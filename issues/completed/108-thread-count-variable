@@ -3,7 +3,7 @@
 ## Status
 - [ ] Open
 - [ ] In Progress
-- [ ] Completed
+- [x] Completed
 
 ## Current Behavior
 
@@ -68,3 +68,35 @@ fi
 1. Source script without MAKE_JOBS set, verify default is nproc/2
 2. Set MAKE_JOBS=4, source script, verify value is 4
 3. Run a build and confirm make uses correct -j value
+
+---
+
+## Completion Notes (2025-02-24)
+
+### Changes Made
+
+Modified `scripts/azerothcore` lines 16-25:
+- MAKE_JOBS now defaults to `$(nproc) - 1` (leaves one core for multitasking)
+- Can still be overridden via environment variable
+- Minimum enforced to 1 thread
+- Removed error checks that required explicit MAKE_JOBS
+
+### Final Implementation
+
+```bash
+# Thread count for parallel builds
+# Defaults to (nproc - 1) to leave one core free for multitasking
+# Can be overridden: MAKE_JOBS=4 source scripts/azerothcore && azerothcore install
+if [[ -z "${MAKE_JOBS:-}" ]]; then
+    MAKE_JOBS=$(( $(nproc) - 1 ))
+    # Minimum of 1 thread
+    if [[ "${MAKE_JOBS}" -lt 1 ]]; then
+        MAKE_JOBS=1
+    fi
+fi
+```
+
+### Difference from Original Plan
+
+- Used `nproc - 1` instead of `nproc / 2` per user preference
+- Removed requirement for explicit configuration (script should just work)

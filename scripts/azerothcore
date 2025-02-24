@@ -2,93 +2,135 @@
 
 # AzerothCore management script for wow-chat-2
 # Handles installation, updates, and server startup for the project-local server.
-# All paths are relative to the project directory.
+# Run directly: ./scripts/azerothcore <command> [options]
 
 # Project root directory - all paths derive from this
 DIR="/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
 
-# Allow override via command line argument
-if [[ -n "${1:-}" && -d "${1:-}" ]]; then
-    DIR="$1"
-    shift
-fi
-
-# Thread count for parallel builds
-# Must be set explicitly - no default to prevent accidental system overload
-# Usage: MAKE_JOBS=8 source scripts/azerothcore && azerothcore install
-# Why: Forces intentional decision about resource allocation
-if [[ -z "${MAKE_JOBS:-}" ]]; then
-    MAKE_JOBS=""
+# Thread count for parallel builds - defaults to (nproc - 1)
+THREADS=$(( $(nproc) - 1 ))
+if [[ "${THREADS}" -lt 1 ]]; then
+    THREADS=1
 fi
 
 KEIRA_VERSION="3.10.1"
 
-# -- {{{ authserver
+# -- {{{ show_help
+# Display usage information
+show_help() {
+    echo "Usage: ./scripts/azerothcore <command> [options]"
+    echo ""
+    echo "Commands:"
+    echo "  install <mode>     Fresh installation"
+    echo "    core             Clone and build AzerothCore only (no modules)"
+    echo "    modules          Clone modules only (assumes core exists)"
+    echo "    all              Full install: core + modules"
+    echo ""
+    echo "  update [options]   Update and rebuild if changes exist"
+    echo "    --force          Rebuild even without remote changes"
+    echo ""
+    echo "  authserver         Start the authentication server"
+    echo "  worldserver        Start the world server"
+    echo "  keira              Launch Keira3 database editor"
+    echo ""
+    echo "Global options:"
+    echo "  --threads <n>      Number of threads for compilation (default: nproc-1 = ${THREADS})"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  ./scripts/azerothcore install all"
+    echo "  ./scripts/azerothcore update --force"
+    echo "  ./scripts/azerothcore update --force --threads 8"
+    echo "  ./scripts/azerothcore authserver"
+}
+# -- }}}
+
+# -- {{{ parse_args
+# Parse global arguments and extract command
+parse_args() {
+    COMMAND=""
+    COMMAND_ARGS=()
+
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --threads)
+                if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
+                    THREADS="${2}"
+                    shift 2
+                else
+                    echo "Error: --threads requires a numeric argument"
+                    exit 1
+                fi
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            -*)
+                # Pass other flags to command
+                COMMAND_ARGS+=("${1}")
+                shift
+                ;;
+            *)
+                if [[ -z "${COMMAND}" ]]; then
+                    COMMAND="${1}"
+                else
+                    COMMAND_ARGS+=("${1}")
+                fi
+                shift
+                ;;
+        esac
+    done
+}
+# -- }}}
+
+# -- {{{ cmd_authserver
 # Starts the authentication server
-function authserver() {
+cmd_authserver() {
     "${DIR}/installed-files/bin/authserver"
 }
 # -- }}}
 
-# -- {{{ worldserver
+# -- {{{ cmd_worldserver
 # Starts the world server
-function worldserver() {
+cmd_worldserver() {
     "${DIR}/installed-files/bin/worldserver"
 }
 # -- }}}
 
-# -- {{{ keira
+# -- {{{ cmd_keira
 # Launches Keira3 database editor (external tool)
-function keira() {
+cmd_keira() {
     local KEIRA_DIR="/home/ritz/games/azeroth-core/keira"
     if [[ -d "${KEIRA_DIR}" ]]; then
         "${KEIRA_DIR}/Keira-${KEIRA_VERSION}.LINUX.AppImage" &
     else
         echo "Error: Keira not found at ${KEIRA_DIR}"
-        return 1
+        exit 1
     fi
 }
 # -- }}}
 
-# -- {{{ azerothcore
-# Main dispatch function for azerothcore commands
-function azerothcore() {
-    case "${1:-}" in
-        install)    install-azerothcore ;;
-        update)     update-azerothcore ;;
-        install-pb) install-playerbots ;;
-        update-pb)  update-playerbots ;;
-        *)
-            echo "Usage: azerothcore {install|update|install-pb|update-pb}"
-            echo "  install    - Fresh installation of AzerothCore"
-            echo "  update     - Update existing installation"
-            echo "  install-pb - Install playerbots module"
-            echo "  update-pb  - Update playerbots module"
-            return 1
-            ;;
-    esac
-}
-# -- }}}
+# -- {{{ cmd_install
+# Fresh installation of AzerothCore with selectable components
+cmd_install() {
+    set -o pipefail
 
-# -- {{{ install-azerothcore
-# Fresh installation of AzerothCore with all modules
-function install-azerothcore() {
-    trap 'trap - ERR; return 1' ERR
-    set -uo pipefail
-
-    # Ensure positional parameters are set to avoid unbound variable errors
-    set -- "${1:-}" "${2:-}" "${3:-}"
-
-    if [[ $(/usr/bin/id -u) -ne 0 ]]; then
-        echo "Not running as root"
-        sudo echo "Elevated privileges acquired"
+    local mode="${1:-}"
+    if [[ "${mode}" != "core" && "${mode}" != "modules" && "${mode}" != "all" ]]; then
+        echo "Error: install requires a mode argument"
+        echo "Usage: ./scripts/azerothcore install {core|modules|all}"
+        echo "  core    - Clone and build AzerothCore only (no modules)"
+        echo "  modules - Clone modules only (assumes core exists)"
+        echo "  all     - Full install: core + modules"
+        exit 1
     fi
 
     # Project-local paths
-    export AC_CODE_DIR="${DIR}/source"
-    export INSTALL_DIR="${DIR}/installed-files"
-    export   BUILD_DIR="${DIR}/build"
-    export   MYSQL_DIR="${DIR}/mysql/installed-files"
+    local AC_CODE_DIR="${DIR}/source"
+    local INSTALL_DIR="${DIR}/installed-files"
+    local BUILD_DIR="${DIR}/build"
+    local MYSQL_DIR="${DIR}/mysql/installed-files"
 
     # Compiler paths
     local CLANGPP_DIR="/usr/bin/clang++"
@@ -102,38 +144,74 @@ function install-azerothcore() {
 
     # Prepare directories
     echo "Preparing directories..."
-    sudo rm -drf "${AC_CODE_DIR}"
-    sudo mkdir -p "${AC_CODE_DIR}"
+    for check_dir in "${AC_CODE_DIR}" "${BUILD_DIR}" "${INSTALL_DIR}/bin"; do
+        if [[ -d "${check_dir}" && ! -w "${check_dir}" ]]; then
+            echo "Error: ${check_dir} exists but is not writable by $(whoami)"
+            echo "Fix with: sudo chown -R $(whoami):$(whoami) ${check_dir}"
+            exit 1
+        fi
+    done
 
-    sudo rm -drf "${INSTALL_DIR}/bin"
-    sudo mkdir -p "${INSTALL_DIR}/bin"
+    # Only wipe source directory for core or all modes
+    if [[ "${mode}" == "core" || "${mode}" == "all" ]]; then
+        rm -rf "${AC_CODE_DIR}"
+        mkdir -p "${AC_CODE_DIR}"
+    fi
 
-    sudo rm -drf "${BUILD_DIR}"
-    sudo mkdir -p "${BUILD_DIR}"
+    rm -rf "${INSTALL_DIR}/bin"
+    mkdir -p "${INSTALL_DIR}/bin"
 
-    # Clone AzerothCore with Playerbot support
-    echo "Cloning AzerothCore (Playerbot branch)..."
-    git clone https://github.com/liyunfan1223/azerothcore-wotlk.git \
-              --branch=Playerbot \
-              "${AC_CODE_DIR}"
+    rm -rf "${BUILD_DIR}"
+    mkdir -p "${BUILD_DIR}"
 
-    # Clone modules
-    echo "Cloning modules..."
-    cd "${AC_CODE_DIR}/modules"
-    git clone https://github.com/azerothcore/mod-eluna.git
-    git clone https://github.com/TerraByte-tbwps/mod-aoe-loot.git
-    git clone https://github.com/webluke/mod-grownup
-    git clone https://github.com/liyunfan1223/mod-playerbots.git --branch=master
+    # Clone AzerothCore (core or all mode)
+    if [[ "${mode}" == "core" || "${mode}" == "all" ]]; then
+        echo "Cloning AzerothCore (Playerbot branch)..."
+        git clone https://github.com/liyunfan1223/azerothcore-wotlk.git \
+                  --branch=Playerbot \
+                  "${AC_CODE_DIR}"
+    fi
+
+    # Clone modules (modules or all mode)
+    if [[ "${mode}" == "modules" || "${mode}" == "all" ]]; then
+        if [[ "${mode}" == "modules" && ! -d "${AC_CODE_DIR}/modules" ]]; then
+            echo "Error: Core not found. Run './scripts/azerothcore install core' first."
+            exit 1
+        fi
+        echo "Cloning modules..."
+        cd "${AC_CODE_DIR}/modules"
+
+        for mod_repo in \
+            "https://github.com/azerothcore/mod-eluna.git" \
+            "https://github.com/TerraByte-tbwps/mod-aoe-loot.git" \
+            "https://github.com/webluke/mod-grownup" \
+            "https://github.com/liyunfan1223/mod-playerbots.git --branch=master"
+        do
+            local mod_name=$(echo "${mod_repo}" | sed 's|.*/||' | sed 's|\.git.*||' | awk '{print $1}')
+            if [[ -d "${mod_name}" ]]; then
+                echo "  Removing existing ${mod_name}..."
+                rm -rf "${mod_name}"
+            fi
+            echo "  Cloning ${mod_name}..."
+            git clone ${mod_repo}
+        done
+    fi
 
     # Configure and build
     echo "Configuring build..."
     cd "${BUILD_DIR}"
+
+    local LUAJIT_INC="/usr/include/luajit-2.1"
+    local LUAJIT_LIB="/usr/lib/libluajit-5.1.so"
+
     cmake "${AC_CODE_DIR}"                                \
           -DLUA_VERSION=luajit                            \
+          -DLUAJIT_INCLUDE_DIR="${LUAJIT_INC}"            \
+          -DLUAJIT_LIBRARIES="${LUAJIT_LIB}"              \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"         \
           -DCMAKE_C_COMPILER="${CLANG_DIR}"               \
           -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}"           \
-          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common" \
+          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common -I${LUAJIT_INC}" \
           -DCMAKE_BINARY_DIR="${BUILD_DIR}"               \
           -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}"             \
           -DWITH_WARNINGS=1                               \
@@ -144,15 +222,8 @@ function install-azerothcore() {
           -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include"      \
           -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so"
 
-    # Require explicit thread count
-    if [[ -z "${MAKE_JOBS}" ]]; then
-        echo "Error: MAKE_JOBS not set. Specify thread count explicitly."
-        echo "Example: MAKE_JOBS=8 source scripts/azerothcore && azerothcore install"
-        return 1
-    fi
-
-    echo "Building with ${MAKE_JOBS} threads (this may take a while)..."
-    make -j${MAKE_JOBS}
+    echo "Building with ${THREADS} threads (this may take a while)..."
+    make -j${THREADS}
     make install
 
     # Setup MySQL databases
@@ -188,26 +259,20 @@ EOF
     # Configure database connections (port 3307 for local MySQL)
     echo "Configuring database connections..."
 
-    # Configure authserver.conf
     sed -i '/^LoginDatabaseInfo = "127\.0\.0\.1;3306;acore;acore;acore_auth"$/c\LoginDatabaseInfo = "127.0.0.1;3307;ritz;menardi;acore_auth"' "${INSTALL_DIR}/etc/authserver.conf"
 
-    # Configure worldserver.conf
     sed -i '/^LoginDatabaseInfo     = "127\.0\.0\.1;3306;acore;acore;acore_auth"$/c\LoginDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;acore_auth"' "${INSTALL_DIR}/etc/worldserver.conf"
     sed -i '/^WorldDatabaseInfo     = "127\.0\.0\.1;3306;acore;acore;acore_world"$/c\WorldDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;acore_world"' "${INSTALL_DIR}/etc/worldserver.conf"
     sed -i '/^CharacterDatabaseInfo = "127\.0\.0\.1;3306;acore;acore;acore_characters"$/c\CharacterDatabaseInfo = "127.0.0.1;3307;ritz;menardi;acore_characters"' "${INSTALL_DIR}/etc/worldserver.conf"
 
     # Configure directory paths
     echo "Configuring directory paths..."
-
-    # Create necessary directories
     mkdir -p "${DIR}/logs"
 
-    # Configure authserver.conf paths
     sed -i '/^SourceDirectory = ""$/c\SourceDirectory = "'"${DIR}"'/source"' "${INSTALL_DIR}/etc/authserver.conf"
     sed -i '/^MySQLExecutable = ""$/c\MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"' "${INSTALL_DIR}/etc/authserver.conf"
     sed -i '/^LogsDir = ""$/c\LogsDir = "'"${DIR}"'/logs"' "${INSTALL_DIR}/etc/authserver.conf"
 
-    # Configure worldserver.conf paths
     sed -i '/^DataDir = "\."$/c\DataDir = "'"${DIR}"'/data-files"' "${INSTALL_DIR}/etc/worldserver.conf"
     sed -i '/^LogsDir = ""$/c\LogsDir = "'"${DIR}"'/logs"' "${INSTALL_DIR}/etc/worldserver.conf"
     sed -i '/^BuildDirectory = ""$/c\BuildDirectory = "'"${DIR}"'/build"' "${INSTALL_DIR}/etc/worldserver.conf"
@@ -216,19 +281,14 @@ EOF
 
     # Setup symlinks
     echo "Setting up symlinks..."
+    mkdir -p "${INSTALL_DIR}/bin/lua_scripts"
+    ln -sfn "${DIR}/src/lua" "${INSTALL_DIR}/bin/lua_scripts/custom"
 
-    # Lua scripts - use project-local src/lua directory
-    sudo mkdir -p "${INSTALL_DIR}/bin/lua_scripts"
-    sudo ln -sfn "${DIR}/src/lua" "${INSTALL_DIR}/bin/lua_scripts/custom"
-
-    # Extensions - symlink if exists in src/lua/extensions
     if [[ -d "${DIR}/src/lua/extensions" ]]; then
-        sudo ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR}/bin/lua_scripts/extensions"
+        ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR}/bin/lua_scripts/extensions"
     fi
 
-    # Data files - copy into project for full isolation
-    # These are extracted from the WoW client (dbc, maps, vmaps, mmaps)
-    # Copy is preferred over symlink to keep the project self-contained
+    # Data files
     if [[ ! -d "${DIR}/data-files/dbc" ]]; then
         local SHARED_DATA="/home/ritz/games/azeroth-core/data-files"
         if [[ -d "${SHARED_DATA}" ]]; then
@@ -249,45 +309,99 @@ EOF
     echo "Installation complete!"
     echo ""
     echo "Next steps:"
-    echo "  1. Start MySQL: source scripts/mysql-start"
-    echo "  2. Start auth server: source scripts/azerothcore && authserver"
-    echo "  3. Start world server: source scripts/azerothcore && worldserver"
+    echo "  1. Start MySQL: ./scripts/mysql-start"
+    echo "  2. Start auth server: ./scripts/azerothcore authserver"
+    echo "  3. Start world server: ./scripts/azerothcore worldserver"
 }
 # -- }}}
 
-# -- {{{ update-azerothcore
+# -- {{{ cmd_update
 # Update existing AzerothCore installation
-function update-azerothcore() {
-    trap 'trap - ERR; return 1' ERR
-    set -uo pipefail
+# Checks for remote changes before rebuilding. Use --force to rebuild anyway.
+cmd_update() {
+    set -o pipefail
+
+    local force_rebuild=false
+    for arg in "$@"; do
+        if [[ "${arg}" == "--force" ]]; then
+            force_rebuild=true
+        fi
+    done
 
     # Project-local paths
-    export AC_CODE_DIR="${DIR}/source"
-    export INSTALL_DIR="${DIR}/installed-files"
-    export   BUILD_DIR="${DIR}/build"
-    export   MYSQL_DIR="${DIR}/mysql/installed-files"
+    local AC_CODE_DIR="${DIR}/source"
+    local INSTALL_DIR="${DIR}/installed-files"
+    local BUILD_DIR="${DIR}/build"
+    local MYSQL_DIR="${DIR}/mysql/installed-files"
+
+    # Validate source exists
+    if [[ ! -d "${AC_CODE_DIR}/src" ]]; then
+        echo "Error: Source not found at ${AC_CODE_DIR}"
+        echo "Run './scripts/azerothcore install all' first to clone the source."
+        exit 1
+    fi
 
     # Compiler paths
     local CLANGPP_DIR="/usr/bin/clang++"
     local CLANG_DIR="/usr/bin/clang"
 
-    # Pull latest changes
-    echo "Pulling latest changes..."
+    # Check for remote changes
     cd "${AC_CODE_DIR}"
-    git pull --rebase
+    echo "Fetching remote changes..."
+    git fetch
+
+    local LOCAL_HEAD=$(git rev-parse HEAD)
+    local REMOTE_HEAD=$(git rev-parse @{u} 2>/dev/null || echo "")
+
+    local needs_rebuild=false
+
+    if [[ -z "${REMOTE_HEAD}" ]]; then
+        echo "Warning: No upstream branch configured. Skipping remote check."
+        if [[ "${force_rebuild}" == true ]]; then
+            needs_rebuild=true
+        else
+            echo "Use --force to rebuild without pulling."
+            exit 0
+        fi
+    elif [[ "${LOCAL_HEAD}" != "${REMOTE_HEAD}" ]]; then
+        echo "Remote changes detected. Pulling..."
+        git pull --rebase
+        needs_rebuild=true
+    else
+        echo "Already up to date with remote."
+        if [[ "${force_rebuild}" == true ]]; then
+            echo "Force rebuild requested."
+            needs_rebuild=true
+        fi
+    fi
+
+    if [[ "${needs_rebuild}" == false ]]; then
+        echo "No rebuild needed. Use './scripts/azerothcore update --force' to rebuild anyway."
+        exit 0
+    fi
 
     # Rebuild
     echo "Rebuilding..."
-    rm -drf "${BUILD_DIR}"
+    rm -rf "${BUILD_DIR}"
     mkdir -p "${BUILD_DIR}"
 
+    rm -rf "${INSTALL_DIR}/bin"
+    mkdir -p "${INSTALL_DIR}/bin"
+
     cd "${BUILD_DIR}"
+
+    local LUAJIT_INC="/usr/include/luajit-2.1"
+    local LUAJIT_LIB="/usr/lib/libluajit-5.1.so"
+
+    echo "Configuring build..."
     cmake "${AC_CODE_DIR}"                                \
           -DLUA_VERSION=luajit                            \
+          -DLUAJIT_INCLUDE_DIR="${LUAJIT_INC}"            \
+          -DLUAJIT_LIBRARIES="${LUAJIT_LIB}"              \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"         \
           -DCMAKE_C_COMPILER="${CLANG_DIR}"               \
           -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}"           \
-          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common" \
+          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common -I${LUAJIT_INC}" \
           -DCMAKE_BINARY_DIR="${BUILD_DIR}"               \
           -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}"             \
           -DWITH_WARNINGS=1                               \
@@ -298,42 +412,60 @@ function update-azerothcore() {
           -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include"      \
           -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so"
 
-    # Require explicit thread count
-    if [[ -z "${MAKE_JOBS}" ]]; then
-        echo "Error: MAKE_JOBS not set. Specify thread count explicitly."
-        echo "Example: MAKE_JOBS=8 source scripts/azerothcore && azerothcore update"
-        return 1
-    fi
-
-    echo "Building with ${MAKE_JOBS} threads..."
-    make -j${MAKE_JOBS}
+    echo "Building with ${THREADS} threads (this may take a while)..."
+    make -j${THREADS}
     make install
 
-    echo "Update complete!"
-}
-# -- }}}
+    # Setup Lua script symlinks
+    echo "Setting up symlinks..."
+    mkdir -p "${INSTALL_DIR}/bin/lua_scripts"
+    ln -sfn "${DIR}/src/lua" "${INSTALL_DIR}/bin/lua_scripts/custom"
 
-# -- {{{ install-playerbots
-# Install playerbots module separately (if not included in initial install)
-function install-playerbots() {
-    echo "Playerbots is included in the main installation."
-    echo "Run 'azerothcore install' for a fresh install with playerbots."
-}
-# -- }}}
-
-# -- {{{ update-playerbots
-# Update playerbots module
-function update-playerbots() {
-    local AC_CODE_DIR="${DIR}/source"
-
-    if [[ -d "${AC_CODE_DIR}/modules/mod-playerbots" ]]; then
-        echo "Updating mod-playerbots..."
-        cd "${AC_CODE_DIR}/modules/mod-playerbots"
-        git pull --rebase
-        echo "Playerbots updated. Run 'azerothcore update' to rebuild."
-    else
-        echo "Error: mod-playerbots not found. Run 'azerothcore install' first."
-        return 1
+    if [[ -d "${DIR}/src/lua/extensions" ]]; then
+        ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR}/bin/lua_scripts/extensions"
     fi
+
+    echo "Update complete!"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Start MySQL: ./scripts/mysql-start"
+    echo "  2. Start auth server: ./scripts/azerothcore authserver"
+    echo "  3. Start world server: ./scripts/azerothcore worldserver"
 }
 # -- }}}
+
+# -- {{{ main
+# Main entry point - parse args and dispatch to command
+main() {
+    parse_args "$@"
+
+    case "${COMMAND}" in
+        install)
+            cmd_install "${COMMAND_ARGS[@]}"
+            ;;
+        update)
+            cmd_update "${COMMAND_ARGS[@]}"
+            ;;
+        authserver)
+            cmd_authserver
+            ;;
+        worldserver)
+            cmd_worldserver
+            ;;
+        keira)
+            cmd_keira
+            ;;
+        ""|help)
+            show_help
+            ;;
+        *)
+            echo "Error: Unknown command '${COMMAND}'"
+            echo ""
+            show_help
+            exit 1
+            ;;
+    esac
+}
+# -- }}}
+
+main "$@"

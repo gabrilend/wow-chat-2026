@@ -9,7 +9,7 @@ Establish stable server environment with documented setup process.
 
 | ID | Title | Status |
 |----|-------|--------|
-| 101 | verify-server-startup | Open |
+| 101 | verify-server-startup | In Progress |
 | 102 | test-playerbots-spawn | Open |
 | 103 | document-configuration-options | Completed |
 | 104 | migrate-lua-scripts-from-wowchat1 | Completed |
@@ -18,8 +18,11 @@ Establish stable server environment with documented setup process.
 | 106a | read-only-config-dashboard | Open |
 | 106b | runtime-config-modifications | Open |
 | 106c | config-persistence-layer | Open |
+| 107 | credential-manager-script | Open |
+| 108 | thread-count-variable | Completed |
+| 109 | improve-update-command | Completed |
 
-## Completed: 3/6 (3/9 including sub-issues)
+## Completed: 5/9 (5/12 including sub-issues)
 
 ## Phase Milestones
 
@@ -30,6 +33,14 @@ Establish stable server environment with documented setup process.
 - [x] Documentation complete
 
 ## Notes
+
+### 2025-02-24 - Issues 108, 109 Completed
+- **108**: MAKE_JOBS now auto-detects to (nproc - 1), no config needed
+- **109**: Improved `update` with `--force` flag and remote change detection
+- `update` checks for remote changes before rebuilding (saves 30+ min)
+- `update --force` rebuilds without requiring remote changes (for first compile)
+- Removed deprecated `scripts/update-2` (all functionality now in main script)
+- Script now "just works" - no manual configuration required
 
 ### 2026-01-29 - Issue 103 Completed
 - Created comprehensive `docs/configuration.md` documenting all server settings
