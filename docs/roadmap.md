@@ -15,6 +15,7 @@
 - 101-verify-server-startup
 - 102-test-playerbots-spawn
 - 103-document-configuration-options
+- 104-migrate-lua-scripts-from-wowchat1
 
 ---
 

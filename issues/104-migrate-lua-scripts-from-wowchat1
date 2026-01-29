@@ -1,0 +1,100 @@
+# 104: Migrate Lua Scripts from wow-chat-1
+
+## Status
+- [ ] Open
+- [ ] In Progress
+- [ ] Completed
+
+## Current Behavior
+
+Lua scripts exist at `/home/ritz/games/azeroth-core/lua-scripts/` and are
+symlinked into the server's lua_scripts directory. This creates risk of
+accidental data overwriting if the shared location is modified.
+
+Source location has its own git history (119 commits in custom/.git).
+
+## Intended Behavior
+
+Scripts are copied (not symlinked) into this project at `src/lua/` with:
+1. Full ownership by this repository
+2. Preserved functionality
+3. Clear documentation of what each module does
+
+## Scripts to Migrate
+
+### Core System (custom/)
+| File | Size | Purpose |
+|------|------|---------|
+| periodic_events.lua | 4.5KB | Main event loop - spawns ambushes, travellers, treasure on timers |
+| ambush.lua | 22KB | Enemy spawning, chasing, combat, banned creature list |
+| treasure.lua | 6KB | Level-scaled chest spawning (dungeons, raids, dinosaur bones) |
+| travel.lua | 36KB | NPC traveller system |
+| movement.lua | 7KB | Position calculations (orbit, arc spawn, midpoint) |
+| tempo.lua | 3KB | Game pacing/timing utilities |
+| death-knights.lua | 5KB | Death Knight class customizations |
+| hearthstone.lua | 3.4KB | Custom hearthstone behavior |
+| levelling | 5.8KB | Level scaling adjustments |
+| merchants | 3.4KB | Vendor NPCs |
+| wow-chat-survival/waves.lua | WIP | Risk of Rain 2 style wave system (notes only) |
+
+### Extensions
+| Directory | Purpose |
+|-----------|---------|
+| StackTracePlus/ | Lua debugging utility |
+
+### Reading Order (per README)
+1. periodic_events.lua - entry point
+2. treasure.lua - simple spawning example
+3. travel.lua - NPC movement patterns
+4. ambush.lua - complex system with combat
+
+## Suggested Implementation Steps
+
+1. Create `src/lua/` directory structure
+2. Copy all files from `/home/ritz/games/azeroth-core/lua-scripts/custom/`
+3. Copy extensions from `/home/ritz/games/azeroth-core/lua-scripts/extensions/`
+4. Remove symlinks from install script
+5. Update install script to copy from local src/lua/
+6. Verify scripts load when server starts
+7. Create src/lua/README.md documenting the system
+
+## System Overview
+
+```
+On Player Login:
+├── Setup queues (ambush, treasure)
+├── Register periodic events:
+│   ├── Every 40s:  PeriodicSpawnAmbush
+│   ├── Every 130s: PeriodicSpawnTravellers
+│   └── Every 100s: PeriodicSpawnTreasure
+└── If dead: join spirit world, wait for res
+
+PeriodicSpawnAmbush:
+├── Skip if: sitting, dead, in water, 3+ ambushers, boss fight
+├── Query DB for level-appropriate mobs
+├── Spawn 120-160 units away
+└── Creature chases player, attacks when close
+
+PeriodicSpawnTreasure:
+├── Skip if: sitting, dead, in water
+├── Select level-appropriate chest from queue
+└── Spawn 20-35 units away
+```
+
+## Related Documents
+
+- docs/scripting.md
+- /home/ritz/games/azeroth-core/lua-scripts/custom/README.md
+
+## Dependencies
+
+- 101-verify-server-startup (need running server to test)
+
+## Notes
+
+The custom/ directory has its own git history. Consider preserving that history
+by importing commits, or simply starting fresh with a snapshot. The history may
+contain valuable context about why certain decisions were made.
+
+The waves.lua file is WIP - contains LLM conversation notes about grid-based
+spawning but no functional code yet.
