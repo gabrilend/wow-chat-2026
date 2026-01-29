@@ -1,0 +1,237 @@
+#!/bin/bash
+
+# AC_DIR="/home/ritz/games/azeroth-core/azerothcore"
+       AC_DIR="/home/ritz/games/azeroth-core/wowchat-2025/installed-files"
+KEIRA_VERSION="3.10.1"
+
+function authserver {
+   source /mnt/mtwo/scripts/cd-improved
+   cd "${AC_DIR}/bin" --no-ls
+   ./authserver
+   cd -
+}
+
+function worldserver {
+   source /mnt/mtwo/scripts/cd-improved
+   cd "${AC_DIR}/bin" --no-ls
+   ./worldserver
+   cd -
+}
+
+function keira {
+   cd "/home/ritz/games/azeroth-core/keira/"
+   ./Keira-${KEIRA_VERSION}.LINUX.AppImage &
+   cd -
+   exit
+}
+
+function azerothcore() {
+    if [[ "$1" == "install" ]]; then
+        install-azerothcore
+    fi
+
+    if [[ "$1" == "update" ]]; then
+        update-azerothcore
+    fi
+
+    if [[ "$1" == "install-pb" ]]; then
+        install-playerbots
+    fi
+
+    if [[ "$1" == "update-pb" ]]; then
+        update-playerbots
+    fi
+}
+
+function install-azerothcore(){ # {{{
+   trap 'trap - ERR;return' ERR
+   set -uo pipefail
+   # Ensure positional parameters are set to avoid unbound variable errors
+   set -- "${1:-}" "${2:-}" "${3:-}"
+   if [[ $(/usr/bin/id -u) -ne 0 ]]; then
+       echo "Not running as root"
+       sudo echo "there, that's better"
+   fi
+
+                     OLD_DIR="$(pwd)"
+                 AC_HOME_DIR="/home/ritz/games/azeroth-core"
+                         DIR="${AC_HOME_DIR}/wowchat-2025"
+   export AC_CODE_DIR="${DIR}/source"
+   export INSTALL_DIR="${DIR}/installed-files"
+   export   BUILD_DIR="${DIR}/build"
+
+   find "${AC_CODE_DIR}" -name CMakeCache.txt -delete
+   find "${AC_CODE_DIR}" -name CMakeFiles -type d -exec rm -rf {} +
+   rm -f "${AC_CODE_DIR}/cmake_uninstall.cmake"
+
+   sudo rm -drf  "${AC_CODE_DIR}"
+   sudo mkdir -p "${AC_CODE_DIR}"
+
+   sudo rm -drf  "${INSTALL_DIR}/bin"
+   sudo mkdir -p "${INSTALL_DIR}/bin"
+
+   sudo rm  -drf "${BUILD_DIR}"
+   sudo mkdir -p "${BUILD_DIR}"
+   cd            "${BUILD_DIR}"
+ 
+
+#   git clone https://github.com/azerothcore/azerothcore-wotlk.git \
+#             --branch master \
+#             --single-branch \
+#           "${AC_CODE_DIR}"
+   git clone https://github.com/liyunfan1223/azerothcore-wotlk.git \
+             --branch=Playerbot \
+           "${AC_CODE_DIR}"
+
+          MYSQL_DIR="/home/ritz/programs/mysql-server/installed-files"
+        CLANGPP_DIR="/usr/bin/clang++"
+          CLANG_DIR="/usr/bin/clang"
+
+#   cmake "${AC_CODE_DIR}"                                \
+#         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"         \
+#         -DCMAKE_C_COMPILER="${CLANG_DIR}"               \
+#         -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}"           \
+#         -DWITH_WARNINGS=1                               \
+#         -DTOOLS_BUILD=all                               \
+#         -DSCRIPTS=static                                \
+#         -DMODULES=static                                \
+#         -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql"     \
+#         -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include"      \
+#         -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so"
+ 
+   cd "${AC_CODE_DIR}/modules"
+   git clone https://github.com/azerothcore/mod-eluna.git
+   git clone https://github.com/TerraByte-tbwps/mod-aoe-loot.git
+   git clone https://github.com/webluke/mod-grownup
+   git clone https://github.com/liyunfan1223/mod-playerbots.git --branch=master
+   cd -
+
+
+   cmake "${AC_CODE_DIR}"                                \
+         -DLUA_VERSION=luajit                            \
+         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"         \
+         -DCMAKE_C_COMPILER="${CLANG_DIR}"               \
+         -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}"           \
+         -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common" \
+         -DCMAKE_BINARY_DIR="${BUILD_DIR}"               \
+         -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}"             \
+         -DWITH_WARNINGS=1                               \
+         -DTOOLS_BUILD=all                               \
+         -DSCRIPTS=static                                \
+         -DMODULES=static                                \
+         -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql"     \
+         -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include"      \
+         -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so"
+
+   make -j15
+   make install
+
+  echo "Setting up MySQL databases..." # {{{
+  "${MYSQL_DIR}/bin/mysql" -u ritz -p << 'EOF'
+DROP USER IF EXISTS 'ritz'@'localhost';
+CREATE USER 'ritz'@'localhost' IDENTIFIED BY 'menardi' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0;
+
+CREATE DATABASE IF NOT EXISTS `acore_world` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `acore_characters` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `acore_auth` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
+
+GRANT ALL PRIVILEGES ON `acore_world` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON `acore_characters` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON `acore_auth` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
+EOF
+
+  echo "Initializing configuration files..." # {{{
+
+  if [[ ! -f "${INSTALL_DIR}/etc/worldserver.conf" ]]; then
+    cp "${INSTALL_DIR}/etc/worldserver.conf.dist" "${INSTALL_DIR}/etc/worldserver.conf"
+  fi
+
+
+  if [[ ! -f "${INSTALL_DIR}/etc/authserver.conf" ]]; then
+    cp "${INSTALL_DIR}/etc/authserver.conf.dist" "${INSTALL_DIR}/etc/authserver.conf"
+  fi
+
+  if [[ ! -f "${INSTALL_DIR}/etc/mod_grownup.conf" ]]; then
+    cp "${INSTALL_DIR}/etc/mod_grownup.conf.dist" "${INSTALL_DIR}/etc/mod_grownup.conf"
+  fi 
+
+  echo "Configuring database connections..." # }}}
+  
+  # Configure authserver.conf
+  sed -i '/^LoginDatabaseInfo = "127\.0\.0\.1;3306;acore;acore;acore_auth"$/c\LoginDatabaseInfo = "127.0.0.1;3306;ritz;menardi;acore_auth"' "${INSTALL_DIR}/etc/authserver.conf"
+  
+  # Configure worldserver.conf
+  sed -i '/^LoginDatabaseInfo     = "127\.0\.0\.1;3306;acore;acore;acore_auth"$/c\LoginDatabaseInfo     = "127.0.0.1;3306;ritz;menardi;acore_auth"' "${INSTALL_DIR}/etc/worldserver.conf"
+  sed -i '/^WorldDatabaseInfo     = "127\.0\.0\.1;3306;acore;acore;acore_world"$/c\WorldDatabaseInfo     = "127.0.0.1;3306;ritz;menardi;acore_world"' "${INSTALL_DIR}/etc/worldserver.conf"
+  sed -i '/^CharacterDatabaseInfo = "127\.0\.0\.1;3306;acore;acore;acore_characters"$/c\CharacterDatabaseInfo = "127.0.0.1;3306;ritz;menardi;acore_characters"' "${INSTALL_DIR}/etc/worldserver.conf"
+
+  echo "Configuring directory paths..."
+  
+  # Create necessary directories
+  mkdir -p "${DIR}/logs"
+  mkdir -p "${DIR}/data-files"
+  
+  # Configure authserver.conf paths
+  sed -i '/^SourceDirectory = ""$/c\SourceDirectory = "'"${DIR}"'/source"' "${INSTALL_DIR}/etc/authserver.conf"
+  sed -i '/^MySQLExecutable = ""$/c\MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"' "${INSTALL_DIR}/etc/authserver.conf"
+  sed -i '/^LogsDir = ""$/c\LogsDir = "'"${DIR}"'/logs"' "${INSTALL_DIR}/etc/authserver.conf"
+  
+  # Configure worldserver.conf paths
+  sed -i '/^DataDir = "\."$/c\DataDir = "'"${DIR}"'/data-files"' "${INSTALL_DIR}/etc/worldserver.conf"
+  sed -i '/^LogsDir = ""$/c\LogsDir = "'"${DIR}"'/logs"' "${INSTALL_DIR}/etc/worldserver.conf"
+  sed -i '/^BuildDirectory = ""$/c\BuildDirectory = "'"${DIR}"'/build"' "${INSTALL_DIR}/etc/worldserver.conf"
+  sed -i '/^SourceDirectory = ""$/c\SourceDirectory = "'"${DIR}"'/source"' "${INSTALL_DIR}/etc/worldserver.conf"
+  sed -i '/^MySQLExecutable = ""$/c\MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"' "${INSTALL_DIR}/etc/worldserver.conf"
+
+  # }}}
+
+   echo "setting up symlinks..."
+   sudo ln -s "${AC_HOME_DIR}/lua-scripts/custom"     "${INSTALL_DIR}/bin/lua_scripts/custom"
+   sudo ln -s "${AC_HOME_DIR}/lua-scripts/extensions" "${INSTALL_DIR}/bin/lua_scripts/extensions"
+   sudo ln -s "${AC_HOME_DIR}/sql-scripts/" "${AC_CODE_DIR}/data/sql/custom/"
+
+   cd "${OLD_DIR}"
+
+} # }}}
+
+function update-azerothcore(){ # {{{
+
+                       OLD_DIR="$(pwd)"
+                           DIR="/home/ritz/games/azeroth-core/wowchat-2025"
+     export INSTALL_DIR="${DIR}/installed-files"
+     export   BUILD_DIR="${DIR}/build"
+     export AC_CODE_DIR="${DIR}/source"
+
+   cd    "${AC_CODE_DIR}"
+   git pull --rebase
+
+   rm  -drf "${BUILD_DIR}"
+   mkdir -p "${BUILD_DIR}"
+
+     MYSQL_DIR="/home/ritz/programs/mysql-server/installed-files"
+   CLANGPP_DIR="/usr/bin/clang++"
+     CLANG_DIR="/usr/bin/clang"
+
+
+   cd    "${BUILD_DIR}"
+   cmake "${AC_CODE_DIR}"                                \
+         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"         \
+         -DCMAKE_C_COMPILER="${CLANG_DIR}"               \
+         -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}"           \
+         -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common" \
+         -DCMAKE_BINARY_DIR="${BUILD_DIR}"               \
+         -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}"             \
+         -DWITH_WARNINGS=1                               \
+         -DTOOLS_BUILD=all                               \
+         -DSCRIPTS=static                                \
+         -DMODULES=static                                \
+         -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql"     \
+         -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include"      \
+         -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so"
+  
+   make -j15
+   make install
+   
+   cd "${OLD_DIR}"
+
+} # }}}

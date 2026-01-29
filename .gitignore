@@ -1,0 +1,17 @@
+# Build artifacts
+build/
+installed-files/
+source/
+
+# Runtime files
+logs/
+tmp/
+data-files/
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store

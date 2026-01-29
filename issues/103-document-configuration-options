@@ -1,0 +1,65 @@
+# 103: Document Configuration Options
+
+## Status
+- [ ] Open
+- [ ] In Progress
+- [ ] Completed
+
+## Current Behavior
+
+Configuration files exist but are not documented. Users must read raw .conf files
+or external AzerothCore documentation to understand available options.
+
+Current configuration files:
+- installed-files/etc/authserver.conf
+- installed-files/etc/worldserver.conf
+- installed-files/etc/mod_grownup.conf
+- (possibly others in etc/modules/)
+
+## Intended Behavior
+
+A project-specific configuration reference document exists that:
+1. Lists all modified configuration options with explanations
+2. Documents custom paths and their purposes
+3. Explains module-specific configurations
+4. Provides examples for common customizations
+
+## Suggested Implementation Steps
+
+1. List all .conf files in etc/ directory
+2. Extract non-default values from each config
+3. Document purpose of each modified setting
+4. Create docs/configuration.md with findings
+5. Update table-of-contents.md to include new doc
+
+## Template for Configuration Document
+
+```markdown
+# Configuration Reference
+
+## Modified Settings
+
+### authserver.conf
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| LoginDatabaseInfo | ... | Custom MySQL connection |
+
+### worldserver.conf
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| DataDir | ... | Game data location |
+```
+
+## Related Documents
+
+- docs/installation.md (Configuration Files section)
+- docs/table-of-contents.md
+
+## Notes
+
+This is a documentation task, not a code task. Can be completed independently
+of server startup verification.
+
+## Dependencies
+
+None - can proceed in parallel with other Phase 1 issues.

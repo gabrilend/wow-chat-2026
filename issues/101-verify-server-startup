@@ -1,0 +1,56 @@
+# 101: Verify Server Startup
+
+## Status
+- [ ] Open
+- [ ] In Progress
+- [ ] Completed
+
+## Current Behavior
+
+Server has been installed but startup verification is incomplete. Logs directory
+contains old log files from previous runs. Current operational status unknown.
+
+Relevant log files:
+- logs/Auth.log (2926 bytes, dated Sep 16)
+- logs/Server.log (25764 bytes, dated Sep 16)
+- logs/Errors.log (4.7MB, dated Sep 16)
+
+## Intended Behavior
+
+1. Auth server starts without errors
+2. World server starts and loads all modules
+3. Eluna scripts load successfully
+4. Playerbots module initializes
+5. Server accepts client connections
+
+## Suggested Implementation Steps
+
+1. Start auth server in terminal, observe output
+2. Start world server in separate terminal
+3. Check logs for errors after startup completes
+4. Verify module loading messages in console
+5. Attempt client connection to confirm ports open
+
+## Validation Commands
+
+```bash
+# Check if binaries exist
+ls -la installed-files/bin/authserver installed-files/bin/worldserver
+
+# Check configuration files
+ls -la installed-files/etc/*.conf
+
+# Start servers and check for immediate errors
+# (manual process - requires interactive terminals)
+```
+
+## Related Documents
+
+- docs/installation.md
+- docs/architecture.md
+
+## Notes
+
+Large Errors.log file (4.7MB) suggests previous issues during runtime. Should
+analyze log contents to understand historical problems before attempting fresh
+startup validation.

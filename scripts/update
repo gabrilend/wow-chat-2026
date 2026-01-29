@@ -1,0 +1,176 @@
+#!/bin/bash
+set -o pipefail
+
+function update-xbps(){
+   sudo xbps-install -u xbps
+   sudo xbps-remove -oO
+   sudo xbps-install -Suf
+   sudo vkpurge rm all
+}
+
+function update-ollama(){ # {{{
+   /home/ritz/programs/ollama/build_ollama.sh
+} # }}}
+
+function update-mysql(){ # {{{
+   if [[ $(/usr/bin/id -u) -ne 0 ]]; then
+       echo "Not running as root"
+       sudo echo "there, that's better"
+   fi
+   source /home/ritz/scripts/cd-improved
+
+   # Get the installed MySQL version
+   set +o pipefail
+   INSTALLED_VERSION=$(                                    \
+  /mnt/mtwo/programs/mysql-server/installed-files/bin/mysql \
+                                                     -u ritz \
+--socket=/mnt/mtwo/programs/mysql-server/databases/mysql.sock \
+                                                            -p \
+                                                            --version | awk '{print $3}' | tr -d ',')
+   if [ -z "${INSTALLED_VERSION}" ]; then INSTALLED_VERSION=$(/home/ritz/programs/mysql-server/build/runtime_output_directory/mysql --version | awk '{print $3}' | tr -d ','); fi
+   if [ -z "${INSTALLED_VERSION}" ]; then INSTALLED_VERSION=0; fi
+   set -o pipefail
+
+      # Decide target version
+   if [ -n "$1" ]; then
+       LATEST_VERSION="$1"
+   else
+       LATEST_VERSION=$(curl -s https://dev.mysql.com/downloads/mysql/ | grep -oP 'MySQL Community Server \K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+   fi
+   
+   # Compare versions
+   if [ "${INSTALLED_VERSION}" != "${LATEST_VERSION}" ]; then
+      echo "A better version of MySQL is available: ${LATEST_VERSION}"
+      echo "Proceeding with the update..."
+
+      OLD_DIR="$(pwd)"
+          DIR="/home/ritz/programs/mysql-server"
+      cd-improved "${DIR}" --no-ls
+      wget https://dev.mysql.com/get/Downloads/MySQL-${LATEST_VERSION%.*}/mysql-${LATEST_VERSION}.tar.gz
+      mkdir -p "${DIR}/source"
+      tar -xvzf \
+                 mysql-${LATEST_VERSION}.tar.gz \
+               --directory="${DIR}/source"      \
+               --checkpoint=10                  \
+               --checkpoint-action=dot
+      rm ${DIR}/mysql-${LATEST_VERSION}.tar.gz
+
+       rm -drf    "${DIR}/build"
+      mkdir -p    "${DIR}/build"
+      cd-improved "${DIR}/build" --no-ls
+
+      rm -f  "${DIR}/source/mysql-${LATEST_VERSION}/CMakeCache.txt"
+      rm -rf "${DIR}/source/mysql-${LATEST_VERSION}/CMakeFiles/"
+      cmake  "${DIR}/source/mysql-${LATEST_VERSION}"               \
+             -DCMAKE_INSTALL_PREFIX=${DIR}/installed-files         \
+             -DMYSQL_ICU_DATADIR=   ${DIR}/databases               \
+             -DSYSCONFDIR=          ${DIR}/conf                    \
+             -DWITH_SSL=system                                     \
+             -DDOWNLOAD_BOOST=1                                    \
+             -DWITH_BOOST="/home/ritz/programs/boost/boost_1_77_0" \
+             -DDEFAULT_CHARSET=utf8mb4                             \
+             -DDEFAULT_COLLATION=utf8mb4_general_ci
+      
+      make -j15
+
+      MYSQL_DATADIR="/home/ritz/programs/mysql-server/databases"
+      
+      FILE_PATH="${DIR}/source/mysql-${LATEST_VERSION}/mysys/my_default.cc"
+      if ! grep -q 'env_mysql_datadir = getenv("MYSQL_ICU_DATADIR")' "$FILE_PATH"; then
+          sed -i 's|^\([[:space:]]*\)convert_dirname(datadir,.*NullS);|\1const char* env_mysql_datadir = getenv("MYSQL_ICU_DATADIR");\
+      \1std::string MYSQL_ICU_DATADIR = env_mysql_datadir ? env_mysql_datadir : "'"${MYSQL_DATADIR}"'";\
+      \1convert_dirname(datadir, MYSQL_ICU_DATADIR.c_str(), NullS);|' "$FILE_PATH"
+      else
+          echo "[SKIP] my_default.cc already patched"
+      fi
+      
+      FILE_PATH="${DIR}/source/mysql-${LATEST_VERSION}/sql/mysqld.cc"
+      if ! grep -q 'env_mysql_datadir = getenv("MYSQL_ICU_DATADIR")' "$FILE_PATH"; then
+          sed -i 's|^\([[:space:]]*\)strmake(mysql_real_data_home, get_relative_path(.*sizeof(mysql_real_data_home)-1));|\1const char* env_mysql_datadir = getenv("MYSQL_ICU_DATADIR");\
+      \1std::string MYSQL_ICU_DATADIR = env_mysql_datadir ? env_mysql_datadir : "'"${MYSQL_DATADIR}"'";\
+      \1strmake(mysql_real_data_home, get_relative_path(MYSQL_ICU_DATADIR.c_str()), sizeof(mysql_real_data_home)-1);|' "$FILE_PATH"
+      else
+          echo "[SKIP] mysqld.cc already patched"
+      fi
+
+      sudo make install
+      cd-improved ${OLD_DIR} --no-ls
+
+   else
+      echo "You already have the latest version of MySQL installed."
+   fi
+} # }}}
+
+function update-ipfs(){ # {{{
+   OLD_DIR="$(pwd)"
+       DIR="/home/ritz/programs/ipfs"
+   cd-improved "${DIR}" --no-ls
+
+   echo "Fetching latest go-ipfs release..."
+   LATEST_VERSION=$(curl -s https://api.github.com/repos/ipfs/go-ipfs/releases/latest | jq -r '.tag_name')
+   LATEST_VERSION_STRIPPED="${LATEST_VERSION#v}"  # remove 'v' prefix for folder names
+
+   if [[ -f "${DIR}/installed.version" && "$(cat ${DIR}/installed.version)" == "${LATEST_VERSION}" ]]; then
+       echo "IPFS is already up to date (version ${LATEST_VERSION})"
+       cd "${OLD_DIR}" --no-ls
+       return
+   fi
+
+   echo "Updating IPFS to ${LATEST_VERSION}..."
+   mkdir -p "${DIR}/files"
+   curl -L "https://dist.ipfs.tech/go-ipfs/${LATEST_VERSION}/go-ipfs_${LATEST_VERSION_STRIPPED}_linux-amd64.tar.gz" \
+        -o "${DIR}/go-ipfs.tar.gz"
+
+   tar -xzf "${DIR}/go-ipfs.tar.gz" -C "${DIR}/files" --strip-components=1
+
+   echo "Installing IPFS binaries..."
+   mkdir -p "${DIR}/bin"
+   cp -f "${DIR}/files/ipfs" "${DIR}/bin/ipfs"
+
+   echo "${LATEST_VERSION}" > "${DIR}/installed.version"
+
+   echo "Done. IPFS version:"
+   "${DIR}/bin/ipfs" --version
+
+   cd-improved "${OLD_DIR}" --no-ls
+} # }}}
+
+function update-all(){
+   update-xbps
+   update-ollama
+   update-mysql
+   update-ipfs
+}
+
+# argument parsing {{{
+# if argument == one of the options, run that function
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 {xbps|ollama|mysql [version]|ipfs|all}"
+    exit 1
+fi
+
+case "${1}" in
+    xbps)
+        update-xbps
+        ;;
+    ollama)
+        update-ollama
+        ;;
+    mysql)
+        shift
+        update-mysql "$@"
+        ;;
+    ipfs)
+        update-ipfs
+        ;;
+    all)
+        update-all
+        ;;
+    *)
+        echo "Invalid option: $1"
+        echo "Usage: $0 {xbps|ollama|mysql [version]|ipfs|all}"
+        exit 1
+        ;;
+esac
+# }}}
+

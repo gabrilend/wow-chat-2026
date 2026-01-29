@@ -1,0 +1,85 @@
+# WoW Chat 2 - Vision Document
+
+## Project Overview
+
+WoW Chat 2 is a self-hosted World of Warcraft private server environment built on
+AzerothCore with enhanced scripting capabilities through the Eluna (LuaJIT) module.
+
+## Core Purpose
+
+To create a programmable, scriptable WoW server environment that enables:
+- Custom game logic through Lua scripting
+- AI-controlled player bots via the Playerbots module
+- Experimentation with MMO server architecture
+- Learning about game server internals and event-driven programming
+
+## Technical Foundation
+
+### Server Core
+- **AzerothCore**: Open-source WotLK (3.3.5a) server emulator
+- **Branch**: liyunfan1223/azerothcore-wotlk (Playerbot-enabled fork)
+- **Database**: MySQL for world, characters, and auth data
+
+### Modules
+- **mod-eluna**: LuaJIT scripting engine for server-side game logic
+- **mod-playerbots**: AI companions that can group, quest, and raid
+- **mod-aoe-loot**: Quality-of-life area looting
+- **mod-grownup**: Level scaling utilities
+
+### Build System
+- Clang compiler toolchain
+- CMake build configuration
+- Custom installation paths for isolated environment
+
+## Design Principles
+
+1. **Isolation**: Server runs independently from system packages
+2. **Scriptability**: All custom behavior defined in Lua, not C++
+3. **Reproducibility**: Installation and updates fully automated
+4. **Separation of Concerns**: Data generation separate from data viewing
+
+## Directory Structure
+
+```
+wow-chat-2/
+├── docs/           # Project documentation
+├── notes/          # Design notes and vision documents
+├── src/            # Custom Lua scripts and source code
+├── libs/           # Shared libraries and utilities
+├── assets/         # Game assets, SQL scripts, configuration templates
+├── issues/         # Issue tracking and progress
+├── scripts/        # Build, install, and maintenance scripts
+├── installed-files/# Compiled server binaries and configs
+├── logs/           # Server runtime logs
+├── build/          # CMake build directory
+└── source/         # AzerothCore source code (cloned during install)
+```
+
+## Goals
+
+### Near-term
+- Stable server environment with automated setup
+- Basic Lua scripting infrastructure
+- Playerbots configured for solo play
+
+### Mid-term
+- Custom event handlers for game mechanics
+- Chat-based interaction systems
+- Automated testing framework for scripts
+
+### Long-term
+- Complex AI behavior scripting
+- Data export and analysis tools
+- Integration with external systems
+
+## Non-Goals
+
+- Production/public server hosting
+- Client modifications
+- Replicating retail WoW experience exactly
+
+## Related Projects
+
+- delta-version: Version control and documentation methodology
+- lua-scripts/: Shared Lua libraries (external to this project)
+- sql-scripts/: Database customizations (external to this project)
