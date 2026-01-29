@@ -1,0 +1,109 @@
+# 105: Setup Local MySQL Installation
+
+## Status
+- [ ] Open
+- [ ] In Progress
+- [ ] Completed
+
+## Current Behavior
+
+Server uses MySQL at `/home/ritz/programs/mysql-server/` which is:
+- Shared across multiple projects
+- Not version controlled with this project
+- Custom changes lost if reinstalled
+
+## Intended Behavior
+
+MySQL installation local to this project at `mysql/` with:
+1. Binaries compiled into `mysql/installed-files/`
+2. Database files at `mysql/databases/`
+3. Configuration at `mysql/conf/`
+4. Database content tracked in git (custom world changes preserved)
+
+## Directory Structure
+
+```
+mysql/
+├── build/              # CMake build directory (gitignored)
+├── source/             # MySQL source code (gitignored)
+├── installed-files/
+│   ├── bin/            # mysqld, mysql client (gitignored)
+│   ├── lib/            # Libraries (gitignored)
+│   └── share/          # Data files (gitignored)
+├── databases/          # TRACKED - custom world data lives here
+│   ├── acore_auth/
+│   ├── acore_world/
+│   └── acore_characters/
+└── conf/
+    └── my.cnf          # MySQL configuration
+```
+
+## Suggested Implementation Steps
+
+1. Create directory structure
+2. Adapt install script from `scripts/update` (update-mysql function)
+3. Configure paths in my.cnf:
+   - datadir = mysql/databases
+   - socket = mysql/databases/mysql.sock
+   - basedir = mysql/installed-files
+4. Update worldserver.conf and authserver.conf database paths
+5. Initialize database with AzerothCore schema
+6. Import base world data
+7. Test connection from worldserver
+8. Document startup procedure
+
+## Configuration Template (my.cnf)
+
+```ini
+[mysqld]
+basedir = /mnt/mtwo/programming/ai-stuff/games/wow-chat-2/mysql/installed-files
+datadir = /mnt/mtwo/programming/ai-stuff/games/wow-chat-2/mysql/databases
+socket  = /mnt/mtwo/programming/ai-stuff/games/wow-chat-2/mysql/databases/mysql.sock
+port    = 3307  # Different port to avoid conflicts
+
+[client]
+socket  = /mnt/mtwo/programming/ai-stuff/games/wow-chat-2/mysql/databases/mysql.sock
+port    = 3307
+```
+
+## Git Tracking Strategy
+
+Database files will be tracked in git so custom world modifications are preserved.
+This includes:
+- Custom NPC entries
+- Modified loot tables
+- Quest adjustments
+- Spell tweaks for balance
+
+Large binary files (ibdata1, ib_logfile*) may need git-lfs if they grow too large.
+
+Runtime files (*.pid, *.sock, binlog.*) are gitignored.
+
+## Scripts to Create
+
+1. `scripts/mysql-install` - Compile and install MySQL
+2. `scripts/mysql-start` - Start the MySQL daemon
+3. `scripts/mysql-stop` - Stop the MySQL daemon
+4. `scripts/mysql-client` - Connect to the local database
+
+## Related Documents
+
+- scripts/update (contains update-mysql function to adapt)
+- docs/installation.md
+
+## Dependencies
+
+None - can proceed independently
+
+## Notes
+
+Using a different port (3307) allows running alongside system MySQL if needed.
+
+The database tracking approach means:
+- `git diff` shows world data changes
+- Can revert problematic changes
+- History of balance tweaks preserved
+- Collaboration on world design possible
+
+Consider: SQL dump files might be more git-friendly than raw InnoDB files.
+Could export key tables as .sql and track those instead of binary files.

@@ -12,9 +12,10 @@ Establish stable server environment with documented setup process.
 | 101 | verify-server-startup | Open |
 | 102 | test-playerbots-spawn | Open |
 | 103 | document-configuration-options | Open |
-| 104 | migrate-lua-scripts-from-wowchat1 | Open |
+| 104 | migrate-lua-scripts-from-wowchat1 | Completed |
+| 105 | setup-local-mysql-installation | Open |
 
-## Completed: 0/4
+## Completed: 1/5
 
 ## Phase Milestones
 

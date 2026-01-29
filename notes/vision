@@ -1,85 +1,118 @@
 # WoW Chat 2 - Vision Document
 
-## Project Overview
+## What This Is
 
-WoW Chat 2 is a self-hosted World of Warcraft private server environment built on
-AzerothCore with enhanced scripting capabilities through the Eluna (LuaJIT) module.
+A game to play with friends while talking. Fight monsters, find treasure, explore
+forgotten deserts, do quests, find equipment. Sometimes with friends, sometimes
+solo with AI companions. The difficulty scales with your group - team up and face
+proportionally harder challenges.
 
-## Core Purpose
+This is the resurrection of wow-chat-1, which is now ancient history (at least
+one whole year old). We miss it dearly.
 
-To create a programmable, scriptable WoW server environment that enables:
-- Custom game logic through Lua scripting
-- AI-controlled player bots via the Playerbots module
-- Experimentation with MMO server architecture
-- Learning about game server internals and event-driven programming
+## Core Experience
+
+### The Roguelike Layer
+
+Built on top of WoW, a survival-style game loop:
+
+| Timer | Event | Description |
+|-------|-------|-------------|
+| 40s | Ambush | Level-appropriate monsters spawn and chase you |
+| 130s | Travellers | Friendly NPCs wander the world |
+| 100s | Treasure | Chests spawn nearby (scaled dungeon/raid loot) |
+
+**Rest Mechanic**: Sit down and enemies orbit instead of attacking. A moment
+to breathe, strategize, or just chat.
+
+**Group Scaling**: Solo play spawns regular mobs. Group up and face rare elites.
+The challenge grows with your party.
+
+### Playerbots - Core Feature
+
+AI companions are not optional extras - they're central to the experience:
+
+- **Solo play**: Bots fill your party when friends aren't around
+- **Scriptable behavior**: Custom AI through Lua scripting
+- **Always available**: No waiting for friends to log on
+
+Future: Explore computerized personality. What happens when bots have character?
 
 ## Technical Foundation
 
-### Server Core
-- **AzerothCore**: Open-source WotLK (3.3.5a) server emulator
-- **Branch**: liyunfan1223/azerothcore-wotlk (Playerbot-enabled fork)
-- **Database**: MySQL for world, characters, and auth data
+### Server Stack
+- **AzerothCore**: WotLK (3.3.5a) emulator, Playerbot-enabled fork
+- **Eluna**: LuaJIT scripting for game logic
+- **MySQL**: Local installation, database changes tracked in git
 
-### Modules
-- **mod-eluna**: LuaJIT scripting engine for server-side game logic
-- **mod-playerbots**: AI companions that can group, quest, and raid
-- **mod-aoe-loot**: Quality-of-life area looting
-- **mod-grownup**: Level scaling utilities
+### Key Modules
+- **mod-playerbots**: AI companions (core feature, scriptable)
+- **mod-eluna**: Lua scripting engine
+- **mod-aoe-loot**: Quality-of-life looting
+- **mod-grownup**: Level scaling
 
-### Build System
-- Clang compiler toolchain
-- CMake build configuration
-- Custom installation paths for isolated environment
+### The Soul (src/lua/)
+
+The Lua scripts ARE the game. Everything custom lives here:
+
+```
+src/lua/
+├── periodic_events.lua  # Main loop - ties everything together
+├── ambush.lua           # Enemy spawning and combat
+├── treasure.lua         # Chest spawning (dungeons, raids, dinosaur bones)
+├── travel.lua           # NPC traveller system
+├── movement.lua         # Position calculations
+├── tempo.lua            # Game pacing
+└── wow-chat-survival/
+    └── waves.lua.vision # Future: Risk of Rain 2 style wave system
+```
 
 ## Design Principles
 
-1. **Isolation**: Server runs independently from system packages
-2. **Scriptability**: All custom behavior defined in Lua, not C++
-3. **Reproducibility**: Installation and updates fully automated
-4. **Separation of Concerns**: Data generation separate from data viewing
+1. **Play with friends** - The "chat" in wow-chat is socializing, not a system
+2. **Scriptable everything** - Custom behavior in Lua, not C++
+3. **Track the world** - Database changes version controlled, history preserved
+4. **Isolation** - Self-contained project, doesn't pollute system
+5. **Data separation** - Generation separate from viewing
 
 ## Directory Structure
 
 ```
 wow-chat-2/
-├── docs/           # Project documentation
-├── notes/          # Design notes and vision documents
-├── src/            # Custom Lua scripts and source code
-├── libs/           # Shared libraries and utilities
-├── assets/         # Game assets, SQL scripts, configuration templates
-├── issues/         # Issue tracking and progress
-├── scripts/        # Build, install, and maintenance scripts
-├── installed-files/# Compiled server binaries and configs
-├── logs/           # Server runtime logs
-├── build/          # CMake build directory
-└── source/         # AzerothCore source code (cloned during install)
+├── src/lua/            # THE SOUL - game scripts, fully tracked
+├── mysql/
+│   ├── databases/      # TRACKED - custom world data
+│   └── conf/           # MySQL configuration
+├── docs/               # Documentation
+├── notes/              # Vision and design notes
+├── issues/             # Issue tracking
+├── scripts/            # Build and maintenance
+├── installed-files/    # Server binaries (gitignored)
+├── data-files/         # Client extracts (gitignored, too large)
+└── logs/               # Runtime logs (gitignored)
 ```
 
 ## Goals
 
-### Near-term
-- Stable server environment with automated setup
-- Basic Lua scripting infrastructure
-- Playerbots configured for solo play
+### Phase 1: Foundation
+- Playable server (the completion criterion)
+- Lua scripts migrated and working
+- Local MySQL with tracked database
+- Playerbots operational
 
-### Mid-term
-- Custom event handlers for game mechanics
-- Chat-based interaction systems
-- Automated testing framework for scripts
-
-### Long-term
-- Complex AI behavior scripting
-- Data export and analysis tools
-- Integration with external systems
+### Future Phases
+- Bot behavior scripting
+- Wave-based survival mode (waves.lua.vision)
+- Data export and analysis
+- AI integration (undefined but anticipated)
 
 ## Non-Goals
 
-- Production/public server hosting
+- Public server hosting
 - Client modifications
-- Replicating retail WoW experience exactly
+- Exact retail replication
+- Product - this is about software design
 
-## Related Projects
+## The Promise
 
-- delta-version: Version control and documentation methodology
-- lua-scripts/: Shared Lua libraries (external to this project)
-- sql-scripts/: Database customizations (external to this project)
+Raise more than one. Pick the purest, truest one.

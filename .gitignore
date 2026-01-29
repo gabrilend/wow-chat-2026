@@ -1,11 +1,16 @@
 # Build artifacts
 build/
-installed-files/
+installed-files/bin/
+installed-files/lib/
+installed-files/include/
+installed-files/share/
 source/
 
 # Runtime files
 logs/
 tmp/
+
+# Game data (extracted from client, too large for git)
 data-files/
 
 # Editor files
@@ -15,3 +20,36 @@ data-files/
 
 # OS files
 .DS_Store
+
+# =============================================================================
+# MySQL - Local Installation
+# =============================================================================
+# Binaries and build artifacts are ignored
+mysql/build/
+mysql/source/
+mysql/installed-files/bin/
+mysql/installed-files/lib/
+mysql/installed-files/include/
+mysql/installed-files/share/
+
+# TRACKED: Database files containing custom world/character data
+# These are explicitly NOT ignored so changes can be version controlled:
+#   mysql/databases/acore_world/
+#   mysql/databases/acore_characters/
+#   mysql/databases/acore_auth/
+#
+# Large binary files (ibdata, ib_logfile) should use git-lfs if needed
+
+# MySQL runtime files (regenerated on startup)
+mysql/databases/*.pid
+mysql/databases/*.sock
+mysql/databases/*.sock.lock
+mysql/databases/auto.cnf
+mysql/databases/binlog.*
+mysql/databases/undo_*
+mysql/databases/*.pem
+
+# =============================================================================
+# Eluna Scripts - TRACKED
+# =============================================================================
+# src/lua/ is fully tracked - this is the game's soul
