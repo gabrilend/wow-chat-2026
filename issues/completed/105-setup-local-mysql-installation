@@ -3,7 +3,7 @@
 ## Status
 - [ ] Open
 - [ ] In Progress
-- [ ] Completed
+- [x] Completed
 
 ## Current Behavior
 
@@ -107,3 +107,61 @@ The database tracking approach means:
 
 Consider: SQL dump files might be more git-friendly than raw InnoDB files.
 Could export key tables as .sql and track those instead of binary files.
+
+## Completion Notes (2026-01-29)
+
+### What Was Done
+
+1. **MySQL 9.6.0 compiled and installed** to `mysql/installed-files/`
+   - Built from source with CMake
+   - Configured for local project paths
+
+2. **Database initialized** at `mysql/databases/`
+   - Fixed deprecated `innodb_log_file_size` → `innodb_redo_log_capacity` (MySQL 9.x change)
+   - All paths verified local to project:
+     - basedir: `mysql/installed-files/`
+     - datadir: `mysql/databases/`
+     - tmpdir: `tmp/`
+     - socket: `mysql/databases/mysql.sock`
+     - port: 3307
+
+3. **AzerothCore databases created**:
+   - `acore_auth`
+   - `acore_world`
+   - `acore_characters`
+
+4. **User created** matching `secrets.conf`:
+   - User: `ritz@localhost` and `ritz@127.0.0.1`
+   - Full privileges on acore_* databases
+
+5. **Scripts verified working**:
+   - `scripts/mysql-install` - Compiles MySQL from source
+   - `scripts/mysql-start` - Starts daemon (PID tracked)
+   - `scripts/mysql-stop` - Graceful shutdown
+   - `scripts/mysql-client` - Connects using secrets.conf credentials
+   - Fixed: Added `--no-defaults` to avoid system config interference
+
+6. **Gitignore updated** to properly handle:
+   - Runtime files (*.pid, *.sock, *.log)
+   - InnoDB internal files (#ib_*, #innodb_*)
+   - System databases (mysql/, performance_schema/, sys/)
+   - installed-files/ (can be rebuilt)
+   - Kept tracking for: conf/, acore_* database directories
+
+### Remaining Work (Separate Issues)
+
+- Steps 4-7 from original plan (worldserver.conf updates, schema import, worldserver test)
+  belong to issue 101 (verify server startup) since they require running the game server
+
+### Usage
+
+```bash
+# Start MySQL
+./scripts/mysql-start
+
+# Connect to database
+./scripts/mysql-client
+
+# Stop MySQL
+./scripts/mysql-stop
+```

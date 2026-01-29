@@ -32,9 +32,12 @@ if [[ ! -S "${SOCKET}" ]]; then
     exit 1
 fi
 
+# Use --no-defaults to avoid system config interference
+# Password provided via -p flag prompts for input
 exec "${INSTALL_DIR}/bin/mysql" \
+    --no-defaults \
     --socket="${SOCKET}" \
     -u "${DB_USER}" \
-    -p \
+    -p"${DB_PASS}" \
     "$@"
 # }}}

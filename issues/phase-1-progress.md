@@ -13,10 +13,13 @@ Establish stable server environment with documented setup process.
 | 102 | test-playerbots-spawn | Open |
 | 103 | document-configuration-options | Open |
 | 104 | migrate-lua-scripts-from-wowchat1 | Completed |
-| 105 | setup-local-mysql-installation | In Progress |
-| 106 | ingame-config-control-board | Open |
+| 105 | setup-local-mysql-installation | Completed |
+| 106 | ingame-config-control-board | Open (split) |
+| 106a | read-only-config-dashboard | Open |
+| 106b | runtime-config-modifications | Open |
+| 106c | config-persistence-layer | Open |
 
-## Completed: 1/6
+## Completed: 2/6 (2/9 including sub-issues)
 
 ## Phase Milestones
 
@@ -27,6 +30,22 @@ Establish stable server environment with documented setup process.
 - [ ] Documentation complete
 
 ## Notes
+
+### 2026-01-29 - Issue 105 Completed
+- MySQL 9.6.0 compiled and installed locally to `mysql/installed-files/`
+- Database initialized at `mysql/databases/` with all paths local to project
+- AzerothCore databases created: acore_auth, acore_world, acore_characters
+- User `ritz` created with credentials from secrets.conf
+- Scripts verified working: mysql-start, mysql-stop, mysql-client
+- Fixed deprecated innodb_log_file_size config option for MySQL 9.x
+- Gitignore updated to properly handle MySQL runtime files
+
+### 2025-01-29 - Issue 106 Split
+- Split 106-ingame-config-control-board into three sub-issues for incremental delivery
+- 106a: Read-only dashboard (view settings via chat commands and NPC)
+- 106b: Runtime modifications (change hot-reloadable settings live)
+- 106c: Persistence layer (save to files, backup/restore)
+- Sub-issues must be completed in order due to dependencies
 
 ### 2025-01-28 - Project Initialization
 - Converted existing project to monorepo structure

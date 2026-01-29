@@ -34,13 +34,11 @@ data-files/
 # =============================================================================
 # MySQL - Local Installation
 # =============================================================================
-# Binaries and build artifacts are ignored
+# Binaries, build artifacts, and boost are ignored (can be rebuilt)
 mysql/build/
 mysql/source/
-mysql/installed-files/bin/
-mysql/installed-files/lib/
-mysql/installed-files/include/
-mysql/installed-files/share/
+mysql/boost/
+mysql/installed-files/
 
 # TRACKED: Database files containing custom world/character data
 # These are explicitly NOT ignored so changes can be version controlled:
@@ -58,8 +56,34 @@ mysql/databases/auto.cnf
 mysql/databases/binlog.*
 mysql/databases/undo_*
 mysql/databases/*.pem
+mysql/databases/*.log
+mysql/databases/ibtmp*
+mysql/databases/mysql_upgrade_history
+
+# InnoDB internal files (regenerated)
+mysql/databases/#ib_*
+mysql/databases/#innodb_redo/
+mysql/databases/#innodb_temp/
+mysql/databases/ib_buffer_pool
+
+# MySQL system databases (not project-specific)
+mysql/databases/mysql/
+mysql/databases/performance_schema/
+mysql/databases/sys/
+
+# InnoDB shared tablespace - large binary, use git-lfs if needed
+# Uncomment to track: mysql/databases/ibdata1
+mysql/databases/ibdata1
+mysql/databases/mysql.ibd
+
+# TRACKED: AzerothCore database table files
+# These directories contain custom world data and should be tracked:
+#   mysql/databases/acore_auth/
+#   mysql/databases/acore_world/
+#   mysql/databases/acore_characters/
 
 # =============================================================================
 # Eluna Scripts - TRACKED
 # =============================================================================
 # src/lua/ is fully tracked - this is the game's soul
+*.tar.gz
