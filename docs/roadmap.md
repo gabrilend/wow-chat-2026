@@ -17,6 +17,7 @@
 - 103-document-configuration-options
 - 104-migrate-lua-scripts-from-wowchat1
 - 105-setup-local-mysql-installation
+- 106-ingame-config-control-board
 
 ---
 

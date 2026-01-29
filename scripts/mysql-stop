@@ -1,0 +1,55 @@
+#!/bin/bash
+# mysql-stop
+# Stops the local MySQL server for wow-chat-2
+
+# {{{ set_dir
+DIR="/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
+if [[ -n "$1" ]]; then
+    DIR="$1"
+fi
+# }}}
+
+# {{{ paths
+MYSQL_DIR="${DIR}/mysql"
+INSTALL_DIR="${MYSQL_DIR}/installed-files"
+DATA_DIR="${MYSQL_DIR}/databases"
+PID_FILE="${DATA_DIR}/mysqld.pid"
+SOCKET="${DATA_DIR}/mysql.sock"
+# }}}
+
+# {{{ stop
+if [[ ! -f "${PID_FILE}" ]]; then
+    echo "MySQL not running (no PID file)"
+    exit 0
+fi
+
+PID=$(cat "${PID_FILE}")
+
+if ! kill -0 "${PID}" 2>/dev/null; then
+    echo "MySQL not running (stale PID file)"
+    rm -f "${PID_FILE}"
+    exit 0
+fi
+
+echo "Stopping MySQL (PID ${PID})..."
+
+"${INSTALL_DIR}/bin/mysqladmin" \
+    --socket="${SOCKET}" \
+    -u root \
+    shutdown 2>/dev/null || kill "${PID}"
+
+# Wait for shutdown
+for i in {1..10}; do
+    if ! kill -0 "${PID}" 2>/dev/null; then
+        echo "MySQL stopped"
+        rm -f "${PID_FILE}"
+        exit 0
+    fi
+    sleep 1
+done
+
+echo "WARNING: MySQL did not stop gracefully, forcing..."
+kill -9 "${PID}" 2>/dev/null
+rm -f "${PID_FILE}"
+echo "MySQL killed"
+# }}}

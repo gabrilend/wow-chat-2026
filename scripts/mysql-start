@@ -1,0 +1,56 @@
+#!/bin/bash
+# mysql-start
+# Starts the local MySQL server for wow-chat-2
+
+# {{{ set_dir
+DIR="/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
+if [[ -n "$1" ]]; then
+    DIR="$1"
+fi
+# }}}
+
+# {{{ paths
+MYSQL_DIR="${DIR}/mysql"
+INSTALL_DIR="${MYSQL_DIR}/installed-files"
+CONF_FILE="${MYSQL_DIR}/conf/my.cnf"
+DATA_DIR="${MYSQL_DIR}/databases"
+PID_FILE="${DATA_DIR}/mysqld.pid"
+# }}}
+
+# {{{ check_running
+if [[ -f "${PID_FILE}" ]]; then
+    PID=$(cat "${PID_FILE}")
+    if kill -0 "${PID}" 2>/dev/null; then
+        echo "MySQL already running (PID ${PID})"
+        exit 0
+    else
+        echo "Removing stale PID file"
+        rm -f "${PID_FILE}"
+    fi
+fi
+# }}}
+
+# {{{ start
+echo "Starting MySQL server..."
+echo "Config: ${CONF_FILE}"
+echo "Data:   ${DATA_DIR}"
+
+"${INSTALL_DIR}/bin/mysqld" \
+    --defaults-file="${CONF_FILE}" \
+    --user=$(whoami) \
+    --pid-file="${PID_FILE}" \
+    &
+
+sleep 2
+
+if [[ -f "${PID_FILE}" ]]; then
+    PID=$(cat "${PID_FILE}")
+    echo "MySQL started (PID ${PID})"
+    echo "Socket: ${DATA_DIR}/mysql.sock"
+    echo "Port: 3307"
+else
+    echo "ERROR: MySQL failed to start"
+    echo "Check ${DATA_DIR}/error.log for details"
+    exit 1
+fi
+# }}}

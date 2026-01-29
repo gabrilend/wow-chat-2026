@@ -1,0 +1,158 @@
+#!/bin/bash
+# mysql-install
+# Compiles and installs MySQL locally for wow-chat-2
+# Downloads latest version or uses specified version
+
+set -o pipefail
+
+# {{{ set_dir
+DIR="/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
+if [[ -n "$1" && "$1" != "--"* ]]; then
+    DIR="$1"
+    shift
+fi
+# }}}
+
+# {{{ paths
+MYSQL_DIR="${DIR}/mysql"
+SOURCE_DIR="${MYSQL_DIR}/source"
+BUILD_DIR="${MYSQL_DIR}/build"
+INSTALL_DIR="${MYSQL_DIR}/installed-files"
+DATA_DIR="${MYSQL_DIR}/databases"
+CONF_DIR="${MYSQL_DIR}/conf"
+BOOST_DIR="/home/ritz/programs/boost/boost_1_77_0"
+# }}}
+
+# {{{ get_version
+get_installed_version() {
+    if [[ -x "${INSTALL_DIR}/bin/mysql" ]]; then
+        "${INSTALL_DIR}/bin/mysql" --version 2>/dev/null | awk '{print $3}' | tr -d ','
+    else
+        echo "0"
+    fi
+}
+
+get_latest_version() {
+    curl -s https://dev.mysql.com/downloads/mysql/ | \
+        grep -oP 'MySQL Community Server \K[0-9]+\.[0-9]+\.[0-9]+' | head -1
+}
+# }}}
+
+# {{{ download_and_extract
+download_and_extract() {
+    local VERSION="$1"
+    local MAJOR_MINOR="${VERSION%.*}"
+    local TARBALL="mysql-${VERSION}.tar.gz"
+    local URL="https://dev.mysql.com/get/Downloads/MySQL-${MAJOR_MINOR}/${TARBALL}"
+
+    echo "Downloading MySQL ${VERSION}..."
+    wget -q --show-progress -O "${MYSQL_DIR}/${TARBALL}" "${URL}"
+
+    echo "Extracting..."
+    rm -rf "${SOURCE_DIR}"
+    mkdir -p "${SOURCE_DIR}"
+    tar -xzf "${MYSQL_DIR}/${TARBALL}" \
+        --directory="${SOURCE_DIR}" \
+        --strip-components=1
+
+    rm "${MYSQL_DIR}/${TARBALL}"
+}
+# }}}
+
+# {{{ configure_and_build
+configure_and_build() {
+    echo "Configuring CMake..."
+    rm -rf "${BUILD_DIR}"
+    mkdir -p "${BUILD_DIR}"
+    cd "${BUILD_DIR}"
+
+    # Clean any previous cmake cache
+    rm -f "${SOURCE_DIR}/CMakeCache.txt"
+    rm -rf "${SOURCE_DIR}/CMakeFiles/"
+
+    cmake "${SOURCE_DIR}" \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+        -DMYSQL_DATADIR="${DATA_DIR}" \
+        -DSYSCONFDIR="${CONF_DIR}" \
+        -DWITH_SSL=system \
+        -DDOWNLOAD_BOOST=1 \
+        -DWITH_BOOST="${BOOST_DIR}" \
+        -DDEFAULT_CHARSET=utf8mb4 \
+        -DDEFAULT_COLLATION=utf8mb4_unicode_ci \
+        -DWITH_INNODB_MEMCACHED=OFF \
+        -DWITH_RAPID=OFF
+
+    echo "Building (this may take a while)..."
+    make -j$(nproc)
+
+    echo "Installing..."
+    make install
+}
+# }}}
+
+# {{{ initialize_database
+initialize_database() {
+    if [[ -f "${DATA_DIR}/mysql/user.MYD" ]] || [[ -d "${DATA_DIR}/mysql" ]]; then
+        echo "Database already initialized at ${DATA_DIR}"
+        echo "To reinitialize, remove ${DATA_DIR}/* first"
+        return 0
+    fi
+
+    echo "Initializing database..."
+    mkdir -p "${DATA_DIR}"
+
+    "${INSTALL_DIR}/bin/mysqld" \
+        --defaults-file="${CONF_DIR}/my.cnf" \
+        --initialize-insecure \
+        --user=$(whoami)
+
+    echo "Database initialized (insecure - no root password)"
+    echo "Run mysql-start and then set a root password"
+}
+# }}}
+
+# {{{ main
+echo "=== MySQL Installation for wow-chat-2 ==="
+echo "Directory: ${MYSQL_DIR}"
+echo ""
+
+INSTALLED=$(get_installed_version)
+echo "Installed version: ${INSTALLED}"
+
+# Check for version argument
+if [[ -n "$1" ]]; then
+    TARGET_VERSION="$1"
+else
+    TARGET_VERSION=$(get_latest_version)
+fi
+echo "Target version: ${TARGET_VERSION}"
+
+if [[ "${INSTALLED}" == "${TARGET_VERSION}" ]]; then
+    echo "Already at target version."
+    echo "To force reinstall, remove ${INSTALL_DIR}/bin/mysql"
+    exit 0
+fi
+
+echo ""
+read -p "Proceed with installation? [y/N] " -n 1 -r
+echo ""
+
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborted."
+    exit 1
+fi
+
+download_and_extract "${TARGET_VERSION}"
+configure_and_build
+initialize_database
+
+echo ""
+echo "=== Installation Complete ==="
+echo "MySQL ${TARGET_VERSION} installed to ${INSTALL_DIR}"
+echo ""
+echo "Next steps:"
+echo "  1. Start MySQL:  ${DIR}/scripts/mysql-start"
+echo "  2. Connect:      ${DIR}/scripts/mysql-client"
+echo "  3. Set password: ALTER USER 'root'@'localhost' IDENTIFIED BY 'password';"
+echo "  4. Create DBs:   Run AzerothCore database setup"
+# }}}

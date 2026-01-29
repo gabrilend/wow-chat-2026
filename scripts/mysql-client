@@ -1,0 +1,40 @@
+#!/bin/bash
+# mysql-client
+# Connects to the local MySQL server for wow-chat-2
+
+# {{{ set_dir
+DIR="/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
+if [[ -n "$1" && "$1" != "-"* ]]; then
+    DIR="$1"
+    shift
+fi
+# }}}
+
+# {{{ paths
+MYSQL_DIR="${DIR}/mysql"
+INSTALL_DIR="${MYSQL_DIR}/installed-files"
+SOCKET="${MYSQL_DIR}/databases/mysql.sock"
+# }}}
+
+# {{{ load_secrets
+SECRETS_FILE="${DIR}/secrets.conf"
+if [[ -f "${SECRETS_FILE}" ]]; then
+    source "${SECRETS_FILE}"
+fi
+
+DB_USER="${DB_USER:-root}"
+# }}}
+
+# {{{ connect
+if [[ ! -S "${SOCKET}" ]]; then
+    echo "ERROR: MySQL socket not found at ${SOCKET}"
+    echo "Is MySQL running? Try: ${DIR}/scripts/mysql-start"
+    exit 1
+fi
+
+exec "${INSTALL_DIR}/bin/mysql" \
+    --socket="${SOCKET}" \
+    -u "${DB_USER}" \
+    -p \
+    "$@"
+# }}}

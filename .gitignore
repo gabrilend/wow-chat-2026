@@ -1,3 +1,7 @@
+# Secrets (credentials)
+secrets.conf
+!secrets.conf.example
+
 # Build artifacts
 build/
 installed-files/bin/
@@ -5,6 +9,12 @@ installed-files/lib/
 installed-files/include/
 installed-files/share/
 source/
+
+# Generated config files (contain credentials from secrets.conf)
+installed-files/etc/*.conf
+installed-files/etc/modules/*.conf
+!installed-files/etc/*.conf.dist
+!installed-files/etc/modules/*.conf.dist
 
 # Runtime files
 logs/
