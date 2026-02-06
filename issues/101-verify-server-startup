@@ -2,7 +2,7 @@
 
 ## Status
 - [ ] Open
-- [ ] In Progress
+- [x] In Progress
 - [ ] Completed
 
 ## Current Behavior
@@ -40,8 +40,12 @@ ls -la installed-files/bin/authserver installed-files/bin/worldserver
 # Check configuration files
 ls -la installed-files/etc/*.conf
 
-# Start servers and check for immediate errors
-# (manual process - requires interactive terminals)
+# Start MySQL (required before servers)
+source scripts/mysql-start
+
+# Start servers
+source scripts/azerothcore && authserver   # In terminal 1
+source scripts/azerothcore && worldserver  # In terminal 2
 ```
 
 ## Related Documents
@@ -54,3 +58,67 @@ ls -la installed-files/etc/*.conf
 Large Errors.log file (4.7MB) suggests previous issues during runtime. Should
 analyze log contents to understand historical problems before attempting fresh
 startup validation.
+
+---
+
+## Preparation Work (2025-01-29)
+
+### Path Migration to Project-Local
+
+All paths have been updated to use project-local directories instead of the
+old `/home/ritz/games/azeroth-core/` location.
+
+#### scripts/azerothcore Changes
+- `DIR` now points to `/mnt/mtwo/programming/ai-stuff/games/wow-chat-2`
+- `MYSQL_DIR` uses project-local `${DIR}/mysql/installed-files`
+- Database port changed from 3306 to 3307 (local MySQL instance)
+- Lua scripts symlinked from `${DIR}/src/lua` (not global lua-scripts)
+- Data files copied into project instead of symlinked (for isolation)
+- Added proper vimfolds and documentation to functions
+
+#### worldserver.conf Updates
+| Setting | Old Value | New Value |
+|---------|-----------|-----------|
+| Database Port | 3306 | 3307 |
+| DataDir | /home/ritz/games/azeroth-core/data-files | ${DIR}/data-files |
+| LogsDir | /home/ritz/.../wowchat-2025/logs | ${DIR}/logs |
+| BuildDirectory | /home/ritz/.../wowchat-2025/build | ${DIR}/build |
+| SourceDirectory | /home/ritz/.../wowchat-2025/source | ${DIR}/source |
+| MySQLExecutable | /home/ritz/programs/mysql-server/... | ${DIR}/mysql/installed-files/bin/mysql |
+
+#### authserver.conf Updates
+| Setting | Old Value | New Value |
+|---------|-----------|-----------|
+| Database Port | 3306 | 3307 |
+| LogsDir | /home/ritz/.../wowchat-2025/logs | ${DIR}/logs |
+| SourceDirectory | /home/ritz/.../wowchat-2025/source | ${DIR}/source |
+| MySQLExecutable | /home/ritz/programs/mysql-server/... | ${DIR}/mysql/installed-files/bin/mysql |
+
+#### Data Files
+- Copied 3.1GB of game data (dbc, maps, vmaps, mmaps) into project
+- Previously was symlinked to external location
+- Now fully self-contained in `${DIR}/data-files/`
+- Excluded from git via .gitignore (too large for version control)
+
+### Blockers Resolved
+
+1. **MySQL Installation** - Issue 105 completed, local MySQL ready on port 3307
+2. **Configuration Paths** - All paths now point to project-local directories
+3. **Data Files** - Copied into project for full isolation
+
+### Remaining Blocker
+
+**Server binaries not yet compiled** - The `installed-files/bin/` directory is
+empty. Need to run the install script to compile AzerothCore:
+
+```bash
+source scripts/azerothcore && azerothcore install
+```
+
+This will:
+- Clone AzerothCore with Playerbot branch
+- Clone modules (mod-eluna, mod-playerbots, mod-aoe-loot, mod-grownup)
+- Build with cmake/make (-j15)
+- Install to installed-files/
+- Setup database schema
+- Configure symlinks for Lua scripts

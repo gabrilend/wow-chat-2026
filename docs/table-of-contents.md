@@ -6,6 +6,7 @@ wow-chat-2/
 ├── docs/
 │   ├── table-of-contents.md    [this file]
 │   ├── architecture.md         System architecture and data flow
+│   ├── configuration.md        Configuration options reference
 │   ├── installation.md         Setup and installation guide
 │   ├── scripting.md            Eluna Lua scripting reference
 │   ├── roadmap.md              Development phases and milestones
@@ -42,11 +43,12 @@ wow-chat-2/
 
 ### Operational Documentation
 4. **docs/installation.md** - Setup procedures
-5. **docs/scripting.md** - Lua API reference
+5. **docs/configuration.md** - All server and script settings
+6. **docs/scripting.md** - Lua API reference
 
 ### Process Documentation
-6. **docs/delta-guide.md** - Issue tracking methodology
-7. **issues/phase-X-progress.md** - Phase completion tracking
+7. **docs/delta-guide.md** - Issue tracking methodology
+8. **issues/phase-X-progress.md** - Phase completion tracking
 
 ## Adding New Documents
 

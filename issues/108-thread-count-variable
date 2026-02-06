@@ -1,0 +1,70 @@
+# 108: Thread Count Variable for Build Script
+
+## Status
+- [ ] Open
+- [ ] In Progress
+- [ ] Completed
+
+## Current Behavior
+
+The `scripts/azerothcore` script has hardcoded `-j15` in make commands:
+- Line 140: `make -j15`
+- Line 286: `make -j15`
+
+This assumes a 16-thread system and uses nearly all available threads, which:
+1. Makes the system unresponsive during builds
+2. Doesn't adapt to different hardware
+3. Prevents reserving threads for other parallel work
+
+## Intended Behavior
+
+A configurable thread count that:
+1. Defaults to a sensible value (nproc - 1, or nproc / 2)
+2. Can be overridden via environment variable
+3. Can be passed as command line argument
+4. Is used consistently across all make invocations
+
+Example usage:
+```bash
+# Use default (auto-detected)
+source scripts/azerothcore && azerothcore install
+
+# Override via environment
+MAKE_JOBS=8 source scripts/azerothcore && azerothcore install
+
+# Override via argument
+source scripts/azerothcore && azerothcore install --jobs=8
+```
+
+## Suggested Implementation Steps
+
+1. Add `MAKE_JOBS` variable near top of script with default calculation
+2. Allow override via environment variable if set
+3. Replace hardcoded `-j15` with `-j${MAKE_JOBS}`
+4. Add documentation comment explaining the variable
+5. Test with explicit value to verify it works
+
+## Implementation Details
+
+```bash
+# Thread count for parallel builds
+# Default: half of available threads (leaves room for other work)
+# Override: set MAKE_JOBS environment variable before sourcing
+MAKE_JOBS="${MAKE_JOBS:-$(( $(nproc) / 2 ))}"
+
+# Ensure at least 1 job
+if [[ "${MAKE_JOBS}" -lt 1 ]]; then
+    MAKE_JOBS=1
+fi
+```
+
+## Related Documents
+
+- scripts/azerothcore
+- issues/101-verify-server-startup (blocked on compilation)
+
+## Testing
+
+1. Source script without MAKE_JOBS set, verify default is nproc/2
+2. Set MAKE_JOBS=4, source script, verify value is 4
+3. Run a build and confirm make uses correct -j value

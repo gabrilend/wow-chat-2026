@@ -1,133 +1,163 @@
 #!/bin/bash
 
-# AC_DIR="/home/ritz/games/azeroth-core/azerothcore"
-       AC_DIR="/home/ritz/games/azeroth-core/wowchat-2025/installed-files"
+# AzerothCore management script for wow-chat-2
+# Handles installation, updates, and server startup for the project-local server.
+# All paths are relative to the project directory.
+
+# Project root directory - all paths derive from this
+DIR="/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
+
+# Allow override via command line argument
+if [[ -n "${1:-}" && -d "${1:-}" ]]; then
+    DIR="$1"
+    shift
+fi
+
+# Thread count for parallel builds
+# Must be set explicitly - no default to prevent accidental system overload
+# Usage: MAKE_JOBS=8 source scripts/azerothcore && azerothcore install
+# Why: Forces intentional decision about resource allocation
+if [[ -z "${MAKE_JOBS:-}" ]]; then
+    MAKE_JOBS=""
+fi
+
 KEIRA_VERSION="3.10.1"
 
-function authserver {
-   source /mnt/mtwo/scripts/cd-improved
-   cd "${AC_DIR}/bin" --no-ls
-   ./authserver
-   cd -
+# -- {{{ authserver
+# Starts the authentication server
+function authserver() {
+    "${DIR}/installed-files/bin/authserver"
 }
+# -- }}}
 
-function worldserver {
-   source /mnt/mtwo/scripts/cd-improved
-   cd "${AC_DIR}/bin" --no-ls
-   ./worldserver
-   cd -
+# -- {{{ worldserver
+# Starts the world server
+function worldserver() {
+    "${DIR}/installed-files/bin/worldserver"
 }
+# -- }}}
 
-function keira {
-   cd "/home/ritz/games/azeroth-core/keira/"
-   ./Keira-${KEIRA_VERSION}.LINUX.AppImage &
-   cd -
-   exit
+# -- {{{ keira
+# Launches Keira3 database editor (external tool)
+function keira() {
+    local KEIRA_DIR="/home/ritz/games/azeroth-core/keira"
+    if [[ -d "${KEIRA_DIR}" ]]; then
+        "${KEIRA_DIR}/Keira-${KEIRA_VERSION}.LINUX.AppImage" &
+    else
+        echo "Error: Keira not found at ${KEIRA_DIR}"
+        return 1
+    fi
 }
+# -- }}}
 
+# -- {{{ azerothcore
+# Main dispatch function for azerothcore commands
 function azerothcore() {
-    if [[ "$1" == "install" ]]; then
-        install-azerothcore
-    fi
-
-    if [[ "$1" == "update" ]]; then
-        update-azerothcore
-    fi
-
-    if [[ "$1" == "install-pb" ]]; then
-        install-playerbots
-    fi
-
-    if [[ "$1" == "update-pb" ]]; then
-        update-playerbots
-    fi
+    case "${1:-}" in
+        install)    install-azerothcore ;;
+        update)     update-azerothcore ;;
+        install-pb) install-playerbots ;;
+        update-pb)  update-playerbots ;;
+        *)
+            echo "Usage: azerothcore {install|update|install-pb|update-pb}"
+            echo "  install    - Fresh installation of AzerothCore"
+            echo "  update     - Update existing installation"
+            echo "  install-pb - Install playerbots module"
+            echo "  update-pb  - Update playerbots module"
+            return 1
+            ;;
+    esac
 }
+# -- }}}
 
-function install-azerothcore(){ # {{{
-   trap 'trap - ERR;return' ERR
-   set -uo pipefail
-   # Ensure positional parameters are set to avoid unbound variable errors
-   set -- "${1:-}" "${2:-}" "${3:-}"
-   if [[ $(/usr/bin/id -u) -ne 0 ]]; then
-       echo "Not running as root"
-       sudo echo "there, that's better"
-   fi
+# -- {{{ install-azerothcore
+# Fresh installation of AzerothCore with all modules
+function install-azerothcore() {
+    trap 'trap - ERR; return 1' ERR
+    set -uo pipefail
 
-                     OLD_DIR="$(pwd)"
-                 AC_HOME_DIR="/home/ritz/games/azeroth-core"
-                         DIR="${AC_HOME_DIR}/wowchat-2025"
-   export AC_CODE_DIR="${DIR}/source"
-   export INSTALL_DIR="${DIR}/installed-files"
-   export   BUILD_DIR="${DIR}/build"
+    # Ensure positional parameters are set to avoid unbound variable errors
+    set -- "${1:-}" "${2:-}" "${3:-}"
 
-   find "${AC_CODE_DIR}" -name CMakeCache.txt -delete
-   find "${AC_CODE_DIR}" -name CMakeFiles -type d -exec rm -rf {} +
-   rm -f "${AC_CODE_DIR}/cmake_uninstall.cmake"
+    if [[ $(/usr/bin/id -u) -ne 0 ]]; then
+        echo "Not running as root"
+        sudo echo "Elevated privileges acquired"
+    fi
 
-   sudo rm -drf  "${AC_CODE_DIR}"
-   sudo mkdir -p "${AC_CODE_DIR}"
+    # Project-local paths
+    export AC_CODE_DIR="${DIR}/source"
+    export INSTALL_DIR="${DIR}/installed-files"
+    export   BUILD_DIR="${DIR}/build"
+    export   MYSQL_DIR="${DIR}/mysql/installed-files"
 
-   sudo rm -drf  "${INSTALL_DIR}/bin"
-   sudo mkdir -p "${INSTALL_DIR}/bin"
+    # Compiler paths
+    local CLANGPP_DIR="/usr/bin/clang++"
+    local CLANG_DIR="/usr/bin/clang"
 
-   sudo rm  -drf "${BUILD_DIR}"
-   sudo mkdir -p "${BUILD_DIR}"
-   cd            "${BUILD_DIR}"
- 
+    # Clean previous build artifacts
+    echo "Cleaning previous build artifacts..."
+    find "${AC_CODE_DIR}" -name CMakeCache.txt -delete 2>/dev/null || true
+    find "${AC_CODE_DIR}" -name CMakeFiles -type d -exec rm -rf {} + 2>/dev/null || true
+    rm -f "${AC_CODE_DIR}/cmake_uninstall.cmake" 2>/dev/null || true
 
-#   git clone https://github.com/azerothcore/azerothcore-wotlk.git \
-#             --branch master \
-#             --single-branch \
-#           "${AC_CODE_DIR}"
-   git clone https://github.com/liyunfan1223/azerothcore-wotlk.git \
-             --branch=Playerbot \
-           "${AC_CODE_DIR}"
+    # Prepare directories
+    echo "Preparing directories..."
+    sudo rm -drf "${AC_CODE_DIR}"
+    sudo mkdir -p "${AC_CODE_DIR}"
 
-          MYSQL_DIR="/home/ritz/programs/mysql-server/installed-files"
-        CLANGPP_DIR="/usr/bin/clang++"
-          CLANG_DIR="/usr/bin/clang"
+    sudo rm -drf "${INSTALL_DIR}/bin"
+    sudo mkdir -p "${INSTALL_DIR}/bin"
 
-#   cmake "${AC_CODE_DIR}"                                \
-#         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"         \
-#         -DCMAKE_C_COMPILER="${CLANG_DIR}"               \
-#         -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}"           \
-#         -DWITH_WARNINGS=1                               \
-#         -DTOOLS_BUILD=all                               \
-#         -DSCRIPTS=static                                \
-#         -DMODULES=static                                \
-#         -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql"     \
-#         -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include"      \
-#         -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so"
- 
-   cd "${AC_CODE_DIR}/modules"
-   git clone https://github.com/azerothcore/mod-eluna.git
-   git clone https://github.com/TerraByte-tbwps/mod-aoe-loot.git
-   git clone https://github.com/webluke/mod-grownup
-   git clone https://github.com/liyunfan1223/mod-playerbots.git --branch=master
-   cd -
+    sudo rm -drf "${BUILD_DIR}"
+    sudo mkdir -p "${BUILD_DIR}"
 
+    # Clone AzerothCore with Playerbot support
+    echo "Cloning AzerothCore (Playerbot branch)..."
+    git clone https://github.com/liyunfan1223/azerothcore-wotlk.git \
+              --branch=Playerbot \
+              "${AC_CODE_DIR}"
 
-   cmake "${AC_CODE_DIR}"                                \
-         -DLUA_VERSION=luajit                            \
-         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"         \
-         -DCMAKE_C_COMPILER="${CLANG_DIR}"               \
-         -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}"           \
-         -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common" \
-         -DCMAKE_BINARY_DIR="${BUILD_DIR}"               \
-         -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}"             \
-         -DWITH_WARNINGS=1                               \
-         -DTOOLS_BUILD=all                               \
-         -DSCRIPTS=static                                \
-         -DMODULES=static                                \
-         -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql"     \
-         -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include"      \
-         -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so"
+    # Clone modules
+    echo "Cloning modules..."
+    cd "${AC_CODE_DIR}/modules"
+    git clone https://github.com/azerothcore/mod-eluna.git
+    git clone https://github.com/TerraByte-tbwps/mod-aoe-loot.git
+    git clone https://github.com/webluke/mod-grownup
+    git clone https://github.com/liyunfan1223/mod-playerbots.git --branch=master
 
-   make -j15
-   make install
+    # Configure and build
+    echo "Configuring build..."
+    cd "${BUILD_DIR}"
+    cmake "${AC_CODE_DIR}"                                \
+          -DLUA_VERSION=luajit                            \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"         \
+          -DCMAKE_C_COMPILER="${CLANG_DIR}"               \
+          -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}"           \
+          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common" \
+          -DCMAKE_BINARY_DIR="${BUILD_DIR}"               \
+          -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}"             \
+          -DWITH_WARNINGS=1                               \
+          -DTOOLS_BUILD=all                               \
+          -DSCRIPTS=static                                \
+          -DMODULES=static                                \
+          -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql"     \
+          -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include"      \
+          -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so"
 
-  echo "Setting up MySQL databases..." # {{{
-  "${MYSQL_DIR}/bin/mysql" -u ritz -p << 'EOF'
+    # Require explicit thread count
+    if [[ -z "${MAKE_JOBS}" ]]; then
+        echo "Error: MAKE_JOBS not set. Specify thread count explicitly."
+        echo "Example: MAKE_JOBS=8 source scripts/azerothcore && azerothcore install"
+        return 1
+    fi
+
+    echo "Building with ${MAKE_JOBS} threads (this may take a while)..."
+    make -j${MAKE_JOBS}
+    make install
+
+    # Setup MySQL databases
+    echo "Setting up MySQL databases..."
+    "${MYSQL_DIR}/bin/mysql" --socket="${DIR}/mysql/databases/mysql.sock" -u ritz -p << 'EOF'
 DROP USER IF EXISTS 'ritz'@'localhost';
 CREATE USER 'ritz'@'localhost' IDENTIFIED BY 'menardi' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0;
 
@@ -140,98 +170,170 @@ GRANT ALL PRIVILEGES ON `acore_characters` . * TO 'ritz'@'localhost' WITH GRANT 
 GRANT ALL PRIVILEGES ON `acore_auth` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
 EOF
 
-  echo "Initializing configuration files..." # {{{
+    # Initialize configuration files
+    echo "Initializing configuration files..."
 
-  if [[ ! -f "${INSTALL_DIR}/etc/worldserver.conf" ]]; then
-    cp "${INSTALL_DIR}/etc/worldserver.conf.dist" "${INSTALL_DIR}/etc/worldserver.conf"
-  fi
+    if [[ ! -f "${INSTALL_DIR}/etc/worldserver.conf" ]]; then
+        cp "${INSTALL_DIR}/etc/worldserver.conf.dist" "${INSTALL_DIR}/etc/worldserver.conf"
+    fi
 
+    if [[ ! -f "${INSTALL_DIR}/etc/authserver.conf" ]]; then
+        cp "${INSTALL_DIR}/etc/authserver.conf.dist" "${INSTALL_DIR}/etc/authserver.conf"
+    fi
 
-  if [[ ! -f "${INSTALL_DIR}/etc/authserver.conf" ]]; then
-    cp "${INSTALL_DIR}/etc/authserver.conf.dist" "${INSTALL_DIR}/etc/authserver.conf"
-  fi
+    if [[ ! -f "${INSTALL_DIR}/etc/mod_grownup.conf" ]]; then
+        cp "${INSTALL_DIR}/etc/mod_grownup.conf.dist" "${INSTALL_DIR}/etc/mod_grownup.conf"
+    fi
 
-  if [[ ! -f "${INSTALL_DIR}/etc/mod_grownup.conf" ]]; then
-    cp "${INSTALL_DIR}/etc/mod_grownup.conf.dist" "${INSTALL_DIR}/etc/mod_grownup.conf"
-  fi 
+    # Configure database connections (port 3307 for local MySQL)
+    echo "Configuring database connections..."
 
-  echo "Configuring database connections..." # }}}
-  
-  # Configure authserver.conf
-  sed -i '/^LoginDatabaseInfo = "127\.0\.0\.1;3306;acore;acore;acore_auth"$/c\LoginDatabaseInfo = "127.0.0.1;3306;ritz;menardi;acore_auth"' "${INSTALL_DIR}/etc/authserver.conf"
-  
-  # Configure worldserver.conf
-  sed -i '/^LoginDatabaseInfo     = "127\.0\.0\.1;3306;acore;acore;acore_auth"$/c\LoginDatabaseInfo     = "127.0.0.1;3306;ritz;menardi;acore_auth"' "${INSTALL_DIR}/etc/worldserver.conf"
-  sed -i '/^WorldDatabaseInfo     = "127\.0\.0\.1;3306;acore;acore;acore_world"$/c\WorldDatabaseInfo     = "127.0.0.1;3306;ritz;menardi;acore_world"' "${INSTALL_DIR}/etc/worldserver.conf"
-  sed -i '/^CharacterDatabaseInfo = "127\.0\.0\.1;3306;acore;acore;acore_characters"$/c\CharacterDatabaseInfo = "127.0.0.1;3306;ritz;menardi;acore_characters"' "${INSTALL_DIR}/etc/worldserver.conf"
+    # Configure authserver.conf
+    sed -i '/^LoginDatabaseInfo = "127\.0\.0\.1;3306;acore;acore;acore_auth"$/c\LoginDatabaseInfo = "127.0.0.1;3307;ritz;menardi;acore_auth"' "${INSTALL_DIR}/etc/authserver.conf"
 
-  echo "Configuring directory paths..."
-  
-  # Create necessary directories
-  mkdir -p "${DIR}/logs"
-  mkdir -p "${DIR}/data-files"
-  
-  # Configure authserver.conf paths
-  sed -i '/^SourceDirectory = ""$/c\SourceDirectory = "'"${DIR}"'/source"' "${INSTALL_DIR}/etc/authserver.conf"
-  sed -i '/^MySQLExecutable = ""$/c\MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"' "${INSTALL_DIR}/etc/authserver.conf"
-  sed -i '/^LogsDir = ""$/c\LogsDir = "'"${DIR}"'/logs"' "${INSTALL_DIR}/etc/authserver.conf"
-  
-  # Configure worldserver.conf paths
-  sed -i '/^DataDir = "\."$/c\DataDir = "'"${DIR}"'/data-files"' "${INSTALL_DIR}/etc/worldserver.conf"
-  sed -i '/^LogsDir = ""$/c\LogsDir = "'"${DIR}"'/logs"' "${INSTALL_DIR}/etc/worldserver.conf"
-  sed -i '/^BuildDirectory = ""$/c\BuildDirectory = "'"${DIR}"'/build"' "${INSTALL_DIR}/etc/worldserver.conf"
-  sed -i '/^SourceDirectory = ""$/c\SourceDirectory = "'"${DIR}"'/source"' "${INSTALL_DIR}/etc/worldserver.conf"
-  sed -i '/^MySQLExecutable = ""$/c\MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"' "${INSTALL_DIR}/etc/worldserver.conf"
+    # Configure worldserver.conf
+    sed -i '/^LoginDatabaseInfo     = "127\.0\.0\.1;3306;acore;acore;acore_auth"$/c\LoginDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;acore_auth"' "${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i '/^WorldDatabaseInfo     = "127\.0\.0\.1;3306;acore;acore;acore_world"$/c\WorldDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;acore_world"' "${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i '/^CharacterDatabaseInfo = "127\.0\.0\.1;3306;acore;acore;acore_characters"$/c\CharacterDatabaseInfo = "127.0.0.1;3307;ritz;menardi;acore_characters"' "${INSTALL_DIR}/etc/worldserver.conf"
 
-  # }}}
+    # Configure directory paths
+    echo "Configuring directory paths..."
 
-   echo "setting up symlinks..."
-   sudo ln -s "${AC_HOME_DIR}/lua-scripts/custom"     "${INSTALL_DIR}/bin/lua_scripts/custom"
-   sudo ln -s "${AC_HOME_DIR}/lua-scripts/extensions" "${INSTALL_DIR}/bin/lua_scripts/extensions"
-   sudo ln -s "${AC_HOME_DIR}/sql-scripts/" "${AC_CODE_DIR}/data/sql/custom/"
+    # Create necessary directories
+    mkdir -p "${DIR}/logs"
 
-   cd "${OLD_DIR}"
+    # Configure authserver.conf paths
+    sed -i '/^SourceDirectory = ""$/c\SourceDirectory = "'"${DIR}"'/source"' "${INSTALL_DIR}/etc/authserver.conf"
+    sed -i '/^MySQLExecutable = ""$/c\MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"' "${INSTALL_DIR}/etc/authserver.conf"
+    sed -i '/^LogsDir = ""$/c\LogsDir = "'"${DIR}"'/logs"' "${INSTALL_DIR}/etc/authserver.conf"
 
-} # }}}
+    # Configure worldserver.conf paths
+    sed -i '/^DataDir = "\."$/c\DataDir = "'"${DIR}"'/data-files"' "${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i '/^LogsDir = ""$/c\LogsDir = "'"${DIR}"'/logs"' "${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i '/^BuildDirectory = ""$/c\BuildDirectory = "'"${DIR}"'/build"' "${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i '/^SourceDirectory = ""$/c\SourceDirectory = "'"${DIR}"'/source"' "${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i '/^MySQLExecutable = ""$/c\MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"' "${INSTALL_DIR}/etc/worldserver.conf"
 
-function update-azerothcore(){ # {{{
+    # Setup symlinks
+    echo "Setting up symlinks..."
 
-                       OLD_DIR="$(pwd)"
-                           DIR="/home/ritz/games/azeroth-core/wowchat-2025"
-     export INSTALL_DIR="${DIR}/installed-files"
-     export   BUILD_DIR="${DIR}/build"
-     export AC_CODE_DIR="${DIR}/source"
+    # Lua scripts - use project-local src/lua directory
+    sudo mkdir -p "${INSTALL_DIR}/bin/lua_scripts"
+    sudo ln -sfn "${DIR}/src/lua" "${INSTALL_DIR}/bin/lua_scripts/custom"
 
-   cd    "${AC_CODE_DIR}"
-   git pull --rebase
+    # Extensions - symlink if exists in src/lua/extensions
+    if [[ -d "${DIR}/src/lua/extensions" ]]; then
+        sudo ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR}/bin/lua_scripts/extensions"
+    fi
 
-   rm  -drf "${BUILD_DIR}"
-   mkdir -p "${BUILD_DIR}"
+    # Data files - copy into project for full isolation
+    # These are extracted from the WoW client (dbc, maps, vmaps, mmaps)
+    # Copy is preferred over symlink to keep the project self-contained
+    if [[ ! -d "${DIR}/data-files/dbc" ]]; then
+        local SHARED_DATA="/home/ritz/games/azeroth-core/data-files"
+        if [[ -d "${SHARED_DATA}" ]]; then
+            echo "Copying data-files into project (this may take a while)..."
+            mkdir -p "${DIR}/data-files"
+            cp -r "${SHARED_DATA}"/* "${DIR}/data-files/"
+            echo "Data files copied successfully"
+        else
+            echo "Warning: Game data not found at ${SHARED_DATA}"
+            echo "You will need to extract dbc, maps, vmaps, mmaps from the WoW client"
+            echo "Place them in: ${DIR}/data-files/"
+            mkdir -p "${DIR}/data-files"
+        fi
+    else
+        echo "Data files already present, skipping copy"
+    fi
 
-     MYSQL_DIR="/home/ritz/programs/mysql-server/installed-files"
-   CLANGPP_DIR="/usr/bin/clang++"
-     CLANG_DIR="/usr/bin/clang"
+    echo "Installation complete!"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Start MySQL: source scripts/mysql-start"
+    echo "  2. Start auth server: source scripts/azerothcore && authserver"
+    echo "  3. Start world server: source scripts/azerothcore && worldserver"
+}
+# -- }}}
 
+# -- {{{ update-azerothcore
+# Update existing AzerothCore installation
+function update-azerothcore() {
+    trap 'trap - ERR; return 1' ERR
+    set -uo pipefail
 
-   cd    "${BUILD_DIR}"
-   cmake "${AC_CODE_DIR}"                                \
-         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"         \
-         -DCMAKE_C_COMPILER="${CLANG_DIR}"               \
-         -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}"           \
-         -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common" \
-         -DCMAKE_BINARY_DIR="${BUILD_DIR}"               \
-         -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}"             \
-         -DWITH_WARNINGS=1                               \
-         -DTOOLS_BUILD=all                               \
-         -DSCRIPTS=static                                \
-         -DMODULES=static                                \
-         -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql"     \
-         -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include"      \
-         -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so"
-  
-   make -j15
-   make install
-   
-   cd "${OLD_DIR}"
+    # Project-local paths
+    export AC_CODE_DIR="${DIR}/source"
+    export INSTALL_DIR="${DIR}/installed-files"
+    export   BUILD_DIR="${DIR}/build"
+    export   MYSQL_DIR="${DIR}/mysql/installed-files"
 
-} # }}}
+    # Compiler paths
+    local CLANGPP_DIR="/usr/bin/clang++"
+    local CLANG_DIR="/usr/bin/clang"
+
+    # Pull latest changes
+    echo "Pulling latest changes..."
+    cd "${AC_CODE_DIR}"
+    git pull --rebase
+
+    # Rebuild
+    echo "Rebuilding..."
+    rm -drf "${BUILD_DIR}"
+    mkdir -p "${BUILD_DIR}"
+
+    cd "${BUILD_DIR}"
+    cmake "${AC_CODE_DIR}"                                \
+          -DLUA_VERSION=luajit                            \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"         \
+          -DCMAKE_C_COMPILER="${CLANG_DIR}"               \
+          -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}"           \
+          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common" \
+          -DCMAKE_BINARY_DIR="${BUILD_DIR}"               \
+          -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}"             \
+          -DWITH_WARNINGS=1                               \
+          -DTOOLS_BUILD=all                               \
+          -DSCRIPTS=static                                \
+          -DMODULES=static                                \
+          -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql"     \
+          -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include"      \
+          -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so"
+
+    # Require explicit thread count
+    if [[ -z "${MAKE_JOBS}" ]]; then
+        echo "Error: MAKE_JOBS not set. Specify thread count explicitly."
+        echo "Example: MAKE_JOBS=8 source scripts/azerothcore && azerothcore update"
+        return 1
+    fi
+
+    echo "Building with ${MAKE_JOBS} threads..."
+    make -j${MAKE_JOBS}
+    make install
+
+    echo "Update complete!"
+}
+# -- }}}
+
+# -- {{{ install-playerbots
+# Install playerbots module separately (if not included in initial install)
+function install-playerbots() {
+    echo "Playerbots is included in the main installation."
+    echo "Run 'azerothcore install' for a fresh install with playerbots."
+}
+# -- }}}
+
+# -- {{{ update-playerbots
+# Update playerbots module
+function update-playerbots() {
+    local AC_CODE_DIR="${DIR}/source"
+
+    if [[ -d "${AC_CODE_DIR}/modules/mod-playerbots" ]]; then
+        echo "Updating mod-playerbots..."
+        cd "${AC_CODE_DIR}/modules/mod-playerbots"
+        git pull --rebase
+        echo "Playerbots updated. Run 'azerothcore update' to rebuild."
+    else
+        echo "Error: mod-playerbots not found. Run 'azerothcore install' first."
+        return 1
+    fi
+}
+# -- }}}

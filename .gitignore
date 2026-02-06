@@ -1,6 +1,9 @@
 # Secrets (credentials)
 secrets.conf
 !secrets.conf.example
+scripts/credentials
+scripts/credentials.bak
+!scripts/credentials.dist
 
 # Build artifacts
 build/
