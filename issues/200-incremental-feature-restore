@@ -1,0 +1,194 @@
+# 200: Incremental Feature Restore
+
+## Status
+- [x] In Progress
+- [ ] Completed
+
+## Current Behavior
+
+All Phase 2 work is stashed in `stash@{0}`:
+- "WIP: Phase 2 behaviors, ALE fix, portal design - 2026-03-31"
+
+The `clean-rebuild` branch is at commit `1fc133a` (2025-02-24).
+
+## Intended Behavior
+
+Restore features one-by-one, testing each before proceeding.
+Reference implementation preserved in `libs/wow-chat-1/`.
+
+## Critical Path Index
+
+Map concept → closest investigation point. Follow arrows for dependencies.
+
+```
+CONCEPT                     ENTRY POINT                      DEPENDS ON
+─────────────────────────────────────────────────────────────────────────
+server won't start      →   scripts/azerothcore          →   (none)
+                        →   scripts/mysql-start          →   (none)
+
+lua scripts not loading →   worldserver.conf.dist        →   server starts
+                        →   src/lua/ambush.lua           →   config loaded
+
+monsters not spawning   →   src/lua/ambush.lua           →   lua loads
+                        →   libs/wow-chat-1/ambush.lua   →   (reference)
+
+bots acting weird       →   behaviors/find-monsters.lua  →   ambush works
+                        →   behaviors/avoid-monsters.lua →   find-monsters
+                        →   behaviors/orbit-player.lua   →   avoid-monsters
+
+bots not resting        →   behaviors/sit-and-rest.lua   →   avoid-monsters
+
+spawn timing wrong      →   src/lua/ambush.lua:INTERVAL  →   lua loads
+                        →   libs/wow-chat-1/periodic_events.lua (reference)
+
+talent points broken    →   src/lua/levelling.lua        →   lua loads
+
+config not applied      →   worldserver.conf.dist        →   server starts
+                        →   authserver.conf.dist         →   (auth issues)
+
+can't find a file       →   docs/table-of-contents.md    →   (none)
+
+architecture question   →   docs/architecture.md         →   (none)
+                        →   notes/vision                 →   (none)
+
+playerbots question     →   issues/102-test-playerbots   →   server starts
+                        →   docs/playerbots/             →   (reference)
+
+phase progress          →   issues/phase-1-progress.md   →   (none)
+                        →   issues/phase-2-progress.md   →   (none)
+
+new feature ideas       →   notes/wow-chat-2-ideas       →   (none)
+                        →   tissues/                     →   (human review)
+```
+
+### Dependency Chain (Critical Path)
+
+```
+server starts
+    ↓
+config loaded
+    ↓
+lua engine init (ALE)
+    ↓
+ambush.lua loads ←──────────── libs/wow-chat-1/ambush.lua (reference)
+    ↓
+monsters spawn
+    ↓
+behaviors load
+    ├── find-monsters.lua
+    ├── avoid-monsters.lua ←── depends on find-monsters
+    ├── sit-and-rest.lua ←──── depends on avoid-monsters
+    └── orbit-player.lua ←──── depends on avoid-monsters
+```
+
+### Quick Lookup: "Where do I start?"
+
+| If you're debugging...        | Start here                    | Group |
+|-------------------------------|-------------------------------|-------|
+| Build/compile issues          | scripts/azerothcore           | 2     |
+| Database connection           | scripts/mysql-start           | 2     |
+| Server crashes on start       | worldserver.conf.dist         | 3     |
+| Lua not executing             | worldserver.conf.dist → ALE   | 3     |
+| Ambush system                 | src/lua/ambush.lua            | 4     |
+| Levelling/talents             | src/lua/levelling.lua         | 4     |
+| Bot AI behavior               | src/lua/behaviors/*           | 5     |
+| "What was the plan?"          | issues/phase-*-progress.md    | 6     |
+| "What files exist?"           | docs/table-of-contents.md     | 1     |
+
+## Stashed Features to Restore
+
+### Group 0: Bootstrap (Restored)
+-- [x] CLAUDE.md - Project context for AI sessions
+-- [x] issues/200-incremental-feature-restore - This testing document
+-- [x] libs/wow-chat-1/ - Reference implementation cloned
+
+### Group 1: Documentation Updates (Low Risk)
+-- [ ] docs/architecture.md - Title and naming updates
+-- [ ] docs/table-of-contents.md - Directory structure documentation
+-- [ ] notes/vision - Vision document updates
+
+### Group 2: Script Improvements
+-- [x] scripts/azerothcore - Profile-based versioning (issue 201)
+-- [ ] scripts/azerothcore - Remaining stashed improvements
+-- [ ] scripts/mysql-start - 27 lines of improvements
+-- [ ] scripts/client - New client launch script
+-- [ ] scripts/install-client-addons - New addon installer
+
+### Group 3: Configuration Updates
+-- [ ] installed-files/etc/authserver.conf.dist - 18 new lines
+-- [ ] installed-files/etc/worldserver.conf.dist - 156 new lines
+
+### Group 4: Core Lua Scripts
+-- [ ] src/lua/ambush.lua - 192 lines added (random walk interval)
+-- [ ] src/lua/levelling.lua - Recreated with talent point cap
+
+### Group 5: Behavior System (New)
+-- [ ] src/lua/behaviors/find-monsters.lua - Combat targeting
+-- [ ] src/lua/behaviors/avoid-monsters.lua - Danger awareness
+-- [ ] src/lua/behaviors/sit-and-rest.lua - Resource recovery
+-- [ ] src/lua/behaviors/orbit-player.lua - Formation positioning
+
+### Group 6: Issue Tracking Updates
+-- [ ] issues/102-test-playerbots-spawn - 14 new lines
+-- [ ] issues/phase-1-progress.md - 20 new lines
+-- [ ] issues/phase-2-progress.md - New file (untracked)
+-- [ ] issues/114-119 - Behavior issue files (untracked)
+-- [ ] issues/120-130 - System issue files (untracked)
+
+### Group 7: Supporting Structure
+-- [ ] tissues/.gitkeep - Human expert tasks directory
+-- [ ] pngs/ - Visual powerline directory structure
+-- [ ] notes/wow-chat-2-ideas - Ideas document
+
+## Testing Protocol
+
+For each feature group:
+1. Extract specific files from stash: `git checkout stash@{0} -- <path>`
+2. Review changes: `git diff HEAD -- <path>`
+3. Test functionality (where applicable)
+4. Commit if passing: `git add <path> && git commit -m "restore: <description>"`
+5. Mark line as complete in this file
+
+## Stash Commands Reference
+
+```bash
+-- View stash contents
+git stash show -p stash@{0}
+
+-- Extract single file from stash
+git checkout stash@{0} -- path/to/file
+
+-- Extract untracked file from stash
+git show stash@{0}^3:path/to/file > path/to/file
+
+-- View specific file in stash
+git show stash@{0}:path/to/file
+
+-- Drop stash when done (preserves in reflog for 30 days)
+git stash drop stash@{0}
+```
+
+## Reference: wow-chat-1
+
+Original Lua scripts available at `libs/wow-chat-1/`:
+- ambush.lua (17KB) - Original ambush system
+- movement.lua (4KB) - Movement helpers
+- travel.lua (34KB) - Traveler NPC system
+- treasure.lua (6KB) - Treasure spawns
+- periodic_events.lua (4KB) - Timing system
+- hearthstone.lua (3KB) - Hearthstone modifications
+- death-knights.lua (1KB) - DK modifications
+- tempo.lua (2KB) - Tempo/timing utilities
+
+## Validation Criteria
+
+-- [ ] Server starts without errors after each group restore
+-- [ ] Lua scripts load (check worldserver console for ALE messages)
+-- [ ] No regression in existing functionality
+-- [ ] New behaviors integrate with ambush/travel systems
+
+## Notes
+
+Started: 2026-03-31
+Branch: clean-rebuild
+Stash: stash@{0} (WIP: Phase 2 behaviors, ALE fix, portal design)
