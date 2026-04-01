@@ -2,6 +2,7 @@
 
 # AzerothCore management script for wow-chat-2
 # Handles installation, updates, and server startup for the project-local server.
+# Supports multiple version profiles for compatibility testing.
 # Run directly: ./scripts/azerothcore <command> [options]
 
 # Project root directory - all paths derive from this
@@ -14,6 +15,61 @@ if [[ "${THREADS}" -lt 1 ]]; then
 fi
 
 KEIRA_VERSION="3.10.1"
+
+# =============================================================================
+# Version Profile Definitions
+# =============================================================================
+# beta    - June 2023 AzerothCore, Eluna only, wow-chat-1 compatible
+# alpha   - Latest playerbots branch, experimental features
+# release - Pinned stable playerbots commit
+# gamma   - Reserved for converse design experiments
+# =============================================================================
+
+# -- {{{ profile_definitions
+# Repository URLs for each profile
+declare -A PROFILE_REPO=(
+    ["beta"]="https://github.com/azerothcore/azerothcore-wotlk.git"
+    ["alpha"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["gamma"]="https://github.com/azerothcore/azerothcore-wotlk.git"
+)
+
+# Branch to clone for each profile
+declare -A PROFILE_BRANCH=(
+    ["beta"]="master"
+    ["alpha"]="Playerbot"
+    ["release"]="Playerbot"
+    ["gamma"]="master"
+)
+
+# Specific commit to checkout (empty = HEAD)
+# beta: June 27 2023 - contemporary with wow-chat-1
+declare -A PROFILE_COMMIT=(
+    ["beta"]="a779cca9e3a3d673761d6bbe6d1c5d1f51c2f6f3"
+    ["alpha"]=""
+    ["release"]="5ab5ecbed"
+    ["gamma"]=""
+)
+
+# Modules to install for each profile (space-separated)
+declare -A PROFILE_MODULES=(
+    ["beta"]="mod-eluna"
+    ["alpha"]="mod-eluna mod-aoe-loot mod-grownup mod-playerbots"
+    ["release"]="mod-eluna mod-aoe-loot mod-grownup mod-playerbots"
+    ["gamma"]="mod-eluna"
+)
+
+# Module repository URLs
+declare -A MODULE_REPOS=(
+    ["mod-eluna"]="https://github.com/azerothcore/mod-eluna.git"
+    ["mod-aoe-loot"]="https://github.com/TerraByte-tbwps/mod-aoe-loot.git"
+    ["mod-grownup"]="https://github.com/webluke/mod-grownup"
+    ["mod-playerbots"]="https://github.com/liyunfan1223/mod-playerbots.git --branch=master"
+)
+
+# Current profile - defaults to release, can be overridden with --profile
+PROFILE="release"
+# -- }}}
 
 # -- {{{ show_help
 # Display usage information
@@ -32,16 +88,23 @@ show_help() {
     echo "  authserver         Start the authentication server"
     echo "  worldserver        Start the world server"
     echo "  keira              Launch Keira3 database editor"
+    echo "  profiles           List available version profiles"
     echo ""
     echo "Global options:"
+    echo "  --profile <name>   Version profile (default: release)"
+    echo "                     beta    - June 2023, Eluna only, wow-chat-1 compatible"
+    echo "                     alpha   - Latest playerbots, experimental"
+    echo "                     release - Stable playerbots (default)"
+    echo "                     gamma   - Reserved for experiments"
     echo "  --threads <n>      Number of threads for compilation (default: nproc-1 = ${THREADS})"
     echo "  --help             Show this help message"
     echo ""
     echo "Examples:"
     echo "  ./scripts/azerothcore install all"
+    echo "  ./scripts/azerothcore install all --profile beta"
     echo "  ./scripts/azerothcore update --force"
     echo "  ./scripts/azerothcore update --force --threads 8"
-    echo "  ./scripts/azerothcore authserver"
+    echo "  ./scripts/azerothcore authserver --profile beta"
 }
 # -- }}}
 
@@ -53,6 +116,21 @@ parse_args() {
 
     while [[ $# -gt 0 ]]; do
         case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    if [[ -v "PROFILE_REPO[${2}]" ]]; then
+                        PROFILE="${2}"
+                        shift 2
+                    else
+                        echo "Error: Unknown profile '${2}'"
+                        echo "Available profiles: beta, alpha, release, gamma"
+                        exit 1
+                    fi
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
             --threads)
                 if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
                     THREADS="${2}"
@@ -84,17 +162,79 @@ parse_args() {
 }
 # -- }}}
 
+# -- {{{ get_profile_paths
+# Returns profile-specific directory paths
+# Sets: AC_CODE_DIR, INSTALL_DIR, BUILD_DIR
+get_profile_paths() {
+    local p="${PROFILE}"
+    if [[ "${p}" == "release" ]]; then
+        # release uses default paths (no suffix) for backwards compatibility
+        AC_CODE_DIR="${DIR}/source"
+        INSTALL_DIR="${DIR}/installed-files"
+        BUILD_DIR="${DIR}/build"
+    else
+        AC_CODE_DIR="${DIR}/source-${p}"
+        INSTALL_DIR="${DIR}/installed-files-${p}"
+        BUILD_DIR="${DIR}/build-${p}"
+    fi
+    MYSQL_DIR="${DIR}/mysql/installed-files"
+}
+# -- }}}
+
+# -- {{{ cmd_profiles
+# List available version profiles and their configurations
+cmd_profiles() {
+    echo "Available version profiles:"
+    echo ""
+    printf "%-10s %-50s %-12s\n" "PROFILE" "REPOSITORY" "BRANCH"
+    printf "%-10s %-50s %-12s\n" "-------" "----------" "------"
+    for p in beta alpha release gamma; do
+        local repo="${PROFILE_REPO[$p]}"
+        local branch="${PROFILE_BRANCH[$p]}"
+        local commit="${PROFILE_COMMIT[$p]}"
+        local suffix=""
+        if [[ -n "${commit}" ]]; then
+            suffix=" @${commit:0:7}"
+        fi
+        printf "%-10s %-50s %-12s\n" "${p}" "${repo##*/}" "${branch}${suffix}"
+    done
+    echo ""
+    echo "Modules per profile:"
+    for p in beta alpha release gamma; do
+        echo "  ${p}: ${PROFILE_MODULES[$p]}"
+    done
+    echo ""
+    echo "Current profile: ${PROFILE}"
+}
+# -- }}}
+
 # -- {{{ cmd_authserver
 # Starts the authentication server
 cmd_authserver() {
-    "${DIR}/installed-files/bin/authserver"
+    get_profile_paths
+    if [[ ! -f "${INSTALL_DIR}/bin/authserver" ]]; then
+        echo "Error: authserver not found for profile '${PROFILE}'"
+        echo "Expected: ${INSTALL_DIR}/bin/authserver"
+        echo "Run './scripts/azerothcore install all --profile ${PROFILE}' first."
+        exit 1
+    fi
+    echo "Starting authserver (profile: ${PROFILE})"
+    "${INSTALL_DIR}/bin/authserver"
 }
 # -- }}}
 
 # -- {{{ cmd_worldserver
 # Starts the world server
 cmd_worldserver() {
-    "${DIR}/installed-files/bin/worldserver"
+    get_profile_paths
+    if [[ ! -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+        echo "Error: worldserver not found for profile '${PROFILE}'"
+        echo "Expected: ${INSTALL_DIR}/bin/worldserver"
+        echo "Run './scripts/azerothcore install all --profile ${PROFILE}' first."
+        exit 1
+    fi
+    echo "Starting worldserver (profile: ${PROFILE})"
+    "${INSTALL_DIR}/bin/worldserver"
 }
 # -- }}}
 
@@ -113,24 +253,37 @@ cmd_keira() {
 
 # -- {{{ cmd_install
 # Fresh installation of AzerothCore with selectable components
+# Uses profile-specific repos, branches, commits, and modules
 cmd_install() {
     set -o pipefail
 
     local mode="${1:-}"
     if [[ "${mode}" != "core" && "${mode}" != "modules" && "${mode}" != "all" ]]; then
         echo "Error: install requires a mode argument"
-        echo "Usage: ./scripts/azerothcore install {core|modules|all}"
+        echo "Usage: ./scripts/azerothcore install {core|modules|all} [--profile <name>]"
         echo "  core    - Clone and build AzerothCore only (no modules)"
         echo "  modules - Clone modules only (assumes core exists)"
         echo "  all     - Full install: core + modules"
         exit 1
     fi
 
-    # Project-local paths
-    local AC_CODE_DIR="${DIR}/source"
-    local INSTALL_DIR="${DIR}/installed-files"
-    local BUILD_DIR="${DIR}/build"
-    local MYSQL_DIR="${DIR}/mysql/installed-files"
+    # Get profile-specific paths
+    get_profile_paths
+
+    # Get profile-specific settings
+    local REPO="${PROFILE_REPO[$PROFILE]}"
+    local BRANCH="${PROFILE_BRANCH[$PROFILE]}"
+    local COMMIT="${PROFILE_COMMIT[$PROFILE]}"
+    local MODULES="${PROFILE_MODULES[$PROFILE]}"
+
+    echo "Installing with profile: ${PROFILE}"
+    echo "  Repository: ${REPO}"
+    echo "  Branch: ${BRANCH}"
+    if [[ -n "${COMMIT}" ]]; then
+        echo "  Commit: ${COMMIT}"
+    fi
+    echo "  Modules: ${MODULES}"
+    echo ""
 
     # Compiler paths
     local CLANGPP_DIR="/usr/bin/clang++"
@@ -166,28 +319,35 @@ cmd_install() {
 
     # Clone AzerothCore (core or all mode)
     if [[ "${mode}" == "core" || "${mode}" == "all" ]]; then
-        echo "Cloning AzerothCore (Playerbot branch)..."
-        git clone https://github.com/liyunfan1223/azerothcore-wotlk.git \
-                  --branch=Playerbot \
-                  "${AC_CODE_DIR}"
+        echo "Cloning AzerothCore (${BRANCH} branch)..."
+        git clone "${REPO}" --branch="${BRANCH}" "${AC_CODE_DIR}"
+
+        # Checkout specific commit if defined for this profile
+        if [[ -n "${COMMIT}" ]]; then
+            echo "Checking out commit ${COMMIT}..."
+            cd "${AC_CODE_DIR}"
+            git checkout "${COMMIT}"
+            cd -
+        fi
     fi
 
     # Clone modules (modules or all mode)
     if [[ "${mode}" == "modules" || "${mode}" == "all" ]]; then
         if [[ "${mode}" == "modules" && ! -d "${AC_CODE_DIR}/modules" ]]; then
-            echo "Error: Core not found. Run './scripts/azerothcore install core' first."
+            echo "Error: Core not found. Run './scripts/azerothcore install core --profile ${PROFILE}' first."
             exit 1
         fi
-        echo "Cloning modules..."
+        echo "Cloning modules for profile ${PROFILE}: ${MODULES}"
+        mkdir -p "${AC_CODE_DIR}/modules"
         cd "${AC_CODE_DIR}/modules"
 
-        for mod_repo in \
-            "https://github.com/azerothcore/mod-eluna.git" \
-            "https://github.com/TerraByte-tbwps/mod-aoe-loot.git" \
-            "https://github.com/webluke/mod-grownup" \
-            "https://github.com/liyunfan1223/mod-playerbots.git --branch=master"
-        do
-            local mod_name=$(echo "${mod_repo}" | sed 's|.*/||' | sed 's|\.git.*||' | awk '{print $1}')
+        # Install only the modules defined for this profile
+        for mod_name in ${MODULES}; do
+            local mod_repo="${MODULE_REPOS[$mod_name]}"
+            if [[ -z "${mod_repo}" ]]; then
+                echo "  Warning: Unknown module '${mod_name}', skipping"
+                continue
+            fi
             if [[ -d "${mod_name}" ]]; then
                 echo "  Removing existing ${mod_name}..."
                 rm -rf "${mod_name}"
@@ -195,6 +355,7 @@ cmd_install() {
             echo "  Cloning ${mod_name}..."
             git clone ${mod_repo}
         done
+        cd -
     fi
 
     # Configure and build
@@ -318,6 +479,7 @@ EOF
 # -- {{{ cmd_update
 # Update existing AzerothCore installation
 # Checks for remote changes before rebuilding. Use --force to rebuild anyway.
+# Note: Profiles with pinned commits (beta, release) skip git pull
 cmd_update() {
     set -o pipefail
 
@@ -328,16 +490,17 @@ cmd_update() {
         fi
     done
 
-    # Project-local paths
-    local AC_CODE_DIR="${DIR}/source"
-    local INSTALL_DIR="${DIR}/installed-files"
-    local BUILD_DIR="${DIR}/build"
-    local MYSQL_DIR="${DIR}/mysql/installed-files"
+    # Get profile-specific paths
+    get_profile_paths
+
+    local COMMIT="${PROFILE_COMMIT[$PROFILE]}"
+
+    echo "Updating profile: ${PROFILE}"
 
     # Validate source exists
     if [[ ! -d "${AC_CODE_DIR}/src" ]]; then
         echo "Error: Source not found at ${AC_CODE_DIR}"
-        echo "Run './scripts/azerothcore install all' first to clone the source."
+        echo "Run './scripts/azerothcore install all --profile ${PROFILE}' first to clone the source."
         exit 1
     fi
 
@@ -347,36 +510,47 @@ cmd_update() {
 
     # Check for remote changes
     cd "${AC_CODE_DIR}"
-    echo "Fetching remote changes..."
-    git fetch
-
-    local LOCAL_HEAD=$(git rev-parse HEAD)
-    local REMOTE_HEAD=$(git rev-parse @{u} 2>/dev/null || echo "")
 
     local needs_rebuild=false
 
-    if [[ -z "${REMOTE_HEAD}" ]]; then
-        echo "Warning: No upstream branch configured. Skipping remote check."
-        if [[ "${force_rebuild}" == true ]]; then
-            needs_rebuild=true
-        else
-            echo "Use --force to rebuild without pulling."
-            exit 0
-        fi
-    elif [[ "${LOCAL_HEAD}" != "${REMOTE_HEAD}" ]]; then
-        echo "Remote changes detected. Pulling..."
-        git pull --rebase
-        needs_rebuild=true
-    else
-        echo "Already up to date with remote."
+    # Profiles with pinned commits don't pull from remote
+    if [[ -n "${COMMIT}" ]]; then
+        echo "Profile '${PROFILE}' has pinned commit ${COMMIT:0:7} - skipping git pull"
         if [[ "${force_rebuild}" == true ]]; then
             echo "Force rebuild requested."
             needs_rebuild=true
+        else
+            echo "Use --force to rebuild without pulling."
+        fi
+    else
+        echo "Fetching remote changes..."
+        git fetch
+
+        local LOCAL_HEAD=$(git rev-parse HEAD)
+        local REMOTE_HEAD=$(git rev-parse @{u} 2>/dev/null || echo "")
+
+        if [[ -z "${REMOTE_HEAD}" ]]; then
+            echo "Warning: No upstream branch configured. Skipping remote check."
+            if [[ "${force_rebuild}" == true ]]; then
+                needs_rebuild=true
+            else
+                echo "Use --force to rebuild without pulling."
+            fi
+        elif [[ "${LOCAL_HEAD}" != "${REMOTE_HEAD}" ]]; then
+            echo "Remote changes detected. Pulling..."
+            git pull --rebase
+            needs_rebuild=true
+        else
+            echo "Already up to date with remote."
+            if [[ "${force_rebuild}" == true ]]; then
+                echo "Force rebuild requested."
+                needs_rebuild=true
+            fi
         fi
     fi
 
     if [[ "${needs_rebuild}" == false ]]; then
-        echo "No rebuild needed. Use './scripts/azerothcore update --force' to rebuild anyway."
+        echo "No rebuild needed. Use './scripts/azerothcore update --force --profile ${PROFILE}' to rebuild anyway."
         exit 0
     fi
 
@@ -454,6 +628,9 @@ main() {
             ;;
         keira)
             cmd_keira
+            ;;
+        profiles)
+            cmd_profiles
             ;;
         ""|help)
             show_help

@@ -1,0 +1,150 @@
+# 201: Branch-Based AzerothCore Versioning
+
+## Status
+- [x] In Progress (implementation complete, testing pending)
+- [ ] Completed
+
+## Current Behavior
+
+The azerothcore script clones a single hardcoded source:
+- Repository: `liyunfan1223/azerothcore-wotlk`
+- Branch: `Playerbot`
+- Modules: mod-eluna, mod-aoe-loot, mod-grownup, mod-playerbots
+
+This works for the current mod-ale/playerbots architecture but is incompatible
+with the wow-chat-1 Lua scripts which were designed for:
+- Original AzerothCore (circa June 2023)
+- Eluna (not mod-ale)
+- No playerbots module
+
+## Intended Behavior
+
+Support multiple version profiles via `--profile` flag:
+
+```bash
+./scripts/azerothcore install all --profile beta    # June 2023 compatible
+./scripts/azerothcore install all --profile alpha   # Latest experimental
+./scripts/azerothcore install all --profile release # Stable playerbots
+```
+
+### Version Profiles
+
+| Profile | Repository | Branch/Commit | Modules | Purpose |
+|---------|------------|---------------|---------|---------|
+| beta    | azerothcore/azerothcore-wotlk | Tag ~June 2023 | mod-eluna only | wow-chat-1 compatibility |
+| alpha   | liyunfan1223/azerothcore-wotlk | Playerbot HEAD | all current | experimental features |
+| release | liyunfan1223/azerothcore-wotlk | Playerbot (pinned) | all current | stable playerbots |
+| gamma   | TBD | TBD | TBD | converse design experiments |
+
+### Profile Storage
+
+Each profile gets its own:
+- `source-{profile}/` - AzerothCore source
+- `build-{profile}/` - Build artifacts
+- `installed-files-{profile}/` - Binaries and configs
+
+Shared across profiles:
+- `data-files/` - DBC, maps, vmaps, mmaps (version-independent)
+- `mysql/` - Database (may need migration scripts between profiles)
+
+## Suggested Implementation Steps
+
+1. Add profile definitions to script header as associative arrays
+2. Add `--profile` argument parsing
+3. Modify directory paths to include profile suffix
+4. Update clone commands to use profile-specific repos/branches
+5. Add profile-specific module lists
+6. Create profile switching command: `./scripts/azerothcore switch <profile>`
+7. Document profile differences
+
+## Technical Approach
+
+```bash
+-- Profile definitions
+declare -A PROFILE_REPO=(
+    ["beta"]="https://github.com/azerothcore/azerothcore-wotlk.git"
+    ["alpha"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+)
+
+declare -A PROFILE_BRANCH=(
+    ["beta"]="master"
+    ["alpha"]="Playerbot"
+    ["release"]="Playerbot"
+)
+
+declare -A PROFILE_COMMIT=(
+    ["beta"]="<commit-hash-from-june-2023>"
+    ["alpha"]=""  # HEAD
+    ["release"]="<pinned-stable-commit>"
+)
+
+declare -A PROFILE_MODULES=(
+    ["beta"]="mod-eluna"
+    ["alpha"]="mod-eluna mod-aoe-loot mod-grownup mod-playerbots"
+    ["release"]="mod-eluna mod-aoe-loot mod-grownup mod-playerbots"
+)
+```
+
+## Research Needed
+
+-- [ ] Find AzerothCore commit hash from June 2023 that works with Eluna
+-- [ ] Verify wow-chat-1 scripts load on beta profile
+-- [ ] Document any Eluna → mod-ale API differences
+-- [ ] Test database compatibility between profiles
+
+## Validation Criteria
+
+-- [ ] `./scripts/azerothcore install all --profile beta` succeeds
+-- [ ] `./scripts/azerothcore install all --profile alpha` succeeds
+-- [ ] Beta profile loads wow-chat-1 ambush.lua without errors
+-- [ ] Alpha profile loads current src/lua scripts without errors
+-- [ ] Profile switching preserves data-files and databases
+-- [ ] Each profile's binaries are isolated
+
+## Dependencies
+
+- 200-incremental-feature-restore (testing framework)
+- libs/wow-chat-1/ (reference for beta compatibility)
+
+## Related Documents
+
+- scripts/azerothcore (main script to modify)
+- libs/wow-chat-1/ (June 2023 Lua scripts)
+- docs/configuration.md (will need profile-specific sections)
+
+## Notes
+
+### Timeline Reference
+- wow-chat-1 last commit: 2023-06-26
+- Current AzerothCore source: 2026-03-27 (Playerbot branch)
+- Gap: ~2.75 years of AzerothCore development
+
+### Key API Differences (Eluna vs mod-ale)
+TBD - needs research when beta profile is built
+
+### 2026-03-31 - Implementation Complete
+
+Added to scripts/azerothcore:
+- Profile definitions (PROFILE_REPO, PROFILE_BRANCH, PROFILE_COMMIT, PROFILE_MODULES)
+- `--profile` flag parsing with validation
+- `profiles` command to list available profiles
+- `get_profile_paths()` function for profile-specific directories
+- Profile-specific clone logic in cmd_install
+- Pinned commit checkout for beta/release profiles
+- Skip git pull for pinned profiles in cmd_update
+- Profile-aware authserver/worldserver startup
+
+Directory structure per profile:
+- release: source/, build/, installed-files/ (backwards compatible)
+- beta: source-beta/, build-beta/, installed-files-beta/
+- alpha: source-alpha/, build-alpha/, installed-files-alpha/
+- gamma: source-gamma/, build-gamma/, installed-files-gamma/
+
+Commands verified working:
+```bash
+./scripts/azerothcore profiles
+./scripts/azerothcore --help
+```
+
+Next: Test `./scripts/azerothcore install all --profile beta`

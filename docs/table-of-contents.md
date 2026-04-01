@@ -10,6 +10,8 @@ wow-chat-2/
 │   ├── installation.md         Setup and installation guide
 │   ├── scripting.md            Eluna Lua scripting reference
 │   ├── roadmap.md              Development phases and milestones
+│   ├── concept-catalog.md      1000 concepts (001-1000)
+│   ├── concept-catalog-2.md    1000 concepts (1001-2000)
 │   └── delta-guide.md          -> (symlink) Monorepo methodology
 │
 ├── notes/
@@ -49,6 +51,11 @@ wow-chat-2/
 ### Process Documentation
 7. **docs/delta-guide.md** - Issue tracking methodology
 8. **issues/phase-X-progress.md** - Phase completion tracking
+
+### Concept Catalogs
+9. **docs/concept-catalog.md** - Foundation, Behavior, Config, Data, Math, Visual, Integration, Workflow, Philosophy, Summary (001-1000)
+10. **docs/concept-catalog-2.md** - Social, Content, World, Progression, Economy, Narrative, UX, Performance, Community, Philosophy (1001-2000)
+11. **docs/concept-issue-map.md** - Cross-reference linking concepts to issue files
 
 ## Adding New Documents
 
