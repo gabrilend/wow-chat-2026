@@ -1,6 +1,7 @@
 #!/bin/bash
-# mysql-start
+# start-mysql
 # Starts the local MySQL server for wow-chat-2
+# Ensures tmp/ symlink exists (destroyed on reboot since target is /tmp)
 
 # {{{ set_dir
 DIR="/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
@@ -15,6 +16,17 @@ INSTALL_DIR="${MYSQL_DIR}/installed-files"
 CONF_FILE="${MYSQL_DIR}/conf/my.cnf"
 DATA_DIR="${MYSQL_DIR}/databases"
 PID_FILE="${DATA_DIR}/mysqld.pid"
+TMP_DIR="${DIR}/tmp"
+# }}}
+
+# {{{ ensure_tmp_symlink
+# tmp/ is a symlink to /tmp/wow-chat-2 for RAM-backed temp storage
+# target directory is destroyed on reboot, so recreate if missing
+TMP_TARGET="/tmp/wow-chat-2"
+if [[ ! -d "${TMP_TARGET}" ]]; then
+    echo "Creating ${TMP_TARGET}..."
+    mkdir -p "${TMP_TARGET}"
+fi
 # }}}
 
 # {{{ check_running
@@ -41,16 +53,19 @@ echo "Data:   ${DATA_DIR}"
     --pid-file="${PID_FILE}" \
     &
 
-sleep 2
+# wait up to 10 seconds for PID file
+for i in {1..10}; do
+    if [[ -f "${PID_FILE}" ]]; then
+        PID=$(cat "${PID_FILE}")
+        echo "MySQL started (PID ${PID})"
+        echo "Socket: ${DATA_DIR}/mysql.sock"
+        echo "Port: 3307"
+        exit 0
+    fi
+    sleep 1
+done
 
-if [[ -f "${PID_FILE}" ]]; then
-    PID=$(cat "${PID_FILE}")
-    echo "MySQL started (PID ${PID})"
-    echo "Socket: ${DATA_DIR}/mysql.sock"
-    echo "Port: 3307"
-else
-    echo "ERROR: MySQL failed to start"
-    echo "Check ${DATA_DIR}/error.log for details"
-    exit 1
-fi
+echo "ERROR: MySQL failed to start"
+echo "Check ${DATA_DIR}/error.log for details"
+exit 1
 # }}}

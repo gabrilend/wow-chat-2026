@@ -1,0 +1,292 @@
+#!/bin/bash
+
+# Map extraction script for wow-chat-2
+# Extracts game data from WoW 3.3.5a client using profile-specific tools.
+# Outputs to data-files/ directory for use by the server.
+
+DIR="/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
+CLIENT_DIR="/mnt/dile/ritz/games/wotlk"
+
+# -- {{{ usage
+usage() {
+    echo "Usage: ./scripts/extract-maps [options]"
+    echo ""
+    echo "Options:"
+    echo "  --all         Extract everything (dbc, maps, vmaps, mmaps)"
+    echo "  --dbc         Extract only dbc files"
+    echo "  --maps        Extract only maps"
+    echo "  --vmaps       Extract only vmaps"
+    echo "  --mmaps       Extract only mmaps (requires maps and vmaps first)"
+    echo "  --client DIR  Specify client directory (default: ${CLIENT_DIR})"
+    echo "  --help        Show this help"
+    echo ""
+    echo "Examples:"
+    echo "  ./scripts/extract-maps --all              # Full extraction (~2-4 hours)"
+    echo "  ./scripts/extract-maps --dbc --maps       # Quick extraction (~10 min)"
+    echo "  ./scripts/extract-maps --vmaps            # Add vmaps (~30 min)"
+    echo "  ./scripts/extract-maps --mmaps            # Add mmaps (~2-3 hours)"
+}
+# -- }}}
+
+# -- {{{ get_profile_paths
+get_profile_paths() {
+    PROFILE_FILE="${DIR}/.current-profile"
+    if [[ -f "${PROFILE_FILE}" ]]; then
+        PROFILE="$(cat "${PROFILE_FILE}")"
+    else
+        PROFILE="release"
+    fi
+
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    DATA_DIR="${DIR}/data-files"
+    TOOLS_DIR="${INSTALL_DIR}/bin"
+}
+# -- }}}
+
+# -- {{{ check_prerequisites
+check_prerequisites() {
+    get_profile_paths
+
+    echo "Profile: ${PROFILE}"
+    echo "Tools:   ${TOOLS_DIR}"
+    echo "Client:  ${CLIENT_DIR}"
+    echo "Output:  ${DATA_DIR}"
+    echo ""
+
+    # Check client directory
+    if [[ ! -d "${CLIENT_DIR}/Data" ]]; then
+        echo "Error: Client directory not found or missing Data folder"
+        echo "Expected: ${CLIENT_DIR}/Data"
+        exit 1
+    fi
+
+    # Check tools exist
+    local missing_tools=()
+    [[ ! -f "${TOOLS_DIR}/map_extractor" ]] && missing_tools+=("map_extractor")
+    [[ ! -f "${TOOLS_DIR}/vmap4_extractor" ]] && missing_tools+=("vmap4_extractor")
+    [[ ! -f "${TOOLS_DIR}/vmap4_assembler" ]] && missing_tools+=("vmap4_assembler")
+    [[ ! -f "${TOOLS_DIR}/mmaps_generator" ]] && missing_tools+=("mmaps_generator")
+
+    if [[ ${#missing_tools[@]} -gt 0 ]]; then
+        echo "Error: Missing extraction tools: ${missing_tools[*]}"
+        echo "Build the server first: ./scripts/azerothcore update"
+        exit 1
+    fi
+
+    # Create output directory
+    mkdir -p "${DATA_DIR}"
+}
+# -- }}}
+
+# -- {{{ extract_dbc_maps
+# Extracts dbc and maps using mapextractor
+extract_dbc_maps() {
+    echo ""
+    echo "=========================================="
+    echo "Extracting DBC and Maps..."
+    echo "=========================================="
+
+    cd "${CLIENT_DIR}"
+
+    # Clean target directories before extraction
+    echo "Cleaning previous dbc/maps extraction..."
+    rm -rf "${CLIENT_DIR}/dbc" "${CLIENT_DIR}/maps"
+
+    "${TOOLS_DIR}/map_extractor"
+
+    if [[ $? -ne 0 ]]; then
+        echo "Error: map_extractor failed"
+        return 1
+    fi
+
+    # Move results to data directory
+    echo "Moving dbc to ${DATA_DIR}/dbc..."
+    rm -rf "${DATA_DIR}/dbc"
+    mv "${CLIENT_DIR}/dbc" "${DATA_DIR}/"
+
+    echo "Moving maps to ${DATA_DIR}/maps..."
+    rm -rf "${DATA_DIR}/maps"
+    mv "${CLIENT_DIR}/maps" "${DATA_DIR}/"
+
+    echo "DBC and Maps extraction complete!"
+}
+# -- }}}
+
+# -- {{{ extract_vmaps
+# Extracts vmaps using vmap4extractor and vmap4assembler
+extract_vmaps() {
+    echo ""
+    echo "=========================================="
+    echo "Extracting VMaps..."
+    echo "=========================================="
+
+    cd "${CLIENT_DIR}"
+
+    # Step 1: Extract raw vmap data
+    # Clean target directories before extraction
+    echo "Cleaning previous vmap extraction..."
+    rm -rf "${CLIENT_DIR}/Buildings" "${CLIENT_DIR}/vmaps"
+
+    echo "Running vmap4_extractor..."
+    "${TOOLS_DIR}/vmap4_extractor"
+
+    if [[ $? -ne 0 ]]; then
+        echo "Error: vmap4_extractor failed"
+        return 1
+    fi
+
+    # Step 2: Assemble vmaps
+    echo ""
+    echo "Running vmap4_assembler..."
+    mkdir -p "${CLIENT_DIR}/vmaps"
+    "${TOOLS_DIR}/vmap4_assembler" "${CLIENT_DIR}/Buildings" "${CLIENT_DIR}/vmaps"
+
+    if [[ $? -ne 0 ]]; then
+        echo "Error: vmap4_assembler failed"
+        return 1
+    fi
+
+    # Move results to data directory
+    echo "Moving vmaps to ${DATA_DIR}/vmaps..."
+    rm -rf "${DATA_DIR}/vmaps"
+    mv "${CLIENT_DIR}/vmaps" "${DATA_DIR}/"
+
+    # Clean up intermediate files
+    echo "Cleaning up Buildings directory..."
+    rm -rf "${CLIENT_DIR}/Buildings"
+
+    echo "VMaps extraction complete!"
+}
+# -- }}}
+
+# -- {{{ extract_mmaps
+# Extracts mmaps using mmaps_generator (longest step)
+extract_mmaps() {
+    echo ""
+    echo "=========================================="
+    echo "Extracting MMaps (this takes 2-3 hours)..."
+    echo "=========================================="
+
+    # MMaps require maps and vmaps to exist
+    if [[ ! -d "${DATA_DIR}/maps" ]]; then
+        echo "Error: maps directory not found. Run --maps first."
+        return 1
+    fi
+
+    if [[ ! -d "${DATA_DIR}/vmaps" ]]; then
+        echo "Error: vmaps directory not found. Run --vmaps first."
+        return 1
+    fi
+
+    cd "${DATA_DIR}"
+
+    # Clean target directory before extraction
+    echo "Cleaning previous mmaps extraction..."
+    rm -rf "${DATA_DIR}/mmaps"
+    mkdir -p "${DATA_DIR}/mmaps"
+
+    # Get thread count
+    local threads=$(( $(nproc) - 1 ))
+    [[ ${threads} -lt 1 ]] && threads=1
+
+    echo "Using ${threads} threads..."
+    "${TOOLS_DIR}/mmaps_generator" --threads ${threads}
+
+    if [[ $? -ne 0 ]]; then
+        echo "Error: mmaps_generator failed"
+        return 1
+    fi
+
+    echo "MMaps extraction complete!"
+}
+# -- }}}
+
+# -- {{{ main
+main() {
+    local do_dbc=false
+    local do_maps=false
+    local do_vmaps=false
+    local do_mmaps=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --all)
+                do_dbc=true
+                do_maps=true
+                do_vmaps=true
+                do_mmaps=true
+                shift
+                ;;
+            --dbc|--maps)
+                do_dbc=true
+                do_maps=true
+                shift
+                ;;
+            --vmaps)
+                do_vmaps=true
+                shift
+                ;;
+            --mmaps)
+                do_mmaps=true
+                shift
+                ;;
+            --client)
+                CLIENT_DIR="$2"
+                shift 2
+                ;;
+            --help|-h)
+                usage
+                exit 0
+                ;;
+            *)
+                echo "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+        esac
+    done
+
+    # Default to showing help if no options
+    if [[ "${do_dbc}" == false && "${do_vmaps}" == false && "${do_mmaps}" == false ]]; then
+        usage
+        exit 0
+    fi
+
+    # Run extraction
+    check_prerequisites
+
+    local start_time=$(date +%s)
+
+    if [[ "${do_dbc}" == true || "${do_maps}" == true ]]; then
+        extract_dbc_maps || exit 1
+    fi
+
+    if [[ "${do_vmaps}" == true ]]; then
+        extract_vmaps || exit 1
+    fi
+
+    if [[ "${do_mmaps}" == true ]]; then
+        extract_mmaps || exit 1
+    fi
+
+    local end_time=$(date +%s)
+    local duration=$(( end_time - start_time ))
+    local minutes=$(( duration / 60 ))
+    local seconds=$(( duration % 60 ))
+
+    echo ""
+    echo "=========================================="
+    echo "Extraction complete!"
+    echo "Duration: ${minutes}m ${seconds}s"
+    echo "Output:   ${DATA_DIR}"
+    echo "=========================================="
+
+    # Show what was extracted
+    echo ""
+    echo "Contents:"
+    ls -la "${DATA_DIR}/"
+}
+# -- }}}
+
+main "$@"

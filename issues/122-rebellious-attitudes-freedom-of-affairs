@@ -1,0 +1,67 @@
+# 122 - Rebellious Attitudes and Freedom of Affairs
+
+## Status
+- Created: 2025-03-31
+- Phase: 3
+- Priority: Medium
+- State: **Placeholder - awaiting inspiration data**
+
+## Current Behavior
+Standard faction-based economy and social structure inherited from WoW. Capitalistic reward systems, hierarchical faction standings.
+
+## Intended Behavior
+Replace capitalist-style mechanics with rebellious attitudes and new freedom of affairs. This issue is a placeholder that will be updated naturally as other systems develop and inspiration data becomes available.
+
+## Initial Concepts
+
+### What We're Moving Away From
+- "Grind for gold" mentality
+- Hierarchical faction standings that gate content
+- Competitive resource accumulation
+- "Everyone's depressed in the summers" - seasonal burnout from endless progression
+
+### What We're Moving Toward
+- Community-oriented reward structures
+- Rebellious attitudes toward imposed structures
+- Freedom of affairs - player agency over faction dictates
+- Organic social dynamics instead of forced competition
+
+## Inspiration Sources
+- User will provide locations to search for inspiration data
+- Written materials about alternative social/economic structures
+- Will be supplied when it becomes relevant to implementation
+
+## Integration Points
+- Issue 121 (bounty system) - may be restructured
+- Issue 120 (training currency) - may evolve
+- Faction reputation systems - may be replaced or reimagined
+
+## Notes
+
+### Conflict at the Crossroads
+Keep the crossroads conflict styled authentically - this is **Everland Ghostsong**, not a capitalism simulator. The mechanics should reflect the world's unique nature.
+
+### Natural Evolution
+This issue will change naturally as other systems come together. Don't force it - let the alternative structures emerge from gameplay needs.
+
+## Placeholder Tasks
+1. [ ] Receive inspiration data locations
+2. [ ] Research alternative economic/social models
+3. [ ] Identify which existing systems need replacement
+4. [ ] Design replacement mechanics that feel natural
+5. [ ] Implement gradually alongside other features
+
+## Related Issues
+- 120 - talent points (training economy)
+- 121 - bounty system (reward structures)
+- All phase 2 behavior issues (social dynamics)
+
+## To Be Updated
+This issue will be expanded when:
+- Inspiration data is provided
+- Other systems mature enough to show integration points
+- The natural direction becomes clear
+
+---
+*"Suddenly, capitalism, everyone's depressed in the summers."*
+*Let's build something different.*

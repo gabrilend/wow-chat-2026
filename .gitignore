@@ -5,22 +5,23 @@ scripts/credentials
 scripts/credentials.bak
 !scripts/credentials.dist
 
-# Build artifacts
-build/
-installed-files/bin/
-installed-files/lib/
-installed-files/include/
-installed-files/share/
-source/
+# Build artifacts (profile-suffixed: build-release, source-beta, etc.)
+build*/
+installed-files*/bin/
+installed-files*/lib/
+installed-files*/include/
+installed-files*/share/
+source*/
+libs/
 
-# Generated config files (contain credentials from secrets.conf)
-installed-files/etc/*.conf
-installed-files/etc/modules/*.conf
-!installed-files/etc/*.conf.dist
-!installed-files/etc/modules/*.conf.dist
+# Generated config files (contain credentials)
+installed-files*/etc/*.conf
+installed-files*/etc/modules/*.conf
+!installed-files*/etc/*.conf.dist
+!installed-files*/etc/modules/*.conf.dist
 
-# Runtime files
-logs/
+# Runtime files (profile-suffixed: logs-release, logs-beta, etc.)
+logs*/
 tmp/
 
 # Game data (extracted from client, too large for git)
@@ -44,10 +45,11 @@ mysql/boost/
 mysql/installed-files/
 
 # TRACKED: Database files containing custom world/character data
-# These are explicitly NOT ignored so changes can be version controlled:
-#   mysql/databases/acore_world/
-#   mysql/databases/acore_characters/
+# Per-profile databases (acore_world_release, acore_characters_beta, etc.)
+# Auth database (acore_auth) is shared across all profiles
 #   mysql/databases/acore_auth/
+#   mysql/databases/acore_world_*/
+#   mysql/databases/acore_characters_*/
 #
 # Large binary files (ibdata, ib_logfile) should use git-lfs if needed
 
@@ -79,14 +81,12 @@ mysql/databases/sys/
 mysql/databases/ibdata1
 mysql/databases/mysql.ibd
 
-# TRACKED: AzerothCore database table files
-# These directories contain custom world data and should be tracked:
-#   mysql/databases/acore_auth/
-#   mysql/databases/acore_world/
-#   mysql/databases/acore_characters/
+# AzerothCore database table files (too large for git - use data/sql/custom/ for changes)
+mysql/databases/acore_*/
 
 # =============================================================================
 # Eluna Scripts - TRACKED
 # =============================================================================
 # src/lua/ is fully tracked - this is the game's soul
 *.tar.gz
+.current-profile

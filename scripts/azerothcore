@@ -19,56 +19,132 @@ KEIRA_VERSION="3.10.1"
 # =============================================================================
 # Version Profile Definitions
 # =============================================================================
-# beta    - June 2023 AzerothCore, Eluna only, wow-chat-1 compatible
-# alpha   - Latest playerbots branch, experimental features
-# release - Pinned stable playerbots commit
-# gamma   - Reserved for converse design experiments
+# alpha   - Latest playerbots branch, cutting edge (not yet implemented)
+# beta    - Current work being tested, all modules
+# release - June 2023 known good, wow-chat-1 compatible (stable)
 # =============================================================================
 
 # -- {{{ profile_definitions
 # Repository URLs for each profile
 declare -A PROFILE_REPO=(
-    ["beta"]="https://github.com/azerothcore/azerothcore-wotlk.git"
     ["alpha"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
-    ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
-    ["gamma"]="https://github.com/azerothcore/azerothcore-wotlk.git"
+    ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["release"]="https://github.com/azerothcore/azerothcore-wotlk.git"
 )
 
 # Branch to clone for each profile
 declare -A PROFILE_BRANCH=(
-    ["beta"]="master"
     ["alpha"]="Playerbot"
-    ["release"]="Playerbot"
-    ["gamma"]="master"
+    ["beta"]="Playerbot"
+    ["release"]="master"
 )
 
 # Specific commit to checkout (empty = HEAD)
-# beta: June 27 2023 - contemporary with wow-chat-1
+# release: June 27 2023 - contemporary with wow-chat-1 (known good)
 declare -A PROFILE_COMMIT=(
-    ["beta"]="a779cca9e3a3d673761d6bbe6d1c5d1f51c2f6f3"
     ["alpha"]=""
-    ["release"]="5ab5ecbed"
-    ["gamma"]=""
+    ["beta"]=""
+    ["release"]="a779cca9e3a3d673761d6bbe6d1c5d1f51c2f6f3"
 )
 
 # Modules to install for each profile (space-separated)
 declare -A PROFILE_MODULES=(
-    ["beta"]="mod-eluna"
-    ["alpha"]="mod-eluna mod-aoe-loot mod-grownup mod-playerbots"
-    ["release"]="mod-eluna mod-aoe-loot mod-grownup mod-playerbots"
-    ["gamma"]="mod-eluna"
+    ["alpha"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
+    ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
+    ["release"]="mod-eluna"
 )
 
 # Module repository URLs
 declare -A MODULE_REPOS=(
+    ["mod-ale"]="https://github.com/azerothcore/mod-ale.git"
     ["mod-eluna"]="https://github.com/azerothcore/mod-eluna.git"
     ["mod-aoe-loot"]="https://github.com/TerraByte-tbwps/mod-aoe-loot.git"
     ["mod-grownup"]="https://github.com/webluke/mod-grownup"
     ["mod-playerbots"]="https://github.com/liyunfan1223/mod-playerbots.git --branch=master"
 )
 
-# Current profile - defaults to release, can be overridden with --profile
-PROFILE="release"
+# Module commits per profile (profile:module -> commit)
+# Empty = use HEAD
+declare -A PROFILE_MODULE_COMMITS=(
+    ["release:mod-eluna"]="1abf244"
+)
+
+# Current profile - read from .current-profile or default to release
+PROFILE_FILE="${DIR}/.current-profile"
+if [[ -f "${PROFILE_FILE}" ]]; then
+    PROFILE="$(cat "${PROFILE_FILE}")"
+else
+    PROFILE="release"
+fi
+# -- }}}
+
+# -- {{{ Boost configuration
+BOOST_VERSION="1.74.0"
+BOOST_VERSION_UNDERSCORE="1_74_0"
+BOOST_DIR="${DIR}/libs/boost"
+# -- }}}
+
+# -- {{{ cmd_boost
+# Download and compile Boost from source
+# Installs to libs/boost with required components for AzerothCore
+cmd_boost() {
+    set -e
+    echo "Installing Boost ${BOOST_VERSION}..."
+
+    local BOOST_SRC="${DIR}/libs/boost-src"
+    local BOOST_TARBALL="boost_${BOOST_VERSION_UNDERSCORE}.tar.gz"
+    # SourceForge mirror - JFrog artifactory no longer allows direct downloads
+    local BOOST_URL="https://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION}/${BOOST_TARBALL}/download"
+
+    mkdir -p "${DIR}/libs"
+
+    # Check if already installed
+    if [[ -f "${BOOST_DIR}/lib/libboost_system.a" ]]; then
+        echo "Boost already installed at ${BOOST_DIR}"
+        echo "To reinstall, remove ${BOOST_DIR} first."
+        return 0
+    fi
+
+    # Download
+    if [[ ! -f "${DIR}/libs/${BOOST_TARBALL}" ]]; then
+        echo "Downloading Boost ${BOOST_VERSION}..."
+        curl -L --fail --progress-bar -o "${DIR}/libs/${BOOST_TARBALL}" "${BOOST_URL}"
+    fi
+
+    # Verify download is a valid tarball
+    if ! file "${DIR}/libs/${BOOST_TARBALL}" | grep -q "gzip compressed"; then
+        echo "Error: Downloaded file is not a valid gzip archive"
+        echo "Contents: $(head -c 100 "${DIR}/libs/${BOOST_TARBALL}")"
+        rm -f "${DIR}/libs/${BOOST_TARBALL}"
+        exit 1
+    fi
+
+    # Extract
+    echo "Extracting..."
+    rm -rf "${BOOST_SRC}"
+    mkdir -p "${BOOST_SRC}"
+    tar -xzf "${DIR}/libs/${BOOST_TARBALL}" -C "${BOOST_SRC}" --strip-components=1
+
+    # Bootstrap and build
+    echo "Building Boost (this may take a while)..."
+    cd "${BOOST_SRC}"
+
+    ./bootstrap.sh --prefix="${BOOST_DIR}" \
+        --with-libraries=system,filesystem,program_options,iostreams,regex,thread
+
+    ./b2 install \
+        --prefix="${BOOST_DIR}" \
+        -j${THREADS} \
+        link=static \
+        threading=multi \
+        variant=release
+
+    # Cleanup
+    echo "Cleaning up..."
+    rm -rf "${BOOST_SRC}"
+
+    echo "Boost ${BOOST_VERSION} installed to ${BOOST_DIR}"
+}
 # -- }}}
 
 # -- {{{ show_help
@@ -77,34 +153,37 @@ show_help() {
     echo "Usage: ./scripts/azerothcore <command> [options]"
     echo ""
     echo "Commands:"
-    echo "  install <mode>     Fresh installation"
-    echo "    core             Clone and build AzerothCore only (no modules)"
-    echo "    modules          Clone modules only (assumes core exists)"
-    echo "    all              Full install: core + modules"
+    echo "  install            First-time setup (clone, build, MySQL, configs, data)"
+    echo "    --force          Re-clone everything from scratch"
     echo ""
-    echo "  update [options]   Update and rebuild if changes exist"
-    echo "    --force          Rebuild even without remote changes"
+    echo "  update             Pull latest source and rebuild (preserves configs)"
+    echo "    --force          Rebuild even if already up-to-date"
     echo ""
     echo "  authserver         Start the authentication server"
     echo "  worldserver        Start the world server"
     echo "  keira              Launch Keira3 database editor"
     echo "  profiles           List available version profiles"
+    echo "  switch <profile>   Switch to a different profile (no recompile)"
+    echo "  boost              Download and compile Boost to libs/boost"
+    echo "  extract-maps       Extract game data from WoW client"
+    echo "    --all            Extract everything (dbc, maps, vmaps, mmaps)"
+    echo "    --dbc --maps     Extract dbc and maps only (~10 min)"
+    echo "    --vmaps          Extract vmaps (~30 min)"
+    echo "    --mmaps          Extract mmaps (~2-3 hours)"
     echo ""
     echo "Global options:"
     echo "  --profile <name>   Version profile (default: release)"
-    echo "                     beta    - June 2023, Eluna only, wow-chat-1 compatible"
-    echo "                     alpha   - Latest playerbots, experimental"
-    echo "                     release - Stable playerbots (default)"
-    echo "                     gamma   - Reserved for experiments"
+    echo "                     alpha   - Latest playerbots, cutting edge"
+    echo "                     beta    - Current testing, all modules"
+    echo "                     release - June 2023 stable, wow-chat-1 compatible (default)"
     echo "  --threads <n>      Number of threads for compilation (default: nproc-1 = ${THREADS})"
     echo "  --help             Show this help message"
     echo ""
     echo "Examples:"
-    echo "  ./scripts/azerothcore install all"
-    echo "  ./scripts/azerothcore install all --profile beta"
-    echo "  ./scripts/azerothcore update --force"
-    echo "  ./scripts/azerothcore update --force --threads 8"
-    echo "  ./scripts/azerothcore authserver --profile beta"
+    echo "  ./scripts/azerothcore install                    # First-time setup"
+    echo "  ./scripts/azerothcore update                     # Pull and rebuild"
+    echo "  ./scripts/azerothcore update --force             # Rebuild without pulling"
+    echo "  ./scripts/azerothcore install --profile beta     # Install beta profile"
 }
 # -- }}}
 
@@ -123,7 +202,7 @@ parse_args() {
                         shift 2
                     else
                         echo "Error: Unknown profile '${2}'"
-                        echo "Available profiles: beta, alpha, release, gamma"
+                        echo "Available profiles: alpha, beta, release"
                         exit 1
                     fi
                 else
@@ -165,18 +244,12 @@ parse_args() {
 # -- {{{ get_profile_paths
 # Returns profile-specific directory paths
 # Sets: AC_CODE_DIR, INSTALL_DIR, BUILD_DIR
+# All profiles use suffixed directories for consistency
 get_profile_paths() {
     local p="${PROFILE}"
-    if [[ "${p}" == "release" ]]; then
-        # release uses default paths (no suffix) for backwards compatibility
-        AC_CODE_DIR="${DIR}/source"
-        INSTALL_DIR="${DIR}/installed-files"
-        BUILD_DIR="${DIR}/build"
-    else
-        AC_CODE_DIR="${DIR}/source-${p}"
-        INSTALL_DIR="${DIR}/installed-files-${p}"
-        BUILD_DIR="${DIR}/build-${p}"
-    fi
+    AC_CODE_DIR="${DIR}/source-${p}"
+    INSTALL_DIR="${DIR}/installed-files-${p}"
+    BUILD_DIR="${DIR}/build-${p}"
     MYSQL_DIR="${DIR}/mysql/installed-files"
 }
 # -- }}}
@@ -188,7 +261,7 @@ cmd_profiles() {
     echo ""
     printf "%-10s %-50s %-12s\n" "PROFILE" "REPOSITORY" "BRANCH"
     printf "%-10s %-50s %-12s\n" "-------" "----------" "------"
-    for p in beta alpha release gamma; do
+    for p in alpha beta release; do
         local repo="${PROFILE_REPO[$p]}"
         local branch="${PROFILE_BRANCH[$p]}"
         local commit="${PROFILE_COMMIT[$p]}"
@@ -200,7 +273,7 @@ cmd_profiles() {
     done
     echo ""
     echo "Modules per profile:"
-    for p in beta alpha release gamma; do
+    for p in alpha beta release; do
         echo "  ${p}: ${PROFILE_MODULES[$p]}"
     done
     echo ""
@@ -208,8 +281,53 @@ cmd_profiles() {
 }
 # -- }}}
 
+# -- {{{ cmd_switch
+# Switch to a different profile without recompiling
+# Validates profile exists and has been built
+cmd_switch() {
+    local new_profile="${1:-}"
+
+    if [[ -z "${new_profile}" ]]; then
+        echo "Usage: ./scripts/azerothcore switch <profile>"
+        echo "Available profiles: alpha, beta, release"
+        echo "Current profile: ${PROFILE}"
+        return 1
+    fi
+
+    # Validate profile exists
+    if [[ ! -v "PROFILE_REPO[${new_profile}]" ]]; then
+        echo "Error: Unknown profile '${new_profile}'"
+        echo "Available profiles: alpha, beta, release"
+        return 1
+    fi
+
+    # Check if profile has been built
+    local old_profile="${PROFILE}"
+    PROFILE="${new_profile}"
+    get_profile_paths
+
+    if [[ ! -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+        echo "Warning: Profile '${new_profile}' has not been built yet."
+        echo "Expected: ${INSTALL_DIR}/bin/worldserver"
+        echo "Run './scripts/azerothcore install all --profile ${new_profile}' first."
+        echo ""
+    fi
+
+    # Write new profile
+    echo "${new_profile}" > "${PROFILE_FILE}"
+
+    echo "Switched from '${old_profile}' to '${new_profile}'"
+    echo ""
+    echo "Directories:"
+    echo "  Source:    ${AC_CODE_DIR}"
+    echo "  Build:     ${BUILD_DIR}"
+    echo "  Installed: ${INSTALL_DIR}"
+}
+# -- }}}
+
 # -- {{{ cmd_authserver
 # Starts the authentication server
+# Sets LD_LIBRARY_PATH to use project MySQL libs instead of system libs
 cmd_authserver() {
     get_profile_paths
     if [[ ! -f "${INSTALL_DIR}/bin/authserver" ]]; then
@@ -219,12 +337,15 @@ cmd_authserver() {
         exit 1
     fi
     echo "Starting authserver (profile: ${PROFILE})"
-    "${INSTALL_DIR}/bin/authserver"
+    export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
+    cd "${INSTALL_DIR}/bin"
+    ./authserver
 }
 # -- }}}
 
 # -- {{{ cmd_worldserver
 # Starts the world server
+# Sets LD_LIBRARY_PATH to use project MySQL libs instead of system libs
 cmd_worldserver() {
     get_profile_paths
     if [[ ! -f "${INSTALL_DIR}/bin/worldserver" ]]; then
@@ -234,7 +355,9 @@ cmd_worldserver() {
         exit 1
     fi
     echo "Starting worldserver (profile: ${PROFILE})"
-    "${INSTALL_DIR}/bin/worldserver"
+    export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
+    cd "${INSTALL_DIR}/bin"
+    ./worldserver
 }
 # -- }}}
 
@@ -251,205 +374,327 @@ cmd_keira() {
 }
 # -- }}}
 
-# -- {{{ cmd_install
-# Fresh installation of AzerothCore with selectable components
-# Uses profile-specific repos, branches, commits, and modules
-cmd_install() {
-    set -o pipefail
+# -- {{{ extract_custom_config
+# Extract non-default values from a config file by comparing to .dist
+# Outputs KEY=VALUE pairs for values that differ from defaults
+# Args: $1 = config file path (the .dist will be inferred)
+extract_custom_config() {
+    local conf="$1"
+    local dist="${conf}.dist"
 
-    local mode="${1:-}"
-    if [[ "${mode}" != "core" && "${mode}" != "modules" && "${mode}" != "all" ]]; then
-        echo "Error: install requires a mode argument"
-        echo "Usage: ./scripts/azerothcore install {core|modules|all} [--profile <name>]"
-        echo "  core    - Clone and build AzerothCore only (no modules)"
-        echo "  modules - Clone modules only (assumes core exists)"
-        echo "  all     - Full install: core + modules"
-        exit 1
+    if [[ ! -f "${conf}" || ! -f "${dist}" ]]; then
+        return
     fi
 
-    # Get profile-specific paths
-    get_profile_paths
+    # Compare each non-comment, non-empty line
+    while IFS= read -r line; do
+        # Skip comments and empty lines
+        [[ "${line}" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line}" ]] && continue
 
-    # Get profile-specific settings
+        # Extract key (everything before first =)
+        local key="${line%%=*}"
+        key="${key%%[[:space:]]}"  # Trim trailing spaces
+
+        # Skip if no = found
+        [[ "${key}" == "${line}" ]] && continue
+
+        # Get the full line from dist file for this key
+        local dist_line=$(grep "^${key}[[:space:]]*=" "${dist}" 2>/dev/null | head -1)
+
+        # If line differs from dist, output it
+        if [[ -n "${dist_line}" && "${line}" != "${dist_line}" ]]; then
+            echo "${line}"
+        fi
+    done < "${conf}"
+}
+# -- }}}
+
+# -- {{{ apply_custom_config
+# Apply custom config values to a config file
+# Reads KEY=VALUE pairs from stdin and applies them via sed
+# Args: $1 = config file path
+apply_custom_config() {
+    local conf="$1"
+
+    while IFS= read -r line; do
+        [[ -z "${line}" ]] && continue
+
+        # Extract key (everything before first =, trimmed)
+        local key="${line%%=*}"
+        key="${key%%[[:space:]]}"
+
+        # Escape special characters for sed
+        local escaped_line=$(printf '%s\n' "${line}" | sed 's/[&/\]/\\&/g')
+
+        # Replace line matching this key
+        sed -i "s|^${key}[[:space:]]*=.*|${escaped_line}|" "${conf}"
+    done
+}
+# -- }}}
+
+# -- {{{ init_config
+# Initialize a config file from .dist, preserving custom values
+# Args: $1 = config file path (without .dist)
+init_config() {
+    local conf="$1"
+    local dist="${conf}.dist"
+
+    if [[ ! -f "${dist}" ]]; then
+        echo "  Warning: ${dist} not found"
+        return 1
+    fi
+
+    # Extract custom values before overwriting
+    local custom_values=""
+    if [[ -f "${conf}" ]]; then
+        custom_values=$(extract_custom_config "${conf}")
+        if [[ -n "${custom_values}" ]]; then
+            echo "  Preserving custom settings from ${conf##*/}:"
+            echo "${custom_values}" | while read -r line; do
+                echo "    ${line}"
+            done
+        fi
+    fi
+
+    # Copy dist to conf
+    cp -f "${dist}" "${conf}"
+
+    # Re-apply custom values
+    if [[ -n "${custom_values}" ]]; then
+        echo "${custom_values}" | apply_custom_config "${conf}"
+    fi
+}
+# -- }}}
+
+# -- {{{ check_git_status
+# Check if a git repo is at the expected state
+# Returns 0 if up-to-date, 1 if needs update
+# Args: $1 = directory, $2 = expected commit (empty = check remote HEAD)
+check_git_status() {
+    local repo_dir="$1"
+    local expected_commit="$2"
+
+    if [[ ! -d "${repo_dir}/.git" ]]; then
+        return 1  # Not a git repo, needs clone
+    fi
+
+    cd "${repo_dir}"
+    local current_head=$(git rev-parse HEAD)
+
+    if [[ -n "${expected_commit}" ]]; then
+        # Pinned commit - check if we're at that commit
+        if [[ "${current_head}" == "${expected_commit}"* ]]; then
+            cd - > /dev/null
+            return 0  # Up to date
+        fi
+    else
+        # No pinned commit - check against remote
+        git fetch --quiet 2>/dev/null || true
+        local remote_head=$(git rev-parse @{u} 2>/dev/null || echo "")
+        if [[ -n "${remote_head}" && "${current_head}" == "${remote_head}" ]]; then
+            cd - > /dev/null
+            return 0  # Up to date
+        fi
+    fi
+
+    cd - > /dev/null
+    return 1  # Needs update
+}
+# -- }}}
+
+# -- {{{ cmd_install
+# Install or update AzerothCore and modules
+# Checks git status and only rebuilds if source changed or --force
+cmd_install() {
+    set -e
+    set -o pipefail
+
+    # Parse arguments
+    local force=false
+    for arg in "$@"; do
+        if [[ "${arg}" == "--force" ]]; then
+            force=true
+        fi
+    done
+
+    # Get profile-specific paths and settings
+    get_profile_paths
     local REPO="${PROFILE_REPO[$PROFILE]}"
     local BRANCH="${PROFILE_BRANCH[$PROFILE]}"
     local COMMIT="${PROFILE_COMMIT[$PROFILE]}"
     local MODULES="${PROFILE_MODULES[$PROFILE]}"
 
-    echo "Installing with profile: ${PROFILE}"
-    echo "  Repository: ${REPO}"
+    echo "Profile: ${PROFILE}"
+    echo "  Repository: ${REPO##*/}"
     echo "  Branch: ${BRANCH}"
     if [[ -n "${COMMIT}" ]]; then
-        echo "  Commit: ${COMMIT}"
+        echo "  Pinned: ${COMMIT:0:10}"
     fi
     echo "  Modules: ${MODULES}"
     echo ""
 
-    # Compiler paths
-    local CLANGPP_DIR="/usr/bin/clang++"
-    local CLANG_DIR="/usr/bin/clang"
+    local needs_rebuild=false
 
-    # Clean previous build artifacts
-    echo "Cleaning previous build artifacts..."
-    find "${AC_CODE_DIR}" -name CMakeCache.txt -delete 2>/dev/null || true
-    find "${AC_CODE_DIR}" -name CMakeFiles -type d -exec rm -rf {} + 2>/dev/null || true
-    rm -f "${AC_CODE_DIR}/cmake_uninstall.cmake" 2>/dev/null || true
+    # -- Check/update core source --
+    if [[ "${force}" == true ]]; then
+        echo "Force reinstall requested - cleaning source..."
+        rm -rf "${AC_CODE_DIR}"
+        needs_rebuild=true
+    fi
 
-    # Prepare directories
-    echo "Preparing directories..."
-    for check_dir in "${AC_CODE_DIR}" "${BUILD_DIR}" "${INSTALL_DIR}/bin"; do
-        if [[ -d "${check_dir}" && ! -w "${check_dir}" ]]; then
-            echo "Error: ${check_dir} exists but is not writable by $(whoami)"
-            echo "Fix with: sudo chown -R $(whoami):$(whoami) ${check_dir}"
-            exit 1
+    if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
+        echo "Cloning AzerothCore (${BRANCH} branch)..."
+        git clone "${REPO}" --branch="${BRANCH}" "${AC_CODE_DIR}"
+        if [[ -n "${COMMIT}" ]]; then
+            echo "Checking out ${COMMIT:0:10}..."
+            cd "${AC_CODE_DIR}" && git checkout "${COMMIT}" && cd -
+        fi
+        needs_rebuild=true
+    elif ! check_git_status "${AC_CODE_DIR}" "${COMMIT}"; then
+        echo "Source needs update..."
+        cd "${AC_CODE_DIR}"
+        if [[ -n "${COMMIT}" ]]; then
+            git fetch
+            git checkout "${COMMIT}"
+        else
+            git pull --rebase
+        fi
+        cd -
+        needs_rebuild=true
+    else
+        echo "Core source is up-to-date"
+    fi
+
+    # -- Check/update modules --
+    mkdir -p "${AC_CODE_DIR}/modules"
+
+    # Remove modules that aren't in this profile
+    for existing_mod in "${AC_CODE_DIR}"/modules/*/; do
+        if [[ -d "${existing_mod}" ]]; then
+            local existing_name=$(basename "${existing_mod}")
+            if [[ ! " ${MODULES} " =~ " ${existing_name} " ]]; then
+                echo "  Removing ${existing_name} (not in ${PROFILE} profile)..."
+                rm -rf "${existing_mod}"
+                needs_rebuild=true
+            fi
         fi
     done
 
-    # Only wipe source directory for core or all modes
-    if [[ "${mode}" == "core" || "${mode}" == "all" ]]; then
-        rm -rf "${AC_CODE_DIR}"
-        mkdir -p "${AC_CODE_DIR}"
-    fi
-
-    rm -rf "${INSTALL_DIR}/bin"
-    mkdir -p "${INSTALL_DIR}/bin"
-
-    rm -rf "${BUILD_DIR}"
-    mkdir -p "${BUILD_DIR}"
-
-    # Clone AzerothCore (core or all mode)
-    if [[ "${mode}" == "core" || "${mode}" == "all" ]]; then
-        echo "Cloning AzerothCore (${BRANCH} branch)..."
-        git clone "${REPO}" --branch="${BRANCH}" "${AC_CODE_DIR}"
-
-        # Checkout specific commit if defined for this profile
-        if [[ -n "${COMMIT}" ]]; then
-            echo "Checking out commit ${COMMIT}..."
-            cd "${AC_CODE_DIR}"
-            git checkout "${COMMIT}"
-            cd -
+    # Install/update profile modules
+    for mod_name in ${MODULES}; do
+        local mod_repo="${MODULE_REPOS[$mod_name]}"
+        if [[ -z "${mod_repo}" ]]; then
+            echo "  Warning: Unknown module '${mod_name}', skipping"
+            continue
         fi
-    fi
 
-    # Clone modules (modules or all mode)
-    if [[ "${mode}" == "modules" || "${mode}" == "all" ]]; then
-        if [[ "${mode}" == "modules" && ! -d "${AC_CODE_DIR}/modules" ]]; then
-            echo "Error: Core not found. Run './scripts/azerothcore install core --profile ${PROFILE}' first."
-            exit 1
+        local mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+        local mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]}"
+
+        if [[ "${force}" == true && -d "${mod_dir}" ]]; then
+            rm -rf "${mod_dir}"
         fi
-        echo "Cloning modules for profile ${PROFILE}: ${MODULES}"
-        mkdir -p "${AC_CODE_DIR}/modules"
-        cd "${AC_CODE_DIR}/modules"
 
-        # Install only the modules defined for this profile
-        for mod_name in ${MODULES}; do
-            local mod_repo="${MODULE_REPOS[$mod_name]}"
-            if [[ -z "${mod_repo}" ]]; then
-                echo "  Warning: Unknown module '${mod_name}', skipping"
-                continue
-            fi
-            if [[ -d "${mod_name}" ]]; then
-                echo "  Removing existing ${mod_name}..."
-                rm -rf "${mod_name}"
-            fi
+        if [[ ! -d "${mod_dir}/.git" ]]; then
             echo "  Cloning ${mod_name}..."
+            cd "${AC_CODE_DIR}/modules"
             git clone ${mod_repo}
-        done
-        cd -
-    fi
+            # Checkout specific commit if defined for this profile
+            if [[ -n "${mod_commit}" ]]; then
+                echo "  Checking out ${mod_name} @ ${mod_commit}..."
+                cd "${mod_dir}"
+                git checkout "${mod_commit}"
+                cd -
+            fi
+            cd - > /dev/null
+            needs_rebuild=true
+        elif ! check_git_status "${mod_dir}" "${mod_commit}"; then
+            echo "  Updating ${mod_name}..."
+            cd "${mod_dir}"
+            if [[ -n "${mod_commit}" ]]; then
+                git fetch
+                git checkout "${mod_commit}"
+            else
+                git pull --rebase
+            fi
+            cd - > /dev/null
+            needs_rebuild=true
+        else
+            echo "  ${mod_name} is up-to-date"
+        fi
+    done
 
-    # Configure and build
-    echo "Configuring build..."
-    cd "${BUILD_DIR}"
+    # -- Build --
+    # Pass force flag to do_build for cmake reconfiguration
+    FORCE_REBUILD="${force}"
+    do_build
 
-    local LUAJIT_INC="/usr/include/luajit-2.1"
-    local LUAJIT_LIB="/usr/lib/libluajit-5.1.so"
+    # -- First-time setup (MySQL, configs, data files) --
+    # Database names: auth is shared, world/characters are per-profile
+    local DB_AUTH="acore_auth"
+    local DB_WORLD="acore_world_${PROFILE}"
+    local DB_CHARS="acore_characters_${PROFILE}"
+    local LOGS_DIR="${DIR}/logs-${PROFILE}"
 
-    cmake "${AC_CODE_DIR}"                                \
-          -DLUA_VERSION=luajit                            \
-          -DLUAJIT_INCLUDE_DIR="${LUAJIT_INC}"            \
-          -DLUAJIT_LIBRARIES="${LUAJIT_LIB}"              \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"         \
-          -DCMAKE_C_COMPILER="${CLANG_DIR}"               \
-          -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}"           \
-          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common -I${LUAJIT_INC}" \
-          -DCMAKE_BINARY_DIR="${BUILD_DIR}"               \
-          -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}"             \
-          -DWITH_WARNINGS=1                               \
-          -DTOOLS_BUILD=all                               \
-          -DSCRIPTS=static                                \
-          -DMODULES=static                                \
-          -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql"     \
-          -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include"      \
-          -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so"
+    echo ""
+    echo "Setting up MySQL databases for profile '${PROFILE}'..."
+    echo "  Auth (shared): ${DB_AUTH}"
+    echo "  World:         ${DB_WORLD}"
+    echo "  Characters:    ${DB_CHARS}"
 
-    echo "Building with ${THREADS} threads (this may take a while)..."
-    make -j${THREADS}
-    make install
-
-    # Setup MySQL databases
-    echo "Setting up MySQL databases..."
-    "${MYSQL_DIR}/bin/mysql" --socket="${DIR}/mysql/databases/mysql.sock" -u ritz -p << 'EOF'
+    "${MYSQL_DIR}/bin/mysql" --socket="${DIR}/mysql/databases/mysql.sock" -u ritz -p << EOF
 DROP USER IF EXISTS 'ritz'@'localhost';
 CREATE USER 'ritz'@'localhost' IDENTIFIED BY 'menardi' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0;
 
-CREATE DATABASE IF NOT EXISTS `acore_world` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS `acore_characters` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS `acore_auth` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS \`${DB_AUTH}\` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS \`${DB_WORLD}\` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS \`${DB_CHARS}\` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
 
-GRANT ALL PRIVILEGES ON `acore_world` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
-GRANT ALL PRIVILEGES ON `acore_characters` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
-GRANT ALL PRIVILEGES ON `acore_auth` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON \`${DB_AUTH}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON \`${DB_WORLD}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON \`${DB_CHARS}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
 EOF
 
-    # Initialize configuration files
     echo "Initializing configuration files..."
+    init_config "${INSTALL_DIR}/etc/worldserver.conf"
+    init_config "${INSTALL_DIR}/etc/authserver.conf"
 
-    if [[ ! -f "${INSTALL_DIR}/etc/worldserver.conf" ]]; then
-        cp "${INSTALL_DIR}/etc/worldserver.conf.dist" "${INSTALL_DIR}/etc/worldserver.conf"
-    fi
+    # Initialize module configs if they exist
+    for conf_dist in "${INSTALL_DIR}/etc/modules/"*.conf.dist; do
+        if [[ -f "${conf_dist}" ]]; then
+            init_config "${conf_dist%.dist}"
+        fi
+    done
 
-    if [[ ! -f "${INSTALL_DIR}/etc/authserver.conf" ]]; then
-        cp "${INSTALL_DIR}/etc/authserver.conf.dist" "${INSTALL_DIR}/etc/authserver.conf"
-    fi
-
-    if [[ ! -f "${INSTALL_DIR}/etc/mod_grownup.conf" ]]; then
-        cp "${INSTALL_DIR}/etc/mod_grownup.conf.dist" "${INSTALL_DIR}/etc/mod_grownup.conf"
-    fi
-
-    # Configure database connections (port 3307 for local MySQL)
+    # Apply standard project settings (database connections, paths)
+    # These override any preserved values since they're project-specific
     echo "Configuring database connections..."
+    sed -i 's|^LoginDatabaseInfo.*=.*|LoginDatabaseInfo = "127.0.0.1;3307;ritz;menardi;'"${DB_AUTH}"'"|' "${INSTALL_DIR}/etc/authserver.conf"
+    sed -i 's|^LoginDatabaseInfo.*=.*|LoginDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;'"${DB_AUTH}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^WorldDatabaseInfo.*=.*|WorldDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;'"${DB_WORLD}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^CharacterDatabaseInfo.*=.*|CharacterDatabaseInfo = "127.0.0.1;3307;ritz;menardi;'"${DB_CHARS}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
 
-    sed -i '/^LoginDatabaseInfo = "127\.0\.0\.1;3306;acore;acore;acore_auth"$/c\LoginDatabaseInfo = "127.0.0.1;3307;ritz;menardi;acore_auth"' "${INSTALL_DIR}/etc/authserver.conf"
-
-    sed -i '/^LoginDatabaseInfo     = "127\.0\.0\.1;3306;acore;acore;acore_auth"$/c\LoginDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;acore_auth"' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i '/^WorldDatabaseInfo     = "127\.0\.0\.1;3306;acore;acore;acore_world"$/c\WorldDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;acore_world"' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i '/^CharacterDatabaseInfo = "127\.0\.0\.1;3306;acore;acore;acore_characters"$/c\CharacterDatabaseInfo = "127.0.0.1;3307;ritz;menardi;acore_characters"' "${INSTALL_DIR}/etc/worldserver.conf"
-
-    # Configure directory paths
     echo "Configuring directory paths..."
-    mkdir -p "${DIR}/logs"
+    mkdir -p "${LOGS_DIR}"
+    sed -i 's|^SourceDirectory.*=.*|SourceDirectory = "'"${AC_CODE_DIR}"'"|' "${INSTALL_DIR}/etc/authserver.conf"
+    sed -i 's|^MySQLExecutable.*=.*|MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"|' "${INSTALL_DIR}/etc/authserver.conf"
+    sed -i 's|^LogsDir.*=.*|LogsDir = "'"${LOGS_DIR}"'"|' "${INSTALL_DIR}/etc/authserver.conf"
+    sed -i 's|^DataDir.*=.*|DataDir = "'"${DIR}"'/data-files"|' "${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^LogsDir.*=.*|LogsDir = "'"${LOGS_DIR}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^BuildDirectory.*=.*|BuildDirectory = "'"${BUILD_DIR}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^SourceDirectory.*=.*|SourceDirectory = "'"${AC_CODE_DIR}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^MySQLExecutable.*=.*|MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"|' "${INSTALL_DIR}/etc/worldserver.conf"
 
-    sed -i '/^SourceDirectory = ""$/c\SourceDirectory = "'"${DIR}"'/source"' "${INSTALL_DIR}/etc/authserver.conf"
-    sed -i '/^MySQLExecutable = ""$/c\MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"' "${INSTALL_DIR}/etc/authserver.conf"
-    sed -i '/^LogsDir = ""$/c\LogsDir = "'"${DIR}"'/logs"' "${INSTALL_DIR}/etc/authserver.conf"
-
-    sed -i '/^DataDir = "\."$/c\DataDir = "'"${DIR}"'/data-files"' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i '/^LogsDir = ""$/c\LogsDir = "'"${DIR}"'/logs"' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i '/^BuildDirectory = ""$/c\BuildDirectory = "'"${DIR}"'/build"' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i '/^SourceDirectory = ""$/c\SourceDirectory = "'"${DIR}"'/source"' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i '/^MySQLExecutable = ""$/c\MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"' "${INSTALL_DIR}/etc/worldserver.conf"
-
-    # Setup symlinks
+    # Setup Lua script symlinks
     echo "Setting up symlinks..."
     mkdir -p "${INSTALL_DIR}/bin/lua_scripts"
     ln -sfn "${DIR}/src/lua" "${INSTALL_DIR}/bin/lua_scripts/custom"
-
     if [[ -d "${DIR}/src/lua/extensions" ]]; then
         ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR}/bin/lua_scripts/extensions"
     fi
 
-    # Data files
+    # Copy data files if needed
     if [[ ! -d "${DIR}/data-files/dbc" ]]; then
         local SHARED_DATA="/home/ritz/games/azeroth-core/data-files"
         if [[ -d "${SHARED_DATA}" ]]; then
@@ -464,149 +709,185 @@ EOF
             mkdir -p "${DIR}/data-files"
         fi
     else
-        echo "Data files already present, skipping copy"
+        echo "Data files already present"
     fi
 
-    echo "Installation complete!"
     echo ""
+    echo "Installation complete!"
     echo "Next steps:"
-    echo "  1. Start MySQL: ./scripts/mysql-start"
+    echo "  1. Start MySQL: ./scripts/start-mysql"
     echo "  2. Start auth server: ./scripts/azerothcore authserver"
     echo "  3. Start world server: ./scripts/azerothcore worldserver"
 }
 # -- }}}
 
-# -- {{{ cmd_update
-# Update existing AzerothCore installation
-# Checks for remote changes before rebuilding. Use --force to rebuild anyway.
-# Note: Profiles with pinned commits (beta, release) skip git pull
-cmd_update() {
-    set -o pipefail
+# -- {{{ do_build
+# Shared build logic - cmake and make
+# Expects: AC_CODE_DIR, BUILD_DIR, INSTALL_DIR, MYSQL_DIR, BOOST_DIR, PROFILE to be set
+# Logs output to tmp/build-${PROFILE}.log
+do_build() {
+    echo ""
+    echo "Building..."
 
-    local force_rebuild=false
-    for arg in "$@"; do
-        if [[ "${arg}" == "--force" ]]; then
-            force_rebuild=true
-        fi
-    done
-
-    # Get profile-specific paths
-    get_profile_paths
-
-    local COMMIT="${PROFILE_COMMIT[$PROFILE]}"
-
-    echo "Updating profile: ${PROFILE}"
-
-    # Validate source exists
-    if [[ ! -d "${AC_CODE_DIR}/src" ]]; then
-        echo "Error: Source not found at ${AC_CODE_DIR}"
-        echo "Run './scripts/azerothcore install all --profile ${PROFILE}' first to clone the source."
-        exit 1
-    fi
-
-    # Compiler paths
     local CLANGPP_DIR="/usr/bin/clang++"
     local CLANG_DIR="/usr/bin/clang"
-
-    # Check for remote changes
-    cd "${AC_CODE_DIR}"
-
-    local needs_rebuild=false
-
-    # Profiles with pinned commits don't pull from remote
-    if [[ -n "${COMMIT}" ]]; then
-        echo "Profile '${PROFILE}' has pinned commit ${COMMIT:0:7} - skipping git pull"
-        if [[ "${force_rebuild}" == true ]]; then
-            echo "Force rebuild requested."
-            needs_rebuild=true
-        else
-            echo "Use --force to rebuild without pulling."
-        fi
-    else
-        echo "Fetching remote changes..."
-        git fetch
-
-        local LOCAL_HEAD=$(git rev-parse HEAD)
-        local REMOTE_HEAD=$(git rev-parse @{u} 2>/dev/null || echo "")
-
-        if [[ -z "${REMOTE_HEAD}" ]]; then
-            echo "Warning: No upstream branch configured. Skipping remote check."
-            if [[ "${force_rebuild}" == true ]]; then
-                needs_rebuild=true
-            else
-                echo "Use --force to rebuild without pulling."
-            fi
-        elif [[ "${LOCAL_HEAD}" != "${REMOTE_HEAD}" ]]; then
-            echo "Remote changes detected. Pulling..."
-            git pull --rebase
-            needs_rebuild=true
-        else
-            echo "Already up to date with remote."
-            if [[ "${force_rebuild}" == true ]]; then
-                echo "Force rebuild requested."
-                needs_rebuild=true
-            fi
-        fi
-    fi
-
-    if [[ "${needs_rebuild}" == false ]]; then
-        echo "No rebuild needed. Use './scripts/azerothcore update --force --profile ${PROFILE}' to rebuild anyway."
-        exit 0
-    fi
-
-    # Rebuild
-    echo "Rebuilding..."
-    rm -rf "${BUILD_DIR}"
-    mkdir -p "${BUILD_DIR}"
-
-    rm -rf "${INSTALL_DIR}/bin"
-    mkdir -p "${INSTALL_DIR}/bin"
-
-    cd "${BUILD_DIR}"
-
     local LUAJIT_INC="/usr/include/luajit-2.1"
     local LUAJIT_LIB="/usr/lib/libluajit-5.1.so"
 
-    echo "Configuring build..."
-    cmake "${AC_CODE_DIR}"                                \
-          -DLUA_VERSION=luajit                            \
-          -DLUAJIT_INCLUDE_DIR="${LUAJIT_INC}"            \
-          -DLUAJIT_LIBRARIES="${LUAJIT_LIB}"              \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"         \
-          -DCMAKE_C_COMPILER="${CLANG_DIR}"               \
-          -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}"           \
-          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common -I${LUAJIT_INC}" \
-          -DCMAKE_BINARY_DIR="${BUILD_DIR}"               \
-          -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}"             \
-          -DWITH_WARNINGS=1                               \
-          -DTOOLS_BUILD=all                               \
-          -DSCRIPTS=static                                \
-          -DMODULES=static                                \
-          -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql"     \
-          -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include"      \
-          -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so"
+    # Setup build logging (tmp/ may be symlink to /tmp/wow-chat-2)
+    if [[ -L "${DIR}/tmp" ]]; then
+        mkdir -p "$(readlink -f "${DIR}/tmp")" 2>/dev/null || mkdir -p "$(readlink "${DIR}/tmp")"
+    else
+        mkdir -p "${DIR}/tmp"
+    fi
+    local BUILD_LOG="${DIR}/tmp/build-${PROFILE}.log"
+    echo "Build started: $(date)" > "${BUILD_LOG}"
+    echo "Profile: ${PROFILE}" >> "${BUILD_LOG}"
+    echo "Source: ${AC_CODE_DIR}" >> "${BUILD_LOG}"
+    echo "---" >> "${BUILD_LOG}"
+    echo "Build log: ${BUILD_LOG}"
 
-    echo "Building with ${THREADS} threads (this may take a while)..."
-    make -j${THREADS}
-    make install
+    # Prepare build directory (preserve for incremental builds)
+    mkdir -p "${BUILD_DIR}"
+    cd "${BUILD_DIR}"
 
-    # Setup Lua script symlinks
-    echo "Setting up symlinks..."
+    # Build Boost if needed
+    if [[ ! -d "${BOOST_DIR}/lib" ]]; then
+        echo "Local Boost not found - building from source..."
+        cmd_boost 2>&1 | tee -a "${BUILD_LOG}"
+    fi
+    echo "Using local Boost from ${BOOST_DIR}"
+
+    # Only run cmake if not already configured, or if forced
+    # CMakeCache.txt presence indicates cmake has been run before
+    if [[ ! -f "${BUILD_DIR}/CMakeCache.txt" || "${FORCE_REBUILD:-false}" == "true" ]]; then
+        echo ""
+        echo "Running cmake..."
+        cmake "${AC_CODE_DIR}" \
+          -DBOOST_ROOT="${BOOST_DIR}" \
+          -DLUA_VERSION=luajit \
+          -DLUAJIT_INCLUDE_DIR="${LUAJIT_INC}" \
+          -DLUAJIT_LIBRARIES="${LUAJIT_LIB}" \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DCMAKE_C_COMPILER="${CLANG_DIR}" \
+          -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}" \
+          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common -I${LUAJIT_INC} -Wno-enum-constexpr-conversion -fcolor-diagnostics" \
+          -DCMAKE_BINARY_DIR="${BUILD_DIR}" \
+          -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}" \
+          -DCMAKE_COLOR_DIAGNOSTICS=ON \
+          -DWITH_WARNINGS=1 \
+          -DTOOLS_BUILD=all \
+          -DSCRIPTS=static \
+          -DMODULES=static \
+          -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql" \
+          -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include" \
+          -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so" \
+          2>&1 | tee -a "${BUILD_LOG}"
+    else
+        echo ""
+        echo "Skipping cmake (already configured, use --force to reconfigure)"
+    fi
+
+    echo ""
+    echo "Building with ${THREADS} threads..."
+    make -j${THREADS} 2>&1 | tee -a "${BUILD_LOG}"
+
+    echo ""
+    echo "Installing..."
+    make install 2>&1 | tee -a "${BUILD_LOG}"
+
+    # Setup Lua script symlinks (always, in case they got removed)
     mkdir -p "${INSTALL_DIR}/bin/lua_scripts"
     ln -sfn "${DIR}/src/lua" "${INSTALL_DIR}/bin/lua_scripts/custom"
-
     if [[ -d "${DIR}/src/lua/extensions" ]]; then
         ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR}/bin/lua_scripts/extensions"
     fi
 
-    echo "Update complete!"
     echo ""
-    echo "Next steps:"
-    echo "  1. Start MySQL: ./scripts/mysql-start"
-    echo "  2. Start auth server: ./scripts/azerothcore authserver"
-    echo "  3. Start world server: ./scripts/azerothcore worldserver"
+    echo "Build complete! Log: ${BUILD_LOG}"
 }
 # -- }}}
+
+# -- {{{ cmd_update
+# Update source and rebuild - does NOT touch MySQL, configs, or data files
+cmd_update() {
+    set -e
+    set -o pipefail
+
+    local force=false
+    for arg in "$@"; do
+        if [[ "${arg}" == "--force" ]]; then
+            force=true
+        fi
+    done
+
+    get_profile_paths
+    local REPO="${PROFILE_REPO[$PROFILE]}"
+    local BRANCH="${PROFILE_BRANCH[$PROFILE]}"
+    local COMMIT="${PROFILE_COMMIT[$PROFILE]}"
+    local MODULES="${PROFILE_MODULES[$PROFILE]}"
+
+    echo "Updating profile: ${PROFILE}"
+
+    # Check source exists
+    if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
+        echo "Error: Source not found. Run 'install' first."
+        exit 1
+    fi
+
+    local needs_rebuild=false
+
+    # Check/update core
+    if [[ "${force}" == true ]]; then
+        echo "Force rebuild requested"
+        needs_rebuild=true
+    elif ! check_git_status "${AC_CODE_DIR}" "${COMMIT}"; then
+        echo "Core source needs update..."
+        cd "${AC_CODE_DIR}"
+        if [[ -n "${COMMIT}" ]]; then
+            git fetch && git checkout "${COMMIT}"
+        else
+            git pull --rebase
+        fi
+        cd -
+        needs_rebuild=true
+    else
+        echo "Core source is up-to-date"
+    fi
+
+    # Check/update modules
+    for mod_name in ${MODULES}; do
+        local mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+        if [[ ! -d "${mod_dir}/.git" ]]; then
+            echo "  ${mod_name} missing - run 'install' to add it"
+            continue
+        fi
+        if ! check_git_status "${mod_dir}" ""; then
+            echo "  Updating ${mod_name}..."
+            cd "${mod_dir}" && git pull --rebase && cd -
+            needs_rebuild=true
+        else
+            echo "  ${mod_name} is up-to-date"
+        fi
+    done
+
+    # Build if needed
+    if [[ "${needs_rebuild}" == false && -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+        echo ""
+        echo "Everything up-to-date, no rebuild needed."
+        echo "Use --force to rebuild anyway."
+        return 0
+    fi
+
+    # Pass force flag to do_build for cmake reconfiguration
+    FORCE_REBUILD="${force}"
+    do_build
+
+    echo ""
+    echo "Update complete!"
+}
+# -- }}}
+
 
 # -- {{{ main
 # Main entry point - parse args and dispatch to command
@@ -631,6 +912,15 @@ main() {
             ;;
         profiles)
             cmd_profiles
+            ;;
+        switch)
+            cmd_switch "${COMMAND_ARGS[0]:-}"
+            ;;
+        boost)
+            cmd_boost
+            ;;
+        extract-maps)
+            "${DIR}/scripts/extract-maps" "${COMMAND_ARGS[@]}"
             ;;
         ""|help)
             show_help

@@ -122,3 +122,119 @@ This will:
 - Install to installed-files/
 - Setup database schema
 - Configure symlinks for Lua scripts
+
+---
+
+## Compilation Fixes
+
+### mod-aoe-loot: Item ambiguous (2026-04-01)
+
+**Error:**
+```
+aoe_loot.cpp:458:9: fatal error: reference to 'Item' is ambiguous
+```
+
+**Cause:** AzerothCore has both `class Item` and `namespace WorldPackets::Item`.
+
+**Fix:** Use global scope operator in `source/modules/mod-aoe-loot/src/aoe_loot.cpp`:
+```cpp
+// Line 458: Change Item* to ::Item*
+::Item* pItem = player->GetItemByGuid(lguid);
+```
+
+**Resume compilation after fix:**
+```bash
+cd build-release && make -j$(nproc) && make install
+```
+
+### Boost system component not found (2026-04-01)
+
+**Error:**
+```
+Could not find a package configuration file provided by "boost_system"
+```
+
+**Cause:** June 2023 AzerothCore requires `system` component, but system-installed
+Boost 1.69+ may not provide libboost_system since it became header-only.
+
+**Fix:** Compile Boost 1.74.0 from source with all required components:
+```bash
+./scripts/azerothcore boost
+```
+
+This builds Boost to `libs/boost/` with: system, filesystem, program_options,
+iostreams, regex, thread. The install/update commands automatically detect and
+use the local Boost via `-DBOOST_ROOT`.
+
+The CMakeLists.txt was updated to document this approach:
+```cmake
+# Boost is compiled from source via './scripts/azerothcore boost'
+# which builds: system, filesystem, program_options, iostreams, regex, thread
+find_package(Boost ${BOOST_REQUIRED_VERSION} REQUIRED COMPONENTS system filesystem program_options iostreams regex thread)
+```
+
+### MySQL 8+/9+ SOURCE command not supported (2026-04-01)
+
+**Error:**
+```
+ERROR 1064 (42000): You have an error in your SQL syntax...
+near 'SOURCE /path/to/file.sql' at line 1
+```
+
+**Cause:** The `SOURCE` command is a mysql client command, not valid SQL. June 2023
+AzerothCore used `mysql -e "SOURCE file.sql"` which doesn't work in MySQL 8+.
+
+**Fix:** Backport commit `6261518eb` - use stdin instead of `-e SOURCE`:
+
+In `src/server/database/Updater/DBUpdater.cpp`, remove the `-e SOURCE` args and
+pass the file path to `StartProcess` for stdin redirection:
+
+```cpp
+// Before (line ~509-511):
+args.emplace_back("-e");
+args.emplace_back(Acore::StringFormat("BEGIN; SOURCE %s; COMMIT;", path.generic_string().c_str()));
+
+// After: Remove those lines, change StartProcess call:
+int const ret = Acore::StartProcess(DBUpdaterUtil::GetCorrectedMySQLExecutable(), args,
+    "sql.updates", path.generic_string(), true);  // Pass file path for stdin
+```
+
+**Rebuild after fix:**
+```bash
+cd build-release && make -j$(nproc) && make install
+```
+
+### Map Extraction and Profile Compatibility (2026-04-01)
+
+**Issue:** VMap/MMap file formats can change between AzerothCore versions. Extracted
+data files are not guaranteed to be compatible across profiles.
+
+**Observed error:**
+```
+VMap file 'data-files/vmaps/000.vmtree' couldn't be loaded
+This is because the version of the VMap file and the version of this module are different
+```
+
+**Solution:** Created `scripts/extract-maps` to extract game data using profile-specific
+tools. The script extracts from `/mnt/dile/ritz/games/wotlk/` to `data-files/`.
+
+**Usage:**
+```bash
+./scripts/azerothcore extract-maps --all        # Full extraction (~2-4 hours)
+./scripts/azerothcore extract-maps --dbc --maps # Quick start (~10 min)
+./scripts/azerothcore extract-maps --vmaps      # Add collision (~30 min)
+./scripts/azerothcore extract-maps --mmaps      # Add pathfinding (~2-3 hours)
+```
+
+**Important note on profile switching:**
+
+The `data-files/` directory is shared across all profiles. If switching between profiles
+with incompatible map formats (e.g., June 2023 release vs current beta), you must
+re-extract maps with the target profile's tools:
+
+1. Switch profile: `./scripts/azerothcore switch <profile>`
+2. Rebuild: `./scripts/azerothcore update --force`
+3. Re-extract: `./scripts/azerothcore extract-maps --all`
+
+Profiles using the same underlying AzerothCore version (e.g., alpha and beta both using
+current playerbots branch) can share data-files without re-extraction.

@@ -1,0 +1,126 @@
+#!/bin/bash
+
+# Installs required client-side addons for wow-chat-2 players.
+# Downloads AIO_Client (server-to-client addon framework) to the specified
+# WoW AddOns directory. Players run this once to enable server-pushed addons.
+#
+# Usage: ./scripts/install-client-addons /path/to/WoW/Interface/AddOns
+
+# Project root directory
+DIR="/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
+
+# Temporary directory for downloads
+TMP_DIR="${DIR}/tmp"
+
+# -- {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/install-client-addons <addons_directory>"
+    echo ""
+    echo "Installs required client-side addons for wow-chat-2."
+    echo ""
+    echo "Arguments:"
+    echo "  addons_directory    Path to WoW's AddOns folder"
+    echo "                      (e.g., /path/to/WoW/Interface/AddOns)"
+    echo ""
+    echo "Example:"
+    echo "  ./scripts/install-client-addons ~/games/wow-3.3.5a/Interface/AddOns"
+    echo ""
+    echo "Addons installed:"
+    echo "  - AIO_Client: Enables server-pushed addons (required for custom UI)"
+}
+# -- }}}
+
+# -- {{{ install_aio_client
+# Downloads and installs AIO_Client addon
+install_aio_client() {
+    local addons_dir="${1}"
+    local aio_repo="https://github.com/Rochet2/AIO"
+    local aio_tmp="${TMP_DIR}/AIO"
+
+    echo "Installing AIO_Client..."
+
+    # Clean up any previous download
+    rm -rf "${aio_tmp}"
+    mkdir -p "${TMP_DIR}"
+
+    # Clone the repository (shallow clone for speed)
+    echo "  Downloading from ${aio_repo}..."
+    if ! git clone --depth 1 "${aio_repo}" "${aio_tmp}" 2>/dev/null; then
+        echo "Error: Failed to download AIO repository"
+        return 1
+    fi
+
+    # Check that AIO_Client exists in the download
+    if [[ ! -d "${aio_tmp}/AIO_Client" ]]; then
+        echo "Error: AIO_Client not found in downloaded repository"
+        rm -rf "${aio_tmp}"
+        return 1
+    fi
+
+    # Remove existing installation if present
+    if [[ -d "${addons_dir}/AIO_Client" ]]; then
+        echo "  Removing existing AIO_Client..."
+        rm -rf "${addons_dir}/AIO_Client"
+    fi
+
+    # Copy to AddOns directory
+    echo "  Copying to ${addons_dir}/AIO_Client..."
+    cp -r "${aio_tmp}/AIO_Client" "${addons_dir}/"
+
+    # Clean up
+    rm -rf "${aio_tmp}"
+
+    echo "  AIO_Client installed successfully"
+    return 0
+}
+# -- }}}
+
+# -- {{{ main
+main() {
+    local addons_dir="${1:-}"
+
+    # Show help if no arguments or help flag
+    if [[ -z "${addons_dir}" || "${addons_dir}" == "--help" || "${addons_dir}" == "-h" ]]; then
+        show_help
+        exit 0
+    fi
+
+    # Validate the AddOns directory exists
+    if [[ ! -d "${addons_dir}" ]]; then
+        echo "Error: AddOns directory not found: ${addons_dir}"
+        echo ""
+        echo "Make sure the path is correct. It should be something like:"
+        echo "  /path/to/WoW/Interface/AddOns"
+        echo ""
+        echo "If the Interface/AddOns folders don't exist, create them first:"
+        echo "  mkdir -p \"${addons_dir}\""
+        exit 1
+    fi
+
+    echo "Installing client addons to: ${addons_dir}"
+    echo ""
+
+    # Install each addon
+    local failed=0
+
+    if ! install_aio_client "${addons_dir}"; then
+        ((failed++))
+    fi
+
+    # Summary
+    echo ""
+    if [[ ${failed} -eq 0 ]]; then
+        echo "All addons installed successfully!"
+        echo ""
+        echo "Next steps:"
+        echo "  1. Launch WoW client"
+        echo "  2. Enable 'AIO_Client' in the AddOns menu"
+        echo "  3. Connect to the server"
+    else
+        echo "Warning: ${failed} addon(s) failed to install"
+        exit 1
+    fi
+}
+# -- }}}
+
+main "$@"
