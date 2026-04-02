@@ -23,6 +23,7 @@ installed-files*/etc/modules/*.conf
 # Runtime files (profile-suffixed: logs-release, logs-beta, etc.)
 logs*/
 tmp/
+tmp
 
 # Game data (extracted from client, too large for git)
 data-files/
