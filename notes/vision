@@ -1,4 +1,6 @@
-# WoW Chat 2 - Vision Document
+# Everland Ghostsong - Vision Document
+
+*Technical name: wow-chat-2 (epitome-graph)*
 
 ## What This Is
 
@@ -8,7 +10,7 @@ solo with AI companions. The difficulty scales with your group - team up and fac
 proportionally harder challenges.
 
 This is the resurrection of wow-chat-1, which is now ancient history (at least
-one whole year old). We miss it dearly.
+one whole year old). We miss it dearly. Now reborn as Everland Ghostsong.
 
 ## Core Experience
 
@@ -69,7 +71,7 @@ src/lua/
 
 ## Design Principles
 
-1. **Play with friends** - The "chat" in wow-chat is socializing, not a system
+1. **Play with friends** - The "ghostsong" is the echoes of conversation
 2. **Scriptable everything** - Custom behavior in Lua, not C++
 3. **Track the world** - Database changes version controlled, history preserved
 4. **Isolation** - Self-contained project, doesn't pollute system

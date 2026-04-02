@@ -1,4 +1,6 @@
-# Architecture Overview
+# Everland Ghostsong - Architecture Overview
+
+*Technical name: wow-chat-2*
 
 ## System Components
 

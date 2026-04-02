@@ -1,4 +1,4 @@
-# Phase 1 Progress: Foundation
+# Everland Ghostsong - Phase 1 Progress: Foundation
 
 ## Goal
 Establish stable server environment with documented setup process.
@@ -21,18 +21,32 @@ Establish stable server environment with documented setup process.
 | 107 | credential-manager-script | Open |
 | 108 | thread-count-variable | Completed |
 | 109 | improve-update-command | Completed |
+| 110 | random-spawn-point-feature | Open |
+| 111 | config-merge-script | Open |
+| 112 | fix-drop-creatures-cascading-errors | Open |
+| 113 | investigate-ambush-monsters-not-spawning | Open |
 
-## Completed: 5/9 (5/12 including sub-issues)
+## Completed: 5/13 (5/16 including sub-issues)
 
 ## Phase Milestones
 
 - [x] Installation script functional
 - [x] Update script functional
 - [ ] Server runs without errors
-- [ ] Playerbots module operational
+- [x] Playerbots module operational
 - [x] Documentation complete
 
 ## Notes
+
+### 2025-03-31 - Server First Run, Issues 110-111 Created
+- Server successfully started for the first time with playerbots active (500 bots)
+- Fixed SQL migration: copied wow-chat-1 custom SQL files to source/data/sql/custom/
+- Fixed death-knights.sql: removed deprecated StatsCount column, fixed VALUES syntax
+- Configured mod-grownup: 100% size at level 1, growing to 120% at level 80
+- Downloaded playerbots documentation to docs/playerbots/
+- Created CLAUDE.md with project context and documentation references
+- **Issue 110**: Random spawn point feature - spawn new characters at random waypoints
+- **Issue 111**: Config merge script - merge custom config sections after AC updates
 
 ### 2025-02-24 - Issues 108, 109 Completed
 - **108**: MAKE_JOBS now auto-detects to (nproc - 1), no config needed

@@ -13,10 +13,24 @@ but functionality has not been verified. Configuration may require adjustment.
 ## Intended Behavior
 
 1. Playerbots module loads on server startup
+
+-- yep
+
 2. Random bots spawn in world when enabled
+
+-- yep
+
 3. Bots respond to player commands
+
+-- untested
+
 4. Bots can be added to groups
+
+-- untested
+
 5. Bots perform basic AI tasks (follow, assist, quest)
+
+-- quest, yes.
 
 ## Suggested Implementation Steps
 
