@@ -254,6 +254,27 @@ get_profile_paths() {
 }
 # -- }}}
 
+# -- {{{ setup_log_symlinks
+# Ensure log directories exist in /tmp (RAM) with symlinks from project
+# Creates: /tmp/wow-chat-2/, /tmp/wow-chat-2/logs-${PROFILE}/
+# Symlinks: ${DIR}/tmp -> /tmp/wow-chat-2/
+#           ${DIR}/logs-${PROFILE} -> /tmp/wow-chat-2/logs-${PROFILE}/
+setup_log_symlinks() {
+    local TMP_BASE="/tmp/wow-chat-2"
+    local TMP_LOGS="${TMP_BASE}/logs-${PROFILE}"
+
+    # Create RAM directories
+    mkdir -p "${TMP_BASE}"
+    mkdir -p "${TMP_LOGS}"
+
+    # Setup tmp symlink (for build logs)
+    [[ -L "${DIR}/tmp" ]] || ln -s "${TMP_BASE}" "${DIR}/tmp"
+
+    # Setup logs-${PROFILE} symlink (for runtime logs)
+    [[ -L "${DIR}/logs-${PROFILE}" ]] || ln -s "${TMP_LOGS}" "${DIR}/logs-${PROFILE}"
+}
+# -- }}}
+
 # -- {{{ cmd_profiles
 # List available version profiles and their configurations
 cmd_profiles() {
@@ -330,6 +351,7 @@ cmd_switch() {
 # Sets LD_LIBRARY_PATH to use project MySQL libs instead of system libs
 cmd_authserver() {
     get_profile_paths
+    setup_log_symlinks
     if [[ ! -f "${INSTALL_DIR}/bin/authserver" ]]; then
         echo "Error: authserver not found for profile '${PROFILE}'"
         echo "Expected: ${INSTALL_DIR}/bin/authserver"
@@ -348,6 +370,7 @@ cmd_authserver() {
 # Sets LD_LIBRARY_PATH to use project MySQL libs instead of system libs
 cmd_worldserver() {
     get_profile_paths
+    setup_log_symlinks
     if [[ ! -f "${INSTALL_DIR}/bin/worldserver" ]]; then
         echo "Error: worldserver not found for profile '${PROFILE}'"
         echo "Expected: ${INSTALL_DIR}/bin/worldserver"
@@ -734,12 +757,8 @@ do_build() {
     local LUAJIT_INC="/usr/include/luajit-2.1"
     local LUAJIT_LIB="/usr/lib/libluajit-5.1.so"
 
-    # Setup build logging (tmp/ may be symlink to /tmp/wow-chat-2)
-    if [[ -L "${DIR}/tmp" ]]; then
-        mkdir -p "$(readlink -f "${DIR}/tmp")" 2>/dev/null || mkdir -p "$(readlink "${DIR}/tmp")"
-    else
-        mkdir -p "${DIR}/tmp"
-    fi
+    # Setup log symlinks to /tmp (RAM)
+    setup_log_symlinks
     local BUILD_LOG="${DIR}/tmp/build-${PROFILE}.log"
     echo "Build started: $(date)" > "${BUILD_LOG}"
     echo "Profile: ${PROFILE}" >> "${BUILD_LOG}"
