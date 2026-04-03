@@ -1,0 +1,44 @@
+# 136 - Drop All Creatures Except Spirit Healers
+
+## Status
+- Created: 2026-04-02
+- Phase: 2
+- Priority: Medium
+
+## Current Behavior
+- World has default creature spawns from AzerothCore
+- Static NPCs populate the world alongside the dynamic ambush system
+- Spirit healers exist at graveyards for resurrection
+
+## Intended Behavior
+- Remove all creature spawns from the world database
+- Keep spirit healers (required for player resurrection)
+- World should be empty by default - monsters only spawn via ambush system
+- Aligns with roguelike survival design philosophy
+
+## Implementation Steps
+
+1. Identify spirit healer entries in creature_template
+   - Query: `SELECT entry, name FROM creature_template WHERE name LIKE '%Spirit Healer%' OR entry IN (known spirit healer IDs)`
+
+2. Create SQL script to delete creature spawns
+   ```sql
+   -- Delete all creature spawns except spirit healers
+   DELETE FROM creature WHERE id NOT IN (spirit_healer_entry_ids);
+   ```
+
+3. Verify spirit healers remain at graveyards
+   - Test death and resurrection flow
+
+4. Consider keeping other essential NPCs:
+   - Flight masters? (or remove for survival feel)
+   - Innkeepers? (for hearthstone binding)
+   - Vendors? (handled by custom merchant system - issue 135)
+
+## Technical Notes
+- Table: `creature` (spawns) vs `creature_template` (definitions)
+- Spirit healers have specific AI scripts for resurrection
+- May need to preserve creature GUIDs for quest references
+
+## Related Issues
+- 135 - custom merchant system (vendor handling)

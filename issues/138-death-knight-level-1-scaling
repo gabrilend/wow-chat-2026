@@ -1,0 +1,85 @@
+# 138 - Death Knight Level 1 Scaling
+
+## Status
+- Created: 2026-04-02
+- Phase: 2
+- Priority: Medium
+
+## Current Behavior
+- Death knights start at level 55 with powerful abilities
+- Abilities are tuned for level 55+ content
+- Existing functionality allows DKs to skip starting quests and begin normally
+- At level 1-20 (game's max level), DK abilities would be massively overpowered
+
+## Intended Behavior
+- Death knights can start at level 1 like other classes
+- DK abilities scaled to be roughly equivalent to other classes at each level
+- Damage, healing, and resource costs balanced for low-level play
+- Retains DK flavor (runes, runic power, diseases) but at appropriate power level
+
+## Prerequisites
+
+### DK Level Stats Missing (BLOCKER)
+Server startup shows: `Race 1 class 6 initial level does not have stats data!`
+
+The `player_levelstats` table has no entries for Death Knights (class 6) below level 55.
+Without this data, DKs cannot exist at low levels - the server has no stat values to assign.
+
+**Fix required:**
+- Generate `player_levelstats` entries for class 6, levels 1-54, all DK races
+- DK races: Human (1), Dwarf (3), Night Elf (4), Gnome (7), Draenei (11), Orc (2), Undead (5), Tauren (6), Troll (8), Blood Elf (10)
+- Base stats on warrior (class 1) values as reference plate class
+- May need minor adjustments for DK flavor (slightly higher STR?)
+
+**SQL template:**
+```sql
+-- Generate DK stats based on warrior stats for same race/level
+INSERT INTO player_levelstats (race, class, level, str, agi, sta, inte, spi)
+SELECT race, 6 AS class, level, str, agi, sta, inte, spi
+FROM player_levelstats
+WHERE class = 1 AND level <= 54
+AND race IN (1, 2, 3, 4, 5, 6, 7, 8, 10, 11);
+```
+
+## Implementation Steps
+
+1. Add DK levelstats data (prerequisite above)
+
+2. Inventory existing DK abilities and their scaling
+   - List all DK spells available at low levels
+   - Document current damage/healing formulas
+   - Identify which abilities are problematic
+
+3. Research spell scaling mechanisms
+   - `spell_dbc` table for base values
+   - Coefficient scaling with spell power/attack power
+   - Level-based scaling formulas
+
+4. Create scaling adjustments
+   - Option A: Modify spell coefficients for DK spells
+   - Option B: Create level-scaled versions of spells
+   - Option C: Apply aura-based damage modifiers to DK class
+
+5. Balance testing
+   - Compare DK damage output to warrior/paladin at levels 1, 5, 10, 15, 20
+   - Test DK survivability vs other plate classes
+   - Verify rune regeneration feels appropriate
+
+6. Adjust starting gear
+   - DK starting gear is level 55 quality
+   - Create or assign appropriate level 1 gear
+
+## Technical Notes
+- DK rune system is unique - may need separate balancing
+- Disease mechanics (Blood Plague, Frost Fever) need scaling
+- Death Grip utility remains powerful regardless of damage
+- Consider: should DKs have all abilities at level 1, or learn them progressively?
+- `StartHeroicPlayerLevel` config set to 1 (was defaulting to 55, failing validation)
+
+## Existing Files
+- `death-knights.lua` - existing DK customizations
+- `death-knights.sql` - database modifications for DKs
+
+## Related Issues
+- 137 - universal class trainers (DK ability learning)
+- 120 - talent points system (affects all classes including DK)
