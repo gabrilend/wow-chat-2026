@@ -33,7 +33,8 @@ function Travel.updatePlayerTravellers(playerID)
     end
     local next = next
     for _, traveller_category in pairs(Travel.travellers) do
-        if bit32.band(traveller_category.typeMask, playerData.typeMask) ~= 0 then
+        -- bit_and is ALE global (LuaJIT doesn't have bit32)
+        if bit_and(traveller_category.typeMask, playerData.typeMask) ~= 0 then
             for _, specific_traveller in pairs(traveller_category.list) do
                 if next(specific_traveller) ~= nil then
                     if Travel.isValidFaction(specific_traveller.rel, playerData.playerFaction) and
@@ -120,6 +121,12 @@ function Travel.spawnAndTravel(player)
             playerX, playerY = player:GetLocation()
             x, y = Movement.getPositionOppositePoint(x, y, playerX, playerY)
             z    = player:GetMap():GetHeight(x, y)
+            -- If terrain invalid, despawn traveller instead of crashing
+            if z == nil then
+                print("[Travel] Invalid terrain at spawn, despawning traveller")
+                traveller:DespawnOrUnsummon(0)
+                return
+            end
             o    = traveller:GetO()
             traveller:MoveTo(math.random(0, 4294967295), x, y, z)
             traveller:SetData("theta", o)
@@ -145,7 +152,12 @@ function Travel.continueTravelling(_eventID, _delay, _repeats, creature )
             targetX, targetY, targetZ, newO = Movement.generateNewWanderPosition(x, y, z, o, theta, creature:GetMapId())
             count = count + 1
             if count > 10 then
-                print("count exceeded, despawning creature")
+                print("[Travel] Count exceeded, despawning creature")
+                creature:DespawnOrUnsummon(0)
+                return
+            end
+            if not targetZ then
+                print("[Travel] Invalid terrain, despawning creature")
                 creature:DespawnOrUnsummon(0)
                 return
             end

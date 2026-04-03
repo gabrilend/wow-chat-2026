@@ -65,18 +65,26 @@ function Treasure.spawnTreasure(player)
         return
     else
         local chestID = Treasure.getRandomChestFromQueue(player:GetGUID())
-        local x, y, z, o = player:GetLocation()
-              x, y       = Movement.getPlusSpawnPosition(x, y, treasureMinDist, treasureMaxDist)
-                    z    = player:GetMap():GetHeight(x, y)
-                       o = math.random(0, 6.28)
-        player:SendBroadcastMessage("Treasure!")
-        print("Treasure!")
-        if x or y or z or o == nil then
-            if not x then print("Treasure: Error getting x for spawn position") end
-            if not y then print("Treasure: Error getting y for spawn position") end
-            if not z then print("Treasure: Error getting z for spawn position") end
-            if not o then print("Treasure: Error getting o for spawn position") end
+        local playerX, playerY, playerZ, playerO = player:GetLocation()
+        local playerMap = player:GetMap()
+
+        -- Try to find valid spawn position
+        local x, y, z
+        local tries = 0
+        repeat
+            tries = tries + 1
+            x, y = Movement.getPlusSpawnPosition(playerX, playerY, treasureMinDist, treasureMaxDist)
+            z = playerMap:GetHeight(x, y)
+        until z ~= nil or tries >= 5
+
+        if not z then
+            print("[Treasure] Could not find valid terrain for chest spawn")
+            return
         end
+
+        local o = math.random(0, 6.28)
+        player:SendBroadcastMessage("Treasure!")
+        print("[Treasure] Spawning chest " .. chestID)
         local chest = player:SummonGameObject(chestID, x, y, z, o, 0)
     end
 end
