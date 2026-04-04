@@ -2,6 +2,10 @@
 
 *Technical name: wow-chat-2 (epitome-graph)*
 
+## Session Initialization
+
+**On new session or context compaction:** Read `docs/concept-catalog.md` to restore project knowledge. The catalog contains 800 concepts covering all game systems, algorithms, configuration, and design philosophy. This is essential context for working on this project.
+
 ## Project Overview
 
 Everland Ghostsong is a WoW 3.3.5a private server with custom roguelike survival mechanics. The world is empty by default - monsters spawn around players (ambush system), treasure spawns, and traveler NPCs wander the world. Players use playerbots as AI companions.
@@ -10,16 +14,16 @@ Everland Ghostsong is a WoW 3.3.5a private server with custom roguelike survival
 
 ## Current Development State
 
-**Branch:** `clean-rebuild` - incremental feature restoration in progress
+**Branch:** `beta` - release for newest known good, alpha for new features
 
-**Reference:** `libs/wow-chat-1/` - original Lua scripts from previous version
+**Reference:** `libs/wow-chat-1/` - original Lua scripts from previous version - do not alter
 
 **Testing Doc:** `issues/200-incremental-feature-restore`
 - Critical path index for debugging
 - Feature groups ordered by dependency
 - Stash commands for extracting features
 
-**Stash:** `stash@{0}` contains Phase 2 work (behaviors, ALE fix, portal design)
+**Stash:** `stash@{0}` contains Phase 2 work (behaviors, ALE fix, portal design). This should be moved to the alpha branch immediately, and this line of the CLAUDE.md file removed.
 
 When starting a session, check the testing doc's critical path to find your entry point.
 
@@ -27,19 +31,9 @@ When starting a session, check the testing doc's critical path to find your entr
 
 ### Local Documentation (docs/)
 
-- **docs/playerbots/** - Playerbot module documentation (cloned from wiki)
-  - `Home.md` - Overview and getting started
-  - `Playerbot-Commands.md` - All chat commands for controlling bots
-  - `Playerbot-Configuration.md` - Config file options (~300+ parameters)
-  - `Playerbot-Raid-Strategy-Guide.md` - Comprehensive raid strategies
-  - `Troubleshooting.md` - Common issues and solutions
+- **docs/playerbots/** - Playerbot module documentation
 
 - **docs/ale/** - AzerothCore Lua Engine (ALE) API documentation
-  - `docs/Player/` - Player class methods (including `IsBot()`)
-  - `docs/Unit/` - Unit class methods (including `MoveTo()`, `MoveFollow()`)
-  - `docs/Creature/` - Creature class methods
-  - `docs/Object/` - Base object methods
-  - `docs/Global/` - Global functions and events
 
 - **docs/wiki/** - AzerothCore wiki (server administration)
   - Database structure, SQL queries, server configuration
@@ -50,13 +44,9 @@ When starting a session, check the testing doc's critical path to find your entr
 
 ### Concept Catalogs (docs/)
 
-- **docs/concept-catalog.md** - 1000 concepts (001-1000)
-  - Foundation, Behavior, Config, Data, Math, Visual, Integration, Workflow, Philosophy
+- **docs/concept-catalog.md** - 800 concepts (001-800)
+  - Foundation, Behavior, Config, Data, Math, Visual, Integration, Workflow
   - Appendix with cross-references by system, phase, and file
-
-- **docs/concept-catalog-2.md** - 1000 concepts (1001-2000)
-  - Social, Content, World, Progression, Economy, Narrative, UX, Performance, Community, Philosophy
-  - Meta-layers: what the game IS → COULD BE → what games ARE → what reality IS
 
 - **docs/concept-issue-map.md** - Issue-to-concept cross-reference
   - Maps each issue file to relevant concepts
@@ -77,7 +67,7 @@ When starting a session, check the testing doc's critical path to find your entr
 ./scripts/azerothcore update
 
 # Start MySQL (required first)
-./scripts/mysql-start
+./scripts/start-mysql
 
 # Run servers
 ./scripts/azerothcore authserver
@@ -95,7 +85,7 @@ When starting a session, check the testing doc's critical path to find your entr
 - **mod-ale** - Lua scripting engine (hot-reload capable)
 - **mod-playerbots** - AI companion bots
 - **mod-aoe-loot** - Area loot for convenience
-- **mod-grownup** - Skip low-level content
+- **mod-grownup** - Scale player models by level
 - **AIO** - Server-to-client addon framework
 
 ## Directory Structure

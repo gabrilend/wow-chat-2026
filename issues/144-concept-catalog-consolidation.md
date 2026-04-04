@@ -25,16 +25,21 @@ Target: ~20k tokens or less (30% reduction)
 ## Implementation Steps
 
 1. [x] Confirm original is committed in git
-2. [ ] Create consolidated 800-concept version
-3. [ ] Verify token count reduction
-4. [ ] Commit new version
-5. [ ] Update CLAUDE.md if needed
+2. [x] Create consolidated 800-concept version
+3. [x] Verify token count reduction (~36% reduction achieved)
+4. [x] Commit new version (2ecca15)
+5. [x] Update CLAUDE.md - replaced @import with session initialization hint, updated "1000 concepts" to "800 concepts"
 
 ## Related Documents
 
-- docs/concept-catalog.md (original 1000-concept version)
-- CLAUDE.md (references catalog)
+- docs/concept-catalog.md (now 800-concept consolidated version)
+- CLAUDE.md (references catalog via @import)
 
-## Notes
+## Results
 
-The original 1000-concept version remains in git history for reference.
+- Original: 4039 lines, 94KB (~28k tokens)
+- Consolidated: 2788 lines, 73KB (~18k tokens)
+- Reduction: 31% fewer lines, 23% smaller file, ~36% fewer tokens
+
+The original 1000-concept version remains in git history for reference:
+`git show HEAD^:docs/concept-catalog.md`
