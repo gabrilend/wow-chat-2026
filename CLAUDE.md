@@ -23,8 +23,6 @@ Everland Ghostsong is a WoW 3.3.5a private server with custom roguelike survival
 - Feature groups ordered by dependency
 - Stash commands for extracting features
 
-**Stash:** `stash@{0}` contains Phase 2 work (behaviors, ALE fix, portal design). This should be moved to the alpha branch immediately, and this line of the CLAUDE.md file removed.
-
 When starting a session, check the testing doc's critical path to find your entry point.
 
 ## Documentation Locations
