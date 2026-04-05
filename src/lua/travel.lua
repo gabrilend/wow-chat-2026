@@ -111,20 +111,27 @@ function Travel.spawnAndTravel(player)
     player:SendBroadcastMessage("A traveller appears...")
     local travellerId = Travel.getRandomTravellerId(player:GetGUID())
     if travellerId ~= 0 then
-        -- Custom class players get dynamic trainers instead of base class trainers
-        -- CustomClasses is loaded via custom-classes.lua
+        -- Custom class players get trainers from their eligible classes (equal probability)
+        -- instead of their base class trainer - uses existing world trainers
         if Travel.isTrainer(travellerId) and CustomClasses then
             local customClassId = CustomClasses.getCustomClass(player)
             if customClassId then
-                print("[Travel] Custom class player - spawning dynamic trainer instead")
-                local trainer = CustomClasses.spawnDynamicTrainer(player)
-                if trainer then
-                    player:SendBroadcastMessage("A trainer of your arts has appeared nearby.")
+                local eligibleClasses = CustomClasses.getEligibleClasses(player)
+                if #eligibleClasses > 0 then
+                    -- Equal probability selection
+                    local selectedClass = eligibleClasses[math.random(#eligibleClasses)]
+                    local playerFaction = player:IsHorde() and 1 or 2
+                    local newTrainerId  = Travel.getTrainerForClass(selectedClass, player:GetLevel(), playerFaction)
+                    if newTrainerId then
+                        print("[Travel] Custom class - spawning class " .. selectedClass .. " trainer")
+                        travellerId = newTrainerId
+                    else
+                        print("[Travel] No trainer found for class " .. selectedClass .. " at level " .. player:GetLevel())
+                    end
                 else
-                    -- No learnable spells in range - skip trainer spawn entirely
-                    print("[Travel] No learnable spells - no trainer spawned")
+                    print("[Travel] No eligible classes - using base class trainer")
                 end
-                return
+                -- Fall through to normal spawn with (possibly replaced) travellerId
             end
         end
 
@@ -628,6 +635,28 @@ end
 -- Check if a traveller ID is a class trainer
 function Travel.isTrainer(travellerId)
     return Travel.trainerIds[travellerId] == true
+end
+-- }}}
+
+-- {{{ getTrainerForClass
+-- Find a trainer for a specific class that covers the player's level
+-- classId: positive class ID (1=warrior, 2=paladin, 3=hunter, 4=rogue, 5=priest, 6=dk, 7=shaman, 8=mage, 9=warlock, 11=druid)
+-- playerLevel: player's current level
+-- playerFaction: 1=horde, 2=alliance
+-- Returns trainerID or nil if no matching trainer
+function Travel.getTrainerForClass(classId, playerLevel, playerFaction)
+    local negClass = -classId  -- trainers use negative class IDs
+    for _, trainer in ipairs(trainers) do
+        if trainer.id == negClass then
+            if playerLevel >= trainer.minLevel and playerLevel <= trainer.maxLevel then
+                -- Check faction: 3 = neutral (works for both)
+                if trainer.rel == playerFaction or trainer.rel == 3 then
+                    return trainer.trainerID
+                end
+            end
+        end
+    end
+    return nil
 end
 -- }}}
 

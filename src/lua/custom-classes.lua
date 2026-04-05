@@ -24,20 +24,9 @@ local SELECTOR_NPC_ENTRIES = {
     [11] = 900011,  -- Draenei:   Light of the Naaru
 }
 
--- Trainer NPC entries (one per class) - create in DB
--- Starting at 900021 to avoid conflict with selector NPCs (900001-900011)
-local TRAINER_NPC_ENTRIES = {
-    [1]  = 900021,  -- Warrior trainer
-    [2]  = 900022,  -- Paladin trainer
-    [3]  = 900023,  -- Hunter trainer
-    [4]  = 900024,  -- Rogue trainer
-    [5]  = 900025,  -- Priest trainer
-    [6]  = 900026,  -- Death Knight trainer
-    [7]  = 900027,  -- Shaman trainer
-    [8]  = 900028,  -- Mage trainer
-    [9]  = 900029,  -- Warlock trainer
-    [11] = 900031,  -- Druid trainer
-}
+-- Note: Custom trainer NPCs (900021-900031) are no longer used.
+-- Issue 157 revision: use existing world trainers via Travel.getTrainerForClass()
+-- instead of custom trainer NPCs with gossip menus.
 
 -- Data key for storing custom class on player
 local DATA_KEY_CUSTOM_CLASS = "custom-class"
@@ -48,11 +37,8 @@ local NEARBY_PLAYER_RANGE = 30
 -- How often to check for nearby players (ms)
 local NEARBY_CHECK_INTERVAL = 5000
 
--- Trainer spawn settings
-local TRAINER_MIN_DIST   = 15
-local TRAINER_MAX_DIST   = 25
-local TRAINER_SPAWN_CHANCE = 0.10  -- 10% chance per spawn check
-local LEVEL_RANGE        = 3      -- ±3 levels for spell learning
+-- Level range for determining eligible trainer classes (±3 levels)
+local LEVEL_RANGE = 3
 
 -- Base class names for display
 local CLASS_NAMES = {
@@ -304,6 +290,39 @@ function CustomClasses.getTomeClassesFor(player)
     return def.tomeClasses
 end -- }}}
 
+-- {{{ getEligibleClasses
+-- Returns list of class IDs that have spells in player's ±3 level range
+-- Used by travel.lua to select which trainer to spawn (equal probability)
+-- Returns positive class IDs: 1=warrior, 2=paladin, 3=hunter, 4=rogue, etc.
+function CustomClasses.getEligibleClasses(player)
+    local customClassId = CustomClasses.getCustomClass(player)
+    if not customClassId then return {} end
+
+    local def = CustomClasses.getDefinition(customClassId)
+    if not def or not def.tomeClasses then return {} end
+
+    local playerLevel = player:GetLevel()
+    local minLevel    = playerLevel - LEVEL_RANGE
+    local maxLevel    = playerLevel + LEVEL_RANGE
+
+    -- Check which classes have learnable spells in range
+    local eligible    = {}
+    local seenClasses = {}  -- deduplicate tomeClasses
+
+    for _, classId in ipairs(def.tomeClasses) do
+        if not seenClasses[classId] then
+            seenClasses[classId] = true
+            -- Check if this class has any unlearned spells in the level range
+            local count = CustomClasses.countLearnableSpells(player, def, classId, minLevel, maxLevel)
+            if count > 0 then
+                table.insert(eligible, classId)
+            end
+        end
+    end
+
+    return eligible
+end -- }}}
+
 ---------------------------------------------------------------------------------------------------
 -- Trainer Level Scaling
 
@@ -329,11 +348,8 @@ function CustomClasses.trainerCanTeachSpell(trainerLevel, spellRequiredLevel)
 end -- }}}
 
 ---------------------------------------------------------------------------------------------------
--- Dynamic Trainer Spawning (Issue 157)
--- Trainers spawn weighted by learnable spells in player's level range
-
--- Track spawned trainers per player
-local SpawnedTrainers = {}  -- { [playerGUID] = trainerObject }
+-- Spell Counting for Dynamic Trainer Selection (Issue 157)
+-- Used by getEligibleClasses() to determine which classes have learnable spells
 
 -- {{{ countLearnableSpells
 -- Count spells from a source class that player can learn in level range
@@ -355,316 +371,6 @@ function CustomClasses.countLearnableSpells(player, customClassDef, sourceClass,
     end
 
     return count
-end -- }}}
-
--- {{{ getLearnableSpells
--- Get list of learnable spells from a source class in level range
--- Returns table of { id, level, name } for each learnable spell
-function CustomClasses.getLearnableSpells(player, customClassDef, sourceClass, minLevel, maxLevel)
-    local spells = {}
-
-    for _, spellData in ipairs(customClassDef.spells) do
-        if spellData.sourceClass == sourceClass then
-            if spellData.level >= minLevel and spellData.level <= maxLevel then
-                if not player:HasSpell(spellData.id) then
-                    table.insert(spells, {
-                        id    = spellData.id,
-                        level = spellData.level,
-                    })
-                end
-            end
-        end
-    end
-
-    return spells
-end -- }}}
-
--- {{{ selectTrainerClass
--- Select trainer class weighted by learnable spell count
--- Returns sourceClass or nil if no learnable spells
-function CustomClasses.selectTrainerClass(player, customClassDef)
-    local playerLevel = player:GetLevel()
-    local minLevel    = playerLevel - LEVEL_RANGE
-    local maxLevel    = playerLevel + LEVEL_RANGE
-
-    -- Collect weights per source class
-    local weights     = {}
-    local totalWeight = 0
-    local seenClasses = {}  -- deduplicate tomeClasses
-
-    for _, sourceClass in ipairs(customClassDef.tomeClasses) do
-        if not seenClasses[sourceClass] then
-            seenClasses[sourceClass] = true
-            local count = CustomClasses.countLearnableSpells(player, customClassDef, sourceClass, minLevel, maxLevel)
-            if count > 0 then
-                weights[sourceClass] = count
-                totalWeight = totalWeight + count
-            end
-        end
-    end
-
-    -- No learnable spells in range
-    if totalWeight == 0 then
-        return nil
-    end
-
-    -- Weighted random selection
-    local roll       = math.random(1, totalWeight)
-    local cumulative = 0
-
-    for sourceClass, weight in pairs(weights) do
-        cumulative = cumulative + weight
-        if roll <= cumulative then
-            return sourceClass
-        end
-    end
-
-    -- Fallback (shouldn't reach)
-    return nil
-end -- }}}
-
--- {{{ spawnDynamicTrainer
--- Spawn a trainer for the player's custom class
--- Returns trainer object or nil if no learnable spells
-function CustomClasses.spawnDynamicTrainer(player)
-    local customClassId = CustomClasses.getCustomClass(player)
-    if not customClassId then
-        return nil  -- base class players use world trainers
-    end
-
-    local def = CustomClasses.getDefinition(customClassId)
-    if not def then
-        return nil
-    end
-
-    -- Select which class trainer to spawn
-    local trainerClass = CustomClasses.selectTrainerClass(player, def)
-    if not trainerClass then
-        print("[CustomClasses] No learnable spells for " .. player:GetName() .. " - no trainer spawned")
-        return nil
-    end
-
-    -- Get trainer NPC entry for this class
-    local trainerEntry = TRAINER_NPC_ENTRIES[trainerClass]
-    if not trainerEntry then
-        print("[CustomClasses] No trainer entry defined for class " .. trainerClass)
-        return nil
-    end
-
-    -- Spawn position: random distance/angle from player
-    local px, py, pz, po = player:GetLocation()
-    local map            = player:GetMap()
-    local theta          = math.random() * 6.28
-    local radius         = math.random(TRAINER_MIN_DIST, TRAINER_MAX_DIST)
-    local x              = px + math.cos(theta) * radius
-    local y              = py + math.sin(theta) * radius
-    local z              = map:GetHeight(x, y) or pz
-
-    -- Calculate facing towards player
-    local dx      = px - x
-    local dy      = py - y
-    local facing  = math.atan2(dy, dx)
-
-    -- Spawn trainer
-    local trainer = player:SpawnCreature(trainerEntry, x, y, z, facing, 1, 0)
-
-    if trainer then
-        -- Store trainer class on the creature for gossip handling
-        trainer:SetData("trainer-class", trainerClass)
-        trainer:SetData("spawned-for", player:GetGUIDLow())
-
-        -- Store reference for cleanup
-        local playerGUID           = player:GetGUIDLow()
-        SpawnedTrainers[playerGUID] = trainer
-
-        -- Register despawn check
-        trainer:RegisterEvent(CustomClasses.checkTrainerDespawn, NEARBY_CHECK_INTERVAL, 0)
-
-        local className = CLASS_NAMES[trainerClass] or "Unknown"
-        print("[CustomClasses] Spawned " .. className .. " trainer for " .. player:GetName())
-        player:SendBroadcastMessage("|cff00ffff[Trainer] A " .. className .. " trainer has appeared nearby.|r")
-    else
-        print("[CustomClasses] Failed to spawn trainer (entry " .. trainerEntry .. " not in DB?)")
-    end
-
-    return trainer
-end -- }}}
-
--- {{{ checkTrainerDespawn
--- Despawn trainer if spawning player is gone or too far
-function CustomClasses.checkTrainerDespawn(eventId, delay, repeats, trainer)
-    local spawnedFor = trainer:GetData("spawned-for")
-    if not spawnedFor then
-        trainer:RemoveEvents()
-        trainer:DespawnOrUnsummon(0)
-        return
-    end
-
-    -- Check if spawning player is nearby
-    local nearbyPlayers = trainer:GetPlayersInRange(NEARBY_PLAYER_RANGE * 2)
-    local playerNearby  = false
-
-    if nearbyPlayers then
-        for _, player in ipairs(nearbyPlayers) do
-            if player:GetGUIDLow() == spawnedFor then
-                playerNearby = true
-                break
-            end
-        end
-    end
-
-    if not playerNearby then
-        print("[CustomClasses] Player left - despawning trainer")
-        trainer:RemoveEvents()
-        trainer:DespawnOrUnsummon(0)
-        SpawnedTrainers[spawnedFor] = nil
-    end
-end -- }}}
-
--- {{{ trySpawnTrainer
--- Called from periodic events to potentially spawn a trainer
--- Returns true if trainer spawned, false otherwise
-function CustomClasses.trySpawnTrainer(player)
-    -- Only for custom class players
-    local customClassId = CustomClasses.getCustomClass(player)
-    if not customClassId then
-        return false
-    end
-
-    -- Check spawn chance
-    if math.random() > TRAINER_SPAWN_CHANCE then
-        return false
-    end
-
-    -- Check if player already has a spawned trainer
-    local playerGUID = player:GetGUIDLow()
-    if SpawnedTrainers[playerGUID] then
-        local existing = SpawnedTrainers[playerGUID]
-        if existing:IsInWorld() then
-            return false  -- already has trainer
-        else
-            SpawnedTrainers[playerGUID] = nil  -- clean up stale reference
-        end
-    end
-
-    -- Try to spawn
-    local trainer = CustomClasses.spawnDynamicTrainer(player)
-    return trainer ~= nil
-end -- }}}
-
--- {{{ calculateTrainingCost
--- Calculate gold cost for training a spell based on level
--- Simple formula: level * 5 copper (50c at level 10, 1g at level 20)
-function CustomClasses.calculateTrainingCost(spellLevel)
-    return spellLevel * 5  -- in copper
-end -- }}}
-
--- {{{ onDynamicTrainerGossip
--- Handle gossip with dynamically spawned trainer
-function CustomClasses.onDynamicTrainerGossip(event, player, trainer)
-    local customClassId = CustomClasses.getCustomClass(player)
-    if not customClassId then
-        player:SendBroadcastMessage("|cff888888This trainer has nothing to teach you.|r")
-        return false
-    end
-
-    local def          = CustomClasses.getDefinition(customClassId)
-    local trainerClass = trainer:GetData("trainer-class")
-
-    if not def or not trainerClass then
-        return false
-    end
-
-    -- Get learnable spells for this trainer's class
-    local playerLevel = player:GetLevel()
-    local minLevel    = playerLevel - LEVEL_RANGE
-    local maxLevel    = playerLevel + LEVEL_RANGE
-    local spells      = CustomClasses.getLearnableSpells(player, def, trainerClass, minLevel, maxLevel)
-
-    if #spells == 0 then
-        player:SendBroadcastMessage("|cff888888This trainer has nothing new to teach you right now.|r")
-        return true
-    end
-
-    -- Build gossip menu
-    player:GossipClearMenu()
-
-    for _, spellData in ipairs(spells) do
-        local spellName = GetSpellInfo(spellData.id)
-        local cost      = CustomClasses.calculateTrainingCost(spellData.level)
-        local costStr   = ""
-
-        -- Format cost display
-        if cost >= 100 then
-            costStr = string.format("%dg %ds", math.floor(cost / 100), (cost % 100) / 10)
-        elseif cost >= 10 then
-            costStr = string.format("%ds", cost / 10)
-        else
-            costStr = string.format("%dc", cost)
-        end
-
-        local label = (spellName or "Spell " .. spellData.id) .. " (Lv" .. spellData.level .. ") - " .. costStr
-        player:GossipMenuAddItem(3, label, 0, spellData.id)  -- icon 3 = trainer
-    end
-
-    player:GossipMenuAddItem(0, "Nevermind", 0, 0)
-    player:GossipSendMenu(1, trainer)
-    return true
-end -- }}}
-
--- {{{ onDynamicTrainerGossipSelect
--- Handle spell selection from trainer gossip
-function CustomClasses.onDynamicTrainerGossipSelect(event, player, trainer, sender, intid, code)
-    player:GossipComplete()
-
-    if intid == 0 then
-        return  -- cancelled
-    end
-
-    local spellId = intid
-
-    -- Verify player can learn this spell
-    if player:HasSpell(spellId) then
-        player:SendBroadcastMessage("|cffff0000You already know this spell.|r")
-        return
-    end
-
-    if not CustomClasses.canLearnSpell(player, spellId) then
-        player:SendBroadcastMessage("|cffff0000This spell is not available to your class.|r")
-        return
-    end
-
-    -- Find spell level for cost calculation
-    local customClassId = CustomClasses.getCustomClass(player)
-    local def           = CustomClasses.getDefinition(customClassId)
-    local spellLevel    = 1
-
-    for _, spellData in ipairs(def.spells) do
-        if spellData.id == spellId then
-            spellLevel = spellData.level
-            break
-        end
-    end
-
-    -- Check cost
-    local cost = CustomClasses.calculateTrainingCost(spellLevel)
-    if player:GetCoinage() < cost then
-        player:SendBroadcastMessage("|cffff0000You don't have enough money.|r")
-        return
-    end
-
-    -- Teach spell
-    player:ModifyMoney(-cost)
-    player:LearnSpell(spellId)
-
-    local spellName = GetSpellInfo(spellId) or "Spell"
-    player:SendBroadcastMessage("|cff00ff00You have learned " .. spellName .. "!|r")
-
-    -- Despawn trainer after teaching (optional - could keep around)
-    trainer:RemoveEvents()
-    trainer:DespawnOrUnsummon(3000)  -- 3 second delay
-    local playerGUID           = player:GetGUIDLow()
-    SpawnedTrainers[playerGUID] = nil
 end -- }}}
 
 ---------------------------------------------------------------------------------------------------
@@ -872,16 +578,7 @@ function CustomClasses.handleChat(event, player, message)
         return false
     end
 
-    -- #trainerspawn - manually spawn dynamic trainer (testing)
-    if message == "#trainerspawn" then
-        local trainer = CustomClasses.spawnDynamicTrainer(player)
-        if not trainer then
-            player:SendBroadcastMessage("No trainer spawned (no custom class or no learnable spells in range)")
-        end
-        return false
-    end
-
-    -- #trainerinfo - show learnable spells per class in level range
+    -- #trainerinfo - show eligible trainer classes at current level
     if message == "#trainerinfo" then
         local customClassId = CustomClasses.getCustomClass(player)
         if not customClassId then
@@ -894,26 +591,20 @@ function CustomClasses.handleChat(event, player, message)
         local minLevel    = playerLevel - LEVEL_RANGE
         local maxLevel    = playerLevel + LEVEL_RANGE
 
-        player:SendBroadcastMessage("Learnable spells at level " .. playerLevel .. " (range " .. minLevel .. "-" .. maxLevel .. "):")
+        player:SendBroadcastMessage("Eligible trainers at level " .. playerLevel .. " (range " .. minLevel .. "-" .. maxLevel .. "):")
 
-        local totalSpells = 0
-        for _, sourceClass in ipairs(def.tomeClasses) do
-            local count     = CustomClasses.countLearnableSpells(player, def, sourceClass, minLevel, maxLevel)
-            local className = CLASS_NAMES[sourceClass] or "Unknown"
-            player:SendBroadcastMessage("  " .. className .. ": " .. count .. " spells")
-            totalSpells = totalSpells + count
-        end
+        -- Get eligible classes (those with learnable spells in range)
+        local eligibleClasses = CustomClasses.getEligibleClasses(player)
+        local numEligible     = #eligibleClasses
 
-        if totalSpells > 0 then
-            player:SendBroadcastMessage("Trainer spawn weights:")
-            for _, sourceClass in ipairs(def.tomeClasses) do
-                local count = CustomClasses.countLearnableSpells(player, def, sourceClass, minLevel, maxLevel)
-                if count > 0 then
-                    local className = CLASS_NAMES[sourceClass] or "Unknown"
-                    local pct       = math.floor((count / totalSpells) * 100)
-                    player:SendBroadcastMessage("  " .. className .. ": " .. pct .. "% chance")
-                end
+        if numEligible > 0 then
+            for _, classId in ipairs(eligibleClasses) do
+                local count     = CustomClasses.countLearnableSpells(player, def, classId, minLevel, maxLevel)
+                local className = CLASS_NAMES[classId] or "Unknown"
+                local pct       = math.floor(100 / numEligible)
+                player:SendBroadcastMessage("  " .. className .. ": " .. count .. " spells (" .. pct .. "% chance)")
             end
+            player:SendBroadcastMessage("Equal probability selection: 1/" .. numEligible .. " per class")
         else
             player:SendBroadcastMessage("No learnable spells - no trainer can spawn")
         end
@@ -939,16 +630,11 @@ for race, entry in pairs(SELECTOR_NPC_ENTRIES) do
     RegisterCreatureGossipEvent(entry, 2, CustomClasses.onNPCGossipSelect)
 end
 
--- Dynamic trainer gossip - register for all class trainer entries
--- SQL: source-beta/data/sql/custom/db_world/custom-class-trainers.sql
-for classId, entry in pairs(TRAINER_NPC_ENTRIES) do
-    RegisterCreatureGossipEvent(entry, 1, CustomClasses.onDynamicTrainerGossip)
-    RegisterCreatureGossipEvent(entry, 2, CustomClasses.onDynamicTrainerGossipSelect)
-end
+-- Note: Dynamic trainer spawning (Issue 157) now uses existing world trainers
+-- via Travel.getTrainerForClass() instead of custom trainer NPCs.
+-- No gossip registration needed - players use standard trainer interaction.
 
 print("[CustomClasses] Custom class system loaded")
 print("[CustomClasses] Test commands: #customclass, #customset, #customclear, #customlist, #customspawn")
-print("[CustomClasses] Trainer commands: #trainerspawn, #trainerinfo")
-print("[CustomClasses] NOTE: Requires creature_template entries in database:")
-print("[CustomClasses]   - Selector NPCs: 900001-900011 (race-specific)")
-print("[CustomClasses]   - Trainer NPCs: 900021-900031 (one per class)")
+print("[CustomClasses] Trainer info: #trainerinfo")
+print("[CustomClasses] NOTE: Requires creature_template entries 900001-900011 (selector NPCs)")

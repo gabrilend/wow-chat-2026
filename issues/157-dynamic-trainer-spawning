@@ -2,7 +2,8 @@
 
 ## Status
 - Created: 2026-04-05
-- Status: In Progress (trainer normalization complete)
+- Status: Completed
+- Completed: 2026-04-05
 - Phase: 2
 - Priority: High
 - Depends: 155 (Custom class selection)
@@ -221,8 +222,34 @@ rm source-beta/data/sql/custom/db_world/custom-class-trainers.sql
 - `source-beta/data/sql/custom/db_world/trainer-spell-level-cap.sql` - removes spells above trainer max level
 - `source-beta/data/sql/custom/db_world/custom-class-trainers.sql` - DELETED
 
-## Remaining Work
-1. Add `Travel.getTrainerForClass()` helper function
-2. Update `spawnAndTravel()` to use class-appropriate trainer for custom class players
-3. Add `CustomClasses.getEligibleClasses()` to custom-classes.lua
-4. Remove unnecessary gossip code from custom-classes.lua
+## Implementation Complete (2026-04-05)
+
+### travel.lua changes:
+1. Added `Travel.getTrainerForClass(classId, playerLevel, playerFaction)` helper
+   - Finds trainer from local `trainers` table matching class, level, and faction
+   - Returns trainerID or nil if no match
+2. Updated `spawnAndTravel()` for custom class players:
+   - Calls `CustomClasses.getEligibleClasses(player)` to get eligible classes
+   - Equal probability selection: `eligibleClasses[math.random(#eligibleClasses)]`
+   - Calls `Travel.getTrainerForClass()` to get trainer ID
+   - Falls through to normal spawn logic with replaced travellerId
+
+### custom-classes.lua changes:
+1. Added `CustomClasses.getEligibleClasses(player)`:
+   - Returns list of tomeClasses that have learnable spells in ±3 level range
+   - Uses `countLearnableSpells()` to filter classes with no available spells
+2. Removed old custom trainer system:
+   - Removed TRAINER_NPC_ENTRIES table (900021-900031 no longer needed)
+   - Removed `spawnDynamicTrainer()`, `selectTrainerClass()`, `trySpawnTrainer()`
+   - Removed `checkTrainerDespawn()`, `calculateTrainingCost()`, `getLearnableSpells()`
+   - Removed `onDynamicTrainerGossip()`, `onDynamicTrainerGossipSelect()`
+   - Removed trainer gossip registration loop
+   - Kept `countLearnableSpells()` for eligibility checking and #trainerinfo
+3. Updated `#trainerinfo` command to show equal probability instead of weighted
+4. Removed `#trainerspawn` command (no longer applicable)
+
+### Key Design Points:
+- Uses existing world trainers with their built-in spell lists
+- Equal probability selection among eligible classes (not weighted by spell count)
+- Trainers despawn normally like any other traveller (5 minute timer)
+- Custom class trainer NPCs (900021-900031) are no longer needed in database

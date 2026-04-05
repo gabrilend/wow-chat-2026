@@ -30,7 +30,7 @@ Implement custom playerbot behaviors and game systems that create emergent gamep
 | 142 | custom-spell-system | Open (Phase 3 prep) |
 | 143 | proc-gem-system | Open (Phase 3 prep) |
 | 155 | custom-class-selection-npc | Implemented (race-specific NPCs) |
-| 157 | dynamic-trainer-spawning | Implemented (travel.lua integration) |
+| 157 | dynamic-trainer-spawning | Completed |
 
 ### Ambush System
 | ID | Title | Status |
@@ -66,8 +66,10 @@ Implement custom playerbot behaviors and game systems that create emergent gamep
 | 118 | behavior-travel-to-unique-lands | Open |
 | 119 | behavior-orbit-player | Implemented |
 | 160 | behavior-system-integration | Implemented (needs testing) |
+| 161 | bot-wandering-traveller-style | Open (design complete) |
+| 162 | dungeon-rail-pathfinding | Open (design complete) |
 
-## Completed: 2/10 core, 5/7 behaviors (2 open)
+## Completed: 2/10 core, 5/9 behaviors (4 open)
 
 ## Phase Milestones
 
