@@ -111,6 +111,23 @@ function Travel.spawnAndTravel(player)
     player:SendBroadcastMessage("A traveller appears...")
     local travellerId = Travel.getRandomTravellerId(player:GetGUID())
     if travellerId ~= 0 then
+        -- Custom class players get dynamic trainers instead of base class trainers
+        -- CustomClasses is loaded via custom-classes.lua
+        if Travel.isTrainer(travellerId) and CustomClasses then
+            local customClassId = CustomClasses.getCustomClass(player)
+            if customClassId then
+                print("[Travel] Custom class player - spawning dynamic trainer instead")
+                local trainer = CustomClasses.spawnDynamicTrainer(player)
+                if trainer then
+                    player:SendBroadcastMessage("A trainer of your arts has appeared nearby.")
+                else
+                    -- No learnable spells in range - skip trainer spawn entirely
+                    print("[Travel] No learnable spells - no trainer spawned")
+                end
+                return
+            end
+        end
+
         local x, y, z, o = player:GetLocation()
               x, y       = Movement.getBoxSpawnPosition(x, y, 30, 45)
                     z    = player:GetMap():GetHeight(x, y)
@@ -596,6 +613,21 @@ Travel.travellers["Melee"]       = { name = "Melee",       list = melee,       t
 Travel.travellers["Ranged"]      = { name = "Ranged",      list = ranged,      typeMask = 128 }
 Travel.travellers["Armor"]       = { name = "Armor",       list = armor,       typeMask = 256 }
 Travel.travellers["Food"]        = { name = "Food",        list = food,        typeMask = 512 }
+
+-- {{{ Build trainer ID lookup table
+-- Used to detect if a traveller spawn is a trainer (for custom class redirection)
+Travel.trainerIds = {}
+for _, trainer in ipairs(trainers) do
+    Travel.trainerIds[trainer.trainerID] = true
+end
+-- }}}
+
+-- {{{ isTrainer
+-- Check if a traveller ID is a class trainer
+function Travel.isTrainer(travellerId)
+    return Travel.trainerIds[travellerId] == true
+end
+-- }}}
 
 PLAYER_EVENT_ON_LOGIN = 3
 PLAYER_EVENT_ON_CHAT  = 18

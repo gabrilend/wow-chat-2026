@@ -1,0 +1,207 @@
+# 157 - Dynamic Trainer Spawning for Custom Classes
+
+## Status
+- Created: 2026-04-05
+- Implemented: 2026-04-05
+- Phase: 2
+- Priority: High
+- Depends: 155 (Custom class selection)
+
+### Implementation Notes (2026-04-05)
+
+**Travel System Integration:**
+- Added `Travel.trainerIds` lookup table in travel.lua (line 600-605)
+- Added `Travel.isTrainer(travellerId)` helper function (line 608-612)
+- Modified `Travel.spawnAndTravel()` to intercept trainer spawns for custom class players
+- Custom class players get dynamic trainers instead of base class trainers
+- Base class players still get normal world trainers from traveller pool
+
+**SQL Trainer NPCs:**
+- Created `source-beta/data/sql/custom/db_world/custom-class-trainers.sql`
+- 10 trainer NPCs, one per class (entries 900021-900031, skipping 900030):
+  - Warrior (900021): Wandering Arms Master
+  - Paladin (900022): Wandering Holy Knight
+  - Hunter (900023): Wandering Beastmaster
+  - Rogue (900024): Wandering Shadow
+  - Priest (900025): Wandering Cleric
+  - Death Knight (900026): Wandering Deathbringer
+  - Shaman (900027): Wandering Spiritcaller
+  - Mage (900028): Wandering Arcanist
+  - Warlock (900029): Wandering Shadowbinder
+  - Druid (900031): Wandering Wildshaper
+
+**Gossip System:**
+- Gossip events registered for all trainer entries in custom-classes.lua
+- `onDynamicTrainerGossip()` shows learnable spells in player's level range (±3)
+- `onDynamicTrainerGossipSelect()` handles spell purchase and teaching
+- Trainer despawns after teaching one spell
+
+**Core Lua Infrastructure (already existed):**
+- `countLearnableSpells()` - count learnable spells per source class
+- `getLearnableSpells()` - get spell list for gossip menu
+- `selectTrainerClass()` - weighted random selection by spell count
+- `spawnDynamicTrainer()` - spawn appropriate trainer near player
+- `calculateTrainingCost()` - spell level × 5 copper
+
+**To deploy:**
+```bash
+mysql -u ritz -p -P 3307 acore_world < source-beta/data/sql/custom/db_world/custom-class-trainers.sql
+.reload ale
+```
+
+## Overview
+
+Custom class players can learn spells from multiple base classes. Instead of relying solely on static world trainers, the system spawns trainers dynamically based on what spells the player can learn at their current level.
+
+## Current Behavior
+- Trainers are static NPCs in the world
+- Each trainer teaches only their class's spells
+- Custom class players must travel to multiple trainer types
+
+## Intended Behavior
+
+### Trainer Spawn Trigger
+- Spawns like treasure/ambush (periodic chance)
+- Only for players with custom class
+- Base class players use normal world trainers
+
+### Weighted Class Selection
+When spawning a trainer for a custom class player:
+
+1. Get player level and level range (±3 levels)
+2. For each base class in custom class definition:
+   - Count learnable spells in level range
+   - "Learnable" = in custom class spell list AND not already known
+3. Weight trainer class by spell count:
+   ```
+   Player level 10, range 7-13
+   Learnable: 2 paladin spells, 3 mage spells
+
+   Chance paladin trainer: 2/5 = 40%
+   Chance mage trainer:    3/5 = 60%
+   ```
+
+4. If no learnable spells in range, no trainer spawns
+
+### Trainer Behavior
+- Spawns near player (like treasure chest distance)
+- Despawns when player leaves or after teaching
+- Shows only spells the player can learn (custom class filtered)
+- Uses standard gossip/teaching mechanics
+- Charges gold like normal trainers
+
+### Level Range
+- Player level ±3 determines teachable spells
+- Level 10 player sees spells requiring levels 7-13
+- Matches monster accuracy cap philosophy (±3 matters)
+
+### Spell Level Source
+- `SpellEntry:GetSpellLevel()` or `GetBaseLevel()` for spell requirements
+- Custom class definition stores which spells are available
+- Cross-reference at spawn time
+
+## Implementation Steps
+
+1. Add trainer spawn to periodic events
+   - Check if player has custom class
+   - Calculate learnable spells per base class
+   - Roll weighted class selection
+   - Spawn appropriate trainer NPC
+
+2. Create generic trainer NPCs
+   - One entry per base class (or reuse existing)
+   - Custom gossip to filter spell list
+
+3. Implement gossip handler
+   - Build spell list from custom class definition
+   - Filter by level range
+   - Filter by not-already-known
+   - Show teach options with cost
+
+4. Track trainer state
+   - Link trainer to spawning player
+   - Despawn when done or player leaves
+
+## Technical Notes
+
+### Spell Level Lookup
+```lua
+-- Get spell required level
+local spellEntry = GetSpellInfo(spellId)  -- returns SpellInfo, not SpellEntry
+-- Need to find SpellEntry access for GetSpellLevel()
+
+-- Alternative: store level requirements in custom class definition
+CustomClasses.definitions[1001] = {
+    spells = {
+        { id = 78,  level = 1  },  -- Heroic Strike
+        { id = 100, level = 4  },  -- Charge
+        { id = 133, level = 1  },  -- Fireball
+        -- etc
+    }
+}
+```
+
+### Weighted Selection
+```lua
+function selectTrainerClass(player, customClassDef)
+    local playerLevel = player:GetLevel()
+    local minLevel = playerLevel - 3
+    local maxLevel = playerLevel + 3
+
+    local weights = {}
+    local totalWeight = 0
+
+    for _, baseClass in ipairs(customClassDef.tomeClasses) do
+        local count = countLearnableSpells(player, customClassDef, baseClass, minLevel, maxLevel)
+        if count > 0 then
+            weights[baseClass] = count
+            totalWeight = totalWeight + count
+        end
+    end
+
+    if totalWeight == 0 then return nil end
+
+    -- Weighted random selection
+    local roll = math.random(1, totalWeight)
+    local cumulative = 0
+    for baseClass, weight in pairs(weights) do
+        cumulative = cumulative + weight
+        if roll <= cumulative then
+            return baseClass
+        end
+    end
+end
+```
+
+### Trainer Gossip
+```lua
+function onTrainerGossip(event, player, trainer)
+    local customClassId = CustomClasses.getCustomClass(player)
+    if not customClassId then return false end  -- use default
+
+    local def = CustomClasses.getDefinition(customClassId)
+    local trainerClass = trainer:GetData("trainer-class")
+
+    player:GossipClearMenu()
+
+    for _, spellData in ipairs(def.spells) do
+        if spellData.baseClass == trainerClass then
+            if not player:HasSpell(spellData.id) then
+                if isInLevelRange(player, spellData.level) then
+                    local spellInfo = GetSpellInfo(spellData.id)
+                    local cost = calculateTrainingCost(spellData.level)
+                    player:GossipMenuAddItem(3, spellInfo:GetName() .. " - " .. cost .. "g", 0, spellData.id)
+                end
+            end
+        end
+    end
+
+    player:GossipSendMenu(1, trainer)
+    return true  -- override default
+end
+```
+
+## Related Issues
+- 155 - Custom class selection (provides class definitions)
+- 156 - Monster accuracy level cap (±3 level philosophy)
+- 151 - Ability tome system (alternative spell acquisition)
