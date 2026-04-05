@@ -10,17 +10,30 @@
 ### Trainer Normalization (2026-04-05)
 
 **Lua changes (travel.lua):**
-- Reduced trainer pool from ~120 trainers (levels 1-80) to ~70 trainers (levels 1-20)
-- 4 trainers per class/faction covering: 1-5, 6-10, 11-15, 16-20
-- 3 trainers for classes with fewer available: 1-7, 8-14, 15-20 (death knight, horde druid)
-- Weapon trainers capped at 1-20 (they teach at any level)
+- Uses ALL available trainers per class/faction (not reduced)
+- 20 levels distributed evenly among N trainers per class
+- More trainers = finer granularity (11 mage trainers → ~2 levels each)
+- Fewer trainers = coarser granularity (3 druid trainers → ~7 levels each)
+- Players see consistent trainers at each level for their class/faction
+- Weapon trainers capped at 1-20 (teach at any level)
+
+**Trainer counts:**
+- Warriors: 9 horde, 11 alliance
+- Paladins: 5 horde, 7 alliance
+- Hunters: 7 horde, 8 alliance
+- Rogues: 6 horde, 6 alliance
+- Priests: 9 horde, 9 alliance
+- Death Knights: 3 neutral
+- Shamans: 6 horde, 5 alliance
+- Mages: 11 horde, 7 alliance
+- Warlocks: 6 horde, 6 alliance
+- Druids: 3 horde, 5 alliance
 
 **SQL changes:**
-- Created `trainer-spell-level-cap.sql` to remove spells above each trainer's max level
-- Tier 1 (maxLevel 5): spells requiring level > 5 removed
-- Tier 2 (maxLevel 10): spells requiring level > 10 removed
-- Tier 3 (maxLevel 15): spells requiring level > 15 removed
-- Tier 4 (maxLevel 20): spells requiring level > 20 removed
+- Created `trainer-spell-level-cap.sql` with per-trainer DELETE statements
+- Each trainer has spells removed above their specific maxLevel
+- Example: Alliance warrior trainer 5113 (maxLevel 1) → `DELETE ... ReqLevel > 1`
+- Example: Alliance warrior trainer 7315 (maxLevel 20) → `DELETE ... ReqLevel > 20`
 - Deleted `custom-class-trainers.sql` (no longer needed)
 
 **To deploy:**
