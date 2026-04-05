@@ -261,3 +261,97 @@ See `issues/123-visual-powerline-mapping-tool.md` for full specification.
 ## Tracking
 
 Be sure to keep track of me.
+- The creature shells should now release cleanly, freeing memory for new spawns. Sand from bones,
+bones from creatures, creatures from the ambush queue.
+
+## Documentation as Code
+
+### Patch Documentation (docs/patches/)
+
+When modifications require changes to C++ source (ALE, AzerothCore core, modules),
+write patch documentation instead of directly modifying files. This approach:
+
+1. **Describes exactly what to change, where**
+   - File paths relative to source root
+   - Line numbers or context for insertion points
+   - Complete code snippets ready to paste
+   - Before/after when modifying existing code
+
+2. **Readable by LLMs or humans**
+   - An AI agent can read the patch doc and apply it to any compatible fork
+   - A human can follow the same instructions manually
+   - Non-deterministic interpretation produces same outcome protocols
+   - The description IS the implementation specification
+
+3. **Portable across forks**
+   - Works with any ALE-compatible Lua engine
+   - Works with any AzerothCore fork
+   - Describes behavior, not specific commit hashes
+   - Finds insertion points by context, not line number alone
+
+### Patch Doc Structure
+
+```markdown
+# [Feature Name] Patch
+
+## Overview
+Brief description of what this patch adds.
+
+## Files to Modify
+
+### 1. `path/to/file.cpp`
+[Context and code changes]
+
+### 2. `path/to/other/file.h`
+[Context and code changes]
+
+## Usage
+How to use the feature after applying.
+
+## Build Instructions
+Commands to rebuild after patching.
+```
+
+### Example: `docs/patches/ale-sell-item-hook.md`
+
+Adds `PLAYER_EVENT_ON_SELL_ITEM` to ALE. Describes changes to:
+- `Hooks.h` - enum addition
+- `LuaEngine.h` - method declaration
+- `PlayerHooks.cpp` - implementation
+- `ItemHandler.cpp` - hook call site
+
+Any LLM reading this file can apply the patch. Any human can too.
+The patch doc is the source of truth for the modification.
+
+### Issue Files vs Patch Docs
+
+- **Issue files** (`issues/`) - Describe BEHAVIOR
+  - What the system should do
+  - Why it should do it
+  - Implementation steps (abstract)
+  - Can be implemented in any language, any architecture
+
+- **Patch docs** (`docs/patches/`) - Describe CHANGES
+  - Exact code modifications
+  - Specific to one codebase/language
+  - Ready to apply mechanically
+  - Implementation of an issue's requirements
+
+Issue files are portable across reimplementations.
+Patch docs are portable across forks of the same codebase.
+
+### Why This Matters
+
+The game server runs on open-source C++. We can modify it.
+But we don't want to maintain a hard fork with merge conflicts.
+
+Patch documentation:
+- Preserves the modification as knowledge
+- Allows reapplication after upstream updates
+- Enables review before application
+- Creates a paper trail of customizations
+- Can be shared without sharing compiled binaries
+
+Fanfiction for code. The story of what the code becomes.
+Anyone reading the story can make it real on their own hardware.
+- Fanfiction for code - the story becomes real on whatever hardware reads it.

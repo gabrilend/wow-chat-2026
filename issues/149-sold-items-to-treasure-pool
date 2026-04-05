@@ -1,0 +1,101 @@
+# 149 - Sold Items Return to Treasure Pool
+
+## Status
+- Created: 2026-04-04
+- Phase: 2
+- Priority: Medium
+- Depends: 148 (Treasure Chest Shared Loot)
+
+## Current Behavior
+- Players/bots sell items to vendors
+- Items disappear into the void
+- Gold appears from nothing
+
+## Intended Behavior
+- Sold items enter a global treasure pool
+- These items appear in future treasure chests
+- Items cycle through the economy - nothing destroyed
+- NPCs "prepare" treasure chests with sold items + normal spawns
+
+### Economic Cycle
+```
+Player finds item in chest
+        |
+        v
+Player uses item (equipped/consumed)
+        |
+        v
+Player sells old item to vendor
+        |
+        v
+Item enters treasure pool
+        |
+        v
+Item appears in new chest
+        |
+        v
+Another player finds item...
+```
+
+### What Goes Into Pool
+- Items sold to vendors by players
+- Items sold to vendors by bots
+- Leftover items from chests (from issue 148)
+
+### What Doesn't Go Into Pool
+- Items destroyed/deleted
+- Items traded between players (stays with new owner)
+- Quest items
+
+## Implementation Steps
+
+1. Hook vendor sell event
+   - Capture item data before it's "sold"
+   - Add to global treasure pool
+
+2. Modify chest loot generation
+   - Pull from treasure pool first
+   - Fill remainder with normal spawns
+   - Balance: X% pool items, Y% fresh spawns
+
+3. Handle item uniqueness
+   - Each item is one copy, moved atomically
+   - No duplication, no preservation of original
+   - Transceived: transmitted + received as one action
+
+## Technical Notes
+
+### Pool Structure
+```lua
+TreasurePool = {
+    items = {}, -- array of item entries
+    -- entry: { itemId, enchants, durability, ... }
+}
+```
+
+### Hooks Needed
+- `PLAYER_EVENT_ON_SELL_ITEM` or equivalent
+- Chest spawn/loot generation hook
+
+## Implementation Notes
+
+### 2026-04-04 - Research
+**Finding:** ALE does not have a `PLAYER_EVENT_ON_SELL_ITEM` hook or equivalent.
+Selling is handled entirely in C++ core, not exposed to Lua.
+
+**Workaround Options:**
+1. Custom `#sell <item>` command that uses Lua to sell and add to pool
+2. Modify playerbots C++ to emit a Lua event when bots sell
+3. Use `#pooladd` command for manual pool additions (implemented)
+
+**Current Solution:**
+- `#pooladd <itemId> [count]` - manually add items to pool
+- This allows testing the pool->chest flow without sell hooks
+
+### Future Options
+- Create AIO addon that intercepts client sell packets
+- Modify mod-playerbots to call Lua on bot sell actions
+- Accept that player sells won't flow to pool (bots can still use #pooladd)
+
+## Related Issues
+- 148 - Treasure chest shared loot (prerequisite)

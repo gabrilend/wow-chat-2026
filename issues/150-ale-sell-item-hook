@@ -1,0 +1,74 @@
+# 150 - ALE Sell Item Hook
+
+## Status
+- Created: 2026-04-04
+- Phase: 2
+- Priority: Medium
+- Type: C++ Patch
+
+## Current Behavior
+- When player/bot sells item to vendor, transaction happens in C++ core
+- No event emitted to Lua
+- Lua scripts cannot react to vendor sales
+
+## Intended Behavior
+- New player event: `PLAYER_EVENT_ON_SELL_ITEM`
+- Signature: `(event, player, item, vendor, count)`
+- Fires BEFORE item is destroyed, allowing Lua to capture item data
+- Enables treasure pool recycling, economy tracking, etc.
+
+## Implementation Location
+
+### Option A: Patch mod-ale (preferred)
+File: `source-beta/modules/mod-ale/src/LuaEngine/PlayerHooks.cpp`
+
+Add hook in the player sell item handler. ALE already hooks many player events,
+this follows the same pattern.
+
+### Option B: Patch AzerothCore core
+File: `source-beta/src/server/game/Handlers/ItemHandler.cpp`
+Function: `WorldSession::HandleSellItemOpcode`
+
+Less preferred - modifying core means merge conflicts on updates.
+
+## Technical Notes
+
+### Existing Pattern in ALE
+```cpp
+// Example from PlayerHooks.cpp
+void Eluna::OnLootItem(Player* player, Item* item, uint32 count, ObjectGuid lootguid)
+{
+    // ... calls Lua event
+}
+```
+
+### New Hook (pseudocode)
+```cpp
+void Eluna::OnSellItem(Player* player, Item* item, Creature* vendor, uint32 count)
+{
+    if (!PlayerEventBindings->HasBindingsFor(PLAYER_EVENT_ON_SELL_ITEM))
+        return;
+
+    Push(player);
+    Push(item);
+    Push(vendor);
+    Push(count);
+    CallAllFunctions(PlayerEventBindings, PLAYER_EVENT_ON_SELL_ITEM);
+}
+```
+
+### Event ID
+Add to `ElunaEventMgr.h` or equivalent:
+```cpp
+PLAYER_EVENT_ON_SELL_ITEM = XX,  // (event, player, item, vendor, count)
+```
+
+## Benefits
+- Treasure pool can recycle sold items
+- Economy tracking possible
+- Bot behavior can react to sales
+- No client modification required
+
+## Related Issues
+- 149 - Sold items return to treasure pool (depends on this)
+- 148 - Treasure chest shared loot

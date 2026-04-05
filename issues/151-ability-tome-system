@@ -1,0 +1,194 @@
+# 151 - Ability Tome System
+
+## Status
+- Created: 2026-04-04
+- Phase: 2
+- Priority: Medium
+
+## Validation Required
+- [ ] Confirm quest abilities moved to trainers (issue 140)
+- [ ] SQL script exists to drop all glyphs from game
+
+## Current Behavior
+- Players learn spells from trainers (quests removed, abilities moved to trainers)
+- Some tradable ability tomes exist in base game, but not for all abilities
+- Inscription creates glyphs (to be replaced with tomes)
+- No player-created spell items for teaching others
+
+## Intended Behavior
+
+### Core Mechanic
+- Players create **Ability Tomes** via Inscription profession
+- Tomes teach spells the crafter already knows
+- Tomes are **summoned items** - temporary, expire if not used
+- Tomes can be **SOLD** but **NOT TRADED**
+- When sold to vendor, tome enters class-specific **tome pool**
+- Chests randomly contain tomes drawn from the pool
+
+### Profession Integration
+
+**Enchanting** creates:
+- Magic dusts (disenchanting)
+- Required material for tome creation
+
+**Inscription** creates:
+- Ability tomes (not glyphs - glyphs removed from game)
+- Requires: class-specific implement + magic dusts + gems
+- Can only create tomes for spells the player knows
+
+**Class-Specific Implements:**
+| Class | Implement |
+|-------|-----------|
+| Paladin | Tome |
+| Mage | Scroll |
+| Shaman | Runestone |
+| Priest | Prayer Book |
+| Warlock | Grimoire |
+| Druid | Bark Tablet |
+| Hunter | Beast Manual |
+| Rogue | Shadow Note |
+| Warrior | Battle Scroll |
+| Death Knight | Runic Slab |
+
+### Creation Cooldown
+- **24 hours** for most spells
+- **48 hours** for spells in specialized school (tradeskill specialization)
+- Only ONE tome per player can exist at a time (cooldown enforced)
+
+### Tome Properties
+- **Duration**: 24 or 48 hours (matches creation cooldown)
+- **Tradeable**: NO - cannot be traded between players
+- **Sellable**: YES - can be sold to vendors (enters pool)
+- **Class-specific**: Contains spells for the crafter's class only
+- **Level**: Random - may or may not be level-appropriate
+- **Known status**: Random - may teach spell already known
+
+### Trainer Integration
+- Class trainers teach Inscription recipes for their class
+- Player can only interact with trainers of their own class
+- Trainers teach both class abilities AND tome recipes
+- If you meet a trainer who knows a spell you can learn, they can teach it
+- Same spell may appear on tome OR from trainer - both valid paths
+
+### Spawn Behavior (Chests)
+- Tome selected **when chest is opened**, not when spawned
+- Tome matches the **holder's** class (person keeping chest open)
+- Searchers find tomes for the holder, not themselves
+- Random chance per chest to contain a tome (like any other item)
+- Drawn from pool if available, else no tome
+
+### Server Day Cycle
+- Server runs **22 hours** of gameplay
+- **1 hour** server reset (centered on midnight in-game)
+- **1 hour** real-time skip
+- Creates **23 hour day** cycle
+- Reset hour shifts by 1 hour each real day (encourages sleep)
+- Tome duration designed around this cycle
+
+### Pool Flow
+```
+Inscription crafter creates tome (spell they know)
+        |
+        v
+Crafter sells to vendor (cannot trade)
+        |
+        v
+Tome enters class-specific pool
+        |
+        v
+Player opens chest (becomes holder)
+        |
+        v
+System selects random tome from holder's class pool
+        |
+        v
+Searcher finds tome, trades to holder
+        |
+        v
+Holder learns spell (or already knows it)
+```
+
+## Implementation Steps
+
+1. Remove glyphs from game
+   - SQL script to drop all glyph items
+   - Remove glyph-related inscription recipes
+   - Clear glyph slots from characters
+
+2. Create tome item templates
+   - One template per spell that can be taught
+   - Summoned item type with duration
+   - Class restriction on item
+   - Spell ID stored on item
+
+3. Create inscription tome recipes
+   - Per-class recipe lists
+   - Requires: class implement + dusts + gems
+   - Teaches only if player knows the spell
+   - 24/48 hour cooldown
+
+4. Create class-specific tome pools
+   - 10 pools (11 with DK)
+   - Store: spell ID, count available
+   - Decrement on draw, increment on sell
+
+5. Hook treasure system
+   - On chest open, check for tome spawn
+   - Select from holder's class pool
+   - Add to chest contents if pool has items
+
+6. Hook vendor sell
+   - Detect tome items sold
+   - Add to appropriate class pool
+
+7. Restrict trainer interaction
+   - Player can only interact with same-class trainers
+   - Trainers teach inscription recipes for their class
+
+## Technical Notes
+
+### Pool Structure
+```lua
+TomePools = {
+    [1] = { [spellId] = count, ... },  -- Warrior
+    [2] = { [spellId] = count, ... },  -- Paladin
+    [3] = { [spellId] = count, ... },  -- Hunter
+    -- etc
+}
+
+function addToPool(classId, spellId)
+    TomePools[classId][spellId] = (TomePools[classId][spellId] or 0) + 1
+end
+
+function drawFromPool(classId)
+    local available = {}
+    for spellId, count in pairs(TomePools[classId]) do
+        if count > 0 then
+            table.insert(available, spellId)
+        end
+    end
+    if #available == 0 then return nil end
+    local spellId = available[math.random(#available)]
+    TomePools[classId][spellId] = TomePools[classId][spellId] - 1
+    return spellId
+end
+```
+
+### Tome Selection on Chest Open
+```lua
+function onChestOpen(event, go, player)
+    -- player is the HOLDER
+    local classId = player:GetClass()
+    local spellId = drawFromPool(classId)
+    if spellId then
+        local tomeItemId = getTomeItemForSpell(spellId)
+        go:AddLoot(tomeItemId, 1)
+    end
+end
+```
+
+## Related Issues
+- 140 - Quest spells to trainers (prerequisite validation)
+- 148 - Treasure chest shared loot
+- 149 - Sold items return to treasure pool
+- 154 - Multi-player chest access (holder/searcher dynamic)

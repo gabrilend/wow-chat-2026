@@ -1,0 +1,59 @@
+# 146 - Clear Ambush Data on Creature Death
+
+## Status
+- Created: 2026-04-04
+- Phase: 2
+- Priority: Low
+
+## Current Behavior
+- Creature corpses don't despawn (intentional design)
+- When ambush creatures die, `onCreatureDeath` updates player counters
+- But dead creatures retain ambush-related data (`ambush-chase-target`, `wander-radius`, etc.)
+- Scheduled events may still be registered on the creature object
+- This creates memory overhead as corpses accumulate across the world
+
+## Intended Behavior
+- When ambush creatures die, all ambush-related data is cleared from them
+- Any scheduled events are removed from the creature
+- The corpse remains as static scenery (like bones or environmental objects)
+- The creature is effectively "detached" from the ambush system on death
+- Memory footprint is reduced to just the corpse visual
+
+## Implementation Steps
+
+1. Modify `Ambush.onCreatureDeath` to:
+   - Remove scheduled events from the creature via `creature:RemoveEvents()`
+   - Clear ambush-related data: `ambush-chase-target`, `wander-radius`, `ambush-max-distance`, `orbit-direction`, `is-rare`
+
+## Technical Notes
+
+### Current Death Handler (line 554-570)
+```lua
+function Ambush.onCreatureDeath(event, killer, creature)
+    local owning_player_ID = creature:GetData("ambush-chase-target") or nil
+    local isRare           = creature:GetData("is-rare") or false
+    if owning_player_ID then
+        local player = GetPlayerByGUID(owning_player_ID)
+        if player then
+            if isRare then
+                player:SetData("is-in-boss-fight", false)
+            else
+                local numAmbushers = player:GetData("num-ambushers")
+                if numAmbushers > 0 then
+                    player:SetData("num-ambushers", numAmbushers - 1)
+                end
+            end
+        end
+    end
+end
+```
+
+### Data Fields to Clear
+- `ambush-chase-target` - player GUID
+- `wander-radius` - orbit radius when player sits
+- `ambush-max-distance` - max chase distance
+- `orbit-direction` - direction of orbit movement
+- `is-rare` - whether this is a rare spawn
+
+## Related Issues
+- None

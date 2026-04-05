@@ -2,6 +2,15 @@ require("movement") -- movement.lua
 
 Travel = { travellers = {} }
 
+-- {{{ Travel.despawn
+-- Clean despawn: removes scheduled events and clears data before despawning
+-- Ensures creature shell can be fully garbage collected
+function Travel.despawn(creature)
+    creature:RemoveEvents()
+    creature:SetData("theta", nil)
+    creature:DespawnOrUnsummon(0)
+end -- }}}
+
 function Travel.setupPlayer(_event, player)
     local playerData = { travellers    = {},
                          typeMask      = 0,
@@ -124,7 +133,7 @@ function Travel.spawnAndTravel(player)
             -- If terrain invalid, despawn traveller instead of crashing
             if z == nil then
                 print("[Travel] Invalid terrain at spawn, despawning traveller")
-                traveller:DespawnOrUnsummon(0)
+                Travel.despawn(traveller)
                 return
             end
             o    = traveller:GetO()
@@ -141,7 +150,7 @@ end
 -- 0.19 radians = 11.25 degrees
 function Travel.continueTravelling(_eventID, _delay, _repeats, creature )
     local player = creature:GetNearestPlayer(200)
-    if player == nil then creature:DespawnOrUnsummon(0)
+    if player == nil then Travel.despawn(creature)
     else
         local x, y, z, o = creature:GetLocation()
         local theta = creature:GetData("theta")
@@ -153,12 +162,12 @@ function Travel.continueTravelling(_eventID, _delay, _repeats, creature )
             count = count + 1
             if count > 10 then
                 print("[Travel] Count exceeded, despawning creature")
-                creature:DespawnOrUnsummon(0)
+                Travel.despawn(creature)
                 return
             end
             if not targetZ then
                 print("[Travel] Invalid terrain, despawning creature")
-                creature:DespawnOrUnsummon(0)
+                Travel.despawn(creature)
                 return
             end
             if newO > theta then
@@ -481,10 +490,10 @@ local trainers    = {   -- horde warrior
                       { trainerID = 4092,  minLevel = 54, maxLevel = 62, rel = 2, id = -5  },
                       { trainerID = 4091,  minLevel = 63, maxLevel = 71, rel = 2, id = -5  },
                       { trainerID = 11401, minLevel = 72, maxLevel = 80, rel = 2, id = -5  },
-                        -- neutral death knight
-                      { trainerID = 29194, minLevel = 55, maxLevel = 80, rel = 3, id = -6  },
-                      { trainerID = 29195, minLevel = 55, maxLevel = 80, rel = 3, id = -6  },
-                      { trainerID = 29196, minLevel = 55, maxLevel = 80, rel = 3, id = -6  },
+                        -- neutral death knight (all three have custom level 1-20 spells)
+                      { trainerID = 29194, minLevel = 1,  maxLevel = 80, rel = 3, id = -6  },
+                      { trainerID = 29195, minLevel = 1,  maxLevel = 80, rel = 3, id = -6  },
+                      { trainerID = 29196, minLevel = 1,  maxLevel = 80, rel = 3, id = -6  },
                         -- horde shaman
                       { trainerID = 3032,  minLevel = 1,  maxLevel = 13, rel = 1, id = -7  },
                       { trainerID = 3030,  minLevel = 14, maxLevel = 26, rel = 1, id = -7  },

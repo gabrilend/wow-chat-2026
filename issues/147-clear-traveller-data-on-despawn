@@ -1,0 +1,40 @@
+# 147 - Clear Traveller Data on Despawn
+
+## Status
+- Created: 2026-04-04
+- Phase: 2
+- Priority: Low
+
+## Current Behavior
+- Travellers despawn when no player within 200 yards (line 143-144)
+- Travellers use 5-minute timed despawn (TEMPSUMMON_TIMED_OR_DEAD_DESPAWN)
+- When despawning, scheduled events and data remain on the creature object
+- This creates memory overhead as creature shells accumulate
+
+## Intended Behavior
+- When travellers despawn, clear all scheduled events first
+- Clear traveller-specific data (theta for movement direction)
+- Complete cleanup so creature can be fully garbage collected
+
+## Implementation Steps
+
+1. Create a `Travel.despawn(creature)` helper function that:
+   - Calls `creature:RemoveEvents()`
+   - Clears data: `theta`
+   - Calls `creature:DespawnOrUnsummon(0)`
+
+2. Replace direct `DespawnOrUnsummon` calls with `Travel.despawn`
+
+## Technical Notes
+
+### Despawn Locations
+- Line 144: No player nearby
+- Line 127: Invalid terrain at spawn
+- Line 156: Count exceeded (terrain retry)
+- Line 161: Invalid terrain during travel
+
+### Data Fields to Clear
+- `theta` - movement direction angle
+
+## Related Issues
+- 146 - Clear ambush data on death (same pattern)

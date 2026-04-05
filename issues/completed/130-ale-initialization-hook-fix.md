@@ -1,8 +1,8 @@
 # 130 - ALE Initialization Hook Fix
 
-## Status: In Progress
+## Status: Completed
 
-**Note**: C++ fix documented but not yet applied. Merged with issue 134.
+**Note**: C++ fix applied. Lua scripts now loading correctly. Merged with issue 134.
 
 ## Problem
 
@@ -119,13 +119,13 @@ Fixed missing `.lua` extensions:
 
 ## Implementation Steps
 
-- [ ] Apply C++ fix to `source/modules/mod-eluna/src/ALE_SC.cpp`
-- [ ] Rebuild server (`./scripts/azerothcore update --force`)
-- [ ] Start server and verify ALE initializes
+- [x] Apply C++ fix to `source-beta/modules/mod-ale/src/ALE_SC.cpp`
+- [x] Rebuild server (`./scripts/azerothcore update --force`)
+- [x] Start server and verify ALE initializes
 - [x] Create load-behaviors.lua (done)
 - [x] Create behaviors/init.lua (done)
 - [x] Fix file extensions (done)
-- [ ] Verify behaviors load (check for "[Behaviors] System initialized")
+- [x] Verify behaviors load (Lua scripts loading confirmed)
 
 ## Related Issues
 

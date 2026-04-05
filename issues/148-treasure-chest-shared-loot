@@ -1,0 +1,144 @@
+# 148 - Treasure Chest Shared Loot System
+
+## Status
+- Created: 2026-04-04
+- Phase: 2
+- Priority: Medium
+
+## Current Behavior
+- Treasure chests spawn with loot
+- Single player opens chest, takes what they want
+- Remaining loot disappears when chest closes/despawns
+- No interaction between chests
+
+## Intended Behavior
+
+### Core Principle: One Copy, Transceived
+- Each item exists as ONE copy in the world
+- Items are not duplicated, only moved
+- The pool is a shared inventory, partially accessible through chests at any time
+- When NPCs prepare chests, they pull from this shared pool
+
+### Item Lifecycle
+```
+TRASH (gone forever)     RECYCLE (back to pool)
+        ^                        ^
+        |                        |
+   destroyed              sold to vendor
+   by player              OR chest despawns (no player nearby)
+                          OR corpse despawns (no player nearby)
+```
+
+NPCs find items left behind when heroes move on. Guards watch the stashes.
+
+### Mancala Distribution
+When items enter the pool, distribute to chests round-robin:
+1. First item → next available chest
+2. Second item → second chest
+3. Loop the board? Add another to first chest
+4. No chests available? Distribute to existing chests again (more riches in rich piles)
+
+Overflow is NOT saved - it cycles back through the list. Items keep moving
+through active chests like a travelling salesman wandering the circuit again.
+Each pass adds more to the piles. Eventually players find the riches.
+
+### Vulnerability While Looting
+- Opening a chest requires focus (interacting state)
+- While interacting: defenseless
+- Monsters nearby attack and interrupt
+- Successful hit applies DAZE effect
+- Dazed players cannot open chests
+- Creates tension: someone must guard while others loot
+- Trading allowed during chest interaction (cooperation)
+
+### Multi-Player Chest Access
+- 2+ players can interact with same chest
+- Trading enabled during interaction
+- One holds it open, others take what they need
+- If holder is dazed, chest snaps shut
+
+## Implementation Steps
+
+1. ~~Research current treasure/chest implementation~~ DONE
+   - Chests spawned via `SummonGameObject`
+   - Loot from `gameobject_loot_template` + `AddLoot()`
+   - Hooks: `GAMEOBJECT_EVENT_ON_USE`, `ON_LOOT_STATE_CHANGE`
+
+2. ~~Implement global treasure pool~~ DONE
+   - `Treasure.pool` array of items
+   - `addToPool()`, `pullFromPool()` functions
+   - Pool items added to chests on spawn
+
+3. Implement mancala distribution
+   - Track active chests in world
+   - Round-robin item assignment
+   - Handle overflow (save for later)
+
+4. Implement recycle on despawn
+   - Hook chest despawn (no player nearby)
+   - Hook corpse despawn (no player nearby)
+   - Remaining items → pool
+
+5. Implement vulnerability while looting
+   - Detect player interacting with chest
+   - Allow monster interrupts
+   - Apply daze on hit
+   - Daze prevents chest interaction
+
+6. Implement multi-player chest access
+   - Multiple looters per chest
+   - Trading during interaction
+   - Daze-snap mechanic
+
+## Technical Notes
+
+### State Machine
+```
+CLOSED -> OPENING -> OPEN -> CLOSING -> CLOSED
+                      |
+                      v
+               (redistribute leftovers)
+```
+
+### Data Structures
+- `chest.looters` = {} -- players/bots who have looted
+- `chest.interested` = {} -- players/bots approaching
+- `chest.contents` = {} -- current items
+- `Global.floatingLoot` = {} -- items waiting for redistribution
+
+## Implementation Notes
+
+### 2026-04-04 - Initial Pool System
+Implemented in `src/lua/treasure.lua`:
+
+1. **Global Treasure Pool** (`Treasure.pool`)
+   - Array of `{itemId, count}` entries
+   - FIFO queue: first items added are first to appear in chests
+   - Functions: `Treasure.addToPool()`, `Treasure.pullFromPool()`
+
+2. **Pool Items Added to Chests**
+   - When `Treasure.spawnTreasure()` spawns a chest, pulls up to 2 items from pool
+   - Uses `chest:AddLoot(itemId, count)` to add items
+   - Tracks spawned chests in `Treasure.spawnedChests`
+
+3. **Item Loot Tracking**
+   - `PLAYER_EVENT_ON_LOOT_ITEM` hook logs all looted items
+   - Foundation for future: track what wasn't taken
+
+4. **Test Commands**
+   - `#pooladd <itemId> [count]` - manually add item to pool
+   - `#poolsize` - show current pool size
+   - `#treasure` - spawn a chest
+
+### Limitations (Current)
+- Cannot detect remaining loot in chests (ALE doesn't expose Loot object from GameObject)
+- Multi-player chest opening not implemented yet (requires more research)
+- Bot attraction to open chests not implemented yet
+
+### Next Steps
+- Research `GAMEOBJECT_EVENT_ON_LOOT_STATE_CHANGE` for detecting chest close
+- Implement bot notification when chests spawn nearby
+- Consider custom loot system for full control
+
+## Related Issues
+- 149 - Sold items return to treasure pool

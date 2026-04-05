@@ -1,0 +1,217 @@
+# 154 - Multi-Player Chest Access
+
+## Status
+- Created: 2026-04-04
+- Phase: 2
+- Priority: Medium
+- Depends: 153 (Chest vulnerability mechanic)
+
+## Current Behavior
+- One player opens chest
+- Only that player can loot
+- Chest closes when opening player walks away
+
+## Intended Behavior
+
+### Roles
+- **Holder**: First person to open chest, keeps it open
+- **Searchers**: Additional players who interact with open chest
+- Minimum 2 people for full functionality (1 holder + 1 searcher)
+
+### Chest Holder
+- Keeps chest in "open" state
+- **Cannot search** while holding - sees empty chest
+- Vulnerable to monster attacks
+- If dazed, chest snaps shut
+
+### Searchers
+- Can browse chest contents
+- Can take items they want
+- Can open trade window with holder
+- Only **ONE searcher can trade at a time**
+
+### Trade Queue
+- Trade requests form a **stack (LIFO)**
+- Only one active trade at a time
+- Queue behavior:
+  - If empty: request becomes active immediately
+  - If one pending: request queues behind it
+  - **Non-searchers are not viable traders** - requests dropped (firewall)
+- Request removed when:
+  - Trade completes successfully
+  - Requesting player moves away from chest
+  - Chest closes
+
+### Daze-Snap Mechanic
+- If holder is dazed → chest **immediately closes**
+- All trade communication ends
+- Trade queue is cleared
+- **Any player can reopen** after daze expires - they become the new holder
+- **Loot is the same** upon re-opening (chest contents preserved)
+
+### Post-Close Behavior
+- When holder closes chest normally:
+  - All trade communication ends
+  - Queue cleared
+  - Trade can be requested immediately after (normal behavior)
+- When not holding a chest:
+  - No queue exists (normal behavior)
+
+## Implementation Steps
+
+1. Implement chest holder tracking
+   - Track which player is holding open which chest
+   - Only one holder per chest
+   - **Store as GUID/ID, not pointer or reference**
+   - Store on chest object data
+
+2. Implement searcher access
+   - Non-holder players can interact with open chest
+   - Searchers see contents, holder sees empty
+   - Searchers can take items
+   - Track searchers on chest object
+
+3. Implement trade queue
+   - When searcher initiates trade with holder:
+     - If requester is not a searcher → DROP (firewall)
+     - If queue empty → start trade immediately
+     - If queue has one pending → add to queue
+   - Process trades one at a time (LIFO)
+
+4. Implement daze-snap
+   - Hook daze application on holder
+   - Force close chest (clear holder, clear searchers)
+   - Clear trade queue
+   - Preserve chest contents for reopening
+
+5. Implement reopen mechanics
+   - Any player can reopen chest after daze expires
+   - They become the new holder
+   - Contents same as before snap
+
+6. Implement move-away detection
+   - If requester moves X yards from chest
+   - Remove their request from queue
+   - Cancel any active trade with them
+
+## Technical Notes
+
+### Data Structures
+```lua
+-- All stored on chest object as GUIDs, not references
+ChestState = {
+    holder = playerGUID,           -- GUID, not pointer
+    searchers = { guid1, guid2 },  -- list of GUIDs
+    tradeQueue = { guid },         -- LIFO stack, max 1 pending
+    activeTrade = {
+        searcher = guid,
+        holder = guid
+    } or nil,
+    contents = { ... }             -- preserved across snap/reopen
+}
+```
+
+### Trade Request Handling
+```lua
+function onTradeRequest(event, requester, target)
+    local chest = getChestHeldBy(target)
+    if not chest then return end  -- target not holding a chest
+
+    -- Check if requester is a searcher
+    local searchers = chest:GetData("searchers") or {}
+    if not contains(searchers, requester:GetGUID()) then
+        -- Not a searcher - DROP request (firewall)
+        return false
+    end
+
+    local queue = chest:GetData("tradeQueue") or {}
+    local activeTrade = chest:GetData("activeTrade")
+
+    if not activeTrade then
+        -- No active trade - start immediately
+        startTrade(requester, target, chest)
+    elseif #queue < 1 then
+        -- Queue has room - add to queue
+        table.insert(queue, requester:GetGUID())
+        chest:SetData("tradeQueue", queue)
+    end
+    -- Else: queue full, request dropped
+
+    return true
+end
+```
+
+### Event Flow
+```
+Holder opens chest (becomes holder, sees empty)
+    |
+    v
+Searcher approaches, interacts (becomes searcher, sees contents)
+    |
+    v
+Searcher initiates trade with holder
+    |
+    v
+Is requester a searcher? NO → DROP
+    |
+    YES
+    v
+Queue accepts (if empty) or queues (if not full)
+    |
+    v
+Active trade processes
+    |
+    v
+Trade completes, queue pops next (if any)
+```
+
+### Daze-Snap Implementation
+```lua
+function onHolderDazed(event, player, aura)
+    if not isDazeAura(aura) then return end
+
+    local chest = getChestHeldBy(player)
+    if not chest then return end
+
+    -- Preserve contents for reopening
+    -- (contents already stored on chest, just don't clear them)
+
+    -- Clear interaction state
+    closeChest(chest)
+    clearSearchers(chest)
+    clearTradeQueue(chest)
+
+    -- Holder and searchers are cleared, but chest contents remain
+    -- Any player can now reopen and become new holder
+end
+```
+
+### Reopen Mechanics
+```lua
+function onChestUse(event, go, player)
+    -- Check for daze
+    if player:HasAura(DAZE_SPELL_ID) then
+        player:SendBroadcastMessage("You are too dazed to focus on the chest")
+        return false
+    end
+
+    local holder = go:GetData("holder")
+    if not holder then
+        -- No holder - this player becomes holder
+        go:SetData("holder", player:GetGUID())
+        -- Holder sees empty chest, contents preserved from previous open
+        return true
+    else
+        -- Already has holder - this player becomes searcher
+        local searchers = go:GetData("searchers") or {}
+        table.insert(searchers, player:GetGUID())
+        go:SetData("searchers", searchers)
+        return true
+    end
+end
+```
+
+## Related Issues
+- 153 - Chest vulnerability mechanic (prerequisite)
+- 148 - Treasure chest shared loot
+- 151 - Ability tome system (tome trades through chest)

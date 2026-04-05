@@ -2,6 +2,41 @@ require "movement" -- for spawning the chests at specific positions
 
 Treasure = { chests = {} }
 
+-- {{{ Global Treasure Pool
+-- Items cycle through the world - sold items and unclaimed loot flow here
+-- then reappear in future chests. Nothing destroyed, just transceived.
+Treasure.pool = {}  -- array of {itemId, count} entries
+Treasure.spawnedChests = {}  -- track chests we spawned, keyed by GUID
+
+-- Maximum items to pull from pool per chest spawn
+local POOL_ITEMS_PER_CHEST = 2
+
+-- {{{ Treasure.addToPool
+-- Add an item to the global treasure pool
+function Treasure.addToPool(itemId, count)
+    count = count or 1
+    table.insert(Treasure.pool, { itemId = itemId, count = count })
+    print("[Treasure] Added to pool: item " .. itemId .. " x" .. count .. " (pool size: " .. #Treasure.pool .. ")")
+end -- }}}
+
+-- {{{ Treasure.pullFromPool
+-- Pull items from pool to add to a chest
+-- Returns array of {itemId, count} or empty table
+function Treasure.pullFromPool(maxItems)
+    local items = {}
+    local pulled = 0
+    while pulled < maxItems and #Treasure.pool > 0 do
+        local item = table.remove(Treasure.pool, 1)  -- FIFO: first in, first out
+        table.insert(items, item)
+        pulled = pulled + 1
+    end
+    if pulled > 0 then
+        print("[Treasure] Pulled " .. pulled .. " items from pool (remaining: " .. #Treasure.pool .. ")")
+    end
+    return items
+end -- }}}
+-- }}}
+
 local chests = { { id = 2843,   minLevel = 1,  maxLevel = 5  },
                  { id = 106318, minLevel = 3,  maxLevel = 7  },
                  { id = 106319, minLevel = 6,  maxLevel = 10 },
@@ -86,6 +121,23 @@ function Treasure.spawnTreasure(player)
         player:SendBroadcastMessage("Treasure!")
         print("[Treasure] Spawning chest " .. chestID)
         local chest = player:SummonGameObject(chestID, x, y, z, o, 0)
+
+        -- Add items from pool to this chest
+        if chest then
+            local poolItems = Treasure.pullFromPool(POOL_ITEMS_PER_CHEST)
+            for _, item in ipairs(poolItems) do
+                chest:AddLoot(item.itemId, item.count)
+                print("[Treasure] Added pool item " .. item.itemId .. " to chest")
+            end
+
+            -- Track this chest so we know it's one of ours
+            local chestGUID = chest:GetGUID()
+            Treasure.spawnedChests[chestGUID] = {
+                chestID = chestID,
+                spawnTime = os.time(),
+                poolItemsAdded = #poolItems
+            }
+        end
     end
 end
 
@@ -127,7 +179,49 @@ function Treasure.getRandomChestFromQueue(playerID)
 end
 
 
-PLAYER_EVENT_ON_LOGIN = 3
+-- {{{ Treasure.onLootItem
+-- Track items looted from chests - these complete the cycle
+-- For now, just logging. Later: could track what wasn't taken.
+function Treasure.onLootItem(event, player, item, count)
+    local itemId = item:GetEntry()
+    local itemName = item:GetName()
+    print("[Treasure] " .. player:GetName() .. " looted: " .. itemName .. " (ID: " .. itemId .. ") x" .. count)
+end -- }}}
+
+-- {{{ Treasure.handleChat
+-- Test commands for treasure pool
+-- #pooladd <itemId> [count] - add item to pool
+-- #poolsize - show pool size
+function Treasure.handleChat(event, player, message)
+    if message:sub(1, 8) == "#pooladd" then
+        local args = message:sub(10)
+        local itemId, count = args:match("(%d+)%s*(%d*)")
+        itemId = tonumber(itemId)
+        count = tonumber(count) or 1
+        if itemId then
+            Treasure.addToPool(itemId, count)
+            player:SendBroadcastMessage("Added item " .. itemId .. " x" .. count .. " to treasure pool")
+        else
+            player:SendBroadcastMessage("Usage: #pooladd <itemId> [count]")
+        end
+        return
+    end
+
+    if message == "#poolsize" then
+        player:SendBroadcastMessage("Treasure pool size: " .. #Treasure.pool .. " items")
+        return
+    end
+
+    if message == "#treasure" then
+        Treasure.spawnTreasure(player)
+    end
+end -- }}}
+
+PLAYER_EVENT_ON_LOGIN     = 3
+PLAYER_EVENT_ON_LOOT_ITEM = 32
+PLAYER_EVENT_ON_CHAT      = 18
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, Treasure.setupTreasure)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOOT_ITEM, Treasure.onLootItem)
+RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT, Treasure.handleChat)
 
 
