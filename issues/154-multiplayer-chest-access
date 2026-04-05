@@ -5,6 +5,13 @@
 - Phase: 2
 - Priority: Medium
 - Depends: 153 (Chest vulnerability mechanic)
+- **Implemented:** src/lua/chest-vulnerability.lua
+
+### Implementation Notes
+- Combined with 153 (vulnerability) in same file
+- Holder promoted from searchers on logout
+- Trade queue NOT implemented (requires separate trade hook system)
+- Player-chest mapping for fast damage lookup
 
 ## Current Behavior
 - One player opens chest

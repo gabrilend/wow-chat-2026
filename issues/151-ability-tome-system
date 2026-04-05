@@ -4,6 +4,17 @@
 - Created: 2026-04-04
 - Phase: 2
 - Priority: Medium
+- **Implemented (partial):** src/lua/ability-tomes.lua
+
+### Implementation Notes
+- Core Lua infrastructure complete (pools, chest integration)
+- Test commands: #tomeadd, #tomepool, #tomereg
+- **NOT implemented:**
+  - SQL: Tome item templates (need one per spell)
+  - SQL: Inscription recipes with class implements
+  - SQL: Remove glyphs from game
+  - C++: Sell hook (see docs/patches/ale-sell-item-hook.md)
+  - DB: Pool persistence (currently in-memory only)
 
 ## Validation Required
 - [ ] Confirm quest abilities moved to trainers (issue 140)

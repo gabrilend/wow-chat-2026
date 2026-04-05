@@ -4,6 +4,12 @@
 - Created: 2026-04-04
 - Phase: 2
 - Priority: Medium
+- **Implemented:** src/lua/death-durability.lua
+
+### Implementation Notes
+- Uses low-level Object:GetUInt32Value/SetUInt32Value for durability access
+- WoW 3.3.5a item field indices: DURABILITY=21, MAXDURABILITY=22
+- **Not implemented:** Doubled repair costs (requires C++ hook - ALE doesn't expose repair events)
 
 ## Current Behavior
 - Death causes 10% durability loss to equipped items

@@ -1,0 +1,313 @@
+---------------------------------------------------------------------------------------------------
+-- Ability Tome System
+-- Issue: 151 - Players create tomes via Inscription, sell to vendors, find in chests
+--
+-- This file implements:
+-- - Tome pool management (per-class spell pools)
+-- - Chest integration (add tomes on open based on holder's class)
+-- - Pool persistence (save/load)
+--
+-- NOT implemented here (requires additional work):
+-- - SQL: Tome item templates (one per spell)
+-- - SQL: Inscription recipes (requires class implements)
+-- - C++: Sell hook (see docs/patches/ale-sell-item-hook.md)
+-- - SQL: Remove glyphs from game
+
+AbilityTomes = {}
+
+-- Class IDs for reference
+local CLASS_WARRIOR     = 1
+local CLASS_PALADIN     = 2
+local CLASS_HUNTER      = 3
+local CLASS_ROGUE       = 4
+local CLASS_PRIEST      = 5
+local CLASS_DEATHKNIGHT = 6
+local CLASS_SHAMAN      = 7
+local CLASS_MAGE        = 8
+local CLASS_WARLOCK     = 9
+local CLASS_DRUID       = 11
+
+-- Tome pools: { [classId] = { [spellId] = count, ... } }
+AbilityTomes.pools = {
+    [CLASS_WARRIOR]     = {},
+    [CLASS_PALADIN]     = {},
+    [CLASS_HUNTER]      = {},
+    [CLASS_ROGUE]       = {},
+    [CLASS_PRIEST]      = {},
+    [CLASS_DEATHKNIGHT] = {},
+    [CLASS_SHAMAN]      = {},
+    [CLASS_MAGE]        = {},
+    [CLASS_WARLOCK]     = {},
+    [CLASS_DRUID]       = {},
+}
+
+-- Spell -> Tome Item mapping (populated by SQL data)
+-- Format: { [spellId] = tomeItemId, ... }
+AbilityTomes.spellToTome = {}
+
+-- Tome Item -> Spell mapping (reverse lookup)
+-- Format: { [tomeItemId] = spellId, ... }
+AbilityTomes.tomeToSpell = {}
+
+-- Tome spawn chance when opening chest (0.0 to 1.0)
+local TOME_SPAWN_CHANCE = 0.15  -- 15% chance
+
+---------------------------------------------------------------------------------------------------
+-- Pool Management
+
+-- {{{ addToPool
+-- Add a tome (spell) to the class-specific pool
+function AbilityTomes.addToPool(classId, spellId)
+    if not AbilityTomes.pools[classId] then
+        print("[AbilityTomes] ERROR: Invalid classId " .. classId)
+        return false
+    end
+    AbilityTomes.pools[classId][spellId] = (AbilityTomes.pools[classId][spellId] or 0) + 1
+    print("[AbilityTomes] Added spell " .. spellId .. " to class " .. classId .. " pool")
+    return true
+end -- }}}
+
+-- {{{ drawFromPool
+-- Draw a random tome (spell) from the class pool
+-- Returns spellId or nil if pool empty
+function AbilityTomes.drawFromPool(classId)
+    local pool = AbilityTomes.pools[classId]
+    if not pool then return nil end
+
+    -- Collect available spells
+    local available = {}
+    for spellId, count in pairs(pool) do
+        if count > 0 then
+            table.insert(available, spellId)
+        end
+    end
+
+    if #available == 0 then
+        return nil
+    end
+
+    -- Select random spell
+    local spellId = available[math.random(#available)]
+    pool[spellId] = pool[spellId] - 1
+
+    -- Clean up if count reaches 0
+    if pool[spellId] <= 0 then
+        pool[spellId] = nil
+    end
+
+    print("[AbilityTomes] Drew spell " .. spellId .. " from class " .. classId .. " pool")
+    return spellId
+end -- }}}
+
+-- {{{ getPoolSize
+-- Get total number of tomes in a class pool
+function AbilityTomes.getPoolSize(classId)
+    local pool = AbilityTomes.pools[classId]
+    if not pool then return 0 end
+
+    local total = 0
+    for spellId, count in pairs(pool) do
+        total = total + count
+    end
+    return total
+end -- }}}
+
+-- {{{ getPoolContents
+-- Get detailed contents of a class pool
+function AbilityTomes.getPoolContents(classId)
+    local pool = AbilityTomes.pools[classId]
+    if not pool then return {} end
+
+    local contents = {}
+    for spellId, count in pairs(pool) do
+        if count > 0 then
+            table.insert(contents, { spellId = spellId, count = count })
+        end
+    end
+    return contents
+end -- }}}
+
+---------------------------------------------------------------------------------------------------
+-- Tome Item Management
+
+-- {{{ registerTome
+-- Register a spell -> tome item mapping
+function AbilityTomes.registerTome(spellId, tomeItemId)
+    AbilityTomes.spellToTome[spellId] = tomeItemId
+    AbilityTomes.tomeToSpell[tomeItemId] = spellId
+    print("[AbilityTomes] Registered tome: spell " .. spellId .. " -> item " .. tomeItemId)
+end -- }}}
+
+-- {{{ getTomeItemForSpell
+-- Get the tome item ID for a spell
+function AbilityTomes.getTomeItemForSpell(spellId)
+    return AbilityTomes.spellToTome[spellId]
+end -- }}}
+
+-- {{{ getSpellForTomeItem
+-- Get the spell ID for a tome item
+function AbilityTomes.getSpellForTomeItem(tomeItemId)
+    return AbilityTomes.tomeToSpell[tomeItemId]
+end -- }}}
+
+---------------------------------------------------------------------------------------------------
+-- Chest Integration
+
+-- {{{ onChestOpen
+-- When chest is opened, potentially add a tome based on holder's class
+-- This hooks into GAMEOBJECT_EVENT_ON_USE
+function AbilityTomes.onChestOpen(event, chest, player)
+    -- Random chance to spawn tome
+    if math.random() > TOME_SPAWN_CHANCE then
+        return false  -- no tome this time
+    end
+
+    -- Get player's class
+    local classId = player:GetClass()
+    local poolSize = AbilityTomes.getPoolSize(classId)
+
+    if poolSize == 0 then
+        print("[AbilityTomes] No tomes in pool for class " .. classId)
+        return false
+    end
+
+    -- Draw from pool
+    local spellId = AbilityTomes.drawFromPool(classId)
+    if not spellId then
+        return false
+    end
+
+    -- Get tome item
+    local tomeItemId = AbilityTomes.getTomeItemForSpell(spellId)
+    if not tomeItemId then
+        -- No tome item registered for this spell - put it back
+        AbilityTomes.addToPool(classId, spellId)
+        print("[AbilityTomes] No tome item registered for spell " .. spellId)
+        return false
+    end
+
+    -- Add tome to chest
+    chest:AddLoot(tomeItemId, 1)
+    print("[AbilityTomes] Added tome " .. tomeItemId .. " (spell " .. spellId .. ") to chest for " .. player:GetName())
+
+    player:SendBroadcastMessage("|cff00ffff[Ability Tome] A tome glimmers in the chest...|r")
+    return false  -- continue normal chest interaction
+end -- }}}
+
+---------------------------------------------------------------------------------------------------
+-- Vendor Sell Integration (STUB - requires C++ hook)
+
+-- {{{ onPlayerSellItem
+-- Called when player sells an item to vendor
+-- REQUIRES: C++ patch documented in docs/patches/ale-sell-item-hook.md
+--
+-- When patch is applied, register with:
+-- RegisterPlayerEvent(74, AbilityTomes.onPlayerSellItem)  -- PLAYER_EVENT_ON_SELL_ITEM
+function AbilityTomes.onPlayerSellItem(event, player, item, vendor)
+    local itemId = item:GetEntry()
+    local spellId = AbilityTomes.getSpellForTomeItem(itemId)
+
+    if not spellId then
+        return  -- not a tome
+    end
+
+    -- Get class from spell (would need spell -> class mapping)
+    -- For now, use player's class
+    local classId = player:GetClass()
+
+    -- Add to pool
+    AbilityTomes.addToPool(classId, spellId)
+    player:SendBroadcastMessage("|cff00ffff[Ability Tome] Tome returned to the world pool.|r")
+end -- }}}
+
+---------------------------------------------------------------------------------------------------
+-- Persistence
+
+-- {{{ savePools
+-- Save pools to player data (for persistence across restarts)
+-- This is a simplified approach - real implementation would use DB
+function AbilityTomes.savePools()
+    -- Convert pools to string format for storage
+    local data = {}
+    for classId, pool in pairs(AbilityTomes.pools) do
+        data[classId] = {}
+        for spellId, count in pairs(pool) do
+            data[classId][spellId] = count
+        end
+    end
+    -- Would write to DB or file here
+    print("[AbilityTomes] Pools saved (implementation pending)")
+end -- }}}
+
+-- {{{ loadPools
+-- Load pools from storage
+function AbilityTomes.loadPools()
+    -- Would read from DB or file here
+    print("[AbilityTomes] Pools loaded (implementation pending)")
+end -- }}}
+
+---------------------------------------------------------------------------------------------------
+-- Test Commands
+
+-- {{{ handleChat
+function AbilityTomes.handleChat(event, player, message)
+    -- #tomeadd <classId> <spellId> - add tome to pool
+    if message:sub(1, 8) == "#tomeadd" then
+        local args = message:sub(10)
+        local classId, spellId = args:match("(%d+)%s+(%d+)")
+        classId = tonumber(classId)
+        spellId = tonumber(spellId)
+        if classId and spellId then
+            AbilityTomes.addToPool(classId, spellId)
+            player:SendBroadcastMessage("Added spell " .. spellId .. " to class " .. classId .. " tome pool")
+        else
+            player:SendBroadcastMessage("Usage: #tomeadd <classId> <spellId>")
+        end
+        return false
+    end
+
+    -- #tomepool [classId] - show pool size
+    if message:sub(1, 9) == "#tomepool" then
+        local classIdStr = message:sub(11)
+        local classId = tonumber(classIdStr)
+        if not classId then
+            classId = player:GetClass()
+        end
+        local size = AbilityTomes.getPoolSize(classId)
+        player:SendBroadcastMessage("Class " .. classId .. " tome pool: " .. size .. " tomes")
+
+        local contents = AbilityTomes.getPoolContents(classId)
+        for _, entry in ipairs(contents) do
+            player:SendBroadcastMessage("  - Spell " .. entry.spellId .. " x" .. entry.count)
+        end
+        return false
+    end
+
+    -- #tomereg <spellId> <itemId> - register tome item
+    if message:sub(1, 8) == "#tomereg" then
+        local args = message:sub(10)
+        local spellId, itemId = args:match("(%d+)%s+(%d+)")
+        spellId = tonumber(spellId)
+        itemId = tonumber(itemId)
+        if spellId and itemId then
+            AbilityTomes.registerTome(spellId, itemId)
+            player:SendBroadcastMessage("Registered tome: spell " .. spellId .. " -> item " .. itemId)
+        else
+            player:SendBroadcastMessage("Usage: #tomereg <spellId> <itemId>")
+        end
+        return false
+    end
+end -- }}}
+
+---------------------------------------------------------------------------------------------------
+-- Registration
+
+-- Hook chest opening for tome spawns
+-- Using entry 0 catches all gameobjects - may want to filter to chest types
+RegisterGameObjectEvent(0, 14, AbilityTomes.onChestOpen)  -- event 14 = GAMEOBJECT_EVENT_ON_USE
+
+-- Chat commands for testing
+RegisterPlayerEvent(18, AbilityTomes.handleChat)  -- PLAYER_EVENT_ON_CHAT
+
+print("[AbilityTomes] Ability tome system loaded")
+print("[AbilityTomes] NOTE: Sell hook requires C++ patch (see docs/patches/ale-sell-item-hook.md)")

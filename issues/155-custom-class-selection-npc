@@ -4,6 +4,19 @@
 - Created: 2026-04-04
 - Phase: 2
 - Priority: High
+- **Implemented (partial):** src/lua/custom-classes.lua
+
+### Implementation Notes
+- Core Lua infrastructure complete (class definitions, player storage)
+- Example classes: Spellblade, Shadow Apostle, Beast Shaman
+- Test commands: #customclass, #customset, #customclear, #customlist, #customspawn
+- Trainer level scaling formula implemented
+- **NOT implemented:**
+  - SQL: Selector NPC creature_template entry (900001)
+  - Gossip event registration (needs NPC entry first)
+  - File loading from src/custom-class-json/
+  - Trainer gossip filtering (requires creature gossip hooks)
+  - AIO talent addon
 
 ## Overview
 
@@ -265,6 +278,8 @@ end
 Custom classes defined in: `src/custom-class-json/`
 
 **This directory is an rmail inbox** - people who know the password from the website can upload custom mods. Community-contributed custom classes.
+
+-- if there are more custom classes in the directory than that which fits in a basic WoW characters dialogue, then select from the pool randomly. Also only allow one contribution from each immutable contact password. once you got one, that's always what I'll remember you as. Like a name, introduced at a gathering or meeting. do the sort of random where once picked, you don't show up again until all the options have cycled through.
 
 File format: Custom format (not actually JSON, but "json" is descriptive shorthand for structured data definitions).
 

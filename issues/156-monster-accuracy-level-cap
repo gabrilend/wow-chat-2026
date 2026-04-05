@@ -89,9 +89,15 @@ end
 ```
 
 ### Where to Hook
-- Likely in combat calculation code
-- May need C++ patch if not exposed to Lua
-- Check for existing level-based modifiers to override
+**Requires C++ patch** - ALE does not expose hit/miss calculation hooks to Lua.
+
+Hit chance is calculated in:
+- `Unit::RollMeleeOutcomeAgainst()` - melee attacks
+- `Unit::MagicSpellHitResult()` - spell attacks
+
+Both use `GetLevelDiff()` or similar level difference calculations.
+
+See patch documentation: `docs/patches/accuracy-level-cap.md`
 
 ## Design Philosophy
 
