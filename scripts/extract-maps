@@ -4,7 +4,7 @@
 # Extracts game data from WoW 3.3.5a client using profile-specific tools.
 # Outputs to data-files/ directory for use by the server.
 
-DIR="/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
 CLIENT_DIR="/mnt/dile/ritz/games/wotlk"
 
 # -- {{{ usage

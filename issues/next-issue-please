@@ -1,0 +1,239 @@
+how about this - when players reach level 20, they start gathering invisible exp
+stored in the sql database. Basically, they have to fight stronger-and-stronger
+monsters until they die. If you ever die while you don't have any equipment on,
+your character gets deleted. after hitting level 20, they gain enough invisible
+exp to match the amount of regular exp it would have been needed to level to 21
+- then, they gain an "invisible level", and the monsters that spawn for them
+are of the invisible level + 20. Then, for the same amount of invisible exp that
+it takes to get from level 21 to 22, they face monsters of level 22. But their
+stats are still level 20, they still fight with the same equipment - but, with
+the accuracy mechanics changed, they can no longer absolutely decimate their foe
+- or, be consumed by. Instead, it's a more even and honest fight - the monster
+  damage is scaled down to level 20. They just have more HP, stranger models,
+  and much MUCH better loot. With no level requirements, nyaaaaaaa
+
+they can sit down whenever they want to.
+
+it goes all the way around until it loops back to 40, then 60, then 80, at which
+point the game sends you a single gold coin in the mailbox system.
+
+then the monsters stop spawning for you forever.
+
+the monster damage might need to be adjusted to level 20 levels for monsters
+above level 23. treated like boss foes, that spawn every moment for the immortal
+contenders. For every god amongst us, it becomes easier to face the dark.
+
+wandering storytellers, that stop moving whenever a player/bot sits down within
+5 yards. they sometimes pace, or lay down. sometimes they read from a book, or
+others they recite from memory. What they do is they read something from the
+library of gutenberg, and also w7 because it's my game and I can do what I want
+nyaa (no that wasn't a nyaaaa it was just someone else doing something similar)
+
+anyway, they read a sentence of text
+
+one sentence
+
+split on periods, not commas.
+
+they'd wander like any other traveller,
+
+but, importantly, they'd be a playerbot.
+
+so you could follow them if you want.
+
+also, if you sent an rmail to the right rmail mailbox, you could subscribe and
+have it read through a TTS engine. It'd send it to you as a mp3 and you could
+find the right spot in the "song" that corresponded to the cadence of thebot's
+speaking rhythm. The TTS is generated, with pauses at the same rate that the
+NPC places them. A long sentence develops the timeline of the song more, a
+short does less. commas add time to the waiting period, and the TTS is just
+synced to the start-point of each of the quotes being sent to the user over
+rmail. timestamps if you will. also if you send a PM to a narratorbot, it'll
+share the message with people who say words similar to what it heard before.
+"abandoned farm, you say? I heard someone abandoned a farm recently. here's a
+rumor..." and then it tells the rumor that someone PM'd to the narattorbot.
+
+it only recounts it once. and only if people are asking about it, or otherwise
+engaged with it nearby to the narratorbot. Like, in /say chat channel. but
+usually they'd just speak out loud their story. If people keep interrupting
+them and speaking in /say over them, they stop the story, and talk about rumors
+instead. if the NPC happens to spawn for another player on the other side of
+the map (the same ones spawn from levels 1 through 20) then they can hear what
+you're saying to the one on your side of the map. Just, play a game of telephone
+with the robot, and it'll work out. rumors pass back and forth, especially if
+you keep asking about them, and getting the guesses right. the things that the
+robot leaves unsaid and the ones that they pattern match against - like, they'll
+say something about cars, knowing that cars and picnic blankets were associated
+in the PMs that another player was sending them, and then if you say something
+about picnic blankets then it's like "oh! I said cars, they said picnic, that's
+a match" and then they'll tell you more of the rumor. If you keep guessing, then
+they tell you more. Like, riddles, or ancient past mysteries.
+
+the TTS engine would include rumors by the way. You could subscribe to each of
+the NPCs individually, and they'd tell you everything that NPC said while it
+was within ~20-30 yards of your character while it said it. Remember, you just
+have to sit down near them to get them to stay and listen. they do walking speed
+so you can easily reach them.
+
+sometimes they'll pick two people who are sitting down within ~10 yards and
+they'll walk through the midpoint between them. Ideally, close to a right-angle
+to the line drawn between the two people's positions, only ifthere's nobody in
+the way, and only if they can fit between them easily. Otherwise, when in this
+pacing mood (there's several, they're different) they just orbit people at a 5
+yard range. if they'd step into range of another person, they just orbit them instead, starting at the
+closest point to their "collision box" - essentially allowing the user to circle
+them as a group.
+
+othertimes they pace from point A to point B, take 2 steps, stop, take two steps
+stop, spin around, say something, ponder, then turn around and take two steps,
+etc. Once they reach the end, they'll spin around the long way, and then walk
+back in much the same fashion.
+
+sometimes they'll do the point-to-point pace with an S curve, one period every
+5 yards, lazily evaluated. those are at full walking pace. they do at least 4
+per time s curve point-to-point is selected.
+
+sometimes they say "I kinda want to take a break for a while, watch over me?"
+and they lay down, sleep for ~30 minutes, and ignore all PMs and TTS mechanics
+and forget any rumors they heard.
+
+there's mechanics in place to ensure that they don't listen to more than one PM
+per second, no matter who sent it. Any extra for that particular playerbot NPC
+travelling narrator would be dropped, and only the first one registered.
+
+essentially... periodic event, check which one is assigned to this datastructure
+table that holds all the relevant details. Who cares if another one assigns to
+it, I'll just grab and use the most recent.
+
+but, the datastructure is stored client-side, so it doesn't overload the server
+with update requests. They're just rumors in a mailbox, why be so worried about
+encryption?
+
+shepherds that wander around with a flock of critters in tow. they became
+immortal, and their charges too. now they travel together as a group because
+they want to. the idea is, one day everyone protected a lamb or cow until they
+ascended, and then suddenly they were immmortalized. they will walking speed
+move away from nearby monsters, and they part to go around players. if the
+player walks too close to the critter, they run away at 100% speed (the player
+only gets 80% by default in the worldserver config file) just a few steps, so
+the crowd feels dynamic.
+
+the shepherds explain the immortality dynamics to the players, if they tell them
+their most recent true name. They get a new one every once in a time around.
+
+how it works is, the shepherds need to be near a narrator when no players are
+nearby. Then they'll tell a rumor to the narrator, who can then pass it along
+to players. If the players say part of the story to the shepherd, even just
+matching ~20% of the words, (which are curated and written by the server owners)
+then the shepherd will say in /say "hey, you. where did you hear that tale?"
+
+and then they'll say that they were the only one alive who should know it, and
+they haven't told it out loud for exactly half-way since the unix timestamp the
+server was founded.
+
+then they'll tell the player about immortality, and how surviving through all
+the awful trials was how they became solid sound. then they'll vanish in a
+puff of smoke, and a random tradeskill gathering material node will be left
+behind. their flock each turns into the same kind. this is the only way you can
+get trade-skill materials higher than level 20 - because the nodes that spawn
+are matched according to your invisible exp level.
+
+big tall creatures like giraffes and kodo, but, everywhere. they just wander.
+you can't slay them. huh I wonder why.
+
+every time 80 immortals are born, a random boss from Ulduar is spawned and never
+despawns until slain. the boss is spawned at the point on the continent that the
+newest immortal was on, but at a point that is exactly equidistant from all the
+player/bots on that continent map, centroid style.
+
+the damage is also adjusted. they just have a ton of health, and we can work
+on their combat abilities in a back-and-forth to explain exactly how they'd work
+for wow-chat.
+
+if an immortal player/bot kneels before a shepherd, the shepherd will ask them
+"are you sure?" in /say - if the player says "yes" or nods, then they will turn
+into one of the creatures in the shepherd's flock. Whenever they log in, if that
+NPC shepherd/flock isn't in the world, they'll spawn exactly where they logged
+out. otherwise, the player is teleported to the NPC shepherd that DOES exist in
+the world, and they will watch as their character does not accept input and
+simply wanders the world. When people talk, they can't hear, because they don't
+speak common. they can't send whispers or anything, they just... are a critter
+now, and the shepherd wanders. The shepherd won't despawn if a player is there
+as one of their critters. Only when they log off. They're also unselectable and
+nobody can see them in /who or anything. All they get is a visual feed, follow
+behind the shepherd as he wanders.
+
+this effect is permanent. The immortal is now a critter.
+
+also side-note, we should remove common and orcish as languages that everyone
+knows. Suddenly, you all need a translator, and inscription can create books
+that teach you a language. Even cross-faction. NPCs always understand all
+languages, and narrators can act as translators if you play your cards right.
+
+so, for example, humans can't talk to night elves (common vs darnassian) because
+they don't share a language. But the human can learn gnomish, and the night-elf
+can also learn gnomish, and then they can talk to each other. Or the tauren can
+learn dwarvish, and suddenly they have a new friend.
+
+the language tomes must be traded hand-to-hand, if they're vendored they're lost
+
+but they have a special look to help keep them separate.
+
+hmmmmmmm, what if we added sharks that spawn and attack you if you're in open
+water for too long? they're all level 20 and they give no loot because how are
+you gonna carry that back? you're in the ocean! without a boat! not ideal, go
+back to land silly creature! the sharks'll getcha, and plenty worse besides!
+(it's just sharks for wow-chat)
+
+can we make one of the narrator behaviors to be to just, sit such that they can
+get as many people in a front cone from them that are sitting down that they can
+and they'll disprefer this behavior if more people in a 30 yard radius are
+standing up than sitting down. If more people are sitting down or it's tied,
+they'll prefer sitting down to standing up. But in either case they just sit 
+still at that point and try to face themselves such that the largest proportion
+of nearby people are in front of them.
+
+the ability to send all messages sent to your character to your inbox. But, this
+is not private, so anyone else can subscribe as well.
+
+... what I mean by that is, any messages sent to your character's mailbox in wow
+can be forwarded to your rmail mailbox. And you can send things through the in-
+-game mailbox system by posting a message to your outbox, which is then
+delivered to a character in the game. If you get a copy in your rmail inbox that
+has an item, you'll get a png of the icon of the item as an attachment (lol)
+
+what if we made duplicates of every single item that is valid to go into the
+treasure-chest-redistribution queue from the vendor? the duplicate is what will
+be spawned when pulled from a treasure chest, and the only difference is that
+the duplicates don't have sell values. They sell for 0c, meaning they'll take
+it off your hands but they won't reward you for handing it back. Meaning... the
+gold only flows into the system once.
+
+if there's any enchantments on the original, they'll be added to any of the
+subsequently created and passed around duplicates. Essentially, preserve the
+item as best as you can, and pass it along. remember, if the item is enchanted,
+then vendored, then taken from a chest, used for a while, then vendored, what'll
+happen is the original enchantment will persist and remain. Any subsequent copy
+of the weapon made into the next treasure chests, ready to be looted, will be
+the 0c sell price version. Crucially, it will maintain the original enchantment.
+
+we should make it so the custom class NPC selector doesn't spawn if there's no
+valid classes in the custom-class-json/ directory. the base class, if it doesn't
+have any custom classes, will have to suffice. remember, each custom class
+is begun by choosing a common appointment, and then meeting the right trainer
+at the right time who can guide you down the customized pathline. meaning...
+when creating a character, you pick a base class. there are custom classes that
+use the same stat growth and starting point as the base classes. if there's no
+custom classes that start from the chosen base-class, then the NPC to select
+doesn't spawn.
+
+we should fix the hearthstone. remember there's supposed to be two that can be
+passed around in the chests? once one is taken, it immediately respawns back
+in. one is blue, one is red or something - demonic rune icon? doesn't matter,
+it's a hearthstone too. they take you to the location of the chest you found
+them in. taking one puts a dummy item in your inventory, and then it plays the
+bind-point animations, and then when you use that hearthstone in the future
+it'll take you back then/when.
+
+
+

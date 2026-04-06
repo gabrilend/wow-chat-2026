@@ -12,7 +12,7 @@
 
 ```bash
 # Source the azerothcore script
-source /mnt/mtwo/programming/ai-stuff/games/wow-chat-2/scripts/azerothcore
+source /home/ritz/games/azeroth-core/wow-chat-2026/scripts/azerothcore
 
 # Fresh installation
 azerothcore install
@@ -51,11 +51,11 @@ The `install-azerothcore` function performs:
 
 ```bash
 # Terminal 1: Start auth server
-source /mnt/mtwo/programming/ai-stuff/games/wow-chat-2/scripts/azerothcore
+source /home/ritz/games/azeroth-core/wow-chat-2026/scripts/azerothcore
 authserver
 
 # Terminal 2: Start world server
-source /mnt/mtwo/programming/ai-stuff/games/wow-chat-2/scripts/azerothcore
+source /home/ritz/games/azeroth-core/wow-chat-2026/scripts/azerothcore
 worldserver
 ```
 
@@ -63,7 +63,7 @@ worldserver
 
 Keira database editor available:
 ```bash
-source /mnt/mtwo/programming/ai-stuff/games/wow-chat-2/scripts/azerothcore
+source /home/ritz/games/azeroth-core/wow-chat-2026/scripts/azerothcore
 keira
 ```
 

@@ -6,7 +6,7 @@
 # Run directly: ./scripts/azerothcore <command> [options]
 
 # Project root directory - all paths derive from this
-DIR="/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
 
 # Thread count for parallel builds - defaults to (nproc - 1)
 THREADS=$(( $(nproc) - 1 ))

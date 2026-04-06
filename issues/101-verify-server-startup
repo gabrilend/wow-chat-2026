@@ -69,7 +69,7 @@ All paths have been updated to use project-local directories instead of the
 old `/home/ritz/games/azeroth-core/` location.
 
 #### scripts/azerothcore Changes
-- `DIR` now points to `/mnt/mtwo/programming/ai-stuff/games/wow-chat-2`
+- `DIR` now points to `/home/ritz/games/azeroth-core/wow-chat-2026`
 - `MYSQL_DIR` uses project-local `${DIR}/mysql/installed-files`
 - Database port changed from 3306 to 3307 (local MySQL instance)
 - Lua scripts symlinked from `${DIR}/src/lua` (not global lua-scripts)

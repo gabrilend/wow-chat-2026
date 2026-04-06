@@ -56,13 +56,13 @@ mysql/
 
 ```ini
 [mysqld]
-basedir = /mnt/mtwo/programming/ai-stuff/games/wow-chat-2/mysql/installed-files
-datadir = /mnt/mtwo/programming/ai-stuff/games/wow-chat-2/mysql/databases
-socket  = /mnt/mtwo/programming/ai-stuff/games/wow-chat-2/mysql/databases/mysql.sock
+basedir = /home/ritz/games/azeroth-core/wow-chat-2026/mysql/installed-files
+datadir = /home/ritz/games/azeroth-core/wow-chat-2026/mysql/databases
+socket  = /home/ritz/games/azeroth-core/wow-chat-2026/mysql/databases/mysql.sock
 port    = 3307  # Different port to avoid conflicts
 
 [client]
-socket  = /mnt/mtwo/programming/ai-stuff/games/wow-chat-2/mysql/databases/mysql.sock
+socket  = /home/ritz/games/azeroth-core/wow-chat-2026/mysql/databases/mysql.sock
 port    = 3307
 ```
 

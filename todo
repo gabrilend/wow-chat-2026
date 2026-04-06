@@ -1,0 +1,16 @@
+
+Okay great... Now, can you look at the CLAUDE.md file and the concept-catalogue.md file in docs/ and remove
+  everything from the CLAUDE.md except things that aren't in the concept-catalogue? we're including the
+  concept catalogue, so it doesn't make sense to include concepts twice.
+
+  Also, I changed my mind for the unlock quests. Can we make them a prototype for the upcoming dynamic
+  questing system, in phase 4? For now, we can let them be a prototype. How it'd work is when they're the
+  right level (and every level after that, until they learn the spell) the NPC with the quest will spawn as
+  one of their travellers. Then, once they have the quest, the monsters for that quest will spawn amongst
+  their ambush-queues - for every time it's regenerated, exactly one of the monsters will take the place of
+  one other monster. If the player has two such quests, then two monsters will be replaced, one of each type
+  per queue. Then, once the quest is complete (and only then) the quest-giver will respawn (unless they're
+  already in the traveller banks, in which case they can spawn normally from that too. If a quest doesn't need
+  monsters but instead needs other things, like items or whatever, then those will be forcefully added to the
+  loot tables of 1 of the monsters in the ambush queue, and when being looted they will always go to that
+  player, even if another player fully tags and kills the monster,
