@@ -232,36 +232,8 @@ function OrbitPlayer.updatePosition(bot)
     return true
 end -- }}}
 
--- {{{ OrbitPlayer.onBotUpdate
--- Periodic position update
-function OrbitPlayer.onBotUpdate(_eventID, _delay, _repeats, bot)
-    OrbitPlayer.updatePosition(bot)
-end -- }}}
-
--- {{{ OrbitPlayer.registerForBot
--- Register periodic orbit check for a specific bot
-function OrbitPlayer.registerForBot(bot)
-    if not bot:IsBot() then return end
-
-    bot:RegisterEvent(function(_eventID, _delay, _repeats, unit)
-        OrbitPlayer.updatePosition(unit)
-    end, UPDATE_INTERVAL, 0)
-
-    print("[OrbitPlayer] Registered for bot: " .. bot:GetName())
-end -- }}}
-
--- {{{ OrbitPlayer.onBotLogin
--- When a bot logs in, register for orbit positioning
-function OrbitPlayer.onBotLogin(_event, player)
-    if player:IsBot() then
-        OrbitPlayer.registerForBot(player)
-    end
-end -- }}}
-
--- {{{ Event Registration
-PLAYER_EVENT_ON_LOGIN = 3
-
-RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, OrbitPlayer.onBotLogin)
-
-print("[OrbitPlayer] Behavior loaded")
+-- {{{ Module initialization
+-- NOTE: Per-bot registration moved to periodic_events.lua (issue 160)
+-- This file exposes: OrbitPlayer.updatePosition(bot)
+print("[OrbitPlayer] Behavior loaded - periodic registration via periodic_events.lua")
 -- }}}

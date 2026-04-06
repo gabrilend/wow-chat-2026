@@ -4,19 +4,40 @@
 - Created: 2026-04-04
 - Phase: 2
 - Priority: High
-- **Implemented (partial):** src/lua/custom-classes.lua
+- **Implemented:** src/lua/custom-classes.lua, SQL for race-specific NPCs
 
-### Implementation Notes
+### Implementation Notes (2026-04-05)
+
+**Race-Specific Selector NPCs:**
+- Each race has its own selector NPC with race-appropriate model and thematic name
+- SQL: `source-beta/data/sql/custom/db_world/custom-class-selector-npcs.sql`
+- NPC entries 900001-900011 (skipping 900009 for Goblin which isn't in WotLK):
+  - Human (900001): Mysterious Guide - model 4217
+  - Orc (900002): Spirit Walker - model 3581
+  - Dwarf (900003): Stone Seer - model 2715
+  - Night Elf (900004): Moonshadow Oracle - model 5708
+  - Undead (900005): Deathwhisper Sage - model 10698
+  - Tauren (900006): Earthmother's Voice - model 8022
+  - Gnome (900007): Probability Engine - model 7574
+  - Troll (900008): Loa Speaker - model 8071
+  - Blood Elf (900010): Sunwell Seer - model 18097
+  - Draenei (900011): Light of the Naaru - model 17083
+- Gossip events registered for all race-specific entries
+
+**Lua Infrastructure:**
 - Core Lua infrastructure complete (class definitions, player storage)
-- Example classes: Spellblade, Shadow Apostle, Beast Shaman
+- Example classes: Spellblade, Shadow Apostle, Beast Shaman, Knight
 - Test commands: #customclass, #customset, #customclear, #customlist, #customspawn
 - Trainer level scaling formula implemented
-- **NOT implemented:**
-  - SQL: Selector NPC creature_template entry (900001)
-  - Gossip event registration (needs NPC entry first)
-  - File loading from src/custom-class-json/
-  - Trainer gossip filtering (requires creature gossip hooks)
-  - AIO talent addon
+- Spell format: `{ id, level, sourceClass }` for dynamic trainer weighting (issue 157)
+- Trainer NPC entries shifted to 900021-900031 to avoid collision with selector NPCs
+
+**NOT implemented:**
+- File loading from src/custom-class-json/
+- Trainer SQL (entries 900021-900031)
+- AIO talent addon
+
+**Extended by:** Issue 157 (Dynamic Trainer Spawning)
 
 ## Overview
 
@@ -302,4 +323,5 @@ Number of custom classes: As many as are uploaded. No fixed limit.
 ## Related Issues
 - 151 - Ability tome system (tome integration)
 - 140 - Quest spells to trainers (trainer system)
+- 157 - Dynamic trainer spawning (extends this issue with weighted trainer selection)
 - Future: AIO talent addon issue

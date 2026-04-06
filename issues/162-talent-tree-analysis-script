@@ -1,0 +1,188 @@
+# 162 - Talent Tree Analysis Script
+
+## Status
+- Created: 2026-04-05
+- Phase: 2
+- Priority: Medium
+
+## Current Behavior
+- No automated way to analyze talent point budgets per class
+- Manual counting required to verify tier limits provide enough options
+- Custom classes have no tooling to verify talent arrangement
+
+## Intended Behavior
+- CLI script that analyzes talent trees for any class
+- Outputs 3 tables (one per talent tree)
+- Shows total talent point options per tree and overall
+- Supports both base WoW classes and custom classes
+- Helps verify 60-point budget against ~80-120 available options
+
+## Script Specification
+
+### Usage
+```bash
+# Base class analysis
+./scripts/analyze-talents.lua --class warrior
+./scripts/analyze-talents.lua --class paladin --tiers 3
+
+# Custom class analysis
+./scripts/analyze-talents.lua --class knight --custom
+
+# All classes summary
+./scripts/analyze-talents.lua --all --tiers 3
+```
+
+### Command Line Flags
+| Flag | Description |
+|------|-------------|
+| `--class <name>` | Class to analyze (warrior, paladin, hunter, etc.) |
+| `--custom` | Treat class as custom class (look in custom-classes.lua) |
+| `--tiers <n>` | Limit analysis to first n tiers (default: 3) |
+| `--all` | Analyze all classes and show summary |
+| `--verbose` | Show individual talent descriptions |
+
+### Output Format (Base Class)
+
+```
+=== WARRIOR TALENT ANALYSIS ===
+Tier limit: 3 (15 points required for tier 3)
+
+--- Arms Tree ---
+| Tier | Talent Name          | Ranks | Total |
+|------|----------------------|-------|-------|
+| 1    | Improved Heroic Strike| 3     | 3     |
+| 1    | Deflection           | 5     | 5     |
+| 1    | Improved Rend        | 2     | 2     |
+| 2    | Improved Charge      | 2     | 2     |
+| 2    | Iron Will            | 3     | 3     |
+| 2    | Tactical Mastery     | 3     | 3     |
+| 3    | Anger Management     | 1     | 1     |
+| 3    | Deep Wounds          | 3     | 3     |
+| 3    | Impale               | 2     | 2     |
+| **Subtotal** |              |       | **24** |
+
+--- Fury Tree ---
+[similar table]
+| **Subtotal** |              |       | **22** |
+
+--- Protection Tree ---
+[similar table]
+| **Subtotal** |              |       | **25** |
+
+=== SUMMARY ===
+| Tree       | Points Available |
+|------------|------------------|
+| Arms       | 24               |
+| Fury       | 22               |
+| Protection | 25               |
+| **Total**  | **71**           |
+
+Player has 60 points to spend.
+Ratio: 60/71 = 85% (can fill ~2 trees - dual-spec!)
+```
+
+### Output Format (Custom Class)
+
+```
+=== KNIGHT TALENT ANALYSIS (Custom) ===
+Definition ID: 1004
+Base Class: Paladin (2)
+Tier limit: 3
+
+--- Protection Tree ---
+| Tier | Talent Name        | Ranks | Source Class | Total |
+|------|-------------------|-------|--------------|-------|
+| 1    | Rogue Deflection  | 3     | Rogue        | 3     |
+| 1    | Paladin Deflection| 5     | Paladin      | 5     |
+| 1    | Hunter Deflection | 3     | Hunter       | 3     |
+| 2    | Warrior Deflection| 5     | Warrior      | 5     |
+| 2    | Reckoning         | 1     | Paladin      | 1     |
+| 3    | Spell Deflection  | 3     | Death Knight | 3     |
+| **Subtotal** |            |       |              | **20** |
+
+[... more trees ...]
+
+=== SUMMARY ===
+| Tree       | Points Available |
+|------------|------------------|
+| Protection | 20               |
+| Holy       | 12               |
+| Combat     | 11               |
+| **Total**  | **43**           |
+
+Player has 60 points to spend.
+Ratio: 60/43 = 140% (MORE POINTS THAN OPTIONS - ADD MORE TALENTS!)
+```
+
+## Data Sources
+
+### Base Classes
+- Read from WoW DBC files or wowhead scraping
+- Or hardcode tier 1-3 talents per class (simpler)
+- Reference: https://www.wowhead.com/wotlk/talent-calc
+
+### Custom Classes
+- Read from `src/lua/custom-classes.lua`
+- Parse the talent definitions with tier/tree assignments
+- Requires custom classes to define tree structure
+
+## Implementation Steps
+
+1. Create script skeleton with CLI argument parsing
+2. Hardcode base class tier 1-3 talent data (manual from wowhead)
+3. Add custom class parser for custom-classes.lua
+4. Implement table formatting and summary calculation
+5. Add --all flag for batch analysis
+6. Test with Knight custom class
+
+## Custom Class Talent Tree Definition
+
+Custom classes need tree assignments. Extend definition format:
+
+```lua
+CustomClasses.definitions[1004] = {
+    name = "Knight",
+    baseClass = 2,
+    -- Existing spell list
+    spells = { ... },
+
+    -- NEW: Talent tree definitions for analysis
+    talentTrees = {
+        [1] = {  -- Protection Tree
+            name = "Protection",
+            talents = {
+                { tier = 1, spellIds = {13854}, name = "Rogue Deflection", ranks = 3 },
+                { tier = 1, spellIds = {20060,20061,20062,20063,20064}, name = "Paladin Deflection", ranks = 5 },
+                { tier = 1, spellIds = {19295,19296,19297}, name = "Hunter Deflection", ranks = 3 },
+                { tier = 2, spellIds = {16462,16463,16464,16465,16466}, name = "Warrior Deflection", ranks = 5 },
+                { tier = 2, spellIds = {20177}, name = "Reckoning", ranks = 1 },
+                { tier = 3, spellIds = {49495,49496,49497}, name = "Spell Deflection", ranks = 3 },
+            },
+        },
+        [2] = {  -- Holy Tree
+            name = "Holy",
+            talents = { ... },
+        },
+        [3] = {  -- Combat Tree
+            name = "Combat",
+            talents = { ... },
+        },
+    },
+}
+```
+
+## Related Issues
+- 120 - Talent points level 20 cap (60 points at level 20)
+- 141 - Talent tier limit (verify 3 tiers sufficient)
+- 159 - Knight custom class (first custom class to analyze)
+- 345 - Custom talent interface (will use this data)
+
+## Related Files
+- `scripts/analyze-talents.lua` (to be created)
+- `src/lua/custom-classes.lua` (extend with talentTrees)
+- `docs/class-talents-tier-1-3.md` (reference data, to be created)
+
+## Open Questions
+1. Where to get base class talent data? (Hardcode vs DBC parse vs web scrape)
+2. Should script output markdown or plain text?
+3. Should it write to file or stdout?

@@ -31,6 +31,7 @@ Implement custom playerbot behaviors and game systems that create emergent gamep
 | 143 | proc-gem-system | Open (Phase 3 prep) |
 | 155 | custom-class-selection-npc | Implemented (race-specific NPCs) |
 | 157 | dynamic-trainer-spawning | Completed |
+| 163 | custom-class-lua-format | Open (design complete) |
 
 ### Ambush System
 | ID | Title | Status |
@@ -66,10 +67,13 @@ Implement custom playerbot behaviors and game systems that create emergent gamep
 | 118 | behavior-travel-to-unique-lands | Open |
 | 119 | behavior-orbit-player | Implemented |
 | 160 | behavior-system-integration | Implemented (needs testing) |
-| 161 | bot-wandering-traveller-style | Open (design complete) |
-| 162 | dungeon-rail-pathfinding | Open (design complete) |
+| 161 | bot-wandering-traveller-style | Implemented (needs testing) |
+| 162 | dungeon-rail-pathfinding | Implemented (needs testing) |
+| 164 | behavior-orchestrator-modes | Implemented (foundation) |
+| 165 | activity-selection-boredom | Implemented (needs testing) |
+| 166 | point-line-definition-tools | Open (tooling) |
 
-## Completed: 2/10 core, 5/9 behaviors (4 open)
+## Completed: 2/10 core, 9/10 behaviors (2 open), 1 tooling
 
 ## Phase Milestones
 
@@ -104,6 +108,95 @@ Phase 2 depends on:
 6. **119 - Orbit Player** (social, lower priority)
 
 ## Notes
+
+### 2026-04-05 - Activity Selection and Boredom System (165)
+- **Event-driven activity selection**: Bots get bored and pick new activities
+- **Combat end trigger**: 15% chance to get bored when combat ends
+  - Uses `PLAYER_EVENT_ON_LEAVE_COMBAT = 34` hook
+  - Only triggers for bots not in party (playerbots handles party bots)
+- **Rest period**: Bot sits for 1-3 minutes before selecting new activity
+  - `bot:SetStandState(1)` for sitting, `bot:SetStandState(0)` for standing
+  - One-shot timer registered with `bot:RegisterEvent()`
+- **Activity selection**: Weighted - 80% WANDERING, 20% DUNGEON_DELVE
+  - Future: PROFESSION, SOCIAL, COMBAT_SEEK activities
+- **Party transitions**: Group event hooks for automatic mode switching
+  - `GROUP_EVENT_ON_MEMBER_ADD = 1`: Switch to PARTY_FOLLOW mode
+  - `GROUP_EVENT_ON_MEMBER_REMOVE = 3`: Trigger boredom → activity selection
+- **Cave/dungeon seeking**: Bots actively travel toward caves/dungeons when in DUNGEON_DELVE
+  - `DungeonRails.seekEntrance(bot)` called when not in dungeon
+  - Known entrance locations stored in `CAVE_DUNGEON_ENTRANCES` table
+  - Falls back to wandering if no known entrances on map
+  - Requires manual population via issue 166 (point definition tools)
+- **Files modified:**
+  - `src/lua/periodic_events.lua`:
+    - Added boredom config constants (BOREDOM_CHANCE_AFTER_COMBAT, BOREDOM_REST_MIN/MAX)
+    - Added BotOrchestrator.onCombatEnd(), triggerBoredom(), selectActivityCallback(), selectActivity()
+    - Added event handlers: OnPlayerLeaveCombat, OnGroupMemberAdd/Remove, OnGroupDisband
+    - Registered GROUP_EVENT and PLAYER_EVENT_ON_LEAVE_COMBAT hooks
+  - `src/lua/behaviors/bot-wander.lua`:
+    - Check for DUNGEON_DELVE mode, call DungeonRails.seekEntrance() if not in dungeon
+  - `src/lua/behaviors/dungeon-rails.lua`:
+    - Added DUNGEON_ENTRANCES table with known entrance coordinates
+    - Added findNearestEntrance(), seekEntrance() functions
+- **Bot data keys:**
+  - `resting_for_activity`: true while sitting before activity selection
+- **Status:** Implemented, needs testing
+  - Test combat end → 30% boredom chance → sit → stand → new activity
+  - Test party join → PARTY_FOLLOW mode → party leave → boredom → new activity
+  - Test DUNGEON_DELVE mode → seek nearest dungeon entrance
+
+### 2026-04-05 - Behavior Orchestrator Modes (164)
+- **Mode-based behavior switching**: Bots operate in discrete modes (activity pages)
+- Modes: WANDERING, DUNGEON_DELVE, PROFESSION, SOCIAL, COMBAT_SEEK, PARTY_FOLLOW
+- **Periodic event pattern change**: Events only re-register if in valid mode
+  - Check `BotOrchestrator.isModeValid(bot, "behavior_name")` first
+  - If invalid, return without re-registering (event dies)
+  - Enables dynamic behavior switching via mode changes
+- **Behavior-to-modes mapping**: Each behavior lists which modes it runs in
+  - wander: WANDERING, PROFESSION, COMBAT_SEEK
+  - loneliness: WANDERING only
+  - sit_and_rest: All except PARTY_FOLLOW
+  - find_monsters: WANDERING, DUNGEON_DELVE, COMBAT_SEEK
+  - orbit_player: SOCIAL, PARTY_FOLLOW
+- **One-shot events**: PeriodicDungeonCooldownCleanup is now one-shot
+  - Registered by exitDungeon(), not on login
+  - Re-registers only while cooldown active, then stops
+- **Files modified:**
+  - `src/lua/periodic_events.lua` - Added BotOrchestrator module, mode checking
+  - `src/lua/behaviors/dungeon-rails.lua` - Register cleanup event on exit
+- **Future work**: Mode transition logic (PeriodicOrchestratorCheck)
+
+### 2026-04-05 - Bot Wandering and Dungeon Navigation (161, 162)
+- **Issue 161: Traveller-style wandering** replaces zone-consensus/level-affinity as default
+  - Uses `Movement.generateNewWanderPosition()` with persistent theta (same as travellers)
+  - Wall-hit fallback: after 3 failures, reorient to zone consensus direction
+  - Continued failures: seek nearest player within ±3 levels
+  - Loneliness check: every 30s, if no valid players within 100 yards, seek nearest
+  - Water handling: reactive `IsInWater()` check, reverse theta and back out
+  - Party behavior: defer to playerbots when in group
+  - Anti-clump: 2-yard rule - disperse if too close to another bot
+- **Issue 162: Dynamic dungeon/cave navigation**
+  - Intersection detection via radial height sampling (8 directions, count walkable)
+  - Position classification: intersection (3+), corridor (2), dead_end (1), stuck (0)
+  - At intersection: pick random direction excluding way we came
+  - Dead-end: probability-based turnaround (closer = more likely to turn)
+  - Exactly 10 yards per movement, 10 consecutive failures = exit dungeon
+  - 2-minute cooldown after exiting dungeon (cleanup via periodic event)
+  - Dungeon detection: instance check, subzone keywords, exception list
+- **Files created:**
+  - `src/lua/behaviors/bot-wander.lua` - main wandering behavior
+  - `src/lua/behaviors/dungeon-rails.lua` - dungeon navigation
+- **Files modified:**
+  - `src/lua/movement.lua` - added `getConsensusDirection()`, `normalizeAngle()`
+  - `src/lua/behaviors/init.lua` - added Group 7 for wandering behaviors
+  - `src/lua/periodic_events.lua` - replaced ZoneConsensus/LevelAffinity events
+    - New events: PeriodicBotWander, PeriodicBotLonelinessCheck, PeriodicDungeonCooldownCleanup
+- **Status:** Implemented, needs testing
+  - Test wandering pattern (should look like travellers)
+  - Test wall-hit reorientation after 3 failures
+  - Test loneliness check seeking behavior
+  - Test dungeon intersection navigation
+  - Test dungeon dead-end turnaround probability
 
 ### 2026-04-05 - Custom Class Selection NPC (155)
 - Race-specific selector NPCs: each race sees one of their own kind

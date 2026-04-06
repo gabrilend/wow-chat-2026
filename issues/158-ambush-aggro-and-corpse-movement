@@ -1,0 +1,86 @@
+# 158 - Ambush Creatures Don't Re-Aggro and Corpses Slide
+
+## Status
+- Created: 2026-04-05
+- Implemented: 2026-04-05
+- Phase: 2
+- Priority: High
+
+## Current Behavior
+
+### Bug 1: Creatures Only Chase Assigned Target
+- When a player sits, `creature:SetAggroEnabled(false)` is called (line 486)
+- Aggro is **never re-enabled** when the player stands back up
+- Result: creatures ignore all other players, only chase their `ambush-chase-target`
+- Even if another player attacks them, they won't properly switch targets
+
+### Bug 2: Corpses Sliding on Ground
+- When creature dies mid-movement (e.g., during `MoveTo`), the corpse continues sliding
+- `onCreatureDeath` clears data and removes scheduled events
+- But the physics/movement command already in progress continues
+- Result: dead creature corpses slide across terrain following their last movement vector
+
+## Intended Behavior
+
+### Bug 1 Fix:
+- When player stands up (no longer sitting), re-enable aggro on orbiting creatures
+- Creatures should be able to naturally aggro onto nearby players once combat resumes
+- The `ambush-chase-target` is only for initial chase, not permanent lock-on
+
+### Bug 2 Fix:
+- When creature dies, immediately stop all movement
+- Corpse should stay where the creature died, not continue sliding
+- Use `MoveClear()` or equivalent to halt movement physics
+
+## Implementation Steps
+
+1. In `Ambush.chasePlayer`, when player is standing (line 504-510 after orbit logic):
+   - Re-enable aggro with `creature:SetAggroEnabled(true)`
+
+2. In `Ambush.onCreatureDeath`:
+   - Add `creature:MoveClear()` before clearing data
+   - This stops any in-progress movement commands
+
+## Technical Notes
+
+### Aggro Flow
+```
+Player sits -> SetAggroEnabled(false) -> creature orbits peacefully
+Player stands -> [MISSING] SetAggroEnabled(true) -> creature should re-aggro
+```
+
+### Death Flow
+```
+Creature moving via MoveTo -> Creature dies -> MoveTo physics continues
+Fix: MoveClear() stops the movement command immediately
+```
+
+## Related Issues
+- 146-clear-ambush-data-on-death (partial fix already applied)
+
+## Files to Modify
+- src/lua/ambush.lua
+
+## Implementation Notes (2026-04-05)
+
+### Changes Made to src/lua/ambush.lua:
+
+**Fix 1 - Aggro Re-enable (line 504-508):**
+Added `else` branch after sitting check in `chasePlayer`:
+```lua
+    else
+        -- Player is standing - re-enable aggro so creature can target other players
+        -- (aggro was disabled during orbit mode when player was sitting)
+        creature:SetAggroEnabled(true)
+    end
+```
+
+**Fix 2 - Corpse Movement Stop (line 578):**
+Added `MoveClear()` in `onCreatureDeath` before clearing data:
+```lua
+    creature:MoveClear()  -- Stop any in-progress movement so corpse doesn't slide
+```
+
+These changes ensure:
+1. Creatures regain ability to aggro nearby players when combat resumes
+2. Corpses stay in place when creatures die mid-movement

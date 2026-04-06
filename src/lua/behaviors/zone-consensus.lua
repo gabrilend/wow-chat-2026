@@ -22,9 +22,140 @@ CONSENSUS_WEIGHT       = 0.6   -- weight of zone consensus direction
 IDLE_DRIFT_DISTANCE    = 15    -- yards to drift when idle
 -- }}}
 
+-- {{{ Dispersion Configuration (issue 160)
+-- If no players/bots within LONELY_RADIUS, move APPROACH_DISTANCE toward closest
+-- If too close to others, disperse
+LONELY_RADIUS          = 200   -- yards - if no one within this, move toward others
+APPROACH_DISTANCE      = 100   -- yards - how far to move toward closest player/bot
+CLUMP_RADIUS           = 15    -- yards - too close, need to disperse
+DISPERSE_DISTANCE      = 20    -- yards - how far to disperse when clumped
+-- }}}
+
 -- {{{ State storage
 local zone_consensus = {}    -- [zone_id] = {angle, strength, player_count}
 local bot_momentum = {}      -- [bot_guid] = {angle, speed}
+-- }}}
+
+-- {{{ ZoneConsensus.findNearestUnit
+-- Find nearest player or bot (not self)
+-- Returns unit, distance, or nil if none found
+function ZoneConsensus.findNearestUnit(bot)
+    local bx, by, bz = bot:GetPosition()
+    local map_id     = bot:GetMapId()
+    local bot_guid   = bot:GetGUID()
+
+    local nearest      = nil
+    local nearest_dist = math.huge
+
+    -- Check all players in world (includes bots)
+    local all_players = GetPlayersInWorld()
+    if not all_players then return nil, nil end
+
+    for _, player in pairs(all_players) do
+        if player and player:GetGUID() ~= bot_guid and player:IsAlive() then
+            if player:GetMapId() == map_id then
+                local px, py = player:GetPosition()
+                local distSq = Movement.squaredDistance(bx, by, px, py)
+                local dist   = math.sqrt(distSq)
+
+                if dist < nearest_dist then
+                    nearest      = player
+                    nearest_dist = dist
+                end
+            end
+        end
+    end
+
+    return nearest, nearest_dist
+end
+-- }}}
+
+-- {{{ ZoneConsensus.countNearbyUnits
+-- Count players/bots within radius
+function ZoneConsensus.countNearbyUnits(bot, radius)
+    local bx, by, bz = bot:GetPosition()
+    local map_id     = bot:GetMapId()
+    local bot_guid   = bot:GetGUID()
+    local count      = 0
+
+    local all_players = GetPlayersInWorld()
+    if not all_players then return 0 end
+
+    for _, player in pairs(all_players) do
+        if player and player:GetGUID() ~= bot_guid and player:IsAlive() then
+            if player:GetMapId() == map_id then
+                local px, py = player:GetPosition()
+                local distSq = Movement.squaredDistance(bx, by, px, py)
+
+                if distSq <= radius * radius then
+                    count = count + 1
+                end
+            end
+        end
+    end
+
+    return count
+end
+-- }}}
+
+-- {{{ ZoneConsensus.handleDispersion
+-- Check if bot is lonely or clumped and handle accordingly
+-- Returns true if dispersion action was taken, false otherwise
+function ZoneConsensus.handleDispersion(bot)
+    local nearest, dist = ZoneConsensus.findNearestUnit(bot)
+
+    -- No one found at all - stay put
+    if not nearest then return false end
+
+    -- Lonely: no one within 200 yards - move toward closest
+    if dist > LONELY_RADIUS then
+        local bx, by, bz = bot:GetPosition()
+        local nx, ny, nz = nearest:GetPosition()
+
+        -- Calculate direction toward nearest
+        local angle = math.atan2(ny - by, nx - bx)
+
+        -- Move APPROACH_DISTANCE yards toward them (or to their position if closer)
+        local move_dist = math.min(APPROACH_DISTANCE, dist - 20) -- leave 20 yard buffer
+        local dest_x    = bx + math.cos(angle) * move_dist
+        local dest_y    = by + math.sin(angle) * move_dist
+
+        -- Get ground height
+        local map    = bot:GetMap()
+        local dest_z = bz
+        if map then
+            dest_z = map:GetHeight(dest_x, dest_y) or bz
+        end
+
+        bot:MoveTo(0, dest_x, dest_y, dest_z, false)
+        print("[ZoneConsensus] " .. bot:GetName() .. " moving toward others (lonely)")
+        return true
+    end
+
+    -- Clumped: someone very close - disperse
+    local clumped_count = ZoneConsensus.countNearbyUnits(bot, CLUMP_RADIUS)
+    if clumped_count > 0 then
+        local bx, by, bz = bot:GetPosition()
+
+        -- Pick random direction to disperse
+        local angle  = math.random() * 6.28
+        local dest_x = bx + math.cos(angle) * DISPERSE_DISTANCE
+        local dest_y = by + math.sin(angle) * DISPERSE_DISTANCE
+
+        -- Get ground height
+        local map    = bot:GetMap()
+        local dest_z = bz
+        if map then
+            dest_z = map:GetHeight(dest_x, dest_y) or bz
+        end
+
+        bot:MoveTo(0, dest_x, dest_y, dest_z, false)
+        print("[ZoneConsensus] " .. bot:GetName() .. " dispersing (clumped)")
+        return true
+    end
+
+    return false
+end
 -- }}}
 
 -- {{{ ZoneConsensus.getZoneId
@@ -334,49 +465,31 @@ end
 
 -- {{{ ZoneConsensus.periodicUpdate
 -- Periodic update for a bot
+-- Priority: dispersion > drift
 function ZoneConsensus.periodicUpdate(bot)
+    -- First check dispersion (lonely or clumped)
+    -- If dispersion took action, skip drift this tick
+    if ZoneConsensus.handleDispersion(bot) then
+        return
+    end
+
+    -- Normal drift with zone consensus
     ZoneConsensus.driftWithConsensus(bot)
 end
 -- }}}
 
--- {{{ ZoneConsensus.registerForBot
--- Register periodic consensus updates for a bot
-function ZoneConsensus.registerForBot(bot)
-    if not bot:IsBot() then return end
-
-    bot:RegisterEvent(function(_eventID, _delay, _repeats, unit)
-        ZoneConsensus.periodicUpdate(unit)
-    end, CONSENSUS_UPDATE_RATE, 0)
-
-    print("[ZoneConsensus] Registered for bot: " .. bot:GetName())
-end
--- }}}
-
--- {{{ ZoneConsensus.onBotLogin
--- When a bot logs in, register for consensus updates
-function ZoneConsensus.onBotLogin(event, player)
-    if player and player:IsBot() then
-        ZoneConsensus.registerForBot(player)
-    end
-end
--- }}}
-
 -- {{{ ZoneConsensus.initialize
--- Initialize the zone consensus system
+-- Initialize the zone consensus system (global cleanup event)
 function ZoneConsensus.initialize()
-    -- Periodic cleanup of stale zones
+    -- Periodic cleanup of stale zones (global, not per-bot)
     CreateLuaEvent(ZoneConsensus.cleanupOldZones, 30000, 0)
-
     print("[ZoneConsensus] System initialized")
 end
 -- }}}
 
--- {{{ Event Registration
-PLAYER_EVENT_ON_LOGIN = 3
-
-RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, ZoneConsensus.onBotLogin)
-
+-- {{{ Module initialization
+-- NOTE: Per-bot registration moved to periodic_events.lua (issue 160)
+-- This file only exposes ZoneConsensus.periodicUpdate(bot) for central calling
 ZoneConsensus.initialize()
-
-print("[ZoneConsensus] Behavior loaded - Issue 133")
+print("[ZoneConsensus] Behavior loaded - periodic registration via periodic_events.lua")
 -- }}}

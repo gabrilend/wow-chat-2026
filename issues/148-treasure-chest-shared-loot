@@ -31,16 +31,31 @@ TRASH (gone forever)     RECYCLE (back to pool)
 
 NPCs find items left behind when heroes move on. Guards watch the stashes.
 
-### Mancala Distribution
-When items enter the pool, distribute to chests round-robin:
-1. First item → next available chest
-2. Second item → second chest
-3. Loop the board? Add another to first chest
-4. No chests available? Distribute to existing chests again (more riches in rich piles)
+### Per-Player Queue Distribution
+When items enter the global pool, they are immediately distributed to player queues:
 
-Overflow is NOT saved - it cycles back through the list. Items keep moving
-through active chests like a travelling salesman wandering the circuit again.
-Each pass adds more to the piles. Eventually players find the riches.
+1. Item sold to vendor → enters global pool momentarily
+2. System finds eligible player (level-appropriate for item)
+3. Item assigned to that player's personal treasure queue
+4. When player's next chest spawns → queue items injected into chest
+5. If chest despawns with items remaining → items return to global pool
+6. Returned items immediately redistribute to another player queue
+
+**No floating items** - every item in the system is either:
+- In global pool (briefly, during redistribution)
+- In a player's personal queue (awaiting their next chest)
+- In an active chest (spawned, waiting to be looted)
+- Looted (removed from system until sold again)
+
+**Level matching** - items assigned to players whose level matches the item:
+- Level 15 item sold → assigned to player around level 15
+- If no eligible players online → item waits in global pool
+- Multiple eligible players → round-robin distribution
+
+**Queue injection** - when chest spawns for a player:
+- All items in player's queue are added to chest
+- Queue is cleared
+- Chest tracks which items came from queue vs base loot
 
 ### Vulnerability While Looting
 - Opening a chest requires focus (interacting state)
@@ -64,15 +79,18 @@ Each pass adds more to the piles. Eventually players find the riches.
    - Loot from `gameobject_loot_template` + `AddLoot()`
    - Hooks: `GAMEOBJECT_EVENT_ON_USE`, `ON_LOOT_STATE_CHANGE`
 
-2. ~~Implement global treasure pool~~ DONE
-   - `Treasure.pool` array of items
-   - `addToPool()`, `pullFromPool()` functions
-   - Pool items added to chests on spawn
+2. ~~Implement global treasure pool~~ PARTIAL
+   - `Treasure.pool` array of items - DONE
+   - `addToPool()`, `pullFromPool()` functions - DONE
+   - Pool items added to chests on spawn - DONE
+   - **NEEDS UPDATE:** Convert to per-player queue model
 
-3. Implement mancala distribution
-   - Track active chests in world
-   - Round-robin item assignment
-   - Handle overflow (save for later)
+3. Implement per-player queue distribution
+   - Items entering pool immediately assigned to player queues
+   - Level-based matching for item assignment
+   - Round-robin among eligible players
+   - Queue injected into chest on spawn
+   - Items return to pool on chest despawn
 
 4. Implement recycle on despawn
    - Hook chest despawn (no player nearby)
@@ -101,10 +119,20 @@ CLOSED -> OPENING -> OPEN -> CLOSING -> CLOSED
 ```
 
 ### Data Structures
-- `chest.looters` = {} -- players/bots who have looted
-- `chest.interested` = {} -- players/bots approaching
-- `chest.contents` = {} -- current items
-- `Global.floatingLoot` = {} -- items waiting for redistribution
+```lua
+-- Global pool: items awaiting distribution (briefly held)
+Treasure.globalPool = {}  -- array of {itemId, itemLevel, count}
+
+-- Per-player queues: items assigned to specific players
+Treasure.playerQueues = {}  -- [playerGUID] = { {itemId, count}, ... }
+
+-- Active chest tracking
+Treasure.activeChests = {}  -- [chestGUID] = {
+                            --   queueItems = {},  -- items from player queue
+                            --   spawnerGUID = playerGUID,
+                            --   spawnTime = timestamp
+                            -- }
+```
 
 ## Implementation Notes
 
@@ -132,13 +160,28 @@ Implemented in `src/lua/treasure.lua`:
 
 ### Limitations (Current)
 - Cannot detect remaining loot in chests (ALE doesn't expose Loot object from GameObject)
-- Multi-player chest opening not implemented yet (requires more research)
+- Multi-player chest opening implemented in chest-vulnerability.lua
 - Bot attraction to open chests not implemented yet
 
 ### Next Steps
-- Research `GAMEOBJECT_EVENT_ON_LOOT_STATE_CHANGE` for detecting chest close
-- Implement bot notification when chests spawn nearby
-- Consider custom loot system for full control
+- Convert global FIFO pool to per-player queue model
+- Implement level-based item-to-player matching
+- Track queue items in active chests for despawn recycling
+- Hook chest despawn to recycle unclaimed items
+
+### 2026-04-05 - Design Refinement
+The original "Mancala distribution" concept was correct but incomplete.
+Items ARE distributed mancala-style (round-robin among eligible players),
+but they go to per-player queues rather than directly to active chests:
+
+1. Items go to appropriate-level players (level matching)
+2. Mancala rotation: prefer players with fewer queued items
+3. Each player builds up a personal treasure queue
+4. Queue empties into their next chest spawn
+5. Despawned chest items return to pool and re-distribute
+
+The mancala principle ensures fair distribution - if player A got an item
+and players B, C, D haven't, the next item goes to one of B/C/D.
 
 ## Related Issues
 - 149 - Sold items return to treasure pool

@@ -2,6 +2,7 @@
 
 ## Status
 - Created: 2026-04-04
+- Implemented: 2026-04-05
 - Phase: 2
 - Priority: Medium
 
@@ -107,3 +108,33 @@ This creates a flatter power curve where skill and tactics matter more than pure
 
 ## Related Issues
 - 155 - Custom class selection (trainer level filtering uses similar scaling)
+
+## Implementation Notes (2026-04-05)
+
+### Files Modified
+
+**src/server/game/Entities/Unit/Unit.h:**
+- Added `ACCURACY_LEVEL_CAP 3` and `ACCURACY_SKILL_CAP 15` defines
+
+**src/server/game/Entities/Unit/Unit.cpp:**
+- `MagicSpellHitResult()` (line 3455-3457): Cap `levelDiff` at ±3
+- `MeleeSpellMissChance()` (line 15221-15223): Cap `skillDiff` at ±15
+- `RollMeleeOutcomeAgainst()` (line 2925-2928): Cap `skillBonus` calculation
+
+### What's Capped
+- **Spell hit chance**: Level difference capped at ±3
+- **Melee miss chance**: Skill difference capped at ±15 (3 levels × 5 skill/level)
+- **Combat outcome rolls**: Skill bonus for dodge/parry/block/crit capped
+
+### What's NOT Capped (intentionally)
+- Damage calculations (high level monsters still hit harder)
+- Health/armor differences
+- Other mechanics that don't involve hit/miss
+
+### Build Required
+```bash
+cd source-beta/build && cmake .. && make -j$(nproc) && make install
+```
+
+### Patch Doc
+Full specification: `docs/patches/accuracy-level-cap.md`

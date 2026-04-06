@@ -313,23 +313,20 @@ function LevelAffinity.driftToAffinity(bot)
 end
 -- }}}
 
--- {{{ LevelAffinity.onPlayerLogin
+-- {{{ LevelAffinity.trackLogin
 -- Track player login times for "fresh login" detection
-function LevelAffinity.onPlayerLogin(event, player)
+-- Called by periodic_events.lua on login
+function LevelAffinity.trackLogin(player)
     if player then
         player_login_times[player:GetGUID()] = os.time()
-    end
-
-    -- Also register bots for affinity updates
-    if player and player:IsBot() then
-        LevelAffinity.registerForBot(player)
     end
 end
 -- }}}
 
--- {{{ LevelAffinity.onPlayerLogout
+-- {{{ LevelAffinity.trackLogout
 -- Clean up login tracking on logout
-function LevelAffinity.onPlayerLogout(event, player)
+-- Called by periodic_events.lua on logout
+function LevelAffinity.trackLogout(player)
     if player then
         player_login_times[player:GetGUID()] = nil
     end
@@ -338,22 +335,10 @@ end
 
 -- {{{ LevelAffinity.periodicUpdate
 -- Periodic affinity recalculation for bot
+-- Called by periodic_events.lua on timer
 function LevelAffinity.periodicUpdate(bot)
     LevelAffinity.updateAffinity(bot)
     LevelAffinity.driftToAffinity(bot)
-end
--- }}}
-
--- {{{ LevelAffinity.registerForBot
--- Register periodic affinity updates for a bot
-function LevelAffinity.registerForBot(bot)
-    if not bot:IsBot() then return end
-
-    bot:RegisterEvent(function(_eventID, _delay, _repeats, unit)
-        LevelAffinity.periodicUpdate(unit)
-    end, LEVEL_CHECK_INTERVAL, 0)
-
-    print("[LevelAffinity] Registered for bot: " .. bot:GetName())
 end
 -- }}}
 
@@ -368,12 +353,8 @@ function LevelAffinity.getExpShare(base_exp, killer_level, helper_level)
 end
 -- }}}
 
--- {{{ Event Registration
-PLAYER_EVENT_ON_LOGIN  = 3
-PLAYER_EVENT_ON_LOGOUT = 4
-
-RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, LevelAffinity.onPlayerLogin)
-RegisterPlayerEvent(PLAYER_EVENT_ON_LOGOUT, LevelAffinity.onPlayerLogout)
-
-print("[LevelAffinity] Behavior loaded - Issue 133")
+-- {{{ Module initialization
+-- NOTE: Per-bot registration moved to periodic_events.lua (issue 160)
+-- This file exposes: trackLogin, trackLogout, periodicUpdate
+print("[LevelAffinity] Behavior loaded - periodic registration via periodic_events.lua")
 -- }}}

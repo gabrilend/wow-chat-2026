@@ -355,3 +355,5 @@ Patch documentation:
 Fanfiction for code. The story of what the code becomes.
 Anyone reading the story can make it real on their own hardware.
 - Fanfiction for code - the story becomes real on whatever hardware reads it.
+- at all times, when possible, try to utilize the design patterns presented in the original wow-chat-1 reference source.
+- girl just search the database next time, don't do so many web searches.

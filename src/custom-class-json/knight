@@ -1,0 +1,68 @@
+# Knight Custom Class - Design Notes
+
+**SUPERSEDED**: See issues/159-knight-custom-class for current design.
+**Implementation**: See src/lua/custom-classes.lua (definition 1004)
+
+---
+
+## Original Concept Notes (preserved for reference)
+
+paladin or warrior base.
+
+1. flash of light
+3. sacred shield
+5. renew
+9. Riposte
+deflection talent (rogue prerequisite for riposte)
+paladin deflection (1% to parry)
+reckoning talent
+sheath of light
+the art of war
+warrior weapon mastery talent
+devastate warrior ability
+two handed weapon specialization (ret)
+inner fire priest ability
+inner focus priest talent
+divine aegis priest talent
+desperate prayer holy priest talent
+mental dexterity shaman talent
+aspiration priest talent
+
+scales with intellect, scales with crit, wants agility or strength + intellect mail or plate gear. one talent that scales with strength, one that scales with agility (like, increase your spellpower by x% of your strength, and another talent that's increase your attackpower by x% of your agility)
+
+abilities are shielding and focus focused. devastate is more about learning how to pierce opponents defences with successive strikes.
+
+crits are exploiting weaknesses or repetitions in enemy approach.
+
+agility increases crit for melee, int increases spellpower and spell crit, strength increases spellpower...
+
+only knows 2h weapons, including polearms and staves.
+
+the goal is to benefit Flash of Light casts on a single main target as much as possible. the sacred shield shouldn't be modified - it just is that powerful. though... maybe it should shield less damage, if we can do it without a dbc edit.
+
+ideally, make sacred shield the main ability that everything else hinges around.
+for healing, at least. flash of light, ideally made instant with art of war,
+and with crits coming from auto-attacks not instant melee attacks so much.
+maybe devastate we nix.
+
+sacred shield increases flash of light crit chance, and crit chance gained from
+that source primarily but also others is the main way of healing others. the
+mana cost of sacred shield should be increased too if possible, maybe 12% of
+total mana, not base mana. though, base mana and total mana at level 20 are
+pretty similar.
+
+buff spells are: arcane intellect, blessing of kings, horn of winter. excellent stat bonuses.
+
+---
+
+## Revision Notes
+
+2026-04-05: Original concept reviewed. Several abilities removed as "not knightly":
+- Devastate (removed - not knightly, too warrior-like)
+- Rend (removed - bleeds aren't knightly)
+- Hamstring (removed - crippling isn't knightly, they deliver mortal blows)
+- Lay on Hands (replaced with Desperate Prayer - more personal/urgent)
+- Auras (removed - auras are a Paladin-exclusive thing)
+- Seals (removed - auto-attack focused, not seal procs)
+
+Stat priority clarified: Int > Agi > Str (crit scaling is core identity)

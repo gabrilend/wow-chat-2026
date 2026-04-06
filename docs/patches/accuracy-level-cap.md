@@ -2,6 +2,7 @@
 
 **Issue:** 156 - Monster Accuracy Level Cap
 **Purpose:** Cap level difference impact on hit/miss at ±3 levels
+**Status:** Implemented 2026-04-05
 
 ## Overview
 
@@ -119,4 +120,37 @@ Then read from config:
 int32 cap = sWorld->getIntConfig(CONFIG_ACCURACY_LEVEL_CAP);
 if (cap > 0)
     levelDiff = std::max(-cap, std::min(cap, levelDiff));
+```
+
+---
+
+## Implementation (2026-04-05)
+
+### Unit.h (after MAX_AGGRO_RADIUS define)
+```cpp
+// Everland Ghostsong: Cap level difference for accuracy calculations at ±3 levels
+#define ACCURACY_LEVEL_CAP 3
+#define ACCURACY_SKILL_CAP (ACCURACY_LEVEL_CAP * 5)  // skill = level * 5
+```
+
+### Unit.cpp - MagicSpellHitResult (line ~3455)
+```cpp
+int32 rawLevelDiff = int32(victim->getLevelForTarget(this)) - thisLevel;
+// Everland Ghostsong: Cap level difference at ±ACCURACY_LEVEL_CAP for hit chance
+int32 levelDiff = std::max(-ACCURACY_LEVEL_CAP, std::min(ACCURACY_LEVEL_CAP, rawLevelDiff));
+```
+
+### Unit.cpp - MeleeSpellMissChance (line ~15221)
+```cpp
+// Everland Ghostsong: Cap skill difference at ±ACCURACY_SKILL_CAP (±3 levels worth)
+int32 cappedSkillDiff = std::max(-ACCURACY_SKILL_CAP, std::min(ACCURACY_SKILL_CAP, skillDiff));
+int32 diff = -cappedSkillDiff;
+```
+
+### Unit.cpp - RollMeleeOutcomeAgainst (line ~2925)
+```cpp
+// Everland Ghostsong: Cap skill difference at ±ACCURACY_SKILL_CAP for combat outcome rolls
+int32 skillDiff = attackerWeaponSkill - victimMaxSkillValueForLevel;
+int32 cappedSkillDiff = std::max(-ACCURACY_SKILL_CAP, std::min(ACCURACY_SKILL_CAP, skillDiff));
+int32 skillBonus = 4 * cappedSkillDiff;
 ```

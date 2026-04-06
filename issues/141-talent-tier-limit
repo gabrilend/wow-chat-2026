@@ -1,0 +1,139 @@
+# 141 - Talent Tier Limit (First 3 Rows Only)
+
+## Status
+- Created: 2026-04-02
+- Phase: 2
+- Priority: Medium
+
+## Current Behavior
+- Players get 3x talent points (one at 33%, 66%, 100% XP)
+- By level 20, players have **60 talent points**
+- Players can access all talent tiers, including 51-point talents
+- Deep talents are balanced for level 80 content
+
+## Intended Behavior
+- Limit talent selection to first **3 tiers** (rows 1-3)
+- Each tier requires 5 points in the tree to unlock
+- Tier 1: 0 points required (available immediately)
+- Tier 2: 5 points required
+- Tier 3: 10 points required
+- Goal: ~80-120 total talent point options across all 3 trees
+- Players with 60 points can fill ~2 of 3 trees (dual-specialization)
+- Deep talents (tier 4+) are locked regardless of points spent
+
+## Why This Change
+- 60 talent points enables dual-specialization (pick 2 specs, ~30 points each)
+- Need enough OPTIONS (~80-120) so players can't max everything
+- First 3 tiers provide meaningful choices without breaking balance
+- Encourages hybrid builds or deep dual-spec
+- Maintains class identity without overpowering
+
+## Tier Budget Analysis (60 points, ~80-120 options needed)
+
+Standard tier structure per tree:
+- Tier 1: ~3 talents × ~3-5 ranks = 9-15 points
+- Tier 2: ~3 talents × ~3-5 ranks = 9-15 points
+- Tier 3: ~3 talents × ~3-5 ranks = 9-15 points
+
+Per tree (3 tiers): ~27-45 points
+Three trees (3 tiers each): ~81-135 total options
+
+**Conclusion:** 3 tiers per tree provides ~81-135 options.
+With 60 points to spend, players use ~45-75% of available options.
+This allows meaningful dual-spec while forcing choices.
+Run the talent analysis script (issue 162) to verify per-class.
+
+## Technical Research Needed
+
+### Server-Side Options
+1. **Talent validation hook** - Check tier on talent learn, reject if > 3
+2. **Modified talent data** - Set tier 4+ talents to require level 80
+3. **Spell script** - Block learning spells in restricted tiers
+
+### Client-Side Considerations
+- Client shows full talent trees
+- May need AIO addon to grey out/hide restricted talents
+- Or just let server reject the learn attempt
+
+### Database Tables
+- `spell_dbc` - Spell data including talent info
+- Talent tree structure is in TalentTab.dbc (client-side)
+- Talent requirements in Talent.dbc (client-side)
+
+## Implementation Options
+
+### Option A: Server Validation Only
+- Hook talent learning in C++ or Lua
+- Reject if tier > 3
+- Client shows talents but server refuses
+- Simple but poor UX (player clicks, nothing happens)
+
+### Option B: AIO UI Modification
+- Use AIO to modify talent frame
+- Grey out or hide tier 4+ talents
+- Better UX, players know what's available
+- More complex implementation
+
+### Option C: Database Level Requirement
+- Set tier 4+ talents to require level 80+
+- Simple SQL change
+- Client shows "Requires level 80" naturally
+- Cleanest solution if feasible
+
+## Talent Abilities to Add to Trainers
+
+Since deep talents are locked, consider adding iconic abilities to trainers:
+
+### Death Knight
+- Howling Blast (Frost tier 9) - iconic frost AoE
+- Heart Strike (Blood tier 5) - blood cleave
+- Scourge Strike (Unholy tier 7) - unholy strike
+
+### Warrior
+- Mortal Strike (Arms tier 7) - too iconic?
+- Bloodthirst (Fury tier 7) - too iconic?
+- Shield Slam (Prot tier 3) - could be trainer
+
+### Paladin
+- Crusader Strike (Ret tier 5) - core ability
+- Holy Shock (Holy tier 7) - holy damage/heal
+- Avenger's Shield (Prot tier 9) - iconic but deep
+
+### Other Classes
+- Research needed for each class
+- Identify abilities that define spec identity
+- Consider balance implications
+
+## Implementation Steps
+
+1. Research talent tier structure
+   - Find how tiers are determined
+   - Identify tier boundaries for each class
+
+2. Choose implementation approach
+   - Server-only vs AIO UI
+   - Test different options
+
+3. Implement tier restriction
+   - Add validation/requirement change
+   - Test all classes
+
+4. Add talent abilities to trainers (separate sub-issue?)
+   - Identify candidates
+   - Add to trainer templates
+   - Balance for level 1-20
+
+## Related Issues
+- 120 - Talent points level 20 cap (40 points at level 20)
+- 140 - Quest spells to trainers
+- 138 - Death Knight level 1 scaling
+- 162 - Talent tree analysis script (verify tier budget per class)
+- 345 - Custom talent interface (AIO-based talent UI)
+
+## Revision History
+- 2026-04-02: Initial issue created (60 talent points, 3 tiers)
+- 2026-04-05: Briefly updated for 40 points (2 per level)
+- 2026-04-05: Reverted to 60 points (3 per level)
+  - 60 points enables dual-specialization (fill 2 of 3 trees)
+  - 3 tiers = ~81-135 options, players use 45-75%
+  - Meaningful choices while allowing dual-spec playstyle

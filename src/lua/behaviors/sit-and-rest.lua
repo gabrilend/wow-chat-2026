@@ -195,36 +195,8 @@ function SitAndRest.checkAndRest(bot)
     return isResting
 end -- }}}
 
--- {{{ SitAndRest.onBotUpdate
--- Periodic check for rest needs
-function SitAndRest.onBotUpdate(_eventID, _delay, _repeats, bot)
-    SitAndRest.checkAndRest(bot)
-end -- }}}
-
--- {{{ SitAndRest.registerForBot
--- Register periodic rest check for a specific bot
-function SitAndRest.registerForBot(bot)
-    if not bot:IsBot() then return end
-
-    bot:RegisterEvent(function(_eventID, _delay, _repeats, unit)
-        SitAndRest.checkAndRest(unit)
-    end, CHECK_INTERVAL, 0)
-
-    print("[SitAndRest] Registered for bot: " .. bot:GetName())
-end -- }}}
-
--- {{{ SitAndRest.onBotLogin
--- When a bot logs in, register for rest checking
-function SitAndRest.onBotLogin(_event, player)
-    if player:IsBot() then
-        SitAndRest.registerForBot(player)
-    end
-end -- }}}
-
--- {{{ Event Registration
-PLAYER_EVENT_ON_LOGIN = 3
-
-RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, SitAndRest.onBotLogin)
-
-print("[SitAndRest] Behavior loaded")
+-- {{{ Module initialization
+-- NOTE: Per-bot registration moved to periodic_events.lua (issue 160)
+-- This file exposes: SitAndRest.checkAndRest(bot)
+print("[SitAndRest] Behavior loaded - periodic registration via periodic_events.lua")
 -- }}}

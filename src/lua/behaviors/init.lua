@@ -46,7 +46,7 @@ require("behaviors/convoy")
 print("[Behaviors] Loaded: convoy")
 -- }}}
 
--- {{{ Group 6: Affinity and consensus behaviors
+-- {{{ Group 6: Affinity and consensus behaviors (legacy, kept for utilities)
 require("behaviors/level-affinity")
 print("[Behaviors] Loaded: level-affinity")
 
@@ -54,20 +54,32 @@ require("behaviors/zone-consensus")
 print("[Behaviors] Loaded: zone-consensus")
 -- }}}
 
+-- {{{ Group 7: Wandering behaviors (issue 161, 162)
+-- bot-wander uses traveller-style movement, replaces zone-consensus/level-affinity
+-- as the default bot movement behavior
+require("behaviors/dungeon-rails")
+print("[Behaviors] Loaded: dungeon-rails")
+
+require("behaviors/bot-wander")
+print("[Behaviors] Loaded: bot-wander")
+-- }}}
+
 -- {{{ Behavior registry
 -- Allows other scripts to check which behaviors are loaded
 Behaviors = {
-    version = "1.0.0",
+    version = "1.1.0",  -- Updated for issue 161/162
     loaded = {
-        movement = true,
+        movement       = true,
         avoid_monsters = true,
-        find_monsters = true,
-        sit_and_rest = true,
-        orbit_player = true,
-        gestures = true,
-        convoy = true,
-        level_affinity = true,
-        zone_consensus = true
+        find_monsters  = true,
+        sit_and_rest   = true,
+        orbit_player   = true,
+        gestures       = true,
+        convoy         = true,
+        level_affinity = true,  -- legacy, kept for utilities
+        zone_consensus = true,  -- legacy, kept for utilities
+        dungeon_rails  = true,  -- issue 162
+        bot_wander     = true   -- issue 161
     }
 }
 -- }}}

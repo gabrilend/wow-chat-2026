@@ -1,0 +1,137 @@
+# 144 - Low Level Class Identity Rebalancing
+
+## Status
+- Created: 2026-04-03
+- Phase: 2
+- Priority: High
+
+## Current Behavior
+- Max level is 20, but most iconic class abilities are learned at higher levels
+- Class identity feels weak at low levels - many specs feel similar
+- Damage/healing values are tuned for level 80 progression, not level 20 cap
+- Players lack signature abilities that define their playstyle
+- Tier 1-3 talents help, but many core rotational abilities are missing
+
+## Intended Behavior
+- Each class has clear identity and unique gameplay by level 20
+- Damage/healing values are balanced for level 20 content
+- Signature abilities available earlier (via trainers or custom spells)
+- Specs feel distinct from each other within the same class
+- Combat feels impactful and rewarding at all levels 1-20
+
+## Reference Document
+- `docs/class-spells-level-1-20.md` - Complete list of available abilities and talents
+
+## Analysis Areas
+
+### Per-Class Identity Review
+For each class, identify:
+1. What makes this class unique at level 20?
+2. What signature abilities are missing?
+3. Which specs lack identity?
+4. What abilities could be moved earlier?
+
+### Damage/Healing Tuning
+- Current values assume level 80 scaling
+- Need to evaluate base damage, coefficients, and scaling
+- Consider: Should abilities deal % health damage instead of flat?
+- Healing throughput vs damage taken ratio
+
+### Implementation Options (Preference Order)
+1. **SQL-only** - Trainer table changes, no recompile
+2. **Lua scripting** - ALE hooks for custom behavior
+3. **Spell_dbc overrides** - Database overrides for spell values
+4. **DBC patching** - Last resort, requires client changes
+
+## Suggested Implementation Steps
+
+1. Document current class identity gaps
+   - Review each class in docs/class-spells-level-1-20.md
+   - Note missing signature abilities per spec
+   - Identify "feel bad" moments in early gameplay
+
+2. Propose ability availability changes
+   - Which abilities should come earlier?
+   - Can we use existing lower-rank versions?
+   - Do we need custom spell entries?
+
+3. Analyze damage/healing scaling
+   - Test current damage output at levels 5, 10, 15, 20
+   - Compare to monster health pools
+   - Determine if retuning is needed
+
+4. Implement changes
+   - Start with SQL-only solutions
+   - Add Lua scripts for complex behavior
+   - Use spell_dbc overrides if needed
+   - Avoid DBC patching unless absolutely necessary
+
+5. Playtest each class 1-20
+   - Verify class identity feels strong
+   - Check damage/healing feels impactful
+   - Ensure no class is over/underpowered
+
+## Technical Notes
+
+### Spell Override Tables
+```sql
+-- spell_dbc can override DBC values without client patching
+-- Check existing overrides:
+SELECT * FROM spell_dbc WHERE ID IN (spell_ids);
+```
+
+### Trainer Level Requirements
+```sql
+-- Can move abilities earlier by changing ReqLevel
+UPDATE npc_trainer SET ReqLevel = X WHERE SpellID = Y;
+```
+
+### ALE Spell Hooks
+```lua
+-- Can modify spell behavior via Lua
+RegisterSpellScript(spellId, function(spell, caster, target)
+    -- Custom logic here
+end)
+```
+
+## Class Identity Notes
+(To be filled in during analysis)
+
+### Warrior
+-
+
+### Paladin
+-
+
+### Hunter
+-
+
+### Rogue
+-
+
+### Priest
+-
+
+### Shaman
+-
+
+### Mage
+-
+
+### Warlock
+-
+
+### Druid
+-
+
+### Death Knight
+-
+
+## Related Issues
+- 140 - Quest spells to trainers (completed groundwork)
+- 141 - Talent tier limit
+- 142 - Custom spell system (may be needed for new abilities)
+
+## Implementation Notes
+(To be added as work progresses)
+

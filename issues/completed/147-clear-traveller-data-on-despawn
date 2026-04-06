@@ -2,8 +2,19 @@
 
 ## Status
 - Created: 2026-04-04
+- Completed: 2026-04-05
 - Phase: 2
 - Priority: Low
+
+### Implementation Notes
+- `Travel.despawn()` helper already exists in travel.lua (lines 5-12)
+- Calls `RemoveEvents()`, clears `theta` data, then `DespawnOrUnsummon(0)`
+- All four despawn locations use this helper:
+  - Line 136: Invalid terrain at spawn
+  - Line 153: No player nearby
+  - Line 165: Count exceeded during wander
+  - Line 170: Invalid terrain during travel
+- Pattern matches wow-chat-1 reference implementation
 
 ## Current Behavior
 - Travellers despawn when no player within 200 yards (line 143-144)

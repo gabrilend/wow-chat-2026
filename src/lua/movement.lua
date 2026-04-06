@@ -199,3 +199,41 @@ function Movement.isCloseEnough(x1, y1, x2, y2, dist) -- {{{
     return Movement.squaredDistance(x1, y1, x2, y2) <= dist * dist
 end -- }}}
 
+-- {{{ Movement.getConsensusDirection
+-- Returns average facing direction of nearby players (non-bots)
+-- Used by bots when stuck or needing reorientation
+-- Used by travellers after terrain failures instead of despawning
+-- Returns angle in radians, or nil if no players nearby
+function Movement.getConsensusDirection(unit, range)
+    range = range or 200
+    local players = unit:GetPlayersInRange(range)
+    if not players or #players < 1 then return nil end
+
+    local sum_sin, sum_cos = 0, 0
+    local count = 0
+
+    for _, player in ipairs(players) do
+        if player:IsAlive() and not player:IsBot() then
+            local facing = player:GetFacing()
+            sum_sin = sum_sin + math.sin(facing)
+            sum_cos = sum_cos + math.cos(facing)
+            count   = count + 1
+        end
+    end
+
+    if count == 0 then return nil end
+    return math.atan2(sum_sin, sum_cos)
+end -- }}}
+
+-- {{{ Movement.normalizeAngle
+-- Normalize angle to 0 to 2*pi range
+function Movement.normalizeAngle(angle)
+    while angle < 0 do
+        angle = angle + 6.28
+    end
+    while angle >= 6.28 do
+        angle = angle - 6.28
+    end
+    return angle
+end -- }}}
+

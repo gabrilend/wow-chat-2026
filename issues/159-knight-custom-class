@@ -1,0 +1,448 @@
+# Issue 159: Knight Custom Class Design
+
+**Status**: Design Complete (ready for testing)
+**Phase**: 1
+**Related**: 155 (custom-class-selection-npc), 157 (dynamic-trainer-spawning), 142 (custom-spell-system)
+**Implementation**: `src/lua/custom-classes.lua` definition 1004
+
+## Quick Stats
+
+| Stat            | Value                                                         |
+|-----------------|---------------------------------------------------------------|
+| Base Class      | Paladin (2)                                                   |
+| Total Spells    | 32                                                            |
+| Source Classes  | Paladin, Priest, Rogue, Warrior, Death Knight, Mage, Hunter   |
+| Stat Priority   | Int > Agi > Str (crit scaling)                                |
+| Weapons         | 2H only                                                       |
+| Role            | Single-target protector / off-healer / DPS                    |
+| Core Mechanic   | Parry -> Reckoning/Counterattack -> Crit -> Flurry            |
+| Parry Bonus     | +19% from talents (Rogue +6%, Warrior +5%, Paladin +5%, Hunter +3%) |
+| Party Buffs     | Blessing of Kings, Arcane Intellect, Horn of Winter           |
+
+---
+
+## Overview
+
+The Knight is a custom class built on a Paladin base. They are a holy bodyguard who
+protects one ally at a time through shields and focused healing. They sacrifice AoE
+capability and CC for focused single-target protection.
+
+---
+
+## Design Philosophy
+
+### Fantasy
+
+A defensive warrior-priest who protects allies through sacred power. Not a raid
+healer - a dedicated protector of one target. Think "the one who stands between
+the healer and death."
+
+### Role
+
+Three roles, one per talent tree (hypothetical):
+- **Protection tree**: Off-tank, parry-focused, Reckoning procs
+- **Holy tree**: Single-target healer, Flash of Light + Sacred Shield
+- **Combat tree**: Melee DPS, crit-focused auto-attacks
+
+### Stat Priority
+
+```
+Primary:   Intellect (healing power, mana)
+Secondary: Agility (melee DPS, crit)
+Tertiary:  Strength (damage - nice but droppable)
+Ignore:    Spirit
+
+Core scaling: CRIT
+  - Crit heals for bigger Sacred Shield absorbs
+  - Crit melee for burst damage
+  - Art of War procs from crits
+```
+
+### Weapon Restriction
+
+**2H weapons only**: Swords, Maces, Axes, Polearms, Staves
+
+No shields, no dual wield, no 1H weapons.
+
+---
+
+## Strengths (What Knight CAN Do)
+
+| Capability              | Mechanic                              |
+|-------------------------|---------------------------------------|
+| Single-target healing   | Flash of Light, Renew, Desperate Prayer |
+| Single-target shielding | Sacred Shield (core identity)         |
+| Stat buffs              | Blessing of Kings, Horn of Winter     |
+| Self-armor              | Inner Fire                            |
+| Parry-based damage      | Reckoning talent, Riposte             |
+| Burst mobility          | Sprint (gap closer, not travel)       |
+| Cleanse allies          | Purify (poison + disease, NOT magic)  |
+| Crit amplification      | Inner Focus                           |
+
+---
+
+## Weaknesses (What Knight CANNOT Do)
+
+| Missing            | Why It Matters                    | Contrast to Paladin        |
+|--------------------|-----------------------------------|----------------------------|
+| No AoE damage      | Struggles with packs              | No Consecration            |
+| No ranged damage   | Must close distance               | No Exorcism, no Judgement  |
+| No CC              | Cannot lock down targets          | No Hammer of Justice       |
+| No group healing   | Heals one person at a time        | No Holy Light splash       |
+| No auras           | Auras are a Paladin thing         | No Devotion/Ret Aura       |
+| No seals           | Auto-attack focused, no seal proc | No Seal of Righteousness   |
+| No magic dispel    | Purify is limited                 | No Cleanse (magic)         |
+| No bleeds/cripples | Knights deliver mortal blows      | No Rend, no Hamstring      |
+
+---
+
+## Spell Sources
+
+Knights draw from multiple traditions (this is intentional for custom classes):
+
+| Source Class | Spells Borrowed                                              |
+|--------------|--------------------------------------------------------------|
+| Paladin      | Blessing of Kings, Parry, Purify, Deflection R5              |
+|              | Reckoning, Spiritual Focus, Sheath of Light, Art of War      |
+|              | Pursuit of Justice, Flash of Light, Sacred Shield            |
+| Priest       | Renew, Desperate Prayer, Inner Fire, Inner Focus             |
+|              | Divine Aegis                                                 |
+| Rogue        | Deflection R3, Sprint                                        |
+| Warrior      | Deflection R5, Flurry R5                                     |
+| Death Knight | Horn of Winter, Spell Deflection R3                          |
+| Mage         | Arcane Intellect R1, R2                                      |
+| Hunter       | Deflection R3, Counterattack, Combat Experience R2           |
+
+---
+
+## Spell List (Levels 1-20) - IMPLEMENTED
+
+**Definition ID**: 1004 in `src/lua/custom-classes.lua`
+**Total Spells**: 32 (was 30)
+
+### By Level (Progression)
+
+| Level | Spells Learned                                                              |
+|-------|-----------------------------------------------------------------------------|
+| 1     | Arcane Intellect R1                                                         |
+| 4     | Blessing of Kings                                                           |
+| 6     | Parry, Purify, Rogue Deflection R3, Paladin Deflection R5, Hunter Defl, Horn|
+| 8     | Renew R1, Spiritual Focus R5, Warrior Deflection R5                         |
+| 10    | Desperate Prayer, Sprint, Pursuit of Justice R2                             |
+| 12    | Inner Fire R1, Flurry R5, Combat Experience R2                              |
+| 14    | Renew R2, Arcane Intellect R2, Reckoning, Counterattack                     |
+| 16    | Inner Focus, Sheath of Light R3, Spell Deflection R3                        |
+| 18    | Art of War R2, Divine Aegis R3                                              |
+| 20    | Flash of Light, Sacred Shield, Renew R3, Inner Fire R2                      |
+
+### By Source Class
+
+**Paladin (class 2)** - 11 spells
+
+| Level | Spell               | ID    | Purpose                              |
+|-------|---------------------|-------|--------------------------------------|
+| 4     | Blessing of Kings   | 20217 | +10% all stats                       |
+| 6     | Parry               | 3127  | Enables parry playstyle              |
+| 6     | Purify              | 1152  | Cleanse poison + disease             |
+| 6     | Deflection R5       | 20064 | +5% parry (stacks w/ Rogue+Warrior)  |
+| 8     | Spiritual Focus R5  | 20208 | 70% pushback reduction on heals      |
+| 10    | Pursuit of Justice R2| 26023| +15% speed, -50% disarm duration     |
+| 14    | Reckoning           | 20177 | Parry -> extra attacks               |
+| 16    | Sheath of Light R3  | 53503 | 30% AP -> SP, crit heals add HoT     |
+| 18    | Art of War R2       | 59578 | Melee crit -> instant Flash of Light |
+| 20    | Flash of Light      | 19750 | Fast, efficient heal                 |
+| 20    | Sacred Shield       | 53601 | Core identity - absorb shield        |
+
+**Priest (class 5)** - 8 spells
+
+| Level | Spell             | ID    | Purpose                              |
+|-------|-------------------|-------|--------------------------------------|
+| 8     | Renew R1          | 139   | HoT on single target                 |
+| 10    | Desperate Prayer  | 19236 | Emergency self-heal                  |
+| 12    | Inner Fire R1     | 588   | Armor + spellpower buff              |
+| 14    | Renew R2          | 6074  | HoT upgrade                          |
+| 16    | Inner Focus       | 14751 | Next spell 100% crit, no mana        |
+| 18    | Divine Aegis R3   | 47515 | Crit heals -> 30% absorb shield      |
+| 20    | Renew R3          | 6075  | HoT upgrade                          |
+| 20    | Inner Fire R2     | 7128  | Armor + spellpower upgrade           |
+
+**Rogue (class 4)** - 2 spells
+
+| Level | Spell             | ID    | Purpose                              |
+|-------|-------------------|-------|--------------------------------------|
+| 6     | Deflection R3     | 13854 | +6% parry (passive)                  |
+| 10    | Sprint            | 2983  | Gap closer, escape                   |
+
+**Warrior (class 1)** - 2 spells
+
+| Level | Spell             | ID    | Purpose                              |
+|-------|-------------------|-------|--------------------------------------|
+| 8     | Deflection R5     | 16466 | +5% parry (passive)                  |
+| 12    | Flurry R5         | 12974 | +25% attack speed for 3 swings on crit |
+
+**Death Knight (class 6)** - 2 spells
+
+| Level | Spell               | ID    | Purpose                              |
+|-------|---------------------|-------|--------------------------------------|
+| 6     | Horn of Winter      | 57330 | Str/Agi buff for party               |
+| 16    | Spell Deflection R3 | 49497 | Parry chance = 45% spell dmg redux   |
+
+**Mage (class 8)** - 2 spells
+
+| Level | Spell               | ID    | Purpose                              |
+|-------|---------------------|-------|--------------------------------------|
+| 1     | Arcane Intellect R1 | 1459  | +Int buff (primary stat)             |
+| 14    | Arcane Intellect R2 | 1460  | +Int buff (stronger)                 |
+
+**Hunter (class 3)** - 3 spells
+
+| Level | Spell               | ID    | Purpose                              |
+|-------|---------------------|-------|--------------------------------------|
+| 6     | Deflection R3       | 19297 | +3% parry (passive)                  |
+| 12    | Combat Experience R2| 34476 | +4% Agility and Intellect            |
+| 14    | Counterattack       | 19306 | Parry -> damage + 5s immobilize      |
+
+---
+
+## Talent Considerations - ALL IMPLEMENTED
+
+### From Paladin (class 2)
+
+| Talent | ID | Level | Effect |
+|--------|----|-------|--------|
+| Spiritual Focus R5 | 20208 | 8 | 70% pushback reduction on heals |
+| Reckoning | 20177 | 14 | After being hit, gain extra attacks |
+| Sheath of Light R3 | 53503 | 16 | 30% AP -> SP, crit heals add HoT |
+| Art of War R2 | 59578 | 18 | Melee crit -> instant Flash of Light |
+
+### From Priest (class 5)
+
+| Talent | ID | Level | Effect |
+|--------|----|-------|--------|
+| Inner Focus | 14751 | 16 | Next spell costs no mana and crits |
+| Divine Aegis R3 | 47515 | 18 | Crit heals create 30% absorb shield |
+
+### From Rogue (class 4)
+
+| Talent | ID | Level | Effect |
+|--------|----|-------|--------|
+| Deflection R3 | 13854 | 6 | +6% parry chance (passive) |
+
+### From Warrior (class 1)
+
+| Talent | ID | Level | Effect |
+|--------|----|-------|--------|
+| Flurry R5 | 12974 | 12 | +25% attack speed for 3 swings after crit |
+
+### From Hunter (class 3)
+
+| Talent | ID | Level | Effect |
+|--------|----|-------|--------|
+| Deflection R3 | 19297 | 6 | +3% parry chance (passive) |
+| Combat Experience R2 | 34476 | 12 | +4% Agility and Intellect |
+| Counterattack | 19306 | 14 | After parry, damage + 5s immobilize |
+
+### Additional Parry-Related Talents (NOT YET ADDED)
+
+Potential future additions for deeper parry builds:
+
+| Talent | Class | Effect | Notes |
+|--------|-------|--------|-------|
+| Spirit Weapons | Shaman | Grants parry + threat reduction | Deep Enhancement |
+| Anticipation | Paladin | +5% dodge | Defense, not parry |
+| Blade Barrier | DK | After Blood Strike, +10% parry | Requires DK abilities |
+
+-- this version of WotLK has the blade barrier parry replaced with damage reduction.
+
+Most parry talents are:
+- **Deflection** variants (Rogue, Paladin, Hunter all have versions)
+- **Passive defense** (not as synergistic with crit build)
+
+---
+
+## Comparison: Knight vs Other Classes (Level 20)
+
+| Aspect          | Knight      | Paladin     | Warrior     | Priest      |
+|-----------------|-------------|-------------|-------------|-------------|
+| Damage          | Medium      | Medium      | High        | Low         |
+| Healing         | Medium (1)  | High        | None        | High (many) |
+| Protection      | High (1)    | High        | High        | Medium      |
+| CC              | Low (2)     | Medium      | Medium      | High        |
+| Mobility        | Medium      | Medium      | Medium      | Low         |
+| AoE             | None        | Medium      | Medium      | Low         |
+| Stat scaling    | Crit > Int  | Str > Int   | Str         | Int > Spi   |
+
+(1) = single-target only
+(2) = Counterattack immobilize only (parry-triggered, 5 sec)
+
+---
+
+## Gear Recommendations
+
+```
+Plate with Intellect + Agility
+  - Pre-40: Mail (no plate yet)
+  - Look for crit rating if available
+
+Weapon: 2H with Int or Agi
+  - Staves often have Int
+  - 2H Maces often have Str (acceptable)
+
+Avoid: Spirit, pure Strength pieces
+```
+
+---
+
+## Open Questions
+
+1. **Sacred Shield mana cost**: Spec notes suggest 12% total mana. Need to verify
+   if this is possible without DBC edit.
+
+2. ~~**Art of War**: Should knights get the Art of War talent?~~
+   **RESOLVED**: Yes, added at level 18 (ID: 59578)
+
+3. ~~**Parry at what level?**: Base Paladin gets Parry at 8.~~
+   **RESOLVED**: Knight gets Parry at level 6 (same as Warrior)
+
+4. ~~**Two Sprints?**: User asked if there are two sprint-like abilities.~~
+   **RESOLVED**: Only Rogue Sprint exists. Hunter/Shaman have forms, not sprints.
+
+5. **Tome specificity**: Tomes from trainer classes (Paladin, Priest, Rogue,
+   Warrior, DK, Mage, Hunter) should ONLY teach spells the Knight actually knows
+   from those classes. A DK trainer might only teach Horn of Winter.
+
+---
+
+## Implementation Notes
+
+### tomeClasses
+
+Knights can find tomes from:
+- Paladin (base) - 11 spells
+- Priest (healing spells) - 8 spells
+- Rogue (mobility/parry) - 2 spells
+- Warrior (parry/crit) - 2 spells
+- Death Knight (buffs/defense) - 2 spells
+- Mage (intellect) - 2 spells
+- Hunter (parry/stats) - 3 spells
+
+```lua
+tomeClasses = { 2, 5, 4, 6, 1, 8, 3 }  -- Paladin, Priest, Rogue, DK, Warrior, Mage, Hunter
+```
+
+**Note**: Trainers only teach spells the Knight actually knows. A Warrior trainer
+spawning for a Knight can ONLY teach Deflection R5 and Flurry R5. A Hunter trainer
+can ONLY teach Deflection R3, Combat Experience R2, and Counterattack. This is by
+design - trainers are filtered by the custom class spell list.
+
+### Talent Learning via AIO
+
+High-level talents (normally require level 40+) are learned through:
+1. AIO addon on login
+2. Server reset relearning
+3. Periodic refresh when needed
+
+These talents are in the spell list but flagged for special handling since
+they can't be learned from normal trainers due to level requirements.
+
+---
+
+## Revision History
+
+- 2026-04-05: Initial design based on src/custom-class-json/knight notes
+- 2026-04-05: Revised per user feedback:
+  - Changed stat priority to Int > Agi > Str (crit scaling)
+  - Removed Rend, Hamstring (not knightly - they deliver mortal blows)
+  - Removed Lay on Hands, replaced with Desperate Prayer
+  - Removed Devotion Aura (auras are paladin-only)
+  - Changed blessing to Blessing of Kings (stat focus)
+  - Added Inner Focus for crit build
+  - Clarified Purify is poison+disease only (no magic)
+  - Auto-attack + Reckoning focused damage, not seal damage
+  - Added Sprint for mobility
+  - Confirmed three roles (one per tree) is intentional
+- 2026-04-05: Implementation v1 complete
+  - Added definition 1004 to src/lua/custom-classes.lua
+  - 17 spells total across 4 source classes
+  - Updated src/custom-class-json/knight to reference this issue
+- 2026-04-05: Talent expansion (v2)
+  - Added Power Word: Fortitude at level 1 (early buff)
+  - Added Spiritual Focus R5 at level 8 (pushback reduction)
+  - Added Flurry R5 at level 12 (crit -> attack speed)
+  - Added Sheath of Light R3 at level 16 (AP -> SP conversion)
+  - Added Art of War R2 at level 18 (melee crit -> instant Flash)
+  - Added Divine Aegis R3 at level 18 (crit heal -> absorb shield)
+  - Added Warrior (class 1) to tomeClasses for Flurry
+  - Total spells: 24 (was 17) across 5 source classes
+- 2026-04-05: Parry & Buff expansion (v3)
+  - Removed Power Word: Fortitude (stamina not a priority stat)
+  - Added Arcane Intellect R1 at level 1, R2 at level 14 (Int buff)
+  - Added Warrior Deflection R5 at level 8 (+5% parry, stacks with Rogue)
+  - Added Pursuit of Justice R2 at level 10 (+15% speed, -50% disarm)
+  - Added Spell Deflection R3 at level 16 (parry -> 45% spell dmg redux)
+  - Added Mage (class 8) to tomeClasses for Arcane Intellect
+  - Total spells: 29 (was 24) across 6 source classes
+  - Total parry bonus from talents: +11% (Rogue +6%, Warrior +5%)
+- 2026-04-05: Triple Deflection (v4)
+  - Added Paladin Deflection R5 at level 6 (+5% parry)
+  - Total spells: 30 across 6 source classes
+  - Total parry bonus from talents: +16% (Rogue +6%, Warrior +5%, Paladin +5%)
+  - Created issue 161 for AIO tiered talent trainers
+- 2026-04-05: Hunter integration (v5)
+  - Replaced Riposte with Counterattack (parry -> damage + 5s immobilize)
+  - Added Hunter Deflection R3 at level 6 (+3% parry)
+  - Added Combat Experience R2 at level 12 (+4% Agi/Int)
+  - Added Hunter (class 3) to tomeClasses
+  - Total spells: 32 across 7 source classes
+  - Total parry bonus from talents: +19% (Rogue +6%, Warrior +5%, Paladin +5%, Hunter +3%)
+  - Knight now has light CC capability (Counterattack immobilize)
+
+-- need more talents for knight, specifically in holy and combat. See suggestions:
+
+shaman flurry
+druid nurturing instinct
+mage arcane fortitude
+mage magic absorption
+paladin eye for an eye
+hunter surefooted
+dk acclimation
+priest empowered renew
+priest improved renew
+priest blessed resilience
+priest focused will
+paladin ardent defender
+druid dreamstate
+priest mental strength
+druid lunar guidance
+paladin divine intellect (ranks 1, 3, and 5)
+paladin pure of heart
+rogue lightning reflexes (would need to remove 3 points of parry)
+hunter lightning reflexes (tiers 2 and 4)
+hunter combat experience
+warrior mocking blow
+warrior vigilance (lacks threat generation, could help a bit)
+
+the goal is to have enough int increasing effects via "all stats" and "int" to
+then let druid dreamstate be the mana recovery method. Also, scale off of crits,
+so encourage int (for healing crits) and agi (for melee crits) - question, what
+scales damage-wise for crits? flurry, mostly. more attacks, more chances to crit
+- notice we don't have talents that increase crit chance, intending the users to
+use attributes to increase crit chance, and attack speed to increase crit rate.
+
+no accuracy increases either. there's no (few?) abilities, and auto-attacks
+missing is... fine
+
+these are suggestions. we should consider more thoroughly.
+
+also, if we can make the glyph of renew (priest) effect always be active, that'd
+help. It reduces the duration of renew, meaning the knight has more spells to
+cast. It should just, always be active for knights. Remember, we removed glyphs
+from the inscription profession trainers, so players can't learn to make glyphs.
+They make tomes instead.
+
+if we can do glyphs this way, then we should also always have the warrior
+vigilance glyph (increased threat gained)
+
+instead of paladin cleanse, can we have dispel magic?
+
+

@@ -154,41 +154,8 @@ function FindMonsters.scan(bot)
     return false  -- moving, not yet engaged
 end -- }}}
 
--- {{{ FindMonsters.onBotUpdate
--- Hook into bot update cycle
--- Called periodically for each bot
-function FindMonsters.onBotUpdate(_event, bot)
-    FindMonsters.scan(bot)
-end -- }}}
-
--- {{{ FindMonsters.registerForBot
--- Register periodic scan for a specific bot
-function FindMonsters.registerForBot(bot)
-    if not bot:IsBot() then return end
-
-    -- register periodic event on the bot
-    bot:RegisterEvent(function(_eventID, _delay, _repeats, unit)
-        FindMonsters.scan(unit)
-    end, SCAN_INTERVAL, 0)  -- 0 = repeat forever
-
-    print("[FindMonsters] Registered for bot: " .. bot:GetName())
-end -- }}}
-
--- {{{ FindMonsters.onBotLogin
--- When a bot logs in, register for scanning
-function FindMonsters.onBotLogin(_event, player)
-    if player:IsBot() then
-        FindMonsters.registerForBot(player)
-    end
-end -- }}}
-
--- {{{ Event Registration
--- Note: These events may need adjustment based on actual mod-ale API
--- Check docs/ale/ for correct event constants
-
-PLAYER_EVENT_ON_LOGIN = 3
-
-RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, FindMonsters.onBotLogin)
-
-print("[FindMonsters] Behavior loaded")
+-- {{{ Module initialization
+-- NOTE: Per-bot registration moved to periodic_events.lua (issue 160)
+-- This file exposes: FindMonsters.scan(bot)
+print("[FindMonsters] Behavior loaded - periodic registration via periodic_events.lua")
 -- }}}

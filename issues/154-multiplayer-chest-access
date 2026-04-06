@@ -9,9 +9,10 @@
 
 ### Implementation Notes
 - Combined with 153 (vulnerability) in same file
-- Holder promoted from searchers on logout
+- **Holder logout = chest snaps shut** (not promoted from searchers)
 - Trade queue NOT implemented (requires separate trade hook system)
 - Player-chest mapping for fast damage lookup
+- **Holder = first to interact**, not the person the chest was spawned for
 
 ## Current Behavior
 - One player opens chest
@@ -55,6 +56,13 @@
 - Trade queue is cleared
 - **Any player can reopen** after daze expires - they become the new holder
 - **Loot is the same** upon re-opening (chest contents preserved)
+
+### Holder Logout/Disconnect
+- If holder logs out or disconnects → chest **immediately closes**
+- Same as daze-snap: all searchers ejected, trades canceled
+- **NO searcher promotion** - chest just closes
+- Anyone can reopen after (they become new holder)
+- This prevents "afk holder" griefing and keeps things simple
 
 ### Post-Close Behavior
 - When holder closes chest normally:

@@ -2,6 +2,7 @@
 
 ## Status
 - Created: 2026-04-04
+- Implemented: 2026-04-05
 - Phase: 2
 - Priority: Medium
 - Type: C++ Patch
@@ -72,3 +73,29 @@ PLAYER_EVENT_ON_SELL_ITEM = XX,  // (event, player, item, vendor, count)
 ## Related Issues
 - 149 - Sold items return to treasure pool (depends on this)
 - 148 - Treasure chest shared loot
+
+## Implementation Notes (2026-04-05)
+
+### Files Modified
+
+**ALE (modules/mod-ale/):**
+- `src/LuaEngine/Hooks.h` - Added `PLAYER_EVENT_ON_SELL_ITEM = 74`
+- `src/LuaEngine/LuaEngine.h` - Added `OnSellItem()` declaration
+- `src/LuaEngine/hooks/PlayerHooks.cpp` - Implemented `OnSellItem()` hook
+
+**AzerothCore Core:**
+- `src/server/game/Handlers/ItemHandler.cpp` - Added `#ifdef ALE` include and hook calls
+
+### Hook Call Sites
+Two locations in `HandleSellItemOpcode`:
+1. Line 728: Partial stack sale (`pNewItem`, `packet.Count`)
+2. Line 740: Full item sale (`pItem`, `pItem->GetCount()`)
+
+### Build Required
+Requires full rebuild with `-DSCRIPTS=static -DMODULES=static`:
+```bash
+cd build && cmake .. && make -j$(nproc) && make install
+```
+
+### Patch Doc
+Full patch specification: `docs/patches/ale-sell-item-hook.md`

@@ -1,0 +1,1289 @@
+# 163 - Custom Class Lua Definition Format
+
+## Status
+- Created: 2026-04-05
+- Phase: 2
+- Priority: High
+- Depends: 155 (Custom class selection), 345 (Custom talent interface)
+
+## Current Behavior
+- Custom classes defined as hardcoded Lua tables in custom-classes.lua
+- `loadFromDirectory()` is a TODO stub
+- Class definitions use flat spell lists: `{ id, level, sourceClass }`
+- No validation of class definitions
+- No talent tree structure
+
+## Intended Behavior
+- Custom classes defined in `.lua` files in `src/custom-class-json/` (rename to `src/custom-classes/`)
+- Sandboxed Lua parser - parses as data, does NOT execute arbitrary code
+- Rich structure for talents, abilities, schools, proficiencies
+- Comprehensive validation with detailed error reporting via rmail
+
+## File Format Specification
+
+### Basic Structure
+```lua
+-- src/custom-classes/knight.lua
+knight = {}
+
+-- === METADATA ===
+knight.name        = "Knight"
+knight.description = "A holy bodyguard who protects allies through sacred shields."
+knight.stat_growth = "paladin"  -- Stat curve AND base class restriction
+                                -- Only Paladins can choose Knight
+
+-- === SCHOOLS / TALENT TREES ===
+-- Define once, used for both spellbook pages and talent tree names
+knight.schools = {}
+knight.schools[1] = "Vitality"    -- Healing spells, healing talents
+knight.schools[2] = "Dedication"  -- Protection spells, protection talents
+knight.schools[3] = "Valor"       -- Damage spells, damage talents
+
+-- === ABILITIES ===
+-- Each spell rank is a separate entry (explicit)
+knight.abilities = {}
+
+-- Horn of Winter at level 6, costs 10s, appears in school 3
+knight.abilities[57330] = { level = 6, cost = 1000, school = 3 }
+
+-- Renew R1 at level 8, R2 at level 14, R3 at level 20
+knight.abilities[139]  = { level = 8,  cost = 1500, school = 1 }  -- Renew R1
+knight.abilities[6074] = { level = 14, cost = 2500, school = 1 }  -- Renew R2
+knight.abilities[6075] = { level = 20, cost = 4000, school = 1 }  -- Renew R3
+
+-- Parry at level 0 (known at creation), no cost, school 2
+knight.abilities[3127] = { level = 0, cost = 0, school = 2 }
+
+-- === TALENTS ===
+knight.talents = {}
+
+-- Deflection: 5 ranks available, tier 1, tree 2 (no prerequisite)
+knight.talents[13854] = { max_ranks = 5, tier = 1, tree = 2 }
+
+-- Reckoning: 3 ranks available, tier 2, tree 2
+-- Requires Deflection to be MAXED (all 5 points) to unlock
+knight.talents[20177] = { max_ranks = 3, tier = 2, tree = 2, requires = 13854 }
+
+-- === PROFICIENCIES ===
+knight.weapons = {}
+knight.weapons.known     = { 54, 160, 196 }  -- 2H Swords, 2H Maces, 2H Axes
+knight.weapons.learnable = { 200, 227 }      -- Polearms, Staves
+
+knight.armor = {}
+knight.armor.known     = { 8737 }  -- Mail
+knight.armor.learnable = { 750 }   -- Plate (at level?)
+```
+
+### Key Design Decisions
+1. **Schools = Talent Trees** - defined once, used for both spellbook pages and talent tree names
+2. **stat_growth = base class restriction** - if stat_growth is "paladin", only Paladins can choose this class
+3. **Explicit ability ranks** - Renew R1, R2, R3 are separate entries with separate spell IDs
+4. **Talent prerequisites** - `requires` field is a spell ID that must be MAXED to unlock
+5. **No duplicate talents** - same spell ID appearing twice is an error
+
+### Level Convention
+- `level = 0` means known at character creation
+- `level = 2, 4, 6...` for trainable abilities (even levels only)
+- `level = 1` is invalid for abilities (except as alias for 0?)
+
+### Cost Convention
+- Cost in copper (100 copper = 1 silver, 10000 copper = 1 gold)
+- `cost = 1000` = 10 silver
+- `cost = 0` = free (starting abilities)
+
+## Talent System
+
+### Rank Capping
+Talents have fixed max ranks in Talent.dbc. If user specifies more ranks than exist:
+- Server looks up actual max from DBC (via WorldDatabase query on `spell_dbc`)
+- Caps `max_ranks` to actual maximum
+- Logs warning: "Talent 20177 has max 5 ranks, capped from requested 10"
+
+### Tier Requirements
+- Tier 1: 0 points required in tree
+- Tier 2: 5 points required in tree
+- Tier 3: 10 points required in tree
+- Tier N: (N-1) * 5 points required
+
+### Tree Structure
+```lua
+knight.talent_trees = {}
+knight.talent_trees[1] = "Vitality"    -- Tree names match schools?
+knight.talent_trees[2] = "Dedication"
+knight.talent_trees[3] = "Valor"
+```
+
+## Validation Rules
+
+### Talent Validation
+| Rule | Min | Max | Error Message |
+|------|-----|-----|---------------|
+| Total talent points across all trees | 80 | 120 | "Class must have 80-120 total talent points (found {n})" |
+| Ranks per talent | 1 | DBC max | "Talent {id} max_ranks capped to {max}" |
+| Tier value | 1 | 7 | "Talent {id} tier must be 1-7" |
+| Tree value | 1 | 3 | "Talent {id} tree must be 1-3" |
+| Talents per tier | - | 4 | "Tree {n} tier {t} has {x} talents, max 4" |
+| Points per tier | 5 | - | "Tree {n} tier {t} has only {x} points, need 5" |
+| No duplicates | - | 1 | "Talent {id} appears multiple times" |
+| Prerequisite exists | - | - | "Talent {id} requires {req} which is not in talent list" |
+| Prerequisite tier | lower | - | "Talent {id} requires {req} which is same/higher tier" |
+
+**Important:** Total talent points is calculated AFTER capping max_ranks to DBC maximums.
+If user specifies 10 ranks but DBC max is 5, count 5 toward the total, not 10.
+
+### Ability Validation
+| Rule | Min | Max | Error Message |
+|------|-----|-----|---------------|
+| Total abilities | 1 | 40 | "Class must have 1-40 abilities" |
+| Abilities per level | - | 4 | "Level {n} has {x} abilities, max 4" |
+| Level value | 0 | 20 | "Ability {id} level must be 0-20" |
+| Level parity | even | even | "Ability {id} level must be even (got {n})" |
+| Cost value | 0 | - | "Ability {id} cost cannot be negative" |
+| School value | 1 | 3 | "Ability {id} school must be 1-3" |
+| Spell exists | - | - | "Ability {id} is not a valid spell ID" |
+| No duplicates | - | 1 | "Ability {id} appears multiple times" |
+
+### Metadata Validation
+| Rule | Error Message |
+|------|---------------|
+| name required | "Class must have a name" |
+| name max length 24 | "Class name too long (max 24 chars)" |
+| stat_growth required | "Class must have stat_growth" |
+| stat_growth valid | "Invalid stat_growth '{s}' (must be warrior/paladin/hunter/rogue/priest/deathknight/shaman/mage/warlock/druid)" |
+| 1-3 schools defined | "Class must have 1-3 schools" |
+| school names not empty | "School {n} has empty name" |
+
+**Valid stat_growth values** (determines base class restriction):
+- "warrior" (class 1)
+- "paladin" (class 2)
+- "hunter" (class 3)
+- "rogue" (class 4)
+- "priest" (class 5)
+- "deathknight" (class 6)
+- "shaman" (class 7)
+- "mage" (class 8)
+- "warlock" (class 9)
+- "druid" (class 11)
+
+### Proficiency Validation
+- Weapon/armor IDs must be valid spell IDs for proficiencies
+- At least one weapon proficiency required
+- At least one armor proficiency required
+
+## Parser Implementation
+
+### Sandboxed Loading
+```lua
+-- {{{ loadClassFile
+-- Safely load a custom class definition file
+-- Returns class definition or nil, errorList
+function CustomClasses.loadClassFile(filepath)
+    local errors = {}
+
+    -- Read file contents
+    local file = io.open(filepath, "r")
+    if not file then
+        return nil, { "Cannot open file: " .. filepath }
+    end
+    local content = file:read("*all")
+    file:close()
+
+    -- Create sandboxed environment
+    local sandbox = {
+        -- Only allow table creation and basic types
+        -- NO: io, os, require, loadfile, dofile, rawget, rawset, etc.
+    }
+
+    -- Parse the Lua (not execute - compile to check syntax)
+    local chunk, parseErr = load(content, filepath, "t", sandbox)
+    if not chunk then
+        return nil, { "Syntax error: " .. parseErr }
+    end
+
+    -- Execute in sandbox to build tables
+    local success, execErr = pcall(chunk)
+    if not success then
+        return nil, { "Execution error: " .. execErr }
+    end
+
+    -- Extract class definition from sandbox
+    -- The class name is the table name (e.g., "knight")
+    local className = nil
+    local classDef  = nil
+    for k, v in pairs(sandbox) do
+        if type(v) == "table" and v.name then
+            className = k
+            classDef  = v
+            break
+        end
+    end
+
+    if not classDef then
+        return nil, { "No class definition found in file" }
+    end
+
+    -- Validate the class definition
+    local validationErrors = CustomClasses.validateDefinition(classDef)
+    if #validationErrors > 0 then
+        return nil, validationErrors
+    end
+
+    return classDef, nil
+end
+-- }}}
+```
+
+### Bytecode Considerations
+- Could analyze bytecode to detect dangerous operations before execution
+- LuaJIT compiles to IR, not standard Lua bytecode
+- For now, rely on empty sandbox environment
+- Future: whitelist specific bytecode operations if needed
+
+## Error Reporting via Rmail
+
+When validation fails, send rmail with TWO sections:
+1. **Summary block at top** - all errors listed
+2. **Annotated source** - inline errors next to offending lines
+
+For "absence" errors (missing required field), only show in summary block.
+For "mis-product" errors (bad value), show inline next to the line.
+
+```
+Subject: Custom Class Rejected: knight.lua
+
+=== VALIDATION ERRORS ===
+
+1. [line 47] Talent 20177 max_ranks (10) exceeds actual maximum (5)
+2. [line 52] Ability 99999 is not a valid spell ID
+3. [line 61] Talent 20177 requires 13854 which is not in talent list
+4. [MISSING] Class must have 40-80 total talent points (found 35)
+5. [MISSING] Tree 2 tier 3 has only 3 points, need 5
+
+=== YOUR SOURCE (annotated) ===
+
+ 45: knight.talents = {}
+ 46:
+ 47: knight.talents[20177] = { max_ranks = 10, tier = 2, tree = 2 }
+     ^^^ ERROR: max_ranks (10) exceeds actual maximum (5)
+ 48:
+ 49: knight.abilities = {}
+ 50:
+ 51: knight.abilities[57330] = { level = 6, cost = 1000, school = 3 }
+ 52: knight.abilities[99999] = { level = 8, cost = 1500, school = 1 }
+     ^^^ ERROR: 99999 is not a valid spell ID
+ 53:
+ ...
+ 61: knight.talents[20177] = { max_ranks = 3, tier = 2, tree = 2, requires = 13854 }
+     ^^^ ERROR: requires 13854 which is not in talent list
+
+Please fix these issues and reupload.
+```
+
+## Rmail Integration
+
+The validation system uses rmail's `on_receive` hook to process custom class definitions
+sent as **text messages** (not attachments).
+
+### rmail Background
+
+rmail is a file-based encrypted messaging system:
+- Location: `/home/ritz/programs/r-mail/` or https://github.com/gabrilend/r-mail
+- **Hooks**: `on_receive_raw`, `on_receive`, `on_package`, `on_send`, `on_delete`
+- **`on_receive` hook**: Fires after message is written to inbox
+  - `$1` = sender name (contact)
+  - `$2` = subject line
+  - `$3` = full path to inbox file
+  - Runs in background (non-blocking)
+- Messages up to 128KB - plenty for .lua class definitions
+
+### Hook Configuration
+
+```
+# game-server-mailbox/config
+on_receive = /path/to/scripts/validate-custom-class.lua
+```
+
+### Upload Flow
+
+1. User adds game server as rmail contact (shares token)
+2. User sends message with subject `CLASS: knight` and body containing the Lua code
+3. rmail saves to `<mailbox>/inbox/<timestamp>-<sender>.txt`
+4. `on_receive` hook fires with: sender, "CLASS: knight", "/path/to/inbox/..."
+5. Hook validates the message body as Lua
+
+### Hook Script: validate-custom-class.lua
+
+```lua
+#!/usr/bin/env lua
+-- {{{ validate-custom-class.lua
+-- on_receive hook for custom class validation
+-- Receives: sender, subject, filepath
+-- Returns: nothing (on_receive runs in background)
+
+local sender   = arg[1]  -- contact name
+local subject  = arg[2]  -- e.g., "CLASS: knight"
+local filepath = arg[3]  -- path to inbox file
+
+-- Only process CLASS: messages
+local className = subject:match("^CLASS:%s*(%S+)$")
+if not className then
+    return  -- not a class submission, ignore
+end
+
+-- Read and parse inbox file
+local f = io.open(filepath, "r")
+if not f then return end
+local content = f:read("*a")
+f:close()
+
+-- Strip rmail headers (to:, subject:, blank line)
+local body = content:match("\n\n(.+)$") or content
+
+-- Load validator
+local CustomClasses = require("custom-classes-validator")
+
+-- Validate
+local classDef, errors = CustomClasses.loadClassFromString(body, className)
+
+if errors then
+    local report = CustomClasses.formatErrorReport(body, errors)
+    send_rmail(sender, "REJECTED: " .. className, report)
+    -- Delete invalid inbox file - user gets annotated copy back
+    os.remove(filepath)
+else
+    -- Register class as available (loaded from inbox on demand)
+    CustomClasses.registerInboxClass(sender, className, filepath)
+    send_rmail(sender, "ACCEPTED: " .. className,
+               "Your class '" .. classDef.name .. "' is now available.\n" ..
+               "New characters of base class " .. classDef.stat_growth ..
+               " can choose it.")
+end
+-- }}}
+```
+
+### Version Pinning System
+
+**Problem**: Author can update or delete their class file, but existing characters
+should keep playing with the version they started with.
+
+**Solution**: Snapshot on character creation, cleanup unused snapshots.
+
+```
+inbox/                              -- Author-controlled (via rmail)
+  1712345678-alice.txt              -- Alice's Knight class
+
+src/custom-class-snapshots/         -- Server-controlled (internal backups)
+  alice-knight-v1712345678.lua      -- Snapshot for CharacterA
+  alice-knight-v1712400000.lua      -- Snapshot for CharacterB (newer version)
+```
+
+### Character Creation Flow
+
+1. Player selects custom class "Knight" (authored by Alice)
+2. Server reads Alice's inbox file (current version)
+3. Server copies to `src/custom-class-snapshots/alice-knight-v<timestamp>.lua`
+4. Server stores snapshot filename in character data: `CharCustomClassSnapshot`
+5. Character is created with that snapshot
+
+### Character Loading Flow
+
+1. Character logs in with `CharCustomClassSnapshot = "alice-knight-v1712345678.lua"`
+2. Server loads from `src/custom-class-snapshots/alice-knight-v1712345678.lua`
+3. **Ignores** any updates Alice made to her inbox file
+4. Character plays with original version they started with
+
+### Author Updates Class
+
+1. Alice sends updated CLASS: knight message
+2. Old inbox file replaced (rmail behavior)
+3. **Existing characters unaffected** - they use their snapshots
+4. **New characters** get the new version (new snapshot created)
+
+### Author Deletes Class
+
+1. Alice deletes her outbox file
+2. Rmail syncs → server's inbox file deleted
+3. **Existing characters unaffected** - snapshots remain
+4. **New characters cannot choose this class** - no inbox file to read
+
+### Snapshot Cleanup (Server Startup)
+
+```lua
+-- {{{ cleanupUnusedSnapshots
+-- Remove snapshot files that no character is using
+function CustomClasses.cleanupUnusedSnapshots()
+    -- Get all CharCustomClassSnapshot values from characters table
+    local usedSnapshots = {}
+    local query = CharDBQuery("SELECT DISTINCT data FROM character_data " ..
+                              "WHERE key = 'CharCustomClassSnapshot'")
+    if query then
+        repeat
+            usedSnapshots[query:GetString(0)] = true
+        until not query:NextRow()
+    end
+
+    -- Scan snapshot directory
+    local snapshotDir = "src/custom-class-snapshots/"
+    for file in lfs.dir(snapshotDir) do
+        if file:match("%.lua$") then
+            if not usedSnapshots[file] then
+                os.remove(snapshotDir .. file)
+                print("[CustomClasses] Removed unused snapshot: " .. file)
+            end
+        end
+    end
+end
+-- }}}
+```
+
+**Key points**:
+- Invalid inbox files are deleted immediately (author gets annotated copy back)
+- Valid inbox files are only deleted by author (via rmail outbox deletion)
+- Snapshots are cleaned up when no characters reference them
+- If Alice's class has no active characters but her inbox file exists, new characters
+  can still choose her class.
+
+### Class Availability
+
+A custom class is **available** for character creation if:
+1. Valid inbox file exists for that class
+2. Passes validation (re-validated on each character creation? or cache?)
+
+A custom class is **loaded** for a character if:
+1. Character has `CharCustomClassSnapshot` set
+2. Snapshot file exists in `src/custom-class-snapshots/`
+
+### send_rmail Helper
+
+```lua
+-- {{{ send_rmail
+local function send_rmail(recipient, subject, body)
+    local outbox = os.getenv("MAIL") .. "/outbox"
+    local filename = os.time() .. "-" .. recipient .. ".txt"
+    local f = io.open(outbox .. "/" .. filename, "w")
+    if f then
+        f:write("to: " .. recipient .. "\n")
+        f:write("subject: " .. subject .. "\n\n")
+        f:write(body)
+        f:close()
+    end
+end
+-- }}}
+```
+
+### One Class Per Author
+
+Each rmail contact can have **one active class** in their inbox.
+Sending a new `CLASS: X` message replaces the previous one.
+(Rmail deduplication by contact handles this.)
+
+If author wants multiple classes, they need multiple rmail contacts/tokens.
+
+## Directory Structure
+
+```
+<rmail-mailbox>/
+├── inbox/                              -- Author-controlled custom classes
+│   ├── 1712345678-alice.txt            -- Alice's CLASS: knight message
+│   └── 1712400000-bob.txt              -- Bob's CLASS: battlemage message
+├── outbox/                             -- Server responses (ACCEPTED/REJECTED)
+└── config                              -- Hook configuration
+
+src/custom-class-snapshots/             -- Server-controlled backups
+├── alice-knight-v1712345678.lua        -- Snapshot for existing characters
+├── alice-knight-v1712400000.lua        -- Newer snapshot (if Alice updated)
+└── bob-battlemage-v1712400000.lua      -- Bob's class snapshot
+
+src/custom-classes/                     -- Built-in classes (not user-submitted)
+├── knight.lua                          -- Example/default Knight class
+└── README.md                           -- Format documentation
+```
+
+### File Naming Conventions
+
+**Inbox files** (rmail-controlled):
+- `<timestamp>-<sender>.txt` - standard rmail format
+- Subject line determines class: `CLASS: knight`
+
+**Snapshot files** (server-controlled):
+- `<author>-<classname>-v<timestamp>.lua`
+- Timestamp is when snapshot was created (character creation time)
+- Same author+class can have multiple snapshots (different versions)
+
+## Migration from Current System
+
+### Remove from custom-classes.lua
+- Remove hardcoded `CustomClasses.definitions[1001]` etc.
+- Keep only Knight (convert to file format)
+- Remove Spellblade, Shadow Apostle, Beast Shaman examples
+
+### Convert Knight to File Format
+Current Knight definition has ~40 spells across 7 classes. Convert to new format:
+- Group by school (Vitality/Dedication/Valor based on spell purpose)
+- Extract talent-style abilities vs trainable abilities
+- Define proper talent tiers
+
+### Update loadFromDirectory()
+- Implement actual file loading
+- Call validateDefinition() for each file
+- Send rmail on errors
+- Only load valid definitions
+
+## Implementation Steps
+
+### Phase A: Core Validator (ALE-side)
+
+1. Create `src/custom-class-snapshots/` directory
+2. Write `CustomClasses.loadClassFromString(content, className)` with sandbox
+3. Write `CustomClasses.validateDefinition()` with all rules
+4. Write `CustomClasses.formatErrorReport()` for annotated output
+5. Convert Knight to new file format as `src/custom-classes/knight.lua` (built-in example)
+6. Remove deprecated example classes from custom-classes.lua
+7. Write `CustomClasses.createSnapshot(author, className, content)` - saves to snapshots/
+8. Write `CustomClasses.loadSnapshot(snapshotFile)` - loads character's pinned version
+9. Write `CustomClasses.cleanupUnusedSnapshots()` - server startup cleanup
+10. Test with valid and invalid class strings via `.reload ale`
+
+### Phase B: Rmail Hook (External Lua)
+
+11. Create standalone validator: `scripts/validate-custom-class.lua`
+    - Runs outside ALE (standard Lua with LuaFileSystem)
+    - Shares validation logic with Phase A (extract to common module?)
+    - Implements `send_rmail()` helper
+12. Configure game server's rmail instance with `on_receive` hook
+13. Test: send CLASS: message → receive ACCEPTED/REJECTED response
+
+### Phase C: Character Integration
+
+14. Update character creation to:
+    - Scan inbox for available custom classes
+    - Create snapshot on class selection
+    - Store `CharCustomClassSnapshot` in character data
+15. Update character loading to:
+    - Check for `CharCustomClassSnapshot`
+    - Load from snapshot file instead of inbox
+16. Call `cleanupUnusedSnapshots()` on server startup
+17. End-to-end test: rmail → validation → character creation → snapshot → login
+
+### Architecture Notes
+
+**Validation happens twice:**
+1. `on_receive` hook (external Lua) - immediate feedback to author
+2. Character creation (ALE) - re-validate before creating snapshot
+
+This ensures:
+- Authors get fast feedback (hook runs in background)
+- Snapshots are always valid (ALE validates before saving)
+- No race conditions if author updates between validation and character creation
+
+**Shared validation code:**
+The validation rules should be defined once and used by both:
+- External hook script (`scripts/validate-custom-class.lua`)
+- ALE module (`src/lua/custom-classes.lua`)
+
+Options:
+- Duplicate the validation code (simple, some drift risk)
+- Extract to `libs/custom-class-validator.lua` used by both
+- Have hook call ALE via some bridge (complex)
+
+## NPC Gossip Menu Overflow
+
+If there are more valid custom classes for a base class than fit in a gossip menu:
+1. **Random selection** - pick N classes randomly from the pool
+2. **Cache with NPC** - store selection on NPC via SetData("class-list", serialized)
+3. **Consistent per NPC** - same player or different player sees same list from same NPC
+4. **Refresh on despawn** - when NPC despawns and respawns, new random selection
+
+```lua
+-- On NPC spawn or first gossip
+function cacheClassList(npc, baseClass)
+    local allClasses = CustomClasses.getClassesForBase(baseClass)
+    if #allClasses <= MAX_GOSSIP_OPTIONS then
+        npc:SetData("class-list", allClasses)
+        return
+    end
+
+    -- Random selection without replacement
+    local selected = {}
+    local pool = { unpack(allClasses) }
+    for i = 1, MAX_GOSSIP_OPTIONS do
+        local idx = math.random(#pool)
+        table.insert(selected, table.remove(pool, idx))
+    end
+    npc:SetData("class-list", selected)
+end
+```
+
+## Open Questions
+
+- What happens if uploader resubmits fixed file? Replace previous or reject as duplicate?
+  - **Answer**: Replace inbox file. Existing characters keep their snapshots.
+- Should we track upload history per contact password?
+  - **Answer**: No explicit tracking. Snapshots serve as implicit version history.
+- What's the max gossip options in WoW? (I think ~12-15)
+  - **Research needed**: Check via testing or wiki
+- How to notify ALE of new classes without manual reload?
+  - **Answer**: Don't. ALE scans inbox on character creation, not on message receive.
+  - New classes become available immediately for character creation.
+- Should validation run in rmail's Lua or ALE's Lua?
+  - **Answer**: Both. Hook validates for fast feedback. ALE re-validates on snapshot.
+- What if inbox file changes between hook validation and character creation?
+  - **Answer**: ALE re-validates. If invalid now, character creation fails gracefully.
+- What happens to invalid inbox files?
+  - **Answer**: Deleted immediately. Author receives annotated copy with errors in their inbox.
+- How to share validation code between external Lua and ALE?
+  - **TBD**: Extract to common module, or accept duplication with drift risk.
+
+## Deployment Architecture
+
+### Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         GAME SERVER MACHINE                             │
+│                                                                         │
+│  ┌─────────────────┐         ┌──────────────────────────────────────┐  │
+│  │  rmail daemon   │         │         AzerothCore worldserver      │  │
+│  │  (standard Lua) │         │              (with ALE)              │  │
+│  │                 │         │                                      │  │
+│  │  Listens on     │         │  src/lua/custom-classes.lua          │  │
+│  │  port 8025      │         │    - reads from game-mail/inbox/     │  │
+│  │                 │         │    - writes to custom-class-snapshots│  │
+│  └────────┬────────┘         └──────────────────────────────────────┘  │
+│           │                                     ▲                       │
+│           │ on_receive hook                     │ filesystem            │
+│           ▼                                     │                       │
+│  ┌─────────────────┐                           │                       │
+│  │ validate-custom │    ┌───────────────────────┘                       │
+│  │ -class.lua      │    │                                               │
+│  │ (standard Lua)  │    │                                               │
+│  └────────┬────────┘    │                                               │
+│           │             │                                               │
+│           ▼             │                                               │
+│  ┌──────────────────────┴───────────────────────────────────────────┐  │
+│  │                      SHARED FILESYSTEM                            │  │
+│  │                                                                   │  │
+│  │  /home/ritz/game-mail/           (rmail mailbox)                  │  │
+│  │    inbox/                        CLASS: messages land here        │  │
+│  │    outbox/                       ACCEPTED/REJECTED responses      │  │
+│  │    contacts                      author credentials               │  │
+│  │    config                        hook configuration               │  │
+│  │                                                                   │  │
+│  │  /mnt/mtwo/.../wow-chat-2/                                        │  │
+│  │    src/custom-class-snapshots/   character-pinned versions        │  │
+│  │    src/lua/custom-classes.lua    ALE module                       │  │
+│  │    scripts/validate-custom-class.lua   rmail hook                 │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    ▲
+                                    │ TCP port 8025
+                                    │ (encrypted with shared token)
+                                    │
+┌───────────────────────────────────┴─────────────────────────────────────┐
+│                         USER'S MACHINE                                  │
+│                                                                         │
+│  ┌─────────────────┐                                                    │
+│  │  rmail daemon   │                                                    │
+│  │                 │                                                    │
+│  │  ~/mail/        │                                                    │
+│  │    outbox/      │  ← user writes CLASS: knight message here          │
+│  │    inbox/       │  ← receives ACCEPTED/REJECTED here                 │
+│  │    contacts     │  ← has game-server contact with token              │
+│  └─────────────────┘                                                    │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Points
+
+1. **Two separate processes** on game server:
+   - `rmail.lua` daemon (standard Lua 5.1+, runs continuously)
+   - `worldserver` with ALE (game server, runs continuously)
+   - They communicate via **shared filesystem only** - no IPC
+
+2. **rmail handles all networking**:
+   - Listens on configurable port (e.g., 8025)
+   - AES-256-GCM encryption with per-contact shared token
+   - Users connect peer-to-peer to send messages
+
+3. **No AzerothCore C++ changes needed**:
+   - All custom class logic is in ALE Lua scripts
+   - ALE reads files from disk (inbox, snapshots)
+   - Standard ALE APIs for character data storage
+
+4. **Hook runs outside worldserver**:
+   - `validate-custom-class.lua` is spawned by rmail daemon
+   - Uses standard Lua (not ALE environment)
+   - Has access to filesystem but not game state
+
+### Directory Locations
+
+| Purpose | Path | Managed by |
+|---------|------|------------|
+| rmail mailbox | `/home/ritz/game-mail/` | rmail daemon |
+| rmail hook script | `wow-chat-2/scripts/validate-custom-class.lua` | git repo |
+| Snapshots | `wow-chat-2/src/custom-class-snapshots/` | ALE |
+| Built-in classes | `wow-chat-2/src/custom-classes/` | git repo |
+| ALE module | `wow-chat-2/src/lua/custom-classes.lua` | git repo |
+
+### Configuration Files
+
+**rmail config** (`/home/ritz/game-mail/config`):
+```
+port = 8025
+on_receive = /mnt/mtwo/.../wow-chat-2/scripts/validate-custom-class.lua
+```
+
+**ALE config** (in `custom-classes.lua`):
+```lua
+local RMAIL_INBOX_PATH    = "/home/ritz/game-mail/inbox"
+local SNAPSHOT_PATH       = "src/custom-class-snapshots"
+```
+
+### Startup Sequence
+
+```bash
+# 1. Start MySQL (if not running)
+./scripts/start-mysql
+
+# 2. Start rmail daemon (background, or separate terminal)
+cd /home/ritz/programs/r-mail
+lua rmail.lua /home/ritz/game-mail &
+
+# 3. Start game server
+./scripts/azerothcore worldserver
+```
+
+Could add a unified startup script:
+```bash
+#!/bin/bash
+# scripts/start-all
+./scripts/start-mysql
+lua /home/ritz/programs/r-mail/rmail.lua /home/ritz/game-mail &
+./scripts/azerothcore worldserver
+```
+
+### User Onboarding
+
+For a user to submit custom classes:
+
+1. **Install rmail** on their machine
+2. **Exchange tokens** with game server admin (out-of-band)
+3. **Add game server contact**:
+   ```
+   # ~/mail/contacts
+   ghostsong.ip    = <server-ip>
+   ghostsong.port  = 8025
+   ghostsong.token = "<shared-secret>"
+   ```
+4. **Send class definition**:
+   ```
+   # ~/mail/outbox/my-class.txt
+   to: ghostsong
+   subject: CLASS: knight
+
+   knight = {}
+   knight.name = "Knight"
+   ...
+   ```
+5. **Receive response** in `~/mail/inbox/`
+
+### Networking Considerations
+
+**Port forwarding**: Game server needs port 8025 (or configured port) accessible.
+
+**Firewall**: Allow TCP on rmail port.
+
+**NAT**: rmail supports UPnP/NAT-PMP for automatic port forwarding (optional).
+
+**Multiple users**: Each user has unique contact entry with unique token.
+The contacts file stores all authorized class authors.
+
+### ALE ↔ Filesystem Bridge
+
+ALE needs to know where the rmail inbox is. Options:
+
+**Option A: Hardcoded path**
+```lua
+-- custom-classes.lua
+local RMAIL_INBOX = "/home/ritz/game-mail/inbox"
+```
+
+**Option B: Environment variable**
+```lua
+local RMAIL_INBOX = os.getenv("GAME_RMAIL_INBOX") or "/home/ritz/game-mail/inbox"
+```
+
+**Option C: Config file**
+```lua
+-- Read from wow-chat-2/config/custom-classes.conf
+local config = loadConfig("config/custom-classes.conf")
+local RMAIL_INBOX = config.rmail_inbox
+```
+
+For simplicity, start with Option A (hardcoded). Refactor later if needed.
+
+### What Runs Where
+
+| Component | Environment | Has access to |
+|-----------|-------------|---------------|
+| rmail daemon | Standard Lua 5.1+ | Network, filesystem, hooks |
+| validate-custom-class.lua | Standard Lua (child of rmail) | Filesystem, rmail outbox |
+| custom-classes.lua | ALE (inside worldserver) | ALE APIs, character DB, filesystem |
+| worldserver | C++ | Everything |
+
+### Data Flow: Class Submission
+
+```
+1. User writes to ~/mail/outbox/knight.txt
+2. User's rmail daemon reads outbox, connects to game server port 8025
+3. Game server's rmail daemon receives, writes to /home/ritz/game-mail/inbox/
+4. on_receive hook fires: lua validate-custom-class.lua "alice" "CLASS: knight" "/path/to/inbox/file"
+5. Hook validates, either:
+   a. Invalid: delete inbox file, write error to outbox (→ user's inbox)
+   b. Valid: keep inbox file, write confirmation to outbox
+6. (Later) Player creates character, ALE reads from inbox, creates snapshot
+```
+
+### Data Flow: Character Creation
+
+```
+1. Player talks to class selection NPC
+2. ALE scans /home/ritz/game-mail/inbox/ for CLASS: messages
+3. ALE filters by base class (stat_growth matches player's class)
+4. Player selects "Knight" by alice
+5. ALE reads alice's inbox file, re-validates
+6. ALE copies to src/custom-class-snapshots/alice-knight-v<timestamp>.lua
+7. ALE stores "alice-knight-v<timestamp>.lua" in character data
+8. Character is created
+```
+
+### Data Flow: Character Login
+
+```
+1. Character logs in
+2. ALE checks character data for CharCustomClassSnapshot
+3. ALE loads from src/custom-class-snapshots/<snapshot>.lua
+4. Character plays with that class definition
+```
+
+## Related Issues
+- 155 - Custom class selection (uses these definitions)
+- 157 - Dynamic trainer spawning (needs ability data)
+- 345 - Custom talent interface (displays talent trees)
+- 142 - Custom spell system (future: fully custom abilities)
+
+## Files to Modify/Create
+
+### Existing Files
+- `src/lua/custom-classes.lua` - Add parser, validation, inbox scanning, snapshot management
+
+### New Files
+- `scripts/validate-custom-class.lua` - rmail on_receive hook (standard Lua)
+- `src/custom-class-snapshots/` - Directory for character-pinned versions
+- `src/custom-classes/knight.lua` - Built-in example class
+- `src/custom-classes/README.md` - Format documentation for authors
+- `scripts/start-rmail` - Start rmail daemon for game server
+- `config/custom-classes.conf` - Path configuration (optional)
+
+### External (not in repo)
+- `/home/ritz/game-mail/` - rmail mailbox directory
+- `/home/ritz/game-mail/config` - rmail daemon configuration
+- `/home/ritz/game-mail/contacts` - authorized class authors
+
+## Build System Integration
+
+### Overview
+
+Integrate rmail installation into the existing `scripts/azerothcore` build system.
+rmail will be cloned to `libs/r-mail/` and a game-server mailbox created at `game-mail/`.
+
+### Directory Layout (after integration)
+
+```
+wow-chat-2/
+├── libs/
+│   └── r-mail/                     # Cloned rmail repo (gitignored except tracking)
+│       ├── rmail.lua
+│       ├── rmail_crypto.c
+│       ├── libs/                   # Compiled dependencies (gitignored)
+│       ├── deps/                   # Compiled lua/openssl (gitignored)
+│       └── scripts/install.sh
+│
+├── game-mail/                      # Game server's rmail mailbox
+│   ├── inbox/                      # Received CLASS: messages (gitignored)
+│   ├── outbox/                     # ACCEPTED/REJECTED responses (gitignored)
+│   ├── attachments/                # Not used, but created (gitignored)
+│   ├── .state/                     # Sync state (gitignored)
+│   ├── config                      # Hook configuration (tracked)
+│   ├── contacts                    # Author credentials (gitignored - contains tokens)
+│   └── contacts.dist               # Example contacts template (tracked)
+│
+├── scripts/
+│   ├── azerothcore                 # Add cmd_rmail, cmd_rmail_start
+│   ├── validate-custom-class.lua   # on_receive hook script
+│   └── credentials                 # Add RMAIL_PORT (gitignored)
+│   └── credentials.dist            # Add RMAIL_PORT template (tracked)
+```
+
+### Gitignore Additions
+
+```gitignore
+# =============================================================================
+# rmail - Custom Class Submission System
+# =============================================================================
+
+# rmail source (cloned to libs/)
+libs/r-mail/deps/
+libs/r-mail/libs/*.so
+libs/r-mail/.build-tmp/
+libs/r-mail/config
+libs/r-mail/.logs
+
+# Game server mailbox (messages are transient)
+game-mail/inbox/
+game-mail/outbox/
+game-mail/attachments/
+game-mail/.state/
+game-mail/contacts
+!game-mail/contacts.dist
+
+# rmail config is tracked (contains hook paths)
+!game-mail/config
+```
+
+### Credentials Integration
+
+Add to `scripts/credentials.dist`:
+```bash
+# rmail configuration
+RMAIL_PORT=8025
+RMAIL_NAME=ghostsong
+```
+
+These get sourced by the azerothcore script and used to configure rmail.
+
+### New Commands in scripts/azerothcore
+
+```bash
+# -- {{{ cmd_rmail
+# Install rmail and set up game server mailbox
+cmd_rmail() {
+    set -e
+    local force=false
+    for arg in "$@"; do
+        [[ "${arg}" == "--force" ]] && force=true
+    done
+
+    echo "Setting up rmail for custom class submissions..."
+
+    # Clone rmail if not present
+    local RMAIL_DIR="${DIR}/libs/r-mail"
+    if [[ ! -d "${RMAIL_DIR}/.git" ]]; then
+        echo "Cloning rmail..."
+        git clone https://github.com/gabrilend/r-mail.git "${RMAIL_DIR}"
+    elif [[ "${force}" == true ]]; then
+        echo "Updating rmail..."
+        cd "${RMAIL_DIR}" && git pull --rebase && cd -
+    fi
+
+    # Load credentials for port
+    source "${DIR}/scripts/credentials" 2>/dev/null || true
+    RMAIL_PORT="${RMAIL_PORT:-8025}"
+    RMAIL_NAME="${RMAIL_NAME:-ghostsong}"
+
+    # Create mailbox directories
+    local MAIL_DIR="${DIR}/game-mail"
+    mkdir -p "${MAIL_DIR}/inbox"
+    mkdir -p "${MAIL_DIR}/outbox"
+    mkdir -p "${MAIL_DIR}/attachments"
+    mkdir -p "${MAIL_DIR}/.state"
+
+    # Create config if not exists
+    if [[ ! -f "${MAIL_DIR}/config" ]]; then
+        cat > "${MAIL_DIR}/config" << EOF
+# rmail configuration for game server
+name = ${RMAIL_NAME}
+port = ${RMAIL_PORT}
+
+# Custom class validation hook
+on_receive = ${DIR}/scripts/validate-custom-class.lua
+EOF
+        echo "Created ${MAIL_DIR}/config"
+    fi
+
+    # Create contacts.dist if not exists
+    if [[ ! -f "${MAIL_DIR}/contacts.dist" ]]; then
+        cat > "${MAIL_DIR}/contacts.dist" << 'EOF'
+// Game server contacts - add custom class authors here
+//
+// Example:
+//   alice.ip    = 203.0.113.1
+//   alice.port  = 54321
+//   alice.token = "shared-secret-exchange-out-of-band"
+//
+// Both sides must use the same token.
+// Token should be random, e.g.: openssl rand -hex 32
+EOF
+        echo "Created ${MAIL_DIR}/contacts.dist"
+    fi
+
+    # Create contacts from dist if not exists
+    if [[ ! -f "${MAIL_DIR}/contacts" ]]; then
+        cp "${MAIL_DIR}/contacts.dist" "${MAIL_DIR}/contacts"
+        echo "Created ${MAIL_DIR}/contacts (add authors here)"
+    fi
+
+    # Compile rmail dependencies (non-interactive)
+    echo "Compiling rmail dependencies..."
+    cd "${RMAIL_DIR}"
+
+    # Check if already compiled
+    if [[ -f "libs/rmail_crypto.so" && -f "libs/socket/core.so" ]] && ! $force; then
+        echo "rmail dependencies already compiled"
+    else
+        # Run install.sh components manually (avoiding interactive prompts)
+        # This mirrors what install.sh does but non-interactively
+
+        # 1. dkjson
+        if [[ ! -f "libs/dkjson.lua" ]]; then
+            echo "  Downloading dkjson..."
+            mkdir -p libs
+            curl -sL -o libs/dkjson.lua "http://dkolf.de/dkjson-lua/dkjson-2.8.lua"
+        fi
+
+        # 2. luasocket (compile from source)
+        if [[ ! -f "libs/socket/core.so" ]]; then
+            echo "  Compiling luasocket..."
+            # Use system lua headers
+            local LUA_INC=""
+            for dir in /usr/include/lua5.4 /usr/include/luajit-2.1 /usr/include; do
+                [[ -f "$dir/lua.h" ]] && LUA_INC="-I$dir" && break
+            done
+
+            mkdir -p .build-tmp libs/socket libs/mime
+            cd .build-tmp
+            curl -sL -o luasocket.tar.gz \
+                "https://github.com/lunarmodules/luasocket/archive/refs/tags/v3.1.0.tar.gz"
+            tar xzf luasocket.tar.gz
+            cd luasocket-3.1.0/src
+
+            # Compile socket/core.so
+            for src in luasocket.c timeout.c buffer.c io.c auxiliar.c compat.c \
+                       options.c inet.c usocket.c except.c select.c tcp.c udp.c; do
+                cc $LUA_INC -DLUASOCKET_NODEBUG -Wall -O2 -fPIC -c -o "${src%.c}.o" "$src"
+            done
+            cc -shared -fPIC -O -o socket-core.so *.o
+
+            # Compile mime/core.so
+            cc $LUA_INC -DLUASOCKET_NODEBUG -Wall -O2 -fPIC -c -o mime.o mime.c
+            cc -shared -fPIC -O -o mime-core.so mime.o compat.o
+
+            # Install
+            cp socket-core.so "${RMAIL_DIR}/libs/socket/core.so"
+            cp mime-core.so "${RMAIL_DIR}/libs/mime/core.so"
+            cp socket.lua mime.lua ltn12.lua "${RMAIL_DIR}/libs/"
+            cp http.lua url.lua tp.lua ftp.lua smtp.lua headers.lua "${RMAIL_DIR}/libs/socket/"
+
+            cd "${RMAIL_DIR}"
+            rm -rf .build-tmp
+        fi
+
+        # 3. rmail_crypto.so
+        if [[ ! -f "libs/rmail_crypto.so" ]]; then
+            echo "  Compiling rmail_crypto.so..."
+            local LUA_INC=""
+            for dir in /usr/include/lua5.4 /usr/include/luajit-2.1 /usr/include; do
+                [[ -f "$dir/lua.h" ]] && LUA_INC="-I$dir" && break
+            done
+            cc -shared -fPIC -O2 -Wall $LUA_INC \
+                -o libs/rmail_crypto.so rmail_crypto.c -lcrypto
+        fi
+    fi
+
+    cd "${DIR}"
+
+    echo ""
+    echo "rmail setup complete!"
+    echo "  Mailbox: ${MAIL_DIR}"
+    echo "  Port: ${RMAIL_PORT}"
+    echo "  Config: ${MAIL_DIR}/config"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Add authors to ${MAIL_DIR}/contacts"
+    echo "  2. Forward port ${RMAIL_PORT} on your router"
+    echo "  3. Start rmail: ./scripts/azerothcore rmail-start"
+}
+# -- }}}
+
+# -- {{{ cmd_rmail_start
+# Start the rmail daemon for the game server mailbox
+cmd_rmail_start() {
+    local RMAIL_DIR="${DIR}/libs/r-mail"
+    local MAIL_DIR="${DIR}/game-mail"
+
+    if [[ ! -f "${RMAIL_DIR}/rmail.lua" ]]; then
+        echo "Error: rmail not installed. Run './scripts/azerothcore rmail' first."
+        exit 1
+    fi
+
+    if [[ ! -d "${MAIL_DIR}" ]]; then
+        echo "Error: game-mail directory not found. Run './scripts/azerothcore rmail' first."
+        exit 1
+    fi
+
+    echo "Starting rmail daemon..."
+    echo "  Mailbox: ${MAIL_DIR}"
+    echo "  Logs: /tmp/rmail-game.log"
+    echo ""
+
+    # Find lua interpreter
+    local LUA_BIN=""
+    if [[ -f "${RMAIL_DIR}/deps/lua/bin/lua" ]]; then
+        LUA_BIN="${RMAIL_DIR}/deps/lua/bin/lua"
+    else
+        for cmd in lua5.4 luajit lua5.3 lua; do
+            command -v "$cmd" >/dev/null 2>&1 && LUA_BIN="$cmd" && break
+        done
+    fi
+
+    if [[ -z "${LUA_BIN}" ]]; then
+        echo "Error: no lua interpreter found"
+        exit 1
+    fi
+
+    # Run in foreground (or add & for background)
+    cd "${RMAIL_DIR}"
+    exec "${LUA_BIN}" rmail.lua "${MAIL_DIR}"
+}
+# -- }}}
+```
+
+### Hook Script: scripts/validate-custom-class.lua
+
+```lua
+#!/usr/bin/env lua
+-- {{{ validate-custom-class.lua
+-- rmail on_receive hook for custom class validation
+-- Receives: $1=sender, $2=subject, $3=filepath
+-- Runs in background (on_receive), stdout ignored
+
+local sender   = arg[1]
+local subject  = arg[2]
+local filepath = arg[3]
+
+-- Only process CLASS: messages
+local className = subject and subject:match("^CLASS:%s*(%S+)$")
+if not className then
+    os.exit(0)  -- Not a class submission, ignore
+end
+
+-- Configuration
+local DIR = "/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
+local MAIL_DIR = DIR .. "/game-mail"
+
+-- Read inbox file
+local f = io.open(filepath, "r")
+if not f then os.exit(1) end
+local content = f:read("*a")
+f:close()
+
+-- Strip rmail headers (to:, subject:, blank line, then body)
+local body = content:match("\n\n(.+)$") or content
+
+-- For now, just accept everything (validation TBD in Phase A)
+-- TODO: require("custom-classes-validator") and validate
+
+-- Send acceptance response
+local outbox = MAIL_DIR .. "/outbox"
+local responseFile = outbox .. "/" .. os.time() .. "-" .. sender .. ".txt"
+local out = io.open(responseFile, "w")
+if out then
+    out:write("to: " .. sender .. "\n")
+    out:write("subject: ACCEPTED: " .. className .. "\n\n")
+    out:write("Your class '" .. className .. "' has been received.\n")
+    out:write("(Validation not yet implemented - this is a placeholder)\n")
+    out:close()
+end
+
+-- Log
+local log = io.open("/tmp/rmail-game.log", "a")
+if log then
+    log:write(os.date("%Y-%m-%d %H:%M:%S") .. " CLASS received: " ..
+              className .. " from " .. sender .. "\n")
+    log:close()
+end
+-- }}}
+```
+
+### IP Address Handling
+
+rmail automatically detects the public IP on startup using multiple services.
+The game server admin shares their IP with authors out-of-band (email, Discord, etc.).
+
+For dynamic IP:
+- rmail has `notify_ip_change = true` which notifies contacts when IP changes
+- Or use a dynamic DNS service and share the hostname
+
+### Port Configuration
+
+Port is set in:
+1. `scripts/credentials` → `RMAIL_PORT=8025`
+2. `game-mail/config` → `port = 8025`
+
+The install script reads from credentials and writes to config.
+
+### Adding a New Author
+
+1. Author runs `./scripts/install.sh` on their machine
+2. Author generates a token: `openssl rand -hex 32`
+3. Author shares their IP, port, and token with game admin (out-of-band)
+4. Game admin adds to `game-mail/contacts`:
+   ```
+   alice.ip    = 203.0.113.1
+   alice.port  = 54321
+   alice.token = "their-shared-token"
+   ```
+5. Author adds game server to their contacts:
+   ```
+   ghostsong.ip    = <game-server-ip>
+   ghostsong.port  = 8025
+   ghostsong.token = "same-shared-token"
+   ```
+6. Author can now send `CLASS: myclass` messages
+
+### Startup Integration
+
+Option A: Add to existing startup (modify cmd_worldserver):
+```bash
+# In cmd_worldserver, before starting worldserver:
+if [[ -d "${DIR}/libs/r-mail" ]]; then
+    echo "Starting rmail daemon in background..."
+    (cd "${DIR}/libs/r-mail" && lua rmail.lua "${DIR}/game-mail" >> /tmp/rmail-game.log 2>&1) &
+fi
+```
+
+Option B: Separate command (cleaner):
+```bash
+./scripts/azerothcore rmail-start &
+./scripts/azerothcore worldserver
+```
+
+Option C: Combined start-all script:
+```bash
+#!/bin/bash
+# scripts/start-all
+./scripts/start-mysql
+./scripts/azerothcore rmail-start &
+./scripts/azerothcore worldserver
+```
+
+### Summary of Changes Needed
+
+| File | Change |
+|------|--------|
+| `scripts/azerothcore` | Add `cmd_rmail`, `cmd_rmail_start`, update help |
+| `scripts/credentials.dist` | Add `RMAIL_PORT`, `RMAIL_NAME` |
+| `.gitignore` | Add rmail and game-mail entries |
+| `scripts/validate-custom-class.lua` | Create hook script |
+| `game-mail/config` | Created by cmd_rmail |
+| `game-mail/contacts.dist` | Created by cmd_rmail |

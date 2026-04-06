@@ -501,6 +501,10 @@ function Ambush.chasePlayer(_eventID, _delay, _repeats, creature) -- {{{
         creature:MoveTo(math.random(0, 4294967295), x, y, creatureMap:GetHeight(x, y))
         creature:RegisterEvent(Ambush.chasePlayer, WANDER_ROTATION_DELAY, 1)
         return
+    else
+        -- Player is standing - re-enable aggro so creature can target other players
+        -- (aggro was disabled during orbit mode when player was sitting)
+        creature:SetAggroEnabled(true)
     end -- }}}
 
     if player:IsDead() then -- {{{
@@ -571,6 +575,7 @@ function Ambush.onCreatureDeath(event, killer, creature) -- {{{
     -- Clear ambush data from corpse - corpse remains as static scenery
     -- like bones or trees, no longer tracked by ambush system
     creature:RemoveEvents()
+    creature:MoveClear()  -- Stop any in-progress movement so corpse doesn't slide
     creature:SetData("ambush-chase-target", nil)
     creature:SetData("wander-radius",       nil)
     creature:SetData("ambush-max-distance", nil)
