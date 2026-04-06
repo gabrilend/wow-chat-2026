@@ -129,27 +129,36 @@ WowChat2.TalentStartLevel = 1
   - 40 points was too restrictive for dual-spec
   - Tier 1-3 provides ~80-120 options, so 60 points = meaningful choices
   - Start at level 1 (not 10) - use AIO custom talent system
-- 2026-04-06: Restored deferred files
-  - Fixed levelling.lua: GetGUID() → GetGUIDLow() for SQL compatibility
-  - Created talent-points.sql with idempotent column addition
-  - Fixed broken lua_scripts/custom symlink (project was moved)
-  - Removed out-of-scope sections (quest abilities, training currency)
+- 2026-04-06: Restored deferred files (initial approach with DB tracking)
+- 2026-04-06: Simplified approach - no SQL needed
+  - Server's Rate.Talent handles 100% (level-up) talent points
+  - Lua script only handles 33% and 66% mid-level thresholds
+  - Uses SetData() for session tracking (no DB persistence needed)
+  - Green "reputation level gained" effect at 33%/66%
+  - Yellow level-up effect at 100% (normal game behavior)
+  - Removed talent-points.sql (not needed)
 
 ## Related Files
-- sql/custom/db_characters/talent-points.sql (tracked)
-- source-beta/data/sql/custom/db_characters/talent-points.sql (server auto-import)
 - src/lua/levelling.lua (tracked, symlinked to server)
 
-## Restored Files (2026-04-06)
+## Implementation (2026-04-06)
 
-### Lua Script (RESTORED)
-- **src/lua/levelling.lua** - Fixed GetGUID() → GetGUIDLow() error
-  - Original: ~/games/azeroth-core/lua-scripts/custom/levelling (no .lua extension)
-  - Error was: `bad argument #4 to 'format' (number expected, got userdata)`
-  - Fix: Use `GetGUIDLow()` instead of `GetGUID()` for SQL queries (lines 128, 157)
-  - Also fixed broken symlink: installed-files-beta/bin/lua_scripts/custom
+### Lua Script
+- **src/lua/levelling.lua** - Mid-level talent point awards
+  - Awards +1 talent at 33% XP progress (green visual)
+  - Awards +1 talent at 66% XP progress (green visual)
+  - Server handles +1 at 100% (level-up, yellow visual)
+  - Total: 3 talent points per level
+  - Uses SMSG_SET_FACTION_STANDING packet for green effect
+  - Tracks thresholds via SetData() (session-scoped, no DB needed)
 
-### SQL Script (RESTORED)
-- **sql/custom/db_characters/talent-points.sql**
-  - Adds `total_talent_points` column to characters table
-  - Uses stored procedure for idempotent column addition
+### Configuration Required
+```
+# worldserver.conf
+Rate.Talent = 1   # 1 point at level-up (Lua adds 2 more per level)
+MaxPlayerLevel = 20
+```
+
+### No SQL Required
+- Server stores FreeTalentPoints in characters table natively
+- No custom column needed
