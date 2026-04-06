@@ -89,8 +89,14 @@ end
 -- }}}
 
 -- {{{ onLogin
--- Called on login. Re-check thresholds in case player logged out mid-level.
--- This ensures they don't miss a threshold if they were already past it.
+-- Called on login. Restores bonus talent points based on current XP progress.
+--
+-- The server's InitTalentForLevel() resets FreeTalentPoints to the base calculation
+-- BEFORE this hook fires. We need to re-add bonus points for any thresholds
+-- the player has already passed.
+--
+-- Example: Player at 50% XP should have +1 bonus (passed 33%, not 66%)
+-- Example: Player at 80% XP should have +2 bonus (passed both 33% and 66%)
 local function onLogin(event, player)
     local level = player:GetLevel()
     local currentXP = player:GetXP()
@@ -99,18 +105,23 @@ local function onLogin(event, player)
     if xpToLevel <= 0 then return end
 
     local progress = currentXP / xpToLevel
+    local bonusPoints = 0
 
-    -- Check both thresholds on login
-    -- Note: We don't award points here, just sync state
-    -- If they already had the points, the server remembers FreeTalentPoints
-    -- This just ensures the tracking flags are set correctly
-
+    -- Calculate bonus points based on current XP progress
+    -- Also set tracking flags so we don't double-award on next XP gain
     if progress >= THRESHOLD_33 then
+        bonusPoints = bonusPoints + 1
         player:SetData(getThresholdKey(level, THRESHOLD_33), true)
     end
 
     if progress >= THRESHOLD_66 then
+        bonusPoints = bonusPoints + 1
         player:SetData(getThresholdKey(level, THRESHOLD_66), true)
+    end
+
+    -- Re-add bonus points that the server's InitTalentForLevel() removed
+    if bonusPoints > 0 then
+        player:SetFreeTalentPoints(player:GetFreeTalentPoints() + bonusPoints)
     end
 end
 -- }}}
