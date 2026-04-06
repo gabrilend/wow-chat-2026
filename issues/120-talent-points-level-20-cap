@@ -25,18 +25,6 @@
 - Enables dual-specialization: fill 2 of 3 trees (~30 points each)
 - Enough options in tier 1-3 (~80-120 total) that players can't max everything
 
-### Abilities (Spells)
-- NOT learned automatically at level-up
-- Earned as **quest rewards** (themed, contextual)
-- **No class restrictions** - any class can learn any ability
-- Can also **purchase with special currency** (see issue 121)
-
-### Special Currency for Training
-- Earned by turning in materials to Horde/Alliance trainers
-- "Paying the faction to train you"
-- Material turn-ins grant training tokens
-- Tokens spent at trainers to learn abilities
-
 ## Implementation Steps
 
 ### 1. Set Max Level to 20
@@ -101,22 +89,6 @@ end)
 - Adjust damage/health scaling formulas
 - Or use level scaling module if available
 
-### 4. Remove Auto-Learn Abilities
-- Clear `playercreateinfo_spell_custom` or relevant tables
-- Characters start with minimal abilities
-- All others must be earned
-
-### 5. Quest Reward Abilities
-- Create quests that reward spell learning
-- Themed by context (kill fire elemental → learn fire spell)
-- No class restrictions in reward conditions
-
-### 6. Training Currency System
-- Create custom currency item
-- NPC that accepts material turn-ins
-- Trainer NPC that sells abilities for currency
-- See issue 121 for bounty board integration
-
 ## Database Changes
 
 ```sql
@@ -139,13 +111,11 @@ Rate.XP.Quest = 1.0
 Rate.Talent = 2  # 2 points per level (but only works for levels 10+)
 
 # Custom (if using Lua approach)
-WowChat2.TalentPointsPerLevel = 2
+WowChat2.TalentPointsPerLevel = 3
 WowChat2.TalentStartLevel = 1
-WowChat2.TrainingCurrencyEntry = 99001  -- custom item ID
 ```
 
 ## Related Issues
-- 121 - bounty board currency (training currency source)
 - 113 - ambush monsters (scaled to level 20)
 - 141 - talent tier limit (restricting to tiers 1-3 or 1-4)
 - 345 - custom talent interface (AIO-based talent UI)
@@ -159,22 +129,27 @@ WowChat2.TrainingCurrencyEntry = 99001  -- custom item ID
   - 40 points was too restrictive for dual-spec
   - Tier 1-3 provides ~80-120 options, so 60 points = meaningful choices
   - Start at level 1 (not 10) - use AIO custom talent system
+- 2026-04-06: Restored deferred files
+  - Fixed levelling.lua: GetGUID() → GetGUIDLow() for SQL compatibility
+  - Created talent-points.sql with idempotent column addition
+  - Fixed broken lua_scripts/custom symlink (project was moved)
+  - Removed out-of-scope sections (quest abilities, training currency)
 
 ## Related Files
-- source/data/sql/custom/db_characters/talent-points.sql
-- src/lua/ (new talent tracking script)
+- sql/custom/db_characters/talent-points.sql (tracked)
+- source-beta/data/sql/custom/db_characters/talent-points.sql (server auto-import)
+- src/lua/levelling.lua (tracked, symlinked to server)
 
-## Deferred Files
+## Restored Files (2026-04-06)
 
-The following files were removed from the active codebase pending completion of this issue:
+### Lua Script (RESTORED)
+- **src/lua/levelling.lua** - Fixed GetGUID() → GetGUIDLow() error
+  - Original: ~/games/azeroth-core/lua-scripts/custom/levelling (no .lua extension)
+  - Error was: `bad argument #4 to 'format' (number expected, got userdata)`
+  - Fix: Use `GetGUIDLow()` instead of `GetGUID()` for SQL queries (lines 128, 157)
+  - Also fixed broken symlink: installed-files-beta/bin/lua_scripts/custom
 
-### Lua Script (removed)
-- **src/lua/levelling.lua** - Had GetGUID() userdata error on line 93
-  - Original location: ~/games/azeroth-core/lua-scripts/custom/levelling (no .lua extension)
-  - Error: `bad argument #4 to 'format' (number expected, got userdata)`
-  - Fix needed: Use `GetGUIDLow()` instead of `GetGUID()` for SQL queries
-
-### SQL Script (removed)
-- **source-beta/data/sql/custom/db_characters/talent-points.sql**
+### SQL Script (RESTORED)
+- **sql/custom/db_characters/talent-points.sql**
   - Adds `total_talent_points` column to characters table
-  - Should be applied when levelling.lua is fixed and re-enabled
+  - Uses stored procedure for idempotent column addition
