@@ -1,11 +1,19 @@
 -- levelling.lua
 -- Awards bonus talent points at 33% and 66% XP progress within each level.
--- The normal 100% (level-up) talent point is handled by the server's Rate.Talent config.
+-- The 100% (level-up) talent point is handled by the server's Rate.Talent config.
 --
 -- Issue 120: talent-points-level-20-cap
 --
--- Visual: Uses green "reputation level gained" effect for mid-level talent gains.
--- The yellow level-up effect at 100% is the normal game behavior.
+-- This script works with mod-talent-bonus (C++) which hooks the server's
+-- talent point calculation. The C++ module ensures the server EXPECTS our
+-- bonus points during validation, preventing talent resets on login.
+--
+-- Division of labor:
+-- - C++ (mod-talent-bonus): Modifies expected talent count for validation
+-- - Lua (this file): Awards actual points with visual effect when threshold crossed
+--
+-- Visual: Green "reputation level gained" effect at 33%/66%
+-- Visual: Yellow level-up effect at 100% (normal game behavior)
 
 -- {{{ Configuration
 local THRESHOLD_33 = 0.33
@@ -89,14 +97,10 @@ end
 -- }}}
 
 -- {{{ onLogin
--- Called on login. Restores bonus talent points based on current XP progress.
---
--- The server's InitTalentForLevel() resets FreeTalentPoints to the base calculation
--- BEFORE this hook fires. We need to re-add bonus points for any thresholds
--- the player has already passed.
---
--- Example: Player at 50% XP should have +1 bonus (passed 33%, not 66%)
--- Example: Player at 80% XP should have +2 bonus (passed both 33% and 66%)
+-- Called on login. Sets tracking flags based on current XP progress.
+-- The C++ module (mod-talent-bonus) handles validation, so we don't need
+-- to re-add points here. We just need to mark which thresholds are "spent"
+-- so we don't double-award when the player gains more XP.
 local function onLogin(event, player)
     local level = player:GetLevel()
     local currentXP = player:GetXP()
@@ -105,23 +109,14 @@ local function onLogin(event, player)
     if xpToLevel <= 0 then return end
 
     local progress = currentXP / xpToLevel
-    local bonusPoints = 0
 
-    -- Calculate bonus points based on current XP progress
-    -- Also set tracking flags so we don't double-award on next XP gain
+    -- Mark thresholds as already awarded based on current XP position
     if progress >= THRESHOLD_33 then
-        bonusPoints = bonusPoints + 1
         player:SetData(getThresholdKey(level, THRESHOLD_33), true)
     end
 
     if progress >= THRESHOLD_66 then
-        bonusPoints = bonusPoints + 1
         player:SetData(getThresholdKey(level, THRESHOLD_66), true)
-    end
-
-    -- Re-add bonus points that the server's InitTalentForLevel() removed
-    if bonusPoints > 0 then
-        player:SetFreeTalentPoints(player:GetFreeTalentPoints() + bonusPoints)
     end
 end
 -- }}}
