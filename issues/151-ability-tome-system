@@ -25,6 +25,65 @@
 - Some tradable ability tomes exist in base game, but not for all abilities
 - Inscription creates glyphs (to be replaced with tomes)
 - No player-created spell items for teaching others
+- Spells have fixed ranks with fixed level requirements (Rejuvenation R1, R2, R3, etc.)
+
+## Design Philosophy: Rank-Agnostic Tomes
+
+### The Problem with Ranks
+WoW's rank system (Rejuvenation R1, R2, R3...) creates friction:
+- Inscriptionist must track which rank they're creating
+- Tome must specify which rank it teaches
+- Player might already know that exact rank
+- Different players need different ranks
+
+### The Solution: NEXT Rank System
+Tomes are **spell-agnostic**, not **rank-specific**:
+- A "Tome of Rejuvenation" teaches Rejuvenation - any rank
+- When used, the system looks up the player's custom class definition
+- Finds the NEXT rank of that spell the player hasn't learned yet
+- Teaches that rank if the player meets the level requirement
+
+### Level Validation
+The spell's learn level comes from the **custom class table**, NOT the spell itself:
+- `knight.abilities[139] = { level = 8, ... }` - Renew R1 at level 8
+- `knight.abilities[6074] = { level = 14, ... }` - Renew R2 at level 14
+- Player at level 10 can learn R1 but not R2, regardless of what the spell record says
+- This decouples ability progression from Blizzard's original design
+
+### Linear Ability Scaling (Future: Issue TBD)
+Eventually, ALL abilities will be linearly scaled from level 1-80:
+- New spell records created for each spell at each level
+- Damage, healing, mana cost all scale appropriately for that level
+- A level-5 Rejuvenation is balanced for level 5, level-12 balanced for level 12
+- Requires DBC edits to create ~80 versions of each spell
+- This makes the NEXT rank system seamless - you always learn the level-appropriate version
+
+### Tome Pool Flow (Revised)
+```
+Inscriptionist knows "Rejuvenation" (any rank)
+        |
+        v
+Creates "Tome of Rejuvenation" (rank-agnostic)
+        |
+        v
+Sells to vendor → enters "Rejuvenation" pool (not R1/R2/R3 pool)
+        |
+        v
+Player opens chest (becomes holder)
+        |
+        v
+System checks: Does holder's class have Rejuvenation in ability list?
+        |
+        v
+YES: Draw tome from pool, add to chest
+        |
+        v
+Holder uses tome → system finds NEXT learnable rank
+        |
+        v
+If level >= required level: learn spell
+If level < required level: "You must be level X to learn this spell"
+```
 
 ## Intended Behavior
 
@@ -158,31 +217,92 @@ Holder learns spell (or already knows it)
 
 ## Technical Notes
 
-### Pool Structure
+### Pool Structure (Spell-Family Based)
+
+Pools are keyed by **spell family** (base spell name), not individual spell IDs:
 ```lua
+-- Spell family mapping: all ranks of a spell map to one family key
+-- Key is the R1 spell ID (or any consistent identifier)
+SpellFamilies = {
+    [139]  = "renew",      -- Renew R1
+    [6074] = "renew",      -- Renew R2
+    [6075] = "renew",      -- Renew R3
+    [774]  = "rejuvenation", -- Rejuvenation R1
+    [1058] = "rejuvenation", -- Rejuvenation R2
+    -- etc
+}
+
+-- Pools are per-class, keyed by spell family
 TomePools = {
-    [1] = { [spellId] = count, ... },  -- Warrior
-    [2] = { [spellId] = count, ... },  -- Paladin
-    [3] = { [spellId] = count, ... },  -- Hunter
+    [1] = { ["heroic_strike"] = 2, ["rend"] = 1, ... },  -- Warrior
+    [2] = { ["holy_light"] = 3, ["blessing_of_might"] = 1, ... },  -- Paladin
+    [5] = { ["renew"] = 2, ["power_word_shield"] = 1, ... },  -- Priest
     -- etc
 }
 
 function addToPool(classId, spellId)
-    TomePools[classId][spellId] = (TomePools[classId][spellId] or 0) + 1
+    local family = SpellFamilies[spellId] or tostring(spellId)
+    TomePools[classId][family] = (TomePools[classId][family] or 0) + 1
 end
 
-function drawFromPool(classId)
+function drawFromPool(classId, playerClassDef)
+    -- Only draw spells that exist in the player's class definition
     local available = {}
-    for spellId, count in pairs(TomePools[classId]) do
-        if count > 0 then
-            table.insert(available, spellId)
+    for family, count in pairs(TomePools[classId]) do
+        if count > 0 and playerHasSpellFamily(playerClassDef, family) then
+            table.insert(available, family)
         end
     end
     if #available == 0 then return nil end
-    local spellId = available[math.random(#available)]
-    TomePools[classId][spellId] = TomePools[classId][spellId] - 1
-    return spellId
+    local family = available[math.random(#available)]
+    TomePools[classId][family] = TomePools[classId][family] - 1
+    return family
 end
+```
+
+### Tome Use Logic (NEXT Rank Selection)
+```lua
+-- {{{ useAbilityTome
+-- Player uses a tome, learn the NEXT rank they're eligible for
+function useAbilityTome(player, spellFamily)
+    local classDef = CustomClasses.getPlayerClass(player)
+    if not classDef then
+        player:SendBroadcastMessage("You have no custom class defined.")
+        return false
+    end
+
+    local playerLevel = player:GetLevel()
+
+    -- Find all ranks of this spell in the class definition
+    local ranks = {}
+    for spellId, data in pairs(classDef.abilities) do
+        if SpellFamilies[spellId] == spellFamily then
+            table.insert(ranks, { id = spellId, level = data.level })
+        end
+    end
+
+    -- Sort by level requirement
+    table.sort(ranks, function(a, b) return a.level < b.level end)
+
+    -- Find the NEXT rank the player doesn't know AND can learn
+    for _, rank in ipairs(ranks) do
+        if not player:HasSpell(rank.id) then
+            if playerLevel >= rank.level then
+                player:LearnSpell(rank.id)
+                player:SendBroadcastMessage("You have learned a new ability!")
+                return true
+            else
+                player:SendBroadcastMessage(
+                    "You must be level " .. rank.level .. " to learn this spell.")
+                return false
+            end
+        end
+    end
+
+    player:SendBroadcastMessage("You already know all ranks of this spell.")
+    return false
+end
+-- }}}
 ```
 
 ### Tome Selection on Chest Open
@@ -198,8 +318,28 @@ function onChestOpen(event, go, player)
 end
 ```
 
+## Error Observations
+
+### 2026-04-07 - RegisterGameObjectEvent entry 0 not supported
+
+**Error:** `lua_scripts/custom/ability-tomes.lua:307: Couldn't find a gameobject with (ID: 0)!`
+
+**Cause:** Line 307 uses `RegisterGameObjectEvent(0, 14, AbilityTomes.onChestOpen)` attempting to register for all gameobjects by passing entry 0. ALE does not support entry 0 as a wildcard - it requires specific gameobject entries.
+
+**Impact:** Chest opening events will not trigger `AbilityTomes.onChestOpen`. Tome spawning in chests is non-functional until specific chest entries are registered.
+
+**Potential Solutions:**
+1. Register for each specific chest gameobject entry (may be many)
+2. Create custom chest templates (like 153/159 did) and register only for those
+3. Use a different hook (player loot event, etc.)
+4. Patch ALE to support entry 0 as wildcard (C++ change)
+
+**Related:** Same issue affects issue 153 (chest-vulnerability.lua).
+
 ## Related Issues
 - 140 - Quest spells to trainers (prerequisite validation)
 - 148 - Treasure chest shared loot
 - 149 - Sold items return to treasure pool
 - 154 - Multi-player chest access (holder/searcher dynamic)
+- 163 - Custom class Lua format (defines ability lists and level requirements)
+- 347 - Linear ability scaling (creates level-specific spell versions for seamless progression)
