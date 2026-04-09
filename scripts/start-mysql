@@ -4,7 +4,7 @@
 # Ensures tmp/ symlink exists (destroyed on reboot since target is /tmp)
 
 # {{{ set_dir
-DIR="/mnt/mtwo/programming/ai-stuff/games/wow-chat-2"
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
 if [[ -n "$1" ]]; then
     DIR="$1"
 fi

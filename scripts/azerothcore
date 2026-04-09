@@ -9,10 +9,13 @@
 DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
 
 # Thread count for parallel builds - defaults to (nproc - 1)
-THREADS=$(( $(nproc) - 1 ))
-if [[ "${THREADS}" -lt 1 ]]; then
-    THREADS=1
-fi
+#THREADS=$(( $(nproc) - 1 ))
+THREADS=4
+#if [[ "${THREADS}" -lt 1 ]]; then
+#    THREADS=1
+#fi
+
+echo "running in 4 threaded mode"
 
 KEIRA_VERSION="3.10.1"
 
@@ -159,6 +162,9 @@ show_help() {
     echo "  update             Pull latest source and rebuild (preserves configs)"
     echo "    --force          Rebuild even if already up-to-date"
     echo ""
+    echo "  compile            Just compile (skip git checks)"
+    echo "    --force          Force cmake reconfiguration"
+    echo ""
     echo "  authserver         Start the authentication server"
     echo "  worldserver        Start the world server"
     echo "  keira              Launch Keira3 database editor"
@@ -182,7 +188,8 @@ show_help() {
     echo "Examples:"
     echo "  ./scripts/azerothcore install                    # First-time setup"
     echo "  ./scripts/azerothcore update                     # Pull and rebuild"
-    echo "  ./scripts/azerothcore update --force             # Rebuild without pulling"
+    echo "  ./scripts/azerothcore compile                    # Just recompile"
+    echo "  ./scripts/azerothcore compile --force            # Recompile + cmake reconfig"
     echo "  ./scripts/azerothcore install --profile beta     # Install beta profile"
 }
 # -- }}}
@@ -243,14 +250,18 @@ parse_args() {
 
 # -- {{{ get_profile_paths
 # Returns profile-specific directory paths
-# Sets: AC_CODE_DIR, INSTALL_DIR, BUILD_DIR
+# Sets: AC_CODE_DIR, INSTALL_DIR, BUILD_DIR, and shadow variants
 # All profiles use suffixed directories for consistency
+# Shadow directories used during compilation (Issue 327)
 get_profile_paths() {
     local p="${PROFILE}"
     AC_CODE_DIR="${DIR}/source-${p}"
     INSTALL_DIR="${DIR}/installed-files-${p}"
     BUILD_DIR="${DIR}/build-${p}"
     MYSQL_DIR="${DIR}/mysql/installed-files"
+    # Shadow directories for atomic builds (Issue 327)
+    BUILD_DIR_SHADOW="${DIR}/build-${p}-shadow"
+    INSTALL_DIR_SHADOW="${DIR}/installed-files-${p}-shadow"
 }
 # -- }}}
 
@@ -349,9 +360,20 @@ cmd_switch() {
 # -- {{{ cmd_authserver
 # Starts the authentication server
 # Sets LD_LIBRARY_PATH to use project MySQL libs instead of system libs
+# Updates realmlist with current public IP before starting
 cmd_authserver() {
     get_profile_paths
     setup_log_symlinks
+
+    # Update realmlist with current public IP
+    # Why: ISP may change our IP; this ensures players can connect
+    # Why here: authserver starts first, stays up longer, worldserver restarts should be fast
+    if [[ -x "${DIR}/scripts/update-realmlist-ip" ]]; then
+        echo "Updating realmlist with public IP..."
+        "${DIR}/scripts/update-realmlist-ip" "${DIR}"
+        echo ""
+    fi
+
     if [[ ! -f "${INSTALL_DIR}/bin/authserver" ]]; then
         echo "Error: authserver not found for profile '${PROFILE}'"
         echo "Expected: ${INSTALL_DIR}/bin/authserver"
@@ -472,12 +494,6 @@ init_config() {
     local custom_values=""
     if [[ -f "${conf}" ]]; then
         custom_values=$(extract_custom_config "${conf}")
-        if [[ -n "${custom_values}" ]]; then
-            echo "  Preserving custom settings from ${conf##*/}:"
-            echo "${custom_values}" | while read -r line; do
-                echo "    ${line}"
-            done
-        fi
     fi
 
     # Copy dist to conf
@@ -487,6 +503,323 @@ init_config() {
     if [[ -n "${custom_values}" ]]; then
         echo "${custom_values}" | apply_custom_config "${conf}"
     fi
+}
+# -- }}}
+
+# =============================================================================
+# Build Patch System
+# =============================================================================
+# Three-phase patch system: BEGIN (pre-compile), MIDDLE (compile), END (post)
+# Each patch is idempotent and atomic. Parallelizable patches run concurrently.
+# See docs/patches/patch-registry.md for full documentation.
+# =============================================================================
+
+# -- {{{ patch_B001_aoe_loot_item_namespace
+# Fix Item vs WorldPackets::Item ambiguity in mod-aoe-loot
+# Parallelizable: Yes (unique file)
+patch_B001_aoe_loot_item_namespace() {
+    local FILE="${AC_CODE_DIR}/modules/mod-aoe-loot/src/aoe_loot.cpp"
+    [[ ! -f "${FILE}" ]] && return 0
+    if grep -q "^[[:space:]]*Item\* pItem = player->GetItemByGuid" "${FILE}"; then
+        echo "  [B001] mod-aoe-loot: Item namespace fix"
+        sed -i 's/^\([[:space:]]*\)Item\* pItem = player->GetItemByGuid/\1::Item* pItem = player->GetItemByGuid/' "${FILE}"
+    fi
+}
+# -- }}}
+
+# -- {{{ patch_B002_playerbots_ale_login_hook
+# Add ALE OnLogin hook to playerbots bot login
+# Issue 324: playerbots don't trigger PLAYER_EVENT_ON_LOGIN
+# Parallelizable: Yes (unique files)
+patch_B002_playerbots_ale_login_hook() {
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp"
+    local CMAKE_FILE="${AC_CODE_DIR}/modules/mod-playerbots/mod-playerbots.cmake"
+    [[ ! -f "${FILE}" ]] && return 0
+
+    # Check if patch already applied (look for our hook call)
+    if grep -q "sALE->OnLogin(bot)" "${FILE}"; then
+        return 0  # Already patched
+    fi
+
+    echo "  [B002] mod-playerbots: ALE login hook"
+
+    # Step 1: Create mod-playerbots.cmake to add ALE include directories and MOD_ALE define
+    # This allows mod-playerbots to find LuaEngine.h and conditionally compile ALE calls
+    if [[ ! -f "${CMAKE_FILE}" ]] || ! grep -q "MOD_ALE_PATH" "${CMAKE_FILE}"; then
+        cat > "${CMAKE_FILE}" << 'EOF'
+# mod-playerbots.cmake
+# Generated by patch B002 (Issue 324)
+# Adds mod-ale include directories so playerbots can call ALE hooks
+
+message(STATUS "  +- mod-playerbots.cmake: MOD_ALE_FOUND=${MOD_ALE_FOUND} MOD_ALE_PATH=${MOD_ALE_PATH}")
+if (MOD_ALE_FOUND)
+    message(STATUS "  +- mod-playerbots: Adding mod-ale include paths: ${MOD_ALE_PATH}/LuaEngine")
+    target_include_directories(modules
+        PUBLIC
+            ${MOD_ALE_PATH}/LuaEngine)
+    # Define MOD_ALE preprocessor macro so source can conditionally include ALE headers
+    target_compile_definitions(modules PUBLIC MOD_ALE)
+endif()
+EOF
+    fi
+
+    # Step 2: Add include for LuaEngine.h AFTER all other includes (before struct GuidClassRaceInfo)
+    # Must be after other headers to avoid forward declaration conflicts
+    # Wrapped in #ifdef MOD_ALE for conditional compilation
+    if ! grep -q '#include "LuaEngine.h"' "${FILE}"; then
+        sed -i '/#include "GridNotifiersImpl.h"/a \
+\
+// ALE Lua engine for login hooks (Issue 324)\
+// Must be included AFTER other AzerothCore headers to avoid forward declaration conflicts\
+#ifdef MOD_ALE\
+#include "LuaEngine.h"\
+#endif' "${FILE}"
+    fi
+
+    # Step 3: Add sALE->OnLogin(bot) call at END of OnBotLoginInternal
+    # Insert AFTER the XP flag handling (RemovePlayerFlag), BEFORE function closing brace
+    # This ensures bot is fully initialized before Lua receives it (Issue 332)
+    # Pattern: Match RemovePlayerFlag line, skip to else-close (}), insert after it
+    # We skip 1 line (else close brace) then insert before function close
+    sed -i '/bot->RemovePlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);/{
+        n
+        a\
+\
+    // Trigger ALE Lua login hook so Lua scripts can initialize bot behaviors\
+    // This ensures bots are treated identically to real players (Issue 324)\
+    // Placed at END of function so bot is fully initialized (Issue 332)\
+#ifdef MOD_ALE\
+    sALE->OnLogin(bot);\
+#endif
+    }' "${FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_B003_ale_gameobject_wildcard
+# Enable entry 0 as wildcard for RegisterGameObjectEvent
+# Issue 325: ALE doesn't support entry 0 wildcard for gameobject events
+# Parallelizable: Yes (unique file)
+patch_B003_ale_gameobject_wildcard() {
+    local FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/LuaEngine.cpp"
+    [[ ! -f "${FILE}" ]] && return 0
+
+    # Check if patch already applied
+    if grep -q "entry != 0 && !eObjectMgr->GetGameObjectTemplate" "${FILE}"; then
+        return 0  # Already patched
+    fi
+
+    echo "  [B003] mod-ale: Gameobject wildcard support"
+
+    # Patch both REGTYPE_GAMEOBJECT and REGTYPE_GAMEOBJECT_GOSSIP
+    # Add "entry != 0 &&" before the template validation check
+    sed -i 's/if (!eObjectMgr->GetGameObjectTemplate(entry))/\/\/ entry 0 = wildcard for all gameobjects (Issue 325)\n                if (entry != 0 \&\& !eObjectMgr->GetGameObjectTemplate(entry))/g' "${FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_B004_upstream_warning_fixes
+# Fix ~695 compiler warnings in upstream modules (mod-playerbots, mod-ale)
+# Issue 333: Clean build improves code quality
+# Parallelizable: Yes (no conflicts with B001-B003)
+patch_B004_upstream_warning_fixes() {
+    local PLAYERBOTS_DIR="${AC_CODE_DIR}/modules/mod-playerbots/src"
+    local ALE_DIR="${AC_CODE_DIR}/modules/mod-ale/src"
+    local APPLIED=0
+
+    # 1. NextAction copy assignment (500 warnings)
+    local FILE="${PLAYERBOTS_DIR}/Bot/Engine/Action/Action.h"
+    if [[ -f "${FILE}" ]] && ! grep -q "NextAction& operator=" "${FILE}"; then
+        sed -i '/NextAction(NextAction const& o).*/{
+            a\    NextAction\& operator=(NextAction const\&) = default;
+        }' "${FILE}"
+        APPLIED=1
+    fi
+
+    # 2. MovementActions loop variable (119 warnings)
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/MovementActions.h"
+    if [[ -f "${FILE}" ]] && grep -q "for (int i = 0; i < intervals; i++)" "${FILE}"; then
+        sed -i 's/for (int i = 0; i < intervals; i++)/for (uint32 i = 0; i < intervals; i++)/' "${FILE}"
+        APPLIED=1
+    fi
+
+    # 3. PositionInfo copy assignment (12 warnings)
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/PositionValue.h"
+    if [[ -f "${FILE}" ]] && ! grep -q "PositionInfo& operator=" "${FILE}"; then
+        sed -i '/PositionInfo(PositionInfo const\& other)/,/^    }/{
+            /^    }$/a\    PositionInfo\& operator=(PositionInfo const\&) = default;
+        }' "${FILE}"
+        APPLIED=1
+    fi
+
+    # 4. CraftData copy assignment (3 warnings)
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/CraftValue.h"
+    if [[ -f "${FILE}" ]] && ! grep -q "CraftData& operator=" "${FILE}"; then
+        sed -i '/CraftData(CraftData const\& other)/,/^    }/{
+            /^    }$/a\    CraftData\& operator=(CraftData const\&) = default;
+        }' "${FILE}"
+        APPLIED=1
+    fi
+
+    # 5. UnitPosition copy assignment (3 warnings)
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/Arrow.h"
+    if [[ -f "${FILE}" ]] && ! grep -q "UnitPosition& operator=" "${FILE}"; then
+        sed -i '/UnitPosition(UnitPosition const\& other)/,/^    }/{
+            /^    }$/a\    UnitPosition\& operator=(UnitPosition const\&) = default;
+        }' "${FILE}"
+        APPLIED=1
+    fi
+
+    # 6. ItemCountValue unused event (13 warnings)
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/ItemCountValue.h"
+    if [[ -f "${FILE}" ]] && grep -q "bool Execute(Event event) override { return false; }" "${FILE}"; then
+        sed -i 's/bool Execute(Event event) override { return false; }/bool Execute(Event event) override { (void)event; return false; }/' "${FILE}"
+        APPLIED=1
+    fi
+
+    # 7. PlayerMethods signed/unsigned (2 warnings)
+    FILE="${ALE_DIR}/LuaEngine/methods/PlayerMethods.h"
+    if [[ -f "${FILE}" ]] && grep -q "slot >= EQUIPMENT_SLOT_START && slot < EQUIPMENT_SLOT_END" "${FILE}"; then
+        sed -i 's/slot >= EQUIPMENT_SLOT_START && slot < EQUIPMENT_SLOT_END/slot >= static_cast<int32>(EQUIPMENT_SLOT_START) \&\& slot < static_cast<int32>(EQUIPMENT_SLOT_END)/' "${FILE}"
+        APPLIED=1
+    fi
+
+    # Report if any patches were applied
+    if [[ "${APPLIED}" -eq 1 ]]; then
+        echo "  [B004] Upstream warning fixes applied"
+    fi
+}
+# -- }}}
+
+# -- {{{ apply_patches_begin
+# PHASE_BEGIN: Pre-compile source fixes
+# Run after clone/update, before cmake
+apply_patches_begin() {
+    echo ""
+    echo "Applying PHASE_BEGIN patches (pre-compile)..."
+
+    # Parallel group 1 (no file conflicts)
+    patch_B001_aoe_loot_item_namespace &
+    patch_B002_playerbots_ale_login_hook &
+    patch_B003_ale_gameobject_wildcard &
+    patch_B004_upstream_warning_fixes &
+
+    wait
+    echo "  PHASE_BEGIN complete"
+}
+# -- }}}
+
+# -- {{{ patches_need_applying
+# Check if any PHASE_BEGIN patches would modify source
+# Returns 0 (true) if patches need applying, 1 (false) if all applied
+# Issue 326: Detect patch staleness before early exit in cmd_update
+patches_need_applying() {
+    local FILE
+
+    # B001: aoe-loot item namespace
+    FILE="${AC_CODE_DIR}/modules/mod-aoe-loot/src/aoe_loot.cpp"
+    if [[ -f "${FILE}" ]] && grep -q "^[[:space:]]*Item\* pItem = player->GetItemByGuid" "${FILE}"; then
+        return 0  # B001 needs applying
+    fi
+
+    # B002: playerbots ALE login hook (includes cmake file check)
+    FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp"
+    local CMAKE_FILE="${AC_CODE_DIR}/modules/mod-playerbots/mod-playerbots.cmake"
+    if [[ -f "${FILE}" ]] && ! grep -q "sALE->OnLogin(bot)" "${FILE}"; then
+        return 0  # B002 needs applying (source change)
+    fi
+    if [[ -f "${FILE}" ]] && { [[ ! -f "${CMAKE_FILE}" ]] || ! grep -q "MOD_ALE_PATH" "${CMAKE_FILE}"; }; then
+        return 0  # B002 needs applying (cmake file missing/incomplete)
+    fi
+
+    # B003: ALE gameobject wildcard
+    FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/LuaEngine.cpp"
+    if [[ -f "${FILE}" ]] && ! grep -q "entry != 0 && !eObjectMgr->GetGameObjectTemplate" "${FILE}"; then
+        return 0  # B003 needs applying
+    fi
+
+    return 1  # All patches already applied
+}
+# -- }}}
+
+# -- {{{ apply_patches_middle
+# PHASE_MIDDLE: Compile-time adjustments
+# Reserved for future use (build tuning, caching, etc.)
+apply_patches_middle() {
+    # Currently empty - compilation handled by do_build
+    :
+}
+# -- }}}
+
+# -- {{{ patch_E001_lua_script_symlinks
+# Create symlinks from install dir to project Lua sources
+# Parallelizable: Yes (unique directory)
+patch_E001_lua_script_symlinks() {
+    mkdir -p "${INSTALL_DIR}/bin/lua_scripts"
+    ln -sfn "${DIR}/src/lua" "${INSTALL_DIR}/bin/lua_scripts/custom"
+    if [[ -d "${DIR}/src/lua/extensions" ]]; then
+        ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR}/bin/lua_scripts/extensions"
+    fi
+    echo "  [E001] Lua script symlinks"
+}
+# -- }}}
+
+# -- {{{ patch_E004_log_directory_setup
+# Create RAM-backed log directory symlink
+# Parallelizable: Yes (unique target)
+patch_E004_log_directory_setup() {
+    local TMP_BASE="/tmp/wow-chat-2"
+    local TMP_LOGS="${TMP_BASE}/logs-${PROFILE}"
+    mkdir -p "${TMP_BASE}"
+    mkdir -p "${TMP_LOGS}"
+    [[ -L "${DIR}/tmp" ]] || ln -s "${TMP_BASE}" "${DIR}/tmp"
+    [[ -L "${DIR}/logs-${PROFILE}" ]] || ln -s "${TMP_LOGS}" "${DIR}/logs-${PROFILE}"
+    echo "  [E004] Log directory setup"
+}
+# -- }}}
+
+# -- {{{ patch_E005_dk_levelstats
+# Apply Death Knight level 1-20 stats to database
+# Required before worldserver first start (issue 138)
+# Parallelizable: No (database operation)
+patch_E005_dk_levelstats() {
+    local MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
+    local DB_WORLD="acore_world_${PROFILE}"
+    local SQL_FILE="${DIR}/sql/custom/db_world/death-knights-levelstats.sql"
+
+    # Skip if MySQL not running
+    [[ ! -S "${MYSQL_SOCKET}" ]] && return 0
+
+    # Skip if SQL file doesn't exist
+    [[ ! -f "${SQL_FILE}" ]] && return 0
+
+    # Check if DK level 1 stats already exist
+    local dk_exists=$("${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+        -u ritz -pmenardi "${DB_WORLD}" \
+        -N -e "SELECT COUNT(*) FROM player_class_stats WHERE Class = 6 AND Level = 1;" 2>/dev/null || echo "0")
+
+    if [[ "${dk_exists}" == "0" ]]; then
+        echo "  [E005] Applying DK level stats to ${DB_WORLD}"
+        "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+            -u ritz -pmenardi "${DB_WORLD}" < "${SQL_FILE}" 2>/dev/null || true
+    fi
+}
+# -- }}}
+
+# -- {{{ apply_patches_end
+# PHASE_END: Post-compile setup
+# Run after successful build
+apply_patches_end() {
+    echo ""
+    echo "Applying PHASE_END patches (post-compile)..."
+
+    # Parallel group (no file conflicts)
+    patch_E001_lua_script_symlinks &
+    patch_E004_log_directory_setup &
+    wait
+
+    # Sequential group (database operations)
+    patch_E005_dk_levelstats
+
+    echo "  PHASE_END complete"
 }
 # -- }}}
 
@@ -526,9 +859,210 @@ check_git_status() {
 }
 # -- }}}
 
+# =============================================================================
+# Parallel Status Check System (issue 323)
+# =============================================================================
+# Runs git status checks in parallel with live spinner feedback.
+# Uses temp files for IPC and ANSI codes for cursor control.
+# =============================================================================
+
+# -- {{{ Spinner and display configuration
+SPINNER_CHARS="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+SPINNER_LEN=10
+CHECK_TMP_DIR="/tmp/wow-chat-2/parallel-checks"
+
+# Parallel check data arrays (populated by parallel_check_add)
+declare -a PCHECK_NAMES=()
+declare -a PCHECK_DIRS=()
+declare -a PCHECK_COMMITS=()
+# -- }}}
+
+# -- {{{ parallel_check_init
+# Initialize parallel check system
+parallel_check_init() {
+    PCHECK_NAMES=()
+    PCHECK_DIRS=()
+    PCHECK_COMMITS=()
+    rm -rf "${CHECK_TMP_DIR}"
+    mkdir -p "${CHECK_TMP_DIR}"
+}
+# -- }}}
+
+# -- {{{ parallel_check_add
+# Add a repo to check
+# Args: $1 = display name, $2 = repo_dir, $3 = expected_commit (optional)
+parallel_check_add() {
+    PCHECK_NAMES+=("$1")
+    PCHECK_DIRS+=("$2")
+    PCHECK_COMMITS+=("${3:-}")
+}
+# -- }}}
+
+# -- {{{ parallel_check_worker
+# Background worker that checks a single repo and writes result to temp file
+# Args: $1 = name, $2 = repo_dir, $3 = expected_commit
+parallel_check_worker() {
+    local name="$1"
+    local repo_dir="$2"
+    local expected_commit="$3"
+    local status_file="${CHECK_TMP_DIR}/${name}.status"
+
+    # Initial status
+    echo "checking" > "${status_file}"
+
+    # Check if repo exists
+    if [[ ! -d "${repo_dir}/.git" ]]; then
+        echo "missing" > "${status_file}"
+        return
+    fi
+
+    # Get current HEAD
+    local current_head
+    current_head=$(git -C "${repo_dir}" rev-parse HEAD 2>/dev/null)
+
+    if [[ -n "${expected_commit}" ]]; then
+        # Pinned commit - check if we're at that commit
+        if [[ "${current_head}" == "${expected_commit}"* ]]; then
+            echo "up-to-date" > "${status_file}"
+        else
+            echo "needs-update" > "${status_file}"
+        fi
+    else
+        # No pinned commit - fetch and check against remote
+        git -C "${repo_dir}" fetch --quiet 2>/dev/null || true
+        local remote_head
+        remote_head=$(git -C "${repo_dir}" rev-parse @{u} 2>/dev/null || echo "")
+        if [[ -n "${remote_head}" && "${current_head}" == "${remote_head}" ]]; then
+            echo "up-to-date" > "${status_file}"
+        else
+            echo "needs-update" > "${status_file}"
+        fi
+    fi
+}
+# -- }}}
+
+# -- {{{ parallel_check_display
+# Display status lines for all checks with spinners
+# Global: PARALLEL_CHECK_FRAME (spinner frame counter)
+parallel_check_display() {
+    local frame="${PARALLEL_CHECK_FRAME:-0}"
+    local spinner_char="${SPINNER_CHARS:$((frame % SPINNER_LEN)):1}"
+
+    for name in "${PCHECK_NAMES[@]}"; do
+        local status_file="${CHECK_TMP_DIR}/${name}.status"
+        local status="checking"
+        [[ -f "${status_file}" ]] && status=$(cat "${status_file}" 2>/dev/null)
+
+        case "${status}" in
+            checking)
+                printf "  %s Checking %s...\033[K\n" "${spinner_char}" "${name}"
+                ;;
+            up-to-date)
+                printf "  \033[32m✓\033[0m %s is up-to-date\033[K\n" "${name}"
+                ;;
+            needs-update)
+                printf "  \033[33m↓\033[0m %s needs update\033[K\n" "${name}"
+                ;;
+            missing)
+                printf "  \033[31m✗\033[0m %s not found\033[K\n" "${name}"
+                ;;
+            *)
+                printf "  ? %s: %s\033[K\n" "${name}" "${status}"
+                ;;
+        esac
+    done
+}
+# -- }}}
+
+# -- {{{ parallel_check_run
+# Run parallel git status checks with live spinner display
+# Sets PARALLEL_CHECK_RESULTS associative array with results
+# Returns: 0 if all up-to-date, 1 if any need update
+parallel_check_run() {
+    local -a pids=()
+    local count=${#PCHECK_NAMES[@]}
+
+    if [[ $count -eq 0 ]]; then
+        return 0
+    fi
+
+    # Start all workers in background
+    for i in "${!PCHECK_NAMES[@]}"; do
+        parallel_check_worker "${PCHECK_NAMES[$i]}" "${PCHECK_DIRS[$i]}" "${PCHECK_COMMITS[$i]}" &
+        pids+=($!)
+    done
+
+    # Initial display
+    parallel_check_display
+
+    # Poll until all complete
+    PARALLEL_CHECK_FRAME=0
+    while true; do
+        local all_done=true
+        for name in "${PCHECK_NAMES[@]}"; do
+            local status_file="${CHECK_TMP_DIR}/${name}.status"
+            if [[ -f "${status_file}" ]]; then
+                local status
+                status=$(cat "${status_file}" 2>/dev/null)
+                if [[ "${status}" == "checking" ]]; then
+                    all_done=false
+                    break
+                fi
+            else
+                all_done=false
+                break
+            fi
+        done
+
+        if [[ "${all_done}" == true ]]; then
+            break
+        fi
+
+        # Move cursor up and redraw
+        printf "\033[%dA" "${count}"
+        PARALLEL_CHECK_FRAME=$((PARALLEL_CHECK_FRAME + 1))
+        parallel_check_display
+
+        sleep 0.1
+    done
+
+    # Final redraw
+    printf "\033[%dA" "${count}"
+    parallel_check_display
+
+    # Wait for all workers to finish
+    for pid in "${pids[@]}"; do
+        wait "${pid}" 2>/dev/null || true
+    done
+
+    # Collect results into global associative array
+    declare -gA PARALLEL_CHECK_RESULTS=()
+    local any_needs_update=false
+
+    for name in "${PCHECK_NAMES[@]}"; do
+        local status_file="${CHECK_TMP_DIR}/${name}.status"
+        local status
+        status=$(cat "${status_file}" 2>/dev/null || echo "error")
+        PARALLEL_CHECK_RESULTS["${name}"]="${status}"
+        if [[ "${status}" == "needs-update" || "${status}" == "missing" ]]; then
+            any_needs_update=true
+        fi
+    done
+
+    # Cleanup
+    rm -rf "${CHECK_TMP_DIR}"
+
+    if [[ "${any_needs_update}" == true ]]; then
+        return 1
+    fi
+    return 0
+}
+# -- }}}
+
 # -- {{{ cmd_install
 # Install or update AzerothCore and modules
 # Checks git status and only rebuilds if source changed or --force
+# Uses parallel status checks with spinners (issue 323)
 cmd_install() {
     set -e
     set -o pipefail
@@ -559,34 +1093,22 @@ cmd_install() {
 
     local needs_rebuild=false
 
-    # -- Check/update core source --
+    # -- Handle force reinstall --
     if [[ "${force}" == true ]]; then
         echo "Force reinstall requested - cleaning source..."
         rm -rf "${AC_CODE_DIR}"
         needs_rebuild=true
     fi
 
+    # -- Clone core if missing --
     if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
         echo "Cloning AzerothCore (${BRANCH} branch)..."
         git clone "${REPO}" --branch="${BRANCH}" "${AC_CODE_DIR}"
         if [[ -n "${COMMIT}" ]]; then
             echo "Checking out ${COMMIT:0:10}..."
-            cd "${AC_CODE_DIR}" && git checkout "${COMMIT}" && cd -
+            git -C "${AC_CODE_DIR}" checkout "${COMMIT}"
         fi
         needs_rebuild=true
-    elif ! check_git_status "${AC_CODE_DIR}" "${COMMIT}"; then
-        echo "Source needs update..."
-        cd "${AC_CODE_DIR}"
-        if [[ -n "${COMMIT}" ]]; then
-            git fetch
-            git checkout "${COMMIT}"
-        else
-            git pull --rebase
-        fi
-        cd -
-        needs_rebuild=true
-    else
-        echo "Core source is up-to-date"
     fi
 
     # -- Check/update modules --
@@ -604,7 +1126,7 @@ cmd_install() {
         fi
     done
 
-    # Install/update profile modules
+    # Clone any missing modules (sequential, can't parallelize git clone)
     for mod_name in ${MODULES}; do
         local mod_repo="${MODULE_REPOS[$mod_name]}"
         if [[ -z "${mod_repo}" ]]; then
@@ -613,7 +1135,7 @@ cmd_install() {
         fi
 
         local mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
-        local mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]}"
+        local mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]:-}"
 
         if [[ "${force}" == true && -d "${mod_dir}" ]]; then
             rm -rf "${mod_dir}"
@@ -623,30 +1145,67 @@ cmd_install() {
             echo "  Cloning ${mod_name}..."
             cd "${AC_CODE_DIR}/modules"
             git clone ${mod_repo}
-            # Checkout specific commit if defined for this profile
             if [[ -n "${mod_commit}" ]]; then
                 echo "  Checking out ${mod_name} @ ${mod_commit}..."
-                cd "${mod_dir}"
-                git checkout "${mod_commit}"
-                cd -
+                git -C "${mod_dir}" checkout "${mod_commit}"
             fi
             cd - > /dev/null
             needs_rebuild=true
-        elif ! check_git_status "${mod_dir}" "${mod_commit}"; then
-            echo "  Updating ${mod_name}..."
-            cd "${mod_dir}"
-            if [[ -n "${mod_commit}" ]]; then
-                git fetch
-                git checkout "${mod_commit}"
-            else
-                git pull --rebase
-            fi
-            cd - > /dev/null
-            needs_rebuild=true
-        else
-            echo "  ${mod_name} is up-to-date"
         fi
     done
+
+    # -- Parallel status checks for existing repos --
+    if [[ "${needs_rebuild}" == false ]]; then
+        # Initialize parallel check system
+        parallel_check_init
+
+        # Add Core
+        parallel_check_add "Core" "${AC_CODE_DIR}" "${COMMIT}"
+
+        # Add all modules that exist
+        for mod_name in ${MODULES}; do
+            local mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+            local mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]:-}"
+            if [[ -d "${mod_dir}/.git" ]]; then
+                parallel_check_add "${mod_name}" "${mod_dir}" "${mod_commit}"
+            fi
+        done
+
+        # Run parallel checks with spinners
+        echo "Checking for updates..."
+        if ! parallel_check_run; then
+            needs_rebuild=true
+        fi
+        echo ""
+
+        # Apply updates for repos that need them
+        if [[ "${PARALLEL_CHECK_RESULTS[Core]:-}" == "needs-update" ]]; then
+            echo "Updating Core..."
+            if [[ -n "${COMMIT}" ]]; then
+                git -C "${AC_CODE_DIR}" fetch
+                git -C "${AC_CODE_DIR}" checkout "${COMMIT}"
+            else
+                git -C "${AC_CODE_DIR}" pull --rebase
+            fi
+        fi
+
+        for mod_name in ${MODULES}; do
+            if [[ "${PARALLEL_CHECK_RESULTS[${mod_name}]:-}" == "needs-update" ]]; then
+                echo "Updating ${mod_name}..."
+                local mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+                local mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]:-}"
+                if [[ -n "${mod_commit}" ]]; then
+                    git -C "${mod_dir}" fetch
+                    git -C "${mod_dir}" checkout "${mod_commit}"
+                else
+                    git -C "${mod_dir}" pull --rebase
+                fi
+            fi
+        done
+    fi
+
+    # -- Apply pre-compile patches --
+    apply_patches_begin
 
     # -- Build --
     # Pass force flag to do_build for cmake reconfiguration
@@ -666,7 +1225,41 @@ cmd_install() {
     echo "  World:         ${DB_WORLD}"
     echo "  Characters:    ${DB_CHARS}"
 
-    "${MYSQL_DIR}/bin/mysql" --socket="${DIR}/mysql/databases/mysql.sock" -u ritz -p << EOF
+    # MySQL setup with error handling
+    local MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
+
+    # Check if databases already exist (skip setup if so)
+    # Uses ritz user which should already have access if previously configured
+    if "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u ritz -pmenardi -e "USE ${DB_WORLD}" 2>/dev/null; then
+        echo "  Databases already configured (skipping setup)"
+    else
+
+    if [[ ! -S "${MYSQL_SOCKET}" ]]; then
+        echo ""
+        echo "==============================================================================="
+        echo "MySQL SETUP FAILED: Socket not found"
+        echo "==============================================================================="
+        echo ""
+        echo "Expected socket: ${MYSQL_SOCKET}"
+        echo ""
+        echo "What didn't complete:"
+        echo "  [ ] Database creation (${DB_AUTH}, ${DB_WORLD}, ${DB_CHARS})"
+        echo "  [ ] User 'ritz'@'localhost' creation/privileges"
+        echo "  [ ] Config file initialization"
+        echo "  [ ] Directory path configuration"
+        echo "  [ ] Lua script symlinks"
+        echo "  [ ] Data files copy"
+        echo ""
+        echo "To fix:"
+        echo "  1. Start MySQL: ./scripts/start-mysql"
+        echo "  2. Re-run install: ./scripts/azerothcore install"
+        echo ""
+        exit 1
+    fi
+
+    # Use root via socket auth for admin operations
+    # --no-defaults: ignore system/user .my.cnf files that may have passwords
+    if ! "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u root << EOF
 DROP USER IF EXISTS 'ritz'@'localhost';
 CREATE USER 'ritz'@'localhost' IDENTIFIED BY 'menardi' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0;
 
@@ -677,7 +1270,48 @@ CREATE DATABASE IF NOT EXISTS \`${DB_CHARS}\` DEFAULT CHARACTER SET UTF8MB4 COLL
 GRANT ALL PRIVILEGES ON \`${DB_AUTH}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON \`${DB_WORLD}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON \`${DB_CHARS}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
 EOF
+    then
+        echo ""
+        echo "==============================================================================="
+        echo "MySQL SETUP FAILED: Database/user creation failed"
+        echo "==============================================================================="
+        echo ""
+        echo "Connection attempted via: ${MYSQL_SOCKET}"
+        echo ""
+        echo "What didn't complete:"
+        echo "  [ ] Database creation (${DB_AUTH}, ${DB_WORLD}, ${DB_CHARS})"
+        echo "  [ ] User 'ritz'@'localhost' creation/privileges"
+        echo "  [ ] Config file initialization"
+        echo "  [ ] Directory path configuration"
+        echo "  [ ] Lua script symlinks"
+        echo "  [ ] Data files copy"
+        echo ""
+        echo "What DID complete:"
+        echo "  [x] Source code clone/update"
+        echo "  [x] Module installation"
+        echo "  [x] Pre-compile patches (PHASE_BEGIN)"
+        echo "  [x] Compilation (make)"
+        echo "  [x] Binary installation"
+        echo ""
+        echo "Possible causes:"
+        echo "  - MySQL not running (start with: ./scripts/start-mysql)"
+        echo "  - Root user doesn't have socket auth configured"
+        echo "  - Socket permissions issue"
+        echo ""
+        echo "To debug:"
+        echo "  ${MYSQL_DIR}/bin/mysql --no-defaults --socket=${MYSQL_SOCKET} -u root"
+        echo ""
+        echo "  If it connects: root has no password, script bug (report issue)"
+        echo "  If 'Access denied': root has a password set, need to reset or use it"
+        echo "  If 'Can't connect': MySQL not running or wrong socket path"
+        echo ""
+        exit 1
+    fi
+
+    echo "  Databases and user configured successfully"
+    fi  # end of database setup else block
 
     echo "Initializing configuration files..."
     init_config "${INSTALL_DIR}/etc/worldserver.conf"
@@ -744,13 +1378,73 @@ EOF
 }
 # -- }}}
 
+# -- {{{ atomic_swap_dirs
+# Atomically swap shadow directories to become current (Issue 327)
+# On success: shadow becomes current, old current is deleted
+# On failure: shadow is preserved, current is untouched
+# Args: none (uses global BUILD_DIR, BUILD_DIR_SHADOW, INSTALL_DIR, INSTALL_DIR_SHADOW)
+atomic_swap_dirs() {
+    echo ""
+    echo "Build successful - swapping to new binaries..."
+
+    # Swap build directories
+    # Note: rm -rf on large build dir can be slow, but safer than leaving orphaned dirs
+    if [[ -d "${BUILD_DIR}" ]]; then
+        rm -rf "${BUILD_DIR}"
+    fi
+    mv "${BUILD_DIR_SHADOW}" "${BUILD_DIR}"
+
+    # Swap install directories
+    if [[ -d "${INSTALL_DIR}" ]]; then
+        rm -rf "${INSTALL_DIR}"
+    fi
+    mv "${INSTALL_DIR_SHADOW}" "${INSTALL_DIR}"
+
+    echo "  build:     ${BUILD_DIR}"
+    echo "  installed: ${INSTALL_DIR}"
+}
+# -- }}}
+
+# -- {{{ print_build_failure
+# Print helpful error message when build fails (Issue 327)
+# Preserves shadow directories for debugging
+print_build_failure() {
+    local ERROR_LOG="${BUILD_DIR_SHADOW}/compile-errors.log"
+
+    echo ""
+    echo "==============================================================================="
+    echo "BUILD FAILED"
+    echo "==============================================================================="
+    echo ""
+    echo "Debug information preserved at:"
+    echo "  ${ERROR_LOG}"
+    echo ""
+    if [[ -d "${INSTALL_DIR}" && -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+        echo "Your current working binaries are UNCHANGED:"
+        echo "  ${INSTALL_DIR}/bin/worldserver"
+        echo "  ${INSTALL_DIR}/bin/authserver"
+    else
+        echo "No previous working binaries exist."
+        echo "This appears to be a first-time build."
+    fi
+    echo ""
+    echo "To retry after fixing:"
+    echo "  ./scripts/azerothcore compile"
+    echo "==============================================================================="
+}
+# -- }}}
+
 # -- {{{ do_build
 # Shared build logic - cmake and make
+# Compiles into shadow directories, swaps on success (Issue 327)
 # Expects: AC_CODE_DIR, BUILD_DIR, INSTALL_DIR, MYSQL_DIR, BOOST_DIR, PROFILE to be set
-# Logs output to tmp/build-${PROFILE}.log
+# Also uses BUILD_DIR_SHADOW and INSTALL_DIR_SHADOW from get_profile_paths
+# Logs output to tmp/build-${PROFILE}.log and BUILD_DIR_SHADOW/compile-errors.log
 do_build() {
     echo ""
-    echo "Building..."
+    echo "Building into shadow directories..."
+    echo "  Shadow build:   ${BUILD_DIR_SHADOW}"
+    echo "  Shadow install: ${INSTALL_DIR_SHADOW}"
 
     local CLANGPP_DIR="/usr/bin/clang++"
     local CLANG_DIR="/usr/bin/clang"
@@ -760,38 +1454,49 @@ do_build() {
     # Setup log symlinks to /tmp (RAM)
     setup_log_symlinks
     local BUILD_LOG="${DIR}/tmp/build-${PROFILE}.log"
-    echo "Build started: $(date)" > "${BUILD_LOG}"
-    echo "Profile: ${PROFILE}" >> "${BUILD_LOG}"
-    echo "Source: ${AC_CODE_DIR}" >> "${BUILD_LOG}"
-    echo "---" >> "${BUILD_LOG}"
-    echo "Build log: ${BUILD_LOG}"
 
-    # Prepare build directory (preserve for incremental builds)
-    mkdir -p "${BUILD_DIR}"
-    cd "${BUILD_DIR}"
+    # Prepare shadow build directory
+    # If shadow exists from a previous failed build, preserve object files for incremental retry
+    mkdir -p "${BUILD_DIR_SHADOW}"
+    cd "${BUILD_DIR_SHADOW}"
+
+    # Error log in shadow directory (Issue 327)
+    local ERROR_LOG="${BUILD_DIR_SHADOW}/compile-errors.log"
+    echo "Build started: $(date)" > "${ERROR_LOG}"
+    echo "Profile: ${PROFILE}" >> "${ERROR_LOG}"
+    echo "Source: ${AC_CODE_DIR}" >> "${ERROR_LOG}"
+    echo "Shadow build: ${BUILD_DIR_SHADOW}" >> "${ERROR_LOG}"
+    echo "Shadow install: ${INSTALL_DIR_SHADOW}" >> "${ERROR_LOG}"
+    echo "---" >> "${ERROR_LOG}"
+
+    # Also write to the RAM-backed build log
+    cp "${ERROR_LOG}" "${BUILD_LOG}"
+    echo "Build log: ${BUILD_LOG}"
+    echo "Error log: ${ERROR_LOG}"
 
     # Build Boost if needed
     if [[ ! -d "${BOOST_DIR}/lib" ]]; then
         echo "Local Boost not found - building from source..."
-        cmd_boost 2>&1 | tee -a "${BUILD_LOG}"
+        cmd_boost 2>&1 | tee -a "${BUILD_LOG}" "${ERROR_LOG}"
     fi
     echo "Using local Boost from ${BOOST_DIR}"
 
-    # Only run cmake if not already configured, or if forced
+    # Only run cmake if not already configured in shadow, or if forced
     # CMakeCache.txt presence indicates cmake has been run before
-    if [[ ! -f "${BUILD_DIR}/CMakeCache.txt" || "${FORCE_REBUILD:-false}" == "true" ]]; then
+    if [[ ! -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" || "${FORCE_REBUILD:-false}" == "true" ]]; then
         echo ""
         echo "Running cmake..."
-        cmake "${AC_CODE_DIR}" \
+        # Note: INSTALL_DIR_SHADOW is the target for make install
+        if ! cmake "${AC_CODE_DIR}" \
           -DBOOST_ROOT="${BOOST_DIR}" \
           -DLUA_VERSION=luajit \
           -DLUAJIT_INCLUDE_DIR="${LUAJIT_INC}" \
           -DLUAJIT_LIBRARIES="${LUAJIT_LIB}" \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR_SHADOW}" \
           -DCMAKE_C_COMPILER="${CLANG_DIR}" \
           -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}" \
           -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common -I${LUAJIT_INC} -Wno-enum-constexpr-conversion -fcolor-diagnostics" \
-          -DCMAKE_BINARY_DIR="${BUILD_DIR}" \
+          -DCMAKE_BINARY_DIR="${BUILD_DIR_SHADOW}" \
           -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}" \
           -DCMAKE_COLOR_DIAGNOSTICS=ON \
           -DWITH_WARNINGS=1 \
@@ -801,7 +1506,12 @@ do_build() {
           -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql" \
           -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include" \
           -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so" \
-          2>&1 | tee -a "${BUILD_LOG}"
+          2>&1 | tee -a "${BUILD_LOG}" "${ERROR_LOG}"; then
+            echo "" >> "${ERROR_LOG}"
+            echo "CMAKE FAILED at $(date)" >> "${ERROR_LOG}"
+            print_build_failure
+            return 1
+        fi
     else
         echo ""
         echo "Skipping cmake (already configured, use --force to reconfigure)"
@@ -809,18 +1519,38 @@ do_build() {
 
     echo ""
     echo "Building with ${THREADS} threads..."
-    make -j${THREADS} 2>&1 | tee -a "${BUILD_LOG}"
+    # Capture make exit code without triggering set -e
+    local make_result=0
+    make -j${THREADS} 2>&1 | tee -a "${BUILD_LOG}" "${ERROR_LOG}" || make_result=$?
+
+    if [[ ${make_result} -ne 0 ]]; then
+        echo "" >> "${ERROR_LOG}"
+        echo "MAKE FAILED with exit code ${make_result} at $(date)" >> "${ERROR_LOG}"
+        print_build_failure
+        return 1
+    fi
 
     echo ""
-    echo "Installing..."
-    make install 2>&1 | tee -a "${BUILD_LOG}"
+    echo "Installing to shadow directory..."
+    local install_result=0
+    make install 2>&1 | tee -a "${BUILD_LOG}" "${ERROR_LOG}" || install_result=$?
 
-    # Setup Lua script symlinks (always, in case they got removed)
-    mkdir -p "${INSTALL_DIR}/bin/lua_scripts"
-    ln -sfn "${DIR}/src/lua" "${INSTALL_DIR}/bin/lua_scripts/custom"
-    if [[ -d "${DIR}/src/lua/extensions" ]]; then
-        ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR}/bin/lua_scripts/extensions"
+    if [[ ${install_result} -ne 0 ]]; then
+        echo "" >> "${ERROR_LOG}"
+        echo "MAKE INSTALL FAILED with exit code ${install_result} at $(date)" >> "${ERROR_LOG}"
+        print_build_failure
+        return 1
     fi
+
+    # Setup Lua script symlinks in shadow install dir
+    mkdir -p "${INSTALL_DIR_SHADOW}/bin/lua_scripts"
+    ln -sfn "${DIR}/src/lua" "${INSTALL_DIR_SHADOW}/bin/lua_scripts/custom"
+    if [[ -d "${DIR}/src/lua/extensions" ]]; then
+        ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR_SHADOW}/bin/lua_scripts/extensions"
+    fi
+
+    # Success! Swap shadow directories to become current (Issue 327)
+    atomic_swap_dirs
 
     echo ""
     echo "Build complete! Log: ${BUILD_LOG}"
@@ -829,6 +1559,7 @@ do_build() {
 
 # -- {{{ cmd_update
 # Update source and rebuild - does NOT touch MySQL, configs, or data files
+# Uses parallel status checks with spinners (issue 323)
 cmd_update() {
     set -e
     set -o pipefail
@@ -847,6 +1578,7 @@ cmd_update() {
     local MODULES="${PROFILE_MODULES[$PROFILE]}"
 
     echo "Updating profile: ${PROFILE}"
+    echo ""
 
     # Check source exists
     if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
@@ -856,57 +1588,155 @@ cmd_update() {
 
     local needs_rebuild=false
 
-    # Check/update core
+    # Force rebuild skips status checks
     if [[ "${force}" == true ]]; then
         echo "Force rebuild requested"
         needs_rebuild=true
-    elif ! check_git_status "${AC_CODE_DIR}" "${COMMIT}"; then
-        echo "Core source needs update..."
-        cd "${AC_CODE_DIR}"
-        if [[ -n "${COMMIT}" ]]; then
-            git fetch && git checkout "${COMMIT}"
-        else
-            git pull --rebase
-        fi
-        cd -
-        needs_rebuild=true
     else
-        echo "Core source is up-to-date"
+        # Initialize parallel check system
+        parallel_check_init
+
+        # Add Core as first check (treated same as modules)
+        parallel_check_add "Core" "${AC_CODE_DIR}" "${COMMIT}"
+
+        # Add all modules
+        for mod_name in ${MODULES}; do
+            local mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+            local mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]:-}"
+            parallel_check_add "${mod_name}" "${mod_dir}" "${mod_commit}"
+        done
+
+        # Run parallel checks with spinners
+        echo "Checking for updates..."
+        if ! parallel_check_run; then
+            needs_rebuild=true
+        fi
+        echo ""
+
+        # Apply updates for repos that need them
+        if [[ "${PARALLEL_CHECK_RESULTS[Core]:-}" == "needs-update" ]]; then
+            echo "Updating Core..."
+            if [[ -n "${COMMIT}" ]]; then
+                git -C "${AC_CODE_DIR}" checkout "${COMMIT}"
+            else
+                git -C "${AC_CODE_DIR}" pull --rebase
+            fi
+        fi
+
+        for mod_name in ${MODULES}; do
+            if [[ "${PARALLEL_CHECK_RESULTS[${mod_name}]:-}" == "needs-update" ]]; then
+                echo "Updating ${mod_name}..."
+                local mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+                local mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]:-}"
+                if [[ -n "${mod_commit}" ]]; then
+                    git -C "${mod_dir}" checkout "${mod_commit}"
+                else
+                    git -C "${mod_dir}" pull --rebase
+                fi
+            elif [[ "${PARALLEL_CHECK_RESULTS[${mod_name}]:-}" == "missing" ]]; then
+                echo "  ${mod_name} missing - run 'install' to add it"
+            fi
+        done
     fi
 
-    # Check/update modules
-    for mod_name in ${MODULES}; do
-        local mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
-        if [[ ! -d "${mod_dir}/.git" ]]; then
-            echo "  ${mod_name} missing - run 'install' to add it"
-            continue
+    # Check if patches need applying (Issue 326)
+    # Must check BEFORE early exit, otherwise new patches are never applied
+    if patches_need_applying; then
+        echo "Patches pending - rebuild required"
+        needs_rebuild=true
+    fi
+
+    # Check if patched source files are newer than binary (Issue 326)
+    # This catches the case where patches were applied but binary wasn't rebuilt
+    if [[ "${needs_rebuild}" == false && -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+        local BINARY_TIME=$(stat -c %Y "${INSTALL_DIR}/bin/worldserver" 2>/dev/null || echo 0)
+
+        # Check B002 source file
+        local B002_FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp"
+        if [[ -f "${B002_FILE}" ]]; then
+            local B002_TIME=$(stat -c %Y "${B002_FILE}" 2>/dev/null || echo 0)
+            if [[ "${B002_TIME}" -gt "${BINARY_TIME}" ]]; then
+                echo "Source newer than binary - rebuild required"
+                needs_rebuild=true
+            fi
         fi
-        if ! check_git_status "${mod_dir}" ""; then
-            echo "  Updating ${mod_name}..."
-            cd "${mod_dir}" && git pull --rebase && cd -
-            needs_rebuild=true
-        else
-            echo "  ${mod_name} is up-to-date"
+
+        # Check B003 source file
+        local B003_FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/LuaEngine.cpp"
+        if [[ "${needs_rebuild}" == false && -f "${B003_FILE}" ]]; then
+            local B003_TIME=$(stat -c %Y "${B003_FILE}" 2>/dev/null || echo 0)
+            if [[ "${B003_TIME}" -gt "${BINARY_TIME}" ]]; then
+                echo "Source newer than binary - rebuild required"
+                needs_rebuild=true
+            fi
         fi
-    done
+    fi
 
     # Build if needed
     if [[ "${needs_rebuild}" == false && -f "${INSTALL_DIR}/bin/worldserver" ]]; then
         echo ""
         echo "Everything up-to-date, no rebuild needed."
         echo "Use --force to rebuild anyway."
+        # Always check database patches (idempotent, safe to run every time)
+        patch_E005_dk_levelstats
         return 0
     fi
+
+    # Apply pre-compile patches
+    apply_patches_begin
 
     # Pass force flag to do_build for cmake reconfiguration
     FORCE_REBUILD="${force}"
     do_build
+
+    # Apply post-compile patches
+    apply_patches_end
 
     echo ""
     echo "Update complete!"
 }
 # -- }}}
 
+# -- {{{ cmd_compile
+# Compile only - skip git checks, go straight to cmake/make
+# Use when you've made local changes and just want to rebuild
+cmd_compile() {
+    set -e
+    set -o pipefail
+
+    local force=false
+    for arg in "$@"; do
+        if [[ "${arg}" == "--force" ]]; then
+            force=true
+        fi
+    done
+
+    get_profile_paths
+
+    echo "Compiling profile: ${PROFILE}"
+    echo "  (skipping git checks)"
+    echo ""
+
+    # Check source exists
+    if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
+        echo "Error: Source not found. Run 'install' first."
+        exit 1
+    fi
+
+    # Apply pre-compile patches (idempotent, safe to run)
+    apply_patches_begin
+
+    # Build - force cmake reconfig if --force
+    FORCE_REBUILD="${force}"
+    do_build
+
+    # Apply post-compile patches
+    apply_patches_end
+
+    echo ""
+    echo "Compile complete!"
+}
+# -- }}}
 
 # -- {{{ main
 # Main entry point - parse args and dispatch to command
@@ -919,6 +1749,9 @@ main() {
             ;;
         update)
             cmd_update "${COMMAND_ARGS[@]}"
+            ;;
+        compile)
+            cmd_compile "${COMMAND_ARGS[@]}"
             ;;
         authserver)
             cmd_authserver
