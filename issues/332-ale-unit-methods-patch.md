@@ -2,10 +2,16 @@
 
 ## Status
 - Created: 2026-04-08
-- **Resolved: 2026-04-08**
+- Resolved: 2026-04-08
+- **PATCH NOT IN SOURCE** (discovered 2026-04-09)
 - Phase: 2
 - Priority: High
 - Related: Issue 328 (GetPosition nil errors)
+
+**Note (2026-04-09):** Issue was marked "Resolved" but the C++ changes are NOT in the source.
+UnitMethods.h does not contain SetWalk, IsWalking, IsHostileTo, or IsFriendlyTo.
+The patch documentation exists but was never added to `scripts/azerothcore` patcher.
+Source was likely reset/re-cloned and changes were lost. See issue 334 for re-implementation plan.
 
 ## Current Behavior (Before Fix)
 
