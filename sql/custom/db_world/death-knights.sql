@@ -8,9 +8,10 @@
 -- Starting gear is race-specific (handled by playercreateinfo_item).
 --
 -- Run against acore_world database
+-- Updated 2026-04-08: Fixed column names (Strength/Agility/etc instead of str/agi/etc, added BaseHP/BaseMana)
 
 -- {{{ Clean up existing custom entries
-DELETE FROM `player_class_stats` WHERE `class` = 6 AND `level` BETWEEN 1 AND 54;
+DELETE FROM `player_class_stats` WHERE `Class` = 6 AND `Level` BETWEEN 1 AND 54;
 DELETE FROM `playercreateinfo_spell_custom` WHERE `classmask` = 32;  -- class 6 = 2^5 = 32
 DELETE FROM `playercreateinfo_item` WHERE `class` = 6;
 DELETE FROM `npc_trainer` WHERE `ID` IN (29194, 29195, 29196) AND `SpellID` IN (
@@ -22,10 +23,10 @@ DELETE FROM `npc_trainer` WHERE `ID` IN (29194, 29195, 29196) AND `SpellID` IN (
 -- {{{ Death Knight Class Stats (levels 1-54)
 -- Copy warrior stats for DK levels 1-54 (DKs normally start at 55)
 -- This allows low-level DK play with appropriate stats
-INSERT INTO `player_class_stats` (`class`, `level`, `str`, `agi`, `sta`, `inte`, `spi`)
-SELECT 6, level, str, agi, sta, inte, spi
+INSERT INTO `player_class_stats` (`Class`, `Level`, `BaseHP`, `BaseMana`, `Strength`, `Agility`, `Stamina`, `Intellect`, `Spirit`)
+SELECT 6, `Level`, `BaseHP`, `BaseMana`, `Strength`, `Agility`, `Stamina`, `Intellect`, `Spirit`
 FROM `player_class_stats`
-WHERE `class` = 1 AND `level` BETWEEN 1 AND 54;
+WHERE `Class` = 1 AND `Level` BETWEEN 1 AND 54;
 -- }}}
 
 -- {{{ Starting Ability - Blood Strike (level 1)
@@ -201,7 +202,7 @@ VALUES
 -- }}}
 
 -- {{{ Verification queries (run manually)
--- SELECT class, level, str, agi, sta, inte, spi FROM player_class_stats WHERE class = 6 AND level <= 20;
+-- SELECT Class, Level, Strength, Agility, Stamina, Intellect, Spirit FROM player_class_stats WHERE Class = 6 AND Level <= 20;
 -- SELECT * FROM playercreateinfo_spell_custom WHERE classmask = 32;
 -- SELECT * FROM playercreateinfo_item WHERE class = 6;
 -- SELECT * FROM npc_trainer WHERE ID IN (29194, 29195, 29196) ORDER BY ID, ReqLevel;

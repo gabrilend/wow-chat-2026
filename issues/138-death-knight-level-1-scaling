@@ -128,6 +128,26 @@ Added via `playercreateinfo_item` table with race-specific entries.
 - [ ] Test DK combat feel at various levels
 - [ ] Verify no Death Grip, Path of Frost, Mind Freeze, or Icebound Fortitude
 
+## Error Observations
+
+### 2026-04-08 - SQL schema mismatch (str column)
+
+**Error:** `ERROR 1054 (42S22) at line 25: Unknown column 'str' in 'field list'`
+
+**Cause:** The `player_class_stats` table schema changed in newer AzerothCore. Column names are now full words instead of abbreviations.
+
+**Schema Changes:**
+- `class` → `Class`
+- `level` → `Level`
+- `str` → `Strength`
+- `agi` → `Agility`
+- `sta` → `Stamina`
+- `inte` → `Intellect`
+- `spi` → `Spirit`
+- Added: `BaseHP`, `BaseMana`
+
+**Resolution:** Updated `source-beta/data/sql/custom/db_world/death-knights.sql` to use correct column names and include BaseHP/BaseMana in the INSERT.
+
 ## Technical Notes
 - DK rune system works at any level (base mechanic)
 - Disease mechanics use base spell ranks - appropriate for low levels

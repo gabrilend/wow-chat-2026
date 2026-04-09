@@ -12,6 +12,12 @@
 -- - C++ (mod-talent-bonus): Modifies expected talent count for validation
 -- - Lua (this file): Awards actual points with visual effect when threshold crossed
 --
+-- IMPORTANT - Relog exploit prevention:
+-- Actual talent points are ONLY awarded in onGiveXP (PLAYER_EVENT_ON_GIVE_XP).
+-- The onLogin handler ONLY sets tracking flags - it does NOT award points.
+-- This prevents the exploit where logging out/in repeatedly could grant points.
+-- The C++ module adjusts EXPECTED count (for validation), not ACTUAL points.
+--
 -- Visual: Green "reputation level gained" effect at 33%/66%
 -- Visual: Yellow level-up effect at 100% (normal game behavior)
 
@@ -101,6 +107,10 @@ end
 -- The C++ module (mod-talent-bonus) handles validation, so we don't need
 -- to re-add points here. We just need to mark which thresholds are "spent"
 -- so we don't double-award when the player gains more XP.
+--
+-- NOTE: This function does NOT call SetFreeTalentPoints() - it only sets flags.
+-- This is intentional: talent points are ONLY awarded on XP gain (onGiveXP).
+-- Relog cannot grant extra points because this handler never awards them.
 local function onLogin(event, player)
     local level = player:GetLevel()
     local currentXP = player:GetXP()
