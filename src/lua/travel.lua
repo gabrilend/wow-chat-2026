@@ -2,6 +2,10 @@ require("movement") -- movement.lua
 
 Travel = { travellers = {} }
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER Travel table is created so require() returns the module
+package.loaded["travel"] = Travel
+
 -- {{{ Travel.despawn
 -- Clean despawn: removes scheduled events and clears data before despawning
 -- Ensures creature shell can be fully garbage collected

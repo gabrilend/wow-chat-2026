@@ -2,6 +2,10 @@ require "movement" -- for spawning the chests at specific positions
 
 Treasure = { chests = {} }
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER Treasure table is created so require() returns the module
+package.loaded["treasure"] = Treasure
+
 -- {{{ Per-Player Queue System
 -- Items are immediately distributed to player queues when added to global pool
 -- Each player has a personal queue that injects into their next chest spawn

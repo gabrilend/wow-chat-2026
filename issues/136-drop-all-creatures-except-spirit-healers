@@ -2,6 +2,7 @@
 
 ## Status
 - Created: 2026-04-02
+- Updated: 2026-04-06
 - Phase: 2
 - Priority: Medium
 
@@ -9,36 +10,91 @@
 - World has default creature spawns from AzerothCore
 - Static NPCs populate the world alongside the dynamic ambush system
 - Spirit healers exist at graveyards for resurrection
+- Critters (ambient animals) exist throughout the world
 
 ## Intended Behavior
 - Remove all creature spawns from the world database
-- Keep spirit healers (required for player resurrection)
+- **Keep spirit healers** (required for player resurrection)
+- **Keep critters** (ambient animals like rabbits, squirrels - type=8)
 - World should be empty by default - monsters only spawn via ambush system
 - Aligns with roguelike survival design philosophy
 
-## Implementation Steps
+## Implementation
 
-1. Identify spirit healer entries in creature_template
-   - Query: `SELECT entry, name FROM creature_template WHERE name LIKE '%Spirit Healer%' OR entry IN (known spirit healer IDs)`
+### SQL Script Created
+`source-beta/data/sql/custom/db_world/drop-creatures-keep-essential.sql`
 
-2. Create SQL script to delete creature spawns
-   ```sql
-   -- Delete all creature spawns except spirit healers
-   DELETE FROM creature WHERE id NOT IN (spirit_healer_entry_ids);
+### Identification Methods
+- **Critters:** `creature_template.type = 8`
+- **Spirit Healers:** `creature_template.npcflag & 16384` (UNIT_NPC_FLAG_SPIRITHEALER)
+  - This flag makes creatures invisible to living players
+  - Enables the resurrection dialogue when dead players interact
+
+### Main Spirit Healer Entry
+- Entry 6491 is the primary Spirit Healer used in most zones
+- Entry 29259 used in some WotLK areas (Wintergrasp)
+- The npcflag method catches ALL spirit healers regardless of entry
+
+### Cascade Cleanup (per issue 112)
+The script cleans up all related tables to prevent error log spam:
+- creature_addon
+- creature_formations (leader and member)
+- linked_respawn
+- creature_movement_override
+- game_event_creature
+- pool_creature
+- conditions (CONDITION_OBJECT_ENTRY_GUID)
+- smart_scripts (GUID-specific overrides)
+
+## How Spirit Healers Work
+
+Spirit healers use the `npc_spirithealer` ScriptName and npcflag 16384:
+1. When a player dies, they become a ghost
+2. Ghost can see spirit healers (invisible to living players)
+3. Interacting triggers resurrection dialogue
+4. Accepting causes:
+   - Resurrection at graveyard
+   - 25% durability loss to all items
+   - Resurrection Sickness debuff (spell 15007)
+     - 75% stat/damage reduction
+     - Duration varies by level (none under 10, 10 min at 20+)
+
+The client handles the "Release Spirit" button and ghost mode UI.
+The server handles graveyard selection and the npc_spirithealer script.
+
+## Deployment
+
+1. Start MySQL: `./scripts/mysql-start`
+2. Run script:
+   ```bash
+   ./scripts/mysql-client -e "SOURCE /mnt/mtwo/games/azeroth-core/wow-chat-2026/source-beta/data/sql/custom/db_world/drop-creatures-keep-essential.sql"
    ```
-
-3. Verify spirit healers remain at graveyards
-   - Test death and resurrection flow
-
-4. Consider keeping other essential NPCs:
-   - Flight masters? (or remove for survival feel)
-   - Innkeepers? (for hearthstone binding)
-   - Vendors? (handled by custom merchant system - issue 135)
+3. Verify counts:
+   ```sql
+   SELECT COUNT(*) FROM creature;  -- should be small (critters + spirit healers)
+   ```
+4. Restart worldserver
 
 ## Technical Notes
-- Table: `creature` (spawns) vs `creature_template` (definitions)
-- Spirit healers have specific AI scripts for resurrection
-- May need to preserve creature GUIDs for quest references
+- creature.guid is the spawn instance ID
+- creature.id1 references creature_template.entry
+- npcflag is a bitmask - use bitwise AND to check specific flags
+- Script is idempotent - safe to run multiple times
 
 ## Related Issues
+- 112 - fix-drop-creatures-cascading-errors (cascade cleanup patterns) - COMPLETED
 - 135 - custom merchant system (vendor handling)
+
+## Related Files
+- source-beta/data/sql/custom/db_world/drop-creatures-keep-essential.sql
+
+## History
+
+### 2026-04-06 - SQL Script Recreated
+- Original script from issue 112 was never committed to git
+- Recreated with proper cascade cleanup
+- Added spirit healer identification via npcflag bitmask
+- Documented how spirit healers work in WoW
+
+### 2026-04-02 - Issue Created
+- Initial design for empty world philosophy

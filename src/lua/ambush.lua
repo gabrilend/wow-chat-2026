@@ -4,6 +4,10 @@
             Ambush = {} -- table to hold the functions.
 local AmbushQueues = {} -- table to hold monsters that are queued to attack.
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER Ambush table is created so require() returns the module
+package.loaded["ambush"] = Ambush
+
 -- Creature cache: populated at startup, keyed by level then rank
 -- Structure: CreatureCache[level][rank] = { {id=X, minLevel=Y, maxLevel=Z}, ... }
 local CreatureCache = {}
