@@ -1,0 +1,120 @@
+# 301 - Ocean Shark Hazard
+
+Environmental hazard that discourages extended open-water travel.
+
+## Current Behavior
+
+The vanilla fatigue mechanic kills players who swim too far into the ocean. This
+is an invisible wall that feels arbitrary and immersion-breaking. Players either
+die to an invisible timer or never venture into deep water at all.
+
+Water travel is often faster than land travel for certain routes, but there's no
+organic environmental pressure - just instant death if you go too far.
+
+## Intended Behavior
+
+**Remove the fatigue mechanic entirely.** Replace it with sharks.
+
+When a player remains in open water for too long, level 20 sharks spawn ~30 yards
+away (in deep-ish water themselves) and attack. The sharks:
+- Are all level 20 (max player level)
+- Drop no loot (you're in the ocean - can't carry it back anyway)
+- Spawn periodically while the player remains in deep water
+- Stop spawning when the player returns to shallow water or land
+- Use the same spawn mechanics as the ambush system
+
+This creates a soft barrier against extended ocean travel without making it
+completely impossible. Short swims across bays or rivers are fine, but crossing
+the Great Sea is suicide without a boat. Unlike fatigue, sharks are visible,
+fightable, and create stories rather than arbitrary death.
+
+## Design Considerations
+
+### What Counts as "Open Water"
+- Player must be swimming (not walking on shallow seabed)
+- Player must be far from any landmass (configurable distance threshold)
+- Could check `IsInWater()` combined with depth/distance-from-shore heuristics
+- Former fatigue zones are a good indicator of "deep ocean" for triggering
+
+### Timing
+- Grace period after entering water before first shark spawns
+- Subsequent sharks spawn on a faster interval while player remains
+- Timer resets when player exits water
+
+### Shark Behavior
+- Spawn underwater, below/behind the player
+- Immediately aggressive
+- Should pursue relentlessly (no leash distance in water)
+- Multiple can spawn if player stays long enough
+
+### No Loot Rationale
+- Flavor: you're treading water, how would you loot a shark?
+- Mechanical: removes incentive to farm sharks as a spawn source
+- Thematic: the ocean is punishment, not opportunity
+
+## Suggested Implementation Steps
+
+1. **Disable fatigue mechanic**
+   - Set `FatigueTimer` config to 0 or very high value in worldserver.conf
+   - Alternatively, patch out fatigue damage in C++ (Player.cpp `HandleDrowning`)
+   - Test that players no longer die from swimming into deep ocean
+
+2. **Add water duration tracking to periodic events**
+   - Track per-player: `in_water_since` timestamp
+   - Clear when player exits water or stands on ground
+   - Use `player:IsInWater()` and `player:GetSubmergeLevel()`
+
+3. **Define "open water" detection**
+   - Check if player is in former fatigue zone (deep ocean areas)
+   - Or: sample terrain height in a radius, if no valid ground, player is in open water
+   - Or: specific zone/subzone detection (ocean zones)
+
+4. **Create shark spawn logic (reuse ambush system)**
+   - Copy ambush spawn patterns - sharks work the same way, just underwater
+   - Spawn position: ~30 yards from player, in deep-ish water
+   - Use `PerformIngameSpawn()` same as ambush.lua
+   - Creature entry: use an existing shark model (e.g., Threshadon entry 2505)
+   - Level: fixed at 20
+   - Loot: remove loot template via SQL or Lua override
+   - Aggro behavior: immediate, same as ambush mobs
+
+5. **Configure timing constants**
+   ```lua
+   SHARK_GRACE_PERIOD     = 30000   -- 30s before first spawn
+   SHARK_SPAWN_INTERVAL   = 15000   -- 15s between subsequent spawns
+   SHARK_SPAWN_RADIUS     = 30      -- spawn ~30 yards from player
+   ```
+
+6. **Handle edge cases**
+   - Player mounting a sea turtle: still counts as in water
+   - Player using water walking: does NOT count as in water
+   - Player in a battleground with water: disable (BG has its own rules)
+   - Player in instance with water: disable (dungeon water is controlled)
+
+7. **Test scenarios**
+   - Fatigue disabled: swim into deep ocean, no fatigue bar or damage
+   - Short swim across river: no sharks
+   - Extended swim in deep water: sharks spawn after grace period
+   - Player exits water: timer resets
+   - Player fights sharks in water: more keep spawning
+   - Player reaches land: safe
+   - Sharks spawn in deep-ish water themselves (not on land or shallow)
+
+## Related Concepts
+
+- Concept 014: Ambush spawn radius and timing
+- Concept 121: Periodic event registration patterns
+- Concept 045: Water and terrain detection
+
+## Related Files
+
+- src/lua/ambush.lua - Spawn patterns to follow
+- src/lua/periodic_events.lua - Timer registration
+- src/lua/movement.lua - Position and terrain utilities
+
+## Stats
+
+- **Phase:** 3
+- **Priority:** Medium (environmental flavor)
+- **Complexity:** Low (reuses ambush system, config change for fatigue)
+- **Dependencies:** None (uses existing spawn infrastructure)

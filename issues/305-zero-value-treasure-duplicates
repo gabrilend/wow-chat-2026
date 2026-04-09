@@ -1,0 +1,153 @@
+# 305 - Zero-Value Treasure Duplicates
+
+Items entering the treasure redistribution pool become duplicates with no sell
+value, preventing infinite gold generation while preserving enchantments.
+
+## Current Behavior
+
+When items are sold to vendors, they enter the treasure chest redistribution
+pool. When looted from a chest, the item retains its original sell value. This
+creates potential for infinite gold:
+
+1. Player A vendors sword for 10g
+2. Sword enters treasure pool
+3. Player B loots sword from chest
+4. Player B vendors sword for 10g
+5. Sword enters pool again...
+
+Gold duplicates infinitely through the cycle.
+
+## Intended Behavior
+
+When an item enters the treasure redistribution pool, it becomes a **duplicate**
+with 0 copper sell value:
+
+1. Player A vendors sword for 10g → gold enters economy ONCE
+2. Sword duplicate (0c value) enters treasure pool
+3. Player B loots duplicate from chest
+4. Player B vendors duplicate for 0c → vendor takes it, no gold given
+5. Duplicate enters pool again (still 0c)
+
+Gold only enters the economy once per item. The item itself circulates forever.
+
+### Enchantment Preservation
+
+If an item has enchantments when vendored, those enchantments persist:
+
+1. Player A enchants sword with +5 Stamina
+2. Player A vendors enchanted sword for 10g
+3. Enchanted duplicate (0c, +5 Stamina) enters pool
+4. Player B loots enchanted duplicate from chest
+5. Player B uses sword with +5 Stamina enchant intact
+6. Player B vendors → enchanted duplicate re-enters pool
+
+Enchantments are preserved through the entire cycle. Items can accumulate
+history and value through enchantments even though they have no gold value.
+
+### Visual/Tooltip Distinction
+
+Duplicates should be visually identical but tooltip could indicate:
+- "Sell Price: 0" (instead of showing original value)
+- Optional: subtle indicator that item came from treasure system
+
+## Design Considerations
+
+### Implementation Approach
+
+Two options:
+
+**Option A: Create actual duplicate items in database**
+- New item entries with `SellPrice = 0`
+- Preserves item stats, just changes sell value
+- More database entries but cleaner separation
+
+**Option B: Mark items and override sell behavior**
+- Add flag to item instance data
+- On sell, check flag and give 0 gold
+- Fewer database changes but more Lua complexity
+
+**Recommendation:** Option B with Lua - mark items when they enter pool,
+check mark on sell to override gold amount.
+
+### Enchantment Data
+
+Enchantments are stored per-item-instance, not per-item-template. When creating
+the duplicate in the treasure pool:
+- Copy enchantment IDs from original item
+- Apply to new item instance when spawned in chest
+- Enchantments persist through all future cycles
+
+### Edge Cases
+
+- **Gems/sockets:** Should also be preserved if present
+- **Durability:** Reset to max when entering pool? Or preserve wear?
+- **Random enchants (green items):** Preserve the specific roll
+- **Stacked items (potions, etc.):** Each stack vendored = one stack in pool
+
+### Economic Impact
+
+This creates a closed-loop economy for items:
+- Gold enters system only through vendoring original items
+- Items circulate forever through treasure chests
+- Enchanted items become valuable finds (0g cost, free enchant)
+- Encourages using items rather than vendoring for gold
+
+## Suggested Implementation Steps
+
+1. **Add pool-origin flag to item data**
+   - When item enters treasure pool, mark it: `item:SetData("from_pool", true)`
+   - Or use a separate tracking table keyed by item GUID
+
+2. **Hook sell event to check flag**
+   - In `PLAYER_EVENT_ON_SELL_ITEM` handler
+   - If `item:GetData("from_pool")` is true, override gold to 0
+   - Still allow the sale (item leaves inventory, enters pool)
+
+3. **Preserve enchantments when creating pool items**
+   - When vendored item enters pool, store enchant data
+   - When spawning from chest, apply stored enchants to new instance
+   - Use `item:GetEnchantmentId()` and `item:SetEnchantment()`
+
+4. **Handle re-entry to pool**
+   - Items already marked keep their mark
+   - Enchantments preserved through each cycle
+
+5. **Test scenarios**
+   - Vendor normal sword → get gold → chest sword sells for 0
+   - Vendor enchanted sword → chest sword has enchant, sells for 0
+   - Re-vendor chest sword → still 0, still has enchant
+   - Loot chest sword, enchant it, vendor → enchant preserved, 0 gold
+
+## Configuration
+
+```lua
+-- Flag key for pool-origin items
+TREASURE_POOL_FLAG = "from_treasure_pool"
+
+-- Whether to show tooltip indicator (optional)
+SHOW_POOL_INDICATOR = false
+```
+
+## Related Concepts
+
+- Concept 048: Treasure chest redistribution queue
+- Concept 089: Item enchantment handling
+- Concept 150: Sell item hook
+
+## Related Files
+
+- src/lua/treasure.lua - Pool management
+- src/lua/chest-vulnerability.lua - Chest interaction
+
+## Related Issues
+
+- Issue 148: treasure-chest-shared-loot
+- Issue 149: sold-items-to-treasure-pool
+- Issue 150: ale-sell-item-hook (required for sell interception)
+
+## Stats
+
+- **Phase:** 3
+- **Priority:** Medium (economic balance)
+- **Complexity:** Medium (item data tracking, enchant preservation)
+- **Dependencies:** Issue 150 (sell item hook)

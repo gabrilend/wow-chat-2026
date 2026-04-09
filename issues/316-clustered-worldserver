@@ -1,0 +1,570 @@
+# 316 - Clustered Worldserver Architecture
+
+Distribute AzerothCore worldserver across multiple machines. Each node handles
+a portion of the world, with coordination for cross-node interactions.
+
+## Current Behavior
+
+Single worldserver process handles everything:
+- All maps, zones, instances
+- All players, NPCs, creatures
+- All combat, spells, movement
+- All database operations
+- Single point of failure, single machine's resources
+
+## Intended Behavior
+
+Worldserver functionality distributed across a cluster:
+- Multiple nodes share the load
+- Nodes communicate for cross-boundary interactions
+- Failure of one node doesn't crash the world
+- Horizontal scaling: add nodes to handle more players
+
+## Component Analysis
+
+### What the Worldserver Does
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        WORLDSERVER                               │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
+│  │   Network    │  │    Maps      │  │   Database   │           │
+│  │   (packets)  │  │   (grids)    │  │   (MySQL)    │           │
+│  └──────────────┘  └──────────────┘  └──────────────┘           │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
+│  │   Players    │  │  Creatures   │  │   Combat     │           │
+│  │   (sessions) │  │  (AI/paths)  │  │   (spells)   │           │
+│  └──────────────┘  └──────────────┘  └──────────────┘           │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
+│  │   Guilds     │  │   Auction    │  │    Mail      │           │
+│  │   (global)   │  │   (global)   │  │   (global)   │           │
+│  └──────────────┘  └──────────────┘  └──────────────┘           │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
+│  │   Groups     │  │  Battlegrounds│ │  Instances   │           │
+│  │   (cross-zone)│ │  (isolated)  │  │  (isolated)  │           │
+│  └──────────────┘  └──────────────┘  └──────────────┘           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Distributable vs Centralized
+
+| Component | Distributable? | Notes |
+|-----------|---------------|-------|
+| Maps/Zones | YES | Natural partition boundary |
+| Instances | YES | Isolated, spawn on any node |
+| Battlegrounds | YES | Isolated, spawn on any node |
+| Player Sessions | YES | Follow player's current zone |
+| Creature AI | YES | Local to zone |
+| Combat/Spells | PARTIAL | Local when same-zone, complex when cross-zone |
+| Groups/Raids | PARTIAL | Members may span zones |
+| Guilds | CENTRALIZED | Global state, infrequent updates |
+| Auction House | CENTRALIZED | Global state, transactional |
+| Mail | CENTRALIZED | Global state, async delivery |
+| Chat Channels | PARTIAL | Some global, some zone-local |
+| Database | CENTRALIZED | Single source of truth |
+
+## Architecture Options
+
+### Option A: Zone-Based Sharding
+
+Each node owns specific zones. Players transfer between nodes when crossing zones.
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│     NODE A      │     │     NODE B      │     │     NODE C      │
+│                 │     │                 │     │                 │
+│  Eastern        │     │  Kalimdor       │     │  Northrend      │
+│  Kingdoms       │     │                 │     │                 │
+│                 │     │                 │     │                 │
+│  - Elwynn       │     │  - Durotar      │     │  - Borean       │
+│  - Westfall     │     │  - Barrens      │     │  - Howling      │
+│  - Redridge     │     │  - Ashenvale    │     │  - Dragonblight │
+│  - ...          │     │  - ...          │     │  - ...          │
+└────────┬────────┘     └────────┬────────┘     └────────┬────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    │     COORDINATOR         │
+                    │                         │
+                    │  - Player registry      │
+                    │  - Zone ownership       │
+                    │  - Cross-node routing   │
+                    │  - Global services      │
+                    └────────────┬────────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    │       DATABASE          │
+                    │                         │
+                    │  - Characters           │
+                    │  - Guilds               │
+                    │  - Auction              │
+                    └─────────────────────────┘
+```
+
+**Pros:**
+- Clear ownership boundaries
+- Minimal cross-node communication within a zone
+- Matches game's natural structure
+
+**Cons:**
+- Uneven load (popular zones vs empty zones)
+- Zone transitions require handoff
+- Some zones are much larger than others
+
+### Option B: Grid-Based Sharding
+
+Divide the world into a grid. Each node owns grid cells regardless of zone.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     WORLD MAP                            │
+│                                                          │
+│   ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐    │
+│   │  A  │  A  │  B  │  B  │  C  │  C  │  D  │  D  │    │
+│   ├─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤    │
+│   │  A  │  A  │  B  │  B  │  C  │  C  │  D  │  D  │    │
+│   ├─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤    │
+│   │  E  │  E  │  F  │  F  │  G  │  G  │  H  │  H  │    │
+│   ├─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤    │
+│   │  E  │  E  │  F  │  F  │  G  │  G  │  H  │  H  │    │
+│   └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘    │
+│                                                          │
+│   Letters = Node ownership                               │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Pros:**
+- More even distribution
+- Finer granularity for load balancing
+- Can dynamically reassign cells
+
+**Cons:**
+- Zone logic split across nodes
+- More frequent cross-node communication
+- Complex boundary handling
+
+### Option C: Player-Based Sharding
+
+Each node owns a set of players. The world is replicated, but each node only
+simulates entities relevant to its players.
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│     NODE A      │     │     NODE B      │     │     NODE C      │
+│                 │     │                 │     │                 │
+│  Players 1-1000 │     │  Players        │     │  Players        │
+│                 │     │  1001-2000      │     │  2001-3000      │
+│  Simulates:     │     │                 │     │                 │
+│  - Zones where  │     │  Simulates:     │     │  Simulates:     │
+│    players are  │     │  - Zones where  │     │  - Zones where  │
+│  - NPCs nearby  │     │    players are  │     │    players are  │
+└────────┬────────┘     └────────┬────────┘     └────────┬────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    │     STATE SYNC          │
+                    │                         │
+                    │  - Entity positions     │
+                    │  - Combat events        │
+                    │  - World changes        │
+                    └─────────────────────────┘
+```
+
+**Pros:**
+- Players never transfer between nodes
+- Natural load balancing (players per node)
+- No zone-based hotspots
+
+**Cons:**
+- High synchronization overhead
+- Duplicate simulation of shared areas
+- Conflict resolution complexity
+
+### Option D: Hybrid (Recommended)
+
+Combine zone-based ownership with centralized services and dynamic instance spawning.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         CLUSTER                                  │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                  COORDINATOR NODE                        │    │
+│  │                                                          │    │
+│  │  - Player registry (who is where)                       │    │
+│  │  - Zone ownership table                                 │    │
+│  │  - Cross-node message routing                           │    │
+│  │  - Global services (guild, auction, mail)               │    │
+│  │  - Load monitoring                                      │    │
+│  │  - Node health checks                                   │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                              │                                   │
+│         ┌────────────────────┼────────────────────┐             │
+│         │                    │                    │             │
+│  ┌──────┴──────┐     ┌──────┴──────┐     ┌──────┴──────┐       │
+│  │   ZONE NODE  │     │  ZONE NODE  │     │ INSTANCE    │       │
+│  │      A       │     │      B      │     │   POOL      │       │
+│  │              │     │              │     │             │       │
+│  │ - Elwynn     │     │ - Durotar    │     │ - Deadmines │       │
+│  │ - Westfall   │     │ - Barrens    │     │ - RFC       │       │
+│  │ - Stormwind  │     │ - Orgrimmar  │     │ - BGs       │       │
+│  │              │     │              │     │             │       │
+│  │ Players:     │     │ Players:     │     │ Players:    │       │
+│  │ - Sessions   │     │ - Sessions   │     │ - Sessions  │       │
+│  │ - Combat     │     │ - Combat     │     │ - Combat    │       │
+│  │ - Movement   │     │ - Movement   │     │ - Movement  │       │
+│  └──────────────┘     └──────────────┘     └──────────────┘       │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                    SHARED DATABASE                       │    │
+│  │                                                          │    │
+│  │  MySQL cluster or single high-availability instance      │    │
+│  └─────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Inter-Node Communication
+
+### Message Types
+
+| Message | From | To | Purpose |
+|---------|------|-----|---------|
+| PLAYER_TRANSFER | Zone A | Zone B | Player crossing zone boundary |
+| SPELL_EFFECT | Zone A | Zone B | Spell affecting player in other zone |
+| CHAT_MESSAGE | Zone A | Coordinator | Broadcast to channel |
+| GROUP_UPDATE | Zone A | Coordinator | Group member state change |
+| ENTITY_QUERY | Zone A | Zone B | Request entity state |
+| HEARTBEAT | All | Coordinator | Health check |
+
+### Protocol
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                    MESSAGE FORMAT                           │
+├────────────────────────────────────────────────────────────┤
+│  Header (16 bytes)                                         │
+│  ┌──────────┬──────────┬──────────┬──────────────────┐    │
+│  │ Magic(4) │ Type(2)  │ Len(4)   │ Sequence(4)      │    │
+│  │ "WCLR"   │ uint16   │ uint32   │ uint32           │    │
+│  └──────────┴──────────┴──────────┴──────────────────┘    │
+│                                                            │
+│  Body (variable)                                           │
+│  ┌────────────────────────────────────────────────────┐   │
+│  │ Payload (msgpack or protobuf)                      │   │
+│  └────────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Transport Options
+
+1. **TCP sockets** - Reliable, ordered, simple
+2. **ZeroMQ** - High performance, patterns (pub/sub, req/rep)
+3. **Redis pub/sub** - Easy setup, good enough for many cases
+4. **Custom UDP** - Lowest latency, requires reliability layer
+
+Recommendation: Start with **Redis pub/sub** for simplicity, migrate to ZeroMQ
+if latency becomes an issue.
+
+## Player Zone Transfer
+
+Most complex interaction. Player moves from Zone A (Node 1) to Zone B (Node 2).
+
+### Transfer Sequence
+
+```
+Player approaches zone boundary
+         │
+         ▼
+Node 1: Detect boundary crossing
+         │
+         ▼
+Node 1: Serialize player state
+        - Position, orientation
+        - Health, mana, buffs, debuffs
+        - Inventory (or reference)
+        - Combat state
+        - Group membership
+        - Active quests
+         │
+         ▼
+Node 1 → Coordinator: TRANSFER_REQUEST
+        {player_guid, from_zone, to_zone, state_blob}
+         │
+         ▼
+Coordinator: Route to Node 2
+         │
+         ▼
+Node 2: TRANSFER_INCOMING
+        - Deserialize player state
+        - Create session
+        - Spawn player in zone
+         │
+         ▼
+Node 2 → Coordinator: TRANSFER_ACK
+         │
+         ▼
+Coordinator → Node 1: TRANSFER_COMPLETE
+         │
+         ▼
+Node 1: Destroy old session
+        - Remove from zone
+        - Cleanup resources
+```
+
+### Edge Cases
+
+- **Player disconnects mid-transfer**: Coordinator tracks pending transfers,
+  times out after N seconds, rolls back to source zone
+- **Target node unavailable**: Coordinator rejects transfer, player bounces
+  back (invisible wall behavior)
+- **Combat during transfer**: Abort transfer, player stays in current zone
+- **Group member transfers**: Notify group via coordinator
+
+## Global Services
+
+Services that need world-wide consistency run on coordinator or dedicated nodes.
+
+### Guild Service
+
+```lua
+-- {{{ Guild operations (coordinator)
+-- All guild operations route through coordinator for consistency
+
+GuildService = {}
+
+function GuildService:getMember(guildId, playerGuid)
+    return db:query("SELECT * FROM guild_member WHERE guildId=? AND guid=?",
+                    guildId, playerGuid)
+end
+
+function GuildService:broadcast(guildId, messageType, payload)
+    -- Find all zones with guild members
+    local zones = self:getZonesWithMembers(guildId)
+
+    for _, zoneNode in ipairs(zones) do
+        coordinator:send(zoneNode, "GUILD_BROADCAST", {
+            guildId = guildId,
+            type = messageType,
+            payload = payload
+        })
+    end
+end
+-- }}}
+```
+
+### Auction House
+
+```lua
+-- {{{ Auction house (centralized)
+-- Single authority for auction state, prevents race conditions
+
+AuctionService = {}
+
+function AuctionService:placeBid(auctionId, playerGuid, amount)
+    -- Atomic operation
+    return db:transaction(function(tx)
+        local auction = tx:queryOne("SELECT * FROM auctionhouse WHERE id=? FOR UPDATE",
+                                     auctionId)
+
+        if auction.currentBid >= amount then
+            return false, "Bid too low"
+        end
+
+        tx:execute("UPDATE auctionhouse SET currentBid=?, bidder=? WHERE id=?",
+                   amount, playerGuid, auctionId)
+
+        -- Notify previous bidder (may be on different node)
+        if auction.bidder then
+            coordinator:notifyPlayer(auction.bidder, "OUTBID", { auctionId = auctionId })
+        end
+
+        return true
+    end)
+end
+-- }}}
+```
+
+## Implementation Approach
+
+### Phase 1: Coordinator Framework
+
+1. Create coordinator process
+   - Node registry (which nodes exist, their zones)
+   - Player registry (which player on which node)
+   - Message routing infrastructure
+   - Health monitoring
+
+2. Modify worldserver to connect to coordinator
+   - Register on startup
+   - Report owned zones
+   - Receive routed messages
+
+### Phase 2: Global Services Extraction
+
+3. Extract guild service to coordinator
+4. Extract auction service to coordinator
+5. Extract mail service to coordinator
+6. Extract global chat channels to coordinator
+
+### Phase 3: Zone Distribution
+
+7. Implement zone ownership configuration
+8. Implement player transfer protocol
+9. Implement cross-zone spell effects
+10. Implement cross-zone group updates
+
+### Phase 4: Instance Pool
+
+11. Create instance pool node type
+12. Implement instance creation/destruction
+13. Implement instance transfer (entering/leaving dungeon)
+14. Implement battleground spawning
+
+### Phase 5: Reliability
+
+15. Node failure detection
+16. Zone reassignment on failure
+17. Player recovery on node crash
+18. State persistence and recovery
+
+## Configuration
+
+### Coordinator Config
+
+```conf
+# coordinator.conf
+
+[cluster]
+name = ghostsong-cluster
+
+[nodes]
+# List of zone nodes
+node1.address = 192.168.1.10:9000
+node1.zones = elwynn,westfall,redridge,stormwind
+
+node2.address = 192.168.1.11:9000
+node2.zones = durotar,barrens,orgrimmar
+
+instance_pool.address = 192.168.1.12:9000
+instance_pool.type = instances
+
+[database]
+host = 192.168.1.100
+port = 3306
+user = acore
+password = ****
+
+[services]
+guild.enabled = true
+auction.enabled = true
+mail.enabled = true
+```
+
+### Zone Node Config
+
+```conf
+# worldserver.conf additions
+
+[cluster]
+enabled = true
+coordinator = 192.168.1.1:8000
+node_id = node1
+
+[zones]
+# Zones this node is responsible for
+owned = elwynn,westfall,redridge,stormwind
+```
+
+## Files to Modify
+
+### Core Changes
+
+- `src/server/worldserver/Main.cpp` - Add cluster mode startup
+- `src/server/worldserver/WorldThread.cpp` - Integrate coordinator communication
+- `src/server/game/World/World.cpp` - Zone ownership awareness
+- `src/server/game/Maps/MapManager.cpp` - Only load owned zones
+- `src/server/game/Entities/Player/Player.cpp` - Transfer protocol
+- `src/server/game/Guilds/Guild.cpp` - Route to coordinator
+- `src/server/game/AuctionHouse/*` - Route to coordinator
+
+### New Files
+
+- `src/server/coordinator/` - New coordinator process
+- `src/server/shared/Cluster/` - Shared cluster communication code
+- `src/server/game/Cluster/` - Game-side cluster integration
+
+## Proof of Concept Scope
+
+For initial POC, implement:
+
+1. **Coordinator** with node registry
+2. **Two zone nodes** (Alliance zones, Horde zones)
+3. **Basic player transfer** between zones
+4. **Guild chat routing** through coordinator
+
+Skip for POC:
+- Instance pool
+- Auction house distribution
+- Combat across zone boundaries
+- Failure recovery
+
+## Performance Considerations
+
+### Latency Budget
+
+```
+Player action → Response should be < 100ms
+
+Breakdown:
+- Client → Server: 20-50ms (network)
+- Server processing: 10-20ms
+- Cross-node (if needed): 5-10ms (LAN)
+- Server → Client: 20-50ms (network)
+
+Cross-node adds ~10ms, acceptable for most operations
+```
+
+### Bandwidth
+
+```
+Inter-node traffic estimate:
+- Player positions: ~50 bytes/update × 1000 players × 20 updates/sec = 1 MB/s
+- Combat events: ~200 bytes/event × 500 events/sec = 100 KB/s
+- Transfers: ~10 KB/transfer × 10 transfers/sec = 100 KB/s
+
+Total: ~1.5 MB/s between nodes (manageable on gigabit LAN)
+```
+
+## Related Research
+
+- **EVE Online**: Single-shard universe using "time dilation" for large battles
+- **WoW Retail**: Cross-realm zones, phasing (different approach)
+- **Spatial OS**: Commercial distributed game server platform
+- **Agones**: Kubernetes-based game server hosting
+
+## Open Questions
+
+1. **Database scaling**: Single MySQL vs cluster vs sharding?
+2. **Combat across boundaries**: Allow or prevent?
+3. **State serialization format**: Protobuf vs msgpack vs custom?
+4. **Coordinator HA**: Single coordinator or clustered coordinators?
+5. **Instance affinity**: Spawn instances on least-loaded node?
+
+## Related Documents
+
+- AzerothCore source: `src/server/worldserver/`
+- Map/Grid system: `src/server/game/Maps/`
+- Player class: `src/server/game/Entities/Player/`
+
+## Stats
+
+- **Phase:** 4 (infrastructure)
+- **Priority:** Low (research/future)
+- **Complexity:** Very High (architectural change)
+- **Dependencies:** Deep understanding of worldserver internals

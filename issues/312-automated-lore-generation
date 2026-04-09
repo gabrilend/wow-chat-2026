@@ -1,0 +1,303 @@
+# 312 - Automated Lore Generation
+
+Design a story/lore generation system using Ollama that produces usable content
+without requiring human curation passes.
+
+## Current Behavior
+
+No automated content generation exists. All NPC dialogue and lore would need to
+be manually written or manually curated after generation.
+
+## Intended Behavior
+
+A generation pipeline that:
+1. Takes world context, themes, and constraints as input
+2. Produces shepherd stories, narrator content, and rumors
+3. Outputs content that meets quality standards automatically
+4. Requires no human review before deployment
+
+## Open Questions
+
+### Quality Control
+
+- How do we define "good enough" for generated content?
+- What metrics can we measure automatically?
+  - Sentence length distribution?
+  - Vocabulary complexity?
+  - Theme adherence scoring?
+- Can we use a second LLM pass to evaluate quality?
+  - "Rate this story 1-10 for fantasy appropriateness"
+  - Reject below threshold, regenerate
+  - Is this reliable enough?
+- Should we use multiple generation attempts and pick best?
+  - How do we define "best" programmatically?
+
+### Tone Consistency
+
+- How do we ensure all generated content feels like the same world?
+- Do we need example stories in the prompt (few-shot)?
+  - How many examples?
+  - What makes a good example?
+- Should we fine-tune a model on our preferred style?
+  - Is this overkill for this use case?
+  - What training data would we use?
+- Can we use a "tone checker" prompt to verify consistency?
+
+### Content Safety
+
+- How do we prevent inappropriate content generation?
+- Ollama models vary in their safety training
+  - Which models are appropriate?
+  - Do we need content filtering?
+- Should generated content be scanned for:
+  - Modern anachronisms?
+  - Real-world references?
+  - Inappropriate themes?
+- What's the failure mode if bad content slips through?
+  - Players see it once, then it rotates out?
+  - Is that acceptable?
+
+### Keyword Extraction
+
+- Shepherds need keywords for the 20% match trigger
+- Can we reliably extract meaningful keywords from generated text?
+- Should the generator output keywords alongside the story?
+  - "Generate a story and list 5-10 key terms"
+- How do we weight keywords for matching?
+  - All equal?
+  - Nouns more important than adjectives?
+
+### Thematic Constraints
+
+- What themes should shepherd stories include?
+  - Immortality and ascension
+  - Trials and perseverance
+  - The nature of "solid sound"
+  - Ancient times before the server
+- How do we encode these requirements in prompts?
+- Should stories reference each other?
+  - Shared characters across shepherds?
+  - Connected lore threads?
+  - How do we track cross-references in generation?
+
+### Rumor vs Story
+
+- Shepherds tell "stories" (their lore) and "rumors" (telephone game)
+- Are these generated differently?
+- Rumors are player-seeded, but shepherds also seed rumors to narrators
+  - What do shepherds seed when there's no player activity?
+  - Pre-generated "world rumors"?
+  - Events that "happened long ago"?
+
+### Generation Frequency
+
+- When do we generate new content?
+  - On server startup?
+  - On a schedule (daily/weekly)?
+  - On demand when content pool runs low?
+- How much content do we pre-generate?
+  - 10 stories? 100? 1000?
+- Do stories ever repeat, or always fresh?
+  - If a shepherd tells their story, is it gone forever?
+  - Or can it cycle back after enough time?
+
+### Ollama Integration
+
+- Which model works best for fantasy lore?
+  - llama3? mistral? mixtral?
+  - Smaller = faster, larger = better quality?
+- What's the performance impact of generation?
+  - Generate async in background?
+  - Pre-generate pools during low activity?
+- How do we handle Ollama being unavailable?
+  - Fallback to static content?
+  - Skip generation, use existing pool?
+
+### Prompt Engineering
+
+- What's the optimal prompt structure?
+- Do we need:
+  - System prompt with world context?
+  - Character card for each shepherd?
+  - Style guide embedded in prompt?
+- How long can prompts be before quality degrades?
+- Should prompts include negative examples?
+  - "Don't mention technology, cars, phones..."
+
+### Validation Pipeline
+
+- What checks run on generated content?
+  - Length bounds (min/max sentences)?
+  - Required keyword presence?
+  - Forbidden word list?
+  - Grammar/coherence check?
+- What happens when validation fails?
+  - Regenerate with same prompt?
+  - Regenerate with modified prompt?
+  - Log and skip?
+- How many retries before giving up?
+
+### Storage and Rotation
+
+- Where is generated content stored?
+  - Database?
+  - Files?
+  - Memory only?
+- How do we track which content has been used?
+- True name rotation (issue 311) ties to story rotation
+  - New true name = new story?
+  - Or true name and story independent?
+
+### Testing
+
+- How do we test generation quality at scale?
+- Can we generate 100 stories and manually review once?
+  - Then trust the pipeline going forward?
+- Should we log all generated content for post-hoc review?
+- A/B testing: generated vs hand-written, measure player engagement?
+
+## Design Considerations
+
+### Pipeline Architecture
+
+```
+[World Context] + [Shepherd Identity] + [Theme Requirements]
+                           |
+                           v
+                   [Ollama Generation]
+                           |
+                           v
+                 [Validation Checks]
+                    |           |
+                  pass        fail
+                    |           |
+                    v           v
+              [Content Pool]  [Retry/Log]
+```
+
+### Possible Validation Checks
+
+```lua
+function validateStory(story)
+    -- Length check
+    if #story < 100 or #story > 2000 then return false end
+
+    -- Sentence count
+    local sentences = countSentences(story)
+    if sentences < 3 or sentences > 20 then return false end
+
+    -- Forbidden words
+    for _, word in ipairs(FORBIDDEN_WORDS) do
+        if story:lower():find(word) then return false end
+    end
+
+    -- Required theme presence (at least one)
+    local hasTheme = false
+    for _, theme in ipairs(REQUIRED_THEMES) do
+        if story:lower():find(theme) then hasTheme = true; break end
+    end
+    if not hasTheme then return false end
+
+    return true
+end
+```
+
+### Self-Evaluation Prompt (speculative)
+
+```
+You are a fantasy lore critic. Rate this story 1-10:
+- 1-3: Inappropriate, anachronistic, or incoherent
+- 4-6: Acceptable but bland or off-tone
+- 7-10: Good fantasy lore, appropriate for a mystical shepherd
+
+Story: {generated_story}
+
+Respond with only a number.
+```
+
+Then reject anything below 7? Below 5? Unknown.
+
+## Suggested Implementation Steps
+
+1. **Research Ollama models**
+   - Test different models for fantasy generation quality
+   - Benchmark generation speed vs quality tradeoff
+   - Document findings
+
+2. **Design prompt templates**
+   - World context section
+   - Shepherd identity section
+   - Theme requirements section
+   - Output format specification
+
+3. **Implement basic generation**
+   - Ollama API integration
+   - Single story generation
+   - Raw output capture
+
+4. **Add validation layer**
+   - Length checks
+   - Forbidden word filter
+   - Theme presence check
+   - Retry logic
+
+5. **Experiment with self-evaluation**
+   - Implement rating prompt
+   - Test reliability of self-rating
+   - Determine if useful or not
+
+6. **Build content pool management**
+   - Storage mechanism
+   - Usage tracking
+   - Rotation logic
+
+7. **Integrate with shepherd system**
+   - Pull stories from pool
+   - Extract keywords
+   - Tie to true name rotation
+
+8. **Load testing**
+   - Generate 100+ stories
+   - Review quality distribution
+   - Tune validation thresholds
+
+9. **Document findings**
+   - What works, what doesn't
+   - Recommended configuration
+   - Known failure modes
+
+## Configuration (speculative)
+
+```lua
+-- Generation
+OLLAMA_MODEL            = "llama3"
+OLLAMA_ENDPOINT         = "http://localhost:11434"
+GENERATION_TIMEOUT      = 30000  -- ms
+MAX_RETRIES             = 3
+
+-- Validation
+MIN_STORY_LENGTH        = 100   -- characters
+MAX_STORY_LENGTH        = 2000
+MIN_SENTENCES           = 3
+MAX_SENTENCES           = 20
+SELF_EVAL_THRESHOLD     = 6     -- minimum rating to accept
+
+-- Pool
+POOL_MIN_SIZE           = 20    -- regenerate when below this
+POOL_TARGET_SIZE        = 50    -- generate up to this
+GENERATION_BATCH_SIZE   = 5     -- stories per generation run
+```
+
+## Related Issues
+
+- Issue 308: gutenberg-text-library (similar content pipeline)
+- Issue 310: wandering-narrator-system (consumes rumors)
+- Issue 311: shepherd-flock-system (**BLOCKED BY THIS ISSUE**)
+
+## Stats
+
+- **Phase:** 3
+- **Priority:** High (blocks 311)
+- **Complexity:** Unknown (research required)
+- **Dependencies:** Ollama installation, model selection
+

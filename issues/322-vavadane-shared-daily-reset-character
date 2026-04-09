@@ -1,0 +1,101 @@
+# 322: Vavadane - Shared Daily Reset Character
+
+## Status
+- [x] Open
+- [ ] In Progress
+- [ ] Completed
+
+## Current Behavior
+
+No shared public character exists. Each player has their own private characters.
+
+## Intended Behavior
+
+A level 20 character named **vavadane** that:
+
+1. **Shared access** - Anyone can log in and play as her
+2. **Daily reset** - All progress resets at server midnight (or on first login of day)
+3. **Deterministic equipment** - Outfit derived from account credentials, same every reset
+4. **Display name masking** - Internal name `vavadane1234` (or similar), displays as `vavadane` to all players
+
+### Equipment Selection Algorithm
+
+For each equipment slot:
+1. Gather all equippable items for that slot (level ≤20, class-appropriate)
+2. Generate embedding vector for each item name
+3. Generate embedding vector from account username + password hash
+4. Select item with highest cosine similarity to credential embedding
+5. Equip that item
+
+This creates a "signature outfit" unique to the account credentials but deterministic across resets.
+
+### Reset Behavior
+
+On daily reset (or first login after midnight):
+- Position → starting zone or designated "vavadane home"
+- Level → 20
+- Equipment → recalculated from embedding algorithm
+- Inventory → cleared (or reset to starting items)
+- Talents → cleared or preset build
+- Gold → fixed amount (e.g., 1g)
+- Quest progress → cleared
+- Reputation → default
+- Skills → appropriate for level 20
+
+### Display Name Masking
+
+Challenge: WoW client shows character name from database.
+
+Possible approaches:
+1. **Addon-based** - AIO addon intercepts name display, shows "vavadane"
+2. **Database trigger** - On login, temporarily rename character (fragile)
+3. **Server packet modification** - Intercept SMSG_NAME_QUERY_RESPONSE (C++ patch)
+4. **Accept visible suffix** - Just name her "vavadane" and accept uniqueness constraints
+
+Research needed on which approach is feasible with AzerothCore.
+
+### Account Setup
+
+- Account: `vavadane` / `vavadane` (or similar public credentials)
+- Posted on server connection guide for anyone to use
+- Single character slot used
+
+## Suggested Implementation Steps
+
+1. Create account and character manually for testing
+2. Implement daily reset Lua script:
+   - Hook `PLAYER_EVENT_ON_LOGIN`
+   - Check if character is vavadane
+   - Check if last reset was before today
+   - If so, execute reset procedure
+3. Create embedding-based equipment selector:
+   - Query item_template for slot-appropriate items
+   - Generate embeddings (external service or precomputed)
+   - Store selected item IDs in config
+4. Implement reset procedure:
+   - Teleport to home location
+   - Clear inventory
+   - Equip predetermined items
+   - Reset currencies, rep, quests
+5. Research display name masking options
+6. Document public access in connection guide
+
+## Related Concepts
+
+- 451: Procedural identity (embedding-driven selection)
+- 089: Daily reset mechanics
+- 127: Shared world state
+
+## Questions to Resolve
+
+1. Should talents be preset or cleared?
+2. Should she have playerbots available?
+3. What happens if someone is playing when reset triggers?
+4. Should other players see her online status?
+5. Can multiple people be logged in simultaneously? (Probably not - WoW limitation)
+
+## Philosophy
+
+Vavadane represents the **ephemeral adventurer** - progress is temporary, identity is shared. She exists as a way to experience the world without attachment to permanence. Anyone can be vavadane for a day.
+
+The embedding-derived equipment makes her outfit feel "fated" rather than random - the same credentials always produce the same signature look, as if her appearance is written into the nature of who she is.

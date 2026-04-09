@@ -1,0 +1,288 @@
+# 308 - Gutenberg Text Library
+
+Scraper and parser for Project Gutenberg texts, providing sentence-by-sentence
+content for the narrator NPC system.
+
+## Current Behavior
+
+No text content system exists. Narrator NPCs have no source material to read
+from.
+
+## Intended Behavior
+
+A utility library that:
+1. Downloads public domain texts from Project Gutenberg
+2. Parses them into individual sentences
+3. Stores sentences in a format narrators can read sequentially
+4. Provides API for narrator system to fetch next sentence
+
+### Sentence Splitting
+
+Split on **periods, not commas**:
+- "Hello, world. How are you?" → ["Hello, world.", "How are you?"]
+- Preserve commas within sentences for natural pacing
+- Handle abbreviations (Mr., Mrs., Dr., etc.) without false splits
+- Handle ellipsis (...) and other edge cases
+
+### Storage Format
+
+Simple line-oriented text files, one sentence per line:
+
+```
+texts/
+  alice-in-wonderland/
+    metadata.txt       # title, author, gutenberg ID
+    sentences.txt      # one sentence per line
+  pride-and-prejudice/
+    metadata.txt
+    sentences.txt
+  ...
+```
+
+### Narrator Integration
+
+Narrators read sequentially with persistent position:
+- Each narrator **spawn instance** tracks current book + sentence index
+- Position is per-instance, NOT per-NPC-type
+
+**Why per-instance:**
+The same NPC (e.g., "Storyteller McGee") can spawn for multiple players across
+the world simultaneously. Each spawn is independent:
+- Player A in Elwynn meets McGee reading Snow White at sentence 47
+- Player B in Northrend meets McGee reading Treasure Island at sentence 203
+- Player A's McGee gets interrupted → switches to rumors mode
+- Player B's McGee keeps reading unaffected
+- When Player A's McGee resumes, it picks up at sentence 47, not wherever B is
+
+**Instance identification:**
+- Use creature spawn GUID as instance key (unique per spawn)
+- When creature despawns, state is cleared
+- If same player re-encounters narrator, fresh instance = fresh position
+
+**API:**
+- `Library.getNextSentence(instanceId)` returns next sentence, advances position
+- `Library.getCurrentBook(instanceId)` returns metadata
+- `Library.getMode(instanceId)` returns STORY or RUMORS
+- `Library.setMode(instanceId, mode)` switches mode without losing position
+
+**Note:** Rumors are shared across instances (telephone game), but story position
+is strictly per-instance. See narrator system issue for rumor mechanics.
+
+### rmail Distribution
+
+Narrator speech can be forwarded to rmail, but **only what you heard in person**:
+- Player must be within ~20-30 yards of narrator to receive their speech
+- What the narrator says while you're nearby gets recorded
+- That recorded content is forwarded to your rmail inbox
+- Optional TTS integration: generate mp3 with narrator's speaking rhythm
+  - Long sentences = more audio time
+  - Commas add pauses
+  - Timestamps sync to when each sentence was spoken in-game
+
+This is NOT remote listening - you must physically be near the narrator in-game.
+The rmail forwarding just gives you a permanent copy of what you already heard,
+so you can review it later or share it with others.
+
+See issue 306 (rmail-ingame-bridge) for rmail integration patterns.
+
+## Design Considerations
+
+### Gutenberg Access
+
+Project Gutenberg provides:
+- Plain text files at `https://www.gutenberg.org/cache/epub/{id}/pg{id}.txt`
+- No API key required for reasonable access
+- Respect robots.txt and rate limits
+
+### Text Cleaning
+
+Raw Gutenberg files include:
+- Header/footer boilerplate (license, transcriber notes)
+- Chapter headings, table of contents
+- Illustrations markers `[Illustration: ...]`
+
+Cleaning steps:
+1. Strip header (everything before "*** START OF")
+2. Strip footer (everything after "*** END OF")
+3. Remove `[Illustration]` markers
+4. Normalize whitespace
+5. Split into sentences
+
+### Curated vs Automatic
+
+Two approaches:
+- **Curated list**: Hand-pick books appropriate for fantasy setting
+- **Automatic**: Download anything, let narrators read whatever
+
+Recommendation: Start with curated list of ~20-50 books:
+- Fantasy/fairy tales (Brothers Grimm, Hans Christian Andersen)
+- Adventure (Treasure Island, Robinson Crusoe)
+- Mythology (Bulfinch's Mythology, Greek myths)
+- Philosophy (Marcus Aurelius, Epictetus)
+- Poetry (collected works)
+
+### Multiple Instances, Same NPC Type
+
+Each spawn instance is fully independent:
+- Same NPC type can spawn multiple times across the world
+- Each instance has its own: book, position, mode (story/rumors)
+- No synchronization of story position between instances
+- Interrupting one instance doesn't affect others
+- Advancing one instance doesn't skip content for others
+
+**Exception:** Rumors propagate across instances (that's the telephone game mechanic).
+Story content does not.
+
+### Book Rotation
+
+When narrator finishes a book:
+- Option A: Start next book in library
+- Option B: Random book selection
+- Option C: Repeat same book from beginning
+
+Recommendation: Option B (random) for variety
+
+## Suggested Implementation Steps
+
+1. **Create scraper script**
+   ```lua
+   -- scripts/gutenberg-scraper.lua
+   -- Usage: lua gutenberg-scraper.lua <gutenberg-id> <output-dir>
+   ```
+   - Download raw text from Gutenberg
+   - Strip header/footer
+   - Clean text
+   - Split into sentences
+   - Write to output directory
+
+2. **Implement sentence splitter**
+   ```lua
+   function Library.splitIntoSentences(text)
+       -- Split on . ! ? while handling abbreviations
+       -- Return array of sentences
+   end
+   ```
+
+3. **Create curated book list**
+   ```lua
+   -- data/gutenberg-books.lua
+   GUTENBERG_BOOKS = {
+       { id = 11,    title = "Alice's Adventures in Wonderland" },
+       { id = 1342,  title = "Pride and Prejudice" },
+       { id = 84,    title = "Frankenstein" },
+       { id = 1661,  title = "Sherlock Holmes" },
+       -- ...
+   }
+   ```
+
+4. **Build initial library**
+   - Run scraper on all curated books
+   - Store in `data/texts/` directory
+   - Verify sentence counts and quality
+
+5. **Implement library API**
+   ```lua
+   -- src/lua/library.lua
+   Library = {}
+   Library.instances = {}  -- keyed by spawn GUID
+
+   function Library.getNextSentence(instanceId)
+   function Library.getCurrentBook(instanceId)
+   function Library.setBook(instanceId, bookId)
+   function Library.getPosition(instanceId)
+   function Library.setPosition(instanceId, index)
+   function Library.getMode(instanceId)       -- STORY or RUMORS
+   function Library.setMode(instanceId, mode) -- switch without losing position
+   function Library.clearInstance(instanceId) -- called on despawn
+   ```
+
+6. **Add instance state management**
+   - Track state in memory keyed by creature spawn GUID
+   - On narrator spawn: initialize fresh state (random book, position 0)
+   - On narrator despawn: clear state
+   - No cross-server persistence needed (instances are ephemeral)
+
+7. **Test scenarios**
+   - Scrape a book, verify sentence split quality
+   - Narrator reads through book, position advances
+   - Narrator finishes book, moves to random next book
+   - **Multi-instance:** Two players meet same NPC type
+     - Each instance has independent book/position
+     - Interrupting instance A doesn't affect instance B
+     - Advancing instance B doesn't skip content for instance A
+   - **Mode switching:** Instance switches to rumors, position preserved
+     - Resume story later at same sentence
+
+## Configuration
+
+```lua
+-- Library configuration
+GUTENBERG_BASE_URL = "https://www.gutenberg.org/cache/epub/"
+LIBRARY_DATA_DIR   = "data/texts/"
+POSITION_FILE      = "data/narrator-positions.txt"
+
+-- Sentence splitter
+ABBREVIATIONS = { "Mr", "Mrs", "Ms", "Dr", "Prof", "Sr", "Jr", "vs", "etc", "i.e", "e.g" }
+```
+
+## Example Curated Books
+
+| ID | Title | Genre |
+|----|-------|-------|
+| 11 | Alice's Adventures in Wonderland | Fantasy |
+| 17 | Peter Pan | Fantasy |
+| 84 | Frankenstein | Gothic |
+| 174 | The Picture of Dorian Gray | Gothic |
+| 244 | A Study in Scarlet | Mystery |
+| 1184 | The Count of Monte Cristo | Adventure |
+| 1232 | The Prince | Philosophy |
+| 1342 | Pride and Prejudice | Romance |
+| 1661 | Adventures of Sherlock Holmes | Mystery |
+| 2701 | Moby Dick | Adventure |
+| 4300 | Ulysses | Literary |
+| 5200 | Metamorphosis | Literary |
+| 16328 | Beowulf | Epic |
+| 28054 | Brothers Grimm Fairy Tales | Fairy Tale |
+| 30254 | Greek Myths | Mythology |
+
+## File Structure
+
+```
+data/
+  texts/
+    11-alice-in-wonderland/
+      metadata.txt
+      sentences.txt
+    84-frankenstein/
+      metadata.txt
+      sentences.txt
+  gutenberg-books.lua      # curated book list
+  narrator-positions.txt   # position tracking
+
+scripts/
+  gutenberg-scraper.lua    # download and parse tool
+
+src/lua/
+  library.lua              # runtime API for narrators
+```
+
+## Related Concepts
+
+- Concept 119: Narrator NPC system
+- Concept 267: External data integration
+
+## Related Files
+
+- src/lua/travel.lua - Narrator NPC system (future)
+
+## Related Issues
+
+- Narrator/Storyteller system (not yet filed)
+- Issue 307: narrator-audience-facing
+
+## Stats
+
+- **Phase:** 3
+- **Priority:** Medium (enables narrator content)
+- **Complexity:** Medium (scraping, parsing, persistence)
+- **Dependencies:** None (standalone utility)

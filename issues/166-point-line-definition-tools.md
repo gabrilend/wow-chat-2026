@@ -274,6 +274,88 @@ Spawn visualization NPCs for all stored points when server starts.
 8. `#chain end` - Finish chain
 9. `#chain show 1` - Verify chain visualization
 
+## Waypoint Direction Lookup API
+
+Once chains are defined, bots need to traverse them. Core function:
+
+```lua
+-- {{{ PointTools.getNextWaypoint
+-- Given a waypoint and direction, return the next waypoint in the chain
+-- direction: 1 = forward along chain, -1 = backward
+-- Returns next waypoint table {x, y, z, name} or nil if at end
+function PointTools.getNextWaypoint(chainId, currentOrder, direction)
+    direction = direction or 1
+    local nextOrder = currentOrder + direction
+
+    local query = CharDBQuery(string.format(
+        "SELECT x, y, z, p.name FROM custom_defined_points p " ..
+        "WHERE chain_id = %d AND chain_order = %d",
+        chainId, nextOrder
+    ))
+
+    if query then
+        return {
+            x = query:GetFloat(0),
+            y = query:GetFloat(1),
+            z = query:GetFloat(2),
+            name = query:GetString(3),
+            order = nextOrder
+        }
+    end
+
+    return nil  -- End of chain
+end
+-- }}}
+
+-- {{{ PointTools.findNearestChainPoint
+-- Find the closest point on any chain of given category
+-- Returns chainId, order, distance, and point data
+function PointTools.findNearestChainPoint(x, y, mapId, category)
+    local query = CharDBQuery(string.format(
+        "SELECT chain_id, chain_order, x, y, z, name, " ..
+        "SQRT(POW(x - %.2f, 2) + POW(y - %.2f, 2)) as dist " ..
+        "FROM custom_defined_points " ..
+        "WHERE map_id = %d AND category = '%s' AND chain_id IS NOT NULL " ..
+        "ORDER BY dist LIMIT 1",
+        x, y, mapId, category
+    ))
+
+    if query then
+        return {
+            chainId = query:GetUInt32(0),
+            order = query:GetUInt32(1),
+            x = query:GetFloat(2),
+            y = query:GetFloat(3),
+            z = query:GetFloat(4),
+            name = query:GetString(5),
+            distance = query:GetFloat(6)
+        }
+    end
+
+    return nil
+end
+-- }}}
+```
+
+### Usage: Bot Following a Road
+```lua
+-- Bot finds nearest road point, then walks the chain
+local nearest = PointTools.findNearestChainPoint(botX, botY, mapId, "road")
+if nearest and nearest.distance < 50 then
+    -- On or near a road - follow it
+    local direction = math.random() < 0.5 and 1 or -1  -- Random direction
+    bot:SetData("road_chain", nearest.chainId)
+    bot:SetData("road_order", nearest.order)
+    bot:SetData("road_direction", direction)
+
+    -- Get next waypoint
+    local next = PointTools.getNextWaypoint(nearest.chainId, nearest.order, direction)
+    if next then
+        bot:MoveTo(0, next.x, next.y, next.z, false)
+    end
+end
+```
+
 ## Future Use Cases
 - **Road paths**: Traveller NPCs follow defined roads instead of random wandering
 - **Coastlines**: Bots avoid crossing into water at defined coastal boundaries

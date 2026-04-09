@@ -1,0 +1,624 @@
+# 310 - Wandering Narrator System
+
+Core system for storytelling NPCs that wander the world, read literature,
+share rumors, and create emergent social gameplay through the telephone game.
+
+## Current Behavior
+
+No narrator NPCs exist. Travelers wander but don't interact socially beyond
+basic movement behaviors.
+
+## Intended Behavior
+
+### Core Identity
+
+Wandering narrators are **playerbots** that:
+- Wander like any other traveler (walking speed)
+- Stop moving when a player/bot sits within 5 yards
+- Read sentences from Project Gutenberg library (issue 308)
+- Share and propagate rumors through PM interactions
+- Can be followed by players (playerbot functionality)
+
+### Reading Behavior
+
+When narrating stories:
+- Read **one sentence at a time** in /say chat
+- Split on periods, not commas (see issue 308)
+- Sometimes read from a book (animation), sometimes recite from memory
+- Continue through book sequentially per-instance (issue 308)
+
+### Rumor Mechanics
+
+Players can PM narrators to share information:
+- Narrator stores received rumors with associated keywords
+- When other players talk in /say nearby, narrator pattern-matches
+- If player says something related to a stored rumor:
+  - "Abandoned farm, you say? I heard someone abandoned a farm recently..."
+  - Narrator shares the relevant rumor
+- **Rumors only told once** - then forgotten
+- Creates telephone game: rumors propagate across the world through narrator network
+
+### Keyword Matching
+
+Narrators use association-based matching:
+- When receiving a PM, extract keywords and associations
+- "Cars and picnic blankets" → associate these terms
+- Later, if player mentions "picnic", narrator recognizes match
+- Shares more of the rumor as player guesses related words
+- Like riddles or ancient mysteries to uncover
+
+### Multi-Instance Sharing
+
+Same NPC type spawns across the world:
+- Each instance has independent story position (issue 308)
+- **Rumors ARE shared** across instances (telephone game)
+- Player A tells rumor to McGee in Elwynn
+- Player B might hear it from McGee in Northrend
+
+### Interruption Behavior
+
+If players keep talking over the narrator in /say:
+- Narrator stops the story
+- Switches to rumor mode instead
+- Resumes story when interruptions cease
+
+### Movement Behaviors
+
+Narrators have several pacing patterns:
+
+**1. Orbit Behavior**
+- When seated audience detected, orbit at 5 yard range
+- If would step into range of another person, orbit them instead
+- Creates natural "circling the group" movement
+
+**2. Midpoint Walk**
+- Pick two seated players within ~10 yards
+- Walk through midpoint between them
+- Perpendicular to the line connecting them (if clear)
+- Only if space allows
+
+**3. Point-to-Point Pace**
+- Walk from A to B with stops: 2 steps, stop, 2 steps, stop
+- Spin around, say something, ponder
+- Turn and continue
+- At end, spin the long way, walk back
+
+**4. S-Curve Pace**
+- Point-to-point with S-curve path
+- One period every 5 yards (lazily evaluated)
+- Full walking pace
+- At least 4 S-curves per selection
+
+**5. Sleep Mode**
+- Sometimes say "I want to take a break, watch over me?"
+- **Spawn a cozy campfire** at current position
+- Sit by fire, then lay down to sleep for ~30 minutes
+- Ignore all PMs, forget rumors heard
+- Reset interaction state
+- Fire despawns when narrator wakes and resumes wandering
+
+### Rate Limiting
+
+- Maximum 1 PM processed per second per narrator instance
+- Extra PMs for that narrator are dropped
+- Only first registered PM counts
+
+### TTS Integration (via rmail)
+
+Players can subscribe to narrators through rmail:
+- Send subscription request to narrator's rmail address
+- Receive everything narrator says while you're within ~20-30 yards
+- Speech recorded and forwarded to your rmail inbox
+- Optional TTS: generate mp3 with narrator's speaking rhythm
+  - Long sentences = more audio time
+  - Commas add pauses
+  - Timestamps sync to in-game speech timing
+
+**Service Address:** `wow.ritzmenardi.com/narrator`
+
+**Port:** `4862`
+
+**Contact Entry (User Side):**
+```
+wow.ritzmenardi.com/narrator.ip    = wow.ritzmenardi.com
+wow.ritzmenardi.com/narrator.port  = 4862
+wow.ritzmenardi.com/narrator.token = "your-narrator-token"
+```
+
+**Subscribe Message:**
+```
+to: wow.ritzmenardi.com/narrator
+subject: subscribe
+
+NarratorName
+```
+
+**Subscribe with TTS:**
+```
+to: wow.ritzmenardi.com/narrator
+subject: subscribe tts
+
+NarratorName
+```
+
+See `docs/rmail-integration.md` for full setup instructions.
+
+See also issues 306 (rmail bridge) and 308 (Gutenberg library) for integration.
+
+## Hook Architecture
+
+The narrator subscription system requires:
+- **Inbound**: rmail subscribe/unsubscribe requests
+- **Outbound**: Narrator speech forwarded to subscribers
+- **TTS Generation**: Optional audio generation daemon
+
+### Inbound Hook: narrator-subscribe.lua
+
+Triggered when player sends rmail to `wow.ritzmenardi.com/narrator`:
+
+```lua
+#!/usr/bin/env lua
+-- {{{ narrator-subscribe.lua
+-- on_receive hook for narrator subscription management
+
+local sender   = arg[1]
+local subject  = arg[2]
+local filepath = arg[3]
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local NARRATOR_DIR = DIR .. "/game-mail/narrator"
+local SUBSCRIPTIONS_FILE = NARRATOR_DIR .. "/subscriptions.txt"
+
+-- Read message body
+local f = io.open(filepath, "r")
+if not f then os.exit(1) end
+local content = f:read("*a")
+f:close()
+
+-- Parse body (after headers)
+local body = content:match("\n\n(.+)$") or ""
+local narratorName = body:match("^%s*(.-)%s*$")
+
+-- Parse subject for options
+local subjectLower = (subject or ""):lower()
+local wantsTTS = subjectLower:match("tts") ~= nil
+local isUnsubscribe = subjectLower:match("unsubscribe") ~= nil
+
+if not narratorName or #narratorName == 0 then
+    sendError(sender, "No narrator name provided")
+    os.exit(0)
+end
+
+if isUnsubscribe then
+    removeSubscription(sender, narratorName)
+    sendConfirmation(sender, "Unsubscribed from narrator: " .. narratorName)
+else
+    addSubscription(sender, narratorName, wantsTTS)
+    local ttsNote = wantsTTS and " (with TTS)" or ""
+    sendConfirmation(sender, "Subscribed to narrator: " .. narratorName .. ttsNote)
+end
+-- }}}
+```
+
+### Subscription Storage
+
+```
+# subscriptions.txt
+# Format: rmail_contact:narrator_name:tts_flag
+alice:McGee:0
+alice:Storyteller:1
+bob:McGee:1
+```
+
+### Outbound: on_send Hook Architecture
+
+Instead of a polling daemon, use rmail's `on_send` hook. This hook fires only when
+a message is successfully delivered. If the subscriber is offline, speech queues
+naturally until they come online.
+
+**Key insight:** When one message sends, check if there are more queued.
+
+### Queue Storage
+
+Narrator speech pending delivery:
+
+```
+# .pending-speech.txt
+# Format: id:subscriber:narrator:text:timestamp:wants_tts
+1:alice:McGee:Once upon a time...:1712345678:1
+2:alice:McGee:There was a dragon.:1712345680:1
+3:bob:McGee:Once upon a time...:1712345678:0
+```
+
+### ALE Integration: Queue on Narrator Speech
+
+When a narrator speaks, ALE queues it for subscribers:
+
+```lua
+-- {{{ onNarratorSpeech (ALE)
+-- Queue narrator speech for rmail forwarding
+
+local PENDING_FILE = "/mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/narrator/.pending-speech.txt"
+local SUBSCRIPTIONS_FILE = "/mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/narrator/subscriptions.txt"
+
+local speechId = 0
+
+local function onNarratorSpeech(narrator, text)
+    local narratorName = narrator:GetName()
+    local subscribers = getSubscribersForNarrator(narratorName)
+
+    if #subscribers == 0 then return end
+
+    speechId = speechId + 1
+    local timestamp = os.time()
+
+    -- Queue for each subscriber
+    local f = io.open(PENDING_FILE, "a")
+    if f then
+        for _, sub in ipairs(subscribers) do
+            local ttsFlag = sub.wantsTTS and "1" or "0"
+            f:write(string.format("%d:%s:%s:%s:%d:%s\n",
+                speechId, sub.contact, narratorName,
+                text:gsub(":", "::"), timestamp, ttsFlag))  -- escape colons in text
+        end
+        f:close()
+    end
+
+    -- Trigger first send attempt for each subscriber
+    for _, sub in ipairs(subscribers) do
+        attemptNextSpeech(sub.contact)
+    end
+end
+-- }}}
+```
+
+### on_send Hook: Check for More
+
+When a message successfully sends, check if there are more pending:
+
+```lua
+#!/usr/bin/env lua
+-- {{{ narrator-onsend.lua
+-- on_send hook - fires after successful message delivery
+-- Checks if more speech is queued for this subscriber
+
+local recipient = arg[1]
+local subject   = arg[2]
+local filepath  = arg[3]
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local PENDING_FILE = DIR .. "/game-mail/narrator/.pending-speech.txt"
+local OUTBOX_PATH = DIR .. "/game-mail/narrator/outbox/"
+local TTS_CACHE_PATH = DIR .. "/game-mail/narrator/.tts-cache/"
+
+-- Only process narrator messages (subject format: [NarratorName] says)
+if not subject or not subject:match("^%[.+%] says$") then
+    os.exit(0)
+end
+
+-- {{{ checkAndSendNext
+function checkAndSendNext(recipient)
+    local pending = readPendingFile()
+    local toSend = nil
+
+    for i, entry in ipairs(pending) do
+        if entry.subscriber == recipient then
+            toSend = entry
+            table.remove(pending, i)
+            writePendingFile(pending)
+            break
+        end
+    end
+
+    if toSend then
+        writeSpeechToOutbox(toSend)
+        -- rmail will attempt send, triggering on_send again if successful
+    end
+end
+-- }}}
+
+-- {{{ writeSpeechToOutbox
+function writeSpeechToOutbox(entry)
+    local filename = entry.timestamp .. "-" .. entry.subscriber .. ".txt"
+
+    local f = io.open(OUTBOX_PATH .. filename, "w")
+    if f then
+        f:write("to: " .. entry.subscriber .. "\n")
+        f:write("subject: [" .. entry.narrator .. "] says\n\n")
+        f:write(entry.text .. "\n")
+        f:write("\n---\n")
+        f:write("Timestamp: " .. os.date("%Y-%m-%d %H:%M:%S", entry.timestamp) .. "\n")
+
+        if entry.wantsTTS then
+            local audioPath = generateTTS(entry.narrator, entry.text, entry.timestamp)
+            if audioPath then
+                f:write("\n[Audio: " .. audioPath .. "]\n")
+            end
+        end
+
+        f:close()
+    end
+end
+-- }}}
+
+-- {{{ generateTTS
+function generateTTS(narratorName, text, timestamp)
+    local outputPath = TTS_CACHE_PATH .. timestamp .. "-" .. narratorName .. ".mp3"
+
+    -- Example using espeak + ffmpeg
+    local escaped = text:gsub("'", "'\\''")
+    local cmd = string.format(
+        "espeak '%s' --stdout | ffmpeg -i - -y '%s' 2>/dev/null",
+        escaped, outputPath
+    )
+
+    if os.execute(cmd) == 0 then
+        return outputPath
+    end
+    return nil
+end
+-- }}}
+
+checkAndSendNext(recipient)
+-- }}}
+```
+
+### on_login Hook: Flush Queue
+
+Triggered by ALE when a player logs in:
+
+```lua
+#!/usr/bin/env lua
+-- {{{ narrator-onlogin.lua
+-- Flush pending narrator speech on player login
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local PENDING_FILE = DIR .. "/game-mail/narrator/.pending-speech.txt"
+
+-- {{{ flushPendingSpeech
+function flushPendingSpeech()
+    local pending = readPendingFile()
+    local attemptedSubscribers = {}
+
+    for _, entry in ipairs(pending) do
+        if not attemptedSubscribers[entry.subscriber] then
+            writeSpeechToOutbox(entry)
+            attemptedSubscribers[entry.subscriber] = true
+        end
+    end
+end
+-- }}}
+
+flushPendingSpeech()
+-- }}}
+```
+
+### ALE: Trigger on_login Hook
+
+```lua
+-- {{{ OnPlayerLogin (ALE)
+local function OnPlayerLogin(event, player)
+    -- Run narrator flush script
+    os.execute("lua /mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/narrator/scripts/narrator-onlogin.lua &")
+end
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, OnPlayerLogin)
+-- }}}
+```
+
+### Flow Diagram
+
+```
+1. Narrator McGee speaks: "Once upon a time..."
+   ↓
+2. ALE onNarratorSpeech: alice and bob subscribe to McGee
+   - Add entries to .pending-speech.txt
+   - Write first message to outbox/ for each
+   ↓
+3. rmail attempts to send to alice
+   ↓
+   ├─ alice OFFLINE: stays in outbox, retries later
+   │
+   └─ alice ONLINE: delivered
+      ↓
+4. on_send hook fires
+   - Check .pending-speech.txt for more alice messages
+   - If found: write next to outbox, remove from pending
+   - Repeat from step 3
+   ↓
+5. Eventually: all speech delivered to alice
+```
+
+### Directory Structure
+
+```
+game-mail/narrator/
+├── inbox/                     # Subscribe/unsubscribe requests
+├── outbox/                    # Forwarded narrator speech
+├── .pending-speech.txt        # Queue of speech waiting to forward
+├── .tts-cache/                # Generated audio files
+├── subscriptions.txt          # subscriber:narrator:tts mappings
+├── config                     # rmail config with hooks
+└── scripts/
+    ├── narrator-subscribe.lua # on_receive hook
+    ├── narrator-onsend.lua    # on_send hook (check for more)
+    └── narrator-onlogin.lua   # Called by ALE on player login
+```
+
+### Config File
+
+```
+# game-mail/narrator/config
+name = narrator
+port = 4862
+on_receive = /mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/narrator/scripts/narrator-subscribe.lua
+on_send = /mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/narrator/scripts/narrator-onsend.lua
+```
+
+### TTS Considerations
+
+- **espeak**: Free, fast, robotic voice
+- **festival**: Free, slightly better quality
+- **External API**: Google TTS, Amazon Polly (costs money, better quality)
+- **Pre-generated**: Cache common phrases, generate uncommon on-demand
+
+For narrator personality, could assign different TTS voices per narrator name.
+
+## Design Considerations
+
+### Playerbot Integration
+
+Narrators are playerbots, not standard NPCs:
+- Can be followed by players
+- Use playerbot movement system
+- Visible to /who (unless configured otherwise)
+- Have player-like combat/death behavior (or disabled)
+
+### State Management
+
+Per-instance state (keyed by spawn GUID):
+- Current book and sentence position (issue 308)
+- Current behavior mode (story/rumors/sleep)
+- Collected rumors with keyword associations
+- Movement pattern state
+
+Cross-instance state (shared):
+- Rumor propagation network
+- Telephone game state
+
+### Keyword Extraction
+
+Simple approach for rumor association:
+```lua
+function extractKeywords(text)
+    -- Remove common words (the, a, is, etc.)
+    -- Return list of significant words
+    -- Associate words that appear in same message
+end
+```
+
+### Pattern Matching for Rumors
+
+```lua
+function checkRumorMatch(narrator, playerSpeech)
+    local keywords = extractKeywords(playerSpeech)
+    for _, rumor in ipairs(narrator.rumors) do
+        local matches = countMatches(keywords, rumor.associations)
+        if matches / #rumor.associations > 0.2 then  -- 20% threshold
+            return rumor
+        end
+    end
+    return nil
+end
+```
+
+## Suggested Implementation Steps
+
+1. **Create narrator playerbot template**
+   - Configure as playerbot with narrator-specific settings
+   - Disable combat or make invulnerable
+   - Set walking speed, enable following
+
+2. **Implement base wandering behavior**
+   - Reuse traveler movement patterns
+   - Add stop-on-seated-nearby trigger
+
+3. **Integrate Gutenberg library (issue 308)**
+   - Connect to Library API for sentence retrieval
+   - Speak sentences in /say with timing
+
+4. **Implement movement patterns**
+   - Orbit behavior
+   - Midpoint walk
+   - Point-to-point pace
+   - S-curve pace
+   - Pattern selection logic
+
+5. **Add rumor storage system**
+   - Per-instance rumor list
+   - Keyword extraction
+   - Association tracking
+
+6. **Implement PM handling**
+   - Hook whisper/PM events
+   - Rate limit (1 per second)
+   - Extract and store rumor with keywords
+
+7. **Implement rumor matching and sharing**
+   - Hook /say chat in range
+   - Pattern match against stored rumors
+   - Share matching rumors (once only)
+
+8. **Add rumor propagation**
+   - Cross-instance rumor sharing
+   - Telephone game mechanics
+
+9. **Implement interruption detection**
+   - Track /say frequency in range
+   - Switch modes when interrupted
+   - Resume story when quiet
+
+10. **Add sleep behavior**
+    - Random sleep trigger
+    - 30-minute duration
+    - State reset on wake
+
+11. **Integrate with issue 307 (audience facing)**
+    - Sitting behavior when audience seated
+    - Optimal facing calculation
+
+12. **Connect rmail integration (issue 306)**
+    - Subscribe/unsubscribe handling
+    - Speech forwarding to subscribers
+    - TTS generation (future)
+
+13. **Test scenarios**
+    - Narrator wanders, stops for seated player
+    - Reads sentences from Gutenberg
+    - Player PMs rumor, narrator stores it
+    - Another player triggers rumor match
+    - Rumor shared once, then gone
+    - Interruption switches to rumor mode
+    - Sleep mode works, forgets rumors
+    - Cross-instance rumor propagation
+
+## Configuration
+
+```lua
+-- Narrator behavior
+NARRATOR_STOP_RADIUS        = 5       -- yards to trigger stop
+NARRATOR_PM_RATE_LIMIT      = 1000    -- ms between PM processing
+NARRATOR_RUMOR_MATCH_THRESH = 0.2     -- 20% keyword match
+NARRATOR_SLEEP_DURATION     = 1800000 -- 30 minutes in ms
+NARRATOR_SPEECH_RANGE       = 30      -- yards for rmail recording
+
+-- Movement patterns
+NARRATOR_ORBIT_RADIUS       = 5       -- yards
+NARRATOR_SCURVE_PERIOD      = 5       -- yards per curve
+NARRATOR_SCURVE_MIN_COUNT   = 4       -- minimum curves per selection
+NARRATOR_PACE_STEP_COUNT    = 2       -- steps between stops
+```
+
+## Related Concepts
+
+- Concept 119: Narrator NPC system
+- Concept 267: External data integration
+- Concept 089: NPC facing and orientation
+
+## Related Files
+
+- src/lua/travel.lua - Traveler movement patterns
+- src/lua/behaviors/ - Behavior implementations
+
+## Related Issues
+
+- Issue 306: rmail-ingame-bridge (TTS distribution)
+- Issue 307: narrator-audience-facing (sitting behavior)
+- Issue 308: gutenberg-text-library (content source)
+
+## Stats
+
+- **Phase:** 3
+- **Priority:** High (central social system)
+- **Complexity:** High (multiple behaviors, rumor mechanics, integrations)
+- **Dependencies:** Issues 306, 307, 308, Playerbot module
+
