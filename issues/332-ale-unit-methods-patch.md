@@ -156,6 +156,31 @@ Registering non-existent events corrupted the Lua registry.
 **Design principle:** Event registrations in .ext files can corrupt ALE's Lua registry.
 Move event registrations to .lua files where they work correctly.
 
+## Quaternary Fix: ALE Source Extensions (2026-04-09)
+
+Persistent crash with assertion failure `base > 0` in ExecuteCall.
+
+**Root Cause:** ALE module ships with its own copy of extensions at:
+```
+source-beta/modules/mod-ale/src/LuaEngine/extensions/
+├── ObjectVariables.ext  (broken - uses GetObjectType, invalid event IDs)
+├── StackTracePlus/      (may interfere with ALE traceback handling)
+└── _Misc.ext           (enables StackTracePlus)
+```
+
+This directory contains the original Eluna-compatible extensions, not our ALE-fixed versions.
+Even though `installed-files-beta/bin/lua_scripts/extensions` symlinks to our fixed versions,
+ALE might load from its source directory during certain operations.
+
+**Fix:** Updated ALE source extensions to match our fixed versions:
+1. Copied `src/lua/extensions/ObjectVariables.ext` → ALE source extensions
+2. Copied `src/lua/extensions/_Misc.ext` → ALE source extensions
+3. Renamed `StackTracePlus/` → `StackTracePlus.disabled/` in both locations
+
+**Directory locations fixed:**
+- `source-beta/modules/mod-ale/src/LuaEngine/extensions/`
+- `src/lua/extensions/`
+
 ## Lessons Learned
 
 1. **No fallbacks** - Workarounds that don't match the intended behavior should not be implemented under the original function name. If proximity checks are useful, they get their own function.
@@ -165,3 +190,5 @@ Move event registrations to .lua files where they work correctly.
 3. **Check for duplicates** - When extensions fail to load, verify there aren't multiple versions being loaded.
 
 4. **No event registration in .ext files** - Extensions load before main Lua files. Event registration in this early phase can corrupt ALE's registry. Use .ext files only for method definitions and global setup.
+
+5. **Check ALL extension locations** - ALE has extensions in multiple places: the runtime lua_scripts directory AND the module source directory. Both must be kept in sync or issues will occur.

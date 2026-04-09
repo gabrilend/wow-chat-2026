@@ -13,8 +13,19 @@
  * - Server validates usedTalents <= expectedTalents (now includes our bonus)
  * - No talent reset occurs because our bonus is part of the expected count
  *
+ * IMPORTANT - Relog exploit prevention:
+ * This module does NOT award talent points - it only adjusts the EXPECTED count.
+ * Actual talent points are awarded by levelling.lua ONLY on PLAYER_EVENT_ON_GIVE_XP.
+ * Logging out and back in does NOT trigger XP gain, so no extra points are awarded.
+ * The Lua onLogin handler only sets tracking flags (to prevent double-award later),
+ * it does NOT call SetFreeTalentPoints().
+ *
+ * Division of responsibility:
+ * - C++ (this file): Adjusts EXPECTED count for server validation
+ * - Lua (levelling.lua): Awards ACTUAL points only when XP thresholds are crossed
+ *
  * The Lua script (levelling.lua) handles:
- * - Awarding the actual talent points when thresholds are crossed
+ * - Awarding the actual talent points when thresholds are crossed (XP event only)
  * - Playing the green visual effect
  * - Tracking which thresholds have been awarded this level
  */

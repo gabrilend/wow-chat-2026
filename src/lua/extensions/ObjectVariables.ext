@@ -3,9 +3,10 @@
 -- This program is free software licensed under GPL version 3
 -- Please see the included DOCS/LICENSE.md for more information
 --
--- Modified for ALE compatibility (2026-04-08):
+-- Modified for ALE compatibility (2026-04-09):
 -- - GetObjectType() replaced with GetTypeId() + lookup table
 -- - ALE returns numeric TypeId instead of string type name
+-- - Event registrations restored (ALE has same event IDs as Eluna)
 --
 
 -- filename.ext files are loaded before normal .lua files
@@ -44,6 +45,7 @@ local variableStores = {
     GameObject = {},
 }
 
+-- {{{ DestroyMapData
 local function DestroyMapData(event, obj)
     local map = obj:GetMapId()
     local inst = obj:GetInstanceId()
@@ -54,7 +56,9 @@ local function DestroyMapData(event, obj)
         end
     end
 end
+-- }}}
 
+-- {{{ DestroyObjData
 local function DestroyObjData(event, obj)
     -- ALE uses GetTypeId() instead of GetObjectType()
     local typeId = obj:GetTypeId()
@@ -78,7 +82,9 @@ local function DestroyObjData(event, obj)
         end
     end
 end
+-- }}}
 
+-- {{{ GetData
 local function GetData(self, field)
     -- ALE uses GetTypeId() instead of GetObjectType()
     local typeId = self:GetTypeId()
@@ -107,7 +113,9 @@ local function GetData(self, field)
     end
     return varStore[map][inst][guid]
 end
+-- }}}
 
+-- {{{ SetData
 local function SetData(self, field, val)
     -- ALE uses GetTypeId() instead of GetObjectType()
     local typeId = self:GetTypeId()
@@ -131,21 +139,28 @@ local function SetData(self, field, val)
 
     varStore[map][inst][guid][field] = val
 end
+-- }}}
 
+-- {{{ Assign methods to globals
 for k,v in pairs(variableStores) do
     _G[k].GetData = GetData
     _G[k].SetData = SetData
 end
+-- }}}
 
--- ALE Compatibility Note (2026-04-08):
--- Event registrations in .ext files cause Lua registry corruption in ALE
--- Instead, expose cleanup functions for main scripts to call from their
--- existing event handlers (which register correctly in .lua files)
+-- {{{ Event registrations for automatic cleanup
+-- MOVED TO object-variables-events.lua (Issue 332)
+-- .ext files load before hooks are ready, causing registry corruption
+-- .lua files load after hooks are initialized
+-- }}}
 
--- {{{ ObjectVariables (global namespace for cleanup functions)
+-- {{{ ObjectVariables namespace (for compatibility with code that calls cleanup manually)
 ObjectVariables = {}
 
--- Call from PLAYER_EVENT_ON_LOGOUT handlers
+-- Expose destroy functions for event registration in .lua files
+ObjectVariables._destroyObjData = DestroyObjData
+ObjectVariables._destroyMapData = DestroyMapData
+
 function ObjectVariables.cleanupPlayer(player)
     if not player then return end
     local guid = player:GetGUIDLow()
@@ -154,7 +169,6 @@ function ObjectVariables.cleanupPlayer(player)
     end
 end
 
--- Call when despawning creatures (ambush, travelers, etc.)
 function ObjectVariables.cleanupCreature(creature)
     if not creature then return end
     local guid = creature:GetGUIDLow()
@@ -170,7 +184,6 @@ function ObjectVariables.cleanupCreature(creature)
     end
 end
 
--- Call when despawning gameobjects (treasure chests, etc.)
 function ObjectVariables.cleanupGameObject(gameobject)
     if not gameobject then return end
     local guid = gameobject:GetGUIDLow()
@@ -186,8 +199,6 @@ function ObjectVariables.cleanupGameObject(gameobject)
     end
 end
 
--- Alternative: cleanup by stored location data (for when gameobject reference unavailable)
--- Used by treasure system when chests despawn and we only have cached location info
 function ObjectVariables.cleanupGameObjectByLocation(mapId, instanceId, guid)
     if not mapId or not instanceId or not guid then return end
 
@@ -200,7 +211,6 @@ function ObjectVariables.cleanupGameObjectByLocation(mapId, instanceId, guid)
     end
 end
 
--- Call on map destruction (if needed)
 function ObjectVariables.cleanupMap(mapId, instanceId)
     for k,v in pairs(variableStores) do
         local mapdata = v[mapId]
@@ -210,7 +220,6 @@ function ObjectVariables.cleanupMap(mapId, instanceId)
     end
 end
 
--- Debug: get memory usage stats
 function ObjectVariables.getStats()
     local stats = {
         players = 0,
@@ -237,3 +246,5 @@ function ObjectVariables.getStats()
     return stats
 end
 -- }}}
+
+print("[ObjectVariables] Loaded with automatic cleanup via events")
