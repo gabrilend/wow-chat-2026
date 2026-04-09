@@ -1,68 +1,14 @@
 -- {{{ Everland Ghostsong - Behavior System Initialization
--- Loads all behavior modules in dependency order
--- This file should be required by the main Lua entry point
+-- ALE auto-loads all .lua files from subdirectories via dofile-style loading.
+-- This init.lua file only sets up the behavior registry - the actual behavior
+-- scripts are already loaded by ALE before this file runs.
 --
 -- Issue: 133-gesture-command-system-kneel-convoy.md
+-- Issue: 332 - Removed require() calls that caused double-loading/registry corruption
 -- Concept Catalog: 001-010, 101-139
 -- }}}
 
-print("[Behaviors] Initializing behavior system...")
-
--- {{{ Load order (dependency-aware)
--- 1. Base utilities (no dependencies)
--- 2. Core behaviors (depend on movement only)
--- 3. Complex behaviors (depend on core behaviors)
--- }}}
-
--- {{{ Group 1: Base utilities
-require("movement")
-print("[Behaviors] Loaded: movement")
--- }}}
-
--- {{{ Group 2: Core behaviors
--- avoid-monsters is required by sit-and-rest and orbit-player
-require("behaviors/avoid-monsters")
-print("[Behaviors] Loaded: avoid-monsters")
--- }}}
-
--- {{{ Group 3: Combat and survival behaviors
-require("behaviors/find-monsters")
-print("[Behaviors] Loaded: find-monsters")
-
-require("behaviors/sit-and-rest")
-print("[Behaviors] Loaded: sit-and-rest")
--- }}}
-
--- {{{ Group 4: Formation and movement behaviors
-require("behaviors/orbit-player")
-print("[Behaviors] Loaded: orbit-player")
--- }}}
-
--- {{{ Group 5: Gesture and social behaviors
-require("behaviors/gestures")
-print("[Behaviors] Loaded: gestures")
-
-require("behaviors/convoy")
-print("[Behaviors] Loaded: convoy")
--- }}}
-
--- {{{ Group 6: Affinity and consensus behaviors (legacy, kept for utilities)
-require("behaviors/level-affinity")
-print("[Behaviors] Loaded: level-affinity")
-
-require("behaviors/zone-consensus")
-print("[Behaviors] Loaded: zone-consensus")
--- }}}
-
--- {{{ Group 7: Wandering behaviors (issue 161, 162)
--- bot-wander uses traveller-style movement, replaces zone-consensus/level-affinity
--- as the default bot movement behavior
-require("behaviors/dungeon-rails")
-print("[Behaviors] Loaded: dungeon-rails")
-
-require("behaviors/bot-wander")
-print("[Behaviors] Loaded: bot-wander")
--- }}}
+print("[Behaviors] Initializing behavior registry (scripts already loaded by ALE)...")
 
 -- {{{ Behavior registry
 -- Allows other scripts to check which behaviors are loaded

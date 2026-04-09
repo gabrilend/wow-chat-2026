@@ -19,6 +19,7 @@
 
 ## Intended Behavior
 Bots should wander like traveller NPCs by default, with fallbacks when stuck.
+Travellers walk, bots should run.
 
 ### Movement Hierarchy
 
@@ -43,7 +44,7 @@ Bots should wander like traveller NPCs by default, with fallbacks when stuck.
 
 4. **Loneliness check (every ~30 seconds)**
    - Separate periodic event, longer interval
-   - Check: any players/bots within ±3 levels AND within ~100 yards?
+   - Check: any players/bots within ±3 levels AND within ~200 yards?
    - If lonely: find nearest valid player/bot (±3 levels, any distance)
    - Move to position on ring around them
    - Resume normal wandering after arrival
@@ -198,7 +199,63 @@ This creates natural "test the water and nope out" behavior.
 | Leader moves away | If leader >5-10 yards away: pick random spot on ring around leader, move there. Update spot every ~2 seconds while leader is distant. |
 | Leader nearby | Stay put. Randomly sit or kneel sometimes. Don't follow small movements. |
 | Leader teleports | Leave party if leader in different zone and unreachable by walking/portal. This is bot's new home now. |
-| Combat while in party | Fight, don't reposition. Resume ring-following after combat. |
+| Combat while in party | See combat repositioning below. Resume ring-following after combat. |
+
+### Combat Repositioning (Ranged vs Melee)
+During combat, bots should reposition based on their combat style:
+
+| Bot Type | Detection | Behavior |
+|----------|-----------|----------|
+| Melee | Has melee weapon equipped, or class is warrior/paladin/rogue/DK | Move to melee range (2-5 yards) of target. Stop if in range. |
+| Ranged | Has ranged weapon or wand equipped, or class is mage/warlock/hunter/priest | Maintain distance (15-25 yards). Back up if target approaches. |
+| Healer | Spec includes significant healing (holy priest, resto druid, etc.) | Stay near ranged, prioritize line-of-sight to party members. |
+
+**Melee repositioning:**
+- Target in melee range (≤5 yards): stand ground, attack
+- Target out of range: move toward target
+- Multiple targets: assist tank's target, or nearest if no tank
+
+**Ranged repositioning:**
+- Target too close (<10 yards): kite backward, maintain 15+ yards
+- Target at good range (15-30 yards): stand ground, attack
+- Target too far (>35 yards): move closer to 25 yards
+- If kiting leads to wall/water: sidestep instead of backing up
+
+**Kiting logic:**
+```lua
+-- {{{ BotCombat.kiteIfNeeded
+-- Ranged bot backs away when target gets too close
+function BotCombat.kiteIfNeeded(bot, target)
+    local dist = bot:GetDistance(target)
+    if dist >= 15 then return false end  -- safe distance
+
+    -- Calculate escape direction (away from target)
+    local bx, by, bz = bot:GetPosition()
+    local tx, ty = target:GetPosition()
+    local away = math.atan2(by - ty, bx - tx)
+
+    -- Try backing up 10 yards
+    local nx = bx + math.cos(away) * 10
+    local ny = by + math.sin(away) * 10
+    local nz = bot:GetMap():GetHeight(nx, ny)
+
+    -- Height check (±5 yards) and water check
+    if math.abs(nz - bz) > 5 then
+        -- Can't back up, try sidestep instead
+        away = away + 1.57  -- 90 degrees
+        nx = bx + math.cos(away) * 8
+        ny = by + math.sin(away) * 8
+        nz = bot:GetMap():GetHeight(nx, ny)
+    end
+
+    if math.abs(nz - bz) <= 5 then
+        bot:MoveTo(0, nx, ny, nz, false)
+        return true
+    end
+
+    return false  -- couldn't kite, stand and fight
+end -- }}}
+```
 
 ### Anti-Clumping
 - Simple rule: "if a bot is within 2 yards, move to a position without a bot within 2 yards"
@@ -222,18 +279,20 @@ This creates natural "test the water and nope out" behavior.
 Add to `movement.lua` for reuse by bots AND travellers:
 ```lua
 -- {{{ Movement.getConsensusDirection
--- Returns average facing direction of nearby players
+-- Returns average facing direction of all players in same zone
 -- Used when stuck or needing reorientation
--- Returns angle in radians, or nil if no players nearby
-function Movement.getConsensusDirection(unit, range)
-    range = range or 200
-    local players = unit:GetPlayersInRange(range)
-    if not players or #players < 1 then return nil end
+-- Zone-wide lookup because bots may be far from players when stuck
+-- Returns angle in radians, or nil if no players in zone
+function Movement.getConsensusDirection(unit)
+    local zoneId = unit:GetZoneId()
+    local allPlayers = GetPlayersInWorld()
+    if not allPlayers then return nil end
 
     local sum_sin, sum_cos = 0, 0
     local count = 0
-    for _, player in ipairs(players) do
-        if player:IsAlive() and not player:IsBot() then
+    for _, player in ipairs(allPlayers) do
+        -- Same zone, alive, not a bot
+        if player:GetZoneId() == zoneId and player:IsAlive() and not player:IsBot() then
             local facing = player:GetFacing()
             sum_sin = sum_sin + math.sin(facing)
             sum_cos = sum_cos + math.cos(facing)

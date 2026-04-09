@@ -1,5 +1,9 @@
-
 Movement = {}
+
+-- Register in package.loaded so require("movement") is a no-op after ALE loads this
+-- (ALE uses dofile-style loading which doesn't populate package.loaded)
+-- Must be AFTER Movement table is created so require() returns the module
+package.loaded["movement"] = Movement
 
 function Movement.getCircleSpawnPosition(originX, originY, minDist, maxDist) -- {{{
     local theta = math.random(0, 6.28)
@@ -214,7 +218,7 @@ function Movement.getConsensusDirection(unit, range)
 
     for _, player in ipairs(players) do
         if player:IsAlive() and not player:IsBot() then
-            local facing = player:GetFacing()
+            local facing = player:GetO()
             sum_sin = sum_sin + math.sin(facing)
             sum_cos = sum_cos + math.cos(facing)
             count   = count + 1

@@ -317,6 +317,7 @@ end
 -- {{{ periodicEvent
 -- Register a periodic event for a player, handling dead state
 -- ALE signature: RegisterEvent(func, delay, repeats) - worldobject passed to callback automatically
+-- Issue 332: Add type checking to debug registry corruption
 local function periodicEvent(eventFunction, delay, repeats, player)
     if player:IsDead() then
         if denizens_of_the_spirit_world[player:GetGUID()] == nil then
@@ -324,6 +325,29 @@ local function periodicEvent(eventFunction, delay, repeats, player)
         end
         return
     else
+        -- Issue 332: Type checking before RegisterEvent
+        if type(eventFunction) ~= "function" then
+            print("[periodicEvent] ERROR: eventFunction is " .. type(eventFunction) .. ", expected function")
+            print("[periodicEvent] ERROR: actual type = " .. type(eventFunction))
+            if type(eventFunction) == "table" then
+                print("[periodicEvent] ERROR: TABLE PASSED INSTEAD OF FUNCTION!")
+                for k, v in pairs(eventFunction) do
+                    print("[periodicEvent] ERROR: table key: " .. tostring(k) .. " = " .. type(v))
+                    break  -- Just print first key to identify the table
+                end
+            end
+            return
+        end
+        if type(delay) ~= "number" then
+            print("[periodicEvent] ERROR: delay is " .. type(delay) .. ", expected number")
+            return
+        end
+        if type(repeats) ~= "number" then
+            print("[periodicEvent] ERROR: repeats is " .. type(repeats) .. ", expected number")
+            return
+        end
+        -- Issue 332: Debug - show what we're registering
+        print("[periodicEvent] Registering: delay=" .. delay .. ", repeats=" .. repeats .. ", player=" .. player:GetName())
         player:RegisterEvent(eventFunction, delay, repeats)
     end
 end
@@ -475,16 +499,12 @@ end
 -- {{{ PeriodicBotFindMonsters
 -- Scan for combat targets
 -- Mode check: only re-registers if in valid mode (issue 164)
+-- Issue 332: Use constant delay instead of callback parameter to avoid registry corruption
 function PeriodicBotFindMonsters(eventID, delay, repeats, bot)
-    if not bot:IsBot() then return end
-    if not bot:IsAlive() then return end
-    if not botHasValidPosition(bot) then return end  -- Issue 328
-    if not BotOrchestrator.isModeValid(bot, "find_monsters") then return end
-
-    periodicEvent(PeriodicBotFindMonsters, delay, repeats, bot)
-    if FindMonsters and FindMonsters.scan then
-        FindMonsters.scan(bot)
-    end
+    -- Issue 332: Ultra-minimal test - just print a static string
+    print("[DEBUG FindMonsters] CALLBACK FIRED")
+    -- Print parameter types to understand what we're receiving
+    print("[DEBUG FindMonsters] types: " .. type(eventID) .. ", " .. type(delay) .. ", " .. type(repeats) .. ", " .. type(bot))
 end
 -- }}}
 
@@ -656,13 +676,14 @@ function InitialLogin(_event, player)
 
         -- Register behaviors with longer initial delay (5 seconds)
         -- If bot isn't ready when they fire, botHasValidPosition will skip and re-register
+        -- DEBUGGING (Issue 332) - adding back one at a time
         local INITIAL_BOT_DELAY = 5000  -- 5 seconds - give bot time to initialize
-        periodicEvent(PeriodicBotWander,           INITIAL_BOT_DELAY, 1, player)
-        periodicEvent(PeriodicBotLonelinessCheck,  INITIAL_BOT_DELAY + 1000, 1, player)
-        periodicEvent(PeriodicBotSitAndRest,       INITIAL_BOT_DELAY + 2000, 1, player)
-        periodicEvent(PeriodicBotOrbitPlayer,      INITIAL_BOT_DELAY + 3000, 1, player)
-        periodicEvent(PeriodicBotFindMonsters,     INITIAL_BOT_DELAY + 4000, 1, player)
-        print("[PeriodicEvents] Bot " .. player:GetName() .. " behaviors queued (5s delay)")
+        -- periodicEvent(PeriodicBotWander,           INITIAL_BOT_DELAY, 1, player)
+        -- periodicEvent(PeriodicBotLonelinessCheck,  INITIAL_BOT_DELAY + 1000, 1, player)
+        -- periodicEvent(PeriodicBotSitAndRest,       INITIAL_BOT_DELAY + 2000, 1, player)
+        -- periodicEvent(PeriodicBotOrbitPlayer,      INITIAL_BOT_DELAY + 3000, 1, player)
+        periodicEvent(PeriodicBotFindMonsters,     INITIAL_BOT_DELAY, 1, player)  -- TEST 1
+        print("[PeriodicEvents] Bot " .. player:GetName() .. " TEST: FindMonsters only")
     end
 end
 -- }}}

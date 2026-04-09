@@ -11,6 +11,10 @@ require("movement")
 
 ZoneConsensus = {}
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER ZoneConsensus table is created so require() returns the module
+package.loaded["behaviors/zone-consensus"] = ZoneConsensus
+
 -- {{{ Configuration
 CONSENSUS_UPDATE_RATE  = 3000   -- ms between consensus recalculation
 DRIFT_SPEED_FACTOR     = 0.3   -- how strongly bots follow consensus
@@ -40,7 +44,7 @@ local bot_momentum = {}      -- [bot_guid] = {angle, speed}
 -- Find nearest player or bot (not self)
 -- Returns unit, distance, or nil if none found
 function ZoneConsensus.findNearestUnit(bot)
-    local bx, by, bz = bot:GetPosition()
+    local bx, by, bz = bot:GetLocation()
     local map_id     = bot:GetMapId()
     local bot_guid   = bot:GetGUID()
 
@@ -54,7 +58,7 @@ function ZoneConsensus.findNearestUnit(bot)
     for _, player in pairs(all_players) do
         if player and player:GetGUID() ~= bot_guid and player:IsAlive() then
             if player:GetMapId() == map_id then
-                local px, py = player:GetPosition()
+                local px, py = player:GetLocation()
                 local distSq = Movement.squaredDistance(bx, by, px, py)
                 local dist   = math.sqrt(distSq)
 
@@ -73,7 +77,7 @@ end
 -- {{{ ZoneConsensus.countNearbyUnits
 -- Count players/bots within radius
 function ZoneConsensus.countNearbyUnits(bot, radius)
-    local bx, by, bz = bot:GetPosition()
+    local bx, by, bz = bot:GetLocation()
     local map_id     = bot:GetMapId()
     local bot_guid   = bot:GetGUID()
     local count      = 0
@@ -84,7 +88,7 @@ function ZoneConsensus.countNearbyUnits(bot, radius)
     for _, player in pairs(all_players) do
         if player and player:GetGUID() ~= bot_guid and player:IsAlive() then
             if player:GetMapId() == map_id then
-                local px, py = player:GetPosition()
+                local px, py = player:GetLocation()
                 local distSq = Movement.squaredDistance(bx, by, px, py)
 
                 if distSq <= radius * radius then
@@ -109,8 +113,8 @@ function ZoneConsensus.handleDispersion(bot)
 
     -- Lonely: no one within 200 yards - move toward closest
     if dist > LONELY_RADIUS then
-        local bx, by, bz = bot:GetPosition()
-        local nx, ny, nz = nearest:GetPosition()
+        local bx, by, bz = bot:GetLocation()
+        local nx, ny, nz = nearest:GetLocation()
 
         -- Calculate direction toward nearest
         local angle = math.atan2(ny - by, nx - bx)
@@ -135,7 +139,7 @@ function ZoneConsensus.handleDispersion(bot)
     -- Clumped: someone very close - disperse
     local clumped_count = ZoneConsensus.countNearbyUnits(bot, CLUMP_RADIUS)
     if clumped_count > 0 then
-        local bx, by, bz = bot:GetPosition()
+        local bx, by, bz = bot:GetLocation()
 
         -- Pick random direction to disperse
         local angle  = math.random() * 6.28
@@ -215,7 +219,7 @@ function ZoneConsensus.calculateZoneConsensus(zone_id, players)
 
     for _, player in ipairs(players) do
         if player and player:IsAlive() and not player:IsBot() then
-            local facing = player:GetFacing()
+            local facing = player:GetO()
             table.insert(angles, facing)
         end
     end
@@ -243,7 +247,7 @@ end
 -- {{{ ZoneConsensus.getPlayersInZone
 -- Get all players in the same zone area
 function ZoneConsensus.getPlayersInZone(bot)
-    local bx, by, bz = bot:GetPosition()
+    local bx, by, bz = bot:GetLocation()
     local map_id = bot:GetMapId()
     local players = {}
 
@@ -252,7 +256,7 @@ function ZoneConsensus.getPlayersInZone(bot)
 
     for _, player in pairs(all_players) do
         if player and player:IsAlive() and player:GetMapId() == map_id then
-            local px, py = player:GetPosition()
+            local px, py = player:GetLocation()
             local distSq = Movement.squaredDistance(bx, by, px, py)
 
             if distSq <= (ZONE_RANGE * ZONE_RANGE) then
@@ -268,7 +272,7 @@ end
 -- {{{ ZoneConsensus.updateZoneConsensus
 -- Update the consensus for a zone based on current players
 function ZoneConsensus.updateZoneConsensus(bot)
-    local bx, by = bot:GetPosition()
+    local bx, by = bot:GetLocation()
     local map_id = bot:GetMapId()
     local zone_id = ZoneConsensus.getZoneId(bx, by, map_id)
 
@@ -291,7 +295,7 @@ end
 -- {{{ ZoneConsensus.getConsensusForBot
 -- Get the zone consensus for a bot's current location
 function ZoneConsensus.getConsensusForBot(bot)
-    local bx, by = bot:GetPosition()
+    local bx, by = bot:GetLocation()
     local map_id = bot:GetMapId()
     local zone_id = ZoneConsensus.getZoneId(bx, by, map_id)
 
@@ -310,7 +314,7 @@ function ZoneConsensus.getBotMomentum(bot)
     end
 
     -- Default to facing direction
-    return bot:GetFacing(), 0
+    return bot:GetO(), 0
 end
 -- }}}
 
@@ -363,7 +367,7 @@ end
 -- {{{ ZoneConsensus.getDriftDestination
 -- Calculate destination position for idle drifting
 function ZoneConsensus.getDriftDestination(bot)
-    local bx, by, bz = bot:GetPosition()
+    local bx, by, bz = bot:GetLocation()
     local drift_angle = ZoneConsensus.calculateDriftDirection(bot)
 
     local dest_x = bx + math.cos(drift_angle) * IDLE_DRIFT_DISTANCE
@@ -452,6 +456,7 @@ end
 -- {{{ ZoneConsensus.cleanupOldZones
 -- Remove stale zone consensus data
 function ZoneConsensus.cleanupOldZones()
+    print("[DEBUG ZoneConsensus.cleanupOldZones] CALLBACK FIRED")
     local current_time = os.time()
     local stale_threshold = 60  -- seconds
 
@@ -479,11 +484,19 @@ end
 -- }}}
 
 -- {{{ ZoneConsensus.initialize
--- Initialize the zone consensus system (global cleanup event)
+-- No global initialization needed - cleanup runs per-player now
 function ZoneConsensus.initialize()
-    -- Periodic cleanup of stale zones (global, not per-bot)
-    CreateLuaEvent(ZoneConsensus.cleanupOldZones, 30000, 0)
-    print("[ZoneConsensus] System initialized")
+    print("[ZoneConsensus] System initialized (per-player events via periodic_events.lua)")
+end
+-- }}}
+
+-- {{{ ZoneConsensus.periodicCleanup
+-- Per-player periodic cleanup of stale zone data
+-- Called from periodic_events.lua, attached to any player (bots ARE players)
+-- Issue 332: Moved from CreateLuaEvent to player-attached event
+function ZoneConsensus.periodicCleanup(player)
+    -- Just run the cleanup - doesn't matter which player triggers it
+    ZoneConsensus.cleanupOldZones()
 end
 -- }}}
 

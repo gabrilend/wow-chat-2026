@@ -11,6 +11,10 @@ require("movement")
 
 LevelAffinity = {}
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER LevelAffinity table is created so require() returns the module
+package.loaded["behaviors/level-affinity"] = LevelAffinity
+
 -- {{{ Configuration
 MAX_LEVEL             = 80    -- WotLK max level
 LEVEL_CHECK_INTERVAL  = 5000  -- ms between affinity recalculation
@@ -62,8 +66,8 @@ end
 -- {{{ LevelAffinity.getProximityCost
 -- Calculate cost based on distance
 function LevelAffinity.getProximityCost(bot, target)
-    local bx, by = bot:GetPosition()
-    local tx, ty = target:GetPosition()
+    local bx, by = bot:GetLocation()
+    local tx, ty = target:GetLocation()
     local distSq = Movement.squaredDistance(bx, by, tx, ty)
     return math.sqrt(distSq) * PROXIMITY_COST_WEIGHT
 end
@@ -265,7 +269,7 @@ function LevelAffinity.getIdleDestination(bot)
     local target = LevelAffinity.getAffinityTarget(bot)
     if not target then return nil, nil, nil end
 
-    local tx, ty, tz = target:GetPosition()
+    local tx, ty, tz = target:GetLocation()
 
     -- Add some random offset to avoid stacking
     local bot_guid = bot:GetGUID()
@@ -300,7 +304,7 @@ function LevelAffinity.driftToAffinity(bot)
     if not dest_x then return false end
 
     -- Check if we're already close
-    local bx, by = bot:GetPosition()
+    local bx, by = bot:GetLocation()
     local distSq = Movement.squaredDistance(bx, by, dest_x, dest_y)
 
     if distSq < 25 then  -- Within 5 yards

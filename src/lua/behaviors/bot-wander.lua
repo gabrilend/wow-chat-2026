@@ -11,6 +11,10 @@ require("movement")
 
 BotWander = {}
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER BotWander table is created so require() returns the module
+package.loaded["behaviors/bot-wander"] = BotWander
+
 -- {{{ Configuration
 WANDER_DISTANCE       = 10    -- yards per movement (same as travellers)
 WANDER_THETA_DRIFT    = 0.39  -- max radians drift per step (~22 degrees)
@@ -43,10 +47,11 @@ end -- }}}
 
 -- {{{ BotWander.getTheta
 -- Get persistent movement direction
+-- GetO() returns orientation (facing angle in radians)
 function BotWander.getTheta(bot)
     local theta = bot:GetData("theta")
     if not theta then
-        theta = bot:GetFacing()
+        theta = bot:GetO()
         bot:SetData("theta", theta)
     end
     return theta
@@ -133,7 +138,7 @@ function BotWander.handleWater(bot)
     BotWander.setWallHits(bot, wall_hits)
 
     -- Move back out immediately (5 yards in reversed direction)
-    local x, y, z = bot:GetPosition()
+    local x, y, z = bot:GetLocation()
     local bx = x + math.cos(theta) * 5
     local by = y + math.sin(theta) * 5
     local bz = bot:GetMap():GetHeight(bx, by) or z
@@ -192,7 +197,7 @@ end -- }}}
 -- Returns player, distance or nil, nil
 function BotWander.findNearestValidPlayer(bot)
     local botLevel = bot:GetLevel()
-    local bx, by   = bot:GetPosition()
+    local bx, by   = bot:GetLocation()
     local mapId    = bot:GetMapId()
     local botGuid  = bot:GetGUID()
 
@@ -207,7 +212,7 @@ function BotWander.findNearestValidPlayer(bot)
             if player:GetMapId() == mapId then
                 local levelDiff = math.abs(player:GetLevel() - botLevel)
                 if levelDiff <= LEVEL_RANGE then
-                    local px, py = player:GetPosition()
+                    local px, py = player:GetLocation()
                     local distSq = Movement.squaredDistance(bx, by, px, py)
                     local dist   = math.sqrt(distSq)
 
@@ -226,7 +231,7 @@ end -- }}}
 -- {{{ BotWander.getRingPosition
 -- Get random position on ring around target
 function BotWander.getRingPosition(bot, target)
-    local tx, ty, tz = target:GetPosition()
+    local tx, ty, tz = target:GetLocation()
 
     -- Random angle
     local angle  = math.random() * 6.28
@@ -272,7 +277,7 @@ end -- }}}
 -- Check if too close to another bot and disperse
 -- Returns true if dispersed
 function BotWander.checkAntiClump(bot)
-    local bx, by, bz = bot:GetPosition()
+    local bx, by, bz = bot:GetLocation()
     local botGuid    = bot:GetGUID()
     local mapId      = bot:GetMapId()
 
@@ -282,7 +287,7 @@ function BotWander.checkAntiClump(bot)
     for _, other in pairs(allPlayers) do
         if other and other:IsBot() and other:GetGUID() ~= botGuid then
             if other:GetMapId() == mapId and other:IsAlive() then
-                local ox, oy = other:GetPosition()
+                local ox, oy = other:GetLocation()
                 local distSq = Movement.squaredDistance(bx, by, ox, oy)
 
                 if distSq < ANTI_CLUMP_RADIUS * ANTI_CLUMP_RADIUS then
@@ -314,7 +319,8 @@ function BotWander.doWander(bot)
 
     if targetX then
         -- Success - move and reset counters
-        bot:SetWalk(true)  -- walking speed like travellers
+        -- SetWalk provided by ElunaCompat.ext for Players
+        bot:SetWalk(true)
         bot:MoveTo(0, targetX, targetY, targetZ, false)
 
         -- Update theta toward chosen direction
@@ -436,7 +442,7 @@ function BotWander.lonelinessCheck(bot)
         return false
     end
 
-    local bx, by   = bot:GetPosition()
+    local bx, by   = bot:GetLocation()
     local botLevel = bot:GetLevel()
     local mapId    = bot:GetMapId()
     local botGuid  = bot:GetGUID()
@@ -454,7 +460,7 @@ function BotWander.lonelinessCheck(bot)
             if player:GetMapId() == mapId then
                 local levelDiff = math.abs(player:GetLevel() - botLevel)
                 if levelDiff <= LEVEL_RANGE then
-                    local px, py = player:GetPosition()
+                    local px, py = player:GetLocation()
                     local distSq = Movement.squaredDistance(bx, by, px, py)
 
                     if distSq < LONELY_RADIUS * LONELY_RADIUS then

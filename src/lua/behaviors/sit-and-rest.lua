@@ -12,6 +12,10 @@ require("behaviors/avoid-monsters")
 
 SitAndRest = {}
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER SitAndRest table is created so require() returns the module
+package.loaded["behaviors/sit-and-rest"] = SitAndRest
+
 -- {{{ Configuration
 REST_HEALTH_PCT  =  50   -- start resting below this health %
 REST_MANA_PCT    =  30   -- start resting below this mana %

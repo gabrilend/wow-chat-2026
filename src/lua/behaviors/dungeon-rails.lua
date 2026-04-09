@@ -11,6 +11,10 @@ require("movement")
 
 DungeonRails = {}
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER DungeonRails table is created so require() returns the module
+package.loaded["behaviors/dungeon-rails"] = DungeonRails
+
 -- {{{ Configuration
 DUNGEON_SAMPLE_DIST       = 10    -- yards to sample terrain
 DUNGEON_HEIGHT_LIMIT      = 5     -- yards vertical tolerance
@@ -105,7 +109,7 @@ end -- }}}
 -- Returns count and table of walkable directions
 function DungeonRails.countWalkableDirections(bot, sampleDist)
     sampleDist = sampleDist or DUNGEON_SAMPLE_DIST
-    local bx, by, bz = bot:GetPosition()
+    local bx, by, bz = bot:GetLocation()
     local map = bot:GetMap()
     local walkable = {}
 
@@ -219,7 +223,7 @@ function DungeonRails.handleIntersection(bot, directions)
     bot:SetData("came_from_angle", oppositeAngle)
 
     -- Store that we passed through this intersection
-    local bx, by, bz = bot:GetPosition()
+    local bx, by, bz = bot:GetLocation()
     DungeonRails.recordIntersection(bot, bx, by, bz)
 
     -- Update theta for rail following
@@ -235,8 +239,8 @@ end -- }}}
 -- Check ahead for dead-end, return probability of turning around
 -- Probability increases as we get closer
 function DungeonRails.checkDeadEnd(bot)
-    local bx, by, bz = bot:GetPosition()
-    local facing = bot:GetData("theta") or bot:GetFacing()
+    local bx, by, bz = bot:GetLocation()
+    local facing = bot:GetData("theta") or bot:GetO()
     local map = bot:GetMap()
 
     -- Sample progressively further ahead
@@ -269,7 +273,7 @@ end -- }}}
 -- Turn around at dead-end
 function DungeonRails.handleDeadEnd(bot)
     -- Reverse direction
-    local theta = bot:GetData("theta") or bot:GetFacing()
+    local theta = bot:GetData("theta") or bot:GetO()
     theta = theta + 3.14
     if theta > 6.28 then theta = theta - 6.28 end
     bot:SetData("theta", theta)
@@ -285,8 +289,8 @@ end -- }}}
 -- Pick target exactly 10 yards away, within meander range of current theta
 -- Returns x, y, z, status on success; nil, nil, nil, "retry"/"exit" on failure
 function DungeonRails.selectWanderTarget(bot)
-    local bx, by, bz = bot:GetPosition()
-    local theta = bot:GetData("theta") or bot:GetFacing()
+    local bx, by, bz = bot:GetLocation()
+    local theta = bot:GetData("theta") or bot:GetO()
     local map = bot:GetMap()
 
     local failures = bot:GetData("dungeon_failures") or 0
@@ -359,7 +363,7 @@ function DungeonRails.findNearestEntrance(bot)
         return nil
     end
 
-    local bx, by = bot:GetPosition()
+    local bx, by = bot:GetLocation()
     local nearest = nil
     local nearestDistSq = math.huge
 
@@ -403,11 +407,12 @@ function DungeonRails.seekEntrance(bot)
     end
 
     -- Move toward dungeon entrance
+    -- SetWalk provided by ElunaCompat.ext for Players
     bot:SetWalk(true)
     bot:MoveTo(0, entrance.x, entrance.y, entrance.z, false)
 
     -- Update theta toward dungeon for consistent movement
-    local bx, by = bot:GetPosition()
+    local bx, by = bot:GetLocation()
     local theta = math.atan2(entrance.y - by, entrance.x - bx)
     bot:SetData("theta", theta)
 
@@ -428,9 +433,9 @@ function DungeonRails.update(bot)
 
     -- Initialize entrance if first tick in dungeon
     if not bot:GetData("dungeon_entrance") then
-        local x, y, z = bot:GetPosition()
+        local x, y, z = bot:GetLocation()
         bot:SetData("dungeon_entrance", { x = x, y = y, z = z })
-        bot:SetData("theta", bot:GetFacing())
+        bot:SetData("theta", bot:GetO())
         print("[DungeonRails] " .. bot:GetName() .. " entered dungeon at " ..
               string.format("%.0f, %.0f", x, y))
     end
@@ -441,6 +446,7 @@ function DungeonRails.update(bot)
     if posType == "intersection" then
         -- At intersection - pick direction
         local tx, ty, tz = DungeonRails.handleIntersection(bot, directions)
+        -- SetWalk provided by ElunaCompat.ext for Players
         bot:SetWalk(true)
         bot:MoveTo(0, tx, ty, tz, false)
         return
@@ -481,6 +487,7 @@ function DungeonRails.update(bot)
     end
 
     if tx then
+        -- SetWalk provided by ElunaCompat.ext for Players
         bot:SetWalk(true)
         bot:MoveTo(0, tx, ty, tz, false)
     end

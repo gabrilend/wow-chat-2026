@@ -1,32 +1,24 @@
 -- {{{ Everland Ghostsong - Behavior Loader
--- This script is loaded by ALE and initializes all behavior systems
--- ALE auto-loads .lua files from the root script directory
--- Subdirectories require explicit loading
+-- ALE auto-loads ALL .lua files from subdirectories (including behaviors/).
+-- This file is now just a marker that confirms behaviors loaded correctly.
 --
 -- Issue: 134-ale-behavior-scripts-not-loading
+-- Issue: 332 - Removed require() calls that caused double-loading
 -- Concept Catalog: 001-010
 -- }}}
 
-print("[LoadBehaviors] Starting behavior system initialization...")
+-- Register in package.loaded so require() is a no-op after ALE loads this
+package.loaded["load-behaviors"] = true
 
--- {{{ Setup require paths
--- Add behaviors directory to package path
-local script_path = debug.getinfo(1, "S").source:sub(2):match("(.*/)")
-if script_path then
-    package.path = script_path .. "?.lua;" ..
-                   script_path .. "behaviors/?.lua;" ..
-                   package.path
-end
--- }}}
+-- ALE loads scripts alphabetically within each directory.
+-- By the time this file runs, behaviors/ scripts have already executed.
+-- We just verify the Behaviors global exists.
 
--- {{{ Load behavior system
-local success, err = pcall(function()
-    require("behaviors/init")
-end)
-
-if not success then
-    print("[LoadBehaviors] ERROR: Failed to load behaviors: " .. tostring(err))
+if Behaviors and Behaviors.loaded then
+    local count = 0
+    for _ in pairs(Behaviors.loaded) do count = count + 1 end
+    print("[LoadBehaviors] Behavior system verified - " .. count .. " behaviors registered")
 else
-    print("[LoadBehaviors] Behavior system loaded successfully")
+    print("[LoadBehaviors] WARNING: Behaviors table not found - check behavior scripts for errors")
 end
 -- }}}

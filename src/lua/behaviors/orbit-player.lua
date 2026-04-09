@@ -12,6 +12,10 @@ require("behaviors/avoid-monsters")
 
 OrbitPlayer = {}
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER OrbitPlayer table is created so require() returns the module
+package.loaded["behaviors/orbit-player"] = OrbitPlayer
+
 -- {{{ Configuration
 ORBIT_RADIUS_IDLE    =  8   -- yards from leader when idle
 ORBIT_RADIUS_COMBAT  =  5   -- yards from leader in combat
@@ -114,7 +118,7 @@ function OrbitPlayer.calculateTargetPosition(bot)
     local leader = OrbitPlayer.getLeader(bot)
     if not leader then return nil, nil, nil end
 
-    local lx, ly, lz = leader:GetPosition()
+    local lx, ly, lz = leader:GetLocation()
     local radius     = OrbitPlayer.getOrbitRadius(bot, leader)
     local slot       = OrbitPlayer.getOrbitSlot(bot)
     local totalSlots = OrbitPlayer.getPartyBotCount(bot)
@@ -144,7 +148,7 @@ end -- }}}
 function OrbitPlayer.needsRepositioning(bot, tx, ty)
     if not tx or not ty then return false end
 
-    local bx, by = bot:GetPosition()
+    local bx, by = bot:GetLocation()
     local distSq = Movement.squaredDistance(bx, by, tx, ty)
 
     return distSq > (REPOSITION_THRESHOLD * REPOSITION_THRESHOLD)
@@ -161,7 +165,7 @@ function OrbitPlayer.avoidClumping(bot, tx, ty)
 
     for _, other in pairs(bots) do
         if other and other:IsBot() and other:GetGUID() ~= bot:GetGUID() then
-            local ox, oy = other:GetPosition()
+            local ox, oy = other:GetLocation()
             local distSq = Movement.squaredDistance(tx, ty, ox, oy)
 
             if distSq < (CLUMP_AVOID_RADIUS * CLUMP_AVOID_RADIUS) then

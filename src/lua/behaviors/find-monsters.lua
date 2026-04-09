@@ -11,6 +11,10 @@ require("movement")
 
 FindMonsters = {}
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER FindMonsters table is created so require() returns the module
+package.loaded["behaviors/find-monsters"] = FindMonsters
+
 -- {{{ Configuration
 SIGHT_RANGE        = 500   -- yards to scan for creatures
 MAX_LEVEL_DIFF_UP  =   3   -- will attack creatures up to 3 levels higher
@@ -25,16 +29,19 @@ ENGAGE_RANGE       =  30   -- yards to start combat
 -- Does not check LoS - that's done in selectTarget
 function FindMonsters.getNearbyCreatures(bot, range)
     local creatures = {}
-    local bx, by, bz = bot:GetPosition()
+    local bx, by, bz = bot:GetLocation()
 
-    -- GetCreaturesInRange returns creatures within yards
-    local nearby = bot:GetCreaturesInRange(range, 0, 0)  -- hostile only
+    -- GetCreaturesInRange(range, entryId, hostile, dead)
+    -- hostile: 0=both, 1=hostile, 2=friendly
+    -- dead: 0=both, 1=alive, 2=dead (default 1)
+    local nearby = bot:GetCreaturesInRange(range, 0, 1)  -- hostile only
 
     if not nearby then return creatures end
 
     for _, creature in pairs(nearby) do
+        -- IsHostileTo provided by ElunaCompat.ext
         if creature and creature:IsAlive() and creature:IsHostileTo(bot) then
-            local cx, cy = creature:GetPosition()
+            local cx, cy = creature:GetLocation()
             local dist   = Movement.squaredDistance(bx, by, cx, cy)
 
             table.insert(creatures, {
@@ -93,8 +100,8 @@ end -- }}}
 -- {{{ FindMonsters.moveToTarget
 -- Move bot toward target creature
 function FindMonsters.moveToTarget(bot, target)
-    local tx, ty, tz = target:GetPosition()
-    local bx, by     = bot:GetPosition()
+    local tx, ty, tz = target:GetLocation()
+    local bx, by     = bot:GetLocation()
 
     local dist = math.sqrt(Movement.squaredDistance(bx, by, tx, ty))
 

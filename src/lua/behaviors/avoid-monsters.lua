@@ -12,6 +12,10 @@ require("movement")
 
 AvoidMonsters = {}
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER AvoidMonsters table is created so require() returns the module
+package.loaded["behaviors/avoid-monsters"] = AvoidMonsters
+
 -- {{{ Configuration
 DANGER_RADIUS       =  40   -- yards to check for threats
 FLEE_HEALTH_PCT     =  20   -- health % to trigger flee
@@ -28,7 +32,8 @@ BOSS_DANGER_MULT    =   5   -- multiplier for boss creatures
 -- Higher score = more dangerous
 function AvoidMonsters.getDangerScore(unit, creature)
     if not creature or not creature:IsAlive() then return 0 end
-    if not creature:IsHostileTo(unit)          then return 0 end
+    -- IsHostileTo provided by ElunaCompat.ext
+    if not creature:IsHostileTo(unit) then return 0 end
 
     local score      = 0
     local unitLevel  = unit:GetLevel()
@@ -60,18 +65,20 @@ end -- }}}
 -- Sum danger scores from all nearby hostile creatures
 -- Returns total danger and table of threat positions
 function AvoidMonsters.getTotalDanger(unit)
-    local ux, uy     = unit:GetPosition()
-    local nearby     = unit:GetCreaturesInRange(DANGER_RADIUS, 0, 0)  -- hostile
+    local ux, uy     = unit:GetLocation()
+    -- GetCreaturesInRange(range, entryId, hostile) - hostile: 0=both, 1=hostile, 2=friendly
+    local nearby     = unit:GetCreaturesInRange(DANGER_RADIUS, 0, 1)  -- hostile only
     local totalScore = 0
     local threats    = {}
 
     if not nearby then return 0, threats end
 
     for _, creature in pairs(nearby) do
+        -- IsHostileTo provided by ElunaCompat.ext
         if creature and creature:IsAlive() and creature:IsHostileTo(unit) then
             local score = AvoidMonsters.getDangerScore(unit, creature)
             if score > 0 then
-                local cx, cy = creature:GetPosition()
+                local cx, cy = creature:GetLocation()
                 totalScore   = totalScore + score
                 table.insert(threats, {
                     creature = creature,
@@ -92,7 +99,7 @@ end -- }}}
 function AvoidMonsters.getEscapeVector(unit, threats)
     if #threats == 0 then return 0, 0 end
 
-    local ux, uy      = unit:GetPosition()
+    local ux, uy      = unit:GetLocation()
     local sumX, sumY  = 0, 0
     local totalWeight = 0
 
@@ -147,7 +154,7 @@ end -- }}}
 -- Calculate position to flee to
 -- Returns x, y, z for safe escape position
 function AvoidMonsters.getFleePosition(unit)
-    local ux, uy, uz = unit:GetPosition()
+    local ux, uy, uz = unit:GetLocation()
     local danger, threats = AvoidMonsters.getTotalDanger(unit)
 
     if #threats == 0 then return ux, uy, uz end
@@ -199,14 +206,16 @@ end -- }}}
 -- Check if a position is near active combat or hostiles
 -- Used by travel.lua wanderers to pick safe paths
 function AvoidMonsters.isAreaDangerous(unit, checkX, checkY)
-    local ux, uy = unit:GetPosition()
-    local nearby = unit:GetCreaturesInRange(DANGER_RADIUS, 0, 0)
+    local ux, uy = unit:GetLocation()
+    -- GetCreaturesInRange(range, entryId, hostile) - hostile: 0=both, 1=hostile, 2=friendly
+    local nearby = unit:GetCreaturesInRange(DANGER_RADIUS, 0, 1)  -- hostile only
 
     if not nearby then return false end
 
     for _, creature in pairs(nearby) do
+        -- IsHostileTo provided by ElunaCompat.ext
         if creature and creature:IsAlive() and creature:IsHostileTo(unit) then
-            local cx, cy = creature:GetPosition()
+            local cx, cy = creature:GetLocation()
 
             -- check if creature is near the point we're checking
             local distToPoint = Movement.squaredDistance(cx, cy, checkX, checkY)
@@ -228,7 +237,7 @@ end -- }}}
 -- Find a direction that avoids danger
 -- Returns angle in radians, or nil if no safe direction
 function AvoidMonsters.getSafeDirection(unit, preferredAngle)
-    local ux, uy     = unit:GetPosition()
+    local ux, uy     = unit:GetLocation()
     local checkDist  = DANGER_RADIUS / 2
     local angleStep  = 0.785  -- 45 degrees
 

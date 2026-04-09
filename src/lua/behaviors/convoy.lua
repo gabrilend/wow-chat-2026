@@ -11,6 +11,10 @@ require("movement")
 
 Convoy = {}
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER Convoy table is created so require() returns the module
+package.loaded["behaviors/convoy"] = Convoy
+
 -- {{{ Configuration
 CONVOY_SPACING        = 3     -- yards between convoy members
 REFORM_DELAY          = 500   -- ms delay before reformation
@@ -146,7 +150,7 @@ function Convoy.findNearest(x, y, candidates)
     for i, npc_guid in ipairs(candidates) do
         local npc = GetCreatureByGUID(npc_guid)
         if npc then
-            local nx, ny = npc:GetPosition()
+            local nx, ny = npc:GetLocation()
             local dist = Movement.squaredDistance(x, y, nx, ny)
             if dist < nearest_dist then
                 nearest = i
@@ -170,7 +174,7 @@ function Convoy.rebuildChain(convoy_id)
     if convoy.leader then
         local leader = GetPlayerByGUID(convoy.leader)
         if leader then
-            start_x, start_y = leader:GetPosition()
+            start_x, start_y = leader:GetLocation()
         end
     end
 
@@ -178,7 +182,7 @@ function Convoy.rebuildChain(convoy_id)
     if not start_x then
         local first_npc = GetCreatureByGUID(convoy.members[1])
         if first_npc then
-            start_x, start_y = first_npc:GetPosition()
+            start_x, start_y = first_npc:GetLocation()
         else
             return  -- No valid starting point
         end
@@ -201,7 +205,7 @@ function Convoy.rebuildChain(convoy_id)
 
             local npc = GetCreatureByGUID(npc_guid)
             if npc then
-                current_x, current_y = npc:GetPosition()
+                current_x, current_y = npc:GetLocation()
             end
         else
             break
@@ -401,23 +405,24 @@ end
 -- {{{ Convoy.lostMemberCheck
 -- Periodic check for members too far from chain
 function Convoy.lostMemberCheck()
+    print("[DEBUG Convoy.lostMemberCheck] CALLBACK FIRED")
     for convoy_id, convoy in pairs(convoys) do
         if not convoy.leader then goto next_convoy end
 
         local leader = GetPlayerByGUID(convoy.leader)
         if not leader then goto next_convoy end
 
-        local lx, ly = leader:GetPosition()
+        local lx, ly = leader:GetLocation()
 
         for _, npc_guid in ipairs(convoy.members) do
             local npc = GetCreatureByGUID(npc_guid)
             if npc then
-                local nx, ny = npc:GetPosition()
+                local nx, ny = npc:GetLocation()
                 local dist = math.sqrt(Movement.squaredDistance(lx, ly, nx, ny))
 
                 if dist > MAX_STRAY_DISTANCE then
                     -- Lost member - teleport back
-                    npc:NearTeleport(lx, ly, leader:GetZ(), leader:GetFacing())
+                    npc:NearTeleport(lx, ly, leader:GetZ(), leader:GetO())
                     print("[Convoy] " .. npc:GetName() .. " was lost, teleported back")
                 end
             end
@@ -429,12 +434,36 @@ end
 -- }}}
 
 -- {{{ Convoy.initialize
--- Initialize convoy system
+-- No global initialization needed - convoy checks are per-player now
 function Convoy.initialize()
-    -- Periodic lost member check
-    CreateLuaEvent(Convoy.lostMemberCheck, CHAIN_UPDATE_RATE * 5, 0)
+    print("[Convoy] System initialized (per-player events via periodic_events.lua)")
+end
+-- }}}
 
-    print("[Convoy] System initialized")
+-- {{{ Convoy.periodicLostMemberCheck
+-- Per-player periodic check for lost convoy members
+-- Called from periodic_events.lua attached to players with convoys
+-- Issue 332: Moved from CreateLuaEvent to player-attached event
+function Convoy.periodicLostMemberCheck(player)
+    local guid = player:GetGUID()
+    local convoy = convoys[guid]
+    if not convoy or not convoy.leader then return end
+
+    local lx, ly = player:GetLocation()
+
+    for _, npc_guid in ipairs(convoy.members) do
+        local npc = GetCreatureByGUID(npc_guid)
+        if npc then
+            local nx, ny = npc:GetLocation()
+            local dist = math.sqrt(Movement.squaredDistance(lx, ly, nx, ny))
+
+            if dist > MAX_STRAY_DISTANCE then
+                -- Lost member - teleport back
+                npc:NearTeleport(lx, ly, player:GetZ(), player:GetO())
+                print("[Convoy] " .. npc:GetName() .. " was lost, teleported back")
+            end
+        end
+    end
 end
 -- }}}
 

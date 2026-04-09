@@ -10,6 +10,10 @@ require("movement")
 
 Gestures = {}
 
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER Gestures table is created so require() returns the module
+package.loaded["behaviors/gestures"] = Gestures
+
 -- {{{ Configuration
 KNEEL_RADIUS           = 10    -- yards to trigger NPC kneeling
 BECKON_RADIUS          = 15    -- yards for beckoning to work
@@ -54,7 +58,7 @@ function Gestures.getPlayersInRange(x, y, z, range, map)
 
     for _, player in pairs(all_players) do
         if player and player:IsAlive() then
-            local px, py, pz = player:GetPosition()
+            local px, py, pz = player:GetLocation()
             local dist = Movement.squaredDistance(x, y, px, py)
             if dist <= range * range then
                 table.insert(players, player)
@@ -70,7 +74,7 @@ end
 -- Find all friendly NPCs within range of player
 function Gestures.getNPCsInRange(player, range)
     local npcs = {}
-    local px, py, pz = player:GetPosition()
+    local px, py, pz = player:GetLocation()
 
     -- Get creatures in range that are friendly
     local nearby = player:GetCreaturesInRange(range, 1, 0)  -- friendly
@@ -99,8 +103,8 @@ function Gestures.npcKneel(npc, player)
     if reverence_targets[npc_guid] then return end
 
     -- Face the player
-    local px, py = player:GetPosition()
-    local nx, ny = npc:GetPosition()
+    local px, py = player:GetLocation()
+    local nx, ny = npc:GetLocation()
     local angle = math.atan2(py - ny, px - nx)
     npc:SetFacing(angle)
 
@@ -240,7 +244,7 @@ function Gestures.onPlayerSit(player)
     if not player then return end
 
     local convoy = Gestures.getConvoy(player)
-    local px, py, pz = player:GetPosition()
+    local px, py, pz = player:GetLocation()
 
     for _, npc in ipairs(convoy) do
         -- Stop following
@@ -269,8 +273,8 @@ function Gestures.onPlayerKneel(player)
 
     if #convoy == 0 then return end
 
-    local px, py, pz = player:GetPosition()
-    local facing = player:GetFacing()
+    local px, py, pz = player:GetLocation()
+    local facing = player:GetO()
 
     -- Calculate target position in facing direction
     local target_x = px + math.cos(facing) * KNEEL_DIRECTION_DIST
@@ -368,12 +372,13 @@ end
 
 -- {{{ Gestures.proximityCheck
 -- Periodic check for player-NPC proximity (reverence trigger)
+-- Issue 328: Use ReadyPlayers registry instead of GetPlayersInWorld()
+-- This ensures we only iterate over players with valid position
 function Gestures.proximityCheck()
-    local all_players = GetPlayersInWorld()
+    print("[DEBUG Gestures.proximityCheck] CALLBACK FIRED")
+    local ready_players = ReadyPlayers.getAll()
 
-    if not all_players then return end
-
-    for _, player in pairs(all_players) do
+    for _, player in pairs(ready_players) do
         if player and player:IsAlive() and player:IsStandState() then
             Gestures.onPlayerApproach(player)
         end
@@ -382,12 +387,21 @@ end
 -- }}}
 
 -- {{{ Gestures.initialize
--- Set up periodic checks and event handlers
+-- No global initialization needed - proximity check is per-player now
 function Gestures.initialize()
-    -- Periodic proximity check for reverence
-    CreateLuaEvent(Gestures.proximityCheck, REVERENCE_CHECK_RATE, 0)
+    print("[Gestures] System initialized (per-player events via periodic_events.lua)")
+end
+-- }}}
 
-    print("[Gestures] System initialized")
+-- {{{ Gestures.periodicProximityCheck
+-- Per-player periodic check for nearby NPCs (reverence trigger)
+-- Called from periodic_events.lua, re-registers itself
+-- Issue 332: Moved from CreateLuaEvent to player-attached event
+function Gestures.periodicProximityCheck(player)
+    if not player or not player:IsAlive() or not player:IsStandState() then
+        return
+    end
+    Gestures.onPlayerApproach(player)
 end
 -- }}}
 
