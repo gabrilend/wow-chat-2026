@@ -12,6 +12,7 @@ Implement custom playerbot behaviors and game systems that create emergent gamep
 |----|-------|--------|
 | 120 | talent-points-level-20-cap | Completed |
 | 121 | bounty-board-currency-system | Open |
+| 136 | drop-all-creatures-except-spirit-healers | Ready (SQL created) |
 | 122 | rebellious-attitudes-freedom-of-affairs | Open (placeholder) |
 | 124 | randomize-ambush-spawn-interval | Completed |
 | 125 | player-bot-behavior-commands | Open |
@@ -20,13 +21,15 @@ Implement custom playerbot behaviors and game systems that create emergent gamep
 | 128 | embedding-based-creature-selection | Open (depends on 127) |
 | 129 | portal-dimension-system | Open (Design Phase) |
 | 130 | ale-initialization-hook-fix | Completed |
+| 318 | remove-profile-system | Open |
 
 ### Class Scaling & Training
 | ID | Title | Status |
 |----|-------|--------|
 | 138 | death-knight-level-1-scaling | Implemented (needs testing) |
 | 140 | quest-spells-to-trainers | Implemented (needs testing) |
-| 141 | talent-tier-limit | Open |
+| 141 | talent-tier-limit | Open (see 319) |
+| 319 | chunked-talent-points | Open (v1.0 requirement) |
 | 142 | custom-spell-system | Open (Phase 3 prep) |
 | 143 | proc-gem-system | Open (Phase 3 prep) |
 | 155 | custom-class-selection-npc | Implemented (race-specific NPCs) |
@@ -40,11 +43,17 @@ Implement custom playerbot behaviors and game systems that create emergent gamep
 | 147 | clear-traveller-data-on-despawn | Completed |
 | 158 | ambush-aggro-and-corpse-movement | Implemented (needs testing) |
 
+### Traveler System
+| ID | Title | Status |
+|----|-------|--------|
+| 320 | traveler-sit-with-player | Implemented (needs testing) |
+
 ### C++ Patches
 | ID | Title | Status |
 |----|-------|--------|
 | 150 | ale-sell-item-hook | Implemented (needs rebuild) |
 | 156 | monster-accuracy-level-cap | Implemented (needs rebuild) |
+| 332 | ale-unit-methods-patch | Completed |
 
 ### Treasure Chest Systems
 | ID | Title | Status |
@@ -72,6 +81,7 @@ Implement custom playerbot behaviors and game systems that create emergent gamep
 | 164 | behavior-orchestrator-modes | Implemented (foundation) |
 | 165 | activity-selection-boredom | Implemented (needs testing) |
 | 166 | point-line-definition-tools | Open (tooling) |
+| 328 | getposition-nil-errors | Implemented (needs testing) |
 
 ## Completed: 2/10 core, 9/10 behaviors (2 open), 1 tooling
 
@@ -108,6 +118,50 @@ Phase 2 depends on:
 6. **119 - Orbit Player** (social, lower priority)
 
 ## Notes
+
+### 2026-04-08 - ALE Unit Methods Patch (332)
+- **Problem:** Bot behavior scripts called Eluna-compatible methods not in ALE
+  - `SetWalk()` only existed for Creature, not Player/Unit
+  - `IsHostileTo()` and `IsFriendlyTo()` did not exist in ALE
+- **Solution:** Added native methods to ALE C++ source
+  - `Unit:SetWalk(enable)` - Sets MOVEMENTFLAG_WALKING for proper walking animation
+  - `Unit:IsWalking()` - Reads movement flags
+  - `Unit:IsHostileTo(target)` - Uses `GetReactionTo() <= REP_HOSTILE`
+  - `Unit:IsFriendlyTo(target)` - Uses `GetReactionTo() >= REP_FRIENDLY`
+- **Files patched:**
+  - `source-beta/modules/mod-ale/src/LuaEngine/methods/UnitMethods.h`
+  - `source-beta/modules/mod-ale/src/LuaEngine/LuaFunctions.cpp`
+- **Secondary fix:** Removed duplicate ObjectVariables.ext causing Lua state corruption
+  - Replaced `installed-files-beta/bin/lua_scripts/extensions/` directory with symlink to `src/lua/extensions/`
+  - Same pattern already used for `custom/` directory
+- **Design lesson:** "No fallbacks" - workarounds under the original function name are wrong
+  - Speed manipulation is not SetWalk (doesn't trigger MOVEMENTFLAG_WALKING)
+  - Proximity checks are not IsHostileTo (different purpose entirely)
+- **Patch doc:** `docs/patches/ale-unit-setwalk.md`
+- **Status:** Completed, ready for testing
+
+### 2026-04-08 - GetPosition Nil Errors Fixed (328)
+- **Root cause identified**: Timing race condition during bot login
+  - Playerbots queues `OnBotLoginOperation` which eventually calls `sALE->OnLogin(bot)`
+  - Lua `InitialLogin` immediately registers periodic events
+  - First tick of `PeriodicBotWander` fires before bot has world position
+  - `bot:GetPosition()` fails with "method is nil" (stale userdata or uninitialized state)
+- **Architectural fix implemented**: Option A - Delayed event registration
+  - Added `WaitForBotReady()` function that polls for valid position
+  - Uses `pcall` to safely test `GetPosition()` - handles stale userdata gracefully
+  - Polls every 500ms until position available
+  - Only then registers behavior events via `registerBotBehaviors()`
+- **Design principle**: "Make the dangerous state impossible, not just guarded against"
+  - Behavior events are never registered until bot is confirmed ready
+  - No guard rails needed in individual behavior functions
+- **File modified**: `src/lua/periodic_events.lua`
+  - Added `DELAY_BOT_READY_CHECK = 500`
+  - Added `registerBotBehaviors(bot)` helper
+  - Added `WaitForBotReady()` polling function
+  - Modified `InitialLogin()` to start polling for bots instead of immediate registration
+  - Added clarifying comment to `BotOrchestrator.switchMode()`
+- **Related**: Issue 329 (Algorism Priority Scheduler) proposes centralized WorldTick as alternative
+- **Status**: Implemented, needs testing
 
 ### 2026-04-05 - Activity Selection and Boredom System (165)
 - **Event-driven activity selection**: Bots get bored and pick new activities
