@@ -1,100 +1,124 @@
 # Development Roadmap
 
-## Phase 1: Foundation
+## Overview
 
-**Goal**: Establish stable server environment with documented setup process.
+Everland Ghostsong is a WoW 3.3.5a private server with roguelike survival mechanics.
+- **Max level:** 20
+- **Talent points:** Every 1/3 level
+- **World:** Empty by default - monsters spawn around players (ambush system)
+- **Companions:** Playerbots as AI party members
+
+---
+
+## Phase 1: Foundation (Complete)
+
+**Goal**: Establish stable server environment with working modules.
 
 ### Milestones
 - [x] Installation script functional
 - [x] Update script functional
-- [ ] Server runs without errors
-- [ ] Playerbots module operational
-- [ ] Documentation complete
+- [x] Local MySQL installation
+- [x] Server runs without errors
+- [x] Playerbots module operational
+- [x] mod-ale (Lua engine) operational
+- [x] Lua scripts loading and executing
+- [x] Profile system (alpha/beta/release)
 
-### Issues
+### Key Issues
 - 101-verify-server-startup
 - 102-test-playerbots-spawn
-- 103-document-configuration-options
-- 104-migrate-lua-scripts-from-wowchat1
 - 105-setup-local-mysql-installation
-- 106-ingame-config-control-board
+- 130-ale-initialization-hook-fix
 
 ---
 
-## Phase 2: Scripting Infrastructure
+## Phase 2: Behaviors and Systems (In Progress)
 
-**Goal**: Create Lua scripting framework for custom game logic.
+**Goal**: Implement custom playerbot behaviors and core game systems.
 
 ### Milestones
-- [ ] Utility library structure established
-- [ ] Basic event handlers working
-- [ ] Chat command framework
-- [ ] Script hot-reload workflow
+- [x] Level 20 cap with 1/3 level talent points
+- [x] Ambush spawn system with randomized intervals
+- [x] Treasure chest system (per-player queues, holder/searcher)
+- [x] Bot behaviors: find-monsters, avoid-monsters, sit-and-rest, orbit-player
+- [x] Bot wandering (traveller-style with dungeon navigation)
+- [x] Activity selection and boredom system
+- [ ] C++ patches applied (150, 156) - **needs rebuild**
+- [ ] Sold items to treasure pool (depends on 150)
+- [ ] Discuss with NPC behavior
+- [ ] Point/line definition tools
+- [ ] Dungeon room spawn zones
 
-### Issues
-- 201-create-lua-utility-library
-- 202-implement-chat-command-framework
-- 203-setup-script-reload-workflow
+### Key Issues
+- 120: Talent points level 20 cap
+- 124: Randomize ambush spawn interval
+- 148-154: Treasure chest system
+- 114-119: Playerbot behaviors
+- 160-166: Behavior orchestration and tooling
+
+### Blocking
+- Issues 150/156 need server rebuild to unblock treasure pool integration
 
 ---
 
-## Phase 3: Chat System
+## Phase 3: World Immersion and Hazards (Planning)
 
-**Goal**: Implement custom chat-based interaction systems.
+**Goal**: Create a living, dangerous world with storytelling and progression.
 
-### Milestones
-- [ ] Chat message parsing
-- [ ] Command routing system
-- [ ] Response formatting
-- [ ] Chat-based game mechanics
+### Environmental Hazards
+- [ ] Ocean sharks after time threshold (301)
+- [ ] Language barriers - racial languages only (302)
 
-### Issues
-- 301-implement-chat-parser
-- 302-create-command-router
-- 303-design-response-formatter
+### Treasure Expansion
+- [ ] Chest-bound hearthstones (303)
+- [ ] Zero-value treasure duplicates (305)
+
+### Custom Classes
+- [ ] Conditional selector spawn (304)
+- [ ] Custom talent interface (345)
+
+### rmail Integration
+- [ ] In-game mail bridge (306)
+- [ ] DNS-style addresses (313)
+- [ ] Feedback mailbox (314)
+- [ ] Login flush hook (315)
+- [ ] Account creation (317)
+
+### NPC Storytelling
+- [ ] Narrator audience facing (307)
+- [ ] Gutenberg text library (308)
+- [ ] Wandering narrator system (310)
+- [ ] Shepherd flock system (311)
+- [ ] Automated lore generation (312)
+
+### Progression
+- [ ] Invisible level progression past 20 (309)
+- [ ] Permadeath and immortality mechanics
 
 ---
 
-## Phase 4: Bot Integration
+## Future Phases (Conceptual)
 
-**Goal**: Script playerbot behavior and create automated systems.
+### Phase 4: Social and Economy
+- Trading post system
+- Bounty board currency
+- Cross-faction communication
+- Player-driven economy
 
-### Milestones
-- [ ] Bot command interface
-- [ ] Group management scripts
-- [ ] Quest automation helpers
-- [ ] Combat behavior customization
-
-### Issues
-- 401-create-bot-command-interface
-- 402-implement-group-management
-- 403-quest-automation-helpers
-
----
-
-## Phase 5: Data and Analytics
-
-**Goal**: Export game data for analysis and visualization.
-
-### Milestones
-- [ ] Event logging system
-- [ ] Data export formats
-- [ ] Statistics gathering
-- [ ] Visualization tools
-
-### Issues
-- 501-implement-event-logger
-- 502-design-data-export-format
-- 503-create-statistics-gatherer
+### Phase 5: Content Generation
+- Procedural quest generation
+- Dynamic event system
+- World state persistence
+- Seasonal content
 
 ---
 
 ## Phase Completion Checklist
 
 For each phase:
-1. All issues resolved and moved to completed/
-2. Phase demo created in issues/completed/demos/
-3. phase-X-progress.md updated with final status
+1. All issues resolved and moved to `completed/`
+2. Phase demo created in `issues/completed/demos/`
+3. `phase-X-progress.md` updated with final status
 4. Git commit with phase completion summary
 
 ## Version Milestones
@@ -102,8 +126,14 @@ For each phase:
 | Version | Phase | Description |
 |---------|-------|-------------|
 | 0.1.0 | 1 | Stable foundation |
-| 0.2.0 | 2 | Scripting ready |
-| 0.3.0 | 3 | Chat system complete |
-| 0.4.0 | 4 | Bot scripting |
-| 0.5.0 | 5 | Data tools |
+| 0.2.0 | 2 | Behaviors and systems |
+| 0.3.0 | 3 | World immersion |
+| 0.4.0 | 4 | Social and economy |
 | 1.0.0 | - | Feature complete |
+
+## Related Documents
+
+- `issues/phase-1-progress.md` - Phase 1 detailed status
+- `issues/phase-2-progress.md` - Phase 2 detailed status
+- `issues/phase-3-progress.md` - Phase 3 detailed status
+- `notes/vision` - Project vision and philosophy

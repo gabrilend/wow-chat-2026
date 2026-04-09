@@ -43,7 +43,8 @@ a city that no longer exists.
 
 ### Treasure (every 100 seconds)
 
-Chests appear nearby with dungeon and raid loot scaled to your level.
+Chests appear nearby with equipment scaled to your level. Items sold to vendors
+will appear in other player's chests.
 
 ---
 
@@ -76,8 +77,8 @@ someone else's treasure.
 
 ### Sharing Chests
 
-You can't loot your own chest. When you open a chest, you can see the items
-inside, but you can't take them. A second player has to come by and pull
+You can't loot your own chest. When you open a chest, you can't see the items
+inside, and you can't take them either. A second player has to come by and pull
 them out for you. This fosters trust and cooperation—you need each other.
 
 ### Death Costs Durability
@@ -90,18 +91,20 @@ Equipment takes durability damage when you die. Death has consequences.
 
 ### Level 20 Cap
 
-The game caps at level 20. You get talent points every few levels, six total
+The game caps at level 20. You get three talent points every level, sixty total
 by the end. Abilities come from trainers who wander by as travelers.
 
 ### Custom Classes
 
-Players can submit their own custom classes. Pick any abilities from the base
+Players can supply their own custom classes. Pick any abilities from the base
 game, arrange them in any order, and that becomes a playable class. Want a
-healer with stealth? A tank that throws fireballs? Build it.
+healer with stealth? A tank that throws fireballs? Build it. Nobody will tell
+you no, the system is automatic and parsed from mod files provided by players.
 
 ### Death Knights
 
-Death Knights start at level 1 like everyone else. No special treatment.
+Death Knights start at level 1. Their abilities have been scaled and tuned to
+be closer in power to a level 1-20 adventurer.
 
 ---
 
@@ -130,7 +133,7 @@ src/lua/
 
 ```bash
 ./scripts/azerothcore update    # Build server
-./scripts/mysql-start           # Start database (port 3307)
+./scripts/start-mysql           # Start database
 ./scripts/azerothcore authserver
 ./scripts/azerothcore worldserver
 ```

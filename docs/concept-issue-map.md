@@ -328,6 +328,27 @@ Restore stashed features incrementally.
 
 ---
 
+### 329-mmap-route-precomputation
+**Status:** Open | **Phase:** 3 | **Merge-Oriented:** 162
+
+Precomputed A* pathfinding with path relaxation for dungeon navigation.
+
+| Concept | Title | Relevance |
+|---------|-------|-----------|
+| 162 | Issue 162 (dungeon-rail-pathfinding) | Merge target |
+| 401-420 | A* Algorithm | Core pathfinding |
+| 421-430 | Path Relaxation | Gradient descent on smoothness |
+| 431-440 | Tile Grids | Hex/square mmap sampling |
+| 113-122 | Consensus/Momentum | Player proximity effect |
+| 024 | travel.lua | Wandering integration |
+| 025 | movement.lua | Position utilities |
+| 055-100 | Ambush System | Spawn zone awareness |
+| 126 | Issue 126 (dungeon-room-spawn-zones) | Room detection |
+| 161 | Issue 161 (bot-wandering) | Integration point |
+| 166 | Issue 166 (point-line-definition) | Visualization |
+
+---
+
 ## Concept → Issues (Reverse Lookup)
 
 Quick reference for finding which issues touch a concept.
@@ -376,7 +397,10 @@ Quick reference for finding which issues touch a concept.
 
 | Range | Concept Group | Issues |
 |-------|---------------|--------|
-| 401-500 | Math/Algorithms | 200 (ambush math) |
+| 401-420 | A* Pathfinding | 329 |
+| 421-430 | Path Relaxation | 329 |
+| 431-440 | Tile Grids | 329 |
+| 441-500 | Math/Algorithms | 200 (ambush math) |
 
 ### Visual/Aesthetic (501-600)
 
@@ -431,6 +455,9 @@ Quick reference for finding which issues touch a concept.
 | 108-thread-count-variable | 5 | Completed |
 | 109-add-build-mode-to-azerothcore-script | 6 | Completed |
 | 200-incremental-feature-restore | 50+ | In Progress |
+| 329-mmap-route-precomputation | 11 | Open |
+| 346-authserver-public-ip-detection | 3 | Open |
+| 347-linear-ability-scaling | 15+ | Open |
 
 **Total unique concepts referenced:** ~200 (20% of first thousand)
 **Most connected issue:** 200-incremental-feature-restore (touches most game systems)

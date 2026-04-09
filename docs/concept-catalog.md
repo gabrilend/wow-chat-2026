@@ -80,8 +80,8 @@ the solo-friendly experience.
 Quality-of-life looting. One click, all corpses. Respect for player time.
 
 ### 018 - mod-grownup Module
-Level scaling. High-level players can play with low-level friends.
-The world stays challenging.
+characters increase in physical scale when levelling up.
+stronger characters are larger, to help identify them on the battlefield.
 
 ### 019 - The Soul: src/lua/
 The Lua scripts ARE the game. Everything custom lives here. This is
