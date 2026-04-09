@@ -1,0 +1,138 @@
+#!/bin/bash
+
+# update-realmlist-ip - Detects public IP and updates realmlist table
+# Run this before starting worldserver to ensure correct external address.
+# Uses multiple IP detection services for reliability (like rmail).
+#
+# Usage: ./scripts/update-realmlist-ip [optional-dir]
+
+# {{{ set_dir
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+if [[ -n "${1:-}" && -d "${1:-}" ]]; then
+    DIR="$1"
+fi
+# }}}
+
+# {{{ configuration
+WORLDSERVER_PORT=4462
+REALM_ID=1
+MYSQL_DIR="${DIR}/mysql/installed-files"
+MYSQL="${MYSQL_DIR}/bin/mysql"
+# }}}
+
+# {{{ source credentials
+source "${DIR}/scripts/credentials" "${DIR}"
+# }}}
+
+# {{{ get_public_ip
+# Query multiple services, require at least 2 to agree
+# Why: Single service could be down or return bad data
+function get_public_ip() {
+    local ip1 ip2 ip3 ip4
+
+    ip1=$(curl -s --max-time 5 ifconfig.me 2>/dev/null)
+    ip2=$(curl -s --max-time 5 icanhazip.com 2>/dev/null)
+    ip3=$(curl -s --max-time 5 api.ipify.org 2>/dev/null)
+    ip4=$(curl -s --max-time 5 checkip.amazonaws.com 2>/dev/null)
+
+    # Trim whitespace
+    ip1=$(echo "$ip1" | tr -d '[:space:]')
+    ip2=$(echo "$ip2" | tr -d '[:space:]')
+    ip3=$(echo "$ip3" | tr -d '[:space:]')
+    ip4=$(echo "$ip4" | tr -d '[:space:]')
+
+    # Find consensus (at least 2 services must agree)
+    for candidate in "$ip1" "$ip2" "$ip3" "$ip4"; do
+        if [[ -z "$candidate" ]]; then
+            continue
+        fi
+
+        local count=0
+        [[ "$ip1" == "$candidate" ]] && ((count++))
+        [[ "$ip2" == "$candidate" ]] && ((count++))
+        [[ "$ip3" == "$candidate" ]] && ((count++))
+        [[ "$ip4" == "$candidate" ]] && ((count++))
+
+        if [[ $count -ge 2 ]]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+
+    # No consensus - return error
+    echo "ERROR: Could not determine public IP (services disagree)" >&2
+    echo "  ifconfig.me:        $ip1" >&2
+    echo "  icanhazip.com:      $ip2" >&2
+    echo "  api.ipify.org:      $ip3" >&2
+    echo "  checkip.amazonaws:  $ip4" >&2
+    return 1
+}
+# }}}
+
+# {{{ get_current_realmlist
+function get_current_realmlist() {
+    "${MYSQL}" -u "$(cred_get mysql_user)" \
+          -p"$(cred_get mysql_pass)" \
+          -P "$(cred_get mysql_port)" \
+          -S "$(cred_get mysql_socket)" \
+          -N -e "SELECT address, port FROM acore_auth.realmlist WHERE id = ${REALM_ID};"
+}
+# }}}
+
+# {{{ update_realmlist
+function update_realmlist() {
+    local new_ip="$1"
+    local new_port="$2"
+
+    "${MYSQL}" -u "$(cred_get mysql_user)" \
+          -p"$(cred_get mysql_pass)" \
+          -P "$(cred_get mysql_port)" \
+          -S "$(cred_get mysql_socket)" \
+          -e "UPDATE acore_auth.realmlist SET address = '${new_ip}', port = ${new_port} WHERE id = ${REALM_ID};"
+}
+# }}}
+
+# {{{ main
+function main() {
+    echo "=== Realmlist IP Update ==="
+    echo ""
+
+    # Get current settings
+    echo "Current realmlist:"
+    local current
+    current=$(get_current_realmlist)
+    echo "  $current"
+    echo ""
+
+    # Detect public IP
+    echo "Detecting public IP..."
+    local public_ip
+    public_ip=$(get_public_ip)
+
+    if [[ $? -ne 0 ]]; then
+        echo "FAILED: Could not determine public IP"
+        echo "Realmlist NOT updated - using existing value"
+        exit 1
+    fi
+
+    echo "  Detected: $public_ip"
+    echo ""
+
+    # Update realmlist
+    echo "Updating realmlist..."
+    update_realmlist "$public_ip" "$WORLDSERVER_PORT"
+
+    if [[ $? -eq 0 ]]; then
+        echo "  SUCCESS: address = $public_ip, port = $WORLDSERVER_PORT"
+    else
+        echo "  FAILED: Database update error"
+        exit 1
+    fi
+
+    echo ""
+    echo "New realmlist:"
+    get_current_realmlist
+}
+# }}}
+
+main
