@@ -8,6 +8,12 @@ Travel = { travellers = {} }
 function Travel.despawn(creature)
     creature:RemoveEvents()
     creature:SetData("theta", nil)
+
+    -- Clean up object variable data before despawn (Issue 332)
+    if ObjectVariables and ObjectVariables.cleanupCreature then
+        ObjectVariables.cleanupCreature(creature)
+    end
+
     creature:DespawnOrUnsummon(0)
 end -- }}}
 
@@ -172,45 +178,69 @@ end
 -- 0.78 radians = 45 degrees
 -- 0.39 radians = 22.5 degrees
 -- 0.19 radians = 11.25 degrees
-function Travel.continueTravelling(_eventID, _delay, _repeats, creature )
+
+-- Stand state constants
+local STAND_STATE_STAND = 0
+local STAND_STATE_SIT   = 1
+
+-- {{{ Travel.continueTravelling
+-- Periodic movement for traveler NPCs
+-- Mirrors player sit state - sits when player sits, stands when player stands
+-- Despawns if no player nearby or terrain becomes invalid
+function Travel.continueTravelling(_eventID, _delay, _repeats, creature)
     local player = creature:GetNearestPlayer(200)
-    if player == nil then Travel.despawn(creature)
-    else
-        local x, y, z, o = creature:GetLocation()
-        local theta = creature:GetData("theta")
-
-        local count = 0
-        local targetX, targetY, targetZ, newO
-        repeat
-            targetX, targetY, targetZ, newO = Movement.generateNewWanderPosition(x, y, z, o, theta, creature:GetMapId())
-            count = count + 1
-            if count > 10 then
-                print("[Travel] Count exceeded, despawning creature")
-                Travel.despawn(creature)
-                return
-            end
-            if not targetZ then
-                print("[Travel] Invalid terrain, despawning creature")
-                Travel.despawn(creature)
-                return
-            end
-            if newO > theta then
-                theta = theta + 0.39
-            elseif newO < theta then
-                theta = theta - 0.39
-            end
-            creature:SetData("theta", theta)
-        until targetZ < z + 5 and targetZ > z - 5
-
-        creature:MoveClear()
-        if player:IsStandState() then creature:MoveTo(math.random(4294967295),
-                                                                  targetX,
-                                                                  targetY,
-                                                                  targetZ)
-        end
-        creature:RegisterEvent(Travel.continueTravelling, math.random(2000, 4000), 1)
+    if player == nil then
+        Travel.despawn(creature)
+        return
     end
+
+    -- Mirror player sit state (issue 320)
+    -- If player is sitting, sit with them and wait
+    if not player:IsStandState() then
+        if creature:GetStandState() ~= STAND_STATE_SIT then
+            creature:SetStandState(STAND_STATE_SIT)
+        end
+        creature:RegisterEvent(Travel.continueTravelling, 2000, 1)
+        return
+    else
+        -- Player standing - ensure we're standing too
+        if creature:GetStandState() ~= STAND_STATE_STAND then
+            creature:SetStandState(STAND_STATE_STAND)
+        end
+    end
+
+    -- Normal wandering behavior
+    local x, y, z, o = creature:GetLocation()
+    local theta = creature:GetData("theta")
+
+    local count = 0
+    local targetX, targetY, targetZ, newO
+    repeat
+        targetX, targetY, targetZ, newO = Movement.generateNewWanderPosition(x, y, z, o, theta, creature:GetMapId())
+        count = count + 1
+        if count > 10 then
+            print("[Travel] Count exceeded, despawning creature")
+            Travel.despawn(creature)
+            return
+        end
+        if not targetZ then
+            print("[Travel] Invalid terrain, despawning creature")
+            Travel.despawn(creature)
+            return
+        end
+        if newO > theta then
+            theta = theta + 0.39
+        elseif newO < theta then
+            theta = theta - 0.39
+        end
+        creature:SetData("theta", theta)
+    until targetZ < z + 5 and targetZ > z - 5
+
+    creature:MoveClear()
+    creature:MoveTo(math.random(4294967295), targetX, targetY, targetZ)
+    creature:RegisterEvent(Travel.continueTravelling, math.random(2000, 4000), 1)
 end
+-- }}}
 
 ---------------------------------------------------------------------------------------------------
 

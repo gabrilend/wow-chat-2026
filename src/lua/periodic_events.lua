@@ -7,6 +7,73 @@ require("load-behaviors") -- Load bot behavior system (issue 160)
 -- require("tempo")       -- Removed: tempo.lua not yet implemented (see wow-chat-1)
 -- }}}
 --------------------------------------------------------------------------------
+-- ReadyPlayers Registry (Issue 328) -- {{{
+-- Architectural fix: Only track players/bots that are confirmed ready (have position).
+-- Systems that iterate over players should use this registry, NOT GetPlayersInWorld().
+-- This eliminates the dangerous state where code runs against unready entities.
+--
+-- Usage:
+--   ReadyPlayers.add(player)      -- Call when player confirmed ready
+--   ReadyPlayers.remove(guid)     -- Call on logout
+--   ReadyPlayers.getAll()         -- Returns table of ready players
+--   ReadyPlayers.isReady(guid)    -- Check if specific player is ready
+--
+ReadyPlayers = {
+    registry = {},  -- guid -> true (just track GUIDs, look up players fresh)
+}
+
+-- {{{ ReadyPlayers.add
+function ReadyPlayers.add(player)
+    if not player then return end
+    local guid = player:GetGUID()
+    ReadyPlayers.registry[guid] = true
+    print("[ReadyPlayers] Added: " .. player:GetName())
+end
+-- }}}
+
+-- {{{ ReadyPlayers.remove
+function ReadyPlayers.remove(guid)
+    if ReadyPlayers.registry[guid] then
+        ReadyPlayers.registry[guid] = nil
+        print("[ReadyPlayers] Removed: " .. tostring(guid))
+    end
+end
+-- }}}
+
+-- {{{ ReadyPlayers.getAll
+-- Returns fresh player objects for all registered GUIDs
+-- Automatically cleans up stale entries
+-- Issue 328: Also validates GetLocation works (IsInWorld is not enough)
+function ReadyPlayers.getAll()
+    local result = {}
+    for guid, _ in pairs(ReadyPlayers.registry) do
+        -- Look up player fresh each time (avoids stale userdata)
+        local player = GetPlayerByGUID(guid)
+        if player and player:IsInWorld() then
+            -- Additional validation: ensure GetLocation actually works
+            -- IsInWorld() can return true before position is available
+            -- GetLocation returns x,y,z,o - we only need x to verify it works
+            local ok, x = pcall(function() return player:GetLocation() end)
+            if ok and x then
+                table.insert(result, player)
+            end
+            -- Don't remove from registry - player is in world, just not ready yet
+        else
+            -- Player no longer exists, clean up
+            ReadyPlayers.registry[guid] = nil
+        end
+    end
+    return result
+end
+-- }}}
+
+-- {{{ ReadyPlayers.isReady
+function ReadyPlayers.isReady(guid)
+    return ReadyPlayers.registry[guid] ~= nil
+end
+-- }}}
+-- }}}
+--------------------------------------------------------------------------------
 -- globals - spawn timers -- {{{
 DELAY_PERIODIC_SPAWN_CREATURE  = 40  * 1000  -- 40  seconds
 DELAY_PERIODIC_SPAWN_TRAVELLER = 130 * 1000  -- 130 seconds
@@ -99,6 +166,8 @@ end
 -- {{{ BotOrchestrator.switchMode
 -- Switch bot to a new mode, registering that mode's events
 -- Old mode's events will die naturally (fail mode check, don't re-register)
+-- Note: This is called DURING GAMEPLAY, not during login
+-- By this point, bot is guaranteed to have valid position (Issue 328)
 function BotOrchestrator.switchMode(bot, newMode)
     local oldMode = BotOrchestrator.getMode(bot)
     if oldMode == newMode then return end
@@ -247,6 +316,7 @@ end
 
 -- {{{ periodicEvent
 -- Register a periodic event for a player, handling dead state
+-- ALE signature: RegisterEvent(func, delay, repeats) - worldobject passed to callback automatically
 local function periodicEvent(eventFunction, delay, repeats, player)
     if player:IsDead() then
         if denizens_of_the_spirit_world[player:GetGUID()] == nil then
@@ -254,7 +324,7 @@ local function periodicEvent(eventFunction, delay, repeats, player)
         end
         return
     else
-        player:RegisterEvent(eventFunction, delay, repeats, player)
+        player:RegisterEvent(eventFunction, delay, repeats)
     end
 end
 -- }}}
@@ -313,6 +383,16 @@ end
 -- Issue 161: Replaced zone_consensus/level_affinity with traveller-style wandering
 --------------------------------------------------------------------------------
 
+-- {{{ botHasValidPosition
+-- Check if bot has valid position (Issue 328)
+-- Returns true if GetLocation works, false otherwise
+-- GetLocation returns x,y,z,o - we only check x to verify availability
+local function botHasValidPosition(bot)
+    local ok, x = pcall(function() return bot:GetLocation() end)
+    return ok and x ~= nil
+end
+-- }}}
+
 -- {{{ PeriodicBotWander
 -- Traveller-style wandering with fallbacks (issue 161)
 -- Includes dungeon navigation when in caves/dungeons (issue 162)
@@ -320,6 +400,7 @@ end
 function PeriodicBotWander(eventID, delay, repeats, bot)
     if not bot:IsBot() then return end
     if not bot:IsAlive() then return end
+    if not botHasValidPosition(bot) then return end  -- Issue 328
     if not BotOrchestrator.isModeValid(bot, "wander") then return end
 
     periodicEvent(PeriodicBotWander, delay, repeats, bot)
@@ -335,6 +416,7 @@ end
 function PeriodicBotLonelinessCheck(eventID, delay, repeats, bot)
     if not bot:IsBot() then return end
     if not bot:IsAlive() then return end
+    if not botHasValidPosition(bot) then return end  -- Issue 328
     if not BotOrchestrator.isModeValid(bot, "loneliness") then return end
 
     periodicEvent(PeriodicBotLonelinessCheck, delay, repeats, bot)
@@ -364,6 +446,7 @@ end
 function PeriodicBotSitAndRest(eventID, delay, repeats, bot)
     if not bot:IsBot() then return end
     if not bot:IsAlive() then return end
+    if not botHasValidPosition(bot) then return end  -- Issue 328
     if not BotOrchestrator.isModeValid(bot, "sit_and_rest") then return end
 
     periodicEvent(PeriodicBotSitAndRest, delay, repeats, bot)
@@ -379,6 +462,7 @@ end
 function PeriodicBotOrbitPlayer(eventID, delay, repeats, bot)
     if not bot:IsBot() then return end
     if not bot:IsAlive() then return end
+    if not botHasValidPosition(bot) then return end  -- Issue 328
     if not BotOrchestrator.isModeValid(bot, "orbit_player") then return end
 
     periodicEvent(PeriodicBotOrbitPlayer, delay, repeats, bot)
@@ -394,6 +478,7 @@ end
 function PeriodicBotFindMonsters(eventID, delay, repeats, bot)
     if not bot:IsBot() then return end
     if not bot:IsAlive() then return end
+    if not botHasValidPosition(bot) then return end  -- Issue 328
     if not BotOrchestrator.isModeValid(bot, "find_monsters") then return end
 
     periodicEvent(PeriodicBotFindMonsters, delay, repeats, bot)
@@ -407,9 +492,126 @@ end
 -- Login Event Registration
 --------------------------------------------------------------------------------
 
+-- Delay before first "wait for ready" check (ms)
+-- Gives playerbots time to finish internal setup
+local DELAY_BOT_READY_CHECK = 500
+
+-- {{{ registerBotBehaviors
+-- Register all behavior events for a bot that is confirmed ready
+-- Called by WaitForBotReady after position is confirmed available
+local function registerBotBehaviors(bot)
+    -- Bot is confirmed ready - add to registry (Issue 328)
+    ReadyPlayers.add(bot)
+
+    -- Initialize orchestrator mode (WANDERING by default)
+    BotOrchestrator.setMode(bot, BotOrchestrator.MODE.WANDERING)
+
+    periodicEvent(PeriodicBotWander,
+                  DELAY_BOT_WANDER,
+                  1,
+                  bot)
+    periodicEvent(PeriodicBotLonelinessCheck,
+                  DELAY_BOT_LONELINESS_CHECK,
+                  1,
+                  bot)
+    periodicEvent(PeriodicBotSitAndRest,
+                  DELAY_BOT_SIT_AND_REST,
+                  1,
+                  bot)
+    periodicEvent(PeriodicBotOrbitPlayer,
+                  DELAY_BOT_ORBIT_PLAYER,
+                  1,
+                  bot)
+    periodicEvent(PeriodicBotFindMonsters,
+                  DELAY_BOT_FIND_MONSTERS,
+                  1,
+                  bot)
+    -- Note: PeriodicDungeonCooldownCleanup is one-shot, registered by exitDungeon()
+    print("[PeriodicEvents] Bot " .. bot:GetName() .. " ready, behaviors registered")
+end
+-- }}}
+
+-- {{{ Pending bot ready checks
+-- Store GUIDs of bots waiting to be ready, avoid holding stale references
+-- Issue 328: Using GUID lookup prevents segfaults from stale bot pointers
+local pending_bot_ready = {}  -- [guid] = { attempts = n }
+local MAX_READY_ATTEMPTS = 20  -- Give up after 10 seconds (20 * 500ms)
+-- }}}
+
+-- {{{ checkPendingBotReady
+-- Global timer callback - checks all pending bots for readiness
+-- Uses CreateLuaEvent instead of bot:RegisterEvent to avoid segfaults
+local function checkPendingBotReady()
+    local still_pending = false
+
+    for guid, data in pairs(pending_bot_ready) do
+        -- Look up bot fresh by GUID (never hold stale references)
+        local bot = GetPlayerByGUID(guid)
+
+        if not bot then
+            -- Bot logged out, remove from pending
+            pending_bot_ready[guid] = nil
+        else
+            -- Check if bot has valid position (GetLocation returns x,y,z,o)
+            local ok, x = pcall(function() return bot:GetLocation() end)
+
+            if ok and x then
+                -- Bot is ready! Register behaviors
+                pending_bot_ready[guid] = nil
+                registerBotBehaviors(bot)
+            else
+                -- Not ready yet, increment attempts
+                data.attempts = data.attempts + 1
+                if data.attempts >= MAX_READY_ATTEMPTS then
+                    -- Give up after too many attempts
+                    local name = "unknown"
+                    local nameOk, n = pcall(function() return bot:GetName() end)
+                    if nameOk and n then name = n end
+                    print("[WaitForBotReady] Giving up on " .. name .. " after " .. data.attempts .. " attempts")
+                    pending_bot_ready[guid] = nil
+                else
+                    still_pending = true
+                end
+            end
+        end
+    end
+
+    -- Re-register if there are still pending bots
+    if still_pending then
+        CreateLuaEvent(checkPendingBotReady, DELAY_BOT_READY_CHECK, 1)
+    end
+end
+-- }}}
+
+-- {{{ WaitForBotReady
+-- Queue a bot to be checked for readiness
+-- Issue 328: Don't access bot object directly, just store GUID
+-- Uses global timer to avoid segfaults from stale entity references
+function WaitForBotReady(bot)
+    if not bot then return end
+
+    local guid = bot:GetGUID()
+    if not guid then return end
+
+    -- Add to pending list
+    pending_bot_ready[guid] = { attempts = 0 }
+
+    -- Start the checker if this is the first pending bot
+    local count = 0
+    for _ in pairs(pending_bot_ready) do count = count + 1 end
+    if count == 1 then
+        CreateLuaEvent(checkPendingBotReady, DELAY_BOT_READY_CHECK, 1)
+    end
+end
+-- }}}
+
 -- {{{ InitialLogin
 -- Register all periodic events when a player or bot logs in
 function InitialLogin(_event, player)
+    -- Debug: Log every login event (Issue 328 investigation)
+    local isBot = player:IsBot()
+    print("[InitialLogin] " .. player:GetName() .. " (isBot=" .. tostring(isBot) .. ")")
+
     if player:IsDead() then
         denizens_of_the_spirit_world[player:GetGUID()] = true
         CreateLuaEvent(spiritHeartbeat, 1000, 1)
@@ -421,8 +623,11 @@ function InitialLogin(_event, player)
         LevelAffinity.trackLogin(player)
     end
 
-    -- Real players: spawn events
+    -- Real players: spawn events (players are ready immediately)
     if not player:IsBot() then
+        -- Real players are ready immediately - add to registry (Issue 328)
+        ReadyPlayers.add(player)
+
         periodicEvent(PeriodicSpawnAmbush,
                       DELAY_PERIODIC_SPAWN_CREATURE,
                       1,
@@ -438,35 +643,26 @@ function InitialLogin(_event, player)
         print("[PeriodicEvents] Registered spawn events for player: " .. player:GetName())
     end
 
-    -- Bots: behavior events
-    -- Issue 161: Replaced zone_consensus/level_affinity with traveller-style wandering
+    -- Bots: register behavior events with longer initial delay
+    -- Issue 328: botHasValidPosition check in each behavior protects against early calls
+    -- Issue 161: Traveller-style wandering
     -- Issue 164: Behaviors only re-register if in valid mode
     if player:IsBot() then
+        -- Add to ready registry (bot may not have position yet, but behaviors will check)
+        ReadyPlayers.add(player)
+
         -- Initialize orchestrator mode (WANDERING by default)
         BotOrchestrator.setMode(player, BotOrchestrator.MODE.WANDERING)
 
-        periodicEvent(PeriodicBotWander,
-                      DELAY_BOT_WANDER,
-                      1,
-                      player)
-        periodicEvent(PeriodicBotLonelinessCheck,
-                      DELAY_BOT_LONELINESS_CHECK,
-                      1,
-                      player)
-        periodicEvent(PeriodicBotSitAndRest,
-                      DELAY_BOT_SIT_AND_REST,
-                      1,
-                      player)
-        periodicEvent(PeriodicBotOrbitPlayer,
-                      DELAY_BOT_ORBIT_PLAYER,
-                      1,
-                      player)
-        periodicEvent(PeriodicBotFindMonsters,
-                      DELAY_BOT_FIND_MONSTERS,
-                      1,
-                      player)
-        -- Note: PeriodicDungeonCooldownCleanup is one-shot, registered by exitDungeon()
-        print("[PeriodicEvents] Registered behavior events for bot: " .. player:GetName())
+        -- Register behaviors with longer initial delay (5 seconds)
+        -- If bot isn't ready when they fire, botHasValidPosition will skip and re-register
+        local INITIAL_BOT_DELAY = 5000  -- 5 seconds - give bot time to initialize
+        periodicEvent(PeriodicBotWander,           INITIAL_BOT_DELAY, 1, player)
+        periodicEvent(PeriodicBotLonelinessCheck,  INITIAL_BOT_DELAY + 1000, 1, player)
+        periodicEvent(PeriodicBotSitAndRest,       INITIAL_BOT_DELAY + 2000, 1, player)
+        periodicEvent(PeriodicBotOrbitPlayer,      INITIAL_BOT_DELAY + 3000, 1, player)
+        periodicEvent(PeriodicBotFindMonsters,     INITIAL_BOT_DELAY + 4000, 1, player)
+        print("[PeriodicEvents] Bot " .. player:GetName() .. " behaviors queued (5s delay)")
     end
 end
 -- }}}
@@ -474,8 +670,16 @@ end
 -- {{{ Logout handler
 -- Clean up login tracking on logout
 local function OnPlayerLogout(_event, player)
+    -- Remove from ready registry (Issue 328)
+    ReadyPlayers.remove(player:GetGUID())
+
     if LevelAffinity and LevelAffinity.trackLogout then
         LevelAffinity.trackLogout(player)
+    end
+
+    -- Clean up object variable data to prevent memory leaks (Issue 332)
+    if ObjectVariables and ObjectVariables.cleanupPlayer then
+        ObjectVariables.cleanupPlayer(player)
     end
 end
 -- }}}

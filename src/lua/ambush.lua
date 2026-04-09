@@ -443,7 +443,13 @@ end -- }}}
 
 function Ambush.despawn(creature) -- {{{
     local playerID = creature:GetData("ambush-chase-target")
-    if    playerID == nil then creature:DespawnOrUnsummon(0) return end
+
+    -- Clean up object variable data before despawn (Issue 332)
+    if ObjectVariables and ObjectVariables.cleanupCreature then
+        ObjectVariables.cleanupCreature(creature)
+    end
+
+    if playerID == nil then creature:DespawnOrUnsummon(0) return end
     Ambush.deregister(creature)
     creature:DespawnOrUnsummon(0)
 end -- }}}

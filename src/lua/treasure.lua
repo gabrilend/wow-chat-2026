@@ -171,6 +171,15 @@ function Treasure.returnToPool(chestGUID)
         print("[Treasure] Returned " .. returned .. " items from despawned chest to pool")
     end
 
+    -- Clean up object variable data to prevent memory leaks (Issue 332)
+    if ObjectVariables and ObjectVariables.cleanupGameObjectByLocation then
+        ObjectVariables.cleanupGameObjectByLocation(
+            chestData.mapId,
+            chestData.instanceId,
+            chestGUID
+        )
+    end
+
     Treasure.activeChests[chestGUID] = nil
 end -- }}}
 -- }}}
@@ -289,6 +298,9 @@ function Treasure.spawnTreasure(player)
         queueItems   = queuedItems,  -- track for recycling if despawned
         pendingLoot  = queuedItems,  -- loot waiting to be injected by searcher
         lootInjected = false,        -- flag: has loot been injected yet?
+        -- Location data for ObjectVariables cleanup (Issue 332)
+        mapId        = chest:GetMapId(),
+        instanceId   = chest:GetInstanceId(),
     }
 
     print("[Treasure] Chest spawned with " .. #queuedItems .. " pending items (holder will see empty)")

@@ -127,6 +127,35 @@ During testing, encountered crash:
 
 **Fix:** Replaced `installed-files-beta/bin/lua_scripts/extensions/` directory with symlink to `src/lua/extensions/`, matching how `custom/` directory is already configured.
 
+## Tertiary Fix: ObjectVariables Memory Cleanup
+
+The original ObjectVariables.ext registered event handlers for cleanup:
+```lua
+RegisterServerEvent(31, DestroyObjData) -- creature delete
+RegisterServerEvent(32, DestroyObjData) -- gameobject delete
+RegisterServerEvent(17, DestroyMapData) -- map create
+RegisterServerEvent(18, DestroyMapData) -- map destroy
+```
+
+**Problem:** These server event IDs (17, 18, 31, 32) don't exist in ALE - only 1-7 exist.
+Registering non-existent events corrupted the Lua registry.
+
+**Solution:** Removed event registrations from extension, exposed cleanup functions instead:
+- `ObjectVariables.cleanupPlayer(player)` - call from logout handlers
+- `ObjectVariables.cleanupCreature(creature)` - call when despawning creatures
+- `ObjectVariables.cleanupGameObject(gameobject)` - call when despawning gameobjects
+- `ObjectVariables.cleanupGameObjectByLocation(mapId, instanceId, guid)` - for cached location data
+- `ObjectVariables.getStats()` - debug function to monitor memory usage
+
+**Integration points:**
+- `periodic_events.lua:OnPlayerLogout` - calls cleanupPlayer
+- `ambush.lua:Ambush.despawn` - calls cleanupCreature
+- `travel.lua:Travel.despawn` - calls cleanupCreature
+- `treasure.lua:Treasure.returnToPool` - calls cleanupGameObjectByLocation
+
+**Design principle:** Event registrations in .ext files can corrupt ALE's Lua registry.
+Move event registrations to .lua files where they work correctly.
+
 ## Lessons Learned
 
 1. **No fallbacks** - Workarounds that don't match the intended behavior should not be implemented under the original function name. If proximity checks are useful, they get their own function.
@@ -134,3 +163,5 @@ During testing, encountered crash:
 2. **AzerothCore already has the data** - Faction relationships, movement flags, etc. are already computed by the C++ core. The fix is exposing them to Lua, not reimplementing them.
 
 3. **Check for duplicates** - When extensions fail to load, verify there aren't multiple versions being loaded.
+
+4. **No event registration in .ext files** - Extensions load before main Lua files. Event registration in this early phase can corrupt ALE's registry. Use .ext files only for method definitions and global setup.
