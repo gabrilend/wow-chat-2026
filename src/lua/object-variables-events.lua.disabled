@@ -1,0 +1,28 @@
+-- {{{ Object Variables Event Registration
+-- Issue 332: Event registrations moved from .ext to .lua file
+-- .ext files load before ALE hooks are ready, causing registry corruption
+-- .lua files load after hooks are initialized
+--
+-- These events provide automatic cleanup of ObjectVariables data
+-- when objects are deleted or maps are destroyed
+-- }}}
+
+-- {{{ Event registration
+-- Only register if ObjectVariables was loaded (from .ext file)
+if ObjectVariables and ObjectVariables._destroyObjData then
+    -- Player logout - clean up player data
+    RegisterPlayerEvent(4, ObjectVariables._destroyObjData)   -- PLAYER_EVENT_ON_LOGOUT
+
+    -- Creature/GameObject deletion - clean up their data
+    RegisterServerEvent(31, ObjectVariables._destroyObjData)  -- WORLD_EVENT_ON_DELETE_CREATURE
+    RegisterServerEvent(32, ObjectVariables._destroyObjData)  -- WORLD_EVENT_ON_DELETE_GAMEOBJECT
+
+    -- Map creation/destruction - clean up map-specific data
+    RegisterServerEvent(17, ObjectVariables._destroyMapData)  -- MAP_EVENT_ON_CREATE
+    RegisterServerEvent(18, ObjectVariables._destroyMapData)  -- MAP_EVENT_ON_DESTROY
+
+    print("[ObjectVariables] Event handlers registered (from .lua file)")
+else
+    print("[ObjectVariables] WARNING: Extension not loaded, events not registered")
+end
+-- }}}

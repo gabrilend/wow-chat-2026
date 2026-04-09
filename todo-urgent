@@ -1,0 +1,26 @@
+fg-sora-cluster each one runs a bot that's constantly ollama generating thoughts. I only
+have computers for three, but they'd follow beside me. Each one would be configured to
+look like me,
+talk like me,
+but be beside me.
+
+some of them you could tell "two truths and a lie" and they'd coordinate with one
+another. supplying each of their thoughts to each of their contexts, with slightly
+different motions to next be applied upon next. see wow-chat development philosophy:
+
+[ 66%] Built target scripts
+make: *** [Makefile:136: all] Error 2
+
+[ 66%] Built target scripts
+make: *** [Makefile:136: all] Error 2
+<LeftMouse>
+
+ here's the new version. It's not ready yet, check back next weekend. 1.0 won't have everything... is beta now (technically alpha but I didn't want to use too many branches)_/'-> alpha meaning, still adding features, beta means testing, then development cycle for each 1 digit increment. decimal point digits are for patches. each development cycle has an alpha, beta, but no digit increments - just, alpha, beta, then release as-is.
+
+alpha is probably about 80% done, with lots of room left for sequels. beta doesn't have too much to do, just pulling things together. The faster we do beta, the better off release will be, which is why we document bug-fixes in alpha and combine them into a meta-compendium that fully describes the operations of the system. Can build any system this way. Source code is the build artifact of LLM back-and-forth with user dialogue. Specifically, the artifacts created from that process are used to create the artifacts of the system - LLM transcripts compiles issue files which compile source code which becomes machine code binary which becomes a useful interaction or enjoyable experience which is itself a useful interaction. the core kernel of machinery is that it is designed for an action - it will do what that action compel-design-guides.
+
+-- continue original from "see wow-chat development philosophy":
+
+feldowinn, chorus of angels
+
+
