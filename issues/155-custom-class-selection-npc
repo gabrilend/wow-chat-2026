@@ -17,9 +17,9 @@
   - Dwarf (900003): Stone Seer - model 2715
   - Night Elf (900004): Moonshadow Oracle - model 5708
   - Undead (900005): Deathwhisper Sage - model 10698
-  - Tauren (900006): Earthmother's Voice - model 8022
-  - Gnome (900007): Probability Engine - model 7574
-  - Troll (900008): Loa Speaker - model 8071
+  - Tauren (900006): Earthmother's Voice - model 18807 (Gossip NPC Tauren Male)
+  - Gnome (900007): Probability Engine - model 18799 (Gossip NPC Gnome Male)
+  - Troll (900008): Loa Speaker - model 18809 (Gossip NPC Troll Male)
   - Blood Elf (900010): Sunwell Seer - model 18097
   - Draenei (900011): Light of the Naaru - model 17083
 - Gossip events registered for all race-specific entries
@@ -319,6 +319,67 @@ Number of custom classes: As many as are uploaded. No fixed limit.
 - **Base class is default** - custom classes are optional
 - **Doors open AND close** - choosing custom class gains some options, loses others
 - **Base classes also modified** - lower tier talents disabled, transferred to custom
+
+## Error Observations
+
+### 2026-04-08 - SQL schema mismatch (scale column)
+
+**Error:** `ERROR 1054 (42S22) at line 17: Unknown column 'scale' in 'field list'`
+
+**Cause:** The `creature_template` table schema changed in newer AzerothCore. The custom SQL file used the old schema.
+
+**Schema Changes:**
+- Removed: `scale` (now in `creature_template_model.DisplayScale`)
+- Removed: `trainer_type`, `trainer_spell`, `trainer_class`, `trainer_race`
+- Removed: `mechanic_immune_mask`, `spell_school_immune_mask`
+- Added: `speed_swim`, `speed_flight`, `detection_range`
+- Added: `CreatureImmunitiesId` (replaces immune masks)
+
+**Resolution:** Updated `source-beta/data/sql/custom/db_world/custom-class-selector-npcs.sql` to match current schema.
+
+### 2026-04-07 - Creature templates 900001-900011 not in database
+
+**Error:** `lua_scripts/custom/custom-classes.lua:629: Couldn't find a creature with (ID: 900001)!`
+
+**Cause:** Lines 628-631 register gossip events for creature entries 900001-900011 (race-specific selector NPCs), but these creatures don't exist in the `creature_template` table.
+
+**Impact:** Custom class selection NPCs cannot spawn. The `RegisterCreatureGossipEvent` calls fail silently for all 10 race-specific entries.
+
+**SQL File:** `sql/custom/db_world/custom-class-selector-npcs.sql` exists but hasn't been applied to the database.
+
+**Resolution:** Apply the SQL file:
+```bash
+mysql -u ritz -pmenardi acore_world_beta < sql/custom/db_world/custom-class-selector-npcs.sql
+```
+
+Or add to build patch system like E005 for automatic application.
+
+**Note:** Only entry 900001 is logged because the error occurs on the first iteration of the loop - subsequent entries would fail the same way.
+
+### 2026-04-08 - Invalid CreatureDisplayID for Tauren/Gnome/Troll
+
+**Error:**
+```
+Creature (Entry: 900006) lists non-existing CreatureDisplayID id (8022), this can crash the client.
+Creature (Entry: 900007) lists non-existing CreatureDisplayID id (7574), this can crash the client.
+Creature (Entry: 900008) lists non-existing CreatureDisplayID id (8071), this can crash the client.
+```
+
+**Cause:** Display IDs 8022, 7574, 8071 exist in `creature_template_model` but NOT in `creature_model_info`. The worldserver validates that all creature display IDs have corresponding entries in `creature_model_info`.
+
+**Resolution:** Updated display IDs to use valid Gossip NPC models:
+- Tauren (900006): 8022 → 18807 (Gossip NPC Tauren Male)
+- Gnome (900007): 7574 → 18799 (Gossip NPC Gnome Male)
+- Troll (900008): 8071 → 18809 (Gossip NPC Troll Male)
+
+**Validation query used:**
+```sql
+SELECT DisplayID FROM creature_model_info WHERE DisplayID IN (8022, 7574, 8071);
+-- Returns empty set (IDs not valid)
+
+SELECT DisplayID FROM creature_model_info WHERE DisplayID IN (18807, 18799, 18809);
+-- Returns all three (IDs valid)
+```
 
 ## Related Issues
 - 151 - Ability tome system (tome integration)

@@ -284,6 +284,29 @@ Please fix these issues and reupload.
 The validation system uses rmail's `on_receive` hook to process custom class definitions
 sent as **text messages** (not attachments).
 
+### rmail Configuration
+
+**Service Address:** `wow.ritzmenardi.com/classes`
+
+**Port:** `4662`
+
+**Contact Entry (User Side):**
+```
+wow.ritzmenardi.com/classes.ip    = wow.ritzmenardi.com
+wow.ritzmenardi.com/classes.port  = 4662
+wow.ritzmenardi.com/classes.token = "your-author-token"
+```
+
+**Message Format:**
+```
+to: wow.ritzmenardi.com/classes
+subject: CLASS: classname
+
+-- Lua class definition here
+```
+
+See `docs/rmail-integration.md` for full setup instructions.
+
 ### rmail Background
 
 rmail is a file-based encrypted messaging system:
@@ -871,6 +894,36 @@ For simplicity, start with Option A (hardcoded). Refactor later if needed.
 - 157 - Dynamic trainer spawning (needs ability data)
 - 345 - Custom talent interface (displays talent trees)
 - 142 - Custom spell system (future: fully custom abilities)
+- 151 - Ability tome system (uses class definitions for NEXT rank lookup)
+- 347 - Linear ability scaling (future: spell-family based format)
+
+## Future: Base Class Equivalence
+
+Eventually, base classes (Warrior, Paladin, etc.) will use the same format as custom classes.
+This means:
+- `src/custom-classes/warrior.lua` defines the Warrior class
+- `src/custom-classes/paladin.lua` defines the Paladin class
+- No special-casing for "real" vs "custom" classes
+- Same tome pools, same progression system, same validation
+
+### Format Evolution (Issue 347)
+
+When linear ability scaling is implemented, the ability format changes:
+```lua
+-- Current format (spell ID keys, explicit ranks):
+knight.abilities[139]  = { level = 8,  cost = 1500, school = 1 }  -- Renew R1
+knight.abilities[6074] = { level = 14, cost = 2500, school = 1 }  -- Renew R2
+
+-- Future format (spell family keys, no ranks):
+knight.abilities["renew"] = {
+    unlock_level = 8,   -- First available at level 8
+    cost = 1500,        -- Training cost (copper)
+    school = 1          -- Spellbook category
+}
+```
+
+With linear scaling, the player always learns the level-appropriate version of a spell.
+A level-12 character learning Renew gets "Renew (Level 12)" automatically.
 
 ## Files to Modify/Create
 
