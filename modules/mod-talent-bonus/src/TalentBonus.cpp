@@ -53,7 +53,8 @@ public:
         if (xpToLevel == 0)
             return;
 
-        float progress = static_cast<float>(player->GetXP()) / static_cast<float>(xpToLevel);
+        uint32 currentXP = player->GetUInt32Value(PLAYER_XP);
+        float progress = static_cast<float>(currentXP) / static_cast<float>(xpToLevel);
 
         // Add bonus points based on XP progress
         if (progress >= THRESHOLD_33)

@@ -22,6 +22,7 @@ wow-chat-2026/
 │   ├── addons/                    Client addon documentation
 │   ├── ale/                       AzerothCore Lua Engine API docs
 │   │   └── ale-integration-technical-report.md  Complete data flow analysis
+│   ├── migration-guide.md         Release to beta transition process
 │   ├── patches/                   C++ patch documentation
 │   │   ├── patch-registry.md      Build patch system (BEGIN/MIDDLE/END phases)
 │   │   ├── accuracy-level-cap.md  Monster hit chance level cap
@@ -121,6 +122,13 @@ wow-chat-2026/
 18. **docs/delta-guide.md** - Issue tracking methodology
 19. **issues/phase-X-progress.md** - Phase completion tracking
 20. **issues-beta/phase-structure.md** - 9-phase reorganization (by effect)
+
+### Migration Documentation
+21. **docs/migration-guide.md** - Release to beta transition process
+22. **issues/400-release-to-beta-transition.md** - Master migration tracking
+23. **issues/401-shadow-build-setup.md** - Shadow worktree creation
+24. **issues/402-verify-release-baseline.md** - Baseline verification
+25. **issues/403-incremental-patch-integration.md** - Patch-by-patch integration
 
 ## Profile System
 
