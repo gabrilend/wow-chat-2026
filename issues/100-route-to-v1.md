@@ -71,7 +71,7 @@ Sitting pauses combat; enemies orbit instead of attacking.
 |---------|--------|-------|-------|
 | Enemies stop attacking when player sits | Done | - | Aggro disabled on sit |
 | Enemies orbit around seated player | Done | 119 | orbit-player behavior |
-| Standing re-engages combat | Done | 158 | Aggro re-enabled on stand |
+| Standing re-engages combat | Done | 305 | Aggro re-enabled on stand |
 
 ### 6. Playerbots (AI Companions)
 

@@ -1,0 +1,360 @@
+# 305 - Ambush Aggro and Corpse Movement
+
+**Phase:** 3 (Danger - Ambush System)
+**Effect:** Creatures re-aggro when combat resumes, corpses stop sliding
+**Status:** Completed (2026-04-05)
+
+---
+
+## The Effect
+
+When players stand up after sitting, ambush creatures re-enable aggro and can properly engage with nearby players. When creatures die, their corpses immediately stop moving and stay where they fell.
+
+This fixes two bugs that made combat feel broken and unresponsive.
+
+---
+
+## What This Solved
+
+### Before (Two Combat Bugs)
+
+**Bug 1: Aggro Lock**
+
+When player sits:
+```lua
+-- ambush.lua, line 486
+creature:SetAggroEnabled(false)  -- Disables aggro for orbit mode
+```
+
+When player stands:
+```lua
+-- [NOTHING] - aggro stays disabled!
+```
+
+**Problems:**
+1. Creature permanently locked to original `ambush-chase-target`
+2. Can't aggro onto nearby players even if attacked
+3. Breaks natural combat flow
+4. Orbit mode becomes permanent state
+
+**Bug 2: Corpse Sliding**
+
+When creature dies mid-movement:
+```lua
+-- ambush.lua onCreatureDeath (before fix)
+function Ambush.onCreatureDeath(event, killer, creature)
+    -- Clear data
+    creature:RemoveEvents()
+    creature:SetData("ambush-chase-target", nil)
+    -- ... but MoveTo command still executing!
+end
+```
+
+**Problems:**
+1. Physics command already in progress continues after death
+2. Corpse slides across terrain following last movement vector
+3. Looks broken and unnatural
+4. Corpses end up far from death location
+
+### After (Both Bugs Fixed)
+
+**Fix 1: Re-enable Aggro on Stand**
+
+Added to `Ambush.chasePlayer` (line 504-508):
+```lua
+if player:IsSitting() then
+    -- Orbit peacefully
+    creature:SetAggroEnabled(false)
+    -- ...orbit logic...
+else
+    -- Player is standing - re-enable aggro
+    creature:SetAggroEnabled(true)
+end
+```
+
+**Result:**
+- Aggro disabled during sit/orbit (peaceful mode)
+- Aggro re-enabled when player stands (combat resumes)
+- Creatures can naturally target nearby players
+- `ambush-chase-target` is initial target, not permanent lock
+
+**Fix 2: Stop Corpse Movement**
+
+Added to `Ambush.onCreatureDeath` (line 578):
+```lua
+function Ambush.onCreatureDeath(event, killer, creature)
+    creature:MoveClear()  -- STOP all movement immediately
+
+    -- Then cleanup data
+    creature:RemoveEvents()
+    creature:SetData("ambush-chase-target", nil)
+    -- ...
+end
+```
+
+**Result:**
+- Movement command halted on death
+- Corpse stays at death location
+- No sliding physics artifacts
+- Natural death appearance
+
+---
+
+## Why This Matters
+
+**Aggro Lock Broke Combat Flow**
+
+The ambush system assigns creatures to players via `ambush-chase-target`:
+- This prevents spawn-stealing
+- Ensures players face their own ambush monsters
+- Distributes challenge fairly
+
+But it's not meant to be permanent:
+- When player sits, creature orbits peacefully (sit = rest)
+- When player stands, combat should resume naturally
+- Other players should be able to help if nearby
+
+Without re-enabling aggro, the creature becomes a zombie:
+- Follows original target mindlessly
+- Ignores all other threats
+- Can't respond to combat state changes
+
+**Corpse Sliding Looked Broken**
+
+Death should be immediate and final:
+- Creature dies → corpse appears
+- Corpse stays where creature fell
+- Visual marker of battle
+
+Sliding corpses:
+- Look like physics glitches
+- Break immersion
+- Make death feel imprecise
+- Corpses far from actual death location
+
+This is especially bad because corpses persist (issue 304):
+- Corpses don't despawn (intentional design)
+- They're visual history of battles
+- Sliding corpses create false history ("died here" marker is wrong)
+
+**Simple Fixes, Big Impact**
+
+Both bugs had one-line fixes:
+```lua
+creature:SetAggroEnabled(true)   -- Re-enable aggro
+creature:MoveClear()              -- Stop movement
+```
+
+But without them, combat felt fundamentally broken:
+- Creatures unresponsive to state changes
+- Death animations glitchy
+- Core loop undermined
+
+---
+
+## Technical Details
+
+### Aggro System
+
+**AzerothCore aggro mechanics:**
+```lua
+creature:SetAggroEnabled(false)  -- Disables threat table updates
+creature:SetAggroEnabled(true)   -- Enables natural targeting
+```
+
+When aggro is disabled:
+- Creature ignores threat changes
+- Won't switch targets
+- Won't respond to attacks
+- Follows scripted behavior only
+
+When aggro is enabled:
+- Creature uses threat table
+- Can switch targets based on threat
+- Responds to attacks naturally
+- Normal AI behavior
+
+**The ambush flow:**
+```
+Spawn -> Chase assigned target
+         ↓
+Player sits -> Disable aggro -> Orbit peacefully
+         ↓
+Player stands -> [FIX] Re-enable aggro -> Resume combat
+```
+
+### Movement System
+
+**AzerothCore movement commands:**
+```lua
+creature:MoveTo(x, y, z)  -- Issues movement command
+creature:MoveClear()      -- Cancels all movement commands
+```
+
+Movement commands are queued:
+- `MoveTo` adds to movement queue
+- Physics engine processes queue every frame
+- Death doesn't automatically clear queue
+
+**The death flow (before fix):**
+```
+MoveTo(x, y, z) -> Physics processing -> Creature dies -> Physics continues!
+```
+
+**The death flow (after fix):**
+```
+MoveTo(x, y, z) -> Physics processing -> Creature dies -> MoveClear() -> Physics halts
+```
+
+### Order of Operations in Death Handler
+
+**Critical:** `MoveClear()` must happen BEFORE data cleanup:
+
+```lua
+function Ambush.onCreatureDeath(event, killer, creature)
+    -- 1. Stop movement FIRST
+    creature:MoveClear()
+
+    -- 2. Read data for player counter updates
+    local owning_player_ID = creature:GetData("ambush-chase-target")
+    local isRare = creature:GetData("is-rare")
+
+    -- 3. Update player counters
+    -- ...
+
+    -- 4. Clear data LAST
+    creature:RemoveEvents()
+    creature:SetData("ambush-chase-target", nil)
+    -- ...
+end
+```
+
+If `MoveClear()` happened after data cleanup, corpse would still slide (movement command still in queue).
+
+---
+
+## Related Phase 3 Issues
+
+- 304 - clear-ambush-data-on-death (cleanup pattern, corpses persist)
+- 302 - investigate-ambush-monsters-not-spawning (spawn system)
+- 303 - randomize-ambush-spawn-interval (timing system)
+
+---
+
+## Lessons Learned
+
+### State Changes Need Reversals
+
+Disabling aggro creates a state:
+```lua
+creature:SetAggroEnabled(false)  -- Enter state
+```
+
+Every state entry needs an exit:
+```lua
+creature:SetAggroEnabled(true)   -- Exit state
+```
+
+Without the exit, the state becomes permanent. State machines need complete transitions.
+
+**Lesson:** Every `SetX(false)` needs a matching `SetX(true)` somewhere.
+
+### Physics Commands Outlive Events
+
+Death is an event, but movement is physics:
+- Events trigger once
+- Physics processes every frame
+- Events don't automatically cancel physics
+
+Death must explicitly stop physics:
+```lua
+creature:MoveClear()  -- Explicit physics halt
+```
+
+**Lesson:** Event handlers must clean up active systems (physics, timers, etc.)
+
+### One-Line Fixes, Big Testing
+
+Both fixes were single lines:
+- `creature:SetAggroEnabled(true)` (1 line)
+- `creature:MoveClear()` (1 line)
+
+But required testing:
+- Does aggro re-enable correctly?
+- Can creatures switch targets now?
+- Do corpses stop sliding?
+- Does this break orbit mode?
+- Does death cleanup still work?
+
+**Lesson:** Simple code doesn't mean simple testing.
+
+### Persistent Corpses Amplify Visual Bugs
+
+Because corpses don't despawn (issue 304), sliding corpses are PERMANENT:
+- Sliding corpse ends up 50 yards from death location
+- Visual marker is now WRONG FOREVER
+- "I died here" becomes "I died... somewhere else?"
+
+If corpses despawned quickly, sliding wouldn't matter (gone in 5 seconds).
+But persistent corpses make precision critical.
+
+**Lesson:** Persistent visuals demand higher quality. What stays visible must be correct.
+
+### State Management in Combat Systems
+
+The ambush system has multiple states:
+- Chase (normal aggro enabled)
+- Orbit (aggro disabled, peaceful)
+- Dead (cleanup, corpse)
+
+Each state transition needs handling:
+```
+Chase -> Orbit: SetAggroEnabled(false)
+Orbit -> Chase: SetAggroEnabled(true)  [was missing]
+Any   -> Dead:  MoveClear() + cleanup
+```
+
+**Lesson:** Map all state transitions, ensure each is handled.
+
+---
+
+## Implementation Notes
+
+**File:** `src/lua/ambush.lua`
+
+**Changes:**
+
+1. Line 504-508: Aggro re-enable in `Ambush.chasePlayer`:
+```lua
+else
+    -- Player is standing - re-enable aggro
+    creature:SetAggroEnabled(true)
+end
+```
+
+2. Line 578: Movement stop in `Ambush.onCreatureDeath`:
+```lua
+creature:MoveClear()  -- Stop movement immediately
+```
+
+Both implemented 2026-04-05.
+
+---
+
+## Phase 3 Contribution
+
+This issue enables **Phase 3: Danger (Ambush System)** by ensuring:
+> "Combat feels responsive and death looks natural"
+
+Broken aggro and sliding corpses undermine player trust:
+- "Why won't this creature attack me back?"
+- "Why is that corpse sliding across the ground?"
+
+These bugs scream "this is broken" louder than missing features.
+
+Phase 3 is about danger being REAL. Real danger requires:
+- Responsive enemies
+- Natural physics
+- Believable consequences
+
+Two one-line fixes. Massive impact on combat feel.

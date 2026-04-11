@@ -120,11 +120,19 @@ local function build_tree_html(files, root_dir)
         local lines = {}
 
         if node._type == "directory" then
+            -- Collapse directories deeper than first level (depth >= 1)
+            local is_collapsed = depth >= 1
+            local icon = is_collapsed and "▶" or "▼"
+            local collapsed_class = is_collapsed and " collapsed" or ""
+
             table.insert(lines, string.format(
-                '%s<div class="tree-node directory"><span class="icon">▼</span> %s</div>',
-                indent, name
+                '%s<div class="tree-node directory"><span class="icon">%s</span> %s</div>',
+                indent, icon, name
             ))
-            table.insert(lines, indent .. '<div class="tree-children">')
+            table.insert(lines, string.format(
+                '%s<div class="tree-children%s">',
+                indent, collapsed_class
+            ))
 
             -- Sort children: directories first, then files
             local children = {}

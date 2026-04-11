@@ -21,7 +21,7 @@ danger beyond land.
 | 302 | investigate-ambush-monsters-not-spawning | In Progress | Debug spawn issues |
 | 303 | randomize-ambush-spawn-interval | Completed | Random walk algorithm |
 | 304 | clear-ambush-data-on-death | Completed | Memory cleanup |
-| 158 | ambush-aggro-and-corpse-movement | Implemented | Aggro/corpse fixes |
+| 305 | ambush-aggro-and-corpse-movement | Implemented | Aggro/corpse fixes |
 | 301 | ocean-shark-hazard | Open | Water danger |
 | 324 | nil-bot-periodic-event-crash | Open | Crash fix |
 | 325 | ale-gameobject-wildcard-registration | Open | Event registration |
@@ -148,7 +148,7 @@ on_spawn:
 
 ---
 
-## Combat Fixes (158)
+## Combat Fixes (305)
 
 ### Corpse Sliding
 

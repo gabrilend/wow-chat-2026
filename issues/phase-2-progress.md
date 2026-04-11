@@ -41,7 +41,7 @@ Implement custom playerbot behaviors and game systems that create emergent gamep
 |----|-------|--------|
 | 146 | clear-ambush-data-on-death | Completed |
 | 147 | clear-traveller-data-on-despawn | Completed |
-| 158 | ambush-aggro-and-corpse-movement | Implemented (needs testing) |
+| 305 | ambush-aggro-and-corpse-movement | Implemented (needs testing) |
 
 ### Traveler System
 | ID | Title | Status |
@@ -313,11 +313,11 @@ Phase 2 depends on:
 - Status: Implemented, needs testing with multiple players
 - **To deploy:** Run SQL file against acore_world, restart server
 
-### 2026-04-05 - Ambush System Fixes (146, 158)
+### 2026-04-05 - Ambush System Fixes (304, 305)
 - Fixed corpse sliding: Added `MoveClear()` in `onCreatureDeath` to stop movement physics
 - Fixed aggro lock-on: Added `SetAggroEnabled(true)` when player stands up after sitting
-- Issue 146 (clear ambush data) was already partially implemented, now complete
-- Issue 158 created to track the aggro re-enable and corpse movement bugs
+- Issue 304 (clear ambush data) was already partially implemented, now complete
+- Issue 305 created to track the aggro re-enable and corpse movement bugs
 - Root causes: aggro disabled during orbit mode but never re-enabled; MoveTo commands
   continued executing on corpses after death
 - Status: Needs testing - kill ambush mobs, verify corpses stay in place

@@ -102,7 +102,7 @@ hazards extend the danger beyond land.
 | 113 | investigate-ambush-monsters-not-spawning | Open |
 | 124 | randomize-ambush-spawn-interval | Completed |
 | 146 | clear-ambush-data-on-death | Completed |
-| 158 | ambush-aggro-and-corpse-movement | Implemented |
+| 305 | ambush-aggro-and-corpse-movement | Implemented |
 | 301 | ocean-shark-hazard | Open |
 | 324 | nil-bot-periodic-event-crash | Open |
 | 325 | ale-gameobject-wildcard-registration | Open |
