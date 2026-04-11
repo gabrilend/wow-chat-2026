@@ -306,3 +306,91 @@ git merge alpha
 Git is the version control system. Let it do version control.
 We don't need three copies of the same source tree.
 Branches are cheap. Disk space is not.
+
+## Implementation Completed (2026-04-10)
+
+### Final Design
+
+**Two source directories, three profiles:**
+
+```
+source-alpha/  = AzerothCore 5af3d2d6 + mod-eluna + mod-transmog (alpha only)
+source-beta/   = Latest liyunfan1223/azerothcore-wotlk (release & beta)
+```
+
+**Profile definitions:**
+- **alpha**: wow-chat-1 baseline, old Eluna, known-good regression point
+- **release**: Latest AzerothCore + playerbots, rock-solid features only
+- **beta**: Experimental development space, all features enabled
+
+### What Was Implemented
+
+**Build script routing (scripts/azerothcore):**
+```bash
+get_profile_paths() {
+    if [[ "${PROFILE}" == "alpha" ]]; then
+        AC_CODE_DIR="${DIR}/source-alpha"
+    else
+        AC_CODE_DIR="${DIR}/source-beta"
+    fi
+    # Build/install dirs remain profile-specific
+}
+```
+
+**File naming conventions:**
+- *.alpha.lua - Alpha-specific Lua scripts
+- *.beta.lua - Beta experimental Lua scripts  
+- *.release.lua - Release stable Lua scripts (if any)
+- alpha-*.sh - Alpha-specific patches
+- B*.sh - Beta/release patches
+
+**Git structure:**
+- source-alpha/: Independent git repo (azerothcore/azerothcore-wotlk @ 5af3d2d6)
+- source-beta/: Independent git repo (liyunfan1223/azerothcore-wotlk @ Playerbot)
+- Project repo: Tracks documentation, scripts, issues (ignores source-*/)
+
+### Commits Made
+
+1. `e42b59e` - refactor(Core/Build): Prepare for profile transition system
+2. `16e4820` - feat(Build): Add profile-switch script (later revised)
+3. `a7f14b9` - refactor(Build): Use unified source/ directory (later revised)
+4. `033c256` - docs(Build): Correct profile system design
+5. `2ee549c` - refactor(Build): Implement two-source-directory system
+6. `d976c94` - feat(Alpha): Establish alpha baseline from wow-chat-1
+
+### Documentation Created
+
+- `docs/profile-transition-flow.md` - Profile system design
+- `issues/405-profile-transition-system.md` - This file
+- `issues/406-alpha-baseline-setup.md` - Alpha baseline documentation
+
+### Current State
+
+✓ Alpha baseline established (source-alpha/)
+✓ Beta source present (source-beta/)
+✓ Build script routes profiles correctly
+✓ Documentation complete
+
+Next steps:
+- Build and validate alpha profile
+- Organize beta features with proper file suffixes
+- Test profile switching
+
+## Lessons Learned
+
+1. **Two sources, not three**: Alpha uses different codebase (old Eluna), release/beta share latest code
+2. **File suffixes, not git branches**: Within source-beta/, files use *.release.lua and *.beta.lua
+3. **Alpha must always work**: It's the fallback, never break it
+4. **Git ignores sources**: source-*/ directories are separate repos, not tracked in project repo
+
+## Success Criteria
+
+- [x] Alpha source directory established
+- [x] Beta source directory established
+- [x] Build script routes profiles correctly
+- [x] Documentation complete
+- [ ] Alpha profile builds successfully
+- [ ] Beta profile builds successfully
+- [ ] Profile switching works
+
+Status: **Implementation complete, validation pending**
