@@ -572,6 +572,65 @@ init_config() {
 # Source all patch functions from patches/ directory
 source "${DIR}/patches/patches.sh"
 
+# -- {{{ patches_need_applying
+# Check if any PHASE_BEGIN patches would modify source (Issue 326)
+# Returns 0 (true) if patches need applying, 1 (false) if all applied
+# This prevents early exit when new patches are added but upstream unchanged
+patches_need_applying() {
+    local FILE
+
+    # B001: aoe-loot item namespace
+    FILE="${AC_CODE_DIR}/modules/mod-aoe-loot/src/aoe_loot.cpp"
+    if [[ -f "${FILE}" ]] && grep -q "^[[:space:]]*Item\* pItem = player->GetItemByGuid" "${FILE}"; then
+        return 0  # B001 needs applying
+    fi
+
+    # B002: playerbots ALE login hook
+    FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp"
+    if [[ -f "${FILE}" ]] && ! grep -q "sALE->OnLogin(bot)" "${FILE}"; then
+        return 0  # B002 needs applying
+    fi
+
+    # B003: ALE gameobject wildcard
+    FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/LuaEngine.cpp"
+    if [[ -f "${FILE}" ]] && ! grep -q "entry != 0 && !eObjectMgr->GetGameObjectTemplate" "${FILE}"; then
+        return 0  # B003 needs applying
+    fi
+
+    # B004: upstream warning fixes (multiple files - check one representative)
+    FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/strategy/values/BudgetValues.cpp"
+    if [[ -f "${FILE}" ]] && grep -q "int32 BudgetCalculator::CalculateMaxBudget" "${FILE}"; then
+        return 0  # B004 needs applying (warning fix not applied)
+    fi
+
+    # B005: accuracy level cap
+    FILE="${AC_CODE_DIR}/src/server/game/Entities/Unit/Unit.h"
+    if [[ -f "${FILE}" ]] && ! grep -q "#define ACCURACY_LEVEL_CAP 3" "${FILE}"; then
+        return 0  # B005 needs applying
+    fi
+
+    # B006: ALE sell item hook
+    FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/Hooks.h"
+    if [[ -f "${FILE}" ]] && ! grep -q "PLAYER_EVENT_ON_SELL_ITEM" "${FILE}"; then
+        return 0  # B006 needs applying
+    fi
+
+    # B007: ALE unit methods (SetWalk, SetRun, etc.)
+    FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/UnitMethods.h"
+    if [[ -f "${FILE}" ]] && ! grep -q "int SetWalk" "${FILE}"; then
+        return 0  # B007 needs applying
+    fi
+
+    # B008: mod-talent-bonus (check if module exists and is linked)
+    FILE="${AC_CODE_DIR}/modules/mod-talent-bonus/src/TalentBonus.cpp"
+    if [[ ! -f "${FILE}" ]]; then
+        return 0  # B008 needs applying (module not linked)
+    fi
+
+    return 1  # All patches already applied
+}
+# -- }}}
+
 # -- {{{ apply_patches_middle
 # PHASE_MIDDLE: Compile-time adjustments
 # Reserved for future use (build tuning, caching, etc.)
