@@ -280,6 +280,43 @@ get_profile_paths() {
 }
 # -- }}}
 
+# -- {{{ update_modules_symlink
+# Updates source-beta/modules symlink to point to correct profile modules
+# Release uses modules-release/ (empty), beta uses modules-beta/ (all modules)
+# Alpha uses source-alpha (doesn't use symlink)
+update_modules_symlink() {
+    local p="${PROFILE}"
+
+    # Only update symlink for profiles using source-beta
+    if [[ "${p}" == "alpha" ]]; then
+        return
+    fi
+
+    local modules_link="${DIR}/source-beta/modules"
+    local target_dir
+
+    if [[ "${p}" == "release" ]]; then
+        target_dir="../modules-release"
+    else
+        target_dir="../modules-beta"
+    fi
+
+    # Update symlink if it doesn't point to the right target
+    if [[ -L "${modules_link}" ]]; then
+        local current_target=$(readlink "${modules_link}")
+        if [[ "${current_target}" != "${target_dir}" ]]; then
+            echo "Updating modules symlink: ${current_target} -> ${target_dir}"
+            rm "${modules_link}"
+            ln -s "${target_dir}" "${modules_link}"
+        fi
+    else
+        echo "Creating modules symlink: -> ${target_dir}"
+        rm -rf "${modules_link}"
+        ln -s "${target_dir}" "${modules_link}"
+    fi
+}
+# -- }}}
+
 # -- {{{ setup_log_symlinks
 # Ensure log directories exist in /tmp (RAM) with symlinks from project
 # Creates: /tmp/wow-chat-2/, /tmp/wow-chat-2/logs-${PROFILE}/
@@ -904,7 +941,12 @@ cmd_install() {
         needs_rebuild=true
     fi
 
+    # -- Update modules symlink (release vs beta) --
+    update_modules_symlink
+
     # -- Check/update modules --
+    # Modules managed via symlink for release/beta profiles
+    # Alpha manages modules directly in source-alpha/modules/
     mkdir -p "${AC_CODE_DIR}/modules"
 
     # Remove modules that aren't in this profile

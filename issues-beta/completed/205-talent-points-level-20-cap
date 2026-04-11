@@ -1,0 +1,376 @@
+# 205 - Talent Points and Level 20 Cap
+
+**Phase:** 2 (Empty World)
+**Effect:** 60 talent points by level 20, enabling dual-specialization gameplay
+**Status:** Completed (2026-04-09)
+
+---
+
+## The Effect
+
+Players gain 3 talent points per level (at 33%, 66%, and 100% XP), starting from level 1. At level 20, players have 60 talent points total—enough to fill 2 of 3 talent trees (~30 points each).
+
+The level cap is 20, not 80. Talent tiers 1-3 provide ~80-120 options, so 60 points = meaningful choices.
+
+---
+
+## What This Solved
+
+### Before (Default WotLK Talents)
+
+**Max level:** 80
+- Takes months to reach
+- Not viable for roguelike short-session gameplay
+- World designed for 1-80 progression
+
+**Talent points:** 1 per level starting at level 10
+- Level 1-9: 0 points
+- Level 10-80: 71 points
+- Enough to max one tree + partial second tree
+
+**Abilities:** Learned automatically at class-specific levels
+- No choice involved
+- Fixed progression
+
+**Problems:**
+- Too slow for short-form gameplay
+- Limited specialization options (71 points for 80 levels)
+- Talent start at level 10 delays customization
+- No dual-spec viability without tons of points
+
+### After (Compressed Level Cap + Chunked Talents)
+
+**Max level:** 20
+- Achievable in hours, not months
+- Fits roguelike pacing
+- World scaled to 1-20 range
+
+**Talent points:** 3 per level starting at level 1
+- At 33% XP: +1 point (green visual effect)
+- At 66% XP: +1 point (green visual effect)
+- At 100% XP (level up): +1 point (yellow visual effect)
+- Total by level 20: **60 points**
+
+**Dual-Specialization Enabled:**
+- 60 points can fill ~2 of 3 trees
+- Example: 30 points in Holy (healing), 30 points in Protection (tanking)
+- Or: 30 in Frost (DPS), 30 in Fire (AoE)
+- Meaningful choices: can't max everything
+
+**Customization from Level 1:**
+- First talent point at 33% of level 1 XP
+- Immediate character differentiation
+- No waiting until level 10
+
+---
+
+## Implementation
+
+### The Challenge: Server Validation
+
+**Problem:** Server recalculates expected talents on login via `InitTalentForLevel()`:
+```cpp
+// Player.cpp:2538
+void Player::InitTalentForLevel()
+{
+    uint32 expected = CalculateTalentsPoints();  // Expected based on level
+    uint32 used = GetUsedTalentCount();          // Actual spent talents
+
+    if (used > expected)
+    {
+        resetTalents(true);  // WIPES ALL TALENTS
+    }
+}
+```
+
+**Issue:** Lua hooks fire AFTER this validation. Too late to prevent resets.
+
+If Lua grants bonus points without server knowing, server sees:
+- Expected: 19 (level 19, default formula)
+- Used: 57 (Lua granted +2 per level)
+- Used > Expected → RESET ALL TALENTS
+
+### The Solution: C++ Module + Lua Script
+
+Two-part system:
+
+#### Part 1: mod-talent-bonus (C++)
+
+Hooks `OnPlayerCalculateTalentsPoints` to adjust expected count:
+```cpp
+class TalentBonusScript : public PlayerScript
+{
+public:
+    void OnPlayerCalculateTalentsPoints(Player* player, uint32 level, uint32& points) override
+    {
+        // Get XP progress (0.0 to 1.0)
+        float progress = GetLevelProgress(player);
+
+        // Add +1 if past 33% threshold
+        if (progress >= 0.33f)
+            points += 1;
+
+        // Add +1 if past 66% threshold
+        if (progress >= 0.66f)
+            points += 1;
+    }
+};
+```
+
+**Effect:** Server now **expects** the bonus points. Validation passes.
+
+#### Part 2: levelling.lua (Lua)
+
+Awards actual talent points at thresholds:
+```lua
+-- src/lua/levelling.lua
+RegisterPlayerEvent(PLAYER_EVENT_ON_GIVE_XP, function(event, player, amount, victim)
+    local level = player:GetLevel()
+    if level >= 20 then return end  -- Max level reached
+
+    local xpForLevel = player:GetUInt32Value(PLAYER_NEXT_LEVEL_XP)
+    local currentXP = player:GetUInt32Value(PLAYER_XP)
+    local progress = currentXP / xpForLevel
+
+    -- 33% threshold
+    if progress >= 0.33 and not player:GetData("talent_33_" .. level) then
+        player:SetData("talent_33_" .. level, true)
+        player:ModifyTalentPoints(1)  -- Grant +1 talent
+        sendGreenLevelUpEffect(player)  -- Visual feedback
+    end
+
+    -- 66% threshold
+    if progress >= 0.66 and not player:GetData("talent_66_" .. level) then
+        player:SetData("talent_66_" .. level, true)
+        player:ModifyTalentPoints(1)
+        sendGreenLevelUpEffect(player)
+    end
+
+    -- 100% (level up) handled by server Rate.Talent = 1
+end)
+```
+
+**Effect:** Players receive points with visual feedback. Tracking via `SetData()` prevents duplicates.
+
+### Visual Effects
+
+**Green effect (33% and 66%):**
+```lua
+function sendGreenLevelUpEffect(player)
+    -- Uses SMSG_SET_FACTION_STANDING packet
+    -- Same visual as "reputation level gained"
+    local data = CreatePacket(SMSG_SET_FACTION_STANDING, 17)
+    data:WriteULong(0)    -- Flags
+    data:WriteULong(1)    -- Faction count
+    data:WriteULong(1134) -- Faction ID (Darkmoon Faire)
+    data:WriteULong(42000) -- Reputation value
+    player:SendPacket(data)
+end
+```
+
+**Yellow effect (100% level up):**
+- Normal game behavior
+- Server sends level-up packet automatically
+- No custom packet needed
+
+### Configuration
+
+**worldserver.conf:**
+```
+Rate.Talent = 1        # 1 point at level-up (Lua adds 2 more)
+MaxPlayerLevel = 20    # Cap at 20
+```
+
+**Module linking (scripts/azerothcore):**
+- Patch B008: `patch_B008_mod_talent_bonus()`
+  - Creates symlink from `modules/mod-talent-bonus/` to `source-beta/modules/`
+  - Module compiled during normal build
+- Unpatch B008: `unpatch_B008_mod_talent_bonus()`
+  - Removes symlink after build
+
+### Build Process
+
+```bash
+cd build && cmake .. -DSCRIPTS=static -DMODULES=static
+make -j$(nproc) && make install
+```
+
+Module auto-detected and compiled with worldserver.
+
+---
+
+## Technical Details
+
+### Key Functions/Files
+
+| Component | File | Function |
+|-----------|------|----------|
+| Validation | Player.cpp:2538 | `InitTalentForLevel()` |
+| Calculation | Player.cpp:13647 | `CalculateTalentsPoints()` |
+| Hook dispatch | PlayerScript.cpp:57 | `OnPlayerCalculateTalentsPoints()` |
+| Bonus logic | mod-talent-bonus | `TalentBonusScript::OnPlayerCalculateTalentsPoints()` |
+| Award logic | levelling.lua | XP event handler |
+| Visual effect | levelling.lua | `sendGreenLevelUpEffect()` |
+
+### Threshold Tracking
+
+Uses `SetData()` for session-based tracking:
+```lua
+player:SetData("talent_33_5", true)  -- Awarded 33% threshold for level 5
+```
+
+**Why session-based, not database:**
+- Data only needed during XP gain
+- Resets on logout (level up resets progress anyway)
+- No SQL overhead
+- Simpler implementation
+
+### NPC Scaling
+
+Creatures scaled to level 20 cap:
+```sql
+UPDATE creature_template
+SET minlevel = LEAST(minlevel, 20),
+    maxlevel = LEAST(maxlevel, 20);
+```
+
+Damage and health formulas adjusted for 1-20 range.
+
+---
+
+## Why This Matters
+
+**Compressed Progression**
+
+80 levels takes months. 20 levels takes hours.
+
+Roguelike gameplay demands:
+- Short sessions (1-2 hours)
+- Quick progression milestones
+- Replayability (multiple characters)
+
+20-level cap enables all three.
+
+**Dual-Specialization Gameplay**
+
+60 talent points enables filling 2 trees:
+- Paladin: Holy (healing) + Protection (tanking)
+- Mage: Frost (control) + Fire (damage)
+- Druid: Restoration (healing) + Feral (DPS/tank)
+
+This creates **versatile characters** who can fulfill multiple roles. Critical for solo/small-group play.
+
+40 points (2 per level) was tested and rejected—too restrictive for dual-spec.
+
+**Meaningful Choices**
+
+With ~80-120 options in tiers 1-3 and only 60 points:
+- Can't max everything
+- Must choose specializations
+- Builds feel distinct
+
+If you could max all trees, choices don't matter. 60 points forces trade-offs.
+
+**Immediate Customization**
+
+First talent point at 33% of level 1 XP (minutes into the game):
+- No waiting until level 10 (hours into the game)
+- Immediate character differentiation
+- Players engage with talent system early
+
+This sets expectations: "This game is about builds."
+
+---
+
+## Related Phase 2 Issues
+
+- 141 - talent-tier-limit (restricting to tiers 1-3 or 1-4)
+- 345 - custom-talent-interface (AIO-based talent UI for custom classes)
+- 159 - knight-custom-class (first custom class, needs custom talent trees)
+
+---
+
+## Lessons Learned
+
+### Server Validation Runs First
+
+Can't just grant bonus talents via Lua. Server validates before Lua runs.
+
+**Lesson:** Hook into validation logic (C++), not just award logic (Lua).
+
+### Rate.Talent Isn't Enough
+
+`Rate.Talent = 3` would give 3 points at level-up, but:
+1. Still starts at level 10 (hardcoded)
+2. No mid-level progression (33%, 66%)
+
+Needed hybrid: C++ module + Lua script.
+
+**Lesson:** Config options have limits. Sometimes need code.
+
+### Visual Feedback Matters
+
+Initially, bonus points were granted silently. Players didn't notice.
+
+Adding green effect (faction reputation visual) made it obvious:
+- "Something happened at 33% XP"
+- "I got a talent point"
+- "This is a feature, not a bug"
+
+**Lesson:** Feedback makes systems discoverable.
+
+### Session Data vs Database
+
+Could store threshold tracking in database:
+```sql
+INSERT INTO character_talent_thresholds (guid, level, threshold) VALUES (...);
+```
+
+But session data (`SetData()`) is simpler:
+- No SQL overhead
+- Resets on logout (acceptable, level up resets XP anyway)
+- Faster to implement
+- Easier to debug
+
+**Lesson:** Don't persist what you don't need to persist.
+
+### Module Linking Pattern
+
+The B008 patch (mod-talent-bonus symlink) established reusable pattern:
+1. Module lives in `modules/mod-name/`
+2. Patch creates symlink to `source-beta/modules/`
+3. Build includes module automatically
+4. Unpatch removes symlink
+
+**Lesson:** Symlinks allow versioned modules without duplicating code.
+
+---
+
+## Revision History
+
+- 2025-03-31: Initial (3 points/level = 60 total)
+- 2026-04-05: Briefly changed to 2 points/level (40 total)
+- 2026-04-05: Reverted to 3 points/level (60 total enables dual-spec)
+- 2026-04-06: Simplified approach (no SQL, session-based tracking)
+- 2026-04-09: C++ module + Lua implementation completed
+
+---
+
+## Phase 2 Contribution
+
+This issue enables **Phase 2: Empty World** by ensuring:
+> "Character progression is meaningful and compressed"
+
+The empty world is populated by systems (ambush, travel, treasure). Players interact with these systems while leveling 1-20.
+
+20 levels (not 80) means:
+- Full progression in hours, not months
+- Replayability (try different builds)
+- Dual-spec versatility (handle solo encounters)
+
+60 talent points (not 71) means:
+- Fill 2 trees for role flexibility
+- Meaningful build choices
+- Immediate customization (level 1)
+
+This creates the progression backbone for the roguelike survival experience.

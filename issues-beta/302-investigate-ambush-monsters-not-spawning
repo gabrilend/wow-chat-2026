@@ -1,0 +1,197 @@
+# 302 - Investigate Ambush Monsters Not Spawning
+
+**Phase:** 3 (Danger - Ambush System)
+**Effect:** Debug spawn system, ensure monsters appear around players
+**Status:** In Progress (partial fix applied)
+
+---
+
+## The Effect
+
+When working, ambush monsters spawn around players every 40 seconds at 120-160 yards distance. They chase and attack, creating constant danger.
+
+This issue tracks the debugging process when spawns weren't happening.
+
+---
+
+## What This Solves
+
+### Problem (Spawn Cycle Not Running)
+
+**Symptoms:**
+- Ambush monsters do not spawn when player logs in
+- No periodic spawn cycle running
+- Queues initialize but never trigger spawns
+
+**Expected behavior:**
+- Monsters spawn periodically around the player (every 40 seconds)
+- Creatures appropriate to player level selected from creature_template
+- Spawned creatures chase and attack the player
+
+### Root Cause Found
+
+The `Ambush.setupPlayer` function initialized the spawn queues on login but never registered the periodic spawn event.
+
+**Line 74 had commented-out registration:**
+```lua
+-- player:RegisterEvent(Ambush.spawnAndAttackPlayer, 3000, 1)
+```
+
+Nothing was starting the spawn cycle. The system was initialized but dormant.
+
+---
+
+## Fix Applied
+
+### 2026-03-31 - Spawn Cycle Registration Added
+
+**1. Added configuration block at top of ambush.lua:**
+```lua
+-- {{{ Configuration
+AMBUSH_SPAWN_INTERVAL = 40000  -- ms between spawn attempts (40 seconds)
+AMBUSH_MIN_DISTANCE   =   120  -- yards minimum from player
+AMBUSH_MAX_DISTANCE   =   160  -- yards maximum from player
+-- }}}
+```
+
+**2. Modified `Ambush.setupPlayer` to register periodic spawn event:**
+```lua
+player:RegisterEvent(Ambush.spawnAndAttackPlayer, AMBUSH_SPAWN_INTERVAL, 0)
+```
+
+The `0` parameter means repeat infinitely. This creates the 40-second spawn cycle.
+
+**3. Updated `Ambush.randomSpawn` to use config constants:**
+
+Before:
+```lua
+local distance = math.random(120, 160)  -- Hardcoded
+```
+
+After:
+```lua
+local distance = math.random(AMBUSH_MIN_DISTANCE, AMBUSH_MAX_DISTANCE)  -- From config
+```
+
+---
+
+## Testing
+
+**Verification steps:**
+1. Log in with a character
+2. Wait 40 seconds
+3. Check logs for: `[Ambush] Registered spawn cycle for: <name>`
+4. Verify monsters spawn and chase player
+
+**Current status:** Fix applied, needs verification that spawns work consistently.
+
+---
+
+## Why This Matters
+
+**Silent Failure Mode**
+
+The worst kind of bug:
+- No error messages
+- System appears to initialize correctly
+- Just... nothing happens
+
+Logs showed:
+- `Ambush.setupPlayer` called ✓
+- Queues initialized ✓
+- But no spawns ✗
+
+The commented-out `RegisterEvent` line was the smoking gun.
+
+**Commented Code is Dangerous**
+
+Why was it commented out? Unknown. But commenting instead of deleting creates confusion:
+- Is it intentionally disabled?
+- Is it a work-in-progress?
+- Is it meant to be restored later?
+
+**Lesson:** Delete dead code, don't comment it. Version control preserves history.
+
+**Configuration Constants**
+
+Moving hardcoded values (120, 160 yards) to named constants (`AMBUSH_MIN_DISTANCE`, `AMBUSH_MAX_DISTANCE`) makes:
+- Values easier to tune
+- Intent clearer
+- Debugging faster (grep for constant name)
+
+---
+
+## Related Phase 3 Issues
+
+- 303 - randomize-ambush-spawn-interval (random walk algorithm)
+- 304 - clear-ambush-data-on-death (memory cleanup)
+- 305 - ambush-aggro-and-corpse-movement (aggro/corpse fixes)
+
+---
+
+## Lessons Learned
+
+### Event Registration Must Happen
+
+Initialization ≠ Execution. The system can be ready but dormant if the event loop never starts.
+
+**Pattern:**
+1. Initialize data structures (queues, tables)
+2. **Register events** (start the clock)
+3. Event fires → system runs
+
+If step 2 is missing, system appears ready but never acts.
+
+### Hardcoded Values Should Be Constants
+
+Magic numbers (120, 160) scattered in code:
+- Hard to find all instances
+- Easy to update inconsistently
+- Intent unclear
+
+Named constants solve this:
+```lua
+AMBUSH_MIN_DISTANCE = 120  -- Clear intent
+AMBUSH_MAX_DISTANCE = 160  -- Easy to find/change
+```
+
+### Log Messages Are Diagnostic Gold
+
+The log message `[Ambush] Registered spawn cycle for: <name>` tells us:
+- Did initialization complete?
+- Which player triggered it?
+- When did it happen?
+
+Without this, debugging would require:
+- Stepping through code
+- Adding print statements
+- Recompiling/reloading
+
+Logging the registration makes the problem visible immediately.
+
+---
+
+## Phase 3 Contribution
+
+This issue enables **Phase 3: Danger (Ambush System)** by ensuring:
+> "The spawn cycle actually runs"
+
+The ambush system is the core danger loop. Without periodic spawns, the empty world stays empty. This fix makes the world dangerous again.
+
+---
+
+## Files Modified
+
+- `src/lua/ambush.lua` - Added configuration constants, registered spawn event, fixed hardcoded values
+
+---
+
+## Status Notes
+
+**Partial fix applied** - Event registration added, but full testing needed:
+- Does spawn cycle run consistently?
+- Do monsters spawn at correct distances?
+- Do they chase and attack properly?
+- Any edge cases (player in water, player in instance)?
+
+Move to completed when spawn system fully verified.

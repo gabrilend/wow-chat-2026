@@ -18,8 +18,8 @@ endgame, and the ultimate stakes of permadeath.
 
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 120 | talent-points-level-20-cap | Completed | Level cap implemented |
-| 138 | death-knight-level-1-scaling | Implemented | DK abilities scaled |
+| 205 | talent-points-level-20-cap | Completed | Level cap implemented |
+| 206 | death-knight-level-1-scaling | Implemented | DK abilities scaled |
 | 139 | proportional-damage-rewards | Open | XP based on contribution |
 | 141 | talent-tier-limit | Open | Block tier 4+ talents |
 | 156 | monster-accuracy-level-cap | Implemented | ±3 level hit cap (C++) |
@@ -165,7 +165,7 @@ Does NOT cap damage/HP/armor - only hit chance.
 
 ---
 
-## Death Knight Scaling (138)
+## Death Knight Scaling (206)
 
 DKs normally start at level 55. For level 20 cap:
 - Start at level 1 instead

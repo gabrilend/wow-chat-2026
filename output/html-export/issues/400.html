@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 400 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 400 • Phase 4</div>
+            <h1>Release to Beta Transition</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>400 - Release to Beta Transition</h1></p>
+<p><h2>Status</h2>
+- Created: 2026-04-09
+- Phase: Foundation
+- Priority: Critical</p>
+<p><h2>Three-Tier Branch Model</h2></p>
+<p><pre><code>release = wow-chat-1 vanilla (baseline, no playerbots complexity)
+alpha   = wow-chat-1 + working playerbots (TONIGHT&amp;#39;s GOAL)
+beta    = alpha + readme features (custom Lua, patches, etc.)</code></pre></p>
+<p><h2>Build Strategy</h2></p>
+<p>- Source patched in intermediary (git checkout + patches)
+- Build in shadow realm (build-{profile}/)
+- Only promote to installed-files if compile succeeds
+- Rewrite patches until they work</p>
+<p><h2>Known-Good Baseline</h2></p>
+<p><pre><code>Branch: release
+Commit: 1fc133a feat(108,109): Auto-detect thread count, improve update command</code></pre></p>
+<p>This baseline includes:
+- [x] Project initialization and structure
+- [x] wow-chat-1 Lua scripts migration
+- [x] Local MySQL installation
+- [x] Configuration system with profiles
+- [x] Build scripts (azerothcore update/compile)
+- [x] Credential management</p>
+<p><h2>Beta Features to Integrate</h2></p>
+<p>Features from beta branch that need systematic integration:</p>
+<p><h3>Core Systems (C++)</h3>
+| Feature | Issue | Status | Notes |
+|---------|-------|--------|-------|
+| mod-talent-bonus | 120 | Pending | Bonus talent validation |
+| ALE Unit methods | 332 | Pending | SetWalk, IsWalking, IsHostileTo, IsFriendlyTo |
+| ALE sell item hook | 150 | Pending | PLAYER_EVENT_ON_SELL_ITEM |
+| Accuracy level cap | 156 | Pending | Cap hit/miss at ±3 levels |
+| ALE gameobject wildcard | 325 | Pending | Entry 0 wildcard registration |
+| Playerbots ALE login hook | 324 | Pending | sALE-&gt;OnLogin for bots |</p>
+<p><h3>Lua Systems</h3>
+| Feature | Issue | Status | Notes |
+|---------|-------|--------|-------|
+| Ambush spawn system | 136 | Pending | Monster spawns around players |
+| Travel system | - | Pending | Traveler NPC wandering |
+| Treasure system | 153 | Pending | Chest spawns with vulnerability |
+| Bot behaviors | 161 | Pending | Wander, orbit, convoy, etc. |
+| Levelling system | 120 | Pending | Talent points at 33%/66% XP |</p>
+<p><h3>Database</h3>
+| Feature | Issue | Status | Notes |
+|---------|-------|--------|-------|
+| Death Knight stats | 138 | Pending | Level 1-20 scaling |
+| Custom class NPCs | 155 | Pending | Class selector spawns |</p>
+<p><h2>Migration Strategy</h2></p>
+<p><h3>Phase 1: Shadow Clone</h3>
+1. Create new worktree from release branch
+2. Apply patches one-by-one
+3. Test each patch before proceeding
+4. Document any issues encountered</p>
+<p><h3>Phase 2: Patch Refinement</h3>
+1. Fix any broken patches
+2. Update patch documentation
+3. Create idempotent apply/unapply functions
+4. Test full patch cycle</p>
+<p><h3>Phase 3: Integration Testing</h3>
+1. Start server with all patches
+2. Verify playerbots spawn and function
+3. Test Lua systems (ambush, travel, treasure)
+4. Validate custom features</p>
+<p><h3>Phase 4: Documentation</h3>
+1. Update all issue files with results
+2. Create migration script
+3. Document lessons learned
+4. Archive beta branch state</p>
+<p><h2>Shadow Build Location</h2></p>
+<p><pre><code>/home/ritz/games/azeroth-core/wow-chat-2026-shadow/</code></pre></p>
+<p><h2>Related Files</h2></p>
+<p>- <code>patches/*.sh</code> - Individual patch files
+- <code>patches/patches.sh</code> - Patch orchestration
+- <code>issues-beta/</code> - Beta-specific issue tracking
+- <code>docs/patches/patch-registry.md</code> - Patch documentation</p>
+<p><h2>Success Criteria</h2></p>
+<p>1. Server starts without errors
+2. Playerbots spawn and respond to commands
+3. ALE Lua engine loads all scripts
+4. All beta features functional
+5. Process documented and repeatable</p>
+<p><h2>Notes</h2></p>
+<p>- Everything is preserved in git - nothing is lost
+- Each step should be a commit
+- If something breaks, we can bisect
+- Documentation updates are as important as code changes
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-4-progress.html">View Phase 4 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

@@ -18,9 +18,9 @@ danger beyond land.
 
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 113 | investigate-ambush-monsters-not-spawning | Open | Debug spawn issues |
-| 124 | randomize-ambush-spawn-interval | Completed | Random walk algorithm |
-| 146 | clear-ambush-data-on-death | Completed | Memory cleanup |
+| 302 | investigate-ambush-monsters-not-spawning | In Progress | Debug spawn issues |
+| 303 | randomize-ambush-spawn-interval | Completed | Random walk algorithm |
+| 304 | clear-ambush-data-on-death | Completed | Memory cleanup |
 | 158 | ambush-aggro-and-corpse-movement | Implemented | Aggro/corpse fixes |
 | 301 | ocean-shark-hazard | Open | Water danger |
 | 324 | nil-bot-periodic-event-crash | Open | Crash fix |
@@ -88,7 +88,7 @@ Select creature appropriate for player level:
 
 ---
 
-## Random Walk Interval (124)
+## Random Walk Interval (303)
 
 ### Algorithm
 
@@ -189,7 +189,7 @@ Deep water becomes dangerous over time:
 
 ## Notes
 
-### Ambush Data Cleanup (146)
+### Ambush Data Cleanup (304)
 
 When creature dies or despawns:
 - Clear tracking data from player

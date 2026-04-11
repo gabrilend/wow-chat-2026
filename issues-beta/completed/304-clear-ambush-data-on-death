@@ -1,0 +1,255 @@
+# 304 - Clear Ambush Data on Death
+
+**Phase:** 3 (Danger - Ambush System)
+**Effect:** Dead creatures clean up after themselves, memory freed properly
+**Status:** Completed (2026-04-05, as part of issue 305)
+
+---
+
+## The Effect
+
+When ambush creatures die, they clear scheduled events and stored data before becoming corpses. This prevents memory overhead from accumulating as corpses linger in the world.
+
+The corpse remains as static scenery, but is detached from the ambush system.
+
+---
+
+## What This Solved
+
+### Before (Data Lingers on Corpses)
+
+**Corpse behavior:**
+- Creature corpses don't despawn (intentional design)
+- When ambush creatures die, `onCreatureDeath` updates player counters
+- But dead creatures retain ambush-related data
+- Scheduled events may still be registered on the creature object
+
+**Data fields lingering:**
+- `ambush-chase-target` - player GUID
+- `wander-radius` - orbit radius when player sits
+- `ambush-max-distance` - max chase distance
+- `orbit-direction` - direction of orbit movement
+- `is-rare` - whether this is a rare spawn
+
+**Problem:** Memory overhead accumulates as corpses pile up across the world.
+
+### After (Cleanup on Death)
+
+Modified `Ambush.onCreatureDeath` to:
+```lua
+function Ambush.onCreatureDeath(event, killer, creature)
+    local owning_player_ID = creature:GetData("ambush-chase-target") or nil
+    local isRare           = creature:GetData("is-rare") or false
+
+    -- Update player counters (existing logic)
+    if owning_player_ID then
+        local player = GetPlayerByGUID(owning_player_ID)
+        if player then
+            if isRare then
+                player:SetData("is-in-boss-fight", false)
+            else
+                local numAmbushers = player:GetData("num-ambushers")
+                if numAmbushers > 0 then
+                    player:SetData("num-ambushers", numAmbushers - 1)
+                end
+            end
+        end
+    end
+
+    -- NEW: Clear events and data
+    creature:RemoveEvents()
+    creature:SetData("ambush-chase-target", nil)
+    creature:SetData("wander-radius", nil)
+    creature:SetData("ambush-max-distance", nil)
+    creature:SetData("orbit-direction", nil)
+    creature:SetData("is-rare", nil)
+end
+```
+
+**Result:**
+- Events cleared → no lingering callbacks
+- Data cleared → no memory overhead
+- Corpse remains → visual feedback of battle
+- Creature detached from ambush system
+
+---
+
+## Why This Matters
+
+**Corpses Are Intentional**
+
+Unlike many games, corpses don't despawn:
+- Visual history of battles
+- Environmental storytelling
+- "I fought here" markers
+- Death has presence in the world
+
+But corpses shouldn't retain active game state.
+
+**Memory Hygiene**
+
+Over a long play session:
+- 100 ambush kills
+- 100 corpses in world
+- Without cleanup: 100 event registrations + data tables
+- With cleanup: 0 events, 0 data, just visual models
+
+**Pattern Consistency**
+
+Same pattern as issue 207 (clear-traveller-data-on-despawn):
+```lua
+-- Travel cleanup (207)
+function Travel.despawn(creature)
+    creature:RemoveEvents()
+    creature:SetData("theta", nil)
+    creature:DespawnOrUnsummon(0)
+end
+
+-- Ambush cleanup (304)
+function Ambush.onCreatureDeath(event, killer, creature)
+    -- Update player counters first
+    -- ...
+
+    -- Then cleanup
+    creature:RemoveEvents()
+    creature:SetData("ambush-chase-target", nil)
+    creature:SetData("wander-radius", nil)
+    creature:SetData("ambush-max-distance", nil)
+    creature:SetData("orbit-direction", nil)
+    creature:SetData("is-rare", nil)
+end
+```
+
+Both systems follow same discipline: clean up on lifecycle end (death or despawn).
+
+---
+
+## Technical Details
+
+### Event Cleanup
+
+`creature:RemoveEvents()` clears all events registered via:
+- `RegisterEvent(callback, delay, repeats)`
+
+Without this, events continue firing after death:
+```lua
+-- During life:
+creature:RegisterEvent(Ambush.onWander, 5000, 0)  -- Repeats forever
+
+-- After death (without RemoveEvents):
+-- Event still fires every 5 seconds, calling onWander on dead creature!
+```
+
+This causes:
+- Nil pointer errors (creature dead but callback runs)
+- Wasted CPU (callback runs on corpse)
+- Memory leak (event scheduler holds reference)
+
+### Data Cleanup
+
+Each `SetData(key, nil)` clears stored value:
+```lua
+-- During life:
+creature:SetData("ambush-chase-target", playerGUID)  -- Store target
+
+-- After death (without cleanup):
+-- "ambush-chase-target" remains in creature's data table
+-- Table persists until garbage collection
+```
+
+Over time:
+- 100 dead creatures = 100 lingering data tables
+- Each table has ~5 entries (chase-target, wander-radius, etc.)
+- Explicit cleanup prevents buildup
+
+### Corpse Persistence
+
+Corpses remain because:
+- `creature:DespawnOrUnsummon()` NOT called
+- Visual model stays in world
+- Players can see battle history
+
+But cleaned corpses are just visuals:
+- No active state
+- No scheduled events
+- No memory overhead beyond model
+
+---
+
+## Related Phase 3 Issues
+
+- 302 - investigate-ambush-monsters-not-spawning (spawn system)
+- 303 - randomize-ambush-spawn-interval (random walk)
+- 305 - ambush-aggro-and-corpse-movement (this issue was implemented as part of 305)
+
+---
+
+## Lessons Learned
+
+### Death ≠ Despawn
+
+Many systems treat death and despawn as same:
+- Creature dies → despawn immediately
+- No corpse remains
+
+This system separates them:
+- Death → cleanup state, keep visual
+- Despawn → remove from world entirely
+
+**Lesson:** Death and despawn are different lifecycle events requiring different cleanup.
+
+### Cleanup Before State Change
+
+The cleanup happens AFTER updating player counters:
+1. Read data to update counters
+2. Update player state
+3. Clear creature data
+
+If cleanup happened first, player counters couldn't be updated (data already gone).
+
+**Lesson:** Order matters in cleanup. Read necessary data, then clear.
+
+### Visual History Has Value
+
+Corpses littering the battlefield tell a story:
+- "I fought 20 creatures here"
+- "This path is dangerous"
+- "I died here before"
+
+Environmental storytelling through persistent corpses.
+
+**Lesson:** Not everything should despawn. Some game state should be visual, not functional.
+
+### Shared Cleanup Pattern
+
+Both ambush and travel systems use same pattern:
+- Remove events
+- Clear data
+- Leave minimal footprint
+
+This makes the pattern easy to remember and replicate for future systems.
+
+**Lesson:** Consistent cleanup patterns across systems reduce cognitive load.
+
+---
+
+## Implementation Notes
+
+**Completed as part of issue 305** (ambush-aggro-and-corpse-movement):
+- Issue 305 included broader ambush system fixes
+- Death cleanup was implemented alongside aggro fixes
+- This issue documents the cleanup specifically
+
+**File:** `src/lua/ambush.lua`
+**Function:** `Ambush.onCreatureDeath` (lines 554-570, updated)
+
+---
+
+## Phase 3 Contribution
+
+This issue enables **Phase 3: Danger (Ambush System)** by ensuring:
+> "The world's dangers are ephemeral and leave no trace (except corpses)"
+
+Ambush creatures spawn, chase, fight, and die. Their deaths should clean up state while preserving visual history. This fix ensures the ambush system doesn't leak memory as battles accumulate.
+
+The battlefield shows evidence of combat without carrying computational overhead.

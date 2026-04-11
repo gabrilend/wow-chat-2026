@@ -18,9 +18,9 @@ that the ambush and traveler systems will populate.
 
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 112 | fix-drop-creatures-cascading-errors | Completed | FK constraint handling |
-| 130 | ale-initialization-hook-fix | Completed | ALE loads correctly |
-| 136 | drop-all-creatures-except-spirit-healers | Ready | SQL created |
+| 201 | fix-drop-creatures-cascading-errors | Completed | FK constraint handling |
+| 202 | ale-initialization-hook-fix | Completed | ALE loads correctly |
+| 203 | drop-all-creatures-except-spirit-healers | Ready | SQL created |
 
 ## Completed: 2/3
 
@@ -50,7 +50,7 @@ that the ambush and traveler systems will populate.
 
 ---
 
-## Creature Removal (136)
+## Creature Removal (203)
 
 ### SQL Approach
 
@@ -76,7 +76,7 @@ DELETE FROM creature WHERE id != 6491;
 - Gameobjects (nodes, chests, doors)
 - Triggers and invisible markers
 
-### Cascading Considerations (112)
+### Cascading Considerations (201)
 
 Creature removal can break foreign key relationships:
 - `creature_addon` references `creature.guid`
@@ -87,7 +87,7 @@ Solution: Delete in correct order, or use CASCADE.
 
 ---
 
-## ALE Initialization (130)
+## ALE Initialization (202)
 
 ### The Problem
 

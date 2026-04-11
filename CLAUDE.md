@@ -397,3 +397,4 @@ To debug:
 
 
 this is an example of a good error message. Each of those values is checked and verified at error message creation time. they are each idempotent. the possible causes can be filled in periodically (focusing on the most common or rarest) as derived from issue files that are related. then it should also offer questions about the potential results of the "to debug:" section, explaining each as succinctly and clearly.
+- not defeated, but redoubling.

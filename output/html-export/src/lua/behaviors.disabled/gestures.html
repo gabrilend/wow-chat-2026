@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gestures.lua - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>gestures.lua</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/behaviors.disabled/gestures.lua
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> lua &nbsp;&nbsp;
+            <strong>Size:</strong> 12122 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-09 03:26
+        </div>
+
+        <div class="content">
+            <pre><code class="lua"><span class="comment">-- {{{ Everland Ghostsong - Gesture Command System</span>
+<span class="comment">-- Players command NPCs through body language: kneeling, sitting, beckoning</span>
+<span class="comment">-- NPCs respond with reverence, following, waiting, <span class="keyword">and</span> directed movement</span>
+<span class="comment">--</span>
+<span class="comment">-- Issue: <span class="number">133</span>-gesture-command-system-kneel-convoy.md</span>
+<span class="comment">-- Concept Catalog: <span class="number">101</span>-<span class="number">139</span></span>
+<span class="comment">-- }}}</span>
+
+require(&quot;movement&quot;)
+
+Gestures = {}
+
+<span class="comment">-- Register <span class="keyword">in</span> package.loaded so require() is a no-op after ALE loads this</span>
+<span class="comment">-- Must be AFTER Gestures table is created so require() returns the module</span>
+package.loaded[&quot;behaviors/gestures&quot;] = Gestures
+
+<span class="comment">-- {{{ Configuration</span>
+KNEEL_RADIUS           = <span class="number">10</span>    <span class="comment">-- yards to trigger NPC kneeling</span>
+BECKON_RADIUS          = <span class="number">15</span>    <span class="comment">-- yards <span class="keyword">for</span> beckoning to work</span>
+KNEEL_DIRECTION_DIST   = <span class="number">50</span>    <span class="comment">-- yards to project facing direction</span>
+REVERENCE_CHECK_RATE   = <span class="number">1000</span>  <span class="comment">-- ms between proximity checks</span>
+DIRECTION_UPDATE_RATE  = <span class="number">500</span>   <span class="comment">-- ms between facing direction updates</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Emote ID mappings (WotLK <span class="number">3.3</span>.<span class="number">5</span>a)</span>
+<span class="comment">-- These may need verification against actual emote IDs</span>
+EMOTE_ONESHOT_KNEEL = <span class="number">68</span>
+EMOTE_STATE_KNEEL   = <span class="number">68</span>
+EMOTE_ONESHOT_WAVE  = <span class="number">3</span>
+EMOTE_ONESHOT_POINT = <span class="number">25</span>
+EMOTE_STATE_SIT     = <span class="number">1</span>
+EMOTE_ONESHOT_SALUTE = <span class="number">66</span>
+
+GESTURE_ACTIONS = {
+    [EMOTE_ONESHOT_KNEEL] = &quot;kneel_start&quot;,
+    [EMOTE_STATE_KNEEL]   = &quot;kneel_hold&quot;,
+    [EMOTE_ONESHOT_WAVE]  = &quot;beckon&quot;,
+    [EMOTE_ONESHOT_POINT] = &quot;direct&quot;,
+    [EMOTE_STATE_SIT]     = &quot;wait_command&quot;,
+    [EMOTE_ONESHOT_SALUTE]= &quot;dismiss_convoy&quot;,
+}
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ State storage</span>
+<span class="comment">-- Tracked per-player: NPCs who have shown reverence</span>
+<span class="keyword">local</span> reverence_targets = {}  <span class="comment">-- [npc_guid] = player_guid</span>
+<span class="keyword">local</span> player_convoys = {}     <span class="comment">-- [player_guid] = {npc_guids...}</span>
+<span class="keyword">local</span> kneel_directions = {}   <span class="comment">-- [player_guid] = {facing, active}</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.getPlayersInRange</span>
+<span class="comment">-- Find all players within range of a position</span>
+<span class="keyword">function</span> Gestures.getPlayersInRange(x, y, z, range, map)
+    <span class="keyword">local</span> players = {}
+    <span class="keyword">local</span> all_players = GetPlayersInWorld()
+
+    <span class="keyword">if</span> <span class="keyword">not</span> all_players <span class="keyword">then</span> <span class="keyword">return</span> players <span class="keyword">end</span>
+
+    <span class="keyword">for</span> _, player <span class="keyword">in</span> pairs(all_players) <span class="keyword">do</span>
+        <span class="keyword">if</span> player <span class="keyword">and</span> player:IsAlive() <span class="keyword">then</span>
+            <span class="keyword">local</span> px, py, pz = player:GetLocation()
+            <span class="keyword">local</span> dist = Movement.squaredDistance(x, y, px, py)
+            <span class="keyword">if</span> dist &lt;= range * range <span class="keyword">then</span>
+                table.insert(players, player)
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> players
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.getNPCsInRange</span>
+<span class="comment">-- Find all friendly NPCs within range of player</span>
+<span class="keyword">function</span> Gestures.getNPCsInRange(player, range)
+    <span class="keyword">local</span> npcs = {}
+    <span class="keyword">local</span> px, py, pz = player:GetLocation()
+
+    <span class="comment">-- Get creatures <span class="keyword">in</span> range that are friendly</span>
+    <span class="keyword">local</span> nearby = player:GetCreaturesInRange(range, <span class="number">1</span>, <span class="number">0</span>)  <span class="comment">-- friendly</span>
+
+    <span class="keyword">if</span> <span class="keyword">not</span> nearby <span class="keyword">then</span> <span class="keyword">return</span> npcs <span class="keyword">end</span>
+
+    <span class="keyword">for</span> _, npc <span class="keyword">in</span> pairs(nearby) <span class="keyword">do</span>
+        <span class="keyword">if</span> npc <span class="keyword">and</span> npc:IsAlive() <span class="keyword">and</span> <span class="keyword">not</span> npc:IsInCombat() <span class="keyword">then</span>
+            table.insert(npcs, npc)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> npcs
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.npcKneel</span>
+<span class="comment">-- Make an NPC kneel before a player</span>
+<span class="keyword">function</span> Gestures.npcKneel(npc, player)
+    <span class="keyword">if</span> <span class="keyword">not</span> npc <span class="keyword">or</span> <span class="keyword">not</span> player <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> npc_guid = npc:GetGUID()
+    <span class="keyword">local</span> player_guid = player:GetGUID()
+
+    <span class="comment">-- Already kneeling to someone?</span>
+    <span class="keyword">if</span> reverence_targets[npc_guid] <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="comment">-- Face the player</span>
+    <span class="keyword">local</span> px, py = player:GetLocation()
+    <span class="keyword">local</span> nx, ny = npc:GetLocation()
+    <span class="keyword">local</span> angle = math.atan<span class="number">2</span>(py - ny, px - nx)
+    npc:SetFacing(angle)
+
+    <span class="comment">-- Kneel (set stand state)</span>
+    npc:SetStandState(<span class="number">8</span>)  <span class="comment">-- UNIT_STAND_STATE_KNEEL = <span class="number">8</span></span>
+
+    <span class="comment">-- Track reverence</span>
+    reverence_targets[npc_guid] = player_guid
+
+    print(&quot;[Gestures] &quot; .. npc:GetName() .. &quot; kneels before &quot; .. player:GetName())
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.npcRise</span>
+<span class="comment">-- Make an NPC rise from kneeling</span>
+<span class="keyword">function</span> Gestures.npcRise(npc)
+    <span class="keyword">if</span> <span class="keyword">not</span> npc <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    npc:SetStandState(<span class="number">0</span>)  <span class="comment">-- UNIT_STAND_STATE_STAND = <span class="number">0</span></span>
+
+    <span class="keyword">local</span> npc_guid = npc:GetGUID()
+    reverence_targets[npc_guid] = <span class="keyword">nil</span>
+
+    print(&quot;[Gestures] &quot; .. npc:GetName() .. &quot; rises&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.addToConvoy</span>
+<span class="comment">-- Add an NPC to a player&#<span class="number">39</span>;s convoy</span>
+<span class="keyword">function</span> Gestures.addToConvoy(player, npc)
+    <span class="keyword">if</span> <span class="keyword">not</span> player <span class="keyword">or</span> <span class="keyword">not</span> npc <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> player_guid = player:GetGUID()
+    <span class="keyword">local</span> npc_guid = npc:GetGUID()
+
+    <span class="comment">-- Initialize convoy <span class="keyword">if</span> needed</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> player_convoys[player_guid] <span class="keyword">then</span>
+        player_convoys[player_guid] = {}
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Check <span class="keyword">if</span> already <span class="keyword">in</span> convoy</span>
+    <span class="keyword">for</span> _, guid <span class="keyword">in</span> ipairs(player_convoys[player_guid]) <span class="keyword">do</span>
+        <span class="keyword">if</span> guid == npc_guid <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    table.insert(player_convoys[player_guid], npc_guid)
+
+    <span class="comment">-- Set NPC to follow player</span>
+    npc:MoveFollow(player, <span class="number">3</span>, <span class="number">0</span>)  <span class="comment">-- <span class="number">3</span> yard distance, <span class="number">0</span> angle offset</span>
+
+    print(&quot;[Gestures] &quot; .. npc:GetName() .. &quot; joins &quot; .. player:GetName() .. &quot;&#<span class="number">39</span>;s convoy&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.removeFromConvoy</span>
+<span class="comment">-- Remove an NPC from a player&#<span class="number">39</span>;s convoy</span>
+<span class="keyword">function</span> Gestures.removeFromConvoy(player, npc)
+    <span class="keyword">if</span> <span class="keyword">not</span> player <span class="keyword">or</span> <span class="keyword">not</span> npc <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> player_guid = player:GetGUID()
+    <span class="keyword">local</span> npc_guid = npc:GetGUID()
+
+    <span class="keyword">if</span> <span class="keyword">not</span> player_convoys[player_guid] <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">for</span> i, guid <span class="keyword">in</span> ipairs(player_convoys[player_guid]) <span class="keyword">do</span>
+        <span class="keyword">if</span> guid == npc_guid <span class="keyword">then</span>
+            table.remove(player_convoys[player_guid], i)
+            npc:MovementExpired()
+            print(&quot;[Gestures] &quot; .. npc:GetName() .. &quot; leaves convoy&quot;)
+            <span class="keyword">return</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.getConvoy</span>
+<span class="comment">-- Get all NPCs <span class="keyword">in</span> a player&#<span class="number">39</span>;s convoy</span>
+<span class="keyword">function</span> Gestures.getConvoy(player)
+    <span class="keyword">if</span> <span class="keyword">not</span> player <span class="keyword">then</span> <span class="keyword">return</span> {} <span class="keyword">end</span>
+
+    <span class="keyword">local</span> player_guid = player:GetGUID()
+    <span class="keyword">local</span> convoy = player_convoys[player_guid] <span class="keyword">or</span> {}
+    <span class="keyword">local</span> npcs = {}
+
+    <span class="keyword">for</span> _, npc_guid <span class="keyword">in</span> ipairs(convoy) <span class="keyword">do</span>
+        <span class="keyword">local</span> npc = GetCreatureByGUID(npc_guid)
+        <span class="keyword">if</span> npc <span class="keyword">and</span> npc:IsAlive() <span class="keyword">then</span>
+            table.insert(npcs, npc)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> npcs
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.onPlayerApproach</span>
+<span class="comment">-- Check <span class="keyword">for</span> NPCs that should kneel when player approaches</span>
+<span class="keyword">function</span> Gestures.onPlayerApproach(player)
+    <span class="keyword">if</span> <span class="keyword">not</span> player <span class="keyword">or</span> <span class="keyword">not</span> player:IsAlive() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> player:IsStandState() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>  <span class="comment">-- Player must be standing</span>
+
+    <span class="keyword">local</span> npcs = Gestures.getNPCsInRange(player, KNEEL_RADIUS)
+
+    <span class="keyword">for</span> _, npc <span class="keyword">in</span> ipairs(npcs) <span class="keyword">do</span>
+        <span class="keyword">if</span> <span class="keyword">not</span> npc:IsInCombat() <span class="keyword">then</span>
+            Gestures.npcKneel(npc, player)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.onPlayerBeckon</span>
+<span class="comment">-- Player beckons - kneeling NPCs rise <span class="keyword">and</span> follow</span>
+<span class="keyword">function</span> Gestures.onPlayerBeckon(player)
+    <span class="keyword">if</span> <span class="keyword">not</span> player <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> player_guid = player:GetGUID()
+    <span class="keyword">local</span> npcs = Gestures.getNPCsInRange(player, BECKON_RADIUS)
+
+    <span class="keyword">for</span> _, npc <span class="keyword">in</span> ipairs(npcs) <span class="keyword">do</span>
+        <span class="keyword">local</span> npc_guid = npc:GetGUID()
+
+        <span class="comment">-- Only respond <span class="keyword">if</span> kneeling to this player</span>
+        <span class="keyword">if</span> reverence_targets[npc_guid] == player_guid <span class="keyword">then</span>
+            Gestures.npcRise(npc)
+            Gestures.addToConvoy(player, npc)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    print(&quot;[Gestures] &quot; .. player:GetName() .. &quot; beckons followers&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.onPlayerSit</span>
+<span class="comment">-- Player sits - convoy members wait nearby</span>
+<span class="keyword">function</span> Gestures.onPlayerSit(player)
+    <span class="keyword">if</span> <span class="keyword">not</span> player <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> convoy = Gestures.getConvoy(player)
+    <span class="keyword">local</span> px, py, pz = player:GetLocation()
+
+    <span class="keyword">for</span> _, npc <span class="keyword">in</span> ipairs(convoy) <span class="keyword">do</span>
+        <span class="comment">-- Stop following</span>
+        npc:MovementExpired()
+
+        <span class="comment">-- Move to player&#<span class="number">39</span>;s position</span>
+        npc:MoveTo(<span class="number">0</span>, px, py, pz, <span class="keyword">true</span>)
+
+        <span class="comment">-- Kneel <span class="keyword">and</span> wait</span>
+        npc:RegisterEvent(<span class="keyword">function</span>()
+            npc:SetStandState(<span class="number">8</span>)  <span class="comment">-- Kneel</span>
+        <span class="keyword">end</span>, <span class="number">2000</span>, <span class="number">1</span>)
+    <span class="keyword">end</span>
+
+    print(&quot;[Gestures] &quot; .. player:GetName() .. &quot; sits - convoy waits&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.onPlayerKneel</span>
+<span class="comment">-- Player kneels facing a direction - convoy moves that way</span>
+<span class="keyword">function</span> Gestures.onPlayerKneel(player)
+    <span class="keyword">if</span> <span class="keyword">not</span> player <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> player_guid = player:GetGUID()
+    <span class="keyword">local</span> convoy = Gestures.getConvoy(player)
+
+    <span class="keyword">if</span> #convoy == <span class="number">0</span> <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> px, py, pz = player:GetLocation()
+    <span class="keyword">local</span> facing = player:GetO()
+
+    <span class="comment">-- Calculate target position <span class="keyword">in</span> facing direction</span>
+    <span class="keyword">local</span> target_x = px + math.cos(facing) * KNEEL_DIRECTION_DIST
+    <span class="keyword">local</span> target_y = py + math.sin(facing) * KNEEL_DIRECTION_DIST
+    <span class="keyword">local</span> target_z = player:GetMap():GetHeight(player:GetPhase(), target_x, target_y, pz)
+
+    <span class="comment">-- Store active direction <span class="keyword">for</span> updates</span>
+    kneel_directions[player_guid] = {
+        facing = facing,
+        active = <span class="keyword">true</span>
+    }
+
+    <span class="comment">-- Direct convoy to target</span>
+    <span class="keyword">for</span> _, npc <span class="keyword">in</span> ipairs(convoy) <span class="keyword">do</span>
+        npc:MovementExpired()
+        npc:MoveTo(<span class="number">0</span>, target_x, target_y, target_z, <span class="keyword">true</span>)
+        npc:SetStandState(<span class="number">0</span>)  <span class="comment">-- Stand up to move</span>
+    <span class="keyword">end</span>
+
+    print(&quot;[Gestures] &quot; .. player:GetName() .. &quot; directs convoy &quot; ..
+          string.format(&quot;(%.<span class="number">0</span>f, %.<span class="number">0</span>f)&quot;, target_x, target_y))
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.onPlayerStand</span>
+<span class="comment">-- Player stands up - resume normal convoy behavior</span>
+<span class="keyword">function</span> Gestures.onPlayerStand(player)
+    <span class="keyword">if</span> <span class="keyword">not</span> player <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> player_guid = player:GetGUID()
+    <span class="keyword">local</span> convoy = Gestures.getConvoy(player)
+
+    <span class="comment">-- Clear kneeling direction</span>
+    kneel_directions[player_guid] = <span class="keyword">nil</span>
+
+    <span class="comment">-- Resume following</span>
+    <span class="keyword">for</span> _, npc <span class="keyword">in</span> ipairs(convoy) <span class="keyword">do</span>
+        npc:SetStandState(<span class="number">0</span>)  <span class="comment">-- Stand</span>
+        npc:MoveFollow(player, <span class="number">3</span>, <span class="number">0</span>)
+    <span class="keyword">end</span>
+
+    print(&quot;[Gestures] &quot; .. player:GetName() .. &quot; stands - convoy follows&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.onPlayerDismiss</span>
+<span class="comment">-- Player salutes - dismiss convoy</span>
+<span class="keyword">function</span> Gestures.onPlayerDismiss(player)
+    <span class="keyword">if</span> <span class="keyword">not</span> player <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> convoy = Gestures.getConvoy(player)
+
+    <span class="keyword">for</span> _, npc <span class="keyword">in</span> ipairs(convoy) <span class="keyword">do</span>
+        Gestures.removeFromConvoy(player, npc)
+        npc:MoveRandom(<span class="number">30</span>)  <span class="comment">-- Wander off</span>
+    <span class="keyword">end</span>
+
+    player_convoys[player:GetGUID()] = <span class="keyword">nil</span>
+
+    print(&quot;[Gestures] &quot; .. player:GetName() .. &quot; dismisses convoy&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.onEmote</span>
+<span class="comment">-- Handle player emote events</span>
+<span class="keyword">function</span> Gestures.onEmote(event, player, emote)
+    <span class="keyword">local</span> action = GESTURE_ACTIONS[emote]
+
+    <span class="keyword">if</span> <span class="keyword">not</span> action <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">if</span> action == &quot;beckon&quot; <span class="keyword">then</span>
+        Gestures.onPlayerBeckon(player)
+    <span class="keyword">elseif</span> action == &quot;kneel_start&quot; <span class="keyword">or</span> action == &quot;kneel_hold&quot; <span class="keyword">then</span>
+        Gestures.onPlayerKneel(player)
+    <span class="keyword">elseif</span> action == &quot;direct&quot; <span class="keyword">then</span>
+        Gestures.onPlayerKneel(player)  <span class="comment">-- Point also directs</span>
+    <span class="keyword">elseif</span> action == &quot;dismiss_convoy&quot; <span class="keyword">then</span>
+        Gestures.onPlayerDismiss(player)
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.onStandStateChange</span>
+<span class="comment">-- Handle player stand state changes</span>
+<span class="keyword">function</span> Gestures.onStandStateChange(event, player, state)
+    <span class="keyword">if</span> state == <span class="number">1</span> <span class="keyword">then</span>  <span class="comment">-- Sitting</span>
+        Gestures.onPlayerSit(player)
+    <span class="keyword">elseif</span> state == <span class="number">8</span> <span class="keyword">then</span>  <span class="comment">-- Kneeling</span>
+        Gestures.onPlayerKneel(player)
+    <span class="keyword">elseif</span> state == <span class="number">0</span> <span class="keyword">then</span>  <span class="comment">-- Standing</span>
+        Gestures.onPlayerStand(player)
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.proximityCheck</span>
+<span class="comment">-- Periodic check <span class="keyword">for</span> player-NPC proximity (reverence trigger)</span>
+<span class="comment">-- Issue <span class="number">328</span>: Use ReadyPlayers registry instead of GetPlayersInWorld()</span>
+<span class="comment">-- This ensures we only iterate over players with valid position</span>
+<span class="keyword">function</span> Gestures.proximityCheck()
+    print(&quot;[DEBUG Gestures.proximityCheck] CALLBACK FIRED&quot;)
+    <span class="keyword">local</span> ready_players = ReadyPlayers.getAll()
+
+    <span class="keyword">for</span> _, player <span class="keyword">in</span> pairs(ready_players) <span class="keyword">do</span>
+        <span class="keyword">if</span> player <span class="keyword">and</span> player:IsAlive() <span class="keyword">and</span> player:IsStandState() <span class="keyword">then</span>
+            Gestures.onPlayerApproach(player)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.initialize</span>
+<span class="comment">-- No global initialization needed - proximity check is per-player now</span>
+<span class="keyword">function</span> Gestures.initialize()
+    print(&quot;[Gestures] System initialized (per-player events via periodic_events.lua)&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Gestures.periodicProximityCheck</span>
+<span class="comment">-- Per-player periodic check <span class="keyword">for</span> nearby NPCs (reverence trigger)</span>
+<span class="comment">-- Called from periodic_events.lua, re-registers itself</span>
+<span class="comment">-- Issue <span class="number">332</span>: Moved from CreateLuaEvent to player-attached event</span>
+<span class="keyword">function</span> Gestures.periodicProximityCheck(player)
+    <span class="keyword">if</span> <span class="keyword">not</span> player <span class="keyword">or</span> <span class="keyword">not</span> player:IsAlive() <span class="keyword">or</span> <span class="keyword">not</span> player:IsStandState() <span class="keyword">then</span>
+        <span class="keyword">return</span>
+    <span class="keyword">end</span>
+    Gestures.onPlayerApproach(player)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Event Registration</span>
+PLAYER_EVENT_ON_EMOTE = <span class="number">28</span>  <span class="comment">-- May need verification</span>
+PLAYER_EVENT_ON_UPDATE = <span class="number">30</span>  <span class="comment">-- May need verification</span>
+
+<span class="comment">-- Note: These event registrations may need adjustment based on actual ALE API</span>
+<span class="comment">-- RegisterPlayerEvent(PLAYER_EVENT_ON_EMOTE, Gestures.onEmote)</span>
+
+<span class="comment">-- Initialize on load</span>
+Gestures.initialize()
+
+print(&quot;[Gestures] Behavior loaded - Issue <span class="number">133</span>&quot;)
+<span class="comment">-- }}}</span>
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

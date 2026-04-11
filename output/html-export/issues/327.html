@@ -174,183 +174,128 @@ em {
     <div class="container">
         <header>
             <div class="issue-id">Issue 327 • Phase 3</div>
-            <h1>HTML Source Tree Export</h1>
+            <h1>Atomic Shadow Builds</h1>
             <div class="status active">⏳ Active</div>
         </header>
 
         <div class="content">
-            <p><h1>327 - HTML Source Tree Export</h1></p>
+            <p><h1>327 - Atomic Shadow Builds</h1></p>
 <p><h2>Status</h2>
 - Created: 2026-04-08
 - Phase: 3
-- Priority: Medium
-- Related: 328-wimmelbilder-embedding-artwork (pending creation)</p>
+- Priority: Medium</p>
 <p><h2>Current Behavior</h2></p>
-<p>Project source exists only as raw files in the repository. To understand how the project was built:
-- Read issue files manually via editor/terminal
-- Navigate directory structure via <code>ls</code> or file browser
-- No unified presentation layer
-- No way to share the &quot;story of construction&quot; with others</p>
-<p>LLM transcripts exist in <code>llm-transcripts/</code> but are not surfaced alongside the issues they implemented.</p>
+<p>The <code>scripts/azerothcore</code> build system:</p>
+<p>1. Compiles directly into <code>build-{profile}/</code>
+2. Installs directly into <code>installed-files-{profile}/</code>
+3. If compilation fails mid-way, partial artifacts remain
+4. No preservation of failed build state for debugging
+5. Cannot continue using old binaries while testing new builds</p>
+<p>A failed compile can leave the system in an inconsistent state, requiring manual cleanup or a full rebuild.</p>
+<p><h2>Terminology</h2></p>
+<p><strong>build-{profile}/</strong> - The cmake/make working directory. Contains:
+- CMakeCache.txt, Makefile
+- Object files (.o) from compilation
+- Intermediate build artifacts
+- This is WHERE compilation happens</p>
+<p><strong>installed-files-{profile}/</strong> - The result of <code>make install</code>. Contains:
+- Final binaries (authserver, worldserver)
+- Config files (.conf)
+- This is WHAT actually runs</p>
+<p>The build directory can be rebuilt from source; the installed-files directory is what matters for running the server.</p>
 <p><h2>Intended Behavior</h2></p>
-<p>A script generates a static HTML site from the project:</p>
-<p>1. <strong>Directory tree as navigation</strong> - Collapsible folder structure
-2. <strong>Source code with syntax highlighting</strong> - Each file becomes an HTML page
-3. <strong>Issues as narrative</strong> - The <code>issues/</code> directory presented as a build journal
-4. <strong>Phase progress as chapters</strong> - <code>phase-X-progress.md</code> files structure the narrative
-5. <strong>LLM transcripts as appendix</strong> - &quot;Here&#39;s the transcript if you don&#39;t believe me&quot;
-6. <strong>Respects .gitignore</strong> - No config files, build artifacts, or secrets</p>
-<p>The output is a directory of static HTML that can be hosted anywhere (rmail, GitHub Pages, local <code>file://</code>).</p>
-<p><h3>Visual Layout (MVP)</h3></p>
-<p><pre><code>+------------------------------------------+
-|  [Tree Nav]  |     Source Code Display   |
-|              |                           |
-|  issues/     |   -- ambush.lua --        |
-|    phase-1/  |                           |
-|    phase-2/  |   function spawn(...)     |
-|    phase-3/  |       local x = ...       |
-|  src/        |                           |
-|    lua/      |                           |
-|  docs/       |                           |
-+------------------------------------------+</code></pre></p>
-<p><h3>Visual Layout (Future - Issue 328)</h3></p>
-<p><pre><code>+------------------------------------------+
-| [i-spy art] |   Source Code   | [i-spy] |
-|   fills     |    Display      |  fills  |
-|   black     |                 |  black  |
-|   bars      |                 |  bars   |
-|             |                 |         |
-|  (based on  |                 | (scroll |
-|  embeddings |                 |  to     |
-|  of words   |                 |  find)  |
-|  in file)   |                 |         |
-+------------------------------------------+</code></pre></p>
-<p><h2>User Feedback Requested</h2></p>
-<p>Before implementation, clarification needed on:</p>
-<p><h3>1. Output Structure</h3>
-- Single-page app with dynamic loading?
-- Multi-page static site (one HTML per source file)?
-- Both? (index.html as SPA, individual pages for direct linking)</p>
-<p><h3>2. Hosting Target</h3>
-- rmail integration (how? embedded iframe? direct serve?)
-- Self-contained offline viewing (all assets inline)?
-- External CDN for syntax highlighting CSS/JS?</p>
-<p><h3>3. Narrative Priority</h3>
-- Issues-first (build journal as main attraction, source as reference)?
-- Source-first (code browser as main, issues as context)?
-- Dual entry points?</p>
-<p><h3>4. Transcript Integration</h3>
-- Full transcripts inline (large files)?
-- Excerpts with links to full transcripts?
-- Just line number references (e.g., &quot;see llm-transcripts/session-042.md:1234&quot;)?</p>
+<p><h3>Two-Slot Shadow System</h3></p>
+<p>Only two directories needed per type - current and shadow:</p>
+<p><pre><code>build-beta/                   &amp;lt;- last successful build (cmake artifacts)
+build-beta-shadow/            &amp;lt;- compilation in progress</p>
+<p>installed-files-beta/         &amp;lt;- current working binaries (what runs)
+installed-files-beta-shadow/  &amp;lt;- new binaries being tested</code></pre></p>
+<p>Servers (authserver, worldserver) ALWAYS launch from <code>installed-files-{profile}/</code>. This directory only changes when a new build succeeds.</p>
+<p><strong>On compile start:</strong>
+1. Create/clear shadow directories
+2. Compile into <code>build-{profile}-shadow/</code>
+3. Install into <code>installed-files-{profile}-shadow/</code></p>
+<p><strong>On compile success:</strong>
+1. Delete <code>build-{profile}</code> (old build artifacts)
+2. Rename <code>build-{profile}-shadow</code> → <code>build-{profile}</code>
+3. Delete <code>installed-files-{profile}</code> (old binaries)
+4. Rename <code>installed-files-{profile}-shadow</code> → <code>installed-files-{profile}</code>
+5. Print: &quot;Build successful. New binaries in installed-files-{profile}/&quot;</p>
+<p><strong>On compile failure:</strong>
+1. Preserve <code>build-{profile}-shadow/</code> with all artifacts
+2. Keep <code>installed-files-{profile}/</code> untouched (still works!)
+3. Print: &quot;Build failed. Debug info: build-{profile}-shadow/&quot;
+4. User can continue using existing binaries immediately</p>
+<p><h3>Failure Preservation</h3></p>
+<p>When compilation fails, preserve the shadow directory with:</p>
+<p>- All <code>.o</code> object files (for incremental retry with <code>make</code>)
+- Full error log with timestamps
+- The build can be resumed by fixing the error and re-running</p>
+<p>Directory structure for failed builds:</p>
+<p><pre><code>build-beta-shadow/
+  compile-errors.log          &amp;lt;- full error output with timestamps
+  CMakeCache.txt              &amp;lt;- cmake configuration (for debugging)
+  modules/CMakeFiles/         &amp;lt;- object files for incremental rebuild</code></pre></p>
+<p>On failure, print:
+<pre><code>===============================================================================
+BUILD FAILED
+===============================================================================</p>
+<p>Debug information preserved at:
+  build-beta-shadow/compile-errors.log</p>
+<p>Your current working binaries are UNCHANGED:
+  installed-files-beta/bin/worldserver
+  installed-files-beta/bin/authserver</p>
+<p>To retry after fixing:
+  ./scripts/azerothcore compile
+===============================================================================</code></pre></p>
 <p><h2>Suggested Implementation</h2></p>
-<p><h3>Phase 1: Directory Scanner</h3></p>
-<p><pre><code class="lua"><span class="comment">-- {{{ scan_project_tree</span>
-<span class="comment">-- Walk project directory, respect .gitignore, build file list</span>
-<span class="comment">-- Returns table of { path, type, size, mtime }</span>
-<span class="keyword">local</span> <span class="keyword">function</span> scan_project_tree(root_dir)</code></pre></p>
-<p>Key behaviors:
-- Parse <code>.gitignore</code> patterns
-- Exclude: <code>build/</code>, <code>installed-files-<em>/</code>, <code>config/</em>/</code>, <code>tmp/</code>, <code>mysql/</code>
-- Include: <code>src/</code>, <code>issues/</code>, <code>docs/</code>, <code>llm-transcripts/</code>, <code>scripts/</code>
-- Sort: directories first, then files alphabetically</p>
-<p><h3>Phase 2: Content Renderer</h3></p>
-<p><pre><code class="lua"><span class="comment">-- {{{ render_source_file</span>
-<span class="comment">-- Read source file, apply syntax highlighting, wrap <span class="keyword">in</span> HTML template</span>
-<span class="comment">-- Returns HTML string</span>
-<span class="keyword">local</span> <span class="keyword">function</span> render_source_file(file_path, template)</code></pre></p>
-<p>Syntax highlighting options:
-- Lua-native: pattern matching for keywords (simple, no deps)
-- highlight.js: external library (prettier, heavier)
-- Prism.js: external library (modular, popular)</p>
-<p>Recommendation: Start with Lua-native for MVP, add JS library later for polish.</p>
-<p><h3>Phase 3: Issue Narrative Builder</h3></p>
-<p><pre><code class="lua"><span class="comment">-- {{{ build_narrative_index</span>
-<span class="comment">-- Parse phase-X-progress.md files to build chapter structure</span>
-<span class="comment">-- Cross-reference issues to source files mentioned</span>
-<span class="comment">-- Returns narrative tree with links</span>
-<span class="keyword">local</span> <span class="keyword">function</span> build_narrative_index(issues_dir)</code></pre></p>
-<p>Structure:
-<pre><code>Phase 1: Foundation
-  ├── 101-initial-setup.md → src/lua/init.lua
-  ├── 102-ambush-system.md → src/lua/ambush.lua
-  └── ...</p>
-<p>Phase 2: Behaviors
-  ├── 201-movement-refactor.md
-  └── ...</code></pre></p>
-<p><h3>Phase 4: HTML Generator</h3></p>
-<p><pre><code class="lua"><span class="comment">-- {{{ generate_html_tree</span>
-<span class="comment">-- Create output directory structure mirroring source</span>
-<span class="comment">-- Generate index.html with tree navigation</span>
-<span class="comment">-- Generate individual page per source file</span>
-<span class="keyword">local</span> <span class="keyword">function</span> generate_html_tree(file_list, narrative, output_dir)</code></pre></p>
-<p>Output structure:
-<pre><code>output/
-  index.html              -- navigation + landing
-  issues/
-    phase-1-progress.html
-    101-initial-setup.html
-    ...
-  src/
-    lua/
-      ambush.html
-      travel.html
-      ...
-  docs/
-    ...
-  llm-transcripts/
-    ...
-  assets/
-    style.css
-    tree.js               -- collapse/expand navigation</code></pre></p>
-<p><h3>Phase 5: Script Wrapper</h3></p>
-<p><pre><code class="bash">#!/bin/bash
-&lt;h1&gt;scripts/export-html&lt;/h1&gt;
-&lt;h1&gt;Export project source tree to static HTML site&lt;/h1&gt;</p>
-<p>DIR=&amp;quot;${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}&amp;quot;
-OUTPUT=&amp;quot;${2:-${DIR}/output/html-export}&amp;quot;</p>
-<p>&lt;h1&gt;Run Lua generator&lt;/h1&gt;
-lua &amp;quot;${DIR}/src/tools/html-export.lua&amp;quot; &amp;quot;${DIR}&amp;quot; &amp;quot;${OUTPUT}&amp;quot;</p>
-<p>echo &amp;quot;Generated: ${OUTPUT}/index.html&amp;quot;
-echo &amp;quot;View: firefox ${OUTPUT}/index.html&amp;quot;</code></pre></p>
-<p><h2>Files to Create</h2></p>
-<p>- <code>src/tools/html-export.lua</code> - Main generator script
-- <code>src/tools/html-export/scanner.lua</code> - Directory walker
-- <code>src/tools/html-export/renderer.lua</code> - Syntax highlighting
-- <code>src/tools/html-export/narrative.lua</code> - Issue cross-referencer
-- <code>src/tools/html-export/templates/</code> - HTML templates
-- <code>scripts/export-html</code> - Bash wrapper</p>
-<p><h2>Files to Reference</h2></p>
-<p>- <code>issues/phase-X-progress.md</code> - Chapter structure
-- <code>.gitignore</code> - Exclusion patterns
-- <code>llm-transcripts/</code> - Session transcripts</p>
-<p><h2>Acceptance Criteria</h2></p>
-<p>1. <code>./scripts/export-html</code> produces <code>output/html-export/</code>
-2. Opening <code>index.html</code> shows navigable tree
-3. Clicking source file shows syntax-highlighted code
-4. Issues directory is browsable
-5. Phase progress files link to their issues
-6. No gitignored files appear in output
-7. Output can be served via <code>python -m http.server</code> or <code>file://</code></p>
-<p><h2>Future Enhancements (Issue 328)</h2></p>
-<p>The high-class version adds:
-- AI-generated wimmelbilder artwork in margins
-- Artwork generated from word embeddings of each file
-- Infinite canvas scrolling (JavaScript)
-- Zoom: i-spy image scales to match viewport
-- Display ratio variations for different aspect ratios</p>
-<p>This is a separate issue because:
-- MVP provides immediate value (shareable project documentation)
-- AI artwork requires embedding pipeline, image generation
-- Canvas/zoom is significant JS complexity
-- Can ship MVP while iterating on artwork</p>
+<p><h3>Step 1: Shadow Directory Support</h3></p>
+<p>1. Modify <code>get_profile_paths()</code> to set <code>BUILD_DIR_SHADOW</code> and <code>INSTALL_DIR_SHADOW</code>
+2. Modify <code>do_build()</code> to compile into shadow directories
+3. Create <code>compile-errors.log</code> with timestamped output</p>
+<p><h3>Step 2: Atomic Swap on Success</h3></p>
+<p>1. After successful <code>make install</code>:
+   - Remove old <code>build-{profile}</code> if exists
+   - Rename <code>build-{profile}-shadow</code> → <code>build-{profile}</code>
+   - Remove old <code>installed-files-{profile}</code> if exists
+   - Rename <code>installed-files-{profile}-shadow</code> → <code>installed-files-{profile}</code>
+2. Print success message with path to new binaries</p>
+<p><h3>Step 3: Preserve on Failure</h3></p>
+<p>1. On <code>make</code> failure (non-zero exit):
+   - Keep shadow directories intact
+   - Write error output to <code>compile-errors.log</code>
+   - Print failure message with debug path
+2. Current binaries remain usable</p>
+<p><h2>Affected Files</h2></p>
+<p>- <code>scripts/azerothcore</code> - get_profile_paths, do_build, error handling</p>
+<p><h2>Related Concepts</h2></p>
+<p>- Blue-green deployment (web services)
+- Atomic operations (rename is atomic on POSIX)
+- Incremental compilation (object files preserved for retry)</p>
 <p><h2>Notes</h2></p>
-<p>The source code is not the interesting part. The interesting part is:
-- How decisions were made (issues)
-- What was tried (transcripts)
-- How components connect (docs)</p>
-<p>Code is just the residue of problem-solving. This tool surfaces the solving.</p>
-<p>&quot;Here&#39;s how we built the whole thing, and here&#39;s the transcript if you don&#39;t believe me.&quot;
+<p>This becomes especially valuable when:
+- Testing patches that might break compilation
+- Experimenting with cmake options
+- Debugging template-heavy C++ errors (playerbots, boost)</p>
+<p>The key insight: compilation can take 10+ minutes. Keeping old binaries working while new ones build means zero downtime for testing.</p>
+<p><h2>Implementation Notes</h2></p>
+<p><h3>Functions Added to scripts/azerothcore</h3></p>
+<p>- <code>atomic_swap_dirs()</code> - Swaps shadow directories to become current after successful build
+- <code>print_build_failure()</code> - Prints formatted error message with debug paths on failure</p>
+<p><h3>Changes to Existing Functions</h3></p>
+<p>- <code>get_profile_paths()</code> - Now also sets BUILD_DIR_SHADOW and INSTALL_DIR_SHADOW
+- <code>do_build()</code> - Rewritten to compile into shadow directories:
+  - Creates/reuses shadow build directory (preserves .o files from failed builds)
+  - Runs cmake with INSTALL_PREFIX pointing to shadow install dir
+  - On success: calls atomic_swap_dirs() to swap shadow → current
+  - On failure: preserves shadow, prints debug info, returns 1</p>
+<p><h3>Error Handling</h3></p>
+<p>The script uses <code>set -e</code> in cmd_install/cmd_update/cmd_compile. When do_build returns 1 on failure, the calling function exits immediately (desired behavior - prevents partial state).</p>
+<p><h3>Tested Scenarios</h3></p>
+<p>- [ ] First-time build (no existing directories)
+- [ ] Successful rebuild (swap works correctly)
+- [ ] Failed build (shadow preserved, old binaries untouched)
+- [ ] Retry after fixing error (incremental build from shadow)
 </p>
         </div>
 

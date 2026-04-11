@@ -31,7 +31,7 @@ gameplay systems can be implemented.
 | 109 | add-build-mode-to-azerothcore-script | Completed | --force flag |
 | 111 | config-merge-script | Open | Merge config changes |
 | 123 | visual-powerline-mapping-tool | Open | Code visualization |
-| 144 | concept-catalog-consolidation | Completed | 1000→800 concepts |
+| 110 | concept-catalog-consolidation | Completed | 1000→800 concepts |
 | 145 | git-branch-consolidation | Open | Clean up branches |
 | 166 | point-line-definition-tools | Open | Dungeon waypoint editor |
 | 201 | branch-based-azerothcore-versioning | Open | Profile system |
@@ -307,5 +307,5 @@ For the full WHY behind rmail, see Phase 10's "Thoughts" sections.
 ## Related Phases
 
 - All other phases depend on Phase 1
-- Phase 2 requires ALE initialization fix (130, now in Phase 2)
+- Phase 2 requires ALE initialization fix (202, now in Phase 2)
 - **Phase 10** - rmail services depend entirely on Phase 1 substrate

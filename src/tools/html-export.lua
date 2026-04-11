@@ -147,8 +147,23 @@ local function build_tree_html(files, root_dir)
             table.insert(lines, indent .. '</div>')
 
         else
-            -- File node
-            local html_path = node._path:gsub("%.md$", ".html"):gsub("%.lua$", ".html"):gsub("%.", "-")
+            -- File node - convert extension to .html, preserve directory structure
+            local html_path = node._path
+            -- Replace common extensions with .html
+            html_path = html_path:gsub("%.lua$", ".html")
+            html_path = html_path:gsub("%.md$", ".html")
+            html_path = html_path:gsub("%.sh$", ".html")
+            html_path = html_path:gsub("%.c$", ".html")
+            html_path = html_path:gsub("%.h$", ".html")
+            html_path = html_path:gsub("%.cpp$", ".html")
+            html_path = html_path:gsub("%.sql$", ".html")
+            html_path = html_path:gsub("%.conf$", ".html")
+            html_path = html_path:gsub("%.json$", ".html")
+            -- If no extension matched, add .html
+            if not html_path:match("%.html$") then
+                html_path = html_path .. ".html"
+            end
+
             table.insert(lines, string.format(
                 '%s<div class="tree-node file"><span class="icon">📄</span> <a href="%s">%s</a></div>',
                 indent, html_path, name
@@ -235,11 +250,23 @@ local function generate_source_file(file, config, output_dir)
     -- Render content
     local rendered = renderer.render_file(file.path, content)
 
-    -- Determine output path
-    local output_path = output_dir .. "/" .. file.relative_path
-        :gsub("%.md$", ".html")
-        :gsub("%.lua$", ".html")
-        :gsub("%.", "-") .. ".html"
+    -- Determine output path - replace extension with .html
+    local rel_path = file.relative_path
+    -- Remove common extensions and add .html
+    rel_path = rel_path:gsub("%.lua$", ".html")
+    rel_path = rel_path:gsub("%.md$", ".html")
+    rel_path = rel_path:gsub("%.sh$", ".html")
+    rel_path = rel_path:gsub("%.c$", ".html")
+    rel_path = rel_path:gsub("%.h$", ".html")
+    rel_path = rel_path:gsub("%.cpp$", ".html")
+    rel_path = rel_path:gsub("%.sql$", ".html")
+    rel_path = rel_path:gsub("%.conf$", ".html")
+    rel_path = rel_path:gsub("%.json$", ".html")
+    -- If no extension was replaced, add .html
+    if not rel_path:match("%.html$") then
+        rel_path = rel_path .. ".html"
+    end
+    local output_path = output_dir .. "/" .. rel_path
 
     local replacements = {
         PROJECT_NAME  = config.project_name,

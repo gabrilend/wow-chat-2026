@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 405 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 405 • Phase 4</div>
+            <h1>Profile Transition System</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>405 - Profile Transition System</h1></p>
+<p><h2>Status</h2>
+- Created: 2026-04-10
+- Priority: Critical
+- Phase: Foundation</p>
+<p><h2>Problem</h2></p>
+<p>Current system uses separate source directories per profile:
+<pre><code>source-release/
+source-alpha/
+source-beta/</code></pre></p>
+<p>This causes:
+- Wasted disk space (3x source trees)
+- Slow switching (re-clone required)
+- Bugfixes don&#39;t propagate between profiles
+- Hard to track what changed between profiles</p>
+<p><h2>Solution</h2></p>
+<p>Use git branches to track profile states:</p>
+<p><pre><code>source/   ← Single directory
+  release branch = vanilla
+  alpha branch = vanilla + playerbots
+  beta branch = alpha + custom features</code></pre></p>
+<p><h2>Implementation Steps</h2></p>
+<p><h3>1. Unify Source Directory</h3></p>
+<p><strong>Current state:</strong>
+<pre><code class="bash">source-release/   # AzerothCore vanilla
+source-alpha/     # (doesn&amp;#39;t exist yet)
+source-beta/      # liyunfan1223 fork</code></pre></p>
+<p><strong>Target state:</strong>
+<pre><code class="bash">source/           # Single directory, branch = profile</code></pre></p>
+<p><strong>Migration:</strong>
+<pre><code class="bash">&lt;h1&gt;Rename source-beta to source&lt;/h1&gt;
+mv source-beta source</p>
+<p>&lt;h1&gt;Remove source-release (will use git checkout instead)&lt;/h1&gt;
+rm -rf source-release</p>
+<p>&lt;h1&gt;Update .gitignore&lt;/h1&gt;
+echo &amp;quot;build-<em>/&amp;quot; &amp;gt;&amp;gt; .gitignore
+echo &amp;quot;installed-files-</em>/&amp;quot; &amp;gt;&amp;gt; .gitignore</code></pre></p>
+<p><h3>2. Create Git Branches</h3></p>
+<p><strong>release branch:</strong>
+<pre><code class="bash">cd source
+git checkout -b release origin/master
+git tag release-2026-04-10-baseline</code></pre></p>
+<p><strong>alpha branch:</strong>
+<pre><code class="bash">git checkout -b alpha release
+&lt;h1&gt;Add minimal patches (B001, B004)&lt;/h1&gt;
+&lt;h1&gt;Commit&lt;/h1&gt;
+git tag alpha-2026-04-10-baseline</code></pre></p>
+<p><strong>beta branch:</strong>
+<pre><code class="bash">git checkout -b beta alpha
+&lt;h1&gt;Add all custom features&lt;/h1&gt;
+&lt;h1&gt;Commit current state&lt;/h1&gt;
+git tag beta-2026-04-10-baseline</code></pre></p>
+<p><h3>3. Update Patch System</h3></p>
+<p>Patches need profile awareness:</p>
+<p><pre><code class="bash">&lt;h1&gt;patches/patches.sh&lt;/h1&gt;</p>
+<p>apply_patches_for_profile() {
+    local profile=&amp;quot;$1&amp;quot;</p>
+<p>    case &amp;quot;$profile&amp;quot; in
+        release)
+            # No patches
+            ;;
+        alpha)
+            patch_B001_aoe_loot_item_namespace
+            patch_B004_upstream_warning_fixes
+            ;;
+        beta)
+            # All patches
+            patch_B001_aoe_loot_item_namespace
+            patch_B002_playerbots_ale_login_hook
+            patch_B003_ale_gameobject_wildcard
+            patch_B004_upstream_warning_fixes
+            patch_B005_accuracy_level_cap
+            patch_B006_ale_sell_item_hook
+            patch_B007_ale_unit_methods
+            patch_B008_mod_talent_bonus
+            ;;
+    esac
+}</code></pre></p>
+<p><h3>4. Create Profile Switch Script</h3></p>
+<p><strong>scripts/profile-switch</strong></p>
+<p><pre><code class="bash">#!/usr/bin/env bash
+&lt;h1&gt;profile-switch - Switch between release/alpha/beta profiles&lt;/h1&gt;</p>
+<p>set -euo pipefail</p>
+<p>TARGET_PROFILE=&amp;quot;$1&amp;quot;
+CURRENT_PROFILE=&amp;quot;$(cat .current-profile)&amp;quot;
+SOURCE_DIR=&amp;quot;source&amp;quot;</p>
+<p>echo &amp;quot;Switching: $CURRENT_PROFILE → $TARGET_PROFILE&amp;quot;</p>
+<p>&lt;h1&gt;Git checkout target branch&lt;/h1&gt;
+cd &amp;quot;$SOURCE_DIR&amp;quot;
+git checkout &amp;quot;$TARGET_PROFILE&amp;quot;
+cd ..</p>
+<p>&lt;h1&gt;Update profile marker&lt;/h1&gt;
+echo &amp;quot;$TARGET_PROFILE&amp;quot; &amp;gt; .current-profile</p>
+<p>&lt;h1&gt;Trigger rebuild&lt;/h1&gt;
+echo &amp;quot;Rebuilding for $TARGET_PROFILE profile...&amp;quot;
+./scripts/azerothcore update</p>
+<p>echo &amp;quot;✓ Switched to $TARGET_PROFILE&amp;quot;</code></pre></p>
+<p><h3>5. Update Build Script</h3></p>
+<p><strong>scripts/azerothcore</strong> changes:</p>
+<p><pre><code class="bash">&lt;h1&gt;Old:&lt;/h1&gt;
+AC_CODE_DIR=&amp;quot;${DIR}/source-${PROFILE}&amp;quot;</p>
+<p>&lt;h1&gt;New:&lt;/h1&gt;
+AC_CODE_DIR=&amp;quot;${DIR}/source&amp;quot;</p>
+<p>&lt;h1&gt;Git checkout happens in profile-switch&lt;/h1&gt;
+&lt;h1&gt;Build script just compiles what&amp;#39;s checked out&lt;/h1&gt;</code></pre></p>
+<p><h3>6. Lua Script Management</h3></p>
+<p>Lua scripts track profile in filename:</p>
+<p><pre><code class="bash">src/lua/
+  movement.lua                # All profiles
+  death-knights.lua           # All profiles</p>
+<p>  ambush.beta.lua             # Beta only
+  travel.beta.lua             # Beta only
+  levelling.beta.lua          # Beta only
+  behaviors.beta/             # Beta only</code></pre></p>
+<p>ALE loads scripts matching current profile:
+<pre><code class="lua"><span class="comment">-- In ALE config</span>
+LoadScriptPattern(&amp;quot;src/lua/<em>.lua&amp;quot;)              <span class="comment">-- Always</span>
+LoadScriptPattern(&amp;quot;src/lua/</em>.${PROFILE}.lua&amp;quot;)   <span class="comment">-- Profile-specific</span></code></pre></p>
+<p><h3>7. Module Management</h3></p>
+<p>Modules track profile via git:</p>
+<p><pre><code class="bash">&lt;h1&gt;release branch&lt;/h1&gt;
+modules/
+  mod-ale/
+  mod-aoe-loot/
+  mod-grownup/</p>
+<p>&lt;h1&gt;alpha branch (adds playerbots)&lt;/h1&gt;
+modules/
+  mod-ale/
+  mod-aoe-loot/
+  mod-grownup/
+  mod-playerbots/</p>
+<p>&lt;h1&gt;beta branch (adds custom modules)&lt;/h1&gt;
+modules/
+  mod-ale/
+  mod-aoe-loot/
+  mod-grownup/
+  mod-playerbots/
+  mod-talent-bonus/</code></pre></p>
+<p>Each profile&#39;s git branch has correct modules checked in.</p>
+<p><h2>Benefits</h2></p>
+<p>1. <strong>Instant switching</strong>: <code>git checkout</code> takes seconds
+2. <strong>Automatic propagation</strong>: <code>git merge alpha</code> brings fixes to beta
+3. <strong>Clear history</strong>: <code>git log --graph --all</code> shows evolution
+4. <strong>Disk efficient</strong>: One source tree instead of three
+5. <strong>Rollback friendly</strong>: <code>git checkout &lt;commit&gt;</code> to any state</p>
+<p><h2>Testing Plan</h2></p>
+<p><h3>Test 1: Switch beta → alpha</h3>
+<pre><code class="bash">./scripts/profile-switch alpha
+&lt;h1&gt;Verify:&lt;/h1&gt;
+&lt;h1&gt;- .current-profile = &amp;quot;alpha&amp;quot;&lt;/h1&gt;
+&lt;h1&gt;- source/ on alpha branch&lt;/h1&gt;
+&lt;h1&gt;- mod-playerbots present&lt;/h1&gt;
+&lt;h1&gt;- mod-talent-bonus absent&lt;/h1&gt;
+&lt;h1&gt;- Custom Lua disabled&lt;/h1&gt;
+&lt;h1&gt;- Server compiles&lt;/h1&gt;</code></pre></p>
+<p><h3>Test 2: Switch alpha → release</h3>
+<pre><code class="bash">./scripts/profile-switch release
+&lt;h1&gt;Verify:&lt;/h1&gt;
+&lt;h1&gt;- .current-profile = &amp;quot;release&amp;quot;&lt;/h1&gt;
+&lt;h1&gt;- source/ on release branch&lt;/h1&gt;
+&lt;h1&gt;- mod-playerbots absent&lt;/h1&gt;
+&lt;h1&gt;- All custom features absent&lt;/h1&gt;
+&lt;h1&gt;- Vanilla server compiles&lt;/h1&gt;</code></pre></p>
+<p><h3>Test 3: Switch release → beta</h3>
+<pre><code class="bash">./scripts/profile-switch beta
+&lt;h1&gt;Verify:&lt;/h1&gt;
+&lt;h1&gt;- .current-profile = &amp;quot;beta&amp;quot;&lt;/h1&gt;
+&lt;h1&gt;- source/ on beta branch&lt;/h1&gt;
+&lt;h1&gt;- All modules present&lt;/h1&gt;
+&lt;h1&gt;- All Lua enabled&lt;/h1&gt;
+&lt;h1&gt;- Full feature set compiles&lt;/h1&gt;</code></pre></p>
+<p><h3>Test 4: Bugfix propagation</h3>
+<pre><code class="bash">&lt;h1&gt;Fix bug on alpha&lt;/h1&gt;
+./scripts/profile-switch alpha
+git commit -m &amp;quot;Fix: Bot crash on login&amp;quot;</p>
+<p>&lt;h1&gt;Merge to beta&lt;/h1&gt;
+./scripts/profile-switch beta
+git merge alpha
+&lt;h1&gt;Bugfix now in beta automatically&lt;/h1&gt;</code></pre></p>
+<p><h2>Migration Checklist</h2></p>
+<p>- [ ] Commit current beta state
+- [ ] Rename source-beta → source
+- [ ] Remove source-release
+- [ ] Create release branch from upstream
+- [ ] Create alpha branch from release
+- [ ] Verify beta branch has all features
+- [ ] Update patches.sh with profile awareness
+- [ ] Create profile-switch script
+- [ ] Update .gitignore
+- [ ] Test all transitions
+- [ ] Document final workflow</p>
+<p><h2>Success Criteria</h2></p>
+<p>1. Single source directory
+2. Three git branches (release, alpha, beta)
+3. <code>./scripts/profile-switch &lt;profile&gt;</code> works
+4. Patches apply based on profile
+5. Bugfixes merge from alpha → beta
+6. All profiles compile and run</p>
+<p><h2>Related Files</h2></p>
+<p>- <code>docs/profile-transition-flow.md</code> - Design document
+- <code>scripts/profile-switch</code> - Switching script
+- <code>patches/patches.sh</code> - Profile-aware patches
+- <code>.current-profile</code> - Active profile marker</p>
+<p><h2>Notes</h2></p>
+<p>Git is the version control system. Let it do version control.
+We don&#39;t need three copies of the same source tree.
+Branches are cheap. Disk space is not.</p>
+<p><h2>Implementation Completed (2026-04-10)</h2></p>
+<p><h3>Final Design</h3></p>
+<p><strong>Two source directories, three profiles:</strong></p>
+<p><pre><code>source-alpha/  = AzerothCore 5af3d2d6 + mod-eluna + mod-transmog (alpha only)
+source-beta/   = Latest liyunfan1223/azerothcore-wotlk (release &amp;amp; beta)</code></pre></p>
+<p><strong>Profile definitions:</strong>
+- <strong>alpha</strong>: wow-chat-1 baseline, old Eluna, known-good regression point
+- <strong>release</strong>: Latest AzerothCore + playerbots, rock-solid features only
+- <strong>beta</strong>: Experimental development space, all features enabled</p>
+<p><h3>What Was Implemented</h3></p>
+<p><strong>Build script routing (scripts/azerothcore):</strong>
+<pre><code class="bash">get_profile_paths() {
+    if [[ &amp;quot;${PROFILE}&amp;quot; == &amp;quot;alpha&amp;quot; ]]; then
+        AC_CODE_DIR=&amp;quot;${DIR}/source-alpha&amp;quot;
+    else
+        AC_CODE_DIR=&amp;quot;${DIR}/source-beta&amp;quot;
+    fi
+    # Build/install dirs remain profile-specific
+}</code></pre></p>
+<p><strong>File naming conventions:</strong>
+- <em>.alpha.lua - Alpha-specific Lua scripts
+- </em>.beta.lua - Beta experimental Lua scripts  
+- <em>.release.lua - Release stable Lua scripts (if any)
+- alpha-</em>.sh - Alpha-specific patches
+- B<em>.sh - Beta/release patches</p>
+<p><strong>Git structure:</strong>
+- source-alpha/: Independent git repo (azerothcore/azerothcore-wotlk @ 5af3d2d6)
+- source-beta/: Independent git repo (liyunfan1223/azerothcore-wotlk @ Playerbot)
+- Project repo: Tracks documentation, scripts, issues (ignores source-</em>/)</p>
+<p><h3>Commits Made</h3></p>
+<p>1. <code>e42b59e</code> - refactor(Core/Build): Prepare for profile transition system
+2. <code>16e4820</code> - feat(Build): Add profile-switch script (later revised)
+3. <code>a7f14b9</code> - refactor(Build): Use unified source/ directory (later revised)
+4. <code>033c256</code> - docs(Build): Correct profile system design
+5. <code>2ee549c</code> - refactor(Build): Implement two-source-directory system
+6. <code>d976c94</code> - feat(Alpha): Establish alpha baseline from wow-chat-1</p>
+<p><h3>Documentation Created</h3></p>
+<p>- <code>docs/profile-transition-flow.md</code> - Profile system design
+- <code>issues/405-profile-transition-system.md</code> - This file
+- <code>issues/406-alpha-baseline-setup.md</code> - Alpha baseline documentation</p>
+<p><h3>Current State</h3></p>
+<p>✓ Alpha baseline established (source-alpha/)
+✓ Beta source present (source-beta/)
+✓ Build script routes profiles correctly
+✓ Documentation complete</p>
+<p>Next steps:
+- Build and validate alpha profile
+- Organize beta features with proper file suffixes
+- Test profile switching</p>
+<p><h2>Lessons Learned</h2></p>
+<p>1. <strong>Two sources, not three</strong>: Alpha uses different codebase (old Eluna), release/beta share latest code
+2. <strong>File suffixes, not git branches</strong>: Within source-beta/, files use <em>.release.lua and </em>.beta.lua
+3. <strong>Alpha must always work</strong>: It&#39;s the fallback, never break it
+4. <strong>Git ignores sources</strong>: source-*/ directories are separate repos, not tracked in project repo</p>
+<p><h2>Success Criteria</h2></p>
+<p>- [x] Alpha source directory established
+- [x] Beta source directory established
+- [x] Build script routes profiles correctly
+- [x] Documentation complete
+- [ ] Alpha profile builds successfully
+- [ ] Beta profile builds successfully
+- [ ] Profile switching works</p>
+<p>Status: <strong>Implementation complete, validation pending</strong>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-4-progress.html">View Phase 4 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

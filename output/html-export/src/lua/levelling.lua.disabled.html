@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>levelling.lua.disabled - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>levelling.lua.disabled</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/levelling.lua.disabled
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> disabled &nbsp;&nbsp;
+            <strong>Size:</strong> 5413 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 17:20
+        </div>
+
+        <div class="content">
+            <pre><code>-- levelling.lua
+-- Awards bonus talent points at 33% and 66% XP progress within each level.
+-- The 100% (level-up) talent point is handled by the server&#39;s Rate.Talent config.
+--
+-- Issue 120: talent-points-level-20-cap
+--
+-- This script works with mod-talent-bonus (C++) which hooks the server&#39;s
+-- talent point calculation. The C++ module ensures the server EXPECTS our
+-- bonus points during validation, preventing talent resets on login.
+--
+-- Division of labor:
+-- - C++ (mod-talent-bonus): Modifies expected talent count for validation
+-- - Lua (this file): Awards actual points with visual effect when threshold crossed
+--
+-- IMPORTANT - Relog exploit prevention:
+-- Actual talent points are ONLY awarded in onGiveXP (PLAYER_EVENT_ON_GIVE_XP).
+-- The onLogin handler ONLY sets tracking flags - it does NOT award points.
+-- This prevents the exploit where logging out/in repeatedly could grant points.
+-- The C++ module adjusts EXPECTED count (for validation), not ACTUAL points.
+--
+-- Visual: Green &quot;reputation level gained&quot; effect at 33%/66%
+-- Visual: Yellow level-up effect at 100% (normal game behavior)
+
+-- {{{ Configuration
+local THRESHOLD_33 = 0.33
+local THRESHOLD_66 = 0.66
+
+-- SMSG_SET_FACTION_STANDING opcode for green &quot;level up&quot; visual
+local SMSG_SET_FACTION_STANDING = 0x124
+-- }}}
+
+-- {{{ sendGreenLevelUpEffect
+-- Sends the green &quot;reputation level gained&quot; visual effect to the player.
+-- Uses a minimal SMSG_SET_FACTION_STANDING packet with the visual flag set.
+local function sendGreenLevelUpEffect(player)
+    -- Packet structure:
+    -- float  - bonus (0)
+    -- uint8  - show visual effect (1 = show green animation)
+    -- uint32 - faction count (0 = no actual reputation changes)
+    local packet = CreatePacket(SMSG_SET_FACTION_STANDING, 9)
+    packet:WriteFloat(0)     -- bonus modifier
+    packet:WriteUByte(1)     -- show visual effect flag
+    packet:WriteULong(0)     -- zero faction updates
+    player:SendPacket(packet)
+end
+-- }}}
+
+-- {{{ awardMidLevelTalent
+-- Awards a talent point and shows the green visual effect.
+local function awardMidLevelTalent(player, threshold)
+    player:SetFreeTalentPoints(player:GetFreeTalentPoints() + 1)
+    sendGreenLevelUpEffect(player)
+
+    local percent = math.floor(threshold * 100)
+    player:SendBroadcastMessage(&quot;You feel more capable. +1 talent point (&quot; .. percent .. &quot;%)&quot;)
+end
+-- }}}
+
+-- {{{ getThresholdKey
+-- Returns a unique key for tracking if a threshold was already awarded this level.
+local function getThresholdKey(level, threshold)
+    return &quot;talent_&quot; .. level .. &quot;_&quot; .. math.floor(threshold * 100)
+end
+-- }}}
+
+-- {{{ onGiveXP
+-- Called when player gains XP. Checks if they crossed 33% or 66% threshold.
+local function onGiveXP(event, player, amount, victim)
+    local level = player:GetLevel()
+    local currentXP = player:GetXP()
+    local xpToLevel = player:GetUInt32Value(36) -- PLAYER_NEXT_LEVEL_XP = 36
+
+    if xpToLevel &lt;= 0 then return end
+
+    local progress = currentXP / xpToLevel
+
+    -- Check 33% threshold
+    local key33 = getThresholdKey(level, THRESHOLD_33)
+    if progress &gt;= THRESHOLD_33 and not player:GetData(key33) then
+        player:SetData(key33, true)
+        awardMidLevelTalent(player, THRESHOLD_33)
+    end
+
+    -- Check 66% threshold
+    local key66 = getThresholdKey(level, THRESHOLD_66)
+    if progress &gt;= THRESHOLD_66 and not player:GetData(key66) then
+        player:SetData(key66, true)
+        awardMidLevelTalent(player, THRESHOLD_66)
+    end
+end
+-- }}}
+
+-- {{{ onLevelChange
+-- Called when player levels up. Clears threshold tracking for the new level.
+-- The actual talent point for leveling is handled by server&#39;s Rate.Talent config.
+local function onLevelChange(event, player, oldLevel)
+    local newLevel = player:GetLevel()
+
+    -- Clear threshold flags for the new level (they start fresh)
+    player:SetData(getThresholdKey(newLevel, THRESHOLD_33), nil)
+    player:SetData(getThresholdKey(newLevel, THRESHOLD_66), nil)
+end
+-- }}}
+
+-- {{{ onLogin
+-- Called on login. Sets tracking flags based on current XP progress.
+-- The C++ module (mod-talent-bonus) handles validation, so we don&#39;t need
+-- to re-add points here. We just need to mark which thresholds are &quot;spent&quot;
+-- so we don&#39;t double-award when the player gains more XP.
+--
+-- NOTE: This function does NOT call SetFreeTalentPoints() - it only sets flags.
+-- This is intentional: talent points are ONLY awarded on XP gain (onGiveXP).
+-- Relog cannot grant extra points because this handler never awards them.
+local function onLogin(event, player)
+    local level = player:GetLevel()
+    local currentXP = player:GetXP()
+    local xpToLevel = player:GetUInt32Value(36) -- PLAYER_NEXT_LEVEL_XP = 36
+
+    if xpToLevel &lt;= 0 then return end
+
+    local progress = currentXP / xpToLevel
+
+    -- Mark thresholds as already awarded based on current XP position
+    if progress &gt;= THRESHOLD_33 then
+        player:SetData(getThresholdKey(level, THRESHOLD_33), true)
+    end
+
+    if progress &gt;= THRESHOLD_66 then
+        player:SetData(getThresholdKey(level, THRESHOLD_66), true)
+    end
+end
+-- }}}
+
+-- {{{ Event Registration
+local PLAYER_EVENT_ON_GIVE_XP      = 12
+local PLAYER_EVENT_ON_LEVEL_CHANGE = 13
+local PLAYER_EVENT_ON_LOGIN        = 3
+
+RegisterPlayerEvent(PLAYER_EVENT_ON_GIVE_XP,      onGiveXP)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LEVEL_CHANGE, onLevelChange)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN,        onLogin)
+-- }}}
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ambush.lua.disabled - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ambush.lua.disabled</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/ambush.lua.disabled
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> disabled &nbsp;&nbsp;
+            <strong>Size:</strong> 29584 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-09 00:22
+        </div>
+
+        <div class="content">
+            <pre><code>---------------------------------------------------------------------------------------------------
+-- storage stuff
+
+            Ambush = {} -- table to hold the functions.
+local AmbushQueues = {} -- table to hold monsters that are queued to attack.
+
+-- Register in package.loaded so require() is a no-op after ALE loads this
+-- Must be AFTER Ambush table is created so require() returns the module
+package.loaded[&quot;ambush&quot;] = Ambush
+
+-- Creature cache: populated at startup, keyed by level then rank
+-- Structure: CreatureCache[level][rank] = { {id=X, minLevel=Y, maxLevel=Z}, ... }
+local CreatureCache = {}
+
+-- add more when you find them
+-- 7074 and 7073 are maybes, try fighting them and see if they&#39;re too hard
+-- 11141 on thin ice
+Ambush.BANNED_CREATURE_IDS = { 17887, 19416, 2673,  3569,  16422, 16423, -- {{{
+                               16437, 16438, 17206, 1946,  5893,  4789,
+                               5894,  7050,  7067,  7310,  7849,  5723,
+                               11876, 17207, 2794,  11560, 11195, 13736,
+                               7767,  6388,  14638, 14639, 14603, 14604,
+                               14640, 8608,  1800,  1801,  4476,  22408,
+                               13022, 13279, 7149,  10940, 10943, 14467,
+                               28654, 28768, 10387, 10836, 11076, 18978,
+                               10479, 10482, 11078, 19136, 14385, 16141,
+                               16298, 16299, 16043, 20145, 20496, 22461,
+                               16992, 17399, 17477, 19016, 16939, 20680,
+                               21040, 20498, 20918, 21233, 21817, 21820,
+                               21821, 19493, 19494, 19757, 19760, 19966,
+                               19971, 20480, 20927, 20983, 22025, 25296,
+                               19759, 21778, 21779, 25382, 26224, 18605,
+                               18606, 19967, 20310, 20311, 20312, 20313,
+                               20320, 20321, 20323, 20643, 20655, 21531,
+                               21552, 21554, 21555, 21646, 21916, 22009,
+                               22201, 22202, 22286, 22289, 23100, 23386,
+                               24564, 24597, 24598, 24599, 24600, 24602,
+                               24603, 24604, 24621, 24622, 24623, 24624,
+                               24625, 24626, 24627, 25766, 30763, 30773,
+                               18614, 20309, 20322, 20784, 20789, 22221,
+                               22327, 22392, 24029, 24790, 26045, 26225,
+                               27513, 25678, 25682, 26490, 26517, 26573,
+                               26966, 25712, 25716, 26232, 26518, 26526,
+                               26702, 26703, 26811, 26812, 27614, 27821,
+                               29117, 29118, 26872, 28750, 28006, 28170,
+                               28669, 28320, 28875, 28752, 30633, 26536,
+                               30053, 30432, 31812, 33499, 29775, 30055,
+                               30791, 30843, 30902, 30921, 30957, 30958,
+                               30960, 31042, 31141, 31274, 31321, 31325,
+                               31326, 31327, 31468, 31554, 31555, 31671,
+                               31681, 31692, 31798, 32161, 32767, 32769,
+                               33289, 3617,  6033,  5055,  5781,  314,
+                               1160,  6071,
+                             } -- }}}
+
+Ambush.BANNED_RARE_IDS = { 0, -- {{{
+                         } -- }}}
+
+---------------------------------------------------------------------------------------------------
+-- periodic event function
+
+-- ranks: 0 = regular mob, 2 = rare elite, 4 = rare
+-- this function determines which queue to use when spawning a monster
+function Ambush.spawnAndAttackPlayer(_eventID, _delay, _repeats, player) -- {{{
+
+    -- if there are no monsters queued for this player, fill the queue from cache
+    local next = next
+    if next(player:GetData(&quot;queue&quot;)) == nil then
+        if next(player:GetData(&quot;rare-queue&quot;)) == nil then
+            if player:IsInGroup() and player:GetGroup():GetMembersCount() &gt; 2 then
+                print(&quot;Heh, thought you could escape us? Think again! (group rare mob spawning)&quot;)
+                Ambush.setupAmbushQueue(player, 2)
+            else
+                print(&quot;Heh, thought you could escape me? Think again! (solo rare mob spawning)&quot;)
+                Ambush.setupAmbushQueue(player, 4)
+            end
+        else
+            Ambush.setupAmbushQueue(player, 0)
+            Ambush.randomSpawn(player, true)
+        end
+    else
+        Ambush.randomSpawn(player, false)
+    end
+end -- }}}
+
+---------------------------------------------------------------------------------------------------
+-- queue construction functions
+
+-- {{{ Ambush.initCreatureCache
+-- Loads all creature data into memory at startup to avoid runtime SQL queries
+-- which have a buffer corruption bug in ALE&#39;s WorldDBQuery implementation.
+-- Called once when the script loads via ELUNA_EVENT_ON_LUA_STATE_OPEN.
+function Ambush.initCreatureCache() -- {{{
+    print(&quot;[Ambush] Initializing creature cache...&quot;)
+    local MAX_LEVEL = 20  -- game&#39;s max level
+    local ranks = {0, 2, 4}  -- normal, rare elite, rare
+
+    -- Initialize cache structure
+    for level = 1, MAX_LEVEL do
+        CreatureCache[level] = {}
+        for _, rank in ipairs(ranks) do
+            CreatureCache[level][rank] = {}
+        end
+    end
+
+    -- Load creatures with separate short queries per rank to avoid ALE query length bug
+    local count = 0
+
+    -- Valid creature types for ambush spawning (matches original wow-chat-1):
+    -- 2=Dragonkin, 3=Demon, 4=Elemental, 5=Giant, 6=Undead, 9=Mechanical, 10=Aberration
+    -- Notably EXCLUDES: 1=Beast, 7=Humanoid, 8=Critter
+    local validTypes = {[2]=true, [3]=true, [4]=true, [5]=true, [6]=true, [9]=true, [10]=true}
+
+    for _, rank in ipairs(ranks) do
+        -- Using backticks around `rank` because it&#39;s a reserved keyword in MySQL 8.0+
+        local sql = &quot;SELECT entry,minlevel,maxlevel,type FROM creature_template WHERE `rank`=&quot; .. rank .. &quot; AND npcflag=0 AND lootid!=0 AND minlevel&lt;=&quot; .. MAX_LEVEL
+        print(&quot;[Ambush] Loading rank &quot; .. rank .. &quot; creatures...&quot;)
+        local result = WorldDBQuery(sql)
+
+        if result then
+            repeat
+                local entry      = result:GetUInt32(0)
+                local minLevel   = result:GetUInt32(1)
+                local maxLevel   = result:GetUInt32(2)
+                local creatureType = result:GetUInt32(3)
+
+                -- Skip creatures with invalid types or banned IDs
+                if validTypes[creatureType] and not Ambush.isCreatureBanned(entry, rank == 2 or rank == 4) then
+                    -- Add creature to cache for each level it&#39;s valid for
+                    for level = minLevel, math.min(maxLevel, MAX_LEVEL) do
+                        if CreatureCache[level] and CreatureCache[level][rank] then
+                            table.insert(CreatureCache[level][rank], {
+                                id       = entry,
+                                minLevel = minLevel,
+                                maxLevel = maxLevel,
+                            })
+                            count = count + 1
+                        end
+                    end
+                end
+            until not result:NextRow()
+        else
+            print(&quot;[Ambush] No creatures found for rank &quot; .. rank)
+        end
+    end
+
+    -- Debug: show cache stats per rank
+    for _, rank in ipairs(ranks) do
+        local rankCount = 0
+        for level = 1, MAX_LEVEL do
+            if CreatureCache[level] and CreatureCache[level][rank] then
+                rankCount = rankCount + #CreatureCache[level][rank]
+            end
+        end
+        print(&quot;[Ambush] Rank &quot; .. rank .. &quot; total entries: &quot; .. rankCount)
+    end
+    print(&quot;[Ambush] Creature cache loaded: &quot; .. count .. &quot; level/creature entries&quot;)
+end -- }}}
+
+-- this function uses the cached creature data instead of querying at runtime
+function Ambush.setupAmbushQueue(player, rank) -- {{{
+    local playerLevel = player:GetLevel()
+    local creatures = CreatureCache[playerLevel] and CreatureCache[playerLevel][rank] or {}
+    print(&quot;[Ambush] setupAmbushQueue: level=&quot; .. playerLevel .. &quot; rank=&quot; .. rank .. &quot; found=&quot; .. #creatures)
+    Ambush.fillPlayerQueue(player, creatures, rank)
+end -- }}}
+
+-- {{{ Ambush.fillPlayerQueue
+-- Fills a single player&#39;s ambush queue from cached creature data
+function Ambush.fillPlayerQueue(player, creatures, rank) -- {{{
+    local MaxQueueSize = 8
+
+    local isRare = (rank == 2 or rank == 4)
+    local queueType = isRare and &quot;rare-queue&quot; or &quot;queue&quot;
+
+    -- Handle empty creature list
+    if #creatures == 0 then
+        print(&quot;[Ambush] No creatures found for rank &quot; .. rank)
+        player:SetData(queueType, {0})
+        player:RegisterEvent(Ambush.spawnAndAttackPlayer, 1000, 1)
+        return
+    end
+
+    -- Build queue with random selection from cache
+    local queue = {}
+    local availableCreatures = {}
+    for i, c in ipairs(creatures) do
+        availableCreatures[i] = c
+    end
+
+    local numToAdd = math.min(#availableCreatures, MaxQueueSize)
+    for i = 1, numToAdd do
+        local creature = table.remove(availableCreatures, math.random(#availableCreatures))
+        table.insert(queue, creature.id)
+    end
+
+    player:SetData(queueType, queue)
+    print(&quot;[Ambush] Filled &quot; .. queueType .. &quot; with &quot; .. #queue .. &quot; creatures for player level &quot; .. player:GetLevel())
+end -- }}}
+
+-- DEPRECATED: this function builds an Ambush queue based on the results of a sql query
+-- Keeping for reference but using pushToAmbushQueueFromCache instead
+function Ambush.pushToAmbushQueue(query) -- {{{
+    local LEVEL_MAX = 0 -- differential between player level and monster level
+    local LEVEL_MIN = 0 -- MAKE SURE YOU ALSO SET IN setup[Solo/Group]RareQueue()
+    local isRare = false
+    local MaxQueueSize = 8
+    local queueType = &quot;&quot;
+    local next = next
+
+    local creatures = {}
+    if query then
+        -- if creature is rare or rare elite
+        if query:GetUInt32(3) == 4 or
+           query:GetUInt32(3) == 2 then isRare = true  queueType = &quot;rare-queue&quot;
+                                   else isRare = false queueType = &quot;queue&quot;
+        end
+        repeat
+            local creature = {
+                  id       = query:GetUInt32(0),
+                  minLevel = query:GetUInt32(1),
+                  maxLevel = query:GetUInt32(2),
+            }
+            if not Ambush.isCreatureBanned(creature.id, isRare) then
+                table.insert(creatures, creature)
+            end
+        until not query:NextRow()
+    end
+
+    if #creatures &gt; MaxQueueSize then -- {{{
+        print(&quot;queue size too large, truncating&quot;)
+        local tempTable = {}
+        local creature
+        for i = 1, MaxQueueSize do
+            creature = table.remove(creatures, math.random(#creatures))
+            table.insert(tempTable, creature)
+        end
+        creatures = tempTable
+    end -- }}}
+
+    if #creatures == 0 then -- {{{
+        print(&quot;no creatures found&quot;)
+        queueType = &quot;rare-queue&quot; -- there will always be normal monsters, soooo...
+    end -- }}}
+
+    all_players = { alliance = GetPlayersInWorld(0, false),
+                    horde    = GetPlayersInWorld(1, false),
+                    neutral  = GetPlayersInWorld(2, false)
+                  }
+
+    -- for each player currently logged in
+    for _, faction in pairs(all_players) do
+        for _, player in pairs(faction) do
+            if #creatures == 0 -- {{{
+                and next(player:GetData(queueType)) == nil then
+                player:SetData(queueType, {0})
+                player:RegisterEvent(Ambush.spawnAndAttackPlayer, 1000, 1)
+                return
+            end -- }}}
+            local playerLevel = player:GetLevel()
+            if playerLevel ~= 0 then
+                -- for each creature that we just queried
+                for _, creature in ipairs(creatures) do
+                    -- if this creature is appropriate for this player
+                    if playerLevel &gt;= creature.minLevel - LEVEL_MIN and
+                       playerLevel &lt;= creature.maxLevel + LEVEL_MAX then
+
+                          tempTable = player:GetData(queueType)
+                          table.insert(tempTable, creature.id)
+                          player:SetData(queueType, tempTable)
+                    end
+                end
+            else
+                print(&quot;player level == 0 which is weird&quot;)
+            end
+        end
+    end
+end -- }}}
+
+-- slower than regenerating the queue all at once
+function Ambush.addCreatureToQueue(player, creatureId, minLevel, maxLevel, isRare) -- {{{
+    local queueType
+    if isRare then queueType = &quot;rare-queue&quot;
+              else queueType = &quot;queue&quot;
+    end
+    local creature = { id       = creatureId,
+                       minLevel = minLevel,
+                       maxLevel = maxLevel,
+                     }
+    local tempTable = {}
+    tempTable[1] = creature
+    for k, v in player:GetData(queueType) do
+        tempTable[k + 1] = v
+    end
+    player:SetData(queueType, tempTable)
+
+end -- }}}
+
+-- make sure this function is in the async callback function... it might take
+-- a while depending on how many banned creatures there are.
+function Ambush.isCreatureBanned(creatureId, isRare) -- {{{
+
+    if isRare then
+        for _, id in ipairs(Ambush.BANNED_RARE_IDS) do
+            if creatureId == id then return true end end
+
+    else -- if not rare
+    for _, id in ipairs(Ambush.BANNED_CREATURE_IDS) do
+        if creatureId == id then return true end end
+    end
+    return false -- if not banned
+end -- }}}
+
+---------------------------------------------------------------------------------------------------
+-- spawning functions
+
+function Ambush.randomSpawn(player, isRare) -- {{{
+    local ambush_min_distance = 120
+    local ambush_max_distance = 160
+    local queueType
+    local corpseDespawnType
+    local corpseDespawnTimer
+
+    if isRare then
+        queueType = &quot;rare-queue&quot;
+        corpseDespawnType  = 8
+        corpseDespawnTimer = nil
+    else
+        queueType = &quot;queue&quot;
+        corpseDespawnType  = 6
+        corpseDespawnTimer = 360 * 1000 -- 6 minutes
+    end
+
+    local  playerID   = player:GetGUID()
+    local playerQueue = player:GetData(queueType)
+    local   randInt   = math.random(1, #playerQueue)
+    local creatureId  = table.remove(playerQueue, randInt)
+    player:SetData(queueType, playerQueue)
+
+
+
+    if creatureId ~= 0 then
+        local spawnFunction
+        if player:IsMoving() then spawnFunction = Movement.getArcSpawnPosition
+                             else spawnFunction = Movement.getPlusSpawnPosition end
+        local playerX, playerY, playerZ, playerO = player:GetLocation()
+        local playerMap = player:GetMap()
+
+------ find valid spawn position {{{
+        local x, y, z, o
+        local spawnTries = 0
+        local SPAWN_TRIES_MAX = 5
+        repeat
+            spawnTries = spawnTries + 1
+            x, y = spawnFunction(playerX, playerY, ambush_min_distance, ambush_max_distance, playerO)
+            z = playerMap:GetHeight(x, y)
+        until z ~= nil or spawnTries &gt;= SPAWN_TRIES_MAX
+
+        if z == nil then
+            print(&quot;[Ambush] Could not find valid terrain for spawn after &quot; .. SPAWN_TRIES_MAX .. &quot; tries&quot;)
+            return
+        end
+        o = math.random(0, 6.28)
+        --- }}}
+
+        local creature = player:SpawnCreature(creatureId, x, y, z, o,
+                                              corpseDespawnType,
+                                              corpseDespawnTimer)
+        if creature then
+
+------ is-in-water check {{{
+            -- check and make sure the creature did not spawn in the water
+            -- if it did, then try 3 times to find a new spawn location.
+            -- if one cannot be found, then just give up and despawn the creature
+            local tries = 0
+            while creature:IsInWater() and tries &lt; 3 do
+                tries = tries + 1
+                x, y = spawnFunction(playerX, playerY, ambush_min_distance, ambush_max_distance, o)
+                z = playerMap:GetHeight(x, y)
+                if z then
+                    creature:NearTeleport(x, y, z, o)
+                end
+            end
+            if tries == 3 or not z then
+                Ambush.despawn(creature)
+                return
+            end
+            --- }}}
+
+------ is-wrong-z check {{{
+            -- check if the Z level is weird. if it is, then try 5 times to find
+            -- a new spawn location. if one cannot be found, then just give up
+            -- and despawn the creature
+            local tries = 0
+            local TRIES_MAX = 5
+            local minDist = ambush_min_distance
+            local maxDist = ambush_max_distance
+            local creatureMap = creature:GetMap()
+            if creatureMap == nil then
+                print(&quot;[Ambush] No creature map&quot;)
+                Ambush.despawn(creature)
+                return
+            end
+
+            local currentZ = creatureMap:GetHeight(x, y)
+            while currentZ and (currentZ &gt; playerZ + 15 or currentZ &lt; playerZ - 15) and tries &lt; TRIES_MAX do
+                tries = tries + 1
+                minDist = minDist / 2
+                maxDist = maxDist / 2
+                print(&quot;[Ambush] Creature too high/low, retrying with distance: &quot; .. minDist .. &quot;-&quot; .. maxDist)
+                x, y = spawnFunction(playerX, playerY, minDist, maxDist, o)
+                z = creatureMap:GetHeight(x, y)
+                if z then
+                    creature:NearTeleport(x, y, z, o)
+                    currentZ = z
+                else
+                    currentZ = nil  -- force another retry
+                end
+            end
+            if tries == TRIES_MAX or not z then
+                print(&quot;[Ambush] Cannot find acceptable spawn location&quot;)
+                Ambush.despawn(creature)
+                return
+            end
+            --- }}}
+
+            if isRare then
+                print(&quot;Rare creature spawn: &quot; .. creatureId)
+                player:SendBroadcastMessage(&quot;A dark rustling alerts you to a dangerous presence. Keep a lookout.&quot;)
+            else
+                print(&quot;Ambush! Watch out, here comes &quot; .. creatureId .. &quot;!&quot;)
+                player:SendBroadcastMessage(&quot;Ambush! Watch out, here comes &quot; .. creatureId .. &quot;!&quot;)
+            end
+
+            creature:SetData(&quot;ambush-chase-target&quot;, playerID)
+            creature:SetData(&quot;wander-radius&quot;, 30)
+            creature:SetData(&quot;ambush-max-distance&quot;, ambush_max_distance)
+            if isRare then   player:SetData(&quot;is-in-boss-fight&quot;, true)
+                           creature:SetData(&quot;is-rare&quot;, true)
+                      else   player:SetData(&quot;num-ambushers&quot;, player:GetData(&quot;num-ambushers&quot;) + 1)
+                           creature:SetData(&quot;is-rare&quot;, false)
+            end
+            creature:RegisterEvent(Ambush.chasePlayer, 1000, 1)
+        end
+    end
+end -- }}}
+
+function Ambush.despawn(creature) -- {{{
+    local playerID = creature:GetData(&quot;ambush-chase-target&quot;)
+
+    -- Clean up object variable data before despawn (Issue 332)
+    if ObjectVariables and ObjectVariables.cleanupCreature then
+        ObjectVariables.cleanupCreature(creature)
+    end
+
+    if playerID == nil then creature:DespawnOrUnsummon(0) return end
+    Ambush.deregister(creature)
+    creature:DespawnOrUnsummon(0)
+end -- }}}
+
+function Ambush.deregister(creature) -- {{{
+    local playerID = creature:GetData(&quot;ambush-chase-target&quot;)
+    local player   = GetPlayerByGUID(playerID)
+    if     creature:GetData(&quot;is-rare&quot;) == true  then player:SetData(&quot;is-in-boss-fight&quot;, false)
+    elseif creature:GetData(&quot;is-rare&quot;) == false then player:SetData(&quot;num-ambushers&quot;, player:GetData(&quot;num-ambushers&quot;) - 1)
+    end
+end -- }}}
+
+---------------------------------------------------------------------------------------------------
+-- combat functions
+
+function Ambush.chasePlayer(_eventID, _delay, _repeats, creature) -- {{{
+    if creature:IsDead() then
+        return
+    end
+    local    ATTACK_DISTANCE    = 30
+    local CREATURE_MAX_DISTANCE = creature:GetData(&quot;ambush-max-distance&quot;) or 60
+    local     WANDER_RADIUS     = creature:GetData(&quot;wander-radius&quot;) or 30
+    local WANDER_ROTATION_DELAY = 2000 -------- time between each new waypoint on the circle
+    local        playerID       = creature:GetData(&quot;ambush-chase-target&quot;) -- required
+    local        player         = GetPlayerByGUID(playerID)
+    local        playerX,
+                 playerY        = player:GetLocation()
+    local       creatureX,
+                creatureY,
+                creatureZ,
+                creatureO       = creature:GetLocation()
+    local       creatureMap     = creature:GetMap() if not creatureMap then print(&quot;no creature map&quot;)
+                                                                           Ambush.despawn(creature)
+                                                                                         return end
+
+    if not player:IsStandState() then -- {{{
+        creature:MoveClear()
+        creature:AttackStop()
+        creature:ClearInCombat()
+        creature:SetAggroEnabled(false)
+        if creature:CanAggro() then print(&quot;can aggro&quot;) else print(&quot;cannot aggro&quot;) end
+        creature:SetHomePosition(creatureX, creatureY, creatureZ, creatureO)
+        local angle = Movement.getInitialAngle(playerX, playerY, creatureX, creatureY)
+        local dir   = creature:GetData(&quot;orbit-direction&quot;) if not dir then dir = 1 end
+        local x, y  = Movement.getOrbitPosition( playerX, playerY,
+                                                 WANDER_RADIUS,
+                                                 creature:GetSpeed(1),
+                                                 WANDER_ROTATION_DELAY,
+                                                 angle,
+                                                 dir )
+        if creatureMap:GetHeight(x, y) &gt; creatureZ + 14 or
+           creatureMap:GetHeight(x, y) &lt; creatureZ - 14 then
+            creature:SetData(&quot;orbit-direction&quot;, dir * -1)
+        end
+        creature:MoveTo(math.random(0, 4294967295), x, y, creatureMap:GetHeight(x, y))
+        creature:RegisterEvent(Ambush.chasePlayer, WANDER_ROTATION_DELAY, 1)
+        return
+    else
+        -- Player is standing - re-enable aggro so creature can target other players
+        -- (aggro was disabled during orbit mode when player was sitting)
+        creature:SetAggroEnabled(true)
+    end -- }}}
+
+    if player:IsDead() then -- {{{
+        creature:MoveRandom(30)
+        creature:RegisterEvent(Ambush.chasePlayer, 5000, 1)
+        return
+    end -- }}}
+
+    if Movement.isCloseEnough(creatureX, creatureY, playerX, playerY, ATTACK_DISTANCE)
+    or creature:IsInCombat() then
+        creature:SetHomePosition(creatureX, creatureY, creatureZ, creatureO)
+        creature:AttackStart(player)
+        creature:RegisterEvent(Ambush.inCombatCheck, 500, 1)
+    else
+        local targetX, targetY = Movement.getMidpoint( creature:GetX(),
+                                                       creature:GetY(),
+                                                       playerX,
+                                                       playerY
+                                                     )
+   if player:GetMapId() ~= creatureMap:GetMapId() then -- {{{
+            -- if the player is on the border between one map and another while
+            -- the creatures are chasing them, then the creature will get stuck
+            -- on the border and not be able to cross over. This is a problem
+            -- because the creature will not be able to attack the player and
+            -- the player will not be able to attack the creature. So, if the
+            -- player and the creature are on different maps, then just despawn
+            -- the creature and attempt to respawn it on the player&#39;s map.
+            print(&quot;player and creature are on different maps, respawning&quot;)
+            Ambush.addCreatureToQueue(player, creature:GetEntry(), creature:GetLevel(), creature:GetLevel(), false) -- setting isRare to false because it doesn&#39;t matter which queue the creature spawns in
+            player:RegisterEvent(Ambush.spawnCreature, 1000, 1)
+            Ambush.despawn(creature)
+        end -- }}}
+
+        if Movement.getLazyDistance(creatureX, creatureY, targetX, targetY) &gt; CREATURE_MAX_DISTANCE then
+            print(Movement.getLazyDistance(creatureX, creatureY, targetX, targetY) ..&quot; yards is too far away, despawning&quot;)
+            Ambush.despawn(creature)
+            return
+        end
+        local targetZ = creatureMap:GetHeight(targetX, targetY)
+        if not targetZ then
+            -- Can&#39;t find valid terrain, stay put and retry next tick
+            creature:RegisterEvent(Ambush.chasePlayer, 1000, 1)
+            return
+        end
+
+        creature:MoveTo(math.random(0, 4294967295), targetX, targetY, targetZ)
+        creature:RegisterEvent(Ambush.chasePlayer, 1000, 1)
+    end
+end -- }}}
+
+function Ambush.onCreatureDeath(event, killer, creature) -- {{{
+    local owning_player_ID = creature:GetData(&quot;ambush-chase-target&quot;) or nil
+    local isRare           = creature:GetData(&quot;is-rare&quot;) or false
+    if owning_player_ID then
+        local player = GetPlayerByGUID(owning_player_ID)
+        if player then
+            if isRare then
+                player:SetData(&quot;is-in-boss-fight&quot;, false)
+            else
+                local numAmbushers = player:GetData(&quot;num-ambushers&quot;)
+                if    numAmbushers &gt; 0 then
+                    player:SetData(&quot;num-ambushers&quot;, numAmbushers - 1)
+                end
+            end
+        end
+    end
+
+    -- Clear ambush data from corpse - corpse remains as static scenery
+    -- like bones or trees, no longer tracked by ambush system
+    creature:RemoveEvents()
+    creature:MoveClear()  -- Stop any in-progress movement so corpse doesn&#39;t slide
+    creature:SetData(&quot;ambush-chase-target&quot;, nil)
+    creature:SetData(&quot;wander-radius&quot;,       nil)
+    creature:SetData(&quot;ambush-max-distance&quot;, nil)
+    creature:SetData(&quot;orbit-direction&quot;,     nil)
+    creature:SetData(&quot;is-rare&quot;,             nil)
+end -- }}}
+
+-- this function checks if the nearest player is in combat, not necessarily the target
+function Ambush.inCombatCheck(event, delay, repeats, creature) -- {{{
+    if not creature then return end
+
+    -- If creature is in combat, let default AI handle it (another player might be fighting it)
+    if creature:IsInCombat() then
+        creature:SetSpeed(0, 1.0)
+        creature:SetSpeed(1, 1.0)
+        creature:RegisterEvent(Ambush.inCombatCheck, 500, 1)
+        return
+    end
+
+    SELECT_TARGET_NEAREST = 3
+    local nearbyPlayer = creature:GetAITarget(SELECT_TARGET_NEAREST, true, 0, 40, 0)
+
+    -- No player nearby within 40 yards - chase assigned player with speed boost
+    if not nearbyPlayer then
+        local playerID = creature:GetData(&quot;ambush-chase-target&quot;)
+        local assignedPlayer = playerID and GetPlayerByGUID(playerID)
+
+        if assignedPlayer and assignedPlayer:GetMapId() == creature:GetMapId() then
+            -- Speed boost to catch up (1.5x normal run speed)
+            creature:SetSpeed(0, 1.5)  -- 0 = MOVE_WALK
+            creature:SetSpeed(1, 1.5)  -- 1 = MOVE_RUN
+
+            -- Move toward assigned player
+            local px, py, pz = assignedPlayer:GetLocation()
+            creature:MoveTo(math.random(0, 4294967295), px, py, pz)
+            creature:RegisterEvent(Ambush.inCombatCheck, 1000, 1)
+        else
+            -- Assigned player gone (logged out, different map) - despawn
+            Ambush.despawn(creature)
+        end
+        return
+    end
+
+    -- Player nearby, reset speed
+    creature:SetSpeed(0, 1.0)
+    creature:SetSpeed(1, 1.0)
+
+    if not nearbyPlayer:IsStandState() then -- {{{
+        creature:MoveHome()
+        creature:RegisterEvent(Ambush.chasePlayer, 2000, 1)
+        return
+    end -- }}}
+
+    -- Not in combat, player nearby but standing - deregister (will re-engage via normal AI)
+    Ambush.deregister(creature)
+end -- }}}
+---------------------------------------------------------------------------------------------------
+
+-- FIXME: make it so that neutral spawning mobs will orbit instead
+--        of attacking the player
+--
+--        then make alternative orbit mechanics that go a little farther out and drift a little bit sorta like the travellers (but still orbiting)
+--
+-- FIXME: make units spawn at strongholds (like demons and undead from strongholds of undeath and fel energy) or helpful allies and hordes who spawn in their castles and march out to wage war
+--
+-- could automate it too, by looking at every quest and pulling the target NPC to be spawned in the area where the target NPC is spawned
+--
+-- and then have them radiate outwards, exploring the world bit-by-bit
+--
+-- you don&#39;t have to make any boundaries
+--
+-- just make them wander about and spawn at their respective strongholds (AKA wherever the quest tells you to wander)
+
+function Ambush.setupPlayer(event, player)
+    player:SetData(   &quot;queue&quot;,     {} )
+    player:SetData( &quot;rare-queue&quot;,  {} )
+    player:SetData(&quot;num-ambushers&quot;, 0 )
+end
+
+PLAYER_EVENT_ON_LOGIN = 3
+PLAYER_EVENT_ON_KILL_CREATURE = 7
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, Ambush.setupPlayer)
+RegisterPlayerEvent(PLAYER_EVENT_ON_KILL_CREATURE, Ambush.onCreatureDeath, 0)
+
+-- Initialize creature cache at script load time
+-- This runs once when the server starts, avoiding runtime SQL queries
+Ambush.initCreatureCache()
+
+---------------------------------------------------------------------------------------------------
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

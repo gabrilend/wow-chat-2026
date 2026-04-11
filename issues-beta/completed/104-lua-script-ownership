@@ -174,7 +174,7 @@ Want to try a radical change to ambush AI? Copy the project directory, hack away
 ## Related Phase 1 Issues
 
 - 101 - verify-server-startup (needs Lua scripts to run)
-- 130 - ale-initialization-hook-fix (ALE must load scripts)
+- 202 - ale-initialization-hook-fix (ALE must load scripts)
 
 ---
 

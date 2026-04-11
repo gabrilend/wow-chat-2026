@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 406 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 406 • Phase 4</div>
+            <h1>Alpha Baseline Setup</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>406 - Alpha Baseline Setup</h1></p>
+<p><h2>Status</h2>
+- Created: 2026-04-10
+- Completed: 2026-04-10
+- Priority: Critical
+- Phase: Foundation</p>
+<p><h2>Goal</h2></p>
+<p>Establish <code>source-alpha/</code> as the known-good regression point based on wow-chat-1.</p>
+<p><h2>Alpha Profile Definition</h2></p>
+<p><strong>Alpha = wow-chat-1 baseline</strong>
+- Earliest safe regression point
+- Old Eluna Lua engine
+- Minimal features, proven stable
+- Always works</p>
+<p><h2>Setup Completed</h2></p>
+<p><h3>AzerothCore Base</h3></p>
+<p><pre><code class="bash">cd /mnt/mtwo/games/azeroth-core/wow-chat-2026
+git clone https://github.com/azerothcore/azerothcore-wotlk.git source-alpha
+cd source-alpha
+git checkout 5af3d2d6
+git switch -c alpha-baseline</code></pre></p>
+<p><strong>Commit:</strong> <code>5af3d2d6</code> - fix(Scripts/BlackTemple): Flames of Azzinoth</p>
+<p><strong>Source:</strong> Same commit as /home/ritz/games/azeroth-core/azerothcore/</p>
+<p><h3>Modules Added</h3></p>
+<p><pre><code class="bash">cd source-alpha/modules
+git clone https://github.com/azerothcore/mod-eluna.git
+git clone https://github.com/azerothcore/mod-transmog.git</code></pre></p>
+<p><strong>Modules:</strong>
+- mod-eluna: Lua scripting engine (Eluna)
+- mod-transmog: Transmogrification system</p>
+<p><h3>Final Structure</h3></p>
+<p><pre><code>source-alpha/
+  ├── src/              (AzerothCore 5af3d2d6)
+  ├── modules/
+  │   ├── mod-eluna/    (Eluna Lua engine)
+  │   └── mod-transmog/ (Transmog system)
+  └── data/</code></pre></p>
+<p><h2>Profile Configuration</h2></p>
+<p>Located in: <code>scripts/azerothcore</code> line 30-89</p>
+<p><pre><code class="bash">PROFILE_REPO[&amp;quot;alpha&amp;quot;]=&amp;quot;https://github.com/azerothcore/azerothcore-wotlk.git&amp;quot;
+PROFILE_BRANCH[&amp;quot;alpha&amp;quot;]=&amp;quot;master&amp;quot;
+PROFILE_MODULES[&amp;quot;alpha&amp;quot;]=&amp;quot;mod-eluna;mod-transmog&amp;quot;</code></pre></p>
+<p><h2>Build/Install Directories</h2></p>
+<p>- Source: <code>source-alpha/</code>
+- Build: <code>build-alpha/</code>
+- Install: <code>installed-files-alpha/</code>
+- Config: <code>config/alpha/</code></p>
+<p><h2>Lua Scripts</h2></p>
+<p>Alpha-specific Lua scripts use <code>.alpha.lua</code> suffix:
+- <code>src/lua/<em>.alpha.lua</code> - Will be loaded when <code>.current-profile = &quot;alpha&quot;</code></p>
+<p><h2>Patches</h2></p>
+<p>Alpha-specific patches use <code>alpha-</code> prefix:
+- <code>patches/alpha-</em>.sh</code> - Applied only for alpha profile</p>
+<p><h2>Next Steps</h2></p>
+<p>- [ ] Build alpha profile: <code>echo &quot;alpha&quot; &gt; .current-profile &amp;&amp; ./scripts/azerothcore update</code>
+- [ ] Test alpha server starts
+- [ ] Validate Eluna Lua scripts load
+- [ ] Document known-working state
+- [ ] Use as regression baseline when beta breaks</p>
+<p><h2>Validation Checklist</h2></p>
+<p>Server must:
+- [x] Source cloned at correct commit
+- [x] mod-eluna present
+- [x] mod-transmog present
+- [ ] Compile successfully
+- [ ] Start authserver
+- [ ] Start worldserver
+- [ ] Load Eluna scripts
+- [ ] Accept client connections
+- [ ] No crashes for 5 minutes</p>
+<p><h2>Notes</h2></p>
+<p>This is the fallback position. When beta experiments break things, we can always return to alpha and know it works.</p>
+<p><strong>Alpha must always work.</strong> No exceptions.</p>
+<p>If alpha breaks, stop everything and fix it immediately.</p>
+<p><h2>Related Files</h2></p>
+<p>- <code>scripts/azerothcore</code> - Profile routing logic
+- <code>docs/profile-transition-flow.md</code> - Profile system design
+- <code>issues/405-profile-transition-system.md</code> - Implementation plan</p>
+<p><h2>Completion Notes</h2></p>
+<p>Alpha baseline established at AzerothCore commit 5af3d2d6 with mod-eluna and mod-transmog. This matches the wow-chat-1 installation and provides a known-good regression point.</p>
+<p>Next: Validate by building and running the alpha profile.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-4-progress.html">View Phase 4 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

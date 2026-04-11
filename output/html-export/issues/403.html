@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 403 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 403 • Phase 4</div>
+            <h1>Incremental Patch Integration</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>403 - Incremental Patch Integration</h1></p>
+<p><h2>Status</h2>
+- Created: 2026-04-09
+- Parent: 400-release-to-beta-transition
+- Phase: Foundation
+- Priority: High</p>
+<p><h2>Purpose</h2></p>
+<p>Apply patches one at a time, testing each before proceeding.
+Document any issues and fixes for each patch.</p>
+<p><h2>Patch Integration Order</h2></p>
+<p>Patches applied in dependency order. Each must pass before next.</p>
+<p><h3>Group 1: Build Fixes (No Dependencies)</h3></p>
+<p>| Patch | Issue | Test | Status |
+|-------|-------|------|--------|
+| B001 | - | Compile succeeds | [ ] |
+| B004 | 333 | Warnings reduced | [ ] |</p>
+<p><h3>Group 2: ALE Extensions</h3></p>
+<p>| Patch | Issue | Test | Status |
+|-------|-------|------|--------|
+| B003 | 325 | Gameobject wildcard works | [ ] |
+| B006 | 150 | Sell item hook fires | [ ] |
+| B007 | 332 | Unit methods available | [ ] |</p>
+<p><h3>Group 3: Cross-Module Integration</h3></p>
+<p>| Patch | Issue | Test | Status |
+|-------|-------|------|--------|
+| B002 | 324 | Bot login triggers Lua | [ ] |
+| B005 | 156 | Hit/miss capped at ±3 | [ ] |
+| B008 | 120 | Talent bonus validates | [ ] |</p>
+<p><h2>Process for Each Patch</h2></p>
+<p>1. <strong>Read patch documentation</strong>
+   - <code>docs/patches/{patch-name}.md</code>
+   - Related issue file</p>
+<p>2. <strong>Apply patch</strong>
+   ``<code>bash
+   source patches/patches.sh
+   patch_B00X_name
+   </code>`<code></p>
+<p>3. <strong>Rebuild</strong>
+   </code>`<code>bash
+   ./scripts/azerothcore compile
+   </code>``</p>
+<p>4. <strong>Test</strong>
+   - Start server
+   - Verify feature works
+   - Check for regressions</p>
+<p>5. <strong>Document</strong>
+   - Update this issue with results
+   - Note any fixes needed
+   - Commit if successful</p>
+<p>6. <strong>Proceed or rollback</strong>
+   - If works: continue to next patch
+   - If fails: fix or rollback, document issue</p>
+<p><h2>Integration Log</h2></p>
+<p><h3>B001 - AOE Loot Item Namespace</h3>
+- Date:
+- Result:
+- Notes:</p>
+<p><h3>B002 - Playerbots ALE Login Hook</h3>
+- Date:
+- Result:
+- Notes:</p>
+<p><h3>B003 - ALE Gameobject Wildcard</h3>
+- Date:
+- Result:
+- Notes:</p>
+<p><h3>B004 - Upstream Warning Fixes</h3>
+- Date:
+- Result:
+- Notes:</p>
+<p><h3>B005 - Accuracy Level Cap</h3>
+- Date:
+- Result:
+- Notes:</p>
+<p><h3>B006 - ALE Sell Item Hook</h3>
+- Date:
+- Result:
+- Notes:</p>
+<p><h3>B007 - ALE Unit Methods</h3>
+- Date:
+- Result:
+- Notes:</p>
+<p><h3>B008 - Mod Talent Bonus</h3>
+- Date:
+- Result:
+- Notes:</p>
+<p><h2>Success Criteria</h2></p>
+<p>- All 8 patches applied
+- Server compiles with all patches
+- Server runs with all patches
+- Each feature tested and working
+- Process documented for repeatability
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-4-progress.html">View Phase 4 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

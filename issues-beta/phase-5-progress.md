@@ -20,7 +20,7 @@ the player seeking them out.
 |-------|-------|--------|-------|
 | 135 | custom-merchant-system | Open | Wandering merchants with goods |
 | 137 | universal-class-trainers | Open | Any trainer teaches any class |
-| 147 | clear-traveller-data-on-despawn | Completed | Memory cleanup |
+| 207 | clear-traveller-data-on-despawn | Completed | Memory cleanup |
 | 157 | dynamic-trainer-spawning | Completed | Trainers spawn for player's class |
 | 320 | traveler-sit-with-player | Implemented | Social mirroring behavior |
 

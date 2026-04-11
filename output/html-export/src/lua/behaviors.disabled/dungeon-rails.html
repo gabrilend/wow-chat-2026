@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dungeon-rails.lua - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>dungeon-rails.lua</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/behaviors.disabled/dungeon-rails.lua
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> lua &nbsp;&nbsp;
+            <strong>Size:</strong> 17041 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-09 00:22
+        </div>
+
+        <div class="content">
+            <pre><code class="lua"><span class="comment">-- {{{ Everland Ghostsong - Dungeon/Cave Dynamic Rail Pathfinding</span>
+<span class="comment">-- Intersection-based navigation when bot enters dungeon/cave</span>
+<span class="comment">-- Uses radial height sampling to detect paths - no navmesh access needed</span>
+<span class="comment">-- Dead-<span class="keyword">end</span> probability increases with proximity</span>
+<span class="comment">--</span>
+<span class="comment">-- Issue: <span class="number">162</span>-dungeon-rail-pathfinding.md</span>
+<span class="comment">-- Related: <span class="number">161</span> (bot wandering main integration)</span>
+<span class="comment">-- }}}</span>
+
+require(&quot;movement&quot;)
+
+DungeonRails = {}
+
+<span class="comment">-- Register <span class="keyword">in</span> package.loaded so require() is a no-op after ALE loads this</span>
+<span class="comment">-- Must be AFTER DungeonRails table is created so require() returns the module</span>
+package.loaded[&quot;behaviors/dungeon-rails&quot;] = DungeonRails
+
+<span class="comment">-- {{{ Configuration</span>
+DUNGEON_SAMPLE_DIST       = <span class="number">10</span>    <span class="comment">-- yards to sample terrain</span>
+DUNGEON_HEIGHT_LIMIT      = <span class="number">5</span>     <span class="comment">-- yards vertical tolerance</span>
+DUNGEON_MOVEMENT_DIST     = <span class="number">10</span>    <span class="comment">-- exactly <span class="number">10</span> yards per move</span>
+DUNGEON_MEANDER_RANGE     = <span class="number">1.0</span>   <span class="comment">-- radians total (±<span class="number">0.5</span> from theta)</span>
+DUNGEON_MEANDER_BIAS      = <span class="number">0.3</span>   <span class="comment">-- how much to bias theta toward chosen angle</span>
+DUNGEON_FAILURE_LIMIT     = <span class="number">10</span>    <span class="comment">-- consecutive failures before exit</span>
+DUNGEON_COOLDOWN          = <span class="number">120</span>   <span class="comment">-- seconds before re-entry</span>
+DUNGEON_DEAD_END_BASE     = <span class="number">35</span>    <span class="comment">-- yards - probability scaling base</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Cave/dungeon keyword patterns</span>
+<span class="keyword">local</span> CAVE_KEYWORDS = {
+    &quot;cave&quot;, &quot;cavern&quot;, &quot;mine&quot;, &quot;tunnel&quot;, &quot;den&quot;, &quot;lair&quot;, &quot;depths&quot;,
+    &quot;hollow&quot;, &quot;burrow&quot;, &quot;pit&quot;, &quot;grotto&quot;, &quot;crypt&quot;, &quot;tomb&quot;, &quot;catacomb&quot;
+}
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Known dungeon area IDs (exceptions without obvious names)</span>
+<span class="comment">-- Add manually as discovered</span>
+<span class="keyword">local</span> KNOWN_DUNGEONS = {
+    <span class="comment">-- [areaId] = <span class="keyword">true</span></span>
+}
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.isInDungeon</span>
+<span class="comment">-- Detect <span class="keyword">if</span> bot is <span class="keyword">in</span> a dungeon/cave</span>
+<span class="comment">-- Method <span class="number">1</span>: Instance check (instanced dungeons)</span>
+<span class="comment">-- Method <span class="number">2</span>: Subzone name heuristics (outdoor caves)</span>
+<span class="comment">-- Method <span class="number">3</span>: Exception list</span>
+<span class="keyword">function</span> DungeonRails.isInDungeon(bot)
+    <span class="comment">-- Method <span class="number">1</span>: Instance check</span>
+    <span class="keyword">local</span> instanceId = bot:GetInstanceId()
+    <span class="keyword">if</span> instanceId <span class="keyword">and</span> instanceId &gt; <span class="number">0</span> <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="keyword">true</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Method <span class="number">2</span>: Subzone name heuristics</span>
+    <span class="keyword">local</span> subzoneId = bot:GetAreaId()
+    <span class="keyword">local</span> subzoneName = GetAreaName <span class="keyword">and</span> GetAreaName(subzoneId) <span class="keyword">or</span> &quot;&quot;
+    <span class="keyword">if</span> subzoneName <span class="keyword">then</span>
+        subzoneName = subzoneName:lower()
+        <span class="keyword">for</span> _, keyword <span class="keyword">in</span> ipairs(CAVE_KEYWORDS) <span class="keyword">do</span>
+            <span class="keyword">if</span> subzoneName:find(keyword) <span class="keyword">then</span>
+                <span class="keyword">return</span> <span class="keyword">true</span>
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Method <span class="number">3</span>: Exception list</span>
+    <span class="keyword">if</span> KNOWN_DUNGEONS[subzoneId] <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="keyword">true</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> <span class="keyword">false</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.canEnterDungeon</span>
+<span class="comment">-- Check <span class="keyword">if</span> cooldown has expired</span>
+<span class="keyword">function</span> DungeonRails.canEnterDungeon(bot)
+    <span class="keyword">local</span> lastExit = bot:GetData(&quot;last_dungeon_exit&quot;) <span class="keyword">or</span> <span class="number">0</span>
+    <span class="keyword">return</span> (os.time() - lastExit) &gt;= DUNGEON_COOLDOWN
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.exitDungeon</span>
+<span class="comment">-- Clean up all dungeon state <span class="keyword">and</span> register one-shot cooldown cleanup</span>
+<span class="keyword">function</span> DungeonRails.exitDungeon(bot)
+    bot:SetData(&quot;last_dungeon_exit&quot;, os.time())
+    bot:SetData(&quot;dungeon_entrance&quot;, <span class="keyword">nil</span>)
+    bot:SetData(&quot;came_from_angle&quot;, <span class="keyword">nil</span>)
+    bot:SetData(&quot;visited_intersections&quot;, <span class="keyword">nil</span>)
+    bot:SetData(&quot;dungeon_failures&quot;, <span class="keyword">nil</span>)
+
+    <span class="comment">-- Register one-shot cleanup event (defined <span class="keyword">in</span> periodic_events.lua)</span>
+    <span class="comment">-- Delay IS the cooldown - fires once after <span class="number">120</span>s, cleans up, done</span>
+    <span class="keyword">if</span> PeriodicDungeonCooldownCleanup <span class="keyword">then</span>
+        bot:RegisterEvent(PeriodicDungeonCooldownCleanup, DUNGEON_COOLDOWN * <span class="number">1000</span>, <span class="number">1</span>)
+    <span class="keyword">end</span>
+
+    print(&quot;[DungeonRails] &quot; .. bot:GetName() .. &quot; exited dungeon, cooldown started&quot;)
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.cleanupExpiredCooldowns</span>
+<span class="comment">-- DEPRECATED: Cleanup now handled by one-shot PeriodicDungeonCooldownCleanup</span>
+<span class="comment">-- Kept <span class="keyword">for</span> backwards compatibility but no longer called</span>
+<span class="keyword">function</span> DungeonRails.cleanupExpiredCooldowns(bot)
+    bot:SetData(&quot;last_dungeon_exit&quot;, <span class="keyword">nil</span>)
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.countWalkableDirections</span>
+<span class="comment">-- Sample terrain <span class="keyword">in</span> <span class="number">8</span> directions, count valid paths</span>
+<span class="comment">-- Returns count <span class="keyword">and</span> table of walkable directions</span>
+<span class="keyword">function</span> DungeonRails.countWalkableDirections(bot, sampleDist)
+    sampleDist = sampleDist <span class="keyword">or</span> DUNGEON_SAMPLE_DIST
+    <span class="keyword">local</span> bx, by, bz = bot:GetLocation()
+    <span class="keyword">local</span> map = bot:GetMap()
+    <span class="keyword">local</span> walkable = {}
+
+    <span class="comment">-- Sample <span class="number">8</span> directions (every <span class="number">45</span> degrees = <span class="number">0.785</span> radians)</span>
+    <span class="keyword">for</span> i = <span class="number">0</span>, <span class="number">7</span> <span class="keyword">do</span>
+        <span class="keyword">local</span> angle = i * <span class="number">0.785</span>
+        <span class="keyword">local</span> testX = bx + math.cos(angle) * sampleDist
+        <span class="keyword">local</span> testY = by + math.sin(angle) * sampleDist
+        <span class="keyword">local</span> testZ = map:GetHeight(testX, testY)
+
+        <span class="comment">-- Valid <span class="keyword">if</span> height exists <span class="keyword">and</span> within tolerance</span>
+        <span class="keyword">if</span> testZ <span class="keyword">and</span> math.abs(testZ - bz) &lt;= DUNGEON_HEIGHT_LIMIT <span class="keyword">then</span>
+            table.insert(walkable, {
+                angle = angle,
+                x     = testX,
+                y     = testY,
+                z     = testZ
+            })
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> #walkable, walkable
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.classifyPosition</span>
+<span class="comment">-- Determine <span class="keyword">if</span> current position is intersection, corridor, <span class="keyword">or</span> dead-<span class="keyword">end</span></span>
+<span class="comment">-- Returns type string <span class="keyword">and</span> directions table</span>
+<span class="keyword">function</span> DungeonRails.classifyPosition(bot)
+    <span class="keyword">local</span> count, directions = DungeonRails.countWalkableDirections(bot)
+
+    <span class="keyword">if</span> count &gt;= <span class="number">3</span> <span class="keyword">then</span>
+        <span class="keyword">return</span> &quot;intersection&quot;, directions
+    <span class="keyword">elseif</span> count == <span class="number">2</span> <span class="keyword">then</span>
+        <span class="keyword">return</span> &quot;corridor&quot;, directions
+    <span class="keyword">elseif</span> count == <span class="number">1</span> <span class="keyword">then</span>
+        <span class="keyword">return</span> &quot;dead_<span class="keyword">end</span>&quot;, directions
+    <span class="keyword">else</span>
+        <span class="keyword">return</span> &quot;stuck&quot;, directions
+    <span class="keyword">end</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.recordIntersection</span>
+<span class="comment">-- Track visited intersections to detect loops</span>
+<span class="keyword">function</span> DungeonRails.recordIntersection(bot, x, y, z)
+    <span class="keyword">local</span> visited = bot:GetData(&quot;visited_intersections&quot;) <span class="keyword">or</span> {}
+    table.insert(visited, { x = x, y = y, z = z, time = os.time() })
+
+    <span class="comment">-- Keep only last <span class="number">10</span> intersections</span>
+    <span class="keyword">while</span> #visited &gt; <span class="number">10</span> <span class="keyword">do</span>
+        table.remove(visited, <span class="number">1</span>)
+    <span class="keyword">end</span>
+
+    bot:SetData(&quot;visited_intersections&quot;, visited)
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.isRecentlyVisited</span>
+<span class="comment">-- Check <span class="keyword">if</span> we&#<span class="number">39</span>;ve been at this intersection before (within <span class="number">20</span> yards, last <span class="number">2</span> minutes)</span>
+<span class="keyword">function</span> DungeonRails.isRecentlyVisited(bot, x, y)
+    <span class="keyword">local</span> visited = bot:GetData(&quot;visited_intersections&quot;) <span class="keyword">or</span> {}
+    <span class="keyword">local</span> now = os.time()
+
+    <span class="keyword">for</span> _, intersection <span class="keyword">in</span> ipairs(visited) <span class="keyword">do</span>
+        <span class="keyword">if</span> now - intersection.time &lt; <span class="number">120</span> <span class="keyword">then</span>  <span class="comment">-- <span class="number">2</span> minutes</span>
+            <span class="keyword">local</span> distSq = (x - intersection.x)^<span class="number">2</span> + (y - intersection.y)^<span class="number">2</span>
+            <span class="keyword">if</span> distSq &lt; <span class="number">400</span> <span class="keyword">then</span>  <span class="comment">-- <span class="number">20</span> yards</span>
+                <span class="keyword">return</span> <span class="keyword">true</span>
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> <span class="keyword">false</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.handleIntersection</span>
+<span class="comment">-- At intersection: pick random direction, excluding way we came</span>
+<span class="comment">-- Returns destination x, y, z</span>
+<span class="keyword">function</span> DungeonRails.handleIntersection(bot, directions)
+    <span class="keyword">local</span> cameFrom = bot:GetData(&quot;came_from_angle&quot;)
+    <span class="keyword">local</span> validChoices = {}
+
+    <span class="keyword">for</span> _, dir <span class="keyword">in</span> ipairs(directions) <span class="keyword">do</span>
+        <span class="comment">-- Exclude direction we came from (within <span class="number">45</span> degrees = <span class="number">0.785</span> radians)</span>
+        <span class="keyword">if</span> <span class="keyword">not</span> cameFrom <span class="keyword">or</span> math.abs(dir.angle - cameFrom) &gt; <span class="number">0.5</span> <span class="keyword">then</span>
+            <span class="comment">-- Also check <span class="keyword">if</span> <span class="keyword">not</span> recently visited</span>
+            <span class="keyword">if</span> <span class="keyword">not</span> DungeonRails.isRecentlyVisited(bot, dir.x, dir.y) <span class="keyword">then</span>
+                table.insert(validChoices, dir)
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- If all choices are recently visited, allow any direction except came_from</span>
+    <span class="keyword">if</span> #validChoices == <span class="number">0</span> <span class="keyword">then</span>
+        <span class="keyword">for</span> _, dir <span class="keyword">in</span> ipairs(directions) <span class="keyword">do</span>
+            <span class="keyword">if</span> <span class="keyword">not</span> cameFrom <span class="keyword">or</span> math.abs(dir.angle - cameFrom) &gt; <span class="number">0.5</span> <span class="keyword">then</span>
+                table.insert(validChoices, dir)
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Still no valid choices - must go back the way we came</span>
+    <span class="keyword">if</span> #validChoices == <span class="number">0</span> <span class="keyword">then</span>
+        validChoices = directions
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Pick random direction</span>
+    <span class="keyword">local</span> choice = validChoices[math.random(#validChoices)]
+
+    <span class="comment">-- Remember which way we&#<span class="number">39</span>;re going (opposite is where we came from)</span>
+    <span class="keyword">local</span> oppositeAngle = choice.angle + <span class="number">3.14</span>
+    <span class="keyword">if</span> oppositeAngle &gt; <span class="number">6.28</span> <span class="keyword">then</span> oppositeAngle = oppositeAngle - <span class="number">6.28</span> <span class="keyword">end</span>
+    bot:SetData(&quot;came_from_angle&quot;, oppositeAngle)
+
+    <span class="comment">-- Store that we passed through this intersection</span>
+    <span class="keyword">local</span> bx, by, bz = bot:GetLocation()
+    DungeonRails.recordIntersection(bot, bx, by, bz)
+
+    <span class="comment">-- Update theta <span class="keyword">for</span> rail following</span>
+    bot:SetData(&quot;theta&quot;, choice.angle)
+
+    print(&quot;[DungeonRails] &quot; .. bot:GetName() .. &quot; at intersection, chose angle &quot; ..
+          string.format(&quot;%.<span class="number">2</span>f&quot;, choice.angle))
+
+    <span class="keyword">return</span> choice.x, choice.y, choice.z
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.checkDeadEnd</span>
+<span class="comment">-- Check ahead <span class="keyword">for</span> dead-<span class="keyword">end</span>, <span class="keyword">return</span> probability of turning around</span>
+<span class="comment">-- Probability increases as we get closer</span>
+<span class="keyword">function</span> DungeonRails.checkDeadEnd(bot)
+    <span class="keyword">local</span> bx, by, bz = bot:GetLocation()
+    <span class="keyword">local</span> facing = bot:GetData(&quot;theta&quot;) <span class="keyword">or</span> bot:GetO()
+    <span class="keyword">local</span> map = bot:GetMap()
+
+    <span class="comment">-- Sample progressively further ahead</span>
+    <span class="keyword">local</span> deadEndDist = <span class="keyword">nil</span>
+    <span class="keyword">for</span> dist = <span class="number">5</span>, <span class="number">30</span>, <span class="number">5</span> <span class="keyword">do</span>
+        <span class="keyword">local</span> testX = bx + math.cos(facing) * dist
+        <span class="keyword">local</span> testY = by + math.sin(facing) * dist
+        <span class="keyword">local</span> testZ = map:GetHeight(testX, testY)
+
+        <span class="keyword">if</span> <span class="keyword">not</span> testZ <span class="keyword">or</span> math.abs(testZ - bz) &gt; DUNGEON_HEIGHT_LIMIT <span class="keyword">then</span>
+            <span class="comment">-- Found the wall/dead-<span class="keyword">end</span></span>
+            deadEndDist = dist
+            <span class="keyword">break</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">if</span> <span class="keyword">not</span> deadEndDist <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="number">0</span>  <span class="comment">-- No dead-<span class="keyword">end</span> visible</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Probability increases as we get closer</span>
+    <span class="comment">-- At <span class="number">30</span> yards: ~<span class="number">14</span>%, at <span class="number">15</span> yards: ~<span class="number">57</span>%, at <span class="number">5</span> yards: ~<span class="number">86</span>%</span>
+    <span class="keyword">local</span> probability = <span class="number">1.0</span> - (deadEndDist / DUNGEON_DEAD_END_BASE)
+    probability = math.max(<span class="number">0</span>, math.min(<span class="number">1</span>, probability))
+
+    <span class="keyword">return</span> probability
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.handleDeadEnd</span>
+<span class="comment">-- Turn around at dead-<span class="keyword">end</span></span>
+<span class="keyword">function</span> DungeonRails.handleDeadEnd(bot)
+    <span class="comment">-- Reverse direction</span>
+    <span class="keyword">local</span> theta = bot:GetData(&quot;theta&quot;) <span class="keyword">or</span> bot:GetO()
+    theta = theta + <span class="number">3.14</span>
+    <span class="keyword">if</span> theta &gt; <span class="number">6.28</span> <span class="keyword">then</span> theta = theta - <span class="number">6.28</span> <span class="keyword">end</span>
+    bot:SetData(&quot;theta&quot;, theta)
+
+    <span class="comment">-- Clear &quot;came from&quot; so we can go back through intersection</span>
+    bot:SetData(&quot;came_from_angle&quot;, <span class="keyword">nil</span>)
+
+    print(&quot;[DungeonRails] &quot; .. bot:GetName() .. &quot; turning around at dead-<span class="keyword">end</span>&quot;)
+    <span class="keyword">return</span> <span class="keyword">true</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.selectWanderTarget</span>
+<span class="comment">-- Pick target exactly <span class="number">10</span> yards away, within meander range of current theta</span>
+<span class="comment">-- Returns x, y, z, status on success; <span class="keyword">nil</span>, <span class="keyword">nil</span>, <span class="keyword">nil</span>, &quot;retry&quot;/&quot;exit&quot; on failure</span>
+<span class="keyword">function</span> DungeonRails.selectWanderTarget(bot)
+    <span class="keyword">local</span> bx, by, bz = bot:GetLocation()
+    <span class="keyword">local</span> theta = bot:GetData(&quot;theta&quot;) <span class="keyword">or</span> bot:GetO()
+    <span class="keyword">local</span> map = bot:GetMap()
+
+    <span class="keyword">local</span> failures = bot:GetData(&quot;dungeon_failures&quot;) <span class="keyword">or</span> <span class="number">0</span>
+
+    <span class="keyword">for</span> attempt = <span class="number">1</span>, <span class="number">10</span> <span class="keyword">do</span>
+        <span class="comment">-- Random angle within meander range (~<span class="number">60</span> degrees = ±<span class="number">0.5</span> radians)</span>
+        <span class="keyword">local</span> angleOffset = (math.random() - <span class="number">0.5</span>) * DUNGEON_MEANDER_RANGE
+        <span class="keyword">local</span> targetAngle = theta + angleOffset
+
+        <span class="comment">-- Exactly <span class="number">10</span> yards</span>
+        <span class="keyword">local</span> targetX = bx + math.cos(targetAngle) * DUNGEON_MOVEMENT_DIST
+        <span class="keyword">local</span> targetY = by + math.sin(targetAngle) * DUNGEON_MOVEMENT_DIST
+        <span class="keyword">local</span> targetZ = map:GetHeight(targetX, targetY)
+
+        <span class="comment">-- Validate: height exists <span class="keyword">and</span> within tolerance</span>
+        <span class="keyword">if</span> targetZ <span class="keyword">and</span> math.abs(targetZ - bz) &lt;= DUNGEON_HEIGHT_LIMIT <span class="keyword">then</span>
+            <span class="comment">-- Success - reset failures, update theta toward target</span>
+            bot:SetData(&quot;dungeon_failures&quot;, <span class="number">0</span>)
+
+            <span class="comment">-- Meander: bias theta slightly toward chosen direction</span>
+            <span class="keyword">local</span> newTheta = theta + (angleOffset * DUNGEON_MEANDER_BIAS)
+            bot:SetData(&quot;theta&quot;, newTheta)
+
+            <span class="keyword">return</span> targetX, targetY, targetZ, &quot;ok&quot;
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- All <span class="number">10</span> attempts failed</span>
+    failures = failures + <span class="number">1</span>
+    bot:SetData(&quot;dungeon_failures&quot;, failures)
+
+    <span class="keyword">if</span> failures &gt;= DUNGEON_FAILURE_LIMIT <span class="keyword">then</span>
+        <span class="comment">-- Too treacherous - leave dungeon</span>
+        <span class="keyword">return</span> <span class="keyword">nil</span>, <span class="keyword">nil</span>, <span class="keyword">nil</span>, &quot;exit&quot;
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> <span class="keyword">nil</span>, <span class="keyword">nil</span>, <span class="keyword">nil</span>, &quot;retry&quot;
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Known cave/dungeon entrance locations (issue <span class="number">165</span>, <span class="number">166</span>)</span>
+<span class="comment">-- Caves <span class="keyword">and</span> dungeons that bots can seek out when <span class="keyword">in</span> DUNGEON_DELVE mode</span>
+<span class="comment">-- These need to be manually defined using point definition tools (issue <span class="number">166</span>)</span>
+<span class="comment">-- Format: { mapId = { { x = ..., y = ..., z = ..., name = &quot;...&quot; }, ... } }</span>
+<span class="comment">-- TODO: Populate via issue <span class="number">166</span> point definition tools</span>
+<span class="keyword">local</span> CAVE_DUNGEON_ENTRANCES = {
+    <span class="comment">-- Eastern Kingdoms (map <span class="number">0</span>)</span>
+    [<span class="number">0</span>] = {
+        { x = -<span class="number">8787</span>, y = -<span class="number">2161</span>, z =  <span class="number">136</span>, name = &quot;Deadmines&quot; },
+        { x = -<span class="number">5163</span>, y = -<span class="number">819</span>,  z =  <span class="number">495</span>, name = &quot;Gnomeregan&quot; },
+        { x = -<span class="number">230</span>,  y = <span class="number">1570</span>,  z =  <span class="number">76</span>,  name = &quot;Shadowfang Keep&quot; },
+        <span class="comment">-- TODO: Add caves (Fargodeep Mine, Jasperlode Mine, Echo Ridge Mine, etc.)</span>
+    },
+    <span class="comment">-- Kalimdor (map <span class="number">1</span>)</span>
+    [<span class="number">1</span>] = {
+        { x = -<span class="number">739</span>,  y = -<span class="number">2213</span>, z =  <span class="number">18</span>,  name = &quot;Ragefire Chasm&quot; },
+        { x = <span class="number">4246</span>,  y = <span class="number">746</span>,   z =  -<span class="number">23</span>, name = &quot;Wailing Caverns&quot; },
+        { x = -<span class="number">4470</span>, y = -<span class="number">1679</span>, z =  <span class="number">82</span>,  name = &quot;Razorfen Kraul&quot; },
+        <span class="comment">-- TODO: Add caves (Skull Rock, Dreadmist Den, etc.)</span>
+    },
+}
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.findNearestEntrance</span>
+<span class="comment">-- Find nearest cave/dungeon entrance on current map</span>
+<span class="comment">-- Returns entrance table <span class="keyword">and</span> distance, <span class="keyword">or</span> <span class="keyword">nil</span></span>
+<span class="keyword">function</span> DungeonRails.findNearestEntrance(bot)
+    <span class="keyword">local</span> mapId = bot:GetMapId()
+    <span class="keyword">local</span> entrances = CAVE_DUNGEON_ENTRANCES[mapId]
+    <span class="keyword">if</span> <span class="keyword">not</span> entrances <span class="keyword">or</span> #entrances == <span class="number">0</span> <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="keyword">nil</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">local</span> bx, by = bot:GetLocation()
+    <span class="keyword">local</span> nearest = <span class="keyword">nil</span>
+    <span class="keyword">local</span> nearestDistSq = math.huge
+
+    <span class="keyword">for</span> _, entrance <span class="keyword">in</span> ipairs(entrances) <span class="keyword">do</span>
+        <span class="keyword">local</span> dx = entrance.x - bx
+        <span class="keyword">local</span> dy = entrance.y - by
+        <span class="keyword">local</span> distSq = dx * dx + dy * dy
+
+        <span class="keyword">if</span> distSq &lt; nearestDistSq <span class="keyword">then</span>
+            nearest = entrance
+            nearestDistSq = distSq
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> nearest, math.sqrt(nearestDistSq)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.seekEntrance</span>
+<span class="comment">-- Seek out nearest dungeon entrance when <span class="keyword">in</span> DUNGEON_DELVE mode but <span class="keyword">not</span> <span class="keyword">in</span> dungeon</span>
+<span class="comment">-- Returns <span class="keyword">true</span> <span class="keyword">if</span> actively seeking, <span class="keyword">false</span> <span class="keyword">if</span> no entrance found <span class="keyword">or</span> arrived</span>
+<span class="keyword">function</span> DungeonRails.seekEntrance(bot)
+    <span class="comment">-- Check cooldown first</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> DungeonRails.canEnterDungeon(bot) <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>  <span class="comment">-- On cooldown, fallback to wandering</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">local</span> entrance, dist = DungeonRails.findNearestEntrance(bot)
+
+    <span class="keyword">if</span> <span class="keyword">not</span> entrance <span class="keyword">then</span>
+        <span class="comment">-- No known entrances on this map</span>
+        <span class="comment">-- Future: could wander toward &quot;cave&quot; named areas</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- If within <span class="number">50</span> yards, let normal dungeon detection kick <span class="keyword">in</span></span>
+    <span class="keyword">if</span> dist &lt; <span class="number">50</span> <span class="keyword">then</span>
+        print(&quot;[DungeonRails] &quot; .. bot:GetName() .. &quot; near entrance &quot; ..
+              entrance.name .. &quot;, letting detection take over&quot;)
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Move toward dungeon entrance</span>
+    <span class="comment">-- SetWalk provided by ElunaCompat.ext <span class="keyword">for</span> Players</span>
+    bot:SetWalk(<span class="keyword">true</span>)
+    bot:MoveTo(<span class="number">0</span>, entrance.x, entrance.y, entrance.z, <span class="keyword">false</span>)
+
+    <span class="comment">-- Update theta toward dungeon <span class="keyword">for</span> consistent movement</span>
+    <span class="keyword">local</span> bx, by = bot:GetLocation()
+    <span class="keyword">local</span> theta = math.atan<span class="number">2</span>(entrance.y - by, entrance.x - bx)
+    bot:SetData(&quot;theta&quot;, theta)
+
+    print(&quot;[DungeonRails] &quot; .. bot:GetName() .. &quot; seeking &quot; .. entrance.name ..
+          &quot; (&quot; .. string.format(&quot;%.<span class="number">0</span>f&quot;, dist) .. &quot; yards)&quot;)
+    <span class="keyword">return</span> <span class="keyword">true</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DungeonRails.update</span>
+<span class="comment">-- Called by BotWander when bot is <span class="keyword">in</span> dungeon/cave</span>
+<span class="keyword">function</span> DungeonRails.update(bot)
+    <span class="comment">-- Check cooldown</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> DungeonRails.canEnterDungeon(bot) <span class="keyword">then</span>
+        <span class="comment">-- Still on cooldown - exit behavior will handle leaving</span>
+        <span class="keyword">return</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Initialize entrance <span class="keyword">if</span> first tick <span class="keyword">in</span> dungeon</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> bot:GetData(&quot;dungeon_entrance&quot;) <span class="keyword">then</span>
+        <span class="keyword">local</span> x, y, z = bot:GetLocation()
+        bot:SetData(&quot;dungeon_entrance&quot;, { x = x, y = y, z = z })
+        bot:SetData(&quot;theta&quot;, bot:GetO())
+        print(&quot;[DungeonRails] &quot; .. bot:GetName() .. &quot; entered dungeon at &quot; ..
+              string.format(&quot;%.<span class="number">0</span>f, %.<span class="number">0</span>f&quot;, x, y))
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Check what kind of position we&#<span class="number">39</span>;re <span class="keyword">in</span></span>
+    <span class="keyword">local</span> posType, directions = DungeonRails.classifyPosition(bot)
+
+    <span class="keyword">if</span> posType == &quot;intersection&quot; <span class="keyword">then</span>
+        <span class="comment">-- At intersection - pick direction</span>
+        <span class="keyword">local</span> tx, ty, tz = DungeonRails.handleIntersection(bot, directions)
+        <span class="comment">-- SetWalk provided by ElunaCompat.ext <span class="keyword">for</span> Players</span>
+        bot:SetWalk(<span class="keyword">true</span>)
+        bot:MoveTo(<span class="number">0</span>, tx, ty, tz, <span class="keyword">false</span>)
+        <span class="keyword">return</span>
+
+    <span class="keyword">elseif</span> posType == &quot;dead_<span class="keyword">end</span>&quot; <span class="keyword">then</span>
+        <span class="comment">-- Dead <span class="keyword">end</span> - turn around</span>
+        DungeonRails.handleDeadEnd(bot)
+        <span class="comment">-- Continue to wander back</span>
+
+    <span class="keyword">elseif</span> posType == &quot;stuck&quot; <span class="keyword">then</span>
+        <span class="comment">-- Completely stuck - try to exit</span>
+        <span class="keyword">local</span> entrance = bot:GetData(&quot;dungeon_entrance&quot;)
+        <span class="keyword">if</span> entrance <span class="keyword">then</span>
+            bot:MoveTo(<span class="number">0</span>, entrance.x, entrance.y, entrance.z, <span class="keyword">false</span>)
+        <span class="keyword">end</span>
+        DungeonRails.exitDungeon(bot)
+        <span class="keyword">return</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Check <span class="keyword">for</span> visible dead-<span class="keyword">end</span> ahead (probability-based turnaround)</span>
+    <span class="keyword">local</span> turnProb = DungeonRails.checkDeadEnd(bot)
+    <span class="keyword">if</span> math.random() &lt; turnProb <span class="keyword">then</span>
+        DungeonRails.handleDeadEnd(bot)
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Select wander target</span>
+    <span class="keyword">local</span> tx, ty, tz, status = DungeonRails.selectWanderTarget(bot)
+
+    <span class="keyword">if</span> status == &quot;exit&quot; <span class="keyword">then</span>
+        <span class="comment">-- Too many failures - exit dungeon</span>
+        <span class="keyword">local</span> entrance = bot:GetData(&quot;dungeon_entrance&quot;)
+        <span class="keyword">if</span> entrance <span class="keyword">then</span>
+            print(&quot;[DungeonRails] &quot; .. bot:GetName() .. &quot; exiting - too treacherous&quot;)
+            bot:MoveTo(<span class="number">0</span>, entrance.x, entrance.y, entrance.z, <span class="keyword">false</span>)
+        <span class="keyword">end</span>
+        DungeonRails.exitDungeon(bot)
+        <span class="keyword">return</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">if</span> tx <span class="keyword">then</span>
+        <span class="comment">-- SetWalk provided by ElunaCompat.ext <span class="keyword">for</span> Players</span>
+        bot:SetWalk(<span class="keyword">true</span>)
+        bot:MoveTo(<span class="number">0</span>, tx, ty, tz, <span class="keyword">false</span>)
+    <span class="keyword">end</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Module initialization</span>
+print(&quot;[DungeonRails] Behavior loaded - called by BotWander when <span class="keyword">in</span> dungeon/cave&quot;)
+<span class="comment">-- }}}</span>
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>
