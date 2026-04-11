@@ -97,6 +97,19 @@ function main() {
     echo "=== Realmlist IP Update ==="
     echo ""
 
+    # Check if we've already detected IP today
+    local today
+    today=$(date +%Y-%m-%d)
+    mkdir -p /tmp/wow-chat
+    local cache_file="/tmp/wow-chat/.ip-check-${today}"
+
+    if [[ -f "${cache_file}" ]]; then
+        echo "IP already checked today ($(cat "${cache_file}"))"
+        echo "Skipping external lookup - using cached value"
+        echo ""
+        return 0
+    fi
+
     # Get current settings
     echo "Current realmlist:"
     local current
@@ -128,6 +141,9 @@ function main() {
         echo "  FAILED: Database update error"
         exit 1
     fi
+
+    # Cache the detected IP for today
+    echo "${public_ip}" > "${cache_file}"
 
     echo ""
     echo "New realmlist:"

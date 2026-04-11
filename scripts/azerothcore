@@ -413,13 +413,14 @@ cmd_switch() {
 # -- {{{ cmd_authserver
 # Starts the authentication server
 # Sets LD_LIBRARY_PATH to use project MySQL libs instead of system libs
-# Updates realmlist with current public IP before starting
+# Updates realmlist with current public IP before starting (cached daily)
 cmd_authserver() {
     get_profile_paths
     setup_log_symlinks
 
-    # Update realmlist with current public IP
+    # Update realmlist with current public IP (cached daily in /tmp/wow-chat/)
     # Why: ISP may change our IP; this ensures players can connect
+    # Why daily: Checking every startup wastes bandwidth; ISPs rarely change more than once/day
     # Why here: authserver starts first, stays up longer, worldserver restarts should be fast
     if [[ -x "${DIR}/scripts/update-realmlist-ip" ]]; then
         echo "Updating realmlist with public IP..."
