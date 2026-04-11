@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>linux-requirements.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>linux-requirements.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/linux-requirements.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 5800 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Requisitos de Linux</h1></p>
+<p>| Guía de instalación                                                                                                                             |                                                              |
+| :---------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------- |
+| Este articulo es una parte de la guía de instalación. Puedes leerlo o hacer clic en el enlace anterior para moverte fácilmente entre los pasos. |
+| <a href="classic-installation">&lt;&lt; Inicio: Guía de instalación</a>                                                                                          | <a href="linux-core-installation">Paso 2: Instalación del núcleo &gt;&gt;</a> |</p>
+<p>|                                                                                                    |
+| :------------------------------------------------------------------------------------------------- |
+| MySQL ≥ 8.0.0                                                                                      |
+| Boost ≥ 1.67                                                                                       |
+| CMake ≥ 3.16                                                                                       |
+| Clang ≥ <a href="https://github.com/azerothcore/azerothcore-wotlk/actions?query=workflow%3Acore-build">10</a> |</p>
+<p><h4>Ubuntu con MySQL 8.x</h4></p>
+<p>``<code>sh
+sudo apt-get update &amp;&amp; sudo apt-get install git cmake make gcc g++ clang libmysqlclient-dev libssl-dev libbz2-dev libreadline-dev libncurses-dev mysql-server libboost-all-dev
+<pre><code>
+Recuerda que si eres el usuario </code>root<code> no es necesario usar </code>sudo<code>.</p>
+<p>Para configurar MySQL en Ubuntu 18.04 y similares (establecer la contraseña </code>root<code> y otros ajustes) lea <a href="https://www.digitalocean.com/community/tutorials/how-to-install-mysql-on-ubuntu-18-04">esta guía</a>.</p>
+<p><strong>Nota</strong>: en versiones antiguas de Ubuntu como la <strong>18.04</strong> necesitas instalar </code>gcc-10<code> y </code>libboost1.74-dev<code>:
+</code></pre>
+sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+sudo add-apt-repository -y ppa:mhier/libboost-latest
+sudo apt-get update
+sudo apt install -y gcc-10 g++-10
+sudo apt install -y install libboost1.74-dev
+<pre><code>
+---</p>
+<p>&lt;h4&gt;Debian 10 / Debian 12&lt;/h4&gt;
+</code></pre>sh
+sudo apt-get update &amp;&amp; sudo apt-get install git cmake make gcc g++ clang default-libmysqlclient-dev libssl-dev libbz2-dev libreadline-dev libncurses-dev mariadb-server libboost-all-dev
+<pre><code>
+Recuerda que si eres el usuario </code>root<code> no es necesario usar </code>sudo<code>.</p>
+<p><strong>Nota:</strong> Si añades la opción </code>-y<code> al final de la lista de comandos, comenzará a instalarlos sin necesidad de que confirmes.</p>
+<p><strong>Ejemplo:</strong>
+</code></pre>sh
+apt-get update &amp;&amp; apt-get install git cmake make gcc g++ clang default-libmysqlclient-dev libssl-dev libbz2-dev libreadline-dev libncurses-dev mariadb-server libboost-all-dev -y
+<pre><code>
+---</p>
+<p>&lt;h4&gt;Verificar la versión de clang&lt;/h4&gt;
+</code></pre>sh
+clang --version
+<pre><code>
+La versión de </code>clang<code> <strong>DEBE</strong> ser </code>10<code> o superior (<a href="https://github.com/azerothcore/azerothcore-wotlk/actions?query=workflow%3Acore-build">aquí</a> puedes comprobar las versiones que se ejecutan en nuestro canal de acciones de Github, te recomendamos que utilices una de esas versiones).</p>
+<p>Por ejemplo, si estás usando una versión antigua de Ubuntu como la 18.04, necesitas instalar clang usando:
+</code></pre>sh
+sudo apt-get install clang-10.0
+<pre><code>
+Si usas otra distro o versión, busca en google cómo instalar la versión de clang adecuada para tu sistema.</p>
+<p>Actualmente el proyecto requiere clang10 o superior.</p>
+<p>Esta es una forma de actualizar e instalar la versión 11.</p>
+<p>La respuesta se detalla aquí:</p>
+<p><a href="https://stackoverflow.com/questions/66223241/how-to-install-clang-11-on-debian">Cómo instalar clang 11 en Debian</a></p>
+<p>&lt;h4&gt;Verificar la versión de cmake&lt;/h4&gt;
+</code></pre>sh
+cmake --version
+<pre><code>
+La versión de </code>cmake<code> <strong>DEBE</strong> ser </code>3.16<code> o superior.</p>
+<p>En una versión más antigua de Ubuntu (ejemplo: 16.04), puede seguir las instrucciones aquí para instalar la última versión de cmake. En Debian necesitarás usar las fuentes de backports o construir Cmake manualmente.</p>
+<p>Recuerde que es posible actualizar cmake usando Python.</p>
+<p>Instalar:
+</code></pre>sh
+python -m pip install cmake
+<pre><code>
+Actualizar:
+</code></pre>sh
+python -m pip install --upgrade cmake
+<pre><code>
+&lt;h4&gt;Asegúrese de que las cabeceras de gcc-8 están instaladas&lt;/h4&gt;</p>
+<p>Esto es un problema si, por ejemplo, se utiliza una versión antigua de Ubuntu como la 16.04. Ahí tienes que añadir el PPA &amp;quot;Toolchain test builds&amp;quot;:
+https://launchpad.net/~ubuntu-toolchain-r/+archive/ubuntu/test</p>
+<p>Después
+</code></pre>sh
+sudo apt-get update
+<pre><code>
+puedes instalar gcc-8: 
+</code></pre>sh
+sudo apt-get install g++-8 gcc-8
+</code>``</p>
+<p><h2>Ayuda</h2></p>
+<p>Si todavía tiene problemas, compruebe:</p>
+<p><em> <a href="faq">FAQ - Preguntas frecuentes</a></p>
+<p></em> <a href="common-errors">Errores comunes</a></p>
+<p><em> <a href="how-to-ask-for-help">Cómo pedir ayuda</a></p>
+<p></em> <a href="https://discord.gg/gkt4y2x">Únase a nuestro servidor de Discord</a>, pero no es un canal de soporte 24/7. Un miembro del staff le responderá siempre que tenga tiempo.</p>
+<p>| Guía de instalación                                                                                                                             |                                                              |
+| :---------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------- |
+| Este articulo es una parte de la guía de instalación. Puedes leerlo o hacer clic en el enlace anterior para moverte fácilmente entre los pasos. |
+| <a href="classic-installation">&lt;&lt; Inicio: Guía de instalación</a>                                                                                          | <a href="linux-core-installation">Paso 2: Instalación del núcleo &gt;&gt;</a> |
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

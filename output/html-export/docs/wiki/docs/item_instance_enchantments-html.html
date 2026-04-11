@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>item_instance_enchantments.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>item_instance_enchantments.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/item_instance_enchantments.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2311 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>item\_instance</h1></p>
+<p><a href="item_instance">&lt;-Back-to:Item Instance</a></p>
+<p><strong>The \<code>item\_instance\enchantments</code> field</strong></p>
+<p>This Field is really a table of its own. </p>
+<p>There are 36 numerics seperated by a space</p>
+<p>Each Numeric is part of a three part Tuple of Numerics represents an enchantment as applied to the item.</p>
+<p>- First Number in Tuple 
+  
+    Id in the SpellItemEnchantment.dbc
+ 
+- Second Number in Tuple
+    
+    Duration of the Enchantment (optional - Used by some spells)
+  
+- Third Number in Tuple</p>
+<p>    Charges (optional - used by some spells) </p>
+<p>Each ordinal set of 3 Id is used for a different purpose.</p>
+<p>| Purpose                    | Ordinal |
+| -------------------------- | ------- |
+| PERM_ENCHANTMENT_SLOT      | 0       |
+| TEMP_ENCHANTMENT_SLOT      | 1       |
+| SOCK_ENCHANTMENT_SLOT      | 2       |
+| SOCK_ENCHANTMENT_SLOT_2    | 3       |
+| SOCK_ENCHANTMENT_SLOT_3    | 4       |
+| BONUS_ENCHANTMENT_SLOT     | 5       |
+| PRISMATIC_ENCHANTMENT_SLOT | 6       |
+| PROP_ENCHANTMENT_SLOT_0    | 7       |
+| PROP_ENCHANTMENT_SLOT_1    | 8       |
+| PROP_ENCHANTMENT_SLOT_2    | 9       |
+| PROP_ENCHANTMENT_SLOT_3    | 10      |
+| PROP_ENCHANTMENT_SLOT_4    | 11      |</p>
+<p><h3>PERM_ENCHANTMENT_SLOT</h3>
+  This Enchantment is part of the Items design.
+  
+<h3>TEMP_ENCHANTMENT_SLOT</h3>
+<h3>SOCK_ENCHANTMENT_SLOT</h3>
+  Enchantments applied to the Item via a profession like blacksmithing sockets.
+  
+<h3>BONUS_ENCHANTMENT_SLOT        </h3>
+<h3>PRISMATIC_ENCHANTMENT_SLOT    </h3>
+<h3>PROP_ENCHANTMENT_SLOT       </h3>
+  Random Enchatments Some Items receive on creation. 
+  
+  These Slots are dependent on either a Random Suffix or the RandomProperty in <a href="item_template">item_template</a>.   
+  
+  If a Random Suffix was applied when the instance we created then that is based off of the <a href="item_enchantment_template">item_enchantment_template</a> table. The Item Enchantment template table gives the different Random Suffixs that might be applied to a given item along with the percent chance that they will be applied.
+  
+  Once an Enchant is selected then the Values in ItemRandomSuffix.dbc are used to determine how strong the enchantment is in the specified slot. 
+  
+  If an enchantment is placed in one of these 5 slots but there is no matching AllocationPct_# in the ItemRandom_Suffix dbc then the enchantment will have no effect on the Item.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

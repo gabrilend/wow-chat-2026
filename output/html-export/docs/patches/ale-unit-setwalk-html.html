@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ale-unit-setwalk.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ale-unit-setwalk.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/patches/ale-unit-setwalk.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 3654 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-08 23:25
+        </div>
+
+        <div class="content">
+            <p><h1>ALE Unit Methods Patch</h1></p>
+<p><h2>Overview</h2></p>
+<p>Adds missing Eluna-compatible methods to ALE for Unit types:</p>
+<p>| Method | Description |
+|--------|-------------|
+| <code>Unit:SetWalk(enable)</code> | Set walk/run movement state |
+| <code>Unit:IsWalking()</code> | Check if unit is walking |
+| <code>Unit:IsHostileTo(target)</code> | Check faction-based hostility |
+| <code>Unit:IsFriendlyTo(target)</code> | Check faction-based friendship |</p>
+<p>All methods work for all Unit types (Player, Creature, etc.).</p>
+<p><h2>Motivation</h2></p>
+<p>Bot behaviors need:
+- Walking animation for natural movement (not just slower running)
+- Faction relationship checks for targeting decisions</p>
+<p>The underlying C++ methods exist in AzerothCore&#39;s Unit class - this patch exposes them to Lua.</p>
+<p><h2>Files Modified</h2></p>
+<p><h3>1. <code>modules/mod-ale/src/LuaEngine/methods/UnitMethods.h</code></h3></p>
+<p>Added after <code>SetSpeedRate</code> method:</p>
+<p>``<code>cpp
+    /*<em>
+     </em> Sets whether the [Unit] is currently walking or running.
+     <em> Works for all Unit types including Player.
+     </em>
+     <em> @param bool enable = true : true to enable walking, false for running
+     </em>/
+    int SetWalk(lua_State<em> L, Unit</em> unit)
+    {
+        bool enable = ALE::CHECKVAL&lt;bool&gt;(L, 2, true);
+        unit-&gt;SetWalk(enable);
+        return 0;
+    }</p>
+<p>    /*<em>
+     </em> Returns whether the [Unit] is currently walking.
+     <em>
+     </em> @return bool isWalking
+     <em>/
+    int IsWalking(lua_State</em> L, Unit<em> unit)
+    {
+        ALE::Push(L, unit-&gt;IsWalking());
+        return 1;
+    }</p>
+<p>    /</em><em>
+     </em> Returns true if the [Unit] is hostile to the specified [Unit].
+     <em> Uses faction relationship data to determine hostility.
+     </em>
+     <em> @param [Unit] target : the unit to check hostility against
+     </em> @return bool isHostile
+     <em>/
+    int IsHostileTo(lua_State</em> L, Unit<em> unit)
+    {
+        Unit</em> target = ALE::CHECKOBJ&lt;Unit&gt;(L, 2);
+        ALE::Push(L, unit-&gt;IsHostileTo(target));
+        return 1;
+    }</p>
+<p>    /*<em>
+     </em> Returns true if the [Unit] is friendly to the specified [Unit].
+     <em> Uses faction relationship data to determine friendship.
+     </em>
+     <em> @param [Unit] target : the unit to check friendship against
+     </em> @return bool isFriendly
+     <em>/
+    int IsFriendlyTo(lua_State</em> L, Unit<em> unit)
+    {
+        Unit</em> target = ALE::CHECKOBJ&lt;Unit&gt;(L, 2);
+        ALE::Push(L, unit-&gt;IsFriendlyTo(target));
+        return 1;
+    }
+<pre><code>
+&lt;h3&gt;2. </code>modules/mod-ale/src/LuaEngine/LuaFunctions.cpp<code>&lt;/h3&gt;</p>
+<p>In the </code>UnitMethods<code> array (after SetSpeedRate):
+</code></pre>cpp
+    { &quot;SetWalk&quot;, &amp;LuaUnit::SetWalk },
+    { &quot;IsWalking&quot;, &amp;LuaUnit::IsWalking },
+    { &quot;IsHostileTo&quot;, &amp;LuaUnit::IsHostileTo },
+    { &quot;IsFriendlyTo&quot;, &amp;LuaUnit::IsFriendlyTo },
+</code>`<code></p>
+<p><h2>How It Works</h2></p>
+<p><h3>SetWalk / IsWalking</h3>
+- </code>Unit::SetWalk(bool)<code> sets </code>MOVEMENTFLAG_WALKING<code> movement flag
+- Calls </code>propagateSpeedChange()<code> to sync with clients
+- Proper walking animation, not just speed reduction</p>
+<p><h3>IsHostileTo / IsFriendlyTo</h3>
+- </code>Unit::IsHostileTo()<code> returns </code>GetReactionTo(unit) &lt;= REP_HOSTILE<code>
+- </code>Unit::IsFriendlyTo()<code> returns </code>GetReactionTo(unit) &gt;= REP_FRIENDLY<code>
+- </code>GetReactionTo()` checks faction template data (friend/enemy lists, flags)
+- Server already has this data - no hardcoded faction lists needed</p>
+<p><h2>Usage</h2></p>
+<p><pre><code class="lua"><span class="comment">-- Walking</span>
+player:SetWalk(<span class="keyword">true</span>)
+player:MoveTo(<span class="number">0</span>, x, y, z, <span class="keyword">false</span>)</p>
+<p><span class="keyword">if</span> player:IsWalking() <span class="keyword">then</span>
+    print(&amp;quot;Player is walking&amp;quot;)
+<span class="keyword">end</span></p>
+<p><span class="comment">-- Hostility checks</span>
+<span class="keyword">if</span> creature:IsHostileTo(player) <span class="keyword">then</span>
+    print(&amp;quot;Creature is hostile to player&amp;quot;)
+<span class="keyword">end</span></p>
+<p><span class="keyword">if</span> player:IsFriendlyTo(npc) <span class="keyword">then</span>
+    print(&amp;quot;Player is friendly to NPC&amp;quot;)
+<span class="keyword">end</span></code></pre></p>
+<p><h2>Build Instructions</h2></p>
+<p><pre><code class="bash">./scripts/azerothcore update</code></pre></p>
+<p><h2>Related Issues</h2></p>
+<p>- Issue 328: GetPosition nil errors (Eluna→ALE compatibility)
+- CreatureMethods.h:972 TODO comment: &quot;Move same to Player?&quot;
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

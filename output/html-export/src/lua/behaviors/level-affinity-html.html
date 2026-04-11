@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>level-affinity.lua - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>level-affinity.lua</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/behaviors/level-affinity.lua
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> lua &nbsp;&nbsp;
+            <strong>Size:</strong> 11428 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-09 00:22
+        </div>
+
+        <div class="content">
+            <pre><code class="lua"><span class="comment">-- {{{ Everland Ghostsong - Level Affinity System</span>
+<span class="comment">-- Bots cluster around players of similar level</span>
+<span class="comment">-- Uses traveling salesman cost based on level difference</span>
+<span class="comment">-- Implements the <span class="number">50</span>% threshold <span class="keyword">and</span> <span class="number">75</span>% opposite spectrum rules</span>
+<span class="comment">--</span>
+<span class="comment">-- Issue: <span class="number">133</span>-gesture-command-system-kneel-convoy.md</span>
+<span class="comment">-- Concept Catalog: <span class="number">201</span>-<span class="number">230</span></span>
+<span class="comment">-- }}}</span>
+
+require(&quot;movement&quot;)
+
+LevelAffinity = {}
+
+<span class="comment">-- Register <span class="keyword">in</span> package.loaded so require() is a no-op after ALE loads this</span>
+<span class="comment">-- Must be AFTER LevelAffinity table is created so require() returns the module</span>
+package.loaded[&quot;behaviors/level-affinity&quot;] = LevelAffinity
+
+<span class="comment">-- {{{ Configuration</span>
+MAX_LEVEL             = <span class="number">80</span>    <span class="comment">-- WotLK max level</span>
+LEVEL_CHECK_INTERVAL  = <span class="number">5000</span>  <span class="comment">-- ms between affinity recalculation</span>
+AFFINITY_RADIUS       = <span class="number">100</span>   <span class="comment">-- yards to search <span class="keyword">for</span> players</span>
+PROXIMITY_THRESHOLD   = <span class="number">0.50</span>  <span class="comment">-- <span class="number">50</span>% of level range = prefer proximity</span>
+OPPOSITE_SPECTRUM     = <span class="number">0.75</span>  <span class="comment">-- <span class="number">75</span>% toward opposite when no peers</span>
+FRESH_LOGIN_WINDOW    = <span class="number">300</span>   <span class="comment">-- seconds to count as &quot;fresh login&quot;</span>
+LEVEL_COST_WEIGHT     = <span class="number">2.0</span>   <span class="comment">-- multiplier <span class="keyword">for</span> level difference cost</span>
+PROXIMITY_COST_WEIGHT = <span class="number">1.0</span>   <span class="comment">-- multiplier <span class="keyword">for</span> distance cost</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ State storage</span>
+<span class="keyword">local</span> bot_affinities = {}     <span class="comment">-- [bot_guid] = {target_guid, score, last_update}</span>
+<span class="keyword">local</span> player_login_times = {} <span class="comment">-- [player_guid] = login_timestamp</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.getLevelRange</span>
+<span class="comment">-- Calculate the effective level range <span class="keyword">for</span> affinity decisions</span>
+<span class="comment">-- Returns min_level, max_level <span class="keyword">for</span> &quot;peer&quot; consideration</span>
+<span class="keyword">function</span> LevelAffinity.getLevelRange(bot_level)
+    <span class="keyword">local</span> range = MAX_LEVEL * PROXIMITY_THRESHOLD
+    <span class="keyword">local</span> half_range = range / <span class="number">2</span>
+
+    <span class="keyword">local</span> min_peer = math.max(<span class="number">1</span>, bot_level - half_range)
+    <span class="keyword">local</span> max_peer = math.min(MAX_LEVEL, bot_level + half_range)
+
+    <span class="keyword">return</span> min_peer, max_peer
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.isWithinPeerRange</span>
+<span class="comment">-- Check <span class="keyword">if</span> a level falls within the peer range</span>
+<span class="keyword">function</span> LevelAffinity.isWithinPeerRange(bot_level, target_level)
+    <span class="keyword">local</span> min_peer, max_peer = LevelAffinity.getLevelRange(bot_level)
+    <span class="keyword">return</span> target_level &gt;= min_peer <span class="keyword">and</span> target_level &lt;= max_peer
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.getLevelCost</span>
+<span class="comment">-- Calculate affinity cost based on level difference</span>
+<span class="comment">-- Lower cost = higher affinity</span>
+<span class="keyword">function</span> LevelAffinity.getLevelCost(bot_level, target_level)
+    <span class="keyword">local</span> diff = math.abs(bot_level - target_level)
+    <span class="comment">-- Squared difference penalizes large gaps more severely</span>
+    <span class="keyword">return</span> (diff * diff) * LEVEL_COST_WEIGHT
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.getProximityCost</span>
+<span class="comment">-- Calculate cost based on distance</span>
+<span class="keyword">function</span> LevelAffinity.getProximityCost(bot, target)
+    <span class="keyword">local</span> bx, by = bot:GetLocation()
+    <span class="keyword">local</span> tx, ty = target:GetLocation()
+    <span class="keyword">local</span> distSq = Movement.squaredDistance(bx, by, tx, ty)
+    <span class="keyword">return</span> math.sqrt(distSq) * PROXIMITY_COST_WEIGHT
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.isMaxLevel</span>
+<span class="comment">-- Check <span class="keyword">if</span> a unit is at max level</span>
+<span class="keyword">function</span> LevelAffinity.isMaxLevel(unit)
+    <span class="keyword">return</span> unit:GetLevel() &gt;= MAX_LEVEL
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.isNewPlayer</span>
+<span class="comment">-- Check <span class="keyword">if</span> a unit is level <span class="number">1</span> <span class="keyword">or</span> freshly logged <span class="keyword">in</span></span>
+<span class="keyword">function</span> LevelAffinity.isNewPlayer(unit)
+    <span class="keyword">if</span> unit:GetLevel() == <span class="number">1</span> <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">true</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> guid = unit:GetGUID()
+    <span class="keyword">local</span> login_time = player_login_times[guid]
+
+    <span class="keyword">if</span> login_time <span class="keyword">then</span>
+        <span class="keyword">local</span> elapsed = os.time() - login_time
+        <span class="keyword">if</span> elapsed &lt; FRESH_LOGIN_WINDOW <span class="keyword">then</span>
+            <span class="keyword">return</span> <span class="keyword">true</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> <span class="keyword">false</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.getOppositeSpectrumTarget</span>
+<span class="comment">-- When no peers exist, find <span class="number">75</span>% toward opposite <span class="keyword">end</span> of level range</span>
+<span class="comment">-- Level <span class="number">1</span>-<span class="number">40</span>: seek higher levels (toward <span class="number">80</span>)</span>
+<span class="comment">-- Level <span class="number">41</span>-<span class="number">80</span>: seek lower levels (toward <span class="number">1</span>)</span>
+<span class="keyword">function</span> LevelAffinity.getOppositeSpectrumTarget(bot_level)
+    <span class="keyword">local</span> midpoint = MAX_LEVEL / <span class="number">2</span>
+
+    <span class="keyword">if</span> bot_level &lt;= midpoint <span class="keyword">then</span>
+        <span class="comment">-- Low level: <span class="number">75</span>% toward max</span>
+        <span class="keyword">local</span> distance_to_max = MAX_LEVEL - bot_level
+        <span class="keyword">return</span> bot_level + (distance_to_max * OPPOSITE_SPECTRUM)
+    <span class="keyword">else</span>
+        <span class="comment">-- High level: <span class="number">75</span>% toward min</span>
+        <span class="keyword">local</span> distance_to_min = bot_level - <span class="number">1</span>
+        <span class="keyword">return</span> bot_level - (distance_to_min * OPPOSITE_SPECTRUM)
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.calculateAffinityScore</span>
+<span class="comment">-- Combined cost <span class="keyword">function</span> <span class="keyword">for</span> traveling salesman heuristic</span>
+<span class="comment">-- Considers level difference, proximity, <span class="keyword">and</span> special rules</span>
+<span class="keyword">function</span> LevelAffinity.calculateAffinityScore(bot, target, has_peers)
+    <span class="keyword">local</span> bot_level = bot:GetLevel()
+    <span class="keyword">local</span> target_level = target:GetLevel()
+
+    <span class="keyword">local</span> level_cost = LevelAffinity.getLevelCost(bot_level, target_level)
+    <span class="keyword">local</span> proximity_cost = LevelAffinity.getProximityCost(bot, target)
+
+    <span class="comment">-- Within peer range: prefer proximity</span>
+    <span class="keyword">if</span> LevelAffinity.isWithinPeerRange(bot_level, target_level) <span class="keyword">then</span>
+        <span class="keyword">return</span> proximity_cost + (level_cost * <span class="number">0.1</span>)
+    <span class="keyword">end</span>
+
+    <span class="comment">-- No peers: <span class="number">75</span>% opposite spectrum rule</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> has_peers <span class="keyword">then</span>
+        <span class="keyword">local</span> ideal_target = LevelAffinity.getOppositeSpectrumTarget(bot_level)
+        <span class="keyword">local</span> spectrum_diff = math.abs(target_level - ideal_target)
+        <span class="keyword">return</span> (spectrum_diff * spectrum_diff) + (proximity_cost * <span class="number">0.5</span>)
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Outside peer range with peers available: prefer level match</span>
+    <span class="keyword">return</span> level_cost + (proximity_cost * <span class="number">0.1</span>)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.applySpecialRules</span>
+<span class="comment">-- Apply max level <span class="keyword">and</span> level <span class="number">1</span> special rules</span>
+<span class="comment">-- Returns modified score (lower = better)</span>
+<span class="keyword">function</span> LevelAffinity.applySpecialRules(bot, target, base_score)
+    <span class="keyword">local</span> bot_level = bot:GetLevel()
+    <span class="keyword">local</span> target_level = target:GetLevel()
+    <span class="keyword">local</span> score = base_score
+
+    <span class="comment">-- Max level players attract struggling players <span class="keyword">and</span> noobs</span>
+    <span class="keyword">if</span> LevelAffinity.isMaxLevel(target) <span class="keyword">then</span>
+        <span class="comment">-- Max level is helpful to low levels <span class="keyword">and</span> those <span class="keyword">in</span> combat</span>
+        <span class="keyword">if</span> bot_level &lt; MAX_LEVEL / <span class="number">2</span> <span class="keyword">then</span>
+            score = score * <span class="number">0.5</span>  <span class="comment">-- Strong attraction</span>
+        <span class="keyword">end</span>
+        <span class="keyword">if</span> bot:IsInCombat() <span class="keyword">then</span>
+            score = score * <span class="number">0.3</span>  <span class="comment">-- Very strong attraction when struggling</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Level <span class="number">1</span> bots follow fresh logins, level <span class="number">1</span>s, <span class="keyword">or</span> max levels</span>
+    <span class="keyword">if</span> bot_level == <span class="number">1</span> <span class="keyword">then</span>
+        <span class="keyword">if</span> LevelAffinity.isNewPlayer(target) <span class="keyword">then</span>
+            score = score * <span class="number">0.2</span>  <span class="comment">-- Strongest attraction to fresh players</span>
+        <span class="keyword">elseif</span> target_level == <span class="number">1</span> <span class="keyword">then</span>
+            score = score * <span class="number">0.4</span>  <span class="comment">-- Strong peer attraction</span>
+        <span class="keyword">elseif</span> LevelAffinity.isMaxLevel(target) <span class="keyword">then</span>
+            score = score * <span class="number">0.6</span>  <span class="comment">-- Attracted to mentors</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> score
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.hasPeersInRange</span>
+<span class="comment">-- Check <span class="keyword">if</span> there are any same-level peers available</span>
+<span class="keyword">function</span> LevelAffinity.hasPeersInRange(bot, players)
+    <span class="keyword">local</span> bot_level = bot:GetLevel()
+
+    <span class="keyword">for</span> _, player <span class="keyword">in</span> ipairs(players) <span class="keyword">do</span>
+        <span class="keyword">if</span> player <span class="keyword">and</span> player:IsAlive() <span class="keyword">then</span>
+            <span class="keyword">if</span> LevelAffinity.isWithinPeerRange(bot_level, player:GetLevel()) <span class="keyword">then</span>
+                <span class="keyword">return</span> <span class="keyword">true</span>
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> <span class="keyword">false</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.findBestTarget</span>
+<span class="comment">-- Find the player with highest affinity (lowest cost)</span>
+<span class="keyword">function</span> LevelAffinity.findBestTarget(bot)
+    <span class="keyword">local</span> nearby = bot:GetPlayersInRange(AFFINITY_RADIUS)
+    <span class="keyword">if</span> <span class="keyword">not</span> nearby <span class="keyword">or</span> #nearby == <span class="number">0</span> <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> has_peers = LevelAffinity.hasPeersInRange(bot, nearby)
+    <span class="keyword">local</span> best_target = <span class="keyword">nil</span>
+    <span class="keyword">local</span> best_score = math.huge
+
+    <span class="keyword">for</span> _, player <span class="keyword">in</span> ipairs(nearby) <span class="keyword">do</span>
+        <span class="keyword">if</span> player <span class="keyword">and</span> player:IsAlive() <span class="keyword">and</span> <span class="keyword">not</span> player:IsBot() <span class="keyword">then</span>
+            <span class="keyword">local</span> score = LevelAffinity.calculateAffinityScore(bot, player, has_peers)
+            score = LevelAffinity.applySpecialRules(bot, player, score)
+
+            <span class="keyword">if</span> score &lt; best_score <span class="keyword">then</span>
+                best_score = score
+                best_target = player
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> best_target, best_score
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.updateAffinity</span>
+<span class="comment">-- Update bot&#<span class="number">39</span>;s current affinity target</span>
+<span class="keyword">function</span> LevelAffinity.updateAffinity(bot)
+    <span class="keyword">if</span> <span class="keyword">not</span> bot <span class="keyword">or</span> <span class="keyword">not</span> bot:IsBot() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span> <span class="keyword">end</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> bot:IsAlive() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> target, score = LevelAffinity.findBestTarget(bot)
+    <span class="keyword">local</span> bot_guid = bot:GetGUID()
+
+    <span class="keyword">if</span> target <span class="keyword">then</span>
+        bot_affinities[bot_guid] = {
+            target_guid = target:GetGUID(),
+            score = score,
+            last_update = os.time()
+        }
+    <span class="keyword">else</span>
+        bot_affinities[bot_guid] = <span class="keyword">nil</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> target
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.getAffinityTarget</span>
+<span class="comment">-- Get current affinity target <span class="keyword">for</span> a bot</span>
+<span class="keyword">function</span> LevelAffinity.getAffinityTarget(bot)
+    <span class="keyword">local</span> bot_guid = bot:GetGUID()
+    <span class="keyword">local</span> affinity = bot_affinities[bot_guid]
+
+    <span class="keyword">if</span> <span class="keyword">not</span> affinity <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> target = GetPlayerByGUID(affinity.target_guid)
+    <span class="keyword">if</span> target <span class="keyword">and</span> target:IsAlive() <span class="keyword">then</span>
+        <span class="keyword">return</span> target
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> <span class="keyword">nil</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.getIdleDestination</span>
+<span class="comment">-- Calculate where bot should drift when idle</span>
+<span class="comment">-- Uses affinity target&#<span class="number">39</span>;s position with some offset</span>
+<span class="keyword">function</span> LevelAffinity.getIdleDestination(bot)
+    <span class="keyword">local</span> target = LevelAffinity.getAffinityTarget(bot)
+    <span class="keyword">if</span> <span class="keyword">not</span> target <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span>, <span class="keyword">nil</span>, <span class="keyword">nil</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> tx, ty, tz = target:GetLocation()
+
+    <span class="comment">-- Add some random offset to avoid stacking</span>
+    <span class="keyword">local</span> bot_guid = bot:GetGUID()
+    <span class="keyword">local</span> angle = (bot_guid % <span class="number">360</span>) * (math.pi / <span class="number">180</span>)
+    <span class="keyword">local</span> offset = <span class="number">5</span> + (bot_guid % <span class="number">10</span>)
+
+    <span class="keyword">local</span> dest_x = tx + math.cos(angle) * offset
+    <span class="keyword">local</span> dest_y = ty + math.sin(angle) * offset
+
+    <span class="comment">-- Get ground height</span>
+    <span class="keyword">local</span> map = bot:GetMap()
+    <span class="keyword">local</span> dest_z = tz
+    <span class="keyword">if</span> map <span class="keyword">then</span>
+        dest_z = map:GetHeight(dest_x, dest_y) <span class="keyword">or</span> tz
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> dest_x, dest_y, dest_z
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.driftToAffinity</span>
+<span class="comment">-- Move bot toward affinity target position</span>
+<span class="keyword">function</span> LevelAffinity.driftToAffinity(bot)
+    <span class="keyword">if</span> <span class="keyword">not</span> bot <span class="keyword">or</span> <span class="keyword">not</span> bot:IsBot() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">false</span> <span class="keyword">end</span>
+    <span class="keyword">if</span> bot:IsInCombat() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">false</span> <span class="keyword">end</span>
+
+    <span class="comment">-- Check <span class="keyword">if</span> resting</span>
+    <span class="keyword">local</span> isResting = bot:GetData(&quot;resting&quot;)
+    <span class="keyword">if</span> isResting <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">false</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> dest_x, dest_y, dest_z = LevelAffinity.getIdleDestination(bot)
+    <span class="keyword">if</span> <span class="keyword">not</span> dest_x <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">false</span> <span class="keyword">end</span>
+
+    <span class="comment">-- Check <span class="keyword">if</span> we&#<span class="number">39</span>;re already close</span>
+    <span class="keyword">local</span> bx, by = bot:GetLocation()
+    <span class="keyword">local</span> distSq = Movement.squaredDistance(bx, by, dest_x, dest_y)
+
+    <span class="keyword">if</span> distSq &lt; <span class="number">25</span> <span class="keyword">then</span>  <span class="comment">-- Within <span class="number">5</span> yards</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Drift toward destination</span>
+    bot:MoveTo(<span class="number">0</span>, dest_x, dest_y, dest_z, <span class="keyword">false</span>)
+    <span class="keyword">return</span> <span class="keyword">true</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.trackLogin</span>
+<span class="comment">-- Track player login times <span class="keyword">for</span> &quot;fresh login&quot; detection</span>
+<span class="comment">-- Called by periodic_events.lua on login</span>
+<span class="keyword">function</span> LevelAffinity.trackLogin(player)
+    <span class="keyword">if</span> player <span class="keyword">then</span>
+        player_login_times[player:GetGUID()] = os.time()
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.trackLogout</span>
+<span class="comment">-- Clean up login tracking on logout</span>
+<span class="comment">-- Called by periodic_events.lua on logout</span>
+<span class="keyword">function</span> LevelAffinity.trackLogout(player)
+    <span class="keyword">if</span> player <span class="keyword">then</span>
+        player_login_times[player:GetGUID()] = <span class="keyword">nil</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.periodicUpdate</span>
+<span class="comment">-- Periodic affinity recalculation <span class="keyword">for</span> bot</span>
+<span class="comment">-- Called by periodic_events.lua on timer</span>
+<span class="keyword">function</span> LevelAffinity.periodicUpdate(bot)
+    LevelAffinity.updateAffinity(bot)
+    LevelAffinity.driftToAffinity(bot)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ LevelAffinity.getExpShare</span>
+<span class="comment">-- Calculate proportional EXP sharing</span>
+<span class="comment">-- base_exp / (killer_level / helper_level)</span>
+<span class="keyword">function</span> LevelAffinity.getExpShare(base_exp, killer_level, helper_level)
+    <span class="keyword">if</span> helper_level &lt;= <span class="number">0</span> <span class="keyword">then</span> <span class="keyword">return</span> <span class="number">0</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> ratio = killer_level / helper_level
+    <span class="keyword">return</span> math.floor(base_exp / ratio)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Module initialization</span>
+<span class="comment">-- NOTE: Per-bot registration moved to periodic_events.lua (issue <span class="number">160</span>)</span>
+<span class="comment">-- This file exposes: trackLogin, trackLogout, periodicUpdate</span>
+print(&quot;[LevelAffinity] Behavior loaded - periodic registration via periodic_events.lua&quot;)
+<span class="comment">-- }}}</span>
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

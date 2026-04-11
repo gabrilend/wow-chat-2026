@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playerbot-Raid-Strategy-Guide.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Playerbot-Raid-Strategy-Guide.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/playerbots/Playerbot-Raid-Strategy-Guide.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 51264 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h2>Raid Strategy Status</h2></p>
+<p>This guide works alongside https://github.com/mod-playerbots/mod-playerbots/wiki/Playerbot-Raid-Completion-Status by going into detail on each strategy coded per boss for each raid, as well as note expected player actions where the coded strategy may be insufficient or not necessary. Please note that the strategies and overall feasibility are made assuming appropriate level gear for that content, although many are also completable using the Individual Progression module nerfs.</p>
+<p><h2>Vanilla</h2></p>
+<p><h3>Molten Core</h3>
+<em>This raid is completable with IP nerfs.</p>
+<p><strong>Lucifron</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: Shadow resistance aura will be automatically applied.
+</em> Tips &amp; Tricks: None</p>
+<p><strong>Magmadar</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+</em> Coded Strategies: Fire resistance aura will be automatically applied.
+<em> Tips &amp; Tricks: Use Bots to place fear ward on tank, and have shamans use tremor totems to help with fear; may be added as a strat in the future.</p>
+<p><strong>Gehennas</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: Shadow resistance aura will be automatically applied.
+</em> Tips &amp; Tricks: None</p>
+<p><strong>Garr</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+</em> Coded Strategies: Fire resistance aura will be automatically applied. Disabled aoe dps abilities via multiplier to help prevent multiple simultaneous explosions.
+<em> Tips &amp; Tricks: None</p>
+<p><strong>Baron Geddon</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: Fire resistance aura will be automatically applied. Bots will run away from the raid if they get Living Bomb and will run away from boss during Inferno.
+</em> Tips &amp; Tricks: None</p>
+<p><strong>Shazzrah</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+</em> Coded Strategies: Ranged bots will position themselves at maximum distance in order to avoid the arcane explosion while still being able to dps and heal.
+<em> Tips &amp; Tricks: None</p>
+<p><strong>Sulfuron Harbinger</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: Fire resistance aura will be automatically applied.
+</em> Tips &amp; Tricks: Use Skull icon to focus target down individual boss adds.</p>
+<p><strong>Golemagg the Incinerator</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed. 
+</em> Coded Strategies: Fire resistance aura will be automatically applied. Disabled aoe dps via multiplier. Offtanks pull Core Ragers away from Golemagg to remove their buff.
+<em> Tips &amp; Tricks: None</p>
+<p><strong>Majordomo Executus</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: Shadow resistance aura will be automatically applied.
+</em> Tips &amp; Tricks: Use Skull icon to focus target down individual boss adds.</p>
+<p><strong>Ragnaros</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+</em> Coded Strategies: Fire resistance aura will be automatically applied.
+<em> Tips &amp; Tricks: None</p>
+<p><h3>Blackwing Lair</h3>
+</em>Note that all Playerbots are automatically granted the Onyxia Scale Cloak buff and will automatically disable suppression devices. This raid is completable with IP nerfs.</p>
+<p><strong>Razorgore the Untamed</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, without coded strategies or manual control needed.
+</em> Coded Strategies: None
+<em> Tips &amp; Tricks: Player will need to control Razorgore to destroy the eggs in Phase 1.</p>
+<p><strong>Vaelastrasz the Corrupt</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, without coded strategies or manual control needed.
+<em> Coded Strategies: None
+</em> Tips &amp; Tricks: None</p>
+<p><strong>Broodlord Lashlayer</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, without coded strategies or manual control needed.
+</em> Coded Strategies: None
+<em> Tips &amp; Tricks: None</p>
+<p><strong>Firemaw</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, without coded strategies or manual control needed.
+<em> Coded Strategies: None
+</em> Tips &amp; Tricks: None</p>
+<p><strong>Ebonroc</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, without coded strategies or manual control needed.
+</em> Coded Strategies: None
+<em> Tips &amp; Tricks: None</p>
+<p><strong>Flamegor</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, without coded strategies or manual control needed.
+<em> Coded Strategies: None
+</em> Tips &amp; Tricks: None</p>
+<p><strong>Chromaggus</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, with coded strategies and some manual control needed.
+</em> Coded Strategies: Bots will automatically clear Brood Affliction: Bronze
+<em> Tips &amp; Tricks: Depending on gear, some manual bot control may be necessary using RTSC to place Chromaggus by the door to LOS during certain breath attacks.</p>
+<p><strong>Nefarian</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, with some degree of manual control needed.
+<em> Coded Strategies: None
+</em> Tips &amp; Tricks: In Phase 2, use RTSC to place main tank for Nefarian by the stairs facing away from the raid. Use commands for shamans to use tremor totem, and remove tank assist (co -tank assist) from main tank to avoid him moving Nefarian around when the skeleton adds spawn in Phase 3.</p>
+<p><h2>Burning Crusade</h2></p>
+<p><h3>Karazhan</h3>
+<em>This raid is completable with suggested IP nerfs. Strategies were written and tested with 1) bot damage and healing each reduced to 50% of normal strength, and 2) HP of all raid mobs restored to Patch 2.4.3 levels (reverting the global 30% nerf to HP of TBC raid mobs from Patch 3.0.2).</p>
+<p><strong>Attumen the Huntsman &amp; Midnight</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: 
+  </em> The main tank will tank Midnight, and bots will focus DPS on Midnight.
+  <em> When Attumen spawns, the assist tank will pick him up and move him away from the raid because he cleaves.
+  </em> When Midnight reaches 25% health and Attumen mounts Midnight, the main tank will pick up Attumen, and other bots will briefly pause DPS. All bots other than the tank will stack up behind Attumen, inside the minimum range of his Berserker Charge.
+<em> Tips &amp; Tricks: Although not required, the easiest way to pull Midnight is to have bots stay out of line-of-sight behind the haycart and pull Midnight yourself (and then take bots off of stay once Midnight gets around the haycart).</p>
+<p><strong>Moroes</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: 
+  </em> The main tank will target Moroes for the duration of the encounter.
+  <em> Other bots will mark adds with the skull icon and prioritize accordingly based on the standard kill order (Millstipe first, Von’indi second, etc.), taking into account which four adds were randomly chosen.
+</em> Tips &amp; Tricks: In practice, the adds will likely be grouped up, and bots will AoE them down (with classes without AoE capabilities targeting the add marked with a skull). If you want bots to only single-target prioritize adds, you will need to disable their standard AoE DPS strategies. However, it is likely (even when playing with IP nerfs) that AoEing down the adds will be fast and effective.</p>
+<p><strong>Maiden of Virtue</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+</em> Coded Strategies: 
+  <em> The main tank will position Maiden in the middle of the room, and ranged bots will fan out around the center, between the pillars. 
+  </em> When Maiden casts Repentance, the tank will move her to a healer to use the Holy Ground to break the healer’s stun.
+<em> Tips &amp; Tricks: Each ranged bot has an assigned position between pillars—if you are also playing a ranged class, make sure to find an open spot so you do not chain Holy Wrath.  </p>
+<p><strong>Opera Event</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: 
+  </em> Bots will switch the skull icon back and forth between Romulo and Julianne as needed to try to kill them at about the same time. 
+  <em> Bots will mark the Wizard of Oz bosses with the skull icon and prioritize accordingly based on the standard kill order (Dorothee, Tito, Roar, Strawman, Tinhead, Crone). Mage bots will spam Scorch on Strawman to disorient him. 
+  </em> The main tank will position the Big Bad Wolf in the front left corner of the stage (from the perspective of facing the stage). Bots that are transformed into Little Red Riding Hood will attempt to run around the stage to get away from the Big Bad Wolf.
+<em> Tips &amp; Tricks: To speed up your clear, you can talk to Barnes and initiate the Opera Event while letting bots clear the final trash mobs. You will likely still have plenty of time to prepare to engage the boss due to the long intro to the event.</p>
+<p><strong>The Curator</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: 
+  </em> The main tank will position Curator in a designated spot in the center of the hallway near the entrance to the Guardian’s Library.
+  <em> Ranged bots will spread out, and all bots will mark and prioritize destroying Astral Flares. 
+  </em> The assist tank will stay on Curator (instead of picking up Flares) to try to stay second on aggro to absorb Hateful Bolts.
+  <em> Bots will save Bloodlust/Heroism until Curator uses Evocation and is vulnerable to double damage.
+</em> Tips &amp; Tricks: Set bots to “co -boost” before the fight to prevent them from using other major cooldowns and activate “co +boost” when Curator uses Evocation.</p>
+<p><strong>Terestian Illhoof</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+</em> Coded Strategies: Bots will mark and prioritize targets with the skull icon in the following order: (1) Demon Chains, (2) Kil’rek, and (3) Terestian Illhoof.
+<em> Tips &amp; Tricks: If you are playing DPS, consider using a /target macro for the Demon Chains.</p>
+<p><strong>Shade of Aran</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: 
+  </em> Ranged bots will attempt to maintain spread positions outside of Aran’s Counterspell range.
+  <em> When Aran casts Massive Magnetic Pull, bots will run to the edge of the room to escape the Arcane Explosion. 
+</em> When Aran casts Flame Wreath, and for the duration of the Flame Wreath aura being active, bots will stop moving.
+<em> When Aran summons Conjured Elementals, bots will mark and prioritize them with the skull icon.
+</em> Tips &amp; Tricks: 
+  <em> Coded strategies do not persist after Aran dies so if Flame Wreath is active when he dies, make sure to manually command bots to stay or they will blow up the raid. 
+  </em> An Azerothcore bug exists that sometimes causes Flame Wreath to persist long beyond its correct duration. If Aran casts Arcane Explosion while Flame Wreath is still active, there is not much you can do, and it is probably a wipe.</p>
+<p><strong>Netherspite</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+</em> Coded Strategies: Bots are assigned to block beams during the Portal Phase, and proper raid composition is important to ensure sufficient beam coverage. 
+  <em> Tank bots are assigned to block the red beam. Each tank will block the red beam for an entire Portal Phase and will dance in and out of the beam to avoid taking too many stacks of the debuff. 
+  </em> DPS bots (excluding Rogues and Warriors) are assigned to block the blue beam. They will transition at 24 stacks of the debuff, and therefore two such bots are required for each Portal Phase. 
+  <em> Healer, Rogue, and DPS Warrior bots are assigned to block the green beam. Rogues and DPS Warriors will be prioritized, and if they are assigned, they will remain in the beam for the duration of the Portal Phase (since there is no disadvantage to them from the debuff). Only if there are not enough eligible Rogues and DPS Warriors will healers block the green beam, and they will transition at 24 stacks of the debuff.
+  </em> Bots are coded to avoid Void Zones and to avoid beams that they are not assigned to block.
+  <em> Bots will briefly pause DPS when Netherspite is pulled and again upon each transition into the Portal Phase.
+</em> Tips &amp; Tricks: 
+  <em> Netherspite is bugged in Azerothcore in that the beams cannot be blocked inside of Netherspite’s hitbox (18 yards from his center), even though they visually continue to his center (and were blockable inside his hitbox in retail). The bots are coded to account for this, but the player should also be aware in the event that the player needs to block a beam. Additionally, this makes it important to pull the boss in the middle of the room since if the boss is too close to a portal, it will be impossible to block the beam.
+  </em> The player’s primary role during the Portal Phase (other than filling in for a bot that dies without replacement) should be to back up the bots on beams. Bots may not transition blocking duties as quickly as competent players (who would be prepared next to a beam when they are about to take over blocking to ensure an instant transition—for various reasons, trying to code this for bots is problematic). In particular, any gap in blocking of the Green Beam can be disastrous. Accordingly, if a healer bot is blocking the Green Beam, players should be prepared to block the Green Beam temporarily then the transition occurs.
+  <em> Bot tanks are coded not to attempt to avoid Void Zones while moving in and out of the Red Beam. The ability to control their movement is not sufficiently precise or dynamic to allow for their avoidance without ensuring that the boss does not move (and cause all beam blockers to get out of position). Therefore, tanks will need to be healed through the extra damage.
+  </em> The only strategy coded for the Banish phase is for bots to avoid Void Zones, and therefore it is the player’s choice whether to continue to DPS the boss or to bring the raid out of range of Netherbreath and wait for the next Portal Phase to reengage.</p>
+<p><strong>Chess Event</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no bot involvement needed.
+</em> Coded Strategies: None.
+<em> Tips &amp; Tricks: From White’s point of view, use your first three turns to move pawns forward to b3, d3, and g3. Use your next two turns to move rooks to a2 and g2. If Medivh sets a fire under your king or queen, stop what you are doing and immediately move them out of the fire. Thereafter, generally focus on controlling the queen and using Fireball (Horde) or Elemental Blast (Alliance) to target the opposing king. This method is effective but not guaranteed, as success is dependent on RNG (including where Medivh moves the king and what cheats he uses and when). Depending on the situation, it may be helpful to capture other pieces before the king (in particular, the opposing bishops and/or queen).</p>
+<p><strong>Prince Malchezaar</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies:
+  </em> Bots that are Enfeebled will run out of Shadow Nova range and should select escape vectors that do not come in range of any Netherspite Infernal’s Hellfire.
+  <em> All bots will attempt to avoid Infernals. The tank will attempt to stay a bit further from the Infernals than other bots to try to give players and other bots (particularly melee DPS) some room to maneuver.
+  </em> Bots will save Bloodlust/Heroism until phase 3 (Malchezaar at 30% HP), when the Infernal spawn rate increases drastically.
+<em> Tips &amp; Tricks: Bots may get “stuck” behind an Infernal that lands between them and Malchezaar, as they will refuse to run into the Hellfire and are unable to move around Infernals. If this happens, briefly activate “flee” and lead the bots slightly off to the side of the Hellfire (or even into or through the Hellfire if they are able to survive) so that they can reach the boss by moving in a straight line after the flee strategy is removed.</p>
+<p><strong>Nightbane</strong></p>
+<p></em> Defeatable Solo with Bots: Yes. During phase changes, the player will be responsible for leading bots to the correct positions in anticipation of combat (discussed below). No RTSC is needed; just make sure to run to the general area called for by the strategies at the right time.
+<em> Coded Strategies: 
+  </em> The tank and ranged bots have fixed positions near the Northeastern door to the Master’s Terrace. After summoning the boss, players should lead the bots to that general area to wait for combat to begin.
+  <em> The tank will attempt to move Nightbane in a manner that results in him being positioned perpendicularly from the raid, facing the edge of the balcony (though this is imperfect, and he may end up at a slight angle).
+  </em> Priest bots will cast Fear Ward on the tank.
+  <em> There are three fixed positions coded for ranged bots. The ranged bots will stack and cycle through the positions if Charred Earth spawns underneath them. It is a known issue that bots will sometimes arrive at a safe position but continue to cycle—this is due to the fact that the bots determine whether they are in an unsafe position by the presence of the Charred Earth aura on themselves. It is possible for the aura not to have faded before the bot arrives at the next position, even if the next position is safe, resulting in the bot thinking it is not safe and continuing to cycle. However, they should eventually settle into a safe position.
+  </em> When the flight phase starts, bots will mark Nightbane with a moon and stop attacking. They will stack at a position near Nightbane’s flight phase position so he does not use Fireball Barrage. When Rain of Bones is cast and Restless Skeletons spawn, all bots will move away and stack in a new position that is outside of the Rain of Bones AoE before killing the Skeletons.
+  <em> Hunter and Warlock pets are set to passive during the flight phase. Players should make sure to do this as well. The maps on the Master’s Terrace are extremely buggy, and pets will chase Nightbane into midair and may even run out of the tower grounds, which can cause Restless Skeletons to spawn in odd places and even aggro mobs from other parts of the instance. Because of this, bots are disabled from using any temporary pets (e.g., Spirit Wolves, Water Elementals, Treants) during the encounter.
+  </em> The flight phase lasts for 45 seconds, but Nightbane is not aggressive during the final 10 seconds (when he is preparing to land). Nightbane will yell that he is landing, at which point the player will need to lead the bots back to the ground phase combat area.
+  <em> Bots will pause DPS after the pull and after each transition into the ground phase to allow the tank to get aggro. 
+</em> Tips &amp; Tricks: 
+  <em> Because of the buggy maps, there is a tendency for mobs to pull through the floor, and it is suggested that prior to the encounter, you clear all mobs from the Livery Stables, including the upper level, and the Scullery.
+  </em> AoE avoidance is intentionally disabled for the tank. This is necessary to prevent the tank from spinning Nightbane and causing him to face the raid, as bot movement is not sufficiently precise or dynamic to avoid the Charred Earth while still keeping Nightbane properly positioned. As a result, the tank will need to be healed through Charred Earth.
+  <em> Ultimately, Nightbane may be the most challenging boss in T4 content. At appropriate gear levels with IP nerfs, it is likely that three healers will be needed (even though two is likely sufficient for the rest of Karazhan).</p>
+<p><h3>Magtheridon&#39;s Lair</h3>
+</em>This raid is completable with IP module nerfs. Strategies were written/tested with (1) bot damage and healing each reduced to 50% of normal strength, and (2) HP of all raid mobs restored to Patch 2.4.3 levels (i.e., reverting the global 30% nerf to HP of TBC raid mobs from Patch 3.0.2).</p>
+<p><strong>Magtheridon</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+</em> Coded Strategies: The strategy is designed for a raid with three traditional tanks, but having that many is not critical.
+  <em> During phase one, the main tank (determined by setting the client-side main tank flag) will tank three of the Hellfire Channelers, and the second and third off tanks will each tank one Channeler, dragging them away from the raid out of Shadow Bot Volley range. DPS bots will prioritize Channelers by RTI marks (in order, Square, Star, Circle, Diamond, and Triangle).
+  </em> Also during phase one, Warlocks will be assigned to Banish the Burning Abyssals (and Fear any in excess of the number of Warlocks in the raid).
+  <em> After the first three Channelers are down, the main tank will wait in the center of the room to pick up Magtheridon while the remainder of the raid finishes the final two Channelers. When Magtheridon is released, the main tank will pull him to the Northern point of the room. DPS bots will wait a few seconds before attacking Magtheridon to prevent them from pulling aggro while the tank gets positioned.
+  </em> To handle the Manticron Cubes, one ranged DPS bot (excluding Warlocks) will be assigned to click each Cube. Warlocks are excluded for Cube assignments so they can keep residual Abyssals crowd controlled and focus their high DPS on the boss. However, the strategy will automatically reassign a Cube clicker if the previously assigned bot dies, and if there are not five living non-Warlock ranged DPS alive, then any living non-tank bot can be selected.
+  <em> Magtheridon will cast Blast Nova approximately every 55 seconds. About 6 seconds before the cast, each bot that is assigned to a Cube will move to their Cube and wait in position a short distance away. They will move in to use the Cube as soon as the Blast Nova cast begins. Once Blast Nova is interrupted, they will return to the fight and will repeat the cycle until the boss is down.
+</em> Tips &amp; Tricks: 
+  <em> During the brief lull between the final Channeler dying and Magtheridon becoming released, bots will be idle and follow their player master. The player should make sure not to lead the bots in front of Magtheridon at this time, or the bots may be killed immediately when Magtheridon is released.  
+  </em> It is helpful (though not required) for Warriors and/or Druids to tank the fourth and fifth Channelers because they will be able to keep the Channelers consistently interrupted (particularly their Dark Mending heals).  
+  <em> You may want to have bots manually pause DPS before Magtheridon reaches 30% HP if his Blast Nova cast is imminent, and wait for the Blast Nova to be interrupted before taking him to 30% HP. Otherwise, the combination of the ceiling collapsing at 30%, followed by an immediate Blast Nova with the raid stunned, can cause a wipe.  </p>
+<p><h3>Gruul’s Lair</h3>
+</em>This raid is completable with IP nerfs. Strategies were written/tested with (1) bot damage and healing each reduced to 50% of normal strength, and (2) HP of all raid mobs restored to Patch 2.4.3 levels (i.e., reverting the global 30% nerf to HP of TBC raid mobs from Patch 3.0.2).</p>
+<p><strong>High King Maulgar</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+</em> Coded Strategies: The strategy is designed for a raid with three traditional tanks, a Mage tank with 9000+ buffed max HP, and a Moonkin Druid tank (special gearing not necessary).
+  <em> The main tank (determined by setting the client-side main tank flag) will tank Maulgar. The other two traditional tanks will tank Olm and Blindeye. The Mage tank (which the strategy selects as the Mage bot in the raid with the highest max HP) will tank Krosh by Spellstealing Krosh’s Spell Shield. The Moonkin tank (Moonkin bot in the raid with the highest max HP) will tank Kiggler, but it is not truly necessary, and the fight can be completed with no Moonkin Druid in the raid.
+  </em> Ranged DPS will prioritize targets in the following order: Blindeye, Olm, Krosh, Kiggler, Maulgar
+  <em> Melee DPS will prioritize targets in the following order: Blindeye, Olm, Kiggler, Maulgar
+</em> Tips &amp; Tricks: 
+  <em> Pull the boss head-on and send your traditional tanks in to start the encounter.
+  </em> All tanks (except the Moonkin tank) have designated spots in the room—be careful not to stand too close to Krosh.
+  <em> If playing with IP nerfs, the fight will likely be difficult without a Mage tank with sufficient HP not to get one-shot by Krosh. At pre-raid gear levels, achieving enough HP will likely require some intentional stacking of stamina gear and/or enchants.</p>
+<p><strong>Gruul the Dragonkiller</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: Two tanks are needed, a main tank and an offtank to absorb Hurtful Strike.
+The main tank will attempt to keep Gruul in the center of the room, and ranged bots will spread in a circle around the center point.
+Bots will attempt to spread out as much as possible after Ground Slam is used in advance of Shatter. 
+</em> Tips &amp; Tricks: In appropriate gear levels, the bots are likely to start dying to Shatter before 10 stacks of Growth, as they do not spread as well as coordinated players. This should be plenty of time to kill Gruul with IP nerfs and pre-raid gear (not even pre-raid BiS needed), but if you are struggling to get the kill before then, you may need to farm more gear or better optimize the composition of your raid.</p>
+<p><h3>Serpentshrine Cavern</h3>
+<em>This raid is completable with suggested IP nerfs. Strategies were written/tested with (1) bot damage and healing each reduced to 50% of normal strength, and (2) HP of all raid mobs restored to Patch 2.4.3 levels (i.e., reverting the global 30% nerf to HP of TBC raid mobs from Patch 3.0.2).</p>
+<p><strong>Trash Mobs</strong>
+</em> Greyheart Tidecaller: Bots will mark and destroy Water Elemental Totems immediately.
+<em> Underbog Colossus: Some Colossi leave behind a lake of toxin when they die that quickly kills any player that is standing in it. Bots will run out of the toxin, even when out of combat.</p>
+<p><strong>Hydross the Unstable</strong>
+</em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: 
+  </em> Two tanks are needed. The main tank will tank the frost phase, and the first assist tank will tank the nature phase. Any additional tanks will be responsible for picking up adds.
+  <em> The main tank will tank Hydross until Mark of Hydross reaches 100%. At that point, the main tank will cross the invisible barrier to transition Hydross into nature phase, and the first assist tank will pick up Hydross. When Mark of Corruption reaches 100%, the first assist tank will cross the invisible barrier to transition Hydross into frost phase, and the main tank will pick Hydross up again. This repeats for the duration of the fight.
+  </em> Bots will stop DPS after Marks reach 100% and will not resume until 5 seconds after Hydross transitions.
+  <em> Hunters will Misdirect Hydross to the applicable tank upon the pull and after each phase change.
+  </em> DPS will prioritize adds that spawn upon phase transitions.
+  <em> Ranged will spread during the frost phase to mitigate the impact of Water Tomb.
+</em> Tips &amp; Tricks: 
+  <em> Have at least one Paladin/Shaman switch to Frost Resistance Aura/Frost Resistance Totem, and at least one Hunter switch to Aspect of the Wild.
+  </em> Frost/nature resist gear for tanks is helpful if you are playing with IP nerfs, particularly if your gear is poor. Consider using the crafted three-piece plate sets from Violet Eye (frost) and Cenarion Expedition (nature).
+  <em> The best way to pull the boss is the same way as in retail. Kill all the Tainted Water Elementals and then approach Hydross from the side, hugging the wall. Then command your main tank to attack to start the fight. This ensures that Hydross does not transition into his nature phase immediately upon the pull.</p>
+<p><strong>The Lurker Below</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: 
+  </em> The main tank has a designated tanking spot in front of a column due to Lurker using multiple knockbacks.
+  <em> Ranged bots spread in an arc directly across from the main tank.
+  </em> When Lurker casts Spout, all bots will run around behind Lurker for the duration of the cast.
+  <em> When Lurker submerges, if you have at least three tanks, the first three will each pick up one of the Coilfang Guardians.
+</em> Tips &amp; Tricks: 
+  <em> If you have bot fishing enabled in the config, bots that have the fishing skill will join you in attempting to catch Lurker. If you allow the bots to fish, then as soon as Lurker spawns, you need to command the bots to “equip upgrade” because they will not automatically switch from their fishing poles. You may need to issue the command multiple times because sometimes bots will not equip their offhand/shield after the first command.</p>
+<p><strong>Leotheras the Blind</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: 
+  </em> Upon the pull, bots will mark and kill Greyheart Spellbinders. They will not waste Bloodlust/Heroism before the boss activates.
+  <em> During Phase 1, ranged bots will attempt to keep their distance from Leotheras in preparation for Whirlwind. When he channels Whirlwind, all bots but tanks will run away until the channel is finished.
+  </em> During Phase 2, Leotheras will be tanked by a Warlock who will spam Searing Pain. You can select the Warlock tank by using the assistant flag. All other bots will move away from the Warlock tank. There is a 12-second pause on DPS upon the phase transition because the Warlock tank will need some time to build aggro.
+  <em> Hunters will Misdirect Leotheras in Phase 2 (and Shadow of Leotheras in Phase 3) to the Warlock tank.
+  </em> If a melee bot acquires five or more stacks of Chaos Blast (either because melee pulls aggro or you do not have a living Warlock), the bot will run out of melee range (unless it is tanking Leotheras at the time).
+  <em> When Inner Demons spawn, affected bots will direct all DPS to their Inner Demon. For healers and Feral Druid tanks, specific ability sequences are coded because their normal strategies are not sufficient to kill their Inner Demons. For example, Resto Druids will shift out of Tree Form, cast Barkskin, and then spam Wrath.
+  </em> In Phase 3, bots will focus all DPS on Leotheras, while the Warlock tank picks up the Shadow of Leotheras. Melee tanks will move Leotheras away from the Warlock tank so melee does not get hit by Chaos Blast.
+<em> Tips &amp; Tricks: 
+  </em> Have at least one Paladin/Shaman switch to Fire Resistance Aura/Fire Resistance Totem. Fire resistance gear for your Warlock tank is not required but is recommended. Surviving Chaos Blast is based on luck, and your odds go up with more fire resistance. Consider using the Infernoweave pieces that can be purchased with Badges of Justice.</p>
+<p><strong>Fathom-Lord Karathress</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+</em> Coded Strategies: 
+  <em> The strategy uses four tanks. The main tank will tank Karathress. The first through third assistant tanks will tank, in order, Caribdis, Sharkkis, and Tidalvess.
+  </em> The boss and three adds each have a designated tanking position, and their respective tanks will pull them to those positions at the beginning of the fight. Karathress is tanked near his starting position. Caribdis is pulled far to the West near the corner. Sharkkis is pulled North to the other side of the ramp. Tidalvess is pulled Northwest toward the pillar.
+  <em> Carbidis has a dedicated healer who can be set with the assistant flag.
+  </em> Hunters will Misdirect upon the pull. Misdirect priority is the Caribdis tank, Tidalvess tank, then Sharkkis tank. There is a delay of 12 seconds for the tanks to pick up their respective targets and move them to the designated positions.
+  <em> Melee DPS will prioritize targets as follows: Spitfire Totems, Tidalvess, Sharkkis, Sharkkis’s pet, and Karathress. Ranged DPS will prioritize targets as follows: Tidalvess, Caribdis, Sharkkis, Sharkkiss’s pet, and Karathress.
+</em> Tips &amp; Tricks: 
+  <em> One effective way to pull is to stand North from Karathress, across the ramp, and send all four tanks in from there.</p>
+<p><strong>Morogrim Tidewalker</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: 
+  </em> Hunters will Misdirect the boss to the main tank upon the pull.
+  <em> The main tank will tank Tidewalker with its back against the Northeast pillar. When Tidewalker reaches 26%, in anticipation of Phase 2 (starting at 25%), the main tank will move around the pillar into the Northeast corner to ensure the greatest possible travel distance for the Water Globules.
+  </em> When Tidewalker reaches 25%, ranged will also move around the pillar and stack up with melee in the corner.
+  <em> Shamans will wait until Murlocs spawn before using Bloodlust/Heroism.
+  </em> Note that there are no coded strategies for dealing with the Murlocs or Watery Graves because bots already deal with them fairly well with their ordinary strategies.
+<em> Tips &amp; Tricks: None </p>
+<p><strong>Lady Vashj</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed, but raid cheats must be enabled in the config.
+<em> Coded Strategies for Phase 1: 
+  </em> Bots will not use Bloodlust/Heroism (delayed until Phase 3).
+  <em> The main tank will move Vashj to the center of the platform. Ranged bots will fan out in an arc to allow for escape from Static Shock.
+  </em> Any Shaman in the main tank’s group will place a Grounding Totem in range of the main tank to absorb Shock Burst.
+  <em> Bots with Static Shock (excluding the main tank) will move away from other bots and stay away until the aura is removed. If the main tank has Static Shock, other bots will move away from the main tank.
+  </em> If a melee bot is Entangled with Static Shock, a Paladin will assist if possible with Hand of Freedom.
+<em> Coded Strategies for Phase 2 (Dealing with Adds): 
+  </em> Phase 2 uses a custom target priority system for bots. Melee DPS will prioritize Enchanted Elementals, then Coilfang Elites. Hunters and Mages will prioritize Enchanted Elementals, Coilfang Striders, then Elites. Other ranged DPS will prioritize Striders, Elites, then Enchanted Elementals. The highest priority Enchanted Elemental at any given time is the one that is closest to Vashj.
+  <em> Tanks generally prioritize Elites. However, if you have raid cheats enabled, tanks will be immune to fear during Phase 2. This allows them to tank Striders, and the first assist tank will then prioritize Striders and move them away from other bots. The standard strategy for real players is to kite the Striders, but bots cannot kite, and therefore the cheat is needed to keep Striders under control. Note that it is actually possible to tank Striders (and melee DPS them) in retail by wearing a Gordok Ogre Suit to extend your combat reach and standing at the very edge of melee range. If you decide not to use the cheat, bots will try to keep Striders slowed with Frost Shock, Curse of Exhaustion, and Slow.
+  </em> For several reasons, it is not possible to replicate a real player strategy for killing Tainted Elementals, which would require the assignment of different groups to different sections of the stairs. Thus, enabling raid cheats will result in a melee DPS bot being assigned as the “designated core looter.” When a Tainted Elemental spawns, the looter will teleport to it and attack it. While fighting the Tainted Elemental, the looter will be given infinite HP recovery since there will be no healer present. After killing the Tainted Elemental, the looter will loot the Tainted Core and begin the passing sequence described below.
+<em> Coded Strategies for Phase 2 (Passing the Core):  
+  </em> The sequence from looting the Core and using it on a generator requires at least three and up to five players, depending on how far away the nearest generator is from the Tainted Elemental. In addition to the designated looter, four bots will be assigned as core passers. The first three passers are healers, and the final passer (who will rarely be needed) is a ranged DPS. The specific roles can be assigned with the assistant flag. In practice, the simplest method is to put the assistant flag on one healer, who will be the first passer who runs to the top of the stairs to receive the Core from the looter. This healer should be your worst healer. You can also give your worst ranged DPS the assistant flag to be the fourth passer if you want. It is not that important which healers are assigned as the second and third passers as healing is simply not very important during Phase 2.
+  <em> When the Tainted Elemental spawns, the first passer will run to the top of the stairs between the looter and the nearest generator to the Tainted Elemental, and the second passer will run to the generator (or as close to it as possible while remaining in passing range of the first passer, if the generator is too far away). The looter will throw the Core to the first passer, who will throw the core to the second passer, who will then use the Core on the generator if close enough. If the generator is too far away for the second passer to shut down, the third passer will move to the generator (or as close as possible while remaining in range of the second passer). Finally, if the third passer is not close enough to use the Core on the generator, the fourth passer will then move to the generator and receive and use the Core.
+  </em> While the Core passing sequence is active, the passer bots are given immunity to fear. This is needed because bots cannot be rooted. The coded strategies force them to stay in place while holding the Core to simulate the rooting mechanic, but if a bot holding the Core is feared, it will run around (instead of being feared in place like should be the case). Without immunity, the bot would then end up out of position but unable to return to position, thus causing a softlock in the passing sequence.
+<em> Coded Strategies for Phase 3: 
+  </em> Bots will first clean up adds before moving to Vashj. The exception is Hunters, which will always prioritize killing Toxic Sporebats (switching to Vashj if there are no Sporebats up).
+  <em> The main tank will attempt to keep Vashj away from Enchanted Elementals.
+  </em> Bots will avoid Toxic Pools, and the main tank will move Vashj out of them.
+  <em> Any Shaman in the main tank’s group will place a Grounding Totem in range of the main tank to absorb Shock Burst.
+  </em> Bots with Static Shock (excluding the main tank) will move away from other bots and stay away until the aura is removed. If the main tank has Static Shock, other bots will move away from the main tank.
+  <em> If a melee bot is Entangled with Static Shock or in a Toxic Pool, a Paladin will assist if possible with Hand of Freedom.
+</em> Tips &amp; Tricks: 
+  <em> Playing DPS is by far the most impactful role for a player in this fight. Phase 2 is dynamic and unpredictable, and while bots do quite well, they are nowhere near the level of a good player with respect to such a situation. By playing DPS, players can fill a backup role and assist wherever more support is needed for adds as they spawn.
+  </em> It is rare but possible for the Tainted Elemental to spawn in a location where the nearest generator is behind some terrain that results in Core passers being out of LoS of each other. If that happens, command the bots to destroy the Core to reset them for the next Tainted Elemental.
+  <em> It is also possible for bots to get stuck inside of the generators, which causes them to be trapped out of LoS of the rest of the raid. This issue is not caused by the coded strategy, and the only solution is to summon the trapped bot.
+  </em> If you want an added challenge, don’t bring any Hunters so that Sporebats will not be killed during Phase 3. In TBC Classic, the Sporebats have greatly increased HP to the point that it is not practical  to kill them. That makes Phase 3 a very tight DPS race to try to burn down Vashj before the entire platform is covered with Spores. With IP nerfs and appropriate gear, it can be an extremely fun experience to replicate.</p>
+<p><h3>Tempest Keep – The Eye</h3>
+<em>This raid is completable with suggested IP nerfs. Strategies were written/tested with (1) bot damage and healing each reduced to 50% of normal strength, and (2) HP of all raid mobs restored to Patch 2.4.3 levels (i.e., reverting the global 30% nerf to HP of TBC raid mobs from Patch 3.0.2).</p>
+<p><strong>Trash Mobs</strong></p>
+<p></em> Crimson Hand Centurion: Mages will spam Polymorph when Arcane Flurry is being channeled in order to interrupt the spell.</p>
+<p><strong>Al’ar</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed, but proper pre-pull positioning is important (see Tips &amp; Tricks below).
+</em> Coded Strategies for Phase 1: 
+  <em> The main tank and first assist tank will rotate platforms to tank the boss. The main tank will start at the West platform to pick up Al’ar on the pull, and the first assist tank will start at the Northwest platform. When Al’ar moves to the Northwest platform, the main tank will move to the Northeast platform, and so on, to ensure there is always a tank at the next platform ready for the boss.
+  </em> Melee dps will follow Al’ar from platform-to-platform. Ranged dps and healers will also follow Al’ar but from below.
+The second assist tank will pick up Embers of Al’ar, which will be prioritized by ranged DPS.
+  <em> When Al’ar starts the Flame Quills sequence, melee will jump down. The main tank will wait at the bottom of the West ramp, and the first assist tank will wait at the bottom of the East ramp, for Al’ar to land (which is random and can be either the West or East platform). Ranged will wait in the center of the room, and melee DPS will wait near the room’s entrance, until Al’ar picks a platform.
+  </em> When Al’ar dies, all bots will move to and wait near the center of the room for Al’ar to respawn.
+<em> Coded Strategies for Phase 2:
+  </em> The main tank will pick up Al’ar, but when Melt Armor is applied, the first assist tank will take over. The tanks will swap back and forth throughout the phase as the debuff is applied.
+  <em> The second assist tank and whichever of the main tank or first assist tank that is not tanking Al’ar will together pick up Embers of Al’ar for ranged DPS to focus down.
+  </em> Bots will avoid Flame Patches and also will spread out during the Dive Bomb sequence.
+<em> Tips &amp; Tricks: 
+  </em> Al’ar always starts the fight by landing on the West platform (right at the top of the ramp). The best way to pull is to have all ranged bots and your third tank stay below the West platform with “nc +stay” (NOT the “stay” command), and then pull at the West platform with melee DPS and your first two tanks following you.
+  <em> It is best to use a Warrior or Druid for the main tank and first assist tank. This is because they can charge to get to Al’ar faster after Flame Quills to limit the stacking of Flame Buffet.</p>
+<p><strong>Void Reaver</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+<em> Coded Strategies: 
+  </em> Ranged bots will start the fight by spreading in a circle around the boss. After the initial spread, they will run to avoid Arcane Orbs, staying at range to keep the Orbs from hitting melee.
+  <em> The tanks will fight for aggro and try to keep the boss in the middle of the room.
+  </em> Bots that have abilities that drop aggro (such as Warlocks and Hunters) will use them immediately when targeted by Void Reaver.
+<em>Tips &amp; Tricks: 
+  </em> At least three tanks are recommended to ensure that the boss is always aggroed on a tank.</p>
+<p><strong>High Astromancer Solarian</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed.
+</em> Coded Strategies: 
+  <em> Ranged bots will stack at a distance from the boss.
+  </em> All bots will run away from players/bots when targeted with Wrath of the Astromancer.
+  <em> When the boss disappears, all bots will stack and wait for the Solarium Agents to spawn.
+  </em> When Solarian reappears, melee will split into two groups and each target one of the Solarium Priests.
+  <em> Priest bots will cast Fear Ward on the main tank in phase 2.
+</em> Tips &amp; Tricks: 
+  <em> None.</p>
+<p><strong>Kael’thas Sunstrider</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, no manual control or command of bots needed, but moving to proper positions with bots between advisors and phases helps greatly (see Tips &amp; Tricks below).
+<em> Coded Strategies for Phase 1:
+  </em> Thaladred: The fixated bot will attempt to “kite” Thaladred, but this is done by simply moving away from him in a straight line.
+  <em> Sanguinar: The main tank will tank Sanguinar and move him up against the West wall. Priest bots will cast Fear Ward on the tank. DPS will wait 12 seconds before attacking.
+  </em> Capernian: A Warlock tank will pick up the boss by spamming Searing Pain. The specific Warlock can be selected with the assistant flag. Ranged bots will spread in an arc at distance from Capernian, and ranged DPS will wait 12 seconds before attacking. The main tank will stand near Capernian to try to bait Conflagrations, but all other melee will stay far away and not engage.
+  <em> Telonicus: The first assist tank will tank Telonicus and move him up against the West wall near Sanguinar’s position. DPS will wait 12 seconds before attacking.
+</em> Coded Strategies for Phase 2:
+  <em> The main tank will tank the Axe and keep it away from the group, and assist tanks will try to tank all of the other legendary weapons.
+  </em> Bots will generally use their default AoE attack strategies, but for single targeting, they will focus down the legendary weapons in the following order: Staff, Mace, Sword, Dagger, Axe (ranged only), Bow, Shield.
+  <em> Bots will loot and equip weapons based on spec—for specifics on which specs will equip which weapons, see the RaidTempestKeep.cpp file.
+  </em> Hunters will use the Bow to create and equip the legendary Arrows, and wielders of the Staff will use it to activate its protective aura.
+  <em> From this point on, if bots die, they will lose equipped legendary weapons and will not automatically reequip. They can be made to reequip by commanding them to “equip weapon.” Otherwise, they automatically call “equip upgrade” when within 150 yards of Kael’thas to ensure that they are equipped for the encounter.
+</em> Coded Strategies for Phase 3:
+  <em> When the advisors respawn but before they reactivate, the main tank, first assist tank, and Warlock tank will move to designated positions to get ready to pick up their assigned targets. A healer will follow them. All other bots will follow the player until the advisors reactivate (assuming the player is not filling one of the above roles).
+  </em> Bots will first kill Thaladred. Then, melee and one Hunter will move to Sanguinar (Hunter to apply the debuff from the legendary Bow). Ranged will target Capernian instead and then help with Sanguinar before all bots finish Telonicus.
+<em> Coded Strategies for Phase 4:
+  </em> The main tank will pick up Kael’thas and move him back to his starting position. Other tanks will pick up Phoenixes and try to keep them away from the raid.
+  <em> DPS will not attack Phoenixes but will attack Phoenix Eggs.
+  </em> All bots will move out of Flame Strikes.
+  <em> When Kael’thas casts Mind Control, bots that have the legendary Dagger equipped (Rogues, Hunters, Enhancement Shamans, and Fury Warriors) will attack mind-controlled bots to break the MC.
+  </em> When Kael’thas puts up Shock Barrier, all bots will focus DPS to break the barrier and interrupt the Pyroblast. The main tank will use the legendary Shield’s ability so that if the bots fail to break the barrier in time, the tank can survive the first Pyroblast.
+<em> Coded Strategies for Phase 5:
+  </em> Bots will spread out after Gravity Lapse is cast. Note that gravity mechanics do not work properly on bots. They will fall toward the ground immediately, and some of them will go back to standing, while others will remain floating but just above the ground. Unfortunately, bots that are floating are unable to attack or cast spells, which can be a problem if your healers end up floating. They may even be unable to return to the ground after Gravity Lapse ends. These are issues with bots generally and cannot be solved by this strategy.
+<em> Tips &amp; Tricks: 
+  </em> While the positions for Sanguinar and Telonicus are fixed, they are not for Capernian and Thaladred. It is best for Capernian to die in phase 1 near her starting position; to allow that, you will want the raid to be in front of her, about 30 yards away, when she activates. It is best for Thaladred to die far South in the room away from the other advisors. To allow this, have bots stay a distance away from him to the South when the fight starts and reactivate follow when he gets farther South. How far you want to wait depends on your raid’s DPS. If you do this, make sure to message “follow” to the raid again after he dies, or the last bot to get fixated will stay where it was when Thaladred died.
+  <em> Before phase 3, if you are not tanking (in which case you’ll need to stay near Sanguinar/Telonicus before they reactivate), you can lead the bots to near Thaladred since he will be the first target (and preferably not North of him to avoid him immediately heading back toward the other advisors).
+  </em> The best tank combination is Paladin or Warrior main tank (so they can equip the Shield to absorb Pyroblast if needed) and Druid first assist tank (so it can equip the Staff to protect itself and the main tank in phase 3).
+  <em> It is helpful for Shamans to have co +tremor enabled for at least phase 1 and 3 because Sanguinar fears.</p>
+<p><h2>Wrath of the Lich King</h2></p>
+<p><h3>Naxxramas</h3>
+NOTE: STRATS ARE TEMPORARILY DISABLED</p>
+<p><strong>Anub&#39;Rekhan</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, with coded strategies, with some manual control recommended.
+<em> Coded Strategies: ??
+</em> Tips &amp; Tricks: For better ranged bot positioning use <code>/ra @ranged disperse set 20</code> to avoid <a href="https://wowgaming.altervista.org/aowow/?spell=28783">Impale</a>.</p>
+<p><strong>Grand Widow Faerlina</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, with no coded strategies or manual control needed.
+</em> Coded Strategies: None
+<em> Tips &amp; Tricks: Focus all damage on boss using skull mark. Adds will die from aoe.</p>
+<p><strong>Maexxna</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, with with some manual control needed.
+<em> Coded Strategies: None
+</em> Tips &amp; Tricks: To command bot to free from <a href="https://wowgaming.altervista.org/aowow/?spell=28622">Web Wrap</a> use <a href="https://github.com/liyunfan1223/mod-playerbots/wiki/Playerbot-Macro-Collection#targeting-predefinied-creature">targeting macro</a>. Use <a href="https://github.com/liyunfan1223/mod-playerbots/wiki/Playerbot-Macro-Collection#bloodlustheroism">bloodlust/heroism macro</a> to focus damage when boss reach 30% HP and use <a href="https://wowgaming.altervista.org/aowow/?spell=28747">Frenzy</a></p>
+<p><strong>Patchwerk</strong></p>
+<p><em> Defeatable Solo with Bots: Yes, with with some manual control needed.
+</em> Coded Strategies: None
+<em> Tips &amp; Tricks: Melee bots will be targeted by <a href="https://wowgaming.altervista.org/aowow/?spell=41926">Hateful Strike</a> then take more tanks or ranged. Use <a href="https://github.com/liyunfan1223/mod-playerbots/wiki/Playerbot-Macro-Collection#bloodlustheroism">bloodlust/heroism macro</a> to focus damage when boss reach 5% HP and use <a href="https://wowgaming.altervista.org/aowow/?spell=28131">Frenzy</a></p>
+<p><h3>Vault of Archavon</h3>
+To set proper faction which controls Wintergrasp use commands \
+<code>.bf switch 1</code> \
+<code>.bf timer 1 0h00m01s</code></p>
+<p><strong>Koralon the Flame Watcher</strong></p>
+<p></em> Defeatable Solo with Bots: Yes, with coded strategies, with some manual control recommended.
+<em> Coded Strategies: 
+    </em> auto apply fire resistance aura
+* Tips &amp; Tricks: For better ranged bot positioning use <code>/ra @ranged disperse set 6</code> to avoid <a href="https://wowgaming.altervista.org/aowow/?spell=66684">Flaming Cinder</a>.</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

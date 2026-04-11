@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>how-to-use-gperftool.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>how-to-use-gperftool.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/how-to-use-gperftool.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2015 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Cómo usar GPERFTool</h1></p>
+<p>AzerothCore integra la biblioteca de herramientas de rendimiento de Google que le permite analizar la ejecución del código de su aplicación en lo que respecta a la CPU y la memoria.
+En resumen: thread-friendly heap-checker, heap-profiler, y cpu-profiler.</p>
+<p><em> <a href="https://github.com/gperftools/gperftools#readme">Repositorio</a>
+</em> <a href="https://gperftools.github.io/gperftools/">Documentación</a></p>
+<p><h2>Instalar  (Ubuntu):</h2></p>
+<p>Ejecutar en una terminal: <code>sudo apt-get install google-perftools libgoogle-perftools-dev</code></p>
+<p>Nota: las dependencias anteriores ya están instaladas en nuestro archivo docker</p>
+<p><h2> Usando (con el tablero AzerothCore):</h2></p>
+<p>1. Para habilitar gperftools debe compilar con el indicador del compilador <code>-DWITH_PERFTOOLS=ON -DNOJEM=ON -DWITH_DYNAMIC_LINKING=0</code>. Puede usar CUSTOMOPTIONS en <code>config.sh</code> para configurarlo para el compilador del tablero. También debe establecer la configuración de <code>CTYPE</code> en al menos <code>RelWithDebInfo</code> (más rápido pero con menos información) o <code>Debug</code> (más lento pero con más información).
+2. Configure las variables dentro de  <code>config.sh</code>, en la sección <code> GOOGLE PERF TOOLS</code> según sus necesidades
+3. Ejecute el  worldserver con <code>sudo ./acore.sh run-worldserver</code>
+4. Ejecute <code>sudo killall -12 worldserver</code> Este comando iniciará el proceso de monitoreo.
+5. Ejecute <code>sudo killall -12 worldserver</code> nuevamente para detener el proceso cuando lo desee. En este momento tendrás listo el archivo .prof en la carpeta configurada a continuación.
+6. Ejecute <code>google-pprof --callgrind &lt;path/of/worldserver/bin&gt; &lt;/path/of/prof/file&gt; &gt; worldserver.callgrind</code> Esto generará un archivo callgrind que se puede leer con
+<a href="https://sourceforge.net/projects/qcachegrindwin/">QCacheGrind</a>, <a href="http://kcachegrind.sourceforge.net/html/Home.html">KCacheGrind</a> o cualquier otra herramienta compatible.</p>
+<p>Esto es lo que verá (captura de pantalla de KCacheGrind):</p>
+<p>!<a href="https://user-images.githubusercontent.com/147092/117697104-615a1f00-b1c2-11eb-8599-f5893a04de0c.png">kcachegrind</a>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

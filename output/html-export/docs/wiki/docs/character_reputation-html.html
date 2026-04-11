@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>character_reputation.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>character_reputation.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/character_reputation.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2570 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>character\_reputation</h1></p>
+<p><a href="database-characters">&lt;-Back-to:Characters</a></p>
+<p><strong>The \<code>character\_reputation\</code> table</strong></p>
+<p>This table holds the reputation information for each character.</p>
+<p><strong>Table Structure</strong></p>
+<p>| Field         | Type        | Attributes | Key | Null | Default | Extra | Comment                  |
+| ------------- | ----------- | ---------- | --- | ---- | ------- | ----- | ------------------------ |
+| [guid][1]     | INT         | UNSIGNED   | PRI | NO   | 0       |       | Global Unique Identifier |
+| [faction][2]  | SMALLINT    | UNSIGNED   | PRI | NO   | 0       |       |                          |
+| [standing][3] | INT         | SIGNED     |     | NO   | 0       |       |                          |
+| [flags][4]    | SMALLINT    | UNSIGNED   |     | NO   | 0       |       |                          |</p>
+<p>[1]: #guid
+[2]: #faction
+[3]: #standing
+[4]: #flags</p>
+<p><strong>Description of the fields</strong></p>
+<p><h3>guid</h3></p>
+<p>The character guid. See <a href="characters#guid">characters.guid</a>.</p>
+<p><h3>faction</h3></p>
+<p>The faction ID that the character has the given reputation in. See <a href="faction">Faction.dbc</a>.</p>
+<p><h3>standing</h3></p>
+<p>The current reputation value that the character has.</p>
+<p><h3>flags</h3></p>
+<p>This field is a bitmask containing flags that apply to the faction and how it&#39;s displayed to the character. Just like any flag field, you can combine flags by adding them together. If this field is 0, then it is not shown in the reputation list in-game.</p>
+<p>| Flag | Name                          | Comments                                                                 |
+|----- | ----------------------------- | ------------------------------------------------------------------------ |
+| 1    | FACTION_FLAG_VISIBLE          | Displayed in the reputation tab                                          |
+| 2    | FACTION_FLAG_AT_WAR           | Active when the player sets the at war checkbox                          |
+| 4    | FACTION_FLAG_HIDDEN           | Hidden faction from reputation pane in client                            |
+| 8    | FACTION_FLAG_INVISIBLE_FORCED | Always overwrites FACTION_FLAG_VISIBLE and hide faction in rep.list      |
+| 16   | FACTION_FLAG_PEACE_FORCED     | Always overwrites FACTION_FLAG_AT_WAR                                    |
+| 32   | FACTION_FLAG_INACTIVE         |                                                                          |
+| 64   | FACTION_FLAG_RIVAL            | Flag for the two competing outland factions                              |
+| 128  | FACTION_FLAG_SPECIAL          | Horde and alliance home cities and their northrend allies have this flag |
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

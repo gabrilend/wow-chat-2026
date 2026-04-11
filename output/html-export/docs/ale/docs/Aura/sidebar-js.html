@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sidebar.js - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>sidebar.js</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/ale/docs/Aura/sidebar.js
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> js &nbsp;&nbsp;
+            <strong>Size:</strong> 1067 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>document.write(`
+  &lt;a id=&quot;Aura:GetAuraId&quot; class=&quot;fn&quot; href=&quot;../Aura/GetAuraId.html&quot;&gt;GetAuraId&lt;/a&gt;
+  &lt;a id=&quot;Aura:GetCaster&quot; class=&quot;fn&quot; href=&quot;../Aura/GetCaster.html&quot;&gt;GetCaster&lt;/a&gt;
+  &lt;a id=&quot;Aura:GetCasterGUID&quot; class=&quot;fn&quot; href=&quot;../Aura/GetCasterGUID.html&quot;&gt;GetCasterGUID&lt;/a&gt;
+  &lt;a id=&quot;Aura:GetCasterLevel&quot; class=&quot;fn&quot; href=&quot;../Aura/GetCasterLevel.html&quot;&gt;GetCasterLevel&lt;/a&gt;
+  &lt;a id=&quot;Aura:GetDuration&quot; class=&quot;fn&quot; href=&quot;../Aura/GetDuration.html&quot;&gt;GetDuration&lt;/a&gt;
+  &lt;a id=&quot;Aura:GetMaxDuration&quot; class=&quot;fn&quot; href=&quot;../Aura/GetMaxDuration.html&quot;&gt;GetMaxDuration&lt;/a&gt;
+  &lt;a id=&quot;Aura:GetOwner&quot; class=&quot;fn&quot; href=&quot;../Aura/GetOwner.html&quot;&gt;GetOwner&lt;/a&gt;
+  &lt;a id=&quot;Aura:GetStackAmount&quot; class=&quot;fn&quot; href=&quot;../Aura/GetStackAmount.html&quot;&gt;GetStackAmount&lt;/a&gt;
+  &lt;a id=&quot;Aura:Remove&quot; class=&quot;fn&quot; href=&quot;../Aura/Remove.html&quot;&gt;Remove&lt;/a&gt;
+  &lt;a id=&quot;Aura:SetDuration&quot; class=&quot;fn&quot; href=&quot;../Aura/SetDuration.html&quot;&gt;SetDuration&lt;/a&gt;
+  &lt;a id=&quot;Aura:SetMaxDuration&quot; class=&quot;fn&quot; href=&quot;../Aura/SetMaxDuration.html&quot;&gt;SetMaxDuration&lt;/a&gt;
+  &lt;a id=&quot;Aura:SetStackAmount&quot; class=&quot;fn&quot; href=&quot;../Aura/SetStackAmount.html&quot;&gt;SetStackAmount&lt;/a&gt;
+`);</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>installation.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>installation.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/installation.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 1486 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+redirect_from: &quot;/Installation&quot;
+---</p>
+<p><h1>Installation Guide</h1></p>
+<p><h2>Choosing a setup</h2></p>
+<p>There are several ways to install AzerothCore, you need to choose <strong>ONE</strong>.</p>
+<p><h3>Install from the source &lt;span class=&quot;badge badge-success&quot;&gt;Recommended&lt;/span&gt;</h3></p>
+<p>This is the officially supported and complete way to install AzerothCore.</p>
+<p>- <a href="classic-installation">AzerothCore Classic Installation</a> - Recommended for Windows, macOS, and Linux.</p>
+<p><h3>Experimental installations &lt;span class=&quot;badge badge-info&quot;&gt;Limited support and usage&lt;/span&gt;</h3></p>
+<p>These guides are for experimental installations and have limited to no support.</p>
+<p>- <a href="ac-dashboard-core-installation">AzerothCore Bash Dashboard setup</a> - the simplest way to install.</p>
+<p>- <a href="install-with-docker">Docker setup</a> - an installation process based on Docker. Previous docker knowledge is recommended.</p>
+<p>- <a href="https://www.azerothcore.org/acore-docker/">Docker pre-compiled setup</a> - a straightforward way of installing AzerothCore. Currently, you can&#39;t install C++ modules, only Eluna scripts. Suitable for bug triaging, bug reporting, or domestic usage.</p>
+<p><h3>Community made &lt;span class=&quot;badge badge-info&quot;&gt;Unsupported&lt;/span&gt;</h3></p>
+<p>Beware these guides are made by community members and might not be up-to-date:</p>
+<p>- <a href="debian12-install-guide">Debian 12</a></p>
+<p>- <a href="aws-tutorial">Amazon Web Services</a></p>
+<p>- <a href="digital-ocean-video-tutorial">Digital Ocean droplet</a></p>
+<p>- <a href="arch-linux">ArchLinux</a></p>
+<p>- <a href="freebsd">FreeBSD</a></p>
+<p>- <a href="vsc-requirements">Visual Studio Code</a></p>
+<p>&lt;br&gt;</p>
+<p><h2>Help</h2></p>
+<p>{% include help.html %}
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

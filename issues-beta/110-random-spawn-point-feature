@@ -1,0 +1,254 @@
+# 110 - Random Spawn Point Feature
+
+**Phase:** 1 (Foundation)
+**Effect:** Characters spawn at random locations, not race-specific starting zones
+**Status:** Open
+
+---
+
+## The Effect
+
+New characters spawn at random points in the world instead of predictable race-specific locations. Each character gets a unique spawn point, creating unpredictability that fits the roguelike survival theme.
+
+No more "Night Elf = Teldrassil, Human = Elwynn." Every character starts somewhere different.
+
+---
+
+## What This Solves
+
+### Current Behavior (Predictable Spawns)
+
+All races spawn at default locations from `playercreateinfo` table:
+- Night Elf → Shadowglen, Teldrassil
+- Human → Northshire, Elwynn Forest
+- Orc → Valley of Trials, Durotar
+- etc.
+
+**Problems:**
+- Predictable starting experience
+- Doesn't fit roguelike theme (randomness, exploration, uncertainty)
+- Players know the area from first spawn
+- No sense of "dropped into unknown world"
+
+### Intended Behavior (Random Spawns)
+
+New characters spawn at random locations from:
+
+**Mode 1 - Waypoint Pool (default):**
+- Pick random waypoint from NPC pathing data
+- Use existing `waypoint_data` or `creature_movement` tables
+- Later: Add custom nodes with faction tags for more control
+
+**Mode 2 - Graveyard Pool (config flag):**
+- Pick random graveyard from `graveyard_zone` table
+- May provide more "safe" spawn points
+- Good for testing or less harsh gameplay
+
+**Per-Character Randomization:**
+- Each new character gets unique spawn point
+- Randomize on creation, not per race/class
+- Store selected spawn or use seed-based selection
+
+---
+
+## Implementation Design
+
+### Lua Script: src/lua/spawn-randomizer.lua
+
+Hook into character creation:
+```lua
+RegisterPlayerEvent(PLAYER_EVENT_ON_CHARACTER_CREATE, function(event, player)
+    -- Query spawn point pool
+    local spawnPoints = getSpawnPointPool()
+
+    -- Select random point
+    local spawn = spawnPoints[math.random(#spawnPoints)]
+
+    -- Validate Z coordinate (ground level)
+    local map = GetMapById(spawn.mapId)
+    local z = map:GetHeight(spawn.x, spawn.y)
+
+    if math.abs(z - spawn.z) > 15 then
+        -- Invalid terrain, try another
+        return retrySpawn(player)
+    end
+
+    -- Teleport to spawn point
+    player:Teleport(spawn.mapId, spawn.x, spawn.y, z, spawn.o)
+end)
+```
+
+### Configuration
+
+Add to `worldserver.conf`:
+```
+WowChat2.SpawnRandomizer.Enable = 1
+WowChat2.SpawnRandomizer.UseGraveyards = 0  # 0 = waypoints, 1 = graveyards
+WowChat2.SpawnRandomizer.MinLevel = 1       # Min level (for future scaling)
+```
+
+### Spawn Point Pools
+
+**Initial Implementation - Waypoint Data:**
+```sql
+-- Query random waypoint
+SELECT point_id, position_x, position_y, position_z, mapid
+FROM waypoint_data
+ORDER BY RAND()
+LIMIT 1;
+```
+
+**Future Enhancement - Custom Spawn Nodes:**
+```sql
+-- Create custom table (future)
+CREATE TABLE wowchat_spawn_nodes (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    mapId INT,
+    x FLOAT,
+    y FLOAT,
+    z FLOAT,
+    o FLOAT,
+    faction ENUM('Alliance', 'Horde', 'Neutral'),
+    level_min INT DEFAULT 1,
+    level_max INT DEFAULT 20
+);
+```
+
+### Edge Cases
+
+**Ground Validation:**
+- Use `map:GetHeight(x, y)` to find ground Z
+- If spawn.z differs by > 15 yards, reject point
+- Prevents spawning in air or underground
+
+**Hostile Area Check:**
+- Later: Query nearby creatures, check for high-level hostiles
+- For now: Trust waypoint data is generally safe
+
+**Death Knights:**
+- May need special handling (skip DK starting zone instance)
+- Or: Disable random spawn for DKs, use normal DK intro
+
+---
+
+## Technical Notes
+
+### ALE API
+
+**Character Creation Hook:**
+```lua
+RegisterPlayerEvent(PLAYER_EVENT_ON_CHARACTER_CREATE, callback)
+```
+
+**Teleport:**
+```lua
+Player:Teleport(mapId, x, y, z, orientation)
+```
+
+### Database Queries
+
+**Waypoint Random Select:**
+```sql
+SELECT * FROM waypoint_data ORDER BY RAND() LIMIT 1;
+```
+
+**Graveyard Random Select:**
+```sql
+SELECT * FROM graveyard_zone ORDER BY RAND() LIMIT 1;
+```
+
+### Future Optimizations
+
+Instead of `ORDER BY RAND()` (slow on large tables):
+```lua
+-- Cache spawn point count at server start
+local spawnPointCount = QueryWorld("SELECT COUNT(*) FROM waypoint_data")[1]
+
+-- Pick random ID
+local randomId = math.random(1, spawnPointCount)
+local spawn = QueryWorld("SELECT * FROM waypoint_data LIMIT 1 OFFSET " .. randomId)[1]
+```
+
+---
+
+## Future Enhancements
+
+### Faction-Tagged Spawns
+
+Custom spawn node table with faction column:
+- Alliance characters → Alliance/Neutral spawn nodes
+- Horde characters → Horde/Neutral spawn nodes
+- Prevents spawning in enemy territory
+
+### Level-Appropriate Zones
+
+Spawn node table with level range:
+- New character (level 1) → level 1-5 zone
+- Death Knight (level 55) → level 50-60 zone
+- Matches starting level to area difficulty
+
+### "Spawn Near Players" Option
+
+For multiplayer sessions:
+- Check for online players
+- Pick spawn point within 500 yards of another player
+- Creates co-op opportunities
+- Config flag: `WowChat2.SpawnRandomizer.NearPlayers = 1`
+
+---
+
+## Why This Matters
+
+**Roguelike Principle: Unpredictability**
+
+Roguelikes thrive on randomness:
+- Random dungeons
+- Random loot
+- Random encounters
+
+Fixed spawn points break this. Random spawns restore it.
+
+**Exploration Over Familiarity**
+
+Fixed spawns: "I know this area, I've been here 100 times."
+Random spawns: "Where am I? What's nearby? I need to explore."
+
+This shifts mindset from **routine** to **discovery**.
+
+**Replayability**
+
+Each new character is a different experience:
+- Character 1: Spawns in Westfall, explores human lands
+- Character 2: Spawns in Darkshore, explores night elf areas
+- Character 3: Spawns in Barrens, explores Horde territory
+
+Same game, different starting point, different journey.
+
+**Survival Theme**
+
+Being "dropped into the world" fits Everland Ghostsong's survival aesthetic:
+- You wake up somewhere unfamiliar
+- Must orient yourself
+- Find resources (ambush monsters, treasure)
+- Survive and explore
+
+Starting in safe, familiar Northshire doesn't convey this. Spawning in random wilderness does.
+
+---
+
+## Related Issues
+
+- 113 - ambush-monsters-not-spawning (spawn system must work first)
+- 127 - contextual-creature-spawns (spawn point affects ambush creature types)
+- 159 - knight-custom-class (custom classes may have custom spawn logic)
+
+---
+
+## Phase 1 Contribution
+
+This issue enhances **Phase 1: Foundation** by ensuring:
+> "The starting experience is unpredictable and exploratory"
+
+It's a foundation feature because it affects **every new character**. Get it working early so all testing benefits from randomized spawns.
+
+This sets the tone for the entire game: roguelike, unpredictable, exploration-focused.

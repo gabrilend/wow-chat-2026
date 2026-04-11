@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>connection-guide.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>connection-guide.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/connection-guide.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 12275 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-07 00:03
+        </div>
+
+        <div class="content">
+            <p><h1>Connection Guide for Players</h1></p>
+<p><h2>TL;DR</h2></p>
+<p>1. <strong>Get the WoW 3.3.5a client</strong> - Search &quot;WoW 3.3.5a client download&quot;</p>
+<p>2. <strong>Install the AIO addon</strong> - Download from https://github.com/Rochet2/AIO/releases
+   and put the <code>AIO_Client</code> folder in <code>World of Warcraft/Interface/AddOns/</code></p>
+<p>3. <strong>Edit your realmlist</strong> - Open <code>realmlist.wtf</code> with Notepad, replace everything with:
+   <pre><code>   set realmlist wow.ritzmenardi.com:4362
+   ``<code></p>
+<p>Launch </code>Wow.exe<code> and play.</p>
+<p>---</p>
+<p><em>Read on for security details and troubleshooting.</em></p>
+<p>---</p>
+<p>Welcome to Everland Ghostsong. This guide walks you through connecting to our
+server. Each step includes security notes so you understand exactly what you&amp;#39;re
+installing and why it&amp;#39;s safe.</p>
+<p>&lt;h2&gt;Overview&lt;/h2&gt;</p>
+<p>Connecting requires three things:</p>
+<p>1. <strong>WoW 3.3.5a Client</strong> - The game itself (read-only game files)
+2. <strong>AIO Addon</strong> - Displays our custom UI elements (display-only)
+3. <strong>Realmlist Change</strong> - Points your client to our server (one text edit)</p>
+<p>None of these can harm your computer. Let&amp;#39;s explain why.</p>
+<p>&lt;h2&gt;Security Model&lt;/h2&gt;</p>
+<p>&lt;h3&gt;The Client is a Viewer&lt;/h3&gt;</p>
+<p>The WoW 3.3.5a client is a <strong>read-only viewer</strong>. It:</p>
+<p>- Reads game data files (maps, textures, sounds)
+- Sends your keyboard/mouse input to the server
+- Displays what the server tells it to display</p>
+<p>The client cannot:</p>
+<p>- Write files outside its own directory
+- Execute programs on your computer
+- Access your documents, photos, or other files
+- Install software or modify your system</p>
+<p>Think of it like a web browser that only speaks one language (WoW protocol).
+It shows you a world, but the world lives on the server.</p>
+<p>&lt;h3&gt;Server Customizations Stay on the Server&lt;/h3&gt;</p>
+<p>Our server has extensive custom mechanics: ambush spawns, AI companions,
+roguelike survival elements. <strong>All of this runs on the server.</strong></p>
+<p>Your client receives the same data packets as any WoW 3.3.5a server would
+send. It sees creatures spawn, items appear, abilities activate - but your
+client doesn&amp;#39;t know these are custom systems. It just renders what it&amp;#39;s told.</p>
+<p>The custom Lua scripts, spawn algorithms, and game logic never touch your
+computer. They exist only on our server hardware.</p>
+<p>&lt;h3&gt;AIO: Display-Only Addon Framework&lt;/h3&gt;</p>
+<p>AIO (Addon Input/Output) lets our server send custom UI frames to your client.
+This sounds scary until you understand what it actually does:</p>
+<p><strong>What AIO does:</strong>
+- Receives UI layout instructions from the server
+- Creates standard WoW addon frames (buttons, text, panels)
+- Displays information calculated server-side</p>
+<p><strong>What AIO cannot do:</strong>
+- Execute arbitrary code
+- Access your filesystem
+- Read files outside the WoW directory
+- Modify your system in any way
+- Run programs or scripts</p>
+<p>AIO is a <strong>rendering pipeline</strong>, not a code execution engine. The server says
+&amp;quot;draw a button at position X,Y with this text&amp;quot; and AIO draws it. The server
+says &amp;quot;update this number to 42&amp;quot; and AIO updates the display.</p>
+<p>All game logic, calculations, and decisions happen on the server. AIO just
+shows you the results.</p>
+<p>&lt;h2&gt;Step 1: Obtain the WoW 3.3.5a Client&lt;/h2&gt;</p>
+<p>&lt;h3&gt;What You Need&lt;/h3&gt;</p>
+<p>World of Warcraft version 3.3.5a (build 12340). This is the final patch of
+the Wrath of the Lich King expansion, released in 2010.</p>
+<p>&lt;h3&gt;Where to Get It&lt;/h3&gt;</p>
+<p>We cannot distribute the client due to copyright. You&amp;#39;ll need to:</p>
+<p>- Use your existing WoW installation (if you have one from that era)
+- Search for &amp;quot;WoW 3.3.5a client download&amp;quot; - many private server communities
+  maintain downloads</p>
+<p>&lt;h3&gt;Verifying Your Client&lt;/h3&gt;</p>
+<p>After download, check the version:</p>
+<p>1. Launch </code>Wow.exe<code>
+2. Look at the bottom-left of the login screen
+3. It should read: </code>3.3.5a (12340)<code></p>
+<p>If you see a different version, you have the wrong client.</p>
+<p>&lt;h3&gt;Security Note&lt;/h3&gt;</p>
+<p>The client executable (</code>Wow.exe<code>) is a standard Windows application from 2010.
+It predates many modern attack vectors and has no network capabilities beyond
+connecting to game servers. Antivirus software may flag it as &amp;quot;unknown&amp;quot; simply
+because it&amp;#39;s old - this is not a virus detection.</p>
+<p>The client runs in user-space with no elevated privileges. It cannot modify
+system files, install drivers, or affect other programs.</p>
+<p>&lt;h2&gt;Step 2: Install the AIO Addon&lt;/h2&gt;</p>
+<p>&lt;h3&gt;What AIO Is&lt;/h3&gt;</p>
+<p>AIO (Addon Input/Output) is an addon framework that lets the server send
+custom UI elements to your client. Many private servers use it for custom
+quest logs, skill trees, and informational displays.</p>
+<p>&lt;h3&gt;Download Location&lt;/h3&gt;</p>
+<p>Download the AIO client addon from:
+https://github.com/Rochet2/AIO</p>
+<p>Direct link to releases:
+https://github.com/Rochet2/AIO/releases</p>
+<p>Download the </code>AIO_Client<code> folder.</p>
+<p>&lt;h3&gt;Installation&lt;/h3&gt;</p>
+<p>1. Locate your WoW directory (where </code>Wow.exe<code> lives)
+2. Open the </code>Interface/AddOns/<code> folder
+   - If </code>AddOns<code> doesn&amp;#39;t exist, create it
+3. Copy the </code>AIO_Client<code> folder into </code>AddOns/<code></p>
+<p>Your folder structure should look like:</code></pre>
+World of Warcraft/
+├── Wow.exe
+├── Data/
+└── Interface/
+    └── AddOns/
+        └── AIO_Client/
+            ├── AIO_Client.lua
+            ├── AIO_Client.toc
+            └── ... (other files)
+<pre><code>
+&lt;h3&gt;Verify Installation&lt;/h3&gt;</p>
+<p>1. Launch WoW
+2. At the character select screen, click &amp;quot;AddOns&amp;quot; (bottom left)
+3. You should see &amp;quot;AIO_Client&amp;quot; in the list
+4. Ensure it&amp;#39;s checked/enabled</p>
+<p>&lt;h3&gt;Security Note&lt;/h3&gt;</p>
+<p>The AIO addon consists of standard Lua files that WoW&amp;#39;s addon API executes.
+WoW&amp;#39;s addon sandbox is extremely restrictive:</p>
+<p>- Addons cannot access files outside WoW&amp;#39;s directory
+- Addons cannot execute system commands
+- Addons cannot open network connections (only the game client can)
+- Addons cannot read your clipboard, keylog, or access other programs</p>
+<p>AIO operates within this sandbox. It receives data through the game protocol
+(the same channel that sends chat messages and combat updates) and uses
+standard WoW API functions to create UI frames.</p>
+<p>The &amp;quot;worst&amp;quot; thing AIO could theoretically do is draw annoying UI elements
+on your screen - and you can always disable the addon.</p>
+<p>&lt;h2&gt;Step 3: Configure Your Realmlist&lt;/h2&gt;</p>
+<p>&lt;h3&gt;What the Realmlist Does&lt;/h3&gt;</p>
+<p>The realmlist tells your client which server to connect to. By default, it
+points to (non-functional) Blizzard servers. You need to change it to point
+to our server.</p>
+<p>&lt;h3&gt;Editing the Realmlist&lt;/h3&gt;</p>
+<p>1. Open your WoW directory
+2. Find </code>realmlist.wtf<code> (or </code>Data/enUS/realmlist.wtf<code> on some clients)
+3. Open it with any text editor (Notepad, TextEdit, etc.)
+4. Replace the contents with:
+</code></pre>
+set realmlist wow.ritzmenardi.com:4362
+</code>`<code></p>
+<p>5. Save the file</p>
+<p><h3>Security Note</h3></p>
+<p>The realmlist is a plain text file containing only a server address. Editing
+it is equivalent to typing a URL into your browser - you&#39;re just telling the
+application where to connect.</p>
+<p>The WoW client will only connect to the specified address using WoW&#39;s
+authentication protocol. It cannot be tricked into downloading files,
+executing code, or performing any action other than establishing a game
+session.</p>
+<p>If you connect to a malicious server, the worst that could happen is:
+- You see inappropriate game content
+- Your character on that server gets deleted (account is server-side)
+- The server could crash your client (annoying, not harmful)</p>
+<p>A malicious server cannot access your computer&#39;s files, install software,
+or affect anything outside the game window. The protocol simply doesn&#39;t
+support those operations.</p>
+<p><h2>Step 4: Connect and Play</h2></p>
+<p><h3>First Launch</h3></p>
+<p>1. Launch </code>Wow.exe<code> directly</p>
+<p>   <strong>Important:</strong> Do not use </code>Launcher.exe<code> or any Battle.net launcher. The
+   launcher will attempt to update your client to a newer version, which breaks
+   compatibility with 3.3.5a servers. Always launch </code>Wow.exe<code> directly.</p>
+<p>2. You should see our server name on the realm list</p>
+<p>3. Log in with a guest account or create your own</p>
+<p>4. Create a character and play</p>
+<p><h3>Guest Accounts</h3></p>
+<p>Guest accounts are available for trying the server. Pick any one:</p>
+<p>| Username    | Password         |
+|-------------|------------------|
+| filament    | cherry-ribbon    |
+| verbose     | table-aperture   |
+| clock       | super-migration  |
+| fable       | interest-sincere |
+| raptor      | cannon-pilgrim   |
+| flipper     | absolute-chatter |
+| peculiar    | spectacle-taxes  |
+| serenade    | mountain-pulse   |
+| artifice    | affront-bulbous  |
+| nostalgia   | unmitigated-butt |
+| ephemeren   | reticulated-self |
+| sorrowful   | falling-leaves   |
+| testUser    | please-ignore    |
+| riparian    | ossified-metrics |
+| multitude   | harmonic-angles  |
+| catlike     | arduous-flames   |
+| aboleth     | ardent-forays    |
+| mailbox     | deleted-shivers  |
+| scarlet     | crusade-rocks    |
+| fibrous     | crushed-parasol  |
+| luminous    | frothy-waves     |
+| seaweed     | protects-bears   |
+| carbon      | blessing-cinders |
+| sympathy    | motor-responses  |</p>
+<p>Guest accounts are shared - your characters may be deleted at any time.</p>
+<p><h3>Creating Your Own Account</h3></p>
+<p>Personal accounts are created through rmail, an encrypted messaging system.
+See </code>docs/rmail-integration.md<code> for full setup instructions.</p>
+<p><strong>Quick summary:</strong>
+1. Install rmail and add the </code>wow.ritzmenardi.com/accounts<code> contact
+2. Send a message with your username on the first line, password on the second.
+3. Your account exists as long as your message exists (delete message = delete account)</p>
+<p><h3>If You Can&#39;t Connect</h3></p>
+<p>Common issues:</p>
+<p><strong>&quot;Unable to connect&quot;</strong>
+- Check your internet connection
+- Verify the realmlist address is correct
+- The server may be down for maintenance
+- Poke Ritz to turn the server on (it&#39;s probably off)
+- If I don&#39;t answer it&#39;s because I&#39;m asleep or in Vancouver or something.</p>
+<p><strong>&quot;Disconnected from server&quot;</strong>
+- I&#39;m probably recompiling the server with changes.
+- A quick update is ~5 minutes, a long one is ~20.
+- If it&#39;s not that, try deleting the </code>Cache<code> folder in your WoW directory</p>
+<p><strong>Addon not working</strong>
+- Verify AIO_Client is in the correct folder
+- Check that it&#39;s enabled in the AddOns menu
+- Type </code>/reload` in-game to reload addons</p>
+<p><h2>Summary of What&#39;s on Your Computer</h2></p>
+<p>After setup, you have:</p>
+<p>| Component | Location | What It Does | Security |
+|-----------|----------|--------------|----------|
+| WoW Client | Your chosen folder | Renders the game world | Sandboxed viewer, no system access |
+| AIO Addon | WoW/Interface/AddOns/ | Displays server-sent UI | WoW addon sandbox, display-only |
+| Realmlist | WoW/realmlist.wtf | Server address (text file) | Plain text, no executable content |</p>
+<p>Total system impact: <strong>Zero</strong>. All files stay in the WoW folder. No registry
+entries, no system modifications, no background processes.</p>
+<p>To completely uninstall: delete the WoW folder. Done.</p>
+<p><h2>What Happens When You Play</h2></p>
+<p>When you&#39;re in-game on our server:</p>
+<p>1. <strong>You press a key</strong> → Client sends input to server
+2. <strong>Server processes your action</strong> → Custom Lua scripts run (on server)
+3. <strong>Server sends results</strong> → Standard WoW protocol packets
+4. <strong>Client displays results</strong> → You see monsters spawn, loot drop, etc.
+5. <strong>Server sends UI data</strong> → AIO renders custom interface elements</p>
+<p>At no point does server code run on your machine. At no point does your
+client access files outside its directory. The entire interaction is:
+input → network → display.</p>
+<p><h2>Questions and Concerns</h2></p>
+<p><h3>&quot;Why should I trust a random server&#39;s addon?&quot;</h3></p>
+<p>AIO is open-source and widely used across the private server community.
+The code is auditable: https://github.com/Rochet2/AIO</p>
+<p>More importantly, even if you don&#39;t audit the code, WoW&#39;s addon API
+physically cannot access your system. Blizzard designed it this way
+to prevent cheating - the same restrictions protect you from malicious
+addons.</p>
+<p><h3>&quot;What data does the server see?&quot;</h3></p>
+<p>The server sees:
+- Your IP address (like any internet service)
+- Your in-game actions (movement, chat, combat)
+- Your account credentials (which you create specifically for this server)</p>
+<p>The server cannot see:
+- Files on your computer
+- Other running programs
+- Your real identity (unless you share it)
+- Anything outside the game session</p>
+<p><h3>&quot;Can I use my retail WoW account?&quot;</h3></p>
+<p>No. Private servers have completely separate account systems. Your retail
+account credentials will not work and should never be entered. Create a
+new account specifically for this server.</p>
+<p>---</p>
+<p><em>Last updated: 2026-04</em></p>
+<p><em>See also: docs/installation.md (for server operators)</em></p>
+<p>Claude is my computer operator. I mostly do the design work. 
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

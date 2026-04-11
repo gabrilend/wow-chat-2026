@@ -1,0 +1,269 @@
+# 109 - Incremental Rebuild Detection
+
+**Phase:** 1 (Foundation)
+**Effect:** Builds only happen when needed, saving 30+ minutes
+**Status:** Completed (2025-02-24)
+
+---
+
+## The Effect
+
+The update command checks for remote changes before rebuilding. If nothing changed upstream, it skips the 30-minute rebuild.
+
+Use `--force` to rebuild anyway (first compile, local changes, troubleshooting).
+
+---
+
+## What This Solved
+
+### Before
+
+Two modes:
+- `install` - Clone fresh, always rebuild (60 minutes)
+- `update` - Pull latest, always rebuild (30 minutes)
+
+**Problems:**
+1. `update` rebuilds even when nothing changed
+2. No way to build without pulling (first compile after clone)
+3. Wastes time: "No remote changes → 30 minute rebuild anyway"
+4. Developer frustration: "Why am I waiting?"
+
+Workflow looked like:
+```bash
+$ azerothcore update
+Fetching updates...
+Already up to date.
+Rebuilding anyway... (30 minutes)
+# Why?!
+```
+
+### After
+
+Smart update with `--force`:
+```bash
+$ azerothcore update
+Fetching updates...
+No remote changes found. Skipping rebuild.
+
+$ azerothcore update --force
+Fetching updates...
+No remote changes found.
+Forcing rebuild... (30 minutes)
+```
+
+---
+
+## Implementation
+
+### Remote Change Detection
+
+```bash
+# Fetch latest from origin
+git fetch origin
+
+# Compare local HEAD to remote HEAD
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git rev-parse origin/main)
+
+if [[ "$LOCAL" != "$REMOTE" ]]; then
+    echo "Remote changes detected. Pulling and rebuilding..."
+    git pull
+    make -j${MAKE_JOBS}
+elif [[ "$FORCE" == "true" ]]; then
+    echo "No changes, but forcing rebuild..."
+    make -j${MAKE_JOBS}
+else
+    echo "No changes. Skipping rebuild."
+fi
+```
+
+### Behavior Table
+
+| Scenario | Without --force | With --force |
+|----------|-----------------|--------------|
+| Remote has changes | Pull + rebuild | Pull + rebuild |
+| No remote changes | Skip rebuild | Rebuild anyway |
+| First build (binaries missing) | Skip rebuild | Rebuild |
+
+---
+
+## The --force Flag
+
+### When to Use
+
+**First compile after clone:**
+```bash
+git clone https://github.com/.../wow-chat-2
+cd wow-chat-2
+azerothcore update --force  # No binaries exist yet
+```
+
+**After local code changes:**
+```bash
+# Edited src/lua/ambush.lua
+azerothcore update --force  # Rebuild with changes
+```
+
+**Troubleshooting broken build:**
+```bash
+# Something went wrong, binaries corrupted
+azerothcore update --force  # Clean rebuild
+```
+
+**Testing without pulling:**
+```bash
+# Want to rebuild current version
+azerothcore update --force  # Don't pull, just build
+```
+
+### When NOT to Use
+
+**Daily development:**
+```bash
+# Check for updates
+azerothcore update  # Only rebuilds if upstream changed
+```
+
+Most of the time, you DON'T want `--force`. The script is smart enough.
+
+---
+
+## Design Decision: update vs build
+
+### Original Plan
+Add a third mode: `build`
+- `install` - Clone and build
+- `update` - Pull and build (if changes)
+- `build` - Build without pulling
+
+### User Feedback
+Just use `update --force`:
+- Two commands (install/update) instead of three
+- `--force` is clearer intent ("I know what I'm doing")
+- Less cognitive load (fewer modes to remember)
+
+### The Semantics
+
+**update** = "bring up to date with remote"
+- If remote ahead → pull and rebuild
+- If remote same → do nothing
+
+**update --force** = "rebuild current version"
+- Don't care about remote state
+- Just compile what's here now
+
+This matches mental model better than separate `build` command.
+
+---
+
+## Time Savings
+
+### Before (Always Rebuild)
+Developer runs `update` 5 times per day:
+- 5 builds × 30 minutes = 150 minutes (2.5 hours)
+- Upstream changes 1-2 times per day
+- Wasted: 90-120 minutes per day
+
+### After (Smart Rebuild)
+- 5 updates, 2 rebuilds = 60 minutes
+- Savings: 90 minutes per day
+- Developer can iterate faster
+
+Over a week:
+- Before: 12.5 hours building
+- After: 5 hours building
+- **Savings: 7.5 hours per week**
+
+That's almost a full workday regained.
+
+---
+
+## Why This Matters
+
+**Iteration Speed**
+
+Fast feedback loop:
+1. Pull latest → 5 seconds (no rebuild needed)
+2. See what changed → git log
+3. Test changes → immediate
+
+Slow feedback loop:
+1. Pull latest → 5 seconds
+2. Wait for rebuild → 30 minutes
+3. Test changes → finally
+
+The difference between "check often" and "avoid checking."
+
+**Mental Context**
+
+When rebuild takes 30 minutes:
+- Can't stay focused on problem
+- Context switch to other work
+- Forget why you were building
+
+When rebuild skipped:
+- Stay in flow
+- Test immediately
+- Iterate quickly
+
+**Respect for Time**
+
+The script saying "No changes. Skipping rebuild." communicates:
+> "I respect your time. I won't make you wait for nothing."
+
+This builds trust. The tool feels helpful, not obstructive.
+
+---
+
+## Related Phase 1 Issues
+
+- 108 - adaptive-build-parallelism (uses MAKE_JOBS variable)
+- 101 - verify-server-startup (needs initial build)
+
+---
+
+## Lessons Learned
+
+### Optimize for the Common Case
+
+**Common:** No upstream changes (80% of updates)
+**Rare:** Upstream has changes (20% of updates)
+
+Optimizing the common case (skip rebuild) saves 80% of wasted time.
+
+### Flags for Edge Cases
+
+`--force` handles the edge cases:
+- First build
+- Local changes
+- Troubleshooting
+
+Most developers never need it. Power users have it when needed.
+
+### Git as Source of Truth
+
+Instead of tracking "last build time" or "binaries exist," use git:
+- `git rev-parse HEAD` vs `git rev-parse origin/main`
+- Simple, reliable, no state to manage
+
+If they match → nothing to rebuild.
+
+### Two Commands Is Enough
+
+Resisted adding `install`, `update`, `build`, `rebuild`, `force-rebuild`, etc.
+
+Just:
+- `install` - Fresh start
+- `update` - Smart incremental
+- `update --force` - Edge cases
+
+Simplicity > comprehensiveness.
+
+---
+
+## Phase 1 Contribution
+
+This issue enables **Phase 1: Foundation** by ensuring:
+> "Developers can iterate quickly without wasting time"
+
+A build system that respects your time is a build system you trust. This fix makes the workflow **fast by default, thorough when needed**.

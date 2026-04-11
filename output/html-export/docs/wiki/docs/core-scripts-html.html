@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>core-scripts.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>core-scripts.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/core-scripts.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 9197 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+tableofcontents: 1
+---</p>
+<p><h1>Core Scripts</h1></p>
+<p>When dealing with Creature-, GameObject-, Spell- and Instancescripts we should always use the new registry macros introduced in <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/430fa147fd340223400f6df968d0726510bb1c99">this</a> and <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/8cc47ab1f174e82d74b2e17b4af13ded0f37a693">this</a> commit.</p>
+<p><h2>Creature Scripts</h2></p>
+<p><h3>World Spawned Creatures</h3></p>
+<p>``<code>cpp
+struct npc_scripted_creature : public CreatureAI
+{
+public:
+    npc_scripted_creature(Creature<em> creature) : CreatureAI(creature) { }</p>
+<p>    void EnterCombat(Unit</em> /<em>who</em>/) override
+    {
+        /<em> Some code </em>/
+    }
+}</p>
+<p>/<em> At the end of a script file you will find a place where we register all
+ </em> the scripts. <em>/
+void AddSC_scripts()
+{
+    /</em> RegisterCreatureAI(creatureScript); <em>/
+    RegisterCreatureAI(npc_scripted_creature);
+}
+<pre><code>
+&lt;h3&gt;Instance Spawned Creatures&lt;/h3&gt;</p>
+<p>If a creature is scripted inside an instance we register them as factory.</p>
+<p>To do this, in the headerfile of the instance we add this define:
+</code></pre>cpp
+#define Register&quot;IntanceName&quot;CreatureAI(ai_name) RegisterCreatureAIWithFactory(ai_name, Get&quot;InstanceName&quot;AI)</p>
+<p>/</em> Example from icecrown_citadel.h <em>/
+#define RegisterIcecrownCitadelCreatureAI(ai_name) RegisterCreatureAIWithFactory(ai_name, GetIcecrownCitadelAI)
+<pre><code>
+And within the script file it would be registered like this:
+</code></pre>cpp
+/</em> Example from boss_lord_marrowgar.cpp <em>/
+struct boss_lord_marrowgar : public BossAI
+{
+public:
+    boss_lord_marrowgar(Creature</em> creature) : BossAI(creature, DATA_LORD_MARROWGAR) { }</p>
+<p>    void EnterCombat(Unit<em> /</em>who<em>/) override
+    {
+        /</em> Some code <em>/
+    }
+}</p>
+<p>void AddSC_boss_lord_marrowgar()
+{
+    /</em> RegisterIcecrownCitadelCreatureAI(creatureScript); <em>/
+    RegisterIcecrownCitadelCreatureAI(boss_lord_marrowgar);
+}
+<pre><code>
+&lt;h3&gt;Different types of Creature AI&amp;#39;s&lt;/h3&gt;</p>
+<p>| Name           |
+| -------------- |
+| CreatureAI     |
+| BossAI         |
+| GuardianAI     |
+| PetAI          |
+| NullCreatureAI |</p>
+<p>&lt;h2&gt;GameObject Scripts&lt;/h2&gt;</p>
+<p>&lt;h3&gt;World Spawned GameObjects&lt;/h3&gt;
+</code></pre>cpp
+struct go_scripted_gameobject : public GameObjectAI
+{
+    go_scripted_gameobject(GameObject</em> go) : GameObjectAI(go) { }</p>
+<p>    void UpdateAI(uint32 const /<em>diff</em>/) override
+    {
+        /<em> Some code </em>/
+    }
+}</p>
+<p>/<em> At the end of a script file you will find a place where we register all
+ </em> the scripts. <em>/
+void AddSC_scripts()
+{
+    /</em> RegisterGameObjectAI(gameObjectScript); <em>/
+    RegisterGameObjectAI(go_scripted_gameobject);
+}
+<pre><code>
+&lt;h3&gt;Instance Spawned GameObject&lt;/h3&gt;</p>
+<p>If a gameobject is scripted inside an instance we register them as factory.</p>
+<p>To do this, in the headerfile of the instance we add this define:
+</code></pre>cpp
+#define Register&quot;IntanceName&quot;GameObjectAI(ai_name) RegisterGameObjectAIWithFactory(ai_name, Get&quot;InstanceName&quot;AI)
+<pre><code>
+&lt;h2&gt;Spell Scripts&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Validation of spells used in a script&lt;/h3&gt;</p>
+<p>Spells used <strong>within</strong> the SpellScript should <strong>always</strong> be validated at the top of the script.</p>
+<p>This will prevent potential crashes if we try to use a spell that doesn&amp;#39;t exist in a script.
+</code></pre>cpp
+class spell_pri_power_word_shield_aura : public AuraScript
+{
+    PrepareAuraScript(spell_pri_power_word_shield_aura);</p>
+<p>    bool Validate(SpellInfo const</em> /<em>spellInfo</em>/) override
+    {
+        return ValidateSpellInfo({ SPELL_1, SPELL_2 });
+    }
+}
+<pre><code>
+&lt;h3&gt;Stand alone SpellScripts and AuraScripts&lt;/h3&gt;</p>
+<p>For stand alone SpellScripts and AuraScripts that do not require any args, and just work once you have assigned them in the databases are handled like below:
+</code></pre>cpp
+class spell_pri_shadow_word_death : public SpellScript
+{
+public:
+    PrepareSpellScript(spell_pri_shadow_word_death);</p>
+<p>    void HandleDamage()
+    {
+        /<em> Some code </em>/
+    }</p>
+<p>    void Register() override
+    {
+        OnHit += SpellHitFn(spell_pri_shadow_word_death::HandleDamage);
+    }
+}</p>
+<p>void AddSC_priest_spell_scripts()
+{
+    /<em> RegisterSpellScript(spell/auraScript); </em>/
+    RegisterSpellScript(spell_pri_shadow_word_death);
+}
+<pre><code>
+&lt;h3&gt;Spell- and Aurascript Pairs&lt;/h3&gt;</p>
+<p>For SpellScripts and AuraScripts that pair together, we script them by themselves and link them at the registry.</p>
+<p>When two scripts are going to be linked, they will always share the same name. Therefore we always suffix the AuraScript with \_aura in these cases.
+</code></pre>cpp
+class spell_pri_power_word_shield_aura : public AuraScript
+{
+    PrepareAuraScript(spell_pri_power_word_shield_aura);</p>
+<p>    bool Validate(SpellInfo const<em> /</em>spellInfo<em>/) override
+    {
+        return ValidateSpellInfo({ SPELL_1 });
+    }</p>
+<p>    void CalculateAmount(AuraEffect const</em> aurEff, int32&amp; amount, bool&amp; canBeRecalculated)
+    {
+        /<em> Some code </em>/
+    }</p>
+<p>    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_pri_power_word_shield_aura::CalculateAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
+    }
+}</p>
+<p>class spell_pri_power_word_shield : public SpellScript
+{
+    PrepareSpellScript(spell_pri_power_word_shield);</p>
+<p>    SpellCastResult CheckCast()
+    {
+        /<em> Some code </em>/
+    }</p>
+<p>    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_pri_power_word_shield::CheckCast);
+    }
+}</p>
+<p>void AddSC_priest_spell_scripts()
+{
+    /<em> We link the two scripts together with RegisterSpellAndAuraScriptPair.
+     </em> RegisterSpellAndAuraScriptPair(spellScript, auraScript) <em>/
+    RegisterSpellAndAuraScriptPair(spell_pri_power_word_shield, spell_pri_power_word_shield_aura);
+}
+<pre><code>
+&lt;h3&gt;SpellScripts with Args&lt;/h3&gt;</p>
+<p>Sometimes we make more generic SpellScripts that we later assign and pass other args to in the registry.
+</code></pre>cpp
+class spell_item_defibrillate : public SpellScript
+{
+    PrepareSpellScript(spell_item_defibrillate);</p>
+<p>public:
+    spell_item_defibrillate(uint8 chance, uint32 failSpell = 0) : SpellScript(), _chance(chance), _failSpell(failSpell) { }</p>
+<p>    void HandleScript(SpellEffIndex effIndex)
+    {
+        /</em> Some code <em>/
+    }</p>
+<p>    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_item_defibrillate::HandleScript, EFFECT_0, SPELL_EFFECT_RESURRECT);
+    }
+}</p>
+<p>void AddSC_item_spell_scripts()
+{
+    /</em> RegisterSpellScriptWithArgs(spellScript, scriptName, args...); <em>/
+    RegisterSpellScriptWithArgs(spell_item_defibrillate, &quot;spell_item_goblin_jumper_cables&quot;, 67, SPELL_GOBLIN_JUMPER_CABLES_FAIL);
+    RegisterSpellScriptWithArgs(spell_item_defibrillate, &quot;spell_item_goblin_jumper_cables_xl&quot;, 50, SPELL_GOBLIN_JUMPER_CABLES_XL_FAIL);
+    RegisterSpellScriptWithArgs(spell_item_defibrillate, &quot;spell_item_gnomish_army_knife&quot;, 33);
+}
+<pre><code>
+&lt;h2&gt;Instance Scripts&lt;/h2&gt;
+</code></pre>cpp
+#define RegisterInstanceScript(script_name, mapId) new GenericInstanceMapScript&lt;script_name&gt;(#script_name, mapId)
+<pre><code>
+Example:</code></pre>cpp
+// instance.cpp
+class instance_instance_script : public InstanceScript
+{
+public:
+    instance_instance_script(Map</em> map) : InstanceScript(map) { }</p>
+<p>    void SomeFunction(uint32 /<em>var</em>/)
+    {
+        /<em> Some code </em>/
+    }
+}</p>
+<p>void AddSC_instance()
+{
+    /<em> RegisterInstanceScript(script_name, mapId); </em>/
+    RegisterInstanceScript(instance_instance_script, 533);
+}
+<pre><code>
+&lt;h2&gt;Assigning Script in the Database&lt;/h2&gt;</p>
+<p>All scripts are assigned in the world database.</p>
+<p>&lt;h3&gt;CreatureScripts&lt;/h3&gt;</p>
+<p>CreatureScripts can be assigned in two tables.</p>
+<p>| Table             | Column     |
+| ----------------- | ---------- |
+| creature_template | ScriptName |
+| creature          | ScriptName |</p>
+<p>In <strong>creature_template</strong> we assign the Script to the creature entry, meaning all spawned creatures with that entry will use the script.</p>
+<p>In <strong>creature</strong> we assign the Script to the creature GUID, meaning that specific spawn will use the script.</p>
+<p>The <strong>ScriptName</strong> is the same as the assigned script name in the core. F.ex <em>boss_lord_marrowgar</em>.</p>
+<p>&lt;h3&gt;SpellScripts&lt;/h3&gt;</p>
+<p>SpellScripts are assigned in one table.</p>
+<p>| Table              | Column1  | Column2    |
+| ------------------ | -------- | ---------- |
+| spell_script_names | spell_id | ScriptName |</p>
+<p>The <strong>spell_id</strong> is the id of the spell you want to assign a script to. One Spell id can assign multiple Scripts.</p>
+<p>The <strong>ScriptName</strong> is depending on what type of registry you used. One ScriptName can be assigned to multiple spells.</p>
+<p>| Registry                                                      | ScriptName  |
+| ------------------------------------------------------------- | ----------- |
+| RegisterSpellScript(spellScript)                              | spellScript |
+| RegisterSpellAndAuraScriptPair(spellScript, auraScript)       | spellScript |
+| RegisterSpellScriptWithArgs(spellScript, scriptName, args...) | scriptName  |</p>
+<p>&lt;h4&gt;SQL part&lt;/h4&gt;</p>
+<p>As a Script can be assigned to multiple spells we <strong>always</strong> want to delete both the spell_id and the ScriptName to avoid messing up other spells.
+</code></pre>sql
+DELETE FROM </code>spell_script_names<code> WHERE </code>spell_id<code> = 1 AND </code>ScriptName<code> = &#39;spell_pri_death_touch&#39;;
+</code>``</p>
+<p>The only time it is okay to only delete the ScriptName is when we are deleting or adding a new script in the core.</p>
+<p><h3>InstanceScripts</h3></p>
+<p>| Table             | Column |
+| ----------------- | ------ |
+| instance_template | script |</p>
+<p>In <strong>instance_template</strong> we assign the script to the instance map id.</p>
+<p>The <strong>script</strong> is the the same as the assigned name for the instance. F.ex <em>instance_instance_script</em>.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

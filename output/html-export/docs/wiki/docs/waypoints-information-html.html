@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>waypoints-information.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>waypoints-information.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/waypoints-information.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 6263 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+redirect_from: &quot;/Waypoints-Information&quot;
+---</p>
+<p><h1>Waypoints and paths</h1></p>
+<p><h3>Different kinds of waypoint paths</h3></p>
+<p>- Waypoint paths directly attached to a creature via <a href="creature_addon#path_id">creature_addon.path_id</a> use the tables <a href="waypoint_data">waypoint_data</a> and <a href="waypoint_scripts">waypoint_scripts</a>. They can be added and manipulated using the GM &#39;.wp&#39; commands.
+- <a href="smart_scripts">SmartAI</a> uses waypoint paths defined in table <a href="waypoints">waypoints</a>.
+- The table <a href="script_waypoint">script_waypoint</a> contains waypoint paths for <a href="https://github.com/azerothcore/azerothcore-wotlk/blob/master/src/server/game/AI/ScriptedAI/ScriptedCreature.h#L159">CreatureAI</a>.</p>
+<p><h3>Overview of GM &#39;.wp&#39; commands</h3></p>
+<p>- ``<code>.wp add</code>`<code> <a href="waypoint_data#id">waypoint_data.id</a>: Add a new point for the specified path id. It is recommended to use creature GUID <em> 10 or GUID </em> 100 as path id, but it can be any random number.
+- </code>`<code>.wp reload</code>`<code> <a href="waypoint_data#id">waypoint_data.id</a>: Reload the specified path id (for new paths has to be executed before </code>`<code>.wp load</code>`<code>).
+- </code>`<code>.wp load</code>`<code> <a href="waypoint_data#id">waypoint_data.id</a>: Load the specified path id for the selected creature.
+- </code>`<code>.wp unload</code>`<code>: Unload the path of the selected creature.
+- </code>`<code>.wp show on</code>`<code> <a href="waypoint_data#id">waypoint_data.id</a>: Show all waypoints of the specified path (GM on is required to actually see them). If no path id is specified shows the waypoints of the selected creature.
+- </code>`<code>.wp show off</code>`<code>: Hide all visual waypoints.
+- </code>`<code>.wp show info</code>`<code>: Show information about the selected waypoint.
+- </code>`<code>.wp modify</code>`<code>: Modify the selected waypoint, options:
+  - </code>`<code>del</code>`<code>: Delete the selected waypoint.
+  - </code>`<code>move</code>`<code>: Move the selected waypoint to the position of the GM.
+  - </code>`<code>delay</code>`<code>: Change the <a href="waypoint_data#delay">delay</a> of the selected waypoint.
+  - </code>`<code>action</code>`<code>: Change the <a href="scripts#id">action</a> of the selected waypoint.
+  - </code>`<code>action_chance</code>`<code>: Change the <a href="waypoint_data#action_chance">action_chance</a> of the selected waypoint.
+  - </code>`<code>move_type</code>`<code>: Change the <a href="waypoint_data#move_type">move_type</a> of the selected waypoint (0: walk, 1: run, 2: fly).
+- </code>`<code>.wp event</code>`<code>: Modify the waypoint <a href="scripts#id">actions</a>, options:
+  - </code>`<code>add</code>`<code> <a href="scripts#guid">guid</a>: Add a new action with the specified GUID (not to be confused with the creature GUID!). If no GUID is specified a new one is generated automatically.
+  - </code>`<code>listid</code>`<code> <a href="scripts#id">action</a>: Show information about the specified action id.
+  - </code>`<code>del</code>`<code> <a href="scripts#guid">guid</a>: Delete the action with the specified GUID.
+  - </code>`<code>mod</code>`<code> <a href="scripts#guid">guid</a>: Modify the action with the specified GUID, further options:
+    - </code>`<code>setid</code>`<code> <a href="scripts#id">action</a>: Set a new action id.
+    - </code>`<code>delay</code>`<code> <a href="scripts#delay">delay</a>: Set a specific delay before the script activates.
+    - </code>`<code>command</code>`<code> <a href="scripts#command">command</a>: Set the command for this script.
+    - </code>`<code>datalong</code>`<code> <a href="scripts#datalong">datalong</a>: Set the datalong for this script.
+    - </code>`<code>datalong2</code>`<code> <a href="scripts#datalong2">datalong2</a>: Set the datalong2 for this script.
+    - </code>`<code>dataint</code>`<code> <a href="scripts#dataint">dataint</a>: Set the dataint for this script.
+    - </code>`<code>posx</code>`<code> <a href="scripts#posx">posx</a>: Set the posx for this script.
+    - </code>`<code>posy</code>`<code> <a href="scripts#posy">posy</a>: Set the posy for this script.
+    - </code>`<code>posz</code>`<code> <a href="scripts#posz">posz</a>: Set the posz for this script.
+    - </code>`<code>orientation</code>`<code> <a href="scripts#orientation">orientation</a>: Set the orientation for this script.</p>
+<p><h3>Example for path creation using GM &#39;.wp&#39; commands</h3></p>
+<p>Example creature GUID: 1234567, example path id: 123456700</p>
+<p>- Create a macro &#39;wp1&#39; with this command:
+  <pre><code>  .wp add 123456700
+  </code>`<code>
+- Create a macro &amp;#39;wp2&amp;#39; with these commands:
+  </code>`<code>
+  .wp reload 123456700
+  .wp load 123456700
+  </code>`<code>
+- Create a macro &amp;#39;wp3&amp;#39; with this command:
+  </code>`<code>
+  .wp show on 123456700
+  </code>`<code>
+- Create a macro &amp;#39;wp4&amp;#39; with this command:
+  </code>`<code>
+  .wp show off 123456700
+  </code>`<code>
+- Teleport to the creature:
+  </code>`<code>
+  .go creature 1234567
+  </code>`<code>
+- Use macro &amp;#39;wp1&amp;#39;
+- Create the path:
+  - Go to the position where the next waypoint should be and use macro &amp;#39;wp1&amp;#39;
+  - repeat until all waypoints are set (don&amp;#39;t forget to also create a path back to the starting position)
+  - use macros &amp;#39;wp3&amp;#39; and &amp;#39;wp4&amp;#39; to show / hide the path (GM on required to actually see the path)
+  - ensure that the waypoints are not too far away from each other, especially if the creature is walking over hills etc. as it will try to directly move to the next waypoint, even if this means going through the ground
+- Select the creature and use macro &amp;#39;wp2&amp;#39;; it should now start moving</p>
+<p>&lt;h3&gt;A few helpful SQL statements&lt;/h3&gt;</p>
+<p>&lt;h4&gt;Delete path&lt;/h4&gt;</p>
+<p>- Select the creature, then unload the path:
+  </code>`<code>
+  .wp unload
+  </code>`<code></p>
+<p>- Delete the path from the DB, for example 123456700:
+  </code>`<code>sql
+  DELETE FROM </code>waypoint_data<code> WHERE </code>id<code> = 123456700;
+  </code>`<code></p>
+<p>&lt;h4&gt;Take over the waypoints from &amp;#39;waypoint_data&amp;#39; to &amp;#39;waypoints&amp;#39; (SmartAI)&lt;/h4&gt;</p>
+<p>If you need the waypoints for SmartAI you have to copy the waypoints from table <a href="waypoint_data">waypoint_data</a> into table <a href="waypoints">waypoints</a> and then delete the original waypoints (unload the path for the creature via </code>`<code>.wp unload</code>`<code> if it was loaded before). Here an example for path 123456700:</code></pre>sql
+INSERT INTO </code>waypoints<code> (</code>entry<code>,</code>pointid<code>,</code>position_x<code>,</code>position_y<code>,</code>position_z<code>)
+SELECT </code>id<code>,</code>point<code>,</code>position_x<code>,</code>position_y<code>,</code>position_z<code> FROM </code>waypoint_data<code> WHERE </code>id<code> = 123456700;
+DELETE FROM </code>waypoint_data<code> WHERE </code>id<code> = 123456700;
+<pre><code>
+&lt;h4&gt;Take over the waypoints from &amp;#39;waypoint_data&amp;#39; to &amp;#39;script_waypoint&amp;#39; (CreatureAI)&lt;/h4&gt;</p>
+<p>The same as above, but now for <a href="script_waypoint">script_waypoint</a> instead of <a href="waypoints">waypoints</a>. The entry of <a href="script_waypoint">script_waypoint</a> has to be the <a href="creature_template#entry">creature_template.entry</a>, here for example 1234567:</code></pre>sql
+INSERT INTO </code>script_waypoint<code> (</code>entry<code>,</code>pointid<code>,</code>location_x<code>,</code>location_y<code>,</code>location_z<code>)
+SELECT 1234567 AS </code>entry<code>,</code>point<code>,</code>position_x<code>,</code>position_y<code>,</code>position_z<code> FROM </code>waypoint_data<code> WHERE </code>id<code> = 123456700;
+DELETE FROM </code>waypoint_data<code> WHERE </code>id<code> = 123456700;</p>
+<p></code>``
+Don&#39;t forget to unload the path from the creature if it was loaded before.</p>
+<p><h3>Waypoint pathing best practices</h3>
+When creating paths along an incline, ground clipping can be minimized by maintaining line-of-sight.</p>
+<p>!<a href="https://i.imgur.com/s045BKp.png">waypoints</a>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

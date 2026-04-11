@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>jquery.camelhunter.min.js - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>jquery.camelhunter.min.js</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/assets/js/jquery.camelhunter.min.js
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> js &nbsp;&nbsp;
+            <strong>Size:</strong> 16236 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>!function(t){
+
+	/* The lunr 0.4.3 library is included here to perform the fulltext searching. lunr is copyright (C) 2013 Oliver Nightingale. MIT Licensed */
+	var lunr=function(t){var e=new lunr.Index;return e.pipeline.add(lunr.stopWordFilter,lunr.stemmer),t&amp;&amp;t.call(e,e),e};lunr.version=&quot;0.4.3&quot;,&quot;undefined&quot;!=typeof module&amp;&amp;(module.exports=lunr),lunr.utils={},lunr.utils.warn=function(t){return function(e){t.console&amp;&amp;console.warn&amp;&amp;console.warn(e)}}(this),lunr.utils.zeroFillArray=function(){var t=[0];return function(e){for(;e&gt;t.length;)t=t.concat(t);return t.slice(0,e)}}(),lunr.EventEmitter=function(){this.events={}},lunr.EventEmitter.prototype.addListener=function(){var t=Array.prototype.slice.call(arguments),e=t.pop(),n=t;if(&quot;function&quot;!=typeof e)throw new TypeError(&quot;last argument must be a function&quot;);n.forEach(function(t){this.hasHandler(t)||(this.events[t]=[]),this.events[t].push(e)},this)},lunr.EventEmitter.prototype.removeListener=function(t,e){if(this.hasHandler(t)){var n=this.events[t].indexOf(e);this.events[t].splice(n,1),this.events[t].length||delete this.events[t]}},lunr.EventEmitter.prototype.emit=function(t){if(this.hasHandler(t)){var e=Array.prototype.slice.call(arguments,1);this.events[t].forEach(function(t){t.apply(void 0,e)})}},lunr.EventEmitter.prototype.hasHandler=function(t){return t in this.events},lunr.tokenizer=function(t){if(!arguments.length||null==t||void 0==t)return[];if(Array.isArray(t))return t.map(function(t){return t.toLowerCase()});for(var e=(&quot;&quot;+t).replace(/^\s+/,&quot;&quot;),n=e.length-1;n&gt;=0;n--)if(/\S/.test(e.charAt(n))){e=e.substring(0,n+1);break}return e.split(/\s+/).map(function(t){return t.replace(/^\W+/,&quot;&quot;).replace(/\W+$/,&quot;&quot;).toLowerCase()})},lunr.Pipeline=function(){this._stack=[]},lunr.Pipeline.registeredFunctions={},lunr.Pipeline.registerFunction=function(t,e){e in this.registeredFunctions&amp;&amp;lunr.utils.warn(&quot;Overwriting existing registered function: &quot;+e),t.label=e,lunr.Pipeline.registeredFunctions[t.label]=t},lunr.Pipeline.warnIfFunctionNotRegistered=function(t){var e=t.label&amp;&amp;t.label in this.registeredFunctions;e||lunr.utils.warn(&quot;Function is not registered with pipeline. This may cause problems when serialising the index.\n&quot;,t)},lunr.Pipeline.load=function(t){var e=new lunr.Pipeline;return t.forEach(function(t){var n=lunr.Pipeline.registeredFunctions[t];if(!n)throw Error(&quot;Cannot load un-registered function: &quot;+t);e.add(n)}),e},lunr.Pipeline.prototype.add=function(){var t=Array.prototype.slice.call(arguments);t.forEach(function(t){lunr.Pipeline.warnIfFunctionNotRegistered(t),this._stack.push(t)},this)},lunr.Pipeline.prototype.after=function(t,e){lunr.Pipeline.warnIfFunctionNotRegistered(e);var n=this._stack.indexOf(t)+1;this._stack.splice(n,0,e)},lunr.Pipeline.prototype.before=function(t,e){lunr.Pipeline.warnIfFunctionNotRegistered(e);var n=this._stack.indexOf(t);this._stack.splice(n,0,e)},lunr.Pipeline.prototype.remove=function(t){var e=this._stack.indexOf(t);this._stack.splice(e,1)},lunr.Pipeline.prototype.run=function(t){for(var e=[],n=t.length,r=this._stack.length,o=0;n&gt;o;o++){for(var i=t[o],s=0;r&gt;s&amp;&amp;(i=this._stack[s](i,o,t),void 0!==i);s++);void 0!==i&amp;&amp;e.push(i)}return e},lunr.Pipeline.prototype.toJSON=function(){return this._stack.map(function(t){return lunr.Pipeline.warnIfFunctionNotRegistered(t),t.label})},lunr.Vector=function(t){this.elements=t},lunr.Vector.prototype.magnitude=function(){if(this._magnitude)return this._magnitude;for(var t,e=0,n=this.elements,r=n.length,o=0;r&gt;o;o++)t=n[o],e+=t*t;return this._magnitude=Math.sqrt(e)},lunr.Vector.prototype.dot=function(t){for(var e=this.elements,n=t.elements,r=e.length,o=0,i=0;r&gt;i;i++)o+=e[i]*n[i];return o},lunr.Vector.prototype.similarity=function(t){return this.dot(t)/(this.magnitude()*t.magnitude())},lunr.Vector.prototype.toArray=function(){return this.elements},lunr.SortedSet=function(){this.length=0,this.elements=[]},lunr.SortedSet.load=function(t){var e=new this;return e.elements=t,e.length=t.length,e},lunr.SortedSet.prototype.add=function(){Array.prototype.slice.call(arguments).forEach(function(t){~this.indexOf(t)||this.elements.splice(this.locationFor(t),0,t)},this),this.length=this.elements.length},lunr.SortedSet.prototype.toArray=function(){return this.elements.slice()},lunr.SortedSet.prototype.map=function(t,e){return this.elements.map(t,e)},lunr.SortedSet.prototype.forEach=function(t,e){return this.elements.forEach(t,e)},lunr.SortedSet.prototype.indexOf=function(t,e,n){var e=e||0,n=n||this.elements.length,r=n-e,o=e+Math.floor(r/2),i=this.elements[o];return 1&gt;=r?i===t?o:-1:t&gt;i?this.indexOf(t,o,n):i&gt;t?this.indexOf(t,e,o):i===t?o:void 0},lunr.SortedSet.prototype.locationFor=function(t,e,n){var e=e||0,n=n||this.elements.length,r=n-e,o=e+Math.floor(r/2),i=this.elements[o];if(1&gt;=r){if(i&gt;t)return o;if(t&gt;i)return o+1}return t&gt;i?this.locationFor(t,o,n):i&gt;t?this.locationFor(t,e,o):void 0},lunr.SortedSet.prototype.intersect=function(t){for(var e=new lunr.SortedSet,n=0,r=0,o=this.length,i=t.length,s=this.elements,l=t.elements;;){if(n&gt;o-1||r&gt;i-1)break;s[n]!==l[r]?s[n]&lt;l[r]?n++:s[n]&gt;l[r]&amp;&amp;r++:(e.add(s[n]),n++,r++)}return e},lunr.SortedSet.prototype.clone=function(){var t=new lunr.SortedSet;return t.elements=this.toArray(),t.length=t.elements.length,t},lunr.SortedSet.prototype.union=function(t){var e,n,r;return this.length&gt;=t.length?(e=this,n=t):(e=t,n=this),r=e.clone(),r.add.apply(r,n.toArray()),r},lunr.SortedSet.prototype.toJSON=function(){return this.toArray()},lunr.Index=function(){this._fields=[],this._ref=&quot;id&quot;,this.pipeline=new lunr.Pipeline,this.documentStore=new lunr.Store,this.tokenStore=new lunr.TokenStore,this.corpusTokens=new lunr.SortedSet,this.eventEmitter=new lunr.EventEmitter,this._idfCache={},this.on(&quot;add&quot;,&quot;remove&quot;,&quot;update&quot;,function(){this._idfCache={}}.bind(this))},lunr.Index.prototype.on=function(){var t=Array.prototype.slice.call(arguments);return this.eventEmitter.addListener.apply(this.eventEmitter,t)},lunr.Index.prototype.off=function(t,e){return this.eventEmitter.removeListener(t,e)},lunr.Index.load=function(t){t.version!==lunr.version&amp;&amp;lunr.utils.warn(&quot;version mismatch: current &quot;+lunr.version+&quot; importing &quot;+t.version);var e=new this;return e._fields=t.fields,e._ref=t.ref,e.documentStore=lunr.Store.load(t.documentStore),e.tokenStore=lunr.TokenStore.load(t.tokenStore),e.corpusTokens=lunr.SortedSet.load(t.corpusTokens),e.pipeline=lunr.Pipeline.load(t.pipeline),e},lunr.Index.prototype.field=function(t,e){var e=e||{},n={name:t,boost:e.boost||1};return this._fields.push(n),this},lunr.Index.prototype.ref=function(t){return this._ref=t,this},lunr.Index.prototype.add=function(t,e){var n={},r=new lunr.SortedSet,o=t[this._ref],e=void 0===e?!0:e;this._fields.forEach(function(e){var o=this.pipeline.run(lunr.tokenizer(t[e.name]));n[e.name]=o,lunr.SortedSet.prototype.add.apply(r,o)},this),this.documentStore.set(o,r),lunr.SortedSet.prototype.add.apply(this.corpusTokens,r.toArray());for(var i=0;r.length&gt;i;i++){var s=r.elements[i],l=this._fields.reduce(function(t,e){var r=n[e.name].length;if(!r)return t;var o=n[e.name].filter(function(t){return t===s}).length;return t+o/r*e.boost},0);this.tokenStore.add(s,{ref:o,tf:l})}e&amp;&amp;this.eventEmitter.emit(&quot;add&quot;,t,this)},lunr.Index.prototype.remove=function(t,e){var n=t[this._ref],e=void 0===e?!0:e;if(this.documentStore.has(n)){var r=this.documentStore.get(n);this.documentStore.remove(n),r.forEach(function(t){this.tokenStore.remove(t,n)},this),e&amp;&amp;this.eventEmitter.emit(&quot;remove&quot;,t,this)}},lunr.Index.prototype.update=function(t,e){var e=void 0===e?!0:e;this.remove(t,!1),this.add(t,!1),e&amp;&amp;this.eventEmitter.emit(&quot;update&quot;,t,this)},lunr.Index.prototype.idf=function(t){if(this._idfCache[t])return this._idfCache[t];var e=this.tokenStore.count(t),n=1;return e&gt;0&amp;&amp;(n=1+Math.log(this.tokenStore.length/e)),this._idfCache[t]=n},lunr.Index.prototype.search=function(t){var e=this.pipeline.run(lunr.tokenizer(t)),n=lunr.utils.zeroFillArray(this.corpusTokens.length),r=[],o=this._fields.reduce(function(t,e){return t+e.boost},0),i=e.some(function(t){return this.tokenStore.has(t)},this);if(!i)return[];e.forEach(function(t,e,i){var s=1/i.length*this._fields.length*o,l=this,u=this.tokenStore.expand(t).reduce(function(e,r){var o=l.corpusTokens.indexOf(r),i=l.idf(r),u=1,a=new lunr.SortedSet;if(r!==t){var h=Math.max(3,r.length-t.length);u=1/Math.log(h)}return o&gt;-1&amp;&amp;(n[o]=s*i*u),Object.keys(l.tokenStore.get(r)).forEach(function(t){a.add(t)}),e.union(a)},new lunr.SortedSet);r.push(u)},this);var s=r.reduce(function(t,e){return t.intersect(e)}),l=new lunr.Vector(n);return s.map(function(t){return{ref:t,score:l.similarity(this.documentVector(t))}},this).sort(function(t,e){return e.score-t.score})},lunr.Index.prototype.documentVector=function(t){for(var e=this.documentStore.get(t),n=e.length,r=lunr.utils.zeroFillArray(this.corpusTokens.length),o=0;n&gt;o;o++){var i=e.elements[o],s=this.tokenStore.get(i)[t].tf,l=this.idf(i);r[this.corpusTokens.indexOf(i)]=s*l}return new lunr.Vector(r)},lunr.Index.prototype.toJSON=function(){return{version:lunr.version,fields:this._fields,ref:this._ref,documentStore:this.documentStore.toJSON(),tokenStore:this.tokenStore.toJSON(),corpusTokens:this.corpusTokens.toJSON(),pipeline:this.pipeline.toJSON()}},lunr.Store=function(){this.store={},this.length=0},lunr.Store.load=function(t){var e=new this;return e.length=t.length,e.store=Object.keys(t.store).reduce(function(e,n){return e[n]=lunr.SortedSet.load(t.store[n]),e},{}),e},lunr.Store.prototype.set=function(t,e){this.store[t]=e,this.length=Object.keys(this.store).length},lunr.Store.prototype.get=function(t){return this.store[t]},lunr.Store.prototype.has=function(t){return t in this.store},lunr.Store.prototype.remove=function(t){this.has(t)&amp;&amp;(delete this.store[t],this.length--)},lunr.Store.prototype.toJSON=function(){return{store:this.store,length:this.length}},lunr.stemmer=function(){var t={ational:&quot;ate&quot;,tional:&quot;tion&quot;,enci:&quot;ence&quot;,anci:&quot;ance&quot;,izer:&quot;ize&quot;,bli:&quot;ble&quot;,alli:&quot;al&quot;,entli:&quot;ent&quot;,eli:&quot;e&quot;,ousli:&quot;ous&quot;,ization:&quot;ize&quot;,ation:&quot;ate&quot;,ator:&quot;ate&quot;,alism:&quot;al&quot;,iveness:&quot;ive&quot;,fulness:&quot;ful&quot;,ousness:&quot;ous&quot;,aliti:&quot;al&quot;,iviti:&quot;ive&quot;,biliti:&quot;ble&quot;,logi:&quot;log&quot;},e={icate:&quot;ic&quot;,ative:&quot;&quot;,alize:&quot;al&quot;,iciti:&quot;ic&quot;,ical:&quot;ic&quot;,ful:&quot;&quot;,ness:&quot;&quot;},n=&quot;[^aeiou]&quot;,r=&quot;[aeiouy]&quot;,o=n+&quot;[^aeiouy]*&quot;,i=r+&quot;[aeiou]*&quot;,s=&quot;^(&quot;+o+&quot;)?&quot;+i+o,l=&quot;^(&quot;+o+&quot;)?&quot;+i+o+&quot;(&quot;+i+&quot;)?$&quot;,u=&quot;^(&quot;+o+&quot;)?&quot;+i+o+i+o,a=&quot;^(&quot;+o+&quot;)?&quot;+r;return function(n){var i,h,c,p,f,d,v;if(3&gt;n.length)return n;if(c=n.substr(0,1),&quot;y&quot;==c&amp;&amp;(n=c.toUpperCase()+n.substr(1)),p=/^(.+?)(ss|i)es$/,f=/^(.+?)([^s])s$/,p.test(n)?n=n.replace(p,&quot;$1$2&quot;):f.test(n)&amp;&amp;(n=n.replace(f,&quot;$1$2&quot;)),p=/^(.+?)eed$/,f=/^(.+?)(ed|ing)$/,p.test(n)){var m=p.exec(n);p=RegExp(s),p.test(m[1])&amp;&amp;(p=/.$/,n=n.replace(p,&quot;&quot;))}else if(f.test(n)){var m=f.exec(n);i=m[1],f=RegExp(a),f.test(i)&amp;&amp;(n=i,f=/(at|bl|iz)$/,d=RegExp(&quot;([^aeiouylsz])\\1$&quot;),v=RegExp(&quot;^&quot;+o+r+&quot;[^aeiouwxy]$&quot;),f.test(n)?n+=&quot;e&quot;:d.test(n)?(p=/.$/,n=n.replace(p,&quot;&quot;)):v.test(n)&amp;&amp;(n+=&quot;e&quot;))}if(p=/^(.+?)y$/,p.test(n)){var m=p.exec(n);i=m[1],p=RegExp(a),p.test(i)&amp;&amp;(n=i+&quot;i&quot;)}if(p=/^(.+?)(ational|tional|enci|anci|izer|bli|alli|entli|eli|ousli|ization|ation|ator|alism|iveness|fulness|ousness|aliti|iviti|biliti|logi)$/,p.test(n)){var m=p.exec(n);i=m[1],h=m[2],p=RegExp(s),p.test(i)&amp;&amp;(n=i+t[h])}if(p=/^(.+?)(icate|ative|alize|iciti|ical|ful|ness)$/,p.test(n)){var m=p.exec(n);i=m[1],h=m[2],p=RegExp(s),p.test(i)&amp;&amp;(n=i+e[h])}if(p=/^(.+?)(al|ance|ence|er|ic|able|ible|ant|ement|ment|ent|ou|ism|ate|iti|ous|ive|ize)$/,f=/^(.+?)(s|t)(ion)$/,p.test(n)){var m=p.exec(n);i=m[1],p=RegExp(u),p.test(i)&amp;&amp;(n=i)}else if(f.test(n)){var m=f.exec(n);i=m[1]+m[2],f=RegExp(u),f.test(i)&amp;&amp;(n=i)}if(p=/^(.+?)e$/,p.test(n)){var m=p.exec(n);i=m[1],p=RegExp(u),f=RegExp(l),d=RegExp(&quot;^&quot;+o+r+&quot;[^aeiouwxy]$&quot;),(p.test(i)||f.test(i)&amp;&amp;!d.test(i))&amp;&amp;(n=i)}return p=/ll$/,f=RegExp(u),p.test(n)&amp;&amp;f.test(n)&amp;&amp;(p=/.$/,n=n.replace(p,&quot;&quot;)),&quot;y&quot;==c&amp;&amp;(n=c.toLowerCase()+n.substr(1)),n}}(),lunr.Pipeline.registerFunction(lunr.stemmer,&quot;stemmer&quot;),lunr.stopWordFilter=function(t){return-1===lunr.stopWordFilter.stopWords.indexOf(t)?t:void 0},lunr.stopWordFilter.stopWords=new lunr.SortedSet,lunr.stopWordFilter.stopWords.length=119,lunr.stopWordFilter.stopWords.elements=[&quot;&quot;,&quot;a&quot;,&quot;able&quot;,&quot;about&quot;,&quot;across&quot;,&quot;after&quot;,&quot;all&quot;,&quot;almost&quot;,&quot;also&quot;,&quot;am&quot;,&quot;among&quot;,&quot;an&quot;,&quot;and&quot;,&quot;any&quot;,&quot;are&quot;,&quot;as&quot;,&quot;at&quot;,&quot;be&quot;,&quot;because&quot;,&quot;been&quot;,&quot;but&quot;,&quot;by&quot;,&quot;can&quot;,&quot;cannot&quot;,&quot;could&quot;,&quot;dear&quot;,&quot;did&quot;,&quot;do&quot;,&quot;does&quot;,&quot;either&quot;,&quot;else&quot;,&quot;ever&quot;,&quot;every&quot;,&quot;for&quot;,&quot;from&quot;,&quot;get&quot;,&quot;got&quot;,&quot;had&quot;,&quot;has&quot;,&quot;have&quot;,&quot;he&quot;,&quot;her&quot;,&quot;hers&quot;,&quot;him&quot;,&quot;his&quot;,&quot;how&quot;,&quot;however&quot;,&quot;i&quot;,&quot;if&quot;,&quot;in&quot;,&quot;into&quot;,&quot;is&quot;,&quot;it&quot;,&quot;its&quot;,&quot;just&quot;,&quot;least&quot;,&quot;let&quot;,&quot;like&quot;,&quot;likely&quot;,&quot;may&quot;,&quot;me&quot;,&quot;might&quot;,&quot;most&quot;,&quot;must&quot;,&quot;my&quot;,&quot;neither&quot;,&quot;no&quot;,&quot;nor&quot;,&quot;not&quot;,&quot;of&quot;,&quot;off&quot;,&quot;often&quot;,&quot;on&quot;,&quot;only&quot;,&quot;or&quot;,&quot;other&quot;,&quot;our&quot;,&quot;own&quot;,&quot;rather&quot;,&quot;said&quot;,&quot;say&quot;,&quot;says&quot;,&quot;she&quot;,&quot;should&quot;,&quot;since&quot;,&quot;so&quot;,&quot;some&quot;,&quot;than&quot;,&quot;that&quot;,&quot;the&quot;,&quot;their&quot;,&quot;them&quot;,&quot;then&quot;,&quot;there&quot;,&quot;these&quot;,&quot;they&quot;,&quot;this&quot;,&quot;tis&quot;,&quot;to&quot;,&quot;too&quot;,&quot;twas&quot;,&quot;us&quot;,&quot;wants&quot;,&quot;was&quot;,&quot;we&quot;,&quot;were&quot;,&quot;what&quot;,&quot;when&quot;,&quot;where&quot;,&quot;which&quot;,&quot;while&quot;,&quot;who&quot;,&quot;whom&quot;,&quot;why&quot;,&quot;will&quot;,&quot;with&quot;,&quot;would&quot;,&quot;yet&quot;,&quot;you&quot;,&quot;your&quot;],lunr.Pipeline.registerFunction(lunr.stopWordFilter,&quot;stopWordFilter&quot;),lunr.TokenStore=function(){this.root={docs:{}},this.length=0},lunr.TokenStore.load=function(t){var e=new this;return e.root=t.root,e.length=t.length,e},lunr.TokenStore.prototype.add=function(t,e,n){var n=n||this.root,r=t[0],o=t.slice(1);return r in n||(n[r]={docs:{}}),0===o.length?(n[r].docs[e.ref]=e,this.length+=1,void 0):this.add(o,e,n[r])},lunr.TokenStore.prototype.has=function(t){if(!t)return!1;for(var e=this.root,n=0;t.length&gt;n;n++){if(!e[t[n]])return!1;e=e[t[n]]}return!0},lunr.TokenStore.prototype.getNode=function(t){if(!t)return{};for(var e=this.root,n=0;t.length&gt;n;n++){if(!e[t[n]])return{};e=e[t[n]]}return e},lunr.TokenStore.prototype.get=function(t,e){return this.getNode(t,e).docs||{}},lunr.TokenStore.prototype.count=function(t,e){return Object.keys(this.get(t,e)).length},lunr.TokenStore.prototype.remove=function(t,e){if(t){for(var n=this.root,r=0;t.length&gt;r;r++){if(!(t[r]in n))return;n=n[t[r]]}delete n.docs[e]}},lunr.TokenStore.prototype.expand=function(t,e){var n=this.getNode(t),r=n.docs||{},e=e||[];return Object.keys(r).length&amp;&amp;e.push(t),Object.keys(n).forEach(function(n){&quot;docs&quot;!==n&amp;&amp;e.concat(this.expand(t+n,e))},this),e},lunr.TokenStore.prototype.toJSON=function(){return{root:this.root,length:this.length}};
+t.fn.camelHunter=function(i){var s=t.extend({},t.fn.camelHunter.defaults,i);return s.results?(e.init(this,s),e):void 0},t.fn.camelHunter.defaults={results:!1,rss:&quot;/rss-alternate&quot;,onKeyUp:!1,result_template:&quot;&lt;a href=&#39;{{link}}&#39;&gt;&lt;p&gt;&lt;h2&gt;{{title}}&lt;/h2&gt;&lt;h4&gt;{{pubDate}}&lt;/h4&gt;&lt;/p&gt;&lt;/a&gt;&quot;,info_template:&quot;&lt;p&gt;Number of posts found: {{amount}}&lt;/p&gt;&quot;,displaySearchInfo:!0,zeroResultsInfo:!0,before:!1,onComplete:!1};var e={isInit:!1,init:function(t,e){var i=this;this.target=t,this.rss=e.rss,this.results=e.results,this.blogData=[],this.result_template=e.result_template,this.info_template=e.info_template,this.zeroResultsInfo=e.zeroResultsInfo,this.displaySearchInfo=e.displaySearchInfo,this.before=e.before,this.onComplete=e.onComplete,this.index=lunr(function(){this.field(&quot;title&quot;,{boost:10}),this.field(&quot;description&quot;),this.field(&quot;link&quot;),this.field(&quot;category&quot;),this.field(&quot;pubDate&quot;),this.ref(&quot;id&quot;)}),t.focus(function(){i.loadRSS()}),t.closest(&quot;form&quot;).submit(function(e){e.preventDefault(),i.find(t.val())}),e.onKeyUp&amp;&amp;(i.loadRSS(),t.keyup(function(){i.find(t.val())}))},loadRSS:function(){if(this.isInit)return!1;var e=this.index,i=this.rss,s=this.blogData;t.get(i,function(i){for(var n=t(i).find(&quot;item&quot;),o=0;n&amp;&amp;o&lt;n.length;o++){var r=n.eq(o),l={id:o+1,title:r.find(&quot;title&quot;).text(),description:r.find(&quot;description&quot;).text(),category:r.find(&quot;category&quot;).text(),pubDate:r.find(&quot;pubDate&quot;).text(),link:r.find(&quot;link&quot;).text()};e.add(l),s.push(l)}}),this.isInit=!0},find:function(e){var i=this.index.search(e),s=t(this.results),n=[];s.empty(),this.before&amp;&amp;this.before(),(this.zeroResultsInfo||i.length&gt;0)&amp;&amp;this.displaySearchInfo&amp;&amp;s.append(this.format(this.info_template,{amount:i.length}));for(var o=0;o&lt;i.length;o++){var r=this.blogData[i[o].ref-1];s.append(this.format(this.result_template,r)),n.push(r)}this.onComplete&amp;&amp;this.onComplete(n)},clear:function(){t(this.results).empty(),this.target.val(&quot;&quot;)},format:function(t,e){return t.replace(/{{([^{}]*)}}/g,function(t,i){var s=e[i];return&quot;string&quot;==typeof s||&quot;number&quot;==typeof s?s:t})}}}(jQuery);
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

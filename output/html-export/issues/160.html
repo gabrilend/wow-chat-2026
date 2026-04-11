@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 160 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 160 • Phase 1</div>
+            <h1>Behavior System Integration</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>160 - Behavior System Integration</h1></p>
+<p><h2>Status</h2>
+- Created: 2026-04-05
+- Phase: 2
+- Priority: High
+- Depends: 130 (ALE initialization fix)</p>
+<p><h2>Current Behavior</h2>
+- Lua behavior files exist but were deleted from working tree
+- Playerbots module controls bot movement via C++ RPG strategies
+- Bots stand in place saying &quot;hi&quot; repeatedly (WanderNpc + EnableGreet)
+- Player chat commands fully control bots once invited (follow, stay, attack)
+- No dispersion - bots clump together</p>
+<p><h2>Intended Behavior</h2>
+- Lua behaviors control bot movement and dispersion
+- Playerbots RPG defers to Lua for idle movement
+- Player commands disabled except: party join, gesture-based directions
+- Bots disperse naturally, moving toward players if none within 200 yards
+- Variety in chatter (eventual ollama integration)</p>
+<p><h2>Investigation Findings</h2></p>
+<p><h3>Behavior Files Restored</h3>
+Files in <code>src/lua/behaviors/</code>:
+- <code>init.lua</code> - Loader
+- <code>zone-consensus.lua</code> - Collective movement drift based on player facing
+- <code>level-affinity.lua</code> - Bots cluster by level similarity
+- <code>orbit-player.lua</code> - Formation positioning with dispersion
+- <code>gestures.lua</code> - Player commands through body language (kneel, sit, wave)
+- <code>find-monsters.lua</code> - Combat targeting
+- <code>avoid-monsters.lua</code> - Danger awareness
+- <code>sit-and-rest.lua</code> - Resource recovery
+- <code>convoy.lua</code> - NPC following behavior</p>
+<p><h3>Movement Conflict</h3>
+Both systems try to control bot movement:
+1. <strong>Playerbots C++ RPG</strong> - WanderRandom, WanderNpc, GoCamp, etc.
+2. <strong>Lua behaviors</strong> - ZoneConsensus, LevelAffinity, OrbitPlayer</p>
+<p>They will fight - last MoveTo() wins for that tick.</p>
+<p><strong>Solution:</strong> Set playerbots RPG weights to Rest=100, others=0
+This makes playerbots &quot;do nothing&quot; while our Lua controls movement.</p>
+<p><h3>Command Blocking Challenge</h3>
+Playerbots security system:
+``<code>cpp
+PLAYERBOT_SECURITY_DENY_ALL = 0   // Nothing
+PLAYERBOT_SECURITY_TALK = 1       // Chat only
+PLAYERBOT_SECURITY_INVITE = 2     // Can invite
+PLAYERBOT_SECURITY_ALLOW_ALL = 3  // Full control
+<pre><code>
+<strong>Problem:</strong> When player invites bot → becomes &amp;quot;master&amp;quot; → gets ALLOW_ALL</p>
+<p><strong>Unsecured commands</strong> (always allowed): who, wts, sendmail, invite, leave, lfg</p>
+<p><strong>Potential solutions:</strong>
+1. <strong>C++ Patch</strong> - Add config </code>AiPlayerbot.AllowedMasterCommands = &amp;quot;invite,leave&amp;quot;<code>
+2. <strong>Modify HandleCommand()</strong> - Check against whitelist before executing
+3. <strong>Lua intercept</strong> - Not possible, C++ processes before Lua hooks</p>
+<p>&lt;h3&gt;Recommended C++ Patch Location&lt;/h3&gt;
+File: </code>source-beta/modules/mod-playerbots/src/Bot/PlayerbotAI.cpp<code>
+Function: </code>HandleCommand()<code> (line 560)</p>
+<p>Add check after security validation:</code></pre>cpp
+// Check command whitelist for Everland Ghostsong
+if (!IsWhitelistedCommand(filtered))
+{
+    TellMaster(&quot;I don&#39;t respond to that command.&quot;);
+    return;
+}
+</code>`<code></p>
+<p><h2>Implementation Steps</h2></p>
+<p><h3>Phase 1: Config Changes (No Rebuild) ✓ COMPLETE</h3>
+1. Edit </code>playerbots.conf<code>:
+   </code>`<code>
+   # Defer movement to Lua behaviors
+   AiPlayerbot.RpgStatusProbWeight.WanderRandom = 0
+   AiPlayerbot.RpgStatusProbWeight.WanderNpc = 0
+   AiPlayerbot.RpgStatusProbWeight.GoCamp = 0
+   AiPlayerbot.RpgStatusProbWeight.Rest = 100</p>
+<p>   # Reduce greeting spam
+   AiPlayerbot.EnableGreet = 0
+   </code>`<code></p>
+<p>2. Integrate Lua behaviors:
+   - Add </code>require(&quot;load-behaviors&quot;)<code> to </code>periodic_events.lua<code>
+   - Behaviors load via load-behaviors.lua</p>
+<p><h3>Phase 2: Dispersion Enhancement ✓ COMPLETE</h3>
+Added to </code>zone-consensus.lua<code>:
+- </code>LONELY_RADIUS = 200<code> - if no one within this, move toward others
+- </code>APPROACH_DISTANCE = 100<code> - how far to move toward closest
+- </code>CLUMP_RADIUS = 15<code> - too close, need to disperse
+- </code>DISPERSE_DISTANCE = 20<code> - how far to disperse when clumped
+- New functions: </code>findNearestUnit()<code>, </code>countNearbyUnits()<code>, </code>handleDispersion()<code></p>
+<p><h3>Phase 2b: Centralized Periodic Event Management ✓ COMPLETE</h3>
+All bot behaviors now register through </code>periodic_events.lua<code> instead of self-registering.</p>
+<p><strong>Rationale:</strong> Each behavior file was calling </code>RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, ...)<code>
+independently, creating duplicate event chains. Centralizing ensures:
+- Single point of control for behavior timing
+- Consistent timer intervals (configurable in one place)
+- Clear separation: spawn events for players, behavior events for bots</p>
+<p><strong>Changes made:</strong></p>
+<p></code>periodic_events.lua<code> now defines:
+<pre><code class="lua">DELAY_BOT_ZONE_CONSENSUS = <span class="number">3000</span>  <span class="comment">-- ms - drift with zone facing direction</span>
+DELAY_BOT_LEVEL_AFFINITY = <span class="number">5000</span>  <span class="comment">-- ms - cluster by level similarity</span>
+DELAY_BOT_SIT_AND_REST   = <span class="number">3000</span>  <span class="comment">-- ms - check resources, sit <span class="keyword">if</span> needed</span>
+DELAY_BOT_ORBIT_PLAYER   = <span class="number">2000</span>  <span class="comment">-- ms - formation positioning</span>
+DELAY_BOT_FIND_MONSTERS  = <span class="number">5000</span>  <span class="comment">-- ms - scan <span class="keyword">for</span> combat targets</span></code></pre></p>
+<p>Wrapper functions added:
+- </code>PeriodicBotZoneConsensus()<code> → calls </code>ZoneConsensus.periodicUpdate(bot)<code>
+- </code>PeriodicBotLevelAffinity()<code> → calls </code>LevelAffinity.periodicUpdate(bot)<code>
+- </code>PeriodicBotSitAndRest()<code> → calls </code>SitAndRest.checkAndRest(bot)<code>
+- </code>PeriodicBotOrbitPlayer()<code> → calls </code>OrbitPlayer.updatePosition(bot)<code>
+- </code>PeriodicBotFindMonsters()<code> → calls </code>FindMonsters.scan(bot)<code></p>
+<p></code>InitialLogin()<code> now registers:
+- For real players: spawn events (ambush, traveller, treasure)
+- For bots: behavior events (all five above)</p>
+<p><strong>Behavior files updated</strong> (removed self-registration):
+- </code>zone-consensus.lua<code> → exposes </code>periodicUpdate(bot)<code>
+- </code>level-affinity.lua<code> → exposes </code>periodicUpdate(bot)<code>, </code>trackLogin()<code>, </code>trackLogout()<code>
+- </code>sit-and-rest.lua<code> → exposes </code>checkAndRest(bot)<code>
+- </code>orbit-player.lua<code> → exposes </code>updatePosition(bot)<code>
+- </code>find-monsters.lua<code> → exposes </code>scan(bot)<code></p>
+<p><h3>Phase 3: Command Blocking (C++ Patch)</h3>
+1. Add config: </code>AiPlayerbot.MasterCommandWhitelist = &quot;invite,leave,who&quot;<code>
+2. Modify </code>HandleCommand()` to check whitelist
+3. Rebuild and test</p>
+<p><h2>Testing</h2>
+1. Login, verify Lua behaviors print load messages
+2. Observe bots - should drift with zone consensus
+3. Try commands like &quot;follow&quot; - should be rejected (after patch)
+4. Invite bot to party - should join
+5. Use gesture commands (kneel near bot) - should respond</p>
+<p><h2>Related Issues</h2>
+- 114-119: Individual behavior implementations
+- 125: Player-bot behavior commands
+- 130: ALE initialization fix
+- 133: Gesture command system</p>
+<p><h2>Related Files</h2>
+- src/lua/behaviors/*.lua
+- src/lua/periodic_events.lua
+- installed-files-beta/etc/modules/playerbots.conf
+- source-beta/modules/mod-playerbots/src/Bot/PlayerbotAI.cpp
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-1-progress.html">View Phase 1 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

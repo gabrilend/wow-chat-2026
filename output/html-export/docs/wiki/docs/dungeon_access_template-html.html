@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dungeon_access_template.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>dungeon_access_template.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/dungeon_access_template.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2506 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>dungeon\_access\_template</h1></p>
+<p><a href="database-world">&lt;-Back-to:World</a></p>
+<p><strong>The \<code>dungeon\_access\_template\</code> table</strong></p>
+<p><strong>Table Structure</strong></p>
+<p>| Field                   | Type         | Attributes | Key | Null | Default        | Extra                                         | Comment |
+| ----------------------- | ------------ | ---------- | --- | ---- | -------------- | --------------------------------------------- | ------- |
+| [id][1]                 | TINYINT      | UNSIGNED   | PRI | NO   | AUTO_INCREMENT |                                               |         |
+| [map_id][2]             | MEDIUMINT    | UNSIGNED   | KEY | NO   |                | FK_dungeon_access_template__instance_template |         |
+| [difficulty][3]         | TINYINT      | UNSIGNED   |     | NO   | 0              |                                               |         |
+| [min_level][4]          | TINYINT      | UNSIGNED   |     | YES  | NULL           |                                               |         |
+| [max_level][5]          | TINYINT      | UNSIGNED   |     | YES  | NULL           |                                               |         |
+| [min_avg_item_level][6] | SMALLINT     | UNSIGNED   |     | YES  | NULL           |                                               |         |
+| [comment][7]            | VARCHAR(255) |            |     | YES  | NULL           |                                               |         |</p>
+<p>[1]: #id
+[2]: #map_id
+[3]: #difficulty
+[4]: #min_level
+[5]: #max_level
+[6]: #min_avg_item_level
+[7]: #comment</p>
+<p><strong>Description of the fields</strong></p>
+<p><h3>id</h3></p>
+<p>The dungeon template ID</p>
+<p><h3>map_id</h3></p>
+<p>Map ID from <a href="instance_template#map">instance_template.map</a>.</p>
+<p><h3>difficulty</h3></p>
+<p>- 5 man: 0 = normal, 1 = heroic, 2 = epic (Mythic, not implemented in 3.3.5) </p>
+<p>- 10 man: 0 = normal, 2 = heroic </p>
+<p>- 25 man: 1 = normal, 3 = heroic</p>
+<p><h3>min_level</h3></p>
+<p>The minimum level you must be to enter the instance.</p>
+<p><h3>max_level</h3></p>
+<p>The maximum level you can be to enter the instance.</p>
+<p><h3>min_avg_item_level</h3></p>
+<p>Min average ilvl required to enter the instance.</p>
+<p>- All WotLK Heroics require at least an average item level of 180.</p>
+<p>- Trial of the Champion, Pit of Saron, and the Forge of Souls require an average item level of 200.</p>
+<p>- Halls of Reflection requires an average item level of 219.</p>
+<p><strong>Note:</strong> this requirement only applies to the Dungeon Finder and the Raid Browser, not to a dungeon/raid portal (and it&#39;s blizzlike). This also means a guild could try to clear a raid while being undergeared :)</p>
+<p><h3>comment</h3>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

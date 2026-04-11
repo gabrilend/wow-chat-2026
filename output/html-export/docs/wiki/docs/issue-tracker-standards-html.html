@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>issue-tracker-standards.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>issue-tracker-standards.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/issue-tracker-standards.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2309 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Issue Tracker Standards</h1></p>
+<p><a href="https://github.com/azerothcore/azerothcore-wotlk/issues">&gt;&gt; Issue Tracker</a></p>
+<p><strong>Always search for existing issues before you report your problem or incident.</strong></p>
+<p><strong>All reports are public. Never leave passwords or other confidential information visible in your report.</strong></p>
+<p><strong>Never upload files into issues! Use GIST for text and YouTube for video!</strong></p>
+<p><h3>Self Checklist</h3></p>
+<p>- Am I using the latest version/revision of AzerothCore? Do you need to update and test again before reporting?</p>
+<p>- Am I using any custom modifications to the database or core that could cause the issue?</p>
+<p>- Am I using any module that could cause the issue?</p>
+<p>- Did I include which <strong>revision/hash/commit</strong> I am on?</p>
+<p>- Did I include which database <strong>version</strong> I am using?</p>
+<p>- Did I include which operating system I am using?</p>
+<p>- Did I include steps to reproduce the issue?</p>
+<p>- Did I explain what is wrong and what is the expected behavior?</p>
+<p>- Did I only report one bug per issue?</p>
+<p>Issue template:</p>
+<p><pre><code>Thank you for taking the time to fill out a bug report. Remember to fill out all fields including the title above.
+An issue that is not properly filled out will be closed.
+You can read more about the standards for a bug report <a href="issue-tracker-standards">here</a>.</p>
+<p><strong>Current Behaviour</strong>
+Description of the problem or issue here.
+Include entries of affected creatures / items / quests / spells etc.
+If this is a crash, post the crashlog (upload to https://gist.github.com/) and include the link here.</p>
+<p><strong>Expected Blizzlike Behaviour</strong>
+Tell us what should happen instead.</p>
+<p><strong>Source</strong>
+If you have a source that proves how it is supposed to work, please add that to make it easier for devs to fix the issue.</p>
+<p><strong>Steps to reproduce the problem</strong>
+What does someone else need to do to encounter the same bug?</p>
+<p>1. 
+2. 
+3. </p>
+<p><strong>Extra Notes</strong>
+Do you have any extra notes that can help solve the issue that does not fit any other field?</p>
+<p><strong>AC rev. hash/commit</strong>
+Copy the result of the .server debug command (if you need to run it from the client get a prat addon)</p>
+<p><strong>Operating System</strong>
+Operating System, i.e. Windows 10 x64, Debian 10 x64, etc</p>
+<p><strong>Custom changes or modules</strong>
+List which custom changes or modules you have applied, i.e. Eluna module, etc.
+</code></pre></p>
+<p><a href="https://github.com/azerothcore/azerothcore-wotlk/issues">&gt;&gt; Issue Tracker</a>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

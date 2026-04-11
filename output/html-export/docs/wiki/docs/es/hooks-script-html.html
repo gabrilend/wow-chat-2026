@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hooks-script.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>hooks-script.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/hooks-script.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 10968 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>El sistema ScriptAI</h1></p>
+<p>El sistema ScriptAI implementado por AC utiliza una estrategia especial: <a href="https://en.wikipedia.org/wiki/Observer_pattern">Patrón del observador</a> para implementar una programación dirigida por eventos que es también el <strong>CORE</strong> de nuestro sistema modular.</p>
+<p>Esta guía, junto con nuestro <a href="create-a-module">sistema de módulos</a> te permite ampliar el AzerothCore sin parchearlo directamente. ¡Esto le permite actualizar su repositorio manteniendo sus adiciones y personalizaciones libres de conflictos!</p>
+<p><h2>Recursos</h2></p>
+<p><h3>Lista de hooks</h3></p>
+<p>La lista de los hooks se encuentra dentro del archivo <a href="https://github.com/azerothcore/azerothcore-wotlk/blob/master/src/server/game/Scripting/ScriptMgr.h">ScriptMgr.h</a></p>
+<p><h3>Glosario</h3></p>
+<p>- <strong>Hook</strong>: Una función que se declara dentro de un <strong>_ScriptObject_</strong> y que es definida por el <strong>_Listeners_</strong>
+- <strong>ScriptObject</strong>: Clase abstracta que debe ser extendida para crear el <strong>_Observer_</strong>.
+- <strong>Script type</strong>: La clase que extiende el <code>ScriptObject</code> y contiene hooks (por ejemplo, <code>PLayerScript</code>, <code>CreatureScript</code>, etc.), cuando extiendes la clase de tipo script estás inicializando un <strong>_Concrete Observer_</strong>
+- <strong>ScriptRegistry</strong>: Esta clase contiene el registro de todos los <code>Observers</code> registrados.
+- <strong>ScriptMgr</strong>: La clase singleton que contiene la lista de todos los hooks disponibles y actúa como un <strong>_Observer_</strong> notificando a los <strong>_Listeners_</strong> cuando se despacha un evento.</p>
+<p><h2>Cómo crear un hook</h2></p>
+<p>¡No se preocupe, no es tan aterrador como puede pensar!.</p>
+<p>!<a href="https://media4.giphy.com/media/B4ZgcoPTHYXL2/giphy.gif?cid=ecf05e47mvpbtn5sbmgkcg2gurnrjk35hsdt3m7faillyp26&amp;rid=giphy.gif&amp;ct=g">hook</a></p>
+<p>Antes de pasar al siguiente paso deberías preguntarte: ¿tengo que crear un nuevo tipo de script basado en la clase <code>ScriptObject</code> o puedo reutilizar uno de los ya existentes?</p>
+<p>Un tipo de script suele estar estrictamente relacionado con una determinada clase del core. Por ejemplo:</p>
+<p>- <code>PlayerScript</code> -&gt; <code>Player</code> class
+- <code>WorldScript</code> -&gt; <code>World</code> class
+- <code>CreatureScript</code> -&gt; <code>Creature</code> class</p>
+<p>Y así sucesivamente.</p>
+<p>Hay algunas excepciones como el <code>GlobalScript</code> que es un Observador utilizado en diferentes clases a lo largo del núcleo. Pero en general, un tipo de script debe referirse a una clase específica.</p>
+<p>Por lo tanto, si ha creado una nueva clase que tiene que ser extendida con hooks, entonces puede proceder con el primer punto.</p>
+<p>Sin embargo, la mayoría de las veces sólo tienes que añadir nuevos hooks a los scripts existentes, en este caso sólo salta al punto 2 de este capítulo.</p>
+<p><h3>1) Procedimiento estándar al añadir nuevas clases de scripts</h3></p>
+<p>En primer lugar, define la clase actual, y haz que herede de <code>ScriptObject</code>, así:</p>
+<p>``<code>cpp
+class MyScriptType : public ScriptObject
+{
+    uint32 _someId;
+    private:
+        void RegisterSelf();
+    protected:
+        MyScriptType(const char<em> name, uint32 someId)
+            : ScriptObject(name), _someId(someId)
+        {
+            ScriptRegistry&lt;MyScriptType&gt;::AddScript(this);
+        }
+    public:
+        // Si una función virtual en tu clase de tipo script
+        // no tiene que ser necesariamente anulada, simplemente declárala virtual
+        // con un cuerpo vacío. Si, por el contrario, es lógico anularla
+        // (es decir, si es el único método de la clase), hazla virtual pura, añadiéndole = 0.
+        virtual void OnBeforeSomeEvent(uint32 /</em>someArg1<em>/, std::string&amp; /</em>someArg2/<em>) { }
+        // Esta es una función virtual pura:
+        virtual void OnAnotherEvent(uint32 /</em>someArg<em>/) = 0;
+}
+<pre><code>
+A continuación, tienes que añadir una especialización para ScriptRegistry. Pon esto al principio de </code>ScriptMgr.cpp<code>:
+</code></pre>cpp
+template class ScriptRegistry&lt;MyScriptType&gt;;
+<pre><code>
+Ahora añade el registro en la parte inferior del </code>ScriptMgr.cpp<code>:
+</code></pre>cpp
+MyScriptType::MyScriptType(const char</em> name)
+    : ScriptObject(name)
+{
+    ScriptRegistry&lt;MyScriptType&gt;::AddScript(this);
+}
+<pre><code>
+Entonces añade una rutina de limpieza en </code>ScriptMgr::unload()<code>.
+</code></pre>
+SCR_CLEAR(MyScriptType);
+<pre><code>
+¡Y finalmente tu clase está lista para funcionar con el sistema de scripts!</p>
+<p>&lt;h3&gt;2) Implementar las funciones de los hooks&lt;/h3&gt;</p>
+<p>Si no has seguido el punto 1 y quieres reutilizar un </code>ScriptObject<code> existente, entonces tienes que declarar primero las funciones dentro de una de las clases de </code>ScriptObject<code> preexistentes (como </code>PlayerScript<code>, </code>ServerScript<code>, etc.)</p>
+<p>&lt;h4&gt;Declarar los hooks&lt;/h4&gt;</p>
+<p>Lo que tienes que hacer ahora es añadir funciones a </code>ScriptMgr<code> que puedan ser llamadas desde el núcleo para desencadenar realmente ciertos eventos.</p>
+<p>En </code>ScriptMgr.h<code>, dentro de </code>class ScriptMgr<code>
+</code></pre>cpp
+void OnBeforeSomeEvent(uint32 someArg1, std::string&amp; someArg2);
+void OnAnotherEvent(uint32 someArg);
+<pre><code>
+<strong>NOTA:</strong> para ciertos scripts el método declarado dentro de la clase </code>ScriptMgr<code> y el declarado en el </code>ScriptObject<code> relacionado, no siempre coinciden. Por ejemplo: </code>OnLogin<code> es un hook del PlayerScript que se declara como </code>OnPlayerLogin<code> cuando se utiliza dentro de la clase </code>ScriptMgr<code>, evitando así colisiones con otros métodos ya que la clase </code>ScriptMgr<code> recoge los hooks de todos los </code>ScriptObjects<code> dentro de la misma lista.</p>
+<p>&lt;h4&gt;Defina sus hooks&lt;/h4&gt;</p>
+<p>Este paso define la forma en que su hook debe llamar a los listeners registrados.</p>
+<p>La forma más habitual de hacerlo es la siguiente</p>
+<p>En </code>ScriptMgr.cpp<code>:
+</code></pre>cpp
+void ScriptMgr::OnBeforeSomeEvent(uint32 someArg1, std::string&amp; someArg2)
+{
+    FOREACH_SCRIPT(MyScriptType)-&gt;OnBeforeSomeEvent(someArg1, someArg2);
+}</p>
+<p>void ScriptMgr::OnAnotherEvent(uint32 someArg)
+{
+    FOREACH_SCRIPT(MyScriptType)-&gt;OnAnotherEvent(someArg);
+}
+<pre><code>
+Ahora basta con llamar a estas dos funciones desde cualquier lugar del core para activar el evento en todos los scripts registrados de ese tipo.</p>
+<p>&lt;h3&gt;Cómo llamar a tus hooks&lt;/h3&gt;</p>
+<p>La clase </code>ScriptMgr<code> se inicializa dentro del AC como un singleton que contendrá todos los observers (ScriptObjects) y sus listeners registrados relacionados (hooks). AC proporciona una propiedad global llamada &amp;quot;sScriptMgr&amp;quot; que puede utilizar para llamar a su script dentro de las funciones de AC.</p>
+<p>Por ejemplo:
+</code></pre>cpp
+void CoreClass::SomeEvent() 
+{
+    uint32 arg1=10;
+    std::string arg2=&quot;something&quot;;</p>
+<p>    sScriptMgr-&gt;OnBeforeSomeEvent(arg1, arg2);</p>
+<p>    //[...]
+}
+<pre><code>
+&lt;h2&gt;Documentar su hook&lt;/h2&gt;</p>
+<p>Recuerda documentar tu nuevo hook siguiendo la guía <a href="how-to-document-code">Cómo documentar tu código</a>.</p>
+<p>Cuando creas un nuevo hook para publicarlo en el repo de </code>AzerothCore<code>, uno de los criterios de aceptación es escribir una documentación adecuada para él, para que otras personas sepan cómo usarlo correctamente. Así que, por favor, lee esa guía con atención.</p>
+<p>&lt;h3&gt;Escribir un registro de cambios&lt;/h3&gt;</p>
+<p>Cuando creas o modificas cualquier hook, tienes que crear un nuevo changelog para explicar a la gente cómo adaptar su código y mantenerlos informados sobre estos cambios. Por favor, siga <a href="how-to-use-changelog">esta guía</a> para aprender a hacerlo.</p>
+<p>&lt;h2&gt;Convenciones de nomenclatura&lt;/h2&gt;</p>
+<p>Cada </code>hook<code> debe tener la siguiente convención de nombres:</p>
+<p></code>On[When]&amp;lt;Action&amp;gt;<code></p>
+<p>Por ejemplo:</p>
+<p>- </code>OnBeforeConfigLoad<code>
+- </code>OnAfterArenaRatingCalculation<code></p>
+<p>La acción normalmente coincide con el nombre de la función dentro de la cual se llama al </code>hook<code>.</p>
+<p>Si la función madre es lo suficientemente compleja como para contener diferentes hooks, entonces la acción debe reflejar para qué se utiliza el </code>hook<code>.</p>
+<p>La parte &amp;quot;Cuando&amp;quot; es opcional, pero se recomienda encarecidamente.</p>
+<p>Ayuda a entender en qué parte de la función padre se llama al </code>hook<code>.</p>
+<p>Por ejemplo, puedes tener tanto </code>OnBeforeConfigLoad<code> como </code>OnAfterConfigLoad<code>, para cambiar el comportamiento antes y después de cargar la configuración.</p>
+<p>&lt;h2&gt;Hooks avanzados&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Cómo cambiar el comportamiento de una función (filtrado)&lt;/h3&gt;</p>
+<p>Con los hooks no sólo puedes ejecutar acciones específicas en un momento determinado, incluso puedes cambiar el comportamiento de la función donde se llama al </code>hook<code> para hacerlo, tienes 2 soluciones:</p>
+<p>&lt;h4&gt;1) Utilización de los parámetros de referencia&lt;/h4&gt;</p>
+<p>Este es el más común. Básicamente utilizando el concepto de pasar un parámetro por referencia se puede cambiar todo lo que se pasa al propio </code>hook<code>.</p>
+<p>Por ejemplo:
+</code></pre>cpp
+OnMotdChange(std::string&amp; newMotd)
+<pre><code>
+Pasando el </code>newMotd<code> con el carácter &amp;#39;&amp;amp;&amp;#39; se permite a los listeners cambiar el valor del </code>Motd<code> cuando se llama a esa acción.</p>
+<p>&lt;h4&gt;2) Utilizar un valor de retorno </code>bool<code>&lt;/h4&gt;</p>
+<p>Este enfoque no es muy común, la mayoría de los hooks devuelven un tipo <strong>&amp;quot;void&amp;quot;</strong>, y trabajar con referencias es más fácil la mayoría de las veces, pero si realmente lo necesitas puedes implementar un hook declarado de esta manera:
+</code></pre>cpp
+bool ScriptMgr::OnBeforePlayerTeleport(Player<em> player, uint32 mapid, float x, float y, float z, float orientation, uint32 options, Unit</em> target)
+{
+    bool ret = true;</p>
+<p>    FOR_SCRIPTS_RET(PlayerScript, itr, end, ret) // Devuelve true por defecto si no son scripts
+    if (!itr-&gt;second-&gt;OnBeforeTeleport(player, mapid, x, y, z, orientation, options, target))
+        ret = false; // Cambiamos el valor de ret sólo cuando los scripts devuelven false</p>
+<p>    return ret;
+}
+</code>`<code></p>
+<p>Este hook notifica a todos los listeners pero también captura cuando al menos uno de los listeners registrados devuelve <strong>&quot;false&quot;</strong>, en ese caso el valor de retorno final también será false.</p>
+<p>En este caso particular, este hook se utiliza dentro de una condición if para no permitir que un jugador sea teletransportado si uno de los listeners devuelve <strong>false</strong> por alguna razón.</p>
+<p>Puedes implementar tu lógica diferente (por ejemplo, falso por defecto, verdadero si lo hay) sólo recuerda documentarlo adecuadamente.</p>
+<p><h3>Cree su sistema de hooks dentro de su módulo</h3></p>
+<p>Usando la guía anterior puedes incluso crear tu </code>ScriptObject<code> dentro de tu módulo para permitir que la gente lo extienda.</p>
+<p>Algunos módulos, como el de balance automático, permiten personalizar cierta parte de su función mediante el uso de hooks internos.</p>
+<p>Puede ver este archivo como ejemplo: https://github.com/azerothcore/mod-autobalance/blob/master/src/AutoBalance.h</p>
+<p><strong>NOTA:</strong> También necesitas crear tu propia implementación de </code>ScriptMgr<code> y ofrecer un singleton que permita llamar a tus hooks.</p>
+<p><h3>Consideraciones finales</h3></p>
+<p>Existen otras características del sistema </code>ScriptAI<code> que no han sido incluidas en esta documentación, como la creación de scripts vinculados a entidades específicas dentro de nuestra base de datos (Ej. </code>CreatureScript<code>). Este uso avanzado puede ser implementado replicando el código relacionado que tenemos dentro de los archivos </code>ScriptMgr`. Si necesitas ayuda o quieres mejorar esta documentación, no dudes en pedir apoyo y editar esta página.</p>
+<p><h2>Recursos externos</h2></p>
+<p>- <a href="https://stackoverflow.com/questions/66340549/is-it-possible-to-turn-a-core-patch-into-a-module-for-azerothcore/66340683#66340683">Stack overflow topic: Is it possible to turn a core patch into a module for AzerothCore?</a>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

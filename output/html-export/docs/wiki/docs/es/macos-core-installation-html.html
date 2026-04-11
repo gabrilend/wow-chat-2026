@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>macos-core-installation.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>macos-core-installation.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/macos-core-installation.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 4461 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Instalación del Core en macOS</h1></p>
+<p>| Guía de Instalación | |
+| :- | :- |
+| Este artículo forma parte de la Guía de Instalación. Puedes leerlo por separado o hacer clic en el enlace anterior para moverte fácilmente entre los pasos. |
+| <a href="macos-requirements">&lt;&lt; Paso 1: Requisitos</a> | <a href="server-setup">Paso 3: Configuración del Servidor &gt;&gt;</a> |</p>
+<p><h2>Software necesario</h2></p>
+<p>Consulta <a href="macos-requirements">Requisitos</a> antes de continuar.</p>
+<p><h3>Descarga del código</h3></p>
+<p>Elija <strong>UNO</strong> del siguiente método, ejecute uno de los siguientes comandos <code>git ...</code> en su terminal.</p>
+<p>1. Clonar solo la rama maestra + historial completo (tamaño más pequeño - recomendado):</p>
+<p>    ``<code>sh
+    git clone https://github.com/azerothcore/azerothcore-wotlk.git --branch master --single-branch azerothcore
+    <pre><code>
+1. Clonar solo la rama maestra + sin historial previo (tamaño más pequeño):</p>
+<p>    </code>`<code>sh
+    git clone https://github.com/azerothcore/azerothcore-wotlk.git --branch master --single-branch azerothcore --depth 1
+    </code>`<code></p>
+<p>    Nota: Si desea recuperar el historial completo, utilice </code>git fetch --unshallow<code>.</p>
+<p>1. Clona todas las ramas y todo el historial:</p>
+<p>    </code>`<code>sh
+    git clone https://github.com/azerothcore/azerothcore-wotlk.git azerothcore
+    </code>`<code></p>
+<p>Esto creará un directorio </code>azerothcore-wotlk<code> que contiene los archivos fuente de AC.</p>
+<p>&lt;h2&gt;Compilando el código fuente&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Creando el directorio de compilación&lt;/h3&gt;</p>
+<p>Para evitar problemas con las actualizaciones y compilaciones de fuentes en conflicto, creamos un directorio de compilación específico, de modo que evitamos cualquier posible problema debido a eso (si es que puede ocurrir alguno).
+</code></pre>sh
+cd azerothcore
+mkdir build
+cd build
+<pre><code>
+&lt;h3&gt;Configurando para compilar&lt;/h3&gt;</p>
+<p>Los directorios que utiliza Homebrew para instalar paquetes difieren entre las Mac que tienen CPU Apple Silicon y aquellas que tienen CPU Intel. Asegúrese de ejecutar el comando CMake correcto para su máquina. Puede ver su tipo de CPU en </code>Acerca de esta Mac<code>. Los comandos siguientes están etiquetados para el tipo de CPU correspondiente.</p>
+<p>Antes de ejecutar el comando CMake, reemplace </code>$HOME/azeroth-server/<code> con la ruta de instalación del servidor (donde desea colocar los archivos binarios compilados).</p>
+<p>Explicación de parámetros para usuarios avanzados <a href="cmake-options">Opciones de CMake</a>.</p>
+<p>En este punto, debes estar en tu directorio &amp;quot;build/&amp;quot;.</p>
+<p><strong>Nota</strong>: en el siguiente comando, la variable </code>$HOME<code> es la ruta del <strong>usuario actual</strong>, por lo que si ha iniciado sesión como root, $HOME será &amp;quot;/root&amp;quot;.</p>
+<p>Para CPU APPLE SILICON::</code></pre>sh
+export OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)
+cmake ../ \
+-DCMAKE_INSTALL_PREFIX=$HOME/azeroth-server/  \
+-DTOOLS_BUILD=all \
+-DSCRIPTS=static \
+-DMYSQL_ADD_INCLUDE_PATH=/opt/homebrew/include/mysql \
+-DMYSQL_LIBRARY=/opt/homebrew/lib/libmysqlclient.dylib \
+-DREADLINE_INCLUDE_DIR=/opt/homebrew/opt/readline/include \
+-DREADLINE_LIBRARY=/opt/homebrew/opt/readline/lib/libreadline.dylib \
+-DOPENSSL_INCLUDE_DIR=&quot;$OPENSSL_ROOT_DIR/include&quot; \
+-DOPENSSL_SSL_LIBRARIES=&quot;$OPENSSL_ROOT_DIR/lib/libssl.dylib&quot; \
+-DOPENSSL_CRYPTO_LIBRARIES=&quot;$OPENSSL_ROOT_DIR/lib/libcrypto.dylib&quot;
+<pre><code>
+Para CPU INTEL:</code></pre>sh
+export OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)
+cmake ../ \
+-DCMAKE_INSTALL_PREFIX=$HOME/azeroth-server/  \
+-DTOOLS_BUILD=all \
+-DSCRIPTS=static \
+-DMYSQL_ADD_INCLUDE_PATH=/usr/local/include/mysql \
+-DMYSQL_LIBRARY=/usr/local/opt/mysql/lib/libmysqlclient.dylib \
+-DREADLINE_INCLUDE_DIR=/usr/local/opt/readline/include \
+-DREADLINE_LIBRARY=/usr/local/opt/readline/lib/libreadline.dylib \
+-DOPENSSL_INCLUDE_DIR=&quot;$OPENSSL_ROOT_DIR/include&quot; \
+-DOPENSSL_SSL_LIBRARIES=&quot;$OPENSSL_ROOT_DIR/lib/libssl.dylib&quot; \
+-DOPENSSL_CRYPTO_LIBRARIES=&quot;$OPENSSL_ROOT_DIR/lib/libcrypto.dylib&quot;
+<pre><code>Luego, para construir e instalar:
+</code></pre>sh
+make -j </code>nproc<code>
+make install
+</code>``</p>
+<p>&lt;br&gt;</p>
+<p><h2>Ayuda</h2></p>
+<p>Si todavía tiene problemas, compruebe:</p>
+<p><em> <a href="faq">FAQ - Preguntas frecuentes</a></p>
+<p></em> <a href="common-errors">Errores comunes</a></p>
+<p><em> <a href="how-to-ask-for-help">Cómo pedir ayuda</a></p>
+<p></em> <a href="https://discord.gg/gkt4y2x">Únase a nuestro servidor de Discord</a>, pero no es un canal de soporte 24/7. Un miembro del staff le responderá siempre que tenga tiempo.</p>
+<p>| Guía de Instalación | |
+| :- | :- |
+| Este artículo forma parte de la Guía de Instalación. Puedes leerlo por separado o hacer clic en el enlace anterior para moverte fácilmente entre los pasos. |
+| <a href="macos-requirements">&lt;&lt; Paso 1: Requisitos</a> | <a href="server-setup">Paso 3: Configuración del Servidor &gt;&gt;</a> |
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

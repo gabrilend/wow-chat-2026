@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>accuracy-level-cap.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>accuracy-level-cap.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/patches/accuracy-level-cap.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 4594 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Accuracy Level Cap - C++ Patch</h1></p>
+<p><strong>Issue:</strong> 156 - Monster Accuracy Level Cap
+<strong>Purpose:</strong> Cap level difference impact on hit/miss at ±3 levels
+<strong>Status:</strong> Implemented 2026-04-05</p>
+<p><h2>Overview</h2></p>
+<p>This patch modifies combat hit/miss calculations to cap the effective level difference at ±3. A monster 10 levels above you has the same hit/miss modifier as one 3 levels above. Similarly, a monster 10 levels below has the same modifier as one 3 levels below.</p>
+<p><h2>Files to Modify</h2></p>
+<p><h3>1. src/server/game/Entities/Unit/Unit.cpp</h3></p>
+<p><h4>Location: GetMissChance() or equivalent</h4></p>
+<p>Find functions that calculate miss chance based on level difference:
+- <code>Unit::RollMeleeOutcomeAgainst()</code>
+- <code>Unit::MagicSpellHitResult()</code>
+- Any helper that computes level-based miss penalty</p>
+<p><h4>Change Pattern</h4></p>
+<p>Wherever level difference is calculated for accuracy purposes:</p>
+<p><strong>Before:</strong>
+``<code>cpp
+int32 levelDiff = victim-&gt;GetLevel() - GetLevel();
+// ... use levelDiff in calculations
+<pre><code>
+<strong>After:</strong></code></pre>cpp
+int32 rawLevelDiff = victim-&gt;GetLevel() - GetLevel();
+// Cap level difference at ±3 for accuracy calculations
+int32 levelDiff = std::max(-3, std::min(3, rawLevelDiff));
+// ... use levelDiff in calculations
+<pre><code>
+&lt;h3&gt;2. src/server/game/Entities/Unit/Unit.h (optional)&lt;/h3&gt;</p>
+<p>If creating a reusable helper:
+</code></pre>cpp
+// In Unit class, public section:
+static int32 GetCappedLevelDiff(Unit const<em> attacker, Unit const</em> victim, int32 cap = 3)
+{
+    int32 rawDiff = victim-&gt;GetLevel() - attacker-&gt;GetLevel();
+    return std::max(-cap, std::min(cap, rawDiff));
+}
+<pre><code>
+&lt;h2&gt;Specific Functions to Modify&lt;/h2&gt;</p>
+<p>&lt;h3&gt;RollMeleeOutcomeAgainst&lt;/h3&gt;</p>
+<p>This function determines melee attack outcomes (hit, miss, dodge, parry, etc.).</p>
+<p>Look for patterns like:</code></pre>cpp
+int32 attackerLvlModifier = GetLevel();
+int32 defenderLvlModifier = victim-&gt;GetLevel();
+<pre><code>
+Or:</code></pre>cpp
+int32 levelDiff = GetLevelDiff(victim);
+<pre><code>
+Apply the cap before these values are used in miss chance calculations.</p>
+<p>&lt;h3&gt;MagicSpellHitResult&lt;/h3&gt;</p>
+<p>This function determines spell hit/miss outcomes.</p>
+<p>Similar patterns exist. Cap the level difference before it&amp;#39;s used to modify hit chance.</p>
+<p>&lt;h3&gt;GetWeaponSkillValue / GetDefenseSkillValue&lt;/h3&gt;</p>
+<p>If weapon/defense skill values incorporate level, cap the level component.</p>
+<p>&lt;h2&gt;Constants&lt;/h2&gt;</p>
+<p>The level cap (3) should be defined as a constant for easy tuning:
+</code></pre>cpp
+// In Unit.h or a config file
+#define ACCURACY_LEVEL_CAP 3
+<pre><code>
+&lt;h2&gt;Testing Approach&lt;/h2&gt;</p>
+<p>1. Create level 1 character
+2. Fight level 20 monster
+3. Verify hit rate is poor but not impossible (same as fighting level 4 monster)
+4. Create level 20 character
+5. Fight level 1 monster
+6. Verify miss rate is low but not zero (same as fighting level 17 monster)</p>
+<p>&lt;h2&gt;Design Notes&lt;/h2&gt;</p>
+<p>This intentionally does NOT cap:
+- Damage calculations (high level monsters still hit harder)
+- Health differences (high level monsters still have more HP)
+- Armor/resistance calculations (may use actual level)</p>
+<p>Only the hit/miss probability is capped, ensuring combat is possible across large level gaps while maintaining challenge through other mechanics.</p>
+<p>&lt;h2&gt;Alternative: Config Option&lt;/h2&gt;</p>
+<p>If making this configurable via worldserver.conf:
+</code></pre>cpp
+// In worldserver.conf
+AccuracyLevelCap = 3  // 0 = disabled (vanilla behavior)
+<pre><code>
+Then read from config:</code></pre>cpp
+int32 cap = sWorld-&gt;getIntConfig(CONFIG_ACCURACY_LEVEL_CAP);
+if (cap &gt; 0)
+    levelDiff = std::max(-cap, std::min(cap, levelDiff));
+<pre><code>
+---</p>
+<p>&lt;h2&gt;Implementation (2026-04-05)&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Unit.h (after MAX_AGGRO_RADIUS define)&lt;/h3&gt;</code></pre>cpp
+// Everland Ghostsong: Cap level difference for accuracy calculations at ±3 levels
+#define ACCURACY_LEVEL_CAP 3
+#define ACCURACY_SKILL_CAP (ACCURACY_LEVEL_CAP <em> 5)  // skill = level </em> 5
+<pre><code>
+&lt;h3&gt;Unit.cpp - MagicSpellHitResult (line ~3455)&lt;/h3&gt;</code></pre>cpp
+int32 rawLevelDiff = int32(victim-&gt;getLevelForTarget(this)) - thisLevel;
+// Everland Ghostsong: Cap level difference at ±ACCURACY_LEVEL_CAP for hit chance
+int32 levelDiff = std::max(-ACCURACY_LEVEL_CAP, std::min(ACCURACY_LEVEL_CAP, rawLevelDiff));
+<pre><code>
+&lt;h3&gt;Unit.cpp - MeleeSpellMissChance (line ~15221)&lt;/h3&gt;</code></pre>cpp
+// Everland Ghostsong: Cap skill difference at ±ACCURACY_SKILL_CAP (±3 levels worth)
+int32 cappedSkillDiff = std::max(-ACCURACY_SKILL_CAP, std::min(ACCURACY_SKILL_CAP, skillDiff));
+int32 diff = -cappedSkillDiff;
+<pre><code>
+&lt;h3&gt;Unit.cpp - RollMeleeOutcomeAgainst (line ~2925)&lt;/h3&gt;</code></pre>cpp
+// Everland Ghostsong: Cap skill difference at ±ACCURACY_SKILL_CAP for combat outcome rolls
+int32 skillDiff = attackerWeaponSkill - victimMaxSkillValueForLevel;
+int32 cappedSkillDiff = std::max(-ACCURACY_SKILL_CAP, std::min(ACCURACY_SKILL_CAP, skillDiff));
+int32 skillBonus = 4 * cappedSkillDiff;
+</code>``
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

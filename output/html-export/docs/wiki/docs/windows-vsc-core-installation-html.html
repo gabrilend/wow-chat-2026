@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>windows-vsc-core-installation.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>windows-vsc-core-installation.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/windows-vsc-core-installation.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 5143 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Windows VSC Core Installation</h1></p>
+<p>| Installation Guide | |
+| :- | :- |
+| <a href="vsc-requirements">&lt;&lt; Step 1: VSC Requirements</a> | <a href="server-setup">Step 3: Server Setup &gt;&gt;</a> |</p>
+<p><h2>Required software</h2></p>
+<p>See <a href="requirements">Requirements</a> before you continue.</p>
+<p><h2>Pulling &amp; Compiling the source</h2></p>
+<p><h3>Pulling the code</h3></p>
+<p>1. Create the directory where the source files will be located. In this guide we will use <strong>C:\Azerothcore</strong>.</p>
+<p>1. Right-click on the folder and select <strong>GitExt Clone...</strong></p>
+<p>1. Fill in the data as follow:</p>
+<p><pre><code>Repository to clone: https://github.com/azerothcore/azerothcore-wotlk
+Destination: C:\Azerothcore
+Subdirectory to create: &amp;lt;none&amp;gt;<em>
+Branch: master
+Repository type: Personal repository</code></pre></p>
+<p>Click <strong>Clone</strong>. Within a few minutes Azerothcore&#39;s sourcefiles will be cloned into <strong>C:\Azerothcore</strong>.</p>
+<p><h3>Configuring and generating Visual C++ solution with CMake</h3></p>
+<p>Before you begin, create a new directory called <strong>Build</strong>. In this guide we will use <strong>C:\Build</strong>.</p>
+<p>1. Open CMake</p>
+<p>1. Click <strong>Browse Source...</strong> → Select the source directory (<strong>C:\Azerothcore</strong>)</p>
+<p>1. Click <strong>Browse Build...</strong> → Select the build directory (<strong>C:\Build</strong>)</p>
+<p>1. Click <strong>Configure</strong>.</p>
+<p>1. In the dropdown menu, choose the version of the compiler you downloaded in <a href="windows-requirements">Requirements</a> section. Be sure to choose <strong>Win64</strong> version if you work on a 64-bit compilation.</p>
+<p>1. Make sure that <strong>Use default native compilers</strong> is checked.</p>
+<p>1. Click <strong>Finish</strong>.</p>
+<p>1. Make sure <strong>TOOLS</strong> is checked. This will compile the extractors needed later in the setup.</p>
+<p>1. Click <strong>Configure</strong> again. As long as you have error(s) typed in red in the log window you will need to check your parameters and re-run it.</p>
+<p>1. Click <strong>Generate</strong>. This will install the selected build files into your <strong>C:\Build</strong> folder.</p>
+<p><h4>Some error fixes</h4></p>
+<p>- If MySQL is not found by CMake it is required to set <strong>MYSQL_INCLUDE_DIR = C:/XX/MySQL/MySQL Server X.X/include</strong> and <strong>MYSQL_LIBRARY = C:/XX/MySQL/MySQL Server X.X/lib(_XX)/libmysql.lib</strong>.</p>
+<p>    - XX depends on which MySQL version you use.
+    
+    - (If you do not see the MYSQL fields in CMake, tick the Advanced box).
+    
+- If you get linker errors (e.g &quot;error LNK2019: unresolved external symbol mysql_server_init&quot;), make sure MYSQL_LIBRARY is set to the libmysql.lib that matches your compile mode (x64 vs 32 bits).</p>
+<p>    - (If you do not see the MYSQL fields in CMake, tick the Advanced box).</p>
+<p>- If you get an error that </em>CMake could NOT find OpenSSL<em>:
+  
+    - Check the <strong>Advanced</strong> checkbox.
+    
+    - Find the two OPENSSL entries in the list and point to the correct directories:</p>
+<p>        - OPENSSL_ROOT_DIR is the installation path (by default, <strong>C:/OpenSSL-Win32</strong> or <strong>C:/OpenSSL-Win64</strong>)
+        
+        - OPENSSL_INCLUDE_DIR is the &quot;include&quot; folder in installation path (by default, <strong>C:/OpenSSL-Win32/include</strong> or <strong>C:/OpenSSL-Win64/include</strong>)</p>
+<p><h3>Compiling the Source</h3></p>
+<p>1. In Visual Studio Code open directory with AC source.
+1. In the menu at the bottom, click <strong>all</strong> (wait a few seconds) and select <strong>ALL_BUILD</strong> on the top dialog.
+1. click <strong>BUILD</strong> </p>
+<p>Build time differs from machine to machine, but you can expect it to take between 5 and 30 minutes.</p>
+<p>When the build is complete you will find a message in the output that looks similar to this:</p>
+<p><pre><code>Build finished with exit code 0</code></pre></p>
+<p>You will find your freshly compiled binaries in the <strong>C:\Build\bin\Release</strong> or <strong>C:\Build\bin\Debug</strong> folder. These are all used to run your server at the end of this instruction.</p>
+<p>You will need the following files in order for the core to function properly:</p>
+<p><pre><code>\configs\
+authserver.exe
+authserver.pbd
+worldserver.exe
+worldserver.pdb
+libmysql.dll
+libeay32.dll / libcrypto-1_1.dll / libcrypto-1_1-x64.dll
+ssleay32.dll / libssl-1_1.dll / libssl-1_1-x64.dll</code></pre></p>
+<p>In the <strong>configs</strong> folder you should find:</p>
+<p><pre><code>authserver.conf.dist
+worldserver.conf.dist</code></pre></p>
+<p>There are three DLL files that need to be manually added to this folder, and you need to copy them from the following installation/bin directories:</p>
+<p><strong>libmysql.dll</strong> → C:\Program Files\MySQL\MySQL Server 8.x\lib\</p>
+<p></em>Note: You need the exact version of libmysql to correspond to the MySQL you have downloaded. Due to this you cannot download the DLL from the web and need to take it out of the folder.<em></p>
+<p>OpenSLL _before_ version 1.1.0:</p>
+<p><strong>libeay32.dll</strong>
+<strong>ssleay32.dll</strong> → C:\OpenSSL-Win64\ or C:\OpenSSL-Win32\ </em>(depends on if your core is 64-bit or 32-bit)*.</p>
+<p>OpenSSL 1.1.0 and more recent installed, names have changed:</p>
+<p><strong>libssl-1_1.dll</strong>
+<strong>libcrypto-1_1.dll</strong> → C:\OpenSSL-Win32\bin</p>
+<p><strong>libssl-1_1-x64.dll</strong>
+<strong>libcrypto-1_1-x64.dll</strong> → C:\OpenSSL-Win64\bin</p>
+<p><h4>About compilation log and report</h4></p>
+<p>pdb files only exist if you compile on Debug or RelWithDebInfo modes, it&#39;s not mandatory but it&#39;s recommended to compile core on at least RelWithDebInfo mode to get proper crashlogs. If you compile on Release mode the pdb files aren&#39;t needed.</p>
+<p>To report crash logs it&#39;s MANDATORY to compile on Debug or RelWithDebInfo mode.</p>
+<p>| Installation Guide | |
+| :- | :- |
+| <a href="vsc-requirements">&lt;&lt; Step 1: VSC Requirements</a> | <a href="server-setup">Step 3: Server Setup &gt;&gt;</a> |
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

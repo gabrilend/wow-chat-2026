@@ -25,6 +25,10 @@ These fix compatibility issues in upstream code.
 | B002 | playerbots-ale-login-hook | mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp | Yes | Trigger PLAYER_EVENT_ON_LOGIN for bots |
 | B003 | ale-gameobject-wildcard | mod-ale/src/LuaEngine/LuaEngine.cpp | Yes | Enable entry 0 as wildcard for gameobject events |
 | B004 | upstream-warning-fixes | mod-playerbots/*, mod-ale/* | Yes | Fix 695+ compiler warnings |
+| B005 | accuracy-level-cap | src/server/game/Entities/Unit/* | Yes | Cap level diff for hit/miss at ±3 (Issue 156) |
+| B006 | ale-sell-item-hook | mod-ale/*, Handlers/ItemHandler.cpp | Yes | Add PLAYER_EVENT_ON_SELL_ITEM = 74 (Issue 150) |
+| B007 | ale-unit-methods | mod-ale/*/UnitMethods.h, LuaFunctions.cpp | Yes | Add SetWalk, IsWalking, IsHostileTo, IsFriendlyTo (Issue 332) |
+| B008 | mod-talent-bonus | modules/mod-talent-bonus | Yes | Link local module for compilation (Issue 120) |
 
 ### B001: aoe-loot-item-namespace
 
@@ -107,6 +111,57 @@ The `unary_function` deprecation was fixed in boost **1.81** (2022).
 Upgrading boost would eliminate 442 warnings.
 
 **See:** `docs/patches/upstream-warning-fixes.md` for detailed implementation.
+
+### B005: accuracy-level-cap
+
+**Files:** `src/server/game/Entities/Unit/Unit.h`, `Unit.cpp`
+**Issue:** 156 - Monster accuracy level cap
+**Reason:** Cap level difference impact on hit/miss at ±3 levels for flatter combat curve.
+
+**Changes:**
+1. Add `ACCURACY_LEVEL_CAP` and `ACCURACY_SKILL_CAP` defines to Unit.h
+2. Cap `levelDiff` in `MagicSpellHitResult()` at ±3
+3. Cap `skillDiff` in `MeleeSpellMissChance()` at ±15 (3 levels × 5 skill/level)
+4. Cap `skillBonus` in `RollMeleeOutcomeAgainst()` at ±15
+
+**See:** `docs/patches/accuracy-level-cap.md` for detailed implementation.
+
+### B006: ale-sell-item-hook
+
+**Files:** `mod-ale/*/Hooks.h`, `LuaEngine.h`, `PlayerHooks.cpp`, `Handlers/ItemHandler.cpp`
+**Issue:** 150 - ALE sell item hook
+**Reason:** Allow Lua scripts to react to vendor sales for treasure pool recycling.
+
+**Changes:**
+1. Add `PLAYER_EVENT_ON_SELL_ITEM = 74` to Hooks.h
+2. Add `OnSellItem()` declaration to LuaEngine.h
+3. Add `OnSellItem()` implementation to PlayerHooks.cpp
+4. Add `sALE->OnSellItem()` calls to ItemHandler.cpp
+
+**See:** `docs/patches/ale-sell-item-hook.md` for detailed implementation.
+
+### B007: ale-unit-methods
+
+**Files:** `mod-ale/*/UnitMethods.h`, `LuaFunctions.cpp`
+**Issue:** 332 - ALE unit methods patch
+**Reason:** Bot behaviors need walking animation and faction hostility checks.
+
+**Changes:**
+1. Add `SetWalk()`, `IsWalking()`, `IsHostileTo()`, `IsFriendlyTo()` to UnitMethods.h
+2. Register methods in LuaFunctions.cpp
+
+**See:** `docs/patches/ale-unit-setwalk.md` for detailed implementation.
+
+### B008: mod-talent-bonus
+
+**Files:** (symlink) `modules/mod-talent-bonus`
+**Issue:** 120 - Talent points system
+**Reason:** Server validates expected talent points on login; module adjusts count for bonus points.
+
+**Changes:**
+1. Create symlink from `modules/mod-talent-bonus/` to `source-beta/modules/mod-talent-bonus/`
+
+**See:** `docs/patches/ale-calculate-talents-hook.md` for module details.
 
 ---
 
@@ -245,3 +300,40 @@ apply_patches_end() {
     patch_E003
 }
 ```
+
+---
+
+## Unpatch System (Issue 334)
+
+Each PHASE_BEGIN patch has a corresponding unpatch function that reverses its changes.
+After build completes (success or failure), all patches are reverted to keep source clean.
+
+### Unpatch Functions
+
+| ID | Patch Function | Unpatch Function |
+|----|----------------|------------------|
+| B001 | `patch_B001_aoe_loot_item_namespace()` | `unpatch_B001_aoe_loot_item_namespace()` |
+| B002 | `patch_B002_playerbots_ale_login_hook()` | `unpatch_B002_playerbots_ale_login_hook()` |
+| B003 | `patch_B003_ale_gameobject_wildcard()` | `unpatch_B003_ale_gameobject_wildcard()` |
+| B004 | `patch_B004_upstream_warning_fixes()` | `unpatch_B004_upstream_warning_fixes()` |
+| B005 | `patch_B005_accuracy_level_cap()` | `unpatch_B005_accuracy_level_cap()` |
+| B006 | `patch_B006_ale_sell_item_hook()` | `unpatch_B006_ale_sell_item_hook()` |
+| B007 | `patch_B007_ale_unit_methods()` | `unpatch_B007_ale_unit_methods()` |
+| B008 | `patch_B008_mod_talent_bonus()` | `unpatch_B008_mod_talent_bonus()` |
+
+### Build Workflow
+
+```bash
+apply_patches_begin          # Apply all patches
+trap 'unapply_patches_begin' EXIT  # Ensure revert on failure
+do_build                     # Compile
+trap - EXIT                  # Clear trap
+unapply_patches_begin        # Revert all patches
+```
+
+### Design Principles
+
+1. **Idempotent** - Both patch and unpatch are safe to run multiple times
+2. **Self-contained** - Each patch/unpatch pair is independent
+3. **Parallel-safe** - No file conflicts between patches
+4. **Failure-safe** - Bash trap ensures cleanup on build failure

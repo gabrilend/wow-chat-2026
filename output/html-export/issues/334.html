@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 334 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 334 • Phase 3</div>
+            <h1>Patch System Improvements</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>334 - Patch System Improvements</h1></p>
+<p><h2>Status</h2>
+- Created: 2026-04-09
+- <strong>Implemented: 2026-04-09</strong>
+- Phase: 3
+- Priority: Medium</p>
+<p><h2>Current Behavior</h2></p>
+<p><h3>1. Patches Are Not Reverted After Build</h3>
+Patches are applied to source before compile but never reverted. This causes:
+- Source directory accumulates patches over time
+- <code>git status</code> shows modified files
+- Unclear if a file is &quot;clean upstream&quot; or &quot;patched&quot;
+- Re-applying patches relies on idempotent checks (grep before sed)</p>
+<p><h3>2. Documented Patches Not In Source</h3>
+Four patches exist in <code>docs/patches/</code> with issues marked &quot;Implemented&quot; but <strong>source changes are missing</strong>:</p>
+<p>| Patch | Issue | Issue Claims | Actually In Source? |
+|-------|-------|--------------|---------------------|
+| accuracy-level-cap.md | 156 | &quot;Implemented 2026-04-05&quot; | ❌ No (no ACCURACY_LEVEL_CAP in Unit.h) |
+| ale-sell-item-hook.md | 150 | &quot;Implemented 2026-04-05&quot; | ❌ No (no ON_SELL_ITEM in Hooks.h) |
+| ale-unit-setwalk.md | 332 | &quot;Resolved 2026-04-08&quot; | ❌ No (no SetWalk in UnitMethods.h) |
+| ale-calculate-talents-hook.md | 120 | &quot;Implementation 2026-04-06&quot; | ❌ No (mod-talent-bonus exists locally but not linked to source-beta) |</p>
+<p><strong>Root Cause:</strong> Issue files were updated to &quot;Implemented&quot; but:
+- Source changes were made in a session but never committed
+- Or source was reset/re-cloned and changes were lost
+- Or module created locally but never linked to source-beta/modules/
+- The patch docs and issue files survived but the actual code didn&#39;t (or wasn&#39;t compiled)</p>
+<p><h3>3. No Patch Verification</h3>
+No way to verify which patches are applied vs which should be.</p>
+<p><h2>Intended Behavior</h2></p>
+<p><h3>1. Clean Source After Build</h3>
+<pre><code>Before build:  git stash (save any manual changes)
+               apply patches
+               compile
+After build:   git checkout -- . (revert patches)
+               git stash pop (restore manual changes)</code></pre></p>
+<p>Alternative: Use <code>git diff</code> to generate patches, apply with <code>git apply</code>, revert with <code>git checkout</code>.</p>
+<p><h3>2. All Documented Patches Implemented</h3>
+Every patch in <code>docs/patches/</code> should have a corresponding function in <code>scripts/azerothcore</code>.</p>
+<p><h3>3. Patch Status Command</h3>
+<pre><code class="bash">./scripts/azerothcore patch-status
+&lt;h1&gt;Output:&lt;/h1&gt;
+&lt;h1&gt;B001 aoe-loot-item-namespace    [applied]&lt;/h1&gt;
+&lt;h1&gt;B002 playerbots-ale-login-hook  [applied]&lt;/h1&gt;
+&lt;h1&gt;B003 ale-gameobject-wildcard    [pending]  &amp;lt;- source not patched&lt;/h1&gt;
+&lt;h1&gt;B004 upstream-warning-fixes     [partial]  &amp;lt;- 5/7 applied&lt;/h1&gt;</code></pre></p>
+<p><h2>Implementation Steps</h2></p>
+<p><h3>Phase A: Re-implement Missing Patches ✓ (2026-04-09)</h3>
+These patches were marked &quot;Implemented&quot; but source changes are missing:
+1. [x] 156 accuracy-level-cap - Added as <code>patch_B005_accuracy_level_cap()</code>
+2. [x] 150 ale-sell-item-hook - Added as <code>patch_B006_ale_sell_item_hook()</code>
+3. [x] 332 ale-unit-setwalk - Added as <code>patch_B007_ale_unit_methods()</code>
+4. [x] 120 ale-calculate-talents - Added as <code>patch_B008_mod_talent_bonus()</code></p>
+<p><h3>Phase B: Add Unpatch Functions ✓ (2026-04-09)</h3>
+1. [x] Write <code>unpatch_B001_<em></code> through <code>unpatch_B008_</em></code>
+2. [x] Create <code>unapply_patches_begin()</code> that calls all unpatches
+3. [x] Add bash trap to ensure unpatches run on failure
+4. [x] Integrated with cmd_update and cmd_compile</p>
+<p><h3>Phase C: Reorganize Into Separate Files ✓ (2026-04-09)</h3>
+Patches moved from inline in <code>scripts/azerothcore</code> to individual files:</p>
+<p><strong>Directory structure:</strong>
+<pre><code>patches/
+├── patches.sh                      # Loader: sources all B###-<em>.sh files
+├── B001-aoe-loot-item-namespace.sh # patch + unpatch functions
+├── B002-playerbots-ale-login-hook.sh
+├── B003-ale-gameobject-wildcard.sh
+├── B004-upstream-warning-fixes.sh
+├── B005-accuracy-level-cap.sh
+├── B006-ale-sell-item-hook.sh
+├── B007-ale-unit-methods.sh
+└── B008-mod-talent-bonus.sh</code></pre></p>
+<p><strong>patches.sh provides:</strong>
+- <code>apply_patches_begin()</code> - Apply all PHASE_BEGIN patches in parallel
+- <code>unapply_patches_begin()</code> - Reverse all PHASE_BEGIN patches
+- <code>patches_need_applying()</code> - Check if any patches need to be applied</p>
+<p><strong>scripts/azerothcore now:</strong>
+- Sources <code>patches/patches.sh</code> instead of inline definitions
+- Cleaner separation of concerns
+- Easier to maintain individual patches</p>
+<p><h2>Design Considerations</h2></p>
+<p><h3>Reverse Patch Approach (Preferred)</h3>
+Each patch function should have a corresponding unpatch function that reverses its operations:</p>
+<p><pre><code class="bash">&lt;h1&gt;Example: B004 patch and unpatch&lt;/h1&gt;
+patch_B004_upstream_warning_fixes() {
+    # Apply: Add operator= default
+    sed -i &amp;#39;/NextAction(NextAction const&amp;amp; o).</em>/{
+        a\    NextAction\&amp;amp; operator=(NextAction const\&amp;amp;) = default;
+    }&amp;#39; &amp;quot;${FILE}&amp;quot;
+}</p>
+<p>unpatch_B004_upstream_warning_fixes() {
+    # Reverse: Remove operator= default
+    sed -i &amp;#39;/NextAction\&amp;amp; operator=(NextAction const\&amp;amp;) = default;/d&amp;#39; &amp;quot;${FILE}&amp;quot;
+}</code></pre></p>
+<p><strong>Build workflow:</strong>
+<pre><code class="bash">apply_patches_begin    # Apply all patches
+do_build               # Compile
+unapply_patches_begin  # Reverse all patches (whether build succeeded or failed)</code></pre></p>
+<p><strong>Benefits:</strong>
+- No git operations needed
+- Source stays clean after build
+- Each patch is self-contained with its reverse
+- Works even if user has manual changes</p>
+<p><strong>Caveat:</strong> Unpatch operations must be idempotent (safe to run even if patch wasn&#39;t applied).</p>
+<p><h3>Trap for Build Failures</h3>
+Use bash trap to ensure patches are reversed even on error:
+<pre><code class="bash">apply_patches_begin
+trap &amp;#39;unapply_patches_begin&amp;#39; EXIT
+do_build
+trap - EXIT  # Clear trap on success
+unapply_patches_begin</code></pre></p>
+<p><h2>Related Files</h2></p>
+<p>- <code>scripts/azerothcore</code> - Sources patches.sh, uses patch functions
+- <code>patches/patches.sh</code> - Loader script, orchestration functions
+- <code>patches/B###-<em>.sh</code> - Individual patch files (patch + unpatch)
+- <code>docs/patches/patch-registry.md</code> - Patch documentation index
+- <code>docs/patches/</em>.md</code> - Individual patch documentation</p>
+<p><h2>Notes</h2></p>
+<p>- Build failures should still revert (use trap or finally-equivalent)
+- Consider adding <code>--keep-patches</code> flag for debugging
+- Patch status could be part of <code>./scripts/azerothcore status</code> output
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-3-progress.html">View Phase 3 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

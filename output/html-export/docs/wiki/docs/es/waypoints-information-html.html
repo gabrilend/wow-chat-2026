@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>waypoints-information.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>waypoints-information.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/waypoints-information.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 6763 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Waypoints y rutas</h1></p>
+<p><h3>Diferentes tipos de rutas de waypoints</h3></p>
+<p>- Las rutas de los puntos de ruta adjuntadas directamente a una criatura a través de <a href="creature_addon#path_id">creature_addon.path_id</a> utilizan las tablas <a href="waypoint_data">waypoint_data</a> y <a href="waypoint_scripts">waypoint_scripts</a>. Se pueden añadir utilizando el comando de GM <code>.wp</code>.
+- <a href="smart_scripts">SmartAI</a> utilizan rutas de waypoints definidas en la tabla <a href="waypoints">waypoints</a>.
+- La tabla <a href="script_waypoint">script_waypoint</a> contiene rutas de waypoints para <a href="https://github.com/azerothcore/azerothcore-wotlk/blob/master/src/server/game/AI/ScriptedAI/ScriptedCreature.h#L159">CreatureAI</a>.</p>
+<p><h3>Resumen de los comandos GM <code>.wp</code>.</h3></p>
+<p>- ``<code>.wp add</code>`<code> <a href="waypoint_data#id">waypoint_data.id</a>: Añade un nuevo punto para el id de ruta especificado. Se recomienda utilizar el GUID de la criatura <em> 10 o el GUID </em> 100 como id de la ruta, pero puede ser cualquier número aleatorio.
+- </code>`<code>.wp reload</code>`<code> <a href="waypoint_data#id">waypoint_data.id</a>: Recarga el id de camino especificado (para nuevos caminos tiene que ser ejecutado antes de </code>.wp load<code>).
+- </code>`<code>.wp load</code>`<code> <a href="waypoint_data#id">waypoint_data.id</a>: Carga el id de camino especificado para la criatura seleccionada.
+- </code>`<code>.wp unload</code>`<code>: Elimina la trayectoria de la criatura seleccionada.
+- </code>`<code>.wp show on</code>`<code> <a href="waypoint_data#id">waypoint_data.id</a>: Muestra todos los waypoints de la ruta especificada (se requiere GM on para verlos realmente). Si no se especifica ningún id de ruta muestra los waypoints de la criatura seleccionada.
+- </code>`<code>.wp show off</code>`<code>: Ocultar todos los waypoints visuales.
+- </code>`<code>.wp show info</code>`<code>: Mostrar información sobre el waypoint seleccionado.
+- </code>`<code>.wp modify</code>`<code>: Modificar el waypoint seleccionado, opciones:
+  - </code>`<code>del</code>`<code>: Eliminar el waypoint seleccionado.
+  - </code>`<code>move</code>`<code>: Mueve el waypoint seleccionado a la posición del GM.
+  - </code>`<code>delay</code>`<code>: Cambia el <a href="waypoint_data#delay">retraso</a> del waypoint seleccionado.
+  - </code>`<code>action</code>`<code>: Cambiar la <a href="scripts#id">acción</a> del waypoint seleccionado.
+  - </code>`<code>action_chance</code>`<code>: Cambia la <a href="waypoint_data#action_chance">action_chance</a> del waypoint seleccionado.
+  - </code>`<code>move_type</code>`<code>: Cambia el <a href="waypoint_data#move_type">tipo de movimiento</a> del waypoint seleccionado (0: caminar, 1: correr, 2: volar).
+- </code>`<code>.wp event</code>`<code>: Modificar el waypoint <a href="scripts#id">acciones</a>, opciones:
+  - </code>`<code>add</code>`<code> <a href="scripts#guid">guid</a>: Añade una nueva acción con el GUID especificado (¡no confundir con el GUID de la criatura!). Si no se especifica un GUID, se genera uno nuevo automáticamente.
+  - </code>`<code>listid</code>`<code> <a href="scripts#id">acción</a>: Muestra información sobre el id de la acción especificada.
+  - </code>`<code>del</code>`<code> <a href="scripts#guid">guid</a>: Elimina la acción con el GUID especificado.
+  - </code>`<code>mod</code>`<code> <a href="scripts#guid">guid</a>: Modifica la acción con el GUID especificado, más opciones:
+    - </code>`<code>setid</code>`<code> <a href="scripts#id">acción</a>: Establece un nuevo id de acción.
+    - </code>`<code>delay</code>`<code> <a href="scripts#delay">retraso</a>: Establece un retardo específico antes de que el script se active.
+    - </code>`<code>command</code>`<code> <a href="scripts#command">comando</a>: Establece el comando para este script.
+    - </code>`<code>datalong</code>`<code> <a href="scripts#datalong">datalong</a>: Establece el datalong para este script.
+    - </code>`<code>datalong2</code>`<code> <a href="scripts#datalong2">datalong2</a>: Establece el datalong2 para este script.
+    - </code>`<code>dataint</code>`<code> <a href="scripts#dataint">dataint</a>: Establece el dataint para este script.
+    - </code>`<code>posx</code>`<code> <a href="scripts#posx">posx</a>: Establece la posición en x para este script.
+    - </code>`<code>posy</code>`<code> <a href="scripts#posy">posy</a>: Establece la posición en y para este script.
+    - </code>`<code>posz</code>`<code> <a href="scripts#posz">posz</a>: Establece la posición en z para este script.
+    - </code>`<code>orientation</code>`<code> <a href="scripts#orientation">orientation</a>: Establece la orientación para este script.</p>
+<p><h3>Ejemplo de creación de una ruta con los comandos GM </code>.wp<code></h3></p>
+<p>Ejemplo de criatura GUID: </code>1234567<code>, ejemplo de ruta de acceso: </code>123456700<code></p>
+<p>- Crea un macro </code>wp1<code> con este comando:</p>
+<p><pre><code>.wp add 123456700</code></pre></p>
+<p>- Crea un macro </code>wp2<code> con estos comandos:</p>
+<p><pre><code>.wp reload 123456700
+.wp load 123456700</code></pre></p>
+<p>- Crea un macro </code>wp3<code> con este comando:</p>
+<p><pre><code>.wp show on 123456700</code></pre></p>
+<p>- Crea un macro </code>wp4<code> con este comando:</p>
+<p><pre><code>.wp show off 123456700</code></pre></p>
+<p>- Teletransporte a la criatura:</p>
+<p><pre><code>.go creature 1234567</code></pre></p>
+<p>- Utilizar la macro </code>wp1<code>
+- Crea el camino:
+  - Ve a la posición donde debería estar el siguiente waypoint y utiliza la macro &#39;wp1&#39;
+  - Repita la operación hasta que todos los puntos de ruta estén fijados (no olvide crear también una ruta de vuelta a la posición inicial)
+  - Utilizar las macros &#39;wp3&#39; y &#39;wp4&#39; para mostrar/ocultar la ruta (se requiere GM on para ver realmente la ruta)
+  - Asegúrese de que los puntos de ruta no están demasiado lejos unos de otros, especialmente si la criatura está caminando sobre colinas, etc., ya que tratará de moverse directamente al siguiente punto de ruta, incluso si esto significa pasar por el suelo.
+- Selecciona la criatura y utiliza la macro </code>wp2<code>. Ahora debería empezar a moverse</p>
+<p><h3>Algunas sentencias SQL útiles</h3></p>
+<p><h4>Borrar ruta</h4></p>
+<p>- Selecciona la criatura y elimina el camino:</p>
+<p><pre><code>.wp unload</code></pre></p>
+<p>- Borre la ruta de la base de datos, por ejemplo 123456700:</p>
+<p></code>`<code>sql
+DELETE FROM </code>waypoint_data<code> WHERE </code>id<code> = 123456700;
+<pre><code>
+&lt;h4&gt;Trasladar los waypoints de &amp;#39;waypoint_data&amp;#39; a &amp;#39;waypoints&amp;#39; (SmartAI)&lt;/h4&gt;</p>
+<p>Si necesita los waypoints para SmartAI tiene que copiar los waypoints de la tabla <a href="waypoint_data">waypoint_data</a> en la tabla <a href="waypoints">waypoints</a> y luego borrar los waypoints originales (elimine la ruta para la criatura a través de </code>.wp unload<code> si estaba cargada antes). Aquí un ejemplo para la ruta 123456700:
+</code></pre>sql
+INSERT INTO </code>waypoints<code> (</code>entry<code>,</code>pointid<code>,</code>position_x<code>,</code>position_y<code>,</code>position_z<code>)</p>
+<p>SELECT </code>id<code>,</code>point<code>,</code>position_x<code>,</code>position_y<code>,</code>position_z<code> FROM </code>waypoint_data<code> WHERE </code>id<code> = 123456700;</p>
+<p>DELETE FROM </code>waypoint_data<code> WHERE </code>id<code> = 123456700;
+<pre><code>
+&lt;h4&gt;Trasladar los waypoints de &amp;#39;waypoint_data&amp;#39; a &amp;#39;script_waypoint&amp;#39; (CreatureAI)&lt;/h4&gt;</p>
+<p>Lo mismo que arriba, pero ahora para <a href="script_waypoint">script_waypoint</a> en lugar de <a href="waypoints">waypoints</a>. La entrada de <a href="script_waypoint">script_waypoint</a> tiene que ser la <a href="creature_template#entry">creature_template.entry</a>, aquí por ejemplo 1234567:
+</code></pre>sql
+INSERT INTO </code>script_waypoint<code> (</code>entry<code>,</code>pointid<code>,</code>location_x<code>,</code>location_y<code>,</code>location_z<code>)</p>
+<p>SELECT 1234567 AS </code>entry<code>,</code>point<code>,</code>position_x<code>,</code>position_y<code>,</code>position_z<code> FROM </code>waypoint_data<code> WHERE </code>id<code> = 123456700;</p>
+<p>DELETE FROM </code>waypoint_data<code> WHERE </code>id<code> = 123456700;
+</code>``</p>
+<p>No te olvides de eliminar el camino de la criatura si se cargó antes.</p>
+<p><h3>Mejores prácticas de trazado de rutas</h3></p>
+<p>Cuando se crean trayectorias a lo largo de una pendiente, se puede minimizar el recorte del terreno manteniendo la línea de visión.</p>
+<p>!<a href="https://i.imgur.com/s045BKp.png">waypoints</a>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

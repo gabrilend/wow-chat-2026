@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>README.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>README.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/extensions/StackTracePlus.disabled/README.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 4209 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-08 23:10
+        </div>
+
+        <div class="content">
+            <p><h1>StackTracePlus #</h1></p>
+<p><a href="https://travis-ci.org/ignacio/StackTracePlus.png?branch=master">![Build Status</a>](https://travis-ci.org/ignacio/StackTracePlus)</p>
+<p><a href="https://github.com/ignacio/StackTracePlus">StackTracePlus</a> provides enhanced stack traces for [Lua 5.1, Lua 5.2][1] and [LuaJIT][2].</p>
+<p>StackTracePlus can be used as a replacement for debug.traceback. It gives detailed information about locals, tries to guess
+function names when they&#39;re not available, etc, so, instead of</p>
+<p>    lua5.1.exe: D:\trunk_git\sources\stacktraceplus\test\test.lua:10: attempt to concatenate a nil value
+    stack traceback:
+	D:\trunk_git\sources\stacktraceplus\test\test.lua:10: in function &lt;D:\trunk_git\sources\stacktraceplus\test\test.lua:7&gt;
+	(tail call): ?
+	D:\trunk_git\sources\stacktraceplus\test\test.lua:15: in main chunk
+	[C]: ?</p>
+<p>you&#39;ll get</p>
+<p>    lua5.1.exe: D:\trunk_git\sources\stacktraceplus\test\test.lua:10: attempt to concatenate a nil value
+    Stack Traceback
+    ===============
+    (2)  C function &#39;function: 00A8F418&#39;
+    (3) Lua function &#39;g&#39; at file &#39;D:\trunk_git\sources\stacktraceplus\test\test.lua:10&#39; (best guess)
+	Local variables:
+	 fun = table module
+	 str = string: &quot;hey&quot;
+	 tb = table: 027DCBE0  {dummy:1, blah:true, foo:bar}
+	 (<em>temporary) = nil
+	 (</em>temporary) = string: &quot;text&quot;
+	 (<em>temporary) = string: &quot;attempt to concatenate a nil value&quot;
+    (4) tail call
+    (5) main chunk of file &#39;D:\trunk_git\sources\stacktraceplus\test\test.lua&#39; at line 15
+    (6)  C function &#39;function: 002CA480&#39;</p>
+<p><h2>Usage #</h2></p>
+<p>StackTracePlus can be used as a replacement for <code>debug.traceback</code>, as an <code>xpcall</code> error handler or even from C code. Note that
+only the Lua 5.1 interpreter allows the traceback function to be replaced &quot;on the fly&quot;. LuaJIT and Lua 5.2 always calls luaL_traceback internally so there is no easy way to override that.</p>
+<p><pre><code class="lua"><span class="keyword">local</span> STP = require &amp;quot;StackTracePlus&amp;quot;</p>
+<p>debug.traceback = STP.stacktrace
+<span class="keyword">function</span> test()
+	<span class="keyword">local</span> s = &amp;quot;this is a string&amp;quot;
+	<span class="keyword">local</span> n = <span class="number">42</span>
+	<span class="keyword">local</span> t = { foo = &amp;quot;bar&amp;quot; }
+	<span class="keyword">local</span> co = coroutine
+	<span class="keyword">local</span> cr = coroutine.create</p>
+<p>	error(&amp;quot;an error&amp;quot;)
+<span class="keyword">end</span>
+test()</code></pre></p>
+<p>That script will output (only with Lua 5.1):</p>
+<p>    lua5.1: example.lua:11: an error
+    Stack Traceback
+    ===============
+    (2)  C function &#39;function: 006B5758&#39;
+    (3) global C function &#39;error&#39;
+    (4) Lua global &#39;test&#39; at file &#39;example.lua:11&#39;
+            Local variables:
+             s = string: &quot;this is a string&quot;
+             n = number: 42
+             t = table: 006E5220  {foo:bar}
+             co = coroutine table
+             cr = C function: 003C7080
+    (5) main chunk of file &#39;example.lua&#39; at line 14
+    (6)  C function &#39;function: 00637B30&#39;</p>
+<p><strong>StackTracePlus</strong> is aware of the usual Lua libraries, like </em>coroutine<em>, </em>table<em>, </em>string<em>, </em>io<em>, etc and functions like
+</em>print<em>, </em>pcall<em>, </em>assert<em>, and so on.</p>
+<p>You can also make STP aware of your own tables and functions by calling </em>add_known_function<em> and </em>add_known_table*.</p>
+<p><pre><code class="lua"><span class="keyword">local</span> STP = require &amp;quot;StackTracePlus&amp;quot;</p>
+<p>debug.traceback = STP.stacktrace
+<span class="keyword">local</span> my_table = {
+	f = <span class="keyword">function</span>() <span class="keyword">end</span>
+}
+<span class="keyword">function</span> my_<span class="keyword">function</span>()
+<span class="keyword">end</span></p>
+<p><span class="keyword">function</span> test(data, func)
+	<span class="keyword">local</span> s = &amp;quot;this is a string&amp;quot;</p>
+<p>	error(&amp;quot;an error&amp;quot;)
+<span class="keyword">end</span></p>
+<p>STP.add_known_table(my_table, &amp;quot;A description <span class="keyword">for</span> my_table&amp;quot;)
+STP.add_known_<span class="keyword">function</span>(my_<span class="keyword">function</span>, &amp;quot;A description <span class="keyword">for</span> my_<span class="keyword">function</span>&amp;quot;)</p>
+<p>test( my_table, my_<span class="keyword">function</span> )</code></pre></p>
+<p>Will output:</p>
+<p>    lua5.1: ..\test\example2.lua:13: an error
+    Stack Traceback
+    ===============
+    (2)  C function &#39;function: 0073AAA8&#39;
+    (3) global C function &#39;error&#39;
+    (4) Lua global &#39;test&#39; at file &#39;..\test\example2.lua:13&#39;
+            Local variables:
+             data = A description for my_table
+             func = Lua function &#39;A description for my_function&#39; (defined at line 7 of chunk ..\test\example2.lua)
+             s = string: &quot;this is a string&quot;
+    (5) main chunk of file &#39;..\test\example2.lua&#39; at line 19
+    (6)  C function &#39;function: 00317B30&#39;</p>
+<p><h2>Installation #</h2>
+The easiest way to install is with [LuaRocks][3].</p>
+<p>  - luarocks install stacktraceplus</p>
+<p>If you don&#39;t want to use LuaRocks, just copy StackTracePlus.lua to Lua&#39;s path.</p>
+<p><h2>License #</h2>
+<strong>StackTracePlus</strong> is available under the MIT license.</p>
+<p>[1]: http://www.lua.org/
+[2]: http://luajit.org/
+[3]: http://luarocks.org/
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

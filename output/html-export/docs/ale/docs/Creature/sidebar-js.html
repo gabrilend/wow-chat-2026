@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sidebar.js - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>sidebar.js</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/ale/docs/Creature/sidebar.js
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> js &nbsp;&nbsp;
+            <strong>Size:</strong> 9532 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>document.write(`
+  &lt;a id=&quot;Creature:AddLootMode&quot; class=&quot;fn&quot; href=&quot;../Creature/AddLootMode.html&quot;&gt;AddLootMode&lt;/a&gt;
+  &lt;a id=&quot;Creature:AllLootRemovedFromCorpse&quot; class=&quot;fn&quot; href=&quot;../Creature/AllLootRemovedFromCorpse.html&quot;&gt;AllLootRemovedFromCorpse&lt;/a&gt;
+  &lt;a id=&quot;Creature:AttackStart&quot; class=&quot;fn&quot; href=&quot;../Creature/AttackStart.html&quot;&gt;AttackStart&lt;/a&gt;
+  &lt;a id=&quot;Creature:CallAssistance&quot; class=&quot;fn&quot; href=&quot;../Creature/CallAssistance.html&quot;&gt;CallAssistance&lt;/a&gt;
+  &lt;a id=&quot;Creature:CallForHelp&quot; class=&quot;fn&quot; href=&quot;../Creature/CallForHelp.html&quot;&gt;CallForHelp&lt;/a&gt;
+  &lt;a id=&quot;Creature:CanAggro&quot; class=&quot;fn&quot; href=&quot;../Creature/CanAggro.html&quot;&gt;CanAggro&lt;/a&gt;
+  &lt;a id=&quot;Creature:CanAssistTo&quot; class=&quot;fn&quot; href=&quot;../Creature/CanAssistTo.html&quot;&gt;CanAssistTo&lt;/a&gt;
+  &lt;a id=&quot;Creature:CanCompleteQuest&quot; class=&quot;fn&quot; href=&quot;../Creature/CanCompleteQuest.html&quot;&gt;CanCompleteQuest&lt;/a&gt;
+  &lt;a id=&quot;Creature:CanFly&quot; class=&quot;fn&quot; href=&quot;../Creature/CanFly.html&quot;&gt;CanFly&lt;/a&gt;
+  &lt;a id=&quot;Creature:CanStartAttack&quot; class=&quot;fn&quot; href=&quot;../Creature/CanStartAttack.html&quot;&gt;CanStartAttack&lt;/a&gt;
+  &lt;a id=&quot;Creature:CanSwim&quot; class=&quot;fn&quot; href=&quot;../Creature/CanSwim.html&quot;&gt;CanSwim&lt;/a&gt;
+  &lt;a id=&quot;Creature:CanWalk&quot; class=&quot;fn&quot; href=&quot;../Creature/CanWalk.html&quot;&gt;CanWalk&lt;/a&gt;
+  &lt;a id=&quot;Creature:DespawnOrUnsummon&quot; class=&quot;fn&quot; href=&quot;../Creature/DespawnOrUnsummon.html&quot;&gt;DespawnOrUnsummon&lt;/a&gt;
+  &lt;a id=&quot;Creature:FleeToGetAssistance&quot; class=&quot;fn&quot; href=&quot;../Creature/FleeToGetAssistance.html&quot;&gt;FleeToGetAssistance&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetAIName&quot; class=&quot;fn&quot; href=&quot;../Creature/GetAIName.html&quot;&gt;GetAIName&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetAITarget&quot; class=&quot;fn&quot; href=&quot;../Creature/GetAITarget.html&quot;&gt;GetAITarget&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetAITargets&quot; class=&quot;fn&quot; href=&quot;../Creature/GetAITargets.html&quot;&gt;GetAITargets&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetAITargetsCount&quot; class=&quot;fn&quot; href=&quot;../Creature/GetAITargetsCount.html&quot;&gt;GetAITargetsCount&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetAggroRange&quot; class=&quot;fn&quot; href=&quot;../Creature/GetAggroRange.html&quot;&gt;GetAggroRange&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetCorpseDelay&quot; class=&quot;fn&quot; href=&quot;../Creature/GetCorpseDelay.html&quot;&gt;GetCorpseDelay&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetCreatureFamily&quot; class=&quot;fn&quot; href=&quot;../Creature/GetCreatureFamily.html&quot;&gt;GetCreatureFamily&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetCreatureSpellCooldownDelay&quot; class=&quot;fn&quot; href=&quot;../Creature/GetCreatureSpellCooldownDelay.html&quot;&gt;GetCreatureSpellCooldownDelay&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetCurrentWaypointId&quot; class=&quot;fn&quot; href=&quot;../Creature/GetCurrentWaypointId.html&quot;&gt;GetCurrentWaypointId&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetDBTableGUIDLow&quot; class=&quot;fn&quot; href=&quot;../Creature/GetDBTableGUIDLow.html&quot;&gt;GetDBTableGUIDLow&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetDefaultMovementType&quot; class=&quot;fn&quot; href=&quot;../Creature/GetDefaultMovementType.html&quot;&gt;GetDefaultMovementType&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetExtraFlags&quot; class=&quot;fn&quot; href=&quot;../Creature/GetExtraFlags.html&quot;&gt;GetExtraFlags&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetHomePosition&quot; class=&quot;fn&quot; href=&quot;../Creature/GetHomePosition.html&quot;&gt;GetHomePosition&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetLoot&quot; class=&quot;fn&quot; href=&quot;../Creature/GetLoot.html&quot;&gt;GetLoot&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetLootMode&quot; class=&quot;fn&quot; href=&quot;../Creature/GetLootMode.html&quot;&gt;GetLootMode&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetLootRecipient&quot; class=&quot;fn&quot; href=&quot;../Creature/GetLootRecipient.html&quot;&gt;GetLootRecipient&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetLootRecipientGroup&quot; class=&quot;fn&quot; href=&quot;../Creature/GetLootRecipientGroup.html&quot;&gt;GetLootRecipientGroup&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetNPCFlags&quot; class=&quot;fn&quot; href=&quot;../Creature/GetNPCFlags.html&quot;&gt;GetNPCFlags&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetRank&quot; class=&quot;fn&quot; href=&quot;../Creature/GetRank.html&quot;&gt;GetRank&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetReactState&quot; class=&quot;fn&quot; href=&quot;../Creature/GetReactState.html&quot;&gt;GetReactState&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetRespawnDelay&quot; class=&quot;fn&quot; href=&quot;../Creature/GetRespawnDelay.html&quot;&gt;GetRespawnDelay&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetScriptId&quot; class=&quot;fn&quot; href=&quot;../Creature/GetScriptId.html&quot;&gt;GetScriptId&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetScriptName&quot; class=&quot;fn&quot; href=&quot;../Creature/GetScriptName.html&quot;&gt;GetScriptName&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetShieldBlockValue&quot; class=&quot;fn&quot; href=&quot;../Creature/GetShieldBlockValue.html&quot;&gt;GetShieldBlockValue&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetSpawnId&quot; class=&quot;fn&quot; href=&quot;../Creature/GetSpawnId.html&quot;&gt;GetSpawnId&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetUnitFlags&quot; class=&quot;fn&quot; href=&quot;../Creature/GetUnitFlags.html&quot;&gt;GetUnitFlags&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetUnitFlagsTwo&quot; class=&quot;fn&quot; href=&quot;../Creature/GetUnitFlagsTwo.html&quot;&gt;GetUnitFlagsTwo&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetWanderRadius&quot; class=&quot;fn&quot; href=&quot;../Creature/GetWanderRadius.html&quot;&gt;GetWanderRadius&lt;/a&gt;
+  &lt;a id=&quot;Creature:GetWaypointPath&quot; class=&quot;fn&quot; href=&quot;../Creature/GetWaypointPath.html&quot;&gt;GetWaypointPath&lt;/a&gt;
+  &lt;a id=&quot;Creature:HasCategoryCooldown&quot; class=&quot;fn&quot; href=&quot;../Creature/HasCategoryCooldown.html&quot;&gt;HasCategoryCooldown&lt;/a&gt;
+  &lt;a id=&quot;Creature:HasLootMode&quot; class=&quot;fn&quot; href=&quot;../Creature/HasLootMode.html&quot;&gt;HasLootMode&lt;/a&gt;
+  &lt;a id=&quot;Creature:HasLootRecipient&quot; class=&quot;fn&quot; href=&quot;../Creature/HasLootRecipient.html&quot;&gt;HasLootRecipient&lt;/a&gt;
+  &lt;a id=&quot;Creature:HasQuest&quot; class=&quot;fn&quot; href=&quot;../Creature/HasQuest.html&quot;&gt;HasQuest&lt;/a&gt;
+  &lt;a id=&quot;Creature:HasSearchedAssistance&quot; class=&quot;fn&quot; href=&quot;../Creature/HasSearchedAssistance.html&quot;&gt;HasSearchedAssistance&lt;/a&gt;
+  &lt;a id=&quot;Creature:HasSpell&quot; class=&quot;fn&quot; href=&quot;../Creature/HasSpell.html&quot;&gt;HasSpell&lt;/a&gt;
+  &lt;a id=&quot;Creature:HasSpellCooldown&quot; class=&quot;fn&quot; href=&quot;../Creature/HasSpellCooldown.html&quot;&gt;HasSpellCooldown&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsCivilian&quot; class=&quot;fn&quot; href=&quot;../Creature/IsCivilian.html&quot;&gt;IsCivilian&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsDamageEnoughForLootingAndReward&quot; class=&quot;fn&quot; href=&quot;../Creature/IsDamageEnoughForLootingAndReward.html&quot;&gt;IsDamageEnoughForLootingAndReward&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsDungeonBoss&quot; class=&quot;fn&quot; href=&quot;../Creature/IsDungeonBoss.html&quot;&gt;IsDungeonBoss&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsElite&quot; class=&quot;fn&quot; href=&quot;../Creature/IsElite.html&quot;&gt;IsElite&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsGuard&quot; class=&quot;fn&quot; href=&quot;../Creature/IsGuard.html&quot;&gt;IsGuard&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsInEvadeMode&quot; class=&quot;fn&quot; href=&quot;../Creature/IsInEvadeMode.html&quot;&gt;IsInEvadeMode&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsRacialLeader&quot; class=&quot;fn&quot; href=&quot;../Creature/IsRacialLeader.html&quot;&gt;IsRacialLeader&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsRegeneratingHealth&quot; class=&quot;fn&quot; href=&quot;../Creature/IsRegeneratingHealth.html&quot;&gt;IsRegeneratingHealth&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsReputationGainDisabled&quot; class=&quot;fn&quot; href=&quot;../Creature/IsReputationGainDisabled.html&quot;&gt;IsReputationGainDisabled&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsTappedBy&quot; class=&quot;fn&quot; href=&quot;../Creature/IsTappedBy.html&quot;&gt;IsTappedBy&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsTargetableForAttack&quot; class=&quot;fn&quot; href=&quot;../Creature/IsTargetableForAttack.html&quot;&gt;IsTargetableForAttack&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsTrigger&quot; class=&quot;fn&quot; href=&quot;../Creature/IsTrigger.html&quot;&gt;IsTrigger&lt;/a&gt;
+  &lt;a id=&quot;Creature:IsWorldBoss&quot; class=&quot;fn&quot; href=&quot;../Creature/IsWorldBoss.html&quot;&gt;IsWorldBoss&lt;/a&gt;
+  &lt;a id=&quot;Creature:MoveWaypoint&quot; class=&quot;fn&quot; href=&quot;../Creature/MoveWaypoint.html&quot;&gt;MoveWaypoint&lt;/a&gt;
+  &lt;a id=&quot;Creature:RemoveCorpse&quot; class=&quot;fn&quot; href=&quot;../Creature/RemoveCorpse.html&quot;&gt;RemoveCorpse&lt;/a&gt;
+  &lt;a id=&quot;Creature:RemoveLootMode&quot; class=&quot;fn&quot; href=&quot;../Creature/RemoveLootMode.html&quot;&gt;RemoveLootMode&lt;/a&gt;
+  &lt;a id=&quot;Creature:ResetLootMode&quot; class=&quot;fn&quot; href=&quot;../Creature/ResetLootMode.html&quot;&gt;ResetLootMode&lt;/a&gt;
+  &lt;a id=&quot;Creature:Respawn&quot; class=&quot;fn&quot; href=&quot;../Creature/Respawn.html&quot;&gt;Respawn&lt;/a&gt;
+  &lt;a id=&quot;Creature:SaveToDB&quot; class=&quot;fn&quot; href=&quot;../Creature/SaveToDB.html&quot;&gt;SaveToDB&lt;/a&gt;
+  &lt;a id=&quot;Creature:SelectVictim&quot; class=&quot;fn&quot; href=&quot;../Creature/SelectVictim.html&quot;&gt;SelectVictim&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetAggroEnabled&quot; class=&quot;fn&quot; href=&quot;../Creature/SetAggroEnabled.html&quot;&gt;SetAggroEnabled&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetCorpseDelay&quot; class=&quot;fn&quot; href=&quot;../Creature/SetCorpseDelay.html&quot;&gt;SetCorpseDelay&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetDeathState&quot; class=&quot;fn&quot; href=&quot;../Creature/SetDeathState.html&quot;&gt;SetDeathState&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetDefaultMovementType&quot; class=&quot;fn&quot; href=&quot;../Creature/SetDefaultMovementType.html&quot;&gt;SetDefaultMovementType&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetDisableGravity&quot; class=&quot;fn&quot; href=&quot;../Creature/SetDisableGravity.html&quot;&gt;SetDisableGravity&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetDisableReputationGain&quot; class=&quot;fn&quot; href=&quot;../Creature/SetDisableReputationGain.html&quot;&gt;SetDisableReputationGain&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetEquipmentSlots&quot; class=&quot;fn&quot; href=&quot;../Creature/SetEquipmentSlots.html&quot;&gt;SetEquipmentSlots&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetHomePosition&quot; class=&quot;fn&quot; href=&quot;../Creature/SetHomePosition.html&quot;&gt;SetHomePosition&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetHover&quot; class=&quot;fn&quot; href=&quot;../Creature/SetHover.html&quot;&gt;SetHover&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetInCombatWithZone&quot; class=&quot;fn&quot; href=&quot;../Creature/SetInCombatWithZone.html&quot;&gt;SetInCombatWithZone&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetLootMode&quot; class=&quot;fn&quot; href=&quot;../Creature/SetLootMode.html&quot;&gt;SetLootMode&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetNPCFlags&quot; class=&quot;fn&quot; href=&quot;../Creature/SetNPCFlags.html&quot;&gt;SetNPCFlags&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetNoCallAssistance&quot; class=&quot;fn&quot; href=&quot;../Creature/SetNoCallAssistance.html&quot;&gt;SetNoCallAssistance&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetNoSearchAssistance&quot; class=&quot;fn&quot; href=&quot;../Creature/SetNoSearchAssistance.html&quot;&gt;SetNoSearchAssistance&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetReactState&quot; class=&quot;fn&quot; href=&quot;../Creature/SetReactState.html&quot;&gt;SetReactState&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetRegeneratingHealth&quot; class=&quot;fn&quot; href=&quot;../Creature/SetRegeneratingHealth.html&quot;&gt;SetRegeneratingHealth&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetRespawnDelay&quot; class=&quot;fn&quot; href=&quot;../Creature/SetRespawnDelay.html&quot;&gt;SetRespawnDelay&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetUnitFlags&quot; class=&quot;fn&quot; href=&quot;../Creature/SetUnitFlags.html&quot;&gt;SetUnitFlags&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetUnitFlagsTwo&quot; class=&quot;fn&quot; href=&quot;../Creature/SetUnitFlagsTwo.html&quot;&gt;SetUnitFlagsTwo&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetWalk&quot; class=&quot;fn&quot; href=&quot;../Creature/SetWalk.html&quot;&gt;SetWalk&lt;/a&gt;
+  &lt;a id=&quot;Creature:SetWanderRadius&quot; class=&quot;fn&quot; href=&quot;../Creature/SetWanderRadius.html&quot;&gt;SetWanderRadius&lt;/a&gt;
+  &lt;a id=&quot;Creature:UpdateEntry&quot; class=&quot;fn&quot; href=&quot;../Creature/UpdateEntry.html&quot;&gt;UpdateEntry&lt;/a&gt;
+`);</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

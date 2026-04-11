@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sidebar.js - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>sidebar.js</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/ale/docs/Guild/sidebar.js
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> js &nbsp;&nbsp;
+            <strong>Size:</strong> 2356 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>document.write(`
+  &lt;a id=&quot;Guild:AddMember&quot; class=&quot;fn&quot; href=&quot;../Guild/AddMember.html&quot;&gt;AddMember&lt;/a&gt;
+  &lt;a id=&quot;Guild:DeleteMember&quot; class=&quot;fn&quot; href=&quot;../Guild/DeleteMember.html&quot;&gt;DeleteMember&lt;/a&gt;
+  &lt;a id=&quot;Guild:Disband&quot; class=&quot;fn&quot; href=&quot;../Guild/Disband.html&quot;&gt;Disband&lt;/a&gt;
+  &lt;a id=&quot;Guild:GetCreatedDate&quot; class=&quot;fn&quot; href=&quot;../Guild/GetCreatedDate.html&quot;&gt;GetCreatedDate&lt;/a&gt;
+  &lt;a id=&quot;Guild:GetId&quot; class=&quot;fn&quot; href=&quot;../Guild/GetId.html&quot;&gt;GetId&lt;/a&gt;
+  &lt;a id=&quot;Guild:GetInfo&quot; class=&quot;fn&quot; href=&quot;../Guild/GetInfo.html&quot;&gt;GetInfo&lt;/a&gt;
+  &lt;a id=&quot;Guild:GetLeader&quot; class=&quot;fn&quot; href=&quot;../Guild/GetLeader.html&quot;&gt;GetLeader&lt;/a&gt;
+  &lt;a id=&quot;Guild:GetLeaderGUID&quot; class=&quot;fn&quot; href=&quot;../Guild/GetLeaderGUID.html&quot;&gt;GetLeaderGUID&lt;/a&gt;
+  &lt;a id=&quot;Guild:GetMOTD&quot; class=&quot;fn&quot; href=&quot;../Guild/GetMOTD.html&quot;&gt;GetMOTD&lt;/a&gt;
+  &lt;a id=&quot;Guild:GetMemberCount&quot; class=&quot;fn&quot; href=&quot;../Guild/GetMemberCount.html&quot;&gt;GetMemberCount&lt;/a&gt;
+  &lt;a id=&quot;Guild:GetMembers&quot; class=&quot;fn&quot; href=&quot;../Guild/GetMembers.html&quot;&gt;GetMembers&lt;/a&gt;
+  &lt;a id=&quot;Guild:GetName&quot; class=&quot;fn&quot; href=&quot;../Guild/GetName.html&quot;&gt;GetName&lt;/a&gt;
+  &lt;a id=&quot;Guild:GetTotalBankMoney&quot; class=&quot;fn&quot; href=&quot;../Guild/GetTotalBankMoney.html&quot;&gt;GetTotalBankMoney&lt;/a&gt;
+  &lt;a id=&quot;Guild:MassInviteToEvent&quot; class=&quot;fn&quot; href=&quot;../Guild/MassInviteToEvent.html&quot;&gt;MassInviteToEvent&lt;/a&gt;
+  &lt;a id=&quot;Guild:ModifyBankMoney&quot; class=&quot;fn&quot; href=&quot;../Guild/ModifyBankMoney.html&quot;&gt;ModifyBankMoney&lt;/a&gt;
+  &lt;a id=&quot;Guild:ResetTimes&quot; class=&quot;fn&quot; href=&quot;../Guild/ResetTimes.html&quot;&gt;ResetTimes&lt;/a&gt;
+  &lt;a id=&quot;Guild:SendMessage&quot; class=&quot;fn&quot; href=&quot;../Guild/SendMessage.html&quot;&gt;SendMessage&lt;/a&gt;
+  &lt;a id=&quot;Guild:SendPacket&quot; class=&quot;fn&quot; href=&quot;../Guild/SendPacket.html&quot;&gt;SendPacket&lt;/a&gt;
+  &lt;a id=&quot;Guild:SendPacketToRanked&quot; class=&quot;fn&quot; href=&quot;../Guild/SendPacketToRanked.html&quot;&gt;SendPacketToRanked&lt;/a&gt;
+  &lt;a id=&quot;Guild:SetBankTabText&quot; class=&quot;fn&quot; href=&quot;../Guild/SetBankTabText.html&quot;&gt;SetBankTabText&lt;/a&gt;
+  &lt;a id=&quot;Guild:SetLeader&quot; class=&quot;fn&quot; href=&quot;../Guild/SetLeader.html&quot;&gt;SetLeader&lt;/a&gt;
+  &lt;a id=&quot;Guild:SetMemberRank&quot; class=&quot;fn&quot; href=&quot;../Guild/SetMemberRank.html&quot;&gt;SetMemberRank&lt;/a&gt;
+  &lt;a id=&quot;Guild:SetName&quot; class=&quot;fn&quot; href=&quot;../Guild/SetName.html&quot;&gt;SetName&lt;/a&gt;
+  &lt;a id=&quot;Guild:SwapItems&quot; class=&quot;fn&quot; href=&quot;../Guild/SwapItems.html&quot;&gt;SwapItems&lt;/a&gt;
+  &lt;a id=&quot;Guild:SwapItemsWithInventory&quot; class=&quot;fn&quot; href=&quot;../Guild/SwapItemsWithInventory.html&quot;&gt;SwapItemsWithInventory&lt;/a&gt;
+  &lt;a id=&quot;Guild:UpdateMemberData&quot; class=&quot;fn&quot; href=&quot;../Guild/UpdateMemberData.html&quot;&gt;UpdateMemberData&lt;/a&gt;
+`);</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

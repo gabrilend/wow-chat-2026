@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ObjectVariables.ext - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ObjectVariables.ext</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/extensions/ObjectVariables.ext
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> ext &nbsp;&nbsp;
+            <strong>Size:</strong> 6977 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-09 10:41
+        </div>
+
+        <div class="content">
+            <pre><code>--
+-- Copyright (C) 2010 - 2016 Eluna Lua Engine &lt;http://emudevs.com/&gt;
+-- This program is free software licensed under GPL version 3
+-- Please see the included DOCS/LICENSE.md for more information
+--
+-- Modified for ALE compatibility (2026-04-09):
+-- - GetObjectType() replaced with GetTypeId() + lookup table
+-- - ALE returns numeric TypeId instead of string type name
+-- - Event registrations restored (ALE has same event IDs as Eluna)
+--
+
+-- filename.ext files are loaded before normal .lua files
+
+--
+-- This extension allows saving data to specific object for it&#39;s lifetime in current runtime session
+-- Supports Map, Player, Creature, GameObject
+--
+-- SetData sets a value
+--  obj:SetData(key, val)
+--
+-- GetData gets the data table or a specific value by key from it
+--  local tbl = obj:GetData()
+--  local val = obj:GetData(key)
+--
+
+local pairs = pairs
+
+-- ALE TypeId enum values (from Object:GetTypeId)
+local TYPEID_UNIT       = 3  -- Creature
+local TYPEID_PLAYER     = 4
+local TYPEID_GAMEOBJECT = 5
+
+-- Map TypeId to string for variable store keys
+-- Note: Map objects don&#39;t have GetTypeId, handled separately
+local typeIdToName = {
+    [TYPEID_UNIT]       = &quot;Creature&quot;,
+    [TYPEID_PLAYER]     = &quot;Player&quot;,
+    [TYPEID_GAMEOBJECT] = &quot;GameObject&quot;,
+}
+
+local variableStores = {
+    Map = {},
+    Player = {},
+    Creature = {},
+    GameObject = {},
+}
+
+-- {{{ DestroyMapData
+local function DestroyMapData(event, obj)
+    local map = obj:GetMapId()
+    local inst = obj:GetInstanceId()
+    for k,v in pairs(variableStores) do
+        local mapdata = v[map]
+        if mapdata then
+            mapdata[inst] = nil
+        end
+    end
+end
+-- }}}
+
+-- {{{ DestroyObjData
+local function DestroyObjData(event, obj)
+    -- ALE uses GetTypeId() instead of GetObjectType()
+    local typeId = obj:GetTypeId()
+    local otype = typeIdToName[typeId]
+    if not otype then return end  -- unknown type
+
+    local guid = obj:GetGUIDLow()
+
+    if otype == &quot;Player&quot; then
+        variableStores[otype][guid] = nil
+        return
+    end
+
+    local map = obj:GetMapId()
+    local inst = obj:GetInstanceId()
+    local mapdata = variableStores[otype][map]
+    if mapdata then
+        local instancedata = mapdata[inst]
+        if instancedata then
+            instancedata[guid] = nil
+        end
+    end
+end
+-- }}}
+
+-- {{{ GetData
+local function GetData(self, field)
+    -- ALE uses GetTypeId() instead of GetObjectType()
+    local typeId = self:GetTypeId()
+    local otype = typeIdToName[typeId]
+    if not otype then return nil end  -- unknown type
+
+    local guid = self:GetGUIDLow()
+    local varStore = variableStores[otype]
+
+    if otype == &quot;Player&quot; then
+        varStore[guid] = varStore[guid] or {}
+        if field ~= nil then
+            return varStore[guid][field]
+        end
+        return varStore[guid]
+    end
+
+    local map = self:GetMapId()
+    local inst = self:GetInstanceId()
+    varStore[map] = varStore[map] or {}
+    varStore[map][inst] = varStore[map][inst] or {}
+    varStore[map][inst][guid] = varStore[map][inst][guid] or {}
+
+    if field ~= nil then
+        return varStore[map][inst][guid][field]
+    end
+    return varStore[map][inst][guid]
+end
+-- }}}
+
+-- {{{ SetData
+local function SetData(self, field, val)
+    -- ALE uses GetTypeId() instead of GetObjectType()
+    local typeId = self:GetTypeId()
+    local otype = typeIdToName[typeId]
+    if not otype then return end  -- unknown type
+
+    local guid = self:GetGUIDLow()
+    local varStore = variableStores[otype]
+
+    if otype == &quot;Player&quot; then
+        varStore[guid] = varStore[guid] or {}
+        varStore[guid][field] = val
+        return
+    end
+
+    local map = self:GetMapId()
+    local inst = self:GetInstanceId()
+    varStore[map] = varStore[map] or {}
+    varStore[map][inst] = varStore[map][inst] or {}
+    varStore[map][inst][guid] = varStore[map][inst][guid] or {}
+
+    varStore[map][inst][guid][field] = val
+end
+-- }}}
+
+-- {{{ Assign methods to globals
+for k,v in pairs(variableStores) do
+    _G[k].GetData = GetData
+    _G[k].SetData = SetData
+end
+-- }}}
+
+-- {{{ Event registrations for automatic cleanup
+-- MOVED TO object-variables-events.lua (Issue 332)
+-- .ext files load before hooks are ready, causing registry corruption
+-- .lua files load after hooks are initialized
+-- }}}
+
+-- {{{ ObjectVariables namespace (for compatibility with code that calls cleanup manually)
+ObjectVariables = {}
+
+-- Expose destroy functions for event registration in .lua files
+ObjectVariables._destroyObjData = DestroyObjData
+ObjectVariables._destroyMapData = DestroyMapData
+
+function ObjectVariables.cleanupPlayer(player)
+    if not player then return end
+    local guid = player:GetGUIDLow()
+    if guid then
+        variableStores.Player[guid] = nil
+    end
+end
+
+function ObjectVariables.cleanupCreature(creature)
+    if not creature then return end
+    local guid = creature:GetGUIDLow()
+    local mapId = creature:GetMapId()
+    local instId = creature:GetInstanceId()
+
+    local mapdata = variableStores.Creature[mapId]
+    if mapdata then
+        local instancedata = mapdata[instId]
+        if instancedata then
+            instancedata[guid] = nil
+        end
+    end
+end
+
+function ObjectVariables.cleanupGameObject(gameobject)
+    if not gameobject then return end
+    local guid = gameobject:GetGUIDLow()
+    local mapId = gameobject:GetMapId()
+    local instId = gameobject:GetInstanceId()
+
+    local mapdata = variableStores.GameObject[mapId]
+    if mapdata then
+        local instancedata = mapdata[instId]
+        if instancedata then
+            instancedata[guid] = nil
+        end
+    end
+end
+
+function ObjectVariables.cleanupGameObjectByLocation(mapId, instanceId, guid)
+    if not mapId or not instanceId or not guid then return end
+
+    local mapdata = variableStores.GameObject[mapId]
+    if mapdata then
+        local instancedata = mapdata[instanceId]
+        if instancedata then
+            instancedata[guid] = nil
+        end
+    end
+end
+
+function ObjectVariables.cleanupMap(mapId, instanceId)
+    for k,v in pairs(variableStores) do
+        local mapdata = v[mapId]
+        if mapdata then
+            mapdata[instanceId] = nil
+        end
+    end
+end
+
+function ObjectVariables.getStats()
+    local stats = {
+        players = 0,
+        creatures = 0,
+        gameobjects = 0,
+    }
+    for guid, _ in pairs(variableStores.Player) do
+        stats.players = stats.players + 1
+    end
+    for mapId, mapdata in pairs(variableStores.Creature) do
+        for instId, instdata in pairs(mapdata) do
+            for guid, _ in pairs(instdata) do
+                stats.creatures = stats.creatures + 1
+            end
+        end
+    end
+    for mapId, mapdata in pairs(variableStores.GameObject) do
+        for instId, instdata in pairs(mapdata) do
+            for guid, _ in pairs(instdata) do
+                stats.gameobjects = stats.gameobjects + 1
+            end
+        end
+    end
+    return stats
+end
+-- }}}
+
+print(&quot;[ObjectVariables] Loaded with automatic cleanup via events&quot;)
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>wiki-standards.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>wiki-standards.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/wiki-standards.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2109 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>WIKI STANDARDS</h1></p>
+<p><h2>FILE NAMING:</h2></p>
+<p>DATABASE TABLES files are to be named exactly as it is in the database,</p>
+<p>ALL OTHER FILES are to be named in <code>lowercase</code> and to use <code>-</code> (dashes) for spaces.</p>
+<p>FILES SHOULD NOT contain special characters other than <code>-</code> (dashes). If we want a file named C++ we name it cpp.</p>
+<p>ALL WIKI FILES should end with with <code>.md</code>.</p>
+<p><h2>FILE ENCODING</h2></p>
+<p>ALL FILES must be UTF-8 encoded to work on the wiki.</p>
+<p><h2>FILE LANGUAGE</h2></p>
+<p>TO ENSURE EASY MAINTENANCE, all files must be written in <code>markdown</code> format. HTML is not allowed!</p>
+<p><h2>FILE HEADERS</h2></p>
+<p>THE FILE  SHOULD ALWAYS START WITH <code># File Name</code>. (This is to display correct info in the browser tab.)</p>
+<p><h2>DATABASE TABLE FILES:</h2></p>
+<p>ALL DATABASE TABLE FILES should be present in the correct DATABASE FILE.</p>
+<p>When adding/removing a table it should also be updated in <code>database-auth</code> <code>database-characters</code> <code>database-world</code></p>
+<p><h2>LINKING WITHIN THE WIKI</h2></p>
+<p>When linking to a page in the wiki we use relative links. (<code><a href="home#overview">home</a></code>).</p>
+<p>When linking to a header on the same page in the wiki relative links. (<code><a href="#withcapitalletters">withCapitalLetters</a>.</code></p>
+<p>It is important to note that only lowercase letters and no special characters are allowed in relative links. Otherwise, the links will be broken.</p>
+<p>When linking to a page outside of the wiki we use absolute links. (<code><a href="https://google.com">Google</a></code>).</p>
+<p><h2>TRANSLATION</h2></p>
+<p>ALL TRANSLATIONS should be in a sub-directory of /docs/ with the shortened locale of the language. i.e./docs/es/. If there have been no translations prior, you need to allow the directory path in the config. See <a href="https://github.com/azerothcore/wiki/commit/8b897c3384298674e82108357ee5e655f788229f">this commit on how to do it</a>.</p>
+<p>ALL FILES should be named the <strong>exact same as the English versions</strong>! Do not ever translate the file names, only the contents within.</p>
+<p><h2>ARCHIVED PAGES: (Not yet implemented)</h2></p>
+<p>ALL ARCHIVED PAGES that could potentially have some some value should be added to the <code>archive</code> list and links to these pages should be removed from other places in the wiki.</p>
+<p>They should also be moved into the /docs/archive/ folder.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

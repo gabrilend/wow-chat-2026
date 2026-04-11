@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 328 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 328 • Phase 3</div>
+            <h1>Wimmelbilder Embedding Artwork</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>328 - Wimmelbilder Embedding Artwork</h1></p>
+<p><h2>Status</h2>
+- Created: 2026-04-08
+- Phase: 3
+- Priority: Low (depends on 327)
+- Depends: 327-html-source-tree-export</p>
+<p><h2>Current Behavior</h2></p>
+<p>Issue 327&#39;s MVP produces HTML pages with source code display. The layout has empty margins - wasted visual real estate. No visual interest beyond syntax highlighting.</p>
+<p><h2>Intended Behavior</h2></p>
+<p>Each source file gets procedurally generated i-spy/wimmelbilder artwork in the margins:</p>
+<p>1. <strong>Embedding-based generation</strong> - Artwork seeded from word embeddings of file contents
+2. <strong>Infinite canvas</strong> - User can scroll/pan around the artwork
+3. <strong>Zoom coherence</strong> - As user zooms out, artwork scales to fill viewport
+4. <strong>Display ratio variations</strong> - Pre-generated for common aspect ratios (16:9, 21:9, 4:3)
+5. <strong>i-spy elements</strong> - Hidden objects to find, themed to the code&#39;s domain</p>
+<p><h3>Visual Concept</h3></p>
+<p><pre><code>+------------------------------------------------------------------+
+|  [wimmelbilder left]  |   Source Code   |  [wimmelbilder right]  |
+|                       |                 |                        |
+|   tiny robot hiding   |  function x()   |   gears and cogs       |
+|   in pixel forest     |    local y = 1  |   hidden in machinery  |
+|                       |    return y     |                        |
+|   (can you find the   |  end            |   (find the 7 screws)  |
+|    3 lua logos?)      |                 |                        |
+|                       |                 |                        |
+|   scroll to explore   |                 |   pan to discover      |
++------------------------------------------------------------------+</code></pre></p>
+<p><h3>Zoom Behavior</h3></p>
+<p><pre><code>Zoomed in (100%):
+  Code fills center, artwork in margins</p>
+<p>Zoomed out (50%):
+  Code smaller, more artwork visible
+  Artwork &amp;quot;grows&amp;quot; to fill black bars</p>
+<p>Zoomed way out (10%):
+  Code is tiny center element
+  Artwork dominates, full panorama visible
+  i-spy game becomes primary experience</code></pre></p>
+<p><h2>User Feedback Requested</h2></p>
+<p><h3>1. Embedding Source</h3>
+- Use word2vec/GloVe embeddings of file tokens?
+- Use code2vec (code-specific embeddings)?
+- Simple bag-of-words frequency → color palette?</p>
+<p><h3>2. Art Style</h3>
+- Pixel art (easier to generate, retro aesthetic)?
+- Illustrated (Waldo/wimmelbilder style, needs more capability)?
+- Abstract (shapes/patterns from embeddings, most feasible)?
+- Mix per-file based on content type (lua vs markdown)?</p>
+<p><h3>3. Generation Pipeline</h3>
+- Pre-generate all artwork at export time?
+- Generate on-demand as user navigates?
+- Hybrid (thumbnails pre-gen, full-res on demand)?</p>
+<p><h3>4. i-spy Integration</h3>
+- Purely decorative (no game)?
+- Actual findable items with checklist?
+- Items themed to file content (find the &quot;function&quot; keyword)?</p>
+<p><h3>5. Hosting Considerations</h3>
+- Images inline as base64 (large but self-contained)?
+- Separate image directory (smaller HTML, needs server)?
+- Lazy loading with placeholders?</p>
+<p><h2>Suggested Implementation</h2></p>
+<p><h3>Phase 1: Embedding Pipeline</h3></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ extract_file_embeddings</span>
+<span class="comment">-- Tokenize source file, compute embedding vector</span>
+<span class="comment">-- Returns normalized vector <span class="keyword">for</span> art generation seed</span>
+<span class="keyword">local</span> <span class="keyword">function</span> extract_file_embeddings(file_path)</code></pre></p>
+<p>Options:
+- Simple: Hash file contents → seed for RNG → colors/shapes
+- Medium: Token frequency → weighted color palette
+- Complex: word2vec embeddings → high-dimensional seed</p>
+<p>Start simple. Complexity can come later.</p>
+<p><h3>Phase 2: Procedural Art Generator</h3></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ generate_margin_art</span>
+<span class="comment">-- Given embedding vector, produce SVG <span class="keyword">or</span> canvas instructions</span>
+<span class="comment">-- Returns art definition (<span class="keyword">not</span> pixels)</span>
+<span class="keyword">local</span> <span class="keyword">function</span> generate_margin_art(embedding, width, height, style)</code></pre></p>
+<p>Generation approaches:
+- L-systems for organic patterns
+- Voronoi diagrams for cellular structures
+- Perlin noise landscapes
+- Geometric tiling patterns
+- Combination based on embedding values</p>
+<p><h3>Phase 3: JavaScript Canvas Renderer</h3></p>
+<p>``<code>javascript
+// {{{ InfiniteCanvas
+// Handle pan, zoom, render artwork at appropriate detail level
+class InfiniteCanvas {
+    constructor(container, artDefinition) { ... }</p>
+<p>    pan(dx, dy) { ... }
+    zoom(factor, centerX, centerY) { ... }
+    render() { ... }
+}
+// }}}
+<pre><code>
+Key behaviors:
+- Level-of-detail: render less detail when zoomed out
+- Chunked rendering: only draw visible portions
+- Smooth transitions: ease zoom/pan animations</p>
+<p>&lt;h3&gt;Phase 4: Display Ratio Variants&lt;/h3&gt;</p>
+<p>Pre-generate artwork for common ratios:</code></pre>
+pngs/generated/
+  ambush.lua/
+    16-9.png   (1920x1080, 3840x2160)
+    21-9.png   (2560x1080, 5120x2160)
+    4-3.png    (1600x1200, 3200x2400)
+    1-1.png    (1080x1080, 2160x2160)
+</code>`<code></p>
+<p>Or: single oversized canvas, crop to viewport at runtime.</p>
+<p><h3>Phase 5: i-spy Game Layer</h3></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ generate_hidden_items</span>
+<span class="comment">-- Place findable items <span class="keyword">in</span> artwork based on file content</span>
+<span class="comment">-- Returns item list with positions <span class="keyword">and</span> hints</span>
+<span class="keyword">local</span> <span class="keyword">function</span> generate_hidden_items(embedding, art_definition, file_tokens)</code></pre></p>
+<p>Item types:
+- Keywords from the file (literal &quot;function&quot; text hidden in art)
+- Thematic objects (gears for machinery code, trees for pathfinding)
+- Universal items (3 lua moons in every image)</p>
+<p><h2>Files to Create</h2></p>
+<p>- </code>src/tools/html-export/embeddings.lua<code> - Embedding extraction
+- </code>src/tools/html-export/art-generator.lua<code> - Procedural art
+- </code>src/tools/html-export/assets/infinite-canvas.js<code> - Pan/zoom handler
+- </code>src/tools/html-export/templates/artwork-page.html<code> - Page with canvas
+- </code>scripts/generate-artwork` - Batch art generation</p>
+<p><h2>Technical Considerations</h2></p>
+<p><h3>Performance</h3>
+- Canvas rendering must be 60fps for smooth pan/zoom
+- Pre-render to off-screen canvas, composite for display
+- Use requestAnimationFrame, not setInterval</p>
+<p><h3>File Size</h3>
+- SVG for vector art (scales perfectly, small files)
+- PNG for raster (more detail, larger files)
+- WebP for best compression
+- Consider: ship SVG, render to canvas at display time</p>
+<p><h3>Accessibility</h3>
+- Alt text describing artwork theme
+- Skip-to-content link for screen readers
+- Keyboard navigation for pan/zoom</p>
+<p><h2>Acceptance Criteria</h2></p>
+<p>1. Each HTML page has artwork in margins
+2. Artwork is deterministic (same file → same art)
+3. Pan/zoom works smoothly on desktop browsers
+4. Artwork responds to viewport resize
+5. At least 3 i-spy items per page
+6. Art style is visually cohesive across pages</p>
+<p><h2>Notes</h2></p>
+<p>The wimmelbilder serves multiple purposes:</p>
+<p>1. <strong>Aesthetic</strong> - Makes the documentation feel crafted, not generated
+2. <strong>Exploration</strong> - Encourages lingering, finding hidden things
+3. <strong>Memory</strong> - Visual association helps remember which file is which
+4. <strong>Delight</strong> - Surprise elements reward thorough readers</p>
+<p>&quot;Sorta like i-spy backgrounds, but with artwork generated based on the embedding values.&quot;</p>
+<p>The embedding connection is key: files about similar topics should have similar art palettes. The art becomes a visual clustering of the codebase.</p>
+<p><h2>Questions for Implementation</h2></p>
+<p>When ready to implement:</p>
+<p>1. What embedding model is available locally? (word2vec, fasttext, none?)
+2. What image generation tools are available? (PIL, ImageMagick, custom?)
+3. Target browsers? (Canvas API support, WebGL for performance?)
+4. Acceptable page load time? (affects pre-gen vs on-demand decision)</p>
+<p>These answers shape whether we go simple (hash-based colors) or complex (neural embeddings).
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-3-progress.html">View Phase 3 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

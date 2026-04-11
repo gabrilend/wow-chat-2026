@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>wiki-standards.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>wiki-standards.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/wiki-standards.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2512 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>﻿# Estándares de la Wiki</p>
+<p><h2>Nombres de los Archivos:</h2></p>
+<p>Los archivos de las tablas de la Base de Datos deben ser nombrados exactamente como están en la base de datos.</p>
+<p>Todos los demás archivos deben ser nombrados en <code>minúsculas</code> y usar<code> -</code> (guiones) para los espacios.</p>
+<p>Los archivos no deberían contener ningún carácter especial que no sea <code>-</code> (guiones). Si queremos un archivo llamado C++, lo llamamos CPP.</p>
+<p>Todos los archivos Wiki deben terminar con <code>.md</code>.</p>
+<p><h2>Codificación de Archivos</h2></p>
+<p>Todos los archivos deben ser codificados en UTF-8 para que funcionen en la Wiki.</p>
+<p><h2>Encabezados de los Archivos </h2></p>
+<p>El archivo debería iniciar siempre con <code># Nombre del archivo</code>. (Esto para mostrar la información correcta en la pestaña.)</p>
+<p><h2>Archivos de las tablas de la Base de Datos </h2></p>
+<p>Todos los archivos de las tablas de la Base de Datos deben estar presentes en el archivo de Base de Datos correcto.</p>
+<p>Al añadir o remover una tabla, también debe actualizarse en <code>database-auth</code> <code>database-characters</code> <code>database-world</code></p>
+<p><h2>Enlaces dentro de la Wiki</h2></p>
+<p>Al enlazar alguna página en la Wiki, usamos <a href="https://semify.com/?Relative-Link&amp;AID=1373#:~:text=For%20example%2C%20a%20relative%20link%20would%20only%20include%20/images%20/puppies.gif%20in%20the%20a%20href%20tag.">enlaces relativos</a>. (<code><a href="home#overview">home</a></code>).</p>
+<p>Al enlazar a una página fuera de la wiki, usamos <a href="https://semify.com/?Relative-Link&amp;AID=1373#:~:text=An%20absolute%20link%2C%20on%20the%20other%20hand%2C%20would%20include%20https%3A//%20www.%20example.com/%20image/%20puppies.gif%20in%20it.">enlaces absolutos</a>. (<code><a href="https://google.com">Google</a></code>).</p>
+<p><h2>Traducción</h2></p>
+<p>Todas las traducciones deberían estar en un sub directorio de /docs/ con el locale acortado del idioma. Por ejemplo: /docs/es/. Si no hay traducciones previas, debe habilitarse la ruta al directorio en la configuración. Véase <a href="https://github.com/azerothcore/wiki/commit/8b897c3384298674e82108357ee5e655f788229f">este commit de cómo hacerlo</a>.</p>
+<p>Todos los archivos deben nombrarse <strong>¡exactamente igual que las versiones en inglés. exact same as the English versions!</strong> Nunca traduzca los nombres de los archivos, solo el contenido dentro de ellos..</p>
+<p><h2>Paginas archivadas: (Sin implementar aún)</h2></p>
+<p>Todas las páginas archivadas que puedan, potencialmente, contener alguna clase de valor, deberían ser añadidas en la  lista <code>archive</code> y los enlaces a estas páginas deberían ser removidos de otros lugares en la Wiki.</p>
+<p>Deberían también ser movidas a la carpeta /docs/archive/.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

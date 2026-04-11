@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playerbot-Commands.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Playerbot-Commands.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/playerbots/Playerbot-Commands.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 20265 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>Playerbots are programmed to respond to chat commands. The Multibot and Unbot addons are designed to handle most of the common chat commands for the player, but you may still have need for manual chat commands as you play. It is important to distinguish between &quot;Altbots&quot; and &quot;Rndbots&quot;: Altbots are manually player-created bots on a normal account, whereas &quot;Rndbots&quot; and their accounts are automatically generated based on .conf settings. Rndbots will automatically gear themselves, apply talents, and roam the world whereas Altbots will not.</p>
+<p><h2>Altbot Setup Commands</h2>
+Altbots are characters that you create on your account (or others) first, and then get assigned bot control via the commands below.</p>
+<p>command | action
+:---|:---
+`<code>.playerbots bot add [name1,name2,name3]</code><code> | login altbots. Note that you are also able to login altbots from other accounts depending on your configurations.
+</code><code>.playerbots bot addaccount [accountname]</code><code> | login an entire account of altbots. Depending on your configurations you can login other accounts.
+</code><code>.playerbots bot remove name1,name2,name3</code><code> | logout altbots
+</code><code>.playerbots bot add <em></code><code> |  login all altbots that are in your party/raid
+</code><code>.playerbots bot remove </em></code><code> | logout all altbots that are in your party/raid
+</code><code>maintenance</code><code> | enable altbot to learn all available spells and skills, supplement consumables, enchant gear, and repair. Can also be used on rndbots, but they automatically do this. Whisper for an individual bot or use /p or /r to simultaneously target multiple bots.
+</code><code>autogear</code><code> | automatically gear your altbot, with quality based on your .conf settings AutoGearQualityLimit and AutoGearScoreLimit. Can also be used on rndbots, but they automatically do their own gear initilization upon level up.
+</code><code>talents</code><code> | check current spec of bot
+</code><code>talents spec list</code><code> | check specs available for the class
+</code><code>talents spec [spec name]</code><code> | force bot to change their talents to the chosen spec, see the .conf for list of spec names or whisper your bot &quot;talents spec list&quot;
+</code><code>talents apply &lt;link&gt;</code><code> | apply talents link to bot
+</code><code>glyphs</code><code> | lists the bot’s currently equipped glyphs in the client locale, using item links for proper translations
+</code><code>glyph equip [GlyphID1 GlyphID2 GlyphID3 GlyphID4 GlyphID5 GlyphID6]</code><code> | bot applies given glyphs
+</code><code>reset botAI</code><code> | reset bot settings
+</code><code>reset</code><code> | reset current bot actions like casting spell, moving etc.</p>
+<p><h2>AddClass Setup Command</h2>
+AddClass bots utilize unused Rndbots in your system. They are currently recommended only to be used for testing purposes i.e. quickly forming a raid group to test certain bots in a given raid, whereas Altbots are strongly recommended for long-term progression playthroughs.</p>
+<p>command | action
+:---|:---
+</code><code>.playerbots bot addclass [className]</code><code> | summon a new Rndbot of the desired class (note: death knight syntax is dk, otherwise the rest are standard)</p>
+<p><h2>Party/Raid General Commands</h2></p>
+<p>command | action
+:---|:---
+</code><code>summon</code><code> | summon bot to you (see .conf for different options to configure this command)
+</code><code>release</code><code> | release spirit when dead
+</code><code>revive</code><code> | revive when near a spirit healer
+</code><code>leave</code><code> | leave party
+</code><code>attack</code><code> | attack selected target
+</code><code>follow</code><code> | run toward player (/w for individual or /p or /r for party/raid)
+</code><code>flee</code><code> | run toward player ignoring everything else (/w for individual or /p or /r for party/raid)
+</code><code>stay</code><code> | stay in place
+</code><code>runaway</code><code> | kite mob // note: currently non-functional
+</code><code>grind</code><code> | attack anything
+</code><code>disperse set x</code><code> | force bots to maintain a distance of x yards from each other
+</code><code>disperse disable</code><code> | resets disperse distance to default value
+</code><code>give leader</code><code> | if bot is party/raid leader it will pass it to their master</p>
+<p>Furthermore, you can specify by group or type for some commands like &quot;attack&quot; and &quot;follow&quot;, such as:
+- &quot;@group1 follow&quot;
+- &quot;@group2 attack&quot;</p>
+<p>This following are other groups that can be targeted: 
+-  @tank, @dps, @heal, @ranged, @rangeddps, @meleedps, @[className]</p>
+<p>You can also command multiple groups at a time like below:
+- &quot;@Group1,4&quot;
+- &quot;@group2-5,8&quot;</p>
+<p><h2>Playerbot Spell Commands</h2></p>
+<p>command | action
+:---|:---
+</code><code>spells</code><code> | show bot&#39;s spells
+</code><code>cast [spell_name]</code><code> | /w a bot to cast a spell
+</code><code>cast [spell_name] on [PlayerName]</code><code> | /w a bot to cast a spell on a specified Player
+</code><code>ss +[spell id]</code><code> | add spell to exclude spells list
+</code><code>ss -[spell id]</code><code> | remove spell from exclude spells list
+</code><code>ss reset</code><code> | removes all spells from exclude spells list
+</code><code>trainer</code><code> | show what bot can learn from the selected trainer
+</code><code>trainer learn</code><code> | learn from the selected trainer</p>
+<p><h2>Party/Raid Target Selection</h2>
+RTSC is a system that enables players to save locations for specified bots to go to using the &quot;aedm&quot; spell that is given when the &quot;rtsc&quot; command is used. Aedm is a spell you use to point and click a particular location that can be saved and used via some of the commands below.</p>
+<p>RTI is a system that enables players to focus bots on specified targets using standard WoW icons.</p>
+<p>command | action
+:---|:---
+</code><code>rtsc</code><code> | toggles on rtsc and gives players the &quot;aedm&quot; spell which will appear in the general category of their spellbook 
+</code><code>rtsc cancel</code><code> | toggles off rtsc and removes the &quot;aedm&quot; spell from the spellbook
+</code><code>rtsc save [#]</code><code> | while rtsc is enabled, this command will save a location as the specified number when the player uses the aedm spell and clicks on a location
+</code><code>rtsc unsave [#]</code><code> | clears the saved location
+</code><code>rtsc go [#]</code><code> | command bots to go to the saved location, this command can be whispered to individual bots or filtered in party/raid chat with the same chat filters listed in Party/Raid General Commands (e.g., &quot;@Tank rtsc go 5&quot; will send all tanks to saved location 5)
+</code><code>[name/group] rtsc toggle</code><code> | toggles the ability to point and click with mouse button to save a location for specified bots to move to, can specify by group or class (ie &quot;@druid rtsc toggle&quot; or &quot;@group1 rtsc toggle&quot;)
+</code><code>rtsc go save</code><code> | command bots to move back into saved rtsc position
+</code><code>rti &lt;icon&gt;</code><code> | sets the target icon for the bot to prioritize (icons: skull, cross, circle, star, square, triangle, diamond, and moon)
+</code><code>attack rti target</code><code> | commands bots to attack their rti target
+</code><code>rti cc &lt;icon&gt;</code><code> | sets a specific icon as the cc target (the default is moon) </p>
+<p>Video guide:
+https://www.youtube.com/watch?v=Pwt7schIC08</p>
+<p><h2>Strategies</h2></p>
+<p>The bots are programmed to respond to triggers by listing possible actions and choosing one based on a strategy. Bots use two categories of strategies: combat and non-combat.  You can add, subtract, or toggle strategies using the combat (co) and non-combat (nc) prefixes in your commands:</p>
+<p><pre><code>co +strategy1,-strategy2,~strategy3
+nc +strategy1,-strategy2,~strategy3</code></pre></p>
+<p>You can query the bot to report what strategies are currently being used:</p>
+<p><pre><code>co ?
+nc ?</code></pre></p>
+<p><h3>Combat Strategies</h3></p>
+<p>General
+strategy | description
+:---|:---|
+</code><code>tank</code><code> | use threat-generating abilities (warrior, paladin, druid will use </code><code>bear</code><code>)
+</code><code>tank assist</code><code> | make tank pull mobs off of others
+</code><code>dps</code><code> |  use dps abilities (rogue, hunter, shaman, priest, druid will use </code><code>cat</code><code>)
+</code><code>cc</code><code> |  use cc abilities (requires cc rti target, default is moon icon; it is useful to know that bots will not attack rti target and will not try to use cc if target is not stunnable)
+</code><code>assist</code><code> | target one mob at a time
+</code><code>aoe</code><code> | target many mobs at a time
+</code><code>boost</code><code> | bots will use big cds (useful to use -boost and +boost on macros to control when to burst on bosses)
+</code><code>threat</code><code> | dps will actively avoid grabbing threat (useful for bosses that wipe aggro or if tanks are struggling to hold aggro)
+</code><code>grind</code><code> | attack any visible target, then switch to another one and so on.
+</code><code>heal</code><code> | focus on party healing (shaman, priest, druid, paladin)
+</code><code>focus</code><code> | stop casting aoe spell or debuff spells on multiple attackers (focus on the single target)
+</code><code>avoid aoe</code><code> | automatically avoid the majority of harmful aoe spells
+</code><code>save mana</code><code> | healers save mana by prioritizing high-efficiency spells when mana falls below a threshold
+</code><code>healer dps</code><code> | healers cast damage spells if they have enough mana
+</code><code>tank face</code><code> | ensure the current target does not face ranged players in the group (to counter breath and cleave-like spells)
+</code><code>behind</code><code> | move to the target&#39;s back (rear flank) when they are not positioned behind the target</p>
+<p>Druid
+strategy | description
+:---|:---
+</code><code>bear</code><code>, </code><code>cat</code><code>, </code><code>caster</code><code> | dictates overall strategy for druids, note that these are already handled by their talent selection</p>
+<p>Hunter
+strategy | description
+:---|:---
+</code><code>trap weave</code><code> | enables the trap weave strat for hunters, dropping an explosive trap as part of their rotation (hunter only)</p>
+<p>Mage
+strategy | description
+:---|:---
+</code><code>frost</code><code>, </code><code>fire</code><code> | mage only, note that these are already handled by their talent selection
+</code><code>firestarter</code><code> | enables the firestarter strat for fire mages, resulting in the mage going into melee to utilize the instant cast flamestrike from the firestarter talent (fire mage only)</p>
+<p>Shaman
+strategy | description
+:---|:---
+</code><code>[totem name]</code><code> | shaman will add totem into their call of the elements cast (ie &quot;co +tremor&quot; will add that totem for the shaman)</p>
+<p>Warlock
+strategy | description
+:---|:---
+</code><code>meta melee</code><code> | default strategy for demonology warlocks, makes warlock go melee while using metamorphosis and immolation aura (demonology warlock only)</p>
+<p><h3>Non-Combat Strategies</h3></p>
+<p>General
+strategy | description
+:---|:---
+</code><code>food</code><code> | initiate or stop eating/drinking
+</code><code>pvp</code><code> |  turn on or off pvp mode
+</code><code>loot</code><code> |  enable looting everything by bots. Note: adding or removing that strategy for randombots requires GM level</p>
+<p>Priest
+strategy | description
+:---|:---
+</code><code>rshadow</code><code> | priest will cast shadow protection</p>
+<p>Paladin
+strategy | description
+:---|:---
+</code><code>bdps</code><code>, </code><code>bmana</code><code>, </code><code>bstats</code><code>, </code><code>bhealth</code><code> | paladin blessing strategies (might, wisdom, kings, and kings/sanctuary depending on context, respectively)
+</code><code>rfire</code><code>, </code><code>rfrost</code><code>, </code><code>rshadow</code><code>, </code><code>baoe</code><code>, </code><code>barmor</code><code>, </code><code>bcast</code><code>, </code><code>bspeed</code><code> | paladin aura strategies (fire, frost, shadow, retribution, devotion, concentration, and crusader aura respectively)</p>
+<p>Hunter
+strategy | description
+:---|:---
+</code><code>bdps</code><code>, </code><code>bspeed</code><code>, </code><code>bmana</code><code>, </code><code>rnature</code><code> | hunter aspect strategies (dragonhawk/hawk, pack/cheetah, viper, and wild respectively)</p>
+<p>Warlock Pet Strategies (Note that defaults are as follows: Affliction uses felhunter, Demonology uses felguard, and Destruction uses imp)
+strategy | description
+:---|:---
+</code><code>imp</code><code> | force warlock to use imp
+</code><code>voidwalker</code><code> |  force warlock to use voidwalker
+</code><code>succubus</code><code> | force warlock to use succubus
+</code><code>felhunter</code><code> |  force warlock to use felhunter
+</code><code>felguard</code><code> |  force warlock to use felguard</p>
+<p>Warlock Soulstone Strategies
+strategy | description
+:---|:---
+</code><code>ss master</code><code> | force warlock to use soulstone on master
+</code><code>ss self</code><code> | force warlock to use soulstone on self
+</code><code>ss tank</code><code> | force warlock to use soulstone on tank
+</code><code>ss healer</code><code> | force warlock to use soulstone on healer</p>
+<p><h3>Raid-Specific Strategies</h3></p>
+<p>Note: These raid strategies are now automatically applied upon entering the instance. You should receive a whisper from your bots confirming activation.</p>
+<p>strategy | description
+:---|:---
+moltencore | enable Molten Core strats 
+bwl | enable Blackwing Lair strats (Note: grants Onyxia Scale Cloak buff to all bots, bots automatic disabling of suppression devices, and bots automatically clear Brood Affliction: Bronze on Chromaggus)
+aq20 | enable Ruins of Ahn&#39;Qiraj strats (Note: Ossirian only, rest are beatable without strats)
+karazhan | enable Karazhan strats 
+gruulslair | enable Gruul&#39;s Lair strats 
+magtheridon | enable Magtheridon&#39;s Lair strats 
+ssc | enable ssc strats 
+voa | enable Vault of Archavon strats (Note: up to Emalon)
+naxx | enable Naxxramas strats 
+wotlk-os | enable Obsidian Sanctum strats (Note: strat is only functional up to OS+2, need to kill Vesperon first)
+wotlk-eoe | enable Eye of Eternity strats
+ulduar | enable Ulduar strats (Note: all bosses except for Algalon are doable)
+onyxia | enable Onyxia&#39;s Lair strats
+icc | enable Icecrown Citadel strats </p>
+<p><h2>Loot</h2></p>
+<p>You can control which items to loot (</code><code>ll</code><code> stands for loot list):</p>
+<p>command | action
+:---|:---
+</code><code>nc +loot</code><code> | activate looting (note </code><code>grind</code><code> strategy activates looting as well)
+</code><code>ll all</code><code> | loot everything
+</code><code>ll normal</code><code> | loot anything except BOP (bind-on-pickup) items
+</code><code>ll gray</code><code> | loot only gray items
+</code><code>ll quest</code><code> |  loot only quest items
+</code><code>ll skill</code><code> | loot only items based on their skills (herbalism, mining, or skinning)
+</code><code>ll [item]</code><code> | add specific item to loot list
+</code><code>ll -[item]</code><code> | remove specific item from loot list</p>
+<p><h2>Items</h2></p>
+<p>command | action
+:---|:---
+</code><code>[item]</code><code> | bot will tell you how many it has, and quest status
+</code><code>e [item]</code><code> | equip item
+</code><code>ue [item]</code><code> | unequip item
+</code><code>u [item]</code><code> | use item
+</code><code>u [item] [target]</code><code> | use item on target (use gem on item)
+</code><code>open items</code><code> | open items in inventory that have loot, ie Satchel of Spoils
+</code><code>destroy [item]</code><code> | destroy item roll [item]
+</code><code>roll [item]</code><code> | bots in party/raid will roll for the linked item if it is an upgrade for them
+</code><code>roll</code><code> | bots in party/raid will all roll
+</code><code>s [item]</code><code> | sell item
+</code><code>s <em></code><code> | sell all grey items
+</code><code>s vendor</code><code> | sell all items that can be sold
+</code><code>b [item]</code><code> | buy item
+</code><code>2g 3s 5c</code><code> | give you gold
+</code><code>bank [item]</code><code> | deposit item in bank
+</code><code>bank -[item]</code><code> | withdraw item from back
+</code><code>gb [item]</code><code> | deposit item in guild bank
+</code><code>gb -[item]</code><code> | withdraw item from guild bank</p>
+<p><h2>Quests</h2></p>
+<p>command | action
+:---|:---
+</code><code>quests</code><code> | show quest summary
+</code><code>quests all</code><code> | shows a list with links of all quests in quest log
+</code><code>accept [quest]</code><code> | accept quest at the selected quest giver
+</code><code>accept </em></code><code> | accept all quests at the selected quest giver
+</code><code>drop [quest]</code><code> | abandon quest
+</code><code>r [item]</code><code> | choose quest reward
+</code><code>[quest]</code><code> | show quest and objectives status
+</code><code>talk</code><code> | talk to the selected npc (to complete a quest)
+</code><code>u [game object]</code><code> | use game object (use &quot;los&quot; command to obtain the game object link)</p>
+<p><h2>General Pet Commands</h2>
+command | action
+:---|:---
+</code><code>pet aggressive</code><code> | changing pet stance on aggresive
+</code><code>pet passive</code><code> | changing pet stance on passive
+</code><code>pet defensive</code><code> | changing pet stance on defensive
+</code><code>pet stance</code><code> | display current pet stance
+</code><code>pet attack</code><code> | pet attack selected target
+</code><code>pet follow</code><code> | pet follow his master
+</code><code>pet stay</code><code> | pet stay in place</p>
+<p><h2>Hunter Tame Commands</h2>
+command | action
+:---|:---
+</code><code>tame</code><code> | tame help
+</code><code>tame name &quot;name&quot;</code><code> | summon a tameable pet by name
+</code><code>tame id &quot;id&quot;</code><code> | summon a tameable pet by database creature ID
+</code><code>tame family</code><code> | tame family help
+</code><code>tame family &quot;family&quot;</code><code> | randomly summon a tameable pet of the given family
+</code><code>tame rename &quot;new name&quot;</code><code> | rename the current pet and refresh its name in the client UI</p>
+<p><h2>Account linking for Altbot control</h2></p>
+<p>As an alternative to controlling the characters from your own account or guild member accounts, this allows to link up different accounts together to allow control of the characters as Altbots. This is based on the </code><code>AiPlayerbot.AllowTrustedAccountBots = 1</code><code> option in the playerbots config file.</p>
+<p>command | action
+:---|:---
+</code><code>.playerbots account setKey somePlayerDefinedSecurityKeyValue</code><code> | Define a securityKey for the current account (the key will be overridden when defined multiple times)
+</code><code>.playerbots account link ACCOUNTNAME somePlayerDefinedSecurityKeyValue</code><code> | Link an account by using its securityKey
+</code><code>.playerbots account linkedAccounts</code><code> | Shows a list of accounts, which are currently linked with this account
+</code><code>.playerbots account unlink ACCOUNTNAME</code><code> | Remove a linked account (this will remove the link for both sides, ensuring that access to the characters can be canceled from both sides anytime)</p>
+<p><h2>Professions</h2></p>
+<p>strategy | description
+:---|:---
+</code><code>master fishing</code><code> | The strategy is automatically added when </code><code>EnableFishingWithMaster</code><code> is enabled in the config. Strategy can be added manually. Strategy is automatically removed if further than </code><code>EndFishingWithMaster</code><code> from water. Strategy also overrides the follow distance to </code>FishingDistanceFromMaster<code>.</p>
+<p><h2>Miscellaneous Commands</h2></p>
+<p>command | action
+:---|:---
+</code><code>los</code><code> | list game objects, items, creatures and npcs the bot can see
+</code><code>stats</code><code> | show stat summary (inventory, gold, xp, etc.)
+</code><code>home</code><code> | set home at the selected innkeeper
+</code><code>playerbot bot initself</code><code> | CAREFUL WITH THIS - re-rolls YOUR character
+</code><code>playerbot bot list</code><code> | lists your altbots (and your other characters you can add as bots if you have that enabled, but I&#39;d be very careful if you do that as you can then re-roll your other characters using the init command)
+</code><code>playerbot bot tweak</code><code> | sets the tweakvalue (seems to be related to a config value that&#39;s no longer present and the variable it changes doesn&#39;t seem to actually do anything anymore)
+</code><code>playerbot bot self</code><code> | make yourself into a bot, use it again to disable
+</code><code>playerbot bot lookup</code><code> | doesn&#39;t do anything but print out a useless usage message (which says you&#39;re supposed to give it a class parameter but doing so doesn&#39;t change anything because the function called is literally <em>just</em> the usage message there&#39;s no functionality there)
+</code><code>.playerbots bot init=rare name1,name2,name3</code><code> | respawn bot at your level with talents &amp; rare gear (gearing currently bugged, recommend autogear instead)
+</code><code>who</code><code> | show bot race, spec, talents, class, level, average item level, current zone 
+</code><code>who [profession name]</code><code> | show bot profession skill level</p>
+<p><h2>Overrides</h2></p>
+<p>You can override everything and instruct the bot to do something specific:</p>
+<p>command | description
+:---|:---|
+</code><code>do attack</code><code> | attack target
+</code><code>do attack my target</code><code> | attack my target
+</code><code>do loot</code><code> | loot target // note: currently non-functional
+</code><code>do add all loot</code><code> | check every corpse and game object for loot // note: currently non-functional</p>
+<p><h2>Help</h2></p>
+<p>The bot can tell you all available commands it will accept:</p>
+<p><pre><code>/w help</code></pre></p>
+<p><h2>Reactions</h2></p>
+<p>The bots will automatically do certain things based on what the party leader is doing.</p>
+<p>your action | bot reaction
+:---|:---
+accept a quest | bot will accept it as well
+talk to a quest giver | bot will turn in his completed quests
+use meeting stone | teleport using the stone
+start using game object and interrupt | use the game object
+open trade window | show inventory and start trading
+invite to a party/raid | accept the invitation
+start raid ready check | tell his ready status
+mount/unmount | mount/unmount as well
+go through a dungeon portal | follow into the dungeon</p>
+<p><h2>Console Only Commands</h2></p>
+<p>command | action
+:---|:---
+</code><code>playerbot pmon toggle</code><code> | enables/disables the performance monitor
+</code><code>playerbot pmon stack</code><code> | shows cumulative performance since toggled on
+</code><code>playerbot pmon tick</code><code> | shows cycle performance averages per update
+</code><code>playerbot pmon reset</code><code> | resets the performance monitor
+</code><code>playerbot rndbot reset</code><code> | clears acore_playerbots.playerbots_random_bots table (seems to contain events) and requires server restart after
+</code><code>playerbot rndbot stats</code><code> | prints rndbot stats (numbers of rndbots per level, per class, etc)
+</code><code>playerbot rndbot reload</code><code> | reloads playerbots.conf
+</code><code>playerbot rndbot update</code><code> | triggers a &quot;full tick&quot; (call to RandomPlayerbotMgr::UpdateAIInternal())
+</code><code>playerbot rndbot init</code><code> | re-rolls the rndbots (useful when you&#39;ve modified settings like min/max level, the spec probabilities, etc)
+</code><code>playerbot rndbot clear</code><code> | reset bots back to starting level (55 for Deathknight)
+</code><code>playerbot rndbot level</code><code> | level up all rndbots by 1
+</code><code>playerbot rndbot refresh</code><code> |  revives rndbots if dead, uses botAI-&gt;Reset(), rerolls gear, while keeping the same level
+</code><code>playerbot rndbot teleport</code><code> | teleports all bots to appropriate area for level
+</code><code>playerbot rndbot revive</code><code> | (BUGGED: will double number of rndbots) revive rndbot, refresh, and teleport (combo of &quot;refresh&quot; and &quot;teleport&quot;)
+</code><code>playerbot rndbot grind</code><code> | (BUGGED: crashes server) teleport rndbot only if needed (needs more testing)
+</code><code>playerbot rndbot change_strategy</code>` | re-roll whether bots are grinding or RPG&#39;ing (based on AiPlayerbot.RandomBotRpgChance setting)</p>
+<p>Special thanks to Whipowill for creating the original Playerbots Operators Manual https://github.com/whipowill/wow-addon-playerbots/blob/master/MANUAL.md, fuzz1111 for contributing many confirmed active commands, and Ky for testing many old and new commands.</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>home.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>home.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/home.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 3111 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+redirect_from: &quot;/&quot;
+---</p>
+<p><h1>Home</h1></p>
+<p>Welcome to the <a href="http://www.azerothcore.org/">AzerothCore</a> project wiki.</p>
+<p>Read in: <a href="home">English :gb:</a> <a href="es/home">Spanish :es:</a></p>
+<p><h2>IMPORTANT NOTE</h2></p>
+<p>{% include warning.html content=&quot;The AzerothCore Team and Owners DO NOT in any case sponsor nor support illegal public servers. If you use these projects to run an illegal public server and not for testing and learning it is your personal choice.&quot; %}</p>
+<p><h2>Getting started</h2></p>
+<p>- <a href="installation">Installation Guide</a></p>
+<p><h2>Documentation</h2></p>
+<p>- <a href="documentation_index">Documentation Index</a> - All documentation in one place
+- <a href="https://www.azerothcore.org/doxygen">Doxygen Docs</a> - Up-to-date API and source code documentation.</p>
+<p><h3>Database Structure</h3></p>
+<p>- <a href="database-auth">Auth</a>
+- <a href="database-characters">Characters</a>
+- <a href="database-world">World</a></p>
+<p><h2>Overview</h2></p>
+<p>AzerothCore is a complete Open Source and Modular solution for MMO development.</p>
+<p><h3>Solid base</h3></p>
+<p>AzerothCore has a solid base from years of development: it is based on MaNGOS, TrinityCore, and SunwellCore.
+We&#39;re improving this reliability with continuous development and strict rules to get code merged into the master branch.</p>
+<p><h3>Stability</h3></p>
+<p>We ensure all changes pass the CIs before merging into the master branch.</p>
+<p>&lt;a href=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/core-build-nopch.yml&quot;&gt;&lt;img alt=&quot;Github CI Core Status&quot; src=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/core-build-nopch.yml/badge.svg?branch=master&quot;&gt;&lt;/a&gt;
+&lt;a href=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/windows_build.yml&quot;&gt;&lt;img alt=&quot;Github CI Windows Status&quot; src=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/windows_build.yml/badge.svg&quot;&gt;&lt;/a&gt;
+&lt;a href=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/macos_build.yml&quot;&gt;&lt;img alt=&quot;Github CI Mac Status&quot; src=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/macos_build.yml/badge.svg&quot;&gt;&lt;/a&gt;
+&lt;a href=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/docker_build.yml&quot;&gt;&lt;img alt=&quot;Github CI Docker Status&quot; src=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/docker_build.yml/badge.svg&quot;&gt;&lt;/a&gt;</p>
+<p><h3>Open Source</h3></p>
+<p>The new AzerothCore source components are released under the GNU AGPL 3.0 The old sources based on MaNGOS/TrinityCore are released under the GNU GPL 2.0, both those licenses are free and open source.</p>
+<p><h3>Blizzlike Content</h3></p>
+<p>We strive to make all in-game content to be blizzlike. Therefore we have a high standard for fixes being made.</p>
+<p><h3>Community-driven</h3></p>
+<p>AzerothCore has an active community of developers, contributors, and users who collaborate, share knowledge, and provide support through forums, Discord channels, and other communication platforms. If you want to contribute, we&#39;d love it!</p>
+<p><h3>Customization</h3></p>
+<p>AzerothCore is designed to be highly modular, allowing developers to extend and customize the game to suit their preferences or create unique gameplay experiences. This flexibility enables the addition of custom features, content, and modifications. <a href="the-modular-structure">Read More...</a>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

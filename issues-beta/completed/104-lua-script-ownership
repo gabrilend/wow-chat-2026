@@ -1,0 +1,222 @@
+# 104 - Lua Script Ownership
+
+**Phase:** 1 (Foundation)
+**Effect:** Game scripts belong to this project, not shared location
+**Status:** Completed (2026-01-29)
+
+---
+
+## The Effect
+
+The project owns its Lua scripts. No symlinks to shared directories. Changes, experiments, and git history are contained within the project boundary.
+
+This enables:
+- Independent development without affecting other projects
+- Full git history of script evolution
+- Safe experimentation (copy the project, break things)
+- Portable repository (clone and run anywhere)
+
+---
+
+## What This Solved
+
+### Before (wow-chat-1 reference)
+
+Scripts lived at `/home/ritz/games/azeroth-core/lua-scripts/` with:
+- custom/ directory (119 git commits)
+- extensions/ directory (StackTracePlus, etc.)
+- Symlinked into server's `installed-files/bin/lua_scripts/`
+
+**Problems:**
+1. Shared across multiple projects (modify one, break all)
+2. Git history outside project scope
+3. Accidental overwrites when switching projects
+4. Can't package repo without external dependencies
+
+### After
+
+Scripts at `src/lua/` within project:
+- Full ownership by this repository
+- 12 core system files
+- Behavior scripts in `src/lua/behaviors/`
+- Extensions in `src/lua/extensions/`
+- No external dependencies
+
+---
+
+## What Was Migrated
+
+### Core Systems (12 files)
+
+| File | Purpose | Lines |
+|------|---------|-------|
+| periodic_events.lua | Event loop - registers timers for ambush/treasure/travelers | ~150 |
+| ambush.lua | Monster spawning, chase AI, banned creature list | ~800 |
+| treasure.lua | Chest spawning, per-player loot queues | ~250 |
+| travel.lua | Wandering NPC system, social mirroring | ~600 |
+| movement.lua | Position math (orbit, arc spawn, midpoint) | ~200 |
+| levelling.lua | Level scaling, talent points | ~180 |
+| death-knights.lua | DK class customizations | ~150 |
+| hearthstone.lua | Custom hearthstone behavior | ~120 |
+| merchants.lua | Vendor NPCs | ~100 |
+| custom-classes.lua | Dynamic class system | ~400 |
+| chest-vulnerability.lua | Holder/searcher mechanics | ~200 |
+| tempo.lua | Game pacing utilities | ~100 |
+
+### Behaviors (11 files)
+
+- find-monsters.lua - Combat targeting
+- avoid-monsters.lua - Danger awareness
+- sit-and-rest.lua - Resource recovery
+- orbit-player.lua - Formation positioning
+- bot-wander.lua - Traveler-style movement
+- dungeon-rails.lua - Cave navigation
+- zone-consensus.lua - Social clustering
+- level-affinity.lua - Level-based grouping
+- gestures.lua - Non-verbal commands
+- convoy.lua - Follow mode
+- init.lua - Behavior registration
+
+### Extensions
+
+- StackTracePlus/ - Enhanced Lua debugging
+- ObjectVariables.ext - Per-object data storage
+- GetFreeBagSlots.ext - Inventory helpers
+
+---
+
+## Reading Order (Recommended)
+
+For understanding the system:
+
+1. **periodic_events.lua** - Entry point, see what triggers
+2. **treasure.lua** - Simplest spawn system (just creates chests)
+3. **travel.lua** - More complex (NPCs wander with direction)
+4. **ambush.lua** - Full system (spawning, AI, combat, cleanup)
+5. **behaviors/init.lua** - How bot behaviors compose
+
+---
+
+## System Architecture
+
+```
+On Player Login:
+├── Setup queues (ambush, treasure, travelers)
+├── Register periodic events:
+│   ├── Every 40s:  PeriodicSpawnAmbush
+│   ├── Every 130s: PeriodicSpawnTravellers
+│   └── Every 100s: PeriodicSpawnTreasure
+└── If dead: join spirit world, wait for res
+
+PeriodicSpawnAmbush:
+├── Skip if: sitting, dead, in water, 3+ ambushers, boss fight
+├── Query DB for level-appropriate mobs
+├── Spawn 120-160 units away
+└── Creature chases player, attacks when close
+
+PeriodicSpawnTreasure:
+├── Skip if: sitting, dead, in water
+├── Select level-appropriate chest from queue
+└── Spawn 20-35 units away
+```
+
+---
+
+## Migration Process
+
+### Steps Taken
+
+1. Created `src/lua/` directory structure
+2. Copied all files from `/home/ritz/games/azeroth-core/lua-scripts/custom/`
+3. Copied extensions from `lua-scripts/extensions/`
+4. Removed symlinks from install script
+5. Updated install script to copy from `src/lua/` to `installed-files/bin/lua_scripts/`
+6. Verified scripts load on server start
+
+### Git History Decision
+
+The original custom/ directory had 119 commits with valuable context about design decisions. Rather than importing that history (complex merge), we took a **snapshot approach**:
+- Fresh start in src/lua/
+- Original history preserved in wow-chat-1 reference (libs/wow-chat-1/)
+- Issue files document "why" decisions were made
+- LLM transcripts/ directory captures evolution
+
+### waves.lua
+
+Found `custom/wow-chat-survival/waves.lua` which is:
+- Work-in-progress Risk of Rain 2 style wave system
+- Contains LLM conversation notes about grid-based spawning
+- No functional code yet
+- Not migrated (remains in notes for future)
+
+---
+
+## Why This Matters
+
+**Independence**
+
+This project can evolve without coordinating with wow-chat-1. Fork the repo, change everything, no conflicts.
+
+**History**
+
+`git log src/lua/` shows script evolution within project context. When did ambush spawning change from 30s to 40s? When was treasure loot made per-player? It's all there.
+
+**Portability**
+
+Clone the repo → scripts are there. No setup, no symlinks, no "where do I put the lua files?" Just works.
+
+**Experimentation**
+
+Want to try a radical change to ambush AI? Copy the project directory, hack away, compare results. The original is unchanged.
+
+---
+
+## Related Phase 1 Issues
+
+- 101 - verify-server-startup (needs Lua scripts to run)
+- 130 - ale-initialization-hook-fix (ALE must load scripts)
+
+---
+
+## Lessons Learned
+
+### Symlinks Create Coupling
+
+The shared lua-scripts directory was meant to share code between projects. In practice, it created:
+- Fear of breaking other projects
+- Merge conflicts when multiple projects evolve
+- "Which version is this?" confusion
+
+Duplication is better than coupling for independent projects.
+
+### Git History as Documentation
+
+The 119 commits in custom/.git had context like:
+- "Fixed traveler spawn when no terrain found"
+- "Reduced ambush interval to make game harder"
+- "Added merchant NPC templates"
+
+We lost that by snapshotting. But we gained:
+- Clean slate for new history
+- Issues as primary documentation
+- LLM transcripts for detailed context
+
+Trade-off: Historical context vs fresh start. We chose fresh start.
+
+### Reference Implementation
+
+The original wow-chat-1 scripts are preserved at `libs/wow-chat-1/` as a reference. When questions arise like "how did traveler spawning work before?" we can diff against the reference.
+
+This enables:
+- Verify bug fixes didn't regress
+- Compare performance of old vs new approach
+- Understand the evolution of ideas
+
+---
+
+## Phase 1 Contribution
+
+This issue enables **Phase 1: Foundation** by ensuring:
+> "The game scripts exist within the project"
+
+Without this, the server runs but the game systems (ambush, treasure, travelers) don't spawn. The scripts are the **game**, not just code. Owning them means owning the experience.

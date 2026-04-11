@@ -443,6 +443,200 @@ The `issues/` directory remains authoritative until full migration.
 
 ---
 
+## Proposed Renumbering Scheme
+
+**Rationale:** Issues should be numbered sequentially within their phase (1xx for Phase 1, 2xx for Phase 2, etc.) in order of foundational importance. This section proposes a complete renumbering map.
+
+### Phase 1: Foundation & Tooling (1xx)
+
+**Keep existing where correctly numbered:**
+- 101 verify-server-startup (KEEP)
+- 102 test-playerbots-spawn (KEEP)
+- 103 document-configuration-options (KEEP)
+- 104 migrate-lua-scripts-from-wowchat1 (KEEP)
+- 105 setup-local-mysql-installation (KEEP)
+- 106a/b/c read-only-config-dashboard / runtime-config-modifications / config-persistence-layer (KEEP)
+- 107 credential-manager-script (KEEP)
+- 108 thread-count-variable (adaptive-build-parallelism) (KEEP)
+- 109 add-build-mode-to-azerothcore-script (incremental-rebuild-detection) (KEEP)
+
+**Renumber to fill gaps:**
+- 110 concept-catalog-consolidation (was 144)
+- 111 config-merge-script (KEEP)
+- 112 git-branch-consolidation (was 145)
+- 113 visual-powerline-mapping-tool (was 123)
+- 114 point-line-definition-tools (was 166)
+- 115 branch-based-azerothcore-versioning (was 201)
+- 116 remove-profile-system (was 318)
+- 117 mysql-script-naming-aliases (was 321)
+- 118 parallel-update-status-spinners (was 323)
+
+### Phase 2: The Empty World (2xx)
+
+**Foundational order:**
+- 201 database-integrity-cleanup (was 112) - FK cascade handling, clean logs
+- 202 lua-engine-initialization (was 130) - ALE must work
+- 203 drop-all-creatures-except-spirit-healers (was 136) - defines empty world
+- 204 random-spawn-point-feature (was 110) - spawn in empty world
+- 205 talent-points-level-20-cap (was 120) - progression system for 1-20
+- 206 death-knight-level-1-scaling (was 138) - class parity for level 1
+- 207 clear-traveller-data-on-despawn (was 147) - memory cleanup
+
+### Phase 3: Danger (Ambush System) (3xx)
+
+**Foundational order:**
+- 301 ocean-shark-hazard (KEEP) - water danger
+- 302 investigate-ambush-monsters-not-spawning (was 113) - debug spawn
+- 303 randomize-ambush-spawn-interval (was 124) - random walk algorithm
+- 304 clear-ambush-data-on-death (was 146) - memory cleanup
+- 305 ambush-aggro-and-corpse-movement (was 158) - aggro/corpse fixes
+- 306 nil-bot-periodic-event-crash (was 324) - crash fix
+- 307 ale-gameobject-wildcard-registration (was 325) - event registration
+
+### Phase 4: Treasure & Economy (4xx)
+
+**Foundational order:**
+- 401 bounty-board-currency-system (was 121)
+- 402 treasure-chest-shared-loot (was 148)
+- 403 ale-sell-item-hook (was 150) - required for sold-items-to-treasure
+- 404 sold-items-to-treasure-pool (was 149)
+- 405 ability-tome-system (was 151)
+- 406 death-durability-system (was 152)
+- 407 chest-vulnerability-mechanic (was 153)
+- 408 multiplayer-chest-access (was 154)
+- 409 custom-empty-loot-chest-templates (was 160)
+- 410 chest-bound-hearthstones (was 303)
+- 411 zero-value-treasure-duplicates (was 305)
+
+### Phase 5: Friendly Encounters (Travelers) (5xx)
+
+**Foundational order:**
+- 501 custom-merchant-system (was 135)
+- 502 universal-class-trainers (was 137)
+- 503 dynamic-trainer-spawning (was 157)
+- 504 traveler-sit-with-player (was 320)
+
+### Phase 6: Companions (Bot Behaviors) (6xx)
+
+**Foundational order:**
+- 601 behavior-find-monsters (was 114)
+- 602 behavior-avoid-monsters (was 116)
+- 603 behavior-sit-and-rest (was 117)
+- 604 behavior-travel-to-unique-lands (was 118)
+- 605 behavior-orbit-player (was 119)
+- 606 behavior-discuss-with-npc (was 115)
+- 607 player-bot-behavior-commands (was 125)
+- 608 healer-bot-ping-pong-behavior (was 132)
+- 609 gesture-command-system-kneel-convoy (was 133)
+- 610 behavior-system-integration (was 160 - duplicate, Phase 6 version)
+- 611 bot-wandering-traveller-style (was 161 - Phase 6 version)
+- 612 dungeon-rail-pathfinding (was 162 - Phase 6 version)
+- 613 behavior-orchestrator-modes (was 164 - Phase 6 version)
+- 614 activity-selection-boredom (was 165)
+- 615 ranged-bot-help-intervention (was 167)
+- 616 public-healer-frames-addon (was 168)
+
+### Phase 7: Character Identity (Custom Classes) (7xx)
+
+**Foundational order:**
+- 701 quest-spells-to-trainers (was 140)
+- 702 low-level-class-identity (was 144 - Phase 7 version, different from 144 catalog)
+- 703 custom-spell-system (was 142)
+- 704 proc-gem-system (was 143)
+- 705 custom-class-selection-npc (was 155)
+- 706 custom-class-lua-format (was 163)
+- 707 custom-class-resource-bars (was 163 - duplicate)
+- 708 custom-class-configuration-schema (was 164 - Phase 7 version)
+- 709 knight-custom-class (was 159)
+- 710 aio-tiered-talent-trainers (was 161 - Phase 7 version)
+- 711 talent-tree-analysis-script (was 162 - Phase 7 version)
+- 712 custom-talent-interface (was 345)
+- 713 conditional-class-selector-spawn (was 304)
+
+### Phase 8: Progression & Endgame (8xx)
+
+**Foundational order:**
+- 801 proportional-damage-rewards (was 139)
+- 802 talent-tier-limit (was 141)
+- 803 monster-accuracy-level-cap (was 156)
+- 804 invisible-level-progression (was 309)
+- 805 chunked-talent-points (was 319)
+- 806 vavadane-shared-daily-reset-character (was 322)
+
+### Phase 9: Storytelling & World Structure (9xx)
+
+**Foundational order:**
+- 901 rebellious-attitudes-freedom-of-affairs (was 122)
+- 902 dungeon-room-spawn-zones (was 126)
+- 903 contextual-creature-spawns (was 127)
+- 904 embedding-based-creature-selection (was 128)
+- 905 portal-dimension-system (was 129)
+- 906 randomized-login-screen-freddi-fish (was 131)
+- 907 language-barrier-system (was 302)
+- 908 narrator-audience-facing (was 307)
+- 909 gutenberg-text-library (was 308)
+- 910 wandering-narrator-system (was 310)
+- 911 shepherd-flock-system (was 311)
+- 912 automated-lore-generation (was 312)
+- 913 clustered-worldserver (was 316)
+
+### Phase 10: External Integration (rmail) (10xx)
+
+**Core Infrastructure:**
+- 1001 rmail-dns-style-addresses (was 313)
+- 1002 rmail-login-flush-hook (was 315)
+- 1003 rmail-account-creation (was 317)
+
+**Service Implementations:**
+- 1004 custom-class-submission (was 163 - Phase 10 rmail version)
+- 1005 rmail-ingame-bridge (was 306)
+- 1006 narrator-subscription (was 310 - duplicate with Phase 9)
+- 1007 rmail-feedback-mailbox (was 314)
+- 1008 rmail-ingame-text-editor (was 164 - Phase 10 version)
+
+### Special Cases & Duplicates
+
+**Duplicate issue numbers in original system:**
+- 160: Used in both Phase 4 (custom-empty-loot-chest-templates) and Phase 6 (behavior-system-integration)
+  - Resolved: Phase 4 keeps 409, Phase 6 gets 610
+
+- 161: Used in both Phase 6 (bot-wandering) and Phase 7 (aio-tiered-talent-trainers)
+  - Resolved: Phase 6 gets 611, Phase 7 gets 710
+
+- 162: Used in both Phase 6 (dungeon-rail-pathfinding) and Phase 7 (talent-tree-analysis-script)
+  - Resolved: Phase 6 gets 612, Phase 7 gets 711
+
+- 163: Used in Phase 7 (custom-class-lua-format) and Phase 10 (custom-class-submission)
+  - Resolved: Phase 7 gets 706, Phase 10 gets 1004
+
+- 164: Used in both Phase 6 (behavior-orchestrator-modes) and Phase 7 (custom-class-configuration-schema) and Phase 10 (rmail-ingame-text-editor)
+  - Resolved: Phase 6 gets 613, Phase 7 gets 708, Phase 10 gets 1008
+
+- 310: Used in both Phase 9 (wandering-narrator-system) and Phase 10 (narrator-subscription)
+  - Resolved: Phase 9 gets 910, Phase 10 gets 1006
+
+**Issues that moved phases during reorganization:**
+- 110 random-spawn-point-feature: Originally Phase 1, moved to Phase 2 (defines spawn in empty world)
+- 112 database-integrity-cleanup: Originally Phase 2 number, but logically Phase 2
+- 120 talent-points-level-20-cap: Originally listed in Phase 8, moved to Phase 2 (defines 1-20 progression)
+- 144 concept-catalog-consolidation: Phase 1 (docs), different from 144 low-level-class-identity (Phase 7)
+
+### Migration Priority
+
+**Immediate (already migrated to issues-beta):**
+- Phase 1: 103, 104, 105, 108, 109, 110 (was 144)
+- Phase 2: 201 (was 112), 202 (was 130), 203 (was 136), 205 (was 120), 206 (was 138), 207 (was 147)
+- Phase 1 active: 101, 102
+- Phase 2 active: 204 (was 110)
+
+**Next priority (completed issues not yet migrated):**
+- Phase 3: 303 (was 124), 304 (was 146)
+- Phase 4: 402 (was 148), 403 (was 150), 406 (was 152), 407 (was 153), 408 (was 154), 409 (was 160)
+- Phase 5: 503 (was 157), 504 (was 320)
+- Phase 6: 601 (was 114), 602 (was 116), 603 (was 117), 605 (was 119), 611 (was 161), etc.
+
+---
+
 ## Related Documents
 
 - `issues/100-route-to-v1.md` - V1.0 feature checklist

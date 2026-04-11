@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>waves.lua.vision - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>waves.lua.vision</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/wow-chat-survival/waves.lua.vision
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> vision &nbsp;&nbsp;
+            <strong>Size:</strong> 5402 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>
+-- {{{ includes
+
+-- }}}
+
+local function waves() {
+
+   -- first, we want to generate the gridmap. To do so, we need the locations
+   -- of each of it&#39;s boundary nodes.
+   --              ___________
+   --             / .-----.  /
+   local nodes = { {x0, y0} ,
+                   {x1, y1} ,
+                   {x2, y2} ,
+                   {x3, y3} ,
+                   {x4, y4} ,
+                   {x5, y5} ,
+                   {x6, y6} ,
+                   {x7, y7} ,
+                   {x8, y8} ,
+                   {x9, y9} }
+   --               then we want to draw them on a big empty map
+                    
+   
+   
+
+}
+
+# Chat with codestral
+## Prompt:
+
+&gt; hi, can you help me create a grid of 100 objects in lua? each object is a pair of floats, and they should be sorted into the 2d grid according to their coordinate values.:
+&gt; 
+
+---
+ Hello! I&#39;m glad that you&#39;re interested in creating a 2D grid with Lua. However, since there isn&#39;t enough context in your question to know how the objects are defined or where the coordinates come from, I will provide a general solution and you can modify it according to your specific needs.
+
+Assuming you have an array of objects with `x` and `y` properties, this is one way to sort them into a 2D grid in Lua:
+
+```lua
+-- Assuming we have the following objects (replace with your data)
+local objects = {
+    { x = 0.5, y = 0.3 },
+    { x = 0.1, y = 0.7 },
+    -- ... more objects here
+}
+
+-- Create a grid with dimensions 10x10 (you can change this as needed)
+local gridSizeX = 10
+local gridSizeY = 10
+local grid = {}
+for i=1,gridSizeX do
+    grid[i] = {}
+end
+
+-- Sort objects into the grid based on their coordinates
+for _,object in ipairs(objects) do
+    -- Calculate which grid cell this object belongs to (scaling the coordinates to fit the grid size)
+    local xIndex = math.floor(object.x * gridSizeX) + 1
+    local yIndex = math.floor(object.y * gridSizeY) + 1
+
+    -- Add the object to that cell&#39;s array (creating it if necessary)
+    if not grid[xIndex][yIndex] then
+        grid[xIndex][yIndex] = {}
+    end
+    table.insert(grid[xIndex][yIndex], object)
+end
+```
+
+Now, `grid` is a 2D array where each cell contains an array of objects that fall within its boundaries. You can iterate over the grid and process the objects accordingly.
+
+---
+## Prompt:
+
+&gt; Great! Can you make it so that if a object node would be placed into the same slot as one that&#39;s already there, another row and column is inserted and all the other relevant values are adjusted to the left/right or above/below sections as needed in order to make room?:
+&gt; 
+
+---
+ Sure, I can help with that. When an object falls into a grid cell that already contains an object, we need to create space for it by adjusting the coordinates of existing objects and inserting new cells if necessary. Here&#39;s how you might modify the previous script:
+
+```lua
+-- Create a function to check if a coordinate is valid and within grid bounds
+function isValidCoordinate(xIndex, yIndex)
+    return xIndex &gt;= 1 and xIndex &lt;= gridSizeX and yIndex &gt;= 1 and yIndex &lt;= gridSizeY
+end
+
+-- Function to move an object to a new cell
+function moveObjectToCell(object, xIndex, yIndex)
+    -- If the target cell is not valid or out of bounds, do nothing
+    if not isValidCoordinate(xIndex, yIndex) then return end
+
+    -- Remove object from its current cell
+    for i, obj in ipairs(grid[object.xIndex][object.yIndex]) do
+        if obj == object then
+            table.remove(grid[object.xIndex][object.yIndex], i)
+            break
+        end
+    end
+
+    -- Insert object into new cell
+    if not grid[xIndex][yIndex] then
+        grid[xIndex] = {}
+    end
+    table.insert(grid[xIndex][yIndex], object)
+    object.xIndex, object.yIndex = xIndex, yIndex
+end
+
+-- Now when sorting objects into the grid:
+for _,object in ipairs(objects) do
+    local xIndex = math.floor(object.x * gridSizeX) + 1
+    local yIndex = math.floor(object.y * gridSizeY) + 1
+
+    -- If the target cell is not empty, find a new spot for the object by shifting existing objects to the right or down
+    while (grid[xIndex] and grid[xIndex][yIndex]) and #grid[xIndex][yIndex] &gt; 0 do
+        -- Shift all objects in this row to the right until we find an empty cell
+        for x = gridSizeX, xIndex + 1, -1 do
+            if not grid[x] or not grid[x][yIndex] then break end
+            for _, obj in ipairs(grid[x][yIndex]) do
+                moveObjectToCell(obj, x + 1, yIndex)
+            end
+        end
+
+        -- If there&#39;s no more space to the right, shift all objects below this row down
+        if (grid[xIndex] and grid[xIndex][yIndex]) and #grid[xIndex][yIndex] &gt; 0 then
+            for y = gridSizeY, yIndex + 1, -1 do
+                if not grid[xIndex][y] then break end
+                for _, obj in ipairs(grid[xIndex][y]) do
+                    moveObjectToCell(obj, xIndex, y + 1)
+                end
+            end
+        end
+
+        -- Check the target cell again, as we may have made space by shifting objects
+    end
+
+    -- Insert object into new cell
+    if not grid[xIndex][yIndex] then
+        grid[xIndex] = {}
+    end
+    table.insert(grid[xIndex][yIndex], object)
+    object.xIndex, object.yIndex = xIndex, yIndex
+end
+```
+
+Now the script will attempt to find a spot for each object in the grid by shifting existing objects as needed. If there&#39;s no more room in the grid, it will simply not insert the object.
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

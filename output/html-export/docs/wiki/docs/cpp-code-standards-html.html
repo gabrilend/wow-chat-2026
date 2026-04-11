@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cpp-code-standards.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>cpp-code-standards.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/cpp-code-standards.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 7405 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+tableofcontents: 1
+---</p>
+<p><h1>C++ Code Standards</h1></p>
+<p><h2>Intro</h2></p>
+<p><h3>Why are coding standards important?</h3></p>
+<p>It makes it easier for everyone to maintain and read the written code as well as it gives us more control over it.</p>
+<p>It can also act as a safeguard to prevent errors in the code.</p>
+<p><h3>Why is it important for everyone to follow the standards?</h3></p>
+<p>We only accept code that is written to the standards, this means that a PR you want to contribute with can be merged faster if you follow the standards from the beginning.</p>
+<p><h2>Coding Standards</h2></p>
+<p><h3>Tabs and Indents</h3></p>
+<p>We never use tabs, instead, we use spaces.</p>
+<p>One tab is equal to 4 spaces and that is what should be used throughout the whole project.</p>
+<p>Visual Studio:</p>
+<p>Tools -&gt; Options -&gt; Text Editor -&gt; C/C++ -&gt; Tabs -&gt; Smart, 4, 4, Insert spaces.</p>
+<p>Notepad++:</p>
+<p>Settings -&gt; Preferences -&gt; Language -&gt; Tab size: 4, Replace by space: checked</p>
+<p><h3>Comments</h3></p>
+<p>Always comment on code where it is not typical repeated code and where the code is not self-explanatory.</p>
+<p>Avoid including hyperlinks in code comments, as they may become outdated or broken over time. If a link is relevant, include it in the pull request description instead—it can be referenced later via Git history.</p>
+<p>Comments should either be placed directly above the code, or directly beside it.</p>
+<p>``<code>cpp
+// A Comment
+if (a == b)</p>
+<p>if (a == b)
+{
+    a = b; // A Comment
+<pre><code>
+&lt;h3&gt;Whitespace&lt;/h3&gt;</p>
+<p>Trailing whitespace is not allowed.</p>
+<p>You should also not have unneeded spaces within a bracket. </p>
+<p>Wrong:
+</code></pre>cpp
+if( var )
+if ( var )
+<pre><code>
+Correct:
+</code></pre>cpp
+if (var)
+<pre><code>
+&lt;h3&gt;Brackets&lt;/h3&gt;</p>
+<p>Brackets should be refrained from using for if statements that are followed by one line.
+</code></pre>cpp
+if (var)
+{
+    me-&gt;DoA();
+    me-&gt;DoB();
+}
+else
+    me-&gt;DoC();
+<pre><code>
+&lt;h3&gt;Loop syntax&lt;/h3&gt;
+</code></pre>cpp
+for (uint32 i = 0; i &lt; loopEnd; ++i)
+{
+    DoSomething();
+    DoSomethingElse();
+}</p>
+<p>uint32 i = 0;
+while (i &lt; 10)
+{
+    DoSomething();
+    DoSomethingElse();
+    ++i;
+}</p>
+<p>do
+{
+    DoSomething();
+    DoSomethingElse();
+    ++i;
+} while (i &gt; 0);
+<pre><code>
+<strong>Please note that brackets should always start on a new line, as displayed in the example above.</strong></p>
+<p>&lt;h3&gt;Random numbers vs. Constants&lt;/h3&gt;</p>
+<p>Constants make the code easier to read and understand, they also provide a safeguard and prevent numbers from being hard-coded.</p>
+<p>Wrong:
+</code></pre>cpp
+if (player-&gt;GetQuestStatus(10090) == 1)
+    me-&gt;RemoveFlag(58, 2);
+<pre><code>
+Correct:
+</code></pre>cpp
+if (player-&gt;GetQuestStatus(QUEST_BEAT_UP) == QUEST_STATUS_INCOMPLETE)
+    me-&gt;RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+<pre><code>
+Constants are set with #defines, constexpr, or enum/enum class. If it does not exist - create one.</p>
+<p>&lt;h3&gt;Switch statements&lt;/h3&gt;</p>
+<p>A default action should always be present in a switch statement, even if it is just a break.
+</code></pre>cpp
+switch (spells)
+{
+    case SPELL_1:
+    case SPELL_2:
+    {
+        if (moreThanOneLine)
+            UseBrackets();
+        break;
+    }
+    case SPELL_3:
+        DoSomethinCool();
+        [[fallthrough]]
+    default:
+        break;
+}
+<pre><code>
+&lt;h3&gt;Enumerations vs. define&lt;/h3&gt;</p>
+<p>It is strongly advised to avoid using #define for constants. use either a const variable or an enum if multiple variables can be grouped together.</p>
+<p>Enums must have a name. Separate constant on different enums depending on their type.
+</code></pre>cpp
+enum Spells
+{
+    SPELL_1 = 1111,
+    SPELL_2 = 2222,
+    SPELL_3 = 3333
+};</p>
+<p>constexpr uint32 SPELL_4 = 4444;
+<pre><code>
+&lt;h3&gt;Enum vs. Enum Class&lt;/h3&gt;</p>
+<p>Enum classes are preferred to be used as they can cause fewer surprises that could lead to bugs as the enum will not implicitly convert to other types like integers or other enums.
+</code></pre>cpp
+enum class Spell : uint32
+{
+    One   = 1111,
+    Two   = 2222,
+    Three = 3333
+}
+<pre><code>
+&lt;h3&gt;Standard prefixes for constants&lt;/h3&gt;</p>
+<p>All constants that we store have a standardized prefix.</p>
+<p>| PREFIX | Comment  |
+| :----- | :------- |
+| SPELL_ | Spell ID |
+| NPC_   | <a href="creature_template#entry">creature_template.entry</a> |
+| ITEM_  | <a href="item_template#entry">item_template.entry</a> |
+| GO_    | <a href="gameobject_template#entry">gameobject_template.entry</a> |
+| QUEST_ | <a href="quest_template#id">quest_template.id</a> |
+| SAY_   | <a href="creature_text#groupid">creature_text.GroupID</a> |
+| EMOTE_ | <a href="creature_text#groupid">creature_text.GroupID</a> Different prefix from SAY_ to show that this is an emote. |
+| MODEL_ | Creature model, DisplayID |
+| XX_G   | Heroic mode prefix (goes after the other prefix) XX is the max man amount from mode. (OBSOLETE AS OF PATCH 3.2 WITH SpellDifficulty.dbc) |
+| RAID_XX | Raid mode prefix (goes before the other prefix) XX is the max man amount from mode. (OBSOLETE AS OF PATCH 3.2 WITH SpellDifficulty.dbc) |
+| EVENT_ | Event/Encounter identifier for instances |
+| DATA_  | Identifiers in instance used for GUIDs/data not being event/encounter |
+| ACHIEV_ | Achievement ID |</p>
+<p>Correct:
+</code></pre>
+SPELL_ENRAGE
+SPELL_ENRAGE_H
+EVENT_ILLIDAN
+DATA_ILLIDAN
+ACHIEVE_MAKE_IT_COUNT
+<pre><code>
+&lt;h3&gt;Naming of variables and functions&lt;/h3&gt;</p>
+<p>Never use HUNGARIAN NOTATION in variable names!</p>
+<p>for public/protected members or global variables:
+</code></pre>cpp
+uint64 SomeGuid;
+uint32 ShadowBoltTimer;
+uint8 ShadowBoltCount;
+bool IsEnraged;
+float HeightData;
+<pre><code>
+for private members:
+</code></pre>cpp
+uint64 _someGuid;
+uint32 _mapEntry;
+uint8 _count;
+bool _isDead;
+float _heightData;
+<pre><code>
+Methods are always UpperCamelCase and their parameters in lowerCamelCase
+</code></pre>cpp
+void DoSomething(uint32 someNumber)
+{
+    uint32 someOtherNumber = 5;
+}
+<pre><code>
+Always use &amp;#39;f&amp;#39; after float values when declaring them to avoid compile warnings.
+</code></pre>cpp
+float posX = 234.3456f;
+<pre><code>
+&lt;h3&gt;Array of Structs:&lt;/h3&gt;
+</code></pre>cpp
+Position const PosMobs[5] =
+{
+    {-724.12f, -176.64f, 430.03f, 2.543f},
+    {-766.70f, -225.03f, 430.50f, 1.710f},
+    {-729.54f, -186.26f, 430.12f, 1.902f},
+    {-756.01f, -219.23f, 430.50f, 2.369f},
+    {-798.01f, -227.24f, 429.84f ,1.446f},
+};
+<pre><code>
+&lt;h3&gt;WorldObjects&lt;/h3&gt;</p>
+<p>We define WorldObjects in this way:
+</code></pre>cpp
+GameObject<em> go;
+Creature</em> creature;
+Item<em> item;
+Player</em> player;
+Unit<em> unit;
+<pre><code>
+We never use multiple declarations with pointers
+</code></pre>cpp
+Something</em> obj1, <em>obj2;
+<pre><code>
+The proper way to do this is
+</code></pre>cpp
+Something</em> obj1;
+Something<em> obj2;
+<pre><code>
+References are defined in a similar way (&amp;amp; must be stuck to the type)
+</code></pre>cpp
+Creature&amp; creature;
+<pre><code>
+Never define &amp;quot;me&amp;quot; in a creature or object script!</p>
+<p>&amp;#39;me&amp;#39; is the pointer to the scripted creature or object.</p>
+<p>&lt;h3&gt;Defining const variables&lt;/h3&gt;</p>
+<p>const keyword should always go after the type name
+</code></pre>cpp
+Player const</em> player; // player object is constant
+Unit<em> const unit; // pointer to the unit is constant
+SpellEntry const</em> const spell; // both spell and pointer to spell are constant
+<pre><code>
+&lt;h3&gt;Static variables&lt;/h3&gt;</p>
+<p>static keyword always should be put as first
+</code></pre>cpp
+static uint32 someVar = 5;
+static float const otherVar = 1.0f;
+<pre><code>
+&lt;h3&gt;Header Guards&lt;/h3&gt;</p>
+<p>All Header files should contain header guards
+</code></pre>cpp
+#ifndef MY_HEADER_H
+#define MY_HEADER_H</p>
+<p>// Header content here</p>
+<p>#endif // MY_HEADER_H
+</code>`<code></p>
+<p><h3>Text Output</h3></p>
+<p>All C++ script/system/command text output must use <a href="acore_string">acore_string</a> whenever possible (e.g., ChatHandler messages, script system messages).</p>
+<p>NPC dialog, emotes, and other in-game text that is managed via database text systems (such as </code>creature_text<code>, </code>broadcast_text<code>, etc.) should continue to use those systems instead of </code>acore_string`.</p>
+<p>When adding new strings, localization must be provided for all available languages.</p>
+<p><strong>Tip:</strong> You may use AI to assist with translating localization strings.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

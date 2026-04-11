@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>creature_onkill_reputation.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>creature_onkill_reputation.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/creature_onkill_reputation.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 3352 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>creature\_onkill\_reputation</h1></p>
+<p><a href="database-world">&lt;-Back-to:World</a></p>
+<p><strong>The \<code>creature\_onkill\_reputation\</code> table</strong></p>
+<p>This table controls the reputation given by creatures when killed by other players.</p>
+<p><strong>Table Structure</strong></p>
+<p>| Field                     | Type      | Attributes | Key | Null | Default | Extra | Comment             |
+| ------------------------- | --------- | ---------- | --- | ---- | ------- | ----- | ------------------- |
+| [creature_id][1]          | MEDIUMINT | UNSIGNED   | PRI | NO   | 0       |       | Creature Identifier |
+| [RewOnKillRepFaction1][2] | SMALLINT  | SIGNED     |     | NO   | 0       |       |                     |
+| [RewOnKillRepFaction2][3] | SMALLINT  | SIGNED     |     | NO   | 0       |       |                     |
+| [MaxStanding1][4]         | TINYINT   | SIGNED     |     | NO   | 0       |       |                     |
+| [IsTeamAward1][5]         | TINYINT   | SIGNED     |     | NO   | 0       |       |                     |
+| [RewOnKillRepValue1][6]   | MEDIUMINT | SIGNED     |     | NO   | 0       |       |                     |
+| [MaxStanding2][7]         | TINYINT   | SIGNED     |     | NO   | 0       |       |                     |
+| [IsTeamAward2][8]         | TINYINT   | SIGNED     |     | NO   | 0       |       |                     |
+| [RewOnKillRepValue2][9]   | MEDIUMINT | SIGNED     |     | NO   | 0       |       |                     |
+| [TeamDependent][10]       | TINYINT   | UNSIGNED   |     | NO   | 0       |       |                     |</p>
+<p>[1]: #creature_id
+[2]: #rewonkillrepfaction1
+[3]: #rewonkillrepfaction2
+[4]: #maxstanding1
+[5]: #isteamaward1
+[6]: #rewonkillrepvalue1
+[7]: #maxstanding2
+[8]: #isteamaward2
+[9]: #rewonkillrepvalue2
+[10]: #teamdependent</p>
+<p><strong>Description of the fields</strong></p>
+<p><h3>creature\_id</h3></p>
+<p>The template ID of the creature. See <a href="creature_template#creature_template-entry">creature\_template.entry</a></p>
+<p><h3>RewOnKillRepFaction</h3></p>
+<p>The faction ID of the faction that the player will gain or lose points in. See Faction.dbc</p>
+<p><h3>MaxStanding</h3></p>
+<p>The maximum standing that the creature will award reputation until. If the player achieves this standing or any other standing higher than this, the creature will not award any reputation.</p>
+<p>| ID  | Rank       |
+| --- | ---------- |
+| 0   | Hated      |
+| 1   | Hostile    |
+| 2   | Unfriendly |
+| 3   | Neutral    |
+| 4   | Friendly   |
+| 5   | Honored    |
+| 6   | Revered    |
+| 7   | Exalted    |</p>
+<p><h3>IsTeamAward</h3></p>
+<p>Boolean 0 or 1 that controls if the player receives the reputation not only to the faction but also the faction team.</p>
+<p>-   0: Player receives reputation only for the faction
+-   1: Player receives reputation both for the faction and the faction&#39;s team</p>
+<p>NOTE: The reputation value that the player gains for the team (if the field is 1) is half of the value specified in <a href="#creature_onkill_reputation-RewOnKillRepValue">RewOnKillRepValue</a></p>
+<p><h3>RewOnKillRepValue</h3></p>
+<p>The reputation value that the player gains (or loses if it&#39;s negative) by killing the creature.</p>
+<p><h3>TeamDependent</h3></p>
+<p>Boolean 0 or 1.</p>
+<p>-   0: The creature will give reputation to the any player from both fields (RewOnKillRepFaction1 and RewOnKillRepFaction2) if both fields are non-zero.
+-   1: The creature will award alliance players the reputation from RewOnKillRepFaction1 and will award horde players the reputation from RewOnKillRepFaction2
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>totemcategory.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>totemcategory.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/totemcategory.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2384 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+redirect_from: &quot;/TotemCategory&quot;
+---</p>
+<p><h1>TotemCategory</h1></p>
+<p><a href="dbc-index"><code>Back-to:DBC</code></a></p>
+<p><strong>TotemCategory.dbc</strong></p>
+<p><strong>Version is : 3.3.5a</strong></p>
+<p><a href="how-to-import-dbc-data-in-db">How to Import DBC Data onto my Database</a>  </p>
+<p><h2>Structure</h2></p>
+<p>| Column | Field        | Type         | Notes                                                                    |
+| ------ | ------------ | ------------ | ------------------------------------------------------------------------ |
+| 1      | ID           | Integer      |                                                                          |
+| 2-18   | sRefName     | String + Loc | Includes all kinds of component things.. not just totems                 |
+| 19     | Category     | Integer      | Which category the tool belongs to (1 = totems, 3 = enchanting rods etc) |
+| 20     | CategoryBits | BitMask      | Which tools in the category the tool can be used as.                     |</p>
+<p><h3>For instance for totems:</h3></p>
+<p>| Bit | Description |
+| --- | ----------- |
+| 0   | earth       |
+| 1   | air         |
+| 2   | fire        |
+| 3   | water       |</p>
+<p>Master Totem has the bitmask 1111b, meaning it can be used instead of all four normal totems.</p>
+<p><h2><strong>Content</strong></h2></p>
+<p>| ID  | Name                     |
+| --- | ------------------------ |
+| 1   | Skinning Knife (OLD)     |
+| 2   | Earth Totem              |
+| 3   | Air Totem                |
+| 4   | Fire Totem               |
+| 5   | Water Totem              |
+| 6   | Runed Copper Rod         |
+| 7   | Runed Silver Rod         |
+| 8   | Runed Golden Rod         |
+| 9   | Runed Truesilver Rod     |
+| 10  | Runed Arcanite Rod       |
+| 11  | Mining Pick (OLD)        |
+| 12  | Philosopher&#39;s Stone      |
+| 13  | Blacksmith Hammer (OLD)  |
+| 14  | Arclight Spanner         |
+| 15  | Gyromatic Micro-Adjustor |
+| 21  | Master Totem             |
+| 41  | Runed Fel Iron Rod       |
+| 62  | Runed Adamantite Rod     |
+| 63  | Runed Eternium Rod       |
+| 81  | Hollow Quill             |
+| 101 | Runed Azurite Rod        |
+| 121 | Virtuoso Inking Set      |
+| 141 | Drums                    |
+| 161 | Gnomish Army Knife       |
+| 162 | Blacksmith Hammer        |
+| 165 | Mining Pick              |
+| 166 | Skinning Knife           |
+| 167 | Hammer Pick              |
+| 168 | Bladed Pickaxe           |
+| 169 | Flint and Tinder         |
+| 189 | Runed Cobalt Rod         |
+| 190 | Runed Titanium Rod       |
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

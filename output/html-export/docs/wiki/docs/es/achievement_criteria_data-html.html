@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>achievement_criteria_data.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>achievement_criteria_data.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/achievement_criteria_data.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 5325 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>achievement\_criteria\_data</h1></p>
+<p><a href="database-world">&lt;-Volver a: World</a></p>
+<p><strong>La tabla \<code>achievement\_criteria\_data\</code></strong></p>
+<p>Esta tabla contiene la información que un jugador necesita obtener / completar para alcanzar cierto logro.</p>
+<p><strong>Estructura</strong></p>
+<p>| Field            | Type      | Attributes | Key | Null | Default | Extra | Comment |
+| ---------------- | --------- | ---------- | --- | ---- | ------- | ----- | ------- |
+| [criteria_id][1] | MEDIUMINT |            | PRI | NO   |         |       |         |
+| [type][2]        | TINYINT   | UNSIGNED   | PRI | NO   | 0       |       |         |
+| [value1][3]      | MEDIUMINT | UNSIGNED   |     | NO   | 0       |       |         |
+| [value2][4]      | MEDIUMINT | UNSIGNED   |     | NO   | 0       |       |         |
+| [ScriptName][5]  | char(64)  |            |     | NO   |         |       |         |</p>
+<p>[1]: #criteria_id
+[2]: #type
+[3]: #value1
+[4]: #value2
+[5]: #scriptname</p>
+<p><strong>Descripción de los campos</strong></p>
+<p><h3>criteria\_id</h3></p>
+<p>Esta es la ID de<a href="Achievement+Criteria">Achievement\_Criteria.dbc</a>.</p>
+<p><h3>type</h3></p>
+<p>Dpendiendo de este valor, será determinado cómo son usados value1 y value2.</p>
+<p>| Type | Name                      |
+| ---- | ------------------------- |
+| 0    | TYPE_NONE                 |
+| 1    | TYPE_T_CREATURE           |
+| 2    | TYPE_T_PLAYER_CLASS_RACE  |
+| 3    | TYPE_T_PLAYER_LESS_HEALTH |
+| 4    | TYPE_T_PLAYER_DEAD        |
+| 5    | TYPE_S_AURA               |
+| 6    | TYPE_S_AREA               |
+| 7    | TYPE_T_AURA               |
+| 8    | TYPE_VALUE                |
+| 9    | TYPE_T_LEVEL              |
+| 10   | TYPE_T_GENDER             |
+| 11   | TYPE_SCRIPT               |
+| 12   | TYPE_MAP_DIFFICULTY       |
+| 13   | TYPE_MAP_PLAYER_COUNT     |
+| 14   | TYPE_T_TEAM               |
+| 15   | TYPE_S_DRUNK              |
+| 16   | TYPE_HOLIDAY              |
+| 17   | TYPE_BG_LOSS_TEAM_SCORE   |
+| 18   | TYPE_INSTANCE_SCRIPT      |
+| 19   | TYPE_S_EQUIPED_ITEM       |
+| 20   | TYPE_MAP_ID               |
+| 21   | TYPE_S_PLAYER_CLASS_RACE  |
+| 22   | TYPE_NTH_BIRTHDAY         |
+| 23   | TYPE_S_KNOWN_TITLE        |</p>
+<p><h3>value1</h3></p>
+<p><strong>TYPE\_T\_CREATURE</strong></p>
+<p>-   El objetivo debe ser una entrada valida de creature\_template</p>
+<p><strong>TYPE\_T\_PLAYER\_CLASS\_RACE</strong></p>
+<p>-   El objetivo acá es un clase valida de (paste class list). value2 debe ser establecido también.</p>
+<p><strong>TYPE\_T\_PLAYER\_LESS\_HEALTH</strong></p>
+<p>-   El porcentaje de salud (hp) que el objetivo debe alcanzar </p>
+<p><strong>TYPE\_T\_PLAYER\_DEAD</strong></p>
+<p>-   La facción del jugador objetivo, (debe coincidir con el jugador intentando alcanzar el logro).</p>
+<p><strong>TYPE\_S\_AURA</strong></p>
+<p>-   La ID del hechizo que debe tener activo el jugador. value2 debe estar establecido también.</p>
+<p><strong>TYPE\_S\_AREA</strong></p>
+<p>-   ID de area de AreaTable.dbc</p>
+<p><strong>TYPE\_T\_AURA</strong></p>
+<p>-   El hechizo del aura que el objetivo debe tener. value2 debe estar establecido también.</p>
+<p><strong>TYPE\_VALUE</strong></p>
+<p>-   Valor a comparar, requerido para el logro. Este valor es usado en conjunto con otro tipo. </p>
+<p><strong>TYPE\_T\_LEVEL</strong></p>
+<p>-   El nivel minimo que el objetivo puede ser.</p>
+<p><strong>TYPE\_T\_GENDER</strong></p>
+<p>-   Género: 0=Masculino, 1=Femenino</p>
+<p><strong>TYPE\_SCRIPT</strong></p>
+<p>-   Usado para deshabilitar un logro si todos los requisitios no son definididos. Se usaría si no todos los requisitios son conocidos.</p>
+<p><strong>TYPE\_MAP\_DIFFICULTY</strong></p>
+<p>-   Dificultad del mapa: (Mazmorras)
+    - Normal = 0
+    - Heroic = 1
+-   Dificultad del mapa: (Bandas)
+    - 10 Man Normal = 0
+    - 25 Man Normal = 1
+    - 10 Man Heroic = 2
+    - 25 Man Heroic = 3</p>
+<p><strong>TYPE\_MAP\_PLAYER\_COUNT</strong></p>
+<p>-   El número de otros jugadores que tienen que estar en la zona. (No es seguro si es un mínimo o un máximo).</p>
+<p><strong>TYPE\_T\_TEAM</strong></p>
+<p>-   El objetivo debe estar en estas facciones: Alianza = 469, Horda = 67</p>
+<p><strong>TYPE\_S\_DRUNK</strong></p>
+<p>-   Quétan borracho debe estar el objetivo:
+    - DRUNKEN\_SOBER = 0
+    - DRUNKEN\_TIPSY = 1
+    - DRUNKEN\_DRUNK = 2
+    - DRUNKEN\_SMASHED = 3</p>
+<p><strong>TYPE\_HOLIDAY</strong> </p>
+<p>-   Holiday ID de Holiday.dbc y game\_event. Tiene que ser un festivo activo.</p>
+<p><strong>TYPE\_BG\_LOSS\_TEAM\_SCORE</strong></p>
+<p>-   El equipo del jugador gana la BG y el equipo contrario tiene un puntaje dentro del rango // Puntaje min.</p>
+<p><strong>TYPE\_INSTANCE\_SCRIPT</strong></p>
+<p>-   Hace que el script de la instancia revise que los criterios se ajusten.
+<strong>TYPE\_S\_EQUIPED\_ITEM</strong></p>
+<p>-   Item level</p>
+<p><strong>TYPE\_MAP\_ID</strong></p>
+<p>-   El jugador debe estar en mapId.</p>
+<p><strong>TYPE\_S\_PLAYER\_CLASS\_RACE</strong></p>
+<p>-   La fuente acá es una clase válida (paste class list). El value2 debe estar establecido también.
+ </p>
+<p><strong>TYPE\_NTH\_BIRTHDAY</strong></p>
+<p>-   Numero de cumpleaños.</p>
+<p><strong>TYPE\_S\_KNOWN\_TITLE</strong></p>
+<p>-   El valor acá es un titleId válido. Veáse: CharTitles.dbc</p>
+<p><h3>value2</h3></p>
+<p><strong>TYPE\_T\_PLAYER\_CLASS\_RACE</strong>
+<strong>TYPE\_S\_PLAYER\_CLASS\_RACE</strong></p>
+<p>-   El valor acá es un ID válidod de raza. Véase ChrRaces.dbc</p>
+<p><strong>TYPE\_S\_AURA</strong></p>
+<p>-   Effect Index del aura</p>
+<p><strong>TYPE\_T\_AURA</strong></p>
+<p>-   Effect Index del aura</p>
+<p><strong>TYPE\_BG\_LOSS\_TEAM\_SCORE</strong></p>
+<p>-   Max. puntaje</p>
+<p><strong>TYPE\_S\_EQUIPED\_ITEM</strong></p>
+<p>-   Calidad del item</p>
+<p><strong>TYPE\_VALUE</strong></p>
+<p>| ComparisationType        |
+| ------------------------ |
+| COMP\_TYPE\_EQ = 0       |
+| COMP\_TYPE\_HIGH = 1     |
+| COMP\_TYPE\_LOW = 2      |
+| COMP\_TYPE\_HIGH\_EQ = 3 |
+| COMP\_TYPE\_LOW\_EQ = 4  |</p>
+<p><h3>ScriptName</h3></p>
+<p>EL nombre del script (ScriptName) para cuando se haga scripting en el core.
+Esto quiza sea &#39;SmartTrigger&#39;. Usaría  <a href="smart_scripts">SmartAI</a> entonces.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

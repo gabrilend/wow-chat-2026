@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 133 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 133 • Phase 1</div>
+            <h1>Gesture Command System: Kneel, Beckon, and Convoy Formation</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>133 - Gesture Command System: Kneel, Beckon, and Convoy Formation</h1></p>
+<p><h2>Status: Open</h2></p>
+<p><h2>Vision</h2></p>
+<p>Players command NPCs through body language, not menus. Kneeling, sitting, and
+beckoning become a silent language of leadership. NPCs form convoys that snake
+across the world like an ouroboros - when one falls, the chain reforms, the
+tail becomes a new head, infinite recursion of the traveling salesman.</p>
+<p><h2>The Gesture Language</h2></p>
+<p><pre><code>┌─────────────────────────────────────────────────────────────────┐
+│  PLAYER ACTION          NPC RESPONSE                           │
+├─────────────────────────────────────────────────────────────────┤
+│  Standing + Near    →   NPCs kneel in reverence                │
+│  Beckoning          →   NPCs rise, follow, assist              │
+│  Sitting            →   NPCs wait beside you                   │
+│  Kneeling + Facing  →   NPCs move toward your facing direction │
+│                         (mobile waypoint - Warcraft Rumble)     │
+└─────────────────────────────────────────────────────────────────┘</code></pre></p>
+<p><h2>Current Behavior</h2></p>
+<p>- NPCs stand idle or patrol
+- No response to player emotes/poses
+- No convoy or follow mechanics
+- Kneeling is just an emote, no gameplay effect</p>
+<p><h2>Intended Behavior</h2></p>
+<p><h3>Kneeling = Sitting (Resource Recovery)</h3>
+<pre><code class="lua"><span class="comment">-- Kneeling grants same benefits as sitting:</span>
+<span class="comment">-- - Increased health/mana regen</span>
+<span class="comment">-- - &amp;quot;Resting&amp;quot; state <span class="keyword">for</span> food/drink bonus</span>
+<span class="comment">-- - But looks more dramatic/submissive</span></p>
+<p>ON_PLAYER_EMOTE(EMOTE_KNEEL):
+    player:SetStandState(UNIT_STAND_STATE_KNEEL)
+    player:SetRestBonus(<span class="keyword">true</span>)  <span class="comment">-- Same as sitting</span></code></pre></p>
+<p><h3>NPCs Kneel When Players Approach</h3>
+<pre><code class="lua"><span class="comment">-- {{{ on_player_approach</span>
+<span class="keyword">local</span> <span class="keyword">function</span> on_player_approach(npc, player)
+    <span class="keyword">local</span> distance = npc:GetDistance(player)</p>
+<p>    <span class="keyword">if</span> distance &amp;lt; KNEEL_RADIUS <span class="keyword">then</span>
+        <span class="keyword">if</span> <span class="keyword">not</span> npc:IsInCombat() <span class="keyword">and</span> <span class="keyword">not</span> npc:IsKneeling() <span class="keyword">then</span>
+            npc:SetFacing(player)
+            npc:Kneel()
+            npc.reverence_target = player
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Beckoning Recruits Followers</h3>
+<pre><code class="lua"><span class="comment">-- {{{ on_player_beckon</span>
+<span class="keyword">local</span> <span class="keyword">function</span> on_player_beckon(player)
+    <span class="keyword">local</span> nearby_npcs = player:GetNearbyNPCs(BECKON_RADIUS)</p>
+<p>    <span class="keyword">for</span> _, npc <span class="keyword">in</span> ipairs(nearby_npcs) <span class="keyword">do</span>
+        <span class="keyword">if</span> npc:IsKneeling() <span class="keyword">and</span> npc.reverence_target == player <span class="keyword">then</span>
+            npc:Rise()
+            npc:Follow(player)
+            npc:SetAssistMode(<span class="keyword">true</span>)
+            add_to_convoy(player, npc)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Sitting = Wait Command</h3>
+<pre><code class="lua"><span class="comment">-- {{{ on_player_sit</span>
+<span class="keyword">local</span> <span class="keyword">function</span> on_player_sit(player)
+    <span class="keyword">local</span> convoy = get_player_convoy(player)</p>
+<p>    <span class="keyword">for</span> _, npc <span class="keyword">in</span> ipairs(convoy) <span class="keyword">do</span>
+        npc:StopFollowing()
+        npc:MoveTo(player:GetPosition())
+        npc:SetState(&amp;quot;waiting&amp;quot;)
+        npc:Kneel()  <span class="comment">-- They kneel <span class="keyword">while</span> waiting</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Kneeling = Directional Waypoint</h3>
+<pre><code>Player kneels facing NORTH:</p>
+<p>     N
+     ↑
+     │
+  ┌──┴──┐
+  │PLAYER│  (kneeling, facing north)
+  │  ⬆   │
+  └──────┘</p>
+<p>NPCs in convoy move NORTH until:
+  - They reach an obstacle
+  - They reach an enemy
+  - Player stands up
+  - Player changes facing</p>
+<p>Like pointing at allies in Warcraft Rumble!</code></pre></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ on_player_kneel_facing</span>
+<span class="keyword">local</span> <span class="keyword">function</span> on_player_kneel_facing(player)
+    <span class="keyword">local</span> convoy = get_player_convoy(player)
+    <span class="keyword">local</span> facing = player:GetFacing()
+    <span class="keyword">local</span> direction = facing_to_vector(facing)</p>
+<p>    <span class="keyword">for</span> _, npc <span class="keyword">in</span> ipairs(convoy) <span class="keyword">do</span>
+        <span class="comment">-- Create waypoint <span class="keyword">in</span> facing direction</span>
+        <span class="keyword">local</span> target_pos = project_position(player:GetPosition(), direction, <span class="number">100</span>)
+        npc:MoveTo(target_pos)
+        npc:SetState(&amp;quot;directed&amp;quot;)
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- Update direction <span class="keyword">if</span> player rotates <span class="keyword">while</span> kneeling</span>
+    player:RegisterFacingCallback(<span class="keyword">function</span>(new_facing)
+        redirect_convoy(player, new_facing)
+    <span class="keyword">end</span>)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h2>The Convoy System</h2></p>
+<p><h3>Formation: Ouroboros Chain</h3>
+<pre><code>Normal convoy (following player):</p>
+<p>    [NPC1] → [NPC2] → [NPC3] → [PLAYER]
+       ↑                          │
+       └──────────────────────────┘
+              (circular awareness)</p>
+<p>When NPC2 dies:</p>
+<p>    [NPC1] → [NPC3] → [PLAYER]
+       ↑                  │
+       └──────────────────┘
+         (chain reforms)</p>
+<p>When PLAYER leaves:</p>
+<p>    [NPC1] → [NPC3] → [NPC1] ...
+         (ouroboros - tail becomes head)</code></pre></p>
+<p><h3>Traveling Salesman Recursion</h3>
+<pre><code class="lua"><span class="comment">-- {{{ convoy_reform</span>
+<span class="keyword">local</span> <span class="keyword">function</span> convoy_reform(convoy)
+    <span class="keyword">if</span> #convoy == <span class="number">0</span> <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span></p>
+<p>    <span class="comment">-- When leader is lost, find new optimal path</span>
+    <span class="keyword">local</span> remaining = convoy.members
+    <span class="keyword">local</span> new_path = {}
+    <span class="keyword">local</span> current = remaining[<span class="number">1</span>]</p>
+<p>    <span class="keyword">while</span> #remaining &amp;gt; <span class="number">0</span> <span class="keyword">do</span>
+        <span class="comment">-- Nearest neighbor heuristic</span>
+        <span class="keyword">local</span> nearest = find_nearest(current, remaining)
+        table.insert(new_path, nearest)
+        remove_from_list(remaining, nearest)
+        current = nearest
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- Connect tail to head (ouroboros)</span>
+    new_path[#new_path].next_target = new_path[<span class="number">1</span>]</p>
+<p>    <span class="comment">-- Each NPC follows the one ahead</span>
+    <span class="keyword">for</span> i = <span class="number">1</span>, #new_path - <span class="number">1</span> <span class="keyword">do</span>
+        new_path[i]:Follow(new_path[i + <span class="number">1</span>])
+    <span class="keyword">end</span></p>
+<p>    <span class="keyword">return</span> new_path
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Dynamic Reassembly on Death</h3>
+<pre><code class="lua"><span class="comment">-- {{{ on_convoy_member_death</span>
+<span class="keyword">local</span> <span class="keyword">function</span> on_convoy_member_death(dead_npc, convoy)
+    <span class="comment">-- Remove from chain</span>
+    <span class="keyword">local</span> prev = dead_npc.follower
+    <span class="keyword">local</span> next = dead_npc.following</p>
+<p>    <span class="keyword">if</span> prev <span class="keyword">and</span> next <span class="keyword">then</span>
+        <span class="comment">-- Reconnect the chain</span>
+        prev:Follow(next)
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- If head died, promote next</span>
+    <span class="keyword">if</span> dead_npc == convoy.head <span class="keyword">then</span>
+        convoy.head = next
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- Recalculate optimal path (traveling salesman)</span>
+    convoy_reform(convoy)</p>
+<p>    <span class="comment">-- The ouroboros continues</span>
+    LOG_INFO(&amp;quot;Convoy reformed: {} members remain&amp;quot;, #convoy.members)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h2>Visual Representation</h2></p>
+<p><h3>The Kneel-Beckon-Direct Flow</h3>
+<pre><code>Step 1: Player approaches NPCs
+┌─────────────────────────────┐
+│    NPC   NPC   NPC          │
+│     ↓     ↓     ↓           │
+│   (kneel before player)     │
+│         PLAYER              │
+└─────────────────────────────┘</p>
+<p>Step 2: Player beckons
+┌─────────────────────────────┐
+│         PLAYER 👋           │
+│     ↗     ↑     ↖           │
+│    NPC   NPC   NPC          │
+│   (rise and follow)         │
+└─────────────────────────────┘</p>
+<p>Step 3: Player kneels facing east
+┌─────────────────────────────┐
+│    NPC → NPC → NPC →→→ EAST │
+│         PLAYER              │
+│         (kneeling, facing →)│
+└─────────────────────────────┘</p>
+<p>Step 4: Player sits (convoy waits)
+┌─────────────────────────────┐
+│   NPC  NPC  NPC             │
+│    ↓    ↓    ↓   (kneeling) │
+│       PLAYER                │
+│       (sitting)             │
+└─────────────────────────────┘</code></pre></p>
+<p><h3>The Ouroboros Reformation</h3>
+<pre><code>Before death:          After death:           Ouroboros complete:</p>
+<p>A → B → C → D          A → C → D              A → C → D
+        ↓                      ↓                      ↓
+      PLAYER               PLAYER              ┌─────┘
+                                               ↓
+                                               A (tail → head)</code></pre></p>
+<p><h2>Configuration</h2></p>
+<p><pre><code class="lua"><span class="comment">-- worldserver.conf</span>
+WowChat<span class="number">2.</span>Gesture.KneelRadius = <span class="number">10</span>          <span class="comment">-- yards to trigger kneel</span>
+WowChat<span class="number">2.</span>Gesture.BeckonRadius = <span class="number">15</span>         <span class="comment">-- yards <span class="keyword">for</span> beckon to work</span>
+WowChat<span class="number">2.</span>Gesture.ConvoySpacing = <span class="number">3</span>         <span class="comment">-- yards between convoy members</span>
+WowChat<span class="number">2.</span>Gesture.DirectionUpdateRate = <span class="number">0.5</span> <span class="comment">-- seconds between facing checks</span>
+WowChat<span class="number">2.</span>Gesture.OuroborosEnabled = <span class="keyword">true</span>   <span class="comment">-- tail becomes head on leader loss</span></code></pre></p>
+<p><h2>Emote Mappings</h2></p>
+<p><pre><code class="lua"><span class="keyword">local</span> GESTURE_EMOTES = {
+    [EMOTE_ONESHOT_KNEEL]     = &amp;quot;kneel_start&amp;quot;,
+    [EMOTE_STATE_KNEEL]       = &amp;quot;kneel_hold&amp;quot;,
+    [EMOTE_ONESHOT_WAVE]      = &amp;quot;beckon&amp;quot;,
+    [EMOTE_ONESHOT_POINT]     = &amp;quot;direct&amp;quot;,
+    [EMOTE_STATE_SIT]         = &amp;quot;wait_command&amp;quot;,
+    [EMOTE_ONESHOT_SALUTE]    = &amp;quot;dismiss_convoy&amp;quot;,
+}</code></pre></p>
+<p><h2>Zone Consensus Direction (The Collective Will)</h2></p>
+<p>When bots don&#39;t know what to do, they look to the players for guidance.
+The average facing direction of all players in a zone becomes the &quot;drift&quot; -
+the natural flow that lost or idle bots follow.</p>
+<p><h3>The Math</h3>
+<pre><code class="lua"><span class="comment">-- {{{ calculate_zone_consensus_direction</span>
+<span class="keyword">local</span> <span class="keyword">function</span> calculate_zone_consensus_direction(zone_id)
+    <span class="keyword">local</span> players = get_players_<span class="keyword">in</span>_zone(zone_id)
+    <span class="keyword">if</span> #players == <span class="number">0</span> <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span> <span class="keyword">end</span></p>
+<p>    <span class="comment">-- Average the unit vectors of all player facings</span>
+    <span class="keyword">local</span> sum_x, sum_y = <span class="number">0</span>, <span class="number">0</span></p>
+<p>    <span class="keyword">for</span> _, player <span class="keyword">in</span> ipairs(players) <span class="keyword">do</span>
+        <span class="keyword">local</span> facing = player:GetFacing()  <span class="comment">-- radians</span>
+        sum_x = sum_x + math.cos(facing)
+        sum_y = sum_y + math.sin(facing)
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- Normalize to get consensus direction</span>
+    <span class="keyword">local</span> avg_x = sum_x / #players
+    <span class="keyword">local</span> avg_y = sum_y / #players
+    <span class="keyword">local</span> magnitude = math.sqrt(avg_x^<span class="number">2</span> + avg_y^<span class="number">2</span>)</p>
+<p>    <span class="comment">-- Magnitude indicates consensus strength (<span class="number">0</span> = chaos, <span class="number">1</span> = unity)</span>
+    <span class="keyword">local</span> consensus_strength = magnitude</p>
+<p>    <span class="comment">-- Convert back to facing angle</span>
+    <span class="keyword">local</span> consensus_facing = math.atan<span class="number">2</span>(avg_y, avg_x)</p>
+<p>    <span class="keyword">return</span> consensus_facing, consensus_strength
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Visual: The Collective Drift</h3>
+<pre><code>Players facing various directions:</p>
+<p>    P1→  P2↗  P3→  P4↘  P5→</p>
+<p>Average vector: →→ (mostly east, some spread)
+Consensus strength: 0.7 (fairly unified)</p>
+<p>Lost bots drift: →→→ EAST</p>
+<p>---</p>
+<p>Players facing randomly:</p>
+<p>    P1↑  P2←  P3↓  P4→  P5↖</p>
+<p>Average vector: ~0 (cancels out)
+Consensus strength: 0.1 (chaos)</p>
+<p>Lost bots: wander randomly (no clear guidance)</code></pre></p>
+<p><h3>Bot Idle Behavior</h3>
+<pre><code class="lua"><span class="comment">-- {{{ on_bot_idle</span>
+<span class="keyword">local</span> <span class="keyword">function</span> on_bot_idle(bot)
+    <span class="comment">-- Check <span class="keyword">if</span> bot has any commands <span class="keyword">or</span> purpose</span>
+    <span class="keyword">if</span> bot:HasConvoy() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+    <span class="keyword">if</span> bot:HasTarget() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+    <span class="keyword">if</span> bot:IsKneeling() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span></p>
+<p>    <span class="comment">-- No purpose - follow the collective will</span>
+    <span class="keyword">local</span> zone = bot:GetZoneId()
+    <span class="keyword">local</span> direction, strength = calculate_zone_consensus_direction(zone)</p>
+<p>    <span class="keyword">if</span> direction <span class="keyword">and</span> strength &amp;gt; CONSENSUS_THRESHOLD <span class="keyword">then</span>
+        <span class="comment">-- Strong consensus - drift that way</span>
+        <span class="keyword">local</span> drift_distance = IDLE_DRIFT_DISTANCE <em> strength
+        <span class="keyword">local</span> target = project_position(bot:GetPosition(), direction, drift_distance)
+        bot:WanderToward(target)
+    <span class="keyword">else</span>
+        <span class="comment">-- Weak consensus - wander randomly</span>
+        bot:WanderRandom()
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>The Emergent Behavior</h3></p>
+<p>When players explore a zone together, naturally facing forward as they move,
+all the idle bots in that zone slowly drift in the same direction. It creates
+a feeling of </em>momentum<em> - the world itself seems to flow where players go.</p>
+<p><pre><code>Zone with 5 players all heading NORTH to a dungeon:</p>
+<p>    ════════════════════════════
+         DUNGEON ENTRANCE
+    ════════════════════════════
+              ↑ ↑ ↑
+           ↑ ↑ ↑ ↑ ↑
+        ↑ ↑ ↑ ↑ ↑ ↑ ↑    ← idle bots drifting north
+           ↑ ↑ ↑ ↑ ↑
+              ↑ ↑ ↑</p>
+<p>         P1↑ P2↑ P3↑ P4↑ P5↑   ← players heading north</p>
+<p>    The whole zone feels like it&amp;#39;s flowing toward the goal.</code></pre></p>
+<p><h3>Individual Bot Facing: The Traveling Salesman Gaze</h3></p>
+<p>When bots have their own targets (not idle), they face their next destination.
+But which destination? The nearest neighbor, averaged with momentum from where
+they just came. The measurement of distance becomes a field - the bot&#39;s gaze
+is a vector sum expressing both proximity and history.</p>
+<p><pre><code class="lua"><span class="comment">-- {{{ calculate_bot_facing</span>
+<span class="keyword">local</span> <span class="keyword">function</span> calculate_bot_facing(bot)
+    <span class="comment">-- Where did we come from?</span>
+    <span class="keyword">local</span> origin = bot.last_position <span class="keyword">or</span> bot:GetPosition()
+    <span class="keyword">local</span> current = bot:GetPosition()
+    <span class="keyword">local</span> momentum = normalize(current - origin)  <span class="comment">-- direction of travel</span></p>
+<p>    <span class="comment">-- Where is the nearest unvisited target?</span>
+    <span class="keyword">local</span> targets = bot:GetPotentialTargets()
+    <span class="keyword">local</span> nearest = find_nearest_unvisited(bot, targets)</p>
+<p>    <span class="keyword">if</span> <span class="keyword">not</span> nearest <span class="keyword">then</span>
+        <span class="comment">-- No targets - fall back to zone consensus</span>
+        <span class="keyword">return</span> calculate_zone_consensus_direction(bot:GetZoneId())
+    <span class="keyword">end</span></p>
+<p>    <span class="keyword">local</span> to_target = normalize(nearest:GetPosition() - current)</p>
+<p>    <span class="comment">-- Average momentum with target direction</span>
+    <span class="comment">-- This creates smooth, natural-looking movement</span>
+    <span class="keyword">local</span> facing_x = (momentum.x + to_target.x) / <span class="number">2</span>
+    <span class="keyword">local</span> facing_y = (momentum.y + to_target.y) / <span class="number">2</span></p>
+<p>    <span class="keyword">return</span> math.atan<span class="number">2</span>(facing_y, facing_x)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><pre><code>Visual: The Distance Field</p>
+<p>    Bot&amp;#39;s history: came from SOUTH
+    Bot&amp;#39;s target: nearest is EAST</p>
+<p>         N
+         │
+    W ───┼─── E  ← nearest target
+         │
+         S  ← came from here</p>
+<p>    Momentum vector:     ↑ (north, away from origin)
+    Target vector:       → (east, toward nearest)
+    Average:            ↗ (northeast)</p>
+<p>    Bot faces NORTHEAST, splitting the difference between
+    where it&amp;#39;s been and where it&amp;#39;s going.</code></pre></p>
+<p>This creates natural &quot;leading&quot; behavior - bots don&#39;t snap instantly to
+face their targets, they curve into them like rivers finding the sea.</p>
+<p><h3>Level Affinity: The Traveling Salesman&#39;s True Cost</h3></p>
+<p>The traveling salesman doesn&#39;t measure distance in yards - he measures it
+in </em>levels<em>. Bots seek players of similar level, clustering around their
+peers like schools of fish finding their own kind.</p>
+<p><pre><code class="lua"><span class="comment">-- {{{ calculate_level_affinity_cost</span>
+<span class="keyword">local</span> <span class="keyword">function</span> calculate_level_affinity_cost(bot, player)
+    <span class="keyword">local</span> bot_level = bot:GetLevel()
+    <span class="keyword">local</span> player_level = player:GetLevel()
+    <span class="keyword">local</span> max_level = MAX_PLAYER_LEVEL  <span class="comment">-- <span class="number">80</span> <span class="keyword">for</span> WotLK</span></p>
+<p>    <span class="keyword">local</span> level_diff = math.abs(bot_level - player_level)
+    <span class="keyword">local</span> physical_distance = bot:GetDistance(player)</p>
+<p>    <span class="comment">-- The <span class="number">50</span>% threshold: proximity vs level preference</span>
+    <span class="comment">-- If you&amp;#<span class="number">39</span>;re beyond halfway to being &amp;quot;close <span class="keyword">in</span> level&amp;quot;, level takes over</span>
+    <span class="keyword">local</span> level_range = LEVEL_AFFINITY_RANGE  <span class="comment">-- e.g., <span class="number">5</span> levels</span>
+    <span class="keyword">local</span> proximity_threshold = level_range / <span class="number">2</span></p>
+<p>    <span class="keyword">if</span> level_diff &amp;lt;= proximity_threshold <span class="keyword">then</span>
+        <span class="comment">-- Close enough <span class="keyword">in</span> level - prefer proximity</span>
+        <span class="keyword">return</span> physical_distance
+    <span class="keyword">else</span>
+        <span class="comment">-- Beyond halfway - level becomes primary</span>
+        <span class="keyword">return</span> level_diff </em> <span class="number">100</span> + physical_distance
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></p>
+<p><span class="comment">-- {{{ find_affinity_target</span>
+<span class="keyword">local</span> <span class="keyword">function</span> find_affinity_target(bot)
+    <span class="keyword">local</span> players = get_players_<span class="keyword">in</span>_zone(bot:GetZoneId())
+    <span class="keyword">local</span> bot_level = bot:GetLevel()
+    <span class="keyword">local</span> max_level = MAX_PLAYER_LEVEL</p>
+<p>    <span class="comment">-- Max level bots only hang with max level players</span>
+    <span class="keyword">if</span> bot_level == max_level <span class="keyword">then</span>
+        <span class="keyword">local</span> max_players = filter(players, <span class="keyword">function</span>(p)
+            <span class="keyword">return</span> p:GetLevel() == max_level
+        <span class="keyword">end</span>)
+        <span class="keyword">if</span> #max_players &amp;gt; <span class="number">0</span> <span class="keyword">then</span>
+            <span class="keyword">return</span> find_nearest(bot, max_players)
+        <span class="keyword">end</span>
+        <span class="comment">-- No max level peers - go help noobs <span class="keyword">or</span> fighters</span>
+        <span class="keyword">return</span> find_noob_<span class="keyword">or</span>_fighter(bot, players)
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- Find level-appropriate peers first</span>
+    <span class="keyword">local</span> peers = filter(players, <span class="keyword">function</span>(p)
+        <span class="keyword">return</span> math.abs(p:GetLevel() - bot_level) &amp;lt;= LEVEL_AFFINITY_RANGE
+    <span class="keyword">end</span>)</p>
+<p>    <span class="keyword">if</span> #peers &amp;gt; <span class="number">0</span> <span class="keyword">then</span>
+        <span class="comment">-- Found peers - use standard cost <span class="keyword">function</span></span>
+        <span class="keyword">local</span> best_player = <span class="keyword">nil</span>
+        <span class="keyword">local</span> best_cost = math.huge
+        <span class="keyword">for</span> _, player <span class="keyword">in</span> ipairs(peers) <span class="keyword">do</span>
+            <span class="keyword">local</span> cost = calculate_level_affinity_cost(bot, player)
+            <span class="keyword">if</span> cost &amp;lt; best_cost <span class="keyword">then</span>
+                best_cost = cost
+                best_player = player
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+        <span class="keyword">return</span> best_player
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- No peers! Go to <span class="number">75</span>% point on level spectrum</span>
+    <span class="comment">-- If you&amp;#<span class="number">39</span>;re level <span class="number">20</span>, <span class="number">75</span>% away is level <span class="number">65</span> (toward max)</span>
+    <span class="comment">-- If you&amp;#<span class="number">39</span>;re level <span class="number">60</span>, <span class="number">75</span>% away is level <span class="number">15</span> (toward min)</span>
+    <span class="keyword">local</span> target_level = calculate_<span class="number">75</span>_percent_opposite(bot_level, max_level)
+    <span class="keyword">return</span> find_closest_to_level(players, target_level)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></p>
+<p><span class="comment">-- {{{ find_noob_<span class="keyword">or</span>_fighter</span>
+<span class="keyword">local</span> <span class="keyword">function</span> find_noob_<span class="keyword">or</span>_fighter(bot, players)
+    <span class="comment">-- High level bots help: very new players OR those <span class="keyword">in</span> combat</span>
+    <span class="keyword">local</span> candidates = {}</p>
+<p>    <span class="keyword">for</span> _, player <span class="keyword">in</span> ipairs(players) <span class="keyword">do</span>
+        <span class="keyword">if</span> player:GetLevel() &amp;lt;= <span class="number">5</span> <span class="keyword">then</span>
+            <span class="comment">-- Very noob</span>
+            table.insert(candidates, {player = player, priority = <span class="number">1</span>})
+        <span class="keyword">elseif</span> player:IsInCombat() <span class="keyword">and</span> player:GetHealthPct() &amp;lt; <span class="number">50</span> <span class="keyword">then</span>
+            <span class="comment">-- Difficult battle</span>
+            table.insert(candidates, {player = player, priority = <span class="number">2</span>})
+        <span class="keyword">end</span>
+    <span class="keyword">end</span></p>
+<p>    table.sort(candidates, <span class="keyword">function</span>(a, b) <span class="keyword">return</span> a.priority &amp;lt; b.priority <span class="keyword">end</span>)
+    <span class="keyword">return</span> candidates[<span class="number">1</span>] <span class="keyword">and</span> candidates[<span class="number">1</span>].player <span class="keyword">or</span> <span class="keyword">nil</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></p>
+<p><span class="comment">-- {{{ calculate_<span class="number">75</span>_percent_opposite</span>
+<span class="keyword">local</span> <span class="keyword">function</span> calculate_<span class="number">75</span>_percent_opposite(current_level, max_level)
+    <span class="comment">-- <span class="number">75</span>% of the way to the opposite <span class="keyword">end</span> of the spectrum</span>
+    <span class="keyword">local</span> midpoint = max_level / <span class="number">2</span></p>
+<p>    <span class="keyword">if</span> current_level &amp;lt; midpoint <span class="keyword">then</span>
+        <span class="comment">-- Low level bot goes toward high <span class="keyword">end</span></span>
+        <span class="keyword">return</span> current_level + (max_level - current_level) <em> <span class="number">0.75</span>
+    <span class="keyword">else</span>
+        <span class="comment">-- High level bot goes toward low <span class="keyword">end</span></span>
+        <span class="keyword">return</span> current_level - (current_level - <span class="number">1</span>) </em> <span class="number">0.75</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><pre><code>Visual: Level Clustering (with 75% rule)</p>
+<p>Zone with mixed level players:</p>
+<p>    [Lv80 Player]     [Lv15 Player]     [Lv35 Player]
+         │                  │                  │
+         ▼                  ▼                  ▼
+    ┌─────────┐        ┌─────────┐        ┌─────────┐
+    │ Lv80 Bot│        │ Lv12 Bot│        │ Lv33 Bot│
+    │ Lv78 Bot│        │ Lv17 Bot│        │ Lv36 Bot│
+    └─────────┘        └─────────┘        └─────────┘
+         │
+         │ (no max peers? help noobs!)
+         ▼
+    [Lv3 Noob struggling in combat]</p>
+<p>    When a Lv45 bot has NO peers:
+    - 75% toward opposite = Lv45 + (80-45)<em>0.75 = Lv71
+    - Bot seeks out ~Lv71 player</code></pre></p>
+<p><h3>The Special Cases</h3></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ handle_special_level_cases</span>
+<span class="keyword">local</span> <span class="keyword">function</span> handle_special_level_cases(bot, player)
+    <span class="keyword">local</span> bot_level = bot:GetLevel()
+    <span class="keyword">local</span> player_level = player:GetLevel()
+    <span class="keyword">local</span> max_level = MAX_PLAYER_LEVEL</p>
+<p>    <span class="comment">-- Level <span class="number">1</span> bots: same behavior as toward fresh/idle/max players</span>
+    <span class="keyword">if</span> bot_level == <span class="number">1</span> <span class="keyword">then</span>
+        <span class="keyword">return</span> is_fresh_login(player) <span class="keyword">or</span>
+               player_level == <span class="number">1</span> <span class="keyword">or</span>
+               player_level == max_level
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- Max level bots: exclusive club</span>
+    <span class="keyword">if</span> bot_level == max_level <span class="keyword">then</span>
+        <span class="keyword">return</span> player_level == max_level
+    <span class="keyword">end</span></p>
+<p>    <span class="keyword">return</span> <span class="keyword">false</span>  <span class="comment">-- no special case applies</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></p>
+<p><span class="comment">-- {{{ is_fresh_login</span>
+<span class="keyword">local</span> <span class="keyword">function</span> is_fresh_login(player)
+    <span class="comment">-- Players who haven&amp;#<span class="number">39</span>;t moved since logging <span class="keyword">in</span></span>
+    <span class="keyword">local</span> login_pos = player:GetLoginPosition()
+    <span class="keyword">local</span> current_pos = player:GetPosition()</p>
+<p>    <span class="keyword">return</span> positions_equal(login_pos, current_pos)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Max Level Dungeon Scaling</h3></p>
+<p>When max level players are alone in open world dungeons, the world
+responds to their presence:</p>
+<p><pre><code class="lua"><span class="comment">-- {{{ scale_dungeon_to_visitors</span>
+<span class="keyword">local</span> <span class="keyword">function</span> scale_dungeon_to_visitors(dungeon)
+    <span class="keyword">local</span> visitors = dungeon:GetPlayers()
+    <span class="keyword">local</span> max_level_only = all(visitors, <span class="keyword">function</span>(p)
+        <span class="keyword">return</span> p:GetLevel() == MAX_PLAYER_LEVEL
+    <span class="keyword">end</span>)</p>
+<p>    <span class="keyword">if</span> max_level_only <span class="keyword">and</span> #visitors &amp;gt; <span class="number">0</span> <span class="keyword">then</span>
+        <span class="comment">-- Spawn max level monsters, scale rewards</span>
+        dungeon:SetMonsterLevel(MAX_PLAYER_LEVEL)
+        dungeon:SetTreasureScale(#visitors)  <span class="comment">-- more visitors = more treasure</span>
+    <span class="keyword">else</span>
+        <span class="comment">-- Mixed levels: scale to highest non-max player</span>
+        <span class="keyword">local</span> scale_target = find_highest_non_max(visitors)
+        dungeon:SetMonsterLevel(scale_target:GetLevel())
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><pre><code>Dungeon Scaling Visual:</p>
+<p>    SOLO MAX LEVEL PLAYER:
+    ┌────────────────────────────────┐
+    │  [Lv80 Player]                 │
+    │       vs                       │
+    │  [Lv80 Elite] [Lv80 Elite]     │
+    │       💰 TREASURE 💰           │
+    └────────────────────────────────┘</p>
+<p>    MIXED PARTY:
+    ┌────────────────────────────────┐
+    │  [Lv80] [Lv45] [Lv30]          │
+    │       vs                       │
+    │  [Lv45 Mob] [Lv45 Mob]         │
+    │  (scaled to highest non-max)   │
+    │  Lv30 player watches, learns   │
+    └────────────────────────────────┘</code></pre></p>
+<p><h3>Mid-Level Boredom: Visiting the Noobs</h3></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ mid_level_boredom_check</span>
+<span class="keyword">local</span> <span class="keyword">function</span> mid_level_boredom_check(bot)
+    <span class="comment">-- Mid-level bots with nothing to <span class="keyword">do</span> go help newbies</span>
+    <span class="keyword">local</span> bot_level = bot:GetLevel()
+    <span class="keyword">local</span> is_mid_level = bot_level &amp;gt; <span class="number">20</span> <span class="keyword">and</span> bot_level &amp;lt; MAX_PLAYER_LEVEL - <span class="number">10</span></p>
+<p>    <span class="keyword">if</span> is_mid_level <span class="keyword">and</span> bot:IsIdle() <span class="keyword">then</span>
+        <span class="keyword">local</span> noobs = find_players_below_level(bot:GetZoneId(), <span class="number">10</span>)
+        <span class="keyword">if</span> #noobs &amp;gt; <span class="number">0</span> <span class="keyword">then</span>
+            <span class="keyword">return</span> find_nearest(bot, noobs)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span></p>
+<p>    <span class="keyword">return</span> <span class="keyword">nil</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Proportional EXP Sharing</h3></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ calculate_shared_exp</span>
+<span class="keyword">local</span> <span class="keyword">function</span> calculate_shared_exp(killer_level, helper_level, base_exp)
+    <span class="comment">-- A level <span class="number">2</span> with a level <span class="number">72</span> still learns proportionally</span>
+    <span class="comment">-- But the level <span class="number">72</span> barely gains anything (already knows it)</span></p>
+<p>    <span class="keyword">local</span> level_ratio = helper_level / killer_level
+    <span class="keyword">local</span> shared_exp = base_exp / level_ratio</p>
+<p>    <span class="comment">-- Cap: can&amp;#<span class="number">39</span>;t gain more than solo would give</span>
+    <span class="keyword">return</span> math.min(shared_exp, base_exp)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></p>
+<p><span class="comment">-- Example:</span>
+<span class="comment">-- Lv<span class="number">72</span> kills monster worth <span class="number">1000</span> EXP</span>
+<span class="comment">-- Lv<span class="number">2</span> helper gets: <span class="number">1000</span> / (<span class="number">72</span>/<span class="number">2</span>) = <span class="number">1000</span> / <span class="number">36</span> = ~<span class="number">28</span> EXP</span>
+<span class="comment">-- Still meaningful <span class="keyword">for</span> a level <span class="number">2</span>!</span>
+<span class="comment">--</span>
+<span class="comment">-- But monsters are Lv<span class="number">72</span>, so Lv<span class="number">2</span> just watches.</span>
+<span class="comment">-- Learning by observation.</span></code></pre></p>
+<p><h3>Gesture Response by Level Peers</h3></p>
+<p>When a player gestures, only level-appropriate bots respond.
+<strong>Tiebreaker rules differ by gesture:</strong></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ on_player_gesture_with_affinity</span>
+<span class="keyword">local</span> <span class="keyword">function</span> on_player_gesture_with_affinity(player, gesture)
+    <span class="keyword">local</span> player_level = player:GetLevel()
+    <span class="keyword">local</span> nearby_bots = get_bots_<span class="keyword">in</span>_zone(player:GetZoneId())</p>
+<p>    <span class="comment">-- Filter to level-appropriate bots</span>
+    <span class="keyword">local</span> responding_bots = filter(nearby_bots, <span class="keyword">function</span>(bot)
+        <span class="keyword">return</span> math.abs(bot:GetLevel() - player_level) &amp;lt;= LEVEL_AFFINITY_RANGE
+    <span class="keyword">end</span>)</p>
+<p>    <span class="keyword">if</span> gesture == &amp;quot;sit&amp;quot; <span class="keyword">then</span>
+        <span class="comment">-- SITTING: tiebreaker is pure proximity</span>
+        <span class="comment">-- Bots approach the player, closest first</span>
+        table.sort(responding_bots, <span class="keyword">function</span>(a, b)
+            <span class="keyword">return</span> a:GetDistance(player) &amp;lt; b:GetDistance(player)
+        <span class="keyword">end</span>)</p>
+<p>        <span class="keyword">for</span> _, bot <span class="keyword">in</span> ipairs(responding_bots) <span class="keyword">do</span>
+            bot:MoveTo(player:GetPosition())
+            bot:SetState(&amp;quot;gathering&amp;quot;)
+        <span class="keyword">end</span></p>
+<p>    <span class="keyword">elseif</span> gesture == &amp;quot;kneel&amp;quot; <span class="keyword">then</span>
+        <span class="comment">-- KNEELING: tiebreaker is AXIS first, <span class="keyword">then</span> proximity</span>
+        <span class="comment">-- Bots on the facing axis get priority</span>
+        <span class="keyword">local</span> facing = player:GetFacing()</p>
+<p>        table.sort(responding_bots, <span class="keyword">function</span>(a, b)
+            <span class="keyword">local</span> a_axis = calculate_axis_alignment(player, a, facing)
+            <span class="keyword">local</span> b_axis = calculate_axis_alignment(player, b, facing)</p>
+<p>            <span class="keyword">if</span> math.abs(a_axis - b_axis) &amp;gt; <span class="number">0.1</span> <span class="keyword">then</span>
+                <span class="comment">-- Different axis alignment - prefer better aligned</span>
+                <span class="keyword">return</span> a_axis &amp;gt; b_axis
+            <span class="keyword">else</span>
+                <span class="comment">-- Same axis - use proximity</span>
+                <span class="keyword">return</span> a:GetDistance(player) &amp;lt; b:GetDistance(player)
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>)</p>
+<p>        <span class="keyword">local</span> target_pos = project_position(
+            player:GetPosition(),
+            facing,
+            KNEEL_DIRECTION_DISTANCE
+        )</p>
+<p>        <span class="keyword">for</span> _, bot <span class="keyword">in</span> ipairs(responding_bots) <span class="keyword">do</span>
+            bot:MoveTo(target_pos)
+            bot:SetState(&amp;quot;directed&amp;quot;)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></p>
+<p><span class="comment">-- {{{ calculate_axis_alignment</span>
+<span class="keyword">local</span> <span class="keyword">function</span> calculate_axis_alignment(player, bot, facing)
+    <span class="comment">-- How aligned is the bot with the player&amp;#<span class="number">39</span>;s facing axis?</span>
+    <span class="comment">-- Returns <span class="number">0</span>-<span class="number">1</span>, where <span class="number">1</span> = perfectly on the axis</span></p>
+<p>    <span class="keyword">local</span> player_pos = player:GetPosition()
+    <span class="keyword">local</span> bot_pos = bot:GetPosition()</p>
+<p>    <span class="keyword">local</span> to_bot = normalize(bot_pos - player_pos)
+    <span class="keyword">local</span> facing_vec = facing_to_vector(facing)</p>
+<p>    <span class="comment">-- Dot product gives alignment (-<span class="number">1</span> to <span class="number">1</span>)</span>
+    <span class="keyword">local</span> dot = to_bot.x </em> facing_vec.x + to_bot.y * facing_vec.y</p>
+<p>    <span class="comment">-- Convert to <span class="number">0</span>-<span class="number">1</span> range (we care about absolute alignment)</span>
+    <span class="keyword">return</span> math.abs(dot)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><pre><code>Tiebreaker Visual:</p>
+<p>SITTING - Pure Proximity:
+┌─────────────────────────────────┐
+│     B3(far)                     │
+│           B2(mid)               │
+│  PLAYER ← B1(close)             │
+│  (sitting)                      │
+│                                 │
+│  Order: B1, B2, B3 (by distance)│
+└─────────────────────────────────┘</p>
+<p>KNEELING - Axis First, Then Proximity:
+┌─────────────────────────────────┐
+│  B2(off-axis, close)            │
+│                                 │
+│  PLAYER →→→ B1(on-axis, far)    │
+│  (kneeling, facing east)        │
+│                                 │
+│  B3(off-axis, far)              │
+│                                 │
+│  Order: B1, B2, B3              │
+│  (B1 wins despite being far -   │
+│   it&amp;#39;s ON the facing axis!)     │
+└─────────────────────────────────┘</code></pre></p>
+<p><pre><code>Gesture Flow:</p>
+<p>1. Player (Lv30) SITS
+   ┌──────────────────────────────────────┐
+   │   Lv60 Bot: &amp;quot;Not my peer&amp;quot; (ignores)  │
+   │   Lv28 Bot: &amp;quot;My people!&amp;quot; (approaches)│
+   │   Lv32 Bot: &amp;quot;My people!&amp;quot; (approaches)│
+   │   Lv10 Bot: &amp;quot;Not my peer&amp;quot; (ignores)  │
+   └──────────────────────────────────────┘</p>
+<p>2. Player (Lv30) KNEELS facing EAST
+   ┌──────────────────────────────────────┐
+   │   Lv28 Bot ──→ EAST                  │
+   │   Lv32 Bot ──→ EAST                  │
+   │   (moving where player points)       │
+   └──────────────────────────────────────┘</code></pre></p>
+<p>Configuration:
+<pre><code class="lua"><span class="comment">-- worldserver.conf</span>
+WowChat<span class="number">2.</span>Gesture.LevelAffinityRange = <span class="number">5</span>       <span class="comment">-- levels +/- to respond</span>
+WowChat<span class="number">2.</span>Gesture.LevelCostWeight = <span class="number">10</span>         <span class="comment">-- how much level matters vs distance</span>
+WowChat<span class="number">2.</span>Gesture.KneelDirectionDistance = <span class="number">50</span>  <span class="comment">-- yards to project kneeling direction</span>
+WowChat<span class="number">2.</span>Gesture.ProximityThreshold = <span class="number">0.5</span>     <span class="comment">-- <span class="number">50</span>% of level range = switch to proximity</span>
+WowChat<span class="number">2.</span>Gesture.NoPeersTargetPercent = <span class="number">0.75</span>  <span class="comment">-- <span class="number">75</span>% toward opposite <span class="keyword">end</span> when no peers</span>
+WowChat<span class="number">2.</span>Dungeon.MaxLevelScaling = <span class="keyword">true</span>       <span class="comment">-- scale dungeons <span class="keyword">for</span> solo max level</span>
+WowChat<span class="number">2.</span>Dungeon.MixedPartyScaleToNonMax = <span class="keyword">true</span>  <span class="comment">-- use highest non-max <span class="keyword">for</span> scaling</span>
+WowChat<span class="number">2.</span>EXP.ProportionalSharing = <span class="keyword">true</span>       <span class="comment">-- level-proportional EXP sharing</span>
+WowChat<span class="number">2.</span>Bot.MidLevelBoredThreshold = <span class="number">300</span>     <span class="comment">-- seconds idle before visiting noobs</span></code></pre></p>
+<p><h2>Edge Cases</h2></p>
+<p>1. <strong>Multiple Players</strong>: NPCs serve the first player they knelt to
+2. <strong>Combat</strong>: Kneeling breaks if player enters combat
+3. <strong>Distance</strong>: Convoy members too far become &quot;lost&quot; and seek player
+4. <strong>Obstacles</strong>: Directed NPCs pathfind around, don&#39;t walk into walls
+5. <strong>Enemy Contact</strong>: Directed NPCs engage enemies in path
+6. <strong>Low Consensus</strong>: If players face randomly, bots wander aimlessly
+7. <strong>Empty Zone</strong>: No players = no consensus, bots do their default behavior
+8. <strong>No Level Peers</strong>: Bot goes to 75% point on opposite end of level spectrum
+9. <strong>Level Ties (Sitting)</strong>: Pure proximity tiebreaker - closest bot responds first
+10. <strong>Level Ties (Kneeling)</strong>: Axis alignment first, then proximity
+11. <strong>Level 1 Bots</strong>: Follow fresh logins, other level 1s, or max level players
+12. <strong>Max Level Bots</strong>: Only hang with other max levels; if none, help noobs or fighters
+13. <strong>50% Threshold</strong>: Within half the level range = prefer proximity; beyond = prefer level
+14. <strong>Fresh Login Players</strong>: Treated same as level 1 (haven&#39;t found their purpose yet)
+15. <strong>Max Level Solo Dungeons</strong>: Spawn max level monsters, scale treasure to party size
+16. <strong>Mixed Level Parties</strong>: Dungeons scale to highest non-max player; low levels watch and learn
+17. <strong>Proportional EXP</strong>: Low level helpers still gain meaningful EXP from high level kills</p>
+<p><h2>The Poetry of It</h2></p>
+<p><pre><code>Kneel before the wanderer,
+Rise when beckoned near.
+Sit and they will wait for you,
+Kneel and they will steer.</p>
+<p>The ouroboros convoy moves,
+A serpent made of souls.
+When one link falls another leads,
+The traveling salesman&amp;#39;s goals.</p>
+<p>Infinite recursion, tail to head,
+The caravan goes on.
+Point them east, point them west,
+Until the player&amp;#39;s gone.</code></pre></p>
+<p><h2>Related Issues</h2></p>
+<p>- <strong>132 - Healer Ping-Pong</strong>: Similar traveling salesman optimization
+- <strong>119 - Orbit Player</strong>: Formation positioning concepts
+- <strong>114 - Find Monsters</strong>: NPC pathfinding to targets</p>
+<p><h2>Files to Create</h2></p>
+<p>- <code>src/lua/gestures.lua</code> - Emote detection and response
+- <code>src/lua/convoy.lua</code> - Convoy formation and reformation
+- <code>src/lua/ouroboros.lua</code> - Recursive chain management
+- <code>src/lua/behaviors/kneel-reverence.lua</code> - NPC kneeling behavior</p>
+<p></p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-1-progress.html">View Phase 1 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>achievement_criteria.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>achievement_criteria.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/achievement_criteria.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 17304 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>
+<h1>Criterios de los Logros</h1></p>
+<p><a href="dbc-index"><code>Volver a:DBC</code></a></p>
+<p><strong>Achievement\_Criteria.dbc</strong></p>
+<p>Este tipo de DBC (DataBaseClient) fue añadido en la versión del WoW 3.0.1.8303 y contiene los criterios necesarios para obtener un logro.</p>
+<p><strong>Versión : 3.3.5a</strong></p>
+<p><h2>Estructura</h2></p>
+<p>| Columna | Campo             | Tipo    | Notas                                                                                                      |
+| ------  | ----------------- | ------- | ---------------------------------------------------------------------------------------------------------- |
+| 1       | ID                | Integer | Identificador (ID) del criterio en cuestión.                                                               |
+| 2       | Achievement       | iRefID  | Es necesario hacer una referencia al logro perteneciente a éste criterio.                                  |
+| 3       | Type              | Integer | ¿De qué tipo es el criterio? Este apartado es definido en las filas de abajo. Véase en la descripción.     |
+| 4       | asset_id          | Integer | Requisito principal del criterio.                                                                          |
+| 5       | Quantity          | Integer | Cantidad del requisito principal.                                                                          |
+| 6       | start_event       | Integer | Requisito adicional del criterio 1.                                                                        |
+| 7       | start_asset       | Integer | Valor del requisito adicional número 1.                                                                    |
+| 8       | fail_event        | Integer | Requisito adicional del criterio 2.                                                                        |
+| 9       | fail_asset        | Integer | Valor del requisito adicional número 2.                                                                    |
+| 10-25   | Description       | Loc     | Descripción del criterio.                                                                                  |
+| 26      | ?                 |         | La mayoría de veces es 16712190, sin embargo no siempre se cumple.                                         |
+| 27      | Flags             | Integer | Marcadores (flags) de visualización: 1: Muestra la Barra de Progreso (desconozco otro tipo de marcadores). |
+| 28      | timer_start_event | Integer |                                                                                                            |
+| 29      | timer_asset_id    | Integer |                                                                                                            |
+| 30      | timer_time        | Integer | Completar la misión en %i segundos.                                                                        |
+| 31      | ui_order          | Integer |                                                                                                            |</p>
+<p><strong>Descripción de los Campos</strong></p>
+<p>Esto describe las filas 3 hasta la 9 por tipo (fila 2). Puede que existan más tipos. Los campos no listados son cero.</p>
+<p>Esta información es recuperada de DBCStructure.h.</p>
+<p><h4>KILL\_CREATURE = 0</h4></p>
+<p><em>Tambien usado para muertes de jugadores.</em></p>
+<p>| Column | Field      | Type    |
+| ------ | ---------- | ------- |
+| 4      | creatureID | Integer |
+| 5      | killCount  | Integer |</p>
+<p><h4>WIN\_BG = 1</h4></p>
+<p><em>Existen criterios adicionales a simplemente ganar</em></p>
+<p>| Column | Field      | Type    |
+| ------ | ---------- | ------- |
+| 4      | <a href="map">Map</a> | iRefID  |
+| 5      | winCount   | Integer |</p>
+<p><h4>REACH\_LEVEL = 5</h4></p>
+<p>Alcanza un nivel especificado.</p>
+<p>| Column | Field  | Type    |
+| ------ | ------ | ------- |
+| 4      | unused | Integer |
+| 5      | level  | Integer |</p>
+<p><h4>REACH\_SKILL\_LEVEL = 7</h4></p>
+<p>Alcanza un nivel especificado en habilidad.</p>
+<p>| Column | Field      | Type    | Notes                               |
+| ------ | ---------- | ------- | ----------------------------------- |
+| 4      | skillID    | iRefID  | <a href="skillline">SkillLine.dbc</a>?         |
+| 5      | skillLevel | Integer |                                     |</p>
+<p><h4>COMPLETE\_ACHIEVEMENT = 8</h4></p>
+<p>Completa un logro.</p>
+<p>| Column | Field                      | Type   |
+| ------ | -------------------------- | ------ |
+| 4      | <a href="achievement">Achievement</a> | iRefID |</p>
+<p><h4>COMPLETE\_QUEST\_COUNT = 9</h4></p>
+<p>Completa cierta cantidad de misiones.</p>
+<p>| Column | Field           | Type    |
+| ------ | --------------- | ------- |
+| 4      | unused          | Integer |
+| 5      | totalQuestCount | Integer |</p>
+<p><h4>COMPLETE\_DAILY\_QUEST\_DAILY = 10</h4></p>
+<p>Completa cierta cantidad de misiones diarias cada día.</p>
+<p>| Column | Field        | Type    |
+| ------ | ------------ | ------- |
+| 4      | unused       | Integer |
+| 5      | numberOfDays | Integer |</p>
+<p><h4>COMPLETE\_QUESTS\_IN\_ZONE = 11</h4></p>
+<p>Completa cierta cantidad de misiones en una zona.</p>
+<p>| Column | Field      | Type    |
+| ------ | ---------- | ------- |
+| 4      | zoneID     | Integer |
+| 5      | questCount | Integer |</p>
+<p><h4>DAMAGE\_DONE = 13</h4></p>
+<p>Cantidad de daño infligido.</p>
+<p><h4>COMPLETE\_DAILY\_QUEST = 14</h4></p>
+<p>Completa cierta cantidad de misiones diarias.</p>
+<p>| Column | Field      | Type    |
+| ------ | ---------- | ------- |
+| 4      | unused     | Integer |
+| 5      | questCount | Integer |</p>
+<p><h4>COMPLETE\_BATTLEGROUND = 15</h4></p>
+<p>Campos de batalla completados.</p>
+<p><h4>DEATH\_AT\_MAP = 16</h4></p>
+<p>Muerte en un mapa.</p>
+<p>| Column | Field      | Type   |
+| ------ | ---------- | ------ |
+| 4      | <a href="map">Map</a> | iRefID |</p>
+<p><h4>DEATH\_IN\_DUNGEON = 18</h4></p>
+<p>Muerte en una Mazmorra.</p>
+<p>| Column | Field    | Type    |
+| ------ | -------- | ------- |
+| 4      | manLimit | Integer |</p>
+<p><h4>COMPLETE\_RAID = 19</h4></p>
+<p>Banda (Raid) completada</p>
+<p>| Column | Field     | Type    | Notes                |
+| ------ | --------- | ------- | -------------------- |
+| 4      | groupSize | Integer | Puede ser 5, 10 o 25 |</p>
+<p><h4>KILLED\_BY\_CREATURE = 20</h4></p>
+<p>Asesinado por una criatura.</p>
+<p>| Column | Field         | Type    |
+| ------ | ------------- | ------- |
+| 4      | creatureEntry | Integer |</p>
+<p><h4>FALL\_WITHOUT\_DYING = 24</h4></p>
+<p>Caer sin morir.</p>
+<p>| Column | Field      | Type    |
+| ------ | ---------- | ------- |
+| 4      | unused     | Integer |
+| 5      | fallHeight | Integer |</p>
+<p><h4>DEATHS\_FROM = 26</h4></p>
+<p>Muertes desde:</p>
+<p>| Column | Field               | Type   |
+| ------ | ------------------- | ------ |
+| 4      | EnvironmentalDamage | iRefID |</p>
+<p><h4>COMPLETE\_QUEST = 27</h4></p>
+<p>Misión completada.</p>
+<p>| Column | Field      | Type    |
+| ------ | ---------- | ------- |
+| 4      | questID    | Integer |
+| 5      | questCount | Integer |</p>
+<p><h4>BE\_SPELL\_TARGET = 28</h4></p>
+<p>Hechizo lanzado a un jugador.</p>
+<p><h4>BE\_SPELL\_TARGET2 = 69</h4></p>
+<p>Hechizo lanzado a un jugador 2.</p>
+<p>| Column | Field          | Type    |
+| ------ | -------------- | ------- |
+| 4      | <a href="spell">Spell</a> | iRefID  |
+| 5      | spellCount     | Integer |</p>
+<p><h4>CAST\_SPELL = 29</h4></p>
+<p>Hechizo lanzado.</p>
+<p><h4>CAST\_SPELL2 = 110</h4></p>
+<p>Hechizo lanzado 2.</p>
+<p>| Column | Field          | Type    |
+| ------ | -------------- | ------- |
+| 4      | <a href="spell">Spell</a> | iRefID  |
+| 5      | castCount      | Integer |</p>
+<p><h4>BG\_OBJECTIVE\_CAPTURE = 30</h4></p>
+<p>Captura de Objetivo del Campo de Batalla</p>
+<p>| Column | Field    | Type    | Notes                         |
+| ------ | -------- | ------- | ----------------------------- |
+| 4      | unknow   | Integer | Valor 42 = captura la bandera |
+| 5      | count(?) | Integer | Cuantas veces fue capturada   |</p>
+<p><h4>HONORABLE\_KILL\_AT\_AREA = 31</h4></p>
+<p>Muerte honorable en un área.</p>
+<p>| Column | Field             | Type    |
+| ------ | ----------------- | ------- |
+| 4      | <a href="areatable">Area</a> | iRefID  |
+| 5      | killCount         | Integer |</p>
+<p><h4>WIN\_ARENA = 32</h4></p>
+<p>Arenas ganadas.</p>
+<p><h4>PLAY\_ARENA = 33</h4></p>
+<p>Arenas jugadas.</p>
+<p>| Column | Field      | Type   |
+| ------ | ---------- | ------ |
+| 4      | <a href="map">Map</a> | iRefID |</p>
+<p><h4>LEARN\_SPELL = 34</h4></p>
+<p>Hechizos aprendidos.</p>
+<p>| Column | Field          | Type   |
+| ------ | -------------- | ------ |
+| 4      | <a href="spell">Spell</a> | iRefID |</p>
+<p><h4>OWN\_ITEM = 36</h4></p>
+<p>Item propio.</p>
+<p><h4>WIN\_RATED\_ARENA = 37</h4></p>
+<p>Ganar la arena clasificada</p>
+<p>| Column | Field  | Type    | Notes          |
+| ------ | ------ | ------- | -------------- |
+| 4      | unused | Integer |                |
+| 5      | count  | Integer |                |
+| 6      | flag   | Integer | 4= en una fila |</p>
+<p><h4>HIGHEST\_TEAM\_RATING = 38</h4></p>
+<p>Mayor Índice de arena.</p>
+<p>| Column | Field    | Type    | Notes   |
+| ------ | -------- | ------- | ------- |
+| 4      | teamtype | Integer | {2,3,5} |</p>
+<p><h4>REACH\_TEAM\_RATING = 39</h4></p>
+<p>Cantidad de Índice de arena.</p>
+<p>| Column | Field      | Type    | Notes   |
+| ------ | ---------- | ------- | ------- |
+| 4      | teamtype   | Integer | {2,3,5} |
+| 5      | teamrating | Integer |         |</p>
+<p><h4>LEARN\_SKILL\_LEVEL = 40</h4></p>
+<p>Aprender nivel de habilidad.</p>
+<p>| Column | Field      | Type    | Notes                                                                    |
+| ------ | ---------- | ------- | ------------------------------------------------------------------------ |
+| 4      | skillID    | iRefID  | <a href="skillline">SkillLine.dbc</a>?                                              |
+| 5      | skillLevel | Integer | Aprendiz=1. Oficial=2. Experto=3. Artesano=4. Maestro=5. Gran Maestro=6. |</p>
+<p><h4>USE\_ITEM = 41</h4></p>
+<p>Item usado.</p>
+<p><h4>LOOT\_ITEM = 42</h4></p>
+<p>Item despojado.</p>
+<p><h4>EXPLORE\_AREA = 43</h4></p>
+<p>areaReference  <strong>NO</strong> es el índice de <a href="areatable">AreaTable.dbc.</a>, proviene de WorldMapOverlay.dbc.</p>
+<p>| Column | Field         | Type    |
+| ------ | ------------- | ------- |
+| 4      | areaReference | Integer |</p>
+<p><h4>OWN\_RANK = 44</h4></p>
+<p>Este rango <strong>NO</strong> es el índice de <a href="chartitles">CharTitles.dbc</a></p>
+<p>| Column | Field | Type    |
+| ------ | ----- | ------- |
+| 4      | rank  | Integer |</p>
+<p><h4>BUY\_BANK\_SLOT = 45</h4></p>
+<p>Comprar casillas en el banco.</p>
+<p>| Column | Field         | Type    |
+| ------ | ------------- | ------- |
+| 4      | unused        | Integer |
+| 5      | numberOfSlots | Integer |</p>
+<p><h4>GAIN\_REPUTATION = 46</h4></p>
+<p>Obtener reputación.</p>
+<p>| Column | Field              | Type    | Notes                                                                  |
+| ------ | ------------------ | ------- | ---------------------------------------------------------------------- |
+| 4      | <a href="faction">Faction</a> | iRefID  |                                                                        |
+| 5      | reputationAmount   | Integer | Cantidad total de reputación, teniendo en cuenta que 42000 es exaltado |</p>
+<p><h4>GAIN\_EXALTED\_REPUTATION= 47</h4></p>
+<p>Obtener reputación exaltada.</p>
+<p>| Column | Field                   | Type    |
+| ------ | ----------------------- | ------- |
+| 4      | unused                  | Integer |
+| 5      | numberOfExaltedFactions | Integer |</p>
+<p><h4>VISIT\_BARBER\_SHOP = 48</h4></p>
+<p>Visitar al peluquero.</p>
+<p>| Column | Field          | Type    |
+| ------ | -------------- | ------- |
+| 4      | unused         | Integer |
+| 5      | numberOfVisits | Integer |</p>
+<p><h4>EQUIP\_EPIC\_ITEM = 49</h4></p>
+<p>Nivel de Item para ser considerado épico. Véase <a href="item_template#itemlevel">itemlevel</a>.</p>
+<p>| Column | Field    | Type    |
+| ------ | -------- | ------- |
+| 4      | itemSlot | Integer |</p>
+<p><h4>ROLL\_NEED\_ON\_LOOT = 50</h4></p>
+<p>Número de dados necesarios para el botín.</p>
+<p><h4>ROLL\_GREED\_ON\_LOOT = 51</h4></p>
+<p>Número de dados necesarios en modo codicia para el botín.</p>
+<p>| Column | Field     | Type    |
+| ------ | --------- | ------- |
+| 4      | rollValue | Integer |
+| 5      | count     | Integer |</p>
+<p><h4>HK\_CLASS = 52</h4></p>
+<p>Muertes honorables por clase.</p>
+<p>| Column | Field               | Type    |
+| ------ | ------------------- | ------- |
+| 4      | <a href="chrclasses">Class</a> | iRefID  |
+| 5      | count               | Integer |</p>
+<p><h4>HK\_RACE = 53</h4></p>
+<p>Muertes honorables por raza.</p>
+<p>| Column | Field            | Type    |
+| ------ | ---------------- | ------- |
+| 4      | <a href="chrraces">Race</a> | iRefID  |
+| 5      | count            | Integer |</p>
+<p><h4>DO\_EMOTE = 54</h4></p>
+<p><a href="emotes#ID">Emotes</a>.</p>
+<p>| Column | Field           | Type    | Notes                                                           |
+| ------ | --------------- | ------- | --------------------------------------------------------------- |
+| 4      | <a href="emotes">Emote</a> | iRefID  |                                                                 |
+| 5      | count           | Integer | Número de emotes, siempre se requiere un objetivo (jugador) o requisitos especiales. |</p>
+<p><h4>HEALING\_DONE = 55</h4></p>
+<p>Sanación realizada.</p>
+<p><h4>GET\_KILLING\_BLOWS = 56</h4></p>
+<p>Hacer Golpes de Gracia.</p>
+<p>| Column | Field          | Type    | Notes                               |
+| ------ | -------------- | ------- | ----------------------------------- |
+| 4      | unused         | Integer |                                     |
+| 5      | count          | Integer |                                     |
+| 6      | flag           | Integer | 3 para sanación en Campo de Batalla |
+| 7      | <a href="Map.dbc">Map</a> | iRefID  |                                     |</p>
+<p><h4>EQUIP\_ITEM = 57</h4></p>
+<p>Equipar Item.</p>
+<p>| Column | Field        | Type    |
+| ------ | ------------ | ------- |
+| 4      | <a href="item">Item</a> | iRefID  |
+| 5      | itemCount    | Integer |</p>
+<p><h4>MONEY\_FROM\_QUEST\_REWARD= 62</h4></p>
+<p>Dinero de misiones obtenido (Medido en monedas de cobre).</p>
+<p><h4>LOOT\_MONEY = 67</h4></p>
+<p>Dinero obtenido (Medido en monedas de cobre).</p>
+<p>| Column | Field        | Type    |
+| ------ | ------------ | ------- |
+| 4      | unused       | Integer |
+| 5      | goldInCopper | Integer |</p>
+<p><h4>USE\_GAMEOBJECT = 68</h4></p>
+<p>Activar cierto Objeto del Juego (GameObject), ya sea puerta, caja, etc.</p>
+<p>| Column | Field    | Type    |
+| ------ | -------- | ------- |
+| 4      | goEntry  | Integer |
+| 5      | useCount | Integer |</p>
+<p><h4>SPECIAL\_PVP\_KILL = 70</h4></p>
+<p>¿Acaso son Criterios de Logros especiales almacenados en los DBC?</p>
+<p>| Column | Field     | Type    |
+| ------ | --------- | ------- |
+| 4      | unused    | Integer |
+| 5      | killCount | Integer |</p>
+<p><h4>FISH\_IN\_GAMEOBJECT = 72</h4></p>
+<p>Pescar en cierto Objeto del Juego (GameObject).</p>
+<p>| Column | Field     | Type    |
+| ------ | --------- | ------- |
+| 4      | goEntry   | Integer |
+| 5      | lootCount | Integer |</p>
+<p><h4>LEARN\_SKILLLINE\_SPELLS = 75</h4></p>
+<p>Aprender hechizos de habilidad.</p>
+<p>| Column | Field                  | Type    |
+| ------ | ---------------------- | ------- |
+| 4      | <a href="skillline">SkillLine</a> | iRefID  |
+| 5      | spellCount             | Integer |</p>
+<p><h4>WIN\_DUEL = 76</h4></p>
+<p>Ganar duelo (s).</p>
+<p>| Column | Field     | Type    |
+| ------ | --------- | ------- |
+| 4      | unused    | Integer |
+| 5      | duelCount | Integer |</p>
+<p><h4>HIGHEST\_POWER = 96</h4></p>
+<p>Mayor número de poder.</p>
+<p>| Column | Field     | Type    | Notes                                     |
+| ------ | --------- | ------- | ----------------------------------------- |
+| 4      | powerType | Integer | 0=Maná. 1=Ira. 3=Energía. 6=Poder Rúnico. |</p>
+<p><h4>HIGHEST\_STAT = 97</h4></p>
+<p>Mayor número de estadística.</p>
+<p>| Column | Field    | Type    | Notes                                                    |
+| ------ | -------- | ------- | -------------------------------------------------------- |
+| 4      | statType | Integer | 4=Espíritu. 3=Intelecto, 2=Aguante, 1=Agilidad, 0=Fuerza |</p>
+<p><h4>HIGHEST\_SPELLPOWER = 98</h4></p>
+<p>Mayor número de poder de hechizos.</p>
+<p>| Column | Field       | Type   | Notes                                 |
+| ------ | ----------- | ------ | ------------------------------------- |
+| 4      | spellSchool | iRefID | <a href="skillline">SkillLine</a> o resistencias |</p>
+<p><h4>HIGHEST\_RATING = 100</h4></p>
+<p>Mayor número.</p>
+<p>| Column | Field      | Type    |
+| ------ | ---------- | ------- |
+| 4      | ratingType | Integer |</p>
+<p><h4>LOOT\_TYPE = 109</h4></p>
+<p>Tipo de botín.</p>
+<p>| Column | Field         | Type    | Notes                                  |
+| ------ | ------------- | ------- | -------------------------------------- |
+| 4      | lootType      | Integer | 3=Pescar, 2=Robar, 4=Desencantar       |
+| 5      | lootTypeCount | Integer |                                        |</p>
+<p><h4>LEARN\_SKILL\_LINE = 112</h4></p>
+<p>Aprender línea de habilidad.</p>
+<p>| Column | Field                  | Type    |
+| ------ | ---------------------- | ------- |
+| 4      | <a href="skillline">SkillLine</a> | iRefID  |
+| 5      | spellCount             | Integer |</p>
+<p><h4>EARN\_HONORABLE\_KILL = 113</h4></p>
+<p>Muertes honorables obtenidas.</p>
+<p>| Column | Field     | Type    |
+| ------ | --------- | ------- |
+| 4      | unused    | Integer |
+| 5      | killCount | Integer |</p>
+<p><h4>ACCEPTED\_SUMMONS = 114</h4></p>
+<p>Invocaciones aceptadas.</p>
+<p>| Column | Field                                       | Type    |
+| ------ | ------------------------------------------- | ------- |
+| 4      | unused                                      | Integer |
+| 5      | Aquí viene un 1, porque es una Estadística  | Integer |</p>
+<p><h4>ACHIVEMENTPOINTS\_REACHED = 115</h4></p>
+<p>Puntos de logro alcanzados.</p>
+<p>| Column | Field  | Type    |
+| ------ | ------ | ------- |
+| 4      | unused | Integer |
+| 5      | unused | Integer |</p>
+<p>// Esta parte suele ser confusa... Tal vez porque sólo debe usarse para &quot;más de noventa mil&quot;, ya que en ninguna parte de AchPoints (Puntos de Logros) se especifica.</p>
+<p><h4>RANDOM\_DUNGEON\_PLAYERCOUNT = 119</h4></p>
+<p>Número de mazmorras aleatorias.</p>
+<p>| Column | Field       | Type    |
+| ------ | ----------- | ------- |
+| 4      | unused      | Integer |
+| 5      | PlayerCount | Integer |
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

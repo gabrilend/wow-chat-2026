@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sidebar.js - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>sidebar.js</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/ale/docs/WorldObject/sidebar.js
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> js &nbsp;&nbsp;
+            <strong>Size:</strong> 4970 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>document.write(`
+  &lt;a id=&quot;WorldObject:GetAngle&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetAngle.html&quot;&gt;GetAngle&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetAreaId&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetAreaId.html&quot;&gt;GetAreaId&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetCreaturesInRange&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetCreaturesInRange.html&quot;&gt;GetCreaturesInRange&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetDistance&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetDistance.html&quot;&gt;GetDistance&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetDistance2d&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetDistance2d.html&quot;&gt;GetDistance2d&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetExactDistance&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetExactDistance.html&quot;&gt;GetExactDistance&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetExactDistance2d&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetExactDistance2d.html&quot;&gt;GetExactDistance2d&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetGameObjectsInRange&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetGameObjectsInRange.html&quot;&gt;GetGameObjectsInRange&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetInstanceId&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetInstanceId.html&quot;&gt;GetInstanceId&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetLocation&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetLocation.html&quot;&gt;GetLocation&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetMap&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetMap.html&quot;&gt;GetMap&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetMapId&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetMapId.html&quot;&gt;GetMapId&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetName&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetName.html&quot;&gt;GetName&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetNearObject&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetNearObject.html&quot;&gt;GetNearObject&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetNearObjects&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetNearObjects.html&quot;&gt;GetNearObjects&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetNearestCreature&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetNearestCreature.html&quot;&gt;GetNearestCreature&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetNearestGameObject&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetNearestGameObject.html&quot;&gt;GetNearestGameObject&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetNearestPlayer&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetNearestPlayer.html&quot;&gt;GetNearestPlayer&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetO&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetO.html&quot;&gt;GetO&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetPhaseMask&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetPhaseMask.html&quot;&gt;GetPhaseMask&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetPlayersInRange&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetPlayersInRange.html&quot;&gt;GetPlayersInRange&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetRelativePoint&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetRelativePoint.html&quot;&gt;GetRelativePoint&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetTransport&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetTransport.html&quot;&gt;GetTransport&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetX&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetX.html&quot;&gt;GetX&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetY&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetY.html&quot;&gt;GetY&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetZ&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetZ.html&quot;&gt;GetZ&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:GetZoneId&quot; class=&quot;fn&quot; href=&quot;../WorldObject/GetZoneId.html&quot;&gt;GetZoneId&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:IsInBack&quot; class=&quot;fn&quot; href=&quot;../WorldObject/IsInBack.html&quot;&gt;IsInBack&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:IsInFront&quot; class=&quot;fn&quot; href=&quot;../WorldObject/IsInFront.html&quot;&gt;IsInFront&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:IsInMap&quot; class=&quot;fn&quot; href=&quot;../WorldObject/IsInMap.html&quot;&gt;IsInMap&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:IsInRange&quot; class=&quot;fn&quot; href=&quot;../WorldObject/IsInRange.html&quot;&gt;IsInRange&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:IsInRange2d&quot; class=&quot;fn&quot; href=&quot;../WorldObject/IsInRange2d.html&quot;&gt;IsInRange2d&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:IsInRange3d&quot; class=&quot;fn&quot; href=&quot;../WorldObject/IsInRange3d.html&quot;&gt;IsInRange3d&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:IsWithinDist&quot; class=&quot;fn&quot; href=&quot;../WorldObject/IsWithinDist.html&quot;&gt;IsWithinDist&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:IsWithinDist2d&quot; class=&quot;fn&quot; href=&quot;../WorldObject/IsWithinDist2d.html&quot;&gt;IsWithinDist2d&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:IsWithinDist3d&quot; class=&quot;fn&quot; href=&quot;../WorldObject/IsWithinDist3d.html&quot;&gt;IsWithinDist3d&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:IsWithinDistInMap&quot; class=&quot;fn&quot; href=&quot;../WorldObject/IsWithinDistInMap.html&quot;&gt;IsWithinDistInMap&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:IsWithinLoS&quot; class=&quot;fn&quot; href=&quot;../WorldObject/IsWithinLoS.html&quot;&gt;IsWithinLoS&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:PlayDirectSound&quot; class=&quot;fn&quot; href=&quot;../WorldObject/PlayDirectSound.html&quot;&gt;PlayDirectSound&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:PlayDistanceSound&quot; class=&quot;fn&quot; href=&quot;../WorldObject/PlayDistanceSound.html&quot;&gt;PlayDistanceSound&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:PlayMusic&quot; class=&quot;fn&quot; href=&quot;../WorldObject/PlayMusic.html&quot;&gt;PlayMusic&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:RegisterEvent&quot; class=&quot;fn&quot; href=&quot;../WorldObject/RegisterEvent.html&quot;&gt;RegisterEvent&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:RemoveEventById&quot; class=&quot;fn&quot; href=&quot;../WorldObject/RemoveEventById.html&quot;&gt;RemoveEventById&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:RemoveEvents&quot; class=&quot;fn&quot; href=&quot;../WorldObject/RemoveEvents.html&quot;&gt;RemoveEvents&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:SendPacket&quot; class=&quot;fn&quot; href=&quot;../WorldObject/SendPacket.html&quot;&gt;SendPacket&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:SetPhaseMask&quot; class=&quot;fn&quot; href=&quot;../WorldObject/SetPhaseMask.html&quot;&gt;SetPhaseMask&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:SpawnCreature&quot; class=&quot;fn&quot; href=&quot;../WorldObject/SpawnCreature.html&quot;&gt;SpawnCreature&lt;/a&gt;
+  &lt;a id=&quot;WorldObject:SummonGameObject&quot; class=&quot;fn&quot; href=&quot;../WorldObject/SummonGameObject.html&quot;&gt;SummonGameObject&lt;/a&gt;
+`);</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

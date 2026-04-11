@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>how-to-work-with-conf-files.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>how-to-work-with-conf-files.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/how-to-work-with-conf-files.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 3493 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Trabajar con archivos de configuración (.conf &amp; .conf.dist)</h1></p>
+<p><h2>¿Por qué worldserver y authserver necesitan que los archivos .conf.dist estén presentes en la ruta de instalación?</h2></p>
+<p>Es porque AzerothCore los utiliza como &quot;fallback&quot; para las configuraciones que no tienes en el archivo .conf copiado (por ejemplo si hemos actualizado la dist o has eliminado una conf)</p>
+<p><h2>Cómo se componen los archivos de configuración</h2></p>
+<p>Todos los archivos de configuración cargan sus propiedades bajo 2 grupos de macros (debe tener uno de ellos en la cabecera de su archivo de configuración):</p>
+<p>[authserver] -&gt; para las configuraciones del servidor de autenticación</p>
+<p>[worldserver] -&gt; para las configuraciones de los servidores de mundo</p>
+<p>Una propiedad está compuesta por un nombre y un valor que se cargará dentro de un objeto al iniciar el servidor / recargar la configuración.</p>
+<p><h2>¿Cómo funciona la carga de múltiples archivos .conf?</h2></p>
+<p>Al iniciar el servidor leemos primero los archivos .dist y cargamos todas las propiedades bajo el objeto sConfig. El archivo .conf será cargado justo después: todas las nuevas propiedades serán añadidas al objeto sConfig, en cambio las propiedades con el mismo nombre sobreescriben las antiguas del .dist</p>
+<p>Esto le permite crear un pequeño archivo .conf que NO REQUIERE tener todas las propiedades de .conf.dist dentro ya que han sido cargadas anteriormente.</p>
+<p>Por ejemplo, si quieres mantener toda la conf por defecto pero tienes que cambiar sólo las propiedades de la base de datos, puedes crear un archivo worldserver.conf con sólo:</p>
+<p><pre><code>[worldserver]
+LoginDatabaseInfo     = &amp;quot;127.0.0.1;3306;root;root;azerothcore_test_auth&amp;quot;
+WorldDatabaseInfo     = &amp;quot;127.0.0.1;3306;root;root;azerothcore_test_world&amp;quot;
+CharacterDatabaseInfo = &amp;quot;127.0.0.1;3306;root;root;azerothcore_test_chars&amp;quot;</code></pre></p>
+<p><h2>Configuración de los módulos</h2></p>
+<p>Después de cargar los archivos normales <code>.conf</code> y <code>.conf.dist</code>, puede cargar un número infinito de archivos de configuración utilizando la API de scripts/módulos. Tendrán el mismo comportamiento que el descrito anteriormente.</p>
+<p><strong>Nota:</strong> No recomendamos sobrescribir las propiedades de configuración del servidor ya que puede tener problemas de concurrencia con otros módulos que también las utilizan. En su lugar, <strong>crea nuevas propiedades con nombres espaciados</strong>.</p>
+<p>Por ejemplo, si quieres modificar la funcionalidad de &quot;desactivar la respiración de agua&quot; en tu módulo. En lugar de utilizar la propiedad existente de <code>worldserver.conf.dist</code>:</p>
+<p>``<code>cpp
+DisableWaterBreath = x
+<pre><code>
+Utiliza un espacio de nombres como:
+</code></pre>cpp
+MyModuleName.DisableWaterBreath = x
+<pre><code>
+Y trabajar con eso.</p>
+<p>&lt;h2&gt;¿Puedo utilizar rutas relativas en los archivos de configuración?&lt;/h2&gt;</p>
+<p>Sí, pero no es recomendable. Cada ruta es relativa al directorio desde el que lanzaste el authserver/worldserver, tanto si lo lanzaste manualmente como a través de un script. Así que si haces esto (ejemplo de linux):</p>
+<p>&lt;pre&gt;&lt;code class=&quot;bash&quot;&gt;cd /tmp/test
+./path/to/worldserver&lt;/code&gt;&lt;/pre&gt;</p>
+<p>Y tienes rutas relativas en el worldserver.conf como </code>LogsDir = &amp;quot;../logs/worldserver/&amp;quot;<code>. Esto creará los registros dentro de </code>/logs/worldserver<code>.</p>
+<p>&lt;h2&gt;Conclusión&lt;/h2&gt;</p>
+<p>Los archivos de configuración se cargarán siguiendo este flujo:
+</code></pre>
+authserver.conf.dist
+authserver.conf (overwrite properties from authserver.conf.dist)
+worldserver.conf.dist
+worldserver.conf (overwrite properties from worldserver.conf.dist)
+modules <em>.conf.dist
+modules </em>.conf (overwrite properties from each module&#39;s .conf.dist)
+</code>``
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

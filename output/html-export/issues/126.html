@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 126 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 126 • Phase 1</div>
+            <h1>Dungeon Room Spawn Zones</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>126 - Dungeon Room Spawn Zones</h1></p>
+<p><h2>Status: Open</h2></p>
+<p><h2>Current Behavior</h2>
+- Dungeons use static spawns (creatures always present)
+- Or ambush system spawns randomly around player
+- No awareness of dungeon room structure
+- No concept of &quot;clearing&quot; a room</p>
+<p><h2>Intended Behavior</h2>
+- Dungeons spawn monsters when player enters a room
+- Spawn zones defined by connected waypoints in 3D
+- Z-level awareness for multi-floor dungeons
+- Monsters spawn from zone&#39;s creature pool
+- Room stays cleared until reset</p>
+<p><h2>Why Room-Based Spawning?</h2>
+- Creates tension: what&#39;s around the corner?
+- Reduces memory: don&#39;t spawn entire dungeon at once
+- Enables &quot;cleared&quot; state: room stays safe after combat
+- Supports vertical dungeons: Z-level boundaries
+- Dynamic difficulty: spawn count based on party size</p>
+<p><h2>Spawn Zone Definition</h2></p>
+<p><h3>Waypoint Network</h3>
+<pre><code>Zone defined by connected waypoints forming a 3D polygon:</p>
+<p>     [wp1]----[wp2]
+       |        |
+       |  ZONE  |
+       |        |
+     [wp4]----[wp3]</p>
+<p>Each waypoint has: x, y, z, zone_id
+Connections form boundaries.
+Player inside polygon = in zone.</code></pre></p>
+<p><h3>Z-Level Handling</h3>
+<pre><code>Multi-floor example (side view):</p>
+<p>  Floor 2:  [wp5]----[wp6]     z = 150
+              |        |
+  Floor 1:  [wp1]----[wp2]     z = 100
+              |        |
+  Basement: [wp7]----[wp8]     z = 50</p>
+<p>Z boundaries defined per zone.
+Player z between zone_z_min and zone_z_max = in zone.</code></pre></p>
+<p><h3>Data Structure</h3>
+<pre><code class="lua">DungeonZone = {
+    zone_id     = <span class="number">1</span>,
+    map_id      = <span class="number">36</span>,  <span class="comment">-- Deadmines</span>
+    name        = &amp;quot;Entrance Hall&amp;quot;,
+    waypoints   = { {x,y,z}, {x,y,z}, ... },  <span class="comment">-- polygon vertices</span>
+    z_min       = <span class="number">95</span>,
+    z_max       = <span class="number">110</span>,
+    creatures   = { <span class="number">634</span>, <span class="number">636</span>, <span class="number">637</span> },  <span class="comment">-- entry IDs</span>
+    spawn_count = { min = <span class="number">3</span>, max = <span class="number">5</span> },
+    respawn     = <span class="keyword">false</span>,  <span class="comment">-- stays cleared</span>
+}</code></pre></p>
+<p><h2>Implementation Steps</h2></p>
+<p><h3>Phase 1: Zone Detection</h3>
+1. Create src/lua/dungeon-zones.lua
+2. Define zone polygons for test dungeon (Deadmines)
+3. Implement point-in-polygon check (2D)
+4. Add Z-level boundary check
+5. Track player&#39;s current zone</p>
+<p><h3>Phase 2: Spawn Logic</h3>
+1. On zone enter: check if zone cleared
+2. If not cleared: spawn creatures from pool
+3. Position spawns at waypoints or random within zone
+4. Track zone clear state (all creatures dead)
+5. Mark zone as cleared</p>
+<p><h3>Phase 3: Visualization</h3>
+1. Export zone data to coordinates
+2. Generate line diagrams (pngs/ directory)
+3. Overlay on dungeon map images
+4. Color code: red=active, green=cleared, gray=unvisited</p>
+<p><h3>Phase 4: Data Entry</h3>
+1. Create tools to define zones in-game
+2. <code>/zone create &lt;name&gt;</code> - start new zone
+3. <code>/zone waypoint</code> - add current position as waypoint
+4. <code>/zone creature &lt;entry&gt;</code> - add creature to pool
+5. <code>/zone save</code> - export to SQL</p>
+<p><h2>Point-in-Polygon Algorithm</h2></p>
+<p><pre><code class="lua"><span class="comment">-- Ray casting algorithm <span class="keyword">for</span> <span class="number">2</span>D polygon containment</span>
+<span class="comment">-- Cast ray from point to infinity, count edge crossings</span>
+<span class="comment">-- Odd crossings = inside, even = outside</span></p>
+<p><span class="keyword">function</span> isPointInZone(px, py, pz, zone)
+    <span class="comment">-- Z check first (fast rejection)</span>
+    <span class="keyword">if</span> pz &amp;lt; zone.z_min <span class="keyword">or</span> pz &amp;gt; zone.z_max <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- <span class="number">2</span>D polygon check</span>
+    <span class="keyword">local</span> inside = <span class="keyword">false</span>
+    <span class="keyword">local</span> j = #zone.waypoints</p>
+<p>    <span class="keyword">for</span> i = <span class="number">1</span>, #zone.waypoints <span class="keyword">do</span>
+        <span class="keyword">local</span> xi, yi = zone.waypoints[i].x, zone.waypoints[i].y
+        <span class="keyword">local</span> xj, yj = zone.waypoints[j].x, zone.waypoints[j].y</p>
+<p>        <span class="keyword">if</span> ((yi &amp;gt; py) ~= (yj &amp;gt; py)) <span class="keyword">and</span>
+           (px &amp;lt; (xj - xi) * (py - yi) / (yj - yi) + xi) <span class="keyword">then</span>
+            inside = <span class="keyword">not</span> inside
+        <span class="keyword">end</span></p>
+<p>        j = i
+    <span class="keyword">end</span></p>
+<p>    <span class="keyword">return</span> inside
+<span class="keyword">end</span></code></pre></p>
+<p><h2>SQL Schema</h2></p>
+<p>``<code>sql
+-- Zone definitions
+CREATE TABLE dungeon_zones (
+    zone_id INT PRIMARY KEY,
+    map_id INT,
+    name VARCHAR(64),
+    z_min FLOAT,
+    z_max FLOAT,
+    spawn_min INT DEFAULT 3,
+    spawn_max INT DEFAULT 5,
+    respawn BOOLEAN DEFAULT false
+);</p>
+<p>-- Zone waypoints (polygon vertices)
+CREATE TABLE dungeon_zone_waypoints (
+    zone_id INT,
+    waypoint_order INT,
+    x FLOAT,
+    y FLOAT,
+    z FLOAT,
+    PRIMARY KEY (zone_id, waypoint_order)
+);</p>
+<p>-- Zone creature pools
+CREATE TABLE dungeon_zone_creatures (
+    zone_id INT,
+    creature_entry INT,
+    weight INT DEFAULT 1,  -- spawn probability weight
+    PRIMARY KEY (zone_id, creature_entry)
+);</p>
+<p>-- Zone clear state (per instance)
+CREATE TABLE dungeon_zone_state (
+    instance_id INT,
+    zone_id INT,
+    cleared BOOLEAN DEFAULT false,
+    clear_time TIMESTAMP,
+    PRIMARY KEY (instance_id, zone_id)
+);
+</code>``</p>
+<p><h2>Edge Cases</h2></p>
+<p><h3>Vertical Shafts</h3>
+- Player falling through multiple zones rapidly
+- Solution: check zone entry, not continuous presence
+- Debounce zone transitions (500ms minimum)</p>
+<p><h3>Zone Overlaps</h3>
+- Some dungeons have overlapping areas
+- Solution: priority system, check highest priority first
+- Or: allow multiple active zones</p>
+<p><h3>Boss Rooms</h3>
+- Special handling for boss encounters
+- Lock zone exits during combat
+- Different spawn logic (single boss + adds)</p>
+<p><h3>Patrol Paths</h3>
+- Some creatures patrol between zones
+- Solution: patrol spawns separate from zone spawns
+- Or: patrol creatures belong to starting zone only</p>
+<p><h2>Test Dungeon: Deadmines</h2></p>
+<p><h3>Zone Layout</h3>
+1. Entrance Hall (z: 0-20)
+2. Mining Tunnels (z: -30 to 0)
+3. Goblin Foundry (z: -30 to -10)
+4. Pirate Ship Deck (z: 0-15)
+5. Captain&#39;s Quarters (z: 10-25)</p>
+<p><h3>Why Deadmines?</h3>
+- Classic low-level dungeon
+- Multiple Z levels
+- Clear room structure
+- Mix of tight corridors and open areas
+- Good test for vertical spawning</p>
+<p><h2>Related Files</h2>
+- src/lua/ambush.lua (spawn logic reference)
+- src/lua/movement.lua (position utilities)
+- assets/waypoint_data (existing waypoint backup)
+- issues/110-random-spawn-point-feature.md (waypoint usage)
+- pngs/dungeons/ (zone visualization output)
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-1-progress.html">View Phase 1 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

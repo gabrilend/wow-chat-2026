@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 165 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 165 • Phase 1</div>
+            <h1>Activity Selection and Boredom System</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>165 - Activity Selection and Boredom System</h1></p>
+<p><h2>Status</h2>
+- Created: 2026-04-05
+- Implemented: 2026-04-05
+- Phase: 2
+- Priority: High
+- Depends: 164 (behavior orchestrator modes)
+- Status: Implemented (needs testing)</p>
+<p><h2>Current Behavior</h2>
+- Bots wander indefinitely in WANDERING mode
+- Only enter dungeons if they stumble into one while wandering
+- No concept of &quot;getting bored&quot; or choosing activities
+- Mode transitions not implemented</p>
+<p><h2>Intended Behavior</h2>
+Bots periodically get &quot;bored&quot; and choose a new activity.</p>
+<p><h3>Boredom Flow</h3>
+1. <strong>Trigger</strong> (event-driven):
+   - Combat ends
+   - Random chance while idle (low probability)
+   - Future: task completion, long travel time, etc.</p>
+<p>2. <strong>Rest Period</strong>:
+   - Bot sits down
+   - Rests for 1-3 minutes (random)
+   - Recovers health/mana</p>
+<p>3. <strong>Activity Selection</strong>:
+   - After rest completes, randomly pick new activity
+   - Current options: WANDERING, DUNGEON_DELVE
+   - Future: PROFESSION, SOCIAL, COMBAT_SEEK</p>
+<p>4. <strong>Activity Execution</strong>:
+   - WANDERING: Normal traveller-style movement
+   - DUNGEON_DELVE: Seek out nearest dungeon, enter, explore</p>
+<p><h3>Event-Driven Transitions</h3>
+| Event | Action |
+|-------|--------|
+| Combat ends | Chance to trigger boredom |
+| Party join | Switch to PARTY_FOLLOW |
+| Party leave | Trigger activity selection |
+| Rest completes | Pick new activity |
+| Near dungeon entrance (while DUNGEON_DELVE) | Enter dungeon |</p>
+<p><h3>Dungeon Seeking</h3>
+When in DUNGEON_DELVE mode but not in a dungeon:
+- Bot should actively travel toward nearest known dungeon entrance
+- Use zone data or heuristics to find dungeon areas
+- When near entrance, enter dungeon (DungeonRails takes over)</p>
+<p><h2>Implementation</h2></p>
+<p><h3>Step 1: Event Hooks</h3>
+<pre><code class="lua"><span class="comment">-- Combat <span class="keyword">end</span> hook</span>
+<span class="keyword">local</span> PLAYER_EVENT_ON_KILL_CREATURE = <span class="number">7</span>  <span class="comment">-- <span class="keyword">or</span> similar</span>
+RegisterPlayerEvent(PLAYER_EVENT_ON_KILL_CREATURE, <span class="keyword">function</span>(event, player, creature)
+    <span class="keyword">if</span> player:IsBot() <span class="keyword">and</span> <span class="keyword">not</span> player:IsInCombat() <span class="keyword">then</span>
+        <span class="comment">-- Combat just ended (killed last enemy)</span>
+        BotOrchestrator.onCombatEnd(player)
+    <span class="keyword">end</span>
+<span class="keyword">end</span>)</p>
+<p><span class="comment">-- Party hooks</span>
+<span class="keyword">local</span> PLAYER_EVENT_ON_GROUP_JOIN = ?
+<span class="keyword">local</span> PLAYER_EVENT_ON_GROUP_LEAVE = ?</code></pre></p>
+<p><h3>Step 2: Boredom Check</h3>
+<pre><code class="lua"><span class="comment">-- {{{ BotOrchestrator.onCombatEnd</span>
+<span class="keyword">function</span> BotOrchestrator.onCombatEnd(bot)
+    <span class="comment">-- <span class="number">15</span>% chance to get bored after combat</span>
+    <span class="keyword">if</span> math.random() &amp;lt; <span class="number">0.15</span> <span class="keyword">then</span>
+        BotOrchestrator.triggerBoredom(bot)
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Step 3: Rest and Select</h3>
+<pre><code class="lua"><span class="comment">-- {{{ BotOrchestrator.triggerBoredom</span>
+<span class="keyword">function</span> BotOrchestrator.triggerBoredom(bot)
+    <span class="comment">-- Sit down to rest</span>
+    bot:SetStandState(<span class="number">1</span>)  <span class="comment">-- UNIT_STAND_STATE_SIT</span>
+    bot:SetData(&amp;quot;resting_<span class="keyword">for</span>_activity&amp;quot;, <span class="keyword">true</span>)</p>
+<p>    <span class="comment">-- Register one-shot event to select activity after rest</span>
+    <span class="keyword">local</span> restTime = (<span class="number">60</span> + math.random(<span class="number">120</span>)) * <span class="number">1000</span>  <span class="comment">-- <span class="number">1</span>-<span class="number">3</span> minutes</span>
+    bot:RegisterEvent(BotOrchestrator.selectActivity, restTime, <span class="number">1</span>)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></p>
+<p><span class="comment">-- {{{ BotOrchestrator.selectActivity</span>
+<span class="keyword">function</span> BotOrchestrator.selectActivity(eventID, delay, repeats, bot)
+    bot:SetData(&amp;quot;resting_<span class="keyword">for</span>_activity&amp;quot;, <span class="keyword">nil</span>)
+    bot:SetStandState(<span class="number">0</span>)  <span class="comment">-- Stand up</span></p>
+<p>    <span class="comment">-- Random selection (<span class="keyword">for</span> now)</span>
+    <span class="keyword">local</span> activities = {
+        BotOrchestrator.MODE.WANDERING,
+        BotOrchestrator.MODE.DUNGEON_DELVE,
+    }
+    <span class="keyword">local</span> choice = activities[math.random(#activities)]</p>
+<p>    BotOrchestrator.switchMode(bot, choice)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Step 4: Dungeon Seeking Behavior</h3>
+When in DUNGEON_DELVE mode but <code>DungeonRails.isInDungeon(bot)</code> is false:
+- Move toward nearest dungeon zone
+- For now: wander with bias toward cave/dungeon areas
+- Future: use known dungeon entrance positions</p>
+<p><pre><code class="lua"><span class="comment">-- In BotWander.update() <span class="keyword">or</span> separate behavior:</span>
+<span class="keyword">if</span> BotOrchestrator.getMode(bot) == BotOrchestrator.MODE.DUNGEON_DELVE <span class="keyword">then</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> DungeonRails.isInDungeon(bot) <span class="keyword">then</span>
+        <span class="comment">-- Seeking dungeon - bias movement toward dungeon areas</span>
+        DungeonRails.seekEntrance(bot)
+        <span class="keyword">return</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span></code></pre></p>
+<p><h2>Bot Data Keys</h2>
+<pre><code class="lua">bot:GetData(&amp;quot;resting_<span class="keyword">for</span>_activity&amp;quot;)  <span class="comment">-- <span class="keyword">true</span> <span class="keyword">while</span> sitting before activity select</span></code></pre></p>
+<p><h2>ALE Event Constants</h2>
+Verified from docs/ale/docs/Global/:
+- PLAYER_EVENT_ON_LEAVE_COMBAT = 34 (event, player)
+- GROUP_EVENT_ON_MEMBER_ADD = 1 (event, group, guid)
+- GROUP_EVENT_ON_MEMBER_REMOVE = 3 (event, group, guid, method, kicker, reason)
+- GROUP_EVENT_ON_DISBAND = 5 (event, group)</p>
+<p><h2>Testing</h2>
+1. Bot finishes combat → 15% chance sits down to rest
+2. After 1-3 minutes → stands up, picks activity (80% wander, 20% dungeon)
+3. If DUNGEON_DELVE → seeks dungeon entrance
+4. Party invite → switches to PARTY_FOLLOW
+5. Party leave → triggers activity selection</p>
+<p><h2>Future Activities</h2>
+- PROFESSION: Seek gathering nodes, craft items
+- SOCIAL: Seek other players, emote, hang out
+- COMBAT_SEEK: Actively hunt monsters (not wait for ambush)</p>
+<p><h2>Related Issues</h2>
+- 164: Behavior orchestrator modes
+- 161: Bot wandering
+- 162: Dungeon pathfinding
+- 166: Point/line definition tools (for cave/dungeon entrances)</p>
+<p><h2>Notes</h2>
+- Activity selection is weighted: 80% wander, 20% dungeon delve
+- Cave/dungeon seeking requires manual entrance definitions (see issue 166)
+- Boredom chance after combat is 15% - tunable via BOREDOM_CHANCE_AFTER_COMBAT
+- Rest period is 1-3 minutes - tunable via BOREDOM_REST_MIN/MAX
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-1-progress.html">View Phase 1 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

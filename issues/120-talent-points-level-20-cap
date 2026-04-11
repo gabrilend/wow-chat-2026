@@ -4,14 +4,12 @@
 - Created: 2025-03-31
 - Phase: 2
 - Priority: High
-- **MODULE NOT LINKED** (discovered 2026-04-09)
+- **PATCH IMPLEMENTED** (2026-04-09)
 
-**Note (2026-04-09):** Issue describes mod-talent-bonus module implementation, but:
-- Module exists at `modules/mod-talent-bonus/` (local)
-- Module NOT linked to `source-beta/modules/` (not compiled)
-- Module NOT mentioned in `scripts/azerothcore` (not installed during update)
-- The Lua script `levelling.lua` awards points, but server validation resets them on login
-- See issue 334 for re-implementation plan.
+**Note (2026-04-09):** Module linking added to `scripts/azerothcore` as B008.
+- `patch_B008_mod_talent_bonus()` creates symlink from `modules/mod-talent-bonus/` to `source-beta/modules/`
+- `unpatch_B008_mod_talent_bonus()` removes symlink after build
+- Module now compiled as part of normal build process
 
 ## Current Behavior
 - talent-points.sql adds a column but doesn't implement the system

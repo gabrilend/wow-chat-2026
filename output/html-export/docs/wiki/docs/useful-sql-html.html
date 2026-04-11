@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>useful-sql.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>useful-sql.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/useful-sql.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 4841 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+tableofcontents: 1
+---</p>
+<p><h1>Useful SQL snippets</h1></p>
+<p><h2>Introduction</h2>
+These SQL queries are intended to be fast and easy-to-use tools to help identify and troubleshoot problems in the AzerothCore database. They&#39;re here to be a quick reference to help when looking at DB-related problems.</p>
+<p><h2>Loot and Reference Loot Issues</h2></p>
+<p><h3>Find what creatures drop an item directly</h3>
+Note that this doesn&#39;t count items dropped from RLTs.
+``<code>sql
+SET @ITEMID := XXXX;</p>
+<p>SELECT ct.name, clt.chance, ct.maxlevel, it.ItemLevel
+FROM </code>creature_template<code> ct
+JOIN </code>creature_loot_template<code> clt ON ct.lootid = clt.entry
+JOIN </code>item_template<code> it ON clt.item = it.entry
+WHERE it.entry = @ITEMID;
+<pre><code>
+&lt;h3&gt;Find which RLTs an item is in&lt;/h3&gt;</code></pre>sql
+SET @ITEMID = XXXX;</p>
+<p>SELECT rlt.entry, it.name
+FROM </code>reference_loot_template<code> rlt
+JOIN </code>item_template<code> it ON rlt.Item = it.entry
+WHERE rlt.item = @ITEMID;
+<pre><code>
+&lt;h3&gt;Find which creatures share a RLT&lt;/h3&gt;
+Non-recursive.</code></pre>sql
+SET @RLTENTRY := XXXX;</p>
+<p>SELECT distinct ct.entry, ct.name
+FROM </code>creature_template<code> ct
+JOIN </code>creature_loot_template<code> clt ON ct.lootid = clt.entry
+WHERE clt.Reference = @RLTENTRY;
+<pre><code>
+&lt;h3&gt;Find a number of items and level statistics for items in a given RLT&lt;/h3&gt;
+This is useful when determining which creatures should have a particular RLT in their drop tables.</code></pre>sql
+SET @RLTENTRY := XXXX;</p>
+<p>SELECT COUNT(rlt.Item), MIN(it.ItemLevel), MAX(it.ItemLevel), AVG(it.ItemLevel)
+FROM </code>item_template<code> it 
+JOIN </code>reference_loot_template<code> rlt ON it.entry = rlt.item 
+WHERE rlt.entry = @RLTENTRY;
+<pre><code>
+&lt;h3&gt;Recursively find an item by name&lt;/h3&gt;
+Note this is complex enough that Keira won&amp;#39;t run it properly - you must run it from a MySQL command prompt. Thanks to @anguaive for this one.</code></pre>sql
+SET @ITEM_NAME := &#39;insert name of item here&#39;;
+SET @ITEM_ID := (SELECT </code>entry<code> FROM </code>item_template<code> WHERE </code>name<code> = @ITEM_NAME);</p>
+<p>SELECT DISTINCT ct.name AS </code>creature<code>, @ITEM_NAME as </code>item<code> FROM (
+    WITH RECURSIVE cte (</code>entry<code>, </code>item<code>, </code>reference<code>) AS (
+    SELECT </code>entry<code>, </code>item<code>, </code>reference<code>
+    FROM </code>reference_loot_template<code>
+    WHERE </code>item<code> = @ITEM_ID
+    UNION ALL
+    SELECT r.entry, r.item, r.reference
+    FROM </code>reference_loot_template<code> r
+    INNER JOIN cte
+    ON r.reference = cte.entry
+    )
+    SELECT clt.entry
+    FROM cte
+    JOIN </code>creature_loot_template<code> clt ON clt.reference = cte.entry
+    UNION ALL
+    SELECT entry
+    FROM
+    </code>creature_loot_template<code> 
+    WHERE item = @ITEM_ID
+) AS q
+JOIN </code>creature_template<code> ct ON ct.lootid = q.entry
+ORDER BY ct.name;
+<pre><code>
+&lt;h2&gt;Miscellaneous Issues&lt;/h2&gt;
+&lt;h4&gt;Find creature information from a spawn GUID&lt;/h4&gt;
+Bug reports sometimes just reference a GUID with no other information about an NPC. This will find the creature a GUID belongs to.</code></pre>sql
+SET @CGUID := XXXX;</p>
+<p>SELECT ct.entry, ct.name, ct.minlevel, ct.maxlevel
+FROM </code>creature_template<code> ct 
+JOIN </code>creature<code> c ON ct.entry = c.id
+WHERE c.guid = @CGUID;
+<pre><code>
+&lt;h3&gt;Find all static creatures given a name&lt;/h3&gt;
+You could use part of the NPC&amp;#39;s name (as here, &amp;#39;Gordunni&amp;#39;) and it will find all NPCs with that string in their name.</code></pre>sql
+SET @NAME := &#39;gordunni&#39;;</p>
+<p>SELECT c.guid, ct.name
+FROM </code>creature<code> c
+JOIN </code>creature_template<code> ct ON ct.entry = c.id
+WHERE c.movementtype = 0 AND ct.name LIKE &#39;%@NAME%&#39;;
+<pre><code>
+&lt;h3&gt;Find creatures that use a certain spell&lt;/h3&gt;
+Note that this is a bit rough and ready, and only works if the spell is in their first action slot. In this case, XXXX is the spell ID.</code></pre>sql
+SET @SPELLID := XXXX;</p>
+<p>SELECT ct.entry, ct.name, ct.maxlevel, ss.action_param1
+FROM </code>creature_template<code> ct
+JOIN </code>smart_scripts<code> ss ON ct.entry = ss.entryorguid
+WHERE ss.action_param1 = @SPELLID;
+<pre><code>
+&lt;h3&gt;Find the average wander distance for a creature&lt;/h3&gt;
+Could be used for fixing static creatures.</code></pre>sql
+SET @CID := XXXX;</p>
+<p>SELECT c.id, AVG(c.wander_distance)
+FROM </code>creature<code> c
+WHERE c.id = @CID AND c.wander_distance &gt; 0;
+<pre><code>
+&lt;h3&gt;Find other members of a node pool&lt;/h3&gt;
+Given a node GUID, find if it belongs to a node pool and list the other members.</code></pre>sql
+SET @GUID := XXXX;</p>
+<p>SELECT <em> FROM </code>pool_gameobject<code> WHERE </code>pool_entry<code> IN (
+SELECT </code>pool_entry<code> from </code>pool_gameobject<code> WHERE guid = @GUID);
+<pre><code>
+&lt;h3&gt;Find respawn timers for a class of object&lt;/h3&gt;
+Given an object&amp;#39;s name, find the respawn timers for all spawns that match that name string.</code></pre>sql
+SELECT got.name, go.guid, go.spawntimesecs
+FROM </code>gameobject_template<code> got
+JOIN </code>gameobject<code> go ON got.entry = go.id
+WHERE name LIKE &#39;%name-of-object%&#39; 
+ORDER BY go.spawntimesecs
+<pre><code>
+&lt;h3&gt;List items inside the inventory based on character GUID&lt;/h3&gt;
+Given a character GUID, show the inventory with the according count inside the item instance and the according name inside the item template.</code></pre>sql
+SET @GUID := XXXX;</p>
+<p>SELECT ci.</em>, ii.itemEntry, it.name, ii.count
+FROM character_inventory ci
+JOIN item_instance ii ON ci.item = ii.guid
+JOIN acore_world.item_template it ON ii.itemEntry = it.entry
+WHERE ci.guid = @GUID;
+</code>``
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pvpstats_players.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>pvpstats_players.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/pvpstats_players.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2705 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>﻿# pvpstats\_players</p>
+<p><a href="database-characters">&lt;-Volver a:Characters</a></p>
+<p>Leer en: <a href="../pvpstats_players">English :gb:</a> <a href="pvpstats_players">Spanish :es:</a></p>
+<p><strong>Tabla \<code>pvpstats\_players\</code></strong></p>
+<p>Esta tabla contiene datos sobre las puntuaciones de BattleGrounds. Para habilitar el almacenamiento de este tipo de información, configure <strong>Battleground.StoreStatistics.Enable = 1</strong> en el archivo <strong>worldserver.config.dist</strong>.</p>
+<p><strong>Estructura</strong></p>
+<p>| Field                      | Type      | Attributes | Key | Null | Default | Extra | Comment |
+| -------------------------- | --------- | ---------- | --- | ---- | ------- | ----- | ------- |
+| [battleground_id][1]       | BIGINT    | UNSIGNED   | PRI | NO   |         |       |         |
+| [character_guid][2]        | INT       | UNSIGNED   | PRI | NO   |         |       |         |
+| [winner][3]                | BIT       | SIGNED     |     | NO   |         |       |         |
+| [score_killing_blows][4]   | MEDIUMINT | UNSIGNED   |     | NO   |         |       |         |
+| [score_deaths][5]          | MEDIUMINT | UNSIGNED   |     | NO   |         |       |         |
+| [score_honorable_kills][6] | MEDIUMINT | UNSIGNED   |     | NO   |         |       |         |
+| [score_bonus_honor][7]     | MEDIUMINT | UNSIGNED   |     | NO   |         |       |         |
+| [score_damage_done][8]     | MEDIUMINT | UNSIGNED   |     | NO   |         |       |         |
+| [score_healing_done][9]    | MEDIUMINT | UNSIGNED   |     | NO   |         |       |         |
+| [attr_1][10]               | MEDIUMINT | UNSIGNED   |     | NO   | 0       |       |         |
+| [attr_2][11]               | MEDIUMINT | UNSIGNED   |     | NO   | 0       |       |         |
+| [attr_3][12]               | MEDIUMINT | UNSIGNED   |     | NO   | 0       |       |         |
+| [attr_4][13]               | MEDIUMINT | UNSIGNED   |     | NO   | 0       |       |         |
+| [attr_5][14]               | MEDIUMINT | UNSIGNED   |     | NO   | 0       |       |         |</p>
+<p>[1]: #battlegroundid
+[2]: #characterguid
+[3]: #winner
+[4]: #score
+[5]: #score
+[6]: #score
+[7]: #score
+[8]: #score
+[9]: #score
+[10]: #attr
+[11]: #attr
+[12]: #attr
+[13]: #attr
+[14]: #attr</p>
+<p><strong>Descripción de los campos</strong></p>
+<p><h3>battleground\_id</h3></p>
+<p>Enlace a <a href="pvpstats_battlegrounds#id">pvpstats\_battlegrounds.id</a>.</p>
+<p><h3>character\_guid</h3></p>
+<p>Enlace a <a href="characters#guid">characters.guid</a>.</p>
+<p><h3>winner</h3></p>
+<p>1 cuando el jugador ha ganado el BG, 0 en caso contrario.</p>
+<p><h3>score\_\<em></h3></p>
+<p>Todas las puntuaciones que son comunes entre todos los Campos de Batalla.</p>
+<p><h3>attr\_\</em></h3></p>
+<p>Todos los puntajes que no son comunes entre todos los Campos de Batalla. Este campo cambia su media de acuerdo con <a href="pvpstats_battlegrounds#type">pvpstats\_battlegrounds.type</a>.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>project-versioning.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>project-versioning.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/project-versioning.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 3877 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+redirect_from: &quot;/Project-Versioning&quot;
+---</p>
+<p><h2>Project Versioning</h2></p>
+<p>We are using the semantic versioning standard:</p>
+<p>http://semver.org/spec/v2.0.0.html</p>
+<p>For instance, we can have: <strong>1.5.1-dev.1</strong> that corresponds to: <strong>MAJOR.MINOR.PATCH-PRERELEASE</strong></p>
+<p>More in depth:</p>
+<p><em> <strong>MAJOR</strong> version when you make incompatible API / DB structure changes. In AzerothCore we release a MAJOR version once in a while and we support only security fixes right after (read the section below). Therefore, this version can be seen more as a Milestone. </p>
+<p></em> <strong>MINOR</strong> version when you add functionality in a backwards-compatible manner. This is mostly unused on AC since we do not import any new functionality after we release a MAJOR  version.</p>
+<p><em> <strong>PATCH</strong> version when you make backwards-compatible bug and security fixes.</p>
+<p></em> <strong>PRERELEASE</strong> this is such called &quot;metadata&quot; in semver standard. We use this part of the versioning while we work on <strong>master</strong> branch. Everytime a new feature or breaking change (on both code or db) is released, this number is increased to notify you regarding possible actions to take. Check <a href="how-to-use-changelog">how to use the changelog</a>.</p>
+<p><h3>PRERELEASE first</h3></p>
+<p>AzerothCore is not yet considered a &quot;completed&quot; software, hence is costantly in dev stage. The versioning described above will be mainly used to provide a simple way to check if a module, script or anything connected to AC is compatible or not with AC and what to do to upgrade it.</p>
+<p>Our strategy is (in order of most common actions):</p>
+<p>- to not update the version when the changes are just small fixes/chore changes
+- to update the <code>-dev.x</code> prerelease version on master when we have breaking changes or new features
+- to upgrade the major version when we decide to release a new stable version
+- if any new security patch or feature is imported within the released major version, those ones will increase the minor/patch version then, but we do it very occasionally.</p>
+<p><h2>Dev stages</h2></p>
+<p><em> <strong>PHASE 1: Developing Phase</strong>: During the developing phase, we will use the master branch where we can freely make changes to API, DB and all things that could break compatibility with old revisions. 
+At the beginning of each development phase, we will clean the sql/updates folders archiving old SQLs.</p>
+<p>  N.B. 
+  </em> Some big jobs, such as rewriting/implementing features, could be not ready for next revision and eventually they will be planned for a future one, so they will be kept in dedicated branches instead of master. 
+  <em> Using master branch you will have immediate access to new awesome features, but you must take care since some commits can break stability in some rare cases.</p>
+<p></em> <strong>PHASE 2: Only Stability and security fixes</strong>: In this phase we will stop to import mechanic / content fix and we will offer support to only security and stability issues. For example: if a function generates a crash for a null pointer, we will fix it.</p>
+<p>  We could eventually extends this phase if requested by many people.</p>
+<p>* <strong>PHASE 3: End of Life ( EOL )</strong>: We will archive that release keeping documentation and branch ofc. You can continue to use/download it, but we won&#39;t offer any official support of any kind</p>
+<p><h2>List of releases</h2></p>
+<p>NOTE: this is outdated, check our <a href="https://github.com/azerothcore/azerothcore-wotlk/releases">releases</a> on github
+  
+| version/branch | codename  | description | current state | release data | end of support|
+|     --         |    --     |      --     |           --  |       --     |      --       |
+|     0.x        |  Sunwell|  small reworks for sunwell  |EOL|      2016 Q3 |      2017  Q1 |
+|     1.x        |  Mimiron | first version to introduce the module system | EOL|     2017 Q1 |      2019  Q1 |
+|     2.x        |  Gunship | Integrated CI/CD and tons of fixes  | Security &amp; Stability   |     2019 Q1 |      ~ |
+|     master (3.x)        |  ~ | ~ | developing |     ~ |      ~|
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

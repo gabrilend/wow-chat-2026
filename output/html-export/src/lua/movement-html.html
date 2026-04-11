@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>movement.lua - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>movement.lua</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/movement.lua
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> lua &nbsp;&nbsp;
+            <strong>Size:</strong> 8459 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-09 00:19
+        </div>
+
+        <div class="content">
+            <pre><code class="lua">Movement = {}
+
+<span class="comment">-- Register <span class="keyword">in</span> package.loaded so require(&quot;movement&quot;) is a no-op after ALE loads this</span>
+<span class="comment">-- (ALE uses dofile-style loading which doesn&#<span class="number">39</span>;t populate package.loaded)</span>
+<span class="comment">-- Must be AFTER Movement table is created so require() returns the module</span>
+package.loaded[&quot;movement&quot;] = Movement
+
+<span class="keyword">function</span> Movement.getCircleSpawnPosition(originX, originY, minDist, maxDist) <span class="comment">-- {{{</span>
+    <span class="keyword">local</span> theta = math.random(<span class="number">0</span>, <span class="number">6.28</span>)
+    <span class="keyword">local</span> radius = math.random(minDist, maxDist)
+    x = originX + math.cos(theta) * radius
+    y = originY + math.sin(theta) * radius
+    <span class="keyword">return</span> x, y
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="keyword">function</span> Movement.getBoxSpawnPosition(originX, originY, minDist, maxDist) <span class="comment">-- {{{</span>
+    randInt = math.random(<span class="number">1</span>, <span class="number">4</span>)
+    <span class="keyword">if</span> randInt == <span class="number">1</span> <span class="keyword">then</span>
+        x = originX + math.random( minDist,  maxDist)
+        y = originY + math.random(-maxDist,  maxDist)
+    <span class="keyword">elseif</span> randInt == <span class="number">2</span> <span class="keyword">then</span>
+        x = originX + math.random(-maxDist, -minDist)
+        y = originY + math.random(-maxDist,  maxDist)
+    <span class="keyword">elseif</span> randInt == <span class="number">3</span> <span class="keyword">then</span>
+        x = originX + math.random(-maxDist,  maxDist)
+        y = originY + math.random( minDist,  maxDist)
+    <span class="keyword">elseif</span> randInt == <span class="number">4</span> <span class="keyword">then</span>
+        x = originX + math.random(-maxDist,  maxDist)
+        y = originY + math.random(-maxDist, -minDist)
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> x, y
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- this should make a rough circle around the player</span>
+<span class="comment">-- it&#<span class="number">39</span>;s more like a plus shape but that&#<span class="number">39</span>;s close enough</span>
+<span class="keyword">function</span> Movement.getPlusSpawnPosition(originX, originY, minDist, maxDist) <span class="comment">-- {{{</span>
+    randInt = math.random(<span class="number">1</span>, <span class="number">4</span>)
+    <span class="keyword">if</span> randInt == <span class="number">1</span> <span class="keyword">then</span>
+        x = originX + math.random( minDist,  maxDist)
+        y = originY + math.random(-minDist,  minDist)
+    <span class="keyword">elseif</span> randInt == <span class="number">2</span> <span class="keyword">then</span>
+        x = originX + math.random(-maxDist, -minDist)
+        y = originY + math.random(-minDist,  minDist)
+    <span class="keyword">elseif</span> randInt == <span class="number">3</span> <span class="keyword">then</span>
+        x = originX + math.random(-minDist,  minDist)
+        y = originY + math.random( minDist,  maxDist)
+    <span class="keyword">elseif</span> randInt == <span class="number">4</span> <span class="keyword">then</span>
+        x = originX + math.random(-minDist,  minDist)
+        y = originY + math.random(-maxDist, -minDist)
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> x, y
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- Convert WoW orientation to standard mathematical angle</span>
+<span class="keyword">function</span> Movement.getMathAngle(wowAngle) <span class="comment">-- {{{</span>
+    <span class="keyword">local</span> mathAngle = wowAngle + <span class="number">6.28</span>
+    <span class="keyword">if</span> mathAngle &gt; <span class="number">6.28</span> <span class="keyword">then</span>
+        mathAngle = mathAngle - <span class="number">6.28</span>
+    <span class="keyword">end</span>
+    <span class="keyword">return</span> mathAngle
+<span class="keyword">end</span>
+
+<span class="comment">-- Convert standard mathematical angle to WoW orientation</span>
+<span class="keyword">function</span> Movement.getWoWAngle(mathAngle)
+    <span class="keyword">local</span> wowAngle = mathAngle - <span class="number">6.28</span>
+    <span class="keyword">if</span> wowAngle &lt; <span class="number">0</span> <span class="keyword">then</span>
+        wowAngle = wowAngle + <span class="number">6.28</span>
+    <span class="keyword">end</span>
+    <span class="keyword">return</span> wowAngle
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="keyword">function</span> Movement.getArcSpawnPosition(originX, originY, minDist, maxDist, initialAngle) <span class="comment">-- {{{</span>
+    <span class="keyword">local</span> radius = math.random(minDist, maxDist)
+    <span class="keyword">local</span> isNegative = math.random(<span class="number">0</span>, <span class="number">1</span>)
+    <span class="keyword">if</span> isNegative == <span class="number">1</span> <span class="keyword">then</span> isNegative =  <span class="number">1</span>
+                       <span class="keyword">else</span> isNegative = -<span class="number">1</span>
+    <span class="keyword">end</span>
+    <span class="keyword">local</span> theta = Movement.getMathAngle(initialAngle + (isNegative * math.random() * <span class="number">0.785</span>))
+    <span class="keyword">local</span> x = originX + math.cos(theta) * radius
+    <span class="keyword">local</span> y = originY + math.sin(theta) * radius
+    <span class="keyword">return</span> x, y
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="keyword">function</span> Movement.getLazyDistance(x<span class="number">1</span>, y<span class="number">1</span>, x<span class="number">2</span>, y<span class="number">2</span>) <span class="comment">-- {{{</span>
+    <span class="keyword">local</span> dist = math.abs(x<span class="number">1</span> - x<span class="number">2</span>) + math.abs(y<span class="number">1</span> - y<span class="number">2</span>)
+    <span class="keyword">local</span> dx = math.abs(x<span class="number">1</span> - x<span class="number">2</span>)
+    <span class="keyword">local</span> dy = math.abs(y<span class="number">1</span> - y<span class="number">2</span>)
+    <span class="keyword">return</span> dist, dx, dy
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="keyword">function</span> Movement.getInitialAngle(originX, originY, monsterX, monsterY) <span class="comment">-- {{{</span>
+    <span class="comment">-- Calculate the difference <span class="keyword">in</span> x <span class="keyword">and</span> y coordinates</span>
+    <span class="keyword">local</span> dx = monsterX - originX
+    <span class="keyword">local</span> dy = monsterY - originY
+
+    <span class="comment">-- Use atan<span class="number">2</span> to get the angle <span class="keyword">in</span> radians</span>
+    <span class="keyword">local</span> angle = math.atan<span class="number">2</span>(dy, dx)
+
+    <span class="keyword">return</span> angle
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="keyword">function</span> Movement.getOrbitPosition(originX, originY, radius, speed, dt, initialAngle, direction) <span class="comment">-- {{{</span>
+    <span class="comment">-- Calculate the angular speed based on the monster&#<span class="number">39</span>;s linear speed <span class="keyword">and</span> the radius of the circle</span>
+    <span class="keyword">local</span> angular_speed = speed / radius
+
+    <span class="comment">-- Compute the new angle after dt seconds</span>
+    <span class="keyword">local</span> new_angle = initialAngle + (angular_speed * dt * direction)
+
+    <span class="comment">-- Calculate the new position</span>
+    <span class="keyword">local</span> x = originX + math.cos(new_angle) * radius
+    <span class="keyword">local</span> y = originY + math.sin(new_angle) * radius
+
+    <span class="keyword">return</span> x, y
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- calculates a position on the exact opposite side of the given position</span>
+<span class="comment">-- x<span class="number">1</span> <span class="keyword">and</span> y<span class="number">1</span> are the pivot point</span>
+<span class="comment">-- x<span class="number">2</span> <span class="keyword">and</span> y<span class="number">2</span> are the initial point</span>
+<span class="comment">-- diagram:</span>
+<span class="comment">-- (initialX, initialY) ---------&gt; (pivotX, pivotY) ---------&gt; (x, y)</span>
+<span class="keyword">function</span> Movement.getPositionOppositePoint(initialX, initialY, pivotX, pivotY) <span class="comment">-- {{{</span>
+    x = initialX + ((pivotX - initialX) * <span class="number">2</span>)
+    y = initialY + ((pivotY - initialY) * <span class="number">2</span>)
+
+    <span class="keyword">return</span> x, y
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="keyword">function</span> Movement.getPositionInFrontOfPoint(x, y, o, dist) <span class="comment">-- {{{</span>
+    x = x + math.cos(o) * dist
+    y = y + math.sin(o) * dist
+
+    <span class="keyword">return</span> x, y
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="keyword">function</span> Movement.getMidpoint(x<span class="number">1</span>, y<span class="number">1</span>, x<span class="number">2</span>, y<span class="number">2</span>) <span class="comment">-- {{{</span>
+    x = (x<span class="number">1</span> + x<span class="number">2</span>) / <span class="number">2</span>
+    y = (y<span class="number">1</span> + y<span class="number">2</span>) / <span class="number">2</span>
+
+    <span class="keyword">return</span> x, y
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- this <span class="keyword">function</span> will take a position <span class="keyword">and</span> an angle <span class="keyword">and</span> generate a new position</span>
+<span class="comment">-- that is within <span class="number">5</span> units on the Z axis. This is to prevent the monster from</span>
+<span class="comment">-- walking over very tall objects like hills <span class="keyword">and</span> cliffs. If the target position</span>
+<span class="comment">-- is too high <span class="keyword">or</span> low, it will attempt to turn left <span class="keyword">or</span> right depending on</span>
+<span class="comment">-- whether o is greater <span class="keyword">or</span> less than theta. theta represents the overall</span>
+<span class="comment">-- direction the NPC is moving toward, <span class="keyword">while</span> o is it&#<span class="number">39</span>;s current orientation - the</span>
+<span class="comment">-- difference between o <span class="keyword">and</span> theta is no more than <span class="number">0.39</span> radians - this is</span>
+<span class="comment">-- represented by thetaMin <span class="keyword">and</span> thetaMax, two variables which hold the minimum</span>
+<span class="comment">-- <span class="keyword">and</span> maximum values of the new o value.</span>
+<span class="keyword">function</span> Movement.generateNewWanderPosition(x, y, z, o, theta, mapID) <span class="comment">-- {{{</span>
+    <span class="keyword">local</span> thetaMin = theta - <span class="number">0.39</span>
+    <span class="keyword">local</span> thetaMax = theta + <span class="number">0.39</span>
+    <span class="keyword">local</span> dir      = (math.random(-<span class="number">19</span>, <span class="number">19</span>) / <span class="number">100</span>) + math.random()
+    <span class="keyword">local</span> map      = GetMapById(mapID)
+
+    <span class="comment">-- Modify direction <span class="keyword">if</span> it&#<span class="number">39</span>;s outside the theta range</span>
+    <span class="keyword">if</span> o + dir &gt; thetaMax <span class="keyword">or</span> o + dir &lt; thetaMin <span class="keyword">then</span>
+        dir = dir * -<span class="number">1</span>
+    <span class="keyword">end</span>
+    o = o + dir
+
+    <span class="keyword">local</span> targetX, targetY = Movement.getPositionInFrontOfPoint(x, y, o, <span class="number">10</span>)
+    <span class="keyword">local</span> targetZ = map:GetHeight(targetX, targetY)
+
+    <span class="comment">-- Return generated new position <span class="keyword">and</span> the new orientation.</span>
+    <span class="keyword">return</span> targetX, targetY, targetZ, o
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- <span class="keyword">function</span> to calculate the squared distance between two points</span>
+<span class="keyword">function</span> Movement.squaredDistance(x<span class="number">1</span>, y<span class="number">1</span>, x<span class="number">2</span>, y<span class="number">2</span>) <span class="comment">-- {{{</span>
+    <span class="keyword">local</span> dx = x<span class="number">2</span> - x<span class="number">1</span>
+    <span class="keyword">local</span> dy = y<span class="number">2</span> - y<span class="number">1</span>
+    <span class="keyword">return</span> dx * dx + dy * dy
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- <span class="keyword">function</span> to normalize a vector</span>
+<span class="keyword">function</span> Movement.normalize(dx, dy) <span class="comment">-- {{{</span>
+    <span class="keyword">local</span> length = math.sqrt(dx * dx + dy * dy)
+    <span class="keyword">return</span> dx / length, dy / length
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- <span class="keyword">function</span> to find the closest point on the circle to the given point</span>
+<span class="keyword">function</span> Movement.nearestPointOnCircle(circleX, circleY, circleRadius, pointX, pointY) <span class="comment">-- {{{</span>
+    <span class="comment">-- calculate the direction vector from the circle center to the point</span>
+    <span class="keyword">local</span> dx, dy = pointX - circleX, pointY - circleY
+
+    <span class="comment">-- normalize the direction vector</span>
+    dx, dy = normalize(dx, dy)
+
+    <span class="comment">-- scale the direction vector by the radius of the circle</span>
+    dx, dy = dx * circleRadius, dy * circleRadius
+
+    <span class="comment">-- calculate the coordinates of the nearest point on the circle</span>
+    <span class="keyword">local</span> nearestX, nearestY = circleX + dx, circleY + dy
+
+    <span class="keyword">return</span> nearestX, nearestY
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="keyword">function</span> Movement.isCloseEnough(x<span class="number">1</span>, y<span class="number">1</span>, x<span class="number">2</span>, y<span class="number">2</span>, dist) <span class="comment">-- {{{</span>
+    <span class="keyword">return</span> Movement.squaredDistance(x<span class="number">1</span>, y<span class="number">1</span>, x<span class="number">2</span>, y<span class="number">2</span>) &lt;= dist * dist
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Movement.getConsensusDirection</span>
+<span class="comment">-- Returns average facing direction of nearby players (non-bots)</span>
+<span class="comment">-- Used by bots when stuck <span class="keyword">or</span> needing reorientation</span>
+<span class="comment">-- Used by travellers after terrain failures instead of despawning</span>
+<span class="comment">-- Returns angle <span class="keyword">in</span> radians, <span class="keyword">or</span> <span class="keyword">nil</span> <span class="keyword">if</span> no players nearby</span>
+<span class="keyword">function</span> Movement.getConsensusDirection(unit, range)
+    range = range <span class="keyword">or</span> <span class="number">200</span>
+    <span class="keyword">local</span> players = unit:GetPlayersInRange(range)
+    <span class="keyword">if</span> <span class="keyword">not</span> players <span class="keyword">or</span> #players &lt; <span class="number">1</span> <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> sum_sin, sum_cos = <span class="number">0</span>, <span class="number">0</span>
+    <span class="keyword">local</span> count = <span class="number">0</span>
+
+    <span class="keyword">for</span> _, player <span class="keyword">in</span> ipairs(players) <span class="keyword">do</span>
+        <span class="keyword">if</span> player:IsAlive() <span class="keyword">and</span> <span class="keyword">not</span> player:IsBot() <span class="keyword">then</span>
+            <span class="keyword">local</span> facing = player:GetO()
+            sum_sin = sum_sin + math.sin(facing)
+            sum_cos = sum_cos + math.cos(facing)
+            count   = count + <span class="number">1</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">if</span> count == <span class="number">0</span> <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span> <span class="keyword">end</span>
+    <span class="keyword">return</span> math.atan<span class="number">2</span>(sum_sin, sum_cos)
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Movement.normalizeAngle</span>
+<span class="comment">-- Normalize angle to <span class="number">0</span> to <span class="number">2</span>*pi range</span>
+<span class="keyword">function</span> Movement.normalizeAngle(angle)
+    <span class="keyword">while</span> angle &lt; <span class="number">0</span> <span class="keyword">do</span>
+        angle = angle + <span class="number">6.28</span>
+    <span class="keyword">end</span>
+    <span class="keyword">while</span> angle &gt;= <span class="number">6.28</span> <span class="keyword">do</span>
+        angle = angle - <span class="number">6.28</span>
+    <span class="keyword">end</span>
+    <span class="keyword">return</span> angle
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

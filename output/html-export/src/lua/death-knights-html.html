@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>death-knights.lua - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>death-knights.lua</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/death-knights.lua
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> lua &nbsp;&nbsp;
+            <strong>Size:</strong> 4904 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code class="lua"><span class="comment">-- =============================================================================</span>
+<span class="comment">-- Death Knight Level <span class="number">1</span>-<span class="number">20</span> Scaling (Issue <span class="number">138</span>)</span>
+<span class="comment">-- =============================================================================</span>
+<span class="comment">-- DKs start at level <span class="number">1</span> with basic abilities (Blood Presence, Icy Touch).</span>
+<span class="comment">-- Additional abilities are learned from trainers at levels <span class="number">4</span>, <span class="number">6</span>, <span class="number">8</span>, etc.</span>
+<span class="comment">-- Quest auto-completion allows DKs to leave Ebon Hold immediately via</span>
+<span class="comment">-- teleport boxes (dock, road, beach).</span>
+<span class="comment">--</span>
+<span class="comment">-- Ability progression defined <span class="keyword">in</span> death-knights.sql (trainer template <span class="number">200019</span>)</span>
+<span class="comment">-- =============================================================================</span>
+
+<span class="comment">-- {{{ Quest data</span>
+<span class="comment">-- DK starting zone quests - completed on first login to unlock teleport exits</span>
+<span class="keyword">local</span> quests = { <span class="number">12593</span>, <span class="number">12619</span>, <span class="number">12842</span>, <span class="number">12848</span>, <span class="number">12636</span>, <span class="number">12641</span>, <span class="number">12657</span>, <span class="number">12678</span>, <span class="number">12679</span>, <span class="number">12680</span>, <span class="number">12687</span>,
+                 <span class="number">12698</span>, <span class="number">12701</span>, <span class="number">12706</span>, <span class="number">12716</span>, <span class="number">12719</span>, <span class="number">12720</span>, <span class="number">12722</span>, <span class="number">12724</span>, <span class="number">12725</span>, <span class="number">12727</span>, <span class="number">12733</span>, -<span class="number">1</span>,
+                 <span class="number">12751</span>, <span class="number">12754</span>, <span class="number">12755</span>, <span class="number">12756</span>, <span class="number">12757</span>, <span class="number">12779</span>, <span class="number">12801</span>, <span class="number">13165</span>, <span class="number">13166</span>
+               }
+<span class="comment">-- Race-specific quests (index matches race ID)</span>
+<span class="keyword">local</span> racequests = { <span class="number">12742</span>, <span class="number">12748</span>, <span class="number">12744</span>, <span class="number">12743</span>, <span class="number">12750</span>, <span class="number">12739</span>, <span class="number">12745</span>, <span class="number">12749</span>, -<span class="number">1</span>, <span class="number">12747</span>, <span class="number">12746</span> }
+<span class="comment">-- }}}</span>
+
+DK = { quests     = quests,
+       racequests = racequests
+     }
+
+<span class="comment">-- {{{ DK.printPosition</span>
+<span class="comment">-- Debug command: type &quot;pos&quot; <span class="keyword">in</span> chat to see coordinates</span>
+<span class="keyword">function</span> DK.printPosition(_eventID, player, msg)
+    <span class="keyword">if</span> msg == &quot;pos&quot; <span class="keyword">then</span>
+        <span class="keyword">local</span> x, y, z, o = player:GetLocation()
+        player:SendBroadcastMessage(&quot;X: &quot; .. x .. &quot; Y: &quot; .. y .. &quot; Z: &quot; .. z .. &quot; O: &quot; .. o)
+        player:SendBroadcastMessage(&quot;MapID: &quot; .. player:GetMapId())
+        player:SendBroadcastMessage(&quot;ZoneID: &quot; .. player:GetZoneId())
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+PLAYER_EVENT_ON_CHAT = <span class="number">18</span>
+RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT, DK.printPosition)
+
+<span class="comment">-- {{{ DK.onFirstLogin</span>
+<span class="comment">-- Complete all DK starting quests so player can leave Ebon Hold immediately</span>
+<span class="comment">-- Does NOT set level <span class="keyword">or</span> grant abilities - those come from trainers</span>
+<span class="keyword">function</span> DK.onFirstLogin(_eventID, player)
+    <span class="keyword">if</span> player:GetClass() ~= <span class="number">6</span> <span class="keyword">then</span>
+        <span class="keyword">return</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">local</span> targetRace = player:GetRace()
+    <span class="keyword">local</span> targetTeam = player:GetTeam()
+
+    <span class="comment">-- Set faction-specific <span class="keyword">end</span> quest</span>
+    <span class="keyword">if</span> targetTeam == <span class="number">0</span> <span class="keyword">then</span>
+        DK.quests[<span class="number">33</span>] = <span class="number">13188</span>  <span class="comment">-- Alliance <span class="keyword">end</span> quest</span>
+    <span class="keyword">else</span>
+        DK.quests[<span class="number">33</span>] = <span class="number">13189</span>  <span class="comment">-- Horde <span class="keyword">end</span> quest</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Set race-specific quest</span>
+    DK.quests[<span class="number">23</span>] = DK.racequests[targetRace]
+
+    <span class="comment">-- Complete all quests to unlock Ebon Hold exits</span>
+    <span class="keyword">for</span> _, questId <span class="keyword">in</span> ipairs(DK.quests) <span class="keyword">do</span>
+        <span class="keyword">if</span> questId &gt; <span class="number">0</span> <span class="keyword">then</span>
+            player:AddQuest(questId)
+            player:CompleteQuest(questId)
+            player:RewardQuest(questId)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Note: Starting gear handled by playercreateinfo_item table</span>
+    <span class="comment">-- Note: Level remains at <span class="number">1</span>, abilities from trainer template <span class="number">200019</span></span>
+
+    player:SaveToDB()
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DK.onLogin</span>
+<span class="comment">-- Start teleport check timer <span class="keyword">for</span> DKs <span class="keyword">in</span> Ebon Hold</span>
+<span class="keyword">function</span> DK.onLogin(_eventID, player)
+    <span class="comment">-- Only check DKs <span class="keyword">in</span> Ebon Hold (map <span class="number">609</span>)</span>
+    <span class="keyword">if</span> player:GetClass() ~= <span class="number">6</span> <span class="keyword">or</span> player:GetMapId() ~= <span class="number">609</span> <span class="keyword">then</span>
+        <span class="keyword">return</span>
+    <span class="keyword">end</span>
+    player:RegisterEvent(DK.teleportCheck, <span class="number">2000</span>, <span class="number">1</span>)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ DK.teleportCheck</span>
+<span class="comment">-- Teleport boxes <span class="keyword">in</span> Ebon Hold that exit to the main world</span>
+<span class="comment">-- Dock  -&gt; Northrend (Borean Tundra)</span>
+<span class="comment">-- Road  -&gt; Eastern Kingdoms (Stormwind area)</span>
+<span class="comment">-- Beach -&gt; Northrend (Borean Tundra)</span>
+<span class="comment">--</span>
+<span class="comment">-- Dock box coordinates:</span>
+<span class="comment">--   x: <span class="number">1289.40</span> - <span class="number">1309.79</span></span>
+<span class="comment">--   y: -<span class="number">6166.92</span> - -<span class="number">6125.28</span></span>
+<span class="comment">--   z: <span class="number">13.99</span> - <span class="number">14.21</span></span>
+<span class="comment">--</span>
+<span class="comment">-- Road box coordinates:</span>
+<span class="comment">--   x: <span class="number">1781.35</span> - <span class="number">1801.34</span></span>
+<span class="comment">--   y: -<span class="number">4875.36</span> - -<span class="number">4867.02</span></span>
+<span class="comment">--   z: <span class="number">88.45</span> - <span class="number">89.94</span></span>
+<span class="comment">--</span>
+<span class="comment">-- Beach box coordinates:</span>
+<span class="comment">--   x: <span class="number">2043.25</span> - <span class="number">2303.61</span></span>
+<span class="comment">--   y: -<span class="number">6224.11</span> - -<span class="number">6150.62</span></span>
+<span class="comment">--   z: -<span class="number">1.41</span> - <span class="number">1.14</span></span>
+<span class="keyword">function</span> DK.teleportCheck(eventID, delay, repeats, player)
+    <span class="comment">-- Only check <span class="keyword">if</span> still <span class="keyword">in</span> Ebon Hold</span>
+    <span class="keyword">if</span> player:GetMapId() ~= <span class="number">609</span> <span class="keyword">or</span> player:GetZoneId() ~= <span class="number">4298</span> <span class="keyword">then</span>
+        <span class="keyword">return</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">local</span> x, y, z, o = player:GetLocation()
+
+    <span class="comment">-- Dock -&gt; Northrend</span>
+    <span class="keyword">if</span>     x &gt; <span class="number">1289.40</span> <span class="keyword">and</span> x &lt; <span class="number">1309.79</span> <span class="keyword">and</span>
+           y &gt; -<span class="number">6166.92</span> <span class="keyword">and</span> y &lt; -<span class="number">6125.28</span> <span class="keyword">and</span>
+           z &gt; <span class="number">13.99</span> <span class="keyword">and</span> z &lt; <span class="number">14.21</span> <span class="keyword">then</span>
+        player:Teleport(<span class="number">571</span>, <span class="number">2473.49</span>, -<span class="number">426.06</span>, <span class="number">2.91</span>, <span class="number">0.07</span>)
+        <span class="keyword">return</span>
+
+    <span class="comment">-- Road -&gt; Eastern Kingdoms</span>
+    <span class="keyword">elseif</span> x &gt; <span class="number">1781.35</span> <span class="keyword">and</span> x &lt; <span class="number">1801.34</span> <span class="keyword">and</span>
+           y &gt; -<span class="number">4875.36</span> <span class="keyword">and</span> y &lt; -<span class="number">4867.02</span> <span class="keyword">and</span>
+           z &gt; <span class="number">88.45</span> <span class="keyword">and</span> z &lt; <span class="number">89.94</span> <span class="keyword">then</span>
+        player:Teleport(<span class="number">0</span>, <span class="number">1786.73</span>, -<span class="number">4878.47</span>, <span class="number">87.49</span>, <span class="number">1.34</span>)
+        <span class="keyword">return</span>
+
+    <span class="comment">-- Beach -&gt; Northrend</span>
+    <span class="keyword">elseif</span> x &gt; <span class="number">2043.25</span> <span class="keyword">and</span> x &lt; <span class="number">2303.61</span> <span class="keyword">and</span>
+           y &gt; -<span class="number">6224.11</span> <span class="keyword">and</span> y &lt; -<span class="number">6150.62</span> <span class="keyword">and</span>
+           z &gt; -<span class="number">1.41</span> <span class="keyword">and</span> z &lt; <span class="number">1.14</span> <span class="keyword">then</span>
+        player:Teleport(<span class="number">571</span>, <span class="number">2473.49</span>, -<span class="number">426.06</span>, <span class="number">2.91</span>, <span class="number">0.07</span>)
+        <span class="keyword">return</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Still <span class="keyword">in</span> Ebon Hold, keep checking</span>
+    player:RegisterEvent(DK.teleportCheck, <span class="number">2000</span>, <span class="number">1</span>)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Event registration</span>
+PLAYER_EVENT_ON_FIRST_LOGIN = <span class="number">30</span>
+PLAYER_EVENT_ON_LOGIN       = <span class="number">3</span>
+RegisterPlayerEvent(PLAYER_EVENT_ON_FIRST_LOGIN, DK.onFirstLogin)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, DK.onLogin)
+<span class="comment">-- }}}</span>
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

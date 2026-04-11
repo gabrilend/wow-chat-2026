@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 125 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 125 • Phase 1</div>
+            <h1>Player Bot Behavior Commands</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>125 - Player Bot Behavior Commands</h1></p>
+<p><h2>Status: Open</h2></p>
+<p><h2>Current Behavior</h2>
+- Players control their character manually
+- Playerbot behaviors only apply to AI companions
+- No way for players to &quot;automate&quot; their own actions</p>
+<p><h2>Intended Behavior</h2>
+- Chat commands trigger bot-like behaviors on the player&#39;s own character
+- Player can go &quot;hands off&quot; and let behaviors drive
+- Useful for AFK farming, following friends, or just watching</p>
+<p><h2>Why This Feature?</h2>
+- Sometimes you want to watch your character play itself
+- Creates emergent &quot;idle game&quot; moments
+- Testing behaviors without spawning bots
+- Accessibility: reduce repetitive inputs
+- Fun: see what your character does on its own</p>
+<p><h2>Suggested Commands</h2></p>
+<p><h3>Combat Behaviors</h3>
+| Command | Behavior |
+|---------|----------|
+| <code>#hunt</code> | Enable find-monsters behavior - seek and attack |
+| <code>#flee</code> | Enable avoid-monsters behavior - run from danger |
+| <code>#stop</code> | Disable all active behaviors |</p>
+<p><h3>Movement Behaviors</h3>
+| Command | Behavior |
+|---------|----------|
+| <code>#orbit &lt;player&gt;</code> | Orbit around target player |
+| <code>#follow &lt;player&gt;</code> | Follow target player |
+| <code>#wander</code> | Wander randomly like travel NPCs |
+| <code>#home</code> | Return to bind point |</p>
+<p><h3>Utility Behaviors</h3>
+| Command | Behavior |
+|---------|----------|
+| <code>#rest</code> | Enable sit-and-rest behavior |
+| <code>#auto</code> | Enable all behaviors (full autopilot) |
+| <code>#status</code> | Show which behaviors are active |</p>
+<p><h2>Implementation Steps</h2>
+1. Create src/lua/player-commands.lua
+2. Register PLAYER_EVENT_ON_CHAT handler
+3. Parse commands starting with #
+4. Toggle behavior flags in player data
+5. Behaviors check flags before acting on bots vs players
+6. Add IsBot() OR HasBehaviorEnabled() checks</p>
+<p><h2>Behavior Integration</h2></p>
+<p>Current behaviors check <code>player:IsBot()</code> before acting. Change to:
+<pre><code class="lua"><span class="keyword">function</span> shouldApplyBehavior(unit, behaviorName)
+    <span class="keyword">if</span> unit:IsBot() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">true</span> <span class="keyword">end</span></p>
+<p>    <span class="comment">-- player opted <span class="keyword">in</span> via chat command</span>
+    <span class="keyword">local</span> enabled = unit:GetData(&amp;quot;behavior-&amp;quot; .. behaviorName)
+    <span class="keyword">return</span> enabled == <span class="keyword">true</span>
+<span class="keyword">end</span></code></pre></p>
+<p><h2>Safety Considerations</h2>
+- Player can always override with manual input
+- Manual movement cancels wander/orbit
+- Combat input cancels hunt/flee
+- <code>#stop</code> always works immediately
+- Behaviors pause in dungeons/raids (configurable)</p>
+<p><h2>Future Enhancements</h2>
+- Behavior presets (<code>#preset grind</code>, <code>#preset explore</code>)
+- Time limits (<code>#hunt 10m</code> - hunt for 10 minutes)
+- Conditional triggers (<code>#hunt when full health</code>)
+- Macro integration</p>
+<p><h2>Related Files</h2>
+- src/lua/behaviors/*.lua
+- src/lua/travel.lua (wander behavior reference)
+- docs/playerbots/Playerbot-Commands.md (command style reference)
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-1-progress.html">View Phase 1 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

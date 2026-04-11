@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>server-setup.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>server-setup.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/server-setup.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 8868 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Configuración del Servidor</h1></p>
+<p>| Guía de Instalación                                                                                                                                      |                                                                     |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------ |
+| Este artículo es parte de la Guía de Instalación. Puedes leerlo por separado o hacer clic en el enlace anterior para moverte fácilmente entre los pasos. |
+| <a href="core-installation">&lt;&lt; Paso 2: Instalación del Core</a>                                                                                                     | <a href="database-installation">Paso 4: Instalación de la Base de Datos &gt;&gt;</a> |</p>
+<p><strong>Tabla de contenido</strong>
+- <a href="#archivos-de-datos">Archivos de datos</a> - Requerido/Opcional (No es necesario si extraes los archivos).
+- <a href="#extractores">Extractores</a> - Requerido/Opcional (No es necesario si descargas los archivos).
+- <a href="#archivos-de-configuración-worldserver-y-authserver">Archivos de Configuración: Worldserver y Authserver</a> - Requerido</p>
+<p>Ahora que tienes el código fuente compilado, necesitas agregar algunos archivos necesarios, ya sea descargándolos o extrayéndolos.</p>
+<p>Algunos archivos son opcionales, pero altamente recomendados:</p>
+<p>| Directorio |                       |
+| :--------- | :-------------------- |
+| dbc        | Obligatorio           |
+| maps       | Obligatorio           |
+| vmaps      | ALTAMENTE RECOMENDADO |
+| mmaps      | ALTAMENTE RECOMENDADO |
+| cameras    | Recomendado           |</p>
+<p><h2>Archivos de datos</h2></p>
+<p>Si tienes la intención de usar un cliente enUS, puedes descargar los archivos de datos a continuación. Si deseas usar un cliente en otro idioma, necesitarás <a href="#extractores">extraer</a> los datos tú mismo.</p>
+<p>&lt;a class=&quot;no-icon&quot; href=&quot;https://github.com/wowgaming/client-data/releases/&quot; target=&quot;_blank&quot;&gt;&lt;i class=&quot;fa-solid fa-download&quot;&gt;&lt;/i&gt; Archivos de datos enUS (AC Data v16)&lt;/a&gt;</p>
+<p>1. Descarga los archivos de arriba.</p>
+<p>2. Crea una nueva carpeta dentro de la carpeta de compilación llamada <strong>Data</strong>. Es decir, en Windows: <strong>C:\Build\bin\RelWithDebInfo\Data</strong> o en Linux: <strong>$HOME/azerothcore/data/</strong></p>
+<p>3. Extrae los archivos del archivo zip y colócalos dentro de la carpeta <strong>Data</strong>.</p>
+<p>4. Edita la opción de configuración <a href="#updating-datadir">DataDir</a> para que apunte a la ubicación de tu carpeta.</p>
+<p><h2>Extractores</h2></p>
+<p><strong>(No es necesario si descargaste los archivos anteriores)</strong></p>
+<p>Si descargaste los archivos anteriores, puedes saltarte este paso y continuar con <a href="#archivos-de-configuración-worldserver-y-authserver">worldserver.conf y authserver.conf</a>.</p>
+<p>Esta parte es solo un resumen general del proceso. Por favor, léelo con más detalle según el sistema operativo con el que estés trabajando.</p>
+<p><a href="linux-server-setup">Configuración de servidor en Linux</a></p>
+<p><a href="macos-server-setup">Configuración de servidor en macOS</a></p>
+<p><a href="windows-server-setup">Configuración de servidor en Windows</a></p>
+<p>AzerothCore necesita ciertos archivos extraídos del cliente de World of Warcraft. Debes extraerlos de un cliente 3.3.5a.</p>
+<p>Por defecto, compilarás tu núcleo con herramientas y obtendrás los siguientes archivos ejecutables: <strong>mapextractor</strong>, <strong>vmap4extractor</strong>, <strong>vmap4assembler</strong>, <strong>mmaps_generator</strong> (.exe en Windows).</p>
+<p>Coloca los archivos junto a tu archivo binario de World of Warcraft (wow.exe en Windows) y ejecútalos.</p>
+<p>Después de extraer todos los archivos necesarios, crea una carpeta llamada <strong>Data</strong> dentro del directorio <strong>RelWithDebInfo</strong> o <strong>Debug</strong> y coloca los archivos allí. Alternativamente, puedes especificar un directorio diferente donde deseas mantenerlos cambiando el valor de DataDir en el archivo worldserver.conf.</p>
+<p>Si usas extractores de otros proyectos o ramas, ¡es casi seguro que tu AzerothCore no reconocerá los datos extraídos o ni siquiera funcionará!</p>
+<p>Cuando esto esté completo, puedes recibir el siguiente mensaje, que se puede ignorar con seguridad:</p>
+<p><pre><code>Processing Map 724
+[################################################################]
+Extracting GameObject models...Extracting World\Wmo\Band\Final_Stage.wmo
+No such file.
+Couldn&amp;#39;t open RootWmo!!!
+Done!
+  
+Extract V4.00 2012_02. Work complete. No errors.</code></pre></p>
+<p><h3>Solución de problemas</h3></p>
+<p>&quot;<strong>Unable to open wmo_list.txt! Nothing extracted.</strong>&quot;</p>
+<p>Debes ejecutar Mapextractor.exe antes de makevmaps_simple.bat.</p>
+<p><h2>Archivos de Configuración: Worldserver y Authserver</h2></p>
+<p>Cada vez que se recompila el núcleo, se crea un archivo de configuración .dist, donde se almacenan todas las opciones predeterminadas. Este archivo no tiene un propósito real, excepto para distribuir todas las opciones del núcleo.</p>
+<p><h3>Creación de los archivos de configuración</h3></p>
+<p>1. Ve a tu carpeta de configuraciones, por ejemplo, D:\build\bin\RelWithDebInfo\configs</p>
+<p>2. Elimina la parte <strong>.dist</strong> de <strong>worldserver.conf.dist</strong> y <strong>authserver.conf.dist</strong>.</p>
+<p>    - Deberías quedarte con <strong>worldserver.conf</strong> y <strong>authserver.conf</strong>.</p>
+<p>Abre los archivos .conf y desplázate hasta <strong>LoginDatabaseInfo</strong>, <strong>WorldDatabaseInfo</strong> y <strong>CharacterDatabaseInfo</strong> e ingresa la información de inicio de sesión de MySQL para que el servidor pueda acceder a tu base de datos.</p>
+<p>En una configuración recién compilada, tendrás los siguientes valores por defecto:</p>
+<p><pre><code>LoginDatabaseInfo     = &amp;quot;127.0.0.1;3306;acore;acore;acore_auth&amp;quot;         -&amp;gt; worldserver.conf / authserver.conf
+WorldDatabaseInfo     = &amp;quot;127.0.0.1;3306;acore;acore;acore_world&amp;quot;        -&amp;gt; worldserver.conf
+CharacterDatabaseInfo = &amp;quot;127.0.0.1;3306;acore;acore;acore_characters&amp;quot;   -&amp;gt; worldserver.conf</code></pre></p>
+<p>Esa parte de la configuración sigue este formato o estructura específica:</p>
+<p><pre><code>Variablename = &amp;quot;MySQLIP;Port;Username;Password;database&amp;quot;  </code></pre></p>
+<p>Los siguientes pasos deben ser verificados:</p>
+<p>- El nombre de host (127.0.0.1) puede mantenerse igual si AzerothCore se está instalando en la misma computadora donde ejecutas WoW.
+  Si no es así, sigue las instrucciones en <a href="realmlist">Tabla Realmlist</a>.</p>
+<p>- El puerto (3306) es el valor estándar configurado. Si cambiaste el puerto predeterminado en la configuración de MySQL, debes cambiarlo en consecuencia.
+  El nombre de usuario y la contraseña pueden ser variables. Puedes optar por:</p>
+<p>    - usar el par de nombre de usuario y contraseña predeterminados acore / acore.</p>
+<p>    - crear un inicio de sesión único dentro de un Gestor de Usuarios en tu herramienta de gestión de bases de datos preferida (comúnmente identificado por un ícono que parece una persona o varias personas) y darle los permisos necesarios (los permisos SELECT, INSERT, UPDATE, DELETE son suficientes, y es mucho más seguro).</p>
+<p><h3>Actualización de DataDir</h3></p>
+<p>1. En tu archivo worldserver.conf, localiza la opción <strong>DataDir</strong>.</p>
+<p>2. Edítala con la ruta de tu carpeta. Por ejemplo, <strong>C:\Build\bin\RelWithDebInfo\Data</strong></p>
+<p>{% include tip.html content=&quot;Para la mayoría de los cambios en la configuración de worldserver.conf, simplemente puedes escribir .reload config en el juego para ver los cambios al instante sin reiniciar el servidor.&quot; %}</p>
+<p>{% include warning.html content=&quot;El equipo de AzerothCore y los propietarios NO patrocinan ni apoyan en ningún caso servidores públicos ilegales. Si utilizas estos proyectos para ejecutar un servidor público ilegal y no para pruebas o aprendizaje, es tu propia elección personal.&quot; %}</p>
+<p><h3>(Opcional) Opciones de configuración mediante variables de entorno</h3></p>
+<p>Es posible cargar opciones de configuración mediante variables de entorno, de las cuales puedes leer más <a href="config-overrides-with-env-var">aquí</a>.</p>
+<p><h2>Ayuda</h2></p>
+<p>Si aún tienes problemas, consulta:</p>
+<p><em> <a href="faq">Preguntas frecuentes (FAQ)</a></p>
+<p></em> <a href="common-errors">Errores comunes</a></p>
+<p><em> <a href="how-to-ask-for-help">Cómo pedir ayuda</a></p>
+<p></em> <a href="https://discord.gg/gkt4y2x">Únete a nuestro servidor de Discord</a>, pero no es un canal de soporte 24/7. Un miembro del personal te responderá cuando tenga tiempo.</p>
+<p>| Guía de Instalación                                                                                                                                      |                                                                     |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------ |
+| Este artículo es parte de la Guía de Instalación. Puedes leerlo por separado o hacer clic en el enlace anterior para moverte fácilmente entre los pasos. |
+| <a href="core-installation">&lt;&lt; Paso 2: Instalación del Core</a>                                                                                                     | <a href="database-installation">Paso 4: Instalación de la Base de Datos &gt;&gt;</a> |
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

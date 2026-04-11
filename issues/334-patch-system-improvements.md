@@ -2,9 +2,9 @@
 
 ## Status
 - Created: 2026-04-09
+- **Implemented: 2026-04-09**
 - Phase: 3
 - Priority: Medium
-- **PLANNING**
 
 ## Current Behavior
 
@@ -62,18 +62,45 @@ Every patch in `docs/patches/` should have a corresponding function in `scripts/
 
 ## Implementation Steps
 
-### Phase A: Re-implement Missing Patches
+### Phase A: Re-implement Missing Patches ✓ (2026-04-09)
 These patches were marked "Implemented" but source changes are missing:
-1. [ ] 156 accuracy-level-cap - Add to scripts/azerothcore as B005
-2. [ ] 150 ale-sell-item-hook - Add to scripts/azerothcore as B006
-3. [ ] 332 ale-unit-setwalk - Add to scripts/azerothcore as B007
-4. [ ] 120 ale-calculate-talents - Add mod-talent-bonus as B008 or integrate
+1. [x] 156 accuracy-level-cap - Added as `patch_B005_accuracy_level_cap()`
+2. [x] 150 ale-sell-item-hook - Added as `patch_B006_ale_sell_item_hook()`
+3. [x] 332 ale-unit-setwalk - Added as `patch_B007_ale_unit_methods()`
+4. [x] 120 ale-calculate-talents - Added as `patch_B008_mod_talent_bonus()`
 
-### Phase B: Add Unpatch Functions
-1. [ ] Write `unpatch_B001_*` through `unpatch_B008_*`
-2. [ ] Create `unapply_patches_begin()` that calls all unpatches
-3. [ ] Add bash trap to ensure unpatches run on failure
-4. [ ] Test: patches applied → build → patches reversed
+### Phase B: Add Unpatch Functions ✓ (2026-04-09)
+1. [x] Write `unpatch_B001_*` through `unpatch_B008_*`
+2. [x] Create `unapply_patches_begin()` that calls all unpatches
+3. [x] Add bash trap to ensure unpatches run on failure
+4. [x] Integrated with cmd_update and cmd_compile
+
+### Phase C: Reorganize Into Separate Files ✓ (2026-04-09)
+Patches moved from inline in `scripts/azerothcore` to individual files:
+
+**Directory structure:**
+```
+patches/
+├── patches.sh                      # Loader: sources all B###-*.sh files
+├── B001-aoe-loot-item-namespace.sh # patch + unpatch functions
+├── B002-playerbots-ale-login-hook.sh
+├── B003-ale-gameobject-wildcard.sh
+├── B004-upstream-warning-fixes.sh
+├── B005-accuracy-level-cap.sh
+├── B006-ale-sell-item-hook.sh
+├── B007-ale-unit-methods.sh
+└── B008-mod-talent-bonus.sh
+```
+
+**patches.sh provides:**
+- `apply_patches_begin()` - Apply all PHASE_BEGIN patches in parallel
+- `unapply_patches_begin()` - Reverse all PHASE_BEGIN patches
+- `patches_need_applying()` - Check if any patches need to be applied
+
+**scripts/azerothcore now:**
+- Sources `patches/patches.sh` instead of inline definitions
+- Cleaner separation of concerns
+- Easier to maintain individual patches
 
 ## Design Considerations
 
@@ -122,7 +149,9 @@ unapply_patches_begin
 
 ## Related Files
 
-- `scripts/azerothcore` - Patch functions and apply_patches_begin
+- `scripts/azerothcore` - Sources patches.sh, uses patch functions
+- `patches/patches.sh` - Loader script, orchestration functions
+- `patches/B###-*.sh` - Individual patch files (patch + unpatch)
 - `docs/patches/patch-registry.md` - Patch documentation index
 - `docs/patches/*.md` - Individual patch documentation
 

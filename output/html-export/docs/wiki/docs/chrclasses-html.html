@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>chrclasses.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>chrclasses.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/chrclasses.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 4799 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>ChrClasses.dbc</h1></p>
+<p><a href="dbc-index"><code>Back-to:DBC</code></a></p>
+<p>This DBC contains all possible player classes.</p>
+<p><strong>Version is 3.3.5a</strong></p>
+<p><a href="how-to-import-dbc-data-in-db">How to Import DBC Data onto my Database</a>  </p>
+<p><strong>Table Structure</strong></p>
+<p>| Column | Name                            | Type    | Notes                                                                                        |
+| ------ | ------------------------------- | ------- | -------------------------------------------------------------------------------------------- |
+| 1      | ID                              | Integer |                                                                                              |
+| 2      | Unknown                         | Integer | 1 for Hunter, Rogue, and Shaman, 9 for Death Knight, 0 for the others. Removed in Cataclysm. |
+| 3      | PowerType                       | Integer | 0 = Mana, 1 = Rage, 2 = Focus, 3 = Energy, 4 = Happiness, 6 = Runes. 2 and 4 unused.         |
+| 4      | m_petNameToken                  | String  | Pet type. 101 for Warlock&#39;s demons, 1 for the other pets.                                    |
+| 5-20   | Name                            | Loc     | A name to display.                                                                           |
+| 21     | NameLangMask                    | Integer | String flags, unused.                                                                        |
+| 22-37  | Name_female                     | Loc     | If different from base case, otherwise unused.                                               |
+| 38     | NameFemaleLangMask              | Integer | String flags, unused.                                                                        |
+| 39-54  | Name_male                       | Loc     | If different from base case, otherwise unused.                                               |
+| 55     | NameMaleLangMask                | Integer | String flags, unused.                                                                        |
+| 56     | fileName                        | String  | Capitalized English name.                                                                    |
+| 57     | <a href="#spellclassset">spellClassSet</a> | Integer |                                                                                              |
+| 58     | <a href="#flags">Flags</a>                 | Integer | Unused                                                                                       |
+| 59     | Camera                          | iRefID  | Used for the opening cinematic. 165 for Death Knight, 0 for the others.                      |
+| 60     | required_expansion              | Integer | 0 = Classic, 1 = Burning Crusade, 3 = Wrath.                                                 |</p>
+<p><h3>Content</h3></p>
+<p>| ID  | Value | Name         |
+| --- | ----- | ------------ |
+| 1   | 1     | Warrior      |
+| 2   | 2     | Paladin      |
+| 3   | 4     | Hunter       |
+| 4   | 8     | Rogue        |
+| 5   | 16    | Priest       |
+| 6   | 32    | Death Knight |
+| 7   | 64    | Shaman       |
+| 8   | 128   | Mage         |
+| 9   | 256   | Warlock      |
+| 11  | 1024  | Druid        |</p>
+<p><h3>Flags</h3></p>
+<p>| Flag | Description                 |
+| ---- | --------------------------- |
+| 1    | Use loincloth               |
+| 2    | Player class                |
+| 4    | Display pet                 |
+| 8    | Unused                      |
+| 16   | Can wear mail               |
+| 32   | Can wear scaling-stat plate |
+| 64   | Bind starting area          |</p>
+<p><h3>spellClassSet</h3></p>
+<p>| ID  | Family       | Notes                       |
+| --- | ------------ | --------------------------- |
+| 0   | Generic      |                             |
+| 1   | Unk1         | Events, holidays            |
+| 2   | Unused       |                             |
+| 3   | Mage         |                             |
+| 4   | Warrior      |                             |
+| 5   | Warlock      |                             |
+| 6   | Priest       |                             |
+| 7   | Druid        |                             |
+| 8   | Rogue        |                             |
+| 9   | Hunter       |                             |
+| 10  | Paladin      |                             |
+| 11  | Shaman       |                             |
+| 12  | Unk2         | Spells (Silence resistance) |
+| 13  | Potion       |                             |
+| 14  | Unused       |                             |
+| 15  | Death Knight |                             |
+| 16  | Unused       |                             |
+| 17  | Pet          |                             |</p>
+<p><h3>Description of the fields</h3></p>
+<p>&gt; Value</p>
+<p>Value designates the bitmask used in various places of the core and database (quest_template.RequiresClasses etc).</p>
+<p>The formula for it is: <strong>Value = 1 &lt;&lt; (ID - 1);</strong>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

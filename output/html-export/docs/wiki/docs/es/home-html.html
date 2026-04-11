@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>home.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>home.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/home.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 3709 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+redirect_from: &quot;/&quot;
+---</p>
+<p>Bienvenido a la wiki del proyecto <a href="http://www.azerothcore.org/">AzerothCore</a>.</p>
+<p>Leer en: <a href="home">Inglés :gb:</a> <a href="home">Español :es:</a></p>
+<p><h2>NOTA IMPORTANTE</h2></p>
+<p>{% include warning.html content=&quot;El equipo y los propietarios de AzerothCore NO patrocinan ni apoyan en ningún caso servidores públicos ilegales. Si utiliza estos proyectos para ejecutar un servidor público ilegal y no para probar y aprender, es su elección personal.&quot; %}</p>
+<p><h2>Empezando</h2></p>
+<p>- <a href="installation">Guía de instalación</a></p>
+<p><h2>Documentación</h2></p>
+<p>- <a href="documentation-index">Índice de documentación</a> - Toda la documentación en un solo lugar
+- <a href="https://www.azerothcore.org/doxygen/">Doxygen Docs</a> - Documentación del código</p>
+<p><h2>Descripción general</h2></p>
+<p>AzerothCore es una solución modular y de código abierto completa para el desarrollo de MMO.</p>
+<p><h3>Base sólida</h3></p>
+<p>AzerothCore tiene una base sólida tras años de desarrollo: se basa en <code>MaNGOS</code>, <code>TrinityCore</code> y <code>SunwellCore</code>.</p>
+<p>Estamos mejorando esta confiabilidad con desarrollo continuo y reglas estrictas para fusionar el código en la rama maestra.</p>
+<p><h3>Estabilidad</h3></p>
+<p>Nos aseguramos de que todos los cambios pasen los CI antes de fusionarse en la rama maestra.</p>
+<p>&lt;a href=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/core-build-nopch.yml&quot;&gt;&lt;img alt=&quot;Github CI Core Status&quot; src=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions/workflows/core-build-nopch.yml/badge.svg?branch=master&quot;&gt;&lt;/a&gt;
+&lt;a href=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions?query=workflow%3Awindows-build+branch%3Amaster+event%3Apush&quot;&gt;&lt;img alt=&quot;Github CI Windows Status&quot; src=&quot;https://github.com/azerothcore/azerothcore-wotlk/workflows/windows-build/badge.svg?branch=master&amp;event=push&quot;&gt;&lt;/a&gt;
+&lt;a href=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions?query=workflow%3Amacos-build+branch%3Amaster+event%3Apush&quot;&gt;&lt;img alt=&quot;Github CI Mac Status&quot; src=&quot;https://github.com/azerothcore/azerothcore-wotlk/workflows/macos-build/badge.svg?branch=master&amp;event=push&quot;&gt;&lt;/a&gt;
+&lt;a href=&quot;https://github.com/azerothcore/azerothcore-wotlk/actions?query=workflow%3Adocker-build+branch%3Amaster+event%3Apush&quot;&gt;&lt;img alt=&quot;Github CI Docker Status&quot; src=&quot;https://github.com/azerothcore/azerothcore-wotlk/workflows/docker-build/badge.svg?branch=master&amp;event=push&quot;&gt;&lt;/a&gt;</p>
+<p><h3>Fuente  de código abierto</h3></p>
+<p>Los nuevos componentes fuente de AzerothCore se publican bajo <code>GNU AGPL 3.0</code>. Las fuentes antiguas basadas en <code>MaNGOS</code>/<code>TrinityCore</code> se publican bajo <code>GNU GPL 2.0</code>, ambas licencias son gratuitas y de código abierto.</p>
+<p><h3>Contenido tipo Blizzlike</h3></p>
+<p>Nos esforzamos por hacer que todo el contenido del juego sea blizzlike. Por lo tanto, tenemos un alto estándar para las correcciones que se realizan.</p>
+<p><h3>Impulsado por la comunidad</h3></p>
+<p>AzerothCore tiene una comunidad activa de desarrolladores, contribuyentes y usuarios que colaboran, comparten conocimientos y brindan soporte a través de foros, canales de Discord y otras plataformas de comunicación. Si quieres contribuir, ¡nos encantaría!</p>
+<p><h3>Personalización</h3></p>
+<p>AzerothCore está diseñado para ser altamente modular, lo que permite a los desarrolladores ampliar y personalizar el juego para adaptarlo a sus preferencias o crear experiencias de juego únicas. Esta flexibilidad permite agregar características, contenido y modificaciones personalizadas. <a href="the-modular-structure">Leer más...</a></p>
+<p>&lt;br&gt;</p>
+<p><h2>Ayuda</h2></p>
+<p>Si sigue teniendo inconvenientes, revise:</p>
+<p><em> <a href="faq.md">Preguntas frecuentes</a></p>
+<p></em> <a href="common-errors.md">Errores Comunes</a></p>
+<p><em> <a href="how-to-ask-for-help.md">Cómo solicitar ayuda</a></p>
+<p></em> <a href="https://discord.gg/gkt4y2x">Unase a nuestro discord</a>. Aunque no es un canal de soporte 24/7, un miembro del staff le responderá siempre que tenga tiempo.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

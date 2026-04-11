@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>how-to-create-a-db-pr.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>how-to-create-a-db-pr.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/how-to-create-a-db-pr.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 6052 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+redirect_from: &quot;/How-to-create-a-DB-PR&quot;
+---</p>
+<p><h1>Como crear una Pull Request SQL en GitHub</h1></p>
+<p>Esta es una guía simplificada para crear fácilmente Pull Request que contengan correcciones de la base de datos (código SQL) sin molestarse con la terminal, 
+una alternativa más fácil a la <a href="how-to-create-a-pr">manera tradicional de crear Pull Request</a>.
+Si quiere enviar correcciones en C++ o de otro tipo que no sea SQL, siga la otra guía.</p>
+<p><h2>Hazlo sólo una vez: crea tu fork de AzerothCore</h2></p>
+<p>Necesitas estar logueado en tu cuenta de <a href="https://github.com/">github.com</a>. Si aún no tienes una cuenta, crea una.</p>
+<p>Abre el <a href="https://github.com/azerothcore/azerothcore-wotlk">repositorio de AzerothCore</a>
+y crea un fork del mismo haciendo clic en el botón &quot;Fork&quot; de la parte superior derecha.</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/1.png">Create a fork of AzerothCore</a></p>
+<p><h2>Creando una nueva Pull Request</h2></p>
+<p><h3>1. Actualiza tu fork en GitHub</h3>
+Abre tu navegador y navega hasta tu fork en GitHub (cambia <code>YourUsername</code> por tu nombre de usuario actual en GitHub):</p>
+<p><strong>https://github.com/YourUsername/azerothcore-wotlk</strong></p>
+<p>Si tu rama <code>master</code> no está actualizada con el último AzerothCore, verás algo como esto:</p>
+<p><code>This branch is XX commits behind azerothcore:master</code></p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/update-fork-1.png">AzerothCore update fork</a></p>
+<p>para actualizarlo, haga clic en <strong>Fetch upstream</strong> y luego en <strong>Fetch and merge</strong>.</p>
+<p>Como resultado, la rama <code>master</code> de tu fork debería decir:</p>
+<p><code>This branch is even with azerothcore:master</code></p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/update-fork-2.png">AzerothCore fork updated</a></p>
+<p><h3>2. Crear una nueva rama</h3></p>
+<p>Asegúrese de que tiene seleccionada la rama <code>master</code>, haga clic en el desplegable de ramas y cree una nueva rama.</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/web-create-new-branch.png">AzerothCore fork updated</a></p>
+<p>Puedes nombrar tu nueva rama como quieras (normalmente algo relacionado con tu arreglo), 
+sólo asegúrate de que no has usado ese nombre antes y que estás creando la nueva rama copiando la rama master.</p>
+<p>Deberías ver un mensaje como este <strong>Create branch my-new-branch-123 from master</strong>.</p>
+<p>Después de crear la nueva rama, asegúrate de <strong>mantenerla seleccionada</strong>.</p>
+<p><h3>3. Navegue hasta la carpeta pending_db_world folder</h3></p>
+<p>Ahora debes navegar dentro de la carpeta <code>data/sql/updates/pending_db_world</code> de tu fork.</p>
+<p>Puedes hacerlo manualmente haciendo clic en la carpeta <code>data</code>, luego <code>sql</code>, <code>updates</code>, <code>pending_db_world</code>;</p>
+<p>...o puedes simplemente abrir este link (cambia <code>YourUsername</code> por tu nombre actual en GitHub):</p>
+<p><strong>https://github.com/YourUsername/azerothcore-wotlk/tree/my-new-branch-123/data/sql/updates/pending_db_world</strong></p>
+<p><h3>4. Generar un nuevo archivo de actualización rev</h3></p>
+<p>En una nueva pestaña de tu navegador, abre <a href="https://www.azerothcore.org/pages/rev-generator/">azerothcore.org/pages/rev-generator</a>.</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/web-rev-generator.png">AzerothCore SQL update rev generator</a></p>
+<p>Esto le dará:</p>
+<p>- El nombre del archivo que necesita crear y que contendrá su código SQL.
+- El <em>código de la versión SQL</em> (una consulta <code>INSERT INTO</code>) que deberá añadir al principio del nuevo archivo SQL que subirás.</p>
+<p><strong>Nota</strong>: siempre deben ir juntas y siempre debes tener una nueva rev para cada PR (Pull Request) que envíes.
+Si necesita obtener una nueva rev, simplemente actualice la página o haga clic en &quot;Generar nueva&quot;.</p>
+<p>Cópialos en algún sitio o mantén la pestaña del navegador abierta.</p>
+<p><h3>5. Crea y commitea un nuevo archivo</h3></p>
+<p>De vuelta en GitHub, desde la carpeta <code>pending_db_world</code>, haz clic en <strong>Add file</strong> y luego en <strong>Create new file</strong>:</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/web-create-new-file-1.png">AzerothCore create new SQL file</a></p>
+<p>Ahora necesitas:</p>
+<p>- Establecer el nombre del archivo como el que generó en el paso 4.
+- Añadir el código de la versión SQL que generó en el paso 4.
+- Agregar una nueva línea, luego agregar su propio código SQL debajo y luego agregar una nueva línea vacía al final del archivo.</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/web-create-new-file-2.png">AzerothCore new SQL file example</a></p>
+<p>Ahora desplázate hacia abajo en la página, necesitarás:</p>
+<p>1. Rellenar el mensaje del commit, utilizamos <a href="https://www.conventionalcommits.org/">el formato convencional de los commits</a>,
+  por ejemplo <code>fix(DB/Creature): some commit description here</code>.
+2. Incluya alguna descripción adicional (opcional).
+3. Asegúrese de que la opción &quot;Commit directly to the <code>your-new-branch-name</code>&quot; está seleccionada.
+4. Haz clic en <strong>Commit new file</strong>.</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/web-create-commit.png">AzerothCore create new commit</a></p>
+<p><h3>6. Abriendo la Pull Request</h3></p>
+<p>Vuelve <a href="https://github.com/azerothcore/azerothcore-wotlk">al repositorio principal de AzerothCore</a>,
+notarás que GitHub es lo suficientemente inteligente como para darse cuenta de que estás a punto de abrir un PR
+y muestra este bonito cuadro amarillo claro:</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/11.png">AzerothCore - Compare &amp; pull request</a></p>
+<p>clic en el botón verde (localizado a la derecha) &quot;Compare &amp; pull request&quot; </p>
+<p>Ahora rellene la plantilla del PR siguiendo las instrucciones que aparecerán en la pantalla,
+no olvides añadir las <strong>instrucciones de prueba</strong> para que la gente pueda probar tu PR y pueda ser mergeado:</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/12.png">AzerothCore - Compare &amp; pull request</a></p>
+<p>También es una buena práctica comprobar la pestaña &quot;File changes&quot; para ver que todo está en su sitio como esperas:</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/13.png">AzerothCore - Compare &amp; pull request</a></p>
+<p><strong>NOTA:</strong> ¡No respondemos bien a las personas que pierden el tiempo! Si su solución proviene de otra organización o persona 
+SIEMPRE debe dar crédito al autor original y comprometerse.</p>
+<p>Eso es todo.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

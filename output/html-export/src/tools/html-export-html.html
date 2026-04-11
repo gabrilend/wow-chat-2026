@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>html-export.lua - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>html-export.lua</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/tools/html-export.lua
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> lua &nbsp;&nbsp;
+            <strong>Size:</strong> 11086 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-09 18:20
+        </div>
+
+        <div class="content">
+            <pre><code class="lua">#!/usr/bin/env luajit
+<span class="comment">-- html-export.lua - Main HTML export orchestrator</span>
+<span class="comment">--</span>
+<span class="comment">-- Generates a static HTML site from project source tree, including:</span>
+<span class="comment">-- - Directory navigation</span>
+<span class="comment">-- - Syntax-highlighted source code</span>
+<span class="comment">-- - Issue files as narrative</span>
+<span class="comment">-- - Phase progress tracking</span>
+
+<span class="comment">-- {{{ DIR Configuration</span>
+<span class="keyword">local</span> DIR = &quot;/mnt/mtwo/games/azeroth-core/wow-chat-<span class="number">2026</span>&quot;
+
+<span class="keyword">if</span> arg[<span class="number">1</span>] <span class="keyword">and</span> arg[<span class="number">1</span>]:match(&quot;^%-%-dir=&quot;) <span class="keyword">then</span>
+    DIR = arg[<span class="number">1</span>]:gsub(&quot;^%-%-dir=&quot;, &quot;&quot;)
+    table.remove(arg, <span class="number">1</span>)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+
+<span class="comment">-- {{{ Load modules</span>
+<span class="keyword">local</span> scanner   = require(&quot;html-export.scanner&quot;)
+<span class="keyword">local</span> renderer  = require(&quot;html-export.renderer&quot;)
+<span class="keyword">local</span> narrative = require(&quot;html-export.narrative&quot;)
+<span class="comment">-- }}}</span>
+
+
+<span class="comment">-- {{{ Utility functions</span>
+
+<span class="comment">-- {{{ read_file</span>
+<span class="keyword">local</span> <span class="keyword">function</span> read_file(path)
+    <span class="keyword">local</span> handle = io.open(path, &quot;r&quot;)
+    <span class="keyword">if</span> <span class="keyword">not</span> handle <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span> <span class="keyword">end</span>
+    <span class="keyword">local</span> content = handle:read(&quot;*a&quot;)
+    handle:close()
+    <span class="keyword">return</span> content
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ write_file</span>
+<span class="keyword">local</span> <span class="keyword">function</span> write_file(path, content)
+    <span class="comment">-- Ensure directory exists</span>
+    <span class="keyword">local</span> dir = path:match(&quot;(.+)/[^/]+$&quot;)
+    <span class="keyword">if</span> dir <span class="keyword">then</span>
+        os.execute(string.format(&quot;mkdir -p %q&quot;, dir))
+    <span class="keyword">end</span>
+
+    <span class="keyword">local</span> handle = io.open(path, &quot;w&quot;)
+    <span class="keyword">if</span> <span class="keyword">not</span> handle <span class="keyword">then</span>
+        error(&quot;Could <span class="keyword">not</span> write to: &quot; .. path)
+    <span class="keyword">end</span>
+    handle:write(content)
+    handle:close()
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ template_replace</span>
+<span class="keyword">local</span> <span class="keyword">function</span> template_replace(template, replacements)
+    <span class="keyword">local</span> output = template
+    <span class="keyword">for</span> key, value <span class="keyword">in</span> pairs(replacements) <span class="keyword">do</span>
+        <span class="comment">-- Escape % <span class="keyword">in</span> replacement value to prevent gsub capture issues</span>
+        <span class="keyword">local</span> escaped = value:gsub(&quot;%%&quot;, &quot;%%%%&quot;)
+        output = output:gsub(&quot;{{&quot; .. key .. &quot;}}&quot;, escaped)
+    <span class="keyword">end</span>
+    <span class="keyword">return</span> output
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ format_bytes</span>
+<span class="keyword">local</span> <span class="keyword">function</span> format_bytes(bytes)
+    <span class="keyword">if</span> bytes &lt; <span class="number">1024</span> <span class="keyword">then</span>
+        <span class="keyword">return</span> string.format(&quot;%d B&quot;, bytes)
+    <span class="keyword">elseif</span> bytes &lt; <span class="number">1024</span> * <span class="number">1024</span> <span class="keyword">then</span>
+        <span class="keyword">return</span> string.format(&quot;%.<span class="number">1</span>f KB&quot;, bytes / <span class="number">1024</span>)
+    <span class="keyword">else</span>
+        <span class="keyword">return</span> string.format(&quot;%.<span class="number">1</span>f MB&quot;, bytes / (<span class="number">1024</span> * <span class="number">1024</span>))
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ format_date</span>
+<span class="keyword">local</span> <span class="keyword">function</span> format_date(timestamp)
+    <span class="keyword">return</span> os.date(&quot;%Y-%m-%d %H:%M&quot;, timestamp)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- }}}</span>
+
+
+<span class="comment">-- {{{ build_tree_html</span>
+<span class="comment">-- Builds HTML <span class="keyword">for</span> directory tree navigation</span>
+<span class="keyword">local</span> <span class="keyword">function</span> build_tree_html(files, root_dir)
+    <span class="comment">-- Group files by directory</span>
+    <span class="keyword">local</span> tree = {}
+
+    <span class="keyword">for</span> _, file <span class="keyword">in</span> ipairs(files) <span class="keyword">do</span>
+        <span class="keyword">local</span> parts = {}
+        <span class="keyword">for</span> part <span class="keyword">in</span> file.relative_path:gmatch(&quot;[^/]+&quot;) <span class="keyword">do</span>
+            table.insert(parts, part)
+        <span class="keyword">end</span>
+
+        <span class="keyword">local</span> current = tree
+        <span class="keyword">for</span> i = <span class="number">1</span>, #parts - <span class="number">1</span> <span class="keyword">do</span>
+            <span class="keyword">local</span> dir_name = parts[i]
+            <span class="keyword">if</span> <span class="keyword">not</span> current[dir_name] <span class="keyword">then</span>
+                current[dir_name] = { _type = &quot;directory&quot;, _children = {} }
+            <span class="keyword">end</span>
+            current = current[dir_name]._children
+        <span class="keyword">end</span>
+
+        <span class="keyword">local</span> filename = parts[#parts]
+        current[filename] = {
+            _type = &quot;file&quot;,
+            _path = file.relative_path,
+        }
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Render tree recursively</span>
+    <span class="keyword">local</span> <span class="keyword">function</span> render_node(name, node, depth)
+        <span class="keyword">local</span> indent = string.rep(&quot;  &quot;, depth)
+        <span class="keyword">local</span> lines = {}
+
+        <span class="keyword">if</span> node._type == &quot;directory&quot; <span class="keyword">then</span>
+            table.insert(lines, string.format(
+                &#<span class="number">39</span>;%s&lt;div class=&quot;tree-node directory&quot;&gt;&lt;span class=&quot;icon&quot;&gt;▼&lt;/span&gt; %s&lt;/div&gt;&#<span class="number">39</span>;,
+                indent, name
+            ))
+            table.insert(lines, indent .. &#<span class="number">39</span>;&lt;div class=&quot;tree-children&quot;&gt;&#<span class="number">39</span>;)
+
+            <span class="comment">-- Sort children: directories first, <span class="keyword">then</span> files</span>
+            <span class="keyword">local</span> children = {}
+            <span class="keyword">for</span> child_name, child_node <span class="keyword">in</span> pairs(node._children) <span class="keyword">do</span>
+                table.insert(children, { name = child_name, node = child_node })
+            <span class="keyword">end</span>
+            table.sort(children, <span class="keyword">function</span>(a, b)
+                <span class="keyword">if</span> a.node._type == b.node._type <span class="keyword">then</span>
+                    <span class="keyword">return</span> a.name &lt; b.name
+                <span class="keyword">end</span>
+                <span class="keyword">return</span> a.node._type == &quot;directory&quot;
+            <span class="keyword">end</span>)
+
+            <span class="keyword">for</span> _, child <span class="keyword">in</span> ipairs(children) <span class="keyword">do</span>
+                <span class="keyword">for</span> _, line <span class="keyword">in</span> ipairs(render_node(child.name, child.node, depth + <span class="number">1</span>)) <span class="keyword">do</span>
+                    table.insert(lines, line)
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+
+            table.insert(lines, indent .. &#<span class="number">39</span>;&lt;/div&gt;&#<span class="number">39</span>;)
+
+        <span class="keyword">else</span>
+            <span class="comment">-- File node</span>
+            <span class="keyword">local</span> html_path = node._path:gsub(&quot;%.md$&quot;, &quot;.html&quot;):gsub(&quot;%.lua$&quot;, &quot;.html&quot;):gsub(&quot;%.&quot;, &quot;-&quot;)
+            table.insert(lines, string.format(
+                &#<span class="number">39</span>;%s&lt;div class=&quot;tree-node file&quot;&gt;&lt;span class=&quot;icon&quot;&gt;📄&lt;/span&gt; &lt;a href=&quot;%s&quot;&gt;%s&lt;/a&gt;&lt;/div&gt;&#<span class="number">39</span>;,
+                indent, html_path, name
+            ))
+        <span class="keyword">end</span>
+
+        <span class="keyword">return</span> lines
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Render root directories</span>
+    <span class="keyword">local</span> output = {}
+    <span class="keyword">local</span> roots = {}
+    <span class="keyword">for</span> name, node <span class="keyword">in</span> pairs(tree) <span class="keyword">do</span>
+        table.insert(roots, { name = name, node = node })
+    <span class="keyword">end</span>
+    table.sort(roots, <span class="keyword">function</span>(a, b)
+        <span class="keyword">if</span> a.node._type == b.node._type <span class="keyword">then</span>
+            <span class="keyword">return</span> a.name &lt; b.name
+        <span class="keyword">end</span>
+        <span class="keyword">return</span> a.node._type == &quot;directory&quot;
+    <span class="keyword">end</span>)
+
+    <span class="keyword">for</span> _, root <span class="keyword">in</span> ipairs(roots) <span class="keyword">do</span>
+        <span class="keyword">for</span> _, line <span class="keyword">in</span> ipairs(render_node(root.name, root.node, <span class="number">0</span>)) <span class="keyword">do</span>
+            table.insert(output, line)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> table.concat(output, &quot;\n&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+
+<span class="comment">-- {{{ generate_index</span>
+<span class="comment">-- Generates index.html</span>
+<span class="keyword">local</span> <span class="keyword">function</span> generate_index(config, scan_result, narrative_data, output_dir)
+    <span class="keyword">local</span> template_path = config.root_dir .. &quot;/src/tools/html-export/templates/index.html&quot;
+    <span class="keyword">local</span> template = read_file(template_path)
+    <span class="keyword">if</span> <span class="keyword">not</span> template <span class="keyword">then</span>
+        error(&quot;Could <span class="keyword">not</span> read index template: &quot; .. template_path)
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Build tree HTML</span>
+    <span class="keyword">local</span> tree_html = build_tree_html(scan_result.files, config.root_dir)
+
+    <span class="comment">-- Build stats HTML</span>
+    <span class="keyword">local</span> stats_lines = {}
+    table.insert(stats_lines, string.format(&quot;&lt;li&gt;Total files: %d&lt;/li&gt;&quot;, scan_result.stats.total_files))
+    table.insert(stats_lines, string.format(&quot;&lt;li&gt;Total size: %s&lt;/li&gt;&quot;, format_bytes(scan_result.stats.total_size)))
+    table.insert(stats_lines, &quot;&lt;li&gt;Issues: &quot; .. #narrative_data.issues .. &quot;&lt;/li&gt;&quot;)
+    table.insert(stats_lines, &quot;&lt;li&gt;Phases: &quot; .. #narrative_data.phases .. &quot;&lt;/li&gt;&quot;)
+
+    <span class="keyword">local</span> replacements = {
+        PROJECT_NAME        = config.project_name,
+        PROJECT_DESCRIPTION = config.project_description <span class="keyword">or</span> &quot;Source tree export&quot;,
+        TREE_CONTENT        = tree_html,
+        STATS_CONTENT       = table.concat(stats_lines, &quot;\n                &quot;),
+        CUSTOM_CSS          = renderer.get_css(),
+    }
+
+    <span class="keyword">local</span> html = template_replace(template, replacements)
+    write_file(output_dir .. &quot;/index.html&quot;, html)
+
+    print(&quot;Generated: index.html&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+
+<span class="comment">-- {{{ generate_source_file</span>
+<span class="comment">-- Generates HTML <span class="keyword">for</span> a source file</span>
+<span class="keyword">local</span> <span class="keyword">function</span> generate_source_file(file, config, output_dir)
+    <span class="keyword">local</span> template_path = config.root_dir .. &quot;/src/tools/html-export/templates/source-file.html&quot;
+    <span class="keyword">local</span> template = read_file(template_path)
+    <span class="keyword">if</span> <span class="keyword">not</span> template <span class="keyword">then</span>
+        error(&quot;Could <span class="keyword">not</span> read source-file template: &quot; .. template_path)
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Read file content</span>
+    <span class="keyword">local</span> content = read_file(file.path)
+    <span class="keyword">if</span> <span class="keyword">not</span> content <span class="keyword">then</span>
+        content = &quot;[Could <span class="keyword">not</span> read file]&quot;
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Render content</span>
+    <span class="keyword">local</span> rendered = renderer.render_file(file.path, content)
+
+    <span class="comment">-- Determine output path</span>
+    <span class="keyword">local</span> output_path = output_dir .. &quot;/&quot; .. file.relative_path
+        :gsub(&quot;%.md$&quot;, &quot;.html&quot;)
+        :gsub(&quot;%.lua$&quot;, &quot;.html&quot;)
+        :gsub(&quot;%.&quot;, &quot;-&quot;) .. &quot;.html&quot;
+
+    <span class="keyword">local</span> replacements = {
+        PROJECT_NAME  = config.project_name,
+        FILE_NAME     = file.name,
+        FILE_PATH     = file.relative_path,
+        FILE_TYPE     = file.type,
+        FILE_SIZE     = tostring(file.size),
+        FILE_MTIME    = format_date(file.mtime),
+        FILE_CONTENT  = rendered,
+        RELATED_LINKS = &quot;&quot;,
+        CUSTOM_CSS    = renderer.get_css(),
+    }
+
+    <span class="keyword">local</span> html = template_replace(template, replacements)
+    write_file(output_path, html)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+
+<span class="comment">-- {{{ generate_issue_file</span>
+<span class="comment">-- Generates HTML <span class="keyword">for</span> an issue file</span>
+<span class="keyword">local</span> <span class="keyword">function</span> generate_issue_file(issue, config, output_dir)
+    <span class="keyword">local</span> template_path = config.root_dir .. &quot;/src/tools/html-export/templates/issue-file.html&quot;
+    <span class="keyword">local</span> template = read_file(template_path)
+    <span class="keyword">if</span> <span class="keyword">not</span> template <span class="keyword">then</span>
+        error(&quot;Could <span class="keyword">not</span> read issue-file template: &quot; .. template_path)
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Read issue content</span>
+    <span class="keyword">local</span> content = read_file(issue.filepath)
+    <span class="keyword">if</span> <span class="keyword">not</span> content <span class="keyword">then</span>
+        content = &quot;[Could <span class="keyword">not</span> read issue file]&quot;
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Render markdown</span>
+    <span class="keyword">local</span> rendered = renderer.render_file(issue.filepath, content)
+
+    <span class="comment">-- Determine output path</span>
+    <span class="keyword">local</span> output_path = output_dir .. &quot;/issues/&quot; .. issue.id .. &quot;.html&quot;
+
+    <span class="keyword">local</span> status_text  = issue.completed <span class="keyword">and</span> &quot;✅ Completed&quot; <span class="keyword">or</span> &quot;⏳ Active&quot;
+    <span class="keyword">local</span> status_class = issue.completed <span class="keyword">and</span> &quot;completed&quot; <span class="keyword">or</span> &quot;active&quot;
+
+    <span class="keyword">local</span> replacements = {
+        PROJECT_NAME  = config.project_name,
+        ISSUE_ID      = issue.id,
+        ISSUE_PHASE   = tostring(issue.phase),
+        ISSUE_TITLE   = issue.title,
+        ISSUE_CONTENT = rendered,
+        STATUS_TEXT   = status_text,
+        STATUS_CLASS  = status_class,
+        CUSTOM_CSS    = renderer.get_css(),
+    }
+
+    <span class="keyword">local</span> html = template_replace(template, replacements)
+    write_file(output_path, html)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+
+<span class="comment">-- {{{ main</span>
+<span class="keyword">local</span> <span class="keyword">function</span> main()
+    <span class="comment">-- Parse arguments</span>
+    <span class="keyword">local</span> root_dir   = arg[<span class="number">1</span>] <span class="keyword">or</span> DIR
+    <span class="keyword">local</span> output_dir = arg[<span class="number">2</span>] <span class="keyword">or</span> (root_dir .. &quot;/output/html-export&quot;)
+
+    print(&quot;HTML Export&quot;)
+    print(&quot;===========&quot;)
+    print(&quot;Root:   &quot; .. root_dir)
+    print(&quot;Output: &quot; .. output_dir)
+    print()
+
+    <span class="comment">-- Configuration</span>
+    <span class="keyword">local</span> config = {
+        root_dir            = root_dir,
+        project_name        = root_dir:match(&quot;([^/]+)$&quot;) <span class="keyword">or</span> &quot;Project&quot;,
+        project_description = &quot;Everland Ghostsong - WoW private server source tree&quot;,
+        gitignore_path      = root_dir .. &quot;/.gitignore&quot;,
+        include_dirs        = { &quot;src&quot;, &quot;issues&quot;, &quot;docs&quot;, &quot;scripts&quot; },
+    }
+
+    <span class="comment">-- Scan project</span>
+    print(&quot;Scanning project...&quot;)
+    <span class="keyword">local</span> scan_result = scanner.scan_project(config)
+    print(string.format(&quot;  Found %d files (%s)&quot;,
+        scan_result.stats.total_files,
+        format_bytes(scan_result.stats.total_size)
+    ))
+
+    <span class="comment">-- Build narrative</span>
+    print(&quot;Building narrative...&quot;)
+    <span class="keyword">local</span> narrative_data = narrative.build_narrative(root_dir)
+    print(string.format(&quot;  Found %d issues across %d phases&quot;,
+        #narrative_data.issues,
+        #narrative_data.phases
+    ))
+
+    <span class="comment">-- Generate output</span>
+    print(&quot;Generating HTML...&quot;)
+
+    <span class="comment">-- Index</span>
+    generate_index(config, scan_result, narrative_data, output_dir)
+
+    <span class="comment">-- Source files</span>
+    <span class="keyword">local</span> source_count = <span class="number">0</span>
+    <span class="keyword">for</span> _, file <span class="keyword">in</span> ipairs(scan_result.files) <span class="keyword">do</span>
+        <span class="keyword">if</span> file.relative_path:match(&quot;^src/&quot;) <span class="keyword">or</span> file.relative_path:match(&quot;^docs/&quot;) <span class="keyword">then</span>
+            generate_source_file(file, config, output_dir)
+            source_count = source_count + <span class="number">1</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+    print(string.format(&quot;  Generated %d source file pages&quot;, source_count))
+
+    <span class="comment">-- Issue files</span>
+    <span class="keyword">for</span> _, issue <span class="keyword">in</span> ipairs(narrative_data.issues) <span class="keyword">do</span>
+        generate_issue_file(issue, config, output_dir)
+    <span class="keyword">end</span>
+    print(string.format(&quot;  Generated %d issue pages&quot;, #narrative_data.issues))
+
+    print()
+    print(&quot;Done!&quot;)
+    print(&quot;View: file://&quot; .. output_dir .. &quot;/index.html&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+
+<span class="comment">-- Run</span>
+main()
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

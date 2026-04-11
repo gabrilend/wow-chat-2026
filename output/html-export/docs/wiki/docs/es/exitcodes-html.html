@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>exitcodes.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>exitcodes.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/exitcodes.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2194 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Códigos de salida</h1></p>
+<p>AzerothCore tiene 3 códigos de salida por defecto que se invocan si se apaga, reinicia o bloquea el servidor.</p>
+<p>``<code>cpp
+enum ShutdownExitCode
+{
+    SHUTDOWN_EXIT_CODE = 0,
+    ERROR_EXIT_CODE    = 1,
+    RESTART_EXIT_CODE  = 2,
+};
+<pre><code>
+</code>SHUTDOWN_EXIT_CODE<code> es llamado cuando se utilizan los comandos <strong>.server shutdown</strong>, <strong>.server idleshutdown</strong>, <strong>.server exit</strong> o si el <a href="https://github.com/azerothcore/azerothcore-wotlk/blob/a594bf5b290e5476c61bab29809a079e93c5daa2/src/server/worldserver/Main.cpp#L575-L581">m_serviceStatus == 0</a> para Windows.</p>
+<p></code>ERROR_EXIT_CODE<code> es llamado cuando el servidor falla. Esto puede deberse a un desbordamiento de guid/id/entry, a que <a href="https://github.com/azerothcore/azerothcore-wotlk/blob/a594bf5b290e5476c61bab29809a079e93c5daa2/src/server/worldserver/worldserver.conf.dist#L2909-L2913">Network.Threads</a> sea &amp;lt;= 0 o a que el servidor no pueda inicializar la red.</p>
+<p></code>RESTART_EXIT_CODE<code> se llama cuando se utilizan los comandos <strong>.server restart</strong> y <strong>.server idlerestart</strong>.</p>
+<p>La mejor manera de saber dónde se llaman todos los códigos de salida es encontrarlos en el código fuente.</p>
+<p>&lt;h2&gt;Commands&lt;/h2&gt;
+</code></pre>
+.server idleshutdown #delay [#exit_code]
+.server idlerestart #delay [#exit_code]
+.server shutdown #delay [#exit_code]
+.server restart #delay [#exit_code]
+</code>`<code></p>
+<p>Los comandos <strong>.server shutdown/restart</strong>, <strong>.server idleshutdown/restart</strong> tienen un argumento para <strong>[#exit_code]</strong>.</p>
+<p>El código de salida por defecto para el apagado es siempre 0 y el código de salida por defecto para el reinicio es siempre 2 si el argumento se deja en blanco.</p>
+<p>El argumento puede tomar un valor entre 0 - 125 que le permite emitir un código de salida personalizado distinto de los predeterminados.</p>
+<p><h2>Scripts que incluyen códigos de salida</h2></p>
+<p>El hecho de que el Worldserver envíe códigos de salida le permite crear un script externo que puede actuar cuando lee un código de salida específico que se muestra.</p>
+<p>Por ejemplo, es posible escribir un script para reiniciar automáticamente si el Worldserver envía </code>RESTART_EXIT_CODE`.</p>
+<p>Puede ver <a href="https://github.com/azerothcore/azerothcore-exitcode-script">esta</a> secuencia de comandos por lotes para Windows.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

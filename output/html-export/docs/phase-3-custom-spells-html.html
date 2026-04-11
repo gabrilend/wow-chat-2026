@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>phase-3-custom-spells.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>phase-3-custom-spells.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/phase-3-custom-spells.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 7633 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Phase 3: Custom Spell System</h1></p>
+<p><h2>Vision</h2></p>
+<p>Migrate all player abilities from WoW&#39;s hardcoded spell system to a server-controlled
+AIO-based system. This decouples gameplay from Blizzard&#39;s client, enabling:</p>
+<p>- True custom abilities without DBC modification
+- Easier path to custom MMO development on AzerothCore
+- Full control over spell behavior, visuals, and balance
+- No licensing concerns from modified client data</p>
+<p><h2>Architecture</h2></p>
+<p><pre><code>┌─────────────────────────────────────────────────────────────────────┐
+│                          SERVER (Lua/C++)                           │
+├─────────────────────────────────────────────────────────────────────┤
+│  Spell Definitions     │  Cast State Machine   │  Effect Handlers   │
+│  - Cost (mana/runes)   │  - Validate start     │  - Damage/Heal     │
+│  - Cast time           │  - Track duration     │  - Apply aura      │
+│  - Cooldown            │  - Handle interrupt   │  - Spawn creature  │
+│  - Range/targeting     │  - Pushback calc      │  - Visual effect   │
+│  - Requirements        │  - Cancel on move     │  - Projectile sim  │
+└─────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   │ AIO Messages
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                          CLIENT (AIO Addon)                         │
+├─────────────────────────────────────────────────────────────────────┤
+│  Action Buttons        │  Cast Bar             │  Cooldown Display  │
+│  - Custom icons        │  - Progress bar       │  - Spiral overlay  │
+│  - Custom tooltips     │  - Spell name         │  - Time remaining  │
+│  - Click → server      │  - Interrupt on move  │  - GCD tracking    │
+│  - State (usable/not)  │  - Interrupt on ESC   │                    │
+└─────────────────────────────────────────────────────────────────────┘</code></pre></p>
+<p><h2>Server Components</h2></p>
+<p><h3>Spell Definition Table (Lua)</h3>
+<pre><code class="lua">CustomSpells = {
+    [&amp;quot;frost_bolt&amp;quot;] = {
+        name           = &amp;quot;Frost Bolt&amp;quot;,
+        icon           = &amp;quot;Interface\\Icons\\Spell_Frost_FrostBolt<span class="number">02</span>&amp;quot;,
+        castTime       = <span class="number">2.5</span>,
+        cooldown       = <span class="number">0</span>,
+        cost           = { mana = <span class="number">50</span> },
+        range          = <span class="number">30</span>,
+        school         = &amp;quot;frost&amp;quot;,
+        interruptible  = <span class="keyword">true</span>,
+        movementCancel = <span class="keyword">true</span>,
+        animation      = &amp;quot;SPELL_CAST_DIRECTED&amp;quot;,
+        onCast         = <span class="keyword">function</span>(caster, target)
+            <span class="comment">-- damage calculation, projectile spawn, etc.</span>
+        <span class="keyword">end</span>,
+    },
+}</code></pre></p>
+<p><h3>Cast State Machine</h3>
+<pre><code>IDLE → CASTING → CAST_COMPLETE → IDLE
+         │
+         ├── INTERRUPTED (damage pushback, silence)
+         ├── CANCELLED (movement, ESC, manual)
+         └── FAILED (out of range, LoS, dead target)</code></pre></p>
+<p><h3>Effect System</h3>
+- Direct damage/healing with school and coefficient
+- Aura application (buffs, debuffs, DoTs, HoTs)
+- Creature/object spawning (pets, totems, projectiles)
+- Forced animations via HandleEmoteCommand
+- Sound playback via PlayDirectSound</p>
+<p><h2>Client Components (AIO)</h2></p>
+<p><h3>Custom Action Bar</h3>
+- Replaces or supplements default action bars
+- Each button tied to a custom spell ID
+- Shows icon, tooltip, cooldown, usability state
+- Sends cast request to server on click</p>
+<p><h3>Cast Bar Frame</h3>
+- Custom progress bar (not the default cast bar)
+- Server sends: spell name, duration, interruptible flag
+- Client updates progress, handles local cancel detection
+- Movement detection: polls player position, cancels on change
+- ESC detection: key hook sends cancel to server</p>
+<p><h3>Cooldown Display</h3>
+- Spiral cooldown overlay on buttons
+- Server sends cooldown duration on cast complete
+- Client tracks remaining time locally</p>
+<p><h2>Solvable Problems</h2></p>
+<p><h3>Projectiles</h3>
+- Spawn invisible creature at caster
+- Move creature toward target using MoveTo
+- On arrival (distance check), trigger impact effect
+- Server spawns visual effect creature at impact point</p>
+<p><h3>Pushback</h3>
+- Server tracks incoming damage during cast
+- Each hit adds pushback time (configurable formula)
+- Server sends updated cast duration to client
+- Client adjusts progress bar accordingly</p>
+<p><h3>Interrupts</h3>
+- Server applies &quot;silenced&quot; state on interrupt
+- Client greys out affected spell schools
+- Lockout duration tracked server-side</p>
+<p><h3>Nameplate Cast Bars</h3>
+- AIO can modify nameplate frames
+- Show custom cast bar on player&#39;s nameplate
+- Other players see it via AIO sync</p>
+<p><h3>Global Cooldown</h3>
+- Server enforces GCD on all custom spells
+- Client shows GCD sweep on all buttons
+- 1.5 second base, haste-modified</p>
+<p><h2>Migration Strategy</h2></p>
+<p><h3>Phase 3a: Infrastructure</h3>
+- Build core spell definition system
+- Build cast state machine
+- Build AIO action bar and cast bar
+- Test with one simple spell (e.g., &quot;Meditate&quot;)</p>
+<p><h3>Phase 3b: Utility Spells</h3>
+- Migrate non-combat spells first
+- Hearthstone, mounts, professions
+- Low risk, validates system</p>
+<p><h3>Phase 3c: Basic Combat</h3>
+- Migrate instant-cast damage/heal spells
+- No cast time = no cast bar needed
+- Test damage calculation, threat, combat log</p>
+<p><h3>Phase 3d: Cast Time Spells</h3>
+- Migrate spells with cast times
+- Full cast bar implementation
+- Movement cancellation, interrupt handling</p>
+<p><h3>Phase 3e: Channeled Spells</h3>
+- Spells that tick over duration
+- Different state machine (CHANNELING state)
+- Partial effect on early cancel</p>
+<p><h3>Phase 3f: Projectiles</h3>
+- Implement projectile simulation
+- Visual creature spawning
+- Impact detection and effects</p>
+<p><h3>Phase 3g: Complete Migration</h3>
+- All class abilities migrated
+- Remove dependency on Spell.dbc for gameplay
+- Client spell data only used for animations/sounds</p>
+<p><h2>Benefits</h2></p>
+<p>1. <strong>Full Control</strong>: Every aspect of spells is configurable
+2. <strong>Hot Reload</strong>: Change spell behavior without restart
+3. <strong>Custom Content</strong>: Create abilities that don&#39;t exist in WoW
+4. <strong>Balance Tuning</strong>: Adjust numbers in Lua, not DBC
+5. <strong>Licensing Clean</strong>: No modified Blizzard data files
+6. <strong>Future Proof</strong>: Foundation for non-WoW custom MMO</p>
+<p><h2>Risks and Mitigations</h2></p>
+<p>| Risk | Mitigation |
+|------|------------|
+| Performance (many AIO messages) | Batch updates, delta compression |
+| Desync (client/server state) | Server authoritative, client corrects |
+| Feel (doesn&#39;t feel like WoW) | Careful animation/timing tuning |
+| Complexity (maintaining two systems) | Migrate fully, don&#39;t half-commit |</p>
+<p><h2>Related Concepts</h2></p>
+<p>- 801-808: AIO Framework concepts
+- 901-908: Performance and optimization
+- 601-608: Visual and aesthetic guidelines</p>
+<p><h2>Related Issues</h2></p>
+<p>- 142-custom-spell-system (implementation tracker)
+- 141-talent-tier-limit (affects spell availability)
+- 140-quest-spells-to-trainers (current system, will be migrated)
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

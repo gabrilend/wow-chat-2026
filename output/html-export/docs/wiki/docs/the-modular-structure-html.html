@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>the-modular-structure.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>the-modular-structure.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/the-modular-structure.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2349 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+redirect_from: &quot;/The-Modular-Structure&quot;
+---</p>
+<p><h1>The Modular Structure</h1></p>
+<p>Based on our modular domain-based <a href="Directory-Structure">directory structure</a> , the AzerothCore project allows you to add and extend game features by adding custom isolated modules, without patching the core directly.</p>
+<p>This results in always having a clean core that is easy to maintain and to keep it in sync with the latest AzerothCore updates.</p>
+<p><h2>Hooks</h2></p>
+<p><h3>Script hooks</h3></p>
+<p>In order to change game features, modules use <strong>script hooks</strong>, which are a collection of functions <a href="https://github.com/azerothcore/azerothcore-wotlk/blob/master/src/server/game/Scripting/ScriptMgr.h">implemented into the core</a> and are able to operate from the very beginning of the server (as soon as the World initialization starts).</p>
+<p>The list of the script hooks is available <a href="hooks-script">here</a>.</p>
+<p>Sometimes you need to add new hooks for your custom module, it&#39;s absolutely possible to add them to the core. There are just a few steps needed in order to create a new hook, please follow this guide <a href="hooks-script">here</a> to learn how.</p>
+<p>When you add new hooks, don&#39;t forget to <a href="http://www.azerothcore.org/wiki/How-to-create-a-PR">create a PR</a> with them. This way, they will be reviewed by the AzerothCore developers and included in the official repo.</p>
+<p><h3>Cmake hooks</h3></p>
+<p>CMake hooks allow modules to execute operations during the AzerothCore compilation phase. This can be used, for example, to install and load custom <code>*.conf</code> files during the server startup.</p>
+<p>So modules can have their own configuration files and you can <strong>avoid patching</strong> the <code>worldserver.conf.dist</code> file.</p>
+<p>The list of the CMake hooks is available <a href="hooks-cmake">here</a>.</p>
+<p><h3>Bash hooks</h3></p>
+<p>Bash hooks allow modules to interact with the AzerothCore bash dashboard. With it, you can add automated operations whenever the module is added or removed using the AzerothCore bash console.</p>
+<p>This can be used, for example, to automatically execute SQL code that would add extra tables in the DB when installing a module, and removing them when uninstalling it.</p>
+<p>To interact with our bash system, create and use <code>include.sh</code> in your root directory.</p>
+<p>The list of the Bash hooks is available <a href="hooks-bash">here</a>.</p>
+<p><h2>How to create a module</h2></p>
+<p>You can get started with creating your first module by reading <a href="Create-a-Module">how to create a module</a></p>
+<p></p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

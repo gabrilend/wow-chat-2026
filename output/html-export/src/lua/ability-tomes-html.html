@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ability-tomes.lua - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ability-tomes.lua</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/ability-tomes.lua
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> lua &nbsp;&nbsp;
+            <strong>Size:</strong> 10600 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code class="lua"><span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Ability Tome System</span>
+<span class="comment">-- Issue: <span class="number">151</span> - Players create tomes via Inscription, sell to vendors, find <span class="keyword">in</span> chests</span>
+<span class="comment">--</span>
+<span class="comment">-- This file implements:</span>
+<span class="comment">-- - Tome pool management (per-class spell pools)</span>
+<span class="comment">-- - Chest integration (add tomes on open based on holder&#<span class="number">39</span>;s class)</span>
+<span class="comment">-- - Pool persistence (save/load)</span>
+<span class="comment">--</span>
+<span class="comment">-- NOT implemented here (requires additional work):</span>
+<span class="comment">-- - SQL: Tome item templates (one per spell)</span>
+<span class="comment">-- - SQL: Inscription recipes (requires class implements)</span>
+<span class="comment">-- - C++: Sell hook (see docs/patches/ale-sell-item-hook.md)</span>
+<span class="comment">-- - SQL: Remove glyphs from game</span>
+
+AbilityTomes = {}
+
+<span class="comment">-- Class IDs <span class="keyword">for</span> reference</span>
+<span class="keyword">local</span> CLASS_WARRIOR     = <span class="number">1</span>
+<span class="keyword">local</span> CLASS_PALADIN     = <span class="number">2</span>
+<span class="keyword">local</span> CLASS_HUNTER      = <span class="number">3</span>
+<span class="keyword">local</span> CLASS_ROGUE       = <span class="number">4</span>
+<span class="keyword">local</span> CLASS_PRIEST      = <span class="number">5</span>
+<span class="keyword">local</span> CLASS_DEATHKNIGHT = <span class="number">6</span>
+<span class="keyword">local</span> CLASS_SHAMAN      = <span class="number">7</span>
+<span class="keyword">local</span> CLASS_MAGE        = <span class="number">8</span>
+<span class="keyword">local</span> CLASS_WARLOCK     = <span class="number">9</span>
+<span class="keyword">local</span> CLASS_DRUID       = <span class="number">11</span>
+
+<span class="comment">-- Tome pools: { [classId] = { [spellId] = count, ... } }</span>
+AbilityTomes.pools = {
+    [CLASS_WARRIOR]     = {},
+    [CLASS_PALADIN]     = {},
+    [CLASS_HUNTER]      = {},
+    [CLASS_ROGUE]       = {},
+    [CLASS_PRIEST]      = {},
+    [CLASS_DEATHKNIGHT] = {},
+    [CLASS_SHAMAN]      = {},
+    [CLASS_MAGE]        = {},
+    [CLASS_WARLOCK]     = {},
+    [CLASS_DRUID]       = {},
+}
+
+<span class="comment">-- Spell -&gt; Tome Item mapping (populated by SQL data)</span>
+<span class="comment">-- Format: { [spellId] = tomeItemId, ... }</span>
+AbilityTomes.spellToTome = {}
+
+<span class="comment">-- Tome Item -&gt; Spell mapping (reverse lookup)</span>
+<span class="comment">-- Format: { [tomeItemId] = spellId, ... }</span>
+AbilityTomes.tomeToSpell = {}
+
+<span class="comment">-- Tome spawn chance when opening chest (<span class="number">0.0</span> to <span class="number">1.0</span>)</span>
+<span class="keyword">local</span> TOME_SPAWN_CHANCE = <span class="number">0.15</span>  <span class="comment">-- <span class="number">15</span>% chance</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Pool Management</span>
+
+<span class="comment">-- {{{ addToPool</span>
+<span class="comment">-- Add a tome (spell) to the class-specific pool</span>
+<span class="keyword">function</span> AbilityTomes.addToPool(classId, spellId)
+    <span class="keyword">if</span> <span class="keyword">not</span> AbilityTomes.pools[classId] <span class="keyword">then</span>
+        print(&quot;[AbilityTomes] ERROR: Invalid classId &quot; .. classId)
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+    AbilityTomes.pools[classId][spellId] = (AbilityTomes.pools[classId][spellId] <span class="keyword">or</span> <span class="number">0</span>) + <span class="number">1</span>
+    print(&quot;[AbilityTomes] Added spell &quot; .. spellId .. &quot; to class &quot; .. classId .. &quot; pool&quot;)
+    <span class="keyword">return</span> <span class="keyword">true</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ drawFromPool</span>
+<span class="comment">-- Draw a random tome (spell) from the class pool</span>
+<span class="comment">-- Returns spellId <span class="keyword">or</span> <span class="keyword">nil</span> <span class="keyword">if</span> pool empty</span>
+<span class="keyword">function</span> AbilityTomes.drawFromPool(classId)
+    <span class="keyword">local</span> pool = AbilityTomes.pools[classId]
+    <span class="keyword">if</span> <span class="keyword">not</span> pool <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span> <span class="keyword">end</span>
+
+    <span class="comment">-- Collect available spells</span>
+    <span class="keyword">local</span> available = {}
+    <span class="keyword">for</span> spellId, count <span class="keyword">in</span> pairs(pool) <span class="keyword">do</span>
+        <span class="keyword">if</span> count &gt; <span class="number">0</span> <span class="keyword">then</span>
+            table.insert(available, spellId)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">if</span> #available == <span class="number">0</span> <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="keyword">nil</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Select random spell</span>
+    <span class="keyword">local</span> spellId = available[math.random(#available)]
+    pool[spellId] = pool[spellId] - <span class="number">1</span>
+
+    <span class="comment">-- Clean up <span class="keyword">if</span> count reaches <span class="number">0</span></span>
+    <span class="keyword">if</span> pool[spellId] &lt;= <span class="number">0</span> <span class="keyword">then</span>
+        pool[spellId] = <span class="keyword">nil</span>
+    <span class="keyword">end</span>
+
+    print(&quot;[AbilityTomes] Drew spell &quot; .. spellId .. &quot; from class &quot; .. classId .. &quot; pool&quot;)
+    <span class="keyword">return</span> spellId
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ getPoolSize</span>
+<span class="comment">-- Get total number of tomes <span class="keyword">in</span> a class pool</span>
+<span class="keyword">function</span> AbilityTomes.getPoolSize(classId)
+    <span class="keyword">local</span> pool = AbilityTomes.pools[classId]
+    <span class="keyword">if</span> <span class="keyword">not</span> pool <span class="keyword">then</span> <span class="keyword">return</span> <span class="number">0</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> total = <span class="number">0</span>
+    <span class="keyword">for</span> spellId, count <span class="keyword">in</span> pairs(pool) <span class="keyword">do</span>
+        total = total + count
+    <span class="keyword">end</span>
+    <span class="keyword">return</span> total
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ getPoolContents</span>
+<span class="comment">-- Get detailed contents of a class pool</span>
+<span class="keyword">function</span> AbilityTomes.getPoolContents(classId)
+    <span class="keyword">local</span> pool = AbilityTomes.pools[classId]
+    <span class="keyword">if</span> <span class="keyword">not</span> pool <span class="keyword">then</span> <span class="keyword">return</span> {} <span class="keyword">end</span>
+
+    <span class="keyword">local</span> contents = {}
+    <span class="keyword">for</span> spellId, count <span class="keyword">in</span> pairs(pool) <span class="keyword">do</span>
+        <span class="keyword">if</span> count &gt; <span class="number">0</span> <span class="keyword">then</span>
+            table.insert(contents, { spellId = spellId, count = count })
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+    <span class="keyword">return</span> contents
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Tome Item Management</span>
+
+<span class="comment">-- {{{ registerTome</span>
+<span class="comment">-- Register a spell -&gt; tome item mapping</span>
+<span class="keyword">function</span> AbilityTomes.registerTome(spellId, tomeItemId)
+    AbilityTomes.spellToTome[spellId] = tomeItemId
+    AbilityTomes.tomeToSpell[tomeItemId] = spellId
+    print(&quot;[AbilityTomes] Registered tome: spell &quot; .. spellId .. &quot; -&gt; item &quot; .. tomeItemId)
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ getTomeItemForSpell</span>
+<span class="comment">-- Get the tome item ID <span class="keyword">for</span> a spell</span>
+<span class="keyword">function</span> AbilityTomes.getTomeItemForSpell(spellId)
+    <span class="keyword">return</span> AbilityTomes.spellToTome[spellId]
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ getSpellForTomeItem</span>
+<span class="comment">-- Get the spell ID <span class="keyword">for</span> a tome item</span>
+<span class="keyword">function</span> AbilityTomes.getSpellForTomeItem(tomeItemId)
+    <span class="keyword">return</span> AbilityTomes.tomeToSpell[tomeItemId]
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Chest Integration</span>
+
+<span class="comment">-- {{{ onChestOpen</span>
+<span class="comment">-- When chest is opened, potentially add a tome based on holder&#<span class="number">39</span>;s class</span>
+<span class="comment">-- This hooks into GAMEOBJECT_EVENT_ON_USE</span>
+<span class="keyword">function</span> AbilityTomes.onChestOpen(event, chest, player)
+    <span class="comment">-- Random chance to spawn tome</span>
+    <span class="keyword">if</span> math.random() &gt; TOME_SPAWN_CHANCE <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>  <span class="comment">-- no tome this time</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Get player&#<span class="number">39</span>;s class</span>
+    <span class="keyword">local</span> classId = player:GetClass()
+    <span class="keyword">local</span> poolSize = AbilityTomes.getPoolSize(classId)
+
+    <span class="keyword">if</span> poolSize == <span class="number">0</span> <span class="keyword">then</span>
+        print(&quot;[AbilityTomes] No tomes <span class="keyword">in</span> pool <span class="keyword">for</span> class &quot; .. classId)
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Draw from pool</span>
+    <span class="keyword">local</span> spellId = AbilityTomes.drawFromPool(classId)
+    <span class="keyword">if</span> <span class="keyword">not</span> spellId <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Get tome item</span>
+    <span class="keyword">local</span> tomeItemId = AbilityTomes.getTomeItemForSpell(spellId)
+    <span class="keyword">if</span> <span class="keyword">not</span> tomeItemId <span class="keyword">then</span>
+        <span class="comment">-- No tome item registered <span class="keyword">for</span> this spell - put it back</span>
+        AbilityTomes.addToPool(classId, spellId)
+        print(&quot;[AbilityTomes] No tome item registered <span class="keyword">for</span> spell &quot; .. spellId)
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Add tome to chest</span>
+    chest:AddLoot(tomeItemId, <span class="number">1</span>)
+    print(&quot;[AbilityTomes] Added tome &quot; .. tomeItemId .. &quot; (spell &quot; .. spellId .. &quot;) to chest <span class="keyword">for</span> &quot; .. player:GetName())
+
+    player:SendBroadcastMessage(&quot;|cff<span class="number">00</span>ffff[Ability Tome] A tome glimmers <span class="keyword">in</span> the chest...|r&quot;)
+    <span class="keyword">return</span> <span class="keyword">false</span>  <span class="comment">-- continue normal chest interaction</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Vendor Sell Integration (STUB - requires C++ hook)</span>
+
+<span class="comment">-- {{{ onPlayerSellItem</span>
+<span class="comment">-- Called when player sells an item to vendor</span>
+<span class="comment">-- REQUIRES: C++ patch documented <span class="keyword">in</span> docs/patches/ale-sell-item-hook.md</span>
+<span class="comment">--</span>
+<span class="comment">-- When patch is applied, register with:</span>
+<span class="comment">-- RegisterPlayerEvent(<span class="number">74</span>, AbilityTomes.onPlayerSellItem)  -- PLAYER_EVENT_ON_SELL_ITEM</span>
+<span class="keyword">function</span> AbilityTomes.onPlayerSellItem(event, player, item, vendor)
+    <span class="keyword">local</span> itemId = item:GetEntry()
+    <span class="keyword">local</span> spellId = AbilityTomes.getSpellForTomeItem(itemId)
+
+    <span class="keyword">if</span> <span class="keyword">not</span> spellId <span class="keyword">then</span>
+        <span class="keyword">return</span>  <span class="comment">-- <span class="keyword">not</span> a tome</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Get class from spell (would need spell -&gt; class mapping)</span>
+    <span class="comment">-- For now, use player&#<span class="number">39</span>;s class</span>
+    <span class="keyword">local</span> classId = player:GetClass()
+
+    <span class="comment">-- Add to pool</span>
+    AbilityTomes.addToPool(classId, spellId)
+    player:SendBroadcastMessage(&quot;|cff<span class="number">00</span>ffff[Ability Tome] Tome returned to the world pool.|r&quot;)
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Persistence</span>
+
+<span class="comment">-- {{{ savePools</span>
+<span class="comment">-- Save pools to player data (<span class="keyword">for</span> persistence across restarts)</span>
+<span class="comment">-- This is a simplified approach - real implementation would use DB</span>
+<span class="keyword">function</span> AbilityTomes.savePools()
+    <span class="comment">-- Convert pools to string format <span class="keyword">for</span> storage</span>
+    <span class="keyword">local</span> data = {}
+    <span class="keyword">for</span> classId, pool <span class="keyword">in</span> pairs(AbilityTomes.pools) <span class="keyword">do</span>
+        data[classId] = {}
+        <span class="keyword">for</span> spellId, count <span class="keyword">in</span> pairs(pool) <span class="keyword">do</span>
+            data[classId][spellId] = count
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+    <span class="comment">-- Would write to DB <span class="keyword">or</span> file here</span>
+    print(&quot;[AbilityTomes] Pools saved (implementation pending)&quot;)
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ loadPools</span>
+<span class="comment">-- Load pools from storage</span>
+<span class="keyword">function</span> AbilityTomes.loadPools()
+    <span class="comment">-- Would read from DB <span class="keyword">or</span> file here</span>
+    print(&quot;[AbilityTomes] Pools loaded (implementation pending)&quot;)
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Test Commands</span>
+
+<span class="comment">-- {{{ handleChat</span>
+<span class="keyword">function</span> AbilityTomes.handleChat(event, player, message)
+    <span class="comment">-- #tomeadd &lt;classId&gt; &lt;spellId&gt; - add tome to pool</span>
+    <span class="keyword">if</span> message:sub(<span class="number">1</span>, <span class="number">8</span>) == &quot;#tomeadd&quot; <span class="keyword">then</span>
+        <span class="keyword">local</span> args = message:sub(<span class="number">10</span>)
+        <span class="keyword">local</span> classId, spellId = args:match(&quot;(%d+)%s+(%d+)&quot;)
+        classId = tonumber(classId)
+        spellId = tonumber(spellId)
+        <span class="keyword">if</span> classId <span class="keyword">and</span> spellId <span class="keyword">then</span>
+            AbilityTomes.addToPool(classId, spellId)
+            player:SendBroadcastMessage(&quot;Added spell &quot; .. spellId .. &quot; to class &quot; .. classId .. &quot; tome pool&quot;)
+        <span class="keyword">else</span>
+            player:SendBroadcastMessage(&quot;Usage: #tomeadd &lt;classId&gt; &lt;spellId&gt;&quot;)
+        <span class="keyword">end</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- #tomepool [classId] - show pool size</span>
+    <span class="keyword">if</span> message:sub(<span class="number">1</span>, <span class="number">9</span>) == &quot;#tomepool&quot; <span class="keyword">then</span>
+        <span class="keyword">local</span> classIdStr = message:sub(<span class="number">11</span>)
+        <span class="keyword">local</span> classId = tonumber(classIdStr)
+        <span class="keyword">if</span> <span class="keyword">not</span> classId <span class="keyword">then</span>
+            classId = player:GetClass()
+        <span class="keyword">end</span>
+        <span class="keyword">local</span> size = AbilityTomes.getPoolSize(classId)
+        player:SendBroadcastMessage(&quot;Class &quot; .. classId .. &quot; tome pool: &quot; .. size .. &quot; tomes&quot;)
+
+        <span class="keyword">local</span> contents = AbilityTomes.getPoolContents(classId)
+        <span class="keyword">for</span> _, entry <span class="keyword">in</span> ipairs(contents) <span class="keyword">do</span>
+            player:SendBroadcastMessage(&quot;  - Spell &quot; .. entry.spellId .. &quot; x&quot; .. entry.count)
+        <span class="keyword">end</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- #tomereg &lt;spellId&gt; &lt;itemId&gt; - register tome item</span>
+    <span class="keyword">if</span> message:sub(<span class="number">1</span>, <span class="number">8</span>) == &quot;#tomereg&quot; <span class="keyword">then</span>
+        <span class="keyword">local</span> args = message:sub(<span class="number">10</span>)
+        <span class="keyword">local</span> spellId, itemId = args:match(&quot;(%d+)%s+(%d+)&quot;)
+        spellId = tonumber(spellId)
+        itemId = tonumber(itemId)
+        <span class="keyword">if</span> spellId <span class="keyword">and</span> itemId <span class="keyword">then</span>
+            AbilityTomes.registerTome(spellId, itemId)
+            player:SendBroadcastMessage(&quot;Registered tome: spell &quot; .. spellId .. &quot; -&gt; item &quot; .. itemId)
+        <span class="keyword">else</span>
+            player:SendBroadcastMessage(&quot;Usage: #tomereg &lt;spellId&gt; &lt;itemId&gt;&quot;)
+        <span class="keyword">end</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Registration</span>
+
+<span class="comment">-- Hook chest opening <span class="keyword">for</span> tome spawns</span>
+<span class="comment">-- Using entry <span class="number">0</span> catches all gameobjects - may want to filter to chest types</span>
+RegisterGameObjectEvent(<span class="number">0</span>, <span class="number">14</span>, AbilityTomes.onChestOpen)  <span class="comment">-- event <span class="number">14</span> = GAMEOBJECT_EVENT_ON_USE</span>
+
+<span class="comment">-- Chat commands <span class="keyword">for</span> testing</span>
+RegisterPlayerEvent(<span class="number">18</span>, AbilityTomes.handleChat)  <span class="comment">-- PLAYER_EVENT_ON_CHAT</span>
+
+print(&quot;[AbilityTomes] Ability tome system loaded&quot;)
+print(&quot;[AbilityTomes] NOTE: Sell hook requires C++ patch (see docs/patches/ale-sell-item-hook.md)&quot;)
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 347 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 347 • Phase 3</div>
+            <h1>Linear Ability Scaling</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>347 - Linear Ability Scaling</h1></p>
+<p><h2>Status: Open</h2></p>
+<p><h2>Phase: 3 (Prerequisite for seamless tome system)</h2></p>
+<p><h2>Current Behavior</h2></p>
+<p>WoW abilities use a rank system with discrete power jumps:
+- Rejuvenation R1 (level 8): 32 HP over 12 sec, 25 mana
+- Rejuvenation R2 (level 14): 56 HP over 12 sec, 65 mana
+- Rejuvenation R3 (level 20): 116 HP over 12 sec, 105 mana</p>
+<p>Problems:
+1. Power spikes at rank-up levels create jarring difficulty transitions
+2. Learning a spell &quot;early&quot; via tome gives you an underpowered version
+3. Learning a spell &quot;late&quot; gives you an overpowered version
+4. Custom classes must carefully balance which ranks to include at which levels
+5. The tome system (issue 151) is complicated by rank management</p>
+<p><h2>Intended Behavior</h2></p>
+<p><h3>Linear Scaling Formula</h3></p>
+<p>Every ability has 80 versions (levels 1-80), each balanced for that exact level:
+- Rejuvenation (level 5): scaled for level 5 encounters
+- Rejuvenation (level 12): scaled for level 12 encounters
+- Rejuvenation (level 47): scaled for level 47 encounters</p>
+<p>The scaling formula for each stat:
+<pre><code>value_at_level = base_value + (max_value - base_value) <em> ((level - 1) / 79)</code></pre></p>
+<p>Where:
+- <code>base_value</code> = the stat at level 1
+- <code>max_value</code> = the stat at level 80
+- Linear interpolation between them</p>
+<p><h3>Example: Rejuvenation</h3></p>
+<p>| Level | Healing Total | Mana Cost | Spell ID |
+|-------|---------------|-----------|----------|
+| 1     | 20            | 15        | 9000001  |
+| 5     | 40            | 30        | 9000005  |
+| 10    | 65            | 50        | 9000010  |
+| 15    | 95            | 70        | 9000015  |
+| 20    | 125           | 90        | 9000020  |
+| ...   | ...           | ...       | ...      |
+| 80    | 500           | 350       | 9000080  |</p>
+<p><h3>Spell ID Allocation</h3></p>
+<p>Reserve a contiguous block of spell IDs for scaled versions:
+<pre><code>Base spell ID range: 9,000,000 - 9,999,999 (1 million IDs)</p>
+<p>Formula: scaled_spell_id = BASE_OFFSET + (spell_family_index </em> 100) + level</p>
+<p>Example for spell family &amp;quot;rejuvenation&amp;quot; (index 0):
+  Level 1:  9000001
+  Level 80: 9000080</p>
+<p>Example for spell family &amp;quot;renew&amp;quot; (index 1):
+  Level 1:  9000101
+  Level 80: 9000180</p>
+<p>Example for spell family &amp;quot;holy_light&amp;quot; (index 2):
+  Level 1:  9000201
+  Level 80: 9000280</code></pre></p>
+<p>This allows ~10,000 spell families with 100 levels each.</p>
+<p><h3>Custom Class Integration</h3></p>
+<p>Custom class definitions reference spell families, not specific spell IDs:
+<pre><code class="lua"><span class="comment">-- Old format (issue <span class="number">163</span>):</span>
+knight.abilities[<span class="number">139</span>]  = { level = <span class="number">8</span>,  cost = <span class="number">1500</span>, school = <span class="number">1</span> }  <span class="comment">-- Renew R<span class="number">1</span></span>
+knight.abilities[<span class="number">6074</span>] = { level = <span class="number">14</span>, cost = <span class="number">2500</span>, school = <span class="number">1</span> }  <span class="comment">-- Renew R<span class="number">2</span></span></p>
+<p><span class="comment">-- New format with linear scaling:</span>
+knight.abilities[&amp;quot;renew&amp;quot;] = {
+    unlock_level = <span class="number">8</span>,   <span class="comment">-- First available at level <span class="number">8</span></span>
+    cost = <span class="number">1500</span>,        <span class="comment">-- Training cost (copper)</span>
+    school = <span class="number">1</span>          <span class="comment">-- Spellbook category</span>
+}
+<span class="comment">-- Player at level <span class="number">8</span> learns &amp;quot;Renew (Level <span class="number">8</span>)&amp;quot; - spell ID <span class="number">9000108</span></span>
+<span class="comment">-- Player at level <span class="number">12</span> learns &amp;quot;Renew (Level <span class="number">12</span>)&amp;quot; - spell ID <span class="number">9000112</span></span>
+<span class="comment">-- (<span class="keyword">if</span> they didn&amp;#<span class="number">39</span>;t have it before)</span></code></pre></p>
+<p><h3>Tome System Integration</h3></p>
+<p>With linear scaling, the tome system becomes trivially simple:
+1. Inscriptionist creates &quot;Tome of Renew&quot; (family-based, not rank-based)
+2. Tome sold to vendor → enters &quot;renew&quot; pool
+3. Player opens chest → tome appears if &quot;renew&quot; in their class
+4. Player uses tome → learns Renew at THEIR CURRENT LEVEL
+5. No rank checking, no level validation against spell requirements
+6. The spell they learn is always balanced for their level</p>
+<p><h3>Base Class Equivalence</h3></p>
+<p>Eventually, base classes (Warrior, Paladin, etc.) will use the same format as custom classes:
+<pre><code class="lua"><span class="comment">-- src/custom-classes/warrior.lua</span>
+warrior = {}
+warrior.name = &amp;quot;Warrior&amp;quot;
+warrior.description = &amp;quot;A mighty melee combatant.&amp;quot;
+warrior.stat_growth = &amp;quot;warrior&amp;quot;</p>
+<p>warrior.abilities = {}
+warrior.abilities[&amp;quot;heroic_strike&amp;quot;] = { unlock_level = <span class="number">1</span>, cost = <span class="number">0</span>, school = <span class="number">1</span> }
+warrior.abilities[&amp;quot;charge&amp;quot;]        = { unlock_level = <span class="number">4</span>, cost = <span class="number">500</span>, school = <span class="number">1</span> }
+warrior.abilities[&amp;quot;rend&amp;quot;]          = { unlock_level = <span class="number">4</span>, cost = <span class="number">500</span>, school = <span class="number">1</span> }
+<span class="comment">-- etc</span></code></pre></p>
+<p>This means:
+- No special-casing for &quot;real&quot; classes vs custom classes
+- All classes use the same progression system
+- All classes benefit from linear scaling
+- Tome pools are unified (a Warrior&#39;s Heroic Strike tome can go to custom class that has it)</p>
+<p><h2>Implementation Steps</h2></p>
+<p><h3>Phase A: Spell Data Generation</h3></p>
+<p>1. Enumerate all learnable player abilities in WoW 3.3.5a
+   - Extract from Spell.dbc using existing tools
+   - Filter to player-usable abilities (not NPC-only, not items)
+   - Group by spell family (all ranks of same spell)</p>
+<p>2. Define scaling parameters for each spell family
+   - Base values (level 1 equivalent)
+   - Max values (level 80 equivalent)
+   - Which fields to scale (damage, healing, mana cost, duration, etc.)</p>
+<p>3. Generate 80 versions of each spell
+   - Use Spell.dbc as template
+   - Calculate scaled values using linear formula
+   - Assign sequential spell IDs from reserved range</p>
+<p>4. Output to DBC files
+   - Spell.dbc - spell definitions
+   - SpellEffect.dbc - damage/healing values
+   - SpellCastTimes.dbc - cast times (may not need scaling)
+   - SpellPower.dbc - mana/rage/energy costs</p>
+<p><h3>Phase B: Spell Family Mapping</h3></p>
+<p>5. Create spell family registry
+   - Maps family names to spell ID ranges
+   - Maps original spell IDs to families (for backwards compat)
+   - Lua table + SQL table for runtime lookup</p>
+<p>6. Update custom class format (issue 163)
+   - Change from spell_id keys to family keys
+   - Add unlock_level field
+   - Update parser and validator</p>
+<p><h3>Phase C: Runtime Integration</h3></p>
+<p>7. Update spell learning logic
+   - When player should learn spell, calculate level-appropriate spell ID
+   - Use formula: <code>BASE_OFFSET + (family_index * 100) + player_level</code>
+   - Replace any lower-level versions in spellbook</p>
+<p>8. Update tome system (issue 151)
+   - Simplify to family-based pools
+   - Remove rank tracking entirely
+   - Tome use = learn spell at current level</p>
+<p>9. Handle level-up spell upgrades
+   - On level up, scan player&#39;s abilities
+   - For each ability, check if new level version exists
+   - Auto-learn new version, remove old version
+   - Player always has level-appropriate spells</p>
+<p><h3>Phase D: Testing and Balancing</h3></p>
+<p>10. Create test characters at various levels
+    - Verify spell power feels appropriate for level
+    - Check mana costs are sustainable
+    - Ensure no broken interactions</p>
+<p>11. Balance pass
+    - Adjust base/max values as needed
+    - Test in actual gameplay scenarios
+    - Get player feedback</p>
+<p><h2>Technical Considerations</h2></p>
+<p><h3>DBC Editing</h3></p>
+<p>Requires DBC editing tools:
+- MPQ extraction (if not already done)
+- DBC editing library (Python, C++, or similar)
+- MPQ repacking for client distribution</p>
+<p><strong>Client-side requirement</strong>: Players need updated DBC files to see spell tooltips.
+Server can teach the spells regardless, but tooltips will be wrong without client patch.</p>
+<p>Options:
+1. Custom MPQ patch distributed to players
+2. Use addon to override tooltip display (limited)
+3. Accept broken tooltips (not ideal)</p>
+<p><h3>Spell ID Range</h3></p>
+<p>The 9,000,000+ range should be safe:
+- WoW 3.3.5a highest spell ID is around 80,000
+- Custom module spells typically use 100,000-999,999
+- 9,000,000+ is well clear of conflicts</p>
+<p><h3>Performance</h3></p>
+<p>80 versions × 1000 spells = 80,000 new spell records
+- DBC files will be larger
+- Server memory usage increases slightly
+- Spell lookup should remain O(1) with ID indexing</p>
+<p><h3>Backwards Compatibility</h3></p>
+<p>Old spell IDs (139, 6074, etc.) should still work:
+- NPCs that cast original spells unaffected
+- Items that teach original spells unaffected
+- Only player learning is redirected to scaled versions</p>
+<p><h2>Scaling Parameters</h2></p>
+<p><h3>What to Scale</h3></p>
+<p>| Field | Scale? | Notes |
+|-------|--------|-------|
+| Base damage | Yes | Linear with level |
+| Bonus damage | Yes | Linear with level |
+| Healing | Yes | Linear with level |
+| Mana cost | Yes | Linear with level, proportional to player mana pool |
+| Duration | Maybe | Some spells, not all |
+| Cooldown | No | Usually fixed |
+| Range | No | Usually fixed |
+| Cast time | No | Usually fixed |</p>
+<p><h3>Scaling Reference Points</h3></p>
+<p>Use level 80 max-rank versions as the &quot;max&quot; reference:
+- Rejuvenation R15 (level 80): healing = 1690, mana = 586
+- Use this as max_value for healing and mana
+- Calculate base_value as max_value / some_factor (e.g., 25x)</p>
+<p>Alternative: Use empirical data from leveling experience
+- What feels right at level 10?
+- What feels right at level 40?
+- Fit linear curve to those points</p>
+<p><h2>Future Expansion</h2></p>
+<p><h3>Level 80+ Support</h3></p>
+<p>By scaling to 80, we leave room for expansion:
+- If cap increases to 85, add spell IDs 81-85 to each family
+- Linear formula still works: <code>(level - 1) / (max_level - 1)</code>
+- Just need to regenerate DBCs with new max</p>
+<p><h3>Non-Linear Scaling</h3></p>
+<p>Linear scaling is simple but may not feel right:
+- Early levels might feel weak
+- Late levels might feel overpowered</p>
+<p>Future options:
+- Exponential curve
+- Piecewise linear (different slopes per bracket)
+- Hand-tuned values per level</p>
+<p>For v1, linear is good enough. Can refine later.</p>
+<p><h2>Related Issues</h2></p>
+<p>- 151 - Ability tome system (simplified by linear scaling)
+- 163 - Custom class Lua format (updated to use spell families)
+- 142 - Custom spell system (may overlap, merge considerations)</p>
+<p><h2>Files to Create</h2></p>
+<p>- <code>scripts/generate-scaled-spells.lua</code> - Spell generation script
+- <code>data/spell-families.lua</code> - Family → spell ID mapping
+- <code>data/scaling-parameters.lua</code> - Base/max values per family
+- <code>data/dbc/Spell_scaled.dbc</code> - Generated spell records
+- <code>docs/linear-scaling.md</code> - Design documentation</p>
+<p><h2>Notes</h2></p>
+<p>This is a significant undertaking but provides massive simplification:
+- Eliminates rank system complexity
+- Makes tome system trivial
+- Unifies base/custom class handling
+- Creates smooth progression curve
+- Enables &quot;learn any spell at any level&quot; design</p>
+<p>The DBC editing requirement is the main hurdle. Once that tooling exists,
+generating 80k spell records is straightforward scripting.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-3-progress.html">View Phase 3 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

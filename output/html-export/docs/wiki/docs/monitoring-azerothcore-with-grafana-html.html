@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>monitoring-azerothcore-with-grafana.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>monitoring-azerothcore-with-grafana.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/monitoring-azerothcore-with-grafana.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 6024 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+tableofcontents: 1
+---</p>
+<p><h1>Monitoring AzerothCore with Grafana</h1></p>
+<p><h2>Required Software</h2></p>
+<p>1. <a href="https://www.influxdata.com/products/influxdb-overview/">Influx DB</a> - a time-series data storage.</p>
+<p>2. <a href="https://grafana.com/">Grafana</a> - graph and a dashboard builder for visualizing time series metrics.</p>
+<p>{% include note.html content=&quot;While we do support sending metrics, and connecting to Influx DB v2, our Grafana dashboard setups do not. Therefore, to visualize the data with Grafana you do need to run Infux DB v1. However, you can use <a href="#additional-visualizations-and-metrics-collection">Chronograf</a> to visulize it, but you need to set that up yourself. &quot; %}</p>
+<p>{% include note.html content=&quot;We do not support Influx DB v3.&quot; %}</p>
+<p><h3>Installing Influx DB</h3></p>
+<p>1. Download and install InfuxDB version 1.x from https://portal.influxdata.com/downloads/ for your operating system. (Version 2.x is currently not supported.)</p>
+<p>2. Start InfuxDB</p>
+<p>3. Create a user and a database in InfluxDB using the Influx CLI and executing the commands below:</p>
+<p>``<code>sql
+CREATE DATABASE worldserver
+CREATE USER grafana WITH PASSWORD &#39;grafana&#39;
+GRANT READ ON worldserver TO grafana
+<pre><code>
+4. The token you get after creating a user is very important, both in grafana and in the worldserver config.</p>
+<p>&lt;h3&gt;Installing Grafana&lt;/h3&gt;</p>
+<p>1. Download and install Grafana from https://grafana.com/docs/grafana/latest/installation/</p>
+<p>2. Open the dashboard at http://localhost:3000</p>
+<p>3. Login with username <em>admin</em> and password <em>admin</em> (defaults can be changed in Grafana&amp;#39;s .ini file. In newer versions of Grafana you will be prompted to change this at first login.)</p>
+<p>4. Hover the cogwheel and select Data Sources</p>
+<p>5. Search for InfluxDB and select.</p>
+<p>6. Fill in the required data below.
+</code></pre>
+Name: Influx
+Type: InfluxDB
+Url: http://localhost:8086
+Access: Server
+Database: worldserver User: grafana Password: grafana
+<pre><code>
+1. Press Save &amp;amp; Test which should give you a green checkbox that says &amp;quot;Data source is working&amp;quot;.</p>
+<p>1. Hover the + and select Import and import each .json file from <a href="https://github.com/azerothcore/azerothcore-wotlk/tree/master/apps/grafana">AzerothCore&amp;#39;s /apps/grafana</a>.</p>
+<p>&lt;h3&gt;Configuring AzerothCore&lt;/h3&gt;</p>
+<p>1. Edit the worldserver.conf file</p>
+<p>1. Set </code>Metric.Enable<code> = 1</p>
+<p>1. Edit </code>Metric.ConnectionInfo<code> with connection details (e.g &amp;quot;127.0.0.1;8086;worldserver&amp;quot;)</p>
+<p>1. Start worldserver, the dashboard should now start recieving values.</p>
+<p>&lt;h2&gt;Implemented and planned metrics&lt;/h2&gt;</p>
+<p>Implemented (✔) and planned (❌) metrics:</p>
+<p>&lt;h3&gt;Technical oriented&lt;/h3&gt;</p>
+<p><em> I/O networking trafic
+    </em> Packets sent ❌
+    <em> Packets recieved ✔
+    </em> Average ping ❌
+    <em> Traffic in ❌
+    </em> Traffic out ❌
+<em> World session update time ✔
+</em> Map update time ✔
+<em> Map loads/unloads ✔
+</em> MMap queries ✔
+<em> Database async queries queued count ✔
+</em> Server uptime ✔ (through world initialize and world shutdown events)
+<em> Active connections ❌
+</em> Queued connections ❌</p>
+<p>&lt;h3&gt;Game oriented&lt;/h3&gt;</p>
+<p><em> Players online ✔
+</em> Logins per hour/day/week etc ✔
+<em> Mails sent ❌
+</em> Auction house usage ❌
+<em> Character levels ❌
+</em> Gold earn/spend ❌
+<em> LFG queues ❌</p>
+<p>We&amp;#39;d like help implementing these and other metrics, feel free to send us a <a href="https://github.com/azerothcore/azerothcore-wotlk/pulls">pull request</a>.</p>
+<p>&lt;h2&gt;Adding new metrics&lt;/h2&gt;</p>
+<p>There are two kinds of metrics that can be logged: values and events.</p>
+<p>Values correspond to measurements of a certain quantity, like number of online players of the update diff time.</p>
+<p>Events are something that occurs in an instant of time, e.g, a player login, worldserver shutdown, etc...</p>
+<p>To log new metrics, call </code>METRIC_EVENT<code> or </code>METRIC_VALUE<code> and add a new graph to the dashboard.</p>
+<p></code>METRIC_EVENT(category, title, description)<code></p>
+<p>- <strong>category</strong>: Arbitrary string, table where the values and events are stored. By convention, event logs should be suffixed by &amp;quot;_events&amp;quot;.</p>
+<p>- <strong>title</strong>: Name of the event log.</p>
+<p>- <strong>description</strong>: Additional info about a log event.</p>
+<p></code>METRIC_VALUE(category, value)<code></p>
+<p>- <strong>category</strong>: Arbitrary string, table where the values and events are stored. By convention, event logs should be suffixed by &amp;quot;_value&amp;quot;.</p>
+<p>- <strong>value</strong>: A measurment, it can have one of the following types: bool, std::string, float, double, or any integral type (int, int32, uint, etc...).</p>
+<p><strong>Examples</strong>
+</code></pre>cpp
+// Registering player logins: in WorldSession::HandlePlayerLogin(LoginQueryHolder</em> holder)
+METRIC_EVENT(&quot;player_events&quot;, &quot;Login&quot;, pCurrChar-&gt;GetName());
+  
+// Logging the update diff time: in World::Update(uint32 diff)
+METRIC_VALUE(&quot;update_time_diff&quot;, diff);
+<pre><code>
+&lt;h2&gt;Additional Reading&lt;/h2&gt;</p>
+<p>Lean more about InfluxDB and Grafana:</p>
+<p><em> <a href="https://influxdata.com/time-series-platform/influxdb/">InfluxDB website</a>
+</em> <a href="https://docs.influxdata.com/influxdb/v1.8/">InfluxDB documentation (v1.8)</a>
+<em> <a href="http://grafana.org/">Grafana website</a>
+</em> <a href="http://docs.grafana.org/">Grafana documentation</a>
+<em> <a href="http://play.grafana.org/">Grafana live demo</a>
+</em> <a href="http://docs.grafana.org/datasources/influxdb/">Adding InfluxDB to Grafana</a></p>
+<p>&lt;h2&gt;InfluxDB v2&lt;/h2&gt;</p>
+<p>1. Download InfluxDB v2
+2. Start InfluxDB
+3. Head to http://127.0.0.1:8086
+4. Create User</code></pre>
+Username: grafana
+Password: grafana
+Initial Organization Name: Grafana
+Initial Bucket Name: worldserver
+</code>``</p>
+<p><a href="#additional-visualizations-and-metrics-collection">Use for example Chronograf to visualize the data.</a></p>
+<p><h2>Additional visualizations and metrics collection</h2></p>
+<p>InfluxDB is part of a bigger set of projects by <a href="https://www.influxdata.com/">InfluxData</a> which integrate nicely with the DB:</p>
+<p>- <a href="https://www.influxdata.com/time-series-platform/telegraf/">Telegraf</a> can be used to collect system metrics like CPU, I/O, memory usage and other services such as MySQL – to display this info next to the AC metrics.</p>
+<p>- <a href="https://www.influxdata.com/time-series-platform/chronograf/">Chronograf</a> is an alternative to Grafana to graph and visualize time-series metrics.</p>
+<p>- <a href="https://www.influxdata.com/time-series-platform/kapacitor/">Kapacitator</a> is able to process streaming data from InfluxDB to provide alerts, trigger events, detect anomalies or transform data.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

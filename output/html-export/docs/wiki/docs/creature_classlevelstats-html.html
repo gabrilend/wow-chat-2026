@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>creature_classlevelstats.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>creature_classlevelstats.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/creature_classlevelstats.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 3800 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>creature\_classlevelstats</h1></p>
+<p><strong>Table Structure</strong></p>
+<p>This table contains the base values for creature health, mana, armor, attack power, ranged attack power, damage, and experience.</p>
+<p>| Field                  | Type     | Attributes | Null | Default | Extra | Comment |
+| ---------------------- | -------- | ---------- | ---- | ------- | ----- | ------- |
+| [level][1]             | TINYINT  | UNSIGNED   | NO   |         |       |         |
+| [class][2]             | TINYINT  | UNSIGNED   | NO   |         |       |         |
+| [basehp0][3]           | SMALLINT | UNSIGNED   | NO   |         |       |         |
+| [basehp1][4]           | SMALLINT | UNSIGNED   | NO   |         |       |         |
+| [basehp2][5]           | SMALLINT | UNSIGNED   | NO   |         |       |         |
+| [basemana][6]          | SMALLINT | UNSIGNED   | NO   |         |       |         |
+| [basearmor][7]         | SMALLINT | UNSIGNED   | NO   |         |       |         |
+| [attackpower][8]       | SMALLINT | UNSIGNED   | NO   |         |       |         |
+| [rangedattackpower][9] | SMALLINT | UNSIGNED   | NO   |         |       |         |
+| [damage_base][10]      | FLOAT    |            | NO   |         |       |         |
+| [damage_exp1][11]      | FLOAT    |            | NO   |         |       |         |
+| [damage_exp2][12]      | FLOAT    |            | NO   |         |       |         |
+| [comment][13]          | text     |            | YES  | NULL    |       |         |</p>
+<p>[1]: #level
+[2]: #class
+[3]: #basehp0
+[4]: #basehp1
+[5]: #basehp2
+[6]: #basemana
+[7]: #basearmor
+[8]: #attackpower
+[9]: #rangedattackpower
+[10]: #damage_base
+[11]: #damage_exp1
+[12]: #damage_exp2
+[13]: #comment</p>
+<p><strong>Field Descriptions</strong></p>
+<p><h3>level</h3></p>
+<p>Level of the creature.</p>
+<p><h3>class</h3></p>
+<p>Class of the creature. This is a reference to the <a href="creature_template#creature_template-unit_class">unit\_class</a> field in the <a href="creature_template">creature\_template</a> table.</p>
+<p><h3>basehp0</h3></p>
+<p>Base health for the creature if creature\_template.exp value is set to 0. This value is multiplied by <a href="creature_template#health_mod">creature\_template.Health\_mod</a>  to determine the creature&#39;s final health.</p>
+<p><h3>basehp1</h3></p>
+<p>Base health for the creature if creature\_template.exp value is set to 1. This value is multiplied by <a href="creature_template#health_mod">creature\_template.Health\_mod</a>  to determine the creature&#39;s final health.</p>
+<p><h3>basehp2</h3></p>
+<p>Base health for the creature if creature\_template.exp value is set to 2. This value is multiplied by <a href="creature_template#health_mod">creature\_template.Health\_mod</a>  to determine the creature&#39;s final health.</p>
+<p><h3>basemana</h3></p>
+<p>Base mana for the creature. This value is multiplied by  <a href="creature_template#mana_mod">creature\_template.Mana\_mod</a> to determine the creature&#39;s final mana.</p>
+<p><h3>basearmor</h3></p>
+<p>Base armor for the creature. This value is multiplied by creature\_template.Armor\_mod to determine the creature&#39;s final armor.</p>
+<p><h3>attackpower</h3></p>
+<p>Base attack power for the creature.</p>
+<p><h3>rangedattackpower</h3></p>
+<p>Base ranged attack power for the creature.</p>
+<p><h3>damage\_base</h3></p>
+<p>Modifier used to calculate the damage output of a creature. This field is used if a creature&#39;s <a href="creature_template#exp">exp</a> is set to 0. See <a href="creature_template#damagemodifier">DamageModifier</a> for more information.</p>
+<p><h3>damage\_exp1</h3></p>
+<p>Modifier used to calculate the damage output of a creature. This field is used if a creature&#39;s <a href="creature_template#exp">exp</a> is set to 1. See <a href="creature_template#damagemodifier">DamageModifier</a> for more information.</p>
+<p><h3>damage\_exp2</h3></p>
+<p>Modifier used to calculate the damage output of a creature. This field is used if a creature&#39;s <a href="creature_template#exp">exp</a> is set to 2. See <a href="creature_template#damagemodifier">DamageModifier</a> for more information.</p>
+<p><h3>comment</h3></p>
+<p>A comment describing the purpose of the record (entry).
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

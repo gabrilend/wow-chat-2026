@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 329 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 329 • Phase 3</div>
+            <h1>MMap Route Precomputation with Relaxation</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>329 - MMap Route Precomputation with Relaxation</h1></p>
+<p><strong>Merge-Oriented:</strong> Complements/replaces issue 162 (reactive intersection sampling).
+Where 162 samples terrain as the bot moves, this precomputes a full route using mmap data.</p>
+<p><h2>Current Behavior</h2></p>
+<p>- Bots use reactive pathfinding (issue 162) - sample walkable directions as they go
+- No precomputed route through dungeon
+- No awareness of &quot;interesting&quot; areas or coverage
+- No mmap-level route optimization</p>
+<p><h2>Intended Behavior</h2></p>
+<p>Precompute a dungeon route using A<em> on mmap tiles, then relax the path into smooth curves
+that pass through interesting areas. Bot follows the route until dead-end or loop back to entrance.</p>
+<p><h3>Core Algorithm</h3></p>
+<p>1. </em><em>Initial A</em> Path<strong>
+   - Chart shortest path from entrance to deepest reachable point
+   - Operate on mmap tiles (hex grid ideal, square grid acceptable)
+   - Apply randomized avoidance weights to each tile
+   - More players nearby = lower avoidance weights (easier navigation)</p>
+<p>2. </strong>Path Relaxation<strong>
+   - Each line segment directed toward center aperture of local trajectory
+   - &quot;Center aperture&quot; = average direction of surrounding path segments
+   - Iterate relaxation until changes fall below threshold (convergence)
+   - Like quick-and-dirty LLM training with few nodes - gradient descent on path smoothness</p>
+<p>3. </strong>Coverage Goal*<em>
+   - Route should pass through &quot;interesting&quot; parts of dungeon
+   - If multiple paths exist, take one (commit to a direction)
+   - Continue until dead-end OR loop back to entrance
+   - Dead-end: reverse and follow route back out</p>
+<p><h3>Route Behavior</h3></p>
+<p><pre><code>Entrance ──────┐
+               │
+       ┌───────┴───────┐
+       │               │
+    Room A          Room B
+       │               │
+       └───────┬───────┘
+               │
+          Dead End
+               │
+          (reverse)
+               │
+       ┌───────┴───────┐
+       │               │
+    Room A          Room B   &amp;lt;-- may take different path on return
+       │               │
+       └───────┬───────┘
+               │
+            Entrance ──── (done, or loop detected = done)</code></pre></p>
+<p><h2>Player Proximity Effect</h2></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ calculateTileAvoidance</span>
+<span class="comment">-- More players nearby = lower avoidance = easier path</span>
+<span class="comment">-- Simulates &amp;quot;well-trodden&amp;quot; paths <span class="keyword">and</span> social navigation</span>
+<span class="keyword">function</span> calculateTileAvoidance(tileX, tileY, playerPositions)
+    <span class="keyword">local</span> baseAvoidance = math.random() </em> <span class="number">0.5</span> + <span class="number">0.5</span>  <span class="comment">-- <span class="number">0.5</span> to <span class="number">1.0</span></span></p>
+<p>    <span class="keyword">local</span> nearbyPlayers = <span class="number">0</span>
+    <span class="keyword">for</span> _, pos <span class="keyword">in</span> ipairs(playerPositions) <span class="keyword">do</span>
+        <span class="keyword">local</span> dist = math.sqrt((tileX - pos.x)^<span class="number">2</span> + (tileY - pos.y)^<span class="number">2</span>)
+        <span class="keyword">if</span> dist &amp;lt; <span class="number">50</span> <span class="keyword">then</span>  <span class="comment">-- <span class="number">50</span> yard influence radius</span>
+            nearbyPlayers = nearbyPlayers + <span class="number">1</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- Each nearby player reduces avoidance by <span class="number">20</span>%</span>
+    <span class="keyword">local</span> reduction = nearbyPlayers <em> <span class="number">0.2</span>
+    <span class="keyword">return</span> math.max(<span class="number">0.1</span>, baseAvoidance - reduction)
+<span class="keyword">end</span> <span class="comment">-- }}}</span></code></pre></p>
+<p><h2>A</em> with Weighted Tiles</h2></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ MMapRoute.computeInitialPath</span>
+<span class="comment">-- A<em> pathfinding on mmap with randomized tile weights</span>
+<span class="comment">-- Returns ordered list of waypoints from entrance to target</span>
+<span class="keyword">function</span> MMapRoute.computeInitialPath(mapId, startX, startY, startZ, avoidanceGrid)
+    <span class="keyword">local</span> openSet   = PriorityQueue.new()
+    <span class="keyword">local</span> cameFrom  = {}
+    <span class="keyword">local</span> gScore    = {}  <span class="comment">-- cost from start</span>
+    <span class="keyword">local</span> fScore    = {}  <span class="comment">-- gScore + heuristic</span></p>
+<p>    <span class="keyword">local</span> startKey  = tileKey(startX, startY)
+    gScore[startKey] = <span class="number">0</span>
+    fScore[startKey] = <span class="number">0</span>  <span class="comment">-- heuristic starts at <span class="number">0</span> (explore outward)</span></p>
+<p>    openSet:push(startKey, <span class="number">0</span>)</p>
+<p>    <span class="keyword">local</span> deepestPoint = { x = startX, y = startY, z = startZ, depth = <span class="number">0</span> }</p>
+<p>    <span class="keyword">while</span> <span class="keyword">not</span> openSet:isEmpty() <span class="keyword">do</span>
+        <span class="keyword">local</span> currentKey = openSet:pop()
+        <span class="keyword">local</span> cx, cy     = keyToTile(currentKey)
+        <span class="keyword">local</span> cz         = getHeight(mapId, cx, cy)</p>
+<p>        <span class="comment">-- Track deepest reachable point (furthest from start)</span>
+        <span class="keyword">local</span> distFromStart = math.sqrt((cx - startX)^<span class="number">2</span> + (cy - startY)^<span class="number">2</span>)
+        <span class="keyword">if</span> distFromStart &amp;gt; deepestPoint.depth <span class="keyword">then</span>
+            deepestPoint = { x = cx, y = cy, z = cz, depth = distFromStart }
+        <span class="keyword">end</span></p>
+<p>        <span class="comment">-- Explore neighbors (<span class="number">8</span> directions <span class="keyword">for</span> square, <span class="number">6</span> <span class="keyword">for</span> hex)</span>
+        <span class="keyword">for</span> _, neighbor <span class="keyword">in</span> ipairs(getNeighbors(cx, cy)) <span class="keyword">do</span>
+            <span class="keyword">local</span> nx, ny = neighbor.x, neighbor.y
+            <span class="keyword">local</span> nz     = getHeight(mapId, nx, ny)</p>
+<p>            <span class="comment">-- Skip unwalkable tiles</span>
+            <span class="keyword">if</span> <span class="keyword">not</span> nz <span class="keyword">or</span> math.abs(nz - cz) &amp;gt; <span class="number">5</span> <span class="keyword">then</span>
+                <span class="keyword">goto</span> continue
+            <span class="keyword">end</span></p>
+<p>            <span class="keyword">local</span> neighborKey = tileKey(nx, ny)
+            <span class="keyword">local</span> moveCost    = avoidanceGrid[neighborKey] <span class="keyword">or</span> <span class="number">1.0</span>
+            <span class="keyword">local</span> tentativeG  = gScore[currentKey] + moveCost</p>
+<p>            <span class="keyword">if</span> <span class="keyword">not</span> gScore[neighborKey] <span class="keyword">or</span> tentativeG &amp;lt; gScore[neighborKey] <span class="keyword">then</span>
+                cameFrom[neighborKey]  = currentKey
+                gScore[neighborKey]    = tentativeG
+                fScore[neighborKey]    = tentativeG  <span class="comment">-- no target heuristic - explore all</span></p>
+<p>                <span class="keyword">if</span> <span class="keyword">not</span> openSet:contains(neighborKey) <span class="keyword">then</span>
+                    openSet:push(neighborKey, fScore[neighborKey])
+                <span class="keyword">end</span>
+            <span class="keyword">end</span></p>
+<p>            ::continue::
+        <span class="keyword">end</span>
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- Reconstruct path to deepest point</span>
+    <span class="keyword">return</span> reconstructPath(cameFrom, startKey, tileKey(deepestPoint.x, deepestPoint.y))
+<span class="keyword">end</span> <span class="comment">-- }}}</span></code></pre></p>
+<p><h2>Path Relaxation (Gradient Descent on Smoothness)</h2></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ MMapRoute.relaxPath</span>
+<span class="comment">-- Iteratively adjust each waypoint toward center aperture of <span class="keyword">local</span> trajectory</span>
+<span class="comment">-- Converges when max delta falls below threshold</span>
+<span class="keyword">function</span> MMapRoute.relaxPath(path, maxIterations, threshold)
+    maxIterations = maxIterations <span class="keyword">or</span> <span class="number">20</span>
+    threshold     = threshold <span class="keyword">or</span> <span class="number">0.5</span>  <span class="comment">-- yards</span></p>
+<p>    <span class="keyword">for</span> iteration = <span class="number">1</span>, maxIterations <span class="keyword">do</span>
+        <span class="keyword">local</span> maxDelta = <span class="number">0</span></p>
+<p>        <span class="keyword">for</span> i = <span class="number">2</span>, #path - <span class="number">1</span> <span class="keyword">do</span>  <span class="comment">-- don&amp;#<span class="number">39</span>;t move endpoints</span>
+            <span class="keyword">local</span> prev = path[i - <span class="number">1</span>]
+            <span class="keyword">local</span> curr = path[i]
+            <span class="keyword">local</span> next = path[i + <span class="number">1</span>]</p>
+<p>            <span class="comment">-- Calculate center aperture: average direction from neighbors</span>
+            <span class="comment">-- &amp;quot;Aperture&amp;quot; = the opening/direction the path is flowing through</span>
+            <span class="keyword">local</span> inAngle   = math.atan<span class="number">2</span>(curr.y - prev.y, curr.x - prev.x)
+            <span class="keyword">local</span> outAngle  = math.atan<span class="number">2</span>(next.y - curr.y, next.x - curr.x)
+            <span class="keyword">local</span> avgAngle  = (inAngle + outAngle) / <span class="number">2</span></p>
+<p>            <span class="comment">-- Adjust toward the direction of flow</span>
+            <span class="comment">-- Pull point toward the line between prev <span class="keyword">and</span> next</span>
+            <span class="keyword">local</span> midX = (prev.x + next.x) / <span class="number">2</span>
+            <span class="keyword">local</span> midY = (prev.y + next.y) / <span class="number">2</span></p>
+<p>            <span class="comment">-- Blend: <span class="number">30</span>% toward midpoint, <span class="number">70</span>% stay</span>
+            <span class="keyword">local</span> newX = curr.x </em> <span class="number">0.7</span> + midX <em> <span class="number">0.3</span>
+            <span class="keyword">local</span> newY = curr.y </em> <span class="number">0.7</span> + midY <em> <span class="number">0.3</span></p>
+<p>            <span class="keyword">local</span> delta = math.sqrt((newX - curr.x)^<span class="number">2</span> + (newY - curr.y)^<span class="number">2</span>)
+            maxDelta    = math.max(maxDelta, delta)</p>
+<p>            path[i].x = newX
+            path[i].y = newY
+        <span class="keyword">end</span></p>
+<p>        <span class="comment">-- Converged?</span>
+        <span class="keyword">if</span> maxDelta &amp;lt; threshold <span class="keyword">then</span>
+            <span class="keyword">return</span> path, iteration
+        <span class="keyword">end</span>
+    <span class="keyword">end</span></p>
+<p>    <span class="keyword">return</span> path, maxIterations
+<span class="keyword">end</span> <span class="comment">-- }}}</span></code></pre></p>
+<p><h2>Route State Machine</h2></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ MMapRoute states</span>
+<span class="keyword">local</span> ROUTE_STATE = {
+    COMPUTING     = <span class="number">1</span>,  <span class="comment">-- A</em> running</span>
+    RELAXING      = <span class="number">2</span>,  <span class="comment">-- path smoothing</span>
+    FOLLOWING     = <span class="number">3</span>,  <span class="comment">-- bot moving along route</span>
+    REVERSING     = <span class="number">4</span>,  <span class="comment">-- hit dead-<span class="keyword">end</span>, going back</span>
+    COMPLETE      = <span class="number">5</span>,  <span class="comment">-- returned to entrance <span class="keyword">or</span> looped</span>
+}
+<span class="comment">-- }}}</span></p>
+<p><span class="comment">-- {{{ MMapRoute.update</span>
+<span class="keyword">function</span> MMapRoute.update(bot)
+    <span class="keyword">local</span> state = bot:GetData(&amp;quot;route_state&amp;quot;) <span class="keyword">or</span> ROUTE_STATE.COMPUTING</p>
+<p>    <span class="keyword">if</span> state == ROUTE_STATE.COMPUTING <span class="keyword">then</span>
+        <span class="comment">-- Compute initial A<em> path (may take multiple ticks <span class="keyword">for</span> large dungeons)</span>
+        <span class="keyword">local</span> path = MMapRoute.computeOrContinue(bot)
+        <span class="keyword">if</span> path <span class="keyword">then</span>
+            bot:SetData(&amp;quot;route_path&amp;quot;, path)
+            bot:SetData(&amp;quot;route_index&amp;quot;, <span class="number">1</span>)
+            bot:SetData(&amp;quot;route_state&amp;quot;, ROUTE_STATE.RELAXING)
+        <span class="keyword">end</span></p>
+<p>    <span class="keyword">elseif</span> state == ROUTE_STATE.RELAXING <span class="keyword">then</span>
+        <span class="comment">-- Relax path (single pass per tick, <span class="keyword">or</span> all at once <span class="keyword">for</span> small paths)</span>
+        <span class="keyword">local</span> path = bot:GetData(&amp;quot;route_path&amp;quot;)
+        <span class="keyword">local</span> relaxed, iterations = MMapRoute.relaxPath(path, <span class="number">5</span>, <span class="number">0.5</span>)
+        bot:SetData(&amp;quot;route_path&amp;quot;, relaxed)</p>
+<p>        <span class="keyword">if</span> iterations &amp;lt; <span class="number">5</span> <span class="keyword">then</span>  <span class="comment">-- converged early</span>
+            bot:SetData(&amp;quot;route_state&amp;quot;, ROUTE_STATE.FOLLOWING)
+        <span class="keyword">else</span>
+            <span class="comment">-- Continue relaxing next tick</span>
+            <span class="comment">-- (<span class="keyword">or</span> just move to FOLLOWING <span class="keyword">if</span> good enough)</span>
+            bot:SetData(&amp;quot;route_state&amp;quot;, ROUTE_STATE.FOLLOWING)
+        <span class="keyword">end</span></p>
+<p>    <span class="keyword">elseif</span> state == ROUTE_STATE.FOLLOWING <span class="keyword">then</span>
+        <span class="keyword">local</span> path  = bot:GetData(&amp;quot;route_path&amp;quot;)
+        <span class="keyword">local</span> index = bot:GetData(&amp;quot;route_index&amp;quot;)</p>
+<p>        <span class="keyword">if</span> index &amp;gt; #path <span class="keyword">then</span>
+            <span class="comment">-- Reached <span class="keyword">end</span> (dead-<span class="keyword">end</span> <span class="keyword">or</span> deepest point)</span>
+            bot:SetData(&amp;quot;route_state&amp;quot;, ROUTE_STATE.REVERSING)
+            bot:SetData(&amp;quot;route_index&amp;quot;, #path)
+            <span class="keyword">return</span>
+        <span class="keyword">end</span></p>
+<p>        <span class="keyword">local</span> waypoint = path[index]
+        <span class="keyword">local</span> bx, by   = bot:GetPosition()
+        <span class="keyword">local</span> dist     = math.sqrt((bx - waypoint.x)^<span class="number">2</span> + (by - waypoint.y)^<span class="number">2</span>)</p>
+<p>        <span class="keyword">if</span> dist &amp;lt; <span class="number">3</span> <span class="keyword">then</span>
+            <span class="comment">-- Reached waypoint, advance</span>
+            bot:SetData(&amp;quot;route_index&amp;quot;, index + <span class="number">1</span>)
+        <span class="keyword">else</span>
+            <span class="comment">-- Move toward waypoint</span>
+            bot:MoveTo(<span class="number">0</span>, waypoint.x, waypoint.y, waypoint.z, <span class="keyword">false</span>)
+        <span class="keyword">end</span></p>
+<p>    <span class="keyword">elseif</span> state == ROUTE_STATE.REVERSING <span class="keyword">then</span>
+        <span class="keyword">local</span> path  = bot:GetData(&amp;quot;route_path&amp;quot;)
+        <span class="keyword">local</span> index = bot:GetData(&amp;quot;route_index&amp;quot;)</p>
+<p>        <span class="keyword">if</span> index &amp;lt; <span class="number">1</span> <span class="keyword">then</span>
+            <span class="comment">-- Back at entrance</span>
+            bot:SetData(&amp;quot;route_state&amp;quot;, ROUTE_STATE.COMPLETE)
+            MMapRoute.cleanup(bot)
+            <span class="keyword">return</span>
+        <span class="keyword">end</span></p>
+<p>        <span class="keyword">local</span> waypoint = path[index]
+        <span class="keyword">local</span> bx, by   = bot:GetPosition()
+        <span class="keyword">local</span> dist     = math.sqrt((bx - waypoint.x)^<span class="number">2</span> + (by - waypoint.y)^<span class="number">2</span>)</p>
+<p>        <span class="keyword">if</span> dist &amp;lt; <span class="number">3</span> <span class="keyword">then</span>
+            <span class="comment">-- Reached waypoint, go to previous</span>
+            bot:SetData(&amp;quot;route_index&amp;quot;, index - <span class="number">1</span>)
+        <span class="keyword">else</span>
+            bot:MoveTo(<span class="number">0</span>, waypoint.x, waypoint.y, waypoint.z, <span class="keyword">false</span>)
+        <span class="keyword">end</span></p>
+<p>    <span class="keyword">elseif</span> state == ROUTE_STATE.COMPLETE <span class="keyword">then</span>
+        <span class="comment">-- Done - can exit <span class="keyword">or</span> wait <span class="keyword">for</span> reset</span>
+        MMapRoute.cleanup(bot)
+    <span class="keyword">end</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span></code></pre></p>
+<p><h2>Loop Detection</h2></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ MMapRoute.detectLoop</span>
+<span class="comment">-- If we <span class="keyword">return</span> to entrance area <span class="keyword">while</span> following (<span class="keyword">not</span> reversing), we&amp;#<span class="number">39</span>;ve looped</span>
+<span class="comment">-- This is a valid completion state</span>
+<span class="keyword">function</span> MMapRoute.detectLoop(bot)
+    <span class="keyword">local</span> entrance = bot:GetData(&amp;quot;route_entrance&amp;quot;)
+    <span class="keyword">local</span> state    = bot:GetData(&amp;quot;route_state&amp;quot;)</p>
+<p>    <span class="keyword">if</span> state ~= ROUTE_STATE.FOLLOWING <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span></p>
+<p>    <span class="keyword">local</span> bx, by = bot:GetPosition()
+    <span class="keyword">local</span> dist   = math.sqrt((bx - entrance.x)^<span class="number">2</span> + (by - entrance.y)^<span class="number">2</span>)</p>
+<p>    <span class="comment">-- Must have traveled some distance first (<span class="keyword">not</span> immediate entrance)</span>
+    <span class="keyword">local</span> index = bot:GetData(&amp;quot;route_index&amp;quot;) <span class="keyword">or</span> <span class="number">1</span>
+    <span class="keyword">if</span> index &amp;gt; <span class="number">5</span> <span class="keyword">and</span> dist &amp;lt; <span class="number">10</span> <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="keyword">true</span>  <span class="comment">-- looped back to entrance</span>
+    <span class="keyword">end</span></p>
+<p>    <span class="keyword">return</span> <span class="keyword">false</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span></code></pre></p>
+<p><h2>Hex Grid (Ideal) vs Square Grid</h2></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ Grid neighbor functions</span>
+<span class="comment">-- Hex grid provides <span class="number">6</span> equidistant neighbors - smoother paths</span>
+<span class="comment">-- Square grid provides <span class="number">8</span> neighbors - diagonal movement allowed</span></p>
+<p><span class="keyword">function</span> getNeighborsHex(x, y)
+    <span class="comment">-- Axial coordinates <span class="keyword">for</span> hex grid</span>
+    <span class="keyword">local</span> directions = {
+        { <span class="number">1</span>,  <span class="number">0</span>}, { <span class="number">1</span>, -<span class="number">1</span>}, { <span class="number">0</span>, -<span class="number">1</span>},
+        {-<span class="number">1</span>,  <span class="number">0</span>}, {-<span class="number">1</span>,  <span class="number">1</span>}, { <span class="number">0</span>,  <span class="number">1</span>},
+    }
+    <span class="keyword">local</span> neighbors = {}
+    <span class="keyword">for</span> _, d <span class="keyword">in</span> ipairs(directions) <span class="keyword">do</span>
+        table.insert(neighbors, { x = x + d[<span class="number">1</span>], y = y + d[<span class="number">2</span>] })
+    <span class="keyword">end</span>
+    <span class="keyword">return</span> neighbors
+<span class="keyword">end</span></p>
+<p><span class="keyword">function</span> getNeighborsSquare(x, y)
+    <span class="keyword">local</span> directions = {
+        {-<span class="number">1</span>, -<span class="number">1</span>}, { <span class="number">0</span>, -<span class="number">1</span>}, { <span class="number">1</span>, -<span class="number">1</span>},
+        {-<span class="number">1</span>,  <span class="number">0</span>},           { <span class="number">1</span>,  <span class="number">0</span>},
+        {-<span class="number">1</span>,  <span class="number">1</span>}, { <span class="number">0</span>,  <span class="number">1</span>}, { <span class="number">1</span>,  <span class="number">1</span>},
+    }
+    <span class="keyword">local</span> neighbors = {}
+    <span class="keyword">for</span> _, d <span class="keyword">in</span> ipairs(directions) <span class="keyword">do</span>
+        table.insert(neighbors, { x = x + d[<span class="number">1</span>], y = y + d[<span class="number">2</span>] })
+    <span class="keyword">end</span>
+    <span class="keyword">return</span> neighbors
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h2>Merge Strategy with Issue 162</h2></p>
+<p><strong>Option A: Replace entirely</strong>
+- Use precomputed routes instead of reactive sampling
+- Pro: smoother paths, better coverage
+- Con: requires mmap access, upfront computation</p>
+<p><strong>Option B: Hybrid (recommended)</strong>
+- Precompute route if mmap available
+- Fall back to 162&#39;s reactive sampling if not
+- Use 162&#39;s intersection detection to validate precomputed route</p>
+<p><strong>Option C: Layer on top</strong>
+- Precomputed route provides &quot;macro&quot; navigation (which direction overall)
+- 162&#39;s sampling provides &quot;micro&quot; navigation (actual movement)
+- Route says &quot;go toward Room B&quot;, sampling figures out how</p>
+<p><pre><code class="lua"><span class="comment">-- {{{ Hybrid integration</span>
+<span class="keyword">function</span> DungeonNav.update(bot)
+    <span class="keyword">if</span> MMapRoute.isAvailable() <span class="keyword">then</span>
+        <span class="comment">-- Use precomputed route <span class="keyword">for</span> direction</span>
+        <span class="keyword">local</span> nextWaypoint = MMapRoute.getNextWaypoint(bot)</p>
+<p>        <span class="comment">-- Use reactive sampling <span class="keyword">for</span> actual movement toward waypoint</span>
+        DungeonRails.setTarget(bot, nextWaypoint.x, nextWaypoint.y, nextWaypoint.z)
+        DungeonRails.update(bot)
+    <span class="keyword">else</span>
+        <span class="comment">-- Fall back to pure reactive</span>
+        DungeonRails.update(bot)
+    <span class="keyword">end</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span></code></pre></p>
+<p><h2>MMap Access Requirement</h2></p>
+<p><strong>BLOCKED:</strong> ALE does not currently expose mmap/navmesh data directly.</p>
+<p>Options:
+1. <strong>Patch ALE</strong> - Add <code>map:GetMMapTile(x, y)</code> API (see docs/patches/)
+2. <strong>Pre-export</strong> - Export mmap to Lua tables offline, load at runtime
+3. <strong>Height sampling proxy</strong> - Use <code>map:GetHeight()</code> as poor-man&#39;s mmap
+   - Same approach as 162, but precompute the full path upfront
+   - Sample in a flood-fill pattern, build graph, then A</em></p>
+<p><h3>Height Sampling as MMap Proxy</h3></p>
+<p><pre><code class="lua"><span class="comment">-- {{{ buildWalkableGraph</span>
+<span class="comment">-- Flood-fill from entrance using height sampling</span>
+<span class="comment">-- Returns graph of walkable tiles <span class="keyword">for</span> A<em></span>
+<span class="keyword">function</span> buildWalkableGraph(mapId, startX, startY, startZ, maxTiles)
+    maxTiles = maxTiles <span class="keyword">or</span> <span class="number">10000</span></p>
+<p>    <span class="keyword">local</span> graph   = {}
+    <span class="keyword">local</span> queue   = { { x = startX, y = startY, z = startZ } }
+    <span class="keyword">local</span> visited = {}
+    <span class="keyword">local</span> tileSize = <span class="number">2</span>  <span class="comment">-- sample every <span class="number">2</span> yards</span></p>
+<p>    <span class="keyword">while</span> #queue &amp;gt; <span class="number">0</span> <span class="keyword">and</span> tableSize(graph) &amp;lt; maxTiles <span class="keyword">do</span>
+        <span class="keyword">local</span> current = table.remove(queue, <span class="number">1</span>)
+        <span class="keyword">local</span> key     = tileKey(current.x, current.y)</p>
+<p>        <span class="keyword">if</span> visited[key] <span class="keyword">then</span>
+            <span class="keyword">goto</span> continue
+        <span class="keyword">end</span>
+        visited[key] = <span class="keyword">true</span></p>
+<p>        <span class="comment">-- Add to graph</span>
+        graph[key] = {
+            x = current.x,
+            y = current.y,
+            z = current.z,
+            neighbors = {}
+        }</p>
+<p>        <span class="comment">-- Check neighbors</span>
+        <span class="keyword">for</span> _, offset <span class="keyword">in</span> ipairs(getNeighborOffsets(tileSize)) <span class="keyword">do</span>
+            <span class="keyword">local</span> nx = current.x + offset.x
+            <span class="keyword">local</span> ny = current.y + offset.y
+            <span class="keyword">local</span> nz = getHeight(mapId, nx, ny)</p>
+<p>            <span class="keyword">if</span> nz <span class="keyword">and</span> math.abs(nz - current.z) &amp;lt;= <span class="number">5</span> <span class="keyword">then</span>
+                <span class="keyword">local</span> nkey = tileKey(nx, ny)
+                table.insert(graph[key].neighbors, nkey)</p>
+<p>                <span class="keyword">if</span> <span class="keyword">not</span> visited[nkey] <span class="keyword">then</span>
+                    table.insert(queue, { x = nx, y = ny, z = nz })
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+        <span class="keyword">end</span></p>
+<p>        ::continue::
+    <span class="keyword">end</span></p>
+<p>    <span class="keyword">return</span> graph
+<span class="keyword">end</span> <span class="comment">-- }}}</span></code></pre></p>
+<p><h2>Configuration</h2></p>
+<p><pre><code class="lua">MMAP_ROUTE_TILE_SIZE      = <span class="number">2</span>       <span class="comment">-- yards per tile (sampling resolution)</span>
+MMAP_ROUTE_MAX_TILES      = <span class="number">10000</span>   <span class="comment">-- max tiles to sample (memory limit)</span>
+MMAP_ROUTE_RELAX_ITER     = <span class="number">20</span>      <span class="comment">-- max relaxation iterations</span>
+MMAP_ROUTE_RELAX_THRESH   = <span class="number">0.5</span>     <span class="comment">-- convergence threshold (yards)</span>
+MMAP_ROUTE_WAYPOINT_DIST  = <span class="number">3</span>       <span class="comment">-- yards to consider waypoint reached</span>
+MMAP_ROUTE_PLAYER_RADIUS  = <span class="number">50</span>      <span class="comment">-- yards <span class="keyword">for</span> player proximity effect</span>
+MMAP_ROUTE_PLAYER_REDUCE  = <span class="number">0.2</span>     <span class="comment">-- avoidance reduction per nearby player</span></code></pre></p>
+<p><h2>Testing</h2></p>
+<p>1. Bot enters dungeon - should compute route via flood-fill sampling
+2. Path relaxation - should smooth jagged A</em> path
+3. Following route - bot moves through waypoints in order
+4. Dead-end reached - bot reverses, follows path back
+5. Loop detected - bot completed route, exits cleanly
+6. Multiple players - paths should favor areas near players
+7. Compare to 162 - precomputed should be smoother but similar coverage</p>
+<p><h2>Related Issues</h2></p>
+<p>- 162: Dungeon rail pathfinding (reactive approach - merge target)
+- 126: Dungeon room spawn zones (room detection)
+- 161: Bot wandering (integration point)
+- 166: Point-line definition tools (visualization)</p>
+<p><h2>Stats</h2></p>
+<p>- <strong>Phase:</strong> 3
+- <strong>Priority:</strong> Medium
+- <strong>Complexity:</strong> High (A*, relaxation, state machine)
+- <strong>Dependencies:</strong> mmap access OR height sampling proxy
+- <strong>Merge Target:</strong> Issue 162</p>
+<p><h2>Notes</h2></p>
+<p>- &quot;Quick-and-dirty LLM training&quot; = gradient descent with few parameters
+- Relaxation is like training a spline to fit the data
+- Player proximity creates emergent &quot;well-trodden paths&quot;
+- Hex grid preferred for smoother 60-degree turns
+- If mmap unavailable, height sampling flood-fill achieves similar result
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-3-progress.html">View Phase 3 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

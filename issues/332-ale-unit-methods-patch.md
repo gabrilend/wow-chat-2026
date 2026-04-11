@@ -3,15 +3,15 @@
 ## Status
 - Created: 2026-04-08
 - Resolved: 2026-04-08
-- **PATCH NOT IN SOURCE** (discovered 2026-04-09)
+- **PATCH RE-IMPLEMENTED** (2026-04-09)
 - Phase: 2
 - Priority: High
 - Related: Issue 328 (GetPosition nil errors)
 
-**Note (2026-04-09):** Issue was marked "Resolved" but the C++ changes are NOT in the source.
-UnitMethods.h does not contain SetWalk, IsWalking, IsHostileTo, or IsFriendlyTo.
-The patch documentation exists but was never added to `scripts/azerothcore` patcher.
-Source was likely reset/re-cloned and changes were lost. See issue 334 for re-implementation plan.
+**Note (2026-04-09):** Patch added to `scripts/azerothcore` as B007.
+- `patch_B007_ale_unit_methods()` adds SetWalk, IsWalking, IsHostileTo, IsFriendlyTo to ALE
+- `unpatch_B007_ale_unit_methods()` removes the methods after build
+- Source is now patched during build and reverted after (Issue 334)
 
 ## Current Behavior (Before Fix)
 

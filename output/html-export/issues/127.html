@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 127 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 127 • Phase 1</div>
+            <h1>Contextual Creature Spawns</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>127 - Contextual Creature Spawns</h1></p>
+<p><h2>Status: Open</h2></p>
+<p><h2>Dependencies</h2>
+- Issue 126: dungeon-room-spawn-zones (waypoint grouping concept)</p>
+<p><h2>Current Behavior</h2>
+- Ambush system queries creature_template for level-appropriate creatures
+- Filters by type: <code>type IN (2, 3, 4, 5, 6, 9, 10)</code>
+- Spawns randomly from pool regardless of location
+- Undead might spawn in a forest, beasts in a crypt</p>
+<p><h2>Intended Behavior</h2>
+- Pick spawn location first (random point around player)
+- Find nearest waypoint grouping to that point
+- Determine what creature types naturally belong there
+- Filter creature pool to matching types
+- Spawn contextually appropriate creature</p>
+<p><h2>Why Contextual Spawning?</h2>
+- Immersion: undead near graveyards, beasts in forests
+- World feels alive and coherent
+- Leverages existing waypoint data from creature spawns
+- Players learn terrain = creature type associations
+- Emergent strategy: avoid certain areas for certain threats</p>
+<p><h2>Creature Types (WoW 3.3.5a)</h2>
+<pre><code>0  = None
+1  = Beast
+2  = Dragonkin
+3  = Demon
+4  = Elemental
+5  = Giant
+6  = Undead
+7  = Humanoid
+8  = Critter
+9  = Mechanical
+10 = Not specified
+11 = Totem
+12 = Non-combat Pet
+13 = Gas Cloud</code></pre></p>
+<p><h2>Waypoint Type Mapping</h2></p>
+<p><h3>Data Source</h3>
+Use existing creature spawn data to determine area types:
+``<code>sql
+-- Find dominant creature type near a point
+SELECT ct.type, COUNT(<em>) as count
+FROM creature c
+JOIN creature_template ct ON c.id1 = ct.entry
+WHERE c.map = ?
+  AND ABS(c.position_x - ?) &lt; 100
+  AND ABS(c.position_y - ?) &lt; 100
+GROUP BY ct.type
+ORDER BY count DESC
+LIMIT 1;
+<pre><code>
+&lt;h3&gt;Precomputed Zone Types&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;lua&quot;&gt;&lt;span class=&quot;comment&quot;&gt;-- Cache zone types at server start&lt;/span&gt;
+&lt;span class=&quot;comment&quot;&gt;-- Grid the world into cells, compute dominant type per cell&lt;/span&gt;</p>
+<p>ZoneTypes = {
+    &lt;span class=&quot;comment&quot;&gt;-- map_id, grid_x, grid_y -&amp;amp;gt; dominant creature type&lt;/span&gt;
+    [&lt;span class=&quot;number&quot;&gt;0&lt;/span&gt;] = {  &lt;span class=&quot;comment&quot;&gt;-- Eastern Kingdoms&lt;/span&gt;
+        [&amp;amp;quot;&lt;span class=&quot;number&quot;&gt;45&lt;/span&gt;,&lt;span class=&quot;number&quot;&gt;32&lt;/span&gt;&amp;amp;quot;] = &lt;span class=&quot;number&quot;&gt;6&lt;/span&gt;,  &lt;span class=&quot;comment&quot;&gt;-- Undead (Tirisfal Glades)&lt;/span&gt;
+        [&amp;amp;quot;&lt;span class=&quot;number&quot;&gt;50&lt;/span&gt;,&lt;span class=&quot;number&quot;&gt;40&lt;/span&gt;&amp;amp;quot;] = &lt;span class=&quot;number&quot;&gt;1&lt;/span&gt;,  &lt;span class=&quot;comment&quot;&gt;-- Beast (Silverpine Forest)&lt;/span&gt;
+        [&amp;amp;quot;&lt;span class=&quot;number&quot;&gt;60&lt;/span&gt;,&lt;span class=&quot;number&quot;&gt;55&lt;/span&gt;&amp;amp;quot;] = &lt;span class=&quot;number&quot;&gt;7&lt;/span&gt;,  &lt;span class=&quot;comment&quot;&gt;-- Humanoid (Hillsbrad)&lt;/span&gt;
+    },
+}&lt;/code&gt;&lt;/pre&gt;</p>
+<p>&lt;h2&gt;Implementation Steps&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Phase 1: Type Detection&lt;/h3&gt;
+1. Create src/lua/zone-types.lua
+2. Query creature spawns per map grid cell
+3. Compute dominant type per cell
+4. Cache in memory at server start</p>
+<p>&lt;h3&gt;Phase 2: Spawn Integration&lt;/h3&gt;
+1. Modify Ambush.randomSpawn to:
+   - Pick spawn location first
+   - Look up zone type for that location
+   - Pass type filter to queue selection
+2. Modify setupAmbushQueue to accept type parameter
+3. Filter query: </code>AND type = ?<code> instead of </code>type IN (...)<code></p>
+<p>&lt;h3&gt;Phase 3: Fallback Handling&lt;/h3&gt;
+1. If no creatures match type + level, expand search
+2. Try adjacent types (beast &amp;lt;-&amp;gt; critter, undead &amp;lt;-&amp;gt; humanoid)
+3. Fall back to any type if nothing found
+4. Log mismatches for zone data improvement</p>
+<p>&lt;h2&gt;Algorithm&lt;/h2&gt;</p>
+<p>&lt;pre&gt;&lt;code class=&quot;lua&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;function&lt;/span&gt; Ambush.randomSpawn(player, isRare)
+    &lt;span class=&quot;comment&quot;&gt;-- &lt;span class=&quot;number&quot;&gt;1.&lt;/span&gt; Pick spawn location&lt;/span&gt;
+    &lt;span class=&quot;keyword&quot;&gt;local&lt;/span&gt; px, py = player:GetPosition()
+    &lt;span class=&quot;keyword&quot;&gt;local&lt;/span&gt; sx, sy = Movement.getArcSpawnPosition(px, py, MIN_DIST, MAX_DIST, player:GetO())</p>
+<p>    &lt;span class=&quot;comment&quot;&gt;-- &lt;span class=&quot;number&quot;&gt;2.&lt;/span&gt; Get zone type &lt;span class=&quot;keyword&quot;&gt;for&lt;/span&gt; spawn location&lt;/span&gt;
+    &lt;span class=&quot;keyword&quot;&gt;local&lt;/span&gt; zoneType = ZoneTypes.getTypeAt(player:GetMapId(), sx, sy)</p>
+<p>    &lt;span class=&quot;comment&quot;&gt;-- &lt;span class=&quot;number&quot;&gt;3.&lt;/span&gt; Get creature from queue matching type&lt;/span&gt;
+    &lt;span class=&quot;keyword&quot;&gt;local&lt;/span&gt; creature = Ambush.getCreatureOfType(player, zoneType, isRare)</p>
+<p>    &lt;span class=&quot;comment&quot;&gt;-- &lt;span class=&quot;number&quot;&gt;4.&lt;/span&gt; Fallback &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; no match&lt;/span&gt;
+    &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;not&lt;/span&gt; creature &lt;span class=&quot;keyword&quot;&gt;then&lt;/span&gt;
+        creature = Ambush.getAnyCreature(player, isRare)
+    &lt;span class=&quot;keyword&quot;&gt;end&lt;/span&gt;</p>
+<p>    &lt;span class=&quot;comment&quot;&gt;-- &lt;span class=&quot;number&quot;&gt;5.&lt;/span&gt; Spawn&lt;/span&gt;
+    &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; creature &lt;span class=&quot;keyword&quot;&gt;then&lt;/span&gt;
+        &lt;span class=&quot;keyword&quot;&gt;local&lt;/span&gt; sz = player:GetMap():GetHeight(sx, sy)
+        player:SpawnCreature(creature.id, sx, sy, sz, ...)
+    &lt;span class=&quot;keyword&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;keyword&quot;&gt;end&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;</p>
+<p>&lt;h2&gt;Queue Changes&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Current Queue&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;lua&quot;&gt;player:GetData(&amp;amp;quot;queue&amp;amp;quot;)  &lt;span class=&quot;comment&quot;&gt;-- flat list of creature IDs&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;</p>
+<p>&lt;h3&gt;New Queue (type-indexed)&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;lua&quot;&gt;player:GetData(&amp;amp;quot;queue&amp;amp;quot;)  &lt;span class=&quot;comment&quot;&gt;-- table indexed by type&lt;/span&gt;
+&lt;span class=&quot;comment&quot;&gt;-- {&lt;/span&gt;
+&lt;span class=&quot;comment&quot;&gt;--     [&lt;span class=&quot;number&quot;&gt;1&lt;/span&gt;] = { &lt;span class=&quot;number&quot;&gt;123&lt;/span&gt;, &lt;span class=&quot;number&quot;&gt;456&lt;/span&gt;, &lt;span class=&quot;number&quot;&gt;789&lt;/span&gt; },  -- beasts&lt;/span&gt;
+&lt;span class=&quot;comment&quot;&gt;--     [&lt;span class=&quot;number&quot;&gt;6&lt;/span&gt;] = { &lt;span class=&quot;number&quot;&gt;234&lt;/span&gt;, &lt;span class=&quot;number&quot;&gt;567&lt;/span&gt; },       -- undead&lt;/span&gt;
+&lt;span class=&quot;comment&quot;&gt;--     [&lt;span class=&quot;number&quot;&gt;7&lt;/span&gt;] = { &lt;span class=&quot;number&quot;&gt;345&lt;/span&gt;, &lt;span class=&quot;number&quot;&gt;678&lt;/span&gt;, &lt;span class=&quot;number&quot;&gt;901&lt;/span&gt; },  -- humanoids&lt;/span&gt;
+&lt;span class=&quot;comment&quot;&gt;-- }&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;</p>
+<p>&lt;h2&gt;Edge Cases&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Ocean/Water&lt;/h3&gt;
+- No waypoints in deep water
+- Default to beast (sea creatures) or elemental
+- Or prevent spawns entirely</p>
+<p>&lt;h3&gt;Zone Boundaries&lt;/h3&gt;
+- Transition areas may have mixed types
+- Use weighted random based on nearby proportions
+- Or pick closest dominant cell</p>
+<p>&lt;h3&gt;Empty Cells&lt;/h3&gt;
+- Some grid cells have no creature data
+- Inherit from nearest populated cell
+- Or use map-wide default</p>
+<p>&lt;h3&gt;Player Level Mismatch&lt;/h3&gt;
+- Zone has undead but no level-appropriate undead
+- Fall back to any level-appropriate creature
+- Log for balancing review</p>
+<p>&lt;h2&gt;SQL Queries&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Precompute Zone Types&lt;/h3&gt;</code></pre>sql
+-- Run at server start or cache in file
+-- Grid size: 100 yards per cell</p>
+<p>SELECT
+    map,
+    FLOOR(position_x / 100) as grid_x,
+    FLOOR(position_y / 100) as grid_y,
+    ct.type,
+    COUNT(</em>) as count
+FROM creature c
+JOIN creature_template ct ON c.id1 = ct.entry
+WHERE ct.type IN (1, 2, 3, 4, 5, 6, 7, 9)  -- spawnable types
+GROUP BY map, grid_x, grid_y, ct.type
+ORDER BY map, grid_x, grid_y, count DESC;
+</code>``</p>
+<p><h3>Type-Filtered Creature Query</h3>
+<pre><code class="lua"><span class="comment">-- Modified setupAmbushQueue</span>
+<span class="keyword">function</span> Ambush.setupAmbushQueue(playerLevel, rank, creatureType)
+    <span class="keyword">local</span> typeFilter = &amp;quot;&amp;quot;
+    <span class="keyword">if</span> creatureType <span class="keyword">then</span>
+        typeFilter = &amp;quot; AND type = &amp;quot; .. creatureType
+    <span class="keyword">else</span>
+        typeFilter = &amp;quot; AND type IN (<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">9</span>)&amp;quot;
+    <span class="keyword">end</span></p>
+<p>    WorldDBQueryAsync(
+        &amp;quot;SELECT entry, minlevel, maxlevel, rank, type FROM creature_template &amp;quot; ..
+        &amp;quot;WHERE minlevel &amp;lt;= &amp;quot; .. playerLevel ..
+        &amp;quot; AND maxlevel &amp;gt;= &amp;quot; .. playerLevel ..
+        &amp;quot; AND rank = &amp;quot; .. rank ..
+        &amp;quot; AND npcflag = <span class="number">0</span> AND lootid != <span class="number">0</span>&amp;quot; ..
+        typeFilter .. &amp;quot;;&amp;quot;,
+        Ambush.pushToAmbushQueue
+    )
+<span class="keyword">end</span></code></pre></p>
+<p><h2>Future Enhancements</h2></p>
+<p><h3>Biome System</h3>
+- Define biomes (forest, swamp, mountain, etc.)
+- Map biomes to creature types
+- More granular than grid cells</p>
+<p><h3>Time of Day</h3>
+- Undead more common at night
+- Beasts more common at dawn/dusk
+- Elementals during weather events</p>
+<p><h3>Event Spawns</h3>
+- Invasion events override local types
+- Scourge invasion = undead everywhere
+- Demon portal = demons in area</p>
+<p><h2>Related Files</h2>
+- src/lua/ambush.lua (current spawn system)
+- src/lua/zone-types.lua (new, type detection)
+- issues/126-dungeon-room-spawn-zones.md (waypoint grouping)
+- assets/smart_scripts_backup.sql (waypoint data reference)
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-1-progress.html">View Phase 1 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>creature_addon.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>creature_addon.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/creature_addon.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 5258 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>creature\_addon</h1></p>
+<p><a href="database-world">&lt;-Back-to:World</a></p>
+<p><strong>The \<code>creature\_addon\</code> table</strong></p>
+<p>The creature\_addon and creature\_template\_addon tables define different things that are applied on creatures when they are loaded. These &quot;different things&quot; can be for example to have the creature be mounted, to have it emote something, to have it display an aura effect, etc. Through the use of the fields in this table, many things can be changed about the outward visual appearance of the creature. The creature\_template\_addon table affects all creatures with that creature template ID while the creature\_addon table affects individually spawned creatures (so that two creatures using the same template can look different).</p>
+<p>NOTE: A creature\_addon record will override a creature\_template\_addon record should they overlap on the same creature.</p>
+<p>NOTICE: The data for this table is largely incomplete and is mostly just a regurgitation of what the client receives from the server. This article is a WIP as to what all the possible values are.</p>
+<p><strong>Table Structure</strong></p>
+<p>| Field                        | Type          | Attributes | Key | Null | Default | Extra | Comment |
+| ---------------------------- | ------------- | ---------- | --- | ---- | ------- | ----- | ------- |
+| [guid/entry][1]              | INT/MEDIUMINT | UNSIGNED   | PRI | NO   |         |       |         |
+| [path_id][2]                 | INT           | UNSIGNED   |     | NO   |         |       |         |
+| [mount][3]                   | MEDIUMINT     | UNSIGNED   |     | NO   |         |       |         |
+| [bytes1][4]                  | INT           | UNSIGNED   |     | NO   |         |       |         |
+| [bytes2][5]                  | INT           | UNSIGNED   |     | NO   |         |       |         |
+| [emote][6]                   | INT           | UNSIGNED   |     | NO   |         |       |         |
+| [aiAnimKit][7]               | SMALLINT      | SIGNED     |     | NO   |         |       |         |
+| [movementAnimKit][8]         | SMALLINT      | SIGNED     |     | NO   |         |       |         |
+| [meleeAnimKit][9]            | SMALLINT      | SIGNED     |     | NO   |         |       |         |
+| [visibilityDistanceType][10] | TINYINT       | UNSIGNED   |     | NO   |         |       |         |
+| [auras][11]                  | text          |            |     | YES  |         |       |         |</p>
+<p>[1]: #guid/entry
+[2]: #path_id
+[3]: #mount
+[4]: #bytes1
+[5]: #bytes2
+[6]: #emote
+[7]: #aianimkit
+[8]: #movementanimkit
+[9]: #meleeanimkit
+[10]: #visibilityDistanceType
+[11]: #auras</p>
+<p><strong>Description of the fields</strong></p>
+<p><h3>guid/entry</h3></p>
+<p>For creature\_addon, this field signifies a unique creature guid. It will affect just that creature whose GUID matches the one specified here.
+For creature\_template\_addon, this field signifies the <a href="creature_template#creature_template-entry">creature\_template.entry</a>. It will affect all spawned creatures using that template entry.</p>
+<p><h3>path\_id</h3></p>
+<p>If a creature has waypoint pathed movement, this field hold the waypoint\_data.id for the path the creature is to follow.</p>
+<p><h3>mount</h3></p>
+<p>The model ID of the mount to be used to make the creature appear mounted. The value here overrides the value for the creature&#39;s unit field UNIT\_FIELD\_MOUNTDISPLAYID.</p>
+<p><h3>bytes1</h3></p>
+<p>The value here overrides the value for the creature&#39;s unit field UNIT\_FIELD\_BYTES\_1.</p>
+<p>List of known values and what their visual effects on the creature</p>
+<p>- 1 = Sitting
+- 2 = Sit chair
+- 3 = Sleep
+- 4 = Sit low chair
+- 5 = Sit medium chair
+- 6 = Sit high chair
+- 7 = Shows health bar as empty (combine with the state dead emote to make a creature look dead)
+- 8 = Makes the mob kneel
+- 9 = Submerges the creature below the ground
+- 54432 = Hover mode
+- 50331648 = Hover mode 2</p>
+<p><h3>bytes2</h3></p>
+<p>The value here overrides the value for the creature&#39;s unit field UNIT\_FIELD\_BYTES\_2.</p>
+<p>NOTE: //creatures always have melee weapon ready if any unless specified otherwise</p>
+<p>List of few known values and what their visual effects on the creature</p>
+<p>- 0 = STATE\_UNARMED (not prepared weapon, weapons on the sides/back)
+- 1 = STATE\_MELEE (prepared melee weapon in hands)
+- 2 = STATE\_RANGED (prepared ranged weapon in hands, melee weapons on the sides)</p>
+<p><h3>emote</h3></p>
+<p>Emote ID that the creature should continually perform.</p>
+<p>List of often used emote IDs and what they do can be found <a href="emotes">here</a>.</p>
+<p><h3>aiAnimKit / movementAnimKit / meleeAnimKit</h3></p>
+<p>AnimKit ID from AnimKit.db2 that is applied on creature when spawned.</p>
+<p><h3>visibilityDistanceType</h3></p>
+<p>This field controls the visibility distance for creatures:</p>
+<p>- Normal = 0,  100.0f  // default visible distance, 100 yards on continents
+- Tiny = 1,  25.0f
+- Small = 2,  50.0f
+- Large = 3, 200.0f
+- Gigantic = 4, 400.0f
+- Infinite = 5, SIZE_OF_GRIDS // max distance for visible objects)</p>
+<p><h3>auras</h3></p>
+<p>This field controls any auras to be applied on the creature (both in effect and visually). To apply multiple auras, you can add more aura entries, separating each entry by a space. Remember that if a spell applies multiple auras.</p>
+<p>List of useful aura entries (examples):</p>
+<p>- &#39;16380&#39; - Makes the creature invisible.
+- &#39;18950&#39; - Makes the creature detect other invisible units (players or creatures).
+- &#39;16380 18950&#39; - Both auras above
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

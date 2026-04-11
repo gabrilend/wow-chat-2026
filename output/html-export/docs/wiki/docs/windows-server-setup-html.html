@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>windows-server-setup.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>windows-server-setup.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/windows-server-setup.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 7248 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Windows Server Setup</h1></p>
+<p>| Installation Guide                                                                                                                   |                                                           |
+| :----------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------- |
+| This article is a part of the Installation Guide. You can read it alone or click the previous link to easily move between the steps. |
+| <a href="windows-core-installation">&lt;&lt; Step 2: Core Installation</a>                                                                                    | <a href="database-installation">Step 4: Database Installation &gt;&gt;</a> |</p>
+<p><strong>Table of contents</strong>
+- <a href="#option-1-download-pre-extracted-files">Client Data Files (Download Pre-Extracted)</a>
+- <a href="#option-2-extract-files-yourself">Client Data Extractors (Extract Files Yourself)</a>
+- <a href="#config-files-worldserver-and-authserver">Config Files: Worldserver and Authserver</a></p>
+<p>Now that you have the source compiled, you need to add the necessary client data. You can either download pre-extracted files or use the compiled extractors to extract the files yourself. Once the data is ready, you must update the <strong>DataDir</strong> option in your <strong>worldserver.conf</strong> file to point to the directory containing the data.</p>
+<p>Some files are optional but highly recommended:</p>
+<p>| Directory |                    |
+| :-------- | :----------------- |
+| dbc       | Mandatory          |
+| maps      | Mandatory          |
+| vmaps     | HIGHLY RECOMMENDED |
+| mmaps     | HIGHLY RECOMMENDED |
+| cameras   | Recommended        |</p>
+<p><h2>Option 1: Download Pre-Extracted Files</h2></p>
+<p>If you intend to use an enUS client you can download the data files below. If you intend to use any other language client you will need to <a href="#option-2-extract-files-yourself">extract</a> the data yourself.</p>
+<p>&lt;a class=&quot;no-icon&quot; href=&quot;https://github.com/wowgaming/client-data/releases/&quot; target=&quot;_blank&quot;&gt;&lt;i class=&quot;fa-solid fa-download&quot;&gt;&lt;/i&gt; Data files enUS (AC Data v19)&lt;/a&gt;</p>
+<p>1. Download the files above.</p>
+<p>2. Create a new folder within the build folder called <strong>Data</strong>. i.e <strong>C:\Build\bin\RelWithDebInfo\Data</strong></p>
+<p>3. Extract the files from the zip file and place them within the <strong>Data</strong> folder.</p>
+<p>4. Edit your the <a href="#updating-datadir">DataDir</a> config option to the location of your folder.</p>
+<p><h2>Option 2: Extract Files Yourself</h2></p>
+<p><strong>(Not needed if you downloaded the files above)</strong></p>
+<p>1. Browse into your build directory (<strong>C:\Build\bin\RelWithDebInfo\\</strong>) and copy the following files into your World of Warcraft folder (where the wow.exe is located).
+<pre><code>mapextractor.exe
+mmaps_generator.exe
+vmap4extractor.exe
+vmap4assembler.exe
+mmaps-config.yaml</code></pre></p>
+<p>2. Browse into <strong>C:\Azerothcore\apps\extractor</strong> and copy &quot;<strong>extractor.bat</strong>&quot; into your World of Warcraft folder with the previous files.</p>
+<p>3. Create <strong>mmaps</strong> and <strong>vmaps</strong> folders in your World of Warcraft directory.</p>
+<p>4. Launch extractor.bat and select your extractor options.</p>
+<p>{{site.data.alerts.important}}
+&lt;/br&gt;</p>
+<p>   - &lt;b&gt;dbc&lt;/b&gt;, &lt;b&gt;maps&lt;/b&gt; AND &lt;b&gt;vmaps&lt;/b&gt; are needed to make server work properly!</p>
+<p>   - Do not attempt to stop &lt;b&gt;vmaps&lt;/b&gt; exctraction process. It is finished when it prints &quot;Press any key...&quot;. It will create two new folders: &lt;b&gt;buildings&lt;/b&gt; and &lt;b&gt;vmaps&lt;/b&gt; The &lt;b&gt;buildings&lt;/b&gt; folder is completely useless post-running and can be safely deleted.
+    
+   - Don&#39;t run another task before the first is finished or you will have errors.</p>
+<p>   - If you stop vmap4extractor before finish you will need to delete the Buildings directory before start again.</p>
+<p>   - &lt;b&gt;Optional but extremely recommended: Extract mmaps.&lt;/b&gt; Do not attempt to stop this process while it is exctracting.
+{{site.data.alerts.end}}</p>
+<p>5. Create a new folder in &lt;b&gt;C:\Build\bin\RelWithDebInfo&lt;/b&gt; called &lt;b&gt;Data&lt;/b&gt;</p>
+<p>6. Move the vmaps, maps, dbc, cameras into the &lt;b&gt;Data&lt;/b&gt; folder.</p>
+<p><h2>Config Files: Worldserver and Authserver</h2></p>
+<p>First of all you need to find the two default config files (named <strong>worldserver.conf.dist</strong> and <strong>authserver.conf.dist</strong>) and copy them. Then rename the copies their namesakes without the .dist extension. You can find them within C:\Build\bin\RelWithDebInfo\configs\ (may vary).</p>
+<p>Open the .conf files and scroll down to LoginDatabaseInfo, WorldDatabaseInfo, and CharacterDatabaseInfo and enter MySQL login information for the server to be able to access your database.</p>
+<p>On a newly compiled configuration, you will have the following values by default
+<pre><code>LoginDatabaseInfo     = &amp;quot;127.0.0.1;3306;acore;acore;acore_auth&amp;quot; worldserver.conf / authserver.conf
+WorldDatabaseInfo     = &amp;quot;127.0.0.1;3306;acore;acore;acore_world&amp;quot; worldserver.conf
+CharacterDatabaseInfo = &amp;quot;127.0.0.1;3306;acore;acore;acore_characters&amp;quot; worldserver.conf</code></pre></p>
+<p>They follow this structure:</p>
+<p><pre><code>Variablename = &amp;quot;MySQLIP;Port;Username;Password;database&amp;quot;  </code></pre> </p>
+<p>The following steps must be verified:</p>
+<p>- The hostname (127.0.0.1) can stay the same if AzerothCore is being installed on the same computer that you run WoW on.
+  If not, follow the instruction in <a href="realmlist">Realmlist Table</a>.</p>
+<p>- The port (3306) is the standard configured value. If you changed the default port in your MySQL settings, you must change it accordingly.
+  The username and password can be variable. You can choose to either: </p>
+<p>    - use default acore / acore username and password pair.</p>
+<p>    - create a unique login within a User Manager within your preferred database management tool (commonly identified by an icon that looks like a person or people) and give it the necessary permissions (SELECT, INSERT, UPDATE, DELETE permissions are sufficient, and is much safer).</p>
+<p><h3>Updating DataDir</h3></p>
+<p>1. In your <strong>worldserver.conf</strong> file locate the <strong>DataDir</strong> option.</p>
+<p>1. Edit it to the path of your folder. i.e <strong>C:\Build\bin\RelWithDebInfo\Data</strong></p>
+<p>{% include tip.html content=&quot;For most <strong>worldserver.conf</strong> setting changes, you can simply type .reload config in-game to see changes instantly without restarting the server.&quot; %}</p>
+<p>{% include warning.html content=&quot;The AzerothCore Team and Owners DO NOT in any case sponsor nor support illegal public servers. If you use these projects to run an illegal public server and not for testing and learning it is your own personal choice.&quot; %}</p>
+<p><h3>(Optional) Config options by environment variable</h3></p>
+<p>It is possible to load config options via environment variables, which you can read about <a href="config-overrides-with-env-var">here</a>.</p>
+<p><h2>Help</h2></p>
+<p>{% include help.html %}</p>
+<p>| Installation Guide                                                                                                                   |                                                           |
+| :----------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------- |
+| This article is a part of the Installation Guide. You can read it alone or click the previous link to easily move between the steps. |
+| <a href="windows-core-installation">&lt;&lt; Step 2: Core Installation</a>                                                                                    | <a href="database-installation">Step 4: Database Installation &gt;&gt;</a> |
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

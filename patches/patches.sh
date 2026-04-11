@@ -19,44 +19,20 @@ done
 # {{{ apply_patches_begin
 # PHASE_BEGIN: Pre-compile source fixes
 # Run after clone/update, before cmake
+# DISABLED: Building vanilla baseline first
 apply_patches_begin() {
     echo ""
-    echo "Applying PHASE_BEGIN patches (pre-compile)..."
-
-    # Parallel group 1 (no file conflicts)
-    patch_B001_aoe_loot_item_namespace &
-    patch_B002_playerbots_ale_login_hook &
-    patch_B003_ale_gameobject_wildcard &
-    patch_B004_upstream_warning_fixes &
-    patch_B005_accuracy_level_cap &
-    patch_B006_ale_sell_item_hook &
-    patch_B007_ale_unit_methods &
-    patch_B008_mod_talent_bonus &
-
-    wait
-    echo "  PHASE_BEGIN complete"
+    echo "PHASE_BEGIN patches DISABLED (vanilla baseline mode)"
 }
 # }}}
 
 # {{{ unapply_patches_begin
 # Reverse all PHASE_BEGIN patches
 # Called after build completes (success or failure) to keep source clean
+# DISABLED: No patches to revert in vanilla mode
 unapply_patches_begin() {
     echo ""
-    echo "Reverting PHASE_BEGIN patches (post-compile cleanup)..."
-
-    # Run all unpatches in parallel
-    unpatch_B001_aoe_loot_item_namespace &
-    unpatch_B002_playerbots_ale_login_hook &
-    unpatch_B003_ale_gameobject_wildcard &
-    unpatch_B004_upstream_warning_fixes &
-    unpatch_B005_accuracy_level_cap &
-    unpatch_B006_ale_sell_item_hook &
-    unpatch_B007_ale_unit_methods &
-    unpatch_B008_mod_talent_bonus &
-
-    wait
-    echo "  PHASE_BEGIN patches reverted"
+    echo "PHASE_BEGIN patches DISABLED (nothing to revert)"
 }
 # }}}
 

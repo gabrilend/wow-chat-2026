@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sidebar.js - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>sidebar.js</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/ale/docs/SpellEntry/sidebar.js
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> js &nbsp;&nbsp;
+            <strong>Size:</strong> 17539 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>document.write(`
+  &lt;a id=&quot;SpellEntry:GetActiveIconID&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetActiveIconID.html&quot;&gt;GetActiveIconID&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetAreaGroupId&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetAreaGroupId.html&quot;&gt;GetAreaGroupId&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetAttributes&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetAttributes.html&quot;&gt;GetAttributes&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetAttributesEx&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetAttributesEx.html&quot;&gt;GetAttributesEx&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetAttributesEx2&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetAttributesEx2.html&quot;&gt;GetAttributesEx2&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetAttributesEx3&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetAttributesEx3.html&quot;&gt;GetAttributesEx3&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetAttributesEx4&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetAttributesEx4.html&quot;&gt;GetAttributesEx4&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetAttributesEx5&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetAttributesEx5.html&quot;&gt;GetAttributesEx5&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetAttributesEx6&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetAttributesEx6.html&quot;&gt;GetAttributesEx6&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetAttributesEx7&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetAttributesEx7.html&quot;&gt;GetAttributesEx7&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetAuraInterruptFlags&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetAuraInterruptFlags.html&quot;&gt;GetAuraInterruptFlags&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetBaseLevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetBaseLevel.html&quot;&gt;GetBaseLevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetCasterAuraSpell&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetCasterAuraSpell.html&quot;&gt;GetCasterAuraSpell&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetCasterAuraState&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetCasterAuraState.html&quot;&gt;GetCasterAuraState&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetCasterAuraStateNot&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetCasterAuraStateNot.html&quot;&gt;GetCasterAuraStateNot&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetCastingTimeIndex&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetCastingTimeIndex.html&quot;&gt;GetCastingTimeIndex&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetCategory&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetCategory.html&quot;&gt;GetCategory&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetCategoryRecoveryTime&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetCategoryRecoveryTime.html&quot;&gt;GetCategoryRecoveryTime&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetChannelInterruptFlags&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetChannelInterruptFlags.html&quot;&gt;GetChannelInterruptFlags&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetDispel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetDispel.html&quot;&gt;GetDispel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetDmgClass&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetDmgClass.html&quot;&gt;GetDmgClass&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetDurationIndex&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetDurationIndex.html&quot;&gt;GetDurationIndex&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffect&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffect.html&quot;&gt;GetEffect&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectAmplitude&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectAmplitude.html&quot;&gt;GetEffectAmplitude&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectApplyAuraName&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectApplyAuraName.html&quot;&gt;GetEffectApplyAuraName&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectBasePoints&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectBasePoints.html&quot;&gt;GetEffectBasePoints&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectBonusMultiplier&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectBonusMultiplier.html&quot;&gt;GetEffectBonusMultiplier&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectChainTarget&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectChainTarget.html&quot;&gt;GetEffectChainTarget&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectDamageMultiplier&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectDamageMultiplier.html&quot;&gt;GetEffectDamageMultiplier&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectDieSides&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectDieSides.html&quot;&gt;GetEffectDieSides&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectImplicitTargetA&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectImplicitTargetA.html&quot;&gt;GetEffectImplicitTargetA&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectImplicitTargetB&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectImplicitTargetB.html&quot;&gt;GetEffectImplicitTargetB&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectItemType&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectItemType.html&quot;&gt;GetEffectItemType&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectMechanic&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectMechanic.html&quot;&gt;GetEffectMechanic&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectMiscValue&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectMiscValue.html&quot;&gt;GetEffectMiscValue&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectMiscValueB&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectMiscValueB.html&quot;&gt;GetEffectMiscValueB&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectPointsPerComboPoint&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectPointsPerComboPoint.html&quot;&gt;GetEffectPointsPerComboPoint&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectRadiusIndex&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectRadiusIndex.html&quot;&gt;GetEffectRadiusIndex&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectRealPointsPerLevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectRealPointsPerLevel.html&quot;&gt;GetEffectRealPointsPerLevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectSpellClassMask&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectSpellClassMask.html&quot;&gt;GetEffectSpellClassMask&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectTriggerSpell&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectTriggerSpell.html&quot;&gt;GetEffectTriggerSpell&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEffectValueMultiplier&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEffectValueMultiplier.html&quot;&gt;GetEffectValueMultiplier&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEquippedItemClass&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEquippedItemClass.html&quot;&gt;GetEquippedItemClass&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEquippedItemInventoryTypeMask&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEquippedItemInventoryTypeMask.html&quot;&gt;GetEquippedItemInventoryTypeMask&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetEquippedItemSubClassMask&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetEquippedItemSubClassMask.html&quot;&gt;GetEquippedItemSubClassMask&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetExcludeCasterAuraSpell&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetExcludeCasterAuraSpell.html&quot;&gt;GetExcludeCasterAuraSpell&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetExcludeTargetAuraSpell&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetExcludeTargetAuraSpell.html&quot;&gt;GetExcludeTargetAuraSpell&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetFacingCasterFlags&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetFacingCasterFlags.html&quot;&gt;GetFacingCasterFlags&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetId&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetId.html&quot;&gt;GetId&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetInterruptFlags&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetInterruptFlags.html&quot;&gt;GetInterruptFlags&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetManaCost&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetManaCost.html&quot;&gt;GetManaCost&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetManaCostPercentage&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetManaCostPercentage.html&quot;&gt;GetManaCostPercentage&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetManaCostPerlevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetManaCostPerlevel.html&quot;&gt;GetManaCostPerlevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetManaPerSecond&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetManaPerSecond.html&quot;&gt;GetManaPerSecond&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetManaPerSecondPerLevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetManaPerSecondPerLevel.html&quot;&gt;GetManaPerSecondPerLevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetMaxAffectedTargets&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetMaxAffectedTargets.html&quot;&gt;GetMaxAffectedTargets&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetMaxLevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetMaxLevel.html&quot;&gt;GetMaxLevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetMaxTargetLevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetMaxTargetLevel.html&quot;&gt;GetMaxTargetLevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetMechanic&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetMechanic.html&quot;&gt;GetMechanic&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetPowerType&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetPowerType.html&quot;&gt;GetPowerType&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetPreventionType&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetPreventionType.html&quot;&gt;GetPreventionType&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetProcChance&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetProcChance.html&quot;&gt;GetProcChance&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetProcCharges&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetProcCharges.html&quot;&gt;GetProcCharges&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetProcFlags&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetProcFlags.html&quot;&gt;GetProcFlags&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetRangeIndex&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetRangeIndex.html&quot;&gt;GetRangeIndex&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetRank&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetRank.html&quot;&gt;GetRank&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetReagent&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetReagent.html&quot;&gt;GetReagent&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetReagentCount&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetReagentCount.html&quot;&gt;GetReagentCount&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetRecoveryTime&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetRecoveryTime.html&quot;&gt;GetRecoveryTime&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetRequiresSpellFocus&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetRequiresSpellFocus.html&quot;&gt;GetRequiresSpellFocus&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetRuneCostID&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetRuneCostID.html&quot;&gt;GetRuneCostID&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetSchoolMask&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetSchoolMask.html&quot;&gt;GetSchoolMask&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetSpeed&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetSpeed.html&quot;&gt;GetSpeed&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetSpellFamilyFlags&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetSpellFamilyFlags.html&quot;&gt;GetSpellFamilyFlags&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetSpellFamilyName&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetSpellFamilyName.html&quot;&gt;GetSpellFamilyName&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetSpellIconID&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetSpellIconID.html&quot;&gt;GetSpellIconID&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetSpellLevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetSpellLevel.html&quot;&gt;GetSpellLevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetSpellName&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetSpellName.html&quot;&gt;GetSpellName&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetSpellPriority&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetSpellPriority.html&quot;&gt;GetSpellPriority&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetSpellVisual&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetSpellVisual.html&quot;&gt;GetSpellVisual&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetStackAmount&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetStackAmount.html&quot;&gt;GetStackAmount&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetStances&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetStances.html&quot;&gt;GetStances&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetStancesNot&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetStancesNot.html&quot;&gt;GetStancesNot&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetStartRecoveryCategory&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetStartRecoveryCategory.html&quot;&gt;GetStartRecoveryCategory&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetStartRecoveryTime&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetStartRecoveryTime.html&quot;&gt;GetStartRecoveryTime&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetTargetAuraSpell&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetTargetAuraSpell.html&quot;&gt;GetTargetAuraSpell&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetTargetAuraState&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetTargetAuraState.html&quot;&gt;GetTargetAuraState&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetTargetAuraStateNot&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetTargetAuraStateNot.html&quot;&gt;GetTargetAuraStateNot&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetTargetCreatureType&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetTargetCreatureType.html&quot;&gt;GetTargetCreatureType&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetTargets&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetTargets.html&quot;&gt;GetTargets&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetTotem&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetTotem.html&quot;&gt;GetTotem&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:GetTotemCategory&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/GetTotemCategory.html&quot;&gt;GetTotemCategory&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetActiveIconID&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetActiveIconID.html&quot;&gt;SetActiveIconID&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetAttributes&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetAttributes.html&quot;&gt;SetAttributes&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetAttributesEx&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetAttributesEx.html&quot;&gt;SetAttributesEx&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetAttributesEx2&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetAttributesEx2.html&quot;&gt;SetAttributesEx2&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetAttributesEx3&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetAttributesEx3.html&quot;&gt;SetAttributesEx3&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetAttributesEx4&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetAttributesEx4.html&quot;&gt;SetAttributesEx4&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetAttributesEx5&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetAttributesEx5.html&quot;&gt;SetAttributesEx5&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetAttributesEx6&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetAttributesEx6.html&quot;&gt;SetAttributesEx6&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetAttributesEx7&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetAttributesEx7.html&quot;&gt;SetAttributesEx7&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetAuraInterruptFlags&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetAuraInterruptFlags.html&quot;&gt;SetAuraInterruptFlags&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetBaseLevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetBaseLevel.html&quot;&gt;SetBaseLevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetCasterAuraSpell&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetCasterAuraSpell.html&quot;&gt;SetCasterAuraSpell&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetCasterAuraState&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetCasterAuraState.html&quot;&gt;SetCasterAuraState&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetCasterAuraStateNot&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetCasterAuraStateNot.html&quot;&gt;SetCasterAuraStateNot&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetCategory&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetCategory.html&quot;&gt;SetCategory&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetCategoryRecoveryTime&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetCategoryRecoveryTime.html&quot;&gt;SetCategoryRecoveryTime&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetChannelInterruptFlags&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetChannelInterruptFlags.html&quot;&gt;SetChannelInterruptFlags&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetDispel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetDispel.html&quot;&gt;SetDispel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetDmgClass&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetDmgClass.html&quot;&gt;SetDmgClass&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetEquippedItemClass&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetEquippedItemClass.html&quot;&gt;SetEquippedItemClass&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetEquippedItemInventoryTypeMask&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetEquippedItemInventoryTypeMask.html&quot;&gt;SetEquippedItemInventoryTypeMask&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetEquippedItemSubClassMask&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetEquippedItemSubClassMask.html&quot;&gt;SetEquippedItemSubClassMask&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetExcludeCasterAuraSpell&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetExcludeCasterAuraSpell.html&quot;&gt;SetExcludeCasterAuraSpell&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetExcludeTargetAuraSpell&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetExcludeTargetAuraSpell.html&quot;&gt;SetExcludeTargetAuraSpell&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetFacingCasterFlags&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetFacingCasterFlags.html&quot;&gt;SetFacingCasterFlags&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetInterruptFlags&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetInterruptFlags.html&quot;&gt;SetInterruptFlags&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetManaCost&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetManaCost.html&quot;&gt;SetManaCost&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetManaCostPercentage&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetManaCostPercentage.html&quot;&gt;SetManaCostPercentage&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetManaCostPerlevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetManaCostPerlevel.html&quot;&gt;SetManaCostPerlevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetManaPerSecond&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetManaPerSecond.html&quot;&gt;SetManaPerSecond&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetManaPerSecondPerLevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetManaPerSecondPerLevel.html&quot;&gt;SetManaPerSecondPerLevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetMaxAffectedTargets&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetMaxAffectedTargets.html&quot;&gt;SetMaxAffectedTargets&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetMaxLevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetMaxLevel.html&quot;&gt;SetMaxLevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetMaxTargetLevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetMaxTargetLevel.html&quot;&gt;SetMaxTargetLevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetMechanic&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetMechanic.html&quot;&gt;SetMechanic&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetPowerType&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetPowerType.html&quot;&gt;SetPowerType&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetPreventionType&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetPreventionType.html&quot;&gt;SetPreventionType&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetProcChance&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetProcChance.html&quot;&gt;SetProcChance&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetProcCharges&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetProcCharges.html&quot;&gt;SetProcCharges&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetProcFlags&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetProcFlags.html&quot;&gt;SetProcFlags&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetRecoveryTime&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetRecoveryTime.html&quot;&gt;SetRecoveryTime&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetRequiresSpellFocus&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetRequiresSpellFocus.html&quot;&gt;SetRequiresSpellFocus&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetRuneCostID&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetRuneCostID.html&quot;&gt;SetRuneCostID&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetSchoolMask&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetSchoolMask.html&quot;&gt;SetSchoolMask&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetSpeed&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetSpeed.html&quot;&gt;SetSpeed&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetSpellFamilyName&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetSpellFamilyName.html&quot;&gt;SetSpellFamilyName&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetSpellIconID&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetSpellIconID.html&quot;&gt;SetSpellIconID&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetSpellLevel&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetSpellLevel.html&quot;&gt;SetSpellLevel&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetSpellPriority&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetSpellPriority.html&quot;&gt;SetSpellPriority&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetStackAmount&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetStackAmount.html&quot;&gt;SetStackAmount&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetStances&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetStances.html&quot;&gt;SetStances&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetStancesNot&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetStancesNot.html&quot;&gt;SetStancesNot&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetStartRecoveryCategory&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetStartRecoveryCategory.html&quot;&gt;SetStartRecoveryCategory&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetStartRecoveryTime&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetStartRecoveryTime.html&quot;&gt;SetStartRecoveryTime&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetTargetAuraSpell&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetTargetAuraSpell.html&quot;&gt;SetTargetAuraSpell&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetTargetAuraState&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetTargetAuraState.html&quot;&gt;SetTargetAuraState&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetTargetAuraStateNot&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetTargetAuraStateNot.html&quot;&gt;SetTargetAuraStateNot&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetTargetCreatureType&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetTargetCreatureType.html&quot;&gt;SetTargetCreatureType&lt;/a&gt;
+  &lt;a id=&quot;SpellEntry:SetTargets&quot; class=&quot;fn&quot; href=&quot;../SpellEntry/SetTargets.html&quot;&gt;SetTargets&lt;/a&gt;
+`);</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 323 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 323 • Phase 3</div>
+            <h1>Parallel Update Status Spinners</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>323 - Parallel Update Status Spinners</h1></p>
+<p><h2>Status: COMPLETED</h2></p>
+<p><h2>Current Behavior (After Implementation)</h2></p>
+<p>Both <code>./scripts/azerothcore install</code> and <code>update</code> commands run git status checks in parallel with live spinner feedback:
+<pre><code>Checking for updates...
+  ⠸ Checking Core...
+  ⠸ Checking mod-ale...
+  ⠸ Checking mod-aoe-loot...
+  ⠸ Checking mod-grownup...
+  ⠸ Checking mod-playerbots...</code></pre></p>
+<p>As each completes, its line updates:
+<pre><code>  ✓ Core is up-to-date
+  ✓ mod-ale is up-to-date
+  ✓ mod-aoe-loot is up-to-date
+  ✓ mod-grownup is up-to-date
+  ✓ mod-playerbots is up-to-date</code></pre></p>
+<p><h2>Previous Behavior</h2></p>
+<p>Sequential checks - each git fetch blocked until complete, total time = sum of all check times.</p>
+<p><h2>Implementation</h2></p>
+<p><h3>Functions Added (scripts/azerothcore:659-856)</h3></p>
+<p>1. <code>parallel_check_init</code> - Initialize arrays and temp directory
+2. <code>parallel_check_add</code> - Add repo to check (name, dir, commit)
+3. <code>parallel_check_worker</code> - Background worker, writes status to temp file
+4. <code>parallel_check_display</code> - Render all lines with appropriate symbols
+5. <code>parallel_check_run</code> - Start workers, poll, animate, collect results</p>
+<p><h3>Status Values</h3></p>
+<p>- <code>checking</code> - Initial state, shows spinner
+- <code>up-to-date</code> - Green ✓
+- <code>needs-update</code> - Yellow ↓
+- <code>missing</code> - Red ✗</p>
+<p><h3>IPC Mechanism</h3></p>
+<p>- Temp files at <code>/tmp/wow-chat-2/parallel-checks/{name}.status</code>
+- Workers write status, main thread polls every 100ms
+- ANSI <code>\033[nA</code> to move cursor up, <code>\033[K</code> to clear line</p>
+<p><h3>Commands Using Parallel Checks</h3></p>
+<p>- <code>cmd_install</code> - Checks existing repos after clone phase
+- <code>cmd_update</code> - Checks all repos before pull phase</p>
+<p><h2>Notes</h2></p>
+<p>- Core is treated the same as modules (first in list)
+- Network is the bottleneck - parallel saves ~5x time with 5 repos
+- Spinner uses braille dots: ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-3-progress.html">View Phase 3 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

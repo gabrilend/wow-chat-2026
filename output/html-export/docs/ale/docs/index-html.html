@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>index.html - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>index.html</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/ale/docs/index.html
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> html &nbsp;&nbsp;
+            <strong>Size:</strong> 19211 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;meta charset=&quot;utf-8&quot;&gt;
+    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+    &lt;meta name=&quot;description&quot; content=&quot;API documentation for the ALE engine.&quot;&gt;
+    &lt;meta name=&quot;keywords&quot; content=&quot;ALE, lua, lua engine, azerothcore, script, scripting, doc, docs, documentation&quot;&gt;
+
+    &lt;title&gt;ALE API&lt;/title&gt;
+
+    &lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;static/main.css&quot;&gt;
+    &lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;static/dark.css&quot;&gt;
+
+    &lt;link rel=&quot;shortcut icon&quot; href=&quot;static/favicon.ico&quot;&gt;
+
+&lt;/head&gt;
+&lt;body class=&quot;rustdoc&quot;&gt;
+&lt;!--[if lte IE 8]&gt;
+    &lt;div class=&quot;warning&quot;&gt;
+        This old browser is unsupported and will most likely display funky
+        things.
+    &lt;/div&gt;
+    &lt;![endif]--&gt;
+
+&lt;section class=&quot;sidebar&quot;&gt;
+    &lt;a href=&#39;index.html&#39;&gt;&lt;img src=&#39;static/eluna-logo.png&#39; alt=&#39;ALE Logo&#39; width=&#39;100&#39;&gt;&lt;/a&gt;
+    &lt;div class=&quot;block&quot;&gt;
+        
+            &lt;h2&gt;All Classes&lt;/h2&gt;
+            &lt;a class=&quot;mod &quot; href=&quot;ALEQuery/index.html&quot;&gt;ALEQuery&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Achievement/index.html&quot;&gt;Achievement&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Aura/index.html&quot;&gt;Aura&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;BattleGround/index.html&quot;&gt;BattleGround&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;ChatHandler/index.html&quot;&gt;ChatHandler&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Corpse/index.html&quot;&gt;Corpse&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Creature/index.html&quot;&gt;Creature&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;GameObject/index.html&quot;&gt;GameObject&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;GemPropertiesEntry/index.html&quot;&gt;GemPropertiesEntry&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Global/index.html&quot;&gt;Global&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Group/index.html&quot;&gt;Group&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Guild/index.html&quot;&gt;Guild&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Item/index.html&quot;&gt;Item&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;ItemTemplate/index.html&quot;&gt;ItemTemplate&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Loot/index.html&quot;&gt;Loot&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Map/index.html&quot;&gt;Map&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Object/index.html&quot;&gt;Object&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Pet/index.html&quot;&gt;Pet&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Player/index.html&quot;&gt;Player&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Quest/index.html&quot;&gt;Quest&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Roll/index.html&quot;&gt;Roll&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Spell/index.html&quot;&gt;Spell&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;SpellEntry/index.html&quot;&gt;SpellEntry&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;SpellInfo/index.html&quot;&gt;SpellInfo&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Ticket/index.html&quot;&gt;Ticket&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Transport/index.html&quot;&gt;Transport&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Unit/index.html&quot;&gt;Unit&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;Vehicle/index.html&quot;&gt;Vehicle&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;WorldObject/index.html&quot;&gt;WorldObject&lt;/a&gt;&lt;a class=&quot;mod &quot; href=&quot;WorldPacket/index.html&quot;&gt;WorldPacket&lt;/a&gt;
+        
+    &lt;/div&gt;
+&lt;/section&gt;
+
+&lt;nav class=&quot;sub&quot;&gt;
+    &lt;form class=&quot;search-form js-only&quot;&gt;
+        &lt;div class=&quot;search-container&quot;&gt;
+            &lt;input class=&quot;search-input&quot; name=&quot;search&quot;
+                   autocomplete=&quot;off&quot;
+                   placeholder=&quot;Click or press &#39;S&#39; to search, &#39;?&#39; for more options...&quot;
+                   type=&quot;search&quot;&gt;
+        &lt;/div&gt;
+    &lt;/form&gt;
+&lt;/nav&gt;
+
+&lt;section id=&#39;main&#39; class=&quot;content mod&quot;&gt;
+    &lt;h1 class=&#39;fqn&#39;&gt;
+        ALE API Documentation
+        &lt;span class=&#39;out-of-band&#39;&gt;
+            &lt;span id=&#39;render-detail&#39;&gt;
+                &lt;a id=&quot;collapse-all&quot; href=&quot;#&quot;&gt;[-]&lt;/a&gt;
+                &lt;a id=&quot;expand-all&quot; href=&quot;#&quot;&gt;[+]&lt;/a&gt;
+            &lt;/span&gt;
+        &lt;/span&gt;
+    &lt;/h1&gt;
+
+    
+    &lt;div class=&#39;docblock&#39;&gt;
+        &lt;h1 id=&quot;the-ale-engine-api&quot; class=&#39;section-header&#39;&gt;
+            &lt;a href=&quot;#the-ale-engine-api&quot;&gt;The ALE Lua Engine&amp;copy; API&lt;/a&gt;
+        &lt;/h1&gt;
+        &lt;p&gt;
+            The ALE Lua Engine&amp;copy; API allows you to add your own Lua code to be executed when certain events (called &quot;hooks&quot;) occur.
+        &lt;/p&gt;
+        &lt;p&gt;
+            Add a new in-game command, give life to creatures with new AI, or even light players who try to duel on fire!
+            If the hook exists, you can script it.
+        &lt;/p&gt;
+
+        &lt;h2 id=&quot;about-ale&quot; class=&#39;section-header&#39;&gt;
+            &lt;a href=&quot;#about-ale&quot;&gt;About ALE&lt;/a&gt;
+        &lt;/h2&gt;
+        &lt;p&gt;
+            ALE is a &lt;a href=&quot;http://www.lua.org/&quot;&gt;Lua&lt;/a&gt; engine for World of Warcraft emulators.
+            These pages are for &lt;a href=&quot;https://www.azerothcore.org/&quot;&gt;AzerothCore&lt;/a&gt;&#39;s version, but ALE also supports
+            &lt;a href=&quot;https://cmangos.net/&quot;&gt;CMaNGOS&lt;/a&gt;/&lt;a href=&quot;https://www.getmangos.eu/&quot;&gt;MaNGOS&lt;/a&gt; and &lt;a href=&quot;https://www.trinitycore.org/&quot;&gt;TrinityCore&lt;/a&gt;.
+        &lt;/p&gt;
+        &lt;p&gt;
+            If you come from the TypeScript / JavaScript world, or would prefer to use a typed language instead of Lua, check out &lt;a href=&quot;https://github.com/azerothcore/eluna-ts&quot;&gt;ale-ts&lt;/a&gt;!
+        &lt;/p&gt;
+        &lt;p&gt;
+            You can get support in the &lt;code&gt;#ale-ac&lt;/code&gt; channel of &lt;a href=&quot;https://discord.com/invite/sqkPb623&quot;&gt;AzerothCore&#39;s Discord server&lt;/a&gt;.
+        &lt;/p&gt;
+
+        &lt;h2 id=&quot;installation&quot; class=&#39;section-header&#39;&gt;
+            &lt;a href=&quot;#installation&quot;&gt;How to Install&lt;/a&gt;
+        &lt;/h2&gt;
+        &lt;p&gt;
+            &lt;ol&gt;
+                &lt;li&gt;If you haven&#39;t already, clone AzerothCore from &lt;a href=&quot;https://github.com/azerothcore/azerothcore-wotlk&quot;&gt;our GitHub repository&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;Go to the modules directory and run the following command: &lt;pre&gt;git clone https://github.com/azerothcore/mod-ale.git mod-ale&lt;/pre&gt;&lt;/li&gt;
+                &lt;li&gt;Run CMake&lt;/li&gt;
+                &lt;li&gt;Build AzerothCore&lt;/li&gt;
+            &lt;/ol&gt;
+        &lt;/p&gt;
+
+        &lt;!-- &lt;h2 id=&quot;tutorials-and-guides&quot; class=&#39;section-header&#39;&gt;
+            &lt;a href=&quot;#tutorials-and-guides&quot;&gt;Tutorials &amp; Guides&lt;/a&gt;
+        &lt;/h2&gt;
+        &lt;p&gt;
+            We haven&#39;t written tutorials yet, but when we do, we&#39;ll put the links here.
+        &lt;/p&gt; --&gt;
+
+        &lt;h2 id=&quot;about-this-documentation&quot; class=&#39;section-header&#39;&gt;
+            &lt;a href=&quot;#about-this-documentation&quot;&gt;About this Documentation&lt;/a&gt;
+        &lt;/h2&gt;
+        &lt;p&gt;
+            The layout, CSS, and Javascript code for this documentation was borrowed from &lt;a href=&quot;http://doc.rust-lang.org/&quot;&gt;doc.rust-lang.org&lt;/a&gt;.
+        &lt;/p&gt;
+        &lt;p&gt;
+            The documentation generator was originally written by &lt;a href=&quot;https://github.com/Patman64&quot;&gt;Patman64&lt;/a&gt; and is maintained by the ALE team.
+        &lt;/p&gt;
+    &lt;/div&gt;
+
+    &lt;h2 id=&#39;modules&#39; class=&#39;section-header&#39;&gt;&lt;a href=&quot;#modules&quot;&gt;Classes&lt;/a&gt;&lt;/h2&gt;
+    &lt;table&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;ALEQuery/index.html&#39;&gt;ALEQuery&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;The result of a database query.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Achievement/index.html&#39;&gt;Achievement&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents an entry from the game&#39;s achievement database (e.g., achievement earned for completing certain tasks).&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Aura/index.html&#39;&gt;Aura&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;The persistent effect of a &lt;a class=&quot;mod&quot; href=&quot;Spell/index.html&quot;&gt;Spell&lt;/a&gt; that remains on a &lt;a class=&quot;mod&quot; href=&quot;Unit/index.html&quot;&gt;Unit&lt;/a&gt; after the &lt;a class=&quot;mod&quot; href=&quot;Spell/index.html&quot;&gt;Spell&lt;/a&gt;
+has been cast.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;BattleGround/index.html&#39;&gt;BattleGround&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Contains the state of a battleground, e.g. Warsong Gulch, Arathi Basin, etc.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;ChatHandler/index.html&#39;&gt;ChatHandler&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Provides access to in-game and console chat commands, messages, and selection context for command execution.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Corpse/index.html&#39;&gt;Corpse&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;The remains of a &lt;a class=&quot;mod&quot; href=&quot;Player/index.html&quot;&gt;Player&lt;/a&gt; that has died.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Creature/index.html&#39;&gt;Creature&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Non-&lt;a class=&quot;mod&quot; href=&quot;Player/index.html&quot;&gt;Player&lt;/a&gt; controlled &lt;a class=&quot;mod&quot; href=&quot;Unit/index.html&quot;&gt;Unit&lt;/a&gt;s (i.e. NPCs).&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;GameObject/index.html&#39;&gt;GameObject&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents a game object in the world, such as doors, chests, and other interactive objects.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;GemPropertiesEntry/index.html&#39;&gt;GemPropertiesEntry&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents static gem data used in item enhancement, including spell enchantments triggered by socketed gems.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Global/index.html&#39;&gt;Global&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;These functions can be used anywhere at any time, including at start-up.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Group/index.html&#39;&gt;Group&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents a player group in the game, such as a party or raid.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Guild/index.html&#39;&gt;Guild&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents a player guild. Used to manage guild members, ranks, guild bank.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Item/index.html&#39;&gt;Item&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents an instance of an item in the game world.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;ItemTemplate/index.html&#39;&gt;ItemTemplate&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents item data defined in the database and DBCs, such as stats, quality, class restrictions, and display info.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Loot/index.html&#39;&gt;Loot&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents loot that can be obtained from various sources like creatures, gameobjects, or items.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Map/index.html&#39;&gt;Map&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;A game map, e.g. Azeroth, Eastern Kingdoms, the Molten Core, etc.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Object/index.html&#39;&gt;Object&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;A basic game object (either an &lt;a class=&quot;mod&quot; href=&quot;Item/index.html&quot;&gt;Item&lt;/a&gt; or a &lt;a class=&quot;mod&quot; href=&quot;WorldObject/index.html&quot;&gt;WorldObject&lt;/a&gt;).&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Pet/index.html&#39;&gt;Pet&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Non-&lt;a class=&quot;mod&quot; href=&quot;Player/index.html&quot;&gt;Player&lt;/a&gt; controlled companions that fight alongside their owners.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Unstable&#39; title=&#39;Partially Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Player/index.html&#39;&gt;Player&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Inherits all methods from: &lt;a class=&quot;mod&quot; href=&quot;Object/index.html&quot;&gt;Object&lt;/a&gt;, &lt;a class=&quot;mod&quot; href=&quot;WorldObject/index.html&quot;&gt;WorldObject&lt;/a&gt;, &lt;a class=&quot;mod&quot; href=&quot;Unit/index.html&quot;&gt;Unit&lt;/a&gt;&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Quest/index.html&#39;&gt;Quest&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents a quest in the game, including its objectives, rewards, and conditions.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Roll/index.html&#39;&gt;Roll&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents a group loot roll session for an item, including player votes and roll statistics.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Spell/index.html&#39;&gt;Spell&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;An instance of a spell, created when the spell is cast by a &lt;a class=&quot;mod&quot; href=&quot;Unit/index.html&quot;&gt;Unit&lt;/a&gt;.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;SpellEntry/index.html&#39;&gt;SpellEntry&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents spell data loaded from the DBCs, including effects, costs, attributes, and requirements.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;SpellInfo/index.html&#39;&gt;SpellInfo&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents spell metadata used for behavior, targeting, attributes, mechanics, auras, and conditions.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Ticket/index.html&#39;&gt;Ticket&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents a support ticket created by a &lt;a class=&quot;mod&quot; href=&quot;Player/index.html&quot;&gt;Player&lt;/a&gt; using the in-game ticket system.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Transport/index.html&#39;&gt;Transport&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents a transport object in the world, such as boats and zeppelins.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Unit/index.html&#39;&gt;Unit&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents a non-&lt;a class=&quot;mod&quot; href=&quot;Player/index.html&quot;&gt;Player&lt;/a&gt; controlled &lt;a class=&quot;mod&quot; href=&quot;Unit/index.html&quot;&gt;Unit&lt;/a&gt; (i.e. NPCs).&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;Vehicle/index.html&#39;&gt;Vehicle&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents a vehicle in the game, which can carry passengers and provide special abilities or movement.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;WorldObject/index.html&#39;&gt;WorldObject&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;Represents a &lt;a class=&quot;mod&quot; href=&quot;WorldObject/index.html&quot;&gt;WorldObject&lt;/a&gt; in the game world.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;
+                &lt;a class=&#39;stability Stable&#39; title=&#39;Fully Documented&#39;&gt;&lt;/a&gt;
+                &lt;a class=&#39;mod&#39; href=&#39;WorldPacket/index.html&#39;&gt;WorldPacket&lt;/a&gt;
+            &lt;/td&gt;
+            &lt;td class=&#39;docblock short&#39;&gt;
+                &lt;p&gt;A packet used to pass messages between the server and a client.&lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+    &lt;/table&gt;
+
+&lt;/section&gt;
+
+&lt;section id=&#39;search&#39; class=&quot;content hidden&quot;&gt;&lt;/section&gt;
+
+&lt;section class=&quot;footer&quot;&gt;&lt;/section&gt;
+
+&lt;div id=&quot;help&quot; class=&quot;hidden&quot;&gt;
+    &lt;div class=&quot;shortcuts&quot;&gt;
+        &lt;h1&gt;Keyboard shortcuts&lt;/h1&gt;
+        &lt;dl&gt;
+            &lt;dt&gt;?&lt;/dt&gt;
+            &lt;dd&gt;Show this help dialog&lt;/dd&gt;
+            &lt;dt&gt;S&lt;/dt&gt;
+            &lt;dd&gt;Focus the search field&lt;/dd&gt;
+            &lt;dt&gt;&amp;larrb;&lt;/dt&gt;
+            &lt;dd&gt;Move up in search results&lt;/dd&gt;
+            &lt;dt&gt;&amp;rarrb;&lt;/dt&gt;
+            &lt;dd&gt;Move down in search results&lt;/dd&gt;
+            &lt;dt&gt;&amp;#9166;&lt;/dt&gt;
+            &lt;dd&gt;Go to active search result&lt;/dd&gt;
+        &lt;/dl&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;infos&quot;&gt;
+        &lt;h1&gt;Search tricks&lt;/h1&gt;
+        &lt;p&gt;
+            Prefix searches with a type followed by a colon (e.g.
+            &lt;code&gt;fn:&lt;/code&gt;) to restrict the search to a given type.
+        &lt;/p&gt;
+        &lt;p&gt;
+            Accepted types are: &lt;code&gt;fn&lt;/code&gt;, &lt;code&gt;mod&lt;/code&gt;,
+            &lt;code&gt;struct&lt;/code&gt; (or &lt;code&gt;str&lt;/code&gt;), &lt;code&gt;enum&lt;/code&gt;,
+            &lt;code&gt;trait&lt;/code&gt;, &lt;code&gt;typedef&lt;/code&gt; (or
+            &lt;code&gt;tdef&lt;/code&gt;).
+        &lt;/p&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+    window.rootPath = &quot;&quot;;
+&lt;/script&gt;
+&lt;script src=&quot;static/jquery.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;static/main.js&quot;&gt;&lt;/script&gt;
+&lt;script async src=&quot;search-index.js&quot;&gt;&lt;/script&gt;
+&lt;center&gt;Generated on &lt;script src=&quot;date.js&quot;&gt;&lt;/script&gt;&lt;/center&gt;
+&lt;center&gt;&amp;copy;2026 - ALE Lua Engine&lt;/center&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

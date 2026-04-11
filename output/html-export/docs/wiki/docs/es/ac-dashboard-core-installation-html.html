@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ac-dashboard-core-installation.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ac-dashboard-core-installation.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/ac-dashboard-core-installation.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 7732 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h2>Introducción</h2></p>
+<p>El panel de control Bash de Azeroth Core es una colección de scripts que ayudan durante la instalación y mantenimiento del servidor basado en AC. Permiten facilidad en al instalación, actualización y ejecución de AzerothCore mediante una realmente baja cantidad de pasos.</p>
+<p>Installar un servidor para desarrollo o producción nunca había sido tan fácil.</p>
+<p>Si necesita algún tipo de ayuda: <a href="How-to-ask-for-help">haga una pregunta</a>.</p>
+<p><h2>Requisitos</h2></p>
+<p>Necesita tener <a href="https://git-scm.com/">git</a> instalado en su máquina. 
+Ningún otro software require ser instalado manualmente.</p>
+<p>- debian/ubuntu-based: <code>apt update &amp;&amp; apt install git</code>
+- macOS: <code>brew install git</code></p>
+<p><h3>Notas</h3>
+- Para usuarios de macOS: instale y use la ultima verisón de bash para ejecutar los comandos del panel de control (<code>brew install bash</code>)
+- Para usuarios de Windows: Los comandos deben ser ejecutados dentro de la consola de &quot;git bash&quot; o una compatible por ejemplo: WSL, cywin, etc...
+  Sin embargo, se sugiere usar git bash ya que viene preinstalada con git para Windows (uno de nuestros requisitos).</p>
+<p><h2>Instalación</h2></p>
+<p><h3>Obténga las fuentes de AzerothCore</h3></p>
+<p><pre><code>git clone https://github.com/azerothcore/azerothcore-wotlk.git; cd azerothcore-wotlk</code></pre></p>
+<p><h3>Configuración</h3></p>
+<p>Existe un archivo <a href="https://github.com/azerothcore/azerothcore-wotlk/blob/master/conf/dist/config.sh">conf/dist/config.sh</a> que contiene una configuración predeterminada. Échele un vistazo. La mayor parte de las configuraciones predefinidas le servirán. Sin embargo, puede copiarlas bajo <code>conf/config.sh</code> y cambiarlas como le parezca o lo requiera.</p>
+<p><h3>Instalar todas las dependecias de AzerothCore</h3></p>
+<p><pre><code>./acore.sh install-deps</code></pre></p>
+<p><h3>Construya todo desde cero</h3></p>
+<p><pre><code>./acore.sh compiler all</code></pre></p>
+<p><h3>Configurar la base de datos</h3></p>
+<p>- Bien puede conectarse a su base de datos MySQL (con <code>sudo mysql -u root</code>) y crear manualmente el usuario de MySQL <code>acore</code> ejecutando:</p>
+<p><pre><code>DROP USER IF EXISTS &amp;#39;acore&amp;#39;@&amp;#39;localhost&amp;#39;;
+DROP USER IF EXISTS &amp;#39;acore&amp;#39;@&amp;#39;127.0.0.1&amp;#39;;
+CREATE USER &amp;#39;acore&amp;#39;@&amp;#39;localhost&amp;#39; IDENTIFIED BY &amp;#39;acore&amp;#39;;
+CREATE USER &amp;#39;acore&amp;#39;@&amp;#39;127.0.0.1&amp;#39; IDENTIFIED BY &amp;#39;acore&amp;#39;;
+GRANT ALL PRIVILEGES ON <em> . </em> TO &amp;#39;acore&amp;#39;@&amp;#39;localhost&amp;#39; WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON <em> . </em> TO &amp;#39;acore&amp;#39;@&amp;#39;127.0.0.1&amp;#39; WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+exit;</code></pre></p>
+<p><em>Nota:  aún cuando el usuario <code>acore</code> solo es accesible desde la conexión local, cambiar su contraseña por algo más seguro es una buena práctica.</em></p>
+<p>- O cambiar el <code>config.sh</code> para usar otro usuario de MySQL.</p>
+<p>Luegoe ejecute:</p>
+<p><pre><code>./acore.sh db-assembler import-all</code></pre></p>
+<p>Esto va a instalar toda la base de datos de AzerothCore. No se necesita importar alguna actualización de la base de datos en este punto.</p>
+<p><h3>Descargar los archivos del cliente más recientes</h3></p>
+<p>Ejecute:</p>
+<p><pre><code>./acore.sh client-data</code></pre></p>
+<p><h3>Archivos de configuración del Servidor</h3></p>
+<p><pre><code>cp env/dist/etc/authserver.conf.dist env/dist/etc/authserver.conf</code></pre>
+<pre><code>cp env/dist/etc/worldserver.conf.dist env/dist/etc/worldserver.conf</code></pre></p>
+<p><h3>Resultado</h3></p>
+<p>Si siguió los pasos anteriores, tendrá el servidor dentro del directorio <code>env/dist</code>.</p>
+<p>Los binarios <code>worldserver</code> y <code>authserver</code> están ubicados en <code>azerothcore-wotlk/env/dist/bin</code>.</p>
+<p>Bien puedes ejecutralos directamente, o usar el reiniciador (ver abajo).</p>
+<p><h3>Reiniciador</h3></p>
+<p>El panel de control de  AzerothCore viene con un sistema de reinicio incorporado:</p>
+<p><pre><code>./acore.sh run-worldserver</code></pre></p>
+<p><pre><code>./acore.sh run-authserver</code></pre></p>
+<p>Para servidores de dedicados, tal vez usted quiera ejecutarlos dentro de sesiones multiplexer de la terminal, usando herrambientas como <code>tmux</code> (ver abajo).</p>
+<p><h2>Como actualizar su servidor</h2></p>
+<p>Actualice las fuentes:</p>
+<p><pre><code>git pull</code></pre></p>
+<p>Reconstruya:
+<pre><code>./acore.sh compiler build</code></pre></p>
+<p>Actualice la base de datos:</p>
+<p><pre><code>./acore.sh db-assembler import-updates</code></pre></p>
+<p>Eso es todo.</p>
+<p><h2>Consejos para servidores dedicados (de producción)</h2></p>
+<p><h3>Copias de respaldo diarias via Telegram</h3></p>
+<p>Obtener copias de respaldo diarias de las bases de datos de su servidor directamente en su celular o computador
+via mensajes de<a href="https://telegram.org/">Telegram</a>?</p>
+<p>Sí, es posible. Solamente use: <a href="https://github.com/azerothcore/telegram-automated-db-backup">azerothcore/telegram-automated-db-backup</a></p>
+<p><h3>Visual Studio Code SSH</h3></p>
+<p>Puede instalar AzerothCore en un servidor de linux, con facilidad, sin usar ningún tipo de GUI (Interfáz gráfica de usuario). Simplemente conectese de forma remota via SSH, usando <a href="https://code.visualstudio.com/">Visual Studio Code</a>
+y las extensiones <a href="https://code.visualstudio.com/docs/remote/ssh">SSH</a>
+y <a href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh-edit">SSH: Editing Configuration Files</a> de manera que se va a sentir como en casa.</p>
+<p><h3>Ejecutar AzerothCore dentro de sesiones Tmux Run AzerothCore inside Tmux sessions</h3></p>
+<p>Usted puede usar <a href="https://github.com/tmux/tmux">tmux</a> como terminal multiplexer, 
+esto le permitirá administrar con facilidad los procesos dentro de un servidor sin GUI.</p>
+<p>Puede crear 2 sesiones y ejecutrar <code>worldserver</code> y <code>authserver</code> dentro de estas:</p>
+<p>- <code>tmux new -s world-session</code>
+- luego ejecute <code>./acore.sh run-worldserver</code> dentro de esta, luego salga.</p>
+<p>- <code>tmux new -s auth-session</code>
+- luego ejecute <code>./acore.sh run-authserver</code> dentro de esta,  luego salga.</p>
+<p>Puede salir usando <code>CTRL+B+D</code>. De esta manera no finalizará el/los proceso.
+Si está conectado usando VsCode SSH, puede simplemente serrar la sesión de la terminal.</p>
+<p>Puede volver de nuevo a la sesión <code>world-session</code> usando:</p>
+<p>- <code>tmux attach -t world-session</code></p>
+<p>Otros comandos útiles:</p>
+<p>- crear nueva sesión: <code>tmux new -s my_session</code>
+- listar todas las sesiones: <code>tmux ls</code>
+- finalizar una sesión: <code>tmux kill my_session</code> (or just attach to it and type <code>exit</code>)
+- finalizar TODAS las sesiones: <code>tmux kill-server</code>
+- ...más detalles disponibles en la <a href="https://github.com/tmux/tmux/wiki">wiki de tmux</a></p>
+<p><h3>Iniciar automáticamente las sesiones tmux en el arranque del sistema</h3></p>
+<p>Puede crear automáticamente las sesiones y ejecutar <code>authserver</code> y <code>worldserver</code> usando este sencillo script:</p>
+<p>``<code>sh
+#!/usr/bin/env bash</p>
+<p><h1>CHANGE THESE WITH THE CORRECT PATHS</h1>
+authserver=&quot;/path/to/azerothcore-wotlk/acore.sh run-authserver&quot;
+worldserver=&quot;/path/to/azerothcore-wotlk/acore.sh run-worldserver&quot;</p>
+<p>authserver_session=&quot;auth-session&quot;
+worldserver_session=&quot;world-session&quot;</p>
+<p>if tmux new-session -d -s $authserver_session; then
+    echo &quot;Created authserver session: $authserver_session&quot;
+else
+    echo &quot;Error when trying to create authserver session: $authserver_session&quot;
+fi</p>
+<p>if tmux new-session -d -s $worldserver_session; then
+    echo &quot;Created worldserver session: $worldserver_session&quot;
+else
+    echo &quot;Error when trying to create worldserver session: $worldserver_session&quot;
+fi</p>
+<p>if tmux send-keys -t $authserver_session &quot;$authserver&quot; C-m; then
+    echo &quot;Executed \&quot;$authserver\&quot; inside $authserver_session&quot;
+    echo &quot;You can attach to $authserver_session and check the result using \&quot;tmux attach -t $authserver_session\&quot;&quot;
+else
+    echo &quot;Error when executing \&quot;$authserver\&quot; inside $authserver_session&quot;
+fi</p>
+<p>if tmux send-keys -t $worldserver_session &quot;$worldserver&quot; C-m; then
+    echo &quot;Executed \&quot;$worldserver\&quot; inside $worldserver_session&quot;
+    echo &quot;You can attach to $worldserver_session and check the result using \&quot;tmux attach -t $worldserver_session\&quot;&quot;
+else
+    echo &quot;Error when executing \&quot;$worldserver\&quot; inside $worldserver_session&quot;
+fi
+<pre><code>
+En sistemas unix, puede usar <a href="https://en.wikipedia.org/wiki/Cron">crontab</a> 
+para ejecutrar el script automáticamente en el arranque del sistema:
+</code></pre>
+crontab -e
+<pre><code>
+luego, añada esta linea (remplace </code>/path/to/startup.sh<code> con la ruta de donde está ubicado el script script):
+</code></pre>
+@reboot /bin/bash /path/to/startup.sh
+</code>``
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

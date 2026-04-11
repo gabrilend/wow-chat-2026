@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>getting-started.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>getting-started.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/getting-started.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 13181 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Getting started with AzerothCore</h1></p>
+<p><h2>Introduction</h2></p>
+<p>Would you like to learn about AzerothCore (AC), setup your WoW server for the first time, understand how to modify it and become able to contribute? You came to the right place!</p>
+<p>Getting started with WoW emulation might be tricky at first, but don&#39;t worry, we will be there to help you in case you encounter any issue or have any questions to ask. Just read <a href="How-to-ask-for-help">this page</a> before asking for help.</p>
+<p>If while reading any of the tutorials linked on this page you find something that is not clear: let us know. We&#39;ll do our best to rephrase it and make it easier to be understood for beginners. Improving the docs is also a way to contribute!</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/109369720-b6fa7d00-789d-11eb-86b4-5fe15d6ab834.png">AzerothCore learning code</a></p>
+<p><h2>Knowledge requirements</h2></p>
+<p>There are <strong>NO</strong> technical requirements. You just need to be patient and willing to learn.</p>
+<p>If you already have some programming knowledge it would surely be an advantage for you. However, trust me, you don&#39;t need any pre-existing knowledge to learn about WoW servers.</p>
+<p><em>Personal note from the author of this tutorial: when I first installed my first WoW server I was 15, I had no programming knowledge at all, I was using Windows XP and barely understood English. I&#39;m sure if you are reading this, you have already more skills than I used to have when I was trying to install MaNGOS+UDB+ScriptDev2 and get a decent WoW server to run on my local machine.
+Initially, I spent hours trying to read and understand tutorials from different people written on different websites, but eventually, I succeeded. AzerothCore is an all-in-one project so it&#39;s going to be easier than that, bear with me and you&#39;ll get there!</em></p>
+<p>Tempted to use a repack instead? <a href="https://www.mangosrumors.org/why-you-should-not-use-repacks-to-run-your-wow-server/">Don&#39;t do it</a>.</p>
+<p><h2>Installing AzerothCore on your computer</h2></p>
+<p>The first step is always installing a local WoW server in your own machine. And there are several ways to do it, which can vary according to the operating system.</p>
+<p><h3>Your operating system</h3></p>
+<p>Let me be clear about one thing: <strong>ALL operating systems are supported by AzerothCore</strong>.
+So you can successfully install AzerothCore GNU/Linux, macOS or Windows without any issue.</p>
+<p>However, I can tell you if you use a Linux distribution such as <strong>Ubuntu 20.04</strong>, the process is going to be easier. If you would like to install Ubuntu, you can download it from <a href="https://ubuntu.com/download/desktop">here</a> and you can find plenty of tutorials online about how to do it. There is a nice tutorial about running WoW on Linux <a href="https://www.mangosrumors.org/how-to-run-wow-on-linux/">here</a>.</p>
+<p>Would you like to stick with <strong>Windows</strong> or <strong>macOS</strong>? That&#39;s absolutely fine.</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/109369213-e5775880-789b-11eb-8356-99a4ab842bfb.png">AzerothCore supports GNU/Linux, macOS and Windows</a></p>
+<p><h3>Different ways to install AzerothCore</h3></p>
+<p>Basically, there are 3 main ways to install AC:</p>
+<p>- The &quot;<strong>classic setup</strong>&quot;: this is the traditional setup you would normally use to install a common WoW emulator. <strong>All operating systems are supported.</strong> Doing this setup also probably gives you a better overview of the components of the server.
+- The &quot;<strong>docker setup</strong>&quot;: this is a simplified setup that uses Docker to automate a lot of things for you. This setup is typically easier. <strong>You can use this setup in all operating systems where you can install <a href="https://www.docker.com/products/docker-desktop">Docker</a>.</strong>
+- The &quot;<strong>dashboard setup</strong>&quot;: this is an <strong>EXTREMELY EASY</strong> way of installing AzerothCore in your machine, based on a collection of bash scripts created by <a href="https://github.com/Yehonal">Yehonal</a>. However, <strong>you can only use this setup in Ubuntu</strong> or similar platforms. Windows is not supported, and probably we are not there yet with macOS as well.</p>
+<p>You can choose one setup, or even try more than one. You can find all the instructions here:</p>
+<p>- <a href="installation">azerothcore.org/wiki/Installation</a></p>
+<p>Should you encounter any issue or doubt while trying to install your AC server, <a href="https://github.com/azerothcore/wiki/blob/master/docs/how-to-ask-for-help">ask us for help</a>.</p>
+<p>Got your WoW server installed? Congratulations! Now let&#39;s see what you can do next.</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/109369101-80236780-789b-11eb-900c-bcc17a3cf13c.png">AzerothCore server running on macOS</a></p>
+<p><h2>Access the game, learn the GM commands</h2></p>
+<p>First of all, make sure your Client has their realmlist.wtf set to the following: <code>set realmlist localhost</code>. After this (assuming you&#39;ve already setup AzerothCore) make sure you&#39;ve a <code>GM</code> (Security of 2 or Higher) account created. If you haven&#39;t created an account or you&#39;re not sure follow this <a href="creating-accounts">Creating Accounts</a>.
+After this your <code>GM</code> account will be able to use the following commands from link with a list of all commands below:</p>
+<p>- <a href="GM-Commands">azerothcore.org/wiki/GM-Commands</a></p>
+<p>Get confident with the commands, you will need them for any administration, testing or development activities.</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/109369940-ba423880-789e-11eb-88d6-e6d8f7b8a723.png">AzerothCore GM</a></p>
+<p><h2>Consider learning git</h2></p>
+<p>You can just blindly copy-paste the <code>git</code> commands that you&#39;ll see in the tutorials linked here, most likely you will not have issues with them.
+However, properly learning <code>git</code> will make you really aware of what you&#39;re doing, and this knowledge can help you with whatever other software development project you may work with.
+Yes, because <code>git</code> is one of the most important tools used in many software engineering projects. Learning its basics will not only help you a lot with AzerothCore, but it&#39;s also something very good to put in your CV.</p>
+<p>You can find plenty of resources online about learning <code>git</code>, for example <a href="https://try.github.io/">try.github.io</a></p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/109370018-fb3a4d00-789e-11eb-8532-1ab1bf8fba60.png">AzerothCore learning git</a></p>
+<p><h2>Learn how to update your WoW server</h2></p>
+<p>We release improvements to AzerothCore on a daily basis. You should learn how to update your server and keep updating it often. We recommend avoiding working on older versions of AzerothCore because they can have bugs that we already resolved and you don&#39;t want to stay behind.</p>
+<p>So it is <strong>very important</strong> that you update your AzerothCore server regularly. We recommend you to do it at least once a week. Read this guide:</p>
+<p>- <a href="update">azerothcore.org/wiki/Update</a></p>
+<p>After you follow the update procedure, it is important to <strong>verify</strong> that:</p>
+<p>- Your server application (core) has been properly updated, use the <code>server info</code> command to make sure of it.
+- Your DB has been properly updated and aligned to your core version, <a href="https://stackoverflow.com/a/55282168/3497671">read this answer on stackoverflow</a>.</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/109370296-00e46280-78a0-11eb-9ed0-b9df14f2008b.png">AzerothCore server info</a></p>
+<p><h2>Learn to check out PRs</h2></p>
+<p>A great way to start contributing is by testing PRs made by other contributors. This is not only quite easy to do, but it is extremely helpful for the project and can help you to get into our development process.</p>
+<p>This topic is so important that there is a dedicated tutorial for it:</p>
+<p>- <a href="How-to-test-a-PR">azerothcore.org/wiki/How-to-test-a-PR</a></p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/109370244-d397b480-789f-11eb-9ac7-64d98ca0d33c.png">image</a></p>
+<p><h2>Learning how to work with the Database</h2></p>
+<p>The Database is the best place to start developing a WoW server. Because it&#39;s easier than the other components, and there are tools that are able to automatically generate the code for you. For example, Keira3.</p>
+<p><h3>Download Keira3</h3></p>
+<p>Keira3 is a DB editor for AzerothCore which allows you to edit or add contents to the world very easily, we recommend to install and play with it:</p>
+<p>- <a href="https://www.azerothcore.org/Keira3">azerothcore.org/Keira3</a></p>
+<p>Keira3 automatically generates the SQL code needed to create or change stuff in the database.
+Sounds complicated? Give it a try and you&#39;ll see how it works.</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/109370160-769bfe80-789f-11eb-9958-dc17ff48f39a.png">AzerothCore Keira3</a></p>
+<p><h3>Download a MySQL client</h3></p>
+<p>You&#39;ll need a generic database management tool too in order to manage tables and their contents.</p>
+<p>- <a href="database-management-tool">Database Management Tool</a></p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/109370368-42750d80-78a0-11eb-946c-c0831a02b52b.png">AzerothCore world database viewed with sequel-ace</a></p>
+<p><h3>The DB documentation is your friend</h3></p>
+<p>Always read the documentation about every table that you deal with:</p>
+<p>- <a href="database-world">azerothcore.org/wiki/database-world</a></p>
+<p><h3>SmartAI</h3></p>
+<p>With SmartAI you can do a lot of things. You can add special behaviour to an element of the game such as a creature, without ever touching a single line of C++.</p>
+<p>In a nutshell, with SmartAI you can make an entity (for example a Creature) perform a certain <strong>action</strong> when a certain <strong>event</strong> occurs, optionally specifying a <strong>target</strong>. In other words, you can make entities react to events with behaviour defined by you.</p>
+<p>For example, you can make a creature cast a spell (action), when its health goes below 50% of its total health (event), against a random member of the party group (target).</p>
+<p>Technically the <code>smart_script</code> is just a table inside the world database (and its documentation can be found <a href="smart_scripts">here</a>). Tools like Keira3 help you working with SmartAI using a practical graphic interface.</p>
+<p>Try to open Keira3, look for any creature that has &quot;SmartAI&quot; as &quot;AIName&quot;, open it and click on &quot;SmartAI&quot; on the right menu.
+You&#39;ll be prompted with a visual editor that will assist you when working with SmartAI.</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/109367698-1bfea480-7897-11eb-9cf0-f047b3dcdb85.png">AzerothCore SmartAI with Keira3</a></p>
+<p>Experiment with the SmartAI and get confident with it. It&#39;s a simple but very powerful tool.
+After getting some knowledge of it, you will be able to do many things. Many bugs can be fixed just using the SmartAI.</p>
+<p>The AI of most of the creatures you&#39;ll find in the world is done with SmartAI. While more complex creatures (typically raid bosses) are scripted in C++.</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/109369529-e78de700-789c-11eb-97d5-02ecc6c85a0a.png">SmartAI vs C++</a></p>
+<p><h3>Learn the SQL language</h3></p>
+<p>Usually, you&#39;ll need only the basics of the SQL language, and in most cases, you&#39;ll probably figure it out by yourself, however, it&#39;s not a bad idea to read about the SQL language. You can find a lot of resources online, for example:</p>
+<p>- <a href="https://www.w3schools.com/sql/sql_intro.asp">https://www.w3schools.com/sql/sql_intro.asp</a></p>
+<p>if you understand how basic statements such as <code>SELECT</code>, <code>UPDATE</code>, <code>INSERT</code> and <code>DELETE</code> work, that&#39;s usually enough. You don&#39;t need to go too deep into SQL in order to be able to contribute.</p>
+<p><h2>Share your code!</h2></p>
+<p>You can submit your improvement via PR. Read this guide:</p>
+<p>- <a href="how-to-create-a-pr">How to create a Pull Request (PR)</a></p>
+<p><h2>Start contributing!</h2></p>
+<p>If you mastered some of the above parts, there is already <strong>A LOT</strong> you can do to help our project and becoming a contributor.
+For example:</p>
+<p>- Help the developers by testing PRs and giving your feedback
+- Do some bug triaging by confirming issues and helping us to identify and close the invalid reports
+- You can also help by <a href="https://github.com/chromiecraft/chromiecraft">triaging the bugs coming from the players of ChromieCraft</a> (our child-project)
+- Report any bug that you may find yourself
+- Try to fix bugs, a lot of them can just be fixed with some SQL and you can use Keira3 for that (e.g. using SmartAI or other embedded editors). Being this an open-source project, you can find plenty of examples on our main GitHub repository</p>
+<p>Would you like to talk to us? Join <a href="https://discordapp.com/invite/gkt4y2x">the AzerothCore Discord server</a>.</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/109370461-b44d5700-78a0-11eb-916c-81c8500fa969.png">Contributing to AzerothCore</a></p>
+<p><h2>Conclusion and next steps</h2></p>
+<p>Never stop learning. Go to learn the basics behind Object-Oriented Programming (OOP).
+Get some C++ tutorial, start experimenting with the core source code. Look at other people PR&#39;s as examples.</p>
+<p>Study the basic mechanisms of the game server (read articles like <a href="https://stackoverflow.com/questions/62249204/how-does-the-update-diff-work-in-azerothcore">this</a>). Try to <a href="https://stackoverflow.com/questions/66340549/is-it-possible-to-turn-a-core-patch-into-a-module-for-azerothcore">create modules</a>.</p>
+<p>Or learn another programming language, there are plenty of tools you might build for AzerothCore users or developers using your favourite programming language.</p>
+<p>Whatever you are going to do, always remember: <strong>StackOverflow is your friend</strong>.</p>
+<p>-------------------------------------------------</p>
+<p>In this tutorial, I wanted to help beginners and demonstrate how much you can learn and contribute without even knowing C++. All you need is some time and patience.</p>
+<p>Happy coding!</p>
+<p>-- Shin aka Francesco
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

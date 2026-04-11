@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>how-to-import-dbc-data-in-db.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>how-to-import-dbc-data-in-db.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/how-to-import-dbc-data-in-db.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 3859 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>How to import DBC data inside the AC database</h1></p>
+<p>This guide will show you how to import DBC data inside the AzerothCore database and edit them. For the guide we are going to use the AreaTable.dbc as example
+by changing the Hyjal zone from &quot;Normal&quot; to &quot;Sanctuary (with duels allowed)&quot;. 
+If you do this you will turn that zone into crossfaction and, for example, you can use it for events.</p>
+<p><h2>Requirements</h2></p>
+<p>- <a href="https://nodejs.org/en/">Nodejs</a> for the node-dbc-reader</p>
+<p><h2>Getting started</h2></p>
+<p><h3>1. install my dbc-reader</h3></p>
+<p>Clone or download <a href="https://github.com/wowgaming/node-dbc-reader">this repository</a> and run <code>npm install</code> inside the downloaded folder.</p>
+<p><em>Read the documentation of that repository if you need to run more complex commands.</em></p>
+<p><h3>2. Search your data</h3></p>
+<p>Run this command to check that the zone is correct: <code>npm run start -- --search=&quot;[616].includes({<em>})&quot; --columns=ID AreaTable</code></p>
+<p>This command will search into the <strong>ID</strong> column with the following condition: <code>[616].includes({</em>})</code> which means that the program will search for all the IDs that include
+the values within the [ ] array. In this case we only need the value 616. </p>
+<p><em>Note: the --search option is backed by an eval, which means you can run any javascript method to execute a comparison</em></p>
+<p>The result of that command will be:
+``<code>json
+{
+    &quot;ID&quot;: 616,
+    &quot;ContinentID&quot;: 1,
+    &quot;ParentAreaID&quot;: 0,
+    &quot;AreaBit&quot;: 619,
+    &quot;Flags&quot;: 64,
+    &quot;SoundProviderPref&quot;: 0,
+    &quot;SoundProviderPrefUnderwater&quot;: 11,
+    &quot;AmbienceID&quot;: 31,
+    &quot;ZoneMusic&quot;: 0,
+    &quot;IntroSound&quot;: 0,
+    &quot;ExplorationLevel&quot;: 0,
+    &quot;AreaName_Lang_enUS&quot;: &quot;Hyjal&quot;,
+    &quot;AreaName_Lang_enGB&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_koKR&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_frFR&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_deDE&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_enCN&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_zhCN&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_enTW&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_zhTW&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_esES&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_esMX&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_ruRU&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_ptPT&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_ptBR&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_itIT&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_Unk&quot;: &quot;&quot;,
+    &quot;AreaName_Lang_Mask&quot;: 16712190,
+    &quot;FactionGroupMask&quot;: 0,
+    &quot;LiquidTypeID_1&quot;: 0,
+    &quot;LiquidTypeID_2&quot;: 0,
+    &quot;LiquidTypeID_3&quot;: 0,
+    &quot;LiquidTypeID_4&quot;: 0,
+    &quot;MinElevation&quot;: -500,
+    &quot;Ambient_Multiplier&quot;: 0,
+    &quot;Lightid&quot;: 0
+  }
+  </code><pre><code>
+The value: <code>&amp;quot;Flags&amp;quot;: 64</code> means &amp;quot;normal zone&amp;quot;, we have to override it with <code>19456 - Sanctuary (Duels allowed)</code>.</p>
+<p>For the DBC documentation check <a href="https://wowdev.wiki/Category:DBC_WotLK">this wiki</a></p>
+<p>You can check the list of the flags <a href="areatable">here</a></p>
+<p>3. Export the SQL</p>
+<p>Now run the same command above but with the output type : <code>npm run start -- -s &amp;quot;[616].includes({*})&amp;quot; -t sql  --columns=ID AreaTable</code> to extract the INSERT query</p>
+<p>Output: </code></pre>sql
+INSERT IGNORE INTO areatable_dbc (<code>ID</code>,<code>ContinentID</code>,<code>ParentAreaID</code>,<code>AreaBit</code>,<code>Flags</code>,<code>SoundProviderPref</code>,<code>SoundProviderPrefUnderwater</code>,<code>AmbienceID</code>,<code>ZoneMusic</code>,<code>IntroSound</code>,<code>ExplorationLevel</code>,<code>AreaName_Lang_enUS</code>,<code>AreaName_Lang_enGB</code>,<code>AreaName_Lang_koKR</code>,<code>AreaName_Lang_frFR</code>,<code>AreaName_Lang_deDE</code>,<code>AreaName_Lang_enCN</code>,<code>AreaName_Lang_zhCN</code>,<code>AreaName_Lang_enTW</code>,<code>AreaName_Lang_zhTW</code>,<code>AreaName_Lang_esES</code>,<code>AreaName_Lang_esMX</code>,<code>AreaName_Lang_ruRU</code>,<code>AreaName_Lang_ptPT</code>,<code>AreaName_Lang_ptBR</code>,<code>AreaName_Lang_itIT</code>,<code>AreaName_Lang_Unk</code>,<code>AreaName_Lang_Mask</code>,<code>FactionGroupMask</code>,<code>LiquidTypeID_1</code>,<code>LiquidTypeID_2</code>,<code>LiquidTypeID_3</code>,<code>LiquidTypeID_4</code>,<code>MinElevation</code>,<code>Ambient_Multiplier</code>,<code>Lightid</code>)
+ VALUES (616,1,0,619,64,0,11,31,0,0,0,&quot;Hyjal&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,&quot;&quot;,16712190,0,0,0,0,0,-500,0,0);
+<code><pre><code>
+4. Create the Update Query</p>
+<p>Create the update query to set the proper faction :
+</code></pre>sql
+UPDATE areatable_dbc SET Flags=19456 WHERE ID=616
+</code>``</p>
+<p>5. Create your PR</p>
+<p>If you are using this guide to fix a bug (not for customization purpose), 
+now you can create <a href="How-to-create-a-PR">your PR</a> with the 2 queries above </p>
+<p></p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

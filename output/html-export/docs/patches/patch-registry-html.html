@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>patch-registry.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>patch-registry.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/patches/patch-registry.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 12410 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-09 12:27
+        </div>
+
+        <div class="content">
+            <p><h1>Patch Registry</h1></p>
+<p>Patches applied during the build process, organized by phase.
+Each patch is idempotent (safe to run multiple times) and atomic (self-contained).</p>
+<p><h2>Meta-List Structure</h2></p>
+<p><pre><code>BUILD_PATCHES
+├── PHASE_BEGIN    (pre-compile source fixes)
+├── PHASE_MIDDLE   (compile-time adjustments)
+└── PHASE_END      (post-compile config/setup)</code></pre></p>
+<p>---</p>
+<p><h2>PHASE_BEGIN: Pre-Compile Source Fixes</h2></p>
+<p>Applied after source/modules are cloned, before cmake/make.
+These fix compatibility issues in upstream code.</p>
+<p>| ID | Name | Target | Parallelizable | Description |
+|----|------|--------|----------------|-------------|
+| B001 | aoe-loot-item-namespace | mod-aoe-loot/src/aoe_loot.cpp | Yes | Fix <code>Item</code> vs <code>WorldPackets::Item</code> ambiguity |
+| B002 | playerbots-ale-login-hook | mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp | Yes | Trigger PLAYER_EVENT_ON_LOGIN for bots |
+| B003 | ale-gameobject-wildcard | mod-ale/src/LuaEngine/LuaEngine.cpp | Yes | Enable entry 0 as wildcard for gameobject events |
+| B004 | upstream-warning-fixes | mod-playerbots/<em>, mod-ale/</em> | Yes | Fix 695+ compiler warnings |
+| B005 | accuracy-level-cap | src/server/game/Entities/Unit/<em> | Yes | Cap level diff for hit/miss at ±3 (Issue 156) |
+| B006 | ale-sell-item-hook | mod-ale/</em>, Handlers/ItemHandler.cpp | Yes | Add PLAYER_EVENT_ON_SELL_ITEM = 74 (Issue 150) |
+| B007 | ale-unit-methods | mod-ale/<em>/UnitMethods.h, LuaFunctions.cpp | Yes | Add SetWalk, IsWalking, IsHostileTo, IsFriendlyTo (Issue 332) |
+| B008 | mod-talent-bonus | modules/mod-talent-bonus | Yes | Link local module for compilation (Issue 120) |</p>
+<p><h3>B001: aoe-loot-item-namespace</h3></p>
+<p><strong>File:</strong> <code>modules/mod-aoe-loot/src/aoe_loot.cpp</code>
+<strong>Line:</strong> 458
+<strong>Pattern:</strong> <code>Item</em> pItem = player-&gt;GetItemByGuid</code>
+<strong>Fix:</strong> <code>::Item<em> pItem = player-&gt;GetItemByGuid</code>
+<strong>Reason:</strong> AzerothCore has both <code>class Item</code> and <code>namespace WorldPackets::Item</code>. The global scope operator <code>::</code> disambiguates.</p>
+<p><pre><code class="bash">&lt;h1&gt;Idempotent check: only patch if unfixed pattern exists&lt;/h1&gt;
+grep -q &amp;quot;^[[:space:]]</em>Item\<em> pItem = player-&amp;gt;GetItemByGuid&amp;quot; &amp;quot;$FILE&amp;quot; &amp;amp;&amp;amp; \
+sed -i &amp;#39;s/^\([[:space:]]</em>\)Item\<em> pItem = player-&amp;gt;GetItemByGuid/\1::Item</em> pItem = player-&amp;gt;GetItemByGuid/&amp;#39; &amp;quot;$FILE&amp;quot;</code></pre></p>
+<p><h3>B002: playerbots-ale-login-hook</h3></p>
+<p><strong>File:</strong> <code>modules/mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp</code>
+<strong>Issue:</strong> 324 - playerbots don&#39;t trigger PLAYER_EVENT_ON_LOGIN
+<strong>Reason:</strong> Playerbots log bots in through their own C++ path, bypassing ALE Lua hooks. This prevents Lua scripts from initializing bot behaviors.</p>
+<p><strong>Changes:</strong>
+1. Add <code>#include &quot;LuaEngine.h&quot;</code> after existing includes
+2. Add <code>sALE-&gt;OnLogin(bot);</code> at end of <code>OnBotLoginInternal</code> function</p>
+<p><pre><code class="bash">&lt;h1&gt;Idempotent check: only patch if hook not present&lt;/h1&gt;
+grep -q &amp;quot;sALE-&amp;gt;OnLogin(bot)&amp;quot; &amp;quot;$FILE&amp;quot; || {
+    # Add include
+    sed -i &amp;#39;/#include &amp;quot;RandomPlayerbotMgr.h&amp;quot;/a #include &amp;quot;LuaEngine.h&amp;quot;&amp;#39;
+    # Add hook call via awk (brace-depth tracking)
+    awk &amp;#39;...&amp;#39; &amp;quot;$FILE&amp;quot; &amp;gt; &amp;quot;$FILE.tmp&amp;quot; &amp;amp;&amp;amp; mv &amp;quot;$FILE.tmp&amp;quot; &amp;quot;$FILE&amp;quot;
+}</code></pre></p>
+<p><strong>See:</strong> <code>docs/patches/playerbots-ale-login-hook.md</code> for full implementation details.</p>
+<p><h3>B003: ale-gameobject-wildcard</h3></p>
+<p><strong>File:</strong> <code>modules/mod-ale/src/LuaEngine/LuaEngine.cpp</code>
+<strong>Issue:</strong> 325 - ALE doesn&#39;t support entry 0 wildcard for gameobject events
+<strong>Reason:</strong> ALE validates gameobject templates before registration. Entry 0 fails validation since no template exists with that ID.</p>
+<p><strong>Changes:</strong>
+1. Add <code>entry != 0 &amp;&amp;</code> check before <code>GetGameObjectTemplate</code> validation (2 locations)</p>
+<p><pre><code class="bash">&lt;h1&gt;Idempotent check: only patch if wildcard not present&lt;/h1&gt;
+grep -q &amp;quot;entry != 0 &amp;amp;&amp;amp; !eObjectMgr-&amp;gt;GetGameObjectTemplate&amp;quot; &amp;quot;$FILE&amp;quot; || {
+    sed -i &amp;#39;s/if (!eObjectMgr-&amp;gt;GetGameObjectTemplate(entry))/\/\/ entry 0 = wildcard (Issue 325)\n                if (entry != 0 \&amp;amp;\&amp;amp; !eObjectMgr-&amp;gt;GetGameObjectTemplate(entry))/g&amp;#39; &amp;quot;$FILE&amp;quot;
+}</code></pre></p>
+<p><strong>See:</strong> <code>docs/patches/ale-gameobject-wildcard.md</code> for full implementation details.</p>
+<p><h3>B004: upstream-warning-fixes</h3></p>
+<p><strong>Files:</strong> Multiple files in <code>mod-playerbots/</code> and <code>mod-ale/</code>
+<strong>Issue:</strong> 333 - Upstream code produces ~1137 compiler warnings
+<strong>Reason:</strong> Clean build improves code quality and makes real issues easier to spot.</p>
+<p><strong>Warning Categories Fixed (~650):</strong>
+- 500: NextAction deprecated copy assignment (<code>Action.h</code>)
+- 119: MovementActions.h signed/unsigned loop
+- 13: ItemCountValue.h unused parameter
+- 12: PositionInfo deprecated copy assignment
+- 3: CraftData deprecated copy assignment
+- 3: UnitPosition deprecated copy assignment
+- 2: PlayerMethods.h signed/unsigned comparison</p>
+<p><strong>Not Fixed (~490):</strong>
+- 442: boost unary_function deprecated (boost 1.74 → needs 1.81+)
+- 40: HunterActions.h unused params (4 locations, low priority)
+- 3: Arrow.h initializer order (requires verifying member declaration order)
+- ~5: Scattered individual warnings</p>
+<p><strong>Boost Note:</strong>
+Current boost version: <strong>1.74</strong> (2020)
+The <code>unary_function</code> deprecation was fixed in boost <strong>1.81</strong> (2022).
+Upgrading boost would eliminate 442 warnings.</p>
+<p><strong>See:</strong> <code>docs/patches/upstream-warning-fixes.md</code> for detailed implementation.</p>
+<p><h3>B005: accuracy-level-cap</h3></p>
+<p><strong>Files:</strong> <code>src/server/game/Entities/Unit/Unit.h</code>, <code>Unit.cpp</code>
+<strong>Issue:</strong> 156 - Monster accuracy level cap
+<strong>Reason:</strong> Cap level difference impact on hit/miss at ±3 levels for flatter combat curve.</p>
+<p><strong>Changes:</strong>
+1. Add <code>ACCURACY_LEVEL_CAP</code> and <code>ACCURACY_SKILL_CAP</code> defines to Unit.h
+2. Cap <code>levelDiff</code> in <code>MagicSpellHitResult()</code> at ±3
+3. Cap <code>skillDiff</code> in <code>MeleeSpellMissChance()</code> at ±15 (3 levels × 5 skill/level)
+4. Cap <code>skillBonus</code> in <code>RollMeleeOutcomeAgainst()</code> at ±15</p>
+<p><strong>See:</strong> <code>docs/patches/accuracy-level-cap.md</code> for detailed implementation.</p>
+<p><h3>B006: ale-sell-item-hook</h3></p>
+<p><strong>Files:</strong> <code>mod-ale/<em>/Hooks.h</code>, <code>LuaEngine.h</code>, <code>PlayerHooks.cpp</code>, <code>Handlers/ItemHandler.cpp</code>
+<strong>Issue:</strong> 150 - ALE sell item hook
+<strong>Reason:</strong> Allow Lua scripts to react to vendor sales for treasure pool recycling.</p>
+<p><strong>Changes:</strong>
+1. Add <code>PLAYER_EVENT_ON_SELL_ITEM = 74</code> to Hooks.h
+2. Add <code>OnSellItem()</code> declaration to LuaEngine.h
+3. Add <code>OnSellItem()</code> implementation to PlayerHooks.cpp
+4. Add <code>sALE-&gt;OnSellItem()</code> calls to ItemHandler.cpp</p>
+<p><strong>See:</strong> <code>docs/patches/ale-sell-item-hook.md</code> for detailed implementation.</p>
+<p><h3>B007: ale-unit-methods</h3></p>
+<p><strong>Files:</strong> <code>mod-ale/</em>/UnitMethods.h</code>, <code>LuaFunctions.cpp</code>
+<strong>Issue:</strong> 332 - ALE unit methods patch
+<strong>Reason:</strong> Bot behaviors need walking animation and faction hostility checks.</p>
+<p><strong>Changes:</strong>
+1. Add <code>SetWalk()</code>, <code>IsWalking()</code>, <code>IsHostileTo()</code>, <code>IsFriendlyTo()</code> to UnitMethods.h
+2. Register methods in LuaFunctions.cpp</p>
+<p><strong>See:</strong> <code>docs/patches/ale-unit-setwalk.md</code> for detailed implementation.</p>
+<p><h3>B008: mod-talent-bonus</h3></p>
+<p><strong>Files:</strong> (symlink) <code>modules/mod-talent-bonus</code>
+<strong>Issue:</strong> 120 - Talent points system
+<strong>Reason:</strong> Server validates expected talent points on login; module adjusts count for bonus points.</p>
+<p><strong>Changes:</strong>
+1. Create symlink from <code>modules/mod-talent-bonus/</code> to <code>source-beta/modules/mod-talent-bonus/</code></p>
+<p><strong>See:</strong> <code>docs/patches/ale-calculate-talents-hook.md</code> for module details.</p>
+<p>---</p>
+<p><h2>PHASE_MIDDLE: Compile-Time Adjustments</h2></p>
+<p>Applied during compilation. Currently empty - reserved for future use.</p>
+<p>| ID | Name | Target | Parallelizable | Description |
+|----|------|--------|----------------|-------------|
+| (none) | | | | |</p>
+<p>Examples of future use:
+- Parallel make job tuning based on available RAM
+- Incremental build detection
+- Build artifact caching</p>
+<p>---</p>
+<p><h2>PHASE_END: Post-Compile Setup</h2></p>
+<p>Applied after successful compilation, before server start.
+These configure the installed files.</p>
+<p>| ID | Name | Target | Parallelizable | Description |
+|----|------|--------|----------------|-------------|
+| E001 | lua-script-symlinks | installed-files/bin/lua_scripts/ | Yes | Symlink custom Lua to install dir |
+| E002 | config-database-paths | installed-files/etc/<em>.conf | No | Set database connection strings |
+| E003 | config-directory-paths | installed-files/etc/</em>.conf | No | Set log/data/source paths |
+| E004 | log-directory-setup | logs-{profile}/ | Yes | Create log dir symlink to /tmp |
+| E005 | dk-levelstats | acore_world_{profile} | No | Apply DK level 1-20 stats (issue 138) |</p>
+<p><h3>E001: lua-script-symlinks</h3></p>
+<p><strong>Target:</strong> <code>installed-files-{profile}/bin/lua_scripts/</code>
+<strong>Action:</strong> Create symlinks to project Lua sources</p>
+<p><pre><code class="bash">mkdir -p &amp;quot;${INSTALL_DIR}/bin/lua_scripts&amp;quot;
+ln -sfn &amp;quot;${DIR}/src/lua&amp;quot; &amp;quot;${INSTALL_DIR}/bin/lua_scripts/custom&amp;quot;</code></pre></p>
+<p><h3>E002: config-database-paths</h3></p>
+<p><strong>Target:</strong> <code>installed-files-{profile}/etc/authserver.conf</code>, <code>worldserver.conf</code>
+<strong>Action:</strong> Set MySQL connection strings
+<strong>Parallelizable:</strong> No (both modify worldserver.conf)</p>
+<p><pre><code class="bash">sed -i &amp;#39;s|^LoginDatabaseInfo.<em>=.</em>|LoginDatabaseInfo = &amp;quot;127.0.0.1;3307;ritz;menardi;acore_auth&amp;quot;|&amp;#39; authserver.conf
+sed -i &amp;#39;s|^LoginDatabaseInfo.<em>=.</em>|LoginDatabaseInfo     = &amp;quot;127.0.0.1;3307;ritz;menardi;acore_auth&amp;quot;|&amp;#39; worldserver.conf
+sed -i &amp;#39;s|^WorldDatabaseInfo.<em>=.</em>|WorldDatabaseInfo     = &amp;quot;127.0.0.1;3307;ritz;menardi;acore_world_beta&amp;quot;|&amp;#39; worldserver.conf
+sed -i &amp;#39;s|^CharacterDatabaseInfo.<em>=.</em>|CharacterDatabaseInfo = &amp;quot;127.0.0.1;3307;ritz;menardi;acore_characters_beta&amp;quot;|&amp;#39; worldserver.conf</code></pre></p>
+<p><h3>E003: config-directory-paths</h3></p>
+<p><strong>Target:</strong> <code>installed-files-{profile}/etc/authserver.conf</code>, <code>worldserver.conf</code>
+<strong>Action:</strong> Set filesystem paths
+<strong>Parallelizable:</strong> No (modifies same files as E002)</p>
+<p><pre><code class="bash">sed -i &amp;#39;s|^SourceDirectory.<em>=.</em>|SourceDirectory = &amp;quot;&amp;#39;&amp;quot;${AC_CODE_DIR}&amp;quot;&amp;#39;&amp;quot;|&amp;#39; authserver.conf
+sed -i &amp;#39;s|^LogsDir.<em>=.</em>|LogsDir = &amp;quot;&amp;#39;&amp;quot;${LOGS_DIR}&amp;quot;&amp;#39;&amp;quot;|&amp;#39; authserver.conf
+&lt;h1&gt;... etc&lt;/h1&gt;</code></pre></p>
+<p><h3>E004: log-directory-setup</h3></p>
+<p><strong>Target:</strong> Project root
+<strong>Action:</strong> Create RAM-backed log directory</p>
+<p><pre><code class="bash">mkdir -p &amp;quot;/tmp/wow-chat-2/logs-${PROFILE}&amp;quot;
+ln -sfn &amp;quot;/tmp/wow-chat-2/logs-${PROFILE}&amp;quot; &amp;quot;${DIR}/logs-${PROFILE}&amp;quot;</code></pre></p>
+<p>---</p>
+<p><h2>Parallelization Groups</h2></p>
+<p>Patches that can run concurrently (no file conflicts):</p>
+<p><strong>Group 1 (BEGIN phase):</strong>
+- B001 (aoe_loot.cpp)
+- B002 (RandomPlayerbotMgr.cpp)
+- B003 (LuaEngine.cpp)
+- B004 (multiple files - no conflicts with B001-B003)</p>
+<p><strong>Group 2 (END phase):</strong>
+- E001 (lua_scripts/)
+- E004 (logs/)</p>
+<p><strong>Sequential (END phase):</strong>
+- E002 → E003 (both modify .conf files)</p>
+<p>---</p>
+<p><h2>Adding New Patches</h2></p>
+<p>1. Assign ID: <code>B###</code> (begin), <code>M###</code> (middle), <code>E###</code> (end)
+2. Document in appropriate section above
+3. Add to <code>apply_patches_begin/middle/end()</code> in <code>scripts/azerothcore</code>
+4. Mark parallelizable if it doesn&#39;t share files with other patches
+5. Include idempotent check (grep before sed, check before create)</p>
+<p>---</p>
+<p><h2>Implementation in scripts/azerothcore</h2></p>
+<p><pre><code class="bash">&lt;h1&gt;Meta-list structure (conceptual)&lt;/h1&gt;
+declare -A BUILD_PATCHES=(
+    [&amp;quot;begin&amp;quot;]=&amp;quot;B001&amp;quot;
+    [&amp;quot;middle&amp;quot;]=&amp;quot;&amp;quot;
+    [&amp;quot;end&amp;quot;]=&amp;quot;E001 E002 E003 E004&amp;quot;
+)</p>
+<p>apply_patches_begin() {
+    # Parallelizable patches can use &amp;amp; and wait
+    patch_B001 &amp;amp;
+    wait
+}</p>
+<p>apply_patches_middle() {
+    # Currently empty
+    :
+}</p>
+<p>apply_patches_end() {
+    # Parallel group
+    patch_E001 &amp;amp;
+    patch_E004 &amp;amp;
+    wait
+    # Sequential group
+    patch_E002
+    patch_E003
+}</code></pre></p>
+<p>---</p>
+<p><h2>Unpatch System (Issue 334)</h2></p>
+<p>Each PHASE_BEGIN patch has a corresponding unpatch function that reverses its changes.
+After build completes (success or failure), all patches are reverted to keep source clean.</p>
+<p><h3>Unpatch Functions</h3></p>
+<p>| ID | Patch Function | Unpatch Function |
+|----|----------------|------------------|
+| B001 | <code>patch_B001_aoe_loot_item_namespace()</code> | <code>unpatch_B001_aoe_loot_item_namespace()</code> |
+| B002 | <code>patch_B002_playerbots_ale_login_hook()</code> | <code>unpatch_B002_playerbots_ale_login_hook()</code> |
+| B003 | <code>patch_B003_ale_gameobject_wildcard()</code> | <code>unpatch_B003_ale_gameobject_wildcard()</code> |
+| B004 | <code>patch_B004_upstream_warning_fixes()</code> | <code>unpatch_B004_upstream_warning_fixes()</code> |
+| B005 | <code>patch_B005_accuracy_level_cap()</code> | <code>unpatch_B005_accuracy_level_cap()</code> |
+| B006 | <code>patch_B006_ale_sell_item_hook()</code> | <code>unpatch_B006_ale_sell_item_hook()</code> |
+| B007 | <code>patch_B007_ale_unit_methods()</code> | <code>unpatch_B007_ale_unit_methods()</code> |
+| B008 | <code>patch_B008_mod_talent_bonus()</code> | <code>unpatch_B008_mod_talent_bonus()</code> |</p>
+<p><h3>Build Workflow</h3></p>
+<p><pre><code class="bash">apply_patches_begin          # Apply all patches
+trap &amp;#39;unapply_patches_begin&amp;#39; EXIT  # Ensure revert on failure
+do_build                     # Compile
+trap - EXIT                  # Clear trap
+unapply_patches_begin        # Revert all patches</code></pre></p>
+<p><h3>Design Principles</h3></p>
+<p>1. <strong>Idempotent</strong> - Both patch and unpatch are safe to run multiple times
+2. <strong>Self-contained</strong> - Each patch/unpatch pair is independent
+3. <strong>Parallel-safe</strong> - No file conflicts between patches
+4. <strong>Failure-safe</strong> - Bash trap ensures cleanup on build failure
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

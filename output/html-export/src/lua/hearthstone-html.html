@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hearthstone.lua - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>hearthstone.lua</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/hearthstone.lua
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> lua &nbsp;&nbsp;
+            <strong>Size:</strong> 3418 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code class="lua">
+require &quot;movement&quot; <span class="comment">-- <span class="keyword">for</span> the spawning randomization</span>
+
+<span class="comment">-- this script will teleport all group members to the player using their hearthstone</span>
+
+<span class="comment">-- target is the player using their hearthstone</span>
+<span class="comment">-- player is the group member who is following</span>
+<span class="comment">-- needs to play visual effects to notify them <span class="keyword">and</span> <span class="keyword">then</span> teleport them to</span>
+<span class="comment">-- a random location near the hearthing player <span class="keyword">and</span> face them toward the hearther</span>
+<span class="keyword">local</span> <span class="keyword">function</span> teleport(event, delay, repeats, player)
+    print(&quot;teleport!&quot;)
+    <span class="keyword">local</span>   target   = GetPlayerByGUID(player:GetData(&quot;group-hearthstone-target-player&quot;))
+    <span class="keyword">local</span> playerX, playerY, playerZ, playerO
+    <span class="keyword">local</span> targetX, targetY, targetZ = target:GetLocation()
+    <span class="keyword">local</span> count = <span class="number">0</span>
+    player:SetData(&quot;teleport-count&quot;, <span class="number">0</span>)
+    <span class="keyword">repeat</span>
+        count = count + <span class="number">1</span>
+        playerX, playerY, playerZ, playerO = target:GetLocation()
+        playerX, playerY                   = Movement.getCircleSpawnPosition(targetX, targetY, <span class="number">5</span>, <span class="number">10</span>)
+                                playerZ          = target:GetMap():GetHeight(playerX, playerY)
+                                         playerO = math.tan(playerX/playerY)
+        print(&quot;playerO = &quot;..playerO)
+        <span class="comment">-- orient the player toward the hearther</span>
+        <span class="keyword">if</span>     targetX &lt; playerX <span class="keyword">and</span> targetY &lt; playerY <span class="keyword">then</span> playerO = playerO + <span class="number">3.14</span>
+        <span class="keyword">elseif</span> targetX &gt; playerX <span class="keyword">and</span> targetY &lt; playerY <span class="keyword">then</span> playerO =    <span class="number">6.28</span> - playerO
+        <span class="keyword">elseif</span> targetX &gt; playerX <span class="keyword">and</span> targetY &gt; playerY <span class="keyword">then</span> playerO = playerO
+        <span class="keyword">elseif</span> targetX &lt; playerX <span class="keyword">and</span> targetY &gt; playerY <span class="keyword">then</span> playerO =    <span class="number">3.14</span> - playerO
+        <span class="keyword">end</span>
+        print(&quot;new playerO = &quot;..playerO)
+    <span class="keyword">until</span> (playerZ &lt; targetZ + <span class="number">5</span> <span class="keyword">and</span> playerZ &gt; targetZ - <span class="number">5</span>) <span class="keyword">or</span> count &gt; <span class="number">5</span>
+    print(&quot;teleporting to &quot;..playerX..&quot;, &quot;..playerY..&quot;, &quot;..playerZ..&quot;, &quot;..playerO)
+    player:Teleport(target:GetMapId(), playerX, playerY, playerZ, playerO)
+<span class="keyword">end</span>
+
+<span class="keyword">local</span> <span class="keyword">function</span> teleportInProgress(event, delay, repeats, player)
+    print(&quot;teleportInProgress&quot;)
+    <span class="keyword">local</span> HEARTHSTONE_CAST_TIME = <span class="number">10</span>
+    <span class="keyword">local</span> DELAY = <span class="number">3</span> <span class="comment">-- delay between visual effects</span>
+    player:CastSpell(player, VISUAL_EFFECT_ID, <span class="keyword">true</span>) <span class="comment">-- cast level up effect</span>
+    <span class="keyword">local</span> teleport_count = player:GetData(&quot;teleport-count&quot;) <span class="keyword">or</span> <span class="number">0</span>
+          teleport_count = teleport_count + DELAY
+    player:SetData(&quot;teleport-count&quot;, teleport_count)
+    <span class="keyword">if</span> teleport_count &lt; HEARTHSTONE_CAST_TIME <span class="keyword">then</span>
+        player:RegisterEvent(teleportInProgress, DELAY * <span class="number">1000</span>, <span class="number">1</span>)
+    <span class="keyword">else</span>
+        <span class="keyword">if</span> player:IsStandState() <span class="keyword">then</span> <span class="comment">-- to decline a hearth just sit down</span>
+            player:RegisterEvent(teleport, <span class="number">1000</span>, <span class="number">1</span>)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+<span class="keyword">local</span> <span class="keyword">function</span> HearthstoneUse( event, player, item, target)
+    print(&quot;using hearthstone&quot;)
+    <span class="keyword">if</span> player:IsInGroup() <span class="keyword">then</span>
+        print(&quot;player is <span class="keyword">in</span> group&quot;)
+        <span class="keyword">local</span> group_members = player:GetGroup():GetMembers()
+        <span class="keyword">for</span> k, v <span class="keyword">in</span> pairs(group_members) <span class="keyword">do</span>
+            <span class="keyword">if</span> v == player <span class="keyword">then</span>
+                print(&quot;v == player&quot;)
+                <span class="keyword">return</span>
+            <span class="keyword">end</span>
+            print(&quot;v ~= player&quot;)
+            v:SendBroadcastMessage(&quot;You are being teleported to &quot;..player:GetName()..&quot;&#<span class="number">39</span>;s hearthstone.&quot;)
+            v:SendBroadcastMessage(&quot;You may sit down to cancel the teleport.&quot;)
+            v:SetData(&quot;group-hearthstone-target-player&quot;, player:GetGUID())
+            v:RegisterEvent(teleportInProgress, <span class="number">500</span>, <span class="number">1</span>)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+ITEM_EVENT_ON_USE = <span class="number">2</span>
+HEARTHSTONE_ITEM_ID = <span class="number">6948</span>
+VISUAL_EFFECT_ID = <span class="number">47292</span>
+RegisterItemEvent( HEARTHSTONE_ITEM_ID, ITEM_EVENT_ON_USE, HearthstoneUse, <span class="number">0</span>)
+
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

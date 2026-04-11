@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>how-to-restart-and-debug.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>how-to-restart-and-debug.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/how-to-restart-and-debug.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 5041 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Cómo reiniciar y depurar</h1></p>
+<p>AzerothCore está compuesto por 2 servicios: <code>authserver</code> y <code>worldserver</code>.</p>
+<p>- Authserver sólo actúa como un autentificador y un router para sus reinos redirigiendo las conexiones de sus clientes autorizados a la dirección del reino seleccionado.
+- En cambio, el servidor de mundos (worldserver) se encarga de todas las conexiones relacionadas con la mecánica del juego y es la única fuente de verdad para todo lo relacionado con un solo reino.</p>
+<p><code>authserver</code> y <code>worldserver</code> pueden ser colocados en diferentes entornos, sin embargo, en la siguiente guía le explicaremos cómo ejecutarlos juntos en el mismo entorno.</p>
+<p><h2>Cómo iniciar los servicios</h2></p>
+<p>Tanto authserver como worldserver pueden iniciarse simplemente ejecutando los binarios compilados después de <a href="installation">completar la instalación</a>.</p>
+<p><h2>Cómo configurar un reinicio</h2></p>
+<p>El reinicio y la depuración de una aplicación funcionan de manera muy diferente dependiendo de su sistema operativo. Por eso siempre sugerimos utilizar nuestra solución docker que es totalmente compatible con todas las plataformas.</p>
+<p>Sin embargo, si necesitas mantener tu servidor en funcionamiento después de una caída y comprobar qué ocurre con tu código, puedes hacerlo utilizando un reiniciador y un depurador.</p>
+<p>A continuación vamos a explicar cómo utilizar nuestros scripts de reinicio integrados y la utilidad de depuración <a href="https://www.gnu.org/software/gdb/">GDB</a> también para generar <code>crash-dumps</code>.</p>
+<p><h3>Restarter usando acore dashboard (sólo para bash)</h3></p>
+<p>Puedes utilizar <code>./acore.sh run-worldserver</code> y <code>./acore.sh run-authserver</code>.</p>
+<p>Ambos funcionan de forma inmediata cuando se compila con el dashboard.</p>
+<p><strong>NOTA:</strong> Para habilitar GDB puede utilizar <code>AC_RESTARTER_WITHGDB=true</code> como variable de entorno o añadiendo esto a su archivo <code>/conf/config.sh</code>.</p>
+<p>Después de habilitar GDB, si el servidor se bloquea, encontrarás el archivo crashdump (gdb.txt) dentro de la carpeta <code>/env/</code>. <strong>Tenga en cuenta que debe compilar su código con uno de los siguientes tipos de compilación: Debug o RelWithDebInfo, de lo contrario GDB no funcionará correctamente</strong>.</p>
+<p><h3>Uso de docker (multiplataforma)</h3></p>
+<p>Nuestro sistema docker integra los scripts anteriores dentro de <code>docker-compose</code>. Esto significa que habilitar el <code>GDB</code> funciona exactamente de la misma manera en docker también.</p>
+<p>Además, nuestro <code>docker-compose</code> utiliza la función <a href="https://docs.docker.com/config/containers/start-containers-automatically/">política de reinicio</a> para mantener los contenedores en funcionamiento.</p>
+<p>Para más información, consulte la documentación <a href="install-with-docker">Instalación con Docker</a>.</p>
+<p>También encontrarás una guía sobre cómo depurar tu código utilizando VSCode combinado con su extensión Remote Docker.</p>
+<p><h3>Reiniciador avanzado (sólo para bash)</h3></p>
+<p>Si desea un reinicio más avanzado que incluya otras configuraciones útiles, puede probar nuestro sistema <code>run-engine</code> escrito en bash.</p>
+<p><a href="https://github.com/azerothcore/azerothcore-wotlk/tree/master/apps/startup-scripts">Aquí</a> puedes encontrar los reinicios para entornos linux/bash.</p>
+<p>Estos scripts se copian automáticamente después de la compilación en el directorio <code>/dist</code> si estás usando nuestro dashboard <code>./acore.sh</code>.</p>
+<p>Puede copiar el archivo <code>conf.sh.dist</code> y crear un archivo <code>conf-world.sh</code> para personalizar esas configuraciones documentadas (haga lo mismo con el archivo <code>conf-auth.sh</code>). De esta manera, tienes tanto el restarter como el gdb preconfigurados para crear un archivo <code>gdb.txt</code> (crashdump) cuando el núcleo se bloquea. Asegúrese de utilizar la compilación <code>RelWithDebInfo</code> o <code>Debug</code> (en su comando CMake) para obtener informes de fallos significativos.</p>
+<p>Luego copia el <code>restarter-world.sh</code> y el <code>restarter-auth.sh</code> de los &quot;ejemplos&quot; al lado de tu archivo conf y en la misma carpeta del archivo &quot;run-engine&quot;.</p>
+<p>Al final tendrás algo así:</p>
+<p>[![example][1]][1]</p>
+<p>Ejecuta esos 2 script de reinicio para tener tanto el reinicio de authserver como el de worldserver con soporte gdb.</p>
+<p><h3>De forma manual (multiplataforma)</h3></p>
+<p>Asegúrese siempre de utilizar la compilación <strong>RelWithDebInfo</strong> o <strong>Debug</strong> (en su comando CMake) para obtener informes de fallos significativos.</p>
+<p>Crea un archivo llamado <code>gdb.conf</code> con esto dentro:</p>
+<p><pre><code class="bash">set logging on
+set debug timestamp
+run -c ../etc/worldserver.conf
+bt
+bt full
+info thread
+thread apply all backtrace full</code></pre></p>
+<p>Luego, para depurar o crear un crashdump sólo tienes que usar el comando gdb como se describe en su documentación:</p>
+<p><pre><code class="bash">gdb -x gdb.conf --batch ./worldserver</code></pre></p>
+<p>Este comando debería ser suficiente tanto para conectar su IDE para depurar su código como para generar un crashdump cuando el servidor se bloquea</p>
+<p>Para un reinicio &quot;universal&quot; y más avanzado, personalmente estoy usando [PM2][2]</p>
+<p><pre><code class="bash">pm2 start &amp;quot;gdb -x gdb.conf --batch ./worldserver&amp;quot;</code></pre></p>
+<p>Debería ser suficiente para reiniciar automáticamente, monitorear y gdb su servidor</p>
+<p>[1]: https://i.stack.imgur.com/EyIi7.png
+[2]: https://pm2.keymetrics.io/
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

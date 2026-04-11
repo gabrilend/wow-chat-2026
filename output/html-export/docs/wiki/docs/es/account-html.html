@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>account.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>account.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/account.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 8078 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>﻿# account</p>
+<p><a href="database-auth">&lt;-Volver a: Auth</a></p>
+<p>Leer en: <a href="../account">English :gb:</a> <a href="account">Español :es:</a></p>
+<p><strong>Tabla \<code>account\</code></strong></p>
+<p><strong>Estructura</strong></p>
+<p>| Field                 | Type          | Attributes | Key | Null | Default           | Extra          | Comment    |
+| --------------------- | ------------- | ---------- | --- | ---- | ----------------- | -------------- | ---------- |
+| [id][1]               | INT           | UNSIGNED   | PRI | NO   |                   | AUTO_INCREMENT | Identifier |
+| [username][2]         | VARCHAR(32)   | SIGNED     | UNI | NO   | &#39;&#39;                |                |            |
+| [salt][3]             | BINARY(32)    | SIGNED     |     | NO   |                   |                |            |
+| [verifier][4]         | BINARY(32)    | SIGNED     |     | NO   |                   |                |            |
+| [session_key][5]      | BINARY(40)    | SIGNED     |     | YES  |                   |                |            |
+| [totp_secret][6]      | VARBINARY(100)| SIGNED     |     | YES  |                   |                |            |
+| [email][7]            | VARCHAR(255)  | SIGNED     |     | NO   | &#39;&#39;                |                |            |
+| [reg_mail][8]         | VARCHAR(255)  | SIGNED     |     | NO   | &#39;&#39;                |                |            |
+| [joindate][9]         | TIMESTAMP     | SIGNED     |     | NO   | CURRENT_TIMESTAMP |                |            |
+| [last_ip][10]         | VARCHAR(15)   | SIGNED     |     | NO   | 127.0.0.1         |                |            |
+| [last_attempt_ip][11] | VARCHAR(15)   | SIGNED     |     | NO   | 127.0.0.1         |                |            |
+| [failed_logins][12]   | INT           | UNSIGNED   |     | NO   | 0                 |                |            |
+| [locked][13]          | TINYINT       | UNSIGNED   |     | NO   | 0                 |                |            |
+| [lock_country][14]    | VARCHAR(2)    | SIGNED     |     | NO   | 00                |                |            |
+| [last_login][15]      | TIMESTAMP     | SIGNED     |     | YES  |                   |                |            |
+| [online][16]          | INT           | UNSIGNED   |     | NO   | 0                 |                |            |
+| [expansion][17]       | TINYINT       | UNSIGNED   |     | NO   | 2                 |                |            |
+| [mutetime][18]        | BIGINT        | SIGNED     |     | NO   | 0                 |                |            |
+| [mutereason][19]      | VARCHAR(255)  | SIGNED     |     | NO   | &#39;&#39;                |                |            |
+| [muteby][20]          | VARCHAR(50)   | SIGNED     |     | NO   | &#39;&#39;                |                |            |
+| [locale][21]          | TINYINT       | UNSIGNED   |     | NO   | 0                 |                |            |
+| [os][22]              | VARCHAR(3)    | SIGNED     |     | NO   | &#39;&#39;                |                |            |
+| [recruiter][23]       | INT           | UNSIGNED   |     | NO   | 0                 |                |            |
+| [totaltime][24]       | INT           | UNSIGNED   |     | NO   | 0                 |                |            |</p>
+<p>[1]: #id
+[2]: #username
+[3]: #salt
+[4]: #verifier
+[5]: #sessionkey
+[6]: #totpsecret
+[7]: #email
+[8]: #regmail
+[9]: #joindate
+[10]: #lastip
+[11]: #lastattemptip
+[12]: #failedlogins
+[13]: #locked
+[14]: #lockcountry
+[15]: #lastlogin
+[16]: #online
+[17]: #expansion
+[18]: #mutetime
+[19]: #mutereason
+[20]: #muteby
+[21]: #locale
+[22]: #os
+[23]: #recruiter
+[24]: #totaltime</p>
+<p><strong>Descripción de los campos</strong></p>
+<p><h3>id</h3></p>
+<p>El ID único de la cuenta.</p>
+<p><h3>username</h3></p>
+<p>El nombre de la cuenta de usuario.</p>
+<p><strong>NOTA:</strong> los nombres de usuario están limitados a 20 caracteres y estos mismos no tienen restricción por caracter.</p>
+<p><h3>salt</h3></p>
+<p>Salt es un valor criptográfico aleatorio de 32 bytes.</p>
+<p><h3>verifier</h3></p>
+<p>El verificador se deriva de salt, así como el nombre de usuario (todo en mayúsculas) y su contraseña (todo en mayúsculas).</p>
+<p>Para obtener el verificador hay que calcular:</p>
+<p>1. Calcular <code>h1 = SHA1(&quot;USUARIO:CONTRASEÑA&quot;)</code>, sustituyendo el nombre de usuario y la contraseña convertidos en mayúsculas.</p>
+<p>2. Calcular <code>h2 = SHA1(salt || h1)</code>, dónde || es la concatenación (el operador . en PHP).</p>
+<p><strong>NOTA:</strong> ¡Tanto <code>salt</code> como <code>h1</code> son cadenas binarias, no hexadecimales!</p>
+<p>3. Tratar <code>h2</code> como un entero en orden little-endian (el primer byte es el menos significativo).</p>
+<p>4. Calcular <code>(g ^ h2) % N</code>.</p>
+<p><strong>NOTA:</strong> <code>g</code> y <code>N</code> son parámetros, que están fijados en la implementación de WoW.</p>
+<p><code>g = 7</code></p>
+<p><code>N = 0x894B645E89E1535BBDAD5B8B290650530801B18EBFBF5E8FAB3C82872A3E9BB7</code></p>
+<p>5. Convierte el resultado en una matriz de bytes en orden little-endian.</p>
+<p><strong>Para implementaciones de PHP</strong></p>
+<p>¡Asegúrese de que la extensión PHP GMP esté cargada! Descomente <code>extension=gmp</code> en su php.ini.</p>
+<p><a href="https://gist.github.com/Treeston/db44f23503ae9f1542de31cb8d66781e">CalculateSRP6Verifier.php</a></p>
+<p><a href="https://gist.github.com/Treeston/40b99dd71f55d55c68857919088b2e41">GetSRP6RegistrationData.php</a></p>
+<p><a href="https://gist.github.com/Treeston/34d9249fb467dddc11b2568e74f8cb1e">VerifySRP6Login.php</a></p>
+<p><h3>session\_key</h3></p>
+<p><code>campo-sin-descripción|5</code></p>
+<p><h3>totp\_secret</h3></p>
+<p>La clave del autentificador.</p>
+<p>La clave puede generarse a través de la API de Google Authenticator, un generador TOTP de terceros, o especificarse manualmente (debe ser una expresión compatible con Base32 de 16 caracteres).</p>
+<p>Enlace de implementación en Wikipedia para la API de Google Authenticator</p>
+<p>&lt;https://es.wikipedia.org/wiki/Google_Authenticator#Implementaciones&gt;</p>
+<p><h3>email</h3></p>
+<p>La dirección de correo electrónico asociada a esta cuenta.</p>
+<p><h3>reg\_mail</h3></p>
+<p>La dirección de correo electrónico de registro asociada a esta cuenta.</p>
+<p><h3>joindate</h3></p>
+<p>La fecha de creación de la cuenta.</p>
+<p><h3>last\_ip</h3></p>
+<p>La última IP utilizada por la persona que se conectó a la cuenta.</p>
+<p><h3>failed\_logins</h3></p>
+<p>El número de inicios de sesión fallidos en la cuenta.</p>
+<p><h3>locked</h3></p>
+<p>Booleano 0 o 1 que controla si la cuenta ha sido bloqueada o no. Esto se puede controlar con el comando GM &quot;.account lock&quot;. Si está bloqueada (1), el usuario sólo puede iniciar sesión con su [last_ip][11]. Si está desbloqueado (0), el usuario puede conectarse desde cualquier IP, y su last_ip se actualizará si es diferente. &quot;.Ban account&quot; no la bloquea.</p>
+<p><h3>last\_login</h3></p>
+<p>La fecha en la que se inició sesión por última vez.</p>
+<p><h3>totaltime</h3></p>
+<p>Tiempo total jugado en todos los personajes de un jugador. Incluso en personajes borrados que ya no se encuentran en la base de datos.
+Almacenado en tiempo Unix.</p>
+<p><h3>online</h3></p>
+<p>Booleano 0 o 1 que controla si la cuenta está actualmente conectada y en línea.</p>
+<p><h3>expansion</h3></p>
+<p>Entero 0, 1 o 2 que controla si el cliente conectado a la cuenta tiene alguna otra expansión. (por ejemplo, si el cliente es TBC ( 1 ), pero la expansión está configurada como 0 ( vanilla ), no podrá entrar en Terrallende, etc.)</p>
+<p>| Valor | Expansión                      |
+| ----- | ------------------------------ |
+| 0     | Classic                        |
+| 1     | The Burning Crusade (TBC)      |
+| 2     | Wrath of the Lich King (WotLK) |</p>
+<p><h3>mutetime</h3></p>
+<p>La hora, en tiempo Unix, en la que la cuenta será desmuteada. Para ver cuándo expirará el silenciamiento puedes usar esta consulta:</p>
+<p>``<code>sql
+SELECT FROM_UNIXTIME(</code>mutetime<code>);
+</code>``</p>
+<p><h3>mutereason</h3></p>
+<p>La razón del muteo.</p>
+<p><h3>muteby</h3></p>
+<p>El nombre del personaje con los derechos o el poder sobre el comando .mute que da el silenciamiento.</p>
+<p><h3>locale</h3></p>
+<p>La configuración regional utilizada por el cliente conectado a esta cuenta. Si se han configurado y añadido múltiples datos de localización a los servidores mundiales, éstos devolverán al cliente las cadenas de localización adecuadas. Ver <a href="es/Localization_lang">IDs de localización</a></p>
+<p><h3>os</h3></p>
+<p>Almacena información sobre el sistema operativo del cliente. Utilizado por el sistema Warden.</p>
+<p>- Win
+- Mac</p>
+<p><h3>recruiter</h3></p>
+<p>El ID de otra cuenta asociada a esta cuenta. Se utiliza para el sistema de &quot;recuit-a-friend&quot; (reclutar un amigo). Ver [account.id][1]
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

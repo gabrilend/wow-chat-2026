@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>loot_template.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>loot_template.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/loot_template.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 7359 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>loot_template</h1></p>
+<p><a href="database-world">&lt;-Back-to:World</a></p>
+<p>*<em>The \</em>_loot_template tables<strong></p>
+<p></strong>Table Structure<strong></p>
+<p>| Field                           | Type         | Attributes | Key | Null | Default | Extra | Comment                       |
+| ------------------------------- | ------------ | ---------- | --- | ---- | ------- | ----- | ----------------------------- |
+| <a href="#entry">Entry</a>                 | INT          | UNSIGNED   | PRI | NO   | 0       |       |                               |
+| <a href="#item">Item</a>                   | INT          | UNSIGNED   | PRI | NO   | 0       |       |                               |
+| <a href="#reference">Reference</a>         | INT          |            |     | NO   | 0       |       |                               |
+| <a href="#chance">Chance</a>               | FLOAT        |            |     | NO   | 0       |       |                               |
+| <a href="#questrequired">QuestRequired</a> | TINYINT      |            |     | NO   | 0       |       |                               |
+| <a href="#lootmode">LootMode</a>           | SMALLINT     | UNSIGNED   |     | NO   | 1       |       |                               |
+| <a href="#groupid">GroupId</a>             | TINYINT      | UNSIGNED   |     | NO   | 0       |       | PRI in creature_loot_template |
+| <a href="#mincount">MinCount</a>           | TINYINT      | UNSIGNED   |     | NO   | 1       |       |                               |
+| <a href="#maxcount">MaxCount</a>           | TINYINT      | UNSIGNED   |     | NO   | 1       |       |                               |
+| <a href="#comment">Comment</a>             | VARCHAR(255) |            |     | YES  | NULL    |       | TEXT in player_loot_template  |</p>
+<p></strong>Description of the fields*<em></p>
+<p><h3>Entry</h3></p>
+<p>| Table                     | Entry                                                                | Comment                                                                                   |
+| ------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| creature_loot_template    | <a href="creature_template#lootid">creature_template.lootid</a>                 | Usually the same as <a href="creature_template#entry">creature_template.entry</a>                    |
+| disenchant_loot_template  | <a href="item_template#disenchantid">item_template.DisenchantID</a>             |                                                                                           |
+| fishing_loot_template     | area id                                                              |                                                                                           |
+| gameobject_loot_template  | <a href="gameobject_template#data023">gameobject_template.data1</a>             | Need to have gamobject type GAMEOBJECT_TYPE_CHEST (3) or GAMEOBJECT_TYPE_FISHINGHOLE (25) |
+| item_loot_template        | <a href="item_template#entry">item_template.entry</a>                           |                                                                                           |
+| mail_loot_template        | mail template id                                                     |                                                                                           |
+| milling_loot_template     | <a href="item_template#entry">item_template.entry</a>                           |                                                                                           |
+| pickpocket_loot_template  | <a href="creature_template#pickpocketloot">creature_template.pickpocketloot</a> |                                                                                           |
+| player_loot_template      | TeamID (0 Horde/1 Alliance)                                          | Only drops in BGs as insignia removal.                                                    |
+| prospecting_loot_template | <a href="item_template#entry">item_template.entry</a>                           |                                                                                           |
+| reference_loot_template   | <a href="loot_template#reference">\</em>_loot_template.reference</a>                |                                                                                           |
+| skinning_loot_template    | <a href="creature_template#skinloot">creature_template.skinloot</a>             | Also includes minable/herbable loot from creatures                                        |
+| spell_loot_template       | SpellID                                                              |                                                                                           |</p>
+<p><h3>Item</h3></p>
+<p><a href="item_template#entry">item_template.entry</a></p>
+<p><h3>Reference</h3></p>
+<p><a href="loot_template#entry">reference_loot_template.entry</a>.</p>
+<p>Uses the entries in the referenced template in the current template.</p>
+<p><strong>Note: Self reference is never allowed. This will lead to a crash.</strong></p>
+<p><h3>Chance</h3></p>
+<p>Chance for loot to drop. Chance can never exceed a total of 100 for all entries with the same <a href="#groupid">GroupID</a>.</p>
+<p>If the field is left at 0 the chance will be even across all entries with the same <a href="#groupid">GroupID</a> and chance = 0.</p>
+<p><h3>QuestRequired</h3></p>
+<p>0 - Loot is always available.</p>
+<p>1 - Loot can only drop if the player has a quest with the item id specified in <a href="quest_template#requireditemid1">quest_template.RequiredItemId1-6</a>.</p>
+<p><h3>LootMode</h3></p>
+<p>Bitmask.</p>
+<p>Used to separate conditional loot. Such as Hardmode loot in Ulduar. The active lootmode(s) can be changed at any time by the core.</p>
+<p>In most cases this field is left as 1.</p>
+<p><h3>GroupId</h3></p>
+<p>Used to group items within the same loot template.</p>
+<p>- Only one item from the group can drop.
+- If the total <a href="#chance">chance</a> for the group is 100 then one item will always drop.
+- If the total <a href="#chance">chance</a> for the group is less than 100, then there is a risk of empty loot.</p>
+<p>Referenced loot can be a part of a group, just like items. When a reference is grouped, it competes with the other entries in that group, and only one entry (item or reference) will be selected. If the reference wins the roll, the entire referenced template is processed.</p>
+<p><strong>Note: The client can only display 16 items in the loot windows, this includes gold. Therefore it is not recomended to use more than 16 groups.</strong></p>
+<p><h3>MinCount</h3></p>
+<p>Minimum amount of an item to drop in a single loot. Cannot be 0.</p>
+<p><h3>MaxCount</h3></p>
+<p>| Table                    | Comment                                                                                                                                                                                                                                 |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| \*_loot_template         | Maximum amount of an item to drop in a single loot.                                                                                                                                                                                     |
+| referenced_loot_template | How many times a referenced loot template should be processed. <strong>Note: The core only rolls chance per loot definition once. If the initial reference roll was lost, it will skip the current loot completely, regardless of MaxCount.</strong> |</p>
+<p><h3>Comment</h3></p>
+<p>Comment
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

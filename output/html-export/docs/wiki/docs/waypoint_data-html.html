@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>waypoint_data.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>waypoint_data.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/waypoint_data.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 4794 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>waypoint\_data</h1></p>
+<p><a href="database-world">&lt;-Back-to:World</a></p>
+<p><strong>The \<code>waypoint\_data\</code> table</strong></p>
+<p>This table contains all the path data for creatures that use waypoints and waypoint scripts directly in their creature addon definition. See also <a href="Waypoints-Information">Waypoints-Information</a> for general information about waypoints.</p>
+<p><strong>Table Structure</strong></p>
+<p>| Field                                 | Type      | Attributes | Key | Null | Default |
+| ------------------------------------- | --------- | ---------- | --- | ---- | ------- |
+| <a href="#id">id</a>                             | INT       | UNSIGNED   | PRI | NO   | 0       |
+| <a href="#point">point</a>                       | MEDIUMINT | UNSIGNED   | PRI | NO   | 0       |
+| <a href="#positionx">position\_x</a>             | FLOAT     |            |     | NO   | 0       |
+| <a href="#positiony">position\_y</a>             | FLOAT     |            |     | NO   | 0       |
+| <a href="#positionz">position\_z</a>             | FLOAT     |            |     | NO   | 0       |
+| <a href="#orientation">orientation</a>           | FLOAT     |            |     | YES  | NULL    |
+| <a href="#velocity">velocity</a>                 | FLOAT     |            |     | NO   | 0       |
+| <a href="#delay">delay</a>                       | INT       | UNSIGNED   |     | NO   | 0       |
+| <a href="#smoothtransition">smoothTransition</a> | TINYINT   |            |     | NO   | 0       |
+| <a href="#movetype">move\_type</a>               | INT       |            |     | NO   | 0       |
+| <a href="#action">action</a>                     | INT       |            |     | NO   | 0       |
+| <a href="#actionchance">action\_chance</a>       | SMALLINT  |            |     | NO   | 100     |
+| <a href="#wpguid">wpguid</a>                     | INT       | UNSIGNED   |     | NO   | 0       |</p>
+<p><strong>Description of the fields</strong></p>
+<p><h3>id</h3></p>
+<p>Unique ID for each path.</p>
+<p><em>The TDB standard way of assigning an ID is to multiply GUID of the creature by 10.</em></p>
+<p><em>So for a creature with a GUID of 1234 the path ID would be 12340. Any waypoints submitted to TDB should follow this standard.</em></p>
+<p><em>However, this is only a suggestion when creating your own waypoints. This ID can be anything you want as long as creature\_addon.path\_id is set to the ID you pick here for the creature you are creating a waypoint for.</em></p>
+<p><h3>point</h3></p>
+<p>Unique point ID for each point in a path. Starts at 1 and increases with each path.</p>
+<p><h3>position\_x</h3></p>
+<p>The X coordinate of the destination waypoint.</p>
+<p><h3>position\_y</h3></p>
+<p>The Y coordinate of the destination waypoint.</p>
+<p><h3>position\_z</h3></p>
+<p>The Z coordinate of the destination waypoint.</p>
+<p><h3>orientation</h3></p>
+<p>The orientation of the creature. (North = 0.0; South = π (3.14159))</p>
+<p><h3>velocity</h3></p>
+<p>Overrides the creature&#39;s default movement speed for this waypoint. Set to <code>0</code> to use the default speed.</p>
+<p><h3>delay</h3></p>
+<p>Time to wait (in ms) between each point.</p>
+<p><h3>smoothTransition</h3></p>
+<p>When enabled, the creature follows a smooth catmullrom spline curve through waypoints instead of stopping and turning sharply at each point. Custom intermediate spline points can be added via the <a href="waypoint_data_addon">waypoint\_data\_addon</a> table.</p>
+<p>| Value | Description                                          |
+| ----- | ---------------------------------------------------- |
+| 0     | Disabled (default) — creature stops at each waypoint |
+| 1     | Enabled — smooth spline curve between waypoints      |</p>
+<p><h3>move\_type</h3></p>
+<p>| Value | Name    | Description                                                    |
+| ----- | ------- | -------------------------------------------------------------- |
+| 0     | Walk    | Creature moves at walking speed.                               |
+| 1     | Run     | Creature moves at running speed (default).                     |
+| 2     | Land    | Sets animation tier to Ground (used when landing from flight). |
+| 3     | Takeoff | Sets animation tier to Hover (used when taking off).           |</p>
+<p><h3>action</h3></p>
+<p>ID of the action to be performed. See <a href="waypoint_scripts">waypoint\_scripts.id</a>.</p>
+<p><h3>action\_chance</h3></p>
+<p>Percentage of action happening (0-100%).</p>
+<p><h3>wpguid</h3></p>
+<p>This field is used by the core and is <strong>NOT</strong> to be set by hand.</p>
+<p>This field holds the GUID of the waypoint visual when you enable the visual mode for waypoints.</p>
+<p><h3>Example Rows</h3></p>
+<p>| Id    | Point | Position\_x | Position\_y | Position\_z | Orientation | Velocity | Delay | SmoothTransition | Move\_type | Action | Action\_chance | wpguid |
+| ----- | ----- | ----------- | ----------- | ----------- | ----------- | -------- | ----- | ---------------- | ---------- | ------ | -------------- | ------ |
+| 20160 | 1     | -4998       | -1167       | 501657      | 0           | 0        | 10000 | 0                | 0          | 0      | 100            | 0      |
+| 20160 | 2     | -4958.38    | -1199.34    | 501659      | 0           | 0        | 0     | 0                | 0          | 0      | 100            | 0      |
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

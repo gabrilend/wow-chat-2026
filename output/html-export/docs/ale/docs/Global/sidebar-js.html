@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sidebar.js - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>sidebar.js</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/ale/docs/Global/sidebar.js
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> js &nbsp;&nbsp;
+            <strong>Size:</strong> 12368 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>document.write(`
+  &lt;a id=&quot;Global:AddTaxiPath&quot; class=&quot;fn&quot; href=&quot;../Global/AddTaxiPath.html&quot;&gt;AddTaxiPath&lt;/a&gt;
+  &lt;a id=&quot;Global:AddVendorItem&quot; class=&quot;fn&quot; href=&quot;../Global/AddVendorItem.html&quot;&gt;AddVendorItem&lt;/a&gt;
+  &lt;a id=&quot;Global:AuthDBExecute&quot; class=&quot;fn&quot; href=&quot;../Global/AuthDBExecute.html&quot;&gt;AuthDBExecute&lt;/a&gt;
+  &lt;a id=&quot;Global:AuthDBQuery&quot; class=&quot;fn&quot; href=&quot;../Global/AuthDBQuery.html&quot;&gt;AuthDBQuery&lt;/a&gt;
+  &lt;a id=&quot;Global:AuthDBQueryAsync&quot; class=&quot;fn&quot; href=&quot;../Global/AuthDBQueryAsync.html&quot;&gt;AuthDBQueryAsync&lt;/a&gt;
+  &lt;a id=&quot;Global:Ban&quot; class=&quot;fn&quot; href=&quot;../Global/Ban.html&quot;&gt;Ban&lt;/a&gt;
+  &lt;a id=&quot;Global:CharDBExecute&quot; class=&quot;fn&quot; href=&quot;../Global/CharDBExecute.html&quot;&gt;CharDBExecute&lt;/a&gt;
+  &lt;a id=&quot;Global:CharDBQuery&quot; class=&quot;fn&quot; href=&quot;../Global/CharDBQuery.html&quot;&gt;CharDBQuery&lt;/a&gt;
+  &lt;a id=&quot;Global:CharDBQueryAsync&quot; class=&quot;fn&quot; href=&quot;../Global/CharDBQueryAsync.html&quot;&gt;CharDBQueryAsync&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearAllCreatureEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearAllCreatureEvents.html&quot;&gt;ClearAllCreatureEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearBattleGroundEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearBattleGroundEvents.html&quot;&gt;ClearBattleGroundEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearCreatureEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearCreatureEvents.html&quot;&gt;ClearCreatureEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearCreatureGossipEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearCreatureGossipEvents.html&quot;&gt;ClearCreatureGossipEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearGameObjectEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearGameObjectEvents.html&quot;&gt;ClearGameObjectEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearGameObjectGossipEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearGameObjectGossipEvents.html&quot;&gt;ClearGameObjectGossipEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearGroupEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearGroupEvents.html&quot;&gt;ClearGroupEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearGuildEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearGuildEvents.html&quot;&gt;ClearGuildEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearInstanceEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearInstanceEvents.html&quot;&gt;ClearInstanceEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearItemEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearItemEvents.html&quot;&gt;ClearItemEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearItemGossipEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearItemGossipEvents.html&quot;&gt;ClearItemGossipEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearMapEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearMapEvents.html&quot;&gt;ClearMapEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearPacketEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearPacketEvents.html&quot;&gt;ClearPacketEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearPlayerEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearPlayerEvents.html&quot;&gt;ClearPlayerEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearPlayerGossipEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearPlayerGossipEvents.html&quot;&gt;ClearPlayerGossipEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearServerEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearServerEvents.html&quot;&gt;ClearServerEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearSpellEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearSpellEvents.html&quot;&gt;ClearSpellEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearTicketEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearTicketEvents.html&quot;&gt;ClearTicketEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:ClearUniqueCreatureEvents&quot; class=&quot;fn&quot; href=&quot;../Global/ClearUniqueCreatureEvents.html&quot;&gt;ClearUniqueCreatureEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:CreateLongLong&quot; class=&quot;fn&quot; href=&quot;../Global/CreateLongLong.html&quot;&gt;CreateLongLong&lt;/a&gt;
+  &lt;a id=&quot;Global:CreateLuaEvent&quot; class=&quot;fn&quot; href=&quot;../Global/CreateLuaEvent.html&quot;&gt;CreateLuaEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:CreatePacket&quot; class=&quot;fn&quot; href=&quot;../Global/CreatePacket.html&quot;&gt;CreatePacket&lt;/a&gt;
+  &lt;a id=&quot;Global:CreateULongLong&quot; class=&quot;fn&quot; href=&quot;../Global/CreateULongLong.html&quot;&gt;CreateULongLong&lt;/a&gt;
+  &lt;a id=&quot;Global:GetActiveGameEvents&quot; class=&quot;fn&quot; href=&quot;../Global/GetActiveGameEvents.html&quot;&gt;GetActiveGameEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:GetAreaName&quot; class=&quot;fn&quot; href=&quot;../Global/GetAreaName.html&quot;&gt;GetAreaName&lt;/a&gt;
+  &lt;a id=&quot;Global:GetConfigValue&quot; class=&quot;fn&quot; href=&quot;../Global/GetConfigValue.html&quot;&gt;GetConfigValue&lt;/a&gt;
+  &lt;a id=&quot;Global:GetCoreExpansion&quot; class=&quot;fn&quot; href=&quot;../Global/GetCoreExpansion.html&quot;&gt;GetCoreExpansion&lt;/a&gt;
+  &lt;a id=&quot;Global:GetCoreName&quot; class=&quot;fn&quot; href=&quot;../Global/GetCoreName.html&quot;&gt;GetCoreName&lt;/a&gt;
+  &lt;a id=&quot;Global:GetCoreVersion&quot; class=&quot;fn&quot; href=&quot;../Global/GetCoreVersion.html&quot;&gt;GetCoreVersion&lt;/a&gt;
+  &lt;a id=&quot;Global:GetCurrTime&quot; class=&quot;fn&quot; href=&quot;../Global/GetCurrTime.html&quot;&gt;GetCurrTime&lt;/a&gt;
+  &lt;a id=&quot;Global:GetGUIDEntry&quot; class=&quot;fn&quot; href=&quot;../Global/GetGUIDEntry.html&quot;&gt;GetGUIDEntry&lt;/a&gt;
+  &lt;a id=&quot;Global:GetGUIDLow&quot; class=&quot;fn&quot; href=&quot;../Global/GetGUIDLow.html&quot;&gt;GetGUIDLow&lt;/a&gt;
+  &lt;a id=&quot;Global:GetGUIDType&quot; class=&quot;fn&quot; href=&quot;../Global/GetGUIDType.html&quot;&gt;GetGUIDType&lt;/a&gt;
+  &lt;a id=&quot;Global:GetGameTime&quot; class=&quot;fn&quot; href=&quot;../Global/GetGameTime.html&quot;&gt;GetGameTime&lt;/a&gt;
+  &lt;a id=&quot;Global:GetGossipMenuOptionLocale&quot; class=&quot;fn&quot; href=&quot;../Global/GetGossipMenuOptionLocale.html&quot;&gt;GetGossipMenuOptionLocale&lt;/a&gt;
+  &lt;a id=&quot;Global:GetGuildByLeaderGUID&quot; class=&quot;fn&quot; href=&quot;../Global/GetGuildByLeaderGUID.html&quot;&gt;GetGuildByLeaderGUID&lt;/a&gt;
+  &lt;a id=&quot;Global:GetGuildByName&quot; class=&quot;fn&quot; href=&quot;../Global/GetGuildByName.html&quot;&gt;GetGuildByName&lt;/a&gt;
+  &lt;a id=&quot;Global:GetItemGUID&quot; class=&quot;fn&quot; href=&quot;../Global/GetItemGUID.html&quot;&gt;GetItemGUID&lt;/a&gt;
+  &lt;a id=&quot;Global:GetItemLink&quot; class=&quot;fn&quot; href=&quot;../Global/GetItemLink.html&quot;&gt;GetItemLink&lt;/a&gt;
+  &lt;a id=&quot;Global:GetItemTemplate&quot; class=&quot;fn&quot; href=&quot;../Global/GetItemTemplate.html&quot;&gt;GetItemTemplate&lt;/a&gt;
+  &lt;a id=&quot;Global:GetLuaEngine&quot; class=&quot;fn&quot; href=&quot;../Global/GetLuaEngine.html&quot;&gt;GetLuaEngine&lt;/a&gt;
+  &lt;a id=&quot;Global:GetMapById&quot; class=&quot;fn&quot; href=&quot;../Global/GetMapById.html&quot;&gt;GetMapById&lt;/a&gt;
+  &lt;a id=&quot;Global:GetMapEntrance&quot; class=&quot;fn&quot; href=&quot;../Global/GetMapEntrance.html&quot;&gt;GetMapEntrance&lt;/a&gt;
+  &lt;a id=&quot;Global:GetObjectGUID&quot; class=&quot;fn&quot; href=&quot;../Global/GetObjectGUID.html&quot;&gt;GetObjectGUID&lt;/a&gt;
+  &lt;a id=&quot;Global:GetOwnerHalaa&quot; class=&quot;fn&quot; href=&quot;../Global/GetOwnerHalaa.html&quot;&gt;GetOwnerHalaa&lt;/a&gt;
+  &lt;a id=&quot;Global:GetPackedGUIDSize&quot; class=&quot;fn&quot; href=&quot;../Global/GetPackedGUIDSize.html&quot;&gt;GetPackedGUIDSize&lt;/a&gt;
+  &lt;a id=&quot;Global:GetPlayerByGUID&quot; class=&quot;fn&quot; href=&quot;../Global/GetPlayerByGUID.html&quot;&gt;GetPlayerByGUID&lt;/a&gt;
+  &lt;a id=&quot;Global:GetPlayerByName&quot; class=&quot;fn&quot; href=&quot;../Global/GetPlayerByName.html&quot;&gt;GetPlayerByName&lt;/a&gt;
+  &lt;a id=&quot;Global:GetPlayerCount&quot; class=&quot;fn&quot; href=&quot;../Global/GetPlayerCount.html&quot;&gt;GetPlayerCount&lt;/a&gt;
+  &lt;a id=&quot;Global:GetPlayerGUID&quot; class=&quot;fn&quot; href=&quot;../Global/GetPlayerGUID.html&quot;&gt;GetPlayerGUID&lt;/a&gt;
+  &lt;a id=&quot;Global:GetPlayersInWorld&quot; class=&quot;fn&quot; href=&quot;../Global/GetPlayersInWorld.html&quot;&gt;GetPlayersInWorld&lt;/a&gt;
+  &lt;a id=&quot;Global:GetQuest&quot; class=&quot;fn&quot; href=&quot;../Global/GetQuest.html&quot;&gt;GetQuest&lt;/a&gt;
+  &lt;a id=&quot;Global:GetRealmID&quot; class=&quot;fn&quot; href=&quot;../Global/GetRealmID.html&quot;&gt;GetRealmID&lt;/a&gt;
+  &lt;a id=&quot;Global:GetSpellInfo&quot; class=&quot;fn&quot; href=&quot;../Global/GetSpellInfo.html&quot;&gt;GetSpellInfo&lt;/a&gt;
+  &lt;a id=&quot;Global:GetStateInstanceId&quot; class=&quot;fn&quot; href=&quot;../Global/GetStateInstanceId.html&quot;&gt;GetStateInstanceId&lt;/a&gt;
+  &lt;a id=&quot;Global:GetStateMap&quot; class=&quot;fn&quot; href=&quot;../Global/GetStateMap.html&quot;&gt;GetStateMap&lt;/a&gt;
+  &lt;a id=&quot;Global:GetStateMapId&quot; class=&quot;fn&quot; href=&quot;../Global/GetStateMapId.html&quot;&gt;GetStateMapId&lt;/a&gt;
+  &lt;a id=&quot;Global:GetTimeDiff&quot; class=&quot;fn&quot; href=&quot;../Global/GetTimeDiff.html&quot;&gt;GetTimeDiff&lt;/a&gt;
+  &lt;a id=&quot;Global:GetUnitGUID&quot; class=&quot;fn&quot; href=&quot;../Global/GetUnitGUID.html&quot;&gt;GetUnitGUID&lt;/a&gt;
+  &lt;a id=&quot;Global:HttpRequest&quot; class=&quot;fn&quot; href=&quot;../Global/HttpRequest.html&quot;&gt;HttpRequest&lt;/a&gt;
+  &lt;a id=&quot;Global:IsBagPos&quot; class=&quot;fn&quot; href=&quot;../Global/IsBagPos.html&quot;&gt;IsBagPos&lt;/a&gt;
+  &lt;a id=&quot;Global:IsBankPos&quot; class=&quot;fn&quot; href=&quot;../Global/IsBankPos.html&quot;&gt;IsBankPos&lt;/a&gt;
+  &lt;a id=&quot;Global:IsCompatibilityMode&quot; class=&quot;fn&quot; href=&quot;../Global/IsCompatibilityMode.html&quot;&gt;IsCompatibilityMode&lt;/a&gt;
+  &lt;a id=&quot;Global:IsEquipmentPos&quot; class=&quot;fn&quot; href=&quot;../Global/IsEquipmentPos.html&quot;&gt;IsEquipmentPos&lt;/a&gt;
+  &lt;a id=&quot;Global:IsGameEventActive&quot; class=&quot;fn&quot; href=&quot;../Global/IsGameEventActive.html&quot;&gt;IsGameEventActive&lt;/a&gt;
+  &lt;a id=&quot;Global:IsInventoryPos&quot; class=&quot;fn&quot; href=&quot;../Global/IsInventoryPos.html&quot;&gt;IsInventoryPos&lt;/a&gt;
+  &lt;a id=&quot;Global:Kick&quot; class=&quot;fn&quot; href=&quot;../Global/Kick.html&quot;&gt;Kick&lt;/a&gt;
+  &lt;a id=&quot;Global:LookupEntry&quot; class=&quot;fn&quot; href=&quot;../Global/LookupEntry.html&quot;&gt;LookupEntry&lt;/a&gt;
+  &lt;a id=&quot;Global:PerformIngameSpawn&quot; class=&quot;fn&quot; href=&quot;../Global/PerformIngameSpawn.html&quot;&gt;PerformIngameSpawn&lt;/a&gt;
+  &lt;a id=&quot;Global:PrintDebug&quot; class=&quot;fn&quot; href=&quot;../Global/PrintDebug.html&quot;&gt;PrintDebug&lt;/a&gt;
+  &lt;a id=&quot;Global:PrintError&quot; class=&quot;fn&quot; href=&quot;../Global/PrintError.html&quot;&gt;PrintError&lt;/a&gt;
+  &lt;a id=&quot;Global:PrintInfo&quot; class=&quot;fn&quot; href=&quot;../Global/PrintInfo.html&quot;&gt;PrintInfo&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterAllCreatureEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterAllCreatureEvent.html&quot;&gt;RegisterAllCreatureEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterBGEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterBGEvent.html&quot;&gt;RegisterBGEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterCreatureEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterCreatureEvent.html&quot;&gt;RegisterCreatureEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterCreatureGossipEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterCreatureGossipEvent.html&quot;&gt;RegisterCreatureGossipEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterGameObjectEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterGameObjectEvent.html&quot;&gt;RegisterGameObjectEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterGameObjectGossipEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterGameObjectGossipEvent.html&quot;&gt;RegisterGameObjectGossipEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterGroupEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterGroupEvent.html&quot;&gt;RegisterGroupEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterGuildEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterGuildEvent.html&quot;&gt;RegisterGuildEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterInstanceEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterInstanceEvent.html&quot;&gt;RegisterInstanceEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterItemEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterItemEvent.html&quot;&gt;RegisterItemEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterItemGossipEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterItemGossipEvent.html&quot;&gt;RegisterItemGossipEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterMapEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterMapEvent.html&quot;&gt;RegisterMapEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterPacketEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterPacketEvent.html&quot;&gt;RegisterPacketEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterPlayerEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterPlayerEvent.html&quot;&gt;RegisterPlayerEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterPlayerGossipEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterPlayerGossipEvent.html&quot;&gt;RegisterPlayerGossipEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterServerEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterServerEvent.html&quot;&gt;RegisterServerEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterSpellEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterSpellEvent.html&quot;&gt;RegisterSpellEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterTicketEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterTicketEvent.html&quot;&gt;RegisterTicketEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:RegisterUniqueCreatureEvent&quot; class=&quot;fn&quot; href=&quot;../Global/RegisterUniqueCreatureEvent.html&quot;&gt;RegisterUniqueCreatureEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:ReloadALE&quot; class=&quot;fn&quot; href=&quot;../Global/ReloadALE.html&quot;&gt;ReloadALE&lt;/a&gt;
+  &lt;a id=&quot;Global:RemoveEventById&quot; class=&quot;fn&quot; href=&quot;../Global/RemoveEventById.html&quot;&gt;RemoveEventById&lt;/a&gt;
+  &lt;a id=&quot;Global:RemoveEvents&quot; class=&quot;fn&quot; href=&quot;../Global/RemoveEvents.html&quot;&gt;RemoveEvents&lt;/a&gt;
+  &lt;a id=&quot;Global:RunCommand&quot; class=&quot;fn&quot; href=&quot;../Global/RunCommand.html&quot;&gt;RunCommand&lt;/a&gt;
+  &lt;a id=&quot;Global:SaveAllPlayers&quot; class=&quot;fn&quot; href=&quot;../Global/SaveAllPlayers.html&quot;&gt;SaveAllPlayers&lt;/a&gt;
+  &lt;a id=&quot;Global:SendMail&quot; class=&quot;fn&quot; href=&quot;../Global/SendMail.html&quot;&gt;SendMail&lt;/a&gt;
+  &lt;a id=&quot;Global:SendWorldMessage&quot; class=&quot;fn&quot; href=&quot;../Global/SendWorldMessage.html&quot;&gt;SendWorldMessage&lt;/a&gt;
+  &lt;a id=&quot;Global:SetOwnerHalaa&quot; class=&quot;fn&quot; href=&quot;../Global/SetOwnerHalaa.html&quot;&gt;SetOwnerHalaa&lt;/a&gt;
+  &lt;a id=&quot;Global:StartGameEvent&quot; class=&quot;fn&quot; href=&quot;../Global/StartGameEvent.html&quot;&gt;StartGameEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:StopGameEvent&quot; class=&quot;fn&quot; href=&quot;../Global/StopGameEvent.html&quot;&gt;StopGameEvent&lt;/a&gt;
+  &lt;a id=&quot;Global:VendorRemoveAllItems&quot; class=&quot;fn&quot; href=&quot;../Global/VendorRemoveAllItems.html&quot;&gt;VendorRemoveAllItems&lt;/a&gt;
+  &lt;a id=&quot;Global:VendorRemoveItem&quot; class=&quot;fn&quot; href=&quot;../Global/VendorRemoveItem.html&quot;&gt;VendorRemoveItem&lt;/a&gt;
+  &lt;a id=&quot;Global:WorldDBExecute&quot; class=&quot;fn&quot; href=&quot;../Global/WorldDBExecute.html&quot;&gt;WorldDBExecute&lt;/a&gt;
+  &lt;a id=&quot;Global:WorldDBQuery&quot; class=&quot;fn&quot; href=&quot;../Global/WorldDBQuery.html&quot;&gt;WorldDBQuery&lt;/a&gt;
+  &lt;a id=&quot;Global:WorldDBQueryAsync&quot; class=&quot;fn&quot; href=&quot;../Global/WorldDBQueryAsync.html&quot;&gt;WorldDBQueryAsync&lt;/a&gt;
+  &lt;a id=&quot;Global:bit_and&quot; class=&quot;fn&quot; href=&quot;../Global/bit_and.html&quot;&gt;bit_and&lt;/a&gt;
+  &lt;a id=&quot;Global:bit_lshift&quot; class=&quot;fn&quot; href=&quot;../Global/bit_lshift.html&quot;&gt;bit_lshift&lt;/a&gt;
+  &lt;a id=&quot;Global:bit_not&quot; class=&quot;fn&quot; href=&quot;../Global/bit_not.html&quot;&gt;bit_not&lt;/a&gt;
+  &lt;a id=&quot;Global:bit_or&quot; class=&quot;fn&quot; href=&quot;../Global/bit_or.html&quot;&gt;bit_or&lt;/a&gt;
+  &lt;a id=&quot;Global:bit_rshift&quot; class=&quot;fn&quot; href=&quot;../Global/bit_rshift.html&quot;&gt;bit_rshift&lt;/a&gt;
+  &lt;a id=&quot;Global:bit_xor&quot; class=&quot;fn&quot; href=&quot;../Global/bit_xor.html&quot;&gt;bit_xor&lt;/a&gt;
+`);</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

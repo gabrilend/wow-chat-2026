@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>scripts.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>scripts.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/scripts.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 15908 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Script tabless</h1></p>
+<p><a href="database-world">&lt;-Back-to:World</a></p>
+<p><h1>Tables: \<em>\</em>\<em>\_scripts</h1></p>
+<p>This table format is used for 3 different tables to control possible scripts activated by different actions:</p>
+<p><strong>spell\_scripts:</strong> Holds scripts that can be activated by spells with effect SPELL\_EFFECT\_SCRIPT\_EFFECT (77) or SPELL\_EFFECT\_DUMMY(3).</p>
+<p><strong>event\_scripts:</strong> Holds scripts activated whenever an event is activated, be it by an object or as the spell effect SPELL\_EFFECT\_SEND\_EVENT (61).</p>
+<p><strong>waypoint\_scripts:</strong> Holds scripts used in the <a href="waypoint_data">waypoint\_data</a> table. See also <a href="waypoints-information">Waypoints-Information</a> for general information about waypoints.</p>
+<p>NOTE: An entry in this table may have more than one row as a script may do more than just one action. Also each action the script may make can have a separate delay attached to it. In that case, the core will activate the appropriate action after the correct delay.</p>
+<p><strong>Table Structure</strong></p>
+<p>| Field                     | Type  | Attributes | Key | Null | Default | Extra                                                                                                                          | Comment |
+| ------------------------- | ----- | ---------- | --- | ---- | ------- | ------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| <a href="#id">id</a>                 | INT   | UNSIGNED   |     | NO   | 0       |                                                                                                                                |         |
+| <a href="#effindex">effIndex</a>     | INT   | UNSIGNED   |     | NO   | 0       | only used in spell_scripts                                                                                                     |         |
+| <a href="#delay">delay</a>           | INT   | UNSIGNED   |     | NO   | 0       |                                                                                                                                |         |
+| <a href="#command">command</a>       | INT   | UNSIGNED   |     | NO   | 0       |                                                                                                                                |         |
+| <a href="#otherfields">datalong</a>  | INT   | UNSIGNED   |     | NO   | 0       |                                                                                                                                |         |
+| <a href="#otherfields">datalong2</a> | INT   | UNSIGNED   |     | NO   | 0       |                                                                                                                                |         |
+| <a href="#otherfields">dataint</a>   | INT   |            |     | NO   | 0       |                                                                                                                                |         |
+| <a href="#otherfields">x</a>         | FLOAT |            |     | NO   | 0       |                                                                                                                                |         |
+| <a href="#otherfields">y</a>         | FLOAT |            |     | NO   | 0       |                                                                                                                                |         |
+| <a href="#otherfields">z</a>         | FLOAT |            |     | NO   | 0       |                                                                                                                                |         |
+| <a href="#otherfields">o</a>         | FLOAT |            |     | NO   | 0       |                                                                                                                                |         |
+| <a href="#guid">guid</a>             | INT   |            | PRI | NO   | 0       | only used in waypoint_scripts; acts as primary key and is set automatically using the <a href="gm-commands">GM command</a> &#39;wp event add&#39; |         |</p>
+<p><h2><strong>Description of the fields</strong></h2></p>
+<p><h3>id</h3></p>
+<p>For <strong>spell\_scripts</strong>, it is the spell ID. See <a href="spell">Spell.dbc</a></p>
+<p>For <strong>event\_scripts</strong>, it is the event ID. There doesn&#39;t exist currently a full list of events. In any case, the event IDs are taken directly from gameobject WDB data or spell effect data. If both a gameobject and a spell activate the same event, the IDs will match.</p>
+<p>For <strong>waypoint\_scripts</strong>, it is the <a href="waypoint_data#action">action</a> ID.</p>
+<p><h3>effIndex</h3></p>
+<p>The effect index of the spell that this script is to be applied to.</p>
+<p><h3>delay</h3></p>
+<p>Delay in seconds before this current step of the script activates. 0 = instant.</p>
+<p><h3>command</h3></p>
+<p>The type of action performed by the script after <a href="#delay">delay</a> seconds have passed. The value of this field affects what other fields also need to be set. The following commands can be used:</p>
+<p>| Command | Name                                                               | Description                                                              |
+| ------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| 0       | <a href="#script_command_talk--0">TALK</a>                                    | Creature say/whisper/yell/textemote.                                     |
+| 1       | <a href="#script_command_emote--1">EMOTE</a>                                  | Play emote on creature.                                                  |
+| 2       | <a href="#script_command_field_set--2">FIELD\_SET</a>                         | Change the value at an index for the player.                             |
+| 3       | <a href="#script_command_move_to--3">MOVE\_TO</a>                             | Relocate creature to a destination.                                      |
+| 4       | <a href="#script_command_flag_set--4">FLAG\_SET</a>                           | Turns on bits on a flag field at an index for the player.                |
+| 5       | <a href="#script_command_flag_remove--5">FLAG\_REMOVE</a>                     | Turns off bits on a flag field at an index for the player.               |
+| 6       | <a href="#script_command_teleport_to--6">TELEPORT\_TO</a>                     | Teleports the player to a location.                                      |
+| 7       | <a href="#script_command_quest_explored--7">QUEST\_EXPLORED</a>               | Satisfies the explore requirement for a quest.                           |
+| 8       | <a href="#script_command_kill_credit--8">KILL\_CREDIT</a>                     | Gives kill credit to the player.                                         |
+| 9       | <a href="#script_command_respawn_gameobject--9">RESPAWN\_GAMEOBJECT</a>       | Spawns a despawned gameobject.                                           |
+| 10      | <a href="#script_command_temp_summon_creature--10">TEMP\_SUMMON\_CREATURE</a> | Temporarily summons a creature.                                          |
+| 11      | <a href="#script_command_open_door--11">OPEN\_DOOR</a>                        | Opens a door gameobject (type h1. 0).                                    |
+| 12      | <a href="#script_command_close_door--12">CLOSE\_DOOR</a>                      | Closes a door gameobject (type 0).                                       |
+| 13      | <a href="#script_command_activate_object--13">ACTIVATE\_OBJECT</a>            | Activates an object.                                                     |
+| 14      | <a href="#script_command_remove_aura--14">REMOVE\_AURA</a>                    | Removes an aura due to a spell.                                          |
+| 15      | <a href="#script_command_cast_spell--15">CAST\_SPELL</a>                      | Casts a spell.                                                           |
+| 16      | <a href="#script_command_play_sound--16">PLAY\_SOUND</a>                      | Plays a sound.                                                           |
+| 17      | <a href="#script_command_create_item--17">CREATE\_ITEM</a>                    | Creates specified amount of items for the player.                        |
+| 18      | <a href="#script_command_despawn_self--18">DESPAWN\_SELF</a>                  | Forces creature to despawn.                                              |
+| 20      | <a href="#script_command_load_path--20">LOAD\_PATH</a>                        | Load path to unit, then unit starts waypoint movement.                   |
+| 21      | <a href="#script_command_callscript_to_unit--21">CALLSCRIPT\_TO\_UNIT</a>     | Calls script from one of \</em>\_scripts table with given unit as source.    |
+| 22      | <a href="#script_command_kill--22">KILL</a>                                   | Changes state of the creature to dead and optionally removes its corpse. |
+| 30      | <a href="#script_command_orientation--30">ORIENTATION</a>                     | Changes unit&#39;s orientation (Used in Waypoint Scripts)                    |
+| 31      | <a href="#script_command_equip--31">EQUIP</a>                                 | Sets creature equipment.                                                 |
+| 32      | <a href="#script_command_model--32">MODEL</a>                                 | Sets creature model.                                                     |
+| 33      | <a href="#script_command_close_gossip--33">CLOSE\_GOSSIP</a>                  | Closes gossip window. This command is only used for Gossip Scripts.      |
+| 34      | <a href="#script_command_playmovie--34">PLAYMOVIE</a>                         | Plays movie.                                                             |
+| 35      | <a href="#script_command_movement--35">MOVEMENT</a>                           | Change movement type.                                                    |</p>
+<p><h3>OtherFields</h3></p>
+<p>Depending on what command was used, the meaning and use for the following fields varies.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_TALK = 0</h4></p>
+<p>- source: Creature.
+- target: any/Player (for whisper).
+- datalong: 0=say, 1=yell, 2=text emote, 3=boss emote, 4=whisper 5=boss whisper
+- dataint: reference to <a href="broadcast_text">broadcast\_text.id</a></p>
+<p><h4>\</em>SCRIPT\_COMMAND\_EMOTE = 1</h4></p>
+<p>- source or target: Creature.
+- datalong: The emote ID to play.
+- datalong2: If this value is &amp;gt; 0 the npc will play emote state rather than oneshot.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_FIELD\_SET = 2</h4></p>
+<p>- source or target: Creature.
+- datalong: Index of the field.
+- datalong2: Value to place at the index.</p>
+<p><h4>\</em>SCRIPT\_COMMAND\_MOVE\_TO = 3</h4></p>
+<p>- source: Creature.
+- datalong2: Length (in time) of the motion.
+- x: X position to move to.
+- y: Y position to move to.
+- z: Z position to move to.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_FLAG\_SET = 4</h4></p>
+<p>- source or target: Creature.
+- datalong: Field index to be set.
+- datalong2: Flag bit(s) to set.</p>
+<p><h4>\</em>SCRIPT\_COMMAND\_FLAG\_REMOVE = 5</h4></p>
+<p>- source or target: Creature.
+- datalong: Field index to be unset.
+- datalong2: Flag bit(s) to unset.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_TELEPORT\_TO = 6</h4></p>
+<p>- source or target: Player (datalong2 0) or Creature (datalong2 1).
+- datalong: Target Map ID. See <a href="map">Map.dbc</a>
+- x: Teleport target x coordinate.
+- y: Teleport target y coordinate.
+- z: Teleport target z coordinate.
+- o: Teleport target orientation.</p>
+<p><h4>\</em>SCRIPT\_COMMAND\_QUEST\_EXPLORED = 7</h4></p>
+<p>- source or target: Player.
+- target or source: WorldObject.
+- datalong: Quest entry which external status should be satisfied. See <a href="quest_template#id">quest\_template.id</a>.
+- datalong2: Distance away from the NPC/object that the player can be and have the script still take effect (min value 5).</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_KILL\_CREDIT = 8</h4></p>
+<p>- target or source: Player.
+- datalong: Creatue entry of kill credit. See <a href="creature_template#entry">creature\_template.entry</a>.
+- datalong2: If value &amp;gt; 0 gives kill credit to the whole group player belongs to, otherwise, gives personal kill credit.</p>
+<p><h4>\</em>SCRIPT\_COMMAND\_RESPAWN\_GAMEOBJECT = 9</h4></p>
+<p>- source: WorldObject (summoner).
+- datalong: Guid of the gameobject to respawn. See <a href="gameobject#guid">gameobject.guid</a>.
+- datalong2: Despawn time in seconds. If the value is &amp;lt; 5 seconds: 5 is used instead.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_TEMP\_SUMMON\_CREATURE = 10</h4></p>
+<p>- source: WorldObject (summoner).
+- datalong: Entry of the summoned creature. See <a href="creature_template#entry">creature\_template.entry</a>.
+- datalong2: Despawn time in ms.
+- x: Summon target x coordinate.
+- y: Summon target y coordinate.
+- z: Summon target z coordinate.
+- o: Summon target orientation.</p>
+<p><h4>\</em>SCRIPT\_COMMAND\_OPEN\_DOOR = 11</h4></p>
+<p>- source: WorldObject.
+- datalong: Guid of the activated door. See <a href="gameobject#guid">gameobject.guid</a>.
+- datalong2: Delay before closing again the door. If the value is &amp;lt; 15 seconds: 15 is used instead.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_CLOSE\_DOOR = 12</h4></p>
+<p>- source: WorldObject.
+- datalong: Guid of the activated door. See <a href="gameobject#guid">gameobject.guid</a>.
+- datalong2: Delay before opening again the door. If the value is &amp;lt; 15 seconds: 15 is used instead.</p>
+<p><h4>\</em>SCRIPT\_COMMAND\_ACTIVATE\_OBJECT = 13</h4></p>
+<p>- source: Unit.
+- target: GameObject.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_REMOVE\_AURA = 14</h4></p>
+<p>- source (datalong2 != 0) or target (datalong2 h1. 0): Unit.
+- datalong: Spell ID. See <a href="spell">Spell.dbc</a>
+- datalong2: If value &amp;gt; 0, then remove from the source; otherwise remove from the target.</p>
+<p><h4>\</em>SCRIPT\_COMMAND\_CAST\_SPELL = 15</h4></p>
+<p>- source: Unit.
+- target: Unit.
+- datalong: Spell ID. See <a href="spell">Spell.dbc</a>
+- datalong2:
+  - 0 - Source-&amp;gt;Target
+  - 1 - Source-&amp;gt;Source (Self cast, use for dummy spells)
+  - 2 - Target-&amp;gt;Target
+  - 3 - Target-&amp;gt;Source
+  - 4 - Source-&amp;gt;Closest entry of dataint.
+- dataint: Creature entry to target if datalong2 value is 4, or triggered attribute for CastSpell method in other cases.
+- x: Search range for creature entry (dataint) if datalong2 value is 4.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_PLAY\_SOUND = 16</h4></p>
+<p>- source: WorldObject.
+- target: none (datalong2 &amp; 1 0) or Player (datalong2 &amp; 1 != 0).
+- datalong: Sound ID.
+- datalong2:
+  - 0 - play direct sound to everyone.
+  - 1 - play direct sound to target (must be Player).
+  - 2 - play sound with distance dependency to anyone.
+  - 3 - play sound with distance dependency to target (must be Player).
+  - 4 - play sound within radius to anyone.
+- dataint: radius if datalong2 value is 4</p>
+<p><h4>\</em>SCRIPT\_COMMAND\_CREATE\_ITEM = 17</h4></p>
+<p>- target or source: Player.
+- datalong: Item entry to create. See <a href="item_template#entry">item\_template.entry</a>.
+- datalong2: Amount of items to create.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_DESPAWN\_SELF = 18</h4></p>
+<p>- target: Creature.
+- datalong: Despawn delay.</p>
+<p><h4>\</em>SCRIPT\_COMMAND\_LOAD\_PATH = 20</h4></p>
+<p>- source: Unit.
+- datalong: Path ID. See <a href="waypoint_data#id">waypoint\_data.id</a>.
+- datalong2: If value &amp;gt; 0, means waypoint movement is repeatable.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_CALLSCRIPT\_TO\_UNIT = 21</h4></p>
+<p>- source: if present, used as a search center.
+- datalong: entry of searched creature, if source exists, guid of the creature otherwise.
+        \</em>\<em>datalong2: ID of the script from \</em>\_scripts table.
+- dataint:
+  - 3 - use spell\_scripts table;
+  - 5 - use event\_scripts table;
+  - 6 - use waypoint\_scripts table.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_KILL = 22</h4></p>
+<p>- source: Creature.
+- dataint: if value == 1 remove corpse.</p>
+<p><h4>\</em>SCRIPT\_COMMAND\_ORIENTATION = 30</h4></p>
+<p>- source: Unit.
+- target: Unit (datalong != 0).
+- datalong: If value != 0, then turn to face the target; otherwise turn to value in o.
+- o: Set orientation to value in field \<code>o\</code>.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_EQUIP = 31</h4></p>
+<p>- source: Creature.
+- datalong: ID (1, 2, 3 ...)  from equipment entry. See <a href="creature_equip_template#id">creature\_equip\_template.id</a></p>
+<p><h4>\</em>SCRIPT\_COMMAND\_MODEL = 32</h4></p>
+<p>- source: Creature.
+- datalong: model ID.</p>
+<p><h4>\<em>SCRIPT\_COMMAND\_CLOSE\_GOSSIP = 33</h4></p>
+<p>- source: Player.</p>
+<p><h4>\</em>SCRIPT\_COMMAND\_PLAYMOVIE = 34</h4></p>
+<p>- source: Player.
+- datalong: movie ID.</p>
+<p><h4>\*SCRIPT\_COMMAND\_MOVEMENT = 35</h4></p>
+<p>- source: Creature.
+- datalong: MovementType.
+- datalong2: MovementDistance (e.g. wander_distance for MovementType 1).
+- dataint: pathid (for MovementType 2, see <a href="waypoint_data#id">waypoint\_data.id</a>).</p>
+<p><h3>guid</h3></p>
+<p>Exists only for &#39;waypoint_scripts&#39; and acts there as primary key; it is set automatically using the <a href="gm-commands">GM command</a> &#39;wp event add&#39;.</p>
+<p></p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

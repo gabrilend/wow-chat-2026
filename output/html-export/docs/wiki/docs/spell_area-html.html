@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>spell_area.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>spell_area.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/spell_area.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 7201 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>spell\_area</h1></p>
+<p><a href="database-world">&lt;-Back-to:World</a></p>
+<p><strong>The \<code>spell\_area\</code> table</strong></p>
+<p>This table is used to apply a specific spell aura to the player within an area in the game. When any player enters this area or somehow interacts with a quest, this aura will be handled accordingly.</p>
+<p><strong>Table Structure</strong></p>
+<p>| Field                   | Type      | Attributes | Key | Null | Default | Extra | Comment |
+| ----------------------- | --------- | ---------- | --- | ---- | ------- | ----- | ------- |
+| [spell][1]              | MEDIUMINT | UNSIGNED   | PRI | NO   |         |       |         |
+| [area][2]               | MEDIUMINT | UNSIGNED   | PRI | NO   |         |       |         |
+| [quest_start][3]        | MEDIUMINT | UNSIGNED   | PRI | NO   |         |       |         |
+| [quest_end][4]          | MEDIUMINT | UNSIGNED   |     | NO   |         |       |         |
+| [aura_spell][5]         | MEDIUMINT | SIGNED     | PRI | NO   |         |       |         |
+| [racemask][6]           | MEDIUMINT | UNSIGNED   | PRI | NO   |         |       |         |
+| [gender][7]             | TINYINT   | UNSIGNED   | PRI | NO   |         |       |         |
+| [flags][8]              | TINYINT   | UNSIGNED   |     | NO   |         |       |         |
+| [quest_start_status][9] | INT       | UNSIGNED   |     | NO   |         |       |         |
+| [quest_end_status][10]  | INT       | UNSIGNED   |     | NO   |         |       |         |</p>
+<p>[1]: #spell
+[2]: #area
+[3]: #quest_start
+[4]: #quest_end
+[5]: #aura_spell
+[6]: #racemask
+[7]: #gender
+[8]: #flags
+[9]: #quest_start_status
+[10]: #quest_end_status</p>
+<p><strong>Description of the fields</strong></p>
+<p><h3>spell</h3></p>
+<p>The spell ID of the spell to be casted on the player. See <a href="spell">Spell.dbc</a>.</p>
+<p><h3>area</h3></p>
+<p>The area ID. Type &quot;.gps&quot; in-game and find the &quot;Area:&quot; number to use for this cell. Also see AreaTable.dbc.</p>
+<p><h3>quest\_start</h3></p>
+<p>The entry of the quest which the player must have in the state defined by <strong>quest\_start\_status</strong>. See <a href="quest_template#id">quest\_template.id</a>.</p>
+<p><h3>quest\_end</h3></p>
+<p>The entry of the quest which the player must not have in the state defined by <strong>quest\_end\_status</strong>. See <a href="quest_template#id">quest\_template.id</a>. Setting both <strong>quest\_start</strong> and <strong>quest\_end</strong> to the same value is useless.</p>
+<p><h3>aura\_spell</h3></p>
+<p>If set, this value (plus or minus aura spell ID from Spell.dbc) imposes additional condition.</p>
+<p>The value has the following effect:</p>
+<p>- <strong>&lt; 0</strong>  (negative values) If the player has aura <strong>-aura\_spell</strong> then the <a href="#spell_area-spell">spell</a> will not be activated.
+-   <strong>0</strong>   this column is ignored.
+- <strong>&gt; 0</strong>  (positive values) If the player has no aura <strong>aura\_spell</strong> then the <a href="#spell_area-spell">spell</a> will not be activated.</p>
+<p><h3>racemask</h3></p>
+<p>This ID is automatically called from <a href="chrraces">ChrRaces.dbc</a>. The bitmask is entered here.</p>
+<p>- 0, 1791 = All Races
+- 690 (2 + 16 + 32 + 128 + 512) = Horde Only
+- 1101 (1 + 4 + 8 + 64 + 1024 ) = Alliance Only</p>
+<p><h3>gender</h3></p>
+<p>The gender type this entry applies to. 0 = Male, 1 = Female, 2 = Any.</p>
+<p><h3>flags</h3></p>
+<p>| Flag | Value | Name                          | Comment                                                                                                                   |
+| ---- | ----- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 1    | 0x01  | SPELL\_AREA\_FLAG\_AUTOCAST   | If the spell should be automatically applied when the character enters the area. Also prevents the user from removing it. |
+| 2    | 0x02  | SPELL\_AREA\_FLAG\_AUTOREMOVE | If the spell should be automatically removed when the character is <strong>inside</strong> the area (only works with quest updates)    |</p>
+<p>Note: Spell is allways removed on leaving area, SPELL\_AREA\_FLAG\_AUTOREMOVE does not effect this.</p>
+<p>Example:</p>
+<p>- flags = 0 : Spell not added on enter (must be added manually), not automatically removed on quest update, but removed on leave.
+- flags = 1 : Spell is automatically applied on enter, not automatically removed on quest update, but removed on leave.
+- flags = 2 : Spell not added on enter (must be added manually), automatically removed on quest update and removed on leave.
+- flags = 3 : (Default) Spell is automatically applied on enter, automatically removed on quest update and removed on leave.</p>
+<p><h3>quest\_start\_status, quest\_end\_status</h3></p>
+<p>Within <strong>quest\_start\_status</strong>, you can define the mask of quest status required for <strong>quest\_start</strong>.</p>
+<p>Within <strong>quest\_end\_status</strong>,  you can define the mask of quest status required for <strong>quest\_end</strong>. </p>
+<p>Example:</p>
+<p>Area 257 is a cavern on Teldrassil. What we want is simple : When the player take the 28725 quest, he have the aura in the cavern. When he finish the 28727 quest, the aura disappear.</p>
+<p>You should have the spell 92237 when entering the cavern IF :</p>
+<p>- The start quest 28725 is incomplete, complete or rewarded (2 | 8 | 64 = 74) 
+- The end quest 28727 is not taked (none), incomplete or complete BUT not rewarded (1 | 2 | 8 = 11)</p>
+<p>Here is the SQL for this example : </p>
+<p>``<code>sql
+INSERT INTO </code>spell_area<code> (</code>spell<code>, </code>area<code>, </code>quest_start<code>, </code>quest_end<code>, </code>autocast<code>, </code>quest_start_status<code>, </code>quest_end_status<code>) VALUES 
+(92237, 257, 28725, 28727, 1, 74, 11);
+<pre><code>
+| Quest Status                       | Flag          | Explanation                                                                         |
+| ---------------------------------- | ------------- | ----------------------------------------------------------------------------------- |
+| QUEST\_STATUS\_NONE = 0            | 1             | Player does not have or had quest at all. He could accept it, but he did not (yet). |
+| QUEST\_STATUS\_COMPLETE = 1        | 2             | Player fulfilled objectives, but did not hand it in yet.                            |
+| ~~QUEST\_STATUS\_UNAVAILABLE = 2~~ | 4 (NOT USED)  | (Not used)                                                                          |
+| QUEST\_STATUS\_INCOMPLETE = 3      | 8             | Player did not fulfill objectives yet                                               |
+| ~~QUEST\_STATUS\_AVAILABLE = 4~~   | 16 (NOT USED) | (Not used)                                                                          |
+| QUEST\_STATUS\_FAILED = 5          | 32            | Player failed to fulfill objectives for any reason, e.g. time limit                 |
+| QUEST\_STATUS\_REWARDED = 6        | 64            | Player handed quest in and this is sort of a post-quest interaction                 |</p>
+<p>Example for a SQL</p>
+<p> For a \</code>quest\_end\_status\<code> that should contain QUEST\_STATUS\_NONE (1), QUEST\_STATUS\_COMPLETE (2) and QUEST\_STATUS\_INCOMPLETE (8):
+</code></pre> sql
+-- equivalent to </code>quest_end_status<code>= 11
+UPDATE </code>spell_area<code> SET </code>quest_end_status<code>= (1|2|8) WHERE </code>spell<code>=XXXXX AND </code>area<code>=YYYY;
+</code>``</p>
+<p>Some examples:</p>
+<p>- An area could pacify all players (spell 39331)
+- Another area could full heal every 1 second (spell 48591)
+- Teleport player out of an area (spell 53141)
+- Factions-specific buffs, e.g. in Icecrown Citadel:
+- &quot;Hellscream&#39;s Warsong&quot; (spell 73822) for horde 
+- &quot;Strength of Wrynn&quot; (spell 73828) for alliance
+- Even region-based buffs, such as area 440 - Tanaris.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

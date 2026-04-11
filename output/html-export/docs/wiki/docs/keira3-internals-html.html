@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>keira3-internals.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>keira3-internals.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/keira3-internals.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 16061 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Keira3 Internals</h1></p>
+<p>This is a collection of notes aiming to explain the internals of Keira3 for development purposes.</p>
+<p>If you just want to use Keira3, you don&#39;t need any of the following. If you want to modify Keira3, for example to improve it or to add new features, you may find this page useful.</p>
+<p><h2>Main technologies</h2></p>
+<p>Keira3 is built upon the following open source web technologies:</p>
+<p>- <a href="http://www.typescriptlang.org/"><strong>TypeScript</strong></a> is the main language of Keira3. It is a superset of JavaScript. 
+If you know JavaScript and have some basic knowledge of OOP languages like Java and C#, you will feel pretty familiar with TypeScript already.
+Otherwise, you might find <a href="https://www.udemy.com/course/understanding-typescript/">this course</a> helpful.
+If you don&#39;t know JavaScript at all, it would be better to get some basic knowledge first.</p>
+<p>- <a href="https://angular.io/"><strong>Angular</strong></a>. This is the main framework behind Keira3. 
+We absolutely recommend getting familiar with it before getting your hands inside Keira3&#39;s code.
+If you are looking for a complete Angular course, we can recommend <a href="https://www.udemy.com/course/the-complete-guide-to-angular-2/">this one</a>.</p>
+<p>- We use <a href="https://sass-lang.com/"><strong>SCSS</strong></a> to style our UI. It&#39;s an extension of CSS.
+Knowing the CSS fundamentals is required in order to be able to change the Keira3&#39;s interface.
+SCSS should be quite intuitive for anyone who can understand CSS.</p>
+<p>- <a href="https://getbootstrap.com/"><strong>Bootstrap</strong></a> is the CSS framework used as a base for Keira3&#39;s style.
+You don&#39;t have to be a Bootstrap expert, however we recommend being at least familiar with its <a href="https://getbootstrap.com/docs/5.3/layout/grid/">Grid system</a> and Utilities like <a href="https://getbootstrap.com/docs/5.3/utilities/spacing/">spacing</a>.</p>
+<p>- <a href="https://electronjs.org/"><strong>Electron</strong></a> is the software framework that allows building Desktop apps using web technologies.
+We don&#39;t use many native Electron features so usually you don&#39;t have to worry about it when developing Keira3.</p>
+<p>- <a href="https://nx.dev/"><strong>NX</strong></a> is the build system to manage the project and keep it modular by diving it into several libraries.
+It was originally born as an extension of the Angular CLI, today NX is a generic to manage all kinds of monorepo projects (also for projects not based on Angular).
+Among several features, we leverage the <a href="https://nx.dev/ci/features/affected">affected</a> powerful command of NX to run checks (e.g. lint, test, ...) only to the parts of the application that have been modified and to those which depend on them.</p>
+<p><h2>Testing</h2></p>
+<p>We use <a href="https://en.wikipedia.org/wiki/Test_automation">test automation</a> in Keira3 in our development cycle. For every PR/commit, our CI automatically runs a lot of automated tests.</p>
+<p>More specifically, we have:</p>
+<p>- <strong>Unit tests</strong>. It&#39;s all <code><em>.spec.ts</code> file, they run with <code>npm run test</code>. We keep <strong>100% coverage</strong> and in <a href="https://medium.com/@borzifrancesco/why-i-set-my-unit-test-coverage-threshold-to-100-4c7138276053">this is article</a> it is explained why this is important.
+  This means that if you try to submit untested code, the CI build of your PR will fail. We use the <a href="https://angular.io/guide/testing">Angular testing framework</a> for it.</p>
+<p>- <strong>Integration tests</strong>. It&#39;s all the <code></em>.integration.spec.ts</code> file, they also run with <code>npm run test</code>, together with the unit tests.
+ You can see the integration tests of Keira3 almost like a set of e2e tests, the main difference is that all the DB interactions are mocked.
+ The difference between unit tests and integration test is: in unit tests we test units by mocking all their dependencies, while in integration tests we test &quot;big pieces&quot; of Keira3 together (mocking only the DB). Mostly used to test the editors.</p>
+<p>- For both our unit and integration tests, we test components by doing Component DOM Testing. Check <a href="https://medium.com/@borzifrancesco/component-dom-testing-in-angular-0d2256414c06">this article</a> for more information about it.
+ 
+- <strong>E2E tests</strong>. We have a tiny set of e2e tests based on <a href="https://playwright.dev/">Playwright</a>. For example, to check the sqlite integration. 
+ The command <code>npm run e2e</code> will automatically serve the app and run the e2e tests.
+ 
+ ### Why test automation?
+ 
+ Because every time you modify your app, you never know if you are breaking any existing functionality unless you manually test everything again and again.
+ 
+ When you have automated tests in place, you are still not 100% sure about not breaking existing stuff, but at least they can give you some assurance.</p>
+<p><h2>Files structure</h2></p>
+<p>The project is entirely based on NX divinding the code into apps and libraries.</p>
+<p>Apps:</p>
+<p>- <strong>apps/keira-e2e</strong>: all e2e test cases, isolated from everything else;
+- <strong>apps/keira</strong>: the main Angular app that imports code from <code>libs/<em></code></p>
+<p>Libraries:</p>
+<p>- <strong>libs/features</strong>: source code of the main Keira3 features (each one isolated from the others in different libs). <strong>RULE</strong>: a feature can NOT import anything from another feature.
+If something is meant to be shared across features, then it must be placed under <code>libs/shared</code>;</p>
+<p>- <strong>libs/main</strong>: libraries of components that don&#39;t belong to a specific feature, yet they are isolated. For example, the main wrapper component <code>MainWindowComponent</code>, the Sidebar, the Login window, etc...</p>
+<p>- <strong>libs/shared</strong>: all kinds of utilities, modules, components, services, abstract classes, testing utilities, etc...</p>
+<p><h2>Architecture design and fundamentals</h2></p>
+<p>Keira3 code is structured using <a href="https://en.wikipedia.org/wiki/Object-oriented_programming">OOP</a> with techniques like <a href="https://www.typescriptlang.org/docs/handbook/classes.html#inheritance">inheritance</a> and <a href="https://www.typescriptlang.org/docs/handbook/generics.html">generic types</a> to maximise code reuse.</p>
+<p>Inside the directory <code>libs/shared/base-abstract-classes</code> there is a collection of abstract classes that are meant to be extended by the concrete Angular <a href="https://angular.io/guide/architecture-components">Components</a> and <a href="https://angular.io/guide/architecture-services">Services</a> which will implement the Keira3 features.</p>
+<p></em>If you are not familiar with the terminology used so far, please check the above hyperlinks before proceeding.<em></p>
+<p>Keira3 is <a href="https://en.wikipedia.org/wiki/Modular_programming"><strong>modular</strong></a>, you can see it as a collection of features and shared utilities that are organised into <a href="https://nx.dev/concepts/more-concepts/applications-and-libraries">NX apps and libraries</a>.</p>
+<p><h2>Keira3 terminology and conventions</h2></p>
+<p>Typically, Keira3 features are characterised by the following elements.</p>
+<p><h3>Table types</h3></p>
+<p>All the definitions of the AzerothCore DB tables are defined in Keira3 inside <code>libs/shared/acore-world-model</code>.</p>
+<p>If you want to create a new editor, you have to first create its definition there.</p>
+<p><h3>The Main Entity</h3></p>
+<p>For example </em><strong>Creature</strong><em> is a main entity. Whether you want to modify a vendor (<code>npc_vendor</code>) or a loot of a creature (<code>creature_loot_template</code>), you still have to select (or create) a Creature.</p>
+<p>There is always a table (and so also an Editor) for the Main Entity. For creatures it&#39;s <code>creature_template</code>.</p>
+<p>You can&#39;t have a vendor, loot, etc... without having a creature first. In other words, you can&#39;t have an <code>npc_vendor</code> row without linking it to an existing entry of <code>creature_template</code>.</p>
+<p>Another example could be: you can&#39;t have a row in <code>quest_template_addon</code> without linking it to an existing row of <code>quest_template</code>. Because <code>quest_template</code> is the Main Entity of the Quest editors.</p>
+<p><h3>Editor</h3></p>
+<p>An Editor is typically linked to a table. For example, the </em><strong>Creature</strong><em> -&gt; </em><strong>Vendor</strong>* editor allows you to edit the <code>npc_vendor</code> table.</p>
+<p>There are 2 main types of Editors in Keira3:</p>
+<p><h4>Single-row editors</h4></p>
+<p>They are the editors of tables containing <strong>ONE row for each entity</strong>.</p>
+<p>For example, the table <code>creature_template_addon</code> can have only ONE row for each creature. You can never have 2 rows pointing to the same creature in this table.</p>
+<p>Every row is uniquely identified by a primary key, that is the ID of the selected entity. Typically in the DB they are called <code>id</code>, <code>ID</code>, <code>entry</code>, <code>Entry</code>, etc... yes, they are completely inconsistent, but that&#39;s what we inherited from MaNGOS/TrinityCore. In Keira3 we call it just <code>entityIdField</code>.</p>
+<p><h4>Multi-row editors</h4></p>
+<p>They are the editors containing <strong>MULTIPLE rows for each entity</strong>.</p>
+<p>For example, the table <code>npc_vendor</code> can have multiple rows that belongs to the same Creature. Every row of <code>npc_vendor</code> represents a specific Item that is sold by a specific Creature. And a Creature can sell 0, 1 or many items. Then every Creature can have 0, 1 or many rows in the <code>npc_vendor</code> table. Makes sense right?</p>
+<p>Every row has 2 primary keys, typically (but not always) called <code>id</code> and <code>guid</code>. In Keira3 we always call them <code>entityIdField</code> and 
+<code>entitySecondIdField</code>. The <code>entityIdField</code> is the ID of the selected entity.</p>
+<p>Back to the example of <code>npc_vendor</code>:</p>
+<p>- <code>entityIdField</code> would be the ID of the Creature
+- <code>entitySecondIdField</code> would be the ID of the Item</p>
+<p><h4>Editor&#39;s Component and Service</h4></p>
+<p>Every Editor in Keira3 has its own <a href="https://angular.io/guide/architecture-components">Component</a> and <a href="https://angular.io/guide/architecture-services">Service</a> counterparts, where:</p>
+<p>- you can see an <strong>Editor Component</strong> as the &quot;UI part&quot; of the Editor. It reflects the status of the table being edited and contains a form that allows the user to change its properties. Components are typically &quot;dumb&quot; (without much logic code) and are mostly about the HTML code. Of course it&#39;s linked to the Editor Service;</p>
+<p>- the <strong>Editor Service</strong> contains all the logic that powers an Editor, as well as the <strong>status</strong> for the current table being edited. It&#39;s responsible for calling the <code>QueryService</code> whenever the user edits any property in order to re-generate the SQL queries.</p>
+<p>In order to maximise code reuse, the following abstract classes have been created:</p>
+<p>- <code>EditorService</code>: base of all Editor Services;
+- <code>SingleRowEditorService</code>: extends <code>EditorService</code>, base of all Single-row Editor Services (e.g. <code>CreatureTemplateService</code> extends this class);
+- <code>MultiRowEditorService</code>: extends <code>EditorService</code>, base of all Multi-row Editor Services (e.g. <code>CreatureLootTemplateService</code> extends this class);</p>
+<p>- <code>EditorComponent</code>: base of all Editor Components
+- <code>SingleRowEditorComponent</code>: extends <code>EditorComponent</code>, base of all Single-row Editor Components (e.g. <code>CreatureTemplateComponent</code> extends this class);
+- <code>MultiRowEditorComponent</code>: extends <code>EditorComponent</code>, base of all Multi-row Editor Components (e.g. <code>CreatureLootTemplateComponent</code> extends this class);</p>
+<p><h3>Handler</h3></p>
+<p>Handlers are services responsible for holding statuses such as:</p>
+<p>- which entity has been selected (for example, when you select a Creature, the ID of the creature is kept inside the <code>CreatureHandlerService</code>)
+- which editors are left with unsaved changes</p>
+<p>Group of editors that refer to the same main entity should share <strong>one Handler</strong>. For example, all Creature Editors refer to the <code>CreatureHandlerService</code>, all Quest Editors refer to the <code>QuestHandlerService</code>, and so on...</p>
+<p>All Handlers classes extend the <code>HandlerService</code> abstract class.</p>
+<p><h2>Selectors</h2></p>
+<p>There are several kinds of selectors which allow the user to easily select a value for a given field.</p>
+<p>Selectors are typically available to the user by clicking on the button with three dots:</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/118693269-351a5000-b80b-11eb-81b5-15065634a5b4.png">image</a></p>
+<p>There are three main types of selectors, listed below.</p>
+<p><h3>SingleValueSelectorBtnComponent</h3></p>
+<p>The <code>SingleValueSelectorBtnComponent</code> is a reusable component which can be used to allow the user to select a <strong>single value</strong> from a list of values, for a given field.</p>
+<p>Let&#39;s check for example the <code>exp</code> field of <code>creature_template</code>, allowing to specify ONE value:</p>
+<p><pre><code>0 - Classic
+1 - TBC
+2 - WOTLK</code></pre></p>
+<p>All you have to do to implement such selector is first definying the list values by creating an array of <code>Option</code>:</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/118694016-e7eaae00-b80b-11eb-8701-bc59c80ec3bd.png">image</a></p>
+<p>All the options are located in <code>libs/shared/acore-world-model/src/options</code> so you just need to create a new file like the above.</p>
+<p>You then need to import the array of options, in this case <code>EXPANSIONS</code>, in the <code>.ts</code> file of your component and declare it as <code>PUBLIC READONLY</code> in order to make it available for the component&#39;s template:</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/118694375-4dd73580-b80c-11eb-8f22-4f2ec76bfe68.png">image</a></p>
+<p>Now you can use it in the <code>.html</code> template of the component by adding the <code>keira-single-value-selector-btn</code> html element and passing the following properties:</p>
+<p>- <code>[control]</code> the form control, example <code>editorService.form.controls.exp</code> (note: <code>exp</code> is the name of the field)
+- <code>[config]</code> an object specifying the <code>options</code> and <code>name</code> property
+- <code>[modalClass]</code> the class of the modal, so you can change the modal size, e.g. <code>modal-md</code> or <code>modal-lg</code> (optional)</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/118693601-7c084580-b80b-11eb-9a6d-8833d6581920.png">image</a></p>
+<p>This is the result:</p>
+<p>&lt;img src=&quot;https://user-images.githubusercontent.com/75517/118694803-c1794280-b80c-11eb-9099-00758983ca2e.png&quot; width=300&gt;</p>
+<p>&lt;img src=&quot;https://user-images.githubusercontent.com/75517/118694841-cf2ec800-b80c-11eb-8719-b770a7fd0c98.png&quot; width=500&gt;</p>
+<p><h3>FlagsSelectorBtnComponent</h3></p>
+<p>The <code>FlagsSelectorBtnComponent</code> is another very useful reusable component which allows the user to compose a value from a set of <strong>flags</strong> (bitmask), for a given field. If terms like bits, bitmask, flags, etc.. sounds weird to you, we recommend to read <a href="Bit-and_bytes-tutorial">this page</a> to fully understand how flag values work.</p>
+<p>Let&#39;s see, for example, how the field <code>dynamicflags</code> of <code>creature_template</code> is implemented.</p>
+<p>First you need to define the list of (bit) values by creating an array of <code>Flag</code>:</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/118695616-aeb33d80-b80d-11eb-97cd-a6b7933b632d.png">image</a></p>
+<p>All the flag values are located in <code>libs/shared/acore-world-model/src/flags</code> so you can create a new file there, for example <code>dynamic-flags.ts</code> in our case.</p>
+<p>Basically you need to define what&#39;s the meaning of every single bit. Don&#39;t forge that bits typically start from zero.</p>
+<p>Then you need to import the <code>DYNAMIC_FLAGS</code> array in the component&#39;s <code>.ts</code> file and make it available for its <code>.html</code> template by declaring it <code>PUBLIC READONLY</code>:</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/118696084-339e5700-b80e-11eb-951d-0b8f7acf1052.png">image</a></p>
+<p>Now you just need to use it in the html by adding the <code>keira-flags-selector-btn</code> component there:</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/118695922-02258b80-b80e-11eb-9c29-ec6ae693d13c.png">image</a></p>
+<p>The attributes for this component are:</p>
+<p>- <code>[control]</code> the form control, example <code>editorService.form.controls.dynamicflags</code> (note: <code>dynamicflags</code> is the name of the field)
+- <code>[config]</code> an object specifying the <code>options</code> and <code>name</code> property
+- <code>[modalClass]</code> the class of the modal, so you can change the modal size, e.g. <code>modal-md</code> or <code>modal-lg</code> (optional)</p>
+<p>This is the result:</p>
+<p>&lt;img src=&quot;https://user-images.githubusercontent.com/75517/118697264-685ede00-b80f-11eb-9609-6b4af903bcdc.png&quot; width=300&gt;</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/118697333-790f5400-b80f-11eb-8795-cdeae8ebfd64.png">image</a></p>
+<p><h3>Other selectors</h3></p>
+<p>There are other selectors that allow the user to select values by doing a search either in the DB or in the DBC contained in the sqlite integrated in Keira3.</p>
+<p>You can find their implementations in <code>libs/shared/selectors</code> as well as examples of usage around the app.</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/118693136-10be7380-b80b-11eb-9721-081bf1f4128d.png">image</a></p>
+<p>Example: the <strong>item-selector</strong>.</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/118697495-a2c87b00-b80f-11eb-9db4-69357704d5f5.png">image</a></p>
+<p>You can use it whenever an Item ID is needed:</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/118697570-bbd12c00-b80f-11eb-9959-feb7186dab45.png">image</a>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

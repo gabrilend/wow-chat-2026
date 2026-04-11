@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>chrraces.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>chrraces.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/chrraces.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 6621 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>ChrRaces.dbc</h1></p>
+<p><a href="dbc-index"><code>Volver a:DBC</code></a></p>
+<p>Éste archivo DBC alberga todas las razas existentes, algunas de las cuales no son utilizadas y por ende no están disponibles para los jugadores.</p>
+<p><strong>Versión 3.3.5a</strong></p>
+<p><h3>Estructura</h3></p>
+<p>| Columna | Campo                   | Tipo         | Notas                                                                                                                           |
+|---------|-------------------------|--------------|---------------------------------------------------------------------------------------------------------------------------------|
+| 1       | ID                      | Integer      |                                                                                                                                 |
+| 2       | <a href="#flags">Flags</a>         | Integer      |                                                                                                                                 |
+| 3       | FactionID               | iRefID       | Identificador (ID) de la plantilla de facción. El orden de la pantalla en la creación del personaje depende de esto.            |
+| 4       | Exploration             | iRefID       | Jugó en zonas en proceso de exploración con SMSG_EXPLORATION_EXPERIENCE.                                                        |
+| 5       | MaleModel               | iRefID       | Sólo es usado en la pantalla de creación/selección de personajes. El servidor establece el modelo del jugador dentro del juego. |
+| 6       | FemaleModel             | iRefID       | Sólo es usado en la pantalla de creación/selección de personajes. El servidor establece el modelo del jugador dentro del juego. |
+| 7       | ClientPrefix            | String       | Una forma abreviada del nombre. Usado para modelos de cascos que posean los jugadores.                                          |
+| 8       | BaseLanguage            | Integer      | 1 para la Horda, 7 para la Alianza y también para No Jugable.                                                                   |
+| 9       | creatureType            | iRefID       | Siempre el valor 7 (Humanoide).                                                                                                 |
+| 10      | ResSicknessSpellID      | Integer      | Siempre el valor 15007.                                                                                                         |
+| 11      | SplashSoundID           | Integer      | 1090 para los enanos, 1096 para los demás. Estando almacenado en CGUnit de CGUnit::PostInit.                                    |
+| 12      | clientFilestring        | String       | El mismo que se utiliza en las rutas de los archivos para los modelos.                                                          |
+| 13      | cinematicSequenceID     | iRefID       | Identificador (ID) usado para la cinemática de inicio.                                                                          |
+| 14      | alliance                | Integer      | Facción (0 para la Alianza, 1 para la Horda, 2 equivale a No Disponible)                                                        |
+| 15-30   | RaceNameNeutral         | Loc          | Nombre a mostrar.                                                                                                               |
+| 31      | NameLangMask            | Integer      | Marcadores en cadena, sin uso aparente.                                                                                         |
+| 32-47   | RaceNameFemale          | Loc          | Sólo si es diferente del nombre anterior, de lo contrario no es usado. Siempre apunta a NULL para zhCN.                         |
+| 48      | NameFemaleLangMask      | Integer      | Marcadores en cadena, sin uso aparente.                                                                                         |
+| 49-64   | RaceNameMale            | Loc          | Sólo si es diferente del nombre anterior, de lo contrario no es usado. Siempre apunta a NULL para zhCN.                         |
+| 65      | NameMaleLangMask        | Integer      | Marcadores en cadena, sin uso aparente.                                                                                         |
+| 66      | facialHairCustomization | String       | Nombres internos para los rasgos faciales.                                                                                      |
+| 67      | facialHairCustomization | String       | Los nombres en clave se encuentran en luas.                                                                                     |
+| 68      | hairCustomization       | String       | Nombre interno para las personalizaciones del cabello. Cuernos para los tauren, normal para el resto.                           |
+| 69      | required_expansion      | Integer      | 0 para Classic y No Jugable, 1 para Burning Crusade                                                                             |</p>
+<p><h3>Contenido</h3></p>
+<p>| ID | Valor    | Nombre                  |
+|----|----------|-------------------------|
+| 1  | 1        | Humano                  |
+| 2  | 2        | Orco                    |
+| 3  | 4        | Enano                   |
+| 4  | 8        | Elfo de la Noche        |
+| 5  | 16       | No-Muerto               |
+| 6  | 32       | Tauren                  |
+| 7  | 64       | Gnomo                   |
+| 8  | 128      | Trol                    |
+| 9  | 256      | Goblin                  |
+| 10 | 512      | Elfo de Sangre          |
+| 11 | 1024     | Draenei                 |
+| 12 | 2048     | Orco Vil                |
+| 13 | 4096     | Naga                    |
+| 14 | 8192     | Tábido                  |
+| 15 | 16384    | Esqueleto               |
+| 16 | 32768    | Vrykul                  |
+| 17 | 65536    | Tuskarr                 |
+| 18 | 131072   | Trol del bosque         |
+| 19 | 262144   | Taunka                  |
+| 20 | 524288   | Esqueleto de Rasganorte |
+| 21 | 1048576  | Trol de hielo           |</p>
+<p><h3>Flags</h3></p>
+<p>| Marcador | Descripción        |
+|----------|--------------------|
+| 1        | No jugable         |
+| 2        | Pies descalzos     |
+| 4        | Puede usar montura |
+| 8        | Es calvo (¿XD?)    |</p>
+<p><h3>Valores de Facción</h3></p>
+<p>Sólo para la Alianza = 1101;
+Sólo para la Horda = 690;
+Para ambas facciones = 1791 (0 también puede funcionar);</p>
+<p><h3>¿Cómo se obtienen los valores?</h3></p>
+<p>Si quieres aprender acerca de cómo funcionan realmente los bits puedes leer el artículo de <a href="Bit-and_bytes-tutorial">Tutorial de Bits y Bytes</a> que puede ser hallado en esta misma página.</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

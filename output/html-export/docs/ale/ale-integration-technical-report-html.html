@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ale-integration-technical-report.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ale-integration-technical-report.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/ale/ale-integration-technical-report.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 40756 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-09 11:20
+        </div>
+
+        <div class="content">
+            <p><h1>ALE Integration Technical Report</h1></p>
+<p><h2>Table of Contents</h2></p>
+<p>1. <a href="#overview">Overview</a>
+2. <a href="#part-1-server-side-event-generation">Part 1: Server-Side Event Generation</a>
+   - 1.1 World Update Loop
+   - 1.2 Event Trigger Points
+   - 1.3 Hook Dispatch Entry
+3. <a href="#part-2-ale-engine-internals">Part 2: ALE Engine Internals</a>
+   - 2.1 The Lua State
+   - 2.2 Hook Handler Functions
+   - 2.3 Data Transformation: C++ to Lua
+   - 2.4 Metatable System
+   - 2.5 Registry and Binding Maps
+   - 2.6 Callback Execution
+   - 2.7 Timed Events
+4. <a href="#part-3-boundary-crossings">Part 3: Boundary Crossings</a>
+   - 3.1 C++ → Lua (Event Dispatch)
+   - 3.2 Lua → C++ (API Calls)
+   - 3.3 Error Handling at Boundary
+5. <a href="#part-4-custom-patches">Part 4: Custom Patches</a>
+   - 4.1 Patch Registry
+   - 4.2 B002: Playerbots ALE Login Hook
+   - 4.3 B003: Gameobject Wildcard
+6. <a href="#part-5-registry-corruption-analysis-issue-332">Part 5: Registry Corruption Analysis</a>
+   - 5.1-5.8 Corruption hypotheses and analysis
+7. <a href="#part-6-script-load-order">Part 6: Script Load Order</a>
+8. <a href="#part-7-critical-boundary-summary">Part 7: Critical Boundary Summary</a>
+9. <a href="#appendix-a-key-source-files">Appendices</a></p>
+<p>---</p>
+<p><h2>Overview</h2></p>
+<p>This document traces the complete data flow and control handoff between AzerothCore (C++),
+the Azeroth Lua Engine (ALE), and our custom Lua scripts. Focus is on the boundary points
+where control and data cross between systems.</p>
+<p><pre><code>┌─────────────────────────────────────────────────────────────────────────────┐
+│                           AZEROTHCORE SERVER                                │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
+│  │  World Update   │───▶│  Event Trigger  │───▶│  Hook Dispatch  │         │
+│  │  (Game Loop)    │    │  (C++ Code)     │    │  (ALE Entry)    │         │
+│  └─────────────────┘    └─────────────────┘    └────────┬────────┘         │
+└─────────────────────────────────────────────────────────┼───────────────────┘
+                                                          │
+                                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              ALE ENGINE                                     │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
+│  │  Hook Handler   │───▶│  Registry Lookup│───▶│  ExecuteCall    │         │
+│  │  (ServerHooks)  │    │  (BindingMap)   │    │  (lua_pcall)    │         │
+│  └─────────────────┘    └─────────────────┘    └────────┬────────┘         │
+└─────────────────────────────────────────────────────────┼───────────────────┘
+                                                          │
+                                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           LUA SCRIPTS                                       │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
+│  │  Callback Exec  │───▶│  Business Logic │───▶│  C++ Method     │         │
+│  │  (User Code)    │    │  (User Code)    │    │  Calls (API)    │         │
+│  └─────────────────┘    └─────────────────┘    └─────────────────┘         │
+└─────────────────────────────────────────────────────────────────────────────┘</code></pre></p>
+<p>---</p>
+<p><h2>Part 1: Server-Side Event Generation</h2></p>
+<p><h3>1.1 World Update Loop</h3></p>
+<p>AzerothCore&#39;s main game loop runs in <code>World::Update()</code>. Each tick processes:
+- Player movement
+- Creature AI
+- Spell effects
+- Network packets</p>
+<p>Events originate from these subsystems and propagate to ALE hooks.</p>
+<p><h3>1.2 Event Trigger Points</h3></p>
+<p>Events are generated at specific C++ locations. Key examples:</p>
+<p>| Event                    | Source Location                          | Trigger Condition           |
+|--------------------------|------------------------------------------|------------------------------|
+| PLAYER_EVENT_ON_LOGIN    | <code>WorldSession::HandlePlayerLogin</code>        | Player enters world          |
+| PLAYER_EVENT_ON_LOGOUT   | <code>WorldSession::LogoutPlayer</code>             | Player leaves world          |
+| PLAYER_EVENT_ON_KILL     | <code>Unit::Kill</code>                             | Unit dies to player damage   |
+| CREATURE_EVENT_ON_SPAWN  | <code>Creature::InitEntry</code>                    | Creature spawns              |
+| GAMEOBJECT_EVENT_ON_USE  | <code>Spell::EffectOpenLock</code>                  | Player uses gameobject       |</p>
+<p><h3>1.3 Hook Dispatch Entry</h3></p>
+<p>Each event location calls an ALE hook function. The call site pattern:</p>
+<p>``<code>cpp
+// In AzerothCore source (e.g., WorldSession.cpp)
+void WorldSession::HandlePlayerLogin(/<em> ... </em>/)
+{
+    // ... player initialization ...</p>
+<p>    // Hook call - control transfers to ALE
+    sALE-&gt;OnLogin(player);  // &lt;-- BOUNDARY CROSSING</p>
+<p>    // ... continue player setup ...
+}
+<pre><code>
+<strong>Critical Files:</strong>
+- </code>WorldSession.cpp<code> - Player login/logout
+- </code>Unit.cpp<code> - Combat events
+- </code>Creature.cpp<code> - Creature AI events
+- </code>GameObject.cpp<code> - Interaction events</p>
+<p>---</p>
+<p>&lt;h2&gt;Part 2: ALE Engine Internals&lt;/h2&gt;</p>
+<p>&lt;h3&gt;2.1 The Lua State&lt;/h3&gt;</p>
+<p>ALE maintains a single </code>lua_State<em> L<code> throughout the server&amp;#39;s lifetime. This state contains:
+</code></pre>
+┌─────────────────────────────────────────────────────────────────┐
+│                        LUA STATE                                │
+├─────────────────────────────────────────────────────────────────┤
+│  REGISTRY (LUA_REGISTRYINDEX)                                   │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ [1]  = function (callback for event A)                     │ │
+│  │ [2]  = function (callback for event B)                     │ │
+│  │ [3]  = table    (instance data for map 0)                  │ │
+│  │ [4]  = function (timed event callback)                     │ │
+│  │ ...  = mixed    (refs allocated/freed dynamically)         │ │
+│  │ [&quot;Player&quot;]    = metatable for Player userdata              │ │
+│  │ [&quot;Creature&quot;]  = metatable for Creature userdata            │ │
+│  │ [&quot;GameObject&quot;] = metatable for GameObject userdata         │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│  GLOBALS (_G)                                                   │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ Player           = metatable (same as registry)            │ │
+│  │ Creature         = metatable (same as registry)            │ │
+│  │ RegisterPlayerEvent = C function                           │ │
+│  │ GetPlayersInWorld   = C function                           │ │
+│  │ ... user scripts populate this ...                         │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│  STACK (temporary, per-call)                                    │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ [top]   = current operation values                         │ │
+│  │ [...]   = function arguments, return values                │ │
+│  │ [1]     = bottom of stack                                  │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+<pre><code>
+&lt;h3&gt;2.2 Hook Handler Functions&lt;/h3&gt;</p>
+<p>Each event type has a handler in </code>ServerHooks.cpp<code> or </code>PlayerHooks.cpp<code>:
+</code></pre>cpp
+// mod-ale/src/LuaEngine/hooks/PlayerHooks.cpp
+void ALE::OnLogin(Player</em> player)
+{
+    START_HOOK(PLAYER_EVENT_ON_LOGIN);  // Macro: sets up event key
+    Push(player);                        // Push userdata to Lua stack
+    CallAllFunctions(PlayerEventBindings, key);  // Execute all registered callbacks
+}
+<pre><code>
+<strong>START_HOOK macro expansion:</strong></code></pre>cpp
+#define START_HOOK(EVENT) \
+    LOCK_ALE; \                                              // Acquire mutex
+    if (!ALEConfig::GetInstance().IsALEEnabled()) return; \  // Check enabled
+    auto key = EventKey&lt;Hooks::PlayerEvents&gt;((Hooks::PlayerEvents)EVENT);</p>
+<p>// LOCK_ALE is a RAII guard:
+struct ALELock {
+    ALELock() { sALE-&gt;mutex.lock(); }
+    ~ALELock() { sALE-&gt;mutex.unlock(); }
+};
+#define LOCK_ALE ALELock _aleLock
+<pre><code>
+The lock ensures single-threaded access to the Lua state. All hook handlers acquire this lock before touching any Lua data.</p>
+<p>&lt;h3&gt;2.3 Data Transformation: C++ to Lua&lt;/h3&gt;</p>
+<p>The </code>Push()<code> family of functions converts C++ types to Lua values:</p>
+<p>| C++ Type         | Lua Type      | Push Function                    |
+|------------------|---------------|----------------------------------|
+| </code>Player<em><code>        | userdata      | </code>Push(L, player)<code> → metatable    |
+| </code>Creature</em><code>      | userdata      | </code>Push(L, creature)<code> → metatable  |
+| </code>uint32<code>         | number        | </code>Push(L, value)<code> → lua_pushint   |
+| </code>std::string<code>    | string        | </code>Push(L, str)<code> → lua_pushstring  |
+| </code>ObjectGuid<code>     | number        | </code>Push(L, guid)<code> → uint64         |
+| </code>bool<code>           | boolean       | </code>Push(L, val)<code> → lua_pushboolean |</p>
+<p><strong>Userdata wrapping (LuaFunctions.cpp):</strong></code></pre>cpp
+template &lt;typename T&gt;
+void ALE::Push(lua_State<em> L, T const</em> obj)
+{
+    if (!obj)
+    {
+        lua_pushnil(L);
+        return;
+    }</p>
+<p>    // Create userdata containing pointer
+    <em>(T</em><em>)lua_newuserdata(L, sizeof(T</em>)) = const_cast&lt;T<em>&gt;(obj);</p>
+<p>    // Attach metatable for type checking and method dispatch
+    lua_pushstring(L, ALE::GName&lt;T&gt;());  // Type name: &quot;Player&quot;, &quot;Creature&quot;, etc.
+    lua_rawget(L, LUA_REGISTRYINDEX);    // Get metatable from registry
+    lua_setmetatable(L, -2);             // Attach to userdata
+}
+<pre><code>
+<strong>Memory layout of userdata:</strong></code></pre>
+┌─────────────────────────────────────────────────────────────────┐
+│                    LUA USERDATA (on Lua heap)                   │
+├─────────────────────────────────────────────────────────────────┤
+│  Header:  GC info, type tag, size                               │
+│  Data:    [ Player</em> pointer ]  ← 8 bytes, points to C++ object  │
+│  Meta:    → &quot;Player&quot; metatable in registry                      │
+└─────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                C++ PLAYER OBJECT (server heap)                  │
+├─────────────────────────────────────────────────────────────────┤
+│  Unit base class fields...                                      │
+│  Player-specific fields...                                      │
+│  m_name, m_level, m_position, etc.                              │
+│  ALEEvents<em> ALEEvents;  ← Pointer to timed event processor      │
+└─────────────────────────────────────────────────────────────────┘
+<pre><code>
+The userdata is a thin wrapper. Lua owns the userdata memory (8 bytes for a pointer).
+The server owns the actual Player object. When the Player is deleted in C++, the userdata
+becomes a dangling pointer. ALE handles this via InvalidateObjects() after callbacks.</p>
+<p>&lt;h3&gt;2.4 Metatable System&lt;/h3&gt;</p>
+<p>Each C++ type has a metatable registered in the Lua registry. Metatables enable:
+- Method dispatch (</code>player:GetName()<code> → </code>PlayerMethods::GetName<code>)
+- Type checking (</code>luaL_checkudata<code> verifies metatable matches)
+- Operator overloading (comparison, arithmetic if needed)</p>
+<p><strong>Metatable structure:</strong>
+&lt;pre&gt;&lt;code class=&quot;lua&quot;&gt;&lt;span class=&quot;comment&quot;&gt;-- Registry[&amp;amp;quot;Player&amp;amp;quot;] contains:&lt;/span&gt;
+{
+    __index = {
+        GetName = &amp;amp;lt;C &lt;span class=&quot;keyword&quot;&gt;function&lt;/span&gt;: PlayerMethods::GetName&amp;amp;gt;,
+        GetLevel = &amp;amp;lt;C &lt;span class=&quot;keyword&quot;&gt;function&lt;/span&gt;: PlayerMethods::GetLevel&amp;amp;gt;,
+        GetGUID = &amp;amp;lt;C &lt;span class=&quot;keyword&quot;&gt;function&lt;/span&gt;: WorldObjectMethods::GetGUID&amp;amp;gt;,
+        RegisterEvent = &amp;amp;lt;C &lt;span class=&quot;keyword&quot;&gt;function&lt;/span&gt;: WorldObjectMethods::RegisterEvent&amp;amp;gt;,
+        &lt;span class=&quot;comment&quot;&gt;-- ... hundreds of methods ...&lt;/span&gt;
+    },
+    __tostring = &amp;amp;lt;C &lt;span class=&quot;keyword&quot;&gt;function&lt;/span&gt;: prints &amp;amp;quot;Player: &amp;amp;lt;name&amp;amp;gt;&amp;amp;quot;&amp;amp;gt;,
+    __eq = &amp;amp;lt;C &lt;span class=&quot;keyword&quot;&gt;function&lt;/span&gt;: compares GUIDs&amp;amp;gt;,
+}&lt;/code&gt;&lt;/pre&gt;</p>
+<p><strong>Method dispatch flow:</strong></code></pre>
+Lua: player:GetLevel()
+  │
+  ▼
+Lua VM: getfield(player, &quot;GetLevel&quot;)
+  │      player has no &quot;GetLevel&quot; field
+  │      Check metatable.__index
+  ▼
+Metatable.__index[&quot;GetLevel&quot;] → C function pointer
+  │
+  ▼
+C call: PlayerMethods::GetLevel(L, player)
+  │
+  │  // Extract Player</em> from userdata
+  │  Player<em> player = CHECKOBJ&lt;Player&gt;(L, 1);
+  │
+  │  // Call actual C++ method
+  │  uint8 level = player-&gt;GetLevel();
+  │
+  │  // Push result to Lua stack
+  │  Push(L, level);
+  │
+  ▼
+Returns 1 (one value on stack)
+<pre><code>
+&lt;h3&gt;2.5 Registry and Binding Maps&lt;/h3&gt;</p>
+<p>ALE stores callback references in multiple binding maps:
+</code></pre>cpp
+// LuaEngine.h
+BindingMap&lt;EventKey&lt;PlayerEvents&gt;&gt;</em>  PlayerEventBindings;   // RegisterPlayerEvent
+BindingMap&lt;EventKey&lt;ServerEvents&gt;&gt;<em>  ServerEventBindings;   // RegisterServerEvent
+BindingMap&lt;EntryKey&lt;CreatureEvents&gt;&gt;</em> CreatureEventBindings; // RegisterCreatureEvent
+// ... etc
+<pre><code>
+<strong>The Lua Registry as Memory Pool:</strong></p>
+<p>The Lua registry is a special table at pseudo-index </code>LUA_REGISTRYINDEX<code>. Unlike normal tables,
+it uses integer keys allocated by </code>luaL_ref()<code>:
+</code></pre>
+Registry Slot Allocation:
+┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+│  1  │  2  │  3  │  4  │  5  │  6  │  7  │  8  │ ... │
+├─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤
+│func │func │tbl  │FREE │func │FREE │func │tbl  │     │
+│(ev) │(ev) │(dat)│     │(tim)│     │(ev) │(dat)│     │
+└─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+   ↑           ↑     ↑
+   │           │     └── Freed slot, available for reuse
+   │           └── Instance data table
+   └── Event callback function</p>
+<p>luaL_ref(L, LUA_REGISTRYINDEX):
+  1. Pop value from stack
+  2. Find first free slot (linked list of freed slots)
+  3. Store value in slot
+  4. Return slot number (the &quot;ref&quot;)</p>
+<p>luaL_unref(L, LUA_REGISTRYINDEX, ref):
+  1. Set registry[ref] = nil
+  2. Add ref to free list
+  3. Slot now available for next luaL_ref()
+<pre><code>
+<strong>Registration flow:</strong></code></pre>
+Lua: RegisterPlayerEvent(3, myCallback)
+  │
+  ▼
+GlobalMethods.h: RegisterEventHelper()
+  │ luaL_checktype(L, 2, LUA_TFUNCTION)  ← CRITICAL: Type check here
+  │ lua_pushvalue(L, 2)                   ← Copy function to top of stack
+  │ int funcRef = luaL_ref(L, LUA_REGISTRYINDEX)  ← Pop and store, get ref
+  ▼
+LuaEngine.cpp: Register()
+  │ key = EventKey&lt;PlayerEvents&gt;(PLAYER_EVENT_ON_LOGIN)
+  │ PlayerEventBindings-&gt;Insert(key, funcRef, shots)  ← Store binding
+  ▼
+BindingMap.h: Insert()
+  │ uint64 id = ++next_id
+  │ Binding<em> b = new Binding(L, id, funcRef, shots)
+  │ bindings[key].push_back(unique_ptr&lt;Binding&gt;(b))
+  │ id_lookup_table[id] = iterator_to_binding
+  ▼
+createCancelCallback(L, id, bindings)  ← Returns closure that can remove binding
+<pre><code>
+<strong>Binding ownership model:</strong></code></pre>
+┌─────────────────────────────────────────────────────────────────┐
+│                      BindingMap                                 │
+├─────────────────────────────────────────────────────────────────┤
+│  bindings: map&lt;EventKey, list&lt;unique_ptr&lt;Binding&gt;&gt;&gt;             │
+│                                   │                             │
+│                                   ▼                             │
+│                          ┌──────────────┐                       │
+│                          │   Binding    │                       │
+│                          ├──────────────┤                       │
+│                          │ funcRef: 5   │───┐                   │
+│                          │ shots: 0     │   │                   │
+│                          │ id: 12345    │   │                   │
+│                          └──────────────┘   │                   │
+│                                             │                   │
+│                                             ▼                   │
+│                                    ┌────────────────┐           │
+│                                    │  Lua Registry  │           │
+│                                    │   [5] = func   │           │
+│                                    └────────────────┘           │
+│                                                                 │
+│  When Binding is destroyed (unique_ptr deleted):                │
+│    ~Binding() { luaL_unref(L, LUA_REGISTRYINDEX, funcRef); }    │
+│                                                                 │
+│  This frees registry slot 5 for reuse.                          │
+└─────────────────────────────────────────────────────────────────┘
+<pre><code>
+&lt;h3&gt;2.4 Callback Execution&lt;/h3&gt;</p>
+<p><strong>PushRefsFor (retrieves all callbacks for an event):</strong></code></pre>cpp
+// BindingMap.h:182
+void PushRefsFor(const K&amp; key)
+{
+    Guard guard(GetLock());  // Thread safety</p>
+<p>    auto result = bindings.find(key);
+    if (result == bindings.end()) return;</p>
+<p>    for (auto&amp; binding : result-&gt;second)
+    {
+        // Push function from Lua registry to stack
+        lua_rawgeti(L, LUA_REGISTRYINDEX, binding-&gt;functionReference);</p>
+<p>        // Handle shot counting
+        if (binding-&gt;remainingShots &gt; 0)
+        {
+            binding-&gt;remainingShots--;
+            if (binding-&gt;remainingShots == 0)
+            {
+                // Remove binding, destructor calls luaL_unref
+                bindings.erase(binding);
+            }
+        }
+    }
+}
+<pre><code>
+<strong>ExecuteCall (actually runs the Lua function):</strong></code></pre>cpp
+// LuaEngine.cpp:844
+bool ALE::ExecuteCall(int params, int res)
+{
+    int base = lua_gettop(L) - params;</p>
+<p>    // CRITICAL CHECK - crash point for Issue 332
+    if (!lua_isfunction(L, base))
+    {
+        ALE_LOG_ERROR(&quot;[ALE]: Cannot execute call: registered value is {}, not a function.&quot;,
+                      luaL_tolstring(L, base, NULL));
+        ASSERT(false);  // Stack probably corrupt
+    }</p>
+<p>    // Protected call with optional traceback
+    ++event_level;
+    int result = lua_pcall(L, params, res, errorHandler);
+    --event_level;</p>
+<p>    if (result) Report(L);  // Log error
+    return result == 0;
+}
+<pre><code>
+&lt;h3&gt;2.5 Timed Events (Player:RegisterEvent)&lt;/h3&gt;</p>
+<p>Separate from global event bindings, timed events attach to specific WorldObjects:
+</code></pre>cpp
+// WorldObjectMethods.h:758
+int RegisterEvent(lua_State</em> L, WorldObject<em> obj)
+{
+    luaL_checktype(L, 2, LUA_TFUNCTION);  // Arg 2 must be function
+    uint32 delay = ALE::CHECKVAL&lt;uint32&gt;(L, 3);
+    uint32 repeats = ALE::CHECKVAL&lt;uint32&gt;(L, 4, 1);</p>
+<p>    lua_pushvalue(L, 2);
+    int funcRef = luaL_ref(L, LUA_REGISTRYINDEX);  // Store function</p>
+<p>    obj-&gt;ALEEvents-&gt;AddEvent(funcRef, delay, repeats);  // Add to event processor
+    return 1;  // Returns eventId
+}
+<pre><code>
+<strong>Event processor update cycle (ALEEventMgr.cpp:42):</strong></code></pre>cpp
+void ALEEventProcessor::Update(uint32 diff)
+{
+    m_time += diff;</p>
+<p>    for (auto it = eventList.begin(); it != eventList.end(); /</em> ... <em>/)
+    {
+        LuaEvent</em> event = it-&gt;second;
+        eventList.erase(it);</p>
+<p>        if (event-&gt;state == LUAEVENT_STATE_RUN)
+        {
+            bool lastRun = (event-&gt;repeats == 1);
+            if (!lastRun)
+                AddEvent(event);  // Reschedule</p>
+<p>            // Execute via ServerHooks::OnTimedEvent
+            E-&gt;OnTimedEvent(event-&gt;funcRef, delay, repeats, obj);</p>
+<p>            if (!lastRun) continue;
+        }</p>
+<p>        RemoveEvent(event);  // Calls luaL_unref
+    }
+}
+<pre><code>
+---</p>
+<p>&lt;h2&gt;Part 3: Boundary Crossings&lt;/h2&gt;</p>
+<p>&lt;h3&gt;3.1 C++ → Lua (Event Dispatch)&lt;/h3&gt;</p>
+<p><strong>Entry points where C++ transfers control to Lua:</strong></p>
+<p>| Hook Function         | Source File           | Pushes to Stack            |
+|-----------------------|-----------------------|----------------------------|
+| </code>OnLogin(player)<code>     | PlayerHooks.cpp:340   | event_id, player           |
+| </code>OnLogout(player)<code>    | PlayerHooks.cpp:355   | event_id, player           |
+| </code>OnTimedEvent(...)<code>   | ServerHooks.cpp:67    | eventId, delay, reps, obj  |
+| </code>OnCreatureKilled()<code>  | PlayerHooks.cpp:380   | event_id, player, creature |
+| </code>OnLootItem()<code>        | PlayerHooks.cpp:420   | event_id, player, item     |</p>
+<p><strong>Stack state at Lua entry:</strong></code></pre>
+┌─────────────────┐
+│  callback func  │ ← Pushed by PushRefsFor
+├─────────────────┤
+│    argument N   │
+│       ...       │
+│    argument 2   │
+│    argument 1   │ ← event_id
+└─────────────────┘
+<pre><code>
+&lt;h3&gt;3.2 Lua → C++ (API Calls)&lt;/h3&gt;</p>
+<p><strong>When Lua calls a C++ method:</strong></p>
+<p>&lt;pre&gt;&lt;code class=&quot;lua&quot;&gt;&lt;span class=&quot;comment&quot;&gt;-- Lua code&lt;/span&gt;
+player:GetName()&lt;/code&gt;&lt;/pre&gt;</p>
+<p><strong>Dispatch path:</strong></code></pre>
+Lua: player:GetName()
+  │
+  ▼
+Metatable __index → PlayerMethods table
+  │
+  ▼
+PlayerMethods.h: GetName()
+  │ Player<em> player = CHECKOBJ&lt;Player&gt;(L, 1);  ← Extract pointer from userdata
+  │ std::string name = player-&gt;GetName();     ← C++ method call
+  │ Push(L, name);                            ← Push result to Lua
+  ▼
+Returns 1 (one result on stack)
+<pre><code>
+<strong>CHECKOBJ macro (type-safe extraction):</strong></code></pre>cpp
+template &lt;typename T&gt;
+T</em> CHECKOBJ(lua_State<em> L, int index)
+{
+    T<strong> ptrHolder = static_cast&lt;T</strong>&gt;(luaL_checkudata(L, index, GName&lt;T&gt;()));
+    return </em>ptrHolder;
+}
+<pre><code>
+&lt;h3&gt;3.3 Error Handling at Boundary&lt;/h3&gt;</p>
+<p><strong>Lua errors propagate to C++:</strong></code></pre>cpp
+// lua_pcall returns non-zero on error
+int result = lua_pcall(L, params, res, errorHandler);
+if (result)
+{
+    // Error message is on stack
+    Report(L);  // Logs error
+    lua_gc(L, LUA_GCCOLLECT, 0);  // Force GC
+    // Push nils for expected results
+}
+<pre><code>
+<strong>C++ errors propagate to Lua:</strong></code></pre>cpp
+// Methods use luaL_error for validation failures
+if (!player)
+    return luaL_error(L, &quot;Player is nil&quot;);
+<pre><code>
+---</p>
+<p>&lt;h2&gt;Part 4: Custom Patches&lt;/h2&gt;</p>
+<p>&lt;h3&gt;4.1 Patch Registry&lt;/h3&gt;</p>
+<p>| ID    | Name                          | Phase  | Purpose                                      |
+|-------|-------------------------------|--------|----------------------------------------------|
+| B001  | aoe-loot-item-namespace       | BEGIN  | Fix compilation: </code>Acore::Item::<code> namespace   |
+| B002  | playerbots-ale-login-hook     | BEGIN  | Trigger OnLogin for bots                     |
+| B003  | ale-gameobject-wildcard       | BEGIN  | Enable entry 0 as wildcard for GO events    |
+| E001  | lua-script-symlinks           | END    | Symlink src/lua to install dir               |
+| E004  | log-directory-setup           | END    | RAM-backed log directory                     |
+| E005  | dk-levelstats                 | END    | Death Knight level 1-20 stats               |</p>
+<p>&lt;h3&gt;4.2 B002: Playerbots ALE Login Hook&lt;/h3&gt;</p>
+<p><strong>Problem:</strong> Bots log in via </code>OnBotLoginInternal()<code>, bypassing ALE hooks.</p>
+<p><strong>Solution:</strong> Add explicit </code>sALE-&amp;gt;OnLogin(bot)<code> call.</p>
+<p><strong>Integration point:</strong></code></pre>
+RandomPlayerbotMgr.cpp:
+  │
+  void OnBotLoginInternal(Player<em> bot)
+  {
+      // ... existing initialization ...
+      // XP flag handling</p>
+<p>      #ifdef MOD_ALE
+      sALE-&gt;OnLogin(bot);  ← PATCH INSERTION POINT
+      #endif
+  }
+<pre><code>
+<strong>Data flow with patch:</strong></code></pre>
+Playerbots creates bot → OnBotLoginInternal()
+  │
+  ▼ (after XP flag setup)
+sALE-&gt;OnLogin(bot)
+  │
+  ▼
+ALE::OnLogin() in PlayerHooks.cpp
+  │
+  ▼
+Push(player) → Lua stack
+  │
+  ▼
+CallAllFunctions(PlayerEventBindings, PLAYER_EVENT_ON_LOGIN)
+  │
+  ▼
+Each registered callback executes (periodic_events.lua:InitialLogin, etc.)
+<pre><code>
+&lt;h3&gt;4.3 B003: Gameobject Wildcard&lt;/h3&gt;</p>
+<p><strong>Problem:</strong> </code>RegisterGameObjectEvent(entry, event, callback)<code> requires valid entry ID.</p>
+<p><strong>Solution:</strong> Allow entry 0 to match all gameobjects.</p>
+<p><strong>Integration point:</strong></code></pre>cpp
+// LuaEngine.cpp ~line 1415
+case Hooks::REGTYPE_GAMEOBJECT:
+    // PATCH: entry 0 = wildcard for all gameobjects
+    if (entry != 0 &amp;&amp; !eObjectMgr-&gt;GetGameObjectTemplate(entry))
+    {
+        // Validation error
+    }
+    // Register normally
+<pre><code>
+<strong>Effect:</strong> Entry 0 callbacks fire for ALL gameobject interactions.</p>
+<p>---</p>
+<p>&lt;h2&gt;Part 5: Registry Corruption Analysis (Issue 332)&lt;/h2&gt;</p>
+<p>&lt;h3&gt;5.1 Crash Point&lt;/h3&gt;
+</code></pre>cpp
+// LuaEngine.cpp:853
+if (!lua_isfunction(L, base))
+{
+    ALE_LOG_ERROR(&quot;[ALE]: Cannot execute call: registered value is {}, not a function.&quot;,
+                  luaL_tolstring(L, base, NULL));
+    ASSERT(false);  // &quot;stack probably corrupt&quot;
+}
+<pre><code>
+&lt;h3&gt;5.2 Data Flow to Crash&lt;/h3&gt;
+</code></pre>
+Normal flow:
+  Event triggers → PushRefsFor() → lua_rawgeti(funcRef) → FUNCTION on stack → ExecuteCall</p>
+<p>Corruption flow:
+  Event triggers → PushRefsFor() → lua_rawgeti(funcRef) → TABLE on stack → CRASH
+                                          ↑
+                                 funcRef points to wrong value
+<pre><code>
+<strong>The question:</strong> How does registry[funcRef] change from FUNCTION to TABLE?</p>
+<p>&lt;h3&gt;5.3 Registry Slot Lifecycle&lt;/h3&gt;
+</code></pre>
+SCENARIO: Timed event re-registration pattern</p>
+<p>Timeline:
+┌────────────────────────────────────────────────────────────────────────────┐
+│ T1: periodicEvent(func, 5000, 1, player)                                   │
+│     └─ luaL_ref() allocates slot 10, stores FUNCTION                       │
+│     └─ LuaEvent created with funcRef=10                                    │
+├────────────────────────────────────────────────────────────────────────────┤
+│ T2: 5 seconds later, event fires                                           │
+│     └─ ALEEventProcessor::Update() processes event                         │
+│     └─ lua_rawgeti(L, REGISTRY, 10) → pushes FUNCTION                      │
+│     └─ OnTimedEvent(10, ...) → calls ExecuteCall                           │
+│                                                                            │
+│     INSIDE the callback:                                                   │
+│       └─ Lua: periodicEvent(func, 5000, 1, player)                         │
+│       └─ luaL_ref() allocates slot 11, stores FUNCTION                     │
+│       └─ New LuaEvent created with funcRef=11                              │
+│       └─ Callback returns                                                  │
+│                                                                            │
+│     AFTER callback:                                                        │
+│     └─ RemoveEvent() called for original event                             │
+│     └─ luaL_unref(10) frees slot 10                                        │
+├────────────────────────────────────────────────────────────────────────────┤
+│ T3: Next iteration, new event fires...                                     │
+│     └─ Process repeats with funcRef=11                                     │
+└────────────────────────────────────────────────────────────────────────────┘</p>
+<p>This is CORRECT behavior. Slot 10 freed AFTER callback completes.
+<pre><code>
+&lt;h3&gt;5.4 Corruption Hypothesis: PushRefsFor Shot Depletion&lt;/h3&gt;
+</code></pre>cpp
+// BindingMap.h:194-210
+void PushRefsFor(const K&amp; key)
+{
+    Guard guard(GetLock());</p>
+<p>    for (auto i = list.begin(); i != list.end();)
+    {
+        Binding&amp; binding = <strong>i;
+        auto i_prev = (i++);</p>
+<p>        // LINE A: Push function from registry
+        lua_rawgeti(L, LUA_REGISTRYINDEX, binding.funcRef);</p>
+<p>        if (binding.remainingShots &gt; 0)
+        {
+            binding.remainingShots--;</p>
+<p>            if (binding.remainingShots == 0)
+            {
+                // LINE B: Erase binding (destructor calls luaL_unref)
+                list.erase(i_prev);  // ← SLOT FREED HERE
+            }
+        }
+    }
+}
+<pre><code>
+</strong>Potential issue:<strong> Between LINE A and LINE B:
+1. Function is pushed to stack (safe, stack holds reference)
+2. Binding destroyed, luaL_unref() frees registry slot
+3. If lua_rawgeti is called AGAIN before lua_pcall...</p>
+<p></strong>But:<strong> The guard lock prevents concurrent access. And the function is already on stack.
+So this should be safe.</p>
+<p>&lt;h3&gt;5.5 Corruption Hypothesis: Instance Data Collision&lt;/h3&gt;
+</code></pre>
+Registry contains BOTH:
+- Event callback functions (from RegisterPlayerEvent)
+- Instance data tables (from CreateInstanceData)</p>
+<p>They share the same integer namespace.</p>
+<p>┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+│  1  │  2  │  3  │  4  │  5  │  6  │  7  │  8  │  9  │
+├─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤
+│func │func │func │tbl  │func │tbl  │func │func │tbl  │
+│login│loot │timer│map0 │kill │map1 │chat │kill │map2 │
+└─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘</p>
+<p>If code MISTAKENLY uses an instance data ref as a funcRef:
+  lua_rawgeti(L, REGISTRY, 4)  → Gets TABLE (map0 data)
+  ExecuteCall()                → CRASH: not a function
+<pre><code>
+</strong>Storage locations:<strong>
+- Event funcRefs: stored in Binding.functionReference
+- Instance data refs: stored in instanceDataRefs[mapId] or continentDataRefs[instanceId]</p>
+<p>These are separate data structures. Collision would require bug in ALE code.</p>
+<p>&lt;h3&gt;5.6 Corruption Hypothesis: Threading Race&lt;/h3&gt;
+</code></pre>
+Thread A (World Update):              Thread B (Map Thread):
+─────────────────────────────────     ─────────────────────────────────
+sALE-&gt;OnLogin(player)                 sALE-&gt;CreateInstanceData(map)
+  │                                     │
+  LOCK_ALE                              LOCK_ALE (BLOCKED)
+  │                                     │
+  PushRefsFor(key)                      │
+    │                                   │
+    lua_rawgeti(L, REG, 5)              │
+    │                                   │
+  CallOneFunction()                     │
+    │                                   │
+    lua_pcall()                         │
+      │                                 │
+      [Lua callback runs]               │
+        │                               │
+      [callback returns]                │
+    │                                   │
+  UNLOCK_ALE                            │
+  │                                     │
+  return                                LOCK_ALE acquired
+                                        │
+                                        lua_istable(L, -1)
+                                        luaL_ref() → gets slot N
+                                        │
+                                        UNLOCK_ALE
+<pre><code>
+The LOCK_ALE ensures serialization. Thread B cannot touch registry while A is working.
+But what if there&amp;#39;s a path that DOESN&amp;#39;T use LOCK_ALE?</p>
+<p>&lt;h3&gt;5.7 Verified Safe Paths&lt;/h3&gt;</p>
+<p>All registration paths have type checking:
+- </code>luaL_checktype(L, 2, LUA_TFUNCTION)<code> in GlobalMethods.h:597, 612, 629
+- </code>luaL_checktype(L, 2, LUA_TFUNCTION)<code> in WorldObjectMethods.h:760</p>
+<p>All hook handlers use LOCK_ALE:
+- </code>START_HOOK<code> macro acquires lock
+- </code>OnTimedEvent<code> explicitly calls </code>LOCK_ALE<code></p>
+<p></strong>Conclusion:<strong> Corruption happens AFTER successful registration. The registry slot
+is valid when created (type check passes), but somehow changes later.</p>
+<p>&lt;h3&gt;5.8 Remaining Unknowns&lt;/h3&gt;</p>
+<p>1. </strong>Bytecode cache interaction<strong> - Was disabled, crash persists
+2. </strong>Script reload timing<strong> - Does </code>.reload ale<code> leave dangling refs?
+3. </strong>Object invalidation<strong> - InvalidateObjects() called after callbacks, could affect userdata
+4. </strong>Extension load order</em><em> - </code>.ext<code> files load before hooks ready (documented risk)</p>
+<p>---</p>
+<p>&lt;h2&gt;Part 6: Script Load Order&lt;/h2&gt;</p>
+<p>&lt;h3&gt;6.1 File Loading Sequence&lt;/h3&gt;
+</code></pre>
+1. .ext files (extensions/)     ← Load first, before hooks ready
+2. .lua files (alphabetical)    ← Load after hooks initialized
+<pre><code>
+&lt;h3&gt;6.2 Extension Files&lt;/h3&gt;</p>
+<p>| File                    | Purpose                            | Registers Events? |
+|-------------------------|------------------------------------|-------------------|
+| GetFreeBagSlots.ext     | Adds Player:GetFreeBagSlots()      | No                |
+| ObjectVariables.ext     | Adds obj:GetData()/SetData()       | No (moved out)    |
+| _Misc.ext               | math.randomseed, debug setup       | No                |</p>
+<p>&lt;h3&gt;6.3 Main Script Load Order&lt;/h3&gt;
+</code></pre>
+1. ambush.lua           ← RegisterPlayerEvent(3, 42)
+2. travel.lua           ← RegisterPlayerEvent(3, 18)
+3. treasure.lua         ← RegisterPlayerEvent(3, 4, 26, 18)
+4. levelling.lua        ← RegisterPlayerEvent(28, 13, 3)
+5. periodic_events.lua  ← RegisterPlayerEvent(3, 4, 10)
+6. custom-classes.lua   ← RegisterPlayerEvent(30, 3, 18)
+7. death-knights.lua    ← RegisterPlayerEvent(18, 30, 3)
+8. behaviors/</em>.lua      ← Loaded via load-behaviors.lua
+<pre><code>
+---</p>
+<p>&lt;h2&gt;Part 7: Critical Boundary Summary&lt;/h2&gt;</p>
+<p>&lt;h3&gt;7.1 Lua Registry as Central Storage&lt;/h3&gt;</p>
+<p>All function references stored in single Lua registry:
+- Global event callbacks (BindingMap)
+- Timed event callbacks (ALEEventProcessor)
+- Instance data tables (instanceDataRefs)
+- Cancel callbacks (closures)</p>
+<p><strong>Registry slot lifecycle:</strong></code></pre>
+luaL_ref()     → Allocates slot, stores value, returns int ref
+lua_rawgeti()  → Retrieves value by ref
+luaL_unref()   → Marks slot as free for reuse
+<pre><code>
+&lt;h3&gt;7.2 Thread Safety Boundaries&lt;/h3&gt;</p>
+<p>| Operation              | Lock Used           | Protected By                |
+|------------------------|---------------------|-----------------------------|
+| Binding map access     | BindingMap::GetLock | Guard in PushRefsFor        |
+| Event processor update | LOCK_ALE            | Mutex in Update()           |
+| Lua state access       | LOCK_ALE            | All hook functions          |</p>
+<p>&lt;h3&gt;7.3 Control Flow Summary&lt;/h3&gt;
+</code></pre>
+SERVER EVENT
+    ↓
+sALE-&gt;OnXxx()                    ← C++ entry to ALE
+    ↓
+START_HOOK macro                 ← Acquires lock, creates key
+    ↓
+Push(arguments)                  ← C++ objects → Lua userdata
+    ↓
+PushRefsFor(key)                 ← Registry → Stack (functions)
+    ↓
+CallOneFunction/ExecuteCall      ← lua_pcall (control to Lua)
+    ↓
+[LUA CALLBACK EXECUTES]          ← User code runs
+    ↓
+player:Method()                  ← Lua → C++ method call
+    ↓
+Returns to Lua
+    ↓
+Callback returns
+    ↓
+ExecuteCall returns              ← Control back to C++
+    ↓
+CleanUpStack                     ← Pop results
+    ↓
+Hook function returns
+    ↓
+SERVER CONTINUES
+<pre><code>
+---</p>
+<p>&lt;h2&gt;Appendix A: Key Source Files&lt;/h2&gt;
+</code></pre>
+mod-ale/src/LuaEngine/
+├── LuaEngine.cpp       ← Core engine, Register(), ExecuteCall()
+├── LuaEngine.h         ← Class definition, binding maps
+├── ALEEventMgr.cpp     ← Timed event processing
+├── BindingMap.h        ← Event callback storage
+├── HookHelpers.h       ← CallAllFunctions, SetupStack
+├── hooks/
+│   ├── ServerHooks.cpp ← OnTimedEvent, global events
+│   └── PlayerHooks.cpp ← OnLogin, OnLogout, player events
+└── methods/
+    ├── GlobalMethods.h      ← RegisterPlayerEvent, RegisterServerEvent
+    ├── PlayerMethods.h      ← Player:GetName, etc.
+    └── WorldObjectMethods.h ← obj:RegisterEvent
+</code>``</p>
+<p><h2>Appendix B: Related Issues</h2></p>
+<p>- <strong>Issue 324</strong>: playerbots-ale-login-hook (B002)
+- <strong>Issue 325</strong>: ale-gameobject-wildcard (B003)
+- <strong>Issue 328</strong>: GetPosition nil errors
+- <strong>Issue 332</strong>: Registry corruption crash</p>
+<p>---</p>
+<p><em>Document generated: 2026-04-09</em>
+<em>Last updated: Issue 332 investigation</em>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

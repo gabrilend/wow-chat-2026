@@ -1,0 +1,306 @@
+# 147 - Clear Traveller Data on Despawn
+
+**Phase:** 2 (Empty World)
+**Effect:** Travellers clean up after themselves, memory freed properly
+**Status:** Completed (2026-04-05)
+
+---
+
+## The Effect
+
+When travellers despawn (no player nearby, invalid terrain, count exceeded), they now clear scheduled events and stored data before removal. This prevents memory overhead from accumulating as creature shells linger.
+
+The cleanup is automatic and comprehensive.
+
+---
+
+## What This Solved
+
+### Before (Data Lingers)
+
+When travellers despawned, they called `DespawnOrUnsummon(0)` directly:
+```lua
+-- travel.lua, line 144 (before)
+if not nearbyPlayer then
+    creature:DespawnOrUnsummon(0)  -- Despawns but leaves data
+end
+```
+
+**Problems:**
+1. Scheduled events remain attached to creature object
+2. Traveller-specific data (`theta` angle) still stored
+3. Creature shell exists in memory until garbage collected
+4. Over time, hundreds of these shells accumulate overhead
+
+**Despawn Locations:**
+- Line 144: No player nearby (200 yard check)
+- Line 127: Invalid terrain at spawn
+- Line 156: Count exceeded during wander
+- Line 161: Invalid terrain during travel
+
+All four locations had same problem: direct despawn without cleanup.
+
+### After (Cleanup Helper)
+
+Created `Travel.despawn(creature)` helper function:
+```lua
+-- {{{ Travel.despawn
+-- travel.lua, lines 5-12
+function Travel.despawn(creature)
+    creature:RemoveEvents()              -- Clear all scheduled events
+    creature:SetData("theta", nil)       -- Clear movement direction
+    creature:DespawnOrUnsummon(0)        -- Now safe to despawn
+end -- }}}
+```
+
+All four despawn locations now use this helper:
+```lua
+-- travel.lua, line 136 (after)
+if not validTerrain then
+    Travel.despawn(creature)  -- Cleanup + despawn
+    return
+end
+
+-- Line 153
+if not nearbyPlayer then
+    Travel.despawn(creature)
+end
+
+-- Line 165
+if count > MAX_RETRIES then
+    Travel.despawn(creature)
+    return
+end
+
+-- Line 170
+if not validTerrain then
+    Travel.despawn(creature)
+    return
+end
+```
+
+**Result:**
+- Events cleared → no lingering callbacks
+- Data cleared → no memory overhead
+- Creature despawns → shell can be fully garbage collected
+
+---
+
+## Implementation Process
+
+### 1. Identify Despawn Locations
+
+Grepped `travel.lua` for `DespawnOrUnsummon`:
+```bash
+grep -n "DespawnOrUnsummon" src/lua/travel.lua
+```
+
+Found four locations:
+1. Line 136: Invalid terrain at spawn
+2. Line 153: No player nearby
+3. Line 165: Count exceeded during wander
+4. Line 170: Invalid terrain during travel
+
+### 2. Identify Data to Clear
+
+Checked what data travellers store:
+```lua
+-- travel.lua uses these data fields:
+creature:SetData("theta", angle)  -- Movement direction
+```
+
+Events are registered via:
+```lua
+creature:RegisterEvent(Travel.onWander, 5000, 0)
+```
+
+Both need cleanup.
+
+### 3. Create Helper Function
+
+Added `Travel.despawn()` at top of file:
+```lua
+-- {{{ Travel.despawn
+function Travel.despawn(creature)
+    creature:RemoveEvents()              -- Clear all scheduled events
+    creature:SetData("theta", nil)       -- Clear movement direction
+    creature:DespawnOrUnsummon(0)        -- Now safe to despawn
+end -- }}}
+```
+
+### 4. Replace Direct Calls
+
+Changed all four locations:
+```diff
+- creature:DespawnOrUnsummon(0)
++ Travel.despawn(creature)
+```
+
+### 5. Verify Pattern Match
+
+Checked wow-chat-1 reference implementation:
+```bash
+grep -A3 "despawn" libs/wow-chat-1/src/lua/travel.lua
+```
+
+Confirmed: original version also used cleanup helper. This migration restores that pattern.
+
+---
+
+## Technical Details
+
+### Event Cleanup
+
+`creature:RemoveEvents()` clears all events registered via:
+- `RegisterEvent(callback, delay, repeats)`
+
+Without this, events continue firing after despawn:
+```lua
+-- Without RemoveEvents():
+creature:RegisterEvent(Travel.onWander, 5000, 0)  -- Repeats forever
+creature:DespawnOrUnsummon(0)                     -- Despawns...
+-- But event still fires every 5 seconds, calling onWander on nil creature!
+```
+
+This causes:
+- Nil pointer errors (creature no longer exists)
+- Wasted CPU (callback runs on nothing)
+- Memory leak (event scheduler holds reference)
+
+### Data Cleanup
+
+`creature:SetData("theta", nil)` clears stored angle:
+```lua
+-- During travel:
+creature:SetData("theta", 2.4)  -- Store current direction
+
+-- On despawn (without cleanup):
+-- "theta" remains in creature's data table
+-- Table persists until garbage collection
+```
+
+Over time:
+- 100 despawned travellers = 100 lingering data tables
+- Each table small (1 entry), but accumulates
+- Explicit cleanup prevents buildup
+
+### Garbage Collection
+
+Lua uses reference-counting + mark-and-sweep GC. Despawned creatures become collectible when:
+1. No references exist (events cleared)
+2. No data tables attached (theta cleared)
+3. No active callbacks (RemoveEvents)
+
+Calling `Travel.despawn()` ensures all three conditions are met.
+
+---
+
+## Why This Matters
+
+**Memory Hygiene**
+
+Travellers spawn every 130 seconds. Over an hour:
+- 27 travellers spawn
+- 27 despawn (no player nearby after 5 minutes)
+
+Without cleanup:
+- 27 event registrations linger
+- 27 data tables persist
+- 27 creature shells wait for GC
+
+With cleanup:
+- 0 events after despawn
+- 0 data tables
+- Immediate GC eligibility
+
+**No Silent Leaks**
+
+Silent memory leaks are deadly:
+- No error messages
+- No obvious symptoms
+- Server just slowly uses more RAM
+- Eventually: swapping, lag, crashes
+
+This fix prevents that scenario.
+
+**Pattern Consistency**
+
+Issue 146 (clear-ambush-data-on-death) uses same pattern for ambush monsters. Now both systems follow same cleanup discipline:
+```lua
+-- Ambush cleanup (issue 146)
+function Ambush.onDeath(event, creature, killer)
+    creature:RemoveEvents()
+    creature:SetData("orbitAngle", nil)
+    -- Despawn handled by death
+end
+
+-- Travel cleanup (issue 147)
+function Travel.despawn(creature)
+    creature:RemoveEvents()
+    creature:SetData("theta", nil)
+    creature:DespawnOrUnsummon(0)
+end
+```
+
+Same structure, easy to remember, easy to maintain.
+
+---
+
+## Related Phase 2 Issues
+
+- 146 - clear-ambush-data-on-death (same pattern for ambush system)
+- 104 - lua-script-ownership (traveller system migrated from wow-chat-1)
+
+---
+
+## Lessons Learned
+
+### Always Clean Up Events
+
+ALE's `RegisterEvent` is powerful but dangerous. Events continue firing until:
+- Explicitly removed with `RemoveEvents()`
+- Creature permanently deleted from database
+
+Despawn ≠ delete. Creatures despawn/respawn frequently. Always call `RemoveEvents()` on despawn.
+
+### Explicit > Implicit
+
+Could rely on garbage collector to eventually clean up:
+- Creature despawns → becomes unreferenced → GC runs → memory freed
+
+But this is **implicit** and **eventual**.
+
+Explicit cleanup is better:
+- Happens immediately
+- Deterministic timing
+- No waiting for GC
+- Clearer intent
+
+**Lesson:** Don't rely on GC for important cleanup.
+
+### Helper Functions Enforce Patterns
+
+Instead of remembering "despawn = RemoveEvents + clear data + DespawnOrUnsummon," just call `Travel.despawn()`.
+
+The helper function **encodes the pattern**. Can't forget a step if the helper does it for you.
+
+**Lesson:** Create helpers for multi-step cleanup.
+
+### Reference Implementations Have Reasons
+
+The wow-chat-1 reference code used a despawn helper. When migrating to wow-chat-2, we initially skipped it ("why do we need a function for one line?").
+
+This issue discovers: **it wasn't one line, it was three lines**. The reference was right.
+
+**Lesson:** Patterns in reference code exist for reasons. Don't skip them without understanding why.
+
+---
+
+## Phase 2 Contribution
+
+This issue enables **Phase 2: Empty World** by ensuring:
+> "The world's inhabitants are ephemeral and leave no trace"
+
+Travellers wander the empty world, bringing life and mystery. But they're transient—appearing near players, despawning when alone. This transience requires clean lifecycle management: spawn, wander, despawn, **cleanup**.
+
+Without this fix, the "empty" world accumulates invisible debris. With it, the world truly resets—empty again, ready for the next wanderer.

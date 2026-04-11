@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>holidays.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>holidays.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/holidays.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 7533 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Holidays</h1></p>
+<p><h2>holidays.dbc</h2></p>
+<p><a href="dbc-index"><code>Volver a:DBC</code></a></p>
+<p><h2>Estructura</h2></p>
+<p>| Columna | Campo                         | Tipo    | Notas                                                                                      | Info Extra                                                                                           |
+|---------|-------------------------------|---------|--------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| 0       | [eventID][1]                  | Integer | ID del Evento de Festividad                                                                |                                                                                                      |
+| 1       | [eventStage1Duration][2]      | Integer | Duración del evento (en la fase 1)                                                         | Ya sea como evento de preparación o evento principal. Véase eventSchedulerType para más información) |
+| 2       | [eventStage2Duration][3]      | Integer | Duración del evento (en la fase 2)                                                         | Ya sea como evento principal o de reinicio. Véase eventSchedulerType para más información)           |
+| 11      | [eventDate][4]                | Integer | Packed blizzdate - Epochdate=01.01.2000-00:00 - El año se descarta si la columna12 es 0    |                                                                                                      |
+| 37      | [Region][5]                   | integer | ??? (necesita ser investigado)                                                             |                                                                                                      |
+| 38      | [Looping][6]                  | integer | ??? (necesita ser investigado - se utiliza sólo en los eventos de Llamamiento a las armas) | 283 - Llamamiento a las armas: Valle de Alterac                                                      |
+|         |                               |         |                                                                                            | 284 - Llamamiento a las armas: Garganta Grito de Guerra                                              |
+|         |                               |         |                                                                                            | 285 - Llamamiento a las armas: Cuenca de Arathi                                                      |
+|         |                               |         |                                                                                            | 353 - Llamamiento a las armas: Ojo de la tormenta                                                    |
+|         |                               |         |                                                                                            | 400 - Llamamiento a las armas: Playa de los Ancestros                                                |
+|         |                               |         |                                                                                            | 420 - Llamamiento a las armas: Isla de la Conquista                                                  |
+| 39      | [calendarFlags][7]            | integer | ??? (necesita ser investigado)                                                             |                                                                                                      |
+| 49      | [eventCalendarName][8]        | iRefID  | Referencia al Loc(idioma) en HolidayNames.dbc                                              |                                                                                                      |
+| 50      | [eventCalendarDescription][9] | iRefID  | Referencia al Loc(idioma) en HolidayNames.dbc                                              |                                                                                                      |
+| 51      | [eventCalendarOverlay][10]    | String  | Textura superpuesta utilizada para la decoración de eventos del calendario del juego       |                                                                                                      |
+| 52      | [priority][11]                | Integer | ??? (necesita ser investigado)                                                             |                                                                                                      |
+| 53      | [eventSchedulerType][12]      | Integer | Definición sobre qué tipo de temporizador se utiliza, véase eventSchedulerType             | -1: repetición, anualmente                                                                           |
+|         |                               |         |                                                                                            | 0: repetición, semanalmente                                                                          |
+|         |                               |         |                                                                                            | 1: repetición, usado en fechas definidas                                                             |
+|         |                               |         |                                                                                            | 2: repetición, por hora                                                                              |
+| 54      | [eventFlags][13]              | Integer | ??? (necesita ser investigado)                                                             |                                                                                                      |
+ 
+[1]: #eventid
+[2]: #eventstage1duration
+[3]: #eventstage2duration
+[4]: #eventdate
+[5]: #region
+[6]: #looping
+[7]: #calendarflags
+[8]: #eventcalendarname
+[9]: #eventcalendardescription
+[10]: #eventcalendaroverlay
+[11]: #priority
+[12]: #eventschedulertype
+[13]: #eventflags</p>
+<p><h3>eventID</h3></p>
+<p><h3>eventStage1Duration</h3></p>
+<p><h3>eventStage2Duration</h3></p>
+<p><h3>eventDate</h3></p>
+<p><h3>Region</h3></p>
+<p><h3>Looping</h3></p>
+<p><h3>calendarFlags</h3></p>
+<p><h3>eventCalendarName</h3></p>
+<p><h3>eventCalendarDescription</h3></p>
+<p><h3>eventCalendarOverlay</h3></p>
+<p><h3>priority</h3></p>
+<p><h2>eventSchedulerType</h2>
+<pre><code>eventSchedulerType define qué tipo de temporizador se usa para que el evento se detenga o inicie, etc. - y en caso también de que utilice diferentes etapas durante su fase de &amp;quot;acumulación&amp;quot; (2 etapas disponibles)
+-1: el evento se repite anualmente basado en las fechas de la columna11, columna12, etc. - la duración y las posibles fases del evento se toman de la información dada en la columna1 y la columna2 (fijada en DBC para mantenerla en línea con los cambios <strong>anuales</strong>) - En caso de que la columna12 equivalga al valor 0 usaría sólo la FECHA del campo11
+0: el evento se repite cada 7 días, con una duración de un tiempo de tipo &amp;lt;eventStage1Duration&amp;gt; (duración de primera fase) (fecha de inicio codificada en el servidor dependiendo del tipo de ID del evento)
+1: el evento se repite en base a los valores de la columna11, columna12, etc. (ver -1) - En caso de que &amp;lt;eventStage2Duration&amp;gt; (duración de segunda fase) exista, se utiliza primero &amp;lt;eventStage1Duration&amp;gt; (duración de primera fase) como duración de la fase previa al evento
+2: el evento se repite cada X horas (siendo &amp;lt;eventStage2Duration&amp;gt; el temporizador eventPause/eventWait)</code></pre></p>
+<p><h3>eventFlags</h3>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

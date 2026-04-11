@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sidebar.html - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>sidebar.html</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/_includes/azerothcore/sidebar.html
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> html &nbsp;&nbsp;
+            <strong>Size:</strong> 6895 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>﻿&lt;div class=&quot;sidebar-wrapper&quot;&gt;
+    &lt;script language= &quot;JavaScript&quot;&gt;
+        $(document).ready(function() {
+            const url = window.location;
+            const lang = url.pathname.split(&#39;/&#39;)[2];
+            if (lang == &#39;es&#39;)
+            {
+                document.getElementById(&#39;es&#39;).style.display = &#39;inline&#39;;
+            }
+            else
+            {
+                document.getElementById(&#39;en&#39;).style.display = &#39;inline&#39;;
+            }
+        });
+    &lt;/script&gt;
+    &lt;div&gt;
+        &lt;div id=&quot;en&quot; style=&quot;display: none&quot;&gt;
+            &lt;b&gt;Install:&lt;/b&gt;
+            &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/installation&quot;&gt;Installation Guide&lt;/a&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+            &lt;a href=&quot;/wiki/classic-installation&quot;&gt;&lt;b&gt;Classic Installation Guide:&lt;/b&gt;&lt;/a&gt;
+            &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/requirements&quot;&gt;Requirements&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/core-installation&quot;&gt;Core Installation&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/server-setup&quot;&gt;Server Setup&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/database-installation&quot;&gt;Database Installation&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/networking&quot;&gt;Networking&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/final-server-steps&quot;&gt;Final Server Steps&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/keeping-the-server-up-to-date&quot;&gt;Keeping the server up to date&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/client-setup&quot;&gt;Client Setup&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/installing-a-module&quot;&gt;Installing a module&lt;/a&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+            &lt;b&gt;Documentation:&lt;/b&gt;
+            &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/documentation-index&quot;&gt;Documentation Index&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;https://www.azerothcore.org/doxygen&quot;&gt;Doxygen Documentation&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/standard-operating-procedure&quot;&gt;Standard Operating Procedure&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/faq&quot;&gt;FAQ&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/common-errors&quot;&gt;Common Errors&lt;/a&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+            &lt;b&gt;Database:&lt;/b&gt;
+            &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/database-auth&quot;&gt;Auth&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/database-characters&quot;&gt;Characters&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/database-world&quot;&gt;World&lt;/a&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+            &lt;b&gt;Contribute:&lt;/b&gt;
+            &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/guide-to-triaging&quot;&gt;Guide to bug triaging&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/contribute&quot;&gt;How to contribute &lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/how-to-create-a-pr&quot;&gt;How to create a PR&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/how-to-test-a-pr&quot;&gt;How to test a PR&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/how-to-test-db-only-changes&quot;&gt;How to test DB-only changes&lt;/a&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+        &lt;/div&gt;
+        &lt;div id=&quot;es&quot; style=&quot;display: none&quot;&gt;
+            &lt;b id=&quot;container&quot;&gt;Como (branch master) &lt;/b&gt;&lt;a href=&quot;https://github.com/azerothcore/wiki/edit/master/_includes/azerothcore/sidebar.html&quot;&gt;Editar&lt;/a&gt;
+            &lt;b&gt;Instalación:&lt;/b&gt;
+            &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/installation&quot;&gt;Guía de instalación&lt;/a&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+            &lt;a href=&quot;/wiki/es/classic-installation&quot;&gt;&lt;b&gt;Classic Installation Guide:&lt;/b&gt;&lt;/a&gt;
+            &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/requirements&quot;&gt;Requisitos&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/core-installation&quot;&gt;Instalación del núcleo&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/server-setup&quot;&gt;Configuración del servidor&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/database-installation&quot;&gt; Instalación de la BD&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/networking&quot;&gt;Redes&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/final-server-steps&quot;&gt;Pasos finales del servidor&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/keeping-the-server-up-to-date&quot;&gt;  Mantener el servidor actualizado&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/client-setup&quot;&gt;Configuración del cliente&lt;/a&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+            &lt;b&gt;Documentación:&lt;/b&gt;
+            &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/documentation-index&quot;&gt;Índice de documentación&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/standard-operating-procedure&quot;&gt;Procedimiento Operativo Estándar&lt;/a&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+            &lt;b&gt;Base de datos:&lt;/b&gt;
+            &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/database-auth&quot;&gt;DB auth&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/database-characters&quot;&gt;DB characters&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/database-world&quot;&gt;DB world&lt;/a&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+            &lt;b&gt;Contribuir:&lt;/b&gt;
+            &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/contribute&quot;&gt;Cómo contribuir&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/how-to-create-a-pr&quot;&gt;Cómo crear un PR&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/how-to-create-a-db-pr&quot;&gt;Cómo crear un PR de SQL a través de GitHub&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/how-to-test-a-pr&quot;&gt;Cómo probar un PR&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/how-to-test-db-only-changes&quot;&gt;Cómo probar los cambios solo en la BD&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/how-to-document-code&quot;&gt;Cómo documentar su código&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;/wiki/es/guide-to-triaging&quot;&gt;Guía para la evaluación de errores&lt;/a&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+            &lt;b&gt;Otro:&lt;/b&gt;
+            &lt;ul&gt;
+                &lt;details&gt;&lt;summary&gt;Test Details&lt;/summary&gt;
+                    &lt;li&gt;&lt;a href=&quot;http://www.azerothcore.org/pages/sunwell.pl/&quot; target=&quot;_blank&quot;&gt;Descripción original del SC (en Ingles)&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/how-to-ask-for-help&quot;&gt;Cómo pedir ayuda&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/best-practices&quot;&gt;Buenas prácticas&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/external-tools-and-modules&quot;&gt;Otras herramientas y módulos&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/faq&quot;&gt;Preguntas frecuentes&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/creating-accounts&quot;&gt;Crear cuentas&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/create-a-module&quot;&gt;Crear un módulo&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/create-a-script&quot;&gt;Crea tu primer Script&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/how-to-work-with-conf-files&quot;&gt;Trabajar con archivos de configuración (.conf &amp; .conf.dist)&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/memory-usage&quot;&gt;Uso de la memoria&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/linux-restarter&quot;&gt;Reiniciar automático en Linux&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/gm-commands&quot;&gt;Comandos GM&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/remote-access&quot;&gt;Acceso remoto&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/waypoints-information&quot;&gt;Información sobre waypoints&lt;/a&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;a href=&quot;/wiki/es/how-to-obtain-free-records&quot;&gt;Cómo obtener registros libres&lt;/a&gt;&lt;/li&gt;
+                &lt;/details&gt;
+            &lt;/ul&gt;
+         &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

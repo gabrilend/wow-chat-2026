@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>how-to-use-warden-payload-mgr.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>how-to-use-warden-payload-mgr.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/how-to-use-warden-payload-mgr.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 4342 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>How to use the Warden Payload Manager</h1></p>
+<p>The WardenPayloadMgr is responsible for maintaining custom payloads used by modules.
+This allows users to send custom lua payloads up to a size of 512 bytes to the game client.</p>
+<p>Some of the things you can achieve with this is:
+- Interaction with the client interface (add custom frames)
+- Access to client CVars
+- Access to protected lua functions.</p>
+<p>Opening up many possiblilties for a patch-less custom server.</p>
+<p><h2>Accessing the Payload Manager</h2></p>
+<p>To access the payload manager you have to have access to a Player reference.</p>
+<p><strong>Example(C++):</strong>
+``<code>cpp
+void OnLogin(Player<em> player) override
+{
+	if (!player)
+	{
+		return;
+	}
+	
+	Warden</em> warden = player-&gt;GetSession()-&gt;GetWarden();
+	if (!warden)
+	{
+		return;
+	}
+	
+	WardenPayloadMgr<em> payloadMgr = warden-&gt;GetPayloadMgr();
+	if (!payloadMgr)
+	{
+		return;
+	}</p>
+<p>	std::string sPayload = &quot;message(&#39;Hello World!&#39;);&quot;;
+	uint16 payloadId = payloadMgr-&gt;RegisterPayload(sPayload);
+	payloadMgr-&gt;QueuePayload(payloadId);
+}
+<pre><code>Typically you would store the payloadId somewhere and not generate a new one every login.</p>
+<p>&lt;h2&gt;Writing a Payload Addon Listener&lt;/h2&gt;
+There is a limited amount of payload ids available so it is advised to create a payload listener that is sent to the client on login.</p>
+<p><strong>Example(Lua):</strong>
+&lt;pre&gt;&lt;code class=&quot;lua&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;local&lt;/span&gt; luaFrame = CreateFrame(&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;Frame&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;);
+luaFrame:RegisterEvent(&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;CHAT_MSG_ADDON&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;);
+luaFrame:SetScript(&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;OnEvent&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;, &lt;span class=&quot;keyword&quot;&gt;function&lt;/span&gt;(self, event, ...)
+  &lt;span class=&quot;keyword&quot;&gt;local&lt;/span&gt; prefix, lua, msgType, unit = ...;
+  &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; event == &amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;CHAT_MSG_ADDON&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;; &lt;span class=&quot;keyword&quot;&gt;and&lt;/span&gt; prefix == &amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;wlrx&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;; &lt;span class=&quot;keyword&quot;&gt;and&lt;/span&gt; msgType == &amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;WHISPER&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;; &lt;span class=&quot;keyword&quot;&gt;and&lt;/span&gt; unit == UnitName(&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;player&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;) &lt;span class=&quot;keyword&quot;&gt;then&lt;/span&gt;
+    forceinsecure();
+    loadstring(lua)();
+  &lt;span class=&quot;keyword&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;keyword&quot;&gt;end&lt;/span&gt;);&lt;/code&gt;&lt;/pre&gt;
+To send a payload now to the client you would need to send an addon message to the player with the prefix </code>wlrx<code>, message type </code>WHISPER<code> and the sender/receiver as the players GUID.</p>
+<p><strong>Example(C++):</strong></code></pre>cpp
+WorldPacket CreateAddonPacket(std::string const&amp; prefix, std::string const&amp; msg, ChatMsg msgType, Player</em> player)
+{
+    WorldPacket data;</p>
+<p>    std::string fullMsg = prefix + &quot;\t&quot; + msg;
+    size_t len = fullMsg.length();</p>
+<p>    data.Initialize(SMSG_MESSAGECHAT, 1 + 4 + 8 + 4 + 8 + 4 + 1 + len + 1);
+    data &lt;&lt; uint8(msgType); //Type
+    data &lt;&lt; uint32(LANG_ADDON); //Lang
+    data &lt;&lt; uint64(player-&gt;GetGUID().GetRawValue()); //SenderGUID
+    data &lt;&lt; uint32(0); //Flags
+    data &lt;&lt; uint64(player-&gt;GetGUID().GetRawValue()); //ReceiverGUID
+    data &lt;&lt; uint32(len + 1); //MsgLen
+    data &lt;&lt; fullMsg; //Msg
+    data &lt;&lt; uint8(0);</p>
+<p>    return data;
+}</p>
+<p>std::string myPayload = &quot;message(&#39;Hello World!&#39;);&quot;;
+WorldPacket payloadPacket = CreateAddonPacket(&quot;wlrx&quot;, myPayload, CHAT_MSG_WHISPER, player);
+player-&gt;SendDirectMessage(&amp;payloadPacket);
+<pre><code>The addon message has a limit to about 255 characters so you may have to chunk your message up into multiple packets.</p>
+<p>You can do this by writing parts of your payload to a buffer on the client then on the last payload call loadstring on that buffer.</p>
+<p>If you need to communicate back to the server you can use <a href="https://wowwiki-archive.fandom.com/wiki/API_SendAddonMessage">SendAddonMessage</a> and capture the result using one of the message hooks:</p>
+<p><strong>Example(Lua):</strong>
+&lt;pre&gt;&lt;code class=&quot;lua&quot;&gt;SendAddonMessage(&amp;amp;quot;wltx&amp;amp;quot;, &amp;amp;quot;ping&amp;amp;quot;, &amp;amp;quot;WHISPER&amp;amp;quot;, UnitName(&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;player&amp;amp;#&lt;span class=&quot;number&quot;&gt;39&lt;/span&gt;;));&lt;/code&gt;&lt;/pre&gt;</p>
+<p><strong>Example(C++):</strong></code></pre>cpp
+std::vector&lt;std::string&gt; Split(const std::string&amp; s, char delimiter)
+{
+    std::vector&lt;std::string&gt; tokens;
+    std::string token;
+    std::istringstream tokenStream(s);
+    while (std::getline(tokenStream, token, delimiter))
+    {
+        tokens.push_back(token);
+    }
+    return tokens;
+}</p>
+<p>void PlayerScript::OnBeforeSendChatMessage(Player* player, uint32&amp; type, uint32&amp; lang, std::string&amp; msg)
+{
+    if (!player)
+    {
+        return;
+    }</p>
+<p>    if (type != CHAT_MSG_WHISPER)
+    {
+        return;
+    }</p>
+<p>    if (lang != LANG_ADDON)
+    {
+        return;
+    }</p>
+<p>    auto data = Split(msg, &#39;\t&#39;);</p>
+<p>    auto prefix = data[0];
+    auto event = data[1];</p>
+<p>    if (prefix != &quot;wltx&quot;)
+    {
+        return;
+    }</p>
+<p>    LOG_INFO(&quot;module&quot;, &quot;Received addon event: &#39;{}&#39;&quot;, event);
+    
+    std::string myPayload = &quot;print(&#39;Pong!&#39;);&quot;;
+    WorldPacket payloadPacket = CreateAddonPacket(&quot;wlrx&quot;, myPayload, CHAT_MSG_WHISPER, player);
+    player-&gt;SendDirectMessage(&amp;payloadPacket);
+}</p>
+<p>//Output: Received addon event: &#39;ping&#39;.
+</code>``</p>
+<p>You now have the basic tools to create a listener and send payloads to the client.</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

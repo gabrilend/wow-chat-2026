@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 113 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 113 • Phase 1</div>
+            <h1>Investigate Ambush Monsters Not Spawning</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>113 - Investigate Ambush Monsters Not Spawning</h1></p>
+<p><h2>Status: In Progress</h2></p>
+<p><h2>Current Behavior</h2>
+- Ambush monsters do not spawn when player logs in
+- No periodic spawn cycle running
+- Queues initialize but never trigger spawns</p>
+<p><h2>Intended Behavior</h2>
+- Monsters spawn periodically around the player (every 40 seconds)
+- Creatures appropriate to player level are selected from creature_template
+- Spawned creatures chase and attack the player</p>
+<p><h2>Root Cause Found</h2></p>
+<p>The <code>Ambush.setupPlayer</code> function initialized the spawn queues on login but never registered the periodic spawn event. Line 74 had a commented-out registration:</p>
+<p><pre><code class="lua"><span class="comment">-- player:RegisterEvent(Ambush.spawnAndAttackPlayer, <span class="number">3000</span>, <span class="number">1</span>)</span></code></pre></p>
+<p>Nothing was starting the spawn cycle.</p>
+<p><h2>Fix Applied</h2></p>
+<p><h3>2026-03-31 - Spawn Cycle Registration Added</h3></p>
+<p>1. Added configuration block at top of ambush.lua:
+<pre><code class="lua"><span class="comment">-- {{{ Configuration</span>
+AMBUSH_SPAWN_INTERVAL = <span class="number">40000</span>  <span class="comment">-- ms between spawn attempts (<span class="number">40</span> seconds)</span>
+AMBUSH_MIN_DISTANCE   =   <span class="number">120</span>  <span class="comment">-- yards minimum from player</span>
+AMBUSH_MAX_DISTANCE   =   <span class="number">160</span>  <span class="comment">-- yards maximum from player</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p>2. Modified <code>Ambush.setupPlayer</code> to register the periodic spawn event:
+<pre><code class="lua">player:RegisterEvent(Ambush.spawnAndAttackPlayer, AMBUSH_SPAWN_INTERVAL, <span class="number">0</span>)</code></pre></p>
+<p>3. Updated <code>Ambush.randomSpawn</code> to use config constants instead of hardcoded values.</p>
+<p><h2>Testing Required</h2>
+- Log in with a character
+- Wait 40 seconds
+- Verify &quot;[Ambush] Registered spawn cycle for: &lt;name&gt;&quot; appears in log
+- Verify monsters spawn and chase player</p>
+<p><h2>Related Files</h2>
+- src/lua/ambush.lua
+- src/lua/movement.lua (used for spawn positioning)
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-1-progress.html">View Phase 1 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

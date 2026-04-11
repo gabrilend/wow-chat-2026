@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sidebar.js - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>sidebar.js</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/ale/docs/Object/sidebar.js
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> js &nbsp;&nbsp;
+            <strong>Size:</strong> 2705 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>document.write(`
+  &lt;a id=&quot;Object:GetByteValue&quot; class=&quot;fn&quot; href=&quot;../Object/GetByteValue.html&quot;&gt;GetByteValue&lt;/a&gt;
+  &lt;a id=&quot;Object:GetEntry&quot; class=&quot;fn&quot; href=&quot;../Object/GetEntry.html&quot;&gt;GetEntry&lt;/a&gt;
+  &lt;a id=&quot;Object:GetFloatValue&quot; class=&quot;fn&quot; href=&quot;../Object/GetFloatValue.html&quot;&gt;GetFloatValue&lt;/a&gt;
+  &lt;a id=&quot;Object:GetGUID&quot; class=&quot;fn&quot; href=&quot;../Object/GetGUID.html&quot;&gt;GetGUID&lt;/a&gt;
+  &lt;a id=&quot;Object:GetGUIDLow&quot; class=&quot;fn&quot; href=&quot;../Object/GetGUIDLow.html&quot;&gt;GetGUIDLow&lt;/a&gt;
+  &lt;a id=&quot;Object:GetInt32Value&quot; class=&quot;fn&quot; href=&quot;../Object/GetInt32Value.html&quot;&gt;GetInt32Value&lt;/a&gt;
+  &lt;a id=&quot;Object:GetScale&quot; class=&quot;fn&quot; href=&quot;../Object/GetScale.html&quot;&gt;GetScale&lt;/a&gt;
+  &lt;a id=&quot;Object:GetTypeId&quot; class=&quot;fn&quot; href=&quot;../Object/GetTypeId.html&quot;&gt;GetTypeId&lt;/a&gt;
+  &lt;a id=&quot;Object:GetUInt16Value&quot; class=&quot;fn&quot; href=&quot;../Object/GetUInt16Value.html&quot;&gt;GetUInt16Value&lt;/a&gt;
+  &lt;a id=&quot;Object:GetUInt32Value&quot; class=&quot;fn&quot; href=&quot;../Object/GetUInt32Value.html&quot;&gt;GetUInt32Value&lt;/a&gt;
+  &lt;a id=&quot;Object:GetUInt64Value&quot; class=&quot;fn&quot; href=&quot;../Object/GetUInt64Value.html&quot;&gt;GetUInt64Value&lt;/a&gt;
+  &lt;a id=&quot;Object:HasFlag&quot; class=&quot;fn&quot; href=&quot;../Object/HasFlag.html&quot;&gt;HasFlag&lt;/a&gt;
+  &lt;a id=&quot;Object:IsInWorld&quot; class=&quot;fn&quot; href=&quot;../Object/IsInWorld.html&quot;&gt;IsInWorld&lt;/a&gt;
+  &lt;a id=&quot;Object:IsPlayer&quot; class=&quot;fn&quot; href=&quot;../Object/IsPlayer.html&quot;&gt;IsPlayer&lt;/a&gt;
+  &lt;a id=&quot;Object:RemoveFlag&quot; class=&quot;fn&quot; href=&quot;../Object/RemoveFlag.html&quot;&gt;RemoveFlag&lt;/a&gt;
+  &lt;a id=&quot;Object:SetByteValue&quot; class=&quot;fn&quot; href=&quot;../Object/SetByteValue.html&quot;&gt;SetByteValue&lt;/a&gt;
+  &lt;a id=&quot;Object:SetFlag&quot; class=&quot;fn&quot; href=&quot;../Object/SetFlag.html&quot;&gt;SetFlag&lt;/a&gt;
+  &lt;a id=&quot;Object:SetFloatValue&quot; class=&quot;fn&quot; href=&quot;../Object/SetFloatValue.html&quot;&gt;SetFloatValue&lt;/a&gt;
+  &lt;a id=&quot;Object:SetInt16Value&quot; class=&quot;fn&quot; href=&quot;../Object/SetInt16Value.html&quot;&gt;SetInt16Value&lt;/a&gt;
+  &lt;a id=&quot;Object:SetInt32Value&quot; class=&quot;fn&quot; href=&quot;../Object/SetInt32Value.html&quot;&gt;SetInt32Value&lt;/a&gt;
+  &lt;a id=&quot;Object:SetScale&quot; class=&quot;fn&quot; href=&quot;../Object/SetScale.html&quot;&gt;SetScale&lt;/a&gt;
+  &lt;a id=&quot;Object:SetUInt16Value&quot; class=&quot;fn&quot; href=&quot;../Object/SetUInt16Value.html&quot;&gt;SetUInt16Value&lt;/a&gt;
+  &lt;a id=&quot;Object:SetUInt32Value&quot; class=&quot;fn&quot; href=&quot;../Object/SetUInt32Value.html&quot;&gt;SetUInt32Value&lt;/a&gt;
+  &lt;a id=&quot;Object:SetUInt64Value&quot; class=&quot;fn&quot; href=&quot;../Object/SetUInt64Value.html&quot;&gt;SetUInt64Value&lt;/a&gt;
+  &lt;a id=&quot;Object:ToCorpse&quot; class=&quot;fn&quot; href=&quot;../Object/ToCorpse.html&quot;&gt;ToCorpse&lt;/a&gt;
+  &lt;a id=&quot;Object:ToCreature&quot; class=&quot;fn&quot; href=&quot;../Object/ToCreature.html&quot;&gt;ToCreature&lt;/a&gt;
+  &lt;a id=&quot;Object:ToGameObject&quot; class=&quot;fn&quot; href=&quot;../Object/ToGameObject.html&quot;&gt;ToGameObject&lt;/a&gt;
+  &lt;a id=&quot;Object:ToPlayer&quot; class=&quot;fn&quot; href=&quot;../Object/ToPlayer.html&quot;&gt;ToPlayer&lt;/a&gt;
+  &lt;a id=&quot;Object:ToUnit&quot; class=&quot;fn&quot; href=&quot;../Object/ToUnit.html&quot;&gt;ToUnit&lt;/a&gt;
+  &lt;a id=&quot;Object:UpdateUInt32Value&quot; class=&quot;fn&quot; href=&quot;../Object/UpdateUInt32Value.html&quot;&gt;UpdateUInt32Value&lt;/a&gt;
+`);</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

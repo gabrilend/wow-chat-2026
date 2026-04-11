@@ -1,0 +1,278 @@
+# 105 - Project-Local Database
+
+**Phase:** 1 (Foundation)
+**Effect:** Database lives within project, custom world data tracked in git
+**Status:** Completed (2026-01-29)
+
+---
+
+## The Effect
+
+The database is project-local at `mysql/`. Custom world modifications (loot tables, NPC changes, balance tweaks) are tracked in git alongside code.
+
+This enables:
+- `git diff` shows world data changes
+- Revert broken balance changes
+- Collaborate on world design
+- Clone repo → databases included
+- No conflicts with system MySQL or other projects
+
+---
+
+## What This Solved
+
+### Before
+
+MySQL at `/home/ritz/programs/mysql-server/` was:
+- Shared across multiple projects
+- Not version controlled
+- Custom changes lost on reinstall
+- Risk of breaking other projects' databases
+
+When tweaking loot drop rates or NPC spawn locations, changes were invisible to git. No history, no revert, no collaboration.
+
+### After
+
+MySQL at `mysql/` within project:
+- Binaries at `mysql/installed-files/` (git-ignored, can rebuild)
+- Databases at `mysql/databases/` (tracked in git)
+- Config at `mysql/conf/my.cnf` (tracked)
+- Port 3307 (coexists with system MySQL)
+
+Custom world changes now show in `git diff`:
+```
+modified:   mysql/databases/acore_world/creature.ibd
+modified:   mysql/databases/acore_world/creature_loot_template.ibd
+```
+
+---
+
+## What Was Built
+
+### Directory Structure
+
+```
+mysql/
+├── build/              # CMake (git-ignored)
+├── source/             # MySQL 9.6.0 source (git-ignored)
+├── installed-files/    # Compiled binaries (git-ignored)
+│   ├── bin/mysqld      # Server daemon
+│   ├── bin/mysql       # Client
+│   └── lib/            # Libraries
+├── databases/          # TRACKED - custom world data
+│   ├── acore_auth/
+│   ├── acore_world/
+│   ├── acore_characters/
+│   ├── acore_playerbots/
+│   └── mysql.sock      # Unix socket (git-ignored)
+└── conf/
+    └── my.cnf          # TRACKED - server config
+```
+
+### Scripts Created
+
+1. **scripts/mysql-install** - Compile MySQL 9.6.0 from source
+2. **scripts/start-mysql** - Start daemon, track PID
+3. **scripts/stop-mysql** - Graceful shutdown
+4. **scripts/mysql-client** - Connect using project credentials
+
+### Configuration
+
+Port 3307 (different from system MySQL 3306):
+```ini
+[mysqld]
+basedir = mysql/installed-files
+datadir = mysql/databases
+socket  = mysql/databases/mysql.sock
+port    = 3307
+
+[client]
+socket  = mysql/databases/mysql.sock
+port    = 3307
+```
+
+---
+
+## MySQL 9.x Migration
+
+### Breaking Change
+
+MySQL 9.x deprecated `innodb_log_file_size` in favor of `innodb_redo_log_capacity`.
+
+**Old (MySQL 8.x):**
+```ini
+innodb_log_file_size = 512M
+```
+
+**New (MySQL 9.x):**
+```ini
+innodb_redo_log_capacity = 512M
+```
+
+This was discovered when initialization failed with deprecation warnings. Updated my.cnf accordingly.
+
+### User Creation
+
+Created user matching `secrets.conf`:
+```sql
+CREATE USER 'ritz'@'localhost' IDENTIFIED BY '***';
+CREATE USER 'ritz'@'127.0.0.1' IDENTIFIED BY '***';
+GRANT ALL ON acore_*.* TO 'ritz'@'localhost';
+GRANT ALL ON acore_*.* TO 'ritz'@'127.0.0.1';
+```
+
+Both localhost and 127.0.0.1 needed for socket vs TCP connections.
+
+---
+
+## Git Tracking Strategy
+
+### What's Tracked
+
+- `mysql/conf/` - Server configuration
+- `mysql/databases/acore_*` - Game databases (world, characters, auth, playerbots)
+
+### What's Ignored
+
+- `mysql/installed-files/` - Binaries (can rebuild)
+- `mysql/build/` - CMake artifacts
+- `mysql/source/` - MySQL source code
+- `mysql/databases/mysql/` - System tables
+- `mysql/databases/performance_schema/` - Metrics
+- `mysql/databases/sys/` - Admin views
+- Runtime files: `*.pid`, `*.sock`, `*.log`, binlog.*, `#ib_*`, `#innodb_*`
+
+### Why Track Database Files?
+
+Binary InnoDB files (`.ibd`, `.frm`) might seem wrong to track in git, but:
+
+**Advantages:**
+1. Custom loot tables preserved
+2. Modified NPC entries tracked
+3. Balance tweaks have history
+4. Can revert problematic changes
+5. Collaborators get same world state
+
+**Disadvantages:**
+1. Large binary diffs (git struggles)
+2. Merge conflicts difficult
+3. File size grows over time
+
+**Alternative Considered:** SQL dumps
+
+Instead of tracking binary files, export key tables as .sql:
+```bash
+mysqldump acore_world creature_loot_template > sql/custom/loot.sql
+```
+
+This was NOT done because:
+- Extra step in workflow (remember to export)
+- SQL dumps lose some metadata
+- Direct file tracking is simpler for now
+
+May revisit if binary diffs become problematic.
+
+---
+
+## Usage
+
+```bash
+# Start MySQL (required before worldserver)
+./scripts/start-mysql
+
+# Connect to database
+./scripts/mysql-client
+
+# Run queries
+mysql> USE acore_world;
+mysql> SELECT * FROM creature LIMIT 10;
+
+# Stop MySQL
+./scripts/stop-mysql
+```
+
+### First-Time Setup
+
+After cloning the repo:
+1. MySQL binaries might not be built → run `./scripts/mysql-install`
+2. Database files should exist (tracked in git)
+3. Run `./scripts/start-mysql` → should just work
+
+---
+
+## Why This Matters
+
+**Isolation**
+
+This project has its own MySQL. Experiments won't break other projects. Drop tables, corrupt data, doesn't matter - clone a fresh copy.
+
+**World as Code**
+
+Custom NPC entries, modified loot tables, balance tweaks - all tracked in git. The **world design** is version controlled alongside the **code** that spawns it.
+
+**Collaboration**
+
+When someone suggests "reduce treasure spawn rates," they can:
+1. Modify `mysql/databases/acore_world/gameobject.ibd`
+2. Commit the change
+3. Open a PR
+4. Others test the balance change
+5. Merge if good, revert if bad
+
+The world design becomes collaborative.
+
+**Portability**
+
+Clone the repo → database files are there. No "import this SQL dump" or "restore from backup." Just `./scripts/start-mysql` and go.
+
+---
+
+## Related Phase 1 Issues
+
+- 101 - verify-server-startup (needs database to run)
+- 103 - document-configuration-options (MySQL port documented)
+
+---
+
+## Lessons Learned
+
+### Binary Files in Git
+
+Tracking `.ibd` files (InnoDB tablespace) in git is unconventional. Most projects use SQL dumps. We chose direct file tracking because:
+
+**Pro:** Simplicity - no export/import steps
+**Con:** Large diffs, merge conflicts
+
+If this becomes painful, migrate to:
+```
+sql/custom/db_world/creature_loot.sql
+sql/custom/db_world/gameobject_loot.sql
+```
+
+And load these on server start.
+
+### Port Isolation
+
+Using port 3307 instead of 3306 allows:
+- System MySQL coexists
+- Multiple wow-chat projects (each with own port)
+- No "MySQL is already running" conflicts
+
+This pattern works for development. Production might use Docker containers or separate VMs.
+
+### MySQL Version Jumps
+
+MySQL 9.x breaking `innodb_log_file_size` was discovered through error logs. When upgrading major versions, read changelogs for deprecated options.
+
+Lesson: Don't blindly upgrade databases. Test in isolation first.
+
+---
+
+## Phase 1 Contribution
+
+This issue enables **Phase 1: Foundation** by answering:
+> "Where does world data live?"
+
+The answer: `mysql/databases/`, tracked in git, owned by the project.
+
+Without this, the server runs but the world is Blizzard's. With this, the world is ours.

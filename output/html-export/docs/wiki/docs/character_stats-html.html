@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>character_stats.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>character_stats.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/character_stats.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 6871 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>character\_stats</h1></p>
+<p><a href="database-characters">&lt;-Back-to:Characters</a></p>
+<p><strong>The \<code>character\_stats\</code> table</strong></p>
+<p>This table holds information on all the stats regarding the character. Used for external applications such as websites.
+See worldserver.conf: PlayerSave.Stats.\*</p>
+<p><strong>Table Structure</strong></p>
+<p>| Field                   | Type  | Attributes | Key | Null | Default | Extra | Comment                            |
+| ----------------------- | ----- | ---------- | --- | ---- | ------- | ----- | ---------------------------------- |
+| [guid][1]               | INT   | UNSIGNED   | PRI | NO   | 0       |       | Global Unique Identifier, Low part |
+| [maxhealth][2]          | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [maxpower1][3]          | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [maxpower2][4]          | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [maxpower3][5]          | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [maxpower4][6]          | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [maxpower5][7]          | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [maxpower6][8]          | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [maxpower7][9]          | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [strength][10]          | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [agility][11]           | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [stamina][12]           | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [intellect][13]         | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [spirit][14]            | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [armor][15]             | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [resHoly][16]           | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [resFire][17]           | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [resNature][18]         | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [resFrost][19]          | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [resShadow][20]         | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [resArcane][21]         | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [blockPct][22]          | FLOAT | SIGNED     |     | NO   | 0       |       |                                    |
+| [dodgePct][23]          | FLOAT | SIGNED     |     | NO   | 0       |       |                                    |
+| [parryPct][24]          | FLOAT | SIGNED     |     | NO   | 0       |       |                                    |
+| [critPct][25]           | FLOAT | SIGNED     |     | NO   | 0       |       |                                    |
+| [rangedCritPct][26]     | FLOAT | SIGNED     |     | NO   | 0       |       |                                    |
+| [spellCritPct][27]      | FLOAT | SIGNED     |     | NO   | 0       |       |                                    |
+| [attackPower][28]       | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [rangedAttackPower][29] | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [spellPower][30]        | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |
+| [resilience][31]        | INT   | UNSIGNED   |     | NO   | 0       |       |                                    |</p>
+<p>[1]: #guid
+[2]: #maxhealth
+[3]: #maxpower
+[4]: #maxpower
+[5]: #maxpower
+[6]: #maxpower
+[7]: #maxpower
+[8]: #maxpower
+[9]: #maxpower
+[10]: #strength
+[11]: #agility
+[12]: #stamina
+[13]: #intellect
+[14]: #spirit
+[15]: #armor
+[16]: #resholy
+[17]: #resfire
+[18]: #resnature
+[19]: #resfrost
+[20]: #resshadow
+[21]: #resarcane
+[22]: #blockpct
+[23]: #dodgepct
+[24]: #parrypct
+[25]: #critpct
+[26]: #rangedcritpct
+[27]: #spellcritpct
+[28]: #attackpower
+[29]: #rangedattackpower
+[30]: #spellpower
+[31]: #resilience</p>
+<p><strong>Description of the fields</strong></p>
+<p><h3>guid</h3></p>
+<p>The character guid. See <a href="characters#guid">characters.guid</a>.</p>
+<p><h3>maxhealth</h3></p>
+<p>Maximum amount of health that the character has.</p>
+<p><h3>maxpower</h3></p>
+<p>| Value | Description |
+| ----- | ----------- |
+| 1     | mana        |
+| 2     | rage        |
+| 3     | focus       |
+| 4     | energy      |
+| 5     | happiness   |
+| 6     | rune        |
+| 7     | runic power |</p>
+<p><h3>strength</h3></p>
+<p>Character&#39;s current strength value.</p>
+<p><h3>agility</h3></p>
+<p>Character&#39;s current agility value.</p>
+<p><h3>stamina</h3></p>
+<p>Character&#39;s current stamina value.</p>
+<p><h3>intellect</h3></p>
+<p>Character&#39;s current intellect value.</p>
+<p><h3>spirit</h3></p>
+<p>Character&#39;s current spirit value.</p>
+<p><h3>armor</h3></p>
+<p>Character&#39;s current armor value.</p>
+<p><h3>resHoly</h3></p>
+<p>Character&#39;s current holy resistance value.</p>
+<p><h3>resFire</h3></p>
+<p>Character&#39;s current fire resistance value.</p>
+<p><h3>resNature</h3></p>
+<p>Character&#39;s current nature resistance value.</p>
+<p><h3>resFrost</h3></p>
+<p>Character&#39;s current frost resistance value.</p>
+<p><h3>resShadow</h3></p>
+<p>Character&#39;s current shadow resistance value.</p>
+<p><h3>resArcane</h3></p>
+<p>Character&#39;s current arcane resistance value.</p>
+<p><h3>blockPct</h3></p>
+<p>Character&#39;s current block chance.</p>
+<p>Value must be &gt;=0. If the value does not meet the condition the SQL will fail on <code>character_stats_chk_1</code>.</p>
+<p><h3>dodgePct</h3></p>
+<p>Character&#39;s current dodge chance.</p>
+<p>Value must be &gt;=0. If the value does not meet the condition the SQL will fail on <code>character_stats_chk_1</code>.</p>
+<p><h3>parryPct</h3></p>
+<p>Character&#39;s current parry chance.</p>
+<p>Value must be &gt;=0. If the value does not meet the condition the SQL will fail on <code>character_stats_chk_1</code>.</p>
+<p><h3>critPct</h3></p>
+<p>Character&#39;s current crit chance.</p>
+<p>Value must be &gt;=0. If the value does not meet the condition the SQL will fail on <code>character_stats_chk_1</code>.</p>
+<p><h3>rangedCritPct</h3></p>
+<p>Character&#39;s current ranged crit chance.</p>
+<p>Value must be &gt;=0. If the value does not meet the condition the SQL will fail on <code>character_stats_chk_1</code>.</p>
+<p><h3>spellCritPct</h3></p>
+<p>Character&#39;s current spell crit chance.</p>
+<p>Value must be &gt;=0. If the value does not meet the condition the SQL will fail on <code>character_stats_chk_1</code>.</p>
+<p><h3>attackPower</h3></p>
+<p>Character&#39;s current attackpower.</p>
+<p><h3>rangedAttackPower</h3></p>
+<p>Character&#39;s current ranged attackpower.</p>
+<p><h3>spellPower</h3></p>
+<p>Character&#39;s current spellpower.</p>
+<p><h3>resilience</h3></p>
+<p>Character&#39;s current resilience value.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -20,6 +20,8 @@ gameplay systems can be implemented.
 |-------|-------|--------|-------|
 | 101 | verify-server-startup | In Progress | Baseline validation |
 | 102 | test-playerbots-spawn | Open | Module verification |
+| 103 | document-configuration-options | Completed | Created docs/configuration.md |
+| 104 | migrate-lua-scripts-from-wowchat1 | Completed | Copied to src/lua/ |
 | 105 | setup-local-mysql-installation | Completed | MySQL 9.6.0 local |
 | 106a | read-only-config-dashboard | Open | View settings in-game |
 | 106b | runtime-config-modifications | Open | Change settings live |
@@ -29,6 +31,7 @@ gameplay systems can be implemented.
 | 109 | add-build-mode-to-azerothcore-script | Completed | --force flag |
 | 111 | config-merge-script | Open | Merge config changes |
 | 123 | visual-powerline-mapping-tool | Open | Code visualization |
+| 144 | concept-catalog-consolidation | Completed | 1000→800 concepts |
 | 145 | git-branch-consolidation | Open | Clean up branches |
 | 166 | point-line-definition-tools | Open | Dungeon waypoint editor |
 | 201 | branch-based-azerothcore-versioning | Open | Profile system |
@@ -36,7 +39,7 @@ gameplay systems can be implemented.
 | 321 | mysql-script-naming-aliases | Open | Consistent script names |
 | 323 | parallel-update-status-spinners | Open | Better build feedback |
 
-## Completed: 3/17
+## Completed: 6/20
 
 ---
 
@@ -67,10 +70,20 @@ gameplay systems can be implemented.
 - `config/beta/playerbots.conf` - Playerbot settings
 - `config/beta/mod_ale.conf` - ALE settings
 
+### Lua Scripts
+- `src/lua/` - Game Lua scripts (Issue 104)
+- `src/lua/periodic_events.lua` - Main event loop
+- `src/lua/ambush.lua` - Monster spawning
+- `src/lua/treasure.lua` - Chest spawning
+- `src/lua/travel.lua` - Wandering NPCs
+
 ### Database
 - `mysql/` - Local MySQL installation
 - `mysql/databases/` - Data directory
 - `mysql/conf/my.cnf` - MySQL configuration
+
+### Documentation
+- `docs/configuration.md` - Configuration reference (Issue 103)
 
 ---
 

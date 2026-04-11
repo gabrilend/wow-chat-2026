@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>convoy.lua - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>convoy.lua</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/behaviors/convoy.lua
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> lua &nbsp;&nbsp;
+            <strong>Size:</strong> 13891 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-09 03:26
+        </div>
+
+        <div class="content">
+            <pre><code class="lua"><span class="comment">-- {{{ Everland Ghostsong - Convoy System (Ouroboros)</span>
+<span class="comment">-- NPCs form chains that follow each other <span class="keyword">in</span> traveling salesman order</span>
+<span class="comment">-- When a member dies, the chain reforms dynamically</span>
+<span class="comment">-- When the leader leaves, tail becomes head (ouroboros)</span>
+<span class="comment">--</span>
+<span class="comment">-- Issue: <span class="number">133</span>-gesture-command-system-kneel-convoy.md</span>
+<span class="comment">-- Concept Catalog: <span class="number">107</span>-<span class="number">112</span>, <span class="number">401</span>-<span class="number">403</span></span>
+<span class="comment">-- }}}</span>
+
+require(&quot;movement&quot;)
+
+Convoy = {}
+
+<span class="comment">-- Register <span class="keyword">in</span> package.loaded so require() is a no-op after ALE loads this</span>
+<span class="comment">-- Must be AFTER Convoy table is created so require() returns the module</span>
+package.loaded[&quot;behaviors/convoy&quot;] = Convoy
+
+<span class="comment">-- {{{ Configuration</span>
+CONVOY_SPACING        = <span class="number">3</span>     <span class="comment">-- yards between convoy members</span>
+REFORM_DELAY          = <span class="number">500</span>   <span class="comment">-- ms delay before reformation</span>
+OUROBOROS_ENABLED     = <span class="keyword">true</span>  <span class="comment">-- tail becomes head on leader loss</span>
+CHAIN_UPDATE_RATE     = <span class="number">1000</span>  <span class="comment">-- ms between chain position updates</span>
+MAX_STRAY_DISTANCE    = <span class="number">30</span>    <span class="comment">-- yards before member is considered &quot;lost&quot;</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy state storage</span>
+<span class="keyword">local</span> convoys = {}  <span class="comment">-- [convoy_id] = convoy_data</span>
+<span class="keyword">local</span> npc_convoy_map = {}  <span class="comment">-- [npc_guid] = convoy_id</span>
+
+<span class="comment">-- Convoy data structure:</span>
+<span class="comment">-- {</span>
+<span class="comment">--   id = convoy_id,</span>
+<span class="comment">--   leader = player_guid <span class="keyword">or</span> <span class="keyword">nil</span>,</span>
+<span class="comment">--   head = npc_guid,</span>
+<span class="comment">--   members = {npc_guid, ...},  -- ordered from head to tail</span>
+<span class="comment">--   chain = {[npc_guid] = {following = guid, follower = guid}, ...}</span>
+<span class="comment">-- }</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.create</span>
+<span class="comment">-- Create a new convoy, optionally led by a player</span>
+<span class="keyword">function</span> Convoy.create(leader_player)
+    <span class="keyword">local</span> convoy_id = &quot;convoy_&quot; .. tostring(math.random(<span class="number">100000</span>, <span class="number">999999</span>))
+
+    <span class="keyword">local</span> convoy = {
+        id = convoy_id,
+        leader = leader_player <span class="keyword">and</span> leader_player:GetGUID() <span class="keyword">or</span> <span class="keyword">nil</span>,
+        head = <span class="keyword">nil</span>,
+        members = {},
+        chain = {}
+    }
+
+    convoys[convoy_id] = convoy
+
+    print(&quot;[Convoy] Created convoy: &quot; .. convoy_id)
+    <span class="keyword">return</span> convoy_id
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.destroy</span>
+<span class="comment">-- Destroy a convoy <span class="keyword">and</span> release all members</span>
+<span class="keyword">function</span> Convoy.destroy(convoy_id)
+    <span class="keyword">local</span> convoy = convoys[convoy_id]
+    <span class="keyword">if</span> <span class="keyword">not</span> convoy <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="comment">-- Clear NPC mappings</span>
+    <span class="keyword">for</span> _, npc_guid <span class="keyword">in</span> ipairs(convoy.members) <span class="keyword">do</span>
+        npc_convoy_map[npc_guid] = <span class="keyword">nil</span>
+        <span class="keyword">local</span> npc = GetCreatureByGUID(npc_guid)
+        <span class="keyword">if</span> npc <span class="keyword">then</span>
+            npc:MovementExpired()
+            npc:MoveRandom(<span class="number">30</span>)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    convoys[convoy_id] = <span class="keyword">nil</span>
+    print(&quot;[Convoy] Destroyed convoy: &quot; .. convoy_id)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.addMember</span>
+<span class="comment">-- Add an NPC to a convoy</span>
+<span class="keyword">function</span> Convoy.addMember(convoy_id, npc)
+    <span class="keyword">local</span> convoy = convoys[convoy_id]
+    <span class="keyword">if</span> <span class="keyword">not</span> convoy <span class="keyword">or</span> <span class="keyword">not</span> npc <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">false</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> npc_guid = npc:GetGUID()
+
+    <span class="comment">-- Already <span class="keyword">in</span> a convoy?</span>
+    <span class="keyword">if</span> npc_convoy_map[npc_guid] <span class="keyword">then</span>
+        Convoy.removeMember(npc_convoy_map[npc_guid], npc)
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Add to members list</span>
+    table.insert(convoy.members, npc_guid)
+    npc_convoy_map[npc_guid] = convoy_id
+
+    <span class="comment">-- Set as head <span class="keyword">if</span> first member</span>
+    <span class="keyword">if</span> #convoy.members == <span class="number">1</span> <span class="keyword">then</span>
+        convoy.head = npc_guid
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Rebuild chain</span>
+    Convoy.rebuildChain(convoy_id)
+
+    print(&quot;[Convoy] Added &quot; .. npc:GetName() .. &quot; to &quot; .. convoy_id)
+    <span class="keyword">return</span> <span class="keyword">true</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.removeMember</span>
+<span class="comment">-- Remove an NPC from a convoy</span>
+<span class="keyword">function</span> Convoy.removeMember(convoy_id, npc)
+    <span class="keyword">local</span> convoy = convoys[convoy_id]
+    <span class="keyword">if</span> <span class="keyword">not</span> convoy <span class="keyword">or</span> <span class="keyword">not</span> npc <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> npc_guid = npc:GetGUID()
+
+    <span class="comment">-- Find <span class="keyword">and</span> remove from members</span>
+    <span class="keyword">for</span> i, guid <span class="keyword">in</span> ipairs(convoy.members) <span class="keyword">do</span>
+        <span class="keyword">if</span> guid == npc_guid <span class="keyword">then</span>
+            table.remove(convoy.members, i)
+            <span class="keyword">break</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Clear mapping</span>
+    npc_convoy_map[npc_guid] = <span class="keyword">nil</span>
+
+    <span class="comment">-- Stop movement</span>
+    npc:MovementExpired()
+
+    <span class="comment">-- Rebuild chain <span class="keyword">if</span> members remain</span>
+    <span class="keyword">if</span> #convoy.members &gt; <span class="number">0</span> <span class="keyword">then</span>
+        Convoy.rebuildChain(convoy_id)
+    <span class="keyword">else</span>
+        Convoy.destroy(convoy_id)
+    <span class="keyword">end</span>
+
+    print(&quot;[Convoy] Removed &quot; .. npc:GetName() .. &quot; from &quot; .. convoy_id)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.findNearest</span>
+<span class="comment">-- Find nearest NPC from a position (traveling salesman nearest neighbor)</span>
+<span class="keyword">function</span> Convoy.findNearest(x, y, candidates)
+    <span class="keyword">local</span> nearest = <span class="keyword">nil</span>
+    <span class="keyword">local</span> nearest_dist = math.huge
+
+    <span class="keyword">for</span> i, npc_guid <span class="keyword">in</span> ipairs(candidates) <span class="keyword">do</span>
+        <span class="keyword">local</span> npc = GetCreatureByGUID(npc_guid)
+        <span class="keyword">if</span> npc <span class="keyword">then</span>
+            <span class="keyword">local</span> nx, ny = npc:GetLocation()
+            <span class="keyword">local</span> dist = Movement.squaredDistance(x, y, nx, ny)
+            <span class="keyword">if</span> dist &lt; nearest_dist <span class="keyword">then</span>
+                nearest = i
+                nearest_dist = dist
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> nearest
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.rebuildChain</span>
+<span class="comment">-- Rebuild the follow chain using nearest neighbor heuristic</span>
+<span class="keyword">function</span> Convoy.rebuildChain(convoy_id)
+    <span class="keyword">local</span> convoy = convoys[convoy_id]
+    <span class="keyword">if</span> <span class="keyword">not</span> convoy <span class="keyword">or</span> #convoy.members == <span class="number">0</span> <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="comment">-- Get starting position (leader <span class="keyword">or</span> head)</span>
+    <span class="keyword">local</span> start_x, start_y
+    <span class="keyword">if</span> convoy.leader <span class="keyword">then</span>
+        <span class="keyword">local</span> leader = GetPlayerByGUID(convoy.leader)
+        <span class="keyword">if</span> leader <span class="keyword">then</span>
+            start_x, start_y = leader:GetLocation()
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Fallback to first member position</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> start_x <span class="keyword">then</span>
+        <span class="keyword">local</span> first_npc = GetCreatureByGUID(convoy.members[<span class="number">1</span>])
+        <span class="keyword">if</span> first_npc <span class="keyword">then</span>
+            start_x, start_y = first_npc:GetLocation()
+        <span class="keyword">else</span>
+            <span class="keyword">return</span>  <span class="comment">-- No valid starting point</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Build optimal path using nearest neighbor</span>
+    <span class="keyword">local</span> remaining = {}
+    <span class="keyword">for</span> _, guid <span class="keyword">in</span> ipairs(convoy.members) <span class="keyword">do</span>
+        table.insert(remaining, guid)
+    <span class="keyword">end</span>
+
+    <span class="keyword">local</span> new_order = {}
+    <span class="keyword">local</span> current_x, current_y = start_x, start_y
+
+    <span class="keyword">while</span> #remaining &gt; <span class="number">0</span> <span class="keyword">do</span>
+        <span class="keyword">local</span> nearest_idx = Convoy.findNearest(current_x, current_y, remaining)
+        <span class="keyword">if</span> nearest_idx <span class="keyword">then</span>
+            <span class="keyword">local</span> npc_guid = table.remove(remaining, nearest_idx)
+            table.insert(new_order, npc_guid)
+
+            <span class="keyword">local</span> npc = GetCreatureByGUID(npc_guid)
+            <span class="keyword">if</span> npc <span class="keyword">then</span>
+                current_x, current_y = npc:GetLocation()
+            <span class="keyword">end</span>
+        <span class="keyword">else</span>
+            <span class="keyword">break</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Update convoy order</span>
+    convoy.members = new_order
+    convoy.head = new_order[<span class="number">1</span>]
+
+    <span class="comment">-- Rebuild chain links</span>
+    convoy.chain = {}
+    <span class="keyword">for</span> i, npc_guid <span class="keyword">in</span> ipairs(new_order) <span class="keyword">do</span>
+        convoy.chain[npc_guid] = {
+            following = new_order[i - <span class="number">1</span>] <span class="keyword">or</span> <span class="keyword">nil</span>,  <span class="comment">-- who I follow</span>
+            follower = new_order[i + <span class="number">1</span>] <span class="keyword">or</span> <span class="keyword">nil</span>    <span class="comment">-- who follows me</span>
+        }
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Ouroboros: connect tail to head</span>
+    <span class="keyword">if</span> OUROBOROS_ENABLED <span class="keyword">and</span> #new_order &gt; <span class="number">1</span> <span class="keyword">then</span>
+        <span class="keyword">local</span> tail_guid = new_order[#new_order]
+        convoy.chain[tail_guid].following_next = new_order[<span class="number">1</span>]
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Apply follow behavior</span>
+    Convoy.applyFollowBehavior(convoy_id)
+
+    print(&quot;[Convoy] Rebuilt chain <span class="keyword">for</span> &quot; .. convoy_id .. &quot; (&quot; .. #new_order .. &quot; members)&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.applyFollowBehavior</span>
+<span class="comment">-- Make each NPC follow their chain target</span>
+<span class="keyword">function</span> Convoy.applyFollowBehavior(convoy_id)
+    <span class="keyword">local</span> convoy = convoys[convoy_id]
+    <span class="keyword">if</span> <span class="keyword">not</span> convoy <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">for</span> i, npc_guid <span class="keyword">in</span> ipairs(convoy.members) <span class="keyword">do</span>
+        <span class="keyword">local</span> npc = GetCreatureByGUID(npc_guid)
+        <span class="keyword">if</span> <span class="keyword">not</span> npc <span class="keyword">then</span> <span class="keyword">goto</span> continue <span class="keyword">end</span>
+
+        <span class="keyword">local</span> chain_link = convoy.chain[npc_guid]
+
+        <span class="keyword">if</span> i == <span class="number">1</span> <span class="keyword">then</span>
+            <span class="comment">-- Head follows leader (<span class="keyword">if</span> any)</span>
+            <span class="keyword">if</span> convoy.leader <span class="keyword">then</span>
+                <span class="keyword">local</span> leader = GetPlayerByGUID(convoy.leader)
+                <span class="keyword">if</span> leader <span class="keyword">then</span>
+                    npc:MoveFollow(leader, CONVOY_SPACING, <span class="number">0</span>)
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+        <span class="keyword">else</span>
+            <span class="comment">-- Others follow the one ahead</span>
+            <span class="keyword">local</span> follow_guid = chain_link.following
+            <span class="keyword">local</span> follow_target = GetCreatureByGUID(follow_guid)
+            <span class="keyword">if</span> follow_target <span class="keyword">then</span>
+                npc:MoveFollow(follow_target, CONVOY_SPACING, <span class="number">0</span>)
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        ::continue::
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.onMemberDeath</span>
+<span class="comment">-- Handle convoy member death - reconnect chain</span>
+<span class="keyword">function</span> Convoy.onMemberDeath(npc)
+    <span class="keyword">local</span> npc_guid = npc:GetGUID()
+    <span class="keyword">local</span> convoy_id = npc_convoy_map[npc_guid]
+
+    <span class="keyword">if</span> <span class="keyword">not</span> convoy_id <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> convoy = convoys[convoy_id]
+    <span class="keyword">if</span> <span class="keyword">not</span> convoy <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> chain_link = convoy.chain[npc_guid]
+    <span class="keyword">if</span> <span class="keyword">not</span> chain_link <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> prev_guid = chain_link.follower   <span class="comment">-- who was following the dead NPC</span>
+    <span class="keyword">local</span> next_guid = chain_link.following  <span class="comment">-- who the dead NPC was following</span>
+
+    <span class="comment">-- Reconnect: prev now follows next</span>
+    <span class="keyword">if</span> prev_guid <span class="keyword">and</span> next_guid <span class="keyword">then</span>
+        <span class="keyword">local</span> prev_npc = GetCreatureByGUID(prev_guid)
+        <span class="keyword">local</span> next_npc = GetCreatureByGUID(next_guid)
+
+        <span class="keyword">if</span> prev_npc <span class="keyword">and</span> next_npc <span class="keyword">then</span>
+            prev_npc:MoveFollow(next_npc, CONVOY_SPACING, <span class="number">0</span>)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- If head died, promote next</span>
+    <span class="keyword">if</span> convoy.head == npc_guid <span class="keyword">and</span> next_guid <span class="keyword">then</span>
+        convoy.head = next_guid
+
+        <span class="comment">-- New head follows leader</span>
+        <span class="keyword">if</span> convoy.leader <span class="keyword">then</span>
+            <span class="keyword">local</span> new_head = GetCreatureByGUID(next_guid)
+            <span class="keyword">local</span> leader = GetPlayerByGUID(convoy.leader)
+            <span class="keyword">if</span> new_head <span class="keyword">and</span> leader <span class="keyword">then</span>
+                new_head:MoveFollow(leader, CONVOY_SPACING, <span class="number">0</span>)
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Remove from convoy</span>
+    Convoy.removeMember(convoy_id, npc)
+
+    print(&quot;[Convoy] Member died, chain reformed: &quot; .. #convoy.members .. &quot; remain&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.onLeaderLeave</span>
+<span class="comment">-- Handle leader leaving - ouroboros behavior</span>
+<span class="keyword">function</span> Convoy.onLeaderLeave(player)
+    <span class="keyword">local</span> player_guid = player:GetGUID()
+
+    <span class="comment">-- Find convoys led by this player</span>
+    <span class="keyword">for</span> convoy_id, convoy <span class="keyword">in</span> pairs(convoys) <span class="keyword">do</span>
+        <span class="keyword">if</span> convoy.leader == player_guid <span class="keyword">then</span>
+            convoy.leader = <span class="keyword">nil</span>
+
+            <span class="keyword">if</span> OUROBOROS_ENABLED <span class="keyword">and</span> #convoy.members &gt; <span class="number">1</span> <span class="keyword">then</span>
+                <span class="comment">-- Ouroboros: tail follows head</span>
+                <span class="keyword">local</span> tail_guid = convoy.members[#convoy.members]
+                <span class="keyword">local</span> head_guid = convoy.head
+
+                <span class="keyword">local</span> tail_npc = GetCreatureByGUID(tail_guid)
+                <span class="keyword">local</span> head_npc = GetCreatureByGUID(head_guid)
+
+                <span class="keyword">if</span> tail_npc <span class="keyword">and</span> head_npc <span class="keyword">then</span>
+                    <span class="comment">-- Head follows tail (circular)</span>
+                    head_npc:MoveFollow(tail_npc, CONVOY_SPACING, <span class="number">0</span>)
+                <span class="keyword">end</span>
+
+                print(&quot;[Convoy] Ouroboros activated - tail becomes head&quot;)
+            <span class="keyword">else</span>
+                <span class="comment">-- No ouroboros - convoy wanders</span>
+                Convoy.destroy(convoy_id)
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.getConvoyByNPC</span>
+<span class="comment">-- Get convoy data <span class="keyword">for</span> an NPC</span>
+<span class="keyword">function</span> Convoy.getConvoyByNPC(npc)
+    <span class="keyword">local</span> convoy_id = npc_convoy_map[npc:GetGUID()]
+    <span class="keyword">return</span> convoy_id <span class="keyword">and</span> convoys[convoy_id] <span class="keyword">or</span> <span class="keyword">nil</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.getConvoyByPlayer</span>
+<span class="comment">-- Get convoy led by a player</span>
+<span class="keyword">function</span> Convoy.getConvoyByPlayer(player)
+    <span class="keyword">local</span> player_guid = player:GetGUID()
+
+    <span class="keyword">for</span> convoy_id, convoy <span class="keyword">in</span> pairs(convoys) <span class="keyword">do</span>
+        <span class="keyword">if</span> convoy.leader == player_guid <span class="keyword">then</span>
+            <span class="keyword">return</span> convoy
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> <span class="keyword">nil</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.directToPosition</span>
+<span class="comment">-- Direct entire convoy to a position</span>
+<span class="keyword">function</span> Convoy.directToPosition(convoy_id, x, y, z)
+    <span class="keyword">local</span> convoy = convoys[convoy_id]
+    <span class="keyword">if</span> <span class="keyword">not</span> convoy <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="comment">-- Clear leader temporarily</span>
+    <span class="keyword">local</span> had_leader = convoy.leader
+    convoy.leader = <span class="keyword">nil</span>
+
+    <span class="comment">-- Move head to target</span>
+    <span class="keyword">local</span> head_npc = GetCreatureByGUID(convoy.head)
+    <span class="keyword">if</span> head_npc <span class="keyword">then</span>
+        head_npc:MoveTo(<span class="number">0</span>, x, y, z, <span class="keyword">true</span>)
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Others follow chain normally</span>
+    Convoy.applyFollowBehavior(convoy_id)
+
+    <span class="comment">-- Restore leader</span>
+    convoy.leader = had_leader
+
+    print(&quot;[Convoy] Directed to position: &quot; .. string.format(&quot;(%.<span class="number">0</span>f, %.<span class="number">0</span>f)&quot;, x, y))
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.lostMemberCheck</span>
+<span class="comment">-- Periodic check <span class="keyword">for</span> members too far from chain</span>
+<span class="keyword">function</span> Convoy.lostMemberCheck()
+    print(&quot;[DEBUG Convoy.lostMemberCheck] CALLBACK FIRED&quot;)
+    <span class="keyword">for</span> convoy_id, convoy <span class="keyword">in</span> pairs(convoys) <span class="keyword">do</span>
+        <span class="keyword">if</span> <span class="keyword">not</span> convoy.leader <span class="keyword">then</span> <span class="keyword">goto</span> next_convoy <span class="keyword">end</span>
+
+        <span class="keyword">local</span> leader = GetPlayerByGUID(convoy.leader)
+        <span class="keyword">if</span> <span class="keyword">not</span> leader <span class="keyword">then</span> <span class="keyword">goto</span> next_convoy <span class="keyword">end</span>
+
+        <span class="keyword">local</span> lx, ly = leader:GetLocation()
+
+        <span class="keyword">for</span> _, npc_guid <span class="keyword">in</span> ipairs(convoy.members) <span class="keyword">do</span>
+            <span class="keyword">local</span> npc = GetCreatureByGUID(npc_guid)
+            <span class="keyword">if</span> npc <span class="keyword">then</span>
+                <span class="keyword">local</span> nx, ny = npc:GetLocation()
+                <span class="keyword">local</span> dist = math.sqrt(Movement.squaredDistance(lx, ly, nx, ny))
+
+                <span class="keyword">if</span> dist &gt; MAX_STRAY_DISTANCE <span class="keyword">then</span>
+                    <span class="comment">-- Lost member - teleport back</span>
+                    npc:NearTeleport(lx, ly, leader:GetZ(), leader:GetO())
+                    print(&quot;[Convoy] &quot; .. npc:GetName() .. &quot; was lost, teleported back&quot;)
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        ::next_convoy::
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.initialize</span>
+<span class="comment">-- No global initialization needed - convoy checks are per-player now</span>
+<span class="keyword">function</span> Convoy.initialize()
+    print(&quot;[Convoy] System initialized (per-player events via periodic_events.lua)&quot;)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Convoy.periodicLostMemberCheck</span>
+<span class="comment">-- Per-player periodic check <span class="keyword">for</span> lost convoy members</span>
+<span class="comment">-- Called from periodic_events.lua attached to players with convoys</span>
+<span class="comment">-- Issue <span class="number">332</span>: Moved from CreateLuaEvent to player-attached event</span>
+<span class="keyword">function</span> Convoy.periodicLostMemberCheck(player)
+    <span class="keyword">local</span> guid = player:GetGUID()
+    <span class="keyword">local</span> convoy = convoys[guid]
+    <span class="keyword">if</span> <span class="keyword">not</span> convoy <span class="keyword">or</span> <span class="keyword">not</span> convoy.leader <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+
+    <span class="keyword">local</span> lx, ly = player:GetLocation()
+
+    <span class="keyword">for</span> _, npc_guid <span class="keyword">in</span> ipairs(convoy.members) <span class="keyword">do</span>
+        <span class="keyword">local</span> npc = GetCreatureByGUID(npc_guid)
+        <span class="keyword">if</span> npc <span class="keyword">then</span>
+            <span class="keyword">local</span> nx, ny = npc:GetLocation()
+            <span class="keyword">local</span> dist = math.sqrt(Movement.squaredDistance(lx, ly, nx, ny))
+
+            <span class="keyword">if</span> dist &gt; MAX_STRAY_DISTANCE <span class="keyword">then</span>
+                <span class="comment">-- Lost member - teleport back</span>
+                npc:NearTeleport(lx, ly, player:GetZ(), player:GetO())
+                print(&quot;[Convoy] &quot; .. npc:GetName() .. &quot; was lost, teleported back&quot;)
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ Event Registration</span>
+CREATURE_EVENT_ON_DIED = <span class="number">4</span>
+
+<span class="comment">-- Note: Event registration may need adjustment <span class="keyword">for</span> actual ALE API</span>
+<span class="comment">-- RegisterCreatureEvent(CREATURE_EVENT_ON_DIED, Convoy.onMemberDeath)</span>
+
+Convoy.initialize()
+
+print(&quot;[Convoy] Ouroboros behavior loaded - Issue <span class="number">133</span>&quot;)
+<span class="comment">-- }}}</span>
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

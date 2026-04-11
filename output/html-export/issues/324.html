@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 324 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 324 • Phase 3</div>
+            <h1>Nil Bot Periodic Event Crash</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>324 - Nil Bot Periodic Event Crash</h1></p>
+<p><h2>Status</h2>
+- Created: 2026-04-08
+- Phase: 2
+- Priority: High</p>
+<p><h2>Root Cause (IDENTIFIED)</h2></p>
+<p><strong>Playerbots do not trigger <code>PLAYER_EVENT_ON_LOGIN</code> (event 3).</strong></p>
+<p>The playerbots module logs bots in through its own C++ code path (autologin, random bots), which does not call the ALE Lua hooks. This means <code>InitialLogin</code> in <code>periodic_events.lua</code> is never called for bots.</p>
+<p>Evidence:
+- <code>[PeriodicEvents] Registered behavior events for bot:</code> message never appears in Server.log
+- Bots log in and stand at spawn position doing nothing
+- Global <code>CreateLuaEvent</code> timers (like <code>Gestures.proximityCheck</code>) iterate <code>GetPlayersInWorld()</code> which includes bots
+- When those timers try to call methods on bot references that were never initialized, they fail</p>
+<p><h2>Current Behavior</h2></p>
+<p>Multiple Lua behavior scripts crash with:
+<pre><code>lua_scripts/custom/behaviors/find-monsters.lua:28: attempt to call method &amp;#39;GetPosition&amp;#39; (a nil value)
+lua_scripts/custom/behaviors/gestures.lua:73: attempt to call method &amp;#39;GetPosition&amp;#39; (a nil value)
+lua_scripts/custom/behaviors/bot-wander.lua:275: attempt to call method &amp;#39;GetPosition&amp;#39; (a nil value)</code></pre></p>
+<p>The errors spam repeatedly in Server.log.</p>
+<p><h2>Root Cause</h2></p>
+<p>Eluna timer system stores references to bot/player objects. When a bot logs out or despawns:
+1. The underlying C++ WorldObject is deleted
+2. The Lua userdata still exists but is invalid
+3. Timer fires and passes the stale reference
+4. Calling methods on invalid userdata fails with &quot;nil value&quot; error</p>
+<p>The periodic_events.lua attempts validation:
+<pre><code class="lua"><span class="keyword">function</span> PeriodicBotFindMonsters(eventID, delay, repeats, bot)
+    <span class="keyword">if</span> <span class="keyword">not</span> bot:IsBot() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>  <span class="comment">-- THIS CAN CRASH TOO</span></code></pre></p>
+<p>But this validation itself can fail if the bot reference is invalid.</p>
+<p><h2>Intended Behavior</h2></p>
+<p>Periodic events should gracefully handle invalid bot references:
+1. Check if reference is nil before calling any methods
+2. Check if underlying object is still valid
+3. Cancel the periodic event if bot is gone
+4. No errors in logs for expected logout/despawn scenarios</p>
+<p><h2>Affected Files</h2></p>
+<p>- <code>src/lua/periodic_events.lua</code> - All PeriodicBot* functions
+- <code>src/lua/behaviors/find-monsters.lua:28</code> - getNearbyCreatures
+- <code>src/lua/behaviors/gestures.lua:73</code> - getNPCsInRange
+- <code>src/lua/behaviors/bot-wander.lua:275</code> - checkAntiClump</p>
+<p><h2>Suggested Implementation</h2></p>
+<p><h3>Option 1: Nil check wrapper (simple)</h3></p>
+<p>Add explicit nil check at start of every periodic function:</p>
+<p><pre><code class="lua"><span class="keyword">function</span> PeriodicBotFindMonsters(eventID, delay, repeats, bot)
+    <span class="keyword">if</span> <span class="keyword">not</span> bot <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>  <span class="comment">-- ADD THIS</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> bot:IsBot() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> bot:IsAlive() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span></code></pre></p>
+<p><h3>Option 2: pcall wrapper (robust)</h3></p>
+<p>Wrap method calls in pcall to catch any failure:</p>
+<p><pre><code class="lua"><span class="keyword">function</span> safeGetPosition(obj)
+    <span class="keyword">local</span> ok, x, y, z = pcall(<span class="keyword">function</span>()
+        <span class="keyword">return</span> obj:GetPosition()
+    <span class="keyword">end</span>)
+    <span class="keyword">if</span> ok <span class="keyword">then</span>
+        <span class="keyword">return</span> x, y, z
+    <span class="keyword">else</span>
+        <span class="keyword">return</span> <span class="keyword">nil</span>, <span class="keyword">nil</span>, <span class="keyword">nil</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span></code></pre></p>
+<p><h3>Option 3: Track bot validity (proper)</h3></p>
+<p>Use PLAYER_EVENT_ON_LOGOUT to unregister periodic events:</p>
+<p><pre><code class="lua"><span class="keyword">local</span> botTimers = {}  <span class="comment">-- guid -&amp;gt; {eventId<span class="number">1</span>, eventId<span class="number">2</span>, ...}</span></p>
+<p><span class="keyword">function</span> OnBotLogout(event, player)
+    <span class="keyword">local</span> guid = player:GetGUID()
+    <span class="keyword">if</span> botTimers[guid] <span class="keyword">then</span>
+        <span class="keyword">for</span> _, eventId <span class="keyword">in</span> ipairs(botTimers[guid]) <span class="keyword">do</span>
+            RemoveEventById(eventId)
+        <span class="keyword">end</span>
+        botTimers[guid] = <span class="keyword">nil</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span></code></pre></p>
+<p><h2>Recommendation</h2></p>
+<p><strong>No fallbacks. Make the pipeline work correctly.</strong></p>
+<p>The real fix: Patch mod-playerbots to call <code>sALE-&gt;OnLogin(bot)</code> when bots log in.
+Bots should be treated exactly the same as players.</p>
+<p><h3>Patch: mod-playerbots ALE Integration</h3></p>
+<p>See: <code>docs/patches/playerbots-ale-login-hook.md</code></p>
+<p><h2>Error Observations</h2></p>
+<p><h3>2026-04-08 - Initial discovery</h3></p>
+<p>Found in <code>/tmp/wow-chat-2/logs-beta/Server.log</code>:
+- Hundreds of repeated GetPosition nil errors
+- Multiple behavior files affected
+- Occurs when bots log out while periodic timers are active</p>
+<p><h2>Related Issues</h2>
+- 160 - Periodic events system
+- 164 - Bot mode orchestration
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-3-progress.html">View Phase 3 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

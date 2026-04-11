@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>directory-structure.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>directory-structure.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/directory-structure.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 4460 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+redirect_from: &quot;/Directory-Structure&quot;
+---</p>
+<p><h1>Directory Structure</h1></p>
+<p>AzerothCore and our modules is following  directory structure standard from hw-core:</p>
+<p>&lt;a href=&quot;https://github.com/HW-Core/directory-structure/blob/master/README&quot; target=&quot;_blank&quot;&gt;Standard Directory Structure&lt;/a&gt;</p>
+<p>This structure is conformed to our <a href="The-Modular-Structure">modular architecture</a>.</p>
+<p>azerothcore/</p>
+<p>├── [apps][1]&lt;br/&gt;
+├── [bin][2]&lt;br/&gt;
+├── [conf][3]&lt;br/&gt;
+├── [data][4]&lt;br/&gt;
+├── [deps][5]&lt;br/&gt;
+├── [env][6]&lt;br/&gt;
+├── [modules][7]&lt;br/&gt;
+├── [src][8]&lt;br/&gt;
+└── [var][9]&lt;br/&gt;</p>
+<p>[1]: #apps
+[2]: #bin
+[3]: #conf
+[4]: #data
+[5]: #deps
+[6]: #env
+[7]: #modules
+[8]: #src
+[9]: #var</p>
+<p><h2> AzerothCore Wotlk directory structure in detail:</h2></p>
+<p><h3>apps</h3>
+  Utilities and applications with an higher level of awareness compared to modules. They can act in the lifecycle operations of the project such as the CI, the installation of modules, database migration etc.
+  
+  An example of app is our db_assembler that is able to create and upgrade your database installation.</p>
+<p><h3>bin  </h3>
+  Contains binaries/scripts for this project. This folder can be placed inside the PATH env variable of your OS allowing you to integrate the project CLI scripts with your shell.
+  
+  An example is the azerothcore dashboard script, that allows you to directly run the installer app, the db_assembler and the other tools that come with the azerothcore repo.</p>
+<p><h3>conf  </h3>
+  The configuration files needed by the apps/ and other tools included in our repo. It&#39;s not the folder where the worldserver and authserver conf files are stored because the conf/ folder is used only for the repository and it&#39;s not compiled.
+  
+  An example of configuration file is the conf.sh.dist. It&#39;s an all-in-one conf used by our apps such as the dashboard, the compiler, the db_assembler etc.</p>
+<p><h3>data </h3>
+  All static data not compiled with the sources.
+  
+  An example of data are the sql files, the assets etc.
+  
+  You can learn more about the SQL Directory <a href="sql-directory">here</a>.
+    
+<h3>deps</h3>
+  This is a domain-oriented folder structure. Therefore, all folders define a specific business domain . In this case each folder represent a standalone component that is needed by the project to work. All components are stored with a <a href="https://en.wikipedia.org/wiki/Monorepo">monorepo strategy</a>. All code that is generic and not related to the logic of Wotlk should be moved under a separated component of the deps layer and handled by a proper VCS.
+  The deps layer of AzerothCore can be used and configured to build other server applications.</p>
+<p>  An example of deps are the 3rd party library such as acelib and the g3dlite lib, but also libraries created by the azerothcore organization for a generic purpose.</p>
+<p><h3>modules</h3>
+  This is a domain-oriented folder structure. In fact, the principal benefit of this structure is its modularity. Each folder represent a standalone <a href="The-Modular-Structure">module</a>/plugin that is optional and can be used to extend core functionalities. All modules are stored with a multi-repo strategy and they are git-ignored by default.
+  
+  An example of module are the transmog, the autobalance, the crossbattlegrounds etc.</p>
+<p><h3>env</h3>
+  This folder is used for the default distribution environment. By default the compiler will generate binaries, configuration files and everything is needed by the server application inside the /env/dist folder. However, as explained in the directory-structure standard, this folder can be used to create any kind of nested encapsulated environments.</p>
+<p><h3>src  </h3>
+  All sources strictly related to this application/project and wotlk server version. It follows a role-oriented folder structure. This is a classic directory structure seen in many frameworks. The files are organized by their roles (game, scripts, tools etc.). Its main benefit is to quickly get the picture of all files for specific roles.
+  
+<h3>var  </h3>
+  This is a folder in which the content is ignored by git. Var folder contains volatile data such as temporary build files. Note: var folder is not used to store worldserver/authserver logs, even though they are volatile data, because those data are not related to the repository lifecycle and reside inside the <strong>application environment</strong> (/env/dist).
+  
+  
+!<a href="https://docs.google.com/drawings/d/e/2PACX-1vQDBXPZMAq2HSszx8BGxloxQ5cqDULLC2tCgCmO2uyAF6HH3s9RkDFZxbQVsmFY8xM8Y18rIQJg1mBU/pub?w=1413&amp;h=945">AC Layers</a>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

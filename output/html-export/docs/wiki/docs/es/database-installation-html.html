@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>database-installation.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>database-installation.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/database-installation.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2661 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Instalación de la Base de Datos</h1></p>
+<p>| Guía de Instalación | |
+| :- | :- |
+| Este artículo es parte de la Guía de Instalación. Puede leerlo solo o hacer click en los links previos para navegar con facilidad entre los pasos. |
+| <a href="server-setup">&lt;&lt; Paso 3: Configuración del Servidor</a> | <a href="networking">Paso 5: Redes &gt;&gt;</a> |</p>
+<p><h2>Creación de la Base de Datos en MySQL</h2></p>
+<p><h3>Creación de la Base de Datos y el Usuario</h3></p>
+<p>Primero que todo, necesita crear el usuario acore usando el siguiente script.</p>
+<p>https://github.com/azerothcore/azerothcore-wotlk/blob/master/data/sql/create/create_mysql.sql</p>
+<p>Puede realizarlo con un cliente de MySQL o con la interfaz de comandos de MySQL (CLI).</p>
+<p>Necesitará usar una cuenta root de MySQL con su cliente de  MySQL o con MySQL CLI antes de empezar a correr el servidor y usar alguno de esos archivos. (use un usuario root de MySQL solo para importar uno de esos archivos, NUNCA inicie el servidor con usuario root o administrator).</p>
+<p><em>Consejo: Puede cambiar la contraseña del usario que está creando para incrementar la seguridad.</em></p>
+<p><h2>Cargan de información a la Base de Datos</h2></p>
+<p>Puede hacer esto de dos maneras:
+- Automatic Database Updater (Actualizador autmático de la base datos: predeterminado, recomendado)</p>
+<p>Si quiere saber cómo funciona el directorio SQL o planea hacer cambios custom, le recomendamos leer <a href="sql-directory">esto</a>.</p>
+<p><h3>Actualizador automático de bases de datos</h3></p>
+<p>Por defecto, Worldserver y Authserver van a revisar e importar los nuevos archivos dentro de la base de datos que estén especificados en la configuración.</p>
+<p>Esta es la forma recomendada y la más facil, para asegurarse de que siempre tiene la base de datos al día con el Core.</p>
+<p>Para editar el actualizador automático de bases de datos, encontrará las configuraciones necesarias en authserver.conf y worldserver.conf en la opción <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/2d2857ce81db5297eb63d388d2e2f252ef52412d#diff-56b141374cf0384a2887c9fd490c6a79a3d2f31fb020ee0e423a5685344b59d3R30">UPDATE SETTINGS</a>.</p>
+<p>&lt;br&gt;</p>
+<p><h2>Ayuda</h2></p>
+<p>Si sigue teniendo inconvenientes, revise:</p>
+<p><em> <a href="faq">Preguntas frecuentes</a></p>
+<p></em> <a href="common-errors">Errores Comunes</a></p>
+<p><em> <a href="how-to-ask-for-help">Cómo solicitar ayuda</a></p>
+<p></em> <a href="https://discord.gg/gkt4y2x">Unase a nuestro discord</a>. Aunque no es un canal de soporte 24/7, un miembro del staff le responderá siempre que tenga tiempo.</p>
+<p>| Guía de Instalación | |
+| :- | :- |
+| Este artículo es parte de la Guía de Instalación. Puede leerlo solo o hacer click en los links previos para navegar con facilidad entre los pasos. |
+| <a href="server-setup">&lt;&lt; Paso 3: Configuración del Servidor</a> | <a href="networking">Paso 5: Redes &gt;&gt;</a> |
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

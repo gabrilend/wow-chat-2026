@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>account_banned.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>account_banned.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/account_banned.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 1714 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>﻿# account\_banned</p>
+<p><a href="database-auth">&lt;-Volver a: Auth</a></p>
+<p>Leer en: <a href="../account_banned">English :gb:</a> <a href="account_banned">Español :es:</a></p>
+<p><strong>Tabla \<code>account\_banned\</code></strong></p>
+<p>Esta tabla enumera todas las cuentas que han sido baneadas junto con la fecha en la que (en tal caso) expirase el baneo.</p>
+<p><strong>Estructura</strong></p>
+<p>| Field          | Type         | Attributes | Key | Null | Default | Extra | Comment    |
+| -------------- | ------------ | ---------- | --- | ---- | ------- | ----- | ---------- |
+| [id][1]        | INT          | UNSIGNED   | PRI | NO   | 0       |       | Account id |
+| [bandate][2]   | INT          | UNSIGNED   | PRI | NO   | 0       |       |            |
+| [unbandate][3] | INT          | UNSIGNED   |     | NO   | 0       |       |            |
+| [bannedby][4]  | VARCHAR(50)  | SIGNED     |     | NO   |         |       |            |
+| [banreason][5] | VARCHAR(255) | SIGNED     |     | NO   |         |       |            |
+| [active][6]    | TINYINT      | UNSIGNED   |     | NO   | 1       |       |            |</p>
+<p>[1]: #id
+[2]: #bandate
+[3]: #unbandate
+[4]: #bannedby
+[5]: #banreason
+[6]: #active</p>
+<p><strong>Descripción de los campos</strong></p>
+<p><h3>id</h3></p>
+<p>El ID de la cuenta. Véase <a href="account#id">account.id</a>.</p>
+<p><h3>bandate</h3></p>
+<p>La fecha en que la cuenta fue baneada, en tiempo Unix.</p>
+<p><h3>unbandate</h3></p>
+<p>La fecha en que la cuenta será automáticamente desbaneada, en tiempo Unix. Un valor inferior en negativo a la fecha actual significa, en efecto, un baneo permanente.</p>
+<p><h3>bannedby</h3></p>
+<p>El nombre del personaje del GM que baneó esa cuenta. Si se banea desde la consola, entonces estará vacía (hasta que se cambie).</p>
+<p><h3>banreason</h3></p>
+<p>La razón del ban.</p>
+<p><h3>active</h3></p>
+<p>Booleano 0 o 1 que controla si el baneo está activo o no.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

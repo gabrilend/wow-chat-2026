@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>windows-core-installation.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>windows-core-installation.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/windows-core-installation.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 6316 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Instalación del Core en Windows</h1></p>
+<p>| Guía de Instalación | |
+| :- | :- |
+| Este artículo forma parte de la Guía de Instalación. Puedes leerlo por separado o hacer clic en el enlace anterior para moverte fácilmente entre los pasos. |
+| <a href="windows-requirements">&lt;&lt; Paso 1: Requisitos</a> | <a href="server-setup">Paso 3: Configuración del Servidor &gt;&gt;</a> |</p>
+<p><h2>Software necesario</h2></p>
+<p>Consulta <a href="windows-requirements">Requisitos</a> antes de continuar.</p>
+<p><h2>Descarga y compilación del código fuente</h2></p>
+<p><h3>Descarga del código</h3></p>
+<p>1. Crea el directorio donde se ubicarán los archivos fuente. En esta guía, utilizaremos <strong>C:\Azerothcore</strong>.</p>
+<p>2. Abre Github Desktop.</p>
+<p>3. Haz clic en <strong>Archivo</strong> -&gt; <strong>Clonar repositorio...</strong> en la esquina superior izquierda.</p>
+<p>4. Haz clic en <strong>URL</strong>.</p>
+<p>5. Completa los datos de la siguiente manera:</p>
+<p>``<code>text
+Repository URL or GitHub username and repository: https://github.com/azerothcore/azerothcore-wotlk
+Local path: C:\Azerothcore
+<pre><code>
+Click <strong>Clone</strong>. En pocos minutos, los archivos fuente de Azerothcore se clonarán en <strong>C:\Azerothcore</strong>.</p>
+<p>&lt;h3&gt;Configuración y generación de la solución Visual C++ con CMake&lt;/h3&gt;</p>
+<p>Antes de comenzar, crea un nuevo directorio llamado <strong>Build</strong>. En esta guía, utilizaremos <strong>C:\Build</strong>.</p>
+<p>1. Abre CMake.</p>
+<p>2. Haz clic en <strong>Examinar fuente...</strong> → Selecciona el directorio fuente (<strong>C:\Azerothcore</strong>).</p>
+<p>3. Haz clic en <strong>Examinar construcción...</strong> → Selecciona el directorio de construcción (<strong>C:\Build</strong>).</p>
+<p>4. Haz clic en <strong>Configurar</strong>.</p>
+<p>5. En el menú desplegable, elige la versión del compilador que descargaste en la sección de <a href="windows-requirements">Requisitos</a>. Asegúrate de elegir la versión <strong>Win64</strong> si trabajas en una compilación de 64 bits.</p>
+<p>6. Asegúrate de que <strong>Usar compiladores nativos predeterminados</strong> esté marcado.</p>
+<p>7. Haz clic en <strong>Finalizar</strong>.</p>
+<p>8. Asegúrate de que <strong>TOOLS_BUILD</strong> esté configurado en </code>all<code>. Esto compilará los extractores necesarios más adelante en la configuración.</p>
+<p>9. Haz clic en <strong>Configurar</strong> nuevamente. Mientras haya error(es) en rojo en la ventana de registro, deberás verificar tus parámetros y volver a ejecutarlo.</p>
+<p>10. Haz clic en <strong>Generar</strong>. Esto instalará los archivos de construcción seleccionados en tu carpeta <strong>C:\Build</strong>.</p>
+<p>&lt;h4&gt;Solución de algunos errores&lt;/h4&gt;</p>
+<p>Si llegaras a encontrar errores en CMake, consulta <a href="common-errors#core-installation-errors">Errores comunes</a>.</p>
+<p>&lt;h3&gt;Compilación del código fuente&lt;/h3&gt;</p>
+<p>1. En CMake, presiona <strong>Abrir proyecto</strong> para abrir el archivo <strong>AzerothCore.sln</strong> directamente con Visual Studio.</p>
+<p>1. En el menú superior, haz clic en <strong>Compilar</strong> y selecciona <strong>Administrador de configuraciones</strong>.</p>
+<p>    1. Establece la <strong>Configuración de solución activa</strong> en <strong>RelWithDebInfo</strong>.</p>
+<p>    1. Establece la <strong>Plataforma de solución activa</strong> en <strong>x64</strong> y luego haz clic en Cerrar (la configuración se guarda automáticamente).</p>
+<p>1. Haz clic con el botón derecho en <strong>ALL_BUILD</strong> en el Explorador de soluciones en la barra lateral derecha y selecciona <strong>Limpiar</strong>.</p>
+<p>1. Haz clic con el botón derecho en <strong>ALL_BUILD</strong> y selecciona <strong>Compilar</strong> (Ctrl + Shift + B).</p>
+<p>    1. Si tu GUI no muestra el Explorador de soluciones, haz clic en el menú Compilar y selecciona <strong>Limpiar solución</strong>, y luego <strong>Compilar</strong>.</p>
+<p>El tiempo de compilación varía de una máquina a otra, pero puedes esperar que tome entre 5 y 30 minutos.</p>
+<p>Si se te pide &amp;quot;Recargar archivos de construcción&amp;quot; durante o después de la compilación, hazlo.</p>
+<p>Cuando la compilación esté completa, encontrarás un mensaje en la salida que se parece a esto:
+</code></pre>text
+========== Build: 22 succeeded, 0 failed, 0 up-to-date, 1 skipped ==========
+<pre><code>
+Encontrarás tus binarios recién compilados en la carpeta <strong>C:\Build\bin\RelWithDebInfo</strong> o <strong>C:\Build\bin\Debug</strong>. Estos se utilizan para ejecutar tu servidor al final de estas instrucciones.</p>
+<p>Necesitarás los siguientes archivos para que el núcleo funcione correctamente:
+</code></pre>text
+\configs\
+authserver.exe
+authserver.pbd
+worldserver.exe
+worldserver.pdb
+libmysql.dll</p>
+<p>---------
+Para OpenSSL 1.1.x</p>
+<p>libeay32.dll / libcrypto-1_1.dll / libcrypto-1_1-x64.dll
+ssleay32.dll / libssl-1_1.dll / libssl-1_1-x64.dll</p>
+<p>---------
+Para OpenSSL 3.0 y versiones posteriores</p>
+<p>legacy.dll
+libcrypto-3.dll / libcrypto-3-x64.dll
+libssl-3.dll / libssl-3-x64.dll
+<pre><code>
+En la carpeta <strong>configs</strong> deberías encontrar:
+</code></pre>text
+authserver.conf.dist
+worldserver.conf.dist
+</code>``</p>
+<p>Hay dos/tres archivos DLL que deben agregarse manualmente a esta carpeta, y debes copiarlos desde los siguientes directorios de instalación/bin:</p>
+<p><strong>libmysql.dll</strong> → C:\Program Files\MySQL\MySQL Server 8.x\lib\</p>
+<p><em>Nota: Necesitas la versión exacta de libmysql que corresponda al MySQL que has descargado. Debido a esto, no puedes descargar el DLL de la web y necesitas extraerlo de la carpeta.</em></p>
+<p><h4>OpenSSL _antes_ de la versión 1.1.0:</h4></p>
+<p><strong>libeay32.dll</strong> y <strong>ssleay32.dll</strong> → C:\OpenSSL-Win64\ o C:\OpenSSL-Win32\ <em>(depende de si tu núcleo es de 64 bits o 32 bits)</em>.</p>
+<p><h4>Nombres de OpenSSL 1.1.x han cambiado:</h4></p>
+<p><strong>libssl-1_1-x64.dll</strong> y <strong>libcrypto-1_1-x64.dll</strong> → C:\OpenSSL-Win64\bin</p>
+<p><h4>OpenSSL 3.0 y más reciente instalado, debes copiar:</h4></p>
+<p><strong>legacy.dll</strong> → C:\OpenSSL-Win(32/64)\bin</p>
+<p><strong>libcrypto-3-x64.dll</strong> y <strong>libssl-3-x64.dll</strong> → C:\OpenSSL-Win64\bin</p>
+<p><h4>Acerca del registro de compilación e informe</h4></p>
+<p>Los archivos pdb solo existen si compilar con la configuración Debug o RelWithDebInfo. No es obligatorio, pero se recomienda compilar el núcleo con al menos la configuración RelWithDebInfo para obtener registros de errores adecuados.</p>
+<p>Para informar sobre registros de errores, es OBLIGATORIO compilar con la configuración Debug o RelWithDebInfo.</p>
+<p>&lt;br&gt;</p>
+<p><h2>Ayuda</h2></p>
+<p>fgdfgSi aún tienes problemas, verifica:</p>
+<p><em> <a href="faq">FAQ</a></p>
+<p></em> <a href="common-errors">Errores comunes</a></p>
+<p><em> <a href="how-to-ask-for-help">Cómo solicitar ayuda</a></p>
+<p></em> <a href="https://discord.gg/gkt4y2x">Únete a nuestro servidor de Discord</a>, pero no es un canal de soporte las 24 horas. Un miembro del personal te responderá cuando tenga tiempo.</p>
+<p>| Guía de Instalación | |
+| :- | :- |
+| Este artículo forma parte de la Guía de Instalación. Puedes leerlo por separado o hacer clic en el enlace anterior para moverte fácilmente entre los pasos. |
+| <a href="windows-requirements">&lt;&lt; Paso 1: Requisitos</a> | <a href="server-setup">Paso 3: Configuración del Servidor &gt;&gt;</a> |
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

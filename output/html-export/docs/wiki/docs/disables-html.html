@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>disables.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>disables.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/disables.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 5394 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>disables</h1></p>
+<p><a href="database-world">&lt;-Back-to:World</a></p>
+<p><strong>The \<code>disables\</code> table</strong></p>
+<p>This table is used to disable dungeons/bgs/spells/etc.</p>
+<p><strong>Table Structure</strong></p>
+<p>| Field           | Type         | Attributes | Key | Null | Default | Extra | Comment |
+| --------------- | ------------ | ---------- | --- | ---- | ------- | ----- | ------- |
+| [sourceType][1] | INT          | UNSIGNED   | PRI | NO   | NULL    |       |         |
+| [entry][2]      | INT          | UNSIGNED   | PRI | NO   | NULL    |       |         |
+| [flags][3]      | TINYINT      | UNSIGNED   |     | NO   | 0       |       |         |
+| [params_0][4]   | VARCHAR(255) |            |     | NO   |         |       |         |
+| [params_1][5]   | VARCHAR(255) |            |     | NO   |         |       |         |
+| [comment][6]    | VARCHAR(255) |            |     | NO   |         |       |         |</p>
+<p>[1]: #sourcetype
+[2]: #entry
+[3]: #flags
+[4]: #params_0
+[5]: #params_1
+[6]: #comment</p>
+<p><strong>Description of the fields</strong></p>
+<p><h3>sourceType</h3></p>
+<p>| Value | Type                              |
+| ----- | --------------------------------- |
+| 0     | DISABLE_TYPE_SPELL                |
+| 1     | DISABLE_TYPE_QUEST                |
+| 2     | DISABLE_TYPE_MAP                  |
+| 3     | DISABLE_TYPE_BATTLEGROUND         |
+| 4     | DISABLE_TYPE_ACHIEVEMENT_CRITERIA |
+| 5     | DISABLE_TYPE_OUTDOORPVP           |
+| 6     | DISABLE_TYPE_VMAP                 |
+| 7     | DISABLE_TYPE_MMAP                 |
+| 8     | DISABLE_TYPE_LFG_MAP              |
+| 9     | DISABLE_TYPE_GAME_EVENT           |
+| 10    | DISABLE_TYPE_LOOT                 |</p>
+<p><h3>entry</h3></p>
+<p>Entry of Spell/Quest/Map/BG/Achievement/Map/GameEvent/Item.</p>
+<p><em><strong>If sourceType = DISABLE_TYPE_SPELL:</strong></em></p>
+<p>Entry of Spell</p>
+<p><em><strong>If sourceType = DISABLE_TYPE_QUEST:</strong></em></p>
+<p><a href="quest_template#id">quest_template.id</a></p>
+<p><em><strong>If sourceType = DISABLE_TYPE_MAP:</strong></em></p>
+<p><em><strong>If sourceType = DISABLE_TYPE_VMAP:</strong></em></p>
+<p><em><strong>If sourceType = DISABLE_TYPE_MMAP:</strong></em></p>
+<p><em><strong>If sourceType = DISABLE_TYPE_OUTDOORPVP:</strong></em></p>
+<p><em><strong>If sourceType = DISABLE_TYPE_LFG_MAP:</strong></em></p>
+<p>Entry of Map</p>
+<p><em><strong>If sourceType = DISABLE_TYPE_ACHIEVEMENT_CRITERIA:</strong></em></p>
+<p>Entry of Achievement</p>
+<p><em><strong>If sourceType = DISABLE_TYPE_GAME_EVENT:</strong></em></p>
+<p><a href="game_event#evententry">game_event.eventEntry</a></p>
+<p><em><strong>If sourceType = DISABLE_TYPE_LOOT:</strong></em></p>
+<p><a href="item_template#entry">item_template.entry</a></p>
+<p><h3>flags</h3></p>
+<p>If sourceType = DISABLE_TYPE_SPELL: Specifies who the spell is disabled for.</p>
+<p>| Value | Type                                                                                          |
+| ----- | --------------------------------------------------------------------------------------------- |
+| 0     | Spell enabled                                                                                 |
+| 1     | Spell disabled for players                                                                    |
+| 2     | Spell disabled for creatures                                                                  |
+| 4     | Spell disabled for pets                                                                       |
+| 8     | Spell completely disabled (used for no logner existing spells in DBCs)                        |
+| 16    | Spell disabled for MapId                                                                      |
+| 32    | Spell disabled for AreaId                                                                     |
+| 64    | Line of Sight (LOS) is disabled for this spell (replaces &quot;vmap.ignoreSpellIds&quot; config option) |</p>
+<p>Example: INSERT INTO \<code>disables\</code> VALUES (0, 8921, (1+16+32), &quot;571,1&quot;, &quot;1519&quot;, &quot;Moonfire Example&quot;);</p>
+<p>This will disable spell Moonfire (8921) for players in maps 571,1 and area 1519.</p>
+<p><em><strong>If sourceType = DISABLE_TYPE_MAP:</strong></em></p>
+<p>Specifies what type of map is disabled (5man/10man/heroic/etc).</p>
+<p>| Value | Type                                                        |
+| ----- | ----------------------------------------------------------- |
+| 1     | DUNGEON_STATUS_FLAG_NORMAL OR RAID_STATUS_FLAG_10MAN_NORMAL |
+| 2     | DUNGEON_STATUS_FLAG_HEROIC OR RAID_STATUS_FLAG_25MAN_NORMAL |
+| 4     | RAID_STATUS_FLAG_10MAN_HEROIC                               |
+| 8     | RAID_STATUS_FLAG_25MAN_HEROIC                               |</p>
+<p>The value is a bitmask of VALID modes for the specific map, 15 is as such NOT a valid mask on certain maps, only those actually found possible for the respective map.</p>
+<p><em><strong>If sourceType = DISABLE_TYPE_VMAP:</strong></em></p>
+<p>Specifies on which map should be vMap disabled</p>
+<p>| Value | Type                  |
+| ----- | --------------------- |
+| 1     | VMAP_DISABLE_AREAFLAG |
+| 2     | VMAP_DISABLE_HEIGHT   |
+| 4     | VMAP_DISABLE_LOS      |
+| 8     | VMAP_LIQUIDSTATUS     |</p>
+<p>Example: INSERT INTO \<code>disables\</code> VALUES (6, 1, (2 + 4), 0, 0, &quot;Disable Kalimdor vMaps&quot;);</p>
+<p>This will disable vMaps on whole Kalimdor.</p>
+<p><em><strong>If sourceType = DISABLE_TYPE_QUEST:</strong></em></p>
+<p><em><strong>If sourceType = DISABLE_TYPE_ACHIEVEMENT_CRITERIA:</strong></em></p>
+<p><em><strong>If sourceType = DISABLE_TYPE_OUTDOORPVP:</strong></em></p>
+<p><em><strong>If sourceType = DISABLE_TYPE_MMAP:</strong></em></p>
+<p><em><strong>If sourceType = DISABLE_TYPE_LFG_MAP:</strong></em></p>
+<p><em><strong>If sourceType = DISABLE_TYPE_GAME_EVENT:</strong></em></p>
+<p><em><strong>If sourceType = DISABLE_TYPE_LOOT:</strong></em></p>
+<p>No flags needed just add the entry to the table with \<code>flags\</code>=0.</p>
+<p><h3>params_0</h3></p>
+<p>MapId if DISABLE_TYPE_SPELL used, 0 for all maps.</p>
+<p><h3>params_1</h3></p>
+<p>AreaId if DISABLE_TYPE_SPELL used, 0 for all areas.</p>
+<p><h3>comment</h3></p>
+<p>A comment as to why the something was disabled, or any other text that you want.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

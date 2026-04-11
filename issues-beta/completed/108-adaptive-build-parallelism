@@ -1,0 +1,197 @@
+# 108 - Adaptive Build Parallelism
+
+**Phase:** 1 (Foundation)
+**Effect:** Builds adapt to hardware, system remains responsive
+**Status:** Completed (2025-02-24)
+
+---
+
+## The Effect
+
+The build script auto-detects CPU cores and uses `nproc - 1` threads by default. The system stays responsive during 30-minute builds.
+
+Can override with `MAKE_JOBS=4` for slower/faster builds.
+
+---
+
+## What This Solved
+
+### Before
+
+Hardcoded `-j15` in build script:
+```bash
+make -j15  # Always use 15 threads
+```
+
+**Problems:**
+1. Assumes 16-core system (not portable)
+2. Uses 93% of cores → system freezes
+3. Can't adjust for different hardware
+4. No way to reserve cores for other work
+
+Developer experience:
+- Start build → computer unusable for 30 minutes
+- Can't browse docs, check logs, test code
+- Frustrating on slower machines (why so many threads?)
+
+### After
+
+Auto-detect with override:
+```bash
+MAKE_JOBS=$(( $(nproc) - 1 ))  # Leave one core free
+
+# User can override
+MAKE_JOBS=4 source scripts/azerothcore && azerothcore update
+```
+
+---
+
+## Implementation
+
+### Code
+
+```bash
+# Thread count for parallel builds
+# Defaults to (nproc - 1) to leave one core free for multitasking
+# Can be overridden: MAKE_JOBS=4 source scripts/azerothcore && azerothcore install
+if [[ -z "${MAKE_JOBS:-}" ]]; then
+    MAKE_JOBS=$(( $(nproc) - 1 ))
+    # Minimum of 1 thread
+    if [[ "${MAKE_JOBS}" -lt 1 ]]; then
+        MAKE_JOBS=1
+    fi
+fi
+```
+
+### Behavior
+
+| System | nproc | MAKE_JOBS | Effect |
+|--------|-------|-----------|--------|
+| Laptop (4 cores) | 4 | 3 | Leaves 1 core, system usable |
+| Desktop (16 cores) | 16 | 15 | Fast build, responsive |
+| Server (64 cores) | 64 | 63 | Blazing fast |
+| VM (1 core) | 1 | 1 | Minimum enforced |
+
+### Override Examples
+
+```bash
+# Faster build, less responsive
+MAKE_JOBS=15 source scripts/azerothcore && azerothcore update --force
+
+# Slower build, more responsive (background compile)
+MAKE_JOBS=2 source scripts/azerothcore && azerothcore update --force
+
+# Max speed (use all cores)
+MAKE_JOBS=$(nproc) source scripts/azerothcore && azerothcore update --force
+```
+
+---
+
+## Design Decision: nproc - 1 vs nproc / 2
+
+### Original Plan
+Use `nproc / 2` (half cores) to leave "room for other work."
+
+### User Preference
+Use `nproc - 1` (all but one core) because:
+1. Builds are faster (important for iteration)
+2. One core is enough for terminal, browser, editor
+3. Can still check logs, read docs during build
+4. If doing heavy work, override with `MAKE_JOBS=4`
+
+### The Trade-Off
+
+**nproc / 2** (conservative):
+- System very responsive
+- Builds take 2x longer
+- Good for: Multitasking while building
+
+**nproc - 1** (aggressive):
+- Builds finish faster
+- System slightly sluggish
+- Good for: "Start build, grab coffee"
+
+We chose aggressive because:
+- Developer can override if needed
+- Faster iteration > extra responsiveness
+- The `-1` prevents total freeze
+
+---
+
+## Why This Matters
+
+**Portability**
+
+The script now works on:
+- Laptops (4 cores)
+- Desktops (16 cores)
+- Servers (64 cores)
+- VMs (1 core)
+
+No hardcoded assumptions. Clone the repo → builds optimize for your hardware.
+
+**Developer Experience**
+
+Before: "Why is my computer frozen?"
+After: "I can still use my browser during the build."
+
+That one free core makes the difference between:
+- Frustration (can't do anything)
+- Patience (read docs, check logs, reply to messages)
+
+**Overridability**
+
+Sometimes you want slow (background build, working on something else).
+Sometimes you want fast (full cores, iterating quickly).
+
+`MAKE_JOBS` lets you choose per build.
+
+---
+
+## Related Phase 1 Issues
+
+- 109 - add-build-mode-to-azerothcore-script (uses MAKE_JOBS)
+- 101 - verify-server-startup (build must complete first)
+
+---
+
+## Lessons Learned
+
+### Defaults Matter
+
+The default should be "works well for most people most of the time." That's `nproc - 1`:
+- Fast enough (no one complains about speed)
+- Responsive enough (one core keeps system alive)
+- Portable (works on 4-core and 64-core machines)
+
+Edge cases (want slower, want faster) can override.
+
+### Environment Variables > Command Line Args
+
+Could have done `azerothcore install --jobs=8`, but environment variable is simpler:
+```bash
+MAKE_JOBS=8 source scripts/azerothcore && azerothcore install
+```
+
+Why better:
+- One variable for entire session
+- Multiple commands (install, update) use same value
+- Doesn't clutter command interface
+
+### The One-Core Buffer
+
+Leaving one core free prevents:
+- System total freeze
+- SSH disconnects (server unresponsive)
+- "Can't even move mouse" frustration
+
+That margin makes the system feel cooperative instead of hostile.
+
+---
+
+## Phase 1 Contribution
+
+This issue enables **Phase 1: Foundation** by ensuring:
+> "Builds complete without killing the system"
+
+A frozen computer during build is a bad developer experience. This fix makes builds feel **cooperative** rather than **hostile**.

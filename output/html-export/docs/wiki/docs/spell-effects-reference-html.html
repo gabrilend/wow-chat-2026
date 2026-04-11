@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>spell-effects-reference.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>spell-effects-reference.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/spell-effects-reference.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 14340 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Spell Effects Reference</h1></p>
+<p><a href="spell_dbc">&lt;-Back-to:spell_dbc</a></p>
+<p><h3>This page contains description regarding the usage of EffectMiscValue and other Spell Effects values.</h3></p>
+<p><h3>Contains the list of all Spell Effects.</h3></p>
+<p><strong>Version is : 3.3.5a</strong></p>
+<p><h3>Related Information</h3>
+<a href="summonproperties_dbc">Summon Properties</a></p>
+<p><a href="spell-aura-reference">Spell Aura</a></p>
+<p><h1>Spell Effect Names</h1></p>
+<p>SPELL_EFFECT_INSTAKILL = 1</p>
+<p>SPELL_EFFECT_SCHOOL_DAMAGE = 2
+- BasePoints: Base damage
+- Multiple: Damage multiplier</p>
+<p>SPELL_EFFECT_DUMMY = 3
+- BasePoints: Anything</p>
+<p>SPELL_EFFECT_PORTAL_TELEPORT = 4</p>
+<p>SPELL_EFFECT_TELEPORT_UNITS = 5
+- TargetB: Teleport location</p>
+<p>SPELL_EFFECT_APPLY_AURA = 6
+- BasePoints: Value of aura (depends on Aura ID)
+- EffectAura: <a href="spell-aura-reference">Spell Aura</a></p>
+<p>SPELL_EFFECT_ENVIRONMENTAL_DAMAGE = 7
+- BasePoints: Base damage</p>
+<p>SPELL_EFFECT_POWER_DRAIN = 8
+- BasePoints: Base drain
+- Multiple: Drain multiplier</p>
+<p>SPELL_EFFECT_HEALTH_LEECH = 9
+- BasePoints: Base drain 
+- Multiple: Drain multiplier
+- TargetB: If used, TargetA is healed</p>
+<p>SPELL_EFFECT_HEAL = 10
+- BasePoints: Base heal
+- Multiple: Heal multiplier
+- TargetB: If used, TargetA is healed</p>
+<p>SPELL_EFFECT_BIND = 11
+- BasePoints: Unknown
+- EffectMiscValueA: Area ID (Death Gate only)</p>
+<p>SPELL_EFFECT_PORTAL = 12
+- TargetA: Teleport Destination
+- TargetB: Targets</p>
+<p>SPELL_EFFECT_RITUAL_BASE = 13 // Unused</p>
+<p>SPELL_EFFECT_RITUAL_SPECIALIZE = 14 // Unused</p>
+<p>SPELL_EFFECT_RITUAL_ACTIVATE_PORTAL = 15 // Unused</p>
+<p>SPELL_EFFECT_QUEST_COMPLETE = 16
+- EffectMiscValueA: Quest ID
+- TargetB: Additional Targets (Used by 30790)</p>
+<p>SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL = 17
+- BasePoints: Base damage</p>
+<p>SPELL_EFFECT_RESURRECT = 18
+- BasePoints: Percentage (%) of restored health and mana
+- TargetB: Additional Targets (Used by 29820, mass revive)</p>
+<p>SPELL_EFFECT_ADD_EXTRA_ATTACKS = 19
+- BasePoints: Number of extra melee attacks</p>
+<p>SPELL_EFFECT_DODGE = 20</p>
+<p>SPELL_EFFECT_EVADE = 21</p>
+<p>SPELL_EFFECT_PARRY = 22</p>
+<p>SPELL_EFFECT_BLOCK = 23</p>
+<p>SPELL_EFFECT_CREATE_ITEM = 24
+- BasePoints: Number of items
+- EffectItemType: <a href="item_template">Item ID</a></p>
+<p>SPELL_EFFECT_WEAPON = 25</p>
+<p>SPELL_EFFECT_DEFENSE = 26</p>
+<p>SPELL_EFFECT_PERSISTENT_AREA_AURA = 27
+- BasePoints: Depends on <a href="spell-aura-reference">Spell Aura</a></p>
+<p>SPELL_EFFECT_SUMMON = 28
+- BasePoints: Number of summons (Sometimes used to set HP of summoned creature)
+- EffectMiscValueA: <a href="creature_template">Creature ID</a>
+- EffectMiscValueB: <a href="summonproperties_dbc">Summon Properties</a>
+- Radius: Spawn range</p>
+<p>SPELL_EFFECT_LEAP = 29
+- TargetA: Target
+- TargetB: Destination
+- Radius: Blink/leap distance</p>
+<p>SPELL_EFFECT_ENERGIZE = 30
+- BasePoints: Amount
+- TargetB: Additional Targets
+- EffectMiscValueA: Power Type</p>
+<p>| ID  | Type       |
+| --- | ---------- |
+| 0   | Mana       |
+| 1   | Rage       |
+| 2   | Focus      |
+| 3   | Energy     |
+| 4   | Happiness  |
+| 5   | Rune       |
+| 6   | Runic      |
+| 7   | Max powers |
+| 127 | All powers |
+| -2  | HP         |</p>
+<p>SPELL_EFFECT_WEAPON_PERCENT_DAMAGE = 31
+- BasePoints: Percentage base damage</p>
+<p>SPELL_EFFECT_TRIGGER_MISSILE = 32
+- TriggerSpell: Spell ID</p>
+<p>SPELL_EFFECT_OPEN_LOCK = 33
+- BasePoints: Required lockpicking skill level</p>
+<p>SPELL_EFFECT_SUMMON_CHANGE_ITEM = 34 // Weapons like Benedictions
+EffectItemType: New <a href="item_template">Item ID</a></p>
+<p>SPELL_EFFECT_APPLY_AREA_AURA_PARTY = 35
+- BasePoints: Depends on <a href="spell-aura-reference">Spell Aura</a></p>
+<p>SPELL_EFFECT_LEARN_SPELL = 36
+- TriggerSpell: Spell ID</p>
+<p>SPELL_EFFECT_SPELL_DEFENSE = 37</p>
+<p>SPELL_EFFECT_DISPEL = 38
+- BasePoints: Number of spells to dispell
+- EffectMiscValueA: Dispel Type</p>
+<p>| ID | Type       | ID | Type         | ID | Type            |
+| -- | ---------- | -- | ------------ | -- | --------------- |
+| 0  | None       | 4  | Poison       | 8  | SPE_NPC_ONLY    |
+| 1  | Magic      | 5  | Stealth      | 9  | Enrage          |
+| 2  | Curse      | 6  | Invisibility | 10 | ZG Trinket      |
+| 3  | Disease    | 7  | ALL          | 11 | Old Unseen      |</p>
+<p>SPELL_EFFECT_LANGUAGE = 39
+- EffectMiscValueA: <a href="languages">Language ID</a></p>
+<p>SPELL_EFFECT_DUAL_WIELD = 40</p>
+<p>SPELL_EFFECT_JUMP = 41
+- Multiple: Unknown
+- EffectMiscValueA: Speed XY or speed Z
+- EffectMiscValueB: Speed XY or speed Z</p>
+<p>SPELL_EFFECT_JUMP_DEST = 42
+- Multiple: Unknown
+- EffectMiscValueA: Speed XY or speed Z
+- EffectMiscValueB: Speed XY or speed Z</p>
+<p>SPELL_EFFECT_TELEPORT_UNITS_FACE_CASTER = 43
+- BasePoints: Number of units to teleport</p>
+<p>SPELL_EFFECT_SKILL_STEP = 44
+- BasePoints: Unknown
+- EffectMiscValueA: <a href="skillline">Skill ID</a></p>
+<p>SPELL_EFFECT_ADD_HONOR = 45
+- BasePoints: Honor points to reward</p>
+<p>SPELL_EFFECT_SPAWN = 46</p>
+<p>SPELL_EFFECT_TRADE_SKILL = 47</p>
+<p>SPELL_EFFECT_STEALTH = 48</p>
+<p>SPELL_EFFECT_DETECT = 49</p>
+<p>SPELL_EFFECT_TRANS_DOOR = 50
+- EffectMiscValueA: <a href="gameobject_template">gameobject_template ID</a>
+- gameobject_template&#39;s Data0 is the spell that is linked to the destination of the teleport when clicked.
+- Data0 entry = spell_target_position table</p>
+<p>SPELL_EFFECT_FORCE_CRITICAL_HIT = 51 // Unused</p>
+<p>SPELL_EFFECT_GUARANTEE_HIT = 52 // Unused</p>
+<p>SPELL_EFFECT_ENCHANT_ITEM = 53
+- EffectItemType: <a href="item_template">Item ID</a> (Scrolls/Inscription)
+- EffectMiscValueA: ID from SpellItemEnchantment.dbc
+- EffectMiscValueA: 14 = armor, 15 = weapon, tied to EffectItemType.</p>
+<p>SPELL_EFFECT_ENCHANT_ITEM_TEMPORARY = 54
+- EffectMiscValueA: ID from SpellItemEnchantment.dbc</p>
+<p>SPELL_EFFECT_TAMECREATURE = 55</p>
+<p>SPELL_EFFECT_SUMMON_PET = 56
+- Multiple: Relative to Caster level (e.g a value of -3 will be caster level -3) Does not currently work.
+- EffectMiscValueA: <a href="creature_template">Creature ID</a></p>
+<p>SPELL_EFFECT_LEARN_PET_SPELL = 57
+- TriggerSpell: Spell ID</p>
+<p>SPELL_EFFECT_WEAPON_DAMAGE = 58
+- BasePoints: Additional damage
+- TargetB: Additional Targets
+- Chain Target: Additional Targets</p>
+<p>SPELL_EFFECT_CREATE_RANDOM_ITEM = 59
+- EffectMiscValueA: Unknown</p>
+<p>SPELL_EFFECT_PROFICIENCY = 60</p>
+<p>SPELL_EFFECT_SEND_EVENT = 61
+- EffectMiscValueA: Calls for an event from acevent_scripts table.\
+(Most are missmatched, but there are few that are correct.)</p>
+<p>SPELL_EFFECT_POWER_BURN = 62
+- BasePoints: Amount of mana to burn
+- TargetB: Additional Targets
+- Multiple: conversion % to dmg (e.g if 0.5, for 1 mana burned, deal 0.5 damage)
+- Chain Target: Additional Targets</p>
+<p>SPELL_EFFECT_THREAT = 63
+- BasePoints: Amount of threat to add/remove</p>
+<p>SPELL_EFFECT_TRIGGER_SPELL = 64
+- TriggerSpell: Spell ID</p>
+<p>SPELL_EFFECT_APPLY_AREA_AURA_RAID = 65
+- BasePoints: Depends on <a href="spell-aura-reference">Spell Aura</a>
+- EffectMiscValueA: Unknown</p>
+<p>SPELL_EFFECT_CREATE_MANA_GEM = 66
+- BasePoints: Number to refill
+- EffectItemType: <a href="item_template">Item ID</a> to create/refill</p>
+<p>SPELL_EFFECT_HEAL_MAX_HEALTH = 67</p>
+<p>SPELL_EFFECT_INTERRUPT_CAST = 68
+- EffectMechanic: Interupted</p>
+<p>SPELL_EFFECT_DISTRACT = 69
+- BasePoints: Duration in seconds.</p>
+<p>SPELL_EFFECT_PULL = 70</p>
+<p>SPELL_EFFECT_PICKPOCKET = 71</p>
+<p>SPELL_EFFECT_ADD_FARSIGHT = 72</p>
+<p>SPELL_EFFECT_UNTRAIN_TALENTS = 73</p>
+<p>SPELL_EFFECT_APPLY_GLYPH = 74
+- EffectMiscValueA: ID from GlyphProperties.dbc</p>
+<p>SPELL_EFFECT_HEAL_MECHANICAL = 75
+- BasePoints: Amount</p>
+<p>SPELL_EFFECT_SUMMON_OBJECT_WILD = 76
+- EffectMiscValueA: <a href="gameobject_template">gameobject_template ID</a></p>
+<p>SPELL_EFFECT_SCRIPT_EFFECT = 77 Assigned to a <a href="/wiki/core-scripts#spell-scripts">Core Script</a> in the DB.</p>
+<p>SPELL_EFFECT_ATTACK = 78</p>
+<p>SPELL_EFFECT_SANCTUARY = 79</p>
+<p>SPELL_EFFECT_ADD_COMBO_POINTS = 80
+- BasePoints: Number of combo points to add</p>
+<p>SPELL_EFFECT_CREATE_HOUSE = 81</p>
+<p>SPELL_EFFECT_BIND_SIGHT = 82</p>
+<p>SPELL_EFFECT_DUEL = 83
+- EffectMiscValueA: <a href="gameobject_template">gameobject_template ID</a> (Duel Flag)</p>
+<p>SPELL_EFFECT_STUCK = 84</p>
+<p>SPELL_EFFECT_SUMMON_PLAYER = 85</p>
+<p>SPELL_EFFECT_ACTIVATE_OBJECT = 86
+- EffectMiscValueA: Unknown</p>
+<p>SPELL_EFFECT_GAMEOBJECT_DAMAGE = 87
+- BasePoints: Base damage</p>
+<p>SPELL_EFFECT_GAMEOBJECT_REPAIR = 88</p>
+<p>SPELL_EFFECT_GAMEOBJECT_SET_DESTRUCTION_STATE = 89
+- EffectMiscValueA: State</p>
+<p>| ID | State      |
+| -- | ---------- |
+| 0  | Intact     |
+| 1  | Damaged    |
+| 2  | Destroyed  |
+| 3  | Rebuilding |</p>
+<p>SPELL_EFFECT_KILL_CREDIT = 90
+- EffectMiscValueA: <a href="creature_template">Creature ID</a></p>
+<p>SPELL_EFFECT_THREAT_ALL = 91 // Unused</p>
+<p>SPELL_EFFECT_ENCHANT_HELD_ITEM = 92
+- EffectMiscValueA: ID from SpellItemEnchantment.dbc</p>
+<p>SPELL_EFFECT_FORCE_DESELECT = 93</p>
+<p>SPELL_EFFECT_SELF_RESURRECT = 94
+- BasePoints: Positive = %, Negative = Flat Value
+- EffectMiscValueA: Mana (Flat Value)</p>
+<p>SPELL_EFFECT_SKINNING = 95</p>
+<p>SPELL_EFFECT_CHARGE = 96</p>
+<p>SPELL_EFFECT_CAST_BUTTON = 97 (Totem bar since 3.2.2a)
+- EffectMiscValueA: Totem combinations = 0,4,8
+- EffectMiscValueB: Unknown (Always 4), possibly totem amount</p>
+<p>SPELL_EFFECT_KNOCK_BACK = 98
+- BasePoints: Distance
+- EffectMiscValueA: Distance</p>
+<p>SPELL_EFFECT_DISENCHANT = 99</p>
+<p>SPELL_EFFECT_INEBRIATE = 100
+- BasePoints: Drunk power</p>
+<p>SPELL_EFFECT_FEED_PET = 101
+- BasePoints: Happiness Amount
+- TriggerSpell: Spell ID</p>
+<p>SPELL_EFFECT_DISMISS_PET = 102</p>
+<p>SPELL_EFFECT_REPUTATION = 103
+- BasePoints: Reputation  Amount
+- EffectMiscValueA: ID from <a href="faction">faction.dbc</a></p>
+<p>SPELL_EFFECT_SUMMON_OBJECT_SLOT1 = 104
+- EffectMiscValueA: <a href="gameobject_template">gameobject_template ID</a> </p>
+<p>SPELL_EFFECT_SUMMON_OBJECT_SLOT2 = 105
+- EffectMiscValueA: <a href="gameobject_template">gameobject_template ID</a> </p>
+<p>SPELL_EFFECT_SUMMON_OBJECT_SLOT3 = 106
+- EffectMiscValueA: <a href="gameobject_template">gameobject_template ID</a> </p>
+<p>SPELL_EFFECT_SUMMON_OBJECT_SLOT4 = 107 // Unused</p>
+<p>SPELL_EFFECT_DISPEL_MECHANIC = 108
+- EffectMiscValueA: Dispel Mechanic</p>
+<p>| ID | Mechanic   | ID | Mechanic   | ID | Mechanic        |
+| -- | ---------- | -- | ---------- | -- | --------------- |
+| 0  | None       | 11 | Snare      | 22 | Infected        |
+| 1  | Charm      | 12 | Stun       | 23 | Turn            |
+| 2  | Disorient  | 13 | Freeze     | 24 | Horror          |
+| 3  | Disarm     | 14 | Knockout   | 25 | Invulnerability |
+| 4  | Distract   | 15 | Bleed      | 26 | Interrupt       |
+| 5  | Fear       | 16 | Bandage    | 27 | Daze            |
+| 6  | Grip       | 17 | Polymorph  | 28 | Discovery       |
+| 7  | Root       | 18 | Banish     | 29 | immunity shield |
+| 8  | Slow       | 19 | Shield     | 30 | All powers      |
+| 9  | Silence    | 20 | Shackle    | 31 | Sap             |
+| 10 | Sleep      | 21 | Mount      | 31 | Enrage          |</p>
+<p>SPELL_EFFECT_RESURRECT_PET = 109
+- BasePoints: % base health to heal</p>
+<p>SPELL_EFFECT_DESTROY_ALL_TOTEMS = 110
+- BasePoints: % mana refund</p>
+<p>SPELL_EFFECT_DURABILITY_DAMAGE = 111
+- BasePoints: Positive = Durability damage, Negative = Durability restore
+- EffectMiscValueA: Unknown</p>
+<p>SPELL_EFFECT_112 = 112 // Unused</p>
+<p>SPELL_EFFECT_RESURRECT_NEW = 113
+- BasePoints: Health to restore (Flat Value)
+- EffectMiscValueA: Mana (Flat Value)</p>
+<p>SPELL_EFFECT_ATTACK_ME = 114</p>
+<p>SPELL_EFFECT_DURABILITY_DAMAGE_PCT = 115
+- BasePoints: Durability damage %
+- EffectMiscValueA: Unknown</p>
+<p>SPELL_EFFECT_SKIN_PLAYER_CORPSE = 116</p>
+<p>SPELL_EFFECT_SPIRIT_HEAL = 117
+- BasePoints: Health %</p>
+<p>SPELL_EFFECT_SKILL = 118
+- BasePoints: Unknown
+- EffectMiscValueA: <a href="skillline">Skill ID</a></p>
+<p>SPELL_EFFECT_APPLY_AREA_AURA_PET = 119
+- BasePoints: Depends on <a href="spell-aura-reference">Spell Aura</a></p>
+<p>SPELL_EFFECT_TELEPORT_GRAVEYARD = 120</p>
+<p>SPELL_EFFECT_NORMALIZED_WEAPON_DMG = 121
+- BasePoints: Base damage
+- Chain Target: Additional Targets</p>
+<p>SPELL_EFFECT_122 = 122 // Unused</p>
+<p>SPELL_EFFECT_SEND_TAXI = 123
+- EffectMiscValueA: ID from TaxiPath.dbc</p>
+<p>SPELL_EFFECT_PULL_TOWARDS = 124
+- EffectMiscValueA: Speed of pull</p>
+<p>SPELL_EFFECT_MODIFY_THREAT_PERCENT = 125
+- BasePoints: Threat %</p>
+<p>SPELL_EFFECT_STEAL_BENEFICIAL_BUFF = 126
+- BasePoints: Number of buffs to steal</p>
+<p>SPELL_EFFECT_PROSPECTING = 127</p>
+<p>SPELL_EFFECT_APPLY_AREA_AURA_FRIEND = 128
+- BasePoints: Depends on <a href="spell-aura-reference">Spell Aura</a></p>
+<p>SPELL_EFFECT_APPLY_AREA_AURA_ENEMY = 129
+- BasePoints: Depends on <a href="spell-aura-reference">Spell Aura</a></p>
+<p>SPELL_EFFECT_REDIRECT_THREAT = 130
+- BasePoints: % Threat to redirect
+- TargetB: Unit to redirect threat to </p>
+<p>SPELL_EFFECT_PLAY_SOUND = 131
+- EffectMiscValueA: ID from SoundEntries.dbc</p>
+<p>SPELL_EFFECT_PLAY_MUSIC = 132
+- EffectMiscValueA: ID from SoundEntries.dbc</p>
+<p>SPELL_EFFECT_UNLEARN_SPECIALIZATION = 133
+- TriggerSpell: Spell ID</p>
+<p>SPELL_EFFECT_KILL_CREDIT2 = 134
+- EffectMiscValueA: <a href="creature_template">Creature ID</a></p>
+<p>SPELL_EFFECT_CALL_PET = 135</p>
+<p>SPELL_EFFECT_HEAL_PCT = 136
+- BasePoints: % Heal</p>
+<p>SPELL_EFFECT_ENERGIZE_PCT = 137
+- BasePoints: % to restore
+- EffectMiscValueA: Power Type (Same as EFFECT 30)</p>
+<p>SPELL_EFFECT_LEAP_BACK = 138
+- BasePoints: Distance
+- EffectMiscValueA: Distance</p>
+<p>SPELL_EFFECT_CLEAR_QUEST = 139
+- BasePoints: 2nd quest ID to clear (e.g Spell ID 56518)
+- EffectMiscValueA: Quest ID</p>
+<p>SPELL_EFFECT_FORCE_CAST = 140
+- TriggerSpell: Spell ID</p>
+<p>SPELL_EFFECT_FORCE_CAST_WITH_VALUE = 141
+- BasePoints: Value for the TriggerSpell 
+- TriggerSpell: Spell ID</p>
+<p>SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE = 142
+- BasePoints: Value for the TriggerSpell 
+- TriggerSpell: Spell ID</p>
+<p>SPELL_EFFECT_APPLY_AREA_AURA_OWNER = 143
+- BasePoints: Depends on <a href="spell-aura-reference">Spell Aura</a></p>
+<p>SPELL_EFFECT_KNOCK_BACK_DEST = 144
+- BasePoints: Distance
+- TargetB: Destionation
+- EffectMiscValueA: Distance</p>
+<p>SPELL_EFFECT_PULL_TOWARDS_DEST = 145 (Black Hole Effect)
+- EffectMiscValueA: Distance</p>
+<p>SPELL_EFFECT_ACTIVATE_RUNE = 146
+- BasePoints: Number of runes to activate (1 or 2)
+- EffectMiscValueA: Rune Type</p>
+<p>SPELL_EFFECT_QUEST_FAIL = 147
+- EffectMiscValueA: Quest ID</p>
+<p>SPELL_EFFECT_TRIGGER_MISSILE_SPELL_WITH_VALUE = 148
+- BasePoints: Value
+- TriggerSpell: Spell ID</p>
+<p>SPELL_EFFECT_CHARGE_DEST = 149</p>
+<p>SPELL_EFFECT_QUEST_START = 150
+- EffectMiscValueA: Quest ID</p>
+<p>SPELL_EFFECT_TRIGGER_SPELL_2 = 151
+- TriggerSpell: Spell ID</p>
+<p>SPELL_EFFECT_SUMMON_RAF_FRIEND = 152
+- TriggerSpell: Spell ID (Summon)</p>
+<p>SPELL_EFFECT_CREATE_TAMED_PET = 153
+- EffectMiscValueA: <a href="creature_template">Creature ID</a></p>
+<p>SPELL_EFFECT_DISCOVER_TAXI = 154
+- EffectMiscValueA: ID from TaxiNodes.dbc</p>
+<p>SPELL_EFFECT_TITAN_GRIP = 155
+- EffectMiscValueA: Spell ID</p>
+<p>SPELL_EFFECT_ENCHANT_ITEM_PRISMATIC = 156</p>
+<p>SPELL_EFFECT_CREATE_ITEM_2 = 157
+- EffectItemType: <a href="item_template">Item ID</a> to transform
+- EffectMiscValueA: Unknown</p>
+<p>SPELL_EFFECT_MILLING = 158
+- BasePoints: Number of herbs to mill.</p>
+<p>SPELL_EFFECT_ALLOW_RENAME_PET = 159</p>
+<p>SPELL_EFFECT_160 = 160</p>
+<p>SPELL_EFFECT_TALENT_SPEC_COUNT = 161
+- BasePoints: Number of active talent specs</p>
+<p>SPELL_EFFECT_TALENT_SPEC_SELECT = 162
+- BasePoints: Talent spec ID to activate</p>
+<p>SPELL_EFFECT_163 = 163 // Unused</p>
+<p>SPELL_EFFECT_REMOVE_AURA = 164
+- BasePoints:  Spell ID to remove 2
+- TriggerSpell: Spell ID to remove
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

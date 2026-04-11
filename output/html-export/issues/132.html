@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 132 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 132 • Phase 1</div>
+            <h1>Healer Bot Ping-Pong Spiral Behavior</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>132 - Healer Bot Ping-Pong Spiral Behavior</h1></p>
+<p><h2>Status: Open</h2></p>
+<p><h2>Vision</h2></p>
+<p>Healer playerbots become mobile healing stations that spiral through 3D space,
+weaving between players in an optimized path like a bee pollinating flowers.
+They don&#39;t stand still and spam heals - they MOVE, creating a visual rhythm
+of healing that winds down through the party like water down a staircase.</p>
+<p><h2>Current Behavior</h2></p>
+<p>- Healer bots stand in place
+- Target lowest health player
+- Spam healing spells
+- Occasionally move if threatened</p>
+<p><h2>Intended Behavior</h2></p>
+<p><h3>The Ping-Pong Spiral</h3>
+<pre><code>Top View:                          Side View (3D Staircase):</p>
+<p>    P1 ─────┐                         P1 ○
+            │                            ╲
+    P2 ←────┘                             ╲ Healer descends
+    │                                  P2  ○
+    └───── P3                               ╲
+           │                                 ╲
+    P4 ←───┘                           P3    ○
+    │                                         ╲
+    └───── P5                                  ╲
+                                       P4      ○
+                                                ╲
+Healer winds through all                P5      ○
+players in optimal path</code></pre></p>
+<p><h3>Traveling Salesman Optimization</h3>
+<pre><code class="lua"><span class="comment">-- Priority factors <span class="keyword">for</span> next target:</span>
+<span class="comment">-- <span class="number">1.</span> Proximity (closer = higher priority)</span>
+<span class="comment">-- <span class="number">2.</span> Health deficit (lower health = higher priority)</span>
+<span class="comment">-- <span class="number">3.</span> Role importance (tank &amp;gt; healer &amp;gt; dps)</span>
+<span class="comment">-- <span class="number">4.</span> Time since last healed (longer = higher priority)</span></p>
+<p>score = (<span class="number">1</span> / distance) <em> health_deficit </em> role_weight <em> time_factor</code></pre></p>
+<p><h3>Speed of Sound Movement</h3>
+<pre><code class="lua"><span class="comment">-- Configuration</span>
+PING_PONG_SPEED = <span class="number">300</span>        <span class="comment">-- % of normal run speed</span>
+HEAL_WINDOW = <span class="number">1.5</span>            <span class="comment">-- seconds to cast <span class="keyword">while</span> passing</span>
+MIN_PROXIMITY = <span class="number">5</span>            <span class="comment">-- yards to trigger heal</span>
+SPIRAL_RADIUS = <span class="number">3</span>            <span class="comment">-- yards offset from direct path</span></p>
+<p><span class="comment">-- Movement feels like:</span>
+<span class="comment">-- &amp;quot;woooosh&amp;quot; past player → instant heal → &amp;quot;woooosh&amp;quot; to next</span></code></pre></p>
+<p><h2>Implementation</h2></p>
+<p><h3>Path Generation</h3>
+<pre><code class="lua"><span class="comment">-- {{{ calculate_healing_path</span>
+<span class="keyword">local</span> <span class="keyword">function</span> calculate_healing_path(healer, party_members)
+    <span class="comment">-- Sort by combined score</span>
+    <span class="keyword">local</span> targets = {}
+    <span class="keyword">for</span> _, member <span class="keyword">in</span> ipairs(party_members) <span class="keyword">do</span>
+        <span class="keyword">if</span> needs_healing(member) <span class="keyword">then</span>
+            <span class="keyword">local</span> score = calculate_priority_score(healer, member)
+            table.insert(targets, {player = member, score = score})
+        <span class="keyword">end</span>
+    <span class="keyword">end</span></p>
+<p>    table.sort(targets, <span class="keyword">function</span>(a, b) <span class="keyword">return</span> a.score &amp;gt; b.score <span class="keyword">end</span>)</p>
+<p>    <span class="comment">-- Apply traveling salesman nearest-neighbor heuristic</span>
+    <span class="keyword">local</span> path = {}
+    <span class="keyword">local</span> current_pos = healer:GetPosition()
+    <span class="keyword">local</span> remaining = targets</p>
+<p>    <span class="keyword">while</span> #remaining &amp;gt; <span class="number">0</span> <span class="keyword">do</span>
+        <span class="keyword">local</span> nearest_idx = find_nearest(current_pos, remaining)
+        <span class="keyword">local</span> nearest = table.remove(remaining, nearest_idx)
+        table.insert(path, nearest.player)
+        current_pos = nearest.player:GetPosition()
+    <span class="keyword">end</span></p>
+<p>    <span class="keyword">return</span> path
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>3D Spiral Movement</h3>
+<pre><code class="lua"><span class="comment">-- {{{ spiral_to_target</span>
+<span class="keyword">local</span> <span class="keyword">function</span> spiral_to_target(healer, target, callback)
+    <span class="keyword">local</span> start_pos = healer:GetPosition()
+    <span class="keyword">local</span> <span class="keyword">end</span>_pos = target:GetPosition()</p>
+<p>    <span class="comment">-- Calculate spiral waypoints</span>
+    <span class="keyword">local</span> distance = start_pos:Distance(<span class="keyword">end</span>_pos)
+    <span class="keyword">local</span> num_spirals = math.floor(distance / <span class="number">10</span>)  <span class="comment">-- one spiral per <span class="number">10</span> yards</span></p>
+<p>    <span class="keyword">local</span> waypoints = {}
+    <span class="keyword">for</span> i = <span class="number">1</span>, num_spirals <span class="keyword">do</span>
+        <span class="keyword">local</span> t = i / num_spirals
+        <span class="keyword">local</span> direct_point = lerp(start_pos, <span class="keyword">end</span>_pos, t)</p>
+<p>        <span class="comment">-- Add spiral offset (circular motion around direct path)</span>
+        <span class="keyword">local</span> angle = t </em> math.pi <em> <span class="number">4</span>  <span class="comment">-- two full rotations</span>
+        <span class="keyword">local</span> offset_x = math.cos(angle) </em> SPIRAL_RADIUS
+        <span class="keyword">local</span> offset_y = math.sin(angle) <em> SPIRAL_RADIUS</p>
+<p>        table.insert(waypoints, {
+            x = direct_point.x + offset_x,
+            y = direct_point.y + offset_y,
+            z = direct_point.z  <span class="comment">-- maintains height <span class="keyword">for</span> staircase effect</span>
+        })
+    <span class="keyword">end</span></p>
+<p>    healer:MoveAlongPath(waypoints, PING_PONG_SPEED, callback)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Heal-While-Moving</h3>
+<pre><code class="lua"><span class="comment">-- {{{ ping_pong_heal_loop</span>
+<span class="keyword">local</span> <span class="keyword">function</span> ping_pong_heal_loop(healer)
+    <span class="keyword">local</span> party = healer:GetGroup():GetMembers()
+    <span class="keyword">local</span> path = calculate_healing_path(healer, party)</p>
+<p>    <span class="keyword">if</span> #path == <span class="number">0</span> <span class="keyword">then</span>
+        <span class="comment">-- Nobody needs healing, orbit the tank</span>
+        orbit_tank(healer)
+        <span class="keyword">return</span>
+    <span class="keyword">end</span></p>
+<p>    <span class="keyword">local</span> <span class="keyword">function</span> heal_next(index)
+        <span class="keyword">if</span> index &amp;gt; #path <span class="keyword">then</span>
+            <span class="comment">-- Completed circuit, recalculate</span>
+            ping_pong_heal_loop(healer)
+            <span class="keyword">return</span>
+        <span class="keyword">end</span></p>
+<p>        <span class="keyword">local</span> target = path[index]</p>
+<p>        spiral_to_target(healer, target, <span class="keyword">function</span>()
+            <span class="comment">-- Arrived near target, instant heal</span>
+            <span class="keyword">if</span> healer:IsInRange(target, MIN_PROXIMITY) <span class="keyword">then</span>
+                cast_instant_heal(healer, target)
+            <span class="keyword">end</span></p>
+<p>            <span class="comment">-- Continue to next</span>
+            heal_next(index + <span class="number">1</span>)
+        <span class="keyword">end</span>)
+    <span class="keyword">end</span></p>
+<p>    heal_next(<span class="number">1</span>)
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Priority Score Calculation</h3>
+<pre><code class="lua"><span class="comment">-- {{{ calculate_priority_score</span>
+<span class="keyword">local</span> <span class="keyword">function</span> calculate_priority_score(healer, target)
+    <span class="keyword">local</span> distance = healer:GetDistance(target)
+    <span class="keyword">local</span> health_pct = target:GetHealthPct()
+    <span class="keyword">local</span> health_deficit = <span class="number">100</span> - health_pct</p>
+<p>    <span class="comment">-- Role weights</span>
+    <span class="keyword">local</span> role_weight = <span class="number">1.0</span>
+    <span class="keyword">if</span> is_tank(target) <span class="keyword">then</span>
+        role_weight = <span class="number">2.0</span>
+    <span class="keyword">elseif</span> is_healer(target) <span class="keyword">then</span>
+        role_weight = <span class="number">1.5</span>
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- Time since last healed by this healer</span>
+    <span class="keyword">local</span> last_heal_time = healer.heal_timestamps[target:GetGUID()] <span class="keyword">or</span> <span class="number">0</span>
+    <span class="keyword">local</span> time_since_heal = GetTime() - last_heal_time
+    <span class="keyword">local</span> time_factor = math.min(time_since_heal / <span class="number">10</span>, <span class="number">2.0</span>)  <span class="comment">-- caps at <span class="number">2</span>x</span></p>
+<p>    <span class="comment">-- Proximity is king (inverse distance)</span>
+    <span class="keyword">local</span> proximity_score = <span class="number">100</span> / math.max(distance, <span class="number">1</span>)</p>
+<p>    <span class="comment">-- Combined score</span>
+    <span class="keyword">return</span> proximity_score </em> (health_deficit / <span class="number">100</span>) <em> role_weight </em> time_factor
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span></code></pre></p>
+<p><h2>Visual Effect</h2></p>
+<p><pre><code>Frame 1:     Frame 2:     Frame 3:     Frame 4:
+  T            T            T            T
+      H→           ↓H           H→           ↓H
+  D   D        D   D        D   D        D   D
+    D            D            D            D</p>
+<p>H = Healer, T = Tank, D = DPS
+Healer spirals through the formation like a figure-8</code></pre></p>
+<p><h2>Configuration</h2></p>
+<p><pre><code class="lua"><span class="comment">-- worldserver.conf options</span>
+WowChat<span class="number">2.</span>Bot.Healer.PingPongEnabled = <span class="keyword">true</span>
+WowChat<span class="number">2.</span>Bot.Healer.PingPongSpeed = <span class="number">300</span>
+WowChat<span class="number">2.</span>Bot.Healer.SpiralRadius = <span class="number">3</span>
+WowChat<span class="number">2.</span>Bot.Healer.HealWindow = <span class="number">1.5</span>
+WowChat<span class="number">2.</span>Bot.Healer.MinHealthToHeal = <span class="number">90</span></code></pre></p>
+<p><h2>Related Issues</h2></p>
+<p>- <strong>114 - Find Monsters</strong>: Similar movement optimization
+- <strong>116 - Avoid Monsters</strong>: Healer must dodge while spiraling
+- <strong>119 - Orbit Player</strong>: Fallback behavior when no healing needed</p>
+<p><h2>Edge Cases</h2></p>
+<p>1. <strong>Tight Spaces</strong>: Reduce spiral radius in dungeons
+2. <strong>Spread Mechanics</strong>: Increase speed, reduce spiral
+3. <strong>Stack Mechanics</strong>: Collapse spiral, stand and heal
+4. <strong>Moving Targets</strong>: Predict target movement, lead the spiral
+5. <strong>Multiple Healers</strong>: Coordinate paths to avoid overlap</p>
+<p><h2>The Poetry of It</h2></p>
+<p><pre><code>Down the staircase, round and round,
+The healer moves without a sound.
+From tank to mage, from priest to knight,
+A spiral dance of healing light.</p>
+<p>No standing still, no rooted feet,
+The ping-pong path is swift and sweet.
+Through 3D space the healer flows,
+Wherever wounded health bar shows.</code></pre></p>
+<p></p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-1-progress.html">View Phase 1 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

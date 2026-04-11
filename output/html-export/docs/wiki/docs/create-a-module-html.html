@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>create-a-module.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>create-a-module.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/create-a-module.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2697 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+redirect_from: &quot;/Create-a-Module&quot;
+---</p>
+<p><h1>Create a Module</h1></p>
+<p><h2><strong>How to create a module</strong></h2></p>
+<p>Before start we suggest you to read <a href="The-Modular-Structure">Documentation about modular structure</a> to understand the way AzerothCore works.</p>
+<p><h3>Resources</h3></p>
+<p>- Module template (heavily recommended): <a href="https://github.com/azerothcore/skeleton-module">https://github.com/azerothcore/skeleton-module</a>
+- Script template: https://github.com/azerothcore/azerothcore-boilerplates
+- All the hooks in the core are listed in <a href="https://github.com/azerothcore/azerothcore-wotlk/blob/master/src/server/game/Scripting/ScriptMgr.h">ScriptMgr.h</a>. If you need custom hooks, they can be added to the core by <a href="How-to-create-a-PR">sending a PR</a>.
+- Existing modules listed in the catalogue: <a href="https://www.azerothcore.org/catalogue.html">https://www.azerothcore.org/catalogue.html</a>
+- If you need to create a new hook for your module, please follow this guide: <a href="hooks-script">How to create a new hook</a></p>
+<p><h3><strong>The Basis</strong></h3></p>
+<p>1. Create a folder inside <code>modules/</code> directory</p>
+<p>2. Now you can develop add anything to the main project, such as some scripts or
+even an entire library</p>
+<p>Note: we suggest to use the <a href="Directory-Structure">directory structure</a> standards of AzerothCore to better organize your modules and be familiar with main project.</p>
+<p><h3><strong>Add the first script</strong></h3></p>
+<p>1. Before continue, we suggest you to follow our guide on how to create a script for AzerothCore</p>
+<p>2. After you’ve created your script you’ve to create a .cpp file to handle the script loading.</p>
+<p>  For example ( Assuming you’ve created an src folder ):</p>
+<p>  <code>my_custom_loader.cpp</code></p>
+<p> ``<code>cpp
+// From SC
+void AddMyCustomScripts();</p>
+<p>// Add all
+// cf. the naming convention https://github.com/azerothcore/azerothcore-wotlk/blob/master/doc/changelog/master#how-to-upgrade-4
+// additionally replace all &#39;-&#39; in the module folder name with &#39;_&#39; here
+void Addmod_my_customScripts()
+{
+    AddMyCustomScripts();
+}
+</code>`<code></p>
+<p>  NOTE: AddMyCustomScripts is composed by:</p>
+<p>  Add (Prefix)</p>
+<p>  MyCustom (An unique name identifier for your script to avoid function collisions)</p>
+<p>  Scripts ( Suffix )</p>
+<p><h3><strong>Create a custom configuration file</strong></h3></p>
+<p>if you need to add a custom configuration file to your module that will be installed with server, the steps are very simple.</p>
+<p>1. Add a file with the extension </code>.conf.dist<code> in folder </code>./conf`
+2. Done. Yes, really, that&#39;s all there is to it.</p>
+<p><h3><strong>Add your db files to db_assembler</strong></h3></p>
+<p>you are able to create base, updates and custom sql that will be automatically loaded in our db_assembler</p>
+<p><strong>work in progress….</strong></p>
+<p><h3><strong>Finished creating your module?</strong></h3></p>
+<p>Publish your module to our catalogue: https://www.azerothcore.org/catalogue.html#/how-to</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

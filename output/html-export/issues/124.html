@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 124 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 124 • Phase 1</div>
+            <h1>Randomize Ambush Spawn Interval</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>124 - Randomize Ambush Spawn Interval</h1></p>
+<p><h2>Status: In Progress</h2></p>
+<p><h2>Current Behavior</h2>
+- Fixed 40 second spawn interval
+- Predictable timing feels mechanical
+- Timer starts on login, repeats forever</p>
+<p><h2>Intended Behavior</h2>
+- Base interval: 40 seconds
+- Jitter: +/- 2, 3, or 4 seconds (integer only)
+- Each offset value has equal probability (uniform distribution)
+- Possible intervals: 36, 37, 38, 42, 43, 44 seconds
+- Re-randomize each spawn cycle</p>
+<p><h2>Implementation v2 - Random Walk with Boundaries</h2></p>
+<p><h3>Core Behavior</h3>
+- Jitter (+/- 2-4 seconds) applies to PREVIOUS interval, not base
+- Creates a random walk that drifts over time
+- Boundaries prevent runaway values</p>
+<p><h3>Boundary Rules</h3>
+<pre><code>INTERVAL_MIN = 10 seconds
+INTERVAL_SOFT_CAP = 100 seconds
+INTERVAL_HARD_CAP = 200 seconds</p>
+<p>if interval &amp;lt;= INTERVAL_MIN:
+    direction = +1 only (forced positive)</p>
+<p>if interval &amp;gt;= INTERVAL_SOFT_CAP:
+    direction can be +1 or -1
+    but +1 is half as likely</p>
+<p>if interval &amp;gt;= INTERVAL_HARD_CAP:
+    +1 is quarter as likely</code></pre></p>
+<p><h3>Probability Table (above soft cap)</h3>
+| Range | P(positive) | P(negative) |
+|-------|-------------|-------------|
+| &lt; 100 | 50%         | 50%         |
+| 100-199 | 33%       | 67%         |
+| &gt;= 200 | 20%        | 80%         |</p>
+<p><h3>Grace Period</h3>
+- 30 second fixed grace period on login
+- Only triggers if offline for 10+ minutes
+- Quick relogs resume random walk immediately
+- Logout time tracked via PLAYER_EVENT_ON_LOGOUT</p>
+<p><h3>Persistence</h3>
+- Current interval stored in player data
+- Logout time stored in player data
+- TODO: Save to database for cross-session persistence
+- Quick relogs preserve interval (within session)</p>
+<p><h3>No Floats Rule</h3>
+- All values in milliseconds (integers)
+- math.random returns integers
+- Probability weights use integer ratios</p>
+<p><h2>Configuration Constants</h2>
+<pre><code class="lua">AMBUSH_BASE_INTERVAL   =  <span class="number">40000</span>  <span class="comment">-- ms (<span class="number">40</span> seconds) - starting value only</span>
+AMBUSH_INTERVAL_MIN    =  <span class="number">10000</span>  <span class="comment">-- ms (<span class="number">10</span> seconds) - floor</span>
+AMBUSH_INTERVAL_SOFT   = <span class="number">100000</span>  <span class="comment">-- ms (<span class="number">100</span> seconds) - positive bias starts</span>
+AMBUSH_INTERVAL_HARD   = <span class="number">200000</span>  <span class="comment">-- ms (<span class="number">200</span> seconds) - strong positive bias</span>
+AMBUSH_JITTER_MIN      =   <span class="number">2000</span>  <span class="comment">-- ms (<span class="number">2</span> seconds)</span>
+AMBUSH_JITTER_MAX      =   <span class="number">4000</span>  <span class="comment">-- ms (<span class="number">4</span> seconds)</span>
+AMBUSH_JITTER_STEP     =   <span class="number">1000</span>  <span class="comment">-- ms (<span class="number">1</span> second increments)</span></code></pre></p>
+<p><h2>Future Improvements</h2></p>
+<p><h3>Adaptive Spawn Rate</h3>
+- Increase spawn rate when player is winning easily
+- Decrease when player is struggling (low health, deaths)
+- Track kill time to adjust difficulty</p>
+<p><h3>Zone-Based Intervals</h3>
+- Different zones could have different spawn rates
+- Dangerous zones: faster spawns
+- Safe zones: slower spawns</p>
+<p><h3>Group Scaling</h3>
+- Solo: base rate
+- Party: faster spawns, more creatures per wave
+- Raid: spawn packs instead of singles</p>
+<p><h3>Time-of-Day Variation</h3>
+- Night: more frequent spawns
+- Day: less frequent
+- Creates gameplay rhythm</p>
+<p><h3>Combat State Awareness</h3>
+- Pause timer during active combat
+- Resume after combat ends
+- Prevents overwhelming the player</p>
+<p><h3>Streak System</h3>
+- Track consecutive kills without rest
+- Increase spawn rate during &quot;hot streaks&quot;
+- Creates risk/reward tension</p>
+<p><h2>Related Files</h2>
+- src/lua/ambush.lua
+- issues/113-investigate-ambush-monsters-not-spawning.md
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-1-progress.html">View Phase 1 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

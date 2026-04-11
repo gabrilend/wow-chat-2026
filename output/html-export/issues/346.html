@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 346 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 346 • Phase 3</div>
+            <h1>Authserver Public IP Detection</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>346 - Authserver Public IP Detection</h1></p>
+<p><h2>Status: Open</h2></p>
+<p><h2>Current Behavior</h2></p>
+<p>The <code>scripts/update-realmlist-ip</code> script runs every time authserver starts:</p>
+<p>1. Queries 4 external services (ifconfig.me, icanhazip.com, api.ipify.org, checkip.amazonaws.com)
+2. Requires consensus from at least 2 services
+3. Updates <code>acore_auth.realmlist</code> table with detected IP
+4. Takes 5-20 seconds depending on network latency</p>
+<p>This runs on every authserver start, even if:
+- The IP hasn&#39;t changed
+- The server was restarted moments ago
+- Multiple restarts happen in quick succession during development</p>
+<p>No warning is issued when IP changes - the database is silently updated.</p>
+<p><h2>Intended Behavior</h2></p>
+<p><h3>Daily Caching</h3></p>
+<p>Only perform the external IP lookup once per day:</p>
+<p>1. Store last detected IP and timestamp in a cache file (e.g., <code>tmp/public-ip-cache</code>)
+2. On authserver start, check cache age
+3. If cache is &lt; 24 hours old, use cached value
+4. If cache is stale or missing, perform fresh lookup
+5. Compare new IP to cached IP before updating database</p>
+<p><h3>IP Change Warning</h3></p>
+<p>When the public IP changes:</p>
+<p>1. Display prominent warning to console
+2. Show old IP vs new IP
+3. Remind user to update DNS record if using domain name
+4. Log the change with timestamp</p>
+<p>Example output:
+<pre><code>=== PUBLIC IP CHANGED ===
+  Previous: 203.0.113.45
+  Current:  198.51.100.72</p>
+<p>  If using a domain name, update your DNS A record.
+  Realmlist database has been updated automatically.
+=============================</code></pre></p>
+<p><h3>Cache File Format</h3></p>
+<p>Simple text file at <code>${DIR}/tmp/public-ip-cache</code>:
+<pre><code>IP=198.51.100.72
+TIMESTAMP=1712678400</code></pre></p>
+<p><h2>Suggested Implementation Steps</h2></p>
+<p>1. Add cache file path constant to <code>update-realmlist-ip</code>
+2. Add <code>read_cache()</code> function - returns IP and timestamp or empty
+3. Add <code>write_cache()</code> function - stores current IP and Unix timestamp
+4. Add <code>is_cache_fresh()</code> function - checks if timestamp &lt; 24 hours old
+5. Modify <code>main()</code> to check cache before querying external services
+6. Add IP comparison and warning message when change detected
+7. Update <code>scripts/azerothcore</code> comment to note caching behavior</p>
+<p><h2>Related Files</h2></p>
+<p>- <code>scripts/update-realmlist-ip</code> - Current implementation
+- <code>scripts/azerothcore:364-371</code> - Where the script is called (authserver command)
+- <code>scripts/credentials</code> - Sourced for MySQL access</p>
+<p><h2>Notes</h2></p>
+<p>The current implementation was created without an issue file. This issue retroactively
+documents the feature and adds the caching requirement.</p>
+<p>Why daily: ISPs with dynamic IP typically don&#39;t change more than once per day. Checking
+more frequently wastes bandwidth and adds startup latency. Checking less frequently
+risks stale realmlist entries preventing player connections.</p>
+<p>Why warn on change: DNS records have TTL. If using a domain name, the user needs to
+know their IP changed so they can update the A record. The realmlist database update
+is automatic, but DNS is external to this system.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-3-progress.html">View Phase 3 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

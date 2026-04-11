@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>aws-tutorial.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>aws-tutorial.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/aws-tutorial.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 13370 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Hosting AzerothCore via Amazon AWS</h1></p>
+<p>Preface: The goal with this guide is for it to be mostly via a command line. There is also the <a href="https://aws.amazon.com/console/">AWS Console</a> that some will find more intuitive, however, for guide longevity (as the AWS Console UI may change) the aws-cli tool will be recommended. Also included will be grep commands to receive only the required output. If the entire output is desired simply remove the <code>| grep</code> and everything after it.</p>
+<p>------</p>
+<p>[TOC]</p>
+<p>------</p>
+<p><h2>Prerequisites</h2></p>
+<p>These tools are required as rest of the tutorial will be done via a bash enabled command line:</p>
+<p>- <a href="https://portal.aws.amazon.com/billing/signup#/start">Amazon AWS Account</a>
+- <a href="https://git-scm.com/downloads">Git</a>
+- <a href="https://www.python.org/downloads/">Python</a> - make sure to check that this is added to PATH if using windows</p>
+<p>------</p>
+<p><h2>AWS-CLI</h2></p>
+<p><h3>Installing AWS-CLI</h3></p>
+<p>Firstly verify that python &amp; its included pip tool are correctly setup :</p>
+<p><pre><code class="bash">python --version &amp;amp;&amp;amp; pip --version</code></pre></p>
+<p>This should return both the python and pip version. If not then correctly install python and link it to the PATH. Now that python is installed install aws-cli via:</p>
+<p><pre><code class="bash">pip install awscli --upgrade</code></pre></p>
+<p>Verify that awscli correctly installed by entering <code>aws --version</code>. If it didn&#39;t install correctly refer to <a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html#install-post">this</a> to troubleshoot depending on your computer&#39;s operating system.</p>
+<p><h3>Configuring AWS-CLI</h3></p>
+<p>An access Key and ID will be required. This can be found at <a href="https://console.aws.amazon.com/iam/home#/security_credentials">AWS Security Credentials</a> and selecting the Access Keys &gt; Create New Access Key button. <strong>Keep this key safe as it can be used to perform any actions on an AWS account</strong>. It is considered best practice to allow access via an <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users.html">IAM User</a>,  especially if AWS privilege will be shared with anyone else. Once the Key has been obtained use it to give credentials to aws-cli using the command:</p>
+<p><pre><code class="bash">aws configure</code></pre></p>
+<p>Insert the ID and Key into their corresponding fields. For the default region name insert <code>us-east-1</code> and for the default output format insert <code>table</code>. Another server now may be found with the command:</p>
+<p><pre><code class="bash">aws ec2 describe-regions --output table</code></pre></p>
+<p>Use the <code>ping</code> command plus the various endpoints to test latency to the regions. After an appropriate server has been found run <code>aws configure</code> again and enter the new region.</p>
+<p><h3>Creating a Key-Pair</h3></p>
+<p>Before any server instances are created a <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html">key-pair</a> will be required. This key-pair will be used to validated access to the EC2 instances it is affixed to. Create a new key-pair via:</p>
+<p><pre><code class="bash">aws ec2 create-key-pair --key-name AzCore-KP --query &amp;#39;KeyMaterial&amp;#39; --output text &amp;gt; ~/AzCore-KP.pem</code></pre></p>
+<p>The key-pair will be saved into the $HOME directory. Make sure to keep this newly created <code>AzCore-KP.pem</code> file safe as <strong>this file cannot be remade</strong> after it is created. If the key-pair is lost after linking it to any EC2 instances they will need to be remade with a new key-pair. The key-pair is used to SSH into the instance and there are no ways to remove access from the key-pair without ultimately deleting the EC2 instance! Before the key-pair can be used the permissions must be set with :</p>
+<p><pre><code class="bash">chmod 400 ~/AzCore-KP.pem</code></pre></p>
+<p><h3>Creating a VPC</h3></p>
+<p><em>Note: While AWS provides a default VPC that will work fine. The information required for making an entirely new VPC for this guide will be provided incase the default VPC for whatever case isn&#39;t available or working. It simultaneously acts as deeper delve into AWS and its networking features.</em></p>
+<p>Creating a VPC for the region using:</p>
+<p><pre><code class="bash">aws ec2 create-vpc --cidr-block 172.32.0.0/16 | grep -Po &amp;quot;(vpc)-[a-zA-Z0-9]<em>\s&amp;quot;</code></pre></p>
+<p>This should output the vpc-id. Save this as it will be required later.</p>
+<p>Also needed is the command:</p>
+<p><pre><code class="bash">aws ec2  modify-vpc-attribute --enable-dns-hostnames --vpc-id $VPC_ID </code></pre></p>
+<p><h3>Creating a Subnet</h3></p>
+<p>A Subnet is required to be linked with the VPC using:</p>
+<p><pre><code class="bash">aws ec2 create-subnet --cidr-block 172.32.0.0/20 --vpc-id $VPC_ID | grep -Po &amp;quot;(?&amp;lt;!\/)(subnet)-[a-zA-Z0-9]</em>\s&amp;quot;</code></pre></p>
+<p>Save the subnet-id value for later use.</p>
+<p><h3>Creating an Internet Gateway</h3></p>
+<p>Create and attach the internet gateway with:</p>
+<p><pre><code class="bash">aws ec2 create-internet-gateway | grep -Po &amp;quot;(igw)-[a-zA-Z0-9]<em>\s&amp;quot;
+aws ec2 attach-internet-gateway --internet-gateway-id $IGW_ID --vpc-id $VPC_ID</code></pre></p>
+<p><h3>Creating a Route Table</h3></p>
+<p>The newly created VPC comes with a route table included, however, it doesn&#39;t have access to an Internet Gateway by default! To fix this issue describe the route tables with:</p>
+<p><pre><code class="bash">aws ec2 describe-route-tables</code></pre></p>
+<p>This will return a table with all VPCs in the region. Find the one with the CIDR block used which is most likely <code>172.32.0.0/16</code> and save the <code>RouteTableID</code> value. After finding the route table id enter: </p>
+<p><pre><code class="bash">aws ec2 create-route --route-table-id $RouteTableID --destination-cidr-block 0.0.0.0/0 --gateway-id $IGW_ID</code></pre></p>
+<p><h3>Creating a Security Group</h3></p>
+<p>The Security Group will provide access to ports required for traffic to the server. This is done by:</p>
+<p><pre><code class="bash">aws ec2 create-security-group --group-name AzerothCore --description &amp;quot;World / Auth / SSH Port Access&amp;quot; --vpc-id $VPC_ID | grep -Po &amp;quot;(sg)-[a-zA-Z0-9]</em>\s&amp;quot;</code></pre></p>
+<p><h3>Configuring the Security Group</h3></p>
+<p>This next string creates the port traffic permissions allowing traffic on ports 22 (SSH), 8085 (World Server), and 3724 (Authentication Server). Where $SECURITY_GROUP_ID is the previously obtained output.</p>
+<p><pre><code class="bash">aws ec2 authorize-security-group-ingress --group-id $SECURITY_GROUP_ID --ip-permissions IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=&amp;#39;[{CidrIp=0.0.0.0/0, Description=&amp;quot;SSH from Anywhere&amp;quot;}]&amp;#39; IpProtocol=tcp,FromPort=8085,ToPort=8085,IpRanges=&amp;#39;[{CidrIp=0.0.0.0/0, Description=&amp;quot;World-Server from Anywhere&amp;quot;}]&amp;#39; IpProtocol=tcp,FromPort=3724,ToPort=3724,IpRanges=&amp;#39;[{CidrIp=0.0.0.0/0, Description=&amp;quot;Auth-Server from Anywhere&amp;quot;}]&amp;#39;</code></pre></p>
+<p><h3>Finding an AMI</h3></p>
+<p>Latest Ubuntu LTS will be used for the guide but any Linux distribution supported by AzerothCore should be fine. Keep in mind there may be small idiosyncrasies with differing distributions. Newer AMI releases of Ubuntu can be found <a href="https://cloud-images.ubuntu.com/locator/ec2/">here</a> and other AMIs found on the <a href="https://aws.amazon.com/marketplace/ref=csl_ec2_ami">AWS Marketplace</a>. The AMI that is used for the guide is <code>ami-024a64a6685d05041</code>. Find more information on this image with:</p>
+<p><pre><code class="bash">aws ec2 describe-images --image-ids ami-024a64a6685d05041</code></pre></p>
+<p><h3>Running the Instance</h3></p>
+<p>Now it&#39;s finally time to create the server instance. Insert the previously described AMI or a new one in place of $AMI_ID :</p>
+<p><pre><code class="bash">aws ec2 run-instances --image-id $AMI_ID --instance-type t2.micro --count 1 --associate-public-ip-address --key-name AzCore-KP --security-group-ids $SECURITY_GROUP_ID --subnet-id $SUBNET_ID</code></pre></p>
+<p>This will create and initialize one t2.micro instance. <em>Only one instance can constantly be ran in a month without paying for additional server hours.</em></p>
+<p><h3>Modifying the Volume</h3></p>
+<p>Now, describe the running instance with:</p>
+<p><pre><code class="bash">aws ec2 describe-instances</code></pre></p>
+<p>Find the running instance and perform the following command on the volume-id that is attached:</p>
+<p><pre><code class="bash">aws ec2 modify-volume --size 20 --volume-id $VOL_ID</code></pre></p>
+<p><em>This will change the storage to 20GB. 30GB is the MAX block storage for free tier. Try not to go over that unless intending on paying!</em></p>
+<p><h3>Assigning a Static IP</h3></p>
+<p>Run the command:</p>
+<p><pre><code class="bash">aws ec2 allocate-address --domain $VPC_ID</code></pre></p>
+<p>This will provide an Allocation ID. Now using the Instance ID which can be found in the previously ran <code>aws ec2 describe-instances</code> perform the command:</p>
+<p><pre><code class="bash">aws ec2 associate-address --allocation-id $ALLOC_ID --instance-id $INSTANCE_ID</code></pre></p>
+<p><em>If a domain is desired for connection consider <a href="https://aws.amazon.com/route53/">Amazons Route 53</a> service. They can be found as low as 12$ per year.</em></p>
+<p>------</p>
+<p><h2>The Instance</h2></p>
+<p><h3>SSH into the Instance</h3></p>
+<p>Describe the instance with <code>aws ec2 describe-instances</code> and find the <code>PublicDnsName </code>.</p>
+<p>Access the server using the command</p>
+<p><pre><code class="bash">SSH -i &amp;quot;~/AzCore-KP.pem&amp;quot; ubuntu@$PublicDnsName</code></pre></p>
+<p><h3>Installing AzerothCore</h3></p>
+<p>Follow the Linux portion of the guide found at &lt;http://www.azerothcore.org/wiki/Installation&gt;. Run <code>sudo apt-get update &amp;&amp; sudo apt-get upgrade</code> before installing dependencies and update security patches.</p>
+<p><h3>Uploading Data file to Server</h3></p>
+<p>Download the <a href="https://mega.nz/#F!Am4DBKCR!o9Qj_xFLfsg4sczqg0xq2A">newest_data.zip</a> and unzip it and its subfolders. Next <code>cd</code> into the folder where it is located and perform the command:</p>
+<p><pre><code class="bash">tar zcfv ~/data.tar.gz newest_data/</code></pre></p>
+<p>This will zip the file into a tar.gz file. Now to upload it to the server using</p>
+<p><pre><code class="bash">scp -i &amp;quot;~/AzCore-KP.pem&amp;quot; ~/data.tar.gz ubuntu@$PublicDnsName:$CMAKE_INSTALL_PREFIX/data</code></pre></p>
+<p>This can take a while depending on upload speed. The $CMAKE_INSTALL_PREFIX will be the path to where the server is installed not the cloned git repository which is <code>~/azeroth-server/</code> by default. </p>
+<p>Now untar it with:</p>
+<p>``<code>bas
+tar xfv $CMAKE_INSTALL_PREFIX/data.tar.gz --strip-components=2
+<pre><code>
+It should now be unpacked into </code>$CMAKE_INSTALL_PREFIX/data/<code></p>
+<p>Alternatively, borrowed from <a href="https://stackoverflow.com/a/49444877">stackoverflow</a> and with much better download performance:</p>
+<p>&lt;pre&gt;&lt;code class=&quot;bash&quot;&gt;#!/bin/bash
+fileid=&amp;amp;quot;12XIh3rqm3ukpSKQtMop44U4XCYb6kdda&amp;amp;quot;
+filename=&amp;amp;quot;data.tar.gz&amp;amp;quot;
+curl -c ./cookie -s -L &amp;amp;quot;https://drive.google.com/uc?export=download&amp;amp;amp;id=${fileid}&amp;amp;quot; &amp;amp;gt; /dev/null
+curl -Lb ./cookie &amp;amp;quot;https://drive.google.com/uc?export=download&amp;amp;amp;confirm=</code>awk &amp;amp;#39;/download/ {print $NF}&amp;amp;#39; ./cookie<code>&amp;amp;amp;id=${fileid}&amp;amp;quot; -o ${filename}&lt;/code&gt;&lt;/pre&gt;</p>
+<p>Run </code>nano $CMAKEINSTALL_PREFIX/data/<code> and save this script as a .</code>sh<code> file in the data directory and perform </code>chmod -x $filename.sh<code> to make it executable. The script will download a repackaged <a href="https://mega.nz/#F!Am4DBKCR!o9Qj_xFLfsg4sczqg0xq2A">newest_data</a> from a Google Drive <a href="https://drive.google.com/open?id=12XIh3rqm3ukpSKQtMop44U4XCYb6kdda">upload</a>. <em>note: I recommend verifying the SHA256 Checksum values match between the mega upload and google drive upload. If not the files are not tampered with or changed.</em></p>
+<p>&lt;h3&gt;Database Setup&lt;/h3&gt;</p>
+<p>Enter into MySQL using </code>sudo mysql<code>. A username and password will be needed to access the database. 
+</code></pre>sql
+GRANT ALL PRIVILEGES ON <em>.</em> TO &#39;username&#39;@&#39;localhost&#39; IDENTIFIED BY &#39;password&#39;;
+<pre><code>
+The .conf files will need to be edited with the newly chosen username and password described <a href="http://www.azerothcore.org/wiki/Installation#4-setting-the-configuration-files">here</a>.</p>
+<p>&lt;h3&gt;Kswapd issue &lt;/h3&gt;</p>
+<p><em>Note: If running on a more powerful instance this step is likely irrelevant. For the t2.micro instance with 1GB of ram this step is required.</em></p>
+<p>As a learning exercise after compilation run a </code> top -oh %MEM<code> and attempt to launch the world server. It will eventually reach a hang-up and the server will become unresponsive. Notice the process taking up a majority of memory is </code>kswapd<code>. The </code>kswapd<code> process is used whenever the systems memory usage reaches a threshold and then it offloads the memory into a storage. The default swap image, however, does not allocate enough resources to run the the world server so a new one is needed. <a href="https://askubuntu.com/questions/178712/how-to-increase-swap-space">Various solutions to this issue can be found here.</a> The guide will be using the </code>dd<code> <a href="https://askubuntu.com/a/178726">method</a>:
+</code></pre>Bash
+#Creates 3GB swap image and sets up a swap area
+sudo dd if=/dev/zero of=/media/fasthdd/swapfile.img bs=1024 count=3M
+sudo mkswap /media/fasthdd/swapfile.img</p>
+<p>#Opens editer with sudo permissions at /etc/fstab
+sudo nano /etc/fstab</p>
+<p><h1>Add this line to /etc/fstab</h1>
+/media/fasthdd/swapfile.img swap swap sw 0 0</p>
+<p>#Activate the swap image
+swapon /media/fasthdd/swapfile.img
+</code>`<code></p>
+<p><h3>Connecting to the server</h3></p>
+<p>Find the instances Public IP address which can be found with </code>aws ec2 describe-instances<code>. Enter the </code>PublicIpAddress<code> into your </code>acore_auth` realmlist table. More connection information can be found <a href="http://www.azerothcore.org/wiki/Installation#8-connecting-to-the-server">here</a>.</p>
+<p>------</p>
+<p><h2>Disclaimer</h2></p>
+<p>​	Many best practices have not been followed in lieu of guide brevity and general ignorance on internet security. Some things to be known and that should be done if planning to allow anyone access to your server include:</p>
+<p>- <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html">Adding an IAM User for anyone who needs AWS access.</a> <em>Don&#39;t allow someone to run 100 instances to mine bitcoins... keep in mind that payment information is stored to create an account and AWS charges per server hour used!</em>  <strong>Be safe.</strong>
+- AWS Free Tier allows <strong>750</strong> instance hours meaning 750/24 = 31.25 Days. <em>Only one instance non-stop can be ran for a month without paying and the free tier only lasts for 12 months after account creation. Don&#39;t get unintentional charges. You&#39;ve been warned!</em>
+- Generally, don&#39;t allow another user SSH or admin privileges until some research on how to secure Linux and don&#39;t allow anyone root privileges. Only allow users the least privileges required. Your safety is in your hands, good luck!
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

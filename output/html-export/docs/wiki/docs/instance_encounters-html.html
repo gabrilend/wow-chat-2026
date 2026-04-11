@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>instance_encounters.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>instance_encounters.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/instance_encounters.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2058 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>instance\_encounters</h1></p>
+<p><a href="database-world">&lt;-Back-to:World</a></p>
+<p><strong>The \<code>instance\_encounters\</code> table</strong></p>
+<p>Definitions of instance encounters. Used by LFG.</p>
+<p><strong>Table Structure</strong></p>
+<p>| Field                     | Type         | Attributes | Key | Null | Default | Extra | Comment                                                                 |
+| ------------------------- | ------------ | ---------- | --- | ---- | ------- | ----- | ----------------------------------------------------------------------- |
+| [entry][1]                | INT          | UNSIGNED   | PRI | NO   | 0       |       | Unique entry from DungeonEncounter.dbc                                  |
+| [creditType][2]           | TINYINT      | UNSIGNED   |     | NO   | 0       |       |                                                                         |
+| [creditEntry][3]          | INT          | UNSIGNED   |     | NO   | 0       |       |                                                                         |
+| [lastEncounterDungeon][4] | SMALLINT     | UNSIGNED   |     | NO   | 0       |       | If not 0, LfgDungeon.dbc entry for the instance it is last encounter in |
+| [comment][5]              | varchat(255) | SIGNED     |     | NO   | &quot;       |       |                                                                         |</p>
+<p>[1]: #entry
+[2]: #credittype
+[3]: #creditentry
+[4]: #lastencounterdungeon
+[5]: #comment</p>
+<p><strong>Description of the fields</strong></p>
+<p><h3>entry</h3></p>
+<p>Unique entry from <a href="dungeonencounter">DungeonEncounter.dbc</a></p>
+<p><h3>creditType</h3></p>
+<p>See enum EncounterCreditType.</p>
+<p>ENCOUNTER\_CREDIT\_KILL\_CREATURE = 0</p>
+<p>ENCOUNTER\_CREDIT\_CAST\_SPELL = 1</p>
+<p><h3>creditEntry</h3></p>
+<p>If creditType = 0, then value for this field is creature entry. See creature\_template.entry</p>
+<p>If creditType = 1, then value for this field is a spell. See Spell.dbc.</p>
+<p><h3>lastEncounterDungeon</h3></p>
+<p>Reference to <a href="lfgdungeon">LfgDungeon.dbc</a> entry for the instance it which is this encounter last. If 0, encounter is not last one.</p>
+<p><h3>comment</h3></p>
+<p>Instance encounter comment for easy identification. Encounter name used only.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

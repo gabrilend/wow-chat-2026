@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>scanner.lua - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>scanner.lua</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/tools/html-export/scanner.lua
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> lua &nbsp;&nbsp;
+            <strong>Size:</strong> 5784 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-09 18:19
+        </div>
+
+        <div class="content">
+            <pre><code class="lua">#!/usr/bin/env luajit
+<span class="comment">-- scanner.lua - Directory scanner with .gitignore support <span class="keyword">for</span> HTML export</span>
+<span class="comment">--</span>
+<span class="comment">-- Walks project directories, respects .gitignore patterns, <span class="keyword">and</span> builds</span>
+<span class="comment">-- a structured file list with metadata <span class="keyword">for</span> HTML generation.</span>
+
+<span class="keyword">local</span> M = {}
+
+
+<span class="comment">-- {{{ parse_gitignore</span>
+<span class="comment">-- Parses .gitignore file <span class="keyword">and</span> returns list of patterns</span>
+<span class="keyword">local</span> <span class="keyword">function</span> parse_gitignore(gitignore_path)
+    <span class="keyword">local</span> patterns = {}
+
+    <span class="keyword">local</span> handle = io.open(gitignore_path, &quot;r&quot;)
+    <span class="keyword">if</span> <span class="keyword">not</span> handle <span class="keyword">then</span> <span class="keyword">return</span> patterns <span class="keyword">end</span>
+
+    <span class="keyword">for</span> line <span class="keyword">in</span> handle:lines() <span class="keyword">do</span>
+        <span class="comment">-- Strip whitespace</span>
+        line = line:gsub(&quot;^%s+&quot;, &quot;&quot;):gsub(&quot;%s+$&quot;, &quot;&quot;)
+
+        <span class="comment">-- Skip empty lines <span class="keyword">and</span> comments</span>
+        <span class="keyword">if</span> #line &gt; <span class="number">0</span> <span class="keyword">and</span> <span class="keyword">not</span> line:match(&quot;^#&quot;) <span class="keyword">then</span>
+            <span class="comment">-- Convert gitignore glob to Lua pattern</span>
+            <span class="keyword">local</span> pattern = line
+                :gsub(&quot;%.&quot;, &quot;%%.&quot;)          <span class="comment">-- Escape dots</span>
+                :gsub(&quot;%*&quot;, &quot;.*&quot;)           <span class="comment">-- * -&gt; .*</span>
+                :gsub(&quot;%?&quot;, &quot;.&quot;)            <span class="comment">-- ? -&gt; .</span>
+                :gsub(&quot;/$&quot;, &quot;&quot;)             <span class="comment">-- Remove trailing slash</span>
+
+            table.insert(patterns, pattern)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    handle:close()
+    <span class="keyword">return</span> patterns
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+
+<span class="comment">-- {{{ matches_gitignore</span>
+<span class="comment">-- Checks <span class="keyword">if</span> a path matches any gitignore pattern</span>
+<span class="keyword">local</span> <span class="keyword">function</span> matches_gitignore(path, patterns)
+    <span class="keyword">for</span> _, pattern <span class="keyword">in</span> ipairs(patterns) <span class="keyword">do</span>
+        <span class="keyword">if</span> path:match(pattern) <span class="keyword">then</span>
+            <span class="keyword">return</span> <span class="keyword">true</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+    <span class="keyword">return</span> <span class="keyword">false</span>
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+
+<span class="comment">-- {{{ get_file_info</span>
+<span class="comment">-- Extracts metadata from a file</span>
+<span class="keyword">local</span> <span class="keyword">function</span> get_file_info(filepath)
+    <span class="comment">-- Get modification time</span>
+    <span class="keyword">local</span> cmd = string.format(&quot;stat -c %%Y %q <span class="number">2</span>&gt;/dev/null&quot;, filepath)
+    <span class="keyword">local</span> handle = io.popen(cmd)
+    <span class="keyword">local</span> mtime = <span class="number">0</span>
+    <span class="keyword">if</span> handle <span class="keyword">then</span>
+        <span class="keyword">local</span> result = handle:read(&quot;*a&quot;):gsub(&quot;%s+&quot;, &quot;&quot;)
+        handle:close()
+        mtime = tonumber(result) <span class="keyword">or</span> <span class="number">0</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Get file size</span>
+    cmd = string.format(&quot;stat -c %%s %q <span class="number">2</span>&gt;/dev/null&quot;, filepath)
+    handle = io.popen(cmd)
+    <span class="keyword">local</span> size = <span class="number">0</span>
+    <span class="keyword">if</span> handle <span class="keyword">then</span>
+        <span class="keyword">local</span> result = handle:read(&quot;*a&quot;):gsub(&quot;%s+&quot;, &quot;&quot;)
+        handle:close()
+        size = tonumber(result) <span class="keyword">or</span> <span class="number">0</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Determine file type from extension</span>
+    <span class="keyword">local</span> ext = filepath:match(&quot;%.([^.]+)$&quot;)
+    <span class="keyword">local</span> file_type = ext <span class="keyword">or</span> &quot;unknown&quot;
+
+    <span class="keyword">local</span> filename = filepath:match(&quot;([^/]+)$&quot;)
+
+    <span class="keyword">return</span> {
+        path      = filepath,
+        name      = filename,
+        extension = ext,
+        type      = file_type,
+        size      = size,
+        mtime     = mtime,
+    }
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+
+<span class="comment">-- {{{ scan_directory</span>
+<span class="comment">-- Recursively scans directory <span class="keyword">and</span> returns file list</span>
+<span class="keyword">local</span> <span class="keyword">function</span> scan_directory(root_dir, gitignore_patterns, include_dirs, exclude_patterns)
+    <span class="keyword">local</span> files = {}
+
+    <span class="comment">-- Build find command</span>
+    <span class="keyword">local</span> exclude_args = {}
+    <span class="keyword">for</span> _, pattern <span class="keyword">in</span> ipairs(exclude_patterns) <span class="keyword">do</span>
+        table.insert(exclude_args, string.format(&quot;-<span class="keyword">not</span> -path &#<span class="number">39</span>;*/%s/*&#<span class="number">39</span>;&quot;, pattern))
+    <span class="keyword">end</span>
+
+    <span class="keyword">local</span> exclude_clause = &quot;&quot;
+    <span class="keyword">if</span> #exclude_args &gt; <span class="number">0</span> <span class="keyword">then</span>
+        exclude_clause = table.concat(exclude_args, &quot; &quot;)
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Scan each include directory</span>
+    <span class="keyword">for</span> _, include_dir <span class="keyword">in</span> ipairs(include_dirs) <span class="keyword">do</span>
+        <span class="keyword">local</span> search_path = root_dir .. &quot;/&quot; .. include_dir
+
+        <span class="keyword">local</span> cmd = string.format(
+            &quot;find %q -type f %s <span class="number">2</span>&gt;/dev/null&quot;,
+            search_path,
+            exclude_clause
+        )
+
+        <span class="keyword">local</span> handle = io.popen(cmd)
+        <span class="keyword">if</span> handle <span class="keyword">then</span>
+            <span class="keyword">for</span> filepath <span class="keyword">in</span> handle:lines() <span class="keyword">do</span>
+                <span class="comment">-- Check against gitignore patterns</span>
+                <span class="keyword">local</span> rel_path = filepath:gsub(&quot;^&quot; .. root_dir:gsub(&quot;([^%w])&quot;, &quot;%%%<span class="number">1</span>&quot;) .. &quot;/&quot;, &quot;&quot;)
+
+                <span class="keyword">if</span> <span class="keyword">not</span> matches_gitignore(rel_path, gitignore_patterns) <span class="keyword">then</span>
+                    <span class="keyword">local</span> info = get_file_info(filepath)
+                    info.relative_path = rel_path
+                    table.insert(files, info)
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+            handle:close()
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Sort by path</span>
+    table.sort(files, <span class="keyword">function</span>(a, b)
+        <span class="keyword">return</span> a.relative_path &lt; b.relative_path
+    <span class="keyword">end</span>)
+
+    <span class="keyword">return</span> files
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+
+<span class="comment">-- {{{ M.scan_project</span>
+<span class="comment">-- Public API: Scans project directory with configuration</span>
+<span class="comment">-- Returns: { files = {...}, stats = {...} }</span>
+<span class="keyword">function</span> M.scan_project(config)
+    <span class="keyword">local</span> root_dir        = config.root_dir <span class="keyword">or</span> &quot;.&quot;
+    <span class="keyword">local</span> gitignore_path  = config.gitignore_path <span class="keyword">or</span> (root_dir .. &quot;/.gitignore&quot;)
+    <span class="keyword">local</span> include_dirs    = config.include_dirs <span class="keyword">or</span> { &quot;src&quot;, &quot;issues&quot;, &quot;docs&quot;, &quot;scripts&quot; }
+    <span class="keyword">local</span> exclude_patterns = config.exclude_patterns <span class="keyword">or</span> {
+        &quot;build&quot;,
+        &quot;build-beta&quot;,
+        &quot;build-release&quot;,
+        &quot;installed-files-beta&quot;,
+        &quot;installed-files-release&quot;,
+        &quot;config&quot;,
+        &quot;tmp&quot;,
+        &quot;mysql&quot;,
+        &quot;libs/boost&quot;,
+        &quot;modules&quot;,
+        &quot;source-beta&quot;,
+        &quot;source-release&quot;,
+        &quot;llm-transcripts&quot;,
+        &quot;.git&quot;,
+    }
+
+    <span class="comment">-- Parse .gitignore</span>
+    <span class="keyword">local</span> gitignore_patterns = parse_gitignore(gitignore_path)
+
+    <span class="comment">-- Add hardcoded exclusions</span>
+    <span class="keyword">local</span> all_patterns = {}
+    <span class="keyword">for</span> _, p <span class="keyword">in</span> ipairs(gitignore_patterns) <span class="keyword">do</span>
+        table.insert(all_patterns, p)
+    <span class="keyword">end</span>
+    <span class="keyword">for</span> _, p <span class="keyword">in</span> ipairs(exclude_patterns) <span class="keyword">do</span>
+        table.insert(all_patterns, p)
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Scan directories</span>
+    <span class="keyword">local</span> files = scan_directory(root_dir, all_patterns, include_dirs, exclude_patterns)
+
+    <span class="comment">-- Compute stats</span>
+    <span class="keyword">local</span> stats = {
+        total_files = #files,
+        total_size  = <span class="number">0</span>,
+        by_type     = {},
+    }
+
+    <span class="keyword">for</span> _, file <span class="keyword">in</span> ipairs(files) <span class="keyword">do</span>
+        stats.total_size = stats.total_size + file.size
+
+        <span class="keyword">local</span> ftype = file.type
+        <span class="keyword">if</span> <span class="keyword">not</span> stats.by_type[ftype] <span class="keyword">then</span>
+            stats.by_type[ftype] = { count = <span class="number">0</span>, size = <span class="number">0</span> }
+        <span class="keyword">end</span>
+        stats.by_type[ftype].count = stats.by_type[ftype].count + <span class="number">1</span>
+        stats.by_type[ftype].size  = stats.by_type[ftype].size + file.size
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> {
+        files = files,
+        stats = stats,
+    }
+<span class="keyword">end</span>
+<span class="comment">-- }}}</span>
+
+
+<span class="keyword">return</span> M
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sidebar.js - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>sidebar.js</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/ale/docs/GameObject/sidebar.js
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> js &nbsp;&nbsp;
+            <strong>Size:</strong> 2001 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>document.write(`
+  &lt;a id=&quot;GameObject:AddLoot&quot; class=&quot;fn&quot; href=&quot;../GameObject/AddLoot.html&quot;&gt;AddLoot&lt;/a&gt;
+  &lt;a id=&quot;GameObject:Despawn&quot; class=&quot;fn&quot; href=&quot;../GameObject/Despawn.html&quot;&gt;Despawn&lt;/a&gt;
+  &lt;a id=&quot;GameObject:GetDisplayId&quot; class=&quot;fn&quot; href=&quot;../GameObject/GetDisplayId.html&quot;&gt;GetDisplayId&lt;/a&gt;
+  &lt;a id=&quot;GameObject:GetGoState&quot; class=&quot;fn&quot; href=&quot;../GameObject/GetGoState.html&quot;&gt;GetGoState&lt;/a&gt;
+  &lt;a id=&quot;GameObject:GetLootRecipient&quot; class=&quot;fn&quot; href=&quot;../GameObject/GetLootRecipient.html&quot;&gt;GetLootRecipient&lt;/a&gt;
+  &lt;a id=&quot;GameObject:GetLootRecipientGroup&quot; class=&quot;fn&quot; href=&quot;../GameObject/GetLootRecipientGroup.html&quot;&gt;GetLootRecipientGroup&lt;/a&gt;
+  &lt;a id=&quot;GameObject:GetLootState&quot; class=&quot;fn&quot; href=&quot;../GameObject/GetLootState.html&quot;&gt;GetLootState&lt;/a&gt;
+  &lt;a id=&quot;GameObject:GetSpawnId&quot; class=&quot;fn&quot; href=&quot;../GameObject/GetSpawnId.html&quot;&gt;GetSpawnId&lt;/a&gt;
+  &lt;a id=&quot;GameObject:HasQuest&quot; class=&quot;fn&quot; href=&quot;../GameObject/HasQuest.html&quot;&gt;HasQuest&lt;/a&gt;
+  &lt;a id=&quot;GameObject:IsActive&quot; class=&quot;fn&quot; href=&quot;../GameObject/IsActive.html&quot;&gt;IsActive&lt;/a&gt;
+  &lt;a id=&quot;GameObject:IsSpawned&quot; class=&quot;fn&quot; href=&quot;../GameObject/IsSpawned.html&quot;&gt;IsSpawned&lt;/a&gt;
+  &lt;a id=&quot;GameObject:IsTransport&quot; class=&quot;fn&quot; href=&quot;../GameObject/IsTransport.html&quot;&gt;IsTransport&lt;/a&gt;
+  &lt;a id=&quot;GameObject:RemoveFromWorld&quot; class=&quot;fn&quot; href=&quot;../GameObject/RemoveFromWorld.html&quot;&gt;RemoveFromWorld&lt;/a&gt;
+  &lt;a id=&quot;GameObject:Respawn&quot; class=&quot;fn&quot; href=&quot;../GameObject/Respawn.html&quot;&gt;Respawn&lt;/a&gt;
+  &lt;a id=&quot;GameObject:SaveToDB&quot; class=&quot;fn&quot; href=&quot;../GameObject/SaveToDB.html&quot;&gt;SaveToDB&lt;/a&gt;
+  &lt;a id=&quot;GameObject:SetGoState&quot; class=&quot;fn&quot; href=&quot;../GameObject/SetGoState.html&quot;&gt;SetGoState&lt;/a&gt;
+  &lt;a id=&quot;GameObject:SetLootState&quot; class=&quot;fn&quot; href=&quot;../GameObject/SetLootState.html&quot;&gt;SetLootState&lt;/a&gt;
+  &lt;a id=&quot;GameObject:SetRespawnDelay&quot; class=&quot;fn&quot; href=&quot;../GameObject/SetRespawnDelay.html&quot;&gt;SetRespawnDelay&lt;/a&gt;
+  &lt;a id=&quot;GameObject:SetRespawnTime&quot; class=&quot;fn&quot; href=&quot;../GameObject/SetRespawnTime.html&quot;&gt;SetRespawnTime&lt;/a&gt;
+  &lt;a id=&quot;GameObject:UseDoorOrButton&quot; class=&quot;fn&quot; href=&quot;../GameObject/UseDoorOrButton.html&quot;&gt;UseDoorOrButton&lt;/a&gt;
+`);</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

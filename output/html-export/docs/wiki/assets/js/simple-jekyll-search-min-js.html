@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>simple-jekyll-search.min.js - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>simple-jekyll-search.min.js</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/assets/js/simple-jekyll-search.min.js
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> js &nbsp;&nbsp;
+            <strong>Size:</strong> 4726 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code>/*!
+  * Simple-Jekyll-Search v1.7.2 (https://github.com/christian-fei/Simple-Jekyll-Search)
+  * Copyright 2015-2018, Christian Fei
+  * Licensed under the MIT License.
+  */
+!function(){&quot;use strict&quot;;var f={load:function w(t,e){var n=function r(){return window.XMLHttpRequest?new window.XMLHttpRequest:new ActiveXObject(&quot;Microsoft.XMLHTTP&quot;)}();n.open(&quot;GET&quot;,t,!0),n.onreadystatechange=function i(e,n){return function(){if(4===e.readyState&amp;&amp;200===e.status)try{n(null,JSON.parse(e.responseText))}catch(t){n(t,null)}}}(n,e),n.send()}};(function y(t){if(!function e(t){return!!t&amp;&amp;&quot;undefined&quot;!=typeof t.required&amp;&amp;t.required instanceof Array}(t))throw new Error(&quot;-- OptionsValidator: required options missing&quot;);if(!(this instanceof y))return new y(t);var r=t.required;this.getRequiredOptions=function(){return r},this.validate=function(e){var n=[];return r.forEach(function(t){&quot;undefined&quot;==typeof e[t]&amp;&amp;n.push(t)}),n}});var n=function g(t,e){var n=e.length,r=t.length;if(n&lt;r)return!1;if(r===n)return t===e;t:for(var i=0,o=0;i&lt;r;i++){for(var u=t.charCodeAt(i);o&lt;n;)if(e.charCodeAt(o++)===u)continue t;return!1}return!0},e=new function t(){this.matches=function(t,e){return n(e.toLowerCase(),t.toLowerCase())}};var r=new function O(){this.matches=function(e,t){return!!e&amp;&amp;(e=e.trim().toLowerCase(),(t=t.trim().toLowerCase()).split(&quot; &quot;).filter(function(t){return 0&lt;=e.indexOf(t)}).length===t.split(&quot; &quot;).length)}};var l={put:function z(t){if(c(t))return s(t);if(function e(t){return Boolean(t)&amp;&amp;&quot;[object Array]&quot;===Object.prototype.toString.call(t)}(t))return function i(t){var e=[];a();for(var n=0,r=t.length;n&lt;r;n++)c(t[n])&amp;&amp;e.push(s(t[n]));return e}(t);return undefined},clear:a,search:function S(t){return t?function a(t,e,n,r){for(var i=[],o=0;o&lt;t.length&amp;&amp;i.length&lt;r.limit;o++){var u=d(t[o],e,n,r);u&amp;&amp;i.push(u)}return i}(o,t,u.searchStrategy,u).sort(u.sort):[]},setOptions:function q(t){(u=t||{}).fuzzy=t.fuzzy||!1,u.limit=t.limit||10,u.searchStrategy=t.fuzzy?e:r,u.sort=t.sort||i}};function i(){return 0}var o=[],u={};function a(){return o.length=0,o}function c(t){return Boolean(t)&amp;&amp;&quot;[object Object]&quot;===Object.prototype.toString.call(t)}function s(t){return o.push(t),o}function d(t,e,n,r){for(var i in t)if(!p(t[i],r.exclude)&amp;&amp;n.matches(t[i],e))return t}function p(t,e){for(var n=!1,r=0,i=(e=e||[]).length;r&lt;i;r++){var o=e[r];!n&amp;&amp;new RegExp(t).test(o)&amp;&amp;(n=!0)}return n}u.fuzzy=!1,u.limit=10,u.searchStrategy=u.fuzzy?e:r,u.sort=i;var h={compile:function j(r){return m.template.replace(m.pattern,function(t,e){var n=m.middleware(e,r[e],m.template);return void 0!==n?n:r[e]||t})},setOptions:function C(t){m.pattern=t.pattern||m.pattern,m.template=t.template||m.template,&quot;function&quot;==typeof t.middleware&amp;&amp;(m.middleware=t.middleware)}},m={};m.pattern=/\{(.*?)\}/g,m.template=&quot;&quot;,m.middleware=function(){};var v={merge:function L(t,e){var n={};for(var r in t)n[r]=t[r],&quot;undefined&quot;!=typeof e[r]&amp;&amp;(n[r]=e[r]);return n},isJSON:function M(t){try{return!!(t instanceof Object&amp;&amp;JSON.parse(JSON.stringify(t)))}catch(e){return!1}}};!function(t){var o={searchInput:null,resultsContainer:null,json:[],success:Function.prototype,searchResultTemplate:&#39;&lt;li&gt;&lt;a href=&quot;{url}&quot; title=&quot;{desc}&quot;&gt;{title}&lt;/a&gt;&lt;/li&gt;&#39;,templateMiddleware:Function.prototype,sortMiddleware:function(){return 0},noResultsText:&quot;No results found&quot;,limit:10,fuzzy:!1,exclude:[]},n=[&quot;searchInput&quot;,&quot;resultsContainer&quot;,&quot;json&quot;],r=function y(e){if(!function n(t){return!!t&amp;&amp;&quot;undefined&quot;!=typeof t.required&amp;&amp;t.required instanceof Array}(e))throw new Error(&quot;-- OptionsValidator: required options missing&quot;);if(!(this instanceof y))return new y(e);var r=e.required;this.getRequiredOptions=function(){return r},this.validate=function(e){var n=[];return r.forEach(function(t){&quot;undefined&quot;==typeof e[t]&amp;&amp;n.push(t)}),n}}({required:n});function i(t){o.success(t),l.put(t),function e(){o.searchInput.addEventListener(&quot;keyup&quot;,function(t){(function e(t){return-1===[13,16,20,37,38,39,40,91].indexOf(t)})(t.which)&amp;&amp;(u(),c(t.target.value))})}()}function u(){o.resultsContainer.innerHTML=&quot;&quot;}function a(t){o.resultsContainer.innerHTML+=t}function c(t){(function e(t){return t&amp;&amp;0&lt;t.length})(t)&amp;&amp;(u(),function i(t,e){var n=t.length;if(0===n)return a(o.noResultsText);for(var r=0;r&lt;n;r++)t[r].query=e,a(h.compile(t[r]))}(l.search(t),t))}function s(t){throw new Error(&quot;SimpleJekyllSearch --- &quot;+t)}t.SimpleJekyllSearch=function(t){return 0&lt;r.validate(t).length&amp;&amp;s(&quot;You must specify the following required options: &quot;+n),o=v.merge(o,t),h.setOptions({template:o.searchResultTemplate,middleware:o.templateMiddleware}),l.setOptions({fuzzy:o.fuzzy,limit:o.limit,sort:o.sortMiddleware}),v.isJSON(o.json)?i(o.json):function e(n){f.load(n,function(t,e){t&amp;&amp;s(&quot;failed to get JSON (&quot;+n+&quot;)&quot;),i(e)})}(o.json),{search:c}}}(window)}();</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

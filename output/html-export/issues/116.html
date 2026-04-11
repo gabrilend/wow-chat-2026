@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 116 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 116 • Phase 1</div>
+            <h1>Behavior: Avoid Monsters</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>116 - Behavior: Avoid Monsters</h1></p>
+<p><h2>Status: In Progress</h2></p>
+<p><h2>Current Behavior</h2>
+- Bots and wandering NPCs have no danger awareness
+- Entities may walk into active combat or hostile creatures
+- No threat evaluation exists</p>
+<p><h2>Intended Behavior</h2>
+- Track nearby hostile creatures and their threat level
+- Evaluate danger based on level difference and numbers
+- Flee behavior when overwhelmed (health low, outnumbered)
+- Called by find-monsters before engagement decisions
+- Used by travel.lua wanderers to avoid combat areas</p>
+<p><h2>Suggested Implementation Steps</h2>
+1. Create src/lua/behaviors/avoid-monsters.lua
+2. Implement getDangerLevel scoring system
+3. Track nearby combat via GetUnitsInCombatWith or similar
+4. Calculate escape vector (opposite direction of threats)
+5. Provide shouldFlee(unit) API for other behaviors
+6. Integrate with find-monsters targeting decisions
+7. Add wanderer avoidance in travel.lua continueTravelling</p>
+<p><h2>Configuration</h2>
+- DANGER_RADIUS: range to check for threats
+- FLEE_HEALTH_PCT: health threshold to trigger flee
+- OUTNUMBER_THRESHOLD: enemy count triggering flee
+- LEVEL_DANGER_WEIGHT: how much level diff affects danger score</p>
+<p><h2>Implementation Notes</h2></p>
+<p><h3>2026-03-31 - Initial Implementation</h3>
+- Created avoid-monsters.lua with full API
+- getDangerScore: calculates threat level per creature (level diff, combat, elite/boss)
+- getTotalDanger: sums danger from all nearby hostiles
+- getEscapeVector: weighted centroid calculation for flee direction
+- shouldFlee: decision logic (low health, outnumbered, extreme danger)
+- getFleePosition: calculates safe escape coordinates
+- flee: executes movement away from danger
+- isAreaDangerous: for travel.lua wanderers to check paths
+- getSafeDirection: finds angle avoiding danger (used by wanderers)
+- Configuration at top with vertical alignment</p>
+<p><h2>Related Files</h2>
+- src/lua/behaviors/find-monsters.lua
+- src/lua/behaviors/avoid-monsters.lua
+- src/lua/travel.lua
+- src/lua/movement.lua
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-1-progress.html">View Phase 1 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

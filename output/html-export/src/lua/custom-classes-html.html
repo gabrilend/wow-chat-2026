@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>custom-classes.lua - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>custom-classes.lua</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/lua/custom-classes.lua
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> lua &nbsp;&nbsp;
+            <strong>Size:</strong> 27581 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <pre><code class="lua"><span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Custom Class Selection System</span>
+<span class="comment">-- Issue: <span class="number">155</span> - Custom classes as curated spell arrangements from multiple base classes</span>
+<span class="comment">-- Issue: <span class="number">157</span> - Dynamic trainer spawning based on learnable spells</span>
+<span class="comment">--</span>
+<span class="comment">-- Custom class definitions loaded from: src/custom-class-json/</span>
+<span class="comment">-- (rmail inbox <span class="keyword">for</span> community uploads)</span>
+
+CustomClasses = {}
+
+<span class="comment">-- Race-specific NPC entries <span class="keyword">for</span> the Custom Class Selector</span>
+<span class="comment">-- Each race has its own selector NPC with race-appropriate model</span>
+<span class="comment">-- SQL: source-beta/data/sql/custom/db_world/custom-class-selector-npcs.sql</span>
+<span class="keyword">local</span> SELECTOR_NPC_ENTRIES = {
+    [<span class="number">1</span>]  = <span class="number">900001</span>,  <span class="comment">-- Human:     Mysterious Guide</span>
+    [<span class="number">2</span>]  = <span class="number">900002</span>,  <span class="comment">-- Orc:       Spirit Walker</span>
+    [<span class="number">3</span>]  = <span class="number">900003</span>,  <span class="comment">-- Dwarf:     Stone Seer</span>
+    [<span class="number">4</span>]  = <span class="number">900004</span>,  <span class="comment">-- Night Elf: Moonshadow Oracle</span>
+    [<span class="number">5</span>]  = <span class="number">900005</span>,  <span class="comment">-- Undead:    Deathwhisper Sage</span>
+    [<span class="number">6</span>]  = <span class="number">900006</span>,  <span class="comment">-- Tauren:    Earthmother&#<span class="number">39</span>;s Voice</span>
+    [<span class="number">7</span>]  = <span class="number">900007</span>,  <span class="comment">-- Gnome:     Probability Engine</span>
+    [<span class="number">8</span>]  = <span class="number">900008</span>,  <span class="comment">-- Troll:     Loa Speaker</span>
+    [<span class="number">10</span>] = <span class="number">900010</span>,  <span class="comment">-- Blood Elf: Sunwell Seer</span>
+    [<span class="number">11</span>] = <span class="number">900011</span>,  <span class="comment">-- Draenei:   Light of the Naaru</span>
+}
+
+<span class="comment">-- Note: Custom trainer NPCs (<span class="number">900021</span>-<span class="number">900031</span>) are no longer used.</span>
+<span class="comment">-- Issue <span class="number">157</span> revision: use existing world trainers via Travel.getTrainerForClass()</span>
+<span class="comment">-- instead of custom trainer NPCs with gossip menus.</span>
+
+<span class="comment">-- Data key <span class="keyword">for</span> storing custom class on player</span>
+<span class="keyword">local</span> DATA_KEY_CUSTOM_CLASS = &quot;custom-class&quot;
+
+<span class="comment">-- How close to check <span class="keyword">for</span> nearby players before despawning</span>
+<span class="keyword">local</span> NEARBY_PLAYER_RANGE = <span class="number">30</span>
+
+<span class="comment">-- How often to check <span class="keyword">for</span> nearby players (ms)</span>
+<span class="keyword">local</span> NEARBY_CHECK_INTERVAL = <span class="number">5000</span>
+
+<span class="comment">-- Level range <span class="keyword">for</span> determining eligible trainer classes (±<span class="number">3</span> levels)</span>
+<span class="keyword">local</span> LEVEL_RANGE = <span class="number">3</span>
+
+<span class="comment">-- Base class names <span class="keyword">for</span> display</span>
+<span class="keyword">local</span> CLASS_NAMES = {
+    [<span class="number">1</span>] = &quot;Warrior&quot;, [<span class="number">2</span>] = &quot;Paladin&quot;, [<span class="number">3</span>] = &quot;Hunter&quot;, [<span class="number">4</span>] = &quot;Rogue&quot;,
+    [<span class="number">5</span>] = &quot;Priest&quot;, [<span class="number">6</span>] = &quot;Death Knight&quot;, [<span class="number">7</span>] = &quot;Shaman&quot;, [<span class="number">8</span>] = &quot;Mage&quot;,
+    [<span class="number">9</span>] = &quot;Warlock&quot;, [<span class="number">11</span>] = &quot;Druid&quot;,
+}
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Custom Class Definitions</span>
+<span class="comment">-- Structure: { [customClassId] = { name, baseClass, spells, tomeClasses, description } }</span>
+<span class="comment">-- Spell format: { id, level, sourceClass } - level is required player level, sourceClass is base class</span>
+
+CustomClasses.definitions = {}
+
+<span class="comment">-- {{{ Example Custom Classes</span>
+<span class="comment">-- These would normally be loaded from src/custom-class-json/</span>
+
+<span class="comment">-- Spellblade: Warrior + Mage fire/frost</span>
+CustomClasses.definitions[<span class="number">1001</span>] = {
+    name = &quot;Spellblade&quot;,
+    baseClass = <span class="number">1</span>,  <span class="comment">-- Warrior (<span class="keyword">for</span> armor/animations)</span>
+    spells = {
+        <span class="comment">-- Warrior base abilities</span>
+        { id = <span class="number">78</span>,   level = <span class="number">1</span>,  sourceClass = <span class="number">1</span> },  <span class="comment">-- Heroic Strike</span>
+        { id = <span class="number">284</span>,  level = <span class="number">4</span>,  sourceClass = <span class="number">1</span> },  <span class="comment">-- Heroic Strike R<span class="number">2</span></span>
+        { id = <span class="number">100</span>,  level = <span class="number">4</span>,  sourceClass = <span class="number">1</span> },  <span class="comment">-- Charge</span>
+        { id = <span class="number">772</span>,  level = <span class="number">4</span>,  sourceClass = <span class="number">1</span> },  <span class="comment">-- Rend</span>
+        { id = <span class="number">6546</span>, level = <span class="number">10</span>, sourceClass = <span class="number">1</span> },  <span class="comment">-- Rend R<span class="number">2</span></span>
+        { id = <span class="number">6343</span>, level = <span class="number">6</span>,  sourceClass = <span class="number">1</span> },  <span class="comment">-- Thunder Clap</span>
+        { id = <span class="number">1715</span>, level = <span class="number">8</span>,  sourceClass = <span class="number">1</span> },  <span class="comment">-- Hamstring</span>
+        <span class="comment">-- Mage fire/frost additions</span>
+        { id = <span class="number">133</span>,  level = <span class="number">1</span>,  sourceClass = <span class="number">8</span> },  <span class="comment">-- Fireball R<span class="number">1</span></span>
+        { id = <span class="number">143</span>,  level = <span class="number">6</span>,  sourceClass = <span class="number">8</span> },  <span class="comment">-- Fireball R<span class="number">2</span></span>
+        { id = <span class="number">145</span>,  level = <span class="number">12</span>, sourceClass = <span class="number">8</span> },  <span class="comment">-- Fireball R<span class="number">3</span></span>
+        { id = <span class="number">116</span>,  level = <span class="number">4</span>,  sourceClass = <span class="number">8</span> },  <span class="comment">-- Frostbolt R<span class="number">1</span></span>
+        { id = <span class="number">205</span>,  level = <span class="number">8</span>,  sourceClass = <span class="number">8</span> },  <span class="comment">-- Frostbolt R<span class="number">2</span></span>
+        { id = <span class="number">837</span>,  level = <span class="number">14</span>, sourceClass = <span class="number">8</span> },  <span class="comment">-- Frostbolt R<span class="number">3</span></span>
+        { id = <span class="number">122</span>,  level = <span class="number">10</span>, sourceClass = <span class="number">8</span> },  <span class="comment">-- Frost Nova</span>
+        { id = <span class="number">2136</span>, level = <span class="number">6</span>,  sourceClass = <span class="number">8</span> },  <span class="comment">-- Fire Blast R<span class="number">1</span></span>
+    },
+    tomeClasses = { <span class="number">1</span>, <span class="number">8</span> },  <span class="comment">-- Can find Warrior <span class="keyword">and</span> Mage tomes</span>
+    description = &quot;A warrior who channels arcane fire <span class="keyword">and</span> frost through their weapons.&quot;,
+}
+
+<span class="comment">-- Shadow Apostle: Priest + Warlock curses</span>
+CustomClasses.definitions[<span class="number">1002</span>] = {
+    name = &quot;Shadow Apostle&quot;,
+    baseClass = <span class="number">5</span>,  <span class="comment">-- Priest</span>
+    spells = {
+        <span class="comment">-- Priest abilities</span>
+        { id = <span class="number">585</span>,  level = <span class="number">1</span>,  sourceClass = <span class="number">5</span> },  <span class="comment">-- Smite R<span class="number">1</span></span>
+        { id = <span class="number">591</span>,  level = <span class="number">6</span>,  sourceClass = <span class="number">5</span> },  <span class="comment">-- Smite R<span class="number">2</span></span>
+        { id = <span class="number">589</span>,  level = <span class="number">4</span>,  sourceClass = <span class="number">5</span> },  <span class="comment">-- Shadow Word: Pain R<span class="number">1</span></span>
+        { id = <span class="number">594</span>,  level = <span class="number">10</span>, sourceClass = <span class="number">5</span> },  <span class="comment">-- Shadow Word: Pain R<span class="number">2</span></span>
+        { id = <span class="number">8092</span>, level = <span class="number">10</span>, sourceClass = <span class="number">5</span> },  <span class="comment">-- Mind Blast R<span class="number">1</span></span>
+        { id = <span class="number">8102</span>, level = <span class="number">16</span>, sourceClass = <span class="number">5</span> },  <span class="comment">-- Mind Blast R<span class="number">2</span></span>
+        { id = <span class="number">2944</span>, level = <span class="number">20</span>, sourceClass = <span class="number">5</span> },  <span class="comment">-- Devouring Plague R<span class="number">1</span></span>
+        <span class="comment">-- Warlock curse additions</span>
+        { id = <span class="number">702</span>,  level = <span class="number">4</span>,  sourceClass = <span class="number">9</span> },  <span class="comment">-- Curse of Weakness R<span class="number">1</span></span>
+        { id = <span class="number">1108</span>, level = <span class="number">14</span>, sourceClass = <span class="number">9</span> },  <span class="comment">-- Curse of Weakness R<span class="number">2</span></span>
+        { id = <span class="number">980</span>,  level = <span class="number">8</span>,  sourceClass = <span class="number">9</span> },  <span class="comment">-- Curse of Agony R<span class="number">1</span></span>
+        { id = <span class="number">1014</span>, level = <span class="number">18</span>, sourceClass = <span class="number">9</span> },  <span class="comment">-- Curse of Agony R<span class="number">2</span></span>
+        { id = <span class="number">172</span>,  level = <span class="number">4</span>,  sourceClass = <span class="number">9</span> },  <span class="comment">-- Corruption R<span class="number">1</span></span>
+        { id = <span class="number">6222</span>, level = <span class="number">14</span>, sourceClass = <span class="number">9</span> },  <span class="comment">-- Corruption R<span class="number">2</span></span>
+    },
+    tomeClasses = { <span class="number">5</span>, <span class="number">9</span> },  <span class="comment">-- Priest <span class="keyword">and</span> Warlock tomes</span>
+    description = &quot;A priest who has delved into forbidden warlock arts.&quot;,
+}
+
+<span class="comment">-- Beast Shaman: Shaman + Hunter beast abilities</span>
+CustomClasses.definitions[<span class="number">1003</span>] = {
+    name = &quot;Beast Shaman&quot;,
+    baseClass = <span class="number">7</span>,  <span class="comment">-- Shaman</span>
+    spells = {
+        <span class="comment">-- Shaman abilities</span>
+        { id = <span class="number">403</span>,  level = <span class="number">1</span>,  sourceClass = <span class="number">7</span> },  <span class="comment">-- Lightning Bolt R<span class="number">1</span></span>
+        { id = <span class="number">529</span>,  level = <span class="number">8</span>,  sourceClass = <span class="number">7</span> },  <span class="comment">-- Lightning Bolt R<span class="number">2</span></span>
+        { id = <span class="number">548</span>,  level = <span class="number">14</span>, sourceClass = <span class="number">7</span> },  <span class="comment">-- Lightning Bolt R<span class="number">3</span></span>
+        { id = <span class="number">8042</span>, level = <span class="number">4</span>,  sourceClass = <span class="number">7</span> },  <span class="comment">-- Earth Shock R<span class="number">1</span></span>
+        { id = <span class="number">8044</span>, level = <span class="number">8</span>,  sourceClass = <span class="number">7</span> },  <span class="comment">-- Earth Shock R<span class="number">2</span></span>
+        { id = <span class="number">8045</span>, level = <span class="number">14</span>, sourceClass = <span class="number">7</span> },  <span class="comment">-- Earth Shock R<span class="number">3</span></span>
+        { id = <span class="number">324</span>,  level = <span class="number">8</span>,  sourceClass = <span class="number">7</span> },  <span class="comment">-- Lightning Shield R<span class="number">1</span></span>
+        { id = <span class="number">331</span>,  level = <span class="number">1</span>,  sourceClass = <span class="number">7</span> },  <span class="comment">-- Healing Wave R<span class="number">1</span></span>
+        <span class="comment">-- Hunter beast abilities</span>
+        { id = <span class="number">1515</span>, level = <span class="number">10</span>, sourceClass = <span class="number">3</span> },  <span class="comment">-- Tame Beast</span>
+        { id = <span class="number">883</span>,  level = <span class="number">10</span>, sourceClass = <span class="number">3</span> },  <span class="comment">-- Call Pet</span>
+        { id = <span class="number">2641</span>, level = <span class="number">10</span>, sourceClass = <span class="number">3</span> },  <span class="comment">-- Dismiss Pet</span>
+        { id = <span class="number">6991</span>, level = <span class="number">12</span>, sourceClass = <span class="number">3</span> },  <span class="comment">-- Feed Pet</span>
+        { id = <span class="number">136</span>,  level = <span class="number">10</span>, sourceClass = <span class="number">3</span> },  <span class="comment">-- Mend Pet R<span class="number">1</span></span>
+    },
+    tomeClasses = { <span class="number">3</span>, <span class="number">7</span> },  <span class="comment">-- Hunter <span class="keyword">and</span> Shaman tomes</span>
+    description = &quot;A shaman with deep bonds to the animal kingdom.&quot;,
+}
+
+<span class="comment">-- Knight: Paladin + Priest/Rogue/DK/Warrior/Mage support abilities</span>
+<span class="comment">-- Issue <span class="number">159</span> - holy bodyguard, single-target protector, parry + crit focused</span>
+<span class="comment">-- Stats: Int &gt; Agi &gt; Str, scales with crit</span>
+<span class="comment">-- Weapons: <span class="number">2</span>H only (swords, maces, axes, polearms, staves)</span>
+<span class="comment">-- Talents (high level req) learned via AIO addon on login</span>
+<span class="comment">-- Party buffs: Blessing of Kings, Arcane Intellect, Horn of Winter</span>
+CustomClasses.definitions[<span class="number">1004</span>] = {
+    name = &quot;Knight&quot;,
+    baseClass = <span class="number">2</span>,  <span class="comment">-- Paladin (<span class="keyword">for</span> plate armor, holy theme)</span>
+    spells = {
+        <span class="comment">-- === LEVEL <span class="number">1</span>-<span class="number">4</span>: Early buffs ===</span>
+        { id = <span class="number">1459</span>,  level = <span class="number">1</span>,  sourceClass = <span class="number">8</span> },  <span class="comment">-- Arcane Intellect R<span class="number">1</span> (+Int buff)</span>
+        { id = <span class="number">20217</span>, level = <span class="number">4</span>,  sourceClass = <span class="number">2</span> },  <span class="comment">-- Blessing of Kings (+<span class="number">10</span>% stats)</span>
+
+        <span class="comment">-- === LEVEL <span class="number">6</span>: Parry foundation ===</span>
+        { id = <span class="number">3127</span>,  level = <span class="number">6</span>,  sourceClass = <span class="number">2</span> },  <span class="comment">-- Parry (enables parry playstyle)</span>
+        { id = <span class="number">1152</span>,  level = <span class="number">6</span>,  sourceClass = <span class="number">2</span> },  <span class="comment">-- Purify (poison + disease only)</span>
+        { id = <span class="number">13854</span>, level = <span class="number">6</span>,  sourceClass = <span class="number">4</span> },  <span class="comment">-- Rogue Deflection R<span class="number">3</span> (+<span class="number">6</span>% parry)</span>
+        { id = <span class="number">20064</span>, level = <span class="number">6</span>,  sourceClass = <span class="number">2</span> },  <span class="comment">-- Paladin Deflection R<span class="number">5</span> (+<span class="number">5</span>% parry)</span>
+        { id = <span class="number">19297</span>, level = <span class="number">6</span>,  sourceClass = <span class="number">3</span> },  <span class="comment">-- Hunter Deflection R<span class="number">3</span> (+<span class="number">3</span>% parry)</span>
+        { id = <span class="number">57330</span>, level = <span class="number">6</span>,  sourceClass = <span class="number">6</span> },  <span class="comment">-- Horn of Winter (str/agi buff)</span>
+
+        <span class="comment">-- === LEVEL <span class="number">8</span>: First healing + parry boost ===</span>
+        { id = <span class="number">139</span>,   level = <span class="number">8</span>,  sourceClass = <span class="number">5</span> },  <span class="comment">-- Renew R<span class="number">1</span> (HoT)</span>
+        { id = <span class="number">20208</span>, level = <span class="number">8</span>,  sourceClass = <span class="number">2</span> },  <span class="comment">-- Spiritual Focus R<span class="number">5</span> (<span class="number">70</span>% pushback reduction)</span>
+        { id = <span class="number">16466</span>, level = <span class="number">8</span>,  sourceClass = <span class="number">1</span> },  <span class="comment">-- Warrior Deflection R<span class="number">5</span> (+<span class="number">5</span>% parry)</span>
+
+        <span class="comment">-- === LEVEL <span class="number">10</span>: Mobility + emergency heal ===</span>
+        { id = <span class="number">19236</span>, level = <span class="number">10</span>, sourceClass = <span class="number">5</span> },  <span class="comment">-- Desperate Prayer (emergency self-heal)</span>
+        { id = <span class="number">2983</span>,  level = <span class="number">10</span>, sourceClass = <span class="number">4</span> },  <span class="comment">-- Sprint (gap closer)</span>
+        { id = <span class="number">26023</span>, level = <span class="number">10</span>, sourceClass = <span class="number">2</span> },  <span class="comment">-- Pursuit of Justice R<span class="number">2</span> (+<span class="number">15</span>% speed, -<span class="number">50</span>% disarm)</span>
+
+        <span class="comment">-- === LEVEL <span class="number">12</span>: Armor + crit synergy ===</span>
+        { id = <span class="number">588</span>,   level = <span class="number">12</span>, sourceClass = <span class="number">5</span> },  <span class="comment">-- Inner Fire R<span class="number">1</span> (armor + sp)</span>
+        { id = <span class="number">12974</span>, level = <span class="number">12</span>, sourceClass = <span class="number">1</span> },  <span class="comment">-- Flurry R<span class="number">5</span> (+<span class="number">25</span>% attack speed on crit)</span>
+        { id = <span class="number">34476</span>, level = <span class="number">12</span>, sourceClass = <span class="number">3</span> },  <span class="comment">-- Combat Experience R<span class="number">2</span> (+<span class="number">4</span>% Agi/Int)</span>
+
+        <span class="comment">-- === LEVEL <span class="number">14</span>: Parry payoff + Int upgrade ===</span>
+        { id = <span class="number">6074</span>,  level = <span class="number">14</span>, sourceClass = <span class="number">5</span> },  <span class="comment">-- Renew R<span class="number">2</span></span>
+        { id = <span class="number">1460</span>,  level = <span class="number">14</span>, sourceClass = <span class="number">8</span> },  <span class="comment">-- Arcane Intellect R<span class="number">2</span> (+Int buff stronger)</span>
+        { id = <span class="number">20177</span>, level = <span class="number">14</span>, sourceClass = <span class="number">2</span> },  <span class="comment">-- Reckoning (parry -&gt; extra attacks)</span>
+        { id = <span class="number">19306</span>, level = <span class="number">14</span>, sourceClass = <span class="number">3</span> },  <span class="comment">-- Counterattack (parry -&gt; damage + <span class="number">5</span>s immobilize)</span>
+
+        <span class="comment">-- === LEVEL <span class="number">16</span>: Crit amplification + spell defense ===</span>
+        { id = <span class="number">14751</span>, level = <span class="number">16</span>, sourceClass = <span class="number">5</span> },  <span class="comment">-- Inner Focus (<span class="number">100</span>% crit, no mana)</span>
+        { id = <span class="number">53503</span>, level = <span class="number">16</span>, sourceClass = <span class="number">2</span> },  <span class="comment">-- Sheath of Light R<span class="number">3</span> (<span class="number">30</span>% AP -&gt; SP, crit heal HoT)</span>
+        { id = <span class="number">49497</span>, level = <span class="number">16</span>, sourceClass = <span class="number">6</span> },  <span class="comment">-- Spell Deflection R<span class="number">3</span> (parry -&gt; <span class="number">45</span>% spell dmg redux)</span>
+
+        <span class="comment">-- === LEVEL <span class="number">18</span>: Core talent synergies ===</span>
+        { id = <span class="number">59578</span>, level = <span class="number">18</span>, sourceClass = <span class="number">2</span> },  <span class="comment">-- Art of War R<span class="number">2</span> (melee crit -&gt; instant Flash)</span>
+        { id = <span class="number">47515</span>, level = <span class="number">18</span>, sourceClass = <span class="number">5</span> },  <span class="comment">-- Divine Aegis R<span class="number">3</span> (crit heal -&gt; <span class="number">30</span>% absorb)</span>
+
+        <span class="comment">-- === LEVEL <span class="number">20</span>: Capstone abilities ===</span>
+        { id = <span class="number">19750</span>, level = <span class="number">20</span>, sourceClass = <span class="number">2</span> },  <span class="comment">-- Flash of Light (fast heal)</span>
+        { id = <span class="number">53601</span>, level = <span class="number">20</span>, sourceClass = <span class="number">2</span> },  <span class="comment">-- Sacred Shield (core identity)</span>
+        { id = <span class="number">6075</span>,  level = <span class="number">20</span>, sourceClass = <span class="number">5</span> },  <span class="comment">-- Renew R<span class="number">3</span></span>
+        { id = <span class="number">7128</span>,  level = <span class="number">20</span>, sourceClass = <span class="number">5</span> },  <span class="comment">-- Inner Fire R<span class="number">2</span></span>
+    },
+    tomeClasses = { <span class="number">2</span>, <span class="number">5</span>, <span class="number">4</span>, <span class="number">6</span>, <span class="number">1</span>, <span class="number">8</span>, <span class="number">3</span> },  <span class="comment">-- Paladin, Priest, Rogue, DK, Warrior, Mage, Hunter tomes</span>
+    description = &quot;A holy bodyguard who protects one ally through sacred shields <span class="keyword">and</span> focused healing. Parry-focused combat with crit scaling.&quot;,
+}
+
+<span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Custom Class Loading</span>
+
+<span class="comment">-- {{{ loadFromDirectory</span>
+<span class="comment">-- Load custom class definitions from src/custom-class-json/</span>
+<span class="comment">-- Format: Each file defines one class with spell lists, trainer mappings, etc.</span>
+<span class="comment">-- Directory is an rmail inbox - community uploads via password from website</span>
+<span class="keyword">function</span> CustomClasses.loadFromDirectory()
+    <span class="comment">-- TODO: Implement file loading when directory structure is finalized</span>
+    <span class="comment">-- For now, using hardcoded examples above</span>
+    <span class="comment">--</span>
+    <span class="comment">-- VALIDATION REQUIREMENTS (reject malformed files):</span>
+    <span class="comment">-- <span class="number">1.</span> Required fields: name (string), baseClass (<span class="number">1</span>-<span class="number">11</span>), spells (table), tomeClasses (table)</span>
+    <span class="comment">-- <span class="number">2.</span> Each spell entry must have: id (number), level (number <span class="number">1</span>-<span class="number">20</span>), sourceClass (<span class="number">1</span>-<span class="number">11</span>)</span>
+    <span class="comment">-- <span class="number">3.</span> Spell IDs must be valid (exist <span class="keyword">in</span> spell DBC)</span>
+    <span class="comment">-- <span class="number">4.</span> sourceClass must match one of the tomeClasses</span>
+    <span class="comment">-- <span class="number">5.</span> baseClass must be valid WoW class ID (<span class="number">1</span>-<span class="number">11</span>, skip <span class="number">10</span>)</span>
+    <span class="comment">-- <span class="number">6.</span> No duplicate spell IDs within a class definition</span>
+    <span class="comment">-- <span class="number">7.</span> Class ID must <span class="keyword">not</span> conflict with existing definitions</span>
+    <span class="comment">-- <span class="number">8.</span> One contribution per immutable contact password (dedupe by uploader)</span>
+    <span class="comment">--</span>
+    <span class="comment">-- On validation failure: log error with filename <span class="keyword">and</span> reason, skip file, continue loading others</span>
+    <span class="comment">-- Never load partially valid files - reject entire file <span class="keyword">if</span> any validation fails</span>
+    <span class="comment">--</span>
+    print(&quot;[CustomClasses] Using hardcoded class definitions (file loading <span class="keyword">not</span> implemented)&quot;)
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Custom Class Management</span>
+
+<span class="comment">-- {{{ getCustomClass</span>
+<span class="comment">-- Get player&#<span class="number">39</span>;s custom class ID (<span class="keyword">or</span> <span class="keyword">nil</span> <span class="keyword">if</span> using base class)</span>
+<span class="keyword">function</span> CustomClasses.getCustomClass(player)
+    <span class="keyword">local</span> classId = player:GetData(DATA_KEY_CUSTOM_CLASS)
+    <span class="keyword">if</span> classId <span class="keyword">and</span> classId ~= <span class="number">0</span> <span class="keyword">then</span>
+        <span class="keyword">return</span> classId
+    <span class="keyword">end</span>
+    <span class="keyword">return</span> <span class="keyword">nil</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ setCustomClass</span>
+<span class="comment">-- Set player&#<span class="number">39</span>;s custom class</span>
+<span class="keyword">function</span> CustomClasses.setCustomClass(player, customClassId)
+    player:SetData(DATA_KEY_CUSTOM_CLASS, customClassId)
+    print(&quot;[CustomClasses] &quot; .. player:GetName() .. &quot; selected custom class: &quot; .. customClassId)
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ getDefinition</span>
+<span class="comment">-- Get custom class definition by ID</span>
+<span class="keyword">function</span> CustomClasses.getDefinition(customClassId)
+    <span class="keyword">return</span> CustomClasses.definitions[customClassId]
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ canLearnSpell</span>
+<span class="comment">-- Check <span class="keyword">if</span> player with custom class can learn a specific spell</span>
+<span class="keyword">function</span> CustomClasses.canLearnSpell(player, spellId)
+    <span class="keyword">local</span> customClassId = CustomClasses.getCustomClass(player)
+    <span class="keyword">if</span> <span class="keyword">not</span> customClassId <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="keyword">true</span>  <span class="comment">-- base class, use default behavior</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">local</span> def = CustomClasses.getDefinition(customClassId)
+    <span class="keyword">if</span> <span class="keyword">not</span> def <span class="keyword">then</span>
+        <span class="keyword">return</span> <span class="keyword">true</span>  <span class="comment">-- unknown class, allow default</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Check <span class="keyword">if</span> spell is <span class="keyword">in</span> custom class spell list</span>
+    <span class="comment">-- Spell format: { id, level, sourceClass }</span>
+    <span class="keyword">for</span> _, spellData <span class="keyword">in</span> ipairs(def.spells) <span class="keyword">do</span>
+        <span class="keyword">if</span> spellData.id == spellId <span class="keyword">then</span>
+            <span class="keyword">return</span> <span class="keyword">true</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+    <span class="keyword">return</span> <span class="keyword">false</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ getTomeClassesFor</span>
+<span class="comment">-- Get list of base class IDs to draw tomes from</span>
+<span class="keyword">function</span> CustomClasses.getTomeClassesFor(player)
+    <span class="keyword">local</span> customClassId = CustomClasses.getCustomClass(player)
+    <span class="keyword">if</span> <span class="keyword">not</span> customClassId <span class="keyword">then</span>
+        <span class="keyword">return</span> { player:GetClass() }  <span class="comment">-- base class only</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">local</span> def = CustomClasses.getDefinition(customClassId)
+    <span class="keyword">if</span> <span class="keyword">not</span> def <span class="keyword">or</span> <span class="keyword">not</span> def.tomeClasses <span class="keyword">then</span>
+        <span class="keyword">return</span> { player:GetClass() }
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> def.tomeClasses
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ getEligibleClasses</span>
+<span class="comment">-- Returns list of class IDs that have spells <span class="keyword">in</span> player&#<span class="number">39</span>;s ±<span class="number">3</span> level range</span>
+<span class="comment">-- Used by travel.lua to select which trainer to spawn (equal probability)</span>
+<span class="comment">-- Returns positive class IDs: <span class="number">1</span>=warrior, <span class="number">2</span>=paladin, <span class="number">3</span>=hunter, <span class="number">4</span>=rogue, etc.</span>
+<span class="keyword">function</span> CustomClasses.getEligibleClasses(player)
+    <span class="keyword">local</span> customClassId = CustomClasses.getCustomClass(player)
+    <span class="keyword">if</span> <span class="keyword">not</span> customClassId <span class="keyword">then</span> <span class="keyword">return</span> {} <span class="keyword">end</span>
+
+    <span class="keyword">local</span> def = CustomClasses.getDefinition(customClassId)
+    <span class="keyword">if</span> <span class="keyword">not</span> def <span class="keyword">or</span> <span class="keyword">not</span> def.tomeClasses <span class="keyword">then</span> <span class="keyword">return</span> {} <span class="keyword">end</span>
+
+    <span class="keyword">local</span> playerLevel = player:GetLevel()
+    <span class="keyword">local</span> minLevel    = playerLevel - LEVEL_RANGE
+    <span class="keyword">local</span> maxLevel    = playerLevel + LEVEL_RANGE
+
+    <span class="comment">-- Check which classes have learnable spells <span class="keyword">in</span> range</span>
+    <span class="keyword">local</span> eligible    = {}
+    <span class="keyword">local</span> seenClasses = {}  <span class="comment">-- deduplicate tomeClasses</span>
+
+    <span class="keyword">for</span> _, classId <span class="keyword">in</span> ipairs(def.tomeClasses) <span class="keyword">do</span>
+        <span class="keyword">if</span> <span class="keyword">not</span> seenClasses[classId] <span class="keyword">then</span>
+            seenClasses[classId] = <span class="keyword">true</span>
+            <span class="comment">-- Check <span class="keyword">if</span> this class has any unlearned spells <span class="keyword">in</span> the level range</span>
+            <span class="keyword">local</span> count = CustomClasses.countLearnableSpells(player, def, classId, minLevel, maxLevel)
+            <span class="keyword">if</span> count &gt; <span class="number">0</span> <span class="keyword">then</span>
+                table.insert(eligible, classId)
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> eligible
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Trainer Level Scaling</span>
+
+<span class="comment">-- {{{ getScaledSpellLevel</span>
+<span class="comment">-- Scale trainer level to player max level (<span class="number">20</span>) to determine teachable spell range</span>
+<span class="comment">-- trainerLevel / maxNpcLevel * maxPlayerLevel = scaledLevel</span>
+<span class="comment">-- Trainer teaches spells <span class="keyword">in</span> range [scaledLevel - <span class="number">2</span>, scaledLevel + <span class="number">2</span>]</span>
+<span class="keyword">local</span> MAX_NPC_LEVEL = <span class="number">80</span>
+<span class="keyword">local</span> MAX_PLAYER_LEVEL = <span class="number">20</span>
+
+<span class="keyword">function</span> CustomClasses.getScaledSpellLevel(trainerLevel)
+    <span class="keyword">local</span> ratio = trainerLevel / MAX_NPC_LEVEL
+    <span class="keyword">return</span> math.floor(ratio * MAX_PLAYER_LEVEL)
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ trainerCanTeachSpell</span>
+<span class="comment">-- Check <span class="keyword">if</span> trainer at given level can teach a spell at given required level</span>
+<span class="keyword">function</span> CustomClasses.trainerCanTeachSpell(trainerLevel, spellRequiredLevel)
+    <span class="keyword">local</span> scaledLevel = CustomClasses.getScaledSpellLevel(trainerLevel)
+    <span class="keyword">local</span> minLevel = scaledLevel - <span class="number">2</span>
+    <span class="keyword">local</span> maxLevel = scaledLevel + <span class="number">2</span>
+    <span class="keyword">return</span> spellRequiredLevel &gt;= minLevel <span class="keyword">and</span> spellRequiredLevel &lt;= maxLevel
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Spell Counting <span class="keyword">for</span> Dynamic Trainer Selection (Issue <span class="number">157</span>)</span>
+<span class="comment">-- Used by getEligibleClasses() to determine which classes have learnable spells</span>
+
+<span class="comment">-- {{{ countLearnableSpells</span>
+<span class="comment">-- Count spells from a source class that player can learn <span class="keyword">in</span> level range</span>
+<span class="comment">-- Returns count of spells that are: <span class="keyword">in</span> range, from sourceClass, <span class="keyword">not</span> already known</span>
+<span class="keyword">function</span> CustomClasses.countLearnableSpells(player, customClassDef, sourceClass, minLevel, maxLevel)
+    <span class="keyword">local</span> count = <span class="number">0</span>
+
+    <span class="keyword">for</span> _, spellData <span class="keyword">in</span> ipairs(customClassDef.spells) <span class="keyword">do</span>
+        <span class="comment">-- Check source class matches</span>
+        <span class="keyword">if</span> spellData.sourceClass == sourceClass <span class="keyword">then</span>
+            <span class="comment">-- Check level is <span class="keyword">in</span> range</span>
+            <span class="keyword">if</span> spellData.level &gt;= minLevel <span class="keyword">and</span> spellData.level &lt;= maxLevel <span class="keyword">then</span>
+                <span class="comment">-- Check <span class="keyword">not</span> already known</span>
+                <span class="keyword">if</span> <span class="keyword">not</span> player:HasSpell(spellData.id) <span class="keyword">then</span>
+                    count = count + <span class="number">1</span>
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> count
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- NPC Spawning <span class="keyword">and</span> Gossip (Selector NPC)</span>
+
+<span class="comment">-- {{{ spawnSelectorNPC</span>
+<span class="comment">-- Spawn the custom class selector NPC near a player</span>
+<span class="comment">-- Uses race-specific NPC entry so player sees one of their own kind</span>
+<span class="comment">-- Skips spawn <span class="keyword">if</span> any selector NPC already exists within <span class="number">20</span> yards (players can share)</span>
+<span class="keyword">local</span> SELECTOR_SHARE_RANGE = <span class="number">20</span>
+
+<span class="keyword">function</span> CustomClasses.spawnSelectorNPC(player)
+    <span class="keyword">local</span> px, py, pz, po = player:GetLocation()
+    <span class="keyword">local</span> map            = player:GetMap()
+    <span class="keyword">local</span> race           = player:GetRace()
+
+    <span class="comment">-- Check <span class="keyword">if</span> any selector NPC is already nearby (any race)</span>
+    <span class="keyword">local</span> nearbyCreatures = player:GetCreaturesInRange(SELECTOR_SHARE_RANGE)
+    <span class="keyword">if</span> nearbyCreatures <span class="keyword">then</span>
+        <span class="keyword">for</span> _, creature <span class="keyword">in</span> ipairs(nearbyCreatures) <span class="keyword">do</span>
+            <span class="keyword">local</span> entry = creature:GetEntry()
+            <span class="comment">-- Check <span class="keyword">if</span> this creature is any of our selector NPCs</span>
+            <span class="keyword">for</span> _, selectorEntry <span class="keyword">in</span> pairs(SELECTOR_NPC_ENTRIES) <span class="keyword">do</span>
+                <span class="keyword">if</span> entry == selectorEntry <span class="keyword">then</span>
+                    print(&quot;[CustomClasses] Selector NPC already nearby - skipping spawn <span class="keyword">for</span> &quot; .. player:GetName())
+                    <span class="keyword">return</span> <span class="keyword">nil</span>
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Get race-specific NPC entry</span>
+    <span class="keyword">local</span> npcEntry = SELECTOR_NPC_ENTRIES[race]
+    <span class="keyword">if</span> <span class="keyword">not</span> npcEntry <span class="keyword">then</span>
+        print(&quot;[CustomClasses] No selector NPC entry <span class="keyword">for</span> race &quot; .. race)
+        <span class="keyword">return</span> <span class="keyword">nil</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Find position <span class="keyword">in</span> front of player</span>
+    <span class="keyword">local</span> spawnDist = <span class="number">3</span>
+    <span class="keyword">local</span> x         = px + math.cos(po) * spawnDist
+    <span class="keyword">local</span> y         = py + math.sin(po) * spawnDist
+    <span class="keyword">local</span> z         = map:GetHeight(x, y) <span class="keyword">or</span> pz
+
+    <span class="comment">-- Spawn NPC facing player</span>
+    <span class="keyword">local</span> npcFacing = po + math.pi  <span class="comment">-- face towards player</span>
+    <span class="keyword">local</span> npc       = player:SpawnCreature(npcEntry, x, y, z, npcFacing, <span class="number">1</span>, <span class="number">0</span>)
+
+    <span class="keyword">if</span> npc <span class="keyword">then</span>
+        <span class="comment">-- Register periodic check <span class="keyword">for</span> nearby players</span>
+        npc:RegisterEvent(CustomClasses.checkNearbyPlayers, NEARBY_CHECK_INTERVAL, <span class="number">0</span>)
+        print(&quot;[CustomClasses] Spawned selector NPC (race &quot; .. race .. &quot;, entry &quot; .. npcEntry .. &quot;) <span class="keyword">for</span> &quot; .. player:GetName())
+    <span class="keyword">else</span>
+        print(&quot;[CustomClasses] Failed to spawn selector NPC (entry &quot; .. npcEntry .. &quot; <span class="keyword">not</span> <span class="keyword">in</span> DB?)&quot;)
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> npc
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ checkNearbyPlayers</span>
+<span class="comment">-- Periodic check - despawn NPC <span class="keyword">if</span> no players nearby</span>
+<span class="keyword">function</span> CustomClasses.checkNearbyPlayers(eventId, delay, repeats, npc)
+    <span class="keyword">local</span> nearbyPlayers = npc:GetPlayersInRange(NEARBY_PLAYER_RANGE)
+    <span class="keyword">if</span> <span class="keyword">not</span> nearbyPlayers <span class="keyword">or</span> #nearbyPlayers == <span class="number">0</span> <span class="keyword">then</span>
+        print(&quot;[CustomClasses] No players nearby - despawning selector NPC&quot;)
+        npc:RemoveEvents()
+        npc:DespawnOrUnsummon(<span class="number">0</span>)
+    <span class="keyword">end</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ onNPCGossip</span>
+<span class="comment">-- Handle gossip with selector NPC</span>
+<span class="keyword">function</span> CustomClasses.onNPCGossip(event, player, npc)
+    <span class="comment">-- Only talk to level <span class="number">1</span> characters</span>
+    <span class="keyword">if</span> player:GetLevel() &gt; <span class="number">1</span> <span class="keyword">then</span>
+        player:SendBroadcastMessage(&quot;|cff<span class="number">888888</span>The figure seems uninterested <span class="keyword">in</span> you.|r&quot;)
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Check <span class="keyword">if</span> already selected a class</span>
+    <span class="keyword">local</span> currentClass = CustomClasses.getCustomClass(player)
+    <span class="keyword">if</span> currentClass <span class="keyword">then</span>
+        player:SendBroadcastMessage(&quot;|cff<span class="number">888888</span>You have already chosen your path.|r&quot;)
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Build gossip menu with custom class options</span>
+    player:GossipClearMenu()
+
+    <span class="keyword">for</span> classId, def <span class="keyword">in</span> pairs(CustomClasses.definitions) <span class="keyword">do</span>
+        <span class="comment">-- Only show classes compatible with player&#<span class="number">39</span>;s base class</span>
+        <span class="keyword">if</span> def.baseClass == player:GetClass() <span class="keyword">then</span>
+            player:GossipMenuAddItem(<span class="number">0</span>, def.name, <span class="number">0</span>, classId)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Option to stay with base class</span>
+    player:GossipMenuAddItem(<span class="number">0</span>, &quot;Stay with my training (Base Class)&quot;, <span class="number">0</span>, <span class="number">0</span>)
+
+    player:GossipSendMenu(<span class="number">1</span>, npc)  <span class="comment">-- npcTextId <span class="number">1</span> = default</span>
+    <span class="keyword">return</span> <span class="keyword">true</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ onNPCGossipSelect</span>
+<span class="comment">-- Handle selection from gossip menu</span>
+<span class="keyword">function</span> CustomClasses.onNPCGossipSelect(event, player, npc, sender, intid, code)
+    player:GossipComplete()
+
+    <span class="keyword">if</span> intid == <span class="number">0</span> <span class="keyword">then</span>
+        <span class="comment">-- Chose base class</span>
+        player:SendBroadcastMessage(&quot;|cff<span class="number">00</span>ff<span class="number">00</span>You have chosen to follow your original training.|r&quot;)
+        <span class="keyword">return</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">local</span> def = CustomClasses.getDefinition(intid)
+    <span class="keyword">if</span> def <span class="keyword">then</span>
+        CustomClasses.setCustomClass(player, intid)
+        player:SendBroadcastMessage(&quot;|cff<span class="number">00</span>ffff You have become a &quot; .. def.name .. &quot;!|r&quot;)
+        player:SendBroadcastMessage(&quot;|cff<span class="number">888888</span>&quot; .. def.description .. &quot;|r&quot;)
+    <span class="keyword">else</span>
+        player:SendBroadcastMessage(&quot;|cffff<span class="number">0000</span>Unknown class selection.|r&quot;)
+    <span class="keyword">end</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Event Handlers</span>
+
+<span class="comment">-- {{{ onFirstLogin</span>
+<span class="comment">-- Spawn selector NPC when player first logs <span class="keyword">in</span> at level <span class="number">1</span></span>
+<span class="keyword">function</span> CustomClasses.onFirstLogin(event, player)
+    <span class="keyword">if</span> player:GetLevel() &gt; <span class="number">1</span> <span class="keyword">then</span>
+        <span class="keyword">return</span>  <span class="comment">-- only <span class="keyword">for</span> level <span class="number">1</span></span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Small delay to ensure player is fully loaded</span>
+    player:RegisterEvent(<span class="keyword">function</span>(eventId, delay, repeats, player)
+        CustomClasses.spawnSelectorNPC(player)
+    <span class="keyword">end</span>, <span class="number">2000</span>, <span class="number">1</span>)
+
+    print(&quot;[CustomClasses] Scheduled NPC spawn <span class="keyword">for</span> new character: &quot; .. player:GetName())
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">-- {{{ onLogin</span>
+<span class="comment">-- Restore custom class data on login (<span class="keyword">if</span> stored <span class="keyword">in</span> DB, it persists)</span>
+<span class="keyword">function</span> CustomClasses.onLogin(event, player)
+    <span class="keyword">local</span> customClassId = CustomClasses.getCustomClass(player)
+    <span class="keyword">if</span> customClassId <span class="keyword">then</span>
+        <span class="keyword">local</span> def = CustomClasses.getDefinition(customClassId)
+        <span class="keyword">if</span> def <span class="keyword">then</span>
+            print(&quot;[CustomClasses] &quot; .. player:GetName() .. &quot; logged <span class="keyword">in</span> as &quot; .. def.name)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Test Commands</span>
+
+<span class="comment">-- {{{ handleChat</span>
+<span class="keyword">function</span> CustomClasses.handleChat(event, player, message)
+    <span class="comment">-- #customclass - show current custom class</span>
+    <span class="keyword">if</span> message == &quot;#customclass&quot; <span class="keyword">then</span>
+        <span class="keyword">local</span> classId = CustomClasses.getCustomClass(player)
+        <span class="keyword">if</span> classId <span class="keyword">then</span>
+            <span class="keyword">local</span> def = CustomClasses.getDefinition(classId)
+            player:SendBroadcastMessage(&quot;Custom class: &quot; .. (def <span class="keyword">and</span> def.name <span class="keyword">or</span> &quot;Unknown&quot;) .. &quot; (ID: &quot; .. classId .. &quot;)&quot;)
+        <span class="keyword">else</span>
+            player:SendBroadcastMessage(&quot;No custom class - using base class&quot;)
+        <span class="keyword">end</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- #customset &lt;classId&gt; - set custom class (testing only)</span>
+    <span class="keyword">if</span> message:sub(<span class="number">1</span>, <span class="number">10</span>) == &quot;#customset&quot; <span class="keyword">then</span>
+        <span class="keyword">local</span> classIdStr = message:sub(<span class="number">12</span>)
+        <span class="keyword">local</span> classId = tonumber(classIdStr)
+        <span class="keyword">if</span> classId <span class="keyword">then</span>
+            CustomClasses.setCustomClass(player, classId)
+            <span class="keyword">local</span> def = CustomClasses.getDefinition(classId)
+            player:SendBroadcastMessage(&quot;Set custom class to: &quot; .. (def <span class="keyword">and</span> def.name <span class="keyword">or</span> &quot;Unknown&quot;))
+        <span class="keyword">else</span>
+            player:SendBroadcastMessage(&quot;Usage: #customset &lt;classId&gt;&quot;)
+        <span class="keyword">end</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- #customclear - clear custom class (testing only)</span>
+    <span class="keyword">if</span> message == &quot;#customclear&quot; <span class="keyword">then</span>
+        player:SetData(DATA_KEY_CUSTOM_CLASS, <span class="keyword">nil</span>)
+        player:SendBroadcastMessage(&quot;Custom class cleared - now using base class&quot;)
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- #customlist - list available custom classes</span>
+    <span class="keyword">if</span> message == &quot;#customlist&quot; <span class="keyword">then</span>
+        player:SendBroadcastMessage(&quot;Available custom classes:&quot;)
+        <span class="keyword">for</span> classId, def <span class="keyword">in</span> pairs(CustomClasses.definitions) <span class="keyword">do</span>
+            player:SendBroadcastMessage(&quot;  &quot; .. classId .. &quot;: &quot; .. def.name .. &quot; (base: &quot; .. def.baseClass .. &quot;)&quot;)
+        <span class="keyword">end</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- #customspawn - manually spawn selector NPC</span>
+    <span class="keyword">if</span> message == &quot;#customspawn&quot; <span class="keyword">then</span>
+        CustomClasses.spawnSelectorNPC(player)
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- #trainerinfo - show eligible trainer classes at current level</span>
+    <span class="keyword">if</span> message == &quot;#trainerinfo&quot; <span class="keyword">then</span>
+        <span class="keyword">local</span> customClassId = CustomClasses.getCustomClass(player)
+        <span class="keyword">if</span> <span class="keyword">not</span> customClassId <span class="keyword">then</span>
+            player:SendBroadcastMessage(&quot;No custom class - base class players use world trainers&quot;)
+            <span class="keyword">return</span> <span class="keyword">false</span>
+        <span class="keyword">end</span>
+
+        <span class="keyword">local</span> def         = CustomClasses.getDefinition(customClassId)
+        <span class="keyword">local</span> playerLevel = player:GetLevel()
+        <span class="keyword">local</span> minLevel    = playerLevel - LEVEL_RANGE
+        <span class="keyword">local</span> maxLevel    = playerLevel + LEVEL_RANGE
+
+        player:SendBroadcastMessage(&quot;Eligible trainers at level &quot; .. playerLevel .. &quot; (range &quot; .. minLevel .. &quot;-&quot; .. maxLevel .. &quot;):&quot;)
+
+        <span class="comment">-- Get eligible classes (those with learnable spells <span class="keyword">in</span> range)</span>
+        <span class="keyword">local</span> eligibleClasses = CustomClasses.getEligibleClasses(player)
+        <span class="keyword">local</span> numEligible     = #eligibleClasses
+
+        <span class="keyword">if</span> numEligible &gt; <span class="number">0</span> <span class="keyword">then</span>
+            <span class="keyword">for</span> _, classId <span class="keyword">in</span> ipairs(eligibleClasses) <span class="keyword">do</span>
+                <span class="keyword">local</span> count     = CustomClasses.countLearnableSpells(player, def, classId, minLevel, maxLevel)
+                <span class="keyword">local</span> className = CLASS_NAMES[classId] <span class="keyword">or</span> &quot;Unknown&quot;
+                <span class="keyword">local</span> pct       = math.floor(<span class="number">100</span> / numEligible)
+                player:SendBroadcastMessage(&quot;  &quot; .. className .. &quot;: &quot; .. count .. &quot; spells (&quot; .. pct .. &quot;% chance)&quot;)
+            <span class="keyword">end</span>
+            player:SendBroadcastMessage(&quot;Equal probability selection: <span class="number">1</span>/&quot; .. numEligible .. &quot; per class&quot;)
+        <span class="keyword">else</span>
+            player:SendBroadcastMessage(&quot;No learnable spells - no trainer can spawn&quot;)
+        <span class="keyword">end</span>
+        <span class="keyword">return</span> <span class="keyword">false</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span>
+
+<span class="comment">---------------------------------------------------------------------------------------------------</span>
+<span class="comment">-- Registration</span>
+
+<span class="comment">-- First login event (new characters)</span>
+RegisterPlayerEvent(<span class="number">30</span>, CustomClasses.onFirstLogin)  <span class="comment">-- PLAYER_EVENT_ON_FIRST_LOGIN</span>
+
+<span class="comment">-- Regular login</span>
+RegisterPlayerEvent(<span class="number">3</span>, CustomClasses.onLogin)  <span class="comment">-- PLAYER_EVENT_ON_LOGIN</span>
+
+<span class="comment">-- Chat commands</span>
+RegisterPlayerEvent(<span class="number">18</span>, CustomClasses.handleChat)  <span class="comment">-- PLAYER_EVENT_ON_CHAT</span>
+
+<span class="comment">-- Selector NPC gossip - register <span class="keyword">for</span> all race-specific entries</span>
+<span class="keyword">for</span> race, entry <span class="keyword">in</span> pairs(SELECTOR_NPC_ENTRIES) <span class="keyword">do</span>
+    RegisterCreatureGossipEvent(entry, <span class="number">1</span>, CustomClasses.onNPCGossip)
+    RegisterCreatureGossipEvent(entry, <span class="number">2</span>, CustomClasses.onNPCGossipSelect)
+<span class="keyword">end</span>
+
+<span class="comment">-- Note: Dynamic trainer spawning (Issue <span class="number">157</span>) now uses existing world trainers</span>
+<span class="comment">-- via Travel.getTrainerForClass() instead of custom trainer NPCs.</span>
+<span class="comment">-- No gossip registration needed - players use standard trainer interaction.</span>
+
+print(&quot;[CustomClasses] Custom class system loaded&quot;)
+print(&quot;[CustomClasses] Test commands: #customclass, #customset, #customclear, #customlist, #customspawn&quot;)
+print(&quot;[CustomClasses] Trainer info: #trainerinfo&quot;)
+print(&quot;[CustomClasses] NOTE: Requires creature_template entries <span class="number">900001</span>-<span class="number">900011</span> (selector NPCs)&quot;)
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

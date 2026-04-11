@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 130 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 130 • Phase 1</div>
+            <h1>ALE Initialization Hook Fix</h1>
+            <div class="status completed">✅ Completed</div>
+        </header>
+
+        <div class="content">
+            <p><h1>130 - ALE Initialization Hook Fix</h1></p>
+<p><h2>Status: Completed</h2></p>
+<p><strong>Note</strong>: C++ fix applied. Lua scripts now loading correctly. Merged with issue 134.</p>
+<p><h2>Problem</h2></p>
+<p>ALE (AzerothCore Lua Engine) was not initializing, preventing any Lua scripts from
+loading. The Lua scripts for monsters, travellers, treasure spawns, and all other
+custom content were completely non-functional.</p>
+<p>Additionally, even when ALE initializes, behavior scripts in subdirectories are not
+automatically loaded - they require explicit loading via a root-level loader script.</p>
+<p><h2>Root Cause Analysis</h2></p>
+<p><h3>Symptoms</h3>
+- No ALE.log file created
+- No &quot;Initialize ALE Lua Engine...&quot; message in Server.log
+- No Lua script output (test-loading.lua print statements not appearing)
+- <code>.reload ALE</code> command not available
+- Behavior scripts in <code>src/lua/behaviors/</code> not executing</p>
+<p><h3>Investigation Timeline</h3></p>
+<p>1. <strong>Config Verification</strong>: Confirmed <code>ALE.Enabled = true</code> in mod_ale.conf
+2. <strong>Binary Check</strong>: Verified ALE code is compiled into worldserver via <code>strings</code>
+3. <strong>Module Registration</strong>: Confirmed <code>Addmod_aleScripts()</code> is called in ModulesLoader.cpp
+4. <strong>Hook Analysis</strong>: Discovered <code>WORLDHOOK_ON_BEFORE_CONFIG_LOAD</code> never fires
+5. <strong>Subdirectory Loading</strong>: ALE only auto-loads root <code>.lua</code> files, not subdirectories</p>
+<p><h3>Technical Details</h3></p>
+<p>ALE&#39;s initialization was tied to <code>OnBeforeConfigLoad</code> hook:</p>
+<p>``<code>cpp
+void OnBeforeConfigLoad(bool reload) override
+{
+    ALEConfig::GetInstance().Initialize(reload);
+    if (!reload)
+    {
+        LOG_INFO(&quot;ALE&quot;, &quot;Initialize ALE Lua Engine...&quot;);
+        ALE::Initialize();
+    }
+    sALE-&gt;OnConfigLoad(reload, true);
+}
+<pre><code>
+However, this hook was not firing. Meanwhile, </code>WORLDHOOK_ON_BEFORE_WORLD_INITIALIZED<code>
+(used by mod-playerbots) was working correctly.</p>
+<p>The existing </code>OnBeforeWorldInitialized<code> tried to run scripts, but since ALE was never
+initialized, it failed silently or crashed:
+</code></pre>cpp
+void OnBeforeWorldInitialized() override
+{
+    sALE-&gt;RunScripts();  // CRASH: sALE not initialized
+    sALE-&gt;OnConfigLoad(false, false);
+}
+<pre><code>
+&lt;h2&gt;Solution&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Part 1: C++ Fix (NOT YET APPLIED)&lt;/h3&gt;</p>
+<p>Modify </code>ALE_SC.cpp<code> to perform initialization in </code>OnBeforeWorldInitialized<code> instead
+of relying on the unreliable </code>OnBeforeConfigLoad<code> hook.</p>
+<p><strong>File</strong>: </code>source/modules/mod-eluna/src/ALE_SC.cpp<code>
+</code></pre>cpp
+void OnBeforeWorldInitialized() override
+{
+    // Initialize ALE here since OnBeforeConfigLoad may not fire in some builds.
+    // This hook is called later but reliably fires.
+    if (!ALE::IsInitialized())
+    {
+        ALEConfig::GetInstance().Initialize(false);
+        LOG_INFO(&quot;ALE&quot;, &quot;Initialize ALE Lua Engine...&quot;);
+        ALE::Initialize();
+    }</p>
+<p>    ///- Run ALE scripts.
+    sALE-&gt;RunScripts();
+    sALE-&gt;OnConfigLoad(false, false);
+}
+<pre><code>
+Also add guards to other hook callbacks to prevent crashes if called before
+initialization:
+</code></pre>cpp
+void OnAfterConfigLoad(bool reload) override
+{
+    if (ALE::IsInitialized())
+    {
+        sALE-&gt;OnConfigLoad(reload, false);
+    }
+}
+</code>`<code></p>
+<p><h3>Part 2: Lua Loader (COMPLETED)</h3></p>
+<p>Created </code>src/lua/load-behaviors.lua<code> which:
+- Sets up package.path to include behaviors directory
+- Requires </code>behaviors/init<code>
+- Has error handling with pcall</p>
+<p>Created </code>src/lua/behaviors/init.lua<code> which:
+- Loads behaviors in dependency order
+- Registers loaded behaviors in global </code>Behaviors<code> table
+- Prints initialization messages</p>
+<p>Fixed missing </code>.lua<code> extensions:
+- </code>src/lua/levelling<code> → </code>src/lua/levelling.lua<code>
+- </code>src/lua/merchants<code> → </code>src/lua/merchants.lua<code></p>
+<p><h2>Implementation Steps</h2></p>
+<p>- [x] Apply C++ fix to </code>source-beta/modules/mod-ale/src/ALE_SC.cpp<code>
+- [x] Rebuild server (</code>./scripts/azerothcore update --force<code>)
+- [x] Start server and verify ALE initializes
+- [x] Create load-behaviors.lua (done)
+- [x] Create behaviors/init.lua (done)
+- [x] Fix file extensions (done)
+- [x] Verify behaviors load (Lua scripts loading confirmed)</p>
+<p><h2>Related Issues</h2></p>
+<p>- <strong>113 - Ambush System</strong>: Depends on Lua scripts working
+- <strong>125 - Player Bot Behavior Commands</strong>: Lua extension scripts
+- <strong>127 - Contextual Creature Spawns</strong>: Lua-based spawn system
+- ~~<strong>134 - Behavior Scripts Not Loading</strong>: Merged into this issue~~</p>
+<p><h2>Files Modified</h2></p>
+<p><strong>C++ (pending):</strong>
+- </code>source/modules/mod-eluna/src/ALE_SC.cpp<code></p>
+<p><strong>Lua (completed):</strong>
+- </code>src/lua/load-behaviors.lua<code> (new)
+- </code>src/lua/behaviors/init.lua<code> (new)
+- </code>src/lua/levelling.lua<code> (renamed from levelling)
+- </code>src/lua/merchants.lua<code> (renamed from merchants)</p>
+<p><h2>Testing Checklist</h2></p>
+<p>- [ ] Server starts without crashes
+- [ ] &quot;Initialize ALE Lua Engine...&quot; appears in Server.log
+- [ ] ALE.log file is created
+- [ ] Root Lua scripts execute (ambush.lua, travel.lua)
+- [ ] &quot;[Behaviors] System initialized - 9 behaviors loaded&quot; appears
+- [ ] Monsters spawn from ambush.lua
+- [ ] Travellers spawn from periodic_events.lua</p>
+<p><h2>Lessons Learned</h2></p>
+<p>1. Not all WorldScript hooks fire reliably in all AzerothCore builds
+2. </code>WORLDHOOK_ON_BEFORE_WORLD_INITIALIZED<code> is more reliable than </code>WORLDHOOK_ON_BEFORE_CONFIG_LOAD<code>
+3. Always add null/initialization guards to hook callbacks
+4. mod-eluna.conf (if present) may conflict with mod-ale - removed as precaution
+5. ALE only auto-loads root-level </code>.lua` files, subdirectories need explicit require</p>
+<p><h2>Concept Catalog Reference</h2></p>
+<p>- 001-010: Foundation (project structure)
+- 101-139: Behavior systems
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-1-progress.html">View Phase 1 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

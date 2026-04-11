@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>changelog.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>changelog.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/changelog.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 16282 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Registro de cambios</h1></p>
+<p>Este archivo contiene los registros de cambios de todos los grandes cambios de la API.</p>
+<p><h2>6.0.0-dev.1 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/de13bf426e162ee10cbd5470cec74122d1d4afa0">de13bf426e162ee10cbd5470cec74122d1d4afa0</a></h2></p>
+<p><h3>Cómo actualizar</h3></p>
+<p>- <code>PrepareStatment</code></p>
+<p>``<code>diff
+- setNull(...)
+- setBool(...)
+- setUInt8(...)
+- setInt8(...)
+- setUInt16(...)
+- setInt16(...)
+- setUInt32(...)
+- setUInt64(...)
+- setInt64(...)
+- setFloat(...)
+- setDouble(...)
+- setString(...)
+- setStringView(...)
+- setBinary(...)
++ SetData(...)
+<pre><code>
+- </code>Fields<code>
+</code></pre>diff
+- GetBool()
++ Get&lt;bool&gt;()
+<pre><code></code>`<code>diff
+- GetUInt8()
++ Get&amp;lt;uint8&amp;gt;()</code></pre>
+</code>`<code>diff
+- GetInt8()
++ Get&lt;int8&gt;()
+<pre><code></code>`<code>diff
+- GetUInt16()
++ Get&amp;lt;uint16&amp;gt;()</code></pre>
+</code>`<code>diff
+- GetInt16()
++ Get&lt;int16&gt;()
+<pre><code></code>`<code>diff
+- GetUInt32()
++ Get&amp;lt;uint32&amp;gt;()</code></pre>
+</code>`<code>diff
+- GetInt32()
++ Get&lt;int32&gt;()
+<pre><code></code>`<code>diff
+- GetUInt64()
++ Get&amp;lt;uint64&amp;gt;()</code></pre>
+</code>`<code>diff
+- GetInt64()
++ Get&lt;int64&gt;()
+<pre><code></code>`<code>diff
+- GetFloat()
++ Get&amp;lt;float&amp;gt;()</code></pre>
+</code>`<code>diff
+- GetDouble()
++ Get&lt;double&gt;()
+<pre><code></code>`<code>diff
+- GetString()
++ Get&amp;lt;std::string&amp;gt;()</code></pre>
+</code>`<code>diff
+- GetStringView()
++ Get&lt;std::string_view&gt;()
+<pre><code></code>`<code>diff
+- GetBinary()
++ Get&amp;lt;Binary&amp;gt;()</code></pre></p>
+<p><h2>5.0.0-dev.1 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/8b7df23f064f8c1c41aea222342b53f109c4e3b9">8b7df23f064f8c1c41aea222342b53f109c4e3b9</a></h2></p>
+<p><h3>Cómo actualizar</h3></p>
+<p></code>`<code>diff
+- time(nullptr)
++ GameTime::GetGameTime().count()
+<pre><code></code>`<code>diff
+- sWorld-&amp;gt;GetGameTime()
++ GameTime::GetGameTime().count()</code></pre>
+</code>`<code>diff
+- World::GetGameTimeMS()
++ GameTime::GetGameTimeMS().count()
+<pre><code>
+&lt;h2&gt;5.0.0-dev.0 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/2fd8b00d7bac1f9c9b565916453cf490fb069df0">2fd8b00d7bac1f9c9b565916453cf490fb069df0</a>&lt;/h2&gt;</p>
+<p>Le sugerimos que utilice siempre la última versión de nuestra rama maestra.</p>
+<p>- https://github.com/azerothcore/azerothcore-wotlk/tree/master</p>
+<p>&lt;h3&gt;Cómo actualizar&lt;/h3&gt;</p>
+<p>Para los administradores de servidores: las instrucciones sobre cómo actualizar los servidores existentes están disponibles <a href="http://www.azerothcore.org/wiki/Upgrade-from-pre-2.0.0-to-latest-master">aquí</a>.</p>
+<p>&lt;h3&gt;Notas de publicación&lt;/h3&gt;</p>
+<p>Este PR elimina la columna modelId de la tabla de criaturas para permitirnos pasar a un sistema de spawn de doble entrada.</p>
+<p>Si esto causa un problema para los spawns del juego o personalizados, la siguiente línea de SAI puede actualizar el modelId.
+</code></pre>sql
+(#entryorguid,0,0,0,11,0,100,0,0,0,0,0,0,3,0,#modelId,0,0,0,0,1,0,0,0,0,0,0,0,0,&quot;Creature Name - On Spawn - Change Model to #modelId&quot;),
+<pre><code>
+Un agradecimiento especial a @Shin @Kitzunu @M&amp;#39;Dic por su ayuda.</p>
+<p>&lt;h2&gt;4.0.0-dev.13 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/bc82f36f1ff46bb21d32e1cfdaec8271dde08af1">bc82f36f1ff46bb21d32e1cfdaec8271dde08af1</a>&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Añadido&lt;/h3&gt;
+</code></pre>diff
+// Unit.cpp
++ virtual void Talk(std::string_view text, ChatMsg msgType, Language language, float textRange, WorldObject const<em> target);
++ virtual void Say(std::string_view text, Language language, WorldObject const</em> target = nullptr);
++ virtual void Yell(std::string_view text, Language language, WorldObject const<em> target = nullptr);
++ virtual void TextEmote(std::string_view text, WorldObject const</em> target = nullptr, bool isBossEmote = false);
++ virtual void Whisper(std::string_view text, Language language, Player<em> target, bool isBossWhisper = false);
++ virtual void Talk(uint32 textId, ChatMsg msgType, float textRange, WorldObject const</em> target);
++ virtual void Say(uint32 textId, WorldObject const<em> target = nullptr);
++ virtual void Yell(uint32 textId, WorldObject const</em> target = nullptr);
++ virtual void TextEmote(uint32 textId, WorldObject const<em> target = nullptr, bool isBossEmote = false);
++ virtual void Whisper(uint32 textId, Player</em> target, bool isBossWhisper = false);
+<pre><code>
+&lt;h3&gt;Eliminado&lt;/h3&gt;
+</code></pre>diff
+// Object.cpp
+- void MonsterSay(const char<em> text, uint32 language, WorldObject const</em> target);
+- void MonsterYell(const char<em> text, uint32 language, WorldObject const</em> target);
+- void MonsterTextEmote(const char<em> text, WorldObject const</em> target, bool IsBossEmote = false);
+- void MonsterWhisper(const char<em> text, Player const</em> target, bool IsBossWhisper = false);
+- void MonsterSay(int32 textId, uint32 language, WorldObject const<em> target);
+- void MonsterYell(int32 textId, uint32 language, WorldObject const</em> target);
+- void MonsterTextEmote(int32 textId, WorldObject const<em> target, bool IsBossEmote = false);
+- void MonsterWhisper(int32 textId, Player const</em> target, bool IsBossWhisper = false);
+- void SendPlaySound(uint32 Sound, bool OnlySelf);
+<pre><code>
+&lt;h3&gt;Cómo actualizar&lt;/h3&gt;
+</code></pre>diff
+- creature-&gt;MonsterSay(text, LANG_XXX, nullptr);
++ creature-&gt;Say(text, LANG_XXX);</p>
+<p>- creature-&gt;MonsterTextEmote(text, 0);
++ creature-&gt;TextEmote(text);</p>
+<p>- creature-&gt;MonsterWhisper(text, receiver);
++ creature-&gt;Whisper(text, LANG_XXX, receiver);</p>
+<p>- creature-&gt;MonsterYell(text, LANG_XXX, NULL);
++ creature-&gt;Yell(text, LANG_XXX);</p>
+<p>- creature-&gt;MonsterWhisper(text, target, isBossWhisper);
++ creature-&gt;Whisper(text, LANG_XXX, target, isBossWhisper);</p>
+<p>- SendPlaySound(uint32 Sound, bool OnlySelf);
++ PlayDirectSound(uint32 sound_id, Player<em> target = nullptr);
+<pre><code>
+&lt;h2&gt;4.0.0-dev.12 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/bcec4191e43de8a7b57a4219d6baaa7c5e3dfaf1">bcec4191e43de8a7b57a4219d6baaa7c5e3dfaf1</a>&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Añadido&lt;/h3&gt;</p>
+<p>- Se ha añadido el hook </code>OnPlayerPVPFlagChange<code>, que se ejecutará cuando se cambie la bandera pvp de un jugador.</p>
+<p>&lt;h2&gt;4.0.0-dev.11 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/d18545263fda54e19c875d22adfb28ae4072ec01">d18545263fda54e19c875d22adfb28ae4072ec01</a>&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Añadido&lt;/h3&gt;</p>
+<p>- Se ha añadido </code>OnBeforeFinalizePlayerWorldSession<code> que puede utilizarse para modificar la versión de la caché que se envía al cliente a través de los módulos.</p>
+<p>&lt;h2&gt;4.0.0-dev.10 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/0897705a6814fc19007e5f88fbcb98b3689880c9">0897705a6814fc19007e5f88fbcb98b3689880c9</a>&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Cómo actualizar&lt;/h3&gt;</p>
+<p>Actualiza tu versión de Boost a la 1.74 o superior.</p>
+<p>&lt;h2&gt;4.0.0-dev.9 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/edfc2a8db48a17bf3e9ace0b36edc819aa0e5e23">edfc2a8db48a17bf3e9ace0b36edc819aa0e5e23</a>&lt;/h2&gt;</p>
+<p>Changelog para el commit &amp;quot;<a href="https://github.com/azerothcore/azerothcore-wotlk/commit/06ee4ea7c46a5c0494dd7502a7646e84f83dab89">feature(Core/Spells): Permitir aprender todos los hechizos para los personajes en la creación</a>&amp;quot;</p>
+<p>&lt;h3&gt;Añadido&lt;/h3&gt;</p>
+<p>- Todas las habilidades de las clases hasta TBC en </code>playercreateinfo_spell_custom<code>.
+- Opción de configuración PlayerStart.AllSpells - Si está activada, los jugadores empezarán con todos sus hechizos de clase (no talentos). Debes rellenar la tabla playercreateinfo_spell_custom con los hechizos que quieras, o no funcionará. La tabla tiene datos para todas las clases / razas hasta la expansión TBC.</p>
+<p>&lt;h3&gt;Eliminado&lt;/h3&gt;</p>
+<p>- Opción de configuración PlayerStart.CustomSpells</p>
+<p>&lt;h3&gt;Cómo actualizar&lt;/h3&gt;</p>
+<p>- Actualiza el archivo worldserver.conf con el nuevo PlayerStart.AllSpells si quieres cambiarlo a &amp;quot;ON&amp;quot;. De lo contrario, irá con la opción por defecto &amp;quot;OFF&amp;quot; del archivo worldserver.conf.dist.</p>
+<p>&lt;h2&gt;4.0.0-dev.8 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/edfc2a8db48a17bf3e9ace0b36edc819aa0e5e23">edfc2a8db48a17bf3e9ace0b36edc819aa0e5e23</a>&lt;/h2&gt;</p>
+<p>Registro de cambios para el commit &amp;quot;<a href="https://github.com/azerothcore/azerothcore-wotlk/commit/1be561e03b56dc396270335886e59eddad9fa0c6">fix(Core/Player): Use SkillLineAbility.dbc to determine player initial spells - skill assignment done in a new table </code>playercreateinfo_skills<code></a>&amp;quot;</p>
+<p>&lt;h3&gt;Añadido&lt;/h3&gt;</p>
+<p>- </code>playercreateinfo_skills<code> - Nueva tabla de base de datos para la asignación de habilidades.</p>
+<p>&lt;h3&gt;Eliminado&lt;/h3&gt;</p>
+<p>- </code>playercreateinfo_spells<code></p>
+<p>&lt;h3&gt;Cambiado&lt;/h3&gt;</p>
+<p>- Utiliza </code>SkillLineAbility.dbc<code> para determinar los hechizos iniciales del jugador.
+- Cambio de nombre de los campos </code>SkillLineAbilityEntry<code></p>
+<p>&lt;h3&gt;Cómo actualizar&lt;/h3&gt;
+</code></pre>diff
+- uint32    id;                                           // 0        m_ID
+- uint32    skillId;                                      // 1        m_skillLine
+- uint32    spellId;                                      // 2        m_spell
+- uint32    racemask;                                     // 3        m_raceMask
+- uint32    classmask;                                    // 4        m_classMask
+- //uint32    racemaskNot;                                // 5        m_excludeRace
+- //uint32    classmaskNot;                               // 6        m_excludeClass
+- uint32    req_skill_value;                              // 7        m_minSkillLineRank
+- uint32    forward_spellid;                              // 8        m_supercededBySpell
+- uint32    learnOnGetSkill;                              // 9        m_acquireMethod
+- uint32    max_value;                                    // 10       m_trivialSkillLineRankHigh
+- uint32    min_value;                                    // 11       m_trivialSkillLineRankLow
+- //uint32    characterPoints[2];                         // 12-13    m_characterPoints[2]
++ uint32 ID;                                              // 0
++ uint32 SkillLine;                                       // 1
++ uint32 Spell;                                           // 2
++ uint32 RaceMask;                                        // 3
++ uint32 ClassMask;                                       // 4
++ //uint32 ExcludeRace;                                   // 5
++ //uint32 ExcludeClass;                                  // 6
++ uint32 MinSkillLineRank;                                // 7
++ uint32 SupercededBySpell;                               // 8
++ uint32 AcquireMethod;                                   // 9
++ uint32 TrivialSkillLineRankHigh;                        // 10
++ uint32 TrivialSkillLineRankLow;                         // 11
++ //uint32 CharacterPoints[2];                            // 12-13
+<pre><code>
+- Por ejemplo </code>skillLine-&amp;gt;forward_spellid<code> se convertirá en </code>skillLine-&amp;gt;SupercededBySpell<code></p>
+<p>&lt;h2&gt;4.0.0-dev.7 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/59a3912a3b3bd4dd2d8e2b1c2cdd225b9c4d6244">59a3912a3b3bd4dd2d8e2b1c2cdd225b9c4d6244</a>&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Eliminado&lt;/h3&gt;</p>
+<p>- Gossip antiguos api <a href="https://github.com/azerothcore/azerothcore-wotlk/pull/5414">#5414</a></p>
+<p>&lt;h3&gt;Cómo actualizar&lt;/h3&gt;</p>
+<p>- </code>player-&amp;gt;ADD_GOSSIP_ITEM(whatever)<code> -&amp;gt; </code>AddGossipItemFor(player, whatever)<code>
+- </code>player-&amp;gt;ADD_GOSSIP_ITEM_DB(whatever)<code> -&amp;gt; </code>AddGossipItemFor(player, whatever)<code>
+- </code>player-&amp;gt;ADD_GOSSIP_ITEM_EXTENDED(whatever)<code> -&amp;gt; </code>AddGossipItemFor(player, whatever)<code>
+- </code>player-&amp;gt;CLOSE_GOSSIP_MENU()<code> -&amp;gt; </code>CloseGossipMenuFor(player)<code>
+- </code>player-&amp;gt;SEND_GOSSIP_MENU(textid, creature-&amp;gt;GetGUID())<code> -&amp;gt; </code>SendGossipMenuFor(player, textid, creature-&amp;gt;GetGUID())<code></p>
+<p>También necesitas </code>#include &amp;quot;ScriptedGossip.h&amp;quot;<code> en tus archivos </code>.cpp<code></p>
+<p>&lt;h2&gt;4.0.0-dev.6 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/59a3912a3b3bd4dd2d8e2b1c2cdd225b9c4d6244">59a3912a3b3bd4dd2d8e2b1c2cdd225b9c4d6244</a>&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Cambiado&lt;/h3&gt;</p>
+<p>- Nuevas opciones para la carga de scripts </code>static dynamic minimal-static minimal-dynamic<code> <a href="https://github.com/azerothcore/azerothcore-wotlk/pull/5346">#5346</a>
+</code></pre>
+static - Construye estáticamente. Opción por defecto. para todos los scripts (Como era antes)</p>
+<p>dynamic - Construye dinámicamente. Después de iniciar el soporte de Dynamic Linking Library (DLL) puede hacer una biblioteca separada para cada script. Ahora no soporta</p>
+<p>minimal-static - construye comandos y hechizos estáticamente</p>
+<p>minimal-dynamic - construye comandos y hechizos dinámicamente. Ahora no soporta
+<pre><code>
+- También el valor por defecto que es proporcionado por la variable </code>SCRIPTS<code> es sobrescribible a través de la variable </code>SCRIPTS_COMMANDS, SCRIPTS_SPELLS...<code>.
+- Cada subdirectorio contiene ahora su propia unidad de traducción que es responsable de cargar su directorio
+- Si el módulo utiliza la api del cargador de scripts obsoleta, obtendrá un mensaje de error.
+</code></pre>cmake
+&gt; Module (mod-ah-bot) using deprecated loader api
+<pre><code>
+&lt;h3&gt;Cómo actualizar&lt;/h3&gt;</p>
+<p>- Para la mayoría de los módulos, el archivo </code>&amp;#39;CMakeLists.txt&amp;#39; ya no es necesario<code>.
+- Es necesario cambiar el archivo del cargador de scripts.
+</code></pre>
+1. Cambiar la extensión del archivo a </code>.cpp<code>.
+2. Renombrar la función de carga general a </code>Add(nombre del módulo con reemplazo de todos los espacios en blanco a guiones bajos)Scripts()<code>.
+3. Eliminar las macros </code>AC_ADD_SCRIPT_LOADER<code> de </code>CMakeLists.txt<code>.
+<pre><code>
+- Ejemplo de script cargador de módulos:
+</code></pre>cpp
+/</em>
+ <em> Copyright (C) 2016+ AzerothCore &lt;www.azerothcore.org&gt;, released under GNU AGPL v3 license: https://github.com/azerothcore/azerothcore-wotlk/blob/master/LICENSE-AGPL3
+ </em>/</p>
+<p>// From SC
+void AddSC_ServerAutoShutdown();</p>
+<p>// Add all scripts
+void Addmod_server_auto_shutdownScripts()
+{
+    AddSC_ServerAutoShutdown();
+}
+<pre><code>
+- Los módulos de la lista soportan la nueva api del cargador de scripts:</p>
+<p>https://github.com/azerothcore/mod-server-auto-shutdown</p>
+<p>&lt;h2&gt;4.0.0-dev.5 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/59a3912a3b3bd4dd2d8e2b1c2cdd225b9c4d6244">59a3912a3b3bd4dd2d8e2b1c2cdd225b9c4d6244</a>&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Añadido&lt;/h3&gt;
+- Nueva opción de cmake </code>WITH_STRICT_DATABASE_TYPE_CHECKS<code> <a href="https://github.com/azerothcore/azerothcore-wotlk/pull/5611">#5611</a></p>
+<p>&lt;h3&gt;Cambiado&lt;/h3&gt;</p>
+<p>- Evitar la mezcla de bases de datos con titulares de consultas <a href="https://github.com/azerothcore/azerothcore-wotlk/pull/5611">#5611</a>
+- Evitar el uso de sentencias preparadas en una base de datos errónea <a href="https://github.com/azerothcore/azerothcore-wotlk/pull/5611">#5611</a>
+- Impedir la confirmación de transacciones iniciadas en una base de datos diferente <a href="https://github.com/azerothcore/azerothcore-wotlk/pull/5611">#5611</a>
+- Convertir las consultas asíncronas en nuevos callbacks de consulta <a href="https://github.com/azerothcore/azerothcore-wotlk/pull/5611">#5611</a></p>
+<p>&lt;h3&gt;Cómo actualizar&lt;/h3&gt;</p>
+<p>- </code>PreparedStatement<code>
+</code></pre>diff
+- PreparedStatement<em> stmt = LoginDatabase.GetPreparedStatement(LOGIN_UPD_LOGONPROOF);
++ LoginDatabasePreparedStatement</em> stmt = LoginDatabase.GetPreparedStatement(LOGIN_UPD_LOGONPROOF);
+<pre><code>
+- </code>SQLTransaction<code>
+</code></pre>diff
+- SQLTransaction trans = CharacterDatabase.BeginTransaction();
++ CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+<pre><code>
+&lt;h2&gt;4.0.0-dev.4 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/fbad1f3d6c27a5d3eea22483913c67a827ab01be">fbad1f3d6c27a5d3eea22483913c67a827ab01be</a>&lt;/h2&gt;</p>
+<p>&lt;h3&gt;Añadido&lt;/h3&gt;</p>
+<p>- Nuevo hook </code>OnBeforeSendJoinMessageArenaQueue<code> y </code>OnBeforeSendExitMessageArenaQueue<code>.</p>
+<p>&lt;h3&gt;Cambiado&lt;/h3&gt;</p>
+<p>- Cambiar el nombre de </code>CanExitJoinMessageArenaQueue<code> a </code>OnBeforeSendExitMessageArenaQueue<code>.
+- Cambiar el nombre de </code>CanSendJoinMessageArenaQueue<code> a </code>OnBeforeSendJoinMessageArenaQueue<code>.</p>
+<p>&lt;h3&gt;Cómo actualizar&lt;/h3&gt;</p>
+<p>- Cambie el nombre de todos los hooks de </code>CanExitJoinMessageArenaQueue<code> y </code>CanSendMessageArenaQueue<code> por </code>OnBeforeSendExitMessageArenaQueue<code>.
+- Cambia el nombre de todos los hooks de </code>CanSendJoinMessageArenaQueue<code> y </code>OnBeforeSendJoinMessageArenaQueue<code>.</p>
+<p>&lt;h2&gt;4.0.0-dev.3 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/c35dde6fae732269357b78fb796fba21956b83fc">c35dde6fae732269357b78fb796fba21956b83fc</a>&lt;/h2&gt;</p>
+<p>- Registro de cambios para el commit &amp;quot;<a href="https://github.com/azerothcore/azerothcore-wotlk/commit/b84f9b8a4b334632cb37dcebbb2dd4e087f65610">refactor(Collision): Update some methods to UpperCamelCase</a>&amp;quot;</p>
+<p>&lt;h3&gt;Changes&lt;/h3&gt;
+</code></pre>diff
+- getPosition
+- getBounds
+- getBounds2
+- getInstanceMapTree
+- getModelInstances
+- getPosInfo
+- getMeshData
+- getGroupModels
+- getIntersectionTime
+- getObjectHitPos
+- getAreaInfo
++ GetPosition
++ GetBounds
++ GetBounds2
++ GetInstanceMapTree
++ GetModelInstances
++ GetPosInfo
++ GetMeshData
++ GetGroupModels
++ GetIntersectionTime
++ GetObjectHitPos
++ GetAreaInfo
+</code>`<code></p>
+<p><h3>Cómo actualizar</h3></p>
+<p>Si está utilizando alguno de esos métodos, simplemente cambie el nombre cambiando la primera letra del método de minúscula a mayúscula.</p>
+<p>Ejemplo: </code>getAreaInfo<code> -&gt; </code>GetAreaInfo`</p>
+<p><h2>4.0.0-dev.2 | Commit: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/3f70d0b80ff483f142ffbebf8960aeb503913a35">3f70d0b80ff483f142ffbebf8960aeb503913a35</a></h2></p>
+<p><h3>Añadido</h3></p>
+<p>- Se ha creado un nuevo sistema de registro de cambios.</p>
+<p><h3>Cómo actualizar</h3></p>
+<p>Para crear un nuevo registro de cambios, siga las instrucciones de nuestra [página wiki].(es/how-to-use-changelog)
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

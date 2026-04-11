@@ -1,0 +1,139 @@
+#!/bin/bash
+# export-html - Export project source tree to static HTML site
+#
+# Generates a browsable HTML site from the project's source code,
+# issues, and documentation with syntax highlighting and navigation.
+
+# {{{ DIR Configuration
+DIR="${DIR:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+
+# Allow override via argument
+if [[ "$1" =~ ^--dir= ]]; then
+    DIR="${1#--dir=}"
+    shift
+fi
+# }}}
+
+
+# {{{ Usage
+usage() {
+    cat <<EOF
+Usage: export-html [OPTIONS] [OUTPUT_DIR]
+
+Exports the project source tree to a static HTML site.
+
+OPTIONS:
+    --dir=PATH      Override project directory (default: $DIR)
+    -o, --output    Output directory (default: \$DIR/output/html-export)
+    -h, --help      Show this help
+
+EXAMPLES:
+    export-html
+        Export to default output directory
+
+    export-html /tmp/website
+        Export to /tmp/website
+
+    export-html --dir=/path/to/project -o /var/www/html
+        Export specific project to web server directory
+
+OUTPUT:
+    The generated site contains:
+    - index.html              Navigation and landing page
+    - src/**/*.html           Source files with syntax highlighting
+    - issues/**/*.html        Issue files as HTML
+    - docs/**/*.html          Documentation
+
+    Open index.html in a web browser to view.
+
+EOF
+}
+# }}}
+
+
+# {{{ Parse arguments
+OUTPUT_DIR=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -o|--output)
+            OUTPUT_DIR="$2"
+            shift 2
+            ;;
+        --output=*)
+            OUTPUT_DIR="${1#--output=}"
+            shift
+            ;;
+        --dir=*)
+            # Already handled above
+            shift
+            ;;
+        *)
+            OUTPUT_DIR="$1"
+            shift
+            ;;
+    esac
+done
+
+# Default output directory
+if [[ -z "$OUTPUT_DIR" ]]; then
+    OUTPUT_DIR="$DIR/output/html-export"
+fi
+# }}}
+
+
+# {{{ Validate
+if [[ ! -d "$DIR" ]]; then
+    echo "Error: Project directory not found: $DIR" >&2
+    exit 1
+fi
+
+if [[ ! -f "$DIR/src/tools/html-export.lua" ]]; then
+    echo "Error: html-export.lua not found in $DIR/src/tools/" >&2
+    echo "Are you running this from the correct directory?" >&2
+    exit 1
+fi
+# }}}
+
+
+# {{{ Export
+echo "Exporting HTML..."
+echo "  Project: $DIR"
+echo "  Output:  $OUTPUT_DIR"
+echo
+
+# Set LUA_PATH to include html-export modules
+export LUA_PATH="$DIR/src/tools/?.lua;$DIR/src/tools/?/init.lua;;"
+
+# Run the generator
+cd "$DIR" || exit 1
+luajit "$DIR/src/tools/html-export.lua" "$DIR" "$OUTPUT_DIR"
+RESULT=$?
+
+if [[ $RESULT -eq 0 ]]; then
+    echo
+    echo "==============================================================================="
+    echo "Export complete!"
+    echo "==============================================================================="
+    echo
+    echo "View in browser:"
+    echo "  firefox \"file://$OUTPUT_DIR/index.html\""
+    echo
+    echo "Or serve with HTTP:"
+    echo "  cd \"$OUTPUT_DIR\" && python3 -m http.server 8000"
+    echo "  Then visit: http://localhost:8000"
+    echo
+else
+    echo
+    echo "==============================================================================="
+    echo "Export FAILED"
+    echo "==============================================================================="
+    echo
+    echo "Check the error messages above for details."
+    exit $RESULT
+fi
+# }}}

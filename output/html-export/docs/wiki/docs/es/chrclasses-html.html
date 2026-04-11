@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>chrclasses.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>chrclasses.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/chrclasses.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 6128 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>ChrClasses.dbc</h1></p>
+<p><a href="dbc-index"><code>Volver a:DBC</code></a></p>
+<p>Éste archivo DBC contiene todas las clases jugables existentes dentro del juego.</p>
+<p><strong>Versión 3.3.5a</strong></p>
+<p><h3>Estructura</h3></p>
+<p>| Columna | Nombre                                         | Tipo    | Notas                                                                                                              |
+|---------|------------------------------------------------|---------|--------------------------------------------------------------------------------------------------------------------|
+| 1       | ID                                             | Integer |                                                                                                                    |
+| 2       | Unknown                                        | Integer | 1 para Cazador, Pícaro y Chamán, 9 para Caballero de la Muerte, 0 para el resto de clases. Removido en Cataclismo. |
+| 3       | PowerType                                      | Integer | 0 para Maná, 1 para Ira, 2 para Focus, 3 = Energía, 4 = Felicidad, 6 = Runas. 2 y 4 sin uso aparente.              |
+| 4       | m_petNameToken                                 | String  | Tipo de mascota. 101 para los demonios del brujo, 1 para el resto de mascotas.                                     |
+| 5-20    | Name                                           | Loc     | Nombre a mostrar.                                                                                                  |
+| 21      | NameLangMask                                   | Integer | Marcadores en cadena, sin uso aparente.                                                                            |
+| 22-37   | Name_female                                    | Loc     | En caso de llegar a ser diferente del nombre inicial, de lo contrario no tiene un uso.                             |
+| 38      | NameFemaleLangMask                             | Integer | Marcadores en cadena, sin uso aparente.                                                                            |
+| 39-54   | Name_male                                      | Loc     | En caso de llegar a ser diferente del nombre inicial, de lo contrario no tiene un uso.                             |
+| 55      | NameMaleLangMask                               | Integer | Marcadores en cadena, sin uso aparente.                                                                            |
+| 56      | fileName                                       | String  | Nombre en inglés.                                                                                                  |
+| 57      | <a href="#spellclassset">spellClassSet</a>                | Integer |                                                                                                                    |
+| 58      | <a href="#flags">Flags</a>                                | Integer | Sin un uso aparente.                                                                                               |
+| 59      | Camera                                         | iRefID  | Usado para el inicio de cinemáticas de clase. 165 para el Caballero de la Muerte, 0 para el resto de clases.       |
+| 60      | required_expansion                             | Integer | 0 = Classic, 1 = Burning Crusade, 3 = Wrath of The Lich King.                                                      |</p>
+<p><h3>Contenido</h3></p>
+<p>| ID | Valor | Nombre                 |
+|----|-------|------------------------|
+| 1  | 1     | Guerrero               |
+| 2  | 2     | Paladín                |
+| 3  | 4     | Cazador                |
+| 4  | 8     | Pícaro                 |
+| 5  | 16    | Sacerdote              |
+| 6  | 32    | Caballero de la Muerte |
+| 7  | 64    | Chamán                 |
+| 8  | 128   | Mago                   |
+| 9  | 256   | Brujo                  |
+| 11 | 1024  | Druida                 |</p>
+<p><h3>&#39;Flags&#39; o Marcadores</h3></p>
+<p>| Marcador | Descripción                                       |
+|----------|---------------------------------------------------|
+| 1        | Usa taparrabos (No sé si se refiera a la tela XD) |
+| 2        | Clase de jugador                                  |
+| 4        | Muestra la mascota                                |
+| 8        | Sin uso aparente                                  |
+| 16       | Puede equipar malla                               |
+| 32       | Puede equipar placas                              |
+| 64       | Vincula la zona de inicio                         |</p>
+<p><h3>spellClassSet</h3></p>
+<p>| ID | Familia                | Notas                              |
+|----|------------------------|------------------------------------|
+| 0  | Genérico               |                                    |
+| 1  | Unk1                   | Eventos, días festivos             |
+| 2  | SinUso                 |                                    |
+| 3  | Mago                   |                                    |
+| 4  | Guerrero               |                                    |
+| 5  | Brujo                  |                                    |
+| 6  | Sacerdote              |                                    |
+| 7  | Druida                 |                                    |
+| 8  | Pícaro                 |                                    |
+| 9  | Cazador                |                                    |
+| 10 | Paladín                |                                    |
+| 11 | Chamán                 |                                    |
+| 12 | Unk2                   | Hechizos (Resistencia al Silencio) |
+| 13 | Poción                 |                                    |
+| 14 | SinUso                 |                                    |
+| 15 | Caballero de la Muerte |                                    |
+| 16 | SinUso                 |                                    |
+| 17 | Mascota                |                                    |</p>
+<p><h3>Descripción de los Campos</h3></p>
+<p>&gt; Valor</p>
+<p>El valor designa la &#39;Máscara de Bits&#39; usada en varios lugares del núcleo del emulador y la Base de Datos (quest_template.RequiresClasses etc).</p>
+<p>La fórmula para ello es: <strong>Valor = 1 &lt;&lt; (ID - 1);</strong></p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,158 @@
+# 103 - Configuration Documentation
+
+**Phase:** 1 (Foundation)
+**Effect:** Developers can understand and modify server settings
+**Status:** Completed (2026-01-29)
+
+---
+
+## The Effect
+
+When a developer opens this project, they can quickly understand:
+- What settings have been changed from defaults
+- Why those changes were made
+- How to adjust settings for their needs
+
+This removes the barrier of "read the source" or "guess and test" when configuring the server.
+
+---
+
+## What This Solved
+
+### Before
+- 50+ modified settings in worldserver.conf with no explanation
+- Custom paths scattered across authserver and worldserver configs
+- Module configurations undocumented
+- Lua script timings hardcoded with no reference
+
+Developers had to:
+1. Read raw .conf files (500+ lines each)
+2. Consult external AzerothCore wiki
+3. Diff against default configs to find changes
+4. Guess at the purpose of custom values
+
+### After
+One document (`docs/configuration.md`) that lists:
+- All modified settings grouped by category
+- The purpose of each modification
+- Quick reference for file locations
+- Lua script timing constants
+
+---
+
+## What Was Created
+
+### docs/configuration.md
+
+Comprehensive reference organized by domain:
+
+**Path Configuration**
+- Custom MySQL port (3307)
+- Project-local data directory
+- Lua script paths
+
+**Game Balance** (50+ settings)
+- Movement: Slower walk/run speeds, increased fall damage
+- Progression: 3x talent points every 1/3 level, 10x rest XP
+- Economy: Vendor prices scaled, 25x repair costs
+- Death: No resurrection sickness, instant corpse reclaim
+- Creatures: No leash, extended assist radius
+- Visibility: Extended view distance, disabled node sparkles
+- Instances: Enter at any level, solo raids enabled
+- Cross-Faction: All interactions enabled
+
+**Module Configuration**
+- ALE (Eluna) script loading
+- Playerbots settings
+
+**Lua Script Constants**
+- Ambush spawn interval (40s base, random walk)
+- Traveler spawn interval (130s)
+- Treasure spawn interval (100s)
+- Spawn distances (ambush 120-160 yards, travelers 50-100 yards)
+
+---
+
+## Implementation Notes
+
+### Files Modified
+- Created: `docs/configuration.md`
+- Updated: `docs/table-of-contents.md`
+
+### Discoveries
+- `mod_grownup.conf` mentioned in original issue doesn't exist
+- Only module config is `mod_eluna.conf` (ALE)
+- Playerbots config may be built-in or separate file (not found)
+
+### Organization Strategy
+Settings grouped by **effect on gameplay**:
+- Movement and Combat
+- Experience and Progression
+- Economy
+- Death and Corpse
+- Creatures
+- Visibility
+- Quests
+- Instances
+- Cross-Faction
+- Guilds
+- PvP
+
+This makes it easy to find "how do I adjust death penalties?" rather than hunting through alphabetical lists.
+
+---
+
+## Why This Matters
+
+**For new developers:**
+- Understand project philosophy in 5 minutes
+- Know what's safe to change vs foundational
+- See the roguelike survival design intent
+
+**For returning developers:**
+- Quick reference when tweaking balance
+- Remember why decisions were made months ago
+- Avoid breaking unintended dependencies
+
+**For collaborators:**
+- Propose balance changes with context
+- Understand the empty-world + ambush design
+- See how configs support the core experience
+
+---
+
+## Related Phase 1 Issues
+
+- 101 - verify-server-startup (needs config to run)
+- 105 - setup-local-mysql-installation (MySQL port documented)
+- 106a - read-only-config-dashboard (future: view in-game)
+
+---
+
+## Lessons Learned
+
+### Documentation as Discovery
+
+Writing the configuration doc revealed:
+1. Some settings contradict each other (extended vision + disabled sparkles)
+2. Values tuned through iteration (repair cost 25x from trial/error)
+3. Cross-faction is core to design (not just convenience)
+
+### Configuration as Design Document
+
+The modified settings tell the story of the game:
+- Empty world → no NPCs except spirit healers
+- Ambush system → slow movement, high fall damage
+- Roguelike → expensive repairs, no rez sickness
+- Solo experience → enter instances at any level, solo raids
+
+The config file IS the game design spec.
+
+---
+
+## Phase 1 Contribution
+
+This issue enables **Phase 1: Foundation** by answering:
+> "What does this server do differently?"
+
+The answer is in docs/configuration.md. Every modified setting contributes to the empty-world roguelike survival experience.

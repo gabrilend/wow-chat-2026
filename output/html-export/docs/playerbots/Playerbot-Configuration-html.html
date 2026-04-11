@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playerbot-Configuration.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Playerbot-Configuration.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/playerbots/Playerbot-Configuration.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 10302 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h2>MySQL Tuning</h2>
+The default MySQL configuration is not adequate for use with Playerbots, and will lead to increased disk activity and decreased performance.</p>
+<p>You should add/change the below config options, in your MySQL configuration where ``<code>innodb_buffer_pool_size</code>`<code> ideally should be 50% of your total RAM:</p>
+<p><pre><code>#
+&lt;h1&gt;<em> Fine Tuning&lt;/h1&gt;
+&lt;h1&gt;Example with 64 GB RAM&lt;/h1&gt;</p>
+<p>&lt;h1&gt;INNODB&lt;/h1&gt;
+innodb_buffer_pool_size = 32G
+innodb_io_capacity = 500
+innodb_io_capacity_max = 2500
+innodb_use_fdatasync = ON
+innodb_buffer_pool_instances = 12
+innodb_log_buffer_size = 32M</p>
+<p>&lt;h1&gt;Max age of binary logs - 5 days to prevent binary log pileups&lt;/h1&gt;
+binlog_expire_logs_seconds = 432000</p>
+<p>&lt;h1&gt;Optionally:&lt;/h1&gt;
+&lt;h1&gt;Prevent SQL Deadlocks as much as possible&lt;/h1&gt;
+transaction_isolation=&amp;quot;READ-COMMITTED&amp;quot;</code></pre></p>
+<p>Recommended configuration to extend lifespan of your hard drive:
+- in mysql configuration file change/add line </code>skip-log-bin<code> which reduce ~75-90% of writes because skipping binary logging (Use at own risk)
+- in playerbots configuration file enable </code>AiPlayerbot.DisabledWithoutRealPlayer` to make sure no bots are logged in, while no players are
+- use as few bots as possible or limit yourself to only using altbots to minimize the amount of writes</p>
+<p><h2>Bot activity profiles and performance</h2>
+Before going into the configuration options we need explain the logic a bit. Every update tick of the server its calculated whether a bot can
+or can&#39;t be active. An active bots takes and eats alot more resources then an idle bot.</p>
+<p>The following logic is applied to determine whether a bot is active or not, applied in the explained order.</p>
+<p><pre><code>1. NOT ACTIVE: When server uptime smaller then (max amount of bots </em> 0.12 seconds) 
+2. ALWAYS ACTIVE: When bot is in battleground, instance or raid.
+3. ALWAYS ACTIVE: When in combat and not in party (defend urself)
+4. ALWAYS ACTIVE: If the zone where the bot is located has real players
+5. ALWAYS ACTIVE: When the bots is a member of a guild with real players
+6. ALWAYS ACTIVE: Has real player as master
+7. ALWAYS ACTIVE: if grouped and the leader is a real player
+8. ALWAYS ACTIVE: if in battleground queue
+9. ALWAYS ACTIVE: if looking for group
+10. ALWAYS ACTIVE: If bot has a real player within the radius 300 yards
+11. ALWAYS ACTIVE: When bot is on a friendlist of a online real player
+12. ALWAYS ACTIVE: When bot has more then 10 other bots within the sightDistance, force to spread out</code></pre>
+These rules will always be applied regardless what value you have configured <strong>&#39;AiPlayerbot.BotActiveAlone&#39;</strong>.</p>
+<p><em><strong></p>
+<p>All remaining situations e.g. bots in zones or maps without real players, empty server etc will be configured
+based on the </strong>&#39;AiPlayerbot.BotActiveAlone&#39;<strong> value. That value basically means that the bot has about
+% chance to get active for only a few seconds. Unless in those few seconds one of the above rules
+is triggered then it might result staying active longer.</p>
+<p>Then </strong>&#39;AiPlayerbot.botActiveAloneSmartScale&#39;<strong> basically auto scale the activity percentages
+based on the latency, relative to the configured value of </strong>&#39;AiPlayerbot.BotActiveAlone&#39;</em><em>. And only when the bots are in level scope of the configured values of:
+</em> <strong>&#39;AiPlayerbot.botActiveAloneSmartScaleWhenMinLevel&#39;</strong>
+<em> <strong>&#39;AiPlayerbot.botActiveAloneSmartScaleWhenMinLevel&#39;</strong></p>
+<p></em><strong></p>
+<p><h4>1. best performance with high bot count.</h4>
+My personal preference is that i keep my bots idle when i am not in the zone or map, which is applied with the following config
+and in this specific requirement it doesnt rlly matter autoscale is on or off but i leave it on.</p>
+<p><pre><code>AiPlayerbot.BotActiveAlone = 10
+AiPlayerbot.botActiveAloneSmartScale = 1
+AiPlayerbot.botActiveAloneSmartScaleWhenMinLevel = 1
+AiPlayerbot.botActiveAloneSmartScaleWhenMaxLevel = 80</code></pre></p>
+<p><h4>2. Default; best effort to enforce 100% acitivity but auto adjust when needed </h4>
+(prolly best profile with a server with more real players spread over different zones and maps).
+When you want all bots active in all situations but you want to server to compensate the bot 
+acitivity based on your latency then use (basically best effort for 100%) : 
+<pre><code>AiPlayerbot.BotActiveAlone = 100
+AiPlayerbot.botActiveAloneSmartScale = 1
+AiPlayerbot.botActiveAloneSmartScaleWhenMinLevel = 1
+AiPlayerbot.botActiveAloneSmartScaleWhenMaxLevel = 80</code></pre></p>
+<p><h4>3. All bots active regardless your latency and performance impact.</h4>
+<pre><code>AiPlayerbot.BotActiveAlone = 100
+AiPlayerbot.botActiveAloneSmartScale = 0
+AiPlayerbot.botActiveAloneSmartScaleWhenMinLevel = 1
+AiPlayerbot.botActiveAloneSmartScaleWhenMaxLevel = 80</code></pre></p>
+<p><h4>4. All bots active and only apply autoscale on a level range (e.g. high levels)</h4>
+<pre><code>AiPlayerbot.BotActiveAlone = 100
+AiPlayerbot.botActiveAloneSmartScale = 1
+AiPlayerbot.botActiveAloneSmartScaleWhenMinLevel = 75
+AiPlayerbot.botActiveAloneSmartScaleWhenMaxLevel = 80</code></pre></p>
+<p></strong>*</p>
+<p><h4>Verify bot performance</h4>
+Use the command &#39;.server info&#39; to see your server latency. The general latency should be under 70-80 and the percentiles maxed out around 
+100, 120, 150. Next to that verify how quick a bot executes your command. It should be pretty much instant. If not to should choose a different profile 
+and/or lower your bot amount.</p>
+<p>If you dont use these performance checks it might result into strange and incorrect bot behaviours and/or huge amount of memory footprint growth in a relative short time (OOM)</p>
+<p>##### Reference
+I use &#39;profile 1&#39; with 5000 bots with an AMD 5700x (4.6ghz, 6 cores), linux, 20GB mem with the following result:</p>
+<p>!<a href="https://github.com/user-attachments/assets/6760feaf-3dc7-4d7a-9534-d4183ff43284">image</a></p>
+<p><h2>Recommended hardware</h2>
+<pre><code>Memory
+ minimal: 16GB (when all map grids are loaded 11-12GB)
+ preferable: 32GB or more
+CPU cores:
+ minimal: 4 cores
+ preferable: 6 or more cores
+CPU speed:
+ minimal: 3000mhz
+ preferable: 4400mhz or more</code></pre></p>
+<p><h2>Recommended config</h2>
+worldserver.conf
+<pre><code class="bash">&lt;h1&gt;bots might not pickup quests in certain condidations&lt;/h1&gt;
+Quests.IgnoreAutoAccept = 1</p>
+<p>&lt;h1&gt;performance &lt;/h1&gt;
+PreloadAllNonInstancedMapGrids = 0
+SetAllCreaturesWithWaypointMovementActive = 0
+DontCacheRandomMovementPaths = 0
+MapUpdate.Threads = 4 or 6
+MapUpdateInterval = 10
+MinWorldUpdateTime = 1</p>
+<p>&lt;h1&gt;no player limit for the bots&lt;/h1&gt;
+PlayerLimit = 0</p>
+<p>&lt;h1&gt;prevent buggy situations&lt;/h1&gt;
+LeaveGroupOnLogout.Enabled = 1</code></pre></p>
+<p>playerbots.conf
+<pre><code class="bash"></p>
+<p>#-------------------------------------------------------------------
+&lt;h1&gt;general&lt;/h1&gt;
+#-------------------------------------------------------------------
+AiPlayerbot.Enabled = 1
+AiPlayerbot.DeleteRandomBotAccounts = 0
+AiPlayerbot.RandomBotAccountPrefix = &amp;quot;rndbot&amp;quot;</p>
+<p>#-------------------------------------------------------------------
+&lt;h1&gt;randombots &lt;/h1&gt;
+&lt;h1&gt;- RandomBotMaps: 0=Eastern Kingdoms, 1=Kalimdor, 530=Outland, 571=Northrend&lt;/h1&gt;
+#-------------------------------------------------------------------
+AiPlayerbot.RandomBotMinLevel = 1
+AiPlayerbot.RandomBotMaxLevel = 80
+AiPlayerbot.AutoTeleportForLevel = 1
+AiPlayerbot.RandomBotMaps = 0,1,530,571
+AiPlayerbot.ProbTeleToBankers = 0.25
+AiPlayerbot.RandomBotMaxLevelChance = 0.01
+AiPlayerbot.RandomBotFixedLevel = 0
+AiPlayerbot.DisableRandomLevels = 0
+AiPlayerbot.RandombotStartingLevel = 5
+AiPlayerbot.SyncLevelWithPlayers = 0
+AiPlayerbot.SyncQuestWithPlayer = 1
+AiPlayerbot.AutoDoQuests = 1</p>
+<p>#-------------------------------------------------------------------
+&lt;h1&gt;command (gear: 1 = normal, 2 = uncommon, 3 = rare, 4 = epic, 5 = legendary)&lt;/h1&gt;
+#-------------------------------------------------------------------
+AiPlayerbot.AutoGearQualityLimit = 4
+AiPlayerbot.AutoGearScoreLimit = 0
+AiPlayerbot.AutoGearCommand = 1
+AiPlayerbot.MaintenanceCommand = 1
+AiPlayerbot.AllowPlayerBots = 1
+AiPlayerbot.AllowGuildBots = 1</p>
+<p>#-------------------------------------------------------------------
+&lt;h1&gt;chat and broadcast (default; RepeatDelay = 2000)&lt;/h1&gt;
+#-------------------------------------------------------------------
+#AiPlayerbot.RepeatDelay = 2000
+AiPlayerbot.EnableBroadcasts = 0
+AiPlayerbot.RandomBotTalk = 0
+AiPlayerbot.RandomBotEmote = 0
+AiPlayerbot.RandomBotSuggestDungeons = 0
+AiPlayerbot.EnableGreet = 0
+AiPlayerbot.ToxicLinksRepliesChance = 0
+AiPlayerbot.ThunderfuryRepliesChance = 0
+AiPlayerbot.GuildRepliesRate = 0
+AIPlayerbot.GuildFeedback = 0
+AiPlayerbot.RandomBotSayWithoutMaster = 0</p>
+<p>#-------------------------------------------------------------------
+&lt;h1&gt;intervals&lt;/h1&gt;
+#-------------------------------------------------------------------
+AiPlayerbot.RandomBotUpdateInterval = 20
+AiPlayerbot.RandomBotCountChangeMinInterval = 1800
+AiPlayerbot.RandomBotCountChangeMaxInterval = 7200
+AiPlayerbot.MinRandomBotInWorldTime = 3600
+AiPlayerbot.MaxRandomBotInWorldTime = 1209600
+AiPlayerbot.MinRandomBotRandomizeTime = 7200
+AiPlayerbot.MaxRandomBotRandomizeTime = 1209600
+AiPlayerbot.RandomBotsPerInterval = 60
+AiPlayerbot.MinRandomBotReviveTime = 60
+AiPlayerbot.MaxRandomBotReviveTime = 300
+AiPlayerbot.MinRandomBotTeleportInterval = 3600
+AiPlayerbot.MaxRandomBotTeleportInterval = 18000
+AiPlayerbot.RandomBotInWorldWithRotationDisabled = 31104000</p>
+<p>#-------------------------------------------------------------------
+&lt;h1&gt;distance&lt;/h1&gt;
+#-------------------------------------------------------------------
+AiPlayerbot.FarDistance = 20.0
+AiPlayerbot.SightDistance = 75.0
+AiPlayerbot.SpellDistance = 28.5
+AiPlayerbot.ShootDistance = 26.0
+AiPlayerbot.ReactDistance = 150.0
+AiPlayerbot.GrindDistance = 75.0
+AiPlayerbot.HealDistance = 38.5
+AiPlayerbot.LootDistance = 25.0
+AiPlayerbot.FleeDistance = 8.0
+AiPlayerbot.TooCloseDistance = 5.0
+AiPlayerbot.MeleeDistance = 1.5
+AiPlayerbot.FollowDistance = 1.5
+AiPlayerbot.WhisperDistance = 6000.0
+AiPlayerbot.ContactDistance = 0.5
+AiPlayerbot.AoeRadius = 10
+AiPlayerbot.RpgDistance = 200
+AiPlayerbot.AggroDistance = 22</p>
+<p>#-------------------------------------------------------------------
+&lt;h1&gt;performance related&lt;/h1&gt;
+#-------------------------------------------------------------------
+AiPlayerbot.BotActiveAlone = 10 (either use 10% or 100% anything is between is kinda useless)
+AiPlayerbot.botActiveAloneSmartScale = 1
+AiPlayerbot.botActiveAloneSmartScaleWhenMinLevel = 1
+AiPlayerbot.botActiveAloneSmartScaleWhenMaxLevel = 80</p>
+<p>PlayerbotsDatabase.WorkerThreads = 1
+PlayerbotsDatabase.SynchThreads = 2</code></pre></p>
+<p><h2>Memory footprint</h2>
+The memory footprint does grow in most cases. Consider restarting your server every x hours depending on your 
+configuration, hardware, player base/usage. </p>
+<p>e.g. with a cronjob
+..
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

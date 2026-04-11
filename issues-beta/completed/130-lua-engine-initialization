@@ -1,0 +1,301 @@
+# 130 - Lua Engine Initialization
+
+**Phase:** 2 (Empty World)
+**Effect:** Lua scripts load and execute, game systems come alive
+**Status:** Completed (2026-04-01)
+
+---
+
+## The Effect
+
+ALE (AzerothCore Lua Engine) initializes correctly and loads scripts. The game systems (ambush, treasure, travelers) spawn and function.
+
+Without this, the server runs but the game doesn't exist.
+
+---
+
+## What This Solved
+
+### Before (Silent Failure)
+
+Server starts, no errors, but:
+- No ambush monsters spawn
+- No treasure chests appear
+- No traveler NPCs wander
+- Lua scripts completely non-functional
+
+**Symptoms:**
+- No `ALE.log` file created
+- No "Initialize ALE Lua Engine..." in Server.log
+- `.reload ALE` command not available
+- Test print statements in Lua never appear
+
+The game looked like vanilla WoW with everything deleted. Empty, but not the roguelike we designed.
+
+### After (Scripts Alive)
+
+Server starts and:
+- ALE initializes during world startup
+- Lua scripts load from `lua_scripts/`
+- Ambush spawns every 40 seconds
+- Treasure spawns every 100 seconds
+- Travelers spawn every 130 seconds
+
+The empty world becomes **populated by our systems**.
+
+---
+
+## Root Cause
+
+### The Hook That Didn't Fire
+
+ALE was tied to `OnBeforeConfigLoad` hook:
+```cpp
+void OnBeforeConfigLoad(bool reload) override
+{
+    ALEConfig::GetInstance().Initialize(reload);
+    LOG_INFO("ALE", "Initialize ALE Lua Engine...");
+    ALE::Initialize();
+}
+```
+
+This hook **never fired** in our build.
+
+Meanwhile, `OnBeforeWorldInitialized` (used by playerbots) worked fine.
+
+### The Failed Fallback
+
+There was a fallback `OnBeforeWorldInitialized`:
+```cpp
+void OnBeforeWorldInitialized() override
+{
+    sALE->RunScripts();  // CRASH: sALE not initialized
+}
+```
+
+But it assumed ALE was already initialized. Since it wasn't, it either:
+- Crashed (NULL pointer)
+- Failed silently (guards caught it)
+
+Either way, no scripts ran.
+
+---
+
+## The Fix
+
+### Move Initialization to Reliable Hook
+
+Patch: `docs/patches/ale-initialization-fix.md`
+
+**Before:**
+```cpp
+void OnBeforeConfigLoad(bool reload) override
+{
+    // Initialize ALE here
+    ALE::Initialize();
+}
+
+void OnBeforeWorldInitialized() override
+{
+    // Assume ALE is initialized
+    sALE->RunScripts();
+}
+```
+
+**After:**
+```cpp
+void OnBeforeWorldInitialized() override
+{
+    // Initialize ALE here (reliable hook)
+    if (!ALE::IsInitialized())
+    {
+        ALEConfig::GetInstance().Initialize(false);
+        LOG_INFO("ALE", "Initialize ALE Lua Engine...");
+        ALE::Initialize();
+    }
+
+    // Now safe to run scripts
+    sALE->RunScripts();
+    sALE->OnConfigLoad(false, false);
+}
+```
+
+### Why OnBeforeWorldInitialized?
+
+**Hypothesis 1:** OnBeforeConfigLoad timing issue
+- Config hook fires too early
+- World structures not ready
+- ALE can't initialize properly
+
+**Hypothesis 2:** Build configuration
+- Some AC builds don't trigger config hooks
+- Our build is one of them
+- Playerbots uses world hook, which works
+
+**Hypothesis 3:** Module load order
+- ALE loads before config system ready
+- Hook registered but never called
+- World hook happens later, safer timing
+
+We never confirmed which. We just moved to the hook that **works**.
+
+---
+
+## Secondary Issue: Subdirectory Loading
+
+### The Second Problem
+
+Even after ALE initialized, behavior scripts didn't load. ALE only auto-loads:
+- Root-level `.lua` files
+- NOT subdirectories like `behaviors/`
+
+**Solution:** Explicit loader
+
+Created `src/lua/load-behaviors.lua`:
+```lua
+-- Load all behavior scripts
+require("behaviors.init")
+require("behaviors.find-monsters")
+require("behaviors.avoid-monsters")
+-- ... etc
+```
+
+ALE auto-loads `load-behaviors.lua` (root level), which then loads subdirectory scripts.
+
+### Merged from Issue 134
+
+Issue 134 (behavior scripts not loading) was actually part of this problem:
+1. ALE not initializing (130)
+2. Subdirectories not auto-loading (134)
+
+Both needed fixing for scripts to work.
+
+---
+
+## Testing Process
+
+### Verification Steps
+
+1. **ALE Log Exists**
+```bash
+ls -l logs/ALE.log  # Should exist
+```
+
+2. **Initialization Message**
+```bash
+grep "Initialize ALE Lua Engine" logs/Server.log  # Should appear
+```
+
+3. **Scripts Load**
+```bash
+grep "Loading.*lua" logs/ALE.log  # Should list files
+```
+
+4. **Test Print**
+Add to `src/lua/periodic_events.lua`:
+```lua
+print("PERIODIC EVENTS LOADED")
+```
+
+Should appear in ALE.log.
+
+5. **Game Systems Work**
+Login → wait 40 seconds → ambush monster spawns.
+
+---
+
+## Why This Matters
+
+**Scripts ARE the Game**
+
+The C++ server is just:
+- Network protocol (connect clients)
+- Database (store characters)
+- Physics (movement, combat)
+
+The **game** is in Lua:
+- When monsters spawn (ambush system)
+- Where treasure appears (chest system)
+- How NPCs behave (traveler system)
+
+If Lua doesn't run, there's no game.
+
+**Silent Failure is Deadly**
+
+The worst kind of bug:
+- No error messages
+- Server appears to work
+- Game just... doesn't happen
+
+Hours of debugging: "Why aren't monsters spawning?!"
+Answer: "Lua engine never initialized."
+
+**One Hook Change**
+
+The fix was 15 lines of C++. But finding it took:
+- Grep through AC codebase
+- Test multiple hooks
+- Understand module loading
+- Read playerbots source (working example)
+- Trial and error
+
+That's why this issue exists. Document the discovery.
+
+---
+
+## Related Phase 2 Issues
+
+- 112 - database-integrity-cleanup (cleaner logs help find this bug)
+- 104 - lua-script-ownership (scripts must exist to load)
+
+---
+
+## Lessons Learned
+
+### Hooks Are Not Guaranteed
+
+Don't assume hooks fire. Verify:
+```cpp
+if (!IsCalled) {
+    LOG_ERROR("module", "Hook never fired!");
+}
+```
+
+If a hook doesn't work, find one that does.
+
+### Fallbacks Need Guards
+
+The `OnBeforeWorldInitialized` fallback assumed ALE was initialized. Always guard:
+```cpp
+if (!ALE::IsInitialized()) {
+    // Initialize first
+}
+// Then use sALE
+```
+
+### Working Code as Template
+
+Playerbots worked. ALE didn't. Lesson:
+> Copy the pattern that works.
+
+Playerbots used `OnBeforeWorldInitialized`. We switched to that. It worked.
+
+### Silent Failures are Hard
+
+If the engine had logged:
+```
+ERROR: ALE initialization skipped (hook not fired)
+```
+
+We'd have found it in 5 minutes. Instead, hours of "why no monsters?"
+
+**Design lesson:** Log **attempted** operations, not just success.
+
+---
+
+## Phase 2 Contribution
+
+This issue enables **Phase 2: Empty World** by ensuring:
+> "The Lua engine brings life to the emptiness"
+
+The empty world is Phase 2. But Phase 2 also requires the **systems that populate it**. Those systems are Lua. This fix makes Phase 2 possible.

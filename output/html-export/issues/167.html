@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue 167 - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        header .issue-id {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 0.5em;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        header .status {
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        header .status.completed {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .content {
+            padding: 2em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .content h2 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #667eea;
+        }
+
+        .content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #764ba2;
+        }
+
+        .content p {
+            margin-bottom: 1em;
+        }
+
+        .content ul, .content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .content li {
+            margin-bottom: 0.5em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="issue-id">Issue 167 • Phase 1</div>
+            <h1>Ranged Bot "Help!" Behavior with Melee Intervention</h1>
+            <div class="status active">⏳ Active</div>
+        </header>
+
+        <div class="content">
+            <p><h1>167 - Ranged Bot &quot;Help!&quot; Behavior with Melee Intervention</h1></p>
+<p><h2>Status</h2>
+- Created: 2026-04-06
+- Phase: 2
+- Priority: Medium
+- Depends: 161 (bot wandering and combat repositioning)</p>
+<p><h2>Current Behavior</h2>
+- Ranged bots kite backward when enemies get close (per issue 161)
+- No communication between ranged and melee bots about threats
+- Ranged bots handle threats alone through kiting
+- Melee bots continue attacking their current target</p>
+<p><h2>Intended Behavior</h2>
+When a ranged bot is overwhelmed (enemy too close, can&#39;t kite), it should &quot;call for help&quot;
+and nearby melee bots should intervene by intercepting the threat.</p>
+<p><h3>Help Conditions</h3>
+Ranged bot calls for help when:
+1. Enemy within 5 yards (melee range)
+2. Kiting failed (wall, water, or terrain blocked retreat)
+3. Multiple enemies closing in (2+ enemies within 10 yards)</p>
+<p><h3>Intervention Behavior</h3>
+Melee bot responds when:
+1. Ranged bot calls for help within 30 yards
+2. Melee bot is not currently tanking (no aggro on self)
+3. Melee bot has taunt or intercept ability available</p>
+<p><strong>Intervention priority:</strong>
+1. Taunt the threat off the ranged bot
+2. Move between threat and ranged bot (body block)
+3. Attack the threat to generate aggro</p>
+<p><h3>Communication Flow</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    RANGED BOT                                │
+│  - Check: enemy within 5 yards AND kite failed?             │
+│  - Broadcast: &amp;quot;HELP&amp;quot; signal with threat GUID                 │
+│  - Continue: attack while waiting for help                   │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          │ broadcast to party/nearby bots
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    MELEE BOT                                 │
+│  - Receive: &amp;quot;HELP&amp;quot; signal                                    │
+│  - Check: am I in range? am I tanking?                       │
+│  - Respond: intercept and taunt threat                       │
+│  - Resume: previous target after ranged is safe              │
+└─────────────────────────────────────────────────────────────┘</code></pre></p>
+<p><h2>Implementation Steps</h2></p>
+<p><h3>Step 1: Add help signal to SetData</h3>
+<pre><code class="lua"><span class="comment">-- Ranged bot sets when overwhelmed</span>
+bot:SetData(&amp;quot;help_threat&amp;quot;, threatGUID)
+bot:SetData(&amp;quot;help_time&amp;quot;, GetGameTime())</code></pre></p>
+<p><h3>Step 2: Melee bot periodic scan</h3>
+<pre><code class="lua"><span class="comment">-- {{{ BotCombat.checkForHelpCalls</span>
+<span class="comment">-- Melee bot scans <span class="keyword">for</span> nearby ranged bots needing help</span>
+<span class="keyword">function</span> BotCombat.checkForHelpCalls(bot)
+    <span class="keyword">if</span> <span class="keyword">not</span> BotCombat.isMelee(bot) <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span> <span class="keyword">end</span>
+    <span class="keyword">if</span> bot:IsTanking() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span> <span class="keyword">end</span>  <span class="comment">-- already busy</span></p>
+<p>    <span class="keyword">local</span> nearby = bot:GetPlayersInRange(<span class="number">30</span>)
+    <span class="keyword">for</span> _, other <span class="keyword">in</span> ipairs(nearby) <span class="keyword">do</span>
+        <span class="keyword">if</span> other:IsBot() <span class="keyword">and</span> BotCombat.isRanged(other) <span class="keyword">then</span>
+            <span class="keyword">local</span> threatGUID = other:GetData(&amp;quot;help_threat&amp;quot;)
+            <span class="keyword">local</span> helpTime = other:GetData(&amp;quot;help_time&amp;quot;) <span class="keyword">or</span> <span class="number">0</span></p>
+<p>            <span class="comment">-- Help call is fresh (within <span class="number">5</span> seconds)</span>
+            <span class="keyword">if</span> threatGUID <span class="keyword">and</span> (GetGameTime() - helpTime) &amp;lt; <span class="number">5</span> <span class="keyword">then</span>
+                <span class="keyword">return</span> threatGUID
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+    <span class="keyword">return</span> <span class="keyword">nil</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Step 3: Intervention action</h3>
+<pre><code class="lua"><span class="comment">-- {{{ BotCombat.intervene</span>
+<span class="comment">-- Melee bot intercepts threat attacking ranged ally</span>
+<span class="keyword">function</span> BotCombat.intervene(bot, threatGUID)
+    <span class="keyword">local</span> threat = GetPlayerByGUID(threatGUID) <span class="keyword">or</span> GetCreatureByGUID(threatGUID)
+    <span class="keyword">if</span> <span class="keyword">not</span> threat <span class="keyword">or</span> <span class="keyword">not</span> threat:IsAlive() <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">false</span> <span class="keyword">end</span></p>
+<p>    <span class="comment">-- Try taunt first</span>
+    <span class="keyword">if</span> bot:HasSpell(<span class="number">355</span>) <span class="keyword">then</span>  <span class="comment">-- Warrior Taunt</span>
+        bot:CastSpell(threat, <span class="number">355</span>)
+    <span class="keyword">elseif</span> bot:HasSpell(<span class="number">62124</span>) <span class="keyword">then</span>  <span class="comment">-- Paladin Hand of Reckoning</span>
+        bot:CastSpell(threat, <span class="number">62124</span>)
+    <span class="keyword">end</span></p>
+<p>    <span class="comment">-- Move to intercept position (between threat <span class="keyword">and</span> ranged)</span>
+    <span class="keyword">local</span> tx, ty = threat:GetPosition()
+    <span class="keyword">local</span> bx, by, bz = bot:GetPosition()</p>
+<p>    <span class="comment">-- Get <span class="number">3</span> yards <span class="keyword">in</span> front of threat (toward ranged)</span>
+    <span class="keyword">local</span> angle = threat:GetFacing()
+    <span class="keyword">local</span> ix = tx + math.cos(angle) <em> <span class="number">3</span>
+    <span class="keyword">local</span> iy = ty + math.sin(angle) </em> <span class="number">3</span>
+    <span class="keyword">local</span> iz = bot:GetMap():GetHeight(ix, iy) <span class="keyword">or</span> bz</p>
+<p>    bot:MoveTo(<span class="number">0</span>, ix, iy, iz, <span class="keyword">false</span>)
+    bot:Attack(threat)</p>
+<p>    <span class="keyword">return</span> <span class="keyword">true</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span></code></pre></p>
+<p><h3>Step 4: Clear help signal</h3>
+<pre><code class="lua"><span class="comment">-- Ranged bot clears when threat is handled</span>
+<span class="comment">-- {{{ BotCombat.clearHelpSignal</span>
+<span class="keyword">function</span> BotCombat.clearHelpSignal(bot)
+    <span class="keyword">local</span> threatGUID = bot:GetData(&amp;quot;help_threat&amp;quot;)
+    <span class="keyword">if</span> <span class="keyword">not</span> threatGUID <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span></p>
+<p>    <span class="keyword">local</span> threat = GetCreatureByGUID(threatGUID)
+    <span class="comment">-- Clear <span class="keyword">if</span>: threat dead, threat targeting someone <span class="keyword">else</span>, <span class="keyword">or</span> &amp;gt;<span class="number">15</span> yards away</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> threat <span class="keyword">or</span> <span class="keyword">not</span> threat:IsAlive() <span class="keyword">then</span>
+        bot:SetData(&amp;quot;help_threat&amp;quot;, <span class="keyword">nil</span>)
+        bot:SetData(&amp;quot;help_time&amp;quot;, <span class="keyword">nil</span>)
+    <span class="keyword">elseif</span> threat:GetVictim() ~= bot <span class="keyword">then</span>
+        bot:SetData(&amp;quot;help_threat&amp;quot;, <span class="keyword">nil</span>)
+        bot:SetData(&amp;quot;help_time&amp;quot;, <span class="keyword">nil</span>)
+    <span class="keyword">elseif</span> bot:GetDistance(threat) &amp;gt; <span class="number">15</span> <span class="keyword">then</span>
+        bot:SetData(&amp;quot;help_threat&amp;quot;, <span class="keyword">nil</span>)
+        bot:SetData(&amp;quot;help_time&amp;quot;, <span class="keyword">nil</span>)
+    <span class="keyword">end</span>
+<span class="keyword">end</span> <span class="comment">-- }}}</span></code></pre></p>
+<p><h2>Visual/Audio Feedback</h2>
+- Ranged bot could /yell &quot;Help!&quot; or play distress emote
+- Optional: brief highlight on melee bot when responding
+- Combat log message: &quot;[Bot] rushes to defend [Ranged]&quot;</p>
+<p><h2>Edge Cases</h2></p>
+<p>| Case | Handling |
+|------|----------|
+| Multiple ranged calling | Melee helps closest one first |
+| No melee nearby | Ranged continues kiting/fighting alone |
+| Melee already engaged | Only intervene if not actively tanking |
+| Help call expires | Auto-clear after 5 seconds |
+| Threat dies during intervention | Resume previous target |</p>
+<p><h2>Testing</h2>
+1. Put ranged bot against wall, spawn melee enemy - should call for help
+2. Have melee bot nearby - should intercept and taunt
+3. Multiple ranged bots calling - melee should help closest
+4. Melee tanking a boss - should NOT abandon boss to help
+5. Check performance with many bots (help scan is O(n))</p>
+<p><h2>Related Issues</h2>
+- 161: Bot wandering and combat repositioning (kiting behavior)
+- 132: Healer bot ping-pong behavior (similar coordination pattern)
+- 160: Behavior system integration</p>
+<p><h2>Related Concepts</h2>
+- Concept 401-420: Combat coordination
+- Concept 301-330: Zone consensus (used for finding nearby bots)</p>
+<p><h2>Notes</h2>
+- This creates emergent &quot;pack&quot; behavior where bots protect each other
+- Similar to MMO trinity dynamics (tank/healer/DPS) but lightweight
+- Could extend to healers calling for help when focused
+- SetData is session-scoped, so help state doesn&#39;t persist through logout
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="../phase-1-progress.html">View Phase 1 Progress</a>
+        </nav>
+    </div>
+</body>
+</html>

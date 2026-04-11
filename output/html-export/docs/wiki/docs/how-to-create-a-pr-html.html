@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>how-to-create-a-pr.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>how-to-create-a-pr.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/how-to-create-a-pr.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 9736 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+redirect_from: &quot;/How-to-create-a-PR&quot;
+---</p>
+<p><h1>How to create a PR</h1></p>
+<p>This guide explains how to open PRs to submit any kind of fixes (C++, SQL, etc...).</p>
+<p>If you happen to submit only DB fixes, you might give it a try to our new <a href="how-to-create-a-db-pr">simplified way of opening a PR containing SQL code</a>.</p>
+<p><h2>Do only ONCE: create and clone your AzerothCore fork</h2></p>
+<p><h3>1. Create a fork of AzerothCore</h3></p>
+<p>You need to be signed on <a href="https://github.com/">github.com</a>. If you don&#39;t have an account yet, create one.</p>
+<p>Open the <a href="https://github.com/azerothcore/azerothcore-wotlk">AzerothCore repository</a> 
+and create a fork of it by clicking in the top-right &quot;Fork&quot; button:</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/1.png">Create a fork of AzerothCore</a></p>
+<p><h3>2. Clone your fork to your local machine</h3></p>
+<p>Once your fork is ready, you will see a screen showing <strong>YourUsername/azerothcore-wotlk</strong>.</p>
+<p>Click on the &quot;Clone or download&quot; button (on the right) and copy the https address of your fork:</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/2.png">Copy your AzerothCore fork address</a></p>
+<p>Now open the <strong>terminal</strong> (if you are on Windows, use the <a href="https://git-scm.com/downloads">git bash terminal</a>) 
+and type <code>git clone </code> followed by the git address of your fork that you just copied:</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/3.png">Clone your AzerothCore fork</a></p>
+<p><pre><code>git clone https://github.com/YourUsername/azerothcore-wotlk.git</code></pre></p>
+<p>Wait until the download ends and then access the <code>azerothcore-wotlk</code> directory:</p>
+<p><pre><code>cd azerothcore-wotlk</code></pre></p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/4.png">Access the AzerothCore directory</a></p>
+<p><h2>Creating a new PR</h2></p>
+<p><h3>1. Update your fork on GitHub</h3></p>
+<p>Open your browser and navigate to your fork on GitHub (change <code>YourUsername</code> with your actual GitHub username):</p>
+<p><strong>https://github.com/YourUsername/azerothcore-wotlk</strong></p>
+<p>If your <code>master</code> branch is not up to date with latest AzerothCore, you&#39;ll see something like:</p>
+<p><code>This branch is XX commits behind azerothcore:master</code></p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/update-fork-1.png">AzerothCore update fork</a></p>
+<p>to update it, click on <strong>Fetch upstream</strong> and then <strong>Fetch and merge</strong>.</p>
+<p>As a result, your fork&#39;s <code>master</code> branch should say:</p>
+<p><code>This branch is even with azerothcore:master</code></p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/update-fork-2.png">AzerothCore update fork</a></p>
+<p><h3>2. Update your local clone</h3></p>
+<p>In the previous step you just updated your <em>remote</em> fork, but you have to sync your local clone as well.</p>
+<p>Open your terminal inside the <code>azerothcore-wotlk</code> directory and run:</p>
+<p><pre><code>git checkout master; git pull</code></pre></p>
+<p><h3>3. Create a new branch</h3></p>
+<p>{% include important.html content=&quot;Never commit changes your &lt;b&gt;master&lt;/b&gt; branch, it will make your fork messy.&quot; %}</p>
+<p>When creating a new branch, git will create a copy of your <strong>current</strong> branch. 
+Always make sure you are on <code>master</code> branch <strong>before</strong> creating a new branch by typing:
+ 
+<pre><code> git checkout master</code></pre></p>
+<p>Create a new branch giving it a name that is different than any existing branch.</p>
+<p>You can give any name you want (replace &quot;xxx&quot; with whatever you are fixing):</p>
+<p><pre><code>git checkout -b fix-issue-xxxx</code></pre></p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/5.png">Access the AzerothCore directory</a></p>
+<p><h3>4. Add your C++ changes (if any)</h3></p>
+<p>Make sure all changes abides the <a href="cpp-code-standards">C++ Code Standards</a>!</p>
+<p>If you don&#39;t have any C++ changes, you can skip this. Otherwise, open your editor and do them now! I&#39;ll wait...</p>
+<p>In this guide we will assume that you modified the file <code>instance_deadmines.cpp</code></p>
+<p>Now add your file(s) to be committed:</p>
+<p><pre><code>git add src/server/scripts/EasternKingdoms/Deadmines/instance_deadmines.cpp</code></pre></p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/6.png">AzerothCore - add files with git add</a></p>
+<p>If you modified more files, just add them using <code>git add path/to/file</code></p>
+<p>You can use the <code>git status</code> command to check which files have been selected to be committed:</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/7.png">AzerothCore - git status</a></p>
+<p><h3>5. Add your SQL changes (if any)</h3></p>
+<p>If you don&#39;t have any SQL changes, you can skip this. Otherwise, run the following:</p>
+<p><pre><code>./data/sql/updates/pending_db_world/create_sql.sh</code></pre></p>
+<p>This will generate a new file located at <code>data/sql/updates/pending_db_world</code> 
+having a unique name that looks like <code>rev_XXXXXXXXXXXX.sql</code></p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/8.png">AzerothCore - create pending sql file</a></p>
+<p>Now add this file to be committed using the <code>git add path/to/file</code> command:</p>
+<p><pre><code>git add data/sql/updates/pending_db_world/rev_XXXXXXXXXXXX.sql</code></pre> </p>
+<p>(of course replace <code>rev_XXXXXXXXXXXX.sql</code> with the actual name of the file)</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/9.png">AzerothCore - git add pending sql file</a></p>
+<p><h3>6. Commit &amp; Push your changes</h3></p>
+<p><h4>Do only ONCE: git config</h4></p>
+<p>First of all make sure to use the AC commit template (this should only be necessary once):
+<pre><code>git config --local commit.template &amp;quot;.git_commit_template.txt&amp;quot;</code></pre></p>
+<p>When you will write your commit message, it will use the default text editor <code>Vim</code> which is very hard to manipulate. You can keep it or you can instead use the much simpler <code>Nano</code> editor. Here is how to proceed, type:
+<pre><code>git config --global core.editor &amp;quot;nano&amp;quot;</code></pre></p>
+<p><h4>Git commit</h4></p>
+<p>Then commit your changes by typing:
+<pre><code>git commit</code></pre>
+You are then prompted to specify an appropriate commit message. Please, follow the format guidelines here (= every line starting by a # that will be ignored in the commit message), and you can refer to a commit like <a href="https://github.com/azerothcore/mod-npc-beastmaster/commit/53cf90233091db2191b522f0fa7c4b6009dca22e">this</a> as an example.
+If using <code>Nano</code>, press [ctrl]+[x] and say yes to save and exit (other commands are written at the bottom in <code>Nano</code>, and can be found easily on the net or by typing <code>man nano</code> in the terminal).</p>
+<p>Verify you&#39;re satisfied by typing <code>git show</code>. Exit by pressing [q]. If not satisfied, you can recommit the <strong>last local</strong> commit by typing <code>git commit --amend</code>.</p>
+<p>Now it&#39;s time to push them remotely. 
+If you use the <code>git push</code> command for the first time in this branch, 
+git will ask to specify which remote branch you want to push to.</p>
+<p>So you should give:</p>
+<p><pre><code>git push --set-upstream origin fix-issue-xxxx</code></pre></p>
+<p>(of course replace <code>fix-issue-xxxx</code> with the actual name of your branch)</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/10.png">AzerothCore - git push</a></p>
+<p><h3>7. Open the PR</h3></p>
+<p>Go back to the <a href="https://github.com/azerothcore/azerothcore-wotlk">main AzerothCore repository</a>, 
+you will notice that GitHub is smart enough to realize that you are about to open a PR 
+and shows this nice light-yellow box:
+ 
+!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/11.png">AzerothCore - Compare &amp; pull request</a></p>
+<p>click on the &quot;Compare &amp; pull request&quot; green button (located on the right).</p>
+<p>Now fill the PR template following the instructions that will appear in the screen, 
+do not forget to add the <strong>testing instructions</strong> so people can be able to test your PR and it can be merged:</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/12.png">AzerothCore - Compare &amp; pull request</a></p>
+<p>It&#39;s also a good practice to check the &quot;File changes&quot; tab to see that everything is in place as you expect:</p>
+<p>!<a href="http://www.azerothcore.org/wiki/assets/images/pr-tutorial/13.png">AzerothCore - Compare &amp; pull request</a></p>
+<p>{% include important.html content=&quot;We do not respond well to leechers! If your fix comes from another organization or person you should ALWAYS give credit to the original author and commit!&quot; %}</p>
+<p>That&#39;s it!</p>
+<p><h2>FAQ</h2></p>
+<p><h3>There is something wrong or missing in the file changes, I want to push more changes</h3></p>
+<p>Just edit/add the files that you want, <code>git add</code> them, then commit &amp; push again. 
+If you refresh your PR&#39;s page you will see the changes.</p>
+<p><h3>I&#39;ve already created a PR, what should I do to create another one?</h3></p>
+<p>Just repeat the procedure starting from the step 3.</p>
+<p>Be careful when creating a new branch: you <strong>must</strong> be in branch <code>master</code> first (type <code>git checkout master</code>).</p>
+<p><h3>How can I update my fork&#39;s master branch?</h3></p>
+<p>If you never updated your fork before, type:</p>
+<p><pre><code>git remote add upstream https://github.com/azerothcore/azerothcore-wotlk.git</code></pre></p>
+<p>Then follow these steps:</p>
+<p>1) <code>git checkout master</code>
+2) <code>git fetch upstream</code>
+3) <code>git merge upstream/master</code>
+4) <code>git push origin master</code></p>
+<p>Your fork is now updated.</p>
+<p><h3>How can I update my branch with latest master?</h3></p>
+<p>You have to update your fork&#39;s master branch first (see above).</p>
+<p>Then just <code>git checkout your-branch</code> and <code>git merge master</code>.</p>
+<p><h3>How much time does it take for my PR to be reviewed, tested and merged?</h3></p>
+<p>This is an open source project and people work in their free time, so we cannot estimate it.</p>
+<p>What we can recommend is: write <strong>clear</strong> instructions to test your PR, so it will be easy for anyone to test it.</p>
+<p>If your test instructions are not clear or missing at all, 
+only advanced users will be able to test your PR and it will take much more time.</p>
+<p><h3>What terminal was used in this tutorial?</h3></p>
+<p>https://github.com/robbyrussell/oh-my-zsh</p>
+<p>But any linux/mac terminal is ok too. 
+If you are so unlucky to be on windows, use <a href="https://git-scm.com/downloads">git bash</a>.</p>
+<p><h3>Do I have to re-authenticated every time I use git push?</h3></p>
+<p>You can clone your own fork using SSH instead of HTTPS and then follow <a href="https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/adding-a-new-ssh-key-to-your-github-account">this guide</a> to set the SSH keys.</p>
+<p>This way you can use <code>git push</code> without typing your password over and over.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

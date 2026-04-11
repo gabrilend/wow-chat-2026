@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>linux-restarter.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>linux-restarter.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/linux-restarter.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 2706 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h2>Introduction</h2>
+This tutorial will walk you through creating a script to restart AzerothCore after a shutdown, restart, or crash when using a Linux server.</p>
+<p>The easiest way to setup a restarter is by using our <a href="how-to-restart-and-debug">integrated scripts or docker</a></p>
+<p>However, the following guy will show you how to create your own restarter from scratch.</p>
+<p><h2>Creating The Scripts</h2>
+<h4>Prerequisites</h4>
+- Verify that your Linux server has screen and nano installed.</p>
+<p>``<code>sh
+sudo apt-get update &amp;&amp; sudo apt-get install screen nano
+<pre><code>
+- Once you&amp;#39;ve installed screen and nano, continue on to the next step.</p>
+<p>&lt;h4&gt;Script Creation&lt;/h4&gt;
+- Navigate to your server bin directory </code>~/azeroth-server/bin<code> and type </code>nano auth.sh<code>
+- In the new nano screen, enter the following script:
+</code></pre>sh
+#!/bin/sh
+while :; do
+./authserver
+sleep 20
+done
+<pre><code>
+- Once entered, press Ctrl + O, hit Enter, and then Ctrl + X. That will save the new script and return you to the terminal. We&amp;#39;ve just created the Authserver restart script. Let&amp;#39;s next create the Worldserver script.
+- Type </code>nano world.sh<code>
+- In the new nano screen, enter the following script:
+</code></pre>sh
+while :; do
+./worldserver
+sleep 20
+done
+<pre><code>
+- Once entered, press Ctrl + O, hit Enter, and then Ctrl + X. That will save the new script and return you to the terminal. We&amp;#39;ve just created the Worldserver restart script. Let&amp;#39;s next create a script that will launch both the Authserver and Worldserver restarter scripts.
+- Type </code>nano restarter.sh<code>
+</code></pre>sh
+#!/bin/bash
+screen -AmdS auth ./auth.sh
+screen -AmdS world ./world.sh
+<pre><code>
+- Once entered, press Ctrl + O, hit Enter, and then Ctrl + X. Finally, let&amp;#39;s create our server shutdown script.
+- Type </code>nano shutdown.sh<code>
+</code></pre>sh
+#!/bin/bash
+screen -X -S &quot;world&quot; quit
+screen -X -S &quot;auth&quot; quit
+</code>`<code></p>
+<p>- Once entered, press Ctrl + O, hit Enter, and then Ctrl + X. Next, let&#39;s start our server.</p>
+<p><h2>Server Management</h2>
+<h4>Server Startup</h4>
+- To start your server with the scripts, ensure you are in you server bin directory </code>~/azeroth-server/bin<code>.
+- We will start the restart scripts by typing the following command </code>./restarter.sh<code>
+- Side note: If you wish to start the server and see the worldserver console, use the following command </code>./restarter.sh; screen -r world<code></p>
+<p><h4>Server Monitoring</h4>
+- To access and view the Authserver or Worldserver consoles:
+-- Authserver: </code>screen -r auth<code>
+-- Worldserver: </code>screen -r world<code>
+- When you want to exit the screen and return to your terminal, type Ctrl + A, followed by D.</p>
+<p><h4>Server Shutdown</h4>
+- To terminate the restarter and shutdown your server, ensure you are in you server bin directory </code>~/azeroth-server/bin<code>.
+- Type </code>./shutdown.sh` and the scripts will turn off and your server will terminate.
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

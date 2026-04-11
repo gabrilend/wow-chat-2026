@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>database-world.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>database-world.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/es/database-world.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 8608 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p><h1>Base de datos: World</h1></p>
+<p>La base de datos del mundo tiene información básicamente relacionada con criaturas, objetos, ítems, diálogos, textos e incluso se pueden hacer scripts a través de la tabla <code>smart_scripts</code>. También tiene traducciones, logros, eventos... Actualmente estamos trabajando para revisar estas tablas e intentar actualizar aquellas que no tienen la información correcta. Por ello, si detectas algún error en alguna de ellas, te invitamos a abrir una <a href="https://github.com/azerothcore/wiki/issues">incidencia</a>, aportando la información oportuna, para que podamos actualizarla. También te invitamos a crear un <a href="https://github.com/azerothcore/wiki/pulls">pull request</a>, con las modificaciones correspondientes, para que podamos analizar el código e incorporarlo si es correcto. Actualmente, estamos trabajando en la actualización. En el próximo <a href="https://github.com/azerothcore/wiki/issues/357">Actualizar base de datos-mundo</a></p>
+<p>- <a href="achievement_criteria_data">achievement_criteria_data</a>
+- <a href="achievement_dbc">achievement_dbc</a>
+- <a href="achievement_reward">achievement_reward</a>
+- <a href="achievement_reward_locale">achievement_reward_locale</a>
+- <a href="acore_string">acore_string</a>
+- <a href="areatrigger">areatrigger</a>
+- <a href="areatrigger_involvedrelation">areatrigger_involvedrelation</a>
+- <a href="areatrigger_scripts">areatrigger_scripts</a>
+- <a href="areatrigger_tavern">areatrigger_tavern</a>
+- <a href="areatrigger_teleport">areatrigger_teleport</a>
+- <a href="battleground_template">battleground_template</a>
+- <a href="battlemaster_entry">battlemaster_entry</a>
+- <a href="broadcast_text">broadcast_text</a>
+- <a href="broadcast_text_locale">broadcast_text_locale</a>
+- <a href="command">command</a>
+- <a href="conditions">conditions</a>
+- <a href="creature">creature</a>
+- <a href="creature_addon">creature_addon</a>
+- <a href="creature_classlevelstats">creature_classlevelstats</a>
+- <a href="creature_equip_template">creature_equip_template</a>
+- <a href="creature_formations">creature_formations</a>
+- <a href="loot_template">creature_loot_template</a>
+- <a href="creature_model_info">creature_model_info</a>
+- <a href="creature_template_movement">creature_movement_override</a>
+- <a href="creature_onkill_reputation">creature_onkill_reputation</a>
+- <a href="creature_questender">creature_questender</a>
+- <a href="creature_questitem">creature_questitem</a>
+- <a href="creature_queststarter">creature_queststarter</a>
+- <a href="creature_summon_groups">creature_summon_groups</a>
+- <a href="creature_template">creature_template</a>
+- <a href="creature_addon">creature_template_addon</a>
+- <a href="creature_template_locale">creature_template_locale</a>
+- <a href="creature_template_movement">creature_template_movement</a>
+- <a href="creature_template_resistance">creature_template_resistance</a>
+- <a href="creature_template_spell">creature_template_spell</a>
+- <a href="creature_text">creature_text</a>
+- <a href="creature_text_locale">creature_text_locale</a>
+- <a href="disables">disables</a>
+- <a href="loot_template">disenchant_loot_template</a>
+- <a href="dungeon_access_requirements">dungeon_access_requirements</a>
+- <a href="dungeon_access_template">dungeon_access_template</a>
+- <a href="event_scripts">event_scripts</a>
+- <a href="exploration_basexp">exploration_basexp</a>
+- <a href="loot_template">fishing_loot_template</a>
+- <a href="game_event">game_event</a>
+- <a href="game_event_arena_seasons">game_event_arena_seasons</a>
+- <a href="game_event_battleground_holiday">game_event_battleground_holiday</a>
+- <a href="game_event_condition">game_event_condition</a>
+- <a href="game_event_creature">game_event_creature</a>
+- <a href="game_event_creature_quest">game_event_creature_quest</a>
+- <a href="game_event_gameobject">game_event_gameobject</a>
+- <a href="game_event_gameobject_quest">game_event_gameobject_quest</a>
+- <a href="game_event_model_equip">game_event_model_equip</a>
+- <a href="game_event_npc_vendor">game_event_npc_vendor</a>
+- <a href="game_event_npcflag">game_event_npcflag</a>
+- <a href="game_event_pool">game_event_pool</a>
+- <a href="game_event_prerequisite">game_event_prerequisite</a>
+- <a href="game_event_quest_condition">game_event_quest_condition</a>
+- <a href="game_event_seasonal_questrelation">game_event_seasonal_questrelation</a>
+- <a href="game_graveyard">game_graveyard</a>
+- <a href="game_tele">game_tele</a>
+- <a href="game_weather">game_weather</a>
+- <a href="gameobject">gameobject</a>
+- <a href="gameobject_addon">gameobject_addon</a>
+- <a href="loot_template">gameobject_loot_template</a>
+- <a href="gameobject_questender">gameobject_questender</a>
+- <a href="gameobject_questitem">gameobject_questitem</a>
+- <a href="gameobject_queststarter">gameobject_queststarter</a>
+- <a href="gameobject_template">gameobject_template</a>
+- <a href="gameobject_template_addon">gameobject_template_addon</a>
+- <a href="gameobject_template_locale">gameobject_template_locale</a>
+- <a href="gossip_menu">gossip_menu</a>
+- <a href="gossip_menu_option">gossip_menu_option</a>
+- <a href="gossip_menu_option_locale">gossip_menu_option_locale</a>
+- <a href="graveyard_zone">graveyard_zone</a>
+- <a href="instance_encounters">instance_encounters</a>
+- <a href="instance_template">instance_template</a>
+- <a href="item_enchantment_template">item_enchantment_template</a>
+- <a href="loot_template">item_loot_template</a>
+- <a href="item_set_names">item_set_names</a>
+- <a href="item_set_names_locale">item_set_names_locale</a>
+- <a href="item_template">item_template</a>
+- <a href="item_template_locale">item_template_locale</a>
+- <a href="lfg_dungeon_rewards">lfg_dungeon_rewards</a>
+- <a href="lfg_dungeon_template">lfg_dungeon_template</a>
+- <a href="linked_respawn">linked_respawn</a>
+- <a href="mail_level_reward">mail_level_reward</a>
+- <a href="loot_template">mail_loot_template</a>
+- <a href="loot_template">milling_loot_template</a>
+- <a href="npc_spellclick_spells">npc_spellclick_spells</a>
+- <a href="npc_text">npc_text</a>
+- <a href="npc_text_locale">npc_text_locale</a>
+- <a href="npc_trainer">npc_trainer</a>
+- <a href="npc_vendor">npc_vendor</a>
+- <a href="outdoorpvp_template">outdoorpvp_template</a>
+- <a href="page_text">page_text</a>
+- <a href="page_text_locale">page_text_locale</a>
+- <a href="pet_levelstats">pet_levelstats</a>
+- <a href="pet_name_generation">pet_name_generation</a>
+- <a href="loot_template">pickpocketing_loot_template</a>
+- <a href="player_class_stats">player_class_stats</a>
+- <a href="player_factionchange_achievement">player_factionchange_achievement</a>
+- <a href="player_factionchange_items">player_factionchange_items</a>
+- <a href="player_factionchange_quests">player_factionchange_quests</a>
+- <a href="player_factionchange_reputations">player_factionchange_reputations</a>
+- <a href="player_factionchange_spells">player_factionchange_spells</a>
+- <a href="player_factionchange_titles">player_factionchange_titles</a>
+- <a href="player_race_stats">player_race_stats</a>
+- <a href="player_xp_for_level">player_xp_for_level</a>
+- <a href="playercreateinfo">playercreateinfo</a>
+- <a href="playercreateinfo_action">playercreateinfo_action</a>
+- <a href="playercreateinfo_item">playercreateinfo_item</a>
+- <a href="playercreateinfo_skills">playercreateinfo_skills</a>
+- <a href="playercreateinfo_spell_custom">playercreateinfo_spell_custom</a>
+- <a href="points_of_interest">points_of_interest</a>
+- <a href="points_of_interest_locale">points_of_interest_locale</a>
+- <a href="pool_creature">pool_creature</a>
+- <a href="pool_gameobject">pool_gameobject</a>
+- <a href="pool_pool">pool_pool</a>
+- <a href="pool_quest">pool_quest</a>
+- <a href="pool_template">pool_template</a>
+- <a href="loot_template">prospecting_loot_template</a>
+- <a href="quest_details">quest_details</a>
+- <a href="quest_greeting">quest_greeting</a>
+- <a href="quest_greeting_locale">quest_greeting_locale</a>
+- <a href="quest_mail_sender">quest_mail_sender</a>
+- <a href="quest_money_reward">quest_money_reward</a>
+- <a href="quest_offer_reward">quest_offer_reward</a>
+- <a href="quest_offer_reward_locale">quest_offer_reward_locale</a>
+- <a href="quest_poi">quest_poi</a>
+- <a href="quest_poi_points">quest_poi_points</a>
+- <a href="quest_request_items">quest_request_items</a>
+- <a href="quest_request_items_locale">quest_request_items_locale</a>
+- <a href="quest_template">quest_template</a>
+- <a href="quest_template_addon">quest_template_addon</a>
+- <a href="quest_template_locale">quest_template_locale</a>
+- <a href="loot_template">reference_loot_template</a>
+- <a href="reputation_reward_rate">reputation_reward_rate</a>
+- <a href="reputation_spillover_template">reputation_spillover_template</a>
+- <a href="scripts">script_waypoint</a>
+- <a href="scripts">\<em>\</em>\_scripts</a>
+- <a href="skill_discovery_template">skill_discovery_template</a>
+- <a href="skill_extra_item_template">skill_extra_item_template</a>
+- <a href="skill_fishing_base_level">skill_fishing_base_level</a>
+- <a href="loot_template">skinning_loot_template</a>
+- <a href="smart_scripts">smart_scripts</a>
+- <a href="spell_area">spell_area</a>
+- <a href="spell_bonus_data">spell_bonus_data</a>
+- <a href="spell_custom_attr">spell_custom_attr</a>
+- <a href="spell_dbc">spell_dbc</a>
+- <a href="spell_enchant_proc_data">spell_enchant_proc_data</a>
+- <a href="spell_group">spell_group</a>
+- <a href="spell_group_stack_rules">spell_group_stack_rules</a>
+- <a href="spell_linked_spell">spell_linked_spell</a>
+- <a href="loot_template">spell_loot_template</a>
+- <a href="spell_mixology">spell_mixology</a>
+- <a href="spell_pet_auras">spell_pet_auras</a>
+- <a href="spell_proc">spell_proc</a>
+- <a href="spell_proc_event">spell_proc_event</a>
+- <a href="spell_ranks">spell_ranks</a>
+- <a href="spell_required">spell_required</a>
+- <a href="spell_script_names">spell_script_names</a>
+- <a href="scripts">spell_scripts</a>
+- <a href="spell_target_position">spell_target_position</a>
+- <a href="spell_threat">spell_threat</a>
+- <a href="spelldifficulty_dbc">spelldifficulty_dbc</a>
+- <a href="transports">transports</a>
+- <a href="updates">updates</a>
+- <a href="updates_include">updates_include</a>
+- <a href="vehicle_accessory">vehicle_accessory</a>
+- <a href="vehicle_template_accessory">vehicle_template_accessory</a>
+- <a href="version">version</a>
+- <a href="version_db_world">version_db_world</a>
+- <a href="warden_checks">warden_checks</a>
+- <a href="waypoint_data">waypoint_data</a>
+- <a href="scripts">waypoint_scripts</a>
+- <a href="waypoints">waypoints</a>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>how-to-test-a-pr.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>how-to-test-a-pr.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/wiki/docs/how-to-test-a-pr.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 8192 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-06 09:30
+        </div>
+
+        <div class="content">
+            <p>---
+redirect_from: &quot;/How-to-test-a-PR&quot;
+---</p>
+<p><h1>How to test a PR</h1></p>
+<p><h2>Introduction</h2></p>
+<p>At AzerothCore we care about game quality and stability. Because of this, <strong>we do not push changes directly to the master branch</strong>. Instead, whenever introducing a new change, we create a new <a href="https://help.github.com/articles/about-pull-requests/">Pull Request</a> (often shortened in PR).</p>
+<p>This allow us to properly <strong>review and test</strong> any change before it gets into production environments. Everyone who is able to install AzerothCore is also able to contribute by testing PRs. This guide will explain how to do it.</p>
+<p>The more users help us with testing the PRs, the better will be our development activity in terms of speed and quality.</p>
+<p><h2>What PRs need to be tested?</h2></p>
+<p>We label as <a href="https://github.com/azerothcore/azerothcore-wotlk/pulls?q=is%3Apr+is%3Aopen+label%3A%22Waiting+to+be+tested%22"><strong>Waiting to be tested</strong></a> all PRs that have already been completed by the author and had their code reviewed.</p>
+<p>Clicking on the label above will show you the list of all PRs that need to be tested in order to get to the <code>master</code> branch.</p>
+<p><h2>What do I need before testing a PR?</h2></p>
+<p>You need to:</p>
+<p>- have AzerothCore installed in your system (see <a href="installation">Installation</a>).
+- have a GitHub account, you can <a href="https://github.com/join">register one here</a> for free.</p>
+<p><h3>What if the PR has only DB changes?</h3></p>
+<p>Some PRs have only database changes (no C++ changes). If that&#39;s the case, there is a <a href="How-to-test-DB-only-changes">simplified procedure to test such changes</a>.</p>
+<p>If you&#39;re not sure, just keep reading here and do the traditional PR test which will work for all kind of PRs.</p>
+<p><h3>Notes who cloned a fork of AzerothCore instead of the main repo:</h3></p>
+<p>It is typical to create and clone your own fork of AzerothCore if you are also a developer.
+If that is your case, then you have to </p>
+<p>- add the main AzerothCore remote using:
+<pre><code>git remote add upstream https://github.com/azerothcore/azerothcore-wotlk.git</code></pre>
+- replace <code>origin</code> with <code>upstream</code> in all commands listed below</p>
+<p><h2>Get the PR code to be tested</h2></p>
+<p>- Open a terminal and move to the directory of your AzerothCore sources, for example using <code>cd azerothcore-wotlk</code>.</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/52176403-b6708480-27b2-11e9-93b0-9f3d3232e817.png">image</a></p>
+<p>- Here we assume that you are starting from a clean, updated <code>master</code> branch. You can verify which branch you are in by typing <code>git checkout</code>. If you are not in master already, go back to master using <code>git checkout master</code>. While you&#39;re here, you can also <code>git pull</code> to make sure you have the latest master. And remember, <strong>never add custom changes to the master branch</strong> (always create a new, separate branch if you have to).</p>
+<p>- Check the ID of the PR that you want to test, it will appear in the URL and title of the PR. For example the ID of this PR is <strong>1383</strong>:  <a href="https://github.com/azerothcore/azerothcore-wotlk/pull/1383">https://github.com/azerothcore/azerothcore-wotlk/pull/1383</a></p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/52176395-9ccf3d00-27b2-11e9-9600-64206e7b33bc.png">image</a></p>
+<p>- Now you need to run the following commands by replacing &quot;XXXX&quot; with the ID of the PR that you want to test:</p>
+<p>``<code>git checkout -b pr-XXXX<pre><code></code></pre>git pull origin pull/XXXX/head</code>`<code></p>
+<p>The commands above will create a new local branch called </code>pr-XXXX<code> which will contain all the changes that need to be tested.</p>
+<p>The terminal will prompt an editor (usually </code>nano<code> or </code>vim<code>) that asks to save the merge commit message. Just save the changes and exit the editor. </p>
+<p>- If the editor is </code>nano<code>, you can do it by simply using </code>CTRL+O<code> and </code>ENTER<code> to save then </code>CTRL+X<code> to exit.
+- If the editor is </code>vim<code> you can hold the </code>SHIFT<code> key and press two times </code>Z<code> to save and exit.</p>
+<p>You can read more about the </code>git<code> configuration and its default editor <a href="http://web.mit.edu/6.005/www/fa14/tutorial/git/config.html">here</a>.</p>
+<p>{% include note.html content=&quot;Check the message in your console. If it states &#39;Automatic merge failed; fix conflicts and then commit the result&#39;, you should report back to the PR, asking the Developer to please fix the merge conflicts, and remove the &#39;waiting to be tested&#39; label and attach a &#39;merge conflict&#39; label&quot; %}</p>
+<p><h2>Update your local server to apply the changes</h2></p>
+<p>Now you simply need to update your local server with the new changes. The procedure is analogue to a normal server update.</p>
+<p>Basically you need to <strong>recompile your sources</strong> and <strong>update the DB</strong>.</p>
+<p><h3>Using traditional setup</h3></p>
+<p>If you are using the traditional setup, you have to recompile following the steps of the <a href="Installation#3-compiling">3) Compiling</a> from the main setup guide.</p>
+<p>You also need to update your DB. You can use the DB assembler to do that, but usually it&#39;s quicker to just manually importing the pending sql file(s) that the PR includes. Such file(s) are located under </code>data/sql/updates/pending_db_*<code>.</p>
+<p><strong>Tip</strong>: typically a PR consists of one new world update file located under </code>data/sql/updates/pending_db_world<code>. You can check which files have been added to spot any added sql files going to the &quot;Files changed&quot; tab of the PR page:</p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/52176720-ea4da900-27b6-11e9-8459-d58adf7fd50c.png">File Changes</a></p>
+<p>Then start the server just the way you always do.</p>
+<p><h3>Using Docker setup</h3></p>
+<p>If you are using the Docker setup, you can simply trigger the recompilation by running:</p>
+<p>Linux:  </code>`<code>./bin/acore-docker-build</code>`<code>  
+Windows: </code>`<code>./acore.sh docker build</code>`<code> </p>
+<p>then to launch the server you have to destroy and recreate the containers using </code>docker-compose down<code> and </code>docker-compose up<code>.</p>
+<p>{% include note.html content=&quot;This will also automatically update your DB.&quot; %}</p>
+<p>-----</p>
+<p><h2>Verify your actual version</h2></p>
+<p>To make sure you are correctly running your server with the PR, check the date and branch name in the output of the </code>server info<code> command. They should match with the PR.</p>
+<p>Now log in game and do your tests!</p>
+<p><h2>What needs to be tested?</h2></p>
+<p>Instructions about what needs to be tested in the scope of a PR should be provided by the PR&#39;s author in the PR description. If that is not the case, feel free to leave a comment in the PR description asking for testing istructions.</p>
+<p>For advanced users: you can also have a look at what has actually been changed in the PR and decide yourself what to test. Sometimes it&#39;s good to have a different point of view! Just make sure you describe what you have tested in your report.</p>
+<p><h2>Reporting your test results</h2></p>
+<p>It is important to report your test results by leaving a comment <strong>in the PR page</strong>.</p>
+<p>You should write:</p>
+<p>- what you have tested
+- do the things that you&#39;ve tested work as intented?
+- sometimes you may also want to specify how things worked <strong>before</strong> and <strong>after</strong> the PR
+- please insert as many details as possible
+- you can also insert screenshot or videos</p>
+<p><h2>Examples of good testing reports</h2></p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/52176856-1702c000-27b9-11e9-9030-48fe01669247.png">image</a></p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/52176862-3bf73300-27b9-11e9-8852-51624d882ccd.png">image</a></p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/52176828-980d8780-27b8-11e9-9fcc-071d64176022.png">image</a></p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/52176837-becbbe00-27b8-11e9-9b42-94a9521b6647.png">image</a></p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/52176842-cee39d80-27b8-11e9-97e6-25f272a346bd.png">image</a></p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/52176846-ea4ea880-27b8-11e9-9497-919cec1e22ff.png">image</a></p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/52176849-02262c80-27b9-11e9-927f-687dcc43cb26.png">image</a></p>
+<p>!<a href="https://user-images.githubusercontent.com/75517/52176867-44e80480-27b9-11e9-9f43-070e4edcb77d.png">image</a></p>
+<p><h2>Finishing Testing</h2></p>
+<p>Once you have left a test report, you will want to revert your AC installation back to the base state for further testing. To do this, use </code>git reset --hard<code> to remove all unstaged changes, followed by </code>git checkout master<code> to go back to the master branch. To tidy up, you can also use </code>git clean -fd<code> to get rid of any untracked files. Finally, you can then type </code>git status` to make sure everything is back to normal.</p>
+<p></p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

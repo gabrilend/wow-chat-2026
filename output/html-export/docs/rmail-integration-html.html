@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rmail-integration.md - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>rmail-integration.md</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / docs/rmail-integration.md
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> md &nbsp;&nbsp;
+            <strong>Size:</strong> 9203 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-07 00:05
+        </div>
+
+        <div class="content">
+            <p><h1>rmail Integration Guide</h1></p>
+<p>rmail is a file-based encrypted messaging system used for server communication.
+This guide explains how to set up rmail to interact with Everland Ghostsong.</p>
+<p><h2>What You Can Do With rmail</h2></p>
+<p>| Purpose | Contact Entry | Port | Description |
+|---------|---------------|------|-------------|
+| Account Creation | <code>wow.ritzmenardi.com/accounts</code> | 4562 | Create personal game accounts |
+| Custom Classes | <code>wow.ritzmenardi.com/classes</code> | 4662 | Submit custom class definitions |
+| In-Game Mail | <code>wow.ritzmenardi.com/mail</code> | 4762 | Subscribe to character mailboxes |
+| Narrator Feed | <code>wow.ritzmenardi.com/narrator</code> | 4862 | Subscribe to narrator speech and TTS |
+| Feedback | <code>wow.ritzmenardi.com/feedback</code> | 4962 | Send feedback, bug reports, suggestions |</p>
+<p><h2>Installing rmail</h2></p>
+<p><h3>Download</h3></p>
+<p><pre><code class="bash">git clone https://github.com/gabrilend/r-mail.git
+cd r-mail
+./scripts/install.sh</code></pre></p>
+<p>The installer compiles dependencies (luasocket, crypto library) and creates
+your mailbox directory at <code>~/mail/</code>.</p>
+<p><h3>Mailbox Structure</h3></p>
+<p>After installation:</p>
+<p><pre><code>~/mail/
+├── inbox/       # Messages you receive
+├── outbox/      # Messages you send (write files here)
+├── contacts     # Your contact list
+└── config       # rmail configuration</code></pre></p>
+<p><h2>Setting Up Contacts</h2></p>
+<p>To communicate with the game server, add entries to your contacts file.</p>
+<p><h3>Contact File Format</h3></p>
+<p><pre><code>// ~/mail/contacts</p>
+<p>// Account creation service
+wow.ritzmenardi.com/accounts.ip    = wow.ritzmenardi.com
+wow.ritzmenardi.com/accounts.port  = 4562
+wow.ritzmenardi.com/accounts.token = &amp;quot;public-accounts-token-here&amp;quot;</p>
+<p>// Custom class submission
+wow.ritzmenardi.com/classes.ip    = wow.ritzmenardi.com
+wow.ritzmenardi.com/classes.port  = 4662
+wow.ritzmenardi.com/classes.token = &amp;quot;your-author-token-here&amp;quot;</p>
+<p>// In-game mail subscription
+wow.ritzmenardi.com/mail.ip    = wow.ritzmenardi.com
+wow.ritzmenardi.com/mail.port  = 4762
+wow.ritzmenardi.com/mail.token = &amp;quot;your-mail-token-here&amp;quot;</p>
+<p>// Narrator TTS subscription
+wow.ritzmenardi.com/narrator.ip    = wow.ritzmenardi.com
+wow.ritzmenardi.com/narrator.port  = 4862
+wow.ritzmenardi.com/narrator.token = &amp;quot;your-narrator-token-here&amp;quot;</code></pre></p>
+<p>Each contact entry has three fields:
+- <code>.ip</code> - Server address (hostname or IP)
+- <code>.port</code> - Port number for that service
+- <code>.token</code> - Shared secret for encryption (both sides must match)</p>
+<p><h3>Getting Tokens</h3></p>
+<p><strong>Account creation</strong> uses a public token - see the server website or ask in Discord.</p>
+<p><strong>Other services</strong> require exchanging tokens with the server admin:
+1. Generate a token: <code>openssl rand -hex 32</code>
+2. Share with the admin out-of-band (Discord, email, etc.)
+3. Admin adds your token to their server
+4. You add the same token to your contacts file</p>
+<p><h2>Sending Messages</h2></p>
+<p>Messages are plain text files in your outbox. The first line specifies the
+recipient using the <code>to:</code> header.</p>
+<p><h3>Basic Format</h3></p>
+<p><pre><code>to: contact-name</p>
+<p>message body here</code></pre></p>
+<p>The contact name must match an entry in your contacts file.</p>
+<p><h3>Example: Create Account</h3></p>
+<p>Create a file in <code>~/mail/outbox/</code> with any filename:</p>
+<p><pre><code>to: wow.ritzmenardi.com/accounts</p>
+<p>myusername
+mypassword</code></pre></p>
+<p>- Line 1 after headers: your desired username
+- Line 2: your desired password</p>
+<p>rmail syncs automatically. You&#39;ll receive a confirmation in <code>~/mail/inbox/</code>.</p>
+<p><h3>Example: Submit Custom Class</h3></p>
+<p><pre><code>to: wow.ritzmenardi.com/classes
+subject: CLASS: knight</p>
+<p>knight = {}
+knight.name        = &amp;quot;Knight&amp;quot;
+knight.description = &amp;quot;A holy bodyguard&amp;quot;
+knight.stat_growth = &amp;quot;paladin&amp;quot;</p>
+<p>knight.schools = {}
+knight.schools[1] = &amp;quot;Vitality&amp;quot;
+knight.schools[2] = &amp;quot;Dedication&amp;quot;
+knight.schools[3] = &amp;quot;Valor&amp;quot;</p>
+<p>knight.abilities = {}
+knight.abilities[139] = { level = 8, cost = 1500, school = 1 }
+-- ... rest of class definition</code></pre></p>
+<p>You&#39;ll receive either <code>ACCEPTED: knight</code> or <code>REJECTED: knight</code> with validation
+errors in your inbox.</p>
+<p><h3>Example: Subscribe to Character Mail</h3></p>
+<p><pre><code>to: wow.ritzmenardi.com/mail
+subject: subscribe</p>
+<p>Thrall</code></pre></p>
+<p>The body contains the character name to subscribe to. All mail sent to that
+character will be forwarded to your rmail inbox.</p>
+<p><h3>Example: Subscribe to Narrator</h3></p>
+<p><pre><code>to: wow.ritzmenardi.com/narrator
+subject: subscribe</p>
+<p>McGee</code></pre></p>
+<p>Subscribe to a narrator NPC by name. Everything they say within 30 yards of
+any player will be forwarded to your inbox, optionally with TTS audio.</p>
+<p><h2>Running rmail</h2></p>
+<p><h3>Start the Daemon</h3></p>
+<p><pre><code class="bash">cd ~/mail
+lua /path/to/r-mail/rmail.lua .</code></pre></p>
+<p>Or if you installed to the default location:</p>
+<p><pre><code class="bash">rmail ~/mail</code></pre></p>
+<p>rmail runs continuously, syncing messages with your contacts.</p>
+<p><h3>Background Mode</h3></p>
+<p><pre><code class="bash">rmail ~/mail &amp;amp;</code></pre></p>
+<p><h3>Check for New Messages</h3></p>
+<p>Messages appear in <code>~/mail/inbox/</code> as text files. Read them with any text
+editor or use <code>ls -lt ~/mail/inbox/ | head</code> to see recent arrivals.</p>
+<p><h2>Security Model</h2></p>
+<p><h3>Encryption</h3></p>
+<p>All messages are encrypted with AES-256-GCM using the shared token as the key.
+Without the token, messages are unreadable gibberish.</p>
+<p><h3>What the Server Sees</h3></p>
+<p>The game server can read messages you send to it (it has the token). It cannot:
+- Read messages you send to other contacts
+- Access files on your computer
+- Execute code on your machine</p>
+<p>rmail is a messaging protocol, not remote access.</p>
+<p><h3>What You Control</h3></p>
+<p>- <strong>Your outbox</strong>: Delete a file to unsend/revoke
+- <strong>Your contacts</strong>: Only contacts in your file can message you
+- <strong>Your tokens</strong>: Change a token to revoke someone&#39;s access</p>
+<p><h3>Account Lifecycle</h3></p>
+<p>For account creation specifically: your game account exists as long as your
+rmail message exists. Delete the message from your outbox and the account
+(with all characters) is deleted from the server.</p>
+<p>This gives you complete control over your data.</p>
+<p><h2>Troubleshooting</h2></p>
+<p><h3>&quot;Connection refused&quot;</h3></p>
+<p>- Check port number matches the service
+- Verify server is running
+- Check firewall allows outbound connections</p>
+<p><h3>&quot;Decryption failed&quot;</h3></p>
+<p>- Token mismatch between you and server
+- Verify token is identical on both sides
+- Tokens are case-sensitive</p>
+<p><h3>Message Not Arriving</h3></p>
+<p>- Check rmail daemon is running
+- Verify contact entry is correct
+- Look for errors in rmail logs</p>
+<p><h3>&quot;Unknown contact&quot;</h3></p>
+<p>- Contact name in <code>to:</code> must exactly match your contacts file
+- Check for typos in the contact name</p>
+<p><h2>Services Reference</h2></p>
+<p><h3>Account Creation (Port 4562)</h3></p>
+<p><strong>Contact:</strong> <code>wow.ritzmenardi.com/accounts</code></p>
+<p><strong>Message format:</strong>
+<pre><code>to: wow.ritzmenardi.com/accounts</p>
+<p>username
+password</code></pre></p>
+<p><strong>Response:</strong> Confirmation or error message</p>
+<p><strong>Lifecycle:</strong> Account exists while message exists. Delete message = delete account.</p>
+<p><strong>Rules:</strong>
+- Username: max 20 characters, any characters, case-insensitive
+- Password: any length, any characters</p>
+<p>---</p>
+<p><h3>Custom Classes (Port 4662)</h3></p>
+<p><strong>Contact:</strong> <code>wow.ritzmenardi.com/classes</code></p>
+<p><strong>Message format:</strong>
+<pre><code>to: wow.ritzmenardi.com/classes
+subject: CLASS: classname</p>
+<p>-- Lua class definition
+classname = {}
+classname.name = &amp;quot;Display Name&amp;quot;
+-- ...</code></pre></p>
+<p><strong>Response:</strong> <code>ACCEPTED: classname</code> or <code>REJECTED: classname</code> with errors</p>
+<p><strong>Lifecycle:</strong> Class available while message exists. Characters using your class
+keep their snapshot even if you delete the message.</p>
+<p>See <code>issues/163-custom-class-lua-format</code> for full specification.</p>
+<p>---</p>
+<p><h3>In-Game Mail (Port 4762)</h3></p>
+<p><strong>Contact:</strong> <code>wow.ritzmenardi.com/mail</code></p>
+<p><strong>Subscribe:</strong>
+<pre><code>to: wow.ritzmenardi.com/mail
+subject: subscribe</p>
+<p>CharacterName</code></pre></p>
+<p><strong>Unsubscribe:</strong>
+<pre><code>to: wow.ritzmenardi.com/mail
+subject: unsubscribe</p>
+<p>CharacterName</code></pre></p>
+<p><strong>Send mail to character:</strong>
+<pre><code>to: wow.ritzmenardi.com/mail
+subject: Mail Subject Here</p>
+<p>CharacterName</p>
+<p>Mail body text here.</code></pre></p>
+<p><strong>Notes:</strong>
+- Subscriptions are public - anyone can subscribe to any character
+- Item attachments become PNG icon images
+- Outbound mail is text-only (no items/gold)</p>
+<p>See <code>issues/306-rmail-ingame-bridge</code> for details.</p>
+<p>---</p>
+<p><h3>Narrator Feed (Port 4862)</h3></p>
+<p><strong>Contact:</strong> <code>wow.ritzmenardi.com/narrator</code></p>
+<p><strong>Subscribe:</strong>
+<pre><code>to: wow.ritzmenardi.com/narrator
+subject: subscribe</p>
+<p>NarratorName</code></pre></p>
+<p><strong>Options:</strong>
+<pre><code>to: wow.ritzmenardi.com/narrator
+subject: subscribe tts</p>
+<p>NarratorName</code></pre></p>
+<p>Add <code>tts</code> to subject for audio files.</p>
+<p><strong>Notes:</strong>
+- Receives everything narrator says within 30 yards of any player
+- TTS option generates mp3 with narrator&#39;s speaking rhythm
+- Multiple narrators can be subscribed separately</p>
+<p>See <code>issues/310-wandering-narrator-system</code> for details.</p>
+<p>---</p>
+<p><h3>Feedback (Port 4962)</h3></p>
+<p><strong>Contact:</strong> <code>wow.ritzmenardi.com/feedback</code></p>
+<p><strong>Message format:</strong>
+<pre><code>to: wow.ritzmenardi.com/feedback</p>
+<p>Your message here. Bug reports, suggestions, questions, complaints,
+compliments, poetry - whatever you want to share.</code></pre></p>
+<p><strong>Response:</strong> None guaranteed. Messages go to a queue and get read eventually.</p>
+<p><strong>Notes:</strong>
+- No specific format required - just write what&#39;s on your mind
+- Include your character name if it&#39;s about an in-game issue
+- Responses come when they come</p>
+<p><h2>Related Documents</h2></p>
+<p>- <code>docs/connection-guide.md</code> - Basic connection setup
+- <code>issues/317-rmail-account-creation</code> - Account system details
+- <code>issues/163-custom-class-lua-format</code> - Class definition specification
+- <code>issues/306-rmail-ingame-bridge</code> - Mail bridge implementation
+- <code>issues/310-wandering-narrator-system</code> - Narrator subscription</p>
+<p>---</p>
+<p><em>Last updated: 2026-04</em>
+</p>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>index.html - wow-chat-2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5em 2em;
+            background: #2d2d2d;
+            color: #fff;
+            border-bottom: 3px solid #0366d6;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        header .breadcrumb {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        header .breadcrumb a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        header .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .content {
+            padding: 2em;
+        }
+
+        nav {
+            padding: 1em 2em;
+            background: #f9f9f9;
+            border-top: 1px solid #e1e4e8;
+        }
+
+        nav a {
+            color: #0366d6;
+            text-decoration: none;
+            margin-right: 1em;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>index.html</h1>
+            <div class="breadcrumb">
+                <a href="index.html">wow-chat-2026</a> / src/tools/html-export/templates/index.html
+            </div>
+        </header>
+
+        <div class="meta">
+            <strong>Type:</strong> html &nbsp;&nbsp;
+            <strong>Size:</strong> 4667 bytes &nbsp;&nbsp;
+            <strong>Modified:</strong> 2026-04-09 18:16
+        </div>
+
+        <div class="content">
+            <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;meta charset=&quot;UTF-8&quot;&gt;
+    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+    &lt;title&gt;wow-chat-2026 - Source Tree&lt;/title&gt;
+    &lt;style&gt;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, &#39;Segoe UI&#39;, Roboto, &#39;Helvetica Neue&#39;, Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background: #f5f5f5;
+        }
+
+        #sidebar {
+            width: 300px;
+            background: #2d2d2d;
+            color: #d4d4d4;
+            overflow-y: auto;
+            border-right: 1px solid #1e1e1e;
+            flex-shrink: 0;
+        }
+
+        #content {
+            flex: 1;
+            background: #ffffff;
+            overflow-y: auto;
+            padding: 2em;
+        }
+
+        .tree-header {
+            padding: 1em;
+            background: #1e1e1e;
+            border-bottom: 1px solid #333;
+        }
+
+        .tree-header h1 {
+            font-size: 1.2em;
+            font-weight: normal;
+            color: #fff;
+        }
+
+        .tree {
+            padding: 0.5em 0;
+        }
+
+        .tree-node {
+            padding: 0.3em 0.5em 0.3em 1em;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            transition: background 0.1s;
+        }
+
+        .tree-node:hover {
+            background: #37373d;
+        }
+
+        .tree-node.active {
+            background: #094771;
+        }
+
+        .tree-node.directory {
+            font-weight: bold;
+        }
+
+        .tree-node .icon {
+            margin-right: 0.5em;
+            width: 1em;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .tree-children {
+            margin-left: 1em;
+        }
+
+        .tree-children.collapsed {
+            display: none;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        #content h1 {
+            font-size: 2em;
+            margin-bottom: 0.5em;
+            color: #333;
+        }
+
+        #content h2 {
+            font-size: 1.5em;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #555;
+        }
+
+        #content p {
+            line-height: 1.6;
+            color: #666;
+            margin-bottom: 1em;
+        }
+
+        .stats {
+            background: #f9f9f9;
+            padding: 1em;
+            border-left: 4px solid #0366d6;
+            margin: 1em 0;
+        }
+
+        .stats h3 {
+            margin-bottom: 0.5em;
+            color: #333;
+        }
+
+        .stats ul {
+            list-style: none;
+            padding-left: 1em;
+        }
+
+        .stats li {
+            padding: 0.25em 0;
+            color: #666;
+        }
+
+        /* Syntax Highlighting */
+.keyword  { color: #569cd6; font-weight: bold; }
+.string   { color: #ce9178; }
+.comment  { color: #6a9955; font-style: italic; }
+.number   { color: #b5cea8; }
+.function { color: #dcdcaa; font-weight: bold; }
+
+.line-number {
+    color: #858585;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-align: right;
+    min-width: 3em;
+}
+
+pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Markdown styles */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #333;
+}
+
+p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div id=&quot;sidebar&quot;&gt;
+        &lt;div class=&quot;tree-header&quot;&gt;
+            &lt;h1&gt;wow-chat-2026&lt;/h1&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;tree&quot;&gt;
+            {{TREE_CONTENT}}
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div id=&quot;content&quot;&gt;
+        &lt;h1&gt;wow-chat-2026&lt;/h1&gt;
+        &lt;p&gt;{{PROJECT_DESCRIPTION}}&lt;/p&gt;
+
+        &lt;h2&gt;Project Statistics&lt;/h2&gt;
+        &lt;div class=&quot;stats&quot;&gt;
+            &lt;h3&gt;Source Tree&lt;/h3&gt;
+            &lt;ul&gt;
+                {{STATS_CONTENT}}
+            &lt;/ul&gt;
+        &lt;/div&gt;
+
+        &lt;h2&gt;Navigation&lt;/h2&gt;
+        &lt;p&gt;Use the sidebar to browse source files, issues, and documentation.&lt;/p&gt;
+        &lt;p&gt;Click any file to view its contents with syntax highlighting.&lt;/p&gt;
+    &lt;/div&gt;
+
+    &lt;script&gt;
+        // Tree navigation
+        document.querySelectorAll(&#39;.tree-node.directory&#39;).forEach(node =&gt; {
+            node.addEventListener(&#39;click&#39;, (e) =&gt; {
+                e.stopPropagation();
+                const children = node.nextElementSibling;
+                if (children &amp;&amp; children.classList.contains(&#39;tree-children&#39;)) {
+                    children.classList.toggle(&#39;collapsed&#39;);
+                    const icon = node.querySelector(&#39;.icon&#39;);
+                    if (icon) {
+                        icon.textContent = children.classList.contains(&#39;collapsed&#39;) ? &#39;▶&#39; : &#39;▼&#39;;
+                    }
+                }
+            });
+        });
+
+        // Highlight active file
+        document.querySelectorAll(&#39;.tree-node a&#39;).forEach(link =&gt; {
+            link.addEventListener(&#39;click&#39;, (e) =&gt; {
+                document.querySelectorAll(&#39;.tree-node&#39;).forEach(n =&gt; n.classList.remove(&#39;active&#39;));
+                link.parentElement.classList.add(&#39;active&#39;);
+            });
+        });
+    &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+        </div>
+
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            
+        </nav>
+    </div>
+</body>
+</html>
