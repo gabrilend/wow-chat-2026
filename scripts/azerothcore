@@ -640,6 +640,47 @@ apply_patches_middle() {
 }
 # -- }}}
 
+# =============================================================================
+# Config Value Orchestrator (Issue 407)
+# =============================================================================
+# Profile-aware configuration registry
+# Each config is a function in config/config-registry.sh
+# Applies configs based on profile specification
+# =============================================================================
+
+# -- {{{ apply_config_values
+# Apply all config values for current profile (Issue 407)
+# Called after init_config() copies .dist to .conf
+# Reads config-registry.sh and applies matching configs
+apply_config_values() {
+    echo "Applying config values for profile: ${PROFILE}..."
+
+    # Source the config registry
+    if [[ ! -f "${DIR}/config/config-registry.sh" ]]; then
+        echo "  Warning: config-registry.sh not found, using defaults"
+        return 0
+    fi
+
+    source "${DIR}/config/config-registry.sh"
+
+    # Get list of all config functions
+    local config_funcs=$(declare -F | grep "^declare -f config_" | sed 's/declare -f //')
+
+    local applied_count=0
+    for func in ${config_funcs}; do
+        # Check if this config applies to current profile
+        local profiles="${CONFIG_PROFILES[$func]:-}"
+        if [[ " ${profiles} " =~ " ${PROFILE} " ]] || [[ " ${profiles} " =~ " all " ]]; then
+            ${func}
+            echo "  [✓] ${func}"
+            ((applied_count++))
+        fi
+    done
+
+    echo "  Applied ${applied_count} config values"
+}
+# -- }}}
+
 # -- {{{ patch_E001_lua_script_symlinks
 # Create symlinks from install dir to project Lua sources
 # Parallelizable: Yes (unique directory)
@@ -1231,24 +1272,10 @@ EOF
         fi
     done
 
-    # Apply standard project settings (database connections, paths)
-    # These override any preserved values since they're project-specific
-    echo "Configuring database connections..."
-    sed -i 's|^LoginDatabaseInfo.*=.*|LoginDatabaseInfo = "127.0.0.1;3307;ritz;menardi;'"${DB_AUTH}"'"|' "${INSTALL_DIR}/etc/authserver.conf"
-    sed -i 's|^LoginDatabaseInfo.*=.*|LoginDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;'"${DB_AUTH}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i 's|^WorldDatabaseInfo.*=.*|WorldDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;'"${DB_WORLD}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i 's|^CharacterDatabaseInfo.*=.*|CharacterDatabaseInfo = "127.0.0.1;3307;ritz;menardi;'"${DB_CHARS}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
-
-    echo "Configuring directory paths..."
+    # Apply profile-specific config values (database, paths, gameplay settings)
+    # Replaces inline sed commands with centralized config registry (Issue 407)
     mkdir -p "${LOGS_DIR}"
-    sed -i 's|^SourceDirectory.*=.*|SourceDirectory = "'"${AC_CODE_DIR}"'"|' "${INSTALL_DIR}/etc/authserver.conf"
-    sed -i 's|^MySQLExecutable.*=.*|MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"|' "${INSTALL_DIR}/etc/authserver.conf"
-    sed -i 's|^LogsDir.*=.*|LogsDir = "'"${LOGS_DIR}"'"|' "${INSTALL_DIR}/etc/authserver.conf"
-    sed -i 's|^DataDir.*=.*|DataDir = "'"${DIR}"'/data-files"|' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i 's|^LogsDir.*=.*|LogsDir = "'"${LOGS_DIR}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i 's|^BuildDirectory.*=.*|BuildDirectory = "'"${BUILD_DIR}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i 's|^SourceDirectory.*=.*|SourceDirectory = "'"${AC_CODE_DIR}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i 's|^MySQLExecutable.*=.*|MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"|' "${INSTALL_DIR}/etc/worldserver.conf"
+    apply_config_values
 
     # Setup Lua script symlinks
     echo "Setting up symlinks..."
