@@ -251,12 +251,21 @@ parse_args() {
 # -- {{{ get_profile_paths
 # Returns profile-specific directory paths
 # Sets: AC_CODE_DIR, INSTALL_DIR, BUILD_DIR, and shadow variants
-# Source is unified - files labeled by profile (*.alpha.lua, *.beta.lua)
+# Two source directories:
+#   source-alpha/ = wow-chat-1 baseline (old Eluna)
+#   source-beta/  = Latest AzerothCore (used by release AND beta)
 # Build/install directories profile-specific
 # Shadow directories used during compilation (Issue 327)
 get_profile_paths() {
     local p="${PROFILE}"
-    AC_CODE_DIR="${DIR}/source"
+
+    # Alpha uses source-alpha, release/beta use source-beta
+    if [[ "${p}" == "alpha" ]]; then
+        AC_CODE_DIR="${DIR}/source-alpha"
+    else
+        AC_CODE_DIR="${DIR}/source-beta"
+    fi
+
     INSTALL_DIR="${DIR}/installed-files-${p}"
     BUILD_DIR="${DIR}/build-${p}"
     MYSQL_DIR="${DIR}/mysql/installed-files"

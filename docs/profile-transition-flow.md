@@ -2,15 +2,15 @@
 
 ## Overview
 
-Two profiles sharing same git branch, differentiated by file naming:
+Three profiles sharing same git branch, differentiated by file naming:
 
 ```
-alpha  = wow-chat-1 baseline (old Eluna, earliest regression point)
-beta   = current development (custom features)
-release = (same as beta for now)
+alpha   = wow-chat-1 baseline (old Eluna, earliest regression point)
+release = Latest AzerothCore + playerbots, rock-solid features only
+beta    = Lawless development space, all experimental features
 ```
 
-**Key insight:** Files are labeled by profile (*.alpha.lua, *.beta.lua), both committed to same git branch.
+**Key insight:** Files are labeled by profile (*.alpha.lua, *.beta.lua), all committed to same git branch.
 
 ## Profile States
 
@@ -18,49 +18,74 @@ release = (same as beta for now)
 - Base: wow-chat-1 baseline (old Eluna)
 - Known-good regression point
 - Minimal features, proven stable
-- Files: *.alpha.lua, patches-alpha/
-- Goal: Validate baseline works
-
-### beta
-- Base: Current development
-- All custom features
-- Files: *.beta.lua, patches-beta/
-- Goal: Build features incrementally
+- Files: *.alpha.lua, alpha-*.sh patches
+- Goal: Always works, earliest safe rollback point
 
 ### release
-- Same as beta for now
-- Will diverge later for stable releases
+- Base: Latest AzerothCore + playerbots
+- Only rock-solid, confirmed-working features
+- Currently: Nothing extra beyond playerbots
+- Files: *.release.lua (if any), regular patches
+- Goal: Stable, deployable state
 
-## File-Based Profiles
+### beta
+- Base: release + experimental features
+- Lawless development space
+- All in-progress features
+- Files: *.beta.lua, regular patches
+- Goal: Fast iteration, break things, learn
 
-### Key Concept
-Profiles are **file suffixes**, not git branches or directories.
+## Directory Structure
+
+### Two Source Trees
 
 ```
-source/                    ← Single source directory (git tracked)
+source-alpha/              ← wow-chat-1 baseline (old Eluna)
   src/lua/
-    movement.lua           ← Shared (no suffix)
-    ambush.alpha.lua       ← Alpha-specific
-    ambush.beta.lua        ← Beta-specific
+    *.alpha.lua            ← Alpha-specific scripts
 
-build-alpha/               ← Profile-specific build
-build-beta/                ← Profile-specific build
+source-beta/               ← Latest AzerothCore (shared by release & beta)
+  src/lua/
+    movement.lua           ← Shared scripts
+    *.release.lua          ← Release-specific (if any)
+    *.beta.lua             ← Beta experimental scripts
 
-installed-files-alpha/     ← Profile-specific install
-installed-files-beta/      ← Profile-specific install
+build-alpha/               ← Alpha build artifacts
+build-release/             ← Release build artifacts
+build-beta/                ← Beta build artifacts
+
+installed-files-alpha/     ← Alpha binaries
+installed-files-release/   ← Release binaries
+installed-files-beta/      ← Beta binaries
 ```
+
+### Profile Mapping
+
+| Profile | Source Directory | Patches | Feature Level |
+|---------|-----------------|---------|---------------|
+| alpha   | source-alpha/   | alpha-*.sh | Minimal (wow-chat-1) |
+| release | source-beta/    | *.sh | Playerbots only |
+| beta    | source-beta/    | *.sh | All experimental |
 
 ### File Loading by Profile
 
-When .current-profile = "alpha":
-- Load: *.alpha.lua files
-- Apply: patches-alpha/ patches
-- Use: build-alpha/, installed-files-alpha/
+**alpha:**
+- Source: source-alpha/
+- Scripts: *.alpha.lua
+- Patches: alpha-*.sh
+- Goal: Known-good baseline
 
-When .current-profile = "beta":
-- Load: *.beta.lua files
-- Apply: patches-beta/ patches
-- Use: build-beta/, installed-files-beta/
+**release:**
+- Source: source-beta/
+- Scripts: *.release.lua (if any), no-suffix files
+- Patches: stable patches only
+- Goal: Rock-solid, deployable
+
+**beta:**
+- Source: source-beta/
+- Scripts: *.beta.lua, no-suffix files
+- Patches: all patches
+- Goal: Experimental features
 
 ### Transition Mechanics
 
@@ -68,14 +93,21 @@ When .current-profile = "beta":
 ```bash
 echo "alpha" > .current-profile
 ./scripts/azerothcore update
-# Rebuilds using *.alpha.lua and patches-alpha/
+# Uses source-alpha/, builds to build-alpha/
+```
+
+**Switch to release:**
+```bash
+echo "release" > .current-profile
+./scripts/azerothcore update
+# Uses source-beta/, only stable features
 ```
 
 **Switch to beta:**
 ```bash
 echo "beta" > .current-profile
 ./scripts/azerothcore update
-# Rebuilds using *.beta.lua and patches-beta/
+# Uses source-beta/, all experimental features
 ```
 
 ## Patch Pinning System
