@@ -637,17 +637,22 @@ patch_E005_dk_levelstats() {
 # -- {{{ apply_patches_end
 # PHASE_END: Post-compile setup
 # Run after successful build
+# Profile-aware: release gets minimal setup, beta gets all features
 apply_patches_end() {
     echo ""
     echo "Applying PHASE_END patches (post-compile)..."
 
-    # Parallel group (no file conflicts)
-    patch_E001_lua_script_symlinks &
-    patch_E004_log_directory_setup &
-    wait
+    # All profiles: Log directory setup
+    patch_E004_log_directory_setup
 
-    # Sequential group (database operations)
-    patch_E005_dk_levelstats
+    # Beta only: Custom features
+    if [[ "${PROFILE}" == "beta" ]]; then
+        patch_E001_lua_script_symlinks &
+        wait
+        patch_E005_dk_levelstats
+    fi
+
+    # Alpha only: (none currently)
 
     echo "  PHASE_END complete"
 }
