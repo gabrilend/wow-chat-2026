@@ -2,77 +2,80 @@
 
 ## Overview
 
-Three profiles managed via git branches, not separate source directories:
+Two profiles sharing same git branch, differentiated by file naming:
 
 ```
-release branch → alpha branch → beta branch
-   (vanilla)    (+ playerbots)  (+ features)
+alpha  = wow-chat-1 baseline (old Eluna, earliest regression point)
+beta   = current development (custom features)
+release = (same as beta for now)
 ```
+
+**Key insight:** Files are labeled by profile (*.alpha.lua, *.beta.lua), both committed to same git branch.
 
 ## Profile States
 
-### release
-- Base: AzerothCore vanilla + modules
-- Modules: mod-ale, mod-aoe-loot, mod-grownup
-- No playerbots
-- No custom Lua
-- Branch: `release`
-- Known good: wow-chat-1 baseline
-
 ### alpha
-- Base: release + playerbots working
-- Modules: release + mod-playerbots
-- Minimal patches (build fixes only)
-- No custom Lua features
-- Branch: `alpha`
-- Goal: `.bot add` works
+- Base: wow-chat-1 baseline (old Eluna)
+- Known-good regression point
+- Minimal features, proven stable
+- Files: *.alpha.lua, patches-alpha/
+- Goal: Validate baseline works
 
 ### beta
-- Base: alpha + custom features
-- All 8 patches enabled
-- Custom Lua systems active
-- Full feature set
-- Branch: `beta`
-- Current development target
+- Base: Current development
+- All custom features
+- Files: *.beta.lua, patches-beta/
+- Goal: Build features incrementally
 
-## Git-Based Transitions
+### release
+- Same as beta for now
+- Will diverge later for stable releases
+
+## File-Based Profiles
 
 ### Key Concept
-Profiles are **git branches**, not separate directories.
+Profiles are **file suffixes**, not git branches or directories.
 
 ```
-source-beta/     ← Single source directory
-build-beta/      ← Single build directory
-installed-files-beta/  ← Single install directory
+source/                    ← Single source directory (git tracked)
+  src/lua/
+    movement.lua           ← Shared (no suffix)
+    ambush.alpha.lua       ← Alpha-specific
+    ambush.beta.lua        ← Beta-specific
 
-Git branch determines what code is checked out.
-.current-profile determines which directories to use.
+build-alpha/               ← Profile-specific build
+build-beta/                ← Profile-specific build
+
+installed-files-alpha/     ← Profile-specific install
+installed-files-beta/      ← Profile-specific install
 ```
+
+### File Loading by Profile
+
+When .current-profile = "alpha":
+- Load: *.alpha.lua files
+- Apply: patches-alpha/ patches
+- Use: build-alpha/, installed-files-alpha/
+
+When .current-profile = "beta":
+- Load: *.beta.lua files
+- Apply: patches-beta/ patches
+- Use: build-beta/, installed-files-beta/
 
 ### Transition Mechanics
 
-**beta → alpha:**
+**Switch to alpha:**
 ```bash
-cd source-beta
-git checkout alpha
-# Patches auto-apply based on profile
-# Rebuild triggered
+echo "alpha" > .current-profile
+./scripts/azerothcore update
+# Rebuilds using *.alpha.lua and patches-alpha/
 ```
 
-**alpha → release:**
+**Switch to beta:**
 ```bash
-cd source-beta
-git checkout release
-# Patches disabled
-# Rebuild triggered
-```
-
-**beta → release:**
-```bash
-cd source-beta
-git checkout release
-# Skip alpha state entirely
-# Clean rebuild
+echo "beta" > .current-profile
+./scripts/azerothcore update
+# Rebuilds using *.beta.lua and patches-beta/
 ```
 
 ## Patch Pinning System
