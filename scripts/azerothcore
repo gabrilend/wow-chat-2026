@@ -251,11 +251,12 @@ parse_args() {
 # -- {{{ get_profile_paths
 # Returns profile-specific directory paths
 # Sets: AC_CODE_DIR, INSTALL_DIR, BUILD_DIR, and shadow variants
-# All profiles use suffixed directories for consistency
+# Source directory unified (single git repo, branch = profile)
+# Build/install directories still profile-specific
 # Shadow directories used during compilation (Issue 327)
 get_profile_paths() {
     local p="${PROFILE}"
-    AC_CODE_DIR="${DIR}/source-${p}"
+    AC_CODE_DIR="${DIR}/source"  # Unified source, git branch determines profile
     INSTALL_DIR="${DIR}/installed-files-${p}"
     BUILD_DIR="${DIR}/build-${p}"
     MYSQL_DIR="${DIR}/mysql/installed-files"
