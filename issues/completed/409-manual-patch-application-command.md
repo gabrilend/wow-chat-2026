@@ -20,19 +20,24 @@ There's no way to:
 
 ## Intended Behavior
 
-New command: `./scripts/azerothcore apply-patches [--begin|--end|--all] [--target shadow|main]`
+New command: `./scripts/azerothcore apply-patches [--begin] [--end] [--revert] [--dry-run]`
+
+Always operates on shadow directory (main is a generated artifact from promote workflow).
 
 ```bash
 # Apply PHASE_END patches to shadow (default)
 ./scripts/azerothcore apply-patches
 
-# Apply PHASE_END patches to main installation
-./scripts/azerothcore apply-patches --target main
-
 # Apply PHASE_BEGIN patches to source (for testing)
 ./scripts/azerothcore apply-patches --begin
 
-# Revert PHASE_BEGIN patches from source
+# Apply both phases
+./scripts/azerothcore apply-patches --begin --end
+
+# Revert PHASE_END patches
+./scripts/azerothcore apply-patches --revert
+
+# Revert PHASE_BEGIN patches (also triggers recompilation)
 ./scripts/azerothcore apply-patches --begin --revert
 
 # Show what patches would be applied without applying
@@ -46,70 +51,13 @@ New command: `./scripts/azerothcore apply-patches [--begin|--end|--all] [--targe
 
 ### Function Design
 
-```bash
-# {{{ cmd_apply_patches
-cmd_apply_patches() {
-    local phase="end"      # Default: PHASE_END
-    local target="shadow"  # Default: shadow directory
-    local revert=false
-    local dry_run=false
+See `scripts/azerothcore:1704-1792` for final implementation.
 
-    # Parse arguments
-    for arg in "$@"; do
-        case "${arg}" in
-            --begin) phase="begin" ;;
-            --end)   phase="end" ;;
-            --all)   phase="all" ;;
-            --target)
-                shift
-                target="${1:-shadow}"
-                ;;
-            --revert) revert=true ;;
-            --dry-run) dry_run=true ;;
-        esac
-    done
-
-    get_profile_paths
-
-    # Set TARGET_INSTALL_DIR based on --target
-    if [[ "${target}" == "main" ]]; then
-        TARGET_INSTALL_DIR="${INSTALL_DIR}"
-    else
-        TARGET_INSTALL_DIR="${INSTALL_DIR_SHADOW}"
-    fi
-
-    echo "Profile: ${PROFILE}"
-    echo "Target: ${target} (${TARGET_INSTALL_DIR})"
-    echo ""
-
-    if [[ "${dry_run}" == "true" ]]; then
-        echo "DRY RUN - Would apply:"
-        if [[ "${phase}" == "begin" || "${phase}" == "all" ]]; then
-            echo "  PHASE_BEGIN: ${PHASE_BEGIN_PATCHES[$PROFILE]:-none}"
-        fi
-        if [[ "${phase}" == "end" || "${phase}" == "all" ]]; then
-            echo "  PHASE_END: ${PHASE_END_PATCHES[$PROFILE]:-none}"
-        fi
-        return 0
-    fi
-
-    # Apply patches
-    if [[ "${phase}" == "begin" || "${phase}" == "all" ]]; then
-        if [[ "${revert}" == "true" ]]; then
-            unapply_patches_begin
-        else
-            apply_patches_begin
-        fi
-    fi
-
-    if [[ "${phase}" == "end" || "${phase}" == "all" ]]; then
-        apply_patches_end
-    fi
-
-    unset TARGET_INSTALL_DIR
-}
-# }}}
-```
+Key design points:
+- Uses `do_begin` and `do_end` booleans that can be combined
+- Always targets shadow directory (no --target option)
+- For `--begin --revert`: runs `unapply_patches_begin` then triggers `make`
+- For `--end --revert`: runs `unapply_patches_end` (removes configs, symlinks, DB entries)
 
 ## Common Issues and Fixes
 
@@ -129,9 +77,9 @@ cmd_apply_patches() {
 **Cause:** apply_patches_end called without setting TARGET_INSTALL_DIR
 **Fix:** Always set TARGET_INSTALL_DIR before calling, unset after
 
-### Issue: "Patches applied to wrong directory"
-**Cause:** Using --target main when shadow was intended (or vice versa)
-**Fix:** Always verify target with --dry-run first
+### Issue: "Patches applied but worldserver still broken"
+**Cause:** Running apply-patches to shadow but running worldserver from main
+**Fix:** Run worldserver from shadow, or promote shadow to main first
 
 ### Issue: "apply_config_values fails"
 **Cause:** Config patches in config/patches/ have errors
@@ -153,17 +101,22 @@ ls installed-files-shadow/etc/worldserver.conf
 # Should exist
 ```
 
-### Test 3: Apply to main creates configs
+### Test 3: Combine --begin and --end
 ```bash
-./scripts/azerothcore apply-patches --target main
-ls installed-files-release/etc/worldserver.conf
-# Should exist
+./scripts/azerothcore apply-patches --begin --end --dry-run --profile beta
+# Should show both PHASE_BEGIN (B001-B008) and PHASE_END (E001 E004 E005 E006)
 ```
 
-### Test 4: PHASE_BEGIN patches (beta profile only)
+### Test 4: Revert PHASE_END patches
 ```bash
-./scripts/azerothcore apply-patches --begin --profile beta --dry-run
-# Should show B001-B008
+./scripts/azerothcore apply-patches --revert --dry-run
+# Should show E004 E006 would be reverted
+```
+
+### Test 5: PHASE_BEGIN revert triggers recompile
+```bash
+./scripts/azerothcore apply-patches --begin --revert --profile beta
+# Should run unapply_patches_begin then make
 ```
 
 ## Related Files
@@ -184,40 +137,54 @@ ls installed-files-release/etc/worldserver.conf
 
 ## Implementation Notes (2026-04-14)
 
+### Revision 2 - Simplified Design
+
+**Changes from initial implementation:**
+- Removed `--all` flag - can now combine `--begin` and `--end` flags
+- Removed `--target` option - always operates on shadow (main comes from promote)
+- Added `--revert` support for PHASE_END patches (via unpatch_E00X functions)
+- `--begin --revert` now triggers incremental recompilation after reverting
+
 ### Files Modified
 
-1. **scripts/azerothcore:1691-1770** - Added `cmd_apply_patches()` function
-   - Parses --begin, --end, --all, --target, --revert, --dry-run arguments
-   - Sets TARGET_INSTALL_DIR based on --target parameter
-   - Sources patches.sh for patch function definitions
-   - Calls apply_patches_begin/end or unapply_patches_begin
+1. **scripts/azerothcore:1704-1792** - `cmd_apply_patches()` function
+   - Uses `do_begin` and `do_end` booleans (can combine)
+   - Always targets shadow directory
+   - Triggers `make -j${THREADS}` after PHASE_BEGIN revert
 
-2. **scripts/azerothcore:2004-2007** - Added CLI dispatcher case
-   - Sources patches/patches.sh before calling cmd_apply_patches
-   - Passes COMMAND_ARGS to the function
+2. **scripts/azerothcore:733-738, 754-758, 788-800, 836-851** - Added unpatch functions
+   - `unpatch_E001_lua_script_symlinks` - removes Lua symlinks
+   - `unpatch_E004_log_directory_setup` - removes log symlinks
+   - `unpatch_E005_dk_levelstats` - deletes DK stats from database
+   - `unpatch_E006_initialize_config_files` - removes .conf files
 
-3. **scripts/azerothcore:177-183** - Added help text for apply-patches command
+3. **patches/patches.sh:166-190** - Added `unapply_patches_end()` orchestrator
+   - Mirrors `unapply_patches_begin()` pattern for PHASE_END patches
 
-4. **scripts/azerothcore:214-218** - Added usage examples
+4. **scripts/azerothcore:177-182, 213-219** - Updated help text and examples
 
 ### Test Results
 
 ```
-$ ./scripts/azerothcore apply-patches --dry-run
+$ ./scripts/azerothcore apply-patches --begin --end --dry-run
 Apply Patches (Issue 409)
   Profile: release
-  Phase:   end
-  Target:  shadow (/home/ritz/games/azeroth-core/wow-chat-2026/installed-files-shadow)
+  Action:  apply
+  Target:  shadow (...)
+  Phase:   PHASE_BEGIN
+  Phase:   PHASE_END
 
 DRY RUN - Would apply:
+  PHASE_BEGIN: none
   PHASE_END: E004 E006
 
-$ ./scripts/azerothcore apply-patches --dry-run --begin --profile beta
+$ ./scripts/azerothcore apply-patches --revert --dry-run
 Apply Patches (Issue 409)
-  Profile: beta
-  Phase:   begin
-  Target:  shadow (/home/ritz/games/azeroth-core/wow-chat-2026/installed-files-shadow)
+  Profile: release
+  Action:  revert
+  Target:  shadow (...)
+  Phase:   PHASE_END
 
-DRY RUN - Would apply:
-  PHASE_BEGIN: B001 B002 B003 B004 B005 B006 B007 B008
+DRY RUN - Would revert:
+  PHASE_END: E004 E006
 ```

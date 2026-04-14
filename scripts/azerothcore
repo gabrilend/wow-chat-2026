@@ -174,12 +174,11 @@ show_help() {
     echo "  worldserver        Start the world server"
     echo "  validate           Test worldserver from shadow (validates build before promotion)"
     echo "  promote            Promote shadow build to main (after successful validation)"
-    echo "  apply-patches      Manually apply patches for current profile"
+    echo "  apply-patches      Manually apply patches for current profile (to shadow)"
     echo "    --begin          Apply PHASE_BEGIN patches (source modifications)"
     echo "    --end            Apply PHASE_END patches (configs, symlinks) [default]"
-    echo "    --all            Apply both PHASE_BEGIN and PHASE_END"
-    echo "    --target <dir>   Target: shadow (default) or main"
-    echo "    --revert         Revert PHASE_BEGIN patches instead of applying"
+    echo "    --begin --end    Apply both phases (can combine flags)"
+    echo "    --revert         Revert patches (triggers recompile for --begin)"
     echo "    --dry-run        Show what would be applied without applying"
     echo "  keira              Launch Keira3 database editor"
     echo "  profiles           List available version profiles"
@@ -212,10 +211,12 @@ show_help() {
     echo "  ./scripts/azerothcore promote                    # Copy shadow → main"
     echo ""
     echo "Manual patch application:"
-    echo "  ./scripts/azerothcore apply-patches --dry-run    # Show what patches would apply"
-    echo "  ./scripts/azerothcore apply-patches              # Apply PHASE_END to shadow"
-    echo "  ./scripts/azerothcore apply-patches --target main  # Apply PHASE_END to main"
-    echo "  ./scripts/azerothcore apply-patches --begin      # Apply PHASE_BEGIN to source"
+    echo "  ./scripts/azerothcore apply-patches --dry-run       # Preview patches"
+    echo "  ./scripts/azerothcore apply-patches                 # Apply PHASE_END to shadow"
+    echo "  ./scripts/azerothcore apply-patches --begin         # Apply PHASE_BEGIN to source"
+    echo "  ./scripts/azerothcore apply-patches --begin --end   # Apply both phases"
+    echo "  ./scripts/azerothcore apply-patches --revert        # Revert PHASE_END"
+    echo "  ./scripts/azerothcore apply-patches --begin --revert  # Revert source + recompile"
 }
 # -- }}}
 
@@ -728,6 +729,13 @@ patch_E001_lua_script_symlinks() {
     fi
     echo "  [E001] Lua script symlinks"
 }
+
+unpatch_E001_lua_script_symlinks() {
+    local TARGET="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
+    [[ -L "${TARGET}/bin/lua_scripts/custom" ]] && rm "${TARGET}/bin/lua_scripts/custom"
+    [[ -L "${TARGET}/bin/lua_scripts/extensions" ]] && rm "${TARGET}/bin/lua_scripts/extensions"
+    echo "  [E001] Removed Lua script symlinks"
+}
 # -- }}}
 
 # -- {{{ patch_E004_log_directory_setup
@@ -741,6 +749,12 @@ patch_E004_log_directory_setup() {
     [[ -L "${DIR}/tmp" ]] || ln -s "${TMP_BASE}" "${DIR}/tmp"
     [[ -L "${DIR}/logs-${PROFILE}" ]] || ln -s "${TMP_LOGS}" "${DIR}/logs-${PROFILE}"
     echo "  [E004] Log directory setup"
+}
+
+unpatch_E004_log_directory_setup() {
+    [[ -L "${DIR}/tmp" ]] && rm "${DIR}/tmp"
+    [[ -L "${DIR}/logs-${PROFILE}" ]] && rm "${DIR}/logs-${PROFILE}"
+    echo "  [E004] Removed log directory symlinks"
 }
 # -- }}}
 
@@ -769,6 +783,20 @@ patch_E005_dk_levelstats() {
         "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
             -u ritz -pmenardi "${DB_WORLD}" < "${SQL_FILE}" 2>/dev/null || true
     fi
+}
+
+unpatch_E005_dk_levelstats() {
+    local MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
+    local DB_WORLD="acore_world_${PROFILE}"
+
+    # Skip if MySQL not running
+    [[ ! -S "${MYSQL_SOCKET}" ]] && return 0
+
+    # Delete DK level 1-20 stats (Class=6 is Death Knight)
+    echo "  [E005] Removing DK level stats from ${DB_WORLD}"
+    "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+        -u ritz -pmenardi "${DB_WORLD}" \
+        -e "DELETE FROM player_class_stats WHERE Class = 6 AND Level BETWEEN 1 AND 20;" 2>/dev/null || true
 }
 # -- }}}
 
@@ -803,6 +831,23 @@ patch_E006_initialize_config_files() {
     INSTALL_DIR="${TARGET}"
     apply_config_values
     INSTALL_DIR="${ORIG_INSTALL_DIR}"
+}
+
+unpatch_E006_initialize_config_files() {
+    local TARGET="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
+    echo "  [E006] Removing config files (keeping .dist)..."
+
+    # Remove .conf files (leave .dist files intact)
+    [[ -f "${TARGET}/etc/authserver.conf" ]] && rm "${TARGET}/etc/authserver.conf"
+    [[ -f "${TARGET}/etc/worldserver.conf" ]] && rm "${TARGET}/etc/worldserver.conf"
+    [[ -f "${TARGET}/etc/dbimport.conf" ]] && rm "${TARGET}/etc/dbimport.conf"
+
+    # Remove module configs
+    for conf in "${TARGET}/etc/modules/"*.conf; do
+        if [[ -f "${conf}" && -f "${conf}.dist" ]]; then
+            rm "${conf}"
+        fi
+    done
 }
 # -- }}}
 
@@ -1703,74 +1748,82 @@ promote_shadow_to_main() {
 
 # -- {{{ cmd_apply_patches
 # Manually apply PHASE_BEGIN or PHASE_END patches for current profile
-# Useful for testing patches, re-applying after corruption, or applying to main after promotion
+# Always operates on shadow directory (main comes from promote workflow)
 # Issue 409: Manual Patch Application Command
 cmd_apply_patches() {
-    local phase="end"      # Default: PHASE_END
-    local target="shadow"  # Default: shadow directory
+    local do_begin=false
+    local do_end=false
     local revert=false
     local dry_run=false
 
-    # Parse arguments
+    # Parse arguments - can combine --begin and --end
     while [[ $# -gt 0 ]]; do
         case "${1}" in
-            --begin) phase="begin"; shift ;;
-            --end)   phase="end"; shift ;;
-            --all)   phase="all"; shift ;;
-            --target)
-                shift
-                target="${1:-shadow}"
-                shift
-                ;;
+            --begin) do_begin=true; shift ;;
+            --end)   do_end=true; shift ;;
             --revert) revert=true; shift ;;
             --dry-run) dry_run=true; shift ;;
             *) shift ;;
         esac
     done
 
+    # Default to --end if neither specified
+    if [[ "${do_begin}" == "false" && "${do_end}" == "false" ]]; then
+        do_end=true
+    fi
+
     get_profile_paths
 
-    # Set TARGET_INSTALL_DIR based on --target
-    if [[ "${target}" == "main" ]]; then
-        TARGET_INSTALL_DIR="${INSTALL_DIR}"
-    else
-        TARGET_INSTALL_DIR="${INSTALL_DIR_SHADOW}"
-    fi
+    # Always operate on shadow directory
+    # Main directory is a generated artifact from the promote workflow
+    TARGET_INSTALL_DIR="${INSTALL_DIR_SHADOW}"
+
+    local action="apply"
+    [[ "${revert}" == "true" ]] && action="revert"
 
     echo ""
     echo "Apply Patches (Issue 409)"
     echo "  Profile: ${PROFILE}"
-    echo "  Phase:   ${phase}"
-    echo "  Target:  ${target} (${TARGET_INSTALL_DIR})"
+    echo "  Action:  ${action}"
+    echo "  Target:  shadow (${TARGET_INSTALL_DIR})"
+    [[ "${do_begin}" == "true" ]] && echo "  Phase:   PHASE_BEGIN"
+    [[ "${do_end}" == "true" ]] && echo "  Phase:   PHASE_END"
     echo ""
 
     if [[ "${dry_run}" == "true" ]]; then
-        echo "DRY RUN - Would apply:"
-        if [[ "${phase}" == "begin" || "${phase}" == "all" ]]; then
+        echo "DRY RUN - Would ${action}:"
+        if [[ "${do_begin}" == "true" ]]; then
             echo "  PHASE_BEGIN: ${PHASE_BEGIN_PATCHES[$PROFILE]:-none}"
         fi
-        if [[ "${phase}" == "end" || "${phase}" == "all" ]]; then
+        if [[ "${do_end}" == "true" ]]; then
             echo "  PHASE_END: ${PHASE_END_PATCHES[$PROFILE]:-none}"
         fi
         unset TARGET_INSTALL_DIR
         return 0
     fi
 
-    # Apply patches
-    if [[ "${phase}" == "begin" || "${phase}" == "all" ]]; then
+    # PHASE_BEGIN patches (source code modifications)
+    if [[ "${do_begin}" == "true" ]]; then
         if [[ "${revert}" == "true" ]]; then
             echo "Reverting PHASE_BEGIN patches..."
             unapply_patches_begin
+            echo ""
+            echo "Triggering incremental recompilation..."
+            # Recompile only changed files - make handles this automatically
+            cd "${BUILD_DIR_SHADOW}"
+            make -j${THREADS}
+            echo "  Recompilation complete."
         else
             echo "Applying PHASE_BEGIN patches..."
             apply_patches_begin
         fi
     fi
 
-    if [[ "${phase}" == "end" || "${phase}" == "all" ]]; then
+    # PHASE_END patches (config files, symlinks, database)
+    if [[ "${do_end}" == "true" ]]; then
         if [[ "${revert}" == "true" ]]; then
-            echo "Note: PHASE_END patches are idempotent and cannot be reverted."
-            echo "      Re-run without --revert to apply them."
+            echo "Reverting PHASE_END patches..."
+            unapply_patches_end
         else
             echo "Applying PHASE_END patches..."
             apply_patches_end
