@@ -68,6 +68,7 @@ Introduce environmental hazards, storytelling NPCs, and progression mechanics th
 | 334 | patch-system-improvements | Complete |
 | 408 | release-profile-build-fixes | Complete |
 | 409 | manual-patch-application-command | Complete |
+| 410 | split-azerothcore-script | Open |
 
 ## Phase Milestones
 
