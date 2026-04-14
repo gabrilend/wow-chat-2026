@@ -62,6 +62,13 @@ Introduce environmental hazards, storytelling NPCs, and progression mechanics th
 | 327 | html-source-tree-export | Open |
 | 328 | wimmelbilder-embedding-artwork | Open (depends 327) |
 
+### Build Infrastructure
+| ID | Title | Status |
+|----|-------|--------|
+| 334 | patch-system-improvements | Complete |
+| 408 | release-profile-build-fixes | Complete |
+| 409 | manual-patch-application-command | Complete |
+
 ## Phase Milestones
 
 ### Environmental Hazards
@@ -364,8 +371,17 @@ Phase 3 depends on:
   - Generation pipeline (pre-gen, on-demand, hybrid)?
   - i-spy integration (decorative vs actual game)?
 
+### 2026-04-14 - Manual Patch Application Command (409)
+- New CLI command: `./scripts/azerothcore apply-patches`
+- Allows manual application of PHASE_BEGIN and PHASE_END patches
+- Options: --begin, --end, --all, --target shadow|main, --revert, --dry-run
+- Useful for testing patches, re-applying after corruption, applying to main after promotion
+- Incremental compilation supported: cmake/make only rebuilds affected files
+
 ## Related Files
 - src/lua/ambush.lua - Spawn system patterns to follow
 - src/lua/movement.lua - Water detection helpers
 - src/lua/treasure.lua - Chest redistribution queue
 - src/lua/custom-classes.lua - Custom class selector system
+- scripts/azerothcore - Build orchestration, patch application
+- patches/patches.sh - Profile-specific patch lists and orchestration

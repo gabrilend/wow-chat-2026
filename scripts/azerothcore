@@ -172,6 +172,15 @@ show_help() {
     echo ""
     echo "  authserver         Start the authentication server"
     echo "  worldserver        Start the world server"
+    echo "  validate           Test worldserver from shadow (validates build before promotion)"
+    echo "  promote            Promote shadow build to main (after successful validation)"
+    echo "  apply-patches      Manually apply patches for current profile"
+    echo "    --begin          Apply PHASE_BEGIN patches (source modifications)"
+    echo "    --end            Apply PHASE_END patches (configs, symlinks) [default]"
+    echo "    --all            Apply both PHASE_BEGIN and PHASE_END"
+    echo "    --target <dir>   Target: shadow (default) or main"
+    echo "    --revert         Revert PHASE_BEGIN patches instead of applying"
+    echo "    --dry-run        Show what would be applied without applying"
     echo "  keira              Launch Keira3 database editor"
     echo "  profiles           List available version profiles"
     echo "  switch <profile>   Switch to a different profile (no recompile)"
@@ -196,6 +205,17 @@ show_help() {
     echo "  ./scripts/azerothcore compile                    # Just recompile"
     echo "  ./scripts/azerothcore compile --force            # Recompile + cmake reconfig"
     echo "  ./scripts/azerothcore install --profile beta     # Install beta profile"
+    echo ""
+    echo "Shadow-run-promote workflow:"
+    echo "  ./scripts/azerothcore compile                    # Build to shadow"
+    echo "  ./scripts/azerothcore validate                   # Test from shadow"
+    echo "  ./scripts/azerothcore promote                    # Copy shadow → main"
+    echo ""
+    echo "Manual patch application:"
+    echo "  ./scripts/azerothcore apply-patches --dry-run    # Show what patches would apply"
+    echo "  ./scripts/azerothcore apply-patches              # Apply PHASE_END to shadow"
+    echo "  ./scripts/azerothcore apply-patches --target main  # Apply PHASE_END to main"
+    echo "  ./scripts/azerothcore apply-patches --begin      # Apply PHASE_BEGIN to source"
 }
 # -- }}}
 
@@ -573,7 +593,7 @@ init_config() {
 source "${DIR}/patches/patches.sh"
 
 # -- {{{ patches_need_applying
-# Check if any PHASE_BEGIN patches would modify source (Issue 326)
+# Check if any PHASE_BEGIN patches would modify source (Issue 112, formerly 326)
 # Returns 0 (true) if patches need applying, 1 (false) if all applied
 # This prevents early exit when new patches are added but upstream unchanged
 patches_need_applying() {
@@ -641,7 +661,7 @@ apply_patches_middle() {
 # -- }}}
 
 # =============================================================================
-# Config Value Orchestrator (Issue 407)
+# Config Value Orchestrator (Issue 119, formerly 407)
 # =============================================================================
 # Profile-aware configuration registry
 # Each config is a function in config/config-registry.sh
@@ -649,19 +669,33 @@ apply_patches_middle() {
 # =============================================================================
 
 # -- {{{ apply_config_values
-# Apply all config values for current profile (Issue 407)
+# Apply all config values for current profile (Issue 119, formerly 407)
 # Called after init_config() copies .dist to .conf
-# Reads config-registry.sh and applies matching configs
+# Sources all config patch files from config/patches/
 apply_config_values() {
     echo "Applying config values for profile: ${PROFILE}..."
 
-    # Source the config registry
-    if [[ ! -f "${DIR}/config/config-registry.sh" ]]; then
-        echo "  Warning: config-registry.sh not found, using defaults"
+    # Check if config patches directory exists
+    if [[ ! -d "${DIR}/config/patches" ]]; then
+        echo "  Warning: config/patches/ directory not found, using defaults"
         return 0
     fi
 
-    source "${DIR}/config/config-registry.sh"
+    # Declare profile mapping array
+    declare -A CONFIG_PROFILES
+
+    # Source all config patch files
+    local patch_count=0
+    for patch_file in "${DIR}/config/patches"/C*.sh; do
+        [[ -f "${patch_file}" ]] || continue
+        source "${patch_file}"
+        ((patch_count++))
+    done
+
+    if [[ ${patch_count} -eq 0 ]]; then
+        echo "  Warning: No config patches found in config/patches/"
+        return 0
+    fi
 
     # Get list of all config functions
     local config_funcs=$(declare -F | grep "^declare -f config_" | sed 's/declare -f //')
@@ -677,18 +711,20 @@ apply_config_values() {
         fi
     done
 
-    echo "  Applied ${applied_count} config values"
+    echo "  Applied ${applied_count} config values from ${patch_count} patches"
 }
 # -- }}}
 
 # -- {{{ patch_E001_lua_script_symlinks
 # Create symlinks from install dir to project Lua sources
 # Parallelizable: Yes (unique directory)
+# Uses TARGET_INSTALL_DIR (defaults to INSTALL_DIR, can be set to INSTALL_DIR_SHADOW)
 patch_E001_lua_script_symlinks() {
-    mkdir -p "${INSTALL_DIR}/bin/lua_scripts"
-    ln -sfn "${DIR}/src/lua" "${INSTALL_DIR}/bin/lua_scripts/custom"
+    local TARGET="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
+    mkdir -p "${TARGET}/bin/lua_scripts"
+    ln -sfn "${DIR}/src/lua" "${TARGET}/bin/lua_scripts/custom"
     if [[ -d "${DIR}/src/lua/extensions" ]]; then
-        ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR}/bin/lua_scripts/extensions"
+        ln -sfn "${DIR}/src/lua/extensions" "${TARGET}/bin/lua_scripts/extensions"
     fi
     echo "  [E001] Lua script symlinks"
 }
@@ -710,7 +746,7 @@ patch_E004_log_directory_setup() {
 
 # -- {{{ patch_E005_dk_levelstats
 # Apply Death Knight level 1-20 stats to database
-# Required before worldserver first start (issue 138)
+# Required before worldserver first start (Issue 206, formerly 138)
 # Parallelizable: No (database operation)
 patch_E005_dk_levelstats() {
     local MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
@@ -736,29 +772,41 @@ patch_E005_dk_levelstats() {
 }
 # -- }}}
 
-# -- {{{ apply_patches_end
-# PHASE_END: Post-compile setup
-# Run after successful build
-# Profile-aware: release gets minimal setup, beta gets all features
-apply_patches_end() {
-    echo ""
-    echo "Applying PHASE_END patches (post-compile)..."
+# -- {{{ patch_E006_initialize_config_files
+# Initialize config files (.dist → .conf) and apply profile-specific values
+# Runs after build completes (PHASE_END)
+# Parallelizable: No (sequential file operations)
+# Uses TARGET_INSTALL_DIR (defaults to INSTALL_DIR, can be set to INSTALL_DIR_SHADOW)
+patch_E006_initialize_config_files() {
+    local TARGET="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
+    echo "  [E006] Initializing config files..."
 
-    # All profiles: Log directory setup
-    patch_E004_log_directory_setup
-
-    # Beta only: Custom features
-    if [[ "${PROFILE}" == "beta" ]]; then
-        patch_E001_lua_script_symlinks &
-        wait
-        patch_E005_dk_levelstats
+    # Copy .dist files to .conf
+    if [[ -f "${TARGET}/etc/authserver.conf.dist" ]]; then
+        cp -f "${TARGET}/etc/authserver.conf.dist" "${TARGET}/etc/authserver.conf"
     fi
 
-    # Alpha only: (none currently)
+    if [[ -f "${TARGET}/etc/worldserver.conf.dist" ]]; then
+        cp -f "${TARGET}/etc/worldserver.conf.dist" "${TARGET}/etc/worldserver.conf"
+    fi
 
-    echo "  PHASE_END complete"
+    # Initialize module configs
+    for conf_dist in "${TARGET}/etc/modules/"*.conf.dist; do
+        if [[ -f "${conf_dist}" ]]; then
+            cp -f "${conf_dist}" "${conf_dist%.dist}"
+        fi
+    done
+
+    # Apply profile-specific config values (database, paths, gameplay settings)
+    # Temporarily override INSTALL_DIR for config patches
+    local ORIG_INSTALL_DIR="${INSTALL_DIR}"
+    INSTALL_DIR="${TARGET}"
+    apply_config_values
+    INSTALL_DIR="${ORIG_INSTALL_DIR}"
 }
 # -- }}}
+
+# apply_patches_end is now defined in patches/patches.sh with profile-aware lists
 
 # -- {{{ check_git_status
 # Check if a git repo is at the expected state
@@ -1160,6 +1208,9 @@ cmd_install() {
     trap - EXIT
     unapply_patches_begin
 
+    # PHASE_END patches already applied to shadow by do_build
+    # Configs and symlinks are in shadow, ready for validation
+
     # -- First-time setup (MySQL, configs, data files) --
     # Database names: auth is shared, world/characters are per-profile
     local DB_AUTH="acore_auth"
@@ -1261,29 +1312,7 @@ EOF
     echo "  Databases and user configured successfully"
     fi  # end of database setup else block
 
-    echo "Initializing configuration files..."
-    init_config "${INSTALL_DIR}/etc/worldserver.conf"
-    init_config "${INSTALL_DIR}/etc/authserver.conf"
-
-    # Initialize module configs if they exist
-    for conf_dist in "${INSTALL_DIR}/etc/modules/"*.conf.dist; do
-        if [[ -f "${conf_dist}" ]]; then
-            init_config "${conf_dist%.dist}"
-        fi
-    done
-
-    # Apply profile-specific config values (database, paths, gameplay settings)
-    # Replaces inline sed commands with centralized config registry (Issue 407)
-    mkdir -p "${LOGS_DIR}"
-    apply_config_values
-
-    # Setup Lua script symlinks
-    echo "Setting up symlinks..."
-    mkdir -p "${INSTALL_DIR}/bin/lua_scripts"
-    ln -sfn "${DIR}/src/lua" "${INSTALL_DIR}/bin/lua_scripts/custom"
-    if [[ -d "${DIR}/src/lua/extensions" ]]; then
-        ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR}/bin/lua_scripts/extensions"
-    fi
+    # Config initialization and Lua symlinks now handled by PHASE_END patches (E006, E001)
 
     # Copy data files if needed
     if [[ ! -d "${DIR}/data-files/dbc" ]]; then
@@ -1420,7 +1449,9 @@ do_build() {
     if [[ ! -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" || "${FORCE_REBUILD:-false}" == "true" ]]; then
         echo ""
         echo "Running cmake..."
-        # Note: INSTALL_DIR_SHADOW is the target for make install
+        # IMPORTANT: CMAKE_INSTALL_PREFIX points to shadow directory
+        # Binary will run from shadow first (validation), then promoted to main
+        # Both shadow and main have identical directory structure
         if ! cmake "${AC_CODE_DIR}" \
           -DBOOST_ROOT="${BOOST_DIR}" \
           -DLUA_VERSION=luajit \
@@ -1467,7 +1498,7 @@ do_build() {
     echo ""
     echo "Installing to shadow directory..."
     local install_result=0
-    make install 2>&1 | tee -a "${BUILD_LOG}" "${ERROR_LOG}" || install_result=$?
+    cmake --install . 2>&1 | tee -a "${BUILD_LOG}" "${ERROR_LOG}" || install_result=$?
 
     if [[ ${install_result} -ne 0 ]]; then
         echo "" >> "${ERROR_LOG}"
@@ -1483,11 +1514,272 @@ do_build() {
         ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR_SHADOW}/bin/lua_scripts/extensions"
     fi
 
-    # Success! Swap shadow directories to become current (Issue 327)
-    atomic_swap_dirs
+    # Apply PHASE_END patches to shadow directory
+    # Set TARGET_INSTALL_DIR so patches operate on shadow, not main
+    TARGET_INSTALL_DIR="${INSTALL_DIR_SHADOW}"
+    apply_patches_end
+    unset TARGET_INSTALL_DIR
 
     echo ""
-    echo "Build complete! Log: ${BUILD_LOG}"
+    echo "Build complete! Shadow install at: ${INSTALL_DIR_SHADOW}"
+    echo "Log: ${BUILD_LOG}"
+    echo ""
+    echo "NOTE: Binaries are in shadow directory and have NOT been promoted yet."
+    echo "Run validation before promoting to main installation."
+}
+# -- }}}
+
+# -- {{{ validate_shadow_worldserver
+# Start worldserver from shadow directory to validate it works
+# Returns 0 if successful, 1 if failed
+# Kills the server after validation
+validate_shadow_worldserver() {
+    echo ""
+    echo "Validating shadow worldserver..."
+    echo "  Shadow: ${INSTALL_DIR_SHADOW}/bin/worldserver"
+
+    # Check if binary exists
+    if [[ ! -f "${INSTALL_DIR_SHADOW}/bin/worldserver" ]]; then
+        echo "  ERROR: worldserver not found in shadow"
+        return 1
+    fi
+
+    # Check if config exists
+    if [[ ! -f "${INSTALL_DIR_SHADOW}/etc/worldserver.conf" ]]; then
+        echo "  ERROR: worldserver.conf not found in shadow/etc/"
+        return 1
+    fi
+
+    # Start worldserver in background
+    echo "  Starting worldserver from shadow (validation run)..."
+    cd "${INSTALL_DIR_SHADOW}/bin"
+    export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
+
+    # Start in background, redirect output to validation log
+    local VALIDATION_LOG="${DIR}/tmp/shadow-validation-${PROFILE}.log"
+    ./worldserver > "${VALIDATION_LOG}" 2>&1 &
+    local WS_PID=$!
+
+    echo "  Worldserver started (PID ${WS_PID})"
+    echo "  Waiting for successful initialization..."
+
+    # Wait up to 30 seconds for successful startup
+    local timeout=30
+    local elapsed=0
+    local success=false
+
+    while [[ ${elapsed} -lt ${timeout} ]]; do
+        # Check if process is still running
+        if ! kill -0 ${WS_PID} 2>/dev/null; then
+            echo "  ERROR: Worldserver crashed during startup"
+            echo "  Check log: ${VALIDATION_LOG}"
+            return 1
+        fi
+
+        # Check log for success indicator
+        if grep -q "World initialized in" "${VALIDATION_LOG}" 2>/dev/null; then
+            success=true
+            break
+        fi
+
+        # Check for critical errors
+        if grep -qE "(ERROR|FATAL|Failed to initialize)" "${VALIDATION_LOG}" 2>/dev/null; then
+            echo "  ERROR: Worldserver failed to initialize"
+            kill ${WS_PID} 2>/dev/null
+            echo "  Check log: ${VALIDATION_LOG}"
+            return 1
+        fi
+
+        sleep 1
+        ((elapsed++))
+    done
+
+    # Kill the validation worldserver
+    if kill ${WS_PID} 2>/dev/null; then
+        echo "  Stopped validation worldserver (PID ${WS_PID})"
+    fi
+
+    if [[ "${success}" == "true" ]]; then
+        echo "  ✓ Shadow worldserver validated successfully"
+        return 0
+    else
+        echo "  ERROR: Validation timeout (${timeout}s)"
+        echo "  Check log: ${VALIDATION_LOG}"
+        return 1
+    fi
+}
+# -- }}}
+
+# -- {{{ promote_shadow_to_main
+# Copy shadow installation to main, tracking non-clobbered files
+# Updates build manifest with promotion details
+promote_shadow_to_main() {
+    echo ""
+    echo "Promoting shadow to main installation..."
+    echo "  From: ${INSTALL_DIR_SHADOW}"
+    echo "  To:   ${INSTALL_DIR}"
+
+    # Create manifest directory
+    local MANIFEST_DIR="${DIR}/build-manifests"
+    mkdir -p "${MANIFEST_DIR}"
+
+    local TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+    local MANIFEST_FILE="${MANIFEST_DIR}/${PROFILE}-${TIMESTAMP}.txt"
+
+    echo "# Build Manifest" > "${MANIFEST_FILE}"
+    echo "# Profile: ${PROFILE}" >> "${MANIFEST_FILE}"
+    echo "# Timestamp: ${TIMESTAMP}" >> "${MANIFEST_FILE}"
+    echo "# Shadow: ${INSTALL_DIR_SHADOW}" >> "${MANIFEST_FILE}"
+    echo "# Main: ${INSTALL_DIR}" >> "${MANIFEST_FILE}"
+    echo "" >> "${MANIFEST_FILE}"
+
+    # Find files in main that won't be clobbered (user customizations)
+    if [[ -d "${INSTALL_DIR}" ]]; then
+        echo "# Files in main NOT in shadow (preserved):" >> "${MANIFEST_FILE}"
+
+        # Use comm to find files only in main
+        local main_files=$(mktemp)
+        local shadow_files=$(mktemp)
+
+        (cd "${INSTALL_DIR}" && find . -type f | sort > "${main_files}")
+        (cd "${INSTALL_DIR_SHADOW}" && find . -type f | sort > "${shadow_files}")
+
+        local preserved_count=0
+        while IFS= read -r file; do
+            echo "  ${file}" >> "${MANIFEST_FILE}"
+            ((preserved_count++))
+        done < <(comm -23 "${main_files}" "${shadow_files}")
+
+        rm -f "${main_files}" "${shadow_files}"
+
+        echo "" >> "${MANIFEST_FILE}"
+        echo "# Preserved files: ${preserved_count}" >> "${MANIFEST_FILE}"
+        echo "  Preserved ${preserved_count} existing files"
+    else
+        echo "# No existing main installation (first-time)" >> "${MANIFEST_FILE}"
+        echo "  No existing main installation"
+    fi
+
+    echo "" >> "${MANIFEST_FILE}"
+    echo "# Files promoted from shadow:" >> "${MANIFEST_FILE}"
+
+    # Copy shadow to main, preserving directory structure
+    mkdir -p "${INSTALL_DIR}"
+
+    # Use rsync to copy, tracking what was copied
+    local promoted_count=0
+    (cd "${INSTALL_DIR_SHADOW}" && find . -type f) | while IFS= read -r file; do
+        local src="${INSTALL_DIR_SHADOW}/${file}"
+        local dst="${INSTALL_DIR}/${file}"
+
+        # Create parent directory
+        mkdir -p "$(dirname "${dst}")"
+
+        # Copy file
+        cp -f "${src}" "${dst}"
+        echo "  ${file}" >> "${MANIFEST_FILE}"
+        ((promoted_count++))
+    done
+
+    # Copy symlinks separately
+    (cd "${INSTALL_DIR_SHADOW}" && find . -type l) | while IFS= read -r link; do
+        local src="${INSTALL_DIR_SHADOW}/${link}"
+        local dst="${INSTALL_DIR}/${link}"
+        local target=$(readlink "${src}")
+
+        mkdir -p "$(dirname "${dst}")"
+        ln -sfn "${target}" "${dst}"
+        echo "  ${link} -> ${target}" >> "${MANIFEST_FILE}"
+    done
+
+    echo ""
+    echo "  ✓ Promotion complete"
+    echo "  Manifest: ${MANIFEST_FILE}"
+
+    # Create symlink to latest manifest
+    ln -sfn "$(basename "${MANIFEST_FILE}")" "${MANIFEST_DIR}/${PROFILE}-latest.txt"
+}
+# -- }}}
+
+# -- {{{ cmd_apply_patches
+# Manually apply PHASE_BEGIN or PHASE_END patches for current profile
+# Useful for testing patches, re-applying after corruption, or applying to main after promotion
+# Issue 409: Manual Patch Application Command
+cmd_apply_patches() {
+    local phase="end"      # Default: PHASE_END
+    local target="shadow"  # Default: shadow directory
+    local revert=false
+    local dry_run=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --begin) phase="begin"; shift ;;
+            --end)   phase="end"; shift ;;
+            --all)   phase="all"; shift ;;
+            --target)
+                shift
+                target="${1:-shadow}"
+                shift
+                ;;
+            --revert) revert=true; shift ;;
+            --dry-run) dry_run=true; shift ;;
+            *) shift ;;
+        esac
+    done
+
+    get_profile_paths
+
+    # Set TARGET_INSTALL_DIR based on --target
+    if [[ "${target}" == "main" ]]; then
+        TARGET_INSTALL_DIR="${INSTALL_DIR}"
+    else
+        TARGET_INSTALL_DIR="${INSTALL_DIR_SHADOW}"
+    fi
+
+    echo ""
+    echo "Apply Patches (Issue 409)"
+    echo "  Profile: ${PROFILE}"
+    echo "  Phase:   ${phase}"
+    echo "  Target:  ${target} (${TARGET_INSTALL_DIR})"
+    echo ""
+
+    if [[ "${dry_run}" == "true" ]]; then
+        echo "DRY RUN - Would apply:"
+        if [[ "${phase}" == "begin" || "${phase}" == "all" ]]; then
+            echo "  PHASE_BEGIN: ${PHASE_BEGIN_PATCHES[$PROFILE]:-none}"
+        fi
+        if [[ "${phase}" == "end" || "${phase}" == "all" ]]; then
+            echo "  PHASE_END: ${PHASE_END_PATCHES[$PROFILE]:-none}"
+        fi
+        unset TARGET_INSTALL_DIR
+        return 0
+    fi
+
+    # Apply patches
+    if [[ "${phase}" == "begin" || "${phase}" == "all" ]]; then
+        if [[ "${revert}" == "true" ]]; then
+            echo "Reverting PHASE_BEGIN patches..."
+            unapply_patches_begin
+        else
+            echo "Applying PHASE_BEGIN patches..."
+            apply_patches_begin
+        fi
+    fi
+
+    if [[ "${phase}" == "end" || "${phase}" == "all" ]]; then
+        if [[ "${revert}" == "true" ]]; then
+            echo "Note: PHASE_END patches are idempotent and cannot be reverted."
+            echo "      Re-run without --revert to apply them."
+        else
+            echo "Applying PHASE_END patches..."
+            apply_patches_end
+        fi
+    fi
+
+    unset TARGET_INSTALL_DIR
+    echo ""
+    echo "Done."
 }
 # -- }}}
 
@@ -1573,7 +1865,7 @@ cmd_update() {
         done
     fi
 
-    # Check if patches need applying (Issue 326)
+    # Check if patches need applying (Issue 112)
     # Must check BEFORE early exit, otherwise new patches are never applied
     if patches_need_applying; then
         echo "Patches pending - rebuild required"
@@ -1629,11 +1921,11 @@ cmd_update() {
     trap - EXIT
     unapply_patches_begin
 
-    # Apply post-compile patches
-    apply_patches_end
+    # PHASE_END patches already applied to shadow by do_build
+    # Use 'validate' command to test, then 'promote' to move to main
 
     echo ""
-    echo "Update complete!"
+    echo "Update complete! Shadow build ready for validation."
 }
 # -- }}}
 
@@ -1676,11 +1968,11 @@ cmd_compile() {
     trap - EXIT
     unapply_patches_begin
 
-    # Apply post-compile patches
-    apply_patches_end
+    # PHASE_END patches already applied to shadow by do_build
+    # Use 'validate' command to test, then 'promote' to move to main
 
     echo ""
-    echo "Compile complete!"
+    echo "Compile complete! Shadow build ready for validation."
 }
 # -- }}}
 
@@ -1713,6 +2005,18 @@ main() {
             ;;
         switch)
             cmd_switch "${COMMAND_ARGS[0]:-}"
+            ;;
+        validate)
+            get_profile_paths
+            validate_shadow_worldserver
+            ;;
+        promote)
+            get_profile_paths
+            promote_shadow_to_main
+            ;;
+        apply-patches)
+            source "${DIR}/patches/patches.sh"
+            cmd_apply_patches "${COMMAND_ARGS[@]}"
             ;;
         boost)
             cmd_boost
