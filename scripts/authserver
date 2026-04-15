@@ -1,0 +1,117 @@
+#!/bin/bash
+# scripts/authserver - Start the authentication server
+# Runs the authserver binary for the current profile
+# Updates realmlist with public IP before starting (cached daily)
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+# =============================================================================
+# Load Profile
+# =============================================================================
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+
+# {{{ parse_args
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
+# }}}
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/authserver [options]"
+    echo ""
+    echo "Start the authentication server for the current profile."
+    echo "Updates realmlist with public IP (cached daily) before starting."
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>   Use specific profile (default: ${PROFILE})"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Current profile: ${PROFILE}"
+}
+# }}}
+
+# =============================================================================
+# Functions
+# =============================================================================
+
+# {{{ get_profile_paths
+get_profile_paths() {
+    if [[ "${PROFILE}" == "alpha" ]]; then
+        AC_CODE_DIR="${DIR}/source-alpha"
+    else
+        AC_CODE_DIR="${DIR}/source-beta"
+    fi
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    MYSQL_DIR="${DIR}/mysql/installed-files"
+}
+# }}}
+
+# {{{ setup_log_symlinks
+setup_log_symlinks() {
+    local TMP_BASE="/tmp/wow-chat-2"
+    local TMP_LOGS="${TMP_BASE}/logs-${PROFILE}"
+    mkdir -p "${TMP_BASE}"
+    mkdir -p "${TMP_LOGS}"
+    [[ -L "${DIR}/tmp" ]] || ln -s "${TMP_BASE}" "${DIR}/tmp"
+    [[ -L "${DIR}/logs-${PROFILE}" ]] || ln -s "${TMP_LOGS}" "${DIR}/logs-${PROFILE}"
+}
+# }}}
+
+# =============================================================================
+# Main
+# =============================================================================
+
+parse_args "$@"
+get_profile_paths
+setup_log_symlinks
+
+# Update realmlist with current public IP (cached daily in /tmp/wow-chat/)
+# Why: ISP may change our IP; this ensures players can connect
+# Why daily: Checking every startup wastes bandwidth; ISPs rarely change more than once/day
+# Why here: authserver starts first, stays up longer, worldserver restarts should be fast
+if [[ -x "${DIR}/scripts/update-realmlist-ip" ]]; then
+    echo "Updating realmlist with public IP..."
+    "${DIR}/scripts/update-realmlist-ip" "${DIR}"
+    echo ""
+fi
+
+if [[ ! -f "${INSTALL_DIR}/bin/authserver" ]]; then
+    echo "Error: authserver not found for profile '${PROFILE}'"
+    echo "Expected: ${INSTALL_DIR}/bin/authserver"
+    echo "Run './scripts/install --profile ${PROFILE}' first."
+    exit 1
+fi
+
+echo "Starting authserver (profile: ${PROFILE})"
+export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
+cd "${INSTALL_DIR}/bin"
+./authserver

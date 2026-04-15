@@ -1,0 +1,105 @@
+#!/bin/bash
+# scripts/switch - Switch to a different profile
+# Changes the active profile without recompiling
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+# =============================================================================
+# Profile Definitions
+# =============================================================================
+
+# {{{ Repository URLs (for validation)
+declare -A PROFILE_REPO=(
+    ["alpha"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+)
+# }}}
+
+# =============================================================================
+# Load Current Profile
+# =============================================================================
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+
+# =============================================================================
+# Functions
+# =============================================================================
+
+# {{{ get_profile_paths
+get_profile_paths() {
+    if [[ "${PROFILE}" == "alpha" ]]; then
+        AC_CODE_DIR="${DIR}/source-alpha"
+    else
+        AC_CODE_DIR="${DIR}/source-beta"
+    fi
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    BUILD_DIR="${DIR}/build-${PROFILE}"
+}
+# }}}
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/switch <profile>"
+    echo ""
+    echo "Switch to a different profile without recompiling."
+    echo ""
+    echo "Available profiles:"
+    echo "  alpha   - Latest playerbots, cutting edge"
+    echo "  beta    - Current testing, all modules"
+    echo "  release - Stable, wow-chat-1 compatible"
+    echo ""
+    echo "Current profile: ${PROFILE}"
+}
+# }}}
+
+# =============================================================================
+# Main
+# =============================================================================
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    show_help
+    exit 0
+fi
+
+new_profile="${1:-}"
+
+if [[ -z "${new_profile}" ]]; then
+    echo "Usage: ./scripts/switch <profile>"
+    echo "Available profiles: alpha, beta, release"
+    echo "Current profile: ${PROFILE}"
+    exit 1
+fi
+
+# Validate profile exists
+if [[ ! -v "PROFILE_REPO[${new_profile}]" ]]; then
+    echo "Error: Unknown profile '${new_profile}'"
+    echo "Available profiles: alpha, beta, release"
+    exit 1
+fi
+
+# Check if profile has been built
+old_profile="${PROFILE}"
+PROFILE="${new_profile}"
+get_profile_paths
+
+if [[ ! -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+    echo "Warning: Profile '${new_profile}' has not been built yet."
+    echo "Expected: ${INSTALL_DIR}/bin/worldserver"
+    echo "Run './scripts/install --profile ${new_profile}' first."
+    echo ""
+fi
+
+# Write new profile
+echo "${new_profile}" > "${DIR}/.profile"
+
+echo "Switched from '${old_profile}' to '${new_profile}'"
+echo ""
+echo "Directories:"
+echo "  Source:    ${AC_CODE_DIR}"
+echo "  Build:     ${BUILD_DIR}"
+echo "  Installed: ${INSTALL_DIR}"

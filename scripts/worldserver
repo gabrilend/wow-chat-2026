@@ -1,0 +1,105 @@
+#!/bin/bash
+# scripts/worldserver - Start the world server
+# Runs the worldserver binary for the current profile
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+# =============================================================================
+# Load Profile
+# =============================================================================
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+
+# {{{ parse_args
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
+# }}}
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/worldserver [options]"
+    echo ""
+    echo "Start the world server for the current profile."
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>   Use specific profile (default: ${PROFILE})"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Current profile: ${PROFILE}"
+}
+# }}}
+
+# =============================================================================
+# Functions
+# =============================================================================
+
+# {{{ get_profile_paths
+get_profile_paths() {
+    if [[ "${PROFILE}" == "alpha" ]]; then
+        AC_CODE_DIR="${DIR}/source-alpha"
+    else
+        AC_CODE_DIR="${DIR}/source-beta"
+    fi
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    MYSQL_DIR="${DIR}/mysql/installed-files"
+}
+# }}}
+
+# {{{ setup_log_symlinks
+setup_log_symlinks() {
+    local TMP_BASE="/tmp/wow-chat-2"
+    local TMP_LOGS="${TMP_BASE}/logs-${PROFILE}"
+    mkdir -p "${TMP_BASE}"
+    mkdir -p "${TMP_LOGS}"
+    [[ -L "${DIR}/tmp" ]] || ln -s "${TMP_BASE}" "${DIR}/tmp"
+    [[ -L "${DIR}/logs-${PROFILE}" ]] || ln -s "${TMP_LOGS}" "${DIR}/logs-${PROFILE}"
+}
+# }}}
+
+# =============================================================================
+# Main
+# =============================================================================
+
+parse_args "$@"
+get_profile_paths
+setup_log_symlinks
+
+if [[ ! -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+    echo "Error: worldserver not found for profile '${PROFILE}'"
+    echo "Expected: ${INSTALL_DIR}/bin/worldserver"
+    echo "Run './scripts/install --profile ${PROFILE}' first."
+    exit 1
+fi
+
+echo "Starting worldserver (profile: ${PROFILE})"
+export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
+cd "${INSTALL_DIR}/bin"
+./worldserver

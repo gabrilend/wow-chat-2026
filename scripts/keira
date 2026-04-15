@@ -1,0 +1,40 @@
+#!/bin/bash
+# scripts/keira - Launch Keira3 database editor
+# Keira3 is a GUI tool for editing WoW database tables
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+KEIRA_VERSION="3.10.1"
+KEIRA_DIR="/home/ritz/games/azeroth-core/keira"
+
+# =============================================================================
+# Main
+# =============================================================================
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/keira"
+    echo ""
+    echo "Launch Keira3 database editor for WoW tables."
+    echo "Version: ${KEIRA_VERSION}"
+}
+# }}}
+
+# Handle --help
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    show_help
+    exit 0
+fi
+
+# Launch Keira
+if [[ -d "${KEIRA_DIR}" ]]; then
+    "${KEIRA_DIR}/Keira-${KEIRA_VERSION}.LINUX.AppImage" &
+    echo "Keira3 launched (version ${KEIRA_VERSION})"
+else
+    echo "Error: Keira not found at ${KEIRA_DIR}"
+    exit 1
+fi

@@ -1,0 +1,100 @@
+#!/bin/bash
+# scripts/profiles - List available version profiles
+# Shows repository, branch, and modules for each profile
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+# =============================================================================
+# Profile Definitions
+# =============================================================================
+
+# {{{ Repository URLs
+declare -A PROFILE_REPO=(
+    ["alpha"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+)
+# }}}
+
+# {{{ Branch per profile
+declare -A PROFILE_BRANCH=(
+    ["alpha"]="Playerbot"
+    ["beta"]="Playerbot"
+    ["release"]="Playerbot"
+)
+# }}}
+
+# {{{ Pinned commits (empty = HEAD)
+declare -A PROFILE_COMMIT=(
+    ["alpha"]=""
+    ["beta"]=""
+    ["release"]=""
+)
+# }}}
+
+# {{{ Modules per profile
+declare -A PROFILE_MODULES=(
+    ["alpha"]="mod-eluna mod-transmog"
+    ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
+    ["release"]=""
+)
+# }}}
+
+# =============================================================================
+# Load Current Profile
+# =============================================================================
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+
+# =============================================================================
+# Main
+# =============================================================================
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/profiles"
+    echo ""
+    echo "List available version profiles and their configurations."
+    echo ""
+    echo "Profiles:"
+    echo "  alpha   - Latest playerbots, cutting edge"
+    echo "  beta    - Current testing, all modules"
+    echo "  release - Stable, wow-chat-1 compatible"
+}
+# }}}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    show_help
+    exit 0
+fi
+
+echo "Available version profiles:"
+echo ""
+printf "%-10s %-50s %-12s\n" "PROFILE" "REPOSITORY" "BRANCH"
+printf "%-10s %-50s %-12s\n" "-------" "----------" "------"
+
+for p in alpha beta release; do
+    repo="${PROFILE_REPO[$p]}"
+    branch="${PROFILE_BRANCH[$p]}"
+    commit="${PROFILE_COMMIT[$p]}"
+    suffix=""
+    if [[ -n "${commit}" ]]; then
+        suffix=" @${commit:0:7}"
+    fi
+    printf "%-10s %-50s %-12s\n" "${p}" "${repo##*/}" "${branch}${suffix}"
+done
+
+echo ""
+echo "Modules per profile:"
+for p in alpha beta release; do
+    mods="${PROFILE_MODULES[$p]:-none}"
+    [[ -z "${mods}" ]] && mods="none"
+    echo "  ${p}: ${mods}"
+done
+
+echo ""
+echo "Current profile: ${PROFILE}"

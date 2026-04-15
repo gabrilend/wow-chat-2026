@@ -1,0 +1,161 @@
+#!/bin/bash
+# scripts/validate - Validate shadow worldserver build
+# Starts worldserver from shadow directory to verify it initializes correctly
+# Part of shadow-run-promote workflow: compile -> validate -> promote
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+# =============================================================================
+# Load Profile
+# =============================================================================
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+
+# {{{ parse_args
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
+# }}}
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/validate [options]"
+    echo ""
+    echo "Validate shadow worldserver build before promotion."
+    echo "Starts worldserver from shadow, waits for initialization, then stops."
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>   Use specific profile (default: ${PROFILE})"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Workflow:"
+    echo "  1. ./scripts/compile     - Build to shadow"
+    echo "  2. ./scripts/validate    - Test shadow build"
+    echo "  3. ./scripts/promote     - Copy shadow to main"
+}
+# }}}
+
+# =============================================================================
+# Functions
+# =============================================================================
+
+# {{{ get_profile_paths
+get_profile_paths() {
+    INSTALL_DIR_SHADOW="${DIR}/installed-files-shadow"
+    MYSQL_DIR="${DIR}/mysql/installed-files"
+}
+# }}}
+
+# {{{ validate_shadow_worldserver
+validate_shadow_worldserver() {
+    echo ""
+    echo "Validating shadow worldserver..."
+    echo "  Shadow: ${INSTALL_DIR_SHADOW}/bin/worldserver"
+
+    # Check if binary exists
+    if [[ ! -f "${INSTALL_DIR_SHADOW}/bin/worldserver" ]]; then
+        echo "  ERROR: worldserver not found in shadow"
+        return 1
+    fi
+
+    # Check if config exists
+    if [[ ! -f "${INSTALL_DIR_SHADOW}/etc/worldserver.conf" ]]; then
+        echo "  ERROR: worldserver.conf not found in shadow/etc/"
+        return 1
+    fi
+
+    # Start worldserver in background
+    echo "  Starting worldserver from shadow (validation run)..."
+    cd "${INSTALL_DIR_SHADOW}/bin"
+    export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
+
+    # Start in background, redirect output to validation log
+    local VALIDATION_LOG="${DIR}/tmp/shadow-validation-${PROFILE}.log"
+    mkdir -p "${DIR}/tmp"
+    ./worldserver > "${VALIDATION_LOG}" 2>&1 &
+    local WS_PID=$!
+
+    echo "  Worldserver started (PID ${WS_PID})"
+    echo "  Waiting for successful initialization..."
+
+    # Wait up to 30 seconds for successful startup
+    local timeout=30
+    local elapsed=0
+    local success=false
+
+    while [[ ${elapsed} -lt ${timeout} ]]; do
+        # Check if process is still running
+        if ! kill -0 ${WS_PID} 2>/dev/null; then
+            echo "  ERROR: Worldserver crashed during startup"
+            echo "  Check log: ${VALIDATION_LOG}"
+            return 1
+        fi
+
+        # Check log for success indicator
+        if grep -q "World initialized in" "${VALIDATION_LOG}" 2>/dev/null; then
+            success=true
+            break
+        fi
+
+        # Check for critical errors
+        if grep -qE "(ERROR|FATAL|Failed to initialize)" "${VALIDATION_LOG}" 2>/dev/null; then
+            echo "  ERROR: Worldserver failed to initialize"
+            kill ${WS_PID} 2>/dev/null
+            echo "  Check log: ${VALIDATION_LOG}"
+            return 1
+        fi
+
+        sleep 1
+        ((elapsed++))
+    done
+
+    # Kill the validation worldserver
+    if kill ${WS_PID} 2>/dev/null; then
+        echo "  Stopped validation worldserver (PID ${WS_PID})"
+    fi
+
+    if [[ "${success}" == "true" ]]; then
+        echo "  Validation successful"
+        return 0
+    else
+        echo "  ERROR: Validation timeout (${timeout}s)"
+        echo "  Check log: ${VALIDATION_LOG}"
+        return 1
+    fi
+}
+# }}}
+
+# =============================================================================
+# Main
+# =============================================================================
+
+parse_args "$@"
+get_profile_paths
+validate_shadow_worldserver

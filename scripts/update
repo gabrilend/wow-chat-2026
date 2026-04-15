@@ -1,176 +1,343 @@
 #!/bin/bash
+# scripts/update - Update source and rebuild
+# Pulls latest from git, then calls compile
+# Does NOT touch MySQL, configs, or data files
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+set -e
 set -o pipefail
 
-function update-xbps(){
-   sudo xbps-install -u xbps
-   sudo xbps-remove -oO
-   sudo xbps-install -Suf
-   sudo vkpurge rm all
+# =============================================================================
+# Load Profile
+# =============================================================================
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+
+# =============================================================================
+# Profile Definitions
+# =============================================================================
+
+# {{{ Pinned commits
+declare -A PROFILE_COMMIT=(
+    ["alpha"]=""
+    ["beta"]=""
+    ["release"]=""
+)
+# }}}
+
+# {{{ Modules per profile
+declare -A PROFILE_MODULES=(
+    ["alpha"]="mod-eluna mod-transmog"
+    ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
+    ["release"]=""
+)
+# }}}
+
+# {{{ Module commits per profile
+declare -A PROFILE_MODULE_COMMITS=(
+    ["release:mod-eluna"]="1abf244"
+)
+# }}}
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+
+FORCE_REBUILD=false
+COMPILE_ARGS=()
+
+# {{{ parse_args
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    COMPILE_ARGS+=("--profile" "${2}")
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --threads)
+                if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
+                    COMPILE_ARGS+=("--threads" "${2}")
+                    shift 2
+                else
+                    echo "Error: --threads requires a numeric argument"
+                    exit 1
+                fi
+                ;;
+            --force)
+                FORCE_REBUILD=true
+                COMPILE_ARGS+=("--force")
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
+# }}}
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/update [options]"
+    echo ""
+    echo "Update source from git and rebuild."
+    echo "Does NOT touch MySQL, configs, or data files."
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>   Use specific profile (default: ${PROFILE})"
+    echo "  --threads <n>      Number of threads"
+    echo "  --force            Force rebuild even if up-to-date"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Workflow:"
+    echo "  1. ./scripts/update      - Pull and build to shadow"
+    echo "  2. ./scripts/validate    - Test shadow build"
+    echo "  3. ./scripts/promote     - Copy shadow to main"
+}
+# }}}
+
+# =============================================================================
+# Functions
+# =============================================================================
+
+# {{{ get_profile_paths
+get_profile_paths() {
+    if [[ "${PROFILE}" == "alpha" ]]; then
+        AC_CODE_DIR="${DIR}/source-alpha"
+    else
+        AC_CODE_DIR="${DIR}/source-beta"
+    fi
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+}
+# }}}
+
+# {{{ Parallel status check system
+SPINNER_CHARS="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+SPINNER_LEN=10
+CHECK_TMP_DIR="/tmp/wow-chat-2/parallel-checks"
+declare -a PCHECK_NAMES=()
+declare -a PCHECK_DIRS=()
+declare -a PCHECK_COMMITS=()
+
+parallel_check_init() {
+    PCHECK_NAMES=()
+    PCHECK_DIRS=()
+    PCHECK_COMMITS=()
+    rm -rf "${CHECK_TMP_DIR}"
+    mkdir -p "${CHECK_TMP_DIR}"
 }
 
-function update-ollama(){ # {{{
-   /home/ritz/programs/ollama/build_ollama.sh
-} # }}}
-
-function update-mysql(){ # {{{
-   if [[ $(/usr/bin/id -u) -ne 0 ]]; then
-       echo "Not running as root"
-       sudo echo "there, that's better"
-   fi
-   source /home/ritz/scripts/cd-improved
-
-   # Get the installed MySQL version
-   set +o pipefail
-   INSTALLED_VERSION=$(                                    \
-  /mnt/mtwo/programs/mysql-server/installed-files/bin/mysql \
-                                                     -u ritz \
---socket=/mnt/mtwo/programs/mysql-server/databases/mysql.sock \
-                                                            -p \
-                                                            --version | awk '{print $3}' | tr -d ',')
-   if [ -z "${INSTALLED_VERSION}" ]; then INSTALLED_VERSION=$(/home/ritz/programs/mysql-server/build/runtime_output_directory/mysql --version | awk '{print $3}' | tr -d ','); fi
-   if [ -z "${INSTALLED_VERSION}" ]; then INSTALLED_VERSION=0; fi
-   set -o pipefail
-
-      # Decide target version
-   if [ -n "$1" ]; then
-       LATEST_VERSION="$1"
-   else
-       LATEST_VERSION=$(curl -s https://dev.mysql.com/downloads/mysql/ | grep -oP 'MySQL Community Server \K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-   fi
-   
-   # Compare versions
-   if [ "${INSTALLED_VERSION}" != "${LATEST_VERSION}" ]; then
-      echo "A better version of MySQL is available: ${LATEST_VERSION}"
-      echo "Proceeding with the update..."
-
-      OLD_DIR="$(pwd)"
-          DIR="/home/ritz/programs/mysql-server"
-      cd-improved "${DIR}" --no-ls
-      wget https://dev.mysql.com/get/Downloads/MySQL-${LATEST_VERSION%.*}/mysql-${LATEST_VERSION}.tar.gz
-      mkdir -p "${DIR}/source"
-      tar -xvzf \
-                 mysql-${LATEST_VERSION}.tar.gz \
-               --directory="${DIR}/source"      \
-               --checkpoint=10                  \
-               --checkpoint-action=dot
-      rm ${DIR}/mysql-${LATEST_VERSION}.tar.gz
-
-       rm -drf    "${DIR}/build"
-      mkdir -p    "${DIR}/build"
-      cd-improved "${DIR}/build" --no-ls
-
-      rm -f  "${DIR}/source/mysql-${LATEST_VERSION}/CMakeCache.txt"
-      rm -rf "${DIR}/source/mysql-${LATEST_VERSION}/CMakeFiles/"
-      cmake  "${DIR}/source/mysql-${LATEST_VERSION}"               \
-             -DCMAKE_INSTALL_PREFIX=${DIR}/installed-files         \
-             -DMYSQL_ICU_DATADIR=   ${DIR}/databases               \
-             -DSYSCONFDIR=          ${DIR}/conf                    \
-             -DWITH_SSL=system                                     \
-             -DDOWNLOAD_BOOST=1                                    \
-             -DWITH_BOOST="/home/ritz/programs/boost/boost_1_77_0" \
-             -DDEFAULT_CHARSET=utf8mb4                             \
-             -DDEFAULT_COLLATION=utf8mb4_general_ci
-      
-      make -j15
-
-      MYSQL_DATADIR="/home/ritz/programs/mysql-server/databases"
-      
-      FILE_PATH="${DIR}/source/mysql-${LATEST_VERSION}/mysys/my_default.cc"
-      if ! grep -q 'env_mysql_datadir = getenv("MYSQL_ICU_DATADIR")' "$FILE_PATH"; then
-          sed -i 's|^\([[:space:]]*\)convert_dirname(datadir,.*NullS);|\1const char* env_mysql_datadir = getenv("MYSQL_ICU_DATADIR");\
-      \1std::string MYSQL_ICU_DATADIR = env_mysql_datadir ? env_mysql_datadir : "'"${MYSQL_DATADIR}"'";\
-      \1convert_dirname(datadir, MYSQL_ICU_DATADIR.c_str(), NullS);|' "$FILE_PATH"
-      else
-          echo "[SKIP] my_default.cc already patched"
-      fi
-      
-      FILE_PATH="${DIR}/source/mysql-${LATEST_VERSION}/sql/mysqld.cc"
-      if ! grep -q 'env_mysql_datadir = getenv("MYSQL_ICU_DATADIR")' "$FILE_PATH"; then
-          sed -i 's|^\([[:space:]]*\)strmake(mysql_real_data_home, get_relative_path(.*sizeof(mysql_real_data_home)-1));|\1const char* env_mysql_datadir = getenv("MYSQL_ICU_DATADIR");\
-      \1std::string MYSQL_ICU_DATADIR = env_mysql_datadir ? env_mysql_datadir : "'"${MYSQL_DATADIR}"'";\
-      \1strmake(mysql_real_data_home, get_relative_path(MYSQL_ICU_DATADIR.c_str()), sizeof(mysql_real_data_home)-1);|' "$FILE_PATH"
-      else
-          echo "[SKIP] mysqld.cc already patched"
-      fi
-
-      sudo make install
-      cd-improved ${OLD_DIR} --no-ls
-
-   else
-      echo "You already have the latest version of MySQL installed."
-   fi
-} # }}}
-
-function update-ipfs(){ # {{{
-   OLD_DIR="$(pwd)"
-       DIR="/home/ritz/programs/ipfs"
-   cd-improved "${DIR}" --no-ls
-
-   echo "Fetching latest go-ipfs release..."
-   LATEST_VERSION=$(curl -s https://api.github.com/repos/ipfs/go-ipfs/releases/latest | jq -r '.tag_name')
-   LATEST_VERSION_STRIPPED="${LATEST_VERSION#v}"  # remove 'v' prefix for folder names
-
-   if [[ -f "${DIR}/installed.version" && "$(cat ${DIR}/installed.version)" == "${LATEST_VERSION}" ]]; then
-       echo "IPFS is already up to date (version ${LATEST_VERSION})"
-       cd "${OLD_DIR}" --no-ls
-       return
-   fi
-
-   echo "Updating IPFS to ${LATEST_VERSION}..."
-   mkdir -p "${DIR}/files"
-   curl -L "https://dist.ipfs.tech/go-ipfs/${LATEST_VERSION}/go-ipfs_${LATEST_VERSION_STRIPPED}_linux-amd64.tar.gz" \
-        -o "${DIR}/go-ipfs.tar.gz"
-
-   tar -xzf "${DIR}/go-ipfs.tar.gz" -C "${DIR}/files" --strip-components=1
-
-   echo "Installing IPFS binaries..."
-   mkdir -p "${DIR}/bin"
-   cp -f "${DIR}/files/ipfs" "${DIR}/bin/ipfs"
-
-   echo "${LATEST_VERSION}" > "${DIR}/installed.version"
-
-   echo "Done. IPFS version:"
-   "${DIR}/bin/ipfs" --version
-
-   cd-improved "${OLD_DIR}" --no-ls
-} # }}}
-
-function update-all(){
-   update-xbps
-   update-ollama
-   update-mysql
-   update-ipfs
+parallel_check_add() {
+    PCHECK_NAMES+=("$1")
+    PCHECK_DIRS+=("$2")
+    PCHECK_COMMITS+=("${3:-}")
 }
 
-# argument parsing {{{
-# if argument == one of the options, run that function
-if [ $# -eq 0 ]; then
-    echo "Usage: $0 {xbps|ollama|mysql [version]|ipfs|all}"
+parallel_check_worker() {
+    local name="$1"
+    local repo_dir="$2"
+    local expected_commit="$3"
+    local status_file="${CHECK_TMP_DIR}/${name}.status"
+    echo "checking" > "${status_file}"
+
+    if [[ ! -d "${repo_dir}/.git" ]]; then
+        echo "missing" > "${status_file}"
+        return
+    fi
+
+    local current_head
+    current_head=$(git -C "${repo_dir}" rev-parse HEAD 2>/dev/null)
+
+    if [[ -n "${expected_commit}" ]]; then
+        if [[ "${current_head}" == "${expected_commit}"* ]]; then
+            echo "up-to-date" > "${status_file}"
+        else
+            echo "needs-update" > "${status_file}"
+        fi
+    else
+        git -C "${repo_dir}" fetch --quiet 2>/dev/null || true
+        local remote_head
+        remote_head=$(git -C "${repo_dir}" rev-parse @{u} 2>/dev/null || echo "")
+        if [[ -n "${remote_head}" && "${current_head}" == "${remote_head}" ]]; then
+            echo "up-to-date" > "${status_file}"
+        else
+            echo "needs-update" > "${status_file}"
+        fi
+    fi
+}
+
+parallel_check_display() {
+    local frame="${PARALLEL_CHECK_FRAME:-0}"
+    local spinner_char="${SPINNER_CHARS:$((frame % SPINNER_LEN)):1}"
+
+    for name in "${PCHECK_NAMES[@]}"; do
+        local status_file="${CHECK_TMP_DIR}/${name}.status"
+        local status="checking"
+        [[ -f "${status_file}" ]] && status=$(cat "${status_file}" 2>/dev/null)
+
+        case "${status}" in
+            checking)     printf "  %s Checking %s...\033[K\n" "${spinner_char}" "${name}" ;;
+            up-to-date)   printf "  \033[32m✓\033[0m %s is up-to-date\033[K\n" "${name}" ;;
+            needs-update) printf "  \033[33m↓\033[0m %s needs update\033[K\n" "${name}" ;;
+            missing)      printf "  \033[31m✗\033[0m %s not found\033[K\n" "${name}" ;;
+            *)            printf "  ? %s: %s\033[K\n" "${name}" "${status}" ;;
+        esac
+    done
+}
+
+parallel_check_run() {
+    local -a pids=()
+    local count=${#PCHECK_NAMES[@]}
+
+    [[ $count -eq 0 ]] && return 0
+
+    for i in "${!PCHECK_NAMES[@]}"; do
+        parallel_check_worker "${PCHECK_NAMES[$i]}" "${PCHECK_DIRS[$i]}" "${PCHECK_COMMITS[$i]}" &
+        pids+=($!)
+    done
+
+    parallel_check_display
+
+    PARALLEL_CHECK_FRAME=0
+    while true; do
+        local all_done=true
+        for name in "${PCHECK_NAMES[@]}"; do
+            local status_file="${CHECK_TMP_DIR}/${name}.status"
+            if [[ -f "${status_file}" ]]; then
+                local status=$(cat "${status_file}" 2>/dev/null)
+                [[ "${status}" == "checking" ]] && all_done=false && break
+            else
+                all_done=false
+                break
+            fi
+        done
+
+        [[ "${all_done}" == true ]] && break
+
+        printf "\033[%dA" "${count}"
+        PARALLEL_CHECK_FRAME=$((PARALLEL_CHECK_FRAME + 1))
+        parallel_check_display
+        sleep 0.1
+    done
+
+    printf "\033[%dA" "${count}"
+    parallel_check_display
+
+    for pid in "${pids[@]}"; do
+        wait "${pid}" 2>/dev/null || true
+    done
+
+    declare -gA PARALLEL_CHECK_RESULTS=()
+    local any_needs_update=false
+
+    for name in "${PCHECK_NAMES[@]}"; do
+        local status=$(cat "${CHECK_TMP_DIR}/${name}.status" 2>/dev/null || echo "error")
+        PARALLEL_CHECK_RESULTS["${name}"]="${status}"
+        [[ "${status}" == "needs-update" || "${status}" == "missing" ]] && any_needs_update=true
+    done
+
+    rm -rf "${CHECK_TMP_DIR}"
+    [[ "${any_needs_update}" == true ]] && return 1
+    return 0
+}
+# }}}
+
+# =============================================================================
+# Main
+# =============================================================================
+
+parse_args "$@"
+get_profile_paths
+
+COMMIT="${PROFILE_COMMIT[$PROFILE]}"
+MODULES="${PROFILE_MODULES[$PROFILE]}"
+
+echo "Updating profile: ${PROFILE}"
+echo ""
+
+if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
+    echo "Error: Source not found. Run './scripts/install' first."
     exit 1
 fi
 
-case "${1}" in
-    xbps)
-        update-xbps
-        ;;
-    ollama)
-        update-ollama
-        ;;
-    mysql)
-        shift
-        update-mysql "$@"
-        ;;
-    ipfs)
-        update-ipfs
-        ;;
-    all)
-        update-all
-        ;;
-    *)
-        echo "Invalid option: $1"
-        echo "Usage: $0 {xbps|ollama|mysql [version]|ipfs|all}"
-        exit 1
-        ;;
-esac
-# }}}
+# Source patch functions for patches_need_applying check
+source "${DIR}/patches/patches.sh"
 
+needs_rebuild=false
+
+if [[ "${FORCE_REBUILD}" == true ]]; then
+    echo "Force rebuild requested"
+    needs_rebuild=true
+else
+    parallel_check_init
+    parallel_check_add "Core" "${AC_CODE_DIR}" "${COMMIT}"
+
+    for mod_name in ${MODULES}; do
+        mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+        mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]:-}"
+        parallel_check_add "${mod_name}" "${mod_dir}" "${mod_commit}"
+    done
+
+    echo "Checking for updates..."
+    if ! parallel_check_run; then
+        needs_rebuild=true
+    fi
+    echo ""
+
+    # Apply git updates
+    if [[ "${PARALLEL_CHECK_RESULTS[Core]:-}" == "needs-update" ]]; then
+        echo "Updating Core..."
+        if [[ -n "${COMMIT}" ]]; then
+            git -C "${AC_CODE_DIR}" fetch
+            git -C "${AC_CODE_DIR}" checkout "${COMMIT}"
+        else
+            git -C "${AC_CODE_DIR}" pull --rebase
+        fi
+    fi
+
+    for mod_name in ${MODULES}; do
+        if [[ "${PARALLEL_CHECK_RESULTS[${mod_name}]:-}" == "needs-update" ]]; then
+            echo "Updating ${mod_name}..."
+            mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+            mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]:-}"
+            if [[ -n "${mod_commit}" ]]; then
+                git -C "${mod_dir}" fetch
+                git -C "${mod_dir}" checkout "${mod_commit}"
+            else
+                git -C "${mod_dir}" pull --rebase
+            fi
+        fi
+    done
+fi
+
+# Check if patches need applying
+if patches_need_applying; then
+    echo "Patches pending - rebuild required"
+    needs_rebuild=true
+fi
+
+if [[ "${needs_rebuild}" == false && -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+    echo ""
+    echo "Everything up-to-date, no rebuild needed."
+    echo "Use --force to rebuild anyway."
+    exit 0
+fi
+
+# Call compile script
+echo ""
+exec "${DIR}/scripts/compile" "${COMPILE_ARGS[@]}"

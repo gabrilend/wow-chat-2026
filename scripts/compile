@@ -1,0 +1,309 @@
+#!/bin/bash
+# scripts/compile - Compile the server from source
+# Skips git checks, goes straight to cmake/make
+# Builds into shadow directory for atomic promotion
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+set -e
+set -o pipefail
+
+# =============================================================================
+# Load Profile
+# =============================================================================
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+THREADS="${THREADS:-4}"
+BOOST_VERSION="1.74.0"
+BOOST_VERSION_UNDERSCORE="1_74_0"
+
+# =============================================================================
+# Profile Definitions
+# =============================================================================
+
+# {{{ Modules per profile
+declare -A PROFILE_MODULES=(
+    ["alpha"]="mod-eluna mod-transmog"
+    ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
+    ["release"]=""
+)
+# }}}
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+
+FORCE_REBUILD=false
+
+# {{{ parse_args
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --threads)
+                if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
+                    THREADS="${2}"
+                    shift 2
+                else
+                    echo "Error: --threads requires a numeric argument"
+                    exit 1
+                fi
+                ;;
+            --force)
+                FORCE_REBUILD=true
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
+# }}}
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/compile [options]"
+    echo ""
+    echo "Compile the server from source (skips git checks)."
+    echo "Builds into shadow directory for atomic promotion."
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>   Use specific profile (default: ${PROFILE})"
+    echo "  --threads <n>      Number of threads (default: ${THREADS})"
+    echo "  --force            Force cmake reconfiguration"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Workflow:"
+    echo "  1. ./scripts/compile     - Build to shadow"
+    echo "  2. ./scripts/validate    - Test shadow build"
+    echo "  3. ./scripts/promote     - Copy shadow to main"
+}
+# }}}
+
+# =============================================================================
+# Functions
+# =============================================================================
+
+# {{{ get_profile_paths
+get_profile_paths() {
+    if [[ "${PROFILE}" == "alpha" ]]; then
+        AC_CODE_DIR="${DIR}/source-alpha"
+    else
+        AC_CODE_DIR="${DIR}/source-beta"
+    fi
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    BUILD_DIR="${DIR}/build-${PROFILE}"
+    MYSQL_DIR="${DIR}/mysql/installed-files"
+    BOOST_DIR="${DIR}/libs/boost"
+    BUILD_DIR_SHADOW="${DIR}/build-shadow"
+    INSTALL_DIR_SHADOW="${DIR}/installed-files-shadow"
+}
+# }}}
+
+# {{{ setup_log_symlinks
+setup_log_symlinks() {
+    local TMP_BASE="/tmp/wow-chat-2"
+    local TMP_LOGS="${TMP_BASE}/logs-${PROFILE}"
+    mkdir -p "${TMP_BASE}"
+    mkdir -p "${TMP_LOGS}"
+    [[ -L "${DIR}/tmp" ]] || ln -s "${TMP_BASE}" "${DIR}/tmp"
+    [[ -L "${DIR}/logs-${PROFILE}" ]] || ln -s "${TMP_LOGS}" "${DIR}/logs-${PROFILE}"
+}
+# }}}
+
+# {{{ print_build_failure
+print_build_failure() {
+    local ERROR_LOG="${BUILD_DIR_SHADOW}/compile-errors.log"
+    echo ""
+    echo "==============================================================================="
+    echo "BUILD FAILED"
+    echo "==============================================================================="
+    echo ""
+    echo "Debug information preserved at:"
+    echo "  ${ERROR_LOG}"
+    echo ""
+    if [[ -d "${INSTALL_DIR}" && -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+        echo "Your current working binaries are UNCHANGED:"
+        echo "  ${INSTALL_DIR}/bin/worldserver"
+        echo "  ${INSTALL_DIR}/bin/authserver"
+    else
+        echo "No previous working binaries exist."
+        echo "This appears to be a first-time build."
+    fi
+    echo ""
+    echo "To retry after fixing:"
+    echo "  ./scripts/compile"
+    echo "==============================================================================="
+}
+# }}}
+
+# {{{ do_build
+do_build() {
+    echo ""
+    echo "Building into shadow directories..."
+    echo "  Shadow build:   ${BUILD_DIR_SHADOW}"
+    echo "  Shadow install: ${INSTALL_DIR_SHADOW}"
+
+    local CLANGPP_DIR="/usr/bin/clang++"
+    local CLANG_DIR="/usr/bin/clang"
+    local LUAJIT_INC="/usr/include/luajit-2.1"
+    local LUAJIT_LIB="/usr/lib/libluajit-5.1.so"
+
+    setup_log_symlinks
+    local BUILD_LOG="${DIR}/tmp/build-${PROFILE}.log"
+
+    mkdir -p "${BUILD_DIR_SHADOW}"
+    cd "${BUILD_DIR_SHADOW}"
+
+    local ERROR_LOG="${BUILD_DIR_SHADOW}/compile-errors.log"
+    echo "Build started: $(date)" > "${ERROR_LOG}"
+    echo "Profile: ${PROFILE}" >> "${ERROR_LOG}"
+    echo "Source: ${AC_CODE_DIR}" >> "${ERROR_LOG}"
+    echo "---" >> "${ERROR_LOG}"
+
+    cp "${ERROR_LOG}" "${BUILD_LOG}"
+    echo "Build log: ${BUILD_LOG}"
+    echo "Error log: ${ERROR_LOG}"
+
+    # Build Boost if needed
+    if [[ ! -d "${BOOST_DIR}/lib" ]]; then
+        echo "Local Boost not found - run ./scripts/boost first"
+        exit 1
+    fi
+    echo "Using local Boost from ${BOOST_DIR}"
+
+    # Only run cmake if not already configured, or if forced
+    if [[ ! -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" || "${FORCE_REBUILD}" == "true" ]]; then
+        echo ""
+        echo "Running cmake..."
+        if ! cmake "${AC_CODE_DIR}" \
+          -DBOOST_ROOT="${BOOST_DIR}" \
+          -DLUA_VERSION=luajit \
+          -DLUAJIT_INCLUDE_DIR="${LUAJIT_INC}" \
+          -DLUAJIT_LIBRARIES="${LUAJIT_LIB}" \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR_SHADOW}" \
+          -DCMAKE_C_COMPILER="${CLANG_DIR}" \
+          -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}" \
+          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common -I${LUAJIT_INC} -Wno-enum-constexpr-conversion -fcolor-diagnostics" \
+          -DCMAKE_BINARY_DIR="${BUILD_DIR_SHADOW}" \
+          -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}" \
+          -DCMAKE_COLOR_DIAGNOSTICS=ON \
+          -DWITH_WARNINGS=1 \
+          -DTOOLS_BUILD=all \
+          -DSCRIPTS=static \
+          -DMODULES=static \
+          -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql" \
+          -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include" \
+          -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so" \
+          2>&1 | tee -a "${BUILD_LOG}" "${ERROR_LOG}"; then
+            echo "" >> "${ERROR_LOG}"
+            echo "CMAKE FAILED at $(date)" >> "${ERROR_LOG}"
+            print_build_failure
+            return 1
+        fi
+    else
+        echo ""
+        echo "Skipping cmake (already configured, use --force to reconfigure)"
+    fi
+
+    echo ""
+    echo "Building with ${THREADS} threads..."
+    local make_result=0
+    make -j${THREADS} 2>&1 | tee -a "${BUILD_LOG}" "${ERROR_LOG}" || make_result=$?
+
+    if [[ ${make_result} -ne 0 ]]; then
+        echo "" >> "${ERROR_LOG}"
+        echo "MAKE FAILED with exit code ${make_result} at $(date)" >> "${ERROR_LOG}"
+        print_build_failure
+        return 1
+    fi
+
+    echo ""
+    echo "Installing to shadow directory..."
+    local install_result=0
+    cmake --install . 2>&1 | tee -a "${BUILD_LOG}" "${ERROR_LOG}" || install_result=$?
+
+    if [[ ${install_result} -ne 0 ]]; then
+        echo "" >> "${ERROR_LOG}"
+        echo "MAKE INSTALL FAILED with exit code ${install_result} at $(date)" >> "${ERROR_LOG}"
+        print_build_failure
+        return 1
+    fi
+
+    # Setup Lua script symlinks in shadow install dir
+    mkdir -p "${INSTALL_DIR_SHADOW}/bin/lua_scripts"
+    ln -sfn "${DIR}/src/lua" "${INSTALL_DIR_SHADOW}/bin/lua_scripts/custom"
+    if [[ -d "${DIR}/src/lua/extensions" ]]; then
+        ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR_SHADOW}/bin/lua_scripts/extensions"
+    fi
+
+    # Apply PHASE_END patches to shadow directory
+    TARGET_INSTALL_DIR="${INSTALL_DIR_SHADOW}"
+    apply_patches_end
+    unset TARGET_INSTALL_DIR
+
+    echo ""
+    echo "Build complete! Shadow install at: ${INSTALL_DIR_SHADOW}"
+    echo "Log: ${BUILD_LOG}"
+    echo ""
+    echo "NOTE: Binaries are in shadow directory and have NOT been promoted yet."
+    echo "Run validation before promoting to main installation."
+}
+# }}}
+
+# =============================================================================
+# Main
+# =============================================================================
+
+parse_args "$@"
+get_profile_paths
+
+echo "Compiling profile: ${PROFILE}"
+echo "  (skipping git checks)"
+echo ""
+
+# Check source exists
+if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
+    echo "Error: Source not found. Run './scripts/install' first."
+    exit 1
+fi
+
+# Source patch functions
+source "${DIR}/patches/patches.sh"
+
+# Apply pre-compile patches (idempotent)
+apply_patches_begin
+# Ensure patches are reverted even on build failure
+trap 'unapply_patches_begin' EXIT
+
+# Build
+do_build
+
+# Clear trap and revert patches after successful build
+trap - EXIT
+unapply_patches_begin
+
+echo ""
+echo "Compile complete! Shadow build ready for validation."

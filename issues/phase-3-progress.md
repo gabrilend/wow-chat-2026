@@ -68,7 +68,7 @@ Introduce environmental hazards, storytelling NPCs, and progression mechanics th
 | 334 | patch-system-improvements | Complete |
 | 408 | release-profile-build-fixes | Complete |
 | 409 | manual-patch-application-command | Complete |
-| 410 | split-azerothcore-script | Open |
+| 410 | split-azerothcore-script | Complete |
 
 ## Phase Milestones
 
@@ -372,10 +372,18 @@ Phase 3 depends on:
   - Generation pipeline (pre-gen, on-demand, hybrid)?
   - i-spy integration (decorative vs actual game)?
 
+### 2026-04-14 - Split azerothcore Script (410)
+- Monolithic 2093-line dispatcher split into separate scripts
+- Each script has independent profile definitions (no shared config dependency)
+- Profile stored in `.profile` as simple text (just "release", "beta", or "alpha")
+- Scripts call each other: update→compile, install→compile
+- compile sources patches/patches.sh for patch functions
+- Deprecated files marked for removal: azerothcore-deprecated, profile-switch-deprecated
+
 ### 2026-04-14 - Manual Patch Application Command (409)
-- New CLI command: `./scripts/azerothcore apply-patches`
+- New CLI command: `./scripts/apply-patches`
 - Allows manual application of PHASE_BEGIN and PHASE_END patches
-- Options: --begin, --end, --all, --target shadow|main, --revert, --dry-run
+- Options: --begin, --end, --revert, --dry-run, --profile
 - Useful for testing patches, re-applying after corruption, applying to main after promotion
 - Incremental compilation supported: cmake/make only rebuilds affected files
 
@@ -384,5 +392,8 @@ Phase 3 depends on:
 - src/lua/movement.lua - Water detection helpers
 - src/lua/treasure.lua - Chest redistribution queue
 - src/lua/custom-classes.lua - Custom class selector system
-- scripts/azerothcore - Build orchestration, patch application
+- scripts/compile - Build orchestration
+- scripts/update - Git pull + compile
+- scripts/install - First-time setup + compile
+- scripts/apply-patches - Manual patch application
 - patches/patches.sh - Profile-specific patch lists and orchestration

@@ -1,0 +1,170 @@
+#!/bin/bash
+# scripts/promote - Promote shadow build to main installation
+# Copies shadow directory to main, preserving user customizations
+# Part of shadow-run-promote workflow: compile -> validate -> promote
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+# =============================================================================
+# Load Profile
+# =============================================================================
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+
+# {{{ parse_args
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
+# }}}
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/promote [options]"
+    echo ""
+    echo "Promote shadow build to main installation."
+    echo "Copies shadow directory to main, tracking preserved files in manifest."
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>   Use specific profile (default: ${PROFILE})"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Workflow:"
+    echo "  1. ./scripts/compile     - Build to shadow"
+    echo "  2. ./scripts/validate    - Test shadow build"
+    echo "  3. ./scripts/promote     - Copy shadow to main"
+}
+# }}}
+
+# =============================================================================
+# Functions
+# =============================================================================
+
+# {{{ get_profile_paths
+get_profile_paths() {
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    INSTALL_DIR_SHADOW="${DIR}/installed-files-shadow"
+}
+# }}}
+
+# {{{ promote_shadow_to_main
+promote_shadow_to_main() {
+    echo ""
+    echo "Promoting shadow to main installation..."
+    echo "  From: ${INSTALL_DIR_SHADOW}"
+    echo "  To:   ${INSTALL_DIR}"
+
+    # Check shadow exists
+    if [[ ! -d "${INSTALL_DIR_SHADOW}" ]]; then
+        echo "Error: Shadow directory not found"
+        echo "Run './scripts/compile' first to build to shadow"
+        return 1
+    fi
+
+    # Create manifest directory
+    local MANIFEST_DIR="${DIR}/build-manifests"
+    mkdir -p "${MANIFEST_DIR}"
+
+    local TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+    local MANIFEST_FILE="${MANIFEST_DIR}/${PROFILE}-${TIMESTAMP}.txt"
+
+    echo "# Build Manifest" > "${MANIFEST_FILE}"
+    echo "# Profile: ${PROFILE}" >> "${MANIFEST_FILE}"
+    echo "# Timestamp: ${TIMESTAMP}" >> "${MANIFEST_FILE}"
+    echo "# Shadow: ${INSTALL_DIR_SHADOW}" >> "${MANIFEST_FILE}"
+    echo "# Main: ${INSTALL_DIR}" >> "${MANIFEST_FILE}"
+    echo "" >> "${MANIFEST_FILE}"
+
+    # Find files in main that won't be clobbered (user customizations)
+    if [[ -d "${INSTALL_DIR}" ]]; then
+        echo "# Files in main NOT in shadow (preserved):" >> "${MANIFEST_FILE}"
+
+        local main_files=$(mktemp)
+        local shadow_files=$(mktemp)
+
+        (cd "${INSTALL_DIR}" && find . -type f | sort > "${main_files}")
+        (cd "${INSTALL_DIR_SHADOW}" && find . -type f | sort > "${shadow_files}")
+
+        local preserved_count=0
+        while IFS= read -r file; do
+            echo "  ${file}" >> "${MANIFEST_FILE}"
+            ((preserved_count++))
+        done < <(comm -23 "${main_files}" "${shadow_files}")
+
+        rm -f "${main_files}" "${shadow_files}"
+
+        echo "" >> "${MANIFEST_FILE}"
+        echo "# Preserved files: ${preserved_count}" >> "${MANIFEST_FILE}"
+        echo "  Preserved ${preserved_count} existing files"
+    else
+        echo "# No existing main installation (first-time)" >> "${MANIFEST_FILE}"
+        echo "  No existing main installation"
+    fi
+
+    echo "" >> "${MANIFEST_FILE}"
+    echo "# Files promoted from shadow:" >> "${MANIFEST_FILE}"
+
+    # Copy shadow to main, preserving directory structure
+    mkdir -p "${INSTALL_DIR}"
+
+    # Copy files
+    (cd "${INSTALL_DIR_SHADOW}" && find . -type f) | while IFS= read -r file; do
+        local src="${INSTALL_DIR_SHADOW}/${file}"
+        local dst="${INSTALL_DIR}/${file}"
+        mkdir -p "$(dirname "${dst}")"
+        cp -f "${src}" "${dst}"
+        echo "  ${file}" >> "${MANIFEST_FILE}"
+    done
+
+    # Copy symlinks separately
+    (cd "${INSTALL_DIR_SHADOW}" && find . -type l) | while IFS= read -r link; do
+        local src="${INSTALL_DIR_SHADOW}/${link}"
+        local dst="${INSTALL_DIR}/${link}"
+        local target=$(readlink "${src}")
+        mkdir -p "$(dirname "${dst}")"
+        ln -sfn "${target}" "${dst}"
+        echo "  ${link} -> ${target}" >> "${MANIFEST_FILE}"
+    done
+
+    echo ""
+    echo "  Promotion complete"
+    echo "  Manifest: ${MANIFEST_FILE}"
+
+    # Create symlink to latest manifest
+    ln -sfn "$(basename "${MANIFEST_FILE}")" "${MANIFEST_DIR}/${PROFILE}-latest.txt"
+}
+# }}}
+
+# =============================================================================
+# Main
+# =============================================================================
+
+parse_args "$@"
+get_profile_paths
+promote_shadow_to_main

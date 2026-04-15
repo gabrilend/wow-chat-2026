@@ -1,0 +1,332 @@
+#!/bin/bash
+# scripts/install - First-time setup for AzerothCore
+# Clones source, installs modules, then calls compile
+# Also sets up MySQL databases and copies data files
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+set -e
+set -o pipefail
+
+# =============================================================================
+# Load Profile
+# =============================================================================
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+
+# =============================================================================
+# Profile Definitions
+# =============================================================================
+
+# {{{ Repository URLs
+declare -A PROFILE_REPO=(
+    ["alpha"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+)
+# }}}
+
+# {{{ Branch per profile
+declare -A PROFILE_BRANCH=(
+    ["alpha"]="Playerbot"
+    ["beta"]="Playerbot"
+    ["release"]="Playerbot"
+)
+# }}}
+
+# {{{ Pinned commits
+declare -A PROFILE_COMMIT=(
+    ["alpha"]=""
+    ["beta"]=""
+    ["release"]=""
+)
+# }}}
+
+# {{{ Modules per profile
+declare -A PROFILE_MODULES=(
+    ["alpha"]="mod-eluna mod-transmog"
+    ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
+    ["release"]=""
+)
+# }}}
+
+# {{{ Module repository URLs
+declare -A MODULE_REPOS=(
+    ["mod-ale"]="https://github.com/azerothcore/mod-ale.git"
+    ["mod-eluna"]="https://github.com/azerothcore/mod-eluna.git"
+    ["mod-aoe-loot"]="https://github.com/TerraByte-tbwps/mod-aoe-loot.git"
+    ["mod-grownup"]="https://github.com/webluke/mod-grownup"
+    ["mod-playerbots"]="https://github.com/liyunfan1223/mod-playerbots.git --branch=master"
+)
+# }}}
+
+# {{{ Module commits per profile
+declare -A PROFILE_MODULE_COMMITS=(
+    ["release:mod-eluna"]="1abf244"
+)
+# }}}
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+
+FORCE_REBUILD=false
+COMPILE_ARGS=()
+
+# {{{ parse_args
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    COMPILE_ARGS+=("--profile" "${2}")
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --threads)
+                if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
+                    COMPILE_ARGS+=("--threads" "${2}")
+                    shift 2
+                else
+                    echo "Error: --threads requires a numeric argument"
+                    exit 1
+                fi
+                ;;
+            --force)
+                FORCE_REBUILD=true
+                COMPILE_ARGS+=("--force")
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
+# }}}
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/install [options]"
+    echo ""
+    echo "First-time setup: clone source, install modules, build, setup MySQL."
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>   Use specific profile (default: ${PROFILE})"
+    echo "  --threads <n>      Number of threads"
+    echo "  --force            Re-clone everything from scratch"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "After install:"
+    echo "  1. ./scripts/start-mysql   - Start MySQL"
+    echo "  2. ./scripts/authserver    - Start auth server"
+    echo "  3. ./scripts/worldserver   - Start world server"
+}
+# }}}
+
+# =============================================================================
+# Functions
+# =============================================================================
+
+# {{{ get_profile_paths
+get_profile_paths() {
+    if [[ "${PROFILE}" == "alpha" ]]; then
+        AC_CODE_DIR="${DIR}/source-alpha"
+    else
+        AC_CODE_DIR="${DIR}/source-beta"
+    fi
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    MYSQL_DIR="${DIR}/mysql/installed-files"
+}
+# }}}
+
+# {{{ update_modules_symlink
+update_modules_symlink() {
+    [[ "${PROFILE}" == "alpha" ]] && return
+
+    local modules_link="${DIR}/source-beta/modules"
+    local target_dir
+
+    if [[ "${PROFILE}" == "release" ]]; then
+        target_dir="../modules-release"
+    else
+        target_dir="../modules-beta"
+    fi
+
+    if [[ -L "${modules_link}" ]]; then
+        local current_target=$(readlink "${modules_link}")
+        if [[ "${current_target}" != "${target_dir}" ]]; then
+            echo "Updating modules symlink: ${current_target} -> ${target_dir}"
+            rm "${modules_link}"
+            ln -s "${target_dir}" "${modules_link}"
+        fi
+    else
+        echo "Creating modules symlink: -> ${target_dir}"
+        rm -rf "${modules_link}"
+        ln -s "${target_dir}" "${modules_link}"
+    fi
+}
+# }}}
+
+# =============================================================================
+# Main
+# =============================================================================
+
+parse_args "$@"
+get_profile_paths
+
+REPO="${PROFILE_REPO[$PROFILE]}"
+BRANCH="${PROFILE_BRANCH[$PROFILE]}"
+COMMIT="${PROFILE_COMMIT[$PROFILE]}"
+MODULES="${PROFILE_MODULES[$PROFILE]}"
+
+echo "Profile: ${PROFILE}"
+echo "  Repository: ${REPO##*/}"
+echo "  Branch: ${BRANCH}"
+[[ -n "${COMMIT}" ]] && echo "  Pinned: ${COMMIT:0:10}"
+echo "  Modules: ${MODULES:-none}"
+echo ""
+
+# Force reinstall
+if [[ "${FORCE_REBUILD}" == true ]]; then
+    echo "Force reinstall requested - cleaning source..."
+    rm -rf "${AC_CODE_DIR}"
+fi
+
+# Clone core if missing
+if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
+    echo "Cloning AzerothCore (${BRANCH} branch)..."
+    git clone "${REPO}" --branch="${BRANCH}" "${AC_CODE_DIR}"
+    if [[ -n "${COMMIT}" ]]; then
+        echo "Checking out ${COMMIT:0:10}..."
+        git -C "${AC_CODE_DIR}" checkout "${COMMIT}"
+    fi
+fi
+
+# Update modules symlink
+update_modules_symlink
+
+# Handle modules
+mkdir -p "${AC_CODE_DIR}/modules"
+
+# Remove modules not in this profile
+for existing_mod in "${AC_CODE_DIR}"/modules/*/; do
+    if [[ -d "${existing_mod}" ]]; then
+        existing_name=$(basename "${existing_mod}")
+        if [[ ! " ${MODULES} " =~ " ${existing_name} " ]]; then
+            echo "  Removing ${existing_name} (not in ${PROFILE} profile)..."
+            rm -rf "${existing_mod}"
+        fi
+    fi
+done
+
+# Clone missing modules
+for mod_name in ${MODULES}; do
+    mod_repo="${MODULE_REPOS[$mod_name]}"
+    if [[ -z "${mod_repo}" ]]; then
+        echo "  Warning: Unknown module '${mod_name}', skipping"
+        continue
+    fi
+
+    mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+    mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]:-}"
+
+    [[ "${FORCE_REBUILD}" == true && -d "${mod_dir}" ]] && rm -rf "${mod_dir}"
+
+    if [[ ! -d "${mod_dir}/.git" ]]; then
+        echo "  Cloning ${mod_name}..."
+        cd "${AC_CODE_DIR}/modules"
+        git clone ${mod_repo}
+        if [[ -n "${mod_commit}" ]]; then
+            git -C "${mod_dir}" checkout "${mod_commit}"
+        fi
+        cd - > /dev/null
+    fi
+done
+
+# Call compile script
+echo ""
+"${DIR}/scripts/compile" "${COMPILE_ARGS[@]}"
+
+# MySQL setup (after successful build)
+DB_AUTH="acore_auth"
+DB_WORLD="acore_world_${PROFILE}"
+DB_CHARS="acore_characters_${PROFILE}"
+
+echo ""
+echo "Setting up MySQL databases for profile '${PROFILE}'..."
+echo "  Auth (shared): ${DB_AUTH}"
+echo "  World:         ${DB_WORLD}"
+echo "  Characters:    ${DB_CHARS}"
+
+MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
+
+# Check if databases already exist
+if "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u ritz -pmenardi -e "USE ${DB_WORLD}" 2>/dev/null; then
+    echo "  Databases already configured (skipping setup)"
+else
+    if [[ ! -S "${MYSQL_SOCKET}" ]]; then
+        echo ""
+        echo "==============================================================================="
+        echo "MySQL SETUP SKIPPED: Socket not found"
+        echo "==============================================================================="
+        echo "Expected: ${MYSQL_SOCKET}"
+        echo ""
+        echo "To complete setup:"
+        echo "  1. Start MySQL: ./scripts/start-mysql"
+        echo "  2. Re-run install: ./scripts/install"
+    else
+        if "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u root << EOF
+DROP USER IF EXISTS 'ritz'@'localhost';
+CREATE USER 'ritz'@'localhost' IDENTIFIED BY 'menardi' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0;
+CREATE DATABASE IF NOT EXISTS \`${DB_AUTH}\` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS \`${DB_WORLD}\` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS \`${DB_CHARS}\` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON \`${DB_AUTH}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON \`${DB_WORLD}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON \`${DB_CHARS}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+EOF
+        then
+            echo "  Databases and user configured successfully"
+        else
+            echo "  Warning: Database setup failed - may need manual configuration"
+        fi
+    fi
+fi
+
+# Copy data files if needed
+if [[ ! -d "${DIR}/data-files/dbc" ]]; then
+    SHARED_DATA="/home/ritz/games/azeroth-core/data-files"
+    if [[ -d "${SHARED_DATA}" ]]; then
+        echo "Copying data-files into project..."
+        mkdir -p "${DIR}/data-files"
+        cp -r "${SHARED_DATA}"/* "${DIR}/data-files/"
+        echo "Data files copied successfully"
+    else
+        echo "Warning: Game data not found at ${SHARED_DATA}"
+        echo "Extract dbc, maps, vmaps, mmaps from WoW client to: ${DIR}/data-files/"
+        mkdir -p "${DIR}/data-files"
+    fi
+else
+    echo "Data files already present"
+fi
+
+echo ""
+echo "Installation complete!"
+echo "Next steps:"
+echo "  1. Start MySQL: ./scripts/start-mysql"
+echo "  2. Start auth server: ./scripts/authserver"
+echo "  3. Start world server: ./scripts/worldserver"

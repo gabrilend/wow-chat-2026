@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# profile-switch - Switch between release/alpha/beta profiles
+#
+# Usage: ./scripts/profile-switch <profile> [--no-rebuild]
+#
+# Profiles:
+#   release - Vanilla AzerothCore (no playerbots, no custom features)
+#   alpha   - Vanilla + playerbots working
+#   beta    - Alpha + all custom features
+#
+# This script:
+#   1. Checks out the appropriate git branch in source/
+#   2. Updates .current-profile marker
+#   3. Optionally triggers rebuild (use --no-rebuild to skip)
+
+set -euo pipefail
+
+# Get directory containing this script
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$DIR"
+
+# Check arguments
+if [[ $# -lt 1 ]]; then
+    echo "Usage: $0 <profile> [--no-rebuild]"
+    echo ""
+    echo "Profiles: release, alpha, beta"
+    exit 1
+fi
+
+TARGET_PROFILE="$1"
+NO_REBUILD=false
+
+if [[ "${2:-}" == "--no-rebuild" ]]; then
+    NO_REBUILD=true
+fi
+
+# Validate profile
+case "$TARGET_PROFILE" in
+    release|alpha|beta)
+        ;;
+    *)
+        echo "Error: Unknown profile '$TARGET_PROFILE'"
+        echo "Valid profiles: release, alpha, beta"
+        exit 1
+        ;;
+esac
+
+# Read current profile
+if [[ -f ".current-profile" ]]; then
+    CURRENT_PROFILE="$(cat .current-profile)"
+else
+    CURRENT_PROFILE="unknown"
+fi
+
+echo "==============================================================================="
+echo "Profile Transition: $CURRENT_PROFILE → $TARGET_PROFILE"
+echo "==============================================================================="
+echo ""
+
+# Check if already on target profile
+if [[ "$CURRENT_PROFILE" == "$TARGET_PROFILE" ]]; then
+    echo "Already on $TARGET_PROFILE profile."
+    echo ""
+    echo "Current state:"
+    echo "  Profile: $TARGET_PROFILE"
+    echo "  Branch:  $(cd source && git branch --show-current)"
+    echo ""
+    exit 0
+fi
+
+# Git checkout target branch in source/
+echo "Step 1: Checking out $TARGET_PROFILE branch in source/"
+cd source
+git checkout "$TARGET_PROFILE"
+BRANCH="$(git branch --show-current)"
+echo "  ✓ On branch: $BRANCH"
+echo ""
+cd ..
+
+# Update profile marker
+echo "Step 2: Updating .current-profile"
+echo "$TARGET_PROFILE" > .current-profile
+echo "  ✓ Profile set to: $TARGET_PROFILE"
+echo ""
+
+# Trigger rebuild if requested
+if [[ "$NO_REBUILD" == "true" ]]; then
+    echo "Step 3: Rebuild SKIPPED (--no-rebuild flag)"
+    echo ""
+else
+    echo "Step 3: Rebuilding for $TARGET_PROFILE profile"
+    echo "  Command: ./scripts/azerothcore update"
+    echo ""
+
+    read -p "Proceed with rebuild? [Y/n] " -n 1 -r
+    echo
+
+    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+        ./scripts/azerothcore update
+    else
+        echo "  Rebuild cancelled"
+        echo ""
+    fi
+fi
+
+# Show final state
+echo "==============================================================================="
+echo "Profile Switch Complete"
+echo "==============================================================================="
+echo ""
+echo "Profile: $TARGET_PROFILE"
+echo "Branch:  $(cd source && git branch --show-current)"
+echo "Source:  source/"
+echo "Build:   build-$TARGET_PROFILE/"
+echo "Install: installed-files-$TARGET_PROFILE/"
+echo ""
+echo "To start servers:"
+echo "  ./scripts/start-mysql"
+echo "  ./scripts/azerothcore worldserver"
+echo ""

@@ -1,0 +1,96 @@
+#!/bin/bash
+# scripts/boost - Download and compile Boost from source
+# Installs to libs/boost with required components for AzerothCore
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+set -e
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+BOOST_VERSION="1.74.0"
+BOOST_VERSION_UNDERSCORE="1_74_0"
+BOOST_DIR="${DIR}/libs/boost"
+THREADS="${THREADS:-4}"
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/boost"
+    echo ""
+    echo "Download and compile Boost ${BOOST_VERSION} from source."
+    echo "Installs to: ${BOOST_DIR}"
+    echo ""
+    echo "Options:"
+    echo "  --help    Show this help message"
+}
+# }}}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    show_help
+    exit 0
+fi
+
+# =============================================================================
+# Main
+# =============================================================================
+
+echo "Installing Boost ${BOOST_VERSION}..."
+
+BOOST_SRC="${DIR}/libs/boost-src"
+BOOST_TARBALL="boost_${BOOST_VERSION_UNDERSCORE}.tar.gz"
+BOOST_URL="https://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION}/${BOOST_TARBALL}/download"
+
+mkdir -p "${DIR}/libs"
+
+# Check if already installed
+if [[ -f "${BOOST_DIR}/lib/libboost_system.a" ]]; then
+    echo "Boost already installed at ${BOOST_DIR}"
+    echo "To reinstall, remove ${BOOST_DIR} first."
+    exit 0
+fi
+
+# Download
+if [[ ! -f "${DIR}/libs/${BOOST_TARBALL}" ]]; then
+    echo "Downloading Boost ${BOOST_VERSION}..."
+    curl -L --fail --progress-bar -o "${DIR}/libs/${BOOST_TARBALL}" "${BOOST_URL}"
+fi
+
+# Verify download is a valid tarball
+if ! file "${DIR}/libs/${BOOST_TARBALL}" | grep -q "gzip compressed"; then
+    echo "Error: Downloaded file is not a valid gzip archive"
+    echo "Contents: $(head -c 100 "${DIR}/libs/${BOOST_TARBALL}")"
+    rm -f "${DIR}/libs/${BOOST_TARBALL}"
+    exit 1
+fi
+
+# Extract
+echo "Extracting..."
+rm -rf "${BOOST_SRC}"
+mkdir -p "${BOOST_SRC}"
+tar -xzf "${DIR}/libs/${BOOST_TARBALL}" -C "${BOOST_SRC}" --strip-components=1
+
+# Bootstrap and build
+echo "Building Boost (this may take a while)..."
+cd "${BOOST_SRC}"
+
+./bootstrap.sh --prefix="${BOOST_DIR}" \
+    --with-libraries=system,filesystem,program_options,iostreams,regex,thread
+
+./b2 install \
+    --prefix="${BOOST_DIR}" \
+    -j${THREADS} \
+    link=static \
+    threading=multi \
+    variant=release
+
+# Cleanup
+echo "Cleaning up..."
+rm -rf "${BOOST_SRC}"
+
+echo "Boost ${BOOST_VERSION} installed to ${BOOST_DIR}"

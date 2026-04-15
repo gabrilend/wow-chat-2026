@@ -1,0 +1,175 @@
+#!/bin/bash
+# scripts/apply-patches - Apply PHASE_BEGIN or PHASE_END patches
+# Always operates on shadow directory (main comes from promote workflow)
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+# =============================================================================
+# Load Profile
+# =============================================================================
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+
+DO_BEGIN=false
+DO_END=false
+REVERT=false
+DRY_RUN=false
+
+# {{{ parse_args
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --begin)
+                DO_BEGIN=true
+                shift
+                ;;
+            --end)
+                DO_END=true
+                shift
+                ;;
+            --revert)
+                REVERT=true
+                shift
+                ;;
+            --dry-run)
+                DRY_RUN=true
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
+# }}}
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/apply-patches [options]"
+    echo ""
+    echo "Manually apply patches for current profile."
+    echo "Always operates on shadow directory."
+    echo ""
+    echo "Options:"
+    echo "  --begin          Apply PHASE_BEGIN patches (source modifications)"
+    echo "  --end            Apply PHASE_END patches (configs, symlinks) [default]"
+    echo "  --revert         Revert patches (triggers recompile for --begin)"
+    echo "  --dry-run        Show what would be applied without applying"
+    echo "  --profile <name> Use specific profile (default: ${PROFILE})"
+    echo "  --help           Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  ./scripts/apply-patches --dry-run       # Preview patches"
+    echo "  ./scripts/apply-patches                 # Apply PHASE_END to shadow"
+    echo "  ./scripts/apply-patches --begin         # Apply PHASE_BEGIN to source"
+    echo "  ./scripts/apply-patches --begin --end   # Apply both phases"
+    echo "  ./scripts/apply-patches --revert        # Revert PHASE_END"
+}
+# }}}
+
+# =============================================================================
+# Functions
+# =============================================================================
+
+# {{{ get_profile_paths
+get_profile_paths() {
+    if [[ "${PROFILE}" == "alpha" ]]; then
+        AC_CODE_DIR="${DIR}/source-alpha"
+    else
+        AC_CODE_DIR="${DIR}/source-beta"
+    fi
+    INSTALL_DIR_SHADOW="${DIR}/installed-files-shadow"
+    BUILD_DIR_SHADOW="${DIR}/build-shadow"
+}
+# }}}
+
+# =============================================================================
+# Main
+# =============================================================================
+
+parse_args "$@"
+get_profile_paths
+
+# Default to --end if neither specified
+if [[ "${DO_BEGIN}" == "false" && "${DO_END}" == "false" ]]; then
+    DO_END=true
+fi
+
+# Source patch functions
+source "${DIR}/patches/patches.sh"
+
+# Always operate on shadow directory
+TARGET_INSTALL_DIR="${INSTALL_DIR_SHADOW}"
+
+action="apply"
+[[ "${REVERT}" == "true" ]] && action="revert"
+
+echo ""
+echo "Apply Patches"
+echo "  Profile: ${PROFILE}"
+echo "  Action:  ${action}"
+echo "  Target:  shadow (${TARGET_INSTALL_DIR})"
+[[ "${DO_BEGIN}" == "true" ]] && echo "  Phase:   PHASE_BEGIN"
+[[ "${DO_END}" == "true" ]] && echo "  Phase:   PHASE_END"
+echo ""
+
+if [[ "${DRY_RUN}" == "true" ]]; then
+    echo "DRY RUN - Would ${action}:"
+    [[ "${DO_BEGIN}" == "true" ]] && echo "  PHASE_BEGIN: ${PHASE_BEGIN_PATCHES[$PROFILE]:-none}"
+    [[ "${DO_END}" == "true" ]] && echo "  PHASE_END: ${PHASE_END_PATCHES[$PROFILE]:-none}"
+    unset TARGET_INSTALL_DIR
+    exit 0
+fi
+
+# PHASE_BEGIN patches (source code modifications)
+if [[ "${DO_BEGIN}" == "true" ]]; then
+    if [[ "${REVERT}" == "true" ]]; then
+        echo "Reverting PHASE_BEGIN patches..."
+        unapply_patches_begin
+        echo ""
+        echo "Triggering incremental recompilation..."
+        cd "${BUILD_DIR_SHADOW}"
+        THREADS="${THREADS:-4}"
+        make -j${THREADS}
+        echo "  Recompilation complete."
+    else
+        echo "Applying PHASE_BEGIN patches..."
+        apply_patches_begin
+    fi
+fi
+
+# PHASE_END patches (config files, symlinks, database)
+if [[ "${DO_END}" == "true" ]]; then
+    if [[ "${REVERT}" == "true" ]]; then
+        echo "Reverting PHASE_END patches..."
+        unapply_patches_end
+    else
+        echo "Applying PHASE_END patches..."
+        apply_patches_end
+    fi
+fi
+
+unset TARGET_INSTALL_DIR
+echo ""
+echo "Done."
