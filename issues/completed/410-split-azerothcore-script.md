@@ -28,19 +28,20 @@ Each command became a standalone script with:
 
 ```
 scripts/
-├── compile          # Build to shadow (sources patches/patches.sh)
-├── update           # Pull + calls compile
-├── install          # First-time setup + calls compile
-├── apply-patches    # Manual patch application
-├── validate         # Test shadow build
-├── promote          # Shadow → main
-├── worldserver      # Start worldserver
-├── authserver       # Start authserver
-├── profiles         # List profiles
-├── switch           # Switch profile
-├── boost            # Install Boost 1.74.0
-├── keira            # Launch Keira3
-└── extract-maps     # (already existed)
+├── compile            # Build to shadow (sources patches/patches.sh)
+├── update             # Pull + calls compile
+├── install            # First-time setup + calls compile
+├── apply-patches      # Manual patch application
+├── redownload-source  # Remove source for fresh re-clone
+├── validate           # Test shadow build
+├── promote            # Shadow → main
+├── worldserver        # Start worldserver
+├── authserver         # Start authserver
+├── profiles           # List profiles
+├── switch             # Switch profile
+├── boost              # Install Boost 1.74.0
+├── keira              # Launch Keira3
+└── extract-maps       # (already existed)
 ```
 
 ### Profile System
@@ -86,11 +87,23 @@ Removed:
 ./scripts/worldserver                 # Start worldserver
 ./scripts/authserver                  # Start authserver
 ./scripts/update                      # Pull and rebuild
-./scripts/install --force             # Fresh install
+./scripts/install                     # First-time setup
+./scripts/redownload-source           # Remove source for re-clone
 ./scripts/apply-patches --dry-run     # Preview patches
 ./scripts/boost                       # Install Boost
 ./scripts/keira                       # Launch database editor
 ```
+
+### Fresh Install Workflow
+
+Instead of `--force` flags, use explicit preparation scripts:
+```bash
+./scripts/redownload-source           # Remove source directory
+./scripts/install                     # Detects missing source, re-clones
+```
+
+This way `install` checks if source exists - if not, it clones. The `redownload-source`
+script explicitly handles the "remove for re-clone" action, making the workflow visible.
 
 ## Design Decisions
 
@@ -108,6 +121,12 @@ Removed:
    - Easy to read programmatically
    - Easy to manually edit
    - No complex parsing needed
+
+4. **Decompose --force into explicit actions** - Instead of `--force` flags
+   - `redownload-source` removes source so `install` will re-clone
+   - `compile --force` only forces cmake reconfig (minimal scope)
+   - Each action is its own script, visible in the workflow
+   - Scripts detect missing state and act accordingly
 
 ## Related Files
 
