@@ -1,5 +1,7 @@
 # 346 - Authserver Public IP Detection
 
+**MIGRATED TO:** issues-beta/completed/113-authserver-ip-caching.md
+
 ## Status: Completed (2026-04-11)
 
 ## Current Behavior
@@ -170,3 +172,17 @@ Cache correctly prevents external service queries on subsequent authserver start
 3. **Automatic cleanup** - `/tmp/` cleared on reboot
 4. **Simple implementation** - No timestamp parsing, just file existence check
 5. **Organized temp files** - All wow-chat temp files in `/tmp/wow-chat/`
+
+## Script Disabled (2026-04-18)
+
+**Reason:** Realmlist now uses DNS hostname (`wow.ritzmenardi.com`) instead of raw IP address.
+
+The DNS record handles IP changes externally, making automatic IP detection unnecessary.
+The script call in `scripts/authserver` has been commented out.
+
+**Realmlist configuration:**
+- `address`: `wow.ritzmenardi.com` (for external players)
+- `localAddress`: `127.0.0.1` (for local connections)
+- `port`: 4462 (worldserver)
+
+The script remains in `scripts/update-realmlist-ip` in case raw IP mode is needed in the future.

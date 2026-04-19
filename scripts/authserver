@@ -122,15 +122,16 @@ get_profile_paths
 setup_log_symlinks
 check_mysql
 
-# Update realmlist with current public IP (cached daily in /tmp/wow-chat/)
-# Why: ISP may change our IP; this ensures players can connect
-# Why daily: Checking every startup wastes bandwidth; ISPs rarely change more than once/day
-# Why here: authserver starts first, stays up longer, worldserver restarts should be fast
-if [[ -x "${DIR}/scripts/update-realmlist-ip" ]]; then
-    echo "Updating realmlist with public IP..."
-    "${DIR}/scripts/update-realmlist-ip" "${DIR}"
-    echo ""
-fi
+# NOTE: Public IP auto-detection disabled (2026-04-18)
+# Realmlist now uses DNS hostname (wow.ritzmenardi.com) instead of raw IP.
+# DNS handles IP changes externally, so this script is no longer needed.
+# See: issues/completed/346-authserver-public-ip-detection.md
+#
+# if [[ -x "${DIR}/scripts/update-realmlist-ip" ]]; then
+#     echo "Updating realmlist with public IP..."
+#     "${DIR}/scripts/update-realmlist-ip" "${DIR}"
+#     echo ""
+# fi
 
 if [[ ! -f "${INSTALL_DIR}/bin/authserver" ]]; then
     echo "Error: authserver not found for profile '${PROFILE}'"

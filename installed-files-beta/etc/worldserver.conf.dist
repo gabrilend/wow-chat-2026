@@ -94,7 +94,7 @@ RealmID = 1
 #        Description: TCP port to reach the world server.
 #        Default:     8085
 
-WorldServerPort = 8085
+WorldServerPort = 4462
 
 #
 #    BindIP
