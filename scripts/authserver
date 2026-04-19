@@ -65,11 +65,12 @@ show_help() {
 
 # {{{ get_profile_paths
 get_profile_paths() {
-    if [[ "${PROFILE}" == "alpha" ]]; then
-        AC_CODE_DIR="${DIR}/source-alpha"
-    else
-        AC_CODE_DIR="${DIR}/source-beta"
-    fi
+    case "${PROFILE}" in
+        release) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
+        alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
+        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+    esac
     INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
     MYSQL_DIR="${DIR}/mysql/installed-files"
 }
@@ -86,6 +87,32 @@ setup_log_symlinks() {
 }
 # }}}
 
+# {{{ check_mysql
+# Ensures MySQL is running before server startup
+# Calls start-mysql if not running (which handles already-running case gracefully)
+check_mysql() {
+    local PID_FILE="${DIR}/mysql/databases/mysqld.pid"
+    local MYSQL_RUNNING=0
+
+    if [[ -f "${PID_FILE}" ]]; then
+        local PID
+        PID=$(cat "${PID_FILE}")
+        if kill -0 "${PID}" 2>/dev/null; then
+            MYSQL_RUNNING=1
+        fi
+    fi
+
+    if [[ "${MYSQL_RUNNING}" -eq 0 ]]; then
+        echo "MySQL not running, starting..."
+        if ! "${DIR}/scripts/start-mysql"; then
+            echo "ERROR: Failed to start MySQL"
+            exit 1
+        fi
+        echo ""
+    fi
+}
+# }}}
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -93,6 +120,7 @@ setup_log_symlinks() {
 parse_args "$@"
 get_profile_paths
 setup_log_symlinks
+check_mysql
 
 # Update realmlist with current public IP (cached daily in /tmp/wow-chat/)
 # Why: ISP may change our IP; this ensures players can connect
