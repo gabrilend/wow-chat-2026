@@ -18,8 +18,8 @@ The world contains no NPCs, creatures, or vendors by default.
 
 | Feature | Status | Issue | Notes |
 |---------|--------|-------|-------|
-| Remove all creature spawns | Partial | 136 | SQL created, needs testing |
-| Keep spirit healers only | Partial | 136 | Part of creature removal |
+| Remove all creature spawns | Partial | 203 | SQL created, needs testing |
+| Keep spirit healers only | Partial | 203 | Part of creature removal |
 | Remove static NPCs | Open | - | Vendors, quest givers, guards |
 | Verify empty world on fresh install | Open | - | End-to-end test |
 
@@ -94,7 +94,7 @@ Maximum level is 20 with modified progression.
 
 | Feature | Status | Issue | Notes |
 |---------|--------|-------|-------|
-| Level cap at 20 | Done | 120 | levelling.lua |
+| Level cap at 20 | Done | 205 | levelling.lua |
 | Chunked talent points (10 × 6) | Open | 319 | At levels 5, 8, 11, 14, 17, 20 |
 | No respec allowed | Open | 319 | Talents are permanent |
 | Tier 1-3 only (no deep talents) | Open | 319 | Block tier 4+ |
@@ -124,8 +124,8 @@ Death Knights start at level 1 with scaled abilities.
 
 | Feature | Status | Issue | Notes |
 |---------|--------|-------|-------|
-| DK starts at level 1 | Done | 138 | Needs testing |
-| DK abilities scaled for 1-20 | Done | 138 | Damage/healing adjusted |
+| DK starts at level 1 | Done | 206 | Needs testing |
+| DK abilities scaled for 1-20 | Done | 206 | Damage/healing adjusted |
 | DK power comparable to other classes | Open | - | Balance testing needed |
 
 ---

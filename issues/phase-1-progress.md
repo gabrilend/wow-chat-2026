@@ -1,105 +1,384 @@
-# Everland Ghostsong - Phase 1 Progress: Foundation
+# Phase 1 Progress: Foundation & Tooling
+
+## Effect
+
+The server runs. Developers can work on the project.
+
+## Status: Mostly Complete
 
 ## Goal
-Establish stable server environment with documented setup process.
 
-## Status: In Progress
+Establish a functional development environment: build scripts, database setup,
+configuration management, and developer tooling. Everything needed before
+gameplay systems can be implemented.
+
+---
 
 ## Issues
 
-| ID | Title | Status |
-|----|-------|--------|
-| 101 | verify-server-startup | In Progress |
-| 102 | test-playerbots-spawn | Open |
-| 103 | document-configuration-options | Completed |
-| 104 | migrate-lua-scripts-from-wowchat1 | Completed |
-| 105 | setup-local-mysql-installation | Completed |
-| 106 | ingame-config-control-board | Open (split) |
-| 106a | read-only-config-dashboard | Open |
-| 106b | runtime-config-modifications | Open |
-| 106c | config-persistence-layer | Open |
-| 107 | credential-manager-script | Open |
-| 108 | thread-count-variable | Completed |
-| 109 | improve-update-command | Completed |
-| 110 | random-spawn-point-feature | Open |
-| 111 | config-merge-script | Open |
-| 112 | fix-drop-creatures-cascading-errors | Open |
-| 113 | investigate-ambush-monsters-not-spawning | Open |
+Ordered by narrative arc. Number-order is preserved from history; the
+table-order below reflects dependency / blocking relationships. Where
+the two diverge, the **Notes** column calls out blockers.
 
-## Completed: 5/13 (5/16 including sub-issues)
+### Act 1 — The server runs (foundational)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 101 | verify-server-startup | In Progress | Substrate. Blocks every later issue. |
+| 102 | test-playerbots-spawn | In Progress | Module loading verification. Blocks all bot work in Phase 6. |
 
-## Phase Milestones
+### Act 2 — Knowledge is captured (documentation foundation)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 103 | configuration-documentation | Completed | docs/configuration.md established. |
+| 104 | lua-script-ownership | Completed | src/lua/ established as project's Lua home. |
+| 110 | concept-catalog-consolidation | Completed | 800-concept reference doc. Indexes everything. |
 
-- [x] Installation script functional
-- [x] Update script functional
-- [ ] Server runs without errors
-- [x] Playerbots module operational
-- [x] Documentation complete
+### Act 3 — Local data substrate
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 105 | project-local-database | Completed | MySQL 9.6.0 local install. Required by every DB-touching system. |
+
+### Act 4 — Build pipeline (the engine that builds the engine)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 108 | adaptive-build-parallelism | Completed | Auto-detect nproc for make. |
+| 109 | incremental-rebuild-detection | Completed | `update --force` flag. |
+| 112 | patch-staleness-detection | Completed | Source vs patch mtime. Blocks 127. |
+| 127 | patch-system-improvements | Implemented | Built on 112. (was issue 334) |
+
+### Act 5 — Profile model (canonical truth)
+The keystone. Every later build/profile decision derives from 136.
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 136 | canonical-profile-definitions | Open | **Keystone.** alpha/release/beta semantics. Supersedes 129, 133. (was 412) |
+| 129 | release-to-beta-transition | Open | Earlier transition plan. **Superseded by 136.** (was 400) |
+| 133 | profile-transition-system | Open | Earlier transition spec. **Superseded by 136.** (was 405) |
+| 130 | verify-release-baseline | Open | Validation step for release profile. (was 402) |
+| 131 | incremental-patch-integration | Open | Promote-from-beta workflow. Depends on 136. (was 403) |
+| 134 | alpha-baseline-setup | Open | Pin alpha to old AC commit + eluna. Depends on 136. (was 406) |
+| 132 | alpha-playerbots-working | Invalidated | Per 136 alpha has no playerbots. Kept for traceability. (was 404) |
+| 135 | release-profile-build-fixes | Open | Cleanup after 136 lands. (was 408) |
+| 138 | sql-profile-switch-rollback | Deferred Low | Move-to-archive-table approach. Not started. (was 414) |
+
+### Act 6 — Build pipeline correctness
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 115 | shadow-build-setup | Completed | Shadow build dir exists; previously marked "Will Not Implement" but file lives in completed/ — reconcile. |
+| 122 | atomic-shadow-builds | Open | Compile-or-keep-old, no half-states. (was 327) |
+| 137 | shadow-conf-path-baked-into-binary | Open | CONF_DIR was baked to shadow path; fix in scripts/compile applied 2026-04-28. (was 413) |
+| 114 | remove-profile-system | Will Not Implement | Decision: keep profiles for isolation. |
+
+### Act 7 — Networking & ops
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 113 | authserver-ip-caching | Completed | Replaced by DNS hostname; see issue's superseded-by note. |
+
+### Act 8 — Configuration system
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 107 | credential-manager-script | Open | Secrets management. Blocks 119. |
+| 111 | config-merge-script | Open | Merge config changes across rebuilds. |
+| 119 | config-value-orchestrator | Completed | Config management. Depends on 107. |
+| 106 | ingame-config-control-board | Open | Parent: full in-game config dashboard. |
+| 106a | read-only-config-dashboard | Open | View phase. Blocks 106b. |
+| 106b | runtime-config-modifications | Open | Modify phase. Depends on 106a. |
+| 106c | config-persistence-layer | Open | Save phase. Depends on 106b. |
+
+### Act 9 — Repository hygiene & dev ergonomics
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 116 | git-branch-consolidation | Open | Clean up legacy branches. |
+| 121 | mysql-script-naming-aliases | Open | Verb-first vs noun-first script names. (was 321) |
+| 120 | parallel-update-status-spinners | Open | Better build feedback. |
+| 128 | script-command-history | Open | Per-script history. (was 411) |
+| 126 | upstream-warning-fixes | Open | Suppress AzerothCore upstream noise. (was 333) |
+
+### Act 10 — Visualization & dev tools
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 117 | visual-powerline-mapping-tool | Open | Code-flow visualizations. |
+| 118 | point-line-definition-tools | Open | Dungeon waypoint editor. |
+| 123 | html-source-tree-export | Open | Static HTML site of source/issues/docs. (was 327) |
+| 124 | wimmelbilder-embedding-artwork | Open | Depends on 123. (was 328) |
+
+### Act 11 — Research / experimental
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 125 | algorism-priority-scheduler | Open | Research only; future architecture. (was 329) |
+
+### Act 12 — Latecomers (slotted at end of Phase 1)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 139 | recreate-missing-sql-files | Open | Reconstruct custom SQLs that became orphaned in DB. (was 167) |
+| 140 | branch-based-azerothcore-versioning | Implemented (Superseded) | Original profile-system spec. **Superseded by 136.** Infrastructure still active. (was 201) |
+
+## Completed: 12/42 (2 Will Not Implement, 2 Superseded, 1 Invalidated, 1 Deferred Low)
+
+---
+
+## Completion Criteria
+
+- [x] Server builds without errors
+- [x] Server starts without crashes
+- [x] MySQL databases accessible (local installation)
+- [x] Lua scripts load and execute (ALE working)
+- [x] Playerbots module loads
+- [ ] Configuration viewable in-game
+- [ ] Configuration modifiable at runtime
+- [ ] Developer tooling complete
+
+---
+
+## Key Files
+
+### Scripts
+- `scripts/azerothcore` - Main server management script
+- `scripts/start-mysql` - Start local MySQL
+- `scripts/stop-mysql` - Stop local MySQL
+- `scripts/mysql-client` - Connect to local MySQL
+
+### Configuration
+- `config/beta/worldserver.conf` - World server settings
+- `config/beta/authserver.conf` - Auth server settings
+- `config/beta/playerbots.conf` - Playerbot settings
+- `config/beta/mod_ale.conf` - ALE settings
+
+### Lua Scripts
+- `src/lua/` - Game Lua scripts (Issue 104)
+- `src/lua/periodic_events.lua` - Main event loop
+- `src/lua/ambush.lua` - Monster spawning
+- `src/lua/treasure.lua` - Chest spawning
+- `src/lua/travel.lua` - Wandering NPCs
+
+### Database
+- `mysql/` - Local MySQL installation
+- `mysql/databases/` - Data directory
+- `mysql/conf/my.cnf` - MySQL configuration
+
+### Documentation
+- `docs/configuration.md` - Configuration reference (Issue 103)
+
+---
+
+## Dependencies
+
+None - this is the foundation phase.
+
+---
+
+## Server Management
+
+### Build Commands
+
+```bash
+# Full build (first time or after pulling changes)
+./scripts/azerothcore update --force
+
+# Update only if remote has changes
+./scripts/azerothcore update
+
+# Start servers
+./scripts/azerothcore authserver
+./scripts/azerothcore worldserver
+```
+
+### MySQL Commands
+
+```bash
+# Start MySQL (required before worldserver)
+./scripts/start-mysql
+
+# Connect to MySQL
+./scripts/mysql-client
+
+# Stop MySQL
+./scripts/stop-mysql
+```
+
+### Database Credentials
+
+- Host: localhost (via socket)
+- Port: 3307
+- User: ritz
+- Password: (in secrets.conf)
+- Databases: acore_auth, acore_world, acore_characters, acore_playerbots
+
+---
+
+## Profile System
+
+Currently supports multiple build profiles:
+- **beta** - Current development
+- **release** - Stable snapshot
+- **alpha** - Cutting edge (not yet used)
+
+Each profile has isolated:
+- `source-{profile}/` - AzerothCore source
+- `build-{profile}/` - CMake artifacts
+- `installed-files-{profile}/` - Compiled binaries
+- `config/{profile}/` - Symlinks to configs
+
+### Simplification Pending (318)
+
+Profile system may be removed in favor of single build.
+Reduces complexity, simplifies scripts.
+
+---
 
 ## Notes
 
-### 2025-03-31 - Server First Run, Issues 110-111 Created
-- Server successfully started for the first time with playerbots active (500 bots)
-- Fixed SQL migration: copied wow-chat-1 custom SQL files to source/data/sql/custom/
-- Fixed death-knights.sql: removed deprecated StatsCount column, fixed VALUES syntax
-- Configured mod-grownup: 100% size at level 1, growing to 120% at level 80
-- Downloaded playerbots documentation to docs/playerbots/
-- Created CLAUDE.md with project context and documentation references
-- **Issue 110**: Random spawn point feature - spawn new characters at random waypoints
-- **Issue 111**: Config merge script - merge custom config sections after AC updates
+### MySQL Local Installation (105)
 
-### 2025-02-24 - Issues 108, 109 Completed
-- **108**: MAKE_JOBS now auto-detects to (nproc - 1), no config needed
-- **109**: Improved `update` with `--force` flag and remote change detection
-- `update` checks for remote changes before rebuilding (saves 30+ min)
-- `update --force` rebuilds without requiring remote changes (for first compile)
-- Removed deprecated `scripts/update-2` (all functionality now in main script)
-- Script now "just works" - no manual configuration required
+MySQL 9.6.0 compiled locally to avoid system conflicts:
+- Binary: `mysql/installed-files/bin/mysql`
+- Socket: `mysql/databases/mysql.sock`
+- Config: `mysql/conf/my.cnf`
 
-### 2026-01-29 - Issue 103 Completed
-- Created comprehensive `docs/configuration.md` documenting all server settings
-- Documented 50+ modified worldserver.conf settings organized by category
-- Added path configuration, database settings, module configs, Lua script constants
-- Updated `docs/table-of-contents.md` to include new document
-- Documentation milestone achieved
+Fixed deprecated `innodb_log_file_size` for MySQL 9.x.
 
-### 2026-01-29 - Issue 105 Completed
-- MySQL 9.6.0 compiled and installed locally to `mysql/installed-files/`
-- Database initialized at `mysql/databases/` with all paths local to project
-- AzerothCore databases created: acore_auth, acore_world, acore_characters
-- User `ritz` created with credentials from secrets.conf
-- Scripts verified working: mysql-start, mysql-stop, mysql-client
-- Fixed deprecated innodb_log_file_size config option for MySQL 9.x
-- Gitignore updated to properly handle MySQL runtime files
+### Build Optimization (108, 109)
 
-### 2025-01-29 - Issue 106 Split
-- Split 106-ingame-config-control-board into three sub-issues for incremental delivery
-- 106a: Read-only dashboard (view settings via chat commands and NPC)
-- 106b: Runtime modifications (change hot-reloadable settings live)
-- 106c: Persistence layer (save to files, backup/restore)
-- Sub-issues must be completed in order due to dependencies
+- MAKE_JOBS auto-detects to (nproc - 1)
+- `update` checks remote before rebuilding
+- `update --force` rebuilds unconditionally
+- Saves 30+ minutes on no-change updates
 
-### 2025-01-28 - Project Initialization
-- Converted existing project to monorepo structure
-- Created documentation framework
-- Created initial issue files for Phase 1
-- Existing scripts (azerothcore, update) preserved and documented
+### Config Dashboard (106a-c)
 
-### Pre-existing State
-The project contained functional installation and update scripts before
-monorepo initialization. Server binaries appear to have been built previously
-(Sep 2024 timestamps on logs). LuaJIT libraries present in installed-files/share/.
+Planned three-phase implementation:
+1. **106a**: Read-only view via chat commands and NPC
+2. **106b**: Modify hot-reloadable settings live
+3. **106c**: Persist changes to config files
 
-## Next Steps
+---
 
-1. Complete 101-verify-server-startup to establish baseline
-2. Address any errors found in Errors.log
-3. Proceed with 102-test-playerbots-spawn
-4. ~~Document findings in 103-document-configuration-options~~ (Done)
-5. Begin 106a-read-only-config-dashboard for in-game config viewing
+## rmail Integration (Reference)
 
-## Phase Completion Criteria
+Phase 1 doesn't use rmail - it IS the substrate that makes rmail possible.
+Every rmail service depends on this foundation existing and working.
+See **Phase 10** for the full rmail treatment with design philosophy.
 
-- All three issues resolved and in completed/
-- Demo script verifies server can start and accept connections
-- Configuration reference document exists
+### Foundation as Substrate
+
+rmail services require Phase 1 components:
+
+| Component | Phase 1 Provides | rmail Requires |
+|-----------|-----------------|----------------|
+| ALE | Lua script execution | Hook scripts (on_receive, on_send, on_delete) |
+| MySQL | Database access | Account table, character data, mail table |
+| Server Process | Running worldserver | Event hooks, player sessions |
+| Configuration | Settings files | Service ports, paths, credentials |
+
+### What Each rmail Service Needs
+
+| Service | Port | ALE Hooks | MySQL Tables | Config |
+|---------|------|-----------|--------------|--------|
+| accounts | 4562 | on_receive, on_delete | acore_auth.account | credentials |
+| classes | 4662 | on_receive | (validation only) | class paths |
+| mail | 4762 | on_receive, on_send | acore_characters.mail | poll interval |
+| narrator | 4862 | on_receive, on_send | (memory only) | TTS settings |
+| feedback | 4962 | on_receive | (file storage) | inbox path |
+
+### The Invisible Layer
+
+```
+THOUGHT: Infrastructure is invisible when it works.
+
+You don't think about MySQL when you're fighting wolves.
+You don't think about ALE when a narrator speaks.
+You don't think about the build system when submitting a class.
+
+But take any piece away, and everything collapses.
+No MySQL? No accounts. No characters. No mail.
+No ALE? No hooks. No custom behavior. No rmail integration.
+No server? No game.
+
+Phase 1 is the silence that lets other sounds be heard.
+The foundation doesn't speak. It holds.
+```
+
+### How Hooks Execute
+
+When rmail delivers a message:
+
+```
+1. rmail writes file to game-mail/*/inbox/
+2. rmail calls on_receive hook: lua script.lua sender subject filepath
+3. ALE executes the Lua script
+   └── Script reads message, parses content
+   └── Script accesses MySQL via ALE bindings
+   └── Script writes response to outbox
+4. rmail picks up outbox files, delivers responses
+
+All of this requires:
+- ALE initialized (Phase 1)
+- MySQL running (Phase 1)
+- Lua scripts loadable (Phase 1)
+- File permissions correct (Phase 1)
+```
+
+### Credential Flow
+
+```
+Phase 1: Foundation
+    │
+    ├── secrets.conf (database credentials)
+    │       │
+    │       ▼
+    ├── MySQL (acore_auth, acore_characters)
+    │       │
+    │       ▼
+    └── ALE (Lua execution environment)
+            │
+            ▼
+Phase 10: rmail Services
+    │
+    ├── on_receive hooks read/write database
+    ├── on_send hooks check delivery status
+    └── on_delete hooks clean up accounts
+```
+
+### Failure Modes
+
+When Phase 1 breaks, rmail fails:
+
+| Failure | Symptom | rmail Impact |
+|---------|---------|--------------|
+| MySQL down | Connection refused | No accounts, no mail |
+| ALE not loaded | Hooks don't fire | Messages arrive, nothing happens |
+| Bad credentials | Access denied | Hooks can't read/write DB |
+| Disk full | Write failures | Messages lost, queues corrupt |
+
+```
+THOUGHT: The foundation doesn't get credit. It gets blame.
+
+When rmail works, players thank the narrator system.
+When rmail breaks, they blame the server admin.
+
+Phase 1 is maintenance. Backups. Monitoring. Restarts.
+The unglamorous work that makes glamorous things possible.
+
+Every THOUGHT in Phase 10 assumes Phase 1 exists.
+Every diagram starts AFTER the server is running.
+The foundation is the implicit first line of every story.
+```
+
+### Service Architecture (Preview)
+
+| Service | Port | Foundation Dependencies |
+|---------|------|------------------------|
+| accounts | 4562 | MySQL (account table), ALE (hooks) |
+| classes | 4662 | ALE (validation), filesystem (class files) |
+| mail | 4762 | MySQL (mail table), ALE (hooks) |
+| narrator | 4862 | ALE (hooks, speech events) |
+| feedback | 4962 | Filesystem (inbox storage) |
+
+For the full WHY behind rmail, see Phase 10's "Thoughts" sections.
+
+---
+
+## Related Phases
+
+- All other phases depend on Phase 1
+- Phase 2 requires ALE initialization fix (202, now in Phase 2)
+- **Phase 10** - rmail services depend entirely on Phase 1 substrate

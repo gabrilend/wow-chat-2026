@@ -1,56 +1,51 @@
-# 102: Test Playerbots Spawn
+# 102 - Test Playerbots Spawn
 
-## Status
-- [ ] Open
-- [ ] In Progress
-- [ ] Completed
+**Phase:** 1 (Foundation)
+**Effect:** Verify AI companions work and respond to commands
+**Status:** Open
 
-## Current Behavior
+---
 
-Playerbots module is included in the build (mod-playerbots cloned during install)
-but functionality has not been verified. Configuration may require adjustment.
+## The Effect
 
-## Intended Behavior
+When complete, playerbots will:
+- Load on server startup
+- Spawn in the world when enabled
+- Respond to player commands (.bot add, .bot remove)
+- Follow and assist players
+- Perform basic AI tasks
 
+This validates the companion system that makes solo play viable.
+
+---
+
+## What This Solves
+
+### Current State (Unverified)
+
+Playerbots module is compiled into worldserver (mod-playerbots cloned during install), but:
+- Functionality not tested
+- Configuration may need adjustment
+- Don't know if bots spawn correctly
+- Don't know if commands work
+- Don't know if AI behaviors function
+
+### Intended State (Verified Working)
+
+After completion:
 1. Playerbots module loads on server startup
-
--- yep
-
 2. Random bots spawn in world when enabled
-
--- yep
-
 3. Bots respond to player commands
-
--- untested
-
 4. Bots can be added to groups
-
--- untested
-
 5. Bots perform basic AI tasks (follow, assist, quest)
 
--- quest, yes.
+---
 
-## Suggested Implementation Steps
+## Implementation Steps
 
-1. Verify mod-playerbots compiled into worldserver
-2. Check for playerbots configuration in etc/modules/
-3. Enable playerbots in configuration if disabled
-4. Start server and observe bot spawn messages
-5. Test in-game commands: .bot add, .bot remove
-6. Verify bot follows and assists player
+### 1. Verify Module Compiled
 
-## Configuration Options to Check
-
-```
-PlayerbotAI.Enabled = 1
-PlayerbotAI.RandomBotAutologin = 1
-PlayerbotAI.RandomBotCount = 100
-```
-
-## Validation Commands
-
+Check that mod-playerbots was built into worldserver:
 ```bash
 # Check for playerbots config
 ls -la installed-files/etc/*playerbot* 2>/dev/null || echo "No playerbot config found"
@@ -59,16 +54,104 @@ ls -la installed-files/etc/*playerbot* 2>/dev/null || echo "No playerbot config 
 grep -i playerbot installed-files/etc/worldserver.conf
 ```
 
-## Related Documents
+### 2. Enable Playerbots
 
-- docs/architecture.md (Module Integration Points section)
-- https://github.com/liyunfan1223/mod-playerbots
+Configuration options to check/set:
+```
+PlayerbotAI.Enabled = 1
+PlayerbotAI.RandomBotAutologin = 1
+PlayerbotAI.RandomBotCount = 100
+```
 
-## Notes
+Location: `installed-files/etc/modules/playerbots.conf` (or similar)
 
-This issue depends on 101-verify-server-startup being completed first. Server
-must be running before playerbots can be tested.
+### 3. Start Server and Observe
+
+Start worldserver and watch for playerbots initialization:
+```bash
+./scripts/azerothcore worldserver
+```
+
+Look for log messages indicating:
+- Playerbots module loaded
+- Random bots logging in
+- Bot spawn messages
+
+### 4. Test In-Game Commands
+
+Connect with client and test:
+```
+.bot add <name>        -- Add a bot to your group
+.bot remove <name>     -- Remove a bot
+.bot                   -- List available bot commands
+```
+
+### 5. Verify Bot Behavior
+
+Observe that bots:
+- Follow the player when moving
+- Assist in combat
+- Respond to group commands
+- Can be dismissed and re-summoned
+
+---
 
 ## Dependencies
 
-- 101-verify-server-startup
+**Blocker:**
+- 101-verify-server-startup (server must be running before testing bots)
+
+This issue can't proceed until server startup verification completes.
+
+---
+
+## Related Documents
+
+- docs/architecture.md (Module Integration Points section)
+- docs/playerbots/ (playerbot module documentation)
+- https://github.com/liyunfan1223/mod-playerbots
+
+---
+
+## Why This Matters
+
+**Solo Play Requires Companions**
+
+Everland Ghostsong is designed for solo/small-group play. The world is empty except for:
+- Ambush monsters (hostile)
+- Traveler NPCs (friendly but don't fight)
+- Treasure chests (loot)
+
+Without playerbots, players are alone against ambush spawns. With playerbots:
+- Group compositions possible (tank + healer + DPS)
+- Tactical gameplay (CC, focus fire)
+- Survivability in dangerous areas
+- Social element (even though bots are AI)
+
+**Foundation for Bot Behaviors**
+
+Later phases add custom bot behaviors:
+- 119 - orbit-player (defensive positioning)
+- 132 - healer-ping-pong (support AI)
+- 133 - gesture-commands (kneel, convoy)
+- 161 - wandering-traveler-style (exploration mode)
+
+These all depend on playerbots module working. Testing now prevents discovering broken bots when implementing behaviors later.
+
+**Quality Gate**
+
+This issue is a checkpoint:
+> "Does the companion system work at all?"
+
+If playerbots don't load, we need to fix that before adding features. If they do load, we can proceed with confidence.
+
+---
+
+## Phase 1 Contribution
+
+This issue validates **Phase 1: Foundation** by ensuring:
+> "The companion system is operational"
+
+A single-player roguelike needs AI companions. Verifying playerbots work means the foundation includes not just "server runs" but "server runs with working bots."
+
+This unlocks Phase 2 (Empty World) and Phase 3 (Living Systems) bot behaviors.

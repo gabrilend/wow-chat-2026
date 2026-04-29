@@ -84,7 +84,7 @@ Create a script that performs two operations:
 
 ## Related Documents
 - docs/configuration.md
-- issues/110-random-spawn-point-feature (will add config keys)
+- issues/204-random-spawn-point-feature (will add config keys)
 
 ## Future Enhancements
 - Support for authserver.conf custom sections
