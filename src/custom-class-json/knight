@@ -1,6 +1,6 @@
 # Knight Custom Class - Design Notes
 
-**SUPERSEDED**: See issues/159-knight-custom-class for current design.
+**SUPERSEDED**: See issues/706-knight-custom-class for current design.
 **Implementation**: See src/lua/custom-classes.lua (definition 1004)
 
 ---

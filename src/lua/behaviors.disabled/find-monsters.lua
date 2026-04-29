@@ -162,7 +162,7 @@ function FindMonsters.scan(bot)
 end -- }}}
 
 -- {{{ Module initialization
--- NOTE: Per-bot registration moved to periodic_events.lua (issue 160)
+-- NOTE: Per-bot registration moved to periodic_events.lua (issue 610)
 -- This file exposes: FindMonsters.scan(bot)
 print("[FindMonsters] Behavior loaded - periodic registration via periodic_events.lua")
 -- }}}

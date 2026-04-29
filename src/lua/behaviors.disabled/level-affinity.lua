@@ -358,7 +358,7 @@ end
 -- }}}
 
 -- {{{ Module initialization
--- NOTE: Per-bot registration moved to periodic_events.lua (issue 160)
+-- NOTE: Per-bot registration moved to periodic_events.lua (issue 610)
 -- This file exposes: trackLogin, trackLogout, periodicUpdate
 print("[LevelAffinity] Behavior loaded - periodic registration via periodic_events.lua")
 -- }}}

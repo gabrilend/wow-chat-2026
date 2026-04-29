@@ -25,10 +25,10 @@ These fix compatibility issues in upstream code.
 | B002 | playerbots-ale-login-hook | mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp | Yes | Trigger PLAYER_EVENT_ON_LOGIN for bots |
 | B003 | ale-gameobject-wildcard | mod-ale/src/LuaEngine/LuaEngine.cpp | Yes | Enable entry 0 as wildcard for gameobject events |
 | B004 | upstream-warning-fixes | mod-playerbots/*, mod-ale/* | Yes | Fix 695+ compiler warnings |
-| B005 | accuracy-level-cap | src/server/game/Entities/Unit/* | Yes | Cap level diff for hit/miss at ±3 (Issue 156) |
-| B006 | ale-sell-item-hook | mod-ale/*, Handlers/ItemHandler.cpp | Yes | Add PLAYER_EVENT_ON_SELL_ITEM = 74 (Issue 150) |
-| B007 | ale-unit-methods | mod-ale/*/UnitMethods.h, LuaFunctions.cpp | Yes | Add SetWalk, IsWalking, IsHostileTo, IsFriendlyTo (Issue 332) |
-| B008 | mod-talent-bonus | modules/mod-talent-bonus | Yes | Link local module for compilation (Issue 120) |
+| B005 | accuracy-level-cap | src/server/game/Entities/Unit/* | Yes | Cap level diff for hit/miss at ±3 (Issue 803) |
+| B006 | ale-sell-item-hook | mod-ale/*, Handlers/ItemHandler.cpp | Yes | Add PLAYER_EVENT_ON_SELL_ITEM = 74 (Issue 403) |
+| B007 | ale-unit-methods | mod-ale/*/UnitMethods.h, LuaFunctions.cpp | Yes | Add SetWalk, IsWalking, IsHostileTo, IsFriendlyTo (Issue 209) |
+| B008 | mod-talent-bonus | modules/mod-talent-bonus | Yes | Link local module for compilation (Issue 205) |
 
 ### B001: aoe-loot-item-namespace
 
@@ -47,7 +47,7 @@ sed -i 's/^\([[:space:]]*\)Item\* pItem = player->GetItemByGuid/\1::Item* pItem 
 ### B002: playerbots-ale-login-hook
 
 **File:** `modules/mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp`
-**Issue:** 324 - playerbots don't trigger PLAYER_EVENT_ON_LOGIN
+**Issue:** 306 (was 324) - playerbots don't trigger PLAYER_EVENT_ON_LOGIN
 **Reason:** Playerbots log bots in through their own C++ path, bypassing ALE Lua hooks. This prevents Lua scripts from initializing bot behaviors.
 
 **Changes:**
@@ -69,7 +69,7 @@ grep -q "sALE->OnLogin(bot)" "$FILE" || {
 ### B003: ale-gameobject-wildcard
 
 **File:** `modules/mod-ale/src/LuaEngine/LuaEngine.cpp`
-**Issue:** 325 - ALE doesn't support entry 0 wildcard for gameobject events
+**Issue:** 307 (was 325) - ALE doesn't support entry 0 wildcard for gameobject events
 **Reason:** ALE validates gameobject templates before registration. Entry 0 fails validation since no template exists with that ID.
 
 **Changes:**
@@ -78,7 +78,7 @@ grep -q "sALE->OnLogin(bot)" "$FILE" || {
 ```bash
 # Idempotent check: only patch if wildcard not present
 grep -q "entry != 0 && !eObjectMgr->GetGameObjectTemplate" "$FILE" || {
-    sed -i 's/if (!eObjectMgr->GetGameObjectTemplate(entry))/\/\/ entry 0 = wildcard (Issue 325)\n                if (entry != 0 \&\& !eObjectMgr->GetGameObjectTemplate(entry))/g' "$FILE"
+    sed -i 's/if (!eObjectMgr->GetGameObjectTemplate(entry))/\/\/ entry 0 = wildcard (Issue 307)\n                if (entry != 0 \&\& !eObjectMgr->GetGameObjectTemplate(entry))/g' "$FILE"
 }
 ```
 
@@ -129,7 +129,7 @@ Upgrading boost would eliminate 442 warnings.
 ### B006: ale-sell-item-hook
 
 **Files:** `mod-ale/*/Hooks.h`, `LuaEngine.h`, `PlayerHooks.cpp`, `Handlers/ItemHandler.cpp`
-**Issue:** 150 - ALE sell item hook
+**Issue:** 403 (was 150) - ALE sell item hook
 **Reason:** Allow Lua scripts to react to vendor sales for treasure pool recycling.
 
 **Changes:**
@@ -191,7 +191,7 @@ These configure the installed files.
 | E002 | config-database-paths | installed-files/etc/*.conf | No | Set database connection strings |
 | E003 | config-directory-paths | installed-files/etc/*.conf | No | Set log/data/source paths |
 | E004 | log-directory-setup | logs-{profile}/ | Yes | Create log dir symlink to /tmp |
-| E005 | dk-levelstats | acore_world_{profile} | No | Apply DK level 1-20 stats (issue 138) |
+| E005 | dk-levelstats | acore_world_{profile} | No | Apply DK level 1-20 stats (issue 206) |
 
 ### E001: lua-script-symlinks
 
@@ -303,7 +303,7 @@ apply_patches_end() {
 
 ---
 
-## Unpatch System (Issue 334)
+## Unpatch System (Issue 127)
 
 Each PHASE_BEGIN patch has a corresponding unpatch function that reverses its changes.
 After build completes (success or failure), all patches are reverted to keep source clean.

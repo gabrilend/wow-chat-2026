@@ -330,11 +330,11 @@ function DungeonRails.selectWanderTarget(bot)
     return nil, nil, nil, "retry"
 end -- }}}
 
--- {{{ Known cave/dungeon entrance locations (issue 165, 166)
+-- {{{ Known cave/dungeon entrance locations (issue 614, 118)
 -- Caves and dungeons that bots can seek out when in DUNGEON_DELVE mode
--- These need to be manually defined using point definition tools (issue 166)
+-- These need to be manually defined using point definition tools (issue 118)
 -- Format: { mapId = { { x = ..., y = ..., z = ..., name = "..." }, ... } }
--- TODO: Populate via issue 166 point definition tools
+-- TODO: Populate via issue 118 point definition tools
 local CAVE_DUNGEON_ENTRANCES = {
     -- Eastern Kingdoms (map 0)
     [0] = {

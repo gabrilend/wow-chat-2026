@@ -378,7 +378,7 @@ function BotWander.update(bot)
         return true
     end
 
-    -- Check if in DUNGEON_DELVE mode but not in dungeon - seek entrance (issue 165)
+    -- Check if in DUNGEON_DELVE mode but not in dungeon - seek entrance (issue 614)
     if BotOrchestrator and BotOrchestrator.getMode then
         local mode = BotOrchestrator.getMode(bot)
         if mode == BotOrchestrator.MODE.DUNGEON_DELVE then

@@ -134,5 +134,5 @@ end
 
 ## Related Issues
 
-- Issue 328: GetPosition nil errors (Eluna→ALE compatibility)
+- Issue 606b: GetPosition Nil Errors (Eluna→ALE compatibility)
 - CreatureMethods.h:972 TODO comment: "Move same to Player?"

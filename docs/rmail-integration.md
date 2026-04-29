@@ -297,7 +297,7 @@ classname.name = "Display Name"
 **Lifecycle:** Class available while message exists. Characters using your class
 keep their snapshot even if you delete the message.
 
-See `issues/163-custom-class-lua-format` for full specification.
+See `issues/709-custom-class-lua-format` for full specification.
 
 ---
 
@@ -336,7 +336,7 @@ Mail body text here.
 - Item attachments become PNG icon images
 - Outbound mail is text-only (no items/gold)
 
-See `issues/306-rmail-ingame-bridge` for details.
+See `issues/1004-rmail-ingame-bridge` for details.
 
 ---
 
@@ -367,7 +367,7 @@ Add `tts` to subject for audio files.
 - TTS option generates mp3 with narrator's speaking rhythm
 - Multiple narrators can be subscribed separately
 
-See `issues/310-wandering-narrator-system` for details.
+See `issues/910-wandering-narrator-system` for details.
 
 ---
 
@@ -394,10 +394,10 @@ compliments, poetry - whatever you want to share.
 ## Related Documents
 
 - `docs/connection-guide.md` - Basic connection setup
-- `issues/317-rmail-account-creation` - Account system details
-- `issues/163-custom-class-lua-format` - Class definition specification
-- `issues/306-rmail-ingame-bridge` - Mail bridge implementation
-- `issues/310-wandering-narrator-system` - Narrator subscription
+- `issues/1003-rmail-account-creation` - Account system details
+- `issues/709-custom-class-lua-format` - Class definition specification
+- `issues/1004-rmail-ingame-bridge` - Mail bridge implementation
+- `issues/910-wandering-narrator-system` - Narrator subscription
 
 ---
 

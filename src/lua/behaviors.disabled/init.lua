@@ -13,7 +13,7 @@ print("[Behaviors] Initializing behavior registry (scripts already loaded by ALE
 -- {{{ Behavior registry
 -- Allows other scripts to check which behaviors are loaded
 Behaviors = {
-    version = "1.1.0",  -- Updated for issue 161/162
+    version = "1.1.0",  -- Updated for issue 611/612
     loaded = {
         movement       = true,
         avoid_monsters = true,
@@ -24,8 +24,8 @@ Behaviors = {
         convoy         = true,
         level_affinity = true,  -- legacy, kept for utilities
         zone_consensus = true,  -- legacy, kept for utilities
-        dungeon_rails  = true,  -- issue 162
-        bot_wander     = true   -- issue 161
+        dungeon_rails  = true,  -- issue 612
+        bot_wander     = true   -- issue 611
     }
 }
 -- }}}

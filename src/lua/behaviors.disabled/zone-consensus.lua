@@ -26,7 +26,7 @@ CONSENSUS_WEIGHT       = 0.6   -- weight of zone consensus direction
 IDLE_DRIFT_DISTANCE    = 15    -- yards to drift when idle
 -- }}}
 
--- {{{ Dispersion Configuration (issue 160)
+-- {{{ Dispersion Configuration (issue 610)
 -- If no players/bots within LONELY_RADIUS, move APPROACH_DISTANCE toward closest
 -- If too close to others, disperse
 LONELY_RADIUS          = 200   -- yards - if no one within this, move toward others
@@ -501,7 +501,7 @@ end
 -- }}}
 
 -- {{{ Module initialization
--- NOTE: Per-bot registration moved to periodic_events.lua (issue 160)
+-- NOTE: Per-bot registration moved to periodic_events.lua (issue 610)
 -- This file only exposes ZoneConsensus.periodicUpdate(bot) for central calling
 ZoneConsensus.initialize()
 print("[ZoneConsensus] Behavior loaded - periodic registration via periodic_events.lua")

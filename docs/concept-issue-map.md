@@ -75,7 +75,7 @@ Bot spawning and AI behavior verification.
 
 ---
 
-### 103-document-configuration-options
+### 103-configuration-documentation
 **Status:** Completed | **Phase:** 1
 
 Configuration documentation and reference creation.
@@ -101,7 +101,7 @@ Configuration documentation and reference creation.
 
 ---
 
-### 104-migrate-lua-scripts-from-wowchat1
+### 104-lua-script-ownership
 **Status:** Completed | **Phase:** 1
 
 Lua script migration from original project.
@@ -131,7 +131,7 @@ Lua script migration from original project.
 
 ---
 
-### 105-setup-local-mysql-installation
+### 105-project-local-database
 **Status:** Completed | **Phase:** 1
 
 Project-local MySQL database setup.
@@ -263,7 +263,7 @@ Secure credential management.
 
 ---
 
-### 108-thread-count-variable
+### 108-adaptive-build-parallelism
 **Status:** Completed | **Phase:** 1
 
 Configurable parallel build threads.
@@ -278,7 +278,7 @@ Configurable parallel build threads.
 
 ---
 
-### 109-add-build-mode-to-azerothcore-script
+### 109-incremental-rebuild-detection
 **Status:** Completed | **Phase:** 1
 
 Debug/Release build mode selection.
@@ -328,7 +328,7 @@ Restore stashed features incrementally.
 
 ---
 
-### 329-mmap-route-precomputation
+### 612b-mmap-route-precomputation
 **Status:** Open | **Phase:** 3 | **Merge-Oriented:** 162
 
 Precomputed A* pathfinding with path relaxation for dungeon navigation.
@@ -343,9 +343,9 @@ Precomputed A* pathfinding with path relaxation for dungeon navigation.
 | 024 | travel.lua | Wandering integration |
 | 025 | movement.lua | Position utilities |
 | 055-100 | Ambush System | Spawn zone awareness |
-| 126 | Issue 126 (dungeon-room-spawn-zones) | Room detection |
-| 161 | Issue 161 (bot-wandering) | Integration point |
-| 166 | Issue 166 (point-line-definition) | Visualization |
+| — | Issue 902 (dungeon-room-spawn-zones) | Room detection |
+| — | Issue 611 (bot-wandering-traveller-style) | Integration point |
+| — | Issue 118 (point-line-definition-tools) | Visualization |
 
 ---
 
@@ -365,7 +365,7 @@ Quick reference for finding which issues touch a concept.
 | 020-027 | Lua Scripts | 104, 200 |
 | 028-036 | Directories | 101, 104, 105 |
 | 037-054 | Phase 1 Issues | All Phase 1 issues |
-| 055-100 | Ambush System | 200 |
+| 055-100 | Ambush System | 903, 904, 200, 903b |
 
 ### Behavior Systems (101-200)
 
@@ -397,9 +397,9 @@ Quick reference for finding which issues touch a concept.
 
 | Range | Concept Group | Issues |
 |-------|---------------|--------|
-| 401-420 | A* Pathfinding | 329 |
-| 421-430 | Path Relaxation | 329 |
-| 431-440 | Tile Grids | 329 |
+| 401-420 | A* Pathfinding | 612b |
+| 421-430 | Path Relaxation | 612b |
+| 431-440 | Tile Grids | 612b |
 | 441-500 | Math/Algorithms | 200 (ambush math) |
 
 ### Visual/Aesthetic (501-600)
@@ -444,20 +444,20 @@ Quick reference for finding which issues touch a concept.
 |-------|---------------|--------|
 | 101-verify-server-startup | 42 | In Progress |
 | 102-test-playerbots-spawn | 9 | Open |
-| 103-document-configuration-options | 20+ | Completed |
-| 104-migrate-lua-scripts-from-wowchat1 | 20 | Completed |
-| 105-setup-local-mysql-installation | 18 | Completed |
+| 103-configuration-documentation | 20+ | Completed |
+| 104-lua-script-ownership | 20 | Completed |
+| 105-project-local-database | 18 | Completed |
 | 106-ingame-config-control-board | 15 | Open |
 | 106a-read-only-config-dashboard | 15 | Open |
 | 106b-runtime-config-modifications | 10 | Open |
 | 106c-config-persistence-layer | 10 | Open |
 | 107-credential-manager-script | 5 | Open |
-| 108-thread-count-variable | 5 | Completed |
-| 109-add-build-mode-to-azerothcore-script | 6 | Completed |
+| 108-adaptive-build-parallelism | 5 | Completed |
+| 109-incremental-rebuild-detection | 6 | Completed |
 | 200-incremental-feature-restore | 50+ | In Progress |
-| 329-mmap-route-precomputation | 11 | Open |
-| 346-authserver-public-ip-detection | 3 | Open |
-| 347-linear-ability-scaling | 15+ | Open |
+| 612b-mmap-route-precomputation | 11 | Open |
+| 113-authserver-ip-caching | 3 | Open |
+| 715-linear-ability-scaling | 15+ | Open |
 
 **Total unique concepts referenced:** ~200 (20% of first thousand)
 **Most connected issue:** 200-incremental-feature-restore (touches most game systems)

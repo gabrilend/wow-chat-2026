@@ -200,7 +200,7 @@ function SitAndRest.checkAndRest(bot)
 end -- }}}
 
 -- {{{ Module initialization
--- NOTE: Per-bot registration moved to periodic_events.lua (issue 160)
+-- NOTE: Per-bot registration moved to periodic_events.lua (issue 610)
 -- This file exposes: SitAndRest.checkAndRest(bot)
 print("[SitAndRest] Behavior loaded - periodic registration via periodic_events.lua")
 -- }}}
