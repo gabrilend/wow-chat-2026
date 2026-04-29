@@ -16,26 +16,48 @@ not pets - they're fellow adventurers with their own agendas.
 
 ## Issues
 
+Ordered by narrative arc: orchestrator → individual behaviors →
+movement/pathfinding → social/cooperation → tooling/UI.
+
+### Orchestrator (the keystone)
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 114 | behavior-find-monsters | Implemented | Combat targeting |
-| 115 | behavior-discuss-with-npc | Open | Social interaction |
-| 116 | behavior-avoid-monsters | Implemented | Danger awareness |
-| 117 | behavior-sit-and-rest | Implemented | Resource recovery |
-| 118 | behavior-travel-to-unique-lands | Open | Cross-zone exploration |
-| 119 | behavior-orbit-player | Implemented | Formation positioning |
-| 125 | player-bot-behavior-commands | Open | Player control interface |
-| 132 | healer-bot-ping-pong-behavior | Open | Healer positioning |
-| 133 | gesture-command-system-kneel-convoy | Open | Non-verbal commands |
-| 160 | behavior-system-integration | Implemented | Centralized orchestration |
-| 161 | bot-wandering-traveller-style | Implemented | Natural movement |
-| 162 | dungeon-rail-pathfinding | Implemented | Cave/dungeon navigation |
-| 164 | behavior-orchestrator-modes | Implemented | Activity pages |
-| 165 | activity-selection-boredom | Implemented | Emergent decisions |
-| 167 | ranged-bot-help-intervention | Open | Ranged assistance |
-| 168 | public-healer-frames-addon | Open | UI for healer bots |
+| 610 | behavior-system-integration | Implemented | Centralized orchestration. Blocks every behavior below. |
+| 613 | behavior-orchestrator-modes | Implemented | Activity-page modes. Built on 610. |
+| 614 | activity-selection-boredom | Implemented | Emergent decisions; 15% chance after combat. Built on 613. |
 
-## Completed: 10/16
+### Individual behaviors (depend on 610)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 601 | behavior-find-monsters | Implemented | Combat targeting. |
+| 603 | behavior-avoid-monsters | Implemented | Danger awareness. Inverse of 601. |
+| 604 | behavior-sit-and-rest | Implemented | Resource recovery. |
+| 606 | behavior-orbit-player | Implemented | Formation positioning. |
+| 605 | behavior-travel-to-unique-lands | Open | Cross-zone exploration. |
+| 602 | behavior-discuss-with-npc | Open | Social interaction. |
+
+### Movement & pathfinding
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 611 | bot-wandering-traveller-style | Implemented | Natural movement. Pattern from Phase 5 travelers. |
+| 612 | dungeon-rail-pathfinding | Implemented | Reactive intersection sampling for caves/dungeons. |
+| 612b | mmap-route-precomputation | Open (Research) | Precompute full routes via mmap data. Complements/replaces 612. (was 329) |
+| 606b | getposition-nil-errors | Resolved | Bot crash fix when GetPosition returns nil. (was 328) |
+
+### Social / cooperation
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 607 | player-bot-behavior-commands | Open | Player control interface (party invite, dismiss). |
+| 608 | healer-bot-ping-pong-behavior | Open | Healer positioning. |
+| 609 | gesture-command-system-kneel-convoy | Open | Non-verbal commands. |
+| 615 | ranged-bot-help-intervention | Open | Ranged assistance pattern. |
+
+### UI / tooling
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 616 | public-healer-frames-addon | Open | UI for healer bots. Client-side AIO addon. |
+
+## Completed: 0/18 (10 Implemented, 1 Resolved, 1 Research)
 
 ---
 

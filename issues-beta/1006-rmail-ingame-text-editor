@@ -1,0 +1,289 @@
+# 1006 - In-Game Text Editor via Rmail
+
+## Status
+- Created: 2026-04-05
+- Phase: 3
+- Priority: Medium
+- Depends: 163 (Custom class Lua format - establishes rmail infrastructure)
+
+## Overview
+
+Use the WoW game client as a text editing interface through an AIO addon that embeds
+nvim-style editing. Messages composed in-game are sent through rmail to recipients.
+To non-recipients, the message appears as **static** - unintelligible noise. To the
+intended recipient with the shared key, the message is crystal clear.
+
+This creates a communication channel that bypasses the game entirely - you're talking
+through the filesystem, not through WoW's chat system. NPCs, the server, other players -
+none of them can tell what you're saying. Only your listener understands.
+
+## Current Behavior
+- Chat goes through WoW's built-in systems (say, whisper, guild, etc.)
+- All chat is logged and visible to server operators
+- No encrypted player-to-player communication
+- No in-game text editing beyond the basic chat box
+
+## Intended Behavior
+
+### The Editor Interface
+- AIO addon provides nvim-style text editing window
+- Modal editing: normal mode, insert mode, visual mode
+- Basic commands: i, a, o, dd, yy, p, :w, :q, :wq
+- Frame appears over game world, can be toggled with keybind
+- Supports multi-line editing for longer messages
+
+### Message Composition Flow
+```
+1. Player opens editor (/editor or keybind)
+2. Types recipient: :to alice
+3. Types subject: :subject Meeting at Goldshire
+4. Types message body in normal editing
+5. Saves and sends: :wq
+6. Message written to player's rmail outbox
+7. rmail daemon syncs to recipient's inbox
+8. Recipient sees notification in-game
+```
+
+### The Static Effect
+
+When a message is transmitted, it manifests in-game as:
+- NPC speech bubbles with garbled text
+- Environmental text objects with corrupted characters
+- Chat messages that appear as line noise: `▒░▓█▒▓░▒`
+
+To the intended recipient:
+- Same visual trigger, but text is readable
+- Decryption happens client-side via AIO addon
+- Only they have the shared key in their contacts file
+
+To everyone else:
+- Just noise
+- Can't tell a message was even sent
+- Plausible deniability - "I didn't say anything, that's just static"
+
+### Technical Implementation
+
+**Server-side (ALE)**:
+```lua
+-- Periodic check for outgoing messages from player's outbox
+-- Path: /home/ritz/games/azerothcore-2026/game-mail/player-outboxes/<guid>/
+
+function Rmail.checkPlayerOutbox(player)
+    local guid = player:GetGUIDLow()
+    local outboxPath = RMAIL_PLAYER_OUTBOXES .. "/" .. guid .. "/"
+
+    -- Check for new files
+    local files = scanDirectory(outboxPath)
+    for _, file in ipairs(files) do
+        if not file:match("^%.") then
+            -- New message to send
+            Rmail.queueOutgoing(guid, file)
+        end
+    end
+end
+
+-- When message arrives in player's inbox
+function Rmail.onIncomingMessage(recipientGuid, senderName, subject, body)
+    local player = GetPlayerByGUID(recipientGuid)
+    if player then
+        -- Send encrypted payload to client via AIO
+        AIO.Msg():Add("Rmail", "incoming", {
+            sender  = senderName,
+            subject = subject,
+            body    = body,  -- Already encrypted, client decrypts
+        }):Send(player)
+
+        -- Spawn "static" visual for everyone to see
+        Rmail.spawnStaticVisual(player)
+    end
+end
+```
+
+**Client-side (AIO Addon)**:
+```lua
+-- editor.lua - nvim-style text editor
+
+local EditorFrame = CreateFrame("Frame", "RmailEditor", UIParent)
+EditorFrame:SetSize(600, 400)
+EditorFrame:SetPoint("CENTER")
+EditorFrame:Hide()
+
+local mode = "normal"  -- normal, insert, visual
+local buffer = {}      -- lines of text
+local cursor = { line = 1, col = 1 }
+
+-- Decrypt incoming message with local key
+function Rmail.decryptMessage(encryptedBody, senderName)
+    local contact = Rmail.contacts[senderName]
+    if not contact or not contact.token then
+        return nil  -- No key, can't decrypt
+    end
+    return Rmail.decrypt(encryptedBody, contact.token)
+end
+
+-- When static appears, check if we can decode it
+function Rmail.onStaticReceived(payload)
+    local decrypted = Rmail.decryptMessage(payload.body, payload.sender)
+    if decrypted then
+        -- Show readable message
+        Rmail.showNotification(payload.sender, payload.subject, decrypted)
+    else
+        -- Can't decrypt - just see static (do nothing special)
+    end
+end
+```
+
+### File System Layout
+
+```
+/home/ritz/games/azerothcore-2026/
+├── game-mail/                          # Server's main rmail mailbox
+│   ├── inbox/                          # External messages (CLASS: submissions, etc.)
+│   ├── outbox/                         # Server responses
+│   └── config                          # Hooks
+│
+├── player-mail/                        # Per-player mailboxes (NEW)
+│   ├── <guid>/                         # One per character
+│   │   ├── inbox/                      # Messages TO this player
+│   │   ├── outbox/                     # Messages FROM this player
+│   │   └── contacts                    # Player's contact list
+│   └── .pending/                       # Sync queue
+│
+└── rmail-relay/                        # Bridge daemon (NEW)
+    ├── relay.lua                       # Routes player↔player messages
+    └── config                          # Relay configuration
+```
+
+### The Relay Daemon
+
+Players don't run rmail themselves - the server does. But players can message
+each other through the server-hosted relay:
+
+```
+Player A (in-game) → AIO → ALE writes to player-mail/A/outbox/
+                                    ↓
+                            relay.lua reads outbox
+                                    ↓
+                            Looks up recipient B in A's contacts
+                                    ↓
+                            Writes to player-mail/B/inbox/
+                                    ↓
+Player B (in-game) ← AIO ← ALE reads from player-mail/B/inbox/
+```
+
+For external contacts (off-server), the relay bridges to real rmail:
+```
+Player A → relay → game-mail/outbox/ → rmail daemon → internet
+```
+
+### Contact Exchange
+
+Players exchange contacts in-game:
+1. Player A targets Player B
+2. Player A types: /rmail contact
+3. AIO generates shared secret, stores in both players' contacts
+4. Now they can message each other encrypted
+
+For external contacts (people not on server):
+1. Player shares their external rmail address out-of-band
+2. External person adds them as contact
+3. Messages route through server relay
+
+### Visual Manifestation Options
+
+**Option A: NPC Speech**
+- Nearby NPC speaks garbled text
+- Recipient sees actual message in speech bubble
+- Others see: `░▒▓█▓▒░▒░▓█▒▓░`
+
+**Option B: Ground Text**
+- Text object spawns on ground
+- Like Diablo item labels
+- Fades after 10 seconds
+
+**Option C: Chat Channel**
+- Custom channel "Static" that everyone can see
+- Messages appear as noise
+- Recipient's addon filters and shows real text
+
+**Option D: Mail Icon**
+- Small envelope icon appears over recipient's head
+- Click to read
+- No public manifestation
+
+### Encryption
+
+Using same token-based encryption as rmail:
+- AES-256-GCM with shared key
+- Key derived from contact token
+- Perfect forward secrecy via ephemeral keys (optional enhancement)
+
+The "static" is literally the ciphertext rendered as visual noise.
+
+## Implementation Steps
+
+### Phase A: File Infrastructure
+1. Create `player-mail/` directory structure
+2. Add ALE functions to read/write player mailboxes
+3. Implement mailbox creation on character login
+4. Add periodic check for inbox messages
+
+### Phase B: AIO Editor Addon
+5. Create basic frame with text display
+6. Implement insert mode (typing)
+7. Implement normal mode (navigation)
+8. Add :to, :subject, :wq commands
+9. Write to outbox on save
+
+### Phase C: Relay Daemon
+10. Create relay.lua script
+11. Implement local player→player routing
+12. Implement external rmail bridging
+13. Add to startup scripts
+
+### Phase D: In-Game Contact Exchange
+14. Add /rmail contact command
+15. Implement key generation and exchange
+16. Store contacts in player mailbox
+
+### Phase E: Visual Static Effect
+17. Choose manifestation option
+18. Implement static spawn on message send
+19. Implement client-side decrypt and display
+
+### Phase F: Polish
+20. Add inbox notification
+21. Add message history viewer
+22. Add contact management UI
+
+## Security Considerations
+
+- Player contacts stored server-side (in player-mail/<guid>/contacts)
+- Server can technically read all messages (it has the contacts files)
+- For true E2E encryption, clients would need local key storage
+- Current design: server-mediated encryption (server is trusted relay)
+
+For paranoid mode (future):
+- Client generates keypair, stores private key locally
+- Only public key shared with server
+- True E2E, server can't read messages
+
+## Lore Integration
+
+The static is explained as:
+- "Whispers from the void that only the attuned can hear"
+- "Ancient runescript visible only to those who know the words"
+- "Echoes across the ley lines, scrambled to all but the intended"
+
+NPCs might comment: "Did you hear that? Just noise... probably nothing."
+
+## Related Issues
+- 163 - Custom class Lua format (establishes rmail infrastructure)
+- 155 - Custom class selection (uses rmail for class submissions)
+
+## Directory Note
+
+The azerothcore installation has moved to:
+`/home/ritz/games/azerothcore-2026/`
+
+Update paths in rmail configuration accordingly.

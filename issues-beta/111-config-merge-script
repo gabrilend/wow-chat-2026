@@ -1,0 +1,93 @@
+# 111 - Config Merge Script
+
+## Status
+- Created: 2025-03-31
+- Phase: 1
+- Priority: Medium
+
+## Current Behavior
+Custom config sections (like WowChat2.* settings) must be manually added to worldserver.conf after updates. When AzerothCore releases new .dist files, users lose custom sections or must manually merge them.
+
+-- that's not entirely true, the .dist file is meant to be copied to a file
+   without the .dist extension. like, worldserver.conf instead of worldserver.conf.dist.
+
+-- the dist stands for distribution, meaning this is the version to distribute, and the custom file without is the file you want to be custom to your name.
+
+-- (whispers disinters (to cinders) when beyond the red flame
+
+## Intended Behavior
+Create a script that performs two operations:
+
+1. **Merge custom sections INTO user config** (primary use):
+   - Read our custom config template (with .dist suffix)
+   - Merge our custom sections into user's existing worldserver.conf
+   - Preserve all user's existing values
+   - Add only new sections/keys that don't exist
+
+2. **Extract custom sections FROM user config** (development use):
+   - Read user's worldserver.conf
+   - Extract WowChat2.* sections (and any other custom sections we define)
+   - Write to our .dist template file
+   - Useful for updating our template when adding new options
+
+## Suggested Implementation Steps
+
+1. Create script `scripts/config-merge`:
+   ```bash
+   #!/bin/bash
+   # Usage: ./scripts/config-merge [--extract] <config-file>
+   # Default: merge our .dist sections into config-file
+   # --extract: pull custom sections from config-file into our .dist
+   ```
+
+2. Define custom section markers:
+   - Start marker: `######## WowChat2 Configuration ########`
+   - End marker: `######## End WowChat2 Configuration ########`
+   - All WowChat2.* keys live within these markers
+
+3. Create template file:
+   - `installed-files/etc/worldserver.conf.wowchat.dist`
+   - Contains only our custom sections with defaults and documentation
+
+4. Merge logic:
+   - Parse target config file
+   - Check if WowChat2 section exists
+   - If not: append our template
+   - If yes: merge new keys while preserving existing values
+
+5. Extract logic:
+   - Parse user config file
+   - Find WowChat2 section markers
+   - Extract content between markers
+   - Write to our .dist template
+
+## Technical Notes
+
+- Use Lua for parsing (consistent with project)
+- Config format: `Key = Value` with `#` comments
+- Handle multi-line values if needed
+- Preserve comment blocks for documentation
+
+## File Locations
+- Script: `scripts/config-merge`
+- Template: `installed-files/etc/worldserver.conf.wowchat.dist`
+- Target: User's `worldserver.conf`
+
+## Example Usage
+```bash
+# After AC update, merge our custom sections back in:
+./scripts/config-merge /path/to/worldserver.conf
+
+# After adding new WowChat2 options, update our template:
+./scripts/config-merge --extract /path/to/worldserver.conf
+```
+
+## Related Documents
+- docs/configuration.md
+- issues/204-random-spawn-point-feature (will add config keys)
+
+## Future Enhancements
+- Support for authserver.conf custom sections
+- Backup creation before merge
+- Dry-run mode to preview changes
+- Validate config syntax after merge

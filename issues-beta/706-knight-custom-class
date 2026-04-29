@@ -1,0 +1,254 @@
+# Issue 706: Knight Custom Class Design
+
+**Status**: Design Complete
+**Phase**: 2
+**Related**: 155 (custom-class-selection-npc), 157 (dynamic-trainer-spawning), 164 (configuration-schema)
+**Implementation**: `src/lua/custom-classes/knight.lua`
+
+## Quick Stats
+
+| Stat            | Value                                                         |
+|-----------------|---------------------------------------------------------------|
+| Base Class      | Paladin (2)                                                   |
+| Definition ID   | 1004                                                          |
+| Total Abilities | 18                                                            |
+| Total Talents   | 97 points across 30 families                                  |
+| Source Classes  | Paladin, Priest, Rogue, Warrior, Death Knight, Mage, Hunter, Druid, Shaman |
+| Stat Priority   | Int > Agi > Str (crit scaling)                                |
+| Weapons         | 2H only                                                       |
+| Role            | Single-target protector / off-healer / DPS                    |
+| Core Mechanic   | Parry -> Reckoning/Counterattack -> Crit -> Flurry -> Surge of Light |
+
+---
+
+## Overview
+
+The Knight is a custom class built on a Paladin base. They are a holy bodyguard who
+protects one ally at a time through shields and focused healing. They sacrifice AoE
+capability and CC for focused single-target protection.
+
+---
+
+## Design Philosophy
+
+### Fantasy
+
+A defensive warrior-priest who protects allies through sacred power. Not a raid
+healer - a dedicated protector of one target. Think "the one who stands between
+the healer and death."
+
+### Healing Model
+
+**Flash of Light is the ONLY healing spell.**
+- No Renew, no Holy Light, no group heals
+- Desperate Prayer kept as emergency tank cooldown (exception)
+- Smite for holy damage, creates proc synergy with Surge of Light
+
+### Core Gameplay Loop
+
+```
+1. Melee until crit
+2. Art of War procs -> instant Flash of Light
+3. If Flash crits -> Surge of Light procs -> instant Smite (can't crit)
+4. Back to melee, wait for next crit
+```
+
+### Stat Priority
+
+```
+Primary:   Intellect (healing power, mana, crit via talents)
+Secondary: Agility (melee crit, Nurturing Instinct healing bonus)
+Tertiary:  Strength (damage - nice but droppable)
+Ignore:    Spirit
+
+Core scaling: CRIT
+  - Crit heals proc Divine Aegis absorbs
+  - Crit melee procs Art of War (instant Flash)
+  - Crit Flash procs Surge of Light (instant Smite)
+```
+
+---
+
+## Abilities (Trainer-Learned)
+
+**Total: 18 abilities**
+
+| Source | Spell | ID | Level | Purpose |
+|--------|-------|-----|-------|---------|
+| Paladin | Parry | 3127 | 6 | Enables parry playstyle |
+| Paladin | Purify | 1152 | 6 | Cleanse poison + disease |
+| Paladin | Blessing of Kings | 20217 | 4 | +10% all stats |
+| Paladin | Flash of Light | 19750 | 20 | Primary heal |
+| Paladin | Sacred Shield | 53601 | 20 | Core identity - absorb shield |
+| Priest | Smite R1 | 585 | 1 | Holy damage |
+| Priest | Smite R2 | 591 | 6 | Holy damage |
+| Priest | Smite R3 | 598 | 14 | Holy damage |
+| Priest | Inner Fire R1 | 588 | 12 | Armor + spellpower buff |
+| Priest | Inner Fire R2 | 7128 | 20 | Armor + spellpower upgrade |
+| Priest | Inner Focus | 14751 | 16 | Next spell 100% crit, no mana |
+| Priest | Desperate Prayer | 19236 | 10 | Emergency self-heal (tank cooldown) |
+| Mage | Arcane Intellect R1 | 1459 | 1 | +Int buff (primary stat) |
+| Mage | Arcane Intellect R2 | 1460 | 14 | +Int buff (stronger) |
+| Death Knight | Horn of Winter | 57330 | 6 | Str/Agi buff for party |
+| Rogue | Sprint | 2983 | 10 | Gap closer, escape |
+| Warrior | Vigilance | 50720 | 16 | Threat transfer |
+| Warrior | Mocking Blow | 694 | 14 | Threat taunt |
+
+---
+
+## Talent Trees
+
+### PROTECTION TREE (30 points, 10 families)
+
+**Tier 1** (16 points, 4 families)
+
+| Talent | Source | Ranks | Spell IDs | Effect |
+|--------|--------|-------|-----------|--------|
+| Rogue Deflection | Rogue | 3 | 13852-13854 | +2/4/6% parry |
+| Warrior Deflection | Warrior | 5 | 16462-16466 | +1-5% parry |
+| Paladin Deflection | Paladin | 5 | 20060-20064 | +1-5% parry |
+| Hunter Deflection | Hunter | 3 | 19295-19297 | +1-3% parry |
+
+**Tier 2** (10 points, 4 families)
+
+| Talent | Source | Ranks | Spell IDs | Effect |
+|--------|--------|-------|-----------|--------|
+| Spell Deflection | Death Knight | 3 | 49145, 49496, 49497 | Parry = 15/30/45% spell dmg redux |
+| Magic Absorption | Mage | 2 | 29441, 29444 | +resist per level, mana on resist |
+| Eye for an Eye | Paladin | 2 | 9799, 9800 | Reflect 5/10% crit damage |
+| Acclimation | Death Knight | 3 | 50150-50152 | 10/20/30% resist stack on spell hit |
+
+**Tier 3** (4 points, 2 families)
+
+| Talent | Source | Ranks | Spell IDs | Effect |
+|--------|--------|-------|-----------|--------|
+| Reckoning | Paladin | 1 | 20177 | Extra attacks after being hit |
+| Ardent Defender | Paladin | 3 | 31850-31852 | 7/13/20% dmg redux below 35% HP |
+
+---
+
+### HOLY TREE (35 points, 10 families)
+
+**Tier 1** (17 points, 4 families)
+
+| Talent | Source | Ranks | Spell IDs | Effect |
+|--------|--------|-------|-----------|--------|
+| Divine Intellect | Paladin | 5 | 20257-20261 | +2/4/6/8/10% Int |
+| Spiritual Focus | Paladin | 5 | 20205-20209 | 14-70% pushback redux |
+| Mental Strength | Priest | 5 | 18551-18555 | +3/6/9/12/15% Int |
+| Holy Reach | Priest | 2 | 27789, 27790 | +10/20% Smite range |
+
+**Tier 2** (10 points, 4 families)
+
+| Talent | Source | Ranks | Spell IDs | Effect |
+|--------|--------|-------|-----------|--------|
+| Divine Aegis | Priest | 3 | 47509, 47511, 47515 | Crit heal = 10/20/30% absorb |
+| Blessed Resilience | Priest | 3 | 33142, 33145, 33146 | +1/2/3% healing, crit immunity |
+| Nurturing Instinct | Druid | 2 | 33872, 33873 | +50/100% Agi->healing |
+| Surge of Light | Priest | 2 | 33150, 33154 | 25/50% crit -> instant Smite/Flash |
+
+**Tier 3** (8 points, 3 families)
+
+| Talent | Source | Ranks | Spell IDs | Effect |
+|--------|--------|-------|-----------|--------|
+| Dreamstate | Druid | 3 | 33597, 33599, 33956 | 4/7/10% Int as MP5 |
+| Lunar Guidance | Druid | 3 | 33589-33591 | 4/8/12% Int->SP |
+| Art of War | Paladin | 2 | 53486, 59578 | Melee crit -> instant Flash |
+
+---
+
+### COMBAT TREE (32 points, 10 families)
+
+**Tier 1** (13 points, 4 families)
+
+| Talent | Source | Ranks | Spell IDs | Effect |
+|--------|--------|-------|-----------|--------|
+| Hunter Lightning Reflexes | Hunter | 5 | 19168, 19180, 24294, 24296, 24297 | +3-15% Agi |
+| Rogue Lightning Reflexes | Rogue | 3 | 13787-13789 | +2-6% dodge, +4-10% haste |
+| Combat Experience | Hunter | 2 | 34475, 34476 | +2/4% Agi and Int |
+| Focused Will | Priest | 3 | 45234, 45243, 45244 | +3% spell crit, dmg redux on crit |
+
+**Tier 2** (15 points, 4 families)
+
+| Talent | Source | Ranks | Spell IDs | Effect |
+|--------|--------|-------|-----------|--------|
+| Warrior Flurry | Warrior | 5 | 12319, 12967-12969, 12974 | +5-25% haste 3 swings |
+| Shaman Flurry | Shaman | 5 | 16256, 16281-16284 | +10-30% haste 3 swings |
+| Surefooted | Hunter | 3 | 19290, 19294, 24283 | -10/20/30% slow duration |
+| Pure of Heart | Paladin | 2 | 31822, 31823 | -15/30% curse/disease/poison duration |
+
+**Tier 3** (4 points, 2 families)
+
+| Talent | Source | Ranks | Spell IDs | Effect |
+|--------|--------|-------|-----------|--------|
+| Sheath of Light | Paladin | 3 | 53501-53503 | 30% AP->SP, crit heal HoT |
+| Counterattack | Hunter | 1 | 19306 | Parry->damage + 5s root |
+
+---
+
+## Point Budget Summary
+
+| Tree | T1 | T2 | T3 | Total | Families |
+|------|----|----|----|----|----------|
+| Protection | 16 | 10 | 4 | **30** | 10 |
+| Holy | 17 | 10 | 8 | **35** | 10 |
+| Combat | 13 | 15 | 4 | **32** | 10 |
+| **Grand Total** | 46 | 35 | 16 | **97** | 30 |
+
+**Player Budget:** 60 points (3 per level, levels 1-20)
+**Coverage Ratio:** 60/97 = 61.9%
+
+---
+
+## Permanent Glyphs
+
+```lua
+permanentGlyphs = {
+    [63326] = true,  -- Glyph of Vigilance (threat transfer)
+},
+```
+
+---
+
+## Strengths / Weaknesses
+
+**CAN Do:**
+- Single-target healing (Flash of Light only)
+- Single-target shielding (Sacred Shield)
+- Stat buffs (Blessing of Kings, Horn of Winter, Arcane Intellect)
+- Self-armor (Inner Fire)
+- Parry-based damage (Reckoning, Counterattack)
+- Burst mobility (Sprint)
+- Cleanse (Purify - poison + disease)
+- Holy damage (Smite)
+- Tank threat (Vigilance, Mocking Blow)
+
+**CANNOT Do:**
+- AoE damage
+- Ranged damage except Smite
+- CC (no stuns)
+- Group healing
+- Magic dispel (Scholar handles that)
+- HoTs (Flash is direct heal only)
+
+---
+
+## Class Differentiation
+
+| Mechanic | Knight | Scholar (planned) |
+|----------|--------|-------------------|
+| Dispel | Purify (poison/disease) | Dispel Magic (magic) |
+| Healing | Flash of Light | TBD |
+| Damage | Smite + melee | TBD |
+
+---
+
+## Revision History
+
+- 2026-04-05: Initial design, multiple iterations on talents
+- 2026-04-06: Major revision - Flash of Light only healing model
+  - Removed Renew and related talents
+  - Added Smite as holy damage spell
+  - Added Surge of Light for proc synergy
+  - Rebalanced talent trees (30/35/32 points)
+  - Confirmed Purify over Dispel Magic (Scholar gets magic dispels)

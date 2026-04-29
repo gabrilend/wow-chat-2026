@@ -16,15 +16,33 @@ the player seeking them out.
 
 ## Issues
 
+Ordered by narrative arc: spawning mechanism → social behavior →
+service types (trainers, merchants) → combat travelers.
+
+### Traveler spawning (the substrate)
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 135 | custom-merchant-system | Open | Wandering merchants with goods |
-| 137 | universal-class-trainers | Open | Any trainer teaches any class |
-| 207 | clear-traveller-data-on-despawn | Completed | Memory cleanup |
-| 157 | dynamic-trainer-spawning | Completed | Trainers spawn for player's class |
-| 320 | traveler-sit-with-player | Implemented | Social mirroring behavior |
+| 503 | dynamic-trainer-spawning | Completed | Trainers spawn for player's class. Pattern for all traveler types. |
 
-## Completed: 2/5
+### Social behavior
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 504 | traveler-sit-with-player | Implemented | Social mirroring (sit when player sits). |
+
+### Service-type travelers
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 501 | custom-merchant-system | Open | Wandering merchants with goods. Depends on 503 spawning pattern. |
+| 502 | universal-class-trainers | Open | Any trainer teaches any class. Depends on 503. |
+
+### Combat travelers (idea stage)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 505 | creature-class-travelers | Open (Idea) | Friendly combat NPCs, one per class/level-track. From original `wandering-dogs` stub. Depends on 503. Viability TBD. |
+
+## Completed: 1/5 (1 Implemented, 1 Idea Stage)
+
+Note: Issue 207 (clear-traveller-data-on-despawn) moved to Phase 2.
 
 ---
 

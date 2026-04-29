@@ -16,13 +16,39 @@ that the ambush and traveler systems will populate.
 
 ## Issues
 
+Ordered by narrative arc: database hygiene → ALE engine alive → content
+stripped → progression scaffolding for the empty world.
+
+### Database substrate
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 201 | fix-drop-creatures-cascading-errors | Completed | FK constraint handling |
-| 202 | ale-initialization-hook-fix | Completed | ALE loads correctly |
-| 203 | drop-all-creatures-except-spirit-healers | Ready | SQL created |
+| 201 | database-integrity-cleanup | Completed | FK constraint handling. Blocks 203. |
 
-## Completed: 2/3
+### ALE engine (the Lua substrate this phase delivers)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 202 | lua-engine-initialization | Completed | ALE loads correctly. Blocks every Lua-driven feature in later phases. |
+| 208 | ale-registry-corruption | In Progress | Crash fix. (was 332) |
+| 209 | ale-unit-methods-patch | Resolved | SetWalk / IsWalking / IsHostileTo / IsFriendlyTo. Re-implemented 2026-04-09. (was 332) |
+
+### Content stripping (the empty world)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 203 | drop-all-creatures-except-spirit-healers | Completed | SQL created. Depends on 201. |
+| 204 | remove-static-npcs | Open | Clear retail vendors / quest givers. Depends on 203. |
+
+### Progression scaffolding (1–20 cap, DK parity)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 205 | talent-points-level-20-cap | Completed | 1-20 progression. Blocks Phase 8 progression work. |
+| 206 | death-knight-level-1-scaling | Completed | DK starts at level 1 instead of 55. |
+
+### Memory hygiene
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 207 | clear-traveller-data-on-despawn | Completed | Memory cleanup. Pattern reused by Phase 5 traveller system. |
+
+## Completed: 6/9 (1 Resolved, 1 In Progress, 1 Open)
 
 ---
 

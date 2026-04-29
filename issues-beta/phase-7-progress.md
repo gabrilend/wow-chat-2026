@@ -16,23 +16,45 @@ automatically, and spawn personalized trainers.
 
 ## Issues
 
+Ordered by narrative arc: ability sources → custom-class definition
+format → selection UI → talent system → custom-class implementations.
+
+### Ability sources (where abilities come from)
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 140 | quest-spells-to-trainers | Implemented | Quest abilities at trainers |
-| 142 | custom-spell-system | Open | New spells beyond base game |
-| 143 | proc-gem-system | Open | Item-triggered abilities |
-| 144 | low-level-class-identity | Open | Class feel at early levels |
-| 155 | custom-class-selection-npc | Implemented | Race-specific selector NPCs |
-| 159 | knight-custom-class | Open | Example custom class |
-| 161 | aio-tiered-talent-trainers | Open | Talent training interface |
-| 162 | talent-tree-analysis-script | Open | Tooling for talent design |
-| 163 | custom-class-lua-format | Open | Definition file format |
-| 163 | custom-class-resource-bars | Open | Custom UI elements |
-| 164 | custom-class-configuration-schema | Open | Validation rules |
-| 304 | conditional-class-selector-spawn | Open | Only spawn if customs exist |
-| 345 | custom-talent-interface | Open | In-game talent UI |
+| 701 | quest-spells-to-trainers | Implemented | Quest-learned abilities now trainable. Pattern for ability acquisition. |
+| 702 | custom-spell-system | Open | New spells beyond base game. Blocks 706. |
+| 703 | proc-gem-system | Open | Item-triggered abilities. |
+| 715 | linear-ability-scaling | Open | Level-based spell scaling. (Phase 4 prerequisite for tome system.) |
 
-## Completed: 2/13
+### Custom-class definition format (the data model)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 709 | custom-class-lua-format | Open | Definition file format. **Keystone.** Blocks 711, 706, 706+. |
+| 711 | custom-class-configuration-schema | Open | Validation rules. Depends on 709. |
+
+### Selection UI
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 705 | custom-class-selection-npc | Implemented | Race-specific selector NPCs. |
+| 712 | conditional-class-selector-spawn | Open | Only spawn 705 if customs exist. Depends on 709 for detection. |
+
+### Talent system
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 707 | aio-tiered-talent-trainers | Open | Talent training interface. |
+| 713 | custom-talent-interface | Open | In-game talent UI (AIO addon). |
+| 714 | chunked-talent-points | Open | 10 points at levels 5/8/11/14/17/20. Blocks 707. |
+| 708 | talent-tree-analysis-script | Open | Tooling for talent-tree design. |
+
+### Custom-class implementations (depend on 709)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 704 | low-level-class-identity | Open | Class feel at early levels. |
+| 706 | knight-custom-class | Open | Example custom class. Depends on 709, 702. |
+| 710 | custom-class-resource-bars | Open | Custom UI elements (mana, rage, energy, custom). |
+
+## Completed: 0/15 (2 Implemented)
 
 ---
 

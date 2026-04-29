@@ -16,21 +16,49 @@ re-enter circulation, creating an economy of found goods.
 
 ## Issues
 
+Ordered by narrative arc: chest substrate → economy hooks → loot
+pipeline → multiplayer access → death stakes → exploit hardening.
+
+### Currency substrate
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 121 | bounty-board-currency-system | Open | Alternative currency |
-| 148 | treasure-chest-shared-loot | Implemented | Per-player queues |
-| 149 | sold-items-to-treasure-pool | Blocked | Needs 150 |
-| 150 | ale-sell-item-hook | Implemented | Needs C++ rebuild |
-| 151 | ability-tome-system | Partial | Lua done, needs SQL |
-| 152 | death-durability-system | Implemented | Gear damage on death |
-| 153 | chest-vulnerability-mechanic | Implemented | Daze/taunt on open |
-| 154 | multiplayer-chest-access | Implemented | Searcher can loot |
-| 160 | custom-empty-loot-chest-templates | Implemented | 37 custom templates |
-| 303 | chest-bound-hearthstones | Open | Teleport items |
-| 305 | zero-value-treasure-duplicates | Open | Prevent gold exploit |
+| 401 | bounty-board-currency-system | Completed | Alternative currency. Foundation for non-gold rewards. |
 
-## Completed: 0/11 (6 implemented, need testing/rebuild)
+### Chest substrate (the container)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 409 | custom-empty-loot-chest-templates | Implemented | 37 custom templates. Blocks 402. |
+| 402 | treasure-chest-shared-loot | Implemented | Per-player queues. Depends on 409. Core loop. |
+
+### Economy hooks (sold items re-enter pool)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 403 | ale-sell-item-hook | Completed | C++ patch applied. Blocks 404. |
+| 404 | sold-items-to-treasure-pool | In Progress | Needs 403 rebuild. Closes the loop: sells become spawns. |
+
+### Multiplayer access (cooperation required)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 408 | multiplayer-chest-access | Implemented | Holder can't see own loot — searcher must loot for them. |
+| 407 | chest-vulnerability-mechanic | Implemented | Daze/taunt on open. Creates tension during loot. |
+
+### Death stakes
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 406 | death-durability-system | Implemented | Gear damage on death. Blocks Phase 8 permadeath logic. |
+| 410 | chest-bound-hearthstones | Open | Teleport items rotate through pool. |
+
+### Exploit hardening
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 411 | zero-value-treasure-duplicates | Open | Prevent gold exploit on re-pooled items. |
+
+### Ability rewards (ties to Phase 7)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 405 | ability-tome-system | In Progress | Lua done, needs SQL. Crosses into Phase 7 ability system. |
+
+## Completed: 2/11 (5 Implemented, need testing)
 
 ---
 
@@ -163,7 +191,7 @@ ALE needs `PLAYER_EVENT_ON_SELL_ITEM` hook to capture vendor sales.
 
 - Hook implemented in C++ (see docs/patches/ale-sell-item-hook.md)
 - Needs server rebuild to activate
-- Once rebuilt, issue 149 unblocks
+- Once rebuilt, issue 404 unblocks
 
 ---
 

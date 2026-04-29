@@ -39,23 +39,29 @@ developer tooling.
 
 | Issue | Title | Status |
 |-------|-------|--------|
-| 101 | verify-server-startup | - |
-| 102 | test-playerbots-spawn | - |
-| 105 | setup-local-mysql-installation | Completed |
+| 101 | verify-server-startup | In Progress |
+| 102 | test-playerbots-spawn | In Progress |
+| 103 | configuration-documentation | Completed |
+| 104 | lua-script-ownership | Completed |
+| 105 | project-local-database | Completed |
 | 106a | read-only-config-dashboard | Open |
 | 106b | runtime-config-modifications | Open |
 | 106c | config-persistence-layer | Open |
 | 107 | credential-manager-script | Open |
-| 108 | thread-count-variable | Completed |
-| 109 | add-build-mode-to-azerothcore-script | Completed |
+| 108 | adaptive-build-parallelism | Completed |
+| 109 | incremental-rebuild-detection | Completed |
+| 110 | concept-catalog-consolidation | Completed |
 | 111 | config-merge-script | Open |
-| 123 | visual-powerline-mapping-tool | Open |
-| 145 | git-branch-consolidation | Open |
-| 166 | point-line-definition-tools | Open |
-| 201 | branch-based-azerothcore-versioning | Open |
-| 318 | remove-profile-system | Open |
-| 321 | mysql-script-naming-aliases | Open |
-| 323 | parallel-update-status-spinners | Open |
+| 112 | patch-staleness-detection | Completed |
+| 113 | authserver-ip-caching | Completed |
+| 114 | remove-profile-system | Will Not Implement |
+| 115 | shadow-build-setup | Will Not Implement |
+| 116 | git-branch-consolidation | Open |
+| 117 | visual-powerline-mapping-tool | Open |
+| 118 | point-line-definition-tools | Open |
+| 119 | config-value-orchestrator | Completed |
+| 120 | parallel-update-status-spinners | Open |
+| 121 | mysql-script-naming-aliases | Open |
 
 ### Phase 1 Completion Criteria
 
@@ -76,9 +82,13 @@ leaving an eerie emptiness that the ambush and traveler systems will populate.
 
 | Issue | Title | Status |
 |-------|-------|--------|
-| 112 | fix-drop-creatures-cascading-errors | Completed |
-| 130 | ale-initialization-hook-fix | Completed |
-| 136 | drop-all-creatures-except-spirit-healers | Ready |
+| 201 | database-integrity-cleanup | Completed |
+| 202 | lua-engine-initialization | Completed |
+| 203 | drop-all-creatures-except-spirit-healers | Completed |
+| 204 | remove-static-npcs | Open |
+| 205 | talent-points-level-20-cap | Completed |
+| 206 | death-knight-level-1-scaling | Completed |
+| 207 | clear-traveller-data-on-despawn | Completed |
 
 ### Phase 2 Completion Criteria
 
@@ -99,13 +109,13 @@ hazards extend the danger beyond land.
 
 | Issue | Title | Status |
 |-------|-------|--------|
-| 113 | investigate-ambush-monsters-not-spawning | Open |
-| 124 | randomize-ambush-spawn-interval | Completed |
-| 146 | clear-ambush-data-on-death | Completed |
-| 305 | ambush-aggro-and-corpse-movement | Implemented |
-| 301 | ocean-shark-hazard | Open |
-| 324 | nil-bot-periodic-event-crash | Open |
-| 325 | ale-gameobject-wildcard-registration | Open |
+| 301 | investigate-ambush-monsters-not-spawning | Open |
+| 302 | ocean-shark-hazard | Open |
+| 303 | randomize-ambush-spawn-interval | Completed |
+| 304 | clear-ambush-data-on-death | Completed |
+| 305 | ambush-aggro-and-corpse-movement | Completed |
+| 306 | nil-bot-periodic-event-crash | Open |
+| 307 | ale-gameobject-wildcard | Completed |
 
 ### Phase 3 Completion Criteria
 
@@ -128,17 +138,17 @@ Sold items re-enter circulation, creating an economy of found goods.
 
 | Issue | Title | Status |
 |-------|-------|--------|
-| 121 | bounty-board-currency-system | Open |
-| 148 | treasure-chest-shared-loot | Implemented |
-| 149 | sold-items-to-treasure-pool | Blocked (150) |
-| 150 | ale-sell-item-hook | Implemented (needs rebuild) |
-| 151 | ability-tome-system | Partial |
-| 152 | death-durability-system | Implemented |
-| 153 | chest-vulnerability-mechanic | Implemented |
-| 154 | multiplayer-chest-access | Implemented |
-| 160 | custom-empty-loot-chest-templates | Implemented |
-| 303 | chest-bound-hearthstones | Open |
-| 305 | zero-value-treasure-duplicates | Open |
+| 401 | bounty-board-currency-system | Completed |
+| 402 | treasure-chest-shared-loot | In Progress |
+| 403 | ale-sell-item-hook | Completed |
+| 404 | sold-items-to-treasure-pool | In Progress |
+| 405 | ability-tome-system | In Progress |
+| 406 | death-durability-system | Implemented |
+| 407 | chest-vulnerability-mechanic | Implemented |
+| 408 | multiplayer-chest-access | Implemented |
+| 409 | custom-empty-loot-chest-templates | Implemented |
+| 410 | chest-bound-hearthstones | Open |
+| 411 | zero-value-treasure-duplicates | Open |
 
 ### Phase 4 Completion Criteria
 
@@ -162,11 +172,10 @@ the player rather than the player seeking them out.
 
 | Issue | Title | Status |
 |-------|-------|--------|
-| 135 | custom-merchant-system | Open |
-| 137 | universal-class-trainers | Open |
-| 147 | clear-traveller-data-on-despawn | Completed |
-| 157 | dynamic-trainer-spawning | Completed |
-| 320 | traveler-sit-with-player | Implemented |
+| 501 | custom-merchant-system | Open |
+| 502 | universal-class-trainers | Open |
+| 503 | dynamic-trainer-spawning | Completed |
+| 504 | traveler-sit-with-player | Implemented |
 
 ### Phase 5 Completion Criteria
 
@@ -189,22 +198,22 @@ They're not pets - they're fellow adventurers with their own agendas.
 
 | Issue | Title | Status |
 |-------|-------|--------|
-| 114 | behavior-find-monsters | Implemented |
-| 115 | behavior-discuss-with-npc | Open |
-| 116 | behavior-avoid-monsters | Implemented |
-| 117 | behavior-sit-and-rest | Implemented |
-| 118 | behavior-travel-to-unique-lands | Open |
-| 119 | behavior-orbit-player | Implemented |
-| 125 | player-bot-behavior-commands | Open |
-| 132 | healer-bot-ping-pong-behavior | Open |
-| 133 | gesture-command-system-kneel-convoy | Open |
-| 160 | behavior-system-integration | Implemented |
-| 161 | bot-wandering-traveller-style | Implemented |
-| 162 | dungeon-rail-pathfinding | Implemented |
-| 164 | behavior-orchestrator-modes | Implemented |
-| 165 | activity-selection-boredom | Implemented |
-| 167 | ranged-bot-help-intervention | Open |
-| 168 | public-healer-frames-addon | Open |
+| 601 | behavior-find-monsters | Implemented |
+| 602 | behavior-discuss-with-npc | Open |
+| 603 | behavior-avoid-monsters | Implemented |
+| 604 | behavior-sit-and-rest | Implemented |
+| 605 | behavior-travel-to-unique-lands | Open |
+| 606 | behavior-orbit-player | Implemented |
+| 607 | player-bot-behavior-commands | Open |
+| 608 | healer-bot-ping-pong-behavior | Open |
+| 609 | gesture-command-system-kneel-convoy | Open |
+| 610 | behavior-system-integration | Implemented |
+| 611 | bot-wandering-traveller-style | Implemented |
+| 612 | dungeon-rail-pathfinding | Implemented |
+| 613 | behavior-orchestrator-modes | Implemented |
+| 614 | activity-selection-boredom | Implemented |
+| 615 | ranged-bot-help-intervention | Open |
+| 616 | public-healer-frames-addon | Open |
 
 ### Phase 6 Completion Criteria
 
@@ -229,19 +238,21 @@ automatically, and spawn personalized trainers.
 
 | Issue | Title | Status |
 |-------|-------|--------|
-| 140 | quest-spells-to-trainers | Implemented |
-| 142 | custom-spell-system | Open |
-| 143 | proc-gem-system | Open |
-| 144 | low-level-class-identity | Open |
-| 155 | custom-class-selection-npc | Implemented |
-| 159 | knight-custom-class | Open |
-| 161 | aio-tiered-talent-trainers | Open |
-| 162 | talent-tree-analysis-script | Open |
-| 163 | custom-class-lua-format | Open |
-| 163 | custom-class-resource-bars | Open |
-| 164 | custom-class-configuration-schema | Open |
-| 304 | conditional-class-selector-spawn | Open |
-| 345 | custom-talent-interface | Open |
+| 701 | quest-spells-to-trainers | Implemented |
+| 702 | custom-spell-system | Open |
+| 703 | proc-gem-system | Open |
+| 704 | low-level-class-identity | Open |
+| 705 | custom-class-selection-npc | Implemented |
+| 706 | knight-custom-class | Open |
+| 707 | aio-tiered-talent-trainers | Open |
+| 708 | talent-tree-analysis-script | Open |
+| 709 | custom-class-lua-format | Open |
+| 710 | custom-class-resource-bars | Open |
+| 711 | custom-class-configuration-schema | Open |
+| 712 | conditional-class-selector-spawn | Open |
+| 713 | custom-talent-interface | Open |
+| 714 | chunked-talent-points | Open |
+| 715 | linear-ability-scaling | Open |
 
 ### Phase 7 Completion Criteria
 
@@ -265,14 +276,13 @@ mandatory grouping at endgame, and the ultimate stakes of permadeath.
 
 | Issue | Title | Status |
 |-------|-------|--------|
-| 120 | talent-points-level-20-cap | Completed |
-| 138 | death-knight-level-1-scaling | Implemented |
-| 139 | proportional-damage-rewards | Open |
-| 141 | talent-tier-limit | Open |
-| 156 | monster-accuracy-level-cap | Implemented (needs rebuild) |
-| 309 | invisible-level-progression | Open |
-| 319 | chunked-talent-points | Open |
-| 322 | vavadane-shared-daily-reset-character | Open |
+| 801 | proportional-damage-rewards | Open |
+| 802 | talent-tier-limit | Open |
+| 803 | monster-accuracy-level-cap | Implemented (needs rebuild) |
+| 804 | invisible-level-progression | Open |
+| 805 | vavadane-shared-daily-reset-character | Open |
+
+Note: Talent system (205) and DK scaling (206) are in Phase 2.
 
 ### Phase 8 Completion Criteria
 
@@ -300,19 +310,19 @@ Dungeons have meaningful room structures. Language barriers create social puzzle
 
 | Issue | Title | Status |
 |-------|-------|--------|
-| 122 | rebellious-attitudes-freedom-of-affairs | Open |
-| 126 | dungeon-room-spawn-zones | Open |
-| 127 | contextual-creature-spawns | Open |
-| 128 | embedding-based-creature-selection | Open |
-| 129 | portal-dimension-system | Open |
-| 131 | randomized-login-screen-freddi-fish | Open |
-| 302 | language-barrier-system | Open |
-| 307 | narrator-audience-facing | Open |
-| 308 | gutenberg-text-library | Open |
-| 310 | wandering-narrator-system | Open |
-| 311 | shepherd-flock-system | Open |
-| 312 | automated-lore-generation | Open |
-| 316 | clustered-worldserver | Open |
+| 901 | rebellious-attitudes-freedom-of-affairs | Open |
+| 902 | dungeon-room-spawn-zones | Open |
+| 903 | contextual-creature-spawns | Open |
+| 904 | embedding-based-creature-selection | Open |
+| 905 | portal-dimension-system | Open |
+| 906 | randomized-login-screen-freddi-fish | Open |
+| 907 | language-barrier-system | Open |
+| 908 | narrator-audience-facing | Open |
+| 909 | gutenberg-text-library | Open |
+| 910 | wandering-narrator-system | Open |
+| 911 | shepherd-flock-system | Open |
+| 912 | automated-lore-generation | Open |
+| 913 | clustered-worldserver | Open |
 
 ### Phase 9 Completion Criteria
 
@@ -346,19 +356,19 @@ that enables services implemented in other phases. The service architecture span
 
 | Issue | Title | Status |
 |-------|-------|--------|
-| 313 | rmail-dns-style-addresses | Open |
-| 315 | rmail-login-flush-hook | Open |
-| 317 | rmail-account-creation | Open |
+| 1001 | rmail-dns-style-addresses | Open |
+| 1002 | rmail-login-flush-hook | Open |
+| 1003 | rmail-account-creation | Open |
 
 ### Service Implementations
 
 | Issue | Title | Impl Phase | Port |
 |-------|-------|------------|------|
-| 163 | custom-class-submission | 7 | 4662 |
-| 306 | rmail-ingame-bridge | 10 | 4762 |
-| 310 | narrator-subscription | 9 | 4862 |
-| 314 | rmail-feedback-mailbox | 10 | 4962 |
-| 164 | rmail-ingame-text-editor | 10 | - |
+| 709 | custom-class-submission | 7 | 4662 |
+| 1004 | rmail-ingame-bridge | 10 | 4762 |
+| 910 | narrator-subscription | 9 | 4862 |
+| 1005 | rmail-feedback-mailbox | 10 | 4962 |
+| 1006 | rmail-ingame-text-editor | 10 | - |
 
 ### Phase 10 Completion Criteria
 
@@ -390,14 +400,14 @@ See `issues-beta/phase-10-progress.md` for examples of the Thoughts style.
 
 Some issues contribute to multiple phases. Assignment is based on primary effect:
 
-- **157 (dynamic trainer spawning)** - Could be Phase 5 (travelers) or Phase 7
+- **503 (dynamic trainer spawning)** - Could be Phase 5 (travelers) or Phase 7
   (custom classes). Assigned to Phase 5 because the trainer IS a traveler.
 
-- **160 (behavior system integration)** - Spans Phase 5 and 6. Assigned to
+- **610 (behavior system integration)** - Spans Phase 5 and 6. Assigned to
   Phase 6 because bots are the primary beneficiary.
 
-- **161/162 (duplicate numbers)** - The original numbering has collisions.
-  Context determines which issue is meant.
+- **611/612 (bot wandering/dungeon navigation)** - Originally had duplicate
+  numbers 161/162. Now properly separated in Phase 6.
 
 ### Original Phase Mapping
 
@@ -634,6 +644,94 @@ The `issues/` directory remains authoritative until full migration.
 - Phase 4: 402 (was 148), 403 (was 150), 406 (was 152), 407 (was 153), 408 (was 154), 409 (was 160)
 - Phase 5: 503 (was 157), 504 (was 320)
 - Phase 6: 601 (was 114), 602 (was 116), 603 (was 117), 605 (was 119), 611 (was 161), etc.
+
+---
+
+## Spec Audit Addendum (2026-04-28)
+
+> **Note (later same day):** The per-phase number assignments below have
+> been **superseded by the narrative-arc ordering in each
+> `phase-N-progress.md`**. Where the assignments below conflict with a
+> progress doc, the progress doc wins. The progress docs now hold the
+> authoritative blocking/dependency story. This addendum is kept for
+> traceability of how numbers shifted as new issues were folded in.
+
+The renumbering map above (lines 456–646) was written against an earlier
+issue corpus. Since then, ~30 new issues have been created and 5
+duplicate-number collisions have appeared. This section records the
+resolutions so manual migration can resume.
+
+### Duplicate-Number Collisions
+
+| Old# | Files | Resolution |
+|------|-------|------------|
+| 212 | `outland-demon-felorc-spawns` + `regional-creature-spawn-themes` | Primary = `regional-creature-spawn-themes` → **903b** (sub-issue of contextual-creature-spawns); supplemental = **903b1-outland-demon-felorc-spawns** as detail spec. Both Phase 9. |
+| 327 | `atomic-shadow-builds` + `html-source-tree-export` | Different topics. `atomic-shadow-builds` → **122** (Phase 1 build infra). `html-source-tree-export` → **123-html-source-tree-export** (Phase 1 tooling). |
+| 328 | `getposition-nil-errors` (resolved) + `wimmelbilder-embedding-artwork` | Different topics. `getposition-nil-errors` → **606b-getposition-nil-errors** (completed; Phase 6 bot crash fix). `wimmelbilder-embedding-artwork` → **124-wimmelbilder-embedding-artwork** (Phase 1, depends on 123). |
+| 329 | `algorism-priority-scheduler` + `mmap-route-precomputation` | Different topics. `algorism-priority-scheduler` → **125-algorism-priority-scheduler** (Phase 1, research/experimental). `mmap-route-precomputation` → **612b-mmap-route-precomputation** (Phase 6, complements 612). |
+| 332 | `ale-registry-corruption` (in progress) + `ale-unit-methods-patch` (resolved) | Both Phase 2 ALE. `ale-registry-corruption` → **208-ale-registry-corruption**. `ale-unit-methods-patch` → **209-ale-unit-methods-patch**. |
+
+### New Issues — Phase Assignments
+
+**Phase 1 (Foundation & Tooling):**
+- 122 atomic-shadow-builds (was 327)
+- 123 html-source-tree-export (was 327)
+- 124 wimmelbilder-embedding-artwork (was 328)
+- 125 algorism-priority-scheduler (was 329, research)
+- 126 upstream-warning-fixes (was 333)
+- 127 patch-system-improvements (was 334, implemented)
+- 128 script-command-history (was 411)
+- 129 release-to-beta-transition (was 400, **superseded by 412**)
+- 130 verify-release-baseline (was 402)
+- 131 incremental-patch-integration (was 403)
+- 132 alpha-playerbots-working (was 404)
+- 133 profile-transition-system (was 405, **superseded by 412**)
+- 134 alpha-baseline-setup (was 406)
+- 135 release-profile-build-fixes (was 408)
+- 136 canonical-profile-definitions (was 412)
+- 137 shadow-conf-path-baked-into-binary (was 413)
+
+**Phase 2 (Empty World):**
+- 208 ale-registry-corruption (was 332, in progress)
+- 209 ale-unit-methods-patch (was 332, resolved)
+
+**Phase 1 (continued — infrastructure tooling):**
+- 138 sql-profile-switch-rollback (was 414, low priority deferred — SQL tooling is infrastructure, not gameplay economy)
+
+**Phase 6 (Bot Behaviors):**
+- 606b getposition-nil-errors (was 328, completed)
+- 612b mmap-route-precomputation (was 329, complements 612)
+
+**Phase 7 (Custom Classes):**
+- 716 linear-ability-scaling (was 347, prerequisite for tome system in Phase 4)
+
+**Phase 9 (Storytelling):**
+- 903b regional-creature-spawn-themes (was 212, sub-issue of 903)
+- 903b1 outland-demon-felorc-spawns (was 212, detail spec)
+- 914 custom-chat-data-sources (was 330, narrator data sources)
+- 915 ollama-conversation-flow (was 331, experimental lore generation)
+
+### Loose Files — Disposition
+
+| File | Type | Action |
+|------|------|--------|
+| `issues/100-route-to-v1.md` | Meta (v1.0 feature checklist) | Keep at root as `route-to-v1.md` (no number); not a Phase issue, it's a release manifest |
+| `issues/200-incremental-feature-restore` | Meta (testing critical-path doc) | Keep at root as `testing-critical-path.md`; it's the runbook, not an issue |
+| `issues/TONIGHT.md` | Stale snapshot (says release=wow-chat-1) | Move to `issues/completed/` as historical artifact, OR delete. Superseded by 412. |
+| `issues/next-issue-please` | Empty file | Delete |
+| `issues/wandering-dogs` | Raw idea-stub for traveler creatures | **Done 2026-04-28**: converted to `issues/505-creature-class-travelers.md` with verbatim text preserved as the authoritative source. Original file deleted. |
+
+### Numbering Range Used
+
+After this audit, Phase 1 issues run **101–137** (was 101–121 in the
+original spec). Other phases largely unchanged. Numbers above the
+ranges used here remain available for new work.
+
+### Implementation Note
+
+This addendum is the **spec**, not the migration. Manual issue-by-issue
+migration to `issues-beta/` proceeds against these resolutions. As each
+issue moves, update its phase-progress file and check it off here.
 
 ---
 

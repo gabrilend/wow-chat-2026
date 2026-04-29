@@ -14,7 +14,15 @@ Everland Ghostsong is a WoW 3.3.5a private server with custom roguelike survival
 
 ## Current Development State
 
-**Branch:** `beta` - release for newest known good, alpha for new features
+**Active Profile:** read `.profile` at project root (currently `release`).
+
+**Profile Definitions:** see `issues/136-canonical-profile-definitions.md`
+for the canonical model. Brief summary:
+- `alpha` — pinned old AzerothCore + mod-eluna + wow-chat-1 customs
+  (no playerbots, no ALE). Holiday relic.
+- `release` — current AzerothCore + mod-ale + mod-playerbots. Public
+  release target.
+- `beta` — release baseline + in-development custom features.
 
 **Reference:** `libs/wow-chat-1/` - original Lua scripts from previous version - do not alter
 
@@ -256,7 +264,7 @@ The powerline tool parses source files and procedurally generates maps:
 - **Skooch** - adjust alignment so one element clears another visually
 - **Wave** - align config points across files to create visual flow
 
-See `issues/123-visual-powerline-mapping-tool.md` for full specification.
+See `issues/117-visual-powerline-mapping-tool.md` for full specification.
 
 ## Tracking
 
@@ -357,44 +365,6 @@ Anyone reading the story can make it real on their own hardware.
 - Fanfiction for code - the story becomes real on whatever hardware reads it.
 - at all times, when possible, try to utilize the design patterns presented in the original wow-chat-1 reference source.
 - girl just search the database next time, don't do so many web searches.
-- Build complete! Log: /home/ritz/games/azeroth-core/wow-chat-2026/tmp/build-beta.log
-
-Setting up MySQL databases for profile 'beta'...
-  Auth (shared): acore_auth
-  World:         acore_world_beta
-  Characters:    acore_characters_beta
-ERROR 1045 (28000): Access denied for user 'root'@'localhost' (using password: YES)
-
-===============================================================================
-MySQL SETUP FAILED: Database/user creation failed
-===============================================================================
-
-Connection attempted via: /home/ritz/games/azeroth-core/wow-chat-2026/mysql/databases/mysql.sock
-
-What didn't complete:
-  [ ] Database creation (acore_auth, acore_world_beta, acore_characters_beta)
-  [ ] User 'ritz'@'localhost' creation/privileges
-  [ ] Config file initialization
-  [ ] Directory path configuration
-  [ ] Lua script symlinks
-  [ ] Data files copy
-
-What DID complete:
-  [x] Source code clone/update
-  [x] Module installation
-  [x] Pre-compile patches (PHASE_BEGIN)
-  [x] Compilation (make)
-  [x] Binary installation
-
-Possible causes:
-  - MySQL not running (start with: ./scripts/start-mysql)
-  - Root user doesn't have socket auth configured
-  - Socket permissions issue
-
-To debug:
-  /home/ritz/games/azeroth-core/wow-chat-2026/mysql/installed-files/bin/mysql --socket=/home/ritz/games/azeroth-core/wow-chat-2026/mysql/databases/mysql.sock -u root
-
-
-
-this is an example of a good error message. Each of those values is checked and verified at error message creation time. they are each idempotent. the possible causes can be filled in periodically (focusing on the most common or rarest) as derived from issue files that are related. then it should also offer questions about the potential results of the "to debug:" section, explaining each as succinctly and clearly.
+- a good error message has each value checked and verified at message-creation time, each idempotent. Possible causes can be filled in periodically (focusing on the most common or rarest) as derived from related issue files. It should offer questions about the potential results of its "to debug:" suggestions, explaining each succinctly and clearly. The error reports both what didn't complete AND what did, so the reader knows where in the pipeline things stopped.
 - not defeated, but redoubling.
+- let me run the compilation scripts. I want to see the output.

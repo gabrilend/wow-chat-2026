@@ -125,10 +125,10 @@ wow-chat-2026/
 
 ### Migration Documentation
 21. **docs/migration-guide.md** - Release to beta transition process
-22. **issues/400-release-to-beta-transition.md** - Master migration tracking
-23. **issues/401-shadow-build-setup.md** - Shadow worktree creation
-24. **issues/402-verify-release-baseline.md** - Baseline verification
-25. **issues/403-incremental-patch-integration.md** - Patch-by-patch integration
+22. **issues/129-release-to-beta-transition.md** - Master migration tracking (was 400; superseded by 136)
+23. **issues/completed/115-shadow-build-setup.md** - Shadow build directory (was 401)
+24. **issues/130-verify-release-baseline.md** - Baseline verification (was 402)
+25. **issues/131-incremental-patch-integration.md** - Patch-by-patch integration (was 403)
 
 ## Profile System
 

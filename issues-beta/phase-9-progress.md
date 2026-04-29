@@ -17,36 +17,52 @@ puzzles.
 
 ## Issues
 
-### World Structure
-| Issue | Title | Status | Notes |
-|-------|-------|--------|-------|
-| 126 | dungeon-room-spawn-zones | Open | Room detection in dungeons |
-| 127 | contextual-creature-spawns | Open | Theme-appropriate monsters |
-| 128 | embedding-based-creature-selection | Open | Semantic similarity |
-| 129 | portal-dimension-system | Open | BG portals → shared worlds |
+Ordered by narrative arc: world-structure substrate → creature
+selection layered on top → narrative agents who tell stories → social
+systems → cross-cutting infrastructure.
 
-### Narrative Systems
+### World structure substrate
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 307 | narrator-audience-facing | Open | Sit with seated audience |
-| 308 | gutenberg-text-library | Open | Public domain literature |
-| 310 | wandering-narrator-system | Open | Core storytelling NPCs |
-| 311 | shepherd-flock-system | Open | Immortality lore NPCs |
-| 312 | automated-lore-generation | Open | LLM-generated stories |
+| 902 | dungeon-room-spawn-zones | Open | Room detection in dungeons. Blocks 903. |
+| 905 | portal-dimension-system | Open | BG portals → shared worlds. World-level structure. |
 
-### Social Systems
+### Creature selection (depends on 902)
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 122 | rebellious-attitudes-freedom-of-affairs | Open | Placeholder |
-| 302 | language-barrier-system | Open | Racial languages only |
+| 903 | contextual-creature-spawns | Open | Theme-appropriate monsters per zone. Blocks 903b, 904. |
+| 903b | regional-creature-spawn-themes | Open | Continental themes (Eastern/Kalimdor/Outland). (was 212) |
+| 903b1 | outland-demon-felorc-spawns | Open | Detail spec for 903b. (was 212) |
+| 904 | embedding-based-creature-selection | Open | Semantic similarity for thematic consistency. Depends on 903. |
+
+### Narrative agents (the storytellers)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 909 | gutenberg-text-library | Open | Public domain literature. Blocks 910. |
+| 910 | wandering-narrator-system | Open | Core storytelling NPCs. Depends on 909, Phase 5 traveler pattern. |
+| 908 | narrator-audience-facing | Open | Sit with seated audience. Social-mirroring extension of 504. |
+| 911 | shepherd-flock-system | Open | Immortality-lore NPCs (shepherds with critter flocks). |
+| 912 | automated-lore-generation | Open | LLM-generated stories. Depends on 915 Ollama integration. |
+| 914 | custom-chat-data-sources | Open | Where narrators draw their content. Blocks 910 enrichment. (was 330) |
+| 915 | ollama-conversation-flow | Open (Experimental) | LLM conversation flow for 912. (was 331) |
+
+### Social systems
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 907 | language-barrier-system | Open | Racial languages only. Creates social puzzles. |
+| 901 | rebellious-attitudes-freedom-of-affairs | Open | Placeholder concept. |
+
+### Polish
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 906 | randomized-login-screen-freddi-fish | Open | Visual polish. Standalone. |
 
 ### Infrastructure
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 131 | randomized-login-screen-freddi-fish | Open | Visual polish |
-| 316 | clustered-worldserver | Open | Horizontal scaling |
+| 913 | clustered-worldserver | Open | Horizontal scaling. Spans phases. |
 
-## Completed: 0/13
+## Completed: 0/17 (1 Experimental)
 
 ---
 

@@ -1,0 +1,249 @@
+# 703 - Proc Gem System
+
+## Status
+- Created: 2026-04-02
+- Phase: 3
+- Priority: Medium
+
+## Current Behavior
+- Gems provide flat stats only (+spell power, +stamina, etc.)
+- No proc effects, no special behaviors
+- Standard red/blue/yellow/meta gem colors
+
+## Intended Behavior
+- Gems can have proc effects that trigger on specific actions
+- Procs can apply buffs, bonus healing/damage, resource restoration
+- Stacking buffs with independent duration tracking per stack
+- Still uses standard gem colors (no DBC editing required)
+- Custom tooltips via AIO showing proc information
+
+## Example Gems
+
+### Ember of Restoration (Red Gem)
+- +12 Spell Power (base stat)
+- Proc: 20% chance on heal to restore an additional 15 health
+
+### Shard of Flowing Mana (Blue Gem)
+- +10 Intellect (base stat)
+- Proc: On spell cast, gain 5 mp5 for 10 seconds (stacks, each stack tracked separately)
+
+### Spark of Vengeance (Yellow Gem)
+- +8 Critical Strike Rating (base stat)
+- Proc: 15% chance on critical hit to deal 50 additional damage
+
+## Technical Design
+
+### 1. Gem Definition Table (Lua)
+```lua
+ProcGems = {
+    [90001] = {  -- item entry
+        name     = "Ember of Restoration",
+        baseStat = "spellpower",
+        baseVal  = 12,
+        proc     = {
+            trigger   = "on_heal",
+            chance    = 20,
+            effect    = "bonus_heal",
+            value     = 15,
+            cooldown  = 0,
+        },
+    },
+    [90002] = {
+        name     = "Shard of Flowing Mana",
+        baseStat = "intellect",
+        baseVal  = 10,
+        proc     = {
+            trigger   = "on_spell_cast",
+            chance    = 100,
+            effect    = "stacking_mp5",
+            value     = 5,
+            duration  = 10,
+            maxStacks = 10,
+        },
+    },
+}
+```
+
+### 2. Trigger Types
+- `on_heal` - When player casts a healing spell
+- `on_damage` - When player deals damage
+- `on_spell_cast` - When player casts any spell
+- `on_melee_hit` - When player lands a melee attack
+- `on_crit` - When player scores a critical hit
+- `on_take_damage` - When player takes damage
+- `on_kill` - When player kills an enemy
+
+### 3. Effect Types
+- `bonus_heal` - Add flat healing to the triggering heal
+- `bonus_damage` - Add flat damage to the triggering attack
+- `apply_aura` - Apply a buff/debuff aura
+- `stacking_mp5` - Stacking mana regen with independent durations
+- `stacking_hp5` - Stacking health regen
+- `instant_mana` - Restore mana instantly
+- `instant_health` - Restore health instantly
+
+### 4. Stacking System with Independent Durations
+```lua
+-- Each stack is a table entry with its own expiry time
+player_stacks = {
+    ["mp5"] = {
+        { expiry = 1000, value = 5 },  -- stack 1: expires at game time 1000
+        { expiry = 1003, value = 5 },  -- stack 2: expires at game time 1003
+        { expiry = 1007, value = 5 },  -- stack 3: expires at game time 1007
+    }
+}
+
+-- Total mp5 = 15 (3 stacks × 5)
+-- As each stack expires, total decreases independently
+```
+
+### 5. Hook Implementation
+```lua
+-- {{{ ProcGems.onSpellCast
+function ProcGems.onSpellCast(event, player, spell, skipCheck)
+    local equippedGems = ProcGems.getEquippedGems(player)
+
+    for _, gem in ipairs(equippedGems) do
+        local def = ProcGems[gem.entry]
+        if def and def.proc then
+            local proc = def.proc
+
+            -- Check trigger type matches
+            if ProcGems.matchesTrigger(proc.trigger, spell) then
+                -- Roll for proc chance
+                if math.random(100) <= proc.chance then
+                    -- Check cooldown
+                    if ProcGems.isOffCooldown(player, gem.entry) then
+                        ProcGems.applyEffect(player, proc, spell)
+                        ProcGems.setCooldown(player, gem.entry, proc.cooldown)
+                    end
+                end
+            end
+        end
+    end
+end
+-- }}}
+```
+
+### 6. Gem Detection
+```lua
+-- {{{ ProcGems.getEquippedGems
+-- Scan all equipped items for socketed proc gems
+function ProcGems.getEquippedGems(player)
+    local gems = {}
+
+    -- Equipment slots with potential sockets
+    local slots = { 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }
+
+    for _, slot in ipairs(slots) do
+        local item = player:GetItemByPos(255, slot)
+        if item then
+            -- Check each socket
+            for socketIdx = 1, 3 do
+                local gemEntry = item:GetEnchantmentId(socketIdx + 3)  -- Socket enchants start at 4
+                if gemEntry and ProcGems[gemEntry] then
+                    table.insert(gems, { entry = gemEntry, slot = slot, socket = socketIdx })
+                end
+            end
+        end
+    end
+
+    return gems
+end
+-- }}}
+```
+
+### 7. AIO Tooltip Enhancement
+```lua
+-- Server sends gem data to client
+AIO.Handle("ProcGems", "UpdateTooltip", function(player, msg)
+    -- Client receives custom tooltip data
+    -- Displays proc chance, effect, cooldown status
+end)
+```
+
+## Database Schema
+
+### Gem Items (item_template)
+```sql
+-- Ember of Restoration (red gem)
+INSERT INTO item_template (entry, class, subclass, name, displayid, Quality,
+    ItemLevel, RequiredLevel, GemProperties)
+VALUES (90001, 3, 0, 'Ember of Restoration', 39900, 3, 70, 1, 1079);
+-- GemProperties 1079 = red gem color (existing)
+```
+
+### Custom Gem Data (new table, optional)
+```sql
+CREATE TABLE custom_gem_procs (
+    entry        INT PRIMARY KEY,
+    trigger_type VARCHAR(32),
+    proc_chance  INT,
+    effect_type  VARCHAR(32),
+    effect_value INT,
+    duration     INT DEFAULT 0,
+    cooldown     INT DEFAULT 0,
+    max_stacks   INT DEFAULT 1
+);
+```
+
+## Implementation Steps
+
+1. [ ] Create gem definition system in Lua
+2. [ ] Implement spell cast hook for proc triggers
+3. [ ] Implement gem detection (scan equipped items for sockets)
+4. [ ] Implement effect application system
+5. [ ] Implement stacking system with independent durations
+6. [ ] Create AIO tooltip enhancement
+7. [ ] Add SQL for test gems
+8. [ ] Test proc mechanics in-game
+9. [ ] Document gem creation process
+
+## AIO Tooltip Display
+
+```
+┌─────────────────────────────────────┐
+│ Ember of Restoration                │
+│ Red Gem                             │
+│ +12 Spell Power                     │
+│                                     │
+│ Equip: 20% chance on heal to        │
+│ restore an additional 15 health.    │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│ Shard of Flowing Mana               │
+│ Blue Gem                            │
+│ +10 Intellect                       │
+│                                     │
+│ Equip: On spell cast, gain 5 mp5    │
+│ for 10 sec. Stacks up to 10 times.  │
+│ Each stack expires independently.   │
+└─────────────────────────────────────┘
+```
+
+## Stacking Buff Display (AIO)
+
+```
+┌─────────────────────────────────┐
+│ Flowing Mana (3 stacks)         │
+│ +15 mana per 5 sec              │
+│                                 │
+│ Stack 1: 3.2 sec remaining      │
+│ Stack 2: 6.5 sec remaining      │
+│ Stack 3: 9.1 sec remaining      │
+└─────────────────────────────────┘
+```
+
+## Related Issues
+- 142 - Custom spell system (same phase, shares AIO infrastructure)
+- 141 - Talent tier limit (affects which gems are appropriate)
+
+## Related Documents
+- docs/phase-3-custom-spells.md (shared vision)
+
+## Notes
+- Proc gems use existing gem colors - no DBC editing needed
+- Base stats still work normally (server handles enchantment application)
+- Proc effects are entirely server-side with AIO UI enhancement
+- Could expand to trinket procs, weapon enchant procs using same system

@@ -1,0 +1,153 @@
+# 106: In-Game Config Control Board
+
+## Status
+- [ ] Open
+- [ ] In Progress
+- [ ] Completed
+
+## Sub-Issues
+
+This issue has been split into three sub-issues for incremental implementation:
+
+| Sub-Issue | Description | Status |
+|-----------|-------------|--------|
+| [106a](106a-read-only-config-dashboard) | Read-only dashboard (list/show commands, NPC gossip) | Open |
+| [106b](106b-runtime-config-modifications) | Runtime modification support for hot-reloadable settings | Open |
+| [106c](106c-config-persistence-layer) | Persistence layer (save to files, backup/restore) | Open |
+
+Complete sub-issues in order: 106a -> 106b -> 106c
+
+---
+
+## Current Behavior
+
+Server configuration requires:
+1. Editing config files manually
+2. Restarting the server to apply changes
+3. No visibility into current settings while playing
+
+## Intended Behavior
+
+An in-game interface (NPC or chat commands) that allows:
+1. Viewing current configuration values
+2. Modifying runtime-adjustable settings
+3. Persisting changes to config files
+4. Hot-reloading where supported
+
+## Scope
+
+### Phase 1: Read-Only Dashboard
+- Chat command: `.config list` - show categories
+- Chat command: `.config show <category>` - show settings
+- NPC gossip menu for browsing settings
+
+### Phase 2: Runtime Modifications
+- Modify settings that support hot-reload
+- Changes take effect immediately
+- Visual feedback on success/failure
+
+### Phase 3: Persistence
+- Write changes back to config files
+- Script to regenerate configs with new values
+- Backup before modification
+
+## Configuration Categories
+
+### Game Rates (hot-reloadable)
+- XP rates
+- Loot rates
+- Reputation rates
+- Honor rates
+
+### Ambush System (src/lua/)
+- DELAY_PERIODIC_SPAWN_CREATURE (currently 40s)
+- DELAY_PERIODIC_SPAWN_TRAVELLER (currently 130s)
+- DELAY_PERIODIC_SPAWN_TREASURE (currently 100s)
+- Ambush distance min/max
+- Max ambushers per player
+
+### Playerbots
+- Bot spawn settings
+- AI behavior toggles
+- Party formation rules
+
+### Server Settings (require restart)
+- Max players
+- MOTD
+- Realm settings
+
+## Technical Approach
+
+### Lua Script Structure
+```lua
+-- src/lua/config-board.lua
+
+ConfigBoard = {}
+
+-- {{{ ConfigBoard.getCategories
+function ConfigBoard.getCategories()
+    return {
+        "rates",
+        "ambush",
+        "playerbots",
+        "server"
+    }
+end
+-- }}}
+
+-- {{{ ConfigBoard.getValue
+function ConfigBoard.getValue(category, key)
+    -- Read from appropriate source
+end
+-- }}}
+
+-- {{{ ConfigBoard.setValue
+function ConfigBoard.setValue(category, key, value)
+    -- Validate and apply
+    -- Return success/failure
+end
+-- }}}
+```
+
+### Chat Commands
+```
+.config                     - Show help
+.config list                - List categories
+.config show rates          - Show rate settings
+.config set rates.xp 2.0    - Set XP rate to 2x
+.config reload              - Reload from files
+.config save                - Save current to files
+```
+
+### NPC Gossip
+- Spawn a "Configuration Terminal" NPC
+- Menu-driven interface for browsing/editing
+- Confirmation dialogs for changes
+
+## Suggested Implementation Steps
+
+1. Create config-board.lua skeleton
+2. Implement read-only `.config list` and `.config show`
+3. Add NPC with gossip menu for browsing
+4. Implement setValue for hot-reloadable settings
+5. Add persistence (write back to files)
+6. Create backup/restore functionality
+
+## Dependencies
+
+- 103-document-configuration-options (need to know what's configurable)
+- 101-verify-server-startup (need running server to test)
+
+## Related Documents
+
+- docs/scripting.md
+- src/lua/periodic_events.lua (contains timing constants)
+
+## Notes
+
+Some settings in worldserver.conf support `.reload config` command.
+Lua script globals can be modified at runtime.
+Database-backed settings are easiest to change live.
+
+Consider: Store user-tweakable settings in a database table rather than
+config files for easier runtime modification.

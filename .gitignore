@@ -1,3 +1,6 @@
+# Generated HTML site (regenerable via scripts/export-html)
+output/html-export/
+
 # Secrets (credentials)
 secrets.conf
 !secrets.conf.example

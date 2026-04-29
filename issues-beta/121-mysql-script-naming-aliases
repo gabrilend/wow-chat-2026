@@ -1,0 +1,107 @@
+# 121: MySQL Script Naming Aliases
+
+## Status
+- [x] Open
+- [ ] In Progress
+- [ ] Completed
+
+## Current Behavior
+
+MySQL scripts use inconsistent naming:
+- `start-mysql` (verb-first)
+- `stop-mysql` (verb-first)
+- `mysql-client` (noun-first)
+- `mysql-install` (noun-first)
+
+No restart command exists.
+
+## Intended Behavior
+
+Both naming conventions should work as aliases:
+- `start-mysql` ↔ `mysql-start`
+- `stop-mysql` ↔ `mysql-stop`
+- `restart-mysql` ↔ `mysql-restart` (new)
+
+Preferred canonical form: **noun-first** (`mysql-*`)
+
+### Rationale
+
+**Verb-first (`start-mysql`):**
+- Natural English: "start MySQL"
+- Reads like a sentence
+- Action-oriented thinking
+
+**Noun-first (`mysql-start`):**
+- Technology-oriented lookup: "mysql... what was it... start"
+- Tab completion groups all mysql commands together
+- Fewer keystrokes when switching actions:
+  - `mysql-stop` → `mysql-start`: delete 4 chars, type 5
+  - `stop-mysql` → `start-mysql`: delete 10 chars, type 11
+
+The noun-first pattern wins on discoverability and editing efficiency.
+
+### Restart Command Behavior
+
+```
+restart-mysql / mysql-restart
+```
+
+**Warning printed on every invocation:**
+```
+NOTE: Please don't call this in scripts.
+      Use stop-mysql && sleep 2 && start-mysql instead.
+      Restart has a fixed 3-second sleep timer.
+```
+
+**Why the warning:**
+- Scripts should control their own timing
+- Fixed sleep may be too short or too long for different contexts
+- Explicit stop/start is clearer in scripts
+- Interactive use is fine - convenience over precision
+
+## Suggested Implementation Steps
+
+1. Rename canonical scripts to noun-first:
+   - `start-mysql` → `mysql-start`
+   - `stop-mysql` → `mysql-stop`
+
+2. Create verb-first symlinks:
+   - `start-mysql` → `mysql-start`
+   - `stop-mysql` → `mysql-stop`
+
+3. Create `mysql-restart`:
+   ```bash
+   #!/bin/bash
+   # mysql-restart
+   # Convenience command for interactive use - not for scripts
+
+   echo "NOTE: Please don't call this in scripts."
+   echo "      Use mysql-stop && sleep 2 && mysql-start instead."
+   echo ""
+
+   DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+   "${DIR}/scripts/mysql-stop" "$@"
+   sleep 3
+   "${DIR}/scripts/mysql-start" "$@"
+   ```
+
+4. Create `restart-mysql` symlink → `mysql-restart`
+
+5. Update documentation and other scripts to use canonical `mysql-*` form
+
+## Related Documents
+
+- issues/completed/105-setup-local-mysql-installation (originally specified mysql-* naming)
+- scripts/start-mysql
+- scripts/stop-mysql
+- scripts/mysql-client
+- scripts/mysql-install
+
+## Notes
+
+Issue 105 originally specified `mysql-start` / `mysql-stop` but implementation used
+`start-mysql` / `stop-mysql`. This issue restores the original intent while adding
+backward-compatible aliases.
+
+The verb-first form remains valid and will always work - this is about which form
+is canonical (used in docs, used in other scripts) vs which is an alias.

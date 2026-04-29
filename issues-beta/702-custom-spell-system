@@ -1,0 +1,90 @@
+# 702 - Custom Spell System (AIO-Based)
+
+## Status
+- Created: 2026-04-02
+- Phase: 3
+- Priority: High (foundational for future development)
+
+## Current Behavior
+- All player abilities use WoW's hardcoded spell system
+- Spell data stored in client-side Spell.dbc (~80k entries)
+- Custom spells require DBC modification or repurposing existing IDs
+- Server can modify spell behavior via SpellScript (C++) but not fundamentals
+- Cast bars, projectiles, animations tied to spell IDs
+
+## Intended Behavior
+- All player abilities defined and controlled server-side (Lua)
+- AIO addon provides UI: action bars, cast bars, cooldowns
+- Server pushes state to client, client renders appropriately
+- No dependency on Spell.dbc for gameplay logic
+- Full hot-reload capability for spell tuning
+
+## Why This Change
+- Decouples from Blizzard's client for licensing cleanliness
+- Enables true custom abilities without DBC editing
+- Opens path to custom MMO development on AzerothCore
+- Full control over balance, behavior, visuals
+- Hot-reload spell changes without server restart
+
+## Technical Design
+
+See: `docs/phase-3-custom-spells.md` for full architecture
+
+### Core Components
+1. **Spell Definition System** - Lua tables defining all spell properties
+2. **Cast State Machine** - Server tracks cast states per player
+3. **Effect Handlers** - Modular functions for damage, heal, aura, spawn
+4. **AIO Action Bar** - Custom buttons with icons, tooltips, cooldowns
+5. **AIO Cast Bar** - Progress bar with interrupt detection
+6. **Projectile Simulation** - Creature-based visual projectiles
+
+### Migration Phases
+- 3a: Infrastructure and test spell
+- 3b: Utility spells (hearthstone, mounts)
+- 3c: Instant-cast combat spells
+- 3d: Cast-time spells
+- 3e: Channeled spells
+- 3f: Projectile spells
+- 3g: Complete migration
+
+## Implementation Steps
+
+### Phase 3a: Infrastructure
+- [ ] Create spell definition table structure
+- [ ] Implement cast state machine (IDLE, CASTING, etc.)
+- [ ] Create AIO action button frame
+- [ ] Create AIO cast bar frame
+- [ ] Implement movement/ESC cancel detection
+- [ ] Test with "Meditate" ability (channel, restore health)
+
+### Phase 3b-3g: See docs/phase-3-custom-spells.md
+
+## Dependencies
+- AIO addon framework (already installed)
+- Eluna/ALE Lua engine (already installed)
+- Phase 1 & 2 completion (current focus)
+
+## Sub-Issues (to be created when phase 3 begins)
+- 142a - Spell definition system
+- 142b - Cast state machine
+- 142c - AIO action bar
+- 142d - AIO cast bar
+- 142e - Effect handler system
+- 142f - Projectile simulation
+- 142g - Class ability migration
+
+## Related Documents
+- docs/phase-3-custom-spells.md - Full technical design
+- docs/ale/ - ALE API documentation
+- docs/playerbots/ - Bot integration considerations
+
+## Related Issues
+- 140 - Quest spells to trainers (current system, will be superseded)
+- 141 - Talent tier limit (affects spell availability)
+- 206 - Death Knight scaling (test case for migration)
+
+## Notes
+- This is a significant undertaking but foundational for the project's future
+- Validates the "WoW engine as MMO framework" concept
+- Each migration phase should be fully functional before proceeding
+- Consider starting with DK as test class (already custom-balanced)

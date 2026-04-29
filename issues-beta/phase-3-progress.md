@@ -16,17 +16,33 @@ danger beyond land.
 
 ## Issues
 
+Ordered by narrative arc: spawn loop alive → spawn behavior tuned →
+crash fixes → environmental hazards extend the danger.
+
+### Core spawn loop
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 302 | investigate-ambush-monsters-not-spawning | In Progress | Debug spawn issues |
-| 303 | randomize-ambush-spawn-interval | Completed | Random walk algorithm |
-| 304 | clear-ambush-data-on-death | Completed | Memory cleanup |
-| 305 | ambush-aggro-and-corpse-movement | Implemented | Aggro/corpse fixes |
-| 301 | ocean-shark-hazard | Open | Water danger |
-| 324 | nil-bot-periodic-event-crash | Open | Crash fix |
-| 325 | ale-gameobject-wildcard-registration | Open | Event registration |
+| 301 | investigate-ambush-monsters-not-spawning | In Progress | Debug current spawn failures. Blocks confidence in 303–305. |
+| 307 | ale-gameobject-wildcard | Completed | Entry-0 wildcard registration. Blocks bot-spawn handling. |
 
-## Completed: 2/7 (1 more implemented, needs testing)
+### Spawn rhythm & cleanup
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 303 | randomize-ambush-spawn-interval | Completed | Random walk algorithm (40s base, 10s floor, 200s hard cap). |
+| 304 | clear-ambush-data-on-death | Completed | Memory cleanup pattern. |
+| 305 | ambush-aggro-and-corpse-movement | Completed | Aggro/corpse-slide fixes. |
+
+### Crash fixes (depend on 307)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 306 | nil-bot-periodic-event-crash | Open | Crash fix in periodic event when bot disconnects. |
+
+### Environmental hazards
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 302 | ocean-shark-hazard | Open | Water danger after time threshold. Extends danger beyond land. |
+
+## Completed: 4/7
 
 ---
 
@@ -198,7 +214,7 @@ When creature dies or despawns:
 
 Prevents memory leaks and spawn count drift.
 
-### Periodic Event Crash (324)
+### Periodic Event Crash (306)
 
 Crash when bot is nil during periodic event:
 - Bot logged out between event registration and callback

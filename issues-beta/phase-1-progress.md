@@ -16,30 +16,103 @@ gameplay systems can be implemented.
 
 ## Issues
 
+Ordered by narrative arc. Number-order is preserved from history; the
+table-order below reflects dependency / blocking relationships. Where
+the two diverge, the **Notes** column calls out blockers.
+
+### Act 1 — The server runs (foundational)
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 101 | verify-server-startup | In Progress | Baseline validation |
-| 102 | test-playerbots-spawn | Open | Module verification |
-| 103 | document-configuration-options | Completed | Created docs/configuration.md |
-| 104 | migrate-lua-scripts-from-wowchat1 | Completed | Copied to src/lua/ |
-| 105 | setup-local-mysql-installation | Completed | MySQL 9.6.0 local |
-| 106a | read-only-config-dashboard | Open | View settings in-game |
-| 106b | runtime-config-modifications | Open | Change settings live |
-| 106c | config-persistence-layer | Open | Save to files |
-| 107 | credential-manager-script | Open | Secrets management |
-| 108 | thread-count-variable | Completed | Auto-detect nproc |
-| 109 | add-build-mode-to-azerothcore-script | Completed | --force flag |
-| 111 | config-merge-script | Open | Merge config changes |
-| 123 | visual-powerline-mapping-tool | Open | Code visualization |
-| 110 | concept-catalog-consolidation | Completed | 1000→800 concepts |
-| 145 | git-branch-consolidation | Open | Clean up branches |
-| 166 | point-line-definition-tools | Open | Dungeon waypoint editor |
-| 201 | branch-based-azerothcore-versioning | Open | Profile system |
-| 318 | remove-profile-system | Open | Simplify to single build |
-| 321 | mysql-script-naming-aliases | Open | Consistent script names |
-| 323 | parallel-update-status-spinners | Open | Better build feedback |
+| 101 | verify-server-startup | In Progress | Substrate. Blocks every later issue. |
+| 102 | test-playerbots-spawn | In Progress | Module loading verification. Blocks all bot work in Phase 6. |
 
-## Completed: 6/20
+### Act 2 — Knowledge is captured (documentation foundation)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 103 | configuration-documentation | Completed | docs/configuration.md established. |
+| 104 | lua-script-ownership | Completed | src/lua/ established as project's Lua home. |
+| 110 | concept-catalog-consolidation | Completed | 800-concept reference doc. Indexes everything. |
+
+### Act 3 — Local data substrate
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 105 | project-local-database | Completed | MySQL 9.6.0 local install. Required by every DB-touching system. |
+
+### Act 4 — Build pipeline (the engine that builds the engine)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 108 | adaptive-build-parallelism | Completed | Auto-detect nproc for make. |
+| 109 | incremental-rebuild-detection | Completed | `update --force` flag. |
+| 112 | patch-staleness-detection | Completed | Source vs patch mtime. Blocks 127. |
+| 127 | patch-system-improvements | Implemented | Built on 112. (was issue 334) |
+
+### Act 5 — Profile model (canonical truth)
+The keystone. Every later build/profile decision derives from 136.
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 136 | canonical-profile-definitions | Open | **Keystone.** alpha/release/beta semantics. Supersedes 129, 133. (was 412) |
+| 129 | release-to-beta-transition | Open | Earlier transition plan. **Superseded by 136.** (was 400) |
+| 133 | profile-transition-system | Open | Earlier transition spec. **Superseded by 136.** (was 405) |
+| 130 | verify-release-baseline | Open | Validation step for release profile. (was 402) |
+| 131 | incremental-patch-integration | Open | Promote-from-beta workflow. Depends on 136. (was 403) |
+| 134 | alpha-baseline-setup | Open | Pin alpha to old AC commit + eluna. Depends on 136. (was 406) |
+| 132 | alpha-playerbots-working | Invalidated | Per 136 alpha has no playerbots. Kept for traceability. (was 404) |
+| 135 | release-profile-build-fixes | Open | Cleanup after 136 lands. (was 408) |
+| 138 | sql-profile-switch-rollback | Deferred Low | Move-to-archive-table approach. Not started. (was 414) |
+
+### Act 6 — Build pipeline correctness
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 115 | shadow-build-setup | Completed | Shadow build dir exists; previously marked "Will Not Implement" but file lives in completed/ — reconcile. |
+| 122 | atomic-shadow-builds | Open | Compile-or-keep-old, no half-states. (was 327) |
+| 137 | shadow-conf-path-baked-into-binary | Open | CONF_DIR was baked to shadow path; fix in scripts/compile applied 2026-04-28. (was 413) |
+| 114 | remove-profile-system | Will Not Implement | Decision: keep profiles for isolation. |
+
+### Act 7 — Networking & ops
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 113 | authserver-ip-caching | Completed | Replaced by DNS hostname; see issue's superseded-by note. |
+
+### Act 8 — Configuration system
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 107 | credential-manager-script | Open | Secrets management. Blocks 119. |
+| 111 | config-merge-script | Open | Merge config changes across rebuilds. |
+| 119 | config-value-orchestrator | Completed | Config management. Depends on 107. |
+| 106 | ingame-config-control-board | Open | Parent: full in-game config dashboard. |
+| 106a | read-only-config-dashboard | Open | View phase. Blocks 106b. |
+| 106b | runtime-config-modifications | Open | Modify phase. Depends on 106a. |
+| 106c | config-persistence-layer | Open | Save phase. Depends on 106b. |
+
+### Act 9 — Repository hygiene & dev ergonomics
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 116 | git-branch-consolidation | Open | Clean up legacy branches. |
+| 121 | mysql-script-naming-aliases | Open | Verb-first vs noun-first script names. (was 321) |
+| 120 | parallel-update-status-spinners | Open | Better build feedback. |
+| 128 | script-command-history | Open | Per-script history. (was 411) |
+| 126 | upstream-warning-fixes | Open | Suppress AzerothCore upstream noise. (was 333) |
+
+### Act 10 — Visualization & dev tools
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 117 | visual-powerline-mapping-tool | Open | Code-flow visualizations. |
+| 118 | point-line-definition-tools | Open | Dungeon waypoint editor. |
+| 123 | html-source-tree-export | Open | Static HTML site of source/issues/docs. (was 327) |
+| 124 | wimmelbilder-embedding-artwork | Open | Depends on 123. (was 328) |
+
+### Act 11 — Research / experimental
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 125 | algorism-priority-scheduler | Open | Research only; future architecture. (was 329) |
+
+### Act 12 — Latecomers (slotted at end of Phase 1)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 139 | recreate-missing-sql-files | Open | Reconstruct custom SQLs that became orphaned in DB. (was 167) |
+| 140 | branch-based-azerothcore-versioning | Implemented (Superseded) | Original profile-system spec. **Superseded by 136.** Infrastructure still active. (was 201) |
+
+## Completed: 12/42 (2 Will Not Implement, 2 Superseded, 1 Invalidated, 1 Deferred Low)
 
 ---
 

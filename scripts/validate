@@ -74,7 +74,15 @@ get_profile_paths() {
 # }}}
 
 # {{{ validate_shadow_worldserver
+# Smart validation: detects stability via output analysis
+# - No new output for SILENCE_THRESHOLD seconds = stable
+# - Same line repeating REPEAT_THRESHOLD times = heartbeat reached
+# - Hard timeout at MAX_TIMEOUT seconds
 validate_shadow_worldserver() {
+    local SILENCE_THRESHOLD=5
+    local REPEAT_THRESHOLD=3
+    local MAX_TIMEOUT=300
+
     echo ""
     echo "Validating shadow worldserver..."
     echo "  Shadow: ${INSTALL_DIR_SHADOW}/bin/worldserver"
@@ -97,55 +105,116 @@ validate_shadow_worldserver() {
     export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
 
     # Start in background, redirect output to validation log
+    # Use /dev/null for stdin to prevent blocking on input
     local VALIDATION_LOG="${DIR}/tmp/shadow-validation-${PROFILE}.log"
     mkdir -p "${DIR}/tmp"
-    ./worldserver > "${VALIDATION_LOG}" 2>&1 &
+    > "${VALIDATION_LOG}"  # Truncate log
+    # Explicit -c flag: with CONF_DIR baked into the binary pointing at
+    # the profile etc dir (see issue 137), the shadow validation run
+    # must override to read shadow's etc dir instead of the promoted
+    # profile's. The flag is the exception, used precisely here.
+    ./worldserver -c "${INSTALL_DIR_SHADOW}/etc/worldserver.conf" < /dev/null > "${VALIDATION_LOG}" 2>&1 &
     local WS_PID=$!
 
     echo "  Worldserver started (PID ${WS_PID})"
-    echo "  Waiting for successful initialization..."
+    echo "  Detecting stability (silence=${SILENCE_THRESHOLD}s, repeat=${REPEAT_THRESHOLD}x, max=${MAX_TIMEOUT}s)..."
 
-    # Wait up to 30 seconds for successful startup
-    local timeout=30
+    # Smart detection variables
     local elapsed=0
+    local last_line_count=0
+    local silence_count=0
+    local last_line=""
+    local repeat_count=0
     local success=false
+    local unique_count=0
 
-    while [[ ${elapsed} -lt ${timeout} ]]; do
+    while [[ ${elapsed} -lt ${MAX_TIMEOUT} ]]; do
+        # Check for success FIRST (before checking if process died)
+        # This handles the case where server initializes and exits cleanly
+        if grep -qi "World initialized in" "${VALIDATION_LOG}" 2>/dev/null; then
+            sleep 2
+            echo "  Stable: World initialized successfully"
+            success=true
+            break
+        fi
+
         # Check if process is still running
         if ! kill -0 ${WS_PID} 2>/dev/null; then
+            # Process died - but check if it succeeded before dying
+            if grep -qi "World initialized in" "${VALIDATION_LOG}" 2>/dev/null; then
+                echo "  Stable: World initialized (server exited cleanly)"
+                success=true
+                break
+            fi
             echo "  ERROR: Worldserver crashed during startup"
             echo "  Check log: ${VALIDATION_LOG}"
             return 1
         fi
 
-        # Check log for success indicator
-        if grep -q "World initialized in" "${VALIDATION_LOG}" 2>/dev/null; then
-            success=true
-            break
-        fi
-
-        # Check for critical errors
-        if grep -qE "(ERROR|FATAL|Failed to initialize)" "${VALIDATION_LOG}" 2>/dev/null; then
+        # Check for critical errors (but not warnings about missing optional things)
+        if grep -qE "^(FATAL|.*Failed to initialize World)" "${VALIDATION_LOG}" 2>/dev/null; then
             echo "  ERROR: Worldserver failed to initialize"
             kill ${WS_PID} 2>/dev/null
+            wait ${WS_PID} 2>/dev/null
             echo "  Check log: ${VALIDATION_LOG}"
             return 1
+        fi
+
+        # Count current lines
+        local current_line_count
+        current_line_count=$(wc -l < "${VALIDATION_LOG}" 2>/dev/null || echo 0)
+
+        if [[ ${current_line_count} -eq ${last_line_count} ]]; then
+            # No new output
+            ((silence_count++))
+            if [[ ${silence_count} -ge ${SILENCE_THRESHOLD} ]]; then
+                echo "  Stable: No output for ${SILENCE_THRESHOLD} seconds"
+                success=true
+                break
+            fi
+        else
+            # New output received
+            silence_count=0
+            unique_count=${current_line_count}
+
+            # Check for repeating lines (heartbeat detection)
+            local current_last_line
+            current_last_line=$(tail -1 "${VALIDATION_LOG}" 2>/dev/null)
+            if [[ "${current_last_line}" == "${last_line}" ]]; then
+                ((repeat_count++))
+                if [[ ${repeat_count} -ge ${REPEAT_THRESHOLD} ]]; then
+                    echo "  Stable: Heartbeat detected (${repeat_count} repeats)"
+                    success=true
+                    break
+                fi
+            else
+                repeat_count=1
+                last_line="${current_last_line}"
+            fi
+
+            last_line_count=${current_line_count}
         fi
 
         sleep 1
         ((elapsed++))
     done
 
-    # Kill the validation worldserver
+    # Kill the validation worldserver gracefully, then forcefully
+    echo "  Stopping validation worldserver..."
     if kill ${WS_PID} 2>/dev/null; then
-        echo "  Stopped validation worldserver (PID ${WS_PID})"
+        sleep 2
+        if kill -0 ${WS_PID} 2>/dev/null; then
+            kill -9 ${WS_PID} 2>/dev/null
+        fi
     fi
+    wait ${WS_PID} 2>/dev/null
 
     if [[ "${success}" == "true" ]]; then
-        echo "  Validation successful"
+        echo "  Validation successful (${elapsed}s, ${unique_count} lines)"
         return 0
     else
-        echo "  ERROR: Validation timeout (${timeout}s)"
+        echo "  ERROR: Validation timeout (${MAX_TIMEOUT}s)"
+        echo "  Server may need more time. Last ${unique_count} lines logged."
         echo "  Check log: ${VALIDATION_LOG}"
         return 1
     fi
@@ -158,4 +227,12 @@ validate_shadow_worldserver() {
 
 parse_args "$@"
 get_profile_paths
-validate_shadow_worldserver
+
+if ! validate_shadow_worldserver; then
+    exit 1
+fi
+
+# Auto-promote on successful validation
+echo ""
+echo "Validation passed, promoting to main installation..."
+exec "${DIR}/scripts/promote" --profile "${PROFILE}"

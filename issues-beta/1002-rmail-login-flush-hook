@@ -1,0 +1,218 @@
+# 1002 - rmail Login Flush Hook
+
+ALE hook that triggers queue flushing for all rmail services when a player logs in.
+Ensures queued messages attempt delivery when recipients come online.
+
+## Current Behavior
+
+rmail services (mail, narrator) queue messages for offline recipients. Messages
+stay in the queue until:
+- `on_send` hook fires (after successful delivery of another message)
+- Manual intervention
+
+If a recipient comes online but no messages are being actively sent, their
+queued messages sit indefinitely.
+
+## Intended Behavior
+
+When any player logs into the game server:
+1. ALE detects the login event
+2. ALE runs a master flush script
+3. The script triggers flush for each rmail service
+4. Each service writes one pending message per subscriber to its outbox
+5. rmail attempts delivery, which triggers `on_send` chains
+
+This "primes the pump" for queued message delivery.
+
+## Implementation
+
+### ALE: Master Login Hook
+
+```lua
+-- {{{ src/lua/rmail-flush.lua
+-- Master flush hook - runs on player login
+-- Triggers all rmail service flush scripts
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+
+local FLUSH_SCRIPTS = {
+    DIR .. "/game-mail/mail/scripts/mail-onlogin.lua",
+    DIR .. "/game-mail/narrator/scripts/narrator-onlogin.lua",
+    -- Add more services as needed
+}
+
+-- {{{ OnPlayerLogin
+local function OnPlayerLogin(event, player)
+    -- Run all flush scripts in background
+    for _, script in ipairs(FLUSH_SCRIPTS) do
+        os.execute("lua " .. script .. " &")
+    end
+end
+-- }}}
+
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, OnPlayerLogin)
+-- }}}
+```
+
+### Alternative: Single Flush Script
+
+Instead of multiple scripts, one script that handles all services:
+
+```lua
+#!/usr/bin/env lua
+-- {{{ rmail-flush-all.lua
+-- Flush all rmail service queues
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+
+-- {{{ Service definitions
+local services = {
+    {
+        name = "mail",
+        pending_file = DIR .. "/game-mail/mail/.pending-forwards.txt",
+        outbox_path = DIR .. "/game-mail/mail/outbox/",
+        format_message = formatMailMessage,
+    },
+    {
+        name = "narrator",
+        pending_file = DIR .. "/game-mail/narrator/.pending-speech.txt",
+        outbox_path = DIR .. "/game-mail/narrator/outbox/",
+        format_message = formatSpeechMessage,
+    },
+}
+-- }}}
+
+-- {{{ flushService
+function flushService(service)
+    local pending = readPendingFile(service.pending_file)
+    local attempted = {}
+
+    for _, entry in ipairs(pending) do
+        local subscriber = entry.subscriber or entry[2]  -- handle different formats
+
+        if not attempted[subscriber] then
+            local message = service.format_message(entry)
+            writeToOutbox(service.outbox_path, subscriber, message)
+            attempted[subscriber] = true
+        end
+    end
+
+    return countKeys(attempted)
+end
+-- }}}
+
+-- {{{ main
+for _, service in ipairs(services) do
+    local count = flushService(service)
+    if count > 0 then
+        log(string.format("Flushed %d subscribers for %s", count, service.name))
+    end
+end
+-- }}}
+-- }}}
+```
+
+### ALE: Using Single Script
+
+```lua
+-- {{{ OnPlayerLogin (ALE)
+local function OnPlayerLogin(event, player)
+    os.execute("lua /mnt/mtwo/games/azeroth-core/wow-chat-2026/scripts/rmail-flush-all.lua &")
+end
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, OnPlayerLogin)
+-- }}}
+```
+
+## Flow Diagram
+
+```
+Player logs in
+     ↓
+ALE OnPlayerLogin fires
+     ↓
+rmail-flush-all.lua runs
+     ↓
+For each service (mail, narrator, ...):
+  - Read .pending-*.txt
+  - Group by subscriber
+  - Write ONE message per subscriber to outbox/
+     ↓
+rmail attempts delivery
+     ↓
+   ├─ Subscriber OFFLINE: retry later (no change)
+   │
+   └─ Subscriber ONLINE: delivered
+        ↓
+     on_send hook fires
+        ↓
+     Check for more pending
+        ↓
+     Self-draining chain continues
+```
+
+## Why On Login?
+
+Login is a good trigger because:
+
+1. **Player coming online** - Most likely time for rmail recipients to be available
+2. **Natural event** - Happens regularly without manual intervention
+3. **Low overhead** - Just writes files to outbox, rmail handles delivery
+4. **Idempotent** - Safe to run multiple times (just writes to outbox)
+
+## Optimization: Only Flush for Logged-In Player
+
+Instead of flushing ALL pending, only flush for the player who logged in:
+
+```lua
+-- {{{ OnPlayerLogin (ALE)
+local function OnPlayerLogin(event, player)
+    local playerName = player:GetName()
+    -- Only flush queues where this player is a subscriber
+    os.execute("lua scripts/rmail-flush-all.lua " .. playerName .. " &")
+end
+-- }}}
+```
+
+The flush script then filters by player:
+
+```lua
+local targetPlayer = arg[1]  -- nil means flush all
+
+for _, entry in ipairs(pending) do
+    if not targetPlayer or entry.subscriber == targetPlayer then
+        -- ... flush this entry
+    end
+end
+```
+
+## Directory Structure
+
+```
+scripts/
+└── rmail-flush-all.lua      # Master flush script
+
+game-mail/
+├── mail/
+│   └── scripts/
+│       └── mail-onlogin.lua   # Service-specific (optional)
+│
+└── narrator/
+    └── scripts/
+        └── narrator-onlogin.lua  # Service-specific (optional)
+
+src/lua/
+└── rmail-flush.lua          # ALE hook registration
+```
+
+## Related Issues
+
+- Issue 306: In-game mail bridge (uses flush on login)
+- Issue 310: Narrator subscription (uses flush on login)
+- Issue 313: DNS-style addresses (service organization)
+
+## Stats
+
+- **Phase:** 3
+- **Priority:** Medium (required for mail/narrator to work reliably)
+- **Complexity:** Low (just triggers existing flush scripts)
+- **Dependencies:** Issues 306, 310 (the services being flushed)

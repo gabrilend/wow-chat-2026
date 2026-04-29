@@ -192,6 +192,6 @@ echo "Migration complete. Start servers to verify."
 
 ## Related Documents
 
-- `issues/400-release-to-beta-transition.md` - Master tracking issue
+- `issues/129-release-to-beta-transition.md` - Master tracking issue (was 400; superseded by 136-canonical-profile-definitions)
 - `docs/patches/patch-registry.md` - Patch documentation
 - `issues-beta/phase-structure.md` - Beta phase planning

@@ -23,44 +23,44 @@ that touch multiple phases. Each tracking issue references its component parts.
 
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 313 | rmail-dns-style-addresses | Open | Foundation: naming convention |
-| 315 | rmail-login-flush-hook | Open | Foundation: queue priming |
-| 317 | rmail-account-creation | Open | Foundation: account lifecycle |
+| 1001 | rmail-dns-style-addresses | Open | Foundation: naming convention |
+| 1002 | rmail-login-flush-hook | Open | Foundation: queue priming |
+| 1003 | rmail-account-creation | Open | Foundation: account lifecycle |
 
 ### Service Implementations (Cross-Phase)
 
 | Issue | Title | Status | Impl Phase | Notes |
 |-------|-------|--------|------------|-------|
-| 306 | rmail-ingame-bridge | Open | 10 | Mail service standalone |
-| 314 | rmail-feedback-mailbox | Open | 10 | Feedback service standalone |
-| 163 | custom-class-submission | Open | 7 | Classes service (port 4662) |
-| 310 | narrator-subscription | Open | 9 | Narrator service (port 4862) |
-| 164 | rmail-ingame-text-editor | Open | 10 | QoL: compose in-game |
+| 1004 | rmail-ingame-bridge | Open | 10 | Mail service standalone |
+| 1005 | rmail-feedback-mailbox | Open | 10 | Feedback service standalone |
+| 1006 | rmail-ingame-text-editor | Open | 10 | QoL: compose in-game |
+| 709 | custom-class-submission | Open | 7 | Classes service (port 4662) |
+| 910 | narrator-subscription | Open | 9 | Narrator service (port 4862) |
 
 ### Issue Hierarchy
 
 ```
 Phase 10 (Coordination)
 │
-├── 313: DNS-style addresses
+├── 1001: DNS-style addresses
 │   └── Affects: ALL services
 │
-├── 315: Login flush hook
-│   └── Affects: 306 (mail), 310 (narrator)
+├── 1002: Login flush hook
+│   └── Affects: 1004 (mail), 910 (narrator)
 │
-├── 317: Account creation
+├── 1003: Account creation
 │   └── Standalone (port 4562)
 │
-├── 306: Mail bridge
-│   ├── Depends: 313, 315
+├── 1004: Mail bridge
+│   ├── Depends: 1001, 1002
 │   └── Standalone (port 4762)
 │
-├── 314: Feedback mailbox
+├── 1005: Feedback mailbox
 │   └── Standalone (port 4962)
 │
 └── Cross-phase references:
-    ├── Phase 7, Issue 163: Custom classes (port 4662)
-    └── Phase 9, Issue 310: Narrator feed (port 4862)
+    ├── Phase 7, Issue 709: Custom classes (port 4662)
+    └── Phase 9, Issue 910: Narrator feed (port 4862)
 ```
 
 ## Completed: 0/6 (Phase 10 primary issues)

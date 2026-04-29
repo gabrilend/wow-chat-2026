@@ -1,0 +1,407 @@
+# 711 - Custom Class Configuration Schema
+
+## Status
+- Created: 2026-04-05
+- Phase: 2
+- Priority: High
+- Depends on: 345 (custom talent interface), 163 (custom resource bars)
+
+## Current Behavior
+- Custom classes defined in `src/lua/custom-classes.lua`
+- Flat spell list with level, sourceClass, and implicit auto-learn
+- No distinction between trainer abilities and talents
+- No talent tree structure defined
+
+## Intended Behavior
+- Clear separation between trainer abilities and talent tree spells
+- Indexed by spell ID for fast lookup
+- Talent tree structure with tiers, prerequisites, and arrow blocking
+- Automatic rank detection via spell name + source class
+- Support for skipping ranks (e.g., R1, R3, R5 = 3 points for full effect)
+
+## Configuration Schema
+
+### Basic Structure
+```lua
+CustomClasses.definitions[1004] = {
+    name = "Knight",
+    baseClass = 2,  -- Paladin
+
+    -- Trainer-learned abilities (visit NPC, pay gold)
+    abilities = {
+        [19750] = { level = 20, cost = 5000 },   -- Flash of Light, 50 silver
+        [53601] = { level = 20, cost = 10000 },  -- Sacred Shield, 1 gold
+        [2983]  = { level = 10, cost = 2000 },   -- Sprint, 20 silver
+        -- Ranks are separate entries
+        [139]   = { level = 8,  cost = 1000 },   -- Renew R1
+        [6074]  = { level = 14, cost = 2500 },   -- Renew R2
+        [6075]  = { level = 20, cost = 5000 },   -- Renew R3
+    },
+
+    -- Talent tree spells (spend points in AIO talent interface)
+    talents = {
+        -- Warrior Deflection (skip R2, R4 - player gets R1, R3, R5 effect with 3 points)
+        [16462] = { tree = 1, tier = 1 },  -- R1: +1% parry
+        [16464] = { tree = 1, tier = 1 },  -- R3: +3% parry (displayed as R2)
+        [16466] = { tree = 1, tier = 1 },  -- R5: +5% parry (displayed as R3)
+
+        -- Reckoning with prerequisite
+        [20177] = { tree = 1, tier = 3, prerequisite = 16466 },  -- Requires max Deflection
+
+        -- Flurry (all 5 ranks)
+        [12319] = { tree = 3, tier = 1 },  -- R1
+        [12967] = { tree = 3, tier = 1 },  -- R2
+        [12968] = { tree = 3, tier = 1 },  -- R3
+        [12969] = { tree = 3, tier = 1 },  -- R4
+        [12974] = { tree = 3, tier = 1 },  -- R5
+    },
+
+    -- Tree names (for UI display)
+    treeNames = {
+        [1] = "Protection",
+        [2] = "Holy",
+        [3] = "Combat",
+    },
+
+    -- Optional: Tree icons
+    treeIcons = {
+        [1] = "Interface\\Icons\\Ability_Defend",
+        [2] = "Interface\\Icons\\Spell_Holy_HolyBolt",
+        [3] = "Interface\\Icons\\Ability_DualWield",
+    },
+}
+```
+
+### Field Definitions
+
+#### abilities table
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| (key) | number | Yes | Spell ID |
+| level | number | Yes | Minimum level to learn |
+| cost | number | Yes | Cost in copper (100 = 1 silver, 10000 = 1 gold) |
+
+#### talents table
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| (key) | number | Yes | Spell ID |
+| tree | number | Yes | Tree index (1, 2, or 3) |
+| tier | number | Yes | Tier/row (1, 2, or 3) |
+| prerequisite | number | No | Spell ID that must be maxed first |
+| column | number | No | Force specific column (1, 2, or 3). Auto-assigned if omitted |
+
+## Talent Rank Detection
+
+### Automatic Grouping
+System groups spell IDs into talent families by:
+1. Query spell name from `spell_dbc` or lookup table
+2. Group by (spell_name, source_class)
+
+```lua
+-- {{{ groupTalentRanks
+-- Groups talent spell IDs into families by name + source class
+function CustomClasses.groupTalentRanks(talents)
+    local families = {}
+
+    for spellId, config in pairs(talents) do
+        local spellName = GetSpellName(spellId)
+        local sourceClass = GetSpellSourceClass(spellId)
+        local key = spellName .. "_" .. sourceClass
+
+        if not families[key] then
+            families[key] = {
+                name = spellName,
+                sourceClass = sourceClass,
+                tree = config.tree,
+                tier = config.tier,
+                prerequisite = config.prerequisite,
+                ranks = {},
+            }
+        end
+
+        table.insert(families[key].ranks, spellId)
+    end
+
+    -- Sort ranks by spell ID (usually correlates with rank order)
+    for _, family in pairs(families) do
+        table.sort(family.ranks)
+    end
+
+    return families
+end -- }}}
+```
+
+### Skipped Ranks
+If user defines only some ranks, system renumbers for display:
+
+```lua
+-- User defines:
+[16462] = { tree = 1, tier = 1 },  -- Warrior Deflection R1 (+1%)
+[16464] = { tree = 1, tier = 1 },  -- Warrior Deflection R3 (+3%)
+[16466] = { tree = 1, tier = 1 },  -- Warrior Deflection R5 (+5%)
+
+-- System displays:
+-- "Deflection" with 3 ranks
+-- Rank 1: +1% parry (spell 16462)
+-- Rank 2: +3% parry (spell 16464)  -- Was R3, now displayed as R2
+-- Rank 3: +5% parry (spell 16466)  -- Was R5, now displayed as R3
+
+-- Player spends 3 talent points, gets full +5% effect
+-- Effectively "compressed" the 5-rank talent into 3 ranks
+```
+
+### Same-Name Talents from Different Classes
+```lua
+-- All three are "Deflection" but treated as separate talents:
+[13854] = { tree = 1, tier = 1 },  -- Rogue Deflection R3 (source class 4)
+[20064] = { tree = 1, tier = 2 },  -- Paladin Deflection R5 (source class 2)
+[16466] = { tree = 1, tier = 1 },  -- Warrior Deflection R5 (source class 1)
+
+-- System groups by (name + source_class):
+-- Family 1: "Deflection_4" (Rogue) - 1 rank defined
+-- Family 2: "Deflection_2" (Paladin) - 1 rank defined
+-- Family 3: "Deflection_1" (Warrior) - 1 rank defined
+```
+
+## Prerequisite Arrows and Tier Blocking
+
+### Arrow Rendering
+When talent B requires talent A:
+1. Draw arrow from A to B
+2. Arrow passes through intermediate tiers
+3. Blocked positions cannot have other talents
+
+### Layout Algorithm
+```lua
+-- {{{ calculateTalentPositions
+-- Assigns columns to talents, respecting prerequisite arrows
+function CustomClasses.calculateTalentPositions(tree, families)
+    local positions = {}  -- [tier][column] = family
+    local blocked = {}    -- [tier][column] = true if arrow passes through
+
+    -- First pass: place talents with prerequisites (need specific columns)
+    for _, family in pairs(families) do
+        if family.tree == tree and family.prerequisite then
+            -- Find prerequisite's position
+            local prereqFamily = findFamilyBySpellId(families, family.prerequisite)
+            local prereqCol = prereqFamily.column or 2  -- Default to middle
+
+            -- Block intermediate tiers in that column
+            for tier = prereqFamily.tier + 1, family.tier - 1 do
+                blocked[tier] = blocked[tier] or {}
+                blocked[tier][prereqCol] = true
+            end
+
+            -- Place this talent in same column as prerequisite
+            family.column = prereqCol
+            positions[family.tier] = positions[family.tier] or {}
+            positions[family.tier][prereqCol] = family
+        end
+    end
+
+    -- Second pass: place remaining talents in available columns
+    for _, family in pairs(families) do
+        if family.tree == tree and not family.column then
+            local tier = family.tier
+            positions[tier] = positions[tier] or {}
+            blocked[tier] = blocked[tier] or {}
+
+            -- Find first available column
+            for col = 1, 3 do
+                if not positions[tier][col] and not blocked[tier][col] then
+                    family.column = col
+                    positions[tier][col] = family
+                    break
+                end
+            end
+        end
+    end
+
+    return positions
+end -- }}}
+```
+
+### Visual Example
+```
+PROTECTION TREE
+
+Tier 1:  [Warr Defl]    [Rogue Defl]   [Hunt Defl]
+              |
+              | (prerequisite arrow)
+              ↓
+Tier 2:  [Pala Defl]    [BLOCKED]      [Spell Defl]
+              |
+              |
+              ↓
+Tier 3:  [Empty]        [Reckoning]    [Empty]
+                        (req: Warr Defl)
+
+Note: Middle column of tier 2 is blocked by arrow from
+Warrior Deflection (tier 1) to Reckoning (tier 3).
+```
+
+## Glyph Effects (Always-Active)
+
+For glyphs that should always be active for a custom class:
+
+```lua
+CustomClasses.definitions[1004] = {
+    -- ... abilities and talents ...
+
+    -- Glyphs that are always active (no inscription needed)
+    permanentGlyphs = {
+        [54857] = true,  -- Glyph of Renew (reduces duration, more healing per tick)
+        [58375] = true,  -- Glyph of Vigilance (increases threat transfer)
+    },
+}
+
+-- On login, apply glyph auras/effects
+function CustomClasses.applyPermanentGlyphs(player)
+    local def = CustomClasses.getDefinition(CustomClasses.getCustomClass(player))
+    if not def or not def.permanentGlyphs then return end
+
+    for glyphId, _ in pairs(def.permanentGlyphs) do
+        -- Apply glyph effect (may need to learn the glyph spell or apply aura)
+        ApplyGlyphEffect(player, glyphId)
+    end
+end
+```
+
+## Validation Rules
+
+### On Definition Load
+1. All spell IDs must be valid (exist in spell database)
+2. Tree indices must be 1, 2, or 3
+3. Tier indices must be 1, 2, or 3
+4. Prerequisites must reference defined talents
+5. No more than 3 talent families per tier per tree (would overflow columns)
+6. No circular prerequisites
+
+### Validation Function
+```lua
+-- {{{ validateDefinition
+function CustomClasses.validateDefinition(classId, def)
+    local errors = {}
+
+    -- Check required fields
+    if not def.name then
+        table.insert(errors, "Missing name")
+    end
+    if not def.baseClass or def.baseClass < 1 or def.baseClass > 11 then
+        table.insert(errors, "Invalid baseClass")
+    end
+
+    -- Check abilities
+    for spellId, config in pairs(def.abilities or {}) do
+        if not IsValidSpell(spellId) then
+            table.insert(errors, "Invalid ability spell ID: " .. spellId)
+        end
+        if not config.level or config.level < 1 or config.level > 20 then
+            table.insert(errors, "Invalid level for ability " .. spellId)
+        end
+        if not config.cost or config.cost < 0 then
+            table.insert(errors, "Invalid cost for ability " .. spellId)
+        end
+    end
+
+    -- Check talents
+    local talentsPerTier = {}  -- [tree][tier] = count
+    for spellId, config in pairs(def.talents or {}) do
+        if not IsValidSpell(spellId) then
+            table.insert(errors, "Invalid talent spell ID: " .. spellId)
+        end
+        if not config.tree or config.tree < 1 or config.tree > 3 then
+            table.insert(errors, "Invalid tree for talent " .. spellId)
+        end
+        if not config.tier or config.tier < 1 or config.tier > 3 then
+            table.insert(errors, "Invalid tier for talent " .. spellId)
+        end
+        if config.prerequisite and not def.talents[config.prerequisite] then
+            table.insert(errors, "Prerequisite " .. config.prerequisite .. " not defined")
+        end
+    end
+
+    -- Check tier overflow after grouping
+    local families = CustomClasses.groupTalentRanks(def.talents or {})
+    for _, family in pairs(families) do
+        local key = family.tree .. "_" .. family.tier
+        talentsPerTier[key] = (talentsPerTier[key] or 0) + 1
+        if talentsPerTier[key] > 3 then
+            table.insert(errors, "Too many talents in tree " .. family.tree .. " tier " .. family.tier)
+        end
+    end
+
+    return #errors == 0, errors
+end -- }}}
+```
+
+## Migration from Current Format
+
+### Current Format (issue 159)
+```lua
+spells = {
+    { id = 19750, level = 20, sourceClass = 2 },  -- Flash of Light
+    { id = 12974, level = 12, sourceClass = 1 },  -- Flurry R5
+}
+```
+
+### New Format
+```lua
+abilities = {
+    [19750] = { level = 20, cost = 5000 },  -- Flash of Light
+},
+talents = {
+    [12974] = { tree = 3, tier = 1 },  -- Flurry R5
+},
+```
+
+### Migration Script
+```lua
+-- {{{ migrateOldFormat
+function CustomClasses.migrateOldFormat(oldDef)
+    local newDef = {
+        name = oldDef.name,
+        baseClass = oldDef.baseClass,
+        abilities = {},
+        talents = {},
+        treeNames = { "Protection", "Holy", "Combat" },  -- Knight default
+    }
+
+    for _, spell in ipairs(oldDef.spells) do
+        -- Heuristic: passives/talents go to talents, actives go to abilities
+        -- This would need manual review
+        newDef.abilities[spell.id] = {
+            level = spell.level,
+            cost = spell.level * 500,  -- Default cost scaling
+        }
+    end
+
+    return newDef
+end -- }}}
+```
+
+## Implementation Steps
+
+1. **Define new schema** in custom-classes.lua
+2. **Implement rank grouping** function
+3. **Implement position calculation** with arrow blocking
+4. **Create validation function**
+5. **Update Knight definition** to new format
+6. **Write migration script** for any other custom classes
+7. **Update AIO talent UI** to read new format
+8. **Test with Knight** class
+
+## Related Issues
+- 159 - Knight custom class (first to use new schema)
+- 162 - Talent tree analysis script (will read this format)
+- 163 - Custom resource bars (auto-detected from abilities)
+- 345 - Custom talent interface (renders this data)
+
+## Related Files
+- `src/lua/custom-classes.lua` (update schema)
+- `src/lua/custom-class-validation.lua` (new)
+
+## Open Questions
+1. **Spell name lookup**: Query spell_dbc or maintain lookup table?
+2. **Glyph effects**: How to apply permanent glyphs? Auras? Spell modifications?
+3. **Cost scaling**: Should ability costs scale with level automatically, or always explicit?

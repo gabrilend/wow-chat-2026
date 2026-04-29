@@ -1,0 +1,259 @@
+# Issue 707: AIO Tiered Talent Trainers
+
+**Status**: Design
+**Phase**: 1
+**Related**: 159 (knight-custom-class), 155 (custom-class-selection-npc), 157 (dynamic-trainer-spawning)
+
+---
+
+## Overview
+
+Custom classes learn talents that normally require high levels (40+). Currently these
+are force-learned via AIO on login. This issue proposes a more elegant solution:
+custom trainers that teach talent ranks progressively as the player levels.
+
+---
+
+## Current Behavior
+
+- Talents are in the custom class spell list with a level requirement
+- High-level talents (Sacred Shield, Art of War, etc.) require level 40-80 normally
+- These are learned via AIO addon on login, bypassing normal trainer requirements
+- Player gets max rank immediately when they hit the level requirement
+
+## Intended Behavior
+
+- Custom trainers spawn for custom class players (existing issue 157)
+- Trainer displays a custom AIO gossip menu
+- Menu shows talent ranks available at current level
+- Player learns ranks progressively: R1 at level 6, R2 at level 9, etc.
+- Higher ranks replace lower ranks automatically
+
+---
+
+## Design
+
+### Tiered Talent Progression
+
+Example: Warrior Deflection (5 ranks, +1% parry each)
+
+| Rank | Spell ID | Player Level | Effect |
+|------|----------|--------------|--------|
+| R1   | 16462    | 6            | +1% parry |
+| R2   | 16463    | 9            | +2% parry |
+| R3   | 16464    | 12           | +3% parry |
+| R4   | 16465    | 15           | +4% parry |
+| R5   | 16466    | 18           | +5% parry |
+
+Instead of getting R5 at level 8 immediately, player earns ranks over time.
+
+### Custom Trainer Data Structure
+
+```lua
+-- Tiered talents for Knight custom class
+local KNIGHT_TIERED_TALENTS = {
+    -- Warrior Deflection: 5 ranks
+    ["warrior_deflection"] = {
+        name = "Deflection",
+        sourceClass = 1,  -- Warrior
+        ranks = {
+            { spell = 16462, level = 6,  desc = "+1% Parry" },
+            { spell = 16463, level = 9,  desc = "+2% Parry" },
+            { spell = 16464, level = 12, desc = "+3% Parry" },
+            { spell = 16465, level = 15, desc = "+4% Parry" },
+            { spell = 16466, level = 18, desc = "+5% Parry" },
+        },
+    },
+
+    -- Rogue Deflection: 3 ranks
+    ["rogue_deflection"] = {
+        name = "Deflection",
+        sourceClass = 4,  -- Rogue
+        ranks = {
+            { spell = 13852, level = 6,  desc = "+2% Parry" },
+            { spell = 13853, level = 10, desc = "+4% Parry" },
+            { spell = 13854, level = 14, desc = "+6% Parry" },
+        },
+    },
+
+    -- Paladin Deflection: 5 ranks
+    ["paladin_deflection"] = {
+        name = "Deflection",
+        sourceClass = 2,  -- Paladin
+        ranks = {
+            { spell = 20060, level = 6,  desc = "+1% Parry" },
+            { spell = 20061, level = 9,  desc = "+2% Parry" },
+            { spell = 20062, level = 12, desc = "+3% Parry" },
+            { spell = 20063, level = 15, desc = "+4% Parry" },
+            { spell = 20064, level = 18, desc = "+5% Parry" },
+        },
+    },
+
+    -- Flurry: 5 ranks
+    ["flurry"] = {
+        name = "Flurry",
+        sourceClass = 1,  -- Warrior
+        ranks = {
+            { spell = 12319, level = 8,  desc = "+5% Attack Speed" },
+            { spell = 12967, level = 11, desc = "+10% Attack Speed" },
+            { spell = 12968, level = 14, desc = "+15% Attack Speed" },
+            { spell = 12969, level = 17, desc = "+20% Attack Speed" },
+            { spell = 12974, level = 20, desc = "+25% Attack Speed" },
+        },
+    },
+}
+```
+
+### AIO Trainer Gossip Flow
+
+```
+1. Player interacts with custom trainer NPC
+2. AIO intercepts gossip event
+3. Server checks player's custom class and level
+4. Server builds list of:
+   - Talents with learnable ranks (current level >= rank level)
+   - Already-known ranks (grayed out or hidden)
+   - Next available rank for each talent
+5. AIO sends custom frame to client showing:
+   - Talent name and icon
+   - Current rank / max rank
+   - "Learn Rank X" button if upgrade available
+   - Cost (gold, or free)
+6. Player clicks to learn
+7. Server teaches spell, removes old rank if applicable
+8. Frame updates to show new state
+```
+
+### Server-Side Lua
+
+```lua
+-- {{{ getAvailableTalentRank
+-- Returns the highest rank the player can learn for a tiered talent
+function CustomTrainer.getAvailableTalentRank(player, talentData)
+    local playerLevel = player:GetLevel()
+    local availableRank = nil
+
+    for i, rankData in ipairs(talentData.ranks) do
+        if playerLevel >= rankData.level then
+            -- Check if player already knows this or higher rank
+            if not player:HasSpell(rankData.spell) then
+                -- Check if player knows a lower rank
+                local hasLowerRank = false
+                for j = 1, i - 1 do
+                    if player:HasSpell(talentData.ranks[j].spell) then
+                        hasLowerRank = true
+                        break
+                    end
+                end
+
+                if hasLowerRank or i == 1 then
+                    availableRank = rankData
+                end
+            end
+        end
+    end
+
+    return availableRank
+end -- }}}
+
+-- {{{ learnTalentRank
+-- Teaches a talent rank, removing previous rank if exists
+function CustomTrainer.learnTalentRank(player, talentData, rankIndex)
+    local rankData = talentData.ranks[rankIndex]
+
+    -- Remove previous ranks
+    for i = 1, rankIndex - 1 do
+        local oldSpell = talentData.ranks[i].spell
+        if player:HasSpell(oldSpell) then
+            player:RemoveSpell(oldSpell, false, false)
+        end
+    end
+
+    -- Learn new rank
+    player:LearnSpell(rankData.spell)
+
+    return true
+end -- }}}
+```
+
+### Client-Side AIO Frame
+
+```lua
+-- AIO client handler for custom trainer frame
+local TrainerFrame = AIO.AddHandlers("CustomTrainer", {})
+
+function TrainerFrame.ShowTalents(player, talents)
+    -- Create or show the trainer frame
+    -- Display available talents with current/max ranks
+    -- Add "Train" buttons for upgradeable talents
+end
+
+function TrainerFrame.OnTrainClick(player, talentKey, rankIndex)
+    -- Send request to server to learn talent rank
+    AIO.Handle("CustomTrainer", "LearnRank", talentKey, rankIndex)
+end
+```
+
+---
+
+## Benefits
+
+1. **Progression Feel**: Player earns talent power gradually, not all at once
+2. **Trainer Purpose**: Custom trainers have meaningful interactions
+3. **Balance Lever**: Can tune when talents become available per-rank
+4. **Immersion**: Feels more like normal WoW talent/training progression
+
+---
+
+## Implementation Steps
+
+1. Define tiered talent data structure for each custom class
+2. Create AIO server handler for custom trainer gossip
+3. Create AIO client frame for talent display
+4. Modify dynamic trainer spawning (issue 157) to use AIO gossip
+5. Test with Knight class tiered talents
+6. Document talent tier configurations
+
+---
+
+## Affected Custom Classes
+
+### Knight (ID 1004)
+
+Talents that could be tiered:
+
+| Talent | Ranks | Current | Proposed |
+|--------|-------|---------|----------|
+| Warrior Deflection | 5 | R5 at L8 | R1-R5 at L6-18 |
+| Rogue Deflection | 3 | R3 at L6 | R1-R3 at L6-14 |
+| Paladin Deflection | 5 | R5 at L6 | R1-R5 at L6-18 |
+| Flurry | 5 | R5 at L12 | R1-R5 at L8-20 |
+| Spiritual Focus | 5 | R5 at L8 | R1-R5 at L4-12 |
+| Sheath of Light | 3 | R3 at L16 | R1-R3 at L12-18 |
+
+**Note**: Some talents (Art of War, Divine Aegis) only have 2-3 ranks and may
+not benefit from tiering. Keep those as "learn max rank at level X".
+
+---
+
+## Open Questions
+
+1. **Cost**: Should tiered ranks cost gold? Or be free since it's a custom class?
+2. **Auto-learn**: Should lower ranks auto-upgrade when player levels, or require
+   visiting trainer?
+3. **Unlearning**: Can player unlearn talent ranks? Reset system?
+4. **Visual**: Should AIO frame look like standard trainer, or custom design?
+
+---
+
+## Related Files
+
+- `src/lua/custom-classes.lua` - Custom class definitions
+- `src/lua/custom-trainers.lua` - (new) Tiered talent trainer logic
+- `src/aio/custom-trainer-frame.lua` - (new) AIO client frame
+
+---
+
+## Revision History
+
+- 2026-04-05: Initial design based on Knight custom class development

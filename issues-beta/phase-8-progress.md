@@ -16,18 +16,34 @@ endgame, and the ultimate stakes of permadeath.
 
 ## Issues
 
+Ordered by narrative arc: combat fairness → talent constraints →
+post-20 endgame → shared-character meta layer.
+
+### Combat fairness (the floor)
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 205 | talent-points-level-20-cap | Completed | Level cap implemented |
-| 206 | death-knight-level-1-scaling | Implemented | DK abilities scaled |
-| 139 | proportional-damage-rewards | Open | XP based on contribution |
-| 141 | talent-tier-limit | Open | Block tier 4+ talents |
-| 156 | monster-accuracy-level-cap | Implemented | ±3 level hit cap (C++) |
-| 309 | invisible-level-progression | Open | Post-20 endgame |
-| 319 | chunked-talent-points | Open | 10 points at milestones |
-| 322 | vavadane-shared-daily-reset-character | Open | Shared progression |
+| 803 | monster-accuracy-level-cap | Implemented | ±3 level hit cap (C++ patch). Blocks 801 since hit-rate affects damage. |
+| 801 | proportional-damage-rewards | Open | XP based on contribution. Depends on 803 for fair hit rates. |
 
-## Completed: 1/8 (3 implemented, need testing/rebuild)
+### Talent constraints (the cap before endgame)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 802 | talent-tier-limit | Open | Block tier 4+ talents (cap at first 3 tiers). |
+
+### Post-20 endgame
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 804 | invisible-level-progression | Open | Post-20 invisible XP tracking. Mandatory grouping at high invisible levels. Permadeath / immortality at invisible 60. |
+
+### Shared-character meta
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 805 | vavadane-shared-daily-reset-character | Open | One shared character that resets daily. Cross-player layer above per-character progression. |
+
+## Completed: 0/5 (1 Implemented)
+
+Note: Issues 205 (talent-points-level-20-cap) and 206 (death-knight-level-1-scaling)
+moved to Phase 2. Issue 714 (chunked-talent-points) moved to Phase 7.
 
 ---
 

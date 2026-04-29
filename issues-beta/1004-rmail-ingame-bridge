@@ -1,0 +1,514 @@
+# 1004 - rmail In-Game Mail Bridge
+
+Bridge between in-game WoW mailbox and external rmail system, allowing players
+to read and send game mail from outside the client.
+
+## Current Behavior
+
+In-game mail is only accessible through the WoW client at a mailbox NPC. Players
+must log in and physically visit a mailbox to check messages. There's no way to
+interact with game mail from outside the game.
+
+## Intended Behavior
+
+### Forwarding: Game → rmail
+
+Players can subscribe to have their in-game mail forwarded to their rmail inbox:
+- All mail sent to character is copied to rmail
+- Text content preserved as email body
+- **Item attachments become PNG icons** - the item's icon rendered as image attachment
+- Gold amounts noted in the email text
+- Sender name, subject, timestamp preserved
+
+### Sending: rmail → Game
+
+Players can send mail to characters by posting to their rmail outbox:
+- Create file in `~/mail/outbox/` with `to: charactername`
+- Filename becomes in-game mail subject
+- Body becomes in-game mail body
+- Cannot attach items or gold (text only)
+
+Example outbox file `Meeting tomorrow`:
+```
+to: Thrall
+
+Hey, let's meet at the crossroads.
+```
+
+### Public Subscriptions
+
+Subscriptions are **not private**:
+- Anyone can subscribe to any character's mail feed
+- This is intentional - creates information economy
+- Players can monitor alt mail, guild mail, or spy on rivals
+- Subscribing requires knowing the character name
+
+## Design Considerations
+
+### Item Icon Rendering
+
+When mail contains items:
+1. Look up item entry in database
+2. Get icon filename from `displayid` → `ItemDisplayInfo.dbc`
+3. Render icon to PNG (or use pre-extracted icon cache)
+4. Attach PNG to rmail message with item name as filename
+
+Format: `[Thunderfury].png` attached to email
+
+### Subscription Model
+
+Options for subscription management:
+- **Option A:** rmail command to subscribe (`subscribe wow:CharacterName`)
+- **Option B:** In-game command to enable forwarding (`#mailforward enable`)
+- **Option C:** Both - in-game enables, rmail subscribes
+
+Recommendation: Option A (rmail-side) - keeps game code simpler
+
+### Privacy Considerations
+
+The "anyone can subscribe" model is intentional but notable:
+- Creates gameplay around information and secrets
+- Players who want privacy don't use the system
+- Guild leaders can monitor guild bank mail
+- Spies can gather intelligence
+
+This is a feature, not a bug - but document it clearly.
+
+## Suggested Implementation Steps
+
+1. **Create mail forwarding hook**
+   - Hook `PLAYER_EVENT_ON_SEND_MAIL` or poll `mail` database table
+   - On new mail, check if recipient has forwarding enabled
+   - Queue mail data for rmail delivery
+
+2. **Build rmail integration service**
+   - Separate process/script that bridges WoW DB ↔ rmail
+   - Polls for new game mail, sends to rmail
+   - Polls rmail outbox, creates game mail
+   - Runs on timer (every 30-60 seconds)
+
+3. **Implement item icon extraction**
+   - Pre-extract all item icons to PNG cache directory
+   - On mail forward, look up icon path by item entry
+   - Attach icon file to rmail message
+
+4. **Add subscription management**
+   - rmail command: `subscribe wow:CharacterName`
+   - Store subscriptions in rmail system
+   - Bridge service checks subscriptions when forwarding
+
+5. **Implement outbound mail creation**
+   - Parse rmail outbox for `*@wow.rmail` addresses
+   - Extract character name from address
+   - Create in-game mail via SQL INSERT to `mail` table
+   - Mark rmail as processed
+
+6. **Test scenarios**
+   - Receive game mail → appears in rmail with text
+   - Receive mail with item → PNG attachment of icon
+   - Send rmail to character → appears in game mailbox
+   - Subscribe to another character → receive their mail
+
+## rmail Configuration
+
+**Service Address:** `wow.ritzmenardi.com/mail`
+
+**Port:** `4762`
+
+**Contact Entry (User Side):**
+```
+wow.ritzmenardi.com/mail.ip    = wow.ritzmenardi.com
+wow.ritzmenardi.com/mail.port  = 4762
+wow.ritzmenardi.com/mail.token = "your-mail-token"
+```
+
+**Subscribe Message:**
+```
+to: wow.ritzmenardi.com/mail
+subject: subscribe
+
+CharacterName
+```
+
+**Send Mail Message:**
+```
+to: wow.ritzmenardi.com/mail
+subject: Mail Subject Here
+
+CharacterName
+
+Mail body text here.
+```
+
+See `docs/rmail-integration.md` for full setup instructions.
+
+## Hook Architecture
+
+The mail bridge requires two-way communication:
+- **Inbound**: rmail messages → in-game mail
+- **Outbound**: in-game mail → rmail (subscription-based)
+
+### Inbound Hook: mail-receive.lua
+
+Triggered when player sends rmail to `wow.ritzmenardi.com/mail`:
+
+```lua
+#!/usr/bin/env lua
+-- {{{ mail-receive.lua
+-- on_receive hook for in-game mail bridge
+-- Handles: subscribe, unsubscribe, send mail to character
+
+local sender   = arg[1]
+local subject  = arg[2]
+local filepath = arg[3]
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local MAIL_DIR = DIR .. "/game-mail/mail"
+local SUBSCRIPTIONS_FILE = MAIL_DIR .. "/subscriptions.txt"
+
+-- Read message body
+local f = io.open(filepath, "r")
+if not f then os.exit(1) end
+local content = f:read("*a")
+f:close()
+
+-- Parse body (after headers)
+local body = content:match("\n\n(.+)$") or ""
+local firstLine = body:match("^([^\n]+)")
+
+-- Route based on subject
+local subjectLower = (subject or ""):lower()
+
+if subjectLower == "subscribe" then
+    -- Add subscription: sender subscribes to character on firstLine
+    local charName = firstLine and firstLine:match("^%s*(.-)%s*$")
+    if charName and #charName > 0 then
+        appendSubscription(sender, charName)
+        sendConfirmation(sender, "Subscribed to " .. charName)
+    end
+
+elseif subjectLower == "unsubscribe" then
+    -- Remove subscription
+    local charName = firstLine and firstLine:match("^%s*(.-)%s*$")
+    if charName and #charName > 0 then
+        removeSubscription(sender, charName)
+        sendConfirmation(sender, "Unsubscribed from " .. charName)
+    end
+
+else
+    -- Treat as outgoing mail to character
+    -- First line = recipient character name
+    -- Rest of body = mail content
+    local charName = firstLine
+    local mailBody = body:match("\n(.+)$") or ""
+    if charName and #charName > 0 then
+        createIngameMail(sender, charName, subject, mailBody)
+    end
+end
+-- }}}
+```
+
+### Subscription Storage
+
+Simple text file listing subscriptions:
+
+```
+# subscriptions.txt
+# Format: rmail_contact:character_name
+alice:Thrall
+alice:Jaina
+bob:Arthas
+```
+
+### Outbound: on_send Hook Architecture
+
+Instead of a polling daemon, use rmail's `on_send` hook. This hook fires only when
+a message is successfully delivered to the recipient. If the recipient is offline,
+messages queue naturally in rmail's outbox until they come online.
+
+**Key insight:** When one message successfully sends, check if there are more queued.
+
+### Queue Storage
+
+Game mail that needs forwarding is stored in a queue file:
+
+```
+# .pending-forwards.txt
+# Format: mail_id:subscriber:character:timestamp
+12345:alice:Thrall:1712345678
+12346:alice:Thrall:1712345700
+12347:bob:Jaina:1712345800
+```
+
+### ALE Integration: Queue on Mail Receive
+
+When in-game mail arrives, ALE queues it for forwarding:
+
+```lua
+-- {{{ OnMailReceive hook (ALE)
+-- Queue mail for rmail forwarding when it arrives in-game
+
+local PENDING_FILE = "/mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/mail/.pending-forwards.txt"
+local SUBSCRIPTIONS_FILE = "/mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/mail/subscriptions.txt"
+
+local function OnMailReceive(event, receiver, mailId)
+    local receiverName = receiver:GetName()
+    local subscribers = getSubscribersForCharacter(receiverName)
+
+    if #subscribers == 0 then return end
+
+    -- Queue for each subscriber
+    local f = io.open(PENDING_FILE, "a")
+    if f then
+        local timestamp = os.time()
+        for _, subscriber in ipairs(subscribers) do
+            f:write(string.format("%d:%s:%s:%d\n",
+                mailId, subscriber, receiverName, timestamp))
+        end
+        f:close()
+    end
+
+    -- Write first message to outbox to trigger send attempt
+    attemptNextForward(subscribers[1])
+end
+-- }}}
+```
+
+### on_send Hook: Check for More
+
+When a message successfully sends, check if there are more pending:
+
+```lua
+#!/usr/bin/env lua
+-- {{{ mail-onsend.lua
+-- on_send hook - fires after successful message delivery
+-- Checks if more messages are queued for this recipient
+
+local recipient = arg[1]  -- contact that just received a message
+local subject   = arg[2]
+local filepath  = arg[3]  -- path to sent message
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local PENDING_FILE = DIR .. "/game-mail/mail/.pending-forwards.txt"
+local OUTBOX_PATH = DIR .. "/game-mail/mail/outbox/"
+
+-- Only process [WoW Mail] messages (our forwarded mail)
+if not subject or not subject:match("^%[WoW Mail%]") then
+    os.exit(0)
+end
+
+-- {{{ checkAndSendNext
+-- Look for more pending forwards for this recipient
+function checkAndSendNext(recipient)
+    local pending = readPendingFile()
+    local toSend = nil
+
+    for i, entry in ipairs(pending) do
+        if entry.subscriber == recipient then
+            toSend = entry
+            -- Remove from pending
+            table.remove(pending, i)
+            writePendingFile(pending)
+            break
+        end
+    end
+
+    if toSend then
+        -- Fetch mail from game DB and write to outbox
+        local mail = fetchMailFromDB(toSend.mailId)
+        if mail then
+            writeMailToOutbox(recipient, mail)
+            -- rmail will attempt to send, triggering on_send again if successful
+        end
+    end
+end
+-- }}}
+
+checkAndSendNext(recipient)
+-- }}}
+```
+
+### on_login Hook: Flush Queue
+
+Custom hook that runs when a player logs into the game server. Triggers a check
+for any pending forwards for all online rmail recipients:
+
+```lua
+#!/usr/bin/env lua
+-- {{{ mail-onlogin.lua
+-- Called by ALE when player logs in
+-- Attempts to flush any pending mail forwards
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local PENDING_FILE = DIR .. "/game-mail/mail/.pending-forwards.txt"
+local OUTBOX_PATH = DIR .. "/game-mail/mail/outbox/"
+
+-- {{{ flushPendingForwards
+-- Write one message per subscriber to outbox to kick off the chain
+function flushPendingForwards()
+    local pending = readPendingFile()
+    local attemptedSubscribers = {}
+
+    for _, entry in ipairs(pending) do
+        if not attemptedSubscribers[entry.subscriber] then
+            -- Write first pending message to outbox
+            local mail = fetchMailFromDB(entry.mailId)
+            if mail then
+                writeMailToOutbox(entry.subscriber, mail)
+                attemptedSubscribers[entry.subscriber] = true
+            end
+        end
+    end
+end
+-- }}}
+
+flushPendingForwards()
+-- }}}
+```
+
+### ALE: Trigger on_login Hook
+
+```lua
+-- {{{ OnPlayerLogin (ALE)
+local function OnPlayerLogin(event, player)
+    -- Run the mail flush script
+    os.execute("lua /mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/mail/scripts/mail-onlogin.lua &")
+end
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, OnPlayerLogin)
+-- }}}
+```
+
+### Flow Diagram
+
+```
+1. In-game mail arrives for Thrall
+   ↓
+2. ALE OnMailReceive: alice subscribes to Thrall
+   - Add to .pending-forwards.txt
+   - Write first message to outbox/
+   ↓
+3. rmail attempts to send to alice
+   ↓
+   ├─ alice OFFLINE: message stays in outbox, retries later
+   │
+   └─ alice ONLINE: message delivered
+      ↓
+4. on_send hook fires
+   - Check .pending-forwards.txt for more alice messages
+   - If found: write next to outbox, remove from pending
+   - Repeat from step 3
+   ↓
+5. Eventually: all pending messages for alice delivered
+```
+
+### Benefits
+
+- **No daemon**: Uses rmail's native hook system
+- **Offline tolerance**: Messages queue until recipient comes online
+- **Efficient**: Only checks when delivery succeeds
+- **Self-draining**: Each successful send triggers the next
+
+### Item Icon Handling
+
+When mail contains items:
+
+```lua
+-- {{{ getItemIcon
+function getItemIcon(itemEntry)
+    -- Query item_template for displayid
+    local query = string.format(
+        "SELECT displayid FROM item_template WHERE entry = %d",
+        itemEntry
+    )
+    local displayId = queryWorldDB(query)
+
+    -- Look up icon in pre-extracted cache
+    local iconPath = string.format("data/icons/%d.png", displayId)
+
+    if fileExists(iconPath) then
+        return iconPath
+    end
+
+    return nil  -- No icon available
+end
+-- }}}
+```
+
+### Directory Structure
+
+```
+game-mail/mail/
+├── inbox/                    # Incoming rmail (subscribe/unsubscribe/send)
+├── outbox/                   # Outgoing rmail (forwarded game mail)
+├── .pending-forwards.txt     # Queue of mail waiting to forward
+├── subscriptions.txt         # subscriber:character mappings
+├── config                    # rmail config with hooks
+└── scripts/
+    ├── mail-receive.lua      # on_receive hook (subscribe/unsubscribe/send)
+    ├── mail-onsend.lua       # on_send hook (check for more pending)
+    └── mail-onlogin.lua      # Called by ALE on player login
+```
+
+### Config File
+
+```
+# game-mail/mail/config
+name = mail
+port = 4762
+on_receive = /mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/mail/scripts/mail-receive.lua
+on_send = /mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/mail/scripts/mail-onsend.lua
+```
+
+## Configuration
+
+```lua
+-- Bridge polling interval
+RMAIL_POLL_INTERVAL = 30000  -- 30 seconds
+
+-- Icon cache path
+ITEM_ICON_CACHE = "data/icons/"
+
+-- rmail directories (standard locations)
+RMAIL_INBOX  = "~/mail/inbox/"
+RMAIL_OUTBOX = "~/mail/outbox/"
+```
+
+## Technical Notes
+
+### Mail Table Structure
+
+```sql
+-- Key fields in acore_characters.mail
+-- id, messageType, stationery, mailTemplateId
+-- sender, receiver, subject, body
+-- has_items, expire_time, deliver_time, money, cod, checked
+```
+
+### Item Icon Lookup
+
+```sql
+-- Get icon for item
+SELECT displayid FROM item_template WHERE entry = ?
+-- Then look up in ItemDisplayInfo.dbc for icon filename
+```
+
+## Related Concepts
+
+- Concept 267: External service integration
+- Concept 089: Mail system hooks
+
+## Related Files
+
+- Database: acore_characters.mail, acore_characters.mail_items
+- External: rmail service configuration
+
+## Related Issues
+
+- None directly, but complements language barrier system (302) for communication
+
+## Stats
+
+- **Phase:** 3
+- **Priority:** Low (quality of life, external integration)
+- **Complexity:** High (external service, icon extraction, bridging)
+- **Dependencies:** rmail system operational
