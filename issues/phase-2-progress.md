@@ -29,7 +29,7 @@ stripped → progression scaffolding for the empty world.
 |-------|-------|--------|-------|
 | 202 | lua-engine-initialization | Completed | ALE loads correctly. Blocks every Lua-driven feature in later phases. |
 | 208 | ale-registry-corruption | In Progress | Crash fix. (was 332) |
-| 209 | ale-unit-methods-patch | Resolved | SetWalk / IsWalking / IsHostileTo / IsFriendlyTo. Re-implemented 2026-04-09. (was 332) |
+| 209 | ale-unit-methods-patch | Completed | SetWalk / IsWalking / IsHostileTo / IsFriendlyTo. Re-implemented 2026-04-09 as patch B007. Archived to completed/. (was 332) |
 
 ### Content stripping (the empty world)
 | Issue | Title | Status | Notes |
@@ -48,7 +48,7 @@ stripped → progression scaffolding for the empty world.
 |-------|-------|--------|-------|
 | 207 | clear-traveller-data-on-despawn | Completed | Memory cleanup. Pattern reused by Phase 5 traveller system. |
 
-## Completed: 6/9 (1 Resolved, 1 In Progress, 1 Open)
+## Completed: 7/9 (1 In Progress, 1 Open)
 
 ---
 
