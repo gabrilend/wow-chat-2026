@@ -18,6 +18,21 @@ that must be updated to match.
 
 ## Canonical Definitions
 
+### One-Line Summary
+
+- **`alpha`** — is wow-chat-1. The whole old project as a frozen snapshot.
+- **`release`** — the minimum featureset that is *guaranteed working*. Features
+  enter release only after they're proven on beta. **Current focus:** getting ALE
+  into the guaranteed-working set, so release can ship with the modern Lua engine.
+- **`beta`** — future work. Extra stuff that is playable but not yet proven. We
+  shift features from beta into release **one at a time** once they're proven
+  working on beta.
+
+The whole point of the three-tier model is the **promotion pipeline**: a feature
+is developed in beta, hardened against bugs, and only crosses the line into
+release after it has demonstrably worked. Release is therefore always a strict
+subset of what beta can do, with each subset element having earned its place.
+
 ### `alpha` — Holiday Relic
 
 A pinned, frozen snapshot of the early project state. Playable for
@@ -72,9 +87,9 @@ Required:
 
 ### Issues to mark superseded (point at this issue as canonical)
 - `issues/TONIGHT.md` (says release=wow-chat-1 vanilla)
-- `issues/400-release-to-beta-transition.md` (says release=wow-chat-1)
-- `issues/405-profile-transition-system.md` (says release=vanilla)
-- `issues/201-branch-based-azerothcore-versioning` (alpha modules wrong)
+- `issues/129-release-to-beta-transition.md` (was 400; says release=wow-chat-1)
+- `issues/133-profile-transition-system.md` (was 405; says release=vanilla)
+- `issues/140-branch-based-azerothcore-versioning.md` (was 201; alpha modules wrong)
 
 ### Source-dir mapping (`scripts/authserver`, `scripts/worldserver`, `scripts/compile`)
 Currently all three profiles map to `source-beta` for release and beta,
