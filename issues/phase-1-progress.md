@@ -52,7 +52,7 @@ The keystone. Every later build/profile decision derives from 136.
 |-------|-------|--------|-------|
 | 136 | canonical-profile-definitions | Open | **Keystone.** alpha/release/beta semantics. Supersedes 129, 133. (was 412) |
 | 129 | release-to-beta-transition | Superseded | Earlier transition plan, replaced by 136. Archived to completed/. (was 400) |
-| 133 | profile-transition-system | Open | Earlier transition spec. **Superseded by 136.** (was 405) |
+| 133 | profile-transition-system | Superseded | Earlier transition spec, replaced by 136. Archived to completed/. (was 405) |
 | 130 | verify-release-baseline | Open | Validation step for release profile. (was 402) |
 | 131 | incremental-patch-integration | Open | Promote-from-beta workflow. Depends on 136. (was 403) |
 | 134 | alpha-baseline-setup | Open | Pin alpha to old AC commit + eluna. Depends on 136. (was 406) |
@@ -112,7 +112,7 @@ The keystone. Every later build/profile decision derives from 136.
 | 139 | recreate-missing-sql-files | Open | Reconstruct custom SQLs that became orphaned in DB. (was 167) |
 | 140 | branch-based-azerothcore-versioning | Implemented (Superseded) | Original profile-system spec. **Superseded by 136.** Infrastructure still active. (was 201) |
 
-## Completed: 13/42 (2 Will Not Implement, 3 Superseded, 1 Invalidated, 1 Deferred Low)
+## Completed: 14/42 (2 Will Not Implement, 4 Superseded, 1 Invalidated, 1 Deferred Low)
 
 ---
 
