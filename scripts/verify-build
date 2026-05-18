@@ -1,0 +1,194 @@
+#!/bin/bash
+# scripts/verify-build - Post-rebuild sanity checks
+# Runs a focused sequence of checks after `compile --force` to confirm the
+# rebuilt binaries are what we asked for. Designed to fail fast and loud.
+#
+# Run after: compile, validate, promote
+# Exit code 0 = all checks pass; non-zero = at least one check failed.
+
+DIR="${1:-/home/ritz/games/azeroth-core/wow-chat-2026}"
+
+# Load active profile
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+
+INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+SHADOW_DIR="${DIR}/installed-files-shadow"
+
+# Tempfiles for cached binary strings (avoids re-evaluating $ in eval).
+# Project tmp/ is a symlink to a system /tmp/ dir for RAM-backed storage;
+# ensure the symlink TARGET exists before writing to it, since `mkdir -p`
+# on a dangling symlink doesn't always materialize the target.
+TMP_DIR="${DIR}/tmp"
+if [[ -L "${TMP_DIR}" ]]; then
+    TMP_TARGET="$(readlink -f "${TMP_DIR}")"
+    mkdir -p "${TMP_TARGET}" 2>/dev/null
+else
+    mkdir -p "${TMP_DIR}" 2>/dev/null
+fi
+AUTH_STRINGS="${TMP_DIR}/.verify-auth-strings"
+WORLD_STRINGS="${TMP_DIR}/.verify-world-strings"
+
+PASS=0
+FAIL=0
+
+# {{{ pass / fail helpers
+report_pass() {
+    echo "  PASS  ${1}"
+    PASS=$((PASS + 1))
+}
+
+report_fail() {
+    echo "  FAIL  ${1}"
+    FAIL=$((FAIL + 1))
+}
+# }}}
+
+# {{{ check_file_exists
+check_file_exists() {
+    local label="${1}"
+    local path="${2}"
+    if [[ -f "${path}" ]]; then
+        report_pass "${label}"
+    else
+        report_fail "${label} (missing: ${path})"
+    fi
+}
+# }}}
+
+# {{{ check_strings_match
+# Greps cached binary strings against pattern.
+# expect=match  → pass if grep finds it
+# expect=absent → pass if grep does NOT find it
+check_strings_match() {
+    local label="${1}"
+    local strings_file="${2}"
+    local pattern="${3}"
+    local expect="${4}"  # "match" or "absent"
+
+    if [[ ! -f "${strings_file}" ]]; then
+        report_fail "${label} (strings file missing)"
+        return
+    fi
+
+    if grep -q -- "${pattern}" "${strings_file}"; then
+        if [[ "${expect}" == "match" ]]; then
+            report_pass "${label}"
+        else
+            report_fail "${label} (pattern '${pattern}' found, expected absent)"
+        fi
+    else
+        if [[ "${expect}" == "absent" ]]; then
+            report_pass "${label}"
+        else
+            report_fail "${label} (pattern '${pattern}' not found)"
+        fi
+    fi
+}
+# }}}
+
+echo ""
+echo "=== Post-rebuild verification for profile: ${PROFILE} ==="
+echo ""
+
+# {{{ Check 1 - binaries exist
+echo "Binary presence:"
+check_file_exists "authserver binary exists in ${PROFILE}/bin/" \
+    "${INSTALL_DIR}/bin/authserver"
+check_file_exists "worldserver binary exists in ${PROFILE}/bin/" \
+    "${INSTALL_DIR}/bin/worldserver"
+echo ""
+# }}}
+
+# Cache binary strings once (used by checks 2 and 5)
+if [[ -f "${INSTALL_DIR}/bin/authserver" ]]; then
+    strings "${INSTALL_DIR}/bin/authserver" > "${AUTH_STRINGS}" 2>/dev/null
+fi
+if [[ -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+    strings "${INSTALL_DIR}/bin/worldserver" > "${WORLD_STRINGS}" 2>/dev/null
+fi
+
+# {{{ Check 2 - CONF_DIR baked correctly (issue 137 fix)
+# After fix, binary should have profile etc path baked in, not shadow etc.
+echo "Issue 137 - CONF_DIR baked correctly:"
+check_strings_match "authserver has ${PROFILE}/etc baked in" \
+    "${AUTH_STRINGS}" "installed-files-${PROFILE}/etc" "match"
+check_strings_match "authserver does NOT have shadow/etc baked in" \
+    "${AUTH_STRINGS}" "installed-files-shadow/etc" "absent"
+check_strings_match "worldserver has ${PROFILE}/etc baked in" \
+    "${WORLD_STRINGS}" "installed-files-${PROFILE}/etc" "match"
+check_strings_match "worldserver does NOT have shadow/etc baked in" \
+    "${WORLD_STRINGS}" "installed-files-shadow/etc" "absent"
+echo ""
+# }}}
+
+# {{{ Check 3 - config files present in profile etc
+# The binary will look at ${PROFILE}/etc/; configs need to be there.
+echo "Config tree presence:"
+check_file_exists "authserver.conf exists in ${PROFILE}/etc/" \
+    "${INSTALL_DIR}/etc/authserver.conf"
+check_file_exists "worldserver.conf exists in ${PROFILE}/etc/" \
+    "${INSTALL_DIR}/etc/worldserver.conf"
+check_file_exists "dbimport.conf exists in ${PROFILE}/etc/" \
+    "${INSTALL_DIR}/etc/dbimport.conf"
+echo ""
+# }}}
+
+# {{{ Check 4 - patches applied and source clean
+# If patches applied + reverted cleanly, source-beta should be clean.
+echo "Patch lifecycle hygiene:"
+SOURCE_DIR="${DIR}/source-beta"
+if [[ -d "${SOURCE_DIR}/.git" ]]; then
+    DIRTY_COUNT=$(git -C "${SOURCE_DIR}" status --short 2>/dev/null | wc -l)
+    if [[ ${DIRTY_COUNT} -eq 0 ]]; then
+        report_pass "source-beta clean post-build (patches reverted)"
+    else
+        report_fail "source-beta dirty post-build (${DIRTY_COUNT} files; unreverted patches?)"
+    fi
+else
+    echo "  SKIP  source-beta not a git dir"
+fi
+echo ""
+# }}}
+
+# {{{ Check 5 - module loader sees expected modules
+echo "Module presence:"
+case "${PROFILE}" in
+    release|beta)
+        check_strings_match "worldserver references ALE" \
+            "${WORLD_STRINGS}" "ALE\|LuaEngine" "match"
+        check_strings_match "worldserver references playerbots" \
+            "${WORLD_STRINGS}" "playerbot\|PlayerBot" "match"
+        ;;
+    alpha)
+        check_strings_match "worldserver references eluna" \
+            "${WORLD_STRINGS}" "eluna\|Eluna" "match"
+        ;;
+esac
+echo ""
+# }}}
+
+# Clean up tempfiles
+rm -f "${AUTH_STRINGS}" "${WORLD_STRINGS}"
+
+# {{{ summary
+echo "=== Result: ${PASS} pass, ${FAIL} fail ==="
+echo ""
+
+if [[ ${FAIL} -gt 0 ]]; then
+    echo "Rebuild did NOT produce the expected artifacts. Investigate before"
+    echo "starting the server. Look at:"
+    echo "  - tmp/build-${PROFILE}.log"
+    echo "  - tmp/error-${PROFILE}.log"
+    echo "  - issue 137 (shadow conf path) if CONF_DIR checks failed"
+    echo "  - patches/patches.sh PHASE_BEGIN_PATCHES if patch checks failed"
+    echo "  - scripts/install PROFILE_MODULES if module checks failed"
+    exit 1
+fi
+
+echo "Rebuild verified. Safe to start authserver and worldserver."
+exit 0
+# }}}
