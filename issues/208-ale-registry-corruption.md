@@ -400,6 +400,49 @@ beta. The script file is kept with a deprecation header in case
 upstream ever regresses. Next rebuild attempt should reach further than
 12% — B020's actual stress test for 208 still pending.
 
+## Second Rebuild Attempt — Different Blocker, B019 Too Aggressive (2026-05-19)
+
+Second rebuild reached **69%** before failing — significant progress
+from the first attempt's 12%. The new error:
+
+```
+ReadyCheckAction.cpp:50:16: fatal error: use of undeclared identifier 'context'
+return AI_VALUE2(uint8, "health", "self target") > sPlayerbotAIConfig.almostFullHealth;
+```
+
+Traced to patch B019-playerbots-unused-parameter. The patch had a sed
+line that commented out `AiObjectContext* context)` whenever it
+appeared as the last parameter in a function signature:
+
+```bash
+sed -i 's/AiObjectContext\* context)/AiObjectContext* \/*context*\/)/' "${FILE}"
+```
+
+ReadyCheckAction.cpp has 6 `Check()` overrides with that exact
+signature, and at least 4 of them use `context` through the
+`AI_VALUE2` macro (which expands to `context->GetValue<type>(name,
+param)->Get()`). Commenting out the parameter name broke the macro
+expansions at every call site.
+
+Fix landed: removed the `AiObjectContext* context)` sed from B019's
+apply block AND the matching un-comment from the unapply block. The
+two other seds in the same block (for `PlayerbotAI* botAI)` and
+`Event& event)`) only match parameters that are *last* in the
+signature, and in ReadyCheckAction.cpp `botAI` is always followed by a
+comma — so those don't false-positive.
+
+Pattern emerging from these first two attempts: patches in the
+B-range were written against earlier upstream states. As upstream
+moves, some patches become invalid in ways that aren't caught at
+patch-application time — only at compile time. The fix is reactive:
+when a patch breaks, narrow its match pattern or deprecate it. Long
+term, the patch-status command (issue 146) plus the validate-build
+script (commit `d600bc0`) should let us catch this kind of drift
+proactively.
+
+B020's stress test for 208 still pending — next rebuild attempt
+should reach further still.
+
 ## Related Files
 
 - `source-beta/modules/mod-ale/src/LuaEngine/LuaEngine.cpp:856` - ExecuteCall assertion
