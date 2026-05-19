@@ -1,15 +1,46 @@
 # Patch Registry
 
-Patches applied during the build process, organized by phase.
+Patches applied during the build-and-deploy process, organized by phase.
 Each patch is idempotent (safe to run multiple times) and atomic (self-contained).
 
 ## Meta-List Structure
 
+There are **three application times** a patch can fire, each with a distinct
+purpose and target:
+
 ```
 BUILD_PATCHES
-├── PHASE_BEGIN    (pre-compile source fixes)
-├── PHASE_MIDDLE   (compile-time adjustments)
-└── PHASE_END      (post-compile config/setup)
+├── PHASE_BEGIN    (B-patches — pre-compile source fixes)
+├── PHASE_END      (E-patches — post-install setup of shadow tree)
+└── PHASE_CONFIG   (C-patches — post-promote tuning of runtime configs)
+```
+
+| Phase         | Tier        | When                                            | Target                                              | Purpose |
+|---------------|-------------|-------------------------------------------------|-----------------------------------------------------|---------|
+| PHASE_BEGIN   | B-patches   | Before cmake/make, on source tree               | `source-{profile}/src/...` and `source-{profile}/modules/...` | Make upstream code compile cleanly against our profile (fix bugs, add hooks, silence warnings). Reverted after build to keep source tree clean. |
+| PHASE_END     | E-patches   | After cmake install to shadow, before validate  | `installed-files-shadow/{etc,bin,...}`              | Set up the just-installed shadow tree: write `.conf` files from `.dist`, create log/symlink dirs, link Lua scripts, apply per-profile SQL. |
+| PHASE_CONFIG  | C-patches   | After promote, before server start              | `installed-files-{profile}/etc/*.conf`              | Apply gameplay-tuning opinions (max level, exp rate, run speed, fall damage, port numbers, realmlist setup) on the live profile config tree. |
+
+**The separation matters.** B-patches edit upstream code we don't own; they
+must be reverted. E-patches set up infrastructure that the server *needs* to
+start; they're load-bearing for validation. C-patches encode the *opinions*
+that make this server *this server* rather than vanilla AzerothCore — they
+live downstream of validation so the validation pass tests the baseline
+binary, not the opinionated one.
+
+## Reading the pipeline
+
+```
+1. clone/update source
+2. PHASE_BEGIN apply         ← B-patches modify source in place
+3. cmake configure + make
+4. cmake --install (to shadow)
+5. PHASE_END apply           ← E-patches set up shadow's etc/, logs/, db
+6. PHASE_BEGIN unapply       ← B-patches reverted (trap also handles failure)
+7. validate                  ← run shadow worldserver briefly
+8. promote                   ← shadow → installed-files-{profile}/
+9. PHASE_CONFIG apply        ← C-patches tune profile config files
+10. server start
 ```
 
 ---
@@ -237,6 +268,101 @@ sed -i 's|^LogsDir.*=.*|LogsDir = "'"${LOGS_DIR}"'"|' authserver.conf
 mkdir -p "/tmp/wow-chat-2/logs-${PROFILE}"
 ln -sfn "/tmp/wow-chat-2/logs-${PROFILE}" "${DIR}/logs-${PROFILE}"
 ```
+
+---
+
+## PHASE_CONFIG: Post-Promote Runtime Tuning
+
+Applied after `promote` has moved the validated shadow tree into the active
+profile directory, but before the server is started. These patches operate on
+`installed-files-{profile}/etc/*.conf` and on profile-scoped database tables
+to encode the *opinions* that distinguish this server from a vanilla
+AzerothCore install.
+
+Each C-patch declares which profile(s) it applies to via the
+`CONFIG_PROFILES` associative array. The orchestrator filters by the active
+profile at run time, so the same patch directory serves all three profiles
+with different selections.
+
+| ID    | Name                     | Target                                                        | Profiles | Description |
+|-------|--------------------------|---------------------------------------------------------------|----------|-------------|
+| C001  | database-connections     | `installed-files-{profile}/etc/authserver.conf` + `worldserver.conf` | all      | Set MySQL connection strings (project-specific host/port/credentials/db names). |
+| C002  | directory-paths          | `installed-files-{profile}/etc/worldserver.conf`              | all      | Set DataDir, LogsDir, SourceDirectory to project layout. |
+| C003  | run-speed-80-percent     | `installed-files-{profile}/etc/worldserver.conf`              | all      | Set player run speed to 80% (slower, more deliberate exploration). |
+| C004  | fall-damage-10x          | `installed-files-{profile}/etc/worldserver.conf`              | all      | Increase fall damage to 10x baseline (encourages careful movement). |
+| C005  | exp-rate-2x              | `installed-files-{profile}/etc/worldserver.conf`              | all      | Double experience rate (faster testing/iteration cycles). |
+| C006a | max-level-80             | `installed-files-{profile}/etc/worldserver.conf`              | alpha, release | Set MaxPlayerLevel = 80 (testing/baseline). |
+| C006b | max-level-20             | `installed-files-{profile}/etc/worldserver.conf`              | beta     | Set MaxPlayerLevel = 20 (wow-chat-1 design). |
+| C007a | starting-level-40        | `installed-files-{profile}/etc/worldserver.conf`              | alpha, release | Set StartPlayerLevel = 40 (testing/baseline). |
+| C007b | starting-level-1         | `installed-files-{profile}/etc/worldserver.conf`              | beta     | Set StartPlayerLevel = 1 (default, made explicit). |
+| C008  | gm-login-state           | `installed-files-{profile}/etc/worldserver.conf`              | all      | Set GM level on login (0 = player, 3 = admin). |
+| C009  | instant-teleport-beta    | `installed-files-{profile}/etc/worldserver.conf`              | beta     | Reduce teleport cooldowns to zero for beta testing. |
+| C010  | network-ports            | `installed-files-{profile}/etc/authserver.conf` + `worldserver.conf` | all      | Set custom non-default server ports (avoids local conflicts). |
+| C011  | realmlist-setup          | `acore_auth.realmlist` (database row)                         | all      | Configure realm entry: address, port, flags. |
+
+### Variant pattern (a/b)
+
+`C006a`/`C006b` and `C007a`/`C007b` demonstrate a **per-profile variant**
+pattern: same conceptual setting (max level, starting level), different
+value for different profiles. Only one variant fires per build because each
+declares non-overlapping `CONFIG_PROFILES` entries.
+
+This pattern lets the C-patch tree document *what setting matters* (the
+slot) and *what value applies* (the variant). When a new profile is added,
+adding a `C006c` variant for it keeps history visible — old values aren't
+overwritten, they're recorded as sibling patches.
+
+### C001: database-connections
+
+**Target:** `${INSTALL_DIR}/etc/authserver.conf`, `${INSTALL_DIR}/etc/worldserver.conf`
+**Action:** Set MySQL connection strings to project-local credentials and profile-scoped database names
+
+```bash
+config_database_connections() {
+    local auth="${INSTALL_DIR}/etc/authserver.conf"
+    local world="${INSTALL_DIR}/etc/worldserver.conf"
+    # Connection format: "host;port;user;pass;database"
+    sed -i 's|^LoginDatabaseInfo .*=.*|LoginDatabaseInfo = "127.0.0.1;3307;ritz;menardi;acore_auth"|' "${auth}"
+    # ... (worldserver: login/world/character db rows)
+}
+CONFIG_PROFILES[config_database_connections]="alpha release beta"
+```
+
+### C006b: max-level-20 (the variant example)
+
+**Target:** `${INSTALL_DIR}/etc/worldserver.conf`
+**Profile:** beta only
+**Action:** Override MaxPlayerLevel to 20
+
+```bash
+config_max_level_20() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^MaxPlayerLevel.*=.*|MaxPlayerLevel = 20|' "${conf}"
+}
+CONFIG_PROFILES[config_max_level_20]="beta"
+CONFIG_DESCRIPTIONS[config_max_level_20]="Max level 20"
+```
+
+The corresponding alpha/release variant (`C006a`) sets the same setting to
+80 and declares `CONFIG_PROFILES[config_max_level_80]="alpha release"`. The
+orchestrator picks exactly one based on `${PROFILE}` at run time.
+
+### Note on overlap with E-patches
+
+`E002` (config-database-paths) and `E003` (config-directory-paths) in the
+PHASE_END registry overlap conceptually with `C001` and `C002` — both
+write `.conf` files. The current distinction:
+
+- **E-patches** write configs to the **shadow** tree, as part of setting up
+  a buildable / validatable install.
+- **C-patches** write configs to the **profile** tree, as part of applying
+  this server's gameplay opinions after promote.
+
+If the E-patch versions are sufficient (validation passes with the same
+configs production will use), the C-patch versions become redundant. If the
+shadow validation should test the *baseline* and production should run the
+*tuned* configs, the split is meaningful. This is a design decision still
+open — see issue 127 for the broader patch-system context.
 
 ---
 

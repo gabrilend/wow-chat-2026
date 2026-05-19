@@ -283,9 +283,90 @@ apply_patches_end() {
 - Patch IDs (B001, E004) are more maintainable than full function names
 - Function lookup via `declare -F | grep` finds the full function name dynamically
 
+## Phase E: Three Application Times (2026-05-14)
+
+The patch system has settled into **exactly three application times**, each
+with a distinct tier of patches and a distinct purpose. The shape is
+canonical — any new patch must fit into one of these three slots.
+
+### The Three Times Patches Are Applied
+
+```
+1. PHASE_BEGIN   — before compile, on source tree         (B-patches)
+2. PHASE_END     — after install to shadow, on shadow     (E-patches)
+3. PHASE_CONFIG  — after promote, on profile install      (C-patches)
+```
+
+#### 1. PHASE_BEGIN — Source modifications
+
+- **When:** Immediately before `cmake configure`, after source is cloned/updated.
+- **Target:** `source-{profile}/src/...` and `source-{profile}/modules/...`.
+- **Tier:** B-patches (`patches/B###-*.sh`).
+- **Purpose:** Make upstream code compile cleanly against our profile. Fix
+  bugs, add missing hooks, silence deprecation warnings, link local modules.
+- **Lifecycle:** Applied → compile → **reverted** (via `unapply_patches_begin`,
+  also triggered by bash trap on failure). The source tree returns to a
+  clean state after every build.
+- **Idempotency:** Both `patch_*` and `unpatch_*` must be safe to call when
+  the patch is already applied / already reverted.
+
+#### 2. PHASE_END — Shadow install setup
+
+- **When:** Immediately after `cmake --install` populates the shadow tree.
+- **Target:** `installed-files-shadow/{etc,bin,...}`.
+- **Tier:** E-patches (`patches/E-patches.sh` or `patches/E###-*.sh`).
+- **Purpose:** Set up the just-installed shadow tree for first use. Write
+  `.conf` files from `.dist`, create log directory symlinks, link Lua
+  scripts, apply profile-specific SQL.
+- **Lifecycle:** Applied once, **not reverted** (these are setup operations,
+  not modifications of upstream code). Re-running is idempotent.
+- **Required for validation:** The shadow worldserver run in step 8 depends
+  on E-patches having created its `.conf` files.
+
+#### 3. PHASE_CONFIG — Post-promote runtime tuning
+
+- **When:** Immediately after `promote` copies the shadow tree into
+  `installed-files-{profile}/`, before server start.
+- **Target:** `installed-files-{profile}/etc/*.conf` and profile-scoped
+  database tables.
+- **Tier:** C-patches (`config/patches/C###-*.sh`).
+- **Purpose:** Apply this server's gameplay opinions on the live profile
+  config tree. Max level, exp rate, run speed, fall damage, port numbers,
+  realmlist setup.
+- **Profile metadata:** Each C-patch declares
+  `CONFIG_PROFILES[function_name]="<space-separated profile list>"`. The
+  orchestrator filters by `${PROFILE}` at run time.
+- **Variant pattern:** Same setting + different values per profile is
+  expressed as sibling files (`C006a-max-level-80`, `C006b-max-level-20`)
+  with non-overlapping `CONFIG_PROFILES` entries — exactly one fires per
+  build.
+- **Lifecycle:** Applied once, idempotent on re-run. No formal revert (the
+  next promote will overwrite from shadow).
+
+### Why three, not two
+
+The pipeline could collapse PHASE_CONFIG back into PHASE_END (both write
+`.conf` files). The split is intentional:
+
+- PHASE_END writes the **baseline** configs that validation tests against.
+  These are what makes the server *start* at all.
+- PHASE_CONFIG writes the **opinions** that make this server distinct from a
+  vanilla AzerothCore install. These are what makes the server *ours*.
+
+Validation testing the baseline (not the opinions) means a botched
+PHASE_CONFIG patch won't break the validate gate — only the live server.
+The opinion layer is where customizations breathe; the baseline is the
+contract we don't break.
+
+### Documentation
+
+The canonical patch registry, with one row per patch across all three
+tiers, lives at `docs/patches/patch-registry.md`.
+
 ## Notes
 
 - Build failures should still revert (use trap or finally-equivalent)
 - Consider adding `--keep-patches` flag for debugging
-- Patch status could be part of `./scripts/azerothcore status` output
+- Patch status reporting (`./scripts/apply-patches --status` or similar) —
+  spec'd in a separate issue (see issue 146 for the status command).
 - Profile-specific patch lists enable declarative control over build variations
