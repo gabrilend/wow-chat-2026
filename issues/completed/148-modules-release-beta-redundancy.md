@@ -1,7 +1,24 @@
 # 148 - modules-release vs modules-beta Redundancy
 
+**Status: Superseded by issue 136 (canonical-profile-definitions).** The
+decision and implementation steps were merged into 136's "Modules-dir
+mapping" subsection on 2026-05-19. This file is kept for traceability;
+the canonical record lives in 136.
+
+The resolution: modules directory name matches the source directory it
+backs. Since release and beta both compile against `source-beta`, both
+profiles use `modules-beta`. The `modules-release/` directory is a
+vestige and should be removed (deferred until after the current B020
+rebuild lands, so the cleanup doesn't surprise the build).
+
+This issue should not have been opened separately — per the project's
+issue-creation rule, the decision belonged in the existing 136
+canonical-profile-definitions issue. Recording the mistake here so the
+git history shows it.
+
 ## Status
 - Created: 2026-05-19
+- **Superseded: 2026-05-19** by issue 136
 - Phase: 1 (Foundation — build infrastructure cleanup)
 - Priority: Low (current state works; cleanup is hygiene)
 

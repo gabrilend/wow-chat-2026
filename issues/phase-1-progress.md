@@ -69,7 +69,7 @@ The keystone. Every later build/profile decision derives from 136.
 | 145 | playerbots-compile-fix-patches-B009-B010 | Open | Register B009/B010 in PHASE_BEGIN_PATCHES for release+beta. Discovered during rebuild prep audit. |
 | 146 | patch-status-command | Open | Report what patches are scheduled for the active profile across PHASE_BEGIN/END/CONFIG. Downstream of 127's three-tier model. |
 | 147 | alpha-mysql-instance-isolation | Open (deferred low) | Stand up mysql-alpha/ on port 3308 so alpha can run its declared isolation. Activates when alpha is actually run. |
-| 148 | modules-release-beta-redundancy | Open (deferred low) | Collapse modules-release/ and modules-beta/ into a single shared dir. Vestige from when release was wow-chat-1. |
+| 148 | modules-release-beta-redundancy | Superseded | Decision merged into 136 (modules-dir matches source-dir name). Archived to completed/. |
 | 114 | remove-profile-system | Will Not Implement | Decision: keep profiles for isolation. |
 
 ### Act 7 — Networking & ops
@@ -116,7 +116,7 @@ The keystone. Every later build/profile decision derives from 136.
 | 139 | recreate-missing-sql-files | Open | Reconstruct custom SQLs that became orphaned in DB. (was 167) |
 | 140 | branch-based-azerothcore-versioning | Implemented (Superseded) | Original profile-system spec. **Superseded by 136.** Infrastructure still active. (was 201) |
 
-## Completed: 14/42 (2 Will Not Implement, 4 Superseded, 1 Invalidated, 1 Deferred Low)
+## Completed: 15/45 (2 Will Not Implement, 5 Superseded, 1 Invalidated, 1 Deferred Low)
 
 ---
 

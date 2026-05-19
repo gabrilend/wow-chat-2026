@@ -93,14 +93,52 @@ Required:
 
 ### Source-dir mapping (`scripts/authserver`, `scripts/worldserver`, `scripts/compile`)
 Currently all three profiles map to `source-beta` for release and beta,
-`source-alpha` for alpha. Verify this still matches the canonical model:
-- alpha → `source-alpha` (pinned old AC) ✓
-- release → `source-release` or `source-beta` (current AC) — **decide
-  whether release and beta share a source dir or each get their own**
-- beta → `source-beta` (current AC + dev) ✓
+`source-alpha` for alpha. **Resolved 2026-05-19:** release and beta
+*share* `source-beta`. The two profiles are the same compile against
+the same source; what differs is the patch selection (release applies
+a subset; beta applies all) and the runtime C-patch tuning. There is
+no `source-release/` and no need for one.
 
-If release and beta share source, patches must be consistent between
-both; if they diverge, separate dirs are clearer.
+- alpha   → `source-alpha` (pinned old AC, mod-eluna, isolated)
+- release → `source-beta`  (current AC, shared with beta)
+- beta    → `source-beta`  (current AC, shared with release)
+
+### Modules-dir mapping (`scripts/install:update_modules_symlink`)
+**Resolved 2026-05-19** (decision moved here from the now-superseded
+issue 148):
+
+The modules directory at the project root **shares its name with the
+source directory it backs**. Since release and beta both compile from
+`source-beta/`, both profiles use `modules-beta/`. There is no
+`modules-release/` — that directory was a vestige from when release
+was wow-chat-1 with different modules from beta, and should be removed.
+
+- alpha   → `modules-alpha/` (if any; alpha's modules come via
+            `source-alpha/modules/` directly or a parallel
+            `modules-alpha/` if the symlink mechanism extends to alpha)
+- release → `modules-beta/`  (same as beta — same source, same modules)
+- beta    → `modules-beta/`  (canonical)
+
+**Why not `modules-shared/`?** The shared-with-which-source link is
+the load-bearing fact. Naming the directory after the source it backs
+keeps the relationship visible — `modules-beta/` says "this is the
+modules tree that compiles against `source-beta/`." A name like
+`modules-shared/` hides what it's shared *with*.
+
+**Why not symlink `modules-release/` → `modules-beta/`?** Symlinks
+preserve the misleading name. Better to delete the misleading name
+outright.
+
+Implementation steps (deferred — do AFTER the current B020 rebuild
+lands, so this cleanup doesn't surprise the build):
+
+1. Move any contents of `modules-release/` that don't already exist in
+   `modules-beta/` (audit first; should be empty or identical).
+2. Delete `modules-release/`.
+3. Update `scripts/install:update_modules_symlink` so the case-switch
+   has `release|beta) target_dir="../modules-beta" ;;`.
+4. Update the table-of-contents and any docs that reference
+   `modules-release/`.
 
 ## Implementation Steps
 
