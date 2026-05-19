@@ -50,7 +50,7 @@ declare -A PROFILE_COMMIT=(
 declare -A PROFILE_MODULES=(
     ["alpha"]="mod-eluna mod-transmog"
     ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
-    ["release"]=""
+    ["release"]="mod-ale mod-playerbots"
 )
 # }}}
 
@@ -142,11 +142,12 @@ show_help() {
 
 # {{{ get_profile_paths
 get_profile_paths() {
-    if [[ "${PROFILE}" == "alpha" ]]; then
-        AC_CODE_DIR="${DIR}/source-alpha"
-    else
-        AC_CODE_DIR="${DIR}/source-beta"
-    fi
+    case "${PROFILE}" in
+        release) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
+        alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
+        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+    esac
     INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
     MYSQL_DIR="${DIR}/mysql/installed-files"
 }
@@ -154,16 +155,16 @@ get_profile_paths() {
 
 # {{{ update_modules_symlink
 update_modules_symlink() {
-    [[ "${PROFILE}" == "alpha" ]] && return
-
     local modules_link="${DIR}/source-beta/modules"
     local target_dir
 
-    if [[ "${PROFILE}" == "release" ]]; then
-        target_dir="../modules-release"
-    else
-        target_dir="../modules-beta"
-    fi
+    # Each profile can have its own modules directory
+    case "${PROFILE}" in
+        release) target_dir="../modules-release" ;;
+        beta)    target_dir="../modules-beta"    ;;
+        alpha)   return ;; # alpha uses source-alpha, not source-beta
+        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+    esac
 
     if [[ -L "${modules_link}" ]]; then
         local current_target=$(readlink "${modules_link}")
