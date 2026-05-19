@@ -376,6 +376,30 @@ For now the minimal fix (RemoveEvent only) is enough. The function-scope
 lock can be added later if the minimal fix doesn't fully resolve the
 crash.
 
+## First Rebuild Attempt — Blocked Upstream (2026-05-19)
+
+The B020 rebuild was attempted but failed at 12% in mod-ale compilation,
+**not because of B020** — because of a separate patch B011 that had been
+silently degrading. The build error:
+
+```
+ALE_SC.cpp:650: fatal error: non-virtual member function marked 'override'
+hides virtual member function — type mismatch at 3rd parameter
+('bool &' vs 'bool')
+```
+
+B011-ale-resurrect-signature was sed-converting `bool&` to `bool` in
+mod-ale's OnPlayerResurrect override. The patch was valid against an
+older mod-ale where the signature differed from core, but upstream
+mod-ale PR #376 (commit 3eca176, currently pinned in our setup) and
+core's current PlayerScript.h:638 now both use `bool&`. B011's
+"correction" takes valid code and breaks the override match.
+
+B011 deprecated and removed from PHASE_BEGIN_PATCHES for release and
+beta. The script file is kept with a deprecation header in case
+upstream ever regresses. Next rebuild attempt should reach further than
+12% — B020's actual stress test for 208 still pending.
+
 ## Related Files
 
 - `source-beta/modules/mod-ale/src/LuaEngine/LuaEngine.cpp:856` - ExecuteCall assertion

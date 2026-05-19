@@ -24,8 +24,8 @@ fi
 # {{{ Profile-specific patch lists
 # PHASE_BEGIN patches (pre-compile source modifications)
 declare -A PHASE_BEGIN_PATCHES=(
-    ["release"]="B004 B009 B010 B011 B012 B013 B014 B015 B016 B017 B018 B019 B020"  # warning fixes + mod-playerbots + mod-ale compat + ALE registry lock fix
-    ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008 B009 B010 B011 B012 B013 B014 B015 B016 B017 B018 B019 B020"  # All patches
+    ["release"]="B004 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020"  # warning fixes + mod-playerbots + mod-ale compat + ALE registry lock fix (B011 removed — upstream mod-ale now matches core, patch became harmful)
+    ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020"  # All patches (B011 removed — see release-line note)
     ["alpha"]="B001 B004"                                         # Minimal compatibility patches
 )
 
