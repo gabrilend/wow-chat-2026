@@ -345,18 +345,28 @@ canonical — any new patch must fit into one of these three slots.
 
 ### Why three, not two
 
-The pipeline could collapse PHASE_CONFIG back into PHASE_END (both write
-`.conf` files). The split is intentional:
+The primary reason is **chronology**: each tier targets a different state
+of the build tree at a different moment, and that state determines what
+the patch can even attempt.
 
-- PHASE_END writes the **baseline** configs that validation tests against.
-  These are what makes the server *start* at all.
-- PHASE_CONFIG writes the **opinions** that make this server distinct from a
-  vanilla AzerothCore install. These are what makes the server *ours*.
+| Tier         | Target state                              | What's possible at that moment                                                 |
+|--------------|-------------------------------------------|--------------------------------------------------------------------------------|
+| PHASE_BEGIN  | `source-{profile}/` is checked-out clean  | Modify upstream code. Binary doesn't exist yet. Must revert to keep source clean. |
+| PHASE_END    | `installed-files-shadow/` is just-installed | Set up the shadow tree. Profile dir may not exist yet. Validation will run against this state. |
+| PHASE_CONFIG | `installed-files-{profile}/` is just-promoted | Write paths/credentials that depend on the profile being live. Opinions can pile on top. |
 
-Validation testing the baseline (not the opinions) means a botched
-PHASE_CONFIG patch won't break the validate gate — only the live server.
-The opinion layer is where customizations breathe; the baseline is the
-contract we don't break.
+C-patches **can't** run before promote because some of them
+(C001 database-connections, C002 directory-paths) write values that
+literally don't exist until the profile dir is populated. The configs need
+to reference `installed-files-{profile}/etc/...` paths and profile-aware
+database names. Before promote, those paths and names are unwritten
+futures.
+
+A secondary benefit of the three-way split: putting opinion-flavored
+C-patches after validate means a botched gameplay setting can't break the
+validate gate. But that's a consequence of the chronology, not the
+motivation. The motivation is that you can't write a value into a config
+until the system the value points at exists.
 
 ### Documentation
 

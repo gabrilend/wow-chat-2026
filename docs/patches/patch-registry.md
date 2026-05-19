@@ -21,12 +21,22 @@ BUILD_PATCHES
 | PHASE_END     | E-patches   | After cmake install to shadow, before validate  | `installed-files-shadow/{etc,bin,...}`              | Set up the just-installed shadow tree: write `.conf` files from `.dist`, create log/symlink dirs, link Lua scripts, apply per-profile SQL. |
 | PHASE_CONFIG  | C-patches   | After promote, before server start              | `installed-files-{profile}/etc/*.conf`              | Apply gameplay-tuning opinions (max level, exp rate, run speed, fall damage, port numbers, realmlist setup) on the live profile config tree. |
 
-**The separation matters.** B-patches edit upstream code we don't own; they
-must be reverted. E-patches set up infrastructure that the server *needs* to
-start; they're load-bearing for validation. C-patches encode the *opinions*
-that make this server *this server* rather than vanilla AzerothCore — they
-live downstream of validation so the validation pass tests the baseline
-binary, not the opinionated one.
+**The separation matters.** Each tier targets a **different state of the
+build tree at a different chronological moment**:
+
+- B-patches edit upstream code we don't own; the source tree exists, the
+  binary doesn't yet. Must revert so the source stays clean.
+- E-patches set up the shadow install tree; binaries exist in shadow, the
+  profile dir may not. Validation depends on E-patches having run.
+- C-patches modify the live profile config tree; the profile dir exists
+  with live deployment paths and database names. Some C-patches encode
+  gameplay opinions (max level, exp rate); **others are strictly required**
+  — they rewrite paths and credentials in the profile configs that
+  couldn't be known until promote placed the files in the profile dir.
+
+The chronological split is the primary reason for three tiers, not two. A
+secondary benefit: putting C-patches after validate means a botched gameplay
+opinion can't break the validate gate.
 
 ## Reading the pipeline
 
@@ -275,9 +285,19 @@ ln -sfn "/tmp/wow-chat-2/logs-${PROFILE}" "${DIR}/logs-${PROFILE}"
 
 Applied after `promote` has moved the validated shadow tree into the active
 profile directory, but before the server is started. These patches operate on
-`installed-files-{profile}/etc/*.conf` and on profile-scoped database tables
-to encode the *opinions* that distinguish this server from a vanilla
-AzerothCore install.
+`installed-files-{profile}/etc/*.conf` and on profile-scoped database tables.
+
+They serve **two purposes** that share a target and a timing:
+
+- **Required path/credential rewriting.** Configs need to know which profile
+  is live (which database to talk to, which directory holds logs, where the
+  data files are). These values couldn't be written before promote because
+  the profile dir didn't exist yet. C001 (database connections) and C002
+  (directory paths) are in this category — without them the server can't
+  find its world.
+- **Gameplay opinions.** Knobs that distinguish this server from a vanilla
+  AzerothCore install: max level, exp rate, run speed, fall damage, port
+  numbers, realmlist setup. C003 through C011 are tuning, not survival.
 
 Each C-patch declares which profile(s) it applies to via the
 `CONFIG_PROFILES` associative array. The orchestrator filters by the active
@@ -351,18 +371,26 @@ orchestrator picks exactly one based on `${PROFILE}` at run time.
 
 `E002` (config-database-paths) and `E003` (config-directory-paths) in the
 PHASE_END registry overlap conceptually with `C001` and `C002` — both
-write `.conf` files. The current distinction:
+write `.conf` files with paths and credentials.
 
-- **E-patches** write configs to the **shadow** tree, as part of setting up
-  a buildable / validatable install.
-- **C-patches** write configs to the **profile** tree, as part of applying
-  this server's gameplay opinions after promote.
+The reason the overlap exists: when the shadow build runs validation, the
+shadow worldserver needs *some* config values to start at all. E002/E003
+provide a working baseline so validation can connect to MySQL and find its
+data files. After promote, C001/C002 rewrite those same configs with the
+profile-specific values (different database names, profile-rooted paths).
 
-If the E-patch versions are sufficient (validation passes with the same
-configs production will use), the C-patch versions become redundant. If the
-shadow validation should test the *baseline* and production should run the
-*tuned* configs, the split is meaningful. This is a design decision still
-open — see issue 127 for the broader patch-system context.
+The cleanest resolution depends on whether shadow-validation should run
+against the *same* configs that production will run, or against a more
+restrictive baseline:
+
+- **If same configs:** E002/E003 can write the final profile-correct values
+  directly into shadow (using `${INSTALL_DIR}` rather than
+  `${INSTALL_DIR_SHADOW}` as the target), and C001/C002 become redundant.
+- **If different configs:** E002/E003 write minimal validate-only stubs in
+  shadow, and C001/C002 overwrite them with real values post-promote.
+
+This is a design decision still open — see issue 127 for the broader
+patch-system context.
 
 ---
 

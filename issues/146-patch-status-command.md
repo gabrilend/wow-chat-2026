@@ -16,8 +16,15 @@ error-prone.
 
 The patch system has three application times (PHASE_BEGIN / PHASE_END /
 PHASE_CONFIG — see issue 127). A status command should report, for the
-**currently active profile**, which patches in each tier are scheduled to
-apply and (where detectable) whether they appear to be applied right now.
+**currently active profile**, which patches in each tier were **actually
+applied to the currently running build** — not which ones are scheduled to
+apply on the next rebuild.
+
+The difference matters: scheduled = "what `patches.sh` would do if compile
+ran right now," applied = "what actually ran into the live binaries and
+configs." If a patch was added to the array yesterday but you haven't
+rebuilt since, scheduled vs applied diverge. The operator usually wants
+**applied** — that's what describes the system they're staring at.
 
 ## Intended Behavior
 
@@ -76,23 +83,107 @@ PHASE_CONFIG (10 patches scheduled, runtime config tuning):
 Total: 24 patches across 3 application times for profile 'release'.
 ```
 
+### The build manifest — source of truth for "applied"
+
+To know what's actually applied (not just scheduled), the build itself
+needs to **write a manifest** at the moment of promotion. The manifest is
+a plain text file produced once per successful build, capturing the exact
+patch set that crossed the validate gate and landed in the profile dir.
+
+**Location:** `installed-files-{profile}/etc/build-manifest.txt`
+
+**Written by:** `scripts/promote` (and/or `scripts/compile` after
+PHASE_CONFIG completes), at the moment the shadow tree becomes the live
+profile tree.
+
+**Format:**
+
+```
+# Build Manifest
+# Profile: release
+# Built:   2026-05-14T18:42:13-04:00
+# Source:  source-beta @ dd2672641 (Merge pull request #195 from mod-playerbots/test-staging)
+# Boost:   1.81.0
+
+[PHASE_BEGIN]   12 patches applied
+B004  upstream-warning-fixes
+B009  playerbots-equipment-slots-enum
+B010  playerbots-arena-type-none
+B011  ale-resurrect-signature
+B012  player-equipment-slot-sign
+B013  playerbots-logical-op-parentheses
+B014  playerbots-switch-enum-default
+B015  playerbots-implicit-float-conversion
+B016  playerbots-constructor-reorder
+B017  playerbots-unused-variables
+B018  playerbots-sign-compare
+B019  playerbots-unused-parameter
+
+[PHASE_END]     2 patches applied
+E004  log-directory-setup
+E006  initialize-config-files
+
+[PHASE_CONFIG]  10 patches applied
+C001  database-connections
+C002  directory-paths
+C003  run-speed-80-percent
+C004  fall-damage-10x
+C005  exp-rate-2x
+C006a max-level-80
+C007a starting-level-40
+C008  gm-login-state
+C010  network-ports
+C011  realmlist-setup
+
+Total: 24 patches applied for profile 'release'.
+```
+
+The patch-status command then becomes **a simple reader** of this file:
+
+```bash
+./scripts/patch-status               # prints the manifest as-is
+./scripts/patch-status --tier=BEGIN  # prints just the PHASE_BEGIN block
+./scripts/patch-status --diff        # diffs manifest against current
+                                     # patches.sh scheduling — shows
+                                     # "what would change on next rebuild"
+```
+
+This split has nice properties:
+
+- **The manifest is permanent record** — it stays in `etc/` between builds,
+  travels with the deployment, can be committed if you want history (the
+  manifest itself is small enough that committing it is reasonable).
+- **No live inspection needed.** The status command doesn't have to run
+  `grep` against source trees or check file timestamps. It reads a text
+  file. Fast and reliable.
+- **The diff feature is the upgrade path** — if scheduled ≠ applied, the
+  operator immediately sees *which* patches are pending and can decide
+  whether to rebuild.
+
 ### Minimum viable subset
 
-The first version doesn't need to detect *whether each patch is currently
-applied to the tree* (that's harder — requires running each patch's
-`needs_applying` check). The minimum useful behavior is simpler:
+The MVP splits cleanly into two halves:
 
-1. Iterate `PHASE_BEGIN_PATCHES[$PROFILE]`, print patch ID + name.
-2. Iterate `PHASE_END_PATCHES[$PROFILE]`, print patch ID + name.
-3. Iterate `PHASE_CONFIG_PATCHES[$PROFILE]` (or the C-patches array — naming
-   subject to the orchestrator design landing in 127), print patch ID +
-   name.
-4. Print totals.
+**Half A — write the manifest** (in `scripts/promote` and/or
+`scripts/compile`):
 
-That's "what patches are *scheduled* for this profile." A future
-enhancement could mark each line with `[applied]` / `[pending]` by running
-the per-patch `patch_needs_applying_*` check (see issue 127 Phase E), but
-the scheduled view alone is the load-bearing 80% of the value.
+1. After PHASE_CONFIG completes, gather the lists of patches that ran in
+   each tier (the orchestrator already iterates these — capture as it
+   goes).
+2. Write the manifest text to `installed-files-{profile}/etc/build-manifest.txt`.
+3. Include a header with profile, build timestamp, source commit, boost
+   version.
+
+**Half B — read the manifest** (new `scripts/patch-status`):
+
+1. Locate the manifest for the active profile (`installed-files-{profile}/etc/build-manifest.txt`).
+2. Print it. Optionally accept `--tier=<NAME>` to filter.
+3. Fall back to a clear "no manifest — has a build been promoted yet?"
+   message if the file is absent.
+
+The `--diff` mode is a follow-up enhancement: compare manifest patch lists
+against the current `patches.sh` arrays for the same profile, report any
+patches scheduled-but-not-applied or applied-but-no-longer-scheduled.
 
 ## Current Behavior
 
@@ -128,10 +219,14 @@ arrays in `patches/patches.sh` and `config/patches/` directly, then runs
 
 ## Affected Files
 
-- New: `scripts/patch-status` (recommended) OR addition to
-  `scripts/apply-patches`
-- No changes to: `patches/patches.sh`, `patches/B###-*.sh`,
-  `config/patches/C###-*.sh` — this is a read-only consumer of those.
+- **New:** `scripts/patch-status` — the reader, prints the manifest.
+- **Modified:** `scripts/promote` (or `scripts/compile` post-PHASE_CONFIG) —
+  writes `installed-files-{profile}/etc/build-manifest.txt` at promote time.
+- **New file produced at build time:** `installed-files-{profile}/etc/build-manifest.txt`
+  — the manifest itself; written by the build, read by the status command.
+- **No changes to:** `patches/patches.sh`, `patches/B###-*.sh`,
+  `config/patches/C###-*.sh` — these are unmodified producers of patch
+  application; the manifest captures *what they did*, not what they are.
 
 ## Related Issues
 
