@@ -443,6 +443,58 @@ proactively.
 B020's stress test for 208 still pending — next rebuild attempt
 should reach further still.
 
+## Third Rebuild Attempt — Strategy InitTriggers Loop (2026-05-19)
+
+Build reached **74%** (from 69% in attempt 2). New error:
+
+```
+CombatStrategy.cpp:12:5: fatal error: use of undeclared identifier 'triggers'
+  triggers.push_back(...)
+```
+
+Same diagnostic pattern as B019/ReadyCheckAction.cpp: a B-patch
+comments out a parameter as "unused" but upstream filled in the
+function body, so the parameter now IS used.
+
+Audit of the affected files showed the breakage was widespread within
+B019's "Strategy files - InitTriggers" loop:
+
+| File                         | Uses `triggers`? |
+|------------------------------|------------------|
+| NonCombatStrategy.cpp        | Yes              |
+| CombatStrategy.cpp           | Yes (this error) |
+| DuelStrategy.cpp             | Yes              |
+| FollowMasterStrategy.cpp     | No               |
+| GuardStrategy.cpp            | No               |
+| RTSCStrategy.cpp             | No               |
+
+Three of six files now use the parameter. The patch is half-broken.
+
+Fix landed: removed the entire Strategy loop from B019 (apply and
+unapply). The three files that still have empty InitTriggers bodies
+will emit unused-parameter warnings, but those don't break the build
+under current compiler flags. If they ever do, the loop can be
+restored scoped to just those three files.
+
+Per the principle the user articulated: "It's okay if we remove
+patches as long as they're tracked in git. If the upstream fixes a
+bug, it's fine that we don't have to fix it anymore." B019 was
+designed against an upstream where these strategy files had empty
+InitTriggers; upstream has since populated them. The patch is
+obsolete for the populated cases, harmful when it fires on them.
+
+Patterns now confirmed across three rebuilds:
+1. B011 — wrong direction (deprecated entirely)
+2. B019 ReadyCheckAction — over-broad selector (narrowed)
+3. B019 Strategy loop — over-broad selector (removed)
+
+The "patches drift as upstream moves" lesson keeps reappearing. Worth
+considering whether to retire B019 entirely once we identify which of
+its remaining seds still match upstream patterns the right way.
+
+B020's stress test still pending. Next rebuild attempt should reach
+even higher.
+
 ## Related Files
 
 - `source-beta/modules/mod-ale/src/LuaEngine/LuaEngine.cpp:856` - ExecuteCall assertion

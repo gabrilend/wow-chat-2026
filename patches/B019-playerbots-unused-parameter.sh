@@ -20,13 +20,16 @@ patch_B019_playerbots_unused_parameter() {
 
     local FILE
 
-    # Strategy files - InitTriggers with unused triggers parameter
-    for f in NonCombatStrategy CombatStrategy DuelStrategy FollowMasterStrategy GuardStrategy RTSCStrategy; do
-        FILE="${PLAYERBOTS_DIR}/Ai/Base/Strategy/${f}.cpp"
-        if [[ -f "${FILE}" ]]; then
-            sed -i 's/std::vector<TriggerNode\*>& triggers)/std::vector<TriggerNode*>\& \/*triggers*\/)/' "${FILE}" 2>/dev/null || true
-        fi
-    done
+    # Strategy files - InitTriggers triggers parameter
+    # REMOVED 2026-05-19. The patch commented out `triggers` as unused, but
+    # upstream filled in InitTriggers bodies for NonCombatStrategy,
+    # CombatStrategy, and DuelStrategy — those now USE triggers.push_back(...).
+    # The patch broke the build at 74% with "use of undeclared identifier
+    # 'triggers'" at CombatStrategy.cpp:12. Three other Strategy files
+    # (FollowMasterStrategy, GuardStrategy, RTSCStrategy) still have empty
+    # InitTriggers bodies — they will emit unused-parameter warnings, but
+    # those don't break the build under current compiler flags. If they
+    # ever do, restore this loop scoped to just those three files.
 
     # CombatStrategy - multipliers parameter
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Strategy/CombatStrategy.cpp"
@@ -146,11 +149,8 @@ unpatch_B019_playerbots_unused_parameter() {
 
     local FILE
 
-    # Strategy files - reverse triggers parameter
-    for f in NonCombatStrategy CombatStrategy DuelStrategy FollowMasterStrategy GuardStrategy RTSCStrategy; do
-        FILE="${PLAYERBOTS_DIR}/Ai/Base/Strategy/${f}.cpp"
-        [[ -f "${FILE}" ]] && sed -i 's/std::vector<TriggerNode\*>& \/\*triggers\*\//std::vector<TriggerNode*>\& triggers/' "${FILE}" 2>/dev/null || true
-    done
+    # Strategy files — apply-side loop was removed 2026-05-19 (see apply
+    # block above). No revert needed; nothing to undo.
 
     # CombatStrategy - multipliers
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Strategy/CombatStrategy.cpp"
