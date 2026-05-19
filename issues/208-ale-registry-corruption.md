@@ -239,6 +239,143 @@ assert(type(ObjectVariables._destroyObjData) == "function",
 6. [ ] Based on results, narrow down to specific event
 7. [ ] ~~Implement ServerHeartbeat~~ (deferred - not needed for core functionality)
 
+## Investigation Update (2026-05-19)
+
+### Missing LOCK_ALE in event-cleanup path
+
+Audited every registry-touching call site in mod-ale source for LOCK_ALE
+coverage. Found exactly one unguarded path that matches the corruption
+pattern described in the technical report (section 5.6: "what if there's
+a path that doesn't use LOCK_ALE?").
+
+**The path:**
+
+`ALE::OnWorldUpdate(diff)` at `hooks/ServerHooks.cpp:254` is the main
+world-update entry point. It acquires LOCK_ALE for the reload check, then
+**releases it** before calling Update / HttpResponses / QueryCallbacks:
+
+```cpp
+void ALE::OnWorldUpdate(uint32 diff)
+{
+    {
+        LOCK_ALE;
+        if (ShouldReload())
+            _ReloadALE();
+    }   // <- lock released
+
+    eventMgr->globalProcessor->Update(diff);   // <- NO LOCK
+    httpManager.HandleHttpResponses();         // (acquires lock internally — safe)
+    queryProcessor.ProcessReadyCallbacks();
+    ...
+}
+```
+
+Inside `ALEEventProcessor::Update`, the timed-event callback invocation
+goes through `OnTimedEvent` which DOES acquire LOCK_ALE briefly. But
+after `OnTimedEvent` returns and the lock is released, Update calls
+`RemoveEvent(luaEvent)`:
+
+```cpp
+void ALEEventProcessor::RemoveEvent(LuaEvent* luaEvent)
+{
+    if (luaEvent->state != LUAEVENT_STATE_ERASE
+        && ALE::IsInitialized()
+        && (*E)->HasLuaState())
+    {
+        // NOT GUARDED BY LOCK_ALE — this is the bug
+        luaL_unref((*E)->L, LUA_REGISTRYINDEX, luaEvent->funcRef);
+    }
+    delete luaEvent;
+}
+```
+
+`luaL_unref` mutates the Lua registry's free list. If another thread
+holds LOCK_ALE and is in the middle of `luaL_ref` (or another
+registry-mutating call), the free-list update races and the registry's
+slot-management gets corrupted. Subsequent `luaL_ref` calls then return
+slot numbers whose contents are inconsistent with what the caller
+expected — or whose slot still holds a TABLE from a partially-completed
+previous allocation.
+
+This exactly matches the crash signature: "registered value is table:
+0x..., not a function." A `funcRef` is allocated for a function, but
+the Lua reference system is in an inconsistent state due to the unguarded
+unref, so the slot's contents are corrupted.
+
+### Why the destructor pattern was a hint
+
+The technical report noted that `ALEEventProcessor::~ALEEventProcessor()`
+explicitly comments "can be called from multiple threads" and wraps its
+`RemoveEvents_internal()` call with LOCK_ALE. The destructor authors
+knew the threading concern existed. The **Update path has the same
+concern but was missed** — likely because Update is "the normal path"
+and the lock was reasoned about per-callback rather than per-iteration.
+
+### Proposed Fix
+
+Add LOCK_ALE inside `RemoveEvent` so the unref is always guarded,
+regardless of caller:
+
+```cpp
+void ALEEventProcessor::RemoveEvent(LuaEvent* luaEvent)
+{
+    if (luaEvent->state != LUAEVENT_STATE_ERASE
+        && ALE::IsInitialized()
+        && (*E)->HasLuaState())
+    {
+        LOCK_ALE;  // <- ADD THIS
+        luaL_unref((*E)->L, LUA_REGISTRYINDEX, luaEvent->funcRef);
+    }
+    delete luaEvent;
+}
+```
+
+**Safe to add** because `ALE::LockType` is `std::recursive_mutex`
+(LuaEngine.h:115). Callers that already hold LOCK_ALE (like the
+destructor) re-enter safely. Callers that don't (like Update) finally
+get the protection they need.
+
+### Expected behavior change after fix
+
+- The "registered value is table" crash should disappear, OR if it
+  doesn't, we've ruled out the most plausible cause and can narrow to
+  Hypothesis 4 (extension load order).
+- No functional behavior change for callers that already locked.
+- Tiny serialization cost: events being cleaned up will briefly
+  contend for LOCK_ALE with whoever else is holding it. Acceptable.
+
+### Patch shape
+
+This is a 2-line addition to one C++ function. Fits the project's
+patch-system convention as a B-patch:
+
+- ID: B020 (next available after B019)
+- Name: `ale-event-removeevent-lock`
+- Target: `source-beta/modules/mod-ale/src/LuaEngine/ALEEventMgr.cpp:116-125`
+- Profile activation: release + beta (both run ALE)
+- Idempotent check: grep for `LOCK_ALE` inside the RemoveEvent body
+- Issue: this issue (208)
+
+Recommendation: write the patch script, register it in
+`PHASE_BEGIN_PATCHES`, then trigger the rebuild that's been queued.
+The verify-build script's "ALE referenced" check will still pass; the
+real verification will be whether the registered-value-table crash
+stops appearing in tmp/error-release.log after a stress test.
+
+### Open question for additional safety
+
+Should `ALEEventProcessor::Update` itself acquire LOCK_ALE at function
+scope, rather than relying on each inner call to lock individually?
+
+**Pros:** atomic per-tick processing; simpler reasoning about state
+between events.
+**Cons:** holds the lock longer; potentially serializes too aggressively
+if there's contention with hook handlers.
+
+For now the minimal fix (RemoveEvent only) is enough. The function-scope
+lock can be added later if the minimal fix doesn't fully resolve the
+crash.
+
 ## Related Files
 
 - `source-beta/modules/mod-ale/src/LuaEngine/LuaEngine.cpp:856` - ExecuteCall assertion
