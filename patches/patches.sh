@@ -24,8 +24,8 @@ fi
 # {{{ Profile-specific patch lists
 # PHASE_BEGIN patches (pre-compile source modifications)
 declare -A PHASE_BEGIN_PATCHES=(
-    ["release"]="B004 B009 B010 B011 B012 B013 B014 B015 B016 B017 B018 B019"  # warning fixes + mod-playerbots + mod-ale compat
-    ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008 B009 B010 B011 B012 B013 B014 B015 B016 B017 B018 B019"  # All patches
+    ["release"]="B004 B009 B010 B011 B012 B013 B014 B015 B016 B017 B018 B019 B020"  # warning fixes + mod-playerbots + mod-ale compat + ALE registry lock fix
+    ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008 B009 B010 B011 B012 B013 B014 B015 B016 B017 B018 B019 B020"  # All patches
     ["alpha"]="B001 B004"                                         # Minimal compatibility patches
 )
 
@@ -187,6 +187,15 @@ patch_needs_applying_B018() {
 patch_needs_applying_B019() {
     local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Ai/Base/Strategy/NonCombatStrategy.cpp"
     [[ -f "${FILE}" ]] && grep -q "std::vector<TriggerNode\*>& triggers)" "${FILE}"
+}
+
+patch_needs_applying_B020() {
+    local FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/ALEEventMgr.cpp"
+    if [[ ! -f "${FILE}" ]]; then
+        return 1
+    fi
+    # Patch needed if RemoveEvent body does NOT already contain LOCK_ALE
+    ! awk '/^void ALEEventProcessor::RemoveEvent/,/^}/' "${FILE}" | grep -q "LOCK_ALE"
 }
 # }}}
 
