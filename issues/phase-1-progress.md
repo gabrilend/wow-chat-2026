@@ -68,6 +68,7 @@ The keystone. Every later build/profile decision derives from 136.
 | 137 | shadow-conf-path-baked-into-binary | Open | CONF_DIR was baked to shadow path; fix in scripts/compile applied 2026-04-28. (was 413) |
 | 145 | playerbots-compile-fix-patches-B009-B010 | Open | Register B009/B010 in PHASE_BEGIN_PATCHES for release+beta. Discovered during rebuild prep audit. |
 | 146 | patch-status-command | Open | Report what patches are scheduled for the active profile across PHASE_BEGIN/END/CONFIG. Downstream of 127's three-tier model. |
+| 147 | alpha-mysql-instance-isolation | Open (deferred low) | Stand up mysql-alpha/ on port 3308 so alpha can run its declared isolation. Activates when alpha is actually run. |
 | 114 | remove-profile-system | Will Not Implement | Decision: keep profiles for isolation. |
 
 ### Act 7 — Networking & ops

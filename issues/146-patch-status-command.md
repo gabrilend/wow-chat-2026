@@ -217,9 +217,86 @@ arrays in `patches/patches.sh` and `config/patches/` directly, then runs
 5. **Exit code.** Always 0 in MVP — status reporting doesn't fail. Reserve
    non-zero for "couldn't find patches.sh" or similar setup errors.
 
+## --version / -v Flag: Developer Version Report
+
+A flag on `scripts/patch-status` that prints a short developer-oriented
+report comparing four sources of truth about "where am I in the world?":
+
+```bash
+./scripts/patch-status --version
+./scripts/patch-status -v
+```
+
+### What the report contains
+
+```
+=== Version report for profile 'release' ===
+
+Live build (installed-files-release/):
+  Built:   2026-05-14T18:42:13-04:00
+  Source:  source-beta @ dd2672641
+  Patches: 24 applied (12 B, 2 E, 10 C)
+
+Shadow build (installed-files-shadow/):
+  Built:   2026-05-15T09:11:02-04:00
+  Source:  source-beta @ f1c8a99
+  Patches: 24 scheduled (12 B, 2 E, 10 C)
+  Status:  Awaiting validate + promote (newer than live by 7 commits)
+
+Local source (source-beta/.git):
+  HEAD:    f1c8a99 fix(playerbots): wand range check
+  Branch:  release (tracks origin/Playerbot)
+  Dirty:   clean
+
+Upstream (github.com/liyunfan1223/azerothcore-wotlk @ Playerbot):
+  HEAD:    f1c8a99 fix(playerbots): wand range check
+  Behind:  local is even with upstream
+
+Boost:     1.81.0
+Compile:   clang 17, ninja
+```
+
+### What it reads / fetches
+
+Four sources, each labeled clearly:
+
+1. **Live build manifest** — `installed-files-{profile}/etc/build-manifest.txt`.
+   The current production build state.
+2. **Shadow build manifest** — `installed-files-shadow/etc/build-manifest.txt` if
+   present. The next-up build that has been compiled but not yet promoted.
+3. **Local source HEAD** — `git -C source-{profile} log -1` plus
+   `git status --porcelain` for cleanliness. What the next compile will
+   build from.
+4. **Upstream HEAD** — `git ls-remote <repo> <branch> | head -1` against the
+   profile's declared repo and branch in `scripts/profiles`. Tells the
+   developer whether their local source is behind upstream.
+
+### Behavior when sources are missing
+
+Each block fails gracefully and reports its absence rather than the whole
+command erroring out:
+
+- Live manifest absent → "No live build (has a build been promoted yet?)"
+- Shadow manifest absent → "No shadow build queued"
+- Source dir absent → "Source not cloned for this profile"
+- Upstream check fails (no network, no remote) → "Upstream unreachable
+  (check network or remote URL)"
+
+This way the report is useful even on a half-set-up machine.
+
+### Why this lives on patch-status
+
+It's the same observable surface: "what is in this build?" The version
+report extends the question by adding chronological context — *when* was
+this build assembled, *what* source was it built from, *how far behind*
+upstream is. Patch-status without `-v` answers the moment-in-time
+question; with `-v` it answers the timeline question. One command, two
+zoom levels.
+
 ## Affected Files
 
-- **New:** `scripts/patch-status` — the reader, prints the manifest.
+- **New:** `scripts/patch-status` — the reader, prints the manifest (and
+  the `--version` report when flagged).
 - **Modified:** `scripts/promote` (or `scripts/compile` post-PHASE_CONFIG) —
   writes `installed-files-{profile}/etc/build-manifest.txt` at promote time.
 - **New file produced at build time:** `installed-files-{profile}/etc/build-manifest.txt`

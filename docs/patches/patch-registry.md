@@ -367,30 +367,41 @@ The corresponding alpha/release variant (`C006a`) sets the same setting to
 80 and declares `CONFIG_PROFILES[config_max_level_80]="alpha release"`. The
 orchestrator picks exactly one based on `${PROFILE}` at run time.
 
-### Note on overlap with E-patches
+### Resolved overlap with E-patches
 
 `E002` (config-database-paths) and `E003` (config-directory-paths) in the
 PHASE_END registry overlap conceptually with `C001` and `C002` — both
 write `.conf` files with paths and credentials.
 
-The reason the overlap exists: when the shadow build runs validation, the
-shadow worldserver needs *some* config values to start at all. E002/E003
-provide a working baseline so validation can connect to MySQL and find its
-data files. After promote, C001/C002 rewrite those same configs with the
-profile-specific values (different database names, profile-rooted paths).
+**The resolution:** keep both tiers, write full and valid configs at every
+stage, and let the C-patches update only the values that need to be
+profile-aware after promote. No stripped-down validate-only stubs — the
+configs in shadow during validation are real, complete configs. The
+C-patches' job is narrower than overwriting the whole file: **they
+specifically update credentials and file paths** that need to point at
+the live profile installation.
 
-The cleanest resolution depends on whether shadow-validation should run
-against the *same* configs that production will run, or against a more
-restrictive baseline:
+What this means concretely:
 
-- **If same configs:** E002/E003 can write the final profile-correct values
-  directly into shadow (using `${INSTALL_DIR}` rather than
-  `${INSTALL_DIR_SHADOW}` as the target), and C001/C002 become redundant.
-- **If different configs:** E002/E003 write minimal validate-only stubs in
-  shadow, and C001/C002 overwrite them with real values post-promote.
+- **E002 writes valid database connection strings to shadow.** Validation
+  can actually connect. These may use the same credentials and DB names
+  that production will use (release/beta share infrastructure, so the
+  shadow validate uses the same DB host/port/credentials as the eventual
+  live release server reads back at startup).
+- **C001 updates the database connection strings post-promote** if the
+  profile needs different credentials, ports, or DB names than what
+  E002 wrote. For release/beta this is often a no-op (values match);
+  for alpha the C001 update is load-bearing because alpha runs against
+  a separate MySQL on a different port with different DBs.
+- **E003 writes valid directory paths to shadow** (pointing at shadow
+  dirs for the validate run).
+- **C002 updates directory paths post-promote** to point at the
+  profile-correct dirs (`installed-files-{profile}/` instead of shadow).
 
-This is a design decision still open — see issue 127 for the broader
-patch-system context.
+The chronology principle holds: each tier writes the configs that make
+sense for the state of the build tree at that moment. C-patches are not
+redundant with E-patches — they're the **delta** between "valid for
+shadow validation" and "valid for live profile run."
 
 ---
 

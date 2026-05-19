@@ -368,6 +368,32 @@ validate gate. But that's a consequence of the chronology, not the
 motivation. The motivation is that you can't write a value into a config
 until the system the value points at exists.
 
+### Design decision: full configs at every stage (resolved 2026-05-14)
+
+The earlier open question — whether shadow E-patches should write
+"stripped-down validate-only stubs" or full real configs — is **resolved
+in favor of full real configs at every stage**. No special validate
+mode.
+
+Rationale: stripped-down configs are a maintenance burden (a second
+config format, alternate value sets to keep in sync, divergence between
+"what validates" and "what runs"). Writing real full configs everywhere
+keeps the shadow validate close to the live profile run.
+
+C-patches do not duplicate E-patches; they apply the **delta** that the
+profile-specific deployment needs:
+
+- Credentials that differ between profiles (alpha's separate DB
+  credentials vs release/beta's shared ones)
+- File paths that depend on knowing which profile is live
+  (`installed-files-{profile}/...` paths)
+- Database names that differ per isolation group
+- Network ports that differ per isolation group
+
+For settings that don't differ between shadow validation and live
+profile run (most settings), C-patches have nothing to do and don't
+touch them. The C-patch surface is narrow by design.
+
 ### Documentation
 
 The canonical patch registry, with one row per patch across all three
