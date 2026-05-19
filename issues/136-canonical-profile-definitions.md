@@ -208,21 +208,27 @@ To convert from the current muddled state to the fourth-path design:
   template files; check whether they're really our customization or
   just upstream copies. Keep or replace accordingly.
 
-**Phase B — Add the recipe:**
-- Create `modules-beta/manifest.sh` (or `modules-beta/manifest.yaml`)
-  declaring: for each module, its upstream URL and pinned commit.
-  Example:
-  ```bash
-  declare -A MODULES_REPO=(
-      [mod-ale]="https://github.com/azerothcore/mod-ale.git@3eca176"
-      [mod-aoe-loot]="https://github.com/azerothcore/mod-aoe-loot.git@HEAD"
-      [mod-grownup]="https://github.com/azerothcore/mod-grownup.git@HEAD"
-      [mod-playerbots]="https://github.com/liyunfan1223/mod-playerbots.git@f275f729"
-  )
-  ```
-- Per-profile selection of which modules to clone (release vs beta
-  may differ in module set, though both compile from the same
-  source-beta).
+**Phase B — Reuse the existing manifest arrays:**
+
+The "manifest" doesn't need to be a new file format — `scripts/install`
+already declares it via three Bash associative arrays:
+
+- `MODULE_REPOS[mod-name]` → upstream URL (the recipe)
+- `PROFILE_MODULES[profile]` → which modules belong to which profile
+- `PROFILE_MODULE_COMMITS[profile:mod-name]` → optional commit pin
+
+This IS the manifest. No duplication needed. The fourth-path design
+just makes explicit what these arrays were always supposed to do.
+
+**Pinning policy:**
+- `release` and `beta` → leave `PROFILE_MODULE_COMMITS` empty for each
+  module. Both tracks track upstream HEAD. The convention is "latest
+  working code", consistent with release being "the most up-to-date"
+  per the 136 canonical model.
+- `alpha` → fill `PROFILE_MODULE_COMMITS[alpha:mod-X]` with a specific
+  commit hash for any module that needs era-pinning. Alpha is the
+  holiday relic, and its module commits should be frozen at a date
+  that matches the alpha-era AzerothCore source.
 
 **Phase C — Update `scripts/redownload-source`:**
 - Reads the manifest in `modules-beta/`.
@@ -262,6 +268,46 @@ design here so future work has a target.
 
 When the refactor lands, this issue 136 gets the implementation note
 and the pre-fourth-path remarks above become historical context.
+
+### Fourth-Path Implementation Note (landed 2026-05-19)
+
+The refactor went in shortly after the design was codified. The pieces
+were smaller than expected because most of the recipe machinery
+already existed in `scripts/install` — only two things needed
+removing:
+
+- **`update_modules_symlink` function and its call site in
+  `scripts/install`** — gone. Modules are cloned directly into
+  `source-beta/modules/` from upstream via the existing module-clone
+  loop (lines 238-260 of `scripts/install`, which iterates
+  `PROFILE_MODULES[$PROFILE]` and looks up each in `MODULE_REPOS`).
+  No symlink swap is needed because the destination is the build
+  artifact, not a tracked dir.
+
+- **`modules-beta/` directory** — deleted (`git rm`). It had been
+  vendoring module source as gitlinks (`mod-ale`, `mod-aoe-loot`,
+  `mod-grownup`, `mod-playerbots`) plus AzerothCore's module-loader
+  template files. All four module checkouts were verified clean (no
+  local customizations beyond the patch-system's domain) before
+  deletion. The module-loader template files arrive with the
+  AzerothCore clone so they don't need their own home.
+
+The manifest now lives entirely in `scripts/install`:
+
+- `MODULE_REPOS` (URL per module)
+- `PROFILE_MODULES` (which modules each profile uses)
+- `PROFILE_MODULE_COMMITS` (commit pinning — currently only used for
+  `release:mod-eluna`, will be the home for alpha's era-pinning when
+  alpha modules need it)
+
+The patch system (`patches/B###-*.sh` plus the `PHASE_BEGIN_PATCHES`
+array) continues to be the canonical place for source-code
+customizations. Combined, the install script + patch system are the
+complete recipe — nothing else is needed.
+
+`source-beta/` and `source-alpha/` remain gitignored build artifacts.
+Drift in them is no longer a concern because they're regenerable from
+a single command (`scripts/redownload-source` + `scripts/install`).
 
 ## Implementation Steps
 

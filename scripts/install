@@ -153,35 +153,11 @@ get_profile_paths() {
 }
 # }}}
 
-# {{{ update_modules_symlink
-update_modules_symlink() {
-    local modules_link="${DIR}/source-beta/modules"
-    local target_dir
-
-    # Modules directory name matches the source directory it backs. Release
-    # and beta both compile against source-beta, so both use modules-beta.
-    # Alpha uses source-alpha entirely (different core era) and is handled
-    # by source-alpha/modules/ directly. See issue 136 for the rationale.
-    case "${PROFILE}" in
-        release|beta) target_dir="../modules-beta" ;;
-        alpha)        return ;; # alpha uses source-alpha, not source-beta
-        *)            echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
-    esac
-
-    if [[ -L "${modules_link}" ]]; then
-        local current_target=$(readlink "${modules_link}")
-        if [[ "${current_target}" != "${target_dir}" ]]; then
-            echo "Updating modules symlink: ${current_target} -> ${target_dir}"
-            rm "${modules_link}"
-            ln -s "${target_dir}" "${modules_link}"
-        fi
-    else
-        echo "Creating modules symlink: -> ${target_dir}"
-        rm -rf "${modules_link}"
-        ln -s "${target_dir}" "${modules_link}"
-    fi
-}
-# }}}
+# update_modules_symlink was removed 2026-05-19 as part of the fourth-path
+# refactor recorded in issue 136. Under the fourth-path design, modules are
+# cloned directly into source-beta/modules/ from upstream per the MODULE_REPOS
+# manifest, so no symlink swap is needed. The function (and modules-beta/)
+# are gone.
 
 # =============================================================================
 # Main
@@ -218,10 +194,9 @@ if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
     fi
 fi
 
-# Update modules symlink
-update_modules_symlink
-
 # Handle modules
+# (Modules are cloned directly into source-beta/modules/ per MODULE_REPOS
+# below. No symlink swap — see issue 136's fourth-path design.)
 mkdir -p "${AC_CODE_DIR}/modules"
 
 # Remove modules not in this profile
