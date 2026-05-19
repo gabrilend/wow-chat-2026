@@ -11,17 +11,22 @@
 # Get directory containing this script
 PATCHES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Source all B### patch files
+# Source all B### patch files (PHASE_BEGIN - source code modifications)
 for patch_file in "${PATCHES_DIR}"/B[0-9][0-9][0-9]-*.sh; do
     [[ -f "${patch_file}" ]] && source "${patch_file}"
 done
 
+# Source E patches (PHASE_END - config files, symlinks, database)
+if [[ -f "${PATCHES_DIR}/E-patches.sh" ]]; then
+    source "${PATCHES_DIR}/E-patches.sh"
+fi
+
 # {{{ Profile-specific patch lists
 # PHASE_BEGIN patches (pre-compile source modifications)
 declare -A PHASE_BEGIN_PATCHES=(
-    ["release"]=""                                      # Vanilla, no patches
-    ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008"  # All experimental patches
-    ["alpha"]="B001 B004"                               # Minimal compatibility patches
+    ["release"]="B004 B009 B010 B011 B012 B013 B014 B015 B016 B017 B018 B019"  # warning fixes + mod-playerbots + mod-ale compat
+    ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008 B009 B010 B011 B012 B013 B014 B015 B016 B017 B018 B019"  # All patches
+    ["alpha"]="B001 B004"                                         # Minimal compatibility patches
 )
 
 # PHASE_END patches (post-compile setup: configs, symlinks, database)
@@ -81,20 +86,15 @@ unapply_patches_begin() {
 }
 # }}}
 
-# {{{ patches_need_applying
-# Check if any PHASE_BEGIN patches would modify source
-# Returns 0 (true) if patches need applying, 1 (false) if all applied
-patches_need_applying() {
-    local FILE
+# {{{ patch_needs_applying_XXXX
+# Individual patch condition checks - return 0 if patch needs applying
+patch_needs_applying_B001() {
+    local FILE="${AC_CODE_DIR}/modules/mod-aoe-loot/src/aoe_loot.cpp"
+    [[ -f "${FILE}" ]] && grep -q "^[[:space:]]*Item\* pItem = player->GetItemByGuid" "${FILE}"
+}
 
-    # B001: aoe-loot item namespace
-    FILE="${AC_CODE_DIR}/modules/mod-aoe-loot/src/aoe_loot.cpp"
-    if [[ -f "${FILE}" ]] && grep -q "^[[:space:]]*Item\* pItem = player->GetItemByGuid" "${FILE}"; then
-        return 0
-    fi
-
-    # B002: playerbots ALE login hook
-    FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp"
+patch_needs_applying_B002() {
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp"
     local CMAKE_FILE="${AC_CODE_DIR}/modules/mod-playerbots/mod-playerbots.cmake"
     if [[ -f "${FILE}" ]] && ! grep -q "sALE->OnLogin(bot)" "${FILE}"; then
         return 0
@@ -102,35 +102,115 @@ patches_need_applying() {
     if [[ -f "${FILE}" ]] && { [[ ! -f "${CMAKE_FILE}" ]] || ! grep -q "MOD_ALE_PATH" "${CMAKE_FILE}"; }; then
         return 0
     fi
+    return 1
+}
 
-    # B003: ALE gameobject wildcard
-    FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/LuaEngine.cpp"
-    if [[ -f "${FILE}" ]] && ! grep -q "entry != 0 && !eObjectMgr->GetGameObjectTemplate" "${FILE}"; then
-        return 0
+patch_needs_applying_B003() {
+    local FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/LuaEngine.cpp"
+    [[ -f "${FILE}" ]] && ! grep -q "entry != 0 && !eObjectMgr->GetGameObjectTemplate" "${FILE}"
+}
+
+patch_needs_applying_B004() {
+    # Add condition for B004 if it exists
+    return 1
+}
+
+patch_needs_applying_B005() {
+    local FILE="${AC_CODE_DIR}/src/server/game/Entities/Unit/Unit.h"
+    [[ -f "${FILE}" ]] && ! grep -q "ACCURACY_LEVEL_CAP" "${FILE}"
+}
+
+patch_needs_applying_B006() {
+    local FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/Hooks.h"
+    [[ -f "${FILE}" ]] && ! grep -q "PLAYER_EVENT_ON_SELL_ITEM" "${FILE}"
+}
+
+patch_needs_applying_B007() {
+    local FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/methods/UnitMethods.h"
+    [[ -f "${FILE}" ]] && ! grep -q "int SetWalk" "${FILE}"
+}
+
+patch_needs_applying_B008() {
+    [[ -d "${DIR}/modules/mod-talent-bonus" ]] && [[ ! -d "${AC_CODE_DIR}/modules/mod-talent-bonus" ]]
+}
+
+patch_needs_applying_B009() {
+    local FILE="${AC_CODE_DIR}/src/server/game/Entities/Player/Player.h"
+    [[ -f "${FILE}" ]] && ! grep -q "enum EquipmentSlots : uint32" "${FILE}"
+}
+
+patch_needs_applying_B010() {
+    local FILE="${AC_CODE_DIR}/src/server/game/Battlegrounds/Battleground.h"
+    [[ -f "${FILE}" ]] && ! grep -q "ARENA_TYPE_NONE" "${FILE}"
+}
+
+patch_needs_applying_B011() {
+    local FILE="${AC_CODE_DIR}/modules/mod-ale/src/ALE_SC.cpp"
+    [[ -f "${FILE}" ]] && grep -q "OnPlayerResurrect.*bool&" "${FILE}"
+}
+
+patch_needs_applying_B012() {
+    local FILE="${AC_CODE_DIR}/src/server/game/Entities/Player/Player.cpp"
+    [[ -f "${FILE}" ]] && grep -q "for (int slot = EQUIPMENT_SLOT_START\|for (int i = EQUIPMENT_SLOT_START" "${FILE}"
+}
+
+patch_needs_applying_B013() {
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Ai/Base/Actions/ChooseRpgTargetAction.cpp"
+    [[ -f "${FILE}" ]] && grep -q "groupLeader && !groupLeader->isMoving() ||" "${FILE}"
+}
+
+patch_needs_applying_B014() {
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp"
+    [[ -f "${FILE}" ]] && ! grep -q "default:" "${FILE}"
+}
+
+patch_needs_applying_B015() {
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Ai/Raid/Magtheridon/Action/RaidMagtheridonActions.cpp"
+    [[ -f "${FILE}" ]] && grep -q "/ RAND_MAX" "${FILE}" && ! grep -q "static_cast<float>(RAND_MAX)" "${FILE}"
+}
+
+patch_needs_applying_B016() {
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Ai/Base/Actions/GenericSpellActions.cpp"
+    [[ -f "${FILE}" ]] && grep -q 'range(botAI->GetRange("spell")), spell(spell)' "${FILE}"
+}
+
+patch_needs_applying_B017() {
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Ai/Base/Actions/ChooseRpgTargetAction.cpp"
+    [[ -f "${FILE}" ]] && grep -q "Player\* player = botAI->GetBot();" "${FILE}" && ! grep -q "(void)player;" "${FILE}"
+}
+
+patch_needs_applying_B018() {
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/PlayerbotAIConfig.cpp"
+    [[ -f "${FILE}" ]] && grep -q "for (int tab = 0; tab < 3; tab++)" "${FILE}"
+}
+
+patch_needs_applying_B019() {
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Ai/Base/Strategy/NonCombatStrategy.cpp"
+    [[ -f "${FILE}" ]] && grep -q "std::vector<TriggerNode\*>& triggers)" "${FILE}"
+}
+# }}}
+
+# {{{ patches_need_applying
+# Check if any PHASE_BEGIN patches for current profile would modify source
+# Returns 0 (true) if patches need applying, 1 (false) if all applied
+# Profile-aware: only checks patches in PHASE_BEGIN_PATCHES[$PROFILE]
+patches_need_applying() {
+    local patches="${PHASE_BEGIN_PATCHES[$PROFILE]:-}"
+
+    # No patches for this profile = nothing to check
+    if [[ -z "${patches}" ]]; then
+        return 1
     fi
 
-    # B005: Accuracy level cap
-    FILE="${AC_CODE_DIR}/src/server/game/Entities/Unit/Unit.h"
-    if [[ -f "${FILE}" ]] && ! grep -q "ACCURACY_LEVEL_CAP" "${FILE}"; then
-        return 0
-    fi
-
-    # B006: ALE sell item hook
-    FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/Hooks.h"
-    if [[ -f "${FILE}" ]] && ! grep -q "PLAYER_EVENT_ON_SELL_ITEM" "${FILE}"; then
-        return 0
-    fi
-
-    # B007: ALE unit methods
-    FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/methods/UnitMethods.h"
-    if [[ -f "${FILE}" ]] && ! grep -q "int SetWalk" "${FILE}"; then
-        return 0
-    fi
-
-    # B008: mod-talent-bonus
-    if [[ -d "${DIR}/modules/mod-talent-bonus" ]] && [[ ! -d "${AC_CODE_DIR}/modules/mod-talent-bonus" ]]; then
-        return 0
-    fi
+    # Check each patch in the profile's list
+    for patch_id in ${patches}; do
+        local check_func="patch_needs_applying_${patch_id}"
+        if declare -F "${check_func}" > /dev/null 2>&1; then
+            if ${check_func}; then
+                return 0  # This patch needs applying
+            fi
+        fi
+    done
 
     return 1  # All patches already applied
 }
