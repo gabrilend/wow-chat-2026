@@ -158,12 +158,14 @@ update_modules_symlink() {
     local modules_link="${DIR}/source-beta/modules"
     local target_dir
 
-    # Each profile can have its own modules directory
+    # Modules directory name matches the source directory it backs. Release
+    # and beta both compile against source-beta, so both use modules-beta.
+    # Alpha uses source-alpha entirely (different core era) and is handled
+    # by source-alpha/modules/ directly. See issue 136 for the rationale.
     case "${PROFILE}" in
-        release) target_dir="../modules-release" ;;
-        beta)    target_dir="../modules-beta"    ;;
-        alpha)   return ;; # alpha uses source-alpha, not source-beta
-        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+        release|beta) target_dir="../modules-beta" ;;
+        alpha)        return ;; # alpha uses source-alpha, not source-beta
+        *)            echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
     esac
 
     if [[ -L "${modules_link}" ]]; then

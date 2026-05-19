@@ -104,18 +104,18 @@ no `source-release/` and no need for one.
 - beta    → `source-beta`  (current AC, shared with release)
 
 ### Modules-dir mapping (`scripts/install:update_modules_symlink`)
-**Resolved 2026-05-19** (decision moved here from the now-superseded
-issue 148):
+**Resolved 2026-05-19:**
 
 The modules directory at the project root **shares its name with the
 source directory it backs**. Since release and beta both compile from
 `source-beta/`, both profiles use `modules-beta/`. There is no
 `modules-release/` — that directory was a vestige from when release
-was wow-chat-1 with different modules from beta, and should be removed.
+was wow-chat-1 with different modules from beta. **Deleted 2026-05-19**
+in the same commit that updated `scripts/install` to point release at
+`modules-beta`.
 
-- alpha   → `modules-alpha/` (if any; alpha's modules come via
-            `source-alpha/modules/` directly or a parallel
-            `modules-alpha/` if the symlink mechanism extends to alpha)
+- alpha   → uses `source-alpha/modules/` directly (no project-root
+            modules dir; alpha's era predates the symlink mechanism)
 - release → `modules-beta/`  (same as beta — same source, same modules)
 - beta    → `modules-beta/`  (canonical)
 
@@ -127,18 +127,21 @@ modules tree that compiles against `source-beta/`." A name like
 
 **Why not symlink `modules-release/` → `modules-beta/`?** Symlinks
 preserve the misleading name. Better to delete the misleading name
-outright.
+outright. Done.
 
-Implementation steps (deferred — do AFTER the current B020 rebuild
-lands, so this cleanup doesn't surprise the build):
+### Implementation note (landed 2026-05-19)
 
-1. Move any contents of `modules-release/` that don't already exist in
-   `modules-beta/` (audit first; should be empty or identical).
-2. Delete `modules-release/`.
-3. Update `scripts/install:update_modules_symlink` so the case-switch
-   has `release|beta) target_dir="../modules-beta" ;;`.
-4. Update the table-of-contents and any docs that reference
-   `modules-release/`.
+The cleanup happened in one commit during the B020 rebuild prep,
+not deferred to after the rebuild. Audit before deletion found that
+`modules-release/mod-playerbots/` had a corrupted working-tree state
+(massive accidental deletion in `RandomPlayerbotMgr.cpp`, almost
+certainly from a botched `unapply_patches_begin` in a prior session).
+The corrupted file was reverted to its committed state, equivalence
+with `modules-beta/mod-playerbots/` confirmed, and only then was
+`modules-release/` deleted. The `modules-release/` tree was also
+missing `mod-ale/` entirely, which release profile needs per the
+PROFILE_MODULES declaration — so the cleanup also fixed an
+unrecognized brokenness that would have made release builds fail.
 
 ## Implementation Steps
 
