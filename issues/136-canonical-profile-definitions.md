@@ -143,6 +143,126 @@ missing `mod-ale/` entirely, which release profile needs per the
 PROFILE_MODULES declaration — so the cleanup also fixed an
 unrecognized brokenness that would have made release builds fail.
 
+## Source Tree Is A Build Artifact — The Fourth-Path Design
+
+**Codified 2026-05-19** following observation that both `source-beta/`
+and `modules-beta/` had been accumulating drift, residue, and divergent
+module versions. The root cause: both trees were doing the same job
+(vendoring module source code), so neither had clear authority.
+
+### The principle
+
+> Any commit that modifies the source-code of the server or its
+> modules should be written as a **patch**, not as raw edits to the
+> source tree, which is treated like a build artifact.
+
+Concretely:
+
+- **`source-beta/`, `source-alpha/`** — entire source trees. Cloned
+  from upstream by `scripts/redownload-source`. **Build artifacts.**
+  Already `.gitignored` (line 17, pattern `source*/`). Never tracked,
+  never committed. Always reconstructable from clone + patches.
+
+- **`libs/`, `build*/`, `installed-files-*/bin,lib,include,share/`**
+  — all build artifacts. Already `.gitignored`. Never tracked.
+
+- **`modules-beta/`** — **THE RECIPE DIRECTORY**, tracked. Under the
+  fourth-path design, this is *not* where vendored module source
+  lives. It contains the *instructions* for downloading and configuring
+  the modules:
+  - Per-module clone scripts (`get-mod-ale.sh` etc., or one unified
+    `clone-modules.sh`) that fetch each module from upstream at a
+    pinned commit
+  - Overlay files / patches specific to each module's setup
+  - Possibly a manifest declaring exactly which commits to pin
+
+- **`patches/B###-*.sh`** — source-code patches applied during
+  PHASE_BEGIN, reverted post-build. The canonical place for "we want
+  this change to the source." Already tracked, working as intended.
+
+### Why this design works
+
+- **Drift becomes impossible.** Source trees are regenerated; there's
+  nothing to drift. Module versions are pinned in one place (the
+  recipe). Customizations are one-way (patches modify regenerable
+  source; reverts restore baseline).
+- **Reproducibility is automatic.** `scripts/redownload-source` +
+  `scripts/compile` produces an identical build for the same
+  recipe + patch state.
+- **Authority is clear.** The recipe directory says what *should* be
+  there. The build artifact is what *is* there transiently. No
+  question of "which tree is canonical" — only one tree has authority.
+
+### What the refactor would touch
+
+To convert from the current muddled state to the fourth-path design:
+
+**Phase A — Strip vendored source from `modules-beta/`:**
+- Remove the actual cloned module source dirs (`modules-beta/mod-ale/`,
+  `modules-beta/mod-aoe-loot/`, `modules-beta/mod-grownup/`,
+  `modules-beta/mod-playerbots/`).
+- These are vendored copies that drift from upstream and from
+  `source-beta/modules/`. Under the new design they shouldn't be here.
+- The currently-tracked top-level files (`CMakeLists.txt`,
+  `ModulesLoader.cpp.in.cmake`, etc.) are AzerothCore's module-loader
+  template files; check whether they're really our customization or
+  just upstream copies. Keep or replace accordingly.
+
+**Phase B — Add the recipe:**
+- Create `modules-beta/manifest.sh` (or `modules-beta/manifest.yaml`)
+  declaring: for each module, its upstream URL and pinned commit.
+  Example:
+  ```bash
+  declare -A MODULES_REPO=(
+      [mod-ale]="https://github.com/azerothcore/mod-ale.git@3eca176"
+      [mod-aoe-loot]="https://github.com/azerothcore/mod-aoe-loot.git@HEAD"
+      [mod-grownup]="https://github.com/azerothcore/mod-grownup.git@HEAD"
+      [mod-playerbots]="https://github.com/liyunfan1223/mod-playerbots.git@f275f729"
+  )
+  ```
+- Per-profile selection of which modules to clone (release vs beta
+  may differ in module set, though both compile from the same
+  source-beta).
+
+**Phase C — Update `scripts/redownload-source`:**
+- Reads the manifest in `modules-beta/`.
+- Clones AzerothCore into `source-beta/` (already does this).
+- For each module in the profile's set, clones it into
+  `source-beta/modules/<module-name>/` at the pinned commit.
+- Idempotent: if the right commit is already checked out, skip the
+  clone.
+
+**Phase D — Remove `scripts/install:update_modules_symlink`:**
+- No more symlink swap. Modules go directly into
+  `source-beta/modules/` via the clone recipe. The function
+  disappears entirely.
+- The case-switch we currently maintain (`release|beta` → `modules-beta`,
+  `alpha` → return) becomes obsolete.
+
+**Phase E — Patch system unchanged but better-grounded:**
+- B-patches still apply to `source-beta/modules/<mod>/` at build time.
+- Unapply still happens post-build. If unapply fails, the next
+  `redownload-source` will clean things up by re-cloning at the
+  pinned commit.
+- The residue-from-failed-unapply problem becomes self-healing
+  (every redownload restores baseline).
+
+**Phase F — Documentation:**
+- Update `docs/patches/patch-registry.md` to explicitly state that
+  source trees are build artifacts and patches operate on
+  regenerable source.
+- Update CLAUDE.md's "Current Development State" section to describe
+  the build/recipe/patch separation.
+
+### Status
+
+The principle is committed-to. The refactor itself is **not scheduled**
+— it's substantial work and the current setup compiles. Recording the
+design here so future work has a target.
+
+When the refactor lands, this issue 136 gets the implementation note
+and the pre-fourth-path remarks above become historical context.
+
 ## Implementation Steps
 
 1. Decide source-dir layout (shared vs separate for release/beta)

@@ -15,6 +15,17 @@ BUILD_PATCHES
 └── PHASE_CONFIG   (C-patches — post-promote tuning of runtime configs)
 ```
 
+**The source tree is a build artifact.** `source-{profile}/` is cloned
+from upstream by `scripts/redownload-source` and gitignored (line 17 of
+the project `.gitignore`, pattern `source*/`). It is never tracked, never
+committed. The B-patches in PHASE_BEGIN are the *only* mechanism by
+which the source acquires our customizations, and they revert after
+every build to keep the tree pristine. Any modification to source code
+that survives across builds is a bug — either an unapply that failed,
+or a manual edit that should have been a patch. See issue 136's
+"Source Tree Is A Build Artifact" section for the canonical
+description of this design.
+
 | Phase         | Tier        | When                                            | Target                                              | Purpose |
 |---------------|-------------|-------------------------------------------------|-----------------------------------------------------|---------|
 | PHASE_BEGIN   | B-patches   | Before cmake/make, on source tree               | `source-{profile}/src/...` and `source-{profile}/modules/...` | Make upstream code compile cleanly against our profile (fix bugs, add hooks, silence warnings). Reverted after build to keep source tree clean. |
