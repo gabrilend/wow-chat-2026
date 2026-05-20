@@ -495,6 +495,53 @@ its remaining seds still match upstream patterns the right way.
 B020's stress test still pending. Next rebuild attempt should reach
 even higher.
 
+## Fourth Rebuild Attempt — B016 PartyMember Sed Bug (2026-05-19)
+
+Build reached **80%** (from 74% in attempt 3). New error:
+
+```
+PartyMemberToDispel.cpp:13:57: fatal error: expected '{' or ','
+: FindPlayerPredicate(), PlayerbotAIAware(botAI)(), dispelType(dispelType)
+                                                ^^
+```
+
+Different family of failure from the prior three. Not patch drift —
+the patch itself was buggy. B016's PartyMember*.cpp sed pattern was:
+
+```bash
+sed -i 's/PlayerbotAIAware(botAI), FindPlayerPredicate/FindPlayerPredicate(), PlayerbotAIAware(botAI)/'
+```
+
+The left-hand side captures `FindPlayerPredicate` but NOT its trailing
+`()`, so when the substitution lands the original `()` remain in the
+source after the replacement text. Result: `PlayerbotAIAware(botAI)()`
+with dangling parens — a syntax error.
+
+Upstream still legitimately emits the `-Wreorder-ctor` warning here
+(class declaration lists `FindPlayerPredicate` before
+`PlayerbotAIAware`, initializer reverses them), so the patch's INTENT
+is still needed. Fix: anchor the sed on the trailing comma so the
+`()` is captured and replaced cleanly:
+
+```bash
+sed -i 's/PlayerbotAIAware(botAI), FindPlayerPredicate(),/FindPlayerPredicate(), PlayerbotAIAware(botAI),/'
+```
+
+Apply AND unpatch directions both corrected. Patch is now idempotent
+and produces syntactically valid output.
+
+Pattern catalog after four rebuilds:
+1. B011 — wrong direction after upstream convergence (deprecated)
+2. B019 ReadyCheckAction — over-broad selector (narrowed)
+3. B019 Strategy loop — over-broad selector (removed)
+4. B016 PartyMember — sed pattern bug, not drift (fixed in place)
+
+The framing the user pushed back on: "we can't remove it if it fixes
+bugs that we need to fix in order to compile." Patches that address
+real upstream issues must stay; only patches obsoleted by upstream
+convergence (#1) get retired. (#2, #3, #4) all needed fixes that
+preserved the patch's intent.
+
 ## Related Files
 
 - `source-beta/modules/mod-ale/src/LuaEngine/LuaEngine.cpp:856` - ExecuteCall assertion
