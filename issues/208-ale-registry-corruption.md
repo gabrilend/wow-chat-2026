@@ -536,6 +536,45 @@ Pattern catalog after four rebuilds:
 3. B019 Strategy loop — over-broad selector (removed)
 4. B016 PartyMember — sed pattern bug, not drift (fixed in place)
 
+## Fifth Rebuild Attempt — B017 newItem Inserts Into Comment Block (2026-05-19)
+
+Build reached **98%** (from 80% in attempt 4). New error:
+
+```
+PlayerbotFactory.cpp:1984:18: fatal error: expected unqualified-id
+                 (void)newItem;  // Suppress unused warning
+                 ^
+```
+
+B017's `newItem` section used `sed -i '0,/Item\* newItem = /{...a\...}'`
+to add `(void)newItem;` after the first declaration. In current
+upstream, the first two `Item* newItem =` occurrences (lines 1983,
+2012) are inside a long `//`-prefixed block. The sed matched line
+1983 regardless of comment state and inserted raw `(void)newItem;`
+between `//` lines — the inserted line is NOT itself commented, so
+the compiler saw it at file scope between two comment lines.
+
+The third real `Item* newItem` at line 2415 is `if (Item* newItem = ...)`
+— scoped to the if-body where it's used, no warning to suppress.
+
+So there is no live unused-`newItem` warning anywhere in this
+upstream. The patch's target has gone obsolete: the warning either
+moved when those branches were commented out, or it never existed
+in this exact form. The block was removed (left as a tombstone
+comment) so the rest of B017's ten suppressions still run.
+
+Same shape as failures 2 and 3 (over-broad selector), but with an
+extra twist: the selector ALSO matched commented-out lines. A future
+defensive pattern for similar work would anchor on
+`/^[[:space:]]*\/\//!{...}` to skip `//` lines.
+
+Pattern catalog after five rebuilds:
+1. B011 — wrong direction after upstream convergence (deprecated)
+2. B019 ReadyCheckAction — over-broad selector (narrowed)
+3. B019 Strategy loop — over-broad selector (removed)
+4. B016 PartyMember — sed pattern bug, not drift (fixed in place)
+5. B017 newItem — selector matched a now-commented region (block removed)
+
 The framing the user pushed back on: "we can't remove it if it fixes
 bugs that we need to fix in order to compile." Patches that address
 real upstream issues must stay; only patches obsoleted by upstream
