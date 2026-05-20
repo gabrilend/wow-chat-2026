@@ -53,9 +53,13 @@ patch_B017_playerbots_unused_variables() {
     fi
 
     # Arrow.cpp:22 - healerLines
+    # Same drift shape as currentRoles: upstream widened the type from bool
+    # to uint32 (the assignment now reads `1 + healers.Size() / 6`, which
+    # never fit a bool). Match the bare assignment rather than the prior
+    # type prefix so future widenings don't break this again.
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/Arrow.cpp"
     if [[ -f "${FILE}" ]] && ! grep -q "(void)healerLines;" "${FILE}" 2>/dev/null; then
-        sed -i '/bool healerLines = /a\    (void)healerLines;  // Suppress unused warning' "${FILE}" 2>/dev/null || true
+        sed -i '/healerLines = 1 + healers.Size/a\    (void)healerLines;  // Suppress unused warning' "${FILE}" 2>/dev/null || true
     fi
 
     # ItemCountValue.cpp:14 - bot

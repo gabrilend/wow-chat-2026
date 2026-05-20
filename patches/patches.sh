@@ -24,8 +24,8 @@ fi
 # {{{ Profile-specific patch lists
 # PHASE_BEGIN patches (pre-compile source modifications)
 declare -A PHASE_BEGIN_PATCHES=(
-    ["release"]="B004 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020"  # warning fixes + mod-playerbots + mod-ale compat + ALE registry lock fix (B011 removed — upstream mod-ale now matches core, patch became harmful)
-    ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020"  # All patches (B011 removed — see release-line note)
+    ["release"]="B004 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021"  # warning fixes + mod-playerbots + mod-ale compat + ALE registry lock fix (B011 removed — upstream mod-ale now matches core, patch became harmful)
+    ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021"  # All patches (B011 removed — see release-line note)
     ["alpha"]="B001 B004"                                         # Minimal compatibility patches
 )
 
@@ -196,6 +196,13 @@ patch_needs_applying_B020() {
     fi
     # Patch needed if RemoveEvent body does NOT already contain LOCK_ALE
     ! awk '/^void ALEEventProcessor::RemoveEvent/,/^}/' "${FILE}" | grep -q "LOCK_ALE"
+}
+
+patch_needs_applying_B021() {
+    # Probe the OculusMultipliers fix as the witness: when applied, the
+    # `&&` lives outside HasAura's parens; when unapplied, it's inside.
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Ai/Dungeon/Oculus/Multiplier/OculusMultipliers.cpp"
+    [[ -f "${FILE}" ]] && grep -q "boss->HasAura(SPELL_PLANAR_SHIFT && dynamic_cast" "${FILE}"
 }
 # }}}
 

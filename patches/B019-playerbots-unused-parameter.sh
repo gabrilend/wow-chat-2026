@@ -137,6 +137,58 @@ patch_B019_playerbots_unused_parameter() {
         sed -i 's|const MountData\& mountData|const MountData\& /*mountData*/|' "${FILE}" 2>/dev/null || true
     fi
 
+    # --- 2026-05-19: additional sites from the post-build sweep. Each is
+    # anchored on a unique enough signature substring to avoid colliding
+    # with same-name parameters in adjacent overloads.
+
+    # NewRpgBaseAction.cpp:226 - center is unused (moveStep and priority are used)
+    FILE="${PLAYERBOTS_DIR}/Ai/World/Rpg/Action/NewRpgBaseAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|MoveRandomNear(float moveStep, MovementPriority priority, WorldObject\* center)|MoveRandomNear(float moveStep, MovementPriority priority, WorldObject* /*center*/)|' "${FILE}" 2>/dev/null || true
+    fi
+
+    # NewRpgOutdoorPvP.cpp:5 - event taken by value, ignored in body
+    FILE="${PLAYERBOTS_DIR}/Ai/World/Rpg/Action/NewRpgOutdoorPvP.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|NewRpgOutdoorPvpAction::Execute(Event event)|NewRpgOutdoorPvpAction::Execute(Event /*event*/)|' "${FILE}" 2>/dev/null || true
+    fi
+
+    # RandomPlayerbotMgr.cpp:2024 - teleZ at end of signature; 2365 - handler
+    FILE="${PLAYERBOTS_DIR}/Bot/RandomPlayerbotMgr.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|float teleX, float teleY, float teleZ)|float teleX, float teleY, float /*teleZ*/)|' "${FILE}" 2>/dev/null || true
+        sed -i 's|HandlePlayerbotConsoleCommand(ChatHandler\* handler, char const\* args)|HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/, char const* args)|' "${FILE}" 2>/dev/null || true
+    fi
+
+    # RaidSSCActions.cpp:2340 designatedLooter; 2405 firstCorePasser (in a
+    # different overload that also has firstCorePasser). The second sed
+    # anchors on the trailing `Player* secondCorePasser,` so it only
+    # matches the 2405 occurrence.
+    FILE="${PLAYERBOTS_DIR}/Ai/Raid/SerpentshrineCavern/Action/RaidSSCActions.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|Player\* designatedLooter,|Player* /*designatedLooter*/,|' "${FILE}" 2>/dev/null || true
+        sed -i 's|Player\* firstCorePasser, Player\* secondCorePasser,|Player* /*firstCorePasser*/, Player* secondCorePasser,|' "${FILE}" 2>/dev/null || true
+    fi
+
+    # TravelMgr.cpp:543 entry; 3839 amount (the amount sig is multi-line so
+    # we use sed -z to span the newline). The getNextPoint signature is
+    # the only place a `uint32 amount` parameter sits on its own line
+    # right after `std::vector<WorldPosition*> points,` — anchor on that
+    # neighbour so unrelated `uint32 amount` parameters elsewhere are
+    # untouched.
+    FILE="${PLAYERBOTS_DIR}/Mgr/Travel/TravelMgr.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|WorldPosition::getTransports(uint32 entry)|WorldPosition::getTransports(uint32 /*entry*/)|' "${FILE}" 2>/dev/null || true
+        sed -i -z 's|getNextPoint(WorldPosition\* center, std::vector<WorldPosition\*> points,\n                                                    uint32 amount)|getNextPoint(WorldPosition* center, std::vector<WorldPosition*> points,\n                                                    uint32 /*amount*/)|' "${FILE}" 2>/dev/null || true
+    fi
+
+    # PlayerbotCommandScript.cpp:75 - HandlePerfMonCommand's handler is
+    # unused; args is used.
+    FILE="${PLAYERBOTS_DIR}/Script/PlayerbotCommandScript.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|HandlePerfMonCommand(ChatHandler\* handler, char const\* args)|HandlePerfMonCommand(ChatHandler* /*handler*/, char const* args)|' "${FILE}" 2>/dev/null || true
+    fi
+
     # ChooseTravelTargetAction.cpp - onlyCompleted (2nd param, not at end)
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/ChooseTravelTargetAction.cpp"
     if [[ -f "${FILE}" ]]; then
