@@ -8,17 +8,12 @@ config_realmlist_setup() {
     local MYSQL_DIR="${DIR}/mysql/installed-files"
     local MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
 
-    # Credentials live in ${DIR}/secrets.conf — same source as
-    # scripts/mysql-client. Hard-coding them here means they go stale
-    # the moment the operator rotates them; sourcing keeps the single
-    # source of truth.
-    local SECRETS_FILE="${DIR}/secrets.conf"
-    if [[ -f "${SECRETS_FILE}" ]]; then
-        # shellcheck disable=SC1090
-        source "${SECRETS_FILE}"
-    fi
-    local USER="${DB_USER:-root}"
-    local PASS="${DB_PASS:-}"
+    # The patch IS the source of truth for these credentials — same
+    # principle as B-patches owning source modifications and C001 owning
+    # the database connection strings written into the configs. Drift is
+    # paid in patch updates, not in scattered fallback paths.
+    local USER="ritz"
+    local PASS="menardi"
 
     # Helper: does a real ping succeed within 2 seconds?
     _mysql_alive() {
