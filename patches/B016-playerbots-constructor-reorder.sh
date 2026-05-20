@@ -33,16 +33,27 @@ patch_B016_playerbots_constructor_reorder() {
         sed -i 's/estAmount(estAmount), manaEfficiency(manaEfficiency)/manaEfficiency(manaEfficiency), estAmount(estAmount)/' "${FILE}" 2>/dev/null || true
     fi
 
-    # Arrow.h:106 - masterUnit, built, botUnit -> masterUnit, botUnit, built (match declaration order)
+    # Arrow.h:106 - upstream reordered the initializer list so `built` now
+    # appears first; class declaration order is masterUnit, botUnit, built.
+    # Match declaration order. (Pattern updated 2026-05-19 — the prior sed
+    # was anchored on `masterUnit(nullptr), built(false), botUnit(nullptr)`
+    # which no longer matches.)
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/Arrow.h"
-    if [[ -f "${FILE}" ]] && grep -q "masterUnit(nullptr), built(false), botUnit(nullptr)" "${FILE}" 2>/dev/null; then
-        sed -i 's/masterUnit(nullptr), built(false), botUnit(nullptr)/masterUnit(nullptr), botUnit(nullptr), built(false)/' "${FILE}"
+    if [[ -f "${FILE}" ]] && grep -q "built(false), masterUnit(nullptr), botUnit(nullptr)" "${FILE}" 2>/dev/null; then
+        sed -i 's/built(false), masterUnit(nullptr), botUnit(nullptr)/masterUnit(nullptr), botUnit(nullptr), built(false)/' "${FILE}"
     fi
 
-    # LastMovementValue.cpp:20 - lastMoveToOri, lastFlee -> lastFlee, lastMoveToOri
+    # LastMovementValue.cpp - two constructors with the same field-order bug.
+    # The regular ctor uses zero-init (`lastMoveToOri(0), lastFlee(0)`); the
+    # copy ctor uses `other.field` references. Class declares lastFlee
+    # before lastMoveToOri, so both initializer lists must follow suit.
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/LastMovementValue.cpp"
     if [[ -f "${FILE}" ]] && grep -q "lastMoveToOri(0), lastFlee" "${FILE}" 2>/dev/null; then
         sed -i 's/lastMoveToOri(0), lastFlee(0)/lastFlee(0), lastMoveToOri(0)/' "${FILE}" 2>/dev/null || true
+    fi
+    # Copy ctor — two-line swap, so slurp with -z and rewrite both lines.
+    if [[ -f "${FILE}" ]] && grep -q "lastMoveToOri(other.lastMoveToOri)," "${FILE}" 2>/dev/null; then
+        sed -i -z 's/lastMoveToOri(other\.lastMoveToOri),\n      lastFlee(other\.lastFlee)/lastFlee(other.lastFlee),\n      lastMoveToOri(other.lastMoveToOri)/' "${FILE}" 2>/dev/null || true
     fi
 
     # PartyMember*.cpp - base class order: FindPlayerPredicate, PlayerbotAIAware

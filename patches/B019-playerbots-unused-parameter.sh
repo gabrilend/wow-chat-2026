@@ -79,16 +79,30 @@ patch_B019_playerbots_unused_parameter() {
     # the AI_VALUE2 macro (which expands to `context->GetValue<...>(...)`).
     # Commenting it out broke the build (2026-05-19) with "use of undeclared
     # identifier 'context'" at every AI_VALUE2 call site.
+    #
+    # 2026-05-19: extended to target the specific three Check() overrides
+    # whose body uses AI_VALUE2 (context used via macro) but never touches
+    # botAI: HealthChecker, ManaChecker, ItemCountChecker. The other Check
+    # bodies (DistanceChecker, HunterChecker) already use botAI directly,
+    # so the class-anchored ranges below skip them.
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/ReadyCheckAction.cpp"
     if [[ -f "${FILE}" ]]; then
         sed -i 's/PlayerbotAI\* botAI)/PlayerbotAI* \/*botAI*\/)/' "${FILE}" 2>/dev/null || true
         sed -i 's/Event& event)/Event\& \/*event*\/)/' "${FILE}" 2>/dev/null || true
+        sed -i '/class HealthChecker/,/class ManaChecker/ s|bool Check(PlayerbotAI\* botAI, AiObjectContext\* context)|bool Check(PlayerbotAI* /*botAI*/, AiObjectContext* context)|' "${FILE}" 2>/dev/null || true
+        sed -i '/class ManaChecker/,/class DistanceChecker/ s|bool Check(PlayerbotAI\* botAI, AiObjectContext\* context)|bool Check(PlayerbotAI* /*botAI*/, AiObjectContext* context)|' "${FILE}" 2>/dev/null || true
+        sed -i '/class ItemCountChecker/,/^};/ s|bool Check(PlayerbotAI\* botAI, AiObjectContext\* context)|bool Check(PlayerbotAI* /*botAI*/, AiObjectContext* context)|' "${FILE}" 2>/dev/null || true
     fi
 
     # MailAction.cpp - index parameter (3 instances)
+    # Upstream signature is `Process(uint32 index, Mail* mail, PlayerbotAI* botAI)`
+    # — index is the first parameter, so the older `, uint32 index)` selector
+    # (which assumed a trailing position) never matched. Anchor on the
+    # opening paren of the param list instead.
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/MailAction.cpp"
     if [[ -f "${FILE}" ]]; then
         sed -i 's/, uint32 index)/, uint32 \/*index*\/)/' "${FILE}" 2>/dev/null || true
+        sed -i 's|Process(uint32 index, Mail\* mail, PlayerbotAI\* botAI)|Process(uint32 /*index*/, Mail* mail, PlayerbotAI* botAI)|' "${FILE}" 2>/dev/null || true
     fi
 
     # SayAction files
@@ -109,9 +123,18 @@ patch_B019_playerbots_unused_parameter() {
     fi
 
     # LfgActions.cpp - event
+    # LfgJoinAction::Execute takes Event by value (no &), so the `Event&`
+    # selector above misses. Add the value variant explicitly.
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/LfgActions.cpp"
     if [[ -f "${FILE}" ]]; then
         sed -i 's/Event& event)/Event\& \/*event*\/)/' "${FILE}" 2>/dev/null || true
+        sed -i 's|LfgJoinAction::Execute(Event event)|LfgJoinAction::Execute(Event /*event*/)|' "${FILE}" 2>/dev/null || true
+    fi
+
+    # CheckMountStateAction.cpp - mountData (only unused parameter; master is used)
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/CheckMountStateAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|const MountData\& mountData|const MountData\& /*mountData*/|' "${FILE}" 2>/dev/null || true
     fi
 
     # ChooseTravelTargetAction.cpp - onlyCompleted (2nd param, not at end)

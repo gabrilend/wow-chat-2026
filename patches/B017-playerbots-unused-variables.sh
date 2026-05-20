@@ -43,9 +43,13 @@ patch_B017_playerbots_unused_variables() {
     fi
 
     # LfgActions.cpp:177 - currentRoles
+    # Upstream widened the type from uint8 to uint32 between releases; the
+    # earlier `uint8 currentRoles = ` anchor no longer matched, so the
+    # warning slipped through. Match on the bare assignment so future
+    # type bumps don't break this again.
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/LfgActions.cpp"
     if [[ -f "${FILE}" ]] && ! grep -q "(void)currentRoles;" "${FILE}" 2>/dev/null; then
-        sed -i '/uint8 currentRoles = /a\            (void)currentRoles;  // Suppress unused warning' "${FILE}" 2>/dev/null || true
+        sed -i '/currentRoles = sLFGMgr->GetRoles/a\        (void)currentRoles;  // Suppress unused warning' "${FILE}" 2>/dev/null || true
     fi
 
     # Arrow.cpp:22 - healerLines
