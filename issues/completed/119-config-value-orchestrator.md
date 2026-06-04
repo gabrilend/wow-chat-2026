@@ -30,141 +30,150 @@ Problems:
 
 ## Intended Behavior
 
-### Profile-Aware Config Registry
+### Profile-Aware Config Patches — One File Per Patch
 
-Similar to patch orchestrator, each config value is a function with profile specification:
+The shape that landed (and which the rest of this document describes)
+is **one file per patch**, not the single-file registry the original
+draft proposed. The single-file registry was implemented first and
+quickly split into per-file pieces during early use, because:
+
+- Per-file gives clean git history on each patch (no merge conflicts
+  across unrelated patches in the same file)
+- Each patch is independently inspectable, testable, and editable
+- The C-patch (config) layer aligns with the B-patch (source) layer's
+  existing per-file shape
+- Adding a new config means dropping a new file in `config/patches/`,
+  not editing a shared file
+
+Layout:
+
+```
+config/patches/                         (config patches — modify .conf files)
+├── C001-database-connections.sh
+├── C002-directory-paths.sh
+├── C003-run-speed-80-percent.sh
+├── C004-fall-damage-10x.sh
+├── C005-exp-rate-2x.sh
+├── C006a-max-level-80.sh   (alpha)
+├── C006b-max-level-20.sh   (beta/release)
+├── C006c-max-level-40.sh   (vanilla)
+├── C007a-starting-level-40.sh
+├── C007b-starting-level-1.sh
+├── C007c-starting-level-20.sh
+├── C008-gm-login-state.sh
+├── C009-instant-teleport-beta.sh
+├── C010-network-ports.sh
+├── C011-realmlist-setup.sh
+├── C012-playerbot-level-cap.sh
+├── C014-vanilla-playerbot-level-cap.sh
+└── C015-vanilla-disable-deathknight.sh
+
+patches/                                (source/end patches)
+├── patches.sh                          (orchestrator — sources both families)
+├── B001-aoe-loot-item-namespace.sh    (B = PHASE_BEGIN, pre-compile source mods)
+├── B002-playerbots-ale-login-hook.sh
+├── ... (B003 through B024)
+└── E-patches.sh                        (E = PHASE_END, post-compile setup)
+```
+
+Each C-patch is a small bash file with one function and a profile
+declaration:
 
 ```bash
-# config/config-registry.sh
-
-# -- {{{ config_run_speed_80_percent
+# config/patches/C003-run-speed-80-percent.sh
+#!/usr/bin/env bash
+# C003 - Run Speed 80%
 # Set player run speed to 80% (slower, more deliberate exploration)
 # Profiles: all
-# File: worldserver.conf
+
+# -- {{{ config_run_speed_80_percent
 config_run_speed_80_percent() {
     local conf="${INSTALL_DIR}/etc/worldserver.conf"
     sed -i 's|^Rate.Run.Speed.*=.*|Rate.Run.Speed = 0.8|' "${conf}"
 }
-declare -A CONFIG_PROFILES
-CONFIG_PROFILES[config_run_speed_80_percent]="alpha release beta"
-# -- }}}
-
-# -- {{{ config_fall_damage_10x
-# Increase fall damage to 10x (encourages careful movement)
-# Profiles: beta
-# File: worldserver.conf
-config_fall_damage_10x() {
-    local conf="${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i 's|^Rate.Damage.Fall.*=.*|Rate.Damage.Fall = 10.0|' "${conf}"
-}
-CONFIG_PROFILES[config_fall_damage_10x]="beta"
-# -- }}}
-
-# -- {{{ config_exp_rate_2x
-# Double experience rate (faster testing/iteration)
-# Profiles: beta
-# File: worldserver.conf
-config_exp_rate_2x() {
-    local conf="${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i 's|^Rate.XP.Kill.*=.*|Rate.XP.Kill = 2.0|' "${conf}"
-    sed -i 's|^Rate.XP.Quest.*=.*|Rate.XP.Quest = 2.0|' "${conf}"
-}
-CONFIG_PROFILES[config_exp_rate_2x]="beta"
-# -- }}}
-
-# -- {{{ config_database_connections
-# Set database connection strings (project-specific, all profiles)
-# Profiles: all
-# File: authserver.conf, worldserver.conf
-config_database_connections() {
-    sed -i 's|^LoginDatabaseInfo.*=.*|LoginDatabaseInfo = "127.0.0.1;3307;ritz;menardi;'"${DB_AUTH}"'"|' "${INSTALL_DIR}/etc/authserver.conf"
-    sed -i 's|^LoginDatabaseInfo.*=.*|LoginDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;'"${DB_AUTH}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i 's|^WorldDatabaseInfo.*=.*|WorldDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;'"${DB_WORLD}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i 's|^CharacterDatabaseInfo.*=.*|CharacterDatabaseInfo = "127.0.0.1;3307;ritz;menardi;'"${DB_CHARS}"'"|' "${INSTALL_DIR}/etc/worldserver.conf"
-}
-CONFIG_PROFILES[config_database_connections]="alpha release beta"
-# -- }}}
-
-# -- {{{ config_directory_paths
-# Set project directory paths (DataDir, LogsDir, etc.)
-# Profiles: all
-# File: authserver.conf, worldserver.conf
-config_directory_paths() {
-    local conf_auth="${INSTALL_DIR}/etc/authserver.conf"
-    local conf_world="${INSTALL_DIR}/etc/worldserver.conf"
-
-    sed -i 's|^DataDir.*=.*|DataDir = "'"${DIR}"'/data-files"|' "${conf_world}"
-    sed -i 's|^LogsDir.*=.*|LogsDir = "'"${LOGS_DIR}"'"|' "${conf_world}"
-    sed -i 's|^LogsDir.*=.*|LogsDir = "'"${LOGS_DIR}"'"|' "${conf_auth}"
-    sed -i 's|^SourceDirectory.*=.*|SourceDirectory = "'"${AC_CODE_DIR}"'"|' "${conf_auth}"
-    sed -i 's|^BuildDirectory.*=.*|BuildDirectory = "'"${BUILD_DIR}"'"|' "${conf_world}"
-    sed -i 's|^SourceDirectory.*=.*|SourceDirectory = "'"${AC_CODE_DIR}"'"|' "${conf_world}"
-    sed -i 's|^MySQLExecutable.*=.*|MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"|' "${conf_auth}"
-    sed -i 's|^MySQLExecutable.*=.*|MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"|' "${conf_world}"
-}
-CONFIG_PROFILES[config_directory_paths]="alpha release beta"
+CONFIG_PROFILES[config_run_speed_80_percent]="all"
 # -- }}}
 ```
 
-### Orchestrator Function
+The naming convention is `CNNN-short-description.sh` where the index is
+sequential (with letter suffixes for variants — C006a/b/c are three
+versions of "max level" set per profile).
+
+### Orchestrator — Glob-Source All C Files
+
+`patches/patches.sh` (the single entry point that build scripts source)
+glob-sources every `B*.sh` in its own directory and every `C*.sh` in
+`config/patches/`. The `apply_config_values` function walks the
+collected `config_*` functions and applies the ones whose
+`CONFIG_PROFILES` declaration includes the active profile:
 
 ```bash
-# -- {{{ apply_config_values
-# Apply all config values for current profile
-# Called after init_config() copies .dist to .conf
+# patches/patches.sh (simplified)
+
+# Source all B-patches
+for f in "${PATCHES_DIR}"/B[0-9][0-9][0-9]-*.sh; do
+    [[ -f "${f}" ]] && source "${f}"
+done
+
+# Source the E-patch file (currently single-file; see E-Patch Split below)
+[[ -f "${PATCHES_DIR}/E-patches.sh" ]] && source "${PATCHES_DIR}/E-patches.sh"
+
+# Source all C-patches (called from E-patches.sh's apply_config_values
+# in the current implementation; ideally moves to patches.sh top level)
+# ...
+
 apply_config_values() {
-    echo "Applying config values for profile: ${PROFILE}..."
-
-    source "${DIR}/config/config-registry.sh"
-
-    # Get list of all config functions
-    local config_funcs=$(declare -F | grep "^declare -f config_" | sed 's/declare -f //')
-
-    for func in ${config_funcs}; do
-        # Check if this config applies to current profile
+    for f in "${DIR}/config/patches"/C*.sh; do
+        source "${f}"
+    done
+    for func in "${!CONFIG_PROFILES[@]}"; do
         local profiles="${CONFIG_PROFILES[$func]}"
-        if [[ " ${profiles} " =~ " ${PROFILE} " ]] || [[ " ${profiles} " =~ " all " ]]; then
+        if [[ " ${profiles} " =~ " ${PROFILE} " ]] || [[ "${profiles}" == "all" ]]; then
             ${func}
-            echo "  [✓] ${func}"
         fi
     done
-
-    echo "Config values applied"
 }
-# -- }}}
 ```
 
-### Integration with Build Script
+### E-Patch Split — Future Work
 
-Replace inline `sed` commands in `cmd_update`:
+The E (PHASE_END) family currently lives in a single file
+`patches/E-patches.sh` with ~15 individual `patch_E###` functions plus
+shared helpers. This is the OLD single-file shape that the C family
+already moved away from. Aligning the E family with B and C (per-file
+layout — `patches/E001-lua-script-symlinks.sh`, `E004-log-directory-
+setup.sh`, etc.) is left as follow-up work because it requires moving
+shared helpers (`_register_with_updatefetcher`, `apply_config_values`)
+to either `patches.sh` or a new `patches/_helpers.sh`. The mechanical
+file split is straightforward but the helper-relocation deserves its
+own focused commit.
 
-```bash
-# Old (lines 1175-1193):
-echo "Configuring database connections..."
-sed -i 's|^LoginDatabaseInfo.*=.*|...'
-sed -i 's|^WorldDatabaseInfo.*=.*|...'
-# ... 10 more lines
-
-# New:
-apply_config_values
-```
+When that work lands, the orchestrator simplifies further (all three
+families glob-sourced uniformly from their respective directories).
 
 ## Benefits
 
-1. **Centralized Registry** - All config values in one place
-2. **Profile-Aware** - Easy to see which settings apply to which profiles
-3. **Easy to Add** - New config = new function + profile declaration
-4. **Self-Documenting** - Comments explain what each setting does and why
+1. **Per-file Patches** - Each config is its own file under `config/patches/`
+2. **Profile-Aware** - Each patch declares which profiles it applies to
+3. **Easy to Add** - New config = drop a new file in `config/patches/`
+4. **Self-Documenting** - File header + function comment explain purpose
 5. **Testable** - Can list all configs for a profile without applying
+6. **Aligns with B-patches** - Same per-file shape as `patches/B###*.sh`
 
 ## Implementation Steps
 
-1. Create `config/config-registry.sh`
-2. Add `apply_config_values()` to `scripts/azerothcore`
-3. Move existing database/path configs to registry functions
-4. Add gameplay configs (run speed, fall damage, exp rate)
-5. Replace inline sed calls with `apply_config_values`
-6. Test all three profiles build with correct configs
+1. Create `config/patches/` directory
+2. Add one `config_*` function per concern, one file per function:
+   - C001 database connections, C002 directory paths, C003 run speed,
+     C004 fall damage, C005 exp rate, etc.
+3. Source `apply_config_values` from `patches/patches.sh` (the unified
+   orchestrator for the build pipeline)
+4. The orchestrator glob-sources every `config/patches/C*.sh` at runtime
+   so dropping in a new file is the only step needed to register a new
+   patch
+5. Replace inline sed calls in the build script with a single
+   `apply_config_values` call
+6. Test all profiles build with correct configs
 
 ## Profile Specification Format
 
