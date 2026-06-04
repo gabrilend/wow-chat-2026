@@ -148,13 +148,32 @@ fork). Each step up adds something. Vanilla is the floor.
 
 ## Current Behavior
 
-- `scripts/profiles` knows three profiles. Running it does not list
-  vanilla; selecting `vanilla` via `.profile` would be unrecognized
-  by downstream scripts.
-- `scripts/install` has no `PROFILE_MODULES["vanilla"]` entry, no
-  source-dir mapping for vanilla in `get_profile_paths`, and no
-  `installed-files-vanilla/` install location.
-- There is no `installed-files-vanilla/` directory.
+- `scripts/profiles` knows all four profiles including vanilla; the
+  display loop lists them in floor→relic→stable→bleeding order.
+- `scripts/install` recognizes vanilla, clones the upstream fork into
+  `source-beta/`, installs the configured module set, compiles, and
+  populates `installed-files-vanilla/` with binaries and configs.
+- The MySQL setup block creates the three `acore_*_vanilla` databases
+  and grants `ritz` full privileges on them.
+- **However:** the install does NOT seed the world / characters /
+  auth databases with their base content. AC's `DatabaseLoader::Populate()`
+  in `source-beta/src/server/database/Database/DatabaseLoader.cpp:138`
+  is supposed to do this on first worldserver start, but the
+  populate phase isn't running (or is silently no-opping) on this
+  build's vanilla profile. Result: the empty `acore_world_vanilla`
+  causes the worldserver's Update phase to crash on the very first
+  incremental update with `Table 'acore_world_vanilla.version'
+  doesn't exist` — because `version` lives in the base content
+  (`source-beta/data/sql/base/db_world/version.sql`), which never
+  ran. The auto-setup logic in `DBUpdater<T>::Update`'s
+  `CheckUpdateTable` lambda only seeds the two tracking tables
+  (`updates`, `updates_include`) — not the actual content tables.
+- `installed-files-vanilla/bin/dbimport` exists but aborts on launch
+  with ACE00046 (`mysql_get_client_version()` runtime/compile-time
+  mismatch). The binary needs `LD_LIBRARY_PATH=${DIR}/mysql/installed-files/lib`
+  to find the project's libmysqlclient — `scripts/authserver` and
+  `scripts/worldserver` set this, but there is no wrapper for
+  `dbimport`, so any caller hits the version check and fails.
 
 ## Intended Behavior
 
@@ -442,6 +461,43 @@ simply omit `vanilla` from their list. The system is hot-swappable
 in the sense the user described: changing profiles changes which
 patches run, with no cross-contamination across profile data.
 
+### Base Content Seeding
+
+Creating the empty databases is not enough — the world database
+needs roughly 300 base SQL files (~294 MB) seeded before any
+worldserver can boot against it. The files live at
+`source-beta/data/sql/base/db_{auth,characters,world}/` and are
+checked into the upstream AC source tree, so they're always
+available right after `scripts/install` clones the source.
+
+The seed is a per-profile-DB one-time operation. It belongs in the
+install flow, not the worldserver-boot flow, because:
+
+1. **The worldserver path is unreliable here.** AC's
+   `DatabaseLoader::Populate()` is supposed to detect an empty DB
+   and import the base, but its early-exit conditions (DB has any
+   table → skip; `MySQLExecutable` config not resolvable → skip;
+   one base file errors → silent return-false-and-continue) mean
+   it can silently no-op while still letting the subsequent Update
+   phase run and crash on the first missing-table reference. We
+   want the seed to be a loud, traceable step.
+2. **It's a slow operation that wants its own progress output.**
+   The world DB alone is ~300 files. Burying it behind `worldserver`
+   would make the first boot look hung; surfacing it under
+   `scripts/install` puts the time cost where the user expects
+   slow work.
+3. **It's idempotent and cheap to re-check.** Subsequent installs
+   detect a populated DB by a marker table (`account` for auth,
+   `characters` for characters, `version` for world) and skip
+   straight through. A user can re-run install freely.
+
+The seed uses the project's bundled mysql client
+(`mysql/installed-files/bin/mysql`) over the project's MySQL socket
+(`mysql/databases/mysql.sock`), iterating each base directory's
+`*.sql` files in sorted order. Failure on any file is fatal —
+fall through to the user with the failing file's name and the
+mysql error.
+
 ## Implementation Steps
 
 1. Add vanilla entries to `scripts/profiles` (four arrays + display loop + help text).
@@ -454,10 +510,12 @@ patches run, with no cross-contamination across profile data.
 8. Sub-issue 148a: write the DK disablement SQL (delete DK rows from `playercreateinfo`, clear DK bit on `realmlist.flag`).
 9. Sub-issue 148h: write the starting-equipment SQL (per-class level-20 white kit, no head/shoulders, cape included).
 10. Sub-issue 148i: write the flight-path removal SQL (clear flightmaster NPC flag, add flavor gossip).
-11. Run `scripts/install --profile vanilla` from a clean state; verify `installed-files-vanilla/` populates and binaries appear.
-12. Manually switch active profile via `echo vanilla > .profile`, then boot worldserver. Confirm: level cap enforced at 40, characters start at level 20 in correct faction zones with full white-quality class-specific equipment (no helmet, no shoulders, cape present), DK class unavailable, flight masters show no taxi icon and either no gossip or flavor gossip, boats and zeppelins still work, mod-aoe-loot key works, mod-fireworks-on-level fires on ding, mod-solo-lfg accepts a solo queue, playerbots spawn and behave at the 1..40 level range, no ALE hooks fire beyond the starter-equip hook (148k) and the soren-chat hooks (916), no Everland Ghostsong custom NPCs or spawn behavior present.
-13. Update issue 136 with the canonical vanilla definition; update `CLAUDE.md` profile summary.
-14. Sub-issues 916a-n: implement mod-soren-chat in stages — see issue 916 for the full plan. The order recommended there lands the foundation set first (916a-c, plumbing), then the guidance layer (916d-i + 916j), then the chat layer (916k-l), with operations (916m-n) interleaved. Verification at each sub-issue checkpoint.
+11. Extend `scripts/install`'s MySQL setup block: after the existing `CREATE DATABASE` step, seed each of the three databases from `source-beta/data/sql/base/db_{auth,characters,world}/`. Idempotent on a marker table per DB (`account` / `characters` / `version`). See "Base Content Seeding" above for the rationale on owning this at install time rather than relying on `DatabaseLoader::Populate()`.
+12. Add `scripts/dbimport` — a small wrapper that exports `LD_LIBRARY_PATH=${DIR}/mysql/installed-files/lib` and execs `${INSTALL_DIR}/bin/dbimport` for the active profile (with `--profile <name>` override consistent with `scripts/authserver` / `scripts/worldserver`). Without this wrapper, the bundled `dbimport` binary aborts on launch with ACE00046 because the system libmysqlclient (8.4.0) doesn't match what AC compiled against (9.6.0). Not in the install boot path today, but any operator reaching for `dbimport` hits the version check and fails — treating that as a blocker per the project's "warnings are errors" rule.
+13. Run `scripts/install --profile vanilla` from a clean state; verify `installed-files-vanilla/` populates and binaries appear.
+14. Manually switch active profile via `echo vanilla > .profile`, then boot worldserver. Confirm: level cap enforced at 40, characters start at level 20 in correct faction zones with full white-quality class-specific equipment (no helmet, no shoulders, cape present), DK class unavailable, flight masters show no taxi icon and either no gossip or flavor gossip, boats and zeppelins still work, mod-aoe-loot key works, mod-fireworks-on-level fires on ding, mod-solo-lfg accepts a solo queue, playerbots spawn and behave at the 1..40 level range, no ALE hooks fire beyond the starter-equip hook (148k) and the soren-chat hooks (916), no Everland Ghostsong custom NPCs or spawn behavior present.
+15. Update issue 136 with the canonical vanilla definition; update `CLAUDE.md` profile summary.
+16. Sub-issues 916a-n: implement mod-soren-chat in stages — see issue 916 for the full plan. The order recommended there lands the foundation set first (916a-c, plumbing), then the guidance layer (916d-i + 916j), then the chat layer (916k-l), with operations (916m-n) interleaved. Verification at each sub-issue checkpoint.
 
 ## Sub-Issues
 

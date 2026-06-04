@@ -149,6 +149,8 @@ get_profile_paths() {
     BUILD_DIR="${DIR}/build-${PROFILE}"
     MYSQL_DIR="${DIR}/mysql/installed-files"
     BOOST_DIR="${DIR}/libs/boost"
+    CCACHE_BIN="${DIR}/libs/ccache/bin/ccache"
+    CCACHE_CACHE_DIR="${DIR}/build-cache"
     BUILD_DIR_SHADOW="${DIR}/build-shadow"
     INSTALL_DIR_SHADOW="${DIR}/installed-files-shadow"
 }
@@ -278,6 +280,27 @@ do_build() {
     fi
     echo "Using local Boost from ${BOOST_DIR}"
 
+    # ccache check. Cache content lives at ${CCACHE_CACHE_DIR} (project-
+    # local, visible) rather than the per-user default at ~/.ccache so
+    # the cache lifecycle ties to this project, not the operator's
+    # home. See issue 149 for the design rationale (TLDR: the patch-
+    # and-unpatch flow walks file mtimes forward each build, which
+    # would force unnecessary make rebuilds; ccache hashes content
+    # rather than trusting mtimes, so identical-content rebuilds are
+    # cache hits).
+    # Self-bootstrap ccache if missing. scripts/ccache is idempotent
+    # — present binary → instant exit, missing → ~30s first-time build
+    # from libs/ccache-src. Either way the operator never has to
+    # remember to invoke ccache manually before compile.
+    if [[ ! -x "${CCACHE_BIN}" ]]; then
+        echo "Local ccache not found, building it now..."
+        "${DIR}/scripts/ccache"
+    fi
+    mkdir -p "${CCACHE_CACHE_DIR}"
+    export CCACHE_DIR="${CCACHE_CACHE_DIR}"
+    echo "Using local ccache from ${CCACHE_BIN}"
+    echo "  Cache: ${CCACHE_CACHE_DIR}"
+
     # Only run cmake if not already configured, or if forced
     if [[ ! -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" || "${FORCE_REBUILD}" == "true" ]]; then
         echo ""
@@ -291,6 +314,8 @@ do_build() {
           -DCONF_DIR="${INSTALL_DIR}/etc" \
           -DCMAKE_C_COMPILER="${CLANG_DIR}" \
           -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}" \
+          -DCMAKE_C_COMPILER_LAUNCHER="${CCACHE_BIN}" \
+          -DCMAKE_CXX_COMPILER_LAUNCHER="${CCACHE_BIN}" \
           -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common -I${LUAJIT_INC} -Wno-enum-constexpr-conversion -fcolor-diagnostics" \
           -DCMAKE_BINARY_DIR="${BUILD_DIR_SHADOW}" \
           -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}" \

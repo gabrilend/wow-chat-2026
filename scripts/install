@@ -288,7 +288,9 @@ for mod_name in ${MODULES}; do
     fi
 done
 
-# Call compile script
+# Call compile script. compile self-bootstraps ccache (issue 149)
+# and update funnels through compile too, so no extra ccache call
+# is needed here.
 echo ""
 "${DIR}/scripts/compile" "${COMPILE_ARGS[@]}"
 
@@ -305,9 +307,76 @@ echo "  Characters:    ${DB_CHARS}"
 
 MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
 
-# Check if databases already exist
+# {{{ seed_database_base
+# Import the base SQL content for one database. Idempotent: if the
+# marker table is already present, skip the import. Marker tables are
+# the first content table created by each DB's base set (account for
+# auth, characters for characters, version for world).
+#
+# AC's DatabaseLoader::Populate() in
+# source-beta/src/server/database/Database/DatabaseLoader.cpp:138
+# is supposed to do this on first worldserver boot, but its early-exit
+# conditions (any table present → skip; MySQLExecutable unresolvable →
+# skip; one base file failure → silent return-false-and-continue) make
+# it possible for the populate phase to no-op silently while the
+# subsequent Update phase still runs and crashes on the first missing
+# content table. Owning the seed at install time turns a silent
+# failure into a loud, traceable one. See issue 148's
+# "Base Content Seeding" section for the full rationale.
+seed_database_base() {
+    local db="${1}"
+    local base_dir="${2}"
+    local marker_table="${3}"
+
+    if "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+        -u ritz -pmenardi "${db}" \
+        -e "SHOW TABLES LIKE '${marker_table}'" 2>/dev/null | grep -q "${marker_table}"; then
+        echo "  ${db}: already seeded (${marker_table} table present, skipping)"
+        return 0
+    fi
+
+    if [[ ! -d "${base_dir}" ]]; then
+        echo "  ERROR: base directory not found for ${db}: ${base_dir}"
+        return 1
+    fi
+
+    local total
+    total=$(find "${base_dir}" -maxdepth 1 -name "*.sql" | wc -l)
+    if [[ "${total}" -eq 0 ]]; then
+        echo "  ERROR: no .sql files in ${base_dir}"
+        return 1
+    fi
+
+    echo "  ${db}: importing ${total} base files from ${base_dir#${DIR}/}/..."
+
+    local count=0
+    local file
+    for file in "${base_dir}"/*.sql; do
+        count=$((count + 1))
+        # Quiet by default to avoid 300+ lines of noise; print every
+        # 50th and the last so the user sees the import is progressing
+        # without burying everything else in the install output.
+        if (( count % 50 == 0 || count == total )); then
+            printf "    [%d/%d] %s\n" "${count}" "${total}" "$(basename "${file}")"
+        fi
+        if ! "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+            -u ritz -pmenardi "${db}" < "${file}" 2>&1; then
+            echo "  ERROR: failed importing $(basename "${file}") into ${db}"
+            echo "  Path: ${file}"
+            return 1
+        fi
+    done
+
+    echo "  ${db}: base import complete (${count} files)"
+    return 0
+}
+# }}}
+
+# Check whether the databases exist at all; create them if not. Note
+# this only checks existence, not whether they've been seeded — the
+# seed_database_base step below handles seeding idempotently.
 if "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u ritz -pmenardi -e "USE ${DB_WORLD}" 2>/dev/null; then
-    echo "  Databases already configured (skipping setup)"
+    echo "  Databases already exist (skipping CREATE)"
 else
     if [[ ! -S "${MYSQL_SOCKET}" ]]; then
         echo ""
@@ -319,8 +388,10 @@ else
         echo "To complete setup:"
         echo "  1. Start MySQL: ./scripts/start-mysql"
         echo "  2. Re-run install: ./scripts/install"
-    else
-        if "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u root << EOF
+        exit 1
+    fi
+
+    if ! "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u root << EOF
 DROP USER IF EXISTS 'ritz'@'localhost';
 CREATE USER 'ritz'@'localhost' IDENTIFIED BY 'menardi' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0;
 CREATE DATABASE IF NOT EXISTS \`${DB_AUTH}\` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
@@ -331,13 +402,26 @@ GRANT ALL PRIVILEGES ON \`${DB_WORLD}\` . * TO 'ritz'@'localhost' WITH GRANT OPT
 GRANT ALL PRIVILEGES ON \`${DB_CHARS}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 EOF
-        then
-            echo "  Databases and user configured successfully"
-        else
-            echo "  Warning: Database setup failed - may need manual configuration"
-        fi
+    then
+        echo "  ERROR: Database creation failed"
+        exit 1
     fi
+
+    echo "  Databases and user created successfully"
 fi
+
+# Seed base content for each DB. This is the missing step that
+# leaves worldserver crashing on first boot with
+# "Table 'acore_world_<profile>.version' doesn't exist" — the
+# version table lives in source-beta/data/sql/base/db_world/version.sql
+# along with ~300 other content tables that AC's Populate() phase
+# should be importing but isn't on this profile.
+echo ""
+echo "Seeding base database content..."
+echo "  Source: ${AC_CODE_DIR#${DIR}/}/data/sql/base/"
+seed_database_base "${DB_AUTH}"  "${AC_CODE_DIR}/data/sql/base/db_auth"       "account"
+seed_database_base "${DB_CHARS}" "${AC_CODE_DIR}/data/sql/base/db_characters" "characters"
+seed_database_base "${DB_WORLD}" "${AC_CODE_DIR}/data/sql/base/db_world"      "version"
 
 # Copy data files if needed
 if [[ ! -d "${DIR}/data-files/dbc" ]]; then

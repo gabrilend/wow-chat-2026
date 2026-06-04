@@ -1,0 +1,136 @@
+#!/bin/bash
+# scripts/ccache - Download and compile ccache from source
+# Installs to libs/ccache. Project-local compiler cache used by
+# scripts/compile to avoid recompiling translation units whose
+# preprocessed content is unchanged from a prior build. The patch-
+# and-unpatch flow in patches.sh re-touches source mtimes every
+# compile, which would otherwise force make to rebuild a cascade of
+# .o files for no semantic reason. ccache hashes content rather than
+# trusting mtimes, so identical-content rebuilds are cache hits and
+# the compile phase finishes in seconds. See issue 149 for the full
+# design.
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+set -e
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+# ccache 4.x is the modern CMake-built line. Pinning a known-good
+# release rather than tracking HEAD so the project's build pipeline
+# stays reproducible. Update by bumping CCACHE_VERSION and verifying
+# the tarball still extracts with `tar -xJf` (xz format).
+CCACHE_VERSION="4.10.2"
+CCACHE_DIR_INSTALL="${DIR}/libs/ccache"
+CCACHE_DIR_SRC="${DIR}/libs/ccache-src"
+CCACHE_TARBALL="ccache-${CCACHE_VERSION}.tar.xz"
+CCACHE_URL="https://github.com/ccache/ccache/releases/download/v${CCACHE_VERSION}/${CCACHE_TARBALL}"
+THREADS="${THREADS:-4}"
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/ccache"
+    echo ""
+    echo "Download and compile ccache ${CCACHE_VERSION} from source."
+    echo "Installs to: ${CCACHE_DIR_INSTALL}"
+    echo ""
+    echo "ccache is the compiler-cache shim used by scripts/compile."
+    echo "Cache content lives at ${DIR}/build-cache/ (created on first"
+    echo "compile run). See issue 149."
+    echo ""
+    echo "Options:"
+    echo "  --help    Show this help message"
+}
+# }}}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    show_help
+    exit 0
+fi
+
+# =============================================================================
+# Main
+# =============================================================================
+
+echo "Installing ccache ${CCACHE_VERSION}..."
+
+mkdir -p "${DIR}/libs"
+
+# {{{ Skip if already installed
+# Idempotent: a previous successful build leaves the binary at the
+# expected path; re-running this script is a no-op. Operator can
+# force a rebuild by deleting libs/ccache first.
+if [[ -x "${CCACHE_DIR_INSTALL}/bin/ccache" ]]; then
+    echo "ccache already installed at ${CCACHE_DIR_INSTALL}"
+    echo "  Version: $("${CCACHE_DIR_INSTALL}/bin/ccache" --version | head -1)"
+    echo "To reinstall, remove ${CCACHE_DIR_INSTALL} first."
+    exit 0
+fi
+# }}}
+
+# {{{ Download
+if [[ ! -f "${DIR}/libs/${CCACHE_TARBALL}" ]]; then
+    echo "Downloading ccache ${CCACHE_VERSION}..."
+    curl -L --fail --progress-bar -o "${DIR}/libs/${CCACHE_TARBALL}" "${CCACHE_URL}"
+fi
+# }}}
+
+# {{{ Verify download is a valid xz tarball
+if ! file "${DIR}/libs/${CCACHE_TARBALL}" | grep -q "XZ compressed"; then
+    echo "Error: Downloaded file is not a valid xz archive"
+    echo "Contents: $(head -c 100 "${DIR}/libs/${CCACHE_TARBALL}")"
+    rm -f "${DIR}/libs/${CCACHE_TARBALL}"
+    exit 1
+fi
+# }}}
+
+# {{{ Extract
+echo "Extracting..."
+rm -rf "${CCACHE_DIR_SRC}"
+mkdir -p "${CCACHE_DIR_SRC}"
+tar -xJf "${DIR}/libs/${CCACHE_TARBALL}" -C "${CCACHE_DIR_SRC}" --strip-components=1
+# }}}
+
+# {{{ Configure and build
+# ccache 4.x mandates libzstd. If the header isn't found, cmake
+# bails with a clear error — surface that rather than silently
+# disabling caching modes.
+echo "Building ccache..."
+
+CCACHE_BUILD_DIR="${CCACHE_DIR_SRC}/build"
+mkdir -p "${CCACHE_BUILD_DIR}"
+
+cmake -S "${CCACHE_DIR_SRC}" -B "${CCACHE_BUILD_DIR}" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX="${CCACHE_DIR_INSTALL}" \
+    -DREDIS_STORAGE_BACKEND=OFF
+
+cmake --build "${CCACHE_BUILD_DIR}" -j${THREADS}
+cmake --install "${CCACHE_BUILD_DIR}"
+# }}}
+
+# {{{ Cleanup
+echo "Cleaning up..."
+rm -rf "${CCACHE_DIR_SRC}"
+# }}}
+
+# {{{ Verify
+if [[ ! -x "${CCACHE_DIR_INSTALL}/bin/ccache" ]]; then
+    echo "Error: ccache binary not found after install"
+    echo "Expected: ${CCACHE_DIR_INSTALL}/bin/ccache"
+    exit 1
+fi
+# }}}
+
+echo ""
+echo "ccache ${CCACHE_VERSION} installed to ${CCACHE_DIR_INSTALL}"
+echo "  Version: $("${CCACHE_DIR_INSTALL}/bin/ccache" --version | head -1)"
+echo ""
+echo "scripts/compile will pick it up automatically on next build."
+echo "Cache content will accumulate at ${DIR}/build-cache/."
