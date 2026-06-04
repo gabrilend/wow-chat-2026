@@ -36,6 +36,7 @@ declare -A PROFILE_MODULES=(
     ["alpha"]="mod-eluna mod-transmog"
     ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
     ["release"]="mod-ale mod-playerbots"
+    ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
 )
 # }}}
 
@@ -46,6 +47,8 @@ declare -A PROFILE_MODULES=(
 FORCE_REBUILD=false
 
 # {{{ parse_args
+# Each option supports both --opt value and --opt=value forms. The
+# catch-all errors instead of silently dropping unknown args.
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "${1}" in
@@ -58,6 +61,14 @@ parse_args() {
                     exit 1
                 fi
                 ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                if [[ -z "${PROFILE}" ]]; then
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                shift
+                ;;
             --threads)
                 if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
                     THREADS="${2}"
@@ -66,6 +77,14 @@ parse_args() {
                     echo "Error: --threads requires a numeric argument"
                     exit 1
                 fi
+                ;;
+            --threads=*)
+                THREADS="${1#*=}"
+                if [[ ! "${THREADS}" =~ ^[0-9]+$ ]]; then
+                    echo "Error: --threads requires a numeric argument"
+                    exit 1
+                fi
+                shift
                 ;;
             --force)
                 FORCE_REBUILD=true
@@ -80,7 +99,9 @@ parse_args() {
                 exit 0
                 ;;
             *)
-                shift
+                echo "Error: unrecognized argument '${1}'"
+                echo "Run with --help to see available options."
+                exit 1
                 ;;
         esac
     done
@@ -116,9 +137,11 @@ show_help() {
 
 # {{{ get_profile_paths
 get_profile_paths() {
+    # vanilla shares source-beta with release/beta — see issue 148.
     case "${PROFILE}" in
         release) AC_CODE_DIR="${DIR}/source-beta"  ;;
         beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
+        vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
         alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
         *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
     esac
@@ -302,6 +325,21 @@ do_build() {
         return 1
     fi
 
+    # Pre-install cleanup. cmake's
+    #   install(DIRECTORY .../LuaEngine/extensions DESTINATION lua_scripts/)
+    # in source-beta/modules/CMakeLists.txt fails with "File exists" if
+    # anything (broken symlink included) already squats
+    # installed-files-shadow/bin/lua_scripts/extensions/ — its
+    # file(INSTALL TYPE DIRECTORY) refuses to clobber a non-directory.
+    # Strip any leftover E001 symlinks from previous builds before
+    # install runs; the post-install patch_E001 call below re-creates
+    # them fresh against the current profile's source tree.
+    echo ""
+    echo "Clearing prior Lua script symlinks (so cmake --install can write extensions/)..."
+    TARGET_INSTALL_DIR="${INSTALL_DIR_SHADOW}"
+    unpatch_E001_lua_script_symlinks
+    unset TARGET_INSTALL_DIR
+
     echo ""
     echo "Installing to shadow directory..."
     local install_result=0
@@ -314,15 +352,19 @@ do_build() {
         return 1
     fi
 
-    # Setup Lua script symlinks in shadow install dir
-    mkdir -p "${INSTALL_DIR_SHADOW}/bin/lua_scripts"
-    ln -sfn "${DIR}/src/lua" "${INSTALL_DIR_SHADOW}/bin/lua_scripts/custom"
-    if [[ -d "${DIR}/src/lua/extensions" ]]; then
-        ln -sfn "${DIR}/src/lua/extensions" "${INSTALL_DIR_SHADOW}/bin/lua_scripts/extensions"
-    fi
-
-    # Apply PHASE_END patches to shadow directory
+    # Post-install Lua script symlinks for the shadow install. Delegates
+    # to E001's patch fn so the rm-then-link teardown logic lives in one
+    # place (handles cmake's just-installed real extensions/ directory
+    # as well as stale symlinks). Run unconditionally — release/alpha
+    # don't carry E001 in PHASE_END_PATCHES but still benefit from at
+    # least a lua_scripts/custom path for mod-ale to look at.
     TARGET_INSTALL_DIR="${INSTALL_DIR_SHADOW}"
+    patch_E001_lua_script_symlinks
+
+    # Apply PHASE_END patches to shadow directory. For beta/vanilla this
+    # re-runs E001 idempotently (no-op after the call above); for
+    # release/alpha it does the rest of their PHASE_END (E004 logs,
+    # E006 configs, etc.) without touching lua_scripts/.
     apply_patches_end
     unset TARGET_INSTALL_DIR
 
@@ -357,6 +399,11 @@ check_modules_configured
 
 # Source patch functions
 source "${DIR}/patches/patches.sh"
+
+# Hard-reset source-beta and every module to HEAD before re-applying
+# patches. Source trees are build artifacts (issue 136); anything in the
+# working tree is discardable. See patches.sh:reset_source_trees.
+reset_source_trees
 
 # Apply pre-compile patches (idempotent)
 apply_patches_begin

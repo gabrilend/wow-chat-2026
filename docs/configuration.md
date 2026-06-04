@@ -1,17 +1,20 @@
 # Configuration Reference
 
-This document describes all configuration options for wow-chat-2, including server settings,
-module configurations, Lua script constants, and MySQL settings.
+This document describes all configuration options for wow-chat-2026, including server settings,
+module configurations, Lua script constants, and MySQL settings. Paths use
+`{profile}` as a placeholder for the active profile (read from `.profile`
+at the project root: `vanilla`, `alpha`, `release`, or `beta`). See
+`issues/136-canonical-profile-definitions.md` for what each profile means.
 
 ## Quick Reference
 
 | Config File | Purpose | Restart Required |
 |-------------|---------|------------------|
-| `installed-files/etc/authserver.conf` | Login server | Yes |
-| `installed-files/etc/worldserver.conf` | Game server | Most settings |
-| `installed-files/etc/modules/mod_eluna.conf` | Lua scripting engine | Yes |
+| `installed-files-{profile}/etc/authserver.conf` | Login server | Yes |
+| `installed-files-{profile}/etc/worldserver.conf` | Game server | Most settings |
+| `installed-files-{profile}/etc/modules/mod_ale.conf` | Lua scripting engine | Yes |
 | `mysql/conf/my.cnf` | Database server | Yes |
-| `src/lua/periodic_events.lua` | Game loop timings | `.reload eluna` |
+| `src/lua/periodic_events.lua` | Game loop timings | `.reload ale` |
 | `secrets.conf` | Database credentials | Yes |
 
 ---
@@ -24,20 +27,20 @@ All paths are configured to be local to the project directory.
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
-| `LogsDir` | `/mnt/mtwo/.../wow-chat-2/logs` | Authentication logs |
-| `SourceDirectory` | `/mnt/mtwo/.../wow-chat-2/source` | AzerothCore source |
-| `MySQLExecutable` | `/mnt/mtwo/.../wow-chat-2/mysql/installed-files/bin/mysql` | Local MySQL client |
+| `LogsDir` | `/mnt/mtwo/.../wow-chat-2026/logs-{profile}` | Authentication logs |
+| `SourceDirectory` | `/mnt/mtwo/.../wow-chat-2026/source-{profile}` | AzerothCore source |
+| `MySQLExecutable` | `/mnt/mtwo/.../wow-chat-2026/mysql/installed-files/bin/mysql` | Local MySQL client |
 | `LoginDatabaseInfo` | `127.0.0.1;3307;ritz;***;acore_auth` | Database connection |
 
 ### worldserver.conf
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
-| `DataDir` | `/mnt/mtwo/.../wow-chat-2/data-files` | DBC, maps, vmaps, mmaps |
-| `LogsDir` | `/mnt/mtwo/.../wow-chat-2/logs` | Server logs |
-| `BuildDirectory` | `/mnt/mtwo/.../wow-chat-2/build` | CMake build dir |
-| `SourceDirectory` | `/mnt/mtwo/.../wow-chat-2/source` | AzerothCore source |
-| `MySQLExecutable` | `/mnt/mtwo/.../wow-chat-2/mysql/installed-files/bin/mysql` | Local MySQL client |
+| `DataDir` | `/mnt/mtwo/.../wow-chat-2026/data-files` | DBC, maps, vmaps, mmaps |
+| `LogsDir` | `/mnt/mtwo/.../wow-chat-2026/logs-{profile}` | Server logs |
+| `BuildDirectory` | `/mnt/mtwo/.../wow-chat-2026/build-{profile}` | CMake build dir |
+| `SourceDirectory` | `/mnt/mtwo/.../wow-chat-2026/source-{profile}` | AzerothCore source |
+| `MySQLExecutable` | `/mnt/mtwo/.../wow-chat-2026/mysql/installed-files/bin/mysql` | Local MySQL client |
 
 ---
 
@@ -233,21 +236,24 @@ All cross-faction interactions enabled:
 
 ## Module Configuration
 
-### Eluna (mod_eluna.conf)
+### ALE (mod_ale.conf)
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
-| `Eluna.Enabled` | true | LuaJIT scripting enabled |
-| `Eluna.TraceBack` | false | Standard error output |
-| `Eluna.ScriptPath` | "lua_scripts" | Script directory |
-| `Eluna.AutoReload` | false | Manual reload only |
-| `Eluna.BytecodeCache` | true | Cached compilation |
+| `ALE.Enabled` | true | LuaJIT scripting enabled |
+| `ALE.TraceBack` | false | Standard error output |
+| `ALE.ScriptPath` | "lua_scripts" | Script directory |
+| `ALE.AutoReload` | false | Manual reload only |
+| `ALE.BytecodeCache` | true | Cached compilation |
 
 Scripts are loaded from:
-- `installed-files/bin/lua_scripts/custom/` - Game logic scripts
-- `installed-files/bin/lua_scripts/extensions/` - Utility libraries
+- `installed-files-{profile}/bin/lua_scripts/custom/` - Game logic scripts
+- `installed-files-{profile}/bin/lua_scripts/extensions/` - Utility libraries
 
-Reload scripts with: `.reload eluna`
+Reload scripts with: `.reload ale`
+
+(The legacy `alpha` profile uses `mod_eluna.conf` with the same setting keys
+under the `Eluna.` namespace and reloads via `.reload eluna`.)
 
 ---
 
@@ -290,12 +296,12 @@ Game loop timing constants in `src/lua/periodic_events.lua`:
 ## Configuration Files Location
 
 ```
-wow-chat-2/
-├── installed-files/etc/
+wow-chat-2026/
+├── installed-files-{profile}/etc/
 │   ├── authserver.conf          # Login server config
 │   ├── worldserver.conf         # World server config (main game settings)
 │   └── modules/
-│       └── mod_eluna.conf       # Lua scripting engine
+│       └── mod_ale.conf         # Lua scripting engine (mod_eluna.conf on alpha)
 ├── mysql/conf/
 │   └── my.cnf                   # MySQL server config
 ├── src/lua/
@@ -319,8 +325,9 @@ wow-chat-2/
 ### Lua Script Changes
 
 1. Edit files in `src/lua/`
-2. Copy to `installed-files/bin/lua_scripts/custom/`
-3. Run `.reload eluna` in-game (no server restart needed)
+2. `installed-files-{profile}/bin/lua_scripts/custom/` is a symlink back to
+   `src/lua/`, so edits are visible immediately
+3. Run `.reload ale` in-game (no server restart needed; `.reload eluna` on alpha)
 
 ### Database Changes
 

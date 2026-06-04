@@ -156,8 +156,15 @@ echo ""
 
 # {{{ Check 5 - module loader sees expected modules
 echo "Module presence:"
+# vanilla joins the release|beta arm because it links the same two
+# defining modules: mod-ale (required for 148k's starter-equipment
+# auto-equip hook) and mod-playerbots (the reason the profile
+# exists at all per issue 148). vanilla's other modules
+# (mod-solo-lfg, mod-aoe-loot, mod-fireworks-on-level) aren't
+# checked here yet — the binary-strings probe stays focused on the
+# load-bearing two until there's a reason to extend.
 case "${PROFILE}" in
-    release|beta)
+    release|beta|vanilla)
         check_strings_match "worldserver references ALE" \
             "${WORLD_STRINGS}" "ALE\|LuaEngine" "match"
         check_strings_match "worldserver references playerbots" \

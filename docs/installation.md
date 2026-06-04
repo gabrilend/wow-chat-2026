@@ -6,101 +6,117 @@
 - Clang compiler toolchain
 - CMake 3.16+
 - Git
-- MySQL server (custom build at /home/ritz/programs/mysql-server/)
+- MySQL server (custom build at `${DIR}/mysql/`)
 
 ## Quick Start
 
+Active profile lives in `.profile` at the project root (`vanilla`, `alpha`,
+`release`, or `beta`). All scripts read it from there. See
+`issues/136-canonical-profile-definitions.md` for the canonical profile model
+and `issues/148-vanilla-profile-default-wotlk-playerbots.md` for the vanilla
+ruleset specification.
+
 ```bash
-# Source the azerothcore script
-source /home/ritz/games/azeroth-core/wow-chat-2026/scripts/azerothcore
+# Switch profile (writes .profile and reconfigures symlinks)
+./scripts/switch release
 
 # Fresh installation
-azerothcore install
+./scripts/install
 
-# Update existing installation
-azerothcore update
+# Update an existing installation
+./scripts/update
 ```
 
 ## Installation Process
 
-The `install-azerothcore` function performs:
+`./scripts/install` performs:
 
-1. **Source Acquisition**
-   - Clones the Playerbot-enabled AzerothCore fork
-   - Clones required modules into source/modules/
+1. **Source acquisition**
+   - Clones AzerothCore into `source-{profile}/`
+   - Clones required modules into `source-{profile}/modules/`
 
 2. **Build**
-   - Configures CMake with custom paths
-   - Compiles with Clang (-j15 parallel)
-   - Installs to installed-files/
+   - Configures CMake with profile-local paths
+   - Compiles with Clang (parallel)
+   - Installs to `installed-files-{profile}/`
 
-3. **Database Setup**
-   - Creates MySQL databases (acore_auth, acore_world, acore_characters)
+3. **Patches** (applied automatically by `apply-patches`)
+   - B-patches modify upstream source pre-compile (reverted after build)
+   - C-patches tune the runtime configs post-promote
+   - See `docs/patches/patch-registry.md` for the full pipeline
+
+4. **Database setup**
+   - Creates MySQL databases (acore_auth, acore_world, acore_characters,
+     acore_playerbots)
    - Configures user permissions
 
-4. **Configuration**
-   - Copies .conf.dist files to .conf
-   - Patches database connection strings
-   - Sets directory paths for logs, data, source
-
 5. **Symlinks**
-   - Links custom Lua scripts
+   - Links custom Lua scripts under `installed-files-{profile}/bin/lua_scripts/`
    - Links SQL customization scripts
 
 ## Running the Server
 
-```bash
-# Terminal 1: Start auth server
-source /home/ritz/games/azeroth-core/wow-chat-2026/scripts/azerothcore
-authserver
+MySQL must be started first (the C-patches read connection strings from
+`secrets.conf`):
 
-# Terminal 2: Start world server
-source /home/ritz/games/azeroth-core/wow-chat-2026/scripts/azerothcore
-worldserver
+```bash
+./scripts/start-mysql
+
+# Terminal 1
+./scripts/authserver
+
+# Terminal 2
+./scripts/worldserver
 ```
 
 ## Database Management
 
-Keira database editor available:
+Keira3 database editor:
+
 ```bash
-source /home/ritz/games/azeroth-core/wow-chat-2026/scripts/azerothcore
-keira
+./scripts/keira
 ```
 
 ## Configuration Files
 
 | File | Purpose |
 |------|---------|
-| authserver.conf | Login server settings |
-| worldserver.conf | Game world settings, rates, features |
-| mod_grownup.conf | Level scaling options |
+| `installed-files-{profile}/etc/authserver.conf` | Login server settings |
+| `installed-files-{profile}/etc/worldserver.conf` | Game world settings, rates, features |
+| `secrets.conf` | Database credentials (gitignored) |
+
+Per-module configs live under `installed-files-{profile}/etc/modules/`. The
+release/beta profiles ship `mod_ale.conf` and `mod_playerbots.conf`.
 
 ## Data Files
 
 Game data must be extracted from a WoW 3.3.5a client and placed in:
+
 ```
-/home/ritz/games/azeroth-core/wowchat-2025/data-files/
+${DIR}/data-files/
 ```
 
-Required data:
-- dbc/
-- maps/
-- vmaps/
-- mmaps/
-- cameras/ (optional)
+Required subdirectories:
+- `dbc/`
+- `maps/`
+- `vmaps/`
+- `mmaps/`
+- `cameras/` (optional)
 
 ## Troubleshooting
 
-### Validator: run server binary with --version to check build
+### Validator: check the server binary
+
 ```bash
-./installed-files/bin/worldserver --version
+./installed-files-${PROFILE}/bin/worldserver --version
 ```
 
 ### Validator: check database connectivity
+
 ```bash
-/home/ritz/programs/mysql-server/installed-files/bin/mysql \
+./mysql/installed-files/bin/mysql \
   -u ritz -p \
-  --socket=/home/ritz/programs/mysql-server/databases/mysql.sock \
+  --socket=./mysql/databases/mysql.sock \
   -e "SHOW DATABASES;"
 ```
 
@@ -110,9 +126,9 @@ Required data:
 - Ensure MySQL include path is correct in cmake command
 
 **Server crashes on startup**
-- Check logs/Errors.log for specifics
+- Check `logs-{profile}/Errors.log` for specifics
 - Verify data files are extracted correctly
 
 **Cannot connect from client**
-- Verify realmlist in acore_auth.realmlist table
-- Check firewall rules for ports 3724, 8085
+- Verify realmlist row in `acore_auth.realmlist` (C011 sets this)
+- Check firewall rules for the configured auth/world ports (C010)

@@ -20,6 +20,8 @@ fi
 # =============================================================================
 
 # {{{ parse_args
+# Each option supports both --opt value and --opt=value forms. The
+# catch-all errors instead of silently dropping unknown args.
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "${1}" in
@@ -32,12 +34,22 @@ parse_args() {
                     exit 1
                 fi
                 ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                if [[ -z "${PROFILE}" ]]; then
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
                 ;;
             *)
-                shift
+                echo "Error: unrecognized argument '${1}'"
+                echo "Run with --help to see available options."
+                exit 1
                 ;;
         esac
     done
@@ -109,11 +121,17 @@ validate_shadow_worldserver() {
     local VALIDATION_LOG="${DIR}/tmp/shadow-validation-${PROFILE}.log"
     mkdir -p "${DIR}/tmp"
     > "${VALIDATION_LOG}"  # Truncate log
-    # Explicit -c flag: with CONF_DIR baked into the binary pointing at
-    # the profile etc dir (see issue 137), the shadow validation run
-    # must override to read shadow's etc dir instead of the promoted
-    # profile's. The flag is the exception, used precisely here.
-    ./worldserver -c "${INSTALL_DIR_SHADOW}/etc/worldserver.conf" < /dev/null > "${VALIDATION_LOG}" 2>&1 &
+    # Explicit -c and -C flags: with CONF_DIR baked into the binary
+    # pointing at the profile etc dir (see issue 137), the shadow
+    # validation run must override BOTH the main config file (-c) AND
+    # the module config directory (-C, from B022). Without -C, module
+    # configs would still be loaded from the baked _CONF_DIR — i.e.
+    # the promoted profile's etc/modules — which silently invalidates
+    # the validation. The flags are the exception, used precisely here.
+    ./worldserver \
+        -c "${INSTALL_DIR_SHADOW}/etc/worldserver.conf" \
+        -C "${INSTALL_DIR_SHADOW}/etc" \
+        < /dev/null > "${VALIDATION_LOG}" 2>&1 &
     local WS_PID=$!
 
     echo "  Worldserver started (PID ${WS_PID})"

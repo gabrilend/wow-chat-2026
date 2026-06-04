@@ -23,24 +23,54 @@ fi
 # =============================================================================
 
 # {{{ Pinned commits
+# vanilla tracks upstream HEAD same as beta and release per issue 148
+# (originally pinned 2026-06-02, un-pinned later that day so vanilla
+# stays current with bug fixes). Empty string means "track HEAD".
 declare -A PROFILE_COMMIT=(
     ["alpha"]=""
     ["beta"]=""
     ["release"]=""
+    ["vanilla"]=""
 )
 # }}}
 
 # {{{ Modules per profile
+# vanilla's five-module set is the WotLK + playerbots baseline per
+# issue 148: playerbots is the defining feature, solo-lfg + aoe-loot +
+# fireworks are low-risk QoL, and mod-ale is required for 148k's
+# starter-equipment auto-equip hook. Must match scripts/install's
+# PROFILE_MODULES entry exactly or update vs install will disagree
+# about which modules to clone.
 declare -A PROFILE_MODULES=(
     ["alpha"]="mod-eluna mod-transmog"
     ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
-    ["release"]=""
+    ["release"]="mod-ale mod-playerbots"
+    ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
 )
 # }}}
 
 # {{{ Module commits per profile
+# vanilla deliberately has no entries — it tracks upstream HEAD for
+# every module, same as beta/release. See scripts/install's matching
+# block for the full rationale on the un-pin decision.
 declare -A PROFILE_MODULE_COMMITS=(
     ["release:mod-eluna"]="1abf244"
+)
+# }}}
+
+# {{{ Module repository URLs
+# mod-solo-lfg and mod-fireworks-on-level were added 2026-06-02 for
+# the vanilla profile (issue 148). They aren't used by any other
+# profile but live in the shared table so update can resolve them
+# when checking vanilla's module set.
+declare -A MODULE_REPOS=(
+    ["mod-ale"]="https://github.com/azerothcore/mod-ale.git"
+    ["mod-eluna"]="https://github.com/azerothcore/mod-eluna.git"
+    ["mod-aoe-loot"]="https://github.com/TerraByte-tbwps/mod-aoe-loot.git"
+    ["mod-grownup"]="https://github.com/webluke/mod-grownup"
+    ["mod-playerbots"]="https://github.com/liyunfan1223/mod-playerbots.git --branch=master"
+    ["mod-solo-lfg"]="https://github.com/azerothcore/mod-solo-lfg.git"
+    ["mod-fireworks-on-level"]="https://github.com/azerothcore/mod-fireworks-on-level.git"
 )
 # }}}
 
@@ -52,6 +82,12 @@ FORCE_REBUILD=false
 COMPILE_ARGS=()
 
 # {{{ parse_args
+# Each option has two parse arms: the space-separated form
+# (--profile vanilla) and the equals form (--profile=vanilla). Before
+# the equals arms existed, a typo like --profile=vanilla fell through
+# to the catch-all and got silently dropped, leaving PROFILE at the
+# .profile default. The catch-all now errors so unknown or
+# misspelled flags are loud, not silent.
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "${1}" in
@@ -65,6 +101,15 @@ parse_args() {
                     exit 1
                 fi
                 ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                if [[ -z "${PROFILE}" ]]; then
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                COMPILE_ARGS+=("--profile" "${PROFILE}")
+                shift
+                ;;
             --threads)
                 if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
                     COMPILE_ARGS+=("--threads" "${2}")
@@ -73,6 +118,15 @@ parse_args() {
                     echo "Error: --threads requires a numeric argument"
                     exit 1
                 fi
+                ;;
+            --threads=*)
+                threads_value="${1#*=}"
+                if [[ ! "${threads_value}" =~ ^[0-9]+$ ]]; then
+                    echo "Error: --threads requires a numeric argument"
+                    exit 1
+                fi
+                COMPILE_ARGS+=("--threads" "${threads_value}")
+                shift
                 ;;
             --force)
                 FORCE_REBUILD=true
@@ -84,7 +138,9 @@ parse_args() {
                 exit 0
                 ;;
             *)
-                shift
+                echo "Error: unrecognized argument '${1}'"
+                echo "Run with --help to see available options."
+                exit 1
                 ;;
         esac
     done
@@ -116,12 +172,19 @@ show_help() {
 # =============================================================================
 
 # {{{ get_profile_paths
+# vanilla shares source-beta with release/beta because all three
+# compile from the same liyunfan1223 fork on the Playerbot branch.
+# What differs is the module set and the C-patch selection — the
+# source tree itself is a regenerable build artifact (issue 136's
+# fourth-path design).
 get_profile_paths() {
-    if [[ "${PROFILE}" == "alpha" ]]; then
-        AC_CODE_DIR="${DIR}/source-alpha"
-    else
-        AC_CODE_DIR="${DIR}/source-beta"
-    fi
+    case "${PROFILE}" in
+        release) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
+        vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
+        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+    esac
     INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
 }
 # }}}
@@ -278,6 +341,12 @@ fi
 # Source patch functions for patches_need_applying check
 source "${DIR}/patches/patches.sh"
 
+# Hard-reset source-beta and every module to HEAD before any git op.
+# Source trees are build artifacts (issue 136); anything in the working
+# tree is discardable. See patches.sh:reset_source_trees for the full
+# rationale.
+reset_source_trees
+
 needs_rebuild=false
 
 if [[ "${FORCE_REBUILD}" == true ]]; then
@@ -311,10 +380,26 @@ else
     fi
 
     for mod_name in ${MODULES}; do
-        if [[ "${PARALLEL_CHECK_RESULTS[${mod_name}]:-}" == "needs-update" ]]; then
+        mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+        mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]:-}"
+        mod_repo="${MODULE_REPOS[$mod_name]:-}"
+
+        if [[ "${PARALLEL_CHECK_RESULTS[${mod_name}]:-}" == "missing" ]]; then
+            # Clone missing module
+            if [[ -z "${mod_repo}" ]]; then
+                echo "Warning: Unknown module '${mod_name}', skipping"
+                continue
+            fi
+            echo "Installing ${mod_name}..."
+            cd "${AC_CODE_DIR}/modules"
+            git clone ${mod_repo}
+            if [[ -n "${mod_commit}" ]]; then
+                git -C "${mod_dir}" checkout "${mod_commit}"
+            fi
+            cd - > /dev/null
+            needs_rebuild=true
+        elif [[ "${PARALLEL_CHECK_RESULTS[${mod_name}]:-}" == "needs-update" ]]; then
             echo "Updating ${mod_name}..."
-            mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
-            mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]:-}"
             if [[ -n "${mod_commit}" ]]; then
                 git -C "${mod_dir}" fetch
                 git -C "${mod_dir}" checkout "${mod_commit}"
@@ -328,6 +413,54 @@ fi
 # Check if patches need applying
 if patches_need_applying; then
     echo "Patches pending - rebuild required"
+    needs_rebuild=true
+fi
+
+# Check if modules need rebuilding (cmake ran but make didn't, or modules missing)
+check_modules_need_rebuild() {
+    local MODULES_DIR="${AC_CODE_DIR}/modules"
+    local BUILD_DIR_SHADOW="${DIR}/build-shadow"
+    local LOADER_FILE="${BUILD_DIR_SHADOW}/modules/gen_scriptloader/static/ModulesLoader.cpp"
+    local MODULES_LIB="${BUILD_DIR_SHADOW}/modules/libmodules.a"
+    local WORLDSERVER="${INSTALL_DIR}/bin/worldserver"
+
+    # Skip if no CMakeCache (first build)
+    [[ -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" ]] || return 1
+
+    # Check 1: Any module missing from loader?
+    if [[ -f "${LOADER_FILE}" ]]; then
+        for mod_dir in "${MODULES_DIR}"/*/; do
+            local mod_name=$(basename "${mod_dir}")
+            [[ -d "${mod_dir}/src" ]] || continue
+            local func_pattern="Add${mod_name//-/_}Scripts"
+            if ! grep -q "${func_pattern}" "${LOADER_FILE}" 2>/dev/null; then
+                echo "  (module ${mod_name} not in cmake config)"
+                return 0
+            fi
+        done
+    fi
+
+    # Check 2: Loader newer than libmodules.a? (cmake ran, make didn't)
+    if [[ -f "${LOADER_FILE}" && -f "${MODULES_LIB}" ]]; then
+        if [[ "${LOADER_FILE}" -nt "${MODULES_LIB}" ]]; then
+            echo "  (cmake reconfigured, make not run)"
+            return 0
+        fi
+    fi
+
+    # Check 3: libmodules.a newer than worldserver? (make ran, not installed)
+    if [[ -f "${MODULES_LIB}" && -f "${WORLDSERVER}" ]]; then
+        if [[ "${MODULES_LIB}" -nt "${WORLDSERVER}" ]]; then
+            echo "  (modules rebuilt, worldserver not updated)"
+            return 0
+        fi
+    fi
+
+    return 1  # All good
+}
+
+if check_modules_need_rebuild; then
+    echo "Modules rebuild required"
     needs_rebuild=true
 fi
 

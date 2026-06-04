@@ -24,6 +24,10 @@ REVERT=false
 DRY_RUN=false
 
 # {{{ parse_args
+# Each option supports both --opt value and --opt=value forms. The
+# catch-all errors instead of silently dropping unknown args, so
+# typos like --profil=vanilla don't quietly fall back to the .profile
+# default.
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "${1}" in
@@ -35,6 +39,14 @@ parse_args() {
                     echo "Error: --profile requires a profile name"
                     exit 1
                 fi
+                ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                if [[ -z "${PROFILE}" ]]; then
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                shift
                 ;;
             --begin)
                 DO_BEGIN=true
@@ -57,7 +69,9 @@ parse_args() {
                 exit 0
                 ;;
             *)
-                shift
+                echo "Error: unrecognized argument '${1}'"
+                echo "Run with --help to see available options."
+                exit 1
                 ;;
         esac
     done
@@ -93,12 +107,17 @@ show_help() {
 # =============================================================================
 
 # {{{ get_profile_paths
+# vanilla shares source-beta with release/beta — same upstream fork,
+# different module set and patch selection. See issue 136's
+# fourth-path design for the rationale.
 get_profile_paths() {
-    if [[ "${PROFILE}" == "alpha" ]]; then
-        AC_CODE_DIR="${DIR}/source-alpha"
-    else
-        AC_CODE_DIR="${DIR}/source-beta"
-    fi
+    case "${PROFILE}" in
+        release) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
+        vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
+        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+    esac
     INSTALL_DIR_SHADOW="${DIR}/installed-files-shadow"
     BUILD_DIR_SHADOW="${DIR}/build-shadow"
 }

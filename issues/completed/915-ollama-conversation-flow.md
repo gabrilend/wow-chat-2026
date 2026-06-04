@@ -2,10 +2,46 @@
 
 ## Status
 - Created: 2026-04-08
+- Closed: 2026-06-03
+- Resolution: Superseded by issue 916 (mod-soren-chat). Will not implement.
 - Phase: 3
 - Priority: Low (experimental)
 - Milestone: Social Systems
-- Depends: Issue 330 (custom chat data sources)
+- Depends: Issue 914 (custom chat data sources) — also superseded
+
+## Why Superseded
+
+This ticket designed an Ollama overlay on top of issue 914's JSON-corpus
+chat system. A 10% chance per chat trigger would generate via AI; the
+other 90% would pull from JSON. Single-host Ollama at localhost:11434.
+
+Issue 916 supersedes both this and 914 with a different architecture:
+- LLM is the primary source for chat, not a 10% overlay
+- Three Ollama boxes on the LAN, not single localhost
+- effil-jit worker threads in-process, not async-callback via "ALE HTTP
+  capabilities or external curl" (which this ticket explicitly noted as
+  unsolved)
+- The module also handles gameplay-policy guidance, not just chat
+
+What carries forward to 916:
+- The async-never-blocks-gameplay principle (916 enforces via effil
+  workers)
+- The graceful-degradation-on-Ollama-down behavior
+- The context-gathering shape (race, class, level, zone, time, weather,
+  in-combat, nearby-players — this becomes 916's prompt context)
+- The response sanitization patterns (strip quotes/newlines, truncate,
+  remove OOC markers)
+- The content blocklist (no URLs, no modern internet speak, etc.)
+
+What does not carry forward:
+- The 10%/90% AI/JSON split (LLM is always source in 916)
+- The fixed 5-slot queue and 10/minute rate limit (916 uses effil
+  channels and per-bot cooldowns instead)
+- Single-host localhost endpoint (916 has three-box LAN cluster)
+- The `#chataichance` / `#chataitest` console commands (916's `.soren`
+  command family covers debugging)
+
+See issue 916 for the canonical LLM chat + guidance design.
 
 ## Overview
 

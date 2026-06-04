@@ -27,6 +27,7 @@ declare -A PROFILE_REPO=(
     ["alpha"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["vanilla"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
 )
 # }}}
 
@@ -35,14 +36,19 @@ declare -A PROFILE_BRANCH=(
     ["alpha"]="Playerbot"
     ["beta"]="Playerbot"
     ["release"]="Playerbot"
+    ["vanilla"]="Playerbot"
 )
 # }}}
 
 # {{{ Pinned commits
+# vanilla originally pinned 2026-06-02 per 148; un-pinned later that day
+# per user direction — vanilla now tracks upstream HEAD like beta and
+# release. Always up-to-date.
 declare -A PROFILE_COMMIT=(
     ["alpha"]=""
     ["beta"]=""
     ["release"]=""
+    ["vanilla"]=""
 )
 # }}}
 
@@ -51,20 +57,30 @@ declare -A PROFILE_MODULES=(
     ["alpha"]="mod-eluna mod-transmog"
     ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
     ["release"]="mod-ale mod-playerbots"
+    ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
 )
 # }}}
 
 # {{{ Module repository URLs
+# Two new entries added 2026-06-02 for vanilla: mod-solo-lfg lets a
+# solo player queue the dungeon finder with playerbots filling the
+# group; mod-fireworks-on-level is the level-up confetti flair.
 declare -A MODULE_REPOS=(
     ["mod-ale"]="https://github.com/azerothcore/mod-ale.git"
     ["mod-eluna"]="https://github.com/azerothcore/mod-eluna.git"
     ["mod-aoe-loot"]="https://github.com/TerraByte-tbwps/mod-aoe-loot.git"
     ["mod-grownup"]="https://github.com/webluke/mod-grownup"
     ["mod-playerbots"]="https://github.com/liyunfan1223/mod-playerbots.git --branch=master"
+    ["mod-solo-lfg"]="https://github.com/azerothcore/mod-solo-lfg.git"
+    ["mod-fireworks-on-level"]="https://github.com/azerothcore/mod-fireworks-on-level.git"
 )
 # }}}
 
 # {{{ Module commits per profile
+# Vanilla's module pins (originally set 2026-06-02) were removed later
+# that day per user direction so vanilla tracks upstream HEAD across
+# all its modules, matching beta and release. The release:mod-eluna
+# pin stays because it predates 148.
 declare -A PROFILE_MODULE_COMMITS=(
     ["release:mod-eluna"]="1abf244"
 )
@@ -78,6 +94,10 @@ FORCE_REBUILD=false
 COMPILE_ARGS=()
 
 # {{{ parse_args
+# Each option supports both --opt value and --opt=value forms. The
+# catch-all errors instead of silently dropping unknown args, so
+# typos like --profil=vanilla don't quietly fall back to the
+# .profile default.
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "${1}" in
@@ -91,6 +111,15 @@ parse_args() {
                     exit 1
                 fi
                 ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                if [[ -z "${PROFILE}" ]]; then
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                COMPILE_ARGS+=("--profile" "${PROFILE}")
+                shift
+                ;;
             --threads)
                 if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
                     COMPILE_ARGS+=("--threads" "${2}")
@@ -99,6 +128,15 @@ parse_args() {
                     echo "Error: --threads requires a numeric argument"
                     exit 1
                 fi
+                ;;
+            --threads=*)
+                threads_value="${1#*=}"
+                if [[ ! "${threads_value}" =~ ^[0-9]+$ ]]; then
+                    echo "Error: --threads requires a numeric argument"
+                    exit 1
+                fi
+                COMPILE_ARGS+=("--threads" "${threads_value}")
+                shift
                 ;;
             --force)
                 FORCE_REBUILD=true
@@ -110,7 +148,9 @@ parse_args() {
                 exit 0
                 ;;
             *)
-                shift
+                echo "Error: unrecognized argument '${1}'"
+                echo "Run with --help to see available options."
+                exit 1
                 ;;
         esac
     done
@@ -141,10 +181,18 @@ show_help() {
 # =============================================================================
 
 # {{{ get_profile_paths
+# vanilla shares source-beta with release/beta — same upstream fork
+# (liyunfan1223/azerothcore-wotlk on the Playerbot branch), same
+# schema, same compile target. What differs between the three is the
+# module set, the C-patch selection, and the database namespace
+# (vanilla suffixes with _vanilla per 148). See issue 136's fourth-
+# path design for the rationale on treating the source tree as a
+# regenerable build artifact rather than a per-profile checkout.
 get_profile_paths() {
     case "${PROFILE}" in
         release) AC_CODE_DIR="${DIR}/source-beta"  ;;
         beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
+        vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
         alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
         *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
     esac
@@ -193,6 +241,12 @@ if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
         git -C "${AC_CODE_DIR}" checkout "${COMMIT}"
     fi
 fi
+
+# Hard-reset source-beta and every module to HEAD before module-clone
+# and compile. Source trees are build artifacts (issue 136); anything in
+# the working tree is discardable. See patches.sh:reset_source_trees.
+source "${DIR}/patches/patches.sh"
+reset_source_trees
 
 # Handle modules
 # (Modules are cloned directly into source-beta/modules/ per MODULE_REPOS

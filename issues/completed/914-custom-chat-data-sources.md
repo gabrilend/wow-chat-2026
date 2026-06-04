@@ -2,9 +2,37 @@
 
 ## Status
 - Created: 2026-04-08
+- Closed: 2026-06-03
+- Resolution: Superseded by issue 916 (mod-soren-chat). Will not implement.
 - Phase: 3
 - Priority: Medium
 - Milestone: Social Systems
+
+## Why Superseded
+
+This ticket designed a JSON-corpus chat system as a replacement for
+playerbots' built-in random chat. The plan was static authored lines
+selected by weighted random with personality archetypes filtering the
+pool.
+
+Issue 916 takes a different direction: LLM-generated chat from the
+start, with no JSON corpus. Personality archetypes survive as prompt
+inputs rather than file-system buckets. The selection algorithm (weight,
+cooldown, sanitization) carries over to 916 as response-validation
+machinery on the LLM side.
+
+What carries forward to 916:
+- The personality-archetype concept (becomes a prompt input)
+- The cooldown-per-bot rate limiting (becomes `chat_cooldown_seconds`)
+- The trigger taxonomy (login, nearby_player, combat, exploration)
+- The fallback behavior on failure (Ollama unreachable → quiet bot)
+
+What does not carry forward:
+- The JSON data files (no corpus needed; LLM generates)
+- Hot-reload of authored content (LLM is hot-reload by nature)
+- Manual weight tuning (replaced by prompt engineering)
+
+See issue 916 for the canonical chat design.
 
 ## Overview
 

@@ -9,10 +9,15 @@ DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
 # =============================================================================
 
 # {{{ Repository URLs (for validation)
+# This table is the source-of-truth for "does this profile exist?"
+# in scripts/switch — the script tests `[[ -v PROFILE_REPO[name] ]]`
+# below. Adding vanilla here is what makes `./scripts/switch vanilla`
+# legal. Must stay in sync with scripts/install's PROFILE_REPO.
 declare -A PROFILE_REPO=(
     ["alpha"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["vanilla"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
 )
 # }}}
 
@@ -31,27 +36,35 @@ fi
 # =============================================================================
 
 # {{{ get_profile_paths
+# vanilla shares source-beta with release/beta. See issue 136.
 get_profile_paths() {
-    if [[ "${PROFILE}" == "alpha" ]]; then
-        AC_CODE_DIR="${DIR}/source-alpha"
-    else
-        AC_CODE_DIR="${DIR}/source-beta"
-    fi
+    case "${PROFILE}" in
+        release) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
+        vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
+        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+    esac
     INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
     BUILD_DIR="${DIR}/build-${PROFILE}"
 }
 # }}}
 
 # {{{ show_help
+# Profile order here mirrors issue 148's "floor → relic → stable →
+# bleeding-edge" reading: vanilla is the baseline floor, alpha is
+# the frozen holiday relic, release is the guaranteed-working set,
+# beta is the active-development cutting edge.
 show_help() {
     echo "Usage: ./scripts/switch <profile>"
     echo ""
     echo "Switch to a different profile without recompiling."
     echo ""
     echo "Available profiles:"
-    echo "  alpha   - Latest playerbots, cutting edge"
-    echo "  beta    - Current testing, all modules"
-    echo "  release - Stable, wow-chat-1 compatible"
+    echo "  vanilla - Default WotLK + playerbots, no wow-chat customs"
+    echo "  alpha   - wow-chat-1 holiday relic (eluna, pre-playerbots)"
+    echo "  release - Guaranteed-working subset (ALE + playerbots)"
+    echo "  beta    - Active development (release + experimental)"
     echo ""
     echo "Current profile: ${PROFILE}"
 }
@@ -70,7 +83,7 @@ new_profile="${1:-}"
 
 if [[ -z "${new_profile}" ]]; then
     echo "Usage: ./scripts/switch <profile>"
-    echo "Available profiles: alpha, beta, release"
+    echo "Available profiles: vanilla, alpha, release, beta"
     echo "Current profile: ${PROFILE}"
     exit 1
 fi
@@ -78,7 +91,7 @@ fi
 # Validate profile exists
 if [[ ! -v "PROFILE_REPO[${new_profile}]" ]]; then
     echo "Error: Unknown profile '${new_profile}'"
-    echo "Available profiles: alpha, beta, release"
+    echo "Available profiles: vanilla, alpha, release, beta"
     exit 1
 fi
 

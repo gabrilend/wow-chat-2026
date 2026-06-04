@@ -20,6 +20,8 @@ fi
 # =============================================================================
 
 # {{{ parse_args
+# Each option supports both --opt value and --opt=value forms. The
+# catch-all errors instead of silently dropping unknown args.
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "${1}" in
@@ -32,12 +34,22 @@ parse_args() {
                     exit 1
                 fi
                 ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                if [[ -z "${PROFILE}" ]]; then
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
                 ;;
             *)
-                shift
+                echo "Error: unrecognized argument '${1}'"
+                echo "Run with --help to see available options."
+                exit 1
                 ;;
         esac
     done
