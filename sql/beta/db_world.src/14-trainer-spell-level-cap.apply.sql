@@ -1,3 +1,4 @@
+-- MARKER_E014_APPLY beta-trainer-spell-level-cap
 -- trainer-spell-level-cap.sql
 -- Caps trainer spell lists to their assigned level range
 -- Issue 157: dynamic-trainer-spawning
@@ -12,6 +13,24 @@
 -- - Fewer trainers = coarser granularity
 --
 -- Run against acore_world database AFTER fresh import
+
+-- {{{ snapshot — capture npc_trainer before the DELETEs run
+-- Apply is destructive: per-trainer DELETEs strip every spell whose
+-- ReqLevel > maxLevel. Snapshot the full npc_trainer table into
+-- `wow_chat_e014_snapshot_npc_trainer` so the revert can restore
+-- the pre-cap state. Idempotent same way E012's snapshot is:
+-- CREATE IF NOT EXISTS + INSERT IGNORE preserves the original rows
+-- across any number of re-applies.
+--
+-- Important: this snapshot ALSO captures the rows that E011 (DK
+-- class trainers 29194/29195/29196) and E013 (custom 200xxx trainers)
+-- INSERTed earlier. The revert restoring from snapshot brings those
+-- back too — so the chain "unpatch_E014 → re-snapshot via E011/E013"
+-- is unnecessary. The snapshot is the single source of truth for
+-- "what was in npc_trainer right before this apply ran."
+CREATE TABLE IF NOT EXISTS `wow_chat_e014_snapshot_npc_trainer` LIKE `npc_trainer`;
+INSERT IGNORE INTO `wow_chat_e014_snapshot_npc_trainer` SELECT * FROM `npc_trainer`;
+-- }}}
 
 -- {{{ Horde Warrior (9 trainers, ~2 levels each)
 DELETE FROM npc_trainer WHERE ID = 3354 AND ReqLevel > 2;   -- level 1-2

@@ -179,14 +179,14 @@ function Ambush.spawnAndAttackPlayer(_eventID, _delay, _repeats, player) -- {{{
         if next(rareQueue) == nil then
             if player:IsInGroup() and player:GetGroup():GetMembersCount() > 2 then
                 print("[Ambush] Querying for group rare elites (rank 2)")
-                Ambush.setupAmbushQueue(playerLevel, 2)
+                Ambush.setupAmbushQueue(player, 2)
             else
                 print("[Ambush] Querying for solo rares (rank 4)")
-                Ambush.setupAmbushQueue(playerLevel, 4)
+                Ambush.setupAmbushQueue(player, 4)
             end
         else
             print("[Ambush] Spawning rare, querying for normals (rank 0)")
-            Ambush.setupAmbushQueue(playerLevel, 0)
+            Ambush.setupAmbushQueue(player, 0)
             Ambush.randomSpawn(player, true)
         end
     else
@@ -203,13 +203,50 @@ end -- }}}
 -- queue construction functions
 
 -- this function generates an async sql query and calls pushToAmbushQueue() when it's done
-function Ambush.setupAmbushQueue(playerLevel, rank) -- {{{
-    WorldDBQueryAsync("SELECT entry, minlevel, maxlevel, rank FROM creature_template WHERE minlevel <= " .. playerLevel .. " AND maxlevel >= " .. playerLevel .. " AND rank = " .. rank .. " AND npcflag = 0 AND lootid != 0 AND type IN (2, 3, 4, 5, 6, 9, 10);", Ambush.pushToAmbushQueue)
+-- `rank` requires backticks: MySQL 8+ reserved it as a window-function keyword.
+-- Dropping the backticks here in a rewrite caused a runtime SQL parse error
+-- ("near 'FROM creature_template...'"); the .disabled predecessor at line 116
+-- already knew this. Keep backticks on every SQL reference to `rank`.
+--
+-- Valid creature types for ambush spawning (lifted from disabled predecessor):
+--   2 = Dragonkin    3 = Demon        4 = Elemental    5 = Giant
+--   6 = Undead       9 = Mechanical  10 = Aberration
+-- Beasts (1), Humanoids (7), and Critters (8) are excluded — they don't fit
+-- the "ambush from the shadows" thematic, and humanoids overlap with quest NPCs.
+--
+-- Per-player callback (issue 210): the async query result must go to THIS
+-- player's queue, not broadcast across all players in the world. The
+-- closure captures `playerName` (a plain Lua string, not userdata) and
+-- looks the player up at callback time via GetPlayerByName. This avoids
+-- the invalidated-userdata crash that captures-by-reference would cause
+-- if the player logged out between the query firing and the callback
+-- returning. The sync predecessor in ambush.lua.disabled passed `player`
+-- directly; the earlier async rewrite lost that association and worked
+-- around it by iterating every logged-in player — wrong for any
+-- per-player feature (quest spawns etc.).
+function Ambush.setupAmbushQueue(player, rank) -- {{{
+    local playerLevel = player:GetLevel()
+    local playerName  = player:GetName()
+    WorldDBQueryAsync(
+        "SELECT entry, minlevel, maxlevel, `rank` FROM creature_template "
+        .. "WHERE minlevel <= " .. playerLevel
+        .. " AND maxlevel >= " .. playerLevel
+        .. " AND `rank` = " .. rank
+        .. " AND npcflag = 0 AND lootid != 0 AND type IN (2, 3, 4, 5, 6, 9, 10);",
+        function(query)
+            -- Re-resolve the player by name at callback time. If they
+            -- logged out during the async window, the lookup returns
+            -- nil and we drop the query silently.
+            local p = GetPlayerByName(playerName)
+            if p then Ambush.pushToAmbushQueue(p, query) end
+        end)
 end -- }}}
 
 -- this function builds an Ambush queue based on the results of the sql query
-function Ambush.pushToAmbushQueue(query) -- {{{
-    print("[Ambush] pushToAmbushQueue callback fired")
+-- The caller (the closure in setupAmbushQueue) already re-resolved the
+-- player via GetPlayerByName, so `player` is guaranteed valid here.
+-- See issue 210 for the broadcast bug this design replaces.
+function Ambush.pushToAmbushQueue(player, query) -- {{{
 
     local LEVEL_MAX = 0 -- differential between player level and monster level
     local LEVEL_MIN = 0 -- MAKE SURE YOU ALSO SET IN setup[Solo/Group]RareQueue()
@@ -254,38 +291,31 @@ function Ambush.pushToAmbushQueue(query) -- {{{
         queueType = "rare-queue" -- there will always be normal monsters, soooo...
     end -- }}}
 
-    all_players = { alliance = GetPlayersInWorld(0, false),
-                    horde    = GetPlayersInWorld(1, false),
-                    neutral  = GetPlayersInWorld(2, false)
-                  }
+    -- Empty-results fallback: stub the queue with {0} and re-poll in 1s.
+    -- Applies only to the originating player now (used to broadcast).
+    if #creatures == 0 and next(player:GetData(queueType)) == nil then
+        player:SetData(queueType, {0})
+        player:RegisterEvent(Ambush.spawnAndAttackPlayer, 1000, 1)
+        return
+    end
 
-    -- for each player currently logged in
-    for _, faction in pairs(all_players) do
-        for _, player in pairs(faction) do
-            if #creatures == 0 -- {{{
-                and next(player:GetData(queueType)) == nil then
-                player:SetData(queueType, {0})
-                player:RegisterEvent(Ambush.spawnAndAttackPlayer, 1000, 1)
-                return
-            end -- }}}
-            local playerLevel = player:GetLevel()
-            if playerLevel ~= 0 then
-                -- for each creature that we just queried
-                for _, creature in ipairs(creatures) do
-                    -- if this creature is appropriate for this player
-                    if playerLevel >= creature.minLevel - LEVEL_MIN and
-                       playerLevel <= creature.maxLevel + LEVEL_MAX then
+    -- Filter creatures by level appropriateness for THIS player and append
+    -- to their queue. Used to do this for every player in the world — see
+    -- issue 210 for why that was wrong.
+    local playerLevel = player:GetLevel()
+    if playerLevel == 0 then
+        print("[Ambush] player level == 0 which is weird")
+        return
+    end
 
-                          tempTable = player:GetData(queueType)
-                          table.insert(tempTable, creature.id)
-                          player:SetData(queueType, tempTable)
-                    end
-                end
-            else
-                print("player level == 0 which is weird")
-            end
+    local tempTable = player:GetData(queueType)
+    for _, creature in ipairs(creatures) do
+        if playerLevel >= creature.minLevel - LEVEL_MIN and
+           playerLevel <= creature.maxLevel + LEVEL_MAX then
+            table.insert(tempTable, creature.id)
         end
     end
+    player:SetData(queueType, tempTable)
 end -- }}}
 
 -- slower than regenerating the queue all at once
@@ -615,17 +645,13 @@ function Ambush.setupPlayer(event, player) -- {{{
     if useGrace then
         -- long offline or first login: fixed grace period
         firstInterval = AMBUSH_GRACE_PERIOD
-        print("[Ambush] Grace period: " .. (AMBUSH_GRACE_PERIOD / 1000) .. "s (offline " .. offlineTime .. "s)")
     else
         -- quick relog: resume normal random walk
         firstInterval = Ambush.getNextInterval(player)
-        print("[Ambush] Quick relog, resuming at " .. (firstInterval / 1000) .. "s")
     end
 
     -- 1 = run once, then re-register with random interval in spawnAndAttackPlayer
     player:RegisterEvent(Ambush.spawnAndAttackPlayer, firstInterval, 1)
-
-    print("[Ambush] Registered spawn cycle for: " .. player:GetName())
 end -- }}}
 
 -- {{{ Ambush.onPlayerLogout

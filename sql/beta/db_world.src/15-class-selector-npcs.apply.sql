@@ -1,3 +1,4 @@
+-- MARKER_E015_APPLY beta-class-selector-npcs
 -- custom-class-selector-npcs.sql
 -- Race-specific selector NPCs for custom class selection system
 -- Issue 155: custom-class-selection-npc

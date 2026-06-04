@@ -1,6 +1,15 @@
+-- MARKER_E005_APPLY beta-dk-levelstats
 -- #########################################################
--- Death Knight Level 1-20 Stats
--- Issue 138: Death Knight Level 1 Scaling
+-- Death Knight Level 1-20 Stats — APPLY SOURCE
+-- Issue 206: Death Knight Level 1 Scaling
+--
+-- Apply-form source for E005 (beta profile only). The E-patch pipes
+-- this file through mysql against acore_world at PHASE_END. The
+-- mysql-pipe variant of the merged idiom is used here because beta
+-- shares the acore_world DB with release; registering with AC's
+-- UpdateFetcher would cause release worldservers to also apply the
+-- DK levelstats, polluting release data. The unpatch direction
+-- pipes an inline revert heredoc through mysql to drop DK rows.
 --
 -- Creates table if missing, then inserts DK stats.
 -- Must run BEFORE worldserver first start.

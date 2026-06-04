@@ -2,7 +2,7 @@
 -- Awards bonus talent points at 33% and 66% XP progress within each level.
 -- The 100% (level-up) talent point is handled by the server's Rate.Talent config.
 --
--- Issue 120: talent-points-level-20-cap
+-- Issue 205: talent-points-level-20-cap
 --
 -- This script works with mod-talent-bonus (C++) which hooks the server's
 -- talent point calculation. The C++ module ensures the server EXPECTS our

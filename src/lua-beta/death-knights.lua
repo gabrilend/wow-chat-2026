@@ -1,5 +1,5 @@
 -- =============================================================================
--- Death Knight Level 1-20 Scaling (Issue 138)
+-- Death Knight Level 1-20 Scaling (Issue 206)
 -- =============================================================================
 -- DKs start at level 1 with basic abilities (Blood Presence, Icy Touch).
 -- Additional abilities are learned from trainers at levels 4, 6, 8, etc.

@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 -- Ability Tome System
--- Issue: 151 - Players create tomes via Inscription, sell to vendors, find in chests
+-- Issue: 405 (was 151) - Players create tomes via Inscription, sell to vendors, find in chests
 --
 -- This file implements:
 -- - Tome pool management (per-class spell pools)

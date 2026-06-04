@@ -1,3 +1,4 @@
+-- MARKER_E016_APPLY beta-empty-loot-chests
 -- custom-empty-loot-chests.sql
 -- Custom gameobject templates for empty-loot treasure chests
 -- Issue 160: custom-empty-loot-chest-templates

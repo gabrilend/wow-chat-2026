@@ -1,3 +1,4 @@
+-- MARKER_E013_APPLY beta-quest-spells-to-trainers
 -- quest-spells-to-trainers.sql
 -- Adds quest-learned abilities to class trainers
 -- Issue 140: quest-spells-to-trainers

@@ -1,6 +1,7 @@
+-- MARKER_E011_APPLY beta-dk-class-system
 -- death-knights.sql
 -- Death Knight Level 1-20 Scaling System
--- Issue 138: death-knight-level-1-scaling
+-- Issue 206: death-knight-level-1-scaling
 -- Issue 167: recreate-missing-sql-files
 --
 -- Enables Death Knights to start at level 1 like other classes.

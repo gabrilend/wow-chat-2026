@@ -1,13 +1,32 @@
+-- MARKER_E012_APPLY beta-drop-creatures-keep-essential
 -- drop-creatures-keep-essential.sql
 -- Removes all creature spawns except critters and spirit healers
--- Issue 136: drop-all-creatures-except-spirit-healers
--- Issue 112: fix-drop-creatures-cascading-errors (cascade cleanup patterns)
+-- Issue 203: drop-all-creatures-except-spirit-healers
+-- Issue 201: database-integrity-cleanup (cascade cleanup patterns)
 --
 -- Critters: creature_template.type = 8 (ambient animals)
 -- Spirit Healers: creature_template.npcflag & 16384 (UNIT_NPC_FLAG_SPIRITHEALER)
 --
 -- Run against acore_world database AFTER fresh import
 -- This script is idempotent - safe to run multiple times
+
+-- {{{ snapshot — capture the pre-destruction creature table
+-- Apply is destructive: it deletes tens of thousands of spawn rows.
+-- To make E012's revert work, we snapshot the full `creature` table
+-- BEFORE the destruction into a project-owned table
+-- `wow_chat_e012_snapshot_creature`. The unpatch reads from this
+-- snapshot to restore the pre-apply state, then drops the snapshot.
+--
+-- Idempotence:
+--   - CREATE TABLE IF NOT EXISTS — second run skips structure creation.
+--   - INSERT IGNORE — preserves the original snapshot rows. If apply
+--     runs a second time AFTER destruction, the snapshot still has the
+--     original rows (depleted creature table can only add NEW guids,
+--     not new copies of existing ones — IGNORE catches PK conflicts).
+-- Disk cost: ~tens of MB until the unpatch drops the snapshot.
+CREATE TABLE IF NOT EXISTS `wow_chat_e012_snapshot_creature` LIKE `creature`;
+INSERT IGNORE INTO `wow_chat_e012_snapshot_creature` SELECT * FROM `creature`;
+-- }}}
 
 -- {{{ Create temp table of essential creature entries
 -- Using regular table because MySQL can't reopen temp tables in subqueries
@@ -39,7 +58,7 @@ LEFT JOIN _keep_guids kg ON c.guid = kg.guid
 WHERE kg.guid IS NULL;
 -- }}}
 
--- {{{ Clean up related tables (cascade cleanup per issue 112)
+-- {{{ Clean up related tables (cascade cleanup per issue 201)
 
 -- creature_addon: Extra display/aura data per creature spawn
 DELETE ca FROM creature_addon ca

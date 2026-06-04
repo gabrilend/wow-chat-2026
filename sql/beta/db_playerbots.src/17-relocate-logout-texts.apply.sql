@@ -1,3 +1,4 @@
+-- MARKER_E017_APPLY beta-relocate-logout-texts
 -- #########################################################
 -- Local patch: Relocate logout texts BEFORE wait_for_attack
 -- -1 suffix: support beam, holding apart yet equal
@@ -10,6 +11,25 @@
 -- This patch runs at 03_13 (before 03_14), doing the
 -- relocation early so both can coexist.
 -- #########################################################
+
+-- {{{ snapshot — capture the original rows before relocating them
+-- The apply DELETEs+re-INSERTs two named text entries at new IDs.
+-- Snapshot the affected rows (both tables) so the revert can put
+-- them back at whatever IDs upstream gave them. Small snapshot —
+-- only 2-4 rows total. CREATE IF NOT EXISTS + INSERT IGNORE means
+-- the snapshot preserves the original pre-apply state across
+-- re-applies.
+CREATE TABLE IF NOT EXISTS `wow_chat_e017_snapshot_texts` LIKE `ai_playerbot_texts`;
+INSERT IGNORE INTO `wow_chat_e017_snapshot_texts`
+    SELECT * FROM `ai_playerbot_texts`
+    WHERE `name` IN ('bot_not_your_master', 'bot_rndbot_no_logout')
+       OR `id`   IN (1740, 1741);
+
+CREATE TABLE IF NOT EXISTS `wow_chat_e017_snapshot_chance` LIKE `ai_playerbot_texts_chance`;
+INSERT IGNORE INTO `wow_chat_e017_snapshot_chance`
+    SELECT * FROM `ai_playerbot_texts_chance`
+    WHERE `name` IN ('bot_not_your_master', 'bot_rndbot_no_logout');
+-- }}}
 
 -- Clear old positions (if they exist with these names)
 DELETE FROM ai_playerbot_texts WHERE name IN ('bot_not_your_master', 'bot_rndbot_no_logout');
