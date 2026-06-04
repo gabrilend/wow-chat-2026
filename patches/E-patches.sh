@@ -48,11 +48,29 @@ _register_with_updatefetcher() {
     # of when the row was added.
     [[ ! -S "${MYSQL_SOCKET}" ]] && return 0
 
-    # INSERT IGNORE — the `path` column is PRIMARY KEY so a second
-    # call is a clean no-op.
+    # CREATE TABLE IF NOT EXISTS first, then INSERT IGNORE. The CREATE
+    # handles the install-time race where E-patches run before the
+    # worldserver's first boot — at that point the DB exists (install
+    # created it) but `updates_include` does not (AC's worldserver
+    # creates content tables on first DatabaseLoader::Populate()).
+    # Without this, the INSERT below silently fails against the missing
+    # table, the include row never lands, UpdateFetcher never sees our
+    # SQL dir, and our E-patch's apply form is never applied. The
+    # schema mirrors the one AC creates on first boot — both CREATEs
+    # are no-ops once a row from either side is in place, so they can't
+    # fight.
+    #
+    # INSERT IGNORE keeps a second call a clean no-op once the row exists
+    # (path is PRIMARY KEY).
     "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
-        -u ritz -pmenardi "${DB}" \
-        -e "INSERT IGNORE INTO updates_include (path, state) VALUES ('${DIR_PATH}', 'CUSTOM');" 2>/dev/null || true
+        -u ritz -pmenardi "${DB}" <<SQL 2>/dev/null || true
+CREATE TABLE IF NOT EXISTS \`updates_include\` (
+  \`path\` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'directory to include. \$ means relative to the source directory.',
+  \`state\` enum('RELEASED','ARCHIVED','CUSTOM','PENDING') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'RELEASED' COMMENT 'defines if the directory contains released or archived updates.',
+  PRIMARY KEY (\`path\`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='List of directories where we want to include sql updates.';
+INSERT IGNORE INTO \`updates_include\` (\`path\`, \`state\`) VALUES ('${DIR_PATH}', 'CUSTOM');
+SQL
 }
 # -- }}}
 
