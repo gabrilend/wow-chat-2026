@@ -46,7 +46,7 @@ Replace with:
         case Hooks::REGTYPE_GAMEOBJECT:
             if (event_id < Hooks::GAMEOBJECT_EVENT_COUNT)
             {
-                // entry 0 = wildcard for all gameobjects (Issue 325)
+                // entry 0 = wildcard for all gameobjects (Issue 307)
                 if (entry != 0 && !eObjectMgr->GetGameObjectTemplate(entry))
                 {
                     luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
@@ -75,7 +75,7 @@ Replace with:
         case Hooks::REGTYPE_GAMEOBJECT_GOSSIP:
             if (event_id < Hooks::GOSSIP_EVENT_COUNT)
             {
-                // entry 0 = wildcard for all gameobjects (Issue 325)
+                // entry 0 = wildcard for all gameobjects (Issue 307)
                 if (entry != 0 && !eObjectMgr->GetGameObjectTemplate(entry))
                 {
                     luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
@@ -111,6 +111,6 @@ cd build && make -j$(nproc) && make install
 
 ## Related
 
-- Issue: `issues/325-ale-gameobject-wildcard-registration.md`
+- Issue: `issues/307-ale-gameobject-wildcard-registration.md`
 - Affected Lua: `src/lua/ability-tomes.lua:307`, `src/lua/chest-vulnerability.lua:326`
 - Similar pattern: B002 playerbots-ale-login-hook

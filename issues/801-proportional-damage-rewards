@@ -145,4 +145,69 @@ After loot awarded to B:
 ## Related Issues
 - 121 - bounty board currency system
 - (soulbound removal issue - find number)
+- 142 - symmetric aggro radius (the bystander-aggro scenario uses
+  this system as the reward-routing layer; see 142 for the full
+  composition story)
+- 806 - proximity raid system (auto-grouping by location; tightens
+  the conditions under which this reward system fires)
+
+## Reward Curve Shape (added 2026-06-02)
+
+**Design intent:** the per-creature XP and currency reward values
+should scale **non-linearly with creature level** — either
+logarithmically or exponentially, with the exact curve to be tuned —
+so that a small proportional share of a high-level kill is still
+meaningful in absolute terms.
+
+**Why:** the proportional-distribution rules above are fair but flat.
+Under linear creature-reward scaling (vanilla's near-default), a 1%
+contribution to a level-40 kill earns roughly 1% of a level-40 kill's
+reward, which is only a few times the absolute value of a 100%
+contribution to a level-1 kill. The result: low-level players have no
+strong incentive to *hang around* high-level encounters, because the
+absolute payoff is unimpressive.
+
+Under non-linear scaling (exponential is the stronger candidate;
+logarithmic is the conservative one), the level-40 kill drops a
+disproportionately large XP/currency pile. A 1% share of that pile
+is meaningful even to a low-level. The behavioural pull is: stick
+near the high-level player, contribute what you can, and the
+absolute rewards make the proximity worthwhile.
+
+**Composition with related systems:**
+- **142-option-3** (target-change damage rescale) keeps low-level
+  bystanders alive near high-level encounters.
+- **This reward curve** makes sure the rewards from those encounters
+  arrive in meaningful absolute amounts even when proportional shares
+  are small.
+- **806** (proximity raid) makes sure the grouping that triggers
+  proportional rewards happens automatically rather than depending on
+  manual invites.
+
+The three pieces are facets of the same design: cross-level proximity
+should be a meaningful experience, in danger and in reward, without
+requiring social ceremony to activate.
+
+**Tuning:** the exact curve (which exponent? which log base? plateau
+where?) is a play-testing question. Open question pending data.
+
+## Design Observation — High-Level Grouping Is Self-Incentivising
+
+High-level players are already incentivised to group up among
+themselves without any special system, by the natural mechanics of
+this ruleset:
+
+- AoE loot (mod-aoe-loot on vanilla, equivalent elsewhere) means
+  large piles of corpses can be cleared with one keypress.
+- Multiple high-level allies can hold a position while monsters
+  approach them, fight efficiently, and gather materials at scale —
+  the stand-and-deliver pattern.
+- The proportional reward system means co-fighting high-levels each
+  get their share without needing a tagging dance.
+
+No mechanic needs to be added to make high-levels want to group;
+the existing ones already produce the pull. The systems described
+above (target-change damage rescale, reward curve, proximity raid)
+are about pulling **low-levels into proximity with those groups**,
+not about getting high-levels together in the first place.
 

@@ -5,6 +5,22 @@
 - Phase: 1 (Foundation)
 - Priority: High (blocks correct release builds)
 
+## User-facing reference
+
+For an end-user view of each profile (what it gives you, how to
+switch, what to expect at each level), see the user-facing pages
+under [`docs/profiles/`](../docs/profiles/index.md):
+
+- [`docs/profiles/index.md`](../docs/profiles/index.md) — overview + how to switch
+- [`docs/profiles/vanilla.md`](../docs/profiles/vanilla.md)
+- [`docs/profiles/release.md`](../docs/profiles/release.md)
+- [`docs/profiles/beta.md`](../docs/profiles/beta.md)
+- [`docs/profiles/alpha.md`](../docs/profiles/alpha.md)
+
+This issue (136) remains the canonical source of truth for the
+promotion-pipeline rules, schema-level decisions, and historical
+context. The docs/ pages summarise the user-relevant slice.
+
 ## Problem
 
 Multiple project files describe the three profiles (alpha / release / beta)
@@ -20,6 +36,11 @@ that must be updated to match.
 
 ### One-Line Summary
 
+- **`vanilla`** — added 2026-06-02 per issue 148. A separate baseline
+  alongside the promotion pipeline: default WotLK feel with playerbots
+  and a small QoL module set, no Lua engine, no custom scripting.
+  Sits outside the alpha → beta → release pipeline because it's a
+  parallel ruleset, not an iteration of the wow-chat design.
 - **`alpha`** — is wow-chat-1. The whole old project as a frozen snapshot.
 - **`release`** — the minimum featureset that is *guaranteed working*. Features
   enter release only after they're proven on beta. **Current focus:** getting ALE
@@ -28,10 +49,18 @@ that must be updated to match.
   shift features from beta into release **one at a time** once they're proven
   working on beta.
 
-The whole point of the three-tier model is the **promotion pipeline**: a feature
-is developed in beta, hardened against bugs, and only crosses the line into
-release after it has demonstrably worked. Release is therefore always a strict
-subset of what beta can do, with each subset element having earned its place.
+The four-tier model has two independent axes. One axis is the
+**promotion pipeline** (alpha → beta → release): a feature is
+developed in beta, hardened against bugs, and only crosses the line
+into release after it has demonstrably worked. Release is therefore
+always a strict subset of what beta can do, with each subset
+element having earned its place. The other axis is the
+**vanilla branch**: a separate ruleset that doesn't participate in
+the pipeline — it's the "what does playerbots feel like without the
+wow-chat design layer" reference. The two axes share infrastructure
+(source-beta, MySQL on port 3307) but maintain isolated rulesets
+(vanilla has its own database namespace, level cap, starting zones,
+etc.).
 
 ### `alpha` — Holiday Relic
 
@@ -69,6 +98,43 @@ in flight.
 - **Playerbots:** mod-playerbots (same as release)
 - **Custom behavior:** all in-development custom Lua features
 - **Modules:** release modules + any beta-only experimental modules
+
+### `vanilla` — Default WotLK + Playerbots Baseline
+
+A parallel ruleset, not part of the alpha → beta → release pipeline.
+Default WotLK 3.3.5a feel with AI companions: what does
+mod-playerbots deliver before the wow-chat design layer is added?
+Useful as an a/b comparison baseline, as a landing-pad for visitors
+who want a stock experience, and as the floor everything else
+builds on. See issue 148 for the full design.
+
+- **AzerothCore source:** current AzerothCore (liyunfan1223 fork,
+  `Playerbot` branch — same as release/beta, **tracks upstream HEAD**.
+  Originally pinned 2026-06-02 for reproducibility; un-pinned later
+  that day per user direction so vanilla stays current alongside
+  beta and release.
+- **Lua engine:** `mod-ale` (added 2026-06-02 per 148k for the
+  starter-equipment auto-equip hook). Per-profile Lua dir is
+  `src/lua-vanilla/`; the wow-chat design corpus in `src/lua-beta/`
+  is NOT loaded.
+- **Playerbots:** mod-playerbots (modern fork)
+- **Custom behavior:** none of the wow-chat design layer (no ambush
+  spawns, no custom classes, no talent reshaping). A small set of
+  ruleset tunings define vanilla's identity: level cap 40, starting
+  level 20, starting zones Duskwood (Alliance) and Hillsbrad
+  (Horde), Death Knight class disabled, no flight paths, full
+  level-20 starting kit per class, all level-≤20 trainer abilities
+  pre-learned at creation. Movement 80%, fall damage 10×.
+- **Modules:** mod-playerbots, mod-solo-lfg, mod-aoe-loot,
+  mod-fireworks-on-level, mod-ale. Five modules, all tracking
+  upstream HEAD (no pins). Same drift policy as beta/release.
+- **Infrastructure:** shares source-beta with release/beta (same
+  compile, same schema), shares the MySQL instance on port 3307,
+  but lives in suffixed databases (`acore_world_vanilla`,
+  `acore_characters_vanilla`, etc.) so coexistence with a running
+  release server works without standing up a second MySQL. Network
+  ports 4364 (auth) / 4464 (worldserver). See 148's Database
+  Isolation Policy for the rationale.
 
 ## Files to Update
 

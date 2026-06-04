@@ -1,0 +1,202 @@
+#!/usr/bin/env bash
+# scripts/generate-148j-pretrain-sql
+# ----------------------------------------------------------------------------
+# Generates the vanilla pre-train SQL file for sub-issue 148j. It queries the
+# release-channel world database for every class-trainer spell whose required
+# level is 20 or lower, then emits a single SQL file that inserts one
+# playercreateinfo_spell_custom row per (class, spell). The result is that a
+# freshly-created vanilla character (starting at level 20 per C007c) already
+# knows every ability a level-20 character would have learned from a trainer
+# in retail — Frostbolt rank 4 for a mage, Dual Wield for a rogue, etc. —
+# without the player having to visit nineteen trainers.
+#
+# Output is written deterministically; re-running the generator against the
+# same upstream world data produces the same SQL. The committed file is the
+# source of truth; the generator is a build-time tool, not a runtime
+# dependency.
+#
+# The generated file lands in the vanilla-only SQL directory which E008
+# registers with AzerothCore's UpdateFetcher. The worldserver picks it up
+# on next boot and applies it via the standard `updates` table — no
+# direct mysql client invocation at install time.
+# ----------------------------------------------------------------------------
+
+set -euo pipefail
+
+# Project root — overridable for portability per CLAUDE.md convention.
+DIR="${1:-/home/ritz/games/azeroth-core/wow-chat-2026}"
+
+MYSQL_BIN="${DIR}/mysql/installed-files/bin/mysql"
+MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
+SUBSTRATE_DB="acore_world_release"
+OUTPUT_DIR="${DIR}/sql/vanilla/db_world.src"
+OUTPUT_FILE="${OUTPUT_DIR}/04-pretrain-abilities.apply.sql"
+NOTE_PREFIX="vanilla-148j"
+
+# -- {{{ require_mysql_running
+# Bail loudly if MySQL is not up — the generator needs the substrate DB.
+# Per CLAUDE.md, errors are preferred over fallbacks. No silent skip.
+require_mysql_running() {
+    if [[ ! -S "${MYSQL_SOCKET}" ]]; then
+        echo "ERROR: MySQL socket not found at ${MYSQL_SOCKET}" >&2
+        echo "       Start MySQL first: ${DIR}/scripts/start-mysql" >&2
+        exit 1
+    fi
+    if ! "${MYSQL_BIN}" --no-defaults --socket="${MYSQL_SOCKET}" \
+        -u ritz -pmenardi "${SUBSTRATE_DB}" \
+        -e "SELECT 1;" >/dev/null 2>&1; then
+        echo "ERROR: cannot read ${SUBSTRATE_DB} as user ritz" >&2
+        exit 1
+    fi
+}
+# -- }}}
+
+# -- {{{ count_pairs
+# Report how many distinct (class, spell) rows the generator will emit.
+# Used for the header comment so the file is self-describing.
+count_pairs() {
+    "${MYSQL_BIN}" --no-defaults --socket="${MYSQL_SOCKET}" \
+        -u ritz -pmenardi "${SUBSTRATE_DB}" -N -e "
+        SELECT COUNT(DISTINCT t.Requirement, ts.SpellId)
+        FROM trainer t
+        JOIN trainer_spell ts ON ts.TrainerId = t.Id
+        WHERE t.Type = 0
+          AND t.Requirement BETWEEN 1 AND 11
+          AND t.Requirement != 6
+          AND ts.ReqLevel <= 20;"
+}
+# -- }}}
+
+# -- {{{ emit_header
+# Write the file-level documentation block. Mirrors 03-remove-flight-paths.sql
+# so readers find the same shape every time.
+emit_header() {
+    local pair_count="$1"
+    cat > "${OUTPUT_FILE}" <<HEADER_END
+-- ============================================================================
+-- 04-pretrain-abilities.sql (148j)
+-- ============================================================================
+-- Grants every newly-created vanilla character the full set of class-trainer
+-- spells they would normally have learned by level 20. Without this file, a
+-- level-20 starting character (per C007c) wakes up knowing only their level-1
+-- starter abilities — no Dual Wield for rogues, no Frostbolt rank 4 for
+-- mages, no Charge for warriors. With it, the spellbook matches what a
+-- retail-leveled level-20 character would carry.
+--
+-- Database: acore_world_vanilla
+--
+-- Generation: produced by scripts/generate-148j-pretrain-sql. Do not edit
+-- by hand — re-run the generator after upstream AzerothCore trainer data
+-- shifts and re-commit the output. The query joins the trainer-system
+-- tables filtered to Type=0 (class trainer) with ReqLevel<=20, deduplicates
+-- by (class, spell), and emits one INSERT per row.
+--
+-- Application: discovered and applied by AzerothCore's UpdateFetcher via
+-- the updates_include registration that E008 installs in
+-- acore_world_vanilla.updates_include. AC handles hashing, change
+-- detection, and the updates-table accounting — this file just sits in
+-- ${OUTPUT_DIR#${DIR}/} and gets picked up on each worldserver boot.
+--
+-- Re-applicability: the DELETE-then-INSERT pattern below scopes its
+-- cleanup to rows tagged with the Note prefix "${NOTE_PREFIX}-", so
+-- re-running this file produces the same end state without disturbing
+-- inserts from other vanilla migrations.
+--
+-- Pair count: ${pair_count} (class, spell) rows. DK (class 6) excluded
+-- per 148a; the remaining nine classes are represented.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 1. Clear prior rows from this migration so re-applying is safe. The Note
+--    prefix is the migration's signature; only rows it owns are touched.
+-- ----------------------------------------------------------------------------
+
+DELETE FROM playercreateinfo_spell_custom WHERE Note LIKE '${NOTE_PREFIX}-%';
+
+-- ----------------------------------------------------------------------------
+-- 2. Insert one row per (class, spell). race=0 means "every race that can
+--    play this class" — the engine fans out at character creation. The
+--    Note column carries a per-row tag identifying class + spell so a
+--    future SELECT can audit what 148j granted.
+-- ----------------------------------------------------------------------------
+
+HEADER_END
+}
+# -- }}}
+
+# -- {{{ emit_inserts
+# Run the canonical generator query and reshape each row into the INSERT
+# statement target for playercreateinfo_spell_custom. The Note column gets
+# the migration tag plus class and spell IDs so audit queries can group by
+# them. Sort is stable: class ascending, spell ascending — re-running with
+# the same substrate yields byte-identical output.
+emit_inserts() {
+    # The inner SELECT DISTINCT collapses duplicates that arise because the
+    # same spell appears in multiple class trainers across cities (one
+    # mage trainer in Stormwind, another in Ironforge, both teaching the
+    # same Frostbolt rank). The outer SELECT wraps each surviving pair in
+    # the INSERT statement form. Doing it as nested SELECTs sidesteps the
+    # ONLY_FULL_GROUP_BY rule that bans ORDER BY columns absent from a
+    # DISTINCT'd projection.
+    # Schema reality check 2026-06-02: the target columns are racemask +
+    # classmask (bitmasks), not race + class (single IDs). Likewise the
+    # value stored in classmask is a bit (1 << (classId - 1)), not the
+    # raw class ID. Pre-fix versions of this generator wrote raw IDs into
+    # raw-name columns and the SQL failed at apply time with
+    #   ERROR 1054 (42S22): Unknown column 'race' in 'field list'.
+    # Compute the class bit inline so the emitted SQL matches the schema.
+    "${MYSQL_BIN}" --no-defaults --socket="${MYSQL_SOCKET}" \
+        -u ritz -pmenardi "${SUBSTRATE_DB}" -N -e "
+        SELECT CONCAT(
+            'INSERT INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note) VALUES (0, ',
+            (1 << (cs.class_id - 1)), ', ', cs.spell_id,
+            ', ''${NOTE_PREFIX}-c', cs.class_id, '-s', cs.spell_id, ''');')
+        FROM (
+            SELECT DISTINCT t.Requirement AS class_id, ts.SpellId AS spell_id
+            FROM trainer t
+            JOIN trainer_spell ts ON ts.TrainerId = t.Id
+            WHERE t.Type = 0
+              AND t.Requirement BETWEEN 1 AND 11
+              AND t.Requirement != 6
+              AND ts.ReqLevel <= 20
+        ) AS cs
+        ORDER BY cs.class_id, cs.spell_id;" \
+    >> "${OUTPUT_FILE}"
+}
+# -- }}}
+
+# -- {{{ emit_footer
+# Close-out comment so a reader landing at end-of-file knows they got
+# the whole thing and not a truncated copy.
+emit_footer() {
+    cat >> "${OUTPUT_FILE}" <<'FOOTER_END'
+
+-- ============================================================================
+-- End of 04-pretrain-abilities.sql
+-- ============================================================================
+FOOTER_END
+}
+# -- }}}
+
+# -- {{{ main
+main() {
+    require_mysql_running
+    mkdir -p "${OUTPUT_DIR}"
+
+    local pair_count
+    pair_count="$(count_pairs)"
+
+    echo "Generating ${OUTPUT_FILE}"
+    echo "  source: ${SUBSTRATE_DB}.trainer ⋈ trainer_spell"
+    echo "  filter: Type=0 (class), Requirement 1..11 except 6, ReqLevel<=20"
+    echo "  rows:   ${pair_count} distinct (class, spell)"
+
+    emit_header "${pair_count}"
+    emit_inserts
+    emit_footer
+
+    echo "Done. Wrote ${OUTPUT_FILE}"
+}
+# -- }}}
+
+main

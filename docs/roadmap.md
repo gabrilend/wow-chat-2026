@@ -5,14 +5,14 @@
 Everland Ghostsong is a WoW 3.3.5a private server with roguelike survival mechanics.
 - **Max level:** 20
 - **Talent points:** Every 1/3 level
-- **World:** Empty by default - monsters spawn around players (ambush system)
+- **World:** Empty by default — monsters spawn around players (ambush system)
 - **Companions:** Playerbots as AI party members
 
 ---
 
 ## Phase 1: Foundation (Complete)
 
-**Goal**: Establish stable server environment with working modules.
+**Goal:** Establish stable server environment with working modules.
 
 ### Milestones
 - [x] Installation script functional
@@ -22,19 +22,16 @@ Everland Ghostsong is a WoW 3.3.5a private server with roguelike survival mechan
 - [x] Playerbots module operational
 - [x] mod-ale (Lua engine) operational
 - [x] Lua scripts loading and executing
-- [x] Profile system (alpha/beta/release)
-
-### Key Issues
-- 101-verify-server-startup
-- 102-test-playerbots-spawn
-- 105-setup-local-mysql-installation
-- 130-ale-initialization-hook-fix
+- [x] Profile system — canonical definitions in
+      `issues/136-canonical-profile-definitions.md`
+      (alpha = legacy holiday relic, release = current public target,
+       beta = release + in-dev features)
 
 ---
 
 ## Phase 2: Behaviors and Systems (In Progress)
 
-**Goal**: Implement custom playerbot behaviors and core game systems.
+**Goal:** Implement custom playerbot behaviors and core game systems.
 
 ### Milestones
 - [x] Level 20 cap with 1/3 level talent points
@@ -43,57 +40,52 @@ Everland Ghostsong is a WoW 3.3.5a private server with roguelike survival mechan
 - [x] Bot behaviors: find-monsters, avoid-monsters, sit-and-rest, orbit-player
 - [x] Bot wandering (traveller-style with dungeon navigation)
 - [x] Activity selection and boredom system
-- [ ] C++ patches applied (150, 156) - **needs rebuild**
-- [ ] Sold items to treasure pool (depends on 150)
-- [ ] Discuss with NPC behavior
+- [x] ALE sell-item hook landed (B006)
+- [x] Accuracy level cap landed (B005)
+- [ ] Sold items to treasure pool (uses B006)
+- [ ] Discuss-with-NPC behavior
 - [ ] Point/line definition tools
 - [ ] Dungeon room spawn zones
-
-### Key Issues
-- 120: Talent points level 20 cap
-- 124: Randomize ambush spawn interval
-- 148-154: Treasure chest system
-- 114-119: Playerbot behaviors
-- 160-166: Behavior orchestration and tooling
-
-### Blocking
-- Issues 150/156 need server rebuild to unblock treasure pool integration
 
 ---
 
 ## Phase 3: World Immersion and Hazards (Planning)
 
-**Goal**: Create a living, dangerous world with storytelling and progression.
+**Goal:** Create a living, dangerous world with storytelling and progression.
 
 ### Environmental Hazards
-- [ ] Ocean sharks after time threshold (301)
-- [ ] Language barriers - racial languages only (302)
+- [ ] Ocean sharks after time threshold
+- [ ] Language barriers — racial languages only
 
 ### Treasure Expansion
-- [ ] Chest-bound hearthstones (303)
-- [ ] Zero-value treasure duplicates (305)
+- [ ] Chest-bound hearthstones
+- [ ] Zero-value treasure duplicates
 
 ### Custom Classes
-- [ ] Conditional selector spawn (304)
-- [ ] Custom talent interface (345)
+- [ ] Conditional selector spawn
+- [ ] Custom talent interface
 
 ### rmail Integration
-- [ ] In-game mail bridge (306)
-- [ ] DNS-style addresses (313)
-- [ ] Feedback mailbox (314)
-- [ ] Login flush hook (315)
-- [ ] Account creation (317)
+- [ ] In-game mail bridge
+- [ ] DNS-style addresses
+- [ ] Feedback mailbox
+- [ ] Login flush hook
+- [ ] Account creation
 
 ### NPC Storytelling
-- [ ] Narrator audience facing (307)
-- [ ] Gutenberg text library (308)
-- [ ] Wandering narrator system (310)
-- [ ] Shepherd flock system (311)
-- [ ] Automated lore generation (312)
+- [ ] Narrator audience facing
+- [ ] Gutenberg text library
+- [ ] Wandering narrator system
+- [ ] Shepherd flock system
+- [ ] Automated lore generation
 
 ### Progression
-- [ ] Invisible level progression past 20 (309)
+- [ ] Invisible level progression past 20
 - [ ] Permadeath and immortality mechanics
+
+(Issue numbers in this section have shifted under successive renumbering
+passes — consult `issues/` directly for the current ticket IDs rather than
+trusting numbers transcribed here.)
 
 ---
 
@@ -125,15 +117,15 @@ For each phase:
 
 | Version | Phase | Description |
 |---------|-------|-------------|
-| 0.1.0 | 1 | Stable foundation |
-| 0.2.0 | 2 | Behaviors and systems |
-| 0.3.0 | 3 | World immersion |
-| 0.4.0 | 4 | Social and economy |
-| 1.0.0 | - | Feature complete |
+| 0.1.0   | 1     | Stable foundation |
+| 0.2.0   | 2     | Behaviors and systems |
+| 0.3.0   | 3     | World immersion |
+| 0.4.0   | 4     | Social and economy |
+| 1.0.0   | -     | Feature complete |
 
 ## Related Documents
 
-- `issues/phase-1-progress.md` - Phase 1 detailed status
-- `issues/phase-2-progress.md` - Phase 2 detailed status
-- `issues/phase-3-progress.md` - Phase 3 detailed status
-- `notes/vision` - Project vision and philosophy
+- `issues/phase-1-progress.md` — Phase 1 detailed status
+- `issues/phase-2-progress.md` — Phase 2 detailed status
+- `issues/phase-3-progress.md` — Phase 3 detailed status
+- `notes/vision` — Project vision and philosophy

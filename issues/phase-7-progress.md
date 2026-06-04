@@ -46,6 +46,7 @@ format → selection UI → talent system → custom-class implementations.
 | 713 | custom-talent-interface | Open | In-game talent UI (AIO addon). |
 | 714 | chunked-talent-points | Open | 10 points at levels 5/8/11/14/17/20. Blocks 707. |
 | 708 | talent-tree-analysis-script | Open | Tooling for talent-tree design. |
+| 717 | universal-weapon-skills-talent-tradeoff | Open | Every class wields every weapon; talent training 3x slower in exchange. Modifies 714 award cadence. |
 
 ### Custom-class implementations (depend on 709)
 | Issue | Title | Status | Notes |
@@ -54,7 +55,7 @@ format → selection UI → talent system → custom-class implementations.
 | 706 | knight-custom-class | Open | Example custom class. Depends on 709, 702. |
 | 710 | custom-class-resource-bars | Open | Custom UI elements (mana, rage, energy, custom). |
 
-## Completed: 0/15 (2 Implemented)
+## Completed: 0/16 (2 Implemented)
 
 ---
 

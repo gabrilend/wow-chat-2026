@@ -71,16 +71,38 @@ opinion can't break the validate gate.
 Applied after source/modules are cloned, before cmake/make.
 These fix compatibility issues in upstream code.
 
-| ID | Name | Target | Parallelizable | Description |
-|----|------|--------|----------------|-------------|
-| B001 | aoe-loot-item-namespace | mod-aoe-loot/src/aoe_loot.cpp | Yes | Fix `Item` vs `WorldPackets::Item` ambiguity |
-| B002 | playerbots-ale-login-hook | mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp | Yes | Trigger PLAYER_EVENT_ON_LOGIN for bots |
-| B003 | ale-gameobject-wildcard | mod-ale/src/LuaEngine/LuaEngine.cpp | Yes | Enable entry 0 as wildcard for gameobject events |
-| B004 | upstream-warning-fixes | mod-playerbots/*, mod-ale/* | Yes | Fix 695+ compiler warnings |
-| B005 | accuracy-level-cap | src/server/game/Entities/Unit/* | Yes | Cap level diff for hit/miss at ±3 (Issue 803) |
-| B006 | ale-sell-item-hook | mod-ale/*, Handlers/ItemHandler.cpp | Yes | Add PLAYER_EVENT_ON_SELL_ITEM = 74 (Issue 403) |
-| B007 | ale-unit-methods | mod-ale/*/UnitMethods.h, LuaFunctions.cpp | Yes | Add SetWalk, IsWalking, IsHostileTo, IsFriendlyTo (Issue 209) |
-| B008 | mod-talent-bonus | modules/mod-talent-bonus | Yes | Link local module for compilation (Issue 205) |
+| ID   | Name                                    | Target                                                  | Description |
+|------|-----------------------------------------|---------------------------------------------------------|-------------|
+| B001 | aoe-loot-item-namespace                 | mod-aoe-loot/src/aoe_loot.cpp                           | Fix `Item` vs `WorldPackets::Item` ambiguity |
+| B002 | playerbots-ale-login-hook               | mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp           | Trigger PLAYER_EVENT_ON_LOGIN for bots |
+| B003 | ale-gameobject-wildcard                 | mod-ale/src/LuaEngine/LuaEngine.cpp                     | Enable entry 0 as wildcard for gameobject events |
+| B004 | upstream-warning-fixes                  | mod-playerbots/*, mod-ale/*                             | Fix ~695 compiler warnings in upstream modules |
+| B005 | accuracy-level-cap                      | src/server/game/Entities/Unit/*                         | Cap level diff for hit/miss at ±3 |
+| B006 | ale-sell-item-hook                      | mod-ale/*, Handlers/ItemHandler.cpp                     | Add PLAYER_EVENT_ON_SELL_ITEM = 74 |
+| B007 | ale-unit-methods                        | mod-ale/*/UnitMethods.h, LuaFunctions.cpp               | Add SetWalk, IsWalking, IsHostileTo, IsFriendlyTo |
+| B008 | mod-talent-bonus                        | modules/mod-talent-bonus                                | Link local module for compilation |
+| B009 | playerbots-equipment-slots-enum         | mod-playerbots                                          | Forward-declare `enum EquipmentSlots : uint32;` |
+| B010 | playerbots-arena-type-none              | mod-playerbots                                          | `if (type != ARENA_TYPE_NONE)` enum comparison fix |
+| B011 | ale-resurrect-signature                 | mod-ale                                                 | Reconcile `bool&` vs `bool` mismatch with current core |
+| B012 | player-equipment-slot-sign              | core                                                    | Fix int vs `EquipmentSlots` sign-compare warning |
+| B013 | playerbots-logical-op-parentheses       | mod-playerbots                                          | `&&` within `||` parens (-Wlogical-op-parentheses) |
+| B014 | playerbots-switch-enum-default          | mod-playerbots                                          | Missing case values for `WSBotStrategy` (-Wswitch) |
+| B015 | playerbots-implicit-float-conversion    | mod-playerbots                                          | int→float value-change warning |
+| B016 | playerbots-constructor-reorder          | mod-playerbots                                          | Field-init order (-Wreorder-ctor) |
+| B017 | playerbots-unused-variables             | mod-playerbots                                          | -Wunused-variable cleanup |
+| B018 | playerbots-sign-compare                 | mod-playerbots                                          | Signed/unsigned compare warnings |
+| B019 | playerbots-unused-parameter             | mod-playerbots                                          | -Wunused-parameter cleanup |
+| B020 | ale-event-removeevent-lock              | mod-ale                                                 | Add LOCK_ALE around `ALEEventProcessor::RemoveEvent` |
+| B021 | playerbots-misc-warnings                | mod-playerbots                                          | Catch-all bundle for residual one-off warnings |
+| B022 | runtime-conf-dir-override               | core                                                    | Runtime `--conf-dir` override (avoids cmake-baked path) |
+| B023 | ale-formatquery-lifetime                | mod-ale                                                 | Fix variadic format-arg lifetime in FormatQuery |
+| B024 | symmetric-aggro-radius                  | core                                                    | Make `Creature::GetAttackDistance` symmetric |
+
+Per-patch source of truth lives in `patches/B###-*.sh` — each script's
+header comments document the upstream symptom, the matched pattern, and
+the inverse-unpatch operation. Detailed write-ups for the older B-patches
+(B001–B008) follow below; the B009+ family is generally one-warning-at-a-time
+and is documented in the scripts themselves rather than duplicated here.
 
 ### B001: aoe-loot-item-namespace
 
@@ -217,78 +239,15 @@ Upgrading boost would eliminate 442 warnings.
 
 ---
 
-## PHASE_MIDDLE: Compile-Time Adjustments
-
-Applied during compilation. Currently empty - reserved for future use.
-
-| ID | Name | Target | Parallelizable | Description |
-|----|------|--------|----------------|-------------|
-| (none) | | | | |
-
-Examples of future use:
-- Parallel make job tuning based on available RAM
-- Incremental build detection
-- Build artifact caching
-
----
-
 ## PHASE_END: Post-Compile Setup
 
-Applied after successful compilation, before server start.
-These configure the installed files.
-
-| ID | Name | Target | Parallelizable | Description |
-|----|------|--------|----------------|-------------|
-| E001 | lua-script-symlinks | installed-files/bin/lua_scripts/ | Yes | Symlink custom Lua to install dir |
-| E002 | config-database-paths | installed-files/etc/*.conf | No | Set database connection strings |
-| E003 | config-directory-paths | installed-files/etc/*.conf | No | Set log/data/source paths |
-| E004 | log-directory-setup | logs-{profile}/ | Yes | Create log dir symlink to /tmp |
-| E005 | dk-levelstats | acore_world_{profile} | No | Apply DK level 1-20 stats (issue 206) |
-
-### E001: lua-script-symlinks
-
-**Target:** `installed-files-{profile}/bin/lua_scripts/`
-**Action:** Create symlinks to project Lua sources
-
-```bash
-mkdir -p "${INSTALL_DIR}/bin/lua_scripts"
-ln -sfn "${DIR}/src/lua" "${INSTALL_DIR}/bin/lua_scripts/custom"
-```
-
-### E002: config-database-paths
-
-**Target:** `installed-files-{profile}/etc/authserver.conf`, `worldserver.conf`
-**Action:** Set MySQL connection strings
-**Parallelizable:** No (both modify worldserver.conf)
-
-```bash
-sed -i 's|^LoginDatabaseInfo.*=.*|LoginDatabaseInfo = "127.0.0.1;3307;ritz;menardi;acore_auth"|' authserver.conf
-sed -i 's|^LoginDatabaseInfo.*=.*|LoginDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;acore_auth"|' worldserver.conf
-sed -i 's|^WorldDatabaseInfo.*=.*|WorldDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;acore_world_beta"|' worldserver.conf
-sed -i 's|^CharacterDatabaseInfo.*=.*|CharacterDatabaseInfo = "127.0.0.1;3307;ritz;menardi;acore_characters_beta"|' worldserver.conf
-```
-
-### E003: config-directory-paths
-
-**Target:** `installed-files-{profile}/etc/authserver.conf`, `worldserver.conf`
-**Action:** Set filesystem paths
-**Parallelizable:** No (modifies same files as E002)
-
-```bash
-sed -i 's|^SourceDirectory.*=.*|SourceDirectory = "'"${AC_CODE_DIR}"'"|' authserver.conf
-sed -i 's|^LogsDir.*=.*|LogsDir = "'"${LOGS_DIR}"'"|' authserver.conf
-# ... etc
-```
-
-### E004: log-directory-setup
-
-**Target:** Project root
-**Action:** Create RAM-backed log directory
-
-```bash
-mkdir -p "/tmp/wow-chat-2/logs-${PROFILE}"
-ln -sfn "/tmp/wow-chat-2/logs-${PROFILE}" "${DIR}/logs-${PROFILE}"
-```
+Reserved for E-patches that set up the just-installed shadow tree (write
+`.conf` files from `.dist`, create log dirs, link Lua scripts, apply
+per-profile SQL). **No E-patches are currently active** — the equivalent
+work happens inside `scripts/generate-configs`, `scripts/install`, and the
+C-patches that run after promote. When the responsibilities split off
+into discrete idempotent patches they will be registered here as
+`patches/E###-*.sh` and indexed in this table.
 
 ---
 
@@ -416,100 +375,37 @@ shadow validation" and "valid for live profile run."
 
 ---
 
-## Parallelization Groups
-
-Patches that can run concurrently (no file conflicts):
-
-**Group 1 (BEGIN phase):**
-- B001 (aoe_loot.cpp)
-- B002 (RandomPlayerbotMgr.cpp)
-- B003 (LuaEngine.cpp)
-- B004 (multiple files - no conflicts with B001-B003)
-
-**Group 2 (END phase):**
-- E001 (lua_scripts/)
-- E004 (logs/)
-
-**Sequential (END phase):**
-- E002 → E003 (both modify .conf files)
-
----
-
 ## Adding New Patches
 
-1. Assign ID: `B###` (begin), `M###` (middle), `E###` (end)
-2. Document in appropriate section above
-3. Add to `apply_patches_begin/middle/end()` in `scripts/azerothcore`
-4. Mark parallelizable if it doesn't share files with other patches
-5. Include idempotent check (grep before sed, check before create)
+1. Assign the next free ID in the appropriate tier (`B###`, `E###`, `C###`).
+   `C###` variants for per-profile splits use `Cnnna` / `Cnnnb` (see
+   C006a/C006b).
+2. Create `patches/<ID>-<name>.sh` (B-patch) or `config/patches/<ID>-<name>.sh`
+   (C-patch). The script header is the source of truth: what upstream symptom
+   it addresses, the matched pattern, the inverse-unpatch sed.
+3. Add a one-line row to the appropriate table in this registry.
+4. Include an idempotent guard (grep before sed, check before create) so the
+   patch is safe to re-run.
+5. B-patches must ship with an exact-inverse unpatch operation so the source
+   tree round-trips cleanly. Multi-line insertions should be wrapped in
+   `// {{{ B###-name ... // }}} B###-name` marker comments; the unpatch
+   then range-deletes by marker.
 
 ---
 
-## Implementation in scripts/azerothcore
+## Patch Orchestration
 
-```bash
-# Meta-list structure (conceptual)
-declare -A BUILD_PATCHES=(
-    ["begin"]="B001"
-    ["middle"]=""
-    ["end"]="E001 E002 E003 E004"
-)
-
-apply_patches_begin() {
-    # Parallelizable patches can use & and wait
-    patch_B001 &
-    wait
-}
-
-apply_patches_middle() {
-    # Currently empty
-    :
-}
-
-apply_patches_end() {
-    # Parallel group
-    patch_E001 &
-    patch_E004 &
-    wait
-    # Sequential group
-    patch_E002
-    patch_E003
-}
-```
-
----
-
-## Unpatch System (Issue 127)
-
-Each PHASE_BEGIN patch has a corresponding unpatch function that reverses its changes.
-After build completes (success or failure), all patches are reverted to keep source clean.
-
-### Unpatch Functions
-
-| ID | Patch Function | Unpatch Function |
-|----|----------------|------------------|
-| B001 | `patch_B001_aoe_loot_item_namespace()` | `unpatch_B001_aoe_loot_item_namespace()` |
-| B002 | `patch_B002_playerbots_ale_login_hook()` | `unpatch_B002_playerbots_ale_login_hook()` |
-| B003 | `patch_B003_ale_gameobject_wildcard()` | `unpatch_B003_ale_gameobject_wildcard()` |
-| B004 | `patch_B004_upstream_warning_fixes()` | `unpatch_B004_upstream_warning_fixes()` |
-| B005 | `patch_B005_accuracy_level_cap()` | `unpatch_B005_accuracy_level_cap()` |
-| B006 | `patch_B006_ale_sell_item_hook()` | `unpatch_B006_ale_sell_item_hook()` |
-| B007 | `patch_B007_ale_unit_methods()` | `unpatch_B007_ale_unit_methods()` |
-| B008 | `patch_B008_mod_talent_bonus()` | `unpatch_B008_mod_talent_bonus()` |
-
-### Build Workflow
-
-```bash
-apply_patches_begin          # Apply all patches
-trap 'unapply_patches_begin' EXIT  # Ensure revert on failure
-do_build                     # Compile
-trap - EXIT                  # Clear trap
-unapply_patches_begin        # Revert all patches
-```
+`scripts/apply-patches` iterates the `patches/` and `config/patches/`
+directories in numeric order. Each script self-registers via the
+conventions in `patches/patches.sh` (B-patches) and the corresponding
+C-patch registry. B-patches apply pre-compile, run their compile, and
+unapply via a trap so the source tree stays pristine. C-patches apply
+after promote, against the live profile's `installed-files-{profile}/etc/`.
 
 ### Design Principles
 
-1. **Idempotent** - Both patch and unpatch are safe to run multiple times
-2. **Self-contained** - Each patch/unpatch pair is independent
-3. **Parallel-safe** - No file conflicts between patches
-4. **Failure-safe** - Bash trap ensures cleanup on build failure
+1. **Idempotent** — apply and unapply are safe to re-run.
+2. **Self-contained** — each patch/unpatch pair is independent.
+3. **One-to-one targeting** — N upstream errors = N anchored apply seds +
+   N anchored inverse seds. Broad seds corrupt clean source.
+4. **Failure-safe** — bash traps ensure cleanup on build failure.

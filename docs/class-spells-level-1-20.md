@@ -685,7 +685,7 @@ Living Seed
 
 ## Death Knight
 
-See issue 138 for implementation. DK trainers: 29194, 29195, 29196.
+See issue 206 for implementation. DK trainers: 29194, 29195, 29196.
 
 | Level | Spell Name       | School | Rank   | Spell ID |
 |-------|------------------|--------|--------|----------|

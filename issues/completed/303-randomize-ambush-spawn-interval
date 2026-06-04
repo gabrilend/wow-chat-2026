@@ -312,3 +312,26 @@ This issue enables **Phase 3: Danger (Ambush System)** by ensuring:
 Fixed spawns feel like a game mechanic. Random walk spawns feel like a world alive with unpredictable threats.
 
 This transforms ambush from "timer mechanic" to "environmental hazard."
+
+---
+
+## Debug Prints Removed 2026-05-21
+
+Two diagnostic prints added during the random-walk implementation
+have been removed now that the algorithm is verified working in
+production:
+
+- `print("[Ambush] Grace period: ... (offline ...s)")` — logged each
+  long-offline login that received the fixed grace period instead of
+  resuming the random walk.
+- `print("[Ambush] Quick relog, resuming at ...s")` — logged each
+  short-offline login that resumed mid-walk.
+
+Both were instrumentation for the offline-time-vs-grace-threshold
+branching logic at `Ambush.setupPlayer`. The branching has been
+verified correct via in-game testing across multiple offline
+durations, so the prints are no longer needed.
+
+The constants `AMBUSH_GRACE_PERIOD` and `AMBUSH_OFFLINE_RESET`
+remain documented in the configuration block at the top of
+`src/lua/ambush.lua`.

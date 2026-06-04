@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+# update-issue-refs
+# Updates all references from old issue number to new issue number
+#
+# Usage: ./scripts/update-issue-refs <old_number> <new_number>
+# Example: ./scripts/update-issue-refs 138 206
+
+set -euo pipefail
+
+# {{{ Configuration
+DIR="${DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+# }}}
+
+# {{{ usage
+usage() {
+    echo "Usage: $0 <old_number> <new_number> [--dry-run]"
+    echo ""
+    echo "Updates all references to an issue number."
+    echo ""
+    echo "Arguments:"
+    echo "  old_number    The current issue number (e.g., 138)"
+    echo "  new_number    The new issue number (e.g., 206)"
+    echo "  --dry-run     Show what would be changed without modifying files"
+    echo ""
+    echo "Examples:"
+    echo "  $0 138 206           # Update all refs from 138 to 206"
+    echo "  $0 138 206 --dry-run # Preview changes only"
+    exit 1
+}
+# }}}
+
+# {{{ validate_args
+if [ $# -lt 2 ]; then
+    usage
+fi
+
+OLD_NUM="$1"
+NEW_NUM="$2"
+DRY_RUN=false
+
+if [ $# -eq 3 ] && [ "$3" = "--dry-run" ]; then
+    DRY_RUN=true
+fi
+# }}}
+
+# {{{ update_patterns
+# List of patterns to update
+# Format: "search_pattern|replacement_pattern"
+get_update_patterns() {
+    local old="$1"
+    local new="$2"
+
+    cat <<EOF
+issue $old|issue $new
+Issue $old|Issue $new
+#$old|#$new
+$old-|$new-
+EOF
+}
+# }}}
+
+# {{{ main
+main() {
+    echo "=========================================="
+    echo "Updating issue references: $OLD_NUM → $NEW_NUM"
+    if [ "$DRY_RUN" = true ]; then
+        echo "(DRY RUN - no files will be modified)"
+    fi
+    echo "=========================================="
+    echo ""
+
+    # First, search for all references
+    local results_file="/tmp/issue-refs-$OLD_NUM.txt"
+
+    if [ ! -f "$results_file" ]; then
+        echo "Running search first..."
+        "$DIR/scripts/find-issue-refs" "$OLD_NUM"
+    fi
+
+    if [ ! -f "$results_file" ] || [ ! -s "$results_file" ]; then
+        echo "No references found to update."
+        exit 0
+    fi
+
+    # Extract unique file paths
+    local files=$(cut -d: -f1 "$results_file" | sort -u)
+    local file_count=$(echo "$files" | wc -l | tr -d ' ')
+
+    echo "Found references in $file_count file(s):"
+    echo "$files" | sed 's/^/  - /'
+    echo ""
+
+    if [ "$DRY_RUN" = true ]; then
+        echo "Would update the following patterns:"
+        get_update_patterns "$OLD_NUM" "$NEW_NUM" | while IFS='|' read -r search replace; do
+            echo "  '$search' → '$replace'"
+        done
+        echo ""
+        echo "Files that would be modified:"
+        echo "$files" | while read -r file; do
+            local matches=$(grep -c "issue $OLD_NUM\|Issue $OLD_NUM\|#$OLD_NUM\|$OLD_NUM-" "$file" || true)
+            echo "  $file ($matches match(es))"
+        done
+        exit 0
+    fi
+
+    # Actually perform updates
+    local total_changes=0
+
+    echo "$files" | while read -r file; do
+        local changes=0
+        local temp_file="$file.tmp"
+
+        # Apply all pattern replacements
+        cp "$file" "$temp_file"
+
+        get_update_patterns "$OLD_NUM" "$NEW_NUM" | while IFS='|' read -r search replace; do
+            if grep -qF "$search" "$temp_file" 2>/dev/null; then
+                sed -i "s/$search/$replace/g" "$temp_file"
+                changes=$((changes + 1))
+            fi
+        done
+
+        # Check if file actually changed
+        if ! cmp -s "$file" "$temp_file"; then
+            mv "$temp_file" "$file"
+            local match_count=$(grep -c "issue $NEW_NUM\|Issue $NEW_NUM\|#$NEW_NUM\|$NEW_NUM-" "$file" || true)
+            echo "  ✓ Updated $file ($match_count reference(s))"
+            total_changes=$((total_changes + 1))
+        else
+            rm "$temp_file"
+        fi
+    done
+
+    echo ""
+    echo "=========================================="
+    echo "Updated $total_changes file(s)"
+    echo "=========================================="
+
+    # Clean up results file
+    rm "$results_file"
+}
+# }}}
+
+main

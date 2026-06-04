@@ -1,89 +1,34 @@
-# ALE Patch: OnPlayerCalculateTalentsPoints Hook
+# Talent Point Bonus — C++ Module
 
-## Overview
-
-Exposes the `OnPlayerCalculateTalentsPoints` hook to Lua, allowing scripts to modify
-the expected talent point count during server validation.
+**Status:** Implemented as `mod-talent-bonus` (linked via B008)
 
 ## Why This Is Needed
 
 When a player logs in or levels up, the server calls `InitTalentForLevel()` which:
 
-1. Calls `CalculateTalentsPoints()` to get expected talent count
+1. Calls `CalculateTalentsPoints()` to get the expected talent count
 2. If `usedTalents > expected`, **resets ALL talents**
 3. Otherwise, sets `FreeTalentPoints = expected - used`
 
-Without this hook, any bonus talents granted via Lua will cause talent resets on login
-because the server doesn't know about them during validation.
+Without intervention, any bonus talents granted via Lua would cause talent
+resets on login, because the server's own validation does not know about
+them.
 
-## Files to Modify
+The original design explored adding `PLAYER_EVENT_ON_CALCULATE_TALENTS_POINTS`
+to ALE as a Lua-callable hook. We chose the **standalone module** path
+instead: it's cleaner (no ALE diff), it's faster to compute (no Lua
+round-trip on every level validation), and it leaves the Lua surface
+free of a hook nobody else needs.
 
-### 1. `src/LuaEngine/LuaEngine.h`
+## Implementation
 
-Add new hook enum value in `PlayerEvents`:
+A custom AzerothCore module, `mod-talent-bonus`, lives at
+`modules/mod-talent-bonus/` and is symlinked into `source-{profile}/modules/`
+by B008 so the AzerothCore build picks it up.
 
-```cpp
-// Find the PlayerEvents enum, add at the end before PLAYER_EVENT_COUNT:
-PLAYER_EVENT_ON_CALCULATE_TALENTS_POINTS    = XX,  // (event, player, talentPoints) - can return modified points
-```
-
-### 2. `src/LuaEngine/LuaEngine.cpp`
-
-Add hook handler. Find the PlayerScript class implementation and add:
-
-```cpp
-void OnPlayerCalculateTalentsPoints(Player const* player, uint32& talentPointsForLevel) override
-{
-    if (!PlayerEventBindings->HasEvents(PLAYER_EVENT_ON_CALCULATE_TALENTS_POINTS))
-        return;
-
-    LOCK_ELUNA;
-    Push(player);
-    Push(talentPointsForLevel);
-    int n = EventBindings->ExecuteCall();
-
-    // If Lua returned a value, use it as the new talent points
-    if (n > 0)
-    {
-        talentPointsForLevel = CHECKVAL<uint32>(-1);
-    }
-    CleanUpStack(n);
-}
-```
-
-### 3. `src/LuaEngine/methods/GlobalMethods.h`
-
-Update the `RegisterPlayerEvent` documentation comment to include:
-
-```cpp
-*     PLAYER_EVENT_ON_CALCULATE_TALENTS_POINTS       =     XX,       // (event, player, talentPoints) - Can return new talent points
-```
-
-## Lua Usage
-
-```lua
-local PLAYER_EVENT_ON_CALCULATE_TALENTS_POINTS = XX  -- Use actual enum value
-
-RegisterPlayerEvent(PLAYER_EVENT_ON_CALCULATE_TALENTS_POINTS, function(event, player, basePoints)
-    local level = player:GetLevel()
-    local currentXP = player:GetXP()
-    local xpToLevel = player:GetUInt32Value(36)
-
-    if xpToLevel <= 0 then return basePoints end
-
-    local progress = currentXP / xpToLevel
-    local bonusPoints = 0
-
-    if progress >= 0.33 then bonusPoints = bonusPoints + 1 end
-    if progress >= 0.66 then bonusPoints = bonusPoints + 1 end
-
-    return basePoints + bonusPoints
-end)
-```
-
-## Alternative: C++ Module
-
-If modifying mod-ale is not desired, create a standalone module:
+The module overrides `PlayerScript::OnPlayerCalculateTalentsPoints` and
+adjusts the expected count based on the player's progress toward the next
+level.
 
 ### `mod-talent-bonus/src/TalentBonus.cpp`
 
@@ -125,20 +70,21 @@ void Addmod_talent_bonusScripts()
 }
 ```
 
-## Build Instructions
+### B008 link step
 
-After applying patch or adding module:
+B008 creates the symlink before cmake runs:
 
 ```bash
-cd build
-cmake .. -DSCRIPTS=static -DMODULES=static
-make -j$(nproc)
-make install
+ln -sfn "${DIR}/modules/mod-talent-bonus" \
+        "${DIR}/source-${PROFILE}/modules/mod-talent-bonus"
 ```
+
+## Build
+
+A normal `./scripts/update` rebuild picks up the module.
 
 ## Related
 
-- `Player::CalculateTalentsPoints()` - Base calculation in Player.cpp:13647
-- `Player::InitTalentForLevel()` - Validation logic in Player.cpp:2538
-- `ScriptMgr::OnPlayerCalculateTalentsPoints()` - Hook dispatch in PlayerScript.cpp:57
-- Issue 120 - talent-points-level-20-cap
+- `Player::CalculateTalentsPoints()` — base calculation in `Player.cpp`
+- `Player::InitTalentForLevel()` — validation logic that would reset talents
+- `ScriptMgr::OnPlayerCalculateTalentsPoints()` — hook dispatch

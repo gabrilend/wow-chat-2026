@@ -184,3 +184,137 @@ sed targets, the workflow is:
 
 This is the "every couple whenevers" the user accepted as the price
 of -Werror discipline.
+
+## 1:1 Sed Targeting Rule (2026-05-20)
+
+Established after a B019 self-inflicted compile failure on
+`MailAction.cpp`. The rule:
+
+> Every change to source must be specifically targeted. If there are
+> N errors, there must be N apply seds, each matching exactly its
+> intended line. The unpatch script must contain N opposite seds,
+> each matching exactly the post-apply shape at the same anchored
+> location.
+
+**Why.** Sed has no memory of what it changed. If an apply sed
+transforms shape A → shape B, the unpatch sed transforms B → A
+across every occurrence of B in the file. When shape B *also occurs
+naturally in upstream*, unpatch corrupts those lines, leaving drift
+in the supposedly-clean source.
+
+**Concrete failure that motivated the rule.** B019 contained an
+unanchored sed:
+
+```bash
+sed -i 's|Process(uint32 index, Mail* mail, PlayerbotAI* botAI)|Process(uint32 /*index*/, ...)|' MailAction.cpp
+```
+
+There are four `Process` overrides in `MailAction.cpp` with that
+signature. Three of them (`TakeMailProcessor`, `DeleteMailProcessor`,
+`ReadMailProcessor`) were *already commented out* by upstream as
+`uint32 /*index*/`. The fourth (`TellMailProcessor`) USES `index` at
+line 32. The unanchored apply matched only the fourth (the only one
+still showing `uint32 index`), clobbered its parameter name, and
+produced a fatal compile error: `index` then resolved to POSIX
+`::index()` from `<strings.h>`, and `(index + 1)` became arithmetic
+on a function pointer.
+
+The unanchored unpatch then matched all four `/*index*/` lines and
+restored them to `index`, including the three upstream-commented
+ones — leaving three lines of drift in `source-beta` against
+upstream HEAD.
+
+**Resolution.** The entire `MailAction.cpp` section was removed from
+B019 (both apply and unpatch). Upstream already handles the warning.
+This is the expected lifecycle: a B-patch retires when upstream
+adopts the fix.
+
+**Going forward.** Every new B-patch sed must:
+
+1. Anchor on enough context that the apply matches exactly the
+   intended line(s) and nothing else.
+2. Have a mirror unpatch sed that uses the same anchor and reverses
+   exactly the post-apply shape.
+3. Pair 1:1 with a specific warning instance, not a class of warnings.
+
+Broad seds that "happen to match other places too" are a known
+hazard and should be replaced with multiple narrower seds.
+
+### B019 Inventory Update
+
+| Patch | Warning category                | Status              |
+|-------|---------------------------------|---------------------|
+| B019  | unused-parameter                | applied (4th-fixed) |
+
+4th fix: `MailAction.cpp` section removed entirely (apply + unpatch).
+See post-mortem above.
+
+## Marker-Comment Convention for Multi-Line Insertions (2026-05-20)
+
+Established alongside B022. For B-patches that insert multi-line code
+blocks (new function bodies, multiple add_options() chains, etc.),
+wrap each insertion in unique BEGIN/END marker comments containing
+the patch ID:
+
+```cpp
+// {{{ B022-conf-dir-override
+<inserted lines>
+// }}} B022-conf-dir-override
+```
+
+Apply uses `sed '/anchor/a\` (or `i\`) to insert the marker-bounded
+block at one anchored position. Unpatch uses
+`sed '/{{{ B022-conf-dir-override/,/}}} B022-conf-dir-override/d'`
+— one sed per file deletes every marker-bounded block, regardless of
+how many insertions are in that file.
+
+**Why this is safer than naked sed for multi-line insertions.** The
+1:1 rule keeps single-line edits round-trippable, but multi-line
+insertions are still vulnerable to the same drift hazard if their
+unpatch range-delete is anchored on incidental upstream context (a
+closing `}`, a function signature). Markers move the anchor into our
+own namespace — they're strings *we own*, not lines upstream might
+edit. The match set of the unpatch is provably exactly our insertions.
+
+Bonus: the markers double as vim folds (the `{{{` / `}}}` syntax),
+matching the project's existing fold convention for functions.
+
+### B022 Inventory Addition
+
+| Patch | Category                          | Status   |
+|-------|-----------------------------------|----------|
+| B022  | runtime conf-dir override (CLI)   | applied  |
+
+Not a warning fix — an architectural patch that closes the shadow
+validation blind spot documented in issue 137. Listed here for
+inventory completeness because it lives alongside the warning
+B-patches and follows the same apply/unpatch lifecycle.
+
+### B023 Inventory Addition
+
+| Patch | Category                              | Status   |
+|-------|---------------------------------------|----------|
+| B023  | ALE FormatQuery dangling pointer fix  | applied  |
+
+Real bug fix in mod-ale (not a warning): the sync DB query methods
+returned a `.c_str()` pointer to a destroyed `std::string` temporary
+when called with format args. Six identical call sites in
+`GlobalMethods.h`, fixed with one `sed -z` substitution using the
+marker-comment convention. See `issues/141-ale-formatquery-dangling-pointer.md`
+for the diagnosis and `docs/patches/contributing-upstream.md` for the
+upstream-PR workflow that should retire B023 once accepted.
+
+### B024 Inventory Addition
+
+| Patch | Category                          | Status   |
+|-------|-----------------------------------|----------|
+| B024  | symmetric "seek common foe" aggro | applied  |
+
+Gameplay-shaping engine patch in core AzerothCore. Inverts the
+vanilla `Creature::GetAttackDistance` "prey on the weak" asymmetry
+into a plateau-and-decay curve symmetric around matching levels.
+Required by the per-player ambush design (issue 210) where every
+creature is spawned at the triggering player's level and should
+preferentially notice that player over level-mismatched bystanders.
+See `issues/142-symmetric-aggro-radius.md` for the formula derivation
+and upstream-PR considerations (would want a config flag if PR'd).

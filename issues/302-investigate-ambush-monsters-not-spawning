@@ -195,3 +195,25 @@ The ambush system is the core danger loop. Without periodic spawns, the empty wo
 - Any edge cases (player in water, player in instance)?
 
 Move to completed when spawn system fully verified.
+
+---
+
+## Debug Print Removed 2026-05-21
+
+The `print("[Ambush] Registered spawn cycle for: " .. player:GetName())`
+that was added during this investigation (to verify the spawn cycle
+was firing at login) has been removed. Its narrow purpose — confirming
+the `RegisterEvent` call ran at login — was already verified, so the
+log line was no longer carrying signal.
+
+**Important: this does NOT mean monsters are spawning yet.** The
+registration print only proved the *first step* of the spawn cycle
+(the periodic event being registered). Whether `Ambush.spawnAndAttackPlayer`
+actually fires when its timer expires, and whether the spawn logic
+inside it produces creatures, is still unverified in-game as of
+2026-05-21. This issue stays **In Progress** until live observation
+confirms creatures appear around players on the expected cadence.
+
+When that confirmation happens, replace this note with a "Resolved"
+section recording what was actually observed and move the issue
+to `completed/`.

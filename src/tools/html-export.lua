@@ -86,9 +86,42 @@ end
 -- }}}
 
 
+-- {{{ build_issues_tree
+-- Builds tree nodes for issues
+local function build_issues_tree(narrative_data)
+    local lines = {}
+
+    table.insert(lines, '<div class="tree-node directory"><span class="icon">▼</span> issues</div>')
+    table.insert(lines, '<div class="tree-children">')
+
+    -- Group by phase
+    for phase = 0, 10 do
+        local phase_issues = narrative_data.by_phase[phase]
+        if phase_issues and #phase_issues > 0 then
+            table.insert(lines, string.format('  <div class="tree-node directory"><span class="icon">▶</span> Phase %d</div>', phase))
+            table.insert(lines, '  <div class="tree-children collapsed">')
+
+            for _, issue in ipairs(phase_issues) do
+                local icon = issue.completed and "✅" or "📄"
+                table.insert(lines, string.format(
+                    '    <div class="tree-node file"><span class="icon">%s</span> <a href="issues/%s.html">%s - %s</a></div>',
+                    icon, issue.id, issue.id, issue.title
+                ))
+            end
+
+            table.insert(lines, '  </div>')
+        end
+    end
+
+    table.insert(lines, '</div>')
+    return table.concat(lines, "\n")
+end
+-- }}}
+
+
 -- {{{ build_tree_html
 -- Builds HTML for directory tree navigation
-local function build_tree_html(files, root_dir)
+local function build_tree_html(files, root_dir, narrative_data)
     -- Group files by directory
     local tree = {}
 
@@ -200,6 +233,12 @@ local function build_tree_html(files, root_dir)
         end
     end
 
+    -- Add issues tree if narrative data provided
+    if narrative_data then
+        table.insert(output, "")
+        table.insert(output, build_issues_tree(narrative_data))
+    end
+
     return table.concat(output, "\n")
 end
 -- }}}
@@ -215,7 +254,7 @@ local function generate_index(config, scan_result, narrative_data, output_dir)
     end
 
     -- Build tree HTML
-    local tree_html = build_tree_html(scan_result.files, config.root_dir)
+    local tree_html = build_tree_html(scan_result.files, config.root_dir, narrative_data)
 
     -- Build stats HTML
     local stats_lines = {}
@@ -242,7 +281,7 @@ end
 
 -- {{{ generate_source_file
 -- Generates HTML for a source file
-local function generate_source_file(file, config, output_dir)
+local function generate_source_file(file, config, output_dir, tree_html)
     local template_path = config.root_dir .. "/src/tools/html-export/templates/source-file.html"
     local template = read_file(template_path)
     if not template then
@@ -276,16 +315,23 @@ local function generate_source_file(file, config, output_dir)
     end
     local output_path = output_dir .. "/" .. rel_path
 
+    -- Calculate relative path back to index
+    local depth = 0
+    for _ in rel_path:gmatch("/") do depth = depth + 1 end
+    local tree_root_link = string.rep("../", depth) .. "index.html"
+
     local replacements = {
-        PROJECT_NAME  = config.project_name,
-        FILE_NAME     = file.name,
-        FILE_PATH     = file.relative_path,
-        FILE_TYPE     = file.type,
-        FILE_SIZE     = tostring(file.size),
-        FILE_MTIME    = format_date(file.mtime),
-        FILE_CONTENT  = rendered,
-        RELATED_LINKS = "",
-        CUSTOM_CSS    = renderer.get_css(),
+        PROJECT_NAME   = config.project_name,
+        FILE_NAME      = file.name,
+        FILE_PATH      = file.relative_path,
+        FILE_TYPE      = file.type,
+        FILE_SIZE      = tostring(file.size),
+        FILE_MTIME     = format_date(file.mtime),
+        FILE_CONTENT   = rendered,
+        RELATED_LINKS  = "",
+        TREE_CONTENT   = tree_html,
+        TREE_ROOT_LINK = tree_root_link,
+        CUSTOM_CSS     = renderer.get_css(),
     }
 
     local html = template_replace(template, replacements)
@@ -296,7 +342,7 @@ end
 
 -- {{{ generate_issue_file
 -- Generates HTML for an issue file
-local function generate_issue_file(issue, config, output_dir)
+local function generate_issue_file(issue, config, output_dir, tree_html)
     local template_path = config.root_dir .. "/src/tools/html-export/templates/issue-file.html"
     local template = read_file(template_path)
     if not template then
@@ -319,14 +365,16 @@ local function generate_issue_file(issue, config, output_dir)
     local status_class = issue.completed and "completed" or "active"
 
     local replacements = {
-        PROJECT_NAME  = config.project_name,
-        ISSUE_ID      = issue.id,
-        ISSUE_PHASE   = tostring(issue.phase),
-        ISSUE_TITLE   = issue.title,
-        ISSUE_CONTENT = rendered,
-        STATUS_TEXT   = status_text,
-        STATUS_CLASS  = status_class,
-        CUSTOM_CSS    = renderer.get_css(),
+        PROJECT_NAME   = config.project_name,
+        ISSUE_ID       = issue.id,
+        ISSUE_PHASE    = tostring(issue.phase),
+        ISSUE_TITLE    = issue.title,
+        ISSUE_CONTENT  = rendered,
+        STATUS_TEXT    = status_text,
+        STATUS_CLASS   = status_class,
+        TREE_CONTENT   = tree_html,
+        TREE_ROOT_LINK = "../index.html",
+        CUSTOM_CSS     = renderer.get_css(),
     }
 
     local html = template_replace(template, replacements)
@@ -353,7 +401,7 @@ local function main()
         project_name        = root_dir:match("([^/]+)$") or "Project",
         project_description = "Everland Ghostsong - WoW private server source tree",
         gitignore_path      = root_dir .. "/.gitignore",
-        include_dirs        = { "src", "issues", "docs", "scripts" },
+        include_dirs        = { "src", "docs", "scripts" },  -- Exclude issues, build separately
     }
 
     -- Scan project
@@ -381,8 +429,8 @@ local function main()
     -- Source files
     local source_count = 0
     for _, file in ipairs(scan_result.files) do
-        if file.relative_path:match("^src/") or file.relative_path:match("^docs/") then
-            generate_source_file(file, config, output_dir)
+        if file.relative_path:match("^src/") or file.relative_path:match("^docs/") or file.relative_path:match("^scripts/") then
+            generate_source_file(file, config, output_dir, tree_html)
             source_count = source_count + 1
         end
     end
@@ -390,7 +438,7 @@ local function main()
 
     -- Issue files
     for _, issue in ipairs(narrative_data.issues) do
-        generate_issue_file(issue, config, output_dir)
+        generate_issue_file(issue, config, output_dir, tree_html)
     end
     print(string.format("  Generated %d issue pages", #narrative_data.issues))
 

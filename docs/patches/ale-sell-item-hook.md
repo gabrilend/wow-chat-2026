@@ -1,5 +1,7 @@
 # ALE Sell Item Hook Patch
 
+**Status:** Implemented as `patches/B006-ale-sell-item-hook.sh`
+
 Adds `PLAYER_EVENT_ON_SELL_ITEM` to AzerothCore Lua Engine (ALE).
 
 ## Overview
@@ -129,16 +131,11 @@ RegisterPlayerEvent(PLAYER_EVENT_ON_SELL_ITEM, onSellItem)
 
 ## Build Instructions
 
-After applying patch:
+Patch is applied automatically by `scripts/apply-patches` (driven by
+B006) before each build. A normal `./scripts/update` picks it up.
 
-```bash
-cd build
-cmake .. -DSCRIPTS=static -DMODULES=static
-make -j$(nproc)
-make install
-```
+## Related
 
-## Related Issues
-
-- 149 - Sold items return to treasure pool
-- 150 - ALE sell item hook (this patch)
+- `patches/B006-ale-sell-item-hook.sh` — the live B-patch and its inverse
+- The treasure-pool consumer in `src/lua/treasure.lua` registers for
+  `PLAYER_EVENT_ON_SELL_ITEM = 74`

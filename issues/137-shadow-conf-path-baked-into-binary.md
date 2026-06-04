@@ -98,3 +98,87 @@ config rather than the promoted-profile config.
   workflow)
 - 401 shadow-build-setup (completed; established the shadow concept)
 - 408 release-profile-build-fixes (related cleanup)
+
+## Update 2026-05-20: Module Configs Were Still Wrong
+
+The "Edge Case (Resolved)" section above was incomplete. The `-c` flag
+overrides only the *main* config file (`worldserver.conf`). Module
+config files (`etc/modules/<name>.conf`) are loaded by `ConfigMgr`
+via a separate code path:
+
+```cpp
+// Config.cpp:766
+std::string const& moduleConfigPath = GetConfigPath() + "modules/";
+```
+
+And `GetConfigPath()` returns `_CONF_DIR + "/"` — the cmake-baked
+literal, not the `-c` argument. So shadow validation ran the shadow
+worldserver binary with the shadow `worldserver.conf` (correct) but
+loaded module configs from `installed-files-release/etc/modules/`
+(stale, uncustomised).
+
+**How it surfaced.** The post-recompile validation run on 2026-05-20
+crashed with `Access denied for user 'acore'@'localhost'` during
+`DatabasePool Playerbots NOT opened`. The shadow `playerbots.conf` had
+the correct `ritz/menardi` credentials patched in by C001, but the
+binary was reading the release tree's `playerbots.conf` — which still
+held the upstream defaults `acore;acore;acore_playerbots`. The user `acore`
+doesn't exist, hence the access-denied error.
+
+This means *every* C-patched module config has been invisible to
+shadow validation since the shadow flow began. Playerbots was just
+the loudest canary because its DB connection is mandatory at startup.
+
+## B022: Runtime Conf-Dir Override (2026-05-20)
+
+`patches/B022-runtime-conf-dir-override.sh` adds a `--conf-dir / -C`
+CLI argument to all three apps (authserver, worldserver, dbimport)
+and a `ConfigMgr::SetConfigPathOverride(path)` setter. When the arg
+is non-empty, `GetConfigPath()` returns the override instead of the
+baked `_CONF_DIR`. When the arg is absent (the normal release case),
+behaviour is unchanged.
+
+The patch uses the new **marker-comment convention** for invertible
+multi-line insertions: every inserted block is wrapped in
+`// {{{ B022-conf-dir-override` / `// }}} B022-conf-dir-override`.
+The unpatch step deletes everything between those markers — one sed
+per file, regardless of how many insertions. Because the markers
+contain the patch ID, they cannot false-match upstream code or any
+other B-patch. This is the established defence against the
+`MailAction.cpp` self-inflicted drift documented in issue 126.
+
+`scripts/validate` now passes both `-c shadow/etc/worldserver.conf`
+*and* `-C shadow/etc`, so the shadow worldserver finally reads the
+shadow tree's module configs during validation. The release runtime
+invocation is unchanged: no flags, fallback to baked `_CONF_DIR`,
+which points at the profile's `etc/` per the original fix above.
+
+### Affected Source Files
+
+- `src/common/Configuration/Config.h` — declaration of setter
+- `src/common/Configuration/Config.cpp` — storage in the anonymous
+  namespace, override check in `GetConfigPath()`, new setter impl
+- `src/server/apps/worldserver/Main.cpp` — `--conf-dir` option + wiring
+- `src/server/apps/authserver/Main.cpp` — same
+- `src/tools/dbimport/Main.cpp` — same (symmetry for future tools that
+  may load module configs; dbimport doesn't itself load any today)
+
+### Verification
+
+After applying B022 and rebuilding:
+
+```bash
+# release runtime: no override, baked _CONF_DIR wins
+./worldserver
+# > Using configuration file  /.../installed-files-release/etc/worldserver.conf
+# module configs from  /.../installed-files-release/etc/modules/
+
+# shadow validation: -C overrides both worldserver.conf and modules dir
+./worldserver -c shadow/etc/worldserver.conf -C shadow/etc
+# > Using configuration file  /.../installed-files-shadow/etc/worldserver.conf
+# module configs from  /.../installed-files-shadow/etc/modules/
+```
+
+The Playerbots DB pool should now open cleanly during validation,
+because the shadow `playerbots.conf` (patched to `ritz/menardi` by
+C001) is finally the file the binary reads.

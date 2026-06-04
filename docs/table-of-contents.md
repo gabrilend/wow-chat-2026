@@ -10,10 +10,10 @@ wow-chat-2026/
 │   ├── installation.md            Setup and installation guide (server)
 │   ├── connection-guide.md        Player connection guide (client)
 │   ├── rmail-integration.md       rmail setup for server services
-│   ├── scripting.md               Lua scripting reference
+│   ├── scripting.md               ALE Lua scripting reference
 │   ├── roadmap.md                 Development phases and milestones
+│   ├── balance-updates.md         Append-only log of knob/lever tweaks
 │   ├── class-spells-level-1-20.md Class ability reference (levels 1-20)
-│   ├── phase-3-custom-spells.md   Custom spell system design
 │   ├── concept-catalog.md         Concepts 001-800
 │   ├── concept-catalog-2.md       Concepts 801-1600
 │   ├── concept-issue-map.md       Cross-reference: concepts to issues
@@ -22,20 +22,33 @@ wow-chat-2026/
 │   ├── addons/                    Client addon documentation
 │   ├── ale/                       AzerothCore Lua Engine API docs
 │   │   └── ale-integration-technical-report.md  Complete data flow analysis
-│   ├── migration-guide.md         Release to beta transition process
+│   ├── archive/                   Historical / one-shot transition docs
+│   │   ├── migration-guide.md     Release-to-beta transition process
+│   │   └── profile-transition-flow.md  Profile system rollout plan
 │   ├── patches/                   C++ patch documentation
-│   │   ├── patch-registry.md      Build patch system (BEGIN/MIDDLE/END phases)
+│   │   ├── patch-registry.md      Build patch system (BEGIN/END/CONFIG phases)
 │   │   ├── accuracy-level-cap.md  Monster hit chance level cap
 │   │   ├── ale-sell-item-hook.md  ALE hook for vendor sales
-│   │   ├── ale-calculate-talents-hook.md  ALE hook for talent calculation
+│   │   ├── ale-calculate-talents-hook.md  Talent calculation module
 │   │   ├── ale-gameobject-wildcard.md  Entry 0 wildcard for gameobject events
 │   │   ├── playerbots-ale-login-hook.md  Playerbots trigger PLAYER_EVENT_ON_LOGIN
-│   │   └── upstream-warning-fixes.md  Fix 695+ compiler warnings in upstream modules
+│   │   ├── upstream-warning-fixes.md  Fix 695+ compiler warnings in upstream modules
+│   │   └── contributing-upstream.md   How to translate a B-patch into an upstream PR
 │   ├── playerbots/                Playerbot module documentation
+│   ├── profiles/                  Per-profile reference pages (user-facing)
+│   │   ├── index.md               Overview of the four profiles + how to switch
+│   │   ├── vanilla.md             Default WotLK + playerbots, light ruleset (148)
+│   │   ├── release.md             Wow-chat custom design, proven-working tier
+│   │   ├── beta.md                Active development tier (all in-flight features)
+│   │   └── alpha.md               Holiday relic — wow-chat-1 + mod-eluna snapshot
 │   └── wiki/                      AzerothCore wiki mirror
 │
 ├── notes/
 │   ├── vision                     Project vision and goals
+│   ├── vision-enchanting-system-update.md  Layered, level-scaling enchantments
+│   ├── vision-medal-encounters.md  Optional bosses gated by marginal stats (resilience, etc.)
+│   ├── phase-3-custom-spells.md   Custom spell system design (moved from docs/)
+│   ├── topology-behavior-system.md Behavior-graph design notes
 │   ├── wow-chat-2-ideas           Deferred feature ideas
 │   ├── wow-chat-secretary         rmail secretary concept
 │   ├── wow-chat-secretary-2       rmail secretary (cont.)
@@ -47,26 +60,24 @@ wow-chat-2026/
 │   ├── phase-1-progress.md        Phase 1: Server Setup
 │   ├── phase-2-progress.md        Phase 2: Behaviors and Systems
 │   ├── phase-3-progress.md        Phase 3: World Immersion
+│   ├── phase-7-progress.md        Phase 7: ...
 │   ├── 1xx-*.md                   Phase 1 issues
 │   ├── 2xx-*.md                   Phase 2 issues
 │   ├── 3xx-*.md                   Phase 3 issues
 │   └── completed/                 Resolved issues archive
 │       └── demos/                 Phase demonstration scripts
 │
-├── issues-beta/                   Reorganized issue structure (9 phases)
-│   ├── phase-structure.md         Phase definitions by resulting effect
-│   └── completed/                 Resolved issues archive
+├── tissues/                       Tasks for human expert analysis
+│                                  (design, balance, narrative)
 │
 ├── config/
-│   ├── beta/                      Beta profile configs (symlinks)
-│   └── release/                   Release profile configs (symlinks)
+│   └── patches/                   C-patches (post-promote config tuning)
 │
 ├── src/
 │   ├── lua/                       Custom Lua scripts (hot-reload)
 │   │   ├── ambush.lua             Monster spawn system
 │   │   ├── travel.lua             Traveler NPC wandering
 │   │   ├── treasure.lua           Chest and loot system
-│   │   ├── levelling.lua          XP and talent points
 │   │   ├── movement.lua           Movement utilities
 │   │   ├── periodic_events.lua    Timer-based events
 │   │   └── behaviors/             Playerbot behavior scripts
@@ -76,12 +87,30 @@ wow-chat-2026/
 │   └── custom/                    Project-specific SQL
 │       └── db_world/              World database modifications
 │
+├── patches/                       B-patches (pre-compile source patches)
 ├── libs/                          External libraries (boost, etc.)
-├── modules/                       Custom module source
+├── modules/                       Custom module source (e.g. mod-talent-bonus)
 ├── scripts/                       Shell scripts
-│   ├── azerothcore               Server management
-│   ├── start-mysql               Start local MySQL
-│   └── stop-mysql                Stop local MySQL
+│   ├── switch                     Change active profile (.profile)
+│   ├── install                    First-time install for current profile
+│   ├── update                     Refresh source and rebuild
+│   ├── compile                    Build only
+│   ├── apply-patches              Run B/C-patch pipeline
+│   ├── generate-configs           Regenerate .conf files from .dist
+│   ├── promote                    Move shadow tree → installed-files-{profile}
+│   ├── validate                   Smoke-test the shadow build
+│   ├── verify-build               Post-install sanity check
+│   ├── authserver                 Run authserver from installed-files-{profile}
+│   ├── worldserver                Run worldserver from installed-files-{profile}
+│   ├── start-mysql / stop-mysql   Project-local MySQL control
+│   ├── extract-maps               Generate maps/vmaps/mmaps from client data
+│   ├── install-client-addons      Sync client-side AIO addons
+│   ├── redownload-source          Re-clone source-{profile}/
+│   ├── keira                      Keira3 database editor
+│   ├── export-html                Render docs as HTML
+│   ├── find-issue-refs            Find cross-references to issue numbers
+│   ├── update-issue-refs          Rewrite issue-number references after a migration
+│   └── update-realmlist-ip        Update C011's realm address
 │
 ├── source-{profile}/              AzerothCore source per profile
 ├── build-{profile}/               CMake build artifacts per profile
@@ -102,11 +131,11 @@ wow-chat-2026/
 5. **docs/connection-guide.md** - Player client setup and security
 6. **docs/rmail-integration.md** - rmail service configuration
 7. **docs/configuration.md** - All server and script settings
-8. **docs/scripting.md** - Lua API quick reference
+8. **docs/scripting.md** - ALE Lua API quick reference
+9. **docs/balance-updates.md** - Knob/lever tweak log
 
 ### Reference Documentation
-9. **docs/class-spells-level-1-20.md** - Ability availability by class/level
-10. **docs/phase-3-custom-spells.md** - Custom spell system design
+10. **docs/class-spells-level-1-20.md** - Ability availability by class/level
 11. **docs/ale/** - Full ALE API documentation
     - **ale-integration-technical-report.md** - Server→ALE→Lua data flow, registry mechanics
 12. **docs/playerbots/** - Playerbot configuration and commands
@@ -121,40 +150,40 @@ wow-chat-2026/
 ### Process Documentation
 18. **docs/delta-guide.md** - Issue tracking methodology
 19. **issues/phase-X-progress.md** - Phase completion tracking
-20. **issues-beta/phase-structure.md** - 9-phase reorganization (by effect)
 
-### Migration Documentation
-21. **docs/migration-guide.md** - Release to beta transition process
-22. **issues/129-release-to-beta-transition.md** - Master migration tracking (was 400; superseded by 136)
-23. **issues/completed/115-shadow-build-setup.md** - Shadow build directory (was 401)
-24. **issues/130-verify-release-baseline.md** - Baseline verification (was 402)
-25. **issues/131-incremental-patch-integration.md** - Patch-by-patch integration (was 403)
+### Historical Artifacts
+20. **docs/archive/migration-guide.md** - Release-to-beta transition (complete)
+21. **docs/archive/profile-transition-flow.md** - Profile system rollout plan (superseded by issue 136)
 
 ## Profile System
 
-The project supports multiple version profiles:
-- **beta** - Current development (liyunfan playerbots fork)
-- **release** - Stable June 2023 snapshot (wow-chat-1 compatible)
-- **alpha** - Cutting edge (not yet implemented)
+The project supports multiple version profiles. The active profile lives in
+`.profile` at the project root. See
+`issues/136-canonical-profile-definitions.md` for the canonical model:
+
+- **alpha** — Legacy holiday relic; pinned old AzerothCore + wow-chat-1
+  customs + mod-eluna. No playerbots, no ALE.
+- **release** — Current AzerothCore + mod-ale + mod-playerbots. Public
+  release target.
+- **beta** — Release baseline + in-development custom features.
 
 Each profile has isolated directories:
 - `source-{profile}/` - AzerothCore source code
 - `build-{profile}/` - CMake build directory
 - `installed-files-{profile}/` - Compiled server
-- `config/{profile}/` - Symlinks to installed config files
+- `logs-{profile}/` - Runtime logs (RAM-backed via /tmp)
 
-Switch profiles: `./scripts/azerothcore switch beta`
+Switch profiles: `./scripts/switch beta`
 
 ## Adding New Documents
 
 When creating new documentation:
 1. Add the file to the appropriate directory
 2. Update this table of contents
-3. Commit with message describing the new document
+3. Commit with a message describing the new document
 
 ## External References
 
 - AzerothCore Wiki: https://www.azerothcore.org/wiki/
-- ALE Documentation: https://www.azerothcore.org/mod-ale/
 - LuaJIT Reference: https://luajit.org/luajit.html
 - rmail Repository: https://github.com/gabrilend/r-mail
