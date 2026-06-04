@@ -8,14 +8,15 @@ config_database_connections() {
     local conf_auth="${INSTALL_DIR}/etc/authserver.conf"
     local conf_world="${INSTALL_DIR}/etc/worldserver.conf"
 
-    # Database isolation policy:
-    #   - Release and Beta share infrastructure (same source-beta, same schema):
-    #       port 3307, databases acore_auth / acore_world / acore_characters
-    #   - Vanilla (148) shares MySQL port 3307 with release/beta but namespaces
-    #       all databases with the _vanilla suffix. Same schema, isolated data —
-    #       so a running release server can coexist with vanilla without
-    #       contaminating the level-40-cap rules. Any future profile with a
-    #       distinct ruleset should follow this same suffix-the-databases pattern.
+    # Database isolation policy (revised by 136a — unified-realmlist):
+    #   - Release, Beta, and Vanilla share `acore_auth` so the user's account
+    #       and the realmlist table are visible from every profile. The realm
+    #       list shows one row per profile; flag column gates which is "online".
+    #       World / characters / playerbots STAY per-profile so the actual
+    #       game data never crosses profiles:
+    #         release/beta : acore_world / acore_characters / acore_playerbots
+    #         vanilla      : acore_world_vanilla / acore_characters_vanilla /
+    #                        acore_playerbots_vanilla
     #   - Alpha is wholly isolated (different source, different schema, different era):
     #       port 3308, databases acore_auth_alpha / acore_world_alpha / acore_characters_alpha
     #
@@ -44,7 +45,7 @@ config_database_connections() {
             ;;
         vanilla)
             DB_PORT="3307"
-            DB_AUTH="acore_auth_vanilla"
+            DB_AUTH="acore_auth"
             DB_WORLD="acore_world_vanilla"
             DB_CHARS="acore_characters_vanilla"
             DB_PLAYERBOTS="acore_playerbots_vanilla"

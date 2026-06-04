@@ -1,0 +1,95 @@
+#!/bin/bash
+# set-active-realm - Flip the unified realmlist's online flag (issue 136a)
+#
+# Each profile owns one row in acore_auth.realmlist. The active
+# profile's row gets `flag = 0` (online); every other row gets
+# `flag = 2` (offline). The client shows all rows in the realm-select
+# list, with offline ones greyed out and unclickable.
+#
+# Called by scripts/worldserver and scripts/authserver right before
+# exec'ing the binary. Idempotent — safe to call repeatedly, safe to
+# call when no profile change is in flight.
+#
+# First call against a fresh acore_auth seeds the four realm rows
+# (release/beta/vanilla/alpha) via INSERT IGNORE so the flip has
+# something to flip. The seed is lazy on purpose — it doesn't run
+# unless someone actually invokes this script.
+#
+# Profile ↔ RealmID mapping must stay in sync with
+# config/patches/C019-realm-id.sh (which writes the same ids into
+# each profile's worldserver.conf). Update both as a pair.
+#
+# Usage: ./scripts/set-active-realm <profile>
+#        Profile must be one of: release, beta, vanilla, alpha
+#
+# Sample: ./scripts/set-active-realm vanilla
+#         → vanilla row online (flag=0), other three offline (flag=2)
+
+# {{{ set_dir
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+# }}}
+
+# {{{ parse_args
+PROFILE="${1:-}"
+if [[ -z "${PROFILE}" ]]; then
+    echo "Usage: $0 <profile>"
+    echo "  profile: release | beta | vanilla | alpha"
+    exit 1
+fi
+# }}}
+
+# {{{ profile_to_realm_id
+# Mapping must mirror C019-realm-id.sh
+case "${PROFILE}" in
+    release)  ACTIVE_ID=1 ;;
+    beta)     ACTIVE_ID=2 ;;
+    vanilla)  ACTIVE_ID=3 ;;
+    alpha)    ACTIVE_ID=4 ;;
+    *)
+        echo "ERROR: unknown profile '${PROFILE}' (expected release|beta|vanilla|alpha)"
+        exit 1
+        ;;
+esac
+# }}}
+
+# {{{ mysql_paths
+MYSQL_DIR="${DIR}/mysql/installed-files"
+MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
+
+if [[ ! -S "${MYSQL_SOCKET}" ]]; then
+    echo "WARNING: MySQL socket not found at ${MYSQL_SOCKET}; skipping realm flip"
+    echo "         (set-active-realm will be re-run on the next worldserver launch)"
+    exit 0
+fi
+# }}}
+
+# {{{ seed_realmlist
+# Idempotent — INSERT IGNORE means existing rows are preserved as-is.
+# Address defaults to 127.0.0.1; scripts/update-realmlist-ip rewrites
+# every row's address to the detected public IP on each authserver
+# launch (issue 346 — extended to all rows under 136a).
+"${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+    -u ritz -pmenardi acore_auth 2>/dev/null <<'SQL'
+INSERT IGNORE INTO realmlist (id, name, address, localAddress, localSubnetMask, port, gamebuild)
+VALUES
+  (1, 'Everland Ghostsong (release)', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (2, 'Everland Ghostsong (beta)',    '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (3, 'Everland Ghostsong (vanilla)', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (4, 'Everland Ghostsong (alpha)',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340);
+SQL
+# }}}
+
+# {{{ flip_flags
+# Two statements: mark everyone offline, then mark the active profile
+# online. Done in this order so a brief race window during the flip
+# never shows two realms online at once. The client polls the realm
+# list infrequently enough that "everything offline for ~10ms" is
+# invisible.
+"${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+    -u ritz -pmenardi acore_auth 2>/dev/null <<SQL
+UPDATE realmlist SET flag = 2;
+UPDATE realmlist SET flag = 0 WHERE id = ${ACTIVE_ID};
+SQL
+# }}}
+
+echo "Active realm: ${PROFILE} (id=${ACTIVE_ID})"

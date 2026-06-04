@@ -155,6 +155,12 @@ if [[ ! -f "${INSTALL_DIR}/bin/authserver" ]]; then
     exit 1
 fi
 
+# Unified realmlist (issue 136a): kill any authserver squatting the
+# shared port from a previous profile, then flip realm rows so this
+# profile is the online one in the realm-select list.
+pkill -f "${INSTALL_DIR%-*}-"*"/bin/authserver" 2>/dev/null || true
+"${DIR}/scripts/set-active-realm" "${PROFILE}"
+
 echo "Starting authserver (profile: ${PROFILE})"
 export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
 cd "${INSTALL_DIR}/bin"

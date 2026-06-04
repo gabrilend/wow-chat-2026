@@ -141,6 +141,14 @@ if [[ ! -f "${INSTALL_DIR}/bin/worldserver" ]]; then
     exit 1
 fi
 
+# Unified realmlist (issue 136a): kill any worldserver squatting the
+# shared port from a previous profile, then flip realm rows so this
+# profile is the online one in the realm-select list. authserver does
+# the same flip but doing it again here covers the "worldserver booted
+# without authserver" case.
+pkill -f "${INSTALL_DIR%-*}-"*"/bin/worldserver" 2>/dev/null || true
+"${DIR}/scripts/set-active-realm" "${PROFILE}"
+
 echo "Starting worldserver (profile: ${PROFILE})"
 export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
 cd "${INSTALL_DIR}/bin"
