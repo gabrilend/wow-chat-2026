@@ -82,6 +82,34 @@ _unregister_from_updatefetcher() {
 }
 # -- }}}
 
+# -- {{{ _profile_db_name
+# Compose a profile-suffixed database name. Mirrors the database
+# isolation policy in config/patches/C001-database-connections.sh:
+# release and beta share the unsuffixed namespace; vanilla and alpha
+# carry _vanilla / _alpha suffixes for data isolation.
+#
+# Use this anywhere an E-patch wires a sql directory to a database.
+# The patch function stays profile-anonymous; the dispatcher
+# (patches.sh:PHASE_END_PATCHES[$PROFILE]) is the single source of
+# truth for which patches run under which profile.
+#
+# Args:
+#   $1 = base name (without profile suffix; e.g. acore_world, acore_playerbots)
+# Echoes the composed name; returns 1 on unknown profile.
+_profile_db_name() {
+    local base="$1"
+    case "${PROFILE}" in
+        release|beta) echo "${base}" ;;
+        vanilla)      echo "${base}_vanilla" ;;
+        alpha)        echo "${base}_alpha" ;;
+        *)
+            echo "ERROR: _profile_db_name called for unknown profile '${PROFILE}'" >&2
+            return 1
+            ;;
+    esac
+}
+# -- }}}
+
 # -- {{{ apply_config_values
 # Apply all config values for current profile (Issue 119)
 # Called after init_config() copies .dist to .conf
@@ -285,10 +313,8 @@ unpatch_E004_log_directory_setup() {
 # scans it. That is a DB-sharing consequence; address by splitting
 # into acore_world_beta if beta-only isolation is required.
 patch_E005_dk_levelstats() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/01-dk-levelstats.sql"
-    local SRC_FILE="${DIR}/sql/beta/db_world.src/01-dk-levelstats.apply.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/01-dk-levelstats.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/01-dk-levelstats.apply.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E005_APPLY" "${SQL_FILE}"; then
         echo "  [E005] Active file already holds apply-form content"
@@ -297,23 +323,21 @@ patch_E005_dk_levelstats() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E005] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E005] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 
 unpatch_E005_dk_levelstats() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/01-dk-levelstats.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/01-dk-levelstats.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E005_REVERT" "${SQL_FILE}"; then
         echo "  [E005] Active file already holds revert-form content"
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E005] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -346,9 +370,7 @@ SQL
 patch_E007_vanilla_starting_zones() {
     # Vanilla-only — the SQL would scribble over release/beta/alpha
     # starting zones, which is wrong for those profiles.
-    [[ "${PROFILE}" != "vanilla" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/vanilla/db_world/01-starting-zones.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/01-starting-zones.sql"
 
     # Idempotence guard: if the active file already holds the apply
     # marker, the content matches what we'd write and there's nothing
@@ -358,7 +380,7 @@ patch_E007_vanilla_starting_zones() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/vanilla/db_world" "acore_world_vanilla"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E007] Writing apply-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -373,9 +395,7 @@ SQL
 }
 
 unpatch_E007_vanilla_starting_zones() {
-    [[ "${PROFILE}" != "vanilla" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/vanilla/db_world/01-starting-zones.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/01-starting-zones.sql"
 
     # Idempotence guard for the revert direction.
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E007_REVERT" "${SQL_FILE}"; then
@@ -383,7 +403,7 @@ unpatch_E007_vanilla_starting_zones() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/vanilla/db_world" "acore_world_vanilla"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     # Revert-form hardcodes the literal upstream per-race default
     # coordinates pulled directly from
@@ -510,10 +530,8 @@ unpatch_E006_initialize_config_files() {
 # Acceptable for the 156-NPC set since none of the spawned vanilla
 # flightmasters have a confirmed hybrid role.
 patch_E008_vanilla_remove_flight_paths() {
-    [[ "${PROFILE}" != "vanilla" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/vanilla/db_world/03-remove-flight-paths.sql"
-    local SRC_FILE="${DIR}/sql/vanilla/db_world.src/03-remove-flight-paths.apply.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/03-remove-flight-paths.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/03-remove-flight-paths.apply.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E008_APPLY" "${SQL_FILE}"; then
         echo "  [E008] Active file already holds apply-form content"
@@ -522,23 +540,21 @@ patch_E008_vanilla_remove_flight_paths() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E008] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/vanilla/db_world" "acore_world_vanilla"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E008] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 
 unpatch_E008_vanilla_remove_flight_paths() {
-    [[ "${PROFILE}" != "vanilla" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/vanilla/db_world/03-remove-flight-paths.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/03-remove-flight-paths.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E008_REVERT" "${SQL_FILE}"; then
         echo "  [E008] Active file already holds revert-form content"
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/vanilla/db_world" "acore_world_vanilla"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     # Revert restores the flightmaster bit (0x2000 = 8192) on the 163
     # entries that R8 enumerated as having the flag before the apply
@@ -597,10 +613,8 @@ SQL
 # regenerate the apply source file, install — AC sees the hash change
 # on the active file and re-applies on next worldserver boot.
 patch_E009_vanilla_starting_equipment() {
-    [[ "${PROFILE}" != "vanilla" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/vanilla/db_world/02-starting-equipment.sql"
-    local SRC_FILE="${DIR}/sql/vanilla/db_world.src/02-starting-equipment.apply.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/02-starting-equipment.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/02-starting-equipment.apply.sql"
 
     # Idempotence guard: if the active file already holds the apply
     # marker, the content matches the source and there's nothing to do.
@@ -611,23 +625,21 @@ patch_E009_vanilla_starting_equipment() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E009] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/vanilla/db_world" "acore_world_vanilla"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E009] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 
 unpatch_E009_vanilla_starting_equipment() {
-    [[ "${PROFILE}" != "vanilla" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/vanilla/db_world/02-starting-equipment.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/02-starting-equipment.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E009_REVERT" "${SQL_FILE}"; then
         echo "  [E009] Active file already holds revert-form content"
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/vanilla/db_world" "acore_world_vanilla"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     # Revert hardcodes the explicit DELETEs that drop exactly the rows
     # the apply source INSERTed. The generator tags every row with a
@@ -665,10 +677,8 @@ SQL
 # patch grants it, so E009's off-hand items become equippable only
 # once both E009 and E010 have applied.
 patch_E010_vanilla_pretrain_abilities() {
-    [[ "${PROFILE}" != "vanilla" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/vanilla/db_world/04-pretrain-abilities.sql"
-    local SRC_FILE="${DIR}/sql/vanilla/db_world.src/04-pretrain-abilities.apply.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/04-pretrain-abilities.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/04-pretrain-abilities.apply.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E010_APPLY" "${SQL_FILE}"; then
         echo "  [E010] Active file already holds apply-form content"
@@ -677,23 +687,21 @@ patch_E010_vanilla_pretrain_abilities() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E010] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/vanilla/db_world" "acore_world_vanilla"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E010] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 
 unpatch_E010_vanilla_pretrain_abilities() {
-    [[ "${PROFILE}" != "vanilla" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/vanilla/db_world/04-pretrain-abilities.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/04-pretrain-abilities.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E010_REVERT" "${SQL_FILE}"; then
         echo "  [E010] Active file already holds revert-form content"
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/vanilla/db_world" "acore_world_vanilla"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     # Revert drops exactly the 287 rows tagged with the 'vanilla-148j-'
     # Note prefix. Default rows in playercreateinfo_spell_custom (the
@@ -715,10 +723,8 @@ SQL
 # release; cannot use UpdateFetcher without polluting release data).
 # Source: sql/beta/db_world.src/11-dk-class-system.apply.sql.
 patch_E011_beta_dk_class_system() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/11-dk-class-system.sql"
-    local SRC_FILE="${DIR}/sql/beta/db_world.src/11-dk-class-system.apply.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/11-dk-class-system.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/11-dk-class-system.apply.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E011_APPLY" "${SQL_FILE}"; then
         echo "  [E011] Active file already holds apply-form content"
@@ -727,23 +733,21 @@ patch_E011_beta_dk_class_system() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E011] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E011] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 
 unpatch_E011_beta_dk_class_system() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/11-dk-class-system.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/11-dk-class-system.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E011_REVERT" "${SQL_FILE}"; then
         echo "  [E011] Active file already holds revert-form content"
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E011] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -772,10 +776,8 @@ SQL
 # destruction. The unpatch's revert reads from that snapshot to
 # restore the pre-apply state, then drops the snapshot table.
 patch_E012_beta_drop_creatures_keep_essential() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/12-drop-creatures-keep-essential.sql"
-    local SRC_FILE="${DIR}/sql/beta/db_world.src/12-drop-creatures-keep-essential.apply.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/12-drop-creatures-keep-essential.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/12-drop-creatures-keep-essential.apply.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E012_APPLY" "${SQL_FILE}"; then
         echo "  [E012] Active file already holds apply-form content"
@@ -784,23 +786,21 @@ patch_E012_beta_drop_creatures_keep_essential() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E012] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E012] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 
 unpatch_E012_beta_drop_creatures_keep_essential() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/12-drop-creatures-keep-essential.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/12-drop-creatures-keep-essential.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E012_REVERT" "${SQL_FILE}"; then
         echo "  [E012] Active file already holds revert-form content"
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E012] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -825,10 +825,8 @@ SQL
 # Beta has no quest NPCs, so abilities normally taught via quests get
 # routed to trainers 200001-200020 instead.
 patch_E013_beta_quest_spells_to_trainers() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/13-quest-spells-to-trainers.sql"
-    local SRC_FILE="${DIR}/sql/beta/db_world.src/13-quest-spells-to-trainers.apply.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/13-quest-spells-to-trainers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/13-quest-spells-to-trainers.apply.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E013_APPLY" "${SQL_FILE}"; then
         echo "  [E013] Active file already holds apply-form content"
@@ -837,23 +835,21 @@ patch_E013_beta_quest_spells_to_trainers() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E013] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E013] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 
 unpatch_E013_beta_quest_spells_to_trainers() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/13-quest-spells-to-trainers.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/13-quest-spells-to-trainers.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E013_REVERT" "${SQL_FILE}"; then
         echo "  [E013] Active file already holds revert-form content"
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E013] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -875,10 +871,8 @@ SQL
 # the per-trainer DELETEs run. The unpatch's revert reads from that
 # snapshot to restore the pre-apply state, then drops the snapshot.
 patch_E014_beta_trainer_spell_level_cap() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/14-trainer-spell-level-cap.sql"
-    local SRC_FILE="${DIR}/sql/beta/db_world.src/14-trainer-spell-level-cap.apply.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/14-trainer-spell-level-cap.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/14-trainer-spell-level-cap.apply.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E014_APPLY" "${SQL_FILE}"; then
         echo "  [E014] Active file already holds apply-form content"
@@ -887,23 +881,21 @@ patch_E014_beta_trainer_spell_level_cap() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E014] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E014] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 
 unpatch_E014_beta_trainer_spell_level_cap() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/14-trainer-spell-level-cap.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/14-trainer-spell-level-cap.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E014_REVERT" "${SQL_FILE}"; then
         echo "  [E014] Active file already holds revert-form content"
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E014] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -924,10 +916,8 @@ SQL
 # (issue 155). Custom entries 900001-900011 in creature_template and
 # creature_template_model.
 patch_E015_beta_class_selector_npcs() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/15-class-selector-npcs.sql"
-    local SRC_FILE="${DIR}/sql/beta/db_world.src/15-class-selector-npcs.apply.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/15-class-selector-npcs.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/15-class-selector-npcs.apply.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E015_APPLY" "${SQL_FILE}"; then
         echo "  [E015] Active file already holds apply-form content"
@@ -936,23 +926,21 @@ patch_E015_beta_class_selector_npcs() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E015] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E015] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 
 unpatch_E015_beta_class_selector_npcs() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/15-class-selector-npcs.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/15-class-selector-npcs.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E015_REVERT" "${SQL_FILE}"; then
         echo "  [E015] Active file already holds revert-form content"
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E015] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -972,10 +960,8 @@ SQL
 # scripts can inject loot dynamically. Custom entries 900001-900037
 # in gameobject_template.
 patch_E016_beta_empty_loot_chests() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/16-empty-loot-chests.sql"
-    local SRC_FILE="${DIR}/sql/beta/db_world.src/16-empty-loot-chests.apply.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/16-empty-loot-chests.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/16-empty-loot-chests.apply.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E016_APPLY" "${SQL_FILE}"; then
         echo "  [E016] Active file already holds apply-form content"
@@ -984,23 +970,21 @@ patch_E016_beta_empty_loot_chests() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E016] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E016] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 
 unpatch_E016_beta_empty_loot_chests() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_world/16-empty-loot-chests.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/16-empty-loot-chests.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E016_REVERT" "${SQL_FILE}"; then
         echo "  [E016] Active file already holds revert-form content"
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_world" "acore_world"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
     echo "  [E016] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -1021,10 +1005,8 @@ SQL
 # from ai_playerbot_texts and ai_playerbot_texts_chance before
 # renumbering. Revert restores from snapshot and drops the snapshot.
 patch_E017_beta_relocate_logout_texts() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_playerbots/17-relocate-logout-texts.sql"
-    local SRC_FILE="${DIR}/sql/beta/db_playerbots.src/17-relocate-logout-texts.apply.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_playerbots/17-relocate-logout-texts.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_playerbots.src/17-relocate-logout-texts.apply.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E017_APPLY" "${SQL_FILE}"; then
         echo "  [E017] Active file already holds apply-form content"
@@ -1033,23 +1015,21 @@ patch_E017_beta_relocate_logout_texts() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E017] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_playerbots" "acore_playerbots"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_playerbots" "$(_profile_db_name acore_playerbots)"
 
     echo "  [E017] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 
 unpatch_E017_beta_relocate_logout_texts() {
-    [[ "${PROFILE}" != "beta" ]] && return 0
-
-    local SQL_FILE="${DIR}/sql/beta/db_playerbots/17-relocate-logout-texts.sql"
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_playerbots/17-relocate-logout-texts.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E017_REVERT" "${SQL_FILE}"; then
         echo "  [E017] Active file already holds revert-form content"
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/beta/db_playerbots" "acore_playerbots"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_playerbots" "$(_profile_db_name acore_playerbots)"
 
     echo "  [E017] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
