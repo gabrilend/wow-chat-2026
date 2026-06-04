@@ -18,6 +18,7 @@ declare -A PROFILE_REPO=(
     ["alpha"]="https://github.com/azerothcore/azerothcore-wotlk.git"
     ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["vanilla"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
 )
 # }}}
 
@@ -26,16 +27,21 @@ declare -A PROFILE_BRANCH=(
     ["alpha"]="master"
     ["beta"]="Playerbot"
     ["release"]="Playerbot"
+    ["vanilla"]="Playerbot"
 )
 # }}}
 
 # {{{ Pinned commits (empty = HEAD)
 # TODO(136): pin alpha to a specific pre-playerbots-migration commit so
 # the relic stays reproducible across years. Today it tracks master HEAD.
+# vanilla originally pinned 2026-06-02 per 148; un-pinned later same day
+# per user direction — vanilla now tracks HEAD alongside beta and release
+# so it always gets the latest upstream.
 declare -A PROFILE_COMMIT=(
     ["alpha"]=""
     ["beta"]=""
     ["release"]=""
+    ["vanilla"]=""
 )
 # }}}
 
@@ -44,10 +50,13 @@ declare -A PROFILE_COMMIT=(
 # release: ALE + playerbots are the two confirmed-working pillars; aoe-loot
 #   and grownup are quality-of-life additions promoted from beta.
 # beta: same baseline as release plus whatever's in flight (no extras yet).
+# vanilla (148): playerbots + three QoL modules, no ALE, no custom Lua.
+#   Light ruleset baseline for default-WotLK feel.
 declare -A PROFILE_MODULES=(
     ["alpha"]="mod-eluna"
     ["release"]="mod-ale mod-playerbots mod-aoe-loot mod-grownup"
     ["beta"]="mod-ale mod-playerbots mod-aoe-loot mod-grownup"
+    ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
 )
 # }}}
 
@@ -72,9 +81,10 @@ show_help() {
     echo "List available version profiles and their configurations."
     echo ""
     echo "Profiles:"
+    echo "  vanilla - Default WotLK + playerbots, light ruleset (148)"
     echo "  alpha   - Latest playerbots, cutting edge"
-    echo "  beta    - Current testing, all modules"
     echo "  release - Stable, wow-chat-1 compatible"
+    echo "  beta    - Current testing, all modules"
 }
 # }}}
 
@@ -88,7 +98,10 @@ echo ""
 printf "%-10s %-50s %-12s\n" "PROFILE" "REPOSITORY" "BRANCH"
 printf "%-10s %-50s %-12s\n" "-------" "----------" "------"
 
-for p in alpha beta release; do
+# Display order: floor → relic → stable → bleeding-edge.
+# vanilla is the smallest, most-stable profile; beta is the
+# most-experimental. Reading top-to-bottom traverses that gradient.
+for p in vanilla alpha release beta; do
     repo="${PROFILE_REPO[$p]}"
     branch="${PROFILE_BRANCH[$p]}"
     commit="${PROFILE_COMMIT[$p]}"
@@ -101,7 +114,7 @@ done
 
 echo ""
 echo "Modules per profile:"
-for p in alpha beta release; do
+for p in vanilla alpha release beta; do
     mods="${PROFILE_MODULES[$p]:-none}"
     [[ -z "${mods}" ]] && mods="none"
     echo "  ${p}: ${mods}"

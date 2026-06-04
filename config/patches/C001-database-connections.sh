@@ -11,6 +11,11 @@ config_database_connections() {
     # Database isolation policy:
     #   - Release and Beta share infrastructure (same source-beta, same schema):
     #       port 3307, databases acore_auth / acore_world / acore_characters
+    #   - Vanilla (148) shares MySQL port 3307 with release/beta but namespaces
+    #       all databases with the _vanilla suffix. Same schema, isolated data —
+    #       so a running release server can coexist with vanilla without
+    #       contaminating the level-40-cap rules. Any future profile with a
+    #       distinct ruleset should follow this same suffix-the-databases pattern.
     #   - Alpha is wholly isolated (different source, different schema, different era):
     #       port 3308, databases acore_auth_alpha / acore_world_alpha / acore_characters_alpha
     #
@@ -36,6 +41,13 @@ config_database_connections() {
             DB_WORLD="acore_world"
             DB_CHARS="acore_characters"
             DB_PLAYERBOTS="acore_playerbots"
+            ;;
+        vanilla)
+            DB_PORT="3307"
+            DB_AUTH="acore_auth_vanilla"
+            DB_WORLD="acore_world_vanilla"
+            DB_CHARS="acore_characters_vanilla"
+            DB_PLAYERBOTS="acore_playerbots_vanilla"
             ;;
         alpha)
             DB_PORT="3308"

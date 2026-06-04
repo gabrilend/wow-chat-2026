@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+# config-registry.sh - Profile-aware configuration value registry
+# Each config is a function that modifies worldserver.conf or authserver.conf
+# Profile specification uses array of profile names (not bitmask)
+
+# Profile mapping associative array
+# Syntax: CONFIG_PROFILES[function_name]="profile1 profile2 profile3"
+# Special: "all" means all profiles
+declare -A CONFIG_PROFILES
+
+# =============================================================================
+# Infrastructure Configs (all profiles)
+# =============================================================================
+
+# -- {{{ config_database_connections
+# Set database connection strings (project-specific, all profiles)
+# Profiles: all
+# Files: authserver.conf, worldserver.conf
+config_database_connections() {
+    local conf_auth="${INSTALL_DIR}/etc/authserver.conf"
+    local conf_world="${INSTALL_DIR}/etc/worldserver.conf"
+
+    # Auth database (shared across all profiles)
+    sed -i 's|^LoginDatabaseInfo.*=.*|LoginDatabaseInfo = "127.0.0.1;3307;ritz;menardi;'"${DB_AUTH}"'"|' "${conf_auth}"
+    sed -i 's|^LoginDatabaseInfo.*=.*|LoginDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;'"${DB_AUTH}"'"|' "${conf_world}"
+
+    # World database (profile-specific)
+    sed -i 's|^WorldDatabaseInfo.*=.*|WorldDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;'"${DB_WORLD}"'"|' "${conf_world}"
+
+    # Character database (profile-specific)
+    sed -i 's|^CharacterDatabaseInfo.*=.*|CharacterDatabaseInfo = "127.0.0.1;3307;ritz;menardi;'"${DB_CHARS}"'"|' "${conf_world}"
+}
+CONFIG_PROFILES[config_database_connections]="all"
+# -- }}}
+
+# -- {{{ config_directory_paths
+# Set project directory paths (DataDir, LogsDir, SourceDirectory, etc.)
+# Profiles: all
+# Files: authserver.conf, worldserver.conf
+config_directory_paths() {
+    local conf_auth="${INSTALL_DIR}/etc/authserver.conf"
+    local conf_world="${INSTALL_DIR}/etc/worldserver.conf"
+
+    # Data and logs
+    sed -i 's|^DataDir.*=.*|DataDir = "'"${DIR}"'/data"|' "${conf_world}"
+    sed -i 's|^LogsDir.*=.*|LogsDir = "'"${LOGS_DIR}"'"|' "${conf_world}"
+    sed -i 's|^LogsDir.*=.*|LogsDir = "'"${LOGS_DIR}"'"|' "${conf_auth}"
+
+    # Source and build paths
+    sed -i 's|^SourceDirectory.*=.*|SourceDirectory = "'"${AC_CODE_DIR}"'"|' "${conf_auth}"
+    sed -i 's|^SourceDirectory.*=.*|SourceDirectory = "'"${AC_CODE_DIR}"'"|' "${conf_world}"
+    sed -i 's|^BuildDirectory.*=.*|BuildDirectory = "'"${BUILD_DIR}"'"|' "${conf_world}"
+
+    # MySQL executable
+    sed -i 's|^MySQLExecutable.*=.*|MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"|' "${conf_auth}"
+    sed -i 's|^MySQLExecutable.*=.*|MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"|' "${conf_world}"
+}
+CONFIG_PROFILES[config_directory_paths]="all"
+# -- }}}
+
+# =============================================================================
+# Gameplay Configs - Core Rates
+# =============================================================================
+
+# -- {{{ config_run_speed_80_percent
+# Set player run speed to 80% (slower, more deliberate exploration)
+# Profiles: all
+# File: worldserver.conf
+config_run_speed_80_percent() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^Rate\.Run\.Speed.*=.*|Rate.Run.Speed = 0.8|' "${conf}"
+}
+CONFIG_PROFILES[config_run_speed_80_percent]="all"
+# -- }}}
+
+# -- {{{ config_fall_damage_10x
+# Increase fall damage to 10x (encourages careful movement)
+# Profiles: beta release
+# File: worldserver.conf
+config_fall_damage_10x() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^Rate\.Damage\.Fall.*=.*|Rate.Damage.Fall = 10.0|' "${conf}"
+}
+CONFIG_PROFILES[config_fall_damage_10x]="beta release"
+# -- }}}
+
+# -- {{{ config_exp_rate_2x
+# Double experience rate (faster testing/iteration)
+# Profiles: beta release
+# File: worldserver.conf
+config_exp_rate_2x() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^Rate\.XP\.Kill.*=.*|Rate.XP.Kill = 2.0|' "${conf}"
+    sed -i 's|^Rate\.XP\.Quest.*=.*|Rate.XP.Quest = 2.0|' "${conf}"
+}
+CONFIG_PROFILES[config_exp_rate_2x]="beta release"
+# -- }}}
+
+# =============================================================================
+# Gameplay Configs - Server Settings
+# =============================================================================
+
+# -- {{{ config_max_level_20
+# Set maximum player level to 20 (wow-chat design)
+# Profiles: beta
+# File: worldserver.conf
+config_max_level_20() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^MaxPlayerLevel.*=.*|MaxPlayerLevel = 20|' "${conf}"
+}
+CONFIG_PROFILES[config_max_level_20]="beta"
+# -- }}}
+
+# -- {{{ config_starting_level_1
+# Set starting level to 1 (default, but make explicit)
+# Profiles: beta
+# File: worldserver.conf
+config_starting_level_1() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^StartPlayerLevel.*=.*|StartPlayerLevel = 1|' "${conf}"
+}
+CONFIG_PROFILES[config_starting_level_1]="beta"
+# -- }}}
+
+# =============================================================================
+# Debug/Development Configs (beta only)
+# =============================================================================
+
+# -- {{{ config_gm_login_state
+# Set GM level on login (0 = player, 3 = admin)
+# Profiles: beta=3, release=0, alpha=0
+# File: worldserver.conf
+config_gm_login_state() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    local gm_level=0
+
+    if [[ "${PROFILE}" == "beta" ]]; then
+        gm_level=3
+    fi
+
+    sed -i 's|^GM\.LoginState.*=.*|GM.LoginState = '"${gm_level}"'|' "${conf}"
+}
+CONFIG_PROFILES[config_gm_login_state]="all"  # All profiles, but value varies
+# -- }}}
+
+# -- {{{ config_instant_teleport_beta
+# Instant teleport cooldowns for beta testing
+# Profiles: beta
+# File: worldserver.conf
+config_instant_teleport_beta() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^Instant\.Taxi.*=.*|Instant.Taxi = 1|' "${conf}"
+}
+CONFIG_PROFILES[config_instant_teleport_beta]="beta"
+# -- }}}

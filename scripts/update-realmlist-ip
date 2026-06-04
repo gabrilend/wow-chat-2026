@@ -25,33 +25,51 @@ source "${DIR}/scripts/credentials" "${DIR}"
 # }}}
 
 # {{{ get_public_ip
-# Query multiple services, require at least 2 to agree
-# Why: Single service could be down or return bad data
+# Query 2 random services first; only check others if they disagree
+# Why: Cuts network requests in half when services agree (common case)
 function get_public_ip() {
-    local ip1 ip2 ip3 ip4
+    # All available IP detection services
+    local services=(
+        "ifconfig.me"
+        "icanhazip.com"
+        "api.ipify.org"
+        "checkip.amazonaws.com"
+    )
 
-    ip1=$(curl -s --max-time 5 ifconfig.me 2>/dev/null)
-    ip2=$(curl -s --max-time 5 icanhazip.com 2>/dev/null)
-    ip3=$(curl -s --max-time 5 api.ipify.org 2>/dev/null)
-    ip4=$(curl -s --max-time 5 checkip.amazonaws.com 2>/dev/null)
+    # Shuffle and pick first 2
+    local shuffled=($(shuf -e "${services[@]}"))
+    local svc1="${shuffled[0]}"
+    local svc2="${shuffled[1]}"
 
-    # Trim whitespace
-    ip1=$(echo "$ip1" | tr -d '[:space:]')
-    ip2=$(echo "$ip2" | tr -d '[:space:]')
-    ip3=$(echo "$ip3" | tr -d '[:space:]')
-    ip4=$(echo "$ip4" | tr -d '[:space:]')
+    # Query first 2 services
+    local ip1 ip2
+    ip1=$(curl -s --max-time 5 "$svc1" 2>/dev/null | tr -d '[:space:]')
+    ip2=$(curl -s --max-time 5 "$svc2" 2>/dev/null | tr -d '[:space:]')
+
+    # If both agree and non-empty, we're done
+    if [[ -n "$ip1" && "$ip1" == "$ip2" ]]; then
+        echo "$ip1"
+        return 0
+    fi
+
+    # Disagreement or failure - check remaining services
+    local svc3="${shuffled[2]}"
+    local svc4="${shuffled[3]}"
+    local ip3 ip4
+    ip3=$(curl -s --max-time 5 "$svc3" 2>/dev/null | tr -d '[:space:]')
+    ip4=$(curl -s --max-time 5 "$svc4" 2>/dev/null | tr -d '[:space:]')
 
     # Find consensus (at least 2 services must agree)
-    for candidate in "$ip1" "$ip2" "$ip3" "$ip4"; do
-        if [[ -z "$candidate" ]]; then
-            continue
-        fi
+    local all_ips=("$ip1" "$ip2" "$ip3" "$ip4")
+    local all_svcs=("$svc1" "$svc2" "$svc3" "$svc4")
+
+    for candidate in "${all_ips[@]}"; do
+        [[ -z "$candidate" ]] && continue
 
         local count=0
-        [[ "$ip1" == "$candidate" ]] && ((count++))
-        [[ "$ip2" == "$candidate" ]] && ((count++))
-        [[ "$ip3" == "$candidate" ]] && ((count++))
-        [[ "$ip4" == "$candidate" ]] && ((count++))
+        for ip in "${all_ips[@]}"; do
+            [[ "$ip" == "$candidate" ]] && ((count++))
+        done
 
         if [[ $count -ge 2 ]]; then
             echo "$candidate"
@@ -61,10 +79,9 @@ function get_public_ip() {
 
     # No consensus - return error
     echo "ERROR: Could not determine public IP (services disagree)" >&2
-    echo "  ifconfig.me:        $ip1" >&2
-    echo "  icanhazip.com:      $ip2" >&2
-    echo "  api.ipify.org:      $ip3" >&2
-    echo "  checkip.amazonaws:  $ip4" >&2
+    for i in 0 1 2 3; do
+        echo "  ${all_svcs[$i]}: ${all_ips[$i]:-<empty>}" >&2
+    done
     return 1
 }
 # }}}

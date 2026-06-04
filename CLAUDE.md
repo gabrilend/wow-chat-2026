@@ -12,27 +12,6 @@ Everland Ghostsong is a WoW 3.3.5a private server with custom roguelike survival
 
 **Max level: 20** | Talent points every 1/3 level | Abilities earned through quests and training
 
-## Current Development State
-
-**Active Profile:** read `.profile` at project root (currently `release`).
-
-**Profile Definitions:** see `issues/136-canonical-profile-definitions.md`
-for the canonical model. Brief summary:
-- `alpha` — pinned old AzerothCore + mod-eluna + wow-chat-1 customs
-  (no playerbots, no ALE). Holiday relic.
-- `release` — current AzerothCore + mod-ale + mod-playerbots. Public
-  release target.
-- `beta` — release baseline + in-development custom features.
-
-**Reference:** `libs/wow-chat-1/` - original Lua scripts from previous version - do not alter
-
-**Testing Doc:** `issues/200-incremental-feature-restore`
-- Critical path index for debugging
-- Feature groups ordered by dependency
-- Stash commands for extracting features
-
-When starting a session, check the testing doc's critical path to find your entry point.
-
 ## Documentation Locations
 
 ### Local Documentation (docs/)
@@ -60,7 +39,14 @@ When starting a session, check the testing doc's critical path to find your entr
   - Statistics on concept coverage
   - **Update when:** new issues created, issues completed, concepts added/modified
 
-### Key Lua Files (src/lua/)
+### Key Lua Files (src/lua-beta/)
+
+The per-profile Lua dirs (added 2026-06-02): `src/lua-beta/` is the
+wow-chat design corpus (formerly `src/lua/`); `src/lua-vanilla/`
+holds vanilla-only scripts (currently just the starter-equipment
+hook from 148k); `src/lua-alpha/` is a placeholder for alpha-era
+mod-eluna scripts. E001 symlinks the profile-matching dir into
+`installed-files-${PROFILE}/bin/lua_scripts/custom/`.
 
 - `ambush.lua` - Monster spawn system (120-160 yards from player)
 - `travel.lua` - Traveler NPC wandering behavior
@@ -216,7 +202,7 @@ The ambush spawn interval uses a random walk algorithm:
 - Only triggers if offline for 10+ minutes
 - Quick relogs (< 10 minutes) resume random walk immediately
 
-### Configuration (src/lua/ambush.lua)
+### Configuration (src/lua-beta/ambush.lua)
 ```lua
 AMBUSH_BASE_INTERVAL   =  40000  -- ms starting interval
 AMBUSH_INTERVAL_MIN    =  10000  -- ms floor
@@ -235,9 +221,9 @@ AMBUSH_OFFLINE_RESET   =    600  -- seconds offline to trigger grace
 Parallel to `src/`, the `pngs/` directory holds annotated screenshots:
 
 ```
-src/lua/behaviors/find-monsters.lua    →    pngs/lua/behaviors/find-monsters.png
-src/lua/behaviors/avoid-monsters.lua   →    pngs/lua/behaviors/avoid-monsters.png
-src/lua/movement.lua                   →    pngs/lua/movement.png
+src/lua-beta/behaviors/find-monsters.lua    →    pngs/lua/behaviors/find-monsters.png
+src/lua-beta/behaviors/avoid-monsters.lua   →    pngs/lua/behaviors/avoid-monsters.png
+src/lua-beta/movement.lua              →    pngs/lua/movement.png
 ```
 
 ### Powerline Generation (Automatic)
