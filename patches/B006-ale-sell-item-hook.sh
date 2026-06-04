@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # B006 - Add PLAYER_EVENT_ON_SELL_ITEM to ALE
-# Issue 150: ALE sell item hook
+# Issue 403 (was 150): ALE sell item hook
 # Parallelizable: Yes (unique files)
 
 # {{{ patch_B006_ale_sell_item_hook
@@ -28,7 +28,7 @@ patch_B006_ale_sell_item_hook() {
     if [[ -f "${PLAYER_HOOKS}" ]] && ! grep -q "ALE::OnSellItem" "${PLAYER_HOOKS}"; then
         cat >> "${PLAYER_HOOKS}" << 'EOFHOOK'
 
-// Issue 150: ALE sell item hook
+// Issue 403: ALE sell item hook
 void ALE::OnSellItem(Player* pPlayer, Item* pItem, Creature* pVendor, uint32 count)
 {
     START_HOOK(PLAYER_EVENT_ON_SELL_ITEM);
@@ -96,7 +96,7 @@ unpatch_B006_ale_sell_item_hook() {
 
     # 3. Remove implementation from PlayerHooks.cpp
     if [[ -f "${PLAYER_HOOKS}" ]]; then
-        sed -i '/\/\/ Issue 150: ALE sell item hook/,/^}$/d' "${PLAYER_HOOKS}"
+        sed -i '/\/\/ Issue 403: ALE sell item hook/,/^}$/d' "${PLAYER_HOOKS}"
     fi
 
     # 5. Remove hook calls from ItemHandler.cpp

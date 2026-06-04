@@ -94,16 +94,19 @@ patch_B019_playerbots_unused_parameter() {
         sed -i '/class ItemCountChecker/,/^};/ s|bool Check(PlayerbotAI\* botAI, AiObjectContext\* context)|bool Check(PlayerbotAI* /*botAI*/, AiObjectContext* context)|' "${FILE}" 2>/dev/null || true
     fi
 
-    # MailAction.cpp - index parameter (3 instances)
-    # Upstream signature is `Process(uint32 index, Mail* mail, PlayerbotAI* botAI)`
-    # — index is the first parameter, so the older `, uint32 index)` selector
-    # (which assumed a trailing position) never matched. Anchor on the
-    # opening paren of the param list instead.
-    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/MailAction.cpp"
-    if [[ -f "${FILE}" ]]; then
-        sed -i 's/, uint32 index)/, uint32 \/*index*\/)/' "${FILE}" 2>/dev/null || true
-        sed -i 's|Process(uint32 index, Mail\* mail, PlayerbotAI\* botAI)|Process(uint32 /*index*/, Mail* mail, PlayerbotAI* botAI)|' "${FILE}" 2>/dev/null || true
-    fi
+    # MailAction.cpp — REMOVED 2026-05-20. Upstream already commented out the
+    # unused `index` parameter in TakeMailProcessor, DeleteMailProcessor, and
+    # ReadMailProcessor. The fourth processor (TellMailProcessor) USES `index`
+    # at line 32 and must keep its parameter name. The previous sed had no
+    # class anchor, so it clobbered TellMailProcessor's parameter — line 32
+    # then failed to compile because `index` resolved to POSIX `::index()`
+    # from <strings.h> (arithmetic on a function pointer). The unpatch sed
+    # was also unanchored and over-restored the three upstream `/*index*/`
+    # lines back to `index`, leaving three lines of drift each round trip.
+    # No replacement needed: this entire section was treating a warning
+    # that upstream already fixed. The 1:1-targeting rule established
+    # 2026-05-20 (one sed per actual error, exact-inverse unpatch) would
+    # have prevented this from being written.
 
     # SayAction files
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/SayAction.cpp"
@@ -266,9 +269,10 @@ unpatch_B019_playerbots_unused_parameter() {
         sed -i 's/Event& \/\*event\*\//Event\& event/' "${FILE}" 2>/dev/null || true
     fi
 
-    # MailAction.cpp
-    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/MailAction.cpp"
-    [[ -f "${FILE}" ]] && sed -i 's/uint32 \/\*index\*\//uint32 index/' "${FILE}" 2>/dev/null || true
+    # MailAction.cpp — apply-side removed 2026-05-20 (see apply block above).
+    # Unpatch also removed: the inverse sed was global and over-restored
+    # upstream's own `/*index*/` comments to `index`, corrupting clean source
+    # on every round trip. Nothing to undo.
 
     # SayAction files
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/SayAction.cpp"
