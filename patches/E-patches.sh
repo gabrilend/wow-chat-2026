@@ -734,6 +734,54 @@ SQL
 }
 # -- }}}
 
+# -- {{{ patch_E019_vanilla_no_intro_cinematic
+# Installs a BEFORE INSERT trigger on acore_characters_vanilla.characters
+# that sets cinematic = 1 on every new row. AC's first-login flow plays
+# the race intro only when cinematic = 0; pre-flipping it to 1 makes
+# first login skip straight to gameplay.
+#
+# Vanilla-scoped — the trigger lives in acore_characters_vanilla only.
+# Release/beta read a different characters DB so their race intros stay
+# on for anyone who wants them. Requires log_bin_trust_function_creators
+# = 1 in mysql/conf/my.cnf so ritz can install the trigger without
+# SUPER (project-local MySQL is set that way).
+patch_E019_vanilla_no_intro_cinematic() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/01-no-intro-cinematic.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/01-no-intro-cinematic.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E019_APPLY" "${SQL_FILE}"; then
+        echo "  [E019] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E019] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)"
+
+    echo "  [E019] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E019_vanilla_no_intro_cinematic() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/01-no-intro-cinematic.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E019_REVERT" "${SQL_FILE}"; then
+        echo "  [E019] Active file already holds revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)"
+
+    echo "  [E019] Writing revert-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E019_REVERT vanilla-no-intro-cinematic
+-- Revert-form: drop the trigger so cinematic defaults back to 0 and
+-- race intros play on first login as upstream ships.
+DROP TRIGGER IF EXISTS `tr_no_intro_cinematic`;
+SQL
+}
+# -- }}}
+
 # -- {{{ patch_E018_vanilla_kit_required_level_cap
 # Lowers item_template.RequiredLevel on every entry that appears in
 # the vanilla 148h starter kit so a level-20 character (vanilla's

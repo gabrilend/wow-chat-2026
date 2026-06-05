@@ -103,6 +103,7 @@ mysql/databases/acore_*/
 # Active files are regenerable, so they stay out of git to avoid noisy
 # diffs every time someone runs install on a different profile.
 sql/vanilla/db_world/
+sql/vanilla/db_characters/
 sql/beta/db_world/
 sql/beta/db_playerbots/
 # (future profiles with their own SQL: append `sql/<profile>/db_<dbname>/` here)
