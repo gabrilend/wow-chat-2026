@@ -403,12 +403,26 @@ patch_E007_vanilla_starting_zones() {
     echo "  [E007] Writing apply-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
 -- MARKER_E007_APPLY vanilla-starting-zones
--- Apply-form: Alliance races → Darkshire (Duskwood, zone 10),
---             Horde races → Tarren Mill (Hillsbrad, zone 267).
--- Both towns on Eastern Kingdoms (map 0). DK rows (class=6) left alone
--- so a re-enabled DK still lands at Ebon Hold (assumes WotLK opener).
-UPDATE `playercreateinfo` SET `map`=0, `zone`=10,  `position_x`=-10573.0, `position_y`=-1182.51, `position_z`=28.0148, `orientation`=0.309022 WHERE `race` IN (1,3,4,7,11) AND `class` != 6;
-UPDATE `playercreateinfo` SET `map`=0, `zone`=267, `position_x`=-34.1467, `position_y`=-923.366, `position_z`=54.5576, `orientation`=0.15019  WHERE `race` IN (2,5,6,8,10) AND `class` != 6;
+-- Apply-form (148n): per-race spawn assignment, anchored at level-20
+-- town centers. Each row sends a (race, non-DK) pair to a specific
+-- town across the world rather than bucketing every Alliance/Horde
+-- character into one Darkshire/Tarren Mill pair.
+--
+--   Human + Dwarf      → Wetlands / Menethil Harbor (map 0, zone 38)
+--   Draenei            → Duskwood / Darkshire       (map 0, zone 10)
+--   Night Elf + Gnome  → Ashenvale / Astranaar      (map 1, zone 331)
+--   Orc                → Northern Barrens / Ratchet (map 1, zone 17)
+--   Undead + Troll     → Hillsbrad / Tarren Mill    (map 0, zone 267)
+--   Tauren + Blood Elf → Stonetalon / Sun Rock      (map 1, zone 406)
+--
+-- DK rows (class=6) left alone so a re-enabled DK still lands at
+-- Ebon Hold (assumes WotLK opener).
+UPDATE `playercreateinfo` SET `map`=0, `zone`=38,  `position_x`=-3826.0,  `position_y`=-793.0,    `position_z`=19.0,    `orientation`=4.84     WHERE `race` IN (1,3)     AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=0, `zone`=10,  `position_x`=-10573.0, `position_y`=-1182.51,  `position_z`=28.0148, `orientation`=0.309022 WHERE `race`  = 11        AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=1, `zone`=331, `position_x`=2728.0,   `position_y`=-380.0,    `position_z`=107.0,   `orientation`=0.0      WHERE `race` IN (4,7)     AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=1, `zone`=17,  `position_x`=-978.0,   `position_y`=-3771.0,   `position_z`=5.0,     `orientation`=0.0      WHERE `race`  = 2         AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=0, `zone`=267, `position_x`=-34.1467, `position_y`=-923.366,  `position_z`=54.5576, `orientation`=0.15019  WHERE `race` IN (5,8)     AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=1, `zone`=406, `position_x`=736.0,    `position_y`=1019.0,    `position_z`=137.0,   `orientation`=0.0      WHERE `race` IN (6,10)    AND `class` != 6;
 SQL
 }
 
