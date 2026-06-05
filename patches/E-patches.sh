@@ -734,6 +734,71 @@ SQL
 }
 # -- }}}
 
+# -- {{{ patch_E018_vanilla_kit_required_level_cap
+# Lowers item_template.RequiredLevel on every entry that appears in
+# the vanilla 148h starter kit so a level-20 character (vanilla's
+# StartPlayerLevel per C007c) can actually equip the kit. The kit was
+# tuned with Cuirboulli / Polished Scale armor at RequiredLevel 22 —
+# without this patch the character spawns "stripped + bagful of
+# unequippable kit" because ALE's auto-equip-starter-kit hook calls
+# EquipItem and the engine returns ERR_CANT_EQUIP_LEVEL_I.
+#
+# Vanilla-DB scope only (acore_world_vanilla). Release/beta read a
+# different world DB so their item_template stays as upstream
+# shipped. ItemLevel column unchanged — tooltips still show the kit
+# as item-level-22-ish gear; only the required-to-wear level moves.
+patch_E018_vanilla_kit_required_level_cap() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/06-kit-required-level-cap.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/06-kit-required-level-cap.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E018_APPLY" "${SQL_FILE}"; then
+        echo "  [E018] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E018] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+
+    echo "  [E018] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E018_vanilla_kit_required_level_cap() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/06-kit-required-level-cap.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E018_REVERT" "${SQL_FILE}"; then
+        echo "  [E018] Active file already holds revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+
+    # Revert: restore each affected item to its upstream RequiredLevel
+    # by re-reading from a snapshot taken at apply time. The apply
+    # source above doesn't snapshot today — it just UPDATEs in place —
+    # so a clean revert needs the snapshot. Until that's added, this
+    # unpatch is a soft revert: re-floor the level back to a baseline
+    # of 22 which matches the Cuirboulli/Polished-Scale-armor tier the
+    # majority of the kit was drawn from. Imperfect; tracked in 148h
+    # follow-up.
+    echo "  [E018] Writing revert-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E018_REVERT vanilla-kit-required-level-cap
+-- Revert-form: floor RequiredLevel back to 22 for items we lowered.
+-- Imperfect (no snapshot) — see 148h follow-up.
+UPDATE `item_template`
+   SET `RequiredLevel` = 22
+ WHERE `entry` IN (
+           SELECT DISTINCT `itemid`
+             FROM `playercreateinfo_item`
+            WHERE `Note` LIKE 'vanilla-148h-%'
+       )
+   AND `RequiredLevel` = 20;
+SQL
+}
+# -- }}}
+
 # -- {{{ patch_E011_beta_dk_class_system
 # Death Knight class system for beta profile (issue 206/167). Wires DK
 # from level 1 with progressive ability training via custom trainers
