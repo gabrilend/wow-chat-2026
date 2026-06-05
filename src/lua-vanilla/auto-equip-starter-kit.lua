@@ -16,8 +16,10 @@
 --        d. Ammo — AddItem after the quiver exists, so the engine routes
 --           the new stack into the quiver instead of the backpack.
 --        e. Hearthstone — AddItem to the backpack.
---   4. SetBindPoint to Darkshire (Alliance) or Tarren Mill (Horde), so
---      the freshly-granted hearthstone teleports back to the right town.
+--   4. SetBindPoint to this character's race's anchor town (148n's
+--      per-race spread — Wetlands/Ashenvale/Hillsbrad/Stonetalon/Ratchet/
+--      Duskwood), so the freshly-granted hearthstone teleports back to
+--      the right town instead of a one-size-fits-faction default.
 --
 -- Design pillars (user 2026-06-02):
 --   "A character should have nothing but the things we provide, and maybe
@@ -95,20 +97,28 @@ local HEARTHSTONE_ENTRY     = 6948
 -- }}}
 
 -- {{{ hearthstone_targets
--- R3 results: town-square coordinates + zone IDs for the two starting
--- towns. Map 0 is Eastern Kingdoms.
-local HEARTH_ALLIANCE = {
-    x      = -10573.0,    y      =  -1182.51,
-    z      =     28.0148, mapId  =      0,
-    areaId =     10,
+-- 148n: per-race spawn anchors that mirror E007's per-race
+-- playercreateinfo UPDATEs. Each row is the town where this race
+-- materialises at level 20, and where its hearthstone should drop
+-- the character back when cast. Map 0 = Eastern Kingdoms, map 1 =
+-- Kalimdor; areaId is the AC zone id.
+--
+-- Race 9 (Goblin slot, reserved pre-Cataclysm) is absent. DK
+-- characters (class=6) are disabled on vanilla per 148a; if a DK
+-- ever returns, this table would need a class branch sending them
+-- to Ebon Hold instead.
+local HEARTH_BY_RACE = {
+    [1]  = { x =  -3826.0,    y =   -793.0,    z =  19.0,    mapId = 0, areaId =  38 },  -- Human     → Wetlands / Menethil Harbor
+    [2]  = { x =   -978.0,    y =  -3771.0,    z =   5.0,    mapId = 1, areaId =  17 },  -- Orc       → N. Barrens / Ratchet
+    [3]  = { x =  -3826.0,    y =   -793.0,    z =  19.0,    mapId = 0, areaId =  38 },  -- Dwarf     → Wetlands / Menethil Harbor
+    [4]  = { x =   2728.0,    y =   -380.0,    z = 107.0,    mapId = 1, areaId = 331 },  -- Night Elf → Ashenvale / Astranaar
+    [5]  = { x =    -34.1467, y =   -923.366,  z =  54.5576, mapId = 0, areaId = 267 },  -- Undead    → Hillsbrad / Tarren Mill
+    [6]  = { x =    736.0,    y =   1019.0,    z = 137.0,    mapId = 1, areaId = 406 },  -- Tauren    → Stonetalon / Sun Rock Retreat
+    [7]  = { x =   2728.0,    y =   -380.0,    z = 107.0,    mapId = 1, areaId = 331 },  -- Gnome     → Ashenvale / Astranaar
+    [8]  = { x =    -34.1467, y =   -923.366,  z =  54.5576, mapId = 0, areaId = 267 },  -- Troll     → Hillsbrad / Tarren Mill
+    [10] = { x =    736.0,    y =   1019.0,    z = 137.0,    mapId = 1, areaId = 406 },  -- Blood Elf → Stonetalon / Sun Rock Retreat
+    [11] = { x = -10573.0,    y =  -1182.51,   z =  28.0148, mapId = 0, areaId =  10 },  -- Draenei   → Duskwood / Darkshire
 }
-local HEARTH_HORDE = {
-    x      =    -34.1467, y      =   -923.366,
-    z      =     54.5576, mapId  =      0,
-    areaId =    267,
-}
-
-local TEAM_ALLIANCE = 0
 -- }}}
 
 -- {{{ build_kit_query
@@ -287,9 +297,16 @@ end
 -- }}}
 
 -- {{{ bind_hearth
--- SetBindPoint to the appropriate starting town based on faction.
+-- SetBindPoint to this character's race's anchor town. Unknown race
+-- (e.g. race 9 = pre-Cataclysm Goblin reserved slot, or a future
+-- race we haven't tabled yet) returns without binding — the
+-- character keeps whatever default hearth the engine assigned at
+-- creation. Not a silent failure: an explicit nil-table-lookup
+-- means "we don't have an opinion for this race," not "binding
+-- broke."
 local function bind_hearth(player)
-    local target = (player:GetTeam() == TEAM_ALLIANCE) and HEARTH_ALLIANCE or HEARTH_HORDE
+    local target = HEARTH_BY_RACE[player:GetRace()]
+    if not target then return end
     player:SetBindPoint(target.x, target.y, target.z, target.mapId, target.areaId)
 end
 -- }}}
@@ -311,7 +328,7 @@ local function apply_kit(playerName, query)
     install_equipment(player, buckets.equip)    -- armor, cape, weapons, relic, wand
     install_ammo(player, buckets.ammo)          -- Sharp Arrow → routes into quiver
     install_hearthstone(player, buckets.hearth) -- Hearthstone → first available bag
-    bind_hearth(player)                         -- bind to Darkshire / Tarren Mill
+    bind_hearth(player)                         -- bind to race's anchor town (148n)
 end
 -- }}}
 
