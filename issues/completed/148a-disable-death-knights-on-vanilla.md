@@ -4,7 +4,10 @@
 - Created: 2026-06-01
 - Updated: 2026-06-02 — implementation simplified from SQL approach
   to single config-knob (`CharacterCreating.Disabled.ClassMask = 32`).
-  Detail below.
+- **Completed: 2026-07-15** — C015 ships the config knob (committed).
+  Verified it blocks BOTH player creation and random-bot generation:
+  the bot factory reads the same mask, and the live
+  `acore_characters_vanilla` fleet holds 0 Death Knights.
 - Phase: 1 (Foundation — profile model)
 - Parent: 148 (vanilla profile)
 - Priority: Medium (blocks shipping vanilla cleanly)
@@ -47,12 +50,23 @@ on vanilla** and revisit when the client patcher exists.
 
 ## Current Behavior
 
-- Vanilla profile does not exist yet (this sub-issue presumes its
-  arrival per parent 148).
-- On a default AzerothCore install, DK is creatable provided the
-  realm-level requirement is met (in 3.3.5a, having any character
-  level 55+ on the same realm unlocks DK creation; the realmlist flag
-  can also force-allow it).
+Death Knight is disabled on vanilla by the single config knob:
+
+- `config/patches/C015-vanilla-disable-deathknight.sh` sed-sets
+  `CharacterCreating.Disabled.ClassMask = 32` (bit 5 = DK) in the
+  vanilla `worldserver.conf`, scoped `CONFIG_PROFILES[...]="vanilla"`.
+  Committed; the live vanilla conf carries `= 32`.
+- **Player creation:** the create-character packet for a DK is rejected
+  server-side, so no player can roll one on a vanilla realm.
+- **Bot generation:** `RandomPlayerbotFactory` reads the SAME knob
+  (`CONFIG_CHARACTER_CREATING_DISABLED_CLASSMASK`) and `continue`s past
+  any masked class while building the random fleet
+  (`source-beta/modules/mod-playerbots/.../RandomPlayerbotFactory.cpp:711`),
+  so it never attempts a DK — no crash, no leak. Verified live:
+  `acore_characters_vanilla.characters` holds 0 class-6 rows across
+  ~2100 bots (the nine non-DK classes, all level 20).
+
+Release/beta/alpha leave the mask at 0, so DK stays available there.
 
 ## Intended Behavior
 
@@ -125,28 +139,17 @@ If Plan A ever stops working, the SQL Plan B is:
 
 Both layers vanilla-scoped via the C-patch system.
 
-## Files To Update
+## Files Involved (Plan A — implemented)
 
-### `sql/vanilla/` (new directory)
-A vanilla-profile-only SQL load path, applied by `scripts/install`
-when `PROFILE=vanilla`.
+| Path | Role |
+|---|---|
+| `config/patches/C015-vanilla-disable-deathknight.sh` | the whole implementation — `sed`s `CharacterCreating.Disabled.ClassMask = 32` into the vanilla `worldserver.conf`, profile-scoped to vanilla |
 
-- `01-remove-dk-from-playercreateinfo.sql` — `DELETE FROM
-  playercreateinfo WHERE class = 6;` (class 6 is Death Knight in
-  3.3.5a). Also remove from `playercreateinfo_action`,
-  `playercreateinfo_spell_custom`, and `playercreateinfo_item` for
-  the same class for completeness.
-
-### `scripts/install`
-- Add a step in the vanilla branch of `get_profile_paths` (or its
-  caller) that loads `sql/vanilla/*.sql` after the standard schema
-  load, before bringing up the worldserver.
-
-### `scripts/start-mysql` or a new `scripts/setup-realm`
-- For the vanilla realm row, clear the DK availability bit on
-  `realmlist.flag`. The exact bit value is documented in the
-  AzerothCore wiki on `realmlist` columns; record the value here once
-  confirmed so future readers don't have to look it up.
+No SQL migration, no `sql/vanilla/` additions, no `scripts/install`
+change, and no realm-flag edit were needed: the one knob covers both
+the player and the bot creation path (the bot factory honours the same
+config value). The heavier SQL route in "Plan B" below is retained only
+as a documented fallback if a fork ever ignores the knob.
 
 ## Future Work — Re-Enabling DK on Vanilla
 
@@ -171,29 +174,31 @@ The class becomes eligible to return to vanilla once the project has:
 When all three are in place, this sub-issue gets re-opened to remove
 the disablement.
 
-## Implementation Steps
+## Implementation Steps (Plan A — done)
 
-1. Confirm the DK class ID in `playercreateinfo` for AzerothCore 3.3.5a
-   (expected: 6).
-2. Write `sql/vanilla/01-remove-dk-from-playercreateinfo.sql`.
-3. Hook the vanilla SQL load path into `scripts/install`.
-4. Identify the DK flag bit on `realmlist.flag` and write the
-   clear-the-bit step into the realm-setup flow.
-5. Boot a vanilla worldserver, attempt to create a DK character,
-   verify rejection both visually (greyed out class) and at the
-   server (rejection packet on attempted create).
-6. Document the disablement in `docs/profiles/vanilla.md` (or the
-   equivalent profile documentation page if one exists).
+1. ✅ Write `config/patches/C015-vanilla-disable-deathknight.sh` —
+   `config_vanilla_disable_deathknight()` sed-sets the mask to 32,
+   `CONFIG_PROFILES[...]="vanilla"`. (Class 6 = DK; bit 5 = 32.)
+2. ✅ Apply via the config-patch system on vanilla install; the live
+   conf reads `CharacterCreating.Disabled.ClassMask = 32`.
+3. ✅ Confirm the bot factory honours the same mask
+   (`RandomPlayerbotFactory.cpp:711`) so no DK bots are generated.
+4. ✅ Verify against the live DB: 0 class-6 rows in
+   `acore_characters_vanilla.characters`.
+5. ⏳ Optional in-client eyeball (folds into the 148o pass): confirm a
+   vanilla realm rejects DK creation at the character screen.
 
 ## Open Questions
 
-- Is there a single AzerothCore config option (worldserver.conf knob)
-  that disables a class outright, without touching SQL? If so, prefer
-  it; the SQL-level deletion is fine but a config knob would be cleaner.
-- Does removing rows from `playercreateinfo` cause any startup
-  warnings or break unrelated bot-creation paths (e.g. does
-  mod-playerbots try to create DK bots and crash when it can't)?
-  Verify during step 5.
+- ~~Single config knob that disables a class without SQL?~~
+  **Answered:** yes — `CharacterCreating.Disabled.ClassMask`, which is
+  what C015 uses. The SQL deletion (Plan B) was never needed.
+- ~~Does mod-playerbots try to create DK bots and crash?~~
+  **Answered:** no. `RandomPlayerbotFactory` skips masked classes via
+  the same config value (`.cpp:711`), so it never attempts a DK on
+  vanilla — no crash, and the fleet contains 0 DKs.
 - What level should a re-enabled DK start at when the client patcher
   arrives — 1 (full leveling experience), 10 (skip the slowest early
   game), or the chosen world's natural starting level for that race?
+  (Still open, but belongs to the future re-enable — see "Future Work"
+  — not to this disablement issue.)

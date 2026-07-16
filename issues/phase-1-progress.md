@@ -115,6 +115,29 @@ The keystone. Every later build/profile decision derives from 136.
 | 139 | recreate-missing-sql-files | Open | Reconstruct custom SQLs that became orphaned in DB. (was 167) |
 | 140 | branch-based-azerothcore-versioning | Implemented (Superseded) | Original profile-system spec. **Superseded by 136.** Infrastructure still active. (was 201) |
 
+### Act 13 — Vanilla profile (148 cluster)
+The vanilla ruleset (WotLK 3.3.5a, level-40 cap, level-20 start,
+playerbots). Phase-1-tagged as a profile-model slice; tracked here.
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 148 | vanilla-profile-default-wotlk-playerbots | In Progress | Parent. Install wiring in place; sub-issues in flight. |
+| 148a | disable-death-knights | **Completed** | One config knob (ClassMask 32) blocks player creation AND bot generation; 0 DK bots verified in the vanilla fleet. |
+| 148h | class-specific-starting-equipment | Implemented | Kit clone/tune/loot-sweep SQL + first-login hook incl. weapon-proficiency pretrain. Pending 148o in-client validation. |
+| 148j | pretrain-level-20-abilities | Implemented | 287-row trainer-spell pretrain SQL built. Apply/validate pending. |
+| 148k | ale-auto-equip-starter-kit | Implemented | First-login strip + equip + ammo + hearth hook. |
+| 148n | vanilla-racial-starting-zones | Live | Per-race spawn spread, innkeeper-anchored coords; hearth binds + bot fleet moved. |
+| 148o | vanilla-spawn-and-kit-validation-pass | In Progress | 52 race×class reroll matrix; blockers cleared, matrix not yet run. |
+| 148i | remove-all-flight-paths | Open | Next blocking build — network-wide taxi disable + flavor gossip. |
+| 148l | vanilla-mount-level-requirements | Open | Low-priority flavor. |
+| 148q | vanilla-starting-professions | Open | QoL; generator not built. |
+| 148s | vanilla-playerbots-start-in-148h-kit | Open | Consistency; not built. |
+| 148t | starting-town-racemate-npcs | Open | 148n follow-up; race-flavored town NPC reskins. |
+| 148g | class-combination-modifier-system | Promoted → 716 | Redirect stub; moves to completed/ when 716 ships. |
+| 148b–f, 148m, 148p | (various) | Declined | Kept in issues/declined/ as record. |
+
+Vanilla cluster: 1 completed (148a), 4 implemented/live (148h/j/k/n),
+2 in progress (148, 148o), 5 open, 7 declined/promoted.
+
 ## Completed: 14/44 (2 Will Not Implement, 4 Superseded, 1 Invalidated, 1 Deferred Low)
 
 ---
