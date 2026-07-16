@@ -2,6 +2,13 @@
 
 ## Status
 - Created: 2026-06-04
+- **Completed: 2026-07-15** — riding gates pushed to Classic 40/60 and
+  applied live to `acore_world_vanilla` (Apprentice 33388 → 40,
+  Journeyman 33391 → 60). Two corrections to the original spec: shipped
+  as **E020** (the proposed E018 number was already taken by the 148h
+  kit cap), and it updates **`trainer_spell.ReqLevel`** (+ legacy
+  `npc_trainer`), because the modern trainer handler gates on
+  `trainer_spell`, not `npc_trainer` alone.
 - Phase: 1 (Foundation — profile model; see 148 parent)
 - Parent: 148 (vanilla profile)
 - Priority: Low (vanilla-flavor; doesn't block launch)
@@ -76,13 +83,19 @@ Two `UPDATE` rows on this table push the two riding skills to their
 Classic levels:
 
 ```sql
-UPDATE `npc_trainer` SET `reqlevel` = 40 WHERE `SpellID` = 33388;
-UPDATE `npc_trainer` SET `reqlevel` = 60 WHERE `SpellID` = 33391;
+-- Modern AC gates on trainer_spell.ReqLevel (the live trainer handler);
+-- the legacy npc_trainer is updated in lockstep so the two never disagree.
+UPDATE `trainer_spell` SET `ReqLevel` = 40 WHERE `SpellId` = 33388;
+UPDATE `trainer_spell` SET `ReqLevel` = 60 WHERE `SpellId` = 33391;
+UPDATE `npc_trainer`   SET `reqlevel` = 40 WHERE `SpellID` = 33388;
+UPDATE `npc_trainer`   SET `reqlevel` = 60 WHERE `SpellID` = 33391;
 ```
 
 Lives at the data layer; AC's worldserver picks it up on next boot
 without code changes. Mirrors the pattern E007/E008/E009/E010 use for
-other vanilla-profile data tweaks.
+other vanilla-profile data tweaks. Shipped as **E020**
+(`sql/vanilla/db_world.src/05-mount-level-requirements.{apply,revert}.sql`
++ `patch_E020_vanilla_mount_level_requirements`).
 
 ## Disablement Mechanism — DBC patching (Plan B, fallback)
 
@@ -118,6 +131,13 @@ Add `E018` to `PHASE_END_PATCHES["vanilla"]` so the dispatcher fires
 the patch on vanilla compile/install runs only.
 
 ## Implementation Steps
+
+> **Done 2026-07-15.** Spell IDs 33388/33391 confirmed in both trainer
+> tables; the apply/revert SQL, the E020 patch, and the
+> `PHASE_END_PATCHES["vanilla"]` registration are in place; the UPDATEs
+> are live in `acore_world_vanilla` (`trainer_spell` reads 40/60 across
+> 12 trainers each). Remaining: the in-client smoke test (step 6) and the
+> `docs/profiles/vanilla.md` note (step 7).
 
 1. Confirm the riding-skill spell IDs on this AC build (33388, 33391
    are the WotLK 3.3.5a canonical IDs; spot-check against

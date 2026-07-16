@@ -814,6 +814,51 @@ SQL
 }
 # -- }}}
 
+# -- {{{ patch_E020_vanilla_mount_level_requirements
+# Push the two ground riding skills to Classic level gates (148l): Apprentice
+# Riding to level 40, Journeyman to 60. Under vanilla's level-40 cap the 60%
+# mount becomes the cap reward and the 100% mount is permanently out of reach.
+#
+# Same cp-apply / cp-revert idiom as E008/E018: the apply-form source at
+# sql/vanilla/db_world.src/05-mount-level-requirements.apply.sql is copied into
+# the AC-watched active dir; the revert-form source restores the 20/40
+# defaults. The UPDATEs touch both trainer_spell (the live trainer gate) and
+# the legacy npc_trainer table so the two never disagree.
+patch_E020_vanilla_mount_level_requirements() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/05-mount-level-requirements.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/05-mount-level-requirements.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E020_APPLY" "${SQL_FILE}"; then
+        echo "  [E020] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E020] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+
+    echo "  [E020] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E020_vanilla_mount_level_requirements() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/05-mount-level-requirements.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/05-mount-level-requirements.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E020_REVERT" "${SQL_FILE}"; then
+        echo "  [E020] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E020] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+
+    echo "  [E020] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
 # -- {{{ patch_E018_vanilla_kit_required_level_cap
 # Clones every kit-referenced item to a new entry (original + 2000000),
 # tunes the clones to RequiredLevel=20 + DPS=15 (weapons) / DPS=20

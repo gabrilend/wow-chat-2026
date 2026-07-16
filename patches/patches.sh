@@ -41,7 +41,7 @@ declare -A PHASE_END_PATCHES=(
     ["release"]="E004 E006"              # Logs + configs (minimal)
     ["beta"]="E001 E004 E005 E006 E011 E012 E013 E014 E015 E016 E017"  # Lua symlinks + logs + configs + DK levelstats (E005) + DK class system (E011) + drop-creatures (E012, destructive) + quest-spells-to-trainers (E013) + trainer-spell-level-cap (E014, destructive) + class-selector-npcs (E015) + empty-loot-chests (E016) + playerbots logout-texts migration fix (E017)
     ["alpha"]="E004 E006"                # Logs + configs (same as release)
-    ["vanilla"]="E001 E004 E006 E007 E008 E009 E010 E018 E019"  # 2026-06-02: E001 added for ALE (per 148k). E001 now profile-aware — symlinks src/lua-vanilla/ into installed-files-vanilla/bin/lua_scripts/custom/. Plus: configs + starting-zones SQL (148h, E007) + flight-path removal SQL (148i, E008) + starting-equipment SQL (148h, E009) + pretrain-abilities SQL (148j, E010) + kit RequiredLevel cap (148h, E018, lets level-20 chars equip the kit) + no-intro-cinematic trigger (E019, skips race intro on first login). No DK stats (DK disabled per 148a/CP8).
+    ["vanilla"]="E001 E004 E006 E007 E008 E009 E010 E018 E019 E020"  # 2026-06-02: E001 added for ALE (per 148k). E001 now profile-aware — symlinks src/lua-vanilla/ into installed-files-vanilla/bin/lua_scripts/custom/. Plus: configs + starting-zones SQL (148h, E007) + flight-path removal SQL (148i, E008) + starting-equipment SQL (148h, E009) + pretrain-abilities SQL (148j, E010) + kit RequiredLevel cap (148h, E018, lets level-20 chars equip the kit) + no-intro-cinematic trigger (E019, skips race intro on first login) + mount level requirements (148l, E020, Classic 40/60 riding gates). No DK stats (DK disabled per 148a/CP8).
 )
 # }}}
 
