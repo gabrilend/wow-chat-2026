@@ -1,6 +1,6 @@
 # Conversation Summary: f6b0c04d-40f6-437a-ad3d-cd4a401aa9f5
 
-Generated on: 2026-07-15 21:11:01
+Generated on: 2026-07-15 21:57:47
 
 --------------------------------------------------------------------------------
 
@@ -2254,6 +2254,181 @@ Two quick nods before I build:
 2. **Sharpened send-off** — file it as **148u** and build it into the same
 first-login hook? And do you want the symmetric caster-oil version, or literally
 only melee weapons get "sharpened" (staff/wand users get nothing)?
+
+
+--------------------------------------------------------------------------------
+
+### User Request 14
+
+2. Sharpened send-off — file it as 148u and build it into the same first-login
+hook? And do you want the symmetric caster-oil version, or literally only melee
+weapons get "sharpened" (staff/wand users get nothing)?
+
+
+it's caster oil, not castor oil! castor oil makes you diaahretic. and sure,
+let's slather those rods with power spell oil.
+
+
+Two quick nods before I build:
+
+1. 148q as described — go?
+
+2. Sharpened send-off — file it as 148u and build it into the same first-login
+hook? And do you want the symmetric caster-oil version, or literally only melee
+weapons get "sharpened" (staff/wand users get nothing)?
+
+
+
+yes and yes
+
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 14
+
+Ha — noted, caster *oil*, keep the digestive aids out of it. "Yes and yes" —
+building both, with symmetric oil for the rods.
+
+
+Let me lock the last data facts before writing the 148q migration — recipe
+counts per profession and the `playercreateinfo_spell_custom` key (to know if I
+need `INSERT IGNORE`):
+
+
+All 14 professions have recipes (Inscription 61, Blacksmithing 39, Tailoring 38
+down to gathering's 2). PKs confirmed: skills/spells take **bitmasks**
+`(raceMask, classMask, skill/Spell)`, but items take **specific** `(race, class,
+itemid)` — so tools go via `SELECT` over `playercreateinfo`. No generator
+needed; it's all `INSERT … SELECT`. Writing the migration:
+
+
+Now the revert (a tag-scoped DELETE):
+
+
+Now apply it live and verify — row counts and per-combo coherence:
+
+
+Applied cleanly — skills 20, recipes 354 (exactly my computed sum: 202
+production + 152 gathering), tools 72. Now the coherence check — every valid
+combo must have ≥1 gathering and exactly 1 production, decoding the bitmasks
+per-combo:
+
+
+Coherence is right — **every combo has ≥1 gathering and exactly 1
+production**. But the primary-count check flagged **9 combos with 3 primaries**:
+your "add a second gathering" ruling means combos where the race-default
+gathering *and* the class-override gathering are *both* primary (e.g. Orc
+Warrior: Skinning + Mining + Blacksmithing) exceed WoW's 2-primary norm. It's
+mechanically fine (force-granted, bypasses the learn-time cap), and it fits
+"play to the fullest" — I'll flag it in the ticket for your veto, not block on
+it.
+
+
+Now the hook side (148q bump + 148u oil). Let me resolve the 148u enchant IDs
+from the DB and confirm the `SetEnchantment` API:
+
+
+`spellitemenchantment_dbc` is empty too (server reads it from the client's DBC),
+and I can't reliably hardcode enchant IDs from memory. Let me try to resolve
+them verifiably through the item→spell chain — a sharpening stone / wizard
+oil item's use-spell carries the enchant in its effect:
+
+
+I have the stone/oil **items and their use-spells** (Rough Sharpening Stone →
+spell 2828, Minor Wizard Oil → 25117, etc.), but the actual **enchant IDs**
+live in the client's `SpellItemEnchantment.dbc` (empty here) and I won't
+hardcode them from memory. Let me check what `SetEnchantment` needs, and
+meanwhile read the hook's structure to wire in the 148q profession bump:
+
+
+`SetEnchantment(enchantId, slot)` needs a real enchant ID — which lives only
+in the client's `SpellItemEnchantment.dbc` (empty here). I have the stone/oil
+items and their use-spells (2828, 25117…) but not the enchant IDs, and I won't
+guess them from memory. So I'll finish **148q fully now** and **file 148u** with
+the complete design + that one concrete blocker, rather than ship a guessed ID.
+
+
+Let me wire the 148q profession bump into the hook — reading the exact
+apply_kit region:
+
+
+Adding the 148q profession skill-bump function and wiring it in:
+
+
+luajit-check the hook and add the E021 patch. First the E021 functions in
+`E-patches.sh` (after E020):
+
+
+Register E021 in `patches.sh` and syntax-check the hook + scripts:
+
+
+I only edited the comment — need E021 in the actual list too:
+
+
+All green — hook parses, scripts parse, E021 registered. Now update the 148q
+ticket (done + the three spec refinements + the 3-primaries flag):
+
+
+148q ticket is current. Now let me file the **148u** issue (the sharpened
+send-off) with its design and the one concrete blocker, then extend the
+validator with a professions check:
+
+
+Now extend the validator with a professions coherence check (fulfilling the
+ticket's validator deliverable):
+
+
+Run the full validator to confirm everything (including the new professions
+check) is green:
+
+
+All 6 checks green, including the new professions coherence check. Committing
+the 148q completion (the pre-commit hook will auto-bundle the transcripts). Let
+me verify the shared files carry only my 148q changes, then commit:
+
+
+The grep diagnostics were flaky (ugrep quirks). Let me cleanly confirm the two
+shared files are purely additive (my E021 block / profession-bump only, nothing
+else disturbed) before committing:
+
+
+Both purely additive — E021 block and the profession-bump, nothing else
+touched. Committing 148q (transcripts auto-bundle):
+
+
+The pre-commit hook worked — transcripts auto-bundled into the commit (17
+files, the `llm-transcripts/*.md` included). Now the 148u issue as its own
+commit:
+
+
+Both committed — `a1d6d59` (148q) and `fac2da2` (148u). And the transcript
+automation is proven: the pre-commit hook auto-bundled all the
+`llm-transcripts/*.md` into the 148q commit without me lifting a finger.
+
+
+## Where the two land
+
+
+**148q — professions, done and live.** Pure ~120-line SQL migration (no generator — recipes `INSERT … SELECT` straight from the trainer data), E021 patch, and a 6-line hook that bumps each profession's *value* to 125 on first login (the migration can only seed the tier). Applied to `acore_world_vanilla` and green across all 52 combos; the coherence check is now baked into the validator (6/6 passing). Two things surfaced worth your eye:
+
+- The **3-primaries** consequence of "two gatherings is fine": 9 combos (the Warrior/Rogue/Mage/Warlock overrides stacked on a primary racial default) end up with 3 primary professions. Mechanically fine, fits "play to the fullest" — but beyond the WoW norm. **Keep it additive, or trim those four overrides to replace-not-add?** (I left it additive.)
+
+- The **value 125** is set by the hook at first login, so it's only observable in-client — that check folds into the 148o reroll pass.
+
+
+**148u — sharpened send-off, filed and designed, blocked on one datum.** The hook slot and the whole sharpen-physical / oil-caster design are ready. The only missing piece: `SetEnchantment` needs the temp-enchant IDs, which live in the client `SpellItemEnchantment.dbc` (empty in this server's DBC tables). I traced the resolvable leads (Rough Sharpening Stone → spell 2828, Minor Wizard Oil → 25117, etc.) but the enchant ID itself is client-side, and I won't guess it from memory. **To unblock: a quick client/DBC lookup of those enchant IDs, then it's a 15-minute build.** Want me to proceed with the well-known canonical IDs anyway (you'd verify in-client), or resolve them first?
+
+
+## Still sitting uncommitted (your call)
+
+- **Release config regeneration** (`installed-files-release/etc/*.dist`) — the ~6000-line upstream sync, not vanilla work. Revert, or commit as a `chore(Release)` sync?
+
+- `README-2`, `notes/d6-vision` — untracked, pre-existing, unknown intent.
+
+
+That clears the vanilla build list down to: the 3-primaries call, 148u's enchant
+IDs, and the in-client 148o validation pass. Want me to trim the 3-primaries,
+chase the release-config churn, or something else next?
 
 
 --------------------------------------------------------------------------------

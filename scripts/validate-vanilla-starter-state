@@ -204,10 +204,11 @@ check_professions() {
          AND (s.classMask=0 OR s.classMask & (1<<(p.class-1)))
         WHERE p.class <> 6 AND p.race <> 9
         GROUP BY p.race, p.class
-        HAVING SUM(s.skill IN (129,182,186,197,333,356,393)) < 1
-            OR SUM(s.skill IN (164,165,171,185,202,755,773)) <> 1
+        HAVING (SUM(s.skill IN (129,182,186,197,333,356,393))
+              + SUM(s.skill IN (164,165,171,185,202,755,773))) <> 2
+            OR SUM(s.skill IN (164,165,171,185,202,755,773)) > 1
         ORDER BY p.race, p.class;")"
-    report "148q every combo has >=1 gathering + exactly 1 production" "${offenders}"
+    report "148q every combo has exactly 2 professions (production <= 1)" "${offenders}"
 }
 # }}}
 

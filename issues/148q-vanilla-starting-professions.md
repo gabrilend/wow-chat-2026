@@ -14,12 +14,15 @@
      profession is seeded at Journeyman (`rank=2`, cap 150) and the
      first-login hook (`set_profession_skills`) bumps the skill VALUE to
      125 via `SetSkill`, the same idiom used for the starter weapon.
-  3. **Three primaries for 9 combos.** With the two-gatherings ruling,
-     combos where the race-default gathering AND the class-override
-     gathering are both primary (e.g. Orc Warrior: Skinning + Mining +
-     Blacksmithing) land 3 primary professions — beyond WoW's 2-primary
-     norm. Mechanically fine (force-granted, bypasses the learn-time
-     cap); flagged in Open Questions for a possible trim.
+  3. **Exactly two professions (two slots).** The faction-diversity
+     class overrides REPLACE the class's production slot — they do not add
+     a third profession. Every character gets a race gathering (slot 1)
+     plus a class slot (slot 2) that is production normally, or a second
+     gathering for the six override (faction,class) pairs: Alliance
+     Rogue→Skinning, Warlock→Tailoring, Mage→Enchanting; Horde
+     Warrior→Mining, Shaman→Fishing, Priest→First Aid. Both factions still
+     cover all seven gatherings; each loses one production (Alliance
+     Engineering, Horde Blacksmithing) — the accepted trade for the cap.
 - Phase: 1 (Foundation — vanilla profile ruleset)
 - Parent: 148 (vanilla profile)
 - Related: 148h (starter equipment generator — same mechanism),
@@ -289,21 +292,19 @@ all seven productions**.
       (354 = 202 production + 152 gathering); tools = 72.
 - [ ] In-client spot check (folds into 148o): a character per gathering
       and production — confirm skill 125, recipe book, starter tool.
-- [ ] If the 3-primary combos (Open Questions) are unwanted, switch the
-      relevant overrides from add to replace and re-apply.
+- [x] Overrides live in the class slot (replace production, not additive),
+      so every combo has exactly two professions — validator confirms
+      `SUM(gathering)+SUM(production)=2` with `production <= 1` across all 52.
 
 ## Open Questions
 
-- **Three primary professions for 9 combos.** The two-gatherings ruling
-  (a rogue skins *and* keeps their racial gathering — user-approved) means
-  combos where both the race default and the class override are *primary*
-  gatherings land 3 primaries once production is added: Orc/Undead/Tauren/
-  Troll Warrior, Dwarf/NightElf/Gnome Rogue, Gnome Mage, Gnome Warlock.
-  Force-granted, so the game accepts it (the 2-primary cap only gates
-  *learning*), and it fits "play to the fullest" — but it's beyond the WoW
-  norm. To trim: make the Warrior/Rogue/Mage/Warlock overrides *replace*
-  the race default instead of adding (the Shaman/Priest overrides add a
-  *secondary*, so they never trip this). Left additive pending a call.
+- ~~Three primary professions for 9 combos.~~ **Resolved 2026-07-15** —
+  the override belongs in the *class slot*, replacing production, not
+  adding a third profession. Every character now has exactly two. The
+  only consequence is that each faction loses one production it can no
+  longer reach (Alliance Engineering — the Rogue slot became Skinning;
+  Horde Blacksmithing — the Warrior slot became Mining). Accepted as the
+  cost of the two-profession cap; gathering coverage stays complete.
 - Mappings (race defaults, class overrides, production, skill 125) are
   **confirmed** (user sign-off 2026-07-13). Any future change must
   re-check the zero-primary guard: never move a secondary gathering

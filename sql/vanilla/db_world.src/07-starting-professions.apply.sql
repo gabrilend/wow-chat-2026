@@ -2,12 +2,15 @@
 -- ===========================================================================
 -- 07-starting-professions.sql (148q) — APPLY SOURCE
 -- ===========================================================================
--- Grants every level-20 vanilla character one gathering + one production
--- profession at Journeyman (skill cap 150), knowing every trainer recipe
--- usable at skill <= 125, carrying the profession's tool — so they can gather
--- or craft on first login without a trainer trip. Gathering is by race, with
--- per-faction class overrides that ADD a second gathering (a rogue skins on
--- top of their racial default — deliberate). Production is by class.
+-- Grants every level-20 vanilla character exactly TWO professions at
+-- Journeyman (skill cap 150), knowing every trainer recipe usable at skill
+-- <= 125 and carrying each profession's tool — so professions are playable on
+-- first login without a trainer trip. Slot 1 is a race gathering; slot 2 is a
+-- class production — UNLESS the class is a faction-diversity override, in which
+-- case slot 2 holds a second gathering instead (so each faction still covers
+-- all seven gatherings). Overrides: Alliance Rogue->Skinning, Warlock->
+-- Tailoring, Mage->Enchanting; Horde Warrior->Mining, Shaman->Fishing,
+-- Priest->First Aid. Never three professions.
 --
 -- SKILL VALUE (125) is set by the first-login ALE hook via SetSkill: the
 -- playercreateinfo path can only grant the TIER (rank = a step index, whose
@@ -62,14 +65,20 @@ INSERT INTO playercreateinfo_skills (raceMask, classMask, skill, `rank`, comment
 -- Enchanting (333): BloodElf default; Alliance Mage override
 ( 512,    0, 333, 2, 'vanilla-148q-g-enchanting'),
 (1101,  128, 333, 2, 'vanilla-148q-g-enchanting-amag'),
--- Production (by class)
-(   0,    1, 164, 2, 'vanilla-148q-p-blacksmithing'),  -- Warrior
-(   0,    2, 755, 2, 'vanilla-148q-p-jewelcrafting'),  -- Paladin
-(   0,    4, 165, 2, 'vanilla-148q-p-leatherworking'), -- Hunter
-(   0,    8, 202, 2, 'vanilla-148q-p-engineering'),    -- Rogue
-(   0,  144, 773, 2, 'vanilla-148q-p-inscription'),    -- Priest + Mage
-(   0,  320, 171, 2, 'vanilla-148q-p-alchemy'),        -- Shaman + Warlock
-(   0, 1024, 185, 2, 'vanilla-148q-p-cooking');        -- Druid
+-- Production (the CLASS slot) — granted only where the class is NOT a
+-- faction-override on that faction. The six override (faction,class) pairs get
+-- the override GATHERING above in this slot instead, so every character lands
+-- exactly TWO professions total (a race gathering + one class slot). The
+-- overrides: Alliance Rogue/Warlock/Mage, Horde Warrior/Shaman/Priest.
+(1101,    1, 164, 2, 'vanilla-148q-p-blacksmithing'),      -- Warrior — Alliance only (Horde Warriors mine)
+(   0,    2, 755, 2, 'vanilla-148q-p-jewelcrafting'),      -- Paladin — all
+(   0,    4, 165, 2, 'vanilla-148q-p-leatherworking'),     -- Hunter  — all
+( 690,    8, 202, 2, 'vanilla-148q-p-engineering'),        -- Rogue   — Horde only (Alliance Rogues skin)
+(1101,   16, 773, 2, 'vanilla-148q-p-inscription-apri'),   -- Priest  — Alliance only (Horde Priests do First Aid)
+( 690,  128, 773, 2, 'vanilla-148q-p-inscription-hmag'),   -- Mage    — Horde only (Alliance Mages enchant)
+(1101,   64, 171, 2, 'vanilla-148q-p-alchemy-asha'),       -- Shaman  — Alliance only (Horde Shamans fish)
+( 690,  256, 171, 2, 'vanilla-148q-p-alchemy-hwlk'),       -- Warlock — Horde only (Alliance Warlocks tailor)
+(   0, 1024, 185, 2, 'vanilla-148q-p-cooking');            -- Druid   — all
 
 -- ---------------------------------------------------------------------------
 -- 3. Recipes: every trainer-taught spell for the profession usable at
@@ -112,25 +121,29 @@ INSERT IGNORE INTO playercreateinfo_spell_custom (racemask, classmask, Spell, No
   SELECT  512,   0, SpellId, 'vanilla-148q-r-enchanting' FROM trainer_spell WHERE ReqSkillLine=333 AND ReqSkillRank<=125 GROUP BY SpellId;
 INSERT IGNORE INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note)
   SELECT 1101, 128, SpellId, 'vanilla-148q-r-enchanting' FROM trainer_spell WHERE ReqSkillLine=333 AND ReqSkillRank<=125 GROUP BY SpellId;
--- Blacksmithing (164) — Warrior
+-- Blacksmithing (164) — Alliance Warrior
 INSERT IGNORE INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note)
-  SELECT    0,   1, SpellId, 'vanilla-148q-r-blacksmithing' FROM trainer_spell WHERE ReqSkillLine=164 AND ReqSkillRank<=125 GROUP BY SpellId;
--- Jewelcrafting (755) — Paladin
+  SELECT 1101,   1, SpellId, 'vanilla-148q-r-blacksmithing' FROM trainer_spell WHERE ReqSkillLine=164 AND ReqSkillRank<=125 GROUP BY SpellId;
+-- Jewelcrafting (755) — Paladin (all)
 INSERT IGNORE INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note)
   SELECT    0,   2, SpellId, 'vanilla-148q-r-jewelcrafting' FROM trainer_spell WHERE ReqSkillLine=755 AND ReqSkillRank<=125 GROUP BY SpellId;
--- Leatherworking (165) — Hunter
+-- Leatherworking (165) — Hunter (all)
 INSERT IGNORE INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note)
   SELECT    0,   4, SpellId, 'vanilla-148q-r-leatherworking' FROM trainer_spell WHERE ReqSkillLine=165 AND ReqSkillRank<=125 GROUP BY SpellId;
--- Engineering (202) — Rogue
+-- Engineering (202) — Horde Rogue
 INSERT IGNORE INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note)
-  SELECT    0,   8, SpellId, 'vanilla-148q-r-engineering' FROM trainer_spell WHERE ReqSkillLine=202 AND ReqSkillRank<=125 GROUP BY SpellId;
--- Inscription (773) — Priest + Mage
+  SELECT  690,   8, SpellId, 'vanilla-148q-r-engineering' FROM trainer_spell WHERE ReqSkillLine=202 AND ReqSkillRank<=125 GROUP BY SpellId;
+-- Inscription (773) — Alliance Priest + Horde Mage
 INSERT IGNORE INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note)
-  SELECT    0, 144, SpellId, 'vanilla-148q-r-inscription' FROM trainer_spell WHERE ReqSkillLine=773 AND ReqSkillRank<=125 GROUP BY SpellId;
--- Alchemy (171) — Shaman + Warlock
+  SELECT 1101,  16, SpellId, 'vanilla-148q-r-inscription' FROM trainer_spell WHERE ReqSkillLine=773 AND ReqSkillRank<=125 GROUP BY SpellId;
 INSERT IGNORE INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note)
-  SELECT    0, 320, SpellId, 'vanilla-148q-r-alchemy' FROM trainer_spell WHERE ReqSkillLine=171 AND ReqSkillRank<=125 GROUP BY SpellId;
--- Cooking (185) — Druid
+  SELECT  690, 128, SpellId, 'vanilla-148q-r-inscription' FROM trainer_spell WHERE ReqSkillLine=773 AND ReqSkillRank<=125 GROUP BY SpellId;
+-- Alchemy (171) — Alliance Shaman + Horde Warlock
+INSERT IGNORE INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note)
+  SELECT 1101,  64, SpellId, 'vanilla-148q-r-alchemy' FROM trainer_spell WHERE ReqSkillLine=171 AND ReqSkillRank<=125 GROUP BY SpellId;
+INSERT IGNORE INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note)
+  SELECT  690, 256, SpellId, 'vanilla-148q-r-alchemy' FROM trainer_spell WHERE ReqSkillLine=171 AND ReqSkillRank<=125 GROUP BY SpellId;
+-- Cooking (185) — Druid (all)
 INSERT IGNORE INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note)
   SELECT    0, 1024, SpellId, 'vanilla-148q-r-cooking' FROM trainer_spell WHERE ReqSkillLine=185 AND ReqSkillRank<=125 GROUP BY SpellId;
 
@@ -158,13 +171,14 @@ INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note)
   WHERE class<>6 AND race<>9 AND ((race=10) OR (race IN (1,3,4,7,11) AND class=8));
 INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note)
   SELECT race, class, 5956, 1, 'vanilla-148q-tool-blacksmithing' FROM playercreateinfo
-  WHERE class<>6 AND race<>9 AND class=1;
+  WHERE class<>6 AND race<>9 AND class=1 AND race IN (1,3,4,7,11);       -- Alliance Warriors
 INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note)
   SELECT race, class, 5956, 1, 'vanilla-148q-tool-engineering' FROM playercreateinfo
-  WHERE class<>6 AND race<>9 AND class=4;
+  WHERE class<>6 AND race<>9 AND class=4 AND race IN (2,5,6,8,10);       -- Horde Rogues
 INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note)
   SELECT race, class, 3371, 5, 'vanilla-148q-tool-alchemy' FROM playercreateinfo
-  WHERE class<>6 AND race<>9 AND class IN (7,9);
+  WHERE class<>6 AND race<>9 AND ((class=7 AND race IN (1,3,4,7,11))     -- Alliance Shamans
+                               OR (class=9 AND race IN (2,5,6,8,10)));   -- Horde Warlocks
 
 -- ===========================================================================
 -- End of 07-starting-professions.sql (apply)
