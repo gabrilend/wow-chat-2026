@@ -61,6 +61,21 @@ on the same dev machine.
 
 ---
 
+## 2026-07-13 — Vanilla playerbot progression (level 20→40)
+
+Vanilla random bots now enter at level 20 and level up organically toward
+the level-40 cap at player-parity XP, gear persisting and upgrading as they
+climb — replacing the prior lock that pinned the whole fleet at level 20.
+The knobs live in `config/patches/C014-vanilla-playerbot-level-cap.sh`
+(RandomBotMinLevel/MaxLevel, DisableRandomLevels, RandomBotXPRate,
+EquipmentPersistence, RandomBotMaps). **Why:** a fleet frozen at the floor
+of the progression band made the world feel static; a climbing fleet
+mirrors the players moving through the same 20-40 Eastern Kingdoms content.
+The specific "148h white kit at spawn" intent is not config-expressible
+(rndbots self-gear on level-up) and remains an open decision.
+
+---
+
 ## How to add an entry
 
 ```markdown
