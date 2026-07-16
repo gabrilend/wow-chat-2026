@@ -1,0 +1,225 @@
+#!/usr/bin/env bash
+# validate-vanilla-starter-state — ground-truth checker for the vanilla
+# level-20 starting experience (support tool for issue 148o).
+#
+# For a general audience: a freshly-created vanilla character is supposed
+# to appear in a specific town for their race (148n), wearing a full
+# level-20 starter kit with a weapon in hand and bags and a hearthstone
+# (148h), and already knowing the abilities their class would have trained
+# by level 20 (148j). This script asks the live vanilla database whether
+# all of that is actually true for every one of the 52 race/class
+# combinations at once — collapsing the hours-long manual "roll one of
+# each and look at it" pass into a single report. It only READS; it
+# changes nothing. Whatever it flags is a spot a human should eyeball
+# in-client (spawn-walkable, visual correctness) — the data-side checks
+# it can settle on its own.
+#
+# Usage:
+#   scripts/validate-vanilla-starter-state              # default project dir
+#   scripts/validate-vanilla-starter-state /path/to/project
+#
+# Exit status: 0 when every data-side check passes, 1 when any check flags
+# a row (so it can gate a build or a pre-test sanity step).
+
+set -uo pipefail
+
+# {{{ configuration
+# DIR is the project root. Hard-coded default, overridable as the first
+# argument so the script runs from anywhere. Every path derives from it.
+DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+WORLD="acore_world_vanilla"
+
+# MYSQL_PWD keeps the password off the command line (no "insecure
+# password" warning polluting the report) while still surfacing any real
+# connection error to stdout.
+export MYSQL_PWD="menardi"
+MYSQL_CONN=(-h127.0.0.1 -P3307 -uritz -N)
+
+FAIL_COUNT=0
+# }}}
+
+# {{{ run_sql()
+# Run one query against the vanilla world DB and echo its rows (tab-
+# separated, headerless). A connection or SQL error prints through
+# because the caller does not swallow stderr.
+run_sql() {
+    local query="$1"
+    "${MYSQL}" "${MYSQL_CONN[@]}" -e "${query}"
+}
+# }}}
+
+# {{{ report()
+# Print a check's outcome. Given a human title and the offender rows a
+# query returned: empty means the check passed; any rows mean it failed,
+# and the rows are listed verbatim so a human can act on them.
+report() {
+    local title="$1"
+    local offenders="$2"
+    if [[ -z "${offenders}" ]]; then
+        printf '  [PASS] %s\n' "${title}"
+    else
+        printf '  [FAIL] %s\n' "${title}"
+        printf '%s\n' "${offenders}" | sed 's/^/         /'
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+# }}}
+
+# The expected 148n spawn zone for each race, reused across checks. Map is
+# implied by zone. 38 Wetlands · 10 Duskwood · 331 Ashenvale · 17 Northern
+# Barrens · 267 Hillsbrad · 406 Stonetalon.
+EXPECTED_ZONE_CASE="CASE p.race
+        WHEN 1 THEN 38 WHEN 3 THEN 38
+        WHEN 11 THEN 10
+        WHEN 4 THEN 331 WHEN 7 THEN 331
+        WHEN 2 THEN 17
+        WHEN 5 THEN 267 WHEN 8 THEN 267
+        WHEN 6 THEN 406 WHEN 10 THEN 406 END"
+
+# {{{ check_spawn_zone()
+# 148n: every valid (race, class) must spawn in its race's assigned town
+# zone. A mismatch means the per-race starting-zone UPDATE did not take
+# for that combo — the character would appear in the wrong place (or the
+# old faction-bucket zone).
+check_spawn_zone() {
+    local offenders
+    offenders="$(run_sql "
+        SELECT CONCAT('race ', p.race, ' class ', p.class,
+                      ' -> zone ', p.zone, ' (expected ', ${EXPECTED_ZONE_CASE}, ')')
+        FROM ${WORLD}.playercreateinfo p
+        WHERE p.class <> 6 AND p.race <> 9
+          AND p.zone <> (${EXPECTED_ZONE_CASE})
+        ORDER BY p.race, p.class;")"
+    report "148n spawn zone matches the per-race town for every combo" "${offenders}"
+}
+# }}}
+
+# {{{ check_has_weapon()
+# 148h: every valid combo must carry at least one weapon (item_template
+# class 2) in its kit. A weaponless combo would spawn a character who
+# swings their fists — the exact failure 148o suspected for Troll Mage
+# under the pre-clone kit.
+check_has_weapon() {
+    local offenders
+    offenders="$(run_sql "
+        SELECT CONCAT('race ', p.race, ' class ', p.class, ' has no weapon in kit')
+        FROM ${WORLD}.playercreateinfo p
+        LEFT JOIN ${WORLD}.playercreateinfo_item i
+               ON i.race = p.race AND i.class = p.class AND i.Note LIKE 'vanilla-148h-%'
+        LEFT JOIN ${WORLD}.item_template t ON t.entry = i.itemid
+        WHERE p.class <> 6 AND p.race <> 9
+        GROUP BY p.race, p.class
+        HAVING SUM(t.class = 2) = 0 OR SUM(t.class = 2) IS NULL
+        ORDER BY p.race, p.class;")"
+    report "148h weapon present for every combo" "${offenders}"
+}
+# }}}
+
+# {{{ check_bags_and_hearth()
+# 148h: every valid combo needs at least three bag slots' worth of
+# containers (three Linen Bags) and a hearthstone. Counts by amount so a
+# single amount=3 row and three amount=1 rows both satisfy it. The
+# hearthstone may be the canonical entry (6948) or its tuned clone
+# (2006948) depending on whether the loot-sweep repointed it.
+check_bags_and_hearth() {
+    local offenders
+    offenders="$(run_sql "
+        SELECT CONCAT('race ', p.race, ' class ', p.class,
+                      ' -> bag_slots=', COALESCE(SUM(CASE WHEN t.class = 1 THEN i.amount ELSE 0 END), 0),
+                      ' hearth=', COALESCE(SUM(i.itemid IN (6948, 2006948)), 0))
+        FROM ${WORLD}.playercreateinfo p
+        LEFT JOIN ${WORLD}.playercreateinfo_item i
+               ON i.race = p.race AND i.class = p.class AND i.Note LIKE 'vanilla-148h-%'
+        LEFT JOIN ${WORLD}.item_template t ON t.entry = i.itemid
+        WHERE p.class <> 6 AND p.race <> 9
+        GROUP BY p.race, p.class
+        HAVING COALESCE(SUM(CASE WHEN t.class = 1 THEN i.amount ELSE 0 END), 0) < 3
+            OR COALESCE(SUM(i.itemid IN (6948, 2006948)), 0) < 1
+        ORDER BY p.race, p.class;")"
+    report "148h three bags + a hearthstone for every combo" "${offenders}"
+}
+# }}}
+
+# {{{ check_clone_required_level()
+# 148h: every equippable kit item (weapon class 2, armor class 4) must be
+# wearable at level 20 — RequiredLevel <= 20. A higher value means the
+# level-20 starter cannot equip their own kit, which is exactly the
+# in-place-edit leak the E018 clone redesign set out to fix.
+check_clone_required_level() {
+    local offenders
+    offenders="$(run_sql "
+        SELECT CONCAT('race ', p.race, ' class ', p.class,
+                      ' item ', i.itemid, ' RequiredLevel=', t.RequiredLevel)
+        FROM ${WORLD}.playercreateinfo p
+        JOIN ${WORLD}.playercreateinfo_item i
+             ON i.race = p.race AND i.class = p.class AND i.Note LIKE 'vanilla-148h-%'
+        JOIN ${WORLD}.item_template t ON t.entry = i.itemid
+        WHERE p.class <> 6 AND p.race <> 9
+          AND t.class IN (2, 4) AND t.RequiredLevel > 20
+        ORDER BY p.race, p.class;")"
+    report "148h equippable kit items are all RequiredLevel <= 20" "${offenders}"
+}
+# }}}
+
+# {{{ check_pretrain_present()
+# 148j: every playable class must have at least one pretrained spell row
+# (matched by class bit in the classmask). A class with none means the
+# level-20 pretrain migration did not cover it — characters would wake up
+# knowing only their level-1 starter abilities.
+check_pretrain_present() {
+    local offenders
+    offenders="$(run_sql "
+        SELECT CONCAT('class ', cls.c, ' has no 148j pretrain rows')
+        FROM (SELECT 1 c UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+              UNION SELECT 5 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9
+              UNION SELECT 11) cls
+        WHERE NOT EXISTS (
+            SELECT 1 FROM ${WORLD}.playercreateinfo_spell_custom s
+            WHERE s.Note LIKE 'vanilla-148j-%'
+              AND (s.classmask & (1 << (cls.c - 1))) > 0)
+        ORDER BY cls.c;")"
+    report "148j pretrain spells present for every class" "${offenders}"
+}
+# }}}
+
+# {{{ main()
+main() {
+    if [[ ! -x "${MYSQL}" ]]; then
+        echo "ERROR: mysql client not found or not executable at ${MYSQL}" >&2
+        echo "  - Is DIR correct? (got: ${DIR})" >&2
+        echo "  - Is the project-local MySQL built? (mysql/installed-files/bin/mysql)" >&2
+        exit 2
+    fi
+
+    # A single cheap query doubles as the connection probe: if MySQL is
+    # down or credentials are wrong, this fails loudly before any check.
+    local combos
+    combos="$(run_sql "SELECT COUNT(*) FROM ${WORLD}.playercreateinfo WHERE class <> 6 AND race <> 9;")" || {
+        echo "ERROR: could not query ${WORLD}. Is MySQL running on :3307? (start-mysql)" >&2
+        exit 2
+    }
+
+    echo "Vanilla starter-state validation — ${combos} valid (race, class) combos"
+    echo "Database: ${WORLD}   (read-only checks)"
+    echo
+
+    check_spawn_zone
+    check_has_weapon
+    check_bags_and_hearth
+    check_clone_required_level
+    check_pretrain_present
+
+    echo
+    if [[ "${FAIL_COUNT}" -eq 0 ]]; then
+        echo "All data-side checks PASSED. Remaining 148o work is the in-client"
+        echo "eyeball pass (spawn-walkable, kit visually equipped, hearth tooltip)."
+        exit 0
+    fi
+    echo "${FAIL_COUNT} check(s) FAILED — see flagged rows above."
+    exit 1
+}
+
+main
+# }}}
