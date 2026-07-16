@@ -184,6 +184,33 @@ check_pretrain_present() {
 }
 # }}}
 
+# {{{ check_professions()
+# 148q: every valid combo must have at least one gathering profession and
+# exactly one production, granted at Journeyman (skill lines tagged
+# vanilla-148q-). A miss means the profession migration's bitmask keying
+# doesn't cover that (race,class) — the class of bug 148j hit when raw ids
+# leaked into a mask column. (This checks presence, not the 125 value, which
+# the first-login hook sets and is only observable in-client.)
+check_professions() {
+    local offenders
+    offenders="$(run_sql "
+        SELECT CONCAT('race ', p.race, ' class ', p.class,
+                      ' -> gathering=', SUM(s.skill IN (129,182,186,197,333,356,393)),
+                      ' production=', SUM(s.skill IN (164,165,171,185,202,755,773)))
+        FROM ${WORLD}.playercreateinfo p
+        JOIN ${WORLD}.playercreateinfo_skills s
+          ON s.comment LIKE 'vanilla-148q-%'
+         AND (s.raceMask=0  OR s.raceMask  & (1<<(p.race-1)))
+         AND (s.classMask=0 OR s.classMask & (1<<(p.class-1)))
+        WHERE p.class <> 6 AND p.race <> 9
+        GROUP BY p.race, p.class
+        HAVING SUM(s.skill IN (129,182,186,197,333,356,393)) < 1
+            OR SUM(s.skill IN (164,165,171,185,202,755,773)) <> 1
+        ORDER BY p.race, p.class;")"
+    report "148q every combo has >=1 gathering + exactly 1 production" "${offenders}"
+}
+# }}}
+
 # {{{ main()
 main() {
     if [[ ! -x "${MYSQL}" ]]; then
@@ -210,6 +237,7 @@ main() {
     check_bags_and_hearth
     check_clone_required_level
     check_pretrain_present
+    check_professions
 
     echo
     if [[ "${FAIL_COUNT}" -eq 0 ]]; then

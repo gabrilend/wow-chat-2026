@@ -446,6 +446,27 @@ local function learn_weapon_proficiencies(player)
 end
 -- }}}
 
+-- {{{ set_profession_skills
+-- 148q: the profession migration grants each starting profession at Journeyman
+-- (tier 2, cap 150) but only at skill VALUE 1 — playercreateinfo can set the
+-- tier, not the value (rank is a tier-step, per 148h's lesson). Bump every
+-- profession the character now HAS to 125, the level-20 recipe band, keeping
+-- the 150 cap so it still climbs through use. Reads what the character holds,
+-- so it needs no per-(race,class) mapping; mirrors the SetSkill idiom in
+-- train_starter_weapon_skills. Gathering skills first, then production.
+local PROFESSION_SKILLS = {
+    186, 182, 393, 356, 129, 197, 333,  -- Mining Herbalism Skinning Fishing FirstAid Tailoring Enchanting
+    164, 165, 171, 202, 755, 773, 185,  -- Blacksmithing Leatherworking Alchemy Engineering Jewelcrafting Inscription Cooking
+}
+local function set_profession_skills(player)
+    for _, skill in ipairs(PROFESSION_SKILLS) do
+        if player:HasSkill(skill) then
+            player:SetSkill(skill, 2, 125, 150)  -- (skill, tier-step, value, max)
+        end
+    end
+end
+-- }}}
+
 local function apply_kit(playerName, query)
     local player = GetPlayerByName(playerName)
     if not player then return end
@@ -458,6 +479,7 @@ local function apply_kit(playerName, query)
     install_containers(player, buckets.quiver)  -- Medium Quiver into 22 (hunters)
     install_equipment(player, buckets.equip)    -- armor, cape, weapons, relic, wand
     train_starter_weapon_skills(player, buckets.equip) -- starter weapon type → max-for-level (148h)
+    set_profession_skills(player)               -- professions to skill 125 (148q)
     install_ammo(player, buckets.ammo)          -- Sharp Arrow → routes into quiver
     install_hearthstone(player, buckets.hearth) -- Hearthstone → first available bag
     bind_hearth(player)                         -- bind to race's anchor town (148n)

@@ -2,6 +2,24 @@
 
 ## Status
 - Created: 2026-07-13
+- **Completed: 2026-07-15** — applied live to `acore_world_vanilla`
+  (20 skill rows, 354 recipe rows, 72 tool rows), shipped as E021. Three
+  refinements to the spec surfaced during the build:
+  1. **No generator.** Recipes come straight from `trainer_spell` via
+     `INSERT … SELECT` (`skill_line_ability` is an empty DBC table here),
+     so the migration is ~120 lines of pure, data-derived SQL — no
+     `scripts/generate-…` script needed.
+  2. **`playercreateinfo_skills.rank` is a tier-STEP, not a value** —
+     `rank=125` would be rejected exactly like 148h's `rank=100`. So the
+     profession is seeded at Journeyman (`rank=2`, cap 150) and the
+     first-login hook (`set_profession_skills`) bumps the skill VALUE to
+     125 via `SetSkill`, the same idiom used for the starter weapon.
+  3. **Three primaries for 9 combos.** With the two-gatherings ruling,
+     combos where the race-default gathering AND the class-override
+     gathering are both primary (e.g. Orc Warrior: Skinning + Mining +
+     Blacksmithing) land 3 primary professions — beyond WoW's 2-primary
+     norm. Mechanically fine (force-granted, bypasses the learn-time
+     cap); flagged in Open Questions for a possible trim.
 - Phase: 1 (Foundation — vanilla profile ruleset)
 - Parent: 148 (vanilla profile)
 - Related: 148h (starter equipment generator — same mechanism),
@@ -255,30 +273,37 @@ gathering is by race with per-faction class overrides (two matrices),
 so **each faction independently has access to all seven gatherings and
 all seven productions**.
 
-## Implementation Steps
+## Implementation Steps (done)
 
-Nothing built yet — this is a spec. Checklist for the successor:
-
-- [ ] Build `scripts/generate-vanilla-starting-professions-sql`: the
-      shared class→production table + faction-split gathering (race
-      defaults + per-faction class overrides), resolving each
-      (race, class)→gathering by faction (override beats default), with
-      bitmask helpers, a recipe query on `skill_line_ability`
-      (req skill ≤ 125), and tool resolution on `item_template`.
-- [ ] Resolve the tier→level gate data from trainer/skill tables and
-      assert level 20 clears skill 125.
-- [ ] Emit `07-starting-professions.apply.sql` + revert form, correct
-      bitmask keying (never a raw id in a mask column — see 148j).
-- [ ] Add the E-patch (next free `E0##`, content-`cmp` idempotence,
-      UpdateFetcher register), vanilla-DB scope only.
-- [ ] Boot worldserver; run the data-coherence validator across all 52
-      combos, including the per-faction all-7 coverage check.
-- [ ] In-client spot check: one character per gathering and per
-      production — confirm skill 125, recipe book, starter tool.
-- [ ] Record final mappings + skill value in docs/balance-updates.md.
+- [x] No generator needed — recipes derive from `trainer_spell` at apply
+      time, so `sql/vanilla/db_world.src/07-starting-professions.apply.sql`
+      is hand-authored pure SQL (`INSERT … SELECT`), bitmask-keyed (correct
+      `1<<(id-1)` masks, never a raw id — per 148j). Revert = tagged DELETE.
+- [x] Tier/value split resolved: `rank=2` (Journeyman, cap 150) in the
+      migration; skill VALUE 125 set by the first-login hook's
+      `set_profession_skills` (`SetSkill(skill, 2, 125, 150)`).
+- [x] `patch_E021_vanilla_starting_professions` + registration in
+      `PHASE_END_PATCHES["vanilla"]`; cp-apply / cp-revert idiom.
+- [x] Applied + coherence-validated across all 52 combos: every combo has
+      ≥1 gathering + exactly 1 production; recipe totals check out
+      (354 = 202 production + 152 gathering); tools = 72.
+- [ ] In-client spot check (folds into 148o): a character per gathering
+      and production — confirm skill 125, recipe book, starter tool.
+- [ ] If the 3-primary combos (Open Questions) are unwanted, switch the
+      relevant overrides from add to replace and re-apply.
 
 ## Open Questions
 
+- **Three primary professions for 9 combos.** The two-gatherings ruling
+  (a rogue skins *and* keeps their racial gathering — user-approved) means
+  combos where both the race default and the class override are *primary*
+  gatherings land 3 primaries once production is added: Orc/Undead/Tauren/
+  Troll Warrior, Dwarf/NightElf/Gnome Rogue, Gnome Mage, Gnome Warlock.
+  Force-granted, so the game accepts it (the 2-primary cap only gates
+  *learning*), and it fits "play to the fullest" — but it's beyond the WoW
+  norm. To trim: make the Warrior/Rogue/Mage/Warlock overrides *replace*
+  the race default instead of adding (the Shaman/Priest overrides add a
+  *secondary*, so they never trip this). Left additive pending a call.
 - Mappings (race defaults, class overrides, production, skill 125) are
   **confirmed** (user sign-off 2026-07-13). Any future change must
   re-check the zero-primary guard: never move a secondary gathering
