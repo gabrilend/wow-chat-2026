@@ -1,6 +1,19 @@
 # 148m - Vanilla XP and Talent Tuning
 
+> **DECLINED 2026-07-15.** The XP slowdown (`Rate.XP.Kill = 0.8`) and the
+> level-gated talent inflation (+2 points per level-up, 21-40) will not
+> ship. The vanilla profile keeps the default progression instead: the
+> project-wide C005 2× XP and the standard WoW curve of one talent point
+> per level, with no vanilla-specific override. We briefly considered
+> exposing the tuning as an opt-in `worldserver.conf` toggle rather than
+> an always-on patch, then decided against adding the knob at all —
+> default pacing stands until playtesting proves 20→40 actually needs
+> tuning. Never implemented: no `C021-vanilla-xp-rate-multiplier.sh` and
+> no `talent-points-bonus.lua` were written, so there is nothing to
+> unwind. This ticket is kept on disk as a record of the decision.
+
 ## Status
+- **Declined: 2026-07-15** (default XP + talent progression stands)
 - Created: 2026-06-04
 - Phase: 8 (Progression — pacing knobs; logged under 148 parent because
   the values are vanilla-specific)

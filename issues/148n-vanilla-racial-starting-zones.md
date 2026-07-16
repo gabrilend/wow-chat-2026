@@ -27,22 +27,34 @@ distance while also fitting the level-20 difficulty band.
 
 ## Current Behavior
 
-`playercreateinfo` for vanilla profile (set by E007):
+**The per-race spread described under Intended Behavior is now live**
+(shipped with the 148n/148o work). The vanilla `playercreateinfo` no
+longer uses E007's coarse two-zone bucket — each race (all non-DK
+classes) is sent to its own town, and every anchor coordinate is
+measured live from that town's **innkeeper NPC** in the creature
+table, so the spawn lands on walkable ground rather than a
+copied-from-memory town-center guess that risked dropping the player
+inside a building facade or over a void.
 
-| Race | Race name | Spawn zone | Coords (x, y, z) |
+Live migration: `sql/vanilla/db_world/01-starting-zones.sql` (the
+E007 apply-form). Note there is no separate `.src` twin for the zones
+file — unlike the equipment migrations, it is maintained directly in
+`db_world/`.
+
+| Race | Spawn zone (map, zone) | Anchor | position_x, y, z, orient |
 |---|---|---|---|
-| 1 | Human | Duskwood / Darkshire | -10573, -1182, 28 |
-| 3 | Dwarf | Duskwood / Darkshire | -10573, -1182, 28 |
-| 4 | Night Elf | Duskwood / Darkshire | -10573, -1182, 28 |
-| 7 | Gnome | Duskwood / Darkshire | -10573, -1182, 28 |
-| 11 | Draenei | Duskwood / Darkshire | -10573, -1182, 28 |
-| 2 | Orc | Hillsbrad / Tarren Mill | -34, -923, 54 |
-| 5 | Undead | Hillsbrad / Tarren Mill | -34, -923, 54 |
-| 6 | Tauren | Hillsbrad / Tarren Mill | -34, -923, 54 |
-| 8 | Troll | Hillsbrad / Tarren Mill | -34, -923, 54 |
-| 10 | Blood Elf | Hillsbrad / Tarren Mill | -34, -923, 54 |
+| 1 Human, 3 Dwarf | Wetlands (0, 38) | Menethil Harbor inn | -3827.93, -831.9, 10.09, 0.4014 |
+| 11 Draenei | Duskwood (0, 10) | Darkshire inn | -10516.0, -1161.21, 28.12, 4.0317 |
+| 4 Night Elf, 7 Gnome | Ashenvale (1, 331) | Astranaar inn | 2781.16, -433.0, 116.67, 2.5831 |
+| 2 Orc | Northern Barrens (1, 17) | Ratchet inn | -1050.04, -3664.8, 23.97, 6.0039 |
+| 5 Undead, 8 Troll | Hillsbrad (0, 267) | Tarren Mill inn | -5.97, -942.28, 57.16, 2.7415 |
+| 6 Tauren, 10 Blood Elf | Stonetalon (1, 406) | Sun Rock Retreat inn | 893.65, 927.95, 106.36, 5.7072 |
 
-DK (class 6) rows untouched (class is disabled per 148a).
+The hearthstone bind follows the same spread now — the auto-equip
+first-login hook binds each character's hearth to its own spawn town
+(resolving the bind-point Open Question below), and the existing bot
+fleet was moved onto the spread in the same pass. DK (class 6) rows
+remain untouched (class disabled per 148a).
 
 ## Intended Behavior
 
@@ -141,23 +153,24 @@ so no change needed to the patch function — just to its source SQL.
 
 ## Open Questions
 
-- **Inn / hearthstone bind point.** ALE's `auto-equip-starter-kit`
-  hook calls `SetBindPoint` to Darkshire (Alliance) or Tarren Mill
-  (Horde) today. With the new per-race spread, the binding logic
-  needs an update — each race's bind should point to its new spawn
-  town. Track as a follow-up to the kit script. Until then, the
-  hearthstone bind will point back to the old E007 bucket; on
-  hearth, the character teleports to Darkshire/Tarren Mill instead
-  of their new spawn zone.
-- **Existing bot characters.** Same shape as the bot reset already
-  performed in this session — UPDATEs on `characters.position_*`
-  and `character_homebind` would move the existing 1210 bot fleet
-  to the new per-race towns. Mechanically straightforward; track
-  as a follow-up.
 - **Map 1 (Kalimdor) routing for Gnomes.** Putting Gnomes at
   Astranaar is the most unusual choice. If feedback says "Gnomes
   feel out of place in Ashenvale" we'd move them — Loch Modan,
   Wetlands (shared with Humans/Dwarves), or even Stranglethorn
-  are candidate alternatives.
-- **Stonetalon coords specifically.** Sun Rock Retreat coordinates
-  approximate from memory. Worth a live confirm in the test pass.
+  are candidate alternatives. (Still open — a feel/feedback call,
+  not a correctness bug.)
+
+### Resolved
+
+- **Inn / hearthstone bind point.** RESOLVED — the
+  `auto-equip-starter-kit` first-login hook now binds each race's
+  hearth to its own spawn town, matching the per-race spread, so a
+  hearth returns the player to where they started rather than the
+  old Darkshire/Tarren Mill bucket.
+- **Existing bot characters.** RESOLVED — the existing bot fleet was
+  moved onto the per-race spread (`characters.position_*` +
+  `character_homebind`) in the same pass.
+- **Stonetalon coords specifically.** RESOLVED — every anchor
+  (Sun Rock included) is now measured live from the town innkeeper
+  in the creature table instead of approximated from memory, which
+  is exactly what guarantees a walkable-ground spawn.

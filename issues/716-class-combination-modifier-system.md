@@ -10,6 +10,11 @@
   release/beta and any future profile can use the same mechanism)
 - Related: 148 (vanilla profile — first consumer), the 700s cluster
   (custom-class work this sits alongside)
+- **On completion:** move the redirect stub
+  `issues/148g-class-combination-modifier-system.md` into
+  `issues/completed/`. It exists only to point 148-series readers
+  here; once this issue ships, the pointer has done its job and
+  belongs in the historical record rather than active `issues/`.
 
 ## Problem
 

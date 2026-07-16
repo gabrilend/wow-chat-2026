@@ -20,3 +20,9 @@ race/class infrastructure work.
 
 This file remains in place as a redirect so anyone searching the
 148-series finds the new home. Do not add content here; edit 716.
+
+**When 716 is completed, move this redirect into `issues/completed/`.**
+It lives loose in `issues/` for now purely so a `148*` glob or a
+148-series reader lands on the promotion pointer. Once 716 ships, the
+pointer has served its purpose and should follow 716 into the
+historical record — it is not itself active work.
