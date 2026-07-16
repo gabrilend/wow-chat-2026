@@ -33,7 +33,7 @@ declare -A PHASE_BEGIN_PATCHES=(
     ["release"]="B004 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B024"  # warning fixes + mod-playerbots + mod-ale compat + ALE registry lock fix + runtime conf-dir override + ALE FormatQuery lifetime fix + symmetric aggro radius (B011 removed — upstream mod-ale now matches core, patch became harmful)
     ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B024"  # All patches (B011 removed — see release-line note)
     ["alpha"]="B001 B004"                                         # Minimal compatibility patches
-    ["vanilla"]="B001 B002 B004 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023"  # 2026-06-02: ALE added per 148k. Compile fixes + B001 (aoe-loot/ALE compat, conditional) + B002 (playerbots×ALE login hook) + B020 + B023 (ALE thread-safety + dangling-pointer fixes — non-negotiable for ALE stability). Skipped per user OK: B003 B006 B007 (ALE feature patches not yet needed), B005 B008 B024 (wow-chat gameplay), B011 (removed everywhere).
+    ["vanilla"]="B001 B002 B004 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B025"  # 2026-06-02: ALE added per 148k. Compile fixes + B001 (aoe-loot/ALE compat, conditional) + B002 (playerbots×ALE login hook) + B020 + B023 (ALE thread-safety + dangling-pointer fixes — non-negotiable for ALE stability). Skipped per user OK: B003 B006 B007 (ALE feature patches not yet needed), B005 B008 B024 (wow-chat gameplay), B011 (removed everywhere). 2026-07-15: +B025 (148s — vanilla bots start in the 148h starter kit; self-scoping on the kit data, so it only takes effect on vanilla).
 )
 
 # PHASE_END patches (post-compile setup: configs, symlinks, database)
@@ -227,6 +227,13 @@ patch_needs_applying_B002() {
         return 0
     fi
     return 1
+}
+
+patch_needs_applying_B025() {
+    # Grouped with B002 (the other mod-playerbots patch). Witness: the
+    # factory gains the B025 marker once the starter-kit block is injected.
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/Factory/PlayerbotFactory.cpp"
+    [[ -f "${FILE}" ]] && ! grep -q "B025-vanilla-starter-kit" "${FILE}"
 }
 
 patch_needs_applying_B003() {
