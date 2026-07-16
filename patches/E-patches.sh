@@ -43,6 +43,17 @@ _register_with_updatefetcher() {
 
     mkdir -p "${DIR_PATH}"
 
+    # Canonicalize before registering. ${DIR} defaults to the
+    # /home/ritz spelling, which is a symlink to /mnt/mtwo; a run under
+    # one ${DIR} and a run under the other insert two include rows for
+    # the SAME physical directory (path is the PRIMARY KEY, so both
+    # rows survive). AC's UpdateFetcher then scans both, finds every
+    # .sql twice, and aborts the whole DB update with "Duplicate
+    # filename ... every name needs to be unique" — a hard boot crash.
+    # Resolving to the real path keeps a single canonical include row
+    # no matter which ${DIR} spelling ran the install.
+    DIR_PATH="$(readlink -f "${DIR_PATH}")"
+
     # If MySQL isn't up the include row can be inserted on a later
     # install pass. Worldserver picks it up on next boot regardless
     # of when the row was added.
@@ -87,7 +98,9 @@ SQL
 # worldserver. Unapply_patches_end runs every unpatch in
 # PHASE_END_PATCHES[$PROFILE]; each removes its own include row.
 _unregister_from_updatefetcher() {
-    local DIR_PATH="$1"
+    # Canonicalize to match how _register stores it (real path, not the
+    # /home/ritz symlink spelling) so the DELETE actually hits the row.
+    local DIR_PATH; DIR_PATH="$(readlink -f "$1")"
     local DB="$2"
     local MYSQL_DIR="${DIR}/mysql/installed-files"
     local MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
@@ -403,8 +416,10 @@ patch_E007_vanilla_starting_zones() {
     echo "  [E007] Writing apply-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
 -- MARKER_E007_APPLY vanilla-starting-zones
--- Apply-form (148n): per-race spawn assignment, anchored at level-20
--- town centers. Each row sends a (race, non-DK) pair to a specific
+-- Apply-form (148n/148o): per-race spawn assignment, anchored at each
+-- town's innkeeper NPC (coords measured live from the creature table,
+-- so the spawn tile is guaranteed walkable ground rather than a
+-- copied-from-memory town-center guess). Each row sends a (race, non-DK) pair to a specific
 -- town across the world rather than bucketing every Alliance/Horde
 -- character into one Darkshire/Tarren Mill pair.
 --
@@ -417,12 +432,12 @@ patch_E007_vanilla_starting_zones() {
 --
 -- DK rows (class=6) left alone so a re-enabled DK still lands at
 -- Ebon Hold (assumes WotLK opener).
-UPDATE `playercreateinfo` SET `map`=0, `zone`=38,  `position_x`=-3826.0,  `position_y`=-793.0,    `position_z`=19.0,    `orientation`=4.84     WHERE `race` IN (1,3)     AND `class` != 6;
-UPDATE `playercreateinfo` SET `map`=0, `zone`=10,  `position_x`=-10573.0, `position_y`=-1182.51,  `position_z`=28.0148, `orientation`=0.309022 WHERE `race`  = 11        AND `class` != 6;
-UPDATE `playercreateinfo` SET `map`=1, `zone`=331, `position_x`=2728.0,   `position_y`=-380.0,    `position_z`=107.0,   `orientation`=0.0      WHERE `race` IN (4,7)     AND `class` != 6;
-UPDATE `playercreateinfo` SET `map`=1, `zone`=17,  `position_x`=-978.0,   `position_y`=-3771.0,   `position_z`=5.0,     `orientation`=0.0      WHERE `race`  = 2         AND `class` != 6;
-UPDATE `playercreateinfo` SET `map`=0, `zone`=267, `position_x`=-34.1467, `position_y`=-923.366,  `position_z`=54.5576, `orientation`=0.15019  WHERE `race` IN (5,8)     AND `class` != 6;
-UPDATE `playercreateinfo` SET `map`=1, `zone`=406, `position_x`=736.0,    `position_y`=1019.0,    `position_z`=137.0,   `orientation`=0.0      WHERE `race` IN (6,10)    AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=0, `zone`=38,  `position_x`=-3827.93, `position_y`=-831.9,   `position_z`=10.09,  `orientation`=0.4014 WHERE `race` IN (1,3)  AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=0, `zone`=10,  `position_x`=-10516.0, `position_y`=-1161.21, `position_z`=28.12,  `orientation`=4.0317 WHERE `race` = 11      AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=1, `zone`=331, `position_x`=2781.16,  `position_y`=-433.0,   `position_z`=116.67, `orientation`=2.5831 WHERE `race` IN (4,7)  AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=1, `zone`=17,  `position_x`=-1050.04, `position_y`=-3664.8,  `position_z`=23.97,  `orientation`=6.0039 WHERE `race` = 2       AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=0, `zone`=267, `position_x`=-5.97,    `position_y`=-942.28,  `position_z`=57.16,  `orientation`=2.7415 WHERE `race` IN (5,8)  AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=1, `zone`=406, `position_x`=893.65,   `position_y`=927.95,   `position_z`=106.36, `orientation`=5.7072 WHERE `race` IN (6,10) AND `class` != 6;
 SQL
 }
 
@@ -648,14 +663,17 @@ patch_E009_vanilla_starting_equipment() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/02-starting-equipment.sql"
     local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/02-starting-equipment.apply.sql"
 
-    # Idempotence guard: if the active file already holds the apply
-    # marker, the content matches the source and there's nothing to do.
-    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E009_APPLY" "${SQL_FILE}"; then
-        echo "  [E009] Active file already holds apply-form content"
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E009] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    # Idempotence guard: compare source and active file contents byte-
+    # by-byte. Marker-only checks miss the case where the generator
+    # emits new content under the same marker (kit regenerations, etc.)
+    # — UpdateFetcher would never see the hash change because the
+    # patch step thinks "marker present → done" and skips the copy.
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E009] Active file already matches apply-form content"
         return 0
     fi
-
-    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E009] Apply source missing: ${SRC_FILE}"; return 1; }
 
     _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
@@ -797,28 +815,38 @@ SQL
 # -- }}}
 
 # -- {{{ patch_E018_vanilla_kit_required_level_cap
-# Lowers item_template.RequiredLevel on every entry that appears in
-# the vanilla 148h starter kit so a level-20 character (vanilla's
-# StartPlayerLevel per C007c) can actually equip the kit. The kit was
-# tuned with Cuirboulli / Polished Scale armor at RequiredLevel 22 —
-# without this patch the character spawns "stripped + bagful of
-# unequippable kit" because ALE's auto-equip-starter-kit hook calls
-# EquipItem and the engine returns ERR_CANT_EQUIP_LEVEL_I.
+# Clones every kit-referenced item to a new entry (original + 2000000),
+# tunes the clones to RequiredLevel=20 + DPS=15 (weapons) / DPS=20
+# (wands) + per-stat overrides (e.g. +1 Spell Power on the Amani
+# Sacrificial Dagger clone), restores originals to their canonical
+# pre-modification RequiredLevel, and sweeps every loot-table /
+# vendor / quest-reward reference in the vanilla profile world DB
+# so the live world consistently uses the server-tuned clones.
 #
+# Supersedes the V1 patch (148h follow-up): V1 modified RL in-place,
+# which leaked across the entire world's drops/vendors/quests, and
+# the V1 unpatch was a soft revert (floor to RL=22, no snapshot). The
+# V2 clone-to-new-ID design fixes both — originals stay canonical as
+# Wowhead references, clones carry the server-tuned values, and the
+# revert is deterministic (drop the 2000000-2099999 range + reverse
+# the sweep using the same clone-map).
+#
+# See 148h "Item Cloning Procedure" + "Loot Table Update Procedure".
 # Vanilla-DB scope only (acore_world_vanilla). Release/beta read a
-# different world DB so their item_template stays as upstream
-# shipped. ItemLevel column unchanged — tooltips still show the kit
-# as item-level-22-ish gear; only the required-to-wear level moves.
+# different world DB so their item_template stays untouched.
 patch_E018_vanilla_kit_required_level_cap() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/06-kit-required-level-cap.sql"
     local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/06-kit-required-level-cap.apply.sql"
 
-    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E018_APPLY" "${SQL_FILE}"; then
-        echo "  [E018] Active file already holds apply-form content"
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E018] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    # Idempotence by content comparison rather than marker presence —
+    # apply-form source can change with the same marker (DPS
+    # retuning, kit additions). See same-shape comment in E009.
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E018] Active file already matches apply-form content"
         return 0
     fi
-
-    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E018] Apply source missing: ${SRC_FILE}"; return 1; }
 
     _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
@@ -828,36 +856,19 @@ patch_E018_vanilla_kit_required_level_cap() {
 
 unpatch_E018_vanilla_kit_required_level_cap() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/06-kit-required-level-cap.sql"
+    local REV_FILE="${DIR}/sql/${PROFILE}/db_world.src/06-kit-required-level-cap.revert.sql"
 
-    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E018_REVERT" "${SQL_FILE}"; then
-        echo "  [E018] Active file already holds revert-form content"
+    [[ ! -f "${REV_FILE}" ]] && { echo "  [E018] Revert source missing: ${REV_FILE}"; return 1; }
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${REV_FILE}" "${SQL_FILE}"; then
+        echo "  [E018] Active file already matches revert-form content"
         return 0
     fi
 
     _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
 
-    # Revert: restore each affected item to its upstream RequiredLevel
-    # by re-reading from a snapshot taken at apply time. The apply
-    # source above doesn't snapshot today — it just UPDATEs in place —
-    # so a clean revert needs the snapshot. Until that's added, this
-    # unpatch is a soft revert: re-floor the level back to a baseline
-    # of 22 which matches the Cuirboulli/Polished-Scale-armor tier the
-    # majority of the kit was drawn from. Imperfect; tracked in 148h
-    # follow-up.
-    echo "  [E018] Writing revert-form SQL to ${SQL_FILE}"
-    cat > "${SQL_FILE}" <<'SQL'
--- MARKER_E018_REVERT vanilla-kit-required-level-cap
--- Revert-form: floor RequiredLevel back to 22 for items we lowered.
--- Imperfect (no snapshot) — see 148h follow-up.
-UPDATE `item_template`
-   SET `RequiredLevel` = 22
- WHERE `entry` IN (
-           SELECT DISTINCT `itemid`
-             FROM `playercreateinfo_item`
-            WHERE `Note` LIKE 'vanilla-148h-%'
-       )
-   AND `RequiredLevel` = 20;
-SQL
+    echo "  [E018] Copying revert-form source → ${SQL_FILE}"
+    cp "${REV_FILE}" "${SQL_FILE}"
 }
 # -- }}}
 
