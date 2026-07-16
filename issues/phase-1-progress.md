@@ -127,7 +127,7 @@ playerbots). Phase-1-tagged as a profile-model slice; tracked here.
 | 148k | ale-auto-equip-starter-kit | Implemented | First-login strip + equip + ammo + hearth hook. |
 | 148n | vanilla-racial-starting-zones | Live | Per-race spawn spread, innkeeper-anchored coords; hearth binds + bot fleet moved. |
 | 148o | vanilla-spawn-and-kit-validation-pass | In Progress | 52 race×class reroll matrix; blockers cleared, matrix not yet run. |
-| 148i | remove-all-flight-paths | Open | Next blocking build — network-wide taxi disable + flavor gossip. |
+| 148i | remove-all-flight-paths | **Completed** | Flightmaster flag cleared network-wide; 69 hand-authored per-NPC flavor lines (EK + Kalimdor); applied + verified live. |
 | 148l | vanilla-mount-level-requirements | Open | Low-priority flavor. |
 | 148q | vanilla-starting-professions | Open | QoL; generator not built. |
 | 148s | vanilla-playerbots-start-in-148h-kit | Open | Consistency; not built. |
@@ -135,8 +135,8 @@ playerbots). Phase-1-tagged as a profile-model slice; tracked here.
 | 148g | class-combination-modifier-system | Promoted → 716 | Redirect stub; moves to completed/ when 716 ships. |
 | 148b–f, 148m, 148p | (various) | Declined | Kept in issues/declined/ as record. |
 
-Vanilla cluster: 1 completed (148a), 4 implemented/live (148h/j/k/n),
-2 in progress (148, 148o), 5 open, 7 declined/promoted.
+Vanilla cluster: 2 completed (148a, 148i), 4 implemented/live
+(148h/j/k/n), 2 in progress (148, 148o), 4 open, 7 declined/promoted.
 
 ## Completed: 14/44 (2 Will Not Implement, 4 Superseded, 1 Invalidated, 1 Deferred Low)
 

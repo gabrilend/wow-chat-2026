@@ -424,6 +424,17 @@ INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
 INSERT INTO gossip_menu (MenuID, TextID) VALUES (90069, 90069);
 UPDATE creature_template SET gossip_menu_id = 90069 WHERE entry = 23612; -- Dyslix Silvergrub (Silithus)
 
+-- ----------------------------------------------------------------------------
+-- Re-enable the GOSSIP npcflag (bit 1) on every grounded flightmaster that
+-- received a flavor menu above. The npcflag clear at the top only stripped the
+-- flightmaster bit (8192); without the GOSSIP bit the assigned 90xxx menu can
+-- never open, and the core logs "has assigned gossip menu ... but npcflag does
+-- not include UNIT_NPC_FLAG_GOSSIP" once per NPC. Keyed on the 90000-90999
+-- menu range so only our authored dialogues get the flag — de-flighted masters
+-- without a flavor line stay silent.
+-- ----------------------------------------------------------------------------
+UPDATE creature_template SET npcflag = npcflag | 1 WHERE gossip_menu_id BETWEEN 90000 AND 90999;
+
 -- ============================================================================
 -- End of 03-remove-flight-paths.sql
 -- 69 unique dialogues authored for EK + Kalimdor flightmasters.

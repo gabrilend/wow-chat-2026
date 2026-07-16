@@ -2,6 +2,11 @@
 
 ## Status
 - Created: 2026-06-02
+- **Completed: 2026-07-15** — Path B3+B1 implemented, applied, and
+  verified live in `acore_world_vanilla`: the flightmaster flag is
+  cleared on every creature (0 remain), and 69 hand-authored per-NPC
+  flavor gossip lines cover every reachable Eastern Kingdoms + Kalimdor
+  flight master. See "Current Behavior" below.
 - Phase: 1 (Foundation — profile model)
 - Parent: 148 (vanilla profile)
 - Priority: Medium (defining ruleset feature, not a bug fix)
@@ -40,6 +45,33 @@ travel is exclusively on-foot, mounted, or by boat/zeppelin.
   once they level into mount eligibility, ground mounts work.
 - Druid Travel Form and Shaman Ghost Wolf still work — they're not
   flight, they're class abilities.
+
+## Current Behavior (implemented — Path B3 + B1)
+
+Live in `acore_world_vanilla` and verified:
+
+- **Flag cleared everywhere.** `UNIT_NPC_FLAG_FLIGHTMASTER` (8192) is
+  stripped from every `creature_template` — 0 flightmasters retain it,
+  so no taxi icon and no taxi UI appears anywhere, on any continent.
+- **69 unique flavor lines.** Every reachable Eastern Kingdoms and
+  Kalimdor flight master has its own two-sentence, location-and-
+  personality-specific gossip line (`npc_text` + `gossip_menu` IDs
+  90001–90069; the 90000–90999 range is reserved for this migration).
+  Clicking a grounded master gives an in-world reason the wings are
+  down instead of a dead click.
+- **Menus actually open.** After the flag clear, the GOSSIP npcflag
+  (bit 1) is re-set on exactly the masters that received a 90xxx menu,
+  so the flavor text opens; masters with no line stay silent rather
+  than throwing a per-NPC "gossip menu without GOSSIP flag" core warning.
+- **Outland + Northrend:** flag cleared (defense-in-depth) but no
+  dialogue authored — unreachable at the level-40 cap, a deliberate
+  scope call.
+- Boats, zeppelins, mounts, Travel Form, and Ghost Wolf are untouched,
+  per the intended behavior above.
+
+Migration: `sql/vanilla/db_world.src/03-remove-flight-paths.apply.sql`
+(applied by the E008 patch via AC's UpdateFetcher; the revert is the
+E008 unpatch heredoc).
 
 ## Two Implementation Paths
 
@@ -144,23 +176,19 @@ with the 80% movement reduction from C003, a mounted player travels
 at roughly the same effective speed a stock un-mounted player would,
 which feels appropriate for the deliberate-travel design.
 
-## Implementation Steps
+## Implementation Steps (done)
 
-1. Identify the `UNIT_NPC_FLAG_FLIGHTMASTER` bit value (0x2000 in
-   3.3.5a AzerothCore — confirm in `Object.h` or equivalent).
-2. Query `creature_template` for all rows with the flightmaster flag
-   set: `SELECT entry, name FROM creature_template WHERE npcflag & 8192;`.
-   Save the list for the migration.
-3. Write `sql/vanilla/03-remove-flight-paths.sql`:
-   - `UPDATE creature_template SET npcflag = npcflag & ~8192 WHERE npcflag & 8192;`
-   - INSERT flavor gossip rows per the recommended Path B1 approach.
-4. Hook the migration into `scripts/install` after 148a and 148h.
-5. Test:
-   - Walk up to a flight master in Stormwind. Confirm no taxi icon
-     appears. Confirm clicking produces the flavor gossip (or no
-     gossip, if B3 alone is chosen).
-   - Confirm the boat from Menethil to Theramore still operates.
-   - Confirm a Druid can still cast Travel Form.
+1. ✅ `UNIT_NPC_FLAG_FLIGHTMASTER` = 0x2000 = 8192 confirmed.
+2. ✅ Flag cleared across all `creature_template` rows via the apply
+   migration.
+3. ✅ `sql/vanilla/db_world.src/03-remove-flight-paths.apply.sql` written:
+   the flag clear, the 90000-range idempotent cleanup, 69 per-NPC flavor
+   `npc_text` + `gossip_menu` rows, and the GOSSIP-flag re-enable.
+4. ✅ Applied via the E008 patch (`patch_E008_vanilla_remove_flight_paths`)
+   + UpdateFetcher; verified live in `acore_world_vanilla`.
+5. ⏳ In-client eyeball (folds into the 148o pass): a Stormwind flight
+   master shows no taxi icon but gives the flavor line; the
+   Menethil→Theramore boat still runs; Druid Travel Form still casts.
 
 ## Composition With Other Vanilla Decisions
 
