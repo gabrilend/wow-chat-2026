@@ -7,10 +7,14 @@
 - Related: 148k / 148h (the `auto-equip-starter-kit.lua` first-login hook
   this rides in), 148q (built alongside)
 - Priority: Low (flavor)
-- **Blocked on one datum:** the temp-enchant ids live in the client's
-  `SpellItemEnchantment.dbc`, which is empty in this server's DBC tables
-  (`spellitemenchantment_dbc` = 0 rows). See "The one open datum" below —
-  everything else is designed and the hook slot is ready.
+- **Built: 2026-07-15** — `sharpen_starter_weapon` is live in the
+  first-login hook (`src/lua-vanilla/auto-equip-starter-kit.lua`). Tiers
+  chosen from `item_template.RequiredLevel` (best usable at the level-20
+  start): Heavy Sharpening Stone / Heavy Weightstone (RL 15) and Minor
+  Wizard Oil (RL 5). Enchant ids resolved from the wowhead 3.3.5a spell
+  pages (the server's DBC enchant tables are empty, so unresolvable
+  locally): **sharpen 14, weightstone 21, wizard oil 2623**. Only the
+  in-client bonus-number confirmation remains.
 
 ## Problem
 
@@ -53,6 +57,12 @@ first-login steps. One call, first login only (the hook fires once).
 
 ## The one open datum — the enchant ids
 
+> **Resolved 2026-07-15.** Enchant ids pulled from the wowhead 3.3.5a spell
+> pages for the chosen tiers: Heavy Sharpening Stone (spell 2830) → **14**,
+> Heavy Weightstone (spell 3114) → **21**, Minor Wizard Oil (spell 25117)
+> → **2623**. Confirm the exact +damage / +spellpower value in-client. The
+> investigation that led here is kept below.
+
 `Item:SetEnchantment` takes a **SpellItemEnchantment id**, not a spell or
 item id. Those ids are DBC data. In this environment:
 
@@ -76,15 +86,16 @@ warn against.
 
 ## Implementation Steps
 
-1. Resolve the sharpening-stone and wizard-oil temp-enchant ids from the
-   client DBC (see above); pick a modest tier appropriate to a level-20
-   send-off (e.g. Coarse Sharpening Stone / Minor Wizard Oil).
-2. Add `sharpen_starter_weapon(player)` to the first-login hook: look up
-   the main-hand weapon subclass, `SetEnchantment(enchantId, 6)`.
-3. Wire the call into `apply_kit` after `train_starter_weapon_skills`.
-4. In-client: roll a warrior (blade sharpened), a mage (staff oiled),
-   confirm the temp enchant shows on the weapon tooltip and wears off
-   normally.
+1. [x] Enchant ids resolved (sharpen 14, weightstone 21, wizard oil 2623)
+   for the best RL≤20 tiers (Heavy Sharpening Stone / Heavy Weightstone /
+   Minor Wizard Oil, chosen by `item_template.RequiredLevel`).
+2. [x] `sharpen_starter_weapon(player)` added to the first-login hook —
+   branches on `Item:GetSubClass()`, applies `SetEnchantment(enchant, 6)`.
+   Blades sharpen, blunt weightstone, staff/wand oil; ranged left alone.
+3. [x] Wired into `apply_kit` after `set_profession_skills`.
+4. [ ] In-client (folds into 148o): roll a warrior (blade sharpened), a
+   mage (staff oiled) — confirm the temp enchant shows on the tooltip,
+   the bonus value reads right, and it wears off normally.
 
 ## Open Questions
 

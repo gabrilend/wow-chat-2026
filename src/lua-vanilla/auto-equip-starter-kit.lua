@@ -467,6 +467,42 @@ local function set_profession_skills(player)
 end
 -- }}}
 
+-- {{{ sharpen_starter_weapon
+-- 148u: a one-time "fresh for the road" temporary weapon enhancement on the
+-- equipped main-hand, first login only (the hook fires once) — like slapping a
+-- stone or oil on before setting out. Tier = the best usable at the level-20
+-- start, chosen by item_template.RequiredLevel:
+--   Heavy Sharpening Stone (RL 15, spell 2830)  -> temp enchant 14   (blades)
+--   Heavy Weightstone      (RL 15, spell 3114)  -> temp enchant 21   (blunt)
+--   Minor Wizard Oil       (RL  5, spell 25117) -> temp enchant 2623 (caster)
+-- Enchant ids come from the wowhead 3.3.5a spell pages (the DBC enchant tables
+-- are empty in this server DB, so they can't be resolved locally) — confirm
+-- the exact bonus in-client (148u). Applied to TEMP_ENCHANTMENT_SLOT (6).
+-- Ranged main-hands (bow/gun/thrown/crossbow) are left alone.
+local TEMP_ENCHANTMENT_SLOT = 6
+local WEAPON_SUBCLASS_ENCHANT = {
+    [ 0] =   14,  -- One-Handed Axe   → sharpen
+    [ 1] =   14,  -- Two-Handed Axe   → sharpen
+    [ 4] =   21,  -- One-Handed Mace  → weightstone
+    [ 5] =   21,  -- Two-Handed Mace  → weightstone
+    [ 6] =   14,  -- Polearm          → sharpen
+    [ 7] =   14,  -- One-Handed Sword → sharpen
+    [ 8] =   14,  -- Two-Handed Sword → sharpen
+    [10] = 2623,  -- Staff            → wizard oil
+    [13] =   14,  -- Fist Weapon      → sharpen
+    [15] =   14,  -- Dagger           → sharpen
+    [19] = 2623,  -- Wand             → wizard oil
+}
+local function sharpen_starter_weapon(player)
+    local weapon = player:GetEquippedItemBySlot(SLOT_MAINHAND)
+    if not weapon then return end
+    local enchant = WEAPON_SUBCLASS_ENCHANT[weapon:GetSubClass()]
+    if enchant then
+        weapon:SetEnchantment(enchant, TEMP_ENCHANTMENT_SLOT)
+    end
+end
+-- }}}
+
 local function apply_kit(playerName, query)
     local player = GetPlayerByName(playerName)
     if not player then return end
@@ -480,6 +516,7 @@ local function apply_kit(playerName, query)
     install_equipment(player, buckets.equip)    -- armor, cape, weapons, relic, wand
     train_starter_weapon_skills(player, buckets.equip) -- starter weapon type → max-for-level (148h)
     set_profession_skills(player)               -- professions to skill 125 (148q)
+    sharpen_starter_weapon(player)              -- one-time fresh weapon enhancement (148u)
     install_ammo(player, buckets.ammo)          -- Sharp Arrow → routes into quiver
     install_hearthstone(player, buckets.hearth) -- Hearthstone → first available bag
     bind_hearth(player)                         -- bind to race's anchor town (148n)
