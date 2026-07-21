@@ -17,6 +17,10 @@ if [[ -f "${DIR}/.profile" ]]; then
 else
     PROFILE="release"
 fi
+# DEFAULT_PROFILE snapshots the no-argument default so --help reports the
+# true default even when a --profile flag precedes --help on the command
+# line (that flag mutates PROFILE, not the default a bare run would use).
+DEFAULT_PROFILE="${PROFILE}"
 
 # =============================================================================
 # Configuration
@@ -116,7 +120,7 @@ show_help() {
     echo "Builds into shadow directory, then auto-validates and promotes."
     echo ""
     echo "Options:"
-    echo "  --profile <name>   Use specific profile (default: ${PROFILE})"
+    echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
     echo "  --threads <n>      Number of threads (default: ${THREADS})"
     echo "  --force            Force cmake reconfiguration"
     echo "  --no-validate      Skip auto-validation and promotion"

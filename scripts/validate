@@ -14,6 +14,10 @@ if [[ -f "${DIR}/.profile" ]]; then
 else
     PROFILE="release"
 fi
+# DEFAULT_PROFILE snapshots the no-argument default so --help reports the
+# true default even when a --profile flag precedes --help on the command
+# line (that flag mutates PROFILE, not the default a bare run would use).
+DEFAULT_PROFILE="${PROFILE}"
 
 # =============================================================================
 # Argument Parsing
@@ -64,7 +68,7 @@ show_help() {
     echo "Starts worldserver from shadow, waits for initialization, then stops."
     echo ""
     echo "Options:"
-    echo "  --profile <name>   Use specific profile (default: ${PROFILE})"
+    echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
     echo "  --help             Show this help message"
     echo ""
     echo "Workflow:"

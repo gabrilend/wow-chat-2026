@@ -7,6 +7,18 @@
 DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
 CLIENT_DIR="/mnt/dile/ritz/games/wotlk"
 
+# Load the active profile. Reads .profile — the same file every other
+# scripts/ tool uses. This previously read a stale ".current-profile" that
+# no longer exists, so it silently fell back to "release" and looked for the
+# extractor tools in the wrong install tree. DEFAULT_PROFILE is snapshotted so
+# --help can report which profile's tools an extraction run will use.
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+DEFAULT_PROFILE="${PROFILE}"
+
 # -- {{{ usage
 usage() {
     echo "Usage: ./scripts/extract-maps [options]"
@@ -20,6 +32,9 @@ usage() {
     echo "  --client DIR  Specify client directory (default: ${CLIENT_DIR})"
     echo "  --help        Show this help"
     echo ""
+    echo "Active profile: ${DEFAULT_PROFILE} (from .profile — selects the extractor"
+    echo "                tools in installed-files-${DEFAULT_PROFILE}/bin)"
+    echo ""
     echo "Examples:"
     echo "  ./scripts/extract-maps --all              # Full extraction (~2-4 hours)"
     echo "  ./scripts/extract-maps --dbc --maps       # Quick extraction (~10 min)"
@@ -30,13 +45,8 @@ usage() {
 
 # -- {{{ get_profile_paths
 get_profile_paths() {
-    PROFILE_FILE="${DIR}/.current-profile"
-    if [[ -f "${PROFILE_FILE}" ]]; then
-        PROFILE="$(cat "${PROFILE_FILE}")"
-    else
-        PROFILE="release"
-    fi
-
+    # PROFILE is loaded once at the top of the script from .profile; derive
+    # the profile-specific install/tool paths from it here.
     INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
     DATA_DIR="${DIR}/data-files"
     TOOLS_DIR="${INSTALL_DIR}/bin"
