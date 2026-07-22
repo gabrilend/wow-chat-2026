@@ -1,0 +1,981 @@
+#!/bin/bash
+# scripts/bot-governor - Host-load-driven bot population governor
+#
+# Watches the machine's hardware meters and steers the number of AI bots
+# logged into the world server: when the machine runs hot the fleet sheds
+# bots (more each consecutive hot cycle), and when it stays cool the fleet
+# grows back toward a ceiling. It steers the running server from outside,
+# through two narrow channels: the module's config file plus a live reload,
+# and the server's SOAP console endpoint on loopback. Issue 151.
+#
+# Subcommands:
+#   run     govern (foreground loop; --once for a single decision cycle)
+#   setup   mint the SOAP admin account + enable the SOAP listener
+#   status  one-shot report: meters, band, online bots, channel health
+#   check   preflight: dependencies, config, database + SOAP round-trips
+#
+# The mechanism, in one breath: the playerbot module only ever logs bots IN
+# when below its target and re-rolls that target immediately when it falls
+# outside the configured min/max band — so we pin min = max = target for a
+# deterministic re-roll, and because the module's login budget is zero
+# whenever online >= target, bots we then kick over SOAP stay gone. Pin
+# first, kick second; the reverse order undoes itself within a tick.
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+# =============================================================================
+# Load Profile
+# =============================================================================
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+DEFAULT_PROFILE="${PROFILE}"
+
+SUBCOMMAND="run"
+CONFIG_FILE=""          # resolved after arg parsing (depends on --dir)
+RUN_ONCE=0
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+
+# {{{ parse_args
+# First bare word is the subcommand; --opt value and --opt=value both work.
+# Unknown arguments are an error, not a shrug.
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            run|setup|status|check)
+                SUBCOMMAND="${1}"
+                shift
+                ;;
+            --dir)
+                [[ -n "${2:-}" ]] || { echo "Error: --dir requires a path"; exit 1; }
+                DIR="${2}"
+                shift 2
+                ;;
+            --dir=*)
+                DIR="${1#*=}"
+                shift
+                ;;
+            --profile)
+                [[ -n "${2:-}" ]] || { echo "Error: --profile requires a profile name"; exit 1; }
+                PROFILE="${2}"
+                shift 2
+                ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                shift
+                ;;
+            --config)
+                [[ -n "${2:-}" ]] || { echo "Error: --config requires a path"; exit 1; }
+                CONFIG_FILE="${2}"
+                shift 2
+                ;;
+            --config=*)
+                CONFIG_FILE="${1#*=}"
+                shift
+                ;;
+            --once)
+                RUN_ONCE=1
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                echo "Error: unrecognized argument '${1}'"
+                echo "Run with --help to see available options."
+                exit 1
+                ;;
+        esac
+    done
+}
+# }}}
+
+# {{{ show_help
+show_help() {
+    echo "Usage: ./scripts/bot-governor [subcommand] [options]"
+    echo ""
+    echo "Govern the random-bot population by host hardware load."
+    echo ""
+    echo "Subcommands:"
+    echo "  run      Watch meters and shed/grow the fleet (default; foreground)"
+    echo "  setup    Create the governor's SOAP admin account (SRP6 over SQL),"
+    echo "           store its credentials, and enable the SOAP listener in the"
+    echo "           installed worldserver.conf (first enable needs one restart)"
+    echo "  status   One-shot report: meters, thresholds, band, online bots"
+    echo "  check    Preflight every dependency and both server channels"
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
+    echo "  --dir <path>       Project root (default: ${DIR})"
+    echo "  --config <path>    Knob file (default: config/bot-governor.conf)"
+    echo "  --once             run: a single decision cycle, then exit."
+    echo "                     Leaves the pinned band in place (no restore),"
+    echo "                     so repeated --once runs compose."
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Knobs live in config/bot-governor.conf: hot/cool thresholds, meter"
+    echo "checkboxes, floor/ceiling, escalation steps, the logout-method radio"
+    echo "(idle-first / random / newest-first / drain) and its option"
+    echo "checkboxes (spare-grouped, spare-dungeoneers, spare-nearby,"
+    echo "persist-shrunken-band, announce)."
+}
+# }}}
+
+# =============================================================================
+# Plumbing: paths, logging, credentials, config
+# =============================================================================
+
+# {{{ resolve_paths
+resolve_paths() {
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    WORLD_CONF="${INSTALL_DIR}/etc/worldserver.conf"
+    PB_CONF="${INSTALL_DIR}/etc/modules/playerbots.conf"
+    MYSQL_BIN="${DIR}/mysql/installed-files/bin/mysql"
+    [[ -n "${CONFIG_FILE}" ]] || CONFIG_FILE="${DIR}/config/bot-governor.conf"
+
+    # Log tier matches scripts/worldserver: /tmp/wow-chat-2 behind the
+    # project tmp/ symlink, RAM-backed and per-profile.
+    TMP_BASE="/tmp/wow-chat-2"
+    LOG_DIR="${TMP_BASE}/governor-${PROFILE}"
+    mkdir -p "${LOG_DIR}"
+    [[ -L "${DIR}/tmp" ]] || ln -s "${TMP_BASE}" "${DIR}/tmp"
+    LOG_FILE="${LOG_DIR}/governor.log"
+}
+# }}}
+
+# {{{ log
+# Every decision goes to the terminal AND the RAM-backed log, timestamped,
+# so a later reader can reconstruct what the governor did and why.
+log() {
+    local line
+    line="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+    echo "${line}"
+    echo "${line}" >> "${LOG_FILE}"
+}
+# }}}
+
+# {{{ die
+die() {
+    log "ERROR: $*"
+    exit 1
+}
+# }}}
+
+# {{{ load_credentials
+# Sources the self-modifying credential store. Passing DIR as $1 keeps the
+# store's own DIR assignment aligned with ours (it would otherwise reset it
+# to its hard-coded default and drift from a --dir override).
+load_credentials() {
+    [[ -f "${DIR}/scripts/credentials" ]] || die \
+        "scripts/credentials not found — cp scripts/credentials.dist scripts/credentials and fill it in"
+    source "${DIR}/scripts/credentials" "${DIR}"
+
+    MYSQL_USER="$(cred_get mysql_user)"
+    MYSQL_PASS="$(cred_get mysql_pass)"
+    MYSQL_SOCKET="$(cred_get mysql_socket)"
+    DB_AUTH="$(cred_get db_auth)"
+    DB_CHARS="$(cred_get db_characters)"
+    [[ -n "${MYSQL_USER}" && -n "${MYSQL_PASS}" && -n "${MYSQL_SOCKET}" && -n "${DB_AUTH}" && -n "${DB_CHARS}" ]] || die \
+        "credentials store is missing mysql_user/mysql_pass/mysql_socket/db_auth/db_characters keys"
+
+    # SOAP credentials exist only after `setup`; each subcommand decides
+    # whether their absence is fatal (run/status/check: yes; setup: no,
+    # it creates them).
+    SOAP_USER="$(cred_get soap_user)"
+    SOAP_PASS="$(cred_get soap_pass)"
+}
+# }}}
+
+# {{{ require_soap_credentials
+require_soap_credentials() {
+    if [[ -z "${SOAP_USER}" || -z "${SOAP_PASS}" || "${SOAP_PASS}" == "RUN_BOT_GOVERNOR_SETUP" ]]; then
+        die "no SOAP credentials yet — run ./scripts/bot-governor setup first"
+    fi
+}
+# }}}
+
+# {{{ require_int
+# Validates that a knob is an integer within [min, max]; the error names the
+# knob so a config typo points straight at its own line.
+require_int() {
+    local name="$1" value="$2" min="$3" max="$4"
+    [[ "${value}" =~ ^-?[0-9]+$ ]] || die "config: ${name}='${value}' is not an integer"
+    (( value >= min && value <= max )) || die \
+        "config: ${name}=${value} outside sane range [${min}..${max}]"
+}
+# }}}
+
+# {{{ load_config
+# Sources the knob file, then refuses to run on anything unrecognized or
+# inconsistent. Errors over fallbacks, always: a knob the governor would
+# silently ignore is a knob the user wrongly believes is working.
+load_config() {
+    [[ -f "${CONFIG_FILE}" ]] || die "config file not found: ${CONFIG_FILE}"
+    source "${CONFIG_FILE}"
+
+    require_int GOVERNOR_HOT_PERCENT   "${GOVERNOR_HOT_PERCENT}"   1 100
+    require_int GOVERNOR_COOL_PERCENT  "${GOVERNOR_COOL_PERCENT}"  1 100
+    (( GOVERNOR_COOL_PERCENT < GOVERNOR_HOT_PERCENT )) || die \
+        "config: cool threshold (${GOVERNOR_COOL_PERCENT}) must sit below hot (${GOVERNOR_HOT_PERCENT}) — the gap is the hysteresis band"
+
+    require_int GOVERNOR_POLL_SECONDS  "${GOVERNOR_POLL_SECONDS}"  5 3600
+    require_int GOVERNOR_FLEET_FLOOR   "${GOVERNOR_FLEET_FLOOR}"   0 1000
+    require_int GOVERNOR_FLEET_CEILING "${GOVERNOR_FLEET_CEILING}" 1 1000
+    (( GOVERNOR_FLEET_FLOOR <= GOVERNOR_FLEET_CEILING )) || die \
+        "config: fleet floor (${GOVERNOR_FLEET_FLOOR}) above ceiling (${GOVERNOR_FLEET_CEILING})"
+    # C018 provisions 110 bot accounts x 10 characters; the module reserves
+    # part of that pool for class accounts, leaving roughly 590 usable.
+    # Beyond it the module silently undershoots the ceiling, so refuse.
+    (( GOVERNOR_FLEET_CEILING <= 590 )) || die \
+        "config: ceiling ${GOVERNOR_FLEET_CEILING} exceeds the ~590 the C018 account pool supports — raise C018 first"
+
+    require_int GOVERNOR_SHED_STEP     "${GOVERNOR_SHED_STEP}"     1 500
+    require_int GOVERNOR_SHED_MAX      "${GOVERNOR_SHED_MAX}"      1 500
+    (( GOVERNOR_SHED_STEP <= GOVERNOR_SHED_MAX )) || die \
+        "config: shed step (${GOVERNOR_SHED_STEP}) above shed max (${GOVERNOR_SHED_MAX})"
+    require_int GOVERNOR_GROW_STEP     "${GOVERNOR_GROW_STEP}"     1 500
+    require_int GOVERNOR_COOL_STREAK   "${GOVERNOR_COOL_STREAK}"   1 100
+
+    # meters — checkbox set: non-empty subset of the known meters
+    [[ -n "${GOVERNOR_METERS}" ]] || die "config: GOVERNOR_METERS is empty — select at least one meter"
+    local meter
+    for meter in ${GOVERNOR_METERS}; do
+        case "${meter}" in
+            cpu|memory|load) ;;
+            *) die "config: unknown meter '${meter}' (known: cpu memory load)" ;;
+        esac
+    done
+
+    # logout method — radio: exactly one of the enum
+    case "${GOVERNOR_LOGOUT_METHOD}" in
+        idle-first|random|newest-first|drain) ;;
+        *) die "config: unknown logout method '${GOVERNOR_LOGOUT_METHOD}' (radio: idle-first random newest-first drain)" ;;
+    esac
+
+    # method options — checkboxes: known words only, and spare-* targeting
+    # options are meaningless under drain (it never targets individuals),
+    # so that combination is rejected rather than silently ignored.
+    local opt
+    for opt in ${GOVERNOR_LOGOUT_OPTIONS}; do
+        case "${opt}" in
+            spare-grouped|spare-dungeoneers|spare-nearby)
+                [[ "${GOVERNOR_LOGOUT_METHOD}" != "drain" ]] || die \
+                    "config: option '${opt}' does not apply to the drain method — drain never targets individual bots"
+                ;;
+            persist-shrunken-band|announce) ;;
+            *) die "config: unknown logout option '${opt}'" ;;
+        esac
+    done
+}
+# }}}
+
+# {{{ has_option
+has_option() {
+    local wanted="$1" opt
+    for opt in ${GOVERNOR_LOGOUT_OPTIONS}; do
+        [[ "${opt}" == "${wanted}" ]] && return 0
+    done
+    return 1
+}
+# }}}
+
+# {{{ read_server_endpoints
+# The installed confs are the source of truth for where to speak and who
+# the bots are — nothing about the server is hard-coded twice.
+read_server_endpoints() {
+    [[ -f "${WORLD_CONF}" ]] || die "worldserver.conf not found: ${WORLD_CONF} — is profile '${PROFILE}' installed?"
+    [[ -f "${PB_CONF}"    ]] || die "playerbots.conf not found: ${PB_CONF}"
+
+    SOAP_IP="$(sed -n 's|^SOAP\.IP[[:space:]]*=[[:space:]]*"\?\([^"]*\)"\?.*|\1|p' "${WORLD_CONF}" | tail -1)"
+    SOAP_PORT="$(sed -n 's|^SOAP\.Port[[:space:]]*=[[:space:]]*\([0-9]*\).*|\1|p' "${WORLD_CONF}" | tail -1)"
+    SOAP_ENABLED="$(sed -n 's|^SOAP\.Enabled[[:space:]]*=[[:space:]]*\([0-9]*\).*|\1|p' "${WORLD_CONF}" | tail -1)"
+    [[ -n "${SOAP_IP}"   ]] || SOAP_IP="127.0.0.1"
+    [[ -n "${SOAP_PORT}" ]] || SOAP_PORT="7878"
+
+    BOT_PREFIX="$(sed -n 's|^AiPlayerbot\.RandomBotAccountPrefix[[:space:]]*=[[:space:]]*"\?\([^"]*\)"\?.*|\1|p' "${PB_CONF}" | tail -1)"
+    [[ -n "${BOT_PREFIX}" ]] || BOT_PREFIX="rndbot"
+    BOT_PREFIX_UC="${BOT_PREFIX^^}"
+}
+# }}}
+
+# =============================================================================
+# Channels: SQL and SOAP
+# =============================================================================
+
+# {{{ sql_query
+# Tab-separated, headerless rows on stdout. All statements fully qualify
+# their tables, so no default database is selected. Password rides in the
+# environment rather than argv: same trust level, but no per-call
+# "insecure password" warning spamming every poll cycle.
+sql_query() {
+    MYSQL_PWD="${MYSQL_PASS}" "${MYSQL_BIN}" --no-defaults \
+        --socket="${MYSQL_SOCKET}" \
+        -u"${MYSQL_USER}" \
+        -N -B -e "$1"
+}
+# }}}
+
+# {{{ soap_command
+# Sends one console command through the SOAP loopback endpoint and prints
+# the server's textual reply. Distinguishes the three failure shapes so the
+# log says which link in the chain broke: connection (server down or
+# listener off), authentication (account/gmlevel), or the command itself
+# (a SOAP fault carrying the server's error text).
+soap_command() {
+    local command="$1"
+    local escaped="${command//&/&amp;}"
+    escaped="${escaped//</&lt;}"
+    escaped="${escaped//>/&gt;}"
+
+    local envelope
+    envelope="<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ns1=\"urn:AC\">
+<SOAP-ENV:Body><ns1:executeCommand><command>${escaped}</command></ns1:executeCommand></SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"
+
+    local raw http_code body
+    raw="$(curl -s --max-time 15 -w $'\n%{http_code}' \
+        --basic -u "${SOAP_USER}:${SOAP_PASS}" \
+        -H "Content-Type: text/xml" \
+        --data "${envelope}" \
+        "http://${SOAP_IP}:${SOAP_PORT}/")"
+    http_code="${raw##*$'\n'}"
+    body="${raw%$'\n'*}"
+
+    case "${http_code}" in
+        200) ;;
+        401|403)
+            echo "SOAP auth rejected (HTTP ${http_code}) for account '${SOAP_USER}' — re-run setup, or check gmlevel 3 in ${DB_AUTH}.account_access"
+            return 1
+            ;;
+        000)
+            echo "SOAP unreachable at ${SOAP_IP}:${SOAP_PORT} — worldserver down, or SOAP.Enabled=0 (needs one restart after setup)"
+            return 1
+            ;;
+        *)
+            echo "SOAP unexpected HTTP ${http_code}: ${body}"
+            return 1
+            ;;
+    esac
+
+    if [[ "${body}" == *"<faultstring>"* ]]; then
+        # Command-level failure: surface the server's own words.
+        printf '%s' "${body}" | sed -e 's|.*<faultstring[^>]*>||' -e 's|</faultstring>.*||'
+        return 1
+    fi
+
+    # gsoap answers on one line; peel the envelope, decode the entities the
+    # console actually emits (newline carriage pairs and the xml trio).
+    printf '%s' "${body}" \
+        | sed -e 's|.*<result[^>]*>||' -e 's|</result>.*||' \
+        | sed -e 's|&#xD;||g' -e 's|&lt;|<|g' -e 's|&gt;|>|g' -e 's|&amp;|\&|g'
+    return 0
+}
+# }}}
+
+# =============================================================================
+# SRP6 registration (setup)
+# =============================================================================
+
+# {{{ reverse_hex
+# The WoW auth scheme stores and hashes its big numbers little-endian;
+# hex strings from sha1sum/bc arrive big-endian. This flips byte order.
+reverse_hex() {
+    local hex="$1" out="" i
+    for (( i = ${#hex} - 2; i >= 0; i -= 2 )); do
+        out+="${hex:i:2}"
+    done
+    echo "${out}"
+}
+# }}}
+
+# {{{ srp6_verifier
+# Computes the SRP6 verifier the auth database stores, from username,
+# password, and a 32-byte salt (hex, in stored byte order). The scheme:
+#   x = SHA1( salt || SHA1( UPPER(user) ":" UPPER(pass) ) )   as little-endian int
+#   v = g^x mod N, g = 7, N = the classic WoW 256-bit prime
+# stored as 32 little-endian bytes. Modular exponentiation runs in bc —
+# square-and-multiply, ~256 small-number multiplications, instant — so the
+# whole computation stays inside coreutils + bc, no Python.
+srp6_verifier() {
+    local user="${1^^}" pass="${2^^}" salt_hex="$3"
+    local n_hex="894B645E89E1535BBDAD5B8B290650530801B18EBFBF5E8FAB3C82872A3E9BB7"
+
+    local h1 x_be x_le v_be
+    h1="$(printf '%s' "${user}:${pass}" | sha1sum | cut -d' ' -f1)"
+    x_be="$(printf '%s' "${salt_hex}${h1}" | xxd -r -p | sha1sum | cut -d' ' -f1)"
+    x_le="$(reverse_hex "${x_be}")"
+
+    v_be="$(BC_LINE_LENGTH=0 bc <<EOF
+define m(b, e, n) {
+    auto r
+    r = 1
+    b = b % n
+    while (e > 0) {
+        if ((e % 2) == 1) { r = (r * b) % n }
+        e = e / 2
+        b = (b * b) % n
+    }
+    return (r)
+}
+obase = 16
+ibase = 16
+m(7, ${x_le^^}, ${n_hex})
+EOF
+)"
+    # Defensive strip of bc's line-wrap continuations, then pad to the full
+    # 32 bytes and flip to storage order.
+    v_be="${v_be//\\/}"
+    v_be="${v_be//$'\n'/}"
+    v_be="$(printf '%064s' "${v_be}" | tr ' ' '0')"
+    reverse_hex "${v_be}"
+}
+# }}}
+
+# {{{ governor_setup
+# Mints the governor's administrator game account: SRP6 pair computed here,
+# upserted straight into the auth database, credentials remembered in the
+# @CRED store, SOAP flipped on in the installed conf. Idempotent — re-runs
+# re-roll the password and overwrite the account's verifier.
+governor_setup() {
+    local user="${SOAP_USER}" pass="${SOAP_PASS}"
+    [[ -n "${user}" && "${user}" != "RUN_BOT_GOVERNOR_SETUP" ]] || user="GOVERNOR"
+    if [[ -z "${pass}" || "${pass}" == "RUN_BOT_GOVERNOR_SETUP" ]]; then
+        pass="$(od -An -tx1 -N12 /dev/urandom | tr -d ' \n')"
+    fi
+
+    local salt_hex verifier_hex
+    salt_hex="$(od -An -tx1 -N32 /dev/urandom | tr -d ' \n')"
+    verifier_hex="$(srp6_verifier "${user}" "${pass}" "${salt_hex}")"
+    [[ ${#verifier_hex} -eq 64 ]] || die "SRP6 verifier came out ${#verifier_hex} hex chars, expected 64 — is bc GNU bc?"
+
+    log "setup: upserting account '${user^^}' (gmlevel 3, all realms) into ${DB_AUTH}"
+    sql_query "
+        INSERT INTO ${DB_AUTH}.account (username, salt, verifier)
+        VALUES (UPPER('${user}'), X'${salt_hex}', X'${verifier_hex}')
+        AS fresh
+        ON DUPLICATE KEY UPDATE salt = fresh.salt, verifier = fresh.verifier;
+        INSERT INTO ${DB_AUTH}.account_access (id, gmlevel, RealmID, comment)
+        SELECT id, 3, -1, 'bot-governor SOAP (issue 151)'
+        FROM ${DB_AUTH}.account WHERE username = UPPER('${user}')
+        ON DUPLICATE KEY UPDATE gmlevel = 3;
+    " || die "account upsert failed — is MySQL running? (./scripts/start-mysql)"
+
+    cred_set "soap_user" "${user}"
+    cred_set "soap_pass" "${pass}"
+    SOAP_USER="${user}"
+    SOAP_PASS="${pass}"
+    log "setup: credentials stored in scripts/credentials (soap_user/soap_pass)"
+
+    # Flip SOAP on in the INSTALLED conf too, so no reinstall is needed;
+    # config patch C021 makes the same edit survive future installs.
+    if [[ "${SOAP_ENABLED}" != "1" ]]; then
+        sed -i 's|^SOAP\.Enabled[[:space:]]*=.*|SOAP.Enabled = 1|'  "${WORLD_CONF}"
+        sed -i 's|^SOAP\.IP[[:space:]]*=.*|SOAP.IP = "127.0.0.1"|'  "${WORLD_CONF}"
+        sed -i 's|^SOAP\.Port[[:space:]]*=.*|SOAP.Port = 7878|'     "${WORLD_CONF}"
+        log "setup: SOAP.Enabled flipped to 1 in ${WORLD_CONF}"
+        log "setup: the listener spawns at boot — restart the worldserver once to open the channel"
+    else
+        log "setup: SOAP already enabled in ${WORLD_CONF}"
+    fi
+
+    local probe
+    if probe="$(soap_command "server info")"; then
+        log "setup: SOAP round-trip verified — $(echo "${probe}" | head -1)"
+    else
+        log "setup: SOAP probe not yet answering (${probe})"
+        log "setup: that is expected before the restart; run './scripts/bot-governor check' afterward"
+    fi
+}
+# }}}
+
+# =============================================================================
+# Meters
+# =============================================================================
+
+# {{{ cpu_snapshot
+# Echoes "total idle" jiffy counters; two snapshots across the poll window
+# give the busy percentage for exactly that window.
+cpu_snapshot() {
+    local cpu user nice system idle iowait irq softirq steal _rest
+    read -r cpu user nice system idle iowait irq softirq steal _rest < /proc/stat
+    echo "$(( user + nice + system + idle + iowait + irq + softirq + steal )) $(( idle + iowait ))"
+}
+# }}}
+
+# {{{ meter_cpu
+meter_cpu() {
+    local prev_total="$1" prev_idle="$2" cur_total="$3" cur_idle="$4"
+    local d_total=$(( cur_total - prev_total ))
+    local d_idle=$((  cur_idle  - prev_idle  ))
+    # Zero delta means no time passed between snapshots; call that 0% busy.
+    (( d_total > 0 )) || { echo 0; return; }
+    echo $(( (d_total - d_idle) * 100 / d_total ))
+}
+# }}}
+
+# {{{ meter_memory
+meter_memory() {
+    awk '/^MemTotal:/ { t = $2 } /^MemAvailable:/ { a = $2 } END { printf "%d", (t - a) * 100 / t }' /proc/meminfo
+}
+# }}}
+
+# {{{ meter_load
+meter_load() {
+    awk -v cores="$(nproc)" '{ printf "%d", $1 * 100 / cores }' /proc/loadavg
+}
+# }}}
+
+# =============================================================================
+# Fleet observation and the two levers
+# =============================================================================
+
+# {{{ fleet_online_count
+fleet_online_count() {
+    sql_query "
+        SELECT COUNT(*)
+        FROM ${DB_CHARS}.characters c
+        JOIN ${DB_AUTH}.account a ON a.id = c.account
+        WHERE c.online = 1 AND UPPER(a.username) LIKE '${BOT_PREFIX_UC}%';"
+}
+# }}}
+
+# {{{ fleet_read_band
+# Reads the module's current band from the installed conf into globals:
+# FLEET_TARGET (the Max value) and FLEET_BAND_PINNED (1 when Min == Max,
+# i.e. the governor has taken the wheel). Globals, not an echo — callers
+# need both values, and a command substitution would trap the flag in a
+# subshell.
+fleet_read_band() {
+    local cur_min cur_max
+    cur_min="$(sed -n 's|^AiPlayerbot\.MinRandomBots[[:space:]]*=[[:space:]]*\([0-9]*\).*|\1|p' "${PB_CONF}" | tail -1)"
+    cur_max="$(sed -n 's|^AiPlayerbot\.MaxRandomBots[[:space:]]*=[[:space:]]*\([0-9]*\).*|\1|p' "${PB_CONF}" | tail -1)"
+    [[ -n "${cur_max}" ]] || die "could not read MaxRandomBots from ${PB_CONF}"
+    FLEET_TARGET="${cur_max}"
+    FLEET_BAND_PINNED=0
+    [[ "${cur_min}" == "${cur_max}" ]] && FLEET_BAND_PINNED=1
+}
+# }}}
+
+# {{{ pin_band
+# Lever one. Min = Max = target makes the module's cached target re-roll
+# deterministic (any cached value outside a one-value band is out of band),
+# and a zero login budget at the pinned count is what keeps kicked bots
+# from rebounding. The sed anchors carry the C020 lesson: [[:space:]]*=
+# after the key name, or greed bleeds into longer keys.
+pin_band() {
+    local target="$1"
+    sed -i 's|^AiPlayerbot\.MinRandomBots[[:space:]]*=.*|AiPlayerbot.MinRandomBots = '"${target}"'|' "${PB_CONF}"
+    sed -i 's|^AiPlayerbot\.MaxRandomBots[[:space:]]*=.*|AiPlayerbot.MaxRandomBots = '"${target}"'|' "${PB_CONF}"
+
+    local reply
+    if ! reply="$(soap_command "playerbots rndbot reload")"; then
+        log "ERROR: band written to conf but live reload failed: ${reply}"
+        log "ERROR: the module still runs its old band; will retry next cycle"
+        return 1
+    fi
+    return 0
+}
+# }}}
+
+# {{{ select_kick_candidates
+# One query, assembled from the radio + checkboxes: the base set is online
+# characters on bot accounts; spare-* checkboxes become exclusions; the
+# method becomes the ordering; the shed count becomes the LIMIT. Maps
+# 0/1/530/571 are the four continents — anything else is an instance.
+select_kick_candidates() {
+    local wanted="$1"
+
+    local real_player_zones="
+        SELECT rc.zone FROM ${DB_CHARS}.characters rc
+        JOIN ${DB_AUTH}.account ra ON ra.id = rc.account
+        WHERE rc.online = 1 AND UPPER(ra.username) NOT LIKE '${BOT_PREFIX_UC}%'"
+
+    local where="c.online = 1 AND UPPER(a.username) LIKE '${BOT_PREFIX_UC}%'"
+
+    if has_option "spare-grouped"; then
+        where+=" AND c.guid NOT IN (
+            SELECT gm.memberGuid FROM ${DB_CHARS}.group_member gm
+            WHERE gm.guid IN (
+                SELECT gm2.guid FROM ${DB_CHARS}.group_member gm2
+                JOIN ${DB_CHARS}.characters rc2 ON rc2.guid = gm2.memberGuid
+                JOIN ${DB_AUTH}.account ra2 ON ra2.id = rc2.account
+                WHERE rc2.online = 1 AND UPPER(ra2.username) NOT LIKE '${BOT_PREFIX_UC}%'))"
+    fi
+    if has_option "spare-dungeoneers"; then
+        where+=" AND c.map IN (0, 1, 530, 571)"
+    fi
+    if has_option "spare-nearby"; then
+        where+=" AND c.zone NOT IN (${real_player_zones})"
+    fi
+
+    local order
+    case "${GOVERNOR_LOGOUT_METHOD}" in
+        idle-first)
+            # Outward idleness, most-idle first: ungrouped before grouped,
+            # unwatched zones before player-shared ones, continents before
+            # instances, then chance breaks the ties.
+            order="(c.guid IN (SELECT memberGuid FROM ${DB_CHARS}.group_member)) ASC,
+                   (c.zone IN (${real_player_zones})) ASC,
+                   (c.map NOT IN (0, 1, 530, 571)) ASC,
+                   RAND()"
+            ;;
+        random)
+            order="RAND()"
+            ;;
+        newest-first)
+            order="a.last_login DESC"
+            ;;
+    esac
+
+    sql_query "
+        SELECT c.name
+        FROM ${DB_CHARS}.characters c
+        JOIN ${DB_AUTH}.account a ON a.id = c.account
+        WHERE ${where}
+        ORDER BY ${order}
+        LIMIT ${wanted};"
+}
+# }}}
+
+# {{{ do_shed
+# Lever order is the entire mechanism: pin FIRST (closing the module's
+# login budget), kick SECOND. Reversed, every kicked bot re-logs within a
+# module tick because its in-world timer is still valid.
+do_shed() {
+    local shed="$1" reason="$2"
+    local online target want
+    online="$(fleet_online_count)"
+    target=$(( online - shed ))
+    (( target >= GOVERNOR_FLEET_FLOOR )) || target=${GOVERNOR_FLEET_FLOOR}
+
+    if (( target >= online )); then
+        log "hot (${reason}) but already at floor — online=${online}, floor=${GOVERNOR_FLEET_FLOOR}; nothing to shed"
+        return
+    fi
+    want=$(( online - target ))
+    log "hot (${reason}): shedding ${want} bots, ${online} -> ${target} [method: ${GOVERNOR_LOGOUT_METHOD}]"
+
+    pin_band "${target}" || return
+
+    if [[ "${GOVERNOR_LOGOUT_METHOD}" == "drain" ]]; then
+        log "drain: band pinned; the fleet will decay on its own in-world timers"
+    else
+        local victims=() name reply kicked=0
+        mapfile -t victims < <(select_kick_candidates "${want}")
+        if (( ${#victims[@]} < want )); then
+            log "spare filters leave only ${#victims[@]} of ${want} kick candidates — shedding what is allowed"
+        fi
+        for name in "${victims[@]}"; do
+            if reply="$(soap_command "kick ${name}")"; then
+                kicked=$(( kicked + 1 ))
+            else
+                log "kick ${name} failed: ${reply}"
+            fi
+        done
+        log "kicked ${kicked}/${#victims[@]} bots"
+    fi
+
+    if has_option "announce"; then
+        soap_command "announce The realm grows quieter: ${want} wanderers retire to the inns." >/dev/null \
+            || log "announce failed (non-fatal)"
+    fi
+}
+# }}}
+
+# {{{ do_grow
+# Growth steps from the current pin, not from the online count — the module
+# fills toward the pin on its own (~60 logins per tick). Two guards: adopt
+# before stepping (an unpinned band means this is the governor's first act;
+# pinning at the current population takes control without changing it),
+# and never step while the module is still filling the previous pin.
+do_grow() {
+    local online cur target
+    online="$(fleet_online_count)"
+    fleet_read_band
+    cur="${FLEET_TARGET}"
+
+    if (( FLEET_BAND_PINNED == 0 )); then
+        target=${online}
+        (( target >= GOVERNOR_FLEET_FLOOR   )) || target=${GOVERNOR_FLEET_FLOOR}
+        (( target <= GOVERNOR_FLEET_CEILING )) || target=${GOVERNOR_FLEET_CEILING}
+        log "cool streak: adopting the fleet at ${target} (first governor action; band was ${cur} unpinned)"
+        pin_band "${target}"
+        return
+    fi
+
+    if (( cur >= GOVERNOR_FLEET_CEILING )); then
+        log "cool streak but already at ceiling ${GOVERNOR_FLEET_CEILING} — holding"
+        return
+    fi
+    if (( online < cur )); then
+        log "cool streak but module still filling (${online} of ${cur}) — holding"
+        return
+    fi
+
+    target=$(( cur + GOVERNOR_GROW_STEP ))
+    (( target <= GOVERNOR_FLEET_CEILING )) || target=${GOVERNOR_FLEET_CEILING}
+    log "cool streak: growing ${cur} -> ${target}"
+    pin_band "${target}" || return
+    # Nudge an immediate module tick so growth starts now, not in ~20s.
+    soap_command "playerbots rndbot update" >/dev/null || true
+
+    if has_option "announce"; then
+        soap_command "announce The realm stirs: ${GOVERNOR_GROW_STEP} more wanderers take to the roads." >/dev/null \
+            || log "announce failed (non-fatal)"
+    fi
+}
+# }}}
+
+# {{{ restore_band
+# Exit hand-off: put the configured floor/ceiling band back and let the
+# module walk its own population again — unless the persist-shrunken-band
+# checkbox asks to keep the last pin.
+restore_band() {
+    if has_option "persist-shrunken-band"; then
+        log "exit: persist-shrunken-band set — leaving the pinned band in place"
+        return
+    fi
+    log "exit: restoring band ${GOVERNOR_FLEET_FLOOR}-${GOVERNOR_FLEET_CEILING} and handing control back to the module"
+    sed -i 's|^AiPlayerbot\.MinRandomBots[[:space:]]*=.*|AiPlayerbot.MinRandomBots = '"${GOVERNOR_FLEET_FLOOR}"'|'   "${PB_CONF}"
+    sed -i 's|^AiPlayerbot\.MaxRandomBots[[:space:]]*=.*|AiPlayerbot.MaxRandomBots = '"${GOVERNOR_FLEET_CEILING}"'|' "${PB_CONF}"
+    soap_command "playerbots rndbot reload" >/dev/null \
+        || log "exit: conf restored but live reload failed (server down?) — it will pick the band up at next boot"
+}
+# }}}
+
+# =============================================================================
+# Subcommands
+# =============================================================================
+
+# {{{ governor_run
+governor_run() {
+    require_soap_credentials
+
+    log "governor up: profile=${PROFILE} hot>=${GOVERNOR_HOT_PERCENT}% cool<${GOVERNOR_COOL_PERCENT}% meters=[${GOVERNOR_METERS}] poll=${GOVERNOR_POLL_SECONDS}s"
+    log "fleet band ${GOVERNOR_FLEET_FLOOR}-${GOVERNOR_FLEET_CEILING}, method=${GOVERNOR_LOGOUT_METHOD}, options=[${GOVERNOR_LOGOUT_OPTIONS}]"
+
+    # --once is a test probe: act once, leave the pin as acted, no restore.
+    if (( RUN_ONCE == 0 )); then
+        trap restore_band EXIT
+    fi
+
+    local hot_streak=0 cool_streak=0
+    local snap prev_total prev_idle cur_total cur_idle
+    snap="$(cpu_snapshot)"
+    prev_total="${snap%% *}"
+    prev_idle="${snap##* }"
+
+    while :; do
+        sleep "${GOVERNOR_POLL_SECONDS}"
+
+        snap="$(cpu_snapshot)"
+        cur_total="${snap%% *}"
+        cur_idle="${snap##* }"
+
+        # sample each selected meter; hot on ANY >= hot, cool on ALL < cool
+        local meter value readings="" any_hot=0 all_cool=1
+        for meter in ${GOVERNOR_METERS}; do
+            case "${meter}" in
+                cpu)    value="$(meter_cpu "${prev_total}" "${prev_idle}" "${cur_total}" "${cur_idle}")" ;;
+                memory) value="$(meter_memory)" ;;
+                load)   value="$(meter_load)"   ;;
+            esac
+            readings+="${meter}=${value}% "
+            (( value >= GOVERNOR_HOT_PERCENT  )) && any_hot=1
+            (( value >= GOVERNOR_COOL_PERCENT )) && all_cool=0
+        done
+        prev_total="${cur_total}"
+        prev_idle="${cur_idle}"
+
+        if (( any_hot )); then
+            hot_streak=$(( hot_streak + 1 ))
+            cool_streak=0
+            # Escalation: 1x, 2x, 4x, 8x the step, capped. Each consecutive
+            # hot cycle bites harder until the machine cools.
+            local shed=$(( GOVERNOR_SHED_STEP * (1 << (hot_streak - 1)) ))
+            (( shed <= GOVERNOR_SHED_MAX )) || shed=${GOVERNOR_SHED_MAX}
+            do_shed "${shed}" "${readings%% }, streak ${hot_streak}"
+        elif (( all_cool )); then
+            cool_streak=$(( cool_streak + 1 ))
+            hot_streak=0
+            if (( cool_streak >= GOVERNOR_COOL_STREAK )); then
+                do_grow
+                cool_streak=0
+            fi
+        else
+            # hysteresis band: hold still, forget both streaks
+            hot_streak=0
+            cool_streak=0
+        fi
+
+        (( RUN_ONCE )) && { log "single cycle complete (${readings%% }) — pinned band left in place"; break; }
+    done
+}
+# }}}
+
+# {{{ governor_status
+governor_status() {
+    require_soap_credentials
+
+    echo "bot-governor status (profile: ${PROFILE})"
+    echo ""
+
+    # 2-second CPU sample: enough for a status glance
+    local snap1 snap2
+    snap1="$(cpu_snapshot)"
+    sleep 2
+    snap2="$(cpu_snapshot)"
+    echo "meters (hot >= ${GOVERNOR_HOT_PERCENT}%, cool < ${GOVERNOR_COOL_PERCENT}%, selected: ${GOVERNOR_METERS}):"
+    echo "  cpu    $(meter_cpu ${snap1%% *} ${snap1##* } ${snap2%% *} ${snap2##* })%"
+    echo "  memory $(meter_memory)%"
+    echo "  load   $(meter_load)%"
+    echo ""
+
+    local cur online
+    fleet_read_band
+    cur="${FLEET_TARGET}"
+    online="$(fleet_online_count)"
+    local pinned_word="unpinned (module walks its own band)"
+    (( FLEET_BAND_PINNED )) && pinned_word="pinned by governor"
+    echo "fleet: ${online} bots online, conf target ${cur} (${pinned_word})"
+    echo "governor band: ${GOVERNOR_FLEET_FLOOR}-${GOVERNOR_FLEET_CEILING}, method ${GOVERNOR_LOGOUT_METHOD}, options [${GOVERNOR_LOGOUT_OPTIONS}]"
+    echo ""
+
+    local reply
+    if reply="$(soap_command "server info")"; then
+        echo "SOAP channel: up — $(echo "${reply}" | head -1)"
+    else
+        echo "SOAP channel: DOWN — ${reply}"
+    fi
+}
+# }}}
+
+# {{{ governor_check
+# Preflight. Reports what works AND what does not, in pipeline order, so
+# the reader can see exactly where the chain stops.
+governor_check() {
+    local failures=0
+
+    # {{{ check helpers
+    check_pass() { echo "  ok:   $*"; }
+    check_fail() { echo "  FAIL: $*"; failures=$(( failures + 1 )); }
+    # }}}
+
+    echo "bot-governor preflight (profile: ${PROFILE})"
+
+    echo "dependencies:"
+    local dep
+    for dep in curl xxd bc sha1sum awk sed od nproc; do
+        if command -v "${dep}" >/dev/null; then
+            check_pass "${dep}"
+        else
+            check_fail "${dep} not found in PATH"
+        fi
+    done
+
+    echo "files:"
+    for f in "${CONFIG_FILE}" "${WORLD_CONF}" "${PB_CONF}" "${MYSQL_BIN}"; do
+        if [[ -e "${f}" ]]; then
+            check_pass "${f}"
+        else
+            check_fail "${f} missing"
+        fi
+    done
+    check_pass "config validated (thresholds, radio, checkboxes)"
+
+    echo "database:"
+    if [[ -S "${MYSQL_SOCKET}" ]]; then
+        check_pass "socket ${MYSQL_SOCKET}"
+        if [[ "$(sql_query 'SELECT 1;')" == "1" ]]; then
+            check_pass "query round-trip"
+            check_pass "bot prefix '${BOT_PREFIX}', $(fleet_online_count) bots online"
+        else
+            check_fail "query failed — check mysql_user/mysql_pass in scripts/credentials"
+        fi
+    else
+        check_fail "socket missing — is MySQL running? (./scripts/start-mysql)"
+    fi
+
+    echo "SOAP channel:"
+    if [[ "${SOAP_ENABLED}" == "1" ]]; then
+        check_pass "SOAP.Enabled = 1 in worldserver.conf"
+    else
+        check_fail "SOAP.Enabled = ${SOAP_ENABLED:-unset} — run setup (and restart worldserver once)"
+    fi
+    if [[ -z "${SOAP_USER}" || "${SOAP_PASS}" == "RUN_BOT_GOVERNOR_SETUP" || -z "${SOAP_PASS}" ]]; then
+        check_fail "no SOAP credentials — run ./scripts/bot-governor setup"
+    else
+        check_pass "credentials present (account '${SOAP_USER}')"
+
+        # Offline login proof: re-derive the verifier from the stored
+        # password + the database's salt and compare against the stored
+        # verifier. This is the same comparison the auth handshake reduces
+        # to, so a match here means login will succeed — and a mismatch
+        # names the culprit (credential drift) before it becomes a 401.
+        local row salt_hex stored computed gmlevel
+        row="$(sql_query "SELECT HEX(salt), HEX(verifier) FROM ${DB_AUTH}.account WHERE username = UPPER('${SOAP_USER}');")"
+        if [[ -z "${row}" ]]; then
+            check_fail "account '${SOAP_USER^^}' not in ${DB_AUTH}.account — re-run setup"
+        else
+            salt_hex="${row%%$'\t'*}"
+            stored="${row##*$'\t'}"
+            computed="$(srp6_verifier "${SOAP_USER}" "${SOAP_PASS}" "${salt_hex,,}")"
+            if [[ "${computed^^}" == "${stored^^}" ]]; then
+                check_pass "stored verifier reproduces from stored credentials (login-grade match)"
+            else
+                check_fail "verifier mismatch — credentials drifted from the account row; re-run setup"
+            fi
+            gmlevel="$(sql_query "SELECT aa.gmlevel FROM ${DB_AUTH}.account_access aa JOIN ${DB_AUTH}.account a ON a.id = aa.id WHERE a.username = UPPER('${SOAP_USER}') AND aa.RealmID = -1;")"
+            if [[ "${gmlevel}" == "3" ]]; then
+                check_pass "gmlevel 3 on all realms"
+            else
+                check_fail "gmlevel is '${gmlevel:-absent}', SOAP needs 3 — re-run setup"
+            fi
+        fi
+
+        local reply
+        if reply="$(soap_command "server info")"; then
+            check_pass "command round-trip — $(echo "${reply}" | head -1)"
+        else
+            check_fail "round-trip: ${reply}"
+        fi
+    fi
+
+    echo ""
+    if (( failures == 0 )); then
+        echo "all checks passed — ./scripts/bot-governor run is ready"
+    else
+        echo "${failures} check(s) failed. To debug, ask of each failure: is the"
+        echo "server running? did setup run? was the worldserver restarted after"
+        echo "SOAP was first enabled? does the governor account hold gmlevel 3?"
+        exit 1
+    fi
+}
+# }}}
+
+# =============================================================================
+# Main
+# =============================================================================
+
+parse_args "$@"
+resolve_paths
+load_config
+load_credentials
+read_server_endpoints
+
+# Dispatch table: subcommand name -> function, one lookup, no branch ladder.
+declare -A SUBCOMMAND_TABLE=(
+    [run]="governor_run"
+    [setup]="governor_setup"
+    [status]="governor_status"
+    [check]="governor_check"
+)
+"${SUBCOMMAND_TABLE[${SUBCOMMAND}]}"
