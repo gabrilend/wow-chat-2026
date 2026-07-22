@@ -242,6 +242,17 @@ load_config() {
         "config: shed step (${GOVERNOR_SHED_STEP}) above shed max (${GOVERNOR_SHED_MAX})"
     require_int GOVERNOR_GROW_STEP     "${GOVERNOR_GROW_STEP}"     1 500
     require_int GOVERNOR_COOL_STREAK   "${GOVERNOR_COOL_STREAK}"   1 100
+    require_int GOVERNOR_DEMAND_DEADBAND "${GOVERNOR_DEMAND_DEADBAND}" 0 20
+    require_int GOVERNOR_FUTILE_SHEDS  "${GOVERNOR_FUTILE_SHEDS}"  1 20
+
+    # day/night tide — radio on|off plus its pace knobs
+    case "${GOVERNOR_DAYNIGHT}" in
+        on|off) ;;
+        *) die "config: GOVERNOR_DAYNIGHT='${GOVERNOR_DAYNIGHT}' (radio: on off)" ;;
+    esac
+    require_int GOVERNOR_DAYNIGHT_HOURS "${GOVERNOR_DAYNIGHT_HOURS}" 1 24
+    require_int GOVERNOR_TIDE_MAX_STEP  "${GOVERNOR_TIDE_MAX_STEP}"  1 64
+    require_int GOVERNOR_SPIRIT_MINUTES "${GOVERNOR_SPIRIT_MINUTES}" 1 1440
 
     # meters — checkbox set: non-empty subset of the known meters
     [[ -n "${GOVERNOR_METERS}" ]] || die "config: GOVERNOR_METERS is empty — select at least one meter"
@@ -547,6 +558,50 @@ fleet_online_count() {
 }
 # }}}
 
+# {{{ real_players_online
+real_players_online() {
+    sql_query "
+        SELECT COUNT(*)
+        FROM ${DB_CHARS}.characters c
+        JOIN ${DB_AUTH}.account a ON a.id = c.account
+        WHERE c.online = 1 AND UPPER(a.username) NOT LIKE '${BOT_PREFIX_UC}%';"
+}
+# }}}
+
+# {{{ spirits_online
+# A spirit is a real player who died, released, and has stayed a ghost —
+# detected by their resurrectable corpse (corpseType 0 is bones) being
+# older than the threshold while its owner is still online. corpse.guid
+# is the owning player's guid: one resurrectable corpse per character.
+spirits_online() {
+    sql_query "
+        SELECT COUNT(*)
+        FROM ${DB_CHARS}.corpse cp
+        JOIN ${DB_CHARS}.characters c ON c.guid = cp.guid
+        JOIN ${DB_AUTH}.account a ON a.id = c.account
+        WHERE c.online = 1
+          AND UPPER(a.username) NOT LIKE '${BOT_PREFIX_UC}%'
+          AND cp.corpseType != 0
+          AND cp.time <= UNIX_TIMESTAMP() - ${GOVERNOR_SPIRIT_MINUTES} * 60;"
+}
+# }}}
+
+# {{{ tide_target
+# Where the day/night tide wants the population at a given wall-clock
+# second: a sine between floor and ceiling with a full cycle every
+# DAYNIGHT_HOURS hours, anchored to the epoch so restarts rejoin the
+# same tide instead of starting a new one. Phase -pi/2 puts the trough
+# (deepest night) at each cycle boundary.
+tide_target() {
+    local epoch="$1"
+    local period=$(( GOVERNOR_DAYNIGHT_HOURS * 3600 ))
+    awk -v f="${GOVERNOR_FLEET_FLOOR}" -v c="${GOVERNOR_FLEET_CEILING}" \
+        -v p="${period}" -v t="${epoch}" \
+        'BEGIN { pi = 3.14159265358979
+                 printf "%d", f + (c - f) * (1 + sin(2 * pi * (t % p) / p - pi / 2)) / 2 }'
+}
+# }}}
+
 # {{{ fleet_read_band
 # Reads the module's current band from the installed conf into globals:
 # FLEET_TARGET (the Max value) and FLEET_BAND_PINNED (1 when Min == Max,
@@ -645,6 +700,71 @@ select_kick_candidates() {
 }
 # }}}
 
+# {{{ reset_shed_episode
+# A "hot episode" is an unbroken run of hot cycles. All escalation memory
+# lives inside one episode; any non-hot cycle ends it and forgets.
+reset_shed_episode() {
+    SHED_AMOUNT=${GOVERNOR_SHED_STEP}
+    LAST_SHED_DEMAND=-1
+    FUTILE_COUNT=0
+    SHED_GIVEN_UP=0
+}
+# }}}
+
+# {{{ escalate_shed
+# Decides this cycle's shed amount by listening to what the previous shed
+# accomplished, comparing demand now against demand at the last shed
+# (within a jitter deadband):
+#   rose      -> double the amount (capped) — the pressure is winning
+#   held/fell -> same amount again — never fewer within an episode
+# Futility: any shed that failed to REDUCE demand (held or rose) counts;
+# enough in a row means the load is not bot-shaped (a compile, another
+# service) and SHED_GIVEN_UP stops further shedding this episode.
+escalate_shed() {
+    local demand="$1"
+
+    if (( LAST_SHED_DEMAND < 0 )); then
+        SHED_AMOUNT=${GOVERNOR_SHED_STEP}
+        return
+    fi
+
+    if (( demand > LAST_SHED_DEMAND + GOVERNOR_DEMAND_DEADBAND )); then
+        SHED_AMOUNT=$(( SHED_AMOUNT * 2 ))
+        (( SHED_AMOUNT <= GOVERNOR_SHED_MAX )) || SHED_AMOUNT=${GOVERNOR_SHED_MAX}
+        FUTILE_COUNT=$(( FUTILE_COUNT + 1 ))
+    elif (( demand >= LAST_SHED_DEMAND - GOVERNOR_DEMAND_DEADBAND )); then
+        FUTILE_COUNT=$(( FUTILE_COUNT + 1 ))
+    else
+        FUTILE_COUNT=0
+    fi
+
+    if (( FUTILE_COUNT >= GOVERNOR_FUTILE_SHEDS )); then
+        SHED_GIVEN_UP=1
+    fi
+}
+# }}}
+
+# {{{ kick_bots
+# Kicks up to N bots chosen by the configured method + spare options.
+# Callers must have pinned the band DOWN already — see do_shed on order.
+kick_bots() {
+    local want="$1"
+    local victims=() name reply kicked=0
+    mapfile -t victims < <(select_kick_candidates "${want}")
+    if (( ${#victims[@]} < want )); then
+        log "spare filters leave only ${#victims[@]} of ${want} kick candidates — shedding what is allowed"
+    fi
+    for name in "${victims[@]}"; do
+        if reply="$(soap_command "kick ${name}")"; then
+            kicked=$(( kicked + 1 ))
+        else
+            log "kick ${name} failed: ${reply}"
+        fi
+    done
+    log "kicked ${kicked}/${#victims[@]} bots"
+}
+# }}}
+
 # {{{ do_shed
 # Lever order is the entire mechanism: pin FIRST (closing the module's
 # login budget), kick SECOND. Reversed, every kicked bot re-logs within a
@@ -668,19 +788,7 @@ do_shed() {
     if [[ "${GOVERNOR_LOGOUT_METHOD}" == "drain" ]]; then
         log "drain: band pinned; the fleet will decay on its own in-world timers"
     else
-        local victims=() name reply kicked=0
-        mapfile -t victims < <(select_kick_candidates "${want}")
-        if (( ${#victims[@]} < want )); then
-            log "spare filters leave only ${#victims[@]} of ${want} kick candidates — shedding what is allowed"
-        fi
-        for name in "${victims[@]}"; do
-            if reply="$(soap_command "kick ${name}")"; then
-                kicked=$(( kicked + 1 ))
-            else
-                log "kick ${name} failed: ${reply}"
-            fi
-        done
-        log "kicked ${kicked}/${#victims[@]} bots"
+        kick_bots "${want}"
     fi
 
     if has_option "announce"; then
@@ -734,6 +842,54 @@ do_grow() {
 }
 # }}}
 
+# {{{ do_tide
+# One step of the empty-server day/night tide: drift the pinned band
+# toward where the wave wants the population, at most TIDE_MAX_STEP per
+# cycle in either direction — a drift, never a stampede. On the ebb the
+# surplus is kicked (idle-looking bots first under the default method);
+# on the flow the module fills toward the raised pin on its own. Load
+# thresholds are dormant while this runs — that is the design: the tide
+# owns the empty server, and a player logging in dethrones it.
+do_tide() {
+    local now="$1"
+    local online wave cur target delta want
+    fleet_read_band
+    cur="${FLEET_TARGET}"
+    online="$(fleet_online_count)"
+    wave="$(tide_target "${now}")"
+
+    # First touch on an unpinned band: start the drift from the live
+    # population, not from wherever the conf band happened to sit —
+    # otherwise the first step could be a leap.
+    if (( FLEET_BAND_PINNED == 0 )); then
+        cur="${online}"
+    fi
+
+    delta=$(( wave - cur ))
+    (( delta >  GOVERNOR_TIDE_MAX_STEP )) && delta=${GOVERNOR_TIDE_MAX_STEP}
+    (( delta < -GOVERNOR_TIDE_MAX_STEP )) && delta=$(( 0 - GOVERNOR_TIDE_MAX_STEP ))
+    target=$(( cur + delta ))
+    (( target >= GOVERNOR_FLEET_FLOOR   )) || target=${GOVERNOR_FLEET_FLOOR}
+    (( target <= GOVERNOR_FLEET_CEILING )) || target=${GOVERNOR_FLEET_CEILING}
+
+    # resting on the wave: pinned and in place, nothing to do
+    if (( target == cur && FLEET_BAND_PINNED == 1 )); then
+        return
+    fi
+
+    local phase="ebbing"
+    (( delta >= 0 )) && phase="flowing"
+    log "tide ${phase}: pin ${cur} -> ${target} (wave wants ${wave}, ${online} online)"
+
+    pin_band "${target}" || return
+
+    if (( target < online )) && [[ "${GOVERNOR_LOGOUT_METHOD}" != "drain" ]]; then
+        want=$(( online - target ))
+        kick_bots "${want}"
+    fi
+}
+# }}}
+
 # {{{ restore_band
 # Exit hand-off: put the configured floor/ceiling band back and let the
 # module walk its own population again — unless the persist-shrunken-band
@@ -761,13 +917,15 @@ governor_run() {
 
     log "governor up: profile=${PROFILE} hot>=${GOVERNOR_HOT_PERCENT}% cool<${GOVERNOR_COOL_PERCENT}% meters=[${GOVERNOR_METERS}] poll=${GOVERNOR_POLL_SECONDS}s"
     log "fleet band ${GOVERNOR_FLEET_FLOOR}-${GOVERNOR_FLEET_CEILING}, method=${GOVERNOR_LOGOUT_METHOD}, options=[${GOVERNOR_LOGOUT_OPTIONS}]"
+    log "day/night tide: ${GOVERNOR_DAYNIGHT} (${GOVERNOR_DAYNIGHT_HOURS}h cycle), spirit hold: ${GOVERNOR_SPIRIT_MINUTES}m ghosts"
 
     # --once is a test probe: act once, leave the pin as acted, no restore.
     if (( RUN_ONCE == 0 )); then
         trap restore_band EXIT
     fi
 
-    local hot_streak=0 cool_streak=0
+    reset_shed_episode
+    local hot_streak=0 cool_streak=0 mode="load"
     local snap prev_total prev_idle cur_total cur_idle
     snap="$(cpu_snapshot)"
     prev_total="${snap%% *}"
@@ -780,8 +938,9 @@ governor_run() {
         cur_total="${snap%% *}"
         cur_idle="${snap##* }"
 
-        # sample each selected meter; hot on ANY >= hot, cool on ALL < cool
-        local meter value readings="" any_hot=0 all_cool=1
+        # sample each selected meter; hot on ANY >= hot, cool on ALL < cool;
+        # demand is the tallest meter — the number escalation listens to
+        local meter value readings="" any_hot=0 all_cool=1 demand=0
         for meter in ${GOVERNOR_METERS}; do
             case "${meter}" in
                 cpu)    value="$(meter_cpu "${prev_total}" "${prev_idle}" "${cur_total}" "${cur_idle}")" ;;
@@ -791,32 +950,74 @@ governor_run() {
             readings+="${meter}=${value}% "
             (( value >= GOVERNOR_HOT_PERCENT  )) && any_hot=1
             (( value >= GOVERNOR_COOL_PERCENT )) && all_cool=0
+            (( value >  demand )) && demand=${value}
         done
         prev_total="${cur_total}"
         prev_idle="${cur_idle}"
 
-        if (( any_hot )); then
-            hot_streak=$(( hot_streak + 1 ))
-            cool_streak=0
-            # Escalation: 1x, 2x, 4x, 8x the step, capped. Each consecutive
-            # hot cycle bites harder until the machine cools.
-            local shed=$(( GOVERNOR_SHED_STEP * (1 << (hot_streak - 1)) ))
-            (( shed <= GOVERNOR_SHED_MAX )) || shed=${GOVERNOR_SHED_MAX}
-            do_shed "${shed}" "${readings%% }, streak ${hot_streak}"
-        elif (( all_cool )); then
-            cool_streak=$(( cool_streak + 1 ))
+        # Mode arbitration, highest authority first: long-standing spirits
+        # hold the whole world still; an empty server belongs to the tide
+        # (when enabled); otherwise the load meters govern. Any mode change
+        # forgets all streak and episode memory.
+        local new_mode="load" spirits
+        spirits="$(spirits_online)"
+        if (( spirits > 0 )); then
+            new_mode="paused"
+        elif [[ "${GOVERNOR_DAYNIGHT}" == "on" ]] && (( $(real_players_online) == 0 )); then
+            new_mode="tide"
+        fi
+        if [[ "${new_mode}" != "${mode}" ]]; then
+            case "${new_mode}" in
+                paused) log "mode: paused — ${spirits} spirit(s) ${GOVERNOR_SPIRIT_MINUTES}+ minutes among the living; the world holds still" ;;
+                tide)   log "mode: tide — server empty, following the ${GOVERNOR_DAYNIGHT_HOURS}h day/night cycle (load thresholds dormant)" ;;
+                load)   log "mode: load-governing" ;;
+            esac
+            mode="${new_mode}"
             hot_streak=0
-            if (( cool_streak >= GOVERNOR_COOL_STREAK )); then
-                do_grow
-                cool_streak=0
-            fi
-        else
-            # hysteresis band: hold still, forget both streaks
-            hot_streak=0
             cool_streak=0
+            reset_shed_episode
         fi
 
-        (( RUN_ONCE )) && { log "single cycle complete (${readings%% }) — pinned band left in place"; break; }
+        case "${mode}" in
+            paused)
+                : # spirits have seniority; touch nothing until they rest
+                ;;
+            tide)
+                do_tide "$(date +%s)"
+                ;;
+            load)
+                if (( any_hot )); then
+                    hot_streak=$(( hot_streak + 1 ))
+                    cool_streak=0
+                    if (( SHED_GIVEN_UP )); then
+                        log "hot (${readings%% }) but shedding stopped helping — holding until the machine cools"
+                    else
+                        escalate_shed "${demand}"
+                        if (( SHED_GIVEN_UP )); then
+                            log "hot (${readings%% }): ${FUTILE_COUNT} sheds without demand relief — the load is not bot-shaped; no more shedding this episode"
+                        else
+                            do_shed "${SHED_AMOUNT}" "${readings%% }, streak ${hot_streak}, demand ${demand}%"
+                            LAST_SHED_DEMAND=${demand}
+                        fi
+                    fi
+                elif (( all_cool )); then
+                    cool_streak=$(( cool_streak + 1 ))
+                    hot_streak=0
+                    reset_shed_episode
+                    if (( cool_streak >= GOVERNOR_COOL_STREAK )); then
+                        do_grow
+                        cool_streak=0
+                    fi
+                else
+                    # hysteresis band: hold still, forget everything
+                    hot_streak=0
+                    cool_streak=0
+                    reset_shed_episode
+                fi
+                ;;
+        esac
+
+        (( RUN_ONCE )) && { log "single cycle complete (${readings%% }, mode ${mode}) — pinned band left in place"; break; }
     done
 }
 # }}}
@@ -847,6 +1048,16 @@ governor_status() {
     (( FLEET_BAND_PINNED )) && pinned_word="pinned by governor"
     echo "fleet: ${online} bots online, conf target ${cur} (${pinned_word})"
     echo "governor band: ${GOVERNOR_FLEET_FLOOR}-${GOVERNOR_FLEET_CEILING}, method ${GOVERNOR_LOGOUT_METHOD}, options [${GOVERNOR_LOGOUT_OPTIONS}]"
+
+    local players spirits
+    players="$(real_players_online)"
+    spirits="$(spirits_online)"
+    if [[ "${GOVERNOR_DAYNIGHT}" == "on" ]]; then
+        echo "day/night tide: on, ${GOVERNOR_DAYNIGHT_HOURS}h cycle — wave wants $(tide_target "$(date +%s)") right now (runs only while 0 players online)"
+    else
+        echo "day/night tide: off"
+    fi
+    echo "players online: ${players}; spirits holding the world: ${spirits} (ghosts ${GOVERNOR_SPIRIT_MINUTES}+ minutes)"
     echo ""
 
     local reply

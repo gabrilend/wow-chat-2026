@@ -17,6 +17,9 @@ endpoint on loopback, and the module's own config file.
  /proc/loadavg ┘        │
                         ▼
               ┌─── decide (every poll cycle) ───┐
+              │  spirits 15m+ ?     → pause all │
+              │  empty + tide on?   → follow    │
+              │                       the wave  │
               │  any meter ≥ hot?   → shed      │
               │  all meters < cool  → cool      │
               │   (streak long enough → grow)   │
@@ -58,12 +61,51 @@ native "log more bots in" path, at roughly sixty logins per module tick.
 
 ## Escalation Shape
 
-Shedding escalates: the first hot cycle removes a small step of bots, and
-each consecutive hot cycle doubles the count up to a cap. Any cycle that is
-not hot resets the escalation. Growth is the mirror with a longer fuse: only
-a sustained streak of fully-cool cycles raises the target one step. The gap
-between the hot and cool thresholds is deliberate hysteresis — inside it the
-governor holds still.
+Shedding listens to its own results. The first hot cycle removes a small
+step of bots and remembers the demand reading (the tallest selected meter).
+Each further hot cycle compares fresh demand against that memory, inside a
+small jitter deadband:
+
+- demand **rose** — the previous shed lost ground; double the amount, up
+  to a cap
+- demand **held or fell** — shed the same amount again, never fewer
+  within an episode
+
+Every shed that fails to actually *reduce* demand counts toward a futility
+brake: enough of those in a row means the pressure is not bot-shaped (a
+compile, another service), and the governor stops shedding for the rest of
+the episode and says so in the log. Any non-hot cycle ends the episode and
+forgets all of it.
+
+Growth is the mirror with a longer fuse: only a sustained streak of
+fully-cool cycles raises the target one step. The gap between the hot and
+cool thresholds is deliberate hysteresis — inside it the governor holds
+still.
+
+## The Day/Night Tide (off by default)
+
+When the tide is enabled and *zero* real players are online, the governor
+stops asking the load meters and starts asking the clock: population
+follows a sine between floor and ceiling, one full cycle every few real
+hours (default three). Nights feel sparse, peaks feel crowded. The pin
+drifts toward the wave a bounded few bots per cycle — a tide, never a
+stampede — and the wave is anchored to wall-clock time, so a restarted
+governor rejoins it mid-phase rather than starting a fresh day.
+
+While the tide runs, the hot/cool thresholds are dormant on purpose. The
+empty server belongs to the bots; the one way to turn the performance
+demands down is to log in and play, because a real player online suspends
+the tide and hands control back to the load governor.
+
+## The Spirit Pause
+
+A real player who dies, releases, and stays a ghost for fifteen minutes or
+longer (a knob) pauses the entire governor — no shedding, no growing, no
+tide — until they return to their body or log off. Spirits have seniority.
+Detection is by corpse age: the corpse table keeps one resurrectable body
+per character, stamped with its death time, so corpse age *is* ghost
+duration. The pause is therefore something a player does *inside* the
+world: die, release, wait — and the machinery goes still around you.
 
 ## The Credential Path
 
@@ -86,6 +128,8 @@ at worldserver boot — the first activation costs one restart.
 | reads | installed `worldserver.conf` | SOAP address/port |
 | reads | installed `playerbots.conf` | bot account prefix, current band |
 | reads | characters + auth databases | who is online, who is a bot, who is grouped/where |
+| reads | the corpse table | who is a spirit, and for how long |
+| reads | the wall clock | where the day/night tide stands |
 | writes | installed `playerbots.conf` | the pinned band |
 | writes | SOAP loopback | reload / kick / announce commands |
 | writes | `tmp/governor-<profile>/governor.log` | decision log (RAM-backed) |

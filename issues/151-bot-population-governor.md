@@ -47,8 +47,14 @@ and closes the loop between host hardware pressure and bot population:
   memory in use, and/or normalized load average (a checkbox set selects which
   meters count).
 - **Shed when hot.** When any selected meter reaches the *hot* threshold
-  (default 50%), it reduces the fleet. Each consecutive hot cycle sheds more
-  bots than the last (doubling escalation, capped), until the machine cools.
+  (default 50%), it reduces the fleet. The escalation listens to results:
+  the shed amount doubles (capped) only when demand *rose* since the
+  previous shed; when demand held or fell, the same amount goes again —
+  never fewer within a hot episode. And when several consecutive sheds fail
+  to reduce demand at all, the governor concludes the load is not
+  bot-shaped (a compile, another service) and stops shedding until the
+  episode ends. A jitter deadband keeps one-point meter wiggles from
+  counting as movement.
 - **Regrow when cool.** After a sustained streak of every meter sitting below
   the *cool* threshold (default 35%), it raises the fleet target step by
   step, up to a ceiling higher than the old static band — this is how the bot
@@ -97,6 +103,27 @@ shed on its own):
 The spare-* options modify the three kick methods and are rejected with an
 error when combined with `drain` (which never targets individuals) — strict
 validation over silent inapplicability.
+
+**The day/night tide** (off by default): when enabled and *zero* real
+players are online, the population stops answering the load meters and
+instead follows a slow wave — sinking toward the floor for "night", rising
+toward the ceiling for "peak hours", one full cycle every 3-4 real hours
+(a knob). Idle-looking bots drift off a few at a time on the ebb, bounded
+per cycle so the tide never becomes a stampede, and the wave is anchored
+to wall-clock time so governor restarts rejoin it mid-phase. While the
+tide runs, the hot/cool thresholds are deliberately dormant: the empty
+server belongs to the bots, and the one way to turn the performance
+demands down is to log in and play — a real player online suspends the
+tide and restores load-governing. The world should feel sparse at some
+hours and crowded at others.
+
+**The spirit pause**: a real player who dies, releases, and stays a ghost
+for fifteen minutes or longer (a knob) pauses the *entire* governor — no
+shedding, no growing, no tide — until they return to their body or log
+off. Spirits have seniority. This doubles as an in-game hold switch:
+detection is by corpse age (a resurrectable player corpse older than the
+threshold whose owner is still online), so the pause is something a player
+*does* in the world, not a config file they edit outside it.
 
 **Speaking to the server** requires two one-time enablements, both automated:
 
@@ -182,6 +209,10 @@ config validation, SOAP and database round-trips).
   above it, pointing at C018.
 - SOAP.Enabled is read once at worldserver boot (`Main.cpp`) — enabling it
   requires one restart; everything after that is runtime.
+- Ghost state is not persisted as a flag, but the `corpse` table exposes it
+  faithfully: `corpse.guid` is the owning player's guid (one resurrectable
+  corpse per character), `corpseType != 0` separates a waiting body from
+  bones, and `time` stamps the death — corpse age *is* ghost duration.
 
 ## Relevant Files / Symbols
 
