@@ -76,6 +76,20 @@ The specific "148h white kit at spawn" intent is not config-expressible
 
 ---
 
+## 2026-07-16 — Vanilla playerbot population band (128–256 active)
+
+The ambient random-bot fleet is now bounded to a floor of 128 and a ceiling
+of 256 simultaneously-online bots, down from the upstream 500/500 default.
+The knobs live in `config/patches/C020-vanilla-playerbot-population.sh`
+(MinRandomBots / MaxRandomBots). **Why:** a full 500-bot fleet was more
+ambient traffic than the 20-40 Eastern Kingdoms band needs, and paid the
+whole cost as a cold-boot login stampede every startup; a 128–256 band keeps
+the world visibly populated without it. Account provisioning (`C018`, 110
+accounts × 10 chars) still covers the ceiling with headroom, so no change
+there.
+
+---
+
 ## How to add an entry
 
 ```markdown
