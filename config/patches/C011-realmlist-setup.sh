@@ -56,7 +56,9 @@ config_realmlist_setup() {
     local REALM_ADDRESS="wow.ritzmenardi.com"
     local REALM_LOCAL="127.0.0.1"
     local REALM_PORT=4462
-    local REALM_FLAG=0  # 0=normal, 1=invalid, 2=offline
+    # The per-row online/offline flag is owned by scripts/set-active-realm
+    # (it flips the active profile's row to flag=0 and the rest to flag=2 on
+    # every launch), so C011 deliberately does not set flag here.
 
     # Capture mysql errors so a real SQL failure (missing table, bad
     # credentials, etc.) surfaces to the operator instead of a bare
@@ -64,13 +66,17 @@ config_realmlist_setup() {
     local MYSQL_ERR
     MYSQL_ERR=$("${MYSQL_DIR}/bin/mysql" --no-defaults \
         --socket="${MYSQL_SOCKET}" -u "${USER}" -p"${PASS}" acore_auth 2>&1 <<EOF
+-- Every profile's realm lives on this one host, so all rows advertise the
+-- same public address; localAddress stays loopback for same-machine clients.
+-- The old 'WHERE id = 1' left the beta/vanilla/alpha rows on 127.0.0.1, so a
+-- remote player could reach auth but was handed 127.0.0.1 for the world server
+-- and could not enter. Names and the online flag are managed elsewhere (the
+-- set-active-realm seed + flip); id=1 keeps the unsuffixed public brand name.
 UPDATE realmlist SET
-    name = '${REALM_NAME}',
     address = '${REALM_ADDRESS}',
     localAddress = '${REALM_LOCAL}',
-    port = ${REALM_PORT},
-    flag = ${REALM_FLAG}
-WHERE id = 1;
+    port = ${REALM_PORT};
+UPDATE realmlist SET name = '${REALM_NAME}' WHERE id = 1;
 EOF
 )
     local MYSQL_RC=$?

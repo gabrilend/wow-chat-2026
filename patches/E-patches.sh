@@ -485,6 +485,22 @@ patch_E006_initialize_config_files() {
     local TARGET="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
     echo "  [E006] Initializing config files..."
 
+    # Refresh the app config .dist templates straight from source before the
+    # .dist -> .conf copy below. cmake --install is *supposed* to place these,
+    # but the installed .dist drifts stale: keys the binary starts reading get
+    # added to source-beta between cmake installs, so the running conf lacks
+    # them and the worldserver prints "Missing property X" at boot (and falls
+    # back to defaults). Pulling them from source here — the same way module
+    # configs are refreshed further down — keeps the .dist current with the
+    # binary and carries upstream's section layout + comments verbatim. This is
+    # the pipeline refresh that config/patches/C016 was written as a stopgap
+    # for. (The lone @prefix@ token in worldserver.conf.dist sits inside an
+    # example comment, so a raw copy is safe.)
+    for app_conf_dist in "${AC_CODE_DIR}/src/server/apps"/*/*.conf.dist; do
+        [[ -f "${app_conf_dist}" ]] || continue
+        cp -f "${app_conf_dist}" "${TARGET}/etc/$(basename "${app_conf_dist}")"
+    done
+
     # Copy .dist files to .conf
     if [[ -f "${TARGET}/etc/authserver.conf.dist" ]]; then
         cp -f "${TARGET}/etc/authserver.conf.dist" "${TARGET}/etc/authserver.conf"

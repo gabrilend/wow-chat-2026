@@ -41,8 +41,13 @@ config_vanilla_playerbot_level_cap() {
     local BOT_MAX=40
     local BOT_MAPS=0   # 0 = Eastern Kingdoms (the 20-40 content band)
     local conf="${INSTALL_DIR}/etc/modules/playerbots.conf"
-    sed -i 's|^AiPlayerbot\.RandomBotMinLevel.*=.*|AiPlayerbot.RandomBotMinLevel = '"${BOT_MIN}"'|' "${conf}"
-    sed -i 's|^AiPlayerbot\.RandomBotMaxLevel.*=.*|AiPlayerbot.RandomBotMaxLevel = '"${BOT_MAX}"'|' "${conf}"
+    # Anchor the key with [[:space:]]*= so the sed cannot bleed past the key
+    # name. The old `.*=.*` was greedy: it also matched RandomBotMinLevel*Chance*
+    # = 0.1 (the `.*` swallowed "Chance"), rewriting that line into a second
+    # RandomBotMinLevel entry — which both duplicated the level key AND deleted
+    # RandomBotMinLevelChance, surfacing it as a "Missing property" at boot.
+    sed -i 's|^AiPlayerbot\.RandomBotMinLevel[[:space:]]*=.*|AiPlayerbot.RandomBotMinLevel = '"${BOT_MIN}"'|' "${conf}"
+    sed -i 's|^AiPlayerbot\.RandomBotMaxLevel[[:space:]]*=.*|AiPlayerbot.RandomBotMaxLevel = '"${BOT_MAX}"'|' "${conf}"
     sed -i 's|^AiPlayerbot\.DisableRandomLevels.*=.*|AiPlayerbot.DisableRandomLevels = 1|' "${conf}"
     sed -i 's|^AiPlayerbot\.RandomBotXPRate.*=.*|AiPlayerbot.RandomBotXPRate = 1.0|' "${conf}"
     sed -i 's|^AiPlayerbot\.EquipmentPersistence.*=.*|AiPlayerbot.EquipmentPersistence = 1|' "${conf}"

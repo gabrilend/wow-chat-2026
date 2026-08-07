@@ -10,8 +10,13 @@ config_playerbot_level_cap() {
     local BOT_MIN_LEVEL=1
     local BOT_MAX_LEVEL=20
     local conf="${INSTALL_DIR}/etc/modules/playerbots.conf"
-    sed -i 's|^AiPlayerbot\.RandomBotMinLevel.*=.*|AiPlayerbot.RandomBotMinLevel = '"${BOT_MIN_LEVEL}"'|' "${conf}"
-    sed -i 's|^AiPlayerbot\.RandomBotMaxLevel.*=.*|AiPlayerbot.RandomBotMaxLevel = '"${BOT_MAX_LEVEL}"'|' "${conf}"
+    # Anchor the key with [[:space:]]*= so the sed cannot bleed past the key
+    # name. The old `.*=.*` was greedy: it also matched RandomBotMinLevel*Chance*
+    # = 0.1 (the `.*` swallowed "Chance"), rewriting that line into a second
+    # RandomBotMinLevel entry — which both duplicated the level key AND deleted
+    # RandomBotMinLevelChance, surfacing it as a "Missing property" at boot.
+    sed -i 's|^AiPlayerbot\.RandomBotMinLevel[[:space:]]*=.*|AiPlayerbot.RandomBotMinLevel = '"${BOT_MIN_LEVEL}"'|' "${conf}"
+    sed -i 's|^AiPlayerbot\.RandomBotMaxLevel[[:space:]]*=.*|AiPlayerbot.RandomBotMaxLevel = '"${BOT_MAX_LEVEL}"'|' "${conf}"
 }
 CONFIG_PROFILES[config_playerbot_level_cap]="beta release"
 CONFIG_DESCRIPTIONS[config_playerbot_level_cap]="Playerbot level cap 1..20"
