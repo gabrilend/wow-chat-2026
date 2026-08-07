@@ -53,14 +53,16 @@ patch_B017_playerbots_unused_variables() {
     fi
 
     # Arrow.cpp:22 - healerLines
-    # Same drift shape as currentRoles: upstream widened the type from bool
-    # to uint32 (the assignment now reads `1 + healers.Size() / 6`, which
-    # never fit a bool). Match the bare assignment rather than the prior
-    # type prefix so future widenings don't break this again.
-    FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/Arrow.cpp"
-    if [[ -f "${FILE}" ]] && ! grep -q "(void)healerLines;" "${FILE}" 2>/dev/null; then
-        sed -i '/healerLines = 1 + healers.Size/a\    (void)healerLines;  // Suppress unused warning' "${FILE}" 2>/dev/null || true
-    fi
+    #
+    # REMOVED 2026-07-16: same failure as the newItem block below. The pull
+    # commented out the declaration (`//uint32 healerLines = 1 + healers.Size()
+    # / 6;` under a `//@TODO Implement Healer Lines`), but the sed anchor
+    # `/healerLines = 1 + healers.Size/` still matched that COMMENTED line and
+    # appended a live `(void)healerLines;`, referencing a variable that no
+    # longer exists → "fatal error: use of undeclared identifier 'healerLines'".
+    # While the declaration is commented out there is no unused-variable warning
+    # to suppress, so the block is retired. Restore only if upstream re-enables
+    # the computation, with an anchor that skips `//`-prefixed lines.
 
     # ItemCountValue.cpp:14 - bot
     FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/ItemCountValue.cpp"

@@ -27,14 +27,19 @@ DEFAULT_PROFILE="${PROFILE}"
 # =============================================================================
 
 # {{{ Pinned commits
-# vanilla tracks upstream HEAD same as beta and release per issue 148
-# (originally pinned 2026-06-02, un-pinned later that day so vanilla
-# stays current with bug fixes). Empty string means "track HEAD".
+# Empty string means "track HEAD".
+# 2026-07-22: beta/release/vanilla (the shared source-beta tree) pinned
+# to 52f58186a533 until further notice (issue 308) — the playerbot
+# facade corruption was diagnosed and contained (B026/B027) against
+# exactly this revision, and the B027 repair is verified working on it.
+# Moving HEAD would re-open the diagnosis. The three profiles share one
+# tree, so they must pin identically. History: vanilla was pinned
+# 2026-06-02 per 148 and un-pinned the same day to stay current.
 declare -A PROFILE_COMMIT=(
     ["alpha"]=""
-    ["beta"]=""
-    ["release"]=""
-    ["vanilla"]=""
+    ["beta"]="52f58186a533"
+    ["release"]="52f58186a533"
+    ["vanilla"]="52f58186a533"
 )
 # }}}
 
@@ -54,11 +59,17 @@ declare -A PROFILE_MODULES=(
 # }}}
 
 # {{{ Module commits per profile
-# vanilla deliberately has no entries — it tracks upstream HEAD for
-# every module, same as beta/release. See scripts/install's matching
-# block for the full rationale on the un-pin decision.
+# 2026-07-22: mod-playerbots pinned to 93aaea3d for every profile that
+# ships it, until further notice (issue 308). That is the module HEAD
+# the facade-corruption diagnosis and the B027 repair were verified
+# against; its sibling core pin (52f58186a533) lives in PROFILE_COMMIT
+# above. Un-pin both together once upstream fixes the corrupt-facade
+# construction. Must match scripts/install's block.
 declare -A PROFILE_MODULE_COMMITS=(
     ["release:mod-eluna"]="1abf244"
+    ["beta:mod-playerbots"]="93aaea3d"
+    ["release:mod-playerbots"]="93aaea3d"
+    ["vanilla:mod-playerbots"]="93aaea3d"
 )
 # }}}
 

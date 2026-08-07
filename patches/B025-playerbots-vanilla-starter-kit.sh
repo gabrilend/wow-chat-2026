@@ -26,9 +26,12 @@ patch_B025_playerbots_vanilla_starter_kit() {
     echo "  [B025] mod-playerbots: vanilla bots start in the 148h kit"
 
     # The C++ block lives in a quoted heredoc so its single quotes and braces
-    # reach a temp file verbatim, then sed reads it in after the incremental-
-    # guard's `return;` at the top of PlayerbotFactory::InitEquipment. Marker
-    # comments bracket it so the unpatch can delete it as a clean range.
+    # reach a temp file verbatim, then sed reads it in at the top of
+    # PlayerbotFactory::InitEquipment, right after the opening brace. Upstream
+    # removed the old `incrementalGearInit` guard we used to anchor on (pull
+    # ~2026-07), so we anchor on the function signature instead; the block
+    # self-guards on `!incremental && level == 20`, so the position is
+    # equivalent. Marker comments bracket it so the unpatch deletes a clean range.
     local BLOCK
     BLOCK="$(mktemp)"
     cat > "${BLOCK}" << 'CPP_B025'
@@ -60,7 +63,7 @@ patch_B025_playerbots_vanilla_starter_kit() {
     // <<< B025-vanilla-starter-kit (148s) END
 CPP_B025
 
-    sed -i "/if (incremental && !sPlayerbotAIConfig.incrementalGearInit)/{
+    sed -i "/void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)/{
 n
 r ${BLOCK}
 }" "${FILE}"

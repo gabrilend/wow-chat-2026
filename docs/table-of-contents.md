@@ -33,6 +33,9 @@ wow-chat-2026/
 │   │   ├── ale-calculate-talents-hook.md  Talent calculation module
 │   │   ├── ale-gameobject-wildcard.md  Entry 0 wildcard for gameobject events
 │   │   ├── playerbots-ale-login-hook.md  Playerbots trigger PLAYER_EVENT_ON_LOGIN
+│   │   ├── playerbot-bot-login-strategy-guard.md  B026: duplicate-login dangling strategy
+│   │   ├── playerbot-engine-init-facade-guard.md  B027: corrupt strategy facade repair
+│   │   ├── playerbot-vanilla-starter-kit.md  B025: vanilla bots spawn in the 148h kit
 │   │   ├── upstream-warning-fixes.md  Fix 695+ compiler warnings in upstream modules
 │   │   └── contributing-upstream.md   How to translate a B-patch into an upstream PR
 │   ├── playerbots/                Playerbot module documentation

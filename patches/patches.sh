@@ -30,10 +30,10 @@ fi
 # toolchain WITHOUT changing gameplay behaviour. See issue 148 for the
 # full walk and the rationale per skipped patch.
 declare -A PHASE_BEGIN_PATCHES=(
-    ["release"]="B004 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B024"  # warning fixes + mod-playerbots + mod-ale compat + ALE registry lock fix + runtime conf-dir override + ALE FormatQuery lifetime fix + symmetric aggro radius (B011 removed — upstream mod-ale now matches core, patch became harmful)
-    ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B024"  # All patches (B011 removed — see release-line note)
+    ["release"]="B004 B009 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B024 B026 B027"  # +B027 (2026-07-21, issue 308: Engine::Init stale-facade guard, companion to B026); +B026 (2026-07-16, bot-login Engine::Init crash guard+diagnostic); warning fixes + mod-playerbots + mod-ale compat + ALE registry lock fix + runtime conf-dir override + ALE FormatQuery lifetime fix + symmetric aggro radius (B011 removed — upstream mod-ale now matches core, patch became harmful; B010 removed 2026-07-16 — upstream now ships ARENA_TYPE_NONE)
+    ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008 B009 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B024 B026 B027"  # +B027 (2026-07-21, issue 308: Engine::Init stale-facade guard, companion to B026); +B026 (2026-07-16, bot-login crash guard+diagnostic); All patches (B011 removed — see release-line note; B010 removed 2026-07-16 — upstream now ships ARENA_TYPE_NONE)
     ["alpha"]="B001 B004"                                         # Minimal compatibility patches
-    ["vanilla"]="B001 B002 B004 B009 B010 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B025"  # 2026-06-02: ALE added per 148k. Compile fixes + B001 (aoe-loot/ALE compat, conditional) + B002 (playerbots×ALE login hook) + B020 + B023 (ALE thread-safety + dangling-pointer fixes — non-negotiable for ALE stability). Skipped per user OK: B003 B006 B007 (ALE feature patches not yet needed), B005 B008 B024 (wow-chat gameplay), B011 (removed everywhere). 2026-07-15: +B025 (148s — vanilla bots start in the 148h starter kit; self-scoping on the kit data, so it only takes effect on vanilla).
+    ["vanilla"]="B001 B002 B004 B009 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B025 B026 B027"  # +B027 (2026-07-21, issue 308: Engine::Init stale-facade guard, companion to B026). +B026 (2026-07-16, bot-login crash guard+diagnostic). 2026-06-02: ALE added per 148k. Compile fixes + B001 (aoe-loot/ALE compat, conditional) + B002 (playerbots×ALE login hook) + B020 + B023 (ALE thread-safety + dangling-pointer fixes — non-negotiable for ALE stability). Skipped per user OK: B003 B006 B007 (ALE feature patches not yet needed), B005 B008 B024 (wow-chat gameplay), B011 (removed everywhere). 2026-07-15: +B025 (148s — vanilla bots start in the 148h starter kit; self-scoping on the kit data, so it only takes effect on vanilla).
 )
 
 # PHASE_END patches (post-compile setup: configs, symlinks, database)
@@ -218,7 +218,14 @@ patch_needs_applying_B001() {
 }
 
 patch_needs_applying_B002() {
-    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp"
+    # Retargeted 2026-08-07 alongside the patch itself. B002 moved from
+    # RandomPlayerbotMgr.cpp to PlayerbotMgr.cpp when upstream relocated
+    # OnBotLoginInternal; this probe was left pointing at the old file, so it
+    # searched somewhere the witness could never appear and reported "needs
+    # applying" unconditionally, forever. A probe that can only ever say yes
+    # cannot detect the thing it exists to detect — which is exactly the
+    # silent-no-op failure that broke B002 in the first place.
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/PlayerbotMgr.cpp"
     local CMAKE_FILE="${AC_CODE_DIR}/modules/mod-playerbots/mod-playerbots.cmake"
     if [[ -f "${FILE}" ]] && ! grep -q "sALE->OnLogin(bot)" "${FILE}"; then
         return 0
@@ -234,6 +241,35 @@ patch_needs_applying_B025() {
     # factory gains the B025 marker once the starter-kit block is injected.
     local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/Factory/PlayerbotFactory.cpp"
     [[ -f "${FILE}" ]] && ! grep -q "B025-vanilla-starter-kit" "${FILE}"
+}
+
+patch_needs_applying_B026() {
+    # B026 edits two files with two independently-guarded halves, so the probe
+    # reports "needs applying" if EITHER witness is missing — mirroring the
+    # apply function, where each half tests its own marker before editing.
+    #
+    # Added 2026-08-07. B026 shipped without a probe, and the consumer in
+    # patches_need_applying() skips any patch that has none
+    # (`declare -F ... || skip`), so B026 silently contributed nothing to the
+    # "do patches need applying?" decision for its whole life. Every other
+    # B-patch from B001 to B027 has one.
+    local ENGINE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/Engine/Engine.cpp"
+    local MGR="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/PlayerbotMgr.cpp"
+    if [[ -f "${ENGINE}" ]] && ! grep -q "B026 dangling-strategy guard" "${ENGINE}"; then
+        return 0
+    fi
+    if [[ -f "${MGR}" ]] && ! grep -q "B026 duplicate-login fix" "${MGR}"; then
+        return 0
+    fi
+    return 1
+}
+
+patch_needs_applying_B027() {
+    # Companion to B026 (same Engine::Init crash site). Witness: Engine.cpp
+    # gains the B027 guard marker once the stale-facade skip is injected. The
+    # paired PlayerbotAIAware.h accessor is applied in the same step.
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/Engine/Engine.cpp"
+    [[ -f "${FILE}" ]] && ! grep -q "B027 stale-facade guard" "${FILE}"
 }
 
 patch_needs_applying_B003() {

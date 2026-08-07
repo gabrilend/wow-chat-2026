@@ -1,22 +1,32 @@
 #!/usr/bin/env bash
 # B002 - Add ALE OnLogin hook to playerbots bot login
 # Issue 306 (was 324): playerbots don't trigger PLAYER_EVENT_ON_LOGIN
+#
+# Retargeted 2026-07-16: upstream moved OnBotLoginInternal (and the old
+# `RemovePlayerFlag(PLAYER_FLAGS_NO_XP_GAIN)` anchor) out of
+# RandomPlayerbotMgr.cpp and into PlayerbotMgr.cpp. The old anchor no longer
+# existed in the file this patch targeted, so the insertion sed silently
+# no-op'd and the ALE OnLogin hook never injected — bots stopped firing the
+# Lua login hook entirely. We now target PlayerbotMgr.cpp and anchor on the
+# "Bot {} logged in" log line at the tail of OnBotLoginInternal, which is the
+# function's last statement and only reached once the bot's AI is confirmed
+# and its master is set (so the bot is fully initialized — Issue 332).
 # Parallelizable: Yes (unique files)
 
 # {{{ patch_B002_playerbots_ale_login_hook
 patch_B002_playerbots_ale_login_hook() {
-    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp"
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/PlayerbotMgr.cpp"
     local CMAKE_FILE="${AC_CODE_DIR}/modules/mod-playerbots/mod-playerbots.cmake"
     [[ ! -f "${FILE}" ]] && return 0
 
-    # Check if patch already applied (look for our hook call)
+    # Idempotent: our hook call is the witness.
     if grep -q "sALE->OnLogin(bot)" "${FILE}"; then
         return 0  # Already patched
     fi
 
     echo "  [B002] mod-playerbots: ALE login hook"
 
-    # Step 1: Create mod-playerbots.cmake to add ALE include directories and MOD_ALE define
+    # Step 1: cmake wiring — add mod-ale include dir + MOD_ALE define.
     if [[ ! -f "${CMAKE_FILE}" ]] || ! grep -q "MOD_ALE_PATH" "${CMAKE_FILE}"; then
         cat > "${CMAKE_FILE}" << 'EOF'
 # mod-playerbots.cmake
@@ -34,46 +44,42 @@ endif()
 EOF
     fi
 
-    # Step 2: Add include for LuaEngine.h
+    # Step 2: include LuaEngine.h (guarded). Anchor on the last project include
+    # in PlayerbotMgr.cpp so the block joins the existing include group. No
+    # leading blank line, so the unpatch deletes a clean marker..#endif range.
     if ! grep -q '#include "LuaEngine.h"' "${FILE}"; then
-        sed -i '/#include "GridNotifiersImpl.h"/a \
-\
+        sed -i '/#include "PlayerbotWorldThreadProcessor.h"/a \
 // ALE Lua engine for login hooks (Issue 306)\
 #ifdef MOD_ALE\
 #include "LuaEngine.h"\
 #endif' "${FILE}"
     fi
 
-    # Step 3: Add sALE->OnLogin(bot) call at END of OnBotLoginInternal
-    sed -i '/bot->RemovePlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);/{
-        n
-        a\
-\
-    // Trigger ALE Lua login hook so Lua scripts can initialize bot behaviors\
-    // This ensures bots are treated identically to real players (Issue 306)\
-    // Placed at END of function so bot is fully initialized (Issue 332)\
+    # Step 3: fire sALE->OnLogin(bot) at the END of OnBotLoginInternal, right
+    # after the "Bot {} logged in" log line (the function's last statement).
+    sed -i '/LOG_INFO("playerbots", "Bot {} logged in"/a \
+    // Trigger ALE Lua login hook so Lua scripts can initialize bot behaviors,\
+    // treating bots identically to real players (Issue 306). Placed at the end\
+    // of OnBotLoginInternal so the bot is fully initialized (Issue 332).\
 #ifdef MOD_ALE\
     sALE->OnLogin(bot);\
-#endif
-    }' "${FILE}"
+#endif' "${FILE}"
 }
 # }}}
 
 # {{{ unpatch_B002_playerbots_ale_login_hook
 unpatch_B002_playerbots_ale_login_hook() {
-    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp"
+    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Bot/PlayerbotMgr.cpp"
     [[ ! -f "${FILE}" ]] && return 0
 
-    # Remove ALE include block
+    # Remove the include block (marker comment through its #endif).
     if grep -q '#include "LuaEngine.h"' "${FILE}"; then
-        sed -i '/\/\/ ALE Lua engine for login hooks/,/#endif.*\/\/ MOD_ALE include/d' "${FILE}"
-        sed -i '/\/\/ ALE Lua engine for login hooks (Issue 306)/,/^#endif$/{ /^#endif$/d; d; }' "${FILE}"
+        sed -i '/\/\/ ALE Lua engine for login hooks (Issue 306)/,/^#endif$/d' "${FILE}"
     fi
 
-    # Remove OnLogin hook call
+    # Remove the OnLogin hook block (marker comment through its #endif).
     if grep -q "sALE->OnLogin(bot)" "${FILE}"; then
-        sed -i '/\/\/ Trigger ALE Lua login hook/,/^#endif.*sALE/d' "${FILE}"
-        sed -i '/Trigger ALE Lua login hook/,/sALE->OnLogin(bot)/{ N; N; N; N; d; }' "${FILE}" 2>/dev/null || true
+        sed -i '/\/\/ Trigger ALE Lua login hook/,/^#endif$/d' "${FILE}"
     fi
 }
 # }}}
