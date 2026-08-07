@@ -31,7 +31,7 @@ the two diverge, the **Notes** column calls out blockers.
 |-------|-------|--------|-------|
 | 103 | configuration-documentation | Completed | docs/configuration.md established. |
 | 104 | lua-script-ownership | Completed | src/lua/ established as project's Lua home. |
-| 110 | concept-catalog-consolidation | Completed | 800-concept reference doc. Indexes everything. |
+| 110 | concept-catalog-consolidation | Reopened | First pass done (1000→800 concepts). Second pass open: CLAUDE.md still duplicates catalog entries 146, 633-634, 638-646. Moved back out of completed/. |
 
 ### Act 3 — Local data substrate
 | Issue | Title | Status | Notes |
@@ -114,6 +114,7 @@ The keystone. Every later build/profile decision derives from 136.
 |-------|-------|--------|-------|
 | 139 | recreate-missing-sql-files | Open | Reconstruct custom SQLs that became orphaned in DB. (was 167) |
 | 140 | branch-based-azerothcore-versioning | Implemented (Superseded) | Original profile-system spec. **Superseded by 136.** Infrastructure still active. (was 201) |
+| 152 | profile-rename-basic-and-expert | Open | vanilla → basic, release → expert, after the OSR D&D box sets. Renames directories, databases, config-patch gates, and the `.profile` switch. 136 gets the new names when it lands. |
 
 ### Act 13 — Vanilla profile (148 cluster)
 The vanilla ruleset (WotLK 3.3.5a, level-40 cap, level-20 start,
@@ -132,11 +133,20 @@ playerbots). Phase-1-tagged as a profile-model slice; tracked here.
 | 148q | vanilla-starting-professions | Open | QoL; generator not built. |
 | 148s | vanilla-playerbots-start-in-148h-kit | Open | Consistency; not built. |
 | 148t | starting-town-racemate-npcs | Open | 148n follow-up; race-flavored town NPC reskins. |
+| 148v | cloned-kit-items-render-invisible | Open (cause known, fix decided) | Fresh mage logs in with no gear on the model and "?" icons. All 51 clones carry their originals' displayid, so the kit SQL is fine — the client has simply never cached entries in the 2000000 range and only fetches item data when an event prompts it. **Decision 2026-08-07: revert to editing the original entries in place**, reversing 148h's clone design. The clones never contained the world-wide retune anyway, since the loot sweep pointed all thirteen tables at them. |
+| 148w | mage-level-20-spell-gap | Open (cause confirmed) | **`PlayerStart.CustomSpells = 0`** in the vanilla worldserver.conf, and `Player::LearnCustomSpells()` returns immediately when it is false. All 717 pretrain rows have never been read, by anything, on any boot. Fix is one config patch. Also corrected 148j's schema section, which documented `race`/`class` columns that do not exist (the table is racemask/classmask bitmasks). |
 | 148g | class-combination-modifier-system | Promoted → 716 | Redirect stub; moves to completed/ when 716 ships. |
 | 148b–f, 148m, 148p | (various) | Declined | Kept in issues/declined/ as record. |
 
 Vanilla cluster: 2 completed (148a, 148i), 4 implemented/live
-(148h/j/k/n), 2 in progress (148, 148o), 4 open, 7 declined/promoted.
+(148h/j/k/n), 2 in progress (148, 148o), 6 open, 7 declined/promoted.
+
+148v and 148w were both found on the same character in the same
+session and are both invisible to `scripts/validate-vanilla-starter-state`,
+which reports all five of its checks passing. That is the more
+interesting finding than either defect: the validator checks that rows
+exist, and both failures are about what the client does with rows that
+do exist. Strengthening it is an implementation step in 148w.
 
 ## Completed: 14/44 (2 Will Not Implement, 4 Superseded, 1 Invalidated, 1 Deferred Low)
 

@@ -1,5 +1,18 @@
 # TONIGHT - Get Alpha Working
 
+> **Archived 2026-08-07 as a historical artifact.** This was a
+> one-evening scratch runbook from the period when the profile model
+> was believed to be `release = wow-chat-1 (vanilla)`. That model is
+> wrong and has been superseded by
+> `issues/136-canonical-profile-definitions.md`, which is the
+> canonical source for what each profile is. `source-release/` and
+> `build-release/` as described below no longer reflect the tree —
+> release and beta share `source-beta/`.
+>
+> `issues/phase-structure.md` (Loose Files — Disposition) called for
+> this move. Kept rather than deleted because the three-tier framing
+> here is the origin of the promotion pipeline that 136 formalized.
+
 ## Three Tiers
 
 ```

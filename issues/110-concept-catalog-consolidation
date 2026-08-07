@@ -2,7 +2,8 @@
 
 **Phase:** 1 (Foundation)
 **Effect:** Context window usage reduced by 36%, faster agent loading
-**Status:** Completed (2026-04-05)
+**Status:** Reopened (2026-08-07) — first pass completed 2026-04-05,
+second pass open. See "Second Pass" at the end of this file.
 
 ---
 
@@ -241,3 +242,96 @@ This issue enables **Phase 1: Foundation** by ensuring:
 The catalog is a critical reference for understanding the codebase. Keeping it lean means agents can initialize faster and spend more context on problem-solving rather than loading documentation.
 
 This is infrastructure work—invisible to players, but essential for developer productivity.
+
+---
+
+# Second Pass — Deduplicate CLAUDE.md Against the Catalog
+
+**Opened:** 2026-08-07
+**Status:** Open
+
+## Source Report (verbatim, 2026-04-02)
+
+> Okay great... Now, can you look at the CLAUDE.md file and the
+> concept-catalogue.md file in docs/ and remove everything from the CLAUDE.md
+> except things that aren't in the concept-catalogue? we're including the
+> concept catalogue, so it doesn't make sense to include concepts twice.
+
+## The Problem This Time
+
+The first pass moved content *out of* the catalog and *into* CLAUDE.md
+— agent instructions, git conventions, the Task-tool guidance. That
+was the right direction for those items, and the lesson recorded above
+still holds: agent instructions are not game concepts.
+
+But the move went one way and nobody swept the other. CLAUDE.md still
+carries game-concept material that the catalog also carries, and both
+files are read at session start, so the duplicated passages are paid
+for twice out of the same context budget.
+
+The overlap is not speculative. Three CLAUDE.md sections have direct
+catalog counterparts:
+
+| CLAUDE.md section | Catalog concept |
+|---|---|
+| Coding Style (Lua) → Vertical Alignment | 633 — Vertical Alignment |
+| Coding Style (Lua) → Dense Math, Few Functions | 634 — Dense Math, Few Functions |
+| Ambush Spawn System → Spawn Interval (Random Walk) | 146 — Random Walk Spawn Interval |
+| Ambush Spawn System → Grace Period | 146 (same entry, second half) |
+| Visual Powerline Mapping (whole section) | 638–646 — Powerline Mapping, Generation, Principles, Skooch, Editor-Rendered |
+
+The CLAUDE.md versions are longer, with worked code examples. The
+catalog versions are one or two lines each. So the duplication is
+lopsided — it is not the same text twice, it is the full treatment and
+the index entry.
+
+## The Question That Decides the Shape
+
+Whether the catalog entry or the CLAUDE.md section is the survivor is
+not obvious, and the answer differs per item.
+
+- **Coding style** is instruction — it tells whoever is writing Lua
+  how to write it. That is CLAUDE.md's job, and a one-line catalog
+  entry cannot substitute for the worked example. Likely outcome:
+  CLAUDE.md keeps it, the catalog entry becomes a pointer.
+- **Ambush spawn constants** are configuration facts that live in
+  `src/lua-beta/ambush.lua` as actual source. Both documents are
+  copies, and copies of numbers go stale. Likely outcome: both point
+  at the source file, and neither restates the values. This also
+  satisfies the project rule against hard-coding statistics into
+  documentation.
+- **Powerline mapping** is a tool specification with its own issue
+  (117). Likely outcome: CLAUDE.md keeps the two-sentence version and
+  points at 117; the catalog keeps its index entries.
+
+## Implementation Steps
+
+1. Read CLAUDE.md section by section and check each against the
+   catalog. The five rows above are the confirmed overlaps; the sweep
+   may find more, and `docs/concept-catalog-2.md` (larger than the
+   original catalog) has not been checked at all.
+2. For each overlap, decide which document owns it using the
+   instruction-versus-concept split: does this text tell someone what
+   to *do*, or does it name something that *exists*? Instructions stay
+   in CLAUDE.md. Named things stay in the catalog.
+3. For anything that is a copy of a value that lives in source, remove
+   the value from both and point at the source file.
+4. Replace the losing copy with a one-line pointer rather than
+   deleting outright, so a reader who looks in the wrong place still
+   gets sent to the right one.
+5. Re-measure both files. The first pass's metric was token count, not
+   line count, and the same applies here.
+
+## Open Questions
+
+- **What is `docs/concept-catalog-2.md` and does it participate?**
+  It is larger than `concept-catalog.md` (3423 lines against 2788) and
+  CLAUDE.md's session-initialization instruction names only the
+  original. If it is a successor, the initialization instruction is
+  pointing at the wrong file and that is a bigger problem than the
+  duplication. If it is a draft, it should say so at the top.
+- **Should CLAUDE.md still be read in full at session start?** The
+  first pass framed the budget as CLAUDE.md plus catalog. If the
+  catalog is the reference and CLAUDE.md is the instruction set, the
+  instruction set is the one that has to be read every time and the
+  reference is the one that could be consulted on demand.

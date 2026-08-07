@@ -393,6 +393,52 @@ step the next reroll still reads the old (736, 1019, 137) from
 the in-memory playercreateinfo cache — UpdateFetcher only fires
 on worldserver boot.
 
+## Findings So Far (2026-07-22 mage reroll)
+
+Two failures came out of the first characters rolled against this
+matrix. Both got their own sub-issues because both are defects in
+systems this pass validates rather than problems with the pass:
+
+- **148v — cloned kit items render invisible.** A fresh mage logged in
+  with no gear on the character model and a red "?" icon in every
+  equipment slot. Manually unequipping and re-equipping each item fixed
+  it permanently. Warriors and paladins rolled on the same client did
+  not show it. This is check 2 of the per-character checklist failing.
+- **148w — mage has no castable spells at level 20.** The same
+  character arrived with effectively an empty spellbook. This is check
+  4 failing.
+
+Both were diagnosed on 2026-08-07 and in both cases **the world-database
+side was correct**. 148v's 51 item clones all carry their originals'
+display IDs; 148w's pretrain table holds 123 rows applicable to the
+exact race and class that failed. Both defects sit downstream of the
+data:
+
+- 148v — the client has never cached entries in the 2000000 range and
+  only fetches item data when an event prompts it, which a server-side
+  first-login equip does not. Resolved by reverting 148h's clones and
+  editing the original entries in place.
+- 148w — `PlayerStart.CustomSpells = 0` in the vanilla config, and
+  `Player::LearnCustomSpells()` returns immediately when that is false.
+  The pretrain table has never been read. Resolved by a config patch.
+
+The part worth carrying forward into the rest of the matrix: **neither
+failure is visible to `scripts/validate-vanilla-starter-state`**, which
+reports all five of its checks passing. The validator asserts that rows
+exist in the world DB; both defects are about whether those rows ever
+reach a character. So a green validator run is not evidence that a
+(race, class) combination is good, and the in-client rows of this
+matrix are carrying more weight than the "data-side validation
+automated" note above implies.
+
+One check the validator *could* absorb cheaply, and which would have
+caught 148w on its own: compare each existing character's
+`character_spell` count against the number of pretrain rows its race
+and class should have matched. That comparison spans the world and
+character databases, which is why it was not in the original
+data-side sweep — but it is the check that turns "the rows exist" into
+"the rows arrived."
+
 ## Open Questions
 
 - **Corpse-at-graveyard with no ghost transition.** The Blood Elf

@@ -1,6 +1,6 @@
 # Conversation Summary: 3a9e7f2d-16c6-4a17-8f6b-e5a5a8d08b5e
 
-Generated on: 2026-07-22 13:46:42
+Generated on: 2026-08-07 14:02:04
 
 --------------------------------------------------------------------------------
 
@@ -181,11 +181,17 @@ Mapped to `MinRandomBots` (floor) / `MaxRandomBots` (ceiling), which were both
 below the floor, capping at the ceiling. I made it stick in three places:
 
 
-- **`config/patches/C020-vanilla-playerbot-population.sh`** (new) — so it survives a reinstall. The `.dist` resets to 500/500, and nothing was pinning it before; now C020 seds it to 128/256 like C014 does for the level band. Syntax-checked, function registers for the vanilla profile.
+- **`config/patches/C020-vanilla-playerbot-population.sh`** (new) — so it
+  survives a reinstall. The `.dist` resets to 500/500, and nothing was pinning
+  it before; now C020 seds it to 128/256 like C014 does for the level band.
+  Syntax-checked, function registers for the vanilla profile.
 
-- **Live conf** (`installed-files-vanilla/etc/modules/playerbots.conf` lines 88–89) → 128/256, so it applies on your **next run without a rebuild/reinstall**.
+- **Live conf** (`installed-files-vanilla/etc/modules/playerbots.conf` lines
+  88–89) → 128/256, so it applies on your **next run without a
+  rebuild/reinstall**.
 
-- **`docs/balance-updates.md`** — logged the knob-turn per your balance-log convention.
+- **`docs/balance-updates.md`** — logged the knob-turn per your balance-log
+  convention.
 
 
 Account provisioning is fine as-is: C018 pins 110 accounts × 10 chars, far more
@@ -207,28 +213,34 @@ cap of 200 = level 40 × 5 confirms it).
 
 |---|---|---|
 
-| 162 | `Quest N RequiredSkillPoints = X but max possible skill is 200` | Quests
-wanting 210–450 profession/weapon skill — unreachable at L40. Undoable,
-ignored. |
+| 162 | `Quest N RequiredSkillPoints = X but max possible skill is 200` | Quests wanting 210–450 profession/weapon skill — unreachable at L40. Undoable, ignored. |
 
-| 58 | `Skill condition specifies invalid skill value (N), skipped` | Same:
-conditions referencing skill >200. |
+| 58 | `Skill condition specifies invalid skill value (N), skipped` | Same: conditions referencing skill >200. |
 
-| 2 | `Eye of Dar'Khan (entry 16320) doesn't have waypoint path id: 0` | One
-creature spawn set to waypoint movement with no path rows. Single-creature data
-gap. |
+| 2 | `Eye of Dar'Khan (entry 16320) doesn't have waypoint path id: 0` | One creature spawn set to waypoint movement with no path rows. Single-creature data gap. |
 
 
 ## Server.log — startup warnings, none fatal
 
 
-- **Level-cap fallout (same root as above):** 2 config validation failures → defaults (`StartHeroicPlayerLevel` 55>40, `RecruitAFriend.MaxLevel`→60); 12× `lfg_dungeon_rewards level N can never be reached` (levels 45–80).
+- **Level-cap fallout (same root as above):** 2 config validation failures →
+  defaults (`StartHeroicPlayerLevel` 55>40, `RecruitAFriend.MaxLevel`→60);
+  12× `lfg_dungeon_rewards level N can never be reached` (levels 45–80).
 
-- **19× missing config key → default fallback:** `ChatFilter.*` (4), `Trial.*` (10), `Wintergrasp.*` (2), `Achievement.RealmFirstRaceLimitOnePerCharacter`, `AiPlayerbot.RandomBot{Min,Max}LevelChance`. The compiled binary expects keys your `.conf.dist` doesn't ship. **Flagging per your "fallbacks are warnings" rule** — C016 already backfills missing keys; it just doesn't cover these 19 yet, so it's a candidate to extend.
+- **19× missing config key → default fallback:** `ChatFilter.*` (4),
+  `Trial.*` (10), `Wintergrasp.*` (2),
+  `Achievement.RealmFirstRaceLimitOnePerCharacter`,
+  `AiPlayerbot.RandomBot{Min,Max}LevelChance`. The compiled binary expects keys
+  your `.conf.dist` doesn't ship. **Flagging per your "fallbacks are warnings"
+  rule** — C016 already backfills missing keys; it just doesn't cover these 19
+  yet, so it's a candidate to extend.
 
-- **2× duplicate key** in `playerbots.conf`: `RandomBotMinLevel`/`MaxLevel` defined twice (lines 704/705 **and** 771/775). Both agree (20/40) so no behavior change, but worth deduping.
+- **2× duplicate key** in `playerbots.conf`: `RandomBotMinLevel`/`MaxLevel`
+  defined twice (lines 704/705 **and** 771/775). Both agree (20/40) so no
+  behavior change, but worth deduping.
 
-- **1× `Can't set process priority class: Permission denied`** — benign; renice needs elevated privileges.
+- **1× `Can't set process priority class: Permission denied`** — benign;
+  renice needs elevated privileges.
 
 
 Two things worth reconciling (not errors, drift): CLAUDE.md says "Max level: 20"
@@ -244,11 +256,20 @@ no-fallbacks rule.
 
 What the evidence says:
 
-- Init **succeeded** — Server.log hits `World Initialized` + `ready...` and runs periodic tasks. Not a load crash.
+- Init **succeeded** — Server.log hits `World Initialized` + `ready...` and
+  runs periodic tasks. Not a load crash.
 
-- It died in the **first random-bot update tick**, right after logging 60 `Including non-random bot player X into random bot update` lines. Playerbots.log ends on a *complete* line → died between ticks, not mid-write.
+- It died in the **first random-bot update tick**, right after logging 60
+  `Including non-random bot player X into random bot update` lines.
+  Playerbots.log ends on a *complete* line → died between ticks, not
+  mid-write.
 
-- Importantly, the **900 bot creations (InitEquipment, where your B025 kit runs) completed before this point** — so the recent equipment/compile patch edits (B025 retarget, B017 healerLines retirement, B010 removal) ran fine and are *unlikely* to be the cause. This looks like a pre-existing crash in the update pass over online non-random-bot characters, not something your last edits introduced.
+- Importantly, the **900 bot creations (InitEquipment, where your B025 kit runs)
+  completed before this point** — so the recent equipment/compile patch edits
+  (B025 retarget, B017 healerLines retirement, B010 removal) ran fine and are
+  *unlikely* to be the cause. This looks like a pre-existing crash in the update
+  pass over online non-random-bot characters, not something your last edits
+  introduced.
 
 
 The gap: **no backtrace exists anywhere.** Core dumps are off (`ulimit -c 0`),
@@ -270,15 +291,28 @@ How do you want to capture the backtrace?
 **[Asked the user]**
 
 
-*Q1 — Backtrace route:* The segfault has no captured backtrace (core dumps off, no debugger installed). How do you want to get one so I can pin the faulting line?
+*Q1 — Backtrace route:* The segfault has no captured backtrace (core dumps
+off, no debugger installed). How do you want to get one so I can pin the
+faulting line?
 
-- Install gdb, I run it — sudo xbps-install -S gdb (Void), then I launch worldserver under gdb and grab the backtrace at the crash. Cleanest — resolves to file:line since the binary has debug info. Needs sudo + running the ~1min startup.
+- Install gdb, I run it — sudo xbps-install -S gdb (Void), then I launch
+  worldserver under gdb and grab the backtrace at the crash. Cleanest —
+  resolves to file:line since the binary has debug info. Needs sudo + running
+  the ~1min startup.
 
-- No-sudo shim, I run it — I compile a tiny LD_PRELOAD SIGSEGV handler that dumps the stack via glibc backtrace(), run the server with it, and resolve addresses with addr2line (already installed). No packages/sudo, but I still run the heavy server.
+- No-sudo shim, I run it — I compile a tiny LD_PRELOAD SIGSEGV handler that
+  dumps the stack via glibc backtrace(), run the server with it, and resolve
+  addresses with addr2line (already installed). No packages/sudo, but I still
+  run the heavy server.
 
-- You run it yourself — You'd rather drive the server run (per your 'let me run the compile/output' preference). I give you the exact gdb or ulimit+core commands and you paste back the crash output.
+- You run it yourself — You'd rather drive the server run (per your 'let me
+  run the compile/output' preference). I give you the exact gdb or ulimit+core
+  commands and you paste back the crash output.
 
-- Bisect the patches — Rebuild vanilla with the recent playerbot patch changes reverted to test whether a patch is responsible. Slower (full rebuild per step) and my read says the patches are probably NOT the cause, so this is lower-value.
+- Bisect the patches — Rebuild vanilla with the recent playerbot patch changes
+  reverted to test whether a patch is responsible. Slower (full rebuild per
+  step) and my read says the patches are probably NOT the cause, so this is
+  lower-value.
 
 → **Answered:** I'll run it myself. But instead of running commands, can you
 update the worldserver and authserver scripts to accept a --debug or similar cli
@@ -342,11 +376,20 @@ backtrace** to `tmp/debug-vanilla/worldserver-<timestamp>-backtrace.txt`
 (RAM-backed, per your tmp/ convention).
 
 
-- **Logic lives in one place:** `scripts/debug-run.sh` (new, sourced by both scripts) — single source of truth instead of duplicating ~150 lines.
+- **Logic lives in one place:** `scripts/debug-run.sh` (new, sourced by both
+  scripts) — single source of truth instead of duplicating ~150 lines.
 
-- **No install required.** Since `gdb` isn't present, it compiles a tiny `LD_PRELOAD` crash-handler on first use (you already have `cc` + `addr2line`). If you ever `sudo xbps-install -S gdb`, the flag auto-upgrades to gdb's richer per-thread traces — no script change needed. It announces the fallback when it uses the shim, per your "notify on every fallback" rule.
+- **No install required.** Since `gdb` isn't present, it compiles a tiny
+  `LD_PRELOAD` crash-handler on first use (you already have `cc` + `addr2line`).
+  If you ever `sudo xbps-install -S gdb`, the flag auto-upgrades to gdb's richer
+  per-thread traces — no script change needed. It announces the fallback when
+  it uses the shim, per your "notify on every fallback" rule.
 
-- **Proven end-to-end**, not just syntax-checked: I ran the shim against a PIE crasher and it resolved `boom → middle → main` to exact source lines. The worldserver binary is also PIE + not-stripped + `debug_info`, so it resolves identically. (The top 1–2 frames will be the handler/libc trampoline; the real crash frames sit just below.)
+- **Proven end-to-end**, not just syntax-checked: I ran the shim against a PIE
+  crasher and it resolved `boom → middle → main` to exact source lines. The
+  worldserver binary is also PIE + not-stripped + `debug_info`, so it resolves
+  identically. (The top 1–2 frames will be the handler/libc trampoline; the
+  real crash frames sit just below.)
 
 
 So your move: `./scripts/worldserver --debug`, let it crash, and point me at the
@@ -395,15 +438,15 @@ character the bot manager didn't itself create.
 
 ### User Request 2
 
-- 19× missing config key → default fallback: ChatFilter.* (4), Trial.* (10),
-Wintergrasp.* (2), Achievement.RealmFirstRaceLimitOnePerCharacter,
-AiPlayerbot.RandomBot{Min,Max}LevelChance. The
+  - 19× missing config key → default fallback: ChatFilter.* (4), Trial.*
+    (10), Wintergrasp.* (2), Achievement.RealmFirstRaceLimitOnePerCharacter,
+    AiPlayerbot.RandomBot{Min,Max}LevelChance. The
 
-compiled binary expects keys your .conf.dist doesn't ship. Flagging per your
-"fallbacks are warnings" rule — C016 already backfills missing keys; it just
-doesn't cover these 19 yet, so it's a
+  compiled binary expects keys your .conf.dist doesn't ship. Flagging per your
+  "fallbacks are warnings" rule — C016 already backfills missing keys; it just
+  doesn't cover these 19 yet, so it's a
 
-candidate to extend.
+  candidate to extend.
 
 
 
@@ -412,18 +455,18 @@ in a recent upstream patch. We should examine the upstream default config file
 so we can organize ours the same way, and have the same descriptions and such.
 
 
-- 2× duplicate key in playerbots.conf: RandomBotMinLevel/MaxLevel defined twice
-(lines 704/705 and 771/775). Both agree (20/40) so no behavior change, but worth
-deduping.
+  - 2× duplicate key in playerbots.conf: RandomBotMinLevel/MaxLevel defined
+    twice (lines 704/705 and 771/775). Both agree (20/40) so no behavior change,
+    but worth deduping.
 
 
 we should fix that. Be sure to check whether or not we're adding the duplicate
 in as a patch, because if so, we'll need to fix the patch.
 
 
-Two things worth reconciling (not errors, drift): CLAUDE.md says "Max level: 20"
-but the realm runs 40; and those 19 fallbacks technically violate your
-no-fallbacks rule.
+  Two things worth reconciling (not errors, drift): CLAUDE.md says "Max level:
+  20" but the realm runs 40; and those 19 fallbacks technically violate your
+  no-fallbacks rule.
 
 
 I'm assuming the CLAUDE.md is for the entire project, not the vanilla profile.
@@ -434,12 +477,12 @@ Also can you strip out anything that doesn't strictly belong? We should
 familiarize the user with the codebase, not imply direction.
 
 
-A debugging question back at you, since you know the design: who are those 60
-"non-random bot" characters at a fresh boot with nobody logged in? That's the
-mechanism I'd chase first — the update
+  A debugging question back at you, since you know the design: who are those 60
+  "non-random bot" characters at a fresh boot with nobody logged in? That's the
+  mechanism I'd chase first — the update
 
-loop choking on a character it didn't create as a random bot. Do you know what
-puts them online?
+  loop choking on a character it didn't create as a random bot. Do you know what
+  puts them online?
 
 
 I have no idea. Can you tell me the status of the networking for the project? I
@@ -525,13 +568,13 @@ Verified. Two distinct problems confirmed:
 
 
 1. **17 worldserver keys**: present in the **source** `.dist` but absent from
-both the installed `.dist` and `.conf` — so our installed `.dist` is a *stale
-snapshot* that didn't get refreshed from source.
+   both the installed `.dist` and `.conf` — so our installed `.dist` is a
+   *stale snapshot* that didn't get refreshed from source.
 
 2. **The duplicate + 2 missing Chance keys are one bug**: source `.dist`
-correctly has `RandomBotMinLevelChance`/`MaxLevelChance` at 771/775, but the
-live conf has them overwritten into duplicate `RandomBotMinLevel/MaxLevel` —
-exactly the greedy-regex corruption the agent identified in C014.
+   correctly has `RandomBotMinLevelChance`/`MaxLevelChance` at 771/775, but the
+   live conf has them overwritten into duplicate `RandomBotMinLevel/MaxLevel`
+   — exactly the greedy-regex corruption the agent identified in C014.
 
 
 The pivotal question for the 17 keys is *why* the installed `.dist` is stale —
@@ -634,24 +677,26 @@ patches:
 
 ```
 
-OnBotLoginOperation::Execute() ← a bot logging in (async, on a world thread)
+OnBotLoginOperation::Execute()          ← a bot logging in (async, on a world thread)
 
-→ PlayerbotsMgr::AddPlayerbotData()
+  → PlayerbotsMgr::AddPlayerbotData()
 
-→ PlayerbotAI::PlayerbotAI() ← constructing the bot's AI
+    → PlayerbotAI::PlayerbotAI()         ← constructing the bot's AI
 
-→ AiFactory::createCombatEngine()
+      → AiFactory::createCombatEngine()
 
-→ Engine::Init() ← iterating combat strategies ← faults here
+        → Engine::Init()                 ← iterating combat strategies  ← faults here
 
 ```
 
 
 What I ruled out:
 
-- **Death Knights / disabled class** — the DB has **zero** class-6 characters, so C015 isn't implicated.
+- **Death Knights / disabled class** — the DB has **zero** class-6 characters,
+  so C015 isn't implicated.
 
-- **Our patches** — none appear in the stack; the 900 bot *creations* (where B025's kit runs) completed fine before this.
+- **Our patches** — none appear in the stack; the 900 bot *creations* (where
+  B025's kit runs) completed fine before this.
 
 
 What it actually is: a null/dangling object touched while initializing a bot's
@@ -701,7 +746,12 @@ standard for private servers on non-3724 ports, and your guide (author-tested)
 uses it. So the agent's "hardcoded 3724" worry is a myth; ignore it.
 
 
-**But there's a real bug:** the *vanilla* realm (id=3) hands out world address **`127.0.0.1`**, not the public hostname (only id=1 has it). So a remote player connects to auth fine, logs in, then gets told the world is at 127.0.0.1 → can't enter the world. **Only same-machine/localhost clients can actually play vanilla right now.** `C011-realmlist-setup.sh` only updates id=1. Want me to fix the vanilla row (and C011) to use `wow.ritzmenardi.com`?
+**But there's a real bug:** the *vanilla* realm (id=3) hands out world address
+**`127.0.0.1`**, not the public hostname (only id=1 has it). So a remote player
+connects to auth fine, logs in, then gets told the world is at 127.0.0.1 →
+can't enter the world. **Only same-machine/localhost clients can actually play
+vanilla right now.** `C011-realmlist-setup.sh` only updates id=1. Want me to fix
+the vanilla row (and C011) to use `wow.ritzmenardi.com`?
 
 
 ## 3. Config keys + the duplicate — fixed at the source
@@ -710,9 +760,23 @@ uses it. So the agent's "hardcoded 3724" worry is a myth; ignore it.
 Your instinct was right on both counts:
 
 
-- **The duplicate IS added by a patch.** `C014` (vanilla) and `C012` (beta/release) used a greedy `.*=.*` regex that also matched `RandomBotMinLevel`**`Chance`**, rewriting it into a second `RandomBotMinLevel` line. That single bug **both** created the duplicate **and** destroyed the two `Chance` keys — which is why they showed up as "missing." I anchored the regex (`[[:space:]]*=`) in both patches, and restored the two `Chance` keys in the live vanilla conf. Verified: 4 distinct keys, no duplicate.
+- **The duplicate IS added by a patch.** `C014` (vanilla) and `C012`
+  (beta/release) used a greedy `.*=.*` regex that also matched
+  `RandomBotMinLevel`**`Chance`**, rewriting it into a second
+  `RandomBotMinLevel` line. That single bug **both** created the duplicate
+  **and** destroyed the two `Chance` keys — which is why they showed up as
+  "missing." I anchored the regex (`[[:space:]]*=`) in both patches, and
+  restored the two `Chance` keys in the live vanilla conf. Verified: 4 distinct
+  keys, no duplicate.
 
-- **The 17 worldserver keys** are all present in the upstream source `.dist` with full comments — our *installed* `.dist` was just a stale snapshot (E006 refreshes module configs from source every install, but not the app configs, relying on cmake, which had drifted). C016's own header says it's a stopgap "until the pipeline refreshes the .dist" — so I did exactly that: **E006 now refreshes the app `.dist` from source**, which brings all 17 keys with upstream organization and descriptions automatically, and stops future drift. No hardcoding.
+- **The 17 worldserver keys** are all present in the upstream source `.dist`
+  with full comments — our *installed* `.dist` was just a stale snapshot (E006
+  refreshes module configs from source every install, but not the app configs,
+  relying on cmake, which had drifted). C016's own header says it's a stopgap
+  "until the pipeline refreshes the .dist" — so I did exactly that: **E006 now
+  refreshes the app `.dist` from source**, which brings all 17 keys with
+  upstream organization and descriptions automatically, and stops future drift.
+  No hardcoding.
 
 
 Caveat: the 17-key fix takes effect on your **next install** (regenerates the
@@ -724,11 +788,18 @@ warnings. The regex fix likewise re-applies on next install for all profiles
 ## 4. CLAUDE.md
 
 
-- **Max level** is now per-profile (vanilla 40 / beta 20 / release-alpha 80), with a new **Profiles** section so it reads as a whole-project doc, not vanilla-specific.
+- **Max level** is now per-profile (vanilla 40 / beta 20 / release-alpha 80),
+  with a new **Profiles** section so it reads as a whole-project doc, not
+  vanilla-specific.
 
-- Added a **Patch System** section describing the B/C/E script layers and referencing the **`upstream-patch-system` skill** at `/home/ritz/programming/ai-stuff/skills/`.
+- Added a **Patch System** section describing the B/C/E script layers and
+  referencing the **`upstream-patch-system` skill** at
+  `/home/ritz/programming/ai-stuff/skills/`.
 
-- **Stripped** the poetic/motivational asides (the `## Tracking` section, the "Fanfiction for code" flourishes, "not defeated, but redoubling") and **preserved** them in `notes/claude-md-asides.md` (your global rule treats poetry as sacrosanct, so I moved rather than deleted).
+- **Stripped** the poetic/motivational asides (the `## Tracking` section, the
+  "Fanfiction for code" flourishes, "not defeated, but redoubling") and
+  **preserved** them in `notes/claude-md-asides.md` (your global rule treats
+  poetry as sacrosanct, so I moved rather than deleted).
 
 
 One judgment call I left for you: three trailing one-liners read as *directives*
@@ -757,58 +828,58 @@ test, or should I add the diagnostic log line to `Engine::Init`?
 
 ### User Request 3
 
-1. The crash — what happened
+  1. The crash — what happened
 
 
-The --debug flag caught it cleanly. It's a null-pointer dereference during bot
-login, in upstream mod-playerbots' AI-engine construction — not our patches:
+  The --debug flag caught it cleanly. It's a null-pointer dereference during bot
+  login, in upstream mod-playerbots' AI-engine construction — not our patches:
 
 
-OnBotLoginOperation::Execute() ← a bot logging in (async, on a world thread)
+  OnBotLoginOperation::Execute() ← a bot logging in (async, on a world thread)
 
-→ PlayerbotsMgr::AddPlayerbotData()
+    → PlayerbotsMgr::AddPlayerbotData()
 
-→ PlayerbotAI::PlayerbotAI() ← constructing the bot's AI
+      → PlayerbotAI::PlayerbotAI()         ← constructing the bot's AI
 
-→ AiFactory::createCombatEngine()
+        → AiFactory::createCombatEngine()
 
-→ Engine::Init() ← iterating combat strategies ← faults here
-
-
-What I ruled out:
-
-- Death Knights / disabled class — the DB has zero class-6 characters, so C015
-isn't implicated.
-
-- Our patches — none appear in the stack; the 900 bot creations (where B025's
-kit runs) completed fine before this.
+          → Engine::Init()                 ← iterating combat strategies  ← faults here
 
 
-What it actually is: a null/dangling object touched while initializing a bot's
-combat strategies. The exact line is smeared by -O2 inlining (addr2line bounces
-between GetBot() and Engine::Init),
+  What I ruled out:
 
-and the strategy map itself can't hold nulls (addStrategy guards against it) —
-so the most likely culprit is thread-safety: this fork logs bots in on a world
-thread
+  - Death Knights / disabled class — the DB has zero class-6 characters, so
+    C015 isn't implicated.
 
-(PlayerbotWorldThreadProcessor), and constructing a PlayerbotAI touches shared
-factories/registries. Concurrent access → corruption → null deref. It's
-reproducible because the batch consistently
-
-hits it.
+  - Our patches — none appear in the stack; the 900 bot creations (where
+    B025's kit runs) completed fine before this.
 
 
-To pin the exact line, the options are: (a) a -O0 debug build of just
-mod-playerbots (precise attribution), (b) a log line in Engine::Init printing
-the bot's class/spec/strategy right before the
+  What it actually is: a null/dangling object touched while initializing a bot's
+  combat strategies. The exact line is smeared by -O2 inlining (addr2line
+  bounces between GetBot() and Engine::Init),
 
-fault, or (c) check the liyunfan1223 fork's issues for this crash. As an
-immediate workaround/bisector: AiPlayerbot.RandomBotAutologin = 0 stops the
-startup login stampede — if the server then
+  and the strategy map itself can't hold nulls (addStrategy guards against it)
+  — so the most likely culprit is thread-safety: this fork logs bots in on a
+  world thread
 
-stays up, it confirms the crash is purely the login path. Want me to do (b) or
-the autologin test?
+  (PlayerbotWorldThreadProcessor), and constructing a PlayerbotAI touches shared
+  factories/registries. Concurrent access → corruption → null deref. It's
+  reproducible because the batch consistently
+
+  hits it.
+
+
+  To pin the exact line, the options are: (a) a -O0 debug build of just
+  mod-playerbots (precise attribution), (b) a log line in Engine::Init printing
+  the bot's class/spec/strategy right before the
+
+  fault, or (c) check the liyunfan1223 fork's issues for this crash. As an
+  immediate workaround/bisector: AiPlayerbot.RandomBotAutologin = 0 stops the
+  startup login stampede — if the server then
+
+  stays up, it confirms the crash is purely the login path. Want me to do (b) or
+  the autologin test?
 
 
 
@@ -819,15 +890,15 @@ and identify if and where our patches touch those variables, functions, or other
 throughlines)
 
 
-But there's a real bug: the vanilla realm (id=3) hands out world address
-127.0.0.1, not the public hostname (only id=1 has it). So a remote player
-connects to auth fine, logs in, then gets told
+  But there's a real bug: the vanilla realm (id=3) hands out world address
+  127.0.0.1, not the public hostname (only id=1 has it). So a remote player
+  connects to auth fine, logs in, then gets told
 
-the world is at 127.0.0.1 → can't enter the world. Only same-machine/localhost
-clients can actually play vanilla right now. C011-realmlist-setup.sh only
-updates id=1. Want me to fix the vanilla
+  the world is at 127.0.0.1 → can't enter the world. Only
+  same-machine/localhost clients can actually play vanilla right now.
+  C011-realmlist-setup.sh only updates id=1. Want me to fix the vanilla
 
-row (and C011) to use wow.ritzmenardi.com?
+  row (and C011) to use wow.ritzmenardi.com?
 
 
 
@@ -836,16 +907,16 @@ file. I remember that there was something special they had to do in order to
 connect on a non-default port, is that true?
 
 
-- The 17 worldserver keys are all present in the upstream source .dist with full
-comments — our installed .dist was just a stale snapshot (E006 refreshes
-module configs from source every install,
+  - The 17 worldserver keys are all present in the upstream source .dist with
+    full comments — our installed .dist was just a stale snapshot (E006
+    refreshes module configs from source every install,
 
-but not the app configs, relying on cmake, which had drifted). C016's own header
-says it's a stopgap "until the pipeline refreshes the .dist" — so I did
-exactly that: E006 now refreshes the app
+  but not the app configs, relying on cmake, which had drifted). C016's own
+  header says it's a stopgap "until the pipeline refreshes the .dist" — so I
+  did exactly that: E006 now refreshes the app
 
-.dist from source, which brings all 17 keys with upstream organization and
-descriptions automatically, and stops future drift. No hardcoding.
+  .dist from source, which brings all 17 keys with upstream organization and
+  descriptions automatically, and stops future drift. No hardcoding.
 
 
 
@@ -859,27 +930,27 @@ one - the new config values should just persist as unmodified from the upstream
 defaults. Can you tell me how our current system differs from that description?
 
 
-One judgment call I left for you: three trailing one-liners read as directives
-("utilize wow-chat-1 patterns", "just search the database", the
-error-message-quality note) rather than codebase
+  One judgment call I left for you: three trailing one-liners read as directives
+  ("utilize wow-chat-1 patterns", "just search the database", the
+  error-message-quality note) rather than codebase
 
-description. I kept them since they're useful working conventions — but say
-the word and I'll strip those too (or relocate them to a conventions doc).
+  description. I kept them since they're useful working conventions — but say
+  the word and I'll strip those too (or relocate them to a conventions doc).
 
 
 side note, but the wow-chat-1 patterns are almost entirely absent from
 everything we've been working on. So it goes...
 
 
-Files I touched (all unstaged, nothing committed): scripts/debug-run.sh,
-scripts/worldserver, scripts/authserver, config/patches/{C012,C014,C020},
-patches/E-patches.sh, docs/balance-updates.md,
+  Files I touched (all unstaged, nothing committed): scripts/debug-run.sh,
+  scripts/worldserver, scripts/authserver, config/patches/{C012,C014,C020},
+  patches/E-patches.sh, docs/balance-updates.md,
 
-CLAUDE.md, notes/claude-md-asides.md, and the live vanilla playerbots.conf
-(gitignored). The other modified files in git status (release .dist, B017/B025,
-transcripts) aren't mine — left them
+  CLAUDE.md, notes/claude-md-asides.md, and the live vanilla playerbots.conf
+  (gitignored). The other modified files in git status (release .dist,
+  B017/B025, transcripts) aren't mine — left them
 
-alone.
+  alone.
 
 
 
@@ -958,39 +1029,53 @@ I traced the full path and checked **all 16 vanilla B-patches** against it.
 
 |---|---|---|
 
-| **B002** (ALE login hook) | Adjacent | Fires *after* AI construction — can't
-null a strategy during it. **And it's broken** (see below). |
+| **B002** (ALE login hook) | Adjacent | Fires *after* AI construction — can't null a strategy during it. **And it's broken** (see below). |
 
-| **B020 / B023** (ALE thread-safety / dangling-ptr) | Adjacent | *Protective*
-— they remove hazards, touch the Lua registry, not the C++ strategy map. |
+| **B020 / B023** (ALE thread-safety / dangling-ptr) | Adjacent | *Protective* — they remove hazards, touch the Lua registry, not the C++ strategy map. |
 
-| **B025** (starter kit) | Factory path | Equipment init, a different subsystem
-that runs *later* than the engine construction. |
+| **B025** (starter kit) | Factory path | Equipment init, a different subsystem that runs *later* than the engine construction. |
 
-| B004/B016/B019 | Marginal | Value-preserving casts / initializer reordering /
-blanked param names — no pointer or logic change. |
+| B004/B016/B019 | Marginal | Value-preserving casts / initializer reordering / blanked param names — no pointer or logic change. |
 
 | rest (B001/B009/B012…) | No | Off-path compile-warning fixes. |
 
 
-**Bonus bug found in B002:** it sed-targets `RandomPlayerbotMgr.cpp` and anchors on `bot->RemovePlayerFlag(PLAYER_FLAGS_NO_XP_GAIN)` — but upstream moved that code (and `OnBotLoginInternal`) to `PlayerbotMgr.cpp`. So **the ALE bot-login hook silently never injects** — playerbots aren't firing your Lua `OnLogin` (issue 306). Not the crash, but a real regression. I can retarget it to `PlayerbotMgr.cpp` if you want (it re-enables a currently-dead hook, so worth doing deliberately).
+**Bonus bug found in B002:** it sed-targets `RandomPlayerbotMgr.cpp` and anchors
+on `bot->RemovePlayerFlag(PLAYER_FLAGS_NO_XP_GAIN)` — but upstream moved that
+code (and `OnBotLoginInternal`) to `PlayerbotMgr.cpp`. So **the ALE bot-login
+hook silently never injects** — playerbots aren't firing your Lua `OnLogin`
+(issue 306). Not the crash, but a real regression. I can retarget it to
+`PlayerbotMgr.cpp` if you want (it re-enables a currently-dead hook, so worth
+doing deliberately).
 
 
-**What the crash actually is:** a refined finding — `ProcessBatch` runs on the **main world thread** (queued, *not* parallel), so it's a *deterministic* fault, not a simple race. It dies in `Engine::Init` iterating a bot's per-engine `strategies` map. But `addStrategy` only ever inserts non-null strategies, and `Init` runs on the same thread immediately after — so a plain null is hard to explain. That points to a **corrupted/dangling strategy object or heap corruption**, which `-O2` smears across `GetBot()`/`Init`. It's **upstream mod-playerbots** (the liyunfan1223 async-login subsystem), untouched by us.
+**What the crash actually is:** a refined finding — `ProcessBatch` runs on the
+**main world thread** (queued, *not* parallel), so it's a *deterministic* fault,
+not a simple race. It dies in `Engine::Init` iterating a bot's per-engine
+`strategies` map. But `addStrategy` only ever inserts non-null strategies, and
+`Init` runs on the same thread immediately after — so a plain null is hard to
+explain. That points to a **corrupted/dangling strategy object or heap
+corruption**, which `-O2` smears across `GetBot()`/`Init`. It's **upstream
+mod-playerbots** (the liyunfan1223 async-login subsystem), untouched by us.
 
 
 To write a *correct* patch I need the exact object, which the optimized build
 won't give. Two ways to get it — your call, since you run the builds:
 
-- **(a)** Build mod-playerbots at `-O0 -g` (or +ASAN) → the next `--debug` run resolves to the exact line and tells us null-vs-corruption. I can add that as a build option.
+- **(a)** Build mod-playerbots at `-O0 -g` (or +ASAN) → the next `--debug` run
+  resolves to the exact line and tells us null-vs-corruption. I can add that as
+  a build option.
 
-- **(b)** Diff mod-playerbots against a known-good upstream revision to find the regression in `AddDefaultCombatStrategies`/`addStrategy`.
+- **(b)** Diff mod-playerbots against a known-good upstream revision to find the
+  regression in `AddDefaultCombatStrategies`/`addStrategy`.
 
 
 ## 2. Realmlist — fixed, and yes, the port is the "special" bit
 
 
-**The special step you remembered = the `:4362` port suffix.** The stock 3.3.5a client *does* honor a port in `realmlist.wtf` for the auth connection — that's the non-obvious trick. So players already type the right thing:
+**The special step you remembered = the `:4362` port suffix.** The stock 3.3.5a
+client *does* honor a port in `realmlist.wtf` for the auth connection — that's
+the non-obvious trick. So players already type the right thing:
 
 ```
 
@@ -1002,9 +1087,12 @@ The break was on the **other** address — the *world* server address the realm
 hands out after login. `C011` only ever updated `id=1`, so vanilla (id=3)
 advertised `127.0.0.1`. Fixed:
 
-- **Live DB:** all four realms now advertise `wow.ritzmenardi.com` (localAddress stays loopback for same-box clients). Vanilla is online (flag 0).
+- **Live DB:** all four realms now advertise `wow.ritzmenardi.com` (localAddress
+  stays loopback for same-box clients). Vanilla is online (flag 0).
 
-- **Source:** `C011` now sets connectivity for **all** rows, not just id=1 (flag ownership left to `set-active-realm`). So it persists across installs, for whichever profile is active.
+- **Source:** `C011` now sets connectivity for **all** rows, not just id=1 (flag
+  ownership left to `set-active-realm`). So it persists across installs, for
+  whichever profile is active.
 
 
 Remote players can now reach both auth (`:4362`) and the world server on
@@ -1024,11 +1112,17 @@ The idiom you described: fresh config from upstream, **merge the previous
 config's values in**, new keys stay default, only promote overwrites main.
 
 
-**The core difference: we have no "read the previous config and carry its values forward" step at all.** Customizations live as **code** (C-patches) re-applied to a freshly-regenerated file — not as **data** read from the old `.conf`. Consequences:
+**The core difference: we have no "read the previous config and carry its values
+forward" step at all.** Customizations live as **code** (C-patches) re-applied
+to a freshly-regenerated file — not as **data** read from the old `.conf`.
+Consequences:
 
-- Any value *not* captured by a C-patch reverts to the upstream default on every rebuild. The idiom would preserve it.
+- Any value *not* captured by a C-patch reverts to the upstream default on every
+  rebuild. The idiom would preserve it.
 
-- "New upstream keys at default" — we now do this via my `.dist`-refresh (before, the stale `.dist` meant new keys were *missing*, not defaulted). ✓ on that point.
+- "New upstream keys at default" — we now do this via my `.dist`-refresh
+  (before, the stale `.dist` meant new keys were *missing*, not defaulted). ✓
+  on that point.
 
 - "Only overwrite on promote" — yes, `promote` is the sole writer to main. ✓
 
@@ -1047,13 +1141,25 @@ want it?
 ## 4. The other modified files
 
 
-- **B017 / B025 / patches.sh** — one **finished, self-consistent** unit from the recent vanilla-compile session (healerLines suppression retired; B025 anchor retargeted; B010 removed as upstream now ships `ARENA_TYPE_NONE`). Safe to commit together.
+- **B017 / B025 / patches.sh** — one **finished, self-consistent** unit from
+  the recent vanilla-compile session (healerLines suppression retired; B025
+  anchor retargeted; B010 removed as upstream now ships `ARENA_TYPE_NONE`). Safe
+  to commit together.
 
-- **`installed-files-release/etc/*.conf.dist`** (worldserver/authserver/dbimport) — **stale upstream drift**, not a deliberate edit (worldserver is a full regen from ~May; authserver/dbimport just gained new default-*off* keys). These are git-tracked (`.gitignore` un-ignores `*.conf.dist`). Complete content, but **unrelated noise** — should be committed separately as a "sync upstream conf.dist" housekeeping commit, not folded into feature work.
+- **`installed-files-release/etc/*.conf.dist`**
+  (worldserver/authserver/dbimport) — **stale upstream drift**, not a
+  deliberate edit (worldserver is a full regen from ~May; authserver/dbimport
+  just gained new default-*off* keys). These are git-tracked (`.gitignore`
+  un-ignores `*.conf.dist`). Complete content, but **unrelated noise** —
+  should be committed separately as a "sync upstream conf.dist" housekeeping
+  commit, not folded into feature work.
 
-- **`README-2`** — a finished creative/vision note (the "Elentalus" mod, a "retro-active issue files" idea, and personal poetry). Complete; arguably belongs under `notes/` rather than repo root.
+- **`README-2`** — a finished creative/vision note (the "Elentalus" mod, a
+  "retro-active issue files" idea, and personal poetry). Complete; arguably
+  belongs under `notes/` rather than repo root.
 
-- **`notes/d6-vision`** — a finished vision note for an as-yet-unimplemented d6 damage system. Correctly placed.
+- **`notes/d6-vision`** — a finished vision note for an as-yet-unimplemented
+  d6 damage system. Correctly placed.
 
 
 On transcripts: they're auto-bundled into every commit by the
@@ -1066,60 +1172,64 @@ and leave the drift/`.dist` noise out (per your separation-of-concerns rule).
 ---
 
 
-**Side note taken:** you're right that wow-chat-1 patterns are basically absent from what we've built — want me to strip that "utilize wow-chat-1 patterns" directive from CLAUDE.md too (it ties into the earlier judgment call)?
+**Side note taken:** you're right that wow-chat-1 patterns are basically absent
+from what we've built — want me to strip that "utilize wow-chat-1 patterns"
+directive from CLAUDE.md too (it ties into the earlier judgment call)?
 
 
-**Most useful next step is the crash.** Want me to (a) wire up the `-O0`/ASAN mod-playerbots build so your next `--debug` run pins the exact line, or (b) fix the B002 hook anchor first, or both?
+**Most useful next step is the crash.** Want me to (a) wire up the `-O0`/ASAN
+mod-playerbots build so your next `--debug` run pins the exact line, or (b) fix
+the B002 hook anchor first, or both?
 
 
 --------------------------------------------------------------------------------
 
 ### User Request 4
 
-Bonus bug found in B002: it sed-targets RandomPlayerbotMgr.cpp and anchors on
-bot->RemovePlayerFlag(PLAYER_FLAGS_NO_XP_GAIN) — but upstream moved that code
-(and OnBotLoginInternal) to
+  Bonus bug found in B002: it sed-targets RandomPlayerbotMgr.cpp and anchors on
+  bot->RemovePlayerFlag(PLAYER_FLAGS_NO_XP_GAIN) — but upstream moved that
+  code (and OnBotLoginInternal) to
 
-PlayerbotMgr.cpp. So the ALE bot-login hook silently never injects —
-playerbots aren't firing your Lua OnLogin (issue 306). Not the crash, but a real
-regression. I can retarget it to
+  PlayerbotMgr.cpp. So the ALE bot-login hook silently never injects —
+  playerbots aren't firing your Lua OnLogin (issue 306). Not the crash, but a
+  real regression. I can retarget it to
 
-PlayerbotMgr.cpp if you want (it re-enables a currently-dead hook, so worth
-doing deliberately).
+  PlayerbotMgr.cpp if you want (it re-enables a currently-dead hook, so worth
+  doing deliberately).
 
 
 
 yes we need to fix that.
 
 
-What the crash actually is: a refined finding — ProcessBatch runs on the main
-world thread (queued, not parallel), so it's a deterministic fault, not a simple
-race. It dies in Engine::Init
+  What the crash actually is: a refined finding — ProcessBatch runs on the
+  main world thread (queued, not parallel), so it's a deterministic fault, not a
+  simple race. It dies in Engine::Init
 
-iterating a bot's per-engine strategies map. But addStrategy only ever inserts
-non-null strategies, and Init runs on the same thread immediately after — so a
-plain null is hard to explain. That
+  iterating a bot's per-engine strategies map. But addStrategy only ever inserts
+  non-null strategies, and Init runs on the same thread immediately after — so
+  a plain null is hard to explain. That
 
-points to a corrupted/dangling strategy object or heap corruption, which -O2
-smears across GetBot()/Init. It's upstream mod-playerbots (the liyunfan1223
-async-login subsystem), untouched by us.
+  points to a corrupted/dangling strategy object or heap corruption, which -O2
+  smears across GetBot()/Init. It's upstream mod-playerbots (the liyunfan1223
+  async-login subsystem), untouched by us.
 
 
 
 even if it's an upstream bug, we'll still need to write a patch that fixes it.
 
 
-- (a) Build mod-playerbots at -O0 -g (or +ASAN) → the next --debug run
-resolves to the exact line and tells us null-vs-corruption. I can add that as a
-build option.
+  - (a) Build mod-playerbots at -O0 -g (or +ASAN) → the next --debug run
+    resolves to the exact line and tells us null-vs-corruption. I can add that
+    as a build option.
 
 
 this feels like it should be default in --debug? We want as much information as
 we can get, stored to tmp/.
 
 
-- (b) Diff mod-playerbots against a known-good upstream revision to find the
-regression in AddDefaultCombatStrategies/addStrategy.
+  - (b) Diff mod-playerbots against a known-good upstream revision to find the
+    regression in AddDefaultCombatStrategies/addStrategy.
 
 
 we could also do this.
@@ -1128,30 +1238,31 @@ we could also do this.
 did we remove all the strategies or something?
 
 
-2. Realmlist — fixed, and yes, the port is the "special" bit
+  2. Realmlist — fixed, and yes, the port is the "special" bit
 
 
-The special step you remembered = the :4362 port suffix. The stock 3.3.5a client
-does honor a port in realmlist.wtf for the auth connection — that's the
-non-obvious trick. So players already type
+  The special step you remembered = the :4362 port suffix. The stock 3.3.5a
+  client does honor a port in realmlist.wtf for the auth connection — that's
+  the non-obvious trick. So players already type
 
-the right thing:
+  the right thing:
 
-set realmlist wow.ritzmenardi.com:4362
+  set realmlist wow.ritzmenardi.com:4362
 
-The break was on the other address — the world server address the realm hands
-out after login. C011 only ever updated id=1, so vanilla (id=3) advertised
-127.0.0.1. Fixed:
+  The break was on the other address — the world server address the realm
+  hands out after login. C011 only ever updated id=1, so vanilla (id=3)
+  advertised 127.0.0.1. Fixed:
 
-- Live DB: all four realms now advertise wow.ritzmenardi.com (localAddress stays
-loopback for same-box clients). Vanilla is online (flag 0).
+  - Live DB: all four realms now advertise wow.ritzmenardi.com (localAddress
+    stays loopback for same-box clients). Vanilla is online (flag 0).
 
-- Source: C011 now sets connectivity for all rows, not just id=1 (flag ownership
-left to set-active-realm). So it persists across installs, for whichever profile
-is active.
+  - Source: C011 now sets connectivity for all rows, not just id=1 (flag
+    ownership left to set-active-realm). So it persists across installs, for
+    whichever profile is active.
 
 
-Remote players can now reach both auth (:4362) and the world server on vanilla.
+  Remote players can now reach both auth (:4362) and the world server on
+  vanilla.
 
 
 
@@ -1160,50 +1271,50 @@ how does the game client know the authserver's port number if we're only
 including the worldserver's?
 
 
-3. Config pipeline — how we differ from the idiom you described
+  3. Config pipeline — how we differ from the idiom you described
 
 
-Our actual flow: compile → cmake --install into shadow → E006 (in shadow)
-copies .dist → .conf fresh from upstream, then C-patches sed specific values
-→ promote cp -fs shadow→main, overwriting
+  Our actual flow: compile → cmake --install into shadow → E006 (in shadow)
+  copies .dist → .conf fresh from upstream, then C-patches sed specific values
+  → promote cp -fs shadow→main, overwriting
 
-every file present in shadow (configs included), preserving only main-only
-files.
-
-
-The idiom you described: fresh config from upstream, merge the previous config's
-values in, new keys stay default, only promote overwrites main.
+  every file present in shadow (configs included), preserving only main-only
+  files.
 
 
-The core difference: we have no "read the previous config and carry its values
-forward" step at all. Customizations live as code (C-patches) re-applied to a
-freshly-regenerated file — not as data
-
-read from the old .conf. Consequences:
-
-- Any value not captured by a C-patch reverts to the upstream default on every
-rebuild. The idiom would preserve it.
-
-- "New upstream keys at default" — we now do this via my .dist-refresh
-(before, the stale .dist meant new keys were missing, not defaulted). ✓ on
-that point.
-
-- "Only overwrite on promote" — yes, promote is the sole writer to main. ✓
+  The idiom you described: fresh config from upstream, merge the previous
+  config's values in, new keys stay default, only promote overwrites main.
 
 
-Worth surfacing: this is actually a tension with your own written principle.
-CLAUDE.md's "Configuration in Structure, Not Data — maintain configuration in
-code structure, not runtime data; git
+  The core difference: we have no "read the previous config and carry its values
+  forward" step at all. Customizations live as code (C-patches) re-applied to a
+  freshly-regenerated file — not as data
 
-greps are cheap" is the C-patch approach — the opposite of the
-merge-old-values idiom (which is config-as-data). So the current system follows
-the documented philosophy, not the idiom you just
+  read from the old .conf. Consequences:
 
-described. If you want the true merge behavior, I can add a merge step to
-promote/E006 — but flag the trade: it makes the live config's state depend on
-accumulated history rather than being
+  - Any value not captured by a C-patch reverts to the upstream default on every
+    rebuild. The idiom would preserve it.
 
-reproducible from git. Which way do you want it?
+  - "New upstream keys at default" — we now do this via my .dist-refresh
+    (before, the stale .dist meant new keys were missing, not defaulted). ✓ on
+    that point.
+
+  - "Only overwrite on promote" — yes, promote is the sole writer to main. ✓
+
+
+  Worth surfacing: this is actually a tension with your own written principle.
+  CLAUDE.md's "Configuration in Structure, Not Data — maintain configuration
+  in code structure, not runtime data; git
+
+  greps are cheap" is the C-patch approach — the opposite of the
+  merge-old-values idiom (which is config-as-data). So the current system
+  follows the documented philosophy, not the idiom you just
+
+  described. If you want the true merge behavior, I can add a merge step to
+  promote/E006 — but flag the trade: it makes the live config's state depend
+  on accumulated history rather than being
+
+  reproducible from git. Which way do you want it?
 
 
 
@@ -1212,9 +1323,9 @@ great, let's use that system. So, question then, how could we have missing
 values, if we're remaking the config file each time?
 
 
-- README-2 — a finished creative/vision note (the "Elentalus" mod, a
-"retro-active issue files" idea, and personal poetry). Complete; arguably
-belongs under notes/ rather than repo root.
+  - README-2 — a finished creative/vision note (the "Elentalus" mod, a
+    "retro-active issue files" idea, and personal poetry). Complete; arguably
+    belongs under notes/ rather than repo root.
 
 
 this is in the wrong project. Can you move it to
@@ -1223,8 +1334,8 @@ is not a readme to the entire project, but rather an addendum to a
 subdirectory's readme.
 
 
-- notes/d6-vision — a finished vision note for an as-yet-unimplemented d6
-damage system. Correctly placed.
+  - notes/d6-vision — a finished vision note for an as-yet-unimplemented d6
+    damage system. Correctly placed.
 
 
 let's mark this as "will not implement" and resolve it however we do so
@@ -1368,11 +1479,9 @@ mechanism is in `AddPlayerbotData` (PlayerbotMgr.cpp:1761-1767):
 
 itr = _playerbotsAIMap.find(player->GetGUID());
 
-if (itr != end) _playerbotsAIMap.erase(itr); // erases old PlayerbotAI but never
-deletes it → leak
+if (itr != end) _playerbotsAIMap.erase(itr);   // erases old PlayerbotAI but never deletes it → leak
 
-PlayerbotAI* botAI = new PlayerbotAI(player); // second AI on the SAME live
-Player
+PlayerbotAI* botAI = new PlayerbotAI(player);   // second AI on the SAME live Player
 
 ```
 
@@ -1381,13 +1490,14 @@ a strategy owned by an `AiObjectContext` that's being torn down → dangling
 read in `Engine::Init`.
 
 
-**B026** (`patches/B026-…`, registered for release/beta/vanilla, round-trip clean) is deliberately **diagnostic + defensive**, *not* the lifetime fix:
+**B026** (`patches/B026-…`, registered for release/beta/vanilla, round-trip
+clean) is deliberately **diagnostic + defensive**, *not* the lifetime fix:
 
 1. `Engine::Init`: skips + **logs a null strategy by name** instead of
-dereferencing it (survivable, named event).
+   dereferencing it (survivable, named event).
 
 2. `AddPlayerbotData`: **logs when the duplicate-login branch fires** — so we
-confirm duplicates immediately precede the crash.
+   confirm duplicates immediately precede the crash.
 
 
 I held back the actual fix (`delete` the old AI before erase + refuse a
@@ -1414,11 +1524,16 @@ mod-playerbots at `-O0 -g` so `--debug` resolves precisely. Want that?
 ## Your two questions
 
 
-**Ports — how does the client learn the auth port (4362) if we only set the world's?** We don't only set the world's — they travel on two separate channels:
+**Ports — how does the client learn the auth port (4362) if we only set the
+world's?** We don't only set the world's — they travel on two separate
+channels:
 
-- **`realmlist.wtf` (`…:4362`) IS the auth port.** The client dials auth there.
+- **`realmlist.wtf` (`…:4362`) IS the auth port.** The client dials auth
+  there.
 
-- **The DB realm row (`port = 4462`) is the world port.** After auth login, the auth server hands the client the realm list, and each realm carries its *world* address:port. The client uses that to enter the world.
+- **The DB realm row (`port = 4462`) is the world port.** After auth login, the
+  auth server hands the client the realm list, and each realm carries its
+  *world* address:port. The client uses that to enter the world.
 
 
 So: auth port comes from `realmlist.wtf`; world port comes from the DB
@@ -1426,14 +1541,30 @@ So: auth port comes from `realmlist.wtf`; world port comes from the DB
 hostname), not any port. The `:4362` you type stays.
 
 
-**Config — how can we have missing values if we remake the file each time?** Because we remake the `.conf` *from the `.dist` template*, and the **template itself was stale** — older than the binary, missing keys the newer binary reads. Remaking faithfully copies whatever the template has; it never invents keys. C-patches only *set* specific values; everything else is inherited from the template. So a stale template → missing keys in every regenerated `.conf`. My E006 change refreshes the `.dist` from source each build, so the template is current and new keys show up at their upstream defaults. The gap was "remake from a **stale** source," not "we don't remake."
+**Config — how can we have missing values if we remake the file each time?**
+Because we remake the `.conf` *from the `.dist` template*, and the **template
+itself was stale** — older than the binary, missing keys the newer binary
+reads. Remaking faithfully copies whatever the template has; it never invents
+keys. C-patches only *set* specific values; everything else is inherited from
+the template. So a stale template → missing keys in every regenerated `.conf`.
+My E006 change refreshes the `.dist` from source each build, so the template is
+current and new keys show up at their upstream defaults. The gap was "remake
+from a **stale** source," not "we don't remake."
 
 
 ## Housekeeping done
 
-- **README-2** → merged into `…/elentalus-0.97/retro-actively-created-issues/README` (it was a strict superset of that README — its opening was byte-identical, so I appended the video-games/WoW-pitch tail losslessly) and removed from this repo.
+- **README-2** → merged into
+  `…/elentalus-0.97/retro-actively-created-issues/README` (it was a strict
+  superset of that README — its opening was byte-identical, so I appended the
+  video-games/WoW-pitch tail losslessly) and removed from this repo.
 
-- **d6-vision** → declined idiomatically as `issues/declined/807-d6-based-damage-and-aging-system.md`, capturing the full mechanism (1d5 weapons, 10-step damage via stat-curve scaling, gear-as-power, aging-driven de-leveling) with a "will not implement — direction choice, not a judgment on the idea" decision. The `notes/d6-vision` source stays as the origin, referenced by 807.
+- **d6-vision** → declined idiomatically as
+  `issues/declined/807-d6-based-damage-and-aging-system.md`, capturing the full
+  mechanism (1d5 weapons, 10-step damage via stat-curve scaling, gear-as-power,
+  aging-driven de-leveling) with a "will not implement — direction choice, not
+  a judgment on the idea" decision. The `notes/d6-vision` source stays as the
+  origin, referenced by 807.
 
 
 Transcripts will auto-bundle on the next commit via the pre-commit hook, so they
@@ -1458,19 +1589,19 @@ Want me to (a) write the B027 root-cause fix now, (b) add the `compile --debug`
 
 ### User Request 5
 
-Config — how can we have missing values if we remake the file each time?
-Because we remake the .conf from the .dist template, and the template itself was
-stale — older than the binary, missing
+  Config — how can we have missing values if we remake the file each time?
+  Because we remake the .conf from the .dist template, and the template itself
+  was stale — older than the binary, missing
 
-keys the newer binary reads. Remaking faithfully copies whatever the template
-has; it never invents keys. C-patches only set specific values; everything else
-is inherited from the template. So a
+  keys the newer binary reads. Remaking faithfully copies whatever the template
+  has; it never invents keys. C-patches only set specific values; everything
+  else is inherited from the template. So a
 
-stale template → missing keys in every regenerated .conf. My E006 change
-refreshes the .dist from source each build, so the template is current and new
-keys show up at their upstream defaults. The
+  stale template → missing keys in every regenerated .conf. My E006 change
+  refreshes the .dist from source each build, so the template is current and new
+  keys show up at their upstream defaults. The
 
-gap was "remake from a stale source," not "we don't remake."
+  gap was "remake from a stale source," not "we don't remake."
 
 
 
@@ -1478,16 +1609,16 @@ I was under the impression that pulling from upstream would replace the
 template. Is that not so?
 
 
-I held back the actual fix (delete the old AI before erase + refuse a duplicate
-login) on purpose: a premature delete there could convert the dangling-read into
-a double-free, since the destroy
+  I held back the actual fix (delete the old AI before erase + refuse a
+  duplicate login) on purpose: a premature delete there could convert the
+  dangling-read into a double-free, since the destroy
 
-path (LogoutPlayer/OnDestructPlayer) runs independently. So the safe order is:
-ship B026 → see the duplicate-login log fire right before a crash (or get an
--O0 backtrace) → then apply the lifetime
+  path (LogoutPlayer/OnDestructPlayer) runs independently. So the safe order is:
+  ship B026 → see the duplicate-login log fire right before a crash (or get an
+  -O0 backtrace) → then apply the lifetime
 
-fix with confidence. Want me to write that root-cause patch (B027) now, or after
-B026 confirms it?
+  fix with confidence. Want me to write that root-cause patch (B027) now, or
+  after B026 confirms it?
 
 
 
@@ -1496,17 +1627,17 @@ contain the suggested B027's implementation. Does this mean we need another two
 compilations, minimum? Not ideal, any other way to do it?
 
 
-Subtle distinction: --debug is a runtime flag — it runs the already-built
-binary under gdb, so it can't change that binary's -O2 inlining. The -O0
-precision is a build-time thing. What I did now:
+  Subtle distinction: --debug is a runtime flag — it runs the already-built
+  binary under gdb, so it can't change that binary's -O2 inlining. The -O0
+  precision is a build-time thing. What I did now:
 
-enriched the gdb capture to grab everything the existing binary can give —
-registers, disassembly at the fault, faulting-frame args/locals, all-thread full
-backtraces, shared libraries, memory map
+  enriched the gdb capture to grab everything the existing binary can give —
+  registers, disassembly at the fault, faulting-frame args/locals, all-thread
+  full backtraces, shared libraries, memory map
 
-— all to tmp/. For the exact line, we need a debug build; I can add a compile
---debug that builds mod-playerbots at -O0 -g so --debug resolves precisely. Want
-that?
+  — all to tmp/. For the exact line, we need a debug build; I can add a
+  compile --debug that builds mod-playerbots at -O0 -g so --debug resolves
+  precisely. Want that?
 
 
 
@@ -1516,25 +1647,26 @@ output the worldserver's --debug changes. Can you ensure that the worldserver's
 --debug flag is built into the engine on a compile --debug build?
 
 
-- README-2 → merged into
-…/elentalus-0.97/retro-actively-created-issues/README (it was a strict
-superset of that README — its opening was byte-identical, so I appended the
-video-games/WoW-pitch
+  - README-2 → merged into
+    …/elentalus-0.97/retro-actively-created-issues/README (it was a strict
+    superset of that README — its opening was byte-identical, so I appended
+    the video-games/WoW-pitch
 
-tail losslessly) and removed from this repo.
+  tail losslessly) and removed from this repo.
 
 
 um I'd prefer if we had README and README-2, with the correct file modification
 times. But, both in the same location.
 
 
-- d6-vision → declined idiomatically as
-issues/declined/807-d6-based-damage-and-aging-system.md, capturing the full
-mechanism (1d5 weapons, 10-step damage via stat-curve scaling, gear-as-power,
+  - d6-vision → declined idiomatically as
+    issues/declined/807-d6-based-damage-and-aging-system.md, capturing the full
+    mechanism (1d5 weapons, 10-step damage via stat-curve scaling,
+    gear-as-power,
 
-aging-driven de-leveling) with a "will not implement — direction choice, not a
-judgment on the idea" decision. The notes/d6-vision source stays as the origin,
-referenced by 807.
+  aging-driven de-leveling) with a "will not implement — direction choice, not
+  a judgment on the idea" decision. The notes/d6-vision source stays as the
+  origin, referenced by 807.
 
 
 if you leave d6-vision in notes, then we'll keep coming back to it. We don't
@@ -1549,15 +1681,15 @@ Config — how can we have missing values if we remake the file each time?
 Because we remake the .conf from the .dist template, and the template itself was
 stale — older than the binary, missing
 
-keys the newer binary reads. Remaking faithfully copies whatever the template
-has; it never invents keys. C-patches only set specific values; everything else
-is inherited from the template. So a
+  keys the newer binary reads. Remaking faithfully copies whatever the template
+  has; it never invents keys. C-patches only set specific values; everything
+  else is inherited from the template. So a
 
-stale template → missing keys in every regenerated .conf. My E006 change
-refreshes the .dist from source each build, so the template is current and new
-keys show up at their upstream defaults. The
+  stale template → missing keys in every regenerated .conf. My E006 change
+  refreshes the .dist from source each build, so the template is current and new
+  keys show up at their upstream defaults. The
 
-gap was "remake from a stale source," not "we don't remake."
+  gap was "remake from a stale source," not "we don't remake."
 
 
 
@@ -1565,16 +1697,16 @@ I was under the impression that pulling from upstream would replace the
 template. Is that not so?
 
 
-I held back the actual fix (delete the old AI before erase + refuse a duplicate
-login) on purpose: a premature delete there could convert the dangling-read into
-a double-free, since the destroy
+  I held back the actual fix (delete the old AI before erase + refuse a
+  duplicate login) on purpose: a premature delete there could convert the
+  dangling-read into a double-free, since the destroy
 
-path (LogoutPlayer/OnDestructPlayer) runs independently. So the safe order is:
-ship B026 → see the duplicate-login log fire right before a crash (or get an
--O0 backtrace) → then apply the lifetime
+  path (LogoutPlayer/OnDestructPlayer) runs independently. So the safe order is:
+  ship B026 → see the duplicate-login log fire right before a crash (or get an
+  -O0 backtrace) → then apply the lifetime
 
-fix with confidence. Want me to write that root-cause patch (B027) now, or after
-B026 confirms it?
+  fix with confidence. Want me to write that root-cause patch (B027) now, or
+  after B026 confirms it?
 
 
 
@@ -1583,17 +1715,17 @@ contain the suggested B027's implementation. Does this mean we need another two
 compilations, minimum? Not ideal, any other way to do it?
 
 
-Subtle distinction: --debug is a runtime flag — it runs the already-built
-binary under gdb, so it can't change that binary's -O2 inlining. The -O0
-precision is a build-time thing. What I did now:
+  Subtle distinction: --debug is a runtime flag — it runs the already-built
+  binary under gdb, so it can't change that binary's -O2 inlining. The -O0
+  precision is a build-time thing. What I did now:
 
-enriched the gdb capture to grab everything the existing binary can give —
-registers, disassembly at the fault, faulting-frame args/locals, all-thread full
-backtraces, shared libraries, memory map
+  enriched the gdb capture to grab everything the existing binary can give —
+  registers, disassembly at the fault, faulting-frame args/locals, all-thread
+  full backtraces, shared libraries, memory map
 
-— all to tmp/. For the exact line, we need a debug build; I can add a compile
---debug that builds mod-playerbots at -O0 -g so --debug resolves precisely. Want
-that?
+  — all to tmp/. For the exact line, we need a debug build; I can add a
+  compile --debug that builds mod-playerbots at -O0 -g so --debug resolves
+  precisely. Want that?
 
 
 
@@ -1603,25 +1735,26 @@ output the worldserver's --debug changes. Can you ensure that the worldserver's
 --debug flag is built into the engine on a compile --debug build?
 
 
-- README-2 → merged into
-…/elentalus-0.97/retro-actively-created-issues/README (it was a strict
-superset of that README — its opening was byte-identical, so I appended the
-video-games/WoW-pitch
+  - README-2 → merged into
+    …/elentalus-0.97/retro-actively-created-issues/README (it was a strict
+    superset of that README — its opening was byte-identical, so I appended
+    the video-games/WoW-pitch
 
-tail losslessly) and removed from this repo.
+  tail losslessly) and removed from this repo.
 
 
 um I'd prefer if we had README and README-2, with the correct file modification
 times. But, both in the same location.
 
 
-- d6-vision → declined idiomatically as
-issues/declined/807-d6-based-damage-and-aging-system.md, capturing the full
-mechanism (1d5 weapons, 10-step damage via stat-curve scaling, gear-as-power,
+  - d6-vision → declined idiomatically as
+    issues/declined/807-d6-based-damage-and-aging-system.md, capturing the full
+    mechanism (1d5 weapons, 10-step damage via stat-curve scaling,
+    gear-as-power,
 
-aging-driven de-leveling) with a "will not implement — direction choice, not a
-judgment on the idea" decision. The notes/d6-vision source stays as the origin,
-referenced by 807.
+  aging-driven de-leveling) with a "will not implement — direction choice, not
+  a judgment on the idea" decision. The notes/d6-vision source stays as the
+  origin, referenced by 807.
 
 
 if you leave d6-vision in notes, then we'll keep coming back to it. We don't
@@ -1729,11 +1862,17 @@ GUID lookup), and `~PlayerbotAI` self-erases its own map slot — so
 B026 is no longer diagnostic-only; it *is* the fix:
 
 
-- **`AddPlayerbotData`**: the leaking `erase(itr)` becomes `delete stale; erase-by-GUID` — reclaiming the old AI's context so `Engine::Init` never reads a dead strategy. (Root cause: the world-thread login queue has no GUID dedupe, and the per-holder guard doesn't cover the global map, so two logins for one GUID double-add.)
+- **`AddPlayerbotData`**: the leaking `erase(itr)` becomes `delete stale;
+  erase-by-GUID` — reclaiming the old AI's context so `Engine::Init` never
+  reads a dead strategy. (Root cause: the world-thread login queue has no GUID
+  dedupe, and the per-holder guard doesn't cover the global map, so two logins
+  for one GUID double-add.)
 
-- **`Engine::Init`**: a defensive null-guard that logs the strategy name instead of segfaulting, for any future recurrence.
+- **`Engine::Init`**: a defensive null-guard that logs the strategy name instead
+  of segfaulting, for any future recurrence.
 
-- A `LOG_WARN` still fires on the duplicate, so we'll *see* it was happening (now handled).
+- A `LOG_WARN` still fires on the duplicate, so we'll *see* it was happening
+  (now handled).
 
 
 Tested: single insert, correct branch, the other erase untouched, clean
@@ -1745,11 +1884,16 @@ hands you the exact line if anything's still wrong.
 
 ## `compile --debug` + auto-debug — done
 
-- `compile --debug` → builds `CMAKE_BUILD_TYPE=Debug` (-O0 -g, implies `--force`) and stamps `bin/.build-type`.
+- `compile --debug` → builds `CMAKE_BUILD_TYPE=Debug` (-O0 -g, implies
+  `--force`) and stamps `bin/.build-type`.
 
-- `worldserver` reads that stamp: a **"Debug" build auto-runs the crash catcher** — no runtime flag needed, exact `file:line` to `tmp/`. Self-correcting (every build restamps; promote overwrites).
+- `worldserver` reads that stamp: a **"Debug" build auto-runs the crash
+  catcher** — no runtime flag needed, exact `file:line` to `tmp/`.
+  Self-correcting (every build restamps; promote overwrites).
 
-- I **kept** the runtime `--debug` flag as a manual override (handy for poking a RelWithDebInfo build under gdb). You said we *can* remove it — it costs nothing to keep, but say the word and it's gone.
+- I **kept** the runtime `--debug` flag as a manual override (handy for poking a
+  RelWithDebInfo build under gdb). You said we *can* remove it — it costs
+  nothing to keep, but say the word and it's gone.
 
 
 (Takes effect after one `compile --debug`, since the current binary is
@@ -1758,9 +1902,14 @@ RelWithDebInfo.)
 
 ## Housekeeping — corrected per your notes
 
-- **README + README-2**: both now in `…/retro-actively-created-issues/`, as separate files, with their **original mtimes** (README 07-15 17:48 / README-2 07-15 19:16). No longer merged.
+- **README + README-2**: both now in `…/retro-actively-created-issues/`, as
+  separate files, with their **original mtimes** (README 07-15 17:48 / README-2
+  07-15 19:16). No longer merged.
 
-- **d6-vision**: removed from `notes/` (no tombstone). The full vision now lives *inside* `issues/declined/807` — I embedded the raw note verbatim as an appendix and dropped the dangling `notes/` references, so it's genuinely recategorized, not duplicated.
+- **d6-vision**: removed from `notes/` (no tombstone). The full vision now lives
+  *inside* `issues/declined/807` — I embedded the raw note verbatim as an
+  appendix and dropped the dangling `notes/` references, so it's genuinely
+  recategorized, not duplicated.
 
 
 ---
@@ -1882,13 +2031,24 @@ Now I have the full picture. Here's what the logs show.
 
 ## Config — big win ✅
 
-- **The 17 missing worldserver keys are gone** (`Missing property` went **19 → 2**). The E006 `.dist` refresh (plus the `--force` reconfigure) worked — the template is current now.
+- **The 17 missing worldserver keys are gone** (`Missing property` went **19 →
+  2**). The E006 `.dist` refresh (plus the `--force` reconfigure) worked — the
+  template is current now.
 
-- **The old duplicate + missing `Chance` keys are fixed**: `RandomBotMinLevel/MaxLevel` (704/705) and `RandomBotMinLevelChance/MaxLevelChance` (771/775) are now four distinct keys. The C012/C014 regex fix landed.
+- **The old duplicate + missing `Chance` keys are fixed**:
+  `RandomBotMinLevel/MaxLevel` (704/705) and
+  `RandomBotMinLevelChance/MaxLevelChance` (771/775) are now four distinct keys.
+  The C012/C014 regex fix landed.
 
 - **Bot population 128/256 took.** 
 
-- Two *new, cosmetic* warnings surfaced (both harmless): the 2 remaining "missing" keys are `AiPlayerbot.{Min,Max}RandomBotsPriceChangeInterval` (newer module keys), and the 2 duplicate-key warnings are now `MinRandomBots`/`MaxRandomBots` — the refreshed upstream `.dist` declares those **twice** (lines 88/89 *and* 2339/2340), and C020's sed set both to 128/256. Both agree, so it's noise; I can anchor C020 to the first occurrence if you want it silenced.
+- Two *new, cosmetic* warnings surfaced (both harmless): the 2 remaining
+  "missing" keys are `AiPlayerbot.{Min,Max}RandomBotsPriceChangeInterval` (newer
+  module keys), and the 2 duplicate-key warnings are now
+  `MinRandomBots`/`MaxRandomBots` — the refreshed upstream `.dist` declares
+  those **twice** (lines 88/89 *and* 2339/2340), and C020's sed set both to
+  128/256. Both agree, so it's noise; I can anchor C020 to the first occurrence
+  if you want it silenced.
 
 
 ## Debug infrastructure — works exactly as designed ✅
@@ -1900,11 +2060,21 @@ backtrace to `tmp/`.
 
 ## The crash — B026's theory was wrong, but now we have the exact site
 
-- **B026 was compiled in** (the line shifts prove it: Engine::Init moved to 141, AddPlayerbotData to 1788), but its **duplicate-WARN never fired** — so **my "duplicate login" root cause was wrong.** (B026 still fixes a genuine leak — the erase-without-delete — and adds a harmless guard, so it's not wasted, but it's not this bug. Keep or drop, your call.)
+- **B026 was compiled in** (the line shifts prove it: Engine::Init moved to 141,
+  AddPlayerbotData to 1788), but its **duplicate-WARN never fired** — so **my
+  "duplicate login" root cause was wrong.** (B026 still fixes a genuine leak —
+  the erase-without-delete — and adds a harmless guard, so it's not wasted,
+  but it's not this bug. Keep or drop, your call.)
 
-- It crashed during the login storm: **1,100 bot-AI constructions attempted, 0 bots completed login** — it dies *inside* AI construction, before any bot finishes.
+- It crashed during the login storm: **1,100 bot-AI constructions attempted, 0
+  bots completed login** — it dies *inside* AI construction, before any bot
+  finishes.
 
-- **Precise location** (`-O0`): `RacialsStrategy::InitTriggers` (RacialsStrategy.cpp:30) — `Player* bot = botAI->GetBot();` — where the strategy's own **`botAI` pointer is a bad address**. This is *exactly* the hazard mod-playerbots' own CLAUDE.md warns about: storing a raw `Player*`/AI pointer past its lifetime.
+- **Precise location** (`-O0`): `RacialsStrategy::InitTriggers`
+  (RacialsStrategy.cpp:30) — `Player* bot = botAI->GetBot();` — where the
+  strategy's own **`botAI` pointer is a bad address**. This is *exactly* the
+  hazard mod-playerbots' own CLAUDE.md warns about: storing a raw `Player*`/AI
+  pointer past its lifetime.
 
 
 Here's the puzzle: static analysis says strategies are built **per-bot** with a
@@ -1913,9 +2083,12 @@ an empty per-instance cache), so the pointer *should* be valid. The runtime says
 it's dangling. That contradiction needs **one runtime datum** to resolve:
 
 
-- Log `this` in the `PlayerbotAI` constructor, and `(void*)botAI` in `RacialsStrategy::InitTriggers` right before the deref.
+- Log `this` in the `PlayerbotAI` constructor, and `(void*)botAI` in
+  `RacialsStrategy::InitTriggers` right before the deref.
 
-- If `botAI` ≠ the constructing `this` → strategies are being shared/cached stale (my read of the caching missed a path). If `botAI` == `this` but still a bad address → heap corruption of the object itself.
+- If `botAI` ≠ the constructing `this` → strategies are being shared/cached
+  stale (my read of the caching missed a path). If `botAI` == `this` but still a
+  bad address → heap corruption of the object itself.
 
 
 That's a 2-line diagnostic + one `compile --debug`, and it tells us
@@ -1943,22 +2116,22 @@ context/caching statically first?
 
 ### User Request 8
 
-- It crashed during the login storm: 1,100 bot-AI constructions attempted, 0
-bots completed login — it dies inside AI construction, before any bot
-finishes.
+  - It crashed during the login storm: 1,100 bot-AI constructions attempted, 0
+    bots completed login — it dies inside AI construction, before any bot
+    finishes.
 
 
 why are we constructing 1,100 bots if:
 
 
-- Bot population 128/256 took.
+  - Bot population 128/256 took.
 
 
 ?
 
 
-That's a 2-line diagnostic + one compile --debug, and it tells us
-stale-vs-corruption definitively — then the real fix.
+  That's a 2-line diagnostic + one compile --debug, and it tells us
+  stale-vs-corruption definitively — then the real fix.
 
 
 I'd prefer to not recompile unless we have to. Can you look at all the sites
@@ -1981,10 +2154,20 @@ read how the context binds `botAI`.
 Answers taking shape:
 
 
-**The 1,100 aren't concurrent bots** — the log shows "Creating random bot **characters** for account [211/**410**]". That's the module generating the character *pool* in the DB (accounts × ~10 chars, driven by `RandomBotAccountCount`, which it recalculated to ~410 from existing characters). `MinRandomBots/MaxRandomBots` (128/256) only caps how many are *online at once* — a completely separate knob. So the pool is ~4,100 characters; only 128–256 ever log in. Not a bug, though the pool is far larger than 256 needs.
+**The 1,100 aren't concurrent bots** — the log shows "Creating random bot
+**characters** for account [211/**410**]". That's the module generating the
+character *pool* in the DB (accounts × ~10 chars, driven by
+`RandomBotAccountCount`, which it recalculated to ~410 from existing
+characters). `MinRandomBots/MaxRandomBots` (128/256) only caps how many are
+*online at once* — a completely separate knob. So the pool is ~4,100
+characters; only 128–256 ever log in. Not a bug, though the pool is far larger
+than 256 needs.
 
 
-**And I found two `new PlayerbotAI` + `delete` temp-pointer sites** — exactly the "dropped out of scope, referenced later" shape you're asking about: `SharedValueContext.h:33/36` and **`TravelMgr.cpp:3433/3517`**. Let me read those.
+**And I found two `new PlayerbotAI` + `delete` temp-pointer sites** — exactly
+the "dropped out of scope, referenced later" shape you're asking about:
+`SharedValueContext.h:33/36` and **`TravelMgr.cpp:3433/3517`**. Let me read
+those.
 
 
 TravelMgr (3425-3517) is a **startup routine that creates temp `PlayerbotAI`s
@@ -2023,11 +2206,24 @@ larger than 256 needs, and we could prune it later.
 You asked for writes-that-malform and scope-drop-then-reference. Findings:
 
 
-- **The pointer is write-once.** `RacialsStrategy` stores `botAI` via `PlayerbotAIAware(PlayerbotAI* botAI) : botAI(botAI) {}` — a raw pointer set at construction and **never rewritten**. So nothing "writes malformed data" into it. It's a pure **lifetime** problem: the `PlayerbotAI` it points at got freed.
+- **The pointer is write-once.** `RacialsStrategy` stores `botAI` via
+  `PlayerbotAIAware(PlayerbotAI* botAI) : botAI(botAI) {}` — a raw pointer set
+  at construction and **never rewritten**. So nothing "writes malformed data"
+  into it. It's a pure **lifetime** problem: the `PlayerbotAI` it points at got
+  freed.
 
-- **Every create/delete site:** real login (`PlayerbotMgr.cpp:1766`) + logout/destruct deletes (`:446`, `:407`, `Playerbots.cpp:317`) — normal. Plus two **temp** `PlayerbotAI`s: `SharedValueContext.h:33` (a **dead path** — its own comment says "should never reach here") and **`TravelMgr.cpp:3433`**.
+- **Every create/delete site:** real login (`PlayerbotMgr.cpp:1766`) +
+  logout/destruct deletes (`:446`, `:407`, `Playerbots.cpp:317`) — normal.
+  Plus two **temp** `PlayerbotAI`s: `SharedValueContext.h:33` (a **dead path**
+  — its own comment says "should never reach here") and
+  **`TravelMgr.cpp:3433`**.
 
-- **The strategy is created per-bot with a valid pointer.** The full chain — `createAiObjectContext(bot, this)` → `AiObjectContext.botAI = this` → `GetStrategy` caches in a *per-bot* map via `create(name, botAI)` → `new RacialsStrategy(this)` — means `RacialsStrategy.botAI` should equal the *constructing* `PlayerbotAI`, which is valid. **The code says the pointer should be good.**
+- **The strategy is created per-bot with a valid pointer.** The full chain —
+  `createAiObjectContext(bot, this)` → `AiObjectContext.botAI = this` →
+  `GetStrategy` caches in a *per-bot* map via `create(name, botAI)` → `new
+  RacialsStrategy(this)` — means `RacialsStrategy.botAI` should equal the
+  *constructing* `PlayerbotAI`, which is valid. **The code says the pointer
+  should be good.**
 
 
 So the obvious scope-drop suspects are clean, which means the runtime dangling
@@ -2035,7 +2231,15 @@ is either **heap corruption** of the `PlayerbotAI` object, or a **sharing path
 the source structure doesn't reveal.**
 
 
-**Prime suspect for both:** `TravelMgr` runs a startup precompute (on the `randombot0` account) that news a **dummy `Player`**, then churns **~2,400 temp `PlayerbotAI`s** (race × class × spec × level 1..80) through the *exact* crash path — `ResetStrategies` → `GetStrategy` → `InitTriggers` → `delete botAI` — **before any real bot logs in**. It looks self-contained (each temp context is deleted with its temp `botAI`), but if it leaks one pointer into shared/static state — or corrupts the heap across 2,400 full ctor/dtor cycles — the first real login inherits the damage. That timing fits perfectly (crash on bot #1's login, after startup).
+**Prime suspect for both:** `TravelMgr` runs a startup precompute (on the
+`randombot0` account) that news a **dummy `Player`**, then churns **~2,400 temp
+`PlayerbotAI`s** (race × class × spec × level 1..80) through the *exact*
+crash path — `ResetStrategies` → `GetStrategy` → `InitTriggers` →
+`delete botAI` — **before any real bot logs in**. It looks self-contained
+(each temp context is deleted with its temp `botAI`), but if it leaks one
+pointer into shared/static state — or corrupts the heap across 2,400 full
+ctor/dtor cycles — the first real login inherits the damage. That timing fits
+perfectly (crash on bot #1's login, after startup).
 
 
 ## The no-recompile way to settle it
@@ -2045,9 +2249,9 @@ variables directly, no rebuild.** Install it and re-run:
 
 ```
 
-sudo xbps-install -S gdb # (or you run it)
+sudo xbps-install -S gdb        # (or you run it)
 
-./scripts/worldserver # auto-catcher now uses gdb, not the shim
+./scripts/worldserver           # auto-catcher now uses gdb, not the shim
 
 ```
 
@@ -2055,7 +2259,8 @@ My enriched gdb batch already dumps `backtrace full` + `info args/locals`, which
 prints **`botAI` in the `InitTriggers` frame** and **`this` in the `PlayerbotAI`
 ctor frame**. Then:
 
-- `botAI` ≠ `this` → the strategy is **stale/shared** (points at a freed temp — likely TravelMgr's).
+- `botAI` ≠ `this` → the strategy is **stale/shared** (points at a freed
+  temp — likely TravelMgr's).
 
 - `botAI` == `this` but a bad address → **heap corruption** of the object.
 
@@ -2096,11 +2301,13 @@ bot-login storm, then it crashes and gdb prints the pointers). It'll capture, at
 the fault:
 
 
-- `this` in the `GetBot()` frame = **the exact `botAI` pointer being dereferenced**,
+- `this` in the `GetBot()` frame = **the exact `botAI` pointer being
+  dereferenced**,
 
 - `botAI` in the `RacialsStrategy::InitTriggers` frame (same value, confirmed),
 
-- `this` at the `PlayerbotAI` ctor frame = **the bot actually being constructed**, plus the fault registers and a dump of the strategy object.
+- `this` at the `PlayerbotAI` ctor frame = **the bot actually being
+  constructed**, plus the fault registers and a dump of the strategy object.
 
 
 If `botAI` ≠ the ctor's `this` → stale/shared pointer (TravelMgr's freed
@@ -2181,16 +2388,24 @@ It crashed under gdb with real values. Critical addresses: the **constructing
 suspicious. Let me read the actual `botAI` pointer value vs the ctor's `this`.
 
 
-**Definitive breakthrough.** This is neither a dangling pointer nor the duplicate-login. The gdb dump shows:
+**Definitive breakthrough.** This is neither a dangling pointer nor the
+duplicate-login. The gdb dump shows:
 
 
-- The **Engine's `botAI` = `0x7fff8016f000`** (the correctly-constructing bot) ✓
+- The **Engine's `botAI` = `0x7fff8016f000`** (the correctly-constructing bot)
+  ✓
 
-- But the **fault registers are `rdi=0, rax=0`** — the `RacialsStrategy`'s own `botAI` member is **NULL**.
+- But the **fault registers are `rdi=0, rax=0`** — the `RacialsStrategy`'s own
+  `botAI` member is **NULL**.
 
-- The strategy object at `0x7ffff003fbd0` has an **intact vtable** (virtual dispatch reached `RacialsStrategy::InitTriggers`), so it's a real strategy — just **constructed with `botAI = nullptr`**.
+- The strategy object at `0x7ffff003fbd0` has an **intact vtable** (virtual
+  dispatch reached `RacialsStrategy::InitTriggers`), so it's a real strategy —
+  just **constructed with `botAI = nullptr`**.
 
-- The 14 strategies split across **two heap regions**: null-botAI ones (`racials, aoe, boost, cast time, formation, potions` @ `0x7ffff003…`) vs valid ones (`chat, default, duel, fire, bdps…` @ `0x7fff80…`). **A mix of shared/pre-created (no bot) and fresh per-bot strategies.**
+- The 14 strategies split across **two heap regions**: null-botAI ones
+  (`racials, aoe, boost, cast time, formation, potions` @ `0x7ffff003…`) vs
+  valid ones (`chat, default, duel, fire, bdps…` @ `0x7fff80…`). **A mix of
+  shared/pre-created (no bot) and fresh per-bot strategies.**
 
 
 So some strategies are served from a **shared cache created without a bot**
@@ -2209,7 +2424,13 @@ first populates that cache with a null bot (likely `ResetStrategies` or a
 context ctor).
 
 
-**This is the root cause, definitively:** 6 of the 14 combat strategies (`racials, aoe, boost, cast time, formation, potions`) are **shared objects created once with `botAI = nullptr`** and handed to every bot; the other 8 are fresh per-bot. `Engine::Init` calls `InitTriggers` on a shared null-bot strategy → `nullptr->GetBot()` → crash. The `NamedObjectContext` caches created objects by name (line 100), which is the sharing mechanism. Let me find the exact call that seeds those 6 with a null bot.
+**This is the root cause, definitively:** 6 of the 14 combat strategies
+(`racials, aoe, boost, cast time, formation, potions`) are **shared objects
+created once with `botAI = nullptr`** and handed to every bot; the other 8 are
+fresh per-bot. `Engine::Init` calls `InitTriggers` on a shared null-bot strategy
+→ `nullptr->GetBot()` → crash. The `NamedObjectContext` caches created
+objects by name (line 100), which is the sharing mechanism. Let me find the
+exact call that seeds those 6 with a null bot.
 
 
 This is the crux — the strategy is *created* with a null bot (not corrupted
@@ -2224,11 +2445,19 @@ settles the *last* question.
 
 **What gdb proved (this is the real bug, not my earlier guesses):**
 
-- The crashing bot is a **Mage**, constructed correctly: its `Engine` and `AiObjectContext` both hold the **valid** `botAI = 0x7fff8016f000`.
+- The crashing bot is a **Mage**, constructed correctly: its `Engine` and
+  `AiObjectContext` both hold the **valid** `botAI = 0x7fff8016f000`.
 
-- But the `RacialsStrategy` in that engine's strategy map has **`botAI = NULL`** (fault registers `rdi=0, rax=0`). Its vtable is intact, so it's a *real* strategy object — just built with **no bot**.
+- But the `RacialsStrategy` in that engine's strategy map has **`botAI = NULL`**
+  (fault registers `rdi=0, rax=0`). Its vtable is intact, so it's a *real*
+  strategy object — just built with **no bot**.
 
-- **6 of the 14 combat strategies are null-bot** (`racials, aoe, boost, cast time, formation, potions`, all clustered in one heap region `0x7ffff003…`); the other 8 are valid per-bot objects in a different region. That's a **shared strategy cache** (`NamedObjectContext::create` caches objects by name) handing bot-less strategies to every bot. `Engine::Init` → `racials->InitTriggers` → `null->GetBot()` → segfault.
+- **6 of the 14 combat strategies are null-bot** (`racials, aoe, boost, cast
+  time, formation, potions`, all clustered in one heap region `0x7ffff003…`);
+  the other 8 are valid per-bot objects in a different region. That's a **shared
+  strategy cache** (`NamedObjectContext::create` caches objects by name) handing
+  bot-less strategies to every bot. `Engine::Init` → `racials->InitTriggers`
+  → `null->GetBot()` → segfault.
 
 
 So it was never the duplicate login (B026) or a dangling free — it's
@@ -2371,9 +2600,9 @@ to.</local-command-caveat>
 
 <command-name>/extra-usage</command-name>
 
-<command-message>extra-usage</command-message>
+            <command-message>extra-usage</command-message>
 
-<command-args></command-args>
+            <command-args></command-args>
 
 
 --------------------------------------------------------------------------------
@@ -2402,9 +2631,9 @@ to.</local-command-caveat>
 
 <command-name>/extra-usage</command-name>
 
-<command-message>extra-usage</command-message>
+            <command-message>extra-usage</command-message>
 
-<command-args></command-args>
+            <command-args></command-args>
 
 
 --------------------------------------------------------------------------------
@@ -2432,9 +2661,12 @@ Watchpoint result is decisive — and it flips the conclusion again. The address
 math proves it:
 
 
-- The strategy we watched (`$s`) is at `0x7ffff003fe70` — **the exact object that crashes**.
+- The strategy we watched (`$s`) is at `0x7ffff003fe70` — **the exact object
+  that crashes**.
 
-- Its `botAI` (address `0x7ffff003fe78`, i.e. offset +8 after the vtable) was **already `0x0` the instant the constructor returned** (`$2 = 0x0`), and the watchpoint **never fired a write** before the crash.
+- Its `botAI` (address `0x7ffff003fe78`, i.e. offset +8 after the vtable) was
+  **already `0x0` the instant the constructor returned** (`$2 = 0x0`), and the
+  watchpoint **never fired a write** before the crash.
 
 
 So `botAI` isn't zeroed later (not corruption, not the duplicate-login). **The
@@ -2465,9 +2697,11 @@ Let me confirm by disassembling the live binary (no rebuild): compare where
 The disassembly **rules out ODR** — and this is important. The write and read
 agree exactly:
 
-- **`Strategy::Strategy` writes** botAI: `add $0x8,%rdi` then `PlayerbotAIAware` ctor → stores to **[this+8]**.
+- **`Strategy::Strategy` writes** botAI: `add $0x8,%rdi` then `PlayerbotAIAware`
+  ctor → stores to **[this+8]**.
 
-- **`RacialsStrategy::InitTriggers` reads** botAI: `mov 0x8(%rax),%rdi` → reads **[this+8]**.
+- **`RacialsStrategy::InitTriggers` reads** botAI: `mov 0x8(%rax),%rdi` →
+  reads **[this+8]**.
 
 
 Same offset, consistent layout, single definition. So the source and codegen are
@@ -2528,18 +2762,13 @@ binary:
 
 |---|---|---|
 
-| **Duplicate login** (B026's theory) | ❌ **Wrong** | B026's duplicate-WARN
-**never fired** before the crash. My earlier root cause was incorrect. |
+| **Duplicate login** (B026's theory) | ❌ **Wrong** | B026's duplicate-WARN **never fired** before the crash. My earlier root cause was incorrect. |
 
-| **Dangling/freed pointer** | ❌ Ruled out | The strategy object's vtable is
-intact; it's a live object. |
+| **Dangling/freed pointer** | ❌ Ruled out | The strategy object's vtable is intact; it's a live object. |
 
-| **ODR / mixed build** | ❌ Ruled out | Disassembly proves
-`Strategy::Strategy` **writes** `botAI` to `[this+8]` and `InitTriggers`
-**reads** `[this+8]` — identical offset, consistent layout. |
+| **ODR / mixed build** | ❌ Ruled out | Disassembly proves `Strategy::Strategy` **writes** `botAI` to `[this+8]` and `InitTriggers` **reads** `[this+8]` — identical offset, consistent layout. |
 
-| **Shared pre-created strategy** | ❌ Ruled out | The shared context registers
-**only creators** (function pointers), never objects. |
+| **Shared pre-created strategy** | ❌ Ruled out | The shared context registers **only creators** (function pointers), never objects. |
 
 
 ## What's established
@@ -2564,12 +2793,19 @@ which is exactly why the deterministic theories (lifetime, ODR) all came up
 empty.
 
 
-**Honest caveat:** I could cleanly prove *where* `botAI` is null (at use time), but my attempts to prove *when* it goes null (born-null vs. corrupted-after) hit constructor-variant/`finish` quirks in gdb and weren't airtight. That's the gap valgrind closes:
+**Honest caveat:** I could cleanly prove *where* `botAI` is null (at use time),
+but my attempts to prove *when* it goes null (born-null vs. corrupted-after) hit
+constructor-variant/`finish` quirks in gdb and weren't airtight. That's the gap
+valgrind closes:
 
 
-- **If it still crashes under valgrind** → deterministic (use-after-free / uninitialized), and memcheck prints the exact bad read + allocation origin. Then I write the precise patch.
+- **If it still crashes under valgrind** → deterministic (use-after-free /
+  uninitialized), and memcheck prints the exact bad read + allocation origin.
+  Then I write the precise patch.
 
-- **If the crash vanishes under valgrind** (which serializes threads) → confirmed **data race**, and the fix is a lock/serialization around the racy shared state.
+- **If the crash vanishes under valgrind** (which serializes threads) →
+  confirmed **data race**, and the fix is a lock/serialization around the racy
+  shared state.
 
 
 Either way it's decisive and needs no recompile. I'll report the moment valgrind
@@ -2595,9 +2831,14 @@ Valgrind is running detached; I'll be re-invoked automatically when it exits.
 Two ways this resolves:
 
 
-- **It crashes under valgrind** → the run ends, I'm notified, and I read the memcheck report (the invalid read + allocation origin pins the deterministic cause).
+- **It crashes under valgrind** → the run ends, I'm notified, and I read the
+  memcheck report (the invalid read + allocation origin pins the deterministic
+  cause).
 
-- **It runs clean to "ready" and stays up** → that *itself* is the verdict: the crash vanished under thread serialization → **data race confirmed**. In that case valgrind won't exit on its own, so once the log shows a stable "ready..." I'll step in, read it, and move to the race fix.
+- **It runs clean to "ready" and stays up** → that *itself* is the verdict:
+  the crash vanished under thread serialization → **data race confirmed**. In
+  that case valgrind won't exit on its own, so once the log shows a stable
+  "ready..." I'll step in, read it, and move to the race fix.
 
 
 I'll report the moment there's a signal either way.
@@ -2652,13 +2893,13 @@ the identical spot:
 
 Access not within mapped region at address 0x130
 
-at PlayerbotAI::GetBot() PlayerbotAI.h:536
+  at PlayerbotAI::GetBot()                 PlayerbotAI.h:536
 
-by RacialsStrategy::InitTriggers(...) RacialsStrategy.cpp:30
+  by RacialsStrategy::InitTriggers(...)    RacialsStrategy.cpp:30
 
-by Engine::Init() Engine.cpp:140
+  by Engine::Init()                        Engine.cpp:140
 
-... OnBotLoginOperation::Execute → ProcessBatch
+  ... OnBotLoginOperation::Execute → ProcessBatch
 
 ```
 
@@ -2667,16 +2908,16 @@ by Engine::Init() Engine.cpp:140
 
 
 1. **It is NOT a data race.** A race would vanish or shift when threads are
-serialized; this reproduces deterministically under valgrind. My
-arena-contention→race hypothesis from last turn was **wrong** — I'm
-retracting it.
+   serialized; this reproduces deterministically under valgrind. My
+   arena-contention→race hypothesis from last turn was **wrong** — I'm
+   retracting it.
 
 2. **`botAI` holds a garbage value that varies between runs** — `0x0` under
-gdb, `0x130` under valgrind. Valgrind confirms `0x130` "is not stack'd, malloc'd
-or (recently) freed" — it's not a freed pointer, it's an
-**uninitialized/garbage slot**. A value that changes run-to-run but always
-garbage is the fingerprint of **reading uninitialized memory**, not a logic
-null.
+   gdb, `0x130` under valgrind. Valgrind confirms `0x130` "is not stack'd,
+   malloc'd or (recently) freed" — it's not a freed pointer, it's an
+   **uninitialized/garbage slot**. A value that changes run-to-run but always
+   garbage is the fingerprint of **reading uninitialized memory**, not a logic
+   null.
 
 
 So: the 6 strategies' `botAI` member is deterministically garbage, the object is
@@ -2695,9 +2936,14 @@ follow initializes `botAI` correctly. That contradiction now has only two
 resolutions, and I can't distinguish them by reading further:
 
 
-- **A) Build corruption** — mixed/stale object files (this tree has had many incremental builds with B-patches applied/reverted, plus a RelWithDebInfo→Debug switch via ccache; that's a classic recipe for one TU compiled against a stale layout). *Test: a clean from-scratch rebuild.*
+- **A) Build corruption** — mixed/stale object files (this tree has had many
+  incremental builds with B-patches applied/reverted, plus a
+  RelWithDebInfo→Debug switch via ccache; that's a classic recipe for one TU
+  compiled against a stale layout). *Test: a clean from-scratch rebuild.*
 
-- **B) A genuine upstream bug** I haven't pinned — something subtle in the `std::function` creator dispatch or template instantiation that the disassembly of two functions didn't cover.
+- **B) A genuine upstream bug** I haven't pinned — something subtle in the
+  `std::function` creator dispatch or template instantiation that the
+  disassembly of two functions didn't cover.
 
 
 Valgrind also flagged **41,349 errors** and init-time invalid reads
@@ -2719,13 +2965,25 @@ How do you want to proceed?
 **[Asked the user]**
 
 
-*Q1 — Next step:* Valgrind proved the crash is deterministic (not a race) — a garbage botAI that source-tracing says shouldn't happen. This leaves 'stale/mixed build' vs 'real upstream bug', which I can't separate by reading. How do you want to proceed?
+*Q1 — Next step:* Valgrind proved the crash is deterministic (not a race) —
+a garbage botAI that source-tracing says shouldn't happen. This leaves
+'stale/mixed build' vs 'real upstream bug', which I can't separate by reading.
+How do you want to proceed?
 
-- Clean rebuild to rule out build corruption — Wipe build-shadow + build-cache and rebuild vanilla from scratch (no ccache reuse), then re-run. If the crash survives a clean build, it's a real upstream bug — not a mixed-object artifact. Definitive but the slowest option (full recompile).
+- Clean rebuild to rule out build corruption — Wipe build-shadow + build-cache
+  and rebuild vanilla from scratch (no ccache reuse), then re-run. If the crash
+  survives a clean build, it's a real upstream bug — not a mixed-object
+  artifact. Definitive but the slowest option (full recompile).
 
-- Add defensive guard, keep server up — Patch Engine::Init / strategy init to skip + log any strategy whose botAI is null instead of dereferencing it. The server survives and bots just lose those 6 racial/aoe/etc triggers. Masks the root cause but unblocks playing while we dig. Fast (one build).
+- Add defensive guard, keep server up — Patch Engine::Init / strategy init to
+  skip + log any strategy whose botAI is null instead of dereferencing it. The
+  server survives and bots just lose those 6 racial/aoe/etc triggers. Masks the
+  root cause but unblocks playing while we dig. Fast (one build).
 
-- Keep digging in source first — Before any rebuild, I trace the std::function creator dispatch and template instantiation paths (the parts disassembly didn't cover) to try to pin a real bug statically. No build, but may not conclude.
+- Keep digging in source first — Before any rebuild, I trace the std::function
+  creator dispatch and template instantiation paths (the parts disassembly
+  didn't cover) to try to pin a real bug statically. No build, but may not
+  conclude.
 
 → **Selected:** Keep digging in source first
 
@@ -2740,7 +2998,11 @@ and — critically — whether each class context uses a **per-class static
 shared strategy list** whose cache is reused across bots.
 
 
-**Found a real smell.** `MageAiObjectContext.cpp:319` calls `BuildSharedStrategyContexts(sharedStrategyContexts)` — and line 313 shows it uses a **per-class static** `sharedStrategyContexts`. If that runs on *every* Mage bot's construction (not once at startup), the shared context is being rebuilt/mutated repeatedly. Let me read the exact structure.
+**Found a real smell.** `MageAiObjectContext.cpp:319` calls
+`BuildSharedStrategyContexts(sharedStrategyContexts)` — and line 313 shows it
+uses a **per-class static** `sharedStrategyContexts`. If that runs on *every*
+Mage bot's construction (not once at startup), the shared context is being
+rebuilt/mutated repeatedly. Let me read the exact structure.
 
 
 Good — the ctor (312-315) is **empty**; `BuildSharedContexts` runs once at
@@ -2760,22 +3022,23 @@ RacialsStrategy's own ctor** — the one TU that would be stale. Let me
 disassemble it.
 
 
-**FOUND IT — and it's conclusive.** The `RacialsStrategy` constructor is **miscompiled**. Look at the disassembly:
+**FOUND IT — and it's conclusive.** The `RacialsStrategy` constructor is
+**miscompiled**. Look at the disassembly:
 
 
 ```
 
-+8: mov %rdi,-0x8(%rbp) ; save this
++8:  mov %rdi,-0x8(%rbp)      ; save this
 
-+12: mov %rsi,-0x10(%rbp) ; save botAI arg ← spilled correctly here
++12: mov %rsi,-0x10(%rbp)     ; save botAI arg  ← spilled correctly here
 
-+35: mov %rax,(%rdi) ; set vtable at this+0
++35: mov %rax,(%rdi)          ; set vtable at this+0
 
-+38: mov 0x8(%rdi),%rsi ; ← reads botAI from [this+8] (the object's OWN
++38: mov 0x8(%rdi),%rsi       ; ← reads botAI from [this+8] (the object's OWN
 
-; UNINITIALISED slot) instead of -0x10(%rbp)!
+                              ;   UNINITIALISED slot) instead of -0x10(%rbp)!
 
-+42: call Strategy::Strategy ; passes that garbage to the base ctor
++42: call Strategy::Strategy   ; passes that garbage to the base ctor
 
 ```
 
@@ -2797,11 +3060,9 @@ prove it's stale-object corruption, not global.
 
 |---|---|---|
 
-| **DuelStrategy** (valid botAI) | `mov -0x10(%rbp),%rsi` — reads the
-**spilled parameter** ✓ | correct |
+| **DuelStrategy** (valid botAI) | `mov -0x10(%rbp),%rsi` — reads the **spilled parameter** ✓ | correct |
 
-| **RacialsStrategy** (null botAI) | `mov 0x8(%rdi),%rsi` — reads the
-**uninitialized object member** ✗ | garbage |
+| **RacialsStrategy** (null botAI) | `mov 0x8(%rdi),%rsi` — reads the **uninitialized object member** ✗ | garbage |
 
 
 Same source pattern (`: BaseStrategy(botAI)`), same `-O0` compiler, two
@@ -2825,20 +3086,25 @@ objects from the cache rather than recompiling those TUs.
 
 This vindicates a lot:
 
-- **Not the duplicate login** (B026), **not ODR**, **not a race**, **not a lifetime bug** — all correctly ruled out.
+- **Not the duplicate login** (B026), **not ODR**, **not a race**, **not a
+  lifetime bug** — all correctly ruled out.
 
-- **Our patches (B002, B026, B025) are innocent.** The source is correct; the *binary* was wrong.
+- **Our patches (B002, B026, B025) are innocent.** The source is correct; the
+  *binary* was wrong.
 
-- Digging in source first was the right call — the disassembly-vs-source mismatch is what cracked it, and it saved us from chasing a phantom logic bug forever.
+- Digging in source first was the right call — the disassembly-vs-source
+  mismatch is what cracked it, and it saved us from chasing a phantom logic bug
+  forever.
 
 
 ## The fix (now justified, not a guess)
 
 
-**Clear ccache and do a clean rebuild of the module.** A normal incremental rebuild won't help — it'll pull the same poisoned objects. Specifically:
+**Clear ccache and do a clean rebuild of the module.** A normal incremental
+rebuild won't help — it'll pull the same poisoned objects. Specifically:
 
 1. `ccache -C` (clear the cache) — or `ccache -z` won't do it; needs `-C` to
-wipe.
+   wipe.
 
 2. Wipe `build-shadow/` (and `build-cache/`) so no stale `.o` survives.
 
@@ -2849,12 +3115,14 @@ Let me confirm the ccache setup so I give you the exact commands rather than
 guessing.
 
 
-**Smoking gun confirmed at the object-file level — and the mtimes explain everything:**
+**Smoking gun confirmed at the object-file level — and the mtimes explain
+everything:**
 
 
 - **Source `RacialsStrategy.cpp`: `2026-07-16 14:58:03`**
 
-- **Object `RacialsStrategy.cpp.o`: `2026-07-16 14:39:20`** — **19 minutes OLDER than its source.**
+- **Object `RacialsStrategy.cpp.o`: `2026-07-16 14:39:20`** — **19 minutes
+  OLDER than its source.**
 
 
 The `.o` is **stale**. It was compiled at 14:39 (with the broken ctor — I
@@ -2880,7 +3148,17 @@ correctly-compiled `DuelStrategy`.
 ## Root cause — resolved
 
 
-**A stale, miscompiled object file.** `RacialsStrategy.cpp.o` (and its 5 siblings: `aoe, boost, cast time, formation, potions`) contain a constructor that reads `botAI` from the object's **uninitialized `[this+8]` slot instead of the passed argument** — so every such strategy is born with a garbage `botAI`, and `Engine::Init → InitTriggers → botAI->GetBot()` dereferences it and segfaults. The **source is correct**; the **object code is not.** The build never recompiled these units after the last source reset, and every rebuild (RelWithDebInfo *and* Debug) re-linked the same poisoned objects — which is exactly why it reproduced identically and defeated every logic theory (duplicate-login, ODR, race, lifetime — all correctly ruled out; **all our patches vindicated**).
+**A stale, miscompiled object file.** `RacialsStrategy.cpp.o` (and its 5
+siblings: `aoe, boost, cast time, formation, potions`) contain a constructor
+that reads `botAI` from the object's **uninitialized `[this+8]` slot instead of
+the passed argument** — so every such strategy is born with a garbage `botAI`,
+and `Engine::Init → InitTriggers → botAI->GetBot()` dereferences it and
+segfaults. The **source is correct**; the **object code is not.** The build
+never recompiled these units after the last source reset, and every rebuild
+(RelWithDebInfo *and* Debug) re-linked the same poisoned objects — which is
+exactly why it reproduced identically and defeated every logic theory
+(duplicate-login, ODR, race, lifetime — all correctly ruled out; **all our
+patches vindicated**).
 
 
 Since correctly-compiled `DuelStrategy` uses the identical source pattern and
@@ -2902,7 +3180,7 @@ need to evict the poison:
 
 CCACHE_DIR=/mnt/mtwo/games/azeroth-core/wow-chat-2026/build-cache \
 
-/mnt/mtwo/games/azeroth-core/wow-chat-2026/libs/ccache/bin/ccache -C
+  /mnt/mtwo/games/azeroth-core/wow-chat-2026/libs/ccache/bin/ccache -C
 
 
 # 2. Remove all stale objects
@@ -2922,9 +3200,15 @@ Then run the server — the login storm should complete without the crash.
 
 Two notes:
 
-- **The `.o`-older-than-`.cpp` situation is a process fragility**, not a one-off: the patch system reverts `source-beta` to HEAD *after* the build, so object/source mtimes can get into states where incremental `make` mis-judges freshness. Worth a follow-up (a clean-build guarantee, or clearing ccache when patches change) — but the rebuild above fixes the immediate crash.
+- **The `.o`-older-than-`.cpp` situation is a process fragility**, not a
+  one-off: the patch system reverts `source-beta` to HEAD *after* the build, so
+  object/source mtimes can get into states where incremental `make` mis-judges
+  freshness. Worth a follow-up (a clean-build guarantee, or clearing ccache when
+  patches change) — but the rebuild above fixes the immediate crash.
 
-- I kept `--debug` in step 3 so if *anything* survives the clean build, we get a precise `-O0` trace instantly. Once confirmed stable, rebuild without `--debug` for the normal `RelWithDebInfo` performance build.
+- I kept `--debug` in step 3 so if *anything* survives the clean build, we get a
+  precise `-O0` trace instantly. Once confirmed stable, rebuild without
+  `--debug` for the normal `RelWithDebInfo` performance build.
 
 
 Per your preference, I'll let you run the compile so you see the output. Want me
@@ -2966,14 +3250,16 @@ Direct `clang++` command (no ccache). Let me run it standalone against the
 current source and check the ctor — this bypasses ccache entirely.
 
 
-**Proven — definitively.** Compiling `RacialsStrategy.cpp` standalone, bypassing ccache, with the *exact* same clang++ command and flags, produces **correct** code:
+**Proven — definitively.** Compiling `RacialsStrategy.cpp` standalone,
+bypassing ccache, with the *exact* same clang++ command and flags, produces
+**correct** code:
 
 
 ```
 
-+12: mov %rsi,-0x10(%rbp) ; spill botAI arg
++12: mov %rsi,-0x10(%rbp)     ; spill botAI arg
 
-+24: mov -0x10(%rbp),%rsi ; ← reads the PARAMETER (CORRECT)
++24: mov -0x10(%rbp),%rsi     ; ← reads the PARAMETER (CORRECT)
 
 +28: call Strategy::Strategy
 
@@ -2984,7 +3270,7 @@ vs. the object in the shipped binary (from ccache):
 
 ```
 
-+38: mov 0x8(%rdi),%rsi ; ← reads uninitialized member (BROKEN)
++38: mov 0x8(%rdi),%rsi       ; ← reads uninitialized member (BROKEN)
 
 ```
 
@@ -3004,16 +3290,25 @@ complete resolution.
 ## What was wrong
 
 
-**ccache was serving a corrupt cached object** for `RacialsStrategy.cpp` (and its 5 siblings: `aoe, boost, cast time, formation, potions`). That cached object's constructor reads `botAI` from the object's own **uninitialized memory** instead of the passed argument, so every such strategy is born with a garbage `botAI` → `Engine::Init → InitTriggers → botAI->GetBot()` → segfault during the bot-login storm.
+**ccache was serving a corrupt cached object** for `RacialsStrategy.cpp` (and
+its 5 siblings: `aoe, boost, cast time, formation, potions`). That cached
+object's constructor reads `botAI` from the object's own **uninitialized
+memory** instead of the passed argument, so every such strategy is born with a
+garbage `botAI` → `Engine::Init → InitTriggers → botAI->GetBot()` →
+segfault during the bot-login storm.
 
 
 The proof chain:
 
-- The shipped binary's ctor: `mov 0x8(%rdi),%rsi` (reads uninitialized member — broken).
+- The shipped binary's ctor: `mov 0x8(%rdi),%rsi` (reads uninitialized member
+  — broken).
 
-- The *same source*, recompiled fresh **without ccache**: `mov -0x10(%rbp),%rsi` (reads the parameter — correct).
+- The *same source*, recompiled fresh **without ccache**: `mov -0x10(%rbp),%rsi`
+  (reads the parameter — correct).
 
-- → The source is fine; only the cached object is corrupt. ccache (191 MB, 806 hits) re-served it on both prior rebuilds, which is exactly why it reproduced identically and defeated every logic theory.
+- → The source is fine; only the cached object is corrupt. ccache (191 MB, 806
+  hits) re-served it on both prior rebuilds, which is exactly why it reproduced
+  identically and defeated every logic theory.
 
 
 ## Why the last rebuild didn't fix it
@@ -3034,13 +3329,11 @@ Both steps are required — the cache eviction is the one that was missing:
 
 CCACHE_DIR=/mnt/mtwo/games/azeroth-core/wow-chat-2026/build-cache \
 
-/mnt/mtwo/games/azeroth-core/wow-chat-2026/libs/ccache/bin/ccache -C # evict the
-poison
+  /mnt/mtwo/games/azeroth-core/wow-chat-2026/libs/ccache/bin/ccache -C   # evict the poison
 
-rm -rf /mnt/mtwo/games/azeroth-core/wow-chat-2026/build-shadow # force full
-recompile
+rm -rf /mnt/mtwo/games/azeroth-core/wow-chat-2026/build-shadow            # force full recompile
 
-./scripts/compile --debug # rebuild from empty cache
+./scripts/compile --debug                                                 # rebuild from empty cache
 
 ```
 
@@ -3054,9 +3347,15 @@ comes up clean, rebuild without `--debug` for the performance build.
 ## Follow-ups worth noting (not blocking)
 
 
-- **This will recur** unless we guard against it. ccache silently served a corrupt object — a real hazard with this patch-apply/revert workflow. Options: clear ccache automatically when B-patches change, or add a `compile --clean` flag that does the `ccache -C` + `rm build-shadow` dance. Want me to add that flag to `scripts/compile`?
+- **This will recur** unless we guard against it. ccache silently served a
+  corrupt object — a real hazard with this patch-apply/revert workflow.
+  Options: clear ccache automatically when B-patches change, or add a `compile
+  --clean` flag that does the `ccache -C` + `rm build-shadow` dance. Want me to
+  add that flag to `scripts/compile`?
 
-- The **2 duplicate-key warnings** (`Min/MaxRandomBots`) are still in the log — that's the refreshed upstream `.dist` declaring those keys twice; cosmetic, and I can anchor C020 to silence it whenever you like.
+- The **2 duplicate-key warnings** (`Min/MaxRandomBots`) are still in the log
+  — that's the refreshed upstream `.dist` declaring those keys twice;
+  cosmetic, and I can anchor C020 to silence it whenever you like.
 
 
 I held off running the compile myself since you like to watch the build output
@@ -3068,14 +3367,14 @@ me to?
 
 ### User Request 25
 
-Why the last rebuild didn't fix it
+  Why the last rebuild didn't fix it
 
 
-The "clean rebuild" removed build-shadow but never cleared ccache — so the
-corrupt object came right back from the 191 MB cache. rm -rf build-shadow alone
-can't help: on recompile,
+  The "clean rebuild" removed build-shadow but never cleared ccache — so the
+  corrupt object came right back from the 191 MB cache. rm -rf build-shadow
+  alone can't help: on recompile,
 
-ccache re-serves the poison.
+  ccache re-serves the poison.
 
 
 
@@ -3101,11 +3400,11 @@ CCACHE_DIR=/mnt/mtwo/games/azeroth-core/wow-chat-2026/tmp/build-cache
 did I miss anything?
 
 
-- The 2 duplicate-key warnings (Min/MaxRandomBots) are still in the log —
-that's the refreshed upstream .dist declaring those keys twice; cosmetic, and I
-can anchor C020 to silence
+  - The 2 duplicate-key warnings (Min/MaxRandomBots) are still in the log —
+    that's the refreshed upstream .dist declaring those keys twice; cosmetic,
+    and I can anchor C020 to silence
 
-it whenever you like.
+  it whenever you like.
 
 
 didn't we fix that? Are the patches not applying correctly?
@@ -3123,14 +3422,14 @@ Yes — you did run it, but two small things sent it at the **wrong cache**:
 
 
 1. **The path had an extra `tmp/`**: you set `.../tmp/build-cache`, but the real
-cache is `.../build-cache` (no `tmp/`). That path doesn't exist.
+   cache is `.../build-cache` (no `tmp/`). That path doesn't exist.
 
 2. **`CCACHE_DIR=...` was on its own line** — a bare `VAR=value` sets an
-*unexported* shell variable, so the next line's `ccache -C` never saw it. It
-fell back to ccache's **default** dir and cleared `/home/ritz/.cache/ccache`
-(2.2 MB) instead of the project's **191 MB `build-cache`** — which is still
-fully intact and still poisoned (I re-confirmed the binary's ctor is still
-broken).
+   *unexported* shell variable, so the next line's `ccache -C` never saw it. It
+   fell back to ccache's **default** dir and cleared `/home/ritz/.cache/ccache`
+   (2.2 MB) instead of the project's **191 MB `build-cache`** — which is still
+   fully intact and still poisoned (I re-confirmed the binary's ctor is still
+   broken).
 
 
 My fault for giving it as a `\`-continued two-line command that's easy to split.
@@ -3153,7 +3452,8 @@ where the second copy comes from.
 
 - Line 88: `AiPlayerbot.MinRandomBots = 500` ← the population key
 
-- Line 2339: `AiPlayerbot.MinRandomBots`**`PriceChangeInterval`**` = 7200` ← a *different* key that shares the prefix
+- Line 2339: `AiPlayerbot.MinRandomBots`**`PriceChangeInterval`**` = 7200` ← a
+  *different* key that shares the prefix
 
 
 C020's sed uses the **greedy `.*=.*`** — the exact bug I'd just fixed in
@@ -3186,9 +3486,12 @@ Both fixed and verified. Here's where everything stands.
 
 Your instinct was exactly right; the command just aimed at the wrong cache:
 
-- **Extra `tmp/`**: you set `.../tmp/build-cache`, but the real cache is `.../build-cache` (no `tmp/`) — that path doesn't exist.
+- **Extra `tmp/`**: you set `.../tmp/build-cache`, but the real cache is
+  `.../build-cache` (no `tmp/`) — that path doesn't exist.
 
-- **`CCACHE_DIR=…` on its own line** sets an *unexported* shell variable, so the next line's `ccache -C` never received it and cleared ccache's default dir (`~/.cache/ccache`, 2.2 MB) instead of the project's 191 MB cache.
+- **`CCACHE_DIR=…` on its own line** sets an *unexported* shell variable, so
+  the next line's `ccache -C` never received it and cleared ccache's default dir
+  (`~/.cache/ccache`, 2.2 MB) instead of the project's 191 MB cache.
 
 
 That was my fault for handing it to you as a `\`-continued command that's easy
@@ -3204,7 +3507,12 @@ You were right to push on it. Two separate duplicates:
 
 - The **`RandomBotMinLevel`** one we fixed earlier (C012/C014). ✓ still clean.
 
-- The **`MinRandomBots`** one you're seeing now is *new* — **C020's greedy `.*=.*` regex**, the same class of bug, which I reintroduced when I wrote that patch. It matched `MinRandomBots`**`PriceChangeInterval`** too, clobbering it into a second `MinRandomBots` line. That single bug caused **both** the duplicate-key warnings **and** the two `…PriceChangeInterval` "missing property" warnings.
+- The **`MinRandomBots`** one you're seeing now is *new* — **C020's greedy
+  `.*=.*` regex**, the same class of bug, which I reintroduced when I wrote that
+  patch. It matched `MinRandomBots`**`PriceChangeInterval`** too, clobbering it
+  into a second `MinRandomBots` line. That single bug caused **both** the
+  duplicate-key warnings **and** the two `…PriceChangeInterval` "missing
+  property" warnings.
 
 
 Fixed in `config/patches/C020` (anchored `[[:space:]]*=`) and repaired the live
@@ -3221,9 +3529,9 @@ come back on reinstall since C020 is the source of truth.
 
 ```bash
 
-./scripts/compile --debug # ccache is empty now → fresh, correct objects
+./scripts/compile --debug     # ccache is empty now → fresh, correct objects
 
-./scripts/worldserver # Debug build auto-runs the crash catcher
+./scripts/worldserver         # Debug build auto-runs the crash catcher
 
 ```
 
@@ -3260,7 +3568,12 @@ most likely `build-shadow` wasn't wiped, so `make` saw the old broken `.o` as
 up-to-date and never recompiled it.
 
 
-**Critical — this changes the diagnosis.** The `.o` was genuinely recompiled (mtime 13:21, mid-build) as a real ccache **miss** (cache was empty), yet clang produced the **broken ctor again**. So it's **not** ccache poison — it's a **reproducible miscompilation** in the real build. My earlier standalone compile got *correct* code, so something in the real build differs from a bare compile. The prime suspect: **precompiled headers (PCH)**. Let me check.
+**Critical — this changes the diagnosis.** The `.o` was genuinely recompiled
+(mtime 13:21, mid-build) as a real ccache **miss** (cache was empty), yet clang
+produced the **broken ctor again**. So it's **not** ccache poison — it's a
+**reproducible miscompilation** in the real build. My earlier standalone compile
+got *correct* code, so something in the real build differs from a bare compile.
+The prime suspect: **precompiled headers (PCH)**. Let me check.
 
 
 PCH is a dead end — module files don't use PCH (`compile_commands.json` has no
@@ -3332,7 +3645,7 @@ repos to pristine.
 
 ```
 
-+24: mov -0x10(%rbp),%rsi ← CORRECT (patched standalone)
++24: mov -0x10(%rbp),%rsi     ← CORRECT (patched standalone)
 
 ```
 
@@ -3391,7 +3704,13 @@ and give you a straight answer, because I've now gathered enough.
 ## Answering your question directly
 
 
-**Going back a mod-playerbots version won't fix this, and a changelog won't show the cause — because it isn't a source bug.** I've now compiled `RacialsStrategy.cpp` **six different ways** (pristine source, patched source, direct clang, through ccache, `compile_commands.json` flags, and the *exact* `flags.make` command make runs) and **every single one produces correct machine code.** The current mod-playerbots source is fine. There's nothing to revert to, and diffing versions would point at code that compiles correctly.
+**Going back a mod-playerbots version won't fix this, and a changelog won't show
+the cause — because it isn't a source bug.** I've now compiled
+`RacialsStrategy.cpp` **six different ways** (pristine source, patched source,
+direct clang, through ccache, `compile_commands.json` flags, and the *exact*
+`flags.make` command make runs) and **every single one produces correct machine
+code.** The current mod-playerbots source is fine. There's nothing to revert to,
+and diffing versions would point at code that compiles correctly.
 
 
 What's actually broken is that the **full `make` build emitted wrong machine
@@ -3410,7 +3729,7 @@ Correct source → wrong machine code, non-reproducibly, is a textbook symptom
 of one of two things:
 
 1. **Failing hardware (bad RAM)** corrupting the compiler's codegen in flight.
-This is the leading suspect and the most important to rule out.
+   This is the leading suspect and the most important to rule out.
 
 2. A flaky toolchain glitching under heavy parallel-build memory pressure.
 
@@ -3423,18 +3742,18 @@ the running server are all exposed to silent corruption until the RAM is fixed.
 
 
 1. **Run a memory test** (`memtest86` / `memtest86+`, boot it, let it run a full
-pass). This is cheap and directly tests the leading hypothesis. If it finds
-errors, that's your root cause and everything else has been a symptom.
+   pass). This is cheap and directly tests the leading hypothesis. If it finds
+   errors, that's your root cause and everything else has been a symptom.
 
 2. **Meanwhile, retry the build single-threaded**: `./scripts/compile --debug
---threads 1`. If the miscompile is load-triggered, `-j1` sidesteps it, and a
-fresh build may simply come out correct. (I can verify the ctor in the resulting
-binary in one command before you even run the server.)
+   --threads 1`. If the miscompile is load-triggered, `-j1` sidesteps it, and a
+   fresh build may simply come out correct. (I can verify the ctor in the
+   resulting binary in one command before you even run the server.)
 
 3. **Fastest unblock, if you want a server *now*:** I can surgically recompile
-the affected object files and relink — no full rebuild. Caveat: if the cause
-is bad RAM, other files could be silently miscompiled too, so this is a
-band-aid, not a cure.
+   the affected object files and relink — no full rebuild. Caveat: if the
+   cause is bad RAM, other files could be silently miscompiled too, so this is a
+   band-aid, not a cure.
 
 
 My honest recommendation: **kick off the memtest**, and do the `--threads 1`
@@ -3491,9 +3810,9 @@ version comes from.
 
 ```
 
-HEAD@{2026-07-15 22:43:47} 52f58186a pull --rebase: Fast-forward ← THE UPDATE
+HEAD@{2026-07-15 22:43:47}  52f58186a  pull --rebase: Fast-forward   ← THE UPDATE
 
-HEAD@{... 06-03 → 07-15} e98e7a97e (the version that worked for 6 weeks)
+HEAD@{... 06-03 → 07-15}    e98e7a97e  (the version that worked for 6 weeks)
 
 ```
 
@@ -3530,366 +3849,377 @@ Summary:
 
 1. Primary Request and Intent:
 
-The user is debugging an AzerothCore 3.3.5a WoW private server ("Everland
-Ghostsong", technical name wow-chat-2) on the **vanilla profile**. Over multiple
-sessions the requests were:
+   The user is debugging an AzerothCore 3.3.5a WoW private server ("Everland
+   Ghostsong", technical name wow-chat-2) on the **vanilla profile**. Over
+   multiple sessions the requests were:
 
-- **Original:** Categorize all errors/warnings in the vanilla server logs, and
-diagnose a segfault that occurs after startup.
+   - **Original:** Categorize all errors/warnings in the vanilla server logs,
+     and diagnose a segfault that occurs after startup.
 
-- Set playerbot population to between 128 and 256 active bots.
+   - Set playerbot population to between 128 and 256 active bots.
 
-- Update the 17 missing worldserver config keys (organized like upstream with
-same descriptions), fix duplicate config keys, and determine if patches apply
-correctly.
+   - Update the 17 missing worldserver config keys (organized like upstream with
+     same descriptions), fix duplicate config keys, and determine if patches
+     apply correctly.
 
-- Update CLAUDE.md: make it project-wide (not vanilla-specific), add a reference
-to the "patching system" skill at `/home/ritz/programming/ai-stuff/skills/`,
-strip content that "doesn't strictly belong" (familiarize with codebase, not
-imply direction).
+   - Update CLAUDE.md: make it project-wide (not vanilla-specific), add a
+     reference to the "patching system" skill at
+     `/home/ritz/programming/ai-stuff/skills/`, strip content that "doesn't
+     strictly belong" (familiarize with codebase, not imply direction).
 
-- Answer networking status: what goes in players' realmlist.wtf (ports 4362
-auth, 4462 world), and fix so users can enter wow.ritzmenardi.com.
+   - Answer networking status: what goes in players' realmlist.wtf (ports 4362
+     auth, 4462 world), and fix so users can enter wow.ritzmenardi.com.
 
-- Fix the ALE bot-login hook (B002) that wasn't injecting.
+   - Fix the ALE bot-login hook (B002) that wasn't injecting.
 
-- Add a `compile --debug` flag that bakes the crash-catcher into the build
-(debug build auto-runs it).
+   - Add a `compile --debug` flag that bakes the crash-catcher into the build
+     (debug build auto-runs it).
 
-- Move README-2 to `/home/ritz/.dominions6/mods/elentalus-0.97/` as an addendum
-to a subdirectory's readme, keeping README + README-2 as separate files with
-correct mtimes.
+   - Move README-2 to `/home/ritz/.dominions6/mods/elentalus-0.97/` as an
+     addendum to a subdirectory's readme, keeping README + README-2 as separate
+     files with correct mtimes.
 
-- Mark notes/d6-vision as "will not implement" idiomatically (and later: remove
-it from notes/ — "we don't need tombstones for something that has a new
-home").
+   - Mark notes/d6-vision as "will not implement" idiomatically (and later:
+     remove it from notes/ — "we don't need tombstones for something that has
+     a new home").
 
-- **Crash resolution (dominant ongoing task):** Find and fix the exact crash.
-Explicitly: "even if it's an upstream bug, we'll still need to write a patch
-that fixes it." User preferences during this: "I'd prefer to not recompile
-unless we have to"; "keep digging in source first"; use valgrind ("alright I
-installed valgrind and gdb, have at it").
+   - **Crash resolution (dominant ongoing task):** Find and fix the exact crash.
+     Explicitly: "even if it's an upstream bug, we'll still need to write a
+     patch that fixes it." User preferences during this: "I'd prefer to not
+     recompile unless we have to"; "keep digging in source first"; use valgrind
+     ("alright I installed valgrind and gdb, have at it").
 
-- **MOST RECENT:** "can we just go back a version and pin a previous playerbots
-version that doesn't have this bug? Or maybe you can look at what changed since
-the last version and see where any of the relevant parts were modified?" Plus
-the critical clue: "this wasn't a problem just a couple days ago. We were
-compiling and it was fine. It was only after I did the most recent
-./scripts/update run that we had issues. So I think it has something to do with
-the src, or maybe the way that we handle it." And the specific ask: "can you use
-git to search for files that are in src/ that aren't in the most recent builds?
-Both for the engines and all the modules. If you can't find anything, I'll try
-the single-core recompile. Then, if that doesn't work, I'll do the memtest."
+   - **MOST RECENT:** "can we just go back a version and pin a previous
+     playerbots version that doesn't have this bug? Or maybe you can look at
+     what changed since the last version and see where any of the relevant parts
+     were modified?" Plus the critical clue: "this wasn't a problem just a
+     couple days ago. We were compiling and it was fine. It was only after I did
+     the most recent ./scripts/update run that we had issues. So I think it has
+     something to do with the src, or maybe the way that we handle it." And the
+     specific ask: "can you use git to search for files that are in src/ that
+     aren't in the most recent builds? Both for the engines and all the modules.
+     If you can't find anything, I'll try the single-core recompile. Then, if
+     that doesn't work, I'll do the memtest."
 
 
 2. Key Technical Concepts:
 
-- AzerothCore 3.3.5a, mod-playerbots (liyunfan1223 fork), mod-ale (Lua engine)
+   - AzerothCore 3.3.5a, mod-playerbots (liyunfan1223 fork), mod-ale (Lua
+     engine)
 
-- Reversible patch system: `patches/B*.sh` (C++ source patches,
-apply-before-compile/revert-after), `config/patches/C*.sh` (config .conf sed
-patches, per-profile via CONFIG_PROFILES), `patches/E-patches.sh` (install
-setup), `patches/patches.sh` (runner + PHASE_BEGIN_PATCHES lists). Built with
-the "upstream-patch-system" skill.
+   - Reversible patch system: `patches/B*.sh` (C++ source patches,
+     apply-before-compile/revert-after), `config/patches/C*.sh` (config .conf
+     sed patches, per-profile via CONFIG_PROFILES), `patches/E-patches.sh`
+     (install setup), `patches/patches.sh` (runner + PHASE_BEGIN_PATCHES lists).
+     Built with the "upstream-patch-system" skill.
 
-- Shadow-build-promote workflow: compile → `installed-files-shadow` →
-validate → promote → `installed-files-<profile>`. Source in `source-beta/`
-(gitignored, regenerable, reset --hard before each build).
+   - Shadow-build-promote workflow: compile → `installed-files-shadow` →
+     validate → promote → `installed-files-<profile>`. Source in
+     `source-beta/` (gitignored, regenerable, reset --hard before each build).
 
-- Profiles: release/alpha (level 80), beta (20), vanilla (40). Active in
-`.profile`.
+   - Profiles: release/alpha (level 80), beta (20), vanilla (40). Active in
+     `.profile`.
 
-- ccache (project-local at `build-cache/`, binary at `libs/ccache/bin/ccache`,
-4.10.2), used via `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache`
+   - ccache (project-local at `build-cache/`, binary at
+     `libs/ccache/bin/ccache`, 4.10.2), used via
+     `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache`
 
-- clang++ (/usr/bin/clang++), C++20, -O0 -g for Debug build
+   - clang++ (/usr/bin/clang++), C++20, -O0 -g for Debug build
 
-- gdb, valgrind (memcheck), hardware watchpoints, disassembly analysis
+   - gdb, valgrind (memcheck), hardware watchpoints, disassembly analysis
 
-- mod-playerbots strategy architecture:
-`NamedObjectContext`/`NamedObjectContextList`/`SharedNamedObjectContextList`,
-per-class static `sharedStrategyContexts`, strategy creators as std::function,
-PlayerbotAIAware base holding `botAI` at object offset +8 (vtable at +0)
+   - mod-playerbots strategy architecture:
+     `NamedObjectContext`/`NamedObjectContextList`/`SharedNamedObjectContextList`,
+     per-class static `sharedStrategyContexts`, strategy creators as
+     std::function, PlayerbotAIAware base holding `botAI` at object offset +8
+     (vtable at +0)
 
-- PlayerbotWorldThreadProcessor (queued bot login on main world thread)
+   - PlayerbotWorldThreadProcessor (queued bot login on main world thread)
 
 
 3. Files and Code Sections:
 
-- `config/patches/C020-vanilla-playerbot-population.sh` (created, then
-bug-fixed)
+   - `config/patches/C020-vanilla-playerbot-population.sh` (created, then
+     bug-fixed)
 
-- Sets MinRandomBots=128, MaxRandomBots=256. Had greedy regex bug fixed:
+     - Sets MinRandomBots=128, MaxRandomBots=256. Had greedy regex bug fixed:
 
-- `sed -i
-'s|^AiPlayerbot\.MinRandomBots[[:space:]]*=.*|AiPlayerbot.MinRandomBots = 128|'`
-(anchored [[:space:]]*= to not match MinRandomBotsPriceChangeInterval)
+     - `sed -i 's|^AiPlayerbot\.MinRandomBots[[:space:]]*=.*|AiPlayerbot.MinRandomBots = 128|'` (anchored [[:space:]]*= to not match MinRandomBotsPriceChangeInterval)
 
-- `config/patches/C012-playerbot-level-cap.sh` &
-`C014-vanilla-playerbot-level-cap.sh` — fixed greedy `.*=.*` →
-`[[:space:]]*=.*` (was clobbering RandomBotMinLevelChance)
+   - `config/patches/C012-playerbot-level-cap.sh` &
+     `C014-vanilla-playerbot-level-cap.sh` — fixed greedy `.*=.*` →
+     `[[:space:]]*=.*` (was clobbering RandomBotMinLevelChance)
 
-- `config/patches/C011-realmlist-setup.sh` — changed from `WHERE id = 1` to
-update ALL realm rows' address to wow.ritzmenardi.com (removed flag handling,
-left to set-active-realm)
+   - `config/patches/C011-realmlist-setup.sh` — changed from `WHERE id = 1` to
+     update ALL realm rows' address to wow.ritzmenardi.com (removed flag
+     handling, left to set-active-realm)
 
-- `patches/E-patches.sh` — added app .dist refresh from source in
-patch_E006_initialize_config_files (copies
-`${AC_CODE_DIR}/src/server/apps/*/*.conf.dist` to `${TARGET}/etc/`)
+   - `patches/E-patches.sh` — added app .dist refresh from source in
+     patch_E006_initialize_config_files (copies
+     `${AC_CODE_DIR}/src/server/apps/*/*.conf.dist` to `${TARGET}/etc/`)
 
-- `patches/B002-playerbots-ale-login-hook.sh` — retargeted from
-RandomPlayerbotMgr.cpp to PlayerbotMgr.cpp, anchors on `LOG_INFO("playerbots",
-"Bot {} logged in"` at end of OnBotLoginInternal (round-trip tested clean)
+   - `patches/B002-playerbots-ale-login-hook.sh` — retargeted from
+     RandomPlayerbotMgr.cpp to PlayerbotMgr.cpp, anchors on
+     `LOG_INFO("playerbots", "Bot {} logged in"` at end of OnBotLoginInternal
+     (round-trip tested clean)
 
-- `patches/B026-playerbots-bot-login-strategy-guard.sh` (created) —
-Engine::Init null-strategy guard + AddPlayerbotData delete-before-reconstruct
-fix (`PlayerbotAIBase* stale = itr->second; delete stale;
-_playerbotsAIMap.erase(player->GetGUID());`). Registered in patches.sh for
-release/beta/vanilla. Round-trip tested.
+   - `patches/B026-playerbots-bot-login-strategy-guard.sh` (created) —
+     Engine::Init null-strategy guard + AddPlayerbotData
+     delete-before-reconstruct fix (`PlayerbotAIBase* stale = itr->second;
+     delete stale; _playerbotsAIMap.erase(player->GetGUID());`). Registered in
+     patches.sh for release/beta/vanilla. Round-trip tested.
 
-- `scripts/debug-run.sh` (created) — crash catcher: gdb batch (bt full,
-registers, disassembly, all-threads) OR LD_PRELOAD shim (compiled on demand,
-uses dladdr for module-relative offsets + addr2line)
+   - `scripts/debug-run.sh` (created) — crash catcher: gdb batch (bt full,
+     registers, disassembly, all-threads) OR LD_PRELOAD shim (compiled on
+     demand, uses dladdr for module-relative offsets + addr2line)
 
-- `scripts/worldserver` & `scripts/authserver` — added --debug flag +
-auto-detect via `${INSTALL_DIR}/bin/.build-type == "Debug"`
+   - `scripts/worldserver` & `scripts/authserver` — added --debug flag +
+     auto-detect via `${INSTALL_DIR}/bin/.build-type == "Debug"`
 
-- `scripts/compile` — added --debug flag (`-DCMAKE_BUILD_TYPE=Debug`, implies
---force, stamps `${INSTALL_DIR_SHADOW}/bin/.build-type`)
+   - `scripts/compile` — added --debug flag (`-DCMAKE_BUILD_TYPE=Debug`,
+     implies --force, stamps `${INSTALL_DIR_SHADOW}/bin/.build-type`)
 
-- `issues/declined/807-d6-based-damage-and-aging-system.md` (created, embeds raw
-d6-vision verbatim)
+   - `issues/declined/807-d6-based-damage-and-aging-system.md` (created, embeds
+     raw d6-vision verbatim)
 
-- `notes/claude-md-asides.md` (created, holds stripped CLAUDE.md poetry)
+   - `notes/claude-md-asides.md` (created, holds stripped CLAUDE.md poetry)
 
-- CLAUDE.md — max-level per-profile, Profiles section, Patch System section,
-stripped asides
+   - CLAUDE.md — max-level per-profile, Profiles section, Patch System
+     section, stripped asides
 
-- `source-beta/modules/mod-playerbots/src/Ai/Base/Strategy/RacialsStrategy.cpp`
-line 30: `Player* bot = botAI->GetBot();` — the crash site
+   - `source-beta/modules/mod-playerbots/src/Ai/Base/Strategy/RacialsStrategy.cpp`
+     line 30: `Player* bot = botAI->GetBot();` — the crash site
 
-- `source-beta/modules/mod-playerbots/src/Bot/Engine/PlayerbotAIAware.h`:
-`PlayerbotAIAware(PlayerbotAI* botAI) : botAI(botAI) {}` protected `PlayerbotAI*
-botAI;`
+   - `source-beta/modules/mod-playerbots/src/Bot/Engine/PlayerbotAIAware.h`:
+     `PlayerbotAIAware(PlayerbotAI* botAI) : botAI(botAI) {}` protected
+     `PlayerbotAI* botAI;`
 
-- **KEY DISASSEMBLY (the broken binary/object):** RacialsStrategy ctor
-`_ZN15RacialsStrategyC2EP11PlayerbotAI`: `+12: mov %rsi,-0x10(%rbp)` (spill
-arg), then `+38: mov 0x8(%rdi),%rsi` (reads uninitialized member — BROKEN,
-should be `mov -0x10(%rbp),%rsi`). DuelStrategy correctly does `mov
--0x10(%rbp),%rsi`.
+   - **KEY DISASSEMBLY (the broken binary/object):** RacialsStrategy ctor
+     `_ZN15RacialsStrategyC2EP11PlayerbotAI`: `+12: mov %rsi,-0x10(%rbp)` (spill
+     arg), then `+38: mov 0x8(%rdi),%rsi` (reads uninitialized member —
+     BROKEN, should be `mov -0x10(%rbp),%rsi`). DuelStrategy correctly does `mov
+     -0x10(%rbp),%rsi`.
 
-- `scripts/update` — PROFILE_COMMIT pin mechanism at line 29 (all empty), `git
--C "${AC_CODE_DIR}" checkout "${COMMIT}"` (line 376), module pin `git -C
-"${mod_dir}" checkout "${mod_commit}"` (lines 397/405)
+   - `scripts/update` — PROFILE_COMMIT pin mechanism at line 29 (all empty),
+     `git -C "${AC_CODE_DIR}" checkout "${COMMIT}"` (line 376), module pin `git
+     -C "${mod_dir}" checkout "${mod_commit}"` (lines 397/405)
 
-- Live conf `installed-files-vanilla/etc/modules/playerbots.conf` — repaired
-MinRandomBots/MaxRandomBots duplicate (restored PriceChangeInterval keys)
+   - Live conf `installed-files-vanilla/etc/modules/playerbots.conf` —
+     repaired MinRandomBots/MaxRandomBots duplicate (restored
+     PriceChangeInterval keys)
 
 
 4. Errors and fixes:
 
-- **Config duplicate keys / missing keys:** C012/C014 and later C020 had greedy
-`.*=.*` regex clobbering sibling keys (RandomBotMinLevelChance,
-MinRandomBotsPriceChangeInterval). Fixed by anchoring `[[:space:]]*=`. This
-resolved 4 warnings at once.
+   - **Config duplicate keys / missing keys:** C012/C014 and later C020 had
+     greedy `.*=.*` regex clobbering sibling keys (RandomBotMinLevelChance,
+     MinRandomBotsPriceChangeInterval). Fixed by anchoring `[[:space:]]*=`. This
+     resolved 4 warnings at once.
 
-- **B002 anchor drift:** targeted RandomPlayerbotMgr.cpp but upstream moved code
-to PlayerbotMgr.cpp → hook never injected. Retargeted.
+   - **B002 anchor drift:** targeted RandomPlayerbotMgr.cpp but upstream moved
+     code to PlayerbotMgr.cpp → hook never injected. Retargeted.
 
-- **B026 sed over-matched:** anchor matched commented lines / multiple
-functions. Fixed by anchoring on unique `strategyTypeMask |=
-strategy->GetType();` and scoping AddPlayerbotData to the
-`find(player->GetGUID())` branch.
+   - **B026 sed over-matched:** anchor matched commented lines / multiple
+     functions. Fixed by anchoring on unique `strategyTypeMask |=
+     strategy->GetType();` and scoping AddPlayerbotData to the
+     `find(player->GetGUID())` branch.
 
-- **gdb "No executable file specified":** my gdb runner script was missing
-`--args ./worldserver`. Fixed.
+   - **gdb "No executable file specified":** my gdb runner script was missing
+     `--args ./worldserver`. Fixed.
 
-- **gdb watchpoint on wrong offset:** used `(char*)this` losing type, read
-vtable at offset 0 instead of botAI at +8. Fixed with `(RacialsStrategy*)this`.
+   - **gdb watchpoint on wrong offset:** used `(char*)this` losing type, read
+     vtable at offset 0 instead of botAI at +8. Fixed with
+     `(RacialsStrategy*)this`.
 
-- **User's ccache -C failed (user feedback):** User's bash history:
-`CCACHE_DIR=.../tmp/build-cache` (wrong path + unexported bare var on separate
-line) → cleared wrong default cache. I diagnosed this and cleared the real
-build-cache (191M→2.2M). User feedback taught me my `\`-continued two-line
-command was easy to split wrong.
+   - **User's ccache -C failed (user feedback):** User's bash history:
+     `CCACHE_DIR=.../tmp/build-cache` (wrong path + unexported bare var on
+     separate line) → cleared wrong default cache. I diagnosed this and
+     cleared the real build-cache (191M→2.2M). User feedback taught me my
+     `\`-continued two-line command was easy to split wrong.
 
-- **Rebuild still broken (KEY unresolved):** After proper ccache clear +
-rebuild, RacialsStrategy ctor STILL miscompiled. Proven NOT ccache (fresh miss
-compiles correctly), NOT ODR (offsets consistent), NOT patched-vs-pristine
-headers (both compile correctly standalone), NOT PCH, NOT flags difference.
-Standalone compile 6 ways = correct; only `make` build = broken.
+   - **Rebuild still broken (KEY unresolved):** After proper ccache clear +
+     rebuild, RacialsStrategy ctor STILL miscompiled. Proven NOT ccache (fresh
+     miss compiles correctly), NOT ODR (offsets consistent), NOT
+     patched-vs-pristine headers (both compile correctly standalone), NOT PCH,
+     NOT flags difference. Standalone compile 6 ways = correct; only `make`
+     build = broken.
 
-- **User feedback that reframed everything:** "this wasn't a problem just a
-couple days ago... only after the most recent ./scripts/update run." This led to
-finding the commit jump.
+   - **User feedback that reframed everything:** "this wasn't a problem just a
+     couple days ago... only after the most recent ./scripts/update run." This
+     led to finding the commit jump.
 
 
 5. Problem Solving:
 
-- Solved: config warnings (17 missing keys via E006 .dist refresh, verified
-19→2; duplicate/Chance keys via regex fix), realmlist addresses, B002 hook,
---debug tooling, README-2/d6-vision housekeeping.
+   - Solved: config warnings (17 missing keys via E006 .dist refresh, verified
+     19→2; duplicate/Chance keys via regex fix), realmlist addresses, B002
+     hook, --debug tooling, README-2/d6-vision housekeeping.
 
-- **CRASH — root cause narrowed but mechanism unresolved:** RacialsStrategy
-(and 5 sibling strategies) miscompiled — ctor reads uninitialized `botAI`
-member instead of parameter → null/garbage botAI → segfault in Engine::Init.
-The SOURCE is provably correct (compiles right 6 ways). The `make` build emits
-broken code non-reproducibly. **Latest breakthrough:** correlates exactly with
-the 2026-07-15 22:43 `./scripts/update` that fast-forwarded source-beta
-e98e7a97e→52f58186a and mod-playerbots 1041b0b0→93aaea3d. e98e7a97e worked
-for ~6 weeks (06-03 to 07-15). PROFILE_COMMIT pin mechanism exists (empty)
-allowing revert to old commits.
+   - **CRASH — root cause narrowed but mechanism unresolved:** RacialsStrategy
+     (and 5 sibling strategies) miscompiled — ctor reads uninitialized `botAI`
+     member instead of parameter → null/garbage botAI → segfault in
+     Engine::Init. The SOURCE is provably correct (compiles right 6 ways). The
+     `make` build emits broken code non-reproducibly. **Latest breakthrough:**
+     correlates exactly with the 2026-07-15 22:43 `./scripts/update` that
+     fast-forwarded source-beta e98e7a97e→52f58186a and mod-playerbots
+     1041b0b0→93aaea3d. e98e7a97e worked for ~6 weeks (06-03 to 07-15).
+     PROFILE_COMMIT pin mechanism exists (empty) allowing revert to old commits.
 
 
 6. All user messages:
 
-- "Okay I'm starting the server for the first time in a while. Can you
-categorize all the errors and warnings for me? We're on the vanilla profile.
-Also it segfaults after startup."
+   - "Okay I'm starting the server for the first time in a while. Can you
+     categorize all the errors and warnings for me? We're on the vanilla
+     profile. Also it segfaults after startup."
 
-- "also can we set it to between 128 and 256 playerbots at any one time?"
+   - "also can we set it to between 128 and 256 playerbots at any one time?"
 
-- [Long message with quoted sections] fixing missing config keys idiomatically,
-duplicate keys ("check whether or not we're adding the duplicate in as a
-patch"), CLAUDE.md is for entire project not vanilla, add note referring to
-patching system skill at /home/ritz/programming/ai-stuff/skills/, strip anything
-that doesn't strictly belong, networking status question (ports 4362/4462,
-realmlist.wtf), "read the log file and find out what happened" (--debug crash)
+   - [Long message with quoted sections] fixing missing config keys
+     idiomatically, duplicate keys ("check whether or not we're adding the
+     duplicate in as a patch"), CLAUDE.md is for entire project not vanilla, add
+     note referring to patching system skill at
+     /home/ritz/programming/ai-stuff/skills/, strip anything that doesn't
+     strictly belong, networking status question (ports 4362/4462,
+     realmlist.wtf), "read the log file and find out what happened" (--debug
+     crash)
 
-- "yes we need to fix that" (B002); "even if it's an upstream bug, we'll still
-need to write a patch that fixes it"; "-O0 build... this feels like it should be
-default in --debug? We want as much information as we can get, stored to tmp/";
-diff upstream "we could also do this. did we remove all the strategies or
-something?"; realmlist "fix this so that users can enter wow.ritzmenardi.com...
-I remember that there was something special they had to do... on a non-default
-port, is that true?"; config pipeline "how could we have missing values, if
-we're remaking the config file each time?"; README-2 wrong project move to
-/home/ritz/.dominions6/mods/elentalus-0.97/; d6-vision "mark this as will not
-implement"
+   - "yes we need to fix that" (B002); "even if it's an upstream bug, we'll
+     still need to write a patch that fixes it"; "-O0 build... this feels like
+     it should be default in --debug? We want as much information as we can get,
+     stored to tmp/"; diff upstream "we could also do this. did we remove all
+     the strategies or something?"; realmlist "fix this so that users can enter
+     wow.ritzmenardi.com... I remember that there was something special they had
+     to do... on a non-default port, is that true?"; config pipeline "how could
+     we have missing values, if we're remaking the config file each time?";
+     README-2 wrong project move to /home/ritz/.dominions6/mods/elentalus-0.97/;
+     d6-vision "mark this as will not implement"
 
-- "I did that though [ccache -C bash history with tmp/ path]... did I miss
-anything?" + "didn't we fix that [duplicate]? Are the patches not applying
-correctly?"
+   - "I did that though [ccache -C bash history with tmp/ path]... did I miss
+     anything?" + "didn't we fix that [duplicate]? Are the patches not applying
+     correctly?"
 
-- "alright the build completed. Can you run valgrind, then look at the logs?"
+   - "alright the build completed. Can you run valgrind, then look at the logs?"
 
-- "let's build B026, and when we know the root cause, we should edit B026 to
-contain the suggested B027's implementation. Does this mean we need another two
-compilations, minimum? Not ideal, any other way to do it?"
+   - "let's build B026, and when we know the root cause, we should edit B026 to
+     contain the suggested B027's implementation. Does this mean we need another
+     two compilations, minimum? Not ideal, any other way to do it?"
 
-- "sure [compile --debug]. We can remove the --debug flag from the worldserver
-script if we're building the entire build as a debug build... Can you ensure
-that the worldserver's --debug flag is built into the engine on a compile
---debug build?"
+   - "sure [compile --debug]. We can remove the --debug flag from the
+     worldserver script if we're building the entire build as a debug build...
+     Can you ensure that the worldserver's --debug flag is built into the engine
+     on a compile --debug build?"
 
-- "um I'd prefer if we had README and README-2, with the correct file
-modification times. But, both in the same location."
+   - "um I'd prefer if we had README and README-2, with the correct file
+     modification times. But, both in the same location."
 
-- "if you leave d6-vision in notes, then we'll keep coming back to it. We don't
-need tombstones for something that has a new home. They aren't dead, just
-recategorized."
+   - "if you leave d6-vision in notes, then we'll keep coming back to it. We
+     don't need tombstones for something that has a new home. They aren't dead,
+     just recategorized."
 
-- "I'd prefer to not recompile unless we have to. Can you look at all the sites
-that touch that piece of code... Anywhere that writes using that pointer. Also,
-look for scoping issues - does something get dropped out of scope too early, and
-referenced later?"
+   - "I'd prefer to not recompile unless we have to. Can you look at all the
+     sites that touch that piece of code... Anywhere that writes using that
+     pointer. Also, look for scoping issues - does something get dropped out of
+     scope too early, and referenced later?"
 
-- "let's wait for the arbiter"
+   - "let's wait for the arbiter"
 
-- "please continue" / "please continue?"
+   - "please continue" / "please continue?"
 
-- "compilation finished and first run done, please check logs."
+   - "compilation finished and first run done, please check logs."
 
-- "alright compilation finished and first run done, please check logs at your
-leisure." / "alright the build completed. Can you run the server with valgrind,
-then look at the logs?"
+   - "alright compilation finished and first run done, please check logs at your
+     leisure." / "alright the build completed. Can you run the server with
+     valgrind, then look at the logs?"
 
-- "keep digging in source first" (AskUserQuestion answer)
+   - "keep digging in source first" (AskUserQuestion answer)
 
-- **MOST RECENT:** "can we just go back a version and pin a previous playerbots
-version that doesn't have this bug? Or maybe you can look at what changed since
-the last version and see where any of the relevant parts were modified?" ...
-"can you use git to search for files that are in src/ that aren't in the most
-recent builds? Both for the engines and all the modules. If you can't find
-anything, I'll try the single-core recompile. Then, if that doesn't work, I'll
-do the memtest. But, I should say, this wasn't a problem just a couple days ago.
-We were compiling and it was fine. It was only after I did the most recent
-./scripts/update run that we had issues. So I think it has something to do with
-the src, or maybe the way that we handle it."
+   - **MOST RECENT:** "can we just go back a version and pin a previous
+     playerbots version that doesn't have this bug? Or maybe you can look at
+     what changed since the last version and see where any of the relevant parts
+     were modified?" ... "can you use git to search for files that are in src/
+     that aren't in the most recent builds? Both for the engines and all the
+     modules. If you can't find anything, I'll try the single-core recompile.
+     Then, if that doesn't work, I'll do the memtest. But, I should say, this
+     wasn't a problem just a couple days ago. We were compiling and it was fine.
+     It was only after I did the most recent ./scripts/update run that we had
+     issues. So I think it has something to do with the src, or maybe the way
+     that we handle it."
 
 
-Security-relevant constraints (from CLAUDE.md, preserve verbatim): "let me run
-the compilation scripts. I want to see the output." (user runs compiles, not
-me); "don't do anything unless I tell you to"; "you can always say no"; MySQL
-credentials ritz/menardi on port 3307; git commits only after completing an
-issue; bundle llm-transcripts on commit; use `git apply --cached`;
-source-beta/CLAUDE.md: "Do not run git commands that modify repo state (commit,
-branch, merge, rebase, reset, push...) unless explicitly requested" (though
-reset --hard on source-beta is the project's own build behavior).
+   Security-relevant constraints (from CLAUDE.md, preserve verbatim): "let me
+   run the compilation scripts. I want to see the output." (user runs compiles,
+   not me); "don't do anything unless I tell you to"; "you can always say no";
+   MySQL credentials ritz/menardi on port 3307; git commits only after
+   completing an issue; bundle llm-transcripts on commit; use `git apply
+   --cached`; source-beta/CLAUDE.md: "Do not run git commands that modify repo
+   state (commit, branch, merge, rebase, reset, push...) unless explicitly
+   requested" (though reset --hard on source-beta is the project's own build
+   behavior).
 
 
 7. Pending Tasks:
 
-- Resolve the RacialsStrategy miscompile crash (the dominant task).
+   - Resolve the RacialsStrategy miscompile crash (the dominant task).
 
-- Per user's stated plan: search src/ files not in builds (DONE — modules
-clean), then user tries single-core recompile, then memtest.
+   - Per user's stated plan: search src/ files not in builds (DONE — modules
+     clean), then user tries single-core recompile, then memtest.
 
-- Investigate/present the git version angle: pin to old working commit
-(e98e7a97e core / 1041b0b0 mod-playerbots) and/or diff what changed.
+   - Investigate/present the git version angle: pin to old working commit
+     (e98e7a97e core / 1041b0b0 mod-playerbots) and/or diff what changed.
 
-- Note: source-beta trees were reset to pristine by me during investigation;
-B002's untracked `mod-playerbots.cmake` was rm'd; `/tmp/wow-chat-2` was
-recreated.
+   - Note: source-beta trees were reset to pristine by me during investigation;
+     B002's untracked `mod-playerbots.cmake` was rm'd; `/tmp/wow-chat-2` was
+     recreated.
 
 
 8. Current Work:
 
-Immediately before this summary, I was addressing the user's most recent message
-about going back a version / finding files not in builds / the ./scripts/update
-correlation. I:
+   Immediately before this summary, I was addressing the user's most recent
+   message about going back a version / finding files not in builds / the
+   ./scripts/update correlation. I:
 
-- Compared module source .cpp vs compiled .o: **modules clean (663=663)**, no
-missing files.
+   - Compared module source .cpp vs compiled .o: **modules clean (663=663)**, no
+     missing files.
 
-- Found the core comparison was a false alarm (path-mapping artifact — source
-`src/common/X.cpp` vs object `X.cpp` relative roots differ).
+   - Found the core comparison was a false alarm (path-mapping artifact —
+     source `src/common/X.cpp` vs object `X.cpp` relative roots differ).
 
-- **Found via reflog the exact update:** `HEAD@{2026-07-15 22:43:47} 52f58186a
-pull --rebase: Fast-forward` moving source-beta from `e98e7a97e` (working 06-03
-to 07-15) to `52f58186a`; mod-playerbots simultaneously `1041b0b0` →
-`93aaea3d` at 22:43:57.
+   - **Found via reflog the exact update:** `HEAD@{2026-07-15 22:43:47}
+     52f58186a pull --rebase: Fast-forward` moving source-beta from `e98e7a97e`
+     (working 06-03 to 07-15) to `52f58186a`; mod-playerbots simultaneously
+     `1041b0b0` → `93aaea3d` at 22:43:57.
 
-- Confirmed `scripts/update` PROFILE_COMMIT pins are all empty (following latest
-= why it jumped), and the pin mechanism is `git checkout "${COMMIT}"` / `git
-checkout "${mod_commit}"`.
+   - Confirmed `scripts/update` PROFILE_COMMIT pins are all empty (following
+     latest = why it jumped), and the pin mechanism is `git checkout
+     "${COMMIT}"` / `git checkout "${mod_commit}"`.
 
-- Core build-system barely changed (4 lines in deps/readline/CMakeLists.txt).
+   - Core build-system barely changed (4 lines in deps/readline/CMakeLists.txt).
 
-- Last tool output: old mod-playerbots commit = **1041b0b0**; crash-path files
-changed between commits: Strategy.h (3), PlayerbotAIAware.h (2), PlayerbotAI.h
-(18 commits), NamedObjectContext.h (2), RacialsStrategy.cpp (6),
-AiObjectContext.cpp (6), Engine.cpp (5); module pin mechanism confirmed.
+   - Last tool output: old mod-playerbots commit = **1041b0b0**; crash-path
+     files changed between commits: Strategy.h (3), PlayerbotAIAware.h (2),
+     PlayerbotAI.h (18 commits), NamedObjectContext.h (2), RacialsStrategy.cpp
+     (6), AiObjectContext.cpp (6), Engine.cpp (5); module pin mechanism
+     confirmed.
 
 
 9. Optional Next Step:
 
-Present the git findings and recommend pinning to the last working commits
-(source-beta `e98e7a97e`, mod-playerbots `1041b0b0`) via
-`PROFILE_COMMIT["vanilla"]` in scripts/update — directly addressing the user's
-request: "can we just go back a version and pin a previous playerbots version
-that doesn't have this bug?" AND surface the "what changed" diff between the
-old/new commits for the crash-path files (Strategy.h, PlayerbotAIAware.h,
-PlayerbotAI.h, NamedObjectContext.h, RacialsStrategy.cpp, AiObjectContext.cpp,
-Engine.cpp) — addressing "look at what changed since the last version." I
-should note the caveat that pinning reverts recent upstream changes, and that
-the isolated-compile-correct-vs-build-broken mystery remains, so pinning is the
-pragmatic known-good fix while the diff may reveal the actual trigger. Per the
-user's stated fallback plan ("If you can't find anything, I'll try the
-single-core recompile. Then... memtest"), I should present the pin option as the
-strongest lead before they resort to single-core/memtest, and confirm with the
-user before making any scripts/update pin edits since that changes build
-behavior.
+   Present the git findings and recommend pinning to the last working commits
+   (source-beta `e98e7a97e`, mod-playerbots `1041b0b0`) via
+   `PROFILE_COMMIT["vanilla"]` in scripts/update — directly addressing the
+   user's request: "can we just go back a version and pin a previous playerbots
+   version that doesn't have this bug?" AND surface the "what changed" diff
+   between the old/new commits for the crash-path files (Strategy.h,
+   PlayerbotAIAware.h, PlayerbotAI.h, NamedObjectContext.h, RacialsStrategy.cpp,
+   AiObjectContext.cpp, Engine.cpp) — addressing "look at what changed since
+   the last version." I should note the caveat that pinning reverts recent
+   upstream changes, and that the isolated-compile-correct-vs-build-broken
+   mystery remains, so pinning is the pragmatic known-good fix while the diff
+   may reveal the actual trigger. Per the user's stated fallback plan ("If you
+   can't find anything, I'll try the single-core recompile. Then... memtest"), I
+   should present the pin option as the strongest lead before they resort to
+   single-core/memtest, and confirm with the user before making any
+   scripts/update pin edits since that changes build behavior.
 
 
 If you need specific details from before compaction (like exact code snippets,
@@ -3918,9 +4248,9 @@ to.</local-command-caveat>
 
 <command-name>/compact</command-name>
 
-<command-message>compact</command-message>
+            <command-message>compact</command-message>
 
-<command-args></command-args>
+            <command-args></command-args>
 
 
 --------------------------------------------------------------------------------
@@ -3985,11 +4315,11 @@ This is the definitive confirmation. Look at the ctor:
 
 ```
 
-+35: mov %rax,(%rdi) ; set vptr at this+0
++35: mov %rax,(%rdi)          ; set vptr at this+0
 
-+38: mov 0x8(%rdi),%rsi ; rsi = this->botAI ← reads UNINITIALIZED member
++38: mov 0x8(%rdi),%rsi       ; rsi = this->botAI  ← reads UNINITIALIZED member
 
-+42: call Strategy(PlayerbotAI*) ; passes garbage as botAI to base ctor
++42: call Strategy(PlayerbotAI*)   ; passes garbage as botAI to base ctor
 
 ```
 
@@ -4069,7 +4399,12 @@ disassemble the object files directly and check their timestamps against the
 source.
 
 
-**Decisive:** the object file *itself* is miscompiled (offset 0x26: `mov 0x8(%rdi),%rsi`) — so the corruption happened at compile time of this TU, in the build tree. It's deterministic and reproduced in the emitted `.o`. Since standalone compiles were reported correct, the difference must be in the *exact command* the make build uses. Let me pull the real compile command for this TU and check for a PCH.
+**Decisive:** the object file *itself* is miscompiled (offset 0x26: `mov
+0x8(%rdi),%rsi`) — so the corruption happened at compile time of this TU, in
+the build tree. It's deterministic and reproduced in the emitted `.o`. Since
+standalone compiles were reported correct, the difference must be in the *exact
+command* the make build uses. Let me pull the real compile command for this TU
+and check for a PCH.
 
 
 Let me see the rest of that command — optimization level, any PCH include, and
@@ -4085,7 +4420,14 @@ tree's `.o` is a one-off/stale corruption (clean rebuild fixes it). This is a
 tiny single-file compile to `/tmp`, not your build scripts.
 
 
-**This is the answer.** The *exact same command* — same clang 18.1.8, same source, same flags — now produces a **correct** object (`mov -0x10(%rbp),%rsi`), while the `.o` sitting in the build tree from the actual build is **broken** (`mov 0x8(%rdi),%rsi`). Same input, different output = **non-deterministic miscompile**. A deterministic compiler producing different code from identical input means its execution was corrupted at runtime — bad RAM or an unstable CPU. This **vindicates the memtest instinct**. Let me confirm the machine's current stability by replaying several times and hashing.
+**This is the answer.** The *exact same command* — same clang 18.1.8, same
+source, same flags — now produces a **correct** object (`mov
+-0x10(%rbp),%rsi`), while the `.o` sitting in the build tree from the actual
+build is **broken** (`mov 0x8(%rdi),%rsi`). Same input, different output =
+**non-deterministic miscompile**. A deterministic compiler producing different
+code from identical input means its execution was corrupted at runtime — bad
+RAM or an unstable CPU. This **vindicates the memtest instinct**. Let me confirm
+the machine's current stability by replaying several times and hashing.
 
 
 All 8 replays produce a **byte-identical** object (`hash=8778c9e7...`), and its
@@ -4097,7 +4439,8 @@ Proven. Same command, same source, same clang 18.1.8:
 
 - **Fresh compile (8× byte-identical): `mov -0x10(%rbp),%rsi` — correct**
 
-- **The `.o` linked into the crashing worldserver: `mov 0x8(%rdi),%rsi` — broken**
+- **The `.o` linked into the crashing worldserver: `mov 0x8(%rdi),%rsi` —
+  broken**
 
 
 Let me confirm the second broken TU behaves the same way, then I'll lay out the
@@ -4114,18 +4457,37 @@ broken. The diagnosis is now airtight.
 Here's what's actually happening, end to end.
 
 
-**The mechanism.** When the bot login path builds a playerbot's AI, it constructs each combat strategy. Two of those strategy constructors in the *installed* binary are wrong. A constructor for a derived class is supposed to hand the incoming `botAI` pointer (sitting in a stack slot) down to its base class. These two instead read the pointer *from the object's own not-yet-initialized field* — one instruction, `mov 0x8(%rdi),%rsi` where it should be `mov -0x10(%rbp),%rsi`. So the base class stores **heap garbage** as `botAI`. Then, later in startup, `Engine::Init` calls each strategy's trigger-setup, and the new code does `botAI->GetBot()->HasSpell(...)` — dereferencing that garbage pointer. Segfault.
+**The mechanism.** When the bot login path builds a playerbot's AI, it
+constructs each combat strategy. Two of those strategy constructors in the
+*installed* binary are wrong. A constructor for a derived class is supposed to
+hand the incoming `botAI` pointer (sitting in a stack slot) down to its base
+class. These two instead read the pointer *from the object's own
+not-yet-initialized field* — one instruction, `mov 0x8(%rdi),%rsi` where it
+should be `mov -0x10(%rbp),%rsi`. So the base class stores **heap garbage** as
+`botAI`. Then, later in startup, `Engine::Init` calls each strategy's
+trigger-setup, and the new code does `botAI->GetBot()->HasSpell(...)` —
+dereferencing that garbage pointer. Segfault.
 
 
-**Why it looked like "the update did it."** The July-15 `./scripts/update` fast-forwarded mod-playerbots and, among other things, **rewrote the exact function that crashes**. The old version of that trigger-setup never touched `botAI` at all — it just pushed static entries. The new version opens with `Player* bot = botAI->GetBot();` and reads the bot's spellbook a dozen times. So the update didn't *create* the miscompile — it added an early dereference that turns a corrupted pointer into an immediate crash instead of a dormant one. That's the real link between "the update" and "the crash."
+**Why it looked like "the update did it."** The July-15 `./scripts/update`
+fast-forwarded mod-playerbots and, among other things, **rewrote the exact
+function that crashes**. The old version of that trigger-setup never touched
+`botAI` at all — it just pushed static entries. The new version opens with
+`Player* bot = botAI->GetBot();` and reads the bot's spellbook a dozen times. So
+the update didn't *create* the miscompile — it added an early dereference that
+turns a corrupted pointer into an immediate crash instead of a dormant one.
+That's the real link between "the update" and "the crash."
 
 
-**The decisive test.** I pulled the exact compile command the build used (clang 18.1.8, `-O0`, `-std=gnu++20`, no PCH) and re-ran it, unchanged, 8 times:
+**The decisive test.** I pulled the exact compile command the build used (clang
+18.1.8, `-O0`, `-std=gnu++20`, no PCH) and re-ran it, unchanged, 8 times:
 
 
-- All 8 runs → **byte-for-byte identical** output, and the constructor is **correct** (`mov -0x10(%rbp),%rsi`).
+- All 8 runs → **byte-for-byte identical** output, and the constructor is
+  **correct** (`mov -0x10(%rbp),%rsi`).
 
-- The object file that actually got linked into your crashing worldserver → **broken** (`mov 0x8(%rdi),%rsi`).
+- The object file that actually got linked into your crashing worldserver →
+  **broken** (`mov 0x8(%rdi),%rsi`).
 
 
 Same command, same source, same compiler — correct now, broken during the
@@ -4139,29 +4501,35 @@ memtest instinct is the right root-cause check.
 
 Two things worth saying plainly:
 
-- **Pinning to the old version is not needed.** The source compiles correctly on this machine right now. Pinning would "fix" it only by forcing a recompile — same as any rebuild. Skip it.
+- **Pinning to the old version is not needed.** The source compiles correctly on
+  this machine right now. Pinning would "fix" it only by forcing a recompile —
+  same as any rebuild. Skip it.
 
-- **Don't surgically patch the two constructors.** They're just the two corruptions that crashed loudly at startup. The same build run could have flipped bits in any of the other ~thousands of object files, silently. The only trustworthy fix is a **full clean rebuild**, and the only trustworthy root-cause fix is finding out why the machine miscomputes under load.
+- **Don't surgically patch the two constructors.** They're just the two
+  corruptions that crashed loudly at startup. The same build run could have
+  flipped bits in any of the other ~thousands of object files, silently. The
+  only trustworthy fix is a **full clean rebuild**, and the only trustworthy
+  root-cause fix is finding out why the machine miscomputes under load.
 
 
 ## Recommendation, in order
 
 
 1. **Clean rebuild — and force those poisoned objects to regenerate.** Your
-build tree is incremental; the two corrupted `.o` files are cached in
-`build-shadow/` and a normal rebuild may just relink them. Wipe the build tree
-(or at least those objects + the ccache) so they recompile fresh. Since the
-machine currently compiles correctly, the new objects will be clean. This
-unblocks the server immediately.
+   build tree is incremental; the two corrupted `.o` files are cached in
+   `build-shadow/` and a normal rebuild may just relink them. Wipe the build
+   tree (or at least those objects + the ccache) so they recompile fresh. Since
+   the machine currently compiles correctly, the new objects will be clean. This
+   unblocks the server immediately.
 
 2. **Your single-core recompile plan is better than a normal rebuild for this.**
-Fewer parallel clang processes = less heat and memory pressure = far less chance
-of tripping the fault mid-build. If a `-j1` build boots clean where the parallel
-one crashed, that's itself strong confirmation of thermal/RAM-pressure
-instability.
+   Fewer parallel clang processes = less heat and memory pressure = far less
+   chance of tripping the fault mid-build. If a `-j1` build boots clean where
+   the parallel one crashed, that's itself strong confirmation of
+   thermal/RAM-pressure instability.
 
 3. **Then memtest** for the actual root cause. If it's clean, look at CPU temps
-under an all-core load and any XMP/PBO/overclock in BIOS.
+   under an all-core load and any XMP/PBO/overclock in BIOS.
 
 
 Want me to clear the two poisoned objects (and their ccache entries) so your

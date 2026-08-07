@@ -21,6 +21,21 @@ This issue (136) remains the canonical source of truth for the
 promotion-pipeline rules, schema-level decisions, and historical
 context. The docs/ pages summarise the user-relevant slice.
 
+## Pending rename (152)
+
+`issues/152-profile-rename-basic-and-expert.md` renames two of the
+four profiles: `vanilla` → `basic` and `release` → `expert`, after the
+OSR Dungeons & Dragons Basic and Expert box sets. `beta` and `alpha`
+are not in that report's scope.
+
+The names below are the pre-rename ones and stay correct until 152
+lands. The promotion pipeline itself does not change shape — only the
+name of the tier features get promoted *into*. Part of the reason for
+the rename is that `release` currently means both a build target (here)
+and a stage of a development cycle (alpha → beta → release), and the
+project uses both senses; freeing the word resolves one of three
+collisions. See 152 for the other two.
+
 ## Problem
 
 Multiple project files describe the three profiles (alpha / release / beta)

@@ -58,7 +58,19 @@ pipeline → multiplayer access → death stakes → exploit hardening.
 |-------|-------|--------|-------|
 | 405 | ability-tome-system | In Progress | Lua done, needs SQL. Crosses into Phase 7 ability system. |
 
-## Completed: 2/11 (5 Implemented, need testing)
+### Dynamic questing (loot routing with the opposite policy)
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 412 | dynamic-quest-prototype-unlock-quests | Open | Quest giver rides the traveler stream, quest monsters substitute into the ambush queue, quest items force-add to one queued monster's loot and bind to the asker. Blocked by 210. Reverses 701. |
+
+412's forced-loot mechanic is the mirror image of 408: treasure is
+deliberately un-ownable so cooperation is required, quest items are
+deliberately un-stealable so a group can't consume someone's
+objective. Two loot policies, opposite on purpose. That contrast is
+the reason 412 sits in this phase rather than in 3 or 5, where its
+other two mechanics live.
+
+## Completed: 2/12 (5 Implemented, need testing)
 
 ---
 

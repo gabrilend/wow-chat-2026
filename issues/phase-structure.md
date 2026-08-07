@@ -717,7 +717,7 @@ resolutions so manual migration can resume.
 |------|------|--------|
 | `issues/100-route-to-v1.md` | Meta (v1.0 feature checklist) | Keep at root as `route-to-v1.md` (no number); not a Phase issue, it's a release manifest |
 | `issues/200-incremental-feature-restore` | Meta (testing critical-path doc) | Keep at root as `testing-critical-path.md`; it's the runbook, not an issue |
-| `issues/TONIGHT.md` | Stale snapshot (says release=wow-chat-1) | Move to `issues/completed/` as historical artifact, OR delete. Superseded by 412. |
+| `issues/TONIGHT.md` | Stale snapshot (says release=wow-chat-1) | **Done 2026-08-07**: moved to `issues/completed/TONIGHT.md` with an archival header. Superseded by **136** (the old number 412 in this row referred to canonical-profile-definitions before renumbering; 412 in the current scheme is the Phase 4 dynamic-quest prototype, a different issue). |
 | `issues/next-issue-please` | Empty file | Delete |
 | `issues/wandering-dogs` | Raw idea-stub for traveler creatures | **Done 2026-04-28**: converted to `issues/505-creature-class-travelers.md` with verbatim text preserved as the authoritative source. Original file deleted. |
 

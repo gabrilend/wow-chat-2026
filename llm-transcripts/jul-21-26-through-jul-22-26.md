@@ -1,6 +1,6 @@
 # Conversation Summary: 848716dd-6f3d-4efa-89ea-fbf890462fc8
 
-Generated on: 2026-07-22 13:46:43
+Generated on: 2026-08-07 14:02:05
 
 --------------------------------------------------------------------------------
 
@@ -44,18 +44,26 @@ Here's the verdict:
 **Auth.log** — Clean. Connected to MySQL fine, all four realms registered.
 
 
-**Server.log** (worldserver) — Started cleanly, `World Initialized In 0 Minutes 55 Seconds`, reached `ready...`. The only non-info lines are all harmless:
+**Server.log** (worldserver) — Started cleanly, `World Initialized In 0
+Minutes 55 Seconds`, reached `ready...`. The only non-info lines are all
+harmless:
 
-- `Can't set process priority class, error: Permission denied` — just means it wasn't launched as root. Cosmetic.
+- `Can't set process priority class, error: Permission denied` — just means it
+  wasn't launched as root. Cosmetic.
 
-- `StartHeroicPlayerLevel` (55) and `RecruitAFriend.MaxLevel` (60) failed validation, defaults used — because they exceed the vanilla level cap of 40, so the engine clamps them.
+- `StartHeroicPlayerLevel` (55) and `RecruitAFriend.MaxLevel` (60) failed
+  validation, defaults used — because they exceed the vanilla level cap of 40,
+  so the engine clamps them.
 
-- ~12 `Level X ... in lfg_dungeon_rewards can never be reached` lines — same root cause: dungeon reward tiers above level 40.
+- ~12 `Level X ... in lfg_dungeon_rewards can never be reached` lines — same
+  root cause: dungeon reward tiers above level 40.
 
 
-**Errors.log** — 220 lines, but **all of them are the same two benign data-validation complaints**, not runtime errors:
+**Errors.log** — 220 lines, but **all of them are the same two benign
+data-validation complaints**, not runtime errors:
 
-- Retail quests whose `RequiredSkillPoints` (210–450) exceed this profile's profession skill cap of 200 → "quest can't be done."
+- Retail quests whose `RequiredSkillPoints` (210–450) exceed this profile's
+  profession skill cap of 200 → "quest can't be done."
 
 - Skill conditions referencing skill values above 200 → "skipped."
 
@@ -64,7 +72,8 @@ Both are AzerothCore noticing that stock retail content doesn't fit your reduced
 caps. Expected, not a fault.
 
 
-**Playerbots.log** — Normal operation (bots cycling through random-bot updates). No errors.
+**Playerbots.log** — Normal operation (bots cycling through random-bot
+updates). No errors.
 
 
 ## One thing worth noting
@@ -92,7 +101,7 @@ ah here's what happened:
 
 ---------------------------------------
 
-mod-playerbots initialized
+       mod-playerbots initialized
 
 ---------------------------------------
 
@@ -164,9 +173,12 @@ C++ segfault, not a Lua error.
 
 Two things conspired to throw away the evidence:
 
-- **No core dump** — `ulimit -c` is `0`, so the kernel wrote nothing even though `core_pattern` is set.
+- **No core dump** — `ulimit -c` is `0`, so the kernel wrote nothing even
+  though `core_pattern` is set.
 
-- **No backtrace** — this is a `RelWithDebInfo` build, and your launcher only auto-runs the crash catcher for `Debug` builds. It went straight to `./worldserver`, so nothing caught the fault.
+- **No backtrace** — this is a `RelWithDebInfo` build, and your launcher only
+  auto-runs the crash catcher for `Debug` builds. It went straight to
+  `./worldserver`, so nothing caught the fault.
 
 
 So the logs tell us *where in the lifecycle* it died (playerbots first tick) but
@@ -223,17 +235,17 @@ the current `source-beta` tree / this build while you grab the backtrace?
 
 ### User Request 3
 
-There's an existing issue — "Nil Bot Periodic Event Crash" — describing bots
-that enter the world-player list but aren't fully initialized
+  There's an existing issue — "Nil Bot Periodic Event Crash" — describing
+  bots that enter the world-player list but aren't fully initialized
 
-when a periodic pass touches them. Its documented fix (firing the ALE login hook
-for bots) is marked "needs application" — i.e. possibly
+  when a periodic pass touches them. Its documented fix (firing the ALE login
+  hook for bots) is marked "needs application" — i.e. possibly
 
-not actually built into this binary. That's a plausible match for "crash on the
-first bot-update tick," but it described a Lua nil error
+  not actually built into this binary. That's a plausible match for "crash on
+  the first bot-update tick," but it described a Lua nil error
 
-rather than a segfault, so I won't commit to it until the backtrace confirms the
-frame.
+  rather than a segfault, so I won't commit to it until the backtrace confirms
+  the frame.
 
 
 
@@ -266,13 +278,14 @@ before or after the retarget. There's also a **B026 "bot-login crash guard"** in
 the list I should read. Let me nail all three.
 
 
-**Found it.** B026's header describes *exactly* our crash — and it's not B002/issue-306 at all:
+**Found it.** B026's header describes *exactly* our crash — and it's not
+B002/issue-306 at all:
 
 
 > "worldserver segfaults shortly after startup on the queued bot-login path
-(main world thread): OnBotLoginOperation::Execute → AddPlayerbotData → new
-PlayerbotAI → AiFactory::createCombatEngine → **Engine::Init, faulting while
-iterating the engine's `strategies` map**"
+> (main world thread): OnBotLoginOperation::Execute → AddPlayerbotData → new
+> PlayerbotAI → AiFactory::createCombatEngine → **Engine::Init, faulting
+> while iterating the engine's `strategies` map**"
 
 
 That's a hard segfault, at startup, on the bot-login path, main world thread —
@@ -348,9 +361,14 @@ Let me check whether the B026 warning fired, and read the two faulting sites.
 Decisive findings:
 
 
-- **B026's real fix never fired** — the `reclaiming stale AI (B026)` warning is absent from both logs, and **0 bots logged in** before the crash. So this is **not** the duplicate-login race B026 targets — it dies on the *very first* bot in the first batch.
+- **B026's real fix never fired** — the `reclaiming stale AI (B026)` warning
+  is absent from both logs, and **0 bots logged in** before the crash. So this
+  is **not** the duplicate-login race B026 targets — it dies on the *very
+  first* bot in the first batch.
 
-- `RacialsStrategy.cpp:30` is `Player* bot = botAI->GetBot();` — `botAI` is the `Strategy` base member set at construction. The fault is that pointer being bad.
+- `RacialsStrategy.cpp:30` is `Player* bot = botAI->GetBot();` — `botAI` is
+  the `Strategy` base member set at construction. The fault is that pointer
+  being bad.
 
 
 So B026 is simply *not engaged* here (its fix is for a second, duplicate login;
@@ -407,23 +425,29 @@ owning `PlayerbotAI`. That pointer is pointing at freed/garbage memory.
 ## Ruling out the two suspects
 
 
-**B002 / issue-306 (ALE login hook)** — not it. That was always a *recoverable* Lua nil error, not a segfault. And it's genuinely fixed: the `OnLogin` symbol and `MOD_ALE` wiring are compiled into the binary. Your instinct that it "seemed critical" was reasonable, but it's a different bug.
+**B002 / issue-306 (ALE login hook)** — not it. That was always a
+*recoverable* Lua nil error, not a segfault. And it's genuinely fixed: the
+`OnLogin` symbol and `MOD_ALE` wiring are compiled into the binary. Your
+instinct that it "seemed critical" was reasonable, but it's a different bug.
 
 
-**B026 (bot-login strategy guard)** — *this* is the patch that targets this crash path, and it **is compiled into the binary** (I confirmed its log strings are present). But it does **not** stop this crash, for two independent reasons:
+**B026 (bot-login strategy guard)** — *this* is the patch that targets this
+crash path, and it **is compiled into the binary** (I confirmed its log strings
+are present). But it does **not** stop this crash, for two independent reasons:
 
 
 1. **Its real fix never engages.** B026 fixes a *duplicate*-login race — a
-second `PlayerbotAI` built for a GUID that already had one. Its telltale warning
-`reclaiming stale AI (B026)` is **absent from both logs**, and **0 bots logged
-in** before the crash. This dies on the *first* login of the *first* bot.
-Different trigger.
+   second `PlayerbotAI` built for a GUID that already had one. Its telltale
+   warning `reclaiming stale AI (B026)` is **absent from both logs**, and **0
+   bots logged in** before the crash. This dies on the *first* login of the
+   *first* bot. Different trigger.
 
 2. **Its defensive guard is at the wrong dereference.** B026 inserts `if
-(!strategy) continue;` before `strategy->GetType()` at Engine.cpp:126. But (a)
-the fault is three lines later at `strategy->InitTriggers()` (line 129), and (b)
-the strategy pointer is **non-null** (`0x…fc40`) — it's the strategy's
-*internal* `botAI` that's dangling. A null check can't catch a use-after-free.
+   (!strategy) continue;` before `strategy->GetType()` at Engine.cpp:126. But
+   (a) the fault is three lines later at `strategy->InitTriggers()` (line 129),
+   and (b) the strategy pointer is **non-null** (`0x…fc40`) — it's the
+   strategy's *internal* `botAI` that's dangling. A null check can't catch a
+   use-after-free.
 
 
 ## The real root cause
@@ -459,21 +483,21 @@ yet cover it.
 
 
 1. **Immediate unblock (operational):** these are `RandomPlayerbotMgr`
-auto-logins, so the server can't finish boot while they fire. Turning down the
-startup burst (`AiPlayerbot.RandomBotAutologin = 0`, or a low
-`RandomBotMinLevel`/count) in `playerbots.conf` should let the world come up
-while we fix the real bug. Fastest path to a running server.
+   auto-logins, so the server can't finish boot while they fire. Turning down
+   the startup burst (`AiPlayerbot.RandomBotAutologin = 0`, or a low
+   `RandomBotMinLevel`/count) in `playerbots.conf` should let the world come up
+   while we fix the real bug. Fastest path to a running server.
 
 2. **Real fix (new patch, e.g. B027):** ensure the `aiObjectContext`'s `botAI`
-is the live facade before the engine initializes strategies — i.e. don't let a
-first-login engine build off a stale context. I'd write an issue file first
-(this is a feature-grade fix, not a one-line bugfix), then extend the patch set.
-I'll need to read `PlayerbotAI.cpp:151` and the context-creation path to target
-it precisely.
+   is the live facade before the engine initializes strategies — i.e. don't
+   let a first-login engine build off a stale context. I'd write an issue file
+   first (this is a feature-grade fix, not a one-line bugfix), then extend the
+   patch set. I'll need to read `PlayerbotAI.cpp:151` and the context-creation
+   path to target it precisely.
 
 3. **Bisect upstream:** if this started recently, a playerbots commit around
-2026-07-10 regressed context/AI lifetime on the login path; pinning to the prior
-known-good commit sidesteps it until upstream fixes it.
+   2026-07-10 regressed context/AI lifetime on the login path; pinning to the
+   prior known-good commit sidesteps it until upstream fixes it.
 
 
 Want me to start with #1 to get you a bootable server, then open an issue and
@@ -484,24 +508,24 @@ dig into #2? I haven't changed anything yet.
 
 ### User Request 4
 
-2. Real fix (new patch, e.g. B027): ensure the aiObjectContext's botAI is the
-live facade before the engine initializes strategies — i.e.
+  2. Real fix (new patch, e.g. B027): ensure the aiObjectContext's botAI is the
+     live facade before the engine initializes strategies — i.e.
 
-don't let a first-login engine build off a stale context. I'd write an issue
-file first (this is a feature-grade fix, not a one-line
+  don't let a first-login engine build off a stale context. I'd write an issue
+  file first (this is a feature-grade fix, not a one-line
 
-bugfix), then extend the patch set. I'll need to read PlayerbotAI.cpp:151 and
-the context-creation path to target it precisely.
+  bugfix), then extend the patch set. I'll need to read PlayerbotAI.cpp:151 and
+  the context-creation path to target it precisely.
 
 
 
 let's try this, then if it doesn't work, let's try this:
 
 
-3. Bisect upstream: if this started recently, a playerbots commit around
-2026-07-10 regressed context/AI lifetime on the login path;
+  3. Bisect upstream: if this started recently, a playerbots commit around
+     2026-07-10 regressed context/AI lifetime on the login path;
 
-pinning to the prior known-good commit sidesteps it until upstream fixes it.
+  pinning to the prior known-good commit sidesteps it until upstream fixes it.
 
 
 --------------------------------------------------------------------------------
@@ -577,19 +601,19 @@ Everything needed is confirmed. Two decisive results:
 
 
 1. **`AiObjectContext::GetStrategy` feeds the creator the context's own
-`botAI`** (AiObjectContext.cpp:108) — which on a clean first construction *is*
-the live facade. And a clean logical consequence falls out: the engine's facade
-(`this->botAI`) is the `PlayerbotAI` currently under construction, so it's
-**provably valid**. Therefore a crash at `botAI->GetBot()` can *only* happen
-when `strategy->botAI ≠ engine facade` — a stale/foreign facade on the
-strategy. A guard comparing those two pointers is thus **necessary and
-sufficient** to stop this exact segfault, whatever upstream mechanism produced
-the stale strategy.
+   `botAI`** (AiObjectContext.cpp:108) — which on a clean first construction
+   *is* the live facade. And a clean logical consequence falls out: the engine's
+   facade (`this->botAI`) is the `PlayerbotAI` currently under construction, so
+   it's **provably valid**. Therefore a crash at `botAI->GetBot()` can *only*
+   happen when `strategy->botAI ≠ engine facade` — a stale/foreign facade on
+   the strategy. A guard comparing those two pointers is thus **necessary and
+   sufficient** to stop this exact segfault, whatever upstream mechanism
+   produced the stale strategy.
 
 
 2. **`PlayerbotAIAware` has no public accessor** — so the patch must add a
-tiny `GetAI()` getter, then guard in `Engine::Init` at the unique
-`strategy->InitTriggers(triggers);` line (129).
+   tiny `GetAI()` getter, then guard in `Engine::Init` at the unique
+   `strategy->InitTriggers(triggers);` line (129).
 
 
 Before I write anything: B026 already fixes "the bot-login Engine::Init crash"
@@ -760,34 +784,47 @@ module tree that `reset_source_trees` wipes at the next build.
 
 **What I created** (nothing committed; source tree untouched):
 
-- `issues/308-playerbot-engine-init-stale-facade-crash.md` — the behavior/root-cause spec
+- `issues/308-playerbot-engine-init-stale-facade-crash.md` — the
+  behavior/root-cause spec
 
-- `docs/patches/playerbot-engine-init-facade-guard.md` — the exact code changes
+- `docs/patches/playerbot-engine-init-facade-guard.md` — the exact code
+  changes
 
 - `patches/B027-playerbots-engine-init-facade-guard.sh` — the reversible patch
 
-- `patches/patches.sh` — B027 added to release/beta/vanilla lists + `needs_applying` helper
+- `patches/patches.sh` — B027 added to release/beta/vanilla lists +
+  `needs_applying` helper
 
 
-**What B027 does.** `Engine` and every `Strategy` both store a `PlayerbotAI*` facade. The engine is built for one bot with the *live, under-construction* facade — which is provably valid — so a strategy whose facade differs is stale/foreign, and that mismatch is the **only** way the `botAI->GetBot()` dereference can fault. B027 adds a public `GetAI()` accessor to `PlayerbotAIAware`, then in `Engine::Init` skips + logs any strategy whose facade ≠ the engine's, right before the two facade-using calls (`InitMultipliers`/`InitTriggers`). A hard segfault becomes a named log line, and the login burst completes.
+**What B027 does.** `Engine` and every `Strategy` both store a `PlayerbotAI*`
+facade. The engine is built for one bot with the *live, under-construction*
+facade — which is provably valid — so a strategy whose facade differs is
+stale/foreign, and that mismatch is the **only** way the `botAI->GetBot()`
+dereference can fault. B027 adds a public `GetAI()` accessor to
+`PlayerbotAIAware`, then in `Engine::Init` skips + logs any strategy whose
+facade ≠ the engine's, right before the two facade-using calls
+(`InitMultipliers`/`InitTriggers`). A hard segfault becomes a named log line,
+and the login burst completes.
 
 
 **Verification I ran** (non-destructive, in `/tmp`):
 
-- Both anchors match **exactly once** (no silent no-op — the B002 failure mode)
+- Both anchors match **exactly once** (no silent no-op — the B002 failure
+  mode)
 
 - **Idempotent** (apply×2 = one block each)
 
 - **Exact round-trip** (unapply restores both files byte-identical)
 
-- **Composes with B026** in both apply orders — the two guards coexist, `Engine.cpp` round-trips clean either way
+- **Composes with B026** in both apply orders — the two guards coexist,
+  `Engine.cpp` round-trips clean either way
 
 
 **Build it when ready** (you run the compile):
 
 ```bash
 
-./scripts/compile # or ./scripts/azerothcore update
+./scripts/compile          # or ./scripts/azerothcore update
 
 ```
 
@@ -798,9 +835,15 @@ Then start worldserver.
 
 - **Boots, no crash, no B027 log lines** → clean fix; issue 308 resolvable.
 
-- **Boots, *with* `Engine::Init: strategy <name> carries a stale or foreign bot facade` lines** → fixed *and* it just told us the mechanism (which strategy, how often). Send me those lines; they confirm whether the stale facade is worth a deeper upstream fix.
+- **Boots, *with* `Engine::Init: strategy <name> carries a stale or foreign bot
+  facade` lines** → fixed *and* it just told us the mechanism (which strategy,
+  how often). Send me those lines; they confirm whether the stale facade is
+  worth a deeper upstream fix.
 
-- **Still crashes** (guard never fired) → the fault isn't a facade mismatch, so we go to **option 3**: pin mod-playerbots (`52f58186a533`, 2026-07-10) to a prior known-good commit. The debug-run harness (`./scripts/worldserver --debug`) will give a fresh backtrace to confirm.
+- **Still crashes** (guard never fired) → the fault isn't a facade mismatch,
+  so we go to **option 3**: pin mod-playerbots (`52f58186a533`, 2026-07-10) to a
+  prior known-good commit. The debug-run harness (`./scripts/worldserver
+  --debug`) will give a fresh backtrace to confirm.
 
 
 One small housekeeping note: your convention says new docs get added to
@@ -835,17 +878,25 @@ earlier), so let me confirm B027 made it into the binary the definitive way
 resolves.
 
 
-**B027 is confirmed live in the running binary** — the exact guard log string (`Engine::Init: strategy {} carries a stale or foreign bot facade … (B027, issue 308)`) is compiled in, and the binary is freshly built (17:39:55 today). So the guard will fire if a stale-faced strategy shows up.
+**B027 is confirmed live in the running binary** — the exact guard log string
+(`Engine::Init: strategy {} carries a stale or foreign bot facade … (B027,
+issue 308)`) is compiled in, and the binary is freshly built (17:39:55 today).
+So the guard will fire if a stale-faced strategy shows up.
 
 
-**Current state:** worldserver (PID 16251) is mid-boot at "Loading TalentSpecs" — early in the ~41s playerbots init, still short of the first bot-login batch where it segfaulted last time.
+**Current state:** worldserver (PID 16251) is mid-boot at "Loading TalentSpecs"
+— early in the ~41s playerbots init, still short of the first bot-login batch
+where it segfaulted last time.
 
 
-**Watcher launched** (background, bounded ~200s). It will wake me the moment the boot resolves into one of:
+**Watcher launched** (background, bounded ~200s). It will wake me the moment the
+boot resolves into one of:
 
-- **process dies** → crashed again (guard didn't cover it → we pivot to option 3);
+- **process dies** → crashed again (guard didn't cover it → we pivot to
+  option 3);
 
-- **reaches "World Initialized" and survives the bot-login window** → boot complete;
+- **reaches "World Initialized" and survives the bot-login window** → boot
+  complete;
 
 - **timeout** → still grinding, I'll re-check.
 
@@ -888,7 +939,10 @@ strategies) or whether the crash simply didn't recur. That distinction is the
 diagnostic payload.
 
 
-**The crash is fixed — the server is up and stable.** It reached `ready...` (World Initialized in 1m36s, Debug build so slower), the process is alive, and world update ticks are running. And the guard **actively fired** — this wasn't the crash merely failing to recur.
+**The crash is fixed — the server is up and stable.** It reached `ready...`
+(World Initialized in 1m36s, Debug build so slower), the process is alive, and
+world update ticks are running. And the guard **actively fired** — this wasn't
+the crash merely failing to recur.
 
 
 But the diagnostic payload is significant: **2,292 skip lines**, only ever on
@@ -921,11 +975,11 @@ strategies:
 
 |----------|------:|
 
-| `chat` | 1336 |
+| `chat`    | 1336 |
 
-| `racials` | 480 |
+| `racials` |  480 |
 
-| `potions` | 480 |
+| `potions` |  480 |
 
 
 Every other strategy (`default`, `cast time`, `duel`, `boost`, `aoe`, …)
@@ -937,11 +991,20 @@ carrying a facade that belongs to a different or already-freed bot AI.
 ## What this means
 
 
-- **Stability: solved.** The segfault is gone; the server runs. Option 2 did its job.
+- **Stability: solved.** The segfault is gone; the server runs. Option 2 did its
+  job.
 
-- **But B027 is currently a safety net catching a real, ongoing bug** — not the root-cause cure. Because it skips those strategies, the affected bots boot **alive but behaviorally degraded**: no racial abilities, no combat potion use, no chat behaviors. Stability-safe (nothing depends on them; `default` is never skipped), but not free.
+- **But B027 is currently a safety net catching a real, ongoing bug** — not
+  the root-cause cure. Because it skips those strategies, the affected bots boot
+  **alive but behaviorally degraded**: no racial abilities, no combat potion
+  use, no chat behaviors. Stability-safe (nothing depends on them; `default` is
+  never skipped), but not free.
 
-- The "shared strategy context" idea I floated earlier is **not** the mechanism — `StrategyContext` is registered non-shared. So *why* these three specific strategies always carry a stale facade is a genuine lifetime bug still to be pinned — but it's now sharply scoped to three named creators instead of an opaque crash.
+- The "shared strategy context" idea I floated earlier is **not** the mechanism
+  — `StrategyContext` is registered non-shared. So *why* these three specific
+  strategies always carry a stale facade is a genuine lifetime bug still to be
+  pinned — but it's now sharply scoped to three named creators instead of an
+  opaque crash.
 
 
 One health note: there was a single **150-second world-tick stall** at startup
@@ -954,15 +1017,16 @@ that per-skip logging will spam continuously as bots cycle.
 
 
 1. **Pin the real lifetime bug** now that it's localized to
-`chat`/`potions`/`racials`: trace how those three creators end up with a foreign
-facade (why them and not `default`). That's the fix that makes bots whole again
-*and* retires the skips — and it's effectively the deeper end of option 3.
+   `chat`/`potions`/`racials`: trace how those three creators end up with a
+   foreign facade (why them and not `default`). That's the fix that makes bots
+   whole again *and* retires the skips — and it's effectively the deeper end
+   of option 3.
 
 2. **Use the server as-is** if degraded bot behavior is acceptable for now —
-it's stable and playable.
+   it's stable and playable.
 
 3. **Quiet the guard** (downgrade to `LOG_DEBUG` or rate-limit) once you've seen
-enough, so it stops flooding the log every bot cycle.
+   enough, so it stops flooding the log every bot cycle.
 
 
 I'd also like to update issue 308's *current behavior* to record this verified
@@ -987,9 +1051,9 @@ to.</local-command-caveat>
 
 <command-name>/model</command-name>
 
-<command-message>model</command-message>
+            <command-message>model</command-message>
 
-<command-args></command-args>
+            <command-args></command-args>
 
 
 --------------------------------------------------------------------------------
@@ -1007,12 +1071,12 @@ for new sessions</local-command-stdout>
 hi can you figure this bug out for me?
 
 
-- The "shared strategy context" idea I floated earlier is not the mechanism —
-StrategyContext is registered non-shared. So why these three specific strategies
-always carry a stale
+  - The "shared strategy context" idea I floated earlier is not the mechanism
+    — StrategyContext is registered non-shared. So why these three specific
+    strategies always carry a stale
 
-facade is a genuine lifetime bug still to be pinned — but it's now sharply
-scoped to three named creators instead of an opaque crash
+  facade is a genuine lifetime bug still to be pinned — but it's now sharply
+  scoped to three named creators instead of an opaque crash
 
 
 --------------------------------------------------------------------------------
@@ -1038,17 +1102,24 @@ The trap is set. While it boots, here's where the investigation stands:
 ## Status of the hunt
 
 
-**Eliminated by direct reading** (every link of the serving chain, on pristine source, plus all patches that touch these files):
+**Eliminated by direct reading** (every link of the serving chain, on pristine
+source, plus all patches that touch these files):
 
-- Creator functions — all three are plain `new XStrategy(botAI)`, stateless, single registration each
+- Creator functions — all three are plain `new XStrategy(botAI)`, stateless,
+  single registration each
 
-- Constructor chains — `Strategy(botAI) : PlayerbotAIAware(botAI)`, forwarded correctly through `PassThroughStrategy`; exactly one facade member in the hierarchy
+- Constructor chains — `Strategy(botAI) : PlayerbotAIAware(botAI)`, forwarded
+  correctly through `PassThroughStrategy`; exactly one facade member in the
+  hierarchy
 
-- Per-bot context — freshly `new`'d in the AI constructor for every class (I read the whole switch; no shared fallback)
+- Per-bot context — freshly `new`'d in the AI constructor for every class (I
+  read the whole switch; no shared fallback)
 
-- Config-driven strategies — `RandomBotCombatStrategies = ""` (empty, and the trio isn't named anywhere in the active conf)
+- Config-driven strategies — `RandomBotCombatStrategies = ""` (empty, and the
+  trio isn't named anywhere in the active conf)
 
-- Our patches — B019/B021 are inert warning fixes; B026/B027 were already audited composed
+- Our patches — B019/B021 are inert warning fixes; B026/B027 were already
+  audited composed
 
 
 That's a genuine paradox: statically, the strategy handed to `Engine::Init`
@@ -1057,11 +1128,14 @@ That's a genuine paradox: statically, the strategy handed to `Engine::Init`
 #1's constructor*.
 
 
-**So the answer is dynamic**, and the instrumented boot now running will catch it red-handed with two tripwires:
+**So the answer is dynamic**, and the instrumented boot now running will catch
+it red-handed with two tripwires:
 
-- every **birth** of a `RacialsStrategy` (who constructed it, with which facade, full caller chain)
+- every **birth** of a `RacialsStrategy` (who constructed it, with which facade,
+  full caller chain)
 
-- every **guard hit** (which object, its facade vs the engine's, and whether the per-bot cache already contained it)
+- every **guard hit** (which object, its facade vs the engine's, and whether the
+  per-bot cache already contained it)
 
 
 The one datum I most want: whether a `RacialsStrategy` gets constructed **during
@@ -1119,11 +1193,11 @@ aren't inheriting a *dead bot's* facade — they're being **born with garbage**:
 
 |----------|------------------------------|---------------------|
 
-| racials | `0x2073616820676e69` | ASCII `"ing has "` — a string fragment |
+| racials  | `0x2073616820676e69` | ASCII `"ing has "` — a string fragment |
 
-| chat | `0x68` | ASCII `'h'` |
+| chat     | `0x68` | ASCII `'h'` |
 
-| potions | `0x100000000` | two 32-bit ints (1, 0) |
+| potions  | `0x100000000` | two 32-bit ints (1, 0) |
 
 
 That's not a lifetime bug — that's **memory corruption or an uninitialized
@@ -1141,15 +1215,15 @@ Two rival explanations, and the instrumentation splits them cleanly:
 
 
 1. **Heap stomp** — another thread transiently writes string data over the
-context's facade field. The hardware watchpoint fires on the illegal write and
-prints the *stomper's* backtrace and thread. Case closed.
+   context's facade field. The hardware watchpoint fires on the illegal write
+   and prints the *stomper's* backtrace and thread. Case closed.
 
 2. **In-flight corruption** — the member is fine, but the argument gets
-clobbered between `GetStrategy` reading it and the creator using it
-(cross-thread stack interference — plausible fallout from upstream's
-2026-07-10 world-thread-processor refactor). Then no stomp fires, and the ctor
-record will show `GetStrategy this->botAI = good` while `botAI-arg = garbage`
-— proving the corruption happens mid-call.
+   clobbered between `GetStrategy` reading it and the creator using it
+   (cross-thread stack interference — plausible fallout from upstream's
+   2026-07-10 world-thread-processor refactor). Then no stomp fires, and the
+   ctor record will show `GetStrategy this->botAI = good` while `botAI-arg =
+   garbage` — proving the corruption happens mid-call.
 
 
 Either way, the next notification should carry the culprit's name.
@@ -1192,17 +1266,13 @@ Round 3 is booting (~2½ min). Recap of the evidence chain while it runs:
 
 |-------|----------|--------|
 
-| 1 | Are the strategies shared or stale? | Neither — **born with garbage
-facades** (ASCII fragments, tiny ints) |
+| 1 | Are the strategies shared or stale? | Neither — **born with garbage facades** (ASCII fragments, tiny ints) |
 
-| 2 | Is the context member stomped? | **No** — hardware watchpoint silent;
-member is perfect in `GetStrategy`'s own frame, same thread |
+| 2 | Is the context member stomped? | **No** — hardware watchpoint silent; member is perfect in `GetStrategy`'s own frame, same thread |
 
-| 2 | Where does the value die? | **Inside the `std::function` invocation** —
-between `create()` and `StrategyContext::racials` receiving its argument |
+| 2 | Where does the value die? | **Inside the `std::function` invocation** — between `create()` and `StrategyContext::racials` receiving its argument |
 
-| grep | Why these three names? | **Insertion stride** — registrations #1, #9,
-#17 in the creators map; every 8th entry, not a property of the strategies |
+| grep | Why these three names? | **Insertion stride** — registrations #1, #9, #17 in the creators map; every 8th entry, not a property of the strategies |
 
 
 The garbage shapes (UTF-16 text remnants, `'o','k'` bytes, plain null) are what
@@ -1256,16 +1326,34 @@ Round 4 is booting. The state of the hunt, compressed:
 ## Where five rounds of evidence have led
 
 
-**Exonerated, with machine-level proof:** every line of C++ in the serving chain *and* every instruction of its compiled code — `GetStrategy` → `GetContextObject` → `create` → `std::function` plumbing — all preserve the facade argument perfectly. The shared creators map is healthy at the moment of failure. No duplicates, no torn nodes, one clean trampoline.
+**Exonerated, with machine-level proof:** every line of C++ in the serving chain
+*and* every instruction of its compiled code — `GetStrategy` →
+`GetContextObject` → `create` → `std::function` plumbing — all preserve
+the facade argument perfectly. The shared creators map is healthy at the moment
+of failure. No duplicates, no torn nodes, one clean trampoline.
 
 
-**The reframe:** my earlier "born with garbage" readings came from constructor-*entry* breakpoints — exactly where gdb can read unspilled parameter slots and lie. Discard those, and the trustworthy facts (the compiled B027 guard firing, the original segfault, heap-member reads) point to a **heap stomp after construction**: strategies are built *correctly*, then something overwrites their facade field with string data in the microseconds before `Engine::Init` checks them.
+**The reframe:** my earlier "born with garbage" readings came from
+constructor-*entry* breakpoints — exactly where gdb can read unspilled
+parameter slots and lie. Discard those, and the trustworthy facts (the compiled
+B027 guard firing, the original segfault, heap-member reads) point to a **heap
+stomp after construction**: strategies are built *correctly*, then something
+overwrites their facade field with string data in the microseconds before
+`Engine::Init` checks them.
 
 
-**Why always `chat`/`potions`/`racials`:** bot login allocates the same objects, same sizes, same order, every time — so the same *relative heap chunks* neighbor the overrunning buffer on every bot. The victims aren't chosen by name; they're chosen by *address arithmetic*. Deterministic corruption masquerading as a logic bug. (It also means B026's duplicate-login story may have been this same overflow wearing a different costume.)
+**Why always `chat`/`potions`/`racials`:** bot login allocates the same objects,
+same sizes, same order, every time — so the same *relative heap chunks*
+neighbor the overrunning buffer on every bot. The victims aren't chosen by name;
+they're chosen by *address arithmetic*. Deterministic corruption masquerading as
+a logic bug. (It also means B026's duplicate-login story may have been this same
+overflow wearing a different costume.)
 
 
-**Round 4's trap** watches the freshly built victim's own field — armed the instant the object exists, when the base constructor has already stored the good pointer. First write after that *is* the culprit, full backtrace attached. One bonus read at arm-time (`facade@birth`) confirms construction was clean.
+**Round 4's trap** watches the freshly built victim's own field — armed the
+instant the object exists, when the base constructor has already stored the good
+pointer. First write after that *is* the culprit, full backtrace attached. One
+bonus read at arm-time (`facade@birth`) confirms construction was clean.
 
 
 If the trap lands, we'll have the offending function red-handed — then the fix
@@ -1313,9 +1401,11 @@ ever built inside its owning bot AI's constructor, so `Engine::Init` always
 knows the true facade. The revised guard:
 
 
-- **null strategy** → skip with an error (unchanged, redundant with B026 by design)
+- **null strategy** → skip with an error (unchanged, redundant with B026 by
+  design)
 
-- **facade mismatch** → one `LOG_WARN` naming the strategy, **write the correct facade over the garbage**, then initialize normally
+- **facade mismatch** → one `LOG_WARN` naming the strategy, **write the
+  correct facade over the garbage**, then initialize normally
 
 
 So instead of every bot silently losing racials, combat potions, and chat
@@ -1323,16 +1413,25 @@ handling (~2,300 skips per boot), the poisoned strategies get healed at the door
 and work as upstream intended.
 
 
-**Why round 4 makes this provably safe:** the field is corrupt *at birth* and the hardware watchpoint proved *nothing ever writes it afterward* — so a repair at init can't be undone by a later stomp. And the objects are genuinely the right classes built by their real constructors — only that one field is wrong.
+**Why round 4 makes this provably safe:** the field is corrupt *at birth* and
+the hardware watchpoint proved *nothing ever writes it afterward* — so a
+repair at init can't be undone by a later stomp. And the objects are genuinely
+the right classes built by their real constructors — only that one field is
+wrong.
 
 
-**Updated artifacts** (all verified: single anchor match, idempotent, exact round-trip, composes with B026 in both orders):
+**Updated artifacts** (all verified: single anchor match, idempotent, exact
+round-trip, composes with B026 in both orders):
 
-- `patches/B027-…facade-guard.sh` — repair logic + a narrowly-scoped `SetAI` accessor (commented "do not use anywhere else")
+- `patches/B027-…facade-guard.sh` — repair logic + a narrowly-scoped `SetAI`
+  accessor (commented "do not use anywhere else")
 
-- `docs/patches/playerbot-engine-init-facade-guard.md` — full diagnostic evidence + the exact code, ready to replay on any fork and to serve as the upstream bug report
+- `docs/patches/playerbot-engine-init-facade-guard.md` — full diagnostic
+  evidence + the exact code, ready to replay on any fork and to serve as the
+  upstream bug report
 
-- `issues/308…` — current/intended behavior rewritten to the repair design, with the fallback (pin upstream pre-2026-07-10) recorded
+- `issues/308…` — current/intended behavior rewritten to the repair design,
+  with the fallback (pin upstream pre-2026-07-10) recorded
 
 
 The diagnostic server is stopped and the port is free. Compile when ready:
@@ -1345,7 +1444,12 @@ The diagnostic server is stopped and the port is free. Compile when ready:
 ```
 
 
-**What to expect in the log:** `…repairing it with the engine facade (B027, issue 308)` warnings — roughly a dozen per bot login — replacing the old skip errors. Each one is a healed strategy. Success looks like: clean boot, no segfault, and shamans actually War Stomping / bots drinking potions / responding to chat. If the warning volume gets old once trust is established, say the word and I'll downgrade it to debug level.
+**What to expect in the log:** `…repairing it with the engine facade (B027,
+issue 308)` warnings — roughly a dozen per bot login — replacing the old
+skip errors. Each one is a healed strategy. Success looks like: clean boot, no
+segfault, and shamans actually War Stomping / bots drinking potions / responding
+to chat. If the warning volume gets old once trust is established, say the word
+and I'll downgrade it to debug level.
 
 
 One loose end worth keeping in the back pocket: the *upstream* root cause is
@@ -1359,12 +1463,12 @@ like it.
 
 ### User Request 18
 
-One loose end worth keeping in the back pocket: the upstream root cause is still
-unpinned (we contained it, per your call). The patch doc's evidence trail —
-corrupt at birth,
+  One loose end worth keeping in the back pocket: the upstream root cause is
+  still unpinned (we contained it, per your call). The patch doc's evidence
+  trail — corrupt at birth,
 
-stride-8 victims, watchpoint-clean afterward, rev 52f58186a533 — is ready to
-file against mod-playerbots whenever you feel like it.
+  stride-8 victims, watchpoint-clean afterward, rev 52f58186a533 — is ready to
+  file against mod-playerbots whenever you feel like it.
 
 
 we should pin wow-chat-2026 to this commit until further notice. Also, let's try
@@ -1412,13 +1516,19 @@ You asked where else the check might be missing. I traced every consumer of
 strategies:
 
 
-- **All live-bot fetches** (`PlayerbotAI::GetStrategy`, pull-strategy lookups, target-value lookups) pull from the **engine map** — and nothing enters the engine map without passing `Engine::Init`, our repair point.
+- **All live-bot fetches** (`PlayerbotAI::GetStrategy`, pull-strategy lookups,
+  target-value lookups) pull from the **engine map** — and nothing enters the
+  engine map without passing `Engine::Init`, our repair point.
 
-- **Runtime additions** (chat commands, toggles, instance strategies) use `addStrategy` with `init = true` by default → immediate `Init` → repaired before first use.
+- **Runtime additions** (chat commands, toggles, instance strategies) use
+  `addStrategy` with `init = true` by default → immediate `Init` → repaired
+  before first use.
 
-- **The batched adds** (`addStrategiesNoInit`) are always followed by an explicit `Init()` in every factory path.
+- **The batched adds** (`addStrategiesNoInit`) are always followed by an
+  explicit `Init()` in every factory path.
 
-- The **only bypass** is the travel manager's config-time enumeration sweep — it touches dummy data before any real bot exists, never live bots.
+- The **only bypass** is the travel manager's config-time enumeration sweep —
+  it touches dummy data before any real bot exists, never live bots.
 
 
 So the single repair point covers the entire live surface. One net, fully
@@ -1433,11 +1543,16 @@ the module's own HEAD is **`93aaea3d`** (both 2026-07-10). The pin freezes both,
 using the pin machinery the scripts already had:
 
 
-- `PROFILE_COMMIT` → core `52f58186a533` for beta/release/vanilla (they share one source tree, so they must pin together; alpha untouched)
+- `PROFILE_COMMIT` → core `52f58186a533` for beta/release/vanilla (they share
+  one source tree, so they must pin together; alpha untouched)
 
-- `PROFILE_MODULE_COMMITS` → `mod-playerbots = 93aaea3d` for the same three profiles
+- `PROFILE_MODULE_COMMITS` → `mod-playerbots = 93aaea3d` for the same three
+  profiles
 
-- Mirrored in **both** `scripts/install` and `scripts/update`, with comments recording the why, the sibling-pin relationship, and the un-pin condition (upstream fixes the corrupt-facade construction; repair warnings vanish on a test build)
+- Mirrored in **both** `scripts/install` and `scripts/update`, with comments
+  recording the why, the sibling-pin relationship, and the un-pin condition
+  (upstream fixes the corrupt-facade construction; repair warnings vanish on a
+  test build)
 
 
 From now on, `update` will check out these exact revisions instead of pulling

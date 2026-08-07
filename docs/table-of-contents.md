@@ -46,6 +46,8 @@ wow-chat-2026/
 │
 ├── notes/
 │   ├── vision                     Project vision and goals
+│   ├── claude-md-asides.md        Writing lifted out of CLAUDE.md when it was trimmed
+│   ├── todo-file-asides.md        Writing preserved from the root todo/new-issue files
 │   ├── vision-enchanting-system-update.md  Layered, level-scaling enchantments
 │   ├── vision-medal-encounters.md  Optional bosses gated by marginal stats (resilience, etc.)
 │   ├── phase-3-custom-spells.md   Custom spell system design (moved from docs/)

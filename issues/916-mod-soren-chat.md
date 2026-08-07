@@ -405,6 +405,16 @@ despawn — which is fine, the next planning cycle re-populates it).
 - **913 — Clustered Worldserver.** Spiritual sibling — both are
   cross-machine infrastructure. 913 is about scaling the worldserver;
   916 is about offloading LLM work.
+- **917 — Ask the Bots in Plain Text.** Sibling. Rides this module's
+  Ollama client, worker pool, and ALE bindings to turn plain-language
+  player requests into playerbot commands.
+- **918 — fg-sora-cluster.** Sibling, and the one that conflicts.
+  918 wants three bots that generate thoughts *continuously*, one
+  pinned per box, sharing a single persona — the player's. This
+  module's model is the opposite on all three counts: event-driven
+  bursts, round-robin routing, one distinct persona per bot in
+  `soren_chat_persona`. Both cannot own three boxes at once. Whichever
+  is built second inherits the resource decision.
 - **mod-playerbots strategy/trigger/action architecture.** The lever
   916 pushes on. See playerbots docs at docs/playerbots/.
 

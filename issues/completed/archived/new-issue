@@ -1,0 +1,13 @@
+I noticed after creating a mage character and logging in that
+their equipment didn't show up on their character model and had a ? icon.
+We should be more careful about how we implement that.
+I unequipped the items, then re-equipped them, and they properly rendered on
+the character model.
+
+I'm assuming we're creating new items that inherit from the previous items
+somehow? Not idea. We might be unable to change item characteristics. Please
+confirm, and if so, then we should not copy items but instead just modify them
+in place, which is guaranteed to work but is a bit more messy.
+
+I noticed that warrior and paladin characters did not log in with invisible
+equipment. For some reason, their gear properly rendered immediately.

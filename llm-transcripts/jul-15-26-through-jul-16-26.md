@@ -1,6 +1,6 @@
 # Conversation Summary: f6b0c04d-40f6-437a-ad3d-cd4a401aa9f5
 
-Generated on: 2026-07-22 13:46:43
+Generated on: 2026-08-07 14:02:06
 
 --------------------------------------------------------------------------------
 
@@ -65,9 +65,15 @@ comprehensive report:
 
 **148 - Vanilla Profile: Default WotLK + Playerbots**
 
-- **Summary:** Defines and implements the vanilla profile baseline — a WotLK 3.3.5a server with playerbots and minimal customization (no custom Lua layer like release/beta), starting at level 20 with a 40-cap. Serves as the floor upon which all other profiles build.
+- **Summary:** Defines and implements the vanilla profile baseline — a WotLK
+  3.3.5a server with playerbots and minimal customization (no custom Lua layer
+  like release/beta), starting at level 20 with a 40-cap. Serves as the floor
+  upon which all other profiles build.
 
-- **Status:** **PARTIALLY COMPLETE (Phase 1 Foundation)** — The design is thoroughly documented and in-progress. The install infrastructure and basic profile registration exist, but many sub-issues are still pending implementation. See sub-issues below for specific blockers.
+- **Status:** **PARTIALLY COMPLETE (Phase 1 Foundation)** — The design is
+  thoroughly documented and in-progress. The install infrastructure and basic
+  profile registration exist, but many sub-issues are still pending
+  implementation. See sub-issues below for specific blockers.
 
 - **Completion estimate:** ~40-50% done; multiple sub-issues unstarted.
 
@@ -80,51 +86,75 @@ comprehensive report:
 
 **148a - Disable Death Knights on Vanilla**
 
-- **Summary:** Disable DK class creation on vanilla via config knob (`CharacterCreating.Disabled.ClassMask = 32`). The DK starting experience (Acherus) is incompatible with vanilla's level-40 cap and level-20 start.
+- **Summary:** Disable DK class creation on vanilla via config knob
+  (`CharacterCreating.Disabled.ClassMask = 32`). The DK starting experience
+  (Acherus) is incompatible with vanilla's level-40 cap and level-20 start.
 
-- **Status:** **IN PROGRESS** — Issue redesigned (2026-06-02) to use a config knob instead of SQL deletion. Mechanism defined; implementation pending.
+- **Status:** **IN PROGRESS** — Issue redesigned (2026-06-02) to use a config
+  knob instead of SQL deletion. Mechanism defined; implementation pending.
 
 - **Completion estimate:** ~10-20% done; patch-system wiring not yet complete.
 
 
 **148h - Class-Specific Starting Equipment for Level-20 Start**
 
-- **Summary:** Generate and apply full level-20 white-quality starter kits (armor + weapons) for all 52 valid (race, class) combos. Cloned items to avoid polluting canonical vanilla item data, with normalized DPS and per-race curation. Includes armor, weapons, bags, hearthstone, and ammo.
+- **Summary:** Generate and apply full level-20 white-quality starter kits
+  (armor + weapons) for all 52 valid (race, class) combos. Cloned items to avoid
+  polluting canonical vanilla item data, with normalized DPS and per-race
+  curation. Includes armor, weapons, bags, hearthstone, and ammo.
 
-- **Status:** **REDESIGNED &amp; SUBSTANTIALLY COMPLETE (2026-06-12)** — The thematic curation, item cloning procedure, damage normalization, and loot-table updates are fully specified. SQL generation and apply/revert-form design complete. **READY TO IMPLEMENT** but implementation pending.
+- **Status:** **REDESIGNED &amp; SUBSTANTIALLY COMPLETE (2026-06-12)** — The
+  thematic curation, item cloning procedure, damage normalization, and
+  loot-table updates are fully specified. SQL generation and apply/revert-form
+  design complete. **READY TO IMPLEMENT** but implementation pending.
 
 - **Completion estimate:** ~70% designed, 0% implemented.
 
-- **Notes:** Explicitly blocks 148k (auto-equip hook) and 148j (weapon proficiencies).
+- **Notes:** Explicitly blocks 148k (auto-equip hook) and 148j (weapon
+  proficiencies).
 
 
 **148i - Remove All Flight Paths from Vanilla**
 
-- **Summary:** Disable flight-master taxi UI network-wide; preserve boats/zeppelins for cross-continent travel. Replaces flight-master interactions with thematic per-NPC flavor gossip so the world remains populated and legible.
+- **Summary:** Disable flight-master taxi UI network-wide; preserve
+  boats/zeppelins for cross-continent travel. Replaces flight-master
+  interactions with thematic per-NPC flavor gossip so the world remains
+  populated and legible.
 
-- **Status:** **DESIGNED, NOT STARTED** — Mechanism (Path B3 + B1) is fully specified with implementation sketches.
+- **Status:** **DESIGNED, NOT STARTED** — Mechanism (Path B3 + B1) is fully
+  specified with implementation sketches.
 
 - **Completion estimate:** ~60% designed, 0% implemented.
 
 
 **148j - Pre-Train All Level-≤20 Class Abilities at Character Creation**
 
-- **Summary:** Grant every spell + weapon skill a class would learn from trainers at levels 1-20, so a level-20 starting character has their full spell roster. Generator-driven SQL to keep migration synchronized with trainer data.
+- **Summary:** Grant every spell + weapon skill a class would learn from
+  trainers at levels 1-20, so a level-20 starting character has their full spell
+  roster. Generator-driven SQL to keep migration synchronized with trainer data.
 
-- **Status:** **DESIGNED, NOT STARTED** — Data source (npc_trainer join), SQL generation approach, and idempotence strategy all defined. Generator script stub needed.
+- **Status:** **DESIGNED, NOT STARTED** — Data source (npc_trainer join), SQL
+  generation approach, and idempotence strategy all defined. Generator script
+  stub needed.
 
 - **Completion estimate:** ~60% designed, 0% implemented.
 
 
 **148k - ALE Auto-Equip Starter Kit on Character Creation**
 
-- **Summary:** Lua hook on PLAYER_EVENT_ON_FIRST_LOGIN that strips all equipped items and bags, then fetches the 148h kit from the DB and re-equips it categorically (bags → quiver → equipment → ammo → hearthstone), binding hearthstone to per-faction spawn towns.
+- **Summary:** Lua hook on PLAYER_EVENT_ON_FIRST_LOGIN that strips all equipped
+  items and bags, then fetches the 148h kit from the DB and re-equips it
+  categorically (bags → quiver → equipment → ammo → hearthstone),
+  binding hearthstone to per-faction spawn towns.
 
-- **Status:** **DESIGNED, NOT STARTED** — Algorithm, trigger event, slot resolution table, and async query strategy all specified. Mechanism shape clear but Lua code not written.
+- **Status:** **DESIGNED, NOT STARTED** — Algorithm, trigger event, slot
+  resolution table, and async query strategy all specified. Mechanism shape
+  clear but Lua code not written.
 
 - **Completion estimate:** ~70% designed, 0% implemented.
 
-- **Notes:** Explicitly depends on 148j (weapon proficiencies) and 148h (kit data).
+- **Notes:** Explicitly depends on 148j (weapon proficiencies) and 148h (kit
+  data).
 
 
 ---
@@ -135,29 +165,47 @@ comprehensive report:
 
 **148m - Vanilla XP and Talent Tuning**
 
-- **Summary:** Slow XP progression to 0.8× (net 1.6× after C005's 2x doubling) so 20→40 leveling takes longer. Boost talent grants to 3 points per level (instead of 1) from 21-40 so characters reach level cap fully specced.
+- **Summary:** Slow XP progression to 0.8× (net 1.6× after C005's 2x doubling)
+  so 20→40 leveling takes longer. Boost talent grants to 3 points per level
+  (instead of 1) from 21-40 so characters reach level cap fully specced.
 
-- **Status:** **DESIGNED, NOT STARTED** — C-patch for XP rate defined; Lua hook for talent bonus event specified. Exact values confirmed by user (0.8, 3 points).
+- **Status:** **DESIGNED, NOT STARTED** — C-patch for XP rate defined; Lua
+  hook for talent bonus event specified. Exact values confirmed by user (0.8, 3
+  points).
 
 - **Completion estimate:** ~60% designed, 0% implemented.
 
 
 **148n - Vanilla Racial Starting Zones (per-race refinement)**
 
-- **Summary:** Replace the coarse two-faction zone split (Darkshire / Tarren Mill) with a six-town per-race spread (Menethil, Darkshire, Astranaar, Ratchet, Tarren Mill, Stonetalon) to distribute the player population and match race lore.
+- **Summary:** Replace the coarse two-faction zone split (Darkshire / Tarren
+  Mill) with a six-town per-race spread (Menethil, Darkshire, Astranaar,
+  Ratchet, Tarren Mill, Stonetalon) to distribute the player population and
+  match race lore.
 
-- **Status:** **DESIGNED + LIVE ANCHOR FIX PARTIAL (2026-07-13)** — Per-race coordinates specified. The Sun Rock Retreat anchor (race 6+10) was fixed 2026-07-13 after proving broken in testing. The change was **generalized to all six anchors** as innkeeper coordinates to guarantee walkable ground. ALE hearth-bind table updated. Remaining: full test-dev matrix validation.
+- **Status:** **DESIGNED + LIVE ANCHOR FIX PARTIAL (2026-07-13)** — Per-race
+  coordinates specified. The Sun Rock Retreat anchor (race 6+10) was fixed
+  2026-07-13 after proving broken in testing. The change was **generalized to
+  all six anchors** as innkeeper coordinates to guarantee walkable ground. ALE
+  hearth-bind table updated. Remaining: full test-dev matrix validation.
 
-- **Completion estimate:** ~75% done; five anchors unvalidated in-client (one test pass pending).
+- **Completion estimate:** ~75% done; five anchors unvalidated in-client (one
+  test pass pending).
 
 
 **148o - Vanilla Spawn &amp; Kit Validation Pass (per race × class)**
 
-- **Summary:** Structured reroll matrix across all 52 valid (race, class) pairs to validate spawn anchors are walkable (non-void-death), starter kit applied, hearthstone bind correct, and level-20 state correct. Includes test-dev account setup (TESTDEV/menardi) and per-character spot-check checklist.
+- **Summary:** Structured reroll matrix across all 52 valid (race, class) pairs
+  to validate spawn anchors are walkable (non-void-death), starter kit applied,
+  hearthstone bind correct, and level-20 state correct. Includes test-dev
+  account setup (TESTDEV/menardi) and per-character spot-check checklist.
 
-- **Status:** **IN PROGRESS (2026-07-13)** — Sun Rock anchor fixed and generalized; test-dev account recommended; matrix structure designed. The actual 52-character reroll validation **not yet executed**.
+- **Status:** **IN PROGRESS (2026-07-13)** — Sun Rock anchor fixed and
+  generalized; test-dev account recommended; matrix structure designed. The
+  actual 52-character reroll validation **not yet executed**.
 
-- **Completion estimate:** ~50% designed, 0% validated; blockers fixed but test matrix pending.
+- **Completion estimate:** ~50% designed, 0% validated; blockers fixed but test
+  matrix pending.
 
 
 ---
@@ -168,9 +216,13 @@ comprehensive report:
 
 **148l - Vanilla Mount Level Requirements**
 
-- **Summary:** Raise mount-skill level requirements from WotLK defaults (Apprentice 20 / Journeyman 40) to Classic values (Apprentice 40 / Journeyman 60) so only the 60%-speed mount is reachable at level 40, and the epic mount is an unreached horizon.
+- **Summary:** Raise mount-skill level requirements from WotLK defaults
+  (Apprentice 20 / Journeyman 40) to Classic values (Apprentice 40 / Journeyman
+  60) so only the 60%-speed mount is reachable at level 40, and the epic mount
+  is an unreached horizon.
 
-- **Status:** **DESIGNED, NOT STARTED** — Mechanism (trainer reqlevel UPDATE) and fallback (DBC patching) both specified.
+- **Status:** **DESIGNED, NOT STARTED** — Mechanism (trainer reqlevel UPDATE)
+  and fallback (DBC patching) both specified.
 
 - **Completion estimate:** ~50% designed, 0% implemented.
 
@@ -179,22 +231,35 @@ comprehensive report:
 
 **148p - Wand DPS at ~100% of Spell DPS**
 
-- **Summary:** Rebalance all wands in the item DB so auto-attacking with a wand deals roughly equivalent DPS to casting spells, enabling auto-attack-only caster builds at mechanical parity. Deferred from 148h because it's a cross-cutting item rebalance, not a starter-kit tweak.
+- **Summary:** Rebalance all wands in the item DB so auto-attacking with a wand
+  deals roughly equivalent DPS to casting spells, enabling auto-attack-only
+  caster builds at mechanical parity. Deferred from 148h because it's a
+  cross-cutting item rebalance, not a starter-kit tweak.
 
-- **Status:** **SPECIFIED, NOT STARTED** — Reference spell-DPS table, proposed wand-DPS targets per level band, rescaling formula, and open questions (talent scaling, PvP balance, coefficient interaction) all documented. No implementation started.
+- **Status:** **SPECIFIED, NOT STARTED** — Reference spell-DPS table, proposed
+  wand-DPS targets per level band, rescaling formula, and open questions (talent
+  scaling, PvP balance, coefficient interaction) all documented. No
+  implementation started.
 
 - **Completion estimate:** ~40% designed, 0% implemented.
 
 - **Priority:** Low (deferred out of 148h scope; ship at 20 DPS placeholder).
 
-- **Notes:** 148h's wands currently set to 20 DPS as a placeholder; this ticket finishes the proper rebalance.
+- **Notes:** 148h's wands currently set to 20 DPS as a placeholder; this ticket
+  finishes the proper rebalance.
 
 
 **148q - Vanilla Starting Professions (gathering by race, production by class)**
 
-- **Summary:** Grant every level-20 vanilla character two professions: one gathering (by race with per-faction class overrides) and one production (by class), both at skill 125, with every learnable recipe and the profession's tool. Seven gatherings + seven productions split evenly between the axes.
+- **Summary:** Grant every level-20 vanilla character two professions: one
+  gathering (by race with per-faction class overrides) and one production (by
+  class), both at skill 125, with every learnable recipe and the profession's
+  tool. Seven gatherings + seven productions split evenly between the axes.
 
-- **Status:** **FULLY SPECIFIED (2026-07-13), NOT BUILT** — Mappings confirmed by user (race defaults, class overrides, skill value 125). Generator strategy, SQL shape, bitmask-keying lesson (learned from 148j bug), and data-coherence validator all designed. Zero implementation code written yet.
+- **Status:** **FULLY SPECIFIED (2026-07-13), NOT BUILT** — Mappings confirmed
+  by user (race defaults, class overrides, skill value 125). Generator strategy,
+  SQL shape, bitmask-keying lesson (learned from 148j bug), and data-coherence
+  validator all designed. Zero implementation code written yet.
 
 - **Completion estimate:** ~80% specified, 0% implemented.
 
@@ -203,15 +268,20 @@ comprehensive report:
 
 **148s - Vanilla Playerbots Start in the 148h Starter Kit**
 
-- **Summary:** Patch mod-playerbots `PlayerbotFactory` so level-20 bots spawn in the 148h kit instead of randomized gear. Vanilla-only; remains config-gated or DB-name-gated; bots upgrade normally as they level.
+- **Summary:** Patch mod-playerbots `PlayerbotFactory` so level-20 bots spawn in
+  the 148h kit instead of randomized gear. Vanilla-only; remains config-gated or
+  DB-name-gated; bots upgrade normally as they level.
 
-- **Status:** **SPECIFIED, NOT BUILT** — Mechanism (B-patch to module source + C-patch for vanilla scoping), entry point, and vanilla-gating strategy all designed. Patch-system packaging clear. No source patch written.
+- **Status:** **SPECIFIED, NOT BUILT** — Mechanism (B-patch to module source +
+  C-patch for vanilla scoping), entry point, and vanilla-gating strategy all
+  designed. Patch-system packaging clear. No source patch written.
 
 - **Completion estimate:** ~60% specified, 0% implemented.
 
 - **Priority:** Medium (consistency with player kit; not critical).
 
-- **Notes:** Depends on 148h (kit definitions) and 148j (weapon proficiency pre-training).
+- **Notes:** Depends on 148h (kit definitions) and 148j (weapon proficiency
+  pre-training).
 
 
 ---
@@ -222,42 +292,55 @@ comprehensive report:
 
 **148b - Add mod-instance-reset to Vanilla — DECLINED**
 
-- **Summary:** Would raise the per-hour dungeon-entry cap (default 5→30) so Uldaman can be farmed without hourly lockout. Decided vanilla's default 5/hour is acceptable; revisit if play-testing shows it actually blocks the loop in practice.
+- **Summary:** Would raise the per-hour dungeon-entry cap (default 5→30) so
+  Uldaman can be farmed without hourly lockout. Decided vanilla's default 5/hour
+  is acceptable; revisit if play-testing shows it actually blocks the loop in
+  practice.
 
 - **Status:** DECLINED (2026-06-02); kept on disk as reference.
 
 
 **148c - Add mod-quest-status to Vanilla — DECLINED**
 
-- **Summary:** Would add objective markers over quest NPCs/objects. Decided vanilla players should read quest text and use the in-game map; slower exploration matches the ruleset's intent.
+- **Summary:** Would add objective markers over quest NPCs/objects. Decided
+  vanilla players should read quest text and use the in-game map; slower
+  exploration matches the ruleset's intent.
 
 - **Status:** DECLINED (2026-06-02); kept on disk as reference.
 
 
 **148d - Add mod-zone-difficulty to Vanilla — DECLINED**
 
-- **Summary:** Would scale Uldaman HP/damage multipliers. Decided vanilla's default tuning stands for v1; revisit if play-testing shows Uldaman feels trivial.
+- **Summary:** Would scale Uldaman HP/damage multipliers. Decided vanilla's
+  default tuning stands for v1; revisit if play-testing shows Uldaman feels
+  trivial.
 
 - **Status:** DECLINED (2026-06-02); kept on disk as reference.
 
 
 **148e - Add mod-account-achievements to Vanilla — DECLINED**
 
-- **Summary:** Would move achievements to account-level instead of per-character. Decided achievements are not a focus of vanilla; default per-character behavior stands.
+- **Summary:** Would move achievements to account-level instead of
+  per-character. Decided achievements are not a focus of vanilla; default
+  per-character behavior stands.
 
 - **Status:** DECLINED (2026-06-02); kept on disk as reference.
 
 
 **148f - Add mod-server-auto-shutdown to Vanilla — DECLINED**
 
-- **Summary:** Would schedule periodic server restarts with countdown announcements. Decided manual restarts are fine for the current hosting context; revisit if vanilla goes public.
+- **Summary:** Would schedule periodic server restarts with countdown
+  announcements. Decided manual restarts are fine for the current hosting
+  context; revisit if vanilla goes public.
 
 - **Status:** DECLINED (2026-06-02); kept on disk as reference.
 
 
 **148g - Class Combination Modifier System — PROMOTED**
 
-- **Summary:** Was a 148 sub-issue (cross-profile race/class availability system) but promoted to **issue 716** in the phase-7 custom-class cluster because it's cross-profile, not vanilla-specific.
+- **Summary:** Was a 148 sub-issue (cross-profile race/class availability
+  system) but promoted to **issue 716** in the phase-7 custom-class cluster
+  because it's cross-profile, not vanilla-specific.
 
 - **Status:** PROMOTED to 716 (2026-06-01); this file is a redirect.
 
@@ -268,18 +351,23 @@ comprehensive report:
 ## COMPLETED ISSUES (in `issues/completed/` directory)
 
 
-**None of the vanilla profile (148-cluster) issues are in the completed directory.** The profile is still in Phase 1 (Foundation).
+**None of the vanilla profile (148-cluster) issues are in the completed
+directory.** The profile is still in Phase 1 (Foundation).
 
 
 However, several unrelated completed issues reference vanilla:
 
-- **119-config-value-orchestrator.md** — completed; discusses vanilla as a profile option
+- **119-config-value-orchestrator.md** — completed; discusses vanilla as a
+  profile option
 
-- **133-profile-transition-system.md** — completed; mentions vanilla profile transitions
+- **133-profile-transition-system.md** — completed; mentions vanilla profile
+  transitions
 
-- **129-release-to-beta-transition.md** — completed; references vanilla in passing
+- **129-release-to-beta-transition.md** — completed; references vanilla in
+  passing
 
-- **202-lua-engine-initialization** — completed; mentions vanilla Lua path setup
+- **202-lua-engine-initialization** — completed; mentions vanilla Lua path
+  setup
 
 
 These are not vanilla-profile implementation tickets; they're infrastructure
@@ -296,65 +384,43 @@ that vanilla depends on.
 
 |-------|-------|--------|--------|----------|-------|
 
-| **148** | Vanilla Profile: Default WotLK + Playerbots | Partially Complete |
-40-50 | NO | Parent issue; design complete, infrastructure partial, most
-sub-issues pending |
+| **148** | Vanilla Profile: Default WotLK + Playerbots | Partially Complete | 40-50 | NO | Parent issue; design complete, infrastructure partial, most sub-issues pending |
 
-| **148a** | Disable Death Knights | In Progress | 10-20 | YES | Config-knob
-mechanism redesigned; patch wiring pending |
+| **148a** | Disable Death Knights | In Progress | 10-20 | YES | Config-knob mechanism redesigned; patch wiring pending |
 
-| **148h** | Class-Specific Starting Equipment | Designed | 70 | YES | Thematic
-curation, cloning, loot-table sweep all specified; SQL generation ready but not
-executed |
+| **148h** | Class-Specific Starting Equipment | Designed | 70 | YES | Thematic curation, cloning, loot-table sweep all specified; SQL generation ready but not executed |
 
-| **148i** | Remove All Flight Paths | Designed | 60 | YES | Path B (flavor
-gossip) fully specified; migration not written |
+| **148i** | Remove All Flight Paths | Designed | 60 | YES | Path B (flavor gossip) fully specified; migration not written |
 
-| **148j** | Pre-Train Level-≤20 Abilities | Designed | 60 | YES | Data source
-+ SQL shape + generator strategy clear; script not written |
+| **148j** | Pre-Train Level-≤20 Abilities | Designed | 60 | YES | Data source + SQL shape + generator strategy clear; script not written |
 
-| **148k** | ALE Auto-Equip Starter Kit | Designed | 70 | YES | Algorithm +
-events + slot resolution all specified; Lua code not written |
+| **148k** | ALE Auto-Equip Starter Kit | Designed | 70 | YES | Algorithm + events + slot resolution all specified; Lua code not written |
 
-| **148l** | Mount Level Requirements | Designed | 50 | NO | Mechanism +
-fallback specified; low priority (flavor) |
+| **148l** | Mount Level Requirements | Designed | 50 | NO | Mechanism + fallback specified; low priority (flavor) |
 
-| **148m** | XP and Talent Tuning | Designed | 60 | NO | C-patch + Lua hook both
-specified; code not written |
+| **148m** | XP and Talent Tuning | Designed | 60 | NO | C-patch + Lua hook both specified; code not written |
 
-| **148n** | Racial Starting Zones | Live (Partial) | 75 | NO | All six anchors
-moved to innkeeper coords (2026-07-13); test matrix pending |
+| **148n** | Racial Starting Zones | Live (Partial) | 75 | NO | All six anchors moved to innkeeper coords (2026-07-13); test matrix pending |
 
-| **148o** | Spawn &amp; Kit Validation Pass | In Progress | 50 | YES | Test
-structure designed; 52-character matrix not executed; blockers fixed |
+| **148o** | Spawn &amp; Kit Validation Pass | In Progress | 50 | YES | Test structure designed; 52-character matrix not executed; blockers fixed |
 
-| **148p** | Wand DPS Parity | Specified | 40 | NO | Reference spell table +
-targets + formula all designed; implementation deferred (low priority) |
+| **148p** | Wand DPS Parity | Specified | 40 | NO | Reference spell table + targets + formula all designed; implementation deferred (low priority) |
 
-| **148q** | Starting Professions | Fully Specified | 80 | NO | Mappings +
-generator strategy + bitmask lesson all defined; no code written (medium
-priority) |
+| **148q** | Starting Professions | Fully Specified | 80 | NO | Mappings + generator strategy + bitmask lesson all defined; no code written (medium priority) |
 
-| **148s** | Playerbots Start in 148h Kit | Specified | 60 | NO | B-patch +
-C-patch design clear; patch not written (medium priority) |
+| **148s** | Playerbots Start in 148h Kit | Specified | 60 | NO | B-patch + C-patch design clear; patch not written (medium priority) |
 
-| **148b** | mod-instance-reset | Declined | — | — | 5/hour cap acceptable;
-revisit if blocking in practice |
+| **148b** | mod-instance-reset | Declined | — | — | 5/hour cap acceptable; revisit if blocking in practice |
 
-| **148c** | mod-quest-status | Declined | — | — | Players read quest text;
-slower pace is intentional |
+| **148c** | mod-quest-status | Declined | — | — | Players read quest text; slower pace is intentional |
 
-| **148d** | mod-zone-difficulty | Declined | — | — | Uldaman default tuning
-stands for v1 |
+| **148d** | mod-zone-difficulty | Declined | — | — | Uldaman default tuning stands for v1 |
 
-| **148e** | mod-account-achievements | Declined | — | — | Achievements not
-a focus; per-character is default |
+| **148e** | mod-account-achievements | Declined | — | — | Achievements not a focus; per-character is default |
 
-| **148f** | mod-server-auto-shutdown | Declined | — | — | Manual restarts
-OK; revisit if vanilla goes public |
+| **148f** | mod-server-auto-shutdown | Declined | — | — | Manual restarts OK; revisit if vanilla goes public |
 
-| **148g** | Class Combination Modifier | Promoted to 716 | — | — |
-Cross-profile system; now in phase-7 cluster |
+| **148g** | Class Combination Modifier | Promoted to 716 | — | — | Cross-profile system; now in phase-7 cluster |
 
 
 ---
@@ -367,21 +433,21 @@ The following **must be completed** before vanilla can launch:
 
 
 1. **148h** (Starting Equipment) — without this, level-20 characters are naked
-and unplayable
+   and unplayable
 
 2. **148i** (Flight Paths) — core to the "small, deliberate world" design
 
 3. **148j** (Level-20 Ability Pretrain) — without this, level-20 characters
-don't have their spell roster
+   don't have their spell roster
 
 4. **148k** (Auto-Equip Kit) — requires 148h and 148j; makes kit visible on
-character-select
+   character-select
 
 5. **148a** (DK Disablement) — prevents broken DK creation experience
 
 6. **148o** (Validation Matrix) — currently pending; one blocker (Sun Rock
-anchor) was fixed 2026-07-13 but the full 52-character reroll matrix has not
-been executed
+   anchor) was fixed 2026-07-13 but the full 52-character reroll matrix has not
+   been executed
 
 
 ---
@@ -392,7 +458,8 @@ been executed
 
 **Immediate (Week 1):**
 
-- Execute 148o's 52-character reroll matrix against the test-dev account to validate all anchors and kits
+- Execute 148o's 52-character reroll matrix against the test-dev account to
+  validate all anchors and kits
 
 - Implement 148h's SQL generation and apply-form patches
 
@@ -420,7 +487,8 @@ been executed
 
 - Build 148s's playerbots kit-gearing B-patch
 
-- Start 148p's wand rebalance work (lowest priority, can ship as placeholder)</result>
+- Start 148p's wand rebalance work (lowest priority, can ship as
+  placeholder)</result>
 
 <usage><subagent_tokens>81949</subagent_tokens><tool_uses>25</tool_uses><duration_ms>91511</duration_ms></usage>
 
@@ -447,9 +515,12 @@ Here's the actual state of the vanilla (148) cluster:
 
 These are your existing "will not implement" set — decided 2026-06-02:
 
-- **148b** mod-instance-reset · **148c** mod-quest-status · **148d** mod-zone-difficulty · **148e** mod-account-achievements · **148f** mod-server-auto-shutdown
+- **148b** mod-instance-reset · **148c** mod-quest-status · **148d**
+  mod-zone-difficulty · **148e** mod-account-achievements · **148f**
+  mod-server-auto-shutdown
 
-- **148g** — not declined, *promoted* to issue 716 (cross-profile, left vanilla)
+- **148g** — not declined, *promoted* to issue 716 (cross-profile, left
+  vanilla)
 
 
 ## Effectively done (ticket text just needs updating to match)
@@ -458,7 +529,8 @@ These are your existing "will not implement" set — decided 2026-06-02:
 
 - **148m** — XP 0.8× + 3 talent points/level (committed)
 
-- **148n** — per-race starting zones + per-race hearth binds (committed; ~one test pass shy)
+- **148n** — per-race starting zones + per-race hearth binds (committed; ~one
+  test pass shy)
 
 
 ## Still real work — blocking a vanilla ship
@@ -469,18 +541,22 @@ These are your existing "will not implement" set — decided 2026-06-02:
 
 - **148j** — pre-train all ≤20 abilities (generator not written)
 
-- **148k** — ALE auto-equip kit on first login (depends on 148h+148j; Lua not written)
+- **148k** — ALE auto-equip kit on first login (depends on 148h+148j; Lua not
+  written)
 
-- **148o** — the 52 race×class spawn/kit validation matrix (blockers fixed, matrix not run yet)
+- **148o** — the 52 race×class spawn/kit validation matrix (blockers fixed,
+  matrix not run yet)
 
 
 ## Still real work — non-blocking (your natural "will not implement" candidates)
 
 - **148l** — Classic mount level reqs (40/60 instead of 20/40). Pure flavor.
 
-- **148p** — wand DPS ≈ spell DPS parity rebalance. Cross-cutting item sweep; kit wands sit at a 20-DPS placeholder now.
+- **148p** — wand DPS ≈ spell DPS parity rebalance. Cross-cutting item
+  sweep; kit wands sit at a 20-DPS placeholder now.
 
-- **148q** — starting professions (gathering-by-race, production-by-class). QoL.
+- **148q** — starting professions (gathering-by-race, production-by-class).
+  QoL.
 
 - **148s** — playerbots spawn in the 148h kit. Consistency-only.
 
@@ -498,15 +574,20 @@ deciding first:
 **[Asked the user]**
 
 
-*Q1 — Won't-implement:* Which of the non-blocking vanilla issues do you want to mark 'will not implement'?
+*Q1 — Won't-implement:* Which of the non-blocking vanilla issues do you want
+to mark 'will not implement'?
 
-- 148l mount levels — Classic 40/60 mount skill reqs. Cosmetic-only; cleanest cut.
+- 148l mount levels — Classic 40/60 mount skill reqs. Cosmetic-only; cleanest
+  cut.
 
-- 148p wand DPS parity — Big item-wide rebalance for auto-attack casters. Kit wands already have a 20-DPS placeholder.
+- 148p wand DPS parity — Big item-wide rebalance for auto-attack casters. Kit
+  wands already have a 20-DPS placeholder.
 
-- 148q professions — Gathering-by-race + production-by-class at skill 125. QoL, more 'cut for v1' than 'never'.
+- 148q professions — Gathering-by-race + production-by-class at skill 125.
+  QoL, more 'cut for v1' than 'never'.
 
-- 148s bots in kit — Playerbots spawn in the 148h kit. Consistency-only; bots already upgrade as they level.
+- 148s bots in kit — Playerbots spawn in the 148h kit. Consistency-only; bots
+  already upgrade as they level.
 
 → **Answered:** 148p wand DPS parity, 148m - we shouldn't have that as a
 default feature. Can we add it as an option to the azerothcore config file
@@ -515,11 +596,14 @@ instead of having it always implemented?
 
 *Q2 — Record style:* How should I record a 'will not implement' decision?
 
-- Match the 148b-f pattern — Add a DECLINED note + date + reasoning to the top of each ticket, leave the file on disk. Matches your existing declined set.
+- Match the 148b-f pattern — Add a DECLINED note + date + reasoning to the top
+  of each ticket, leave the file on disk. Matches your existing declined set.
 
-- Move to a declined/ folder — Relocate the tickets into a subfolder (git-tracked move). Keeps issues/ to active work only.
+- Move to a declined/ folder — Relocate the tickets into a subfolder
+  (git-tracked move). Keeps issues/ to active work only.
 
-- Just tell me, I'll decide per-issue — Don't touch files yet — talk through each one first.
+- Just tell me, I'll decide per-issue — Don't touch files yet — talk through
+  each one first.
 
 → **Selected:** Move to a declined/ folder
 
@@ -592,7 +676,8 @@ Done. Both tickets are now declined and relocated:
 
 **`issues/declined/`**
 
-- `148m-vanilla-xp-and-talent-tuning.md` — git-tracked rename (history preserved) + decline banner
+- `148m-vanilla-xp-and-talent-tuning.md` — git-tracked rename (history
+  preserved) + decline banner
 
 - `148p-wand-spell-dps-parity-rebalance.md` — moved + decline banner
 
@@ -605,13 +690,16 @@ the standard 1-talent-point-per-level curve. The git view shows only my two
 changes, nothing else swept in.
 
 
-**Stragglers I deliberately did *not* touch** — four comment/cross-ref links still point at the old `issues/148p-…` path, but they live in files already carrying uncommitted **148h** work that isn't mine:
+**Stragglers I deliberately did *not* touch** — four comment/cross-ref links
+still point at the old `issues/148p-…` path, but they live in files already
+carrying uncommitted **148h** work that isn't mine:
 
 - `scripts/generate-vanilla-starting-equipment-sql:392`
 
 - `sql/vanilla/db_world.src/02-starting-equipment.apply.sql:29`
 
-- `sql/vanilla/db_world/02-starting-equipment.sql:29` (clean, but it's the generated twin of the dirty generator)
+- `sql/vanilla/db_world/02-starting-equipment.sql:29` (clean, but it's the
+  generated twin of the dirty generator)
 
 - `issues/148h-…md:643`
 
@@ -624,12 +712,13 @@ Two things worth your call:
 
 
 1. **Those stragglers** — want me to update them to the `declined/` path once
-the 148h work is settled, or leave the follow-up references as-is (they still
-read fine as ticket numbers)?
+   the 148h work is settled, or leave the follow-up references as-is (they still
+   read fine as ticket numbers)?
 
 2. **Consistency** — the older declined set (`148b`–`148f`) and the promoted
-`148g` still sit loose in `issues/`. Your rationale for the folder was "keep
-`issues/` to active work only." Want me to relocate those into `declined/` too?
+   `148g` still sit loose in `issues/`. Your rationale for the folder was "keep
+   `issues/` to active work only." Want me to relocate those into `declined/`
+   too?
 
 
 I haven't committed anything — the tree has a lot of other in-progress work in
@@ -646,17 +735,17 @@ For the record, that leaves the still-**active** vanilla work as: blocking →
 
 ### User Request 3
 
-1. Those stragglers — want me to update them to the declined/ path once the
-148h work is settled, or leave the follow-up references as-is (they still read
-fine as ticket numbers)?
+  1. Those stragglers — want me to update them to the declined/ path once the
+     148h work is settled, or leave the follow-up references as-is (they still
+     read fine as ticket numbers)?
 
 
 what kind of references are they?
 
 
-2. Consistency — the older declined set (148b–148f) and the promoted 148g
-still sit loose in issues/. Your rationale for the folder was "keep issues/ to
-active work only." Want me to relocate those into declined/ too?
+  2. Consistency — the older declined set (148b–148f) and the promoted 148g
+     still sit loose in issues/. Your rationale for the folder was "keep issues/
+     to active work only." Want me to relocate those into declined/ too?
 
 
 yes please do some cleanup if you can.
@@ -697,18 +786,22 @@ All four are **documentation "see also" cross-references** — annotations, not
 functional code:
 
 
-- **Three are the same comment line** inside a `-- Cross-references:` header block at the top of the starting-equipment SQL (the generator script, the `.src` apply SQL, and its generated twin):
+- **Three are the same comment line** inside a `-- Cross-references:` header
+  block at the top of the starting-equipment SQL (the generator script, the
+  `.src` apply SQL, and its generated twin):
 
-```
+  ```
 
--- issues/148p-wand-spell-dps-parity-rebalance.md -- wand follow-up
+  --   issues/148p-wand-spell-dps-parity-rebalance.md    -- wand follow-up
 
-```
+  ```
 
-A note telling a future reader of the SQL where the wand-rebalance design lives.
-Zero effect on what the SQL does.
+  A note telling a future reader of the SQL where the wand-rebalance design
+  lives. Zero effect on what the SQL does.
 
-- **The 148h one** (line 643) is a bullet in that issue's "Cross-References" section calling 148p the "deferred follow-up" that raises wand DPS off the 20 placeholder.
+- **The 148h one** (line 643) is a bullet in that issue's "Cross-References"
+  section calling 148p the "deferred follow-up" that raises wand DPS off the 20
+  placeholder.
 
 
 So they're all navigational pointers, and the durable identifier is the ticket
@@ -742,7 +835,8 @@ glob. Flagging in case you disagree.
 
 - `issues/declined/` → 148b, c, d, e, f, m, p
 
-- `issues/` active vanilla work → parent **148**, plus **148a, 148h, 148i, 148j, 148k, 148l, 148n, 148o, 148q, 148s** (and the **148g** redirect)
+- `issues/` active vanilla work → parent **148**, plus **148a, 148h, 148i,
+  148j, 148k, 148l, 148n, 148o, 148q, 148s** (and the **148g** redirect)
 
 
 Nothing committed — the tree still has the unrelated in-progress work in it,
@@ -758,22 +852,22 @@ own commit so they don't get swept up with the 148h changes.
 Can you update the 148h and 148n tickets to reflect their current status?
 
 
-I left 148g in issues/ — as noted above, it's a promotion redirect, not a
-decline, and its own text asks to stay put so the 148-series stays discoverable.
-Moving it would mislabel it and hide it from an issues/148* glob. Flagging in
-case you disagree.
+  I left 148g in issues/ — as noted above, it's a promotion redirect, not a
+  decline, and its own text asks to stay put so the 148-series stays
+  discoverable. Moving it would mislabel it and hide it from an issues/148*
+  glob. Flagging in case you disagree.
 
 
 we should move it to completed/ once 716, the redirected issue, is completed.
 Make sure those instructions are present in 148g and 716.
 
 
-My recommendation: leave them. When whoever's mid-flight on 148h lands their
-changes, a one-shot s|issues/148p-|issues/declined/148p-| sweep (plus a word
-tweak) cleans it in their commit, where it belongs. Not worth me reaching into
-their uncommitted files for a comment. If you'd
+  My recommendation: leave them. When whoever's mid-flight on 148h lands their
+  changes, a one-shot s|issues/148p-|issues/declined/148p-| sweep (plus a word
+  tweak) cleans it in their commit, where it belongs. Not worth me reaching into
+  their uncommitted files for a comment. If you'd
 
-rather I just do it now anyway, say so and I'll make it an isolated change.
+  rather I just do it now anyway, say so and I'll make it an isolated change.
 
 
 how about you just finish 148h for them?
@@ -981,24 +1075,39 @@ hook. Everything else (generator, both SQL migrations, E009/E018 patches, and
 `src/lua-vanilla/auto-equip-starter-kit.lua`:
 
 
-- **`WEAPON_SKILL_PROFICIENCY`** — skill line → proficiency spell id (Swords→201, Polearms→200, Fist→15590, …)
+- **`WEAPON_SKILL_PROFICIENCY`** — skill line → proficiency spell id
+  (Swords→201, Polearms→200, Fist→15590, …)
 
 - **`CLASS_WEAPON_SKILLS`** — class → skill lines it can train
 
-- **`learn_weapon_proficiencies(player)`** — runs on first login **before** `install_equipment`, `LearnSpell`-ing each proficiency so off-default kit weapons (Tauren Warrior polearm, Orc Rogue mace) actually equip
+- **`learn_weapon_proficiencies(player)`** — runs on first login **before**
+  `install_equipment`, `LearnSpell`-ing each proficiency so off-default kit
+  weapons (Tauren Warrior polearm, Orc Rogue mace) actually equip
 
 
 luajit parse-checks clean. It's a Lua-only change (E001 symlinks the dir in), so
 it takes effect on next worldserver boot/reload — no rebuild.
 
 
-**On the "data-derived, not from memory" requirement** — I didn't trust memory for the spell IDs. The path there was worth noting because the ticket's assumed oracle was wrong:
+**On the "data-derived, not from memory" requirement** — I didn't trust memory
+for the spell IDs. The path there was worth noting because the ticket's assumed
+oracle was wrong:
 
-- `character_spell` (the ticket's stated source) holds **none** of these — bots set the `m_WeaponProficiency` mask directly rather than learning proficiency spells.
+- `character_spell` (the ticket's stated source) holds **none** of these —
+  bots set the `m_WeaponProficiency` mask directly rather than learning
+  proficiency spells.
 
-- `skilllineability_dbc` is empty and `spell_dbc` is only a 4492-row partial (server reads base DBC from files).
+- `skilllineability_dbc` is empty and `spell_dbc` is only a 4492-row partial
+  (server reads base DBC from files).
 
-- **`trainer_spell` was the live oracle** — every id I used (196/197/198/199/200/201/202/227/264/266/1180/2567/5011/15590) resolves to a real weapon-master trainer listing. Cross-checked class→weapon coverage against the bot factory's `CanEquipWeapon`; they agree except **Druid Fist Weapons**, which the ticket's live-data table has and `CanEquipWeapon` misses — so I trusted the ticket. Wands excluded (casters have it innately); Dual Wield (674) left to 148j. I corrected the ticket's now-wrong `character_spell` claim.
+- **`trainer_spell` was the live oracle** — every id I used
+  (196/197/198/199/200/201/202/227/264/266/1180/2567/5011/15590) resolves to a
+  real weapon-master trainer listing. Cross-checked class→weapon coverage
+  against the bot factory's `CanEquipWeapon`; they agree except **Druid Fist
+  Weapons**, which the ticket's live-data table has and `CanEquipWeapon` misses
+  — so I trusted the ticket. Wands excluded (casters have it innately); Dual
+  Wield (674) left to 148j. I corrected the ticket's now-wrong `character_spell`
+  claim.
 
 
 148h's checklist item is flipped to done. The **only** thing left on 148h is the
@@ -1084,7 +1193,8 @@ Here's the reasoning. With 148h's proficiency pretrain landed just now, the
 
 - **148h** (kit clone/tune/loot-sweep) — SQL + generator done
 
-- **148k / 148h hook** (strip, equip, ammo, hearth-bind, **proficiency pretrain**) — Lua done
+- **148k / 148h hook** (strip, equip, ammo, hearth-bind, **proficiency
+  pretrain**) — Lua done
 
 
 Nobody has actually rolled a character and watched all four fire together. 148o
@@ -1104,7 +1214,11 @@ the spawn coords are walkable — so your manual reroll is a fast checklist
 instead of a blind hunt.
 
 
-**If you'd rather keep me on pure code** (no client needed), the best self-contained blocking task is **148a — disable Death Knights**: the config-knob mechanism is already designed, it's a quick deterministic win, and it clears a real ship-blocker. After that, **148i (remove flight paths)** is the last big blocking build.
+**If you'd rather keep me on pure code** (no client needed), the best
+self-contained blocking task is **148a — disable Death Knights**: the
+config-knob mechanism is already designed, it's a quick deterministic win, and
+it clears a real ship-blocker. After that, **148i (remove flight paths)** is the
+last big blocking build.
 
 
 So: **validate what we just built (148o), or keep clearing blockers (148a →
@@ -1116,12 +1230,12 @@ stacking another feature on top of it unverified. Which way do you want to go?
 
 ### User Request 6
 
-If you'd rather keep me on pure code (no client needed), the best self-contained
-blocking task is 148a — disable Death Knights: the config-knob mechanism is
-already designed, it's a quick deterministic win, and it clears a real
-ship-blocker. After that, 148i (remove flight paths)
+  If you'd rather keep me on pure code (no client needed), the best
+  self-contained blocking task is 148a — disable Death Knights: the
+  config-knob mechanism is already designed, it's a quick deterministic win, and
+  it clears a real ship-blocker. After that, 148i (remove flight paths)
 
-is the last big blocking build.
+  is the last big blocking build.
 
 
 sure let's work on that next.
@@ -1203,18 +1317,24 @@ verification + catching the ticket up to reality.
 ## What I found on 148a
 
 
-- **C015 already exists and is committed** (`config/patches/C015-vanilla-disable-deathknight.sh`) — sets `CharacterCreating.Disabled.ClassMask = 32`, vanilla-scoped. The "quick win" was already banked in a prior session; the ticket just never got marked done.
+- **C015 already exists and is committed**
+  (`config/patches/C015-vanilla-disable-deathknight.sh`) — sets
+  `CharacterCreating.Disabled.ClassMask = 32`, vanilla-scoped. The "quick win"
+  was already banked in a prior session; the ticket just never got marked done.
 
 - **One knob covers both paths**, which is the part worth confirming:
 
-- **Players** — the create-character packet for a DK is rejected server-side.
+  - **Players** — the create-character packet for a DK is rejected
+    server-side.
 
-- **Bots** — `RandomPlayerbotFactory.cpp:711` reads the *same*
-`CONFIG_CHARACTER_CREATING_DISABLED_CLASSMASK` and skips masked classes, so it
-never even attempts a DK (the ticket's open worry — "does the bot factory
-crash trying to make DKs?" — answered: no).
+  - **Bots** — `RandomPlayerbotFactory.cpp:711` reads the *same*
+    `CONFIG_CHARACTER_CREATING_DISABLED_CLASSMASK` and skips masked classes, so
+    it never even attempts a DK (the ticket's open worry — "does the bot
+    factory crash trying to make DKs?" — answered: no).
 
-- **Verified live:** `acore_characters_vanilla` has **0 class-6 characters** across ~2100 bots (nine non-DK classes, all level 20). The abandoned SQL Plan B (delete `playercreateinfo` rows, clear realm flag) was never needed.
+- **Verified live:** `acore_characters_vanilla` has **0 class-6 characters**
+  across ~2100 bots (nine non-DK classes, all level 20). The abandoned SQL Plan
+  B (delete `playercreateinfo` rows, clear realm flag) was never needed.
 
 
 ## What I changed
@@ -1237,12 +1357,13 @@ Lua + doc updates, 148n/148g/716, the declined moves). So two questions:
 
 
 1. **Move 148a to `issues/completed/` and commit its close-out now?** C015 is
-already committed, so this commit would just be the ticket update + the move +
-phase-progress. I can stage *only* those.
+   already committed, so this commit would just be the ticket update + the move
+   + phase-progress. I can stage *only* those.
 
 2. **Then start 148i (remove flight paths)** — the last big blocking build?
-That one is genuinely unbuilt (network-wide flight-master disable + per-NPC
-flavor gossip), so it's real implementation work, not a verification surprise.
+   That one is genuinely unbuilt (network-wide flight-master disable + per-NPC
+   flavor gossip), so it's real implementation work, not a verification
+   surprise.
 
 
 Want me to close out 148a and roll into 148i?
@@ -1252,13 +1373,14 @@ Want me to close out 148a and roll into 148i?
 
 ### User Request 7
 
-1. Move 148a to issues/completed/ and commit its close-out now? C015 is already
-committed, so this commit would just be the ticket update + the move +
-phase-progress. I can stage only those.
+  1. Move 148a to issues/completed/ and commit its close-out now? C015 is
+     already committed, so this commit would just be the ticket update + the
+     move + phase-progress. I can stage only those.
 
-2. Then start 148i (remove flight paths) — the last big blocking build? That
-one is genuinely unbuilt (network-wide flight-master disable + per-NPC flavor
-gossip), so it's real implementation work, not a verification surprise.
+  2. Then start 148i (remove flight paths) — the last big blocking build? That
+     one is genuinely unbuilt (network-wide flight-master disable + per-NPC
+     flavor gossip), so it's real implementation work, not a verification
+     surprise.
 
 
 yes and yes
@@ -1332,13 +1454,20 @@ whether it's live in the DB.
 against the DB:
 
 
-- **0** creature_template rows in `acore_world_vanilla` still carry the flightmaster flag (all cleared — B3).
+- **0** creature_template rows in `acore_world_vanilla` still carry the
+  flightmaster flag (all cleared — B3).
 
-- **69** flavor gossip rows + **69** npc_text rows present in the reserved 90000 range (B1) — the hand-authored per-NPC dialogue the ticket asked for is written and applied.
+- **69** flavor gossip rows + **69** npc_text rows present in the reserved 90000
+  range (B1) — the hand-authored per-NPC dialogue the ticket asked for is
+  written and applied.
 
-- The **E008 patch** (`patch_E008_vanilla_remove_flight_paths` + unpatch) is wired.
+- The **E008 patch** (`patch_E008_vanilla_remove_flight_paths` + unpatch) is
+  wired.
 
-- The one uncommitted change to the SQL is a *complete* fix, not a mid-edit: it re-enables the GOSSIP npcflag on the grounded masters so their menus actually open (without it the core would log a warning per NPC and the flavor text would never show). That change is already reflected in the live DB.
+- The one uncommitted change to the SQL is a *complete* fix, not a mid-edit: it
+  re-enables the GOSSIP npcflag on the grounded masters so their menus actually
+  open (without it the core would log a warning per NPC and the flavor text
+  would never show). That change is already reflected in the live DB.
 
 
 So Path B3+B1 is fully implemented, applied, and correct. The Outland/Northrend
@@ -1358,10 +1487,22 @@ finding X done. Continuing to pick issues to "implement" is the wrong shape now.
 Two decision points:
 
 
-**1. The uncommitted flight-path SQL.** The GOSSIP-flag fix in `03-remove-flight-paths.apply.sql` isn't mine — it was already modified when this session began. Closing out 148i properly (ticket update → move to `completed/` → commit) requires committing that SQL. I won't commit someone else's uncommitted change without your say-so. **Want me to commit it as part of closing out 148i?** (It's complete and already live in the DB, so the risk is low — but it's your call whose commit it lands in.)
+**1. The uncommitted flight-path SQL.** The GOSSIP-flag fix in
+`03-remove-flight-paths.apply.sql` isn't mine — it was already modified when
+this session began. Closing out 148i properly (ticket update → move to
+`completed/` → commit) requires committing that SQL. I won't commit someone
+else's uncommitted change without your say-so. **Want me to commit it as part of
+closing out 148i?** (It's complete and already live in the DB, so the risk is
+low — but it's your call whose commit it lands in.)
 
 
-**2. What to actually do next.** Rather than keep guessing which issue is secretly done, I'd suggest a **reconciliation sweep**: verify the true build/applied state of every open 148 issue against the DB and code, then bring the tickets + Phase 1 progress current in one pass. That leaves a trustworthy map of what's *genuinely* unbuilt — my current guess is only the non-blocking ones (148l mounts, 148q professions, 148s bot-kit, 148t town-NPCs) plus the manual 148o validation. Then the real remaining work is clear.
+**2. What to actually do next.** Rather than keep guessing which issue is
+secretly done, I'd suggest a **reconciliation sweep**: verify the true
+build/applied state of every open 148 issue against the DB and code, then bring
+the tickets + Phase 1 progress current in one pass. That leaves a trustworthy
+map of what's *genuinely* unbuilt — my current guess is only the non-blocking
+ones (148l mounts, 148q professions, 148s bot-kit, 148t town-NPCs) plus the
+manual 148o validation. Then the real remaining work is clear.
 
 
 So: **commit the flight-path fix + close 148i, then run a reconciliation sweep
@@ -1372,28 +1513,30 @@ of the rest?** Or would you rather I keep going issue-by-issue?
 
 ### User Request 8
 
-1. The uncommitted flight-path SQL. The GOSSIP-flag fix in
-03-remove-flight-paths.apply.sql isn't mine — it was already modified when
-this session began. Closing out 148i properly (ticket update → move to
-completed/ → commit) requires committing that SQL. I won't commit someone
+  1. The uncommitted flight-path SQL. The GOSSIP-flag fix in
+     03-remove-flight-paths.apply.sql isn't mine — it was already modified
+     when this session began. Closing out 148i properly (ticket update → move
+     to completed/ → commit) requires committing that SQL. I won't commit
+     someone
 
-else's uncommitted change without your say-so. Want me to commit it as part of
-closing out 148i? (It's complete and already live in the DB, so the risk is low
-— but it's your call whose commit it lands in.)
+  else's uncommitted change without your say-so. Want me to commit it as part of
+  closing out 148i? (It's complete and already live in the DB, so the risk is
+  low — but it's your call whose commit it lands in.)
 
 
 can you work on 148i until it's done, then commit the changed files for 148i as
 part of the issue-completion git commit?
 
 
-2. What to actually do next. Rather than keep guessing which issue is secretly
-done, I'd suggest a reconciliation sweep: verify the true build/applied state of
-every open 148 issue against the DB and code, then bring the tickets + Phase 1
-progress current in one pass. That leaves a
+  2. What to actually do next. Rather than keep guessing which issue is secretly
+     done, I'd suggest a reconciliation sweep: verify the true build/applied
+     state of every open 148 issue against the DB and code, then bring the
+     tickets + Phase 1 progress current in one pass. That leaves a
 
-trustworthy map of what's genuinely unbuilt — my current guess is only the
-non-blocking ones (148l mounts, 148q professions, 148s bot-kit, 148t town-NPCs)
-plus the manual 148o validation. Then the real remaining work is clear.
+  trustworthy map of what's genuinely unbuilt — my current guess is only the
+  non-blocking ones (148l mounts, 148q professions, 148s bot-kit, 148t
+  town-NPCs) plus the manual 148o validation. Then the real remaining work is
+  clear.
 
 
 
@@ -1483,12 +1626,14 @@ Now make it executable and run it — this is the moment of truth for the whole
 vanilla starter pipeline:
 
 
-**All five checks PASS across all 52 combos.** The vanilla starter pipeline is data-complete and verified:
+**All five checks PASS across all 52 combos.** The vanilla starter pipeline is
+data-complete and verified:
 
 
 - 148n — every combo spawns in its correct per-race town zone
 
-- 148h — weapon + 3 bags + hearthstone present for all 52; all equippable gear is RequiredLevel ≤ 20 (the E018 clone fix holds)
+- 148h — weapon + 3 bags + hearthstone present for all 52; all equippable gear
+  is RequiredLevel ≤ 20 (the E018 clone fix holds)
 
 - 148j — pretrain spells present for every class
 
@@ -1538,26 +1683,31 @@ dispositioned (that was the pre-clone kit; the current kit is clean).
 ## The one remaining blocker is human, not code
 
 
-**148o's in-client eyeball** — spawn-walkable, kit-shows-on-model, hearth-tooltip — needs someone driving the game client, which I can't do. The validator shrinks it to those three physical checks per combo (or a spot-check of one per town). I can set you up for it: the ticket has the test-dev account steps (`account create TESTDEV menardi` at the worldserver console) and a per-character checklist.
+**148o's in-client eyeball** — spawn-walkable, kit-shows-on-model,
+hearth-tooltip — needs someone driving the game client, which I can't do. The
+validator shrinks it to those three physical checks per combo (or a spot-check
+of one per town). I can set you up for it: the ticket has the test-dev account
+steps (`account create TESTDEV menardi` at the worldserver console) and a
+per-character checklist.
 
 
 ## Two decisions
 
 
 1. **Commit the validator + 148o update?** The script is a finished,
-self-contained tool and the ticket update references it. `148o.md` is currently
-untracked (never committed), and there are sibling untracked issue files
-(148q/s/t) — so I'll stage *only* the validator + `148o.md` if you want this
-as its own commit. Say the word.
+   self-contained tool and the ticket update references it. `148o.md` is
+   currently untracked (never committed), and there are sibling untracked issue
+   files (148q/s/t) — so I'll stage *only* the validator + `148o.md` if you
+   want this as its own commit. Say the word.
 
 
 2. **What's next on the path?** The critical path to *playable* now runs through
-your in-client 148o pass. If you'd rather I keep building while you're not at
-the client, the path widens into the non-blocking four — **148l** (mount
-levels, small), **148q** (professions, medium), **148s** (bots in the kit,
-medium), **148t** (town racemate NPCs, medium). My pick to widen first:
-**148q**, since professions are the biggest remaining gap in "the level-20
-character is fully formed."
+   your in-client 148o pass. If you'd rather I keep building while you're not at
+   the client, the path widens into the non-blocking four — **148l** (mount
+   levels, small), **148q** (professions, medium), **148s** (bots in the kit,
+   medium), **148t** (town racemate NPCs, medium). My pick to widen first:
+   **148q**, since professions are the biggest remaining gap in "the level-20
+   character is fully formed."
 
 
 Want me to commit the validator, then start 148q — or hold for your 148o
@@ -1683,7 +1833,10 @@ across separate Bash calls (the `source` was in the prior call). Let me redo
 those in one self-contained run:
 
 
-**B025 is verified**: applying twice leaves one copy (idempotent), and unpatch restores the factory **byte-for-byte to upstream HEAD** (clean round-trip). The injection lands exactly where it should. That's everything I can prove without a compiler — the build + in-world behavior are yours to run.
+**B025 is verified**: applying twice leaves one copy (idempotent), and unpatch
+restores the factory **byte-for-byte to upstream HEAD** (clean round-trip). The
+injection lands exactly where it should. That's everything I can prove without a
+compiler — the build + in-world behavior are yours to run.
 
 
 Let me update the 148s ticket to reflect the built state:
@@ -1698,30 +1851,45 @@ Let me update the 148s ticket to reflect the built state:
 Four files, all clean and isolated to this feature:
 
 
-- **`patches/B025-playerbots-vanilla-starter-kit.sh`** — injects a branch at the top of `PlayerbotFactory::InitEquipment`: on the initial level-20 gearing, it equips the bot's `(race,class)` 148h kit via `StoreNewItemInBestSlots` (the same helper the factory's own starter-outfit path uses) and returns before the random-gear pass.
+- **`patches/B025-playerbots-vanilla-starter-kit.sh`** — injects a branch at
+  the top of `PlayerbotFactory::InitEquipment`: on the initial level-20 gearing,
+  it equips the bot's `(race,class)` 148h kit via `StoreNewItemInBestSlots` (the
+  same helper the factory's own starter-outfit path uses) and returns before the
+  random-gear pass.
 
-- **`patches/patches.sh`** — registers `B025` in `PHASE_BEGIN_PATCHES["vanilla"]` + a witness.
+- **`patches/patches.sh`** — registers `B025` in
+  `PHASE_BEGIN_PATCHES["vanilla"]` + a witness.
 
-- **`docs/patches/playerbot-vanilla-starter-kit.md`** — the portable spec (before/after, rationale, validation).
+- **`docs/patches/playerbot-vanilla-starter-kit.md`** — the portable spec
+  (before/after, rationale, validation).
 
 - **`issues/148s-…md`** — current-behavior + checklist updated.
 
 
-**Design choice worth flagging:** I dropped the ticket's config-flag idea in favor of **self-scoping on the data** — the branch queries the `vanilla-148h-%` kit rows, which exist only on vanilla, so release/beta fall through untouched. No config flag, no C-patch, no DB-name string. Simpler and safe in the shared module binary.
+**Design choice worth flagging:** I dropped the ticket's config-flag idea in
+favor of **self-scoping on the data** — the branch queries the
+`vanilla-148h-%` kit rows, which exist only on vanilla, so release/beta fall
+through untouched. No config flag, no C-patch, no DB-name string. Simpler and
+safe in the shared module binary.
 
 
-**Verified without a compiler** (dry-run on a throwaway copy): the block lands exactly between the incremental guard and the `level < 5` path, it's idempotent (re-apply → one copy), and unpatch round-trips the factory **byte-for-byte to upstream HEAD**. The query API (`WorldDatabase.Query("… {} …", uint32(race), uint32(class))`), the `uint32` casts (avoiding the uint8-as-char fmt trap), and `StoreNewItemInBestSlots` are all confirmed against the real source.
+**Verified without a compiler** (dry-run on a throwaway copy): the block lands
+exactly between the incremental guard and the `level < 5` path, it's idempotent
+(re-apply → one copy), and unpatch round-trips the factory **byte-for-byte to
+upstream HEAD**. The query API (`WorldDatabase.Query("… {} …", uint32(race),
+uint32(class))`), the `uint32` casts (avoiding the uint8-as-char fmt trap), and
+`StoreNewItemInBestSlots` are all confirmed against the real source.
 
 
 **What's yours (needs the build machine):**
 
 1. Rebuild vanilla through the patch pipeline (`./scripts/azerothcore update`)
-— confirms B025 applies and the module compiles.
+   — confirms B025 applies and the module compiles.
 
 2. Reset the fleet and inspect a few fresh level-20 bots. **One thing to
-watch:** whether an off-default kit weapon (a Tauren Warrior's polearm) actually
-equips on a bot — if not, the factory needs the same proficiency grant the ALE
-hook gives players. I flagged this in the patch doc and ticket.
+   watch:** whether an off-default kit weapon (a Tauren Warrior's polearm)
+   actually equips on a bot — if not, the factory needs the same proficiency
+   grant the ALE hook gives players. I flagged this in the patch doc and ticket.
 
 
 ## Commits pending
@@ -1729,9 +1897,11 @@ hook gives players. I flagged this in the patch doc and ticket.
 
 I haven't committed. Two clean, separable sets are staged-able:
 
-- **148s** — the four files above → e.g. `feat(Vanilla): playerbots start in the 148h kit (148s)`
+- **148s** — the four files above → e.g. `feat(Vanilla): playerbots start in
+  the 148h kit (148s)`
 
-- **Last turn's validator** — `scripts/validate-vanilla-starter-state` + the `148o` update, which you didn't get to.
+- **Last turn's validator** — `scripts/validate-vanilla-starter-state` + the
+  `148o` update, which you didn't get to.
 
 
 Want me to commit both (as two separate commits), just 148s, or hold until after
@@ -1855,19 +2025,31 @@ Let me mark the 148l ticket complete (and record the two corrections: it's E020
 not E018, and it targets `trainer_spell` not just `npc_trainer`):
 
 
-**148l (mounts) is done and live.** Apprentice Riding now requires level 40, Journeyman 60 — verified in `trainer_spell` (the gate the runtime actually reads) across all 12 trainers, and in legacy `npc_trainer`. Under the level-40 cap, the 60% mount becomes the cap reward and the epic mount is the unreachable horizon, exactly as intended.
+**148l (mounts) is done and live.** Apprentice Riding now requires level 40,
+Journeyman 60 — verified in `trainer_spell` (the gate the runtime actually
+reads) across all 12 trainers, and in legacy `npc_trainer`. Under the level-40
+cap, the 60% mount becomes the cap reward and the epic mount is the unreachable
+horizon, exactly as intended.
 
 
 Shipped as:
 
 - `sql/vanilla/db_world.src/05-mount-level-requirements.{apply,revert}.sql`
 
-- `patch_E020_vanilla_mount_level_requirements` in `E-patches.sh` (+ registered in `PHASE_END_PATCHES["vanilla"]`)
+- `patch_E020_vanilla_mount_level_requirements` in `E-patches.sh` (+ registered
+  in `PHASE_END_PATCHES["vanilla"]`)
 
-- Two spec corrections recorded in the ticket: **E020** not E018 (E018 was taken by the 148h kit cap), and it targets **`trainer_spell`** not just `npc_trainer`.
+- Two spec corrections recorded in the ticket: **E020** not E018 (E018 was taken
+  by the 148h kit cap), and it targets **`trainer_spell`** not just
+  `npc_trainer`.
 
 
-**Commit caveat:** `E-patches.sh` was *already* carrying uncommitted work before this session (the 148h/E018 kit patch, not mine), so a clean 148l commit means isolating just my E020 hunk via `git apply --cached` rather than staging the whole file. I held off rather than sweep in someone else's changes. Want me to isolate the hunk and commit 148l (SQL + E020 hunk + `patches.sh` line + ticket + move to `completed/`)?
+**Commit caveat:** `E-patches.sh` was *already* carrying uncommitted work before
+this session (the 148h/E018 kit patch, not mine), so a clean 148l commit means
+isolating just my E020 hunk via `git apply --cached` rather than staging the
+whole file. I held off rather than sweep in someone else's changes. Want me to
+isolate the hunk and commit 148l (SQL + E020 hunk + `patches.sh` line + ticket +
+move to `completed/`)?
 
 
 ## Professions (148q) — the big one
@@ -1876,9 +2058,12 @@ Shipped as:
 148q is genuinely greenfield and **large** — on the order of the 148h
 generator (~550 lines). I've de-risked the data path:
 
-- **Recipes** come from **`trainer_spell`** (`ReqSkillLine` + `ReqSkillRank ≤ 125`), not the empty `skill_line_ability` DBC the ticket names — confirmed (39 blacksmithing recipes ≤125). Same source 148j used.
+- **Recipes** come from **`trainer_spell`** (`ReqSkillLine` + `ReqSkillRank ≤
+  125`), not the empty `skill_line_ability` DBC the ticket names — confirmed
+  (39 blacksmithing recipes ≤125). Same source 148j used.
 
-- **Tools** resolve from `item_template`; **bitmask keying** follows the 148j lesson (real `1<<(id-1)` masks, never raw ids).
+- **Tools** resolve from `item_template`; **bitmask keying** follows the 148j
+  lesson (real `1<<(id-1)` masks, never raw ids).
 
 - Slots: `07-…apply.sql` and `E021` are free.
 
@@ -1897,13 +2082,13 @@ now?
 
 ### User Request 11
 
-Commit caveat: E-patches.sh was already carrying uncommitted work before this
-session (the 148h/E018 kit patch, not mine), so a clean 148l commit means
-isolating just my E020 hunk via git apply --cached rather than staging the whole
-file. I held off rather than sweep in someone
+  Commit caveat: E-patches.sh was already carrying uncommitted work before this
+  session (the 148h/E018 kit patch, not mine), so a clean 148l commit means
+  isolating just my E020 hunk via git apply --cached rather than staging the
+  whole file. I held off rather than sweep in someone
 
-else's changes. Want me to isolate the hunk and commit 148l (SQL + E020 hunk +
-patches.sh line + ticket + move to completed/)?
+  else's changes. Want me to isolate the hunk and commit 148l (SQL + E020 hunk +
+  patches.sh line + ticket + move to completed/)?
 
 
 how about you finish up their changes and build out a commit for them?
@@ -1990,9 +2175,7 @@ it:
 
 |---|---|
 
-| `f7d47de` | **148h** — the finished starter-kit feature (generator,
-clone/tune SQL, first-login hook incl. the proficiency pretrain I completed,
-E018) |
+| `f7d47de` | **148h** — the finished starter-kit feature (generator, clone/tune SQL, first-login hook incl. the proficiency pretrain I completed, E018) |
 
 | `8a47d81` | **148l** — Classic mount gates (05 SQL, E020) |
 
@@ -2000,8 +2183,7 @@ E018) |
 
 | `d571665` | **C014** — bots climb 20→40 + balance record |
 
-| `ccf7b92` | **issue bookkeeping** — declines→`declined/`, 148g redirect
-note, 148n status, new 148q/148t tickets |
+| `ccf7b92` | **issue bookkeeping** — declines→`declined/`, 148g redirect note, 148n status, new 148q/148t tickets |
 
 
 That's **9 vanilla commits this session**, and all vanilla feature + tracking
@@ -2012,23 +2194,35 @@ work is now committed. `E-patches.sh` round-tripped through the split cleanly
 ## What I deliberately left uncommitted — needs your call
 
 
-**1. Release-profile config regeneration** (`installed-files-release/etc/{authserver,dbimport,worldserver}.conf.dist`). This is *not* vanilla work — the `worldserver.conf.dist` diff is a ~6000-line full restructure (whole new SECTION INDEX: AUTOUPDATER, REMOTE ACCESS, …), i.e. an **upstream config regeneration for the release profile**. I won't guess whether that sync is wanted. My read: it's most likely accidental churn from a release install/update. Options:
+**1. Release-profile config regeneration**
+(`installed-files-release/etc/{authserver,dbimport,worldserver}.conf.dist`).
+This is *not* vanilla work — the `worldserver.conf.dist` diff is a ~6000-line
+full restructure (whole new SECTION INDEX: AUTOUPDATER, REMOTE ACCESS, …),
+i.e. an **upstream config regeneration for the release profile**. I won't guess
+whether that sync is wanted. My read: it's most likely accidental churn from a
+release install/update. Options:
 
-- **Revert** (`git checkout -- installed-files-release/etc/*.dist`) if it's unintended, or
+- **Revert** (`git checkout -- installed-files-release/etc/*.dist`) if it's
+  unintended, or
 
-- Commit separately as `chore(Release): sync config .dist with upstream` if it's deliberate.
+- Commit separately as `chore(Release): sync config .dist with upstream` if it's
+  deliberate.
 
 
 **2. Untracked odds and ends:**
 
-- `llm-transcripts/*` — 10 session-transcript logs (the project's history convention). Committable as housekeeping, but that's a separate call.
+- `llm-transcripts/*` — 10 session-transcript logs (the project's history
+  convention). Committable as housekeeping, but that's a separate call.
 
 - `README-2` and `notes/d6-vision` — pre-existing, not mine; unknown intent.
 
 
 ## Still open on the vanilla list
 
-**148q (professions)** — I filed the ticket and de-risked the data path (recipes from `trainer_spell`, tools from `item_template`, bitmask keying per 148j), but the ~550-line generator itself isn't built yet. That's the real remaining build.
+**148q (professions)** — I filed the ticket and de-risked the data path
+(recipes from `trainer_spell`, tools from `item_template`, bitmask keying per
+148j), but the ~550-line generator itself isn't built yet. That's the real
+remaining build.
 
 
 Which of the leftover items do you want me to handle — **revert or commit the
@@ -2123,18 +2317,31 @@ from the ticket's "pure SQL, no hook" vision, so I want your call before I build
 Here's the design I've landed (everything else is de-risked):
 
 
-- **`playercreateinfo_skills`** — each profession at `rank=2` (Journeyman, cap 150), bitmask-keyed. Gathering uses race-default rows + faction-scoped override rows that just *add* the second gathering (your "two gatherings is fine" ruling makes this clean — ~14 rows). Production keyed by class (~7 rows).
+- **`playercreateinfo_skills`** — each profession at `rank=2` (Journeyman, cap
+  150), bitmask-keyed. Gathering uses race-default rows + faction-scoped
+  override rows that just *add* the second gathering (your "two gatherings is
+  fine" ruling makes this clean — ~14 rows). Production keyed by class (~7
+  rows).
 
-- **`playercreateinfo_spell_custom`** — recipes per profession from `trainer_spell` (`ReqSkillRank ≤ 125`), same keying.
+- **`playercreateinfo_spell_custom`** — recipes per profession from
+  `trainer_spell` (`ReqSkillRank ≤ 125`), same keying.
 
-- **`playercreateinfo_item`** — tools (Mining Pick 2901, Skinning Knife 7005, Fishing Pole 6256, Blacksmith Hammer 5956, Runed Copper Rod 6218, a stack of Empty Vials 3371).
+- **`playercreateinfo_item`** — tools (Mining Pick 2901, Skinning Knife 7005,
+  Fishing Pole 6256, Blacksmith Hammer 5956, Runed Copper Rod 6218, a stack of
+  Empty Vials 3371).
 
-- **First-login hook** — bump every profession skill the character now has to value 125 (reads the granted skills, `SetSkill(skill, 2, 125, 150)`; no per-combo mapping needed).
+- **First-login hook** — bump every profession skill the character now has to
+  value 125 (reads the granted skills, `SetSkill(skill, 2, 125, 150)`; no
+  per-combo mapping needed).
 
-- Generator → `07-starting-professions.apply.sql` + revert + **E021** + a coherence check.
+- Generator → `07-starting-professions.apply.sql` + revert + **E021** + a
+  coherence check.
 
 
-**One decision:** OK to bump the value to 125 in the first-login hook (the only way to get value ≠ 1)? Or would you rather professions spawn *known at Journeyman but at skill 1*, climbing through use — no hook, but ≤125 recipes aren't usable on day one?
+**One decision:** OK to bump the value to 125 in the first-login hook (the only
+way to get value ≠ 1)? Or would you rather professions spawn *known at
+Journeyman but at skill 1*, climbing through use — no hook, but ≤125 recipes
+aren't usable on day one?
 
 
 My recommendation: the hook bump — it's what "starts at skill 125, knowing
@@ -2146,12 +2353,12 @@ already in the kit hook. Give me the nod and I'll build it.
 
 ### User Request 13
 
-So spawning at skill 125 (so ≤125 recipes are usable immediately) needs the
-value set via SetSkill in the first-login hook — the same mechanism the kit
-hook already uses to sharpen the starter weapon. That's a real deviation from
-the ticket's "pure SQL, no hook" vision, so I want
+  So spawning at skill 125 (so ≤125 recipes are usable immediately) needs the
+  value set via SetSkill in the first-login hook — the same mechanism the kit
+  hook already uses to sharpen the starter weapon. That's a real deviation from
+  the ticket's "pure SQL, no hook" vision, so I want
 
-your call before I build ~500 lines on it.
+  your call before I build ~500 lines on it.
 
 
 yes please, but 500 lines is way overkill. can you describe the implementation
@@ -2163,10 +2370,10 @@ receive a "sharpened" bonus? just once, as they're fresh and ready for
 adventuring.
 
 
-One decision: OK to bump the value to 125 in the first-login hook (the only way
-to get value ≠ 1)? Or would you rather professions spawn known at Journeyman
-but at skill 1, climbing through use — no hook, but ≤125 recipes aren't
-usable on day one?
+  One decision: OK to bump the value to 125 in the first-login hook (the only
+  way to get value ≠ 1)? Or would you rather professions spawn known at
+  Journeyman but at skill 1, climbing through use — no hook, but ≤125
+  recipes aren't usable on day one?
 
 
 the entire purpose of the profession system changes we're working on is to allow
@@ -2190,38 +2397,45 @@ Here's the plan:
 ## 148q implementation (≈150 lines of SQL + ~6 lines of Lua)
 
 
-**`sql/vanilla/db_world.src/07-starting-professions.apply.sql`** — a pure, idempotent data migration:
+**`sql/vanilla/db_world.src/07-starting-professions.apply.sql`** — a pure,
+idempotent data migration:
 
 1. `DELETE … WHERE Note/comment LIKE 'vanilla-148q-%'` (re-applicable).
 
 2. **~21 `playercreateinfo_skills` rows** granting each profession at `rank=2`
-(Journeyman, cap 150), bitmask-keyed:
+   (Journeyman, cap 150), bitmask-keyed:
 
-- *Gathering*: race-default rows (e.g. `racemask=Dwarf|Gnome → Mining`) **+**
-faction-scoped override rows (`racemask=Alliance, classmask=Rogue → Skinning`)
-that simply *add* the second gathering — clean thanks to your two-gatherings
-ruling.
+   - *Gathering*: race-default rows (e.g. `racemask=Dwarf|Gnome → Mining`)
+     **+** faction-scoped override rows (`racemask=Alliance, classmask=Rogue →
+     Skinning`) that simply *add* the second gathering — clean thanks to your
+     two-gatherings ruling.
 
-- *Production*: one row per class (`classmask=Warrior → Blacksmithing`, …).
+   - *Production*: one row per class (`classmask=Warrior → Blacksmithing`,
+     …).
 
 3. **Tool rows** in `playercreateinfo_item` (Mining Pick 2901, Skinning Knife
-7005, Fishing Pole 6256, Blacksmith Hammer 5956, Runed Copper Rod 6218, Empty
-Vials 3371), same keying.
+   7005, Fishing Pole 6256, Blacksmith Hammer 5956, Runed Copper Rod 6218, Empty
+   Vials 3371), same keying.
 
 4. **Recipes** — one `INSERT … SELECT ts.SpellId FROM trainer_spell ts WHERE
-ts.ReqSkillLine = <skill> AND ts.ReqSkillRank <= 125 GROUP BY ts.SpellId` per
-profession-keying. The recipe set is computed live from trainer data, so it
-tracks the DB and never goes stale. (Gathering profs like Skinning/Mining have
-~no trainer recipes → those selects yield 0 rows, harmless. A couple of
-redundant rank-up spells may ride along; they're no-ops since the skill's
-already Journeyman.)
+   ts.ReqSkillLine = <skill> AND ts.ReqSkillRank <= 125 GROUP BY ts.SpellId` per
+   profession-keying. The recipe set is computed live from trainer data, so it
+   tracks the DB and never goes stale. (Gathering profs like Skinning/Mining
+   have ~no trainer recipes → those selects yield 0 rows, harmless. A couple
+   of redundant rank-up spells may ride along; they're no-ops since the skill's
+   already Journeyman.)
 
 
 Plus `07-…revert.sql` (a DELETE) and an **E021** patch (cp-apply/revert,
 mirroring E020).
 
 
-**First-login hook** — ~6 lines added to `auto-equip-starter-kit.lua`: after the kit installs, loop the 14 profession skill ids; for each `player:HasSkill(id)`, `player:SetSkill(id, 2, 125, 150)`. That bumps the value to 125 while keeping the Journeyman cap — the exact `SetSkill` idiom already there for the starter weapon. The hook reads what the character *has*, so it needs no per-combo mapping.
+**First-login hook** — ~6 lines added to `auto-equip-starter-kit.lua`: after
+the kit installs, loop the 14 profession skill ids; for each
+`player:HasSkill(id)`, `player:SetSkill(id, 2, 125, 150)`. That bumps the value
+to 125 while keeping the Journeyman cap — the exact `SetSkill` idiom already
+there for the starter weapon. The hook reads what the character *has*, so it
+needs no per-combo mapping.
 
 
 Then extend the validator with a professions coherence check (every combo: ≥1
@@ -2236,9 +2450,11 @@ I like it. Cleanest form, and it generalizes nicely: on first login, apply a
 `Item:SetEnchantment(enchantId, 6)` (the temp-enchant slot), the same thing a
 sharpening stone does. Symmetric by weapon type so *everyone* gets a send-off:
 
-- **Physical weapon** (sword/axe/mace/polearm/dagger/fist/bow) → a **sharpening/weightstone** temp enchant (+weapon damage).
+- **Physical weapon** (sword/axe/mace/polearm/dagger/fist/bow) → a
+  **sharpening/weightstone** temp enchant (+weapon damage).
 
-- **Caster weapon** (staff/wand) → a **wizard-oil** temp enchant (+spell power).
+- **Caster weapon** (staff/wand) → a **wizard-oil** temp enchant (+spell
+  power).
 
 
 One-time, on first login, "fresh and ready for adventuring." It's a distinct
@@ -2252,30 +2468,32 @@ Two quick nods before I build:
 1. **148q as described** — go?
 
 2. **Sharpened send-off** — file it as **148u** and build it into the same
-first-login hook? And do you want the symmetric caster-oil version, or literally
-only melee weapons get "sharpened" (staff/wand users get nothing)?
+   first-login hook? And do you want the symmetric caster-oil version, or
+   literally only melee weapons get "sharpened" (staff/wand users get nothing)?
 
 
 --------------------------------------------------------------------------------
 
 ### User Request 14
 
-2. Sharpened send-off — file it as 148u and build it into the same first-login
-hook? And do you want the symmetric caster-oil version, or literally only melee
-weapons get "sharpened" (staff/wand users get nothing)?
+  2. Sharpened send-off — file it as 148u and build it into the same
+     first-login hook? And do you want the symmetric caster-oil version, or
+     literally only melee weapons get "sharpened" (staff/wand users get
+     nothing)?
 
 
 it's caster oil, not castor oil! castor oil makes you diaahretic. and sure,
 let's slather those rods with power spell oil.
 
 
-Two quick nods before I build:
+  Two quick nods before I build:
 
-1. 148q as described — go?
+  1. 148q as described — go?
 
-2. Sharpened send-off — file it as 148u and build it into the same first-login
-hook? And do you want the symmetric caster-oil version, or literally only melee
-weapons get "sharpened" (staff/wand users get nothing)?
+  2. Sharpened send-off — file it as 148u and build it into the same
+     first-login hook? And do you want the symmetric caster-oil version, or
+     literally only melee weapons get "sharpened" (staff/wand users get
+     nothing)?
 
 
 
@@ -2409,19 +2627,39 @@ automation is proven: the pre-commit hook auto-bundled all the
 ## Where the two land
 
 
-**148q — professions, done and live.** Pure ~120-line SQL migration (no generator — recipes `INSERT … SELECT` straight from the trainer data), E021 patch, and a 6-line hook that bumps each profession's *value* to 125 on first login (the migration can only seed the tier). Applied to `acore_world_vanilla` and green across all 52 combos; the coherence check is now baked into the validator (6/6 passing). Two things surfaced worth your eye:
+**148q — professions, done and live.** Pure ~120-line SQL migration (no
+generator — recipes `INSERT … SELECT` straight from the trainer data), E021
+patch, and a 6-line hook that bumps each profession's *value* to 125 on first
+login (the migration can only seed the tier). Applied to `acore_world_vanilla`
+and green across all 52 combos; the coherence check is now baked into the
+validator (6/6 passing). Two things surfaced worth your eye:
 
-- The **3-primaries** consequence of "two gatherings is fine": 9 combos (the Warrior/Rogue/Mage/Warlock overrides stacked on a primary racial default) end up with 3 primary professions. Mechanically fine, fits "play to the fullest" — but beyond the WoW norm. **Keep it additive, or trim those four overrides to replace-not-add?** (I left it additive.)
+- The **3-primaries** consequence of "two gatherings is fine": 9 combos (the
+  Warrior/Rogue/Mage/Warlock overrides stacked on a primary racial default) end
+  up with 3 primary professions. Mechanically fine, fits "play to the fullest"
+  — but beyond the WoW norm. **Keep it additive, or trim those four overrides
+  to replace-not-add?** (I left it additive.)
 
-- The **value 125** is set by the hook at first login, so it's only observable in-client — that check folds into the 148o reroll pass.
+- The **value 125** is set by the hook at first login, so it's only observable
+  in-client — that check folds into the 148o reroll pass.
 
 
-**148u — sharpened send-off, filed and designed, blocked on one datum.** The hook slot and the whole sharpen-physical / oil-caster design are ready. The only missing piece: `SetEnchantment` needs the temp-enchant IDs, which live in the client `SpellItemEnchantment.dbc` (empty in this server's DBC tables). I traced the resolvable leads (Rough Sharpening Stone → spell 2828, Minor Wizard Oil → 25117, etc.) but the enchant ID itself is client-side, and I won't guess it from memory. **To unblock: a quick client/DBC lookup of those enchant IDs, then it's a 15-minute build.** Want me to proceed with the well-known canonical IDs anyway (you'd verify in-client), or resolve them first?
+**148u — sharpened send-off, filed and designed, blocked on one datum.** The
+hook slot and the whole sharpen-physical / oil-caster design are ready. The only
+missing piece: `SetEnchantment` needs the temp-enchant IDs, which live in the
+client `SpellItemEnchantment.dbc` (empty in this server's DBC tables). I traced
+the resolvable leads (Rough Sharpening Stone → spell 2828, Minor Wizard Oil
+→ 25117, etc.) but the enchant ID itself is client-side, and I won't guess it
+from memory. **To unblock: a quick client/DBC lookup of those enchant IDs, then
+it's a 15-minute build.** Want me to proceed with the well-known canonical IDs
+anyway (you'd verify in-client), or resolve them first?
 
 
 ## Still sitting uncommitted (your call)
 
-- **Release config regeneration** (`installed-files-release/etc/*.dist`) — the ~6000-line upstream sync, not vanilla work. Revert, or commit as a `chore(Release)` sync?
+- **Release config regeneration** (`installed-files-release/etc/*.dist`) — the
+  ~6000-line upstream sync, not vanilla work. Revert, or commit as a
+  `chore(Release)` sync?
 
 - `README-2`, `notes/d6-vision` — untracked, pre-existing, unknown intent.
 
@@ -2435,12 +2673,12 @@ chase the release-config churn, or something else next?
 
 ### User Request 15
 
-- The 3-primaries consequence of "two gatherings is fine": 9 combos (the
-Warrior/Rogue/Mage/Warlock overrides stacked on a primary racial default) end up
-with 3 primary professions. Mechanically fine, fits "play to the fullest" —
-but beyond the WoW norm. Keep it additive, or trim
+  - The 3-primaries consequence of "two gatherings is fine": 9 combos (the
+    Warrior/Rogue/Mage/Warlock overrides stacked on a primary racial default)
+    end up with 3 primary professions. Mechanically fine, fits "play to the
+    fullest" — but beyond the WoW norm. Keep it additive, or trim
 
-those four overrides to replace-not-add? (I left it additive.)
+  those four overrides to replace-not-add? (I left it additive.)
 
 
 this should not be a thing - there should only be two total professions. having
@@ -2451,18 +2689,18 @@ profession per class list is not additive as you say, but rather replaces the
 other profession that would be for that character in the class slot.
 
 
-148u — sharpened send-off, filed and designed, blocked on one datum. The hook
-slot and the whole sharpen-physical / oil-caster design are ready. The only
-missing piece: SetEnchantment needs the temp-enchant IDs, which live in the
-client SpellItemEnchantment.dbc (empty in this
+  148u — sharpened send-off, filed and designed, blocked on one datum. The
+  hook slot and the whole sharpen-physical / oil-caster design are ready. The
+  only missing piece: SetEnchantment needs the temp-enchant IDs, which live in
+  the client SpellItemEnchantment.dbc (empty in this
 
-server's DBC tables). I traced the resolvable leads (Rough Sharpening Stone →
-spell 2828, Minor Wizard Oil → 25117, etc.) but the enchant ID itself is
-client-side, and I won't guess it from memory. To unblock: a quick client/DBC
-lookup of those enchant IDs, then it's a 15-minute
+  server's DBC tables). I traced the resolvable leads (Rough Sharpening Stone
+  → spell 2828, Minor Wizard Oil → 25117, etc.) but the enchant ID itself is
+  client-side, and I won't guess it from memory. To unblock: a quick client/DBC
+  lookup of those enchant IDs, then it's a 15-minute
 
-build. Want me to proceed with the well-known canonical IDs anyway (you'd verify
-in-client), or resolve them first?
+  build. Want me to proceed with the well-known canonical IDs anyway (you'd
+  verify in-client), or resolve them first?
 
 
 
@@ -2471,16 +2709,16 @@ the highest value at level 20 - anything that requires above level 20 is
 useless.
 
 
-- Release config regeneration (installed-files-release/etc/*.dist) — the
-~6000-line upstream sync, not vanilla work. Revert, or commit as a
-chore(Release) sync?
+  - Release config regeneration (installed-files-release/etc/*.dist) — the
+    ~6000-line upstream sync, not vanilla work. Revert, or commit as a
+    chore(Release) sync?
 
 
 do not worry about the release version, we'll have that next time we have
 something to ship.
 
 
-- README-2, notes/d6-vision — untracked, pre-existing, unknown intent.
+  - README-2, notes/d6-vision — untracked, pre-existing, unknown intent.
 
 
 well then read them, silly :)
@@ -2567,7 +2805,8 @@ stones/oils with their levels:
 
 The DB settles the tier choice cleanly (authoritative `RequiredLevel`):
 
-- **Bladed → Heavy Sharpening Stone** (RL 15; Solid needs 25) — use-spell 2830
+- **Bladed → Heavy Sharpening Stone** (RL 15; Solid needs 25) — use-spell
+  2830
 
 - **Blunt → Heavy Weightstone** (RL 15) — use-spell 3114
 
@@ -2621,7 +2860,8 @@ from `item_template.RequiredLevel`:
 
 - **Blunt → Heavy Weightstone** (RL 15) — enchant **21**
 
-- **Caster staff/wand → Minor Wizard Oil** (RL 5; Lesser needs 30) — enchant **2623**
+- **Caster staff/wand → Minor Wizard Oil** (RL 5; Lesser needs 30) — enchant
+  **2623**
 
 
 The `sharpen_starter_weapon` hook branches on `Item:GetSubClass()` and applies
@@ -2635,9 +2875,13 @@ folds into 148o).
 
 ## The two files
 
-- **`README-2`** — a personal/artistic note (the "Elentalus" mod intro + the King-family poetry). Sacrosanct; left untouched. It reads mis-placed in the repo root, but that's your call.
+- **`README-2`** — a personal/artistic note (the "Elentalus" mod intro + the
+  King-family poetry). Sacrosanct; left untouched. It reads mis-placed in the
+  repo root, but that's your call.
 
-- **`notes/d6-vision`** — a genuine design note (a d6 damage-normalization idea + de-leveling/aging musings). Belongs in `notes/`; I left it untracked — want it committed as a design note?
+- **`notes/d6-vision`** — a genuine design note (a d6 damage-normalization
+  idea + de-leveling/aging musings). Belongs in `notes/`; I left it untracked
+  — want it committed as a design note?
 
 
 ## Left as instructed
@@ -2668,33 +2912,49 @@ what still besets us, because "148o and 148t" was the comfortable answer, not
 the true one.
 
 
-**The frontier I keep not naming: nothing has been compiled, and nothing has run in-client.** Everything I've called "done" this session is *DB-green and parse-green* — the migrations apply, the Lua parses under luajit, the patches round-trip cleanly. But:
+**The frontier I keep not naming: nothing has been compiled, and nothing has run
+in-client.** Everything I've called "done" this session is *DB-green and
+parse-green* — the migrations apply, the Lua parses under luajit, the patches
+round-trip cleanly. But:
 
-- **148s (B025)** was verified by dry-run injection and API-checked against the source — it has never actually *compiled*. "Does it build" is unproven.
+- **148s (B025)** was verified by dry-run injection and API-checked against the
+  source — it has never actually *compiled*. "Does it build" is unproven.
 
-- **E020 / E021** mirror the working E008 pattern but have never been *run through the build pipeline* — I live-applied their SQL by hand instead. First real exercise is a fresh install.
+- **E020 / E021** mirror the working E008 pattern but have never been *run
+  through the build pipeline* — I live-applied their SQL by hand instead.
+  First real exercise is a fresh install.
 
-- The **first-login hook** has grown a lot (proficiencies, professions, sharpen). luajit parses it; ALE loading it at runtime without error is assumed, not observed.
+- The **first-login hook** has grown a lot (proficiencies, professions,
+  sharpen). luajit parses it; ALE loading it at runtime without error is
+  assumed, not observed.
 
-- The whole level-20 experience — kit equips, professions read 125, the sharpen lands, the hearth binds — is **zero-percent validated in-client.** 148o isn't a formality; it's the first time reality gets a vote.
+- The whole level-20 experience — kit equips, professions read 125, the
+  sharpen lands, the hearth binds — is **zero-percent validated in-client.**
+  148o isn't a formality; it's the first time reality gets a vote.
 
 
 **Tracking debt I let pile up while moving fast:**
 
-- `phase-1-progress.md` Act 13 is now *lying* — it still shows 148l and 148q as **Open** (they're committed) and 148h as merely "Implemented." I updated it for 148a/148i and never came back.
+- `phase-1-progress.md` Act 13 is now *lying* — it still shows 148l and 148q
+  as **Open** (they're committed) and 148h as merely "Implemented." I updated it
+  for 148a/148i and never came back.
 
-- `concept-issue-map.md` — untouched all session, despite three new tickets (148q/t/u) and a pile of completions.
+- `concept-issue-map.md` — untouched all session, despite three new tickets
+  (148q/t/u) and a pile of completions.
 
-- `docs/table-of-contents.md` — the new `docs/patches/playerbot-vanilla-starter-kit.md` never got added.
+- `docs/table-of-contents.md` — the new
+  `docs/patches/playerbot-vanilla-starter-kit.md` never got added.
 
-- `docs/balance-updates.md` — 148q explicitly said "record the skill-125 value here," and 148l the mount gates; I didn't.
+- `docs/balance-updates.md` — 148q explicitly said "record the skill-125 value
+  here," and 148l the mount gates; I didn't.
 
 
 **Loose threads I flagged and walked past:**
 
 - The 148u enchant "+4 vs +6" question — real, unresolved.
 
-- The recipe `INSERT IGNORE` could be *silently dropping* recipes on a PK collision with 148j rows — I never checked whether any actually collide.
+- The recipe `INSERT IGNORE` could be *silently dropping* recipes on a PK
+  collision with 148j rows — I never checked whether any actually collide.
 
 - Release-config churn still squatting in the tree.
 
@@ -2729,31 +2989,56 @@ the mechanical walk-through of `./scripts/azerothcore update` on the vanilla
 profile:
 
 
-**PHASE_BEGIN (before cmake):** the B-patches get sed'd into source — including **B025**, my playerbot-kit patch. Then it compiles. This is the moment of truth I've been dancing around: **B025 has never met a compiler.** Everything else this session — SQL, Lua, E-patches — is post-build and *cannot* fail compilation. So the entire compile risk reduces to one file, `PlayerbotFactory.cpp`, and one ~15-line block. If the build dies, it dies there, and the error text tells you exactly what.
+**PHASE_BEGIN (before cmake):** the B-patches get sed'd into source —
+including **B025**, my playerbot-kit patch. Then it compiles. This is the moment
+of truth I've been dancing around: **B025 has never met a compiler.** Everything
+else this session — SQL, Lua, E-patches — is post-build and *cannot* fail
+compilation. So the entire compile risk reduces to one file,
+`PlayerbotFactory.cpp`, and one ~15-line block. If the build dies, it dies
+there, and the error text tells you exactly what.
 
 
-- The real hazard isn't logic (I API-checked it against the source) — it's that **CI builds with `-Werror`**, so a stray unused-variable or sign-compare warning in my injected block fails the build. I re-read it: both locals are used, `level == 20` mirrors the existing `level < 5` two lines up, and `StoreNewItemInBestSlots(uint32, uint32)` matches the call already in that function. I *think* it's clean — but a warning is the likeliest way this bites, and the compile output settles it in one shot.
+- The real hazard isn't logic (I API-checked it against the source) — it's
+  that **CI builds with `-Werror`**, so a stray unused-variable or sign-compare
+  warning in my injected block fails the build. I re-read it: both locals are
+  used, `level == 20` mirrors the existing `level < 5` two lines up, and
+  `StoreNewItemInBestSlots(uint32, uint32)` matches the call already in that
+  function. I *think* it's clean — but a warning is the likeliest way this
+  bites, and the compile output settles it in one shot.
 
 
-**PHASE_END (after install):** the E-patches run — including **E020** (mounts) and **E021** (professions) for the first time through the real pipeline. They `cp` the `.src` SQL into `db_world/` and register with UpdateFetcher.
+**PHASE_END (after install):** the E-patches run — including **E020** (mounts)
+and **E021** (professions) for the first time through the real pipeline. They
+`cp` the `.src` SQL into `db_world/` and register with UpdateFetcher.
 
 
-**Worldserver boot:** UpdateFetcher hashes `db_world/`, sees 05/07 as new (I applied them by hand, which never touched the `updates` table), and re-applies them — harmless, they're idempotent DELETE-then-INSERT. And E001's symlink means ALE loads the **updated hook** (proficiencies + professions bump + sharpen). If an ALE method signature is off (`SetSkill`'s 4th arg, `Item:GetSubClass`, `SetEnchantment`), it won't fail the boot — it'll throw at *first login*, in the worldserver log.
+**Worldserver boot:** UpdateFetcher hashes `db_world/`, sees 05/07 as new (I
+applied them by hand, which never touched the `updates` table), and re-applies
+them — harmless, they're idempotent DELETE-then-INSERT. And E001's symlink
+means ALE loads the **updated hook** (proficiencies + professions bump +
+sharpen). If an ALE method signature is off (`SetSkill`'s 4th arg,
+`Item:GetSubClass`, `SetEnchantment`), it won't fail the boot — it'll throw at
+*first login*, in the worldserver log.
 
 
 **So what a recompile actually buys you:**
 
 1. **Proves B025 compiles** (or hands you the exact error). Biggest unknown,
-resolved.
+   resolved.
 
 2. **Exercises E020/E021** end-to-end — proves the patch plumbing works, not
-just that it mirrors E008.
+   just that it mirrors E008.
 
 3. **Loads everything live** — which is the precondition for 148o. You can't
-roll a character and check skill-125 / sharpen / kit-equip until this happens.
+   roll a character and check skill-125 / sharpen / kit-equip until this
+   happens.
 
 
-**What it does *not* buy you:** in-client correctness. A green build + clean boot still doesn't tell you the Tauren warrior's polearm actually equipped, the skill reads 125, or the blade shows "sharpened." And one gotcha — **B025 only re-gears bots on their next randomize cycle**, so to *see* bots in the kit you'd reset the random-bot fleet, not just reboot.
+**What it does *not* buy you:** in-client correctness. A green build + clean
+boot still doesn't tell you the Tauren warrior's polearm actually equipped, the
+skill reads 125, or the blade shows "sharpened." And one gotcha — **B025 only
+re-gears bots on their next randomize cycle**, so to *see* bots in the kit you'd
+reset the random-bot fleet, not just reboot.
 
 
 Net: recompiling flips ~four of my "unproven" assumptions to proven (or surfaces
@@ -2803,13 +3088,19 @@ candidates are the files touched then. Ranked by recency + whether our *active
 vanilla* patches touch them:
 
 
-- **`PlayerbotFactory.cpp`** — changed **2026-07-04** by #2520 "Expand show helm/cloak config option" → this is exactly where **B025** (mine, compiling now) injects. Highest priority.
+- **`PlayerbotFactory.cpp`** — changed **2026-07-04** by #2520 "Expand show
+  helm/cloak config option" → this is exactly where **B025** (mine, compiling
+  now) injects. Highest priority.
 
-- **`Player.h` / `Player.cpp` / `Unit.h/.cpp`** — **2026-07-03** upstream-master merge → **B009, B012** (and B005, not in vanilla).
+- **`Player.h` / `Player.cpp` / `Unit.h/.cpp`** — **2026-07-03**
+  upstream-master merge → **B009, B012** (and B005, not in vanilla).
 
-- **`RandomPlayerbotMgr.cpp`** + the `Ai/` files + `PlayerbotAIConfig.cpp` — **2026-07-07** "Update licences" (bulk header change) → **B002, B013–B021**.
+- **`RandomPlayerbotMgr.cpp`** + the `Ai/` files + `PlayerbotAIConfig.cpp` —
+  **2026-07-07** "Update licences" (bulk header change) → **B002,
+  B013–B021**.
 
-- Older/low: `Creature.cpp` (B024, not in vanilla), `Battleground.h` (B010), mod-ale (not recently pulled), `aoe_loot.cpp` (B001).
+- Older/low: `Creature.cpp` (B024, not in vanilla), `Battleground.h` (B010),
+  mod-ale (not recently pulled), `aoe_loot.cpp` (B001).
 
 
 Let me verify the urgent one concretely — does B025's anchor/methods survive,
@@ -2817,7 +3108,13 @@ and did #2520 touch `InitEquipment`? Plus anchor-existence for the other flagged
 patches:
 
 
-**Critical finding: B025's anchor is gone.** The pulled `PlayerbotFactory.cpp` no longer has `if (incremental && !sPlayerbotAIConfig.incrementalGearInit)` (count 0). And since `sALE->OnLogin(bot)` (our B002 code) *is* present, the patches are currently **applied** to source (mid-build) — meaning the other patches (B002/B009/B010/B012) found their anchors and applied, but **B025 silently no-op'd** because its anchor changed. The build will succeed but ship *without* bots-in-kit.
+**Critical finding: B025's anchor is gone.** The pulled `PlayerbotFactory.cpp`
+no longer has `if (incremental && !sPlayerbotAIConfig.incrementalGearInit)`
+(count 0). And since `sALE->OnLogin(bot)` (our B002 code) *is* present, the
+patches are currently **applied** to source (mid-build) — meaning the other
+patches (B002/B009/B010/B012) found their anchors and applied, but **B025
+silently no-op'd** because its anchor changed. The build will succeed but ship
+*without* bots-in-kit.
 
 
 Let me confirm B025 didn't apply and find its new anchor:
@@ -2837,7 +3134,7 @@ with:
 
 if (incremental && !sPlayerbotAIConfig.incrementalGearInit)
 
-return;
+    return;
 
 ```
 
@@ -2849,23 +3146,41 @@ have *everything except bots-in-kit*. It won't fail the build; it'll just be
 missing.
 
 
-**The fix is small and clean:** B025's injected block never used `incrementalGearInit` (it self-guards on `!incremental && level == 20`), and its methods still exist (`StoreNewItemInBestSlots`, `WorldDatabase.Query` both present). So I just re-anchor `patch_B025` to inject right after `InitEquipment`'s opening brace instead of after the removed guard. One-line change to our patch script; behavior identical.
+**The fix is small and clean:** B025's injected block never used
+`incrementalGearInit` (it self-guards on `!incremental && level == 20`), and its
+methods still exist (`StoreNewItemInBestSlots`, `WorldDatabase.Query` both
+present). So I just re-anchor `patch_B025` to inject right after
+`InitEquipment`'s opening brace instead of after the removed guard. One-line
+change to our patch script; behavior identical.
 
 
 ## Review-needed (touched by the 2026-07-03 upstream-master merge)
 
 
-**B009, B010, B012** (and B005, not in the vanilla list) patch `Player.h/.cpp`, `Battleground.h`, `Unit.h` — all moved in that merge. Their grep-witnesses make them idempotent (they self-skip if the fix is already present), so they **won't double-apply or corrupt** — but two things to watch:
+**B009, B010, B012** (and B005, not in the vanilla list) patch `Player.h/.cpp`,
+`Battleground.h`, `Unit.h` — all moved in that merge. Their grep-witnesses
+make them idempotent (they self-skip if the fix is already present), so they
+**won't double-apply or corrupt** — but two things to watch:
 
-- Some may now be **redundant** (upstream fixed the same warning) — dead patches to retire. B012's target pattern (`for (int slot = EQUIPMENT_SLOT_START…`) is already **gone** (0), so it self-skipped this build.
+- Some may now be **redundant** (upstream fixed the same warning) — dead
+  patches to retire. B012's target pattern (`for (int slot =
+  EQUIPMENT_SLOT_START…`) is already **gone** (0), so it self-skipped this
+  build.
 
-- The opposite risk: upstream refactored the code and a `-Werror` warning re-surfaced in a *new* form the patch doesn't catch → that's the one way this build could still fail. If it does, the error will name one of these files.
+- The opposite risk: upstream refactored the code and a `-Werror` warning
+  re-surfaced in a *new* form the patch doesn't catch → that's the one way
+  this build could still fail. If it does, the error will name one of these
+  files.
 
 
 ## Low-risk (the 2026-07-07 "Update licences" bulk change)
 
 
-**B002, B013–B021** touch `RandomPlayerbotMgr.cpp`, `PlayerbotAIConfig.cpp`, the `Ai/` files — but #2536 only rewrote **license headers**, not code bodies. Our anchors are on code, so they survive (B002's `sALE->OnLogin(bot)` is present → it applied fine this build). The warning-fixes are still needed (a header change doesn't fix warnings) and still match.
+**B002, B013–B021** touch `RandomPlayerbotMgr.cpp`, `PlayerbotAIConfig.cpp`,
+the `Ai/` files — but #2536 only rewrote **license headers**, not code bodies.
+Our anchors are on code, so they survive (B002's `sALE->OnLogin(bot)` is present
+→ it applied fine this build). The warning-fixes are still needed (a header
+change doesn't fix warnings) and still match.
 
 
 ## No conflict
@@ -2885,7 +3200,14 @@ record its anchor + a fallback, and to re-anchor on drift (B025 is the worked
 example).
 
 
-**Want me to (1) re-anchor `patch_B025` to the new `InitEquipment` structure now** (safe — it's our repo, doesn't touch your running build), **and (2) rebuild the docs** — update `docs/patches/playerbot-vanilla-starter-kit.md` and the 148s ticket with the drift note + new anchor, and add a short "handling upstream drift" section so the next pull is a checklist, not a scavenger hunt? When your compile finishes, tell me if it succeeded — if it did, a re-run after the B025 fix gets you bots-in-kit; if it failed, paste the error and it'll be one of the B009/B010/B012 group.
+**Want me to (1) re-anchor `patch_B025` to the new `InitEquipment` structure
+now** (safe — it's our repo, doesn't touch your running build), **and (2)
+rebuild the docs** — update `docs/patches/playerbot-vanilla-starter-kit.md`
+and the 148s ticket with the drift note + new anchor, and add a short "handling
+upstream drift" section so the next pull is a checklist, not a scavenger hunt?
+When your compile finishes, tell me if it succeeded — if it did, a re-run
+after the B025 fix gets you bots-in-kit; if it failed, paste the error and it'll
+be one of the B009/B010/B012 group.
 
 
 --------------------------------------------------------------------------------
@@ -2897,46 +3219,46 @@ or have we not implemented it yet? If not, can you implement it so I can restart
 the compile?
 
 
-Review-needed (touched by the 2026-07-03 upstream-master merge)
+  Review-needed (touched by the 2026-07-03 upstream-master merge)
 
 
-B009, B010, B012 (and B005, not in the vanilla list) patch Player.h/.cpp,
-Battleground.h, Unit.h — all moved in that merge. Their
+  B009, B010, B012 (and B005, not in the vanilla list) patch Player.h/.cpp,
+  Battleground.h, Unit.h — all moved in that merge. Their
 
-grep-witnesses make them idempotent (they self-skip if the fix is already
-present), so they won't double-apply or corrupt — but two things
+  grep-witnesses make them idempotent (they self-skip if the fix is already
+  present), so they won't double-apply or corrupt — but two things
 
-to watch:
+  to watch:
 
-- Some may now be redundant (upstream fixed the same warning) — dead patches
-to retire. B012's target pattern (for (int slot =
+  - Some may now be redundant (upstream fixed the same warning) — dead patches
+    to retire. B012's target pattern (for (int slot =
 
-EQUIPMENT_SLOT_START…) is already gone (0), so it self-skipped this build.
+  EQUIPMENT_SLOT_START…) is already gone (0), so it self-skipped this build.
 
-- The opposite risk: upstream refactored the code and a -Werror warning
-re-surfaced in a new form the patch doesn't catch → that's the one
+  - The opposite risk: upstream refactored the code and a -Werror warning
+    re-surfaced in a new form the patch doesn't catch → that's the one
 
-way this build could still fail. If it does, the error will name one of these
-files.
+  way this build could still fail. If it does, the error will name one of these
+  files.
 
 
 
 sounds like we should review these things.
 
 
-Want me to (1) re-anchor patch_B025 to the new InitEquipment structure now (safe
-— it's our repo, doesn't touch your running build), and
+  Want me to (1) re-anchor patch_B025 to the new InitEquipment structure now
+  (safe — it's our repo, doesn't touch your running build), and
 
-(2) rebuild the docs — update docs/patches/playerbot-vanilla-starter-kit.md
-and the 148s ticket with the drift note + new anchor, and add a
+  (2) rebuild the docs — update docs/patches/playerbot-vanilla-starter-kit.md
+  and the 148s ticket with the drift note + new anchor, and add a
 
-short "handling upstream drift" section so the next pull is a checklist, not a
-scavenger hunt? When your compile finishes, tell me if it
+  short "handling upstream drift" section so the next pull is a checklist, not a
+  scavenger hunt? When your compile finishes, tell me if it
 
-succeeded — if it did, a re-run after the B025 fix gets you bots-in-kit; if it
-failed, paste the error and it'll be one of the
+  succeeded — if it did, a re-run after the B025 fix gets you bots-in-kit; if
+  it failed, paste the error and it'll be one of the
 
-B009/B010/B012 group.
+  B009/B010/B012 group.
 
 
 
@@ -2964,7 +3286,14 @@ patched at build time), and check whether B009/B010/B012 are now redundant
 upstream:
 
 
-**B025 is fixed and verified.** The re-anchored patch injects cleanly at the new `InitEquipment` top (right after the brace, before `if (level < 5)`), is idempotent (applying twice = one copy), and round-trips clean on unpatch — tested against the actual clean upstream source via `git show HEAD`. **Restart the compile once more and bots-in-kit will be in the binary.** (Your current run predates the fix, so it'll still lack it — one more restart does it. The fix is on disk in `patches/B025-…sh`; the build reads it from there, no commit needed to take effect.)
+**B025 is fixed and verified.** The re-anchored patch injects cleanly at the new
+`InitEquipment` top (right after the brace, before `if (level < 5)`), is
+idempotent (applying twice = one copy), and round-trips clean on unpatch —
+tested against the actual clean upstream source via `git show HEAD`. **Restart
+the compile once more and bots-in-kit will be in the binary.** (Your current run
+predates the fix, so it'll still lack it — one more restart does it. The fix
+is on disk in `patches/B025-…sh`; the build reads it from there, no commit
+needed to take effect.)
 
 
 ## B009/B010/B012 review — none will break this build
@@ -2974,11 +3303,18 @@ Checked each against clean upstream (`git show HEAD`, so patch-state during the
 build doesn't muddy it):
 
 
-- **B009** (Player.h `enum EquipmentSlots`) — upstream **still lacks it** (0). So B009 is *still needed*, and it applied correctly this build (the working tree had it because B009 added it). No action.
+- **B009** (Player.h `enum EquipmentSlots`) — upstream **still lacks it** (0).
+  So B009 is *still needed*, and it applied correctly this build (the working
+  tree had it because B009 added it). No action.
 
-- **B012** (Player.cpp equipment-slot sign) — upstream **still has** the old `for (int slot = EQUIPMENT_SLOT_START…` loops (2 of them). So B012 is *still needed* and applies its fix cleanly. No action.
+- **B012** (Player.cpp equipment-slot sign) — upstream **still has** the old
+  `for (int slot = EQUIPMENT_SLOT_START…` loops (2 of them). So B012 is *still
+  needed* and applies its fix cleanly. No action.
 
-- **B010** (Battleground.h `ARENA_TYPE_NONE`) — upstream **now has it** (1). So B010 is **redundant** — its witness sees the symbol already present and self-skips. Harmless (no double-define, no build risk), just a **dead patch you can retire** from the vanilla list whenever you feel like tidying.
+- **B010** (Battleground.h `ARENA_TYPE_NONE`) — upstream **now has it** (1).
+  So B010 is **redundant** — its witness sees the symbol already present and
+  self-skips. Harmless (no double-define, no build risk), just a **dead patch
+  you can retire** from the vanilla list whenever you feel like tidying.
 
 
 So the verdict: the only thing that was actually broken by the pull is B025 (now
@@ -2998,13 +3334,13 @@ don't expect it to.
 alright there's a fatal error in the compile logs
 
 
-- B010 (Battleground.h ARENA_TYPE_NONE) — upstream now has it (1). So B010 is
-redundant — its witness sees the symbol already present and
+  - B010 (Battleground.h ARENA_TYPE_NONE) — upstream now has it (1). So B010
+    is redundant — its witness sees the symbol already present and
 
-self-skips. Harmless (no double-define, no build risk), just a dead patch you
-can retire from the vanilla list whenever you feel like
+  self-skips. Harmless (no double-define, no build risk), just a dead patch you
+  can retire from the vanilla list whenever you feel like
 
-tidying.
+  tidying.
 
 
 
@@ -3032,7 +3368,7 @@ conflict:
 
 Arrow.cpp:25: fatal error: use of undeclared identifier 'healerLines'
 
-25 | (void)healerLines; // Suppress unused warning
+   25 |     (void)healerLines;  // Suppress unused warning
 
 ```
 
@@ -3051,7 +3387,10 @@ a variable that no longer exists. **That's the fatal error, and it's ours.** Let
 me see exactly how the patch injects it:
 
 
-**B017** is the culprit (`patches/B017-playerbots-unused-variables.sh:62`): its sed appends `(void)healerLines;` after any line matching `healerLines = 1 + healers.Size` — but upstream commented that declaration out, so the sed matches the *comment* and injects a cast to a variable that no longer exists.
+**B017** is the culprit (`patches/B017-playerbots-unused-variables.sh:62`): its
+sed appends `(void)healerLines;` after any line matching `healerLines = 1 +
+healers.Size` — but upstream commented that declaration out, so the sed
+matches the *comment* and injects a cast to a variable that no longer exists.
 
 
 This is almost certainly not the only stale injection — B017 suppresses
@@ -3071,11 +3410,16 @@ now match a commented-out line:
 
 The audit is decisive:
 
-- **`healerLines` — BROKEN** (anchor matches the commented-out `//uint32 healerLines…`, injecting the dead cast). **This is the fatal error.**
+- **`healerLines` — BROKEN** (anchor matches the commented-out `//uint32
+  healerLines…`, injecting the dead cast). **This is the fatal error.**
 
-- **8 others — GONE** (anchors no longer match anything → sed safely no-ops). Upstream refactored those vars away; no injection, no warning, no problem.
+- **8 others — GONE** (anchors no longer match anything → sed safely
+  no-ops). Upstream refactored those vars away; no injection, no warning, no
+  problem.
 
-- **`masterWorldSessionPtr` — live but safe**: upstream now marks it `[[maybe_unused]]` itself; our cast is redundant but references a real variable, so it compiles.
+- **`masterWorldSessionPtr` — live but safe**: upstream now marks it
+  `[[maybe_unused]]` itself; our cast is redundant but references a real
+  variable, so it compiles.
 
 
 So `healerLines` is the *only* build-breaker in B017, and the file already has
@@ -3121,11 +3465,17 @@ something benign:
 Confirmed clean. Here's the scan verdict:
 
 
-- **B004's `(void)event;`** (line 58) is **safe** — it's a substitution that puts the cast *inside* the same line's braces, referencing the `event` parameter declared right there in the signature. The variable can never go missing, unlike `healerLines` (a separate declaration that got commented out). No undeclared-identifier risk.
+- **B004's `(void)event;`** (line 58) is **safe** — it's a substitution that
+  puts the cast *inside* the same line's braces, referencing the `event`
+  parameter declared right there in the signature. The variable can never go
+  missing, unlike `healerLines` (a separate declaration that got commented out).
+  No undeclared-identifier risk.
 
 - **B016** flagged only on a stray `(void)` in text, no `(void)var` injection.
 
-- Everything else is **substitution-style** (`s/old/new/`), which physically cannot create the "undeclared identifier" failure — a no-op just leaves the code as-is.
+- Everything else is **substitution-style** (`s/old/new/`), which physically
+  cannot create the "undeclared identifier" failure — a no-op just leaves the
+  code as-is.
 
 
 So the `healerLines` landmine was **unique to B017**, and it's defused.
@@ -3134,17 +3484,28 @@ So the `healerLines` landmine was **unique to B017**, and it's defused.
 ## Where you stand
 
 
-**Fatal error: fixed.** B017 no longer injects `(void)healerLines;` (retired with a tombstone matching the earlier `newItem` one — same failure, upstream commented out the declaration and the sed matched the comment). `Arrow.cpp` is already clean in the tree, so a restart compiles past it.
+**Fatal error: fixed.** B017 no longer injects `(void)healerLines;` (retired
+with a tombstone matching the earlier `newItem` one — same failure, upstream
+commented out the declaration and the sed matched the comment). `Arrow.cpp` is
+already clean in the tree, so a restart compiles past it.
 
 
-**B010: retired** from all three profile lists (release/beta/vanilla), the way B011 was — upstream now ships `ARENA_TYPE_NONE`, so the patch was dead everywhere, not just vanilla. Noted inline with the reason.
+**B010: retired** from all three profile lists (release/beta/vanilla), the way
+B011 was — upstream now ships `ARENA_TYPE_NONE`, so the patch was dead
+everywhere, not just vanilla. Noted inline with the reason.
 
 
 Both changes are on disk in `patches/` (the build reads them there — no commit
 needed to take effect; I held off committing since you're mid-cycle).
 
 
-**Restart the vanilla compile.** My honest read: it clears Arrow.cpp and the append-injection risk is gone. The one thing I *can't* rule out without a build is a **substitution patch that silently no-op'd** because upstream reworded its target line — that would surface not as a syntax error but as a specific `-Werror` warning re-appearing (e.g. a sign-compare or unused-parameter in a file the pull touched). If that happens, it'll name one file and one warning — paste it and it's a one-line targeted fix, not another scavenger hunt.
+**Restart the vanilla compile.** My honest read: it clears Arrow.cpp and the
+append-injection risk is gone. The one thing I *can't* rule out without a build
+is a **substitution patch that silently no-op'd** because upstream reworded its
+target line — that would surface not as a syntax error but as a specific
+`-Werror` warning re-appearing (e.g. a sign-compare or unused-parameter in a
+file the pull touched). If that happens, it'll name one file and one warning —
+paste it and it's a one-line targeted fix, not another scavenger hunt.
 
 
 --------------------------------------------------------------------------------

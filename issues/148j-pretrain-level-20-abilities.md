@@ -103,18 +103,39 @@ mage trainer, Ironforge mage trainer, etc.). De-duplicate to
 
 ## Granting Mechanism
 
-The target table is `playercreateinfo_spell_custom`:
+The target table is `playercreateinfo_spell_custom`. **Corrected
+2026-08-07** — this section previously described `race` and `class`
+columns holding direct IDs. That is not the schema. The real one is:
 
-| Column | Meaning |
-|--------|---------|
-| `race` | Race ID, or 0 for "any race" |
-| `class` | Class ID 1..11 |
-| `Spell` | Spell ID to grant at creation |
-| `Note` | Free-text description |
+| Column | Type | Meaning |
+|--------|------|---------|
+| `racemask` | int unsigned | **Bitmask** of races, `1 << (race - 1)`. 0 means "any race" |
+| `classmask` | int unsigned | **Bitmask** of classes, `1 << (class - 1)`. 0 means "any class" |
+| `Spell` | int unsigned | Spell ID to grant at creation |
+| `Note` | varchar(255) | Free-text description; this migration stamps `vanilla-148j-c<class>-s<spell>` |
 
-For the vanilla pre-train migration: one row per (class, spell)
-with `race=0`. The engine grants the spell to every character of
-that class regardless of race at creation time.
+The masks are the load-bearing detail and getting them wrong fails
+**silently and wrongly** rather than loudly. Writing a class *ID* into
+`classmask` grants to a different class than intended: class 8 (Mage)
+written as `8` sets bit 3, which is class 4 (Rogue). Mages would get
+nothing and rogues would get a mage's spellbook, with no error
+anywhere. The correct mask for Mage is `1 << 7` = 128.
+
+Verified 2026-08-07 against the live table: every stored `classmask` is
+a clean power of two, so the generator handled this correctly despite
+the description above being wrong. Blood Elf (race 10, racemask bit
+`1 << 9` = 512) Mage resolves to 123 applicable rows.
+
+For the vanilla pre-train migration: one row per (class, spell) with
+`racemask = 0` where the spell is race-agnostic. The engine grants the
+spell to every matching character at creation time.
+
+**When the engine reads it.** At character creation, from an in-memory
+cache populated at worldserver startup. Rows written to the live
+database while the server is running do not take effect until the next
+restart, and characters created in the meantime are permanently short —
+`playercreateinfo_spell_custom` is never re-consulted for an existing
+character. See 148w, where this appears to be exactly what happened.
 
 Rank handling: WoW spells have explicit rank IDs (Frostbolt rank 1
 is spell 116, rank 2 is 205, rank 4 is 7322, etc.). The

@@ -62,7 +62,19 @@ systems → cross-cutting infrastructure.
 |-------|-------|--------|-------|
 | 913 | clustered-worldserver | Open | Horizontal scaling. Spans phases. |
 
-## Completed: 0/17 (1 Experimental)
+### LLM companions (the three-box Ollama cluster)
+All three share one cluster of three mini-PCs on the LAN, and all
+three want it at once. 916 bursts on events, 917 bursts on player
+requests, 918 saturates it permanently. That contention is the open
+design question across the whole group, not a detail inside any one.
+
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 916 | mod-soren-chat | Open | Parent. LLM-driven bot chat + gameplay guidance. Supersedes 914/915. Fourteen sub-issues, 916a–916n. |
+| 917 | ask-the-bots-in-plain-text | Open | Player states intent in ordinary language; the layer writes the bot commands. Four sub-issues, 917a–917d. |
+| 918 | fg-sora-cluster-mirror-companions | Open | Three bots, one per box, all built to look and talk like the player, cross-feeding thoughts. "Two truths and a lie" is the acceptance test. |
+
+## Completed: 0/20 (1 Experimental)
 
 ---
 

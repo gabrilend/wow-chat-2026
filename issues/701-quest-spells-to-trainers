@@ -175,6 +175,31 @@ Fixed spell ID: Stoneskin Totem corrected from 3599 to 8071 (3599 is Searing Tot
 - [ ] Rogue: Create character, reach level 20, verify poisons at trainer
 - [ ] Paladin: Create character, reach level 12, verify Redemption at trainer
 
+## Decision Reversed by 412 (2026-04-02, recorded 2026-08-07)
+
+This issue's premise was that the quest is the obstacle: the world has
+no quest NPCs, so a quest-locked ability is unreachable, so move the
+ability to a trainer. The SQL above shipped on that premise.
+
+The premise was wrong in a specific way. The obstacle was never the
+quest — it was the *static world*. A quest giver rooted in a town that
+no longer has towns is unreachable; a quest giver who walks up to you
+is not. Once travelers exist, the quest can stay.
+
+`issues/412-dynamic-quest-prototype-unlock-quests.md` takes the ten
+unlock quests listed in this file and makes them the prototype for
+dynamic questing: the giver rides the traveler stream, the target
+monsters substitute into the player's ambush queue, item objectives
+force-add to one queued monster's loot and bind to the asker, and the
+turn-in NPC returns only on completion.
+
+The trainer entries this issue created are **not** being removed yet.
+They stay as the guaranteed path while 412 is a prototype, so a failed
+quest injection never leaves a class unable to function. When 412
+proves out, they come back out and this section records why.
+
 ## Related Issues
+- 412 - Dynamic quest prototype (reverses this issue's core decision;
+  uses this file's spell tables as its authoritative scope list)
 - 137 - Universal class trainers
 - 206 - Death Knight level 1 scaling

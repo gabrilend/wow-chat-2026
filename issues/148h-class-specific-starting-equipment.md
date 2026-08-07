@@ -267,6 +267,37 @@ caster's wand-or-spell rotation, not an additional axis.
 
 ## Item Cloning Procedure
 
+> **REVERSED 2026-08-07 — see 148v.** The clone design below shipped
+> and then failed in the client: entries at `original + 2000000` are
+> ones no WoW client has ever cached, and the client only fetches item
+> data when an event prompts it, which nothing about a server-side
+> first-login equip does. Kit gear therefore rendered as an invisible
+> model with a red "?" icon until the player manually unequipped and
+> re-equipped each piece.
+>
+> Per user direction the project is going back to **editing the
+> original entries in place**. The clone-to-new-ID procedure documented
+> here is being unwound; `issues/148v-cloned-kit-items-render-invisible.md`
+> holds the reversal steps and the ordering they need.
+>
+> The reasoning that made this an easy call: **the clones never
+> actually contained the leak they were built to contain.** The Loot
+> Table Update Procedure below rewrites thirteen tables in
+> `acore_world_vanilla` so every drop, vendor listing, and quest reward
+> points at the clone. The retuned values already apply world-wide.
+> The clone bought a different entry number for the same outcome — and
+> that number is exactly what the client cannot draw. Meanwhile vanilla
+> reads its own world database, so release and beta were never at risk
+> under either approach.
+>
+> What in-place genuinely costs is reversibility, and that is the part
+> to get right this time. See 148v implementation step 6.
+>
+> Everything below is retained as the record of what was built and as
+> the source of the tuning values (the weapon normalization table, the
+> stat adjustments) that in-place editing now applies directly to the
+> originals.
+
 Earlier drafts of this issue (the 2026-06-02 ship) modified the
 `item_template.RequiredLevel` of vanilla items in-place via
 `patch_E018_vanilla_kit_required_level_cap` in `patches/E-patches.sh`.
