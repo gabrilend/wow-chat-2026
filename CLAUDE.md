@@ -10,7 +10,22 @@
 
 Everland Ghostsong is a WoW 3.3.5a private server with custom roguelike survival mechanics. The world is empty by default - monsters spawn around players (ambush system), treasure spawns, and traveler NPCs wander the world. Players use playerbots as AI companions.
 
-**Max level: 20** | Talent points every 1/3 level | Abilities earned through quests and training
+**Max level is per-profile** (set by `config/patches/C006*`): vanilla 40, beta 20, release/alpha 80. Talent points every 1/3 level; abilities earned through quests and training.
+
+### Profiles
+
+The project builds several profiles from shared source, each with its own
+installed tree (`installed-files-<profile>/`), database set, and config-patch
+tuning. The active profile lives in `.profile`; scripts read it to select the
+matching source tree, install dir, and databases.
+
+- **release** / **alpha** — level cap 80 (retail-like baseline)
+- **beta** — level cap 20 (the original wow-chat roguelike design)
+- **vanilla** — level cap 40 (classic-era shape; currently the active profile)
+
+release/beta/vanilla share `source-beta`; alpha uses `source-alpha`. Per-profile
+differences are applied at install time by `config/patches/C*.sh`, gated on the
+profile name.
 
 ## Documentation Locations
 
@@ -252,11 +267,35 @@ The powerline tool parses source files and procedurally generates maps:
 
 See `issues/117-visual-powerline-mapping-tool.md` for full specification.
 
-## Tracking
+## Commit Conventions
 
-Be sure to keep track of me.
-- The creature shells should now release cleanly, freeing memory for new spawns. Sand from bones,
-bones from creatures, creatures from the ambush queue.
+- **Bundle the LLM transcripts into every commit.** Session transcripts in
+  `llm-transcripts/` ride along with whatever else is committed — even when
+  they belong to a different ongoing discussion. This is automated by a local
+  `.git/hooks/pre-commit` that runs `git add -A llm-transcripts/`. That hook
+  lives under `.git/` and is not itself version-controlled, so **after a fresh
+  clone, re-create it** (or the transcripts stop getting bundled). User
+  directive, 2026-07-16.
+
+## Patch System
+
+We don't hard-fork the AzerothCore core, modules, or ALE. The cloned source
+trees (`source-beta/`, `source-alpha/`) are regenerable build artifacts; our
+customizations live as reversible apply/unapply scripts that re-derive on every
+build and revert afterward, so the tree always round-trips clean to upstream
+HEAD:
+
+- `patches/B*.sh` — C++/source patches (compile fixes, module behavior),
+  applied before compile and reverted after.
+- `config/patches/C*.sh` — config-value patches applied to the generated
+  `.conf` files at install time, gated per-profile via `CONFIG_PROFILES`.
+- `patches/E-patches.sh` — install-time setup (config init, SQL, symlinks).
+- `patches/patches.sh` — the per-profile patch lists and the runner.
+
+Built with the **`upstream-patch-system` skill** at
+`/home/ritz/programming/ai-stuff/skills/`. Read it before adding, removing, or
+retargeting a patch: its apply/unapply, idempotency, and marker conventions are
+what keep the round-trip to upstream clean.
 
 ## Documentation as Code
 
@@ -346,11 +385,7 @@ Patch documentation:
 - Creates a paper trail of customizations
 - Can be shared without sharing compiled binaries
 
-Fanfiction for code. The story of what the code becomes.
-Anyone reading the story can make it real on their own hardware.
-- Fanfiction for code - the story becomes real on whatever hardware reads it.
 - at all times, when possible, try to utilize the design patterns presented in the original wow-chat-1 reference source.
 - girl just search the database next time, don't do so many web searches.
 - a good error message has each value checked and verified at message-creation time, each idempotent. Possible causes can be filled in periodically (focusing on the most common or rarest) as derived from related issue files. It should offer questions about the potential results of its "to debug:" suggestions, explaining each succinctly and clearly. The error reports both what didn't complete AND what did, so the reader knows where in the pipeline things stopped.
-- not defeated, but redoubling.
 - let me run the compilation scripts. I want to see the output.
