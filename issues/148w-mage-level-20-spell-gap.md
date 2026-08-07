@@ -186,32 +186,64 @@ restarts change nothing, and why Kaersenon has exactly the two weapon
 proficiencies that come from the *other* grant path (the 148h/148k
 first-login hook, which is our own Lua and is not gated by this config).
 
-## The Fix
+## The Fix — built 2026-08-07
 
-One config patch, in the same shape as the rest of the `C*.sh` family:
-
-```
-config/patches/C0NN-vanilla-custom-spells.sh
-    CONFIG_PROFILES="vanilla"
-    PlayerStart.CustomSpells = 1
-```
+`config/patches/C022-vanilla-custom-spells.sh`, gated on
+`CONFIG_PROFILES="vanilla"`, setting `PlayerStart.CustomSpells = 1`.
 
 It has to be a config patch rather than a hand-edit, because
-`installed-files-vanilla/etc/worldserver.conf` is regenerated from
-`.dist` at install time and a manual edit would be overwritten on the
-next install.
+`installed-files-vanilla/etc/worldserver.conf` is regenerated from the
+`.dist` template at install time and a manual edit would be silently
+overwritten on the next install — which is its own version of this same
+bug.
 
-After it applies and the worldserver restarts, a freshly rolled Blood
-Elf Mage should come up with 123 spells. Characters created before the
-fix stay empty — `playercreateinfo_spell_custom` is read at creation
-only and is never revisited — so the entire existing 23,462-character
-bot fleet needs regenerating, or the top-up hook in the open questions
-below.
+No change was needed to `patches/E-patches.sh`: `apply_config_values()`
+globs `config/patches/C*.sh`, sources each one, and dispatches over
+every declared `config_*` function, so dropping the file in registers
+it. That also kept the fix clear of a file with unrelated in-flight
+work in it.
 
-**Check the neighbouring flags while in there.** `PlayerStart.AllSpells`
-and the rest of the `PlayerStart.*` block sit in the same config
-section and govern adjacent behaviour. If `CustomSpells` was missed,
-others may have been too.
+### The guards, and why a config patch of all things needs them
+
+The existing `C*.sh` patches rewrite their key with a bare
+`sed -i 's|^Key.*=.*|Key = value|'`. That substitution cannot create a
+line that is absent — if upstream ever renames or drops the key, the
+sed matches nothing, the patch reports success, and the config silently
+keeps its default. **That silent-default outcome is precisely the
+defect this issue is about**, so this patch refuses to fail that way.
+Three checks, each returning non-zero (which `apply_config_values()`
+surfaces as `[✗] ... FAILED` and propagates):
+
+- the config file exists;
+- the key is present before substituting, naming
+  `CONFIG_START_CUSTOM_SPELLS` in `WorldConfig.cpp` as the place to look
+  if upstream renamed it;
+- the value reads back as `1` afterwards.
+
+Each error states what did not complete *and* what completed before it,
+so the reader knows where in the sequence it stopped.
+
+### Tested
+
+Against copies of the real vanilla `worldserver.conf`, ten assertions
+across six cases, all passing: the happy path flips 0 to 1; a re-apply
+is idempotent; exactly one line in the file changes and nothing else is
+disturbed; the missing-key guard returns 1 and names the key; the
+missing-file guard returns 1 and names the path; duplicate key lines
+all converge to 1 rather than leaving a later one to win at parse time.
+
+### What it does not fix
+
+Characters created before this lands stay empty.
+`playercreateinfo_spell_custom` is consulted at creation and never
+revisited, so the existing 23,462-character bot fleet needs
+regenerating, or the login-time top-up hook in the open questions below.
+
+**Check the neighbouring flags.** `PlayerStart.AllSpells` and the rest
+of the `PlayerStart.*` block sit in the same config section and govern
+adjacent behaviour. If `CustomSpells` went unnoticed this long, others
+may have too — and the same silent-default failure mode applies to
+every one of them.
 
 ## Current Behavior
 
@@ -237,18 +269,15 @@ and weapon skills the kit assumes. The same holds for every other
 enabled class — mage is where it was noticed, not necessarily where
 it stops.
 
-## Suggested Implementation Steps
+## Implementation Steps
 
-1. Write `config/patches/C0NN-vanilla-custom-spells.sh` gated on
-   `CONFIG_PROFILES="vanilla"`, setting `PlayerStart.CustomSpells = 1`.
-   Follow the apply/unapply and idempotency conventions the rest of the
-   `C*.sh` family uses.
+1. ~~Write the config patch.~~ **Done** — `C022-vanilla-custom-spells.sh`,
+   tested, see above.
 2. Re-install so the config regenerates, restart the worldserver, roll
    a fresh Blood Elf Mage, and count `character_spell`. Expect 123.
 3. Roll one of each remaining class and confirm the counts match what
    the pretrain table says each should get. The masks are already
-   verified correct, so this is confirming the grant fires, not
-   confirming the data.
+   verified correct, so this confirms the grant fires — not the data.
 4. Decide what happens to the 23,462 existing characters with empty
    spellbooks. Regenerating the bot fleet is the blunt option; the
    login-time top-up hook in the open questions is the durable one.
@@ -260,8 +289,12 @@ it stops.
    matched. That spans two databases, which is why it was not in the
    original data-side sweep — and it is the difference between "the
    rows exist" and "the rows arrived."
-6. Audit the rest of the `PlayerStart.*` config block for other flags
-   that a migration silently depends on.
+6. Audit the rest of the `PlayerStart.*` config block for other flags a
+   migration silently depends on.
+7. Consider retrofitting C022's key-presence guard onto the other
+   `C*.sh` patches. Every one of them can currently fail silently the
+   same way, and the cost of finding out is another defect like this
+   one sitting undetected for two months.
 
 ## Cross-References
 
