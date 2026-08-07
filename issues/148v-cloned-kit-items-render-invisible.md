@@ -140,43 +140,89 @@ character-select screen and at first login wearing its full kit,
 rendered on the model, with correct icons — on a cold client cache,
 with no unequip/re-equip, and with no dependence on a timing window.
 
-## Suggested Implementation Steps
+## Implementation
 
-This reverses a shipped migration, so the order matters — the world
-references have to come home before the clones can be dropped.
+### Built 2026-08-07
 
-1. **Restore world references to the originals.** Reverse 148h's Loot
-   Table Update Procedure across all thirteen tables: for every row
-   pointing at an entry `>= 2000000`, set it back to `entry - 2000000`.
-   This is mechanical and should be generated, not hand-written.
-2. **Point the kit at the originals.** `UPDATE playercreateinfo_item
-   SET itemid = itemid - 2000000` for every row with
-   `Note LIKE 'vanilla-148h-%'` and `itemid >= 2000000`.
-3. **Apply the tuning to the originals in place.** Set
-   `RequiredLevel = 20` and the normalized `dmg_min1`/`dmg_max1` values
-   from 148h's weapon table, plus the stat fields (Amani Sacrificial
-   Dagger's +1 Spell Power and so on), on the original entries.
-4. **Drop the 51 clones.** `DELETE FROM item_template WHERE entry >=
-   2000000`. Only after steps 1 and 2 confirm nothing references them —
-   a leftover reference to a deleted entry is worse than the bug being
-   fixed here.
-5. **Update the generator.** `scripts/generate-vanilla-starting-equipment-sql`
-   emits the clone SQL today. It has to emit in-place UPDATEs instead,
-   or the next regeneration undoes all of the above.
-6. **Make the tuning reversible.** In-place edits to canonical entries
-   have no natural undo, which is the real cost being accepted here.
-   The apply SQL should record each touched entry's original
-   `RequiredLevel` and damage values so an unapply can restore them —
-   the same discipline the `patches/` system uses. 148h notes that
-   E018's unapply was "a soft revert to a guessed floor value and known
-   imperfect"; that is the mistake not to repeat.
-7. **Verify on a cold cache.** Delete `WDB/itemcache.wdb`, roll one
+The reversal is written as E018 apply/revert V3. It needed no change to
+`patches/E-patches.sh` — that patch function is a generic
+copy-apply/copy-revert, so rewriting the two source forms is the whole
+edit.
+
+- **`sql/vanilla/db_world.src/06-kit-required-level-cap.apply.sql`** —
+  now `MARKER_E018_APPLY_V3`. Four steps:
+  - *Step 0* undoes the V2 clone state if it is still live: reverse-
+    sweeps all thirteen reference tables plus `playercreateinfo_item`
+    by subtracting the 2000000 offset, then deletes the clones. Keyed
+    on the offset convention rather than a hand-typed map, so there is
+    no second entry list to drift. This makes the file converge from a
+    V2 database, a V3 database, or a fresh import alike.
+  - *Step 1* snapshots `RequiredLevel`, `dmg_min1`, `dmg_max1`,
+    `stat_type1`, and `stat_value1` for all 47 touched entries into
+    `_vanilla_kit_original_values`, via `INSERT IGNORE` so a re-apply
+    never overwrites the pristine baseline with tuned values.
+  - *Step 2* caps `RequiredLevel` at 20, guarded by
+    `WHERE RequiredLevel > 20`. That guard is what keeps the accepted
+    taint minimal — the Hearthstone, the bags, the arrows, the flowers,
+    and Battle Axe were already at or below 20 and are left exactly as
+    upstream shipped them.
+  - *Steps 3 and 4* apply the weapon and wand damage normalization to
+    the originals. The numbers are carried over unchanged from the V2
+    clone tuning; they were never the problem, only which entry they
+    were written to.
+- **`sql/vanilla/db_world.src/06-kit-required-level-cap.revert.sql`** —
+  now `MARKER_E018_REVERT_V3`. Restores from the snapshot by JOIN,
+  drops the snapshot table, then runs the legacy V2 clone cleanup
+  defensively so a database still in V2 state reverts to the same
+  place.
+- **`scripts/generate-vanilla-starting-equipment-sql`** — all 125 clone
+  IDs converted back to canonical entries, and the comments that
+  described the cloning procedure rewritten.
+- **`sql/vanilla/db_world.src/02-starting-equipment.apply.sql`** —
+  regenerated. 581 item rows across 52 (race, class) combos, zero
+  entries in the 2000000 range.
+
+**Not touched:** 923 Longsword, 927 Double Axe, 928 Long Staff, 2209
+Kris. V2 cloned these only so V1's in-place leak could be reverted on
+the originals. They are not in the current kit, so V3 leaves them
+entirely alone once step 0 returns the world's references to them.
+
+### Reversibility, which is the real cost being accepted
+
+In-place edits to canonical entries have no natural undo, and that is
+the one thing the clone design genuinely did better. The snapshot table
+is the answer, and it is deliberately stricter than what came before:
+148h records that the V1 unpatch "re-floored to RL=22" from a
+hand-typed table because no snapshot existed, and was known imperfect.
+V3 restores measured values instead.
+
+One honest limitation, recorded in the revert file itself: the snapshot
+is only as pristine as the database was when V3 first applied. Damage
+fields are genuinely untouched by V1 and V2, so those are true
+originals. `RequiredLevel` on the ~19 items V1 once modified is
+second-hand — V2's step 5 restored those from its own hand-typed
+canonical table, and that is what gets snapshotted. A pristine
+reference for those comes only from a fresh world-DB import.
+
+### Remaining — needs the server
+
+1. Re-install so the E018 patch copies the new source forms into
+   `sql/vanilla/db_world/`, then boot the worldserver so UpdateFetcher
+   re-hashes and applies both changed migrations.
+2. Confirm the clone range is empty and the world points home:
+   `SELECT COUNT(*) FROM item_template WHERE entry >= 2000000;` should
+   be 0, and the same for `playercreateinfo_item WHERE itemid >= 2000000`.
+3. Confirm the snapshot captured a baseline:
+   `SELECT COUNT(*) FROM _vanilla_kit_original_values;` should be 47.
+4. **Verify on a cold cache.** Delete `WDB/itemcache.wdb`, roll one
    character per armor class (cloth, leather, mail, plate), and confirm
    the kit renders on the model at first login with no manual
    intervention.
-8. Add a row to 148o's per-character checklist for "kit renders on the
-   model," since this is the check that catches regressions here and it
-   needs human eyes.
+5. While there, confirm the character-select screen — see the open
+   question below, since it may never have been broken.
+6. Add a row to 148o's per-character checklist for "kit renders on the
+   model," since that check needs human eyes and is what catches a
+   regression here.
 
 ## Cross-References
 
@@ -196,11 +242,18 @@ references have to come home before the clones can be dropped.
 
 ## Open Questions
 
-- **Does the character-select screen behave the same way?** 148k treats
-  "kit visible on the select screen" as its acceptance criterion. The
-  select screen renders through a different path than the in-world
-  model. Worth observing during the cold-cache verification, since it
-  may have been failing for the same reason all along.
+- **Was the character-select screen ever actually broken?** Probably
+  not, and this is worth settling because it was cited as the main
+  reason for the reversal. `SMSG_CHAR_ENUM` carries each equipped
+  slot's display ID *directly in the packet* — the server reads
+  `item_template.displayid` itself and writes it in, so the select
+  screen does not depend on the client's item cache at all. If that
+  reading is right, clone gear rendered correctly on the select screen
+  the whole time and only the in-world model was affected. The
+  reversal still stands on its other grounds (the redraw half of the
+  bug, observers' caches, no per-login cost), but the select screen
+  should not be carrying the argument. One look during the cold-cache
+  verification settles it.
 - **What about the playerbots?** 148s wants bots starting in the 148h
   kit. A bot's appearance renders on *other players'* clients, each with
   its own cache. Original entries fix this for bots too — which is an

@@ -1,258 +1,246 @@
--- MARKER_E018_APPLY_V2 vanilla-kit-clones-and-tune
--- Apply-form (148h redesign 2026-06-12): clone every kit item to a new
--- entry (original + 2000000), tune the clones to DPS=15 (weapons) or
--- DPS=20 (wands) with RL=20, restore originals to canonical RL, and
--- sweep every world reference (loot tables, npc_vendor, quest_template)
--- so the vanilla profile world consistently uses the clones rather
--- than the originals.
+-- MARKER_E018_APPLY_V3 vanilla-kit-in-place-tune
+-- Apply-form (148v reversal, 2026-08-07): tune the ORIGINAL kit item
+-- entries in place. No clones. The V2 clone-to-new-ID design is undone
+-- by step 0 below if it is still live in the database.
 --
--- Replaces the original E018 in-place RequiredLevel UPDATE which had
--- two problems:
---   1. It leaked: lowering RL on shared items affected every drop,
---      vendor listing, and quest reward of those items in the world.
---   2. The unpatch was a soft revert (floor everything to RL=22)
---      because no snapshot existed.
+-- Why the reversal (full reasoning in 148v):
+--   Entries at original+2000000 are ones no WoW client has ever cached.
+--   The client only requests item data when an event prompts it, and a
+--   server-side first-login equip is not such an event — so the model
+--   was built with no display IDs and never redrawn. Kit gear rendered
+--   as an invisible body with red "?" icons until the player manually
+--   unequipped and re-equipped every piece.
 --
--- The clone-to-new-ID approach sidesteps both. Originals stay
--- canonically correct as Wowhead/Wowdb references; clones carry the
--- server-tuned values; the world uses clones; revert is deterministic
--- (DELETE WHERE entry BETWEEN 2000000 AND 2099999 + revert sweeps).
+--   There is no server-side fix for that. Using entries every client
+--   already has cached from retail data is correct by construction.
 --
--- Idempotent: re-running detects existing clones via INSERT IGNORE,
--- sweeps any new references, and re-applies tuning without harm.
+-- What V2's clone design was protecting against, and why it did not:
+--   The stated fear was that in-place edits "leak" — a retuned Polished
+--   Scale Vest is retuned for every drop, vendor, and quest reward in
+--   the world. True. But V2's own step 6 swept all thirteen reference
+--   tables onto the clones, so the retuned values already applied
+--   world-wide. The clone bought a different entry number for an
+--   identical outcome, and that number is precisely the unreadable
+--   part. Accepted deliberately per user direction 2026-08-07: a
+--   handful of white items carry a level-20 required level and 15-DPS
+--   damage across the vanilla world, which nobody notices past their
+--   starting kit. Vanilla reads its own acore_world_vanilla, so
+--   release and beta are untouched either way.
+--
+-- Reversibility — the one thing V2 did better, now fixed properly:
+--   In-place edits have no natural undo, and 148h records that the V1
+--   unpatch was "a soft revert (re-floored to RL=22) and known
+--   imperfect" because no snapshot existed. Step 1 below takes a real
+--   snapshot into _vanilla_kit_original_values before touching
+--   anything, and the revert-form restores from it exactly.
+--
+-- Idempotence:
+--   Step 0 no-ops when no clones exist. Step 1 uses INSERT IGNORE so a
+--   re-apply never overwrites the pristine snapshot with already-tuned
+--   values. Steps 2-4 are absolute SETs, so re-running converges.
+--
+--   HAZARD: dropping _vanilla_kit_original_values by hand and then
+--   re-applying would snapshot the TUNED values and render the revert
+--   a no-op. Do not drop that table except through the revert-form.
 
 START TRANSACTION;
 
--- {{{ step_1_clone_all_kit_items
--- Snapshot every kit-referenced original into a temp table, bump the
--- entry ID by 2000000, and INSERT IGNORE so re-application leaves
--- existing clones untouched.
+-- {{{ step_0_undo_v2_clone_state_if_present
+-- The V2 apply is live in the database as of this rewrite: 51 clones
+-- exist and every loot/vendor/quest reference points at them. Bring the
+-- world home to the originals and delete the clones before tuning, so
+-- this file converges from a V2 database, a V3 database, or a fresh
+-- import alike.
 --
--- The 2000000 offset clears the entire vanilla item range (max ~64000
--- in 3.3.5a + ~30000 for WotLK additions) with no collision risk and
--- makes clone IDs immediately recognisable.
+-- The reverse sweep is keyed on the clone-ID convention (clone =
+-- original + 2000000) rather than a hand-typed map, so it cannot drift
+-- out of sync with the entry list the way a second copy of the map
+-- would.
 
-CREATE TEMPORARY TABLE _kit_clone_src AS
-    SELECT * FROM item_template WHERE entry IN (
-        -- Weapons in current kit
-         922, 924, 925, 926, 3027, 5211, 15810,
-        1198, 2027, 3445, 23923,
-        1197, 5580, 853, 1292,
-        2030, 1159, 5210,
-        -- Weapons present in original kit, no longer used but cloned
-        -- so the original tuning patch's RL=20 leak gets reverted on
-        -- the originals (see step 5 below).
-         923, 927, 928, 2209,
-        -- Shields
-        2441, 2445, 2442,
-        -- Mail (Polished Scale set)
-        2148, 2149, 2150, 2151, 2152, 2153,
-        -- Leather (Cuirboulli set)
-        2141, 2142, 2143, 2144, 2145, 2146,
-        -- Cloth (Padded set)
-        2156, 2158, 2159, 2160, 3591, 3592,
-        -- Cape
-        2240,
-        -- Accessories
-        3422, 19295, 46978,
-        -- Bag / quiver / hearthstone / ammo
-        4238, 11362, 6948, 2515
-    );
+UPDATE creature_loot_template      SET Item = Item - 2000000 WHERE Item BETWEEN 2000000 AND 2099999;
+UPDATE gameobject_loot_template    SET Item = Item - 2000000 WHERE Item BETWEEN 2000000 AND 2099999;
+UPDATE disenchant_loot_template    SET Item = Item - 2000000 WHERE Item BETWEEN 2000000 AND 2099999;
+UPDATE reference_loot_template     SET Item = Item - 2000000 WHERE Item BETWEEN 2000000 AND 2099999;
+UPDATE item_loot_template          SET Item = Item - 2000000 WHERE Item BETWEEN 2000000 AND 2099999;
+UPDATE mail_loot_template          SET Item = Item - 2000000 WHERE Item BETWEEN 2000000 AND 2099999;
+UPDATE pickpocketing_loot_template SET Item = Item - 2000000 WHERE Item BETWEEN 2000000 AND 2099999;
+UPDATE skinning_loot_template      SET Item = Item - 2000000 WHERE Item BETWEEN 2000000 AND 2099999;
+UPDATE fishing_loot_template       SET Item = Item - 2000000 WHERE Item BETWEEN 2000000 AND 2099999;
+UPDATE prospecting_loot_template   SET Item = Item - 2000000 WHERE Item BETWEEN 2000000 AND 2099999;
+UPDATE milling_loot_template       SET Item = Item - 2000000 WHERE Item BETWEEN 2000000 AND 2099999;
 
-UPDATE _kit_clone_src SET entry = entry + 2000000;
+UPDATE npc_vendor SET item = item - 2000000 WHERE item BETWEEN 2000000 AND 2099999;
 
-INSERT IGNORE INTO item_template SELECT * FROM _kit_clone_src;
+UPDATE quest_template SET RewardItem1         = RewardItem1         - 2000000 WHERE RewardItem1         BETWEEN 2000000 AND 2099999;
+UPDATE quest_template SET RewardItem2         = RewardItem2         - 2000000 WHERE RewardItem2         BETWEEN 2000000 AND 2099999;
+UPDATE quest_template SET RewardItem3         = RewardItem3         - 2000000 WHERE RewardItem3         BETWEEN 2000000 AND 2099999;
+UPDATE quest_template SET RewardItem4         = RewardItem4         - 2000000 WHERE RewardItem4         BETWEEN 2000000 AND 2099999;
+UPDATE quest_template SET RewardChoiceItemID1 = RewardChoiceItemID1 - 2000000 WHERE RewardChoiceItemID1 BETWEEN 2000000 AND 2099999;
+UPDATE quest_template SET RewardChoiceItemID2 = RewardChoiceItemID2 - 2000000 WHERE RewardChoiceItemID2 BETWEEN 2000000 AND 2099999;
+UPDATE quest_template SET RewardChoiceItemID3 = RewardChoiceItemID3 - 2000000 WHERE RewardChoiceItemID3 BETWEEN 2000000 AND 2099999;
+UPDATE quest_template SET RewardChoiceItemID4 = RewardChoiceItemID4 - 2000000 WHERE RewardChoiceItemID4 BETWEEN 2000000 AND 2099999;
+UPDATE quest_template SET RewardChoiceItemID5 = RewardChoiceItemID5 - 2000000 WHERE RewardChoiceItemID5 BETWEEN 2000000 AND 2099999;
+UPDATE quest_template SET RewardChoiceItemID6 = RewardChoiceItemID6 - 2000000 WHERE RewardChoiceItemID6 BETWEEN 2000000 AND 2099999;
 
-DROP TEMPORARY TABLE _kit_clone_src;
+-- The kit itself. 02-starting-equipment.sql now emits original IDs, but
+-- a database carrying V2 kit rows needs them brought home too, and this
+-- migration runs before that one re-applies.
+UPDATE playercreateinfo_item SET itemid = itemid - 2000000 WHERE itemid BETWEEN 2000000 AND 2099999;
+
+-- Only now that nothing references them.
+DELETE FROM item_template WHERE entry BETWEEN 2000000 AND 2099999;
 -- }}}
 
--- {{{ step_2_tune_clones_required_level
--- Every clone lands at RequiredLevel = 20 — the vanilla profile's
--- StartPlayerLevel (C007c). Single UPDATE keyed by the clone-ID range.
+-- {{{ step_1_snapshot_originals_before_touching_them
+-- The undo of last resort. Captures every field steps 2-4 write, for
+-- every entry they write it to, exactly once.
+--
+-- Taken AFTER step 0 so the captured values are the originals in their
+-- untuned state — V2 never modified original damage, and its step 5
+-- had already returned original RequiredLevel to canonical.
+
+CREATE TABLE IF NOT EXISTS _vanilla_kit_original_values (
+    entry         INT UNSIGNED     NOT NULL PRIMARY KEY,
+    RequiredLevel TINYINT UNSIGNED NOT NULL,
+    dmg_min1      FLOAT            NOT NULL,
+    dmg_max1      FLOAT            NOT NULL,
+    stat_type1    TINYINT UNSIGNED NOT NULL,
+    stat_value1   INT              NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO _vanilla_kit_original_values
+    (entry, RequiredLevel, dmg_min1, dmg_max1, stat_type1, stat_value1)
+SELECT entry, RequiredLevel, dmg_min1, dmg_max1, stat_type1, stat_value1
+  FROM item_template
+ WHERE entry IN (
+    -- Weapons in the current kit (all 18 are damage-tuned below)
+     922,  924,  925,  926, 3027, 5211, 15810,
+    1198, 2027, 3445, 23923,
+    1197, 5580,  853, 1292,
+    2030, 1159, 5210,
+    -- Shields
+    2441, 2445, 2442,
+    -- Mail (Polished Scale set)
+    2148, 2149, 2150, 2151, 2152, 2153,
+    -- Leather (Cuirboulli set)
+    2141, 2142, 2143, 2144, 2145, 2146,
+    -- Cloth (Padded set)
+    2156, 2158, 2159, 2160, 3591, 3592,
+    -- Cape
+    2240,
+    -- Off-hand frills
+    3422, 19295, 46978,
+    -- Bag / quiver / hearthstone / ammo
+    4238, 11362, 6948, 2515
+ );
+
+-- Deliberately NOT snapshotted and NOT touched: 923 Longsword,
+-- 927 Double Axe, 928 Long Staff, 2209 Kris. V2 cloned these purely so
+-- the V1 in-place leak could be reverted on the originals. They are no
+-- longer in the kit, so V3 leaves them entirely alone — step 0 has
+-- already returned the world's references to them.
+-- }}}
+
+-- {{{ step_2_cap_required_level_at_the_starting_level
+-- Vanilla starts characters at level 20 (C007c). Kit items whose
+-- canonical RequiredLevel sits at 21 or 22 are unequippable by a
+-- brand-new character, so they come down to 20.
+--
+-- The `RequiredLevel > 20` guard is what keeps the accepted taint
+-- small: items already at or below 20 (Hearthstone at 0, Battle Axe at
+-- 20, the bags, the arrows, the flowers) are left exactly as upstream
+-- shipped them. Only the handful that actually block equipping move.
+
 UPDATE item_template
    SET RequiredLevel = 20
- WHERE entry BETWEEN 2000000 AND 2099999;
+ WHERE RequiredLevel > 20
+   AND entry IN (
+     922,  924,  925,  926, 3027, 5211, 15810,
+    1198, 2027, 3445, 23923,
+    1197, 5580,  853, 1292,
+    2030, 1159, 5210,
+    2441, 2445, 2442,
+    2148, 2149, 2150, 2151, 2152, 2153,
+    2141, 2142, 2143, 2144, 2145, 2146,
+    2156, 2158, 2159, 2160, 3591, 3592,
+    2240,
+    3422, 19295, 46978,
+    4238, 11362, 6948, 2515
+ );
 -- }}}
 
--- {{{ step_3_tune_weapon_damage_to_15_dps
--- Per-weapon DPS normalization. Formula: new_dmg = old_dmg × (15/old_DPS).
--- delay preserved from original. Original DPS computed (dmg_min+dmg_max)/2/(delay/1000).
--- See 148h "Damage Normalization" section for the full table.
+-- {{{ step_3_normalise_weapon_damage_to_15_dps
+-- Formula: new_dmg = old_dmg × (15 / old_DPS), delay preserved.
+-- Old DPS is (dmg_min + dmg_max) / 2 / (delay / 1000).
+-- Values carried over unchanged from the V2 clone tuning — the numbers
+-- were never the problem, only which entry they were written to.
+-- See 148h "Damage Normalization" for the derivation.
 
--- Claymore clone (1198 → 2001198) delay 3.2s, was 23-35 / 9.06 DPS
-UPDATE item_template SET dmg_min1 = 38, dmg_max1 = 58 WHERE entry = 2001198;
+-- Claymore (1198) delay 3.2s, was 23-35 / 9.06 DPS
+UPDATE item_template SET dmg_min1 = 38, dmg_max1 = 58 WHERE entry = 1198;
 
--- Scimitar clone (2027 → 2002027) delay 2.3s, was 14-26 / 8.70 DPS
-UPDATE item_template SET dmg_min1 = 24, dmg_max1 = 45 WHERE entry = 2002027;
+-- Scimitar (2027) delay 2.3s, was 14-26 / 8.70 DPS
+UPDATE item_template SET dmg_min1 = 24, dmg_max1 = 45 WHERE entry = 2027;
 
--- Ceremonial Knife clone (3445 → 2003445) delay 1.4s, was 5-10 / 5.36 DPS
-UPDATE item_template SET dmg_min1 = 14, dmg_max1 = 28 WHERE entry = 2003445;
+-- Ceremonial Knife (3445) delay 1.4s, was 5-10 / 5.36 DPS
+UPDATE item_template SET dmg_min1 = 14, dmg_max1 = 28 WHERE entry = 3445;
 
--- Amani Sacrificial Dagger clone (23923 → 2023923) delay 2.0s, was 10-20 / 7.50 DPS
+-- Amani Sacrificial Dagger (23923) delay 2.0s, was 10-20 / 7.50 DPS
 -- Also: +1 Spell Power (stat_type 45 = ITEM_MOD_SPELL_POWER in 3.3.5a)
 UPDATE item_template
    SET dmg_min1 = 20, dmg_max1 = 40,
        stat_type1 = 45, stat_value1 = 1
- WHERE entry = 2023923;
+ WHERE entry = 23923;
 
--- Maul clone (924 → 2000924) delay 2.9s, was 37-56 / 16.03 DPS
-UPDATE item_template SET dmg_min1 = 35, dmg_max1 = 52 WHERE entry = 2000924;
+-- Maul (924) delay 2.9s, was 37-56 / 16.03 DPS
+UPDATE item_template SET dmg_min1 = 35, dmg_max1 = 52 WHERE entry = 924;
 
--- Flail clone (925 → 2000925) delay 2.2s, was 18-34 / 11.82 DPS
-UPDATE item_template SET dmg_min1 = 23, dmg_max1 = 43 WHERE entry = 2000925;
+-- Flail (925) delay 2.2s, was 18-34 / 11.82 DPS
+UPDATE item_template SET dmg_min1 = 23, dmg_max1 = 43 WHERE entry = 925;
 
--- Giant Mace clone (1197 → 2001197) delay 3.5s, was 25-38 / 9.00 DPS
-UPDATE item_template SET dmg_min1 = 42, dmg_max1 = 63 WHERE entry = 2001197;
+-- Giant Mace (1197) delay 3.5s, was 25-38 / 9.00 DPS
+UPDATE item_template SET dmg_min1 = 42, dmg_max1 = 63 WHERE entry = 1197;
 
--- Militia Hammer clone (5580 → 2005580) delay 2.3s, was 3-6 / 1.96 DPS
+-- Militia Hammer (5580) delay 2.3s, was 3-6 / 1.96 DPS
 -- Biggest scale factor in the kit (7.65×). Loses joke-tier feel per 148h.
-UPDATE item_template SET dmg_min1 = 23, dmg_max1 = 46 WHERE entry = 2005580;
+UPDATE item_template SET dmg_min1 = 23, dmg_max1 = 46 WHERE entry = 5580;
 
--- Battle Axe clone (926 → 2000926) delay 3.8s, was 46-70 / 15.26 DPS
-UPDATE item_template SET dmg_min1 = 45, dmg_max1 = 69 WHERE entry = 2000926;
+-- Battle Axe (926) delay 3.8s, was 46-70 / 15.26 DPS
+UPDATE item_template SET dmg_min1 = 45, dmg_max1 = 69 WHERE entry = 926;
 
--- Hatchet clone (853 → 2000853) delay 2.5s, was 12-24 / 7.20 DPS
-UPDATE item_template SET dmg_min1 = 25, dmg_max1 = 50 WHERE entry = 2000853;
+-- Hatchet (853) delay 2.5s, was 12-24 / 7.20 DPS
+UPDATE item_template SET dmg_min1 = 25, dmg_max1 = 50 WHERE entry = 853;
 
--- Butcher's Cleaver clone (1292 → 2001292) delay 1.7s, was 23-32 / 16.18 DPS
-UPDATE item_template SET dmg_min1 = 21, dmg_max1 = 30 WHERE entry = 2001292;
+-- Butcher's Cleaver (1292) delay 1.7s, was 23-32 / 16.18 DPS
+UPDATE item_template SET dmg_min1 = 21, dmg_max1 = 30 WHERE entry = 1292;
 
--- Short Spear clone (15810 → 2015810) delay 3.3s, was 40-60 / 15.15 DPS
-UPDATE item_template SET dmg_min1 = 40, dmg_max1 = 59 WHERE entry = 2015810;
+-- Short Spear (15810) delay 3.3s, was 40-60 / 15.15 DPS
+UPDATE item_template SET dmg_min1 = 40, dmg_max1 = 59 WHERE entry = 15810;
 
--- Dacian Falx clone (922 → 2000922) delay 3.1s, was 39-60 / 15.97 DPS
-UPDATE item_template SET dmg_min1 = 37, dmg_max1 = 56 WHERE entry = 2000922;
+-- Dacian Falx (922) delay 3.1s, was 39-60 / 15.97 DPS
+UPDATE item_template SET dmg_min1 = 37, dmg_max1 = 56 WHERE entry = 922;
 
--- Gnarled Staff clone (2030 → 2002030) delay 2.9s, was 27-42 / 11.90 DPS
-UPDATE item_template SET dmg_min1 = 34, dmg_max1 = 53 WHERE entry = 2002030;
+-- Gnarled Staff (2030) delay 2.9s, was 27-42 / 11.90 DPS
+UPDATE item_template SET dmg_min1 = 34, dmg_max1 = 53 WHERE entry = 2030;
 
--- Militia Quarterstaff clone (1159 → 2001159) delay 2.8s, was 6-9 / 2.68 DPS
+-- Militia Quarterstaff (1159) delay 2.8s, was 6-9 / 2.68 DPS
 -- Second-biggest scale factor (5.60×). Like Militia Hammer, loses joke-tier.
-UPDATE item_template SET dmg_min1 = 34, dmg_max1 = 50 WHERE entry = 2001159;
+UPDATE item_template SET dmg_min1 = 34, dmg_max1 = 50 WHERE entry = 1159;
 
--- Heavy Recurve Bow clone (3027 → 2003027) delay 2.4s, was 21-40 / 12.71 DPS
-UPDATE item_template SET dmg_min1 = 25, dmg_max1 = 47 WHERE entry = 2003027;
+-- Heavy Recurve Bow (3027) delay 2.4s, was 21-40 / 12.71 DPS
+UPDATE item_template SET dmg_min1 = 25, dmg_max1 = 47 WHERE entry = 3027;
 -- }}}
 
--- {{{ step_4_tune_wand_damage_to_20_dps
+-- {{{ step_4_normalise_wand_damage_to_20_dps
 -- Wands land at 20 DPS, not 15 — the kit's wand-DPS placeholder pending
 -- the proper rebalance in 148p. Wand-spell parity at L20 wants ~30 DPS;
 -- 20 is the modest interim bump over vanilla's ~17-18.
 
--- Dusk Wand clone (5211 → 2005211) delay 1.7s, was 21-39 / 17.65 DPS
-UPDATE item_template SET dmg_min1 = 24, dmg_max1 = 44 WHERE entry = 2005211;
+-- Dusk Wand (5211) delay 1.7s, was 21-39 / 17.65 DPS
+UPDATE item_template SET dmg_min1 = 24, dmg_max1 = 44 WHERE entry = 5211;
 
--- Burning Wand clone (5210 → 2005210) delay 1.4s, was 17-32 / 17.50 DPS
-UPDATE item_template SET dmg_min1 = 19, dmg_max1 = 37 WHERE entry = 2005210;
--- }}}
-
--- {{{ step_5_restore_originals_to_canonical_required_level
--- The original E018 patch lowered RequiredLevel in-place on every kit
--- item with RL > 20. Restore those originals to their canonical pre-
--- E018 values so external references (Wowhead, Wowdb) match the DB.
---
--- Per-entry hardcoded lookup since the ItemLevel-derived formula
--- doesn't perfectly match all items. Items at RL ≤ 20 originally
--- (Kris 19, Double Axe 19, Battle Axe 20, accessories at 0) are not
--- touched.
-
--- IL 26 weapons → canonical RL 22
-UPDATE item_template SET RequiredLevel = 22 WHERE entry = 922;  -- Dacian Falx
-UPDATE item_template SET RequiredLevel = 22 WHERE entry = 923;  -- Longsword
-UPDATE item_template SET RequiredLevel = 22 WHERE entry = 924;  -- Maul
-
--- IL 25 weapons → canonical RL 21
-UPDATE item_template SET RequiredLevel = 21 WHERE entry = 925;   -- Flail
-UPDATE item_template SET RequiredLevel = 21 WHERE entry = 928;   -- Long Staff
-UPDATE item_template SET RequiredLevel = 21 WHERE entry = 3027;  -- Heavy Recurve Bow
-UPDATE item_template SET RequiredLevel = 21 WHERE entry = 15810; -- Short Spear
-
--- IL 25 wand → canonical RL 22 (wands have a slightly higher RL curve)
-UPDATE item_template SET RequiredLevel = 22 WHERE entry = 5211;  -- Dusk Wand
-
--- Battle Axe (926) original RL was 20, not touched by E018. No restore.
-
--- IL 27 armor sets → canonical RL 22 (all six pieces per set)
-UPDATE item_template SET RequiredLevel = 22 WHERE entry IN (
-    2141, 2142, 2143, 2144, 2145, 2146,  -- Cuirboulli (leather)
-    2148, 2149, 2150, 2151, 2152, 2153,  -- Polished Scale (mail)
-    2156, 2158, 2159, 2160, 3591, 3592,  -- Padded (cloth)
-    2442                                  -- Reinforced Targe (shield)
-);
--- }}}
-
--- {{{ step_6_sweep_world_references_to_clones
--- Build a clone-ID map in a temp table, then JOIN-UPDATE every loot
--- table, vendor, and quest reward in the vanilla profile world DB.
--- Originals retain their canonical stats as Wowhead references, but
--- the live world consistently drops/sells/rewards the server-tuned
--- clones.
-
-CREATE TEMPORARY TABLE _kit_clone_map (
-    old_id INT NOT NULL PRIMARY KEY,
-    new_id INT NOT NULL
-);
-
-INSERT INTO _kit_clone_map (old_id, new_id) VALUES
-    -- Weapons currently in the kit
-    (922,2000922),(924,2000924),(925,2000925),(926,2000926),
-    (3027,2003027),(5211,2005211),(15810,2015810),
-    (1198,2001198),(2027,2002027),(3445,2003445),(23923,2023923),
-    (1197,2001197),(5580,2005580),(853,2000853),(1292,2001292),
-    (2030,2002030),(1159,2001159),(5210,2005210),
-    -- Weapons retired from the kit (kept cloned so loot still drops
-    -- the original-tier vanilla item via the clone — same stats, but
-    -- the clone IS the server-canonical version now)
-    (923,2000923),(927,2000927),(928,2000928),(2209,2002209),
-    -- Shields
-    (2441,2002441),(2445,2002445),(2442,2002442),
-    -- Mail
-    (2148,2002148),(2149,2002149),(2150,2002150),
-    (2151,2002151),(2152,2002152),(2153,2002153),
-    -- Leather
-    (2141,2002141),(2142,2002142),(2143,2002143),
-    (2144,2002144),(2145,2002145),(2146,2002146),
-    -- Cloth
-    (2156,2002156),(2158,2002158),(2159,2002159),
-    (2160,2002160),(3591,2003591),(3592,2003592),
-    -- Cape
-    (2240,2002240),
-    -- Accessories
-    (3422,2003422),(19295,2019295),(46978,2046978),
-    -- Bag / quiver / hearthstone / ammo
-    (4238,2004238),(11362,2011362),(6948,2006948),(2515,2002515);
-
--- Loot tables — every drop source. Each table keyed on `Item`.
-UPDATE creature_loot_template     ct  JOIN _kit_clone_map m ON ct.Item  = m.old_id SET ct.Item  = m.new_id;
-UPDATE gameobject_loot_template   gt  JOIN _kit_clone_map m ON gt.Item  = m.old_id SET gt.Item  = m.new_id;
-UPDATE disenchant_loot_template   dt  JOIN _kit_clone_map m ON dt.Item  = m.old_id SET dt.Item  = m.new_id;
-UPDATE reference_loot_template    rt  JOIN _kit_clone_map m ON rt.Item  = m.old_id SET rt.Item  = m.new_id;
-UPDATE item_loot_template         it  JOIN _kit_clone_map m ON it.Item  = m.old_id SET it.Item  = m.new_id;
-UPDATE mail_loot_template         ml  JOIN _kit_clone_map m ON ml.Item  = m.old_id SET ml.Item  = m.new_id;
-UPDATE pickpocketing_loot_template pp JOIN _kit_clone_map m ON pp.Item  = m.old_id SET pp.Item  = m.new_id;
-UPDATE skinning_loot_template     sk  JOIN _kit_clone_map m ON sk.Item  = m.old_id SET sk.Item  = m.new_id;
-UPDATE fishing_loot_template      fl  JOIN _kit_clone_map m ON fl.Item  = m.old_id SET fl.Item  = m.new_id;
-UPDATE prospecting_loot_template  pr  JOIN _kit_clone_map m ON pr.Item  = m.old_id SET pr.Item  = m.new_id;
-UPDATE milling_loot_template      ml2 JOIN _kit_clone_map m ON ml2.Item = m.old_id SET ml2.Item = m.new_id;
-
--- Vendor stock — column is lowercase `item`.
-UPDATE npc_vendor nv JOIN _kit_clone_map m ON nv.item = m.old_id SET nv.item = m.new_id;
-
--- Quest rewards — four fixed-reward slots and six choice-reward slots.
--- Each column needs its own UPDATE since the temp-table JOIN can only
--- match one column at a time.
-UPDATE quest_template qt JOIN _kit_clone_map m ON qt.RewardItem1 = m.old_id SET qt.RewardItem1 = m.new_id;
-UPDATE quest_template qt JOIN _kit_clone_map m ON qt.RewardItem2 = m.old_id SET qt.RewardItem2 = m.new_id;
-UPDATE quest_template qt JOIN _kit_clone_map m ON qt.RewardItem3 = m.old_id SET qt.RewardItem3 = m.new_id;
-UPDATE quest_template qt JOIN _kit_clone_map m ON qt.RewardItem4 = m.old_id SET qt.RewardItem4 = m.new_id;
-UPDATE quest_template qt JOIN _kit_clone_map m ON qt.RewardChoiceItemID1 = m.old_id SET qt.RewardChoiceItemID1 = m.new_id;
-UPDATE quest_template qt JOIN _kit_clone_map m ON qt.RewardChoiceItemID2 = m.old_id SET qt.RewardChoiceItemID2 = m.new_id;
-UPDATE quest_template qt JOIN _kit_clone_map m ON qt.RewardChoiceItemID3 = m.old_id SET qt.RewardChoiceItemID3 = m.new_id;
-UPDATE quest_template qt JOIN _kit_clone_map m ON qt.RewardChoiceItemID4 = m.old_id SET qt.RewardChoiceItemID4 = m.new_id;
-UPDATE quest_template qt JOIN _kit_clone_map m ON qt.RewardChoiceItemID5 = m.old_id SET qt.RewardChoiceItemID5 = m.new_id;
-UPDATE quest_template qt JOIN _kit_clone_map m ON qt.RewardChoiceItemID6 = m.old_id SET qt.RewardChoiceItemID6 = m.new_id;
-
-DROP TEMPORARY TABLE _kit_clone_map;
+-- Burning Wand (5210) delay 1.4s, was 17-32 / 17.50 DPS
+UPDATE item_template SET dmg_min1 = 19, dmg_max1 = 37 WHERE entry = 5210;
 -- }}}
 
 COMMIT;

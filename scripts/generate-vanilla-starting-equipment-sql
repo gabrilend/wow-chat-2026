@@ -22,13 +22,20 @@
 #   touching unrelated playercreateinfo_item / _skills rows.
 #
 # Entry IDs:
-#   References cloned item IDs (original + 2000000) per 148h's item-
-#   cloning procedure. The clones are created by the E018 patch, which
-#   must apply before this migration takes effect. UpdateFetcher runs
-#   the two in alphabetical order (06-kit-required-level-cap.sql then
-#   02-starting-equipment.sql); FK constraints on playercreateinfo_item
-#   are not enforced, so the order tolerance lets this migration
-#   reference clones that E018 will materialise within the same boot.
+#   References the ORIGINAL, canonical item entries — the same numbers
+#   Wowhead lists. Between 2026-06-12 and 2026-08-07 this script emitted
+#   cloned IDs (original + 2000000) instead; that design is reversed per
+#   148v, because an entry no client has ever cached renders as an
+#   invisible model with a red "?" icon and there is no server-side way
+#   to fix it. Canonical entries every client already knows are correct
+#   by construction.
+#
+#   The level-20 tuning those clones used to carry is now applied in
+#   place to these same originals by the E018 patch
+#   (06-kit-required-level-cap). That patch and this migration touch
+#   different tables — item_template versus playercreateinfo_item — so
+#   they no longer have an ordering dependency between them the way the
+#   clone design did.
 
 set -euo pipefail
 
@@ -42,23 +49,24 @@ OUT="${DIR}/sql/vanilla/db_world.src/02-starting-equipment.apply.sql"
 
 # {{{ armor_sets
 # Six visible-armor pieces a class wears as its base kit. Picks reference
-# clone entry IDs (original + 2000000) per 148h's cloning procedure.
+# canonical item entries; the E018 patch tunes these same entries in
+# place per 148v.
 # Helmets and shoulders deliberately omitted per 148h's "clean
 # silhouette at start" rule.
 declare -A MAIL=(
-    [chest]=2002153 [legs]=2002152 [hands]=2002151
-    [feet]=2002149  [waist]=2002148 [wrist]=2002150
+    [chest]=2153 [legs]=2152 [hands]=2151
+    [feet]=2149  [waist]=2148 [wrist]=2150
 )
 declare -A LEATHER=(
-    [chest]=2002141 [legs]=2002146 [hands]=2002145
-    [feet]=2002143  [waist]=2002142 [wrist]=2002144
+    [chest]=2141 [legs]=2146 [hands]=2145
+    [feet]=2143  [waist]=2142 [wrist]=2144
 )
 declare -A CLOTH=(
-    [chest]=2002160 [legs]=2002159 [hands]=2002158
-    [feet]=2002156  [waist]=2003591 [wrist]=2003592
+    [chest]=2160 [legs]=2159 [hands]=2158
+    [feet]=2156  [waist]=3591 [wrist]=3592
 )
-# Universal cape clone: Rugged Cape (2240 → 2002240).
-CAPE=2002240
+# Universal cape: Rugged Cape (2240).
+CAPE=2240
 # }}}
 
 # {{{ class_armor
@@ -72,15 +80,15 @@ declare -A CLASS_ARMOR=(
 # }}}
 
 # {{{ universal_items
-# Linen Bag clone (4238 → 2004238): three of these in every kit. White,
+# Linen Bag (4238): three of these in every kit. White,
 # RequiredLevel 0, AllowableClass=-1.
-LINEN_BAG=2004238
+LINEN_BAG=4238
 LINEN_COUNT=3
 
-# Hearthstone clone (6948 → 2006948) in every kit. Bind point set by the
+# Hearthstone (6948) in every kit. Bind point set by the
 # ALE auto-equip script (148k) on first login to the character's race's
 # spawn town per 148n.
-HEARTHSTONE=2006948
+HEARTHSTONE=6948
 # }}}
 
 # {{{ race_class_kit
@@ -91,140 +99,140 @@ HEARTHSTONE=2006948
 # override pattern stops compressing — explicit rows are cleaner.
 #
 # Format: newline-separated "itemid amount slotlabel" rows. Slotlabel
-# becomes the Note suffix. Item entries reference clones per 148h.
+# becomes the Note suffix. Item entries are canonical, per 148v.
 declare -A RACE_CLASS_KIT=(
     # Human
-    [1:1]="2001198 1 mainhand-2h-sword"
-    [1:2]="2000924 1 mainhand-2h-mace"
-    [1:4]="2003445 2 dualwield-daggers"
-    [1:5]="2005580 1 mainhand-mace
-2003422 1 offhand-wildflowers
-2005211 1 ranged-wand"
-    [1:8]="2001159 1 mainhand-staff
-2005210 1 ranged-wand"
-    [1:9]="2002027 1 mainhand-sword
-2019295 1 offhand-flower
-2005211 1 ranged-wand"
+    [1:1]="1198 1 mainhand-2h-sword"
+    [1:2]="924 1 mainhand-2h-mace"
+    [1:4]="3445 2 dualwield-daggers"
+    [1:5]="5580 1 mainhand-mace
+3422 1 offhand-wildflowers
+5211 1 ranged-wand"
+    [1:8]="1159 1 mainhand-staff
+5210 1 ranged-wand"
+    [1:9]="2027 1 mainhand-sword
+19295 1 offhand-flower
+5211 1 ranged-wand"
 
     # Orc
-    [2:1]="2000853 1 mainhand-axe
-2002441 1 offhand-shield"
-    [2:3]="2001292 2 dualwield-cleavers
-2003027 1 ranged-bow
-2002515 200 ammo-arrow
-2011362 1 quiver"
-    [2:4]="2000925 1 mainhand-mace
-2003445 1 offhand-dagger"
-    [2:7]="2001197 1 mainhand-2h-mace
-2046978 1 relic-totem"
-    [2:9]="2001159 1 mainhand-staff
-2005210 1 ranged-wand"
+    [2:1]="853 1 mainhand-axe
+2441 1 offhand-shield"
+    [2:3]="1292 2 dualwield-cleavers
+3027 1 ranged-bow
+2515 200 ammo-arrow
+11362 1 quiver"
+    [2:4]="925 1 mainhand-mace
+3445 1 offhand-dagger"
+    [2:7]="1197 1 mainhand-2h-mace
+46978 1 relic-totem"
+    [2:9]="1159 1 mainhand-staff
+5210 1 ranged-wand"
 
     # Dwarf
-    [3:1]="2015810 1 mainhand-polearm"
-    [3:2]="2000925 1 mainhand-mace
-2002445 1 offhand-shield"
-    [3:3]="2000926 1 mainhand-2h-axe
-2003027 1 ranged-bow
-2002515 200 ammo-arrow
-2011362 1 quiver"
-    [3:4]="2003445 2 dualwield-daggers"
-    [3:5]="2005580 1 mainhand-mace
-2003422 1 offhand-wildflowers
-2005211 1 ranged-wand"
+    [3:1]="15810 1 mainhand-polearm"
+    [3:2]="925 1 mainhand-mace
+2445 1 offhand-shield"
+    [3:3]="926 1 mainhand-2h-axe
+3027 1 ranged-bow
+2515 200 ammo-arrow
+11362 1 quiver"
+    [3:4]="3445 2 dualwield-daggers"
+    [3:5]="5580 1 mainhand-mace
+3422 1 offhand-wildflowers
+5211 1 ranged-wand"
 
     # Night Elf
-    [4:1]="2015810 1 mainhand-polearm"
-    [4:3]="2000922 1 mainhand-polearm
-2003027 1 ranged-bow
-2002515 200 ammo-arrow
-2011362 1 quiver"
-    [4:4]="2002027 2 dualwield-swords"
-    [4:5]="2002030 1 mainhand-staff
-2005211 1 ranged-wand"
-    [4:11]="2001159 1 mainhand-staff"
+    [4:1]="15810 1 mainhand-polearm"
+    [4:3]="922 1 mainhand-polearm
+3027 1 ranged-bow
+2515 200 ammo-arrow
+11362 1 quiver"
+    [4:4]="2027 2 dualwield-swords"
+    [4:5]="2030 1 mainhand-staff
+5211 1 ranged-wand"
+    [4:11]="1159 1 mainhand-staff"
 
     # Undead
-    [5:1]="2000926 1 mainhand-2h-axe"
-    [5:4]="2002027 1 mainhand-sword
-2003445 1 offhand-dagger"
-    [5:5]="2023923 1 mainhand-dagger
-2003422 1 offhand-wildflowers
-2005211 1 ranged-wand"
-    [5:8]="2002030 1 mainhand-staff
-2005210 1 ranged-wand"
-    [5:9]="2002027 1 mainhand-sword
-2019295 1 offhand-flower
-2005210 1 ranged-wand"
+    [5:1]="926 1 mainhand-2h-axe"
+    [5:4]="2027 1 mainhand-sword
+3445 1 offhand-dagger"
+    [5:5]="23923 1 mainhand-dagger
+3422 1 offhand-wildflowers
+5211 1 ranged-wand"
+    [5:8]="2030 1 mainhand-staff
+5210 1 ranged-wand"
+    [5:9]="2027 1 mainhand-sword
+19295 1 offhand-flower
+5210 1 ranged-wand"
 
     # Tauren
-    [6:1]="2015810 1 mainhand-polearm"
-    [6:3]="2002030 1 mainhand-staff
-2003027 1 ranged-bow
-2002515 200 ammo-arrow
-2011362 1 quiver"
-    [6:7]="2001197 1 mainhand-2h-mace
-2046978 1 relic-totem"
-    [6:11]="2001159 1 mainhand-staff"
+    [6:1]="15810 1 mainhand-polearm"
+    [6:3]="2030 1 mainhand-staff
+3027 1 ranged-bow
+2515 200 ammo-arrow
+11362 1 quiver"
+    [6:7]="1197 1 mainhand-2h-mace
+46978 1 relic-totem"
+    [6:11]="1159 1 mainhand-staff"
 
     # Gnome
-    [7:1]="2002027 2 dualwield-swords"
-    [7:4]="2003445 2 dualwield-daggers"
-    [7:8]="2002030 1 mainhand-staff
-2005210 1 ranged-wand"
-    [7:9]="2002027 1 mainhand-sword
-2019295 1 offhand-flower
-2005211 1 ranged-wand"
+    [7:1]="2027 2 dualwield-swords"
+    [7:4]="3445 2 dualwield-daggers"
+    [7:8]="2030 1 mainhand-staff
+5210 1 ranged-wand"
+    [7:9]="2027 1 mainhand-sword
+19295 1 offhand-flower
+5211 1 ranged-wand"
 
     # Troll
-    [8:1]="2000926 1 mainhand-2h-axe"
-    [8:3]="2001292 2 dualwield-cleavers
-2003027 1 ranged-bow
-2002515 200 ammo-arrow
-2011362 1 quiver"
-    [8:4]="2003445 2 dualwield-daggers"
-    [8:5]="2000925 1 mainhand-mace
-2003422 1 offhand-wildflowers
-2005211 1 ranged-wand"
-    [8:7]="2000926 1 mainhand-2h-axe
-2046978 1 relic-totem"
-    [8:8]="2023923 1 mainhand-dagger
-2019295 1 offhand-flower
-2005210 1 ranged-wand"
+    [8:1]="926 1 mainhand-2h-axe"
+    [8:3]="1292 2 dualwield-cleavers
+3027 1 ranged-bow
+2515 200 ammo-arrow
+11362 1 quiver"
+    [8:4]="3445 2 dualwield-daggers"
+    [8:5]="925 1 mainhand-mace
+3422 1 offhand-wildflowers
+5211 1 ranged-wand"
+    [8:7]="926 1 mainhand-2h-axe
+46978 1 relic-totem"
+    [8:8]="23923 1 mainhand-dagger
+19295 1 offhand-flower
+5210 1 ranged-wand"
 
     # Blood Elf
-    [10:2]="2001198 1 mainhand-2h-sword"
-    [10:3]="2015810 1 mainhand-polearm
-2003027 1 ranged-bow
-2002515 200 ammo-arrow
-2011362 1 quiver"
-    [10:4]="2002027 2 dualwield-swords"
-    [10:5]="2023923 1 mainhand-dagger
-2003422 1 offhand-wildflowers
-2005211 1 ranged-wand"
-    [10:8]="2002027 1 mainhand-sword
-2019295 1 offhand-flower
-2005210 1 ranged-wand"
-    [10:9]="2023923 1 mainhand-dagger
-2019295 1 offhand-flower
-2005210 1 ranged-wand"
+    [10:2]="1198 1 mainhand-2h-sword"
+    [10:3]="15810 1 mainhand-polearm
+3027 1 ranged-bow
+2515 200 ammo-arrow
+11362 1 quiver"
+    [10:4]="2027 2 dualwield-swords"
+    [10:5]="23923 1 mainhand-dagger
+3422 1 offhand-wildflowers
+5211 1 ranged-wand"
+    [10:8]="2027 1 mainhand-sword
+19295 1 offhand-flower
+5210 1 ranged-wand"
+    [10:9]="23923 1 mainhand-dagger
+19295 1 offhand-flower
+5210 1 ranged-wand"
 
     # Draenei
-    [11:1]="2005580 1 mainhand-mace
-2002445 1 offhand-shield"
-    [11:2]="2000924 1 mainhand-2h-mace"
-    [11:3]="2001198 1 mainhand-2h-sword
-2003027 1 ranged-bow
-2002515 200 ammo-arrow
-2011362 1 quiver"
-    [11:5]="2005580 1 mainhand-mace
-2003422 1 offhand-wildflowers
-2005211 1 ranged-wand"
-    [11:7]="2000853 1 mainhand-axe
-2002445 1 offhand-shield
-2046978 1 relic-totem"
-    [11:8]="2002030 1 mainhand-staff
-2005210 1 ranged-wand"
+    [11:1]="5580 1 mainhand-mace
+2445 1 offhand-shield"
+    [11:2]="924 1 mainhand-2h-mace"
+    [11:3]="1198 1 mainhand-2h-sword
+3027 1 ranged-bow
+2515 200 ammo-arrow
+11362 1 quiver"
+    [11:5]="5580 1 mainhand-mace
+3422 1 offhand-wildflowers
+5211 1 ranged-wand"
+    [11:7]="853 1 mainhand-axe
+2445 1 offhand-shield
+46978 1 relic-totem"
+    [11:8]="2030 1 mainhand-staff
+5210 1 ranged-wand"
 )
 # }}}
 
@@ -371,8 +379,11 @@ emit_header() {
 --
 -- Purpose: equip every newly-created vanilla character (level-20 start
 -- per C007c) with a full white-quality, race-and-class-appropriate
--- starter kit per the 148h thematic-curation design. References cloned
--- item entries (original_entry + 2000000) created by the E018 patch.
+-- starter kit per the 148h thematic-curation design. References the
+-- canonical item entries, which the E018 patch tunes in place to
+-- RequiredLevel 20 and level-appropriate damage (148v reversal of the
+-- clone design — a cloned entry no client has cached renders as an
+-- invisible model with a red "?" icon).
 --
 -- Idempotent: re-running deletes prior vanilla-148h rows by Note prefix
 -- and re-inserts. Default shirt/pants/quest-starter rows untouched.
@@ -390,7 +401,8 @@ emit_header() {
 --   issues/148n-vanilla-racial-starting-zones.md      -- bind targets
 --   issues/148o-vanilla-spawn-and-kit-validation-pass.md -- test pass
 --   issues/148p-wand-spell-dps-parity-rebalance.md    -- wand follow-up
---   sql/vanilla/db_world.src/06-kit-required-level-cap.apply.sql  -- clones
+--   issues/148v-cloned-kit-items-render-invisible.md  -- why entries are canonical
+--   sql/vanilla/db_world.src/06-kit-required-level-cap.apply.sql  -- in-place tuning
 
 START TRANSACTION;
 

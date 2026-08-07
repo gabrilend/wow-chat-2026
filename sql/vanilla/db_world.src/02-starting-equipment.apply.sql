@@ -8,8 +8,11 @@
 --
 -- Purpose: equip every newly-created vanilla character (level-20 start
 -- per C007c) with a full white-quality, race-and-class-appropriate
--- starter kit per the 148h thematic-curation design. References cloned
--- item entries (original_entry + 2000000) created by the E018 patch.
+-- starter kit per the 148h thematic-curation design. References the
+-- canonical item entries, which the E018 patch tunes in place to
+-- RequiredLevel 20 and level-appropriate damage (148v reversal of the
+-- clone design — a cloned entry no client has cached renders as an
+-- invisible model with a red "?" icon).
 --
 -- Idempotent: re-running deletes prior vanilla-148h rows by Note prefix
 -- and re-inserts. Default shirt/pants/quest-starter rows untouched.
@@ -27,7 +30,8 @@
 --   issues/148n-vanilla-racial-starting-zones.md      -- bind targets
 --   issues/148o-vanilla-spawn-and-kit-validation-pass.md -- test pass
 --   issues/148p-wand-spell-dps-parity-rebalance.md    -- wand follow-up
---   sql/vanilla/db_world.src/06-kit-required-level-cap.apply.sql  -- clones
+--   issues/148v-cloned-kit-items-render-invisible.md  -- why entries are canonical
+--   sql/vanilla/db_world.src/06-kit-required-level-cap.apply.sql  -- in-place tuning
 
 START TRANSACTION;
 
@@ -44,689 +48,689 @@ DELETE FROM playercreateinfo_skills
 -- {{{ playercreateinfo_item — per (race, class) starter kit
 
 -- warrior (class 1)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2001198, 1, 'vanilla-148h-mainhand-2h-sword');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 1198, 1, 'vanilla-148h-mainhand-2h-sword');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 1, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- paladin (class 2)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2000924, 1, 'vanilla-148h-mainhand-2h-mace');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 924, 1, 'vanilla-148h-mainhand-2h-mace');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 2, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- rogue (class 4)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2003445, 2, 'vanilla-148h-dualwield-daggers');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 3445, 2, 'vanilla-148h-dualwield-daggers');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 4, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- priest (class 5)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2005580, 1, 'vanilla-148h-mainhand-mace');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2003422, 1, 'vanilla-148h-offhand-wildflowers');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2005211, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 5580, 1, 'vanilla-148h-mainhand-mace');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 3422, 1, 'vanilla-148h-offhand-wildflowers');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 5211, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 5, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- mage (class 8)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2001159, 1, 'vanilla-148h-mainhand-staff');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2005210, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 1159, 1, 'vanilla-148h-mainhand-staff');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 5210, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 8, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warlock (class 9)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2002027, 1, 'vanilla-148h-mainhand-sword');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2019295, 1, 'vanilla-148h-offhand-flower');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2005211, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 2027, 1, 'vanilla-148h-mainhand-sword');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 19295, 1, 'vanilla-148h-offhand-flower');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 5211, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (1, 9, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warrior (class 1)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2000853, 1, 'vanilla-148h-mainhand-axe');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2002441, 1, 'vanilla-148h-offhand-shield');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 853, 1, 'vanilla-148h-mainhand-axe');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 2441, 1, 'vanilla-148h-offhand-shield');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 1, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- hunter (class 3)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2001292, 2, 'vanilla-148h-dualwield-cleavers');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2003027, 1, 'vanilla-148h-ranged-bow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2002515, 200, 'vanilla-148h-ammo-arrow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2011362, 1, 'vanilla-148h-quiver');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 1292, 2, 'vanilla-148h-dualwield-cleavers');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 3027, 1, 'vanilla-148h-ranged-bow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 2515, 200, 'vanilla-148h-ammo-arrow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 11362, 1, 'vanilla-148h-quiver');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 3, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- rogue (class 4)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2000925, 1, 'vanilla-148h-mainhand-mace');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2003445, 1, 'vanilla-148h-offhand-dagger');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 925, 1, 'vanilla-148h-mainhand-mace');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 3445, 1, 'vanilla-148h-offhand-dagger');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 4, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- shaman (class 7)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2001197, 1, 'vanilla-148h-mainhand-2h-mace');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2046978, 1, 'vanilla-148h-relic-totem');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 1197, 1, 'vanilla-148h-mainhand-2h-mace');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 46978, 1, 'vanilla-148h-relic-totem');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 7, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warlock (class 9)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2001159, 1, 'vanilla-148h-mainhand-staff');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2005210, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 1159, 1, 'vanilla-148h-mainhand-staff');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 5210, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (2, 9, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warrior (class 1)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2015810, 1, 'vanilla-148h-mainhand-polearm');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 15810, 1, 'vanilla-148h-mainhand-polearm');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 1, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- paladin (class 2)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2000925, 1, 'vanilla-148h-mainhand-mace');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2002445, 1, 'vanilla-148h-offhand-shield');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 925, 1, 'vanilla-148h-mainhand-mace');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 2445, 1, 'vanilla-148h-offhand-shield');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 2, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- hunter (class 3)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2000926, 1, 'vanilla-148h-mainhand-2h-axe');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2003027, 1, 'vanilla-148h-ranged-bow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2002515, 200, 'vanilla-148h-ammo-arrow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2011362, 1, 'vanilla-148h-quiver');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 926, 1, 'vanilla-148h-mainhand-2h-axe');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 3027, 1, 'vanilla-148h-ranged-bow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 2515, 200, 'vanilla-148h-ammo-arrow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 11362, 1, 'vanilla-148h-quiver');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 3, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- rogue (class 4)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2003445, 2, 'vanilla-148h-dualwield-daggers');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 3445, 2, 'vanilla-148h-dualwield-daggers');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 4, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- priest (class 5)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2005580, 1, 'vanilla-148h-mainhand-mace');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2003422, 1, 'vanilla-148h-offhand-wildflowers');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2005211, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 5580, 1, 'vanilla-148h-mainhand-mace');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 3422, 1, 'vanilla-148h-offhand-wildflowers');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 5211, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (3, 5, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warrior (class 1)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2015810, 1, 'vanilla-148h-mainhand-polearm');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 15810, 1, 'vanilla-148h-mainhand-polearm');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 1, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- hunter (class 3)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2000922, 1, 'vanilla-148h-mainhand-polearm');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2003027, 1, 'vanilla-148h-ranged-bow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2002515, 200, 'vanilla-148h-ammo-arrow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2011362, 1, 'vanilla-148h-quiver');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 922, 1, 'vanilla-148h-mainhand-polearm');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 3027, 1, 'vanilla-148h-ranged-bow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 2515, 200, 'vanilla-148h-ammo-arrow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 11362, 1, 'vanilla-148h-quiver');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 3, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- rogue (class 4)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2002027, 2, 'vanilla-148h-dualwield-swords');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 2027, 2, 'vanilla-148h-dualwield-swords');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 4, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- priest (class 5)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2002030, 1, 'vanilla-148h-mainhand-staff');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2005211, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 2030, 1, 'vanilla-148h-mainhand-staff');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 5211, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 5, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- druid (class 11)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2001159, 1, 'vanilla-148h-mainhand-staff');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 1159, 1, 'vanilla-148h-mainhand-staff');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (4, 11, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warrior (class 1)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2000926, 1, 'vanilla-148h-mainhand-2h-axe');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 926, 1, 'vanilla-148h-mainhand-2h-axe');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 1, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- rogue (class 4)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2002027, 1, 'vanilla-148h-mainhand-sword');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2003445, 1, 'vanilla-148h-offhand-dagger');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 2027, 1, 'vanilla-148h-mainhand-sword');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 3445, 1, 'vanilla-148h-offhand-dagger');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 4, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- priest (class 5)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2023923, 1, 'vanilla-148h-mainhand-dagger');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2003422, 1, 'vanilla-148h-offhand-wildflowers');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2005211, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 23923, 1, 'vanilla-148h-mainhand-dagger');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 3422, 1, 'vanilla-148h-offhand-wildflowers');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 5211, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 5, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- mage (class 8)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2002030, 1, 'vanilla-148h-mainhand-staff');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2005210, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 2030, 1, 'vanilla-148h-mainhand-staff');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 5210, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 8, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warlock (class 9)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2002027, 1, 'vanilla-148h-mainhand-sword');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2019295, 1, 'vanilla-148h-offhand-flower');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2005210, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 2027, 1, 'vanilla-148h-mainhand-sword');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 19295, 1, 'vanilla-148h-offhand-flower');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 5210, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (5, 9, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warrior (class 1)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2015810, 1, 'vanilla-148h-mainhand-polearm');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 15810, 1, 'vanilla-148h-mainhand-polearm');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 1, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- hunter (class 3)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2002030, 1, 'vanilla-148h-mainhand-staff');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2003027, 1, 'vanilla-148h-ranged-bow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2002515, 200, 'vanilla-148h-ammo-arrow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2011362, 1, 'vanilla-148h-quiver');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2030, 1, 'vanilla-148h-mainhand-staff');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 3027, 1, 'vanilla-148h-ranged-bow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 2515, 200, 'vanilla-148h-ammo-arrow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 11362, 1, 'vanilla-148h-quiver');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 3, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- shaman (class 7)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2001197, 1, 'vanilla-148h-mainhand-2h-mace');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2046978, 1, 'vanilla-148h-relic-totem');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 1197, 1, 'vanilla-148h-mainhand-2h-mace');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 46978, 1, 'vanilla-148h-relic-totem');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 7, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- druid (class 11)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2001159, 1, 'vanilla-148h-mainhand-staff');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 1159, 1, 'vanilla-148h-mainhand-staff');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (6, 11, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warrior (class 1)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2002027, 2, 'vanilla-148h-dualwield-swords');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 2027, 2, 'vanilla-148h-dualwield-swords');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 1, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- rogue (class 4)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2003445, 2, 'vanilla-148h-dualwield-daggers');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 3445, 2, 'vanilla-148h-dualwield-daggers');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 4, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- mage (class 8)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2002030, 1, 'vanilla-148h-mainhand-staff');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2005210, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 2030, 1, 'vanilla-148h-mainhand-staff');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 5210, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 8, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warlock (class 9)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2002027, 1, 'vanilla-148h-mainhand-sword');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2019295, 1, 'vanilla-148h-offhand-flower');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2005211, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 2027, 1, 'vanilla-148h-mainhand-sword');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 19295, 1, 'vanilla-148h-offhand-flower');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 5211, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (7, 9, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warrior (class 1)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2000926, 1, 'vanilla-148h-mainhand-2h-axe');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 926, 1, 'vanilla-148h-mainhand-2h-axe');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 1, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- hunter (class 3)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2001292, 2, 'vanilla-148h-dualwield-cleavers');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2003027, 1, 'vanilla-148h-ranged-bow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2002515, 200, 'vanilla-148h-ammo-arrow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2011362, 1, 'vanilla-148h-quiver');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 1292, 2, 'vanilla-148h-dualwield-cleavers');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 3027, 1, 'vanilla-148h-ranged-bow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 2515, 200, 'vanilla-148h-ammo-arrow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 11362, 1, 'vanilla-148h-quiver');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 3, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- rogue (class 4)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2003445, 2, 'vanilla-148h-dualwield-daggers');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 3445, 2, 'vanilla-148h-dualwield-daggers');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 4, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- priest (class 5)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2000925, 1, 'vanilla-148h-mainhand-mace');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2003422, 1, 'vanilla-148h-offhand-wildflowers');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2005211, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 925, 1, 'vanilla-148h-mainhand-mace');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 3422, 1, 'vanilla-148h-offhand-wildflowers');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 5211, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 5, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- shaman (class 7)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2000926, 1, 'vanilla-148h-mainhand-2h-axe');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2046978, 1, 'vanilla-148h-relic-totem');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 926, 1, 'vanilla-148h-mainhand-2h-axe');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 46978, 1, 'vanilla-148h-relic-totem');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 7, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- mage (class 8)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2023923, 1, 'vanilla-148h-mainhand-dagger');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2019295, 1, 'vanilla-148h-offhand-flower');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2005210, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 23923, 1, 'vanilla-148h-mainhand-dagger');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 19295, 1, 'vanilla-148h-offhand-flower');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 5210, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (8, 8, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- paladin (class 2)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2001198, 1, 'vanilla-148h-mainhand-2h-sword');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 1198, 1, 'vanilla-148h-mainhand-2h-sword');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 2, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- hunter (class 3)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2015810, 1, 'vanilla-148h-mainhand-polearm');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2003027, 1, 'vanilla-148h-ranged-bow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2002515, 200, 'vanilla-148h-ammo-arrow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2011362, 1, 'vanilla-148h-quiver');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 15810, 1, 'vanilla-148h-mainhand-polearm');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 3027, 1, 'vanilla-148h-ranged-bow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 2515, 200, 'vanilla-148h-ammo-arrow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 11362, 1, 'vanilla-148h-quiver');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 3, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- rogue (class 4)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2002027, 2, 'vanilla-148h-dualwield-swords');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 2027, 2, 'vanilla-148h-dualwield-swords');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 4, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- priest (class 5)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2023923, 1, 'vanilla-148h-mainhand-dagger');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2003422, 1, 'vanilla-148h-offhand-wildflowers');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2005211, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 23923, 1, 'vanilla-148h-mainhand-dagger');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 3422, 1, 'vanilla-148h-offhand-wildflowers');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 5211, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 5, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- mage (class 8)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2002027, 1, 'vanilla-148h-mainhand-sword');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2019295, 1, 'vanilla-148h-offhand-flower');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2005210, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 2027, 1, 'vanilla-148h-mainhand-sword');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 19295, 1, 'vanilla-148h-offhand-flower');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 5210, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 8, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warlock (class 9)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2023923, 1, 'vanilla-148h-mainhand-dagger');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2019295, 1, 'vanilla-148h-offhand-flower');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2005210, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 23923, 1, 'vanilla-148h-mainhand-dagger');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 19295, 1, 'vanilla-148h-offhand-flower');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 5210, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (10, 9, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- warrior (class 1)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2005580, 1, 'vanilla-148h-mainhand-mace');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2002445, 1, 'vanilla-148h-offhand-shield');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 5580, 1, 'vanilla-148h-mainhand-mace');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 2445, 1, 'vanilla-148h-offhand-shield');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 1, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- paladin (class 2)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2002153, 1, 'vanilla-148h-mail-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2002152, 1, 'vanilla-148h-mail-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2002151, 1, 'vanilla-148h-mail-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2002149, 1, 'vanilla-148h-mail-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2002148, 1, 'vanilla-148h-mail-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2002150, 1, 'vanilla-148h-mail-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2000924, 1, 'vanilla-148h-mainhand-2h-mace');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2153, 1, 'vanilla-148h-mail-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2152, 1, 'vanilla-148h-mail-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2151, 1, 'vanilla-148h-mail-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2149, 1, 'vanilla-148h-mail-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2148, 1, 'vanilla-148h-mail-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2150, 1, 'vanilla-148h-mail-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 924, 1, 'vanilla-148h-mainhand-2h-mace');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 2, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- hunter (class 3)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2001198, 1, 'vanilla-148h-mainhand-2h-sword');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2003027, 1, 'vanilla-148h-ranged-bow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2002515, 200, 'vanilla-148h-ammo-arrow');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2011362, 1, 'vanilla-148h-quiver');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 1198, 1, 'vanilla-148h-mainhand-2h-sword');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 3027, 1, 'vanilla-148h-ranged-bow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 2515, 200, 'vanilla-148h-ammo-arrow');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 11362, 1, 'vanilla-148h-quiver');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 3, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- priest (class 5)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2005580, 1, 'vanilla-148h-mainhand-mace');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2003422, 1, 'vanilla-148h-offhand-wildflowers');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2005211, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 5580, 1, 'vanilla-148h-mainhand-mace');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 3422, 1, 'vanilla-148h-offhand-wildflowers');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 5211, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 5, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- shaman (class 7)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2002141, 1, 'vanilla-148h-leather-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2002146, 1, 'vanilla-148h-leather-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2002145, 1, 'vanilla-148h-leather-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2002143, 1, 'vanilla-148h-leather-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2002142, 1, 'vanilla-148h-leather-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2002144, 1, 'vanilla-148h-leather-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2000853, 1, 'vanilla-148h-mainhand-axe');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2002445, 1, 'vanilla-148h-offhand-shield');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2046978, 1, 'vanilla-148h-relic-totem');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2141, 1, 'vanilla-148h-leather-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2146, 1, 'vanilla-148h-leather-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2145, 1, 'vanilla-148h-leather-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2143, 1, 'vanilla-148h-leather-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2142, 1, 'vanilla-148h-leather-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2144, 1, 'vanilla-148h-leather-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 853, 1, 'vanilla-148h-mainhand-axe');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 2445, 1, 'vanilla-148h-offhand-shield');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 46978, 1, 'vanilla-148h-relic-totem');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 7, 6948, 1, 'vanilla-148h-hearthstone');
 
 -- mage (class 8)
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2002160, 1, 'vanilla-148h-cloth-chest');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2002159, 1, 'vanilla-148h-cloth-legs');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2002158, 1, 'vanilla-148h-cloth-hands');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2002156, 1, 'vanilla-148h-cloth-feet');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2003591, 1, 'vanilla-148h-cloth-waist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2003592, 1, 'vanilla-148h-cloth-wrist');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2002240, 1, 'vanilla-148h-cape');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2002030, 1, 'vanilla-148h-mainhand-staff');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2005210, 1, 'vanilla-148h-ranged-wand');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2004238, 3, 'vanilla-148h-bag-linen');
-INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2006948, 1, 'vanilla-148h-hearthstone');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2160, 1, 'vanilla-148h-cloth-chest');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2159, 1, 'vanilla-148h-cloth-legs');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2158, 1, 'vanilla-148h-cloth-hands');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2156, 1, 'vanilla-148h-cloth-feet');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 3591, 1, 'vanilla-148h-cloth-waist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 3592, 1, 'vanilla-148h-cloth-wrist');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2240, 1, 'vanilla-148h-cape');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 2030, 1, 'vanilla-148h-mainhand-staff');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 5210, 1, 'vanilla-148h-ranged-wand');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 4238, 3, 'vanilla-148h-bag-linen');
+INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (11, 8, 6948, 1, 'vanilla-148h-hearthstone');
 -- }}}
 
 COMMIT;
