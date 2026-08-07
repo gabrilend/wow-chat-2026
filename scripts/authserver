@@ -19,6 +19,10 @@ fi
 # line (that flag mutates PROFILE, not the default a bare run would use).
 DEFAULT_PROFILE="${PROFILE}"
 
+# --debug launches the server under a crash-backtrace catcher (see
+# scripts/debug-run.sh). Off by default so normal runs are untouched.
+DEBUG_MODE=0
+
 # =============================================================================
 # Argument Parsing
 # =============================================================================
@@ -46,6 +50,10 @@ parse_args() {
                 fi
                 shift
                 ;;
+            --debug)
+                DEBUG_MODE=1
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -69,6 +77,10 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
+    echo "  --debug            Run under a crash-backtrace catcher; on a"
+    echo "                     segfault a symbolized stack trace is written to"
+    echo "                     tmp/debug-${PROFILE}/ (uses gdb if installed,"
+    echo "                     otherwise an LD_PRELOAD shim + addr2line)"
     echo "  --help             Show this help message"
     echo ""
     echo "Current profile: ${PROFILE}"
@@ -168,4 +180,13 @@ pkill -f "${INSTALL_DIR%-*}-"*"/bin/authserver" 2>/dev/null || true
 echo "Starting authserver (profile: ${PROFILE})"
 export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
 cd "${INSTALL_DIR}/bin"
-./authserver
+
+# Normal path: exec the binary directly. Debug path: hand it to the crash
+# harness, which runs it under gdb (or the shim) and dumps a backtrace to
+# tmp/ if it dies. Same binary, same cwd/env either way.
+if [[ "${DEBUG_MODE}" -eq 1 ]]; then
+    source "${DIR}/scripts/debug-run.sh"
+    debug_run_binary "./authserver" "authserver"
+else
+    ./authserver
+fi

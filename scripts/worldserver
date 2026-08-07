@@ -18,6 +18,10 @@ fi
 # line (that flag mutates PROFILE, not the default a bare run would use).
 DEFAULT_PROFILE="${PROFILE}"
 
+# --debug launches the server under a crash-backtrace catcher (see
+# scripts/debug-run.sh). Off by default so normal runs are untouched.
+DEBUG_MODE=0
+
 # =============================================================================
 # Argument Parsing
 # =============================================================================
@@ -45,6 +49,10 @@ parse_args() {
                 fi
                 shift
                 ;;
+            --debug)
+                DEBUG_MODE=1
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -67,6 +75,10 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
+    echo "  --debug            Run under a crash-backtrace catcher; on a"
+    echo "                     segfault a symbolized stack trace is written to"
+    echo "                     tmp/debug-${PROFILE}/ (uses gdb if installed,"
+    echo "                     otherwise an LD_PRELOAD shim + addr2line)"
     echo "  --help             Show this help message"
     echo ""
     echo "Current profile: ${PROFILE}"
@@ -153,7 +165,26 @@ fi
 pkill -f "${INSTALL_DIR%-*}-"*"/bin/worldserver" 2>/dev/null || true
 "${DIR}/scripts/set-active-realm" "${PROFILE}"
 
+# Auto-enable the crash catcher for debug builds. `compile --debug` stamps
+# bin/.build-type = "Debug"; when present, run under the catcher even without the
+# runtime --debug flag (which stays as a manual override for RelWithDebInfo
+# builds). Self-correcting: every build restamps this file and promote overwrites
+# it, so the stamp always reflects the currently-installed binary.
+if [[ -f "${INSTALL_DIR}/bin/.build-type" ]] && [[ "$(cat "${INSTALL_DIR}/bin/.build-type")" == "Debug" ]]; then
+    [[ "${DEBUG_MODE}" -ne 1 ]] && echo "Debug build detected — enabling crash catcher automatically."
+    DEBUG_MODE=1
+fi
+
 echo "Starting worldserver (profile: ${PROFILE})"
 export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
 cd "${INSTALL_DIR}/bin"
-./worldserver
+
+# Normal path: exec the binary directly. Debug path: hand it to the crash
+# harness, which runs it under gdb (or the shim) and dumps a backtrace to
+# tmp/ if it dies. Same binary, same cwd/env either way.
+if [[ "${DEBUG_MODE}" -eq 1 ]]; then
+    source "${DIR}/scripts/debug-run.sh"
+    debug_run_binary "./worldserver" "worldserver"
+else
+    ./worldserver
+fi
