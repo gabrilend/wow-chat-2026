@@ -13,7 +13,7 @@ at the project root: `vanilla`, `alpha`, `release`, or `beta`). See
 | `installed-files-{profile}/etc/authserver.conf` | Login server | Yes |
 | `installed-files-{profile}/etc/worldserver.conf` | Game server | Most settings |
 | `installed-files-{profile}/etc/modules/mod_ale.conf` | Lua scripting engine | Yes |
-| `mysql/conf/my.cnf` | Database server | Yes |
+| `scripts/mysql-install` | Database server settings (generates my.cnf) | Yes |
 | `src/lua/periodic_events.lua` | Game loop timings | `.reload ale` |
 | `secrets.conf` | Database credentials | Yes |
 
@@ -58,7 +58,28 @@ All three databases connect to the local MySQL instance on port 3307:
 
 Credentials are stored in `secrets.conf` (gitignored).
 
-### MySQL Configuration (mysql/conf/my.cnf)
+### MySQL Configuration (written by scripts/mysql-install)
+
+The file the server reads is `mysql/conf/my.cnf`, and it is generated
+rather than edited. The settings live inside `scripts/mysql-install`,
+which writes them out with this project's absolute path substituted
+into the seven places that need it — the base directory, the data
+directory, the temp directory, the socket, and three log paths.
+
+They live inside the script rather than in a template file so that a
+copy of `scripts/mysql-install` downloaded on its own, onto a machine
+that has never seen this project, can still set up a working server.
+That is also what fixed the problem in issue 154: `my.cnf` used to be
+tracked in git with one machine's absolute paths in it, so any copy
+taken elsewhere started a server pointed at directories that did not
+exist there.
+
+To change a setting, change it in that script and run
+`scripts/mysql-install --regenerate-config`. The installer also
+rewrites the file on its own when it finds one whose paths resolve
+somewhere other than the current project, keeping the old one beside it
+as `my.cnf.bak`. Paths are compared after resolving symlinks, so a
+project reachable by more than one route is not mistaken for a move.
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
@@ -303,7 +324,8 @@ wow-chat-2026/
 │   └── modules/
 │       └── mod_ale.conf         # Lua scripting engine (mod_eluna.conf on alpha)
 ├── mysql/conf/
-│   └── my.cnf                   # MySQL server config
+│   └── my.cnf                   # MySQL server config, written per machine
+│                                #   by scripts/mysql-install
 ├── src/lua/
 │   ├── periodic_events.lua      # Game loop timings
 │   ├── ambush.lua               # Ambush distances
@@ -331,9 +353,13 @@ wow-chat-2026/
 
 ### Database Changes
 
-1. Stop MySQL: `./scripts/mysql-stop`
-2. Edit `mysql/conf/my.cnf`
-3. Start MySQL: `./scripts/mysql-start`
+1. Stop MySQL: `./scripts/stop-mysql`
+2. Edit the settings in `scripts/mysql-install` (its `write_server_config`)
+3. Regenerate the config: `./scripts/mysql-install --regenerate-config`
+4. Start MySQL: `./scripts/start-mysql`
+
+Editing `mysql/conf/my.cnf` directly works until the next regeneration,
+which replaces it. The copy inside the script is the one that lasts.
 
 ---
 

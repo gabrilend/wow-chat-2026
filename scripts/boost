@@ -1,96 +1,797 @@
 #!/bin/bash
 # scripts/boost - Download and compile Boost from source
-# Installs to libs/boost with required components for AzerothCore
+#
+# Installs a static Boost holding the six component libraries
+# AzerothCore links against. The server build is pointed at this copy
+# rather than at whatever the machine's package manager offers, so that
+# every machine running this project compiles against the same Boost
+# regardless of what its distribution ships.
+#
+# This file is self-contained on purpose. It can be downloaded on its
+# own, dropped onto a machine that has never seen this project, and run
+# with --dir to say where the project should go. Nothing else from the
+# repository needs to be present.
+#
+# Self-contained means the environment checks below are duplicated in
+# scripts/ccache and scripts/mysql-install, which face the same
+# problem. A fix to one is a fix to make three times. That was the
+# trade taken deliberately: one file a stranger can use beats one copy
+# a maintainer can edit. See issue 154.
 
-DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
-
-set -e
+set -euo pipefail
 
 # =============================================================================
 # Configuration
 # =============================================================================
 
+# Pinned rather than tracking the newest release, so that a machine
+# built today and a machine built next year compile the server against
+# the same library. Bump deliberately, and rebuild the server after.
 BOOST_VERSION="1.81.0"
 BOOST_VERSION_UNDERSCORE="1_81_0"
-BOOST_DIR="${DIR}/libs/boost"
-THREADS="${THREADS:-4}"
+
+# The SourceForge download is a redirect into a mirror network, which
+# makes it the least reliable of this project's three dependency
+# downloads. The gzip check after the transfer exists because a failed
+# mirror hands back an HTML error page with a success status, which
+# curl accepts and tar then rejects with a message about the archive
+# format rather than about the download.
+BOOST_HOST="sourceforge.net"
+
+# Boost's own translation units are small next to a database server's.
+# A gigabyte per parallel job leaves the processor count as the binding
+# constraint on anything but a very small machine.
+BOOST_GB_PER_JOB=1
+
+# Taken off the top of total memory before working out how many jobs
+# fit, for the operating system and whatever else the machine was
+# already doing. Without it the arithmetic assumes a machine doing
+# nothing but this build, which is true of a build server and false of
+# a laptop.
+MEMORY_RESERVE_GB=2
 
 # =============================================================================
-# Argument Parsing
+# Environment checks
 # =============================================================================
+#
+# Requirements accumulate in these arrays as they are declared below,
+# and are all evaluated together, so that a machine missing four things
+# is told about four things rather than about the first one four times.
 
-# {{{ show_help
-show_help() {
-    echo "Usage: ./scripts/boost"
+TOOL_NAMES=()
+TOOL_REASONS=()
+TOOL_PACKAGES=()
+
+HEADER_NAMES=()
+HEADER_REASONS=()
+HEADER_PACKAGES=()
+
+HOST_NAMES=()
+HOST_REASONS=()
+
+# {{{ PACKAGE_HINTS
+# The same piece of software carries a different package name on every
+# distribution, and that name is the one thing a stuck operator
+# actually needs. A table keyed on a short handle, holding one
+# "manager:package" pair per distribution family, lets the report print
+# the exact command for the machine it is running on.
+#
+# The table covers every handle used by any of the three dependency
+# scripts, not just this one's, so that this whole section stays
+# byte-identical across all three. That is what makes three
+# hand-maintained copies checkable: `diff` on two of these files should
+# report nothing between the configuration at the top and the arguments
+# at the bottom.
+declare -A PACKAGE_HINTS=(
+    [compiler]="apt:g++ dnf:gcc-c++ pacman:gcc xbps:gcc apk:g++ zypper:gcc-c++ brew:gcc"
+    [cmake]="apt:cmake dnf:cmake pacman:cmake xbps:cmake apk:cmake zypper:cmake brew:cmake"
+    [make]="apt:make dnf:make pacman:make xbps:make apk:make zypper:make brew:make"
+    [bison]="apt:bison dnf:bison pacman:bison xbps:bison apk:bison zypper:bison brew:bison"
+    [curl]="apt:curl dnf:curl pacman:curl xbps:curl apk:curl zypper:curl brew:curl"
+    [tar]="apt:tar dnf:tar pacman:tar xbps:tar apk:tar zypper:tar brew:gnu-tar"
+    [xz]="apt:xz-utils dnf:xz pacman:xz xbps:xz apk:xz zypper:xz brew:xz"
+    [file]="apt:file dnf:file pacman:file xbps:file apk:file zypper:file brew:file-formula"
+    [pkgconfig]="apt:pkg-config dnf:pkgconf-pkg-config pacman:pkgconf xbps:pkg-config apk:pkgconf zypper:pkg-config brew:pkg-config"
+    [openssl]="apt:libssl-dev dnf:openssl-devel pacman:openssl xbps:openssl-devel apk:openssl-dev zypper:libopenssl-devel brew:openssl"
+    [ncurses]="apt:libncurses-dev dnf:ncurses-devel pacman:ncurses xbps:ncurses-devel apk:ncurses-dev zypper:ncurses-devel brew:ncurses"
+    [zstd]="apt:libzstd-dev dnf:libzstd-devel pacman:zstd xbps:libzstd-devel apk:zstd-dev zypper:libzstd-devel brew:zstd"
+    [zlib]="apt:zlib1g-dev dnf:zlib-devel pacman:zlib xbps:zlib-devel apk:zlib-dev zypper:zlib-devel brew:zlib"
+)
+# }}}
+
+# {{{ package_manager
+# Reports which package manager this machine uses, as the bare handle
+# the hint table is keyed on. Probes for the binary rather than reading
+# /etc/os-release, because a machine can carry more than one
+# distribution's tooling and what matters is which command will work.
+package_manager() {
+    local manager
+    for manager in apt dnf pacman xbps-install apk zypper brew; do
+        if command -v "${manager}" >/dev/null 2>&1; then
+            case "${manager}" in
+                xbps-install) echo "xbps" ;;
+                *)            echo "${manager}" ;;
+            esac
+            return 0
+        fi
+    done
     echo ""
-    echo "Download and compile Boost ${BOOST_VERSION} from source."
-    echo "Installs to: ${BOOST_DIR}"
-    echo ""
-    echo "Options:"
-    echo "  --help    Show this help message"
 }
 # }}}
 
-if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-    show_help
-    exit 0
-fi
+# {{{ install_hint
+# Turns a hint handle into the one line an operator can paste. Falls
+# back to listing every distribution's name when the machine's package
+# manager is unrecognised, and says so plainly rather than pretending
+# to know.
+install_hint() {
+    local handle="$1"
+    local hints="${PACKAGE_HINTS[${handle}]:-}"
+
+    if [[ -z "${hints}" ]]; then
+        echo "no package name on record for '${handle}'"
+        return 0
+    fi
+
+    local manager
+    manager="$(package_manager)"
+
+    if [[ -n "${manager}" ]]; then
+        local pair
+        for pair in ${hints}; do
+            if [[ "${pair%%:*}" == "${manager}" ]]; then
+                local package="${pair#*:}"
+                case "${manager}" in
+                    apt)    echo "sudo apt install ${package}"     ;;
+                    dnf)    echo "sudo dnf install ${package}"     ;;
+                    pacman) echo "sudo pacman -S ${package}"       ;;
+                    xbps)   echo "sudo xbps-install -S ${package}" ;;
+                    apk)    echo "sudo apk add ${package}"         ;;
+                    zypper) echo "sudo zypper install ${package}"  ;;
+                    brew)   echo "brew install ${package}"         ;;
+                esac
+                return 0
+            fi
+        done
+    fi
+
+    echo "package name by distribution: ${hints}"
+}
+# }}}
+
+# {{{ need_tool / need_header / need_host
+# Declare a requirement, what it is for, and the handle naming the
+# package that supplies it. Nothing is checked here; check_environment
+# evaluates the whole set at once.
+need_tool()   { TOOL_NAMES+=("$1");   TOOL_REASONS+=("$2");   TOOL_PACKAGES+=("$3");   }
+need_header() { HEADER_NAMES+=("$1"); HEADER_REASONS+=("$2"); HEADER_PACKAGES+=("$3"); }
+need_host()   { HOST_NAMES+=("$1");   HOST_REASONS+=("$2");                            }
+# }}}
+
+# {{{ find_compiler
+# Reports the C++ compiler this machine will use, honouring an explicit
+# CXX in the environment. Prints nothing when none is found, which the
+# caller treats as a missing tool rather than guessing.
+find_compiler() {
+    if [[ -n "${CXX:-}" ]] && command -v "${CXX}" >/dev/null 2>&1; then
+        echo "${CXX}"
+        return 0
+    fi
+    local candidate
+    for candidate in g++ clang++ c++; do
+        if command -v "${candidate}" >/dev/null 2>&1; then
+            echo "${candidate}"
+            return 0
+        fi
+    done
+    echo ""
+}
+# }}}
+
+# {{{ header_present
+# Asks the compiler to preprocess a file whose only content is an
+# include of the header in question.
+#
+# Asking the compiler rather than looking in /usr/include because a
+# machine can keep headers anywhere its compiler has been configured to
+# look, and the compiler is the only authority on that. Preprocessing
+# rather than compiling because the question is purely "can this be
+# found", which preprocessing answers in a fraction of the time.
+header_present() {
+    local header="$1"
+    local compiler="$2"
+
+    [[ -z "${compiler}" ]] && return 1
+
+    printf '#include <%s>\nint probe;\n' "${header}" \
+        | "${compiler}" -E -x c++ - -o /dev/null >/dev/null 2>&1
+}
+# }}}
+
+# {{{ host_reachable
+# Opens a TCP connection to the host's HTTPS port using bash's own
+# network redirection, which needs no external tool and so stays honest
+# on a machine where curl is the very thing found missing. A refused
+# connection, an unresolvable name, and a firewalled port all land here
+# as the same answer, which is the answer the operator needs anyway.
+host_reachable() {
+    ( exec 3<>"/dev/tcp/$1/443" ) >/dev/null 2>&1
+}
+# }}}
+
+# {{{ check_environment
+# Evaluates every declared requirement and prints one consolidated
+# report: what is satisfied, what is not, what each missing piece was
+# needed for, and how to install it.
+#
+# Reporting the satisfied requirements alongside the missing ones is
+# deliberate. An operator reading a failure needs to know how far the
+# check got, not just where it stopped — five satisfied and one missing
+# is a different problem from six missing.
+check_environment() {
+    local label="$1"
+    local satisfied=0
+    local missing=0
+    local report=""
+    local index
+
+    echo "Checking what ${label} needs from this machine..."
+
+    local compiler
+    compiler="$(find_compiler)"
+
+    for index in "${!TOOL_NAMES[@]}"; do
+        local tool="${TOOL_NAMES[${index}]}"
+        local found
+
+        # The compiler is named by find_compiler rather than by a fixed
+        # binary name, so an operator who set CXX to a versioned or
+        # cross compiler is believed.
+        if [[ "${tool}" == "c++-compiler" ]]; then
+            found="${compiler}"
+        else
+            found="$(command -v "${tool}" 2>/dev/null)"
+        fi
+
+        if [[ -n "${found}" ]]; then
+            printf '  present  %-16s %s\n' "${tool}" "${found}"
+            satisfied=$((satisfied + 1))
+        else
+            printf '  MISSING  %-16s needed for %s\n' "${tool}" "${TOOL_REASONS[${index}]}"
+            report+="    ${tool} — $(install_hint "${TOOL_PACKAGES[${index}]}")"$'\n'
+            missing=$((missing + 1))
+        fi
+    done
+
+    # Header checks are skipped wholesale when there is no compiler,
+    # because every answer would be "missing" for the same single
+    # reason, and a run of misleading lines is worse than one accurate
+    # one.
+    if [[ ${#HEADER_NAMES[@]} -gt 0 ]]; then
+        if [[ -z "${compiler}" ]]; then
+            echo "  skipped  header checks   no C++ compiler to ask"
+        else
+            for index in "${!HEADER_NAMES[@]}"; do
+                local header="${HEADER_NAMES[${index}]}"
+                if header_present "${header}" "${compiler}"; then
+                    printf '  present  %-16s found by %s\n' "${header}" "${compiler}"
+                    satisfied=$((satisfied + 1))
+                else
+                    printf '  MISSING  %-16s needed for %s\n' "${header}" "${HEADER_REASONS[${index}]}"
+                    report+="    ${header} — $(install_hint "${HEADER_PACKAGES[${index}]}")"$'\n'
+                    missing=$((missing + 1))
+                fi
+            done
+        fi
+    fi
+
+    for index in "${!HOST_NAMES[@]}"; do
+        local host="${HOST_NAMES[${index}]}"
+        if host_reachable "${host}"; then
+            printf '  present  %-16s reachable\n' "${host}"
+            satisfied=$((satisfied + 1))
+        else
+            printf '  MISSING  %-16s unreachable, needed for %s\n' "${host}" "${HOST_REASONS[${index}]}"
+            report+="    ${host} — no route to port 443; check network, DNS, and proxy settings"$'\n'
+            missing=$((missing + 1))
+        fi
+    done
+
+    echo ""
+
+    if [[ ${missing} -eq 0 ]]; then
+        echo "All ${satisfied} requirements satisfied."
+        echo ""
+        return 0
+    fi
+
+    echo "Cannot start ${label}."
+    echo "  Satisfied: ${satisfied}"
+    echo "  Missing:   ${missing}"
+    echo ""
+    echo "  Install the missing pieces:"
+    printf '%s' "${report}"
+    echo ""
+    echo "  To debug:"
+    echo "    Is a package installed here under a different name?"
+    echo "      Install it and run again; this list is built from the"
+    echo "      machine each time, so a name that turned out to be"
+    echo "      wrong shows as satisfied once resolved."
+    echo "    Do the development headers live somewhere unusual?"
+    echo "      Header presence is decided by asking the compiler, so"
+    echo "      setting CXX or CPLUS_INCLUDE_PATH to reach them is"
+    echo "      enough; the files need not be under /usr/include."
+    echo "    Is a host unreachable but the network otherwise fine?"
+    echo "      An outbound HTTPS proxy shows as unreachable here,"
+    echo "      because the check opens a direct TCP connection."
+    echo ""
+    return 1
+}
+# }}}
+
+# =============================================================================
+# Machine facts
+# =============================================================================
+
+# {{{ cpu_count
+# Online processor count, from whichever source this machine offers,
+# ordered by how directly each reports it: nproc asks the kernel
+# through the C library, getconf asks the same question through a POSIX
+# interface, /proc/cpuinfo is a text file that has to be counted, and
+# sysctl covers the BSD family.
+cpu_count() {
+    local count=""
+
+    if command -v nproc >/dev/null 2>&1; then
+        count="$(nproc 2>/dev/null)"
+    fi
+    if [[ -z "${count}" ]] && command -v getconf >/dev/null 2>&1; then
+        count="$(getconf _NPROCESSORS_ONLN 2>/dev/null)"
+    fi
+    if [[ -z "${count}" ]] && [[ -r /proc/cpuinfo ]]; then
+        count="$(grep -c '^processor' /proc/cpuinfo 2>/dev/null)"
+    fi
+    if [[ -z "${count}" ]] && command -v sysctl >/dev/null 2>&1; then
+        count="$(sysctl -n hw.ncpu 2>/dev/null)"
+    fi
+
+    # One is the honest answer when the machine will not say. A build
+    # slower than it needed to be is a far smaller problem than a build
+    # that exhausts memory on a machine we guessed wrong about.
+    if [[ ! "${count}" =~ ^[0-9]+$ ]] || [[ "${count}" -lt 1 ]]; then
+        echo "1"
+        return 0
+    fi
+    echo "${count}"
+}
+# }}}
+
+# {{{ memory_gb
+# Total installed memory in whole gigabytes. MemTotal in /proc/meminfo
+# is in kibibytes; the BSD sysctl figure is in bytes. Reports 0 when
+# neither is available, which build_jobs reads as "do not constrain by
+# memory".
+memory_gb() {
+    local kib=""
+
+    if [[ -r /proc/meminfo ]]; then
+        kib="$(awk '/^MemTotal:/ {print $2; exit}' /proc/meminfo 2>/dev/null)"
+    fi
+    if [[ "${kib}" =~ ^[0-9]+$ ]]; then
+        echo $(( kib / 1024 / 1024 ))
+        return 0
+    fi
+
+    if command -v sysctl >/dev/null 2>&1; then
+        local bytes
+        bytes="$(sysctl -n hw.memsize 2>/dev/null)"
+        if [[ "${bytes}" =~ ^[0-9]+$ ]]; then
+            echo $(( bytes / 1024 / 1024 / 1024 ))
+            return 0
+        fi
+    fi
+
+    echo "0"
+}
+# }}}
+
+# {{{ build_jobs
+# Parallel job count: the smaller of the machine's processors and the
+# number of jobs its memory can hold.
+#
+# The memory term matters because compiling C++ is not processor-bound
+# at the margin — each parallel compiler process holds its own copy of
+# the translation unit's syntax tree. A machine with more processors
+# than spare gigabytes will start every job the processor count allows,
+# then swap, and a swapping build takes longer than a serial one before
+# it is finally killed outright.
+#
+# An explicit THREADS in the environment overrides the derivation,
+# since an operator who sets it knows something this cannot.
+build_jobs() {
+    local gb_per_job="$1"
+
+    if [[ -n "${THREADS:-}" ]]; then
+        if [[ "${THREADS}" =~ ^[0-9]+$ ]] && [[ "${THREADS}" -ge 1 ]]; then
+            echo "${THREADS}"
+            return 0
+        fi
+        echo "Ignoring THREADS='${THREADS}': not a positive whole number." >&2
+    fi
+
+    local cpus memory jobs
+    cpus="$(cpu_count)"
+    memory="$(memory_gb)"
+    jobs="${cpus}"
+
+    if [[ "${memory}" -gt 0 ]]; then
+        local usable=$(( memory - MEMORY_RESERVE_GB ))
+        [[ "${usable}" -lt 1 ]] && usable=1
+
+        local memory_jobs=$(( usable / gb_per_job ))
+        [[ "${memory_jobs}" -lt 1 ]] && memory_jobs=1
+        [[ "${memory_jobs}" -lt "${jobs}" ]] && jobs="${memory_jobs}"
+    fi
+
+    echo "${jobs}"
+}
+# }}}
+
+# {{{ describe_jobs
+# One line explaining the job count, so that a machine building more
+# slowly than expected shows its reasoning rather than leaving the
+# operator to guess.
+describe_jobs() {
+    local jobs="$1"
+    local gb_per_job="$2"
+    local cpus memory
+    cpus="$(cpu_count)"
+    memory="$(memory_gb)"
+
+    if [[ -n "${THREADS:-}" ]]; then
+        echo "Building with ${jobs} parallel jobs (THREADS set in environment)."
+    elif [[ "${memory}" -eq 0 ]]; then
+        echo "Building with ${jobs} parallel jobs (${cpus} processors; memory size unknown, so not capped by it)."
+    else
+        echo "Building with ${jobs} parallel jobs (${cpus} processors; ${memory}GB memory less ${MEMORY_RESERVE_GB}GB reserved, at ~${gb_per_job}GB per job)."
+    fi
+}
+# }}}
+
+# =============================================================================
+# Project location
+# =============================================================================
+
+# {{{ PROJECT_MARKERS
+# The files that say a directory really is a checkout of this project.
+#
+# Named rather than inferred, because generic shapes are not evidence.
+# A scripts/ directory and a docs/ directory sit in an enormous number
+# of projects, and in plenty of home directories too, so finding them
+# proves nothing.
+#
+# All three of these are files this project wrote — a server launcher
+# wrapper, the patch runner, the concept catalogue — and that is the
+# point rather than an oversight. The question being answered is "is
+# this a checkout of this project", not "is this an AzerothCore
+# server". A marker shared with every AzerothCore fork would answer the
+# second question, which is not the one being asked. Files nobody else
+# has are the ones that discriminate.
+#
+# The cost of that choice is that renaming any of them turns the
+# derivation off. It turns off loudly: the refusal below prints every
+# marker with whether it was found, so a rename shows up as one MISSING
+# line naming the file that moved, and the fix is to correct this list.
+#
+# All three must be present. A directory that happens to share one name
+# with this project is then not mistaken for it, and the cost of being
+# wrong in that direction is one --dir argument, against a build landing
+# in the wrong place if the check were loose.
+#
+# Every one of these is tracked in git, so a fresh clone has them before
+# anything is built. Keep it that way when editing this list; a marker
+# that only exists after a build would refuse to recognise the very
+# checkout this script is meant to set up.
+PROJECT_MARKERS=(
+    "scripts/worldserver"
+    "patches/patches.sh"
+    "docs/concept-catalog.md"
+)
+# }}}
+
+# {{{ resolve_project_dir
+# The project directory: --dir when given, otherwise derived from where
+# this script sits.
+#
+# The derivation only applies when the script is in its usual place — a
+# scripts/ directory inside a checkout carrying the markers above. A
+# copy downloaded on its own into some other directory has nothing to
+# derive from, and guessing there would build into the operator's home
+# directory or wherever they happened to be standing. So it stops and
+# asks. See issue 154.
+#
+# A --dir that does not exist yet is created, because installing onto a
+# machine that has never seen this project is the case this argument
+# exists for. A --dir that exists but is not a directory is refused.
+# No marker check is applied to an explicit --dir: the operator saying
+# where the project goes is better evidence than a file listing, and on
+# a fresh install none of the markers exist yet.
+resolve_project_dir() {
+    local explicit="$1"
+    local script_source="$2"
+
+    if [[ -n "${explicit}" ]]; then
+        if [[ -e "${explicit}" && ! -d "${explicit}" ]]; then
+            echo "Not a directory: ${explicit}" >&2
+            echo "  This came from --dir. Nothing has been changed." >&2
+            return 1
+        fi
+        if [[ ! -d "${explicit}" ]]; then
+            echo "Creating project directory ${explicit}" >&2
+            mkdir -p "${explicit}" || return 1
+        fi
+        ( builtin cd -P -- "${explicit}" && pwd )
+        return 0
+    fi
+
+    local self_dir="${script_source%/*}"
+    [[ "${self_dir}" == "${script_source}" ]] && self_dir="."
+    local candidate="${self_dir}/.."
+
+    local marker
+    local found=()
+    local absent=()
+    for marker in "${PROJECT_MARKERS[@]}"; do
+        if [[ -e "${candidate}/${marker}" ]]; then
+            found+=("${marker}")
+        else
+            absent+=("${marker}")
+        fi
+    done
+
+    if [[ ${#absent[@]} -eq 0 ]]; then
+        ( builtin cd -P -- "${candidate}" && pwd )
+        return 0
+    fi
+
+    echo "Cannot tell where the project is." >&2
+    echo "  This script ran from:    ${script_source}" >&2
+    echo "  Looked for a project at: ${candidate}" >&2
+    echo "" >&2
+    echo "  Files that would prove it is one:" >&2
+    for marker in "${found[@]}";  do echo "    present  ${marker}" >&2; done
+    for marker in "${absent[@]}"; do echo "    MISSING  ${marker}" >&2; done
+    echo "" >&2
+    echo "  So this is a copy of one script sitting on its own, rather" >&2
+    echo "  than one inside a checkout." >&2
+    echo "" >&2
+    echo "  Nothing has been downloaded or built." >&2
+    echo "" >&2
+    echo "  Say where the project should go:" >&2
+    echo "    ${script_source} --dir /path/to/wow-chat-2026" >&2
+    echo "" >&2
+    echo "  The directory is created if it does not exist yet, and no" >&2
+    echo "  marker check is applied to it — a fresh install has none of" >&2
+    echo "  those files until the project is cloned into place." >&2
+    return 1
+}
+# }}}
+
+# =============================================================================
+# Arguments
+# =============================================================================
+
+EXPLICIT_DIR=""
+EXPLICIT_JOBS=""
+
+# {{{ show_help
+show_help() {
+    echo "Usage: scripts/boost [--dir <path>] [--jobs <n>]"
+    echo ""
+    echo "Download and compile Boost ${BOOST_VERSION} from source into"
+    echo "<project>/libs/boost."
+    echo ""
+    echo "Options:"
+    echo "  --dir <path>   Project directory. Created if it does not exist."
+    echo "                 Required when this script is run on its own,"
+    echo "                 outside a checkout. Inside one, the default is"
+    echo "                 the parent of this script's directory."
+    echo "  --jobs <n>     Parallel compile jobs. Default: derived from"
+    echo "                 this machine's processor count and memory."
+    echo "                 The THREADS environment variable does the same."
+    echo "  --help         Show this message."
+    echo ""
+    echo "Re-running is a no-op once Boost is installed. To rebuild,"
+    echo "remove <project>/libs/boost first."
+}
+# }}}
+
+# {{{ parse arguments
+# Named arguments only. A bare positional argument is refused rather
+# than guessed at, because a sibling script used to read a version
+# number as a directory path and build into a directory named after the
+# version. Refusing costs one word of typing; guessing cost a wasted
+# build in the wrong place.
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dir)
+            EXPLICIT_DIR="${2:-}"
+            if [[ -z "${EXPLICIT_DIR}" ]]; then
+                echo "--dir needs a path after it."
+                exit 1
+            fi
+            shift 2
+            ;;
+        --dir=*)
+            EXPLICIT_DIR="${1#*=}"
+            shift
+            ;;
+        --jobs)
+            EXPLICIT_JOBS="${2:-}"
+            if [[ ! "${EXPLICIT_JOBS}" =~ ^[0-9]+$ ]] || [[ "${EXPLICIT_JOBS}" -lt 1 ]]; then
+                echo "--jobs needs a positive whole number, got '${EXPLICIT_JOBS}'."
+                exit 1
+            fi
+            shift 2
+            ;;
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        *)
+            echo "Unrecognised argument: $1"
+            echo ""
+            show_help
+            exit 1
+            ;;
+    esac
+done
+# }}}
+
+DIR="$(resolve_project_dir "${EXPLICIT_DIR}" "${BASH_SOURCE[0]}")"
+
+BOOST_DIR="${DIR}/libs/boost"
+BOOST_SRC="${DIR}/libs/boost-src"
+BOOST_TARBALL="boost_${BOOST_VERSION_UNDERSCORE}.tar.gz"
+BOOST_URL="https://${BOOST_HOST}/projects/boost/files/boost/${BOOST_VERSION}/${BOOST_TARBALL}/download"
 
 # =============================================================================
 # Main
 # =============================================================================
 
-echo "Installing Boost ${BOOST_VERSION}..."
+echo "=== Boost ${BOOST_VERSION} ==="
+echo "Project:     ${DIR}"
+echo "Installs to: ${BOOST_DIR}"
+echo ""
 
-BOOST_SRC="${DIR}/libs/boost-src"
-BOOST_TARBALL="boost_${BOOST_VERSION_UNDERSCORE}.tar.gz"
-BOOST_URL="https://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION}/${BOOST_TARBALL}/download"
+# {{{ Skip if already installed
+# Checked before the environment check, so a machine with a working
+# Boost is not told about compilers it no longer needs.
+if [[ -f "${BOOST_DIR}/lib/libboost_system.a" ]]; then
+    echo "Boost already installed at ${BOOST_DIR}"
+    echo "To rebuild, remove that directory first."
+    exit 0
+fi
+# }}}
+
+# {{{ Environment
+# Declared in the order the build reaches for them, so the report reads
+# as a walk through what is about to happen.
+need_tool "curl"         "downloading the Boost source archive"            "curl"
+need_tool "tar"          "unpacking the archive"                           "tar"
+need_tool "file"         "confirming the download is really an archive"    "file"
+need_tool "c++-compiler" "compiling Boost, and building its b2 tool first" "compiler"
+need_tool "make"         "Boost's bootstrap step"                          "make"
+
+# Boost.Iostreams compiles against zlib. Left out, the build succeeds
+# and quietly omits the compression filters, and the omission only
+# surfaces much later as a link error in the server build.
+need_header "zlib.h" "Boost.Iostreams compression support" "zlib"
+
+need_host "${BOOST_HOST}" "the Boost source archive"
+
+if ! check_environment "the Boost build"; then
+    exit 1
+fi
+# }}}
+
+# {{{ Job count
+if [[ -n "${EXPLICIT_JOBS}" ]]; then
+    JOBS="${EXPLICIT_JOBS}"
+    echo "Building with ${JOBS} parallel jobs (--jobs given)."
+else
+    JOBS="$(build_jobs "${BOOST_GB_PER_JOB}")"
+    describe_jobs "${JOBS}" "${BOOST_GB_PER_JOB}"
+fi
+echo ""
+# }}}
 
 mkdir -p "${DIR}/libs"
 
-# Check if already installed
-if [[ -f "${BOOST_DIR}/lib/libboost_system.a" ]]; then
-    echo "Boost already installed at ${BOOST_DIR}"
-    echo "To reinstall, remove ${BOOST_DIR} first."
-    exit 0
-fi
-
-# Download
+# {{{ Download
+# The archive is kept after a successful build, so a re-run following a
+# deleted libs/boost skips the slowest external step.
 if [[ ! -f "${DIR}/libs/${BOOST_TARBALL}" ]]; then
     echo "Downloading Boost ${BOOST_VERSION}..."
     curl -L --fail --progress-bar -o "${DIR}/libs/${BOOST_TARBALL}" "${BOOST_URL}"
 fi
+# }}}
 
-# Verify download is a valid tarball
+# {{{ Verify the download really is an archive
 if ! file "${DIR}/libs/${BOOST_TARBALL}" | grep -q "gzip compressed"; then
-    echo "Error: Downloaded file is not a valid gzip archive"
-    echo "Contents: $(head -c 100 "${DIR}/libs/${BOOST_TARBALL}")"
+    echo "The downloaded file is not a gzip archive."
+    echo "  File:  ${DIR}/libs/${BOOST_TARBALL}"
+    echo "  Type:  $(file -b "${DIR}/libs/${BOOST_TARBALL}")"
+    echo "  Head:  $(head -c 100 "${DIR}/libs/${BOOST_TARBALL}")"
+    echo ""
+    echo "  The bad file has been removed; nothing was built."
+    echo ""
+    echo "  To debug:"
+    echo "    Did a SourceForge mirror hand back an error page?"
+    echo "      Most likely. Running this again picks a different"
+    echo "      mirror, and usually succeeds."
+    echo "    Does the head of the file look like HTML?"
+    echo "      Then a proxy or captive portal answered instead of"
+    echo "      the mirror."
     rm -f "${DIR}/libs/${BOOST_TARBALL}"
     exit 1
 fi
+# }}}
 
-# Extract
+# {{{ Extract
 echo "Extracting..."
 rm -rf "${BOOST_SRC}"
 mkdir -p "${BOOST_SRC}"
 tar -xzf "${DIR}/libs/${BOOST_TARBALL}" -C "${BOOST_SRC}" --strip-components=1
+# }}}
 
-# Bootstrap and build
-echo "Building Boost (this may take a while)..."
-cd "${BOOST_SRC}"
+# {{{ Bootstrap and build
+# Both steps run inside a subshell, so the working directory the
+# operator invoked from is left where they put it.
+#
+# Only the six components AzerothCore links are built. Building all of
+# Boost would take several times as long and install libraries nothing
+# in this project references.
+echo "Building Boost (this takes a while)..."
 
-./bootstrap.sh --prefix="${BOOST_DIR}" \
-    --with-libraries=system,filesystem,program_options,iostreams,regex,thread
+(
+    builtin cd "${BOOST_SRC}"
 
-./b2 install \
-    --prefix="${BOOST_DIR}" \
-    -j${THREADS} \
-    link=static \
-    threading=multi \
-    variant=release
+    ./bootstrap.sh --prefix="${BOOST_DIR}" \
+        --with-libraries=system,filesystem,program_options,iostreams,regex,thread
 
-# Cleanup
+    ./b2 install \
+        --prefix="${BOOST_DIR}" \
+        -j"${JOBS}" \
+        link=static \
+        threading=multi \
+        variant=release
+)
+# }}}
+
+# {{{ Verify the install landed
+# b2 reports success for a build that produced nothing when every
+# component was skipped for a missing dependency, so the outcome is
+# confirmed against the filesystem rather than against the exit status.
+if [[ ! -f "${BOOST_DIR}/lib/libboost_system.a" ]]; then
+    echo "Boost finished building but the library is not where it should be."
+    echo "  Expected: ${BOOST_DIR}/lib/libboost_system.a"
+    echo "  Present:  $(ls "${BOOST_DIR}/lib" 2>/dev/null | head -5 | tr '\n' ' ')"
+    echo ""
+    echo "  The source tree has been left at ${BOOST_SRC} for inspection."
+    echo ""
+    echo "  To debug:"
+    echo "    Did b2 skip components for a missing dependency?"
+    echo "      Its output names each skipped component and why;"
+    echo "      scroll back for lines mentioning zlib or bzip2."
+    exit 1
+fi
+# }}}
+
+# {{{ Cleanup
 echo "Cleaning up..."
 rm -rf "${BOOST_SRC}"
+# }}}
 
+echo ""
 echo "Boost ${BOOST_VERSION} installed to ${BOOST_DIR}"

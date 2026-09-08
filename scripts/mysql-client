@@ -28,7 +28,7 @@ DB_USER="${DB_USER:-root}"
 # {{{ connect
 if [[ ! -S "${SOCKET}" ]]; then
     echo "ERROR: MySQL socket not found at ${SOCKET}"
-    echo "Is MySQL running? Try: ${DIR}/scripts/mysql-start"
+    echo "Is MySQL running? Try: ${DIR}/scripts/start-mysql"
     exit 1
 fi
 

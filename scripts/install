@@ -3,10 +3,57 @@
 # Clones source, installs modules, then calls compile
 # Also sets up MySQL databases and copies data files
 
-DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
-
 set -e
 set -o pipefail
+
+# {{{ set_dir
+# The project directory: --dir when given, otherwise the parent of the
+# directory this script lives in.
+#
+# Scanned out of the arguments here rather than in parse_args further
+# down, because the profile is read from ${DIR}/.profile a few lines
+# below and parse_args does not run until long after that. Reading the
+# profile from one project and then working on another is the failure
+# this ordering avoids.
+#
+# No hard-coded path. This departs from the house convention on purpose,
+# so the project can be worked on from a machine that has never seen it.
+# The derivation is safe here in a way it is not for the three
+# dependency scripts: this one is useless without a full checkout around
+# it, so if it is running at all, it is sitting in that checkout's
+# scripts directory. See issue 154.
+SELF_DIR="${BASH_SOURCE[0]%/*}"
+[[ "${SELF_DIR}" == "${BASH_SOURCE[0]}" ]] && SELF_DIR="."
+
+EXPLICIT_DIR=""
+DIR_SCAN_ARGS=("$@")
+for (( dir_scan_index = 0; dir_scan_index < ${#DIR_SCAN_ARGS[@]}; dir_scan_index++ )); do
+    case "${DIR_SCAN_ARGS[dir_scan_index]}" in
+        --dir)   EXPLICIT_DIR="${DIR_SCAN_ARGS[dir_scan_index + 1]:-}" ;;
+        --dir=*) EXPLICIT_DIR="${DIR_SCAN_ARGS[dir_scan_index]#*=}"    ;;
+    esac
+done
+
+if [[ -n "${EXPLICIT_DIR}" ]]; then
+    DIR_CANDIDATE="${EXPLICIT_DIR}"
+    DIR_SOURCE="the --dir argument"
+else
+    DIR_CANDIDATE="${SELF_DIR}/.."
+    DIR_SOURCE="where this script lives, ${BASH_SOURCE[0]}"
+fi
+
+if [[ ! -d "${DIR_CANDIDATE}" ]]; then
+    echo "Project directory does not exist: ${DIR_CANDIDATE}"
+    echo "  This came from ${DIR_SOURCE}."
+    echo "  Nothing has been changed."
+    exit 1
+fi
+
+# Resolved rather than kept as written, so every path built from it is
+# valid regardless of the working directory this was invoked from, and
+# so a project reachable through a symlink compares equal to itself.
+DIR="$( builtin cd -P -- "${DIR_CANDIDATE}" && pwd )"
+# }}}
 
 # =============================================================================
 # Load Profile
@@ -136,6 +183,22 @@ parse_args() {
                 COMPILE_ARGS+=("--profile" "${PROFILE}")
                 shift
                 ;;
+            --dir)
+                # Already resolved by the scan at the top of the file;
+                # consumed here so the catch-all does not reject it,
+                # and forwarded so compile works on the same project.
+                if [[ -n "${2:-}" ]]; then
+                    COMPILE_ARGS+=("--dir" "${2}")
+                    shift 2
+                else
+                    echo "Error: --dir requires a path"
+                    exit 1
+                fi
+                ;;
+            --dir=*)
+                COMPILE_ARGS+=("--dir" "${1#*=}")
+                shift
+                ;;
             --threads)
                 if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
                     COMPILE_ARGS+=("--threads" "${2}")
@@ -180,6 +243,8 @@ show_help() {
     echo "First-time setup: clone source, install modules, build, setup MySQL."
     echo ""
     echo "Options:"
+    echo "  --dir <path>       Project directory"
+    echo "                     (default: the parent of this script's directory)"
     echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
     echo "  --threads <n>      Number of threads"
     echo "  --force            Re-clone everything from scratch"

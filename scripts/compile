@@ -3,10 +3,57 @@
 # Skips git checks, goes straight to cmake/make
 # Builds into shadow directory for atomic promotion
 
-DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
-
 set -e
 set -o pipefail
+
+# {{{ set_dir
+# The project directory: --dir when given, otherwise the parent of the
+# directory this script lives in.
+#
+# Scanned out of the arguments here rather than in parse_args further
+# down, because the profile is read from ${DIR}/.profile a few lines
+# below and parse_args does not run until long after that. Reading the
+# profile from one project and then working on another is the failure
+# this ordering avoids.
+#
+# No hard-coded path. This departs from the house convention on purpose,
+# so the project can be worked on from a machine that has never seen it.
+# The derivation is safe here in a way it is not for the three
+# dependency scripts: this one is useless without a full checkout around
+# it, so if it is running at all, it is sitting in that checkout's
+# scripts directory. See issue 154.
+SELF_DIR="${BASH_SOURCE[0]%/*}"
+[[ "${SELF_DIR}" == "${BASH_SOURCE[0]}" ]] && SELF_DIR="."
+
+EXPLICIT_DIR=""
+DIR_SCAN_ARGS=("$@")
+for (( dir_scan_index = 0; dir_scan_index < ${#DIR_SCAN_ARGS[@]}; dir_scan_index++ )); do
+    case "${DIR_SCAN_ARGS[dir_scan_index]}" in
+        --dir)   EXPLICIT_DIR="${DIR_SCAN_ARGS[dir_scan_index + 1]:-}" ;;
+        --dir=*) EXPLICIT_DIR="${DIR_SCAN_ARGS[dir_scan_index]#*=}"    ;;
+    esac
+done
+
+if [[ -n "${EXPLICIT_DIR}" ]]; then
+    DIR_CANDIDATE="${EXPLICIT_DIR}"
+    DIR_SOURCE="the --dir argument"
+else
+    DIR_CANDIDATE="${SELF_DIR}/.."
+    DIR_SOURCE="where this script lives, ${BASH_SOURCE[0]}"
+fi
+
+if [[ ! -d "${DIR_CANDIDATE}" ]]; then
+    echo "Project directory does not exist: ${DIR_CANDIDATE}"
+    echo "  This came from ${DIR_SOURCE}."
+    echo "  Nothing has been changed."
+    exit 1
+fi
+
+# Resolved rather than kept as written, so every path built from it is
+# valid regardless of the working directory this was invoked from, and
+# so a project reachable through a symlink compares equal to itself.
+DIR="$( builtin cd -P -- "${DIR_CANDIDATE}" && pwd )"
+# }}}
 
 # =============================================================================
 # Load Profile
@@ -27,9 +74,14 @@ DEFAULT_PROFILE="${PROFILE}"
 # =============================================================================
 
 THREADS="${THREADS:-4}"
-BOOST_VERSION="1.74.0"
-BOOST_VERSION_UNDERSCORE="1_74_0"
 AUTO_VALIDATE=true
+
+# No Boost version is named here. cmake is pointed at the directory
+# scripts/boost installed into and reads the version out of the headers
+# it finds there, so a version stated in this file would only be a
+# second copy of the truth, free to disagree with it. Two such
+# constants used to sit here saying 1.74.0 while the installed library
+# was 1.81.0; nothing read them. See issue 154.
 
 # =============================================================================
 # Profile Definitions
@@ -75,6 +127,19 @@ parse_args() {
                     echo "Error: --profile requires a profile name"
                     exit 1
                 fi
+                shift
+                ;;
+            --dir)
+                # Already resolved by the scan at the top of the file;
+                # consumed here only so the catch-all does not reject it.
+                if [[ -n "${2:-}" ]]; then
+                    shift 2
+                else
+                    echo "Error: --dir requires a path"
+                    exit 1
+                fi
+                ;;
+            --dir=*)
                 shift
                 ;;
             --threads)
@@ -132,6 +197,8 @@ show_help() {
     echo "Builds into shadow directory, then auto-validates and promotes."
     echo ""
     echo "Options:"
+    echo "  --dir <path>       Project directory"
+    echo "                     (default: the parent of this script's directory)"
     echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
     echo "  --threads <n>      Number of threads (default: ${THREADS})"
     echo "  --force            Force cmake reconfiguration"
@@ -310,9 +377,13 @@ do_build() {
     # — present binary → instant exit, missing → ~30s first-time build
     # from libs/ccache-src. Either way the operator never has to
     # remember to invoke ccache manually before compile.
+    # The project directory is passed through explicitly. scripts/ccache
+    # works out its own location when told nothing, and that answer is
+    # usually the same one — but "usually" is not good enough when this
+    # script already knows the answer for certain. See issue 154.
     if [[ ! -x "${CCACHE_BIN}" ]]; then
         echo "Local ccache not found, building it now..."
-        "${DIR}/scripts/ccache"
+        "${DIR}/scripts/ccache" --dir "${DIR}"
     fi
     mkdir -p "${CCACHE_CACHE_DIR}"
     export CCACHE_DIR="${CCACHE_CACHE_DIR}"
