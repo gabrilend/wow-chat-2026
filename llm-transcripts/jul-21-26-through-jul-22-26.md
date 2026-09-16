@@ -1,6 +1,7 @@
 # Conversation Summary: 848716dd-6f3d-4efa-89ea-fbf890462fc8
 
-Generated on: 2026-09-08 10:58:59
+Generated on: 2026-09-16 15:55:46
+Models: claude-opus-4-8, claude-fable-5
 
 --------------------------------------------------------------------------------
 
@@ -12,64 +13,65 @@ hi can you read the server logs and tell me if any of them had any errors?
 
 ### Assistant Response 1
 
-I'll find the server logs first. Let me look in the likely locations.
+>          I'll find the server logs first. Let me look in the likely locations.
 
-The active profile is **vanilla**. The freshest logs are in `tmp/logs-vanilla/`
-(updated 20:06). Let me look at those plus the server/error logs.
+>                    The active profile is **vanilla**. The freshest logs are in
+>             `tmp/logs-vanilla/` (updated 20:06). Let me look at those plus the
+>                                                             server/error logs.
 
-The `installed-files-vanilla/bin/` logs are stale (from a `shadow` config, MySQL
-access denied). The live logs in `tmp/logs-vanilla/` are the ones to check. Let
-me read those.
+>     The `installed-files-vanilla/bin/` logs are stale (from a `shadow` config,
+>     MySQL access denied). The live logs in `tmp/logs-vanilla/` are the ones to
+>                                                      check. Let me read those.
 
-Now let me check the Playerbots.log (the largest file) for actual errors, and
-scan for any severe markers across all the live logs.
+>  Now let me check the Playerbots.log (the largest file) for actual errors, and
+>                          scan for any severe markers across all the live logs.
 
-The "exception" hits are false positives — they're item names like "Enchant
-Chest - Exceptional Stats". Let me confirm the Playerbots log tail looks like
-normal operation and check whether the servers are still running.
+>  The "exception" hits are false positives — they're item names like "Enchant
+>  Chest - Exceptional Stats". Let me confirm the Playerbots log tail looks like
+>              normal operation and check whether the servers are still running.
 
-I read the live logs for the active **vanilla** profile (`tmp/logs-vanilla/`).
-Here's the verdict:
+  I read the live logs for the active **vanilla** profile (`tmp/logs-vanilla/`).
+                                                             Here's the verdict:
 
 ## No real errors — everything logged is benign
 
-**Auth.log** — Clean. Connected to MySQL fine, all four realms registered.
+    **Auth.log** — Clean. Connected to MySQL fine, all four realms registered.
 
-**Server.log** (worldserver) — Started cleanly, `World Initialized In 0
-Minutes 55 Seconds`, reached `ready...`. The only non-info lines are all
-harmless:
+       **Server.log** (worldserver) — Started cleanly, `World Initialized In 0
+        Minutes 55 Seconds`, reached `ready...`. The only non-info lines are all
+                                                                       harmless:
 - `Can't set process priority class, error: Permission denied` — just means it
-  wasn't launched as root. Cosmetic.
-- `StartHeroicPlayerLevel` (55) and `RecruitAFriend.MaxLevel` (60) failed
+                                              wasn't launched as root. Cosmetic.
+       - `StartHeroicPlayerLevel` (55) and `RecruitAFriend.MaxLevel` (60) failed
   validation, defaults used — because they exceed the vanilla level cap of 40,
-  so the engine clamps them.
-- ~12 `Level X ... in lfg_dungeon_rewards can never be reached` lines — same
-  root cause: dungeon reward tiers above level 40.
+                                                      so the engine clamps them.
+  - ~12 `Level X ... in lfg_dungeon_rewards can never be reached` lines — same
+                                root cause: dungeon reward tiers above level 40.
 
-**Errors.log** — 220 lines, but **all of them are the same two benign
-data-validation complaints**, not runtime errors:
-- Retail quests whose `RequiredSkillPoints` (210–450) exceed this profile's
-  profession skill cap of 200 → "quest can't be done."
-- Skill conditions referencing skill values above 200 → "skipped."
+         **Errors.log** — 220 lines, but **all of them are the same two benign
+                               data-validation complaints**, not runtime errors:
+   - Retail quests whose `RequiredSkillPoints` (210–450) exceed this profile's
+                          profession skill cap of 200 → "quest can't be done."
+            - Skill conditions referencing skill values above 200 → "skipped."
 
 Both are AzerothCore noticing that stock retail content doesn't fit your reduced
-caps. Expected, not a fault.
+                                                    caps. Expected, not a fault.
 
-**Playerbots.log** — Normal operation (bots cycling through random-bot
-updates). No errors.
+        **Playerbots.log** — Normal operation (bots cycling through random-bot
+                                                            updates). No errors.
 
 ## One thing worth noting
 
-The **worldserver process is not currently running** — only `authserver` is
-up. The Server.log ends cleanly (no crash, no shutdown error), so it looks like
-it was stopped normally rather than dying. If you expected it to still be up,
-that's the thing to look at — but it's not something the logs are flagging as
-an error.
+   The **worldserver process is not currently running** — only `authserver` is
+ up. The Server.log ends cleanly (no crash, no shutdown error), so it looks like
+   it was stopped normally rather than dying. If you expected it to still be up,
+ that's the thing to look at — but it's not something the logs are flagging as
+                                                                       an error.
 
-Every "error"-shaped line in these logs traces back to the vanilla profile's
+    Every "error"-shaped line in these logs traces back to the vanilla profile's
 level-40 / skill-200 caps meeting retail content built for level 80 / skill 450.
-If you want, I can filter those out of the log at write time so `Errors.log`
-only shows things that actually matter.
+    If you want, I can filter those out of the log at write time so `Errors.log`
+                                         only shows things that actually matter.
 
 --------------------------------------------------------------------------------
 
@@ -95,83 +97,82 @@ AC> PlayerbotWorldThreadProcessor initialized
 /home/ritz/games/azeroth-core/wow-chat-2026/scripts/worldserver: line 190: 28288
 Segmentation fault ./worldserver
 
-
 --------------------------------------------------------------------------------
 
 ### Assistant Response 2
 
-A segfault right after `ready...` — the server fully initialized, then
-crashed. Let me dig into what happened. Let me look at the launch script and
-hunt for a crash dump / core file.
+>       A segfault right after `ready...` — the server fully initialized, then
+>   crashed. Let me dig into what happened. Let me look at the launch script and
+>                                             hunt for a crash dump / core file.
 
-The build is RelWithDebInfo, so the crash catcher didn't run — it went
-straight to `./worldserver` with no backtrace captured. And `core_pattern` is
-just `core` with none written (core dumps likely disabled via ulimit). But the
-crash location is a strong hint: it died right after `AC>
-PlayerbotWorldThreadProcessor initialized` — a **playerbots** component.
-There's also an existing issue that looks directly relevant. Let me read it and
-confirm core-dump availability.
+>       The build is RelWithDebInfo, so the crash catcher didn't run — it went
+>  straight to `./worldserver` with no backtrace captured. And `core_pattern` is
+> just `core` with none written (core dumps likely disabled via ulimit). But the
+>                      crash location is a strong hint: it died right after `AC>
+>     PlayerbotWorldThreadProcessor initialized` — a **playerbots** component.
+>    There's also an existing issue that looks directly relevant. Let me read it
+>                                            and confirm core-dump availability.
 
-Let me confirm exactly how to re-run it to capture a backtrace, since that's the
-actionable next step.
+>   Let me confirm exactly how to re-run it to capture a backtrace, since that's
+>                                                      the actionable next step.
 
-So *that's* the real event — the worldserver **segfaulted at startup**, right
-after it finished initializing. Here's what I can and can't tell you.
+ So *that's* the real event — the worldserver **segfaulted at startup**, right
+           after it finished initializing. Here's what I can and can't tell you.
 
 ## What happened
 
-The server got all the way through init to `ready...`, then the **playerbots
-world-thread processor** fired its first update tick (`AC>
-PlayerbotWorldThreadProcessor initialized`) and crashed. The final lines in
-`Playerbots.log` are the random-bot update loop iterating players (`Including
-non-random bot player … into random bot update`) — so it died **inside
-mod-playerbots' first bot-update pass**, not in core worldserver code. That's a
-C++ segfault, not a Lua error.
+    The server got all the way through init to `ready...`, then the **playerbots
+                      world-thread processor** fired its first update tick (`AC>
+     PlayerbotWorldThreadProcessor initialized`) and crashed. The final lines in
+   `Playerbots.log` are the random-bot update loop iterating players (`Including
+      non-random bot player … into random bot update`) — so it died **inside
+ mod-playerbots' first bot-update pass**, not in core worldserver code. That's a
+                                                  C++ segfault, not a Lua error.
 
 ## Why I can't name the exact line yet
 
-Two things conspired to throw away the evidence:
-- **No core dump** — `ulimit -c` is `0`, so the kernel wrote nothing even
-  though `core_pattern` is set.
-- **No backtrace** — this is a `RelWithDebInfo` build, and your launcher only
-  auto-runs the crash catcher for `Debug` builds. It went straight to
-  `./worldserver`, so nothing caught the fault.
+                                Two things conspired to throw away the evidence:
+     - **No core dump** — `ulimit -c` is `0`, so the kernel wrote nothing even
+                                                   though `core_pattern` is set.
+ - **No backtrace** — this is a `RelWithDebInfo` build, and your launcher only
+             auto-runs the crash catcher for `Debug` builds. It went straight to
+                                   `./worldserver`, so nothing caught the fault.
 
 So the logs tell us *where in the lifecycle* it died (playerbots first tick) but
-not *which instruction*. Anyone who tells you the precise cause from these logs
-alone is guessing.
+ not *which instruction*. Anyone who tells you the precise cause from these logs
+                                                              alone is guessing.
 
 ## How to actually catch it
 
-Your launcher already has the tool for this. gdb is installed (17.2), so re-run
-with the catcher:
+ Your launcher already has the tool for this. gdb is installed (17.2), so re-run
+                                                               with the catcher:
 
 ```bash
 ./scripts/worldserver --debug
 ```
 
-That runs the same binary under gdb and, on the crash, dumps a full backtrace
-(crashing thread + all threads) to:
+   That runs the same binary under gdb and, on the crash, dumps a full backtrace
+                                             (crashing thread + all threads) to:
 
 ```
 tmp/debug-vanilla/worldserver-<timestamp>-backtrace.txt
 ```
 
-Since it crashes seconds after `ready...`, you won't have to wait long. Send me
-that file and I can point at the actual frame.
+ Since it crashes seconds after `ready...`, you won't have to wait long. Send me
+                                  that file and I can point at the actual frame.
 
 ## One lead worth holding
 
-There's an existing issue — *"Nil Bot Periodic Event Crash"* — describing
-bots that enter the world-player list but aren't fully initialized when a
-periodic pass touches them. Its documented fix (firing the ALE login hook for
-bots) is marked **"needs application"** — i.e. possibly not actually built
-into this binary. That's a *plausible* match for "crash on the first bot-update
-tick," but it described a Lua nil error rather than a segfault, so I won't
-commit to it until the backtrace confirms the frame.
+   There's an existing issue — *"Nil Bot Periodic Event Crash"* — describing
+       bots that enter the world-player list but aren't fully initialized when a
+   periodic pass touches them. Its documented fix (firing the ALE login hook for
+    bots) is marked **"needs application"** — i.e. possibly not actually built
+ into this binary. That's a *plausible* match for "crash on the first bot-update
+      tick," but it described a Lua nil error rather than a segfault, so I won't
+                            commit to it until the backtrace confirms the frame.
 
 Want me to check whether that playerbots login-hook patch is actually present in
-the current `source-beta` tree / this build while you grab the backtrace?
+       the current `source-beta` tree / this build while you grab the backtrace?
 
 --------------------------------------------------------------------------------
 
@@ -193,115 +194,116 @@ this seems critical, can you look into it while I generate the debug logs?
 
 ### Assistant Response 3
 
-I'll investigate whether that ALE-login-hook patch is actually present in this
-build while you generate the backtrace. Let me trace it from patch doc → patch
-script → source tree → built binary.
+> I'll investigate whether that ALE-login-hook patch is actually present in this
+>     build while you generate the backtrace. Let me trace it from patch doc →
+>                                 patch script → source tree → built binary.
 
-Important nuance: the source tree round-trips clean (patches revert after
-build), so the hook being absent from `source-beta` right now tells us nothing
-— I need to check whether **B002 was applied during the build that made this
-binary**. Let me read the patch, check it's in the active list, and grep the
-build log.
+>      Important nuance: the source tree round-trips clean (patches revert after
+> build), so the hook being absent from `source-beta` right now tells us nothing
+> — I need to check whether **B002 was applied during the build that made this
+>   binary**. Let me read the patch, check it's in the active list, and grep the
+>                                                                     build log.
 
-Now this is getting substantive. B002 was **silently broken until a 2026-07-16
-retarget** — upstream moved `OnBotLoginInternal` to a different file, the old
-sed anchor vanished, and the hook stopped injecting entirely. The retarget is
-sitting **uncommitted** in your working tree. Two things decide whether it's
-relevant: (1) does the *new* anchor actually exist in the pristine source, or
-did the retarget also silently no-op, and (2) was the running binary built
-before or after the retarget. There's also a **B026 "bot-login crash guard"** in
-the list I should read. Let me nail all three.
+> Now this is getting substantive. B002 was **silently broken until a 2026-07-16
+>    retarget** — upstream moved `OnBotLoginInternal` to a different file, the
+> old sed anchor vanished, and the hook stopped injecting entirely. The retarget
+>     is sitting **uncommitted** in your working tree. Two things decide whether
+>        it's relevant: (1) does the *new* anchor actually exist in the pristine
+>       source, or did the retarget also silently no-op, and (2) was the running
+>    binary built before or after the retarget. There's also a **B026 "bot-login
+>               crash guard"** in the list I should read. Let me nail all three.
 
-**Found it.** B026's header describes *exactly* our crash — and it's not
-B002/issue-306 at all:
+>     **Found it.** B026's header describes *exactly* our crash — and it's not
+>                                                         B002/issue-306 at all:
+>
+>    > "worldserver segfaults shortly after startup on the queued bot-login path
+>   > (main world thread): OnBotLoginOperation::Execute → AddPlayerbotData →
+>        > new PlayerbotAI → AiFactory::createCombatEngine → **Engine::Init,
+>                    > faulting while iterating the engine's `strategies` map**"
+>
+>   That's a hard segfault, at startup, on the bot-login path, main world thread
+>             — matching your crash right after `PlayerbotWorldThreadProcessor
+> initialized`. B002/issue-306 was the wrong suspect (that's a *recoverable* Lua
+>                nil error, not a segfault) — good that I didn't commit to it.
+>
+>    The decisive question now: **was B026 actually compiled into this binary?**
+>      Because it also adds a defensive Engine::Init guard that turns this exact
+> fault into a *log line* instead of a segfault — and we saw no such log line,
+> we saw a real segfault. Two checks settle it: (1) did the build actually apply
+>     B026, and (2) do B026's sed anchors even exist in the pristine source (the
+>                                                trap that silently broke B002).
 
-> "worldserver segfaults shortly after startup on the queued bot-login path
-> (main world thread): OnBotLoginOperation::Execute → AddPlayerbotData → new
-> PlayerbotAI → AiFactory::createCombatEngine → **Engine::Init, faulting
-> while iterating the engine's `strategies` map**"
+>   The user says the debug run is done — that's the priority. Let me read the
+>        backtrace and, in parallel, run the definitive check on whether B026 is
+>      actually compiled into the binary (its log-string literals will be in the
+>                                                             binary if it was).
 
-That's a hard segfault, at startup, on the bot-login path, main world thread —
-matching your crash right after `PlayerbotWorldThreadProcessor initialized`.
-B002/issue-306 was the wrong suspect (that's a *recoverable* Lua nil error, not
-a segfault) — good that I didn't commit to it.
+>       Critical correction: **B026 _is_ compiled into this binary** — its log
+>   strings (`reclaiming stale AI (B026)`, `Engine::Init: null strategy…`) are
+> present, and the B002 ALE `OnLogin` hook is wired in too. So both patches made
+> it in, yet it still crashed. Theorizing is over — the backtrace is here (225
+>                          KB, all threads). Let me read the actual crash frame.
 
-The decisive question now: **was B026 actually compiled into this binary?**
-Because it also adds a defensive Engine::Init guard that turns this exact fault
-into a *log line* instead of a segfault — and we saw no such log line, we saw
-a real segfault. Two checks settle it: (1) did the build actually apply B026,
-and (2) do B026's sed anchors even exist in the pristine source (the trap that
-silently broke B002).
+>  Thread 1 (the **main thread**) took the SIGSEGV. Let me read the actual stack
+>                                                 frames of the crashing thread.
 
-The user says the debug run is done — that's the priority. Let me read the
-backtrace and, in parallel, run the definitive check on whether B026 is actually
-compiled into the binary (its log-string literals will be in the binary if it
-was).
+>           There it is — ground truth. The crash is **exactly** the path B026
+>                    documents, and it fires **despite B026 being compiled in**:
+>
+> ```
+> #0 RacialsStrategy::InitTriggers   RacialsStrategy.cpp:30   → Player* bot = botAI->GetBot();   ← faults
+> #1 Engine::Init                    Engine.cpp:140           strategy=0x…fc40  i.first="racials"
+> #2 AiFactory::createCombatEngine   AiFactory.cpp:502
+> #3 PlayerbotAI::PlayerbotAI        PlayerbotAI.cpp:151
+> #4 PlayerbotsMgr::AddPlayerbotData PlayerbotMgr.cpp:1788
+> #5 PlayerbotHolder::OnBotLogin     PlayerbotMgr.cpp:481
+> #6 OnBotLoginOperation::Execute    PlayerbotOperations.h:511
+> #7 PlayerbotWorldThreadProcessor::ProcessBatch  (batch of 60 logins)
+> ```
+>
+>    So B026 correctly *diagnosed* the path but its fix did **not** prevent this
+>      crash. And I can already see why the defensive guard didn't catch it: the
+>     strategy pointer is **non-null** (`0x…fc40`), so B026's `if (!strategy)`
+>                     guard passes — but the fault is one level deeper, inside
+>                `strategy->InitTriggers()` dereferencing a dangling `botAI`, at
+>     Engine.cpp:**140**, whereas B026's guard sits at the `strategy->GetType()`
+>                              line (Engine.cpp:126). Wrong dereference guarded.
+>
+> The decisive question: did B026's *actual* fix (the delete-before-reconstruct)
+> even run for this bot, or is this a different origin for the dangling pointer?
+>  Let me check whether the B026 warning fired, and read the two faulting sites.
 
-Critical correction: **B026 _is_ compiled into this binary** — its log strings
-(`reclaiming stale AI (B026)`, `Engine::Init: null strategy…`) are present,
-and the B002 ALE `OnLogin` hook is wired in too. So both patches made it in, yet
-it still crashed. Theorizing is over — the backtrace is here (225 KB, all
-threads). Let me read the actual crash frame.
+>                                                             Decisive findings:
+>
+> - **B026's real fix never fired** — the `reclaiming stale AI (B026)` warning
+>   is absent from both logs, and **0 bots logged in** before the crash. So this
+>      is **not** the duplicate-login race B026 targets — it dies on the *very
+>                                                 first* bot in the first batch.
+>  - `RacialsStrategy.cpp:30` is `Player* bot = botAI->GetBot();` — `botAI` is
+>      the `Strategy` base member set at construction. The fault is that pointer
+>                                                                     being bad.
+>
+>       So B026 is simply *not engaged* here (its fix is for a second, duplicate
+>  login; its null-guard is at the wrong dereference and the pointer is non-null
+>        anyway). Let me read the `Engine::Init` loop to see where the "racials"
+>     strategy — and its `botAI` — actually comes from. That's the true root
+>                                                                         cause.
 
-Thread 1 (the **main thread**) took the SIGSEGV. Let me read the actual stack
-frames of the crashing thread.
+>         One more crucial tell from that `Engine::Init` loop: strategies run in
+>    `std::map` (alphabetical) order — `boost, cast time, chat, default, duel,
+>        potions, **racials**`. It crashed on **racials**, meaning the *earlier*
+> strategies' `InitTriggers` ran fine with a valid `botAI`. So it's not that the
+>    whole PlayerbotAI is bad — specifically the **racials** strategy instance
+> carries a bad `botAI`. That points to racials being a *shared/cached* strategy
+>          object rather than one freshly built for this bot. Let me confirm how
+>                                                          "racials" is created.
 
-There it is — ground truth. The crash is **exactly** the path B026 documents,
-and it fires **despite B026 being compiled in**:
-
-```
-#0 RacialsStrategy::InitTriggers   RacialsStrategy.cpp:30   → Player* bot = botAI->GetBot();   ← faults
-#1 Engine::Init                    Engine.cpp:140           strategy=0x…fc40  i.first="racials"
-#2 AiFactory::createCombatEngine   AiFactory.cpp:502
-#3 PlayerbotAI::PlayerbotAI        PlayerbotAI.cpp:151
-#4 PlayerbotsMgr::AddPlayerbotData PlayerbotMgr.cpp:1788
-#5 PlayerbotHolder::OnBotLogin     PlayerbotMgr.cpp:481
-#6 OnBotLoginOperation::Execute    PlayerbotOperations.h:511
-#7 PlayerbotWorldThreadProcessor::ProcessBatch  (batch of 60 logins)
-```
-
-So B026 correctly *diagnosed* the path but its fix did **not** prevent this
-crash. And I can already see why the defensive guard didn't catch it: the
-strategy pointer is **non-null** (`0x…fc40`), so B026's `if (!strategy)` guard
-passes — but the fault is one level deeper, inside `strategy->InitTriggers()`
-dereferencing a dangling `botAI`, at Engine.cpp:**140**, whereas B026's guard
-sits at the `strategy->GetType()` line (Engine.cpp:126). Wrong dereference
-guarded.
-
-The decisive question: did B026's *actual* fix (the delete-before-reconstruct)
-even run for this bot, or is this a different origin for the dangling pointer?
-Let me check whether the B026 warning fired, and read the two faulting sites.
-
-Decisive findings:
-
-- **B026's real fix never fired** — the `reclaiming stale AI (B026)` warning
-  is absent from both logs, and **0 bots logged in** before the crash. So this
-  is **not** the duplicate-login race B026 targets — it dies on the *very
-  first* bot in the first batch.
-- `RacialsStrategy.cpp:30` is `Player* bot = botAI->GetBot();` — `botAI` is
-  the `Strategy` base member set at construction. The fault is that pointer
-  being bad.
-
-So B026 is simply *not engaged* here (its fix is for a second, duplicate login;
-its null-guard is at the wrong dereference and the pointer is non-null anyway).
-Let me read the `Engine::Init` loop to see where the "racials" strategy — and
-its `botAI` — actually comes from. That's the true root cause.
-
-One more crucial tell from that `Engine::Init` loop: strategies run in
-`std::map` (alphabetical) order — `boost, cast time, chat, default, duel,
-potions, **racials**`. It crashed on **racials**, meaning the *earlier*
-strategies' `InitTriggers` ran fine with a valid `botAI`. So it's not that the
-whole PlayerbotAI is bad — specifically the **racials** strategy instance
-carries a bad `botAI`. That points to racials being a *shared/cached* strategy
-object rather than one freshly built for this bot. Let me confirm how "racials"
-is created.
-
-Checked — the backtrace is conclusive. Here's the whole picture.
+              Checked — the backtrace is conclusive. Here's the whole picture.
 
 ## What actually crashed
 
-`SIGSEGV on Thread 1 (the main world thread)`, during the **first batch of
-random-bot logins** (60 queued, **zero completed**):
+      `SIGSEGV on Thread 1 (the main world thread)`, during the **first batch of
+                            random-bot logins** (60 queued, **zero completed**):
 
 ```
 #0 RacialsStrategy::InitTriggers   RacialsStrategy.cpp:30   Player* bot = botAI->GetBot();   ← fault
@@ -314,76 +316,76 @@ random-bot logins** (60 queued, **zero completed**):
 #7 PlayerbotWorldThreadProcessor::ProcessBatch
 ```
 
-It faults dereferencing `botAI` — a `Strategy` base-class back-pointer to the
-owning `PlayerbotAI`. That pointer is pointing at freed/garbage memory.
+ It faults dereferencing `botAI` — a `Strategy` base-class back-pointer to the
+         owning `PlayerbotAI`. That pointer is pointing at freed/garbage memory.
 
 ## Ruling out the two suspects
 
-**B002 / issue-306 (ALE login hook)** — not it. That was always a
-*recoverable* Lua nil error, not a segfault. And it's genuinely fixed: the
-`OnLogin` symbol and `MOD_ALE` wiring are compiled into the binary. Your
-instinct that it "seemed critical" was reasonable, but it's a different bug.
+             **B002 / issue-306 (ALE login hook)** — not it. That was always a
+      *recoverable* Lua nil error, not a segfault. And it's genuinely fixed: the
+        `OnLogin` symbol and `MOD_ALE` wiring are compiled into the binary. Your
+    instinct that it "seemed critical" was reasonable, but it's a different bug.
 
-**B026 (bot-login strategy guard)** — *this* is the patch that targets this
-crash path, and it **is compiled into the binary** (I confirmed its log strings
-are present). But it does **not** stop this crash, for two independent reasons:
+   **B026 (bot-login strategy guard)** — *this* is the patch that targets this
+ crash path, and it **is compiled into the binary** (I confirmed its log strings
+ are present). But it does **not** stop this crash, for two independent reasons:
 
-1. **Its real fix never engages.** B026 fixes a *duplicate*-login race — a
-   second `PlayerbotAI` built for a GUID that already had one. Its telltale
-   warning `reclaiming stale AI (B026)` is **absent from both logs**, and **0
-   bots logged in** before the crash. This dies on the *first* login of the
-   *first* bot. Different trigger.
-2. **Its defensive guard is at the wrong dereference.** B026 inserts `if
-   (!strategy) continue;` before `strategy->GetType()` at Engine.cpp:126. But
-   (a) the fault is three lines later at `strategy->InitTriggers()` (line 129),
-   and (b) the strategy pointer is **non-null** (`0x…fc40`) — it's the
-   strategy's *internal* `botAI` that's dangling. A null check can't catch a
-   use-after-free.
+    1. **Its real fix never engages.** B026 fixes a *duplicate*-login race — a
+        second `PlayerbotAI` built for a GUID that already had one. Its telltale
+      warning `reclaiming stale AI (B026)` is **absent from both logs**, and **0
+        bots logged in** before the crash. This dies on the *first* login of the
+                                                 *first* bot. Different trigger.
+        2. **Its defensive guard is at the wrong dereference.** B026 inserts `if
+      (!strategy) continue;` before `strategy->GetType()` at Engine.cpp:126. But
+    (a) the fault is three lines later at `strategy->InitTriggers()` (line 129),
+         and (b) the strategy pointer is **non-null** (`0x…fc40`) — it's the
+       strategy's *internal* `botAI` that's dangling. A null check can't catch a
+                                                                 use-after-free.
 
 ## The real root cause
 
-Strategies aren't built fresh in the engine — they're pulled from the bot's
-`aiObjectContext` via `GetStrategy(name)` (Engine.cpp:355), and each is `new
-RacialsStrategy(botAI)` where `botAI` comes from **the context**
-(StrategyContext.h:150). The engine in frame #2 is initialized from an
-`aiObjectContext` whose `botAI` points at a **destroyed** `PlayerbotAI`. Every
-strategy it lazily creates inherits that dangling pointer; `Engine::Init` then
-faults at **the first strategy whose `InitTriggers` immediately dereferences
-`botAI`** — which, in `std::map` order, is `racials` (the earlier ones —
-boost, chat, default… — have trivial or non-dereferencing trigger init, so
-they slid past).
+   Strategies aren't built fresh in the engine — they're pulled from the bot's
+    `aiObjectContext` via `GetStrategy(name)` (Engine.cpp:355), and each is `new
+                RacialsStrategy(botAI)` where `botAI` comes from **the context**
+          (StrategyContext.h:150). The engine in frame #2 is initialized from an
+  `aiObjectContext` whose `botAI` points at a **destroyed** `PlayerbotAI`. Every
+  strategy it lazily creates inherits that dangling pointer; `Engine::Init` then
+    faults at **the first strategy whose `InitTriggers` immediately dereferences
+    `botAI`** — which, in `std::map` order, is `racials` (the earlier ones —
+  boost, chat, default… — have trivial or non-dereferencing trigger init, so
+                                                                they slid past).
 
 This is the *same "dangling strategy owned by a dead context"* family B026 named
 — but reached through a path B026's `AddPlayerbotData` dedup doesn't cover (no
-duplicate, so its delete-before-reconstruct never runs). So either the context
-is being reused from an earlier torn-down AI for this bot via an uncovered
-route, or the context's `botAI` isn't repointed to the live facade before
-strategies are pulled. Pinning which needs a read of the `PlayerbotAI` ctor +
-how `aiObjectContext` is obtained — one more layer down.
+  duplicate, so its delete-before-reconstruct never runs). So either the context
+      is being reused from an earlier torn-down AI for this bot via an uncovered
+       route, or the context's `botAI` isn't repointed to the live facade before
+   strategies are pulled. Pinning which needs a read of the `PlayerbotAI` ctor +
+                      how `aiObjectContext` is obtained — one more layer down.
 
-This is a **mod-playerbots bug on this branch** (rev `52f58186a533`, Playerbot
-branch, 2026-07-10), not something our patches introduced — they just don't
-yet cover it.
+  This is a **mod-playerbots bug on this branch** (rev `52f58186a533`, Playerbot
+   branch, 2026-07-10), not something our patches introduced — they just don't
+                                                                   yet cover it.
 
 ## Where I'd go next — your call
 
-1. **Immediate unblock (operational):** these are `RandomPlayerbotMgr`
-   auto-logins, so the server can't finish boot while they fire. Turning down
-   the startup burst (`AiPlayerbot.RandomBotAutologin = 0`, or a low
-   `RandomBotMinLevel`/count) in `playerbots.conf` should let the world come up
-   while we fix the real bug. Fastest path to a running server.
-2. **Real fix (new patch, e.g. B027):** ensure the `aiObjectContext`'s `botAI`
-   is the live facade before the engine initializes strategies — i.e. don't
-   let a first-login engine build off a stale context. I'd write an issue file
-   first (this is a feature-grade fix, not a one-line bugfix), then extend the
-   patch set. I'll need to read `PlayerbotAI.cpp:151` and the context-creation
-   path to target it precisely.
-3. **Bisect upstream:** if this started recently, a playerbots commit around
-   2026-07-10 regressed context/AI lifetime on the login path; pinning to the
-   prior known-good commit sidesteps it until upstream fixes it.
+          1. **Immediate unblock (operational):** these are `RandomPlayerbotMgr`
+      auto-logins, so the server can't finish boot while they fire. Turning down
+               the startup burst (`AiPlayerbot.RandomBotAutologin = 0`, or a low
+    `RandomBotMinLevel`/count) in `playerbots.conf` should let the world come up
+                    while we fix the real bug. Fastest path to a running server.
+  2. **Real fix (new patch, e.g. B027):** ensure the `aiObjectContext`'s `botAI`
+      is the live facade before the engine initializes strategies — i.e. don't
+     let a first-login engine build off a stale context. I'd write an issue file
+     first (this is a feature-grade fix, not a one-line bugfix), then extend the
+     patch set. I'll need to read `PlayerbotAI.cpp:151` and the context-creation
+                                                    path to target it precisely.
+    3. **Bisect upstream:** if this started recently, a playerbots commit around
+      2026-07-10 regressed context/AI lifetime on the login path; pinning to the
+                   prior known-good commit sidesteps it until upstream fixes it.
 
-Want me to start with #1 to get you a bootable server, then open an issue and
-dig into #2? I haven't changed anything yet.
+   Want me to start with #1 to get you a bootable server, then open an issue and
+                                    dig into #2? I haven't changed anything yet.
 
 --------------------------------------------------------------------------------
 
@@ -407,108 +409,966 @@ let's try this, then if it doesn't work, let's try this:
 
 ### Assistant Response 4
 
-Let's do option 2 the right way — but first I need to *precisely* understand
-the ownership, because the fix has to target the exact point where the context's
-`botAI` diverges from the live facade. Let me read the constructor, the factory,
-and the context lifecycle before writing anything.
+> Let's do option 2 the right way — but first I need to *precisely* understand
+>         the ownership, because the fix has to target the exact point where the
+>  context's `botAI` diverges from the live facade. Let me read the constructor,
+>                the factory, and the context lifecycle before writing anything.
 
-The construction flow is clear now: at `PlayerbotAI.cpp:149` the context is
-created with `this` (the live facade), then `:151` builds the engine from it. On
-a clean first construction the context's `botAI` *is* the live facade — so the
-dangling pointer means `createAiObjectContext` is handing back a
-**shared/cached** context, not a fresh one. That's the crux. Let me read it and
-the context's object-caching.
+>    The construction flow is clear now: at `PlayerbotAI.cpp:149` the context is
+>  created with `this` (the live facade), then `:151` builds the engine from it.
+>   On a clean first construction the context's `botAI` *is* the live facade —
+>        so the dangling pointer means `createAiObjectContext` is handing back a
+>    **shared/cached** context, not a fresh one. That's the crux. Let me read it
+>                                              and the context's object-caching.
 
-The caching model is now clear — `NamedObjectContext` has a `shared` flag, and
-cached objects persist on the context. If the strategy context is **shared
-across bots**, the first bot's `RacialsStrategy` (holding that bot's `botAI`)
-gets cached, and after that bot's AI is destroyed the cached strategy dangles
-for every later bot. Let me confirm whether the strategy context is actually
-shared and how `GetStrategy` resolves.
+>   The caching model is now clear — `NamedObjectContext` has a `shared` flag,
+> and cached objects persist on the context. If the strategy context is **shared
+>  across bots**, the first bot's `RacialsStrategy` (holding that bot's `botAI`)
+>  gets cached, and after that bot's AI is destroyed the cached strategy dangles
+>   for every later bot. Let me confirm whether the strategy context is actually
+>                                         shared and how `GetStrategy` resolves.
 
-Almost there. The per-bot `NamedObjectContextList` creates strategies fresh with
-the bot's `botAI` — so the dangling pointer only makes sense if `GetStrategy`
-resolves "racials" through a **`shared` context whose `created` cache persists
-across bots**. The deciding file is `AiObjectContext.h` — how `GetStrategy`
-resolves and which `botAI` it feeds the creator. Let me read it.
+>    Almost there. The per-bot `NamedObjectContextList` creates strategies fresh
+>         with the bot's `botAI` — so the dangling pointer only makes sense if
+>  `GetStrategy` resolves "racials" through a **`shared` context whose `created`
+> cache persists across bots**. The deciding file is `AiObjectContext.h` — how
+> `GetStrategy` resolves and which `botAI` it feeds the creator. Let me read it.
 
-The ownership is actually **per-bot and should be safe**: `AiObjectContext`
-holds a per-instance `strategyContexts` with its own cache, created fresh with
-the live facade at `PlayerbotAI.cpp:149`. So a naive "set botAI = facade" fix
-would be a no-op — the defect is subtler (a stale/torn-down facade reaching
-this path, exactly B026's family but not via the dedup it guards).
+     The ownership is actually **per-bot and should be safe**: `AiObjectContext`
+  holds a per-instance `strategyContexts` with its own cache, created fresh with
+   the live facade at `PlayerbotAI.cpp:149`. So a naive "set botAI = facade" fix
+   would be a no-op — the defect is subtler (a stale/torn-down facade reaching
+              this path, exactly B026's family but not via the dedup it guards).
 
-That reshapes the right fix: a **guard + diagnostic at the actual faulting
-site** — in `Engine::Init`, before `InitTriggers`, verify each strategy's
-stored `botAI` matches the engine's live facade; skip-and-log on mismatch
-instead of segfaulting. That both keeps the server up *and* tells us the exact
-nature of the bad pointer on recurrence (which decides whether option 3 is
-needed). Let me nail the exact accessors before writing, and read the
-patch-system skill.
+      That reshapes the right fix: a **guard + diagnostic at the actual faulting
+     site** — in `Engine::Init`, before `InitTriggers`, verify each strategy's
+       stored `botAI` matches the engine's live facade; skip-and-log on mismatch
+  instead of segfaulting. That both keeps the server up *and* tells us the exact
+      nature of the bad pointer on recurrence (which decides whether option 3 is
+           needed). Let me nail the exact accessors before writing, and read the
+                                                             patch-system skill.
 
 --------------------------------------------------------------------------------
 
 ### User Request 5
 
+Base directory for this skill: /home/ritz/.claude/skills/upstream-patch-system
+
+# Upstream Patch System
+
+A method for owning customizations to code you didn't write, without forking it.
+
+> **This document describes machinery to build, not a procedure to follow.** It
+> assumes nothing about which agent, editor, language, or runtime executes it.
+> Everything below is plain shell and text-processing logic — `git`, `sed`,
+> `grep`, `awk`, traps, generated artifacts — that any LLM or human can
+> assemble
+> in any project. Swap equivalent tools freely.
+
+---
+
+## Principle: machinery, not procedure
+
+A **procedure** is a sequence an operator (human or LLM) must work through by
+hand. A **machine** is a set of components wired together so the outcome falls
+out
+deterministically, with no operator memory in the loop. This system is built
+entirely as machinery, on purpose:
+
+- **Every "remember to…" is a defect.** Anything that depends on the operator
+  recalling a step is a latent bug. Convert it into one of four mechanical
+  forms:
+  a **guard** (a precondition check that makes the operation a no-op when it
+  shouldn't fire), a **trap** (cleanup wired to process exit so it runs even on
+  failure), a **generated artifact** (a derived file that can't drift because
+  it's
+  recomputed, never hand-edited), or a **gate** (a hard stop that refuses to
+  proceed until an explicit condition or approval is satisfied).
+
+- **The only inputs left to a human are irreducible.** Three, specifically: the
+  *transformation itself* (the old→new text edit and the anchor that locates
+  it),
+  the *judgment that a given patch belongs upstream*, and the *approval of an
+  outward-facing action* (opening a PR, deleting a fork). Everything else —
+  when
+  patches apply, when they revert, whether they still match, what the registry
+  says, whether the tree is clean — is wired and deterministic.
+
+Read every section below as "here is a component and how it is wired so the
+guarantee holds without anyone watching," not "here are steps to perform."
+
+---
+
+## The core problem this solves
+
+You depend on a third-party codebase — an upstream project, a vendored
+library, a
+submodule. You need to change it: fix a build error against your toolchain, add
+a
+hook, silence warnings, tune a constant, adjust a behavior. The two naive
+approaches both rot:
+
+- **Edit the source in place.** Edits get clobbered when you pull upstream, or
+  they silently survive and are forgotten. The tree drifts and nobody can tell
+  your changes from upstream's.
+- **Maintain a hard fork.** Every upstream update is a merge conflict. The fork
+  diverges, the diff grows opaque, and "what did we change and why" becomes
+  unanswerable.
+
+The machine takes a third path: **the cloned source tree is a disposable build
+artifact.** It is never committed and never the source of truth. The source of
+truth is a directory of small scripts, each of which knows how to *apply* one
+customization and how to *reverse* it. On every build the machine stamps the
+changes into a freshly-cloned tree and peels them back off afterward; the tree
+round-trips to a pristine copy of upstream HEAD.
+
+What you version is the **intent** (the apply/unapply scripts and their
+headers),
+not the **result** (the modified source). The result is a deterministic function
+of `upstream + scripts`, regenerated on demand.
+
+## What the machinery buys you
+
+- **Upstream updates stop hurting.** Re-clone, re-apply. A patch that no longer
+  matches fails loudly with an unmatched pattern — a *signal* the machine
+  surfaces
+  automatically, pointing at the one patch to re-target, rather than a conflict
+  to
+  resolve across the tree.
+- **Every change is documented at the point of change.** Each script's header
+  records the upstream symptom, the pattern it matches, and how it reverses —
+  and
+  the registry is *generated* from those headers, so "what did we change and
+  why"
+  is always answerable and never stale.
+- **The diff is legible.** N upstream problems become N small, named, anchored
+  edits, not one sprawling fork diff.
+- **Changes are portable.** A patch script (or its prose "patch doc") replays
+  onto
+  any compatible upstream. You ship knowledge, not binaries.
+
+---
+
+## Mental model: a patch is a reversible function over a text tree
+
+Each patch is a **pair of functions** over the source tree:
+
+```
+apply:    pristine_tree    ->  customized_tree
+unapply:  customized_tree  ->  pristine_tree     (exact inverse of apply)
+```
+
+Two properties, both enforced mechanically rather than by discipline:
+
+1. **Idempotent.** `apply` twice equals `apply` once; same for `unapply`. The
+   enforcement is a *guard*: apply checks "is the un-patched pattern present?"
+   before editing; unapply checks "is the post-patch shape present?" before
+   reverting. An already-applied patch is a silent no-op — not because the
+   operator avoided re-running it, but because the guard makes re-running inert.
+
+2. **Exact-inverse.** `unapply(apply(tree)) == tree`. The unapply transformation
+   is the literal mirror of the apply transformation. This is what lets the tree
+   round-trip — and it is *asserted* by the verify harness (below), not
+   trusted.
+
+---
+
+## The tiers: components separated by *when they fire* and *what they target*
+
+Customizations fire at different moments and touch different trees, so the
+machine
+groups them into tiers keyed to the **chronological phase of the build**. Each
+tier is a driver function; a project wires up as many as its chronology requires
+(often fewer than three).
+
+```
+PRE-BUILD   (source patches)    before compile   edits the SOURCE tree (code you don't own)
+POST-BUILD  (install patches)   after install    sets up the INSTALL tree (configs, assets, schema)
+POST-DEPLOY (config patches)    after promote     tunes the LIVE config (paths, secrets, runtime knobs)
+```
+
+| Tier | Fires | Target | Job | Reverts? |
+|------|-------|--------|-----|----------|
+| **PRE-BUILD** | after clone, before compile | upstream source files | make upstream build/behave for you (fixes, hooks, warning silencing, behavior tweaks) | **Yes** — must revert so the source stays pristine |
+| **POST-BUILD** | after install-to-staging, before validate | the just-installed staging tree (configs from templates, log dirs, symlinks, schema/data) | set up a freshly-installed instance | usually no (re-run is idempotent) |
+| **POST-DEPLOY** | after promoting staging to live, before start | live config files + runtime data rows | write deploy-specific values unknowable earlier: which database, which paths, which ports, plus runtime tuning | no |
+
+**The separation is chronological because each tier has a precondition the prior
+phase establishes.** PRE-BUILD needs the source present but the binary not yet
+built. POST-BUILD needs the binary installed into staging, though the live
+directory may not exist. POST-DEPLOY needs the live directory to exist (promote
+created it) so it can write paths/credentials pointing *at* it — values that
+did
+not exist at any earlier phase. The tiers cannot be collapsed without violating
+a
+precondition. A side benefit of wiring runtime-tuning (POST-DEPLOY) *after* the
+validation gate: a botched tuning value cannot fail validation, because
+validation
+runs against complete, valid staging configs from POST-BUILD; POST-DEPLOY writes
+only the *delta* between "valid for staging" and "valid for live."
+
+**PRE-BUILD is the load-bearing tier** — the only one touching code you don't
+own,
+hence the only one whose revert must be exact. POST-BUILD and POST-DEPLOY touch
+*your* artifacts and behave like ordinary idempotent setup. Wire only the tiers
+your chronology demands.
+
+---
+
+## Directory layout (the parts bin)
+
+```
+project/
+├── patches/
+│   ├── patches.sh                  # the orchestrator: sources every patch,
+│   │                               #   declares per-profile patch lists,
+│   │                               #   defines the apply/unapply/audit drivers
+│   ├── P001-<short-name>.sh         # one PRE-BUILD patch: apply + unapply pair
+│   ├── P002-<short-name>.sh
+│   ├── I001-<short-name>.sh         # POST-BUILD (install) patches
+│   └── C001-<short-name>.sh         # POST-DEPLOY (config) patches
+├── scripts/
+│   ├── scaffold-patch               # emits a new patch skeleton (generator)
+│   ├── verify-patches               # asserts round-trip + match-count invariants
+│   ├── gen-registry                 # regenerates the registry from patch headers
+│   ├── redownload-source            # wipes the source tree for a fresh clone
+│   ├── install                      # clones upstream + submodules, then compiles
+│   ├── compile                      # the build driver (apply → build → unapply)
+│   ├── apply-patches                # operator surface over the drivers
+│   └── audit-patches                # the pruning machine (post-update)
+├── docs/patches/
+│   ├── patch-registry.md            # GENERATED index — never hand-edited
+│   └── <feature>.md                 # optional prose "patch docs"
+├── .upstream-lock                   # commit last successfully built against
+└── source/                          # THE CLONED TREE — gitignored, disposable
+```
+
+> ID prefixes (`P`/`I`/`C`) are arbitrary; the rule is one tier per prefix,
+> sequential numbering, so a glob selects a tier deterministically.
+
+The load-bearing line of the whole design lives in `.gitignore`:
+
+```gitignore
+source/
+```
+
+The cloned source is **never tracked**. A surviving modification to upstream
+code
+in your repo's history is, by construction, a bug — a failed unapply or a
+manual
+edit that should have been a patch. (The verify harness and a clean-tree
+assertion
+catch both before they land.)
+
+---
+
+## The build driver: a wired pipeline, not a list of steps
+
+The build is a composition of functions in which **each edge guarantees the
+precondition the next stage relies on.** Nobody "performs the steps"; the driver
+runs the graph and the invariants hold by construction. The wiring, in full:
+
+```bash
+source patches/patches.sh
+
+reset_source_trees                       # ⟶ guarantees: source == upstream HEAD
+audit_patches "$(cat .upstream-lock)" \
+              "$(git -C "$SRC" rev-parse HEAD)"   # ⟶ on update: classify/flag drift
+apply_patches_prebuild                   # ⟶ guarantees: customizations present
+trap 'unapply_patches_prebuild' EXIT     # ⟶ guarantees: revert happens NO MATTER WHAT
+build                                    # compile the customized tree
+install_to_staging                       # binaries land in staging, not live
+apply_patches_install                    # ⟶ guarantees: staging is set up
+trap - EXIT                              # success path: disarm the net...
+unapply_patches_prebuild                 # ...and revert explicitly ⟶ source pristine
+git -C "$SRC" rev-parse HEAD > .upstream-lock   # ⟶ baseline advances ONLY on success
+```
+
+Each wire, and the guarantee it makes deterministic:
+
+- **`reset_source_trees` first, unconditionally.** Hard-resets the clone and
+  every
+  submodule to HEAD. On a clean tree it is a no-op; on a dirty tree it discards
+  residue from a build killed in a way that bypassed the trap (SIGKILL, OOM,
+  power
+  loss). Running it always — never "only if dirty" — is what makes "source
+  ==
+  HEAD" a *guaranteed* entry precondition rather than a hope. It is the backstop
+  for the one failure the trap cannot catch: a signal that kills the shell
+  outright.
+
+  ```bash
+  reset_source_trees() {
+      git -C "${SRC}" reset --hard HEAD --quiet
+      for sub in "${SRC}"/<submodules>/*/; do
+          [[ -d "${sub}/.git" ]] && git -C "${sub}" reset --hard HEAD --quiet
+      done
+  }
+  ```
+
+- **The trap is the revert machine.** `trap 'unapply_patches_prebuild' EXIT`
+  wires
+  the revert to process exit, so a crashed or failed build leaves the source
+  clean
+  anyway. The explicit `unapply` on the success path (after disarming) is the
+  normal route; the trap covers every abnormal one. Together they make "the tree
+  returns to HEAD" true across *all* exit modes, with no operator action.
+
+- **`.upstream-lock` advances only after success.** Wiring the lock write to the
+  end of the successful path means the audit's baseline can never point at a
+  version you didn't actually ship. A failed build leaves the previous baseline
+  intact.
+
+The driver loads the active profile's patch list and dispatches by naming
+convention — no central registry of "which function to call," just a glob and
+a
+grep over declared functions:
+
+```bash
+apply_patches_prebuild() {
+    local patches="${PREBUILD_PATCHES[$PROFILE]:-}"
+    for patch_id in ${patches}; do                  # e.g. "P001 P004 P009"
+        local fn=$(declare -F | grep "^declare -f patch_${patch_id}_" | sed 's/declare -f //')
+        [[ -n "${fn}" ]] && ${fn}
+    done
+}
+```
+
+`redownload-source` is the regeneration lever: it removes only the source tree
+(leaving build dirs, installed artifacts, data, config untouched), so "the
+source
+is in a weird state" is never a debugging session — it's `redownload-source &&
+install`. That shortcut is *safe specifically because* the real work lives in
+`patches/`, not in the tree.
+
+---
+
+## Anatomy of a patch (the standard component)
+
+Every patch file is a self-contained apply/unapply pair with a header. The
+header
+fields are not prose decoration — they are the input the generator emits and
+the
+data the registry generator and audit machine read back. Canonical shape:
+
+```bash
+#!/usr/bin/env bash
+# P017-<short-name>.sh
+#
+# TARGET:   <relative/path/to/file> :: <function or region>
+# SYMPTOM:  <what upstream does / the code as shipped>
+# CHANGE:   <what we make it do, and WHY>
+# ANCHOR:   <the unique pattern the apply keys on>
+# WITNESS:  <a string present ONLY in the patched form>
+# MATCHES:  1            # expected match count of ANCHOR (verify asserts this)
+
+# {{{ patch_P017_<short_name>
+patch_P017_<short_name>() {
+    local FILE="${SRC}/<relative/path/to/file>"
+    [[ -f "${FILE}" ]] || return 0                 # missing target = silent skip
+
+    # Marker-wrapped replacement: the NEW block carries unique markers so the
+    # inverse can locate it EXACTLY and can never false-match upstream or a
+    # sibling patch, no matter how upstream reflows around it.
+    sed -i -z 's|<OLD upstream text, escaped>|<C> {{{ P017-marker\n<NEW text>\n<C> }}} P017-marker|' "${FILE}"
+}
+# }}}
+
+# {{{ unpatch_P017_<short_name>
+unpatch_P017_<short_name>() {
+    local FILE="${SRC}/<relative/path/to/file>"
+    [[ -f "${FILE}" ]] || return 0
+    # Exact inverse: match the marker-wrapped NEW block, restore OLD.
+    sed -i -z 's|<C> {{{ P017-marker\n<NEW text escaped>\n<C> }}} P017-marker|<OLD upstream text>|' "${FILE}"
+}
+# }}}
+
+# {{{ patch_needs_applying_P017   (the witness probe)
+patch_needs_applying_P017() {
+    local FILE="${SRC}/<relative/path/to/file>"
+    [[ -f "${FILE}" ]] && ! grep -q "P017-marker" "${FILE}"   # absent witness ⟶ needs applying
+}
+# }}}
+```
+
+(`<C>` is the target language's line-comment token — `//`, `#`, `--`, `;`,
+…)
+
+The mechanical properties the *shape* enforces:
+
+- **The guard makes idempotency structural.** A one-line edit guards with
+  `grep -q "<unpatched anchor>" && sed …`; run it again and the anchor is
+  gone, so
+  nothing happens. The operator never has to track "did I already apply this."
+- **Anchored, one-to-one patterns.** N problems = N anchored edits + N inverses.
+  A
+  broad pattern corrupts clean source; the `MATCHES` field plus the verify
+  harness
+  turn "anchor tightly" from advice into an asserted invariant.
+- **Markers make the inverse robust.** A unique `{{{ <ID> … }}} <ID>` wrapper
+  is a
+  stable handle the inverse always finds and a sibling patch can never hit. The
+  same marker doubles as the witness, so the probe and the inverse agree by
+  construction.
+- **The witness probe is the deterministic answer to "is this needed?"** —
+  reused
+  by the build's skip shortcut, by `--dry-run`, and by the audit's convergence
+  test.
+
+## The generator and the verifier replace the "add a patch" checklist
+
+Adding a patch is not a remembered procedure; it is **a generator that stamps
+the
+component and a verifier that refuses malformed ones.** The only human input is
+the irreducible creative part — the actual old→new edit and its anchor.
+
+- **`scaffold-patch <tier> <name> <file>`** computes the next free ID for the
+  tier
+  (by scanning existing filenames), emits the skeleton above with the header
+  fields and the `patch_/unpatch_/needs_applying_` triplet pre-named, and
+  pre-fills
+  the marker string. The author fills in only the `sed` bodies and the
+  OLD/NEW/ANCHOR/WITNESS fields.
+- **`verify-patches`** is the assertion harness, wired into the build and CI as
+  a
+  gate. For each patch it mechanically checks, against a fresh clone:
+  - apply changes the tree;
+  - `grep -c "<ANCHOR>"` equals the declared `MATCHES` (0 or >1 ⟶ fail);
+  - the witness is present after apply and absent after unapply;
+  - **the round-trip is exact**: `apply → unapply → git diff` is empty.
+  A patch that fails any assertion never enters the active set — the property
+  isn't "the author tested it," it's "the harness won't let a broken one build."
+- **`gen-registry`** regenerates `docs/patches/patch-registry.md` by reading the
+  header fields of every patch file. The registry is a *generated artifact*: it
+  cannot drift from reality because it is never hand-edited, only recomputed.
+  "Add
+  a row to the registry" — a classic forgettable step — ceases to exist as a
+  manual act.
+
+---
+
+## The orchestrator (`patches.sh`): wiring, not bookkeeping
+
+One sourced file wires the components together:
+
+1. **Auto-registration by glob.** Each patch file, when sourced, registers its
+   functions; the orchestrator just globs them in. Adding a file *is*
+   registering
+   it — there is no separate manifest to keep in sync.
+   ```bash
+   PATCHES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+   for f in "${PATCHES_DIR}"/P[0-9][0-9][0-9]-*.sh; do [[ -f "$f" ]] && source "$f"; done
+   ```
+
+2. **Per-profile selection as declarative structure.** The one genuinely
+   *declarative* input — which patches a build variant wants — lives as an
+   associative array (configuration in structure, greppable, with inline
+   justification). This is the human's intent encoded as data the drivers read;
+   it
+   is config, not procedure.
+   ```bash
+   declare -A PREBUILD_PATCHES=(
+       ["minimal"]="P001 P004"
+       ["standard"]="P001 P004 P009 ... P024"   # compile fixes + module compat
+       ["full"]="P001 P002 P003 ... P024"       # everything incl. feature hooks
+   )
+   ```
+
+3. **The drivers** (`apply_*`, `unapply_*`, `reset_source_trees`,
+   `patches_need_applying`, `audit_patches`) each iterate the active profile's
+   list
+   and dispatch by naming convention. Dispatch-by-convention means there is no
+   lookup table to maintain — the function name *is* the registration.
+
+**Revert reporting is computed, not narrated.** `unapply_patches_prebuild`
+snapshots `git status --porcelain` across the tree and submodules before and
+after
+each unpatch and prints `[<ID>] Reverted` only when content actually changed.
+"Nothing printed" is therefore an unambiguous, machine-derived fact (with a
+no-op
+count in the summary), not an operator guess.
+
+---
+
+## Profiles: one parts bin, many machines
+
+A **profile** is a named selection of patches (and submodules, and config
+values).
+The same `patches/` directory drives every variant; the per-profile arrays
+select
+the subset. The active profile is itself read mechanically — from a `.profile`
+file, overridable by `--profile` — so the selection is data the machine
+consumes,
+never a flag an operator must remember to pass:
+
+```bash
+PROFILE="$([[ -f "${ROOT}/.profile" ]] && cat "${ROOT}/.profile" || echo "standard")"
+```
+
+The **a/b variant pattern** encodes "same setting, different value per profile"
+as
+two sibling patches with non-overlapping profile lists, so exactly one fires.
+History stays visible — old values are recorded as siblings, not overwritten
+—
+which is itself a small machine for never losing the prior decision.
+
+---
+
+## De-patching: three cleanup mechanisms, each wired to its own trigger
+
+There is no "decide which cleanup to run." There are three mechanisms, and the
+**call site selects the right one automatically**:
+
+| Mechanism | Wired to (trigger) | Guarantee it provides |
+|-----------|--------------------|-----------------------|
+| `unapply_patches_prebuild` | the EXIT trap, and the success-path revert | reverses exactly the patches *this run* applied, with computed per-patch reporting |
+| `reset_source_trees` | the unconditional pre-flight at every build entry point | drives the tree to a known commit; cannot fabricate dirt |
+| `apply-patches --revert` | the operator surface (manual) | exposes revert by hand; for source patches it also triggers an incremental rebuild so the binary matches |
+
+The split exists because of a real failure mode that makes one mechanism unsafe
+in
+the other's role:
+
+> An `unapply` transformation targets *the post-patch shape*. It cannot
+> distinguish
+> "we applied this" from "upstream now ships this." When upstream converges on
+> the
+> form you patched to, a defensive unapply silently reverts **clean upstream
+> code
+> into false dirt.**
+
+So the wiring assigns each mechanism the job it is safe for: `unapply` only ever
+runs to reverse patches the same run applied (where authorship is certain), and
+`reset_source_trees` — which goes to a commit and *cannot* manufacture dirt
+— is
+the one wired to every defensive/pre-flight position. The operator never
+chooses;
+the call site already did.
+
+The operator surface itself is the one deliberately human-facing tool:
+
+```
+./scripts/apply-patches --dry-run            # show which patches WOULD apply (computed)
+./scripts/apply-patches --prebuild           # apply source patches to the tree
+./scripts/apply-patches --prebuild --revert  # revert + incremental rebuild
+./scripts/apply-patches --profile minimal --prebuild
+```
+
+It is a thin, explicit control panel over the same drivers — not a procedure,
+a
+switchboard.
+
+---
+
+## The pruning machine: auditing patches on every upstream update
+
+Patches rot as upstream moves: some become redundant (upstream fixed it), some
+stale (upstream restructured the target), some quietly mean something different
+(upstream changed the region around your anchor). The pruning machine makes "are
+these still needed?" a **computed verdict wired into the update path** — not a
+review someone must remember to run. It is invoked by the build driver on every
+update (`audit_patches OLD NEW`), so it *cannot be skipped*.
+
+## What it computes, per patch, against the pristine new tree
+
+The machine reads each patch's `TARGET`, `ANCHOR`, and `WITNESS` header fields
+and
+emits exactly one verdict:
+
+1. **RETIRE (convergence).** The witness probe reports the patch is no longer
+   needed on pristine upstream → upstream adopted your shape. The edit is
+   redundant.
+2. **STALE (disappearance).** The anchor is absent from the target → upstream
+   restructured the code out from under the patch; apply can no longer match.
+3. **REVIEW (collision).** Upstream's changed line ranges overlap the patch's
+   anchor line → the patch may still apply but its meaning in the new context
+   is no
+   longer guaranteed.
+4. **OK.** Anchor intact, region untouched.
+
+The collision test is computed directly from the version-control delta — hunk
+headers give the changed line ranges in the new revision:
+
+```bash
+# Lines changed in <file> between old and new upstream. --unified=0 makes each
+# hunk header report exactly the changed range: @@ -<oS>,<oL> +<nStart>,<nLen> @@
+git -C "${SRC}" diff --unified=0 "${OLD_REF}" "${NEW_REF}" -- "${file}" \
+  | awk '/^@@/ { split(,a,","); s=substr(a[1],2)+0; l=(a[2]==""?1:a[2])+0;
+                 if (l>0) print s","(s+l-1) }'
+```
+
+The patch's anchor line is `grep -n "<ANCHOR>" "${file}" | head -1 | cut -d:
+-f1`;
+overlap with any printed range (optionally padded by context) is the trigger.
+
+## The machine emits its own worklist — and a durable record
+
+For every REVIEW and STALE verdict, the audit **auto-inserts a uniquely-tagged
+comment** into the working tree directly above the anchor, in the file's own
+comment syntax:
+
+```bash
+insert_audit_tag() {                       # <file> <line> <patch_id> <range>
+    local C; C="$(comment_token_for "")" # //, #, --, ; … by extension
+    sed -i "${2}i\\${C} [[PATCH-AUDIT  ]] upstream changed this region — \
+confirm patch still needed and the anchor still matches, then delete this line." ""
+}
+```
+
+Now a single `grep -rn "PATCH-AUDIT" "${SRC}"` *enumerates the entire decision
+set*
+mechanically — the machine produces the worklist; the human (or LLM) supplies
+only
+the irreducible judgment per site, then deletes the tag. Two records, two
+lifetimes, both produced automatically:
+
+- **In-tree tags are ephemeral** — they live in the disposable tree and vanish
+  at
+  the next `reset_source_trees`, which is exactly right for one review session.
+- **A persistent report** (`docs/patches/audit-<NEW_REF>.md`) records every
+  verdict, so the decision history survives the reset.
+
+## The gate
+
+Whether the audit *blocks* or merely *warns* is a wired policy, not a habit:
+block
+in CI/releases (a stale patch is a latent bug), warn in fast local iteration.
+The
+`.upstream-lock` baseline advances only on a successful build, so the next audit
+always compares against the last *known-good* version — the machine cannot
+drift
+its own reference point.
+
+---
+
+## Patch docs: the prose form (a portable replay artifact)
+
+For complex multi-file changes, a **prose "patch doc"** in
+`docs/patches/<feature>.md`
+describes the edit in human/agent-readable form — file paths, insertion points
+by
+*context* (not just line number), before/after snippets — so any agent or
+human
+can **replay it onto any compatible upstream** even after line numbers drift. It
+is
+the durable, forge-independent specification a script (or a reviewer)
+implements.
+
+```markdown
+# <Feature> Patch
+## Overview        — what this adds and why
+## Files to Modify — for each file: context to locate the spot + the change
+## Build           — how to rebuild after applying
+```
+
+The three artifacts form a ladder: a **behavior spec** says what the system
+should
+do (portable across reimplementations); a **patch doc** says what edits to make
+to
+one codebase (portable across upstreams of it); a **patch script** is the
+mechanical, idempotent, reversible implementation. Each is derivable downward.
+
+---
+
+## Contributing a patch upstream: the same machine, run forward-only
+
+A subset of your patches are genuine upstream improvements. For those, the
+system
+is already most of a contribution machine: the build runs `apply → build →
+unapply`; a contribution runs `apply → commit`. **Same apply function,
+different
+downstream wiring.** A patch's anchored transformation against a pristine clone
+of
+upstream HEAD *produces the contribution diff*; the header *is* the PR body.
+
+This is built as a driver with **gates** at the outward-facing edges — the one
+place where the machine deliberately halts and requires irreducible human input.
+
+## The two human inputs the machine is built around
+
+- **Eligibility is a human judgment, never automated.** Only the author knows
+  whether an edit belongs upstream. The machine therefore records no
+  upstreamability field and decides nothing; it acts only on a patch a human
+  hands
+  it. (A behavior change worth upstreaming should be contributed behind a config
+  flag, with the patch-doc as the PR body.)
+- **Each outward action is gated on approval.** Fork creation, branch push, PR
+  open, and optional fork deletion each pass through a gate that renders what
+  will
+  happen and refuses to proceed without an explicit yes.
+
+Everything *between* those two human touch-points is wired and deterministic:
+
+## Forge detection — computed from the remote, not asked
+
+```bash
+remote_url="$(git -C "${SRC}" remote get-url upstream 2>/dev/null \
+            || git -C "${SRC}" remote get-url origin)"
+case "${remote_url}" in
+    *github.com*) FORGE=gh   ;;   # gh pr create
+    *gitlab*)     FORGE=glab ;;   # glab mr create
+    *gitea*|*)    FORGE=tea  ;;   # gitea: tea pr create / REST API
+esac
+# owner/repo derive from the same URL; an unrecognized host trips a gate (ask).
+```
+
+## Fork and clone are different objects with different lifetimes
+
+The machine keeps these roles mechanically distinct, which is what lets a
+persistent fork coexist with a throwaway tmpfs clone:
+
+- **The fork is server-side and durable.** Created once on the account, it holds
+  the PR branches and survives so review threads persist. It is **not** on
+  tmpfs.
+- **The working clone is local and disposable, and exactly one is needed** for
+  any
+  number of open PRs. Per patch, the machine resets the clone to pristine
+  default-branch HEAD (reusing `reset_source_trees`), cuts `patch/<id>-<name>`,
+  applies that one patch forward-only, commits, and pushes the branch to the
+  fork.
+  The fork accumulates one branch per PR; the clone is recycled between them.
+- **Each PR carries only its relevant files, by construction** — because each
+  patch is atomic and one-to-one targeted, its branch differs from base only in
+  the
+  files it touches. No filtering machinery is needed.
+- **Open PRs survive clone deletion**: once a branch is pushed, its commits live
+  on
+  the remote fork, so end-of-run cleanup (`rm` the clone) cannot disturb them.
+
+## Clone placement — a measured decision, with a logged fallback
+
+The clone prefers the RAM-backed `tmp/` symlink and falls to on-disk only when
+it
+won't fit. The fit test measures **space available on that mount right now**
+(not
+total capacity — other things already occupy it):
+
+```bash
+avail=$(df -kP "${ROOT}/tmp" | awk 'NR==2 {print  * 1024}')   # free bytes NOW
+need=$(( $(forge_repo_size_kb) * 1024 * 2 ))                    # shallow clone + margin
+if (( avail >= need )); then
+    CLONE_DIR="${ROOT}/tmp/pr-work"
+else
+    CLONE_DIR="${ROOT}/.pr-work"        # on-disk fallback inside the project
+    echo "FALLBACK: tmp/ has ${avail} B free; clone needs ~${need} B. Using" \
+         "on-disk ${CLONE_DIR}. This is a fallback, not the normal path." >&2
+fi
+git clone --depth 1 --branch "<default-branch>" "<fork-url>" "${CLONE_DIR}"
+```
+
+The fallback announces itself every time it fires — a silent fallback would
+hide a
+capacity problem worth surfacing. Either location is `rm`'d when the run ends.
+
+## The verify-match interlock
+
+Before any gate is reached, the machine asserts each patch's anchored pattern
+hits
+its declared `MATCHES` count on upstream HEAD. A zero or extra match means the
+patch was written against an older ref and **the driver aborts** rather than
+opening a PR on stale assumptions — the same signal the pruning machine uses,
+reused here as a pre-flight interlock.
+
+## The driver, as a graph
+
+```
+select(patch)            ─ human: hands the machine an eligible patch
+detect_forge(remote)     ─ computed
+ensure_fork()            ─ GATE: approve creating the server-side fork (once)
+place_clone()            ─ tmpfs if it fits now, else on-disk fallback (logged)
+for each patch:
+    reset → branch → apply(forward-only) → verify_match()   ─ abort on mismatch
+    render(diff, pr_body_from_header)                       ─ computed
+    GATE: approve push + PR open
+    push_branch(); open_pr(FORGE)
+cleanup()                ─ rm the clone; fork + open PRs remain
+```
+
+The driver *prepares* everything up to each gate and stops; nothing reaches the
+network or the account without the human passing that gate.
+
+---
+
+## Non-textual patches (same discipline, different substrate)
+
+The apply/unapply/idempotent/round-trip machinery is not specific to text:
+
+- **A data row** (registering a path with an upstream's own migration/plugin
+  runner): apply is an idempotent insert (`INSERT IGNORE`, or
+  create-if-not-exists
+  keyed on a unique column); unapply is the matching delete; the guard checks
+  for
+  the row.
+- **A binary asset or generated file**: apply writes/links it, unapply removes
+  it,
+  the guard checks presence.
+
+**Where upstream provides its own seam — a plugin dir, a migrations folder, a
+hooks
+directory — wire into it instead of editing upstream files.** A registration
+is a
+patch that *cannot* conflict, because you are using a mechanism upstream
+intends.
+
+---
+
+## Assembling the machine in a new project
+
+This is a parts list and wiring diagram, not a sequence to march through. Build
+the
+components; the guarantees emerge from how they connect.
+
+- **Disposability wire:** add `source/` (or `vendor/`, or the submodule path) to
+  `.gitignore`. Commit only `patches/` and `scripts/`. This single line is what
+  makes the tree a regenerable artifact rather than a thing to protect.
+- **The orchestrator (`patches.sh`):** glob-source patch files; declare the
+  per-profile `declare -A` lists; define `reset_source_trees`, the
+  `apply_/unapply_`
+  drivers, and `audit_patches`. Dispatch by naming convention so there is no
+  manifest to maintain.
+- **The standard component:** patches as guarded, anchored, marker-wrapped,
+  exact-inverse pairs with a witness probe and header fields. The substrate (any
+  language, any config DSL) is irrelevant — anchored `sed`/`awk` operate on
+  any
+  text tree; non-textual patches swap the tool and keep the contract.
+- **The generators and the gate:** `scaffold-patch` (emits components),
+  `gen-registry` (recomputes the registry from headers), `verify-patches`
+  (asserts
+  round-trip + match-count and blocks the build on failure).
+- **The build driver:** compose `reset → audit → apply → (trap) → build
+  → install →
+  unapply → record-lock` exactly as the wiring above, so every precondition is
+  a
+  guaranteed product of the prior edge.
+- **The pruning machine + lock:** `audit_patches` wired into the update path,
+  `.upstream-lock` written only on success.
+- **The contribution driver (optional):** forward-only apply against a fork
+  clone,
+  forge detection from the remote, verify-match interlock, and approval gates at
+  the outward edges.
+
+Tiers beyond PRE-BUILD are added only when the chronology demands them.
+
+---
+
+## Failure modes the machinery is built to foreclose
+
+These are not reminders for an operator — they are the specific failures each
+mechanism above exists to make impossible. Stated as "the bug, and the part that
+forecloses it":
+
+- **False dirt from defensive unapply.** `unapply` matches the post-patch shape
+  and
+  cannot tell your edit from an upstream that converged on it; run defensively
+  it
+  reverts clean code into phantom diffs that read like upstream regressions.
+  *Foreclosed by* wiring `unapply` only to same-run reverts and
+  `reset_source_trees`
+  (which goes to a commit) to every defensive position — the call site, not
+  the
+  operator, picks the safe one.
+- **Silent corruption from a loose pattern.** An unanchored pattern matching two
+  sites edits the wrong one. *Foreclosed by* the `MATCHES` field +
+  `verify-patches`,
+  which fail any patch whose anchor count isn't exactly as declared.
+- **A fragile inverse.** Reverting by re-matching content breaks when upstream
+  reflows around the block. *Foreclosed by* the unique `{{{ <ID> }}}` markers,
+  which give the inverse a stable handle and double as the witness.
+- **Double-apply / double-revert.** Retries, re-sourcing, and trap-over-explicit
+  all run things twice. *Foreclosed by* the guards that make a repeated apply or
+  unapply inert.
+- **A patch that applies but won't reverse.** It leaks false dirt into the
+  *next*
+  build, far from its origin. *Foreclosed by* the round-trip assertion in
+  `verify-patches` (`apply → unapply → empty diff`), which blocks it from
+  the set.
+- **Residue from an uncatchable kill.** The EXIT trap misses SIGKILL/OOM/power
+  loss. *Foreclosed by* the unconditional pre-flight `reset_source_trees`, which
+  covers exactly the modes the trap cannot.
+- **A re-targeting need going unnoticed.** Upstream moves the code under a
+  patch.
+  *Foreclosed by* a loud unmatched-pattern failure and the pruning machine's
+  STALE/REVIEW verdicts with auto-inserted tags — the machine surfaces the one
+  patch needing attention instead of letting it drift.
+- **The patch set silently rotting.** *Foreclosed by* wiring `audit_patches`
+  into
+  the update path so it cannot be skipped, and generating the registry from
+  headers
+  so it cannot go stale.
+- **A poisoned audit baseline.** *Foreclosed by* writing `.upstream-lock` only
+  on a
+  successful build, so the machine never compares against a version it didn't
+  ship.
+- **A tuning knob masquerading as a build failure.** *Foreclosed by* the
+  chronology: POST-DEPLOY writes runtime values only after the validation gate.
+- **A tracked or surviving source edit.** It breaks the `upstream + patches`
+  guarantee. *Foreclosed by* the `.gitignore` wire plus a clean-tree assertion
+  —
+  any surviving edit is a verify failure, not a thing to remember not to do.
+- **An outward action firing without consent.** *Foreclosed by* the approval
+  gates
+  on fork/push/PR/delete, which render the action and refuse to proceed without
+  an
+  explicit yes.
 
 --------------------------------------------------------------------------------
 
 ### Assistant Response 5
 
-The API picture is nearly complete: `Engine : PlayerbotAIAware` stores the live
-facade as `botAI` (Engine.cpp:17), and each `Strategy : PlayerbotAIAware` stores
-its own `botAI` (protected, PlayerbotAIAware.h:18). The guard needs to compare
-`strategy`'s botAI against the engine's facade — a **safe pointer comparison**
-(no deref) that detects a strategy built off a foreign/torn-down facade. Two
-things to confirm before I write: whether there's already a public accessor for
-`botAI` (else the patch must add one), and what `botAI` `GetStrategy` actually
-feeds the creator. Plus I need to check for duplicate issues and the next issue
-ID.
+>     The API picture is nearly complete: `Engine : PlayerbotAIAware` stores the
+> live facade as `botAI` (Engine.cpp:17), and each `Strategy : PlayerbotAIAware`
+>  stores its own `botAI` (protected, PlayerbotAIAware.h:18). The guard needs to
+>    compare `strategy`'s botAI against the engine's facade — a **safe pointer
+>  comparison** (no deref) that detects a strategy built off a foreign/torn-down
+> facade. Two things to confirm before I write: whether there's already a public
+>           accessor for `botAI` (else the patch must add one), and what `botAI`
+>   `GetStrategy` actually feeds the creator. Plus I need to check for duplicate
+>                                                  issues and the next issue ID.
 
-Everything needed is confirmed. Two decisive results:
+>                          Everything needed is confirmed. Two decisive results:
+>
+>        1. **`AiObjectContext::GetStrategy` feeds the creator the context's own
+>    `botAI`** (AiObjectContext.cpp:108) — which on a clean first construction
+>           *is* the live facade. And a clean logical consequence falls out: the
+>           engine's facade (`this->botAI`) is the `PlayerbotAI` currently under
+>                 construction, so it's **provably valid**. Therefore a crash at
+>           `botAI->GetBot()` can *only* happen when `strategy->botAI ≠ engine
+>    facade` — a stale/foreign facade on the strategy. A guard comparing those
+>           two pointers is thus **necessary and sufficient** to stop this exact
+>             segfault, whatever upstream mechanism produced the stale strategy.
+>
+>   2. **`PlayerbotAIAware` has no public accessor** — so the patch must add a
+>              tiny `GetAI()` getter, then guard in `Engine::Init` at the unique
+>                                `strategy->InitTriggers(triggers);` line (129).
+>
+> Before I write anything: B026 already fixes "the bot-login Engine::Init crash"
+>       — my fix targets the *same crash site* via a different cause. Per your
+>   "build history vertically" rule I must not spawn a horizontal duplicate. Let
+>                             me find B026's issue file and the 306/332 lineage.
 
-1. **`AiObjectContext::GetStrategy` feeds the creator the context's own
-   `botAI`** (AiObjectContext.cpp:108) — which on a clean first construction
-   *is* the live facade. And a clean logical consequence falls out: the engine's
-   facade (`this->botAI`) is the `PlayerbotAI` currently under construction, so
-   it's **provably valid**. Therefore a crash at `botAI->GetBot()` can *only*
-   happen when `strategy->botAI ≠ engine facade` — a stale/foreign facade on
-   the strategy. A guard comparing those two pointers is thus **necessary and
-   sufficient** to stop this exact segfault, whatever upstream mechanism
-   produced the stale strategy.
+>      B026 has **no issue file and no patch doc** (it was created Jul 16, still
+>           untracked) — the recent bot-login-crash patches got ahead of their
+>     documentation. And there's no issue 332 despite the references. So there's
+>     nothing to vertically extend for the Engine::Init crash specifically; I'll
+>          create a new Phase-3 issue (same subsystem as 306) that documents the
+>        Engine::Init crash *family* — noting B026 handled the duplicate-login
+>    trigger and B027 handles the residual stale-facade trigger. Let me pick the
+>   next free Phase-3 ID and confirm patches.sh wiring for B026 so B027 slots in
+>                                                                     beside it.
 
-2. **`PlayerbotAIAware` has no public accessor** — so the patch must add a
-   tiny `GetAI()` getter, then guard in `Engine::Init` at the unique
-   `strategy->InitTriggers(triggers);` line (129).
-
-Before I write anything: B026 already fixes "the bot-login Engine::Init crash"
-— my fix targets the *same crash site* via a different cause. Per your "build
-history vertically" rule I must not spawn a horizontal duplicate. Let me find
-B026's issue file and the 306/332 lineage.
-
-B026 has **no issue file and no patch doc** (it was created Jul 16, still
-untracked) — the recent bot-login-crash patches got ahead of their
-documentation. And there's no issue 332 despite the references. So there's
-nothing to vertically extend for the Engine::Init crash specifically; I'll
-create a new Phase-3 issue (same subsystem as 306) that documents the
-Engine::Init crash *family* — noting B026 handled the duplicate-login trigger
-and B027 handles the residual stale-facade trigger. Let me pick the next free
-Phase-3 ID and confirm patches.sh wiring for B026 so B027 slots in beside it.
-
-Next free Phase-3 ID is **308**. Let me read the `patches.sh` structure — how
-B-files are sourced, the apply runner, and the `patch_needs_applying_*`
-convention — so B027 wires in cleanly beside B026.
+ Next free Phase-3 ID is **308**. Let me read the `patches.sh` structure — how
+         B-files are sourced, the apply runner, and the `patch_needs_applying_*`
+                            convention — so B027 wires in cleanly beside B026.
 
 --------------------------------------------------------------------------------
 
 ### User Request 6
 
+Continue from where you left off.
 
 --------------------------------------------------------------------------------
 
-### Assistant Response 6
-
-No response requested.
+                                                        *No response requested.*
 
 --------------------------------------------------------------------------------
 
@@ -520,155 +1380,156 @@ please continue
 
 ### Assistant Response 7
 
-Let me read the runner section of `patches.sh` to see how patches are applied
-and how `needs_applying` is used, so B027 matches conventions exactly.
+>  Let me read the runner section of `patches.sh` to see how patches are applied
+>         and how `needs_applying` is used, so B027 matches conventions exactly.
 
-The wiring model is clear: patches self-guard via markers; the profile lists
-select them; `patch_needs_applying_*` is an optional dry-run helper. B027 will
-touch two files (`PlayerbotAIAware.h` add accessor, `Engine.cpp` add the guard).
-Since **B026 also edits `Engine.cpp`'s Init loop**, I must pick a non-colliding,
-unique anchor. Let me verify anchor uniqueness and check that the early strategy
-calls (GetType/InitMultipliers) are botAI-safe so I place the guard early
-enough.
+>   The wiring model is clear: patches self-guard via markers; the profile lists
+> select them; `patch_needs_applying_*` is an optional dry-run helper. B027 will
+>       touch two files (`PlayerbotAIAware.h` add accessor, `Engine.cpp` add the
+>      guard). Since **B026 also edits `Engine.cpp`'s Init loop**, I must pick a
+>   non-colliding, unique anchor. Let me verify anchor uniqueness and check that
+>   the early strategy calls (GetType/InitMultipliers) are botAI-safe so I place
+>                                                        the guard early enough.
 
-Key result: `strategy->InitTriggers(triggers);` is **unique** (line 129, and
-it's the exact faulting call) — that's my anchor, cleanly independent of
-B026's anchor at 126. (`Strategy* strategy = i->second;` is *not* unique —
-appears at 80/125/504 — so I'm avoiding it.) Two last idiom checks before
-writing: confirm `fmt::ptr` and a `GetAI()` accessor name are consistent with
-the module.
+>   Key result: `strategy->InitTriggers(triggers);` is **unique** (line 129, and
+>     it's the exact faulting call) — that's my anchor, cleanly independent of
+>   B026's anchor at 126. (`Strategy* strategy = i->second;` is *not* unique —
+>    appears at 80/125/504 — so I'm avoiding it.) Two last idiom checks before
+>  writing: confirm `fmt::ptr` and a `GetAI()` accessor name are consistent with
+>                                                                    the module.
 
-Confirmed: `GetAI()` is unused module-wide (clean to add, no clash), but
-`fmt::ptr` isn't used either — so I'll keep the log to the strategy name
-(compile-safe, and the name is the actionable datum). `LOG_ERROR` is available
-in Engine.cpp. And critically — B026's inserted comments avoid apostrophes
-because the `sed` insert is single-quoted; I'll do the same.
+>       Confirmed: `GetAI()` is unused module-wide (clean to add, no clash), but
+>     `fmt::ptr` isn't used either — so I'll keep the log to the strategy name
+> (compile-safe, and the name is the actionable datum). `LOG_ERROR` is available
+>   in Engine.cpp. And critically — B026's inserted comments avoid apostrophes
+>                   because the `sed` insert is single-quoted; I'll do the same.
+>
+>  I have everything. Writing the four artifacts now: issue file first (per your
+>             rules), then patch doc, patch script, and the `patches.sh` wiring.
 
-I have everything. Writing the four artifacts now: issue file first (per your
-rules), then patch doc, patch script, and the `patches.sh` wiring.
+>                                 Now the patch doc with the exact code changes:
 
-Now the patch doc with the exact code changes:
+>         Now the B027 patch script, mirroring B026's structure (sourced module,
+>     vimfolds, marker-wrapped, idempotent, exact-inverse). I'm anchoring on the
+>              clean `: botAI(botAI) {}` (no regex-special chars) and the unique
+>         `strategy->InitTriggers(triggers);`, and keeping the inserted comments
+>                              apostrophe-free since the `sed` is single-quoted:
 
-Now the B027 patch script, mirroring B026's structure (sourced module, vimfolds,
-marker-wrapped, idempotent, exact-inverse). I'm anchoring on the clean `:
-botAI(botAI) {}` (no regex-special chars) and the unique
-`strategy->InitTriggers(triggers);`, and keeping the inserted comments
-apostrophe-free since the `sed` is single-quoted:
+>   Now wire B027 into `patches.sh` — add it to the release/beta/vanilla lists
+>   (mirroring B026's placement) and add the `patch_needs_applying_B027` helper.
 
-Now wire B027 into `patches.sh` — add it to the release/beta/vanilla lists
-(mirroring B026's placement) and add the `patch_needs_applying_B027` helper.
+> Now add the `patch_needs_applying_B027` dry-run helper, grouped with the other
+>                                                         mod-playerbots checks:
 
-Now add the `patch_needs_applying_B027` dry-run helper, grouped with the other
-mod-playerbots checks:
+>     All artifacts are written. Before handing off to a slow compile, I want to
+> prove the patch actually *matches and round-trips* — the silent-no-op anchor
+>  failure (exactly what bit B002) is the thing to catch now, not after a wasted
+>      build. Let me dry-run apply→unapply against throwaway copies of the two
+>                    files (non-destructive; the real source tree is untouched).
 
-All artifacts are written. Before handing off to a slow compile, I want to prove
-the patch actually *matches and round-trips* — the silent-no-op anchor failure
-(exactly what bit B002) is the thing to catch now, not after a wasted build. Let
-me dry-run apply→unapply against throwaway copies of the two files
-(non-destructive; the real source tree is untouched).
+>  Accessor is clean and correctly indented. Now the Engine.cpp guard insertion,
+>                                               idempotency, and the round-trip:
 
-Accessor is clean and correctly indented. Now the Engine.cpp guard insertion,
-idempotency, and the round-trip:
+>      Clean placement, valid C++, idempotent. One improvement worth making: the
+> guard currently sits *after* `InitMultipliers` (line 128), so a stale strategy
+>        still runs `InitMultipliers` before the check. The observed crash is in
+>   `InitTriggers`, but guarding before *both* Init calls is strictly safer. Let
+>   me check if `InitMultipliers` is a unique anchor so I can move the guard one
+>                                                                  line earlier.
 
-Clean placement, valid C++, idempotent. One improvement worth making: the guard
-currently sits *after* `InitMultipliers` (line 128), so a stale strategy still
-runs `InitMultipliers` before the check. The observed crash is in
-`InitTriggers`, but guarding before *both* Init calls is strictly safer. Let me
-check if `InitMultipliers` is a unique anchor so I can move the guard one line
-earlier.
+>         `InitMultipliers` is unique (line 128) — good anchor. Let me confirm
+>    `GetType`/`HasTargetExclusions` (lines 126-127, which still run before that
+>  anchor) don't dereference `botAI`, so moving the guard there fully covers the
+>                                                               dangerous calls.
 
-`InitMultipliers` is unique (line 128) — good anchor. Let me confirm
-`GetType`/`HasTargetExclusions` (lines 126-127, which still run before that
-anchor) don't dereference `botAI`, so moving the guard there fully covers the
-dangerous calls.
+>       Confirmed — `GetType()` returns a constant and `HasTargetExclusions()`
+>              returns `false`; neither touches `botAI`. The dangerous calls are
+>            `InitMultipliers` and `InitTriggers`. So anchoring the guard before
+>  `InitMultipliers` (line 128) covers **both**, which is strictly safer than my
+>     current placement. Let me retarget the anchor in the patch script and doc,
+>                                                                then re-verify.
 
-Confirmed — `GetType()` returns a constant and `HasTargetExclusions()` returns
-`false`; neither touches `botAI`. The dangerous calls are `InitMultipliers` and
-`InitTriggers`. So anchoring the guard before `InitMultipliers` (line 128)
-covers **both**, which is strictly safer than my current placement. Let me
-retarget the anchor in the patch script and doc, then re-verify.
+>    Let me fix the two remaining `InitTriggers` references (composition note in
+>                      the doc, and the script header) to say `InitMultipliers`:
 
-Let me fix the two remaining `InitTriggers` references (composition note in the
-doc, and the script header) to say `InitMultipliers`:
+>       Now the full round-trip verification with the corrected anchor — fresh
+> sandbox, apply → check → idempotency → **unapply must restore pristine**
+>                                                 (the exact-inverse assertion):
 
-Now the full round-trip verification with the corrected anchor — fresh
-sandbox, apply → check → idempotency → **unapply must restore pristine**
-(the exact-inverse assertion):
+>     All invariants pass: anchors match once, idempotent, guard now covers both
+>    `InitMultipliers` and `InitTriggers`, and the round-trip is **exact** (both
+>     files restore identical). One more thing to prove since B026 and B027 both
+> edit `Engine.cpp` — that they **compose** (apply together, both round-trip).
+>                                                       Let me test both orders:
 
-All invariants pass: anchors match once, idempotent, guard now covers both
-`InitMultipliers` and `InitTriggers`, and the round-trip is **exact** (both
-files restore identical). One more thing to prove since B026 and B027 both edit
-`Engine.cpp` — that they **compose** (apply together, both round-trip). Let me
-test both orders:
+> Composition verified in **both** apply orders — B026's null guard and B027's
+>  stale-facade guard coexist cleanly, both dangerous calls (`InitMultipliers` +
+>    `InitTriggers`) are covered, and `Engine.cpp` round-trips clean either way.
+>   Let me do a final sanity check that I never touched the real source tree and
+>                                                     show exactly what changed:
 
-Composition verified in **both** apply orders — B026's null guard and B027's
-stale-facade guard coexist cleanly, both dangerous calls (`InitMultipliers` +
-`InitTriggers`) are covered, and `Engine.cpp` round-trips clean either way. Let
-me do a final sanity check that I never touched the real source tree and show
-exactly what changed:
+>  The `source-beta/modules/mod-playerbots` tree has leftover modified files —
+>  but note these are in the **disposable, gitignored** module tree (its own git
+>    repo), not the project repo. They're patch residue from the last build that
+>        didn't cleanly revert; the next build's `reset_source_trees` pre-flight
+>   hard-resets them before applying fresh patches. Let me confirm my two target
+>       files specifically are pristine (so my anchor analysis was against clean
+>                                                                       source):
 
-The `source-beta/modules/mod-playerbots` tree has leftover modified files —
-but note these are in the **disposable, gitignored** module tree (its own git
-repo), not the project repo. They're patch residue from the last build that
-didn't cleanly revert; the next build's `reset_source_trees` pre-flight
-hard-resets them before applying fresh patches. Let me confirm my two target
-files specifically are pristine (so my anchor analysis was against clean
-source):
-
-Everything checks out. Both target files are pristine (my anchor analysis was
-sound); the 24 dirty files are harmless last-build residue in the disposable
-module tree that `reset_source_trees` wipes at the next build.
+   Everything checks out. Both target files are pristine (my anchor analysis was
+    sound); the 24 dirty files are harmless last-build residue in the disposable
+                  module tree that `reset_source_trees` wipes at the next build.
 
 ## Option 2 is built and verified — ready for your compile
 
-**What I created** (nothing committed; source tree untouched):
-- `issues/308-playerbot-engine-init-stale-facade-crash.md` — the
-  behavior/root-cause spec
-- `docs/patches/playerbot-engine-init-facade-guard.md` — the exact code
-  changes
+                  **What I created** (nothing committed; source tree untouched):
+              - `issues/308-playerbot-engine-init-stale-facade-crash.md` — the
+                                                        behavior/root-cause spec
+       - `docs/patches/playerbot-engine-init-facade-guard.md` — the exact code
+                                                                         changes
 - `patches/B027-playerbots-engine-init-facade-guard.sh` — the reversible patch
-- `patches/patches.sh` — B027 added to release/beta/vanilla lists +
-  `needs_applying` helper
+           - `patches/patches.sh` — B027 added to release/beta/vanilla lists +
+                                                         `needs_applying` helper
 
-**What B027 does.** `Engine` and every `Strategy` both store a `PlayerbotAI*`
-facade. The engine is built for one bot with the *live, under-construction*
-facade — which is provably valid — so a strategy whose facade differs is
-stale/foreign, and that mismatch is the **only** way the `botAI->GetBot()`
-dereference can fault. B027 adds a public `GetAI()` accessor to
-`PlayerbotAIAware`, then in `Engine::Init` skips + logs any strategy whose
-facade ≠ the engine's, right before the two facade-using calls
-(`InitMultipliers`/`InitTriggers`). A hard segfault becomes a named log line,
-and the login burst completes.
+   **What B027 does.** `Engine` and every `Strategy` both store a `PlayerbotAI*`
+     facade. The engine is built for one bot with the *live, under-construction*
+    facade — which is provably valid — so a strategy whose facade differs is
+      stale/foreign, and that mismatch is the **only** way the `botAI->GetBot()`
+                 dereference can fault. B027 adds a public `GetAI()` accessor to
+      `PlayerbotAIAware`, then in `Engine::Init` skips + logs any strategy whose
+                facade ≠ the engine's, right before the two facade-using calls
+   (`InitMultipliers`/`InitTriggers`). A hard segfault becomes a named log line,
+                                                  and the login burst completes.
 
-**Verification I ran** (non-destructive, in `/tmp`):
-- Both anchors match **exactly once** (no silent no-op — the B002 failure
-  mode)
-- **Idempotent** (apply×2 = one block each)
-- **Exact round-trip** (unapply restores both files byte-identical)
-- **Composes with B026** in both apply orders — the two guards coexist,
-  `Engine.cpp` round-trips clean either way
+                            **Verification I ran** (non-destructive, in `/tmp`):
+     - Both anchors match **exactly once** (no silent no-op — the B002 failure
+                                                                           mode)
+                                    - **Idempotent** (apply×2 = one block each)
+             - **Exact round-trip** (unapply restores both files byte-identical)
+       - **Composes with B026** in both apply orders — the two guards coexist,
+                                       `Engine.cpp` round-trips clean either way
 
-**Build it when ready** (you run the compile):
+                                  **Build it when ready** (you run the compile):
 ```bash
 ./scripts/compile          # or ./scripts/azerothcore update
 ```
-Then start worldserver.
+                                                         Then start worldserver.
 
-**How to read the outcome — this is the branch point to option 3:**
-- **Boots, no crash, no B027 log lines** → clean fix; issue 308 resolvable.
-- **Boots, *with* `Engine::Init: strategy <name> carries a stale or foreign bot
+           **How to read the outcome — this is the branch point to option 3:**
+   - **Boots, no crash, no B027 log lines** → clean fix; issue 308 resolvable.
+ - **Boots, *with* `Engine::Init: strategy <name> carries a stale or foreign bot
   facade` lines** → fixed *and* it just told us the mechanism (which strategy,
-  how often). Send me those lines; they confirm whether the stale facade is
-  worth a deeper upstream fix.
-- **Still crashes** (guard never fired) → the fault isn't a facade mismatch,
+       how often). Send me those lines; they confirm whether the stale facade is
+                                                    worth a deeper upstream fix.
+  - **Still crashes** (guard never fired) → the fault isn't a facade mismatch,
   so we go to **option 3**: pin mod-playerbots (`52f58186a533`, 2026-07-10) to a
-  prior known-good commit. The debug-run harness (`./scripts/worldserver
-  --debug`) will give a fresh backtrace to confirm.
+          prior known-good commit. The debug-run harness (`./scripts/worldserver
+                               --debug`) will give a fresh backtrace to confirm.
 
-One small housekeeping note: your convention says new docs get added to
-`docs/table-of-contents.md`. I left that alone since the existing
-`docs/patches/*` don't appear to be indexed there — say the word if you want
-it added.
+         One small housekeeping note: your convention says new docs get added to
+               `docs/table-of-contents.md`. I left that alone since the existing
+  `docs/patches/*` don't appear to be indexed there — say the word if you want
+                                                                       it added.
 
 --------------------------------------------------------------------------------
 
@@ -682,86 +1543,79 @@ if the worldserver isn't done yet, to re-examine the boot logs and move forward?
 
 ### Assistant Response 8
 
-Let me check the compile log confirmed B027 applied, and see how far the
-worldserver has gotten in booting.
+>       Let me check the compile log confirmed B027 applied, and see how far the
+>                                             worldserver has gotten in booting.
 
-The worldserver is running (PID 16251) but still mid-boot — it's at "Loading
-TalentSpecs...", early in the ~41s playerbots init, well before the first
-bot-login batch where it crashed last time. The build log doesn't echo `[B027]`
-(patch-runner output goes to console, not this log — same as B002/B026
-earlier), so let me confirm B027 made it into the binary the definitive way
-(`strings`), and launch a bounded background watcher that wakes me when the boot
-resolves.
+> The worldserver is running (PID 16251) but still mid-boot — it's at "Loading
+>      TalentSpecs...", early in the ~41s playerbots init, well before the first
+>         bot-login batch where it crashed last time. The build log doesn't echo
+>        `[B027]` (patch-runner output goes to console, not this log — same as
+>         B002/B026 earlier), so let me confirm B027 made it into the binary the
+> definitive way (`strings`), and launch a bounded background watcher that wakes
+>                                                     me when the boot resolves.
 
-**B027 is confirmed live in the running binary** — the exact guard log string
-(`Engine::Init: strategy {} carries a stale or foreign bot facade … (B027,
-issue 308)`) is compiled in, and the binary is freshly built (17:39:55 today).
-So the guard will fire if a stale-faced strategy shows up.
+ **B027 is confirmed live in the running binary** — the exact guard log string
+    (`Engine::Init: strategy {} carries a stale or foreign bot facade … (B027,
+  issue 308)`) is compiled in, and the binary is freshly built (17:39:55 today).
+                      So the guard will fire if a stale-faced strategy shows up.
 
-**Current state:** worldserver (PID 16251) is mid-boot at "Loading TalentSpecs"
-— early in the ~41s playerbots init, still short of the first bot-login batch
-where it segfaulted last time.
+ **Current state:** worldserver (PID 16251) is mid-boot at "Loading TalentSpecs"
+ — early in the ~41s playerbots init, still short of the first bot-login batch
+                                                  where it segfaulted last time.
 
 **Watcher launched** (background, bounded ~200s). It will wake me the moment the
-boot resolves into one of:
-- **process dies** → crashed again (guard didn't cover it → we pivot to
-  option 3);
-- **reaches "World Initialized" and survives the bot-login window** → boot
-  complete;
-- **timeout** → still grinding, I'll re-check.
+                                                      boot resolves into one of:
+     - **process dies** → crashed again (guard didn't cover it → we pivot to
+                                                                      option 3);
+    - **reaches "World Initialized" and survives the bot-login window** → boot
+                                                                       complete;
+                                - **timeout** → still grinding, I'll re-check.
 
-No separate timer needed — the harness re-invokes me automatically when the
-watcher exits. I'll examine the boot logs then (including whether any B027
-skip-lines fired, which is the diagnostic payload) and report back.
-
---------------------------------------------------------------------------------
-
-### User Request 9
-
-<task-notification>
-<task-id>b0y5cvxna</task-id>
-<tool-use-id>toolu_01VEA2kBaM62HYajAqW2D94J</tool-use-id>
-<output-file>/tmp/claude-1000/-mnt-mtwo-games-azeroth-core-wow-chat-2026/848716dd-6f3d-4efa-89ea-fbf890462fc8/tasks/b0y5cvxna.output</output-file>
-<status>completed</status>
-<summary>Background command "Launch bounded background boot watcher" completed
-(exit code 0)</summary>
-</task-notification>
+   No separate timer needed — the harness re-invokes me automatically when the
+      watcher exits. I'll examine the boot logs then (including whether any B027
+             skip-lines fired, which is the diagnostic payload) and report back.
 
 --------------------------------------------------------------------------------
 
-### Assistant Response 9
+  *[background task] Background command "Launch bounded background boot watcher"
+                                                        completed (exit code 0)*
 
-The watcher finished — let me read its verdict.
+--------------------------------------------------------------------------------
 
-Survived the crash point. Now the important part — let me confirm it's fully
-up and, critically, whether the B027 guard actually *fired* (caught stale
-strategies) or whether the crash simply didn't recur. That distinction is the
-diagnostic payload.
+### Assistant Response 8 (continued)
 
-**The crash is fixed — the server is up and stable.** It reached `ready...`
-(World Initialized in 1m36s, Debug build so slower), the process is alive, and
-world update ticks are running. And the guard **actively fired** — this wasn't
-the crash merely failing to recur.
+>                              The watcher finished — let me read its verdict.
 
-But the diagnostic payload is significant: **2,292 skip lines**, only ever on
-three strategies — `chat`, `potions`, `racials`. That's pervasive, not a rare
-race. Let me quantify it and confirm the mechanism before reporting fully.
+> Survived the crash point. Now the important part — let me confirm it's fully
+>      up and, critically, whether the B027 guard actually *fired* (caught stale
+>  strategies) or whether the crash simply didn't recur. That distinction is the
+>                                                            diagnostic payload.
 
-Let me get the final mechanistic data point — the `StrategyContext` base
-constructor's `shared` flag — then I'll report the full picture.
+>  **The crash is fixed — the server is up and stable.** It reached `ready...`
+> (World Initialized in 1m36s, Debug build so slower), the process is alive, and
+>      world update ticks are running. And the guard **actively fired** — this
+>                                      wasn't the crash merely failing to recur.
+>
+>  But the diagnostic payload is significant: **2,292 skip lines**, only ever on
+>     three strategies — `chat`, `potions`, `racials`. That's pervasive, not a
+>       rare race. Let me quantify it and confirm the mechanism before reporting
+>                                                                         fully.
 
-The server booted cleanly and is **stable** — reached `ready...`, process
-alive, world ticks running, and critically: **zero segfaults this run** (grep
-for segfault/terminate/assert came back empty). Errors.log holds only the usual
-benign data warnings. The crash is fixed.
+>     Let me get the final mechanistic data point — the `StrategyContext` base
+>             constructor's `shared` flag — then I'll report the full picture.
+
+     The server booted cleanly and is **stable** — reached `ready...`, process
+   alive, world ticks running, and critically: **zero segfaults this run** (grep
+ for segfault/terminate/assert came back empty). Errors.log holds only the usual
+                                       benign data warnings. The crash is fixed.
 
 And the guard didn't just passively avoid the crash — it **actively caught the
-fault and told us exactly what it is.**
+                                         fault and told us exactly what it is.**
 
 ## The diagnostic payoff
 
-Across **185 bot logins**, the guard fired **2,292 times**, on exactly three
-strategies:
+    Across **185 bot logins**, the guard fired **2,292 times**, on exactly three
+                                                                     strategies:
 
 | strategy | skips |
 |----------|------:|
@@ -769,75 +1623,55 @@ strategies:
 | `racials` |  480 |
 | `potions` |  480 |
 
-Every other strategy (`default`, `cast time`, `duel`, `boost`, `aoe`, …)
-passed with a valid facade. So this is **not** a rare race — it's **systemic
-and specific**: those three strategies *consistently* arrive at `Engine::Init`
-carrying a facade that belongs to a different or already-freed bot AI.
+      Every other strategy (`default`, `cast time`, `duel`, `boost`, `aoe`, …)
+  passed with a valid facade. So this is **not** a rare race — it's **systemic
+  and specific**: those three strategies *consistently* arrive at `Engine::Init`
+          carrying a facade that belongs to a different or already-freed bot AI.
 
 ## What this means
 
 - **Stability: solved.** The segfault is gone; the server runs. Option 2 did its
-  job.
-- **But B027 is currently a safety net catching a real, ongoing bug** — not
+                                                                            job.
+   - **But B027 is currently a safety net catching a real, ongoing bug** — not
   the root-cause cure. Because it skips those strategies, the affected bots boot
-  **alive but behaviorally degraded**: no racial abilities, no combat potion
-  use, no chat behaviors. Stability-safe (nothing depends on them; `default` is
-  never skipped), but not free.
-- The "shared strategy context" idea I floated earlier is **not** the mechanism
-  — `StrategyContext` is registered non-shared. So *why* these three specific
-  strategies always carry a stale facade is a genuine lifetime bug still to be
-  pinned — but it's now sharply scoped to three named creators instead of an
-  opaque crash.
+      **alive but behaviorally degraded**: no racial abilities, no combat potion
+   use, no chat behaviors. Stability-safe (nothing depends on them; `default` is
+                                                   never skipped), but not free.
+ - The "shared strategy context" idea I floated earlier is **not** the mechanism
+   — `StrategyContext` is registered non-shared. So *why* these three specific
+    strategies always carry a stale facade is a genuine lifetime bug still to be
+    pinned — but it's now sharply scoped to three named creators instead of an
+                                                                   opaque crash.
 
-One health note: there was a single **150-second world-tick stall** at startup
-(`Update time diff: 150377ms, 0 players online`) — the bot-login burst plus
-2,292 `LOG_ERROR` writes. One-time and non-fatal, but if B027 stays long-term,
-that per-skip logging will spam continuously as bots cycle.
+  One health note: there was a single **150-second world-tick stall** at startup
+   (`Update time diff: 150377ms, 0 players online`) — the bot-login burst plus
+  2,292 `LOG_ERROR` writes. One-time and non-fatal, but if B027 stays long-term,
+                     that per-skip logging will spam continuously as bots cycle.
 
 ## Where I'd go next (your call — I haven't touched anything further)
 
-1. **Pin the real lifetime bug** now that it's localized to
-   `chat`/`potions`/`racials`: trace how those three creators end up with a
-   foreign facade (why them and not `default`). That's the fix that makes bots
-   whole again *and* retires the skips — and it's effectively the deeper end
-   of option 3.
-2. **Use the server as-is** if degraded bot behavior is acceptable for now —
-   it's stable and playable.
+                     1. **Pin the real lifetime bug** now that it's localized to
+        `chat`/`potions`/`racials`: trace how those three creators end up with a
+     foreign facade (why them and not `default`). That's the fix that makes bots
+     whole again *and* retires the skips — and it's effectively the deeper end
+                                                                    of option 3.
+  2. **Use the server as-is** if degraded bot behavior is acceptable for now —
+                                                       it's stable and playable.
 3. **Quiet the guard** (downgrade to `LOG_DEBUG` or rate-limit) once you've seen
-   enough, so it stops flooding the log every bot cycle.
+                           enough, so it stops flooding the log every bot cycle.
 
-I'd also like to update issue 308's *current behavior* to record this verified
-result (crash fixed; guard fires pervasively on three strategies) — but per
-your "don't do anything unless I tell you to," I'll hold until you say go. Want
-me to start on #1?
-
---------------------------------------------------------------------------------
-
-### User Request 10
-
-<local-command-caveat>Caveat: The messages below were generated by the user
-while running local commands. DO NOT respond to these messages or otherwise
-consider them in your response unless the user explicitly asks you
-to.</local-command-caveat>
+  I'd also like to update issue 308's *current behavior* to record this verified
+   result (crash fixed; guard fires pervasively on three strategies) — but per
+ your "don't do anything unless I tell you to," I'll hold until you say go. Want
+                                                              me to start on #1?
 
 --------------------------------------------------------------------------------
 
-### User Request 11
-
-<command-name>/model</command-name>
-            <command-message>model</command-message>
-            <command-args></command-args>
+      `/model` - Set model to Fable 5 and saved as your default for new sessions
 
 --------------------------------------------------------------------------------
 
-### User Request 12
-
-<local-command-stdout>Set model to [1mFable 5[22m and saved as your default
-for new sessions</local-command-stdout>
-
---------------------------------------------------------------------------------
-
-### User Request 13
+### User Request 9
 
 hi can you figure this bug out for me?
 
@@ -849,84 +1683,79 @@ hi can you figure this bug out for me?
 
 --------------------------------------------------------------------------------
 
-### Assistant Response 13
+### Assistant Response 9
 
-The model switch is noted — continuing the hunt. The data signature is the
-key: **every** bot gets stale facades on **exactly** those three names, starting
-from the *very first* login (the original crash hit bot #1 before any bot had
-logged in). That means the three strategy objects were created **before any real
-bot existed** — during config load — and are being **shared** across all
-bots. Something singleton-shaped is hiding in how those three are created. Let
-me read the actual creator bodies and the config-time pre-warm code.
+                                                         *model: claude-fable-5*
 
-No signal line — the file's shape is different than expected. Let me look at
-it directly:
+>   The model switch is noted — continuing the hunt. The data signature is the
+>        key: **every** bot gets stale facades on **exactly** those three names,
+> starting from the *very first* login (the original crash hit bot #1 before any
+>         bot had logged in). That means the three strategy objects were created
+>       **before any real bot existed** — during config load — and are being
+>  **shared** across all bots. Something singleton-shaped is hiding in how those
+>   three are created. Let me read the actual creator bodies and the config-time
+>                                                                 pre-warm code.
 
-The trap is set. While it boots, here's where the investigation stands:
+> No signal line — the file's shape is different than expected. Let me look at
+>                                                                   it directly:
+
+         The trap is set. While it boots, here's where the investigation stands:
 
 ## Status of the hunt
 
-**Eliminated by direct reading** (every link of the serving chain, on pristine
-source, plus all patches that touch these files):
-- Creator functions — all three are plain `new XStrategy(botAI)`, stateless,
-  single registration each
-- Constructor chains — `Strategy(botAI) : PlayerbotAIAware(botAI)`, forwarded
-  correctly through `PassThroughStrategy`; exactly one facade member in the
-  hierarchy
-- Per-bot context — freshly `new`'d in the AI constructor for every class (I
-  read the whole switch; no shared fallback)
-- Config-driven strategies — `RandomBotCombatStrategies = ""` (empty, and the
-  trio isn't named anywhere in the active conf)
-- Our patches — B019/B021 are inert warning fixes; B026/B027 were already
-  audited composed
+  **Eliminated by direct reading** (every link of the serving chain, on pristine
+                               source, plus all patches that touch these files):
+  - Creator functions — all three are plain `new XStrategy(botAI)`, stateless,
+                                                        single registration each
+ - Constructor chains — `Strategy(botAI) : PlayerbotAIAware(botAI)`, forwarded
+       correctly through `PassThroughStrategy`; exactly one facade member in the
+                                                                       hierarchy
+  - Per-bot context — freshly `new`'d in the AI constructor for every class (I
+                                      read the whole switch; no shared fallback)
+ - Config-driven strategies — `RandomBotCombatStrategies = ""` (empty, and the
+                                   trio isn't named anywhere in the active conf)
+     - Our patches — B019/B021 are inert warning fixes; B026/B027 were already
+                                                                audited composed
 
-That's a genuine paradox: statically, the strategy handed to `Engine::Init`
-**must** carry the engine's own facade — yet exactly
-`chat`/`potions`/`racials` arrive foreign, for every bot, starting *inside bot
+     That's a genuine paradox: statically, the strategy handed to `Engine::Init`
+                          **must** carry the engine's own facade — yet exactly
+  `chat`/`potions`/`racials` arrive foreign, for every bot, starting *inside bot
 #1's constructor*.
 
-**So the answer is dynamic**, and the instrumented boot now running will catch
-it red-handed with two tripwires:
+  **So the answer is dynamic**, and the instrumented boot now running will catch
+                                               it red-handed with two tripwires:
 - every **birth** of a `RacialsStrategy` (who constructed it, with which facade,
-  full caller chain)
+                                                              full caller chain)
 - every **guard hit** (which object, its facade vs the engine's, and whether the
-  per-bot cache already contained it)
+                                             per-bot cache already contained it)
 
 The one datum I most want: whether a `RacialsStrategy` gets constructed **during
 config load** — before any bot exists. If yes, the caller frames in that first
-`[CTOR]` record point straight at the culprit that's somehow feeding shared
-objects into per-bot engines.
+     `[CTOR]` record point straight at the culprit that's somehow feeding shared
+                                                   objects into per-bot engines.
 
-I'll report the verdict as soon as the catchpoints fire.
-
---------------------------------------------------------------------------------
-
-### User Request 14
-
-<task-notification>
-<task-id>bcp3xz2wr</task-id>
-<tool-use-id>toolu_01W8w7zhea9pWGFFK9sGgp8Y</tool-use-id>
-<output-file>/tmp/claude-1000/-mnt-mtwo-games-azeroth-core-wow-chat-2026/848716dd-6f3d-4efa-89ea-fbf890462fc8/tasks/bcp3xz2wr.output</output-file>
-<status>completed</status>
-<summary>Background command "Wait for catchpoint data from instrumented run"
-completed (exit code 0)</summary>
-</task-notification>
+                        I'll report the verdict as soon as the catchpoints fire.
 
 --------------------------------------------------------------------------------
 
-### Assistant Response 14
+            *[background task] Background command "Wait for catchpoint data from
+                                      instrumented run" completed (exit code 0)*
 
-The tripwires fired — reading the catch:
+--------------------------------------------------------------------------------
 
-Quick fix to the watchpoint's value-printing (it had a broken placeholder), then
-stop round 1 and launch round 2:
+### Assistant Response 9 (continued)
 
-Round 2 is booting (about 2½ minutes to ready, then the login burst trips the
-wires). While it runs, the state of play:
+>                                     The tripwires fired — reading the catch:
+
+>    Quick fix to the watchpoint's value-printing (it had a broken placeholder),
+>                                          then stop round 1 and launch round 2:
+
+  Round 2 is booting (about 2½ minutes to ready, then the login burst trips the
+                                       wires). While it runs, the state of play:
 
 ## What round 1 proved
 
-The stale-facade theory was wrong in an important way. The three strategies
+     The stale-facade theory was wrong in an important way. The three strategies
 aren't inheriting a *dead bot's* facade — they're being **born with garbage**:
 
 | strategy | facade value at construction | what it actually is |
@@ -935,49 +1764,41 @@ aren't inheriting a *dead bot's* facade — they're being **born with garbage**:
 | chat     | `0x68` | ASCII `'h'` |
 | potions  | `0x100000000` | two 32-bit ints (1, 0) |
 
-That's not a lifetime bug — that's **memory corruption or an uninitialized
-read**, dressed up to look like one. And the maddening part: these creations
-happen through the *same* per-bot context, on the *same* call path, interleaved
-with creations that receive the correct facade — the value is good, then
-garbage, then good again within one constructor sequence. A fixed heap member
-can't do that on its own.
+    That's not a lifetime bug — that's **memory corruption or an uninitialized
+    read**, dressed up to look like one. And the maddening part: these creations
+ happen through the *same* per-bot context, on the *same* call path, interleaved
+      with creations that receive the correct facade — the value is good, then
+   garbage, then good again within one constructor sequence. A fixed heap member
+                                                       can't do that on its own.
 
 ## What round 2 will decide
 
-Two rival explanations, and the instrumentation splits them cleanly:
+            Two rival explanations, and the instrumentation splits them cleanly:
 
-1. **Heap stomp** — another thread transiently writes string data over the
-   context's facade field. The hardware watchpoint fires on the illegal write
-   and prints the *stomper's* backtrace and thread. Case closed.
-2. **In-flight corruption** — the member is fine, but the argument gets
-   clobbered between `GetStrategy` reading it and the creator using it
-   (cross-thread stack interference — plausible fallout from upstream's
-   2026-07-10 world-thread-processor refactor). Then no stomp fires, and the
-   ctor record will show `GetStrategy this->botAI = good` while `botAI-arg =
-   garbage` — proving the corruption happens mid-call.
+    1. **Heap stomp** — another thread transiently writes string data over the
+      context's facade field. The hardware watchpoint fires on the illegal write
+                   and prints the *stomper's* backtrace and thread. Case closed.
+       2. **In-flight corruption** — the member is fine, but the argument gets
+             clobbered between `GetStrategy` reading it and the creator using it
+          (cross-thread stack interference — plausible fallout from upstream's
+       2026-07-10 world-thread-processor refactor). Then no stomp fires, and the
+       ctor record will show `GetStrategy this->botAI = good` while `botAI-arg =
+                           garbage` — proving the corruption happens mid-call.
 
-Either way, the next notification should carry the culprit's name.
-
---------------------------------------------------------------------------------
-
-### User Request 15
-
-<task-notification>
-<task-id>b98uqyods</task-id>
-<tool-use-id>toolu_01SYs2xxsAZNrPnScrggi6p3</tool-use-id>
-<output-file>/tmp/claude-1000/-mnt-mtwo-games-azeroth-core-wow-chat-2026/848716dd-6f3d-4efa-89ea-fbf890462fc8/tasks/b98uqyods.output</output-file>
-<status>completed</status>
-<summary>Background command "Wait for round-2 stomp/guard evidence" completed
-(exit code 0)</summary>
-</task-notification>
+              Either way, the next notification should carry the culprit's name.
 
 --------------------------------------------------------------------------------
 
-### Assistant Response 15
+   *[background task] Background command "Wait for round-2 stomp/guard evidence"
+                                                        completed (exit code 0)*
 
-Round 2 tripped — reading the verdict:
+--------------------------------------------------------------------------------
 
-Round 3 is booting (~2½ min). Recap of the evidence chain while it runs:
+### Assistant Response 9 (continued)
+
+>                                       Round 2 tripped — reading the verdict:
+
+       Round 3 is booting (~2½ min). Recap of the evidence chain while it runs:
 
 ## The narrowing
 
@@ -988,77 +1809,69 @@ Round 3 is booting (~2½ min). Recap of the evidence chain while it runs:
 | 2 | Where does the value die? | **Inside the `std::function` invocation** — between `create()` and `StrategyContext::racials` receiving its argument |
 | grep | Why these three names? | **Insertion stride** — registrations #1, #9, #17 in the creators map; every 8th entry, not a property of the strategies |
 
-The garbage shapes (UTF-16 text remnants, `'o','k'` bytes, plain null) are what
-an **unwritten argument register** picks up — the trampoline calls the right
-function but never loads the argument. That's the signature of a corrupted or
-mismatched `_M_invoker` slot in the stored function object.
+ The garbage shapes (UTF-16 text remnants, `'o','k'` bytes, plain null) are what
+  an **unwritten argument register** picks up — the trampoline calls the right
+   function but never loads the argument. That's the signature of a corrupted or
+                     mismatched `_M_invoker` slot in the stored function object.
 
-Round 3 dumps every entry of the live creators map — target, manager, invoker
-pointers with symbol names. If the bad entries carry a different invoker than
-the good ones (or point into non-code memory), we'll have the exact 8 corrupted
-bytes and, from their contents, a strong lead on who wrote them. Then the fix
-conversation is short: either a real upstream bug we patch precisely, or — if
-the pointers implicate build inconsistency — a clean rebuild test before
-anything else.
-
---------------------------------------------------------------------------------
-
-### User Request 16
-
-<task-notification>
-<task-id>bogsz7xtw</task-id>
-<tool-use-id>toolu_01KDgjKgoFcjM7xwgPmN2reZ</tool-use-id>
-<output-file>/tmp/claude-1000/-mnt-mtwo-games-azeroth-core-wow-chat-2026/848716dd-6f3d-4efa-89ea-fbf890462fc8/tasks/bogsz7xtw.output</output-file>
-<status>completed</status>
-<summary>Background command "Wait for round-3 creators map dump" completed (exit
-code 0)</summary>
-</task-notification>
+ Round 3 dumps every entry of the live creators map — target, manager, invoker
+   pointers with symbol names. If the bad entries carry a different invoker than
+ the good ones (or point into non-code memory), we'll have the exact 8 corrupted
+   bytes and, from their contents, a strong lead on who wrote them. Then the fix
+ conversation is short: either a real upstream bug we patch precisely, or — if
+      the pointers implicate build inconsistency — a clean rebuild test before
+                                                                  anything else.
 
 --------------------------------------------------------------------------------
 
-### Assistant Response 16
+      *[background task] Background command "Wait for round-3 creators map dump"
+                                                        completed (exit code 0)*
 
-The map dump is in — reading the dissection:
+--------------------------------------------------------------------------------
 
-Cut ranges were off — I got tails and neighbors. Precise ranges this time:
+### Assistant Response 9 (continued)
 
-Round 4 is booting. The state of the hunt, compressed:
+>                                 The map dump is in — reading the dissection:
+
+>   Cut ranges were off — I got tails and neighbors. Precise ranges this time:
+
+                          Round 4 is booting. The state of the hunt, compressed:
 
 ## Where five rounds of evidence have led
 
 **Exonerated, with machine-level proof:** every line of C++ in the serving chain
-*and* every instruction of its compiled code — `GetStrategy` →
-`GetContextObject` → `create` → `std::function` plumbing — all preserve
-the facade argument perfectly. The shared creators map is healthy at the moment
-of failure. No duplicates, no torn nodes, one clean trampoline.
+              *and* every instruction of its compiled code — `GetStrategy` →
+   `GetContextObject` → `create` → `std::function` plumbing — all preserve
+ the facade argument perfectly. The shared creators map is healthy at the moment
+                 of failure. No duplicates, no torn nodes, one clean trampoline.
 
-**The reframe:** my earlier "born with garbage" readings came from
-constructor-*entry* breakpoints — exactly where gdb can read unspilled
-parameter slots and lie. Discard those, and the trustworthy facts (the compiled
-B027 guard firing, the original segfault, heap-member reads) point to a **heap
-stomp after construction**: strategies are built *correctly*, then something
-overwrites their facade field with string data in the microseconds before
-`Engine::Init` checks them.
+              **The reframe:** my earlier "born with garbage" readings came from
+        constructor-*entry* breakpoints — exactly where gdb can read unspilled
+ parameter slots and lie. Discard those, and the trustworthy facts (the compiled
+  B027 guard firing, the original segfault, heap-member reads) point to a **heap
+    stomp after construction**: strategies are built *correctly*, then something
+       overwrites their facade field with string data in the microseconds before
+                                                     `Engine::Init` checks them.
 
 **Why always `chat`/`potions`/`racials`:** bot login allocates the same objects,
-same sizes, same order, every time — so the same *relative heap chunks*
+       same sizes, same order, every time — so the same *relative heap chunks*
 neighbor the overrunning buffer on every bot. The victims aren't chosen by name;
 they're chosen by *address arithmetic*. Deterministic corruption masquerading as
 a logic bug. (It also means B026's duplicate-login story may have been this same
-overflow wearing a different costume.)
+                                          overflow wearing a different costume.)
 
-**Round 4's trap** watches the freshly built victim's own field — armed the
+   **Round 4's trap** watches the freshly built victim's own field — armed the
 instant the object exists, when the base constructor has already stored the good
-pointer. First write after that *is* the culprit, full backtrace attached. One
-bonus read at arm-time (`facade@birth`) confirms construction was clean.
+  pointer. First write after that *is* the culprit, full backtrace attached. One
+        bonus read at arm-time (`facade@birth`) confirms construction was clean.
 
 If the trap lands, we'll have the offending function red-handed — then the fix
 is a targeted B028 upstream-style patch (and an upstream report with a beautiful
-evidence trail).
+                                                                evidence trail).
 
 --------------------------------------------------------------------------------
 
-### User Request 17
+### User Request 10
 
 how about, since this isn't our bug but instead is upstream's, how about when we
 initialize these bots we just supply the required datastructures, hard-coded
@@ -1066,75 +1879,75 @@ because they're the same every time?
 
 --------------------------------------------------------------------------------
 
-### Assistant Response 17
+### Assistant Response 10
 
-Before I answer that — round 4 may have already caught the stomper, which
-would sharpen everything. Quick check:
+>    Before I answer that — round 4 may have already caught the stomper, which
+>                                         would sharpen everything. Quick check:
 
-Now the guard block — mismatch heals and falls through; null still skips:
+>    Now the guard block — mismatch heals and falls through; null still skips:
 
-Now the patch doc and issue file, updated to the repair design:
+>                Now the patch doc and issue file, updated to the repair design:
 
-Now re-verify the revised patch — full round-trip plus B026 composition, same
-harness as before:
+>     Now re-verify the revised patch — full round-trip plus B026 composition,
+>                                                        same harness as before:
 
-Done — your approach is implemented, verified, and ready to build.
+            Done — your approach is implemented, verified, and ready to build.
 
 ## What changed: B027 is now *guard-and-repair* instead of *guard-and-skip*
 
 Your idea, refined by one fact: the correct facade can't be a literal hard-coded
-constant because it differs per bot (each bot's own AI object) — but the
-**repair rule** is constant and known at the repair site. The engine is only
-ever built inside its owning bot AI's constructor, so `Engine::Init` always
-knows the true facade. The revised guard:
+      constant because it differs per bot (each bot's own AI object) — but the
+    **repair rule** is constant and known at the repair site. The engine is only
+     ever built inside its owning bot AI's constructor, so `Engine::Init` always
+                                       knows the true facade. The revised guard:
 
-- **null strategy** → skip with an error (unchanged, redundant with B026 by
-  design)
-- **facade mismatch** → one `LOG_WARN` naming the strategy, **write the
-  correct facade over the garbage**, then initialize normally
+   - **null strategy** → skip with an error (unchanged, redundant with B026 by
+                                                                         design)
+       - **facade mismatch** → one `LOG_WARN` naming the strategy, **write the
+                     correct facade over the garbage**, then initialize normally
 
-So instead of every bot silently losing racials, combat potions, and chat
+       So instead of every bot silently losing racials, combat potions, and chat
 handling (~2,300 skips per boot), the poisoned strategies get healed at the door
-and work as upstream intended.
+                                                  and work as upstream intended.
 
-**Why round 4 makes this provably safe:** the field is corrupt *at birth* and
-the hardware watchpoint proved *nothing ever writes it afterward* — so a
-repair at init can't be undone by a later stomp. And the objects are genuinely
-the right classes built by their real constructors — only that one field is
-wrong.
+   **Why round 4 makes this provably safe:** the field is corrupt *at birth* and
+      the hardware watchpoint proved *nothing ever writes it afterward* — so a
+  repair at init can't be undone by a later stomp. And the objects are genuinely
+   the right classes built by their real constructors — only that one field is
+                                                                          wrong.
 
-**Updated artifacts** (all verified: single anchor match, idempotent, exact
-round-trip, composes with B026 in both orders):
+     **Updated artifacts** (all verified: single anchor match, idempotent, exact
+                                 round-trip, composes with B026 in both orders):
 - `patches/B027-…facade-guard.sh` — repair logic + a narrowly-scoped `SetAI`
-  accessor (commented "do not use anywhere else")
-- `docs/patches/playerbot-engine-init-facade-guard.md` — full diagnostic
-  evidence + the exact code, ready to replay on any fork and to serve as the
-  upstream bug report
-- `issues/308…` — current/intended behavior rewritten to the repair design,
-  with the fallback (pin upstream pre-2026-07-10) recorded
+                                 accessor (commented "do not use anywhere else")
+      - `docs/patches/playerbot-engine-init-facade-guard.md` — full diagnostic
+      evidence + the exact code, ready to replay on any fork and to serve as the
+                                                             upstream bug report
+ - `issues/308…` — current/intended behavior rewritten to the repair design,
+                        with the fallback (pin upstream pre-2026-07-10) recorded
 
-The diagnostic server is stopped and the port is free. Compile when ready:
+      The diagnostic server is stopped and the port is free. Compile when ready:
 
 ```bash
 ./scripts/compile
 ```
 
-**What to expect in the log:** `…repairing it with the engine facade (B027,
-issue 308)` warnings — roughly a dozen per bot login — replacing the old
-skip errors. Each one is a healed strategy. Success looks like: clean boot, no
+   **What to expect in the log:** `…repairing it with the engine facade (B027,
+    issue 308)` warnings — roughly a dozen per bot login — replacing the old
+  skip errors. Each one is a healed strategy. Success looks like: clean boot, no
 segfault, and shamans actually War Stomping / bots drinking potions / responding
-to chat. If the warning volume gets old once trust is established, say the word
-and I'll downgrade it to debug level.
+ to chat. If the warning volume gets old once trust is established, say the word
+                                           and I'll downgrade it to debug level.
 
-One loose end worth keeping in the back pocket: the *upstream* root cause is
-still unpinned (we contained it, per your call). The patch doc's evidence trail
-— corrupt at birth, stride-8 victims, watchpoint-clean afterward, rev
-`52f58186a533` — is ready to file against mod-playerbots whenever you feel
-like it.
+    One loose end worth keeping in the back pocket: the *upstream* root cause is
+ still unpinned (we contained it, per your call). The patch doc's evidence trail
+         — corrupt at birth, stride-8 victims, watchpoint-clean afterward, rev
+    `52f58186a533` — is ready to file against mod-playerbots whenever you feel
+                                                                        like it.
 
 --------------------------------------------------------------------------------
 
-### User Request 18
+### User Request 11
 
 > One loose end worth keeping in the back pocket: the upstream root cause is
 > still unpinned (we contained it, per your call). The patch doc's evidence
@@ -1153,71 +1966,72 @@ check the whatchamacallit
 
 --------------------------------------------------------------------------------
 
-### Assistant Response 18
+### Assistant Response 11
 
-Three things: pin the module, verify the fix in the new logs, and audit whether
-the repair net has holes (other places strategies are consumed without passing
-through our repair point). Starting with the logs and the repair-coverage
-question in parallel:
+>        Three things: pin the module, verify the fix in the new logs, and audit
+> whether the repair net has holes (other places strategies are consumed without
+>              passing through our repair point). Starting with the logs and the
+>                                          repair-coverage question in parallel:
 
-All three asks are done. The summary:
+                                           All three asks are done. The summary:
 
 ## 1. The bug is fixed — verified by the numbers
 
-139 logins → **exactly 417 repairs (139 × 3), zero skips, zero crashes**,
-boot to `ready...` in 1m11s, server stable. And your "repair is happening every
+    139 logins → **exactly 417 repairs (139 × 3), zero skips, zero crashes**,
+ boot to `ready...` in 1m11s, server stable. And your "repair is happening every
 time" observation is the system working as designed: upstream corrupts the three
-strategies **at every bot's construction**, so every fresh login needs its own
-three repairs. The proof the repair *sticks*: each strategy is repaired exactly
-once and never again — the skip era logged ~12 lines per bot because every
-`Init` re-pass re-hit the same broken objects; now later passes find them
-healthy and stay silent. Relogging bots will each log three more — that's the
-expected steady state until upstream fixes their constructor path.
+  strategies **at every bot's construction**, so every fresh login needs its own
+ three repairs. The proof the repair *sticks*: each strategy is repaired exactly
+    once and never again — the skip era logged ~12 lines per bot because every
+       `Init` re-pass re-hit the same broken objects; now later passes find them
+ healthy and stay silent. Relogging bots will each log three more — that's the
+              expected steady state until upstream fixes their constructor path.
 
 ## 2. The coverage audit — no missing repair sites
 
-You asked where else the check might be missing. I traced every consumer of
-strategies:
+     You asked where else the check might be missing. I traced every consumer of
+                                                                     strategies:
 
-- **All live-bot fetches** (`PlayerbotAI::GetStrategy`, pull-strategy lookups,
-  target-value lookups) pull from the **engine map** — and nothing enters the
-  engine map without passing `Engine::Init`, our repair point.
-- **Runtime additions** (chat commands, toggles, instance strategies) use
-  `addStrategy` with `init = true` by default → immediate `Init` → repaired
-  before first use.
-- **The batched adds** (`addStrategiesNoInit`) are always followed by an
-  explicit `Init()` in every factory path.
-- The **only bypass** is the travel manager's config-time enumeration sweep —
-  it touches dummy data before any real bot exists, never live bots.
+  - **All live-bot fetches** (`PlayerbotAI::GetStrategy`, pull-strategy lookups,
+   target-value lookups) pull from the **engine map** — and nothing enters the
+                    engine map without passing `Engine::Init`, our repair point.
+       - **Runtime additions** (chat commands, toggles, instance strategies) use
+   `addStrategy` with `init = true` by default → immediate `Init` → repaired
+                                                               before first use.
+        - **The batched adds** (`addStrategiesNoInit`) are always followed by an
+                                        explicit `Init()` in every factory path.
+ - The **only bypass** is the travel manager's config-time enumeration sweep —
+              it touches dummy data before any real bot exists, never live bots.
 
-So the single repair point covers the entire live surface. One net, fully
-strung.
+       So the single repair point covers the entire live surface. One net, fully
+                                                                         strung.
 
 ## 3. Pinned until further notice
 
-One correction while doing it: `52f58186a533` is the **core** tree's revision;
+  One correction while doing it: `52f58186a533` is the **core** tree's revision;
 the module's own HEAD is **`93aaea3d`** (both 2026-07-10). The pin freezes both,
-using the pin machinery the scripts already had:
+                                using the pin machinery the scripts already had:
 
-- `PROFILE_COMMIT` → core `52f58186a533` for beta/release/vanilla (they share
-  one source tree, so they must pin together; alpha untouched)
-- `PROFILE_MODULE_COMMITS` → `mod-playerbots = 93aaea3d` for the same three
-  profiles
-- Mirrored in **both** `scripts/install` and `scripts/update`, with comments
-  recording the why, the sibling-pin relationship, and the un-pin condition
-  (upstream fixes the corrupt-facade construction; repair warnings vanish on a
-  test build)
+ - `PROFILE_COMMIT` → core `52f58186a533` for beta/release/vanilla (they share
+                    one source tree, so they must pin together; alpha untouched)
+   - `PROFILE_MODULE_COMMITS` → `mod-playerbots = 93aaea3d` for the same three
+                                                                        profiles
+    - Mirrored in **both** `scripts/install` and `scripts/update`, with comments
+       recording the why, the sibling-pin relationship, and the un-pin condition
+    (upstream fixes the corrupt-facade construction; repair warnings vanish on a
+                                                                     test build)
 
-From now on, `update` will check out these exact revisions instead of pulling
-— the diagnosed-and-contained ground can't shift under you. Issue 308 and the
-patch doc now carry the corrected revision attribution, the pin record, and the
-verification numbers.
+   From now on, `update` will check out these exact revisions instead of pulling
+ — the diagnosed-and-contained ground can't shift under you. Issue 308 and the
+ patch doc now carry the corrected revision attribution, the pin record, and the
+                                                           verification numbers.
 
-Loose ends, in order of value: issue 308 could be marked complete and committed
-whenever you're satisfied with play-testing (bots should now visibly War Stomp,
-drink combat potions, and answer chat commands — worth a quick in-game poke);
-the upstream report against `93aaea3d` remains packaged in the patch doc for
-whenever you feel like filing it; and if the repair warnings get chatty once
-trust is earned, one word and I'll drop them to debug level.
+ Loose ends, in order of value: issue 308 could be marked complete and committed
+ whenever you're satisfied with play-testing (bots should now visibly War Stomp,
+ drink combat potions, and answer chat commands — worth a quick in-game poke);
+    the upstream report against `93aaea3d` remains packaged in the patch doc for
+    whenever you feel like filing it; and if the repair warnings get chatty once
+                    trust is earned, one word and I'll drop them to debug level.
 
 --------------------------------------------------------------------------------
+
