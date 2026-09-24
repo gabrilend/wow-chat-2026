@@ -19,6 +19,7 @@ declare -A PROFILE_REPO=(
     ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["vanilla"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["basic"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
 )
 # }}}
 
@@ -28,6 +29,7 @@ declare -A PROFILE_BRANCH=(
     ["beta"]="Playerbot"
     ["release"]="Playerbot"
     ["vanilla"]="Playerbot"
+    ["basic"]="Playerbot"
 )
 # }}}
 
@@ -35,13 +37,17 @@ declare -A PROFILE_BRANCH=(
 # TODO(136): pin alpha to a specific pre-playerbots-migration commit so
 # the relic stays reproducible across years. Today it tracks master HEAD.
 # vanilla originally pinned 2026-06-02 per 148; un-pinned later same day
-# per user direction — vanilla now tracks HEAD alongside beta and release
-# so it always gets the latest upstream.
+# per user direction. 2026-07-22 (issue 308): the shared source-beta tree
+# was pinned again in scripts/install and scripts/update, but this display
+# table was never updated and kept printing "HEAD" for a pinned build.
+# This listing only displays; install/update are the ones that check out.
+# Must match their PROFILE_COMMIT blocks. basic (155) shares the tree.
 declare -A PROFILE_COMMIT=(
     ["alpha"]=""
-    ["beta"]=""
-    ["release"]=""
-    ["vanilla"]=""
+    ["beta"]="52f58186a533"
+    ["release"]="52f58186a533"
+    ["vanilla"]="52f58186a533"
+    ["basic"]="52f58186a533"
 )
 # }}}
 
@@ -57,6 +63,7 @@ declare -A PROFILE_MODULES=(
     ["release"]="mod-ale mod-playerbots mod-aoe-loot mod-grownup"
     ["beta"]="mod-ale mod-playerbots mod-aoe-loot mod-grownup"
     ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
 )
 # }}}
 
@@ -81,6 +88,7 @@ show_help() {
     echo "List available version profiles and their configurations."
     echo ""
     echo "Profiles:"
+    echo "  basic   - Levels 1-60, playerbots + QoL, the development baseline (155)"
     echo "  vanilla - Default WotLK + playerbots, light ruleset (148)"
     echo "  alpha   - Latest playerbots, cutting edge"
     echo "  release - Stable, wow-chat-1 compatible"
@@ -99,9 +107,10 @@ printf "%-10s %-50s %-12s\n" "PROFILE" "REPOSITORY" "BRANCH"
 printf "%-10s %-50s %-12s\n" "-------" "----------" "------"
 
 # Display order: floor → relic → stable → bleeding-edge.
+# basic (155) sits beside vanilla at the floor: the full 1-60 baseline.
 # vanilla is the smallest, most-stable profile; beta is the
 # most-experimental. Reading top-to-bottom traverses that gradient.
-for p in vanilla alpha release beta; do
+for p in basic vanilla alpha release beta; do
     repo="${PROFILE_REPO[$p]}"
     branch="${PROFILE_BRANCH[$p]}"
     commit="${PROFILE_COMMIT[$p]}"
@@ -114,7 +123,7 @@ done
 
 echo ""
 echo "Modules per profile:"
-for p in vanilla alpha release beta; do
+for p in basic vanilla alpha release beta; do
     mods="${PROFILE_MODULES[$p]:-none}"
     [[ -z "${mods}" ]] && mods="none"
     echo "  ${p}: ${mods}"

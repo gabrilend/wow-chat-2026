@@ -20,7 +20,7 @@
 # the factory pre-allocate the full set on first boot, so the warning
 # never fires.
 #
-# Profiles: vanilla
+# Profiles: vanilla basic (basic, issue 155, shares the 128–256 population band so the same headroom holds)
 # (Release and beta currently use MaxRandomBots = 500 too; if their
 # auto-mode shows the same lag, the same patch can be added under
 # CONFIG_PROFILES with their profile names appended. Not done here
@@ -32,6 +32,6 @@ config_vanilla_playerbot_account_count() {
     local conf="${INSTALL_DIR}/etc/modules/playerbots.conf"
     sed -i 's|^AiPlayerbot\.RandomBotAccountCount.*=.*|AiPlayerbot.RandomBotAccountCount = '"${ACCOUNT_COUNT}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_vanilla_playerbot_account_count]="vanilla"
+CONFIG_PROFILES[config_vanilla_playerbot_account_count]="vanilla basic"
 CONFIG_DESCRIPTIONS[config_vanilla_playerbot_account_count]="Playerbot RandomBotAccountCount = 110 (cold-boot pre-provision)"
 # -- }}}

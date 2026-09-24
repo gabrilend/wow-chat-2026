@@ -33,7 +33,7 @@ DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
 PROFILE="${1:-}"
 if [[ -z "${PROFILE}" ]]; then
     echo "Usage: $0 <profile>"
-    echo "  profile: release | beta | vanilla | alpha"
+    echo "  profile: release | beta | vanilla | alpha | basic"
     exit 1
 fi
 # }}}
@@ -45,8 +45,9 @@ case "${PROFILE}" in
     beta)     ACTIVE_ID=2 ;;
     vanilla)  ACTIVE_ID=3 ;;
     alpha)    ACTIVE_ID=4 ;;
+    basic)    ACTIVE_ID=5 ;;
     *)
-        echo "ERROR: unknown profile '${PROFILE}' (expected release|beta|vanilla|alpha)"
+        echo "ERROR: unknown profile '${PROFILE}' (expected release|beta|vanilla|alpha|basic)"
         exit 1
         ;;
 esac
@@ -75,7 +76,8 @@ VALUES
   (1, 'Everland Ghostsong (release)', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
   (2, 'Everland Ghostsong (beta)',    '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
   (3, 'Everland Ghostsong (vanilla)', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
-  (4, 'Everland Ghostsong (alpha)',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340);
+  (4, 'Everland Ghostsong (alpha)',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (5, 'Everland Ghostsong (basic)',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340);
 SQL
 # }}}
 

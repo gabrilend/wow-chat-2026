@@ -17,7 +17,7 @@
 # the upstream-default-for-each-key the binary expects when the
 # property is absent. They match the source-beta upstream defaults.
 #
-# Profiles: release beta vanilla
+# Profiles: release beta vanilla basic
 # Alpha is excluded: its older AzerothCore binary doesn't read these
 # keys, so adding them would surface "unknown property" noise.
 
@@ -63,6 +63,6 @@ EOF
         fi
     done
 }
-CONFIG_PROFILES[config_missing_server_config_keys]="release beta vanilla"
+CONFIG_PROFILES[config_missing_server_config_keys]="release beta vanilla basic"
 CONFIG_DESCRIPTIONS[config_missing_server_config_keys]="Backfill 5 server-config keys missing from stale .dist"
 # -- }}}

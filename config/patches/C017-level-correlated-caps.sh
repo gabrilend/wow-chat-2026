@@ -20,7 +20,7 @@
 #                          pinning to the level cap covers the full
 #                          progression range and silences the warning.
 #
-# Profiles: release beta vanilla
+# Profiles: release beta vanilla basic
 # Alpha is excluded for the same reason as C016: different binary,
 # different validation surface.
 
@@ -45,6 +45,6 @@ config_level_correlated_caps() {
     sed -i "s|^StartHeroicPlayerLevel[[:space:]]*=.*|StartHeroicPlayerLevel = ${max_level}|" "${conf}"
     sed -i "s|^RecruitAFriend\.MaxLevel[[:space:]]*=.*|RecruitAFriend.MaxLevel = ${max_level}|" "${conf}"
 }
-CONFIG_PROFILES[config_level_correlated_caps]="release beta vanilla"
+CONFIG_PROFILES[config_level_correlated_caps]="release beta vanilla basic"
 CONFIG_DESCRIPTIONS[config_level_correlated_caps]="StartHeroicPlayerLevel + RecruitAFriend.MaxLevel pinned to MaxPlayerLevel"
 # -- }}}

@@ -50,6 +50,16 @@ config_database_connections() {
             DB_CHARS="acore_characters_vanilla"
             DB_PLAYERBOTS="acore_playerbots_vanilla"
             ;;
+        basic)
+            # basic (155): its own world/characters/playerbots, seeded from a
+            # fresh AzerothCore base (not from vanilla's, which carries the
+            # starter-kit/pretrain/spawn-town rows basic leaves out).
+            DB_PORT="3307"
+            DB_AUTH="acore_auth"
+            DB_WORLD="acore_world_basic"
+            DB_CHARS="acore_characters_basic"
+            DB_PLAYERBOTS="acore_playerbots_basic"
+            ;;
         alpha)
             DB_PORT="3308"
             DB_AUTH="acore_auth_alpha"

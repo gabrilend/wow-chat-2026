@@ -34,6 +34,7 @@ declare -A PHASE_BEGIN_PATCHES=(
     ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008 B009 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B024 B026 B027"  # +B027 (2026-07-21, issue 308: Engine::Init stale-facade guard, companion to B026); +B026 (2026-07-16, bot-login crash guard+diagnostic); All patches (B011 removed — see release-line note; B010 removed 2026-07-16 — upstream now ships ARENA_TYPE_NONE)
     ["alpha"]="B001 B004"                                         # Minimal compatibility patches
     ["vanilla"]="B001 B002 B004 B009 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B025 B026 B027"  # +B027 (2026-07-21, issue 308: Engine::Init stale-facade guard, companion to B026). +B026 (2026-07-16, bot-login crash guard+diagnostic). 2026-06-02: ALE added per 148k. Compile fixes + B001 (aoe-loot/ALE compat, conditional) + B002 (playerbots×ALE login hook) + B020 + B023 (ALE thread-safety + dangling-pointer fixes — non-negotiable for ALE stability). Skipped per user OK: B003 B006 B007 (ALE feature patches not yet needed), B005 B008 B024 (wow-chat gameplay), B011 (removed everywhere). 2026-07-15: +B025 (148s — vanilla bots start in the 148h starter kit; self-scoping on the kit data, so it only takes effect on vanilla).
+    ["basic"]="B001 B002 B004 B005 B009 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B026 B027 B028 B029"  # issue 155 (2026-09-23): +B029 (155e: a trainer gossip option can name its trainer list, for the per-class Visiting Mentors). +B028 (155d: new characters start in their faction's rotating starting valley). vanilla's list minus B025 (bots in the vanilla starter kit — basic has no kit) plus B005 (accuracy level cap, issue 803, user directive: level gaps stop worsening hit/miss past ±3, which also makes 155f's level-64 heroics fightable at 60).
 )
 
 # PHASE_END patches (post-compile setup: configs, symlinks, database)
@@ -42,6 +43,7 @@ declare -A PHASE_END_PATCHES=(
     ["beta"]="E001 E004 E005 E006 E011 E012 E013 E014 E015 E016 E017"  # Lua symlinks + logs + configs + DK levelstats (E005) + DK class system (E011) + drop-creatures (E012, destructive) + quest-spells-to-trainers (E013) + trainer-spell-level-cap (E014, destructive) + class-selector-npcs (E015) + empty-loot-chests (E016) + playerbots logout-texts migration fix (E017)
     ["alpha"]="E004 E006"                # Logs + configs (same as release)
     ["vanilla"]="E001 E004 E006 E007 E008 E009 E010 E018 E019 E020 E021"  # 2026-06-02: E001 added for ALE (per 148k). E001 now profile-aware — symlinks src/lua-vanilla/ into installed-files-vanilla/bin/lua_scripts/custom/. Plus: configs + starting-zones SQL (148h, E007) + flight-path removal SQL (148i, E008) + starting-equipment SQL (148h, E009) + pretrain-abilities SQL (148j, E010) + kit RequiredLevel cap (148h, E018, lets level-20 chars equip the kit) + no-intro-cinematic trigger (E019, skips race intro on first login) + mount level requirements (148l, E020, Classic 40/60 riding gates) + starting professions (148q, E021, gathering+production at skill 125 with recipes & tools). No DK stats (DK disabled per 148a/CP8).
+    ["basic"]="E001 E004 E006 E008 E019 E020 E022 E023 E024 E025"  # issue 155 (2026-09-23): +E025 (155e: a Visiting Mentor per valley for the classes it lacks). +E024 (155f: Outland dungeons a level 60 can enter at level 64; open world stock). +E023 (155d rotation-state table, characters DB). Lua link (src/lua-basic/) + logs + configs + flight-path removal (E008) + no intro cinematic (E019) + Classic riding gates 40/60 (E020) + quests open to the whole faction (E022, 155e). Left out on purpose: E007 level-20 spawn towns (basic spawns in the level-1 valleys), E009/E018 starter kit, E010 pretrained abilities, E021 starting professions — all head-start.
 )
 # }}}
 
@@ -112,14 +114,28 @@ apply_patches_begin() {
 
     echo ""
     echo "Applying PHASE_BEGIN patches for profile '${PROFILE}'..."
+    # A source patch that is missing or fails means the build would compile
+    # without it, so stop here instead of printing "Applied" regardless (the
+    # old behavior) and compiling a binary that silently lacks the change.
+    # Every patch in every profile's list was checked to return success on a
+    # clean tree before this became strict (scripts/test-source-patches).
+    local done_ids=""
     for patch_id in ${patches}; do
         # Find the patch function (e.g., patch_B001_aoe_loot_item_namespace)
         local patch_func=$(declare -F | grep "^declare -f patch_${patch_id}_" | sed 's/declare -f //')
-        if [[ -n "${patch_func}" ]]; then
-            ${patch_func}
+        if [[ -z "${patch_func}" ]]; then
+            echo "  [${patch_id}] ERROR: no function patch_${patch_id}_* is defined"
+            echo "  PHASE_BEGIN STOPPED — applied: ${done_ids:-none}; failed: ${patch_id}"
+            return 1
+        fi
+        if ${patch_func}; then
             echo "  [${patch_id}] Applied: ${patch_func}"
+            done_ids+="${patch_id} "
         else
-            echo "  [${patch_id}] WARNING: No function found for patch ${patch_id}"
+            echo "  [${patch_id}] ERROR: ${patch_func} returned failure"
+            echo "  PHASE_BEGIN STOPPED — applied: ${done_ids:-none}; failed: ${patch_id}"
+            echo "  (the compile's exit trap reverts what was applied)"
+            return 1
         fi
     done
 }
@@ -435,16 +451,47 @@ apply_patches_end() {
 
     echo ""
     echo "Applying PHASE_END patches for profile '${PROFILE}'..."
+    # Stop at the first step that is missing or fails, and say which steps
+    # ran. Earlier this printed a WARNING for a missing function, ignored a
+    # step's failing return code, and always ended with "PHASE_END complete",
+    # so a half-installed profile (say, a world SQL source file missing)
+    # looked finished. Later steps can depend on earlier ones (E001's Lua
+    # link, E006's configs), so continuing past a failure is not safe.
+    local done_ids=""
     for patch_id in ${patches}; do
         # Find the patch function (e.g., patch_E001_lua_script_symlinks)
         local patch_func=$(declare -F | grep "^declare -f patch_${patch_id}_" | sed 's/declare -f //')
-        if [[ -n "${patch_func}" ]]; then
-            ${patch_func}
+        if [[ -z "${patch_func}" ]]; then
+            # No function: the profile's list names a step that does not exist.
+            echo "  [${patch_id}] ERROR: no function patch_${patch_id}_* is defined"
+            _report_patches_end_stop "${patch_id}" "${done_ids}" "${patches}"
+            return 1
+        fi
+        # Run inside `if` so a failing step is caught here (and reported)
+        # instead of killing the caller outright under `set -e`.
+        if ${patch_func}; then
+            done_ids+="${patch_id} "
         else
-            echo "  [${patch_id}] WARNING: No function found for patch ${patch_id}"
+            echo "  [${patch_id}] ERROR: ${patch_func} returned failure"
+            _report_patches_end_stop "${patch_id}" "${done_ids}" "${patches}"
+            return 1
         fi
     done
-    echo "  PHASE_END complete"
+    echo "  PHASE_END complete (${done_ids% })"
+}
+
+# Print where the PHASE_END pipeline stopped: what completed, what failed,
+# what never ran. Args: failed id, completed ids, full list.
+_report_patches_end_stop() {
+    local failed="$1" done_ids="$2" all_ids="$3" skipped="" seen=0
+    for id in ${all_ids}; do
+        [[ "${seen}" -eq 1 ]] && skipped+="${id} "
+        [[ "${id}" == "${failed}" ]] && seen=1
+    done
+    echo "  PHASE_END STOPPED for profile '${PROFILE}'"
+    echo "    completed: ${done_ids:-none}"
+    echo "    failed:    ${failed}"
+    echo "    not run:   ${skipped:-none}"
 }
 # }}}
 

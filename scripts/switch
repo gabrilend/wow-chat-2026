@@ -18,6 +18,7 @@ declare -A PROFILE_REPO=(
     ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["vanilla"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["basic"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
 )
 # }}}
 
@@ -42,6 +43,7 @@ get_profile_paths() {
         release) AC_CODE_DIR="${DIR}/source-beta"  ;;
         beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
         vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        basic)   AC_CODE_DIR="${DIR}/source-beta"  ;;
         alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
         *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
     esac
@@ -61,6 +63,7 @@ show_help() {
     echo "Switch to a different profile without recompiling."
     echo ""
     echo "Available profiles:"
+    echo "  basic   - Levels 1-60, playerbots + QoL, the development baseline (155)"
     echo "  vanilla - Default WotLK + playerbots, no wow-chat customs"
     echo "  alpha   - wow-chat-1 holiday relic (eluna, pre-playerbots)"
     echo "  release - Guaranteed-working subset (ALE + playerbots)"
@@ -83,7 +86,7 @@ new_profile="${1:-}"
 
 if [[ -z "${new_profile}" ]]; then
     echo "Usage: ./scripts/switch <profile>"
-    echo "Available profiles: vanilla, alpha, release, beta"
+    echo "Available profiles: basic, vanilla, alpha, release, beta"
     echo "Current profile: ${PROFILE}"
     exit 1
 fi
@@ -91,7 +94,7 @@ fi
 # Validate profile exists
 if [[ ! -v "PROFILE_REPO[${new_profile}]" ]]; then
     echo "Error: Unknown profile '${new_profile}'"
-    echo "Available profiles: vanilla, alpha, release, beta"
+    echo "Available profiles: basic, vanilla, alpha, release, beta"
     exit 1
 fi
 

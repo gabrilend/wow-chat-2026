@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # C008 - GM Login State
 # Set GM level on login (0 = player, 3 = admin)
-# Profiles: all (vanilla=3, beta=3, release=0, alpha=0)
+# Profiles: all (vanilla=3, basic=3, beta=3, release=0, alpha=0)
 
 # -- {{{ config_gm_login_state
 # vanilla logs in as admin per issue 148: the ruleset is a personal
@@ -18,11 +18,12 @@ config_gm_login_state() {
         beta)    gm_level=3 ;;
         alpha)   gm_level=0 ;;
         vanilla) gm_level=3 ;;
+        basic)   gm_level=3 ;;   # basic (155) is the development baseline; same reasoning as vanilla
         *)       echo "ERROR: Unknown profile '${PROFILE}' in config_gm_login_state"; return 1 ;;
     esac
 
     sed -i 's|^GM\.LoginState.*=.*|GM.LoginState = '"${gm_level}"'|' "${conf}"
 }
 CONFIG_PROFILES[config_gm_login_state]="all"
-CONFIG_DESCRIPTIONS[config_gm_login_state]="GM login state (vanilla/beta=admin, release/alpha=player)"
+CONFIG_DESCRIPTIONS[config_gm_login_state]="GM login state (vanilla/basic/beta=admin, release/alpha=player)"
 # -- }}}

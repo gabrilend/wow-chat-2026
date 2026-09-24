@@ -1,4 +1,8 @@
 -- MARKER_E008_APPLY vanilla-remove-flight-paths
+-- SHARED: sql/basic/ links to this file (issue 155c) — the basic profile
+-- applies the same content to its own databases. Edits here land on both
+-- vanilla and basic; if basic ever needs different content, replace its
+-- link with a real file.
 -- ============================================================================
 -- 03-remove-flight-paths.sql (148i) — APPLY SOURCE
 -- ============================================================================
@@ -424,6 +428,187 @@ INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
 INSERT INTO gossip_menu (MenuID, TextID) VALUES (90069, 90069);
 UPDATE creature_template SET gossip_menu_id = 90069 WHERE entry = 23612; -- Dyslix Silvergrub (Silithus)
 
+-- ---------- Outland map (530): draenei and blood elf home zones, then Outland --
+-- Added 2026-09-23 (issue 155c). The basic profile leaves Outland open at
+-- its level-60 cap, and the draenei / blood elf zones share map 530, so these
+-- 35 had no flavor line. Outland lines avoid naming the NPC's outpost: which
+-- outpost each one serves was not verified, so no place is claimed.
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90070, 'The hippogryphs will not cross water the crash has poisoned. The isle is small, friend; your legs will learn it quickly.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90070, 90070);
+UPDATE creature_template SET gossip_menu_id = 90070 WHERE entry = 17555; -- Stephanos (The Exodar)
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90071, 'The red crystals have soured the air over Bloodmyst. No rider of mine flies through it until the Watch says it is clean.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90071, 90071);
+UPDATE creature_template SET gossip_menu_id = 90071 WHERE entry = 17554; -- Laando (Blood Watch, Bloodmyst)
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90072, 'The Magisters have grounded every dragonhawk until the leylines steady. The roads of Eversong are still beautiful. Walk them.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90072, 90072);
+UPDATE creature_template SET gossip_menu_id = 90072 WHERE entry = 16189; -- Skymaster Sunwing (Silvermoon)
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90073, 'The Scourge shoot anything that flies over the Dead Scar. I will not send a dragonhawk to die for an errand.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90073, 90073);
+UPDATE creature_template SET gossip_menu_id = 90073 WHERE entry = 16192; -- Skymistress Gloaming (Tranquillien)
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90074, 'Troll drums spook the birds, and troll spears finish the job. Rotor''s in pieces. Come back never, maybe.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90074, 90074);
+UPDATE creature_template SET gossip_menu_id = 90074 WHERE entry = 24851; -- Kiz Coilspanner (Zul'Aman)
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90075, 'The Sunwell''s light blinds the dragonhawks on approach. What comes to this isle comes by boat, and what leaves it walks.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90075, 90075);
+UPDATE creature_template SET gossip_menu_id = 90075 WHERE entry = 26560; -- Ohura (Isle of Quel'Danas)
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90076, 'The sky over this land is full of burning things that are not stars. My flock stays on the ground, and so should you.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90076, 90076);
+UPDATE creature_template SET gossip_menu_id = 90076 WHERE entry = 21766; -- Alieshor
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90077, 'Gryphons were bred for Azeroth''s winds. These ones howl with fel. I will not take them up.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90077, 90077);
+UPDATE creature_template SET gossip_menu_id = 90077 WHERE entry = 18939; -- Brubeck Stormfoot
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90078, 'Our patrons ask much of us, and a clear sky is not among what they can give. No flights.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90078, 90078);
+UPDATE creature_template SET gossip_menu_id = 90078 WHERE entry = 19581; -- Maddix
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90079, 'Wind riders do not fly under a green sky. Walk, and keep your weapon in your hand.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90079, 90079);
+UPDATE creature_template SET gossip_menu_id = 90079 WHERE entry = 19317; -- Drek'Gol
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90080, 'Arakkoa shoot at anything with feathers they do not own. The road is slower. The road is also alive.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90080, 90080);
+UPDATE creature_template SET gossip_menu_id = 90080 WHERE entry = 18809; -- Furnan Skysoar
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90081, 'The hippogryphs will not leave the ground while the ogres keep their fires lit on every hill.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90081, 90081);
+UPDATE creature_template SET gossip_menu_id = 90081 WHERE entry = 18789; -- Furgu
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90082, 'The trees here drink shadow. My riders came back pale and silent. No more.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90082, 90082);
+UPDATE creature_template SET gossip_menu_id = 90082 WHERE entry = 18807; -- Kerna
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90083, 'Refugees fill every roost in the city. I have beds for birds or beds for people, and people win.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90083, 90083);
+UPDATE creature_template SET gossip_menu_id = 90083 WHERE entry = 18940; -- Nutral
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90084, 'Fel reavers walk the plains below. A wind rider''s shadow is enough to turn their heads.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90084, 90084);
+UPDATE creature_template SET gossip_menu_id = 90084 WHERE entry = 19558; -- Amilya Airheart
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90085, 'The wind here carries the smell of the old clans. The wyverns remember it and will not go.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90085, 90085);
+UPDATE creature_template SET gossip_menu_id = 90085 WHERE entry = 18808; -- Gursha
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90086, 'Every gryphon I had is flying supply to the front. You want the front? Start walking toward the fire.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90086, 90086);
+UPDATE creature_template SET gossip_menu_id = 90086 WHERE entry = 16822; -- Flightmaster Krill Bitterhue
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90087, 'The Legion''s fliers own the air here. On the ground you might be one of a hundred targets. Up there you are the only one.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90087, 90087);
+UPDATE creature_template SET gossip_menu_id = 90087 WHERE entry = 18942; -- Innalia
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90088, 'Came through the Portal with twelve birds. Have four. The other eight flew one route each.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90088, 90088);
+UPDATE creature_template SET gossip_menu_id = 90088 WHERE entry = 18931; -- Amish Wildhammer
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90089, 'The Portal is at our backs and the Legion is in front. Nobody here has time to fly tourists.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90089, 90089);
+UPDATE creature_template SET gossip_menu_id = 90089 WHERE entry = 18930; -- Vlagga Freyfeather
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90090, 'Something in the mountains eats wind riders. I stopped counting, and I stopped sending them.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90090, 90090);
+UPDATE creature_template SET gossip_menu_id = 90090 WHERE entry = 20762; -- Gur'zil
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90091, 'Spores in the air rot the feathers. My hippogryphs stay dry, and you walk through the marsh.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90091, 90091);
+UPDATE creature_template SET gossip_menu_id = 90091 WHERE entry = 18785; -- Kuma
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90092, 'The giants of the bog swat fliers like flies. Take the boardwalks, and step lightly.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90092, 90092);
+UPDATE creature_template SET gossip_menu_id = 90092 WHERE entry = 18788; -- Munci
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90093, 'The broken land here has no safe place to land. A wind rider that cannot land does not come home.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90093, 90093);
+UPDATE creature_template SET gossip_menu_id = 90093 WHERE entry = 18791; -- Du'ga
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90094, 'The Horde needs every rider for the war. What is left for travellers is a road and good boots.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90094, 90094);
+UPDATE creature_template SET gossip_menu_id = 90094 WHERE entry = 16587; -- Barley
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90095, 'Storms off the rift knock gryphons out of the sky. I''ve buried enough good birds. Go on foot.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90095, 90095);
+UPDATE creature_template SET gossip_menu_id = 90095 WHERE entry = 20234; -- Runetog Wildhammer
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90096, 'The Cenarion Circle asked us to keep the hippogryphs grounded while the land heals. We keep our promises.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90096, 90096);
+UPDATE creature_template SET gossip_menu_id = 90096 WHERE entry = 22485; -- Halu
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90097, 'Nether storms scrambled my compass and my gryphons'' heads. Neither points north anymore.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90097, 90097);
+UPDATE creature_template SET gossip_menu_id = 90097 WHERE entry = 21107; -- Rip Pedalslam
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90098, 'The ridge winds tear the netherwings apart. They will not fly for me, and I do not blame them.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90098, 90098);
+UPDATE creature_template SET gossip_menu_id = 90098 WHERE entry = 22455; -- Sky-Master Maxxor
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90099, 'The marsh is sick, and the hippogryphs feel it in their wings. We wait for it to heal.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90099, 90099);
+UPDATE creature_template SET gossip_menu_id = 90099 WHERE entry = 18937; -- Amerun Leafshade
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90100, 'The earth spirits here are angry. A wind rider flies into that anger and does not come back.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90100, 90100);
+UPDATE creature_template SET gossip_menu_id = 90100 WHERE entry = 18953; -- Unoke Tenderhoof
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90101, 'Mana-storms. Every day, mana-storms. My birds glow now. I am not sending glowing birds anywhere.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90101, 90101);
+UPDATE creature_template SET gossip_menu_id = 90101 WHERE entry = 20515; -- Harpax
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90102, 'The Circle has asked every rider to stay grounded. Tread softly; you are walking on a healing land.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90102, 90102);
+UPDATE creature_template SET gossip_menu_id = 90102 WHERE entry = 22216; -- Fhyn Leafshadow
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90103, 'The netherwing drakes chase anything in their sky. You would be lunch before you were halfway.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90103, 90103);
+UPDATE creature_template SET gossip_menu_id = 90103 WHERE entry = 18938; -- Krexcil
+
+INSERT INTO npc_text (ID, text0_0, lang0, Probability0) VALUES
+(90104, 'Goblin engineering built this tower. Goblin engineering also can''t keep a bird aloft in a nether storm. Walk, pal.', 0, 1.0);
+INSERT INTO gossip_menu (MenuID, TextID) VALUES (90104, 90104);
+UPDATE creature_template SET gossip_menu_id = 90104 WHERE entry = 19583; -- Grennik
+
 -- ----------------------------------------------------------------------------
 -- Re-enable the GOSSIP npcflag (bit 1) on every grounded flightmaster that
 -- received a flavor menu above. The npcflag clear at the top only stripped the
@@ -437,9 +622,10 @@ UPDATE creature_template SET npcflag = npcflag | 1 WHERE gossip_menu_id BETWEEN 
 
 -- ============================================================================
 -- End of 03-remove-flight-paths.sql
--- 69 unique dialogues authored for EK + Kalimdor flightmasters.
--- 87 Outland + Northrend flightmasters retain their original (now-unused)
--- gossip — players cannot reach those continents at vanilla's level 40 cap,
--- so the dialogue work was not done. The npcflag clear at the top of this
--- file still applies to them as defense-in-depth.
+-- 69 unique dialogues authored for EK + Kalimdor flightmasters, plus 35 for
+-- every flightmaster spawned on map 530 (draenei and blood elf home zones and
+-- Outland; added 2026-09-23 for the basic profile, which reaches Outland).
+-- The remaining flightmasters (Northrend, and templates never spawned) keep
+-- their original gossip: no basic or vanilla character reaches Northrend.
+-- The npcflag clear at the top of this file still applies to them.
 -- ============================================================================

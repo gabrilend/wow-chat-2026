@@ -1,4 +1,8 @@
 -- MARKER_E019_APPLY vanilla-no-intro-cinematic
+-- SHARED: sql/basic/ links to this file (issue 155c) — the basic profile
+-- applies the same content to its own databases. Edits here land on both
+-- vanilla and basic; if basic ever needs different content, replace its
+-- link with a real file.
 -- Apply-form: BEFORE INSERT trigger on the characters table that
 -- sets cinematic = 1 for every newly created character. The
 -- cinematic column tracks "has the race intro played yet?"; AC's

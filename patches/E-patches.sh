@@ -56,8 +56,13 @@ _register_with_updatefetcher() {
 
     # If MySQL isn't up the include row can be inserted on a later
     # install pass. Worldserver picks it up on next boot regardless
-    # of when the row was added.
-    [[ ! -S "${MYSQL_SOCKET}" ]] && return 0
+    # of when the row was added. This is a deferral, so say so: until a
+    # pass runs with MySQL up, this directory's SQL is never applied.
+    if [[ ! -S "${MYSQL_SOCKET}" ]]; then
+        echo "    NOTICE: MySQL not running — ${DIR_PATH} NOT registered in ${DB}.updates_include"
+        echo "            (re-run install/apply-patches with MySQL up, or this SQL never applies)"
+        return 0
+    fi
 
     # CREATE TABLE IF NOT EXISTS first, then INSERT IGNORE. The CREATE
     # handles the install-time race where E-patches run before the
@@ -73,8 +78,12 @@ _register_with_updatefetcher() {
     #
     # INSERT IGNORE keeps a second call a clean no-op once the row exists
     # (path is PRIMARY KEY).
+    # MySQL is up, so a failure here is real (database missing, bad
+    # credentials): report it and fail the calling step. Errors used to be
+    # discarded (2>/dev/null || true), which hid exactly the "include row
+    # never lands" failure described above.
     "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
-        -u ritz -pmenardi "${DB}" <<SQL 2>/dev/null || true
+        -u ritz -pmenardi "${DB}" <<SQL || { echo "    ERROR: could not register ${DIR_PATH} in ${DB}.updates_include (database=${DB}, socket=${MYSQL_SOCKET})"; return 1; }
 CREATE TABLE IF NOT EXISTS \`updates_include\` (
   \`path\` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'directory to include. \$ means relative to the source directory.',
   \`state\` enum('RELEASED','ARCHIVED','CUSTOM','PENDING') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'RELEASED' COMMENT 'defines if the directory contains released or archived updates.',
@@ -116,8 +125,8 @@ _unregister_from_updatefetcher() {
 # -- {{{ _profile_db_name
 # Compose a profile-suffixed database name. Mirrors the database
 # isolation policy in config/patches/C001-database-connections.sh:
-# release and beta share the unsuffixed namespace; vanilla and alpha
-# carry _vanilla / _alpha suffixes for data isolation.
+# release and beta share the unsuffixed namespace; vanilla, alpha and basic
+# carry _vanilla / _alpha / _basic suffixes for data isolation.
 #
 # Use this anywhere an E-patch wires a sql directory to a database.
 # The patch function stays profile-anonymous; the dispatcher
@@ -132,6 +141,7 @@ _profile_db_name() {
     case "${PROFILE}" in
         release|beta) echo "${base}" ;;
         vanilla)      echo "${base}_vanilla" ;;
+        basic)        echo "${base}_basic" ;;
         alpha)        echo "${base}_alpha" ;;
         *)
             echo "ERROR: _profile_db_name called for unknown profile '${PROFILE}'" >&2
@@ -183,8 +193,13 @@ apply_config_values() {
         return 0
     fi
 
-    # Output grouped by profile (all first, then alpha/beta/release sorted)
-    for profile in all alpha beta release; do
+    # Output grouped by profile: "all" first, then every profile name some
+    # gate mentions, sorted. This used to be a hard-coded "all alpha beta
+    # release", which silently left vanilla-only (and later basic-only)
+    # patches out of the printed summary even though they were applied.
+    local listed_profiles
+    listed_profiles=$(printf '%s\n' "${!patches_by_profile[@]}" | grep -vx 'all' | sort)
+    for profile in all ${listed_profiles}; do
         [[ -z "${patches_by_profile[$profile]:-}" ]] && continue
         echo "    ${profile}:"
         while IFS= read -r p; do
@@ -259,9 +274,16 @@ apply_config_values() {
 patch_E001_lua_script_symlinks() {
     local TARGET="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
     local LUA_SRC="${DIR}/src/lua-${PROFILE}"
+    # A missing per-profile Lua directory means the profile was never set
+    # up (or its name is misspelled). This used to warn and create an empty
+    # directory, which booted a worldserver with no custom scripts and no
+    # visible failure. Now it stops, and says what was and was not done.
     if [[ ! -d "${LUA_SRC}" ]]; then
-        echo "  [E001] WARNING: ${LUA_SRC} does not exist — creating empty dir"
-        mkdir -p "${LUA_SRC}"
+        echo "  [E001] ERROR: Lua source directory missing: ${LUA_SRC}"
+        echo "         profile='${PROFILE}'; nothing was linked into ${TARGET}/bin/lua_scripts/"
+        echo "         to debug: does src/lua-${PROFILE}/ exist in git? (every profile"
+        echo "         owns one, even if it holds only a README); is .profile spelled right?"
+        return 1
     fi
     mkdir -p "${TARGET}/bin/lua_scripts"
 
@@ -354,7 +376,7 @@ patch_E005_dk_levelstats() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E005] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E005] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -368,7 +390,7 @@ unpatch_E005_dk_levelstats() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E005] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -411,7 +433,7 @@ patch_E007_vanilla_starting_zones() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E007] Writing apply-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -450,7 +472,7 @@ unpatch_E007_vanilla_starting_zones() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     # Revert-form hardcodes the literal upstream per-race default
     # coordinates pulled directly from
@@ -596,14 +618,22 @@ patch_E008_vanilla_remove_flight_paths() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/03-remove-flight-paths.sql"
     local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/03-remove-flight-paths.apply.sql"
 
-    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E008_APPLY" "${SQL_FILE}"; then
-        echo "  [E008] Active file already holds apply-form content"
-        return 0
-    fi
-
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E008] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    # Register first, on every run: INSERT IGNORE makes it a no-op once the
+    # row exists, and a run that found MySQL down must not be the last word
+    # (the early return below would otherwise skip registration forever).
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    # Idempotence by content comparison, not by marker: a marker check left
+    # the active file stale whenever the source was edited (new flavor lines,
+    # retuned values), so an existing install never picked the edit up.
+    # Same shape as E018. On a change AC's UpdateFetcher sees a new hash and
+    # re-runs the file, which is written to be re-applicable.
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E008] Active file already matches apply-form content"
+        return 0
+    fi
 
     echo "  [E008] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -617,7 +647,7 @@ unpatch_E008_vanilla_remove_flight_paths() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     # Revert restores the flightmaster bit (0x2000 = 8192) on the 163
     # entries that R8 enumerated as having the flag before the apply
@@ -691,7 +721,7 @@ patch_E009_vanilla_starting_equipment() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E009] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -705,7 +735,7 @@ unpatch_E009_vanilla_starting_equipment() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     # Revert hardcodes the explicit DELETEs that drop exactly the rows
     # the apply source INSERTed. The generator tags every row with a
@@ -753,7 +783,7 @@ patch_E010_vanilla_pretrain_abilities() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E010] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E010] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -767,7 +797,7 @@ unpatch_E010_vanilla_pretrain_abilities() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     # Revert drops exactly the 287 rows tagged with the 'vanilla-148j-'
     # Note prefix. Default rows in playercreateinfo_spell_custom (the
@@ -797,14 +827,22 @@ patch_E019_vanilla_no_intro_cinematic() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/01-no-intro-cinematic.sql"
     local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/01-no-intro-cinematic.apply.sql"
 
-    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E019_APPLY" "${SQL_FILE}"; then
-        echo "  [E019] Active file already holds apply-form content"
-        return 0
-    fi
-
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E019] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)"
+    # Register first, on every run: INSERT IGNORE makes it a no-op once the
+    # row exists, and a run that found MySQL down must not be the last word
+    # (the early return below would otherwise skip registration forever).
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    # Idempotence by content comparison, not by marker: a marker check left
+    # the active file stale whenever the source was edited (new flavor lines,
+    # retuned values), so an existing install never picked the edit up.
+    # Same shape as E018. On a change AC's UpdateFetcher sees a new hash and
+    # re-runs the file, which is written to be re-applicable.
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E019] Active file already matches apply-form content"
+        return 0
+    fi
 
     echo "  [E019] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -818,7 +856,7 @@ unpatch_E019_vanilla_no_intro_cinematic() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
 
     echo "  [E019] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -844,14 +882,22 @@ patch_E020_vanilla_mount_level_requirements() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/05-mount-level-requirements.sql"
     local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/05-mount-level-requirements.apply.sql"
 
-    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E020_APPLY" "${SQL_FILE}"; then
-        echo "  [E020] Active file already holds apply-form content"
-        return 0
-    fi
-
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E020] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    # Register first, on every run: INSERT IGNORE makes it a no-op once the
+    # row exists, and a run that found MySQL down must not be the last word
+    # (the early return below would otherwise skip registration forever).
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    # Idempotence by content comparison, not by marker: a marker check left
+    # the active file stale whenever the source was edited (new flavor lines,
+    # retuned values), so an existing install never picked the edit up.
+    # Same shape as E018. On a change AC's UpdateFetcher sees a new hash and
+    # re-runs the file, which is written to be re-applicable.
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E020] Active file already matches apply-form content"
+        return 0
+    fi
 
     echo "  [E020] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -868,7 +914,7 @@ unpatch_E020_vanilla_mount_level_requirements() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E020] Revert source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E020] Copying revert-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -892,7 +938,7 @@ patch_E021_vanilla_starting_professions() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E021] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E021] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -909,7 +955,7 @@ unpatch_E021_vanilla_starting_professions() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E021] Revert source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E021] Copying revert-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -950,7 +996,7 @@ patch_E018_vanilla_kit_required_level_cap() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E018] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -967,7 +1013,7 @@ unpatch_E018_vanilla_kit_required_level_cap() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E018] Copying revert-form source → ${SQL_FILE}"
     cp "${REV_FILE}" "${SQL_FILE}"
@@ -991,7 +1037,7 @@ patch_E011_beta_dk_class_system() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E011] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E011] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -1005,7 +1051,7 @@ unpatch_E011_beta_dk_class_system() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E011] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -1044,7 +1090,7 @@ patch_E012_beta_drop_creatures_keep_essential() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E012] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E012] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -1058,7 +1104,7 @@ unpatch_E012_beta_drop_creatures_keep_essential() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E012] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -1093,7 +1139,7 @@ patch_E013_beta_quest_spells_to_trainers() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E013] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E013] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -1107,7 +1153,7 @@ unpatch_E013_beta_quest_spells_to_trainers() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E013] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -1139,7 +1185,7 @@ patch_E014_beta_trainer_spell_level_cap() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E014] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E014] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -1153,7 +1199,7 @@ unpatch_E014_beta_trainer_spell_level_cap() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E014] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -1184,7 +1230,7 @@ patch_E015_beta_class_selector_npcs() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E015] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E015] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -1198,7 +1244,7 @@ unpatch_E015_beta_class_selector_npcs() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E015] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -1228,7 +1274,7 @@ patch_E016_beta_empty_loot_chests() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E016] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E016] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -1242,7 +1288,7 @@ unpatch_E016_beta_empty_loot_chests() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
     echo "  [E016] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -1273,7 +1319,7 @@ patch_E017_beta_relocate_logout_texts() {
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E017] Apply source missing: ${SRC_FILE}"; return 1; }
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_playerbots" "$(_profile_db_name acore_playerbots)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_playerbots" "$(_profile_db_name acore_playerbots)" || return 1
 
     echo "  [E017] Copying apply-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
@@ -1287,7 +1333,7 @@ unpatch_E017_beta_relocate_logout_texts() {
         return 0
     fi
 
-    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_playerbots" "$(_profile_db_name acore_playerbots)"
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_playerbots" "$(_profile_db_name acore_playerbots)" || return 1
 
     echo "  [E017] Writing revert-form SQL to ${SQL_FILE}"
     cat > "${SQL_FILE}" <<'SQL'
@@ -1307,3 +1353,186 @@ SQL
 }
 # -- }}}
 
+
+# -- {{{ patch_E022_basic_faction_quest_gating
+# Open every quest to its whole faction on the basic profile (issue 155e):
+# a quest restricted to some races of one faction becomes available to all
+# of that faction's races. Needed because basic characters are born in any
+# of their faction's starting valleys (155d), not their race's own.
+#
+# Same cp-apply / cp-revert idiom as E020: the apply-form source at
+# sql/basic/db_world.src/08-faction-quest-gating.apply.sql is copied into
+# the AC-watched active dir. The apply form saves each changed row's
+# original mask in a backup table first; the revert form restores from it.
+patch_E022_basic_faction_quest_gating() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/08-faction-quest-gating.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/08-faction-quest-gating.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E022] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    # Register first, on every run: INSERT IGNORE makes it a no-op once the
+    # row exists, and a run that found MySQL down must not be the last word
+    # (the early return below would otherwise skip registration forever).
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    # Idempotence by content comparison, not by marker: a marker check left
+    # the active file stale whenever the source was edited (new flavor lines,
+    # retuned values), so an existing install never picked the edit up.
+    # Same shape as E018. On a change AC's UpdateFetcher sees a new hash and
+    # re-runs the file, which is written to be re-applicable.
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E022] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E022] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E022_basic_faction_quest_gating() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/08-faction-quest-gating.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/08-faction-quest-gating.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E022_REVERT" "${SQL_FILE}"; then
+        echo "  [E022] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E022] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E022] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_E023_basic_starting_valley_rotation
+# Create and seed the rotation-state table the basic profile's
+# character-creation patch (B028) reads and advances (issue 155d). Lives in
+# the characters database because it is per-realm runtime state, not world
+# content. Same cp-apply / cp-revert idiom as E022.
+patch_E023_basic_starting_valley_rotation() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/02-starting-valley-rotation.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/02-starting-valley-rotation.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E023] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    # Register first, on every run: INSERT IGNORE makes it a no-op once the
+    # row exists, and a run that found MySQL down must not be the last word
+    # (the early return below would otherwise skip registration forever).
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    # Idempotence by content comparison, not by marker: a marker check left
+    # the active file stale whenever the source was edited (new flavor lines,
+    # retuned values), so an existing install never picked the edit up.
+    # Same shape as E018. On a change AC's UpdateFetcher sees a new hash and
+    # re-runs the file, which is written to be re-applicable.
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E023] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E023] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E023_basic_starting_valley_rotation() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/02-starting-valley-rotation.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/02-starting-valley-rotation.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E023_REVERT" "${SQL_FILE}"; then
+        echo "  [E023] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E023] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    echo "  [E023] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_E024_basic_outland_dungeons_64
+# Every Outland dungeon a level-60 character can enter is level 64 inside on
+# basic (issue 155f); the open world, quests, loot and the (unreachable)
+# heroic modes are left stock. Same cp-apply /
+# cp-revert idiom and content-comparison idempotence as E022.
+patch_E024_basic_outland_dungeons_64() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/09-outland-dungeons-64.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/09-outland-dungeons-64.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E024] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    # Register on every run (see E022 for why this comes before the check).
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E024] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E024] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E024_basic_outland_dungeons_64() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/09-outland-dungeons-64.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/09-outland-dungeons-64.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E024_REVERT" "${SQL_FILE}"; then
+        echo "  [E024] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E024] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E024] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_E025_basic_valley_universal_trainers
+# One "Visiting Mentor" per starting valley that teaches exactly the classes
+# of its faction the valley's own trainers do not (issue 155e), so a
+# character born in a foreign valley (155d) can train. Same cp-apply /
+# cp-revert idiom and content-comparison idempotence as E022.
+patch_E025_basic_valley_universal_trainers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/10-valley-universal-trainers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/10-valley-universal-trainers.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E025] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    # Register on every run (see E022 for why this comes before the check).
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E025] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E025] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E025_basic_valley_universal_trainers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/10-valley-universal-trainers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/10-valley-universal-trainers.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E025_REVERT" "${SQL_FILE}"; then
+        echo "  [E025] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E025] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E025] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}

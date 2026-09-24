@@ -1,0 +1,275 @@
+#!/usr/bin/env luajit
+-- generate-basic-mentor-hubs - work out where the basic profile's Visiting
+-- Mentors stand, which classes each one teaches, and whose look it borrows;
+-- write the result into the mentor SQL (issue 155e).
+--
+-- For a general audience: the stock world marks every place new characters
+-- are sent to train (each race's starting valley, first town and capital) with
+-- a stack of nine placeholder NPCs. This tool finds those 24 places, looks at
+-- which real class trainers stand around each one, and works out which of the
+-- faction's classes have no trainer there. Each such place gets exactly one
+-- mentor, standing where the placeholders stood, dressed as a trainer of a
+-- missing class borrowed from elsewhere in the faction. The answer is written
+-- as plain data into the SQL file between two marker lines, so the file stays
+-- readable and re-running the tool replaces only that part.
+--
+-- Usage: scripts/generate-basic-mentor-hubs [PROJECT_DIR]
+--   Reads   source-beta/data/sql/base/db_world/{creature,creature_template,
+--           trainer,creature_default_trainer}.sql and data-files/dbc/FactionTemplate.dbc
+--   Writes  sql/basic/db_world.src/10-valley-universal-trainers.apply.sql
+--           (only the GENERATED block)
+--
+-- Base SQL, not the live database: the tool runs with the server off. Spawn
+-- positions and trainer lists in base data are what upstream updates start
+-- from; a hub whose trainers move upstream would need a re-run.
+
+local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local BASE = DIR .. "/source-beta/data/sql/base/db_world/"
+local DBC  = DIR .. "/data-files/dbc/FactionTemplate.dbc"
+local OUT  = DIR .. "/sql/basic/db_world.src/10-valley-universal-trainers.apply.sql"
+
+-- {{{ configuration
+local PLACEHOLDER_FIRST, PLACEHOLDER_LAST = 26324, 26332  -- goblin "X Trainer" NPCs
+local CLUSTER_RADIUS  = 60     -- yards: placeholders of one site stand together
+local HUB_REACH       = 700    -- yards: a real trainer belongs to its nearest site within this
+local CLONE_MIN_LEVEL = 50     -- the borrowed look: "a powerful level 40ish trainer"
+local PLAYABLE = { 1, 2, 3, 4, 5, 7, 8, 9, 11 }  -- both factions play all nine in 3.3.5 (no DK)
+local CLASS_NAME = { [1]="warrior", [2]="paladin", [3]="hunter", [4]="rogue", [5]="priest",
+                     [7]="shaman", [8]="mage", [9]="warlock", [11]="druid" }
+
+-- Site names and the starting valleys' hand-picked looks (chosen with the
+-- owner on 2026-09-23), keyed by the site's rounded "map:x:y".
+local SITE = {
+  ["0:-8946:-158"]  = { name = "Northshire Valley", clone = 4217  },
+  ["0:-9496:36"]    = { name = "Goldshire" },
+  ["0:-8812:638"]   = { name = "Stormwind" },
+  ["0:-6188:392"]   = { name = "Coldridge Valley",  clone = 17519 },
+  ["0:-5575:-485"]  = { name = "Kharanos" },
+  ["0:-4942:-997"]  = { name = "Ironforge" },
+  ["0:1823:1586"]   = { name = "Deathknell",        clone = 20406 },
+  ["0:2253:308"]    = { name = "Brill" },
+  ["0:1812:194"]    = { name = "Undercity" },
+  ["1:10316:853"]   = { name = "Shadowglen",        clone = 5147  },
+  ["1:9856:954"]    = { name = "Dolanaar" },
+  ["1:9999:2286"]   = { name = "Darnassus" },
+  ["1:-2910:-244"]  = { name = "Camp Narache",      clone = 3047  },
+  ["1:-2286:-360"]  = { name = "Bloodhoof Village" },
+  ["1:-1280:87"]    = { name = "Thunder Bluff" },
+  ["1:-623:-4220"]  = { name = "Valley of Trials",  clone = 23128 },
+  ["1:258:-4748"]   = { name = "Razor Hill" },
+  ["1:1568:-4420"]  = { name = "Orgrimmar" },
+  ["530:10377:-6400"] = { name = "Sunstrider Isle", clone = 3034  },
+  ["530:9547:-6813"]  = { name = "Falconwing Square" },
+  ["530:9561:-7321"]  = { name = "Silvermoon City" },
+  ["530:-4076:-13753"] = { name = "Ammen Vale",     clone = 5165  },
+  ["530:-4160:-12530"] = { name = "Azure Watch" },
+  ["530:-4034:-11892"] = { name = "The Exodar" },
+}
+-- }}}
+
+-- {{{ local function read_file(path)
+local function read_file(path)
+    local f = assert(io.open(path, "rb"), "cannot open " .. path)
+    local s = f:read("*a"); f:close(); return s
+end
+-- }}}
+
+-- {{{ local function each_row(file, fn)
+-- Calls fn(fields) for each "(...)," row of a base SQL dump. Fields are
+-- strings; quoted strings are unquoted with \' and \\ unescaped.
+local function each_row(file, fn)
+    local text = read_file(BASE .. file)
+    local body = text:match("INSERT INTO.-\n(.*)$")
+    assert(body, "no INSERT in " .. file)
+    for line in body:gmatch("[^\n]+") do
+        if line:sub(1, 1) == "(" then
+            local fields, i, n, cur, inq = {}, 2, #line, {}, false
+            while i <= n do
+                local c = line:sub(i, i)
+                if inq then
+                    if c == "\\" then cur[#cur + 1] = line:sub(i + 1, i + 1); i = i + 1
+                    elseif c == "'" then inq = false
+                    else cur[#cur + 1] = c end
+                elseif c == "'" then inq = true
+                elseif c == "," then fields[#fields + 1] = table.concat(cur); cur = {}
+                elseif c == ")" and (i == n or line:sub(i + 1, i + 1) == "," or line:sub(i + 1, i + 1) == ";") then
+                    fields[#fields + 1] = table.concat(cur); break
+                else cur[#cur + 1] = c end
+                i = i + 1
+            end
+            fn(fields)
+        end
+    end
+end
+-- }}}
+
+-- {{{ local function faction_groups()
+-- FactionTemplate.dbc: 14 uint32 per record; field 1 = id, field 4 = the
+-- template's own group mask (2 Alliance, 4 Horde). Returns id → mask.
+local function faction_groups()
+    local b = read_file(DBC)
+    local function u32(pos) local a, c, d, e = b:byte(pos, pos + 3); return a + c * 256 + d * 65536 + e * 16777216 end
+    assert(b:sub(1, 4) == "WDBC", "FactionTemplate.dbc: bad header")
+    local rc, fc, rs = u32(5), u32(9), u32(13)
+    local out = {}
+    for r = 0, rc - 1 do
+        local base = 21 + r * rs
+        out[u32(base)] = u32(base + 12)
+    end
+    return out
+end
+-- }}}
+
+-- {{{ load stock data
+local groups = faction_groups()
+
+local trainer_class = {}             -- trainer id → class (class trainers only)
+each_row("trainer.sql", function(f)
+    if tonumber(f[2]) == 0 and tonumber(f[3]) > 0 then trainer_class[tonumber(f[1])] = tonumber(f[3]) end
+end)
+local creature_trainer = {}          -- creature entry → class it trains
+each_row("creature_default_trainer.sql", function(f)
+    local cls = trainer_class[tonumber(f[2])]
+    if cls then creature_trainer[tonumber(f[1])] = cls end
+end)
+local tmpl = {}                      -- entry → { name, level, team }
+each_row("creature_template.sql", function(f)
+    local entry = tonumber(f[1])
+    if creature_trainer[entry] then
+        local g = groups[tonumber(f[14])] or 0
+        tmpl[entry] = { name = f[7], level = tonumber(f[12]),
+                        team = (g % 4 >= 2) and "A" or ((g % 8 >= 4) and "H" or "N") }
+    end
+end)
+
+local placeholders, trainers = {}, {}
+each_row("creature.sql", function(f)
+    local id, map = tonumber(f[2]), tonumber(f[5])
+    local x, y, z, o = tonumber(f[11]), tonumber(f[12]), tonumber(f[13]), tonumber(f[14])
+    if id >= PLACEHOLDER_FIRST and id <= PLACEHOLDER_LAST then
+        placeholders[#placeholders + 1] = { map = map, x = x, y = y, z = z, o = o }
+    elseif creature_trainer[id] then
+        trainers[#trainers + 1] = { id = id, map = map, x = x, y = y, cls = creature_trainer[id] }
+    end
+end)
+-- }}}
+
+-- {{{ sites: cluster the placeholders
+local sites = {}
+for _, p in ipairs(placeholders) do
+    local home
+    for _, s in ipairs(sites) do
+        if s.map == p.map and math.sqrt((s.x - p.x) ^ 2 + (s.y - p.y) ^ 2) < CLUSTER_RADIUS then home = s; break end
+    end
+    if not home then
+        home = { map = p.map, x = p.x, y = p.y, z = p.z, o = p.o, present = {}, teams = {}, local_trainers = {} }
+        sites[#sites + 1] = home
+    end
+end
+for _, s in ipairs(sites) do
+    s.key = string.format("%d:%d:%d", s.map, math.floor(s.x + 0.5), math.floor(s.y + 0.5))
+    -- tolerate a yard of rounding difference against the SITE table
+    if not SITE[s.key] then
+        for k, v in pairs(SITE) do
+            local m, kx, ky = k:match("^(%-?%d+):(%-?%d+):(%-?%d+)$")
+            if tonumber(m) == s.map and math.abs(kx - s.x) <= 2 and math.abs(ky - s.y) <= 2 then s.key = k end
+        end
+    end
+    assert(SITE[s.key], "site " .. s.key .. " has no entry in the SITE table; add it (name, and clone for a valley)")
+end
+-- }}}
+
+-- {{{ assign each real class trainer to its nearest site
+for _, t in ipairs(trainers) do
+    local best, bestd
+    for _, s in ipairs(sites) do
+        if s.map == t.map then
+            local d = math.sqrt((s.x - t.x) ^ 2 + (s.y - t.y) ^ 2)
+            if d < HUB_REACH and (not bestd or d < bestd) then best, bestd = s, d end
+        end
+    end
+    if best then
+        best.present[t.cls] = true
+        best.local_trainers[t.id] = true
+        local team = tmpl[t.id] and tmpl[t.id].team
+        if team then best.teams[team] = (best.teams[team] or 0) + 1 end
+    end
+end
+-- }}}
+
+-- {{{ per site: team, missing classes, borrowed look
+-- the hand-picked valley looks are reserved first, so no automatic pick
+-- takes one of them (each mentor's look is unique)
+local used_clone = {}
+for _, v in pairs(SITE) do if v.clone then used_clone[v.clone] = true end end
+for _, s in ipairs(sites) do
+    s.team = ((s.teams.A or 0) >= (s.teams.H or 0)) and "A" or "H"
+    s.missing = {}
+    for _, c in ipairs(PLAYABLE) do if not s.present[c] then s.missing[#s.missing + 1] = c end end
+    local pick = SITE[s.key].clone
+    if not pick and #s.missing > 0 then
+        local missing_set = {}
+        for _, c in ipairs(s.missing) do missing_set[c] = true end
+        local best
+        for entry, t in pairs(tmpl) do
+            if t.team == s.team and missing_set[creature_trainer[entry]] and t.level >= CLONE_MIN_LEVEL
+               and not s.local_trainers[entry] and not used_clone[entry] then
+                if not best or t.level > tmpl[best].level or (t.level == tmpl[best].level and entry < best) then best = entry end
+            end
+        end
+        pick = best
+    end
+    if #s.missing > 0 then
+        assert(pick and tmpl[pick], "no borrowed look found for " .. SITE[s.key].name)
+        used_clone[pick] = true
+        s.clone = pick
+    end
+end
+table.sort(sites, function(a, b) return SITE[a.key].name < SITE[b.key].name end)
+-- }}}
+
+-- {{{ render the generated block
+local out = {}
+out[#out + 1] = "-- >>> GENERATED BY scripts/generate-basic-mentor-hubs BEGIN (do not edit by hand)"
+out[#out + 1] = "-- sites: " .. #sites .. " placeholder clusters; a site with no missing class gets no mentor"
+out[#out + 1] = "DELETE FROM `basic_155e_hubs`;"
+out[#out + 1] = "INSERT INTO `basic_155e_hubs` (`hub`, `name`, `map`, `x`, `y`, `z`, `o`, `clone_from`, `clone_note`) VALUES"
+local hub_rows, miss_rows, n = {}, {}, 0
+for _, s in ipairs(sites) do
+    if s.clone then
+        n = n + 1
+        local t = tmpl[s.clone]
+        hub_rows[#hub_rows + 1] = string.format("  (%2d, '%s', %d, %.3f, %.3f, %.3f, %.4f, %d, '%s, %s trainer')",
+            n, SITE[s.key].name:gsub("'", "''"), s.map, s.x, s.y, s.z, s.o, s.clone,
+            t.name:gsub("'", "''"), CLASS_NAME[creature_trainer[s.clone]])
+        for _, c in ipairs(s.missing) do
+            miss_rows[#miss_rows + 1] = string.format("(%d, %d)", n, c)
+        end
+    end
+end
+out[#out + 1] = table.concat(hub_rows, ",\n") .. ";"
+out[#out + 1] = "DELETE FROM `basic_155e_missing`;"
+out[#out + 1] = "INSERT INTO `basic_155e_missing` (`hub`, `class`) VALUES"
+out[#out + 1] = "  " .. table.concat(miss_rows, ", ") .. ";"
+out[#out + 1] = "-- <<< GENERATED BY scripts/generate-basic-mentor-hubs END"
+local block = table.concat(out, "\n")
+
+local sql = read_file(OUT)
+local a = sql:find("-- >>> GENERATED BY scripts/generate-basic-mentor-hubs BEGIN", 1, true)
+local b = sql:find("-- <<< GENERATED BY scripts/generate-basic-mentor-hubs END", 1, true)
+assert(a and b, OUT .. " has no GENERATED markers to replace between")
+local bend = sql:find("\n", b, true) or #sql
+sql = sql:sub(1, a - 1) .. block .. sql:sub(bend)
+local f = assert(io.open(OUT, "wb")); f:write(sql); f:close()
+-- }}}
+
+-- {{{ report
+for _, s in ipairs(sites) do
+    local names = {}
+    for _, c in ipairs(s.missing) do names[#names + 1] = CLASS_NAME[c] end
+    print(string.format("%-18s %s  missing: %-40s look: %s", SITE[s.key].name, s.team,
+        #names > 0 and table.concat(names, " ") or "(none: no mentor)",
+        s.clone and (tmpl[s.clone].name .. " (" .. CLASS_NAME[creature_trainer[s.clone]] .. ")") or "-"))
+end
+print(n .. " mentors written to " .. OUT)
+-- }}}

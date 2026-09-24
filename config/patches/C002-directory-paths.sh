@@ -24,6 +24,7 @@ config_directory_paths() {
         release) AC_CODE_DIR="${PROJECT_DIR}/source-beta"  ;;
         beta)    AC_CODE_DIR="${PROJECT_DIR}/source-beta"  ;;
         vanilla) AC_CODE_DIR="${PROJECT_DIR}/source-beta"  ;;
+        basic)   AC_CODE_DIR="${PROJECT_DIR}/source-beta"  ;;
         alpha)   AC_CODE_DIR="${PROJECT_DIR}/source-alpha" ;;
         *)       echo "ERROR: Unknown profile '${PROFILE}' in config_directory_paths"; return 1 ;;
     esac

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# C007b - Starting Level 1 (Beta/Release)
+# C007b - Starting Level 1 (Beta/Release/Basic)
 # Set starting level to 1 (default, but make explicit)
-# Profiles: beta release
+# Profiles: beta release basic (basic added by issue 155: no head-start)
 
 # -- {{{ config_starting_level_1
 config_starting_level_1() {
@@ -9,6 +9,6 @@ config_starting_level_1() {
     local conf="${INSTALL_DIR}/etc/worldserver.conf"
     sed -i 's|^StartPlayerLevel.*=.*|StartPlayerLevel = '"${START_LEVEL}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_starting_level_1]="beta release"
+CONFIG_PROFILES[config_starting_level_1]="beta release basic"
 CONFIG_DESCRIPTIONS[config_starting_level_1]="Starting level 1"
 # -- }}}

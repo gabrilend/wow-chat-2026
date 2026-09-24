@@ -27,6 +27,7 @@ config_realm_id() {
         beta)     REALM_ID=2 ;;
         vanilla)  REALM_ID=3 ;;
         alpha)    REALM_ID=4 ;;
+        basic)    REALM_ID=5 ;;
         *)
             echo "ERROR: Unknown profile '${PROFILE}' in config_realm_id"
             return 1

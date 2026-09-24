@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# validate-basic-state — ground-truth checker for the basic profile's
+# databases after an install and first worldserver boot (issue 155).
+#
+# For a general audience: the basic profile promises a specific world —
+# level-1 starts in the stock valleys with no head-start kit or pretrained
+# spells, no flight paths, Classic riding levels, quests open to the whole
+# faction, a working starting-valley rotation, and level-64 creatures in the
+# Outland dungeons a level 60 can enter. Each of those is a handful of database rows. This
+# script asks the live basic databases whether every promise holds, and
+# lists the offending rows when one does not. It only READS; it changes
+# nothing.
+#
+# Usage:
+#   scripts/validate-basic-state              # default project dir
+#   scripts/validate-basic-state /path/to/project
+#
+# Exit status: 0 when every check passes, 1 when any check flags a row.
+
+set -uo pipefail
+
+# {{{ configuration
+DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+WORLD="acore_world_basic"
+CHARS="acore_characters_basic"
+
+export MYSQL_PWD="menardi"
+MYSQL_CONN=(-h127.0.0.1 -P3307 -uritz -N)
+
+FAIL_COUNT=0
+# }}}
+
+# {{{ run_sql()
+# One query, tab-separated rows, no header. Errors print through.
+run_sql() {
+    "${MYSQL}" "${MYSQL_CONN[@]}" -e "$1"
+}
+# }}}
+
+# {{{ report()
+# Empty offender list = PASS; otherwise FAIL with the rows listed.
+report() {
+    local title="$1" offenders="$2"
+    if [[ -z "${offenders}" ]]; then
+        printf '  [PASS] %s\n' "${title}"
+    else
+        printf '  [FAIL] %s\n' "${title}"
+        printf '%s\n' "${offenders}" | sed 's/^/         /'
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+# }}}
+
+# {{{ reachability
+if ! run_sql "SELECT 1" > /dev/null; then
+    echo "ERROR: cannot reach MySQL on 127.0.0.1:3307 as ritz — nothing was checked."
+    echo "       to debug: is ./scripts/start-mysql running? Did install create ${WORLD}?"
+    exit 1
+fi
+# }}}
+
+echo "Basic profile state (${WORLD}, ${CHARS})"
+
+# {{{ 155c: no head-start, stock valleys, riding, flight paths
+report "no starter-kit rows (vanilla-148h-*) in playercreateinfo_item" \
+    "$(run_sql "SELECT race, class, itemid FROM ${WORLD}.playercreateinfo_item WHERE Note LIKE 'vanilla-148h-%' LIMIT 10")"
+report "no pretrain rows (vanilla-148j-*) in playercreateinfo_spell_custom" \
+    "$(run_sql "SELECT racemask, classmask, Spell FROM ${WORLD}.playercreateinfo_spell_custom WHERE Note LIKE 'vanilla-148j-%' LIMIT 10")"
+# stock level-1 zones by race (non-DK): 1→12, 2→14, 3→1, 4→141, 5→85, 6→215,
+# 7→1, 8→14, 10→3431, 11→3526. (B028 moves new characters at creation; this
+# table is only the fallback-free stock baseline it starts from.)
+report "playercreateinfo still holds the stock level-1 zones (E007 not applied)" \
+    "$(run_sql "SELECT race, class, zone FROM ${WORLD}.playercreateinfo WHERE class <> 6 AND zone <> CASE race
+        WHEN 1 THEN 12 WHEN 2 THEN 14 WHEN 3 THEN 1 WHEN 4 THEN 141 WHEN 5 THEN 85
+        WHEN 6 THEN 215 WHEN 7 THEN 1 WHEN 8 THEN 14 WHEN 10 THEN 3431 WHEN 11 THEN 3526 END")"
+report "Apprentice Riding (33388) trains at 40, Journeyman (33391) at 60" \
+    "$(run_sql "SELECT SpellId, ReqLevel FROM ${WORLD}.trainer_spell WHERE (SpellId = 33388 AND ReqLevel <> 40) OR (SpellId = 33391 AND ReqLevel <> 60) LIMIT 10")"
+report "no creature template carries the flightmaster flag" \
+    "$(run_sql "SELECT entry, name FROM ${WORLD}.creature_template WHERE npcflag & 8192 LIMIT 10")"
+report "every map-530 flightmaster has its flavor menu (90070–90104)" \
+    "$(run_sql "SELECT entry FROM ${WORLD}.creature_template WHERE entry IN (17555,17554,16189,16192,24851,26560,21766,18939,19581,19317,18809,18789,18807,18940,19558,18808,16822,18942,18931,18930,20762,18785,18788,18791,16587,20234,22485,21107,22455,18937,18953,20515,22216,18938,19583) AND gossip_menu_id NOT BETWEEN 90070 AND 90104")"
+# }}}
+
+# {{{ 155e: quests gated by faction only
+report "no quest restricted to part of one faction (masks within 1101 or 690)" \
+    "$(run_sql "SELECT ID, AllowableRaces FROM ${WORLD}.quest_template WHERE AllowableRaces <> 0
+        AND ((AllowableRaces & ~1101) = 0 AND AllowableRaces <> 1101 OR (AllowableRaces & ~690) = 0 AND AllowableRaces <> 690) LIMIT 10")"
+report "every mentor site has its Visiting Mentor spawned (one per row of basic_155e_hubs)" \
+    "$(run_sql "SELECT h.hub, h.name FROM ${WORLD}.basic_155e_hubs h LEFT JOIN ${WORLD}.creature c ON c.guid = 15500000 + h.hub AND c.id = 1550000 + h.hub WHERE c.guid IS NULL")"
+report "each missing class has a non-empty trainer list (155101-155111), none for death knights" \
+    "$(run_sql "SELECT DISTINCT m.class, 'no list' FROM ${WORLD}.basic_155e_missing m LEFT JOIN ${WORLD}.trainer_spell ts ON ts.TrainerId = 155100 + m.class WHERE ts.SpellId IS NULL
+        UNION ALL SELECT 'death knight list present', COUNT(*) FROM ${WORLD}.trainer WHERE Id = 155106 HAVING COUNT(*) > 0")"
+report "each mentor's menu offers exactly its site's missing classes" \
+    "$(run_sql "SELECT m.hub, m.class, 'no dialogue line' FROM ${WORLD}.basic_155e_missing m
+        LEFT JOIN ${WORLD}.gossip_menu_option o ON o.MenuID = 155000 + m.hub AND o.OptionID = m.class AND o.ActionMenuID = 155100 + m.class
+        WHERE o.MenuID IS NULL")"
+report "no placeholder trainers (26324-26332) left at a mentor site" \
+    "$(run_sql "SELECT c.guid, c.id FROM ${WORLD}.creature c JOIN ${WORLD}.basic_155e_hubs v ON v.map = c.map
+        WHERE c.id BETWEEN 26324 AND 26332 AND POW(c.position_x - v.x, 2) + POW(c.position_y - v.y, 2) < 60 * 60")"
+report "quest race-mask backup table exists (the revert needs it)" \
+    "$(run_sql "SELECT 'missing' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '${WORLD}' AND table_name = 'basic_155e_quest_race_backup')")"
+# }}}
+
+# {{{ 155d: rotation state
+report "rotation table holds one row per faction with a valid state" \
+    "$(run_sql "SELECT 'rows', COUNT(*) FROM ${CHARS}.basic_starting_valley_rotation HAVING COUNT(*) <> 2
+        UNION ALL
+        SELECT team, current_valley FROM ${CHARS}.basic_starting_valley_rotation WHERE current_valley NOT IN (0,1,2,3,255) OR count_in_batch > 30")"
+# }}}
+
+# {{{ 155f: Outland dungeons at level 64 (open world and heroic modes stock)
+report "the raised set is non-empty and every template in it is level 64" \
+    "$(run_sql "SELECT 'empty backup', COUNT(*) FROM ${WORLD}.basic_155f_level_backup HAVING COUNT(*) = 0
+        UNION ALL SELECT t.entry, CONCAT(t.name, ' ', t.minlevel, '-', t.maxlevel) FROM ${WORLD}.creature_template t
+        JOIN ${WORLD}.basic_155f_level_backup b ON b.entry = t.entry WHERE t.minlevel <> 64 OR t.maxlevel <> 64 LIMIT 10")"
+report "no template spawned only in those dungeons was missed" \
+    "$(run_sql "SELECT DISTINCT c.id, t.name, t.minlevel FROM ${WORLD}.creature c JOIN ${WORLD}.creature_template t ON t.entry = c.id
+        WHERE c.map IN (SELECT map_id FROM ${WORLD}.basic_155f_maps) AND t.minlevel <> 64
+          AND c.id NOT IN (SELECT c2.id FROM ${WORLD}.creature c2 WHERE c2.map NOT IN (SELECT map_id FROM ${WORLD}.basic_155f_maps))
+        LIMIT 10")"
+report "heroic mode left stock (entry still level 70)" \
+    "$(run_sql "SELECT a.map_id, a.min_level FROM ${WORLD}.dungeon_access_template a WHERE a.difficulty = 1 AND a.map_id IN (SELECT map_id FROM ${WORLD}.basic_155f_maps) AND a.min_level <> 70")"
+# }}}
+
+echo ""
+if [[ "${FAIL_COUNT}" -eq 0 ]]; then
+    echo "All checks passed."
+    exit 0
+fi
+echo "${FAIL_COUNT} check(s) failed."
+exit 1

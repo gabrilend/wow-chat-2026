@@ -120,6 +120,8 @@ sql/vanilla/db_world/
 sql/vanilla/db_characters/
 sql/beta/db_world/
 sql/beta/db_playerbots/
+sql/basic/db_world/
+sql/basic/db_characters/
 # (future profiles with their own SQL: append `sql/<profile>/db_<dbname>/` here)
 
 # =============================================================================
