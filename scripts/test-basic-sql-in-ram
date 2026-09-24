@@ -57,9 +57,19 @@ step() {               # step "what" DB FILE  — run one SQL file, stop on erro
         FAILED=$((FAILED + 1))
     fi
 }
+# Stop the RAM server and wait for the *process* to exit before anything
+# deletes its folder. (First version waited for the socket file to vanish,
+# which happens early in shutdown; the folder was then deleted under a
+# still-running server, which spun at full CPU until killed by hand.)
 stop_server() {
-    [[ -f "${WORK}/mysqld.pid" ]] && kill "$(cat "${WORK}/mysqld.pid")" 2>/dev/null
-    for _ in $(seq 60); do [[ -S "${SOCK}" ]] || break; sleep 1; done
+    [[ -f "${WORK}/mysqld.pid" ]] || return 0
+    local pid
+    pid="$(cat "${WORK}/mysqld.pid")"
+    kill "${pid}" 2>/dev/null || return 0
+    for _ in $(seq 120); do kill -0 "${pid}" 2>/dev/null || return 0; sleep 1; done
+    echo "WARNING: RAM server ${pid} did not stop in 120 s; killing it"
+    kill -9 "${pid}" 2>/dev/null
+    sleep 1
 }
 FAILED=0
 # }}}
@@ -144,6 +154,6 @@ checks=${PIPESTATUS[0]}
 echo "SQL steps failed: ${FAILED}; checker exit: ${checks}. Full log: ${LOG}"
 if [[ "${KEEP}" == "true" ]]; then
     echo "Kept running. Reach it with: ${BIN}/mysql --no-defaults --socket=${SOCK} -uroot"
-    echo "Stop it with: kill \$(cat ${WORK}/mysqld.pid); rm -rf ${WORK}"
+    echo "Stop it with: kill \$(cat ${WORK}/mysqld.pid), wait until that process is gone, then rm -rf ${WORK}"
 fi
 [[ "${FAILED}" -eq 0 && "${checks}" -eq 0 ]]
