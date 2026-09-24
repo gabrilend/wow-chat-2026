@@ -18,6 +18,20 @@ Verbatim, 2026-09-23:
 > capping talents as they would be in vanilla. This should be applied to
 > basic.
 
+Refined, verbatim, 2026-09-23: "okay so tier 6 should have only the capstone
+ability available." So tier 6 keeps its capstone (the tree's one tier-6
+talent in the middle, e.g. Combustion, Repentance) and refuses the talents
+beside it; tier 7 and deeper stay refused. Not built yet: the rule below
+still refuses all of tier 6. The capstone test to use (middle column, or a
+per-tree list checked against Talent.dbc) is decided when it is built.
+
+On "Is there a reason this isn't applied with the patching system?": it is.
+B030 is an ordinary source patch in `patches/patches.sh`, applied before
+each compile and reverted after. The C++ is kept as a whole file in the
+project (`src/cpp-basic/`) because it is a new file, not an edit to one;
+B030 copies it into the server tree and registers it, and its revert
+removes both.
+
 ## Current Behavior
 
 Talent trees are the stock WotLK ones: eleven rows (tiers 0–10), where row

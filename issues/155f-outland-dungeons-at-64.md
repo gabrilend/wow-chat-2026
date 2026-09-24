@@ -44,6 +44,20 @@ And on the loot, verbatim, 2026-09-23:
 > it's required level to level 60. This includes greens that might drop in
 > those dungeons.
 
+Revised, verbatim, 2026-09-23 (not built yet):
+
+> I think we should change it so that creatures in these dungeons have +4
+> levels, with a max of level 64. So HFR for example might be doable at level
+> 59 or 58 even maybe, because it'd have mostly level 62 enemies. Jeez nine
+> dungeons... That's probably like, level 65 gear or above, right? That's too
+> powerful for a level 60 to have, though the difficulty to acquire it might
+> make it worth it.
+
+To settle before building (see Open Questions): stock Hellfire Ramparts
+creatures are about 60–62, so +4 capped at 64 makes nearly all of them 64,
+not about 62. And whether dungeon gear keeps the "required level 60"
+change.
+
 ## Current Behavior
 
 **Built 2026-09-23; tested against a throwaway RAM database** (`scripts/test-basic-sql-in-ram`: stock databases brought fully up to date, then apply, re-apply, revert, apply; all checks pass). It raises 220 templates across the nine dungeons, e.g. Vazruden, Nazan and Omor in the Hellfire Ramparts. Setup step E024
@@ -117,6 +131,14 @@ was missed, and that heroic entry is still stock.
   expert decides whether basic's level-64 version carries over
 
 ## Open Questions
+
+- **+4, capped at 64**: with stock levels around 60–62 in Hellfire Ramparts,
+  +4 puts nearly everything at the cap. Was a lower base intended (e.g. +4
+  from the dungeon's *entry* level, 55 → 59–63), or +2?
+- **Dungeon gear**: these dungeons' blues are roughly item level 85–115,
+  stronger than most level-60 raid gear of the original game. Keep them
+  wearable at 60 (the difficulty is the gate), or put their required level
+  back?
 
 - (Answered 2026-09-23) Scripted creatures are raised too; only dungeons
   are affected, and quests and the open world stay stock.

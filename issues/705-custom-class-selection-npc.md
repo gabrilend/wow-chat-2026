@@ -167,6 +167,14 @@ What is and isn't possible without a client edit:
   Either way the same curated lists serve custom classes and the new-zone
   trainers.
 
+  **Chosen (owner, 2026-09-23): B.** "if we just ensure that only specific
+  classes can open the specific trainer windows, then the alternative
+  probably is the best option I think." So class restrictions come off every
+  spell (generated override table, race masks kept), and *who may open which
+  list* becomes the only gate: stock class trainers keep their class
+  requirement, and curated lists are reached only through dialogue lines
+  whose conditions admit the right custom class. Not built yet.
+
 What is not known yet is only client-side. Does a warrior's spellbook
 display Rejuvenation (the client files spells by skill line)? It can be
 answered in two minutes with the GM command `.learn 774` on a warrior.

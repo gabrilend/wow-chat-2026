@@ -5,7 +5,7 @@
 - Phase: 6 (Companions — bot behaviors)
 - Priority: High for basic (155): "players always have at least one buddy"
 - First profile: basic
-- Sub-issues: 617a–617f
+- Sub-issues: 617a–617g
 
 ## Origin
 
@@ -111,6 +111,7 @@ handler, which B028 (155d) now patches. Bots never pass through it.
 | 617d | buddy-quest-mirroring | 617c | Quest accept and turn-in mirror from owner to every buddy |
 | 617e | buddy-area-adventuring | 617c | Buddies fight in the owner's zone and area independently, resurrect, and travel to the owner's area |
 | 617f | buddy-selector-appearance | 617b | The selector NPC's look (the suave human) and whether his outfit levels with the owner |
+| 617g | buddy-talent-plans | 155g | Generated talent plans (2/3–1/3 and thirds) for capped trees, balanced to equilibrium; a buddy keeps its plan for life |
 
 Execution order: `617a → (617b ∥ 617c) → (617d ∥ 617e); 617b → 617f`.
 
