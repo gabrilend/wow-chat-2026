@@ -119,6 +119,7 @@ get_profile_paths() {
         release) AC_CODE_DIR="${DIR}/source-beta"  ;;
         beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
         vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        basic)   AC_CODE_DIR="${DIR}/source-beta"  ;;
         alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
         *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
     esac
@@ -178,7 +179,7 @@ if [[ "${DO_BEGIN}" == "true" ]]; then
         echo "  Recompilation complete."
     else
         echo "Applying PHASE_BEGIN patches..."
-        apply_patches_begin
+        apply_patches_begin || { echo "PHASE_BEGIN failed — see above for what was and was not applied"; exit 1; }
     fi
 fi
 
@@ -189,7 +190,7 @@ if [[ "${DO_END}" == "true" ]]; then
         unapply_patches_end
     else
         echo "Applying PHASE_END patches..."
-        apply_patches_end
+        apply_patches_end || { echo "PHASE_END failed — see above for what was and was not applied"; exit 1; }
     fi
 fi
 

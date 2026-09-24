@@ -8,9 +8,17 @@ patch_B008_mod_talent_bonus() {
     local MODULE_SRC="${DIR}/modules/mod-talent-bonus"
     local MODULE_DST="${AC_CODE_DIR}/modules/mod-talent-bonus"
 
-    # Check if local module exists
+    # The module must exist. This used to "return 0  # Module not available
+    # locally", so every beta build silently compiled without the talent
+    # bonus (issue 120) while the patch list said B008 was applied. Owner's
+    # rule: fail loudly instead (2026-09-23).
     if [[ ! -d "${MODULE_SRC}" ]]; then
-        return 0  # Module not available locally
+        echo "  [B008] ERROR: module folder missing: ${MODULE_SRC}"
+        echo "         the talent-bonus module (issue 120) is not in the project, so it"
+        echo "         cannot be linked into ${AC_CODE_DIR}/modules/."
+        echo "         to debug: was modules/mod-talent-bonus ever committed (git log --all -- modules/)?"
+        echo "         or take B008 out of beta's list in patches/patches.sh if the module is retired."
+        return 1
     fi
 
     # Check if already linked/copied

@@ -93,6 +93,7 @@ declare -A PROFILE_MODULES=(
     ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
     ["release"]="mod-ale mod-playerbots"
     ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
 )
 # }}}
 
@@ -227,6 +228,7 @@ get_profile_paths() {
         release) AC_CODE_DIR="${DIR}/source-beta"  ;;
         beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
         vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        basic)   AC_CODE_DIR="${DIR}/source-beta"  ;;
         alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
         *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
     esac
@@ -530,10 +532,13 @@ source "${DIR}/patches/patches.sh"
 # working tree is discardable. See patches.sh:reset_source_trees.
 reset_source_trees
 
+# Ensure patches are reverted even on build failure. Armed BEFORE applying:
+# apply_patches_begin now stops on the first failing patch, and under
+# set -e that exits here, so a trap set afterward would never fire and the
+# patches applied before the failure would stay in the tree.
+trap 'unapply_patches_begin' EXIT
 # Apply pre-compile patches (idempotent)
 apply_patches_begin
-# Ensure patches are reverted even on build failure
-trap 'unapply_patches_begin' EXIT
 
 # Build
 do_build

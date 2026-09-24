@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # B005 - Cap level difference impact on hit/miss at ±3 levels
-# Issue 156: Monster accuracy level cap
+# Issue 803 (legacy number 156): Monster accuracy level cap. The "(Issue 156)"
+# text inside the injected C++ comments below is kept as-is: the revert
+# matches on it.
 # Parallelizable: Yes (unique files)
 
 # {{{ patch_B005_accuracy_level_cap
@@ -57,6 +59,11 @@ unpatch_B005_accuracy_level_cap() {
 
     # 1. Remove defines from Unit.h
     if [[ -f "${UNIT_H}" ]]; then
+        # The apply also inserts a blank line above the comment. Drop it first,
+        # while the comment still marks which blank line is ours; without this
+        # the revert left one stray empty line behind in Unit.h, so the tree
+        # never round-tripped to upstream (found 2026-09-23, issue 155c).
+        sed -i '/^#define MAX_AGGRO_RADIUS/{n;/^$/{N;/\n\/\/ Everland Ghostsong: Cap level difference for accuracy/s/^\n//}}' "${UNIT_H}"
         sed -i '/Everland Ghostsong: Cap level difference for accuracy/d' "${UNIT_H}"
         sed -i '/#define ACCURACY_LEVEL_CAP/d' "${UNIT_H}"
         sed -i '/#define ACCURACY_SKILL_CAP/d' "${UNIT_H}"

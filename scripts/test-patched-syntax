@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# test-patched-syntax - compiler-check the source files a profile's patches
+# touch, without building anything.
+#
+# For a general audience: a source patch can apply and revert cleanly and
+# still produce code that does not compile. A full build takes a long time
+# and belongs to the owner. This asks the compiler to *check* each patched
+# file (grammar and types, the same checks a build does) using the exact
+# flags the last build recorded, then throws the result away. It works on a
+# RAM copy of the source tree, so the real tree is never touched, and it
+# writes no object files.
+#
+# Usage: scripts/test-patched-syntax [PROJECT_DIR] [PROFILE] [BUILD_DIR_NAME]
+#   PROJECT_DIR     defaults to the hard-coded path below
+#   PROFILE         defaults to basic
+#   BUILD_DIR_NAME  a build tree with compile_commands.json (default:
+#                   build-shadow, the tree compile writes into)
+#
+# Checked files: every .cpp the profile's patches changed, plus, for each
+# changed header, one .cpp from the build that includes it.
+# Exit status: 0 if every checked file passes.
+
+set -o pipefail
+
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+PROFILE="${2:-basic}"
+BUILD_NAME="${3:-build-shadow}"
+CC_JSON="${DIR}/${BUILD_NAME}/compile_commands.json"
+[[ -f "${CC_JSON}" ]] || { echo "ERROR: ${CC_JSON} missing (no recorded build flags to reuse)"; exit 1; }
+
+# {{{ patched_copy
+# Reuse test-source-patches' copy-and-apply, but stop before reverting:
+# copy the tree, apply the profile's patches, diff against a pristine copy.
+declare -A SOURCE_BY_PROFILE=(
+    [release]="source-beta" [beta]="source-beta" [vanilla]="source-beta"
+    [basic]="source-beta"   [alpha]="source-alpha"
+)
+SRC="${DIR}/${SOURCE_BY_PROFILE[${PROFILE}]:?unknown profile}"
+WORK="${DIR}/tmp/shared-memory/test-patched-syntax-${PROFILE}"
+rm -rf "${WORK}"
+mkdir -p "${WORK}"
+rsync -a --exclude='.git' "${SRC}/" "${WORK}/tree/"     || exit 1
+rsync -a --exclude='.git' "${SRC}/" "${WORK}/pristine/" || exit 1
+
+export PROFILE DIR
+AC_CODE_DIR="${WORK}/tree"
+export AC_CODE_DIR
+source "${DIR}/patches/patches.sh" || exit 1
+apply_patches_begin > "${WORK}/apply.log" 2>&1 || { echo "ERROR: patches failed to apply:"; cat "${WORK}/apply.log"; exit 1; }
+changed=$(diff -rq "${WORK}/pristine" "${WORK}/tree" | sed -n 's|^Files .*/pristine/\(.*\) and .*|\1|p')
+echo "Files changed by ${PROFILE}'s patches: $(echo "${changed}" | grep -c .)"
+# }}}
+
+# {{{ pick_translation_units
+# .cpp files directly; for a header, the first build entry whose source
+# includes it by basename.
+tus=""
+for f in ${changed}; do
+    case "${f}" in
+        *.cpp) tus+="${f}"$'\n' ;;
+        *.h|*.hpp)
+            base=$(basename "${f}")
+            tu=$(python3 - "${CC_JSON}" "${SRC}" "${base}" <<'EOF'
+import json, sys, re
+cc, src, base = sys.argv[1], sys.argv[2], sys.argv[3]
+pat = re.compile(r'#include\s+"' + re.escape(base) + '"')
+for e in json.load(open(cc)):
+    fn = e['file']
+    rel = fn.split('/source-beta/',1)[-1].split('/source-alpha/',1)[-1]
+    try:
+        if pat.search(open(src + '/' + rel, errors='replace').read()):
+            print(rel); break
+    except OSError:
+        pass
+EOF
+)
+            [[ -n "${tu}" ]] && tus+="${tu}"$'\n'
+            ;;
+    esac
+done
+tus=$(echo "${tus}" | grep . | sort -u)
+# }}}
+
+# {{{ check_each
+fail=0
+for tu in ${tus}; do
+    cmdfile="${WORK}/cmd.sh"
+    python3 - "${CC_JSON}" "${tu}" "${WORK}/tree" > "${cmdfile}" <<'EOF'
+import json, sys, shlex
+cc, tu, tree = sys.argv[1], sys.argv[2], sys.argv[3]
+for e in json.load(open(cc)):
+    if e['file'].endswith('/' + tu):
+        args = shlex.split(e.get('command') or ' '.join(e['arguments']))
+        # Drop the precompiled-header binary (-Xclang -include-pch -Xclang X.pch):
+        # it was built from the UNPATCHED headers, so a patched header's new
+        # declarations would be invisible (false "undeclared identifier"),
+        # and clang refuses it anyway once a header it covers has changed.
+        # The textual "-include cmake_pch.hxx" stays; it re-reads the headers.
+        cleaned, i = [], 0
+        while i < len(args):
+            if args[i] == '-Xclang' and i + 3 < len(args) and args[i+1] == '-include-pch':
+                i += 4; continue
+            cleaned.append(args[i]); i += 1
+        args = cleaned
+        out, skip = [], False
+        for a in args:
+            if skip: skip = False; continue
+            if a in ('-o', '-MF', '-MT', '-MQ'): skip = True; continue
+            if a in ('-c', '-MD', '-MMD') or a.endswith('/' + tu): continue
+            # point every include path at the patched copy instead of the real tree
+            a = a.replace('/source-beta/', '/__TREE__/').replace('/source-alpha/', '/__TREE__/')
+            out.append(a)
+        out += ['-fsyntax-only', tree + '/' + tu]
+        line = ' '.join(shlex.quote(x) for x in out)
+        # "-I.../__TREE__/x" → the RAM copy
+        line = line.replace('/mnt/mtwo/games/azeroth-core/wow-chat-2026/__TREE__/', tree + '/') \
+                   .replace('/home/ritz/games/azeroth-core/wow-chat-2026/__TREE__/', tree + '/')
+        print('cd ' + shlex.quote(e['directory']) + ' && ' + line)
+        break
+EOF
+    if [[ ! -s "${cmdfile}" ]]; then
+        echo "  [?] ${tu}: not in ${BUILD_NAME}'s compile_commands.json (module not built there?)"
+        continue
+    fi
+    if timeout 600 bash "${cmdfile}" > "${WORK}/$(basename "${tu}").log" 2>&1; then
+        echo "  [✓] ${tu}"
+    else
+        echo "  [✗] ${tu}"
+        grep -E "error" "${WORK}/$(basename "${tu}").log" | head -10 | sed 's/^/        /'
+        fail=$((fail + 1))
+    fi
+done
+# }}}
+
+rm -rf "${WORK}/tree" "${WORK}/pristine"
+echo "Result: ${fail} file(s) failed. Logs: ${WORK}/"
+[[ "${fail}" -eq 0 ]]

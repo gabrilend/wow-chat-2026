@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+# test-profile-config-gates - run a profile's config patches on scratch
+# copies of the config files and check every value that came out.
+#
+# For a general audience: each profile's settings (level cap, bot
+# population, fall damage, ...) are written into the server's config files
+# by small patch scripts, each tagged with the profiles it applies to. A
+# tag that misses a profile fails silently: the server still starts, with
+# the wrong numbers. This test runs the real patch scripts against
+# throwaway copies of the stock config files, then reads each setting back
+# and compares it with the value the profile's issue file promises. It
+# never starts a server and never touches a database.
+#
+# Usage: scripts/test-profile-config-gates [PROJECT_DIR] [PROFILE]
+#   PROJECT_DIR defaults to the hard-coded path below.
+#   PROFILE defaults to basic (the only profile with an expectation table
+#   so far; add a table below to cover another).
+#
+# Input: the stock .conf.dist files from any installed tree (they are
+# identical across profiles built from source-beta).
+# Exit status: 0 if every expectation holds, 1 otherwise.
+
+set -o pipefail
+
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+PROFILE="${2:-basic}"
+
+# {{{ expectations
+# Each row: file (relative to etc/) | key | expected value.
+# Source of truth for basic: issues/155b-basic-profile-config-gates.md.
+declare -a EXPECT_basic=(
+    "worldserver.conf|MaxPlayerLevel|60"
+    "worldserver.conf|StartPlayerLevel|1"
+    "worldserver.conf|StartHeroicPlayerLevel|60"
+    "worldserver.conf|RecruitAFriend.MaxLevel|60"
+    "worldserver.conf|Rate.Damage.Fall|10.0"
+    "worldserver.conf|Rate.MoveSpeed.Player|0.8"
+    "worldserver.conf|Rate.XP.Kill|1"
+    "worldserver.conf|RealmID|5"
+    "worldserver.conf|WorldServerPort|4462"
+    "worldserver.conf|GM.LoginState|3"
+    "worldserver.conf|CharacterCreating.MinLevelForHeroicCharacter|55"
+    "worldserver.conf|CharacterCreating.Disabled.ClassMask|0"
+    "worldserver.conf|PlayerStart.CustomSpells|__unset_or_0__"
+    "worldserver.conf|ClientCacheVersion|__nonzero_uint32__"
+    "modules/playerbots.conf|AiPlayerbot.RandomBotMinLevel|1"
+    "modules/playerbots.conf|AiPlayerbot.RandomBotMaxLevel|60"
+    "modules/playerbots.conf|AiPlayerbot.RandomBotMaps|0,1,530"
+    "modules/playerbots.conf|AiPlayerbot.DisableDeathKnightLogin|1"
+    "modules/playerbots.conf|AiPlayerbot.MinRandomBots|128"
+    "modules/playerbots.conf|AiPlayerbot.MaxRandomBots|256"
+    "modules/playerbots.conf|AiPlayerbot.RandomBotAccountCount|110"
+)
+# }}}
+
+# {{{ scratch_setup
+# RAM-backed scratch tier per the project convention (tmp/shared-memory).
+SCRATCH_ROOT="${DIR}/tmp/shared-memory"
+if [[ ! -d "${SCRATCH_ROOT}" ]]; then
+    echo "ERROR: ${SCRATCH_ROOT} missing (the project's RAM scratch link)."
+    echo "       to debug: does ${DIR}/tmp point at /tmp/<project>, and does"
+    echo "       tmp/shared-memory point at /dev/shm/<project>?"
+    exit 1
+fi
+SCRATCH="${SCRATCH_ROOT}/test-config-gates-${PROFILE}"
+rm -rf "${SCRATCH}"
+mkdir -p "${SCRATCH}/etc/modules"
+
+DIST_SRC=""
+for candidate in "${DIR}"/installed-files-{vanilla,beta,release}/etc; do
+    if [[ -f "${candidate}/worldserver.conf.dist" && -f "${candidate}/modules/playerbots.conf.dist" ]]; then
+        DIST_SRC="${candidate}"
+        break
+    fi
+done
+if [[ -z "${DIST_SRC}" ]]; then
+    echo "ERROR: no installed tree with worldserver.conf.dist + playerbots.conf.dist found"
+    exit 1
+fi
+cp "${DIST_SRC}/worldserver.conf.dist"         "${SCRATCH}/etc/worldserver.conf"
+cp "${DIST_SRC}/authserver.conf.dist"          "${SCRATCH}/etc/authserver.conf"
+cp "${DIST_SRC}/modules/playerbots.conf.dist"  "${SCRATCH}/etc/modules/playerbots.conf"
+echo "Stock configs from: ${DIST_SRC#${DIR}/}"
+echo "Scratch:            ${SCRATCH}"
+# }}}
+
+# {{{ run_patches
+# The patch scripts read INSTALL_DIR, PROFILE, DIR and PROJECT_DIR.
+export INSTALL_DIR="${SCRATCH}"
+export PROJECT_DIR="${DIR}"
+export PROFILE DIR
+declare -A CONFIG_PROFILES
+declare -A CONFIG_DESCRIPTIONS
+for patch_file in "${DIR}/config/patches"/C*.sh; do
+    source "${patch_file}" || { echo "ERROR: ${patch_file} failed to source"; exit 1; }
+done
+
+applied=0
+failed=0
+# Same selection rule as apply_config_values in patches/E-patches.sh,
+# in the same filename-sorted order (C017 reads what C006* wrote).
+for patch_file in "${DIR}/config/patches"/C*.sh; do
+    name=$(basename "${patch_file}" .sh)
+    func="config_${name#C[0-9]*-}"
+    func="${func//-/_}"
+    profiles="${CONFIG_PROFILES[$func]:-}"
+    if [[ " ${profiles} " =~ " ${PROFILE} " || " ${profiles} " =~ " all " ]]; then
+        # Output of each patch is kept: a patch that fails says why.
+        if ${func} > "${SCRATCH}/${name}.log" 2>&1; then
+            applied=$((applied + 1))
+        else
+            echo "  [✗] ${name} failed:"
+            sed 's/^/        /' "${SCRATCH}/${name}.log"
+            failed=$((failed + 1))
+        fi
+    fi
+done
+echo "Config patches applied for '${PROFILE}': ${applied} ok, ${failed} failed"
+# }}}
+
+# {{{ check_expectations
+table_name="EXPECT_${PROFILE}[@]"
+if [[ -z "$(declare -p "EXPECT_${PROFILE}" 2>/dev/null)" ]]; then
+    echo "ERROR: no expectation table EXPECT_${PROFILE} in this script"
+    exit 1
+fi
+
+pass=0
+fail=0
+for row in "${!table_name}"; do
+    IFS='|' read -r file key want <<< "${row}"
+    conf="${SCRATCH}/etc/${file}"
+    key_re="${key//./\\.}"
+    got=$(grep -E "^${key_re}[[:space:]]*=" "${conf}" | head -1 | sed 's|^[^=]*=[[:space:]]*||; s|[[:space:]]*$||; s|^"||; s|"$||')
+    if [[ "${want}" == "__unset_or_0__" ]]; then
+        # A key that must not be switched on for this profile.
+        if [[ -z "${got}" || "${got}" == "0" ]]; then ok=1; else ok=0; fi
+    elif [[ "${want}" == "__nonzero_uint32__" ]]; then
+        # A computed value (C025's fingerprint): any number in 1..2^32-1.
+        if [[ "${got}" =~ ^[0-9]+$ && "${got}" -gt 0 && "${got}" -le 4294967295 ]]; then ok=1; else ok=0; fi
+    else
+        [[ "${got}" == "${want}" ]] && ok=1 || ok=0
+    fi
+    if [[ "${ok}" -eq 1 ]]; then
+        printf "  [✓] %-52s = %s\n" "${key}" "${got:-<unset>}"
+        pass=$((pass + 1))
+    else
+        printf "  [✗] %-52s = %s   (expected %s, in %s)\n" "${key}" "${got:-<unset>}" "${want}" "${file}"
+        fail=$((fail + 1))
+    fi
+done
+echo "Expectations: ${pass} passed, ${fail} failed"
+# }}}
+
+# {{{ check_keys_exist
+# Every key any config patch edits (for any profile) must exist in the
+# stock config files, or the patch's sed matches nothing and the setting
+# silently stays at its default. Three patches had drifted this way
+# (Rate.Run.Speed, Instant.Taxi, EquipmentPersistence) before this check
+# existed. Keys are read out of the patches' own literal sed patterns;
+# patches that build the key from a variable (C016's backfill list, which
+# appends keys a stale .dist lacks) are not covered by this check.
+# Only source-beta configs are checked here; alpha's older tree names some
+# keys differently (see C003's per-profile key table).
+missing=0
+all_keys=$(grep -ohE "s\|\^[A-Za-z][A-Za-z0-9\\\.]*" "${DIR}"/config/patches/C*.sh \
+    | sed 's/^s|^//; s/\\\././g; s/\.$//' | sort -u)
+for key in ${all_keys}; do
+    key_re="${key//./\\.}"
+    if ! grep -qE "^${key_re}[[:space:]]*=" "${DIST_SRC}"/worldserver.conf.dist "${DIST_SRC}"/authserver.conf.dist "${DIST_SRC}"/modules/*.conf.dist; then
+        echo "  [✗] a config patch edits '${key}', which no stock .conf.dist contains"
+        missing=$((missing + 1))
+    fi
+done
+echo "Edited keys missing from stock configs: ${missing}"
+# }}}
+
+[[ "${failed}" -eq 0 && "${fail}" -eq 0 && "${missing}" -eq 0 ]]

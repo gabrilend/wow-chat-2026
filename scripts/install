@@ -79,6 +79,7 @@ declare -A PROFILE_REPO=(
     ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["vanilla"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["basic"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
 )
 # }}}
 
@@ -88,6 +89,7 @@ declare -A PROFILE_BRANCH=(
     ["beta"]="Playerbot"
     ["release"]="Playerbot"
     ["vanilla"]="Playerbot"
+    ["basic"]="Playerbot"
 )
 # }}}
 
@@ -98,7 +100,7 @@ declare -A PROFILE_BRANCH=(
 # facade corruption was diagnosed and contained (B026/B027) against
 # exactly this revision, and the B027 repair is verified working on it.
 # Moving HEAD would re-open the diagnosis. The three profiles share one
-# tree, so they must pin identically. History: vanilla was pinned
+# tree (basic joined it in 155), so they must pin identically. History: vanilla was pinned
 # 2026-06-02 per 148 and un-pinned the same day to stay current.
 # Must match scripts/update's block.
 declare -A PROFILE_COMMIT=(
@@ -106,6 +108,7 @@ declare -A PROFILE_COMMIT=(
     ["beta"]="52f58186a533"
     ["release"]="52f58186a533"
     ["vanilla"]="52f58186a533"
+    ["basic"]="52f58186a533"
 )
 # }}}
 
@@ -115,6 +118,7 @@ declare -A PROFILE_MODULES=(
     ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
     ["release"]="mod-ale mod-playerbots"
     ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
 )
 # }}}
 
@@ -146,6 +150,7 @@ declare -A PROFILE_MODULE_COMMITS=(
     ["beta:mod-playerbots"]="93aaea3d"
     ["release:mod-playerbots"]="93aaea3d"
     ["vanilla:mod-playerbots"]="93aaea3d"
+    ["basic:mod-playerbots"]="93aaea3d"
 )
 # }}}
 
@@ -274,6 +279,7 @@ get_profile_paths() {
         release) AC_CODE_DIR="${DIR}/source-beta"  ;;
         beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
         vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        basic)   AC_CODE_DIR="${DIR}/source-beta"  ;;
         alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
         *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
     esac
@@ -376,15 +382,22 @@ echo ""
 "${DIR}/scripts/compile" "${COMPILE_ARGS[@]}"
 
 # MySQL setup (after successful build)
+# Database names come from the same composer the E-patches and
+# config/patches/C001 agree on (release/beta unsuffixed, vanilla/alpha/
+# basic suffixed). This used to be "acore_world_${PROFILE}" for every
+# profile, so a release or beta install created acore_world_release /
+# acore_world_beta while the servers were configured to read acore_world.
 DB_AUTH="acore_auth"
-DB_WORLD="acore_world_${PROFILE}"
-DB_CHARS="acore_characters_${PROFILE}"
+DB_WORLD="$(_profile_db_name acore_world)"
+DB_CHARS="$(_profile_db_name acore_characters)"
+DB_PLAYERBOTS="$(_profile_db_name acore_playerbots)"
 
 echo ""
 echo "Setting up MySQL databases for profile '${PROFILE}'..."
 echo "  Auth (shared): ${DB_AUTH}"
 echo "  World:         ${DB_WORLD}"
 echo "  Characters:    ${DB_CHARS}"
+echo "  Playerbots:    ${DB_PLAYERBOTS}"
 
 MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
 
@@ -456,7 +469,7 @@ seed_database_base() {
 # Check whether the databases exist at all; create them if not. Note
 # this only checks existence, not whether they've been seeded — the
 # seed_database_base step below handles seeding idempotently.
-if "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u ritz -pmenardi -e "USE ${DB_WORLD}" 2>/dev/null; then
+if "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u ritz -pmenardi -e "USE ${DB_WORLD}; USE ${DB_PLAYERBOTS}" 2>/dev/null; then
     echo "  Databases already exist (skipping CREATE)"
 else
     if [[ ! -S "${MYSQL_SOCKET}" ]]; then
@@ -473,14 +486,20 @@ else
     fi
 
     if ! "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u root << EOF
-DROP USER IF EXISTS 'ritz'@'localhost';
-CREATE USER 'ritz'@'localhost' IDENTIFIED BY 'menardi' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0;
+-- CREATE USER IF NOT EXISTS, never DROP USER: the ritz account already
+-- holds grants on every other profile's databases. Dropping and
+-- recreating it (the old behavior) left it with grants on this
+-- profile's databases only, so the first install of a new profile cut
+-- every other profile off from its own data.
+CREATE USER IF NOT EXISTS 'ritz'@'localhost' IDENTIFIED BY 'menardi' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0;
 CREATE DATABASE IF NOT EXISTS \`${DB_AUTH}\` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS \`${DB_WORLD}\` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS \`${DB_CHARS}\` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS \`${DB_PLAYERBOTS}\` DEFAULT CHARACTER SET UTF8MB4 COLLATE utf8mb4_unicode_ci;
 GRANT ALL PRIVILEGES ON \`${DB_AUTH}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON \`${DB_WORLD}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON \`${DB_CHARS}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON \`${DB_PLAYERBOTS}\` . * TO 'ritz'@'localhost' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 EOF
     then

@@ -15,7 +15,7 @@
 #                           of being re-rolled to a random level in the
 #                           band on each randomize cycle
 #   RandomBotXPRate=1.0     player-parity XP pace
-#   EquipmentPersistence=1  earned gear persists across randomize cycles
+#   EquipAndSpecPersistence=1  earned gear persists across randomize cycles
 #                           so "upgrade as they go" sticks
 #   RandomBotMaps=0         Eastern Kingdoms pool (the 20-40 content the
 #                           player population also travels)
@@ -50,7 +50,10 @@ config_vanilla_playerbot_level_cap() {
     sed -i 's|^AiPlayerbot\.RandomBotMaxLevel[[:space:]]*=.*|AiPlayerbot.RandomBotMaxLevel = '"${BOT_MAX}"'|' "${conf}"
     sed -i 's|^AiPlayerbot\.DisableRandomLevels.*=.*|AiPlayerbot.DisableRandomLevels = 1|' "${conf}"
     sed -i 's|^AiPlayerbot\.RandomBotXPRate.*=.*|AiPlayerbot.RandomBotXPRate = 1.0|' "${conf}"
-    sed -i 's|^AiPlayerbot\.EquipmentPersistence.*=.*|AiPlayerbot.EquipmentPersistence = 1|' "${conf}"
+    # Upstream renamed EquipmentPersistence → EquipAndSpecPersistence; the
+    # old name matched nothing (the module default of 1 hid it). Fixed
+    # 2026-09-23 during issue 155's config audit.
+    sed -i 's|^AiPlayerbot\.EquipAndSpecPersistence[[:space:]]*=.*|AiPlayerbot.EquipAndSpecPersistence = 1|' "${conf}"
     sed -i 's|^AiPlayerbot\.RandomBotMaps.*=.*|AiPlayerbot.RandomBotMaps = '"${BOT_MAPS}"'|' "${conf}"
 }
 CONFIG_PROFILES[config_vanilla_playerbot_level_cap]="vanilla"

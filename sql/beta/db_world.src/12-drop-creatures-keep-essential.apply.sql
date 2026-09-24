@@ -46,7 +46,7 @@ DROP TABLE IF EXISTS _keep_guids;
 CREATE TABLE _keep_guids AS
 SELECT c.guid
 FROM creature c
-INNER JOIN _essential_creatures ec ON c.id1 = ec.entry;
+INNER JOIN _essential_creatures ec ON c.id = ec.entry;  -- `id`, not `id1`: renamed upstream in 2026_06_16_00 (fixed 2026-09-23, issue 155c)
 
 ALTER TABLE _keep_guids ADD PRIMARY KEY (guid);
 -- }}}
@@ -127,7 +127,7 @@ DROP TABLE IF EXISTS _essential_creatures;
 -- {{{ Verification queries (run manually to check results)
 -- SELECT COUNT(*) as remaining_creatures FROM creature;
 -- SELECT COUNT(*) as remaining_critters FROM creature c
---   INNER JOIN creature_template ct ON c.id1 = ct.entry WHERE ct.type = 8;
+--   INNER JOIN creature_template ct ON c.id = ct.entry WHERE ct.type = 8;
 -- SELECT COUNT(*) as remaining_spirit_healers FROM creature c
---   INNER JOIN creature_template ct ON c.id1 = ct.entry WHERE (ct.npcflag & 16384) = 16384;
+--   INNER JOIN creature_template ct ON c.id = ct.entry WHERE (ct.npcflag & 16384) = 16384;
 -- }}}

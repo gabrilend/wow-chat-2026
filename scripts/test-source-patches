@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# test-source-patches - dry-run a profile's source patches on a RAM copy of
+# the source tree: apply them all, check each one reported success, revert
+# them all, and confirm the copy is byte-identical to where it started.
+#
+# For a general audience: the project changes the game server's source code
+# with small reversible scripts, applied before each compile and removed
+# after. A script that silently fails leaves the server built without that
+# change; a script that does not undo cleanly leaves stray edits behind for
+# the next build. This test catches both without compiling anything and
+# without touching the real source tree.
+#
+# Usage: scripts/test-source-patches [PROJECT_DIR] [PROFILE]
+#   PROJECT_DIR defaults to the hard-coded path below.
+#   PROFILE defaults to basic.
+#
+# Needs ~1 GB free in /dev/shm (the tree is copied there, minus .git).
+# Exit status: 0 if every patch applied, every revert round-tripped.
+
+set -o pipefail
+
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+PROFILE="${2:-basic}"
+
+# {{{ source_tree
+# profile → source tree; mirrors the case blocks in scripts/compile
+declare -A SOURCE_BY_PROFILE=(
+    [release]="source-beta" [beta]="source-beta" [vanilla]="source-beta"
+    [basic]="source-beta"   [alpha]="source-alpha"
+)
+SRC_NAME="${SOURCE_BY_PROFILE[${PROFILE}]:-}"
+if [[ -z "${SRC_NAME}" ]]; then
+    echo "ERROR: unknown profile '${PROFILE}' (no source tree mapping in this script)"
+    exit 1
+fi
+SRC="${DIR}/${SRC_NAME}"
+[[ -d "${SRC}" ]] || { echo "ERROR: ${SRC} missing"; exit 1; }
+# }}}
+
+# {{{ scratch_copy
+SCRATCH_ROOT="${DIR}/tmp/shared-memory"
+[[ -d "${SCRATCH_ROOT}" ]] || { echo "ERROR: ${SCRATCH_ROOT} missing (RAM scratch link)"; exit 1; }
+WORK="${SCRATCH_ROOT}/test-source-patches-${PROFILE}"
+rm -rf "${WORK}"
+mkdir -p "${WORK}"
+echo "Copying ${SRC_NAME} to RAM (without .git)..."
+rsync -a --exclude='.git' "${SRC}/" "${WORK}/tree/" || { echo "ERROR: copy failed"; exit 1; }
+rsync -a --exclude='.git' "${SRC}/" "${WORK}/pristine/" || { echo "ERROR: copy failed"; exit 1; }
+# }}}
+
+# {{{ load_patches
+# patches.sh reads DIR and PROFILE, sources every B-patch and the E-patches.
+export PROFILE DIR
+AC_CODE_DIR="${WORK}/tree"
+export AC_CODE_DIR
+source "${DIR}/patches/patches.sh" || { echo "ERROR: patches/patches.sh failed to source"; exit 1; }
+LIST="${PHASE_BEGIN_PATCHES[${PROFILE}]:-}"
+[[ -n "${LIST}" ]] || { echo "ERROR: no PHASE_BEGIN_PATCHES entry for '${PROFILE}'"; exit 1; }
+# }}}
+
+# {{{ apply_each
+failed=0
+echo "Applying: ${LIST}"
+for id in ${LIST}; do
+    fn=$(declare -F | grep "^declare -f patch_${id}_" | sed 's/declare -f //')
+    if [[ -z "${fn}" ]]; then
+        echo "  [✗] ${id}: no patch function defined"
+        failed=$((failed + 1))
+        continue
+    fi
+    if ${fn} > "${WORK}/${id}.apply.log" 2>&1; then
+        echo "  [✓] ${id} applied"
+    else
+        echo "  [✗] ${id} returned failure:"
+        sed 's/^/        /' "${WORK}/${id}.apply.log"
+        failed=$((failed + 1))
+    fi
+done
+# }}}
+
+# {{{ revert_each
+echo "Reverting (reverse order)..."
+reversed=$(echo "${LIST}" | tr ' ' '\n' | tac | tr '\n' ' ')
+for id in ${reversed}; do
+    fn=$(declare -F | grep "^declare -f unpatch_${id}_" | sed 's/declare -f //')
+    [[ -z "${fn}" ]] && { echo "  [!] ${id}: no unpatch function"; continue; }
+    ${fn} > "${WORK}/${id}.revert.log" 2>&1 || echo "  [!] ${id}: unpatch returned failure (see ${WORK}/${id}.revert.log)"
+done
+
+leftover=$(diff -rq "${WORK}/pristine" "${WORK}/tree" | head -20)
+if [[ -n "${leftover}" ]]; then
+    echo "  [✗] tree differs from the original after revert:"
+    echo "${leftover}" | sed 's/^/        /'
+    failed=$((failed + 1))
+else
+    echo "  [✓] round trip: tree is byte-identical to the original"
+fi
+# }}}
+
+echo "Result: ${failed} problem(s). Logs: ${WORK}/"
+rm -rf "${WORK}/pristine" "${WORK}/tree"
+[[ "${failed}" -eq 0 ]]
