@@ -10,7 +10,14 @@ UPDATE `creature_template` t
 JOIN `basic_155f_level_backup` b ON b.`entry` = t.`entry`
 SET t.`minlevel` = b.`minlevel`, t.`maxlevel` = b.`maxlevel`;
 
+UPDATE `item_template` i
+JOIN `basic_155f_item_backup` b ON b.`entry` = i.`entry`
+SET i.`RequiredLevel` = b.`RequiredLevel`;
+
 DROP TABLE IF EXISTS `basic_155f_level_backup`;
+DROP TABLE IF EXISTS `basic_155f_item_backup`;
+DROP TABLE IF EXISTS `tmp_155f_loot`;
+DROP TABLE IF EXISTS `tmp_155f_ref_step`;
 DROP TABLE IF EXISTS `tmp_155f_found`;     -- working tables, in case an apply stopped part-way
 DROP TABLE IF EXISTS `tmp_155f_set`;
 DROP TABLE IF EXISTS `tmp_155f_outside`;

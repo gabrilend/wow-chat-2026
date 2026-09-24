@@ -38,6 +38,12 @@ And, correcting a reading of that as the whole of Outland:
 > quests and creatures should be the default level. Only dungeons are
 > affected.
 
+And on the loot, verbatim, 2026-09-23:
+
+> if any of the gear dropped requires higher than level 60, we should set
+> it's required level to level 60. This includes greens that might drop in
+> those dungeons.
+
 ## Current Behavior
 
 **Built 2026-09-23; tested against a throwaway RAM database** (`scripts/test-basic-sql-in-ram`: stock databases brought fully up to date, then apply, re-apply, revert, apply; all checks pass). It raises 220 templates across the nine dungeons, e.g. Vazruden, Nazan and Omor in the Hellfire Ramparts. Setup step E024
@@ -68,7 +74,17 @@ template's own multipliers (`Creature.cpp`: health = GenerateHealth ×
 HealthModifier), so elites stay elite and bosses stay bosses, at level-64
 values. Loot is unchanged.
 
-Original levels are saved in `basic_155f_level_backup`, and the revert
+**Gear wearable at 60.** The same file lowers to 60 the required level of
+every weapon or armour piece that drops in these dungeons' normal mode and
+requires more than 60. It follows the raised creatures' loot tables, the
+dungeons' chests, and the reference tables those point at (three levels
+deep). Required level belongs to the item, so an item that also drops
+elsewhere becomes wearable at 60 there too; on basic, where 60 is the cap,
+that only helps. Clients see the new number once their item cache is
+refreshed, which C025 (issue 160) arranges.
+
+Original creature levels and required levels are saved
+(`basic_155f_level_backup`, `basic_155f_item_backup`), and the revert
 restores them. `scripts/validate-basic-state` checks after install that
 every raised template is 64, that no template living only in these dungeons
 was missed, and that heroic entry is still stock.
@@ -77,7 +93,8 @@ was missed, and that heroic entry is still stock.
 
 - Inside every Outland dungeon a level 60 can enter, every creature is
   level 64 with level-64 health and damage: "as hard as raids".
-- Loot, quests and the open world are stock.
+- Loot tables, quests and the open world are stock; dungeon gear that
+  required more than 60 requires 60.
 - With B005's accuracy cap a four-level gap hits and misses like three.
 - If a level-60 party of five clears them too easily, the next knob is the
   templates' health and damage multipliers, logged in

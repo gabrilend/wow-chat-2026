@@ -62,7 +62,8 @@ distance, and nothing draws a dungeon party.
   in (the client's area names, e.g. a town, a mine, a farm). The server
   knows each unit's current area id.
 - **Towns and cities**: when the owner is in one, every buddy leaves the
-  group (617e says what they do there).
+  group (617e says what they do there). "Town" means towns and cities, not
+  "any rested area" (owner, 2026-09-23); 617e has how that is detected.
 - **When it matters**: buddies arrive at creation and at 10, 20, 30 and 40,
   so there are **five at level 40** (six at 50, seven at 60). The group has
   room for four, so the rings begin to differ at 40, not 50.
@@ -95,9 +96,7 @@ distance, and nothing draws a dungeon party.
 ## Open Questions
 
 - (Answered 2026-09-23) Swap every 5 s with a 10-yard margin, to tune.
-- **Counting check**: one buddy at creation plus one every ten levels gives
-  five at 40, so the fifth doesn't fit from 40 on, not 50. Is that the
-  intended count, or should the first "every ten levels" buddy come at 20
-  (making five at 50)?
+- (Answered 2026-09-23: "great even better") Five buddies at 40; the rings
+  differ from 40 on.
 - **Raids**: at 40+ the owner could also form a raid with all buddies. Out
   of scope unless wanted.

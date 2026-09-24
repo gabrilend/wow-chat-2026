@@ -127,6 +127,9 @@ report "no template spawned only in those dungeons was missed" \
         WHERE c.map IN (SELECT map_id FROM ${WORLD}.basic_155f_maps) AND t.minlevel <> 64
           AND c.id NOT IN (SELECT c2.id FROM ${WORLD}.creature c2 WHERE c2.map NOT IN (SELECT map_id FROM ${WORLD}.basic_155f_maps))
         LIMIT 10")"
+report "dungeon gear that required more than 60 now requires 60" \
+    "$(run_sql "SELECT i.entry, i.name, i.RequiredLevel FROM ${WORLD}.item_template i
+        JOIN ${WORLD}.basic_155f_item_backup b ON b.entry = i.entry WHERE i.RequiredLevel <> 60 LIMIT 10")"
 report "heroic mode left stock (entry still level 70)" \
     "$(run_sql "SELECT a.map_id, a.min_level FROM ${WORLD}.dungeon_access_template a WHERE a.difficulty = 1 AND a.map_id IN (SELECT map_id FROM ${WORLD}.basic_155f_maps) AND a.min_level <> 70")"
 # }}}

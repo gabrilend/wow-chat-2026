@@ -49,6 +49,10 @@ export AC_CODE_DIR
 source "${DIR}/patches/patches.sh" || exit 1
 apply_patches_begin > "${WORK}/apply.log" 2>&1 || { echo "ERROR: patches failed to apply:"; cat "${WORK}/apply.log"; exit 1; }
 changed=$(diff -rq "${WORK}/pristine" "${WORK}/tree" | sed -n 's|^Files .*/pristine/\(.*\) and .*|\1|p')
+# Files a patch ADDS ("Only in <tree>/dir: name") are not in the recorded build
+# flags yet; each borrows the flags of a .cpp already built in its folder.
+added=$(diff -rq "${WORK}/pristine" "${WORK}/tree" | sed -n "s|^Only in ${WORK}/tree/\(.*\): \(.*\.cpp\)$|\1/\2|p")
+[[ -n "${added}" ]] && echo "Files added by ${PROFILE}'s patches: $(echo "${added}" | grep -c .)"
 echo "Files changed by ${PROFILE}'s patches: $(echo "${changed}" | grep -c .)"
 # }}}
 
@@ -80,15 +84,31 @@ EOF
     esac
 done
 tus=$(echo "${tus}" | grep . | sort -u)
+declare -A BORROW=()          # added file → built sibling whose flags it uses
+for f in ${added}; do
+    dir_rel="$(dirname "${f}")"
+    sib=$(python3 - "${CC_JSON}" "${dir_rel}" <<'EOF2'
+import json, sys
+cc, d = sys.argv[1], sys.argv[2]
+for e in json.load(open(cc)):
+    rel = e['file'].split('/source-beta/',1)[-1].split('/source-alpha/',1)[-1]
+    if rel.rsplit('/',1)[0] == d and rel.endswith('.cpp'):
+        print(rel); break
+EOF2
+)
+    if [[ -n "${sib}" ]]; then BORROW["${f}"]="${sib}"; tus+=$'\n'"${f}"; else echo "  [?] ${f}: added, and no built sibling in ${dir_rel} to borrow flags from"; fi
+done
+tus=$(echo "${tus}" | grep . | sort -u)
 # }}}
 
 # {{{ check_each
 fail=0
 for tu in ${tus}; do
     cmdfile="${WORK}/cmd.sh"
-    python3 - "${CC_JSON}" "${tu}" "${WORK}/tree" > "${cmdfile}" <<'EOF'
+    flags_from="${BORROW[${tu}]:-${tu}}"
+    python3 - "${CC_JSON}" "${flags_from}" "${WORK}/tree" "${tu}" > "${cmdfile}" <<'EOF'
 import json, sys, shlex
-cc, tu, tree = sys.argv[1], sys.argv[2], sys.argv[3]
+cc, tu, tree, target = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 for e in json.load(open(cc)):
     if e['file'].endswith('/' + tu):
         args = shlex.split(e.get('command') or ' '.join(e['arguments']))
@@ -111,7 +131,7 @@ for e in json.load(open(cc)):
             # point every include path at the patched copy instead of the real tree
             a = a.replace('/source-beta/', '/__TREE__/').replace('/source-alpha/', '/__TREE__/')
             out.append(a)
-        out += ['-fsyntax-only', tree + '/' + tu]
+        out += ['-fsyntax-only', tree + '/' + target]
         line = ' '.join(shlex.quote(x) for x in out)
         # "-I.../__TREE__/x" → the RAM copy
         line = line.replace('/mnt/mtwo/games/azeroth-core/wow-chat-2026/__TREE__/', tree + '/') \

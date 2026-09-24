@@ -5,7 +5,7 @@
 - Phase: 1 (Foundation — profile model, alongside 148's vanilla cluster)
 - Priority: High — basic is the baseline every later feature is developed
   against, starting with custom classes.
-- Sub-issues: 155a through 155f
+- Sub-issues: 155a through 155g
 
 ## Origin
 
@@ -106,6 +106,7 @@ in the rows of this table:
 | Outland | **open at the cap** (Dark Portal at 58, stock) | user decision 2026-09-23: raid-quality gear from questing |
 | Outland dungeons open at ≤60 | **every creature level 64**; open world, quests, loot and heroic modes stock (155f) | user directive 2026-09-23 |
 | Accuracy penalty for level gaps | **capped at ±3 levels** (source patch B005, issue 803) | user directive 2026-09-23 |
+| Talents | **nothing from tier 6 down** (30+ points in a tree), as vanilla-era trees (155g) | user directive 2026-09-23 |
 | Class starter kit + cloned kit items + bots-wear-the-kit | **not applied** | head-start |
 | Pretrained abilities + the config switch that reads them | **not applied** | head-start |
 | Starting professions at skill 125 | **not applied** | user directive |
@@ -125,6 +126,7 @@ in the rows of this table:
 | 155c | basic-world-database-patches | 155a | Which world/character SQL patches basic runs, and where their source SQL lives |
 | 155d | rotating-faction-starting-valleys | 155a, 155e | New characters spawn in one of their faction's starting valleys, the valley changing every 30 characters in a shuffled order |
 | 155e | faction-not-race-quest-gating | 155a | Quests, and the trainers and gossip a valley needs, are open to the whole faction rather than one race |
+| 155g | vanilla-talent-cap | 155a | No talent needing 30+ points in its tree can be learned (Combustion, Repentance and their rows) |
 | 155f | outland-dungeons-at-64 | 155a, 155c | Every creature in each Outland dungeon a level 60 can enter becomes level 64; open world, quests and loot stay stock |
 
 Execution order: `155a → (155b ∥ 155c ∥ 155e) → (155d ∥ 155f)`. 155d depends on 155e

@@ -141,6 +141,56 @@ UPDATE `creature_template` t
 JOIN `basic_155f_level_backup` b ON b.`entry` = t.`entry`
 SET t.`minlevel` = 64, t.`maxlevel` = 64;
 
+-- ---- dungeon gear wearable at 60 (owner, 2026-09-23) ------------------------
+-- "if any of the gear dropped requires higher than level 60, we should set
+-- it's required level to level 60. This includes greens that might drop in
+-- those dungeons." Gear = item class 2 (weapons) and 4 (armor). Sources, all
+-- normal mode (heroic loot is untouched, like heroic mode itself):
+--   * the loot tables of every creature raised above (creature_template.lootid);
+--   * chests spawned in the dungeons (gameobject type 3, loot id in Data1);
+--   * reference tables those point at, followed three levels deep.
+-- Required level is an item-wide value, so an item that also drops elsewhere
+-- becomes wearable at 60 there too. Harmless on basic, where 60 is the cap.
+-- Originals saved; the revert restores them. The client shows the new value
+-- once its item cache is refreshed, which C025 (issue 160) arranges.
+DROP TABLE IF EXISTS `tmp_155f_loot`;
+CREATE TABLE `tmp_155f_loot` (`kind` char(1) NOT NULL, `id` int unsigned NOT NULL, PRIMARY KEY (`kind`, `id`));
+-- 'c' creature loot table, 'g' gameobject loot table, 'r' reference table
+INSERT IGNORE INTO `tmp_155f_loot`
+SELECT 'c', t.`lootid` FROM `creature_template` t JOIN `tmp_155f_set` s ON s.`entry` = t.`entry` WHERE t.`lootid` <> 0;
+INSERT IGNORE INTO `tmp_155f_loot`
+SELECT 'g', g.`Data1` FROM `gameobject` o JOIN `gameobject_template` g ON g.`entry` = o.`id`
+WHERE g.`type` = 3 AND g.`Data1` <> 0 AND o.`map` IN (SELECT `map_id` FROM `basic_155f_maps`);
+-- references, three levels
+INSERT IGNORE INTO `tmp_155f_loot` SELECT 'r', l.`Reference` FROM `creature_loot_template` l JOIN `tmp_155f_loot` k ON k.`kind` = 'c' AND k.`id` = l.`Entry` WHERE l.`Reference` <> 0;
+INSERT IGNORE INTO `tmp_155f_loot` SELECT 'r', l.`Reference` FROM `gameobject_loot_template` l JOIN `tmp_155f_loot` k ON k.`kind` = 'g' AND k.`id` = l.`Entry` WHERE l.`Reference` <> 0;
+DROP TABLE IF EXISTS `tmp_155f_ref_step`;
+CREATE TABLE `tmp_155f_ref_step` (`id` int unsigned NOT NULL, PRIMARY KEY (`id`));
+INSERT IGNORE INTO `tmp_155f_ref_step` SELECT l.`Reference` FROM `reference_loot_template` l JOIN `tmp_155f_loot` k ON k.`kind` = 'r' AND k.`id` = l.`Entry` WHERE l.`Reference` <> 0;
+INSERT IGNORE INTO `tmp_155f_loot` SELECT 'r', `id` FROM `tmp_155f_ref_step`;
+DELETE FROM `tmp_155f_ref_step`;
+INSERT IGNORE INTO `tmp_155f_ref_step` SELECT l.`Reference` FROM `reference_loot_template` l JOIN `tmp_155f_loot` k ON k.`kind` = 'r' AND k.`id` = l.`Entry` WHERE l.`Reference` <> 0;
+INSERT IGNORE INTO `tmp_155f_loot` SELECT 'r', `id` FROM `tmp_155f_ref_step`;
+
+CREATE TABLE IF NOT EXISTS `basic_155f_item_backup` (
+  `entry`         int unsigned     NOT NULL,
+  `RequiredLevel` tinyint unsigned NOT NULL,
+  PRIMARY KEY (`entry`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 155f: original required levels of dungeon gear, for the revert';
+
+INSERT IGNORE INTO `basic_155f_item_backup` (`entry`, `RequiredLevel`)
+SELECT DISTINCT i.`entry`, i.`RequiredLevel` FROM `item_template` i
+WHERE i.`class` IN (2, 4) AND i.`RequiredLevel` > 60
+  AND i.`entry` IN (
+        SELECT l.`Item` FROM `creature_loot_template`  l JOIN `tmp_155f_loot` k ON k.`kind` = 'c' AND k.`id` = l.`Entry` WHERE l.`Reference` = 0
+  UNION SELECT l.`Item` FROM `gameobject_loot_template` l JOIN `tmp_155f_loot` k ON k.`kind` = 'g' AND k.`id` = l.`Entry` WHERE l.`Reference` = 0
+  UNION SELECT l.`Item` FROM `reference_loot_template`  l JOIN `tmp_155f_loot` k ON k.`kind` = 'r' AND k.`id` = l.`Entry` WHERE l.`Reference` = 0);
+
+UPDATE `item_template` i JOIN `basic_155f_item_backup` b ON b.`entry` = i.`entry`
+SET i.`RequiredLevel` = 60;
+
+DROP TABLE `tmp_155f_ref_step`;
+DROP TABLE `tmp_155f_loot`;
 DROP TABLE `tmp_155f_found`;
 DROP TABLE `tmp_155f_set`;
 DROP TABLE `tmp_155f_outside`;

@@ -40,8 +40,14 @@ where the module sends them. Neither is "in my area, on its own".
   fights what lives there and doesn't follow the owner. Grouped buddies stay
   inside the owner's experience radius, ungrouped ones outside it (617c).
 - **In a town or city** the buddies are ungrouped (617c) and don't fight.
-  Each walks (never runs) to a random NPC in the area, stands before it and
-  plays talking animations, then walks to another.
+  Each walks (never runs) to an NPC in the area, stands before it and plays
+  talking animations, then walks to another. Which NPC is weighted
+  (owner, 2026-09-23):
+  - **merchants**, with priority equal to how full the buddy's bags are
+    (half-full bags: 50% priority); at a merchant it sells what the bot
+    module already considers junk or surplus;
+  - **its class trainer**, first, when it has spells it could learn;
+  - otherwise a random NPC.
 - When the owner changes area, buddies travel there on foot, as a player
   would.
 - When a buddy dies it resurrects (spirit healer or corpse run, like a
@@ -71,6 +77,7 @@ where the module sends them. Neither is "in my area, on its own".
 
 - (Answered 2026-09-23) Buddies stay in the owner's area; in towns they
   visit NPCs on foot. The level band is whatever lives in that area.
-- **What counts as a town?** The client flags some areas as towns and
-  cities (sanctuaries, rested areas). Use "the owner is in a rested area"
-  (inns and cities) as the rule?
+- (Answered 2026-09-23) Towns and cities, not rested areas. The client's
+  area table flags capitals and towns (`AreaTable.dbc` flags, readable
+  server-side from the server's copy); the flag set to use is checked when
+  617e is built.

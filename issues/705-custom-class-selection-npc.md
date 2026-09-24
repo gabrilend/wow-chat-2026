@@ -122,6 +122,51 @@ all of it is on the server:
   server already keeps rage and energy pools for every class, and has hooks
   for the rest.
 
+**Training design (owner, 2026-09-23, verbatim):**
+
+> why don't we make it so that for example, a spellblade with warrior and mage
+> abilities, when talking to a warrior and a mage trainer, opens up not the
+> warrior and mage class training lists, but the spellblade training lists,
+> with the warrior spellblade spells on the warrior trainer, and the mage
+> spellblade spells on the mage's training list? That way, we can make
+> duplicates that have a different class requirement, which I think are
+> available now without a client edit. Confirm? Alternatively, make it so
+> that any class can learn any spell, remove the requirements completely, and
+> populate specific class lists for the custom classes (and the classes that
+> need trainers in the new zones!) that just have the intended spells.
+
+What is and isn't possible without a client edit:
+
+- **Duplicate trainer lists: yes.** A trainer list is server data only
+  (`trainer`, `trainer_spell`). A "spellblade (warrior side)" list on
+  warrior trainers and a "spellblade (mage side)" list on mage trainers are
+  plain rows. The stock trainer gets one extra dialogue line ("Train me as a
+  spellblade") that opens that list, using the same mechanism as basic's
+  Visiting Mentors (B029: a trainer line names the list it opens). The line
+  is shown only to spellblades through a dialogue condition. A custom class
+  has to be something a condition can test; the simplest is a hidden
+  quest, marked done when the class is chosen at the selector
+  (condition "quest rewarded"). Quests are server data; their text is
+  cached, and C025 refreshes that.
+- **Duplicate spells: no.** A copy of a spell with its own class
+  requirement would be a new spell id, and spells live in the client's own
+  data files. Duplicates of the *lists* get the same effect without that.
+- **The per-spell class check** (gate two) still stands between a
+  warrior-based spellblade and Fireball. Two ways past it, both server-side:
+  - **A. Skip it for curated lists** (a few lines of source patch): lists
+    with no class requirement (the custom-class lists) skip the class check
+    and keep the race check. Stock class lists and the Visiting Mentors'
+    lists behave as today. *Recommended*: it touches only the lists we
+    write.
+  - **B. Remove class restrictions everywhere** (the owner's alternative),
+    as data: a generated override table (`skilllineability_dbc`) with every
+    spell's class mask cleared and race masks kept. It works too, since
+    stock lists only ever hold their own class's spells, but it rewrites a
+    world-wide table (thousands of rows) and every future list must be
+    curated with care.
+  Either way the same curated lists serve custom classes and the new-zone
+  trainers.
+
 What is not known yet is only client-side. Does a warrior's spellbook
 display Rejuvenation (the client files spells by skill line)? It can be
 answered in two minutes with the GM command `.learn 774` on a warrior.

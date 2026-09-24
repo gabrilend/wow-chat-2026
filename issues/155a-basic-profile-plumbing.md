@@ -69,6 +69,15 @@ pieces of machinery each look up in their own table:
 
 ## Intended Behavior
 
+Owner's rule for sharing between servers (2026-09-23): "characters should be
+separate between servers, but world databases are okay to share." Today
+every profile with its own name has its own world and characters databases
+(release and beta already share a world database). basic cannot share
+vanilla's world database, because the two profiles edit the world
+differently (quest masks, mentors, dungeon levels). What they share is
+source SQL files (155c), not databases. The rule matters most for the
+multi-machine deployment another session is planning (issue 157).
+
 `basic` resolves in every row of the table above:
 
 - source tree `source-beta`, same upstream fork, branch and pin as vanilla,

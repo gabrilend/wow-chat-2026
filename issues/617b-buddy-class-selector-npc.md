@@ -52,8 +52,12 @@ No such NPC. Reference patterns in this project:
   the owner, walking about and telling jokes, **until the owner chooses**.
   His menu offers the classes of the owner's faction; choosing one fills the
   owed slot (617a).
-- **After the choice**: he spawns a campfire nearby and lounges by it
-  until no player is within sight range, then despawns. (In the story he
+- **After the choice**: he spawns a campfire nearby and goes "on break":
+  relaxed and aloof, lounging by the fire and telling his jokes, until no
+  player is within sight range (the server's visibility distance, about
+  100 yards outdoors), then despawns. (Owner, 2026-09-23: "when he's
+  waiting around the campfire, that's when he should tell jokes. He should
+  be 'on break' so he should seem relaxed and aloof.") (In the story he
   turns into a black dragon and flies away; it happens offscreen, so a
   despawn is enough.)
 - **Persistence**: while a slot is owed, he reappears near the owner at
@@ -88,6 +92,4 @@ idle behavior, calling 617a's creation function through a small bridge.
 
 - (Answered 2026-09-23) Name: Sargobras. Jokes: a written list that grows.
 - (Answered 2026-09-23) Level 1: the stationary valley selector only.
-- **Sight range**: "no players within sight range" before he despawns. The
-  server's visibility distance (about 100 yards in the open world, set per
-  map type in `worldserver.conf`) is the natural measure. Is that it?
+- (Answered 2026-09-23) Sight range: the server's visibility distance.
