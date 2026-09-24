@@ -26,8 +26,15 @@ MYSQL="${DIR}/mysql/installed-files/bin/mysql"
 WORLD="acore_world_basic"
 CHARS="acore_characters_basic"
 
-export MYSQL_PWD="menardi"
-MYSQL_CONN=(-h127.0.0.1 -P3307 -uritz -N)
+# Connection: the project MySQL by default. VALIDATE_MYSQL_SOCKET points it
+# at another server instead (scripts/test-basic-sql-in-ram uses this for its
+# throwaway RAM instance, where the user is root without a password).
+if [[ -n "${VALIDATE_MYSQL_SOCKET:-}" ]]; then
+    MYSQL_CONN=(--no-defaults --socket="${VALIDATE_MYSQL_SOCKET}" -uroot -N)
+else
+    export MYSQL_PWD="menardi"
+    MYSQL_CONN=(-h127.0.0.1 -P3307 -uritz -N)
+fi
 
 FAIL_COUNT=0
 # }}}
@@ -55,7 +62,7 @@ report() {
 
 # {{{ reachability
 if ! run_sql "SELECT 1" > /dev/null; then
-    echo "ERROR: cannot reach MySQL on 127.0.0.1:3307 as ritz — nothing was checked."
+    echo "ERROR: cannot reach MySQL (${MYSQL_CONN[*]}) — nothing was checked."
     echo "       to debug: is ./scripts/start-mysql running? Did install create ${WORLD}?"
     exit 1
 fi

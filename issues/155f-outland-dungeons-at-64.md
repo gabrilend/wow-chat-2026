@@ -40,7 +40,7 @@ And, correcting a reading of that as the whole of Outland:
 
 ## Current Behavior
 
-**Built 2026-09-23; not yet run against a database.** Setup step E024
+**Built 2026-09-23; tested against a throwaway RAM database** (`scripts/test-basic-sql-in-ram`: stock databases brought fully up to date, then apply, re-apply, revert, apply; all checks pass). It raises 220 templates across the nine dungeons, e.g. Vazruden, Nazan and Omor in the Hellfire Ramparts. Setup step E024
 installs `sql/basic/db_world.src/09-outland-dungeons-64.apply.sql`, which
 raises to level 64 every creature in each Outland dungeon a level 60 can
 enter. The dungeon list is computed from the dungeon-access table (normal

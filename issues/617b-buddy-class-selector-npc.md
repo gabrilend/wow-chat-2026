@@ -22,6 +22,15 @@ written list, but we have to add to it every once in a while": the list is
 `src/lua-basic/data/sargobras-jokes.lua`, plain data, one joke per entry,
 meant to grow.
 
+And his life cycle, verbatim, 2026-09-23:
+
+> yes that's the only selector at level 1. The wandering one which stays near
+> a player UNTIL THEY CHOOSE, then he just hangs out near a nearby fire (that
+> he spawns) until no players are within sight range, then he despawns. His
+> task is to let you choose a new companion - once you've done so, then he
+> waits until nobody's looking, then turns into a black dragon and flies away.
+> We can just despawn him though, it happens offscreen.
+
 ## Current Behavior
 
 No such NPC. Reference patterns in this project:
@@ -38,10 +47,15 @@ No such NPC. Reference patterns in this project:
 
 - **At every starting valley**: a stationary selector for the first buddy.
   (Every new character is owed one; 617a.)
-- **At each 10th level**: a selector spawns near the owner and stays in the
-  area where the level was gained. He walks around, sits by a fire, and
-  tells jokes. His menu offers the classes of the owner's faction. Choosing
-  one fills the owed slot (617a) and he leaves.
+- **Level 1**: only the stationary selector at the starting valley.
+- **At each 10th level**: Sargobras spawns near the owner and stays near
+  the owner, walking about and telling jokes, **until the owner chooses**.
+  His menu offers the classes of the owner's faction; choosing one fills the
+  owed slot (617a).
+- **After the choice**: he spawns a campfire nearby and lounges by it
+  until no player is within sight range, then despawns. (In the story he
+  turns into a black dragon and flies away; it happens offscreen, so a
+  despawn is enough.)
 - **Persistence**: while a slot is owed, he reappears near the owner at
   each login, wherever that is.
 - **Crowding**: he does not spawn if more than two selectors are already
@@ -73,5 +87,7 @@ idle behavior, calling 617a's creation function through a small bridge.
 ## Open Questions
 
 - (Answered 2026-09-23) Name: Sargobras. Jokes: a written list that grows.
-- **Level 1**: at a valley, is the first selector the stationary one only,
-  or does the wandering one also appear at level 1?
+- (Answered 2026-09-23) Level 1: the stationary valley selector only.
+- **Sight range**: "no players within sight range" before he despawns. The
+  server's visibility distance (about 100 yards in the open world, set per
+  map type in `worldserver.conf`) is the natural measure. Is that it?

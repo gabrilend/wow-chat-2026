@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# test-basic-sql-in-ram - run the basic profile's database changes against a
+# throwaway MySQL that lives entirely in RAM, and check the result.
+#
+# For a general audience: the basic profile changes the game world with SQL
+# files that normally run when the real server first starts. Writing SQL
+# against a schema from memory is error-prone (upstream renames columns and
+# drops tables). This test builds a private copy of the stock databases,
+# brought up to date exactly the way the real server does it, in /dev/shm
+# (RAM), with no network port, then runs every basic SQL file, undoes them,
+# runs them again, and asks the post-install checker whether the world came
+# out right. The project's own MySQL is never touched, and everything is
+# deleted afterwards unless you ask to keep it.
+#
+# Usage: scripts/test-basic-sql-in-ram [PROJECT_DIR] [--keep]
+#   --keep   leave the RAM server running and print how to reach it
+#
+# Needs ~3 GB free in /dev/shm and a few minutes (the stock world database is
+# ~300 MB of SQL). Exit status: 0 if every file ran and every check passed.
+
+set -o pipefail
+
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+KEEP=false
+for a in "$@"; do
+    case "${a}" in
+        --keep) KEEP=true ;;
+        *)      DIR="${a}" ;;
+    esac
+done
+
+# {{{ paths
+BIN="${DIR}/mysql/installed-files/bin"
+SRC="${DIR}/source-beta/data/sql"
+WORK="/dev/shm/wow-chat-2026/sql-in-ram"
+DATA="${WORK}/data"
+SOCK="${WORK}/mysql.sock"
+LOG="${WORK}/steps.log"
+WORLD="acore_world_basic"
+CHARS="acore_characters_basic"
+for f in "${BIN}/mysqld" "${BIN}/mysql"; do
+    [[ -x "${f}" ]] || { echo "ERROR: ${f} missing (the project's MySQL build)"; exit 1; }
+done
+# }}}
+
+# {{{ helpers
+mysql_run() {          # mysql_run DB  (SQL on stdin)
+    "${BIN}/mysql" --no-defaults --socket="${SOCK}" -uroot --default-character-set=utf8mb4 "$1"
+}
+step() {               # step "what" DB FILE  — run one SQL file, stop on error
+    local what="$1" db="$2" file="$3"
+    if mysql_run "${db}" < "${file}" >> "${LOG}" 2>&1; then
+        printf '  [✓] %s\n' "${what}"
+    else
+        printf '  [✗] %s — %s\n' "${what}" "${file#${DIR}/}"
+        tail -5 "${LOG}" | sed 's/^/        /'
+        FAILED=$((FAILED + 1))
+    fi
+}
+stop_server() {
+    [[ -f "${WORK}/mysqld.pid" ]] && kill "$(cat "${WORK}/mysqld.pid")" 2>/dev/null
+    for _ in $(seq 60); do [[ -S "${SOCK}" ]] || break; sleep 1; done
+}
+FAILED=0
+# }}}
+
+# {{{ start a private server in RAM
+stop_server
+rm -rf "${WORK}"
+mkdir -p "${DATA}"
+: > "${LOG}"
+echo "Starting a private MySQL in ${WORK} (no network port)..."
+"${BIN}/mysqld" --no-defaults --initialize-insecure --datadir="${DATA}" >> "${LOG}" 2>&1 \
+    || { echo "ERROR: could not initialize the RAM datadir; see ${LOG}"; exit 1; }
+"${BIN}/mysqld" --no-defaults --datadir="${DATA}" --socket="${SOCK}" --skip-networking \
+    --pid-file="${WORK}/mysqld.pid" --log-error="${WORK}/mysqld.err" --skip-log-bin \
+    --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci \
+    --innodb-buffer-pool-size=1G --innodb-flush-log-at-trx-commit=2 \
+    --log-bin-trust-function-creators=1 &
+for _ in $(seq 60); do [[ -S "${SOCK}" ]] && break; sleep 1; done
+[[ -S "${SOCK}" ]] || { echo "ERROR: server did not start; see ${WORK}/mysqld.err"; exit 1; }
+[[ "${KEEP}" == "true" ]] || trap 'stop_server; rm -rf "${WORK}"' EXIT
+# }}}
+
+# {{{ stock databases, updated the way the server's updater does it
+# Base dump first; then every file in updates/<db>/ that the base's own
+# `updates` table does not already list, in name order (the updater's rule),
+# then the source tree's custom/ folder.
+load_db() {   # load_db NAME  base/updates folder name
+    local db="$1" kind="$2"
+    echo "CREATE DATABASE \`${db}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" | mysql_run mysql
+    local n=0 f
+    for f in "${SRC}/base/${kind}"/*.sql; do
+        mysql_run "${db}" < "${f}" >> "${LOG}" 2>&1 || { echo "  [✗] base ${kind}: $(basename "${f}")"; tail -3 "${LOG}"; exit 1; }
+        n=$((n + 1))
+    done
+    local applied
+    applied=$(echo "SELECT name FROM updates;" | mysql_run "${db}" -N 2>>"${LOG}")
+    local u=0
+    for f in "${SRC}/updates/${kind}"/*.sql "${SRC}/custom/${kind}"/*.sql; do
+        [[ -f "${f}" ]] || continue
+        grep -qxF "$(basename "${f}")" <<< "${applied}" && continue
+        mysql_run "${db}" < "${f}" >> "${LOG}" 2>&1 || { echo "  [✗] update ${kind}: $(basename "${f}")"; tail -3 "${LOG}"; exit 1; }
+        u=$((u + 1))
+    done
+    echo "  ${db}: ${n} base files, ${u} updates applied on top"
+}
+echo "Loading stock databases (a few minutes)..."
+load_db "${WORLD}" db_world
+load_db "${CHARS}" db_characters
+# }}}
+
+# {{{ basic's SQL: apply, revert, apply again
+V="${DIR}/sql/vanilla"
+B="${DIR}/sql/basic"
+apply_all() {
+    step "E008 flight paths removed (vanilla's, shared)"  "${WORLD}" "${V}/db_world.src/03-remove-flight-paths.apply.sql"
+    step "E020 riding levels (vanilla's, shared)"         "${WORLD}" "${V}/db_world.src/05-mount-level-requirements.apply.sql"
+    step "E022 quests open to the whole faction"          "${WORLD}" "${B}/db_world.src/08-faction-quest-gating.apply.sql"
+    step "E024 Outland dungeons at level 64"              "${WORLD}" "${B}/db_world.src/09-outland-dungeons-64.apply.sql"
+    step "E025 Visiting Mentors"                          "${WORLD}" "${B}/db_world.src/10-valley-universal-trainers.apply.sql"
+    step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${V}/db_characters.src/01-no-intro-cinematic.apply.sql"
+    step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
+}
+revert_all() {
+    step "E025 revert" "${WORLD}" "${B}/db_world.src/10-valley-universal-trainers.revert.sql"
+    step "E024 revert" "${WORLD}" "${B}/db_world.src/09-outland-dungeons-64.revert.sql"
+    step "E022 revert" "${WORLD}" "${B}/db_world.src/08-faction-quest-gating.revert.sql"
+    step "E020 revert" "${WORLD}" "${V}/db_world.src/05-mount-level-requirements.revert.sql"
+    step "E023 revert" "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.revert.sql"
+}
+echo "Apply:";          apply_all
+echo "Apply again (must be re-applicable):"; apply_all
+echo "Revert:";         revert_all
+echo "Apply after revert:"; apply_all
+# }}}
+
+# {{{ check the result with the post-install checker
+echo "Post-install checks:"
+VALIDATE_MYSQL_SOCKET="${SOCK}" "${DIR}/scripts/validate-basic-state" "${DIR}" | sed 's/^/  /'
+checks=${PIPESTATUS[0]}
+# }}}
+
+echo "SQL steps failed: ${FAILED}; checker exit: ${checks}. Full log: ${LOG}"
+if [[ "${KEEP}" == "true" ]]; then
+    echo "Kept running. Reach it with: ${BIN}/mysql --no-defaults --socket=${SOCK} -uroot"
+    echo "Stop it with: kill \$(cat ${WORK}/mysqld.pid); rm -rf ${WORK}"
+fi
+[[ "${FAILED}" -eq 0 && "${checks}" -eq 0 ]]

@@ -20,6 +20,14 @@ Verbatim, 2026-09-23 (617 has the full answers):
 > yes it comes back to life. It'll move to the areas that the player is in
 > when it can.
 
+And for towns, verbatim, 2026-09-23:
+
+> they should stay in the same area as you. So if you're in town, they should
+> wander around town and stand in front of random NPCs, do some talking
+> animations, then walk to another NPC. Walk, not run. A random NPC in the
+> area. When you're in a town or a city, you should be un-grouped with them
+> too.
+
 ## Current Behavior
 
 Bots in a master's group follow the master by default. Random bots grind
@@ -27,9 +35,13 @@ where the module sends them. Neither is "in my area, on its own".
 
 ## Intended Behavior
 
-- A buddy's playground is the owner's current **zone and area** (the
-  subzone, e.g. "Fargodeep Mine" inside Elwynn Forest). It fights creatures
-  there that are close to the owner's level, and doesn't follow the owner.
+- A buddy's playground is the owner's current **area**: the named place
+  shown on screen on entry (e.g. "Fargodeep Mine" inside Elwynn Forest). It
+  fights what lives there and doesn't follow the owner. Grouped buddies stay
+  inside the owner's experience radius, ungrouped ones outside it (617c).
+- **In a town or city** the buddies are ungrouped (617c) and don't fight.
+  Each walks (never runs) to a random NPC in the area, stands before it and
+  plays talking animations, then walks to another.
 - When the owner changes area, buddies travel there on foot, as a player
   would.
 - When a buddy dies it resurrects (spirit healer or corpse run, like a
@@ -57,6 +69,8 @@ where the module sends them. Neither is "in my area, on its own".
 
 ## Open Questions
 
-- **Level band of targets**: creatures within how many levels of the owner?
-- **Area vs zone**: when the owner's area has no fightable creatures (a
-  town), do buddies roam the rest of the zone?
+- (Answered 2026-09-23) Buddies stay in the owner's area; in towns they
+  visit NPCs on foot. The level band is whatever lives in that area.
+- **What counts as a town?** The client flags some areas as towns and
+  cities (sanctuaries, rested areas). Use "the owner is in a rested area"
+  (inns and cities) as the rule?

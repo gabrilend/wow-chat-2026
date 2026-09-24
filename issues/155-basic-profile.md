@@ -65,8 +65,7 @@ classes come first.
 **Built 2026-09-23 and tested as far as possible without a running system;
 in progress until the owner compiles and installs it and the open questions
 below are answered.** Every sub-issue's Current Behavior says what exists,
-what was tested, and what waits on the install. Two test tools cover the
-offline part, and a third checks the databases afterward:
+what was tested, and what waits on the install. Test tools:
 
 - `scripts/test-profile-config-gates` — basic's config values (20/20) and
   that no config patch edits a key the configs lack;
@@ -74,7 +73,13 @@ offline part, and a third checks the databases afterward:
   success, and reverts byte-identically;
 - `scripts/validate-basic-state` — run after install: head-start rows
   absent, stock valleys, riding levels, flight paths, flavor lines, quest
-  masks, rotation state, dungeon creature levels.
+  masks, rotation state, mentors, dungeon creature levels;
+- `scripts/test-basic-sql-in-ram` — builds a private MySQL in `/dev/shm`
+  (no network port), loads the stock databases plus every upstream update
+  the way the server's updater does, runs all of basic's SQL (apply,
+  re-apply, revert, apply), then runs the checker above against it.
+  2026-09-23: every step ran and all 16 checks passed. The project's MySQL
+  is never touched.
 
 Work on basic surfaced bugs in shared machinery. They are fixed and listed
 in 155a, 155b and 155c. Two of them change **other** profiles on their next

@@ -17,6 +17,23 @@ Verbatim, 2026-09-23:
 > party. We can choose them randomly, without replacement, cycling through to
 > make sure everyone gets a chance to go.
 
+And, refining the proximity rule, verbatim, 2026-09-23:
+
+> yeah sure. The grouped buddies should try to move in the same area (we can
+> choose areas based on the area text that displays when you walk into for
+> example a town or a place) in the same general area that is A. fully
+> pathable to your location without leaving the radius, and B. the radius is
+> the radius that delivers exp. The ones outside of your group try to fight
+> monsters and stuff in the area outside of that radius. If they're busy
+> fighting a monster and you move away for example, then you might get put
+> into a group with someone else, and they'll get put into the group of
+> characters that tries to move around in the same area but outside of your
+> exp radius, since they're not in your group. This only matters at level 50+
+> I think, when you have 5 companions and only 4 can fit in your party.
+> Right?
+
+> When you're in a town or a city, you should be un-grouped with them too.
+
 ## Current Behavior
 
 The bot module logs a character in as a bot with
@@ -30,9 +47,25 @@ distance, and nothing draws a dungeon party.
   in as a bot near the owner's area (not on top of the owner). When the
   owner logs out, they log out.
 - **Proximity party**: the owner's group holds the owner and the four
-  closest buddies. At a fixed interval (a few seconds), if a buddy outside
-  the group is now closer than one inside, they swap. Buddies outside the
-  group keep adventuring (617e).
+  closest buddies, checked **every 5 seconds with a 10-yard margin** (a
+  buddy outside must be 10 yards closer than the farthest inside before they
+  swap; starting values, tuned in `docs/balance-updates.md`).
+- **Two rings**, measured by the group-experience radius
+  (`MaxGroupXPDistance`, 74 yards by default: a group member farther than
+  that from a kill gets no share):
+  - *grouped* buddies adventure **inside** that radius, in places reachable
+    from the owner on foot without leaving it;
+  - *ungrouped* buddies adventure in the same area **outside** it.
+  A buddy busy with a fight when the owner walks off drops out of the
+  group and joins the outer ring; a closer one takes its seat.
+- **Areas** are the named places whose name shows on screen when you walk
+  in (the client's area names, e.g. a town, a mine, a farm). The server
+  knows each unit's current area id.
+- **Towns and cities**: when the owner is in one, every buddy leaves the
+  group (617e says what they do there).
+- **When it matters**: buddies arrive at creation and at 10, 20, 30 and 40,
+  so there are **five at level 40** (six at 50, seven at 60). The group has
+  room for four, so the rings begin to differ at 40, not 50.
 - **Dungeon party**: when the owner enters a dungeon, the group becomes the
   owner plus four buddies drawn at random **without replacement**. The draw
   bag persists across dungeon runs and refills only when every buddy has
@@ -61,7 +94,10 @@ distance, and nothing draws a dungeon party.
 
 ## Open Questions
 
-- **Swap interval and margin**: a starting value (for example every 5 s,
-  10-yard margin) to be tuned in `docs/balance-updates.md`.
+- (Answered 2026-09-23) Swap every 5 s with a 10-yard margin, to tune.
+- **Counting check**: one buddy at creation plus one every ten levels gives
+  five at 40, so the fifth doesn't fit from 40 on, not 50. Is that the
+  intended count, or should the first "every ten levels" buddy come at 20
+  (making five at 50)?
 - **Raids**: at 40+ the owner could also form a raid with all buddies. Out
   of scope unless wanted.

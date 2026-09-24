@@ -15,7 +15,7 @@ that quests aren't gated by race anymore, only faction."
 
 ## Current Behavior
 
-**Built 2026-09-23; not yet run against a database.** Setup step E022 installs
+**Built 2026-09-23; tested against a throwaway RAM database** (`scripts/test-basic-sql-in-ram`; 404 quests widened, 23 mentors spawned, 204 placeholders removed, 1,937 class-list spells). Setup step E022 installs
 `sql/basic/db_world.src/08-faction-quest-gating.apply.sql`. Its statements
 are set-based and work on whatever quests the database holds, so upstream
 additions are covered. Each quest whose race mask names only one faction's
