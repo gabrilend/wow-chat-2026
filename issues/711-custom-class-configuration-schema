@@ -4,7 +4,7 @@
 - Created: 2026-04-05
 - Phase: 2
 - Priority: High
-- Depends on: 345 (custom talent interface), 163 (custom resource bars)
+- Depends on: 713 (custom talent interface), 710 (custom resource bars)  <!-- legacy 345/163, per MIGRATION_MAP.md -->
 
 ## Current Behavior
 - Custom classes defined in `src/lua/custom-classes.lua`

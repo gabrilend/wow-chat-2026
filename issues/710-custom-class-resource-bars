@@ -6,6 +6,78 @@
 - Priority: Medium
 - Depends on: 345 (custom talent interface), 159 (knight custom class)
 
+## Owner's Direction (verbatim, 2026-09-23)
+
+Asked what Fireball should cost a warrior:
+
+> I'd probably say... 20 rage?
+>
+> I mean, it's got a cast time, so we could charge the rage at the start of the
+> cast teehee
+>
+> ... that's evil, idk if we can manage that but we'll see.
+>
+> Oh! And energy can drain it's cost from your energy bar as the cast time
+> increases!
+>
+> diabolical
+>
+> Focus is spent at the completion of the cast time.
+
+And, earlier the same day, the principle:
+
+> converting resource cost (like rage and energy) to mana or vice-versa, but
+> they are meant to be normalized. [...] we can normalize their ability costs
+> by thinking about how that class would use that type of ability, and match
+> it to other similars in player cast tempo cadence.
+
+> I wish we could adjust talents as well. Let's see how things go.
+
+What this adds to the design below: a **re-costing** path beside the
+"gain the source class's resource bar" path. A borrowed spell is paid in the
+borrower's own resource, and each resource pays in its own rhythm:
+
+| Resource | When a cast-time spell's cost is taken |
+|---|---|
+| Rage | all at the **start** of the cast |
+| Energy | **drained continuously** over the cast time |
+| Focus | all at the **completion** of the cast |
+| Mana | stock: at completion |
+
+Engine facts (re-checked in the source 2026-09-23; owner: no client patches
+until the custom client is in):
+
+- **Every player already has every pool.** `Unit::GetCreatePowers` gives
+  every character a rage pool (max 100) and an energy pool (max 100)
+  regardless of class. `Player::RegenerateAll` regenerates energy and mana
+  for every player every tick. Only mana is class-dependent: its maximum is
+  the class's base mana, which is 0 for warriors and rogues.
+- **Rage gain is one hook away.** Rage from dealing and taking damage is
+  gated on `HasActivePowerType(POWER_RAGE)`. For players that asks
+  `sScriptMgr->OnPlayerHasActivePowerType` first, a stock script hook, so a
+  module can turn rage gain on for any class.
+- **Mana for a warrior is one hook away.** `Player::UpdateMaxPower` calls
+  `sScriptMgr->OnPlayerAfterUpdateMaxPower(this, power, value)` before
+  setting the maximum, so a module can give a warrior-based custom class a
+  mana pool.
+- **So the server side needs no core patch**: a small module using those
+  two hooks. This is the "gain the source class's resource" path above;
+  extra bars are shown with AIO, since the stock UI shows only the class's
+  own bar.
+- **The one open question is client-side.** Does the client's pre-cast check
+  read the spell's own pool (a warrior with a mana pool may cast Fireball),
+  or the displayed one? The client does track every pool (druid mana
+  addons read mana while shapeshifted). A two-minute GM test settles it: on
+  a warrior, `.modify mana 1000` (sets current and maximum mana), `.learn 133`
+  (Fireball), cast.
+- **Re-costing (the owner's rage-at-start, energy-drain, focus-at-end
+  table)** would change a spell's power type or cost, and the client reads
+  those from its own spell data. That needs the custom client or new spell
+  entries, so it waits. The multi-pool path does not.
+- The owner's item-and-form idea (a form that keeps your model but lets you
+  use warrior or rogue abilities) is not needed for rage and energy: those
+  pools already exist on every character.
+
 ## Current Behavior
 - Each WoW class has fixed resource types (mana, rage, energy, runic power, combo points, runes)
 - Resource type is determined by class in DBC files

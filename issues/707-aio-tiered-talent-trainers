@@ -2,7 +2,7 @@
 
 **Status**: Design
 **Phase**: 1
-**Related**: 159 (knight-custom-class), 155 (custom-class-selection-npc), 157 (dynamic-trainer-spawning)
+**Related**: 706 (knight-custom-class), 705 (custom-class-selection-npc), 503 (dynamic-trainer-spawning)  <!-- renumbered from legacy 159/155/157 per MIGRATION_MAP.md, 2026-09-23 -->
 
 ---
 

@@ -4,7 +4,7 @@
 - Created: 2026-04-05
 - Phase: 2
 - Priority: High
-- Depends: 155 (Custom class selection), 345 (Custom talent interface)
+- Depends: 705 (Custom class selection), 713 (Custom talent interface)  <!-- legacy 155/345, per MIGRATION_MAP.md -->
 
 ## Current Behavior
 - Custom classes defined as hardcoded Lua tables in custom-classes.lua
@@ -890,7 +890,7 @@ For simplicity, start with Option A (hardcoded). Refactor later if needed.
 ```
 
 ## Related Issues
-- 155 - Custom class selection (uses these definitions)
+- 705 - Custom class selection (uses these definitions)
 - 157 - Dynamic trainer spawning (needs ability data)
 - 345 - Custom talent interface (displays talent trees)
 - 142 - Custom spell system (future: fully custom abilities)

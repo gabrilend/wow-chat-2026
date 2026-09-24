@@ -90,6 +90,35 @@ there.
 
 ---
 
+## 2026-09-23 — Basic profile starting values (issue 155)
+
+The new basic profile (levels 1–60) takes its first knob settings.
+**Bot band:** bots enter at the player start level and may climb to the
+cap by XP, across Eastern Kingdoms, Kalimdor and Outland
+(`config/patches/C023-basic-playerbot-progression.sh`). **Why:** basic is
+the whole 1–60 ladder, so the ambient population walks the whole ladder
+too. **Bot population and accounts:** basic reuses vanilla's band and
+account count (C020, C018 now gated `vanilla basic`) as a starting point,
+not a tuned value. **Outland dungeons:** the creature level inside every Outland
+dungeon a level 60 can enter (the open world stays stock) is set in
+`sql/basic/db_world.src/09-outland-dungeons-64.apply.sql`. **Why:** the
+owner wants these dungeons "as hard as raids" for level-60 characters, with
+their loot unchanged so dungeon blues are not an early shortcut; with the ±3
+accuracy cap (B005) a four-level gap plays like three.
+
+---
+
+## 2026-09-23 — Run speed now actually 80% on every profile
+
+`config/patches/C003-run-speed-80-percent.sh` has always meant players move
+at 80%, but it edited a key the server config does not have, so everyone
+ran at 100%. It now edits the real key. **Why this entry:** nothing about the
+intended value changed, but every profile's felt movement speed changes on
+its next install, and this is where someone would look for why. Beta's
+instant flights (`C009`) had the same defect and now take effect too.
+
+---
+
 ## How to add an entry
 
 ```markdown

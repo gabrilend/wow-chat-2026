@@ -30,7 +30,7 @@ Ambush monsters spawn based on invisible level:
 ### Combat Balancing
 
 Player stats remain at level 20, but fights are balanced:
-- **Accuracy:** Already capped at ±3 levels (issue 156) - you can hit them, they can hit you
+- **Accuracy:** Already capped at ±3 levels (issue 803; legacy 156) - you can hit them, they can hit you
 - **Monster damage:** Scaled DOWN to level 20 equivalents - they don't one-shot you
 - **Monster HP:** Full HP for their level - they're tanky, fights are long
 - **Monster models:** Higher level = stranger/rarer creature models
@@ -214,7 +214,7 @@ PERMADEATH_CHECK_SLOTS  = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }  -- equipment slots
 
 ## Related Issues
 
-- Issue 156: monster-accuracy-level-cap (implemented)
+- Issue 803: monster-accuracy-level-cap (implemented; legacy number 156)
 - Shepherds system (not yet filed) - explains immortality lore
 
 ## Stats
@@ -222,4 +222,4 @@ PERMADEATH_CHECK_SLOTS  = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }  -- equipment slots
 - **Phase:** 3
 - **Priority:** High (core endgame loop)
 - **Complexity:** High (XP tracking, damage scaling, permadeath)
-- **Dependencies:** Issue 156 (accuracy cap) - already implemented
+- **Dependencies:** Issue 803 (accuracy cap) - already implemented

@@ -6,6 +6,18 @@
 - Priority: Medium
 - Depends on: 144 (Low Level Class Identity)
 
+## Owner's Direction (2026-09-23)
+
+Recorded verbatim in 705 ("Settled 2026-09-23"): each custom class gets
+**three talent trees, like every class**, taken from the source classes'
+specs to fit the class's shape. Rejuvenation points at the restoration
+druid tree, Heroic Strike at the arms warrior tree, and perhaps a third
+such as survival hunter. The trees are whole stock trees reused, not
+cherry-picked talents, so this interface's job narrows: show and train
+three stock trees chosen per custom class, instead of designing new
+ones. The AIO route below is still how a warrior-based class can show a
+druid tree without a client patch.
+
 ## Current Behavior
 - Default WoW talent trees are hardcoded in Talent.dbc
 - Tier requirements, prerequisites, and positions are client-side

@@ -10,7 +10,7 @@
 
 Everland Ghostsong is a WoW 3.3.5a private server with custom roguelike survival mechanics. The world is empty by default - monsters spawn around players (ambush system), treasure spawns, and traveler NPCs wander the world. Players use playerbots as AI companions.
 
-**Max level is per-profile** (set by `config/patches/C006*`): vanilla 40, beta 20, release/alpha 80. Talent points every 1/3 level; abilities earned through quests and training.
+**Max level is per-profile** (set by `config/patches/C006*`): basic 60, vanilla 40, beta 20, release 20, alpha 80. Talent points every 1/3 level; abilities earned through quests and training.
 
 ### Profiles
 
@@ -19,11 +19,16 @@ installed tree (`installed-files-<profile>/`), database set, and config-patch
 tuning. The active profile lives in `.profile`; scripts read it to select the
 matching source tree, install dir, and databases.
 
-- **release** / **alpha** — level cap 80 (retail-like baseline)
+- **basic** — levels 1–60, stock game + playerbots + QoL; the development
+  baseline (issue 155, `docs/profiles/basic.md`). **expert** (61–80, start
+  at 60) is planned, not built (issue 156).
+- **vanilla** — start 20, level cap 40 (constrained demo; currently the active profile)
 - **beta** — level cap 20 (the original wow-chat roguelike design)
-- **vanilla** — level cap 40 (classic-era shape; currently the active profile)
+- **release** — level cap 20 today (C006b is gated `beta release`), though
+  older notes describe it as 80; which is intended is an open question
+- **alpha** — level cap 80, the wow-chat-1 relic
 
-release/beta/vanilla share `source-beta`; alpha uses `source-alpha`. Per-profile
+release/beta/vanilla/basic share `source-beta`; alpha uses `source-alpha`. Per-profile
 differences are applied at install time by `config/patches/C*.sh`, gated on the
 profile name.
 

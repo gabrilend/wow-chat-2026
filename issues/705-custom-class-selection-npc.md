@@ -4,7 +4,7 @@
 - Created: 2026-04-04
 - Phase: 2
 - Priority: High
-- **Implemented:** src/lua/custom-classes.lua, SQL for race-specific NPCs
+- **Implemented:** src/lua-beta/custom-classes.lua.disabled (moved from src/lua/ in the 2026-06-02 per-profile rename; currently disabled, so not loaded on any profile), plus src/lua-beta/custom-classes/knight.lua and SQL for race-specific NPCs
 
 ### Implementation Notes (2026-04-05)
 
@@ -37,7 +37,94 @@
 - Trainer SQL (entries 900021-900031)
 - AIO talent addon
 
-**Extended by:** Issue 157 (Dynamic Trainer Spawning)
+**Extended by:** Issue 503 (Dynamic Trainer Spawning; legacy number 157)
+
+## The Owner's Description (verbatim, 2026-09-23)
+
+Given while scheduling the basic profile (155), from memory:
+
+> the custom class architecture if I remember correctly was just assigning
+> certain class's abilities to a middle-ground class. They'd visit the other
+> trainers, and they could be a warrior mage. Or a necromancer druid. Whatever
+> they'd like. Some affordances are made, like converting resource cost (like
+> rage and energy) to mana or vice-versa, but they are meant to be normalized.
+> Rage and energy characters have more staying power over mana characters, who
+> either have to invest in regeneration or accept that they are sprinters who
+> run out of mana. But we can normalize their ability costs by thinking about
+> how that class would use that type of ability, and match it to other
+> similars in player cast tempo cadence.
+
+### Settled 2026-09-23 (verbatim answers, then what they decide)
+
+> yes they are curated.
+
+> both designs are true. Selector NPC picks the class, and the abilities are
+> learned from the respective class trainers. We don't have custom abilities,
+> but we might have for example a character with Rejuvenation and Heroic
+> Strike. They'd train Heroic Strike at the warrior trainer, and Rejuvenation
+> at the druid trainer. We'll also need the custom class trainer for each city
+> that trains each class that isn't present at that city / starter zone /
+> wherever class trainers are known.
+
+> yes it's a fixed list, and we choose which abilities they learn. I think
+> their required level has to be fixed at the same place it is normally, so we
+> just describe the abilities they want and which ranks we want them to be
+> able to train, and they'll learn them at the required levels.
+
+> Ah... Yes... We should instead update this to have 3 talent trees, one for
+> each class, same as any other class. But those three talent trees might be
+> different. For example Rejuvenation means resto druid's talents, and Heroic
+> Strike might mean warrior's arms spec talent tree, and maybe there's another
+> like survival hunter or something. They should generally reflect the class
+> shape that the class turned out to be.
+
+So:
+
+- **Curated classes**, chosen at the selector NPC (this issue).
+- **No new abilities.** A custom class is a fixed list of *existing* spells
+  and the ranks it may train. Each is learned from the **source class's own
+  trainer** at its **stock required level**. A Heroic-Strike-and-Rejuvenation
+  class trains Heroic Strike at a warrior trainer and Rejuvenation at a druid
+  trainer.
+- **Trainer coverage.** Wherever class trainers stand (cities, starting
+  zones, towns), a custom-class trainer covers the classes missing there.
+  basic's Visiting Mentors (155e) are the first instance: they already
+  cover the missing classes per valley, and a custom-class character uses
+  them too. Generalizing them from valleys to every trainer location is
+  tracked in 155e.
+- **Talents: three trees, like every class**, but chosen per custom class
+  from the source classes' specs to match its shape (Rejuvenation → the
+  restoration druid tree; Heroic Strike → the arms warrior tree; perhaps a
+  third such as survival hunter). This replaces the "curated tree via AIO"
+  idea in the Talent Trees section below; see 713.
+- **Resources:** the owner's direction is recorded in 710.
+
+**Re-evaluated 2026-09-23 (owner: "that can't be true! It'll harm most of
+our plans if true").** The check is real, but it is cheap to get past, and
+all of it is on the server:
+
+- **Gate one** (the whole trainer: "class trainers teach only their class")
+  is `Trainer::IsTrainerValidForPlayer`. basic's Visiting Mentors already
+  show one way around it: a dialogue line that opens a class's list (B029).
+  A custom-class character can be offered the lines for its source classes
+  the same way, conditioned on its custom class.
+- **Gate two** (each spell: "can this class and race learn it") is
+  `Player::IsSpellFitByClassAndRace`. It reads the server's copy of the
+  client's skill tables (`SkillLineAbility`, `SkillRaceClassInfo`). The
+  server merges database override tables over those
+  (`skilllineability_dbc`, `skillraceclassinfo_dbc`; `DBCStores.cpp`
+  `LOAD_DBC(..., "skilllineability_dbc")`), so allowing a class a spell is a
+  data edit. It is per *class*, though: allowing warriors Rejuvenation allows
+  every warrior. Per *character* (only the custom class) takes a few lines
+  of source patch, or a script hook the patch adds. Either way it is small
+  and server-side.
+- **Casting** it is the resource question, in 710. Short version: the
+  server already keeps rage and energy pools for every class, and has hooks
+  for the rest.
+
+What is not known yet is only client-side. Does a warrior's spellbook
+display Rejuvenation (the client files spells by skill line)? It can be
+answered in two minutes with the GM command `.learn 774` on a warrior.
 
 ## Overview
 
@@ -382,7 +469,16 @@ SELECT DisplayID FROM creature_model_info WHERE DisplayID IN (18807, 18799, 1880
 ```
 
 ## Related Issues
-- 151 - Ability tome system (tome integration)
-- 140 - Quest spells to trainers (trainer system)
-- 157 - Dynamic trainer spawning (extends this issue with weighted trainer selection)
+- 405 - Ability tome system (tome integration; legacy 151)
+- 701 - Quest spells to trainers (trainer system; legacy 140)
+- 503 - Dynamic trainer spawning (extends this issue with weighted trainer selection; legacy 157)
 - Future: AIO talent addon issue
+- 155 - Basic profile: the level 1–60 baseline custom classes are developed
+  against first (2026-09-23)
+- 718 - Death knight sacrifice and open Acherus: scheduled after this
+  infrastructure
+
+## Open Questions
+
+- (Answered 2026-09-23) Curated classes, chosen at the NPC; abilities learned
+  at the source classes' trainers. See "Settled 2026-09-23" above.

@@ -107,7 +107,7 @@ CustomClasses.baseClassesWithCustoms = {}
 
 ## Related Issues
 
-- Issue 155: custom-class-selection-npc (original implementation)
+- Issue 705: custom-class-selection-npc (original implementation; legacy number 155)
 - Issue 159: knight-custom-class (first custom class)
 - Issue 163: custom-class-lua-format (definition format)
 

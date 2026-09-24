@@ -15,9 +15,11 @@ most ways, but with a deliberate set of tunings:
 - **AI companion playerbots.** Run dungeons solo with bots filling
   your party. The auction house is also active — bots buy gear they
   want and post their drops.
-- **Fixed starting zones by faction.** Every Alliance character
-  starts in Duskwood (at Darkshire). Every Horde character starts
-  in Hillsbrad Foothills (at Tarren Mill).
+- **Fixed starting towns by race.** Each race starts at a level-20
+  town's innkeeper: human and dwarf at Menethil Harbor, draenei at
+  Darkshire, night elf and gnome at Astranaar, orc at Ratchet,
+  undead and troll at Tarren Mill, tauren and blood elf at Sun Rock
+  (148n; the setup step E007 holds the coordinates).
 - **Death Knight class disabled.** A level-55-starting class in a
   level-40-cap ruleset doesn't make sense yet. Disabled until the
   client-patching pipeline can land a custom DK starting flow.
@@ -93,7 +95,9 @@ creates the suffixed databases (`acore_world_vanilla`, etc.) on
 the shared MySQL instance (port 3307), and applies vanilla's
 config patches and SQL migrations.
 
-The worldserver listens on port 4464; authserver on 4364. Point
+The worldserver listens on port 4462; authserver on 4362 — the same
+ports as release, beta and basic, since only one runs at a time
+(config patch C010). Point
 your client's `realmlist.wtf` at the appropriate address (see the
 [connection guide](../connection-guide.md)).
 
@@ -105,8 +109,7 @@ Skipped. Characters are created at level 20.
 
 ### Level 20 (creation moment)
 
-You appear in your faction's starting zone — Darkshire for Alliance,
-Tarren Mill for Horde — fully equipped in your class kit, with
+You appear at your race's starting town (see "What you get") — fully equipped in your class kit, with
 every trainer ability through level 20 already in your spellbook.
 The character-select screen shows you in the kit, not in the
 default DBC starter outfit.

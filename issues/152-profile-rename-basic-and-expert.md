@@ -16,6 +16,42 @@
 > mirror the osr D&D releases. vanilla intending to be for a "demo" or otherwise
 > constrained experience, and then release is the newly modified version.
 
+## Revised Direction (verbatim, 2026-09-23)
+
+> let's name it basic/expert, with this being the "basic" tier and "expert"
+> being level 61-80 where you start at 60 but it's not built yet.
+
+"It" is a new profile, not vanilla. The names this issue planned to hand to
+vanilla and release now belong to two new profiles:
+
+- **basic** — issue 155: levels 1–60, vanilla's shape without the
+  head-start.
+- **expert** — issue 156: levels 61–80, starting at 60. Not built.
+
+The rename below (vanilla → basic, release → expert) is therefore **no
+longer planned**. The sections that follow are kept as the record of the
+original reasoning: the OSR Basic/Expert relationship it describes is
+exactly what 155 and 156 now carry out. Whether vanilla and release keep
+their names, or get new ones, is this issue's remaining open question.
+
+## Current Behavior
+
+The profiles are named `vanilla`, `release`, `beta` and `alpha`, plus
+`basic` (issue 155, added 2026-09-23). The names this issue proposed for
+vanilla and release, `basic` and `expert`, now belong to two new profiles
+(155 built; 156 planned). Nothing has been renamed.
+
+## Intended Behavior
+
+Revised 2026-09-23: no rename of vanilla or release. The OSR Basic/Expert
+pairing this issue argued for is carried by new profiles instead:
+`basic` (levels 1–60) and `expert` (levels 61–80, starting at 60). What
+remains here is only the leftover question of whether vanilla and release
+keep their names (Open Questions). If they do, this issue completes as
+"superseded by 155 and 156" and moves to `completed/` unchanged otherwise.
+
+The sections below record the original rename reasoning.
+
 ## Why the Current Names Are Wrong
 
 Two separate problems, and the rename fixes both.
@@ -207,6 +243,11 @@ the tree is consistent before anything selects the new name.
 
 ## Open Questions
 
+- **(2026-09-23, supersedes the rest of this list)** Vanilla and release are
+  left alone for now (owner: "we're not really working on vanilla and
+  release right now so let's just leave them alone"). This issue stays open,
+  parked, until they are worked on again. The questions below were written
+  for the original rename and are kept for the record.
 - **Do `alpha` and `beta` keep their names?** The report only names
   two profiles. Leaving alpha and beta alone means the profile set
   reads `basic / expert / beta / alpha` — two names from D&D, two
