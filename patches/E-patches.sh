@@ -151,6 +151,24 @@ _profile_db_name() {
 }
 # -- }}}
 
+# -- {{{ _shared_sql_src
+# Folder holding a profile's source SQL for the steps it shares with another
+# profile. basic (issue 155) runs vanilla's flight-path removal (E008), skipped
+# intro cinematic (E019) and riding levels (E020) with exactly vanilla's
+# content, so it reads vanilla's source files instead of keeping copies (one
+# source of truth: a tuning change lands on both). Only those three steps use
+# this; everything basic owns lives in sql/basic/.
+# (Symbolic links under sql/basic/ did the same job first; they were replaced
+# by this table so the sharing is visible in code and the links do not have
+# to survive every tool that copies or commits the tree.)
+# Args: $1 = database folder name (db_world, db_characters)
+_shared_sql_src() {
+    local -A SHARED_SQL_FROM=( [basic]="vanilla" )
+    local from="${SHARED_SQL_FROM[${PROFILE}]:-${PROFILE}}"
+    echo "${DIR}/sql/${from}/${1}.src"
+}
+# -- }}}
+
 # -- {{{ apply_config_values
 # Apply all config values for current profile (Issue 119)
 # Called after init_config() copies .dist to .conf
@@ -616,7 +634,7 @@ unpatch_E006_initialize_config_files() {
 # flightmasters have a confirmed hybrid role.
 patch_E008_vanilla_remove_flight_paths() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/03-remove-flight-paths.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/03-remove-flight-paths.apply.sql"
+    local SRC_FILE="$(_shared_sql_src db_world)/03-remove-flight-paths.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E008] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -825,7 +843,7 @@ SQL
 # SUPER (project-local MySQL is set that way).
 patch_E019_vanilla_no_intro_cinematic() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/01-no-intro-cinematic.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/01-no-intro-cinematic.apply.sql"
+    local SRC_FILE="$(_shared_sql_src db_characters)/01-no-intro-cinematic.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E019] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -880,7 +898,7 @@ SQL
 # the legacy npc_trainer table so the two never disagree.
 patch_E020_vanilla_mount_level_requirements() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/05-mount-level-requirements.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/05-mount-level-requirements.apply.sql"
+    local SRC_FILE="$(_shared_sql_src db_world)/05-mount-level-requirements.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E020] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -905,7 +923,7 @@ patch_E020_vanilla_mount_level_requirements() {
 
 unpatch_E020_vanilla_mount_level_requirements() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/05-mount-level-requirements.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/05-mount-level-requirements.revert.sql"
+    local SRC_FILE="$(_shared_sql_src db_world)/05-mount-level-requirements.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E020_REVERT" "${SQL_FILE}"; then
         echo "  [E020] Active file already holds revert-form content"

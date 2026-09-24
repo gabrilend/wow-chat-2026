@@ -1,8 +1,8 @@
 -- MARKER_E020_APPLY vanilla-mount-level-requirements
--- SHARED: sql/basic/ links to this file (issue 155c) — the basic profile
--- applies the same content to its own databases. Edits here land on both
--- vanilla and basic; if basic ever needs different content, replace its
--- link with a real file.
+-- SHARED: the basic profile (issue 155c) reads this file too (E-patches.sh,
+-- _shared_sql_src) and applies it to its own databases. Edits land on both
+-- vanilla and basic; if basic ever needs different content, give it its
+-- own file under sql/basic/ and drop it from the sharing table.
 -- ============================================================================
 -- 05-mount-level-requirements.sql (148l) — APPLY SOURCE
 -- ============================================================================
