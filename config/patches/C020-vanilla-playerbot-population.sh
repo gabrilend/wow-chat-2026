@@ -24,7 +24,7 @@
 #
 # Counterpart data point: C014 owns the level band (20→40); this owns how
 # many of those bots exist at once.
-# Profiles: vanilla basic (basic, issue 155, starts from the same band; retune in docs/balance-updates.md)
+# Profiles: vanilla (basic dropped 2026-09-24: basic runs no random bots, C023)
 
 # -- {{{ config_vanilla_playerbot_population
 config_vanilla_playerbot_population() {
@@ -40,6 +40,6 @@ config_vanilla_playerbot_population() {
     sed -i 's|^AiPlayerbot\.MinRandomBots[[:space:]]*=.*|AiPlayerbot.MinRandomBots = '"${BOT_FLOOR}"'|' "${conf}"
     sed -i 's|^AiPlayerbot\.MaxRandomBots[[:space:]]*=.*|AiPlayerbot.MaxRandomBots = '"${BOT_CEIL}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_vanilla_playerbot_population]="vanilla basic"
+CONFIG_PROFILES[config_vanilla_playerbot_population]="vanilla"
 CONFIG_DESCRIPTIONS[config_vanilla_playerbot_population]="Playerbot population band 128–256 active"
 # -- }}}

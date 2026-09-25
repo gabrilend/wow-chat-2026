@@ -12,8 +12,7 @@
 **Built and tested offline 2026-09-23.** Each file in `config/patches/`
 edits values in the generated `.conf` files and carries a gate naming the
 profiles it runs for. Basic's gates are set as in the table below; new
-patches C006d (level cap 60), C023 (bots 1→60 on Eastern Kingdoms,
-Kalimdor and Outland; to be replaced, see below) and C024 (death knights: an account needs a level-55
+patches C006d (level cap 60), C023 (no random bots, see below) and C024 (death knights: an account needs a level-55
 character; no death-knight bots — the interim rule, taken from the owner's
 answer in 718) exist.
 
@@ -36,18 +35,19 @@ fixed:
 C003 and C009 now stop with an error if their key is missing, instead of
 editing nothing.
 
-**Not yet changed (Ritz, 2026-09-24):** basic has no random bots.
-Verbatim, on "the world populated only by players and their buddies":
-"this is what we want", and on switching the ambient bots off: "switched
-off." C023 and C020 still start the random-bot population; they are to be
-replaced by a gate that switches it off. The knobs, from the bot module's
-stock config: `AiPlayerbot.RandomBotAutologin` (1 = random bots log in at
-startup), `AiPlayerbot.MinRandomBots` / `MaxRandomBots` (500 / 500 stock:
-how many are online), and `AiPlayerbot.RandomBotAccountCount` (0 = derive
-the account count from the population). Buddies (617) are not random bots:
-they are ordinary bot characters on an account linked to their owner, so
-this switch does not touch them. Until 617 is built, the basic world has
-no bots at all.
+**Random bots off (built 2026-09-24, config-gate test passes).** Ritz,
+2026-09-24: "this is what we want" (the world populated only by players and
+their buddies), and "switched off." C023 is now
+`config/patches/C023-basic-no-random-bots.sh` (renamed from
+`C023-basic-playerbot-progression.sh`): `AiPlayerbot.RandomBotAutologin = 0`
+(random bots never log in, which holds even if the hand-run bot-governor
+script later raises the counts), `MinRandomBots = 0`, `MaxRandomBots = 0`.
+C020 (population band) and C018 (account count) are gated to `vanilla`
+only again. Buddies (617) are not random bots: they are ordinary bot
+characters on an account linked to their player, so this switch does not
+touch them. Until 617 is built, the basic world has no bots at all.
+`scripts/test-profile-config-gates` reads the three values back (18 of 18
+expectations pass).
 
 ## Intended Behavior
 
@@ -67,13 +67,13 @@ Every config patch is decided for basic, one row at a time:
 | C010 network ports | all | yes | add `basic` to the shared-ports arm (155a) |
 | C011 realmlist setup | all | yes | none |
 | C012 bot level 1..20 | beta release | no | — |
-| C014 vanilla bot progression 20→40, Eastern Kingdoms | vanilla | **no** | ~~new C023 basic bot progression: enter at 1, climb to 60 by XP, gear persists, maps 0,1,530~~ → **random bots off** (2026-09-24): C023 becomes the switch that stops random bots logging in and sets their population to 0 |
+| C014 vanilla bot progression 20→40, Eastern Kingdoms | vanilla | **no** | **C023 basic no random bots** (2026-09-24; it first held a 1→60 bot band): random bots never log in, population 0 |
 | C015 disable death knights | vanilla | **no** | basic allows stock death knights with two restrictions: new **C024** |
 | C016 backfill missing keys | release beta vanilla | yes | add `basic` |
 | C017 level-correlated caps | release beta vanilla | yes — it reads the cap C006d wrote, so it follows to 60 automatically | add `basic` |
-| C018 bot account count 110 | vanilla | **no** (2026-09-24: no random bots) | remove `basic` |
+| C018 bot account count 110 | vanilla | **no** (2026-09-24: no random bots) | removed `basic` |
 | C019 realm id | all | yes | realm 5 (155a) |
-| C020 bot population 128–256 | vanilla | **no** (2026-09-24: no random bots) | remove `basic` |
+| C020 bot population 128–256 | vanilla | **no** (2026-09-24: no random bots) | removed `basic` |
 | C021 SOAP console | all | yes | none |
 | C022 custom starting spells (reads the pretrain table) | vanilla | **no** — pretrained abilities are a head-start | none |
 
@@ -95,12 +95,9 @@ separate sweep, best folded into 152's.
 ## Suggested Implementation Steps
 
 1. Write `config/patches/C006d-max-level-60.sh` by the shape of C006c.
-2. Write `config/patches/C023-basic-playerbot-progression.sh` by the shape of
-   C014: `RandomBotMinLevel = 1`, `RandomBotMaxLevel = 60`,
-   `DisableRandomLevels = 1`, `RandomBotXPRate = 1.0`,
-   `EquipmentPersistence = 1`, and `RandomBotMaps` set to both continents
-   (read the knob's comment in `playerbots.conf` for the list format before
-   writing it).
+2. Write `config/patches/C023-basic-no-random-bots.sh`:
+   `RandomBotAutologin = 0`, `MinRandomBots = 0`, `MaxRandomBots = 0`
+   (anchored keys, as in C020).
 3. Extend the gates listed in the table.
 4. Apply the death-knight row once the interim rule is answered.
 5. After the user's install run, read each value back from
@@ -108,8 +105,7 @@ separate sweep, best folded into 152's.
    `installed-files-basic/etc/modules/playerbots.conf` and compare with this
    table. That comparison is the test: a gate that did not match yields a
    running server with upstream values.
-6. Record the bot band and population starting values in
-   `docs/balance-updates.md`.
+6. Record the change in `docs/balance-updates.md`.
 
 ## Related Issues
 

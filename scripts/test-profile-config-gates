@@ -44,13 +44,11 @@ declare -a EXPECT_basic=(
     "worldserver.conf|CharacterCreating.Disabled.ClassMask|0"
     "worldserver.conf|PlayerStart.CustomSpells|__unset_or_0__"
     "worldserver.conf|ClientCacheVersion|__nonzero_uint32__"
-    "modules/playerbots.conf|AiPlayerbot.RandomBotMinLevel|1"
-    "modules/playerbots.conf|AiPlayerbot.RandomBotMaxLevel|60"
-    "modules/playerbots.conf|AiPlayerbot.RandomBotMaps|0,1,530"
+    # no random bots on basic (C023, 2026-09-24): buddies only (issue 617)
+    "modules/playerbots.conf|AiPlayerbot.RandomBotAutologin|0"
+    "modules/playerbots.conf|AiPlayerbot.MinRandomBots|0"
+    "modules/playerbots.conf|AiPlayerbot.MaxRandomBots|0"
     "modules/playerbots.conf|AiPlayerbot.DisableDeathKnightLogin|1"
-    "modules/playerbots.conf|AiPlayerbot.MinRandomBots|128"
-    "modules/playerbots.conf|AiPlayerbot.MaxRandomBots|256"
-    "modules/playerbots.conf|AiPlayerbot.RandomBotAccountCount|110"
 )
 # }}}
 

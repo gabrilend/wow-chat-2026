@@ -119,6 +119,18 @@ instant flights (`C009`) had the same defect and now take effect too.
 
 ---
 
+## 2026-09-24 — Basic: no random bots
+
+Basic's random-bot fleet is switched off: they never log in and their
+population is zero (`config/patches/C023-basic-no-random-bots.sh`, renamed
+from `C023-basic-playerbot-progression.sh`; the 2026-09-23 entry's bot band
+no longer applies). C020 and C018 are gated to `vanilla` only again.
+**Why:** Ritz, 2026-09-24: "no random bots in basic. Just playerbot
+buddies." Each player's own buddies (issue 617) are the only bots; until
+they are built, a basic world has none.
+
+---
+
 ## How to add an entry
 
 ```markdown
