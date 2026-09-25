@@ -195,6 +195,11 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
    the crystal, add the gem). A new creature template (its name is server
    data), spawned in Uldaman. Odds (Ritz, 2026-09-25): "it's an uncommon
    Wrath gem, with a small chance to be a rare."
+   **Both NPCs at each of three titan places** (Ritz, 2026-09-25, of
+   Uldaman, Un'Goro Crater's Crystal Pylons and Tanaris's Gate of Uldum:
+   "these first three seem fine. I want both of them to be at each
+   location."): six spawns, the crystal trader and the cut teacher side by
+   side at each. Ulduar is out of reach (Northrend).
 8. **Where epic Wrath gems and their cuts come from** (Ritz, 2026-09-25:
    "the gems from the top Outland bosses, the recipes from every Outland
    boss. The gems should be 100% chance for 1 from Kael'Thas, 100% chance
@@ -280,6 +285,27 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
      shows for a cut. If the client blocks the button, the trigger has to
      come from somewhere else (a dialogue or chat command that starts the
      same server-side cut).
+   - Ritz, 2026-09-25: "so we'd essentially need to add the 'will not be
+     traded' section to the list of items in the inventory for the
+     crafter, but only for these gem recipe spells?" Yes, on the server:
+     for an epic cut, the reagent check also counts the other player's
+     "will not be traded" slot. The client's greyed button is the client's
+     own code, which basic can't change in its files; the AIO framework
+     (server-sent interface scripts; not in basic's module list today, and
+     each player installs its small client addon once) could add a "Cut
+     this gem" choice to the trade window that asks the server to cut.
+   - **What the trade window shows** (Ritz: "can we make it show the
+     correct text? Let's try to find out where that text string is
+     defined."): the server sends only the spell's id for that slot (the
+     trade update packet: "spell cast on lowest slot item", read in
+     `TradeHandler.cpp`). The words come from the client: its trade
+     window script asks for the slot's "enchantment" text, which the
+     client looks up from its own spell data by that id. A gem-cut spell
+     is named after its gem ("Bold Cardinal Ruby"), so if the client shows
+     the spell's name the text is already right. Not confirmed: the only
+     game client on this machine is Ascension's, which doesn't carry the
+     stock interface scripts. To see in the test; if it's wrong, an AIO
+     script can set the text.
 10. **+4 gems come from prospecting, pre-cut** (Ritz, 2026-09-25: "Could we
    add the +4 gems to the prospecting tables for the low level ores?
    Pre-cut, instead of the capital city vendor."): copper and tin
@@ -393,12 +419,12 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   customer's gem through the trade window (item 9, a source patch).
 - The teaching NPC: one cut per gem handed over (the gem is consumed), or
   does the gem only have to be shown?
-- Which titan places, and which NPC stands where?
-- Which titan places get a master jewelcrafter: Uldaman only (inside the
-  dungeon, or at its Badlands entrance), or also others such as the
-  Un'Goro pylons or Tanaris's Gate of Uldum?
-- The crystal-to-gem odds: an even chance over every uncut Wrath gem, or
-  mostly uncommon with a rare now and then?
+- (Answered 2026-09-25) Titan places: Uldaman, the Un'Goro pylons and the
+  Gate of Uldum, both NPCs at each.
+- Uldaman: inside the dungeon or at its Badlands entrance? Un'Goro: which
+  of the three pylons (northern, eastern, western)?
+- (Answered 2026-09-25) Crystal-to-gem odds: an uncommon Wrath gem, with a
+  small chance of a rare.
 - How Outland blues change for the Wrath gems: they already carry stock
   sockets (one to three, Burning Crusade sizes). Keep those and let Wrath
   gems fit them, or apply the blue rule (fewer fixed stats, one or two

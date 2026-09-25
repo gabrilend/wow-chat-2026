@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 11:24:47
+Generated on: 2026-09-25 11:26:36
 Models: claude-opus-5-5
 
 ## Contents
@@ -5528,6 +5528,54 @@ Two ways to get what you want, both needing a small server code patch:
 I'd pick the first. It reuses a mechanism the server already has, so it's a
 smaller, safer patch, and it feels natural: "bring your gem to the jewelcrafter
 and trade." Which do you want?
+
+--------------------------------------------------------------------------------
+
+### User Request 50
+
+> 2. Cutting in the "will not be traded" slot, as you described. The server
+> would teach the trade window a new trick: the jewelcrafter casts a cut on the
+> customer's uncut gem, and on
+>      accept the customer receives the cut gem, bound to them. That matches your idea exactly, but it touches more of the trade code.
+
+ideally if we could do that, I'd prefer it.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 50
+
+Recorded in the sockets issue and committed: cut epic gems bind on pickup too,
+and jewelcrafters cut a customer's gem through the trade window. It needs a
+server code patch. It would work like this:
+1. The customer puts the uncut epic gem in the "will not be traded" slot.
+2. The jewelcrafter casts the cut.
+3. The server holds the cut until both players accept, and gold can go either
+   way in the same trade.
+4. On accept, the server takes the uncut gem and gives the customer the cut gem,
+   bound to them.
+
+Two client-side unknowns to test before writing the patch:
+- **Will the Create button work?** The client checks recipe ingredients itself.
+  It may grey out the button when the uncut gem is in the customer's slot rather
+  than the jewelcrafter's bags. If it does, the cut has to start another way,
+  such as a dialogue option or a chat command that triggers the same server-side
+  cut.
+- **What will the trade window show?** It's built to display enchantments, not a
+  gem cut, so it might show nothing or something odd.
+
+Both can be tested in the same session as tomorrow's socket-bonus test.
+
+Next question: where do the two NPCs stand? One trades crystals for gems; the
+other teaches cuts. Titan places reachable in this client:
+1. **Uldaman:** inside the dungeon, or at its entrance in the Badlands (easier
+   to reach).
+2. **Un'Goro Crater:** the Crystal Pylons, titan machines in the open.
+3. **Tanaris:** the Gate of Uldum, a sealed titan doorway in the south.
+4. **Ulduar:** in Northrend, so basic characters can't get there.
+
+My suggestion: the crystal trader at Uldaman's Badlands entrance, and the cut
+teacher at the Gate of Uldum. That puts them at two titan sites far apart, so
+finding the second one is a small journey of its own.
 
 --------------------------------------------------------------------------------
 
