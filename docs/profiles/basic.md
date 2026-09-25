@@ -37,22 +37,26 @@ Design and build record: issue 155 and its sub-issues 155a–155f.
   Journeyman Riding (100% mount) at 60.
 - **Outland open at the cap.** The Dark Portal opens at 58, as in the stock
   game, so level-60 characters can quest there for strong gear.
-- **Outland dungeons are raid-hard.** In the nine Outland dungeons that
-  admit level 60, every creature is level 64, with health and damage to
-  match. The open world and its quests are stock. The loot is unchanged, so
-  dungeon blues are a reward for beating something hard, not an early
-  shortcut. Heroic modes are left stock (level 70, out of reach at 60).
+- **Outland dungeons are raid-hard, in a ladder.** Sixteen dungeons admit
+  level 60: the nine stock ones plus Old Hillsbrad, Black Morass, Shadow
+  Labyrinth, the three Tempest Keep dungeons and Magisters' Terrace (their
+  attunement quests removed). Each dungeon's creatures gain levels by that
+  dungeon's step, so end bosses climb from 66 (Hellfire Ramparts) to 76
+  (Magisters' Terrace), with Kael'thas at 78; health and damage follow the
+  level. Gear that drops there is wearable at 60. The open world and heroic
+  modes are stock for now. The full ladder, and how its loot compares with
+  the vanilla raids: `docs/profiles/basic-gear-ladder.html`.
 - **Level gaps stop hurting past three.** Hit and miss chances worsen with
-  level difference only up to 3 levels (source patch B005), so a level-64
-  dungeon plays like a 3-level gap, not 4.
+  level difference only up to 3 levels (source patch B005), and creatures
+  of level 64 and up never land crushing blows (B031).
 - **Slower movement (80%), heavier fall damage (10×).**
 - **Death knights allowed, with two limits.** An account needs a level-55
   character on the realm to create one, and no playerbot plays a death
   knight. A fuller design (creating a death knight consumes the level-55
   character; Acherus becomes an open leveling zone) is issue 718.
-- **Playerbots from 1 to 60.** Bots enter at level 1 and level up by
-  playing, across Eastern Kingdoms, Kalimdor and Outland; 128–256 are
-  online at once.
+- **No random bots.** The bot module's ambient population is switched off;
+  the only bots will be each player's own buddies (issue 617, not built
+  yet), so for now the world has no bots.
 - **No race intro cinematic** on first login.
 - **GM accounts log in with GM on**, as on vanilla.
 

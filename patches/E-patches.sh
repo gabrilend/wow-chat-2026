@@ -1474,10 +1474,11 @@ unpatch_E023_basic_starting_valley_rotation() {
 # -- }}}
 
 # -- {{{ patch_E024_basic_outland_dungeons_64
-# Every Outland dungeon a level-60 character can enter is level 64 inside on
-# basic (issue 155f); the open world, quests, loot and the (unreachable)
-# heroic modes are left stock. Same cp-apply /
-# cp-revert idiom and content-comparison idempotence as E022.
+# Basic's Outland dungeon ladder (issue 155f): sixteen dungeons open at 60,
+# each dungeon's creatures raised by its own level step (Kael'thas 78), two
+# attunements removed, their gear wearable at 60; the open world, quests and
+# the heroic modes are left stock. (Named for its first, flat-64 version.)
+# Same cp-apply / cp-revert idiom and content-comparison idempotence as E022.
 patch_E024_basic_outland_dungeons_64() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/09-outland-dungeons-64.sql"
     local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/09-outland-dungeons-64.apply.sql"

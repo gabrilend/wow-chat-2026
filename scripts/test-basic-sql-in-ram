@@ -127,7 +127,7 @@ apply_all() {
     step "E008 flight paths removed (vanilla's, shared)"  "${WORLD}" "${V}/db_world.src/03-remove-flight-paths.apply.sql"
     step "E020 riding levels (vanilla's, shared)"         "${WORLD}" "${V}/db_world.src/05-mount-level-requirements.apply.sql"
     step "E022 quests open to the whole faction"          "${WORLD}" "${B}/db_world.src/08-faction-quest-gating.apply.sql"
-    step "E024 Outland dungeons at level 64"              "${WORLD}" "${B}/db_world.src/09-outland-dungeons-64.apply.sql"
+    step "E024 Outland dungeons (level ladder, open at 60)" "${WORLD}" "${B}/db_world.src/09-outland-dungeons-64.apply.sql"
     step "E025 Visiting Mentors"                          "${WORLD}" "${B}/db_world.src/10-valley-universal-trainers.apply.sql"
     step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${V}/db_characters.src/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
@@ -139,9 +139,18 @@ revert_all() {
     step "E020 revert" "${WORLD}" "${V}/db_world.src/05-mount-level-requirements.revert.sql"
     step "E023 revert" "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.revert.sql"
 }
+# The tables basic's world SQL edits; after the revert they must checksum
+TOUCHED="creature_template, item_template, dungeon_access_template, dungeon_access_requirements, quest_template, creature, gossip_menu, npc_text"
+stock_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")
 echo "Apply:";          apply_all
 echo "Apply again (must be re-applicable):"; apply_all
 echo "Revert:";         revert_all
+reverted_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")
+if [[ "${stock_sum}" == "${reverted_sum}" ]]; then
+else
+    diff <(echo "${stock_sum}") <(echo "${reverted_sum}") | sed 's/^/      /'
+    FAILED=$((FAILED + 1))
+fi
 echo "Apply after revert:"; apply_all
 # }}}
 

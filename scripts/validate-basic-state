@@ -117,19 +117,34 @@ report "rotation table holds one row per faction with a valid state" \
         SELECT team, current_valley FROM ${CHARS}.basic_starting_valley_rotation WHERE current_valley NOT IN (0,1,2,3,255) OR count_in_batch > 30")"
 # }}}
 
-# {{{ 155f: Outland dungeons at level 64 (open world and heroic modes stock)
-report "the raised set is non-empty and every template in it is level 64" \
-    "$(run_sql "SELECT 'empty backup', COUNT(*) FROM ${WORLD}.basic_155f_level_backup HAVING COUNT(*) = 0
-        UNION ALL SELECT t.entry, CONCAT(t.name, ' ', t.minlevel, '-', t.maxlevel) FROM ${WORLD}.creature_template t
-        JOIN ${WORLD}.basic_155f_level_backup b ON b.entry = t.entry WHERE t.minlevel <> 64 OR t.maxlevel <> 64 LIMIT 10")"
+# {{{ 155f: Outland dungeons, each creature its stock level + its dungeon's offset
+# (open world and heroic modes stock; Kael'thas 78). The offsets are the ones
+# the apply recorded in basic_155f_templates, per dungeon in basic_155f_maps.
+report "the raised set is non-empty and every template is its original level + its offset" \
+    "$(run_sql "SELECT 'empty set', COUNT(*) FROM ${WORLD}.basic_155f_templates HAVING COUNT(*) = 0
+        UNION ALL SELECT t.entry, CONCAT(t.name, ' ', t.minlevel, '-', t.maxlevel, ' want ', b.minlevel + s.level_offset, '-', b.maxlevel + s.level_offset)
+        FROM ${WORLD}.creature_template t JOIN ${WORLD}.basic_155f_level_backup b ON b.entry = t.entry
+        JOIN ${WORLD}.basic_155f_templates s ON s.entry = t.entry
+        WHERE t.minlevel <> b.minlevel + s.level_offset OR t.maxlevel <> b.maxlevel + s.level_offset LIMIT 10")"
 report "no template spawned only in those dungeons was missed" \
     "$(run_sql "SELECT DISTINCT c.id, t.name, t.minlevel FROM ${WORLD}.creature c JOIN ${WORLD}.creature_template t ON t.entry = c.id
-        WHERE c.map IN (SELECT map_id FROM ${WORLD}.basic_155f_maps) AND t.minlevel <> 64
+        WHERE c.map IN (SELECT map_id FROM ${WORLD}.basic_155f_maps)
+          AND c.id NOT IN (SELECT entry FROM ${WORLD}.basic_155f_templates)
           AND c.id NOT IN (SELECT c2.id FROM ${WORLD}.creature c2 WHERE c2.map NOT IN (SELECT map_id FROM ${WORLD}.basic_155f_maps))
         LIMIT 10")"
+report "Kael'thas (Magisters' Terrace) is level 78" \
+    "$(run_sql "SELECT entry, minlevel FROM ${WORLD}.creature_template WHERE entry = 24664 AND (minlevel <> 78 OR maxlevel <> 78)")"
 report "dungeon gear that required more than 60 now requires 60" \
     "$(run_sql "SELECT i.entry, i.name, i.RequiredLevel FROM ${WORLD}.item_template i
         JOIN ${WORLD}.basic_155f_item_backup b ON b.entry = i.entry WHERE i.RequiredLevel <> 60 LIMIT 10")"
+report "every one of those dungeons opens at 60 (normal mode)" \
+    "$(run_sql "SELECT m.map_id, a.min_level FROM ${WORLD}.basic_155f_maps m
+        LEFT JOIN ${WORLD}.dungeon_access_template a ON a.map_id = m.map_id AND a.difficulty = 0
+        WHERE a.min_level IS NULL OR a.min_level > 60")"
+report "no normal-mode attunement left on them" \
+    "$(run_sql "SELECT a.map_id, r.requirement_type, r.requirement_id FROM ${WORLD}.dungeon_access_requirements r
+        JOIN ${WORLD}.dungeon_access_template a ON a.id = r.dungeon_access_id
+        WHERE a.difficulty = 0 AND a.map_id IN (SELECT map_id FROM ${WORLD}.basic_155f_maps)")"
 report "heroic mode left stock (entry still level 70)" \
     "$(run_sql "SELECT a.map_id, a.min_level FROM ${WORLD}.dungeon_access_template a WHERE a.difficulty = 1 AND a.map_id IN (SELECT map_id FROM ${WORLD}.basic_155f_maps) AND a.min_level <> 70")"
 # }}}

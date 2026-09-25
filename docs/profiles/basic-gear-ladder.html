@@ -249,6 +249,27 @@ function draw(){
         }
         return best;
       };
+      // slide toward the bar's centre in straight legs, 4 px at a time, while the spot stays clear and gets
+      // closer: the axis with the larger remaining distance goes first, then the other, repeated until stuck.
+      const slide = (px, py, path) => {
+        let moved = true;
+        while(moved){
+          moved = false;
+          const dxAbs = Math.abs(cx-(px+tw/2)), dyAbs = Math.abs(cyy-(py+th/2));
+          for(const axis of (dxAbs >= dyAbs ? ["x","y"] : ["y","x"])){
+            let stepped = false;
+            for(;;){
+              const sx = axis==="x" ? Math.sign(cx-(px+tw/2))*4 : 0, sy = axis==="y" ? Math.sign(cyy-(py+th/2))*4 : 0;
+              if(!sx && !sy) break;
+              const nx = px+sx, ny = py+sy;
+              if(!clear(nx,ny) || dist(nx,ny) >= dist(px,py)) break;
+              px = nx; py = ny; stepped = true;
+            }
+            if(stepped){ path.push({lx:px, ly:py}); moved = true; }
+          }
+        }
+        return {lx:px, ly:py};
+      };
       // Fresh start (first row selected, a new colour group, or after the pointer left the chart): the tooltip
       // appears at the pointer, then moves to the clear spot nearest the pointer in the corner facing away from the bar.
       if(!lastTip || lastGroup !== r.g){
@@ -265,29 +286,17 @@ function draw(){
         }
         if(!spot) spot = nearestClear(dist) || {lx:Math.min(Math.max(mx+gap,0),maxX), ly:Math.min(Math.max(my+gap,0),maxY)};
         const from = {lx:Math.min(Math.max(mx,0),maxX), ly:Math.min(Math.max(my,0),maxY)};
-        lastTip = {lx:spot.lx, ly:spot.ly}; lastGroup = r.g;
-        animateTip([from, {lx:spot.lx, ly:from.ly}, {lx:spot.lx, ly:spot.ly}]);
+        const fpath = [from, {lx:spot.lx, ly:from.ly}, {lx:spot.lx, ly:spot.ly}];
+        const fend = slide(spot.lx, spot.ly, fpath);
+        lastTip = fend; lastGroup = r.g;
+        animateTip(fpath);
         return;
       }
       let start = nearestClear((lx,ly) => Math.hypot(lx-lastTip.lx, ly-lastTip.ly));
       if(!start) start = {lx:Math.min(Math.max(cx+12,0),maxX), ly:Math.min(Math.max(cyy+12,0),maxY)};
-      // slide: x first, then y, repeated, 4 px at a time, while clear and closer to the bar
       const path = [{lx:start.lx, ly:start.ly}];
-      let px = start.lx, py = start.ly, moved = true;
-      while(moved){
-        moved = false;
-        for(const axis of ["x","y"]){
-          let stepped = false;
-          for(;;){
-            const sx = axis==="x" ? Math.sign(cx-(px+tw/2))*4 : 0, sy = axis==="y" ? Math.sign(cyy-(py+th/2))*4 : 0;
-            if(!sx && !sy) break;
-            const nx = px+sx, ny = py+sy;
-            if(!clear(nx,ny) || dist(nx,ny) >= dist(px,py)) break;
-            px = nx; py = ny; stepped = true;
-          }
-          if(stepped){ path.push({lx:px, ly:py}); moved = true; }
-        }
-      }
+      const end = slide(start.lx, start.ly, path);
+      const px = end.lx, py = end.ly;
       lastTip = {lx:px, ly:py}; lastGroup = r.g;
       animateTip(path);
     };

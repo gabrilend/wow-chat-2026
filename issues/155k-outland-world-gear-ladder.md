@@ -167,6 +167,22 @@ on all of it are ~1.6× stronger at level 60 (see 155f).
 
 ## Open Questions
 
+- **Gem sockets and socket bonuses** when item stats are scaled. Ritz,
+  2026-09-24: "Gem sockets and socket bonuses I think require an MPQ edit
+  which is a client-side thing that we can't touch." Read in the server
+  (2026-09-24): half of it is server data. An item's sockets (how many,
+  which colours) and *which* bonus it has are fields of the item's
+  database row, sent to the client in the item query (ItemHandler.cpp: the
+  reply writes each socket's colour and the `socketBonus` id). What a bonus
+  *gives* ("+4 Stamina") and what a gem gives live in the client's
+  enchantment tables (SpellItemEnchantment.dbc, GemProperties.dbc), which
+  would need a client patch. So the scaler can keep sockets as they are,
+  remove them, or swap a bonus for another existing, smaller one, without
+  touching the client; only changing a bonus's or gem's own numbers needs
+  the client. Proposal: leave sockets and bonuses as they are (gems are
+  crafted by Jewelcrafting, capped at 300 on basic, so Outland gems come
+  only from drops). Agreed?
+
 - (Answered 2026-09-24) The Isle of Quel'Danas gets **+6** (75–77), the
   top of the open world, just under Kael'thas (78): "It gets +4. In-fact
   since it's the highest level zone, maybe we give them +5 or +6." / "+6".
