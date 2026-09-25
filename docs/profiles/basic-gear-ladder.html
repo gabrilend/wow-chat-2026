@@ -152,6 +152,7 @@ const rng = (a,b) => a===b ? `${a}` : `${a}–${b}`;
 
 let mode = "eq", view = "proposed";
 let lastTip = null;   // where the last tooltip came to rest (container pixels), so the next one starts near it
+let lastGroup = null; // colour group (0 blue, 1 orange, 2 green) of that tooltip; a different group starts fresh
 let tipAnim = 0;      // animation token: a newer path cancels an older one
 const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 // move the tooltip along a path of corner points: first point at once, then each leg in a straight line
@@ -222,7 +223,7 @@ function draw(){
     el("rect",{class:"bar",x:x0,y:cy-5,width:w,height:10,rx:4,fill:colors[r.g],"fill-opacity":r.q===2?.55:1},g);
     bars.push({x:x0,y:cy-5,w:w,h:10});
     const lv = el("text",{x:W-4,y:cy+4,"text-anchor":"end",class:"lvl"},g); lv.textContent = r.lv;
-    const place = () => {
+    const place = (ev) => {
       // The tooltip starts at the clear spot nearest where the last tooltip was (or, the first time, nearest the
       // selected bar), then slides toward the selected bar's centre: along x, then along y, repeating, one step at a
       // time while the spot stays clear and gets closer. The result is a straight or L-shaped path that keeps the
@@ -248,7 +249,27 @@ function draw(){
         }
         return best;
       };
-      let start = lastTip ? nearestClear((lx,ly) => Math.hypot(lx-lastTip.lx, ly-lastTip.ly)) : nearestClear(dist);
+      // Fresh start (first row selected, a new colour group, or after the pointer left the chart): the tooltip
+      // appears at the pointer, then moves to the clear spot nearest the pointer in the corner facing away from the bar.
+      if(!lastTip || lastGroup !== r.g){
+        const mx = ev && ev.clientX!=null ? ev.clientX-bb.left+box.scrollLeft : cx;
+        const my = ev && ev.clientY!=null ? ev.clientY-bb.top : cyy;
+        const sx = mx >= cx ? 1 : -1, sy = my >= cyy ? 1 : -1, gap = 12;
+        const inCorner = (lx,ly) => (sx > 0 ? lx >= mx+gap : lx+tw <= mx-gap) && (sy > 0 ? ly >= my+gap : ly+th <= my-gap);
+        let spot = null;
+        for(let ly = 0; ly <= maxY; ly += 6) for(let lx = 0; lx <= maxX; lx += 8){
+          if(!inCorner(lx,ly)) continue;
+          const d = Math.hypot(lx-mx, ly-my);
+          if(spot && d >= spot.d) continue;
+          if(clear(lx,ly)) spot = {lx,ly,d};
+        }
+        if(!spot) spot = nearestClear(dist) || {lx:Math.min(Math.max(mx+gap,0),maxX), ly:Math.min(Math.max(my+gap,0),maxY)};
+        const from = {lx:Math.min(Math.max(mx,0),maxX), ly:Math.min(Math.max(my,0),maxY)};
+        lastTip = {lx:spot.lx, ly:spot.ly}; lastGroup = r.g;
+        animateTip([from, {lx:spot.lx, ly:from.ly}, {lx:spot.lx, ly:spot.ly}]);
+        return;
+      }
+      let start = nearestClear((lx,ly) => Math.hypot(lx-lastTip.lx, ly-lastTip.ly));
       if(!start) start = {lx:Math.min(Math.max(cx+12,0),maxX), ly:Math.min(Math.max(cyy+12,0),maxY)};
       // slide: x first, then y, repeated, 4 px at a time, while clear and closer to the bar
       const path = [{lx:start.lx, ly:start.ly}];
@@ -267,7 +288,7 @@ function draw(){
           if(stepped){ path.push({lx:px, ly:py}); moved = true; }
         }
       }
-      lastTip = {lx:px, ly:py};
+      lastTip = {lx:px, ly:py}; lastGroup = r.g;
       animateTip(path);
     };
     const show = ev => {
@@ -281,7 +302,7 @@ function draw(){
       if(r.s) h += `<br><i>Stock, the dashed outline: item level ${rng(r.s.lo,r.s.hi)} (≈ epic ${rng(fmt(eq(r.s.lo,r.q)),fmt(eq(r.s.hi,r.q)))}), creature level ${r.s.lv}</i>`;
       if(r.only==="proposed") h += `<br><i>new on basic</i>`;
       tip.innerHTML = h; tip.hidden = false;
-      place();
+      place(ev);
     };
     const hide = () => { for(const e of [band,hband,eL.g,eR.g]) e.setAttribute("visibility","hidden"); for(const t of [lab,lv]){ t.style.fontWeight = ""; t.style.fontStyle = ""; t.style.fill = ""; } tip.hidden = true; };
     g.addEventListener("mouseenter",show); g.addEventListener("focus",show);
@@ -297,6 +318,7 @@ function table(){
 const press = (id,on) => document.getElementById(id).setAttribute("aria-pressed",on);
 const setMode = m => { mode=m; press("mode-eq",m==="eq"); press("mode-raw",m==="raw"); try{localStorage.setItem("ladder-mode",m)}catch(e){} draw(); };
 const setView = v => { view=v; press("view-prop",v==="proposed"); press("view-stock",v==="stock"); try{localStorage.setItem("ladder-view",v)}catch(e){} draw(); };
+box.addEventListener("mouseleave", () => { lastTip = null; lastGroup = null; });
 document.getElementById("mode-eq").onclick = () => setMode("eq");
 document.getElementById("mode-raw").onclick = () => setMode("raw");
 document.getElementById("view-prop").onclick = () => setView("proposed");
