@@ -5,15 +5,18 @@
   --bg:#f6f5f1; --surface:#fcfcfb; --ink:#17160f; --ink-2:#55534a; --ink-3:#8a877b;
   --rule:#e3e1d8; --grid:#ecebe4; --band:rgba(42,120,214,.10); --band-edge:rgba(42,120,214,.45);
   --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --tip:#17160f; --tip-ink:#f6f5f1;
+  --q2:#1f8a00; --q3:#0b5fc4; --q4:#8a2bd6;   /* item quality: uncommon, rare, epic */
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   color-scheme:dark; --bg:#131311; --surface:#1a1a19; --ink:#f3f2ec; --ink-2:#c3c2b7; --ink-3:#8f8d82;
   --rule:#2c2b27; --grid:#24231f; --band:rgba(57,135,229,.16); --band-edge:rgba(57,135,229,.6);
-  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --tip:#f3f2ec; --tip-ink:#131311; } }
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --tip:#f3f2ec; --tip-ink:#131311;
+  --q2:#3fcf2b; --q3:#4a95ff; --q4:#b77bff; } }
 :root[data-theme="dark"]{
   color-scheme:dark; --bg:#131311; --surface:#1a1a19; --ink:#f3f2ec; --ink-2:#c3c2b7; --ink-3:#8f8d82;
   --rule:#2c2b27; --grid:#24231f; --band:rgba(57,135,229,.16); --band-edge:rgba(57,135,229,.6);
-  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --tip:#f3f2ec; --tip-ink:#131311; }
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --tip:#f3f2ec; --tip-ink:#131311;
+  --q2:#3fcf2b; --q3:#4a95ff; --q4:#b77bff; }
 body{background:var(--bg);color:var(--ink);font:15px/1.55 "IBM Plex Sans",system-ui,sans-serif;padding-inline:16px;padding-block:28px 48px}
 .wrap{max-width:1080px;margin:0 auto;display:grid;gap:22px}
 h1{font:600 clamp(28px,4vw,40px)/1.1 "Cormorant SC",Georgia,serif;margin:0;letter-spacing:.02em;text-wrap:balance}
@@ -67,6 +70,7 @@ th{color:var(--ink-3);font-weight:500}
       <span><i style="background:var(--s2)"></i>Outland dungeons</span>
       <span><i style="background:var(--s3)"></i>Outland open world &amp; world bosses</span>
       <span><i style="background:none;border:1.5px dashed var(--ink-3)"></i>stock range (proposed view)</span>
+      <span>names: <b style="color:var(--q2)">green</b> · <b style="color:var(--q3)">blue</b> · <b style="color:var(--q4)">epic</b> gear</span>
     </div>
   </div>
 
@@ -124,7 +128,7 @@ const ROWS = [
   {g:1,n:"Arcatraz",q:3,lo:115,hi:115,lv:"74–76",p:{lo:112,hi:112,lv:"72–75"}},
   {g:1,n:"Magisters' Terrace",q:3,lo:115,hi:115,lv:"74–76",p:{lo:113,hi:113,lv:"73–76"}},
   {g:1,n:"Kael'thas epics, Magisters' Terrace",q:4,lo:110,hi:110,lv:"76",p:{lo:100,hi:100,lv:"78"}},
-  {g:1,n:"Rare trash epics (all dungeons)",q:4,lo:100,hi:100,lv:"63–76"},
+  {g:1,n:"Rare trash epics (upper dungeons)",q:4,lo:100,hi:100,lv:"67–71",p:{lv:"67–76"}},
   {g:2,n:"Hellfire Peninsula greens",q:2,lo:84,hi:92,lv:"59–62",p:{lo:74,hi:84,lv:"63–66"}},
   {g:2,n:"Zangarmarsh greens",q:2,lo:92,hi:95,lv:"62–63",p:{lo:84,hi:88,lv:"66–67"}},
   {g:2,n:"Terokkar Forest greens",q:2,lo:95,hi:104,lv:"64–67",p:{lo:88,hi:98,lv:"68–71"}},
@@ -221,7 +225,8 @@ function draw(){
     const cy = o.y+ROW/2;
     const g = el("g",{tabindex:0,role:"img","aria-label":`${r.n}: ${QN[r.q]} item level ${rng(r.lo,r.hi)}, about epic ${rng(fmt(eq(r.lo,r.q)),fmt(eq(r.hi,r.q)))}, creature level ${r.lv}`});
     el("rect",{x:0,y:o.y,width:W-R+8,height:ROW,fill:"transparent"},g);
-    const lab = el("text",{x:L-10,y:cy+4,"text-anchor":"end"},g); lab.textContent = (r.s || r.only==="proposed") && view==="proposed" ? r.n+" •" : r.n;
+    // the row's name wears the colour of the gear quality it stands for (green / blue / purple)
+    const lab = el("text",{x:L-10,y:cy+4,"text-anchor":"end",style:`fill:var(--q${r.q})`},g); lab.textContent = (r.s || r.only==="proposed") && view==="proposed" ? r.n+" •" : r.n;
     if(r.s){ // ghost of the stock range behind a changed row
       const sa = val(r.s.lo,r.q), sb = val(r.s.hi,r.q), sw = Math.max(x(sb)-x(sa),8), sx = x(sa)-(sb===sa?4:0);
       el("rect",{x:sx,y:cy-5,width:sw,height:10,rx:4,fill:"none",stroke:colors[r.g],"stroke-width":1.5,"stroke-dasharray":"3 2","stroke-opacity":.7},g);
@@ -232,7 +237,11 @@ function draw(){
     bars.push({x:x0,y:cy-5,w:w,h:10});
     // the creature-level column: its own hover target, outside the row, that spotlights every row whose levels overlap
     const lvg = el("g",{});
-    el("rect",{x:W-R+8,y:o.y,width:R-8,height:ROW,fill:"transparent"},lvg);
+    // hover zone runs from this row down to the next row (across a group heading too), so the column has no gaps
+    const nextRow = rows.slice(rows.indexOf(o)+1).find(q => !q.head);
+    // 1 unit of overlap with the next zone: scaled SVG edges land between pixels, and without the overlap
+    // a one-pixel seam can fall between two zones
+    el("rect",{x:W-R+8,y:o.y,width:R-8,height:(nextRow ? nextRow.y-o.y : ROW)+1,fill:"transparent"},lvg);
     const lv = el("text",{x:W-4,y:cy+4,"text-anchor":"end",class:"lvl"},lvg); lv.textContent = r.lv;
     const myLv = parseLv(r.lv);
     rowInfo.push({g, lvText:lv, a, b, lvRange:myLv});
@@ -322,17 +331,20 @@ function draw(){
     const show = ev => {
       band.setAttribute("x",x0); band.setAttribute("width",w); band.setAttribute("visibility","visible");
       hband.setAttribute("y",o.y); hband.setAttribute("visibility","visible");
-      for(const t of [lab,lv]){ t.style.fontWeight = "700"; t.style.fontStyle = "italic"; t.style.fill = "var(--ink)"; }
+      for(const t of [lab,lv]){ t.style.fontWeight = "700"; t.style.fontStyle = "italic"; }
+      lv.style.fill = "var(--ink)";
       putEdge(eL, x0, fmt(a)); if(b!==a) putEdge(eR, x0+w, fmt(b)); else eR.g.setAttribute("visibility","hidden");
+      // an axis number within 2 of either edge value would sit under its label: hide it while this row is selected
+      ticks.forEach(k => { k.t.style.visibility = (Math.abs(k.v - a) <= 2 || Math.abs(k.v - b) <= 2) ? "hidden" : ""; });
       const e1=fmt(eq(r.lo,r.q)), e2=fmt(eq(r.hi,r.q));
       const tag = view==="proposed" && (r.s || r.only==="proposed") ? "Proposed: " : "";
-      let h = `<b>${r.n}</b><br>${tag}${QN[r.q]}, item level ${rng(r.lo,r.hi)} (≈ epic ${rng(e1,e2)}), creature level ${r.lv}`;
-      if(r.s) h += `<br><i>Stock, the dashed outline: item level ${rng(r.s.lo,r.s.hi)} (≈ epic ${rng(fmt(eq(r.s.lo,r.q)),fmt(eq(r.s.hi,r.q)))}), creature level ${r.s.lv}</i>`;
+      let h = `<b>${r.n}</b>${tag ? "<br>"+tag.replace(": ","") : ""}<br>Item level ${rng(r.lo,r.hi)}<br>≈ epic item level ${rng(e1,e2)}`;
+      if(r.s) h += `<br><i>Stock (dashed outline): item level ${rng(r.s.lo,r.s.hi)}, ≈ epic ${rng(fmt(eq(r.s.lo,r.q)),fmt(eq(r.s.hi,r.q)))}</i>`;
       if(r.only==="proposed") h += `<br><i>new on basic</i>`;
       tip.innerHTML = h; tip.hidden = false;
       place(ev);
     };
-    const hide = () => { for(const e of [band,hband,eL.g,eR.g]) e.setAttribute("visibility","hidden"); for(const t of [lab,lv]){ t.style.fontWeight = ""; t.style.fontStyle = ""; t.style.fill = ""; } tip.hidden = true; };
+    const hide = () => { for(const e of [band,hband,eL.g,eR.g]) e.setAttribute("visibility","hidden"); for(const t of [lab,lv]){ t.style.fontWeight = ""; t.style.fontStyle = ""; } lv.style.fill = ""; ticks.forEach(k => k.t.style.visibility = ""); tip.hidden = true; };
     g.addEventListener("mouseenter",show); g.addEventListener("focus",show);
     g.addEventListener("mouseleave",hide); g.addEventListener("blur",hide);
   });
@@ -341,7 +353,7 @@ function draw(){
   // number, hides the axis number nearest it, and spotlights every row whose range contains that number
   const vline = el("line",{x1:0,x2:0,y1:TOP-6,y2:H-20,stroke:"var(--band-edge)","stroke-width":1.5,visibility:"hidden"});
   const vLabel = edgeLabel();
-  const axisHit = el("rect",{x:L-6,y:H-24,width:W-R-L+12,height:24,fill:"transparent",style:"cursor:crosshair"});
+  const axisHit = el("rect",{x:L-6,y:H-24,width:W-R-L+12,height:24,fill:"transparent",style:"cursor:none"});
   const axisOff = () => { vline.setAttribute("visibility","hidden"); vLabel.g.setAttribute("visibility","hidden"); ticks.forEach(k => k.t.style.visibility = ""); unspotlight(); };
   axisHit.addEventListener("mousemove", ev => {
     const sb = svg.getBoundingClientRect();

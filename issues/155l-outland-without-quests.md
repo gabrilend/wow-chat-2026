@@ -41,6 +41,41 @@ anyway."
 
 ## Current Behavior
 
+**Built 2026-09-24** (the flights not yet tried in game):
+
+- **Quests**: install step E028,
+  `sql/basic/db_world.src/13-outland-without-quests.apply.sql` (+ revert),
+  disables every quest filed under an Outland area (its zones, Shattrath,
+  the Isle, every place inside them, every Outland instance and Magisters'
+  Terrace: 379 area ids, generated from AreaTable.dbc by
+  `scripts/generate-basic-outland-quests-sql`), and every quest started or
+  ended by a creature or object standing in Outland or those instances. It
+  uses the server's `disables` table (quest type), so givers stay and the
+  quests are simply unavailable; the rows it added are recorded
+  (`basic_155l_disabled`) and the revert deletes exactly those. Quest items
+  stay in loot.
+- **Shattrath portal to the Isle** (gameobject 187056) removed, saved for
+  the revert.
+- **Flights**: `src/lua-basic/outland-flights.lua` (Lua engine) gives seven
+  former flight masters one dialogue line each that starts a fixed flight:
+  the Dark Portal's Amish Wildhammer to Honor Hold and Vlagga Freyfeather to
+  Thrallmar, and back from Krill Bitterhue (Honor Hold) and Barley
+  (Thrallmar); Light's Hope Chapel's Khaelyn Steelwing (Alliance) and
+  Georgia (Horde) to the Isle, and back from Ohura on the Isle (by the
+  player's faction). The routes' waypoints are the client's own
+  (`scripts/generate-basic-outland-flights` copies them from
+  TaxiPathNode.dbc into `src/lua-basic/data/outland-flight-paths.lua`); the
+  Horde's Isle route joins the client's two legs via Zul'Aman into one
+  flight. Paths are built at startup (free), with the gryphon or wind rider
+  by faction. The dialogue keeps each master's flavor text (from E008).
+- Tested: `scripts/test-basic-sql-in-ram` (apply, re-apply, revert with the
+  exact checksum including `disables`, apply);
+  `scripts/validate-basic-state` checks no enabled quest is given or taken in
+  Outland and the portal is gone. The Lua files pass a load check; the
+  flights themselves need a running server.
+
+Stock numbers, for reference:
+
 - **Quests**: stock. About 1,200 quests are filed under Outland's zones
   (by the quest's zone field: Hellfire Peninsula 243, Shadowmoon Valley
   199, Netherstorm 163, Blade's Edge 158, Terokkar Forest 139, Nagrand 138,

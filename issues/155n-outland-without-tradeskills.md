@@ -36,7 +36,39 @@ Answers, verbatim, 2026-09-24:
 
 ## Current Behavior
 
-Stock. Read from the world database, 2026-09-24 (Outland part of its map:
+**Built 2026-09-24** as install step E027,
+`sql/basic/db_world.src/12-outland-without-tradeskills.apply.sql` (+ revert),
+with its client-data lists written by
+`scripts/generate-basic-outland-tradeskills-sql` (herb and ore locks from
+Lock.dbc: 83; named areas inside Outland's zones, Shattrath and the Isle
+from AreaTable.dbc: 348; Master and Grand Master rank spells from Spell.dbc
+by name: 46). "Outland" by position: map 530 with y > -2000 (north of the
+elf and draenei isles) or x > 11350 (the Isle), plus the Outland instance
+maps and Magisters' Terrace. What it does, each removal saved first:
+
+1. herb and ore spawns (by lock) and fishing pools there are removed, with
+   their addon, event and pool rows;
+2. gas clouds (Swamp Gas, Felmist, Arcane Vortex, Windy Cloud) there are
+   removed;
+3. pools left with no member are removed (two passes, for a mother pool
+   emptied by its children), because the server reports an empty pool as
+   broken;
+4. templates spawned only in Outland lose their skinning loot, and so do the
+   gas clouds;
+5. every Outland zone (and Shattrath, the Isle) needs fishing skill 300,
+   rows added where a zone had none; fishing loot filed under a sub-area is
+   removed, so the zone's own loot applies there;
+6. trainer rows needing more than 300 in any profession, and every Master /
+   Grand Master rank, are removed;
+7. recipes needing more than 300 are removed from every loot table and
+   every vendor.
+
+The revert re-inserts every saved row and restores skinning and fishing
+skill. Tested in `scripts/test-basic-sql-in-ram` with the exact-revert
+checksum over the tables it touches; `scripts/validate-basic-state` checks
+the seven results.
+
+Stock numbers, for reference. Read from the world database, 2026-09-24 (Outland part of its map:
 everything north of the elf and draenei isles, plus the Isle of
 Quel'Danas):
 

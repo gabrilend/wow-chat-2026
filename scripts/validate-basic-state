@@ -156,6 +156,39 @@ report "the creature multiplier table exists with its six value columns" \
           AND column_name IN ('entry','map_id','melee','spell','heal','health') HAVING COUNT(*) <> 6")"
 # }}}
 
+# {{{ 155n: Outland without tradeskills
+OUTLAND_POS="((g.map = 530 AND (g.position_y > -2000 OR g.position_x > 11350)) OR g.map IN (540,542,543,544,545,546,547,548,550,552,553,554,555,556,557,558,564,565,585))"
+report "no herb, ore or fishing-pool spawn left in Outland" \
+    "$(run_sql "SELECT g.guid, g.id FROM ${WORLD}.gameobject g JOIN ${WORLD}.gameobject_template t ON t.entry = g.id
+        WHERE ${OUTLAND_POS} AND (t.type = 25 OR g.id IN (SELECT DISTINCT id FROM ${WORLD}.basic_155n_gameobject)) LIMIT 10")"
+report "no gas cloud left in Outland" \
+    "$(run_sql "SELECT g.guid, g.id FROM ${WORLD}.creature g WHERE g.id IN (17378,17407,17408,24222) AND ${OUTLAND_POS} LIMIT 10")"
+report "no pool still lists a removed spawn" \
+    "$(run_sql "SELECT p.guid FROM ${WORLD}.pool_gameobject p JOIN ${WORLD}.basic_155n_gameobject b ON b.guid = p.guid
+        UNION ALL SELECT p.guid FROM ${WORLD}.pool_creature p JOIN ${WORLD}.basic_155n_creature b ON b.guid = p.guid LIMIT 10")"
+report "every Outland zone needs fishing skill 300" \
+    "$(run_sql "SELECT z.entry, f.skill FROM ${WORLD}.basic_155n_fishing_skill z LEFT JOIN ${WORLD}.skill_fishing_base_level f ON f.entry = z.entry
+        WHERE f.skill IS NULL OR f.skill <> 300")"
+report "no trainer teaches a profession past 300" \
+    "$(run_sql "SELECT ts.TrainerId, ts.SpellId, ts.ReqSkillRank FROM ${WORLD}.trainer_spell ts
+        WHERE (ts.ReqSkillLine IN (164,165,171,182,186,197,202,333,393,755,773,185,129,356) AND ts.ReqSkillRank > 300)
+           OR (ts.TrainerId, ts.SpellId) IN (SELECT TrainerId, SpellId FROM ${WORLD}.basic_155n_trainer_spell) LIMIT 10")"
+report "no recipe past 300 sold or dropped directly" \
+    "$(run_sql "SELECT 'vendor', v.item FROM ${WORLD}.npc_vendor v JOIN ${WORLD}.item_template i ON i.entry = v.item
+        WHERE i.class = 9 AND i.RequiredSkillRank > 300 AND i.RequiredSkill IN (164,165,171,182,186,197,202,333,393,755,773,185,129,356)
+        UNION ALL SELECT 'loot', l.Item FROM ${WORLD}.creature_loot_template l JOIN ${WORLD}.item_template i ON i.entry = l.Item
+        WHERE l.Reference = 0 AND i.class = 9 AND i.RequiredSkillRank > 300 AND i.RequiredSkill IN (164,165,171,182,186,197,202,333,393,755,773,185,129,356) LIMIT 10")"
+# }}}
+
+# {{{ 155l: Outland without quests
+report "no enabled quest is given or taken in Outland" \
+    "$(run_sql "SELECT s.quest, c.id FROM ${WORLD}.creature_queststarter s JOIN ${WORLD}.creature c ON c.id = s.id
+        WHERE ((c.map = 530 AND (c.position_y > -2000 OR c.position_x > 11350)) OR c.map IN (540,542,543,544,545,546,547,548,550,552,553,554,555,556,557,558,564,565,585))
+          AND NOT EXISTS (SELECT 1 FROM ${WORLD}.disables d WHERE d.sourceType = 1 AND d.entry = s.quest) LIMIT 10")"
+report "the Shattrath portal to the Isle of Quel'Danas is gone" \
+    "$(run_sql "SELECT guid FROM ${WORLD}.gameobject WHERE id = 187056")"
+# }}}
+
 echo ""
 if [[ "${FAIL_COUNT}" -eq 0 ]]; then
     echo "All checks passed."
