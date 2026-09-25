@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 10:37:28
+Generated on: 2026-09-25 10:44:36
 Models: claude-opus-5-5
 
 ## Contents
@@ -4909,6 +4909,97 @@ Jewelcrafting 350–450, and professions stop at 300 on basic. The options:
    crystal trade gives cut gems too.
 
 I lean towards option 1. Which do you want?
+
+--------------------------------------------------------------------------------
+
+### User Request 38
+
+<pasted_content id="8773">
+> Wrath gem sizes (one stat): uncommon +12, rare +16, epic +20. After the
+> rescale, a big-slot Outland blue carries roughly 35–55 stats, so one +12 gem
+> is about a quarter of it. For
+> comparison, stock Burning Crusade blues put about 24 of their ~65 stats into
+> three +8 sockets. Uncommon and rare fit well. Epic fits only the very top
+> (Kael'thas, world bosses), if
+  anywhere.
+</pasted_content id="8773">
+
+
+Got it, so we'll need to make the epic WotLK gems be BoP (tradable within 2
+hours if you were there).
+
+I have an idea. Could we add the +4 gems to the prospecting tables for the low
+level ores? Pre-cut, instead of the capital city vendor.
+
+
+
+<pasted_content id="8773">
+> The "shard" is a Nexus Crystal. Disenchanting an Azeroth epic almost always
+> gives a Nexus Crystal. About 900 epics at item level 56+ give one; only a
+> handful of lower epics give
+> shards instead. So the master jewelcrafter takes a Nexus Crystal and hands
+> back a random uncut Wrath gem. That works as a small Lua dialogue, and the
+> jewelcrafter is a new creature
+>   we can name freely and place in Uldaman.
+</pasted_content id="8773">
+
+
+let's say it's an uncommon Wrath gem, with a small chance to be a rare.
+
+Can the wrath recipes be learned from... recipes that drop? Is that only for
+epics maybe? If so, then we can have the recipe drop from a source one "tier"
+below the source of the gems. Rarely, of course. If they're trainer only, then
+maybe we can teach them as a quest reward for turning in one of the gems that
+they need for the recipe? And the quest giver can be in rare places related to
+titans like Uldaman or something. What do you think?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 38
+
+> Checking how the Wrath gem cuts are learned in the stock game.
+
+Both ideas work. The stock data splits cleanly between them:
+
+| Wrath cuts | How learned in the stock game |
+|---|---|
+| Uncommon (75) | 58 from trainers only; 17 from a sold "Design:" recipe item |
+| Rare (94) | 87 from Design items (56 sold, 25 dropped); 7 from trainers |
+| Epic (91) | all from Design items, sold for tokens |
+
+**Designs that drop:** nearly every rare and epic cut already has a recipe item,
+so your "one tier below, rarely" rule needs only loot-table rows. Each recipe's
+required skill is server data, so all of them can be learnable at 300.
+
+**Trainer-only cuts:** a quest works, but one quest can teach only one spell, so
+58 cuts would mean 58 quests. I'd rather let the master jewelcrafter do it: hand
+over one uncut gem of that kind, pick one of its cuts, learn it. That's the same
+idea as your quest, with one titan-site NPC who trades crystals and also
+teaches.
+
+**Also recorded:**
+- Epic Wrath gems bind on pickup. The two-hour trade window for people who were
+  there is the client's own rule for bind-on-pickup loot, so we only set the
+  binding.
+- The +4 gems come pre-cut from prospecting copper and tin, replacing the
+  capital vendor. Only jewelcrafters can prospect, so everyone else would buy
+  them at the auction house or from a jewelcrafter, which could later include a
+  buddy.
+- The crystal trade gives an uncommon Wrath gem, with a small chance of a rare.
+
+**One risk to test in game:** once a Wrath cut is learned, the server might
+still check Jewelcrafting skill when you actually cut the gem, not only when you
+learn the recipe. If it does, a character at 300 couldn't use a recipe that
+stock needs 360+ for.
+
+Next question: what does "one tier below" mean for each kind of recipe? My
+draft:
+- Uncommon-cut Designs drop from Azeroth's level 55–60 monsters.
+- Rare-cut Designs drop from Outland's open world.
+- Epic-cut Designs drop from the upper Outland dungeons.
+
+Does that match what you meant, and roughly how rare is "rarely": something like
+1 in 500 kills?
 
 --------------------------------------------------------------------------------
 

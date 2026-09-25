@@ -217,12 +217,40 @@ Draft for Ritz, 2026-09-25 (his direction, verbatim):
     quest reward for turning in one of the gems that they need for the
     recipe? And the quest giver can be in rare places related to titans
     like Uldaman." Draft:
-    - Designs (rare and epic cuts, 17 uncommon) drop rarely, one tier
-      below where their gems come from.
-    - Trainer-only uncommon cuts: the master jewelcrafter teaches them. Hand
-      over one uncut gem of that kind, pick one of its cuts, learn it (Lua
-      can teach any spell; one quest would teach only one spell, so 58
-      cuts would mean 58 quests).
+    - **Where Designs drop** (Ritz, 2026-09-25: "the uncommon cut designs
+      (which require WotLK gems, which are only sourced from Outland) come
+      from the first half of the open world, and rare cut designs come from
+      the second half of the open world. Both should be able to be dropped
+      in dungeons, with a sliding probability that means the green recipes
+      are more likely from the lower ilevel dungeons and the blue recipes
+      are more likely from the higher ilevel dungeons. They should be about
+      as rare as other recipes of the same quality."):
+      - uncommon-cut Designs (17): Hellfire Peninsula, Zangarmarsh,
+        Terokkar Forest, Nagrand;
+      - rare-cut Designs (87): Blade's Edge, Netherstorm, Shadowmoon
+        Valley, the Isle;
+      - dungeons: both, the rare share rising along the ladder (all
+        uncommon at Hellfire Ramparts, all rare at Magisters' Terrace);
+      - rate: stock recipes drop from ordinary monsters at a median 0.02%
+        per recipe per kill (green) and 0.05% (blue), read 2026-09-25.
+      Built as two shared reference tables (one per quality, each Design at
+      equal odds), which the monsters' loot tables point at.
+    - **Two NPCs** (Ritz, 2026-09-25: "how about two NPCs? :)"): one trades
+      Nexus Crystals for uncut Wrath gems, the other teaches the
+      trainer-only uncommon cuts (hand over one uncut gem of that kind,
+      pick one of its cuts, learn it; Lua can teach any spell, where one
+      quest could teach only one). Both in titan places.
+    - **Skill: set it to 300** (Ritz, 2026-09-25: "can't we change the level
+      that the recipe requires? [...] set it to 300 and call it good"). Yes:
+      read in the server 2026-09-25, casting a craft checks no skill (the
+      spell code checks skill only for skinning, locks, disenchanting,
+      prospecting and milling). What gates a recipe is learning it: the
+      Design's required skill and the trainer's, both server data, and the
+      skill-line table's ranges (server copy overridable through
+      `skilllineability_dbc`; the client's copy only colours the recipe,
+      which shows orange). Set all to 300. 155n's file removes recipes
+      needing more than 300 from loot, so this file runs after it and
+      lowers the Designs first.
 
 ## Suggested Implementation Steps
 
@@ -241,14 +269,17 @@ Draft for Ritz, 2026-09-25 (his direction, verbatim):
   recipe tooltips.
 - (Answered 2026-09-25) Who cuts the Wrath gems: players, after learning
   the cuts from dropped Designs or from the master jewelcrafter (item 10).
-- "One tier below" for each Design: uncommon-cut Designs from Azeroth's
-  level 55–60 monsters, rare-cut Designs from Outland's world, epic-cut
-  Designs from the upper Outland dungeons? And how rare is "rarely"?
-- The master jewelcrafter teaching trainer-only cuts: one cut per gem
-  handed over (the gem is consumed), or does the gem only have to be shown?
-- A known Wrath recipe cast at skill 300: the server may check the skill
-  when crafting, not only when learning. To test in game before relying
-  on it.
+- (Answered 2026-09-25) Where uncommon- and rare-cut Designs drop; skill
+  set to 300 (no check when crafting); two NPCs.
+- The drop rate: stock's per-recipe rate (0.02% green, 0.05% blue per
+  kill) means, with 87 rare-cut Designs, a second-half monster drops *some*
+  rare Design about 4% of kills (17 uncommon: about 0.3%). Keep per-recipe
+  parity, or cap the chance of any Design per kill?
+- Epic-cut Designs (91): where from (the epic gems' own source is still
+  open)?
+- The teaching NPC: one cut per gem handed over (the gem is consumed), or
+  does the gem only have to be shown?
+- Which titan places, and which NPC stands where?
 - Which titan places get a master jewelcrafter: Uldaman only (inside the
   dungeon, or at its Badlands entrance), or also others such as the
   Un'Goro pylons or Tanaris's Gate of Uldum?
