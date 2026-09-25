@@ -252,11 +252,34 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
      the 105 epic cut gems don't either.
    - Layout of the Ashen Sack (18 entries at most): gold bars 1, coloured
      Sacks of Gems 5, low-level raw piles 5, Outland piles 3, Wrath piles
-     2, and the epic cut pile 1 if epic cut gems don't bind: 16–17.
-9. **Epic Wrath gems bind on pickup** (Ritz, 2026-09-25: "we'll need to
-   make the epic WotLK gems be BoP (tradable within 2 hours if you were
-   there)"). The two-hour trade among those present is the client's own
-   bind-on-pickup loot rule; only the binding is ours to set.
+     2: 16. The epic cut pile binds, so it drops from Onyxia herself, next
+     to the epic rolls.
+9. **Epic Wrath gems bind on pickup, cut and uncut** (Ritz, 2026-09-25:
+   "we'll need to make the epic WotLK gems be BoP (tradable within 2 hours
+   if you were there)" / "I want the cut ones to also bind on pickup. If
+   the jewelcrafter can cut the gem when it's in the 'will not be traded'
+   slot, then it's worth it, because they can exchange gold if they'd like
+   at the same transaction."). The two-hour trade among those present is
+   the server's own bind-on-pickup loot rule; only the binding is ours to
+   set.
+   - **Cutting a customer's gem in the trade window** (Ritz chose this
+     over giving crafted gems a two-hour trade window: "ideally if we
+     could do that, I'd prefer it."). Stock, the "will not be traded" slot
+     takes only spells aimed at an item (enchanting, lockpicking), cast
+     when both accept (read 2026-09-25 in the server's trade and spell
+     code). A gem cut isn't aimed at an item: it uses an uncut gem from the
+     crafter's own bags. And a crafted item that binds on pickup binds to
+     its crafter. So this needs a source patch: when a jewelcrafter in a
+     trade casts an epic cut whose uncut gem sits in the other player's
+     "will not be traded" slot, the server holds the cut until both
+     accept, then takes the customer's uncut gem and gives the customer
+     the cut gem, bound to them; gold can change hands in the same trade.
+     Unknowns to test first: whether the client lets the jewelcrafter press
+     Create without the uncut gem in their own bags (the client checks
+     reagents itself and may grey the button), and what the trade window
+     shows for a cut. If the client blocks the button, the trigger has to
+     come from somewhere else (a dialogue or chat command that starts the
+     same server-side cut).
 10. **+4 gems come from prospecting, pre-cut** (Ritz, 2026-09-25: "Could we
    add the +4 gems to the prospecting tables for the low level ores?
    Pre-cut, instead of the capital city vendor."): copper and tin
@@ -366,9 +389,8 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   (The +4 cut gems stay a prospecting product.)
 - (Answered 2026-09-25) Binding gems drop from Onyxia herself, outside the
   sack, so they can be traded for two hours.
-- Does "epic Wrath gems bind on pickup" cover the cut epic gems too, or
-  only the uncut ones that drop? If cut gems don't bind, a jewelcrafter who
-  wins an uncut epic gem can cut it and sell or trade the result.
+- (Answered 2026-09-25) Cut epic gems bind too; jewelcrafters cut a
+  customer's gem through the trade window (item 9, a source patch).
 - The teaching NPC: one cut per gem handed over (the gem is consumed), or
   does the gem only have to be shown?
 - Which titan places, and which NPC stands where?

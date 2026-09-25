@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 11:18:11
+Generated on: 2026-09-25 11:24:47
 Models: claude-opus-5-5
 
 ## Contents
@@ -5446,6 +5446,88 @@ bag don't get that window: they bind to whoever opens the bag. So whoever wins
 Onyxia's sack keeps its epic gems, and can hand the rest out, since the other
 gems don't bind. Is that fine, since the sack itself is the prize? Or should the
 sack's epic gems not bind?
+
+--------------------------------------------------------------------------------
+
+### User Request 48
+
+Oh um, good point. Maybe we have the BoP gems just drop outside of the bag
+instead. That way they can be traded.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 48
+
+Done, and recorded in the sockets issue. The three epic-gem rolls (one
+guaranteed, one at 60%, one at 30%) move out of the sack and onto Onyxia's own
+loot. Everyone who was there can then trade them for two hours, like any other
+bind-on-pickup drop.
+
+That also frees room in the sack, so the low-level gems go back to five piles:
+
+| Entries in the Ashen Sack | What |
+|---|---|
+| 1 | 15–45 Gold Bars |
+| 5 | Red, Green, Yellow, Gray and Blue Sacks of Gems |
+| 5 | low-level raw gem piles |
+| 3 | Outland uncommon and rare gem piles |
+| 2 | Wrath uncommon and rare gem piles |
+| 1 | epic cut gem pile, if those don't bind |
+
+One thing to decide: does the bind-on-pickup rule cover **cut** epic gems too,
+or only the uncut ones that drop? In the stock game neither the uncut epic gems
+nor most cut ones bind (87 of the 105 cut ones don't).
+- **If only the uncut ones bind:** a jewelcrafter who wins an uncut gem can cut
+  it and sell or trade the result. The gem stays in the economy, but it passes
+  through a crafter first.
+- **If cut ones bind too:** an epic gem only ever reaches someone who was at the
+  kill, or someone a jewelcrafter cuts it for directly. The epic cut pile would
+  also move out of the sack onto Onyxia's loot.
+
+Which do you want?
+
+--------------------------------------------------------------------------------
+
+### User Request 49
+
+I want the cut ones to also bind on pickup. If the jewelcrafter can cut the gem
+when it's in the "will not be traded" slot, then it's worth it, because they can
+exchange gold if they'd like at the same transaction.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 49
+
+> Checking whether a jewelcrafter can cut a gem that sits in the "will not be
+> traded" slot.
+
+I checked the server's trade code, and that plan doesn't work in the stock game.
+The "will not be traded" slot only accepts spells that act on an item, like
+enchanting or picking a lock. When both players accept the trade, the server
+casts that spell on the item. Cutting a gem isn't that kind of spell: it uses up
+an uncut gem from the jewelcrafter's own bags and makes a new item. So the
+customer's gem can't be cut in that slot.
+
+There's a second snag. A crafted item that binds on pickup binds to whoever
+crafted it. So a bind-on-pickup cut gem made by a jewelcrafter would be stuck
+with the jewelcrafter, and could never reach the customer.
+
+Two ways to get what you want, both needing a small server code patch:
+1. **Cut gems get the two-hour trade window, like loot.** When a jewelcrafter
+   cuts an epic gem, it can be traded for two hours to anyone in their group at
+   the time. That's the same mechanism the server already uses for raid loot.
+   The customer trades the uncut gem over, and the jewelcrafter cuts it and
+   trades it back with the gold in the same window. The gem still binds, and it
+   can only change hands among people who were grouped together.
+2. **Cutting in the "will not be traded" slot, as you described.** The server
+   would teach the trade window a new trick: the jewelcrafter casts a cut on the
+   customer's uncut gem, and on accept the customer receives the cut gem, bound
+   to them. That matches your idea exactly, but it touches more of the trade
+   code.
+
+I'd pick the first. It reuses a mechanism the server already has, so it's a
+smaller, safer patch, and it feels natural: "bring your gem to the jewelcrafter
+and trade." Which do you want?
 
 --------------------------------------------------------------------------------
 
