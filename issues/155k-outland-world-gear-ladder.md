@@ -46,12 +46,45 @@ from Ahn'Qiraj 20 in Hellfire Peninsula to Ahn'Qiraj 40 at the top.)
 
 ## Current Behavior
 
-Stock. Outland's open world keeps its stock creature levels (155f) and its
-stock loot. Its gear mostly requires levels 61–70, so a level 60 on basic
-can wear almost none of it (8 blues of item level 82–85 from level-61/62
-creatures are the exception).
+**Gear: built and tested on the RAM database (2026-09-24), not yet
+installed.** `sql/basic/db_world.src/16-outland-gear-scaling.apply.sql`
+(E031, after E024) rescales Outland's gear in place, one rule per item
+(weapons and armor, item level 80+):
 
-**The stock loot already ramps by zone.** For each normal creature (level
+- which items: the loot of creatures standing in Outland or on the Isle
+  (world bosses left out), and the normal-mode loot of 155f's sixteen
+  dungeons (spawned templates, the templates each dungeon's script names —
+  the same generated list 155f uses — and chests), references three deep;
+- **g** every green: ≈ epic 47 at item level 84 … 72 at 116, linear
+  (766 items; e.g. 84 → 74, 116 → 113);
+- **w** every blue that drops in the open world, wherever else it drops:
+  ≈ epic 60 at 85 … 83 at 115, linear, and bind on pickup (139 items;
+  85 → 74, 115 → 102);
+- **d** a blue only from dungeons, dropping in an upper dungeon: scaled so
+  that dungeon's best own blue lands on its ladder target, the rest keeping
+  their distance below (250 items; Old Hillsbrad 103 → 102 … Magisters'
+  Terrace 115 → 113);
+- **k** Kael'thas's six item-level-110 epics → item level 100;
+- **r** the rest (the lower six dungeons' blues, the item-level-100 world
+  and trash epics): budget unchanged;
+- then for every item: stats × new ÷ old budget, rating stats also ×
+  0.6335 (155f's Burning Crusade discount); armor, block and weapon damage
+  × new ÷ old item level; required level at most 60.
+
+Random-suffix stats follow the new item level on their own (the server
+computes them from it when the item drops), without the rating discount.
+Equip and proc spells keep their numbers (client data). Sockets unchanged
+(open question below). The per-item plan is kept in `basic_155k_items`,
+the stock values in `basic_155k_item_backup`; `scripts/validate-basic-state`
+checks item levels, each dungeon's target, Kael'thas's epics, required
+levels, binding and the rating discount. Counts above: run
+`scripts/test-basic-sql-in-ram --keep` and query `basic_155k_items`.
+
+**Not built yet:** Outland's hostile creatures +4 (+6 on the Isle).
+
+**Stock loot, before the scaling above.** Outland's gear mostly requires
+levels 61–70, so a level 60 on stock basic can wear almost none of it.
+It already ramps by zone. For each normal creature (level
 58+) in a zone, the average item level of the greens and blues its loot
 table can give; the middle half across the zone's creatures (zones from
 the client's map bounds, WorldMapArea.dbc):

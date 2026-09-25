@@ -134,10 +134,12 @@ apply_all() {
     step "E028 Outland without quests"                    "${WORLD}" "${B}/db_world.src/13-outland-without-quests.apply.sql"
     step "E029 Inscription without glyphs"                "${WORLD}" "${B}/db_world.src/14-inscription-without-glyphs.apply.sql"
     step "E030 Darkmoon cards"                            "${WORLD}" "${B}/db_world.src/15-darkmoon-cards.apply.sql"
+    step "E031 Outland gear scaling"                      "${WORLD}" "${B}/db_world.src/16-outland-gear-scaling.apply.sql"
     step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${V}/db_characters.src/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
 }
 revert_all() {
+    step "E031 revert" "${WORLD}" "${B}/db_world.src/16-outland-gear-scaling.revert.sql"
     step "E030 revert" "${WORLD}" "${B}/db_world.src/15-darkmoon-cards.revert.sql"
     step "E029 revert" "${WORLD}" "${B}/db_world.src/14-inscription-without-glyphs.revert.sql"
     step "E028 revert" "${WORLD}" "${B}/db_world.src/13-outland-without-quests.revert.sql"

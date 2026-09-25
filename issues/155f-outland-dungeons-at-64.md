@@ -266,9 +266,11 @@ server's combat code; this is why +4 is more than +4):
    exact-revert checksum). Done 2026-09-24.
 7. After Ritz's install: `scripts/validate-basic-state`, then a level-60
    party in Hellfire Ramparts and one in Magisters' Terrace.
-8. Still open under this issue: item stat scaling for the upper dungeons'
-   loot (via 155k's generator), and tuning health and damage per creature
-   (155i) once fights are tried.
+8. Item stat scaling for the upper dungeons' loot, Kael'thas's epics and
+   the rating discount: built in 155k's gear scaler (E031, tested on the
+   RAM database 2026-09-24; each dungeon's best own blue lands on the
+   ladder's target above). Still open under this issue: tuning health and
+   damage per creature (155i) once fights are tried.
 
 ## Related Issues
 
