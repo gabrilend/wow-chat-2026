@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 12:27:40
+Generated on: 2026-09-25 12:50:30
 Models: claude-opus-5-5
 
 ## Contents
@@ -51,6 +51,10 @@ Models: claude-opus-5-5
     basic's level-60 ladder, and everything so far is recorded and committed.
     Next: tell me whether the Un'Goro jewelcrafters should always move to a
     different pylon when their cycle through all three restarts.
+12. 2026-09-25 12:30, after Request 56 - We're designing the Jewelcrafting
+    rework for basic, and I just listed its nine open questions, each with a
+    suggested answer. Next: your answers, even just "yes" to the suggestions you
+    agree with, so I can start building.
 
 --------------------------------------------------------------------------------
 
@@ -6070,6 +6074,149 @@ can just say "yes" to the ones you agree with.
    tooltip list and bonus text are client data. Explore them, or leave them?
    *Suggest: leave them for now. We already agreed tooltips should match what
    things do.*
+
+--------------------------------------------------------------------------------
+
+### User Request 57
+
+> One follow-up is recorded there: where in Azeroth the Burning Crusade–era
+> (61–70) tomes drop.
+
+Ahn Quiraj. Both 20 and 40, 40 has 4x the drop rate, but it's still pretty rare
+- usually 1 or 2 per raid amongst 40 people. They all drop from 20 and 40 at the
+same rate, no priority given to higher level spell tomes.
+
+Also, emerald dragons are guaranteed to drop three. They are from The Burning
+Crusade.
+
+
+
+<pasted_content id="8773">
+>   Gems and recipes
+> 1. The cut teacher's price: is the uncut gem used up when it teaches a cut, or
+> does the player only need to show it? Suggest: used up. It makes the teacher a
+> real exchange, like
+>      your original "the cost is the gemstone" idea.
+</pasted_content id="8773">
+
+
+The more I think about it, the more I wonder if this added complexity buys it's
+worth. How about we skip this system for now and replace it with something
+simpler. Proposals?
+
+> 2. Required level on gems: should a stronger gem refuse to go into a low-level
+> item, or is matching gems to items left to the player? Suggest: leave it to
+> the player. They already
+>      choose which gem to buy, and the socket colour is the only check the client makes.
+
+Leave it to the player. If they want to invest in high quality gear, then they
+can. Is it possible to make it so that white quality items have doubled
+durability, but can never be repaired?
+
+> 3. Recipe colours: Outland cutting recipes taught at 150 would always show
+> orange (always a skill-up) until 300, because recipe colours come from the
+> client's files. Is that fine?
+>      Suggest: fine.
+
+If it's fine, then we have to make it true - we should ensure they have the
+correct skill-up percentage chance that the player expects. Which, for orange
+recipes, I think is 100% right?
+
+> 4. Big slots (chest, legs, two-handers): at item level 37 a green carries
+> about 18 stats, while one tier II gem gives 6. How do we fill the gap: a large
+> socket bonus, a set bonus,
+> or a second socket on those items? Suggest: a larger socket bonus, sized by
+> slot. It needs no new data, and "one socket max" stays true.
+
+oh I'd prefer if we had more sockets than just one. But, they should always be
+colorful sockets, except on weapons which have colorless sockets and no socket
+bonus.
+
+> 5. Which dungeon blues get sockets: every dungeon blue or only some slots? One
+> socket or up to two? Suggest: every dungeon blue gets one socket, and chest,
+> legs and two-handers get
+  two.
+
+We should only put sockets onto items that have stats that we could drain in
+response. So for example a weapon with just an on-hit effect shouldn't get a
+socket because there's no way to nerf it to keep it relatively balanced as
+expected. Let's say that blue items tend to have powerful socket bonuses, but
+fewer slots. White items have more slots because they're more customizable and
+standardized, but they have weaker set bonuses because their provenance is
+mundane.
+
+> 6. Outland blues and Wrath gems: Outland blues already have one to three stock
+> sockets sized for Burning Crusade gems. Keep those and let Wrath gems fit in
+> them? Or apply the blue
+> rule: fewer fixed stats, and one or two sockets sized for Wrath gems? Suggest:
+> apply the blue rule, so an empty-socket Outland blue loses to a same-level
+> green like everywhere else.
+
+oh right, duh. Let's just, not touch items that already have slots. We probably
+just shouldn't touch the Outland gear at all for sockets.
+
+> 8. Tooltip honesty: should a socket bonus always do what its text says, or may
+> it hide more? Suggest: always honest in normal gear. A hidden extra is a
+> special surprise for one or
+>   two legendary items at most.
+
+Always honest. Even in legendary items.
+
+> 9. Set bonuses: an item's set membership is server data, but the set's tooltip
+> list and bonus text are client data. Explore them, or leave them? Suggest:
+> leave them for now. We
+>   already agreed tooltips should match what things do.
+
+leave them for now.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 57
+
+> Checking two things in the server code before recording: how repairs are
+> charged, and how crafting skill-up chances are decided.
+
+All recorded in the sockets and tomes issues, and committed.
+
+**Tomes:** Burning Crusade–era (61–70) tomes drop in Ahn'Qiraj 20 and 40,
+with 40 at four times the rate. That comes to about 1–2 tomes per full
+40-person raid, every tome at equal odds. Each of the four Emerald Dragons
+always drops three. One note: the Emerald Dragons are vanilla world bosses, so
+I've read "they are from The Burning Crusade" as "they drop the Burning
+Crusade–era tomes".
+
+**Two findings from the server code:**
+- **Orange recipes are already honest.** The server works out skill-up chances
+  from the same recipe colour ranges the client shows. Below the yellow range
+  the chance is the orange one, 100% by default. So an orange recipe always
+  gives a point, as the colour promises, with no change needed. Side effect:
+  cutting Outland gems becomes a fast road to 300.
+- **"Never repaired" has a catch.** Doubling white gear's durability is easy,
+  since it's server data. Refusing the repair needs a server code patch. But the
+  vendor window works out the repair price in the client, from its own tables.
+  So it would still show a price for whites that the server then doesn't charge,
+  and those items would just stay broken. That breaks "always honest".
+
+**What's left, all together:**
+1. **Replacing the cut teacher**, simplest first:
+   - (a) the ordinary Jewelcrafting trainers teach the 58 trainer-only uncommon
+     Wrath cuts at skill 300, for gold, like stock trainers do; only server data
+     changes;
+   - (b) those cuts become rare recipe drops, like the other 17 uncommon ones;
+   - (c) every jewelcrafter automatically knows the uncommon cuts on reaching
+     300.
+
+   The crystal trader stays at the titan sites either way. I'd pick (a).
+2. **Unrepairable whites:** accept the wrong repair price in the vendor window,
+   or keep whites repairable with just the doubled durability?
+3. **The first socket-bonus test:** which effect? It has to be honest now, so it
+   must be an effect whose existing text describes it, such as a
+   health-every-5-seconds enchantment re-sized.
+4. **Naxxramas's rate for the 71–80 tomes:** the same as Ahn'Qiraj 40, about
+   1–2 per clear?
+5. **Socket counts and bonus sizes per slot**, for whites and blues. I'll bring
+   a table with numbers once the questions above are settled, since it's easier
+   to judge with numbers in front of you.
 
 --------------------------------------------------------------------------------
 

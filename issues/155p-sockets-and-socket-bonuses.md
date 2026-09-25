@@ -192,8 +192,41 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
      needs a source patch in the server's repair code. The catch: the
      vendor window works out the displayed repair cost in the client,
      from its own tables, so it would still show a price for whites that
-     the server then doesn't charge (the whites just stay broken). See
-     Open Questions.
+     the server then doesn't charge (the whites just stay broken).
+     Accepted (Ritz, 2026-09-25: "It might be the best that we can do."):
+     whites get double durability and are never repaired; the vendor
+     window's price for them is the one known mismatch.
+   - **Proposed socket counts and bonus sizes** (2026-09-25, for Ritz):
+     each item's stats-from-gems must land near its target, using the
+     level's gem tier (I +4 at item level 17–27, II +6 at 30–45, III +8
+     at 45–63) and the green table above.
+
+     Whites (target ≈ the same-level green; more sockets, small bonus):
+
+     | Set item level | Tier | Chest, legs, 2-hander | Head, hands, feet, waist, shoulders | Wrist, neck, ring, back |
+     |---|---|---|---|---|
+     | 17 | I | 1 socket + 2 | 1 + 1 | 1 |
+     | 22 | I | 2 + 1 | 1 + 3 | 1 + 1 |
+     | 27 | I | 3 | 2 + 2 | 1 + 2 |
+     | 37 | II | 3 | 2 + 3 | 1 + 4 |
+     | 50 | III | 3 + 2 | 2 + 5 | 2 |
+
+     ("1 + 2" = one socket and a +2 socket bonus.) Weapons count as the
+     chest column for two-handers and the middle column for one-handers,
+     with prismatic sockets and no bonus.
+
+     Dungeon blues (fixed stats cut to about 80% of the same-level green,
+     so an empty blue loses to it; filled, about 10% above the stock
+     blue; fewer sockets, big bonus):
+
+     | Item level | Tier | Chest, legs, 2-hander | Middle slots | Small slots |
+     |---|---|---|---|---|
+     | 30 | II | 1 + 3 | 1 + 2 | 1 |
+     | 45 | III | 1 + 7 | 1 + 4 | 1 |
+     | 60 | III | 2 + 4 | 1 + 8 | 1 + 3 |
+
+     Only blues with stats to cut; a blue whose power is a proc or an
+     on-use keeps its stock form.
 5. **Names stay in sync with tooltips** (Ritz, 2026-09-25: "Let's keep the
    tooltips and the names in sync."): gem items keep their stock names, so
    a recipe's tooltip and the gem it makes always agree.
@@ -231,18 +264,19 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
    **Both NPCs at each of three titan places** (Ritz, 2026-09-25, of
    Uldaman, Un'Goro Crater's Crystal Pylons and Tanaris's Gate of Uldum:
    "these first three seem fine. I want both of them to be at each
-   location."): six spawns, the crystal trader and the cut teacher side by
-   side at each. Ulduar is out of reach (Northrend).
+   location."): at first the crystal trader and a cut teacher side by
+   side at each; the cut teacher was dropped later the same day (item
+   11), so three crystal traders. Ulduar is out of reach (Northrend).
    - Uldaman: outside the dungeon, in a relatively safe spot (Ritz,
      2026-09-25: "Outside of the dungeon, in a relatively safe space.").
-   - Un'Goro: the pair wanders between the Crystal Pylons (Ritz,
+   - Un'Goro: the trader wanders between the Crystal Pylons (Ritz,
      2026-09-25: "every 30 minutes, if there are no players within sight,
      say... 200 yards, then they swap to a different, random one. They
      both travel as a group. The random one is chosen without
      replacement." Then, on the shuffled deck's repeats: "Actually how
      about we just make it so that it's a 50/50 chance each time they swap,
      I think that'll be saner haha"). Every 30 minutes, if no player is
-     within 200 yards, both move together to one of the two other pylons,
+     within 200 yards, the trader moves to one of the two other pylons,
      each at 50%. They always move; the pylon they left can come back. A
      Lua timer, the players-in-range check, and a despawn and respawn at
      the new pylon.
@@ -406,11 +440,12 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
         29,000 kills and one uncommon-cut Design about 1 in 5,700.
       Built as two shared reference tables (one per quality, each Design at
       equal odds), which the monsters' loot tables point at.
-    - **Two NPCs** (Ritz, 2026-09-25: "how about two NPCs? :)"): one trades
-      Nexus Crystals for uncut Wrath gems, the other teaches the
-      trainer-only uncommon cuts (hand over one uncut gem of that kind,
-      pick one of its cuts, learn it; Lua can teach any spell, where one
-      quest could teach only one). Both in titan places.
+    - **Trainer-only uncommon cuts come from the ordinary Jewelcrafting
+      trainers** at skill 300, for gold (Ritz, 2026-09-25, "It's gotta be
+      (a)"). This replaces an earlier plan for a second titan-site NPC who
+      taught them in exchange for a gem ("how about two NPCs? :)", then
+      "I wonder if this added complexity buys it's worth"). The crystal
+      trader alone stands at the titan sites.
     - **Paying with the gem through a stock window?** Ritz, 2026-09-25:
       "some recipes can be learned in exchange for currency items, like
       marks of honor or whatever. Can we do a similar system here, where the
@@ -474,20 +509,14 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   sack, so they can be traded for two hours.
 - (Answered 2026-09-25) Cut epic gems bind too; jewelcrafters cut a
   customer's gem through the trade window (item 9, a source patch).
-- The cut teacher is dropped (Ritz, 2026-09-25: "The more I think about
-  it, the more I wonder if this added complexity buys it's worth. How
-  about we skip this system for now and replace it with something
-  simpler. Proposals?"). Proposals, simplest first: (a) the ordinary
-  Jewelcrafting trainers teach the 58 trainer-only uncommon Wrath cuts at
-  skill 300 for gold, as stock trainers do (only server data changes);
-  (b) the same cuts come as rare Design drops like the other 17 uncommon
-  ones; (c) the uncommon cuts are simply known by every jewelcrafter who
-  reaches 300. The crystal trader stays at the titan sites either way.
-- White gear that can't be repaired: accept the vendor window showing a
-  repair price for whites that the server won't charge, or keep whites
-  repairable (just doubled durability)?
-- How many sockets per slot, for whites and for blues, and how big are
-  their socket bonuses? (Proposal to come with numbers.)
+- (Answered 2026-09-25) The cut teacher is dropped ("I wonder if this
+  added complexity buys it's worth"): the ordinary Jewelcrafting trainers
+  teach the 58 trainer-only uncommon Wrath cuts at skill 300 for gold
+  ("It's gotta be (a)"). Only the crystal trader stands at the titan
+  sites.
+- (Answered 2026-09-25) Unrepairable whites: accepted, the vendor price
+  mismatch included.
+- Socket counts and bonus sizes: the proposed tables in item 4. Agreed?
 - (Answered 2026-09-25) Titan places: Uldaman, the Un'Goro pylons and the
   Gate of Uldum, both NPCs at each.
 - (Answered 2026-09-25) Uldaman outside the dungeon; in Un'Goro the pair
@@ -498,8 +527,8 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   small chance of a rare.
 - (Answered 2026-09-25) Outland gear gets no new sockets; items with stock
   sockets are left alone.
-- Which effect for the first option 2 test (an absorb on being hit,
-  health every 5 seconds, something else)?
+- (Answered 2026-09-25) The first option 2 test: any effect that can be
+  verified ("doesn't matter. Just something we can verify.").
 - (Answered 2026-09-25) More sockets than one where needed; colourful on
   armor, prismatic and bonus-less on weapons; only items with drainable
   stats; blues fewer sockets and big bonuses, whites more sockets and

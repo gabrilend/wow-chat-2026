@@ -81,8 +81,8 @@ so links to it stay valid.)
   (Ritz added "They are from The Burning Crusade"; the dragons are
   vanilla world bosses, so this is read as: they drop the Burning
   Crusade–era tomes.)
-- Naxxramas's rate for the 71–80 tomes: the same as Ahn'Qiraj 40's
-  (about 1–2 per clear)?
+- (Answered 2026-09-25) Naxxramas drops the 71–80 tomes at Ahn'Qiraj 40's
+  rate, about 1–2 per clear ("Sure.").
 - Balance: higher ranks are sized for levels 61–80; do they need scaling
   down on basic (see 715, linear ability scaling)?
 - Death knights are allowed on basic with limits (148a); do they get tomes
