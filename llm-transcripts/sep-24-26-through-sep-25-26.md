@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 10:27:21
+Generated on: 2026-09-25 10:37:28
 Models: claude-opus-5-5
 
 ## Contents
@@ -4848,6 +4848,67 @@ Garnet"). The recipe tooltip also still names the Outland raw gem, which mithril
 and thorium prospecting would now give. Is that okay? We could rename the gem
 items, since names are server data, but the recipe tooltip would still show the
 old name.
+
+--------------------------------------------------------------------------------
+
+### User Request 37
+
+How about the WotLK gems? Are they too high level? We'll need to ensure that we
+adjust the gemstones-from-ore pathways to gather the correct gems. I could see
+WotLK gems being something that drop from Outland mobs. We might consider
+applying the "add sockets, lower stats" rules to Outland blues as well, to give
+spaces to use the WotLK gems. Let's keep the tooltips and the names in sync.
+Could we also add a master jewelcrafter that takes in the shard gained from
+disenchanting Azeroth epics and turns it into a random uncut WotLK gem? These
+master jewelcrafters should be found only in places like Uldaman where the
+titans hang out.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 37
+
+> Checking WotLK gem sizes and what disenchanting Azeroth's epics gives.
+
+Wrath gems aren't too high level for Outland. On our ladder they fit Outland's
+blues. I've recorded all of this in the sockets issue file (committed); it's
+design only, nothing built yet.
+
+**Wrath gem sizes** (one stat): uncommon +12, rare +16, epic +20. After the
+rescale, a big-slot Outland blue carries roughly 35–55 stats, so one +12 gem
+is about a quarter of it. For comparison, stock Burning Crusade blues put about
+24 of their ~65 stats into three +8 sockets. Uncommon and rare fit well. Epic
+fits only the very top (Kael'thas, world bosses), if anywhere.
+
+**Gem sources, lowest to highest:**
+
+| Gems | Comes from |
+|---|---|
+| +4 (level-55 set) | capital-city vendors |
+| +6 (Outland uncommon) | prospecting mithril ore, cut at Jewelcrafting ~150–225 |
+| +8 (Outland rare) | prospecting thorium ore, cut at ~250–300 |
+| +12 / +16 (Wrath uncommon / rare, uncut) | Outland monster drops, and the master jewelcrafters |
+
+Prospecting yields and loot tables are server data, so every pathway above can
+be set up. Gem names stay stock, so they always match the recipe tooltips.
+
+**The "shard" is a Nexus Crystal.** Disenchanting an Azeroth epic almost always
+gives a Nexus Crystal. About 900 epics at item level 56+ give one; only a
+handful of lower epics give shards instead. So the master jewelcrafter takes a
+Nexus Crystal and hands back a random uncut Wrath gem. That works as a small Lua
+dialogue, and the jewelcrafter is a new creature we can name freely and place in
+Uldaman.
+
+One snag to settle first: who cuts the Wrath gems? Their cutting recipes need
+Jewelcrafting 350–450, and professions stop at 300 on basic. The options:
+1. **The master jewelcrafters also cut.** The player hands over an uncut gem,
+   picks a cut from that gem's stock recipes, and pays a fee. This keeps Wrath
+   gems special and ties them to the titan sites.
+2. **Teach the Wrath cutting recipes at 300 or below.** Players cut them
+   themselves.
+3. **Outland monsters drop them already cut.** Then the master jewelcrafter's
+   crystal trade gives cut gems too.
+
+I lean towards option 1. Which do you want?
 
 --------------------------------------------------------------------------------
 

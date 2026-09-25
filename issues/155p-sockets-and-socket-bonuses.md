@@ -193,7 +193,36 @@ Draft for Ritz, 2026-09-25 (his direction, verbatim):
    or Radiant shard for the few epics below 56. The jewelcrafter takes one
    Nexus Crystal and gives a random uncut Wrath gem (a Lua gossip: remove
    the crystal, add the gem). A new creature template (its name is server
-   data), spawned in Uldaman.
+   data), spawned in Uldaman. Odds (Ritz, 2026-09-25): "it's an uncommon
+   Wrath gem, with a small chance to be a rare."
+8. **Epic Wrath gems bind on pickup** (Ritz, 2026-09-25: "we'll need to
+   make the epic WotLK gems be BoP (tradable within 2 hours if you were
+   there)"). The two-hour trade among those present is the client's own
+   bind-on-pickup loot rule; only the binding is ours to set.
+9. **+4 gems come from prospecting, pre-cut** (Ritz, 2026-09-25: "Could we
+   add the +4 gems to the prospecting tables for the low level ores?
+   Pre-cut, instead of the capital city vendor."): copper and tin
+   prospecting yield the level-55 +4 gems, replacing the capital vendor.
+   Only jewelcrafters prospect, so everyone else gets them through the
+   auction house or a jewelcrafter friend (or a buddy, 617k).
+10. **How Wrath cuts are learned** (stock, read 2026-09-25): of 75
+    uncommon cuts, 58 are trainer-only and 17 have a "Design:" recipe item
+    (sold); of 94 rare cuts, 87 have Designs (56 sold, 25 dropped); all 91
+    epic cuts have Designs (sold for tokens). All need Jewelcrafting
+    360–440; a Design's required skill is server data, so it can be set to
+    300 or below. Ritz's idea (2026-09-25): "Can the wrath recipes be
+    learned from... recipes that drop? [...] we can have the recipe drop
+    from a source one 'tier' below the source of the gems. Rarely, of
+    course. If they're trainer only, then maybe we can teach them as a
+    quest reward for turning in one of the gems that they need for the
+    recipe? And the quest giver can be in rare places related to titans
+    like Uldaman." Draft:
+    - Designs (rare and epic cuts, 17 uncommon) drop rarely, one tier
+      below where their gems come from.
+    - Trainer-only uncommon cuts: the master jewelcrafter teaches them. Hand
+      over one uncut gem of that kind, pick one of its cuts, learn it (Lua
+      can teach any spell; one quest would teach only one spell, so 58
+      cuts would mean 58 quests).
 
 ## Suggested Implementation Steps
 
@@ -210,11 +239,16 @@ Draft for Ritz, 2026-09-25 (his direction, verbatim):
 
 - (Answered 2026-09-25) Gem names: keep stock names, in sync with the
   recipe tooltips.
-- Who cuts the Wrath gems? Their cutting recipes need Jewelcrafting
-  350–450, and basic stops professions at 300 (155n). Options: the master
-  jewelcrafters also cut (the player picks the cut from the gem's stock
-  recipes, for a fee); or the Wrath cutting recipes are taught at ≤300;
-  or Outland drops them already cut.
+- (Answered 2026-09-25) Who cuts the Wrath gems: players, after learning
+  the cuts from dropped Designs or from the master jewelcrafter (item 10).
+- "One tier below" for each Design: uncommon-cut Designs from Azeroth's
+  level 55–60 monsters, rare-cut Designs from Outland's world, epic-cut
+  Designs from the upper Outland dungeons? And how rare is "rarely"?
+- The master jewelcrafter teaching trainer-only cuts: one cut per gem
+  handed over (the gem is consumed), or does the gem only have to be shown?
+- A known Wrath recipe cast at skill 300: the server may check the skill
+  when crafting, not only when learning. To test in game before relying
+  on it.
 - Which titan places get a master jewelcrafter: Uldaman only (inside the
   dungeon, or at its Badlands entrance), or also others such as the
   Un'Goro pylons or Tanaris's Gate of Uldum?
