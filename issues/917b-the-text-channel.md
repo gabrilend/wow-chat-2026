@@ -1,5 +1,12 @@
 # 917b - The Text Channel
 
+> **Part of this will not be implemented, because it needs AIO:** the addon surface ("AIO is already installed" is no longer true for the plan).
+> The project no longer plans to use AIO, the server-to-client addon framework
+> (Ritz, 2026-09-25: "I think we should update the plan of the project to
+> NOT use AIO, or at least to mark anything that requires it as 'will not
+> implement because it needs AIO. But here's how we would if we could:'").
+> The AIO parts below are kept as how we would build them if we could. Surfaces that need no addon stand.
+
 ## Status
 - Created: 2026-08-01
 - Parent: Issue 917 (Ask the bots in plain text)

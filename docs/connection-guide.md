@@ -1,5 +1,12 @@
 # Connection Guide for Players
 
+> **Part of this will not be implemented, because it needs AIO:** the AIO addon players are told to install (step 2 and the AIO section).
+> The project no longer plans to use AIO, the server-to-client addon framework
+> (Ritz, 2026-09-25: "I think we should update the plan of the project to
+> NOT use AIO, or at least to mark anything that requires it as 'will not
+> implement because it needs AIO. But here's how we would if we could:'").
+> The AIO parts below are kept as how we would build them if we could. No build installs AIO today; the guide's other steps stand.
+
 ## TL;DR
 
 1. **Get the WoW 3.3.5a client** - Search "WoW 3.3.5a client download"

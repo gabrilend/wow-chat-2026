@@ -114,7 +114,7 @@ wow-chat-2026/
 │   ├── worldserver                Run worldserver from installed-files-{profile}
 │   ├── start-mysql / stop-mysql   Project-local MySQL control
 │   ├── extract-maps               Generate maps/vmaps/mmaps from client data
-│   ├── install-client-addons      Sync client-side AIO addons
+│   ├── install-client-addons      Sync client-side AIO addons (AIO not used, 2026-09-25: docs/roadmap.md)
 │   ├── redownload-source          Re-clone source-{profile}/
 │   ├── keira                      Keira3 database editor
 │   ├── export-html                Render docs as HTML

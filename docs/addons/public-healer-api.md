@@ -1,5 +1,11 @@
 # Public Healer API Documentation
 
+> **Will not implement, because it needs AIO.** The project no longer plans to
+> use AIO, the server-to-client addon framework (Ritz, 2026-09-25: "I think we should update the plan of the project to
+> NOT use AIO, or at least to mark anything that requires it as 'will not
+> implement because it needs AIO. But here's how we would if we could:'").
+> This API belongs to issue 616 (public healer frames), an AIO addon. The design below is kept as how we would build it if we could.
+
 This document describes the server-side and client-side APIs exposed by the
 Public Healer addon for use by other addons.
 

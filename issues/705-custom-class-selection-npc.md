@@ -1,5 +1,12 @@
 # 705 - Custom Class Selection NPC
 
+> **Part of this will not be implemented, because it needs AIO:** the curated talent tree shown through an AIO addon.
+> The project no longer plans to use AIO, the server-to-client addon framework
+> (Ritz, 2026-09-25: "I think we should update the plan of the project to
+> NOT use AIO, or at least to mark anything that requires it as 'will not
+> implement because it needs AIO. But here's how we would if we could:'").
+> The AIO parts below are kept as how we would build them if we could. The selection NPC itself needs no AIO.
+
 ## Status
 - Created: 2026-04-04
 - Phase: 2

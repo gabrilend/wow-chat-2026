@@ -43,7 +43,7 @@ format → selection UI → talent system → custom-class implementations.
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
 | 707 | aio-tiered-talent-trainers | Open | Talent training interface. |
-| 713 | custom-talent-interface | Open | In-game talent UI (AIO addon). |
+| 713 | custom-talent-interface | Will not implement (needs AIO) | In-game talent UI (AIO addon). |
 | 714 | chunked-talent-points | Open | 10 points at levels 5/8/11/14/17/20. Blocks 707. |
 | 708 | talent-tree-analysis-script | Open | Tooling for talent-tree design. |
 | 717 | universal-weapon-skills-talent-tradeoff | Open | Every class wields every weapon; talent training 3x slower in exchange. Modifies 714 award cadence. |
@@ -84,7 +84,7 @@ format → selection UI → talent system → custom-class implementations.
 
 ## Dependencies
 
-- Phase 1 (foundation) - ALE and AIO must work
+- Phase 1 (foundation) - ALE must work (AIO: not used, 2026-09-25; see docs/roadmap.md)
 - Phase 5 (travelers) - Trainers spawn as travelers
 
 ---
@@ -245,7 +245,7 @@ have customs. Check cache before spawning selector.
 
 ### Custom Talent Interface (345)
 
-AIO addon for talent selection:
+AIO addon for talent selection (will not implement, because it needs AIO; 713):
 - Three trees (schools) side by side
 - Click to spend points
 - Visual prerequisite lines

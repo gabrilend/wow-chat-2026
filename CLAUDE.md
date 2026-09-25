@@ -98,7 +98,9 @@ mod-eluna scripts. E001 symlinks the profile-matching dir into
 - **mod-playerbots** - AI companion bots
 - **mod-aoe-loot** - Area loot for convenience
 - **mod-grownup** - Scale player models by level
-- **AIO** - Server-to-client addon framework
+- **AIO** - Server-to-client addon framework. Not used: no build installs
+  it, and designs that need it are marked "will not implement" (see
+  `docs/roadmap.md`, Project-wide decisions, 2026-09-25)
 
 ## Directory Structure
 

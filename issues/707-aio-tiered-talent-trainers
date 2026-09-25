@@ -1,5 +1,12 @@
 # Issue 707: AIO Tiered Talent Trainers
 
+> **Part of this will not be implemented, because it needs AIO:** the "custom AIO gossip menu" and the AIO force-learning on login.
+> The project no longer plans to use AIO, the server-to-client addon framework
+> (Ritz, 2026-09-25: "I think we should update the plan of the project to
+> NOT use AIO, or at least to mark anything that requires it as 'will not
+> implement because it needs AIO. But here's how we would if we could:'").
+> The AIO parts below are kept as how we would build them if we could. A trainer's menu doesn't need AIO: the server's Lua engine builds dialogue menus on its own, so the tiered trainers stand, with a plain dialogue menu.
+
 **Status**: Design
 **Phase**: 1
 **Related**: 706 (knight-custom-class), 705 (custom-class-selection-npc), 503 (dynamic-trainer-spawning)  <!-- renumbered from legacy 159/155/157 per MIGRATION_MAP.md, 2026-09-23 -->

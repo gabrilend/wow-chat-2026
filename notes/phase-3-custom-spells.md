@@ -1,5 +1,11 @@
 # Phase 3: Custom Spell System
 
+> **Will not implement, because it needs AIO.** The project no longer plans to
+> use AIO, the server-to-client addon framework (Ritz, 2026-09-25: "I think we should update the plan of the project to
+> NOT use AIO, or at least to mark anything that requires it as 'will not
+> implement because it needs AIO. But here's how we would if we could:'").
+> This note's architecture puts the custom spells' interface in an AIO addon. The design below is kept as how we would build it if we could.
+
 ## Vision
 
 Migrate all player abilities from WoW's hardcoded spell system to a server-controlled

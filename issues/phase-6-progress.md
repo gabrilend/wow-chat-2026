@@ -55,7 +55,7 @@ movement/pathfinding → social/cooperation → tooling/UI.
 ### UI / tooling
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 616 | public-healer-frames-addon | Open | UI for healer bots. Client-side AIO addon. |
+| 616 | public-healer-frames-addon | Will not implement (needs AIO) | UI for healer bots. Client-side AIO addon. |
 
 ## Completed: 0/18 (10 Implemented, 1 Resolved, 1 Research)
 

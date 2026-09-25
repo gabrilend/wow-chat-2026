@@ -1,5 +1,12 @@
 # Medal Encounters — Strange Bosses for Strange Builds
 
+> **Part of this will not be implemented, because it needs AIO:** cosmetic markers and medal display through an addon.
+> The project no longer plans to use AIO, the server-to-client addon framework
+> (Ritz, 2026-09-25: "I think we should update the plan of the project to
+> NOT use AIO, or at least to mark anything that requires it as 'will not
+> implement because it needs AIO. But here's how we would if we could:'").
+> The AIO parts below are kept as how we would build them if we could. The encounters themselves stand.
+
 *A vision for optional bosses that demand otherwise-marginal stats — turning resilience,
 magic resistance, sustain throughput, and other niche specializations into the
 signature of specific encounters. The medals you win are worn into the next charge.*

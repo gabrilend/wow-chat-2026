@@ -8,6 +8,21 @@ Everland Ghostsong is a WoW 3.3.5a private server with roguelike survival mechan
 - **World:** Empty by default — monsters spawn around players (ambush system)
 - **Companions:** Playerbots as AI party members
 
+## Project-wide decisions
+
+- **No AIO** (2026-09-25). Ritz: "I think we should update the plan of the
+  project to NOT use AIO, or at least to mark anything that requires it as
+  'will not implement because it needs AIO. But here's how we would if we
+  could:'". AIO is the server-to-client addon framework (server-sent Lua
+  that draws new interface in the game client; each player installs its
+  client addon). No build installs it today. Every issue or note whose
+  design needs it carries a banner, "Will not implement, because it needs
+  AIO" (the whole issue) or "Part of this will not be implemented" (the
+  AIO parts only), and keeps its design as how we would build it if we
+  could. Find them with `grep -rl "because it needs AIO" issues notes docs`.
+  New designs work with what the stock client already shows: dialogue
+  menus, chat, mail, tooltips from existing client data.
+
 ---
 
 ## Phase 1: Foundation (Complete)

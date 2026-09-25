@@ -111,7 +111,7 @@ design question across the whole group, not a detail inside any one.
 
 ## Dependencies
 
-- Phase 1 (foundation) - ALE, AIO must work
+- Phase 1 (foundation) - ALE must work (AIO: not used, 2026-09-25; see docs/roadmap.md)
 - Phase 5 (travelers) - Narrators reuse traveler patterns
 - Phase 6 (bots) - Narrators may be playerbots
 - Phase 8 (progression) - Shepherds explain immortality

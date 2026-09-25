@@ -1,5 +1,12 @@
 # 155m - True Creature Levels Instead of the Skull
 
+> **Part of this will not be implemented, because it needs AIO:** route 1 as written (the level shown through AIO).
+> The project no longer plans to use AIO, the server-to-client addon framework
+> (Ritz, 2026-09-25: "I think we should update the plan of the project to
+> NOT use AIO, or at least to mark anything that requires it as 'will not
+> implement because it needs AIO. But here's how we would if we could:'").
+> The AIO parts below are kept as how we would build them if we could. Route 2 and a plain addon without AIO are open (see Open Questions).
+
 ## Status
 - Created: 2026-09-24
 - Phase: 1
@@ -67,4 +74,7 @@ each place.
 - Boss-ranked creatures (Kazzak, Doomwalker, dungeon end bosses) always
   show a skull in stock, even at the player's level. Show their number
   too, or keep the skull as the "this is a boss" sign?
-- Route 1 (addon through AIO), agreed?
+- Route 1 as written used AIO, which the project doesn't use (2026-09-25).
+  Does "no AIO" also rule out a plain addon that players install, talking
+  to the server over the client's own addon-message channel (what AIO is
+  built on), or only the AIO framework itself?

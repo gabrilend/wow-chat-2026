@@ -1,5 +1,11 @@
 # 702 - Custom Spell System (AIO-Based)
 
+> **Will not implement, because it needs AIO.** The project no longer plans to
+> use AIO, the server-to-client addon framework (Ritz, 2026-09-25: "I think we should update the plan of the project to
+> NOT use AIO, or at least to mark anything that requires it as 'will not
+> implement because it needs AIO. But here's how we would if we could:'").
+> The custom spell system draws its action bars, cast bars and cooldowns through AIO. The design below is kept as how we would build it if we could.
+
 ## Status
 - Created: 2026-04-02
 - Phase: 3

@@ -1,5 +1,12 @@
 # 802 - Talent Tier Limit (First 3 Rows Only)
 
+> **Part of this will not be implemented, because it needs AIO:** Option B, greying out restricted talents in the talent window.
+> The project no longer plans to use AIO, the server-to-client addon framework
+> (Ritz, 2026-09-25: "I think we should update the plan of the project to
+> NOT use AIO, or at least to mark anything that requires it as 'will not
+> implement because it needs AIO. But here's how we would if we could:'").
+> The AIO parts below are kept as how we would build them if we could. Server-side enforcement stands.
+
 ## Status
 - Created: 2026-04-02
 - Phase: 2
