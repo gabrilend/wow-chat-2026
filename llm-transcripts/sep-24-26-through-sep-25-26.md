@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 11:09:42
+Generated on: 2026-09-25 11:13:06
 Models: claude-opus-5-5
 
 ## Contents
@@ -5286,6 +5286,44 @@ something great in it:
 A 40-person raid would then get about 30–40 gold bars and a dozen gems per
 kill, which is a real payday for the whole raid. Does that feel right, or should
 the hoard be bigger?
+
+--------------------------------------------------------------------------------
+
+### User Request 44
+
+Yes exactly, common gems should be more common. I'd say there should be at about
+120 gems per sack, but that's just my guess. A solid 40% of them should be
+things like Tigerseye or low level pearls.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 44
+
+> Checking how many item slots one loot window can hold, since 120 separate gems
+> might not fit.
+
+Recorded and committed: about 120 gems per sack, 40% of them cheap low-level raw
+gems like Tigerseye, Malachite, Shadowgem and the small pearls.
+
+**A limit that changes the shape, not the size:** one loot window holds at most
+18 entries; that's hard-coded in the server's loot code. But each entry can be a
+pile of one gem kind, since gems stack to 20. So the hoard opens as about 15
+piles instead of 120 separate gems:
+- 1 pile of 15–45 Gold Bars
+- the 3 stock epic-gem rolls
+- about 48 low-level raw gems in 5 piles
+
+The next question is the remaining 60%, about 72 gems. My proposal, by pile:
+
+| Piles | What | About |
+|---|---|---|
+| 4 | higher vanilla raw gems (Citrine, Aquamarine, Star Ruby…) and the +4 cut gems | 32 |
+| 3 | Outland uncommon and rare gems | 20 |
+| 2 | Wrath uncommon and rare gems | 12 |
+| 1 | epic cut gems | 8 |
+
+Which gem kind fills each pile is random, so every sack looks a bit different.
+Does that split feel right, or should the top end be thinner?
 
 --------------------------------------------------------------------------------
 
