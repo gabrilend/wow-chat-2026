@@ -204,6 +204,17 @@ report "scrolls no longer share a stacking group with class buffs; one scroll at
         UNION ALL SELECT 'scrolls group', COUNT(*) FROM ${WORLD}.spell_group WHERE id = 1087 HAVING COUNT(*) <> 6")"
 # }}}
 
+# {{{ 155o: Darkmoon cards
+report "nothing Darkmoon binds (cards, tarots, decks, deck rewards)" \
+    "$(run_sql "SELECT 'none saved', COUNT(*) FROM ${WORLD}.basic_155o_darkmoon_bonding HAVING COUNT(*) = 0
+        UNION ALL SELECT i.entry, i.name FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155o_darkmoon_bonding b ON b.entry = i.entry WHERE i.Bonding <> 0 LIMIT 10")"
+report "the 32 Burning Crusade cards are one reference table, rolled by Tempest Keep and Magisters' Terrace bosses" \
+    "$(run_sql "SELECT 'cards', COUNT(*) FROM ${WORLD}.reference_loot_template WHERE Entry = 1550155 HAVING COUNT(*) <> 32
+        UNION ALL SELECT 'Kael''thas rolls', MAX(l.MaxCount) FROM ${WORLD}.creature_loot_template l JOIN ${WORLD}.creature_template t ON t.lootid = l.Entry
+          WHERE t.entry = 24664 AND l.Reference = 1550155 HAVING MAX(l.MaxCount) IS NULL OR MAX(l.MaxCount) <> 3
+        UNION ALL SELECT 'boss rows', COUNT(*) FROM ${WORLD}.creature_loot_template WHERE Reference = 1550155 HAVING COUNT(*) < 16")"
+# }}}
+
 echo ""
 if [[ "${FAIL_COUNT}" -eq 0 ]]; then
     echo "All checks passed."

@@ -16,12 +16,15 @@
 --
 -- Usage: scripts/generate-basic-outland-dungeons-sql [PROJECT_DIR]
 --   Reads   source-beta/src/server/scripts/<dungeon folders below>
---   Writes  sql/basic/db_world.src/09-outland-dungeons-64.apply.sql
---           (only the GENERATED block)
+--   Writes  sql/basic/db_world.src/09-outland-dungeons-64.apply.sql and
+--           sql/basic/db_world.src/16-outland-gear-scaling.apply.sql
+--           (only the GENERATED block; the same list in both: the gear
+--           scaler uses it to find the bosses a script summons)
 
 local DIR     = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
 local SCRIPTS = DIR .. "/source-beta/src/server/scripts/"
-local OUT     = DIR .. "/sql/basic/db_world.src/09-outland-dungeons-64.apply.sql"
+local OUTS    = { DIR .. "/sql/basic/db_world.src/09-outland-dungeons-64.apply.sql",
+                  DIR .. "/sql/basic/db_world.src/16-outland-gear-scaling.apply.sql" }
 
 -- {{{ configuration
 -- dungeon map id -> its script folder (relative to SCRIPTS); the level
@@ -102,15 +105,17 @@ lines[#lines + 1] = table.concat(rows, ",\n") .. ";"
 lines[#lines + 1] = END_MARK
 local block = table.concat(lines, "\n")
 
-local f = assert(io.open(OUT, "r"))
-local sql = f:read("*a")
-f:close()
-local a = sql:find(BEGIN_MARK, 1, true)
-local b = sql:find(END_MARK, 1, true)
-if not a or not b or b < a then die("markers not found in " .. OUT) end
-sql = sql:sub(1, a - 1) .. block .. sql:sub(b + #END_MARK)
-f = assert(io.open(OUT, "w"))
-f:write(sql)
-f:close()
-io.write(string.format("wrote %d script-named ids into %s\n", total, OUT))
+for _, OUT in ipairs(OUTS) do
+    local f = io.open(OUT, "r") or die("cannot open " .. OUT)
+    local sql = f:read("*a")
+    f:close()
+    local a = sql:find(BEGIN_MARK, 1, true)
+    local b = sql:find(END_MARK, 1, true)
+    if not a or not b or b < a then die("markers not found in " .. OUT) end
+    sql = sql:sub(1, a - 1) .. block .. sql:sub(b + #END_MARK)
+    f = assert(io.open(OUT, "w"))
+    f:write(sql)
+    f:close()
+    io.write(string.format("wrote %d script-named ids into %s\n", total, OUT))
+end
 -- }}}

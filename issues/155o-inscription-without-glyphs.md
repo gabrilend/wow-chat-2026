@@ -100,8 +100,26 @@ Tested: `scripts/test-basic-sql-in-ram` (with the exact-revert checksum,
 `spell_group` included) and `scripts/validate-basic-state` (no glyph at a
 trainer, every scroll recipe within 300, required levels 3/4 of stock, the
 stacking groups); `scripts/test-source-patches` round-trips B032 with the
-other 24 basic source patches. Not built yet: the Darkmoon voidwalker,
-tarot/deck/trinket binding, the Burning Crusade card drops (below).
+other 24 basic source patches.
+
+**Darkmoon, built 2026-09-24** as install step E030,
+`sql/basic/db_world.src/15-darkmoon-cards.apply.sql` (+ revert): every
+Darkmoon card of every suit, the four tarots, the Darkmoon Card item, every
+deck a Faire quest takes and every item those quests give (trinkets and the
+low-level gear) never bind (stock bindings saved); a new reference loot
+table (1550155) holds the 32 Burning Crusade cards at equal chance, rolled
+once by each Mechanar, Botanica and Arcatraz boss (Harbinger Skyriss, whom
+the Arcatraz script summons, included), twice by each Magisters' Terrace
+boss and three times by Kael'thas; normal mode only.
+
+**Not built yet: the voidwalker delivery.** A deck has no "use" in the
+client (no spell on the item), so right-clicking it does nothing and no
+server hook fires. The plan: give each deck a harmless use-spell in its
+item row (the item row, spells included, is sent to the client by the
+server, so no client patch is needed), catch the use in a Lua item hook,
+cancel the spell, and run the voidwalker scene there. Which spell to borrow
+decides the "Use:" line players read in the tooltip; it needs a try in game
+(see Open Questions).
 
 Stock numbers, for reference. Read from the client's profession tables (SkillLineAbility.dbc,
 Spell.dbc) and the world database, 2026-09-24. Inscription has 449
@@ -239,6 +257,10 @@ buff makes the scroll worthless.
 - **155i** spell changes (for scroll values)
 
 ## Open Questions
+
+- Voidwalker delivery: which existing spell should a deck borrow as its
+  "Use:" (its tooltip text shows)? It must be castable by anyone with no
+  reagent, and the Lua hook cancels it. Needs a try on a running server.
 
 - (Answered 2026-09-24) Choice offered by the voidwalker; the deck, not
   the item, is mailed on interruption; nothing from a deck binds; Burning
