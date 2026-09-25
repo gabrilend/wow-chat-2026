@@ -205,11 +205,20 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
      Zircon, Dreadstone, Ametrine, Eye of Zul), one shared reference table
      at equal odds: Kael'thas 1 always; each world boss 2 always; every
      other Outland dungeon boss (normal mode) 1 at 15%;
-   - epic-cut Designs (91): from every Outland boss, rarely (rate open);
+   - epic-cut Designs (91): from every Outland boss, about 1.5% per kill
+     for one of them (Ritz, 2026-09-25, on 1–2%: "sounds about right");
    - Onyxia's gem bag is the **Ashen Sack of Gems** (3.3.5 Onyxia, always
      dropped). Stock, it already holds exactly those six uncut epic gems:
      one always, a second at 60%, a third at 30%. So on basic it stays on
      Onyxia's loot when 155h brings her vanilla loot back.
+   - **Onyxia hoards** (Ritz, 2026-09-25: "Can we also add more gems of all
+     kinds? ALL kinds. She's a dragon! She should hoard her loot! And can
+     we have several gold bars thrown in there too? Guaranteed some number
+     between 15 and 45 gold bars."): the sack keeps its three epic rolls
+     and adds gems of every kind (every raw and cut gem in the game, test
+     items left out; about 590 cut and several dozen raw), and 15–45 Gold
+     Bars every time. The sack's contents are server data (its own loot
+     table).
 9. **Epic Wrath gems bind on pickup** (Ritz, 2026-09-25: "we'll need to
    make the epic WotLK gems be BoP (tradable within 2 hours if you were
    there)"). The two-hour trade among those present is the client's own
@@ -314,8 +323,10 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   stock trainer or vendor window isn't possible with correct prices shown;
   the teacher uses a dialogue menu.
 - (Answered 2026-09-25) Epic gems and epic-cut Designs: item 8.
-- Epic-cut Designs from every Outland boss: how often? Stock boss recipe
-  drops run a few percent; "rare and coveted" suggests lower.
+- (Answered 2026-09-25) Epic-cut Designs: about 1.5% per Outland boss kill.
+- Onyxia's hoard: how many extra gems per sack, and weighted how (every
+  gem at equal odds would make epic cut gems as common as +4 ones; weighting
+  by quality keeps the common ones common)?
 - Bind on pickup and the Ashen Sack: the two-hour trade window covers
   loot from a creature; gems taken out of the sack bind to whoever opens
   it. Fine, since the sack itself is Onyxia's loot?

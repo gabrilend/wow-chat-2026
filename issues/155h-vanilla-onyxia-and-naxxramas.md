@@ -68,7 +68,8 @@ Blackwing Lair; Naxxramas-40 83–92, above Ahn'Qiraj 40 (73–88).
   dropped; the six uncut epic Wrath gems, one sure and two more at 60% and
   30%), because 155p makes it part of the epic-gem supply (Ritz,
   2026-09-25: "we should ensure that all the gems are on the loot table
-  for the gem bag from Onyxia").
+  for the gem bag from Onyxia"). The sack also becomes her hoard: gems of
+  every kind and 15–45 Gold Bars (155p).
 - Items per kill follow the Wrath version's count for each mode; tier 3
   comes back through the vanilla token-and-quest path.
 - Onyxia's Lair and Naxxramas sit at about the same tier as the top Outland

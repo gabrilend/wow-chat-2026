@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 10:57:18
+Generated on: 2026-09-25 11:04:49
 Models: claude-opus-5-5
 
 ## Contents
@@ -5179,6 +5179,53 @@ come from? Everything else now has a source, but these don't. Options:
    special loot.
 3. **A tiny chance from the crystal trader:** an uncommon gem, rarely a rare,
    very rarely an epic.
+
+--------------------------------------------------------------------------------
+
+### User Request 42
+
+the gems from the top Outland bosses, the recipes from every Outland boss. The
+gems should be 100% chance for 1 from Kael'Thas, 100% chance for 2 from each
+world boss, and 15% chance for 1 from each other Outland dungeon boss. Also, we
+should ensure that all the gems are on the loot table for the gem bag from
+Onyxia.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 42
+
+> Looking for Onyxia's gem bag in the loot data.
+
+> Also fixing a wording slip in the issue ("his direction") so it reads "Ritz's
+> direction".
+
+I've recorded the epic-gem plan in the sockets issue and committed it. There are
+six uncut epic Wrath gems: Cardinal Ruby, King's Amber, Majestic Zircon,
+Dreadstone, Ametrine and Eye of Zul. They drop at equal odds from one shared
+loot table:
+
+| Boss | Epic gems per kill |
+|---|---|
+| Kael'thas | 1, always |
+| Each world boss | 2, always |
+| Every other Outland dungeon boss (normal mode) | 1, at 15% |
+
+The 91 epic-cut recipes drop from every Outland boss.
+
+**Onyxia's gem bag** is the **Ashen Sack of Gems**. She always drops it, and in
+the stock game it already holds exactly those six uncut epic gems: one
+guaranteed, a second at 60%, a third at 30%. So there's nothing to add. But the
+Onyxia issue planned to replace her Wrath-era loot with her vanilla loot, which
+would have removed the sack. I've added to that issue that the sack stays.
+
+A small fix in the sockets issue: it said "his direction", and it now says
+"Ritz's direction". I shouldn't have assumed a pronoun.
+
+Next question: how often should an Outland boss drop an epic-cut recipe? For
+comparison, stock boss recipe drops are usually a few percent per kill, and you
+want these rare and coveted. My suggestion is 1–2% per boss kill for *some*
+epic-cut recipe. That's about one every 50–100 boss kills across a whole clan.
+What feels right?
 
 --------------------------------------------------------------------------------
 
