@@ -233,6 +233,13 @@ Draft for Ritz, 2026-09-25 (his direction, verbatim):
         uncommon at Hellfire Ramparts, all rare at Magisters' Terrace);
       - rate: stock recipes drop from ordinary monsters at a median 0.02%
         per recipe per kill (green) and 0.05% (blue), read 2026-09-25.
+        Ritz, 2026-09-25: "I want these recipes to be rare. They should be
+        coveted and players who learn them should be celebrated and
+        rewarded accordingly. Scarcity in this game breeds connection, at
+        least in the economy." So the chance of *any* Design per kill is
+        capped: about 0.3% for either group (the uncommon group's stock
+        total), which makes one particular rare-cut Design about 1 in
+        29,000 kills and one uncommon-cut Design about 1 in 5,700.
       Built as two shared reference tables (one per quality, each Design at
       equal odds), which the monsters' loot tables point at.
     - **Two NPCs** (Ritz, 2026-09-25: "how about two NPCs? :)"): one trades
@@ -240,6 +247,21 @@ Draft for Ritz, 2026-09-25 (his direction, verbatim):
       trainer-only uncommon cuts (hand over one uncut gem of that kind,
       pick one of its cuts, learn it; Lua can teach any spell, where one
       quest could teach only one). Both in titan places.
+    - **Paying with the gem through a stock window?** Ritz, 2026-09-25:
+      "some recipes can be learned in exchange for currency items, like
+      marks of honor or whatever. Can we do a similar system here, where the
+      'cost' is the gemstone the recipe uses? If so, we'll be able to re-use
+      the trainer UI which is nice." Read 2026-09-25: a trainer charges only
+      gold (its rows have a money cost, required skills and required
+      spells, no item cost). Item prices exist only at vendors, as "extended
+      costs", a client table of fixed price combinations (972 of them);
+      none asks for a gem. The server could define a new "1 Bloodstone"
+      price (it reads an override table), but the client wouldn't know it
+      and would show the wrong price, which breaks names-in-sync. Existing
+      prices of 1–6 Dalaran Jewelcrafter's Tokens do display correctly,
+      but a vendor sells items, and the 58 trainer-only cuts have no Design
+      item to sell. So the teacher uses a dialogue menu: "Show me the cuts
+      of a Bloodstone", pick one, the gem is taken, the cut is learned.
     - **Skill: set it to 300** (Ritz, 2026-09-25: "can't we change the level
       that the recipe requires? [...] set it to 300 and call it good"). Yes:
       read in the server 2026-09-25, casting a craft checks no skill (the
@@ -271,10 +293,11 @@ Draft for Ritz, 2026-09-25 (his direction, verbatim):
   the cuts from dropped Designs or from the master jewelcrafter (item 10).
 - (Answered 2026-09-25) Where uncommon- and rare-cut Designs drop; skill
   set to 300 (no check when crafting); two NPCs.
-- The drop rate: stock's per-recipe rate (0.02% green, 0.05% blue per
-  kill) means, with 87 rare-cut Designs, a second-half monster drops *some*
-  rare Design about 4% of kills (17 uncommon: about 0.3%). Keep per-recipe
-  parity, or cap the chance of any Design per kill?
+- (Answered 2026-09-25) Drop rate: rare and coveted; any Design per kill
+  capped near 0.3% for each group. Exact number open to tuning.
+- (Answered 2026-09-25, by the data) Paying for a cut with its gem in a
+  stock trainer or vendor window isn't possible with correct prices shown;
+  the teacher uses a dialogue menu.
 - Epic-cut Designs (91): where from (the epic gems' own source is still
   open)?
 - The teaching NPC: one cut per gem handed over (the gem is consumed), or

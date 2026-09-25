@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 10:44:36
+Generated on: 2026-09-25 10:52:53
 Models: claude-opus-5-5
 
 ## Contents
@@ -5000,6 +5000,110 @@ draft:
 
 Does that match what you meant, and roughly how rare is "rarely": something like
 1 in 500 kills?
+
+--------------------------------------------------------------------------------
+
+### User Request 39
+
+> Trainer-only cuts: a quest works, but one quest can teach only one spell, so
+> 58 cuts would mean 58 quests. I'd rather let the master jewelcrafter do it:
+> hand over one uncut gem of
+> that kind, pick one of its cuts, learn it. That's the same idea as your quest,
+> with one titan-site NPC who trades crystals and also teaches.
+
+how about two NPCs? :)
+
+> One risk to test in game: once a Wrath cut is learned, the server might still
+> check Jewelcrafting skill when you actually cut the gem, not only when you
+> learn the recipe. If it
+>   does, a character at 300 couldn't use a recipe that stock needs 360+ for.
+\]
+
+--------------------------------------------------------------------------------
+
+### User Request 40
+
+> Trainer-only cuts: a quest works, but one quest can teach only one spell, so
+> 58 cuts would mean 58 quests. I'd rather let the master jewelcrafter do it:
+> hand over one uncut gem of
+> that kind, pick one of its cuts, learn it. That's the same idea as your quest,
+> with one titan-site NPC who trades crystals and also teaches.
+
+how about two NPCs? :)
+
+> One risk to test in game: once a Wrath cut is learned, the server might still
+> check Jewelcrafting skill when you actually cut the gem, not only when you
+> learn the recipe. If it
+>   does, a character at 300 couldn't use a recipe that stock needs 360+ for.
+
+can't we change the level that the recipe requires? There's the recipe, and the
+spell, and both can have their level modified. Right? So, set it to 300 and call
+it good...?
+
+
+
+<pasted_content id="8773">
+> Next question: what does "one tier below" mean for each kind of recipe? My
+> draft:
+>   - Uncommon-cut Designs drop from Azeroth's level 55–60 monsters.
+>   - Rare-cut Designs drop from Outland's open world.
+>   - Epic-cut Designs drop from the upper Outland dungeons.
+</pasted_content id="8773">
+
+
+let's say the uncommon cut designs (which require WotLK gems, which are only
+sourced from Outland) come from the first half of the open world, and rare cut
+designs come from the second half of the open world. Both should be able to be
+dropped in dungeons, with a sliding probability that means the green recipes are
+more likely from the lower ilevel dungeons and the blue recipes are more likely
+from the higher ilevel dungeons. They should be about as rare as other recipes
+of the same quality.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 40
+
+> Checking whether the server looks at Jewelcrafting skill when you craft, not
+> only when you learn.
+
+Recorded all three answers in the sockets issue and committed them; nothing is
+built yet.
+
+**Two NPCs:** one trades Nexus Crystals for uncut Wrath gems. The other teaches
+the trainer-only uncommon cuts: you hand over an uncut gem, pick one of its
+cuts, and learn it. Both stand in titan places.
+
+**Skill: yes, set it to 300.** I checked the server code: when you actually
+craft, it checks no skill at all. It only checks skill for skinning, opening
+locks, disenchanting, prospecting and milling. Learning is the only gate, and
+every place that sets the level needed to learn is server data:
+- the recipe item's required skill;
+- the trainer's required skill;
+- the server's copy of the skill-line table (which a database table can
+  override).
+
+The client's copy of that table only colours the recipe, so it would show
+orange. One ordering detail: the file that removes recipes above 300 from
+Outland's loot has to run first, and then the new file lowers these recipes to
+300 and adds their drops.
+
+**Recipe drops:**
+- Uncommon-cut recipes (17): Hellfire Peninsula, Zangarmarsh, Terokkar Forest
+  and Nagrand.
+- Rare-cut recipes (87): Blade's Edge, Netherstorm, Shadowmoon Valley and the
+  Isle.
+- Dungeons drop both. The rare share climbs along the ladder, from all uncommon
+  at Hellfire Ramparts to all rare at Magisters' Terrace.
+- For "as rare as other recipes", I measured the stock rate. Ordinary monsters
+  drop a given recipe at a median 0.02% per kill for green recipes and 0.05% for
+  blue.
+
+Next question: that per-recipe rate adds up because there are so many rare cuts.
+With 87 rare-cut recipes at 0.05% each, a monster in the second half would drop
+*some* rare-cut recipe on about 4% of kills. The 17 uncommon ones together come
+to about 0.3%. Should each recipe keep the stock rate, which makes rare-cut
+recipes fairly common as a group? Or should we cap the chance of any recipe per
+kill, say around 0.5%, so each one individually becomes much rarer than stock?
 
 --------------------------------------------------------------------------------
 
