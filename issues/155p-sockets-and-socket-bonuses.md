@@ -66,7 +66,14 @@ stands in, from the server's own extracted map files):
   their two places), ranked by the generator from the client's gem data.
   Stock trainer rows for the same cuts are saved; both revert orders (the
   server's name order and reverse) end at the same tables, checked
-  2026-09-25.
+  2026-09-25;
+- a **Visiting Jewelcrafter** <Jewelcrafting Trainer> (list 113) stands in
+  each of Stormwind, Ironforge, Darnassus, Orgrimmar, Thunder Bluff and the
+  Undercity, beside the city's Mining trainer (in Darnassus, which has
+  none, beside a trainer on the Craftsmen's Terrace): copies of the
+  Exodar's trainer for Alliance cities and Silvermoon's for Horde ones.
+  The capitals' outlines come from the client's map rectangles, through
+  the generator.
 Default rates for prospecting and Wrath gem drops: `docs/balance-updates.md`
 (2026-09-25). `scripts/validate-basic-state` checks each part. Not built:
 stage 2 (the titan-site pairs), stage 3 (sockets on items, durability,
@@ -597,11 +604,9 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   (Ritz chose "Between the two: e.g. after all the pure sustain gems and
   before the pure power gems"): sustain, sustain+power, power,
   power+focus, focus.
-- Found while building the trainers: on this database, Azeroth's own
-  capitals (Stormwind, Ironforge, Darnassus, Orgrimmar, Thunder Bluff,
-  Undercity) have no Jewelcrafting trainer; only Silvermoon, Eversong and
-  the Exodar do, below Outland. Add one to each capital (a new trainer
-  spawn using list 113)?
+- (Answered 2026-09-25, "um. sure I guess.") Azeroth's six capitals, which
+  had no Jewelcrafting trainer on this database, each get a Visiting
+  Jewelcrafter teaching list 113.
 - The 11 rare Wrath cuts that stock teaches only at trainers (Ritz asked
   which): seven single gems at skill 390 (Bright Scarlet Ruby +32 attack
   power, Balanced Twilight Opal +16 attack power and +12 Stamina, Pristine

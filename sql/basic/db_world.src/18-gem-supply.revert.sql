@@ -25,6 +25,10 @@ WHERE b.`ReqSkillRank` <= 300
    OR NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'basic_155n_trainer_spell');
 DROP TABLE `basic_155p_trainer_added`;
 DROP TABLE `basic_155p_trainer_backup`;
+DELETE FROM `creature`                 WHERE `guid`       BETWEEN 15501001 AND 15501006;
+DELETE FROM `creature_default_trainer` WHERE `CreatureId` IN (1550201, 1550202);
+DELETE FROM `creature_template_model`  WHERE `CreatureID` IN (1550201, 1550202);
+DELETE FROM `creature_template`        WHERE `entry`      IN (1550201, 1550202);
 DELETE FROM `creature_loot_template`    WHERE `Item` BETWEEN 1550160 AND 1550200;
 DELETE FROM `prospecting_loot_template` WHERE `Item` BETWEEN 1550160 AND 1550200;
 DELETE FROM `reference_loot_template`   WHERE `Entry` BETWEEN 1550160 AND 1550173;
@@ -43,6 +47,8 @@ DROP TABLE IF EXISTS `tmp_155p_places`;
 DROP TABLE IF EXISTS `tmp_155p_teach`;
 DROP TABLE IF EXISTS `tmp_155p_ranked`;
 DROP TABLE IF EXISTS `tmp_155p_trainers`;
+DROP TABLE IF EXISTS `tmp_155p_capitals`;
+DROP TABLE IF EXISTS `tmp_155p_spots`;
 
 -- ============================================================================
 -- End of 18-gem-supply.sql (revert)

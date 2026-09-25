@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 13:43:16
+Generated on: 2026-09-25 14:45:51
 Models: claude-opus-5-5
 
 ## Contents
@@ -69,6 +69,10 @@ Models: claude-opus-5-5
     answers: should the masterwork jewelcrafter teach all 11 rare Wrath cuts
     (where do raw meta diamonds come from), and where do defensive stats fit in
     sustain, power, focus?
+16. 2026-09-25 13:46, after Request 62 - We're building basic's Jewelcrafting
+    rework; the gem supply is done, tested and committed. Next: you choose where
+    two-stat gems like "+Intellect and +mana" go in the sustain → power →
+    focus order, so I can build the trainers' Outland cuts.
 
 --------------------------------------------------------------------------------
 
@@ -6551,6 +6555,61 @@ strike". Where do they go?
    +crit" is power.
 3. **Between the two:** e.g. after all the pure sustain gems and before the pure
    power gems.
+
+--------------------------------------------------------------------------------
+
+### User Request 63
+
+> 3. Between the two: e.g. after all the pure sustain gems and before the pure
+> power gems.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 63
+
+> Recorded: a two-stat gem sits between its two stats' places. So the order runs
+> sustain, sustain+power, power, power+focus, focus. Building the trainer lists
+> now, starting with which trainers teach Jewelcrafting in Azeroth and what the
+> Outland cuts cost in the stock game.
+
+> Now the SQL section that puts the Outland cuts on the trainers.
+
+> One gap: the stock rows that the earlier removal file took away also need
+> copies in my backup, or a forward-order revert loses them. Adding that, and
+> the same restore rule to the re-apply path.
+
+> Now reverting the kept database in the real server's name order, then
+> comparing with a reverse-order revert of the same database.
+
+Stage 1 is complete, including the Outland cuts at the trainers. All committed
+and tested; nothing is installed on the real server yet.
+
+**Trainer cuts:** the trainers who teach Jewelcrafting up to 300 now teach 70 of
+Outland's cuts for gold:
+- 34 uncommon cuts spread over skill 150–225;
+- 36 rare cuts over 250–300.
+
+That's Outland's master trainers, plus those in Silvermoon, Eversong and the
+Exodar. Each tier runs sustain, sustain+power, power, power+focus, focus, worked
+out from what the client says each gem gives. So Solid Azure Moonstone (Stamina)
+comes first at 150 and Smooth Golden Draenite (critical strike) last at 225.
+Prices are small flat defaults, logged for tuning.
+
+**Revert safety:** the server reverts files in name order, not the reverse order
+my test uses. I ran both orders on the same database and they end at identical
+tables, so a revert on the real server is exact.
+
+**Found while building:** on this database, Azeroth's own capitals have no
+Jewelcrafting trainer at all. That's Stormwind, Ironforge, Darnassus, Orgrimmar,
+Thunder Bluff and the Undercity. Below Outland, only Silvermoon, Eversong and
+the Exodar have one. So most characters would have to travel far just to start
+Jewelcrafting. Should I add a Jewelcrafting trainer to each of those six
+capitals, teaching the same list as the Silvermoon and Exodar trainers?
+
+After that comes stage 2: the titan-site pairs (crystal trader and masterwork
+jewelcrafter) at Uldaman, the Gate of Uldum and the Un'Goro pylons, with the
+pylon wandering. I'll pick the exact standing spots from the map data and show
+you the coordinates.
 
 --------------------------------------------------------------------------------
 

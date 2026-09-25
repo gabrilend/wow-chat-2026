@@ -147,7 +147,14 @@ gem drops, Onyxia's hoard) are recorded in the issue.
 
 ---
 
+## 2026-09-25 — Basic: gold price of Outland gem cuts at trainers (defaults)
 
+The Jewelcrafting trainers who now teach Outland's gem cuts on basic (same
+file, section 7) charge a flat default price per cut, one for uncommon and
+one for rare cuts (the values are in that section). **Why:** stock prices
+for these cuts were set for level-70 characters with Outland income; a
+flat, small price fits characters learning them from skill 150, and can be
+tuned once real players' gold is known.
 
 ---
 
