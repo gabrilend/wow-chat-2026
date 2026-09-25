@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 11:15:14
+Generated on: 2026-09-25 11:18:11
 Models: claude-opus-5-5
 
 ## Contents
@@ -5410,6 +5410,42 @@ slice:
 I'd pick the first: opening Onyxia's hoard and finding one sack of every colour
 feels like a dragon's collection. Which do you want? I'll correct the numbers in
 the issue once you choose.
+
+--------------------------------------------------------------------------------
+
+### User Request 47
+
+Yeah let's have the 5 sacks always included, plus the entries you mentioned up
+above.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 47
+
+Recorded and committed: Onyxia's Ashen Sack of Gems now holds all five coloured
+sacks every time, plus the other piles. To stay within the 18-entry loot window,
+the low-level raw gems come as 3 bigger piles (about 16 gems each) instead of 5,
+so the gem count is the same:
+
+| Entries | What | Gems (about) |
+|---|---|---|
+| 1 | 15–45 Gold Bars | — |
+| 3 | the stock epic Wrath gem rolls | 1–3 |
+| 5 | Red, Green, Yellow, Gray and Blue Sacks of Gems | 35 |
+| 3 | low-level raw gems (Tigerseye, Malachite, Shadowgem, small pearls…) | 48 |
+| 3 | Outland uncommon and rare gems | 20 |
+| 2 | Wrath uncommon and rare gems | 12 |
+| 1 | epic cut gems | 8 |
+
+That's about 125 gems. The issue also now lists each coloured sack's signature
+gem and corrects my earlier 8–12 per sack to 6–8.
+
+Next open question: the epic Wrath gems bind on pickup. Loot from a creature can
+be traded for two hours among the people who were there. Things taken out of a
+bag don't get that window: they bind to whoever opens the bag. So whoever wins
+Onyxia's sack keeps its epic gems, and can hand the rest out, since the other
+gems don't bind. Is that fine, since the sack itself is the prize? Or should the
+sack's epic gems not bind?
 
 --------------------------------------------------------------------------------
 

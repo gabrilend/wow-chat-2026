@@ -241,10 +241,18 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
    - **All five coloured sacks, every time** (Ritz, 2026-09-25: "let's have
      the 5 sacks always included, plus the entries you mentioned up
      above"): about 35 higher vanilla raw gems, every signature gem.
-     Layout of the Ashen Sack (18 entries, the limit): gold bars 1, stock
-     epic rolls 3, coloured Sacks of Gems 5, low-level raw piles 3 (about
-     16 each, so the same ~48 gems in fewer, bigger piles), Outland piles
-     3, Wrath piles 2, epic cut pile 1. About 125 gems in all.
+     About 125 gems in all.
+   - **Binding gems drop outside the sack** (Ritz, 2026-09-25: "Maybe we
+     have the BoP gems just drop outside of the bag instead. That way they
+     can be traded."): what comes out of an opened bag binds to the opener
+     at once, while loot from a creature can be traded for two hours among
+     those present. So the stock epic rolls (one sure, 60%, 30%) move from
+     the sack to Onyxia's own loot, and so do the epic cut gems if they
+     bind. Stock, neither the sack nor the uncut epic gems bind, and 87 of
+     the 105 epic cut gems don't either.
+   - Layout of the Ashen Sack (18 entries at most): gold bars 1, coloured
+     Sacks of Gems 5, low-level raw piles 5, Outland piles 3, Wrath piles
+     2, and the epic cut pile 1 if epic cut gems don't bind: 16–17.
 9. **Epic Wrath gems bind on pickup** (Ritz, 2026-09-25: "we'll need to
    make the epic WotLK gems be BoP (tradable within 2 hours if you were
    there)"). The two-hour trade among those present is the client's own
@@ -356,9 +364,11 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   rare 2 piles (~12), epic cut gems 1 pile (~8), next to the three stock
   epic rolls.
   (The +4 cut gems stay a prospecting product.)
-- Bind on pickup and the Ashen Sack: the two-hour trade window covers
-  loot from a creature; gems taken out of the sack bind to whoever opens
-  it. Fine, since the sack itself is Onyxia's loot?
+- (Answered 2026-09-25) Binding gems drop from Onyxia herself, outside the
+  sack, so they can be traded for two hours.
+- Does "epic Wrath gems bind on pickup" cover the cut epic gems too, or
+  only the uncut ones that drop? If cut gems don't bind, a jewelcrafter who
+  wins an uncut epic gem can cut it and sell or trade the result.
 - The teaching NPC: one cut per gem handed over (the gem is consumed), or
   does the gem only have to be shown?
 - Which titan places, and which NPC stands where?
