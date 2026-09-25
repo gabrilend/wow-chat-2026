@@ -56,16 +56,24 @@ creatures are the exception).
 table can give; the middle half across the zone's creatures (zones from
 the client's map bounds, WorldMapArea.dbc):
 
-| Zone | Creature levels | Greens (ilvl) | Blues, rare (ilvl) | Greens ≈ epic | Blues ≈ epic |
+| Zone | Typical creature levels | Greens (ilvl) | Blues, rare (ilvl) | Greens ≈ epic | Blues ≈ epic |
 |---|---|---|---|---|---|
-| Hellfire Peninsula | 58–71 | 84–92 | 88–91 | 53–58 | 71–74 |
-| Zangarmarsh | 61–72 | 92–95 | 91–97 | 58–60 | 74–79 |
-| Terokkar Forest | 60–72 | 95–104 | 97–106 | 60–66 | 79–86 |
-| Nagrand | 62–72 | 98–105 | 100–108 | 62–67 | 81–88 |
-| Blade's Edge | 62–72 | 102–107 | 105–109 | 65–68 | 85–88 |
-| Netherstorm | 67–71 | 108–111 | 111–112 | 69–71 | 90–91 |
-| Shadowmoon Valley | 66–72 | 110–114 | 111–114 | 70–73 | 90–92 |
-| Isle of Quel'Danas | 69–71 | 114–116 | 114 | 73–74 | 92 |
+| Hellfire Peninsula | 59–62 | 84–92 | 88–91 | 53–58 | 71–74 |
+| Zangarmarsh | 62–63 | 92–95 | 91–97 | 58–60 | 74–79 |
+| Terokkar Forest | 64–67 | 95–104 | 97–106 | 60–66 | 79–86 |
+| Nagrand | 65–67 | 98–105 | 100–108 | 62–67 | 81–88 |
+| Blade's Edge | 66–68 | 102–107 | 105–109 | 65–68 | 85–88 |
+| Netherstorm | 68–69 | 108–111 | 111–112 | 69–71 | 90–91 |
+| Shadowmoon Valley | 69–70 | 110–114 | 111–114 | 70–73 | 90–92 |
+| Isle of Quel'Danas | 69–70 | 114–116 | 114 | 73–74 | 92 |
+
+"Typical creature levels" is the middle half of the zone's hostile, lootable
+creature spawns (Ritz, 2026-09-24: the full range misleads, "in every zone
+there's a lot of level 70 monsters, but those aren't really the 'intended'
+monster ranges"). Full ranges, for reference, run up to 71–73 everywhere
+(Skettis in Terokkar, Ogri'la in Blade's Edge and similar corners). Under
+the +4 (+6 on the Isle) these become 63–66, 66–67, 68–71, 69–71, 70–72,
+72–73, 73–74 and 75–76.
 
 "≈ epic" is the stat-budget conversion (green ≈ (ilvl − 4) ÷ 2, blue ≈
 (ilvl − 1.84) ÷ 1.6, epic ≈ (ilvl − 1.3) ÷ 1.3, expressed as an epic's item
@@ -91,10 +99,10 @@ on all of it are ~1.6× stronger at level 60 (see 155f).
   "I think we might need to give all the monsters in Outland a +4 level
   bonus, because a level 58 normal mob dropping raid gear semi-rarely
   is... too powerful."). This reverses 155f's "open world stays stock" for
-  Outland's hostile creatures. Zones' creature levels become: Hellfire
-  Peninsula 62–75, Zangarmarsh 65–76, Terokkar Forest 64–76, Nagrand
-  66–76, Blade's Edge 66–76, Netherstorm 71–75, Shadowmoon Valley 70–76
-  (stock ranges +4), and the Isle of Quel'Danas 75–77 (+6, the top zone). Loot tables don't change
+  Outland's hostile creatures. Zones' typical creature levels become:
+  Hellfire Peninsula 63–66, Zangarmarsh 66–67, Terokkar Forest 68–71,
+  Nagrand 69–71, Blade's Edge 70–72, Netherstorm 72–73, Shadowmoon Valley
+  73–74 (+4), and the Isle of Quel'Danas 75–76 (+6, the top zone). Loot tables don't change
   (they belong to the creature, not its level). Friendly NPCs are not
   raised. With 155f's dungeon templates also raised, a template shared by
   a dungeon and the open world is simply +4 in both.
@@ -183,7 +191,7 @@ on all of it are ~1.6× stronger at level 60 (see 155f).
   crafted by Jewelcrafting, capped at 300 on basic, so Outland gems come
   only from drops). Agreed?
 
-- (Answered 2026-09-24) The Isle of Quel'Danas gets **+6** (75–77), the
+- (Answered 2026-09-24) The Isle of Quel'Danas gets **+6** (typical 75–76; full range 75–77), the
   top of the open world, just under Kael'thas (78): "It gets +4. In-fact
   since it's the highest level zone, maybe we give them +5 or +6." / "+6".
 - (Answered 2026-09-24) The world bosses stay at stock levels: "let's see
