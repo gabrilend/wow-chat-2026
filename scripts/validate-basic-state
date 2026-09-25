@@ -169,10 +169,10 @@ report "no pool still lists a removed spawn" \
 report "every Outland zone needs fishing skill 300" \
     "$(run_sql "SELECT z.entry, f.skill FROM ${WORLD}.basic_155n_fishing_skill z LEFT JOIN ${WORLD}.skill_fishing_base_level f ON f.entry = z.entry
         WHERE f.skill IS NULL OR f.skill <> 300")"
-report "no trainer teaches a profession past 300" \
+report "no trainer teaches a profession past 300, nor a Master or Grand Master rank" \
     "$(run_sql "SELECT ts.TrainerId, ts.SpellId, ts.ReqSkillRank FROM ${WORLD}.trainer_spell ts
         WHERE (ts.ReqSkillLine IN (164,165,171,182,186,197,202,333,393,755,773,185,129,356) AND ts.ReqSkillRank > 300)
-           OR (ts.TrainerId, ts.SpellId) IN (SELECT TrainerId, SpellId FROM ${WORLD}.basic_155n_trainer_spell) LIMIT 10")"
+           OR (ts.TrainerId, ts.SpellId) IN (SELECT TrainerId, SpellId FROM ${WORLD}.basic_155n_trainer_spell WHERE ReqSkillRank <= 300) LIMIT 10")"
 report "no recipe past 300 sold or dropped directly" \
     "$(run_sql "SELECT 'vendor', v.item FROM ${WORLD}.npc_vendor v JOIN ${WORLD}.item_template i ON i.entry = v.item
         WHERE i.class = 9 AND i.RequiredSkillRank > 300 AND i.RequiredSkill IN (164,165,171,182,186,197,202,333,393,755,773,185,129,356)
@@ -187,6 +187,21 @@ report "no enabled quest is given or taken in Outland" \
           AND NOT EXISTS (SELECT 1 FROM ${WORLD}.disables d WHERE d.sourceType = 1 AND d.entry = s.quest) LIMIT 10")"
 report "the Shattrath portal to the Isle of Quel'Danas is gone" \
     "$(run_sql "SELECT guid FROM ${WORLD}.gameobject WHERE id = 187056")"
+# }}}
+
+# {{{ 155o: Inscription without glyphs
+report "no trainer teaches a glyph" \
+    "$(run_sql "SELECT ts.TrainerId, ts.SpellId FROM ${WORLD}.trainer_spell ts JOIN ${WORLD}.basic_155o_glyph_trainer_spell b ON b.SpellId = ts.SpellId LIMIT 10")"
+report "every scroll and vellum III recipe is learnable within 300" \
+    "$(run_sql "SELECT 'missing', COUNT(*) FROM ${WORLD}.basic_155o_scroll_items HAVING COUNT(*) = 0
+        UNION ALL SELECT ts.SpellId, ts.ReqSkillRank FROM ${WORLD}.trainer_spell ts
+        WHERE ts.ReqSkillLine = 773 AND ts.ReqSkillRank > 300 LIMIT 10")"
+report "scroll required levels are 3/4 of stock" \
+    "$(run_sql "SELECT i.entry, i.RequiredLevel, b.RequiredLevel FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155o_scroll_items b ON b.entry = i.entry
+        WHERE i.RequiredLevel <> ROUND(b.RequiredLevel * 0.75) LIMIT 10")"
+report "scrolls no longer share a stacking group with class buffs; one scroll at a time kept" \
+    "$(run_sql "SELECT id, spell_id FROM ${WORLD}.spell_group WHERE id IN (1083,1084,1085,1086,1088) AND spell_id IN (-1066,-1067,-1068,-1069,-1070,-1071)
+        UNION ALL SELECT 'scrolls group', COUNT(*) FROM ${WORLD}.spell_group WHERE id = 1087 HAVING COUNT(*) <> 6")"
 # }}}
 
 echo ""

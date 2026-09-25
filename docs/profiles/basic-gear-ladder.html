@@ -69,7 +69,7 @@ th{color:var(--ink-3);font-weight:500}
       <span><i style="background:var(--s1)"></i>Vanilla raids &amp; Azeroth</span>
       <span><i style="background:var(--s2)"></i>Outland dungeons</span>
       <span><i style="background:var(--s3)"></i>Outland open world &amp; world bosses</span>
-      <span><i style="background:none;border:1.5px dashed var(--ink-3)"></i>stock range (proposed view)</span>
+      <span><i style="background:none;border:1.5px dashed var(--ink-3)"></i>stock values (proposed view; hover it for its own tooltip)</span>
       <span>names: <b style="color:var(--q2)">green</b> · <b style="color:var(--q3)">blue</b> · <b style="color:var(--q4)">epic</b> gear</span>
     </div>
   </div>
@@ -78,7 +78,7 @@ th{color:var(--ink-3);font-weight:500}
     <svg id="chart" role="img" aria-label="Range chart of gear item levels by source"></svg>
     <div id="tip" hidden></div>
   </div>
-  <p class="hint">Hover a creature level on the right to light up every row fought at overlapping levels; hover the axis along the bottom to light up every row whose gear includes that item level. Proposed view: solid bars are the planned values, dashed outlines the stock values they replace, and • marks a changed or new row. Right-hand numbers are the creature levels you fight for that gear: trash to boss for dungeons (after their level offset); for open-world zones, the middle half of the zone's hostile creature spawns (a few much higher-level spots, like a zone's level-70 corner, are left out). Open-world bars are the middle half of what each zone's normal creatures drop.</p>
+  <p class="hint">Hover a creature level on the right to light up every row fought at overlapping levels; hover the axis along the bottom to light up every row whose gear includes that item level. Proposed view: solid bars are the planned values; a changed row (marked •) also shows the stock values it replaces as a dashed bar, which has its own tooltip. Right-hand numbers are the creature levels you fight for that gear: trash to boss for dungeons (after their level offset); for open-world zones, the middle half of the zone's hostile creature spawns (a few much higher-level spots, like a zone's level-70 corner, are left out). Open-world bars are the middle half of what each zone's normal creatures drop.</p>
 
   <section class="notes">
     <div><h2>Stat budget</h2><p>Item level means different amounts of stats at each quality. Converted with the commonly cited budget curves: green ≈ (ilvl − 4) ÷ 2, blue ≈ (ilvl − 1.84) ÷ 1.6, epic ≈ (ilvl − 1.3) ÷ 1.3, then expressed as the epic item level with the same budget. Approximate.</p></div>
@@ -88,7 +88,7 @@ th{color:var(--ink-3);font-weight:500}
 
   <details>
     <summary>Table view</summary>
-    <div class="tbl"><table id="tbl"><thead><tr><th>Source</th><th>Group</th><th>Quality</th><th>Item level</th><th>≈ epic item level</th><th>Creature level</th><th>Stock (when changed)</th></tr></thead><tbody></tbody></table></div>
+    <div class="tbl"><table id="tbl"><thead><tr><th>Source</th><th>Group</th><th>Quality</th><th>Item level</th><th>≈ epic item level</th><th>Creature level</th><th>Status</th></tr></thead><tbody></tbody></table></div>
   </details>
 </div>
 
@@ -181,8 +181,8 @@ const NS = "http://www.w3.org/2000/svg";
 const W = 1040, L = 290, R = 70, ROW = 22, GH = 30, TOP = 34;
 const el = (t,a,p) => { const e=document.createElementNS(NS,t); for(const k in a) e.setAttribute(k,a[k]); (p||svg).appendChild(e); return e; };
 const fmt = v => Math.round(v);
-// the row as shown in the current view; stock values kept as r.s for the ghost bar
-const shown = () => ROWS.filter(r => !r.only || r.only===view).map(r => view==="proposed" && r.p ? {...r, ...r.p, s:r} : {...r});
+// the rows as shown in the current view; a changed row keeps its stock values as r.s (drawn as a dashed bar on the same row)
+const shown = () => ROWS.filter(r => !r.only || r.only===view).map(r => view==="proposed" && r.p ? {...r, ...r.p, changed:true, s:r} : {...r});
 
 function draw(){
   svg.textContent = "";
@@ -226,15 +226,17 @@ function draw(){
     const g = el("g",{tabindex:0,role:"img","aria-label":`${r.n}: ${QN[r.q]} item level ${rng(r.lo,r.hi)}, about epic ${rng(fmt(eq(r.lo,r.q)),fmt(eq(r.hi,r.q)))}, creature level ${r.lv}`});
     el("rect",{x:0,y:o.y,width:W-R+8,height:ROW,fill:"transparent"},g);
     // the row's name wears the colour of the gear quality it stands for (green / blue / purple)
-    const lab = el("text",{x:L-10,y:cy+4,"text-anchor":"end",style:`fill:var(--q${r.q})`},g); lab.textContent = (r.s || r.only==="proposed") && view==="proposed" ? r.n+" •" : r.n;
-    if(r.s){ // ghost of the stock range behind a changed row
-      const sa = val(r.s.lo,r.q), sb = val(r.s.hi,r.q), sw = Math.max(x(sb)-x(sa),8), sx = x(sa)-(sb===sa?4:0);
-      el("rect",{x:sx,y:cy-5,width:sw,height:10,rx:4,fill:"none",stroke:colors[r.g],"stroke-width":1.5,"stroke-dasharray":"3 2","stroke-opacity":.7},g);
-      bars.push({x:sx,y:cy-5,w:sw,h:10});
-    }
+    const lab = el("text",{x:L-10,y:cy+4,"text-anchor":"end",style:`fill:var(--q${r.q})`},g); lab.textContent = (r.changed || r.only==="proposed") ? r.n+" •" : r.n;
     const w = Math.max(x(b)-x(a),8), x0 = x(a)-(b===a?4:0);
     el("rect",{class:"bar",x:x0,y:cy-5,width:w,height:10,rx:4,fill:colors[r.g],"fill-opacity":r.q===2?.55:1},g);
     bars.push({x:x0,y:cy-5,w:w,h:10});
+    // a changed row's stock values: a dashed bar on the same row and at the same height, drawn over the row
+    // so it can be hovered on its own (its own tooltip); where it overlaps the proposed bar, it takes the hover
+    let sx0 = 0, sw = 0, sa = 0, sb = 0, stockBar = null;
+    if(r.s){
+      sa = val(r.s.lo,r.q); sb = val(r.s.hi,r.q); sw = Math.max(x(sb)-x(sa),8); sx0 = x(sa)-(sb===sa?4:0);
+      bars.push({x:sx0,y:cy-5,w:sw,h:10});
+    }
     // the creature-level column: its own hover target, outside the row, that spotlights every row whose levels overlap
     const lvg = el("g",{});
     // hover zone runs from this row down to the next row (across a group heading too), so the column has no gaps
@@ -251,6 +253,7 @@ function draw(){
       spotlight(ri => ri.lvRange && ri.lvRange[0] <= myLv[1] && ri.lvRange[1] >= myLv[0]);
     });
     lvg.addEventListener("mouseleave", () => { lv.style.fontWeight = ""; lv.style.fill = ""; unspotlight(); });
+    let cur = {x0, w};   // the bar the tooltip belongs to: the row's own, or its stock bar
     const place = (ev) => {
       // The tooltip starts at the clear spot nearest where the last tooltip was (or, the first time, nearest the
       // selected bar), then slides toward the selected bar's centre: along x, then along y, repeating, one step at a
@@ -258,7 +261,7 @@ function draw(){
       // tooltip on the same side it was on. "Clear" = covers no bar and not this row's name or level.
       const bb = box.getBoundingClientRect(), sb = svg.getBoundingClientRect(), k = sb.width/W;
       const ox = sb.left-bb.left+box.scrollLeft, oy = sb.top-bb.top;
-      const cx = ox + (x0+w/2)*k, cyy = oy + cy*k;
+      const cx = ox + (cur.x0+cur.w/2)*k, cyy = oy + cy*k;
       const tw = tip.offsetWidth, th = tip.offsetHeight, pad = 3;
       const maxX = Math.max(box.scrollWidth - tw, 0), maxY = Math.max(box.clientHeight - th, 0);
       const toBox = (q) => { const r = q.getBoundingClientRect(); return [r.left-bb.left+box.scrollLeft-pad, r.top-bb.top-pad, r.right-bb.left+box.scrollLeft+pad, r.bottom-bb.top+pad]; };
@@ -328,25 +331,36 @@ function draw(){
       lastTip = {lx:px, ly:py}; lastGroup = r.g;
       animateTip(path);
     };
-    const show = ev => {
-      band.setAttribute("x",x0); band.setAttribute("width",w); band.setAttribute("visibility","visible");
+    // which: "main" (the row's own values) or "stock" (the dashed bar's)
+    const show = (ev, which) => {
+      const st = which === "stock";
+      const lo = st ? r.s.lo : r.lo, hi = st ? r.s.hi : r.hi, va = st ? sa : a, vb = st ? sb : b;
+      cur = st ? {x0:sx0, w:sw} : {x0, w};
+      band.setAttribute("x",cur.x0); band.setAttribute("width",cur.w); band.setAttribute("visibility","visible");
       hband.setAttribute("y",o.y); hband.setAttribute("visibility","visible");
       for(const t of [lab,lv]){ t.style.fontWeight = "700"; t.style.fontStyle = "italic"; }
       lv.style.fill = "var(--ink)";
-      putEdge(eL, x0, fmt(a)); if(b!==a) putEdge(eR, x0+w, fmt(b)); else eR.g.setAttribute("visibility","hidden");
+      // edge labels; two that would touch (values within 2) are pushed apart
+      const close = vb !== va && Math.abs(fmt(vb) - fmt(va)) <= 2, push = close ? 12 : 0;
+      putEdge(eL, cur.x0 - push, fmt(va)); if(vb!==va) putEdge(eR, cur.x0+cur.w + push, fmt(vb)); else eR.g.setAttribute("visibility","hidden");
       // an axis number within 2 of either edge value would sit under its label: hide it while this row is selected
-      ticks.forEach(k => { k.t.style.visibility = (Math.abs(k.v - a) <= 2 || Math.abs(k.v - b) <= 2) ? "hidden" : ""; });
-      const e1=fmt(eq(r.lo,r.q)), e2=fmt(eq(r.hi,r.q));
-      const tag = view==="proposed" && (r.s || r.only==="proposed") ? "Proposed: " : "";
-      let h = `<b>${r.n}</b>${tag ? "<br>"+tag.replace(": ","") : ""}<br>Item level ${rng(r.lo,r.hi)}<br>≈ epic item level ${rng(e1,e2)}`;
-      if(r.s) h += `<br><i>Stock (dashed outline): item level ${rng(r.s.lo,r.s.hi)}, ≈ epic ${rng(fmt(eq(r.s.lo,r.q)),fmt(eq(r.s.hi,r.q)))}</i>`;
-      if(r.only==="proposed") h += `<br><i>new on basic</i>`;
+      // (compared with the numbers the labels show, rounded; 2 inclusive: a label reading 58–62 hides the 60)
+      ticks.forEach(k => { k.t.style.visibility = (Math.abs(k.v - fmt(va)) <= 2 || Math.abs(k.v - fmt(vb)) <= 2) ? "hidden" : ""; });
+      const e1=fmt(eq(lo,r.q)), e2=fmt(eq(hi,r.q));
+      const tag = st ? "Stock (the dashed bar)" : (r.changed || r.only==="proposed") ? "Proposed" : "";
+      let h = `<b>${r.n}</b>${tag ? "<br>"+tag : ""}<br>Item level ${rng(lo,hi)}<br>≈ epic item level ${rng(e1,e2)}`;
+      if(!st && r.only==="proposed") h += `<br><i>new on basic</i>`;
       tip.innerHTML = h; tip.hidden = false;
       place(ev);
     };
     const hide = () => { for(const e of [band,hband,eL.g,eR.g]) e.setAttribute("visibility","hidden"); for(const t of [lab,lv]){ t.style.fontWeight = ""; t.style.fontStyle = ""; } lv.style.fill = ""; ticks.forEach(k => k.t.style.visibility = ""); tip.hidden = true; };
-    g.addEventListener("mouseenter",show); g.addEventListener("focus",show);
+    g.addEventListener("mouseenter", ev => show(ev, "main")); g.addEventListener("focus", ev => show(ev, "main"));
     g.addEventListener("mouseleave",hide); g.addEventListener("blur",hide);
+    if(r.s){
+      stockBar = el("rect",{class:"bar",x:sx0,y:cy-5,width:sw,height:10,rx:4,fill:"transparent",stroke:colors[r.g],"stroke-width":1.5,"stroke-dasharray":"3 2",style:"cursor:default"});
+      stockBar.addEventListener("mouseenter", ev => show(ev, "stock"));
+      stockBar.addEventListener("mouseleave", hide);
+    }
   });
   eL = edgeLabel(); eR = edgeLabel();
   // item-level axis: hovering it picks one whole number on the current scale, draws a line there with the
@@ -371,7 +385,7 @@ function draw(){
 }
 function table(){
   const tb = document.querySelector("#tbl tbody");
-  tb.innerHTML = shown().map(r=>`<tr><td>${r.n}</td><td>${GROUPS[r.g]}</td><td>${QN[r.q]}</td><td>${rng(r.lo,r.hi)}</td><td>${rng(fmt(eq(r.lo,r.q)),fmt(eq(r.hi,r.q)))}</td><td>${r.lv}</td><td>${r.s ? "ilvl "+rng(r.s.lo,r.s.hi)+" (≈ epic "+rng(fmt(eq(r.s.lo,r.q)),fmt(eq(r.s.hi,r.q)))+"), level "+r.s.lv : (r.only==="proposed" ? "new" : "same")}</td></tr>`).join("");
+  tb.innerHTML = shown().map(r=>`<tr><td>${r.n}</td><td>${GROUPS[r.g]}</td><td>${QN[r.q]}</td><td>${rng(r.lo,r.hi)}</td><td>${rng(fmt(eq(r.lo,r.q)),fmt(eq(r.hi,r.q)))}</td><td>${r.lv}</td><td>${r.changed ? "proposed (stock: ilvl "+rng(r.s.lo,r.s.hi)+")" : (r.only==="proposed" ? "new" : "same")}</td></tr>`).join("");
 }
 const press = (id,on) => document.getElementById(id).setAttribute("aria-pressed",on);
 const setMode = m => { mode=m; press("mode-eq",m==="eq"); press("mode-raw",m==="raw"); try{localStorage.setItem("ladder-mode",m)}catch(e){} draw(); };

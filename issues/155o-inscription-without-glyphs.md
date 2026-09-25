@@ -73,7 +73,37 @@ And, verbatim, 2026-09-24:
 
 ## Current Behavior
 
-Stock. Read from the client's profession tables (SkillLineAbility.dbc,
+**Built 2026-09-24** as install step E029,
+`sql/basic/db_world.src/14-inscription-without-glyphs.apply.sql` (+ revert),
+its recipe lists generated from the client's profession and spell tables by
+`scripts/generate-basic-inscription-sql` (347 glyph and research recipes;
+42 stat-scroll and rank-III vellum recipes), plus source patch B032. Runs
+after E027 (which removes every recipe above 300):
+
+1. glyph recipes and glyph research are removed from every trainer;
+2. every stat-scroll recipe and both rank-III vellums need their stock skill
+   × 300/425 (rank VIII 405–425 → 286–300; Vellum III 350/400 → 247/282);
+   recipes E027 removed are put back at that rank;
+3. the scroll items' required level × 0.75 (VI 45, VII 53, VIII 60); buff
+   values and the 30-minute duration are stock;
+4. scrolls leave the "stronger one wins" stacking groups they shared with
+   class buffs (spell groups 1083–1086, 1088) and stay in the "Scrolls"
+   group (1087): one scroll per character, on top of class buffs;
+5. **B032** (`patches/B032-no-buff-level-restriction.sh`, doc
+   `docs/patches/no-buff-level-restriction.md`): the stock server refuses to
+   put a buff on a target more than 10 levels below the buff's lowest rank,
+   which would stop a level-60 player reading rank VII (spell level 70) or
+   VIII (80) on anyone else. Found while building this; Ritz: "sounds like we
+   should make a patch to remove that restriction." Not yet compiled.
+
+Tested: `scripts/test-basic-sql-in-ram` (with the exact-revert checksum,
+`spell_group` included) and `scripts/validate-basic-state` (no glyph at a
+trainer, every scroll recipe within 300, required levels 3/4 of stock, the
+stacking groups); `scripts/test-source-patches` round-trips B032 with the
+other 24 basic source patches. Not built yet: the Darkmoon voidwalker,
+tarot/deck/trinket binding, the Burning Crusade card drops (below).
+
+Stock numbers, for reference. Read from the client's profession tables (SkillLineAbility.dbc,
 Spell.dbc) and the world database, 2026-09-24. Inscription has 449
 entries; **345 are glyphs**, 155 of them within skill 300.
 
