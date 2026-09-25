@@ -129,10 +129,12 @@ apply_all() {
     step "E022 quests open to the whole faction"          "${WORLD}" "${B}/db_world.src/08-faction-quest-gating.apply.sql"
     step "E024 Outland dungeons (level ladder, open at 60)" "${WORLD}" "${B}/db_world.src/09-outland-dungeons-64.apply.sql"
     step "E025 Visiting Mentors"                          "${WORLD}" "${B}/db_world.src/10-valley-universal-trainers.apply.sql"
+    step "E026 creature multiplier table"                 "${WORLD}" "${B}/db_world.src/11-creature-multipliers.apply.sql"
     step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${V}/db_characters.src/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
 }
 revert_all() {
+    step "E026 revert" "${WORLD}" "${B}/db_world.src/11-creature-multipliers.revert.sql"
     step "E025 revert" "${WORLD}" "${B}/db_world.src/10-valley-universal-trainers.revert.sql"
     step "E024 revert" "${WORLD}" "${B}/db_world.src/09-outland-dungeons-64.revert.sql"
     step "E022 revert" "${WORLD}" "${B}/db_world.src/08-faction-quest-gating.revert.sql"
@@ -140,14 +142,22 @@ revert_all() {
     step "E023 revert" "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.revert.sql"
 }
 # The tables basic's world SQL edits; after the revert they must checksum
+# exactly as before the apply (a revert that restores "nearly" is a failed
+# revert). E008 (vanilla's flight-path removal, shared) has no revert file
+# here (its revert lives inline in E-patches.sh), so it is applied first and
+# the snapshot is taken after it.
 TOUCHED="creature_template, item_template, dungeon_access_template, dungeon_access_requirements, quest_template, creature, gossip_menu, npc_text"
+echo "Before the snapshot:"
+step "E008 flight paths removed (vanilla's, shared)"  "${WORLD}" "${V}/db_world.src/03-remove-flight-paths.apply.sql"
 stock_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")
 echo "Apply:";          apply_all
 echo "Apply again (must be re-applicable):"; apply_all
 echo "Revert:";         revert_all
 reverted_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")
 if [[ "${stock_sum}" == "${reverted_sum}" ]]; then
+    echo "  [✓] after the revert, the edited world tables checksum exactly as before the apply"
 else
+    echo "  [✗] after the revert, these world tables differ from before the apply:"
     diff <(echo "${stock_sum}") <(echo "${reverted_sum}") | sed 's/^/      /'
     FAILED=$((FAILED + 1))
 fi

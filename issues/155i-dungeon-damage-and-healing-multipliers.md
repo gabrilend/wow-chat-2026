@@ -24,25 +24,37 @@ themselves — "... yes?"
 
 ## Current Behavior
 
-Nothing like this exists on basic. Creature health and melee damage follow
-the creature's level and its template's health and damage multipliers;
-creature **spell** damage comes from the spell's own data and mostly does
-not follow level, so raising levels (155f) barely changes it.
+**Built 2026-09-24; not yet compiled** (Ritz runs the compile).
 
-The server already has the hooks: its unit-script interface
-(`UnitScript.h`) is called for every melee hit, every direct spell hit,
-every damage-over-time tick and every heal, with the amount passed by
-reference so a script can change it:
-
-- a melee hook (`ModifyMeleeDamage`)
-- a spell damage hook (`ModifySpellDamageTaken`)
-- a periodic damage hook (`ModifyPeriodicDamageAurasTick`)
-- a healing hook (`ModifyHealReceived`)
-
-Basic's compiled rules file (`src/cpp-basic/basic_rules.cpp`, copied in by
-B030) is where such a script lives. The upstream module mod-zone-difficulty
-does this kind of per-map scaling (it is not cloned here, and its current
-table layout has not been checked).
+- **Table**: `basic_creature_multipliers` in the world database, created by
+  install step E026 from `sql/basic/db_world.src/11-creature-multipliers.apply.sql`
+  (revert drops it). Columns: `entry` (creature template, or 0 for a map
+  row), `map_id` (for a map row), `melee`, `spell`, `heal`, `health`
+  (floats, 1 = stock), `comment` (who and why). Starts empty.
+- **Code**: in `src/cpp-basic/basic_rules.cpp` (copied into the server by
+  B030):
+  - loads the table at startup (the world's custom-table hook) and on
+    `.basic reload multipliers` (reload permission); a missing table is
+    logged as an error ("install step E026 not run?"), an empty one as
+    "every creature stock";
+  - picks a unit's row: its own template's row, else its creature owner's
+    (adds and pets), else its map's; players and anything a player
+    controls never;
+  - melee hook (after the attacker's bonuses, before armor) × `melee`;
+    direct spell damage × `spell`; damage-over-time ticks × `spell`,
+    skipping positive spells, because the server also sends heal-over-time
+    ticks through that hook; healing × `heal` when either the healer or the
+    healed has a row (the server's two heal call sites pass the two units
+    in opposite orders);
+  - health × `health` at the end of level selection (spawn, respawn), from
+    creature rows only: the creature's map isn't reliably known at that
+    moment, so a map row's health is ignored (said in the SQL header).
+- **Tests**: `scripts/test-basic-sql-in-ram` applies and reverts the table
+  with the rest of basic's SQL; `scripts/validate-basic-state` checks the
+  table and its six value columns exist; `scripts/test-source-patches`
+  still round-trips all basic source patches. Nothing exercises the C++
+  until the compile; after it, a row for a Ramparts trash creature with
+  `melee = 2` should double its hits in the combat log.
 
 ## Intended Behavior
 

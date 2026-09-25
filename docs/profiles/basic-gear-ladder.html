@@ -249,26 +249,26 @@ function draw(){
         }
         return best;
       };
-      // slide toward the bar's centre in straight legs, 4 px at a time, while the spot stays clear and gets
-      // closer: the axis with the larger remaining distance goes first, then the other, repeated until stuck.
+      // Move toward the bar: the destination is the clear spot closest to the bar's centre on the same side of
+      // it as the tooltip already is (the same corner around the bar), or the closest clear spot anywhere if that
+      // side has none. The route is one or two straight legs, the longer axis first; it may pass over bars and
+      // labels on the way, only the destination must be clear.
       const slide = (px, py, path) => {
-        let moved = true;
-        while(moved){
-          moved = false;
-          const dxAbs = Math.abs(cx-(px+tw/2)), dyAbs = Math.abs(cyy-(py+th/2));
-          for(const axis of (dxAbs >= dyAbs ? ["x","y"] : ["y","x"])){
-            let stepped = false;
-            for(;;){
-              const sx = axis==="x" ? Math.sign(cx-(px+tw/2))*4 : 0, sy = axis==="y" ? Math.sign(cyy-(py+th/2))*4 : 0;
-              if(!sx && !sy) break;
-              const nx = px+sx, ny = py+sy;
-              if(!clear(nx,ny) || dist(nx,ny) >= dist(px,py)) break;
-              px = nx; py = ny; stepped = true;
-            }
-            if(stepped){ path.push({lx:px, ly:py}); moved = true; }
-          }
+        const sx = Math.sign(px+tw/2-cx), sy = Math.sign(py+th/2-cyy);
+        const sameSide = (lx,ly) => (!sx || Math.sign(lx+tw/2-cx) === sx) && (!sy || Math.sign(ly+th/2-cyy) === sy);
+        let dest = null;
+        for(let ly = 0; ly <= maxY; ly += 6) for(let lx = 0; lx <= maxX; lx += 8){
+          if(!sameSide(lx,ly)) continue;
+          const d = dist(lx,ly);
+          if(dest && d >= dest.d) continue;
+          if(clear(lx,ly)) dest = {lx,ly,d};
         }
-        return {lx:px, ly:py};
+        if(!dest) dest = nearestClear(dist);
+        if(!dest || dist(dest.lx,dest.ly) >= dist(px,py) && clear(px,py)) return {lx:px, ly:py};
+        const xFirst = Math.abs(dest.lx-px) >= Math.abs(dest.ly-py);
+        path.push(xFirst ? {lx:dest.lx, ly:py} : {lx:px, ly:dest.ly});
+        path.push({lx:dest.lx, ly:dest.ly});
+        return {lx:dest.lx, ly:dest.ly};
       };
       // Fresh start (first row selected, a new colour group, or after the pointer left the chart): the tooltip
       // appears at the pointer, then moves to the clear spot nearest the pointer in the corner facing away from the bar.

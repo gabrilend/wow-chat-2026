@@ -149,6 +149,13 @@ report "heroic mode left stock (entry still level 70)" \
     "$(run_sql "SELECT a.map_id, a.min_level FROM ${WORLD}.dungeon_access_template a WHERE a.difficulty = 1 AND a.map_id IN (SELECT map_id FROM ${WORLD}.basic_155f_maps) AND a.min_level <> 70")"
 # }}}
 
+# {{{ 155i: the creature multiplier table exists (basic_rules.cpp reads it)
+report "the creature multiplier table exists with its six value columns" \
+    "$(run_sql "SELECT 'missing columns', 6 - COUNT(*) FROM information_schema.columns
+        WHERE table_schema = '${WORLD}' AND table_name = 'basic_creature_multipliers'
+          AND column_name IN ('entry','map_id','melee','spell','heal','health') HAVING COUNT(*) <> 6")"
+# }}}
+
 echo ""
 if [[ "${FAIL_COUNT}" -eq 0 ]]; then
     echo "All checks passed."

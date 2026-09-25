@@ -110,57 +110,57 @@ difficulty with other bosses giving similar ilevel loot?"
 
 ## Current Behavior
 
-**Built 2026-09-23; tested against a throwaway RAM database** (`scripts/test-basic-sql-in-ram`: stock databases brought fully up to date, then apply, re-apply, revert, apply; all checks pass). It raises 220 templates across the nine dungeons, e.g. Vazruden, Nazan and Omor in the Hellfire Ramparts. Setup step E024
-installs `sql/basic/db_world.src/09-outland-dungeons-64.apply.sql`, which
-raises to level 64 every creature in each Outland dungeon a level 60 can
-enter. The dungeon list is computed from the dungeon-access table (normal
-mode, entry level ≤ 60): the Hellfire Ramparts, Blood Furnace, Shattered
-Halls, Slave Pens, Underbog, Steamvault, Mana-Tombs, Auchenai Crypts and
-Sethekk Halls. Shadow Labyrinth (65), the 67+ dungeons and the raids stay
-stock, and so do the open world and every quest.
+**Built 2026-09-24 (second version); tested on a throwaway RAM database**
+(`scripts/test-basic-sql-in-ram`: stock databases brought up to date, then
+apply, apply again, revert, apply; the edited world tables must checksum
+after the revert exactly as before the apply; then
+`scripts/validate-basic-state`). Setup step E024 installs
+`sql/basic/db_world.src/09-outland-dungeons-64.apply.sql` (file name kept
+from the first, flat-64 version).
 
-The set of creature templates is built from:
-
-1. every template spawned in those dungeons;
-2. the creature ids those dungeons' C++ scripts name;
-3. database-scripted summons and summon groups of anything in the set,
-   followed two levels deep.
-
-One safety rule: **a template also spawned anywhere outside these dungeons
-is left alone**, the Outland open world included, because raising it would
-raise it there too. The Midsummer festival's Ahune encounter in the Slave
-Pens is excluded (holiday content). Heroic templates are never spawned
-directly, so heroic modes stay stock (level 70, keys, out of reach at 60).
-
-Health and damage follow the level with no further edits. Stats are
-computed at spawn as the class/level/expansion base value times the
-template's own multipliers (`Creature.cpp`: health = GenerateHealth ×
-HealthModifier), so elites stay elite and bosses stay bosses, at level-64
-values. Loot is unchanged.
-
-**Gear wearable at 60.** The same file lowers to 60 the required level of
-every weapon or armour piece that drops in these dungeons' normal mode and
-requires more than 60. It follows the raised creatures' loot tables, the
-dungeons' chests, and the reference tables those point at (three levels
-deep). Required level belongs to the item, so an item that also drops
-elsewhere becomes wearable at 60 there too; on basic, where 60 is the cap,
-that only helps. Clients see the new number once their item cache is
-refreshed, which C025 (issue 160) arranges.
-
-Original creature levels and required levels are saved
-(`basic_155f_level_backup`, `basic_155f_item_backup`), and the revert
-restores them. `scripts/validate-basic-state` checks after install that
-every raised template is 64, that no template living only in these dungeons
-was missed, and that heroic entry is still stock.
-
-**Not yet built (2026-09-24):** the owner's +4 rule. The built file sets a
-flat 64; it becomes "stock level + 4" per template (the backup table already
-holds the stock levels to add to). With +4 the nine dungeons span, stock →
-raised: Ramparts bosses 62 → 66, Blood Furnace 62–63 → 66–67, Slave Pens
-63–64 → 67–68, Underbog 65 → 69, Mana-Tombs 66 → 70, Auchenai Crypts 66–67
-→ 70–71, Sethekk Halls 68 → 72, Steamvault 72 → 76, Shattered Halls 71–72
-→ 75–76 (queried from the stock world database, bosses = templates with a
-`boss_` script).
+- **Sixteen dungeons**, each with its own level step, in the table
+  `basic_155f_maps`: Ramparts, Blood Furnace, Slave Pens, Underbog,
+  Mana-Tombs, Auchenai Crypts and Sethekk Halls +4; Old Hillsbrad +3; Black
+  Morass +0; Shadow Labyrinth and Shattered Halls +1; Steamvault and
+  Mechanar +2; Botanica and Arcatraz +3; Magisters' Terrace +5, with
+  Kael'thas (24664) set to +6 (72 → 78). End bosses land at 66 → 76 in
+  ladder order.
+- **Which creatures**: every template spawned in these maps; every creature
+  the dungeons' C++ scripts name, tagged with its dungeon (written into the
+  SQL's GENERATED block by `scripts/generate-basic-outland-dungeons-sql`,
+  which reads each dungeon's script folder for NPC_/ENTRY_/CREATURE_/MOB_
+  constants: 160 ids, filtered in SQL to real creature templates);
+  database-scripted summons, two levels deep, inheriting their summoner's
+  step. A template in two of these dungeons takes the larger step. A
+  template also spawned outside them is left alone. Ahune (Midsummer) is
+  excluded.
+- **Levels** are set from the saved originals (`basic_155f_level_backup`)
+  plus the step recorded per template in `basic_155f_templates`, after first
+  restoring every saved template, so re-running, or running over the old
+  flat-64 version, gives the same result.
+- **Entry at 60**: the seven dungeons whose normal-mode entry was above 60
+  (Old Hillsbrad 64, Shadow Labyrinth and Magisters' Terrace 65, Black Morass
+  66, Botanica and Mechanar 67, Arcatraz 68) are lowered to 60; originals in
+  `basic_155f_access_backup`.
+- **Attunements**: every normal-mode requirement on these dungeons is saved
+  (`basic_155f_requirement_backup`) and removed: Old Hillsbrad's quest "The
+  Caverns of Time" and Black Morass's "Return to Andormu". Heroic
+  requirements stay.
+- **Gear wearable at 60**: every weapon or armour piece (any quality) that
+  drops from the raised creatures, the dungeons' chests, or the reference
+  tables they point at (three deep) and requires more than 60 now requires
+  60, originals in `basic_155f_item_backup`. That includes the rare
+  item-level-100 trash epics and Kael'thas's item-level-110 epics. Scaling
+  the items' stats (the ladder's loot targets, Kael'thas's epics to item
+  level 100, the Burning Crusade rating discount) is not in this file; it
+  belongs to the item-scaling generator (155k).
+- The revert restores creature levels, required levels, entry levels and
+  attunements from the backups and drops the helper tables. It also runs
+  on a database that only ever had the flat-64 version.
+- `scripts/validate-basic-state` checks: every raised template equals its
+  original + its step; no template spawned only in these dungeons was
+  missed; Kael'thas is 78; the gear requires 60; all sixteen open at 60;
+  no normal-mode attunement left; heroic entry still 70.
 
 **What level drives, besides health and damage** (read 2026-09-24 in the
 server's combat code; this is why +4 is more than +4):
@@ -254,12 +254,21 @@ server's combat code; this is why +4 is more than +4):
 
 ## Suggested Implementation Steps
 
-1. Compute the dungeon list from the dungeon-access table.
-2. Collect templates (spawns, C++ script ids, summons); drop those also
-   spawned outside the dungeons.
-3. Save levels; set 64.
-4. After the owner's install: `scripts/validate-basic-state`, then a
-   level-60 bot party of five in Hellfire Ramparts.
+1. List the sixteen dungeons with their level steps (`basic_155f_maps`).
+2. Open them at 60 and remove their normal-mode attunements, saving the
+   originals.
+3. Collect templates (spawns; C++ script ids, generated by
+   `scripts/generate-basic-outland-dungeons-sql`; summons), each with its
+   dungeon's step; drop those also spawned outside the dungeons.
+4. Save levels; set original + step (Kael'thas 78).
+5. Required level 60 on the dungeons' gear, saving the originals.
+6. Test on the RAM database (`scripts/test-basic-sql-in-ram`, including the
+   exact-revert checksum). Done 2026-09-24.
+7. After Ritz's install: `scripts/validate-basic-state`, then a level-60
+   party in Hellfire Ramparts and one in Magisters' Terrace.
+8. Still open under this issue: item stat scaling for the upper dungeons'
+   loot (via 155k's generator), and tuning health and damage per creature
+   (155i) once fights are tried.
 
 ## Related Issues
 
