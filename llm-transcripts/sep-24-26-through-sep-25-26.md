@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 11:04:49
+Generated on: 2026-09-25 11:09:42
 Models: claude-opus-5-5
 
 ## Contents
@@ -5226,6 +5226,66 @@ comparison, stock boss recipe drops are usually a few percent per kill, and you
 want these rare and coveted. My suggestion is 1–2% per boss kill for *some*
 epic-cut recipe. That's about one every 50–100 boss kills across a whole clan.
 What feels right?
+
+--------------------------------------------------------------------------------
+
+### User Request 43
+
+<pasted_content id="8773">
+> Onyxia's gem bag is the Ashen Sack of Gems. She always drops it, and in the
+> stock game it already holds exactly those six uncut epic gems: one guaranteed,
+> a second at 60%, a third
+> at 30%. So there's nothing to add. But the Onyxia issue planned to replace her
+> Wrath-era loot with her vanilla loot, which would have removed the sack. I've
+> added to that issue that
+>   the sack stays.
+</pasted_content id="8773">
+
+
+Can we also add more gems of all kinds? ALL kinds. She's a dragon! She should
+hoard her loot! And can we have several gold bars thrown in there too?
+Guaranteed some number between 15 and 45 gold bars.
+
+> A small fix in the sockets issue: it said "his direction", and it now says
+> "Ritz's direction". I shouldn't have assumed a pronoun.
+
+it's she btw
+
+> Next question: how often should an Outland boss drop an epic-cut recipe? For
+> comparison, stock boss recipe drops are usually a few percent per kill, and
+> you want these rare and
+> coveted. My suggestion is 1–2% per boss kill for some epic-cut recipe.
+> That's about one every 50–100 boss kills across a whole clan. What feels
+> right?
+
+sounds about right
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 43
+
+Thanks, Ritz. I'll use "she" from here on.
+
+All three are recorded and committed:
+- **Onyxia's hoard:** the Ashen Sack keeps its three epic-gem rolls. It also
+  gets gems of every kind (every raw and cut gem in the game, test items left
+  out) and 15–45 Gold Bars every time. The sack has its own loot table on the
+  server, so all of this is server data.
+- **Epic-cut recipes:** about 1.5% per Outland boss kill.
+- The Onyxia issue now notes that her sack stays and becomes the hoard.
+
+Next question: how many hoard gems per sack, and how should they be weighted?
+There are about 590 cut gems plus a few dozen raw ones. At equal odds, an epic
+cut gem would be as likely as a +4 one. My proposal is to weight by quality, so
+the common gems stay common and the hoard *looks* like a pile, with a sparkle of
+something great in it:
+- **8–12 gems per sack**
+- by quality: about 50% common and uncommon, 35% rare, 15% epic, on top of the
+  three stock epic rolls
+
+A 40-person raid would then get about 30–40 gold bars and a dozen gems per
+kill, which is a real payday for the whole raid. Does that feel right, or should
+the hoard be bigger?
 
 --------------------------------------------------------------------------------
 

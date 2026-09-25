@@ -219,6 +219,15 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
      items left out; about 590 cut and several dozen raw), and 15–45 Gold
      Bars every time. The sack's contents are server data (its own loot
      table).
+   - Size (Ritz, 2026-09-25: "common gems should be more common. I'd say
+     there should be at about 120 gems per sack, but that's just my guess.
+     A solid 40% of them should be things like Tigerseye or low level
+     pearls."): about 120 gems, 40% low-level raw gems (Malachite,
+     Tigerseye, Shadowgem, the small pearls...). One loot window holds at
+     most 18 entries (the server's limit), but an entry can be a pile of
+     one kind (gems stack to 20), so the hoard comes as about 15 piles:
+     the gold bars one pile, the three stock epic rolls, and the gems in
+     piles of 5–12 per kind.
 9. **Epic Wrath gems bind on pickup** (Ritz, 2026-09-25: "we'll need to
    make the epic WotLK gems be BoP (tradable within 2 hours if you were
    there)"). The two-hour trade among those present is the client's own
@@ -324,9 +333,11 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   the teacher uses a dialogue menu.
 - (Answered 2026-09-25) Epic gems and epic-cut Designs: item 8.
 - (Answered 2026-09-25) Epic-cut Designs: about 1.5% per Outland boss kill.
-- Onyxia's hoard: how many extra gems per sack, and weighted how (every
-  gem at equal odds would make epic cut gems as common as +4 ones; weighting
-  by quality keeps the common ones common)?
+- (Answered 2026-09-25) Onyxia's hoard: about 120 gems, 40% low-level raw.
+- The other 60% of the hoard (about 72 gems): proposal, by pile:
+  higher vanilla raw gems and the +4 cut gems 4 piles (~32), Outland
+  uncommon and rare 3 piles (~20), Wrath uncommon and rare 2 piles (~12),
+  epic cut gems 1 pile (~8), next to the three stock epic rolls. Agreed?
 - Bind on pickup and the Ashen Sack: the two-hour trade window covers
   loot from a creature; gems taken out of the sack bind to whoever opens
   it. Fine, since the sack itself is Onyxia's loot?
