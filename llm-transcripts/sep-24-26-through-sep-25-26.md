@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 11:39:00
+Generated on: 2026-09-25 11:43:04
 Models: claude-opus-5-5
 
 ## Contents
@@ -5756,6 +5756,99 @@ client's built-in addon-message channel, which is what AIO is built on, without
 the AIO framework. That's the difference for true creature levels: a plain addon
 could still replace the skull with real numbers. Or should the project stay
 addon-free entirely?
+
+--------------------------------------------------------------------------------
+
+### User Request 53
+
+> Not touched: three files other sessions are editing right now, which I left
+> for them: the universal class trainers issue, the explore profile's plumbing,
+> and player-machine safety.
+> The first mentions AIO; I didn't check the other two. I also left declined and
+> completed issues alone.
+
+whoa I don't know whose work that is. Can you tell me about it?
+
+
+
+<pasted_content id="8773">
+> One question the AIO change raises: does "no AIO" also rule out a plain addon
+> that players install themselves? It would talk to the server over the client's
+> built-in addon-message
+> channel, which is what AIO is built on, without the AIO framework. That's the
+> difference for true creature levels: a plain addon could still replace the
+> skull with real numbers. Or
+>   should the project stay addon-free entirely?
+</pasted_content id="8773">
+
+
+can't ask users to install addons, at least until the custom client is done...
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 53
+
+> Looking at those three files: their changes, when they were made, and which
+> conversation they came from.
+
+None of the three is mine. They're uncommitted work from earlier sessions,
+sitting in the working tree:
+
+**1. Universal class trainers** (tracked issue, rewritten but never committed).
+Last changed September 4. A September 3–4 conversation
+(`llm-transcripts/sep-3-26-through-sep-4-26.md`) reopened it from a note you'd
+left in the project root:
+
+> hello! I think it'd be neat if there was a config file option in the
+> worldserver that let all trainer-taught skills be trainable to any class.
+> Then, limit them by gold, and let everyone train everything eventually.
+
+It grew from a short issue into about 1,000 lines. It covers:
+- where the server refuses the wrong class at a trainer (two separate checks);
+- a design where each class gets its own generated copy of another class's
+  spells;
+- converting ability costs between resource types (mana, rage, energy and so
+  on);
+- a note that the wandering traveller system that would deliver these trainers
+  isn't loaded on the active profile.
+
+**2. The explore profile** (the main issue plus seven sub-issues, 153 and
+153a–153g, never added to git). Created September 3–4, from your request:
+
+> Can we add issue files to add a "explore" profile which just has wowchat spawn
+> profession trainers for herbalism and mining, and triple the number of
+> critters in the world. All NPCs should be removed from the world, except
+> critters.
+
+It also plans rare bot naturalists who talk about plants simply ("see this
+curved part here? that's the part that stores water"), grounded by generated
+images of the plant. The sub-issues cover the plumbing, emptying the world to
+critters, tripling critter density, the herbalism and mining trainers, the
+naturalist companions, their voice, and the image grounding. The same September
+3–4 conversation lays out that set.
+
+**3. Player-machine safety before public release** (never added to git). Created
+September 23 by a session whose transcript is
+`llm-transcripts/sep-23-26_agent-2.md`. It's about protecting players' *other*
+files (documents, photos, keys) from harm because they played here. It ranks
+three routes:
+- game Lua, including addons: low risk, since it can't touch files;
+- memory-corruption bugs in the 3.3.5 client, triggered by a hostile server;
+- anything the project distributes.
+
+It's blocked by the database-password rotation issue and gates public release.
+
+There are also other uncommitted files from other sessions: the cluster and
+redirect issues and tools (the 913 series), deployment (157), and a few others.
+I haven't read those in detail.
+
+Should I commit these three as they are, one commit each, with a message
+crediting the sessions they came from? Or would you rather look at them first?
+
+On addons: recorded. The roadmap now says no player-installed addons of any kind
+until the custom client is done. The true creature levels issue waits for that
+client, since both its routes put something on players' machines. Until then the
+skull stays.
 
 --------------------------------------------------------------------------------
 

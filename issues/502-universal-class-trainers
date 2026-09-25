@@ -5,6 +5,11 @@
 - Phase: 2
 - Priority: Medium
 
+
+
+
+
+
 ## Current Behavior
 - Class trainers only teach abilities to their specific class
 - Warrior trainers only train warriors, mage trainers only train mages, etc.
