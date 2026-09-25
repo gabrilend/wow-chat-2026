@@ -136,7 +136,22 @@ white items and charge nothing for them. The vendor window's shown price
 still includes whites (client-side; accepted). The source patch round-trips
 cleanly (`scripts/test-source-patches`); it needs Ritz's compile.
 
-Not built: the trade-window source patch (cutting a customer's gem).
+**Cutting a customer's gem in the trade window: built (2026-09-25), not
+yet compiled or tried in game.** Source patch B034
+(`patches/B034-trade-gem-cut.sh`, doc `docs/patches/trade-gem-cut.md`) and
+a `.cut <recipe>` command in `src/cpp-basic/basic_rules.cpp`. Read in the
+client's tradeskill script: the Create button is disabled unless the
+crafter's own bags hold the reagent, so the stock button can't start it;
+per the no-addon rule the trigger is the chat command. The owner puts the
+uncut gem in "Will not be traded"; the jewelcrafter types `.cut` and
+shift-clicks the recipe; the cut shows as the trade's pending spell; on
+both accepting, the uncut gem is used up and the cut gem goes into the
+owner's bags, bound, crafted by the jewelcrafter; anything wrong (gem
+moved, recipe unknown, bags full) refuses the accept before anything
+changes hands. The source patches round-trip cleanly.
+
+To see in game, with the stage 2 checks: the trade window's text for the
+cut; the cut gem's binding and crafter; the skill-up.
 
 Stock, before stage 1. What the data says (read 2026-09-24 from the client
 files and the stock world database):

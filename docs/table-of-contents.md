@@ -33,6 +33,7 @@ wow-chat-2026/
 │   │   ├── no-crushing-blows-64.md  B031: no crushing blows from creatures level 64+
 │   │   ├── no-buff-level-restriction.md  B032: buffs castable on targets of any level
 │   │   ├── white-gear-never-repaired.md  B033: white gear is never repaired (basic)
+│   │   ├── trade-gem-cut.md       B034 + .cut: a jewelcrafter cuts the other player's gem in the trade window (basic)
 │   │   ├── ale-sell-item-hook.md  ALE hook for vendor sales
 │   │   ├── ale-calculate-talents-hook.md  Talent calculation module
 │   │   ├── ale-gameobject-wildcard.md  Entry 0 wildcard for gameobject events
