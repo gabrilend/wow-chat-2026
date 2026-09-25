@@ -355,7 +355,7 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   Gems (~35), Outland uncommon and rare 3 piles (~20), Wrath uncommon and
   rare 2 piles (~12), epic cut gems 1 pile (~8), next to the three stock
   epic rolls.
-  (The +4 cut gems stay a prospecting product.) Agreed?
+  (The +4 cut gems stay a prospecting product.)
 - Bind on pickup and the Ashen Sack: the two-hour trade window covers
   loot from a creature; gems taken out of the sack bind to whoever opens
   it. Fine, since the sack itself is Onyxia's loot?
