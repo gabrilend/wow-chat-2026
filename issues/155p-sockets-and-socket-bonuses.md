@@ -140,7 +140,11 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
 
 1. **Option 2, first try:** one item's socket bonus points at an unused
    enchantment whose effect the server overrides with a chosen aura, to
-   confirm the text/effect split in game.
+   confirm the text/effect split in game. **Always honest** (Ritz,
+   2026-09-25: "Always honest. Even in legendary items."): an override may
+   only give what the enchantment's text already says, so option 2 is for
+   re-sizing or re-wiring an effect the text describes, never for hiding
+   one.
 2. **Three gem tiers, by level**, all existing gem effects:
 
    | Tier | Gem | Where from | Fits items of |
@@ -151,16 +155,45 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
 
    Below item level ~15 nothing gets a socket: a +4 gem would be twice a
    green's whole stats there.
-3. **Capital whites get one socket** from the Tanned/Chainmail/Padded sets
-   (item level 17) upward, plus shields and weapons in the same range, with
-   the tier's gem colour spread across slots. Gem + socket bonus ≈ the
-   green of the same item level and slot size; the socket bonus (an
-   existing enchantment, sized by slot) or a set bonus fills what the gem
-   alone can't.
-4. **Some dungeon blues trade stats for a socket.** Their fixed stats drop
+3. **Capital whites get sockets** from the Tanned/Chainmail/Padded sets
+   (item level 17) upward, plus shields and weapons in the same range.
+   Gems + socket bonus ≈ the green of the same item level and slot size.
+4. **Some dungeon blues trade stats for sockets.** Their fixed stats drop
    below the same-level green's (so an empty-socket blue loses to a plain
-   green); a level-appropriate gem plus the bonus lifts them a little
-   above their stock total (a slight upgrade for players who buy gems).
+   green); level-appropriate gems plus the bonus lift them a little above
+   their stock total (a slight upgrade for players who buy gems).
+   **Socket rules** (Ritz, 2026-09-25):
+   - More than one socket where the budget needs it: "oh I'd prefer if we
+     had more sockets than just one. But, they should always be colorful
+     sockets, except on weapons which have colorless sockets and no socket
+     bonus." Armor gets red, yellow and blue sockets; weapons get
+     prismatic ("colorless", any gem fits) sockets and no socket bonus.
+   - Only items whose stats can pay for it: "We should only put sockets
+     onto items that have stats that we could drain in response. So for
+     example a weapon with just an on-hit effect shouldn't get a socket
+     because there's no way to nerf it."
+   - Blues and whites differ: "blue items tend to have powerful socket
+     bonuses, but fewer slots. White items have more slots because they're
+     more customizable and standardized, but they have weaker set bonuses
+     because their provenance is mundane." (Read as socket bonuses:
+     whites get more sockets and small socket bonuses; blues fewer
+     sockets and big bonuses.)
+   - No gem level check: "Leave it to the player. If they want to invest
+     in high quality gear, then they can."
+   - **Outland gear gets no new sockets** (Ritz, 2026-09-25: "Let's just,
+     not touch items that already have slots. We probably just shouldn't
+     touch the Outland gear at all for sockets."): items that already have
+     sockets keep them as they are; Wrath gems go into those stock
+     sockets.
+   - **White gear: doubled durability, never repaired?** Ritz,
+     2026-09-25: "Is it possible to make it so that white quality items
+     have doubled durability, but can never be repaired?" Doubling is
+     server data (each item's maximum durability). Refusing the repair
+     needs a source patch in the server's repair code. The catch: the
+     vendor window works out the displayed repair cost in the client,
+     from its own tables, so it would still show a price for whites that
+     the server then doesn't charge (the whites just stay broken). See
+     Open Questions.
 5. **Names stay in sync with tooltips** (Ritz, 2026-09-25: "Let's keep the
    tooltips and the names in sync."): gem items keep their stock names, so
    a recipe's tooltip and the gem it makes always agree.
@@ -441,8 +474,20 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   sack, so they can be traded for two hours.
 - (Answered 2026-09-25) Cut epic gems bind too; jewelcrafters cut a
   customer's gem through the trade window (item 9, a source patch).
-- The teaching NPC: one cut per gem handed over (the gem is consumed), or
-  does the gem only have to be shown?
+- The cut teacher is dropped (Ritz, 2026-09-25: "The more I think about
+  it, the more I wonder if this added complexity buys it's worth. How
+  about we skip this system for now and replace it with something
+  simpler. Proposals?"). Proposals, simplest first: (a) the ordinary
+  Jewelcrafting trainers teach the 58 trainer-only uncommon Wrath cuts at
+  skill 300 for gold, as stock trainers do (only server data changes);
+  (b) the same cuts come as rare Design drops like the other 17 uncommon
+  ones; (c) the uncommon cuts are simply known by every jewelcrafter who
+  reaches 300. The crystal trader stays at the titan sites either way.
+- White gear that can't be repaired: accept the vendor window showing a
+  repair price for whites that the server won't charge, or keep whites
+  repairable (just doubled durability)?
+- How many sockets per slot, for whites and for blues, and how big are
+  their socket bonuses? (Proposal to come with numbers.)
 - (Answered 2026-09-25) Titan places: Uldaman, the Un'Goro pylons and the
   Gate of Uldum, both NPCs at each.
 - (Answered 2026-09-25) Uldaman outside the dungeon; in Un'Goro the pair
@@ -451,23 +496,23 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   pylons each time, instead of a shuffled deck.
 - (Answered 2026-09-25) Crystal-to-gem odds: an uncommon Wrath gem, with a
   small chance of a rare.
-- How Outland blues change for the Wrath gems: they already carry stock
-  sockets (one to three, Burning Crusade sizes). Keep those and let Wrath
-  gems fit them, or apply the blue rule (fewer fixed stats, one or two
-  sockets sized for Wrath gems)?
+- (Answered 2026-09-25) Outland gear gets no new sockets; items with stock
+  sockets are left alone.
 - Which effect for the first option 2 test (an absorb on being hit,
   health every 5 seconds, something else)?
-- Big slots (chest, legs, two-handers): at item level 37 a green carries
-  ~18, a tier II gem gives 6. Fill with a large socket bonus, a set bonus,
-  or allow those items a second socket?
-- Which dungeon blues get sockets (every dungeon blue? only some slots?),
-  and one socket or up to two?
-- Required level on gems: should a tier II gem refuse to go into a level-20
-  item, or is the socket colour/tier matching left to the player?
-- Recipe colours: Outland recipes taught at 150 would stay orange (always a
-  skill-up) until 300, since their colour ranges are client data. Fine?
+- (Answered 2026-09-25) More sockets than one where needed; colourful on
+  armor, prismatic and bonus-less on weapons; only items with drainable
+  stats; blues fewer sockets and big bonuses, whites more sockets and
+  small bonuses.
+- (Answered 2026-09-25) No gem level check; left to the player.
+- (Answered 2026-09-25, and already true) Recipe colours: Ritz, "If it's
+  fine, then we have to make it true - we should ensure they have the
+  correct skill-up percentage chance that the player expects." Read in the
+  server: the skill-up chance comes from the same colour ranges the
+  client shows (the server's copy of the skill-line table), and below a
+  recipe's yellow range it is the orange chance, 100% by default config.
+  So an orange recipe always gives a point, as shown. (It also makes
+  Outland cuts a fast road to 300; noted.)
 - Buddy professions come after this (Ritz, 2026-09-25): 617k.
-- Should the tooltip always tell the truth, or can a bonus hide more than
-  its text says?
-- Set bonuses (an item's set membership is also server data, but the set's
-  tooltip list and bonus text are client data): explore, or leave?
+- (Answered 2026-09-25) Tooltips always honest, even on legendary items.
+- (Answered 2026-09-25) Set bonuses: leave them for now.

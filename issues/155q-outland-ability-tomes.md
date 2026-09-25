@@ -69,9 +69,20 @@ so links to it stay valid.)
   needs a client patch, but tomes that drop, as here, skip recipes
   entirely. Using a tome needs an on-use spell the client knows, then the
   server's Lua teaches the next rank.)
-- (Answered 2026-09-25) Where: Azeroth only; the Wrath-era tomes from
-  Naxxramas. Still open: do Burning Crusade–era abilities (the 61–70
-  ones) drop from somewhere else in Azeroth, and how rare are they?
+- (Answered 2026-09-25) Where: Azeroth only; the Wrath-era (71–80) tomes
+  from Naxxramas. The Burning Crusade–era (61–70) tomes (Ritz): "Ahn
+  Quiraj. Both 20 and 40, 40 has 4x the drop rate, but it's still pretty
+  rare - usually 1 or 2 per raid amongst 40 people. They all drop from 20
+  and 40 at the same rate, no priority given to higher level spell tomes.
+  Also, emerald dragons are guaranteed to drop three." So: every 61–70
+  tome at equal odds; an Ahn'Qiraj 40 clear gives about 1–2 in all, an
+  Ahn'Qiraj 20 clear a quarter of that rate per kill; each of the four
+  Emerald Dragons (Ysondre, Lethon, Emeriss, Taerar) always drops three.
+  (Ritz added "They are from The Burning Crusade"; the dragons are
+  vanilla world bosses, so this is read as: they drop the Burning
+  Crusade–era tomes.)
+- Naxxramas's rate for the 71–80 tomes: the same as Ahn'Qiraj 40's
+  (about 1–2 per clear)?
 - Balance: higher ranks are sized for levels 61–80; do they need scaling
   down on basic (see 715, linear ability scaling)?
 - Death knights are allowed on basic with limits (148a); do they get tomes

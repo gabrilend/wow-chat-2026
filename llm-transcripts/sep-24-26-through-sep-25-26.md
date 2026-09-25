@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 12:16:34
+Generated on: 2026-09-25 12:27:40
 Models: claude-opus-5-5
 
 ## Contents
@@ -6007,6 +6007,69 @@ still has open questions: how to fill big slots and which blues get sockets.
 Those can wait until you're back.
 
 Shall I start?
+
+--------------------------------------------------------------------------------
+
+### User Request 56
+
+oh actually can we make tomes only drop from Azeroth? We should treat Outland as
+alien and strange, and Azeroth is where we go to focus our strength. It's
+fitting I think that the WotLK tomes would then be dropping from Naxxramas.
+
+Okay let's do the jewelcrafting open questions - can you list all of them at
+once?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 56
+
+I've recorded the tomes change and committed it: ability tomes drop only in
+Azeroth, and the Wrath-era ones come from Naxxramas. I renamed the issue to
+"Level 61–80 Ability Tomes from Azeroth" but kept the file name so links still
+work. One follow-up is recorded there: where in Azeroth the Burning
+Crusade–era (61–70) tomes drop.
+
+Here are all nine open Jewelcrafting questions. Each has my suggestion, so you
+can just say "yes" to the ones you agree with.
+
+**Gems and recipes**
+1. **The cut teacher's price:** is the uncut gem used up when it teaches a cut,
+   or does the player only need to show it? *Suggest: used up. It makes the
+   teacher a real exchange, like your original "the cost is the gemstone" idea.*
+2. **Required level on gems:** should a stronger gem refuse to go into a
+   low-level item, or is matching gems to items left to the player? *Suggest:
+   leave it to the player. They already choose which gem to buy, and the socket
+   colour is the only check the client makes.*
+3. **Recipe colours:** Outland cutting recipes taught at 150 would always show
+   orange (always a skill-up) until 300, because recipe colours come from the
+   client's files. Is that fine? *Suggest: fine.*
+
+**Sockets on items**
+4. **Big slots** (chest, legs, two-handers): at item level 37 a green carries
+   about 18 stats, while one tier II gem gives 6. How do we fill the gap: a
+   large socket bonus, a set bonus, or a second socket on those items? *Suggest:
+   a larger socket bonus, sized by slot. It needs no new data, and "one socket
+   max" stays true.*
+5. **Which dungeon blues get sockets:** every dungeon blue or only some slots?
+   One socket or up to two? *Suggest: every dungeon blue gets one socket, and
+   chest, legs and two-handers get two.*
+6. **Outland blues and Wrath gems:** Outland blues already have one to three
+   stock sockets sized for Burning Crusade gems. Keep those and let Wrath gems
+   fit in them? Or apply the blue rule: fewer fixed stats, and one or two
+   sockets sized for Wrath gems? *Suggest: apply the blue rule, so an
+   empty-socket Outland blue loses to a same-level green like everywhere else.*
+
+**Socket bonuses**
+7. **The first custom-bonus test** (the one we planned for today): which effect?
+   An absorb shield when hit, health every 5 seconds, or something else?
+   *Suggest: health every 5 seconds. It's the easiest to see working.*
+8. **Tooltip honesty:** should a socket bonus always do what its text says, or
+   may it hide more? *Suggest: always honest in normal gear. A hidden extra is a
+   special surprise for one or two legendary items at most.*
+9. **Set bonuses:** an item's set membership is server data, but the set's
+   tooltip list and bonus text are client data. Explore them, or leave them?
+   *Suggest: leave them for now. We already agreed tooltips should match what
+   things do.*
 
 --------------------------------------------------------------------------------
 
