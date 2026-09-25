@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 13:34:27
+Generated on: 2026-09-25 13:43:16
 Models: claude-opus-5-5
 
 ## Contents
@@ -64,6 +64,11 @@ Models: claude-opus-5-5
     sockets for the basic profile; every design question is now answered and
     committed. Next is building stage 1, the gem supply (prospecting, drops,
     recipe drops, Onyxia's hoard), once you say go.
+15. 2026-09-25 13:37, after Request 61 - We're building basic's Jewelcrafting
+    rework; the gem supply is built, tested and committed. Next I need two
+    answers: should the masterwork jewelcrafter teach all 11 rare Wrath cuts
+    (where do raw meta diamonds come from), and where do defensive stats fit in
+    sustain, power, focus?
 
 --------------------------------------------------------------------------------
 
@@ -6502,6 +6507,50 @@ anywhere in what I built today. Two questions:
    dodge, parry, block) and resilience go? And a two-stat gem like "+Intellect
    and +mana every 5 seconds": my proposal is it sits at the later of its two
    stats' places, so that one counts as power.
+
+--------------------------------------------------------------------------------
+
+### User Request 62
+
+> 1. Should the masterwork jewelcrafter teach all 11, and where should raw meta
+> diamonds come from? For example, a small chance from the crystal trader, or a
+> boss drop.
+
+let's drop the meta gems here.
+
+> 2. For sustain → power → focus: where do the defensive ratings (defense,
+> dodge, parry, block) and resilience go? And a two-stat gem like "+Intellect
+> and +mana every 5 seconds": my
+>      proposal is it sits at the later of its two stats' places, so that one counts as power.
+
+resilience is sustain. The others are focus.
+
+the other cuts we can put on the masterwork trainer.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 62
+
+Done and committed:
+- **Meta gems are gone** from basic's Jewelcrafting. Their recipes no longer
+  drop, so the rare-cut pool goes from 83 to 66, and 174 cutting recipes remain
+  in all. The masterwork jewelcrafter won't teach them either. The seven single
+  rare gems join its list alongside the uncommon cuts.
+- **Design principles updated:** resilience is sustain; defense, dodge, parry
+  and block are focus.
+- The full in-RAM database test passes again with the change.
+
+Next I can build the Azeroth trainers' Outland cuts: uncommon cuts spread across
+about 150–225, rare ones across 250–300, in sustain → power → focus
+order. That needs one rule settled first. Many Outland cuts are two-stat gems,
+such as "+Intellect and +mana every 5 seconds" or "+Strength and +critical
+strike". Where do they go?
+1. **At the later of their two stats' places** (my proposal): "+Intellect and
+   +mana" is power; "+Strength and +crit" is focus.
+2. **At the earlier place:** "+Intellect and +mana" is sustain; "+Strength and
+   +crit" is power.
+3. **Between the two:** e.g. after all the pure sustain gems and before the pure
+   power gems.
 
 --------------------------------------------------------------------------------
 

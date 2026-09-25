@@ -291,6 +291,11 @@ report "Onyxia's hoard: gold bars, five coloured sacks, ten gem piles; her bindi
         UNION ALL SELECT 'gold bars', MAX(MaxCount) FROM ${WORLD}.item_loot_template WHERE Entry = 49294 AND Item = 3577 HAVING MAX(MaxCount) IS NULL OR MAX(MaxCount) <> 45
         UNION ALL SELECT 'Onyxia binding-gem rows', COUNT(*) FROM ${WORLD}.creature_loot_template c JOIN ${WORLD}.creature_template t ON t.lootid = c.Entry
           WHERE t.entry = 10184 AND c.Item BETWEEN 1550180 AND 1550183 HAVING COUNT(*) <> 4")"
+report "Jewelcrafting trainers 112 and 113 teach Outland's cuts between 150 and 300" \
+    "$(run_sql "SELECT a.TrainerId, COUNT(*) FROM ${WORLD}.basic_155p_trainer_added a GROUP BY a.TrainerId HAVING COUNT(*) < 60
+        UNION ALL SELECT 'trainers', COUNT(DISTINCT TrainerId) FROM ${WORLD}.basic_155p_trainer_added HAVING COUNT(DISTINCT TrainerId) <> 2
+        UNION ALL SELECT ts.SpellId, ts.ReqSkillRank FROM ${WORLD}.trainer_spell ts JOIN ${WORLD}.basic_155p_trainer_added a
+          ON a.TrainerId = ts.TrainerId AND a.SpellId = ts.SpellId WHERE ts.ReqSkillRank NOT BETWEEN 150 AND 300 LIMIT 10")"
 # }}}
 
 echo ""

@@ -30,9 +30,10 @@ then focus."
 Defensive stats (Ritz, 2026-09-25): "resilience is sustain. The others are
 focus." Resilience is sustain; defense, dodge, parry and block are focus.
 
-Open: where a two-stat gem sits (proposed: at the later of its two stats'
-places, so "+Intellect and +mana every 5 seconds" counts as power). See
-issue 155p.
+Two-stat gems (Ritz, 2026-09-25): "Between the two: e.g. after all the pure
+sustain gems and before the pure power gems." The full order is sustain,
+sustain+power, power, power+focus, focus (a sustain+focus gem sits with
+power).
 
 Applied in:
 - issue 155p — Jewelcrafting: the order in which trainers teach gem cuts

@@ -147,6 +147,10 @@ gem drops, Onyxia's hoard) are recorded in the issue.
 
 ---
 
+
+
+---
+
 ## How to add an entry
 
 ```markdown
