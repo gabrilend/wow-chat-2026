@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 11:30:49
+Generated on: 2026-09-25 11:39:00
 Models: claude-opus-5-5
 
 ## Contents
@@ -5650,6 +5650,112 @@ Next question: exactly where at two of those places?
   anyone can walk up.
 - **Un'Goro:** there are three Crystal Pylons (northern, eastern, western). Pick
   one, or let them stand at the central one nearest Marshal's Refuge?
+
+--------------------------------------------------------------------------------
+
+### User Request 52
+
+I think we should update the plan of the project to NOT use AIO, or at least to
+mark anything that requires it as "will not implement because it needs AIO. But
+here's how we would if we could:"
+
+
+
+<pasted_content id="8773">
+> So if the trade window shows the spell's name, the text is already right. I
+> think it does, but I
+> couldn't confirm it: the only game client on this machine is Ascension's,
+> which doesn't include the stock interface scripts I'd need to read. We'll see
+> it in the in-game test. If
+>   it's wrong, an AIO script can set the text itself.
+</pasted_content id="8773">
+
+
+not true! We have a client located at /home/ritz/games/azeroth-core/client/
+
+> - Uldaman: inside the dungeon, in the halls near the titan vault, or at its
+> entrance in the Badlands? Inside means fighting through; the entrance means
+> anyone can walk up.
+
+Outside of the dungeon, in a relatively safe space.
+
+> - Un'Goro: there are three Crystal Pylons (northern, eastern, western). Pick
+> one, or let them stand at the central one nearest Marshal's Refuge?
+
+How about every 30 minutes, if there are no players within sight, say... 200
+yards, then they swap to a different, random one. They both travel as a group.
+The random one is chosen without replacement.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 52
+
+> Found a Lua archive tool in another project; using it to read the trade window
+> script out of your client's archives (read-only).
+
+> Your client has the stock interface scripts. Recording what they show, plus
+> the NPC placements, in the sockets issue first; then the project-wide AIO
+> update.
+
+> Now the project-wide AIO update. Finding where the project plan lives and
+> which issues actually depend on AIO.
+
+> Writing the markers now. Issues that are entirely AIO get a "will not
+> implement" banner that keeps their design as "how we would". Issues that only
+> partly use AIO get a banner naming the part.
+
+The project plan now says no AIO. I committed three things:
+
+**Plan change.** The roadmap has a new "Project-wide decisions" section
+recording your call. The project instructions note it next to the module list.
+AIO isn't installed in any build today, so no code changes.
+
+**"Will not implement, because it needs AIO"** banners, with each design kept
+below as "how we would if we could":
+- whole issues: public healer frames (and its two docs), the custom spell
+  system, the custom talent window, the in-game text editor, and the custom
+  spells design note;
+- just the AIO part:
+  - tiered talent trainers: only their AIO menu is marked; they keep a plain
+    dialogue menu, which the server's Lua engine can build on its own;
+  - the class selection NPC's talent tree;
+  - custom classes' extra resource bars;
+  - proc gems' tooltips;
+  - one option of the talent tier limit;
+  - one step of the class configuration format;
+  - the text channel's addon option;
+  - Vavadane's name addon;
+  - true creature levels' first route;
+  - medal markers;
+  - the player connection guide's install step.
+
+Find them all with `grep -rl "because it needs AIO" issues notes docs`.
+
+**Not touched:** three files other sessions are editing right now, which I left
+for them: the universal class trainers issue, the explore profile's plumbing,
+and player-machine safety. The first mentions AIO; I didn't check the other two.
+I also left declined and completed issues alone.
+
+**Your client:** you're right, sorry, I missed it. I read the trade window
+script out of `patch-enUS-3.MPQ`, using the archive reader from your
+world-edit-to-execute project. The script prints a text string in green under
+the "will not be traded" slot. That string comes from a function built into the
+game program, which turns the spell number the server sends into words. The cut
+spell is named exactly after its gem (spell 66447 "Bold Cardinal Ruby" makes the
+item "Bold Cardinal Ruby"). So if that function prints the spell's name, the
+text is already right. Only the game itself can show us which it does. If the
+Create button turns out greyed, the fallback trigger is a chat command, not AIO.
+
+**NPCs:** recorded. Uldaman's pair stands outside the dungeon, somewhere safe.
+The Un'Goro pair moves between the three pylons every 30 minutes when no player
+is within 200 yards, like drawing from a shuffled deck.
+
+One question the AIO change raises: does "no AIO" also rule out a **plain
+addon** that players install themselves? It would talk to the server over the
+client's built-in addon-message channel, which is what AIO is built on, without
+the AIO framework. That's the difference for true creature levels: a plain addon
+could still replace the skull with real numbers. Or should the project stay
+addon-free entirely?
 
 --------------------------------------------------------------------------------
 

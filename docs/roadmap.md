@@ -22,6 +22,11 @@ Everland Ghostsong is a WoW 3.3.5a private server with roguelike survival mechan
   could. Find them with `grep -rl "because it needs AIO" issues notes docs`.
   New designs work with what the stock client already shows: dialogue
   menus, chat, mail, tooltips from existing client data.
+- **No player-installed addons either**, for now (2026-09-25). Ritz: "can't
+  ask users to install addons, at least until the custom client is done..."
+  A plain addon talking over the client's own addon-message channel (what
+  AIO is built on) is ruled out on the same terms, until the project ships
+  its own client.
 
 ---
 

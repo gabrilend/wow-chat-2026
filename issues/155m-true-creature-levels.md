@@ -74,7 +74,8 @@ each place.
 - Boss-ranked creatures (Kazzak, Doomwalker, dungeon end bosses) always
   show a skull in stock, even at the player's level. Show their number
   too, or keep the skull as the "this is a boss" sign?
-- Route 1 as written used AIO, which the project doesn't use (2026-09-25).
-  Does "no AIO" also rule out a plain addon that players install, talking
-  to the server over the client's own addon-message channel (what AIO is
-  built on), or only the AIO framework itself?
+- (Answered 2026-09-25) Route 1 is out in any form, AIO or a plain addon:
+  "can't ask users to install addons, at least until the custom client is
+  done..." Route 2 (a patched game program) is also something handed to
+  players, so it waits for the custom client too. Until then the skull
+  stays; this issue waits on the custom client.
