@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 11:13:06
+Generated on: 2026-09-25 11:15:14
 Models: claude-opus-5-5
 
 ## Contents
@@ -5324,6 +5324,92 @@ The next question is the remaining 60%, about 72 gems. My proposal, by pile:
 
 Which gem kind fills each pile is random, so every sack looks a bit different.
 Does that split feel right, or should the top end be thinner?
+
+--------------------------------------------------------------------------------
+
+### User Request 45
+
+If there isn't enough space to fit, we can have nested containers.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 45
+
+> Nested containers work: the sack can drop smaller bags, and each bag opens
+> into its own loot window of up to 18 piles. Looking for existing openable bags
+> with fitting names, since a brand-new item might show wrongly in the client.
+
+Nested containers work, and we don't even need new bags. Vanilla's **Red, Blue,
+Yellow, Green and Gray Sacks of Gems** still exist in the game as bags you can
+open. Each holds about 8–12 higher-level vanilla raw gems: Jade, Citrine,
+Aquamarine, Star Ruby, pearls, and one Azerothian Diamond or Large Opal. In the
+stock database they drop from vanilla Lord Kazzak in the Blasted Lands.
+
+So the hoard can include two or three of those sacks whole. They become the
+middle slice of gems without a new item, and what they hold everywhere else
+stays the same. Opening Onyxia's Ashen Sack of Gems would then show exactly 18
+entries, the loot window's limit:
+
+| Entries | What |
+|---|---|
+| 1 | 15–45 Gold Bars |
+| 3 | the stock epic Wrath gem rolls |
+| 5 | piles of low-level raw gems (Tigerseye, Malachite, Shadowgem, small pearls…), about 48 gems |
+| 2–3 | coloured Sacks of Gems, unopened, about 30 gems |
+| 3 | piles of Outland uncommon and rare gems, about 20 |
+| 2 | piles of Wrath uncommon and rare gems, about 12 |
+| 1 | a pile of epic cut gems, about 8 |
+
+That's roughly 120 gems, with 40% of them cheap. If we want more later, any pile
+can become another bag. It's recorded in the sockets issue and committed;
+nothing is built yet.
+
+Does this split feel right? One small change from my earlier table: the +4 cut
+gems stay a prospecting product rather than hoard filler.
+
+--------------------------------------------------------------------------------
+
+### User Request 46
+
+What's the difference between the colors of vanilla bags? How many gems do they
+each have?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 46
+
+They differ by one signature gem each. Everything else in them comes from the
+same shared pool with slightly different odds:
+
+| Sack | Signature gem (almost always 1) | Average gems | Most per sack |
+|---|---|---|---|
+| Red | Large Opal (98%) | 8.0 | 15 |
+| Green | Huge Emerald (100%) | 7.0 | 15 |
+| Yellow | Arcane Crystal (88%) | 6.8 | 15 |
+| Gray | Azerothian Diamond (94%) | 6.6 | 15 |
+| Blue | Blue Sapphire (88%) | 6.3 | 15 |
+
+The shared pool, in every sack:
+- **Jade, Citrine, Aquamarine and Star Ruby:** each has a 50–90% chance to
+  appear, as 1–3 gems.
+- **Black Pearl:** 20–45%, one gem.
+- **Golden Pearl:** 3–6%, one gem.
+
+Red is the richest because its pool odds are highest across the board. The
+Yellow sack is the only way to get an Arcane Crystal here, which matters in
+vanilla because Arcane Crystals are rare.
+
+I overstated them earlier: I said 8–12 gems each, but the average is 6–8. So
+three sacks give about 20 gems, not 30. Two ways to reach the planned middle
+slice:
+- **All five sacks, one of each colour:** about 35 gems, and every signature gem
+  guaranteed. That takes 5 entries, so the low-level raw gems shrink to 3 bigger
+  piles to stay within 18.
+- **Three sacks, plus a bigger Outland slice** to make up the difference.
+
+I'd pick the first: opening Onyxia's hoard and finding one sack of every colour
+feels like a dragon's collection. Which do you want? I'll correct the numbers in
+the issue once you choose.
 
 --------------------------------------------------------------------------------
 

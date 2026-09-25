@@ -231,15 +231,20 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
    - Nested containers if it doesn't fit (Ritz, 2026-09-25: "If there isn't
      enough space to fit, we can have nested containers."). Existing bags
      fit: vanilla's **Red, Blue, Yellow, Green and Gray Sacks of Gems**
-     (openable, each ~8–12 higher vanilla raw gems: Jade, Citrine,
-     Aquamarine, Star Ruby, pearls, one Azerothian Diamond or Large Opal).
-     Stock, they drop from vanilla Lord Kazzak (Blasted Lands) and two
-     shared reference tables, so their contents stay as they are, and the
-     hoard includes 2–3 of them whole: they are the "higher vanilla raw"
-     slice without a new item or a changed table. Layout of the Ashen Sack
-     (18 entries, the limit): gold bars 1, stock epic rolls 3, low-level
-     raw piles 5, coloured Sacks of Gems 2–3, Outland piles 3, Wrath piles
-     2, epic cut pile 1.
+     (openable). Each holds one signature gem almost always (Red: Large
+     Opal; Green: Huge Emerald; Yellow: Arcane Crystal; Gray: Azerothian
+     Diamond; Blue: Blue Sapphire) and a shared pool (Jade, Citrine,
+     Aquamarine, Star Ruby at 50–90% for 1–3 each; Black Pearl 20–45%;
+     Golden Pearl 3–6%): 6.3–8.0 gems on average, 15 at most. Stock, they
+     drop from vanilla Lord Kazzak (Blasted Lands) and two shared reference
+     tables, so their contents stay as they are.
+   - **All five coloured sacks, every time** (Ritz, 2026-09-25: "let's have
+     the 5 sacks always included, plus the entries you mentioned up
+     above"): about 35 higher vanilla raw gems, every signature gem.
+     Layout of the Ashen Sack (18 entries, the limit): gold bars 1, stock
+     epic rolls 3, coloured Sacks of Gems 5, low-level raw piles 3 (about
+     16 each, so the same ~48 gems in fewer, bigger piles), Outland piles
+     3, Wrath piles 2, epic cut pile 1. About 125 gems in all.
 9. **Epic Wrath gems bind on pickup** (Ritz, 2026-09-25: "we'll need to
    make the epic WotLK gems be BoP (tradable within 2 hours if you were
    there)"). The two-hour trade among those present is the client's own
@@ -346,10 +351,10 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
 - (Answered 2026-09-25) Epic gems and epic-cut Designs: item 8.
 - (Answered 2026-09-25) Epic-cut Designs: about 1.5% per Outland boss kill.
 - (Answered 2026-09-25) Onyxia's hoard: about 120 gems, 40% low-level raw.
-- The other 60% of the hoard (about 72 gems): proposal, by pile:
-  higher vanilla raw gems as 2–3 whole coloured Sacks of Gems (~30),
-  Outland uncommon and rare 3 piles (~20), Wrath uncommon and rare 2 piles
-  (~12), epic cut gems 1 pile (~8), next to the three stock epic rolls.
+- (Answered 2026-09-25) The rest of the hoard: all five coloured Sacks of
+  Gems (~35), Outland uncommon and rare 3 piles (~20), Wrath uncommon and
+  rare 2 piles (~12), epic cut gems 1 pile (~8), next to the three stock
+  epic rolls.
   (The +4 cut gems stay a prospecting product.) Agreed?
 - Bind on pickup and the Ashen Sack: the two-hour trade window covers
   loot from a creature; gems taken out of the sack bind to whoever opens
