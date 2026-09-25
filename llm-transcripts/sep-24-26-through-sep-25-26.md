@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 11:26:36
+Generated on: 2026-09-25 11:30:49
 Models: claude-opus-5-5
 
 ## Contents
@@ -5576,6 +5576,80 @@ other teaches cuts. Titan places reachable in this client:
 My suggestion: the crystal trader at Uldaman's Badlands entrance, and the cut
 teacher at the Gate of Uldum. That puts them at two titan sites far apart, so
 finding the second one is a small journey of its own.
+
+--------------------------------------------------------------------------------
+
+### User Request 51
+
+> - Will the Create button work? The client checks recipe ingredients itself. It
+> may grey out the button when the uncut gem is in the customer's slot rather
+> than the jewelcrafter's
+>     bags. If it does, the cut has to start another way, such as a dialogue option or a chat command that triggers the same server-side cut.
+
+oh.... OH.... so we'd essentially need to add the "will not be traded" section
+to the list of items in the inventory for the crafter, but only for these gem
+recipe spells?
+
+> - What will the trade window show? It's built to display enchantments, not a
+> gem cut, so it might show nothing or something odd.
+
+can we make it show the correct text? Let's try to find out where that text
+string is defined.
+
+
+
+<pasted_content id="8773">
+> Next question: where do the two NPCs stand? One trades crystals for gems; the
+> other teaches cuts. Titan places reachable in this client:
+> 1. Uldaman: inside the dungeon, or at its entrance in the Badlands (easier to
+> reach).
+>   2. Un'Goro Crater: the Crystal Pylons, titan machines in the open.
+>   3. Tanaris: the Gate of Uldum, a sealed titan doorway in the south.
+>   4. Ulduar: in Northrend, so basic characters can't get there.
+</pasted_content id="8773">
+
+
+these first three seem fine. I want both of them to be at each location.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 51
+
+> Looking at what the server sends the client about the "will not be traded"
+> slot, since that decides what text the trade window can show.
+
+**The Create button:** yes, your understanding is right. There are two halves:
+- **Server:** for the epic gem cuts only, the server's ingredient check would
+  also look at the other player's "will not be traded" slot. That's part of the
+  server code patch.
+- **Client:** the greyed-out button is the client's own interface code, and we
+  can't change files on players' computers. But the project has the AIO
+  framework, which lets the server send interface scripts to the client. It's
+  not in the basic profile yet, and each player installs its small client addon
+  once. With it we could add a "Cut this gem" choice to the trade window that
+  asks the server to do the cut. That skips the Create button entirely.
+
+**The trade window text:** I traced where it comes from. The server sends only a
+spell number for that slot; I read that in its trade code. The client then looks
+up the words in its own spell data. A gem-cut spell is named after the gem it
+makes ("Bold Cardinal Ruby"). So if the trade window shows the spell's name, the
+text is already right. I think it does, but I couldn't confirm it: the only game
+client on this machine is Ascension's, which doesn't include the stock interface
+scripts I'd need to read. We'll see it in the in-game test. If it's wrong, an
+AIO script can set the text itself.
+
+**NPC placement:** recorded. Both the crystal trader and the cut teacher stand
+at each of Uldaman, the Un'Goro Crater pylons and the Gate of Uldum in Tanaris,
+so six spawns in all.
+
+All of this is in the sockets issue and committed.
+
+Next question: exactly where at two of those places?
+- **Uldaman:** inside the dungeon, in the halls near the titan vault, or at its
+  entrance in the Badlands? Inside means fighting through; the entrance means
+  anyone can walk up.
+- **Un'Goro:** there are three Crystal Pylons (northern, eastern, western). Pick
+  one, or let them stand at the central one nearest Marshal's Refuge?
 
 --------------------------------------------------------------------------------
 

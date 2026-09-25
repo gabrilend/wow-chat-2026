@@ -200,6 +200,17 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
    "these first three seem fine. I want both of them to be at each
    location."): six spawns, the crystal trader and the cut teacher side by
    side at each. Ulduar is out of reach (Northrend).
+   - Uldaman: outside the dungeon, in a relatively safe spot (Ritz,
+     2026-09-25: "Outside of the dungeon, in a relatively safe space.").
+   - Un'Goro: the pair wanders between the Crystal Pylons (Ritz,
+     2026-09-25: "every 30 minutes, if there are no players within sight,
+     say... 200 yards, then they swap to a different, random one. They
+     both travel as a group. The random one is chosen without
+     replacement."). Every 30 minutes, if no player is within 200 yards,
+     both move together to another pylon, drawn from the pylons not yet
+     visited this round (a shuffled deck: all three are visited before any
+     repeats). A Lua timer, the players-in-range check, and a despawn and
+     respawn at the new pylon.
 8. **Where epic Wrath gems and their cuts come from** (Ritz, 2026-09-25:
    "the gems from the top Outland bosses, the recipes from every Outland
    boss. The gems should be 100% chance for 1 from Kael'Thas, 100% chance
@@ -290,22 +301,33 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
      crafter, but only for these gem recipe spells?" Yes, on the server:
      for an epic cut, the reagent check also counts the other player's
      "will not be traded" slot. The client's greyed button is the client's
-     own code, which basic can't change in its files; the AIO framework
-     (server-sent interface scripts; not in basic's module list today, and
-     each player installs its small client addon once) could add a "Cut
-     this gem" choice to the trade window that asks the server to cut.
+     own code, which basic can't change in its files. If the test shows the
+     button greyed, the cut starts from a chat command instead (the
+     jewelcrafter types a command naming the cut; a server-side Lua command
+     hook starts the same held cut).
+   - **Will not implement, because it needs AIO** (the project doesn't use
+     AIO; Ritz, 2026-09-25): a "Cut this gem" choice in the trade window.
+     How we would if we could: an AIO script adds a button under the "will
+     not be traded" slot listing the cuts the jewelcrafter knows for the
+     gem there; clicking one sends the choice to the server, which holds
+     the cut exactly as above.
    - **What the trade window shows** (Ritz: "can we make it show the
      correct text? Let's try to find out where that text string is
      defined."): the server sends only the spell's id for that slot (the
      trade update packet: "spell cast on lowest slot item", read in
-     `TradeHandler.cpp`). The words come from the client: its trade
-     window script asks for the slot's "enchantment" text, which the
-     client looks up from its own spell data by that id. A gem-cut spell
-     is named after its gem ("Bold Cardinal Ruby"), so if the client shows
-     the spell's name the text is already right. Not confirmed: the only
-     game client on this machine is Ascension's, which doesn't carry the
-     stock interface scripts. To see in the test; if it's wrong, an AIO
-     script can set the text.
+     `TradeHandler.cpp`). Read 2026-09-25 from the stock client at
+     `/home/ritz/games/azeroth-core/client/client-files/`
+     (`Data/enUS/patch-enUS-3.MPQ`, `Interface\FrameXML\TradeFrame.lua`,
+     extracted with world-edit-to-execute's `src/cli/mpq-extract.lua`):
+     the trade window script prints the slot's `enchantment` string in
+     green under the item, or "Will not be traded" if there is none. That
+     string comes from a function built into the game program
+     (`GetTradePlayerItemInfo` / `GetTradeTargetItemInfo`), which turns
+     the spell id into words. A gem-cut spell is named exactly after its
+     gem (spell 66447 "Bold Cardinal Ruby" makes item 40111 "Bold Cardinal
+     Ruby"), so if that function returns the spell's name the text is
+     already right. What the function returns can only be seen in the
+     game: to check in the test.
 10. **+4 gems come from prospecting, pre-cut** (Ritz, 2026-09-25: "Could we
    add the +4 gems to the prospecting tables for the low level ores?
    Pre-cut, instead of the capital city vendor."): copper and tin
@@ -421,8 +443,11 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   does the gem only have to be shown?
 - (Answered 2026-09-25) Titan places: Uldaman, the Un'Goro pylons and the
   Gate of Uldum, both NPCs at each.
-- Uldaman: inside the dungeon or at its Badlands entrance? Un'Goro: which
-  of the three pylons (northern, eastern, western)?
+- (Answered 2026-09-25) Uldaman outside the dungeon; in Un'Goro the pair
+  moves between the pylons.
+- Un'Goro's shuffled deck: when all three pylons have been visited, the
+  new round could start with the pylon they're standing at (a repeat).
+  Skip it so they always move?
 - (Answered 2026-09-25) Crystal-to-gem odds: an uncommon Wrath gem, with a
   small chance of a rare.
 - How Outland blues change for the Wrath gems: they already carry stock
