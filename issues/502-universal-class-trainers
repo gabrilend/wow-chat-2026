@@ -2,57 +2,1001 @@
 
 ## Status
 - Created: 2026-04-02
-- Phase: 2
+- Reopened: 2026-09-03 (dropped note, folded in below)
+- Decided 2026-09-03: per-class generated spell siblings answer the resource
+  wall; the seven currency names are mapped to the seven engine power slots;
+  costs convert as a percentage of the engagement rather than an exchange
+  rate; rage is priced as an accrual currency alongside runic power; scope is
+  class trainers only
+- Blocked-ish 2026-09-03: the traveller system that would deliver these
+  trainers is not loaded on the active profile — see *The delivery problem*
+- Phase: 5 (Friendly Encounters — the trainers who wander by)
 - Priority: Medium
 
+## Origin
 
+The original 2026-04-02 filing asked for one thing: let a warrior open a mage
+trainer's window. A note dropped into the project root on 2026-09-03 asks for
+the same thing plus two more, and is preserved here word for word because it
+sets the shape of the whole design:
 
+> hello! I think it'd be neat if there was a config file option in the worldserver
+> that let all trainer-taught skills be trainable to any class. Then, limit them
+> by gold, and let everyone train everything eventually.
 
+Three requests, in order of how deep they cut:
 
+1. **A worldserver config option** — not a hardcoded patch, not a Lua hook.
+   A key in `worldserver.conf` that an operator flips, so the vanilla profile
+   can run open trainers while release runs retail rules from the same binary.
+2. **All trainer-taught skills, any class** — the class gate comes off.
+3. **Gold as the only limit, and "eventually" everything** — the wall is not
+   "you are the wrong class", it is "you cannot afford it yet". Money becomes
+   the pacing mechanism, and a rich enough character owns every skill in the
+   game.
 
 ## Current Behavior
-- Class trainers only teach abilities to their specific class
-- Warrior trainers only train warriors, mage trainers only train mages, etc.
-- Players must find their class-specific trainer to learn new abilities
+
+A trainer refuses the wrong class twice, at two different depths, and both
+refusals have to be lifted for the note's request to work.
+
+### Gate one — the whole trainer says no
+
+`Trainer::IsTrainerValidForPlayer` in
+`source-beta/src/server/game/Entities/Creature/Trainer.cpp` compares the
+player against the `Requirement` column of the `trainer` table, dispatching on
+the `Type` column:
+
+| `trainer.Type` | Name       | What `Requirement` is compared against |
+| -------------- | ---------- | -------------------------------------- |
+| 0              | Class      | the player's class                     |
+| 1              | Mount      | the player's race                      |
+| 2              | Tradeskill | a spell the player must already know   |
+| 3              | Pet        | the player's class                     |
+
+A `Requirement` of 0 means no gate at all. This function is consulted from two
+places — `WorldSession::SendTrainerList` in
+`source-beta/src/server/game/Handlers/NPCHandler.cpp`, which is what builds the
+training window, and the trainer gossip-option builder in
+`source-beta/src/server/game/Entities/Player/PlayerGossip.cpp`, which is what
+decides whether the "I seek training" line appears in the NPC's dialogue at
+all. Fail this gate and the player never sees a menu entry.
+
+### Gate two — each individual spell says no
+
+Even inside a trainer window the player is allowed to open,
+`Trainer::SendSpells` skips any spell where
+`Player::IsSpellFitByClassAndRace` returns false, and
+`Trainer::GetSpellState` returns `Unavailable` for the same reason. That
+function (`source-beta/src/server/game/Entities/Player/Player.cpp`) walks the
+skill-line-ability entries for the spell and checks three masks: the spell's
+race mask against the player's race, the spell's class mask against the
+player's class, and `SkillRaceClassInfo.dbc` for whether that skill line is
+even offered to this race/class pair. A spell with no skill-line entry at all
+passes automatically — which is why first aid and cooking are already
+classless.
+
+So gate one is per-NPC and gate two is per-spell. Removing only gate one gets
+a warrior a mage trainer window containing nothing.
+
+### What already limits by gold
+
+`Trainer::TeachSpell` already charges. It reads `MoneyCost` from the
+`trainer_spell` row, multiplies it by `Player::GetReputationPriceDiscount`,
+refuses with `FailReason::NotEnoughMoney` if the purse is short, and calls
+`ModifyMoney` with the negative. The gold pipe the note wants to lean on
+exists; nothing new has to be built to charge for a spell, only to charge
+*differently* for an out-of-class one.
+
+### What the config system looks like today
+
+This AzerothCore build caches config values rather than re-reading the file.
+`enum ServerConfigs` in
+`source-beta/src/server/game/World/WorldConfig.h` is one flat enum of every
+setting, terminated by `MAX_NUM_SERVER_CONFIGS`.
+`WorldConfig::BuildConfigCache` in the matching `.cpp` binds each enum entry to
+its `worldserver.conf` key name and default with a `SetConfigValue<T>` call,
+optionally marking it `Reloadable::Yes` so `.reload config` picks it up
+without a restart. Call sites read it back through `sWorld->getBoolConfig`,
+`getIntConfig`, or `getFloatConfig`. `CONFIG_ALL_TAXI_PATHS` / `AllFlightPaths`
+is the closest existing model: one bool, read once at a decision point.
 
 ## Intended Behavior
-- Any class trainer can teach abilities to any player class
-- A warrior could learn from a mage trainer (learning warrior abilities)
-- Removes class-specific barriers to training
-- Fits the open-world survival design where finding ANY trainer is valuable
 
-## Implementation Steps
+### The switch
 
-1. Research trainer-spell relationships
-   - Table: `npc_trainer` links trainer NPCs to spells
-   - Table: `trainer` defines trainer types
-   - Need to understand class restrictions
+Four new keys in `worldserver.conf`, all defaulting to today's retail
+behavior so that a profile which does not opt in is unchanged:
 
-2. Options to implement:
+| Key                              | Type  | Default | Effect                                                        |
+| -------------------------------- | ----- | ------- | ------------------------------------------------------------- |
+| `Trainer.AnyClass`               | bool  | 0       | master switch; off means every rule below is inert            |
+| `Trainer.AnyClass.TypeMask`      | int   | 1       | which `trainer.Type` values lose their requirement check      |
+| `Trainer.AnyClass.CostMultiplier`| float | 1.0     | gold multiplier applied to a spell outside the player's class |
+| `Trainer.AnyClass.CostPerKnown`  | float | 0.0     | extra multiplier per out-of-class spell already owned         |
 
-   **Option A: Modify trainer data**
-   - Update `npc_trainer` to allow all classes
-   - May require SQL updates to trainer spell lists
+`TypeMask` is a bitmask over the trainer types above — bit 0 Class, bit 1
+Mount, bit 2 Tradeskill, bit 3 Pet — so an operator can open class training
+without also handing every race every mount. Default 1 opens class trainers
+only, and that is the decided scope (2026-09-03): mount trainers keep their
+race requirement, pet trainers keep their class requirement, profession
+trainers keep their prerequisite spell. The mask exists so a later operator
+can widen it without another source patch, not because this issue intends to.
 
-   **Option B: Lua hook on trainer interaction**
-   - Hook gossip/trainer events
-   - Override class check when player interacts with trainer
-   - More flexible, doesn't modify base data
+### What a player sees
 
-   **Option C: Create universal trainer NPC**
-   - Single NPC type that teaches all class abilities
-   - Replace existing trainers with this type
+A level 12 warrior meets a wandering mage trainer. The gossip menu offers
+training. The window lists the mage's full spell list, level-gated as normal,
+but Frostbolt costs (say) four times what it costs a mage, and the fifth
+mage spell this warrior buys costs more than the first did. Nothing is
+greyed out for being the wrong class. Given enough copper, over enough
+wandering trainers, the warrior ends up holding every spell in the game —
+which is the "eventually" the note asks for.
 
-3. Handle ability prerequisites
-   - Some abilities require earlier abilities in the tree
-   - Ensure learning order is preserved
+### The two costs, and why there are two
 
-4. Test with multiple class combinations
+`CostMultiplier` is a flat surcharge: an out-of-class spell is simply
+expensive. `CostPerKnown` is the escalator: each out-of-class spell already
+learned raises the price of the next one, so the first dabble is cheap and
+the hundredth is ruinous. With `CostPerKnown` at 0 the escalator is off and
+the surcharge is flat, which is the simplest thing that satisfies the note.
+The escalator exists because "everyone trains everything eventually" and
+"a level 12 warrior should not be a mage by Tuesday" are both true, and a
+curve is the only way to hold both.
 
-## Technical Notes
-- Trainer system uses `npc_trainer` and `trainer_spell` tables
-- Class restrictions may be client-side or server-side
-- May need to modify trainer gossip scripts
+Both multipliers apply *after* the reputation discount and only to spells
+that `IsSpellFitByClassAndRace` would have rejected — in-class training keeps
+its exact current price, so a mage's own spells cost a mage what they always
+did.
+
+### The resource wall — the thing that makes this not work by itself
+
+A warrior who buys Frostbolt cannot cast it, and the reason is not a check
+that can be switched off.
+
+A character's power type comes from `ChrClasses.dbc`; `Player::InitStatsForLevel`
+and the shapeshift path in `Player.cpp` both read `cEntry->powerType` and call
+`setPowerType` with it. A warrior is `POWER_RAGE` and has a maximum mana of
+zero. `Spell::CheckPower` in
+`source-beta/src/server/game/Spells/Spell.cpp` ends in a plain comparison —
+`GetPower(PowerType) < m_powerCost` — and returns `SPELL_FAILED_NO_POWER`.
+Zero is less than any cost. The spell sits in the spellbook, fully learned,
+and fails on every cast.
+
+This cuts both ways. A mage who buys Mortal Strike has no rage; a rogue who
+buys anything of anyone's has no mana; and a warrior who buys Sinister Strike
+has no energy. Roughly, the skills that work cross-class out of the box are
+the ones that cost nothing or cost health: weapon skills, riding, professions,
+first aid, and passive or utility spells. The skills that define a class —
+its damage abilities — are exactly the ones the resource wall stops.
+
+There is one upstream lever already in the tree:
+`ScriptMgr::OnPlayerHasActivePowerType`, hook
+`PLAYERHOOK_ON_PLAYER_HAS_ACTIVE_POWER_TYPE`, lets a module answer "yes this
+player has that power type" for the drain, restore and regeneration paths.
+It does *not* raise the maximum, so it does not by itself let the spell cast.
+It is noted here only so a later reader does not spend an afternoon on it.
+
+### The answer — a spell costs every currency at once
+
+Decided 2026-09-03, in the user's own words, kept exactly as given:
+
+> Rewrite the spell's power costs to cost either N mana, M energy, R rage,
+> T tiempo, J james, I important, and R runes etc.
+
+The move is to stop treating a spell's cost as a *pair* — one power type,
+one amount — and start treating it as a price quoted in seven denominations.
+Frostbolt does not cost mana. It costs N mana **and** M energy **and** R rage
+**and** T tiempo, all at once, and each caster settles the term it is able to
+settle.
+
+Under that reading the resource wall dissolves without anyone being handed a
+mana bar they should not have. A mage casting Frostbolt settles the mana term
+because mana is what a mage keeps. A warrior casting the same Frostbolt
+settles the rage term, out of the rage a warrior keeps, and the mana term is
+simply not the term that binds them. The spell is one price written in seven
+denominations, and the class you are decides which denomination you happen to
+be holding.
+
+This also reframes what "expensive" means. Gold, per the note, is the wall
+between you and *owning* a skill. The seven-denomination price is the wall
+between you and *using* it — a warrior's Frostbolt is not free just because
+the training bill was paid; it is priced in rage every single cast, and rage
+is the currency a warrior needs for everything else.
+
+The denominations are settled below in *The seven slots*. **How** a caster
+comes to be holding the right denomination is settled in *How the cost gets
+rewritten* — not by re-pricing the spell at cast time, but by handing each
+class its own copy of the spell with the price already converted.
+
+#### The seven slots, and the mapping
+
+The engine's `enum Powers` in `source-beta/src/server/shared/SharedDefines.h`
+has exactly seven real entries before `MAX_POWERS`. The list given on
+2026-09-03 is also exactly seven long. The names were given as approximate —
+"I had the wrong names but we picked the right number so just map them" — so
+the four that already correspond to engine slots take those slots, and the
+three that do not are assigned, in the order they were given, to the three
+slots the list otherwise leaves unnamed:
+
+| Index | Engine name         | The given list | Where the name came from        |
+| ----- | ------------------- | -------------- | ------------------------------- |
+| 0     | `POWER_MANA`        | N mana         | matches outright                |
+| 1     | `POWER_RAGE`        | R rage         | matches outright                |
+| 2     | `POWER_FOCUS`       | T tiempo       | assigned, order-preserving      |
+| 3     | `POWER_ENERGY`      | M energy       | matches outright                |
+| 4     | `POWER_HAPPINESS`   | J james        | assigned, order-preserving      |
+| 5     | `POWER_RUNE`        | R runes        | matches outright                |
+| 6     | `POWER_RUNIC_POWER` | I important    | assigned, order-preserving      |
+
+The assignment preserves the sequence as given — tiempo, james, important sat
+in that order between rage and runes, and focus, happiness, runic power are
+the three free slots in that same order. Each also lands somewhere it reads
+truthfully: *tiempo* on focus, which in 3.3.5 is the one pool that refills on
+nothing but elapsed time; *james* on happiness, which is a mood and the only
+slot in the table that belongs to a creature rather than a number; and
+*important* on runic power, which is what a death knight spends on the moves
+that finish a fight rather than the ones that start it.
+
+Two of these seven belong to nobody a player can be. **Focus and happiness are
+hunter-pet resources** — no player character of any class holds either. That
+leaves four slots that a player can actually pay from: mana (eight classes),
+rage (warriors, and druids in bear form), energy (rogues, and druids in cat
+form), and runic power (death knights). The naming is now complete across all
+seven; the generation below only ever needs to reach for those four.
+
+One observation left standing, not acted on: in five of the seven entries the
+coefficient letter is the currency's own first letter — **T** tiempo, **J**
+james, **I** important, **R** rage, **R** runes. Mana and energy swap onto
+each other's initials (**N** mana, **M** energy), and R serves both rage and
+runes. If those letters are a notation rather than placeholders, the notation
+should be written down before anyone builds the table.
+
+### How the cost gets rewritten — per-class copies of the spell
+
+Decided 2026-09-03, in the user's own words:
+
+> yes we can modify the spell when the player learns it to cost an equivalent
+> amount of mana/energy/rage/etc. So a new version can be programmatically
+> generated, one for each class, and we unlearn the default one and learn the
+> class-specific one to the character-client.
+
+So the spell is not re-priced at cast time. It is re-priced **once, at learn
+time, by handing the player a different spell.** Frostbolt keeps costing mana
+forever, for everybody, because Frostbolt is the mage's. What a warrior walks
+away from the trainer holding is a *generated sibling* of Frostbolt — same
+effects, same school, same family flags, same everything, with two fields
+changed: the power type is rage instead of mana, and the amount is whatever
+rage is worth against that much mana. The trainer teaches the stock spell; the
+server immediately unlearns it and learns the warrior's copy in its place.
+
+This is a better shape than re-pricing at cast time, and for a reason that is
+not obvious: **the client enforces cost too.** The 3.3.5 client greys out an
+action button when it believes the caster cannot pay, using the cost written
+in its own `Spell.dbc`. A warrior with a maximum mana of zero holding a spell
+the client thinks costs mana sees a permanently dark button and never sends
+the cast at all — so no amount of server-side leniency in `Spell::CheckPower`
+would have made it castable. Only a spell whose *data* says rage gets the
+client to agree. The generated-sibling route is the one that works.
+
+#### The generation mechanism already exists
+
+`LoadDBC` in `source-beta/src/server/game/DataStores/DBCStores.cpp` loads
+`Spell.dbc` from disk and then calls `storage.LoadFromDB("spell_dbc", ...)`,
+merging rows from the world database into the in-memory spell store. Upstream
+already uses this table to rewrite spell rows — see the `UPDATE spell_dbc`
+statements in `source-beta/data/sql/archive/db_world/`. New spell entries are
+therefore pure SQL on the server side; no engine patch is needed to bring them
+into existence.
+
+The fields a sibling changes are `SpellEntry::PowerType` (DBC field 41), which
+becomes the target class's own power, and the cost fields alongside it —
+`ManaCost` (42), `ManaCostPerlevel` (43), `ManaPerSecond` (44) and
+`ManaCostPercentage` (204), all in
+`source-beta/src/server/shared/DataStores/DBCStructure.h`. Everything else in
+the row is copied verbatim.
+
+#### "An equivalent amount" — the cost is a percentage, not a number
+
+Decided 2026-09-03, in the user's own words:
+
+> it's not a flat rate, but the benefit of energy for our cases is that it's
+> roughly E% of the resources that unit will be using in the engagement. The
+> starting part of it. So, it's probably about as much as one mage spell of
+> similar function. They have cast times and such...
+
+The conversion is a **fraction of the engagement**, not an exchange rate
+between pools. A spell does not cost 300 of something; it costs *this much of
+what you were going to spend in this fight*. Energy is the yardstick because
+energy is already denominated that way — the pool caps at 100, so a 40-energy
+ability costs, on its face, 40% of the bar, and nobody has to convert anything
+to see it. Rage reads the same way. Mana does not, because mana runs to
+thousands, but mana is the one that has to be translated, not the standard.
+
+The calibration target is stated in the same breath: one converted cast should
+cost about what **one mage spell of similar function** costs its own class.
+Not a derived number — a comparison. The generator's conversion table is
+correct when a warrior's borrowed Frostbolt takes about the same bite out of a
+warrior's fight that Frostbolt takes out of a mage's.
+
+##### Cast time is already paid, and does not need converting
+
+"They have cast times and such" is the other half of the price, and it turns
+out the design gets it for free. The sibling is a wholesale copy, so
+`CastingTimeIndex` comes across unchanged — a warrior's Frostbolt still takes
+the same seconds to cast that a mage's does, seconds in which nothing else
+happens. The time component of a spell's cost is therefore *already identical*
+across every class holding it, with no conversion needed and no way to get it
+wrong. Only the resource component has to be translated. That is a smaller
+problem than it first looked.
+
+It also means the two components stay honestly coupled. A borrowed spell does
+not become a rogue-paced instant just because a rogue learned it; it stays as
+slow as it was written, and the rogue pays energy *and* stands still for the
+cast. The spell keeps its shape in everyone's hands.
+
+##### The engine already speaks percentages
+
+`SpellEntry::ManaCostPercentage` is DBC field 204, and
+`SpellInfo::CalcPowerCost` in
+`source-beta/src/server/game/Spells/SpellInfo.cpp` already resolves it
+per-caster at cast time:
+
+| Power type                       | What the percentage is taken of         |
+| -------------------------------- | --------------------------------------- |
+| `POWER_MANA`                     | `GetCreateMana()` — base mana for class and level |
+| `POWER_RAGE` `POWER_ENERGY` `POWER_FOCUS` `POWER_HAPPINESS` | `GetMaxPower()` — the pool's cap |
+| `POWER_RUNE` `POWER_RUNIC_POWER` | nothing — see below                     |
+
+So the generator does not have to compute per-class numbers at all. It emits
+`ManaCost = 0` and `ManaCostPercentage = E`, and the engine converts for
+whoever is casting, at the moment of casting, forever. The percentage
+self-adjusts as the character levels, which absolute numbers would not.
+
+Two properties of that worth knowing, because both are load-bearing:
+
+- **The client reads field 204 too.** Its greyed-button logic uses the same
+  percentage from its own `Spell.dbc`, so client and server agree without
+  anything being kept in sync by hand. This is the second reason the sibling
+  design beats a runtime cost loop: a loop would have left the client
+  computing a different price than the server charged.
+- **Mana percentages are of *base* mana, not max mana.** `GetCreateMana()`
+  excludes the intellect on your gear. A percentage-priced spell therefore
+  stays the same fraction of your intrinsic pool no matter how you gear, and
+  does not quietly get cheaper as a mage stacks intellect. That is almost
+  certainly what is wanted, and it is not obvious from the outside, so it is
+  written down here.
+
+##### Death knights are free unless something is patched
+
+The switch in `CalcPowerCost` reaches `POWER_RUNE` and `POWER_RUNIC_POWER` and
+logs `"CalculateManaCost: Not implemented yet!"`, adding nothing to the cost.
+A percentage-priced spell therefore costs a death knight **zero**. Every
+cross-class spell, free, forever.
+
+Two ways out, and one of them is four lines: extend that switch to take a
+percentage of `GetMaxPower(POWER_RUNIC_POWER)` — which is 1000 internally, set
+in `Player::InitStatsForLevel` alongside the eight runes — the same way rage
+and energy are already handled. The other is to give death-knight siblings
+absolute costs while everyone else gets percentages, which means two code
+paths in the generator and a class that drifts out of balance separately. The
+four-line patch is the recommendation, and it belongs in the same
+`patches/B*.sh` as the rest.
+
+##### Runes and runic power — which spells take which
+
+Death knights are the only class holding two currencies at once, so their
+siblings need a rule the other nine do not. The rule, as given on 2026-09-03:
+powerful spells that demand a lot of resource take one of the **top two**
+runes; spells on a short cooldown of four or six seconds take one currency;
+and spells with no cooldown or a long one take the other.
+
+**"Top two" needs an ordering, and the ordering was to come from the specs'
+own icons.** The three spec icons are named by the game's own data rather than
+guessed at: `TalentTab.dbc` gives each death-knight tab a `SpellIconID`, and
+`SpellIcon.dbc` resolves those to texture paths.
+
+| Talent tab | Order | Icon id | Texture |
+| ---------- | ----- | ------- | ------- |
+| Blood      | 0     | 2636    | `Interface\Icons\Spell_Deathknight_BloodPresence` |
+| Frost      | 1     | 2632    | `Interface\Icons\Spell_Deathknight_FrostPresence` |
+| Unholy     | 2     | 2633    | `Interface\Icons\Spell_Deathknight_UnholyPresence` |
+
+All three were pulled out of the client's `Data/enUS/locale-enUS.MPQ` — the
+base archives carry the sounds and the spell models, but interface art lives
+in the locale archive — and averaged as 64x64 RGBA. The frame is identical on
+all three icons and drags every average down by the same amount, so the second
+column drops the five-pixel engraved border and averages only the art:
+
+| Spec   | Whole icon        | Art only          | Luminance | Saturation |
+| ------ | ----------------- | ----------------- | --------- | ---------- |
+| Blood  | `#68342E`         | `#7D372F`         | 69.5      | 62.6%      |
+| Frost  | `#4B5172`         | `#575F89`         | 96.2      | 36.7%      |
+| Unholy | `#466339`         | `#4F763D`         | 105.6     | 48.3%      |
+
+**What the colours are for was misread the first time, and the correction is
+the whole idea.** The colours do not rank the specs against each other. They
+are anchors, and each spell is assigned to whichever anchor **its own icon's
+colour is nearest to**. As given on 2026-09-03:
+
+> the icons of the spells that we're assigning, look at the colors, and the
+> colors that are close to them should be part of that spec. So like... an
+> unholy death knight would cast nature spells that are green. And a holy
+> paladin would cast fire spells that are white and yellow and red.
+
+Which is a rule a machine can apply to all 49,839 rows of `Spell.dbc` without
+anyone hand-sorting a spell list. Each spell carries a `SpellIconID` in field
+133; `SpellIcon.dbc` resolves it to a texture; the texture averages to a
+colour; the nearest anchor wins.
+
+##### It was tested on twenty spells and it works
+
+Measured, not asserted. Icon averages against the three anchors, by CIE76
+distance in Lab and separately by hue angle:
+
+| Spell | Icon avg | Hue | By Lab | By hue |
+| ----- | -------- | --- | ------ | ------ |
+| Starfire | `#4C5587` | 231° | Frost 6.0 | Frost 0.2 |
+| Corruption | `#814B4A` | 1° | Blood 13.0 | Blood 5.5 |
+| Eviscerate | `#74483A` | 14° | Blood 13.3 | Blood 7.6 |
+| Frostbolt | `#37355B` | 243° | Frost 17.3 | Frost 12.2 |
+| Lightning Bolt | `#152A5F` | 223° | Frost 24.8 | Frost 7.5 |
+| Fireball | `#9F673C` | 26° | Blood 24.1 | Blood 19.5 |
+| Immolate | `#925A21` | 30° | Blood 26.6 | Blood 23.9 |
+| Healing Touch | `#529175` | 153° | Unholy 20.9 | Unholy 52.3 |
+| Wrath | `#42C09F` | 164° | Unholy 36.8 | Unholy 63.9 |
+| Holy Light | `#CCAA61` | 41° | Unholy 41.2 | **Blood 34.3** |
+
+The brief's own two examples both come out right. **Wrath and Healing Touch —
+nature spells, green icons — land on unholy**, which is precisely "an unholy
+death knight would cast nature spells that are green". **Fireball and Immolate
+land on blood.** And Holy Light, gold at 41°, lands on blood under hue
+distance — "white and yellow and red" — which is the paladin half of the
+example, arriving on its own from the measurement.
+
+##### Hue is the better metric, with saturation as a confidence gate
+
+The two metrics agree on eighteen of twenty. Where they differ, hue is right
+both times, and the reason is structural: Lab distance includes lightness, and
+every icon shares the same dark engraved frame, so lightness is mostly noise
+about the frame rather than signal about the spell. The rule as given is about
+*colour* — green, white, yellow, red — and hue is the axis that word names.
+
+But hue alone breaks on icons that are nearly grey, where the hue angle is
+arbitrary:
+
+| Spell | Icon avg | Saturation | Verdict |
+| ----- | -------- | ---------- | ------- |
+| Wrath | `#42C09F` | 66% | strong colour identity |
+| Holy Light | `#CCAA61` | 52% | strong |
+| Eviscerate | `#74483A` | 50% | strong |
+| Frostbolt | `#37355B` | 41% | strong |
+| Mind Blast | `#A27B78` | 26% | near-grey, hue is noise |
+| Shadow Bolt | `#453547` | 25% | near-grey, hue is noise |
+| Mortal Strike | `#5B5B70` | 19% | near-grey, hue is noise |
+
+A threshold around 30% cleanly separates them, and the spells it rejects are
+the ones whose assignments looked wrong: Shadow Bolt landing on frost, Mortal
+Strike landing on frost. Those are not failures of the rule — they are spells
+with **no colour identity at all**, and a physical warrior strike arguably
+should not have an elemental spec. So the rule is: assign by hue when the
+icon's saturation clears the gate, and when it does not, the spell has no
+spec and falls back to whatever the default is.
+
+##### Why this generalises past death knights
+
+Nothing in the rule is specific to runes. Any class whose specs have icons —
+which is all of them, via `TalentTab.dbc` — gets the same treatment: measure
+the three spec icons, measure the spell's icon, assign by nearest hue. That
+turns "which of this class's flavours does a borrowed spell belong to" from a
+design question requiring ten hand-built tables into one function over data the
+game already ships. It is the most reusable thing in this issue.
+
+**The cooldown split as written names one currency twice.****The cooldown split as written names one currency twice.** "Short cooldowns
+like 4 or 6 seconds cost runic power, and the other spells (no cooldown or
+long cooldown) cost runic power" leaves nothing for the runes to pay for. One
+of those two branches was meant to be runes. It is recorded as given rather
+than silently corrected, and it is Open Question 4.
+
+For what it is worth, the runes are themselves a cooldown-shaped currency —
+each recharges on a timer rather than being spent from a pool — which argues
+that the short-cooldown branch is the rune branch, and that a spell with no
+cooldown is the one which should have to be paid for out of accumulated runic
+power. That is a reading, not a decision.
+
+##### What rage does at the start of a fight, which is nothing
+
+The user's phrase was "the starting part of it", and rage is where that phrase
+bites. A rogue opens an engagement with a full energy bar. A mage opens with
+full mana. **A warrior opens with zero rage** — the pool starts empty and
+fills only by hitting and being hit.
+
+So a percentage-of-pool rage cost is not payable at the opening of a fight at
+all. It becomes payable a few seconds in. This is not a bug to design around;
+it is a rhythm the conversion imposes for free, and it is a good one: a mage
+who bought a rogue ability can open with it instantly, and a warrior who
+bought Frostbolt has to land a swing before the borrowed magic is available.
+Every class's relationship with its own resource carries over into the
+spells it borrows.
+
+The consequence for the conversion table is a definitional one. "The resources
+that unit will be using in the engagement" has to be measured **across** the
+engagement for rage rather than at its start, because at its start there are
+none. Energy and mana can be read off the bar; rage has to be read off the
+accrual.
+
+##### Rage is priced as runic power, not as energy
+
+Decided 2026-09-03: *"warriors should use the same style for rage power costs
+as runic power for deathknights. Same paradigm."*
+
+This settles the asymmetry above by naming which side rage belongs on. The
+four payable pools split two and two, not four ways:
+
+| | **Stock currencies** | **Accrual currencies** |
+| --- | --- | --- |
+| **Pools** | mana, energy | rage, runic power |
+| **At the opening of a fight** | full | empty |
+| **Refilled by** | time, and by drinking | fighting |
+| **Budget measured as** | what is in the bar | what accrues across the engagement |
+| **A spell priced here** | is castable immediately | has to be earned first |
+
+Rage and runic power are the same kind of thing wearing different names, so
+they get one formula between them rather than two. A warrior's borrowed
+Frostbolt and a death knight's borrowed Frostbolt are priced by the same rule,
+against the same definition of a budget, and both have to be paid for out of
+the fight rather than out of the bar. Whatever calibration is chosen for one
+applies unchanged to the other, which halves the tuning surface and removes
+the possibility of the two drifting apart.
+
+It also means the death-knight rune rules above are the *general* accrual
+rules, not a death-knight special case. Runic power is one accrual currency
+and rage is the other; anything the cooldown split decides about runic power
+is decided about rage in the same breath.
+
+#### What the swap has to carry with it
+
+Learning a different spell id than the one the game thinks you learned breaks
+every check written against the original id, and there are three that matter:
+
+- **Rank chains.** `Trainer::GetSpellState` refuses a spell when
+  `sSpellMgr->GetPrevSpellInChain` names a previous rank the player does not
+  have. A warrior holding warrior-Frostbolt-rank-1 does not have
+  Frostbolt-rank-1, so rank 2 is refused forever. The generated siblings need
+  their own chains in `spell_ranks`, one per class, parallel to the original.
+- **Anything that asks `HasSpell` by number.** Quest rewards, `spell_required`,
+  the ability-tome system in issue 405, the pretrain tables from 148j — all of
+  them name original ids.
+- **Talents and procs.** These key off `SpellFamilyName` and
+  `SpellFamilyFlags` rather than the id, so a sibling copied wholesale keeps
+  working. This is the one place the wholesale copy pays off, and it is a
+  reason to copy every field rather than construct a new row.
+
+#### The client still has to be told
+
+A spell id the client's own `Spell.dbc` has never heard of has no name, no
+icon, no tooltip and no cast. It cannot appear in the spellbook, because the
+spellbook is drawn from client data — the server sends ids, not spells. So
+every generated sibling has to reach the player's install, which means a
+client-side patch archive, the same requirement issue 715 hit for its
+per-level spell variants.
+
+Issue 715 states the consequence more softly than this — "tooltips will be
+wrong without client patch" — which reads as though the spell would still
+appear, merely mislabelled. Those two readings differ and only one can be
+true. It has not been checked in-game here, and it should be, because if 715
+is right the client patch is a polish item and if this file is right it is a
+blocking dependency. See Open Question 3.
+
+#### How many spells this makes
+
+The product is (spells a player may learn cross-class) x (classes). Issue 715
+proposes multiplying the same set by *level* as well, and if both ship the
+generated set is level x class, which is a different order of magnitude
+entirely. Rather than guess at either number here, count them:
+
+```sql
+-- distinct spells offered by class trainers, from the live world DB
+SELECT COUNT(DISTINCT ts.SpellId)
+FROM   trainer_spell ts
+JOIN   trainer t ON t.Id = ts.TrainerId
+WHERE  t.Type = 0;
+```
+
+Issue 715 already reserved the id space for generated spells: **9,000,000 and
+up**, chosen because 3.3.5a's highest real spell id is near 80,000 and custom
+modules conventionally sit in 100,000-999,999. This issue should take a
+disjoint block inside that range rather than invent its own convention.
+
+### The delivery problem — nothing wanders by right now
+
+This issue assumes a trainer walks up to the player, because phase 5 is built
+on travellers rather than towns. That assumption does not currently hold, and
+it was checked rather than taken on faith.
+
+**The traveller system is not running on the active profile.** `.profile` says
+`vanilla`. E001 symlinks `src/lua-vanilla/` into the worldserver's
+`lua_scripts/custom/`, and `src/lua-vanilla/` contains exactly one script —
+`auto-equip-starter-kit.lua` — plus a README. The whole beta corpus, travel
+included, sits in `src/lua-beta/` where vanilla never looks, and inside that
+directory `travel.lua` is filed as `travel.lua.disabled` in any case. No
+traveller of any kind spawns for a vanilla player today.
+
+**How the timing works when it does run.** `periodic_events.lua` sets three
+spawn clocks as plain globals and registers them per-player on login:
+
+| Constant | Value | What it spawns |
+| -------- | ----- | -------------- |
+| `DELAY_PERIODIC_SPAWN_CREATURE` | 40 s | an ambush monster |
+| `DELAY_PERIODIC_SPAWN_TRAVELLER` | 130 s | one traveller |
+| `DELAY_PERIODIC_SPAWN_TREASURE` | 100 s | a treasure chest |
+
+The traveller clock is a flat 130 seconds — unlike the ambush interval, which
+random-walks. Each firing re-registers itself and then calls
+`Travel.spawnAndTravel`, skipping silently if the player is dead, swimming, or
+sitting. The traveller spawns 30 to 45 yards away, walks a course away from
+the player, wanders on a 2-4 second step, mirrors the player's sit state, and
+despawns after five minutes or when no player is within 200 yards.
+
+**Which traveller appears is a drained bag, not a dice roll.** On login,
+`Travel.updatePlayerTravellers` walks ten categories, keeps every entry whose
+faction and level bracket fit the player, and builds a list.
+`Travel.getRandomTravellerId` then `table.remove`s a random element each time —
+so a given trainer appears once and is gone until the list empties and
+regenerates. Over a session the player sees the whole eligible cast rather
+than the same NPC repeatedly.
+
+**The ten categories, and what is missing from them:**
+
+| Category | typeMask | Category | typeMask |
+| --- | --- | --- | --- |
+| Ammo | 1 | Others | 32 |
+| Innkeepers | 2 | Melee | 64 |
+| Trainers | 4 | Ranged | 128 |
+| Consumables | 8 | Armor | 256 |
+| Poisons | 16 | Food | 512 |
+
+`Travel.getTravelerTypeMask` gives each class its own subset — a mage gets
+`2+4+8+32+64+256`, no ammo, no poisons, no food.
+
+Counting the 279 distinct creature ids the travel tables name, against the
+world database: **123 class trainers, one weaponsmith, and no profession
+trainers at all.** There is no alchemy, blacksmithing, enchanting,
+engineering, leatherworking, tailoring, herbalism, mining, skinning, cooking,
+first aid or fishing trainer anywhere in the traveller pool, and no category
+that would hold one. The "Others" category, which sounds like it might, is
+five novelty vendors — an exotic-pet dealer, a toymaker and his clockwork
+assistant, a flower vendor, and a cat.
+
+**A weapon-trainer list exists and is dead code.** `wep_trainers` holds twelve
+entries — eleven Weapon Masters and Kradu Grimblade, the one Weaponsmith
+Trainer — each set to levels 1-20. It is never added to `Travel.travellers`,
+so it has no typeMask, so nothing ever reads it. Those twelve NPCs cannot
+spawn. Given issue 717 wants universal weapon skills, this list is either the
+seed of that feature or something to delete; it should not stay as it is.
+
+The consequence for this issue: **502 has no delivery vehicle on the active
+profile**, and even on beta it would reach class trainers only. Whether that
+is a blocker or simply the order things get built in is Open Question 5.
+
+## Suggested Implementation Steps
+
+1. **Add the four settings.** Append four entries before
+   `MAX_NUM_SERVER_CONFIGS` in `WorldConfig.h`; add four `SetConfigValue`
+   calls in `WorldConfig::BuildConfigCache`, all `Reloadable::Yes` so the
+   knobs can be turned on a live server while testing balance. This is a
+   `patches/B*.sh` source patch — sed-anchored on `MAX_NUM_SERVER_CONFIGS`
+   for the enum and on a neighbouring `SetConfigValue` line for the binding,
+   with an unpatch that deletes both — following the shape of
+   `patches/B005-accuracy-level-cap.sh`.
+
+2. **Lift gate one.** In `Trainer::IsTrainerValidForPlayer`, before the
+   existing switch, return true when `Trainer.AnyClass` is on and the
+   trainer's `Type` bit is set in `TypeMask`. The two call sites in
+   `NPCHandler.cpp` and `PlayerGossip.cpp` then both open up together, so
+   the gossip line and the window stay consistent.
+
+3. **Lift gate two.** In `Trainer::SendSpells` and `Trainer::GetSpellState`,
+   treat a failing `IsSpellFitByClassAndRace` as passing when the config is
+   on and the trainer type qualifies. Keep the level, skill-rank, prerequisite
+   and rank-chain checks exactly as they are — the note asks to remove the
+   class wall, not the progression.
+
+4. **Price the surcharge.** In `Trainer::SendSpells` (so the window shows the
+   real number) and `Trainer::TeachSpell` (so the charge matches the window),
+   multiply `MoneyCost` by the surcharge when the spell would have failed the
+   class-fit test. The escalator term needs a count of out-of-class spells the
+   player already knows; deciding where that count lives — recomputed by
+   walking the spellbook, or carried as a character variable — is Open
+   Question 3.
+
+5. **Add the config keys to the installed conf.** A `config/patches/C*.sh`
+   patch gated to the profiles that want it, following the append-and-marker
+   shape of `config/patches/C016-missing-server-config-keys.sh`. Which
+   profiles is Open Question 4.
+
+6. **Write the patch doc.** `docs/patches/trainer-any-class.md`, in the
+   structure the project's CLAUDE.md lays out, so the C++ change survives an
+   upstream re-clone as a description rather than as a diff.
+
+7. **Test the two gates separately.** They fail differently and a combined
+   test hides which one broke: one check that a warrior sees the training
+   gossip line on a mage trainer (gate one), one that the window is non-empty
+   (gate two), one that the price shown equals the price charged, and one
+   that a mage's own spells still cost the unmodified amount.
+
+8. **Patch the runic-power gap first.** Extend the switch in
+   `SpellInfo::CalcPowerCost` so `POWER_RUNIC_POWER` takes a percentage of
+   `GetMaxPower` the way rage and energy already do, instead of logging "Not
+   implemented yet!" and charging nothing. Four lines in a `patches/B*.sh`.
+   It goes first because without it every generated spell is free for death
+   knights, and a generator run before this lands produces data that is
+   silently wrong for one class in ten.
+
+9. **Calibrate the percentages against one reference spell per class.** The
+   target is one converted cast costing roughly what one native spell of
+   similar function costs its own class. That is a comparison, not a formula,
+   so it is done by picking the reference spells and reading their costs as
+   percentages out of the live database, then writing the table. Rage needs
+   its budget measured across the engagement rather than at its start, for
+   the reason given above.
+
+10. **Write the generator.** A script — not a hand-maintained SQL file — that
+    reads the class-trainer spell list out of the world database, and for each
+    spell emits nine siblings, one per other class, into `spell_dbc`: every
+    field copied verbatim except `PowerType`, which becomes the target class's
+    power, and the cost fields, which become `ManaCost = 0` plus the
+    `ManaCostPercentage` from step 9. It also emits the parallel `spell_ranks`
+    rows so each class's chain of ranks links to itself rather than to the
+    original's. Ids come from the block reserved inside 715's 9,000,000+
+    range. The generator is the deliverable; the SQL it produces is a build
+    artifact and should be regenerable at any time from the current trainer
+    list.
+
+11. **Swap at learn time.** When training completes for an out-of-class spell,
+    look up the caller's class sibling, unlearn the stock id, learn the
+    sibling. `Trainer::TeachSpell` is where training completes and where the
+    swap goes; whether that is a source patch there or an ALE hook on the
+    learn event is Open Question 4.
+
+12. **Get the siblings into the client.** Generate the matching `Spell.dbc`
+    rows into a client patch archive and add it to whatever players already
+    install alongside the AIO addon. This is the same client-side dependency
+    issue 715 carries; the two should produce one archive between them, not
+    two. Blocked on resolving the disagreement in Open Question 3 about how
+    badly the client fails without it.
+
+13. **Price one spell by hand and cast it as two classes.** Frostbolt, given a
+    warrior sibling costing a percentage of rage, learned by a warrior and
+    cast. This is the smallest thing that proves the whole chain —
+    generation, swap, client data, cast — and each of those four can fail
+    distinguishably, so check them in that order rather than concluding from
+    the button not lighting up. Cast it once at the opening of a fight, when
+    the warrior holds no rage, and once mid-fight: the first should refuse and
+    the second should land, which is the rhythm working rather than a bug.
+
+## Affected Files (anticipated)
+
+- `source-beta/src/server/game/World/WorldConfig.h` — the four enum entries
+- `source-beta/src/server/game/World/WorldConfig.cpp` — the four bindings
+- `source-beta/src/server/game/Entities/Creature/Trainer.cpp` — both gates and
+  the surcharge
+- `source-beta/src/server/game/Entities/Creature/Trainer.cpp` —
+  `TeachSpell` also performs the unlearn-and-relearn swap
+- `source-beta/src/server/game/Spells/SpellInfo.cpp` — `CalcPowerCost` gains
+  the missing runic-power branch so percentage costs are not free for death
+  knights
+- a new generator script producing `spell_dbc` and `spell_ranks` rows for the
+  per-class siblings, plus the conversion table it reads
+- a client-side patch archive carrying the generated `Spell.dbc` rows, shared
+  with issue 715
+- `patches/B0??-trainer-any-class.sh` — the reversible source patch
+- `config/patches/C0??-trainer-any-class.sh` — the installed-conf keys
+- `docs/patches/trainer-any-class.md` — the portable description
+- `patches/patches.sh` — registration in the per-profile patch lists
 
 ## Related Issues
-- 206 - death knight scaling (also affects class abilities)
+
+- **503** dynamic-trainer-spawning (completed) — the trainers this issue opens
+  up are the ones that wander past. That issue normalized every class's
+  trainers to cover levels 1-20 and picks one per spawn; with 502 on, the
+  class of the trainer who wanders by stops mattering, which removes the whole
+  reason 503 selects a class at all. If this ships, revisit whether 503's
+  per-class selection should become a plain random pick.
+- **501** custom-merchant-system — the other half of phase 5's wandering
+  services.
+- **701** quest-spells-to-trainers — put quest-locked abilities on trainers.
+  Those entries become classless too, which widens that issue's blast radius.
+- **412** dynamic-quest-prototype — already reversed 701's premise; if quests
+  come back as the ability path, gold-gated universal training is a second,
+  parallel path to the same spells.
+- **717** universal-weapon-skills-talent-tradeoff — the same universality
+  principle applied to weapons, and it pays for universality in talent
+  training time rather than gold. Two systems charging for the same idea in
+  two currencies need to agree; see Open Question 5.
+- **716** / **148g** class-combination-modifier-system — the existing answer to
+  "a character holds more than one class's kit". Overlaps this issue directly.
+- **715** linear-ability-scaling — the closest relative in the whole project.
+  It already generates spell siblings, already swaps them by unlearn-and-
+  relearn, already reserved the 9,000,000+ id range, and already ran into the
+  client patch archive. It multiplies the spell set by *level*; this issue
+  multiplies it by *class*. They should share machinery or explicitly decide
+  not to — Open Question 10.
+- **405** ability-tome-system — abilities as lootable items, a third
+  acquisition path. Its tomes name original spell ids, which the sibling swap
+  breaks.
+- **707** aio-tiered-talent-trainers — custom trainer gossip via AIO, an
+  alternative place to put the cross-class purchase UI.
+
+## Open Questions
+
+- **Which profile gets it?** Ritz, 2026-09-25: "It's probably for some
+  other profile though so we should leave that as an open question. The
+  nice thing is we don't have to choose in order to build it, we can just
+  make it as a patch and apply it as we please." So it is built as a
+  reversible patch (the worldserver config option the origin note asks
+  for, plus its source and SQL patches), listed in no profile until one
+  is chosen.
+
+### Answered
+
+- **The resource wall** — 2026-09-03. Not solved at cast time. Each class gets
+  a generated copy of the spell with its own power type and converted cost;
+  the stock spell is unlearned and the copy learned in its place. Written up
+  under *How the cost gets rewritten*.
+- **The three unmatched currency names** — 2026-09-03. Names were approximate,
+  the count was right, so they are mapped onto the three unnamed engine slots
+  in the order given: tiempo to focus, james to happiness, important to runic
+  power. Table under *The seven slots*.
+- **Scope** — 2026-09-03. **Class trainers only.** `TypeMask` stays at 1.
+  Mount trainers keep their race requirement, pet trainers keep their class
+  requirement, profession trainers keep their prerequisite spell.
+- **How rage is priced** — 2026-09-03. Rage takes the runic-power paradigm,
+  not the energy one. Rage and runic power are both accrual currencies, get
+  one formula between them, and are budgeted across the engagement rather than
+  off the bar. Table under *Rage is priced as runic power*.
+- **How a spell is assigned to a spec** — 2026-09-03. By the colour of the
+  spell's own icon against the three spec-icon anchors, nearest wins: hue
+  distance, gated on the icon's saturation clearing about 30% so near-grey
+  icons are not assigned at random. Measured on twenty spells and it
+  reproduces the brief's own examples — green nature spells land on unholy,
+  fire lands on blood, gold Holy Light lands on blood. Generalises to every
+  class, since `TalentTab.dbc` gives every spec an icon. Tables under *Runes
+  and runic power*.
+- **How a profile gets the travel system** — 2026-09-04. By symlink from the
+  beta corpus, with beta as upstream: *"we can do symlink, and let the upstream
+  handle patches to that branch."* Profile-specific differences — which spawn
+  clocks register, which traveller categories are eligible — are conditionals
+  inside the shared files rather than forks of them. The same decision is
+  recorded in 153d, which needed it too.
+- **Why the weapon-trainer list is dead** — confirmed 2026-09-04. It is not an
+  oversight; weapon training was removed on purpose. Issue 148h, *Weapon
+  Skills — Full Proficiency, Starter Weapon Sharpened*, grants every character
+  proficiency in every weapon its class can learn, in its own words *"so the
+  player never visits a weapon master"*. It ships in
+  `src/lua-vanilla/auto-equip-starter-kit.lua` on `PLAYER_EVENT_ON_FIRST_LOGIN`,
+  driven by a per-class `CLASS_WEAPON_SKILLS` table derived from live character
+  data and a `WEAPON_SKILL_PROFICIENCY` map of skill line to proficiency spell.
+  So the twelve unregistered Weapon Masters in `travel.lua` are the residue of
+  a shipped decision. **Caveat: the hook is vanilla-only** — it lives in
+  `src/lua-vanilla/`, so on beta nothing grants proficiencies and weapon
+  masters would still have work to do. Whether beta gets the same treatment is
+  a live question rather than a settled one.
+- **What "an equivalent amount" means** — 2026-09-03. A percentage of what
+  that unit spends across the engagement, not an exchange rate between pools,
+  calibrated so one converted cast costs about what one native spell of
+  similar function costs. The engine already carries this as
+  `ManaCostPercentage`, so the generator writes a percentage and the engine
+  converts per caster. Written up under *"An equivalent amount"*.
+
+### Deferred by decision
+
+Set aside deliberately on 2026-09-04 — *"ask me those questions when we get to
+them."* Not open in the sense of blocking, and not answered. They are asked
+again when somebody is actually writing the cost table, which is the first
+moment either answer changes anything.
+
+- **What "the top two" ranks, now that the colour rule is understood.** The
+  colours turned out to be anchors for matching spells, not a ranking of the
+  specs — so the remaining half of the rule, that powerful high-resource
+  spells take "one of the top two" runes, still needs an ordering from
+  somewhere, and it is no longer obvious it comes from colour at all. Likely
+  candidates: an ordering by how much resource the spell demands (the two
+  most expensive rune types for the most expensive spells), or the talent
+  tab `OrderIndex` the game already carries (blood 0, frost 1, unholy 2).
+
+- **The cooldown split names runic power on both branches.** As given: short
+  cooldowns of four or six seconds cost runic power, and no-cooldown or
+  long-cooldown spells cost runic power. One branch was meant to be runes.
+  Which one? The runes are themselves cooldown-shaped — each recharges on a
+  timer rather than draining from a pool — which reads as an argument for
+  short-cooldown spells costing runes and no-cooldown spells costing
+  accumulated runic power, but that is a guess and not a decision.
+
+
+### Still open
+
+1. **The letter notation.** Five coefficients take their currency's first
+   letter (T tiempo, J james, I important, R rage, R runes); mana and energy
+   take each other's (N mana, M energy), and R does double duty for rage and
+   runes. Placeholders, or a notation with rules? If it is a notation it needs
+   writing down before the conversion table is built, because the conversion
+   table is where those coefficients become numbers.
+
+2. **The reference spell for each class.** The conversion rule is settled —
+   percentage of the engagement, calibrated so one converted cast costs about
+   what one native spell of similar function costs. What is not settled is
+   *which* spell plays "similar function" for each of the ten classes. That
+   choice is the calibration, and picking it wrong tilts a whole class. It
+   needs a person who knows how each class actually plays, which makes it a
+   `tissues/` question rather than an `issues/` one.
+
+3. **Whether the missing delivery vehicle blocks this.** The traveller system
+   is not loaded on the vanilla profile at all, travel.lua is filed as
+   `.disabled` even in the beta corpus, and no profession trainer exists in
+   the traveller pool on any profile. So even a finished 502 reaches nobody
+   today. Is the order of work: turn travellers back on first, or build 502
+   against a system that is switched off and turn both on together?
+
+4. **How badly the client fails on an unknown spell id.** This file says a
+   spell absent from the client's `Spell.dbc` cannot appear in the spellbook
+   at all, because the spellbook is drawn from client data and the server
+   sends only ids. Issue 715 says tooltips "will be wrong" — which implies the
+   spell still appears. Both cannot be true, neither has been checked in-game,
+   and the difference decides whether the client patch archive is polish or a
+   hard dependency. Check before building anything downstream of it.
+
+5. **Where the swap lives.** `Trainer::TeachSpell` in the core is the exact
+   moment training completes, which argues for a source patch. But the project
+   prefers Lua where Lua reaches, and ALE has a learn hook. A core patch is
+   one more thing to re-derive on every upstream re-clone; a Lua hook risks
+   the player briefly holding the wrong spell between the two events. Which
+   cost is preferable?
+
+6. **What happens to a sibling when its original is patched.** Upstream
+   rebalances a spell, or one of this project's own SQL files does. The nine
+   copies are now stale and nothing notices. Does the generator re-run on
+   every build (regenerating from current data, which is the project's stated
+   preference for generated things), or does it run once and drift?
+
+7. **Whether siblings are unlearned when the config is turned off.** An
+   operator flips `Trainer.AnyClass` back to 0. Characters are still holding
+   generated spells that no trainer will now sell. Left alone, or swept?
+
+8. **Where the escalator's count lives.** `CostPerKnown` needs to know how many
+   out-of-class spells a character already owns. Recomputing it by walking the
+   spellbook on every trainer window is correct but touches every spell every
+   time; caching it as a character variable is cheap but can drift when spells
+   are learned outside a trainer (tomes, quests, GM commands). Which failure
+   is preferable?
+
+9. **Which profiles turn it on.** Vanilla is the active profile and the one
+   whose design most wants this. Should release and alpha get the keys at
+   default-off, or not get them at all?
+
+10. **How this and 717 agree on the price of universality.** 717 charges for
+   universal weapons with 3x slower talent training; this charges for
+   universal spells with gold at the trainer and with a converted resource
+   cost at every cast. If both ship, a character pays three times in three
+   currencies for one idea. Intended, or should they collapse into one price?
+
+11. **Whether 502 and 715 share one generator.** Both generate spell siblings
+    into the 9,000,000+ range, both need a client patch archive, both swap by
+    unlearn-and-relearn. 715 multiplies by level, this multiplies by class. If
+    they stay separate they will each build the same three machines; if they
+    merge, the generated set is level x class and the count question in *How
+    many spells this makes* needs answering first.
+
+12. **What the playerbots do with it.** Bots visit trainers and train what they
+    can afford. With the class gate off, a bot warrior spends its gold on mage
+    spells — and under the sibling design those spells now *work*, so bot
+    combat behaviour changes rather than merely wasting money. Does the bot
+    training logic need to keep the class check even when players do not?
+
+13. **Whether the client's spellbook tabs cooperate.** The 3.3.5 client sorts
+    the spellbook by skill line. A warrior holding a warrior-flavoured
+    Frostbolt has no arcane tab to put it in. Since the siblings are generated,
+    their skill line is a field we choose — which may make this a non-issue, or
+    may mean choosing between "appears under a mage tab that shouldn't exist"
+    and "appears under General with everything else". Needs looking at in-game
+    alongside Question 3.
