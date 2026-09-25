@@ -5,7 +5,7 @@
 - Phase: 6 (Companions — bot behaviors)
 - Priority: High for basic (155): "players always have at least one buddy"
 - First profile: basic
-- Sub-issues: 617a–617j
+- Sub-issues: 617a–617k
 
 ## Origin
 
@@ -141,6 +141,7 @@ handler, which B028 (155d) now patches. Bots never pass through it.
 | 617g | buddy-talent-plans | 155g | Generated talent plans (2/3–1/3 and thirds) for capped trees, balanced to equilibrium; a buddy keeps its plan for life |
 | 617h | buddy-auction-house | 617e | Town errands by priority (repair, trainer, auction house, vendor), the auction pricing rules, then wandering the town |
 | 617j | buddy-loot-rolls-and-upgrades | 617a, 617g | Owner and buddies share one gear pool; three-way-split buddies need or greed by the clan's average; upgrades are always equipped |
+| 617k | buddy-professions | 617a, 155p | Buddies' professions (after basic's Jewelcrafting rework); not designed yet |
 | 617i | buddy-battlegrounds | 617c, 617e | Buddies join and leave the owner's battleground queues, finish their matches, then return; an owner's invite pulls them out |
 
 Execution order: `617a → (617b ∥ 617c) → (617d ∥ 617e) → (617h ∥ 617i ∥ 617j); 617b → 617f`.

@@ -75,17 +75,92 @@ stock world database):
   seconds and so on). No recipe makes them; five Burning Crusade gem
   vendors sell them (listed in the catalog).
 
+More, read 2026-09-25 (stock world `acore_world_release`; the client files):
+
+- **What the client can describe limits the gems.** A gem's stat text comes
+  from the client's gem and enchantment files, so a gem can only give an
+  effect some existing gem already gives. The smallest single-stat gems are
+  +4 (the level-55 Tourmaline/Zircon/Amber set) and +2 mana every 5
+  seconds; there is no +1, +2 or +3 gem. Next sizes up: +6 (Outland's
+  uncommon gems: Blood Garnet, Golden Draenite, Azure Moonstone...) and +8
+  (Outland's rare gems: Living Ruby, Dawnstone, Star of Elune...), with
+  two-stat mixes (+3/+4, +4/+6) in the orange, green and purple colours.
+  A gem item's name, icon and item level are server data.
+- **Recipes are client data too.** A Jewelcrafting recipe's reagents and
+  product are in the client's spell file; the skill needed to learn it
+  (trainer, recipe item) is server data. So the existing Outland cutting
+  recipes can be taught at a lower skill, but they keep their reagents:
+  the Outland raw gems. **Prospecting yields are server data**: vanilla ores
+  already prospect (copper, tin, iron, mithril, thorium), and Outland's raw
+  gems could be added to mithril and thorium prospecting.
+- **What a green carries** (fixed-stat greens, average of all stats), by
+  item level and slot size:
+
+  | Item level | Chest, legs, two-hander | Head, shoulders, hands, feet, waist | Wrist, neck, ring, back |
+  |---|---|---|---|
+  | 10 | 2 | 2 | 1 |
+  | 20 | 8 | 6.5 | 4 |
+  | 25 | 11 | 8.5 | 6 |
+  | 35 | 18 | 15 | 10 |
+  | 50 | 26.5 | 21.5 | 15 |
+  | 60 | 31 | 26 | 17 |
+
+  A +4 gem is a whole wrist/ring green at item level 20, half a chest green.
+- **Capital-city white gear:** every capital sells the same ladder of armor
+  sets (item level 5, 10, 17, 22, 27, 37, 50; e.g. leather: Dirty/Cracked,
+  Battered/Rough, Tanned, Cured, Cuirboulli, Studded, Reinforced; mail:
+  Rusted/Tarnished, Light Chain, Chainmail, Scalemail, Polished Scale,
+  Augmented, Brigandine; cloth: … Padded, Russet, Embroidered; plate:
+  Platemail at 50), a shield every few levels (3–50) and plain weapons
+  (item level 2–46). 180–290 such items per city.
+
 ## Intended Behavior
 
-To be designed with Ritz. The pieces so far:
+Draft for Ritz, 2026-09-25 (his direction, verbatim):
+
+> Let's think of some good candidates for socketed items that can be made
+> low level. And the gems can be adjusted such that the weakest gems are
+> low level jewelcrafting recipes or vendor goods always sold in capital
+> cities (for the weakest ones without recipes). I'm thinking one slot max
+> for the low level items because +4 strength is actually pretty
+> significant! Maybe we could make the white quality items from capital
+> cities have sockets, enough to make them roughly equivalent to a green of
+> the same ilevel? With set bonuses to fill the gaps if needed. Make sure
+> we'd be using level appropriate gems. Also, we can make some dungeon
+> blues have sockets in exchange for some of the stats that are on the
+> item naturally. So, empowering the white quality items through
+> flexibility, and shifting the blue items from solid power to flexibility
+> as well. This will have roughly an equivalent amount of stats on the
+> blues, so overall I think it'll be a slight upgrade if the player is
+> willing to spend the money on gems - otherwise, a similarly levelled
+> green might even be better. In-fact, we should tune it such that it is
+> the case that there are enough gems (plus valuable or weak set bonuses
+> as appropriate) to make an unsocketed blue item be worse than a plain
+> green item.
 
 1. **Option 2, first try:** one item's socket bonus points at an unused
    enchantment whose effect the server overrides with a chosen aura, to
    confirm the text/effect split in game.
-2. **Sockets on lower-level gear**, with the item's stats reduced to pay
-   for the socket, while a socket still feels worth having for its
-   flexibility.
-3. **Gems craftable below 300**, so lower-level sockets can be filled.
+2. **Three gem tiers, by level**, all existing gem effects:
+
+   | Tier | Gem | Where from | Fits items of |
+   |---|---|---|---|
+   | I | +4 one stat, +2 mana/5s (Tourmaline, Amber, Zircon: all three colours) | capital-city vendors, always stocked | item level 17–27 |
+   | II | +6 one stat, and the +3/+4 two-stat mixes (Outland's uncommon cut gems) | Jewelcrafting ~150–225, raw gems from prospecting mithril | item level 30–45 |
+   | III | +8 one stat, and the +4/+6 mixes (Outland's rare cut gems) | Jewelcrafting ~250–300, raw gems from prospecting thorium | item level 45–63 |
+
+   Below item level ~15 nothing gets a socket: a +4 gem would be twice a
+   green's whole stats there.
+3. **Capital whites get one socket** from the Tanned/Chainmail/Padded sets
+   (item level 17) upward, plus shields and weapons in the same range, with
+   the tier's gem colour spread across slots. Gem + socket bonus ≈ the
+   green of the same item level and slot size; the socket bonus (an
+   existing enchantment, sized by slot) or a set bonus fills what the gem
+   alone can't.
+4. **Some dungeon blues trade stats for a socket.** Their fixed stats drop
+   below the same-level green's (so an empty-socket blue loses to a plain
+   green); a level-appropriate gem plus the bonus lifts them a little
+   above their stock total (a slight upgrade for players who buy gems).
 
 ## Suggested Implementation Steps
 
@@ -100,15 +175,23 @@ To be designed with Ritz. The pieces so far:
 
 ## Open Questions
 
+- Tiers II and III reuse Outland's cut gems and their cutting recipes
+  (names like "Bold Blood Garnet"; reagents Outland raw gems, which mithril
+  and thorium prospecting would yield). Acceptable, or should gem items be
+  renamed (server-side names are free; the recipe tooltip would still name
+  the Outland gem)?
 - Which effect for the first option 2 test (an absorb on being hit,
   health every 5 seconds, something else)?
-- The socket budget: how much stat to take away per socket, and whether
-  the socket bonus counts towards it.
-- Which low-level items get sockets (every blue? dungeon loot only? crafted
-  gear?), and how many.
-- Where low-level gems come from: new Jewelcrafting recipes below 300 (the
-  level-55 Tourmaline/Zircon/Amber set is a ready-made tier), drops, or
-  vendors.
+- Big slots (chest, legs, two-handers): at item level 37 a green carries
+  ~18, a tier II gem gives 6. Fill with a large socket bonus, a set bonus,
+  or allow those items a second socket?
+- Which dungeon blues get sockets (every dungeon blue? only some slots?),
+  and one socket or up to two?
+- Required level on gems: should a tier II gem refuse to go into a level-20
+  item, or is the socket colour/tier matching left to the player?
+- Recipe colours: Outland recipes taught at 150 would stay orange (always a
+  skill-up) until 300, since their colour ranges are client data. Fine?
+- Buddy professions come after this (Ritz, 2026-09-25): 617k.
 - Should the tooltip always tell the truth, or can a bonus hide more than
   its text says?
 - Set bonuses (an item's set membership is also server data, but the set's
