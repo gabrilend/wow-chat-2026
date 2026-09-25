@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 14:53:13
+Generated on: 2026-09-25 15:19:12
 Models: claude-opus-5-5
 
 ## Contents
@@ -73,6 +73,10 @@ Models: claude-opus-5-5
     rework; the gem supply is done, tested and committed. Next: you choose where
     two-stat gems like "+Intellect and +mana" go in the sustain → power →
     focus order, so I can build the trainers' Outland cuts.
+17. 2026-09-25 15:06, after Request 65 - We're reworking basic's Jewelcrafting
+    and sockets; the gem supply and the titan-site jewelcrafters are built,
+    tested and committed. Next, stage 3 (sockets on items) needs your answers on
+    socket colours, bonus stats, durability scope, and which blues.
 
 --------------------------------------------------------------------------------
 
@@ -6669,6 +6673,155 @@ Stage 1 is complete. Stage 2 is the titan-site pairs at Uldaman's entrance, the
 Gate of Uldum and the Un'Goro pylons: the crystal trader, the masterwork
 jewelcrafter, and the pylon wandering. Shall I go ahead and pick spots from the
 map data?
+
+--------------------------------------------------------------------------------
+
+### User Request 65
+
+Great let's keep working.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 65
+
+> Stage 2. Gathering data first: the Un'Goro pylons, the Gate of Uldum and
+> Uldaman's exits from the database, and a fitting titan-flavoured look for the
+> pair.
+
+> Before relying on game events: the server re-checks events on a schedule, so I
+> need to confirm a script-started event won't be stopped at the next check.
+> Reading that code.
+
+> A script-started event survives if its state is "internal": the server never
+> starts one of those on its own schedule, and never stops one either.
+> Confirming that starting one by hand works.
+
+> Testing the height reader against the landmarks' known heights first, using a
+> stub SQL file with just the markers.
+
+> Confirmed: `world_event = 5` loads as the internal state. Writing the stage-2
+> SQL, and keeping stage 1's list of gem cuts so stage 2 can use it.
+
+> The script parses. Wiring the stage-2 SQL into the install patches, the test
+> and the checker.
+
+> The full test passes with stage 2, including the exact revert. Checking what
+> the gemcutter teaches.
+
+> Exactly as decided: 56 uncommon cuts at stock prices (1–2 gold) and the 7
+> rare single gems at 10 gold. Recording and committing.
+
+Stage 2 is built, tested and committed. At Uldaman, the Gate of Uldum and the
+Un'Goro pylons, each pair is:
+- an **Earthen Crystal-Keeper**, who trades a Nexus Crystal for an uncut Wrath
+  gem: rare at a default 10%, uncommon otherwise. If your bags are full, you get
+  the crystal back.
+- an **Earthen Gemcutter** <Masterwork Jewelcrafter>, a real trainer. It teaches
+  the 56 trainer-only uncommon Wrath cuts and the 7 rare single gems at skill
+  300, at stock prices (1–2 gold, and 10 for the rare ones).
+
+The Un'Goro pair wanders using three game events that the server never starts or
+stops on its own. A small script picks one at boot, then every 30 minutes moves
+the pair 50/50 to another pylon if nobody is within 200 yards. Game events work
+even when nobody's nearby, which moving the NPCs directly wouldn't.
+
+A new generator places each pair a few yards from its landmark. It reads the
+ground height from the server's map files, using the server's own triangle math.
+Uldaman's exit lies under rock that the terrain data doesn't include, so there
+the exit's own height is used.
+
+The in-RAM test passes with exact revert, and a new post-install check covers
+the sites. To see in game: the pairs standing on the ground, the trade, the
+trainer and the wandering.
+
+**Stage 3 is sockets on items.** Four choices shape it, so here they are
+together with my suggestions:
+1. **Socket colours:** which colour goes where? *Suggest: spread red, yellow and
+   blue by slot, so a full set wants all three colours and the socket bonus
+   matters.*
+2. **Which stat each socket bonus gives:** *Suggest: whites give Stamina
+   (sustain fits their mundane origin). Blues give the item's own strongest
+   stat, at the bigger sizes from the table.*
+3. **Doubled durability and no repairs:** all white-quality gear, or only the
+   socketed capital whites? *Suggest: all white gear, as you first said.*
+4. **Which dungeon blues:** the loot of vanilla's 5-person dungeons (level
+   30–60 blues), skipping any blue with no fixed stats to drain. *Suggest:
+   yes, and leave raid loot alone.*
+
+The two server code patches, never repairing whites and cutting a customer's gem
+in the trade window, come after the data part. They'll be for you to compile.
+
+--------------------------------------------------------------------------------
+
+### User Request 66
+
+> 1. Socket colours: which colour goes where? Suggest: spread red, yellow and
+> blue by slot, so a full set wants all three colours and the socket bonus
+> matters.
+
+try and have each "tier" of white quality gear have the same amount of each
+color within the tier. They don't have to be comparable to each other, but they
+probably will be.
+
+> 2. Which stat each socket bonus gives: Suggest: whites give Stamina (sustain
+> fits their mundane origin). Blues give the item's own strongest stat, at the
+> bigger sizes from the
+     table.
+
+sounds good
+
+> 3. Doubled durability and no repairs: all white-quality gear, or only the
+> socketed capital whites? Suggest: all white gear, as you first said.
+
+sure. This is a separate patch by the way.
+
+> 4. Which dungeon blues: the loot of vanilla's 5-person dungeons (level 30–60
+> blues), skipping any blue with no fixed stats to drain. Suggest: yes, and
+> leave raid loot alone.
+
+sure, but, we can probably have lower level than level 30 as well since blues
+have more stats to drain in exchange for gem slots?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 66
+
+> Recording your answers first:
+> - colours balanced within each white tier;
+> - socket bonuses: Stamina on whites, the item's strongest stat on blues;
+> - white durability as its own separate patch;
+> - blues from vanilla dungeons below level 30 too, down to item level 17, where
+>   the smallest +4 gem first fits.
+
+> The bonus lookup can return nothing when no honest enchantment of that stat is
+> small enough. Letting that case through, so it simply means no bonus.
+
+Real dungeon blues carry 1.5–1.9 times a same-level green's stats, not the 1.3
+I'd assumed for the table. With your rule (an empty blue must lose to a green, a
+filled one ends about 10% above stock), a blue drops to about half its stats,
+and the rest has to come back through sockets and bonus:
+
+| Blue item levels | Stats vs a green | Stats kept | Average bonus, in gems | Largest bonus |
+|---|---|---|---|---|
+| 17–29 | 1.8–1.9× | 45% | 0.6–1.0 | +8 |
+| 30–44 | 1.6–1.7× | 50% | 0.7–1.2 | +23 |
+| 45–63 | 1.5× | 55% | 0.7–1.5 | +49 |
+
+With "fewer sockets" (one, or two on chest, legs and two-handers), the bonus has
+to carry a lot: about a whole gem or more on average, and huge on a few items.
+Some choices:
+1. **Keep it as is.** Blues become "get the colours right or lose a big chunk",
+   which really makes gems matter.
+2. **More sockets on blues:** two on middle slots, three on big ones. The
+   bonuses shrink to about half a gem, but blues gain almost as many sockets as
+   whites.
+3. **A gentler cut:** empty blues keep 90% of a green instead of 80%, so they
+   still lose to it, just barely. Bonuses shrink by about a third.
+4. **Cap the bonus at one gem's worth.** A filled blue then ends below its stock
+   power instead of 10% above.
+
+I haven't wired stage 3 into the install until you choose. The white sockets
+already match your table and the colour rule. Which way for blues?
 
 --------------------------------------------------------------------------------
 

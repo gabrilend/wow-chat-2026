@@ -103,7 +103,32 @@ Default rates for prospecting and Wrath gem drops: `docs/balance-updates.md`
   terrain layer doesn't include, the exit's own height is used.
 To check in game: the pairs stand on the ground and not in rock; the trade
 and the trainer window work; the Un'Goro pair moves.
-Not built: stage 3 (sockets on items, durability, the two source patches).
+
+**Stage 3, sockets on items: built and tested on the RAM database
+(2026-09-25), not yet installed.** `sql/basic/db_world.src/20-sockets.apply.sql`
+(E035) with its lists from `scripts/generate-basic-sockets-sql` (864
+honest one-stat enchantments for bonuses, the 20 vanilla 5-person
+dungeons, the capitals' outlines):
+- 182 capital whites (armor, shields and weapons, item level 17–63):
+  armor gets the approved table at the set levels (17, 22, 27, 37, 50)
+  and the same rule elsewhere, with a small Stamina bonus; colours run
+  red, yellow, blue in turn across each set, so a set's colours are even
+  (Cuirboulli: 13 sockets, 5 red, 4 yellow, 4 blue); weapons get
+  prismatic sockets and no bonus;
+- 564 blues from vanilla dungeon loot (item level 17–63, fixed stats):
+  fixed stats cut to 80% of a same-level green; sockets (one, two on big
+  slots with room) and a bonus of the item's strongest stat bring a
+  filled one to 110% of stock. Real blues carry 1.5–1.9 times a green's
+  stats, so they keep about half and the bonus is often a gem's worth or
+  more (up to +49 on a few level-45+ items) — Ritz, 2026-09-25, choosing
+  this over more sockets, a gentler cut or a cap: "Keep it as is. Blues
+  become 'get the colours right or lose a big chunk', which really makes
+  gems matter." Socket colours follow the blue's two strongest stats.
+- the plan per item is kept in `basic_155p_socketed`; stock values in
+  `basic_155p_socket_backup`.
+Not built: white durability (a separate patch), and the two source
+patches (never repairing whites; cutting a customer's gem in the trade
+window).
 
 Stock, before stage 1. What the data says (read 2026-09-24 from the client
 files and the stock world database):
@@ -292,6 +317,24 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
 
      Only blues with stats to cut; a blue whose power is a proc or an
      on-use keeps its stock form.
+   - **Stage 3 rules** (Ritz, 2026-09-25):
+     - colours: "try and have each 'tier' of white quality gear have the
+       same amount of each color within the tier" — within one white set
+       (one armor type at one item level), red, yellow and blue sockets
+       come out as even as the socket count allows; weapons stay
+       colourless (prismatic) with no bonus;
+     - bonuses: whites give Stamina; blues their own strongest stat, at
+       the table's bigger sizes ("sounds good"); a blue's socket colours
+       follow the gem colours of the stats it carries (red: Strength,
+       Agility, attack and spell power; yellow: Intellect and the
+       ratings; blue: Stamina, Spirit, mana every 5 seconds);
+     - white durability: all white-quality gear, doubled and never
+       repaired — "This is a separate patch by the way";
+     - which blues: vanilla's 5-person dungeons' loot, "we can probably
+       have lower level than level 30 as well since blues have more stats
+       to drain in exchange for gem slots" — from item level 17 (where
+       the +4 gem first fits), skipping blues with random or no fixed
+       stats, and leaving raid loot alone.
 5. **Names stay in sync with tooltips** (Ritz, 2026-09-25: "Let's keep the
    tooltips and the names in sync."): gem items keep their stock names, so
    a recipe's tooltip and the gem it makes always agree.

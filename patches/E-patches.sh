@@ -1924,3 +1924,43 @@ unpatch_E034_basic_titan_jewelers() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+
+# -- {{{ patch_E035_basic_sockets
+# Sockets (issue 155p, stage 3): gem sockets on the capitals' white gear
+# and on vanilla dungeon blues (whose fixed stats shrink in exchange), with
+# honest one-stat socket bonuses. Same cp-apply / cp-revert idiom as E022.
+patch_E035_basic_sockets() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/20-sockets.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/20-sockets.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E035] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    # Register on every run (see E022 for why this comes before the check).
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E035] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E035] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E035_basic_sockets() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/20-sockets.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/20-sockets.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E035_REVERT" "${SQL_FILE}"; then
+        echo "  [E035] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E035] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E035] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}

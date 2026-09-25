@@ -300,6 +300,16 @@ report "titan sites: a crystal trader and a masterwork jewelcrafter at Uldaman a
           WHERE e.eventEntry IN (201, 202, 203) AND e.world_event = 5 GROUP BY e.eventEntry HAVING COUNT(g.guid) <> 2
         UNION ALL SELECT 'internal pylon events', COUNT(*) FROM ${WORLD}.game_event WHERE eventEntry IN (201, 202, 203) AND world_event = 5 HAVING COUNT(*) <> 3
         UNION ALL SELECT 'gemcutter cuts', COUNT(*) FROM ${WORLD}.trainer_spell WHERE TrainerId = 155300 HAVING COUNT(*) < 50")"
+report "sockets: whites and dungeon blues socketed; armor colourful, weapons prismatic without bonus; blues keep less than a green" \
+    "$(run_sql "SELECT 'whites', COUNT(*) FROM ${WORLD}.basic_155p_socketed WHERE kind = 'w' HAVING COUNT(*) < 100
+        UNION ALL SELECT 'blues', COUNT(*) FROM ${WORLD}.basic_155p_socketed WHERE kind = 'b' HAVING COUNT(*) < 300
+        UNION ALL SELECT i.entry, 'socket count' FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_socketed s ON s.entry = i.entry
+          WHERE (i.socketColor_1 <> 0) + (i.socketColor_2 <> 0) + (i.socketColor_3 <> 0) <> s.sockets
+        UNION ALL SELECT i.entry, 'weapon socket or bonus' FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_socketed s ON s.entry = i.entry
+          WHERE s.weapon AND (i.socketColor_1 <> 14 OR i.socketBonus <> 0)
+        UNION ALL SELECT i.entry, 'armor socket colour' FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_socketed s ON s.entry = i.entry
+          WHERE NOT s.weapon AND i.socketColor_1 NOT IN (2, 4, 8)
+        UNION ALL SELECT s.entry, 'blue keeps too much' FROM ${WORLD}.basic_155p_socketed s WHERE s.kind = 'b' AND s.keep * s.total > 0.8 * s.g + 0.5 LIMIT 10")"
 report "Jewelcrafting trainers 112 and 113 teach Outland's cuts between 150 and 300" \
     "$(run_sql "SELECT a.TrainerId, COUNT(*) FROM ${WORLD}.basic_155p_trainer_added a GROUP BY a.TrainerId HAVING COUNT(*) < 60
         UNION ALL SELECT 'trainers', COUNT(DISTINCT TrainerId) FROM ${WORLD}.basic_155p_trainer_added HAVING COUNT(DISTINCT TrainerId) <> 2

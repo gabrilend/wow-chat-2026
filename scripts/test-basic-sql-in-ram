@@ -138,10 +138,12 @@ apply_all() {
     step "E032 Outland world monsters +4 (Isle +6)"       "${WORLD}" "${B}/db_world.src/17-outland-world-levels.apply.sql"
     step "E033 gem supply"                                "${WORLD}" "${B}/db_world.src/18-gem-supply.apply.sql"
     step "E034 titan-site jewelcrafters"                  "${WORLD}" "${B}/db_world.src/19-titan-jewelers.apply.sql"
+    step "E035 sockets on whites and dungeon blues"       "${WORLD}" "${B}/db_world.src/20-sockets.apply.sql"
     step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${V}/db_characters.src/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
 }
 revert_all() {
+    step "E035 revert" "${WORLD}" "${B}/db_world.src/20-sockets.revert.sql"
     step "E034 revert" "${WORLD}" "${B}/db_world.src/19-titan-jewelers.revert.sql"
     step "E033 revert" "${WORLD}" "${B}/db_world.src/18-gem-supply.revert.sql"
     step "E032 revert" "${WORLD}" "${B}/db_world.src/17-outland-world-levels.revert.sql"
