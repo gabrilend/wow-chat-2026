@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 12:05:30
+Generated on: 2026-09-25 12:16:34
 Models: claude-opus-5-5
 
 ## Contents
@@ -47,6 +47,10 @@ Models: claude-opus-5-5
     gems for the basic profile, and the plan now drops AIO and player-installed
     addons. Next, you decide whether I commit the three uncommitted files from
     other sessions as they are, or you review them first.
+11. 2026-09-25 12:08, after Request 54 - We're designing sockets and gems for
+    basic's level-60 ladder, and everything so far is recorded and committed.
+    Next: tell me whether the Un'Goro jewelcrafters should always move to a
+    different pylon when their cycle through all three restarts.
 
 --------------------------------------------------------------------------------
 
@@ -5928,6 +5932,81 @@ picks its next pylon like drawing from a shuffled deck, so all three get visited
 before any repeat. When the deck runs out and reshuffles, the first draw could
 be the pylon they're already standing at, meaning they'd stay put for another 30
 minutes. Should the reshuffle skip their current pylon, so they always move?
+
+--------------------------------------------------------------------------------
+
+### User Request 55
+
+Okay how does issue 405 look? does it require AIO or a client patch?
+
+
+
+<pasted_content id="8773">
+> Back to the sockets design, one open question from earlier. The Un'Goro pair
+> picks its next pylon like drawing from a shuffled deck, so all three get
+> visited before any repeat. When
+> the deck runs out and reshuffles, the first draw could be the pylon they're
+> already standing at, meaning they'd stay put for another 30 minutes. Should
+> the reshuffle skip their
+>   current pylon, so they always move?
+</pasted_content id="8773">
+
+
+oh, um... yes. Actually how about we just make it so that it's a 50/50 chance
+each time they swap, I think that'll be saner haha
+
+then, can we either do the buddy-bot profession system or work on something
+else...?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 55
+
+> Reading the rest of issue 405 to see what its tomes are made of.
+
+> Adding the same findings to issue 405 itself, since that's where someone would
+> look.
+
+**Issue 405 (ability tomes):** no AIO, but one part needs a client patch.
+- **The recipes need a client patch.** Players were meant to make tomes through
+  Inscription, but each recipe would be a brand-new spell. The client's crafting
+  window can only list spells in its own spell file.
+- **The tome items probably work as-is.** They're new items, but the server
+  describes new items to the client itself. We'd confirm that in game, or reuse
+  existing unused tome items to avoid the question.
+- **Using a tome works.** The tome casts any existing harmless spell the client
+  knows, and the server's Lua then teaches the next rank.
+- **Everything else is server-side:** the tome pools, rank selection, and the
+  two server patches it depends on, both already done.
+
+Your Outland tomes idea skips the problem part entirely, since those tomes would
+drop from monsters rather than being crafted. I've added this to both issues.
+
+**Un'Goro:** changed to your 50/50 rule. Every 30 minutes, if no player is
+within 200 yards, the pair moves to one of the other two pylons, each at 50%.
+
+**Next:** buddy professions depends on two things that don't exist yet. The
+buddies themselves aren't built, and you wanted the Jewelcrafting rework done
+first. So I'd build the Jewelcrafting rework now. The gem-supply half is fully
+decided and needs no answers from you:
+1. **Prospecting:** copper and tin yield the +4 gems; mithril and thorium yield
+   Outland's raw gems.
+2. **Drops:**
+   - Wrath gems from Outland monsters;
+   - epic gems from the bosses (Kael'thas 1 always, world bosses 2 always, other
+     dungeon bosses 15%);
+   - the gem-cut recipes at their rare rates.
+3. **Onyxia's hoard:** the Ashen Sack of Gems' new contents.
+4. **Recipes learnable at 300.**
+5. **The master jewelcrafters:** crystal trader and cut teacher at Uldaman, the
+   Gate of Uldum and Un'Goro, including the pylon wandering.
+
+Everything except the in-game checks gets tested on the in-RAM database, the
+same way as the Outland work. The other half, sockets on white and blue items,
+still has open questions: how to fill big slots and which blues get sockets.
+Those can wait until you're back.
+
+Shall I start?
 
 --------------------------------------------------------------------------------
 

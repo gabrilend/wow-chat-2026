@@ -1,12 +1,12 @@
-# 155q - Outland Ability Tomes
+# 155q - Level 61–80 Ability Tomes from Azeroth
 
 ## Status
 - Created: 2026-09-25
 - Phase: 1
 - Parent: 155
-- Related: 405 (ability tome system, another profile's rank-agnostic tomes;
-  the mechanism to reuse), 155f / 155k (the high-level Outland creatures
-  that would drop them), 156 (expert, 61–80, where these abilities are
+- Related: 155h (Naxxramas at 60, where the Wrath-era tomes drop), 405
+  (ability tome system, another profile's rank-agnostic tomes; the
+  mechanism to reuse), 156 (expert, 61–80, where these abilities are
   ordinary)
 - Priority: Low (an idea, not designed)
 
@@ -38,8 +38,16 @@ Issue 405 already designs rank-agnostic tomes for another profile: one
 ## Intended Behavior
 
 Level 61–80 class abilities (new ones and higher ranks) become learnable at
-60 from tomes that drop, rarely, from basic's high-level Outland creatures:
-progression past the level cap through what a character finds.
+60 from tomes that drop: progression past the level cap through what a
+character finds.
+
+**Tomes drop only in Azeroth** (Ritz, 2026-09-25, replacing the note's
+Outland mobs): "can we make tomes only drop from Azeroth? We should treat
+Outland as alien and strange, and Azeroth is where we go to focus our
+strength. It's fitting I think that the WotLK tomes would then be dropping
+from Naxxramas." So the Wrath-era abilities' tomes drop from Naxxramas (at
+60 on basic, 155h). (The file keeps its name, `155q-outland-ability-tomes`,
+so links to it stay valid.)
 
 ## Suggested Implementation Steps
 
@@ -61,8 +69,9 @@ progression past the level cap through what a character finds.
   needs a client patch, but tomes that drop, as here, skip recipes
   entirely. Using a tome needs an on-use spell the client knows, then the
   server's Lua teaches the next rank.)
-- Drop sources and rates: which Outland creatures (the upper zones, the
-  upper dungeons, bosses), and how rare?
+- (Answered 2026-09-25) Where: Azeroth only; the Wrath-era tomes from
+  Naxxramas. Still open: do Burning Crusade–era abilities (the 61–70
+  ones) drop from somewhere else in Azeroth, and how rare are they?
 - Balance: higher ranks are sized for levels 61–80; do they need scaling
   down on basic (see 715, linear ability scaling)?
 - Death knights are allowed on basic with limits (148a); do they get tomes
