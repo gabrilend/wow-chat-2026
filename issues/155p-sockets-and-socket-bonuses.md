@@ -206,11 +206,13 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
      2026-09-25: "every 30 minutes, if there are no players within sight,
      say... 200 yards, then they swap to a different, random one. They
      both travel as a group. The random one is chosen without
-     replacement."). Every 30 minutes, if no player is within 200 yards,
-     both move together to another pylon, drawn from the pylons not yet
-     visited this round (a shuffled deck: all three are visited before any
-     repeats). A Lua timer, the players-in-range check, and a despawn and
-     respawn at the new pylon.
+     replacement." Then, on the shuffled deck's repeats: "Actually how
+     about we just make it so that it's a 50/50 chance each time they swap,
+     I think that'll be saner haha"). Every 30 minutes, if no player is
+     within 200 yards, both move together to one of the two other pylons,
+     each at 50%. They always move; the pylon they left can come back. A
+     Lua timer, the players-in-range check, and a despawn and respawn at
+     the new pylon.
 8. **Where epic Wrath gems and their cuts come from** (Ritz, 2026-09-25:
    "the gems from the top Outland bosses, the recipes from every Outland
    boss. The gems should be 100% chance for 1 from Kael'Thas, 100% chance
@@ -445,9 +447,8 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   Gate of Uldum, both NPCs at each.
 - (Answered 2026-09-25) Uldaman outside the dungeon; in Un'Goro the pair
   moves between the pylons.
-- Un'Goro's shuffled deck: when all three pylons have been visited, the
-  new round could start with the pylon they're standing at (a repeat).
-  Skip it so they always move?
+- (Answered 2026-09-25) Un'Goro: a 50/50 pick between the two other
+  pylons each time, instead of a shuffled deck.
 - (Answered 2026-09-25) Crystal-to-gem odds: an uncommon Wrath gem, with a
   small chance of a rare.
 - How Outland blues change for the Wrath gems: they already carry stock

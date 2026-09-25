@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 11:43:04
+Generated on: 2026-09-25 12:05:30
 Models: claude-opus-5-5
 
 ## Contents
@@ -43,6 +43,10 @@ Models: claude-opus-5-5
    socket bonus catalog are all committed. Next is the socket bonus test you
    picked: one item whose bonus keeps an existing tooltip but applies an effect
    we choose.
+10. 2026-09-25 11:46, after Request 53 - We're designing low-level sockets and
+    gems for the basic profile, and the plan now drops AIO and player-installed
+    addons. Next, you decide whether I commit the three uncommitted files from
+    other sessions as they are, or you review them first.
 
 --------------------------------------------------------------------------------
 
@@ -5849,6 +5853,81 @@ On addons: recorded. The roadmap now says no player-installed addons of any kind
 until the custom client is done. The true creature levels issue waits for that
 client, since both its routes put something on players' machines. Until then the
 skull stays.
+
+--------------------------------------------------------------------------------
+
+### User Request 54
+
+Okay for 1. that's gotta be made into an issue file. It's probably for some
+other profile though so we should leave that as an open question. The nice thing
+is we don't have to choose in order to build it, we can just make it as a patch
+and apply it as we please.
+
+2. Great, a new profile set. That's something we can make issues for and leave
+   in the backlog.
+
+3. Great, an adversarial network security challenge. That's something we want to
+   look into, but we don't have to worry about now.
+
+There's an unsorted issue file in the project root, what's that about? Can we
+make a proper issue file for it?
+
+The roadmap should say no REQUIRED player installed addons. They can install
+whatever they'd like, we just can't require them to.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 54
+
+> The root note asks about teaching basic characters level 61–80 abilities
+> through tomes. The existing tome design is issue 405. Counting how many class
+> abilities that would cover.
+
+> Now the class trainers issue: adding your note on which profile it's for and
+> how it gets built.
+
+> Committing the explore profile issues and the player-safety issue as backlog,
+> each credited to its session.
+
+All done and committed.
+
+**Root note → new issue.** The loose file `new-issue-please-sort` asked
+whether basic's level-60 characters could learn level 61–80 class abilities
+from tomes that drop from high-level Outland monsters. It's now issue 155q
+("Outland ability tomes"). It quotes your note and lists its open questions. It
+also records:
+- the size of the idea: about 800 trainer entries across the classes, including
+  new abilities and higher ranks of known ones;
+- the existing tome design it can reuse: issue 405's tomes, which teach
+  whichever rank you're eligible for next.
+
+I removed the loose file afterwards; it had never been committed, and its words
+are quoted in the issue.
+
+**Roadmap:** reworded to your phrasing: no *required* addons. Players can
+install whatever they like, but no feature may depend on one until the custom
+client exists. The true creature levels issue follows that: the skull stays by
+default. An optional addon that shows real numbers would be allowed as an extra,
+and there's a new open question on whether to build it now or wait for the
+custom client.
+
+**The three earlier-session files:**
+1. **Universal class trainers:** committed, credited to the September 3–4
+   session. I added your open question on which profile gets it, with your
+   answer that it's built as a patch listed in no profile yet. One mistake along
+   the way: my first commit took five stray blank lines into that file, because
+   the commit tool couldn't separate my lines from the other session's. The next
+   commit replaced them with the full content, so the file in git is correct
+   now.
+2. **Explore profile** (153 and its seven sub-issues): committed as backlog,
+   unchanged.
+3. **Player-machine safety** (158): committed as backlog, unchanged.
+
+Back to the sockets design, one open question from earlier. The Un'Goro pair
+picks its next pylon like drawing from a shuffled deck, so all three get visited
+before any repeat. When the deck runs out and reshuffles, the first draw could
+be the pylon they're already standing at, meaning they'd stay put for another 30
+minutes. Should the reshuffle skip their current pylon, so they always move?
 
 --------------------------------------------------------------------------------
 

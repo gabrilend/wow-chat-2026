@@ -56,7 +56,11 @@ progression past the level cap through what a character finds.
   ranks of what a level 60 already knows?
 - Where the tome items come from: 405's tomes are new items, which the
   client may show wrongly (no entry in its own item file); are there
-  existing unused tome items to reuse?
+  existing unused tome items to reuse? (405 read 2026-09-25: no AIO; its
+  Inscription recipes would be new spells the client doesn't know, which
+  needs a client patch, but tomes that drop, as here, skip recipes
+  entirely. Using a tome needs an on-use spell the client knows, then the
+  server's Lua teaches the next rank.)
 - Drop sources and rates: which Outland creatures (the upper zones, the
   upper dungeons, bosses), and how rare?
 - Balance: higher ranks are sized for levels 61–80; do they need scaling

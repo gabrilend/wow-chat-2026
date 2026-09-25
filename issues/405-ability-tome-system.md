@@ -394,6 +394,22 @@ Provides treasure pool infrastructure. Tomes use separate pools but similar dist
 
 **Status:** Partial
 
+**Client side (read 2026-09-25, for 155q and the no-AIO decision)**
+
+- No AIO: everything above runs on the server (Lua, the two source
+  patches, SQL).
+- **The Inscription recipes need a client patch.** Their spells
+  (920001…) are new; a tradeskill window lists only spells the client's own
+  spell file has, and the server can't send new ones. Without a client
+  patch, tomes have to come from somewhere other than a recipe: drops,
+  chests (as here), vendors, or a dialogue menu.
+- **The tome items are new item entries** (900001…). The server describes
+  a new item's name and properties to the client, so these likely show,
+  but they have no entry in the client's own item file; to confirm in
+  game. Reusing existing unused tome items avoids the question.
+- **Using a tome** needs an on-use spell the client knows (any existing
+  harmless one); the server's use hook then teaches the next rank.
+
 ---
 
 ## Design Philosophy
