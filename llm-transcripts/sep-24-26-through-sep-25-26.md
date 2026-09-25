@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 13:05:04
+Generated on: 2026-09-25 13:26:54
 Models: claude-opus-5-5
 
 ## Contents
@@ -60,6 +60,10 @@ Models: claude-opus-5-5
     Next I need four decisions from you: the cut teacher's replacement,
     unrepairable whites, the socket-bonus test effect, and Naxxramas's tome
     rate.
+14. 2026-09-25 13:08, after Request 59 - We're reworking Jewelcrafting and
+    sockets for the basic profile; every design question is now answered and
+    committed. Next is building stage 1, the gem supply (prospecting, drops,
+    recipe drops, Onyxia's hoard), once you say go.
 
 --------------------------------------------------------------------------------
 
@@ -6348,6 +6352,86 @@ Nothing is built yet. Next is building, in three stages:
    gem through the trade window are server code patches, for you to compile.
 
 Shall I start on stage 1?
+
+--------------------------------------------------------------------------------
+
+### User Request 60
+
+Yeah!
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 60
+
+> Starting stage 1. First a kept in-RAM database to build against (a few
+> minutes, running in the background), and meanwhile checking where the Outland
+> cutting recipes live in the stock data.
+
+> Reading area ids straight from the server's map files; my tile arithmetic is
+> off. Checking the server's formula.
+
+> The in-RAM database is ready. Pulling the exact item ids the SQL needs: raw
+> gem names, and the loot tables of Onyxia and the bosses.
+
+> Generator worked: 558 Jewelcrafting spells, and 2,456 Outland monster types
+> placed by zone from 22,565 spawns. Applying on the in-RAM database.
+
+> Adding post-install checks for the gem supply to the validator.
+
+> The full test passes: apply, re-apply, revert to identical tables, and apply
+> again, with all checks green. Logging the default rates and updating the issue
+> before committing.
+
+Stage 1 is built, tested and committed. Nothing is installed on the real server
+yet.
+
+**What it does** (all on the in-RAM database):
+- **Prospecting:** copper and tin give cut +4 gems; mithril gives Outland's
+  uncommon raw gems; thorium gives Outland's rare ones.
+- **Outland monsters** (about 1,000 loot tables) drop:
+  - uncut Wrath uncommon gems, rarely rare ones;
+  - Wrath cutting recipes, at about one kill in 300 for any recipe. Uncommon
+    cuts drop in Hellfire, Zangarmarsh, Terokkar and Nagrand; rare cuts in
+    Blade's Edge, Netherstorm, Shadowmoon and the Isle. Dungeons drop both, the
+    rare share rising from Ramparts to Magisters' Terrace.
+- **Bosses** (59 loot tables):
+
+  | Boss | Uncut epic gems |
+  |---|---|
+  | Kael'thas | 1 every kill |
+  | Kazzak and Doomwalker | 2 every kill |
+  | Other Outland dungeon bosses | 1 at 15% |
+
+  Every boss also has a 1.5% chance of an epic cutting recipe.
+- **All 191 Wrath cutting recipes** need only 300. All 97 epic Wrath gems (6
+  uncut, 91 cut) bind on pickup.
+- **Onyxia's sack is the hoard**, and her binding gems drop from her directly.
+
+To place monsters in zones, the new generator reads the server's own map files,
+the same way the server looks up a zone. The full test passes: apply, re-apply,
+revert (tables identical to before), and apply again. The prospecting and
+Wrath-gem drop rates you hadn't set use the defaults I listed; they're logged in
+the balance log for tuning.
+
+**Bug fixed along the way:** the post-install checker used to report PASS for
+any check whose query crashed. The error went to the terminal and the empty
+result read as "nothing wrong". I found it when one of my new checks had a
+mistake. Crashes now count as failures, and the checker refuses to run if that
+ever breaks again.
+
+**Question found while building:** mithril and thorium now give Outland raw
+gems, but nobody can cut them yet. In the stock game, Outland's cuts are taught
+by Outland trainers and sold as recipes by Outland vendors, and basic removed
+both. Who should teach them?
+1. **Azeroth's Jewelcrafting trainers**, for gold: uncommon cuts at about
+   150–225, rare cuts at about 250–300. This is the simplest, and it matches
+   the tier plan.
+2. **The masterwork jewelcrafters** at the titan sites.
+3. **Recipes that drop** somewhere in Azeroth.
+
+A related one: 11 rare Wrath cuts are taught only by trainers in the stock game,
+with no recipe item. Should the masterwork jewelcrafter teach those too,
+alongside the 56 uncommon ones?
 
 --------------------------------------------------------------------------------
 

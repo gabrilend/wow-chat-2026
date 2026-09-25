@@ -571,16 +571,30 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   So an orange recipe always gives a point, as shown. (It also makes
   Outland cuts a fast road to 300; noted.)
 - Buddy professions come after this (Ritz, 2026-09-25): 617k.
-- **Who teaches the Outland cuts (tiers II and III)?** Found while building
-  stage 1: in the stock game Outland's 32 uncommon cuts come from Outland
-  trainers (15) and Outland vendors' recipes (31), and its 53 rare cuts
-  only from Outland vendors' and reputation recipes, all of which basic
-  removed (155n). So mithril and thorium now give Outland raw gems nobody
-  can cut yet. Options: Azeroth's Jewelcrafting trainers teach them (the
-  uncommon cuts at ~150–225, the rare at ~250–300, for gold), or the
-  masterwork jewelcrafters do, or their recipes drop somewhere in Azeroth.
-- The 11 rare Wrath cuts that stock teaches only at trainers (no recipe
-  item): add them to the masterwork jewelcrafter's list with the 56
-  uncommon ones?
+- (Answered 2026-09-25) **Who teaches the Outland cuts** (found while
+  building stage 1: stock teaches Outland's 32 uncommon and 53 rare cuts
+  only through Outland trainers and vendors, which basic removed). Ritz:
+  "this is part of the gem redistribution pact. Jewelcrafting trainers
+  should teach these recipes, and the recipes should be spread out through
+  their crafting range." Azeroth's Jewelcrafting trainers teach them for
+  gold, spread through the tier's range (uncommon ~150–225, rare
+  ~250–300) in the order **sustain, then power, then focus** (Stamina,
+  Spirit, mana every 5 seconds first; Strength, Agility, Intellect, attack
+  and spell power next; critical strike, hit, haste and the other focused
+  ratings last), a rule Ritz applies to the other gem families too and
+  that now lives in `docs/design-principles.md`.
+- Where do defensive ratings (defense, dodge, parry, block) and resilience
+  sit in sustain/power/focus, and a two-stat gem (proposed: at the later of
+  its two stats' places)?
+- The 11 rare Wrath cuts that stock teaches only at trainers (Ritz asked
+  which): seven single gems at skill 390 (Bright Scarlet Ruby +32 attack
+  power, Balanced Twilight Opal +16 attack power and +12 Stamina, Pristine
+  Monarch Topaz +16 attack power and +8 hit, Brilliant Autumn's Glow +16
+  Intellect, Dazzling Forest Emerald +8 Intellect and +4 mana every 5
+  seconds, Sparkling Sky Sapphire +16 Spirit, and Enchanted Tear, +6 to
+  all stats in any socket colour) and four meta gems at 420 (Persistent
+  and Powerful Earthsiege Diamond, Swift and Tireless Skyflare Diamond).
+  The meta gems' raw diamonds have no source in stage 1 yet. Teach them at
+  the masterwork jewelcrafter, and where do the raw diamonds come from?
 - (Answered 2026-09-25) Tooltips always honest, even on legendary items.
 - (Answered 2026-09-25) Set bonuses: leave them for now.
