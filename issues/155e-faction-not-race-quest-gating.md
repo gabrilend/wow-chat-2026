@@ -51,7 +51,7 @@ Built as setup step E025 (`sql/basic/db_world.src/10-valley-universal-trainers.a
 plus source patch B029:
 
 - **Where:** one **Visiting Mentor** at every place the stock world sends
-  new characters to train (owner, 2026-09-23: "yes. No duplicates!"). The
+  new characters to train (Ritz, 2026-09-23: "yes. No duplicates!"). The
   stock data marks these places with stacks of nine placeholder NPCs
   (entries 26324–26332, goblin "Druid Trainer", "Warrior Trainer", …): 24
   sites, three per race (starting valley, first town, capital). Each site

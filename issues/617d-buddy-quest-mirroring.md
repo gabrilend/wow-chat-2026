@@ -25,7 +25,7 @@ ordinary quest logs.
   regardless of whether they could have picked it up themselves.
 - When the owner turns a quest in, every buddy completes it and receives
   its experience, money and a reward item. For a choice reward, a buddy
-  picks the way every playerbot already does (owner, 2026-09-23: "what
+  picks the way every playerbot already does (Ritz, 2026-09-23: "what
   would the playerbots pick? they level up according to the same rules that
   the player does"). In `TalkToQuestGiverAction::BestRewards`
   (`modules/mod-playerbots/src/Ai/Base/Actions/TalkToQuestGiverAction.cpp`)

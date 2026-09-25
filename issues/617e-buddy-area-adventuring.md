@@ -42,12 +42,15 @@ where the module sends them. Neither is "in my area, on its own".
 - **In a town or city** the buddies are ungrouped (617c) and don't fight.
   Each walks (never runs) to an NPC in the area, stands before it and plays
   talking animations, then walks to another. Which NPC is weighted
-  (owner, 2026-09-23):
+  (Ritz, 2026-09-23):
   - **merchants**, with priority equal to how full the buddy's bags are
     (half-full bags: 50% priority); at a merchant it sells what the bot
     module already considers junk or surplus;
   - **its class trainer**, first, when it has spells it could learn;
   - otherwise a random NPC.
+  In towns with services, this is refined by 617h's errand list (repair,
+  trainer, auction house, vendor, in a durability-driven order) and its
+  wandering rule (Ritz, 2026-09-24).
 - When the owner changes area, buddies travel there on foot, as a player
   would.
 - When a buddy dies it resurrects (spirit healer or corpse run, like a

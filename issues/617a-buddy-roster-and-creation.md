@@ -35,7 +35,7 @@ No buddy exists. The pieces to build one with:
 - **Creation**: when a slot is filled, the factory creates a character of
   the chosen class on the companion account, of the owner's faction, and
   levels it to the owner's current level before its first login.
-- **Name and race** (owner, 2026-09-23: "random name, random race.
+- **Name and race** (Ritz, 2026-09-23: "random name, random race.
   Compatible with the class that the character picked, of course."): the
   factory's random name, and a race drawn at random from the owner's
   faction among the races that can play the chosen class.

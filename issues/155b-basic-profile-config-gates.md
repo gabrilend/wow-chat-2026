@@ -13,7 +13,7 @@
 edits values in the generated `.conf` files and carries a gate naming the
 profiles it runs for. Basic's gates are set as in the table below; new
 patches C006d (level cap 60), C023 (bots 1→60 on Eastern Kingdoms,
-Kalimdor and Outland) and C024 (death knights: an account needs a level-55
+Kalimdor and Outland; to be replaced, see below) and C024 (death knights: an account needs a level-55
 character; no death-knight bots — the interim rule, taken from the owner's
 answer in 718) exist.
 
@@ -36,6 +36,19 @@ fixed:
 C003 and C009 now stop with an error if their key is missing, instead of
 editing nothing.
 
+**Not yet changed (Ritz, 2026-09-24):** basic has no random bots.
+Verbatim, on "the world populated only by players and their buddies":
+"this is what we want", and on switching the ambient bots off: "switched
+off." C023 and C020 still start the random-bot population; they are to be
+replaced by a gate that switches it off. The knobs, from the bot module's
+stock config: `AiPlayerbot.RandomBotAutologin` (1 = random bots log in at
+startup), `AiPlayerbot.MinRandomBots` / `MaxRandomBots` (500 / 500 stock:
+how many are online), and `AiPlayerbot.RandomBotAccountCount` (0 = derive
+the account count from the population). Buddies (617) are not random bots:
+they are ordinary bot characters on an account linked to their owner, so
+this switch does not touch them. Until 617 is built, the basic world has
+no bots at all.
+
 ## Intended Behavior
 
 Every config patch is decided for basic, one row at a time:
@@ -54,13 +67,13 @@ Every config patch is decided for basic, one row at a time:
 | C010 network ports | all | yes | add `basic` to the shared-ports arm (155a) |
 | C011 realmlist setup | all | yes | none |
 | C012 bot level 1..20 | beta release | no | — |
-| C014 vanilla bot progression 20→40, Eastern Kingdoms | vanilla | **no** | new **C023 basic bot progression**: enter at 1, climb to 60 by XP, gear persists, maps 0,1,530 (both continents plus Outland; Northrend left out) |
+| C014 vanilla bot progression 20→40, Eastern Kingdoms | vanilla | **no** | ~~new C023 basic bot progression: enter at 1, climb to 60 by XP, gear persists, maps 0,1,530~~ → **random bots off** (2026-09-24): C023 becomes the switch that stops random bots logging in and sets their population to 0 |
 | C015 disable death knights | vanilla | **no** | basic allows stock death knights with two restrictions: new **C024** |
 | C016 backfill missing keys | release beta vanilla | yes | add `basic` |
 | C017 level-correlated caps | release beta vanilla | yes — it reads the cap C006d wrote, so it follows to 60 automatically | add `basic` |
-| C018 bot account count 110 | vanilla | yes | add `basic` |
+| C018 bot account count 110 | vanilla | **no** (2026-09-24: no random bots) | remove `basic` |
 | C019 realm id | all | yes | realm 5 (155a) |
-| C020 bot population 128–256 | vanilla | yes, same band as a starting point | add `basic`; retune later in `docs/balance-updates.md` |
+| C020 bot population 128–256 | vanilla | **no** (2026-09-24: no random bots) | remove `basic` |
 | C021 SOAP console | all | yes | none |
 | C022 custom starting spells (reads the pretrain table) | vanilla | **no** — pretrained abilities are a head-start | none |
 
@@ -107,4 +120,11 @@ separate sweep, best folded into 152's.
 
 ## Open Questions
 
+- (Answered 2026-09-24) "no random bots in basic. Just playerbot buddies."
+  Whether the module starts cleanly with a population of 0 is checked when
+  the switch is built (a startup-log check in the install test).
+- (Answered 2026-09-24) The auction house and battlegrounds are covered by
+  buddies instead: buddies list at auction houses in towns that have one
+  (617h) and follow their owner into battleground queues (617i).
+- (Answered 2026-09-24) Random bots are switched off on basic; only buddies.
 - (Answered 2026-09-23) Experience rate stays 1×.

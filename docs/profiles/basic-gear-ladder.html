@@ -1,0 +1,260 @@
+<title>Level-60 Gear Ladder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Cormorant+SC:wght@600&display=swap">
+<style>
+:root{
+  --bg:#f6f5f1; --surface:#fcfcfb; --ink:#17160f; --ink-2:#55534a; --ink-3:#8a877b;
+  --rule:#e3e1d8; --grid:#ecebe4; --band:rgba(42,120,214,.10); --band-edge:rgba(42,120,214,.45);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --tip:#17160f; --tip-ink:#f6f5f1;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  color-scheme:dark; --bg:#131311; --surface:#1a1a19; --ink:#f3f2ec; --ink-2:#c3c2b7; --ink-3:#8f8d82;
+  --rule:#2c2b27; --grid:#24231f; --band:rgba(57,135,229,.16); --band-edge:rgba(57,135,229,.6);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --tip:#f3f2ec; --tip-ink:#131311; } }
+:root[data-theme="dark"]{
+  color-scheme:dark; --bg:#131311; --surface:#1a1a19; --ink:#f3f2ec; --ink-2:#c3c2b7; --ink-3:#8f8d82;
+  --rule:#2c2b27; --grid:#24231f; --band:rgba(57,135,229,.16); --band-edge:rgba(57,135,229,.6);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --tip:#f3f2ec; --tip-ink:#131311; }
+body{background:var(--bg);color:var(--ink);font:15px/1.55 "IBM Plex Sans",system-ui,sans-serif;padding-inline:16px;padding-block:28px 48px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:22px}
+h1{font:600 clamp(28px,4vw,40px)/1.1 "Cormorant SC",Georgia,serif;margin:0;letter-spacing:.02em;text-wrap:balance}
+.lede{color:var(--ink-2);max-width:68ch;margin:6px 0 0}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{font:500 13px "IBM Plex Sans",sans-serif;color:var(--ink-2);background:none;border:0;padding:7px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg button:focus-visible{outline:2px solid var(--s1);outline-offset:-2px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:8px;border-radius:2px;display:inline-block}
+.chartbox{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:14px 10px 8px;overflow-x:auto;position:relative}
+svg{display:block;min-width:720px;width:100%;height:auto}
+svg text{font-family:"IBM Plex Sans",sans-serif;fill:var(--ink-2);font-size:12px}
+svg .grp{font:600 11px "IBM Plex Mono",monospace;fill:var(--ink-3);letter-spacing:.08em;text-transform:uppercase}
+svg .tick{font:400 11px "IBM Plex Mono",monospace;fill:var(--ink-3)}
+svg .lvl{font:400 11px "IBM Plex Mono",monospace;fill:var(--ink-3)}
+.hint{font-size:13px;color:var(--ink-3);margin:6px 4px 0}
+#tip{position:absolute;pointer-events:none;background:var(--tip);color:var(--tip-ink);font-size:12.5px;line-height:1.4;padding:7px 9px;border-radius:6px;max-width:280px}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px 28px;font-size:14px;color:var(--ink-2)}
+.notes h2{font:600 13px "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin:0 0 4px}
+.notes p{margin:0}
+code{font:12.5px "IBM Plex Mono",monospace}
+details{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:10px 14px}
+summary{cursor:pointer;font-weight:500}
+.tbl{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--rule);white-space:nowrap}
+th{color:var(--ink-3);font-weight:500}
+@media (prefers-reduced-motion:no-preference){ .bar{transition:x .35s ease,width .35s ease} }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Level-60 Gear Ladder</h1>
+    <p class="lede">Three gear sources on one scale, for deciding where each tier should sit on the basic profile: vanilla raids, the Outland dungeons, and Outland open-world farming, as proposed for basic or as stock. Hover any row to project its range across the chart.</p>
+  </header>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Values">
+      <button id="view-prop" aria-pressed="true">Proposed</button>
+      <button id="view-stock" aria-pressed="false">Stock</button>
+    </div>
+    <div class="seg" role="group" aria-label="Scale">
+      <button id="mode-eq" aria-pressed="true">Stat budget (≈ epic item level)</button>
+      <button id="mode-raw" aria-pressed="false">Raw item level</button>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span><i style="background:var(--s1)"></i>Vanilla raids &amp; Azeroth</span>
+      <span><i style="background:var(--s2)"></i>Outland dungeons</span>
+      <span><i style="background:var(--s3)"></i>Outland open world &amp; world bosses</span>
+      <span><i style="background:none;border:1.5px dashed var(--ink-3)"></i>stock range (proposed view)</span>
+    </div>
+  </div>
+
+  <div class="chartbox" id="box">
+    <svg id="chart" role="img" aria-label="Range chart of gear item levels by source"></svg>
+    <div id="tip" hidden></div>
+  </div>
+  <p class="hint">Proposed view: solid bars are the planned values, dashed outlines the stock values they replace, and • marks a changed or new row. Right-hand numbers are the creature levels you fight for that gear: trash to boss, dungeons after their level offset. Open-world bars are the middle half of what each zone's normal creatures drop.</p>
+
+  <section class="notes">
+    <div><h2>Stat budget</h2><p>Item level means different amounts of stats at each quality. Converted with the commonly cited budget curves: green ≈ (ilvl − 4) ÷ 2, blue ≈ (ilvl − 1.84) ÷ 1.6, epic ≈ (ilvl − 1.3) ÷ 1.3, then expressed as the epic item level with the same budget. Approximate.</p></div>
+    <div><h2>Ratings at 60</h2><p>Ratings convert by the wearer's level: 14 crit rating is 1% at 60, about 22 at 70. Vanilla gear carries ratings too (its old "+1% crit" equip effects are +14 crit rating in this client), sized for level 60. Burning Crusade gear's ratings were sized for 70, so on a level 60 they are ~1.6× stronger than this scale shows. Proposed: Burning Crusade items' rating stats × 0.63 (14 ÷ 22.1), vanilla untouched.</p></div>
+    <div><h2>Source</h2><p>Stock world database (vanilla profile copy), 2026-09-24. Zones from the client's map bounds; the Isle of Quel'Danas is Burning Crusade content on the Eastern Kingdoms side, with fixed spawns (one phase) in this database. Bosses = creatures with a boss script; dungeon values are boss blues, normal mode.</p></div>
+  </section>
+
+  <details>
+    <summary>Table view</summary>
+    <div class="tbl"><table id="tbl"><thead><tr><th>Source</th><th>Group</th><th>Quality</th><th>Item level</th><th>≈ epic item level</th><th>Creature level</th><th>Stock (when changed)</th></tr></thead><tbody></tbody></table></div>
+  </details>
+</div>
+
+<script>
+// quality: 2 green, 3 blue, 4 epic. lo/hi are raw item levels; lv is the creature level range fought.
+// p: the proposed values (issues 155f, 155k, 155j) where they differ from stock.
+// only: "stock" or "proposed" rows that exist in one view.
+// Proposed raw blue item level = (target budget + 0.195) / 0.8125, the inverse of the blue budget curve.
+// World greens and blues are mapped proportionally on the ≈ epic scale, so every item keeps its place in the range
+// and its loot table (Ritz, 2026-09-24): greens raw 84..116 onto ≈ epic 47..72 (Hellfire Peninsula ≈ level-60
+// dungeon blues, Isle of Quel'Danas ≈ Emerald Dragons); blues raw 85..115 onto ≈ epic 60..83 (from the middle of
+// the green scale to half a green scale above its top, which lands at the start of Naxxramas-40).
+const ROWS = [
+  {g:0,n:"Level-60 dungeons (blues)",q:3,lo:58,hi:63,lv:"58–62"},
+  {g:0,n:"Molten Core",q:4,lo:61,hi:71,lv:"60–63"},
+  {g:0,n:"Zul'Gurub",q:4,lo:65,hi:68,lv:"56–63"},
+  {g:0,n:"Ahn'Qiraj 20",q:4,lo:66,hi:72,lv:"60–63"},
+  {g:0,n:"Emerald Dragons, Azuregos",q:4,lo:71,hi:72,lv:"63"},
+  {g:0,n:"Onyxia (vanilla loot, 155h)",q:4,lo:71,hi:76,lv:"60–63"},
+  {g:0,n:"Blackwing Lair",q:4,lo:73,hi:77,lv:"60–63"},
+  {g:0,n:"Ahn'Qiraj 40",q:4,lo:73,hi:88,lv:"60–63"},
+  {g:0,n:"Naxxramas-40 (vanilla loot, 155h)",q:4,lo:83,hi:92,lv:"60–63"},
+  {g:1,n:"Hellfire Ramparts",q:3,lo:85,hi:85,lv:"63–66"},
+  {g:1,n:"Blood Furnace",q:3,lo:88,hi:88,lv:"65–67"},
+  {g:1,n:"Slave Pens",q:3,lo:91,hi:91,lv:"65–68"},
+  {g:1,n:"Underbog",q:3,lo:94,hi:94,lv:"66–69"},
+  {g:1,n:"Mana-Tombs",q:3,lo:97,hi:97,lv:"68–70"},
+  {g:1,n:"Auchenai Crypts",q:3,lo:100,hi:100,lv:"69–71"},
+  {g:1,n:"Old Hillsbrad",q:3,lo:102,hi:102,lv:"67–71",only:"proposed"},
+  {g:1,n:"Sethekk Halls",q:3,lo:112,hi:115,lv:"70–73",p:{lo:104,hi:104,lv:"70–72"}},
+  {g:1,n:"Black Morass",q:3,lo:105,hi:105,lv:"68–72",only:"proposed"},
+  {g:1,n:"Shadow Labyrinth",q:3,lo:112,hi:115,lv:"73–76",p:{lo:106,hi:106,lv:"70–73"}},
+  {g:1,n:"Shattered Halls",q:3,lo:112,hi:115,lv:"73–76",p:{lo:107,hi:107,lv:"70–73"}},
+  {g:1,n:"Steamvault",q:3,lo:112,hi:115,lv:"74–76",p:{lo:109,hi:109,lv:"71–74"}},
+  {g:1,n:"Mechanar",q:3,lo:115,hi:115,lv:"74–76",p:{lo:110,hi:110,lv:"71–74"}},
+  {g:1,n:"Botanica",q:3,lo:115,hi:115,lv:"74–76",p:{lo:111,hi:111,lv:"72–75"}},
+  {g:1,n:"Arcatraz",q:3,lo:115,hi:115,lv:"74–76",p:{lo:112,hi:112,lv:"72–75"}},
+  {g:1,n:"Magisters' Terrace",q:3,lo:115,hi:115,lv:"74–76",p:{lo:113,hi:113,lv:"73–76"}},
+  {g:1,n:"Kael'thas epics, Magisters' Terrace",q:4,lo:110,hi:110,lv:"76",p:{lo:100,hi:100,lv:"78"}},
+  {g:1,n:"Rare trash epics (all dungeons)",q:4,lo:100,hi:100,lv:"63–76"},
+  {g:2,n:"Hellfire Peninsula greens",q:2,lo:84,hi:92,lv:"58–71",p:{lo:74,hi:84,lv:"62–75"}},
+  {g:2,n:"Zangarmarsh greens",q:2,lo:92,hi:95,lv:"61–72",p:{lo:84,hi:88,lv:"65–76"}},
+  {g:2,n:"Terokkar Forest greens",q:2,lo:95,hi:104,lv:"60–72",p:{lo:88,hi:98,lv:"64–76"}},
+  {g:2,n:"Nagrand greens",q:2,lo:98,hi:105,lv:"62–72",p:{lo:91,hi:100,lv:"66–76"}},
+  {g:2,n:"Blade's Edge greens",q:2,lo:102,hi:107,lv:"62–72",p:{lo:96,hi:102,lv:"66–76"}},
+  {g:2,n:"Netherstorm greens",q:2,lo:108,hi:111,lv:"67–71",p:{lo:103,hi:107,lv:"71–75"}},
+  {g:2,n:"Shadowmoon Valley greens",q:2,lo:110,hi:114,lv:"66–72",p:{lo:106,hi:110,lv:"70–76"}},
+  {g:2,n:"Isle of Quel'Danas greens",q:2,lo:114,hi:116,lv:"69–71",p:{lo:110,hi:113,lv:"75–77"}},
+  {g:2,n:"Hellfire Peninsula blues (rare)",q:3,lo:88,hi:91,lv:"58–71",p:{lo:77,hi:80,lv:"62–75"}},
+  {g:2,n:"Zangarmarsh blues (rare)",q:3,lo:91,hi:97,lv:"61–72",p:{lo:80,hi:85,lv:"65–76"}},
+  {g:2,n:"Terokkar Forest blues (rare)",q:3,lo:97,hi:106,lv:"60–72",p:{lo:85,hi:94,lv:"64–76"}},
+  {g:2,n:"Nagrand blues (rare)",q:3,lo:100,hi:108,lv:"62–72",p:{lo:88,hi:96,lv:"66–76"}},
+  {g:2,n:"Blade's Edge blues (rare)",q:3,lo:105,hi:109,lv:"62–72",p:{lo:93,hi:97,lv:"66–76"}},
+  {g:2,n:"Netherstorm blues (rare)",q:3,lo:111,hi:112,lv:"67–71",p:{lo:99,hi:100,lv:"71–75"}},
+  {g:2,n:"Shadowmoon Valley blues (rare)",q:3,lo:111,hi:114,lv:"66–72",p:{lo:99,hi:101,lv:"70–76"}},
+  {g:2,n:"Isle of Quel'Danas blues (rare)",q:3,lo:114,hi:114,lv:"69–71",p:{lo:101,hi:101,lv:"75–77"}},
+  {g:2,n:"Fel Reaver ×2 (Karazhan epics ≤120, 155j)",q:4,lo:115,hi:120,lv:"70",only:"proposed"},
+  {g:2,n:"Doomwalker (own 10 items)",q:4,lo:120,hi:120,lv:"73"},
+  {g:2,n:"Doom Lord Kazzak (own 10 items)",q:4,lo:120,hi:120,lv:"73"}
+];
+const GROUPS = ["Vanilla raids & Azeroth","Outland dungeons","Outland open world & world bosses"];
+const QN = {2:"green",3:"blue",4:"epic"};
+const eq = (il,q) => q===2 ? 1.3*((il-4)/2)+1.3 : q===3 ? 1.3*((il-1.84)/1.6)+1.3 : il;
+const rng = (a,b) => a===b ? `${a}` : `${a}–${b}`;
+
+let mode = "eq", view = "proposed";
+const svg = document.getElementById("chart"), tip = document.getElementById("tip"), box = document.getElementById("box");
+const NS = "http://www.w3.org/2000/svg";
+const W = 1040, L = 290, R = 70, ROW = 22, GH = 30, TOP = 34;
+const el = (t,a,p) => { const e=document.createElementNS(NS,t); for(const k in a) e.setAttribute(k,a[k]); (p||svg).appendChild(e); return e; };
+const fmt = v => Math.round(v);
+// the row as shown in the current view; stock values kept as r.s for the ghost bar
+const shown = () => ROWS.filter(r => !r.only || r.only===view).map(r => view==="proposed" && r.p ? {...r, ...r.p, s:r} : {...r});
+
+function draw(){
+  svg.textContent = "";
+  const dom = mode==="eq" ? [40,130] : [50,130];
+  const x = v => L + (v-dom[0])/(dom[1]-dom[0])*(W-L-R);
+  const val = (il,q) => mode==="eq" ? eq(il,q) : il;
+  const list = shown();
+  let y = TOP, rows = [];
+  GROUPS.forEach((gname,gi) => {
+    y += (gi?10:0); rows.push({head:gname,y}); y += GH-8;
+    list.filter(r=>r.g===gi).forEach(r => { rows.push({r,y}); y += ROW; });
+  });
+  const H = y + 26;
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  // hover guides: a column over the row's range, a strip across its row, and the range's two values on the axis
+  const band = el("rect",{x:0,y:TOP-6,width:0,height:H-TOP-20,fill:"var(--band)",stroke:"var(--band-edge)","stroke-width":1,visibility:"hidden"});
+  const hband = el("rect",{x:L-4,y:0,width:W-R-L+8,height:ROW,fill:"var(--band)",stroke:"var(--band-edge)","stroke-width":1,visibility:"hidden"});
+  const edgeLabel = () => { const g=el("g",{visibility:"hidden"}); const r=el("rect",{rx:3,height:14,fill:"var(--band-edge)"},g); const t=el("text",{"text-anchor":"middle",class:"tick",style:"fill:var(--surface)"},g); return {g,r,t}; };
+  let eL, eR; // created after the rows so they sit on top of the axis numbers
+  const putEdge = (e, xv, v) => { e.t.textContent = v; e.t.setAttribute("x",xv); e.t.setAttribute("y",H-8); const w=String(v).length*7+8; e.r.setAttribute("x",xv-w/2); e.r.setAttribute("y",H-19); e.r.setAttribute("width",w); e.g.setAttribute("visibility","visible"); };
+  for(let v=dom[0]; v<=dom[1]; v+=10){
+    el("line",{x1:x(v),x2:x(v),y1:TOP-6,y2:H-20,stroke:"var(--grid)","stroke-width":1});
+    const t = el("text",{x:x(v),y:H-6,"text-anchor":"middle",class:"tick"}); t.textContent = v;
+  }
+  const cap = el("text",{x:L,y:16,class:"grp"}); cap.textContent = (mode==="eq" ? "≈ epic item level (stat budget)" : "raw item level") + (view==="proposed" ? " · proposed" : " · stock");
+  const lvcap = el("text",{x:W-4,y:16,"text-anchor":"end",class:"grp"}); lvcap.textContent = "Creature lvl";
+  const colors = ["var(--s1)","var(--s2)","var(--s3)"];
+  const bars = []; // every drawn bar and stock outline, in chart units {x,y,w,h}
+  rows.forEach(o => {
+    if(o.head){ const t=el("text",{x:4,y:o.y+12,class:"grp"}); t.textContent=o.head; return; }
+    const r=o.r, a = val(r.lo,r.q), b = val(r.hi,r.q);
+    const cy = o.y+ROW/2;
+    const g = el("g",{tabindex:0,role:"img","aria-label":`${r.n}: ${QN[r.q]} item level ${rng(r.lo,r.hi)}, about epic ${rng(fmt(eq(r.lo,r.q)),fmt(eq(r.hi,r.q)))}, creature level ${r.lv}`});
+    el("rect",{x:0,y:o.y,width:W,height:ROW,fill:"transparent"},g);
+    const lab = el("text",{x:L-10,y:cy+4,"text-anchor":"end"},g); lab.textContent = (r.s || r.only==="proposed") && view==="proposed" ? r.n+" •" : r.n;
+    if(r.s){ // ghost of the stock range behind a changed row
+      const sa = val(r.s.lo,r.q), sb = val(r.s.hi,r.q), sw = Math.max(x(sb)-x(sa),8), sx = x(sa)-(sb===sa?4:0);
+      el("rect",{x:sx,y:cy-5,width:sw,height:10,rx:4,fill:"none",stroke:colors[r.g],"stroke-width":1.5,"stroke-dasharray":"3 2","stroke-opacity":.7},g);
+      bars.push({x:sx,y:cy-5,w:sw,h:10});
+    }
+    const w = Math.max(x(b)-x(a),8), x0 = x(a)-(b===a?4:0);
+    el("rect",{class:"bar",x:x0,y:cy-5,width:w,height:10,rx:4,fill:colors[r.g],"fill-opacity":r.q===2?.55:1},g);
+    bars.push({x:x0,y:cy-5,w:w,h:10});
+    const lv = el("text",{x:W-4,y:cy+4,"text-anchor":"end",class:"lvl"},g); lv.textContent = r.lv;
+    const place = () => {
+      // tooltip at the spot nearest the selected bar's centre that covers no bar and not this row's name or level
+      const bb = box.getBoundingClientRect(), sb = svg.getBoundingClientRect(), k = sb.width/W;
+      const ox = sb.left-bb.left+box.scrollLeft, oy = sb.top-bb.top;
+      const cx = ox + (x0+w/2)*k, cyy = oy + cy*k;
+      const tw = tip.offsetWidth, th = tip.offsetHeight, pad = 3;
+      const maxX = box.scrollWidth - tw, maxY = box.clientHeight - th;
+      const toBox = (q) => { const r = q.getBoundingClientRect(); return [r.left-bb.left+box.scrollLeft-pad, r.top-bb.top-pad, r.right-bb.left+box.scrollLeft+pad, r.bottom-bb.top+pad]; };
+      const rects = bars.map(q => [ox+q.x*k-pad, oy+q.y*k-pad, ox+(q.x+q.w)*k+pad, oy+(q.y+q.h)*k+pad]).concat([toBox(lab), toBox(lv)]);
+      const clear = (lx,ly) => !rects.some(([a0,b0,a1,b1]) => lx < a1 && lx+tw > a0 && ly < b1 && ly+th > b0);
+      // distance from the bar's centre to the nearest point of a tooltip placed at (lx,ly)
+      const dist = (lx,ly) => Math.hypot(Math.max(lx-cx, 0, cx-(lx+tw)), Math.max(ly-cyy, 0, cyy-(ly+th)));
+      let best = null;
+      for(let ly = 0; ly <= maxY; ly += 6) for(let lx = 0; lx <= maxX; lx += 8){
+        const d = dist(lx,ly);
+        if(best && d >= best.d) continue;
+        if(clear(lx,ly)) best = {lx,ly,d};
+      }
+      if(!best) best = {lx:Math.min(Math.max(cx+12,0),Math.max(maxX,0)), ly:Math.min(Math.max(cyy+12,0),Math.max(maxY,0))};
+      tip.style.left = best.lx+"px"; tip.style.top = best.ly+"px";
+    };
+    const show = ev => {
+      band.setAttribute("x",x0); band.setAttribute("width",w); band.setAttribute("visibility","visible");
+      hband.setAttribute("y",o.y); hband.setAttribute("visibility","visible");
+      for(const t of [lab,lv]){ t.style.fontWeight = "700"; t.style.fontStyle = "italic"; t.style.fill = "var(--ink)"; }
+      putEdge(eL, x0, fmt(a)); if(b!==a) putEdge(eR, x0+w, fmt(b)); else eR.g.setAttribute("visibility","hidden");
+      const e1=fmt(eq(r.lo,r.q)), e2=fmt(eq(r.hi,r.q));
+      const tag = view==="proposed" && (r.s || r.only==="proposed") ? "Proposed: " : "";
+      let h = `<b>${r.n}</b><br>${tag}${QN[r.q]}, item level ${rng(r.lo,r.hi)} (≈ epic ${rng(e1,e2)}), creature level ${r.lv}`;
+      if(r.s) h += `<br><i>Stock, the dashed outline: item level ${rng(r.s.lo,r.s.hi)} (≈ epic ${rng(fmt(eq(r.s.lo,r.q)),fmt(eq(r.s.hi,r.q)))}), creature level ${r.s.lv}</i>`;
+      if(r.only==="proposed") h += `<br><i>new on basic</i>`;
+      tip.innerHTML = h; tip.hidden = false;
+      place();
+    };
+    const hide = () => { for(const e of [band,hband,eL.g,eR.g]) e.setAttribute("visibility","hidden"); for(const t of [lab,lv]){ t.style.fontWeight = ""; t.style.fontStyle = ""; t.style.fill = ""; } tip.hidden = true; };
+    g.addEventListener("mouseenter",show); g.addEventListener("focus",show);
+    g.addEventListener("mouseleave",hide); g.addEventListener("blur",hide);
+  });
+  eL = edgeLabel(); eR = edgeLabel();
+  table();
+}
+function table(){
+  const tb = document.querySelector("#tbl tbody");
+  tb.innerHTML = shown().map(r=>`<tr><td>${r.n}</td><td>${GROUPS[r.g]}</td><td>${QN[r.q]}</td><td>${rng(r.lo,r.hi)}</td><td>${rng(fmt(eq(r.lo,r.q)),fmt(eq(r.hi,r.q)))}</td><td>${r.lv}</td><td>${r.s ? "ilvl "+rng(r.s.lo,r.s.hi)+" (≈ epic "+rng(fmt(eq(r.s.lo,r.q)),fmt(eq(r.s.hi,r.q)))+"), level "+r.s.lv : (r.only==="proposed" ? "new" : "same")}</td></tr>`).join("");
+}
+const press = (id,on) => document.getElementById(id).setAttribute("aria-pressed",on);
+const setMode = m => { mode=m; press("mode-eq",m==="eq"); press("mode-raw",m==="raw"); try{localStorage.setItem("ladder-mode",m)}catch(e){} draw(); };
+const setView = v => { view=v; press("view-prop",v==="proposed"); press("view-stock",v==="stock"); try{localStorage.setItem("ladder-view",v)}catch(e){} draw(); };
+document.getElementById("mode-eq").onclick = () => setMode("eq");
+document.getElementById("mode-raw").onclick = () => setMode("raw");
+document.getElementById("view-prop").onclick = () => setView("proposed");
+document.getElementById("view-stock").onclick = () => setView("stock");
+try{ if(localStorage.getItem("ladder-mode")==="raw") mode="raw"; if(localStorage.getItem("ladder-view")==="stock") view="stock"; }catch(e){}
+press("view-prop",view==="proposed"); press("view-stock",view==="stock");
+setMode(mode);
+</script>

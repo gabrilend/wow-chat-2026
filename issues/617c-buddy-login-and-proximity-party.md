@@ -63,7 +63,7 @@ distance, and nothing draws a dungeon party.
   knows each unit's current area id.
 - **Towns and cities**: when the owner is in one, every buddy leaves the
   group (617e says what they do there). "Town" means towns and cities, not
-  "any rested area" (owner, 2026-09-23); 617e has how that is detected.
+  "any rested area" (Ritz, 2026-09-23); 617e has how that is detected.
 - **When it matters**: buddies arrive at creation and at 10, 20, 30 and 40,
   so there are **five at level 40** (six at 50, seven at 60). The group has
   room for four, so the rings begin to differ at 40, not 50.
@@ -71,8 +71,19 @@ distance, and nothing draws a dungeon party.
   owner plus four buddies drawn at random **without replacement**. The draw
   bag persists across dungeon runs and refills only when every buddy has
   had a turn. The drawn buddies are brought into the instance; the rest
-  wait outside.
-- **Loyalty**: buddies decline every group invitation except their owner's.
+  wait outside. If the owner enters already in a party, only its empty
+  slots are filled. A party holding two or more players is filled at random
+  from all of those players' buddies; fitting the group's role needs (a
+  tank, a healer) may be out of scope, and the fallback is no auto-fill
+  whenever more than one player is in the group (Ritz, 2026-09-24).
+- **Raids**: nothing is automatic. The owner invites buddies by hand,
+  choosing which (Ritz, 2026-09-24).
+- **Loyalty**: buddies decline every group invitation except their owner's,
+  and say so: "sorry, I don't follow other masters" or similar (Ritz,
+  2026-09-24). One exception: a group's leader may invite the buddies of
+  any player in that group (so two players can fill an arena team, 617i).
+- A buddy inside a battleground has lower priority in the dungeon draw;
+  if drawn, it leaves the battleground (617i).
 
 ## Suggested Implementation Steps
 
@@ -98,5 +109,4 @@ distance, and nothing draws a dungeon party.
 - (Answered 2026-09-23) Swap every 5 s with a 10-yard margin, to tune.
 - (Answered 2026-09-23: "great even better") Five buddies at 40; the rings
   differ from 40 on.
-- **Raids**: at 40+ the owner could also form a raid with all buddies. Out
-  of scope unless wanted.
+- (Answered 2026-09-24) Raids: the owner invites buddies by hand.

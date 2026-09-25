@@ -106,6 +106,68 @@ Both use `GetLevelDiff()` or similar level difference calculations.
 
 See patch documentation: `docs/patches/accuracy-level-cap.md`
 
+## Extension: the other level-gap effects (basic, 2026-09-24)
+
+Raised by 155f's +4 Outland dungeons, where creatures reach level 76
+against level-60 players. Ritz, verbatim, 2026-09-24:
+
+> Hmmmm. Aggro radius concerns me, we should add it to the patch. Armor
+> mitigation too, I didn't realize that was tied to level. Spell resists as
+> well.
+
+And on crushing blows, three options named, undecided: patch them out once
+a character reaches 60, patch them out for everyone, or "accept them as
+trials of the champion and balance around them".
+
+### Current behavior (stock server code, read 2026-09-24)
+
+| Effect | Where | How level enters it | 60 vs 63 | 60 vs 76 |
+|---|---|---|---|---|
+| Crushing blows | `Unit::RollMeleeOutcomeAgainst` | creature ≥4 levels above; chance = 2% per weapon-skill point over 15 above target's defense (target defense capped at level × 5) | none | every hit not avoided |
+| Armor | `Unit::CalcArmorReducedDamage` | reduction = armor ÷ (armor + 85 × L′ + 400), L′ = L + 4.5 × (L − 59), L = attacker level | 9,000 armor: 55% | 40% |
+| Spell partial resist | `Unit::GetEffectiveResistChance` | +5 resistance per level the target is above the caster; the resistance constant grows with the *target's* level (150 + (L − 60)(L − 67.5) above 60) | ~11% average | ~22% average |
+| Aggro radius | `Creature::GetAggroRange` | 20 yards + 1 yard per level the creature is above the player (max 45) | 23 yards | 36 yards |
+
+B005 already caps: spell hit (`MagicSpellHitResult`), melee miss
+(`MeleeSpellMissChance`) and the skill bonus in the melee outcome roll
+(dodge, parry, block, crit). It does not cap anything above.
+
+### Intended behavior
+
+Ritz, verbatim, 2026-09-24: "let's say that crushing blows do not take
+effect for creatures level 64 and higher." And: "Seems like armor and
+resist scale fairly linearly, so it's okay to keep them. I want to remove
+exponential difficulty increases. I want it to be possible, but not easy."
+Then, reversing the aggro cap: "I think the aggro radius should be stock, it
+makes sense for more powerful foes to approach from farther away. That's
+okay." And on beta: "they can pull from our patchlist if they want. Let's
+keep them separate so they can be separately applied."
+
+- **Crushing blows**: a creature of level 64 or higher never crushes. (Below
+  64 the stock rule stands: e.g. a level-45 creature can still crush a
+  level-40 player.) This was the one steep effect: it jumps from none to
+  every landed hit over about four levels.
+- **Aggro radius, armor and spell resists stay stock.** Aggro radius grows
+  1 yard per level (stronger foes notice you from farther). Armor's level
+  term is linear. Resists are bounded: the +5-per-level bonus is linear,
+  and the constant it is divided by grows with the square of the target's
+  level, so a level-60 caster's average resist rises to ~22% around level
+  76 and then falls again (~20% at 80).
+
+### Suggested implementation
+
+A **separate source patch**, not an addition to B005, so beta (or any
+profile) can take it or leave it on its own: in the melee outcome roll
+(`Unit::RollMeleeOutcomeAgainst`), skip the crushing branch when the
+attacker is a creature of level 64 or more. Listed for basic in
+`patches/patches.sh`; B005 is unchanged.
+
+### Open questions (extension)
+
+- (Answered 2026-09-24) Crushing blows: none from level 64 up, as its own
+  patch. Armor, resists and aggro radius: stock. Beta: may pull the patch
+  from basic's list.
+
 ## Design Philosophy
 
 The world should feel dangerous everywhere. A level 20 character wandering into a level 5 zone should still respect the monsters there - not because they can kill the player, but because they're not completely trivial. Similarly, a level 5 player seeing a level 15 monster shouldn't think "impossible" but rather "very dangerous, need to be careful."

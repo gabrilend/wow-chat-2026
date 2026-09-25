@@ -5,7 +5,7 @@
 - Phase: 1 (Foundation — profile model, alongside 148's vanilla cluster)
 - Priority: High — basic is the baseline every later feature is developed
   against, starting with custom classes.
-- Sub-issues: 155a through 155g
+- Sub-issues: 155a through 155o
 
 ## Origin
 
@@ -104,7 +104,10 @@ in the rows of this table:
 | Racial spawn towns (Menethil, Astranaar, …) | **the eight level-1 starting valleys, taken in rotating batches per faction, regardless of race** (155d) | user decision 2026-09-23 |
 | Quests restricted by race | **restricted by faction only** (155e) | a character can start in any of its faction's valleys, so it must be able to do that valley's quests |
 | Outland | **open at the cap** (Dark Portal at 58, stock) | user decision 2026-09-23: raid-quality gear from questing |
-| Outland dungeons open at ≤60 | **every creature level 64**; open world, quests, loot and heroic modes stock (155f) | user directive 2026-09-23 |
+| Outland dungeons open at ≤60 | **every creature its stock level + 4** (built as a flat 64, to be changed); open world, quests, loot and heroic modes stock (155f) | user directive 2026-09-23, +4 on 2026-09-24 |
+| Onyxia and Naxxramas (level-80 versions in this client) | **scaled down to level-60 raids with their original vanilla loot** (155h) | user directive 2026-09-24 |
+| Crushing blows | **none from creatures level 64 and up**, as its own patch; armor, resists and aggro radius stay stock (803) | user directive 2026-09-24 |
+| Outland quests | **removed** (givers stay); one flight from the Dark Portal to Honor Hold / Thrallmar (155l) | user directive 2026-09-24 |
 | Accuracy penalty for level gaps | **capped at ±3 levels** (source patch B005, issue 803) | user directive 2026-09-23 |
 | Talents | **nothing from tier 6 down** (30+ points in a tree), as vanilla-era trees (155g) | user directive 2026-09-23 |
 | Class starter kit + cloned kit items + bots-wear-the-kit | **not applied** | head-start |
@@ -115,7 +118,7 @@ in the rows of this table:
 | 10× fall damage, 80% run speed | **applied** | user decision 2026-09-23 |
 | Race intro cinematic skipped | **applied** | user decision 2026-09-23 |
 | Death knights disabled | **allowed, with two limits**: an account needs a level-55 character, and no death-knight bots (C024). Later replaced by the sacrifice mechanic in 718 | user decision 2026-09-23 |
-| Bot band 20→40, Eastern Kingdoms only | **1→60, Eastern Kingdoms + Kalimdor + Outland** | follows the ladder |
+| Bot band 20→40, Eastern Kingdoms only | **no random bots at all; only each player's buddies** (617) | user directive 2026-09-24 (was 1→60 on all three continents) |
 
 ## Sub-Issues
 
@@ -127,9 +130,17 @@ in the rows of this table:
 | 155d | rotating-faction-starting-valleys | 155a, 155e | New characters spawn in one of their faction's starting valleys, the valley changing every 30 characters in a shuffled order |
 | 155e | faction-not-race-quest-gating | 155a | Quests, and the trainers and gossip a valley needs, are open to the whole faction rather than one race |
 | 155g | vanilla-talent-cap | 155a | No talent needing 30+ points in its tree can be learned (Combustion, Repentance and their rows) |
-| 155f | outland-dungeons-at-64 | 155a, 155c | Every creature in each Outland dungeon a level 60 can enter becomes level 64; open world, quests and loot stay stock |
+| 155f | outland-dungeons-at-64 | 155a, 155c | Every creature in each Outland dungeon a level 60 can enter gains 4 levels; open world, quests and loot stay stock |
+| 155h | vanilla-onyxia-and-naxxramas | 155a, 155c | Onyxia's Lair and Naxxramas become level-60 raids again, dropping their original vanilla loot |
+| 155i | dungeon-damage-and-healing-multipliers | 155a | Per-dungeon multipliers on creature damage and on healing, set in a table, so difficulty is tuned without more levels |
+| 155j | weekly-world-boss-kazzak | 155a, 155i | Kazzak, Doomwalker and a reworked Fel Reaver: basic's top tier, once per restart; Kazzak's loot drawn by each player's contribution, bots excluded |
+| 155k | outland-world-gear-ladder | 155a, 155c | Outland open-world gear wearable at 60, each zone's drops set to an agreed vanilla tier |
+| 155l | outland-without-quests | 155a, 155c | No quests in Outland; one flight from the Dark Portal to Honor Hold or Thrallmar; all other flights stay off |
+| 155m | true-creature-levels | 155a | Show a high-level creature's real level instead of the skull (an interface addon fed by the server) |
+| 155n | outland-without-tradeskills | 155a, 155c | No herb or mining nodes in Outland; no trainer teaches past Artisan (300) |
+| 155o | inscription-without-glyphs | 155a, 155n | No glyphs; Inscription becomes a buff-scroll profession to 300 |
 
-Execution order: `155a → (155b ∥ 155c ∥ 155e) → (155d ∥ 155f)`. 155d depends on 155e
+Execution order: `155a → (155b ∥ 155c ∥ 155e ∥ 155i) → (155d ∥ 155f ∥ 155h ∥ 155k ∥ 155l ∥ 155m ∥ 155n) → (155j ∥ 155o)`. 155d depends on 155e
 because a human sent to Shadowglen before 155e lands arrives in a valley
 whose quests it cannot take.
 
@@ -170,7 +181,7 @@ death-knight rule until then.
 
 ## Open Questions
 
-- (Answered by the owner's death-knight reply, 2026-09-23) Interim rule:
+- (Answered by Ritz's death-knight reply, 2026-09-23) Interim rule:
   allow stock death knights; a level-55 character is required; no
   death-knight bots. Built as C024.
 - (Answered 2026-09-23) Vanilla and release are left alone for now: "we're

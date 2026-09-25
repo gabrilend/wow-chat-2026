@@ -17,7 +17,7 @@ Verbatim, 2026-09-23 (the full answer is in 617):
 > back in they'll appear where you logged back in at. If there's more than two
 > in an area (maybe 30 yards or so) then they won't spawn.
 
-His name is **Sargobras** (owner, 2026-09-23). His jokes "should come from a
+His name is **Sargobras** (Ritz, 2026-09-23). His jokes "should come from a
 written list, but we have to add to it every once in a while": the list is
 `src/lua-basic/data/sargobras-jokes.lua`, plain data, one joke per entry,
 meant to grow.
@@ -55,7 +55,7 @@ No such NPC. Reference patterns in this project:
 - **After the choice**: he spawns a campfire nearby and goes "on break":
   relaxed and aloof, lounging by the fire and telling his jokes, until no
   player is within sight range (the server's visibility distance, about
-  100 yards outdoors), then despawns. (Owner, 2026-09-23: "when he's
+  100 yards outdoors), then despawns. (Ritz, 2026-09-23: "when he's
   waiting around the campfire, that's when he should tell jokes. He should
   be 'on break' so he should seem relaxed and aloof.") (In the story he
   turns into a black dragon and flies away; it happens offscreen, so a

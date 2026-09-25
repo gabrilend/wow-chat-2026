@@ -5,7 +5,7 @@
 - Phase: 6 (Companions — bot behaviors)
 - Priority: High for basic (155): "players always have at least one buddy"
 - First profile: basic
-- Sub-issues: 617a–617g
+- Sub-issues: 617a–617j
 
 ## Origin
 
@@ -58,6 +58,26 @@ Answers to the design questions, verbatim, 2026-09-23:
 > yes it comes back to life. It'll move to the areas that the player is in
 > when it can. Also, deleting your character does delete it's buddies.
 
+On raids and on groups with more than one player, verbatim, 2026-09-24:
+
+> The player invites them manually so they can choose. If the player enters
+> a dungeon, the group is randomly created. If they have a party, then the
+> remaining slots are filled in the dungeon. If a player has a group with
+> another player, or two players, etc, then the bots who fill the rest of the
+> group are chosen randomly, to fit their group requirements. (to fit their
+> group requirements might be out of scope, and that's okay, we might just
+> turn off the auto-fill if there are more than one human players in a
+> group.) - bots don't join other players group, like for example if there's
+> two humans exploring a particular area and someone invites a bot that's not
+> "theirs", then they'll send a message saying "sorry, I don't follow other
+> masters" or something similar.
+
+And on why raids matter: with seven buddies at 60, five players fill a
+40-person raid. Basic runs **no random bots** (155b), so buddies are the
+only bots in the world. For balance, buddies are assumed to play as well
+as a competent player ("let's assume competent bots. We can adjust later if
+needed.").
+
 ## Current Behavior
 
 Nothing like this exists. What the bot module offers today, and why none of
@@ -84,13 +104,20 @@ handler, which B028 (155d) now patches. Bots never pass through it.
   the owner's level**. Each belongs to exactly one player character and
   persists with it. Buddies live on a **hidden account linked to the owner**
   and run as playerbots. **Deleting the owner deletes its buddies.**
+- **Seven at level 60**, so five players and their buddies fill a 40-person
+  raid. **Raids: the owner invites buddies by hand**, choosing which.
 - **The player chooses each buddy's class** at an NPC (617b), one choice per
   buddy.
 - **Party by proximity.** The group holds the owner and up to four buddies,
   and which four is re-chosen continually: the closest. Others keep
   adventuring nearby, ungrouped. **Entering a dungeon** fills a dungeon
   party. Buddies are drawn at random without replacement, cycling, so every
-  buddy gets turns. Buddies refuse every other player's group.
+  buddy gets turns. If the owner already has a party, only the empty slots
+  are filled. A party of two or more players is filled at random from all
+  their buddies (fitting the group's role needs may be out of scope; the
+  fallback is no auto-fill when more than one player is in the group).
+  Buddies refuse every other player's invitation with a line like "sorry,
+  I don't follow other masters".
 - **Same zone, same areas, not following.** Buddies fight the same kinds of
   creatures in the owner's area on their own, maybe across the camp.
   Experience is shared only when close enough, which is the stock group
@@ -112,8 +139,11 @@ handler, which B028 (155d) now patches. Bots never pass through it.
 | 617e | buddy-area-adventuring | 617c | Buddies fight in the owner's zone and area independently, resurrect, and travel to the owner's area |
 | 617f | buddy-selector-appearance | 617b | The selector NPC's look (the suave human) and whether his outfit levels with the owner |
 | 617g | buddy-talent-plans | 155g | Generated talent plans (2/3–1/3 and thirds) for capped trees, balanced to equilibrium; a buddy keeps its plan for life |
+| 617h | buddy-auction-house | 617e | Town errands by priority (repair, trainer, auction house, vendor), the auction pricing rules, then wandering the town |
+| 617j | buddy-loot-rolls-and-upgrades | 617a, 617g | Owner and buddies share one gear pool; three-way-split buddies need or greed by the clan's average; upgrades are always equipped |
+| 617i | buddy-battlegrounds | 617c, 617e | Buddies join and leave the owner's battleground queues, finish their matches, then return; an owner's invite pulls them out |
 
-Execution order: `617a → (617b ∥ 617c) → (617d ∥ 617e); 617b → 617f`.
+Execution order: `617a → (617b ∥ 617c) → (617d ∥ 617e) → (617h ∥ 617i ∥ 617j); 617b → 617f`.
 
 Rationale for the split: 617a is data and the bot module's character
 factory. 617b is a world NPC with its own idle behavior. 617c and 617e are
@@ -136,4 +166,7 @@ bot code works.
   without replacement. Arrival level: the owner's. Home: a hidden linked
   playerbot account. Class choice: an NPC. Death: resurrect and return.
   Owner deleted: buddies deleted.
+- (Answered 2026-09-24) Raids: invited by hand. Multi-player dungeon
+  parties: filled at random, or not auto-filled at all if role-fitting is
+  too much. Refusal: a spoken line.
 - Remaining questions live in the sub-issues.
