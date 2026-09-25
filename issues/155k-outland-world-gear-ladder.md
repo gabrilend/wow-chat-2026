@@ -80,7 +80,24 @@ checks item levels, each dungeon's target, Kael'thas's epics, required
 levels, binding and the rating discount. Counts above: run
 `scripts/test-basic-sql-in-ram --keep` and query `basic_155k_items`.
 
-**Not built yet:** Outland's hostile creatures +4 (+6 on the Isle).
+**Creature levels: built and tested on the RAM database (2026-09-24).**
+`sql/basic/db_world.src/17-outland-world-levels.apply.sql` (E032) raises
+about 950 creature templates: +4, or +6 when every spawn is on the Isle.
+Raised: templates spawned only in Outland or on the Isle, whose faction no
+player befriends (generated from the client's FactionTemplate.dbc and
+Faction.dbc by `scripts/generate-basic-outland-world-levels-sql`: hostile
+factions, neutral ones like beasts, and reputation factions only when
+every race starts Hostile, e.g. never the Aldor or the Cenarion
+Expedition), with no service role (neutral ones: no flags at all; hostile
+ones may talk or give quests but not sell or train). World bosses,
+critters, spell triggers and 155f's dungeon templates are left out. Known
+edges: the Netherwing Ledge's Dragonmaw quest givers are raised (hostile
+without the disguise; their quests are gone on basic, 155l), its vendors
+are not; creatures that only appear by being summoned stay stock; the
+"spirit world" creatures seen through Spectrecles (Time-Lost Skettis,
+Ghostriders of Karabor) are friendly by faction and stay stock. The
+validator checks each raised template's level against its saved stock
+level and that no world boss or service NPC is among them.
 
 **Stock loot, before the scaling above.** Outland's gear mostly requires
 levels 61–70, so a level 60 on stock basic can wear almost none of it.

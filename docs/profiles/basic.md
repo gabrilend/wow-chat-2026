@@ -35,17 +35,29 @@ Design and build record: issue 155 and its sub-issues 155a–155f.
   and blood elf home zones.
 - **Classic riding levels.** Apprentice Riding (60% mount) at 40,
   Journeyman Riding (100% mount) at 60.
-- **Outland open at the cap.** The Dark Portal opens at 58, as in the stock
-  game, so level-60 characters can quest there for strong gear.
+- **Outland open at the cap, as a hunting ground.** The Dark Portal opens
+  at 58, as in the stock game. Outland has no quests, no gathering nodes
+  or special fishing spots, and no professions past 300. Two flights
+  exist: the Dark Portal to Honor Hold or Thrallmar and back, and Light's
+  Hope Chapel to the Isle of Quel'Danas and back (the only way onto the
+  Isle; the Shattrath portal is gone). Its monsters are four levels higher than
+  stock (six on the Isle), friendly folk and world bosses unchanged.
 - **Outland dungeons are raid-hard, in a ladder.** Sixteen dungeons admit
   level 60: the nine stock ones plus Old Hillsbrad, Black Morass, Shadow
   Labyrinth, the three Tempest Keep dungeons and Magisters' Terrace (their
   attunement quests removed). Each dungeon's creatures gain levels by that
   dungeon's step, so end bosses climb from 66 (Hellfire Ramparts) to 76
   (Magisters' Terrace), with Kael'thas at 78; health and damage follow the
-  level. Gear that drops there is wearable at 60. The open world and heroic
-  modes are stock for now. The full ladder, and how its loot compares with
-  the vanilla raids: `docs/profiles/basic-gear-ladder.html`.
+  level. Heroic modes are stock (and closed). The full ladder, and how its
+  loot compares with the vanilla raids: `docs/profiles/basic-gear-ladder.html`.
+- **Outland gear rescaled onto the ladder.** Same items, same loot tables,
+  smaller numbers, all wearable at 60: greens run from about level-60
+  dungeon blues (Hellfire Peninsula) to about Emerald Dragon epics (the
+  Isle); world blues from just under Hellfire Ramparts to the start of
+  Naxxramas, and bind on pickup; each upper dungeon's blues land on its
+  rung; Kael'thas's epics are item level 100. Rating stats (crit, hit,
+  haste...) on Burning Crusade gear carry a discount so they are worth at
+  60 what they were meant to be worth at 70.
 - **Level gaps stop hurting past three.** Hit and miss chances worsen with
   level difference only up to 3 levels (source patch B005), and creatures
   of level 64 and up never land crushing blows (B031).
