@@ -126,9 +126,17 @@ dungeons, the capitals' outlines):
   gems matter." Socket colours follow the blue's two strongest stats.
 - the plan per item is kept in `basic_155p_socketed`; stock values in
   `basic_155p_socket_backup`.
-Not built: white durability (a separate patch), and the two source
-patches (never repairing whites; cutting a customer's gem in the trade
-window).
+**White gear durability: built and tested (2026-09-25), not yet
+installed or compiled.** Its own patch pair, as Ritz asked: E036
+(`sql/basic/db_world.src/21-white-durability.apply.sql`) doubles every white
+weapon's and armor piece's maximum durability; source patch B033
+(`patches/B033-white-gear-never-repaired.sh`, doc
+`docs/patches/white-gear-never-repaired.md`) makes the server's repair skip
+white items and charge nothing for them. The vendor window's shown price
+still includes whites (client-side; accepted). The source patch round-trips
+cleanly (`scripts/test-source-patches`); it needs Ritz's compile.
+
+Not built: the trade-window source patch (cutting a customer's gem).
 
 Stock, before stage 1. What the data says (read 2026-09-24 from the client
 files and the stock world database):

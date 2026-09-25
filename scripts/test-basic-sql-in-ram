@@ -139,10 +139,12 @@ apply_all() {
     step "E033 gem supply"                                "${WORLD}" "${B}/db_world.src/18-gem-supply.apply.sql"
     step "E034 titan-site jewelcrafters"                  "${WORLD}" "${B}/db_world.src/19-titan-jewelers.apply.sql"
     step "E035 sockets on whites and dungeon blues"       "${WORLD}" "${B}/db_world.src/20-sockets.apply.sql"
+    step "E036 white gear durability doubled"             "${WORLD}" "${B}/db_world.src/21-white-durability.apply.sql"
     step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${V}/db_characters.src/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
 }
 revert_all() {
+    step "E036 revert" "${WORLD}" "${B}/db_world.src/21-white-durability.revert.sql"
     step "E035 revert" "${WORLD}" "${B}/db_world.src/20-sockets.revert.sql"
     step "E034 revert" "${WORLD}" "${B}/db_world.src/19-titan-jewelers.revert.sql"
     step "E033 revert" "${WORLD}" "${B}/db_world.src/18-gem-supply.revert.sql"

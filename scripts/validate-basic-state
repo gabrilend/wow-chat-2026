@@ -310,6 +310,10 @@ report "sockets: whites and dungeon blues socketed; armor colourful, weapons pri
         UNION ALL SELECT i.entry, 'armor socket colour' FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_socketed s ON s.entry = i.entry
           WHERE NOT s.weapon AND i.socketColor_1 NOT IN (2, 4, 8)
         UNION ALL SELECT s.entry, 'blue keeps too much' FROM ${WORLD}.basic_155p_socketed s WHERE s.kind = 'b' AND s.keep * s.total > 0.8 * s.g + 0.5 LIMIT 10")"
+report "white weapons and armor have twice their stock durability" \
+    "$(run_sql "SELECT 'saved', COUNT(*) FROM ${WORLD}.basic_155p_durability HAVING COUNT(*) < 500
+        UNION ALL SELECT i.entry, i.MaxDurability FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_durability b ON b.entry = i.entry
+          WHERE i.MaxDurability <> LEAST(65535, b.MaxDurability * 2) LIMIT 10")"
 report "Jewelcrafting trainers 112 and 113 teach Outland's cuts between 150 and 300" \
     "$(run_sql "SELECT a.TrainerId, COUNT(*) FROM ${WORLD}.basic_155p_trainer_added a GROUP BY a.TrainerId HAVING COUNT(*) < 60
         UNION ALL SELECT 'trainers', COUNT(DISTINCT TrainerId) FROM ${WORLD}.basic_155p_trainer_added HAVING COUNT(DISTINCT TrainerId) <> 2
