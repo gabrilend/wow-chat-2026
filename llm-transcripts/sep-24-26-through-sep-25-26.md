@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 12:50:30
+Generated on: 2026-09-25 13:02:32
 Models: claude-opus-5-5
 
 ## Contents
@@ -55,6 +55,11 @@ Models: claude-opus-5-5
     rework for basic, and I just listed its nine open questions, each with a
     suggested answer. Next: your answers, even just "yes" to the suggestions you
     agree with, so I can start building.
+13. 2026-09-25 12:53, after Request 57 - We're designing the Jewelcrafting
+    rework for basic, and all your answers so far are recorded and committed.
+    Next I need four decisions from you: the cut teacher's replacement,
+    unrepairable whites, the socket-bonus test effect, and Naxxramas's tome
+    rate.
 
 --------------------------------------------------------------------------------
 
@@ -6217,6 +6222,88 @@ Crusade–era tomes".
 5. **Socket counts and bonus sizes per slot**, for whites and blues. I'll bring
    a table with numbers once the questions above are settled, since it's easier
    to judge with numbers in front of you.
+
+--------------------------------------------------------------------------------
+
+### User Request 58
+
+<pasted_content id="8773">
+> - "Never repaired" has a catch. Doubling white gear's durability is easy,
+> since it's server data. Refusing the repair needs a server code patch. But the
+> vendor window works out the
+>     repair price in the client, from its own tables. So it would still show a price for whites that the server then doesn't charge, and those items would just stay broken. That breaks
+>     "always honest".
+</pasted_content id="8773">
+
+
+It might be the best that we can do.
+
+>   1. Replacing the cut teacher, simplest first:
+>      - (a) the ordinary Jewelcrafting trainers teach the 58 trainer-only uncommon Wrath cuts at skill 300, for gold, like stock trainers do; only server data changes;
+
+It's gotta be (a)
+
+> 3. The first socket-bonus test: which effect? It has to be honest now, so it
+> must be an effect whose existing text describes it, such as a
+> health-every-5-seconds enchantment
+     re-sized.
+
+doesn't matter. Just something we can verify.
+
+> 4. Naxxramas's rate for the 71–80 tomes: the same as Ahn'Qiraj 40, about
+> 1–2 per clear?
+
+Sure.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 58
+
+Recorded and committed:
+- The ordinary Jewelcrafting trainers teach the 58 uncommon Wrath cuts at 300,
+  for gold. The titan sites keep only the crystal trader, and the Un'Goro one
+  wanders between the pylons on its own.
+- White gear gets double durability and is never repaired. The wrong repair
+  price in the vendor window is the one known mismatch.
+- The first socket-bonus test can use any effect we can verify.
+- Naxxramas drops the 71–80 tomes at Ahn'Qiraj 40's rate.
+
+The last open question is socket counts and bonus sizes. My proposal uses the
+level's gem tier:
+- Tier I, +4 gems, for item levels 17–27
+- Tier II, +6 gems, for 30–45
+- Tier III, +8 gems, for 45–63
+
+"1 + 2" means one socket and a +2 socket bonus.
+
+**Capital whites**: gems plus bonus roughly equal a same-level green. More
+sockets, small bonuses:
+
+| Set item level | Tier | Chest, legs, 2-hander | Head, hands, feet, waist, shoulders | Wrist, neck, ring, back |
+|---|---|---|---|---|
+| 17 | I | 1 + 2 | 1 + 1 | 1 |
+| 22 | I | 2 + 1 | 1 + 3 | 1 + 1 |
+| 27 | I | 3 | 2 + 2 | 1 + 2 |
+| 37 | II | 3 | 2 + 3 | 1 + 4 |
+| 50 | III | 3 + 2 | 2 + 5 | 2 |
+
+White weapons follow the same counts: two-handers like chest, one-handers like
+the middle column. Weapon sockets are prismatic, meaning any gem colour fits,
+with no bonus.
+
+**Dungeon blues**: fixed stats cut to about 80% of the same-level green, so an
+empty blue loses to the green. Filled, they come out about 10% above the stock
+blue. Fewer sockets, big bonuses:
+
+| Item level | Tier | Chest, legs, 2-hander | Middle slots | Small slots |
+|---|---|---|---|---|
+| 30 | II | 1 + 3 | 1 + 2 | 1 |
+| 45 | III | 1 + 7 | 1 + 4 | 1 |
+| 60 | III | 2 + 4 | 1 + 8 | 1 + 3 |
+
+Blues whose power is a proc or an on-use effect keep their stock form.
+
+Do these look right?
 
 --------------------------------------------------------------------------------
 

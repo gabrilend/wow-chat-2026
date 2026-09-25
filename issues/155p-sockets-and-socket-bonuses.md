@@ -264,19 +264,19 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
    **Both NPCs at each of three titan places** (Ritz, 2026-09-25, of
    Uldaman, Un'Goro Crater's Crystal Pylons and Tanaris's Gate of Uldum:
    "these first three seem fine. I want both of them to be at each
-   location."): at first the crystal trader and a cut teacher side by
-   side at each; the cut teacher was dropped later the same day (item
-   11), so three crystal traders. Ulduar is out of reach (Northrend).
+   location."): the crystal trader and the masterwork jewelcrafter (a
+   trainer for the uncommon Wrath cuts, item 11) side by side at each.
+   Ulduar is out of reach (Northrend).
    - Uldaman: outside the dungeon, in a relatively safe spot (Ritz,
      2026-09-25: "Outside of the dungeon, in a relatively safe space.").
-   - Un'Goro: the trader wanders between the Crystal Pylons (Ritz,
+   - Un'Goro: the pair wanders between the Crystal Pylons (Ritz,
      2026-09-25: "every 30 minutes, if there are no players within sight,
      say... 200 yards, then they swap to a different, random one. They
      both travel as a group. The random one is chosen without
      replacement." Then, on the shuffled deck's repeats: "Actually how
      about we just make it so that it's a 50/50 chance each time they swap,
      I think that'll be saner haha"). Every 30 minutes, if no player is
-     within 200 yards, the trader moves to one of the two other pylons,
+     within 200 yards, both move together to one of the two other pylons,
      each at 50%. They always move; the pylon they left can come back. A
      Lua timer, the players-in-range check, and a despawn and respawn at
      the new pylon.
@@ -440,12 +440,15 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
         29,000 kills and one uncommon-cut Design about 1 in 5,700.
       Built as two shared reference tables (one per quality, each Design at
       equal odds), which the monsters' loot tables point at.
-    - **Trainer-only uncommon cuts come from the ordinary Jewelcrafting
-      trainers** at skill 300, for gold (Ritz, 2026-09-25, "It's gotta be
-      (a)"). This replaces an earlier plan for a second titan-site NPC who
-      taught them in exchange for a gem ("how about two NPCs? :)", then
-      "I wonder if this added complexity buys it's worth"). The crystal
-      trader alone stands at the titan sites.
+    - **Trainer-only uncommon cuts come from a masterwork jewelcrafter**,
+      a real trainer (the stock trainer window, gold cost, skill 300)
+      standing with each crystal trader (Ritz, 2026-09-25: "why don't we
+      put those recipes on the gem trader's masterwork jewelcrafter
+      companion instead of the ordinary trainers?"). So each titan site
+      has the pair again: the crystal trader (a dialogue) and the
+      masterwork jewelcrafter (a trainer). This replaces an earlier
+      gem-for-a-cut teacher ("I wonder if this added complexity buys it's
+      worth") and, briefly, the ordinary trainers.
     - **Paying with the gem through a stock window?** Ritz, 2026-09-25:
       "some recipes can be learned in exchange for currency items, like
       marks of honor or whatever. Can we do a similar system here, where the
@@ -512,11 +515,12 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
 - (Answered 2026-09-25) The cut teacher is dropped ("I wonder if this
   added complexity buys it's worth"): the ordinary Jewelcrafting trainers
   teach the 58 trainer-only uncommon Wrath cuts at skill 300 for gold
-  ("It's gotta be (a)"). Only the crystal trader stands at the titan
-  sites.
+  ("It's gotta be (a)"), then moved onto a masterwork jewelcrafter who
+  stands with each crystal trader (item 11).
 - (Answered 2026-09-25) Unrepairable whites: accepted, the vendor price
   mismatch included.
-- Socket counts and bonus sizes: the proposed tables in item 4. Agreed?
+- (Answered 2026-09-25) Socket counts and bonus sizes: the tables in item
+  4 ("Your jewelcrafting tables look right to me!").
 - (Answered 2026-09-25) Titan places: Uldaman, the Un'Goro pylons and the
   Gate of Uldum, both NPCs at each.
 - (Answered 2026-09-25) Uldaman outside the dungeon; in Un'Goro the pair
