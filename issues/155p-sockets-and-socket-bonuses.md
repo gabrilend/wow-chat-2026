@@ -161,6 +161,39 @@ Draft for Ritz, 2026-09-25 (his direction, verbatim):
    below the same-level green's (so an empty-socket blue loses to a plain
    green); a level-appropriate gem plus the bonus lifts them a little
    above their stock total (a slight upgrade for players who buy gems).
+5. **Names stay in sync with tooltips** (Ritz, 2026-09-25: "Let's keep the
+   tooltips and the names in sync."): gem items keep their stock names, so
+   a recipe's tooltip and the gem it makes always agree.
+6. **Wrath of the Lich King gems for Outland** (Ritz, 2026-09-25: "How
+   about the WotLK gems? [...] I could see WotLK gems being something that
+   drop from Outland mobs. We might consider applying the 'add sockets,
+   lower stats' rules to Outland blues as well, to give spaces to use the
+   WotLK gems."). Sizes (one stat): uncommon (Bloodstone set) +12, rare
+   (Scarlet Ruby set) +16, epic (Cardinal Ruby set) +20. On basic's ladder
+   Outland's rescaled blues carry roughly 35–55 stats in a big slot, so a
+   +12 gem is about a quarter of one (stock Burning Crusade blues put ~24
+   of their ~65 into three +8 sockets). Uncommon and rare fit Outland's
+   blues; epic only the very top (Kael'thas, world bosses), if anywhere.
+   Uncut Wrath gems drop from Outland's monsters (loot tables are server
+   data). Gem sources then run by level:
+
+   | Gems | Comes from |
+   |---|---|
+   | +4 (level-55 set) | capital vendors |
+   | +6 (Outland uncommon) | prospecting mithril, cut at Jewelcrafting ~150–225 |
+   | +8 (Outland rare) | prospecting thorium, cut at ~250–300 |
+   | +12 / +16 (Wrath uncommon / rare) | Outland monster drops; the master jewelcrafters below |
+
+7. **Master jewelcrafters where the titans worked** (Ritz, 2026-09-25:
+   "Could we also add a master jewelcrafter that takes in the shard gained
+   from disenchanting Azeroth epics and turns it into a random uncut WotLK
+   gem? These master jewelcrafters should be found only in places like
+   Uldaman where the titans hang out."). Disenchanting an Azeroth epic
+   gives a **Nexus Crystal** (item level 56+; 900 epics), rarely a Brilliant
+   or Radiant shard for the few epics below 56. The jewelcrafter takes one
+   Nexus Crystal and gives a random uncut Wrath gem (a Lua gossip: remove
+   the crystal, add the gem). A new creature template (its name is server
+   data), spawned in Uldaman.
 
 ## Suggested Implementation Steps
 
@@ -175,11 +208,22 @@ Draft for Ritz, 2026-09-25 (his direction, verbatim):
 
 ## Open Questions
 
-- Tiers II and III reuse Outland's cut gems and their cutting recipes
-  (names like "Bold Blood Garnet"; reagents Outland raw gems, which mithril
-  and thorium prospecting would yield). Acceptable, or should gem items be
-  renamed (server-side names are free; the recipe tooltip would still name
-  the Outland gem)?
+- (Answered 2026-09-25) Gem names: keep stock names, in sync with the
+  recipe tooltips.
+- Who cuts the Wrath gems? Their cutting recipes need Jewelcrafting
+  350–450, and basic stops professions at 300 (155n). Options: the master
+  jewelcrafters also cut (the player picks the cut from the gem's stock
+  recipes, for a fee); or the Wrath cutting recipes are taught at ≤300;
+  or Outland drops them already cut.
+- Which titan places get a master jewelcrafter: Uldaman only (inside the
+  dungeon, or at its Badlands entrance), or also others such as the
+  Un'Goro pylons or Tanaris's Gate of Uldum?
+- The crystal-to-gem odds: an even chance over every uncut Wrath gem, or
+  mostly uncommon with a rare now and then?
+- How Outland blues change for the Wrath gems: they already carry stock
+  sockets (one to three, Burning Crusade sizes). Keep those and let Wrath
+  gems fit them, or apply the blue rule (fewer fixed stats, one or two
+  sockets sized for Wrath gems)?
 - Which effect for the first option 2 test (an absorb on being hit,
   health every 5 seconds, something else)?
 - Big slots (chest, legs, two-handers): at item level 37 a green carries

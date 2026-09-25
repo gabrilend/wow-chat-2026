@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-24 21:58:49
+Generated on: 2026-09-25 10:27:21
 Models: claude-opus-5-5
 
 ## Contents
@@ -38,6 +38,11 @@ Models: claude-opus-5-5
    level-60 Outland, and tonight's gear rescale, Darkmoon cards and higher
    Outland monsters are all committed and tested. Next, you install and try them
    in game, and decide what to do with gem sockets.
+9. 2026-09-24 22:01, after Request 35 - We're building the level-60 basic
+   profile, and tonight's Outland gear rescale, higher Outland monsters and
+   socket bonus catalog are all committed. Next is the socket bonus test you
+   picked: one item whose bonus keeps an existing tooltip but applies an effect
+   we choose.
 
 --------------------------------------------------------------------------------
 
@@ -4741,6 +4746,108 @@ sockets worth having, into the issue as open questions. We can work through them
 one at a time.
 
 Good night, Ritz. 🌙
+
+--------------------------------------------------------------------------------
+
+### User Request 36
+
+Okay! Let's think of some good candidates for socketed items that can be made
+low level. And the gems can be adjusted such that the weakest gems are low level
+jewelcrafting recipes or vendor goods always sold in capital cities (for the
+weakest ones without recipes). I'm thinking one slot max for the low level items
+because +4 strength is actually pretty significant! Maybe we could make the
+white quality items from capital cities have sockets, enough to make them
+roughly equivalent to a green of the same ilevel? With set bonuses to fill the
+gaps if needed. Make sure we'd be using level appropriate gems. Also, we can
+make some dungeon blues have sockets in exchange for some of the stats that are
+on the item naturally. So, empowering the white quality items through
+flexibility, and shifting the blue items from solid power to flexibility as
+well. This will have roughly an equivalent amount of stats on the blues, so
+overall I think it'll be a slight upgrade if the player is willing to spend the
+money on gems - otherwise, a similarly levelled green might even be better.
+In-fact, we should tune it such that it is the case that there are enough gems
+(plus valuable or weak set bonuses as appropriate) to make an unsocketed blue
+item be worse than a plain green item.
+
+After we develop the jewelcrafting rework, let's add buddybot professions to the
+list of tasks to accomplish.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 36
+
+> Before proposing candidates, I need to check two constraints in the data.
+> First, how small a gem can be: a gem's text comes from the client, so we can
+> only use gem effects the client already has. Second, which plain white items
+> the capital cities sell.
+
+> That database has only 7,839 creature spawns; it's one of the emptied wow-chat
+> worlds, not stock. Looking for a world database with the full stock spawns.
+
+> Zone ids aren't filled in on spawns, so I'll bound the capitals with the
+> client's own map rectangles, as I did for the Outland zones.
+
+> Enough data for a proposal. Before writing it up, checking for an existing
+> buddy professions issue so I extend it rather than duplicate it.
+
+> Writing the proposal into the sockets issue file, and creating the buddy
+> professions issue next to the other buddy issues.
+
+> Both issue files check out. Committing.
+
+I've written the design draft into the sockets issue file and committed it,
+along with a new issue file for buddy professions that waits until the
+Jewelcrafting rework is done. Nothing is built yet.
+
+**The limit that shapes everything.** A gem's stat text comes from the client,
+so a gem can only give an effect some existing gem already gives. The smallest
+single-stat gem is +4; there's no +1, +2 or +3. Recipes have the same kind of
+limit: we can change the skill needed to learn a recipe, but not its ingredients
+or what it makes. What *is* ours: gem names, the level needed to learn each
+recipe, what vendors sell, and what prospecting ore yields.
+
+**How big +4 is.** Here's what a green carries in total stats, by item level:
+
+| Item level | Chest, legs, 2-hander | Head, hands, feet, waist, shoulders | Wrist, neck, ring, back |
+|---|---|---|---|
+| 10 | 2 | 2 | 1 |
+| 20 | 8 | 6.5 | 4 |
+| 35 | 18 | 15 | 10 |
+| 50 | 26.5 | 21.5 | 15 |
+
+You're right that +4 is significant. Below item level ~15 nothing should get a
+socket, because one gem would be twice a green's whole stats.
+
+**Proposed gem tiers** (all existing gem effects):
+
+| Tier | Gem | Source | For items of |
+|---|---|---|---|
+| I | +4 one stat, or +2 mana every 5 seconds (the unused level-55 Tourmaline, Amber and Zircon gems, all three colours) | Capital-city vendors, always in stock | Item level 17–27 |
+| II | +6 one stat, plus two-stat mixes like +3/+4 (Outland's uncommon cut gems) | Jewelcrafting ~150–225; the raw gems come from prospecting mithril ore | Item level 30–45 |
+| III | +8 one stat, plus +4/+6 mixes (Outland's rare cut gems) | Jewelcrafting ~250–300; the raw gems come from prospecting thorium ore | Item level 45–63 |
+
+**Candidate items.** Every capital sells the same ladder of white armor sets at
+item levels 5, 10, 17, 22, 27, 37 and 50:
+- Leather: Tanned → Cured → Cuirboulli → Studded → Reinforced.
+- Mail: Chainmail → Scalemail → Polished Scale → Augmented → Brigandine.
+- Cloth: Padded → Russet → Embroidered.
+- Plate: Platemail at 50.
+- Plus a shield every few levels and plain weapons up to item level 46.
+
+From the item-level-17 sets upward, each piece gets one socket. The gem plus the
+socket bonus should roughly equal the same-level green. The socket bonus would
+be an existing enchantment, sized to the slot.
+
+**Blues.** Take away enough fixed stats that a blue with an empty socket is
+worse than a plain green of its level. A level-appropriate gem plus the socket
+bonus then lifts it a little above its stock total.
+
+The first question, since the other choices build on it. Tiers II and III reuse
+Outland's cut gems and their recipes, so the names stay Outland's ("Bold Blood
+Garnet"). The recipe tooltip also still names the Outland raw gem, which mithril
+and thorium prospecting would now give. Is that okay? We could rename the gem
+items, since names are server data, but the recipe tooltip would still show the
+old name.
 
 --------------------------------------------------------------------------------
 
