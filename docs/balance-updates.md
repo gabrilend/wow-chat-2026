@@ -131,6 +131,22 @@ they are built, a basic world has none.
 
 ---
 
+## 2026-09-25 — Basic: first gem-supply rates (defaults)
+
+Basic's gem supply (`sql/basic/db_world.src/18-gem-supply.apply.sql`, E033,
+issue 155p) needed rates Ritz hadn't set, so it starts from defaults, to be
+tuned after play: a cut +4 gem per copper or tin prospect, an Outland
+uncommon raw gem per mithril prospect, an Outland rare raw gem per thorium
+prospect, and uncut Wrath uncommon and rare gems per Outland kill (the
+numbers are in the file's header and its prospecting and loot sections).
+**Why:** the tiers need a source at all before their rates can be judged;
+the defaults aim at a +4 gem every few prospects, Outland gems a little
+rarer, and Wrath gems as a rare Outland find. The rates Ritz did set
+(recipe drops near 0.3% of kills, epic-cut recipes 1.5% per boss, the epic
+gem drops, Onyxia's hoard) are recorded in the issue.
+
+---
+
 ## How to add an entry
 
 ```markdown

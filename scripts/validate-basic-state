@@ -40,9 +40,12 @@ FAIL_COUNT=0
 # }}}
 
 # {{{ run_sql()
-# One query, tab-separated rows, no header. Errors print through.
+# One query, tab-separated rows, no header. An error comes back as a row of
+# its own (stderr folded into the output), so the check that ran it fails:
+# before 2026-09-25 errors went to the terminal and the empty output read
+# as a PASS, which let a broken check (mismatched column counts) pass.
 run_sql() {
-    "${MYSQL}" "${MYSQL_CONN[@]}" -e "$1"
+    "${MYSQL}" "${MYSQL_CONN[@]}" -e "$1" 2>&1
 }
 # }}}
 
@@ -64,6 +67,12 @@ report() {
 if ! run_sql "SELECT 1" > /dev/null; then
     echo "ERROR: cannot reach MySQL (${MYSQL_CONN[*]}) — nothing was checked."
     echo "       to debug: is ./scripts/start-mysql running? Did install create ${WORLD}?"
+    exit 1
+fi
+# a broken query must show up as offending output, never as an empty PASS
+if [[ -z "$(run_sql "SELECT FROM nothing_at_all")" ]]; then
+    echo "ERROR: a query error produced no output, so broken checks would pass — nothing was checked."
+    echo "       to debug: does run_sql() still fold stderr into its output (2>&1)?"
     exit 1
 fi
 # }}}
@@ -254,6 +263,34 @@ report "Outland's world monsters are raised +4, the Isle's +6, and no world boss
           JOIN ${WORLD}.basic_155k_level_backup b ON b.entry = t.entry
           WHERE t.minlevel <> b.minlevel + w.level_offset OR t.maxlevel <> b.maxlevel + w.level_offset
              OR t.\`rank\` = 3 OR (t.npcflag & ~3) <> 0 LIMIT 10")"
+# }}}
+
+# {{{ 155p: gem supply
+# Reference tables 1550160–1550173 (see sql/basic/db_world.src/18-gem-supply):
+# each gem family must hold exactly its six (or thirteen, or seven) stock gems,
+# so a renamed or missing item fails here instead of silently dropping out.
+report "gem families are complete (+4 13, Outland and Wrath raw 6 each, low raw 7)" \
+    "$(run_sql "SELECT e.id, e.want, COUNT(r.Item) FROM (SELECT 1550160 id, 13 want UNION SELECT 1550161, 6 UNION SELECT 1550162, 6 UNION SELECT 1550163, 6
+          UNION SELECT 1550164, 6 UNION SELECT 1550165, 6 UNION SELECT 1550170, 7 UNION SELECT 1550171, 12 UNION SELECT 1550172, 12) e
+          LEFT JOIN ${WORLD}.reference_loot_template r ON r.Entry = e.id GROUP BY e.id, e.want HAVING COUNT(r.Item) <> e.want")"
+report "prospecting: copper and tin give +4 gems, mithril Outland uncommon, thorium Outland rare" \
+    "$(run_sql "SELECT o.ore, o.ref FROM (SELECT 2770 ore, 1550160 ref UNION SELECT 2771, 1550160 UNION SELECT 3858, 1550161 UNION SELECT 10620, 1550162) o
+          LEFT JOIN ${WORLD}.prospecting_loot_template p ON p.Entry = o.ore AND p.Reference = o.ref WHERE p.Entry IS NULL")"
+report "Wrath cutting recipes: every Design needs at most 300, and drops somewhere" \
+    "$(run_sql "SELECT 'Designs', COUNT(*) FROM ${WORLD}.basic_155p_design_skill HAVING COUNT(*) < 150
+        UNION ALL SELECT i.entry, i.RequiredSkillRank FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_design_skill b ON b.entry = i.entry WHERE i.RequiredSkillRank > 300
+        UNION ALL SELECT e.id, 'no monster drops it' FROM (SELECT 1550166 id UNION SELECT 1550167 UNION SELECT 1550168) e
+          LEFT JOIN ${WORLD}.creature_loot_template c ON c.Reference = e.id GROUP BY e.id HAVING COUNT(c.Entry) = 0 LIMIT 10")"
+report "epic Wrath gems: Kael'thas one sure, Kazzak and Doomwalker two sure; all epic gems bind" \
+    "$(run_sql "SELECT t.name, c.Chance, c.MaxCount FROM ${WORLD}.creature_template t
+          LEFT JOIN ${WORLD}.creature_loot_template c ON c.Entry = t.lootid AND c.Reference = 1550165
+          WHERE t.entry IN (24664, 18728, 17711) AND (c.Chance IS NULL OR c.Chance < 100 OR c.MaxCount <> IF(t.entry = 24664, 1, 2))
+        UNION ALL SELECT i.entry, i.name, 'does not bind' FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_bonding b ON b.entry = i.entry WHERE i.bonding <> 1 LIMIT 10")"
+report "Onyxia's hoard: gold bars, five coloured sacks, ten gem piles; her binding gems outside it" \
+    "$(run_sql "SELECT 'sack entries', COUNT(*) FROM ${WORLD}.item_loot_template WHERE Entry = 49294 HAVING COUNT(*) <> 16
+        UNION ALL SELECT 'gold bars', MAX(MaxCount) FROM ${WORLD}.item_loot_template WHERE Entry = 49294 AND Item = 3577 HAVING MAX(MaxCount) IS NULL OR MAX(MaxCount) <> 45
+        UNION ALL SELECT 'Onyxia binding-gem rows', COUNT(*) FROM ${WORLD}.creature_loot_template c JOIN ${WORLD}.creature_template t ON t.lootid = c.Entry
+          WHERE t.entry = 10184 AND c.Item BETWEEN 1550180 AND 1550183 HAVING COUNT(*) <> 4")"
 # }}}
 
 echo ""

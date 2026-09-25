@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 13:02:32
+Generated on: 2026-09-25 13:05:04
 Models: claude-opus-5-5
 
 ## Contents
@@ -6304,6 +6304,50 @@ blue. Fewer sockets, big bonuses:
 Blues whose power is a proc or an on-use effect keep their stock form.
 
 Do these look right?
+
+--------------------------------------------------------------------------------
+
+### User Request 59
+
+> - The ordinary Jewelcrafting trainers teach the 58 uncommon Wrath cuts at 300,
+> for gold. The titan sites keep only the crystal trader, and the Un'Goro one
+> wanders between the pylons
+    on its own.
+
+Oh, why don't we put those recipes on the gem trader's masterwork jewelcrafter
+companion instead of the ordinary trainers?
+
+Your jewelcrafting tables look right to me!
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 59
+
+Good idea. Recorded and committed: a **masterwork jewelcrafter** stands beside
+each crystal trader and teaches the 58 uncommon Wrath cuts. It's a real trainer,
+so players get the stock trainer window, pay gold, and need skill 300. It's all
+server data: a new creature with the trainer role and its own list of recipes.
+So each titan site has the pair again, and in Un'Goro they wander between the
+pylons together.
+
+The socket tables are marked approved. That answers every open design question
+in the sockets issue; the only thing left in its list is the note that buddy
+professions come next.
+
+Nothing is built yet. Next is building, in three stages:
+1. **The gem supply.** Everything here is data, testable on the in-RAM database:
+   - prospecting tables;
+   - Wrath and epic gem drops;
+   - the three recipe groups' drop tables, with recipe skill set to 300;
+   - Onyxia's hoard.
+2. **The titan-site pairs.** The crystal trader's dialogue, the masterwork
+   jewelcrafter as a trainer, and the Un'Goro wandering. This is Lua and SQL,
+   and needs an in-game check.
+3. **Sockets on whites and blues** from the tables, plus doubled durability.
+   This is a generator plus SQL. Never-repairing whites and cutting a customer's
+   gem through the trade window are server code patches, for you to compile.
+
+Shall I start on stage 1?
 
 --------------------------------------------------------------------------------
 

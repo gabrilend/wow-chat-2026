@@ -40,8 +40,32 @@ bonus are server data:
 
 ## Current Behavior
 
-Stock. What the data says (read 2026-09-24 from the client files and the
-stock world database):
+**Stage 1, the gem supply: built and tested on the RAM database
+(2026-09-25), not yet installed.** `sql/basic/db_world.src/18-gem-supply.apply.sql`
+(E033, after E024, E027 and E032) with its lists from
+`scripts/generate-basic-gem-supply-sql` (which Jewelcrafting spell makes
+which gem, from the client's spell files; which Outland zone each monster
+stands in, from the server's own extracted map files):
+- prospecting: copper and tin give a cut +4 gem, mithril an Outland
+  uncommon raw gem, thorium an Outland rare one;
+- about 1,000 Outland monster loot tables can drop uncut Wrath uncommon and
+  rare gems, and a Wrath cutting recipe (uncommon cuts in the first-half
+  zones, rare cuts in the second, both in dungeons sliding along the
+  ladder, about 0.3% of kills);
+- 59 boss loot tables: an uncut epic Wrath gem (Kael'thas 1 sure, Kazzak
+  and Doomwalker 2 sure, other dungeon bosses 1 at 15%) and an epic-cut
+  recipe at 1.5%;
+- 191 Wrath cutting recipes need skill 300 at most; the 97 epic Wrath gems
+  (6 uncut, 91 cut) bind on pickup;
+- Onyxia's Ashen Sack of Gems holds the hoard (16 entries: gold bars, the
+  five coloured sacks, ten gem piles); her binding gems drop from her.
+Default rates for prospecting and Wrath gem drops: `docs/balance-updates.md`
+(2026-09-25). `scripts/validate-basic-state` checks each part. Not built:
+stage 2 (the titan-site pairs), stage 3 (sockets on items, durability,
+the two source patches).
+
+Stock, before stage 1. What the data says (read 2026-09-24 from the client
+files and the stock world database):
 
 - **How a socket bonus works.** An item row names up to three socket
   colours and one socket bonus. The bonus is an id in the enchantment
@@ -547,5 +571,16 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   So an orange recipe always gives a point, as shown. (It also makes
   Outland cuts a fast road to 300; noted.)
 - Buddy professions come after this (Ritz, 2026-09-25): 617k.
+- **Who teaches the Outland cuts (tiers II and III)?** Found while building
+  stage 1: in the stock game Outland's 32 uncommon cuts come from Outland
+  trainers (15) and Outland vendors' recipes (31), and its 53 rare cuts
+  only from Outland vendors' and reputation recipes, all of which basic
+  removed (155n). So mithril and thorium now give Outland raw gems nobody
+  can cut yet. Options: Azeroth's Jewelcrafting trainers teach them (the
+  uncommon cuts at ~150–225, the rare at ~250–300, for gold), or the
+  masterwork jewelcrafters do, or their recipes drop somewhere in Azeroth.
+- The 11 rare Wrath cuts that stock teaches only at trainers (no recipe
+  item): add them to the masterwork jewelcrafter's list with the 56
+  uncommon ones?
 - (Answered 2026-09-25) Tooltips always honest, even on legendary items.
 - (Answered 2026-09-25) Set bonuses: leave them for now.
