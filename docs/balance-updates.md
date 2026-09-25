@@ -158,6 +158,16 @@ tuned once real players' gold is known.
 
 ---
 
+## 2026-09-25 — Basic: crystal trade's rare-gem chance (default)
+
+The Earthen Crystal-Keeper (`src/lua-basic/titan-jewelers.lua`, issue 155p)
+gives an uncommon uncut Wrath gem for a Nexus Crystal, and a rare one at a
+default chance (`RARE_CHANCE` in that file). **Why:** Ritz asked for "a
+small chance to be a rare" without a number; this starts it small and
+leaves it for tuning.
+
+---
+
 ## How to add an entry
 
 ```markdown

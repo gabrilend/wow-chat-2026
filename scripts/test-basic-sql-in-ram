@@ -137,10 +137,12 @@ apply_all() {
     step "E031 Outland gear scaling"                      "${WORLD}" "${B}/db_world.src/16-outland-gear-scaling.apply.sql"
     step "E032 Outland world monsters +4 (Isle +6)"       "${WORLD}" "${B}/db_world.src/17-outland-world-levels.apply.sql"
     step "E033 gem supply"                                "${WORLD}" "${B}/db_world.src/18-gem-supply.apply.sql"
+    step "E034 titan-site jewelcrafters"                  "${WORLD}" "${B}/db_world.src/19-titan-jewelers.apply.sql"
     step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${V}/db_characters.src/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
 }
 revert_all() {
+    step "E034 revert" "${WORLD}" "${B}/db_world.src/19-titan-jewelers.revert.sql"
     step "E033 revert" "${WORLD}" "${B}/db_world.src/18-gem-supply.revert.sql"
     step "E032 revert" "${WORLD}" "${B}/db_world.src/17-outland-world-levels.revert.sql"
     step "E031 revert" "${WORLD}" "${B}/db_world.src/16-outland-gear-scaling.revert.sql"
@@ -160,7 +162,7 @@ revert_all() {
 # revert). E008 (vanilla's flight-path removal, shared) has no revert file
 # here (its revert lives inline in E-patches.sh), so it is applied first and
 # the snapshot is taken after it.
-TOUCHED="creature_template, creature_template_model, creature_default_trainer, item_template, prospecting_loot_template, dungeon_access_template, dungeon_access_requirements, quest_template, creature, gossip_menu, npc_text, gameobject, pool_template, pool_pool, pool_gameobject, pool_creature, skill_fishing_base_level, fishing_loot_template, trainer_spell, creature_loot_template, reference_loot_template, gameobject_loot_template, item_loot_template, npc_vendor, disables, spell_group"
+TOUCHED="creature_template, creature_template_model, creature_default_trainer, trainer, game_event, game_event_creature, item_template, prospecting_loot_template, dungeon_access_template, dungeon_access_requirements, quest_template, creature, gossip_menu, npc_text, gameobject, pool_template, pool_pool, pool_gameobject, pool_creature, skill_fishing_base_level, fishing_loot_template, trainer_spell, creature_loot_template, reference_loot_template, gameobject_loot_template, item_loot_template, npc_vendor, disables, spell_group"
 echo "Before the snapshot:"
 step "E008 flight paths removed (vanilla's, shared)"  "${WORLD}" "${V}/db_world.src/03-remove-flight-paths.apply.sql"
 stock_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")

@@ -75,9 +75,35 @@ stands in, from the server's own extracted map files):
   The capitals' outlines come from the client's map rectangles, through
   the generator.
 Default rates for prospecting and Wrath gem drops: `docs/balance-updates.md`
-(2026-09-25). `scripts/validate-basic-state` checks each part. Not built:
-stage 2 (the titan-site pairs), stage 3 (sockets on items, durability,
-the two source patches).
+(2026-09-25). `scripts/validate-basic-state` checks each part.
+
+**Stage 2, the titan-site pairs: built and tested on the RAM database
+(2026-09-25), not yet installed or seen in game.**
+`sql/basic/db_world.src/19-titan-jewelers.apply.sql` (E034) and
+`src/lua-basic/titan-jewelers.lua`:
+- an Earthen Crystal-Keeper <Crystal Trader> (an Earthen Protector's look)
+  and an Earthen Gemcutter <Masterwork Jewelcrafter> (an Earthen Dwarf's),
+  friendly to everyone, side by side outside Uldaman's front exit, beside
+  the Uldum Pedestal, and at one of Un'Goro's Crystal Pylons;
+- the Crystal-Keeper's dialogue trades one Nexus Crystal for a random
+  uncut Wrath gem (rare at a default 10%, else uncommon; a full bag gives
+  the crystal back);
+- the Gemcutter is a trainer (list 155300) teaching the 56 trainer-only
+  uncommon Wrath cuts and the 7 trainer-only rare single gems at skill 300,
+  at stock prices;
+- the Un'Goro pair is three "internal" game events (201–203), which the
+  server never starts or stops by itself; the script starts one at boot
+  and every 30 minutes, if no player is within 200 yards, swaps to one of
+  the other two at 50%. Game events place their creatures even where no
+  one is, which moving the creatures from a script could not.
+- spots come from `scripts/generate-basic-titan-jeweler-spots`: a few
+  yards from each landmark (Uldaman's exit point, the Pedestal, each
+  pylon), at the ground height read from the server's map files with the
+  server's own arithmetic; at Uldaman's exit, which lies under rock the
+  terrain layer doesn't include, the exit's own height is used.
+To check in game: the pairs stand on the ground and not in rock; the trade
+and the trainer window work; the Un'Goro pair moves.
+Not built: stage 3 (sockets on items, durability, the two source patches).
 
 Stock, before stage 1. What the data says (read 2026-09-24 from the client
 files and the stock world database):

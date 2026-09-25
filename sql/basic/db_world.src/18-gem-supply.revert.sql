@@ -36,6 +36,7 @@ DELETE FROM `reference_loot_template`   WHERE `Entry` BETWEEN 1550160 AND 155017
 DROP TABLE `basic_155p_design_skill`;
 DROP TABLE `basic_155p_bonding`;
 DROP TABLE `basic_155p_sack`;
+DROP TABLE IF EXISTS `basic_155p_cuts`;
 DROP TABLE IF EXISTS `tmp_155p_cuts`;     -- working tables, in case an apply stopped part-way
 DROP TABLE IF EXISTS `tmp_155p_halves`;
 DROP TABLE IF EXISTS `tmp_155p_gems`;

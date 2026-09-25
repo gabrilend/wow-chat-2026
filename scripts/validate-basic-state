@@ -294,6 +294,12 @@ report "Onyxia's hoard: gold bars, five coloured sacks, ten gem piles; her bindi
 report "a Visiting Jewelcrafter (Jewelcrafting trainer list 113) stands in each of the six Azeroth capitals" \
     "$(run_sql "SELECT 'spawns', COUNT(*) FROM ${WORLD}.creature WHERE guid BETWEEN 15501001 AND 15501006 AND id IN (1550201, 1550202) HAVING COUNT(*) <> 6
         UNION ALL SELECT 'trainer lists', COUNT(*) FROM ${WORLD}.creature_default_trainer WHERE CreatureId IN (1550201, 1550202) AND TrainerId = 113 HAVING COUNT(*) <> 2")"
+report "titan sites: a crystal trader and a masterwork jewelcrafter at Uldaman and Uldum, and one pair per Un'Goro pylon event" \
+    "$(run_sql "SELECT 'standing spawns', COUNT(*) FROM ${WORLD}.creature WHERE guid BETWEEN 15501011 AND 15501014 AND id IN (1550210, 1550211) HAVING COUNT(*) <> 4
+        UNION ALL SELECT e.eventEntry, COUNT(g.guid) FROM ${WORLD}.game_event e LEFT JOIN ${WORLD}.game_event_creature g ON g.eventEntry = e.eventEntry
+          WHERE e.eventEntry IN (201, 202, 203) AND e.world_event = 5 GROUP BY e.eventEntry HAVING COUNT(g.guid) <> 2
+        UNION ALL SELECT 'internal pylon events', COUNT(*) FROM ${WORLD}.game_event WHERE eventEntry IN (201, 202, 203) AND world_event = 5 HAVING COUNT(*) <> 3
+        UNION ALL SELECT 'gemcutter cuts', COUNT(*) FROM ${WORLD}.trainer_spell WHERE TrainerId = 155300 HAVING COUNT(*) < 50")"
 report "Jewelcrafting trainers 112 and 113 teach Outland's cuts between 150 and 300" \
     "$(run_sql "SELECT a.TrainerId, COUNT(*) FROM ${WORLD}.basic_155p_trainer_added a GROUP BY a.TrainerId HAVING COUNT(*) < 60
         UNION ALL SELECT 'trainers', COUNT(DISTINCT TrainerId) FROM ${WORLD}.basic_155p_trainer_added HAVING COUNT(DISTINCT TrainerId) <> 2

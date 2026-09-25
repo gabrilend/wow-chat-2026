@@ -384,7 +384,9 @@ DROP TABLE `tmp_155p_ladder`;
 DROP TABLE `tmp_155p_designs`;
 DROP TABLE `tmp_155p_gems`;
 DROP TABLE `tmp_155p_halves`;
-DROP TABLE `tmp_155p_cuts`;
+-- the cut list is kept for the titan-site jewelcrafters (19, E034)
+DROP TABLE IF EXISTS `basic_155p_cuts`;
+RENAME TABLE `tmp_155p_cuts` TO `basic_155p_cuts`;
 
 -- ============================================================================
 -- End of 18-gem-supply.sql (apply)

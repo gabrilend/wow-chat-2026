@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 14:45:51
+Generated on: 2026-09-25 14:53:13
 Models: claude-opus-5-5
 
 ## Contents
@@ -6610,6 +6610,65 @@ After that comes stage 2: the titan-site pairs (crystal trader and masterwork
 jewelcrafter) at Uldaman, the Gate of Uldum and the Un'Goro pylons, with the
 pylon wandering. I'll pick the exact standing spots from the map data and show
 you the coordinates.
+
+--------------------------------------------------------------------------------
+
+### User Request 64
+
+<pasted_content id="8773">
+> Found while building: on this database, Azeroth's own capitals have no
+> Jewelcrafting trainer at all. That's Stormwind, Ironforge, Darnassus,
+> Orgrimmar, Thunder Bluff and the
+> Undercity. Below Outland, only Silvermoon, Eversong and the Exodar have one.
+> So most characters would have to travel far just to start Jewelcrafting.
+> Should I add a Jewelcrafting
+> trainer to each of those six capitals, teaching the same list as the
+> Silvermoon and Exodar trainers?
+</pasted_content id="8773">
+
+
+um. sure I guess.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 64
+
+> Adding them. To follow the pattern of the Visiting Mentors I added for class
+> trainers, I'll call them **Visiting Jewelcrafter** <Jewelcrafting Trainer>: a
+> draenei-looking one for Alliance cities and a blood-elf-looking one for Horde
+> cities. Each stands beside its city's Mining trainer. Checking how the mentors
+> were spawned so these match.
+
+> The test passes, but its exact-revert comparison doesn't cover two tables I
+> now edit: trainer bindings and creature models. Adding them and re-running.
+
+Done and committed. Each of Azeroth's six capitals now has a **Visiting
+Jewelcrafter** <Jewelcrafting Trainer>, teaching the same list as the Silvermoon
+and Exodar trainers, including Outland's cuts:
+
+| City | Stands beside |
+|---|---|
+| Stormwind | Gelman Stonehand (Mining) |
+| Ironforge | Geofram Bouldertoe (Mining) |
+| Darnassus | a trainer on the Craftsmen's Terrace (Darnassus has no Mining trainer) |
+| Orgrimmar | Makaru (Mining) |
+| Thunder Bluff | Brek Stonehoof (Mining) |
+| Undercity | Brom Killian (Mining) |
+
+Alliance cities get a copy of the Exodar's trainer and Horde cities a copy of
+Silvermoon's, so each looks and behaves like its side. They're two yards from
+the other trainer, which I haven't looked at in game. One could end up clipping
+into a wall or stall, so they're worth a glance on your next visit. The full
+in-RAM test passes. It now also compares creature models and trainer bindings in
+its exact-revert check, since both of these visiting-trainer changes edit them.
+
+The commit tool had split one of my balance-log entries, committing only a blank
+line. This commit includes the rest.
+
+Stage 1 is complete. Stage 2 is the titan-site pairs at Uldaman's entrance, the
+Gate of Uldum and the Un'Goro pylons: the crystal trader, the masterwork
+jewelcrafter, and the pylon wandering. Shall I go ahead and pick spots from the
+map data?
 
 --------------------------------------------------------------------------------
 
