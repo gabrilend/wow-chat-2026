@@ -44,6 +44,7 @@ wow-chat-2026/
 │   ├── profiles/                  Per-profile reference pages (user-facing)
 │   │   ├── index.md               Overview of the four profiles + how to switch
 │   │   ├── basic-gear-ladder.html Chart: vanilla raids, Outland dungeons and world drops on one stat-budget scale (155f/155k)
+│   │   ├── socket-bonus-catalog.md Generated: every enchantment usable as a socket bonus, by kind and size; low-level cut gems (155p)
 │   │   ├── vanilla.md             Default WotLK + playerbots, light ruleset (148)
 │   │   ├── release.md             Wow-chat custom design, proven-working tier
 │   │   ├── beta.md                Active development tier (all in-flight features)

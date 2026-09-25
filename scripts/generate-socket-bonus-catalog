@@ -1,0 +1,258 @@
+#!/usr/bin/env luajit
+-- generate-socket-bonus-catalog - list every item enchantment the game
+-- client already knows how to describe, grouped by what it does and sorted
+-- by size, as a catalog of possible socket bonuses.
+--
+-- For a general audience: an item's socket bonus is a number pointing at a
+-- row of the enchantment table. The server decides what the row does; the
+-- player's game shows the row's text from its own copy, which we cannot
+-- change. So any row the client already has can become a socket bonus with
+-- correct text. This tool reads the client's enchantment file, drops the
+-- rows that can't work as a bonus (no text, totems, on-use spells, the
+-- prismatic-socket marker), sorts the rest into kinds (stats, resistances,
+-- weapon damage, auras while worn, chance on hit, mixed), groups rows whose
+-- text differs only by its numbers ("+# Stamina") and sorts each group from
+-- small to large. It asks the world database which rows are already some
+-- item's socket bonus and which gems give them, and writes a Markdown page.
+--
+-- Two halves, kept apart: collect() gathers plain tables from the files
+-- and the database; render() turns them into text and knows nothing about
+-- where they came from.
+--
+-- Usage: scripts/generate-socket-bonus-catalog [PROJECT_DIR] [WORLD_DB]
+--   Reads   data-files/dbc/{SpellItemEnchantment,GemProperties,Spell}.dbc
+--           WORLD_DB (default acore_world) on the project MySQL, read-only:
+--           item_template's socket bonuses and gems
+--   Writes  docs/profiles/socket-bonus-catalog.md
+
+local DIR  = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DB   = arg[2] or "acore_world"
+local DBC  = DIR .. "/data-files/dbc/"
+local OUT  = DIR .. "/docs/profiles/socket-bonus-catalog.md"
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch " .. DB
+
+-- {{{ configuration
+-- enchantment effect types (ITEM_ENCHANTMENT_TYPE_* in the server's DBCEnums.h)
+local KIND = {
+    [1] = "Chance on hit",     -- casts a spell when the wearer hits (or is hit)
+    [2] = "Weapon damage",     -- adds weapon damage
+    [3] = "Aura while worn",   -- keeps a spell's aura on the wearer
+    [4] = "Resistances",       -- adds a resistance (or armor)
+    [5] = "Stats",             -- adds a stat (the arg is the stat type)
+}
+local UNUSABLE = { [6] = true, [7] = true, [8] = true }   -- totem, on-use spell, prismatic socket marker
+local SECTION_ORDER = { "Stats", "Resistances", "Weapon damage", "Aura while worn", "Chance on hit", "Mixed" }
+local GEM_COLOR = { [1] = "meta", [2] = "red", [4] = "yellow", [6] = "orange", [8] = "blue",
+                    [10] = "purple", [12] = "green", [14] = "prismatic" }
+local ENCHANT_SIZE, GEM_SIZE = 38 * 4, 5 * 4           -- 3.3.5a record sizes
+-- developer leftovers among the gem items (test and placeholder gems), left
+-- out of the low-level gem list by name
+local JUNK_GEM_NAMES = "name NOT LIKE '%Test%' AND name NOT LIKE 'Deprecated%' AND name NOT LIKE '%Bryanite%' AND name NOT LIKE 'Glyph of%'"
+-- }}}
+
+-- {{{ local function die
+local function die(msg)
+    io.stderr:write("generate-socket-bonus-catalog: ", msg, "\n")
+    os.exit(1)
+end
+-- }}}
+
+-- {{{ local function load_dbc
+-- Returns the record count, record size, a uint32 reader and a string reader.
+local function load_dbc(name)
+    local f = io.open(DBC .. name, "rb") or die("cannot open " .. DBC .. name)
+    local d = f:read("*a")
+    f:close()
+    if d:sub(1, 4) ~= "WDBC" then die(name .. " is not a WDBC file") end
+    local function u32(o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+    local n, rs = u32(4), u32(12)
+    local sb = 20 + n * rs
+    local function str(o) local so = sb + u32(o); local e = d:find("\0", so + 1, true); return d:sub(so + 1, e - 1) end
+    return n, rs, u32, str
+end
+-- }}}
+
+-- {{{ local function query
+-- Runs one read-only query; returns its rows as arrays of strings.
+local function query(sql)
+    local p = io.popen(MYSQL .. " -e \"" .. sql .. "\" 2>&1")
+    local rows = {}
+    for line in p:lines() do
+        if not line:find("Using a password", 1, true) then
+            if line:find("^ERROR") then die("database " .. DB .. ": " .. line) end
+            local r = {}
+            for field in (line .. "\t"):gmatch("([^\t]*)\t") do r[#r + 1] = field end
+            rows[#rows + 1] = r
+        end
+    end
+    p:close()
+    return rows
+end
+-- }}}
+
+-- {{{ local function collect
+-- Returns { enchants = {...}, low_gems = {...} }. Each enchant:
+--   id, text (enUS), types {int x3}, amounts {int x3}, args {int x3},
+--   condition, skill, skill_value, level (ints), spell_names {string},
+--   bonus_items, bonus_min_ilvl, bonus_max_ilvl (ints or nil),
+--   gems {"Name (ilvl N, colour)"}. Each low gem (a cut gem below item
+--   level 60): label, enchant, sources {"sold by X", "N loot rows"}.
+local function collect()
+    -- spell names, for the aura and on-hit kinds
+    local sn, srs, su, sstr = load_dbc("Spell.dbc")
+    local spell_name = {}
+    for r = 0, sn - 1 do local b = 20 + r * srs; spell_name[su(b)] = sstr(b + 136 * 4) end
+
+    -- gems: GemProperties id -> enchant and colour; the gem items from the database
+    local gn, grs, gu = load_dbc("GemProperties.dbc")
+    if grs ~= GEM_SIZE then die("GemProperties.dbc records are " .. grs .. " bytes, expected " .. GEM_SIZE) end
+    local gem_enchant, gem_color = {}, {}
+    for r = 0, gn - 1 do local b = 20 + r * grs; gem_enchant[gu(b)] = gu(b + 4); gem_color[gu(b)] = gu(b + 16) end
+    local gems_of, low_gems = {}, {}
+    for _, r in ipairs(query("SELECT GemProperties, name, ItemLevel, entry, (" .. JUNK_GEM_NAMES .. " AND name NOT LIKE 'QA%') FROM item_template WHERE GemProperties <> 0 ORDER BY ItemLevel, name")) do
+        local gp, name, ilvl, entry, real = tonumber(r[1]), r[2], tonumber(r[3]), tonumber(r[4]), r[5] == "1"
+        local e = gem_enchant[gp]
+        if e and e ~= 0 then
+            local label = string.format("%s (ilvl %d, %s)", name, ilvl, GEM_COLOR[gem_color[gp]] or ("colour " .. gem_color[gp]))
+            gems_of[e] = gems_of[e] or {}
+            table.insert(gems_of[e], label)
+            if ilvl < 60 and real then low_gems[#low_gems + 1] = { label = label, enchant = e, entry = entry, sources = {} } end
+        end
+    end
+    -- where the low gems come from: vendors by name, loot tables by count
+    for _, g in ipairs(low_gems) do
+        for _, r in ipairs(query("SELECT t.name FROM npc_vendor v JOIN creature_template t ON t.entry = v.entry WHERE v.item = " .. g.entry .. " ORDER BY t.name")) do
+            g.sources[#g.sources + 1] = "sold by " .. r[1]
+        end
+        local loot = query("SELECT COUNT(*) FROM (SELECT Item FROM creature_loot_template UNION ALL SELECT Item FROM reference_loot_template UNION ALL SELECT Item FROM gameobject_loot_template UNION ALL SELECT Item FROM item_loot_template) x WHERE Item = " .. g.entry)
+        if tonumber(loot[1][1]) > 0 then g.sources[#g.sources + 1] = loot[1][1] .. " loot rows" end
+    end
+
+    -- which enchantments are already socket bonuses, on how many items
+    local used = {}
+    for _, r in ipairs(query("SELECT socketBonus, COUNT(*), MIN(ItemLevel), MAX(ItemLevel) FROM item_template WHERE socketBonus <> 0 GROUP BY socketBonus")) do
+        used[tonumber(r[1])] = { n = tonumber(r[2]), lo = tonumber(r[3]), hi = tonumber(r[4]) }
+    end
+
+    local n, rs, u, str = load_dbc("SpellItemEnchantment.dbc")
+    if rs ~= ENCHANT_SIZE then die("SpellItemEnchantment.dbc records are " .. rs .. " bytes, expected " .. ENCHANT_SIZE) end
+    local enchants = {}
+    for r = 0, n - 1 do
+        local b = 20 + r * rs
+        local function f(i) return u(b + i * 4) end
+        local e = { id = f(0), text = str(b + 14 * 4), types = {}, amounts = {}, args = {}, spell_names = {},
+                    condition = f(34), skill = f(35), skill_value = f(36), level = f(37) }
+        for i = 1, 3 do e.types[i], e.amounts[i], e.args[i] = f(1 + i), f(4 + i), f(10 + i) end
+        local usable, any = e.text ~= "", false
+        for i = 1, 3 do
+            local t = e.types[i]
+            if UNUSABLE[t] then usable = false end
+            if KIND[t] then any = true end
+            if (t == 1 or t == 3) and e.args[i] ~= 0 then e.spell_names[#e.spell_names + 1] = spell_name[e.args[i]] or ("spell " .. e.args[i]) end
+        end
+        if usable and any then
+            local us = used[e.id]
+            if us then e.bonus_items, e.bonus_min_ilvl, e.bonus_max_ilvl = us.n, us.lo, us.hi end
+            e.gems = gems_of[e.id] or {}
+            enchants[#enchants + 1] = e
+        end
+    end
+    return { enchants = enchants, low_gems = low_gems }
+end
+-- }}}
+
+-- {{{ local function render
+-- Turns collect()'s tables into the Markdown page.
+local function render(data)
+    local sections = {}
+    for _, name in ipairs(SECTION_ORDER) do sections[name] = {} end
+    for _, e in ipairs(data.enchants) do
+        local kinds, first = {}, nil
+        for i = 1, 3 do local k = KIND[e.types[i]]; if k then kinds[k] = true; first = first or k end end
+        local count = 0
+        for _ in pairs(kinds) do count = count + 1 end
+        e.section = count > 1 and "Mixed" or first
+        e.key = e.text:gsub("%d+", "#")
+        e.size = tonumber(e.text:match("%d+")) or e.amounts[1]
+        table.insert(sections[e.section], e)
+    end
+
+    local out = {
+        "# Socket Bonus Catalog",
+        "",
+        "Every item enchantment the game client already has text for, as a",
+        "catalog of possible socket bonuses (\"option 1\": point an item's",
+        "socket bonus at one of these and the tooltip is correct with no client",
+        "change). Generated by `scripts/generate-socket-bonus-catalog` from the",
+        "client's SpellItemEnchantment, GemProperties and Spell files and the",
+        "`" .. DB .. "` database; re-run it rather than editing this page.",
+        "",
+        "How to read it:",
+        "",
+        "- Rows are grouped by kind, then by wording (texts that differ only in",
+        "  their numbers sit together), smallest first. Across different stats",
+        "  the sizes are not comparable (10 spell power is not 10 Stamina).",
+        "- **Bonus on** = how many items already use it as their socket bonus,",
+        "  and their item levels: a guide to what Blizzard thought a bonus of",
+        "  that size was worth at that level.",
+        "- **Also from** = the gems whose effect it is.",
+        "- **Notes**: the spell an aura or on-hit row casts; a required level or",
+        "  skill (the server may refuse the bonus to a wearer below it); a meta",
+        "  condition (only checked for meta gems).",
+        "- Untested as socket bonuses in game; the server applies all these",
+        "  kinds through the same enchantment code it uses for sockets.",
+        "",
+    }
+
+    -- the low-level cut gems, if any, and where they come from
+    if #data.low_gems > 0 then
+        out[#out + 1] = "## Cut gems below item level 60"
+        out[#out + 1] = ""
+        out[#out + 1] = "Cut gems (a socket colour and an effect) below item level 60, test"
+        out[#out + 1] = "items left out. No Jewelcrafting recipe makes them."
+        out[#out + 1] = ""
+        local text_of = {}
+        for _, e in ipairs(data.enchants) do text_of[e.id] = e.text end
+        for _, g in ipairs(data.low_gems) do
+            out[#out + 1] = string.format("- %s: %s (enchantment %d) — %s", g.label, text_of[g.enchant] or "?", g.enchant,
+                #g.sources > 0 and table.concat(g.sources, ", ") or "no vendor or loot table")
+        end
+        out[#out + 1] = ""
+    end
+
+    for _, name in ipairs(SECTION_ORDER) do
+        local list = sections[name]
+        table.sort(list, function(a, b)
+            if a.key ~= b.key then return a.key < b.key end
+            if a.size ~= b.size then return a.size < b.size end
+            return a.id < b.id
+        end)
+        out[#out + 1] = string.format("## %s (%d)", name, #list)
+        out[#out + 1] = ""
+        out[#out + 1] = "| Text | Enchantment | Bonus on | Also from | Notes |"
+        out[#out + 1] = "|---|---|---|---|---|"
+        for _, e in ipairs(list) do
+            local bonus = e.bonus_items and string.format("%d items, ilvl %d–%d", e.bonus_items, e.bonus_min_ilvl, e.bonus_max_ilvl) or ""
+            local gems = #e.gems > 3 and (table.concat(e.gems, ", ", 1, 3) .. string.format(", +%d more", #e.gems - 3)) or table.concat(e.gems, ", ")
+            local notes = {}
+            if #e.spell_names > 0 then notes[#notes + 1] = "casts " .. table.concat(e.spell_names, ", ") end
+            if e.level > 0 then notes[#notes + 1] = "level " .. e.level end
+            if e.skill > 0 then notes[#notes + 1] = string.format("skill %d at %d", e.skill, e.skill_value) end
+            if e.condition > 0 then notes[#notes + 1] = "meta condition" end
+            out[#out + 1] = string.format("| %s | %d | %s | %s | %s |",
+                e.text:gsub("|", "/"), e.id, bonus, gems:gsub("|", "/"), table.concat(notes, "; "):gsub("|", "/"))
+        end
+        out[#out + 1] = ""
+    end
+    return table.concat(out, "\n")
+end
+-- }}}
+
+-- {{{ main
+local data = collect()
+if #data.enchants == 0 then die("no usable enchantments found; the client files may have moved") end
+local f = assert(io.open(OUT, "w"))
+f:write(render(data))
+f:close()
+io.write(string.format("wrote %d enchantments (%d low-level cut gems) into %s\n", #data.enchants, #data.low_gems, OUT))
+-- }}}
