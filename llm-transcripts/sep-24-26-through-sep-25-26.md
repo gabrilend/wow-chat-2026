@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 10:52:53
+Generated on: 2026-09-25 10:57:18
 Models: claude-opus-5-5
 
 ## Contents
@@ -5104,6 +5104,81 @@ With 87 rare-cut recipes at 0.05% each, a monster in the second half would drop
 to about 0.3%. Should each recipe keep the stock rate, which makes rare-cut
 recipes fairly common as a group? Or should we cap the chance of any recipe per
 kill, say around 0.5%, so each one individually becomes much rarer than stock?
+
+--------------------------------------------------------------------------------
+
+### User Request 41
+
+> Two NPCs: one trades Nexus Crystals for uncut Wrath gems. The other teaches
+> the trainer-only uncommon cuts: you hand over an uncut gem, pick one of its
+> cuts, and learn it. Both
+>   stand in titan places.
+
+some recipes can be learned in exchange for currency items, like marks of honor
+or whatever. Can we do a similar system here, where the "cost" is the gemstone
+the recipe uses? If so, we'll be able to re-use the trainer UI which is nice.
+
+
+
+<pasted_content id="8773">
+> Next question: that per-recipe rate adds up because there are so many rare
+> cuts. With 87 rare-cut recipes at 0.05% each, a monster in the second half
+> would drop some rare-cut recipe
+> on about 4% of kills. The 17 uncommon ones together come to about 0.3%. Should
+> each recipe keep the stock rate, which makes rare-cut recipes fairly common as
+> a group? Or should we
+> cap the chance of any recipe per kill, say around 0.5%, so each one
+> individually becomes much rarer than stock?
+</pasted_content id="8773">
+
+
+it's okay. I want these recipes to be rare. They should be coveted and players
+who learn them should be celebrated and rewarded accordingly. Scarcity in this
+game breeds connection, at least in the economy.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 41
+
+> Checking whether the server's trainer can charge an item instead of gold, and
+> whether any existing item-price combination uses gems.
+
+Unfortunately we can't make the gem the price in the trainer window and still
+show a correct price:
+
+- **A trainer can only charge gold.** Its list has a gold cost, required skills
+  and required spells, but no item cost.
+- **Item prices exist only at vendors.** They come from a fixed table of price
+  combinations in the client (972 of them, such as "3 Marks of Honor"). None of
+  them asks for a gem.
+- **Inventing a new price is possible on the server,** for example "1
+  Bloodstone". But the client wouldn't know it, so the vendor window would show
+  the wrong price, and that breaks our rule of keeping names and tooltips in
+  sync.
+- **The existing prices of 1–6 Dalaran Jewelcrafter's Tokens do show
+  correctly.** But vendors sell items, and the 58 trainer-only cuts have no
+  recipe item to sell.
+
+So the teacher uses a dialogue menu instead: "Show me the cuts of a Bloodstone",
+you pick a cut, the gem is taken, and you learn the cut. It's less pretty than
+the trainer window, but everything it shows is true.
+
+**Rarity:** recorded. The chance of dropping *any* gem-cut recipe is capped
+around 0.3% per kill for each group. That makes one particular rare cut about 1
+in 29,000 kills, and one uncommon cut about 1 in 5,700. That's rare enough for
+someone to celebrate when they learn one, and easy to tune later.
+
+Both are in the sockets issue and committed.
+
+Next question: where do the **epic** Wrath gems and their 91 epic-cut recipes
+come from? Everything else now has a source, but these don't. Options:
+1. **The top Outland bosses:** Kael'thas, the other Magisters' Terrace bosses
+   and the Arcatraz bosses, as rare bind-on-pickup drops, with epic-cut recipes
+   one step below in the upper dungeons' trash.
+2. **The world bosses:** Kazzak, Doomwalker and the Fel Reaver, as their own
+   special loot.
+3. **A tiny chance from the crystal trader:** an uncommon gem, rarely a rare,
+   very rarely an epic.
 
 --------------------------------------------------------------------------------
 

@@ -116,7 +116,7 @@ More, read 2026-09-25 (stock world `acore_world_release`; the client files):
 
 ## Intended Behavior
 
-Draft for Ritz, 2026-09-25 (his direction, verbatim):
+Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
 
 > Let's think of some good candidates for socketed items that can be made
 > low level. And the gems can be adjusted such that the weakest gems are
@@ -195,17 +195,32 @@ Draft for Ritz, 2026-09-25 (his direction, verbatim):
    the crystal, add the gem). A new creature template (its name is server
    data), spawned in Uldaman. Odds (Ritz, 2026-09-25): "it's an uncommon
    Wrath gem, with a small chance to be a rare."
-8. **Epic Wrath gems bind on pickup** (Ritz, 2026-09-25: "we'll need to
+8. **Where epic Wrath gems and their cuts come from** (Ritz, 2026-09-25:
+   "the gems from the top Outland bosses, the recipes from every Outland
+   boss. The gems should be 100% chance for 1 from Kael'Thas, 100% chance
+   for 2 from each world boss, and 15% chance for 1 from each other
+   Outland dungeon boss. Also, we should ensure that all the gems are on
+   the loot table for the gem bag from Onyxia."):
+   - uncut epic gems (the six: Cardinal Ruby, King's Amber, Majestic
+     Zircon, Dreadstone, Ametrine, Eye of Zul), one shared reference table
+     at equal odds: Kael'thas 1 always; each world boss 2 always; every
+     other Outland dungeon boss (normal mode) 1 at 15%;
+   - epic-cut Designs (91): from every Outland boss, rarely (rate open);
+   - Onyxia's gem bag is the **Ashen Sack of Gems** (3.3.5 Onyxia, always
+     dropped). Stock, it already holds exactly those six uncut epic gems:
+     one always, a second at 60%, a third at 30%. So on basic it stays on
+     Onyxia's loot when 155h brings her vanilla loot back.
+9. **Epic Wrath gems bind on pickup** (Ritz, 2026-09-25: "we'll need to
    make the epic WotLK gems be BoP (tradable within 2 hours if you were
    there)"). The two-hour trade among those present is the client's own
    bind-on-pickup loot rule; only the binding is ours to set.
-9. **+4 gems come from prospecting, pre-cut** (Ritz, 2026-09-25: "Could we
+10. **+4 gems come from prospecting, pre-cut** (Ritz, 2026-09-25: "Could we
    add the +4 gems to the prospecting tables for the low level ores?
    Pre-cut, instead of the capital city vendor."): copper and tin
    prospecting yield the level-55 +4 gems, replacing the capital vendor.
    Only jewelcrafters prospect, so everyone else gets them through the
    auction house or a jewelcrafter friend (or a buddy, 617k).
-10. **How Wrath cuts are learned** (stock, read 2026-09-25): of 75
+11. **How Wrath cuts are learned** (stock, read 2026-09-25): of 75
     uncommon cuts, 58 are trainer-only and 17 have a "Design:" recipe item
     (sold); of 94 rare cuts, 87 have Designs (56 sold, 25 dropped); all 91
     epic cuts have Designs (sold for tokens). All need Jewelcrafting
@@ -298,8 +313,12 @@ Draft for Ritz, 2026-09-25 (his direction, verbatim):
 - (Answered 2026-09-25, by the data) Paying for a cut with its gem in a
   stock trainer or vendor window isn't possible with correct prices shown;
   the teacher uses a dialogue menu.
-- Epic-cut Designs (91): where from (the epic gems' own source is still
-  open)?
+- (Answered 2026-09-25) Epic gems and epic-cut Designs: item 8.
+- Epic-cut Designs from every Outland boss: how often? Stock boss recipe
+  drops run a few percent; "rare and coveted" suggests lower.
+- Bind on pickup and the Ashen Sack: the two-hour trade window covers
+  loot from a creature; gems taken out of the sack bind to whoever opens
+  it. Fine, since the sack itself is Onyxia's loot?
 - The teaching NPC: one cut per gem handed over (the gem is consumed), or
   does the gem only have to be shown?
 - Which titan places, and which NPC stands where?
