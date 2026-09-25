@@ -12,8 +12,12 @@
 --                 uncut Wrath uncommon gem, rarely a rare one
 --   epic gems     Kael'thas drops one uncut epic Wrath gem every kill, each
 --                 world boss (Kazzak, Doomwalker) two, every other Outland
---                 dungeon boss one at 15%. Epic Wrath gems, uncut and cut,
---                 bind on pickup
+--                 dungeon boss one at 15%. Epic Wrath gems keep their stock
+--                 binding (none): an earlier plan to bind them on pickup was
+--                 dropped with the trade-window cutting it needed (Ritz,
+--                 2026-09-25: "we decided to skip this mechanic. It's too
+--                 obfuscated. So... we should make the cut and uncut gems
+--                 no longer BoP anymore, sadly.")
 --   recipes       the Wrath cutting recipes ("Design:" items) require
 --                 Jewelcrafting 300. Uncommon-cut Designs drop in Outland's
 --                 first half (Hellfire, Zangarmarsh, Terokkar, Nagrand),
@@ -36,9 +40,10 @@
 --   Onyxia        her Ashen Sack of Gems becomes a hoard: 15–45 Gold Bars,
 --                 vanilla's five coloured Sacks of Gems, five piles of
 --                 low-level raw gems, three of Outland gems, two of Wrath
---                 gems; the binding epic gems (the stock three rolls and a
---                 pile of cut epic gems) drop from Onyxia herself, where
---                 those present can trade them for two hours
+--                 gems; the epic gems (the stock three rolls and a pile of
+--                 cut epic gems) drop from Onyxia herself, beside the sack
+--                 (they no longer bind, but the sack's 18-entry window has
+--                 no room for them)
 --
 -- Rates Ritz hasn't set are defaults, logged in docs/balance-updates.md:
 -- +4 gem 20% per copper/tin prospect, Outland uncommon 20% per mithril
@@ -246,14 +251,13 @@ SELECT `lootid`, 1550165, 1550165, `epic_chance`, 0, 1, 0, `epic_rolls`, `epic_r
 UNION ALL SELECT `lootid`, 1550168, 1550168, 1.5, 0, 1, 0, 1, 1, 'basic 155p: epic-cut Design' FROM `tmp_155p_bosses`
 ON DUPLICATE KEY UPDATE `Chance` = VALUES(`Chance`);
 
--- ---- 6. recipes at 300, epic gems bind ---------------------------------------------------
+-- ---- 6. recipes at 300 -------------------------------------------------------------------
 INSERT INTO `basic_155p_design_skill` (`entry`, `RequiredSkillRank`)
 SELECT i.`entry`, i.`RequiredSkillRank` FROM `item_template` i JOIN `tmp_155p_designs` d ON d.`item` = i.`entry`;
 UPDATE `item_template` i JOIN `basic_155p_design_skill` b ON b.`entry` = i.`entry` SET i.`RequiredSkillRank` = LEAST(i.`RequiredSkillRank`, 300);
 
-INSERT INTO `basic_155p_bonding` (`entry`, `bonding`)
-SELECT i.`entry`, i.`bonding` FROM `item_template` i JOIN `tmp_155p_gems` g ON g.`item` = i.`entry` WHERE g.`kind` IN ('wr_epic', 'wr_epic_cut');
-UPDATE `item_template` i JOIN `basic_155p_bonding` b ON b.`entry` = i.`entry` SET i.`bonding` = 1;
+-- (basic_155p_bonding stays empty: it only lets a database where an
+-- earlier version bound the epic gems put their stock binding back, above)
 
 -- ---- 7. Outland's cuts at the Jewelcrafting trainers ------------------------------------
 -- The cuts: what Jewelcrafting spells make at item level 60 uncommon (with
@@ -361,7 +365,7 @@ INSERT INTO `item_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `Quest
   (49294, 1550197, 1550171, 100, 0, 1, 0,  1,  1, 'basic 155p: Outland pile 3'),
   (49294, 1550198, 1550172, 100, 0, 1, 0,  1,  1, 'basic 155p: Wrath pile 1'),
   (49294, 1550199, 1550172, 100, 0, 1, 0,  1,  1, 'basic 155p: Wrath pile 2');
--- the binding gems, from Onyxia herself (10 and 25 person): the stock epic
+-- the epic gems, from Onyxia herself (10 and 25 person): the stock epic
 -- rolls (the stock uncut-epic table 10015: one sure, 60%, 30%) and a pile
 -- of cut epic gems
 INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`)

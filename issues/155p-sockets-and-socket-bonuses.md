@@ -55,8 +55,8 @@ stands in, from the server's own extracted map files):
 - 59 boss loot tables: an uncut epic Wrath gem (Kael'thas 1 sure, Kazzak
   and Doomwalker 2 sure, other dungeon bosses 1 at 15%) and an epic-cut
   recipe at 1.5%;
-- 174 Wrath cutting recipes (17 uncommon, 66 rare, 91 epic cuts; meta gems left out) need skill 300 at most; the 97 epic Wrath gems
-  (6 uncut, 91 cut) bind on pickup;
+- 174 Wrath cutting recipes (17 uncommon, 66 rare, 91 epic cuts; meta gems left out) need skill 300 at most; epic Wrath gems keep their stock binding
+  (none; the bind-on-pickup plan was dropped with trade-window cutting);
 - Onyxia's Ashen Sack of Gems holds the hoard (16 entries: gold bars, the
   five coloured sacks, ten gem piles); her binding gems drop from her;
 - the Jewelcrafting trainers who teach up to 300 (lists 112, Outland's
@@ -136,22 +136,17 @@ white items and charge nothing for them. The vendor window's shown price
 still includes whites (client-side; accepted). The source patch round-trips
 cleanly (`scripts/test-source-patches`); it needs Ritz's compile.
 
-**Cutting a customer's gem in the trade window: built (2026-09-25), not
-yet compiled or tried in game.** Source patch B034
-(`patches/B034-trade-gem-cut.sh`, doc `docs/patches/trade-gem-cut.md`) and
-a `.cut <recipe>` command in `src/cpp-basic/basic_rules.cpp`. Read in the
-client's tradeskill script: the Create button is disabled unless the
-crafter's own bags hold the reagent, so the stock button can't start it;
-per the no-addon rule the trigger is the chat command. The owner puts the
-uncut gem in "Will not be traded"; the jewelcrafter types `.cut` and
-shift-clicks the recipe; the cut shows as the trade's pending spell; on
-both accepting, the uncut gem is used up and the cut gem goes into the
-owner's bags, bound, crafted by the jewelcrafter; anything wrong (gem
-moved, recipe unknown, bags full) refuses the accept before anything
-changes hands. The source patches round-trip cleanly.
-
-To see in game, with the stage 2 checks: the trade window's text for the
-cut; the cut gem's binding and crafter; the skill-up.
+**Cutting a customer's gem in the trade window: built and dropped the
+same day (2026-09-25).** Ritz: "we decided to skip this mechanic. It's too
+obfuscated. So... we should make the cut and uncut gems no longer BoP
+anymore, sadly." (Built as source patch B034 plus a `.cut <recipe>` chat
+command, because the client disables the Create button unless the
+crafter's own bags hold the reagent.) Removed from the patch list and from
+`src/cpp-basic/basic_rules.cpp`; the patch and its doc are kept for one
+commit as `patches/B034-trade-gem-cut.sh-done` and
+`docs/patches/trade-gem-cut.md-done`, then deleted (no further use
+foreseen). With it, epic Wrath gems went back to their stock binding; they
+still drop from Onyxia beside her sack, whose 18-entry window is full.
 
 Stock, before stage 1. What the data says (read 2026-09-24 from the client
 files and the stock world database):
@@ -470,7 +465,8 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
      Sacks of Gems 5, low-level raw piles 5, Outland piles 3, Wrath piles
      2: 16. The epic cut pile binds, so it drops from Onyxia herself, next
      to the epic rolls.
-9. **Epic Wrath gems bind on pickup, cut and uncut** (Ritz, 2026-09-25:
+9. **(Dropped 2026-09-25, see Current Behavior: epic gems keep their stock
+   binding.)** Epic Wrath gems bind on pickup, cut and uncut (Ritz, 2026-09-25:
    "we'll need to make the epic WotLK gems be BoP (tradable within 2 hours
    if you were there)" / "I want the cut ones to also bind on pickup. If
    the jewelcrafter can cut the gem when it's in the 'will not be traded'
@@ -639,10 +635,10 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   rare 2 piles (~12), epic cut gems 1 pile (~8), next to the three stock
   epic rolls.
   (The +4 cut gems stay a prospecting product.)
-- (Answered 2026-09-25) Binding gems drop from Onyxia herself, outside the
-  sack, so they can be traded for two hours.
-- (Answered 2026-09-25) Cut epic gems bind too; jewelcrafters cut a
-  customer's gem through the trade window (item 9, a source patch).
+- (Answered 2026-09-25) Onyxia's epic gems drop from her, outside the sack
+  (first so the binding ones could be traded; now simply for room).
+- (Answered, then dropped, 2026-09-25) Cut epic gems binding, with
+  trade-window cutting: skipped as "too obfuscated"; epic gems don't bind.
 - (Answered 2026-09-25) The cut teacher is dropped ("I wonder if this
   added complexity buys it's worth"): the ordinary Jewelcrafting trainers
   teach the 58 trainer-only uncommon Wrath cuts at skill 300 for gold

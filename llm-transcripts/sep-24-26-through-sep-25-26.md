@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 15:19:12
+Generated on: 2026-09-25 15:32:46
 Models: claude-opus-5-5
 
 ## Contents
@@ -6822,6 +6822,96 @@ Some choices:
 
 I haven't wired stage 3 into the install until you choose. The white sockets
 already match your table and the colour rule. Which way for blues?
+
+--------------------------------------------------------------------------------
+
+### User Request 67
+
+> 1. Keep it as is. Blues become "get the colours right or lose a big chunk",
+> which really makes gems matter.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 67
+
+> Keeping it as is. Finishing stage 3: revert file, install wiring, checks, and
+> the full test.
+
+> Stage 3 passes the full test, including the exact revert and the new check.
+> Recording and committing.
+
+> Code patch written and listed for basic. Running the source-patch round-trip
+> test, which applies every basic patch to a copy of the source and removes it
+> again.
+
+> Round trip is byte-identical with B033 included. Now the SQL half, doubling
+> white durability, plus its patch doc.
+
+> Checking which link types the server's command parser accepts for a spell,
+> since shift-clicking a recipe produces a particular kind of link.
+
+> Recipe links from shift-clicking (the "enchant" kind) are accepted as spells,
+> so `.cut [recipe]` works. Checking the trade handler's includes and exact
+> anchor lines for the patch.
+
+> Variables and signatures line up. Now the `.cut` command in basic's compiled
+> rules. Reading that file's includes and registration.
+
+> The command is in place. Registering B034 for basic with its probe, writing
+> its patch doc, and running the source round trip.
+
+> Round trip is byte-identical. Looking at the patched code itself on a scratch
+> copy, to catch quoting mistakes before you compile.
+
+> The patched code reads right, including the escaped quotes. Writing the patch
+> doc and recording.
+
+The Jewelcrafting rework is built and committed. None of it is installed or
+compiled yet.
+
+**The last two pieces:**
+- **White gear lasts twice as long and is never repaired.** It's its own patch
+  pair: SQL doubles the durability, and a three-line server code patch makes
+  repairs skip white items and charge nothing for them. The vendor window will
+  still show a repair price that counts whites; that's the mismatch you
+  accepted.
+- **Cutting a customer's gem through the trade window.** I read your client's
+  tradeskill script to settle the Create button question: Create stays disabled
+  unless the crafter's own bags hold the uncut gem. So the trigger is a chat
+  command:
+  1. The owner puts the uncut gem in "Will not be traded".
+  2. The jewelcrafter types `.cut ` and shift-clicks the recipe.
+  3. Both accept.
+
+  The cut gem lands in the owner's bags, bound to them, with the jewelcrafter as
+  crafter. Gold can change hands in the same trade. If anything is wrong (gem
+  moved, recipe unknown, bags full), the accept is refused before anything
+  moves, and both players are told why.
+
+**Tests passed:**
+- The in-RAM database test: apply, re-apply, revert to identical tables, and
+  apply again, with the post-install checks green.
+- The source patches round-trip cleanly.
+
+**Your turn:**
+1. **Compile.** New code: the white-gear repair patch, the trade-window patch,
+   and the `.cut` command in basic's compiled rules. None of it has been
+   compiled yet.
+2. **Install and check in game:**
+   - the Visiting Jewelcrafters in the six capitals (they might clip into a
+     wall);
+   - the titan-site pairs standing on the ground;
+   - the crystal trade and the Earthen Gemcutter's training window;
+   - the Un'Goro pair moving between pylons after 30 minutes;
+   - sockets and tooltips on a capital white and a dungeon blue;
+   - a `.cut` through a trade, and what the trade window shows for it;
+   - that a white item won't repair.
+3. **Still owed from the sockets issue:** the "option 2" socket-bonus test,
+   which only works in game.
+
+As you asked, buddy professions come next, after the Jewelcrafting rework.
+They're blocked on the buddies themselves existing, so we'd be designing them
+rather than building. Want to start designing now, or pick something else first?
 
 --------------------------------------------------------------------------------
 

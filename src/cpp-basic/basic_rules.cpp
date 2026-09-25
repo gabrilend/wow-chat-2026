@@ -27,13 +27,11 @@
 #include "Creature.h"
 #include "DatabaseEnv.h"
 #include "DBCStructure.h"
-#include "ObjectMgr.h"
 #include "Log.h"
 #include "Player.h"
 #include "RBAC.h"
 #include "ScriptMgr.h"
 #include "SpellInfo.h"
-#include "TradeData.h"
 #include <algorithm>
 #include <unordered_map>
 
@@ -265,67 +263,6 @@ public:
 };
 // -- }}}
 
-// -- {{{ gem cutting through the trade window (issue 155p)
-// ".cut <recipe>": the jewelcrafter, trading with a gem's owner who has put
-// the uncut gem in the "will not be traded" slot, names the cut (shift-click
-// the recipe to link it). The cut becomes the trade's pending spell, shown
-// under the gem as an enchantment would be; when both accept, source patch
-// B034 (TradeHandler.cpp) uses up the uncut gem and puts the cut gem, bound,
-// in the owner's bags. This command only checks and sets; B034 checks again
-// at accept and does the cut. (The stock Create button can't: the client
-// disables it unless the crafter's own bags hold the reagent.)
-class basic_rules_cut_command : public CommandScript
-{
-public:
-    basic_rules_cut_command() : CommandScript("basic_rules_cut_command") { }
-
-    ChatCommandTable GetCommands() const override
-    {
-        static ChatCommandTable commandTable =
-        {
-            { "cut", HandleCut, SEC_PLAYER, Console::No },
-        };
-        return commandTable;
-    }
-
-    static bool HandleCut(ChatHandler* handler, SpellInfo const* spell)
-    {
-        Player* cutter = handler->GetSession()->GetPlayer();
-        TradeData* trade = cutter->GetTradeData();
-        if (!trade)
-        {
-            handler->SendSysMessage("Open a trade with the gem's owner first, then name the cut: .cut [recipe].");
-            return true;
-        }
-        // one reagent in, one gem out: what a gem cut is
-        uint32 product = 0;
-        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-            if (spell->Effects[i].Effect == SPELL_EFFECT_CREATE_ITEM)
-                product = spell->Effects[i].ItemType;
-        ItemTemplate const* proto = product ? sObjectMgr->GetItemTemplate(product) : nullptr;
-        if (!proto || proto->Class != ITEM_CLASS_GEM || spell->Reagent[0] <= 0 || spell->Reagent[1] > 0)
-        {
-            handler->SendSysMessage("That recipe is not a gem cut.");
-            return true;
-        }
-        if (!cutter->HasSpell(spell->Id))
-        {
-            handler->SendSysMessage("You don't know that cut.");
-            return true;
-        }
-        Item* gem = trade->GetTraderData()->GetItem(TRADE_SLOT_NONTRADED);
-        if (!gem || gem->GetEntry() != uint32(spell->Reagent[0]) || gem->GetCount() < spell->ReagentCount[0])
-        {
-            handler->SendSysMessage("Ask the gem's owner to put the uncut gem for that cut in the \"will not be traded\" slot.");
-            return true;
-        }
-        trade->SetSpell(spell->Id);
-        handler->PSendSysMessage("The cut is set ({}). When you both accept, the gem is cut into its owner's bags.", proto->Name1);
-        return true;
-    }
-};
-// -- }}}
-
 // -- {{{ AddSC_basic_rules
 // Registered from src/server/scripts/Custom/custom_script_loader.cpp by B030.
 void AddSC_basic_rules()
@@ -335,6 +272,5 @@ void AddSC_basic_rules()
     new basic_rules_creature_multipliers_damage();
     new basic_rules_creature_multipliers_health();
     new basic_rules_creature_multipliers_command();
-    new basic_rules_cut_command();
 }
 // -- }}}

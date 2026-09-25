@@ -281,12 +281,12 @@ report "Wrath cutting recipes: every Design needs at most 300, and drops somewhe
         UNION ALL SELECT i.entry, i.RequiredSkillRank FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_design_skill b ON b.entry = i.entry WHERE i.RequiredSkillRank > 300
         UNION ALL SELECT e.id, 'no monster drops it' FROM (SELECT 1550166 id UNION SELECT 1550167 UNION SELECT 1550168) e
           LEFT JOIN ${WORLD}.creature_loot_template c ON c.Reference = e.id GROUP BY e.id HAVING COUNT(c.Entry) = 0 LIMIT 10")"
-report "epic Wrath gems: Kael'thas one sure, Kazzak and Doomwalker two sure; all epic gems bind" \
+report "epic Wrath gems: Kael'thas one sure, Kazzak and Doomwalker two sure; epic gems keep their stock binding" \
     "$(run_sql "SELECT t.name, c.Chance, c.MaxCount FROM ${WORLD}.creature_template t
           LEFT JOIN ${WORLD}.creature_loot_template c ON c.Entry = t.lootid AND c.Reference = 1550165
           WHERE t.entry IN (24664, 18728, 17711) AND (c.Chance IS NULL OR c.Chance < 100 OR c.MaxCount <> IF(t.entry = 24664, 1, 2))
-        UNION ALL SELECT i.entry, i.name, 'does not bind' FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_bonding b ON b.entry = i.entry WHERE i.bonding <> 1 LIMIT 10")"
-report "Onyxia's hoard: gold bars, five coloured sacks, ten gem piles; her binding gems outside it" \
+        UNION ALL SELECT i.entry, i.name, 'binding changed' FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_bonding b ON b.entry = i.entry WHERE i.bonding <> b.bonding LIMIT 10")"
+report "Onyxia's hoard: gold bars, five coloured sacks, ten gem piles; her epic gems beside it" \
     "$(run_sql "SELECT 'sack entries', COUNT(*) FROM ${WORLD}.item_loot_template WHERE Entry = 49294 HAVING COUNT(*) <> 16
         UNION ALL SELECT 'gold bars', MAX(MaxCount) FROM ${WORLD}.item_loot_template WHERE Entry = 49294 AND Item = 3577 HAVING MAX(MaxCount) IS NULL OR MAX(MaxCount) <> 45
         UNION ALL SELECT 'Onyxia binding-gem rows', COUNT(*) FROM ${WORLD}.creature_loot_template c JOIN ${WORLD}.creature_template t ON t.lootid = c.Entry
