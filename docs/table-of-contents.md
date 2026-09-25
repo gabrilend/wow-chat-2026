@@ -29,6 +29,7 @@ wow-chat-2026/
 │   ├── patches/                   C++ patch documentation
 │   │   ├── patch-registry.md      Build patch system (BEGIN/END/CONFIG phases)
 │   │   ├── accuracy-level-cap.md  Monster hit chance level cap
+│   │   ├── no-crushing-blows-64.md  B031: no crushing blows from creatures level 64+
 │   │   ├── ale-sell-item-hook.md  ALE hook for vendor sales
 │   │   ├── ale-calculate-talents-hook.md  Talent calculation module
 │   │   ├── ale-gameobject-wildcard.md  Entry 0 wildcard for gameobject events

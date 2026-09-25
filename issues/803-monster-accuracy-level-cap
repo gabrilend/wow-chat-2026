@@ -154,6 +154,17 @@ keep them separate so they can be separately applied."
   level, so a level-60 caster's average resist rises to ~22% around level
   76 and then falls again (~20% at 80).
 
+### Built (2026-09-24)
+
+`patches/B031-no-crushing-blows-64.sh`, listed for basic in
+`patches/patches.sh`, with a probe; patch doc
+`docs/patches/no-crushing-blows-64.md`. The crushing branch's opening
+condition gains "attacker below level 64". `scripts/test-source-patches`
+applies all 23 basic source patches to a RAM copy of the tree and reverts
+them byte-identically; a second apply is a no-op. **Not yet compiled**
+(Ritz runs the compile); after it, a level-60 tank against a +4 Outland
+creature should see no "crushing" hits in the combat log.
+
 ### Suggested implementation
 
 A **separate source patch**, not an addition to B005, so beta (or any

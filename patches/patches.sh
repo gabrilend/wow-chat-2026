@@ -34,7 +34,7 @@ declare -A PHASE_BEGIN_PATCHES=(
     ["beta"]="B001 B002 B003 B004 B005 B006 B007 B008 B009 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B024 B026 B027"  # +B027 (2026-07-21, issue 308: Engine::Init stale-facade guard, companion to B026); +B026 (2026-07-16, bot-login crash guard+diagnostic); All patches (B011 removed — see release-line note; B010 removed 2026-07-16 — upstream now ships ARENA_TYPE_NONE)
     ["alpha"]="B001 B004"                                         # Minimal compatibility patches
     ["vanilla"]="B001 B002 B004 B009 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B025 B026 B027"  # +B027 (2026-07-21, issue 308: Engine::Init stale-facade guard, companion to B026). +B026 (2026-07-16, bot-login crash guard+diagnostic). 2026-06-02: ALE added per 148k. Compile fixes + B001 (aoe-loot/ALE compat, conditional) + B002 (playerbots×ALE login hook) + B020 + B023 (ALE thread-safety + dangling-pointer fixes — non-negotiable for ALE stability). Skipped per user OK: B003 B006 B007 (ALE feature patches not yet needed), B005 B008 B024 (wow-chat gameplay), B011 (removed everywhere). 2026-07-15: +B025 (148s — vanilla bots start in the 148h starter kit; self-scoping on the kit data, so it only takes effect on vanilla).
-    ["basic"]="B001 B002 B004 B005 B009 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B026 B027 B028 B029 B030"  # issue 155 (2026-09-23): +B030 (155g: basic's compiled rules, first the vanilla-style talent cap). +B029 (155e: a trainer gossip option can name its trainer list, for the per-class Visiting Mentors). +B028 (155d: new characters start in their faction's rotating starting valley). vanilla's list minus B025 (bots in the vanilla starter kit — basic has no kit) plus B005 (accuracy level cap, issue 803, user directive: level gaps stop worsening hit/miss past ±3, which also makes 155f's level-64 heroics fightable at 60).
+    ["basic"]="B001 B002 B004 B005 B009 B012 B013 B014 B015 B016 B017 B018 B019 B020 B021 B022 B023 B026 B027 B028 B029 B030 B031"  # issue 155: +B031 (2026-09-24, issue 803 extension: no crushing blows from creatures level 64+, kept apart from B005 so other profiles can take either). (2026-09-23): +B030 (155g: basic's compiled rules, first the vanilla-style talent cap). +B029 (155e: a trainer gossip option can name its trainer list, for the per-class Visiting Mentors). +B028 (155d: new characters start in their faction's rotating starting valley). vanilla's list minus B025 (bots in the vanilla starter kit — basic has no kit) plus B005 (accuracy level cap, issue 803, user directive: level gaps stop worsening hit/miss past ±3, which also makes 155f's level-64 heroics fightable at 60).
 )
 
 # PHASE_END patches (post-compile setup: configs, symlinks, database)
@@ -401,6 +401,12 @@ patch_needs_applying_B023() {
     # buggy `.c_str()` line is still there), the patch needs applying.
     local FILE="${AC_CODE_DIR}/modules/mod-ale/src/LuaEngine/methods/GlobalMethods.h"
     [[ -f "${FILE}" ]] && ! grep -q "B023-formatquery-lifetime" "${FILE}"
+}
+
+patch_needs_applying_B031() {
+    # Witness: Unit.cpp gains the B031 marker around the crushing-blow condition.
+    local FILE="${AC_CODE_DIR}/src/server/game/Entities/Unit/Unit.cpp"
+    [[ -f "${FILE}" ]] && ! grep -q "B031-no-crush-64" "${FILE}"
 }
 
 patch_needs_applying_B024() {
