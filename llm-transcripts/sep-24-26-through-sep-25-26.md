@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 13:26:54
+Generated on: 2026-09-25 13:34:27
 Models: claude-opus-5-5
 
 ## Contents
@@ -6432,6 +6432,76 @@ both. Who should teach them?
 A related one: 11 rare Wrath cuts are taught only by trainers in the stock game,
 with no recipe item. Should the masterwork jewelcrafter teach those too,
 alongside the 56 uncommon ones?
+
+--------------------------------------------------------------------------------
+
+### User Request 61
+
+> Question found while building: mithril and thorium now give Outland raw gems,
+> but nobody can cut them yet. In the stock game, Outland's cuts are taught by
+> Outland trainers and sold
+> as recipes by Outland vendors, and basic removed both. Who should teach them?
+
+this is part of the gem redistribution pact. Jewelcrafting trainers should teach
+these recipes, and the recipes should be spread out through their crafting
+range. Stats like stamina and spirit and mp5 and other such things are on the
+low end because they provide sustain - things like strength and intellect
+provide power so they are the middle, to better support the higher end which is
+specific focused stats like crit rating and haste. This pattern should be
+applied to the other gems as well. We might make a guiding document that
+mentions this principle as well - when stats are split across a level range like
+this, offer sustain first, then power, then focus.
+
+> A related one: 11 rare Wrath cuts are taught only by trainers in the stock
+> game, with no recipe item. Should the masterwork jewelcrafter teach those too,
+> alongside the 56 uncommon
+  ones?
+
+which rare cuts are they?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 61
+
+> Looking up the 11 rare Wrath cuts.
+
+> Recording the decision in the sockets issue.
+
+Recorded and committed. Azeroth's Jewelcrafting trainers will teach Outland's
+cuts for gold: uncommon cuts across about 150–225, rare cuts across about
+250–300, each tier in order **sustain → power → focus**.
+
+The rule now lives in a new **design principles** doc
+(`docs/design-principles.md`, in the table of contents), with your words and
+where it's applied. I also put two earlier rules from this week there: tooltips
+always tell the truth, and no required addons.
+
+**The 11 rare Wrath cuts only trainers teach:**
+
+| Skill | Gem | Gives |
+|---|---|---|
+| 390 | Bright Scarlet Ruby | +32 attack power |
+| 390 | Balanced Twilight Opal | +16 attack power, +12 Stamina |
+| 390 | Pristine Monarch Topaz | +16 attack power, +8 hit |
+| 390 | Brilliant Autumn's Glow | +16 Intellect |
+| 390 | Dazzling Forest Emerald | +8 Intellect, +4 mana every 5 seconds |
+| 390 | Sparkling Sky Sapphire | +16 Spirit |
+| 390 | Enchanted Tear | +6 to all stats, fits any socket colour |
+| 420 | Persistent Earthsiege Diamond | meta: +42 attack power, stuns 10% shorter |
+| 420 | Powerful Earthsiege Diamond | meta: +32 Stamina, stuns 10% shorter |
+| 420 | Swift Skyflare Diamond | meta: +42 attack power, slightly faster running |
+| 420 | Tireless Skyflare Diamond | meta: +25 spell power, slightly faster running |
+
+The seven single gems fit the masterwork jewelcrafter naturally. The four meta
+gems are a gap: their raw Earthsiege and Skyflare Diamonds don't come from
+anywhere in what I built today. Two questions:
+1. Should the masterwork jewelcrafter teach all 11, and where should raw meta
+   diamonds come from? For example, a small chance from the crystal trader, or a
+   boss drop.
+2. For sustain → power → focus: where do the defensive ratings (defense,
+   dodge, parry, block) and resilience go? And a two-stat gem like "+Intellect
+   and +mana every 5 seconds": my proposal is it sits at the later of its two
+   stats' places, so that one counts as power.
 
 --------------------------------------------------------------------------------
 

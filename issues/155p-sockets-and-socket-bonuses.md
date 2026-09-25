@@ -55,7 +55,7 @@ stands in, from the server's own extracted map files):
 - 59 boss loot tables: an uncut epic Wrath gem (Kael'thas 1 sure, Kazzak
   and Doomwalker 2 sure, other dungeon bosses 1 at 15%) and an epic-cut
   recipe at 1.5%;
-- 191 Wrath cutting recipes need skill 300 at most; the 97 epic Wrath gems
+- 174 Wrath cutting recipes (17 uncommon, 66 rare, 91 epic cuts; meta gems left out) need skill 300 at most; the 97 epic Wrath gems
   (6 uncut, 91 cut) bind on pickup;
 - Onyxia's Ashen Sack of Gems holds the hoard (16 entries: gold bars, the
   five coloured sacks, ten gem piles); her binding gems drop from her.
@@ -449,7 +449,7 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
       as rare as other recipes of the same quality."):
       - uncommon-cut Designs (17): Hellfire Peninsula, Zangarmarsh,
         Terokkar Forest, Nagrand;
-      - rare-cut Designs (87): Blade's Edge, Netherstorm, Shadowmoon
+      - rare-cut Designs (87 in stock, 66 without the meta gems): Blade's Edge, Netherstorm, Shadowmoon
         Valley, the Isle;
       - dungeons: both, the rare share rising along the ladder (all
         uncommon at Hellfire Ramparts, all rare at Magisters' Terrace);
@@ -583,9 +583,11 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   and spell power next; critical strike, hit, haste and the other focused
   ratings last), a rule Ritz applies to the other gem families too and
   that now lives in `docs/design-principles.md`.
-- Where do defensive ratings (defense, dodge, parry, block) and resilience
-  sit in sustain/power/focus, and a two-stat gem (proposed: at the later of
-  its two stats' places)?
+- (Answered 2026-09-25) Resilience is sustain; defense, dodge, parry and
+  block are focus ("resilience is sustain. The others are focus.").
+- A two-stat gem: at the later of its two stats' places (so "+Intellect
+  and +mana every 5 seconds" counts as power)? Proposed, not yet
+  confirmed.
 - The 11 rare Wrath cuts that stock teaches only at trainers (Ritz asked
   which): seven single gems at skill 390 (Bright Scarlet Ruby +32 attack
   power, Balanced Twilight Opal +16 attack power and +12 Stamina, Pristine
@@ -594,7 +596,10 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   seconds, Sparkling Sky Sapphire +16 Spirit, and Enchanted Tear, +6 to
   all stats in any socket colour) and four meta gems at 420 (Persistent
   and Powerful Earthsiege Diamond, Swift and Tireless Skyflare Diamond).
-  The meta gems' raw diamonds have no source in stage 1 yet. Teach them at
-  the masterwork jewelcrafter, and where do the raw diamonds come from?
+  Answered 2026-09-25: the seven single gems join the masterwork
+  jewelcrafter's list ("the other cuts we can put on the masterwork
+  trainer"); **meta gems are dropped** ("let's drop the meta gems here"):
+  not taught, and their recipes left out of the drops (nothing gives
+  their raw diamonds).
 - (Answered 2026-09-25) Tooltips always honest, even on legendary items.
 - (Answered 2026-09-25) Set bonuses: leave them for now.

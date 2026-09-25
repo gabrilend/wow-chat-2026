@@ -108,7 +108,9 @@ INSERT IGNORE INTO `tmp_155p_gems` SELECT DISTINCT i.`entry`, 'wr_epic_cut' FROM
 JOIN `item_template` i ON i.`entry` = c.`item` WHERE i.`class` = 3 AND i.`GemProperties` <> 0 AND i.`Quality` = 4 AND i.`ItemLevel` = 80;
 
 -- the Wrath cutting Designs, by the gem their recipe makes (uncommon cuts
--- are item level 70 uncommon, rare cuts 80 rare, epic cuts 80 epic)
+-- are item level 70 uncommon, rare cuts 80 rare, epic cuts 80 epic). Meta
+-- gems (gem subclass 6) are left out (Ritz, 2026-09-25: "let's drop the
+-- meta gems here"): nothing on basic gives the raw diamonds they need.
 DROP TABLE IF EXISTS `tmp_155p_designs`;
 CREATE TABLE `tmp_155p_designs` (`item` int unsigned NOT NULL, `kind` varchar(8) NOT NULL, PRIMARY KEY (`item`));
 INSERT IGNORE INTO `tmp_155p_designs`
@@ -116,7 +118,7 @@ SELECT d.`entry`, CASE WHEN g.`Quality` = 2 THEN 'unc' WHEN g.`Quality` = 3 THEN
 FROM `item_template` d
 JOIN `tmp_155p_cuts` c ON c.`spell` = d.`spellid_2`
 JOIN `item_template` g ON g.`entry` = c.`item`
-WHERE d.`class` = 9 AND d.`subclass` = 10 AND g.`class` = 3 AND g.`GemProperties` <> 0
+WHERE d.`class` = 9 AND d.`subclass` = 10 AND g.`class` = 3 AND g.`GemProperties` <> 0 AND g.`subclass` <> 6
   AND ((g.`Quality` = 2 AND g.`ItemLevel` = 70) OR (g.`Quality` IN (3, 4) AND g.`ItemLevel` = 80))
   AND d.`name` NOT LIKE 'ZZOLD%';
 

@@ -11,12 +11,12 @@ profession's skill range, gems along the level tiers, rewards along a
 zone's levels), the order is:
 
 1. **Sustain first** — what keeps a character going: Stamina, Spirit, mana
-   every 5 seconds, health regeneration.
+   every 5 seconds, health regeneration, resilience.
 2. **Power next** — what makes everything stronger at once: Strength,
    Agility, Intellect, attack power, spell power.
 3. **Focus last** — the specific, specialised stats that the power
    supports: critical strike, hit, haste, expertise, armor and spell
-   penetration.
+   penetration, and the defensive ratings (defense, dodge, parry, block).
 
 Ritz, 2026-09-25: "Stats like stamina and spirit and mp5 and other such
 things are on the low end because they provide sustain - things like
@@ -27,9 +27,12 @@ make a guiding document that mentions this principle as well - when stats
 are split across a level range like this, offer sustain first, then power,
 then focus."
 
-Open: where the defensive ratings (defense, dodge, parry, block) and
-resilience sit, and where a two-stat gem sits (proposed: at the later of
-its two stats' places). See issue 155p.
+Defensive stats (Ritz, 2026-09-25): "resilience is sustain. The others are
+focus." Resilience is sustain; defense, dodge, parry and block are focus.
+
+Open: where a two-stat gem sits (proposed: at the later of its two stats'
+places, so "+Intellect and +mana every 5 seconds" counts as power). See
+issue 155p.
 
 Applied in:
 - issue 155p — Jewelcrafting: the order in which trainers teach gem cuts
