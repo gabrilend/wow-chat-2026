@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 20:35:03
+Generated on: 2026-09-25 20:46:14
 Models: claude-opus-5-5
 
 ## Contents
@@ -105,6 +105,11 @@ Models: claude-opus-5-5
     at a time, currently task hunts, where a buddy crafts on request. Next is
     your answer: if a later stage of a chain can't be done, like having no forge
     for the ore, is the earlier stage marked impossible too?
+25. 2026-09-25 20:38, after Request 90 - We're designing the buddy bots for the
+    basic profile one question at a time, and every answer so far is recorded
+    and committed. Next: when an owner types a clan guild name that's already
+    taken, should Sargobras ask again, auto-extend the name, or allow
+    duplicates?
 
 --------------------------------------------------------------------------------
 
@@ -8950,6 +8955,81 @@ when the owner types a name that's taken?**
 3. **Names don't have to be unique:** each clan's guild gets an invisible number
    suffix. This fights the server, which looks guilds up by name, and would need
    a source patch.
+
+--------------------------------------------------------------------------------
+
+### User Request 91
+
+> - Northrend: closed on basic for now. Your "60ish +4" expansion has its own
+> new issue in the basic profile, with your words quoted. It's parked until
+> basic's Outland has been tried
+    in game, and it starts with three questions: how Northrend is entered, which of Outland's rules carry over, and whether it opens to everyone at 60.
+
+Both Outland and Northrend should be open to anyone. You walk through a portal
+or you take a boat, that's not level gated. Anyone can do these things.
+
+Question... Remember how we said that WotLK tomes could be picked up as quest
+rewards? For all the abilities, not just the ones that have tomes already. What
+do we have planned for Outland abilities? Did we ever work through that?
+
+
+
+<pasted_content id="8773">
+> Back to the clan guild. Guild names are unique across the server. What happens
+> when the owner types a name that's taken?
+> 1. Sargobras asks again, with a joke about it. The owner can't continue until
+> they pick a free name. This is the simplest option and matches how the stock
+> game treats character
+     names.
+</pasted_content id="8773">
+
+
+this one
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 91
+
+> Checking where the level-58 Dark Portal gate comes from.
+
+I've recorded all three answers and committed them.
+
+- **Open to anyone:** no level gate on Outland or Northrend. One thing to check:
+  basic's notes say the Dark Portal opens at level 58 "as stock", but I can't
+  find that requirement in the stock world data. Outland's map has no access
+  row, and the portal's area trigger has none either. So either the core or
+  client enforces it somewhere, or the note is wrong. I've marked it to try in
+  game with a low-level character, and to remove the gate if one turns up.
+- **Guild names:** if the name is taken, Sargobras asks again with a joke until
+  the owner picks a free one.
+
+**Outland abilities: yes, we worked through them.** The tomes issue covers all
+of levels 61–80, not only Wrath. It has two halves:
+- **Levels 61–70 (the Burning Crusade abilities):**
+  - Tomes drop in Ahn'Qiraj, both the 20- and 40-player raids. The 40-player
+    raid drops them at four times the rate, about 1–2 per clear.
+  - All 61–70 tomes are equally likely; higher levels get no priority.
+  - Each of the four Emerald Dragons always drops three.
+- **Levels 71–80 (the Wrath abilities):** tomes drop from Naxxramas at the
+  40-player Ahn'Qiraj rate.
+
+Tomes drop only in Azeroth, by your rule that "Outland is alien and strange;
+Azeroth is where we go to focus our strength". About 800 trainer entries across
+the classes are covered. Your answer just now, "all the abilities, not just the
+ones that have tomes already", settles which abilities: every new ability and
+every higher rank.
+
+One mismatch with your memory: nothing on record says Wrath tomes come from
+**quest rewards**. The record says they drop from Naxxramas. Did you mean drops,
+or do you want to add quest rewards as a second source? If quest rewards, I'd
+need to know which quests. Outland has none on basic, so they would be Azeroth
+quests.
+
+The tomes issue still has three more open questions:
+- where the tome items come from: existing unused items, or new ones the client
+  might show wrongly;
+- whether 61–80 ranks need scaling down for level 60;
+- whether death knights get tomes too.
 
 --------------------------------------------------------------------------------
 
