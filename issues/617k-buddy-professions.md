@@ -167,7 +167,13 @@ it if the user wants."
   - it gives away those it can't use; of those it uses it keeps 5 and gives
     the rest; lower-level versions of something it has a better version of
     are all given away;
-  - it mails them to clanmates during its town errands.
+  - it mails them to clanmates during its town errands;
+  - the gift is spread evenly among the clanmates who can use it, without
+    regard to what each already holds (Ritz, 2026-09-25: "The consumables
+    should be spread evenly. They'll redistribute themselves naturally over
+    time."). A clanmate who ends up with too many passes the extras on by
+    the same keep-5 rule, so supplies level out over time without a buddy
+    tracking anyone else's bags.
 - **Party**: a dispersed buddy leaves the proximity party (617c) when being
   in it brings no benefit ("they should drop out of the proximity party if
   there's no benefit to being in a party together"), so its fights never
@@ -196,5 +202,5 @@ it if the user wants."
 - (Answered 2026-09-25) Consumables are mailed to clanmates in town:
   whatever the buddy can't use, its extras beyond 5, and lower-level
   versions of ones it has better.
-- Which clanmate gets a given consumable: whoever can use it and has the
-  fewest, the owner first, or spread evenly?
+- (Answered 2026-09-25) Consumables are spread evenly among the clanmates
+  who can use them; the keep-5 rule redistributes them over time.

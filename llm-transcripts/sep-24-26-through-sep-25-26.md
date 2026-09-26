@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 18:27:16
+Generated on: 2026-09-25 18:47:48
 Models: claude-opus-5-5
 
 ## Contents
@@ -7812,6 +7812,42 @@ clanmates, and how?
 2. **By mail, on a timer:** say once a day, with the gifts arriving in the
    mailbox.
 3. **In person, but only in town,** as part of the town errands.
+
+--------------------------------------------------------------------------------
+
+### User Request 78
+
+The bags that they buy / tailor should be one size larger than the smallest size
+the upgrade-able player possesses.
+
+> A few questions remain in the professions and guild issues. Next: handing out
+> consumables. How often does a buddy give its potions, food and bandages to
+> clanmates, and how?
+>   3. In person, but only in town, as part of the town errands.
+
+they will give away things they don't need, and they will craft them at random.
+The ones that they do need they will give away if they have more than 5, or if
+they have any number of a higher level version of that thing, they'll give away
+the low level ones. They will mail them to clanmates while in town.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 78
+
+Recorded in the professions issue and committed:
+- **Bags:** one size up from the clanmate's smallest bag.
+- **Consumables:** crafted at random, and mailed to clanmates during town
+  errands. A buddy gives away anything it can't use, keeps 5 of anything it does
+  use and gives the rest, and gives away lower-level versions of anything it has
+  a better version of.
+
+Next question: **who gets each gift?** When a buddy has, say, 8 spare healing
+potions:
+1. **Whoever can use it and has the fewest**, which evens out supplies across
+   the clan.
+2. **The owner first,** then buddies.
+3. **Spread evenly** among everyone who can use it, regardless of what they
+   hold.
 
 --------------------------------------------------------------------------------
 
