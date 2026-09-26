@@ -96,9 +96,8 @@ anything, Sargobras doesn't even show up for them. A random race and class
 is chosen."
 - For an owner who is a death knight, Sargobras never appears (neither the
   valley selector, which a death knight never visits, nor the one at every
-  10th level). Each owed buddy is created straight away with a random
-  race and class (see the open question on what "death knight buddies"
-  means here).
+  10th level). Each owed buddy is created straight away: a death knight
+  of a random race (answered below).
 
 ## Suggested Implementation Steps
 
@@ -126,7 +125,10 @@ is chosen."
 - (Answered 2026-09-23) Sight range: the server's visibility distance.
 - (Answered 2026-09-25) Sargobras offers a class or a race; the other is
   drawn at random. Death knight owners never meet him.
-- A death knight owner's buddies: Ritz said both "death knight players get
-  death knight buddies" and "A random race and class is chosen". Are they
-  all death knights with a random race, or ordinary buddies of a random
-  class (the bot module plays no death knights on basic today, 148a)?
+- (Answered 2026-09-25) A death knight owner's buddies are all death
+  knights, each of a random race ("death knight buddies for death knight
+  players"). Basic's rule that no playerbot plays a death knight (148a)
+  covers random bots; buddies are the exception.
+- A clan of death knights can't meet the healer guarantee (617g): death
+  knights can tank but can't heal. Does the guarantee skip death knight
+  clans (a tank only), or does one buddy come as a healer class anyway?

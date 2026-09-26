@@ -207,6 +207,8 @@ bot code works.
     617g. Sargobras offers a class or a race: 617b. 617j's "30-point cap"
     corrected to basic's tier rule.
   - (Answered) Guild banks: the objects removed (built, E039): 617l.
-  - Still open: the data model (proposed in 617a); what a death knight
-    owner's buddies are (617b); whether the owner counts toward the
-    tank-and-healer guarantee (617g).
+  - (Answered) Death knight owners get death knight buddies (617b); the
+    owner doesn't count toward the guarantee (617g); price memory is
+    shared per faction pool, neutral its own (617a).
+  - Still open: storing tasks as JSON (617a); the healer guarantee for a
+    clan of death knights, who can't heal (617b).

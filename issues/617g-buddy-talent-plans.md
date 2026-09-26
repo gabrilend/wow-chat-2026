@@ -73,8 +73,9 @@ re-roll. Is that terrible?"
 
 "random, but each clan is guaranteed at least one tank, and one healer."
 - A buddy's profile is drawn at random at creation.
-- **Guarantee**: a clan's buddies always include at least one tank
-  and one healer. When a buddy is created while the buddies
+- **Guarantee**: a clan's buddies always include at least one tank and
+  one healer; the owner's class is ignored ("the owner's class is
+  ignored"). When a buddy is created while the buddies
   lack one, its draw is limited to profiles that fill the missing role
   (tank first, then healer) if its class can fill it; a random class draw
   at Sargobras (617b) is likewise limited to classes that can.
@@ -103,7 +104,6 @@ re-roll. Is that terrible?"
 
 - (Answered 2026-09-25) Random, with at least one tank and one healer
   guaranteed per clan (see the decision above).
-- Does the owner count toward the guarantee (an owner who tanks means no
-  buddy has to), given buddies can't know the owner's spec (617j guesses it
-  per tree)? As written, only buddies count.
+- (Answered 2026-09-25) The owner doesn't count ("the owner's class is
+  ignored"): the buddies alone always include a tank and a healer.
 - **Random (non-buddy) bots**: same plans, or keep stock orders?

@@ -92,12 +92,11 @@ the world, like vendor prices). Every id is `int unsigned` unless noted.
 | `buddy_roster` | owner, slot (`tinyint`: 1 at creation, 2 at level 10, …) | buddy character (empty while the slot is owed); class, race, profile, role (`tinyint` each: role 0 damage, 1 tank, 2 healer); created (unix time) | who the buddies are; an owed slot is a row with no buddy yet (617b fills it) |
 | `buddy_draw` | owner, buddy | had a turn (`tinyint` 0/1) | the dungeon draw bag (617c): drawn without replacement; when every buddy has had a turn, all reset to 0 |
 | `buddy_task` | buddy, task number | kind (`tinyint`: errand, gathering, task hunt), place in line (`smallint`; the first three hunts active, the rest the backlog, 617m), the task itself (text: the command as written, one entry per material and source), progress (text: which steps are done) | what each buddy is doing, so logout and restart resume it (617c) |
-| `buddy_price` | auction house (`tinyint`: Alliance, Horde, neutral), item | steps up (`tinyint`, each +0.5× the vendor price, 617h), last listed price (copper), updated (unix time) | the rising-price memory; reset to 0 steps after a sale |
+| `buddy_price` | auction house pool (`tinyint`: Alliance, Horde, neutral; each faction's houses share one pool, the neutral houses another), item | steps up (`tinyint`, each +0.5× the vendor price, 617h), last listed price (copper), updated (unix time) | the rising-price memory; reset to 0 steps after a sale |
 | `basic_617h_fixed_prices` (world) | item | price (copper), note (why) | the hand-kept prices for items with no vendor price (617h); a checked-in SQL file |
 
-Choices in it, open below: price memory per auction house (shared by all
-buddies selling there) rather than per buddy; the task itself as text in
-the command's own form rather than one row per step.
+Choices in it: price memory shared per pool (answered below); the task
+itself kept as the command's own text, proposed as JSON (open below).
 
 ## Suggested Implementation Steps
 
@@ -131,7 +130,11 @@ the command's own form rather than one row per step.
   evenly sized bags. Hidden from /who and friends; no renaming; bot chat
   commands off (tool calls later); no faction or race change; remembered
   across restarts.
-- **Data model** (proposed above): does the layout fit? Two choices in it:
-  should the rising auction price be remembered per auction house (all
-  buddies selling there share it) or per buddy; and should a task be kept
-  as one text in the command's own form, or one row per step?
+- (Answered 2026-09-25) Price memory is shared per pool: one for the
+  Alliance's houses, one for the Horde's, one for the neutral houses
+  ("shared is fine, as long as it's faction specific. Also neutral auction
+  houses are their own pool.").
+- How a task is stored: Ritz asked "like... json?" Proposed: yes, a JSON
+  column (MySQL checks it is well-formed and can read fields out of it),
+  holding the command exactly as the model's tool call writes it; progress
+  in a second JSON column. To confirm; and does the rest of the layout fit?

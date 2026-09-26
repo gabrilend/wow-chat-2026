@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 22:32:33
+Generated on: 2026-09-25 22:34:22
 Models: claude-opus-5-5
 
 ## Contents
@@ -9694,6 +9694,63 @@ as possible. Prefer four 8 slot bags over two 10 slots and two 6 slots.
 
 All the answers are recorded. The database test for the guild bank removal is
 still running; I'll commit when it passes.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "Run the RAM test with the guild bank
+step" completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 100 (continued)
+
+All ten answers are recorded in the buddy issues and committed.
+
+- **Guild banks are gone.** You said to remove the objects, so I built it: a new
+  install step removes all 44 Guild Vault spawns and saves them for the revert.
+  The in-memory database test passes, including the exact revert, and the
+  checker confirms none is left.
+- **Written into the buddy issues:**
+  - the starting kit;
+  - hidden from /who and friends lists;
+  - no renaming, and no bot chat commands (the language-model layer gets them as
+    tool calls later);
+  - no faction or race changes;
+  - remembering across restarts;
+  - logging out with the owner, mid-errand included;
+  - following the owner's means of travel;
+  - random talent profiles with a tank and a healer guaranteed;
+  - Sargobras's class-or-race choice.
+- I also fixed the loot issue's "30-point cap" to basic's real rule: nothing
+  deeper than tier 6, and only the capstone in tier 6.
+
+**Data model suggestion.** It's written into the roster issue as a table, marked
+"to confirm". Everything a buddy remembers goes in the characters database, so
+it's deleted along with the characters:
+
+| Table | One row per | Remembers |
+|---|---|---|
+| clan | owner | the hidden account, the clan guild |
+| roster | owner and slot (1 at creation, 2 at level 10, …) | the buddy (empty while owed), class, race, talent profile, role (damage, tank or healer) |
+| draw bag | owner and buddy | whether it has had its dungeon turn this cycle |
+| tasks | buddy and task number | errand, gathering or task hunt; its place in line (the first three hunts active, the rest backlog); the command as written; progress |
+| price memory | auction house and item | how many +0.5× steps the price has risen, the last price; reset after a sale |
+| fixed prices (world database) | item | your hand-set price for items with no vendor price, with a note why |
+
+Two choices inside it, which I'd like you to confirm:
+1. **Price memory per auction house:** all buddies selling there share it. My
+   alternative was per buddy. Shared means two buddies don't both raise the same
+   price separately.
+2. **A task stored as one line of text** in the command's own form, rather than
+   one database row per step. That keeps it identical to what the language model
+   writes.
+
+Two questions are still open:
+- **Death knight owners' buddies.** You said both "death knight players get
+  death knight buddies" and "a random race and class is chosen". Are they all
+  death knights with random races, or ordinary buddies of any random class?
+- **The tank-and-healer guarantee.** Does the owner count toward it? As written,
+  only buddies count, so a tanking owner still gets a buddy tank.
 
 --------------------------------------------------------------------------------
 
