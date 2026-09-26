@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 17:10:18
+Generated on: 2026-09-25 17:30:09
 Models: claude-opus-5-5
 
 ## Contents
@@ -85,6 +85,10 @@ Models: claude-opus-5-5
     is done and committed. Next I need your answer on where buddies live: one
     hidden account per character, per player account, or a raised character
     limit.
+20. 2026-09-25 17:13, after Request 70 - We're designing the buddy bots for the
+    basic profile, and all your latest decisions are recorded and committed.
+    Next: tell me whether the respec price drops once per calendar month, as
+    stock does, or once per weekly raid reset.
 
 --------------------------------------------------------------------------------
 
@@ -7390,6 +7394,38 @@ question.
 **Next question, from that issue:** should the respec price come down once per
 calendar month, as stock does, or "every reset"? If reset, which one: the weekly
 raid reset, or something else?
+
+--------------------------------------------------------------------------------
+
+### User Request 71
+
+yeah let's make it weekly instead of monthly. Since we're removing the cap...
+How does the respec cost increase? Is it multiplied or added?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 71
+
+> It's added, not multiplied. The stock steps are 1 gold, 5, 10, then 5 gold
+> more each time (15, 20, 25…), capped at 50 today. Without the cap it keeps
+> climbing by 5 gold per respec: the 20th respec costs 90 gold. It never
+> explodes, but frequent respeccing gets expensive over time. Recording weekly.
+
+Weekly is recorded and committed.
+
+To your question: the cost is added, not multiplied. It's 1, 5 and 10 gold, then
+5 gold more each time: 15, 20, 25, and so on. Stock stops at 50. Without the cap
+it keeps climbing by 5 per respec, so the 20th respec costs 90 gold. That's
+steady rather than explosive, and the weekly decrease pulls it back down if you
+stop respeccing for a while.
+
+Two small questions remain in the respec issue:
+1. **What counts as a week?** Seven days since *your* last respec, the way stock
+   counts its month? Or a drop for everyone on the server's weekly reset day?
+   The first is fairer per character; the second is easier to reason about
+   ("prices drop on Tuesday").
+2. **Keep the floor?** Stock never lets the decreasing price fall below 10 gold.
+   Keep that?
 
 --------------------------------------------------------------------------------
 
