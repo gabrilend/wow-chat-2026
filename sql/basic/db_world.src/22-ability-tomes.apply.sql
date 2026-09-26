@@ -21,8 +21,8 @@
 --   levels 61-70: Ahn'Qiraj 40 about 1.5 books a clear (9 loot bosses);
 --                 Ahn'Qiraj 20 a quarter of that per kill; each Emerald
 --                 Dragon three, always.
---   levels 71-80: Naxxramas about 1.5 books a clear (15 loot bosses), both
---                 sizes.
+--   levels 71-80: Naxxramas about 1.5 books a clear in the 10-person size
+--                 (15 loot bosses), 2.5 times that in the 25-person size.
 --
 -- Books are items 1557001-1557999; the two tier pools are reference loot
 -- 1557901 (61-70) and 1557902 (71-80). Nothing stock is changed, only
@@ -906,7 +906,9 @@ FROM `tmp_155q_books`;
 -- shares one loot (only the last of the three is left lootable, by its
 -- script), so each carries the full chance; the twin emperors both drop, so
 -- each carries half. AQ20 is a quarter of AQ40 per kill. Naxxramas is 1.5
--- over 15 (10% each), in both sizes; the Four Horsemen drop a chest.
+-- over 15 (10% each) in the 10-person size, 2.5 times that (25% each) in
+-- the 25-person size (Ritz, 2026-09-25: "About 2.5x as many."); the Four
+-- Horsemen drop a chest.
 DROP TABLE IF EXISTS `tmp_155q_drops`;
 CREATE TABLE `tmp_155q_drops` (`entry` int unsigned NOT NULL, `pool` int unsigned NOT NULL, `chance` float NOT NULL, `rolls` tinyint unsigned NOT NULL, PRIMARY KEY (`entry`));
 INSERT INTO `tmp_155q_drops` (`entry`, `pool`, `chance`, `rolls`) VALUES
@@ -936,26 +938,26 @@ INSERT INTO `tmp_155q_drops` (`entry`, `pool`, `chance`, `rolls`) VALUES
   (14889, 1557901,   100, 3),  -- Emeriss
   (14890, 1557901,   100, 3),  -- Taerar
   -- Naxxramas, the smaller size, then the larger
-  (15956, 1557902, 10, 1), (29249, 1557902, 10, 1),  -- Anub'Rekhan
-  (15953, 1557902, 10, 1), (29268, 1557902, 10, 1),  -- Grand Widow Faerlina
-  (15952, 1557902, 10, 1), (29278, 1557902, 10, 1),  -- Maexxna
-  (15954, 1557902, 10, 1), (29615, 1557902, 10, 1),  -- Noth the Plaguebringer
-  (15936, 1557902, 10, 1), (29701, 1557902, 10, 1),  -- Heigan the Unclean
-  (16011, 1557902, 10, 1), (29718, 1557902, 10, 1),  -- Loatheb
-  (16061, 1557902, 10, 1), (29940, 1557902, 10, 1),  -- Instructor Razuvious
-  (16060, 1557902, 10, 1), (29955, 1557902, 10, 1),  -- Gothik the Harvester
-  (16028, 1557902, 10, 1), (29324, 1557902, 10, 1),  -- Patchwerk
-  (15931, 1557902, 10, 1), (29373, 1557902, 10, 1),  -- Grobbulus
-  (15932, 1557902, 10, 1), (29417, 1557902, 10, 1),  -- Gluth
-  (15928, 1557902, 10, 1), (29448, 1557902, 10, 1),  -- Thaddius
-  (15989, 1557902, 10, 1), (29991, 1557902, 10, 1),  -- Sapphiron
-  (15990, 1557902, 10, 1), (30061, 1557902, 10, 1);  -- Kel'Thuzad
+  (15956, 1557902, 10, 1), (29249, 1557902, 25, 1),  -- Anub'Rekhan
+  (15953, 1557902, 10, 1), (29268, 1557902, 25, 1),  -- Grand Widow Faerlina
+  (15952, 1557902, 10, 1), (29278, 1557902, 25, 1),  -- Maexxna
+  (15954, 1557902, 10, 1), (29615, 1557902, 25, 1),  -- Noth the Plaguebringer
+  (15936, 1557902, 10, 1), (29701, 1557902, 25, 1),  -- Heigan the Unclean
+  (16011, 1557902, 10, 1), (29718, 1557902, 25, 1),  -- Loatheb
+  (16061, 1557902, 10, 1), (29940, 1557902, 25, 1),  -- Instructor Razuvious
+  (16060, 1557902, 10, 1), (29955, 1557902, 25, 1),  -- Gothik the Harvester
+  (16028, 1557902, 10, 1), (29324, 1557902, 25, 1),  -- Patchwerk
+  (15931, 1557902, 10, 1), (29373, 1557902, 25, 1),  -- Grobbulus
+  (15932, 1557902, 10, 1), (29417, 1557902, 25, 1),  -- Gluth
+  (15928, 1557902, 10, 1), (29448, 1557902, 25, 1),  -- Thaddius
+  (15989, 1557902, 10, 1), (29991, 1557902, 25, 1),  -- Sapphiron
+  (15990, 1557902, 10, 1), (30061, 1557902, 25, 1);  -- Kel'Thuzad
 INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`)
 SELECT t.`lootid`, d.`pool`, d.`pool`, d.`chance`, 0, 1, 0, d.`rolls`, d.`rolls`, 'basic 155q: class books'
 FROM `tmp_155q_drops` d JOIN `creature_template` t ON t.`entry` = d.`entry` WHERE t.`lootid` <> 0;
--- the Four Horsemen's chest, both sizes (181366, 193426)
+-- the Four Horsemen's chest: 181366 the 10-person, 193426 the 25-person
 INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`)
-SELECT g.`Data1`, 1557902, 1557902, 10, 0, 1, 0, 1, 1, 'basic 155q: class books'
+SELECT g.`Data1`, 1557902, 1557902, IF(g.`entry` = 193426, 25, 10), 0, 1, 0, 1, 1, 'basic 155q: class books'
 FROM `gameobject_template` g WHERE g.`entry` IN (181366, 193426) AND g.`Data1` <> 0;
 
 -- ---- 6. keep the list for the checker; drop the working tables --------------------------

@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 21:46:50
+Generated on: 2026-09-25 21:57:48
 Models: claude-opus-5-5
 
 ## Contents
@@ -122,6 +122,10 @@ Models: claude-opus-5-5
     built the level 61–80 class books for basic. Next, pick how clan chat and
     player guilds coexist (my recommendation: a private clan channel), and
     confirm "Runestone of …" for death knight books.
+29. 2026-09-25 21:52, after Request 98 - We're designing and building
+    basic-profile features: the class books are built and tested, and player
+    guilds will work like rao-chat rooms. Next, you choose what's next, and I
+    recommend compiling and play-testing everything built so far.
 
 --------------------------------------------------------------------------------
 
@@ -9452,6 +9456,98 @@ which is close to rao-chat's token. Two things differ:
   rao-chat labels are each reader's own.
 - **Hierarchy:** a channel has an owner and moderators, whereas rao-chat has
   nobody above anybody.
+
+--------------------------------------------------------------------------------
+
+### User Request 98
+
+Yep that looks right. Okay so what's next on the agenda? We can put a pin in the
+rao-chat integration because it's still in development.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 98
+
+I've recorded that the reading is confirmed and the rao-chat integration is
+parked, and committed it.
+
+**What's next, most valuable first:**
+
+1. **Compile, install and play-test** (you run the compile). A lot is built but
+   has never run in the game:
+   - the gem supply and sockets;
+   - the titan-site jewelcrafters;
+   - white gear that's never repaired;
+   - no dual spec, and the weekly respec price drop;
+   - the Outland flights;
+   - the class books.
+
+   I can write a single checklist page of what to look at in game, in order.
+   Every build we do before this adds untested work on top.
+2. **Make the Dark Portal the only door into Outland.** It's fully designed and
+   small: remove Shattrath's eight capital portals, the Stair of Destiny
+   portals, Dalaran's portals to Shattrath, and the capitals' portals to the
+   Blasted Lands. It's one install step, tested in the in-memory database like
+   the others. The level-58 question needs the game to answer.
+3. **The remaining buddy gaps.** Still undesigned:
+   - how buddy data is stored (the roster, the auction price memory);
+   - starting gear and money;
+   - what happens when the owner logs out mid-errand, or the server restarts;
+   - the owner flying or teleporting far away;
+   - guild banks off;
+   - whether a buddy's talent profile is random or matched to the group.
+
+   We can keep going one question at a time.
+4. **Onyxia and Naxxramas at level 60.** Designed but not built; it's large. The
+   class books and Onyxia's hoard already drop there, but the raids are still
+   level 80.
+5. **Two small class-book questions:** should 25-person Naxxramas drop more
+   books than 10-person? And the per-ability scaling review, one table per
+   class.
+
+Which one?
+
+--------------------------------------------------------------------------------
+
+### User Request 99
+
+Sure let's implement 2.
+
+> 5. Two small class-book questions: should 25-person Naxxramas drop more books
+> than 10-person? And the per-ability scaling review, one table per class.
+
+About 2.5x as many.
+
+Then, let's get a list of the buddy gaps.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 99
+
+> Starting with the 25-person drop rate, then the portals.
+
+> A few more spells land in Shattrath. Checking what casts them.
+
+> Now the 25-person Naxxramas rate (2.5× gives 25% per boss).
+
+> Wiring the new install step into the patch lists, the test and the checker.
+
+> The checker is wired. Running the full test in the background while I update
+> the issues and gather the buddy gaps.
+
+> Both issues are updated. Now pulling every unanswered question from the buddy
+> issues.
+
+> Few questions are formally open, so the gaps must be the undesigned areas from
+> the earlier survey. Finding where that was recorded.
+
+> The earlier gap survey was never written into the issues. Searching the
+> transcript for its full list.
+
+> Writing the gap list into the parent buddy issue so it's on record.
+
+The gap list is recorded in the parent buddy issue. The database test is still
+running; I'll commit when it finishes.
 
 --------------------------------------------------------------------------------
 

@@ -41,7 +41,7 @@ anyway."
 
 ## Current Behavior
 
-**Built 2026-09-24** (the flights not yet tried in game). **Not built yet**: removing the other portals between Outland and Azeroth (Intended Behavior, "The Dark Portal is the only door").
+**Built 2026-09-24** (the flights not yet tried in game), and **2026-09-25** the Dark Portal as the only door (install step E038, `sql/basic/db_world.src/23-outland-one-door.apply.sql`: the 20 portal spawns listed under Intended Behavior saved in `basic_155l_portals` and removed; tested in `scripts/test-basic-sql-in-ram` with the exact-revert checksum; `scripts/validate-basic-state` checks none is left). Searched for other ways into Shattrath (spells that land there, and what casts them): the mage's teleport (kept), Dalaran's portal spells (their objects removed), the Shattrath guards' banish (inside the city), an unspawned portal object and one scroll from a removed Isle quest; nothing else.
 
 - **Quests**: install step E028,
   `sql/basic/db_world.src/13-outland-without-quests.apply.sql` (+ revert),
@@ -115,7 +115,7 @@ Stock numbers, for reference:
 - Quest items stay (unobtainable without their quests).
 - **The Dark Portal is the only door** (Ritz, 2026-09-25: "we should
   disable all portals to and from Outland, except the Dark Portal. Yes
-  it's a long walk, but I think that's part of it."). Not built yet. The
+  it's a long walk, but I think that's part of it."). Built 2026-09-25 (E038). The
   portal objects that cross between Outland and the rest of the world, from
   the stock world database (clickable portals, 2026-09-25):
   - Shattrath's eight portals to the capitals: Darnassus 183317, Exodar

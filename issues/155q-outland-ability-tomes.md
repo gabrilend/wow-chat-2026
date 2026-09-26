@@ -52,7 +52,9 @@ per-ability scaling review, step 4, is not done):
   1557902 (71–80). Drops: Ahn'Qiraj 40 16.67% per loot boss (the bug trio
   each, only the last is lootable; the twin emperors 8.33% each), Ahn'Qiraj
   20 4.17% per boss, each Emerald Dragon three books always; Naxxramas 10%
-  per boss in both sizes, and the Four Horsemen's two chests.
+  per boss in the 10-person size and 25% in the 25-person size (2.5 times,
+  Ritz: "About 2.5x as many."), and the Four Horsemen's two chests
+  likewise.
 - `basic_155q_books` keeps the list for the checker. Nothing stock changes;
   the revert deletes what was added.
 - Tested: `scripts/test-basic-sql-in-ram` (apply, re-apply, revert with the
@@ -159,6 +161,5 @@ so links to it stay valid.)
   titled "Runestone of …" ("runestone it is"), copied from the warrior's
   manual (same icon). "Sigil" was avoided: death knight relics are already
   named "Sigil of …".
-- Naxxramas drops about 1.5 books a clear in both its 10- and 25-person
-  sizes (10% per boss in each), read from "at Ahn'Qiraj 40's rate". Should
-  the 25-person size drop more, since more people share it?
+- (Answered 2026-09-25) The 25-person Naxxramas drops about 2.5 times the
+  10-person's books ("About 2.5x as many."): 25% per boss against 10%.
