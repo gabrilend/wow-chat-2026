@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 20:46:14
+Generated on: 2026-09-25 20:59:36
 Models: claude-opus-5-5
 
 ## Contents
@@ -110,6 +110,10 @@ Models: claude-opus-5-5
     and committed. Next: when an owner types a clan guild name that's already
     taken, should Sargobras ask again, auto-extend the name, or allow
     duplicates?
+26. 2026-09-25 20:49, after Request 91 - We're designing buddy bots and the
+    basic profile's Outland rules one question at a time, and every answer is
+    committed. Next: did you mean Wrath tomes come from Naxxramas drops, or
+    should Azeroth quest rewards be added as a second source?
 
 --------------------------------------------------------------------------------
 
@@ -9030,6 +9034,51 @@ The tomes issue still has three more open questions:
   might show wrongly;
 - whether 61–80 ranks need scaling down for level 60;
 - whether death knights get tomes too.
+
+--------------------------------------------------------------------------------
+
+### User Request 92
+
+> - where the tome items come from: existing unused items, or new ones the
+> client might show wrongly;
+
+let's hope that newly created items show correctly...
+
+>   - whether 61–80 ranks need scaling down for level 60;
+
+it probably depends on the ability.
+
+  - whether death knights get tomes too.
+
+yeah!
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 92
+
+> The edit failed, and the commit went ahead anyway with only the transcript
+> under that message. Redoing the edit now.
+
+I've recorded all three answers in the tomes issue. My first commit went out
+with only the transcript because the edit hadn't applied, so the second commit
+holds the actual change and says so.
+
+- **New items:** there's good reason to expect they'll show correctly. The 3.3.5
+  client asks the server for an item's name, quality and tooltip text the first
+  time it sees the item, then caches that. What the server can't send is art.
+  Each tome has to reuse a book icon the client already has, and its "use" has
+  to be a spell the client already knows; the server's Lua then teaches the
+  rank. No client patch is needed. I've noted testing one tome in game first:
+  tooltip, icon, use.
+- **Scaling:** decided ability by ability. How to review them, probably one
+  table per class showing each 61–80 ability's numbers at level 60, is left
+  for the build.
+- **Death knights:** they get tomes too.
+
+That leaves the question you skipped: **do Wrath tomes also come as quest
+rewards?** You remembered deciding that, but the record only has them dropping
+from Naxxramas. If they should also be quest rewards, which quests? They'd have
+to be Azeroth quests, since Outland has none on basic.
 
 --------------------------------------------------------------------------------
 

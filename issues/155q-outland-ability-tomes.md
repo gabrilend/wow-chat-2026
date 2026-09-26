@@ -74,6 +74,21 @@ so links to it stay valid.)
   rank). No AIO and no client patch needed (405's Inscription recipes
   would need one; dropped tomes skip recipes). Test first in game with
   one tome: tooltip, icon, use.
+- How a tome teaches, two ways:
+  - Ritz's (2026-09-25): "we could just... fake the tooltip. If they use
+    the item then we cast the spell on them with lua." The tooltip text is
+    written to say what it teaches; Lua, on use, teaches it.
+  - The stock game's own way, found 2026-09-25: 66 stock class books
+    already work like this with no script (Codex of Holy Word: Shield III,
+    Grimoire of Doom, Tome of Tranquilizing Shot, ...): the item's first
+    spell is the client's "Learning" spell (483), its second is the
+    ability, marked "learn this spell" (trigger 6), and it is limited to
+    one class. The server teaches it natively and the client draws the
+    ability's own tooltip, so it can't drift from what is learned
+    (honest tooltips, `docs/design-principles.md`). It costs one item per
+    rank (about 800, written by the generator) instead of one
+    rank-agnostic tome per ability.
+  Which one?
 - (Answered 2026-09-25) Where: Azeroth only; the Wrath-era (71–80) tomes
   from Naxxramas. The Burning Crusade–era (61–70) tomes (Ritz): "Ahn
   Quiraj. Both 20 and 40, 40 has 4x the drop rate, but it's still pretty
@@ -93,8 +108,5 @@ so links to it stay valid.)
   How to review them (by class, a table of each 61–80 ability's numbers
   at 60) is for the building step.
 - (Answered 2026-09-25) Death knights get tomes too ("yeah!").
-- Do the Wrath-era tomes also come as **quest rewards**? Ritz remembered
-  it so (2026-09-25: "Remember how we said that WotLK tomes could be
-  picked up as quest rewards?"); the record has them dropping from
-  Naxxramas only. If quest rewards too: which quests (Azeroth ones, since
-  Outland has none on basic)?
+- (Answered 2026-09-25) No quest rewards; the Wrath-era tomes drop from
+  Naxxramas only ("the original design is correct").
