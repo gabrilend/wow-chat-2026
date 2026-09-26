@@ -30,6 +30,10 @@ a character belongs to at most one guild.
   buddies, created automatically; the owner chooses its name.
 - The clan uses guild chat to talk among themselves (buddies' lines are
   in-character once the chat module, 916, reaches basic).
+- The owner can't leave it; guild banks are disabled on basic (Ritz,
+  2026-09-25). The stock server has no setting to switch guild banks off
+  (read 2026-09-25 in worldserver.conf.dist), so that takes a source patch
+  or a data change (e.g. no guild bank vendor spawns); to design.
 
 ## Suggested Implementation Steps
 
@@ -42,9 +46,9 @@ a character belongs to at most one guild.
 
 - When does the owner name the guild: at character creation, at the first
   buddy, or through Sargobras? And how (a dialogue box, a chat command)?
-- A character can be in only one guild. Can the owner leave the clan guild
-  to join friends' guilds (and do the buddies then follow into that guild,
-  or stay in theirs)?
+- (Answered 2026-09-25) The owner can't leave the clan guild, and guild
+  banks are disabled (Ritz: "guild banks are disabled and you can't leave
+  your guild"). So joining a friend's guild is not possible on basic.
 - Guild names must be unique on the server: what happens when the chosen
   name is taken?
 - Are other players ever invited into a clan guild?

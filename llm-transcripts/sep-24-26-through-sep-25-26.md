@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 17:47:19
+Generated on: 2026-09-25 17:55:23
 Models: claude-opus-5-5
 
 ## Contents
@@ -7568,6 +7568,54 @@ its own professions, or does the owner assign them?** For example:
 2. **The owner assigns them**, through a menu at Sargobras or a trainer.
 3. **The buddy fills a gap:** it picks the professions the owner's group of
    buddies doesn't have yet, so the whole group covers everything between them.
+
+--------------------------------------------------------------------------------
+
+### User Request 75
+
+It picks totally randomly. It will prioritize crafting items that are upgrades
+to other members in the clan. It will try and create consumables and such and
+hand them out periodically. The crafting profession is the one that is chosen,
+and the gathering profession for that crafting profession is selected. If the
+buddy bot shares professions with members of the clan, you'll probably find that
+you don't need extra of what they make - these get sold on the auction house
+according to the standard rules. This will cause the buddy-bots to have extra
+coin, which they can spend on the auction house to buy upgrades for members of
+the clan. Each clan gets it's own guild auto-created and named by the player,
+and they will use it to chat with each other.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 75
+
+> Recording this, and two consequences to settle next.
+
+> No existing issue mentions guilds for buddies, so the clan guild gets its own
+> sub-issue.
+
+I've recorded your professions design in the buddy professions issue, and
+committed it:
+- A buddy picks a crafting profession at random and takes the gathering one that
+  feeds it. For example, Alchemy comes with Herbalism, and Blacksmithing,
+  Engineering and Jewelcrafting come with Mining.
+- It crafts upgrades for clan members first, then consumables it hands out.
+- Anything the clan doesn't need goes to the auction house under the rules we
+  already have. The coin it earns buys upgrades for clan members there.
+
+**The clan guild** got its own new buddy sub-issue, because it raises questions
+of its own. A character can be in only one guild, and guild names must be unique
+on the server.
+
+Questions this leaves, one at a time. The first one: **Tailoring and Enchanting
+have no gathering profession feeding them.** Tailors get cloth from creatures,
+and enchanters get their materials by disenchanting. So what is a Tailor's or an
+Enchanter's second profession?
+1. **A gathering profession at random** (Herbalism, Mining or Skinning), sold at
+   the auction house or given to clan members who can use it.
+2. **A second crafting profession at random.** Tailoring with Enchanting is the
+   classic pair, since the enchanter disenchants the tailor's cloth goods.
+3. **Always the pair:** a Tailor also takes Enchanting and an Enchanter also
+   takes Tailoring, so each feeds the other.
 
 --------------------------------------------------------------------------------
 
