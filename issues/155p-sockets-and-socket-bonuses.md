@@ -144,8 +144,8 @@ command, because the client disables the Create button unless the
 crafter's own bags hold the reagent.) Removed from the patch list and from
 `src/cpp-basic/basic_rules.cpp`; the patch and its doc are kept for one
 commit as `patches/B034-trade-gem-cut.sh-done` and
-`docs/patches/trade-gem-cut.md-done`, then deleted (no further use
-foreseen). With it, epic Wrath gems went back to their stock binding; they
+`docs/patches/trade-gem-cut.md-done` (commit 14911048e), then deleted (no
+further use foreseen); the number B034 stays retired. With it, epic Wrath gems went back to their stock binding; they
 still drop from Onyxia beside her sack, whose 18-entry window is full.
 
 Stock, before stage 1. What the data says (read 2026-09-24 from the client

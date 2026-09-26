@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 17:30:09
+Generated on: 2026-09-25 17:32:40
 Models: claude-opus-5-5
 
 ## Contents
@@ -7426,6 +7426,37 @@ Two small questions remain in the respec issue:
    ("prices drop on Tuesday").
 2. **Keep the floor?** Stock never lets the decreasing price fall below 10 gold.
    Keep that?
+
+--------------------------------------------------------------------------------
+
+### User Request 72
+
+Could we make it 1, 5, 10, then 20, 30, 40, 50, etc? Let's do a drop for
+everyone on the server's weekly reset day. And yeah let's keep the floor.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 72
+
+Recorded and committed. The respec pricing is now fully decided:
+- 1, 5 and 10 gold, then 20, 30, 40, 50 and up without a cap;
+- one 10-gold step comes off for every weekly reset since your last respec;
+- it never drops below 10 gold.
+
+The server already knows when its weekly reset happens, since weekly quests use
+it, so the patch can count resets directly. The respec issue has no open
+questions left and is ready to build: a small server code patch for the price,
+plus a data patch removing dual spec.
+
+What next?
+1. **Build the respec and dual-spec changes now.** It's small: I'd have it
+   tested, and it needs one compile.
+2. **Continue the buddy design questions.** Still open:
+   - which area marks count as "town" for buddies;
+   - whether Sargobras's outfit levels with you;
+   - the four professions questions;
+   - and from the gaps list, what happens when the owner dies or enters an
+     instance while buddies are outside.
 
 --------------------------------------------------------------------------------
 

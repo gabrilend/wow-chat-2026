@@ -18,7 +18,20 @@ Verbatim, 2026-09-25, while designing buddies' talents (617g):
 
 ## Current Behavior
 
-Stock (read 2026-09-25 in `Player::resetTalentsCost`, Player.cpp): the
+**Built and tested (2026-09-25), not yet installed or compiled.**
+- No dual spec: config patch `config/patches/C026-basic-no-dual-spec.sh`
+  sets `MinDualSpecLevel = 255`, above basic's cap, so the trainers never
+  offer it and refuse the purchase (the server's own check in
+  PlayerGossip.cpp). No data changes. `scripts/test-profile-config-gates`
+  checks the value.
+- Respec price: source patch `patches/B035-respec-cost-weekly.sh` (doc
+  `docs/patches/respec-cost-weekly.md`) prices respecs 1, 5, 10, then 10
+  gold more each time without a cap, one step off per weekly reset since
+  the last respec, floor 10. It round-trips cleanly
+  (`scripts/test-source-patches`); it needs compiling.
+To check in game: no dual-spec option at a trainer at 60; respec prices.
+
+Stock, before this (read 2026-09-25 in `Player::resetTalentsCost`, Player.cpp): the
 first respec costs 1 gold, the second 5, the third 10; after that each
 respec costs 5 gold more than the last, **capped at 50 gold**; and when a
 calendar month or more has passed since the last respec, the price drops

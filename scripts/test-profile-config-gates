@@ -49,6 +49,8 @@ declare -a EXPECT_basic=(
     "modules/playerbots.conf|AiPlayerbot.MinRandomBots|0"
     "modules/playerbots.conf|AiPlayerbot.MaxRandomBots|0"
     "modules/playerbots.conf|AiPlayerbot.DisableDeathKnightLogin|1"
+    # no dual spec on basic (C026, 2026-09-25, issue 155r): above the level cap
+    "worldserver.conf|MinDualSpecLevel|255"
 )
 # }}}
 

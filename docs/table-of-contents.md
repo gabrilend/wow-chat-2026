@@ -33,7 +33,7 @@ wow-chat-2026/
 │   │   ├── no-crushing-blows-64.md  B031: no crushing blows from creatures level 64+
 │   │   ├── no-buff-level-restriction.md  B032: buffs castable on targets of any level
 │   │   ├── white-gear-never-repaired.md  B033: white gear is never repaired (basic)
-│   │   ├── trade-gem-cut.md-done  B034 + .cut (retired 2026-09-25, "too obfuscated"): cutting a gem in the trade window; kept one commit, then removed
+│   │   ├── respec-cost-weekly.md  B035: respec cost 1, 5, 10, then +10 gold uncapped; drops on the weekly reset (basic)
 │   │   ├── ale-sell-item-hook.md  ALE hook for vendor sales
 │   │   ├── ale-calculate-talents-hook.md  Talent calculation module
 │   │   ├── ale-gameobject-wildcard.md  Entry 0 wildcard for gameobject events
