@@ -44,7 +44,7 @@ per-ability scaling review, step 4, is not done):
   155s). Run it for the current count; 793 when built.
 - The SQL copies each class's stock Ahn'Qiraj book (Manual, Libram, Guide,
   Handbook, Codex, Tablet, Tome, Grimoire, Book; death knights copy the
-  warrior's manual and are titled "Runebook of") and sets the name,
+  warrior's manual and are titled "Runestone of") and sets the name,
   description, class, races, the Learning spell (483) and the ability with
   the learn trigger, the required spell and level 60. Rare, **unbound** (tradeable; Ritz, 2026-09-25: "I think they should not be bound"), sells
   for 10 gold, as the stock books.
@@ -155,9 +155,10 @@ so links to it stay valid.)
 - (Answered 2026-09-25) Death knights get tomes too ("yeah!").
 - (Answered 2026-09-25) No quest rewards; the Wrath-era tomes drop from
   Naxxramas only ("the original design is correct").
-- Death knights have no stock class book, so theirs are titled
-  "Runebook of …" (copied from the warrior's manual, same icon). A better
-  word?
+- (Answered 2026-09-25) Death knights have no stock class book; theirs are
+  titled "Runestone of …" ("runestone it is"), copied from the warrior's
+  manual (same icon). "Sigil" was avoided: death knight relics are already
+  named "Sigil of …".
 - Naxxramas drops about 1.5 books a clear in both its 10- and 25-person
   sizes (10% per boss in each), read from "at Ahn'Qiraj 40's rate". Should
   the 25-person size drop more, since more people share it?

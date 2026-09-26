@@ -71,3 +71,14 @@ a character belongs to at most one guild.
   free for player guilds); the owner may leave the clan guild for a player
   guild (the buddies stay in theirs); or a source patch lets a character
   hold two guilds? (A server-wide layer above guilds is 1007.)
+  Ritz, 2026-09-25: "I said I wanted player guilds to exist, I didn't
+  intend to imply that they should be ordinary. Check out rao-chat."
+  (`/mnt/mtwo/programs/rao-chat`, Ritz's decentralised chat: a room is a
+  label, a shared token and its members' addresses; holding the token is
+  being invited; rooms nest in a tree, each child room its own invitation,
+  "tiers of trust"; labels belong to the reader; you choose who hears you,
+  never who hears anyone else.) Proposed reading, to confirm: the stock
+  guild slot stays the clan guild, and **player guilds are rao-chat-style
+  rooms**, a layer beside the stock guild, not in it. A character may be
+  in any number; a guild's sub-groups (officers, a raid team) are child
+  rooms; anyone may start one; the same rooms reach across servers (1007).

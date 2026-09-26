@@ -865,7 +865,7 @@ INSERT INTO `tmp_155q_kinds` (`class`, `model`, `prefix`) VALUES
   ( 3, 21304, 'Guide: '),        -- Guide: Multi-Shot V
   ( 4, 21300, 'Handbook of '),   -- Handbook of Backstab IX
   ( 5, 21284, 'Codex of '),      -- Codex of Greater Heal V
-  ( 6, 21297, 'Runebook of '),   -- (no stock death knight book)
+  ( 6, 21297, 'Runestone of '),  -- (no stock death knight book; Ritz, 2026-09-25: "runestone it is")
   ( 7, 21291, 'Tablet of '),     -- Tablet of Healing Wave X
   ( 8, 21214, 'Tome of '),       -- Tome of Frostbolt XI
   ( 9, 21281, 'Grimoire of '),   -- Grimoire of Shadow Bolt X

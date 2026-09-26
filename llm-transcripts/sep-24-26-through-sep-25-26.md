@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 21:25:46
+Generated on: 2026-09-25 21:44:59
 Models: claude-opus-5-5
 
 ## Contents
@@ -118,6 +118,10 @@ Models: claude-opus-5-5
     at a time, and every answer so far is recorded and committed. Next is your
     call: can other players ever join a clan guild (never, as guests, or as
     allied clans)?
+28. 2026-09-25 21:35, after Request 96 - We're designing buddy bots and just
+    built the level 61–80 class books for basic. Next, pick how clan chat and
+    player guilds coexist (my recommendation: a private clan channel), and
+    confirm "Runestone of …" for death knight books.
 
 --------------------------------------------------------------------------------
 
@@ -9293,6 +9297,113 @@ Two new questions came out of the build. The first: **death knights have no
 stock class book, so theirs are titled "Runebook of …"** and use the warrior
 manual's icon. Keep that, or use a different word, such as "Sigil of …",
 "Codex of the Ebon Blade: …" or "Scourge Tome: …"?
+
+--------------------------------------------------------------------------------
+
+### User Request 96
+
+In-game player guilds should exist though. They're useful abstractions! I think
+battle.net has guilds, it certainly has friends. Maybe... Maybe there's space
+for a similar, meta communication platform that lets users talk across all of
+our servers? When I have more games built, then maybe across all of our games...
+What can I say, Blizzard inspires me.
+
+are the tomes BoP or can they be traded? I think they should not be bound. Also,
+buddybots should consider them as upgrade potentials, preferring the player if
+they need it over a buddy-bot of the same class who also needs it.
+
+> Two new questions came out of the build. The first: death knights have no
+> stock class book, so theirs are titled "Runebook of …" and use the warrior
+> manual's icon. Keep that, or use
+> a different word, such as "Sigil of …", "Codex of the Ebon Blade: …" or
+> "Scourge Tome: …"?
+
+Runestone maybe? Runic Icon? Runic Sigil?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 96
+
+I've recorded all three points and committed them.
+
+- **Tomes are not bound.** They copy the stock Ahn'Qiraj books, which are
+  tradeable, so they're unbound already, as you wanted.
+- **Buddies and books:** a book counts as an upgrade for any clan member of its
+  class who doesn't know that rank yet and has any talent it needs. The owner
+  comes first: a buddy passes on a roll the owner needs, and hands a book it
+  holds to the owner before any other buddy. A book nobody needs goes to the
+  auction house.
+- **Friends and guilds across servers:** a new idea issue in the rmail
+  communication phase. It covers account-level friends and guilds that follow
+  the person across our servers, and later across your other games. It starts
+  with four questions: what an identity is, where the service runs, how it
+  reaches a player in the stock client with no addon, and whether it carries
+  presence too.
+
+**Death knight books:** WotLK already has a relic slot full of "Sigil of the
+Dark Rider", "Sigil of Awareness" and so on, so anything with "Sigil" would read
+like a relic. My pick from your three is **"Runestone of …"**, as in
+"Runestone of Icy Touch V". The database has no items named that, so it's free.
+Say yes and I'll switch the name, regenerate and re-run the test.
+
+**One conflict needs settling first.** You want ordinary player guilds to exist,
+but the stock game gives a character one guild slot, and we decided an owner can
+never leave the clan guild. So no owner could ever join a player guild. Which
+gives way?
+1. **Clan chat moves off the guild (my recommendation).** Each clan gets a
+   private chat channel instead, and the guild slot stays free for real player
+   guilds. Buddies still chat in character. It's a small change, and it needs no
+   source patch.
+2. **The owner may leave the clan guild** to join a player guild, while the
+   buddies stay in theirs. The owner loses clan chat while away.
+3. **A source patch lets a character belong to two guilds,** a clan guild and a
+   player guild. That's a deep change: the client shows only one guild.
+
+--------------------------------------------------------------------------------
+
+### User Request 97
+
+check out /home/ritz/programming/ai-playground/rao-chat/
+
+
+
+<pasted_content id="8773">
+> Death knight books: WotLK already has a relic slot full of "Sigil of the Dark
+> Rider", "Sigil of Awareness" and so on, so anything with "Sigil" would read
+> like a relic. My pick from
+> your three is "Runestone of …", as in "Runestone of Icy Touch V". The
+> database has no items named that, so it's free. Say yes and I'll switch the
+> name, regenerate and re-run the
+  test.
+</pasted_content id="8773">
+
+
+great, runestone it is
+
+> One conflict needs settling first. You want ordinary player guilds to exist,
+> but the stock game gives a character one guild slot, and we decided an owner
+> can never leave the clan
+>   guild. So no owner could ever join a player guild. Which gives way?
+
+I said I wanted player guilds to exist, I didn't intend to imply that they
+should be ordinary. Check out rao-chat.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 97
+
+> Found it at `/mnt/mtwo/programs/rao-chat` rather than under ai-playground.
+> Reading it now.
+
+> Death knight books are renamed. Re-running the database test in the background
+> while I update the issues.
+
+> Now recording how rao-chat reshapes player guilds.
+
+> The issues are updated, and I'll commit once the database test finishes. While
+> it runs: here's the design question rao-chat raises inside the game.
+
+The database test is still running. I'll commit once it passes.
 
 --------------------------------------------------------------------------------
 
