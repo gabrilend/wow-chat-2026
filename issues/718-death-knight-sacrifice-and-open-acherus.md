@@ -121,9 +121,10 @@ Two layers, one per half of the user's design.
 
 - A death knight can only be created by an account that owns a level-55
   character on the realm (stock knob, already in place).
-- **Creating the death knight consumes that character.** The level-55
+- **Creating the death knight consumes that character.** The level-55-or-higher
   character is deleted as part of the creation: the new death knight is
-  what that character became.
+  what that character became, and it keeps that character's professions
+  (2026-09-25).
 - Bots never play death knights (`AiPlayerbot.DisableDeathKnightLogin`),
   except a death knight owner's buddies, which are all death knights
   (617b, 2026-09-25). That setting stops every death knight bot from
@@ -134,8 +135,9 @@ Two layers, one per half of the user's design.
   - **(a) a chooser NPC in Acherus.** A freshly created death knight cannot
     leave Acherus until it has named its former self. The character is
     deleted when the choice is made.
-  - **(b) skip the intro.** Handled by Layer 2, with the choice made some
-    other way (open question).
+  - **(b) skip the intro.** Dropped 2026-09-25: the intro chain is kept,
+    and the chooser is (a), Sargobras. (Was: handled by Layer 2, with the choice made some
+    other way.)
 
 ### Layer 2 — Acherus as a leveling zone
 
@@ -221,15 +223,21 @@ Enclave on top.
   for it is disabled (`src/lua-beta/custom-classes.lua.disabled`) and
   beta-only, so on basic the infrastructure starts from a port, not a switch.
 - (Answered 2026-09-25) The chooser, (a): a static Sargobras in Acherus
-  who lets a death knight leave for a soul. Whether the intro chain is
-  also skipped (b) is still open.
-- **Professions at 300**: Ritz, 2026-09-25, of death knights: "They
-  should also start with level 300 in professions". Does that mean death
-  knight buddies (617g), death knight players too, or should a death
-  knight inherit the professions of the character it sacrificed ("what
-  that character became")?
-- **What if the account has several level-55+ characters?** Choose any; or
-  only the highest; or only ones at exactly 55?
+  who lets a death knight leave for a soul. The intro chain is **not**
+  skipped (Ritz: "We shouldn't skip the intro quest chain."), so (b) is
+  dropped.
+- (Answered 2026-09-25) Professions: a death knight **inherits the
+  professions of the character it sacrificed**, "what that character
+  became"; and death knight buddies start with maxed professions (300 on
+  basic), "the professions they knew in life" (Ritz: "also death knight
+  buddies start with maxed professions as well. They are the professions
+  they knew in life.").
+- (Answered 2026-09-25) Which characters can be given: any of the
+  account's characters at level 55 **or higher** ("level 55 or
+  greater"); the player picks one from Sargobras's list.
+- **Layer 2** (Acherus as a rotating levelling zone) was built on skipping
+  the intro chain, which is now kept. Is Layer 2 dropped, or does it apply
+  to the Scarlet Enclave after the chain is done (a zone to come back to)?
 - **Deletion or retirement?** "Deletes" could mean a true delete, or a
   character kept but made unplayable (a gravestone). Deletion cannot be
   undone.

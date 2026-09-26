@@ -105,7 +105,9 @@ help."
 - **Self-healing first when hurt**: below some health, the abilities that
   heal the death knight (Death Strike, Rune Tap, Death Pact and the like)
   come before damage.
-- **Professions at 300** from the start, so they make their own
+- **Professions maxed (300 on basic) from the start**, "the professions
+  they knew in life" (Ritz, 2026-09-25), picked the way 617k picks any
+  buddy's (a random crafting profession and its gathering one), so they make their own
   consumables (617k).
 
 ## Suggested Implementation Steps

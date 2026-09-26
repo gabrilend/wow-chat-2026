@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 23:12:43
+Generated on: 2026-09-25 23:25:42
 Models: claude-opus-5-5
 
 ## Contents
@@ -134,6 +134,10 @@ Models: claude-opus-5-5
     basic profile, and I just removed guild banks and recorded your ten buddy
     answers. Next, I need you to confirm the proposed buddy data model and
     settle what death knight owners' buddies are.
+32. 2026-09-25 23:15, after Request 101 - We're designing the buddy bots for the
+    basic profile, and I just proposed storing each buddy's tasks as JSON. Your
+    call next: does JSON and the table layout work, and should death knight
+    clans, who can't heal, skip the healer guarantee?
 
 --------------------------------------------------------------------------------
 
@@ -9820,6 +9824,84 @@ One question came out of your death knight answer. Death knights can tank but
 can't heal, so a clan of death knight buddies can never meet the healer
 guarantee. Should the guarantee skip death knight clans and require only a tank,
 or should one of their buddies be a healer class anyway?
+
+--------------------------------------------------------------------------------
+
+### User Request 102
+
+death knights should ignore the guarantee. Their specs might not even be "tank"
+specs, and that's okay. Death knights are expected to be able to handle very
+difficult types of content without dedicated healers. They should try and tank
+swap between each other, taunting enemies when they have more health than their
+target's target (unless in a regular group with "real" tanks, of course) and
+prioritize the abilities that provide healing when they need it. They should
+also start with level 300 in professions, so they should be able to create
+consumables which should help.
+
+I vaguely remember that we had a system where if you created a death knight, you
+had to sacrifice one of your characters in order to leave Acherus. Is that true?
+Oh and by the way the Acherus flight paths / portals should remain... Where are
+we at with that? Can we have a static Sargobras who offers to help them leave
+Acherus in exchange for a powerful soul? One hero for the Lich King, one death
+knight for the living...
+
+the json looks great.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 102
+
+> The JSON is confirmed. Checking the death knight sacrifice design and what
+> basic does to Acherus's travel.
+
+> Acherus's travel is untouched. Its gryphons are click-to-ride creatures, not
+> flight masters, so the flight-path removal never touched them. Recording
+> everything now.
+
+> Now the death knight sacrifice issue: Sargobras in Acherus, and the state of
+> Acherus's travel.
+
+I've recorded all of it and committed it.
+
+- **Death knight clans:**
+  - They skip the tank-and-healer guarantee, and their profiles are random with
+    no role required.
+  - The healthiest death knight taunts: a buddy taunts when its health is higher
+    than that of the enemy's current target, unless the group has a real tank.
+  - When hurt, they put self-healing first: Death Strike, Rune Tap, Death Pact
+    and the like.
+- **The sacrifice: yes, that's real.** It's the death knight issue, fully
+  designed but not built. A new death knight can't leave Acherus until it gives
+  up one of the account's level-55 characters. That issue had left the choice
+  open between a chooser NPC and skipping the intro. Your static Sargobras is
+  now the chooser: he stands in Acherus and lets a death knight go in exchange
+  for a soul. Your line "One hero for the Lich King, one death knight for the
+  living..." is quoted in the issue. Whether the intro quest chain is also
+  skipped is still open.
+- **Acherus's travel is intact on basic:**
+  - **Gryphons:** the rides between Acherus and Death's Breach are creatures you
+    click to ride, not flight masters, so the flight-path removal never touched
+    them.
+  - **Floor pads:** the pads between Acherus's floors are driven by the core's
+    scripts.
+  - **Capital portals:** the Ebon Hold's portals to Stormwind and Orgrimmar
+    aren't Outland portals, so today's Dark Portal step left them alone.
+  - **Death Gate** is a class spell.
+
+  It's recorded as staying that way.
+- **Tasks are stored as JSON,** and the buddy data model is agreed.
+
+One thing I noticed: basic's bot config has a setting that stops every death
+knight bot from logging in. That would block death knight buddies. The death
+knight issue now says the buddy module needs its own exception, or the setting
+turned off, since random bots are already off.
+
+Your "start with level 300 in professions" raised a question I've recorded in
+the death knight issue: **who starts at 300?**
+1. Only death knight buddies, which is how I've recorded it for now.
+2. Every death knight, players included.
+3. A death knight inherits the professions of the character it sacrificed,
+   fitting "what that character became".
 
 --------------------------------------------------------------------------------
 
