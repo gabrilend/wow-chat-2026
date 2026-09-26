@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 17:37:20
+Generated on: 2026-09-25 17:47:19
 Models: claude-opus-5-5
 
 ## Contents
@@ -7497,6 +7497,77 @@ Back to the buddy design? The next open question is which area marks count as
 client's area table flags some areas as towns and some as capitals. Should a
 buddy treat any area with either flag as a town, or only areas that actually
 have services (a vendor or an innkeeper)?
+
+--------------------------------------------------------------------------------
+
+### User Request 74
+
+Well, the buddies should treat any area with the town or city flag as a town,
+and they should dynamically create their todo lists based on the services
+available in that town.
+
+sargobras's outfit doesn't change, let's say.
+
+>      - and from the gaps list, what happens when the owner dies or enters an instance while buddies are outside.
+
+First, when the owner dies. There's two resolutions - either the player
+resurrects at their corpse, or they talk to the spirit healer. In either case,
+the buddies should continue questing around where the player died. If they pick
+the spirit healer, they should move to the player's new location and start doing
+their normal activities over there.
+
+If the owner enters an instance while they're outside, then a dynamic group is
+created for the player (unless they already have a group, then it has to be
+manually created). If it's a manually created group and a buddy-bot is invited,
+they'll move to the instance, enter, and join the party. Let's say tho that the
+buddy-bot isn't picked for a dynamic group and isn't invited to a manually
+formed group - then if they're lower level than the player, they'll quest in the
+closest level-approprate area to the dungeon that the player is in. If they're
+the same level or higher, then they'll just chill - by that I mean lighting a
+fire, hanging out, eating snacks, talking to passerby if they sit at the fire,
+etc. If they're near a graveyard, they'll be provided some flowers to hold and
+they will wander around to the gravestones and kneel before about 1/4th of them.
+They might also say some dynamic chat lines depending on their character. But
+that, and the chatting with passerby, waits on some LLM integration that I think
+the immortal shepherd issue files are also depending on, so check them out to
+see what we had planned for that.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 74
+
+> Recording these, then looking up the immortal shepherd issues' LLM plan.
+
+All recorded in the buddy issues and committed:
+- **Towns:** any area flagged town, capital or capital subzone. Each buddy
+  builds its errand list from the services that town has.
+- **Owner dies:** buddies keep adventuring where it happened. If the owner rises
+  at the spirit healer, they travel there and carry on.
+- **Owner enters a dungeon:**
+  - With no group, the owner gets the dynamic dungeon group; with an existing
+    group, the owner invites buddies by hand, and an invited buddy travels
+    there, enters and joins.
+  - A buddy left out quests near the dungeon if it's lower level than the owner.
+    Otherwise it rests: campfire, snacks, and near a graveyard, flowers carried
+    to about a quarter of the graves.
+- **Sargobras's outfit** stays the same.
+
+On the LLM part: the plan you remembered is **issue 916, "mod-soren-chat"**, not
+the shepherd issues. The shepherds (911) only match keywords in what players say
+nearby. 916 gives playerbots talk shaped by their race, class and spec, through
+an Ollama cluster on your network. Its sub-issues already cover the pieces
+buddies need: persona and chat prompts (916k), chat pacing (916l), and noticing
+nearby players (916g). Two catches, both now noted on the issue:
+- It currently targets the vanilla profile, so basic would need to be added.
+- The buddies' campfire talk and graveyard lines wait on it.
+
+Next, the professions issue (617k). Its first question: **does each buddy choose
+its own professions, or does the owner assign them?** For example:
+1. **Each buddy picks at random** when it's created, maybe weighted to suit its
+   class (a warrior leans towards Mining and Blacksmithing).
+2. **The owner assigns them**, through a menu at Sargobras or a trainer.
+3. **The buddy fills a gap:** it picks the professions the owner's group of
+   buddies doesn't have yet, so the whole group covers everything between them.
 
 --------------------------------------------------------------------------------
 

@@ -1,0 +1,50 @@
+# 617l - A Guild for Each Clan
+
+## Status
+- Created: 2026-09-25
+- Phase: 6
+- Parent: 617
+- Blocked by: 617a (roster: who is in a clan)
+- Related: 617k (professions: buddies hand out crafts and consumables to the
+  clan), 617j (the clan's shared gear pool), 916 (buddies' in-character chat)
+- Priority: Medium
+
+## Origin
+
+Verbatim, 2026-09-25, while designing buddy professions:
+
+> Each clan gets it's own guild auto-created and named by the player, and
+> they will use it to chat with each other.
+
+("Clan": a character and its buddies, as in 617j.)
+
+## Current Behavior
+
+Not designed beyond the line above. Nothing is built. The stock server
+creates a guild from a charter signed by other players, or by a GM command;
+a character belongs to at most one guild.
+
+## Intended Behavior
+
+- Every owner character gets a guild of its own, holding the owner and its
+  buddies, created automatically; the owner chooses its name.
+- The clan uses guild chat to talk among themselves (buddies' lines are
+  in-character once the chat module, 916, reaches basic).
+
+## Suggested Implementation Steps
+
+1. Settle the open questions below with Ritz.
+2. Server side, in the buddy module (617a): create the guild through the
+   core's guild API (no charter) when the owner names it, add each buddy
+   as it is created, remove buddies with their owner.
+
+## Open Questions
+
+- When does the owner name the guild: at character creation, at the first
+  buddy, or through Sargobras? And how (a dialogue box, a chat command)?
+- A character can be in only one guild. Can the owner leave the clan guild
+  to join friends' guilds (and do the buddies then follow into that guild,
+  or stay in theirs)?
+- Guild names must be unique on the server: what happens when the chosen
+  name is taken?
+- Are other players ever invited into a clan guild?

@@ -29,7 +29,31 @@ owner, or cuts gems into the sockets 155p adds.
 
 ## Intended Behavior
 
-To be designed with Ritz once 155p is built.
+Ritz, 2026-09-25: "It picks totally randomly. It will prioritize crafting
+items that are upgrades to other members in the clan. It will try and create
+consumables and such and hand them out periodically. The crafting profession
+is the one that is chosen, and the gathering profession for that crafting
+profession is selected. If the buddy bot shares professions with members of
+the clan, you'll probably find that you don't need extra of what they make -
+these get sold on the auction house according to the standard rules. This
+will cause the buddy-bots to have extra coin, which they can spend on the
+auction house to buy upgrades for members of the clan. Each clan gets it's
+own guild auto-created and named by the player, and they will use it to chat
+with each other."
+
+- **Choosing**: a buddy picks one crafting profession at random, and takes
+  the gathering profession that feeds it (Alchemy and Inscription:
+  Herbalism; Blacksmithing, Engineering and Jewelcrafting: Mining;
+  Leatherworking: Skinning).
+- **Crafting priorities**: first, items that are upgrades for someone in the
+  clan (the owner and their buddies, 617j); then consumables, handed out to
+  the clan from time to time.
+- **Surplus** (what nobody in the clan needs, likelier when professions
+  overlap) is sold at the auction house under 617h's rules.
+- **Spending**: the coin buddies earn buys upgrades for clan members at the
+  auction house (a buying side for 617h).
+- **A guild per clan**, created automatically and named by the owner; the
+  clan chats in it (see 617l).
 
 ## Suggested Implementation Steps
 
@@ -40,10 +64,17 @@ To be designed with Ritz once 155p is built.
 
 ## Open Questions
 
-- Does each buddy pick its own professions, or does the owner assign them?
+- (Answered 2026-09-25) Each buddy picks at random; the gathering profession
+  follows from the crafting one.
+- Tailoring and Enchanting have no gathering profession that feeds them
+  (cloth drops from creatures; enchanting materials come from
+  disenchanting). What does a Tailor's or an Enchanter's second profession
+  become: another random crafting one, or a gathering one at random?
 - Do buddies level professions by gathering along the way, or do they
   arrive with them?
 - Do buddies craft for the clan on request (gems for 155p's sockets,
   potions, bags), and who pays for materials?
-- How does this meet the auction house (617h): do buddies sell what they
-  gather or craft?
+- (Answered 2026-09-25) Surplus goes to the auction house by 617h's rules,
+  and buddies buy clan upgrades there with what they earn.
+- How often does a buddy hand out consumables, and how: in person when
+  near, or by mail?
