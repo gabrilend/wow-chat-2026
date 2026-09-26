@@ -161,6 +161,42 @@ for it: her own materials, her own coin, her own time.
   step she is in the middle of (half a walk to a vein is finished, not
   thrown away), and stage order within a hunt (mine before smelt).
 
+### Three active hunts, the rest on a backlog (Ritz, 2026-09-25)
+
+> how about more than 3 requests (the 4th, 5th, etc) get added to a
+> backlog, and if they share any materials required with any of the active
+> tasks, then the required number of materials to gather / buy / craft /
+> whatever is increased to account for it. Then, when a task is completed
+> and it's 4 in the backlog instead of 5, with 2 active and 2 on the
+> shelf, when we add the third one we'll just make the source be the
+> backpack for the materials we managed to grab along the way. The cost is
+> just, mining 12 copper ore instead of 6.
+
+- At most **3 hunts are active** (woven into the route); any further
+  requests wait on a **backlog**, in order. This keeps the route short
+  enough to weave well.
+- A backlogged hunt that needs a material an active hunt is already
+  fetching adds its count to that active step (mine 12 copper ore instead
+  of 6).
+- When an active hunt finishes, the next backlogged one becomes active;
+  for materials already fetched on its behalf, its source becomes the
+  backpack.
+
+### Out of reach (Ritz, 2026-09-25)
+
+- A source is **out of her reach** when it lies in a zone whose level is
+  more than 3 above the buddy's own (zone levels from the list 617k
+  builds). Then she says Ritz's line instead of going: "Sorry, I can't do
+  that right now because of ABC. Do you want to
+  [do-thing-that-resolves-the-task]?", e.g. "do you want to level up some
+  more with me?" or, for a source inside a dungeon, "do you want to do
+  that dungeon?"
+- **Never Outland.** A buddy never goes into Outland for a hunt: on basic,
+  Outland has no herb or ore nodes, no fishing pools or gas clouds, and
+  its own beasts can't be skinned (155n), and every profession stops at
+  300, whose materials come from Azeroth. The level rule alone would not
+  cover it: Outland's first zones sit near level 60 on basic.
+
 ### Performance of the source table (Ritz, 2026-09-25)
 
 "we should pay special attention to the performance demands of gathering
@@ -244,12 +280,18 @@ sold out, a death on the road, full bags) are re-attempted.
 - (Answered 2026-09-25) Re-weaving after an update is one pass over the
   new set, keeping the step in progress.
 - (Answered 2026-09-25) A failed step is re-attempted.
-- Ritz's earlier line for a source out of her reach ("Sorry, I can't do
-  that right now because of ABC. Do you want to [do-thing-that-resolves-
-  the-task]?", e.g. "do you want to level up some more with me?" / "do you
-  want to do that dungeon?") needs a judgement of reach, which the
-  no-marks rule removes from the table. Where does it live now: does she
-  go, fail (die to the monster, can't enter the dungeon alone) and then
-  say it; does the model say it when routing; or is it dropped?
+- (Answered 2026-09-25) Out of reach: a zone more than 3 levels above the
+  buddy, or inside a dungeon; she asks instead of going. Never Outland.
+- (Answered 2026-09-25) At most 3 active hunts; more wait on a backlog,
+  whose shared materials are fetched early by the active steps.
+- Outland exceptions: some materials for recipes at or below 300 do come
+  from Outland on basic. Wrath uncommon and rare gems drop from about 1,000
+  Outland monster loot tables (155p), and Outland gems drop there too; both
+  also have Azeroth sources (the titan jewelers' crystal trade; prospecting
+  mithril and thorium). And when the owner is already in Outland, the
+  nearest vendor for thread, flux or vials is an Outland one. Does "never
+  Outland" mean never *travel into* Outland for a hunt (so a buddy already
+  there with her owner may use its vendors and monsters), or never use an
+  Outland source at all?
 - (Answered 2026-09-25) Several hunts at once, interleaved by distance or
   effort; the limit waits on the buddies' memory design.

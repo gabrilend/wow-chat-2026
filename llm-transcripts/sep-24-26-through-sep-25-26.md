@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 20:01:36
+Generated on: 2026-09-25 20:12:50
 Models: claude-opus-5-5
 
 ## Contents
@@ -101,6 +101,10 @@ Models: claude-opus-5-5
     at a time, and I've recorded your answers so far and committed them. Next I
     need your pick: does the clan guild get named when the first buddy is
     created, on the first login, or whenever you choose?
+24. 2026-09-25 20:04, after Request 86 - We're designing buddy bots one question
+    at a time, currently task hunts, where a buddy crafts on request. Next is
+    your answer: if a later stage of a chain can't be done, like having no forge
+    for the ore, is the earlier stage marked impossible too?
 
 --------------------------------------------------------------------------------
 
@@ -8684,6 +8688,62 @@ when a later stage it feeds is impossible. For example, if she can mine copper
 ore but there's no forge she can reach to smelt it, "mine the ore" is marked
 "can't: no forge to smelt it", so the model never picks half a chain. Is that
 the right reading?
+
+--------------------------------------------------------------------------------
+
+### User Request 87
+
+So, I was thinking if there's three tasks at once, task A, B, and C, and they're
+threaded together such that it's like... do one task from A, then B, then A,
+then C, so like ABACCBAB or similar, and the user delivers an update to A, then
+first it would re-calculate the BCCBB path, then re-add A so now it's like
+ACABACBB perhaps. That way we get the most optimal path. Unless you think we
+could skip that middle step...?
+
+As for marking tasks impossible, I don't think we should allow that as a
+possibility at all. Everything should be fairly rigidly defined in the game, if
+the model mis-produces a task list or something then the bot will just make a
+mistake. "oops, I forgot to check the auction house before I left Orgrimmar to
+go mining" or whatever.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 87
+
+Both are recorded and committed.
+
+**Re-weaving: yes, we can skip the middle step.** Weaving the new set A′, B
+and C from scratch in one pass is always at least as good as your two passes.
+Any order the two-pass method could produce, such as ACABACBB, is one of the
+orders the single pass also considers, so it can only find the same route or a
+shorter one. Two things stay fixed during the re-weave:
+- **The step she's in the middle of:** half a walk to a vein gets finished, not
+  thrown away.
+- **Each hunt's stage order:** mine before smelt.
+
+One caveat: with a dozen or more steps, finding the truly shortest order gets
+expensive, because the number of possible orders grows factorially. So in
+practice the one pass is a good heuristic, not a guaranteed optimum. Neither is
+your two-pass method, so nothing is lost.
+
+**No impossibility marks:** the source table lists only what exists in the
+game's data. If the model routes badly, she carries out the bad route and
+notices in character ("oops, I forgot to check the auction house before I left
+Orgrimmar"). Two flat facts still stop a request up front:
+- **No source anywhere:** "I don't see any … on the auction house, and I'm not
+  sure where to get them."
+- **Recipe not learned:** "I don't have that recipe trained yet, sorry."
+
+That leaves one conflict. Your earlier line, "Sorry, I can't do that right now
+because of ABC. Do you want to level up some more with me?" or "…do that
+dungeon?", needs someone to judge that a source is out of her reach, and that
+judgement just left the table. **Where does that line go now?**
+1. **After failing.** She goes, dies to the monster or can't get in alone, then
+   says it. Every judgement comes from what actually happened.
+2. **The model says it while routing.** It sees the monster's level next to hers
+   in the table and decides by itself to ask instead of sending her. That is
+   still routing, with asking as one of the routes.
+3. **Dropped.** She just keeps re-attempting.
 
 --------------------------------------------------------------------------------
 
