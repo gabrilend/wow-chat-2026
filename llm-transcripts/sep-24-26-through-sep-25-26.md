@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 19:38:08
+Generated on: 2026-09-25 19:43:33
 Models: claude-opus-5-5
 
 ## Contents
@@ -8436,6 +8436,76 @@ an open question in the task-hunt issue.
 
 So the question now: **for task hunts, option 1 (the model translates, code
 plans) or option 2 (the model plans with tool calls)?**
+
+--------------------------------------------------------------------------------
+
+### User Request 83
+
+<pasted_content id="8773">
+> A task hunt goes further. Choosing between a copper vein 400 yards away and 3
+> gold at the auction house is a decision, and the bot module has no command for
+> "fetch everything this
+>   recipe needs". I see two ways to build it:
+> 1. The model only translates. The buddy module gets a new ordinary-code
+> command, "craft this for that person", and the planning (sources, the distance
+> and price weights, weaving
+>      hunts together) lives in that code. This keeps the command issue's rule intact, makes plans repeatable and testable, and keeps it working when the model cluster is slow. The
+>      model's jobs would be understanding the request and the in-character talk, like "I need this other thing first, lemme go get it".
+</pasted_content id="8773">
+
+
+this one. The model routes between behaviors, it doesn't apply behavior.
+
+> Failures. You're right that crafting itself is predictable. What can go wrong
+> is the fetching:
+>     - a material that only drops from monsters far above her level, or inside a dungeon;
+
+"Sorry, I can't do that right now because of ABC. Do you want to
+[do-thing-that-resolves-the-task]?" like "do you want to level up some more with
+me?" or "do you want to do that dungeon?"
+
+>     - an item that no reachable vendor sells, that the auction house doesn't have, and that she can't gather.
+
+... "I don't see any [wotlk item] on the auction house, and I'm not sure where
+to get them." or alternatively "I don't have that recipe trained yet, sorry"
+(that last one works well in other situations too)
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 83
+
+> Applying the answers to the task-hunt issue and adding the principle to the
+> design-principles doc.
+
+I've recorded your answers and committed them. Task hunts now work your way:
+- **The model routes.** It turns "can you make me some runed copper bracers?"
+  into one buddy command (what to make, for whom, how urgently) and speaks her
+  lines. It doesn't plan.
+- **Code plans.** Choosing sources, weaving hunts together and walking the route
+  are ordinary code. The command can also be typed in chat, so hunts can be
+  tested before the language-model layer exists.
+- **Impossible steps are caught before starting.** She gives the reason and
+  offers the fix, using your lines: "do you want to level up some more with
+  me?", "I don't see any … on the auction house", "I don't have that recipe
+  trained yet, sorry".
+- **Setbacks that clear up on their own are retried:** a node taken, an auction
+  gone, a vendor sold out, a death on the road.
+
+Your rule "the model routes between behaviors, it doesn't apply behavior" is now
+in the design principles doc. It lists the two issues it's applied in: task
+hunts and the plain-language command layer.
+
+Back to the clan guild. Sargobras asks for the name at the first buddy, so **how
+does the owner type it?**
+1. **A text box from his conversation menu.** The stock client can show a pop-up
+   text box from a conversation option; it's the same box the game uses to ask
+   for a password or code. The server receives what was typed, and the Lua
+   engine supports this directly. It needs no addon and is clear to the player.
+2. **Saying it in chat to him.** He waits for the owner's next /say or whisper
+   and takes that as the name. This is more natural, but a stray line becomes
+   the guild name unless he reads it back and asks "is that right?"
+
+I'd recommend option 1.
 
 --------------------------------------------------------------------------------
 

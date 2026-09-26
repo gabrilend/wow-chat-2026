@@ -105,15 +105,27 @@ for it: her own materials, her own coin, her own time.
 "The model routes between behaviors, it doesn't apply behavior."
 
 - **The language model** understands the request and turns it into one new
-  buddy command, "craft this for that person" (with the item, the count,
-  the materials offered, and how urgent it is), and it speaks her lines in
-  character. It does not plan.
-- **Ordinary code in the buddy module** does the planning: the material
-  tree, choosing each source by the distance and price weights, weaving
-  several hunts into one route, and walking the steps. Plans are
-  repeatable and testable, and hunts keep going when the model cluster is
-  slow. This keeps 917's rule that its layer carries requests rather than
-  having goals of its own.
+  buddy command, and it speaks her lines in character. The command's shape
+  (Ritz, 2026-09-25: "what to make, for whom, and a source defined for each
+  of the required materials, one argument per material (with stacks
+  counting as one entry), where one of the sources can be their
+  backpack"):
+  - what to make;
+  - for whom;
+  - then one argument per required material, each naming where that
+    material comes from: her backpack (which, per the example, includes
+    what the asker hands over), a gathering node, a monster, a vendor, or
+    the auction house. A stack is one entry.
+
+  So the model routes each material to a source behavior; it doesn't walk
+  or buy anything itself.
+- **Ordinary code in the buddy module** reads the recipe's material tree
+  and the costs of each source (walking distance, auction and vendor
+  price, whether she can do it at all) for the model to route over, then
+  carries out the command: weaving several hunts into one route and
+  walking the steps. Hunts keep going when the model cluster is slow once
+  the command is written. This keeps 917's rule that its layer carries
+  requests rather than having goals of its own.
 
 ### A step that can't succeed (Ritz, 2026-09-25)
 
@@ -136,16 +148,17 @@ first, a vendor sold out, a death on the road, full bags) are re-attempted.
 
 ## Suggested Implementation Steps
 
-1. The "craft this for that person" buddy command, usable without the
-   model (by a chat command) so hunts can be tested before 917 exists.
-2. The planner, in code: expand a request into its material tree, subtract
-   the supply, and pick a source for each missing leaf by walking distance
-   and auction price, all from data the server already holds (recipes from
-   the spell data, node and monster spawns from the world database, vendor
-   lists, 617h's auction prices); judge each processing chain as one unit;
-   refuse up front, with a reason and an offer, a step that can't succeed.
-3. The model's part (917c): recognise a craft request and write the
-   command; voice her replies.
+1. The craft command (item, recipient, one source per material), usable
+   without the model (by a chat command) so hunts can be tested before 917
+   exists.
+2. The source table, in code: expand a recipe into its material tree and,
+   for each material, list the sources she could use with their walking
+   distance and auction or vendor price, all from data the server already
+   holds (recipes from the spell data, node and monster spawns from the
+   world database, vendor lists, 617h's auction prices); mark sources that
+   can't succeed, with the reason and the offer that would fix it.
+3. The model's part (917c): recognise a craft request, pick a source per
+   material from the table, write the command; voice her replies.
 4. The hunt as a standing instruction (917d) that survives relogs and ends
    on delivery or when the asker cancels.
 5. Delivery by hand or by mail, per the asker's words.
@@ -154,6 +167,19 @@ first, a vendor sold out, a death on the road, full bags) are re-attempted.
 
 - (Answered 2026-09-25) Who plans: code does; the model routes the request
   to a buddy command and speaks. 917's rule holds.
+- Does the model pick sources freely, or only from the table code hands it
+  (each source with its distance, price and whether it can succeed)? The
+  table keeps impossible or far-off picks out, and keeps Ritz's two weights
+  (distance, price) in play.
+- One material split across sources (2 copper bars in the backpack, 4 more
+  from the auction house): two entries for that material, or is the rest
+  always fetched from one source?
+- Urgency (hand it over now, or mail it later) was in the first shape of
+  the command and not in Ritz's: a fourth argument, or read by code from
+  the request some other way?
+- A processed material (a bar made from ore): is "smelt it from ore I
+  mine" one source, keeping the chain as one unit, or does the ore get its
+  own argument?
 - (Answered 2026-09-25) A failed step is re-attempted.
 - (Answered 2026-09-25) Steps that can never succeed are caught before the
   hunt starts; she says why and offers what would fix it.

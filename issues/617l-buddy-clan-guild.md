@@ -29,7 +29,9 @@ a character belongs to at most one guild.
 - Every owner character gets a guild of its own, holding the owner and its
   buddies, created automatically; the owner chooses its name. Sargobras
   asks for it when the first buddy is made (Ritz, 2026-09-25), so the guild
-  and the clan start together.
+  and the clan start together. The owner types it into a pop-up text box
+  opened from his conversation menu (the box the stock client shows for a
+  conversation option that asks for a code), so no addon is needed.
 - The clan uses guild chat to talk among themselves (buddies' lines are
   in-character once the chat module, 916, reaches basic).
 - The owner can't leave it; guild banks are disabled on basic (Ritz,
@@ -48,8 +50,9 @@ a character belongs to at most one guild.
 
 - (Answered 2026-09-25) Sargobras asks the owner for the guild's name when
   the first buddy is created, so the guild begins with the clan.
-- How is the name typed: a pop-up text box from Sargobras's conversation,
-  or the owner saying it in chat to him?
+- (Answered 2026-09-25) The name is typed into a pop-up text box from a
+  conversation option with Sargobras (the stock client's coded gossip box;
+  the Lua engine receives the text). No addon needed.
 - (Answered 2026-09-25) The owner can't leave the clan guild, and guild
   banks are disabled (Ritz: "guild banks are disabled and you can't leave
   your guild"). So joining a friend's guild is not possible on basic.
