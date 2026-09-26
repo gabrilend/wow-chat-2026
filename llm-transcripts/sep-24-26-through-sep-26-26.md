@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 23:57:31
+Generated on: 2026-09-26 13:25:23
 Models: claude-opus-5-5
 
 ## Contents
@@ -143,6 +143,10 @@ Models: claude-opus-5-5
     and the guild bank removal are built and committed. Next, answer who starts
     with 300 professions: death knight buddies, all death knights, or inherited
     from the sacrificed character.
+34. 2026-09-26 00:14, after Request 106 - We're building basic's death knight
+    sacrifice, where Sargobras takes a level-55-or-higher soul before a death
+    knight can leave Acherus, and it's built and committed. Next, decide whether
+    a death knight with no such character left stays stuck.
 
 --------------------------------------------------------------------------------
 
@@ -3477,6 +3481,8 @@ more that we get done, the better.
 
 > Committing today's design work first.
 
+*[commit] 4462a1e35 in wow-chat-2026 - Basic: design pass on the level-60 gear ladder, Outland and buddies*
+
 > Committed. Starting on random bots off (config patch).
 
 > Writing the no-random-bots config patch; checking whether the bot-population
@@ -3484,10 +3490,14 @@ more that we get done, the better.
 
 > Now updating the test's expectations and running it.
 
+*[commit] 74c7695dd in wow-chat-2026 - Basic: no random bots, only each player's buddies*
+
 > Random bots off is committed. Now the tooltip change you asked for; first a
 > quick check of the staging area.
 
 > Adding the tooltip movement you asked for.
+
+*[commit] d34ae539b in wow-chat-2026 - Gear ladder chart: row guides and a tooltip that keeps its side*
 
 Chart change is live and committed. Next: the crushing-blow patch. Loading the
 patch-system conventions first.
@@ -3967,6 +3977,8 @@ skill's directory.
 
 > Checking how to un-claim a line I claimed by mistake in the table of contents.
 
+*[commit] 056aa2d0d in wow-chat-2026 - Basic: creatures of level 64 and up never land crushing blows*
+
 > Now the Outland dungeon SQL rework. Reading the revert file and the two test
 > scripts that check it.
 
@@ -3974,6 +3986,8 @@ skill's directory.
 > from the server's scripts. Checking the existing generator's style first.
 
 > Adding the tooltip reset you described to the chart.
+
+*[commit] 1ef819efc in wow-chat-2026 - Gear ladder chart: tooltip starts fresh for each colour group*
 
 > Chart change committed. Back to the Outland dungeon SQL: writing the new apply
 > file.
@@ -3997,6 +4011,8 @@ skill's directory.
 > including after the fresh-start move.
 
 > Committing the chart change while the test re-runs.
+
+*[commit] 1ec401a12 in wow-chat-2026 - Gear ladder chart: tooltip slides along the longer axis first*
 
 > Writing the multipliers feature while the database test runs. First, the
 > install-step pattern to copy.
@@ -4022,6 +4038,8 @@ skill's directory.
 > commit (1ec401a), because the commit tool takes all of this session's lines.
 > I'll say so in this commit's message.
 
+*[commit] 1ef026a28 in wow-chat-2026 - Basic: Outland dungeon ladder, and per-creature damage multipliers*
+
 > Committed. Now your two chart requests. First, the typical creature levels per
 > zone: I'll use the level range that covers the middle 80% of a zone's hostile
 > creature spawns.
@@ -4032,6 +4050,8 @@ skill's directory.
 
 > Also updating the zone table in the Outland gear issue to use the same typical
 > ranges.
+
+*[commit] 7a3801e49 in wow-chat-2026 - Gear ladder chart: level and item-level spotlights, typical zone levels*
 
 > Committed. Next: the Outland tradeskills removal (155n). Checking how
 > profession ranks and the pools that hold node spawns are stored.
@@ -4082,6 +4102,8 @@ skill's directory.
 > Fixing the last pixel gap in the level column first, then committing
 > everything together.
 
+*[commit] d2fe2d9e3 in wow-chat-2026 - Basic: Outland without tradeskills or quests; one flight in, one to the Isle*
+
 > Committed. Next is Inscription (155o). First checking whether a high-rank
 > scroll can even be used on a level-60 target, since its spell carries a level.
 
@@ -4113,6 +4135,8 @@ skill's directory.
 
 > Inscription passes every check, including the exact revert. Committing it with
 > B032 and the chart changes.
+
+*[commit] 5bb2008bd in wow-chat-2026 - Basic: Inscription without glyphs, a buff-scroll profession*
 
 > Next: the Darkmoon SQL.
 
@@ -4564,6 +4588,8 @@ please continue
 > Darkmoon tests pass (both checks green, exact revert holds); committing that
 > now, then on to Outland gear scaling.
 
+*[commit] ff0862990 in wow-chat-2026 - Basic: Darkmoon cards never bind, and Tempest Keep bosses drop Burning Crusade cards*
+
 > Starting a kept RAM database so I can measure the stock loot for the scaling
 > design.
 
@@ -4589,6 +4615,8 @@ please continue
 
 > Round trip is exact. Updating the issue files to describe what's now built.
 
+*[commit] eaabbf3a9 in wow-chat-2026 - Basic: Outland gear rescaled onto the level-60 ladder*
+
 > Next piece: raising Outland's hostile open-world creatures by 4 (6 on the
 > Isle). Checking how the existing generators read the client's data files,
 > since "hostile" lives in the faction data.
@@ -4604,6 +4632,8 @@ please continue
 
 > Updating the basic profile doc (it still says players can quest in Outland,
 > which is no longer true).
+
+*[commit] f826249b1 in wow-chat-2026 - Basic: Outland's monsters four levels higher, six on the Isle*
 
 I'm stopping here. The rest of the list either needs a decision from you or is a
 large C++ job. Since the last update I made three commits. All three pass the
@@ -4686,6 +4716,8 @@ going to sleep. :)
 
 > Only the transcript has changed since my last commit. Committing it so
 > tonight's conversation is in git.
+
+*[commit] f4d04145c in wow-chat-2026 - Transcript: the end of tonight's basic-profile session*
 
 Everything of mine is committed; the last commit is `f4d04145c`, with tonight's
 transcript. The other changes still in the working tree belong to other
@@ -4810,6 +4842,8 @@ out... goodnight!
 > redo my one line there with the edit tool; that way only my line gets recorded
 > as mine.
 
+*[commit] df8446f01 in wow-chat-2026 - Socket bonus catalog, and an issue for sockets on basic gear*
+
 The catalog is ready: `docs/profiles/socket-bonus-catalog.md`. It's committed in
 `df8446f`, along with a new issue file that holds tomorrow's socket bonus test
 and your low-level sockets idea.
@@ -4895,6 +4929,8 @@ list of tasks to accomplish.
 
 > Both issue files check out. Committing.
 
+*[commit] 3be27ae99 in wow-chat-2026 - Sockets design draft for basic, and a placeholder for buddy professions*
+
 I've written the design draft into the sockets issue file and committed it,
 along with a new issue file for buddy professions that waits until the
 Jewelcrafting rework is done. Nothing is built yet.
@@ -4968,6 +5004,8 @@ titans hang out.
 ### Assistant Response 37
 
 > Checking WotLK gem sizes and what disenchanting Azeroth's epics gives.
+
+*[commit] ed13a5426 in wow-chat-2026 - Sockets design: Wrath gems for Outland, master jewelcrafters in Uldaman*
 
 Wrath gems aren't too high level for Outland. On our ladder they fit Outland's
 blues. I've recorded all of this in the sockets issue file (committed); it's
@@ -5058,6 +5096,8 @@ titans like Uldaman or something. What do you think?
 ### Assistant Response 38
 
 > Checking how the Wrath gem cuts are learned in the stock game.
+
+*[commit] 9cf626183 in wow-chat-2026 - Sockets design: gem odds, bound epic gems, +4 gems from prospecting, cut recipes*
 
 Both ideas work. The stock data splits cleanly between them:
 
@@ -5166,6 +5206,8 @@ of the same quality.
 > Checking whether the server looks at Jewelcrafting skill when you craft, not
 > only when you learn.
 
+*[commit] 71108115d in wow-chat-2026 - Sockets design: where gem-cut recipes drop, two titan-site NPCs, skill 300*
+
 Recorded all three answers in the sockets issue and committed them; nothing is
 built yet.
 
@@ -5243,6 +5285,8 @@ game breeds connection, at least in the economy.
 > Checking whether the server's trainer can charge an item instead of gold, and
 > whether any existing item-price combination uses gems.
 
+*[commit] efd242282 in wow-chat-2026 - Sockets design: rare recipe drops, and why the teacher uses a dialogue*
+
 Unfortunately we can't make the gem the price in the trainer window and still
 show a correct price:
 
@@ -5298,6 +5342,8 @@ Onyxia.
 
 > Also fixing a wording slip in the issue ("his direction") so it reads "Ritz's
 > direction".
+
+*[commit] c61f5e5c4 in wow-chat-2026 - Sockets design: where epic Wrath gems come from; Onyxia keeps her gem sack*
 
 I've recorded the epic-gem plan in the sockets issue and committed it. There are
 six uncut epic Wrath gems: Cardinal Ruby, King's Amber, Majestic Zircon,
@@ -5364,6 +5410,8 @@ sounds about right
 
 ### Assistant Response 43
 
+*[commit] df3a05227 in wow-chat-2026 - Sockets design: Onyxia's hoard, and the epic recipe drop rate*
+
 Thanks, Ritz. I'll use "she" from here on.
 
 All three are recorded and committed:
@@ -5402,6 +5450,8 @@ things like Tigerseye or low level pearls.
 > Checking how many item slots one loot window can hold, since 120 separate gems
 > might not fit.
 
+*[commit] 5bc73ed5b in wow-chat-2026 - Sockets design: Onyxia's hoard is about 120 gems, 40% low-level*
+
 Recorded and committed: about 120 gems per sack, 40% of them cheap low-level raw
 gems like Tigerseye, Malachite, Shadowgem and the small pearls.
 
@@ -5438,6 +5488,8 @@ If there isn't enough space to fit, we can have nested containers.
 > Nested containers work: the sack can drop smaller bags, and each bag opens
 > into its own loot window of up to 18 piles. Looking for existing openable bags
 > with fitting names, since a brand-new item might show wrongly in the client.
+
+*[commit] 835410b16 in wow-chat-2026 - Sockets design: Onyxia's hoard packs vanilla's own coloured gem sacks*
 
 Nested containers work, and we don't even need new bags. Vanilla's **Red, Blue,
 Yellow, Green and Gray Sacks of Gems** still exist in the game as bags you can
@@ -5522,6 +5574,10 @@ above.
 
 ### Assistant Response 47
 
+*[commit] a96c06b7d in wow-chat-2026 - Sockets design: all five coloured gem sacks in Onyxia's hoard*
+
+*[commit] b07f73d1a in wow-chat-2026 - Sockets issue: drop a leftover "Agreed?" from an answered question*
+
 Recorded and committed: Onyxia's Ashen Sack of Gems now holds all five coloured
 sacks every time, plus the other piles. To stay within the 18-entry loot window,
 the low-level raw gems come as 3 bigger piles (about 16 gems each) instead of 5,
@@ -5557,6 +5613,8 @@ instead. That way they can be traded.
 --------------------------------------------------------------------------------
 
 ### Assistant Response 48
+
+*[commit] 9c6c49512 in wow-chat-2026 - Sockets design: binding gems drop from Onyxia, not from inside her sack*
 
 Done, and recorded in the sockets issue. The three epic-gem rolls (one
 guaranteed, one at 60%, one at 30%) move out of the sack and onto Onyxia's own
@@ -5644,6 +5702,8 @@ ideally if we could do that, I'd prefer it.
 
 ### Assistant Response 50
 
+*[commit] 3f9b5b9ee in wow-chat-2026 - Sockets design: cut epic gems bind; jewelcrafters cut through the trade window*
+
 Recorded in the sockets issue and committed: cut epic gems bind on pickup too,
 and jewelcrafters cut a customer's gem through the trade window. It needs a
 server code patch. It would work like this:
@@ -5717,6 +5777,8 @@ these first three seem fine. I want both of them to be at each location.
 
 > Looking at what the server sends the client about the "will not be traded"
 > slot, since that decides what text the trade window can show.
+
+*[commit] 2594aea2c in wow-chat-2026 - Sockets design: trade-window cutting details, and both NPCs at three titan sites*
 
 **The Create button:** yes, your understanding is right. There are two halves:
 - **Server:** for the epic gem cuts only, the server's ingredient check would
@@ -5797,12 +5859,16 @@ The random one is chosen without replacement.
 > the NPC placements, in the sockets issue first; then the project-wide AIO
 > update.
 
+*[commit] 85acb27b9 in wow-chat-2026 - Sockets design: trade window text traced in the stock client; NPC placement*
+
 > Now the project-wide AIO update. Finding where the project plan lives and
 > which issues actually depend on AIO.
 
 > Writing the markers now. Issues that are entirely AIO get a "will not
 > implement" banner that keeps their design as "how we would". Issues that only
 > partly use AIO get a banner naming the part.
+
+*[commit] 1288578d3 in wow-chat-2026 - Plan: no AIO; designs that need it are marked "will not implement"*
 
 The project plan now says no AIO. I committed three things:
 
@@ -5890,6 +5956,8 @@ can't ask users to install addons, at least until the custom client is done...
 
 > Looking at those three files: their changes, when they were made, and which
 > conversation they came from.
+
+*[commit] fbed1790c in wow-chat-2026 - Plan: no player-installed addons until the custom client*
 
 None of the three is mine. They're uncommitted work from earlier sessions,
 sitting in the working tree:
@@ -5982,8 +6050,16 @@ whatever they'd like, we just can't require them to.
 > Now the class trainers issue: adding your note on which profile it's for and
 > how it gets built.
 
+*[commit] 795db65be in wow-chat-2026 - Basic: an issue for Outland ability tomes; the roadmap says no REQUIRED addons*
+
+*[commit] eadcbd007 in wow-chat-2026 - Universal class trainers: commit the September 3–4 design, left uncommitted*
+
 > Committing the explore profile issues and the player-safety issue as backlog,
 > each credited to its session.
+
+*[commit] 2bceb94cd in wow-chat-2026 - Explore profile: commit the September 3–4 issue set as backlog*
+
+*[commit] 349efe6c2 in wow-chat-2026 - Player-machine safety: commit the September 23 issue as backlog*
 
 All done and committed.
 
@@ -6059,6 +6135,8 @@ else...?
 > Adding the same findings to issue 405 itself, since that's where someone would
 > look.
 
+*[commit] 3675a0226 in wow-chat-2026 - Tomes need no AIO but their recipes need a client patch; Un'Goro pair moves 50/50*
+
 **Issue 405 (ability tomes):** no AIO, but one part needs a client patch.
 - **The recipes need a client patch.** Players were meant to make tomes through
   Inscription, but each recipe would be a brand-new spell. The client's crafting
@@ -6114,6 +6192,8 @@ once?
 --------------------------------------------------------------------------------
 
 ### Assistant Response 56
+
+*[commit] 92cc09ef3 in wow-chat-2026 - Ability tomes drop only in Azeroth; the Wrath-era ones from Naxxramas*
 
 I've recorded the tomes change and committed it: ability tomes drop only in
 Azeroth, and the Wrath-era ones come from Naxxramas. I renamed the issue to
@@ -6264,6 +6344,8 @@ leave them for now.
 > Checking two things in the server code before recording: how repairs are
 > charged, and how crafting skill-up chances are decided.
 
+*[commit] c5dd7dfa6 in wow-chat-2026 - Sockets design: Ritz's answers; tomes from Ahn'Qiraj and the Emerald Dragons*
+
 All recorded in the sockets and tomes issues, and committed.
 
 **Tomes:** Burning Crusade–era (61–70) tomes drop in Ahn'Qiraj 20 and 40,
@@ -6342,6 +6424,8 @@ Sure.
 
 ### Assistant Response 58
 
+*[commit] b5253082a in wow-chat-2026 - Sockets design: trainers teach the Wrath cuts; unrepairable whites; socket tables*
+
 Recorded and committed:
 - The ordinary Jewelcrafting trainers teach the 58 uncommon Wrath cuts at 300,
   for gold. The titan sites keep only the crystal trader, and the Un'Goro one
@@ -6406,6 +6490,8 @@ Your jewelcrafting tables look right to me!
 
 ### Assistant Response 59
 
+*[commit] 5cdfeb597 in wow-chat-2026 - Sockets design: a masterwork jewelcrafter trains the Wrath cuts; tables agreed*
+
 Good idea. Recorded and committed: a **masterwork jewelcrafter** stands beside
 each crystal trader and teaches the 58 uncommon Wrath cuts. It's a real trainer,
 so players get the stock trainer window, pay gold, and need skill 300. It's all
@@ -6460,6 +6546,8 @@ Yeah!
 > The full test passes: apply, re-apply, revert to identical tables, and apply
 > again, with all checks green. Logging the default rates and updating the issue
 > before committing.
+
+*[commit] 28ebbaa6b in wow-chat-2026 - Basic: the gem supply (sockets stage 1)*
 
 Stage 1 is built, tested and committed. Nothing is installed on the real server
 yet.
@@ -6546,6 +6634,8 @@ which rare cuts are they?
 
 > Recording the decision in the sockets issue.
 
+*[commit] f48796245 in wow-chat-2026 - Design principles doc; Outland gem cuts go to Azeroth's trainers*
+
 Recorded and committed. Azeroth's Jewelcrafting trainers will teach Outland's
 cuts for gold: uncommon cuts across about 150–225, rare cuts across about
 250–300, each tier in order **sustain → power → focus**.
@@ -6605,6 +6695,8 @@ the other cuts we can put on the masterwork trainer.
 
 ### Assistant Response 62
 
+*[commit] 096709eb2 in wow-chat-2026 - Gem supply: no meta gems; resilience is sustain, defensive ratings focus*
+
 Done and committed:
 - **Meta gems are gone** from basic's Jewelcrafting. Their recipes no longer
   drop, so the rare-cut pool goes from 83 to 66, and 174 cutting recipes remain
@@ -6650,6 +6742,8 @@ strike". Where do they go?
 
 > Now reverting the kept database in the real server's name order, then
 > comparing with a reverse-order revert of the same database.
+
+*[commit] 6f41ed0f0 in wow-chat-2026 - Gem supply: Jewelcrafting trainers teach Outland's cuts, sustain first*
 
 Stage 1 is complete, including the Outland cuts at the trainers. All committed
 and tested; nothing is installed on the real server yet.
@@ -6711,6 +6805,8 @@ um. sure I guess.
 
 > The test passes, but its exact-revert comparison doesn't cover two tables I
 > now edit: trainer bindings and creature models. Adding them and re-running.
+
+*[commit] 153436f90 in wow-chat-2026 - Basic: a Visiting Jewelcrafter in each of Azeroth's six capitals*
 
 Done and committed. Each of Azeroth's six capitals now has a **Visiting
 Jewelcrafter** <Jewelcrafting Trainer>, teaching the same list as the Silvermoon
@@ -6776,6 +6872,8 @@ Great let's keep working.
 
 > Exactly as decided: 56 uncommon cuts at stock prices (1–2 gold) and the 7
 > rare single gems at 10 gold. Recording and committing.
+
+*[commit] 8b10a7a53 in wow-chat-2026 - Basic: titan-site jewelcrafters (sockets stage 2)*
 
 Stage 2 is built, tested and committed. At Uldaman, the Gate of Uldum and the
 Un'Goro pylons, each pair is:
@@ -6906,12 +7004,16 @@ already match your table and the colour rule. Which way for blues?
 > Stage 3 passes the full test, including the exact revert and the new check.
 > Recording and committing.
 
+*[commit] 62c4e7594 in wow-chat-2026 - Basic: gem sockets on capital whites and vanilla dungeon blues (stage 3)*
+
 > Code patch written and listed for basic. Running the source-patch round-trip
 > test, which applies every basic patch to a copy of the source and removes it
 > again.
 
 > Round trip is byte-identical with B033 included. Now the SQL half, doubling
 > white durability, plus its patch doc.
+
+*[commit] 9f4dceb7a in wow-chat-2026 - Basic: white gear lasts twice as long and is never repaired*
 
 > Checking which link types the server's command parser accepts for a spell,
 > since shift-clicking a recipe produces a particular kind of link.
@@ -6931,6 +7033,8 @@ already match your table and the colour rule. Which way for blues?
 
 > The patched code reads right, including the escaped quotes. Writing the patch
 > doc and recording.
+
+*[commit] 89cd9fa5e in wow-chat-2026 - Basic: jewelcrafters cut a customer's gem through the trade window*
 
 The Jewelcrafting rework is built and committed. None of it is installed or
 compiled yet.
@@ -7019,6 +7123,8 @@ deficiencies in planning?
 
 > Updating the sockets issue to match. The design history stays, marked as
 > dropped, and the current-state sections say what's true now.
+
+*[commit] 14911048e in wow-chat-2026 - Basic: drop trade-window gem cutting; epic gems don't bind after all*
 
 The rollback is committed, and the in-RAM test passes again:
 - Epic Wrath gems keep their stock binding (none).
@@ -7421,6 +7527,8 @@ often... What exactly are the buddy bots doing to the database in a hot loop?
 > No existing issue covers dual spec or respec cost, so I'm opening one under
 > the basic profile. First, reading how the server prices a respec today.
 
+*[commit] 9030b57f1 in wow-chat-2026 - Buddy design: accounts, levels, hearthstones, Sargobras, towns, talents*
+
 All your answers are recorded in the buddy issues and committed.
 
 **The database worry was my mistake, and there's no hot loop.** I passed on a
@@ -7465,6 +7573,8 @@ How does the respec cost increase? Is it multiplied or added?
 > climbing by 5 gold per respec: the 20th respec costs 90 gold. It never
 > explodes, but frequent respeccing gets expensive over time. Recording weekly.
 
+*[commit] 16b9af54f in wow-chat-2026 - Respec cost falls weekly, not monthly*
+
 Weekly is recorded and committed.
 
 To your question: the cost is added, not multiplied. It's 1, 5 and 10 gold, then
@@ -7491,6 +7601,8 @@ everyone on the server's weekly reset day. And yeah let's keep the floor.
 --------------------------------------------------------------------------------
 
 ### Assistant Response 72
+
+*[commit] db7795c85 in wow-chat-2026 - Respec cost steps 1, 5, 10, then +10 gold; drops on the weekly reset*
 
 Recorded and committed. The respec pricing is now fully decided:
 - 1, 5 and 10 gold, then 20, 30, 40, 50 and up without a cap;
@@ -7525,6 +7637,8 @@ Great. Let's do 1.
 > Starting with dual spec: finding how class trainers offer it in the data.
 
 > Writing B035, the respec price patch.
+
+*[commit] d674b7fcc in wow-chat-2026 - Basic: no dual spec, and respec prices that climb without a cap*
 
 The respec and dual-spec changes are built, tested and committed.
 
@@ -7592,6 +7706,8 @@ see what we had planned for that.
 
 > Recording these, then looking up the immortal shepherd issues' LLM plan.
 
+*[commit] 731b76f90 in wow-chat-2026 - Buddy design: towns by flag, owner death, owner in a dungeon, Sargobras's look*
+
 All recorded in the buddy issues and committed:
 - **Towns:** any area flagged town, capital or capital subzone. Each buddy
   builds its errand list from the services that town has.
@@ -7646,6 +7762,8 @@ and they will use it to chat with each other.
 
 > No existing issue mentions guilds for buddies, so the clan guild gets its own
 > sub-issue.
+
+*[commit] 002218494 in wow-chat-2026 - Buddy professions designed; a guild per clan*
 
 I've recorded your professions design in the buddy professions issue, and
 committed it:
@@ -7709,6 +7827,8 @@ system, while still allowing it if the user wants.
 
 > Recording the tailor/enchanter rule, the gathering mode, and the guild rules
 > you mentioned (no guild banks, can't leave the guild).
+
+*[commit] e4b566cd2 in wow-chat-2026 - Buddy professions: gathering mode in lower zones; guild rules*
 
 I've recorded the gathering mode and guild rules in the professions and
 clan-guild issues, and committed them. The stock server has no setting that
@@ -7837,6 +7957,8 @@ that's fine. They're players too.
 
 > Checking for the spreading pattern you remember from the beta Lua.
 
+*[commit] 3a670ed66 in wow-chat-2026 - Buddy professions: spreading out, materials, full bags, leaving the party*
+
 All recorded, with each part in the issue it belongs to, and committed:
 - **Professions:** first come, first served at nodes. The owner's level decides
   a "lower zone", and zone level ranges will come from fan guides.
@@ -7883,6 +8005,8 @@ the low level ones. They will mail them to clanmates while in town.
 --------------------------------------------------------------------------------
 
 ### Assistant Response 78
+
+*[commit] 898b094de in wow-chat-2026 - Buddy professions: bag sizes and handing out consumables*
 
 Recorded in the professions issue and committed:
 - **Bags:** one size up from the clanmate's smallest bag.
@@ -8286,6 +8410,8 @@ naturally over time.
 
 ### Assistant Response 80
 
+*[commit] 47c00de86 in wow-chat-2026 - Buddy professions: spare consumables are shared out evenly*
+
 I've recorded the even split in the professions issue and committed it. A buddy
 mails an equal share to every clanmate who can use the item, without checking
 what anyone already holds. Anyone who ends up with more than five passes the
@@ -8330,6 +8456,8 @@ requests.
 ### Assistant Response 81
 
 > Also noting the link on 917's side, then validating and committing.
+
+*[commit] 372b72c4e in wow-chat-2026 - Buddy task hunts: crafting on request, planned and deferred*
 
 I've recorded your answer and committed it. For now, buddies don't take
 requests. Crafting on request now has its own issue, **buddy task hunts**, with
@@ -8418,6 +8546,8 @@ I'd do it...
 ### Assistant Response 82
 
 > Now recording all of it.
+
+*[commit] e4c5318d8 in wow-chat-2026 - Buddy task hunts: sources, walking distance, skill; guild named at the first buddy*
 
 I've recorded all of it in the task-hunt issue and committed it. Sargobras
 asking for the guild name at the first buddy is in the clan-guild issue.
@@ -8519,6 +8649,8 @@ to get them." or alternatively "I don't have that recipe trained yet, sorry"
 > Applying the answers to the task-hunt issue and adding the principle to the
 > design-principles doc.
 
+*[commit] 7e3606b65 in wow-chat-2026 - Task hunts: the model routes, code plans; impossible steps are refused up front*
+
 I've recorded your answers and committed them. Task hunts now work your way:
 - **The model routes.** It turns "can you make me some runed copper bracers?"
   into one buddy command (what to make, for whom, how urgently) and speaks her
@@ -8573,6 +8705,8 @@ this one
 --------------------------------------------------------------------------------
 
 ### Assistant Response 84
+
+*[commit] c4b1ba933 in wow-chat-2026 - Task hunt command names a source per material; guild name via a text box*
 
 Both are recorded and committed.
 
@@ -8665,6 +8799,8 @@ two entries. one for mining ore, one for smelting bars.
 
 > Rewriting the command section and the questions with all four answers.
 
+*[commit] f678341e1 in wow-chat-2026 - Task hunts: changes mid-hunt, split sources, delivery, processing stages*
+
 All four answers are in the task-hunt issue and committed:
 - **Changing a hunt mid-way:** each request stays whole, and her route is only
   ever built from the current set. "Just buy the pearl" swaps that one request
@@ -8715,6 +8851,8 @@ Great looks delicious.
 
 ### Assistant Response 86
 
+*[commit] 143f02bc1 in wow-chat-2026 - Task hunts: source table built in three tiers*
+
 I've recorded the three-step plan for the source table in the task-hunt issue
 and committed it. The straight-line ranking stays, and I noted the
 mountain-and-water penalty as a knob for later.
@@ -8747,6 +8885,8 @@ go mining" or whatever.
 --------------------------------------------------------------------------------
 
 ### Assistant Response 87
+
+*[commit] 42aeff32f in wow-chat-2026 - Task hunts: one-pass re-weave, no impossibility marks, mistakes in character*
 
 Both are recorded and committed.
 
@@ -8817,6 +8957,8 @@ to Azeroth recipes. Right? Any exceptions you can think of?
 --------------------------------------------------------------------------------
 
 ### Assistant Response 88
+
+*[commit] 0545db03e in wow-chat-2026 - Task hunts: a backlog past three, reach by zone level, never Outland*
 
 Both are recorded in the task-hunt issue and committed:
 - **Backlog:** at most three hunts are active at once, and more requests wait on
@@ -8891,8 +9033,12 @@ gained in Outland, so they'll never be considered realistic targets.
 > I'm looking up which portals link Outland to Azeroth before recording the
 > change.
 
+*[commit] 78bdab022 in wow-chat-2026 - Outland: only the Dark Portal connects it; buddies need no Outland rule*
+
 > The mage's Teleport: Shattrath is trainable at 60, not 65 as I wrote. I'm
 > fixing the issue now.
+
+*[commit] 3d1730bb4 in wow-chat-2026 - Outland portals: the mage's Teleport: Shattrath is on the removal list*
 
 I've recorded both answers and committed them.
 
@@ -8962,6 +9108,8 @@ yeah they should go, and no Northrend is not reachable... At least, not yet. >:)
 
 > Committing the portal answers and the Northrend idea.
 
+*[commit] 2ed3144dc in wow-chat-2026 - Outland portals settled; Northrend at sixty noted as a later expansion*
+
 All recorded and committed:
 - **Portals to remove:** the capitals' portals to the Blasted Lands join the
   list. All the portal removals are still waiting to be built.
@@ -9025,6 +9173,8 @@ this one
 
 > Checking where the level-58 Dark Portal gate comes from.
 
+*[commit] e749f1229 in wow-chat-2026 - Outland and Northrend open to anyone; all 61-80 abilities get tomes; taken guild names*
+
 I've recorded all three answers and committed them.
 
 - **Open to anyone:** no level gate on Outland or Northrend. One thing to check:
@@ -9085,8 +9235,12 @@ yeah!
 
 ### Assistant Response 92
 
+*[commit] 92b0e181e in wow-chat-2026 - Ability tomes: new items, per-ability scaling, death knights included*
+
 > The edit failed, and the commit went ahead anyway with only the transcript
 > under that message. Redoing the edit now.
+
+*[commit] a61042573 in wow-chat-2026 - Ability tomes: new items, per-ability scaling, death knights included*
 
 I've recorded all three answers in the tomes issue. My first commit went out
 with only the transcript because the edit hadn't applied, so the second commit
@@ -9137,6 +9291,8 @@ the original design is correct.
 
 ### Assistant Response 93
 
+*[commit] 903355ed1 in wow-chat-2026 - Ability tomes: drops only, and two ways a tome could teach*
+
 I've recorded the answer and committed it: Wrath tomes drop from Naxxramas only.
 
 Your approach, a written tooltip plus Lua that teaches the ability on use, would
@@ -9174,6 +9330,8 @@ issue files I think?
 
 > Recording the choice, and noting in the tome-system issue why custom classes
 > need the scripted kind.
+
+*[commit] 73c29f1dc in wow-chat-2026 - Ability tomes use the stock class-book mechanism; scripted tomes stay for custom classes*
 
 I've recorded the choice and committed it. Basic's tomes will be ordinary class
 books, one per rank, built the stock way. I rewrote the tomes issue's build
@@ -9233,6 +9391,8 @@ let's build the tome issue next.
 
 ### Assistant Response 95
 
+*[commit] ba09f08cc in wow-chat-2026 - Clan guild: never open to other players*
+
 > Recorded and committed: clan guilds never take other players.
 >
 > On making items: mostly yes. Here's what I'm starting the tome build with,
@@ -9273,6 +9433,8 @@ let's build the tome issue next.
 
 > Committing the build, after checking that the files I changed with scripts
 > hold no one else's edits.
+
+*[commit] a258db49a in wow-chat-2026 - Basic: class books for every level 61-80 ability, dropping in Azeroth's top raids*
 
 The class books are built and committed. The in-memory database test passes
 every step, including re-applying and an exact revert, plus two new checks after
@@ -9344,6 +9506,8 @@ Runestone maybe? Runic Icon? Runic Sigil?
 --------------------------------------------------------------------------------
 
 ### Assistant Response 96
+
+*[commit] 84c97fe3f in wow-chat-2026 - Class books stay unbound, buddies give them to the owner first; a cross-server layer idea*
 
 I've recorded all three points and committed them.
 
@@ -9435,6 +9599,8 @@ rename" completed (exit code 0)*
 
 ### Assistant Response 97 (continued)
 
+*[commit] 2391c4218 in wow-chat-2026 - Death knight books become Runestones; player guilds modelled on rao-chat*
+
 Death knight books are now "Runestone of …", for example "Runestone of Icy
 Touch V". The database test passes again, and it's committed.
 
@@ -9484,6 +9650,8 @@ rao-chat integration because it's still in development.
 --------------------------------------------------------------------------------
 
 ### Assistant Response 98
+
+*[commit] efa4541e2 in wow-chat-2026 - Player guilds as rao-chat rooms: confirmed and parked*
 
 I've recorded that the reading is confirmed and the rao-chat integration is
 parked, and committed it.
@@ -9574,6 +9742,8 @@ completed (exit code 0)*
 --------------------------------------------------------------------------------
 
 ### Assistant Response 99 (continued)
+
+*[commit] c2e668558 in wow-chat-2026 - Basic: the Dark Portal is the only door into Outland; 25-person Naxxramas drops 2.5x books*
 
 I built both changes, the in-memory database test passes including an exact
 revert, and it's committed.
@@ -9717,6 +9887,8 @@ step" completed (exit code 0)*
 
 ### Assistant Response 100 (continued)
 
+*[commit] ab5f18916 in wow-chat-2026 - Buddy gaps answered; no guild banks on basic*
+
 All ten answers are recorded in the buddy issues and committed.
 
 - **Guild banks are gone.** You said to remove the objects, so I built it: a new
@@ -9798,6 +9970,8 @@ like... json?
 
 ### Assistant Response 101
 
+*[commit] 49a894103 in wow-chat-2026 - Buddies: death knight clans, the guarantee ignores the owner, faction price pools*
+
 I've recorded your answers and committed them:
 - **Death knight owners** get death knight buddies, each of a random race.
   They're the one exception to basic's rule that no bot plays a death knight.
@@ -9866,6 +10040,8 @@ the json looks great.
 > Now the death knight sacrifice issue: Sargobras in Acherus, and the state of
 > Acherus's travel.
 
+*[commit] d8800aacb in wow-chat-2026 - Death knight clans fight without healers; Sargobras guards the gate of Acherus*
+
 I've recorded all of it and committed it.
 
 - **Death knight clans:**
@@ -9931,6 +10107,8 @@ professions they knew in life.
 
 ### Assistant Response 103
 
+*[commit] 270371b4a in wow-chat-2026 - Death knights: any 55+ soul, the intro kept, professions carried over from life*
+
 I've recorded these and committed them:
 - **The soul:** any of the account's characters at level 55 or higher. Sargobras
   lists them and the player picks one.
@@ -9984,6 +10162,8 @@ color and such because they are canonically undead now. Sucks to be them...
 ### Assistant Response 104
 
 > Checking the client's appearance file now rather than leaving that open.
+
+*[commit] d1b31fe2f in wow-chat-2026 - Death knights: a sacrificed soul is held, not deleted; Acherus a zone after the chain*
 
 I've recorded all of it and committed it.
 
@@ -10043,6 +10223,8 @@ neat
 
 > Now working out what, if anything, still ties the death knight design to
 > custom classes.
+
+*[commit] 4b83dc639 in wow-chat-2026 - Death knights: the Enclave rotates by sacrifices; the custom-class block looks unneeded*
 
 I've recorded your answers and committed them:
 - **Enclave scaling:** noted and parked.
@@ -10156,6 +10338,58 @@ completed (exit code 0)*
 > Reading the last line instead.
 
 Waiting for the re-run.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "Re-run the RAM test" completed (exit code
+0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 106 (continued)
+
+*[commit] 2bb1fe440 in wow-chat-2026 - Basic: the death knight sacrifice, with Sargobras at the gate of Acherus*
+
+The death knight sacrifice is built and committed. It's unblocked from the
+custom-class work and hasn't been tried in game yet.
+
+**How it plays:**
+- **Sargobras** stands in the Ebon Hold, between its two portals to the
+  capitals. That's the last step out of Acherus, and where Death Gate brings a
+  death knight home. His model is a Stormwind noble's for now, until his outfit
+  is chosen.
+- **The gate:** a new death knight that still owes a soul is sent back to him
+  whenever it reaches anywhere except Acherus or the Ebon Hold. So the whole
+  intro chain plays normally, and he's the way out at the end.
+- **The trade:** he lists the account's characters at level 55 or higher, death
+  knights excluded, each with a confirmation box. The chosen character moves to
+  a hidden holding account, and the death knight learns its professions: skill
+  levels and every recipe.
+  - Each player account gets its own holding account, because an account can
+    hold only 10 characters per realm.
+  - Characters are moved with the server's own `.character changeaccount`
+    command, so its record of who owns which character stays correct.
+- **The undo:** he offers the old life back. The death knight is erased, and the
+  character returns to the player's account with a death knight skin and face of
+  its own race. Undead come back unchanged.
+- Death knights made before this rule have no ledger entry and are never held.
+
+**Tests:**
+- The in-memory database test passes, including a new check that undoing the
+  install hands a held character back to its own account. That check didn't work
+  at first: its setup insert was missing two required columns, and then it read
+  the column header instead of the value. Both are fixed, and it now reports a
+  failed setup directly.
+- The script loads with the game engine faked out, and registers its five hooks.
+
+Everything else needs the game: make a death knight, try to leave, give a soul,
+check the professions, take it back, check the look.
+
+The build raised two questions, now recorded in the death knight issue. The
+first: **a death knight whose account has no character of 55 or higher left**
+(the only one was deleted after the death knight was made) owes a soul it can't
+pay, and would be stuck in Acherus. Should that be allowed, or should Sargobras
+let it go?
 
 --------------------------------------------------------------------------------
 

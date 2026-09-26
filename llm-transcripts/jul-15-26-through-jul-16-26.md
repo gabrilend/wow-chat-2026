@@ -1,7 +1,44 @@
 # Conversation Summary: f6b0c04d-40f6-437a-ad3d-cd4a401aa9f5
 
-Generated on: 2026-09-16 17:59:18
+Generated on: 2026-09-26 13:25:28
 Models: claude-opus-4-8
+
+## Contents
+
+1. 2026-07-15 17:52, after Request 3 - Cleaning up the vanilla (148) issues:
+   declined 148m/148p, updated 148h/148n/148g/716 docs, and finished 148h by
+   adding the verified weapon-proficiency pretrain to the first-login Lua hook.
+   Next: commit these changes if you want, or run the 148o in-client validation.
+2. 2026-07-15 18:32, after Request 5 - We're cleaning up the vanilla profile
+   issues and just verified 148a (disable Death Knights) is fully done, updating
+   its ticket to match. Next: with your OK, move 148a to completed, commit it,
+   and start 148i (remove flight paths).
+3. 2026-07-15 18:46, after Request 6 - Goal: finish the vanilla WoW profile. We
+   found 148i (flight-path removal) already built and live, like several vanilla
+   issues before it. Next: your call on whether I commit the uncommitted
+   flight-path fix and close out 148i, then run a reconciliation sweep.
+4. 2026-07-15 19:37, after Request 7 - Goal: finish the vanilla WoW profile.
+   This session I verified and closed 148a and 148i, and built a validator
+   confirming the level-20 starter pipeline passes all 52 combos. Next: commit
+   the validator, then start 148q (starting professions).
+5. 2026-07-15 20:31, after Request 9 - We're finishing the vanilla WoW profile's
+   issues. Mounts (148l) and playerbots-in-kit (148s) are done; several earlier
+   issues got closed and committed. Next: commit 148l (isolating my E-patches.sh
+   hunk), then build the big professions generator (148q).
+6. 2026-07-15 21:14, after Request 12 - Building out the vanilla WoW profile:
+   nearly all its issues are done and committed. Current task is 148q (starting
+   professions) — I've described the plan and am waiting on your go-ahead to
+   build it, plus whether to add the "sharpened weapon" send-off as issue 148u.
+7. 2026-07-15 22:57, after Request 17 - We're patching the vanilla WoW server to
+   survive your upstream pull. The pull deleted the code line B025
+   (bots-start-in-kit) hooks into, so it silently didn't apply. Next: re-anchor
+   patch_B025 and update its docs.
+8. 2026-07-15 23:13, after Request 18 - Building the vanilla WoW profile: I
+   fixed the B025 playerbot patch that upstream broke, so bots start in the
+   level-20 kit. Next: restart your compile and it'll include that feature.
+9. 2026-07-16 00:38, after Request 19 - We're building the vanilla WoW profile;
+   I just fixed the B025 patch and the B017 build-breaker and retired B010. Next
+   action: restart the vanilla compile and paste any error that appears.
 
 --------------------------------------------------------------------------------
 
@@ -26,7 +63,8 @@ candidates once the results come in.
 
 --------------------------------------------------------------------------------
 
-*[background task] Agent "Survey vanilla profile issues" came to rest*
+*[background task] Agent "Survey vanilla profile issues" came to rest —
+[survey-vanilla-profile-issues-jul-15-26.md](survey-vanilla-profile-issues-jul-15-26.md)*
 
 --------------------------------------------------------------------------------
 
@@ -760,6 +798,8 @@ yes and yes
 
 > Index is exactly the 148a close-out. Committing:
 
+*[commit] 47c41b5 - docs(Vanilla): Close out Death Knight disable (148a)*
+
 > 148a is closed out — committed as `47c41b5` (just the rename to `completed/`
 > + the Phase 1 roll-up, nothing else swept in). The declined moves (148b–f,
 > 148m) stay on disk, unstaged, for a separate commit whenever you want.
@@ -887,6 +927,8 @@ critical of issues. we will carve a critical path, and widen as needed.
 
 > Index is exactly the three 148i pieces — the SQL fix, the ticket move, and
 > the roll-up. Nothing else swept in. Committing:
+
+*[commit] 4cbdd2e - feat(Vanilla): Ground the flightmasters — no taxis, just flavor (148i)*
 
 > 148i is closed out — committed as `4cbdd2e` (SQL fix + ticket move +
 > roll-up, nothing else). Two blockers down this session: 148a and 148i.

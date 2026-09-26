@@ -1,7 +1,22 @@
 # Conversation Summary: 848716dd-6f3d-4efa-89ea-fbf890462fc8
 
-Generated on: 2026-09-21 19:45:43
+Generated on: 2026-09-26 12:46:15
 Models: claude-opus-4-8, claude-fable-5
+
+## Contents
+
+1. 2026-07-21 17:06, after Request 7 - We diagnosed the worldserver startup
+   segfault (a stale bot-AI facade in Engine::Init) and built patch B027 to fix
+   it, fully verified but not yet compiled. Next action: run ./scripts/compile,
+   then start worldserver to confirm the crash is gone.
+2. 2026-07-21 21:55, after Request 9 - We're pinning down why bot strategies get
+   corrupted facade pointers at login, crashing the worldserver. A diagnostic
+   boot with a memory watchpoint is running now; next step is reading its output
+   to identify the corrupting code path.
+3. 2026-07-21 23:57, after Request 9 - Hunting the playerbot facade-corruption
+   bug behind the worldserver crash; round-4 diagnostic boot is running with a
+   watchpoint on the corrupted field to catch the culprit. Next: read its output
+   when the trap fires.
 
 --------------------------------------------------------------------------------
 

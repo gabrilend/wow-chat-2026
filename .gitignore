@@ -139,3 +139,6 @@ installed-files-release/etc/modules/
 
 # Symlink to RAM-backed log dir (target lives in /tmp/wow-chat-2/logs-<profile>)
 logs-vanilla
+
+# Conversation pages, rebuilt before every push (install-pages-hook)
+**/llm-transcripts/HTML/

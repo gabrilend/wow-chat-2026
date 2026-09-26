@@ -1,7 +1,27 @@
 # Conversation Summary: 7fed8a61-f944-46d2-b1a4-cbb50023fa71
 
-Generated on: 2026-09-21 19:45:43
+Generated on: 2026-09-26 12:46:15
 Models: claude-opus-5
+
+## Contents
+
+1. 2026-08-01 17:09, after Request 1 - Goal: issue files for an addon that
+   narrates your bot-run characters to a listening player via the LLM cluster.
+   Wrote 16 files under a new Phase 11. Next: you answer whether an attended
+   session needs the WoW client running.
+2. 2026-08-01 17:20, after Request 10 - We're writing issue files for attended
+   play: your characters run on playerbot AI while an LLM explains and takes
+   guidance between tasks. Fifteen blueprints are written. Next: pick selfbot
+   level 2 (driving default) or 3 (attending default).
+3. 2026-08-01 18:06, after Request 11 - We're writing issue files for attended
+   play: your characters run playerbot AI, an LLM cluster explains and guides
+   them between tasks. Sixteen files exist and reflect your last three answers.
+   Next: test what happens to the other wards' sessions when your character logs
+   out.
+4. 2026-08-01 19:02, after Request 13 - Goal: an AI layer that takes plain-text
+   requests and writes bot commands for you. I filed issue 917 with four
+   sub-issues and moved the earlier oversized set to declined. Next: pick where
+   you type — slash command, whisper, or addon frame.
 
 --------------------------------------------------------------------------------
 

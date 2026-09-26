@@ -1,7 +1,18 @@
 # Conversation Summary: 19f41c99-0829-49d7-b39b-aa0b09d55aed
 
-Generated on: 2026-09-23 20:52:13
+Generated on: 2026-09-26 12:46:06
 Models: claude-opus-5-5
+
+## Contents
+
+1. 2026-09-23 20:39, after Request 4 - We're testing whether the game client can
+   be handed off to another server, as the first step toward splitting the world
+   across your three machines. Next: start the servers, run the listener, and
+   type .redirect in game.
+2. 2026-09-23 20:55, after Request 5 - You're moving the server onto your three
+   mini-computers. The deployment issues are written, and the multi-server world
+   work waits until measurements show it's needed. Next, tell me which operating
+   system and CPU type the mini-computers run.
 
 --------------------------------------------------------------------------------
 

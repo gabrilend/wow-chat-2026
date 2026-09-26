@@ -1,7 +1,34 @@
 # Conversation Summary: 3a9e7f2d-16c6-4a17-8f6b-e5a5a8d08b5e
 
-Generated on: 2026-09-21 19:45:42
+Generated on: 2026-09-26 12:46:08
 Models: claude-opus-4-8
+
+## Contents
+
+1. 2026-07-16 12:14, after Request 2 - You're bringing up the vanilla server and
+   fixing its errors. The bot-login crash is diagnosed (a null-deref in
+   mod-playerbots' AI init) but not yet pinned to a line. Next: run the
+   autologin-off test or add a diagnostic log to confirm the exact cause.
+2. 2026-07-16 14:22, after Request 6 - Goal: get the vanilla WoW server booting
+   cleanly. We fixed the playerbot bot-login crash (patch B026) plus config,
+   realmlist, and script issues. Next: run ./scripts/compile --debug to build
+   the fix and confirm the server stays up.
+3. 2026-07-16 16:40, after Request 8 - Goal: get the vanilla WoW server to boot
+   without the playerbot-login segfault. We've traced it to a dangling strategy
+   `botAI` pointer but static analysis can't confirm the cause. Next: install
+   gdb and re-run the existing Debug build to read the pointer.
+4. 2026-07-16 20:19, after Request 10 - Goal: fix the vanilla worldserver
+   segfault during bot login. We've traced it to 6 bot strategies getting a null
+   pointer, and valgrind is running in the background to confirm whether it's a
+   data race. Next: read the valgrind report when it finishes.
+5. 2026-07-17 11:15, after Request 11 - We're fixing a vanilla worldserver
+   segfault, traced to a stale miscompiled object file. Next: clear ccache, wipe
+   build-shadow, and rebuild with ./scripts/compile --debug. Want me to run the
+   ccache clear and build-shadow wipe to tee it up?
+6. 2026-07-17 13:06, after Request 13 - Goal: get the vanilla server booting
+   past the bot-login crash. The corrupt ccache that caused it is now cleared.
+   Your next step: run ./scripts/compile --debug then ./scripts/worldserver to
+   confirm it boots clean.
 
 --------------------------------------------------------------------------------
 

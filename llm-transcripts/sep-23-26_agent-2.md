@@ -1,7 +1,14 @@
 # Conversation Summary: f7bb4aa8-7f27-4858-a8e1-22e4f389d641
 
-Generated on: 2026-09-23 21:15:43
+Generated on: 2026-09-26 12:46:19
 Models: claude-opus-5-5
+
+## Contents
+
+1. 2026-09-23 20:46, after Request 6 - You're working out how to protect
+   players' files from risks through the WoW client; I proposed seven patch
+   ideas and changed nothing. Next, answer the three open questions and pick
+   which idea to start, and I'll write its issue file.
 
 --------------------------------------------------------------------------------
 

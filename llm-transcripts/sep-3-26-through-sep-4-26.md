@@ -1,7 +1,23 @@
 # Conversation Summary: c3562fe6-4518-4164-953d-d8606ca4b1c2
 
-Generated on: 2026-09-21 19:45:44
+Generated on: 2026-09-26 12:46:17
 Models: claude-opus-5
+
+## Contents
+
+1. 2026-09-03 21:06, after Request 5 - Goal: design the cross-class trainer
+   system and a new "explore" profile. I updated issue 502 with the measured
+   icon-colour spell-to-spec rule and wrote eight explore-profile issue files.
+   Next: you decide whether mod-playerbots is the right vehicle for 153e's
+   naturalist bots.
+2. 2026-09-03 21:20, after Request 6 - Goal: design the cross-class trainer
+   system and a new "explore" profile as issue files. I've written eight
+   explore-profile issues, corrected the spell-to-spec colour rule in 502, and
+   added a context-placement doc. Nothing is committed yet.
+3. 2026-09-04 19:38, after Request 8 - We're designing the Everland Ghostsong
+   roadmap in issue files: 502 (cross-class trainers, gold and resource costs)
+   and the new 153 explore-profile cluster. Nothing from this session is
+   committed yet, so the next action is committing the twelve changed files.
 
 --------------------------------------------------------------------------------
 

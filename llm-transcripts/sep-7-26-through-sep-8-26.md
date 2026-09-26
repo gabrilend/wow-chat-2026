@@ -1,7 +1,26 @@
 # Conversation Summary: 490cb174-e977-4e9f-bc59-e1516f38b86c
 
-Generated on: 2026-09-21 19:45:42
+Generated on: 2026-09-26 13:25:19
 Models: claude-opus-5
+
+## Contents
+
+1. 2026-09-07 23:57, after Request 1 - I audited the three dependency scripts
+   and reported what's broken, including a version-argument collision the
+   original audit missed. Next: you decide whether I apply the seven fixes, and
+   whether mysql-install should finish database setup itself.
+2. 2026-09-08 01:26, after Request 2 - Goal: make the dependency scripts work on
+   any machine. All six are rewritten, self-contained, and tested short of an
+   actual build; nothing is committed. Next: you decide whether to commit and to
+   run `git rm --cached mysql/conf/my.cnf`.
+3. 2026-09-08 01:35, after Request 3 - Goal: make the dependency scripts work on
+   any machine. The three builders are now standalone with project-specific
+   checkout detection, and install/compile/update take --dir; nothing is
+   committed. Next: decide whether to commit and untrack mysql/conf/my.cnf.
+4. 2026-09-08 01:48, after Request 5 - Goal was making the dependency scripts
+   work on other machines; that's done and committed as 23d5fc2. Next up is
+   issue 154's three open questions: the duplicated database credential, whether
+   to move the MySQL pin, and root-password use in mysql-client.
 
 --------------------------------------------------------------------------------
 
@@ -608,6 +627,8 @@ Azerothcore, lmao xD
 > AzerothCore server" — a marker shared with every AzerothCore fork answers
 > the wrong question. Files nobody else has are precisely what discriminates.
 > I'm fixing the comment, not the list:
+
+*[commit] 23d5fc2 - feat(scripts): let the dependency builders run on a stranger's machine*
 
 > The commit landed, but left the index out of step with it — the transcript
 > files are in the commit while the index thinks they're deleted. Fixing:
