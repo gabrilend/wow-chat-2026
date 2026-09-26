@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 21:02:56
+Generated on: 2026-09-25 21:07:20
 Models: claude-opus-5-5
 
 ## Contents
@@ -9131,6 +9131,58 @@ tables pick among them at equal odds, as you specified.
    needs no Lua, and there's one item per rank.
 2. **A fake tooltip plus Lua.** Fewer items, since one tome can teach "the next
    rank", but the tooltip text is ours to keep in sync by hand.
+
+--------------------------------------------------------------------------------
+
+### User Request 94
+
+Let's use option 1, but option 2 I think is necessary for like, the custom class
+issue files I think?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 94
+
+> Recording the choice, and noting in the tome-system issue why custom classes
+> need the scripted kind.
+
+I've recorded the choice and committed it. Basic's tomes will be ordinary class
+books, one per rank, built the stock way. I rewrote the tomes issue's build
+steps to match:
+1. A generator writes one book for each 61–80 trainer entry, death knights
+   included. Each book is limited to its class, uses a stock book icon, and
+   requires level 60.
+2. The same generator writes the drop tables: the Ahn'Qiraj raids and the
+   Emerald Dragons for levels 61–70, Naxxramas for 71–80, every book equally
+   likely.
+3. Scaling is reviewed ability by ability.
+4. One book gets tested in game.
+
+You're right that custom classes need the scripted kind, and I've noted why in
+the ability-tome issue for the other profiles. The reason isn't tooltips: custom
+classes reuse stock spells, so the client already knows them. It's eligibility.
+A custom class mixes spells from several base classes, so whether a character
+may learn Fireball depends on the custom class's spell list. A plain book can
+only restrict by base class, so it can't check that list. That issue's tomes
+also teach "the next rank", which a plain book can't do either. Both need the
+use script.
+
+The tomes issue has no open questions left; it's fully designed and waiting to
+be built.
+
+Back to the clan guild. **Can other players ever be invited into a clan guild?**
+Owners can't leave their own guild, so a friend could never join it and leave
+again.
+1. **Never.** A clan guild holds one owner and their buddies, and friends talk
+   through whispers or custom channels. This is the simplest option and needs no
+   rules for mixing clans.
+2. **Friends can join as guests,** able to talk in guild chat and leave any
+   time, while keeping their own clan guild membership. The stock game allows
+   only one guild per character, so this would need a source patch or a relay
+   channel.
+3. **Clans can ally:** two owners link their guilds so both guild chats see each
+   other's messages, like a shared channel. This could be built as a server-side
+   chat relay.
 
 --------------------------------------------------------------------------------
 

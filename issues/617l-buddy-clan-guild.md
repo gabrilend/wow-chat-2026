@@ -61,4 +61,5 @@ a character belongs to at most one guild.
 - (Answered 2026-09-25) A taken name: Sargobras asks again, with a joke
   about it, until the owner types a free one (as the stock game treats
   taken character names).
-- Are other players ever invited into a clan guild?
+- (Answered 2026-09-25) Other players are never invited: a clan guild is
+  one owner and their buddies; friends talk by whisper or custom channels.
