@@ -50,11 +50,10 @@ for it: her own materials, her own coin, her own time.
    asker offers ("I have two copper here").
 2. **Counting what's on hand.** The buddy's bags, plus what the asker
    offered, are counted as one supply.
-3. **Planning the hunt.** For each missing material the buddy looks for the
-   nearest source (gathering node, monster drop, vendor, auction house) and
-   whether she can get it that way (skill level, monster level, coin). A
-   chain of processing steps (ore to bar, bar to a part, part to the item)
-   is judged as one unit: the whole chain is doable or the hunt is not.
+3. **Planning the hunt.** For each missing material the model picks a
+   source (gathering node, monster drop, vendor, auction house) from the
+   source table, one entry per processing stage (ore to bar, bar to a
+   part, part to the item).
 4. **Saying so.** She tells the asker what she's off to do ("I need this
    other thing first, lemme go get it"), or why she can't.
 5. **Hunting.** She carries the plan out step by step until the item is
@@ -124,10 +123,11 @@ for it: her own materials, her own coin, her own time.
 
   So the model routes each material to a source behavior; it doesn't walk
   or buy anything itself. It picks only from the **source table** code
-  hands it (Ritz, 2026-09-25): per material, every source she could use,
-  with its walking distance, its price, and whether she can succeed there
-  (and if not, why). Distance and price are the two weights; the model
-  weighs them with what the asker said ("quickly").
+  hands it (Ritz, 2026-09-25): per material, every source that exists in
+  the game's data, with its distance and its price. Distance and price are
+  the two weights; the model weighs them with what the asker said
+  ("quickly"). The table makes no judgement of whether a source is wise
+  (see "Mistakes are hers").
 - **Ordinary code in the buddy module** builds the source table, then
   carries out the command: weaving several hunts into one route and
   walking the steps. Hunts keep going when the model cluster is slow once
@@ -151,6 +151,15 @@ for it: her own materials, her own coin, her own time.
   after the new one is in place.
 - Materials already fetched for the old command are in her backpack, so
   the new command can name the backpack for them.
+- **Re-weaving** (Ritz, 2026-09-25): with hunts A, B and C woven as
+  ABACCBAB, an update to A takes A out, and the route is rebuilt with the
+  new A (perhaps ACABACBB). Ritz first described two passes (weave B and C
+  alone, then fit the new A in) and asked whether the middle pass could be
+  skipped. It can: weaving the new set in one pass from scratch is at
+  least as good as the two-pass route, since the two-pass route is one of
+  the orders the single pass considers. The one thing kept fixed is the
+  step she is in the middle of (half a walk to a vein is finished, not
+  thrown away), and stage order within a hunt (mine before smelt).
 
 ### Performance of the source table (Ritz, 2026-09-25)
 
@@ -174,24 +183,28 @@ Requests are occasional, never a tight loop. If straight-line ranking
 misleads near mountains and water, a later knob is a small penalty for a
 line crossing a zone boundary or a large height change.
 
-### A step that can't succeed (Ritz, 2026-09-25)
+### Mistakes are hers (Ritz, 2026-09-25)
 
-Before starting, the planner checks that every step can be done. A step
-that can't is not attempted; she says why and, where there is one, offers
-the thing that would make it possible:
+> As for marking tasks impossible, I don't think we should allow that as a
+> possibility at all. Everything should be fairly rigidly defined in the
+> game, if the model mis-produces a task list or something then the bot
+> will just make a mistake. "oops, I forgot to check the auction house
+> before I left Orgrimmar to go mining" or whatever.
 
-- Out of her reach (a drop from monsters far above her level, or only
-  inside a dungeon): "Sorry, I can't do that right now because of ABC. Do
-  you want to [do-thing-that-resolves-the-task]?", e.g. "do you want to
-  level up some more with me?" or "do you want to do that dungeon?"
-- No source at all (no vendor, none at the auction house, nothing she can
-  gather): "I don't see any [item] on the auction house, and I'm not sure
-  where to get them."
-- Recipe not learned: "I don't have that recipe trained yet, sorry" (a line
-  that fits other situations too).
+- The source table lists what the game's data says exists, and nothing
+  more: no "can't" marks, no pruning.
+- If the model routes badly, the buddy carries out the bad route and
+  notices in character when it goes wrong ("oops, I forgot to check the
+  auction house before I left Orgrimmar to go mining").
+- Facts the game states flatly still stop a request before it starts:
+  - no source anywhere in the game's data (no vendor, nothing at the
+    auction house, no node or drop): "I don't see any [item] on the
+    auction house, and I'm not sure where to get them.";
+  - recipe not learned: "I don't have that recipe trained yet, sorry" (a
+    line that fits other situations too).
 
-Steps that can succeed but fail this time (a node taken, an auction bought
-first, a vendor sold out, a death on the road, full bags) are re-attempted.
+Steps that fail this time (a node taken, an auction bought first, a vendor
+sold out, a death on the road, full bags) are re-attempted.
 
 ## Suggested Implementation Steps
 
@@ -204,8 +217,9 @@ first, a vendor sold out, a death on the road, full bags) are re-attempted.
    and auction or vendor price, in the three tiers above (item-to-source
    lists built at start from the spell data, spawn, loot and vendor
    tables; auction prices and straight-line ranking per request; walking
-   paths only for picked sources); mark sources that can't succeed, with
-   the reason and the offer that would fix it.
+   paths only for picked sources). No feasibility marks.
+   Re-weaving: one pass over the current set of hunts, keeping the step in
+   progress and each hunt's stage order.
 3. The model's part (917c): recognise a craft request, pick a source per
    material from the table, write the command; voice her replies.
 4. The hunt as a standing instruction (917d) that survives relogs and ends
@@ -225,12 +239,17 @@ first, a vendor sold out, a death on the road, full bags) are re-attempted.
   the ore; smelt the bars).
 - (Answered 2026-09-25, Ritz: "Great looks delicious.") The source table
   is kept cheap in three tiers; see "Performance of the source table".
-- Processing stages as separate entries: the earlier rule "a chain is
-  judged as one unit" now means the table marks a stage as impossible if
-  a stage it feeds is (no forge she can reach makes the ore pointless).
-  Right reading?
+- (Answered 2026-09-25) Nothing is marked impossible; the "chain is one
+  unit" rule is dropped. A bad route is the buddy's in-character mistake.
+- (Answered 2026-09-25) Re-weaving after an update is one pass over the
+  new set, keeping the step in progress.
 - (Answered 2026-09-25) A failed step is re-attempted.
-- (Answered 2026-09-25) Steps that can never succeed are caught before the
-  hunt starts; she says why and offers what would fix it.
+- Ritz's earlier line for a source out of her reach ("Sorry, I can't do
+  that right now because of ABC. Do you want to [do-thing-that-resolves-
+  the-task]?", e.g. "do you want to level up some more with me?" / "do you
+  want to do that dungeon?") needs a judgement of reach, which the
+  no-marks rule removes from the table. Where does it live now: does she
+  go, fail (die to the monster, can't enter the dungeon alone) and then
+  say it; does the model say it when routing; or is it dropped?
 - (Answered 2026-09-25) Several hunts at once, interleaved by distance or
   effort; the limit waits on the buddies' memory design.

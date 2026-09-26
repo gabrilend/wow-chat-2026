@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 19:57:11
+Generated on: 2026-09-25 20:01:36
 Models: claude-opus-5-5
 
 ## Contents
@@ -8662,6 +8662,28 @@ tight loop. Does that split sound right, or do you want the straight-line
 ranking replaced with something closer to real walking distance? Straight lines
 can mislead near mountains and water. One cheap correction is a small penalty
 when the line crosses a zone boundary or a large change in height.
+
+--------------------------------------------------------------------------------
+
+### User Request 86
+
+Great looks delicious.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 86
+
+I've recorded the three-step plan for the source table in the task-hunt issue
+and committed it. The straight-line ranking stays, and I noted the
+mountain-and-water penalty as a knob for later.
+
+Last task-hunt question, left over from earlier: you first said a processing
+chain is judged as one unit, and now each stage is its own entry. My reading is
+that the two fit together like this: the source table marks a stage impossible
+when a later stage it feeds is impossible. For example, if she can mine copper
+ore but there's no forge she can reach to smelt it, "mine the ore" is marked
+"can't: no forge to smelt it", so the model never picks half a chain. Is that
+the right reading?
 
 --------------------------------------------------------------------------------
 
