@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 19:43:33
+Generated on: 2026-09-25 19:49:23
 Models: claude-opus-5-5
 
 ## Contents
@@ -8506,6 +8506,65 @@ does the owner type it?**
    the guild name unless he reads it back and asks "is that right?"
 
 I'd recommend option 1.
+
+--------------------------------------------------------------------------------
+
+### User Request 84
+
+> - The model routes. It turns "can you make me some runed copper bracers?" into
+> one buddy command (what to make, for whom, how urgently) and speaks her lines.
+> It doesn't plan.
+
+How about it's what to make, for whom, and a source defined for each of the
+required materials, one argument per material (with stacks counting as one
+entry), where one of the sources can be their backpack?
+
+> Back to the clan guild. Sargobras asks for the name at the first buddy, so how
+> does the owner type it?
+> 1. A text box from his conversation menu. The stock client can show a pop-up
+> text box from a conversation option; it's the same box the game uses to ask
+> for a password or code. The
+>      server receives what was typed, and the Lua engine supports this directly. It needs no addon and is clear to the player.
+
+this one
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 84
+
+Both are recorded and committed.
+
+- **Task hunt command:** it now carries what to make, who it's for, and one
+  source per material, with a stack counting as one entry. A source can be her
+  backpack, which holds what the asker hands over as well. The other sources are
+  a gathering node, a monster, a vendor or the auction house. The buddy module
+  walks and buys; the model only picks.
+- **Guild name:** the owner types it into a pop-up text box from a conversation
+  option with Sargobras.
+
+Your command shape raises four questions, all recorded in the task-hunt issue.
+The first:
+
+**Does the model pick each material's source freely, or from a list code makes
+for it?** Code would list, for each material, every source she could use: how
+far a walk it is, what it costs, and whether she can succeed at all. For copper
+ore, that might be the vein 400 yards north, 3 gold at the auction house, or a
+vein in a zone three levels above her marked "can't: too dangerous".
+1. **From the list (my recommendation).** The model can't choose a source that
+   doesn't exist or that she can't reach. Your two weights, distance and price,
+   sit in the list, so the model weighs them along with what the asker said,
+   like "quickly". It is still only routing.
+2. **Freely.** More flexible, but a small model will sometimes name a vendor
+   that doesn't sell the item, and code has to catch that afterwards.
+
+The other three come after:
+- **A material split across sources:** 2 bars in her backpack and 4 from the
+  auction house. Is that two entries, or is the rest always fetched from one
+  place?
+- **Urgency:** hand it over now or mail it later. Your shape didn't include it.
+  Should it be a fourth argument?
+- **Processed materials:** is "smelt bars from ore I mine" one source, or does
+  the ore get its own entry?
 
 --------------------------------------------------------------------------------
 

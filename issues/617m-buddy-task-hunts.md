@@ -111,21 +111,53 @@ for it: her own materials, her own coin, her own time.
   counting as one entry), where one of the sources can be their
   backpack"):
   - what to make;
-  - for whom;
-  - then one argument per required material, each naming where that
+  - for whom, and how it reaches them (Ritz: "it's for person A, and I
+    will hand deliver it."): handed over in person, or mailed when it can
+    wait;
+  - then one entry per material per source, each naming where that
     material comes from: her backpack (which, per the example, includes
     what the asker hands over), a gathering node, a monster, a vendor, or
-    the auction house. A stack is one entry.
+    the auction house. A stack is one entry. A material drawn from two
+    places is two entries (2 bars from the backpack, 4 from the auction
+    house). A processed material is one entry per stage (mine the ore;
+    smelt the bars), so each stage is its own step.
 
   So the model routes each material to a source behavior; it doesn't walk
-  or buy anything itself.
-- **Ordinary code in the buddy module** reads the recipe's material tree
-  and the costs of each source (walking distance, auction and vendor
-  price, whether she can do it at all) for the model to route over, then
+  or buy anything itself. It picks only from the **source table** code
+  hands it (Ritz, 2026-09-25): per material, every source she could use,
+  with its walking distance, its price, and whether she can succeed there
+  (and if not, why). Distance and price are the two weights; the model
+  weighs them with what the asker said ("quickly").
+- **Ordinary code in the buddy module** builds the source table, then
   carries out the command: weaving several hunts into one route and
   walking the steps. Hunts keep going when the model cluster is slow once
   the command is written. This keeps 917's rule that its layer carries
   requests rather than having goals of its own.
+
+### Changing a hunt in flight (Ritz, 2026-09-25)
+
+> we should be able to update it in-flight as well, so make sure even if we
+> weave together multiple requests, we can remove one atomically and
+> re-create the list with it's modified requirements. "Actually I'm running
+> out of time before the raid, can you just buy the pearl on the auction
+> house?"
+
+- Each hunt is kept as its own command; the woven route is only derived
+  from them, never edited directly.
+- A change replaces one hunt's command whole (the model writes the new
+  one: here, the pearl's entry now says "auction house"), and the route is
+  re-woven from the current set. Removing a hunt is the same with no
+  replacement. Either happens all at once: no step of the old command runs
+  after the new one is in place.
+- Materials already fetched for the old command are in her backpack, so
+  the new command can name the backpack for them.
+
+### Performance of the source table (Ritz, 2026-09-25)
+
+"we should pay special attention to the performance demands of gathering
+so much data." A table for one recipe touches every node spawn, monster
+loot list and vendor list that has any of its materials, plus the auction
+house and walking distances. See the open question below.
 
 ### A step that can't succeed (Ritz, 2026-09-25)
 
@@ -148,9 +180,10 @@ first, a vendor sold out, a death on the road, full bags) are re-attempted.
 
 ## Suggested Implementation Steps
 
-1. The craft command (item, recipient, one source per material), usable
-   without the model (by a chat command) so hunts can be tested before 917
-   exists.
+1. The craft command (item; recipient and delivery; one entry per
+   material per source, one per processing stage), usable without the
+   model (by a chat command) so hunts can be tested before 917 exists.
+   Replacing or removing one command at once, re-weaving the route.
 2. The source table, in code: expand a recipe into its material tree and,
    for each material, list the sources she could use with their walking
    distance and auction or vendor price, all from data the server already
@@ -167,19 +200,23 @@ first, a vendor sold out, a death on the road, full bags) are re-attempted.
 
 - (Answered 2026-09-25) Who plans: code does; the model routes the request
   to a buddy command and speaks. 917's rule holds.
-- Does the model pick sources freely, or only from the table code hands it
-  (each source with its distance, price and whether it can succeed)? The
-  table keeps impossible or far-off picks out, and keeps Ritz's two weights
-  (distance, price) in play.
-- One material split across sources (2 copper bars in the backpack, 4 more
-  from the auction house): two entries for that material, or is the rest
-  always fetched from one source?
-- Urgency (hand it over now, or mail it later) was in the first shape of
-  the command and not in Ritz's: a fourth argument, or read by code from
-  the request some other way?
-- A processed material (a bar made from ore): is "smelt it from ore I
-  mine" one source, keeping the chain as one unit, or does the ore get its
-  own argument?
+- (Answered 2026-09-25) The model picks only from the source table code
+  hands it.
+- (Answered 2026-09-25) A material split across sources is two entries.
+- (Answered 2026-09-25) Delivery (in person or by mail) is part of the
+  "for whom" argument.
+- (Answered 2026-09-25) A processed material is one entry per stage (mine
+  the ore; smelt the bars).
+- How is the source table kept cheap? Proposed: the unchanging parts
+  (which nodes, monsters and vendors give each item) are built once at
+  server start as item-to-source lists; per request only the live parts
+  are read (auction prices, from the auction house the server already
+  holds in memory) and distances are straight-line, with a real walking
+  path computed only for the sources the model picks.
+- Processing stages as separate entries: the earlier rule "a chain is
+  judged as one unit" now means the table marks a stage as impossible if
+  a stage it feeds is (no forge she can reach makes the ore pointless).
+  Right reading?
 - (Answered 2026-09-25) A failed step is re-attempted.
 - (Answered 2026-09-25) Steps that can never succeed are caught before the
   hunt starts; she says why and offers what would fix it.
