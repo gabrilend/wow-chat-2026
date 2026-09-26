@@ -46,7 +46,7 @@ per-ability scaling review, step 4, is not done):
   Handbook, Codex, Tablet, Tome, Grimoire, Book; death knights copy the
   warrior's manual and are titled "Runebook of") and sets the name,
   description, class, races, the Learning spell (483) and the ability with
-  the learn trigger, the required spell and level 60. Rare, unbound, sells
+  the learn trigger, the required spell and level 60. Rare, **unbound** (tradeable; Ritz, 2026-09-25: "I think they should not be bound"), sells
   for 10 gold, as the stock books.
 - Two pools, every book equally likely: reference loot 1557901 (61–70) and
   1557902 (71–80). Drops: Ahn'Qiraj 40 16.67% per loot boss (the bug trio

@@ -63,3 +63,11 @@ a character belongs to at most one guild.
   taken character names).
 - (Answered 2026-09-25) Other players are never invited: a clan guild is
   one owner and their buddies; friends talk by whisper or custom channels.
+- **Conflict**: Ritz, 2026-09-25: "In-game player guilds should exist
+  though. They're useful abstractions!" But the stock game allows one
+  guild per character, and an owner can't leave the clan guild, so no
+  owner could ever join a player guild. Which gives way: clan chat moves
+  off the guild (a private chat channel per clan, so the guild slot stays
+  free for player guilds); the owner may leave the clan guild for a player
+  guild (the buddies stay in theirs); or a source patch lets a character
+  hold two guilds? (A server-wide layer above guilds is 1007.)

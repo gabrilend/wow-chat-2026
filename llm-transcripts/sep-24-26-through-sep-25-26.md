@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 21:07:20
+Generated on: 2026-09-25 21:25:46
 Models: claude-opus-5-5
 
 ## Contents
@@ -114,6 +114,10 @@ Models: claude-opus-5-5
     basic profile's Outland rules one question at a time, and every answer is
     committed. Next: did you mean Wrath tomes come from Naxxramas drops, or
     should Azeroth quest rewards be added as a second source?
+27. 2026-09-25 21:10, after Request 94 - We're designing buddy bots one question
+    at a time, and every answer so far is recorded and committed. Next is your
+    call: can other players ever join a clan guild (never, as guests, or as
+    allied clans)?
 
 --------------------------------------------------------------------------------
 
@@ -9183,6 +9187,112 @@ again.
 3. **Clans can ally:** two owners link their guilds so both guild chats see each
    other's messages, like a shared channel. This could be built as a server-side
    chat relay.
+
+--------------------------------------------------------------------------------
+
+### User Request 95
+
+It kinda sounds like we can make whatever items we want. Is that true? If so,
+that's awesome!
+
+> Back to the clan guild. Can other players ever be invited into a clan guild?
+> Owners can't leave their own guild, so a friend could never join it and leave
+> again.
+> 1. Never. A clan guild holds one owner and their buddies, and friends talk
+> through whispers or custom channels. This is the simplest option and needs no
+> rules for mixing clans.
+
+let's build the tome issue next.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 95
+
+> Recorded and committed: clan guilds never take other players.
+>
+> On making items: mostly yes. Here's what I'm starting the tome build with,
+> gathering the facts first.
+
+> Before writing the generator, I'm checking which game data files the existing
+> generators already read.
+
+> Next I'm checking how the twin emperors share loot, and what basic already
+> changed in Naxxramas.
+
+> Next I'm confirming the column positions in the client's spell file from the
+> server's own format string.
+
+> Now writing the generator.
+
+> Generator written. Now the SQL it fills in. First, checking the validator's
+> style.
+
+> Stock books also carry a "Teaches Frostbolt (Rank 11)." line, so the generator
+> will emit that too.
+
+> Now the apply and revert SQL.
+
+> Plate Mail is taught by two classes, so the list has to be kept per class.
+> Fixing.
+
+> 793 books. 221 with a required spell seems high, so I'm checking what those
+> required spells are.
+
+> Now the post-install checks.
+
+> Every step passed, the revert restored the tables exactly, and both new checks
+> pass. Here's a sample of what the books look like:
+
+> Druids train Flight Form at 60, so the Swift Flight Form book's requirement is
+> met too. Now updating the issue and the basic profile page.
+
+> Committing the build, after checking that the files I changed with scripts
+> hold no one else's edits.
+
+The class books are built and committed. The in-memory database test passes
+every step, including re-applying and an exact revert, plus two new checks after
+install.
+
+**What was built:**
+- **793 books,** one per ability and rank that trainers teach from 61 to 80,
+  across all ten classes. Each copies its class's stock Ahn'Qiraj book: Manual,
+  Libram, Guide, Handbook, Codex, Tablet, Tome, Grimoire or Book. Titles follow
+  the stock pattern, like "Guide: Kill Shot II", with the line "Teaches Kill
+  Shot (Rank 2)."
+- **Talent abilities** need their talent. Of the 793 books, 221 require a spell
+  the reader must already know. For some, like Pyroblast or Penance, that's the
+  talent itself. For the rest it's a spell every character already has, such as
+  Heroic Strike, so it's harmless.
+- **Faction-only books:** six. The two paladin seals, Heroism, Bloodlust and the
+  two Portal: Shattrath spells stay with their own faction.
+- **Left out:** Teleport and Portal: Dalaran, since Northrend is closed.
+- **Drops:**
+  - Ahn'Qiraj 40: 16.67% per boss, about 1.5 books a clear.
+  - Ahn'Qiraj 20: 4.17% per boss.
+  - Each Emerald Dragon: three books, always.
+  - Naxxramas: 10% per boss in both sizes, about 1.5 a clear, with the Four
+    Horsemen's chest counting as one boss.
+  - Every drop is an even pick from its tier.
+- **Still to do:** the in-game test and the per-ability scaling review. So the
+  issue stays in progress.
+
+**Can we make whatever items we want?** Mostly yes, and it's a big lever. The
+server sends the client each item's name, quality, stats, description and which
+spells it uses, so a new item shows up correctly. The limits are everything the
+client draws from its own files:
+- **Art:** icons and 3D models must be ones the client already has.
+- **Effects:** the spells an item uses, including its "Use:" and "Equip:" lines,
+  must exist in the client's spell file. So an item can combine any existing
+  spells and stats, but can't have a truly new effect.
+- **Set bonuses:** their tooltip text comes from the client's own item-set file.
+
+Within those limits we can build any combination. The client patch would lift
+them later.
+
+Two new questions came out of the build. The first: **death knights have no
+stock class book, so theirs are titled "Runebook of …"** and use the warrior
+manual's icon. Keep that, or use a different word, such as "Sigil of …",
+"Codex of the Ebon Blade: …" or "Scourge Tome: …"?
 
 --------------------------------------------------------------------------------
 

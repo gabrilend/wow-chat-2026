@@ -91,6 +91,16 @@ bind-on-pickup" flag).
   "hey, so-and-so was also interested in this item..." (Ritz, 2026-09-24).
 - A soulbound item that isn't an upgrade for anyone in the clan is
   vendored (617h).
+- **Class books** (basic's level 61–80 ability books, 155q; unbound, so
+  they can be traded): a book counts as an upgrade for a clan member of its
+  class who doesn't yet know that rank or a higher one, and who knows the
+  talent it may need. Ritz, 2026-09-25: "buddybots should consider them as
+  upgrade potentials, preferring the player if they need it over a
+  buddy-bot of the same class who also needs it." So the owner comes
+  first: a buddy passes on a roll for a book its owner needs, and a buddy
+  holding one hands it to the owner if the owner needs it, else to a buddy
+  of that class who does. A book nobody in the clan needs goes to the
+  auction house (617h), as it is unbound.
 
 ## Suggested Implementation Steps
 
