@@ -85,6 +85,12 @@ distance, and nothing draws a dungeon party.
 - A buddy inside a battleground has lower priority in the dungeon draw;
   if drawn, it leaves the battleground (617i).
 
+### Decision, 2026-09-25 (Ritz)
+
+A buddy away gathering (617k) leaves the proximity party when being in it
+brings no benefit: "they should drop out of the proximity party if there's
+no benefit to being in a party together."
+
 ## Suggested Implementation Steps
 
 1. Login/logout hooks in mod-buddies (617a).

@@ -220,6 +220,17 @@ cutting through walls or teleporting.
   the services a town offers; a town with no auction house or no repair
   simply skips those steps.
 
+### Decisions, 2026-09-25 (Ritz), from buddy professions (617k)
+
+- **Buying**: coin earned buys clan members' upgrades; bag slots count as an
+  upgrade a buddy can buy for a clanmate; materials to level a low crafting
+  skill outrank upgrades (see 617k for when); a craftable upgrade is priced
+  at the auction cost of its missing materials.
+- **Full bags in a town without an auction house**: sell the lowest-value
+  half of the bag space (keeping hearthstone, consumables, profession trade
+  goods); still 90% full: sell trade goods; still 90% full: sell
+  consumables; past that, an error.
+
 ## Suggested Implementation Steps
 
 1. A town-services survey: per town, which service NPCs exist (vendor,

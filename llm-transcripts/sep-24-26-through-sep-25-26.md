@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 17:55:23
+Generated on: 2026-09-25 18:06:46
 Models: claude-opus-5-5
 
 ## Contents
@@ -7616,6 +7616,82 @@ Enchanter's second profession?
    classic pair, since the enchanter disenchants the tailor's cloth goods.
 3. **Always the pair:** a Tailor also takes Enchanting and an Enchanter also
    takes Tailoring, so each feeds the other.
+
+--------------------------------------------------------------------------------
+
+### User Request 76
+
+if tailoring or enchanting is selected, a random gathering profession is chosen.
+One crafting profession per character.
+
+also, we need to define some procedures for low-level professions. If they fall
+behind, or if like 5 of your buddy-bots have mining lol. So, here's what I think
+- if the player is in a zone that is lower than their level, say, 5 levels at
+the suggested max lower than their current level, then buddy-bots will disperse
+through that zone and gather materials according to what their gathering
+professions are. For example they might hunt beasts if they have skinning, they
+might wander around areas with a high differential in Z values if they have
+mining, they might hang around tree doodads and plains if they have herbalism,
+etc. Perhaps we can load the spawn locations of the nodes and try to chart a
+general path around the area. When they enter this mode, it will be randomly
+chosen whether they traverse the zone clockwise or counter-clockwise, on a
+per-bot basis. They will gather materials if they can, but if they can't, they
+will hang out around the player. If the player enters a town, they will gather
+toward the town until they are also in the town and then they will do their town
+behaviors. This allows players to pull them in, or push them out toward the
+edges of the zones at will. The extra materials will probably be auctioned. This
+can apply for profit or for skill level ups. Any gaps that you see? This
+behavior will never apply to the highest level zones by design, however they
+will gather materials in the same area that they are questing in, so the player
+will have to walk them around the map instead of doing it automatically.
+Remember, bots won't auction things if there's too many in the auction house,
+and guild banks are disabled and you can't leave your guild. So at a certain
+point you're farming for vendor price, which decreases the AFK-ability of this
+system, while still allowing it if the user wants.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 76
+
+> Recording the tailor/enchanter rule, the gathering mode, and the guild rules
+> you mentioned (no guild banks, can't leave the guild).
+
+I've recorded the gathering mode and guild rules in the professions and
+clan-guild issues, and committed them. The stock server has no setting that
+switches guild banks off, so that needs its own small patch; I've noted it.
+
+Gaps in the gathering mode, most important first:
+1. **Other players' nodes.** On a server with other people, seven buddies
+   spreading through a low zone will harvest nodes that another player, maybe a
+   real low-level character, was walking to. Should buddies leave a node alone
+   when another player is near it? Or skip zones where other players are?
+2. **Whose level decides "lower zone".** Buddies' levels drift away from the
+   owner's. Is it the owner's level against the zone, or each buddy's own?
+3. **"The zone's level" has to come from somewhere.** The client's data doesn't
+   record a zone's level range. The usual trick is the typical creature levels
+   in the zone, which I can compute the way I did for Outland.
+4. **Too many of one kind.** Five miners in one zone mostly chase the same
+   nodes. Should duplicates split the loop between them, or does each run its
+   own loop and take whatever's left?
+5. **Crafting needs more than gathering.** Tailors need cloth, which comes from
+   fighting. Enchanters need things to disenchant. Many recipes need
+   vendor-bought parts. Who buys those, and does the buddy go to town to fetch
+   them?
+6. **Full bags:** a buddy with full bags would break off and head to the nearest
+   town to sell or post its goods.
+7. **Party and distance:** dispersed buddies are far from the owner, so they
+   drop out of the proximity party. They shouldn't pull aggro onto the owner.
+8. **Server load:** buddies spread across a whole zone keep more of the map
+   loaded and active than seven buddies nearby. It's fine for one player, but
+   worth watching with many.
+
+First question: **other players' nodes.** How should buddies behave around real
+players who are gathering too?
+1. **Yield:** a buddy won't take a node if another player is within some
+   distance of it, say 40 yards.
+2. **Only when alone:** gathering mode switches off in a zone where other real
+   players are present.
+3. **No special rule:** first come, first served, as between players.
 
 --------------------------------------------------------------------------------
 

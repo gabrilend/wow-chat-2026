@@ -100,6 +100,66 @@ it if the user wants."
   is full of it (617h's glut rule), the rest sells to vendors. That limit is
   the brake on leaving buddies to farm unattended, by design.
 
+### Gathering mode, answers (Ritz, 2026-09-25)
+
+- **Other players' nodes**: no special rule, first come first served ("sucks
+  2 suck").
+- **Whose level**: the owner's ("the owner's level").
+- **Zone levels**: a list built from outside sources ("we can build a list
+  from external sources. fan guides and such"): a data file of zones and
+  their level ranges, kept by a generator or a checked-in table with its
+  sources named.
+- **Spreading out**: "they should try and spread themselves out in the zone,
+  moving in the direction that has the fewest clan-members in it, weighted
+  by distance. So a distant clan member would contribute less of a malus
+  [...] we should set their goal direction toward the spot that is
+  equidistant to the other clan members, generally. [...] they should try
+  and fill the zone, ensure that they visit all the nearby potential nodes
+  while also moving primarily in a straight-wavy line, circling the zone
+  and ideally, not passing over the path they took the next time they
+  circle the zone. Remember they're going either clockwise or
+  counter-clockwise."
+  - each gathering buddy steers toward the point farthest from its clan
+    (clan members' pull weakening with distance), not simply outward;
+  - it loops the zone in its own direction, sweeping nearby node spawns in a
+    wavy line, and shifts its loop each lap so it doesn't retrace its path;
+  - prior art: the beta behaviours' dispersion (issue 610) in
+    `src/lua-beta/behaviors.disabled/zone-consensus.lua`, and the 2-yard
+    anti-clump rule in `bot-wander.lua` (both disabled today).
+- **Materials that don't come from gathering** (cloth, things to
+  disenchant, vendor parts): "The buddy buys them. They should try and have
+  some supplies on-hand, and when at the auction house they should consider
+  bag slots to be an upgrade-able metric they can help their clanmates
+  with. They should pick them up while in town, they shouldn't seek out
+  towns specifically."
+- **Low-level crafting skill**: "for low level crafting professions [...]
+  we should buy materials on the auction house whenever we have extra gold.
+  It should be a higher priority than clanmate upgrades, but only if
+  they're low enough level that they can't find profession materials in the
+  zones that are level appropriate for their owner. If they can, then it's
+  the same priority as clanmate upgrades. They should also consider the
+  items they craft for their crafting profession as viable 'targets' for an
+  upgrade they can supply to a clanmate, and should consider the cost to be
+  the cost of materials on the AH minus the materials they have on hand."
+  - buying materials to level crafting outranks buying clan upgrades while
+    the buddy's skill is too low for materials in the owner's zones;
+    otherwise they rank equally;
+  - a craftable upgrade for a clanmate counts as an upgrade to buy, priced
+    at the auction-house cost of its missing materials.
+- **Full bags**: head to the nearest town. "If they get to town and there's
+  no auction house, and they have full bags, they should sell the 50% of
+  their bag space with the lowest value, not counting things they just want
+  to keep like hearthstone, consumables, tradegoods for their profession,
+  etc. If they do this and they're still 90% or more full, then they sell
+  all the tradegoods as well. If they're still 90% full, then they sell all
+  their consumables. Past that I think it's a bug lmao" — past that, it is
+  logged as an error.
+- **Party**: a dispersed buddy leaves the proximity party (617c) when being
+  in it brings no benefit ("they should drop out of the proximity party if
+  there's no benefit to being in a party together"), so its fights never
+  pull onto the owner.
+- **Server load**: accepted ("that's fine. They're players too.").
+
 ## Suggested Implementation Steps
 
 1. Read the bot module's profession code paths (learning, gathering,
