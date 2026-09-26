@@ -8,7 +8,7 @@
   (ability tome system, another profile's rank-agnostic tomes; the
   mechanism to reuse), 156 (expert, 61–80, where these abilities are
   ordinary)
-- Priority: Low (an idea, not designed)
+- Priority: Low (built 2026-09-25 as E037; in-game test and scaling review pending)
 
 ## Origin
 
@@ -23,10 +23,46 @@ Verbatim, a note left in the project root (`new-issue-please-sort`,
 
 ## Current Behavior
 
-Basic stops at level 60, so its characters never learn anything a trainer
-teaches from 61 to 80. That is about 800 trainer entries across the classes
-(new abilities and higher ranks of known ones), read 2026-09-25 from the
-stock trainer tables:
+**Built 2026-09-25** as install step E037 (not yet tried in game; the
+per-ability scaling review, step 4, is not done):
+
+- `scripts/generate-basic-ability-tomes-sql` reads the stock class trainer
+  lists (all levels, kept per class, since Plate Mail is taught to two
+  classes), the client's Spell.dbc (name, rank; a "teaching" entry is
+  unwrapped to the spell it teaches, none at 61–80 today) and
+  SkillLineAbility.dbc (race masks), and writes one row per 61–80 entry
+  into the GENERATED block of
+  `sql/basic/db_world.src/22-ability-tomes.apply.sql`. Each row: the book's
+  item id (1557001 upward), the spell, the class and level, the spell the
+  reader must already know (found by walking the previous-rank chain down
+  through trainer entries; the first link no trainer teaches is the talent
+  or granted spell, such as Pyroblast or the Mangle talent's two forms, or
+  a starting spell every character has), the races allowed (six books are
+  one faction's: the two paladin seals, Heroism, Bloodlust, the two Portal:
+  Shattrath), the title ("Slam V") and the "Teaches Slam (Rank 5)." line.
+  Left out: Teleport: Dalaran and Portal: Dalaran (Northrend is closed,
+  155s). Run it for the current count; 793 when built.
+- The SQL copies each class's stock Ahn'Qiraj book (Manual, Libram, Guide,
+  Handbook, Codex, Tablet, Tome, Grimoire, Book; death knights copy the
+  warrior's manual and are titled "Runebook of") and sets the name,
+  description, class, races, the Learning spell (483) and the ability with
+  the learn trigger, the required spell and level 60. Rare, unbound, sells
+  for 10 gold, as the stock books.
+- Two pools, every book equally likely: reference loot 1557901 (61–70) and
+  1557902 (71–80). Drops: Ahn'Qiraj 40 16.67% per loot boss (the bug trio
+  each, only the last is lootable; the twin emperors 8.33% each), Ahn'Qiraj
+  20 4.17% per boss, each Emerald Dragon three books always; Naxxramas 10%
+  per boss in both sizes, and the Four Horsemen's two chests.
+- `basic_155q_books` keeps the list for the checker. Nothing stock changes;
+  the revert deletes what was added.
+- Tested: `scripts/test-basic-sql-in-ram` (apply, re-apply, revert with the
+  exact checksum, apply); `scripts/validate-basic-state` checks every book
+  (class, level 60, spells, required spell, pool) and every drop row.
+
+Stock, for reference: basic stops at level 60, so its characters never
+learn anything a trainer teaches from 61 to 80. That is about 800 trainer
+entries across the classes (new abilities and higher ranks of known ones),
+read 2026-09-25 from the stock trainer tables:
 
 | Class | Warrior | Paladin | Hunter | Rogue | Priest | Death knight | Shaman | Mage | Warlock | Druid |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -51,18 +87,19 @@ so links to it stay valid.)
 
 ## Suggested Implementation Steps
 
-1. Answer the open questions below with Ritz.
-2. A generator reads each class's 61–80 trainer entries (death knights
+1. Answer the open questions below with Ritz. (Done, except the two
+   below.)
+2. (Done) A generator reads each class's 61–80 trainer entries (death knights
    included) and writes one class book per entry in the stock way: the
    "Learning" spell (483) first, the ability second with the learn
    trigger, limited to that class, a stock book icon, required level 60.
    No script.
-3. The same generator writes the drop tables: Ahn'Qiraj 20 and 40 and the
+3. (Done) The same generator writes the drop tables: Ahn'Qiraj 20 and 40 and the
    Emerald Dragons for the 61–70 books, Naxxramas for the 71–80 books,
    every book at equal odds.
 4. Review scaling per ability (a table per class of each ability's numbers
    at 60) and scale down where needed.
-5. Test on the RAM database; then in game, a level-60 reading a book:
+5. Test on the RAM database (done); then in game, a level-60 reading a book:
    tooltip, icon, learning.
 
 ## Open Questions
@@ -118,3 +155,9 @@ so links to it stay valid.)
 - (Answered 2026-09-25) Death knights get tomes too ("yeah!").
 - (Answered 2026-09-25) No quest rewards; the Wrath-era tomes drop from
   Naxxramas only ("the original design is correct").
+- Death knights have no stock class book, so theirs are titled
+  "Runebook of …" (copied from the warrior's manual, same icon). A better
+  word?
+- Naxxramas drops about 1.5 books a clear in both its 10- and 25-person
+  sizes (10% per boss in each), read from "at Ahn'Qiraj 40's rate". Should
+  the 25-person size drop more, since more people share it?

@@ -1,7 +1,7 @@
 # Basic Profile
 
 **One-line summary:** The ordinary level 1–60 game with AI companion
-playerbots and the quality-of-life layer, Outland open at the cap. It is
+playerbots and the quality-of-life layer, Outland open to anyone. It is
 the baseline new features, starting with custom classes, are developed
 against.
 
@@ -35,8 +35,8 @@ Design and build record: issue 155 and its sub-issues 155a–155f.
   and blood elf home zones.
 - **Classic riding levels.** Apprentice Riding (60% mount) at 40,
   Journeyman Riding (100% mount) at 60.
-- **Outland open at the cap, as a hunting ground.** The Dark Portal opens
-  at 58, as in the stock game. Outland has no quests, no gathering nodes
+- **Outland open to anyone, as a hunting ground.** No level gate is known on
+  the Dark Portal (to be confirmed in game; 155l). Outland has no quests, no gathering nodes
   or special fishing spots, and no professions past 300. Two flights
   exist: the Dark Portal to Honor Hold or Thrallmar and back, and Light's
   Hope Chapel to the Isle of Quel'Danas and back (the only way onto the
@@ -58,6 +58,15 @@ Design and build record: issue 155 and its sub-issues 155a–155f.
   rung; Kael'thas's epics are item level 100. Rating stats (crit, hit,
   haste...) on Burning Crusade gear carry a discount so they are worth at
   60 what they were meant to be worth at 70.
+- **Level 61–80 abilities from class books.** Every ability and rank a
+  class trainer teaches from 61 to 80 (all ten classes) is a class book
+  usable at 60, like the game's own Ahn'Qiraj books ("Tome of Frostbolt
+  XIV"): the Burning Crusade–era ones drop in Ahn'Qiraj (the 40-person
+  temple about one or two a clear, the 20-person ruins a quarter as often
+  per boss) and three from each Emerald Dragon; the Wrath-era ones drop in
+  Naxxramas, about one or two a clear. Talent abilities' higher ranks need
+  the talent. Teleport and Portal: Dalaran are left out (Northrend is
+  closed).
 - **Level gaps stop hurting past three.** Hit and miss chances worsen with
   level difference only up to 3 levels (source patch B005), and creatures
   of level 64 and up never land crushing blows (B031).

@@ -321,6 +321,26 @@ report "Jewelcrafting trainers 112 and 113 teach Outland's cuts between 150 and 
           ON a.TrainerId = ts.TrainerId AND a.SpellId = ts.SpellId WHERE ts.ReqSkillRank NOT BETWEEN 150 AND 300 LIMIT 10")"
 # }}}
 
+# {{{ 155q: class books for the level 61-80 abilities
+# Each book: one class, level 60, the client's Learning spell then the
+# ability marked "learn this", and it sits in its tier's pool. Every class
+# has books. Each raid boss on the list points at its pool.
+report "class books: one per level 61-80 trainer ability, one class each, learnable at 60, in their tier's pool" \
+    "$(run_sql "SELECT 'books', COUNT(*) FROM ${WORLD}.basic_155q_books HAVING COUNT(*) < 700
+        UNION ALL SELECT 'classes', COUNT(DISTINCT class) FROM ${WORLD}.basic_155q_books HAVING COUNT(DISTINCT class) <> 10
+        UNION ALL SELECT b.item, 'item missing or wrong' FROM ${WORLD}.basic_155q_books b LEFT JOIN ${WORLD}.item_template i ON i.entry = b.item
+          WHERE i.entry IS NULL OR i.AllowableClass <> (1 << (b.class - 1)) OR i.RequiredLevel <> 60
+             OR i.spellid_1 <> 483 OR i.spellid_2 <> b.taught OR i.spelltrigger_2 <> 6 OR i.requiredspell <> b.talent
+        UNION ALL SELECT b.item, 'not in its pool' FROM ${WORLD}.basic_155q_books b LEFT JOIN ${WORLD}.reference_loot_template r
+          ON r.Entry = IF(b.level <= 70, 1557901, 1557902) AND r.Item = b.item WHERE r.Item IS NULL LIMIT 10")"
+report "class books drop: Ahn'Qiraj and the Emerald Dragons (61-70), Naxxramas both sizes and the Horsemen chests (71-80)" \
+    "$(run_sql "SELECT 'Ahn''Qiraj and dragon drops', COUNT(*) FROM ${WORLD}.creature_loot_template WHERE Reference = 1557901 HAVING COUNT(*) <> 22
+        UNION ALL SELECT 'Naxxramas drops', COUNT(*) FROM ${WORLD}.creature_loot_template WHERE Reference = 1557902 HAVING COUNT(*) <> 28
+        UNION ALL SELECT 'Horsemen chests', COUNT(*) FROM ${WORLD}.gameobject_loot_template WHERE Reference = 1557902 HAVING COUNT(*) <> 2
+        UNION ALL SELECT 'dragons roll three', COUNT(*) FROM ${WORLD}.creature_loot_template l JOIN ${WORLD}.creature_template t ON t.lootid = l.Entry
+          WHERE t.entry IN (14887, 14888, 14889, 14890) AND l.Reference = 1557901 AND l.Chance = 100 AND l.MaxCount = 3 HAVING COUNT(*) <> 4")"
+# }}}
+
 echo ""
 if [[ "${FAIL_COUNT}" -eq 0 ]]; then
     echo "All checks passed."
