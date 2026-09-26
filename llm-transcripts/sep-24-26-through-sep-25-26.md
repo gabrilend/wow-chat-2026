@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 20:12:50
+Generated on: 2026-09-25 20:22:11
 Models: claude-opus-5-5
 
 ## Contents
@@ -8744,6 +8744,79 @@ judgement just left the table. **Where does that line go now?**
    in the table and decides by itself to ask instead of sending her. That is
    still routing, with asking as one of the routes.
 3. **Dropped.** She just keeps re-attempting.
+
+--------------------------------------------------------------------------------
+
+### User Request 88
+
+> One caveat: with a dozen or more steps, finding the truly shortest order gets
+> expensive, because the number of possible orders grows factorially. So in
+> practice the one pass is a
+> good heuristic, not a guaranteed optimum. Neither is your two-pass method, so
+> nothing is lost.
+
+Okay, how about more than 3 requests (the 4th, 5th, etc) get added to a backlog,
+and if they share any materials required with any of the active tasks, then the
+required number of materials to gather / buy / craft / whatever is increased to
+account for it. Then, when a task is completed and it's 4 in the backlog instead
+of 5, with 2 active and 2 on the shelf, when we add the third one we'll just
+make the source be the backpack for the materials we managed to grab along the
+way. The cost is just, mining 12 copper ore instead of 6.
+
+> That leaves one conflict. Your earlier line, "Sorry, I can't do that right now
+> because of ABC. Do you want to level up some more with me?" or "…do that
+> dungeon?", needs someone to
+> judge that a source is out of her reach, and that judgement just left the
+> table. Where does that line go now?
+
+the source is out of reach if it's in a zone that's more than 3 levels higher
+than the buddy bot. Buddy bots should never choose to go into Outland to
+complete these tasks, because we removed all the profession materials from
+Outland, except those gained from slaying monsters, but even then I don't think
+we have many planned that would count, since most of the professions are capped
+to Azeroth recipes. Right? Any exceptions you can think of?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 88
+
+Both are recorded in the task-hunt issue and committed:
+- **Backlog:** at most three hunts are active at once, and more requests wait on
+  a backlog. When a waiting request shares a material with an active one, the
+  active step fetches both amounts (12 copper ore instead of 6). When a waiting
+  request becomes active, its source for those materials is her backpack.
+- **Out of reach:** a source in a zone more than 3 levels above her, or inside a
+  dungeon, is out of reach. She says your line instead of going: "do you want to
+  level up some more with me?" or "do you want to do that dungeon?"
+- **Never Outland.** Your reading is right about gathering. The Outland
+  tradeskills issue removed every herb and ore node, fishing pool and gas cloud
+  there, and cleared skinning on beasts that only live in Outland. Every
+  profession stops at 300. The explicit rule is still needed, because Outland's
+  first zones sit near level 60 on basic, so the level rule alone would let her
+  walk in.
+
+**Exceptions I found:**
+1. **Wrath gems.** Uncut Wrath uncommon and rare gems drop from about 1,000
+   Outland monster loot tables, from the gem-supply patch we built this session.
+   The Earthen Gemcutter's 300-skill Wrath cuts use them. They also have an
+   Azeroth source: the titan Crystal-Keepers trade a Nexus Crystal for one.
+2. **Outland gems.** The capital jewelcrafting trainers now teach 70 Outland
+   cuts between skill 150 and 300. Those gems drop from Outland monsters in the
+   stock game. They also come from prospecting mithril and thorium in Azeroth,
+   so there's an Azeroth source here too.
+3. **Vendors when the owner is already in Outland.** Thread, flux and vials are
+   sold in Shattrath and other Outland towns. For a buddy standing there with
+   her owner, the nearest vendor is in Outland, and the next nearest is a portal
+   and a long walk away.
+4. **A minor one: skinning.** Only beasts that live solely in Outland lost their
+   skinning loot, so a beast type that also spawns in Azeroth can still be
+   skinned in Outland.
+
+Items 1 and 2 are fine under "never Outland" because both have Azeroth sources.
+Item 3 is the real question: **does "never Outland" mean she never travels into
+Outland for a hunt, so a buddy already there can use its vendors and monsters?
+Or does it mean she never uses an Outland source at all, even while standing in
+Shattrath?**
 
 --------------------------------------------------------------------------------
 

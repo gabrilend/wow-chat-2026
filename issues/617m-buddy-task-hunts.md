@@ -191,11 +191,16 @@ for it: her own materials, her own coin, her own time.
   [do-thing-that-resolves-the-task]?", e.g. "do you want to level up some
   more with me?" or, for a source inside a dungeon, "do you want to do
   that dungeon?"
-- **Never Outland.** A buddy never goes into Outland for a hunt: on basic,
-  Outland has no herb or ore nodes, no fishing pools or gas clouds, and
-  its own beasts can't be skinned (155n), and every profession stops at
-  300, whose materials come from Azeroth. The level rule alone would not
-  cover it: Outland's first zones sit near level 60 on basic.
+- **Outland needs no rule of its own** (Ritz, 2026-09-25: "There doesn't
+  need to be a special case. It's just, there's no materials to be gained
+  in Outland, so they'll never be considered realistic targets."). On
+  basic Outland has no herb or ore nodes, fishing pools or gas clouds, its
+  own beasts can't be skinned (155n), and professions stop at 300. Its few
+  sources (a beast type that also lives in Azeroth and is still skinnable,
+  the gems its monsters drop, its vendors) sit in the source table like
+  any other and lose on distance: the only way in is the long walk through
+  the Dark Portal (155l). A buddy already standing in Shattrath simply
+  finds its vendors nearest.
 
 ### Performance of the source table (Ritz, 2026-09-25)
 
@@ -281,17 +286,12 @@ sold out, a death on the road, full bags) are re-attempted.
   new set, keeping the step in progress.
 - (Answered 2026-09-25) A failed step is re-attempted.
 - (Answered 2026-09-25) Out of reach: a zone more than 3 levels above the
-  buddy, or inside a dungeon; she asks instead of going. Never Outland.
+  buddy, or inside a dungeon; she asks instead of going. Outland gets no
+  special case; distance keeps its sources from being picked.
 - (Answered 2026-09-25) At most 3 active hunts; more wait on a backlog,
   whose shared materials are fetched early by the active steps.
-- Outland exceptions: some materials for recipes at or below 300 do come
-  from Outland on basic. Wrath uncommon and rare gems drop from about 1,000
-  Outland monster loot tables (155p), and Outland gems drop there too; both
-  also have Azeroth sources (the titan jewelers' crystal trade; prospecting
-  mithril and thorium). And when the owner is already in Outland, the
-  nearest vendor for thread, flux or vials is an Outland one. Does "never
-  Outland" mean never *travel into* Outland for a hunt (so a buddy already
-  there with her owner may use its vendors and monsters), or never use an
-  Outland source at all?
+- (Answered 2026-09-25) Outland's few sources (monster-dropped gems, which
+  also come from Azeroth; its vendors) are ordinary table entries; no
+  special case.
 - (Answered 2026-09-25) Several hunts at once, interleaved by distance or
   effort; the limit waits on the buddies' memory design.

@@ -41,7 +41,7 @@ anyway."
 
 ## Current Behavior
 
-**Built 2026-09-24** (the flights not yet tried in game):
+**Built 2026-09-24** (the flights not yet tried in game). **Not built yet**: removing the other portals between Outland and Azeroth (Intended Behavior, "The Dark Portal is the only door").
 
 - **Quests**: install step E028,
   `sql/basic/db_world.src/13-outland-without-quests.apply.sql` (+ revert),
@@ -113,6 +113,23 @@ Stock numbers, for reference:
 - **Every other flight path stays disabled** (E008), unless a place can't
   be reached any other way.
 - Quest items stay (unobtainable without their quests).
+- **The Dark Portal is the only door** (Ritz, 2026-09-25: "we should
+  disable all portals to and from Outland, except the Dark Portal. Yes
+  it's a long walk, but I think that's part of it."). Not built yet. The
+  portal objects that cross between Outland and the rest of the world, from
+  the stock world database (clickable portals, 2026-09-25):
+  - Shattrath's eight portals to the capitals: Darnassus 183317, Exodar
+    183321, Ironforge 183322, Orgrimmar 183323, Silvermoon 183324,
+    Stormwind 183325, Thunder Bluff 183326, Undercity 183327 (the ninth,
+    to the Isle, 187056, is already removed above);
+  - the two portals on the Stair of Destiny back to Stormwind (195139) and
+    Orgrimmar (195140);
+  - Dalaran's two portals to Shattrath (191013 Alliance, 191014 Horde), in
+    Northrend.
+
+  Each is removed and saved for the revert, like 187056. Class spells that
+  reach Shattrath (the mage teleport and portal) are learned at 65 and
+  can't be learned under basic's cap of 60.
 
 **Places that might need a flight**, checked from what is known so far:
 
@@ -160,3 +177,13 @@ Stock numbers, for reference:
 - (Answered 2026-09-24) Shattrath portal removed; the Light's Hope flight
   is the only way. The Isle's quests removed.
 - (Answered 2026-09-24) Dark Portal flights run back. Quest items stay.
+- (Answered 2026-09-25) Every portal between Outland and the rest of the
+  world is removed; only the Dark Portal remains.
+- **Hearthstones**: a hearthstone bound at an Outland inn carries a
+  character between Outland and Azeroth once an hour, skipping the walk
+  just as a portal would. Allowed, or are Outland inns unable to bind?
+- **The Blasted Lands portals** in Stormwind and Orgrimmar (195141,
+  195142, four spawns each) don't enter Outland, but drop a player next
+  to the Dark Portal. Kept, or removed as part of "the long walk"?
+- **Northrend**: is it reachable on basic at all? If not, Dalaran's
+  Shattrath portals are moot, but removing them costs nothing.
