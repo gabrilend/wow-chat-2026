@@ -127,9 +127,11 @@ Stock numbers, for reference:
   - Dalaran's two portals to Shattrath (191013 Alliance, 191014 Horde), in
     Northrend.
 
-  Each is removed and saved for the revert, like 187056. Class spells that
-  reach Shattrath (the mage teleport and portal) are learned at 65 and
-  can't be learned under basic's cap of 60.
+  Each is removed and saved for the revert, like 187056.
+  - The mage's **Teleport: Shattrath** is trainable at 60 (spell 33690
+    Alliance, 35715 Horde; read from the trainer table 2026-09-25), so it
+    is removed from mage trainers too. Portal: Shattrath (33691, 35717)
+    needs 65 and can't be learned under basic's cap.
 
 **Places that might need a flight**, checked from what is known so far:
 
