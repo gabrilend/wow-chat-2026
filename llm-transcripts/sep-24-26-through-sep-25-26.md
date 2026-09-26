@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 23:25:42
+Generated on: 2026-09-25 23:33:03
 Models: claude-opus-5-5
 
 ## Contents
@@ -138,6 +138,11 @@ Models: claude-opus-5-5
     basic profile, and I just proposed storing each buddy's tasks as JSON. Your
     call next: does JSON and the table layout work, and should death knight
     clans, who can't heal, skip the healer guarantee?
+33. 2026-09-25 23:28, after Request 102 - We're designing buddy bots and
+    building basic-profile features; the class books, Outland's one-door portals
+    and the guild bank removal are built and committed. Next, answer who starts
+    with 300 professions: death knight buddies, all death knights, or inherited
+    from the sacrificed character.
 
 --------------------------------------------------------------------------------
 
@@ -9902,6 +9907,50 @@ the death knight issue: **who starts at 300?**
 2. Every death knight, players included.
 3. A death knight inherits the professions of the character it sacrificed,
    fitting "what that character became".
+
+--------------------------------------------------------------------------------
+
+### User Request 103
+
+> A new death knight can't leave Acherus until it gives up one of the account's
+> level-55 characters.
+
+level 55 or greater.
+
+We shouldn't skip the intro quest chain.
+
+> Your "start with level 300 in professions" raised a question I've recorded in
+> the death knight issue: who starts at 300?
+> 3. A death knight inherits the professions of the character it sacrificed,
+> fitting "what that character became".
+
+also death knight buddies start with maxed professions as well. They are the
+professions they knew in life.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 103
+
+I've recorded these and committed them:
+- **The soul:** any of the account's characters at level 55 or higher. Sargobras
+  lists them and the player picks one.
+- **The intro chain stays,** so the skip-the-intro option is dropped.
+- **Professions:** a death knight keeps the professions of the character it
+  replaced. Death knight buddies start with theirs maxed (300 on basic), picked
+  the way any buddy's are: a random crafting profession and its gathering one.
+
+Keeping the intro raises one more question. The death knight issue's second half
+turns Acherus into a levelling zone whose regions take turns being the easy and
+hard areas. That was built on skipping the intro, so what happens to it now?
+1. **Dropped.** Acherus plays exactly as stock, then the death knight leaves for
+   the world.
+2. **It applies after the chain.** Once a death knight finishes the intro, the
+   Scarlet Enclave becomes a zone they can come back to level in, with the
+   rotating regions.
+
+There's also one older question in that issue: when a soul is given, is the
+character truly deleted, or kept as an unplayable "gravestone" on the account?
+Deletion can't be undone.
 
 --------------------------------------------------------------------------------
 

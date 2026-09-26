@@ -235,12 +235,34 @@ Enclave on top.
 - (Answered 2026-09-25) Which characters can be given: any of the
   account's characters at level 55 **or higher** ("level 55 or
   greater"); the player picks one from Sargobras's list.
-- **Layer 2** (Acherus as a rotating levelling zone) was built on skipping
-  the intro chain, which is now kept. Is Layer 2 dropped, or does it apply
-  to the Scarlet Enclave after the chain is done (a zone to come back to)?
-- **Deletion or retirement?** "Deletes" could mean a true delete, or a
-  character kept but made unplayable (a gravestone). Deletion cannot be
-  undone.
+- (Answered 2026-09-25) Layer 2 applies **after the chain**: once a death
+  knight has finished the intro, the Scarlet Enclave becomes a zone to come
+  back to and level in, with the rotating regions.
+- (Answered 2026-09-25) The intro: other characters skip only the race
+  intro cinematic (E019, a trigger that marks every new character's
+  cinematic as seen), and that already covers death knights. Ritz: "we
+  skip the intro for other characters, right? We should skip it for DKs as
+  well, if so." The quest chain stays.
+- (Answered 2026-09-25) **Neither deleted nor a gravestone: held.** Ritz:
+  "they're removed from the player's account and put into a holding area
+  in-case they change their mind. Sargobras in Acherus can reverse this at
+  any time, deleting the death knight and returning the player character
+  to their account. They will be exactly the same except they will have
+  the DK haunted eyes and skin color and such because they are
+  canonically undead now. Sucks to be them..."
+  - Giving a soul moves the character to a hidden holding account.
+  - Sargobras in Acherus can undo it at any time: the death knight is
+    deleted and the character comes back to the player's account,
+    unchanged except for a death knight's look (glowing eyes, pallid
+    skin).
+- The returned look, read 2026-09-25 from the client's appearance table
+  (CharSections.dbc: skins, faces, hair; flag 0x4 marks a death knight
+  option, e.g. a human male's skin colours 12–14 of 0–14): the options
+  exist per race and sex, and the server stores and sends a character's
+  appearance numbers as they are, with no check against its class. So
+  giving the returned character its death knight's skin and face numbers
+  should draw correctly; the flag looks like a creation-screen filter.
+  To confirm in game once, with one character.
 - **Rotation clock.** "Each one is different at different times": what
   moves the rotation — real time (hours, days), server restarts, or the
   number of death knights that have passed through?
