@@ -45,7 +45,9 @@ distance, and nothing draws a dungeon party.
 
 - **Login/logout**: when the owner logs in, every buddy on the roster logs
   in as a bot near the owner's area (not on top of the owner). When the
-  owner logs out, they log out.
+  owner logs out, they log out, even in the middle of an errand, a
+  sale or a task hunt (Ritz, 2026-09-25: "then they log out as well");
+  what they were doing is kept and resumed at the next login (617a).
 - **Proximity party**: the owner's group holds the owner and the four
   closest buddies, checked **every 5 seconds with a 10-yard margin** (a
   buddy outside must be 10 yards closer than the farthest inside before they

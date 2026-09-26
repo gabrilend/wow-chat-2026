@@ -20,7 +20,7 @@ Verbatim, 2026-09-25, while designing buddy professions:
 
 ## Current Behavior
 
-Not designed beyond the line above. Nothing is built. The stock server
+Nothing of the clan guild is built. Built 2026-09-25: no guild banks (install step E039, `sql/basic/db_world.src/24-no-guild-banks.apply.sql`: every Guild Vault spawn saved in `basic_617l_guild_vaults` and removed; `scripts/validate-basic-state` checks none is left). The stock server
 creates a guild from a charter signed by other players, or by a GM command;
 a character belongs to at most one guild.
 
@@ -38,8 +38,9 @@ a character belongs to at most one guild.
   in-character once the chat module, 916, reaches basic).
 - The owner can't leave it; guild banks are disabled on basic (Ritz,
   2026-09-25). The stock server has no setting to switch guild banks off
-  (read 2026-09-25 in worldserver.conf.dist), so that takes a source patch
-  or a data change (e.g. no guild bank vendor spawns); to design.
+  (read 2026-09-25 in worldserver.conf.dist); basic removes the guild
+  bank objects from the world instead (Ritz, 2026-09-25: "let's remove the
+  objects"): every guild bank chest spawn, saved for the revert.
 
 ## Suggested Implementation Steps
 

@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 21:57:48
+Generated on: 2026-09-25 22:32:33
 Models: claude-opus-5-5
 
 ## Contents
@@ -126,6 +126,10 @@ Models: claude-opus-5-5
     basic-profile features: the class books are built and tested, and player
     guilds will work like rao-chat rooms. Next, you choose what's next, and I
     recommend compiling and play-testing everything built so far.
+30. 2026-09-25 22:02, after Request 99 - We're designing buddy bots for your
+    basic server, and the portal removal and 25-person Naxxramas books are
+    built, tested and committed. Next, your call on the first of eleven open
+    buddy questions: what gear, money and bags a new buddy starts with.
 
 --------------------------------------------------------------------------------
 
@@ -9548,6 +9552,148 @@ Then, let's get a list of the buddy gaps.
 
 The gap list is recorded in the parent buddy issue. The database test is still
 running; I'll commit when it finishes.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "Run the RAM database test with E038"
+completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 99 (continued)
+
+I built both changes, the in-memory database test passes including an exact
+revert, and it's committed.
+
+- **The Dark Portal is the only door.** A new install step removes 20 portal
+  spawns:
+  - Shattrath's eight portals to the capitals;
+  - the two on the Stair of Destiny;
+  - Dalaran's two portals to Shattrath;
+  - the capitals' eight portals to the Blasted Lands.
+
+  Hearthstones and the mage's Teleport: Shattrath stay. I also searched for
+  every spell that lands in Shattrath, and nothing else live leads there: the
+  rest are the guards' banish inside the city, an unspawned portal and a scroll
+  from a removed quest. The post-install checker now confirms no removed portal
+  is left.
+- **25-person Naxxramas** drops 2.5 times the books: 25% per boss against 10%,
+  and the same for the Four Horsemen's chest.
+
+**Buddy gaps.** The earlier survey's list had never been written into the
+issues. It's now in the parent buddy issue, as questions no sub-issue covers
+yet:
+1. **Data model:** the roster table's columns, the dungeon draw bag's state, the
+   auction house's price memory, and hand-set prices for items with no vendor
+   price.
+2. **Starting kit:** what gear, money and bags a new buddy has when it arrives
+   at the owner's level.
+3. **Logout mid-errand:** the owner logs out while a buddy is walking to town,
+   selling, or on a task hunt.
+4. **Server restart:** what a buddy remembers (errands, hunts, the draw bag,
+   price memory) and where it stands afterwards.
+5. **The owner far away:** the Dark Portal or Isle flight, being summoned, a
+   mage teleport, a boat to another continent. Hearthstones and instances are
+   already designed.
+6. **Faction or race change:** do the buddies follow?
+7. **Death knight buddies:** basic allows death knight players, but no playerbot
+   plays one. Can a buddy be one?
+8. **Commands:** can the owner rename buddies, and do the bot module's chat
+   commands (follow, stay, attack) still work on them?
+9. **Visibility:** do buddies show up in /who and friends lists?
+10. **Guild banks off:** a source patch, or just no guild bank objects in the
+    world?
+11. **Talent plans:** random or matched to what the group lacks? Also, the loot
+    issue still says "30-point cap", which doesn't match basic's tier rule.
+
+Want to go through them one at a time, starting with 2, the starting kit? It
+shapes a buddy's first minutes, and nothing else depends on it.
+
+--------------------------------------------------------------------------------
+
+### User Request 100
+
+> 10. Guild banks off: a source patch, or just no guild bank objects in the
+> world?
+
+let's remove the objects.
+
+> 11. Talent plans: random or matched to what the group lacks? Also, the loot
+> issue still says "30-point cap", which doesn't match basic's tier rule.
+
+random, but each clan is guaranteed at least one tank, and one healer. When
+talking to Sargobras, you can either request a specific class, or a specific
+race, and he'll pick randomly for the option you didn't pick.
+
+>   9. Visibility: do buddies show up in /who and friends lists?
+
+ideally no...
+
+> 8. Commands: can the owner rename buddies, and do the bot module's chat
+> commands (follow, stay, attack) still work on them?
+
+can't rename, and the chat commands probably shouldn't work. However, they can
+be called with tool calls from the LLM once we build that.
+
+> 7. Death knight buddies: basic allows death knight players, but no playerbot
+> plays one. Can a buddy be one?
+
+death knight players get death knight buddies. They don't get to pick anything,
+Sargobras doesn't even show up for them. A random race and class is chosen.
+
+>   6. Faction or race change: do the buddies follow?
+
+I don't intend to support faction or race changes at this time.
+
+> 5. The owner far away: the Dark Portal or Isle flight, being summoned, a mage
+> teleport, a boat to another continent. Hearthstones and instances are already
+> designed.
+
+The buddy-bot should move toward the mechanism that allowed the distance at
+their earliest convenience and attempt to rejoin the player.
+
+> 4. Server restart: what a buddy remembers (errands, hunts, the draw bag, price
+> memory) and where it stands afterwards.
+
+Ideally, they'd remember.
+
+> 3. Logout mid-errand: the owner logs out while a buddy is walking to town,
+> selling, or on a task hunt.
+
+then they log out as well.
+
+> 1. Data model: the roster table's columns, the dungeon draw bag's state, the
+> auction house's price memory, and hand-set prices for items with no vendor
+> price.
+
+Not sure. Suggestions?
+
+> 2. Starting kit: what gear, money and bags a new buddy has when it arrives at
+> the owner's level.
+
+clad in all white quality gear. They have their level in silver, except at level
+1 they have none. They have the same number of bag slots as the player they
+spawn with, choosing the lowest quality bags to match that number, spread evenly
+as possible. Prefer four 8 slot bags over two 10 slots and two 6 slots.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 100
+
+> Recording all ten answers. First, the sections they land in.
+
+> Adding each decision as its own section in the right issue.
+
+> Guild bank removal is small, so I'll build it now. Counting the spawns:
+
+> 44 guild vault spawns, with no linked rows. Writing the install step.
+
+> While the test runs, I'll write a data model proposal into the roster issue.
+
+> Updating the parent's gap list to show what's answered and where.
+
+All the answers are recorded. The database test for the guild bank removal is
+still running; I'll commit when it passes.
 
 --------------------------------------------------------------------------------
 

@@ -69,6 +69,20 @@ re-roll. Is that terrible?"
 - Removed from basic alongside: dual spec; and the gold cost of a respec
   grows without a cap and comes down over time (155r).
 
+### Decision, 2026-09-25 (Ritz): random profiles, a tank and a healer guaranteed
+
+"random, but each clan is guaranteed at least one tank, and one healer."
+- A buddy's profile is drawn at random at creation.
+- **Guarantee**: a clan's buddies always include at least one tank
+  and one healer. When a buddy is created while the buddies
+  lack one, its draw is limited to profiles that fill the missing role
+  (tank first, then healer) if its class can fill it; a random class draw
+  at Sargobras (617b) is likewise limited to classes that can.
+- Tank profiles: most points in protection (warrior, paladin), feral
+  (druid, the bear side) or a death knight tree played as a tank. Healer
+  profiles: most points in holy or discipline (priest), holy (paladin),
+  restoration (shaman, druid). The exact list is for the generator.
+
 ## Suggested Implementation Steps
 
 1. Read the capped trees (client `Talent.dbc`, `TalentTab.dbc`) into a
@@ -87,6 +101,9 @@ re-roll. Is that terrible?"
 
 ## Open Questions
 
-- **How is a buddy's plan chosen?** Random, or matched to what the owner's
-  group lacks?
+- (Answered 2026-09-25) Random, with at least one tank and one healer
+  guaranteed per clan (see the decision above).
+- Does the owner count toward the guarantee (an owner who tanks means no
+  buddy has to), given buddies can't know the owner's spec (617j guesses it
+  per tree)? As written, only buddies count.
 - **Random (non-buddy) bots**: same plans, or keep stock orders?

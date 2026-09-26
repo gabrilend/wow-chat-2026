@@ -47,6 +47,58 @@ No buddy exists. The pieces to build one with:
 - **Hidden**: buddies never appear on the owner's character screen and
   cannot be logged into by hand.
 
+### Decisions, 2026-09-25 (Ritz)
+
+**Starting kit** ("clad in all white quality gear. They have their level
+in silver, except at level 1 they have none. They have the same number of
+bag slots as the player they spawn with, choosing the lowest quality bags
+to match that number, spread evenly as possible. Prefer four 8 slot bags
+over two 10 slots and two 6 slots."):
+- **Gear**: white (common) items only, in every slot the class can fill at
+  its level.
+- **Money**: its level in silver (a level-30 buddy has 30 silver); none at
+  level 1.
+- **Bags**: as many bag slots in total as the owner has at that moment,
+  split over the four bag slots as evenly as sizes allow, using the
+  lowest-quality bags that make up the total: four 8-slot bags, not two
+  10s and two 6s.
+
+**Hidden from other players** ("ideally no..."): buddies don't appear in
+/who, nor can they be added as friends.
+
+**No renaming** ("can't rename"), and **the bot module's chat commands
+don't work on buddies** ("the chat commands probably shouldn't work.
+However, they can be called with tool calls from the LLM once we build
+that"): a buddy ignores whispered or party-chat bot commands; later the
+language-model layer (917, 617m) reaches the same actions as tool calls.
+
+**No faction or race change** ("I don't intend to support faction or race
+changes at this time"): basic doesn't offer them.
+
+**Server restart** ("Ideally, they'd remember"): what a buddy is doing
+(errands, task hunts, the dungeon draw bag, auction price memory) is kept
+in the database, so a restart picks up where it left off.
+
+### Data model (proposed 2026-09-25, to confirm)
+
+Ritz: "Not sure. Suggestions?" Everything a buddy must remember lives in
+the characters database (it belongs to characters and is deleted with
+them); the one hand-kept list lives in the world database (it is part of
+the world, like vendor prices). Every id is `int unsigned` unless noted.
+
+| Table | Key | Fields | Holds |
+|---|---|---|---|
+| `buddy_clan` | owner | companion account; clan guild id | one row per owner: the hidden account (617a) and the clan guild (617l) |
+| `buddy_roster` | owner, slot (`tinyint`: 1 at creation, 2 at level 10, …) | buddy character (empty while the slot is owed); class, race, profile, role (`tinyint` each: role 0 damage, 1 tank, 2 healer); created (unix time) | who the buddies are; an owed slot is a row with no buddy yet (617b fills it) |
+| `buddy_draw` | owner, buddy | had a turn (`tinyint` 0/1) | the dungeon draw bag (617c): drawn without replacement; when every buddy has had a turn, all reset to 0 |
+| `buddy_task` | buddy, task number | kind (`tinyint`: errand, gathering, task hunt), place in line (`smallint`; the first three hunts active, the rest the backlog, 617m), the task itself (text: the command as written, one entry per material and source), progress (text: which steps are done) | what each buddy is doing, so logout and restart resume it (617c) |
+| `buddy_price` | auction house (`tinyint`: Alliance, Horde, neutral), item | steps up (`tinyint`, each +0.5× the vendor price, 617h), last listed price (copper), updated (unix time) | the rising-price memory; reset to 0 steps after a sale |
+| `basic_617h_fixed_prices` (world) | item | price (copper), note (why) | the hand-kept prices for items with no vendor price (617h); a checked-in SQL file |
+
+Choices in it, open below: price memory per auction house (shared by all
+buddies selling there) rather than per buddy; the task itself as text in
+the command's own form rather than one row per step.
+
 ## Suggested Implementation Steps
 
 1. Decide the module layout: `modules/mod-buddies` in the project, linked
@@ -74,3 +126,12 @@ No buddy exists. The pieces to build one with:
 
 - (Answered 2026-09-23) Random name; random race of the owner's faction that
   can play the chosen class.
+- (Answered 2026-09-25) Starting kit: all white gear, the buddy's level in
+  silver (none at 1), the owner's bag-slot total in the lowest-quality,
+  evenly sized bags. Hidden from /who and friends; no renaming; bot chat
+  commands off (tool calls later); no faction or race change; remembered
+  across restarts.
+- **Data model** (proposed above): does the layout fit? Two choices in it:
+  should the rising auction price be remembered per auction house (all
+  buddies selling there share it) or per buddy; and should a task be kept
+  as one text in the command's own form, or one row per step?

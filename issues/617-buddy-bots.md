@@ -106,7 +106,8 @@ handler, which B028 (155d) now patches. Bots never pass through it.
   and run as playerbots. **Deleting the owner deletes its buddies.**
 - **Seven at level 60**, so five players and their buddies fill a 40-person
   raid. **Raids: the owner invites buddies by hand**, choosing which.
-- **The player chooses each buddy's class** at an NPC (617b), one choice per
+- **The player chooses each buddy's class or race** at an NPC (617b), the
+  other drawn at random (2026-09-25; death knight owners choose nothing), one choice per
   buddy.
 - **Party by proximity.** The group holds the owner and up to four buddies,
   and which four is re-chosen continually: the closest. Others keep
@@ -194,30 +195,18 @@ bot code works.
 - (Answered 2026-09-24) Raids: invited by hand. Multi-player dungeon
   parties: filled at random, or not auto-filled at all if role-fitting is
   too much. Refusal: a spoken line.
-- Remaining questions live in the sub-issues, and these, gathered
-  2026-09-25 from the design survey (not yet in any sub-issue):
-  - **Data model**: the roster table's columns and keys (617a names its
-    contents only); the dungeon draw bag's state (617c); the auction
-    house's price memory (617h's +0.5× steps) and the hand-kept prices of
-    items with no vendor price.
-  - **Starting kit**: what gear, money and bags a buddy has when created
-    at the owner's level.
-  - **Logout mid-errand**: the owner logs out while a buddy is walking to
-    a town, selling, or on a task hunt (617m).
-  - **Server restart**: what a buddy remembers (errands, hunts, the draw
-    bag, auction price memory) and where it stands.
-  - **The owner far away**: the owner takes the Dark Portal or Isle
-    flight, is summoned, teleports (mage), or crosses by boat to another
-    continent. Hearthstones and instances are designed (617e); these are
-    not.
-  - **Faction or race change** of the owner: do buddies follow?
-  - **Death knight buddies**: basic allows death knight players, but no
-    playerbot plays one (148a). Can a buddy be a death knight?
-  - **Commands**: can the owner rename buddies, and are the bot module's
-    chat commands (follow, stay, attack) left working for them?
-  - **Visibility**: do buddies show in /who and the friends list?
-  - **Guild banks off** on basic (617l): a source patch, or no guild bank
-    objects?
-  - **Talent plans** (617g): random, or matched to what the group lacks?
-    And does a plan's deepest tree fit basic's cap (155g: rows up to tier
-    6, capstone only)? 617j still says "30-point cap".
+- Remaining questions live in the sub-issues. The design survey's gaps
+  (gathered and asked 2026-09-25), with where each answer went:
+  - (Answered) Starting kit, hiding from /who and friends, no renaming, bot
+    chat commands off, no faction or race change, remembering across
+    restarts: 617a.
+  - (Answered) Logout mid-errand: buddies log out too, and resume: 617c.
+  - (Answered) The owner far away: buddies go to the same means of travel
+    and rejoin: 617e.
+  - (Answered) Talent profiles random, a tank and a healer guaranteed:
+    617g. Sargobras offers a class or a race: 617b. 617j's "30-point cap"
+    corrected to basic's tier rule.
+  - (Answered) Guild banks: the objects removed (built, E039): 617l.
+  - Still open: the data model (proposed in 617a); what a death knight
+    owner's buddies are (617b); whether the owner counts toward the
+    tank-and-healer guarantee (617g).

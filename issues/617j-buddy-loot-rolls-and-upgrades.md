@@ -130,7 +130,8 @@ bind-on-pickup" flag).
   miscalibration of buddy stat weights is the symptom of this and
   unfortunately we'll have to bear it for now." Known cost: a spec whose
   weight for a stat comes from an ability learned after 60, or from a
-  talent past basic's 30-point cap (155g), overvalues that stat.
+  talent past basic's cap (155g: no row deeper than tier 6, and only the
+  capstone in tier 6), overvalues that stat.
 - (Answered 2026-09-24) Single-spec buddies: need/greed by their spec's
   stat weights (the Ritz's answer covers both kinds: weights per spec,
   blended for split specs).

@@ -122,6 +122,19 @@ their character."
   emission and rate limits 916l, proximity 916g), which today targets the
   vanilla profile and would need basic added.
 
+### Decision, 2026-09-25 (Ritz): the owner far away
+
+"The buddy-bot should move toward the mechanism that allowed the distance
+at their earliest convenience and attempt to rejoin the player."
+- When the owner travels by something other than walking (the Dark
+  Portal or Isle flight, 155l; a boat or zeppelin; a summon; a mage
+  teleport), each buddy, once it has finished what it is doing, goes to
+  that same means (the flight master, the dock, the Dark Portal) and uses
+  it, then rejoins the owner's area.
+- A means a buddy can't use itself (a summon, the mage's own teleport)
+  leaves the walk: it heads for the nearest way there it can use.
+  Hearthstones are designed above (buddies hearth after the owner).
+
 ## Suggested Implementation Steps
 
 1. A bot strategy in mod-buddies: "adventure in owner's area". It

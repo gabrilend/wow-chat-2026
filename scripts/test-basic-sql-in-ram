@@ -142,10 +142,12 @@ apply_all() {
     step "E036 white gear durability doubled"             "${WORLD}" "${B}/db_world.src/21-white-durability.apply.sql"
     step "E037 class books for the level 61-80 abilities" "${WORLD}" "${B}/db_world.src/22-ability-tomes.apply.sql"
     step "E038 the Dark Portal as the only door"           "${WORLD}" "${B}/db_world.src/23-outland-one-door.apply.sql"
+    step "E039 no guild banks"                             "${WORLD}" "${B}/db_world.src/24-no-guild-banks.apply.sql"
     step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${V}/db_characters.src/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
 }
 revert_all() {
+    step "E039 revert" "${WORLD}" "${B}/db_world.src/24-no-guild-banks.revert.sql"
     step "E038 revert" "${WORLD}" "${B}/db_world.src/23-outland-one-door.revert.sql"
     step "E037 revert" "${WORLD}" "${B}/db_world.src/22-ability-tomes.revert.sql"
     step "E036 revert" "${WORLD}" "${B}/db_world.src/21-white-durability.revert.sql"

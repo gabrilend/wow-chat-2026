@@ -79,6 +79,27 @@ style) rotate toward you, but he'll only initiate such movement once every
 stand until the owner is 15 yards away, then follow again; turn smoothly
 to face the owner, starting a turn at most every 5 seconds.
 
+### Decision, 2026-09-25 (Ritz): a class or a race; death knights skip him
+
+"When talking to Sargobras, you can either request a specific class, or a
+specific race, and he'll pick randomly for the option you didn't pick."
+- His menu offers two paths: **pick a class** (the race is then drawn at
+  random among the owner's faction's races that can play it) or **pick a
+  race** (the class is then drawn at random among the classes that race
+  can play). This replaces "his menu offers the classes" above.
+- A random pick honours the tank-and-healer guarantee (617g): while the
+  clan's buddies lack a tank or a healer, a random class is drawn from the
+  classes that can fill the missing role.
+
+"death knight players get death knight buddies. They don't get to pick
+anything, Sargobras doesn't even show up for them. A random race and class
+is chosen."
+- For an owner who is a death knight, Sargobras never appears (neither the
+  valley selector, which a death knight never visits, nor the one at every
+  10th level). Each owed buddy is created straight away with a random
+  race and class (see the open question on what "death knight buddies"
+  means here).
+
 ## Suggested Implementation Steps
 
 1. The NPC template (look per 617f) and its gossip menu: one line per class
@@ -103,3 +124,9 @@ to face the owner, starting a turn at most every 5 seconds.
 - (Answered 2026-09-23) Name: Sargobras. Jokes: a written list that grows.
 - (Answered 2026-09-23) Level 1: the stationary valley selector only.
 - (Answered 2026-09-23) Sight range: the server's visibility distance.
+- (Answered 2026-09-25) Sargobras offers a class or a race; the other is
+  drawn at random. Death knight owners never meet him.
+- A death knight owner's buddies: Ritz said both "death knight players get
+  death knight buddies" and "A random race and class is chosen". Are they
+  all death knights with a random race, or ordinary buddies of a random
+  class (the bot module plays no death knights on basic today, 148a)?

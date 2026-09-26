@@ -204,6 +204,12 @@ report "the Dark Portal is the only door: no Shattrath, Stair of Destiny, Dalara
         UNION ALL SELECT 'saved', COUNT(*) FROM ${WORLD}.basic_155l_portals HAVING COUNT(*) <> 20")"
 # }}}
 
+# {{{ 617l: no guild banks
+report "no Guild Vault (guild bank object) is spawned anywhere; the stock spawns are saved" \
+    "$(run_sql "SELECT g.guid, g.id FROM ${WORLD}.gameobject g JOIN ${WORLD}.gameobject_template t ON t.entry = g.id WHERE t.type = 34
+        UNION ALL SELECT 'saved', COUNT(*) FROM ${WORLD}.basic_617l_guild_vaults HAVING COUNT(*) = 0")"
+# }}}
+
 # {{{ 155o: Inscription without glyphs
 report "no trainer teaches a glyph" \
     "$(run_sql "SELECT ts.TrainerId, ts.SpellId FROM ${WORLD}.trainer_spell ts JOIN ${WORLD}.basic_155o_glyph_trainer_spell b ON b.SpellId = ts.SpellId LIMIT 10")"
