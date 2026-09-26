@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 19:49:23
+Generated on: 2026-09-25 19:57:11
 Models: claude-opus-5-5
 
 ## Contents
@@ -8565,6 +8565,103 @@ The other three come after:
   Should it be a fourth argument?
 - **Processed materials:** is "smelt bars from ore I mine" one source, or does
   the ore get its own entry?
+
+--------------------------------------------------------------------------------
+
+### User Request 85
+
+> - Task hunt command: it now carries what to make, who it's for, and one source
+> per material, with a stack counting as one entry. A source can be her
+> backpack, which holds what the
+>     asker hands over as well. The other sources are a gathering node, a monster, a vendor or the auction house. The buddy module walks and buys; the model only picks.
+
+we should be able to update it in-flight as well, so make sure even if we weave
+together multiple requests, we can remove one atomically and re-create the list
+with it's modified requirements. "Actually I'm running out of time before the
+raid, can you just buy the pearl on the auction house?"
+
+
+
+<pasted_content id="8773">
+> Does the model pick each material's source freely, or from a list code makes
+> for it? Code would list, for each material, every source she could use: how
+> far a walk it is, what it
+> costs, and whether she can succeed at all. For copper ore, that might be the
+> vein 400 yards north, 3 gold at the auction house, or a vein in a zone three
+> levels above her marked
+>   "can't: too dangerous".
+> 1. From the list (my recommendation). The model can't choose a source that
+> doesn't exist or that she can't reach. Your two weights, distance and price,
+> sit in the list, so the model
+>      weighs them along with what the asker said, like "quickly". It is still only routing.
+</pasted_content id="8773">
+
+
+this one. Though, we should pay special attention to the performance demands of
+gathering so much data.
+
+> - A material split across sources: 2 bars in her backpack and 4 from the
+> auction house. Is that two entries, or is the rest always fetched from one
+> place?
+
+two entries.
+
+> - Urgency: hand it over now or mail it later. Your shape didn't include it.
+> Should it be a fourth argument?
+
+Ooops. Yes let's add that to the "who is it for" argument - "it's for person A,
+and I will hand deliver it." etc.
+
+> - Processed materials: is "smelt bars from ore I mine" one source, or does the
+> ore get its own entry?
+
+two entries. one for mining ore, one for smelting bars.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 85
+
+> Rewriting the command section and the questions with all four answers.
+
+All four answers are in the task-hunt issue and committed:
+- **Changing a hunt mid-way:** each request stays whole, and her route is only
+  ever built from the current set. "Just buy the pearl" swaps that one request
+  out in a single step, and the route is rebuilt. Nothing from the old version
+  runs after the swap. Whatever she already fetched is in her backpack, so the
+  new version can use it.
+- **Split supplies:** two entries.
+- **Processed materials:** one entry per stage (mine the ore, then smelt the
+  bars).
+- **Delivery:** part of "for whom", as either "by hand" or "by mail".
+
+Next, **the performance of the source table.** Here is what building one would
+cost if done naively for one recipe:
+- **Where nodes spawn:** thousands of rows in the world database's gameobject
+  spawn table.
+- **Which monsters drop each material:** a scan of loot tables with hundreds of
+  thousands of rows, plus references that point into other tables.
+- **Which vendors sell it:** a few thousand rows.
+- **Auction prices:** the server already keeps the auction house in memory, so
+  this is cheap.
+- **Walking distance:** the real path on the navigation mesh. This is the costly
+  part, and it would have to be done for every candidate source.
+
+My proposal is to split the work by what changes:
+1. **Once, at server start:** turn the unchanging parts into lists from each
+   item to its sources: the node spots, monsters and vendors for each item.
+   After that, a lookup is a single index read, not a table scan. The memory
+   cost is modest: only materials used in recipes are listed, a few thousand
+   items.
+2. **Per request:** read the auction prices, and rank sources by straight-line
+   distance.
+3. **Only for the sources the model picks:** compute the real walking path.
+   That's one to five paths per hunt instead of dozens.
+
+Requests are occasional, so step 2 happens seconds apart at most, never in a
+tight loop. Does that split sound right, or do you want the straight-line
+ranking replaced with something closer to real walking distance? Straight lines
+can mislead near mountains and water. One cheap correction is a small penalty
+when the line crosses a zone boundary or a large change in height.
 
 --------------------------------------------------------------------------------
 

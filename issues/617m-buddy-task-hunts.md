@@ -157,7 +157,22 @@ for it: her own materials, her own coin, her own time.
 "we should pay special attention to the performance demands of gathering
 so much data." A table for one recipe touches every node spawn, monster
 loot list and vendor list that has any of its materials, plus the auction
-house and walking distances. See the open question below.
+house and walking distances. Built in three tiers by how often each part
+changes (agreed 2026-09-25):
+
+1. **At server start, once**: item-to-source lists for the unchanging
+   parts: for every material used by any recipe, the node spawn spots, the
+   monsters whose loot (following reference loot tables) contains it, and
+   the vendors that sell it. A lookup is then one index read, not a scan
+   of the spawn, loot and vendor tables.
+2. **Per request**: auction prices (read from the auction house the server
+   already holds in memory), and sources ranked by straight-line distance.
+3. **Only for the sources the model picks**: the real walking path on the
+   navigation mesh (one to five paths per hunt, not dozens).
+
+Requests are occasional, never a tight loop. If straight-line ranking
+misleads near mountains and water, a later knob is a small penalty for a
+line crossing a zone boundary or a large height change.
 
 ### A step that can't succeed (Ritz, 2026-09-25)
 
@@ -185,11 +200,12 @@ first, a vendor sold out, a death on the road, full bags) are re-attempted.
    model (by a chat command) so hunts can be tested before 917 exists.
    Replacing or removing one command at once, re-weaving the route.
 2. The source table, in code: expand a recipe into its material tree and,
-   for each material, list the sources she could use with their walking
-   distance and auction or vendor price, all from data the server already
-   holds (recipes from the spell data, node and monster spawns from the
-   world database, vendor lists, 617h's auction prices); mark sources that
-   can't succeed, with the reason and the offer that would fix it.
+   for each material, list the sources she could use with their distance
+   and auction or vendor price, in the three tiers above (item-to-source
+   lists built at start from the spell data, spawn, loot and vendor
+   tables; auction prices and straight-line ranking per request; walking
+   paths only for picked sources); mark sources that can't succeed, with
+   the reason and the offer that would fix it.
 3. The model's part (917c): recognise a craft request, pick a source per
    material from the table, write the command; voice her replies.
 4. The hunt as a standing instruction (917d) that survives relogs and ends
@@ -207,12 +223,8 @@ first, a vendor sold out, a death on the road, full bags) are re-attempted.
   "for whom" argument.
 - (Answered 2026-09-25) A processed material is one entry per stage (mine
   the ore; smelt the bars).
-- How is the source table kept cheap? Proposed: the unchanging parts
-  (which nodes, monsters and vendors give each item) are built once at
-  server start as item-to-source lists; per request only the live parts
-  are read (auction prices, from the auction house the server already
-  holds in memory) and distances are straight-line, with a real walking
-  path computed only for the sources the model picks.
+- (Answered 2026-09-25, Ritz: "Great looks delicious.") The source table
+  is kept cheap in three tiers; see "Performance of the source table".
 - Processing stages as separate entries: the earlier rule "a chain is
   judged as one unit" now means the table marks a stage as impossible if
   a stage it feeds is (no forge she can reach makes the ore pointless).
