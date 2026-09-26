@@ -222,6 +222,15 @@ Enclave on top.
   711 (the class format and schema) and 710 (resources). Note the existing Lua
   for it is disabled (`src/lua-beta/custom-classes.lua.disabled`) and
   beta-only, so on basic the infrastructure starts from a port, not a switch.
+  Ritz, 2026-09-25: "what about the DK's rest on custom-class
+  infrastructure?" Read against the design as it now stands: the only part
+  that leaned on it was teaching the chain's abilities at the right
+  levels if the intro were skipped (step 5 below, "level-gated ability
+  grants"). The intro is kept, so that part is gone. What is left needs no
+  custom-class machinery: the sacrifice (a creation hook, the holding
+  account, Sargobras's menu and its undo, the professions carried over),
+  and Layer 2 (region bands, the rotation by sacrifice count, later the
+  scaling). Proposed: drop the block on the custom-class infrastructure.
 - (Answered 2026-09-25) The chooser, (a): a static Sargobras in Acherus
   who lets a death knight leave for a soul. The intro chain is **not**
   skipped (Ritz: "We shouldn't skip the intro quest chain."), so (b) is
@@ -238,6 +247,9 @@ Enclave on top.
 - (Answered 2026-09-25) Layer 2 applies **after the chain**: once a death
   knight has finished the intro, the Scarlet Enclave becomes a zone to come
   back to and level in, with the rotating regions.
+  Its enemies should probably be scaled the way Outland's are (155k, 155m)
+  ("we should also probably consider scaling the enemies like we do in
+  Outland. Let's put a pin in that for now..."): parked.
 - (Answered 2026-09-25) The intro: other characters skip only the race
   intro cinematic (E019, a trigger that marks every new character's
   cinematic as seen), and that already covers death knights. Ritz: "we
@@ -263,9 +275,9 @@ Enclave on top.
   giving the returned character its death knight's skin and face numbers
   should draw correctly; the flag looks like a creation-screen filter.
   To confirm in game once, with one character.
-- **Rotation clock.** "Each one is different at different times": what
-  moves the rotation — real time (hours, days), server restarts, or the
-  number of death knights that have passed through?
-- **Is 148a's premise simply wrong?** If the start location is purely
-  server-side (206), should 148a's "future work" section be corrected now
-  rather than when this lands?
+- (Answered 2026-09-25) Rotation clock: a count of sacrificed characters,
+  as the starting valleys rotate after a count of new characters (155d,
+  B028: every 30). Ritz: "it's like the rotating starter zones [...] a
+  certain number of sacrificed characters causes it to shift". How many is
+  still to set.
+- (Answered 2026-09-25) 148a's premise was wrong; corrected in 148a.

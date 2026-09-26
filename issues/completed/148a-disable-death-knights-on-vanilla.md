@@ -48,6 +48,13 @@ The project does not yet have a client-patching pipeline. Until it
 does, the only correct option is to **disable the DK class entirely
 on vanilla** and revisit when the client patcher exists.
 
+**Correction (2026-09-25, from 718):** the premise above is wrong. Where a
+new character starts, death knights included, is the server's
+`playercreateinfo` table, not the client: beta (206, completed) starts
+death knights at level 1 outside the usual path with no client patch. So
+re-enabling death knights on vanilla needs no client patcher; it is a
+server-side choice. (Ritz, on learning this: "neat".)
+
 ## Current Behavior
 
 Death Knight is disabled on vanilla by the single config knob:

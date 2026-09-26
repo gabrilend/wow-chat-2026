@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 23:33:03
+Generated on: 2026-09-25 23:40:07
 Models: claude-opus-5-5
 
 ## Contents
@@ -9951,6 +9951,66 @@ hard areas. That was built on skipping the intro, so what happens to it now?
 There's also one older question in that issue: when a soul is given, is the
 character truly deleted, or kept as an unplayable "gravestone" on the account?
 Deletion can't be undone.
+
+--------------------------------------------------------------------------------
+
+### User Request 104
+
+> - The intro chain stays, so the skip-the-intro option is dropped.
+
+we skip the intro for other characters, right? We should skip it for DKs as
+well, if so.
+
+> Keeping the intro raises one more question. The death knight issue's second
+> half turns Acherus into a levelling zone whose regions take turns being the
+> easy and hard areas. That was
+>   built on skipping the intro, so what happens to it now?
+> 2. It applies after the chain. Once a death knight finishes the intro, the
+> Scarlet Enclave becomes a zone they can come back to level in, with the
+> rotating regions.
+>
+> There's also one older question in that issue: when a soul is given, is the
+> character truly deleted, or kept as an unplayable "gravestone" on the account?
+> Deletion can't be undone.
+
+they're removed from the player's account and put into a holding area in-case
+they change their mind. Sargobras in Acherus can reverse this at any time,
+deleting the death knight and returning the player character to their account.
+They will be exactly the same except they will have the DK haunted eyes and skin
+color and such because they are canonically undead now. Sucks to be them...
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 104
+
+> Checking the client's appearance file now rather than leaving that open.
+
+I've recorded all of it and committed it.
+
+- **Skipping the intro:** other characters only skip the race intro cinematic,
+  not their starting quests. Basic does that with a database rule that marks
+  every new character's cinematic as already seen, death knights included, so
+  their cinematic is skipped already. The Acherus quest chain stays.
+- **Layer 2:** after the chain, the Scarlet Enclave becomes a zone death knights
+  can come back to, with its regions taking turns as easy and hard.
+- **The soul is held, not deleted.** It moves to a hidden holding account.
+  Sargobras in Acherus can undo it at any time: the death knight is deleted, and
+  the character comes back "canonically undead", with glowing eyes and pallid
+  skin.
+- **Will that look show correctly?** Probably yes. I read the client's
+  appearance file: death knight skins and faces are ordinary options for each
+  race, just flagged as death-knight-only on the character creation screen. For
+  example, a human male's skin colours 12–14 are flagged, out of 0–14. The
+  server stores and sends a character's appearance numbers without checking its
+  class, so a returned warrior wearing skin 13 should look right. It's noted to
+  confirm in game with one character.
+
+Still open in the death knight issue:
+- **Rotation clock:** what moves the Enclave's rotating regions — real time,
+  server restarts, or how many death knights have passed through?
+- **What the custom-class infrastructure is,** which this issue waits on.
+- **An old note to correct:** the vanilla profile says death knights need a
+  client patch. The beta profile showed they don't.
 
 --------------------------------------------------------------------------------
 
