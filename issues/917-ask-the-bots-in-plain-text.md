@@ -109,6 +109,10 @@ player types:  "have everyone repair and meet me at the bridge"
   project's actual narrators.
 - `docs/playerbots/Playerbot-Commands.md` — the command surface being
   written to.
+- [617m - Buddy task hunts](617m-buddy-task-hunts.md) — asking a buddy to
+  craft something; she plans where to get the materials and fetches them.
+  Builds on this layer, and asks whether planning a hunt still counts as
+  "carrying a request".
 - `notes/wow-chat-secretary-2` — the standing house position on what an
   LLM should be handed: levers, not arbitrary reach.
 

@@ -195,8 +195,9 @@ it if the user wants."
   profession; one crafting profession per character.
 - (Answered 2026-09-25) Buddies level professions by gathering (and
   crafting) as they go, including the gathering mode above.
-- Do buddies craft for the clan on request (gems for 155p's sockets,
-  potions, bags), and who pays for materials?
+- (Answered 2026-09-25) Crafting on request: yes eventually, with the buddy
+  paying, but it needs the language model work, so it is its own issue
+  (617m, task hunts). Until then buddies take no requests.
 - (Answered 2026-09-25) Surplus goes to the auction house by 617h's rules,
   and buddies buy clan upgrades there with what they earn.
 - (Answered 2026-09-25) Consumables are mailed to clanmates in town:

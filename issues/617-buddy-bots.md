@@ -5,7 +5,7 @@
 - Phase: 6 (Companions — bot behaviors)
 - Priority: High for basic (155): "players always have at least one buddy"
 - First profile: basic
-- Sub-issues: 617a–617l
+- Sub-issues: 617a–617m
 
 ## Origin
 
@@ -165,6 +165,7 @@ handler, which B028 (155d) now patches. Bots never pass through it.
 | 617j | buddy-loot-rolls-and-upgrades | 617a, 617g | Owner and buddies share one gear pool; three-way-split buddies need or greed by the clan's average; upgrades are always equipped |
 | 617k | buddy-professions | 617a, 155p | Buddies pick a random crafting profession and its gathering one; craft clan upgrades and consumables; sell surplus, buy clan upgrades |
 | 617l | buddy-clan-guild | 617a | A guild per clan (owner and buddies), created automatically, named by the owner, used for clan chat |
+| 617m | buddy-task-hunts | 617k, 917 | Crafting on request: the buddy counts her supply, plans where to get the rest, fetches it, crafts and delivers; needs the language model layer |
 | 617i | buddy-battlegrounds | 617c, 617e | Buddies join and leave the owner's battleground queues, finish their matches, then return; an owner's invite pulls them out |
 
 Execution order: `617a → (617b ∥ 617c) → (617d ∥ 617e) → (617h ∥ 617i ∥ 617j); 617b → 617f`.

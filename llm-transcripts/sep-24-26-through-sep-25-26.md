@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 18:47:48
+Generated on: 2026-09-25 19:14:56
 Models: claude-opus-5-5
 
 ## Contents
@@ -93,6 +93,10 @@ Models: claude-opus-5-5
     current task is the gathering mode for their professions. Next, you choose
     how buddies treat other players' gathering nodes: yield near them, gather
     only when alone, or first come first served.
+22. 2026-09-25 18:50, after Request 78 - We're designing the buddy bots'
+    professions, and the Jewelcrafting rework plus respec changes are built,
+    tested and waiting for your compile. Next is your answer on who gets a
+    buddy's spare consumables: fewest-first, owner-first, or spread evenly.
 
 --------------------------------------------------------------------------------
 
@@ -7848,6 +7852,414 @@ potions:
 2. **The owner first,** then buddies.
 3. **Spread evenly** among everyone who can use it, regardless of what they
    hold.
+
+--------------------------------------------------------------------------------
+
+### User Request 79
+
+/compact
+
+--------------------------------------------------------------------------------
+
+### Session Recap (written by the harness, not by either speaker)
+
+This session is being continued from a previous conversation that ran out of
+context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent:
+   - Ritz (pronoun **she**; "it's she btw"; don't call her "owner") asked me to
+     "keep working until you want to stop" and to "commit as we go".
+   - Work proceeded on the basic profile of Everland Ghostsong, a WoW 3.3.5a
+     AzerothCore server in /mnt/mtwo/games/azeroth-core/wow-chat-2026.
+   - The Jewelcrafting/sockets rework (issue 155p) was designed with Ritz and
+     built in stages 1–3, plus the white-durability patch.
+   - Ritz then asked to design buddy bots (issue 617 series), asking "They
+     should be able to be re-used from playerbots, right? Where are we at with
+     the design, and where are the deficiencies in planning?"
+   - We are now answering buddy design questions one at a time.
+   - Other directives:
+     - no AIO anywhere; no *required* player-installed addons until the custom client exists;
+     - trade-window gem cutting was dropped as "too obfuscated", and epic gems are not bound on pickup.
+
+2. Key Technical Concepts:
+   - Reversible patch system:
+     - E-patches: cp-apply/cp-revert SQL files with MARKER_Exxx_APPLY/REVERT, listed in patches/E-patches.sh and patches/patches.sh;
+     - B-patches: source patches with marker blocks, `//Bxxx-ORIG:` restore and patch_needs_applying_ probes;
+     - C-patches: config patches, with CONFIG_PROFILES gating.
+   - Tests and checks:
+     - scripts/test-basic-sql-in-ram: a RAM MySQL that runs apply, re-apply, revert (exact CHECKSUM of the TOUCHED tables) and apply; `--keep` leaves the server running, socket /dev/shm/wow-chat-2026/sql-in-ram/mysql.sock.
+     - scripts/validate-basic-state: post-install checks via report()/run_sql(). run_sql now folds stderr into its output, and a guard refuses to run if a broken query produces no output.
+     - scripts/test-source-patches: round-trip of the source patches.
+     - scripts/test-profile-config-gates: the config expectations.
+   - Generators (LuaJIT) write GENERATED blocks into the SQL. They read client
+     DBC files (data-files/dbc), the server's map files (data-files/maps, area
+     and height layers, using GridTerrainData arithmetic) and the stock DB
+     (acore_world_release, whose creature column is `id1`; the basic DB uses
+     `id`).
+   - The client's stock UI scripts were read out of its MPQs with
+     /home/ritz/programming/ai-stuff/world-edit-to-execute/src/cli/mpq-extract.lua
+     from /home/ritz/games/azeroth-core/client/client-files/Data.
+   - Game events with world_event=5 (INTERNAL) are never auto-started or
+     stopped; ALE's StartGameEvent/StopGameEvent control them.
+   - Loot windows hold at most 18 entries; reference rows roll MaxCount times.
+   - Server skill-up chance uses the SkillLineAbility trivial ranges; orange
+     means 100%. Crafting checks no skill.
+   - Trainers charge only gold. Vendor ExtendedCost combinations come from the
+     client DBC (none uses gems).
+   - Commits: /home/ritz/programming/ai-stuff/scripts/commit-own-changes <repo>
+     -F - and claim-own-change. Foreign lines in docs/table-of-contents.md (18,
+     49) are always left out.
+
+3. Files and Code Sections (created or modified this session; all committed):
+   - **sql/basic/db_world.src/16-outland-gear-scaling.apply/revert.sql (E031):**
+     - rules per item: g (greens), w (world blues, BoP), d (dungeon blues scaled to each dungeon's own top blue), k (Kael epics to ilvl 100), r (rating discount only);
+     - rating stat types 12–37 and 44 are multiplied by 0.6335;
+     - RequiredLevel is restored only where the backup is above 60.
+   - **sql/basic/db_world.src/17-outland-world-levels.apply/revert.sql (E032)**,
+     with **scripts/generate-basic-outland-world-levels-sql:**
+     - reads FactionTemplate.dbc and Faction.dbc (reputation factions count as hostile only if every race starts Hostile);
+     - MASK_PLAYERS = 1+2+4;
+     - neutral templates need npcflag=0; hostile ones allow npcflag &~3 = 0;
+     - +6 when all spawns are on the Isle (x>11350).
+   - **scripts/generate-socket-bonus-catalog →
+     docs/profiles/socket-bonus-catalog.md:** 2,595 enchantments, grouped by
+     kind and wording.
+   - **issues/155p-sockets-and-socket-bonuses.md:** the full design record;
+     Current Behavior covers stages 1–3, durability and the dropped B034.
+   - **scripts/generate-basic-gem-supply-sql → 18-gem-supply.apply/revert.sql
+     (E033).** Generated lists:
+     - tmp_155p_cuts (558 JC spells);
+     - tmp_155p_halves (2,456 Outland templates, by map-file zone);
+     - tmp_155p_places (sustain/power/focus score per GemProperties);
+     - tmp_155p_capitals (WorldMapArea rectangles).
+   - **What E033 contains:**
+     - reference tables 1550160–1550173;
+     - prospecting: copper and tin give +4 gems at 20%, mithril gives Outland uncommon at 20%, thorium gives Outland rare at 4%;
+     - Wrath uncommon 0.5% and rare 0.05% on Outland monsters;
+     - Design drops at 0.3% (halves, and a dungeon ladder slide), meta gems excluded (subclass 6);
+     - epic uncut gems: Kael 1 sure, Kazzak/Doomwalker 2 sure, other bosses 15%; epic-cut Designs at 1.5%;
+     - Designs set to RequiredSkillRank ≤300 (174 of them);
+     - trainers 112/113 teach 70 Outland cuts over 150–225 and 250–300 in sustain→power→focus order;
+     - basic_155p_trainer_backup/added (the revert is order-independent, verified);
+     - Visiting Jewelcrafters (1550201 Alliance clone of Farii, 1550202 Horde clone of Kalinda; list 113; guids 15501001–06, beside Mining trainers);
+     - Onyxia's Ashen Sack hoard with 16 entries (Gold Bars 15–45, five coloured sacks, 5 low-raw, 3 Outland and 2 Wrath piles); the epic rolls and the epic cut pile drop from Onyxia herself;
+     - basic_155p_cuts is kept for E034;
+     - binding: basic_155p_bonding stays empty now (restore only).
+   - **scripts/generate-basic-titan-jeweler-spots →
+     19-titan-jewelers.apply/revert.sql (E034):**
+     - Earthen Crystal-Keeper 1550210 (clone of 28149, gossip) and Earthen Gemcutter 1550211 (clone of 27980; trainer list 155300 with 56 uncommon and 7 rare single Wrath cuts at 300, stock prices);
+     - spawns 15501011–20; game events 201/202/203 for the pylons; npc_text 1553000;
+     - ground z comes from the map height layer, except where it is under rock (|diff|>5, Uldaman), which uses the landmark z.
+   - **src/lua-basic/titan-jewelers.lua:**
+     - the crystal trade (Nexus Crystal 20725 for a random Wrath uncommon gem, 10% rare);
+     - pylon swap every 30 min when no player is within 200 yd (50/50 to one of the other two);
+     - CreateLuaEvent is registered at load, plus a startup swap.
+   - **src/lua-basic/README.md:** lists the scripts.
+   - **scripts/generate-basic-sockets-sql → 20-sockets.apply/revert.sql
+     (E035):**
+     - 864 honest one-stat bonuses, 20 vanilla dungeons, capitals;
+     - 182 capital whites (approved table at ilvl 17/22/27/37/50, the formula elsewhere; red/yellow/blue rotating per set; weapons prismatic 14 with no bonus);
+     - 564 dungeon blues (keep = min(1, 0.8G/total); filled to 110%; colours from the top two stats; bonus of the top stat);
+     - tables basic_155p_socketed and basic_155p_socket_backup.
+   - **21-white-durability.apply/revert.sql (E036):** MaxDurability ×2 for all
+     Quality 1 class 2/4 items.
+   - **patches/B033-white-gear-never-repaired.sh:** inserts after ` uint32
+     curDurability = item->GetUInt32Value(ITEM_FIELD_DURABILITY);` in
+     Player::DurabilityRepair:
+     ```cpp
+         if (item->GetTemplate()->Quality == ITEM_QUALITY_NORMAL)
+             return TotalCost;
+     ```
+     Doc: docs/patches/white-gear-never-repaired.md.
+   - **B034 (trade gem cut):** built, then dropped. The patch and doc were
+     renamed to -done, committed once, then deleted. The .cut command was
+     removed from src/cpp-basic/basic_rules.cpp (the TradeData.h/ObjectMgr.h
+     includes were removed too). The number B034 stays retired.
+   - **config/patches/C026-basic-no-dual-spec.sh:** MinDualSpecLevel = 255 (test
+     expectation added).
+   - **patches/B035-respec-cost-weekly.sh:** inserts at the top of
+     Player::resetTalentsCost:
+     - 1, 5, 10, then +10 gold uncapped;
+     - one 10 g step off per weekly reset since m_resetTalentsTime, using sWorld->GetNextWeeklyQuestsResetTime() − WEEK;
+     - floor 10 gold.
+
+     Doc: docs/patches/respec-cost-weekly.md.
+   - **patches/patches.sh:**
+     - basic B list: … B031 B032 B033 B035;
+     - basic E list ends E031 E032 E033 E034 E035 E036.
+   - **scripts/test-basic-sql-in-ram:** steps for E031–E036. TOUCHED now also
+     includes creature_template_model, creature_default_trainer, trainer,
+     game_event, game_event_creature and prospecting_loot_template.
+   - **Docs:**
+     - docs/roadmap.md: a "Project-wide decisions" section (No AIO; No required addons);
+     - CLAUDE.md: AIO line marked not used;
+     - docs/design-principles.md: new; covers sustain→power→focus (resilience is sustain; defensive ratings are focus; a two-stat gem sits between its two places), honest tooltips, no required addons;
+     - docs/balance-updates.md: entries for the gem-supply defaults, cut prices, crystal rare chance;
+     - docs/table-of-contents.md: my lines for the new docs.
+   - **AIO banners** in issues 616, 702, 713, 1006, 707, 705, 710, 703, 802,
+     711, 917b, 805, 155m; notes phase-3-custom-spells.md and
+     vision-medal-encounters.md; docs connection-guide.md and
+     addons/public-healer-*.md; the progress files.
+   - **Other sessions' work committed:**
+     - 502 universal class trainers, plus an open question on which profile gets it;
+     - 153–153g, the explore profile;
+     - 158, player-machine safety.
+   - **New and updated issues:**
+     - 155q-outland-ability-tomes.md (title "Level 61–80 Ability Tomes from Azeroth": tomes from Ahn'Qiraj 20/40 with 40 at 4×, about 1–2 per raid, equal odds; Emerald Dragons 3 each; Naxxramas 71–80 tomes at the AQ40 rate); the loose root file new-issue-please-sort was removed.
+     - 155r-no-dual-spec-uncapped-respec.md.
+     - 617l-buddy-clan-guild.md: new.
+     - Updated: 617, 617a, 617b, 617c, 617e, 617f, 617g, 617h, 617k, 916 (Related: 617e), 405 (client-side notes), 155h (Ashen Sack stays and becomes the hoard), 155-basic-profile.md (155q, 155r rows).
+
+4. Errors and fixes:
+   - Unsigned subtraction in 16 SQL (old_ilvl smallint unsigned): made the
+     columns signed.
+   - Old Hillsbrad was scaled against a fixed 115: switched to the dungeon's own
+     top blue, excluding world blues.
+   - The first faction generator found only 53 hostile templates: added the MASK
+     1 (all players) bit, reputation-faction handling, and npcflag rules.
+   - The validator silently passed a check with mismatched UNION columns:
+     run_sql now uses 2>&1, and a guard refuses to run otherwise.
+   - tmp_155p_pick NOT NULL error: the column was made nullable.
+   - The height reader under Uldaman's rock read 437 against 210: added the
+     UNDER_ROCK rule.
+   - The Lua timer would be lost on reload: CreateLuaEvent is registered at
+     load.
+   - The B034 unpatch substr offset and a stray blank line were fixed before
+     B034 was dropped.
+   - The commit tool twice took stray blank lines from tangled files (502 and
+     balance-updates): fixed by claiming the whole file and recommitting.
+   - I wrote "his direction" about Ritz: changed to "Ritz's direction"; Ritz
+     confirmed "it's she".
+   - Doc error: I said the playerbots docs warn that alts cause heavy writes.
+     Corrected: the docs recommend alt bots to minimize writes.
+   - `cd` in commands was blocked by a hook: use absolute paths and `git -C`. I
+     once used 2>/dev/null (avoid it).
+   - I claimed "nothing drops" the level-55 gems: corrected, because vendors
+     sell them.
+   - I claimed the Ascension client was the only client on the machine: Ritz
+     pointed to /home/ritz/games/azeroth-core/client/.
+
+5. Problem Solving:
+   - All SQL stages pass the full RAM test with exact revert. Forward
+     (name-order) and reverse revert orders produce identical tables.
+   - The source patches round-trip byte-identically.
+   - Nothing has been compiled or installed; Ritz compiles.
+   - In-game checks are pending:
+     - capital Visiting Jewelcrafter placement;
+     - titan pairs on the ground; crystal trade; Gemcutter trainer; Un'Goro wandering;
+     - sockets and tooltips;
+     - white items not repairing;
+     - the dual spec option absent;
+     - respec prices;
+     - the option-2 socket bonus test.
+
+6. All user messages (paraphrased where long):
+   - "please continue" (after compaction).
+   - "Whoa! ... you said we can add sockets to items? And set bonuses? ... Great
+     job tonight, let's make sure we're caught up in git and then I'm going to
+     sleep."
+   - Asked whether a socket bonus can be changed to arbitrary effects (dummy
+     text, invisible aura, HP5).
+   - "good night! let's try option 2 tomorrow. Can you also make me a document
+     that lists all the enchantments that option 1 could apply? ... sockets to
+     lower level items ... reduce the stats on the item to compensate ..."
+   - "Let's think of some good candidates for socketed items ... weakest gems
+     are low level jewelcrafting recipes or vendor goods ... one slot max for
+     the low level items ... white quality items from capital cities ... dungeon
+     blues have sockets in exchange for some of the stats ... unsocketed blue
+     item be worse than a plain green item. After we develop the jewelcrafting
+     rework, let's add buddybot professions to the list."
+   - WotLK gems question; drop from Outland mobs; keep tooltips and names in
+     sync; a master jewelcrafter turning a shard into a random uncut WotLK gem
+     at titan places like Uldaman.
+   - Epic WotLK gems BoP (2h trade); +4 gems pre-cut from low-level ore
+     prospecting; the crystal gives uncommon with a small rare chance; Wrath
+     recipes drop (uncommon first half of the open world, rare second half,
+     dungeons sliding, rare like other recipes); quest-reward idea for
+     trainer-only cuts.
+   - "how about two NPCs? :)"; "can't we change the level that the recipe
+     requires? ... set it to 300"; the recipe drop halves and dungeon slide.
+   - Trainer UI with currency costs?; "I want these recipes to be rare ...
+     Scarcity in this game breeds connection".
+   - Gems from the top Outland bosses (Kael 1 at 100%, world bosses 2 at 100%,
+     other bosses 15%), recipes from every boss; all gems in Onyxia's bag.
+   - "Can we also add more gems of all kinds? ALL kinds. She's a dragon! ... 15
+     and 45 gold bars"; "it's she btw"; "sounds about right" (1.5%).
+   - "about 120 gems per sack ... 40% ... Tigerseye or low level pearls"; "we
+     can have nested containers"; bag colour question; "5 sacks always
+     included".
+   - "Maybe we have the BoP gems just drop outside of the bag instead."
+   - "I want the cut ones to also bind on pickup ... cut the gem when it's in
+     the 'will not be traded' slot"; "ideally if we could do that, I'd prefer
+     it."
+   - "we'd essentially need to add the 'will not be traded' section ... ?"; "can
+     we make it show the correct text?"; "these first three seem fine. I want
+     both of them to be at each location."
+   - "update the plan of the project to NOT use AIO, or at least to mark
+     anything that requires it as 'will not implement because it needs AIO. But
+     here's how we would if we could:'"; "not true! We have a client located at
+     /home/ritz/games/azeroth-core/client/"; Uldaman "Outside of the dungeon, in
+     a relatively safe space."; Un'Goro every 30 min, no players within 200 yd,
+     swap without replacement.
+   - "whoa I don't know whose work that is. Can you tell me about it?"; "can't
+     ask users to install addons, at least until the custom client is done..."
+   - 502 → "that's gotta be made into an issue file. It's probably for some
+     other profile though ... make it as a patch and apply it as we please"; 153
+     backlog; 158 later; "There's an unsorted issue file in the project root ...
+     proper issue file"; "The roadmap should say no REQUIRED player installed
+     addons."
+   - "how does issue 405 look? does it require AIO or a client patch?"; "50/50
+     chance each time they swap"; "either do the buddy-bot profession system or
+     work on something else...?"
+   - "can we make tomes only drop from Azeroth? ... WotLK tomes ... from
+     Naxxramas."; "list all [jewelcrafting open questions] at once".
+   - AQ tomes (20 and 40, 40 at 4×, 1–2 per raid, equal) and Emerald Dragons
+     3; drop the cut teacher ("Proposals?"); no gem level check; white items
+     doubled durability and never repaired?; "we have to make it true" (skill-up
+     chances); more sockets, colorful except weapons (colourless, no bonus);
+     only items with drainable stats; blues powerful bonuses and fewer slots,
+     whites more slots and weaker bonuses; don't touch Outland gear for sockets;
+     always honest, even legendary; leave set bonuses.
+   - "It might be the best that we can do."; "It's gotta be (a)"; "doesn't
+     matter. Just something we can verify."; "Sure." (Naxx rate).
+   - "why don't we put those recipes on the gem trader's masterwork jewelcrafter
+     companion"; "Your jewelcrafting tables look right to me!"
+   - "Yeah!" (start stage 1).
+   - "this is part of the gem redistribution pact. Jewelcrafting trainers should
+     teach these recipes ... sustain ... power ... focus ... guiding document";
+     "which rare cuts are they?"
+   - "let's drop the meta gems here. ... resilience is sustain. The others are
+     focus. the other cuts we can put on the masterwork trainer."
+   - "3. Between the two" (two-stat gems).
+   - "um. sure I guess." (capital JC trainers).
+   - "Great let's keep working."
+   - Stage 3 rules: colours even within each white tier; bonus stats "sounds
+     good"; durability for all whites, "a separate patch"; blues below level 30
+     too.
+   - "1. Keep it as is." (blue bonuses).
+   - "we decided to skip this mechanic. It's too obfuscated. So... we should
+     make the cut and uncut gems no longer BoP anymore, sadly."; "Yes, let's
+     design the buddy bots. They should be able to be re-used from playerbots,
+     right? Where are we at with the design, and where are the deficiencies in
+     planning?"
+   - Answers:
+     - one buddy account per character;
+     - levels drift;
+     - hearthstone ring around the innkeeper and hearthing after the player;
+     - Sargobras walks to 7 yd, follows past 15 yd, lerp-turns every 5 s;
+     - mail epics are the same thing;
+     - dynamic towns;
+     - talents random within a fixed profile, re-rolled on respec;
+     - remove dual spec;
+     - uncapped respec cost decreasing;
+     - "could we batch them per player? What exactly are the buddy bots doing to the database in a hot loop?"
+   - "yeah let's make it weekly instead of monthly. ... multiplied or added?"
+   - "Could we make it 1, 5, 10, then 20, 30, 40, 50, etc? Let's do a drop for
+     everyone on the server's weekly reset day. And yeah let's keep the floor."
+   - "Great. Let's do 1." (build the respec and dual spec changes).
+   - Buddies treat town or city flags as towns and build dynamic todo lists;
+     Sargobras's outfit doesn't change; owner death rules; owner-in-instance
+     rules (the LLM chat part "check them out", meaning the immortal shepherd
+     issues).
+   - "It picks totally randomly ... crafting profession ... gathering ... sold
+     on the auction house ... buy upgrades ... Each clan gets it's own guild
+     auto-created and named by the player".
+   - "if tailoring or enchanting is selected, a random gathering profession is
+     chosen. One crafting profession per character." Plus the gathering mode in
+     lower zones; "guild banks are disabled and you can't leave your guild".
+   - Gap answers: "sucks 2 suck"; "the owner's level"; "external sources. fan
+     guides"; the spreading-out description; "The buddy buys them ... bag slots
+     ... low level crafting ... AH materials priority"; full bags selling
+     stages; "drop out of the proximity party if there's no benefit"; "that's
+     fine. They're players too."
+   - Latest: "The bags that they buy / tailor should be one size larger than the
+     smallest size the upgrade-able player possesses." and "they will give away
+     things they don't need, and they will craft them at random. The ones that
+     they do need they will give away if they have more than 5, or if they have
+     any number of a higher level version of that thing, they'll give away the
+     low level ones. They will mail them to clanmates while in town."
+
+7. Pending Tasks:
+   - Continue the buddy design Q&A, one question at a time.
+   - Open questions in 617k:
+     - which clanmate receives each mailed consumable;
+     - whether buddies craft on request, and who pays for materials.
+   - Open questions in 617l:
+     - when and how the owner names the guild;
+     - what happens if the name is taken;
+     - whether other players can ever be invited;
+     - guild bank disabling needs a design (no stock config switch).
+   - Other open items in 617 issues: 617g (whether the profile is random or
+     matched to the group; whether the per-tree amounts fit 155g's cap).
+   - Undesigned buddy areas still listed: the data model (roster, draw bag, AH
+     price memory), starting gear and money, logout mid-errand, server restart,
+     owner flying or teleporting far away, and others from the gap survey.
+   - The zone level-range list from external sources needs building later.
+   - Ritz's compile and install, then the in-game checks listed in section 5.
+   - The earlier sockets "option 2" test (needs the game).
+
+8. Current Work:
+   I had just recorded Ritz's bag and consumable rules in
+   issues/617k-buddy-professions.md and committed them (commit 898b094de, "Buddy
+   professions: bag sizes and handing out consumables"). The new open question
+   added in 617k reads:
+   "- Which clanmate gets a given consumable: whoever can use it and has the
+   fewest, the owner first, or spread evenly?"
+   The reply to Ritz confirming the recording and asking this question had not
+   yet been sent when the summary was requested.
+
+9. Optional Next Step:
+   Tell Ritz the bag-size and consumable rules are recorded and committed. Then
+   ask the next open buddy-professions question, one at a time: "Which clanmate
+   gets a given consumable: whoever can use it and has the fewest, the owner
+   first, or spread evenly?" This continues her request "Yes, let's design the
+   buddy bots ... where are the deficiencies in planning?" and the
+   one-question-at-a-time Q&A we were in.
+
+If you need specific details from before compaction (like exact code snippets,
+error messages, or content you generated), read the full transcript at:
+/home/ritz/.claude/projects/-mnt-mtwo-games-azeroth-core-wow-chat-2026/5f0d7482-8aa0-400d-b224-d8993c8a1751.jsonl
+Continue the conversation from where it left off without asking the user any
+further questions. Resume directly — do not acknowledge the summary, do not
+recap what was happening, do not preface with "I'll continue" or similar. Pick
+up the last task as if the break never happened.
+
+--------------------------------------------------------------------------------
+
+`/compact` - Compacted (ctrl+o to see full summary)
+
+--------------------------------------------------------------------------------
+
+### User Request 80
+
+The consumables should be spread evenly. They'll redistribute themselves
+naturally over time.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 80
+
+I've recorded the even split in the professions issue and committed it. A buddy
+mails an equal share to every clanmate who can use the item, without checking
+what anyone already holds. Anyone who ends up with more than five passes the
+extras on under the same rule, so supplies even out over time.
+
+Next question: **can a clanmate ask a buddy to craft something?** Say you want a
+particular gem for a socket, a stack of potions before a dungeon, or a bag.
+Right now buddies only craft on their own schedule: first upgrades they decide
+someone needs, then consumables at random.
+
+1. **No requests.** Buddies craft only by their own priorities. This is the
+   simplest option, and it keeps them acting like players with their own agenda.
+2. **Requests, and the buddy pays.** The request moves to the front of the
+   buddy's queue. It uses its own materials, or buys the missing ones at the
+   auction house with its own coin.
+3. **Requests, and the asker pays.** The buddy crafts only if the asker mails or
+   trades it the materials, or the gold to buy them.
+4. **Requests, buddy pays, with a limit.** Like option 2, but capped at so many
+   requests a day or so much gold. This stops a player from draining a buddy's
+   savings.
 
 --------------------------------------------------------------------------------
 
