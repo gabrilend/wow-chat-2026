@@ -52,11 +52,18 @@ so links to it stay valid.)
 ## Suggested Implementation Steps
 
 1. Answer the open questions below with Ritz.
-2. Reuse 405's tome mechanism (a Lua use-handler that teaches the next rank
-   of a spell family) rather than one item per rank.
-3. A generator lists each class's 61–80 trainer entries by spell family and
-   writes the tome drop tables.
-4. Test on the RAM database; then in game, a level-60 reading a tome.
+2. A generator reads each class's 61–80 trainer entries (death knights
+   included) and writes one class book per entry in the stock way: the
+   "Learning" spell (483) first, the ability second with the learn
+   trigger, limited to that class, a stock book icon, required level 60.
+   No script.
+3. The same generator writes the drop tables: Ahn'Qiraj 20 and 40 and the
+   Emerald Dragons for the 61–70 books, Naxxramas for the 71–80 books,
+   every book at equal odds.
+4. Review scaling per ability (a table per class of each ability's numbers
+   at 60) and scale down where needed.
+5. Test on the RAM database; then in game, a level-60 reading a book:
+   tooltip, icon, learning.
 
 ## Open Questions
 
@@ -88,7 +95,8 @@ so links to it stay valid.)
     (honest tooltips, `docs/design-principles.md`). It costs one item per
     rank (about 800, written by the generator) instead of one
     rank-agnostic tome per ability.
-  Which one?
+  (Answered 2026-09-25) The stock class-book way ("Let's use option 1").
+  The scripted way stays with 405 and the custom classes, which need it.
 - (Answered 2026-09-25) Where: Azeroth only; the Wrath-era (71–80) tomes
   from Naxxramas. The Burning Crusade–era (61–70) tomes (Ritz): "Ahn
   Quiraj. Both 20 and 40, 40 has 4x the drop rate, but it's still pretty

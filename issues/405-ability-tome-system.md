@@ -409,6 +409,18 @@ Provides treasure pool infrastructure. Tomes use separate pools but similar dist
   game. Reusing existing unused tome items avoids the question.
 - **Using a tome** needs an on-use spell the client knows (any existing
   harmless one); the server's use hook then teaches the next rank.
+- **Two kinds of tome** (2026-09-25, while designing basic's tomes, 155q).
+  The stock class-book mechanism (the client's "Learning" spell plus the
+  ability marked "learn this", limited to one class; 66 stock books) needs
+  no script and shows the ability's own tooltip, but fixes one rank and
+  one class per item. Basic uses it. This issue's tomes need the scripted
+  kind (a written tooltip, the server's use hook teaching) because they
+  pick the *next* rank, and because custom classes (705) take spells from
+  several base classes, so eligibility is the custom class's spell list,
+  which the item itself can't check (Ritz: "option 2 I think is necessary
+  for like, the custom class issue files"). Custom classes reuse stock
+  spells, so the taught ability's tooltip is still the client's own once
+  learned; only the tome's text is ours to keep in sync.
 
 ---
 

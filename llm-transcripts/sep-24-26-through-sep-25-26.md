@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 20:59:36
+Generated on: 2026-09-25 21:02:56
 Models: claude-opus-5-5
 
 ## Contents
@@ -9079,6 +9079,58 @@ That leaves the question you skipped: **do Wrath tomes also come as quest
 rewards?** You remembered deciding that, but the record only has them dropping
 from Naxxramas. If they should also be quest rewards, which quests? They'd have
 to be Azeroth quests, since Outland has none on basic.
+
+--------------------------------------------------------------------------------
+
+### User Request 93
+
+<pasted_content id="8773">
+> - New items: there's good reason to expect they'll show correctly. The 3.3.5
+> client asks the server for an item's name, quality and tooltip text the first
+> time it sees the item,
+>     then caches that. What the server can't send is art. Each tome has to reuse a book icon the client already has, and its "use" has to be a spell the client already knows; the
+>     server's Lua then teaches the rank. No client patch is needed. I've noted testing one tome in game first: tooltip, icon, use.
+</pasted_content id="8773">
+
+
+we could just... fake the tooltip. If they use the item then we cast the spell
+on them with lua.
+
+> That leaves the question you skipped: do Wrath tomes also come as quest
+> rewards? You remembered deciding that, but the record only has them dropping
+> from Naxxramas. If they should
+> also be quest rewards, which quests? They'd have to be Azeroth quests, since
+> Outland has none on basic.
+
+the original design is correct.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 93
+
+I've recorded the answer and committed it: Wrath tomes drop from Naxxramas only.
+
+Your approach, a written tooltip plus Lua that teaches the ability on use, would
+work. While checking it, though, I found the stock game already has a mechanism
+for this. The database holds 66 class books that work with no script at all,
+such as "Codex of Holy Word: Shield III", "Grimoire of Doom" and "Tome of
+Tranquilizing Shot":
+- The item's first spell is the client's built-in "Learning" spell, and its
+  second is the ability itself, marked "learn this".
+- The item is limited to one class.
+- The server teaches the ability natively, and the client draws the ability's
+  own tooltip: damage, mana cost, cast time, all from its own data.
+
+So the tooltip can't disagree with what gets learned, which fits the "tooltips
+always tell the truth" principle. The cost is one item per rank, about 800 in
+total instead of one tome per ability. A generator writes them all, and the drop
+tables pick among them at equal odds, as you specified.
+
+**Which should tomes use?**
+1. **The stock class-book mechanism.** The tooltips are honest automatically, it
+   needs no Lua, and there's one item per rank.
+2. **A fake tooltip plus Lua.** Fewer items, since one tome can teach "the next
+   rank", but the tooltip text is ours to keep in sync by hand.
 
 --------------------------------------------------------------------------------
 
