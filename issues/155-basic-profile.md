@@ -103,7 +103,7 @@ in the rows of this table:
 | Start level 20 | **1** | no head-start |
 | Racial spawn towns (Menethil, Astranaar, …) | **the eight level-1 starting valleys, taken in rotating batches per faction, regardless of race** (155d) | user decision 2026-09-23 |
 | Quests restricted by race | **restricted by faction only** (155e) | a character can start in any of its faction's valleys, so it must be able to do that valley's quests |
-| Outland | **open at the cap** (Dark Portal at 58, stock) | user decision 2026-09-23: raid-quality gear from questing |
+| Outland | **open to anyone** (no level gate; Ritz 2026-09-25: "You walk through a portal or you take a boat, that's not level gated"); the Dark Portal is the only portal there, besides hearthstones and the mage's teleport (155l) | user decision 2026-09-23: raid-quality gear from questing |
 | Outland dungeons open at ≤60 | **every creature its stock level + 4** (built as a flat 64, to be changed); open world, quests, loot and heroic modes stock (155f) | user directive 2026-09-23, +4 on 2026-09-24 |
 | Onyxia and Naxxramas (level-80 versions in this client) | **scaled down to level-60 raids with their original vanilla loot** (155h) | user directive 2026-09-24 |
 | Crushing blows | **none from creatures level 64 and up**, as its own patch; armor, resists and aggro radius stay stock (803) | user directive 2026-09-24 |

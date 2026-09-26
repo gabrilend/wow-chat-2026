@@ -60,8 +60,9 @@ so links to it stay valid.)
 
 ## Open Questions
 
-- Which abilities: every 61–80 entry, only new abilities, or only higher
-  ranks of what a level 60 already knows?
+- (Answered 2026-09-25) Every 61–80 entry, new abilities and higher ranks
+  alike (Ritz: "For all the abilities, not just the ones that have tomes
+  already").
 - Where the tome items come from: 405's tomes are new items, which the
   client may show wrongly (no entry in its own item file); are there
   existing unused tome items to reuse? (405 read 2026-09-25: no AIO; its

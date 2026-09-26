@@ -28,10 +28,11 @@ the capitals, Dalaran's portals) are to be listed when this is designed.
 
 ## Intended Behavior
 
-Northrend opens to basic's level-60 characters, scaled to the same
-difficulty as Outland: creatures around 60 plus 4, as Outland's
-dungeons and world are on basic (155f, 155m), with its gear brought down
-the way Outland's was (155k).
+Northrend opens on basic, scaled to the same difficulty as Outland:
+creatures around 60 plus 4, as Outland's dungeons and world are on basic
+(155f, 155m), with its gear brought down the way Outland's was (155k).
+Like Outland, it is **open to anyone at any level** (Ritz, 2026-09-25):
+the boats and zeppelins carry whoever boards them; the danger is the gate.
 
 To be designed with Ritz; the Outland treatment is the pattern to start
 from: quests (155l removed Outland's), gathering and professions (155n
@@ -46,9 +47,9 @@ Dark Portal into Outland), and creature and gear levels.
 
 ## Open Questions
 
-- How is Northrend entered: the stock boats and zeppelins, or one door
-  like the Dark Portal?
+- (Answered 2026-09-25) Open to anyone, at any level (Ritz: "Both Outland
+  and Northrend should be open to anyone. You walk through a portal or you
+  take a boat, that's not level gated. Anyone can do these things."). So
+  Northrend is entered the stock way, by boat and zeppelin.
 - Which of Outland's rules carry over (no quests, no gathering nodes,
   professions capped at 300), and which differ?
-- Does it open to everyone at 60, or behind something (an attunement, a
-  world event)?

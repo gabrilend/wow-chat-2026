@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 20:29:10
+Generated on: 2026-09-25 20:35:03
 Models: claude-opus-5-5
 
 ## Contents
@@ -8889,6 +8889,67 @@ skips the walk just as a portal would.
 The other two, for after: should the capitals' portals to the Blasted Lands go,
 since they drop a player right beside the Dark Portal? And is Northrend
 reachable on basic at all?
+
+--------------------------------------------------------------------------------
+
+### User Request 90
+
+- the mage's Teleport: Shattrath. I first wrote that it needs level 65. The
+  trainer table says 60, so basic mages can learn it, and it's on the removal
+  list too. Portal: Shattrath
+    needs 65 and is out of reach anyway.
+
+actually this one can stay.
+
+> Three open questions are recorded in that issue. The first: hearthstones. A
+> hearthstone bound at an Outland inn, such as Shattrath's, Honor Hold's or
+> Thrallmar's, carries a
+> character between Outland and Azeroth once an hour, which skips the walk just
+> as a portal would.
+
+that's fine.
+
+> The other two, for after: should the capitals' portals to the Blasted Lands
+> go, since they drop a player right beside the Dark Portal? And is Northrend
+> reachable on basic at all?
+
+yeah they should go, and no Northrend is not reachable... At least, not yet. >:)
+
+... now I'm picturing it, scaled to the same difficult as Outland... level 60ish
++4... wow that's gonna be an expansion for later. Can't wait! ^_^
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 90
+
+> Committing the portal answers and the Northrend idea.
+
+All recorded and committed:
+- **Portals to remove:** the capitals' portals to the Blasted Lands join the
+  list. All the portal removals are still waiting to be built.
+- **Kept on purpose:** the mage's Teleport: Shattrath, and hearthstones bound at
+  Outland inns.
+- **Northrend:** closed on basic for now. Your "60ish +4" expansion has its own
+  new issue in the basic profile, with your words quoted. It's parked until
+  basic's Outland has been tried in game, and it starts with three questions:
+  how Northrend is entered, which of Outland's rules carry over, and whether it
+  opens to everyone at 60.
+- Dalaran's portals to Shattrath are removed anyway, so opening Northrend later
+  doesn't also open a back door into Outland.
+- While there, I fixed the basic profile's summary table, which still said the
+  respec cost falls month by month; it's weekly.
+
+Back to the clan guild. **Guild names are unique across the server. What happens
+when the owner types a name that's taken?**
+1. **Sargobras asks again,** with a joke about it. The owner can't continue
+   until they pick a free name. This is the simplest option and matches how the
+   stock game treats character names.
+2. **The name is made unique automatically,** for example "Dawnbreakers"
+   becoming "Dawnbreakers of Goldshire" after the owner's starting area. There's
+   no second prompt, but the name isn't quite what the owner typed.
+3. **Names don't have to be unique:** each clan's guild gets an invisible number
+   suffix. This fights the server, which looks guilds up by name, and would need
+   a source patch.
 
 --------------------------------------------------------------------------------
 

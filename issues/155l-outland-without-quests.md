@@ -194,4 +194,12 @@ Stock numbers, for reference:
 - (Answered 2026-09-25) Hearthstones bound in Outland keep working, and
   the mage's Teleport: Shattrath stays.
 - (Answered 2026-09-25) The Blasted Lands portals go.
+- **The Dark Portal has no level gate** (Ritz, 2026-09-25: "Both Outland
+  and Northrend should be open to anyone. You walk through a portal or you
+  take a boat, that's not level gated."). Basic's notes say the portal
+  opens at 58 as in the stock game (155, 155c), but the stock world
+  database holds no requirement for it: no access row for Outland's map,
+  and the portal's area trigger (4354) has none. Is 58 enforced anywhere
+  (the core, the client), or is the note wrong? To check in game with a
+  low-level character, and removed if found.
 - (Answered 2026-09-25) Northrend is closed on basic, for now (155s).

@@ -31,7 +31,9 @@ a character belongs to at most one guild.
   asks for it when the first buddy is made (Ritz, 2026-09-25), so the guild
   and the clan start together. The owner types it into a pop-up text box
   opened from his conversation menu (the box the stock client shows for a
-  conversation option that asks for a code), so no addon is needed.
+  conversation option that asks for a code), so no addon is needed. If
+  the name is taken (guild names are unique on the server), he asks again
+  with a joke until the owner picks a free one.
 - The clan uses guild chat to talk among themselves (buddies' lines are
   in-character once the chat module, 916, reaches basic).
 - The owner can't leave it; guild banks are disabled on basic (Ritz,
@@ -56,6 +58,7 @@ a character belongs to at most one guild.
 - (Answered 2026-09-25) The owner can't leave the clan guild, and guild
   banks are disabled (Ritz: "guild banks are disabled and you can't leave
   your guild"). So joining a friend's guild is not possible on basic.
-- Guild names must be unique on the server: what happens when the chosen
-  name is taken?
+- (Answered 2026-09-25) A taken name: Sargobras asks again, with a joke
+  about it, until the owner types a free one (as the stock game treats
+  taken character names).
 - Are other players ever invited into a clan guild?
