@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 20:22:11
+Generated on: 2026-09-25 20:29:10
 Models: claude-opus-5-5
 
 ## Contents
@@ -8817,6 +8817,78 @@ Item 3 is the real question: **does "never Outland" mean she never travels into
 Outland for a hunt, so a buddy already there can use its vendors and monsters?
 Or does it mean she never uses an Outland source at all, even while standing in
 Shattrath?**
+
+--------------------------------------------------------------------------------
+
+### User Request 89
+
+> 3. Vendors when the owner is already in Outland. Thread, flux and vials are
+> sold in Shattrath and other Outland towns. For a buddy standing there with her
+> owner, the nearest vendor
+>      is in Outland, and the next nearest is a portal and a long walk away.
+
+we should disable all portals to and from Outland, except the Dark Portal. Yes
+it's a long walk, but I think that's part of it.
+
+> 4. A minor one: skinning. Only beasts that live solely in Outland lost their
+> skinning loot, so a beast type that also spawns in Azeroth can still be
+> skinned in Outland.
+
+these will almost never be chosen as a source for skinning loot teehee because
+they'll have to walk all the way to Outland! Not ideal...
+
+> Items 1 and 2 are fine under "never Outland" because both have Azeroth
+> sources. Item 3 is the real question: does "never Outland" mean she never
+> travels into Outland for a hunt, so
+> a buddy already there can use its vendors and monsters? Or does it mean she
+> never uses an Outland source at all, even while standing in Shattrath?
+
+There doesn't need to be a special case. It's just, there's no materials to be
+gained in Outland, so they'll never be considered realistic targets.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 89
+
+> I'm looking up which portals link Outland to Azeroth before recording the
+> change.
+
+> The mage's Teleport: Shattrath is trainable at 60, not 65 as I wrote. I'm
+> fixing the issue now.
+
+I've recorded both answers and committed them.
+
+**No Outland special case for buddies.** Outland's few sources, such as
+monster-dropped gems or a beast still skinnable because it also lives in
+Azeroth, sit in the source table like any other. They lose on distance because
+the only way in is the long walk. A buddy already standing in Shattrath simply
+finds its vendors nearest.
+
+**The Dark Portal is the only door.** This is now in the Outland-without-quests
+issue, marked not built yet. I checked the stock world database for ways across:
+- Shattrath's eight portals to the capitals (the ninth, to the Isle of
+  Quel'Danas, was already removed);
+- the two portals on the Stair of Destiny, beside the Dark Portal, back to
+  Stormwind and Orgrimmar;
+- Dalaran's two portals to Shattrath, in Northrend;
+- **the mage's Teleport: Shattrath.** I first wrote that it needs level 65. The
+  trainer table says **60**, so basic mages can learn it, and it's on the
+  removal list too. Portal: Shattrath needs 65 and is out of reach anyway.
+
+Three open questions are recorded in that issue. The first: **hearthstones.** A
+hearthstone bound at an Outland inn, such as Shattrath's, Honor Hold's or
+Thrallmar's, carries a character between Outland and Azeroth once an hour, which
+skips the walk just as a portal would.
+1. **Allowed.** The long walk is only for the first trip, and it matters less
+   once you're settled.
+2. **Outland inns can't bind.** The innkeepers stay, but binding is removed, so
+   every crossing is on foot.
+3. **Binding allowed, but the hearthstone doesn't work across the Dark Portal.**
+   This would need a source patch.
+
+The other two, for after: should the capitals' portals to the Blasted Lands go,
+since they drop a player right beside the Dark Portal? And is Northrend
+reachable on basic at all?
 
 --------------------------------------------------------------------------------
 

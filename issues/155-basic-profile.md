@@ -141,7 +141,8 @@ in the rows of this table:
 | 155o | inscription-without-glyphs | 155a, 155n | No glyphs; Inscription becomes a buff-scroll profession to 300 |
 | 155p | sockets-and-socket-bonuses | 155k | Sockets on lower-level gear, gems below 300, socket bonuses with effects of our choosing |
 | 155q | outland-ability-tomes | 155h, 405 | Level 61–80 class abilities from tomes that drop in Azeroth, the Wrath-era ones from Naxxramas (an idea) |
-| 155r | no-dual-spec-uncapped-respec | 155g | No dual spec; respec cost without the 50-gold cap, still falling month by month |
+| 155r | no-dual-spec-uncapped-respec | 155g | No dual spec; respec cost 1, 5, 10, then +10 gold uncapped, dropping a step each weekly reset |
+| 155s | northrend-at-sixty | 155f, 155k, 155m | Later: Northrend opened to basic, scaled like Outland (about 60 plus 4); closed until then |
 
 Execution order: `155a → (155b ∥ 155c ∥ 155e ∥ 155i) → (155d ∥ 155f ∥ 155h ∥ 155k ∥ 155l ∥ 155m ∥ 155n) → (155j ∥ 155o)`. 155d depends on 155e
 because a human sent to Shadowglen before 155e lands arrives in a valley

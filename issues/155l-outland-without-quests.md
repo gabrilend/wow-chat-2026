@@ -127,11 +127,21 @@ Stock numbers, for reference:
   - Dalaran's two portals to Shattrath (191013 Alliance, 191014 Horde), in
     Northrend.
 
-  Each is removed and saved for the revert, like 187056.
-  - The mage's **Teleport: Shattrath** is trainable at 60 (spell 33690
-    Alliance, 35715 Horde; read from the trainer table 2026-09-25), so it
-    is removed from mage trainers too. Portal: Shattrath (33691, 35717)
-    needs 65 and can't be learned under basic's cap.
+  - the capitals' portals to the Blasted Lands (195141, 195142, four
+    spawns each): they stay in Azeroth but drop a player beside the Dark
+    Portal, skipping the walk to it (Ritz, 2026-09-25: "yeah they should
+    go").
+
+  Each is removed and saved for the revert, like 187056. Dalaran's
+  portals are unreachable while Northrend is closed on basic (155s), and
+  are removed anyway so opening Northrend later doesn't open a door into
+  Outland.
+
+  Kept on purpose (Ritz, 2026-09-25):
+  - the mage's **Teleport: Shattrath**, trainable at 60 (spell 33690
+    Alliance, 35715 Horde): "actually this one can stay." Portal:
+    Shattrath (33691, 35717) needs 65, beyond basic's cap;
+  - **hearthstones** bound at Outland inns ("that's fine").
 
 **Places that might need a flight**, checked from what is known so far:
 
@@ -181,11 +191,7 @@ Stock numbers, for reference:
 - (Answered 2026-09-24) Dark Portal flights run back. Quest items stay.
 - (Answered 2026-09-25) Every portal between Outland and the rest of the
   world is removed; only the Dark Portal remains.
-- **Hearthstones**: a hearthstone bound at an Outland inn carries a
-  character between Outland and Azeroth once an hour, skipping the walk
-  just as a portal would. Allowed, or are Outland inns unable to bind?
-- **The Blasted Lands portals** in Stormwind and Orgrimmar (195141,
-  195142, four spawns each) don't enter Outland, but drop a player next
-  to the Dark Portal. Kept, or removed as part of "the long walk"?
-- **Northrend**: is it reachable on basic at all? If not, Dalaran's
-  Shattrath portals are moot, but removing them costs nothing.
+- (Answered 2026-09-25) Hearthstones bound in Outland keep working, and
+  the mage's Teleport: Shattrath stays.
+- (Answered 2026-09-25) The Blasted Lands portals go.
+- (Answered 2026-09-25) Northrend is closed on basic, for now (155s).
