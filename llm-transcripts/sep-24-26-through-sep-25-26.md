@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 18:06:46
+Generated on: 2026-09-25 18:27:16
 Models: claude-opus-5-5
 
 ## Contents
@@ -89,6 +89,10 @@ Models: claude-opus-5-5
     basic profile, and all your latest decisions are recorded and committed.
     Next: tell me whether the respec price drops once per calendar month, as
     stock does, or once per weekly raid reset.
+21. 2026-09-25 18:09, after Request 76 - We're designing the buddy bots, and the
+    current task is the gathering mode for their professions. Next, you choose
+    how buddies treat other players' gathering nodes: yield near them, gather
+    only when alone, or first come first served.
 
 --------------------------------------------------------------------------------
 
@@ -7692,6 +7696,122 @@ players who are gathering too?
 2. **Only when alone:** gathering mode switches off in a zone where other real
    players are present.
 3. **No special rule:** first come, first served, as between players.
+
+--------------------------------------------------------------------------------
+
+### User Request 77
+
+> 1. Other players' nodes. On a server with other people, seven buddies
+> spreading through a low zone will harvest nodes that another player, maybe a
+> real low-level character, was
+>      walking to. Should buddies leave a node alone when another player is near it? Or skip zones where other players are?
+
+sucks 2 suck
+
+> 2. Whose level decides "lower zone". Buddies' levels drift away from the
+> owner's. Is it the owner's level against the zone, or each buddy's own?
+
+the owner's level.
+
+> 3. "The zone's level" has to come from somewhere. The client's data doesn't
+> record a zone's level range. The usual trick is the typical creature levels in
+> the zone, which I can
+>      compute the way I did for Outland.
+
+we can build a list from external sources. fan guides and such.
+
+> 4. Too many of one kind. Five miners in one zone mostly chase the same nodes.
+> Should duplicates split the loop between them, or does each run its own loop
+> and take whatever's left?
+
+they should try and spread themselves out in the zone, moving in the direction
+that has the fewest clan-members in it, weighted by distance. So a distant clan
+member would contribute less of a malus toward walking in that direction. This
+will instantly move them toward the outer ring of the zone, which isn't
+necessarily what we want - we should set their goal direction toward the spot
+that is equidistant to the other clan members, generally. I think we built a
+pattern for this actually, for spreading the random bots out in a zone when
+they're questing in like, the vanilla or beta patch? I think it was probably the
+beta patch. Anyway they should try and fill the zone, ensure that they visit all
+the nearby potential nodes while also moving primarily in a straight-wavy line,
+circling the zone and ideally, not passing over the path they took the next time
+they circle the zone. Remember they're going either clockwise or
+counter-clockwise, so we should keep that in mind as well.
+
+> 5. Crafting needs more than gathering. Tailors need cloth, which comes from
+> fighting. Enchanters need things to disenchant. Many recipes need
+> vendor-bought parts. Who buys those,
+>      and does the buddy go to town to fetch them?
+
+The buddy buys them. They should try and have some supplies on-hand, and when at
+the auction house they should consider bag slots to be an upgrade-able metric
+they can help their clanmates with. They should pick them up while in town, they
+shouldn't seek out towns specifically.
+
+The enchanter question brings up an important consideration. This cycle system
+helps for low level gathering professions, but not for low level crafting
+professions. For those, we should buy materials on the auction house whenever we
+have extra gold. It should be a higher priority than clanmate upgrades, but only
+if they're low enough level that they can't find profession materials in the
+zones that are level appropriate for their owner. If they can, then it's the
+same priority as clanmate upgrades. They should also consider the items they
+craft for their crafting profession as viable "targets" for an upgrade they can
+supply to a clanmate, and should consider the cost to be the cost of materials
+on the AH minus the materials they have on hand.
+
+> 6. Full bags: a buddy with full bags would break off and head to the nearest
+> town to sell or post its goods.
+
+sounds good. If they get to town and there's no auction house, and they have
+full bags, they should sell the 50% of their bag space with the lowest value,
+not counting things they just want to keep like hearthstone, consumables,
+tradegoods for their profession, etc. If they do this and they're still 90% or
+more full, then they sell all the tradegoods as well. If they're still 90% full,
+then they sell all their consumables. Past that I think it's a bug lmao
+
+> 7. Party and distance: dispersed buddies are far from the owner, so they drop
+> out of the proximity party. They shouldn't pull aggro onto the owner.
+
+... oh yeah! I forgot about that. Yes they should drop out of the proximity
+party if there's no benefit to being in a party together.
+
+> 8. Server load: buddies spread across a whole zone keep more of the map loaded
+> and active than seven buddies nearby. It's fine for one player, but worth
+> watching with many.
+
+that's fine. They're players too.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 77
+
+> Checking for the spreading pattern you remember from the beta Lua.
+
+All recorded, with each part in the issue it belongs to, and committed:
+- **Professions:** first come, first served at nodes. The owner's level decides
+  a "lower zone", and zone level ranges will come from fan guides.
+- **Spreading out:** each gathering buddy steers toward the spot farthest from
+  the rest of its clan. It loops the zone in its own direction, weaving through
+  node spawns and shifting each lap so it doesn't retrace. The beta Lua's
+  dispersion (`zone-consensus.lua`) and anti-clump rule (`bot-wander.lua`) are
+  named as prior art.
+- **Materials:** buddies buy what gathering can't give while they're in town.
+  Bag slots count as an upgrade they can buy for clanmates. Materials for a low
+  crafting skill outrank upgrades until the owner's zones can supply them. A
+  craftable upgrade is priced at the auction cost of its missing materials.
+- **Full bags:** the buddy heads to town. Where there's no auction house, it
+  sells in your staged order; if it's somehow still full after that, it's logged
+  as an error.
+- **Party:** a dispersed buddy leaves the proximity party.
+
+A few questions remain in the professions and guild issues. Next: **handing out
+consumables.** How often does a buddy give its potions, food and bandages to
+clanmates, and how?
+1. **In person, when they meet:** whenever a clanmate is nearby and low on that
+   consumable, the buddy trades it over.
+2. **By mail, on a timer:** say once a day, with the gifts arriving in the
+   mailbox.
+3. **In person, but only in town,** as part of the town errands.
 
 --------------------------------------------------------------------------------
 

@@ -154,6 +154,20 @@ it if the user wants."
   all the tradegoods as well. If they're still 90% full, then they sell all
   their consumables. Past that I think it's a bug lmao" — past that, it is
   logged as an error.
+- **Bags as upgrades**: "The bags that they buy / tailor should be one size
+  larger than the smallest size the upgrade-able player possesses." A
+  buddy buying or sewing a bag for a clanmate makes it one size up from
+  that clanmate's smallest bag.
+- **Consumables** (answering how they're handed out): "they will give away
+  things they don't need, and they will craft them at random. The ones that
+  they do need they will give away if they have more than 5, or if they
+  have any number of a higher level version of that thing, they'll give
+  away the low level ones. They will mail them to clanmates while in town."
+  - a buddy crafts consumables at random from its recipes;
+  - it gives away those it can't use; of those it uses it keeps 5 and gives
+    the rest; lower-level versions of something it has a better version of
+    are all given away;
+  - it mails them to clanmates during its town errands.
 - **Party**: a dispersed buddy leaves the proximity party (617c) when being
   in it brings no benefit ("they should drop out of the proximity party if
   there's no benefit to being in a party together"), so its fights never
@@ -179,5 +193,8 @@ it if the user wants."
   potions, bags), and who pays for materials?
 - (Answered 2026-09-25) Surplus goes to the auction house by 617h's rules,
   and buddies buy clan upgrades there with what they earn.
-- How often does a buddy hand out consumables, and how: in person when
-  near, or by mail?
+- (Answered 2026-09-25) Consumables are mailed to clanmates in town:
+  whatever the buddy can't use, its extras beyond 5, and lower-level
+  versions of ones it has better.
+- Which clanmate gets a given consumable: whoever can use it and has the
+  fewest, the owner first, or spread evenly?
