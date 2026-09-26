@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 17:32:40
+Generated on: 2026-09-25 17:37:20
 Models: claude-opus-5-5
 
 ## Contents
@@ -7457,6 +7457,46 @@ What next?
    - the four professions questions;
    - and from the gaps list, what happens when the owner dies or enters an
      instance while buddies are outside.
+
+--------------------------------------------------------------------------------
+
+### User Request 73
+
+Great. Let's do 1.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 73
+
+> Starting with dual spec: finding how class trainers offer it in the data.
+
+> Writing B035, the respec price patch.
+
+The respec and dual-spec changes are built, tested and committed.
+
+- **No dual spec** needed only one config line. The server has a setting for the
+  minimum level to learn dual spec, and it's now 255, above basic's cap of 60.
+  Class trainers never offer it, and the server refuses the purchase. No data
+  changes, and the config test checks the value.
+- **Respec prices** are a small server code patch:
+  - 1, 5, then 10 gold, then 10 gold more each time with no cap;
+  - one 10-gold step comes off for every weekly reset since your last respec,
+    counted from the server's own weekly quest reset;
+  - never below 10 gold.
+
+  The source patches round-trip cleanly, and the patch has its doc.
+- **Cleanup:** the two retired trade-cutting files have now been in one commit,
+  so they're deleted. The number B034 stays unused.
+
+**For you:** these add one more patch to compile, next to the white-gear repair
+patch. To check in game: at level 60 a trainer shows no dual-spec option, and
+three respecs in a row cost 1, 5 and 10 gold.
+
+Back to the buddy design? The next open question is which area marks count as
+"town". Buddies use it to decide when to stop fighting and run errands. The
+client's area table flags some areas as towns and some as capitals. Should a
+buddy treat any area with either flag as a town, or only areas that actually
+have services (a vendor or an innkeeper)?
 
 --------------------------------------------------------------------------------
 

@@ -85,6 +85,43 @@ where the module sends them. Neither is "in my area, on its own".
   town actually offers (repair, trainer, mailbox, auction house, vendor),
   one system for every town, with 617h's order where both apply.
 
+### Decisions, 2026-09-25 (Ritz): the owner dies, or enters an instance
+
+**The owner dies.** "There's two resolutions - either the player resurrects
+at their corpse, or they talk to the spirit healer. In either case, the
+buddies should continue questing around where the player died. If they pick
+the spirit healer, they should move to the player's new location and start
+doing their normal activities over there."
+- While the owner is dead, buddies keep adventuring where the owner died.
+- Corpse run: nothing changes, the owner comes back to them.
+- Spirit healer: buddies travel to where the owner rose and carry on there.
+
+**The owner enters an instance while buddies are outside.** "a dynamic group
+is created for the player (unless they already have a group, then it has to
+be manually created). If it's a manually created group and a buddy-bot is
+invited, they'll move to the instance, enter, and join the party. [...] if
+they're lower level than the player, they'll quest in the closest
+level-approprate area to the dungeon that the player is in. If they're the
+same level or higher, then they'll just chill - by that I mean lighting a
+fire, hanging out, eating snacks, talking to passerby if they sit at the
+fire, etc. If they're near a graveyard, they'll be provided some flowers to
+hold and they will wander around to the gravestones and kneel before about
+1/4th of them. They might also say some dynamic chat lines depending on
+their character."
+- An owner with no group gets the dynamic dungeon group (617c's draw bag);
+  an owner already in a group invites by hand.
+- An invited buddy travels to the instance, enters and joins.
+- A buddy left out:
+  - **lower level than the owner**: quests in the level-appropriate area
+    nearest the owner's dungeon;
+  - **same level or higher**: rests. It lights a campfire, sits, eats; near
+    a graveyard it is given flowers to hold, walks among the gravestones
+    and kneels at about a quarter of them.
+- Talking to passers-by at the fire, and in-character chat lines, wait on
+  the LLM chat module (issue 916, mod-soren-chat: persona chat 916k,
+  emission and rate limits 916l, proximity 916g), which today targets the
+  vanilla profile and would need basic added.
+
 ## Suggested Implementation Steps
 
 1. A bot strategy in mod-buddies: "adventure in owner's area". It
@@ -111,3 +148,8 @@ where the module sends them. Neither is "in my area, on its own".
   area table flags capitals and towns (`AreaTable.dbc` flags, readable
   server-side from the server's copy); the flag set to use is checked when
   617e is built.
+- (Answered 2026-09-25) Which flags: "the buddies should treat any area with
+  the town or city flag as a town, and they should dynamically create their
+  todo lists based on the services available in that town." In the server's
+  area flags (DBCEnums.h): town (0x00200000, "small towns with Inn"),
+  capital (0x00000100) and the capital's subzones (0x00000008).

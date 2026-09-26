@@ -394,6 +394,10 @@ despawn — which is fine, the next planning cycle re-populates it).
 
 - **148 — Vanilla profile design.** mod-soren-chat is being added to
   vanilla. Update vanilla's module list when 916a lands.
+- **617e — Buddy area adventuring (basic profile).** Buddies waiting
+  outside their owner's dungeon talk to passers-by at their campfire and
+  say in-character lines (Ritz, 2026-09-25); that waits on this module's
+  chat layer, and on this module being added to basic as well as vanilla.
 - **148k — ALE auto-equip starter kit.** Established the pattern of
   small ALE Lua scripts hooking into events. mod-soren-chat is the
   bigger sibling.

@@ -56,4 +56,5 @@ tool (159).
   (skin, hair and worn items already baked into a stock display record),
   chosen with the portrait tool (159). The exact look waits for the custom
   client.
-- **Levels with you?** Owner is undecided.
+- (Answered 2026-09-25) Sargobras's outfit doesn't change: "sargobras's
+  outfit doesn't change, let's say."
