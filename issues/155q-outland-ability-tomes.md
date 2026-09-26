@@ -63,13 +63,17 @@ so links to it stay valid.)
 - (Answered 2026-09-25) Every 61–80 entry, new abilities and higher ranks
   alike (Ritz: "For all the abilities, not just the ones that have tomes
   already").
-- Where the tome items come from: 405's tomes are new items, which the
-  client may show wrongly (no entry in its own item file); are there
-  existing unused tome items to reuse? (405 read 2026-09-25: no AIO; its
-  Inscription recipes would be new spells the client doesn't know, which
-  needs a client patch, but tomes that drop, as here, skip recipes
-  entirely. Using a tome needs an on-use spell the client knows, then the
-  server's Lua teaches the next rank.)
+- (Answered 2026-09-25) New tome items (Ritz: "let's hope that newly
+  created items show correctly..."). What makes that likely: the 3.3.5
+  client asks the server for an item's name, quality and tooltip text the
+  first time it sees the item and caches the answer, so a new item's text
+  shows correctly. What the server can't send is art: each tome must
+  point at an icon the client already has (reuse a stock book's display
+  id), and its on-use effect must be a spell the client already knows
+  (reuse a stock "learning" style spell; the server's Lua then teaches the
+  rank). No AIO and no client patch needed (405's Inscription recipes
+  would need one; dropped tomes skip recipes). Test first in game with
+  one tome: tooltip, icon, use.
 - (Answered 2026-09-25) Where: Azeroth only; the Wrath-era (71–80) tomes
   from Naxxramas. The Burning Crusade–era (61–70) tomes (Ritz): "Ahn
   Quiraj. Both 20 and 40, 40 has 4x the drop rate, but it's still pretty
@@ -84,7 +88,13 @@ so links to it stay valid.)
   Crusade–era tomes.)
 - (Answered 2026-09-25) Naxxramas drops the 71–80 tomes at Ahn'Qiraj 40's
   rate, about 1–2 per clear ("Sure.").
-- Balance: higher ranks are sized for levels 61–80; do they need scaling
-  down on basic (see 715, linear ability scaling)?
-- Death knights are allowed on basic with limits (148a); do they get tomes
-  too?
+- (Answered 2026-09-25) Scaling "probably depends on the ability": decided
+  per ability, not by one rule (715, linear ability scaling, is related).
+  How to review them (by class, a table of each 61–80 ability's numbers
+  at 60) is for the building step.
+- (Answered 2026-09-25) Death knights get tomes too ("yeah!").
+- Do the Wrath-era tomes also come as **quest rewards**? Ritz remembered
+  it so (2026-09-25: "Remember how we said that WotLK tomes could be
+  picked up as quest rewards?"); the record has them dropping from
+  Naxxramas only. If quest rewards too: which quests (Azeroth ones, since
+  Outland has none on basic)?
