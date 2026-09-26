@@ -211,6 +211,15 @@ cutting through walls or teleporting.
   they list surplus trade goods; buddy professions are a later issue
   (Ritz: "we should build out a system for that eventually").
 
+### Decisions, 2026-09-25 (Ritz)
+
+- The "mail step" and the mailing rule are one thing ("I think those refer
+  to the same thing"): the mail step sends bind-on-equip epics that are not
+  an upgrade for anyone in the clan to the owner.
+- Towns behave by what they have (617e): the errand order above applies to
+  the services a town offers; a town with no auction house or no repair
+  simply skips those steps.
+
 ## Suggested Implementation Steps
 
 1. A town-services survey: per town, which service NPCs exist (vendor,

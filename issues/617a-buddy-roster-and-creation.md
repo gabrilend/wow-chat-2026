@@ -25,9 +25,12 @@ No buddy exists. The pieces to build one with:
 
 ## Intended Behavior
 
-- **A hidden companion account per owner account**, created on first need
-  and never offered for login. The bot module treats it like its own
-  accounts.
+- **A hidden companion account per owner character** (Ritz, 2026-09-25:
+  "one buddy bot account per character created"; this replaces "per owner
+  account", which would have hit the server's characters-per-account limit
+  at seven buddies per character), created with the character and never
+  offered for login. The bot module treats it like its own accounts, and
+  deleting the character deletes the account with its buddies.
 - **A roster table** in the characters database: owner character → buddy
   characters, with each buddy's order (1st at creation, 2nd at 10, 3rd at
   20, …) and chosen class. A buddy slot is *owed* when the owner reaches

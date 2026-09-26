@@ -58,6 +58,33 @@ where the module sends them. Neither is "in my area, on its own".
 - Grouped buddies share experience only when in range (stock rule);
   ungrouped buddies earn their own.
 
+### Decisions, 2026-09-25 (Ritz)
+
+- **Hearthstones.** "buddies will put their hearthstone to the same spot as
+  the player. Except, they'll make a ring around the innkeeper, with the
+  radius defined by the distance from the innkeeper in the player's bind
+  location. Then, when they have a moment (not in combat, not dead, etc)
+  they'll hearth after the player does. As soon as a player successfully
+  hearths (they cancel if the player cancels, and they can never complete a
+  hearthstone teleport faster than the player because the player initiates
+  and they take their time) then they have 'use your hearthstone' added to
+  their todo list permanently until they complete a hearthstone teleport.
+  [...] Worst case scenario, they could just walk to where the player is,
+  though that's annoying."
+  - When the owner binds, each buddy binds at the same inn, at a point on a
+    circle round the innkeeper whose radius is the owner's distance from
+    the innkeeper, spread round the circle.
+  - A buddy starts its hearthstone only after the owner starts theirs, and
+    cancels if the owner cancels; it can't arrive first.
+  - Once the owner's hearthstone lands, "use your hearthstone" stays on the
+    buddy's to-do list until it has hearthed (after combat, death, a
+    cooldown), then it teleports home. Walking there is the fallback.
+- **Towns behave by what they have** ("we should dynamically create
+  behavior based on what the town has. Some towns don't even have repair
+  stations."): a buddy's town to-do list is built from the services the
+  town actually offers (repair, trainer, mailbox, auction house, vendor),
+  one system for every town, with 617h's order where both apply.
+
 ## Suggested Implementation Steps
 
 1. A bot strategy in mod-buddies: "adventure in owner's area". It

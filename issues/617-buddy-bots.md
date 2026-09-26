@@ -128,6 +128,28 @@ handler, which B028 (155d) now patches. Bots never pass through it.
 - **Death**: a buddy resurrects like a player and makes its way back to the
   owner's areas when it can.
 
+### Decisions, 2026-09-25 (Ritz)
+
+- **One hidden buddy account per character**: "one buddy bot account per
+  character created" (617a).
+- **Buddies' levels drift**: each arrives at the owner's level and then
+  levels on its own. "at level 10, the player gets a level 10 buddy in
+  addition to their original buddy who might be level 8, 9, 11, etc."
+- **Hearthstones** (617e): buddies bind where the owner binds, and follow
+  the owner home by hearthstone rather than by walking.
+- **Towns behave by what they have** (617e, 617h): "we should dynamically
+  create behavior based on what the town has. Some towns don't even have
+  repair stations."
+- **Talents** (617g): each buddy keeps one profile for life; its talents
+  within it are random and re-rolled when the owner respecs. Dual spec is
+  removed from basic, and respecs get dearer without a cap (155r).
+- **Load**: the proximity party and errands run in memory; buddies are
+  alt bots, which save like players (every 15 minutes by default, and on
+  logout and similar events). The bot module's guide names alt bots as the
+  low-write choice; its heavy writers are random bots, which basic doesn't
+  run. Ritz asked whether writes could be batched per player; nothing
+  buddy-specific writes in a loop, so there is nothing to batch yet.
+
 ## Suggested Implementation Steps
 
 | ID | Name | Dependencies | Description |

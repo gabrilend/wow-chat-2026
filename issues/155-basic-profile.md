@@ -5,7 +5,7 @@
 - Phase: 1 (Foundation — profile model, alongside 148's vanilla cluster)
 - Priority: High — basic is the baseline every later feature is developed
   against, starting with custom classes.
-- Sub-issues: 155a through 155q
+- Sub-issues: 155a through 155r
 
 ## Origin
 
@@ -141,6 +141,7 @@ in the rows of this table:
 | 155o | inscription-without-glyphs | 155a, 155n | No glyphs; Inscription becomes a buff-scroll profession to 300 |
 | 155p | sockets-and-socket-bonuses | 155k | Sockets on lower-level gear, gems below 300, socket bonuses with effects of our choosing |
 | 155q | outland-ability-tomes | 155h, 405 | Level 61–80 class abilities from tomes that drop in Azeroth, the Wrath-era ones from Naxxramas (an idea) |
+| 155r | no-dual-spec-uncapped-respec | 155g | No dual spec; respec cost without the 50-gold cap, still falling month by month |
 
 Execution order: `155a → (155b ∥ 155c ∥ 155e ∥ 155i) → (155d ∥ 155f ∥ 155h ∥ 155k ∥ 155l ∥ 155m ∥ 155n) → (155j ∥ 155o)`. 155d depends on 155e
 because a human sent to Shadowglen before 155e lands arrives in a valley

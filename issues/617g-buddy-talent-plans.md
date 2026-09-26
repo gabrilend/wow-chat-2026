@@ -49,6 +49,26 @@ points stay unspent.
 - Output: talent orders in the bot module's own config format, so the
   module spends them unchanged.
 
+### Decision, 2026-09-25 (Ritz): one profile, random talents within it
+
+"we might have to say that bots will randomly select their talents up to a
+certain amount in each tree, always prioritizing the ones that have 1
+talent point cost, and they can be re-randomly chosen whenever the player
+respecs. [...] Also I kinda want them to pick one profile and stick with
+it - so if they're a holy paladin, they'll always be a holy paladin, but
+the exact talents they choose can be randomly picked every time you
+re-roll. Is that terrible?"
+- A buddy's **profile** (how many points go in each tree, e.g. two-thirds
+  holy and one-third protection) is fixed for life, as before.
+- Within it, **talents are picked at random**, single-point abilities
+  first, each tree filled up to its amount.
+- **Re-rolled when the owner respecs**: the buddy's talents are drawn again
+  within the same profile.
+- This replaces the generator's balancing pass as the way talents are
+  chosen; the plan shapes (the per-tree amounts) stay.
+- Removed from basic alongside: dual spec; and the gold cost of a respec
+  grows without a cap and comes down over time (155r).
+
 ## Suggested Implementation Steps
 
 1. Read the capped trees (client `Talent.dbc`, `TalentTab.dbc`) into a

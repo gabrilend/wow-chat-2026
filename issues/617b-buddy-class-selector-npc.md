@@ -69,6 +69,16 @@ No such NPC. Reference patterns in this project:
 Built in Lua on basic's ALE (`src/lua-basic/`): a gossip NPC plus timed
 idle behavior, calling 617a's creation function through a small bridge.
 
+### Decision, 2026-09-25 (Ritz): where Sargobras stands
+
+"He spawns where you levelled, and then he walks toward you to follow. He
+stops when he's about 7 yards away, and he starts following you again if
+you move 15 yards away. If you rotate around him, he will slowly (lerp
+style) rotate toward you, but he'll only initiate such movement once every
+5 seconds or so." So: spawn at the level-up spot; walk to about 7 yards;
+stand until the owner is 15 yards away, then follow again; turn smoothly
+to face the owner, starting a turn at most every 5 seconds.
+
 ## Suggested Implementation Steps
 
 1. The NPC template (look per 617f) and its gossip menu: one line per class
