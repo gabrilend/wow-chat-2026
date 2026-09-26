@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 16:56:20
+Generated on: 2026-09-25 17:10:18
 Models: claude-opus-5-5
 
 ## Contents
@@ -7278,6 +7278,118 @@ character, per player account, or a raised character limit).
 Still waiting on question 1: where buddies live. One hidden account per
 character is my pick; the alternatives are per player account, or a raised
 character limit.
+
+--------------------------------------------------------------------------------
+
+### User Request 70
+
+> 1. Character limits. The plan is one hidden companion account per player
+> account, but seven buddies per character. Ten characters would mean 70 buddies
+> on one account, and the
+>      server caps characters per account (10 by default). Nothing addresses this.
+
+one buddy bot account per character created.
+
+> 2. Buddy levels after they arrive aren't defined: synced to the owner, capped
+> at the owner's level, or free to drift ahead or behind?
+
+at level 10, the player gets a level 10 buddy in addition to their original
+buddy who might be level 8, 9, 11, etc.
+
+
+
+<pasted_content id="8773">
+>   3. The owner's everyday life isn't covered:
+>      - the owner dies, hearthstones, flies, or enters an instance while buddies are outside;
+>      - logout in the middle of an errand;
+>      - server restarts;
+>      - buddies' starting gear and money.
+</pasted_content id="8773">
+
+
+buddies will put their hearthstone to the same spot as the player. Except,
+they'll make a ring around the innkeeper, with the radius defined by the
+distance from the innkeeper in the player's bind location. Then, when they have
+a moment (not in combat, not dead, etc) they'll hearth after the player does. As
+soon as a player successfully hearths (they cancel if the player cancels, and
+they can never complete a hearthstone teleport faster than the player because
+the player initiates and they take their time) then they have "use your
+hearthstone" added to their todo list permanently until they complete a
+hearthstone teleport. I think that about covers the concerns? Worst case
+scenario, they could just walk to where the player is, though that's annoying.
+
+>   5. Small contradictions between issues:
+>      - where Sargobras waits: where you levelled, or next to you;
+
+He spawns where you levelled, and then he walks toward you to follow. He stops
+when he's about 7 yards away, and he starts following you again if you move 15
+yards away. If you rotate around him, he will slowly (lerp style) rotate toward
+you, but he'll only initiate such movement once every 5 seconds or so.
+
+>      - the auction house issue's "mail epics" step versus its rule of mailing only bind-on-equip epics;
+
+I think those refer to the same thing.
+
+>      - two different town behaviours, depending on whether a town has an auction house;
+
+we should dynamically create behavior based on what the town has. Some towns
+don't even have repair stations.
+
+>      - the loot issue says "30-point talent cap" while the talent plans assume a 34-point tree.
+
+we might have to say that bots will randomly select their talents up to a
+certain amount in each tree, always prioritizing the ones that have 1 talent
+point cost, and they can be re-randomly chosen whenever the player respecs.
+Also, we should remove dual spec from the game. Also, we should remove the cap
+on the gold cost of respeccing, and it should decrease by one increment every
+month of calendar time. Or maybe every reset? Not sure. Also I kinda want them
+to pick one profile and stick with it - so if they're a holy paladin, they'll
+always be a holy paladin, but the exact talents they choose can be randomly
+picked every time you re-roll. Is that terrible?
+
+> 6. Load: seven bots per player, a 5-second proximity loop, and heavy database
+> writes from alt bots.
+
+could we batch them per player perhaps? I mean, players do database writes
+often... What exactly are the buddy bots doing to the database in a hot loop?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 70
+
+> Checking where the warning about bots and database writes comes from before I
+> answer your load question.
+
+> No existing issue covers dual spec or respec cost, so I'm opening one under
+> the basic profile. First, reading how the server prices a respec today.
+
+All your answers are recorded in the buddy issues and committed.
+
+**The database worry was my mistake, and there's no hot loop.** I passed on a
+wrong reading of the playerbots guide: it actually recommends alt bots *because*
+they write less. The heavy writers are random bots, which store their
+bookkeeping constantly, and basic doesn't run them. Buddies are alt bots, so
+they save like a player does: every 15 minutes by default, and on logout,
+level-up and similar events. The proximity party check and the errand lists run
+in memory and write nothing. There's nothing to batch yet.
+
+**Is one fixed profile with random talents terrible?** No, it's a good fit. The
+profile is how many points go in each tree, and it gives each buddy a stable
+identity: "my holy paladin". The random draw inside it keeps buddies from being
+clones of each other. Taking single-point abilities first means a buddy never
+misses the spells that matter. The cost is that some random picks will be weak,
+because a few talents are just worse than others. With seven buddies, that
+averages out.
+
+**Two new decisions went into their own issue:** no dual spec, and no cap on
+respec cost. The stock server already lowers the respec price by one step (5
+gold) per calendar month since your last respec, so removing the 50-gold cap is
+the only real change. It's written up as a new basic sub-issue with one open
+question.
+
+**Next question, from that issue:** should the respec price come down once per
+calendar month, as stock does, or "every reset"? If reset, which one: the weekly
+raid reset, or something else?
 
 --------------------------------------------------------------------------------
 

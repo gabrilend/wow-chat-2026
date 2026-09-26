@@ -31,8 +31,12 @@ is bought from class trainers at level 40 (stock 1,000 gold).
   specialization.
 - **No cap on respec cost**: each respec costs one increment (5 gold) more
   than the last, without limit.
-- **The cost comes back down with time**: one increment less per calendar
-  month since the last respec, as stock does (or per reset: open below).
+- **The cost comes back down with time, weekly** (Ritz, 2026-09-25: "yeah
+  let's make it weekly instead of monthly"): one increment (5 gold) less
+  per week since the last respec, instead of stock's per month.
+- The cost grows by adding, not multiplying (Ritz asked: "How does the
+  respec cost increase? Is it multiplied or added?"): 1, 5, 10 gold, then 5
+  gold more per respec (15, 20, 25 … the 20th respec costs 90 gold).
 
 ## Suggested Implementation Steps
 
@@ -40,13 +44,15 @@ is bought from class trainers at level 40 (stock 1,000 gold).
    dual-spec purchase, and the spell it teaches), found and saved by an
    install-time SQL pair; check whether any character already has it.
 2. Respec cost: a source patch on `Player::resetTalentsCost` that drops the
-   50-gold cap for the basic profile (the monthly decrease stays).
+   50-gold cap for the basic profile and counts weeks (7 days since the
+   last respec) instead of months for the decrease.
 3. Tests: the RAM database test for the SQL; `scripts/test-source-patches`
    for the patch; in game, three respecs in a row cost 1, 5, 10, and the
    eleventh more than 50.
 
 ## Open Questions
 
-- The decrease: once per calendar month (stock), or "every reset" — which
-  reset: the weekly raid reset, or something else?
+- (Answered 2026-09-25) The decrease is weekly.
+- A week counted as 7 days since the character's last respec (like stock's
+  month), or at the server's weekly reset day?
 - Does the minimum after decreasing stay at 10 gold?
