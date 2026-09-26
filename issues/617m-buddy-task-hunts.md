@@ -62,6 +62,44 @@ for it: her own materials, her own coin, her own time.
 6. **Delivering.** She walks back to the asker and hands it over, or mails
    it when the asker said it can wait.
 
+### Sources, money and skill (Ritz, 2026-09-25)
+
+> materials can be purchased from the auction house, or nearby vendors if
+> appropriate. The auction house should be considered if the request needs
+> to be completed quickly and they're in town, weighted against the
+> distance to acquire the other goods. There's no flight paths, so keep
+> that in mind, we probably can't use the default playerbots proximity
+> rules because they might assume flight paths. If the bot can't afford it
+> of course they'll need to gather it themselves. If their skill is too low
+> and the recipe is learned from a trainer, then they can say "I'll have to
+> level up my blacksmithing first, do you mind waiting?" and then they will
+> work on it while the player is online until it's at the required level,
+> then they will find the materials and produce the item. Proximity to
+> source and auction house price are two weights on the scale to consider.
+
+- **Sources**: gathering, monster drops, nearby vendors, and the auction
+  house.
+- **Choosing a source**: two weights on one scale: the distance to the
+  source and the auction house price. The auction house counts for more
+  when the asker is in a hurry and the buddy is already in town.
+- **Distance is walking distance.** There are no flight paths. The bot
+  module's own travel graph links flight masters into its routes (its
+  travel manager builds a flight-path graph), so its distance estimates
+  can't be used as they are: they must be measured on foot.
+- **Can't afford it**: she gathers it herself.
+- **Skill too low** (and the recipe comes from a trainer): she asks, "I'll
+  have to level up my blacksmithing first, do you mind waiting?"; then
+  levels the skill while the asker is online, and only then starts the
+  hunt.
+- **A step fails** (Ritz: "She re-attempts."): she tries again rather than
+  giving up.
+- **Several hunts at once** (Ritz: "In principle I'd say it's okay to hold
+  multiple at once, and thread the tasks together seamlessly according to
+  distance or total effort or something - this is how players would handle
+  multiple concerns at once."): allowed, with the steps of all her hunts
+  interleaved into one route by distance or effort. How many she can hold
+  depends on the memory the language model issues give buddies.
+
 The model makes the decisions through tool calls (read inventory, look up a
 recipe, find the nearest source, estimate the cost); the bot module carries
 out the steps.
@@ -84,6 +122,10 @@ out the steps.
   requests and reports back. A task hunt plans its own route to fulfil a
   request. Is that still carrying a request (so 917 fits), or does it need
   its own planning layer beside 917?
-- What does a hunt do when a step turns out impossible halfway (a node
-  already taken, the price jumped): replan, or report and stop?
-- Can one buddy hold several hunts at once, or one at a time with a queue?
+- (Answered 2026-09-25) A failed step is re-attempted.
+- Re-attempting can loop forever on a step that can never succeed (a drop
+  only from a monster far above her level, an item no vendor sells and the
+  auction house doesn't have). Does she check that each step is possible
+  before starting, give up after some number of tries, or ask the asker?
+- (Answered 2026-09-25) Several hunts at once, interleaved by distance or
+  effort; the limit waits on the buddies' memory design.

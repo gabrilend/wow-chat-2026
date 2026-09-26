@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 19:14:56
+Generated on: 2026-09-25 19:26:58
 Models: claude-opus-5-5
 
 ## Contents
@@ -8260,6 +8260,61 @@ someone needs, then consumables at random.
 4. **Requests, buddy pays, with a limit.** Like option 2, but capped at so many
    requests a day or so much gold. This stops a player from draining a buddy's
    savings.
+
+--------------------------------------------------------------------------------
+
+### User Request 81
+
+option 2. This particular function requires the LLM work. This will allow us to
+create toolcalls for the decisionmaking that for example, if the player said
+"can you make me some runed copper bracers? I have two copper here." the buddy
+will look at her own inventory and treat the 2 copper as part of her supply. She
+might say "I need this other thing first, lemme go get it" and unless the player
+stops her she'll go on a task hunt mission (task hunt, new vocabular words) to
+gather the required materials. She'll think about the closest source of them,
+then consider if she can acquire them that way. Multi-step chains are evaluated
+as a unit, for things like processing stages of materials and such. Then, she
+executes on that until the task is complete, and she'll walk back to the player
+and deliver it, unless the player said it's low priority, it can wait, etc, then
+she'll mail it. But that's part of the LLM issue tickets. For now, we say no
+requests.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 81
+
+> Also noting the link on 917's side, then validating and committing.
+
+I've recorded your answer and committed it. For now, buddies don't take
+requests. Crafting on request now has its own issue, **buddy task hunts**, with
+"task hunt" defined and your message quoted in full. It's blocked until the
+language-model chat work is built. It lays out the flow:
+
+1. Understand the request.
+2. Count her bags plus what the asker offers as one supply.
+3. Plan where each missing material comes from, treating each processing chain
+   as one unit.
+4. Say what she's doing, or why she can't.
+5. Hunt until the item is made; the asker can stop her at any point.
+6. Walk it back and hand it over, or mail it if it can wait.
+
+The buddy parent issue, the professions issue and the plain-language command
+issue now link to it.
+
+The new issue holds three questions for when we get there:
+- The plain-language command issue says its layer is "not an agent with its own
+  goals", so does planning a hunt still count as just carrying a request?
+- If a step fails halfway, does she re-plan or report back and stop?
+- Can she hold one hunt at a time, or several?
+
+That closes the professions issue's questions. Next is the clan guild: **when
+does the owner name it, and how?**
+1. **At the first buddy:** Sargobras asks for the name when the first buddy is
+   created, so the guild starts with the clan.
+2. **At character creation:** the name is asked on the first login, before any
+   buddy exists.
+3. **Whenever the owner chooses:** the clan has a placeholder name until the
+   owner renames it, by chat command or by talking to Sargobras.
 
 --------------------------------------------------------------------------------
 
