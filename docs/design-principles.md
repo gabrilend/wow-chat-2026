@@ -61,3 +61,20 @@ Applied in: issue 155p (gem names, socket bonuses, recipe colours).
 Players may install any addon; no feature may depend on one until the
 project ships its own client. See `docs/roadmap.md`, Project-wide
 decisions.
+
+## The model routes; code behaves
+
+A language model decides *which* behavior a request calls for and speaks
+the character's lines; the behavior itself (planning, choosing, moving,
+buying) is ordinary code. So behavior is repeatable and testable, runs
+without the model when it is slow or absent, and every command the model
+can reach is one a player could also issue.
+
+Ritz, 2026-09-25: "The model routes between behaviors, it doesn't apply
+behavior."
+
+Applied in:
+- issue 617m — buddy task hunts: the model turns "can you make me some
+  runed copper bracers?" into a craft command; code plans and runs the hunt.
+- issue 917 — plain-language bot requests: the model writes the bot
+  commands a player could type; it has no goals of its own.

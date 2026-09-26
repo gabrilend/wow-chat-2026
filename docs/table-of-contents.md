@@ -13,7 +13,7 @@ wow-chat-2026/
 │   ├── scripting.md               ALE Lua scripting reference
 │   ├── roadmap.md                 Development phases and milestones
 │   ├── balance-updates.md         Append-only log of knob/lever tweaks
-│   ├── design-principles.md       Rules of thumb: sustain → power → focus; honest tooltips; no required addons
+│   ├── design-principles.md       Rules of thumb: sustain → power → focus; honest tooltips; no required addons; the model routes, code behaves
 │   ├── bot-governor.md            Host-load-driven bot population governor
 │   ├── class-spells-level-1-20.md Class ability reference (levels 1-20)
 │   ├── concept-catalog.md         Concepts 001-800

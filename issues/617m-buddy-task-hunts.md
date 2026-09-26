@@ -100,32 +100,62 @@ for it: her own materials, her own coin, her own time.
   interleaved into one route by distance or effort. How many she can hold
   depends on the memory the language model issues give buddies.
 
-The model makes the decisions through tool calls (read inventory, look up a
-recipe, find the nearest source, estimate the cost); the bot module carries
-out the steps.
+### What the model does, and what code does (Ritz, 2026-09-25)
+
+"The model routes between behaviors, it doesn't apply behavior."
+
+- **The language model** understands the request and turns it into one new
+  buddy command, "craft this for that person" (with the item, the count,
+  the materials offered, and how urgent it is), and it speaks her lines in
+  character. It does not plan.
+- **Ordinary code in the buddy module** does the planning: the material
+  tree, choosing each source by the distance and price weights, weaving
+  several hunts into one route, and walking the steps. Plans are
+  repeatable and testable, and hunts keep going when the model cluster is
+  slow. This keeps 917's rule that its layer carries requests rather than
+  having goals of its own.
+
+### A step that can't succeed (Ritz, 2026-09-25)
+
+Before starting, the planner checks that every step can be done. A step
+that can't is not attempted; she says why and, where there is one, offers
+the thing that would make it possible:
+
+- Out of her reach (a drop from monsters far above her level, or only
+  inside a dungeon): "Sorry, I can't do that right now because of ABC. Do
+  you want to [do-thing-that-resolves-the-task]?", e.g. "do you want to
+  level up some more with me?" or "do you want to do that dungeon?"
+- No source at all (no vendor, none at the auction house, nothing she can
+  gather): "I don't see any [item] on the auction house, and I'm not sure
+  where to get them."
+- Recipe not learned: "I don't have that recipe trained yet, sorry" (a line
+  that fits other situations too).
+
+Steps that can succeed but fail this time (a node taken, an auction bought
+first, a vendor sold out, a death on the road, full bags) are re-attempted.
 
 ## Suggested Implementation Steps
 
-1. List the tool calls a hunt needs, each answered from game data the
-   server already holds (recipes from the spell data, node and monster
-   spawns from the world database, vendor lists, 617h's auction prices).
-2. The planner: expand a request into its material tree, subtract the
-   supply, and pick a source for each missing leaf; judge each processing
-   chain as one unit.
-3. The hunt as a standing instruction (917d) that survives relogs and ends
+1. The "craft this for that person" buddy command, usable without the
+   model (by a chat command) so hunts can be tested before 917 exists.
+2. The planner, in code: expand a request into its material tree, subtract
+   the supply, and pick a source for each missing leaf by walking distance
+   and auction price, all from data the server already holds (recipes from
+   the spell data, node and monster spawns from the world database, vendor
+   lists, 617h's auction prices); judge each processing chain as one unit;
+   refuse up front, with a reason and an offer, a step that can't succeed.
+3. The model's part (917c): recognise a craft request and write the
+   command; voice her replies.
+4. The hunt as a standing instruction (917d) that survives relogs and ends
    on delivery or when the asker cancels.
-4. Delivery by hand or by mail, per the asker's words.
+5. Delivery by hand or by mail, per the asker's words.
 
 ## Open Questions
 
-- 917 describes its layer as "not an agent with its own goals": it carries
-  requests and reports back. A task hunt plans its own route to fulfil a
-  request. Is that still carrying a request (so 917 fits), or does it need
-  its own planning layer beside 917?
+- (Answered 2026-09-25) Who plans: code does; the model routes the request
+  to a buddy command and speaks. 917's rule holds.
 - (Answered 2026-09-25) A failed step is re-attempted.
-- Re-attempting can loop forever on a step that can never succeed (a drop
-  only from a monster far above her level, an item no vendor sells and the
-  auction house doesn't have). Does she check that each step is possible
-  before starting, give up after some number of tries, or ask the asker?
+- (Answered 2026-09-25) Steps that can never succeed are caught before the
+  hunt starts; she says why and offers what would fix it.
 - (Answered 2026-09-25) Several hunts at once, interleaved by distance or
   effort; the limit waits on the buddies' memory design.

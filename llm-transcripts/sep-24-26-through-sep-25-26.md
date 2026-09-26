@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 19:26:58
+Generated on: 2026-09-25 19:38:08
 Models: claude-opus-5-5
 
 ## Contents
@@ -97,6 +97,10 @@ Models: claude-opus-5-5
     professions, and the Jewelcrafting rework plus respec changes are built,
     tested and waiting for your compile. Next is your answer on who gets a
     buddy's spare consumables: fewest-first, owner-first, or spread evenly.
+23. 2026-09-25 19:30, after Request 81 - We're designing buddy bots one question
+    at a time, and I've recorded your answers so far and committed them. Next I
+    need your pick: does the clan guild get named when the first buddy is
+    created, on the first login, or whenever you choose?
 
 --------------------------------------------------------------------------------
 
@@ -8315,6 +8319,123 @@ does the owner name it, and how?**
    buddy exists.
 3. **Whenever the owner chooses:** the clan has a placeholder name until the
    owner renames it, by chat command or by talking to Sargobras.
+
+--------------------------------------------------------------------------------
+
+### User Request 82
+
+<pasted_content id="8773">
+>   1. Understand the request.
+>   2. Count her bags plus what the asker offers as one supply.
+> 3. Plan where each missing material comes from, treating each processing chain
+> as one unit.
+>   4. Say what she's doing, or why she can't.
+>   5. Hunt until the item is made; the asker can stop her at any point.
+>   6. Walk it back and hand it over, or mail it if it can wait.
+</pasted_content id="8773">
+
+
+oh also, I should add - materials can be purchased from the auction house, or
+nearby vendors if appropriate. The auction house should be considered if the
+request needs to be completed quickly and they're in town, weighted against the
+distance to acquire the other goods. There's no flight paths, so keep that in
+mind, we probably can't use the default playerbots proximity rules because they
+might assume flight paths. If the bot can't afford it of course they'll need to
+gather it themselves. If their skill is too low and the recipe is learned from a
+trainer, then they can say "I'll have to level up my blacksmithing first, do you
+mind waiting?" and then they will work on it while the player is online until
+it's at the required level, then they will find the materials and produce the
+item. Proximity to source and auction house price are two weights on the scale
+to consider.
+
+> - The plain-language command issue says its layer is "not an agent with its
+> own goals", so does planning a hunt still count as just carrying a request?
+
+Not sure... tell me about that issue?
+
+>   - If a step fails halfway, does she re-plan or report back and stop?
+
+She re-attempts. What kind of failures are you expecting? Most professions in
+WoW are fairly predictable.
+
+>   - Can she hold one hunt at a time, or several?
+
+This depends on what sort of memory we develop for the bots, based on the LLM
+issue. In principle I'd say it's okay to hold multiple at once, and thread the
+tasks together seamlessly according to distance or total effort or something -
+this is how players would handle multiple concerns at once. At least, that's how
+I'd do it...
+
+> That closes the professions issue's questions. Next is the clan guild: when
+> does the owner name it, and how?
+> 1. At the first buddy: Sargobras asks for the name when the first buddy is
+> created, so the guild starts with the clan.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 82
+
+> Now recording all of it.
+
+I've recorded all of it in the task-hunt issue and committed it. Sargobras
+asking for the guild name at the first buddy is in the clan-guild issue.
+
+One thing I checked in the bot module's code: its travel system builds a
+flight-path network and routes through flight masters. So you're right that its
+distance estimates can't be used as they are. Hunt distances have to be measured
+on foot.
+
+**The plain-language command issue.** A player types an ordinary sentence, such
+as "have everyone repair and meet me at the bridge". A language model reads the
+bots' state as text: who is out, where they are, what they're doing, with item
+and creature numbers already turned into names. It then writes the same chat
+commands a player could have typed to the bots, like "maintenance" or "follow".
+The commands are checked against the bots' real command list, sent, and the
+reply says in one sentence what was done. A later sub-issue adds standing
+instructions like "keep everyone repaired", which stay in force until changed.
+Its "what it is not" section says: "Not an agent with its own goals. It carries
+requests and reports back. It doesn't decide what the bot AI would have decided
+faster."
+
+A task hunt goes further. Choosing between a copper vein 400 yards away and 3
+gold at the auction house is a decision, and the bot module has no command for
+"fetch everything this recipe needs". I see two ways to build it:
+1. **The model only translates.** The buddy module gets a new ordinary-code
+   command, "craft this for that person", and the planning (sources, the
+   distance and price weights, weaving hunts together) lives in that code. This
+   keeps the command issue's rule intact, makes plans repeatable and testable,
+   and keeps it working when the model cluster is slow. The model's jobs would
+   be understanding the request and the in-character talk, like "I need this
+   other thing first, lemme go get it".
+2. **The model plans.** It calls tools (read inventory, find the nearest source,
+   check a price) and makes the choices itself. This is more flexible, but it
+   breaks the "not an agent" line and makes each hunt depend on the model
+   answering well.
+
+I'd recommend option 1. Your two weights on a scale already describe a formula,
+and formulas belong in code.
+
+**Failures.** You're right that crafting itself is predictable. What can go
+wrong is the fetching:
+- **Loops forever:**
+  - a material that only drops from monsters far above her level, or inside a
+    dungeon;
+  - an item that no reachable vendor sells, that the auction house doesn't have,
+    and that she can't gather.
+- **Clears up if she simply tries again:**
+  - another player took the node;
+  - someone bought the auction first;
+  - a vendor's limited stock is sold out until it restocks;
+  - she died on the way;
+  - her bags filled up;
+  - the recipe needs an anvil or forge she has to walk to.
+
+Retrying fixes the second kind. The first kind needs a check before she starts,
+a limit on tries, or asking the person who made the request. I've added that as
+an open question in the task-hunt issue.
+
+So the question now: **for task hunts, option 1 (the model translates, code
+plans) or option 2 (the model plans with tool calls)?**
 
 --------------------------------------------------------------------------------
 
