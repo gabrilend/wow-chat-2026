@@ -6,10 +6,9 @@
 - Priority: Medium
 - Related: 617b (Sargobras, the chooser here), 617g (death knight buddy
   clans)
-- Blocked by: the custom-class infrastructure. The user places this
-  "second or fourth" among the classes built once that infrastructure
-  exists. Which 700s issues count as "the infrastructure" is an open question
-  below.
+- Blocked by: nothing (unblocked 2026-09-25, Ritz: "sure, let's unblock it
+  and write it"). It had waited on the custom-class infrastructure for
+  the skipped-intro ability schedule, which is gone now the intro is kept.
 - First profile: basic (155)
 
 ## Origin
@@ -60,8 +59,32 @@ Three different death-knight arrangements exist, one per profile family:
   be needed. 206 shows otherwise: beta starts death knights at level 1
   with no client patch. The start location is the server's
   `playercreateinfo` table, not the client.
-- **Basic:** an interim rule (see 155's open questions) until this issue
-  lands.
+- **Basic:** stock death knights (an account needs a level-55 character;
+  no death knight bots), plus **layer 1, the sacrifice, built 2026-09-25**
+  and not yet tried in game:
+  - `sql/basic/db_world.src/25-death-knight-sargobras.apply.sql` (E040):
+    Sargobras (creature 7180001, spawn 71800001) between the Ebon Hold's
+    portals, every phase, three texts (owed, given, anyone else); model a
+    stand-in (Lord Gregor Lescovar's) until 617f.
+  - `sql/basic/db_characters.src/03-death-knight-souls.apply.sql` (E041):
+    the soul ledger `basic_718_souls`; its revert hands every held soul
+    back to its own account before dropping the table.
+  - `src/lua-basic/death-knight-souls.lua`: the ledger row at a death
+    knight's first login, the gate (Acherus and the Ebon Hold only while a
+    soul is owed), the trade and the undo as planned below. Characters move
+    between accounts with the server's own `.character changeaccount` and
+    are removed with `.character erase`, which keep its cache right; each
+    player account gets its own holding account (`SOULS<account id>`,
+    random password nobody keeps).
+  - `scripts/generate-basic-death-knight-soul-data` writes
+    `src/lua-basic/data/death-knight-soul-data.lua`: 3,702 profession
+    spells over 14 skills (SkillLineAbility.dbc) and each race and sex's
+    death knight skins with their faces (CharSections.dbc; undead have none
+    and return unchanged).
+  - Tested: the RAM database test (apply, re-apply, revert, apply) including
+    a held soul returned by the ledger's revert; the post-install checker
+    (Sargobras's spawn and texts, the ledger); the script loads with the
+    engine stubbed and registers its five hooks. In game: everything else.
 
 ### What Acherus is made of (from the server's own data, 2026-09-23)
 
@@ -187,19 +210,49 @@ Enclave on top.
 
 ## Suggested Implementation Steps
 
-1. Answer the open questions; the user offered to describe the rotation
-   further once this context is in front of them.
-2. Measure each named region's centre and radius from creature and game
-   object spawn clusters on map 609, per phase, and write the table into
-   this issue.
-3. Read the chain's scripts (`smart_scripts`, and the C++ scripts under
-   the core's Scarlet Enclave directory) to list every ability and item the
-   chain hands out.
-4. Split into sub-issues along the two layers once the design is settled:
-   the sacrifice (creation hook, deletion, bot exclusion), the chooser if
-   (a) is kept, the ability schedule, the region bands, and the rotation.
-5. Build on whatever the custom-class infrastructure provides for level-gated
-   ability grants, rather than inventing a parallel mechanism.
+**Layer 1, the sacrifice** (being built 2026-09-25):
+
+1. **Sargobras in the Ebon Hold** (world database step, basic): a gossip
+   NPC standing between the Ebon Hold's two portals to the capitals (map 0,
+   area 4281 "Acherus: The Ebon Hold"), the last step out of Acherus and
+   where Death Gate brings a death knight home. Visible in every phase. His
+   model is a stand-in (a Stormwind noble's) until his outfit is chosen
+   (617f).
+2. **The soul ledger** (characters database step): one row per death
+   knight created on basic: its soul (0 while owed), the soul's own
+   account, the holding account, the state (owed, given, being returned).
+3. **The Lua** (`src/lua-basic/death-knight-souls.lua`):
+   - a new death knight's first login writes its "owed" row (death knights
+     from before this rule have no row and are never held);
+   - **the gate**: an owing death knight who reaches any place but Acherus
+     (map 609) or the Ebon Hold (map 0, area 4281) is sent back to
+     Sargobras with a line from him;
+   - **the trade**: Sargobras lists the account's characters at level 55
+     or higher (not death knights); choosing one (with a confirmation box)
+     moves it to the player account's own holding account
+     (`.character changeaccount`, one holding account per player account,
+     because an account holds at most 10 characters per realm), teaches
+     the death knight that character's professions (skills and recipes)
+     and lifts the gate;
+   - **the undo**: for a death knight who gave a soul, Sargobras offers it
+     back (with a confirmation box): the death knight is erased
+     (`.character erase`), the soul returns to the player's account, and
+     its skin and face are set to its race's death knight options.
+4. **Generated data** (`scripts/generate-basic-death-knight-soul-data`,
+   from the client's SkillLineAbility.dbc and CharSections.dbc): every
+   profession recipe and rank spell (what may be carried over), and each
+   race and sex's death knight skins and faces.
+5. Tests: the database steps in the RAM test; the Lua load check; in game:
+   create a death knight, try to leave, give a soul, check professions,
+   take it back, check the returned look.
+
+**Layer 2, the Enclave as a zone** (after the chain; not started):
+
+6. Measure each named region's centre and radius from spawn clusters on
+   map 609, per phase, and write the table into this issue.
+7. Region level bands; the rotation, shifting after a set number of
+   sacrificed characters (count to choose); later, enemies scaled the
+   Outland way (parked).
 
 ## Related Issues
 
@@ -214,7 +267,7 @@ Enclave on top.
 
 ## Open Questions
 
-- **Which issues are "the custom-class infrastructure"?** This issue is
+- (Answered 2026-09-25, no longer blocking) **Which issues are "the custom-class infrastructure"?** This issue was
   scheduled second-to-fourth after it. The owner's description (recorded
   verbatim in 705, 2026-09-23): a middle-ground class learns chosen abilities
   from other classes' trainers, with borrowed abilities re-costed in its own
@@ -231,6 +284,7 @@ Enclave on top.
   account, Sargobras's menu and its undo, the professions carried over),
   and Layer 2 (region bands, the rotation by sacrifice count, later the
   scaling). Proposed: drop the block on the custom-class infrastructure.
+  (Answered 2026-09-25: unblocked, "sure, let's unblock it and write it".)
 - (Answered 2026-09-25) The chooser, (a): a static Sargobras in Acherus
   who lets a death knight leave for a soul. The intro chain is **not**
   skipped (Ritz: "We shouldn't skip the intro quest chain."), so (b) is
@@ -281,3 +335,8 @@ Enclave on top.
   certain number of sacrificed characters causes it to shift". How many is
   still to set.
 - (Answered 2026-09-25) 148a's premise was wrong; corrected in 148a.
+- A death knight whose account has no character of 55 or higher left (the
+  only one deleted after the death knight was made) owes a soul it can't
+  pay, and stays in Acherus. Is that right, or does Sargobras let it go?
+- A held soul's own buddies (617): they belong to that character, so do
+  they wait with it on the holding account, and come back with it?

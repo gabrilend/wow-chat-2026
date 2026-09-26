@@ -143,10 +143,13 @@ apply_all() {
     step "E037 class books for the level 61-80 abilities" "${WORLD}" "${B}/db_world.src/22-ability-tomes.apply.sql"
     step "E038 the Dark Portal as the only door"           "${WORLD}" "${B}/db_world.src/23-outland-one-door.apply.sql"
     step "E039 no guild banks"                             "${WORLD}" "${B}/db_world.src/24-no-guild-banks.apply.sql"
+    step "E040 Sargobras at the gate of Acherus"          "${WORLD}" "${B}/db_world.src/25-death-knight-sargobras.apply.sql"
     step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${V}/db_characters.src/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
+    step "E041 death knight soul ledger"                  "${CHARS}" "${B}/db_characters.src/03-death-knight-souls.apply.sql"
 }
 revert_all() {
+    step "E040 revert" "${WORLD}" "${B}/db_world.src/25-death-knight-sargobras.revert.sql"
     step "E039 revert" "${WORLD}" "${B}/db_world.src/24-no-guild-banks.revert.sql"
     step "E038 revert" "${WORLD}" "${B}/db_world.src/23-outland-one-door.revert.sql"
     step "E037 revert" "${WORLD}" "${B}/db_world.src/22-ability-tomes.revert.sql"
@@ -165,6 +168,7 @@ revert_all() {
     step "E024 revert" "${WORLD}" "${B}/db_world.src/09-outland-dungeons-64.revert.sql"
     step "E022 revert" "${WORLD}" "${B}/db_world.src/08-faction-quest-gating.revert.sql"
     step "E020 revert" "${WORLD}" "${V}/db_world.src/05-mount-level-requirements.revert.sql"
+    step "E041 revert" "${CHARS}" "${B}/db_characters.src/03-death-knight-souls.revert.sql"
     step "E023 revert" "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.revert.sql"
 }
 # The tables basic's world SQL edits; after the revert they must checksum
@@ -178,7 +182,27 @@ step "E008 flight paths removed (vanilla's, shared)"  "${WORLD}" "${V}/db_world.
 stock_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")
 echo "Apply:";          apply_all
 echo "Apply again (must be re-applicable):"; apply_all
+# A held soul (issue 718): a character on a holding account, recorded in the
+# soul ledger. Reverting E041 must hand it back to its own account before
+# dropping the ledger; a revert that dropped the table first would strand
+# it. (guid 99999001 on holding account 99001, home account 42.)
+if ! echo "INSERT INTO characters (guid, account, name, race, class, gender, level, taximask, innTriggerId) VALUES (99999001, 99001, 'Heldsoul', 1, 1, 0, 60, '', 0);
+      INSERT INTO basic_718_souls (dk, soul, soul_account, holding_account, state) VALUES (99999002, 99999001, 42, 99001, 1);" \
+    | mysql_run "${CHARS}" >> "${LOG}" 2>&1; then
+    echo "  [✗] could not set up the held-soul test (a character row and its ledger row); see ${LOG}"
+    FAILED=$((FAILED + 1))
+fi
 echo "Revert:";         revert_all
+# mysql_run passes only the database name, so -N would be ignored: the
+# header line comes first and the value last
+held=$(echo "SELECT account FROM characters WHERE guid = 99999001;" | mysql_run "${CHARS}" 2>>"${LOG}" | tail -n 1)
+if [[ "${held}" == "42" ]]; then
+    echo "  [✓] the ledger's revert returned a held soul to its own account (42)"
+else
+    echo "  [✗] the ledger's revert left a held soul on account '${held}', not its own (42)"
+    FAILED=$((FAILED + 1))
+fi
+echo "DELETE FROM characters WHERE guid = 99999001;" | mysql_run "${CHARS}" >> "${LOG}" 2>&1
 reverted_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")
 if [[ "${stock_sum}" == "${reverted_sum}" ]]; then
     echo "  [✓] after the revert, the edited world tables checksum exactly as before the apply"

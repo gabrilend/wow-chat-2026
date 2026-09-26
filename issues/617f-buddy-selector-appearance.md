@@ -20,7 +20,7 @@ Verbatim, 2026-09-23:
 
 ## Current Behavior
 
-No such NPC (617b).
+No such NPC (617b). One Sargobras exists since 2026-09-25: the static one at the gate of Acherus (718, creature 7180001), wearing a stand-in model (Lord Gregor Lescovar's, a Stormwind noble) until this issue chooses his look.
 
 ## Intended Behavior
 

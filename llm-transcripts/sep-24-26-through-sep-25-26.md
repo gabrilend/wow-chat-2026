@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 23:40:07
+Generated on: 2026-09-25 23:57:31
 Models: claude-opus-5-5
 
 ## Contents
@@ -10011,6 +10011,151 @@ Still open in the death knight issue:
 - **What the custom-class infrastructure is,** which this issue waits on.
 - **An old note to correct:** the vanilla profile says death knights need a
   client patch. The beta profile showed they don't.
+
+--------------------------------------------------------------------------------
+
+### User Request 105
+
+> - Layer 2: after the chain, the Scarlet Enclave becomes a zone death knights
+> can come back to, with its regions taking turns as easy and hard.
+
+we should also probably consider scaling the enemies like we do in Outland.
+Let's put a pin in that for now...
+
+> - Rotation clock: what moves the Enclave's rotating regions — real time,
+> server restarts, or how many death knights have passed through?
+
+it's like the rotating starter zones (where are we at with that, btw?) a certain
+number of sacrificed characters causes it to shift
+
+>   - What the custom-class infrastructure is, which this issue waits on.
+
+what about the DK's rest on custom-class infrastructure?
+
+> - An old note to correct: the vanilla profile says death knights need a client
+> patch. The beta profile showed they don't.
+
+neat
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 105
+
+> Now working out what, if anything, still ties the death knight design to
+> custom classes.
+
+I've recorded your answers and committed them:
+- **Enclave scaling:** noted and parked.
+- **Rotation clock:** the regions shift after a set number of sacrificed
+  characters. The exact number is still to choose.
+- **Old vanilla note:** corrected in the vanilla death knight issue. Where a
+  character starts is the server's choice, not the client's.
+
+**Rotating starting valleys:** built, but not yet compiled or run. It's a source
+patch to character creation: each faction has four level-1 valleys, and after
+every 30 new characters the faction's valley moves on, in a shuffled order that
+visits each valley once per cycle. The hearthstone is bound where you start, and
+death knights are left out. So far it's tested as a patch that applies, reverts
+byte-identically and passes the compiler's type check. Creating 31 characters in
+game is still to do.
+
+**What in the death knight design rests on custom-class infrastructure?** After
+today's answers, nothing, I think. The only part that leaned on it was teaching
+the quest chain's abilities at the right levels if the intro were skipped. That
+needed the custom-class "level-gated ability grants". With the intro kept, the
+chain teaches them itself. What's left needs no custom-class machinery:
+- **the sacrifice:** a character-creation hook, the holding account, Sargobras's
+  menu and its undo, and the professions carried over;
+- **the Enclave as a zone:** region level bands, rotation by sacrifice count,
+  and later the scaling.
+
+I've proposed in the issue to drop the block. **Should I unblock it?** If yes,
+the death knight work could be built whenever you want, instead of waiting
+behind custom classes.
+
+--------------------------------------------------------------------------------
+
+### User Request 106
+
+sure, let's unblock it and write it.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 106
+
+> Unblocking and building the sacrifice half now. First, checking which Lua
+> engine hooks and functions are available for it.
+
+> Sargobras will stand between the Ebon Hold's two portals: the last step out,
+> and where Death Gate brings a death knight home. Finding the Ebon Hold's area
+> ids for the gate.
+
+> Next, checking whether Sargobras's look was chosen, and what the human male
+> models look like.
+
+> Using Lord Gregor Lescovar's model (a Stormwind noble) as a stand-in until
+> Sargobras's outfit is chosen. Reading how the titan-jeweler step cloned a
+> creature, to follow the same pattern.
+
+> Before writing code, checking two core commands the undo will rely on.
+
+> The data generator is written. Fixing a bug before running it: it would have
+> written each race twice, once per sex, and the second line would overwrite the
+> first.
+
+> Undead have no death-knight-only skins, since they're already undead, so an
+> undead character returns unchanged. Next, confirming the characters table's
+> appearance columns.
+
+> Writing the two database steps.
+
+> Now the Lua script.
+
+> Checking how the other basic scripts load their data files, and that the
+> engine calls I used exist.
+
+> Matching the existing scripts' way of finding their data folder.
+
+> Adding post-install checks, plus a RAM test that proves the revert returns a
+> held soul to its own account.
+
+> While the test runs, updating the Lua folder's README and the issue's Current
+> Behavior.
+
+The code and issue updates are done. Waiting on the database test before
+committing.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "Run the RAM test with the death knight
+steps" completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 106 (continued)
+
+> The new test failed. The account came back empty, so the fake held character
+> was probably never inserted. Checking the log.
+
+> The fake character was missing two required columns. Fixing that, and making
+> the test say so if its setup insert fails, instead of only failing later.
+
+The test is running again with the fix.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "Re-run the RAM test with the fixed setup"
+completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 106 (continued)
+
+> The test works, but my check read the column header ("account") along with the
+> value: the test's query helper ignores the flag I passed to hide headers.
+> Reading the last line instead.
+
+Waiting for the re-run.
 
 --------------------------------------------------------------------------------
 

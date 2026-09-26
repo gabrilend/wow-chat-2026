@@ -1,0 +1,172 @@
+#!/usr/bin/env luajit
+-- generate-basic-death-knight-soul-data - write the two lists the death
+-- knight sacrifice needs, read from the game client's own data files
+-- (issue 718).
+--
+-- For a general audience: on basic, a new death knight leaves Acherus only
+-- by giving up one of the player's level-55 characters, and it inherits
+-- that character's professions; the character can later be taken back,
+-- returning with a death knight's pallid skin and glowing eyes. The script
+-- that does this needs two facts only the client files hold:
+--   1. which spells belong to a profession (the recipes and the rank
+--      spells), so a character's professions can be carried over without
+--      also carrying its class spells;
+--   2. which skin colours and faces each race and sex has as "death knight
+--      only" options, so the returned character can wear one.
+-- This tool reads SkillLineAbility.dbc and CharSections.dbc and writes both
+-- as a plain Lua data file the script loads.
+--
+-- Usage: scripts/generate-basic-death-knight-soul-data [PROJECT_DIR]
+--   Reads   data-files/dbc/{SkillLineAbility,CharSections}.dbc
+--   Writes  src/lua-basic/data/death-knight-soul-data.lua
+
+local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DBC = DIR .. "/data-files/dbc/"
+local OUT = DIR .. "/src/lua-basic/data/death-knight-soul-data.lua"
+
+-- {{{ configuration
+-- the professions a character can carry over: the eleven primary ones and
+-- the three secondary ones (skill line ids, SkillLine.dbc)
+local PROFESSIONS = {
+    [164] = "Blacksmithing", [165] = "Leatherworking", [171] = "Alchemy",
+    [182] = "Herbalism",     [186] = "Mining",         [197] = "Tailoring",
+    [202] = "Engineering",   [333] = "Enchanting",     [393] = "Skinning",
+    [755] = "Jewelcrafting", [773] = "Inscription",
+    [129] = "First Aid",     [185] = "Cooking",        [356] = "Fishing",
+}
+local SECTION_SKIN, SECTION_FACE = 0, 1                 -- CharSections: base section types
+local FLAG_DEATH_KNIGHT = 0x4                           -- CharSections flag: a death knight option
+-- }}}
+
+-- {{{ local function die
+local function die(msg)
+    io.stderr:write("generate-basic-death-knight-soul-data: ", msg, "\n")
+    os.exit(1)
+end
+-- }}}
+
+-- {{{ local function load_dbc
+-- Returns the record count, record size and a uint32 reader over the file.
+local function load_dbc(name)
+    local f = io.open(DBC .. name, "rb") or die("cannot open " .. DBC .. name)
+    local d = f:read("*a")
+    f:close()
+    if d:sub(1, 4) ~= "WDBC" then die(name .. " is not a WDBC file") end
+    local function u32(o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+    return u32(4), u32(12), u32
+end
+-- }}}
+
+-- {{{ main
+-- SkillLineAbility.dbc: 1 skill line, 2 spell
+local n, rs, u = load_dbc("SkillLineAbility.dbc")
+local spells, per_skill = {}, {}
+for r = 0, n - 1 do
+    local b = 20 + r * rs
+    local skill, spell = u(b + 4), u(b + 8)
+    if PROFESSIONS[skill] and not spells[spell] then
+        spells[spell] = skill
+        per_skill[skill] = (per_skill[skill] or 0) + 1
+    end
+end
+for skill, name in pairs(PROFESSIONS) do
+    if not per_skill[skill] then die("no spells found for " .. name .. " (skill line " .. skill .. "); has the client file changed?") end
+end
+
+-- CharSections.dbc: 1 race, 2 sex, 3 section, 7 flags, 8 variation, 9 colour.
+-- Skins are section 0 rows (the colour is the skin); faces are section 1
+-- rows (the variation is the face, the colour the skin it is drawn for).
+n, rs, u = load_dbc("CharSections.dbc")
+-- Death knight faces exist for every skin colour, but only some skin
+-- colours are death knight skins (a human male's 12-14 of 0-14). The look
+-- is a death knight skin with a death knight face drawn for that skin, so
+-- the two are gathered apart and only skins that have such a face are kept.
+local dk_skins, dk_faces = {}, {}                     -- [race][sex][colour] = true / { faces }
+for r = 0, n - 1 do
+    local b = 20 + r * rs
+    local race, sex, section, flags = u(b + 4), u(b + 8), u(b + 12), u(b + 28)
+    local variation, colour = u(b + 32), u(b + 36)
+    if bit.band(flags, FLAG_DEATH_KNIGHT) ~= 0 then
+        local k = race * 2 + sex
+        if section == SECTION_SKIN then
+            dk_skins[k] = dk_skins[k] or {}
+            dk_skins[k][colour] = true
+        elseif section == SECTION_FACE then
+            dk_faces[k] = dk_faces[k] or {}
+            dk_faces[k][colour] = dk_faces[k][colour] or {}
+            table.insert(dk_faces[k][colour], variation)
+        end
+    end
+end
+local looks = {}                                      -- [race][sex][skin] = { faces }
+for k, skins in pairs(dk_skins) do
+    local race, sex = math.floor(k / 2), k % 2
+    for colour in pairs(skins) do
+        local faces = dk_faces[k] and dk_faces[k][colour]
+        if faces then
+            looks[race] = looks[race] or {}
+            looks[race][sex] = looks[race][sex] or {}
+            looks[race][sex][colour] = faces
+        end
+    end
+end
+
+-- write
+local out = {
+    "-- death-knight-soul-data.lua - GENERATED by scripts/generate-basic-death-knight-soul-data",
+    "-- from the client's SkillLineAbility.dbc and CharSections.dbc; do not edit by hand (issue 718).",
+    "return {",
+    "    -- spell id -> profession skill line, for every recipe and rank spell of a profession",
+    "    profession_spells = {",
+}
+local ids = {}
+for spell in pairs(spells) do ids[#ids + 1] = spell end
+table.sort(ids)
+local line = {}
+for i, spell in ipairs(ids) do
+    line[#line + 1] = string.format("[%d]=%d,", spell, spells[spell])
+    if #line == 8 or i == #ids then out[#out + 1] = "        " .. table.concat(line, " "); line = {} end
+end
+out[#out + 1] = "    },"
+out[#out + 1] = "    -- profession skill lines carried over"
+local skills = {}
+for skill in pairs(PROFESSIONS) do skills[#skills + 1] = skill end
+table.sort(skills)
+local sk = {}
+for _, skill in ipairs(skills) do sk[#sk + 1] = string.format("[%d]=%q", skill, PROFESSIONS[skill]) end
+out[#out + 1] = "    professions = { " .. table.concat(sk, ", ") .. " },"
+out[#out + 1] = "    -- [race][sex] = { { skin = colour, faces = { ... } }, ... }: death knight skins, each with its faces"
+out[#out + 1] = "    death_knight_looks = {"
+local races = {}
+for race in pairs(looks) do races[#races + 1] = race end
+table.sort(races)
+local count = 0
+for _, race in ipairs(races) do
+    -- one line per race holding both sexes (two lines with the same race
+    -- key would leave only the second in the loaded table)
+    local per_sex = {}
+    for sex = 0, 1 do
+        local by_skin = looks[race][sex]
+        if by_skin then
+            local skins = {}
+            for skin in pairs(by_skin) do skins[#skins + 1] = skin end
+            table.sort(skins)
+            local parts = {}
+            for _, skin in ipairs(skins) do
+                table.sort(by_skin[skin])
+                parts[#parts + 1] = string.format("{ skin = %d, faces = { %s } }", skin, table.concat(by_skin[skin], ", "))
+                count = count + 1
+            end
+            per_sex[#per_sex + 1] = string.format("[%d] = { %s }", sex, table.concat(parts, ", "))
+        end
+    end
+    out[#out + 1] = string.format("        [%d] = { %s },", race, table.concat(per_sex, ", "))
+end
+out[#out + 1] = "    },"
+out[#out + 1] = "}"
+local f = assert(io.open(OUT, "w"))
+f:write(table.concat(out, "\n"), "\n")
+f:close()
+io.write(string.format("wrote %d profession spells over %d skills and %d death knight skins over %d races into %s\n",
+    #ids, #skills, count, #races, OUT))
+-- }}}
