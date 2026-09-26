@@ -4,6 +4,8 @@
 - Created: 2026-09-23
 - Phase: 7 (Custom class / race-class infrastructure)
 - Priority: Medium
+- Related: 617b (Sargobras, the chooser here), 617g (death knight buddy
+  clans)
 - Blocked by: the custom-class infrastructure. The user places this
   "second or fourth" among the classes built once that infrastructure
   exists. Which 700s issues count as "the infrastructure" is an open question
@@ -122,7 +124,11 @@ Two layers, one per half of the user's design.
 - **Creating the death knight consumes that character.** The level-55
   character is deleted as part of the creation: the new death knight is
   what that character became.
-- Bots never play death knights (`AiPlayerbot.DisableDeathKnightLogin`).
+- Bots never play death knights (`AiPlayerbot.DisableDeathKnightLogin`),
+  except a death knight owner's buddies, which are all death knights
+  (617b, 2026-09-25). That setting stops every death knight bot from
+  logging in, so the buddy module will need its own exception (or the
+  setting off, with random bots already off on basic, 155b).
 - The user named two ways to make the choice of *which* level-55 character is
   consumed:
   - **(a) a chooser NPC in Acherus.** A freshly created death knight cannot
@@ -147,6 +153,35 @@ Two layers, one per half of the user's design.
   entered from.
 - Basic's flight paths are otherwise removed (155c); the Enclave's internal
   flight paths are an exception that has to be carved out of that removal.
+
+### Decision, 2026-09-25 (Ritz): Sargobras at the gate of Acherus
+
+Asked "I vaguely remember that we had a system where if you created a
+death knight, you had to sacrifice one of your characters in order to
+leave Acherus. Is that true?" (it is this issue, designed and not built),
+Ritz chose the chooser NPC, option (a), and gave it a face:
+
+> Can we have a static Sargobras who offers to help them leave Acherus in
+> exchange for a powerful soul? One hero for the Lich King, one death
+> knight for the living...
+
+- **Sargobras (617b), standing still in Acherus**, is the chooser. A new
+  death knight can't leave Acherus until it trades him a soul: one of the
+  account's level-55 characters, given to the Lich King. Then Sargobras
+  lets the death knight go to the living.
+- For death knights he is only this: he never wanders to them at every
+  10th level, and they choose nothing for their buddies (617b).
+
+**Acherus's own travel stays** (Ritz, 2026-09-25: "the Acherus flight
+paths / portals should remain"). As of 2026-09-25 nothing on basic touches
+it: the Scourge Gryphons between Acherus and Death's Breach are creatures
+you click to ride (29488, 29501), not flight masters, so the flight-path
+removal (E008, flight-master flags only) leaves them; the teleport pads
+between Acherus's floors are the core's scripts; the Ebon Hold's portals to
+Stormwind and Orgrimmar (193052, 193053) are not Outland portals, so the
+Dark Portal rule (155l, E038) leaves them; Death Gate is a class spell.
+718's rotating arrival points (below) would add flights inside the
+Enclave on top.
 
 ## Suggested Implementation Steps
 
@@ -185,9 +220,14 @@ Two layers, one per half of the user's design.
   711 (the class format and schema) and 710 (resources). Note the existing Lua
   for it is disabled (`src/lua-beta/custom-classes.lua.disabled`) and
   beta-only, so on basic the infrastructure starts from a port, not a switch.
-- **(a) or (b), or both?** Does the chooser NPC survive if the intro is
-  skipped, or does the choice move somewhere else (the character-creation
-  screen cannot ask, so something in-world has to)?
+- (Answered 2026-09-25) The chooser, (a): a static Sargobras in Acherus
+  who lets a death knight leave for a soul. Whether the intro chain is
+  also skipped (b) is still open.
+- **Professions at 300**: Ritz, 2026-09-25, of death knights: "They
+  should also start with level 300 in professions". Does that mean death
+  knight buddies (617g), death knight players too, or should a death
+  knight inherit the professions of the character it sacrificed ("what
+  that character became")?
 - **What if the account has several level-55+ characters?** Choose any; or
   only the highest; or only ones at exactly 55?
 - **Deletion or retirement?** "Deletes" could mean a true delete, or a

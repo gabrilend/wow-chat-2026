@@ -79,7 +79,7 @@ changes at this time"): basic doesn't offer them.
 (errands, task hunts, the dungeon draw bag, auction price memory) is kept
 in the database, so a restart picks up where it left off.
 
-### Data model (proposed 2026-09-25, to confirm)
+### Data model (agreed 2026-09-25)
 
 Ritz: "Not sure. Suggestions?" Everything a buddy must remember lives in
 the characters database (it belongs to characters and is deleted with
@@ -91,7 +91,7 @@ the world, like vendor prices). Every id is `int unsigned` unless noted.
 | `buddy_clan` | owner | companion account; clan guild id | one row per owner: the hidden account (617a) and the clan guild (617l) |
 | `buddy_roster` | owner, slot (`tinyint`: 1 at creation, 2 at level 10, …) | buddy character (empty while the slot is owed); class, race, profile, role (`tinyint` each: role 0 damage, 1 tank, 2 healer); created (unix time) | who the buddies are; an owed slot is a row with no buddy yet (617b fills it) |
 | `buddy_draw` | owner, buddy | had a turn (`tinyint` 0/1) | the dungeon draw bag (617c): drawn without replacement; when every buddy has had a turn, all reset to 0 |
-| `buddy_task` | buddy, task number | kind (`tinyint`: errand, gathering, task hunt), place in line (`smallint`; the first three hunts active, the rest the backlog, 617m), the task itself (text: the command as written, one entry per material and source), progress (text: which steps are done) | what each buddy is doing, so logout and restart resume it (617c) |
+| `buddy_task` | buddy, task number | kind (`tinyint`: errand, gathering, task hunt), place in line (`smallint`; the first three hunts active, the rest the backlog, 617m), the task itself (JSON: the command as the model's tool call writes it, one entry per material and source), progress (JSON: which entries are done) | what each buddy is doing, so logout and restart resume it (617c) |
 | `buddy_price` | auction house pool (`tinyint`: Alliance, Horde, neutral; each faction's houses share one pool, the neutral houses another), item | steps up (`tinyint`, each +0.5× the vendor price, 617h), last listed price (copper), updated (unix time) | the rising-price memory; reset to 0 steps after a sale |
 | `basic_617h_fixed_prices` (world) | item | price (copper), note (why) | the hand-kept prices for items with no vendor price (617h); a checked-in SQL file |
 
@@ -134,7 +134,6 @@ itself kept as the command's own text, proposed as JSON (open below).
   Alliance's houses, one for the Horde's, one for the neutral houses
   ("shared is fine, as long as it's faction specific. Also neutral auction
   houses are their own pool.").
-- How a task is stored: Ritz asked "like... json?" Proposed: yes, a JSON
-  column (MySQL checks it is well-formed and can read fields out of it),
-  holding the command exactly as the model's tool call writes it; progress
-  in a second JSON column. To confirm; and does the rest of the layout fit?
+- (Answered 2026-09-25) Tasks are stored as JSON ("the json looks
+  great"): the command exactly as the model's tool call writes it, and
+  progress in a second JSON column. The data model above stands.

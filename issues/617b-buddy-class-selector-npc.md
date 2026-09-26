@@ -129,6 +129,5 @@ is chosen."
   knights, each of a random race ("death knight buddies for death knight
   players"). Basic's rule that no playerbot plays a death knight (148a)
   covers random bots; buddies are the exception.
-- A clan of death knights can't meet the healer guarantee (617g): death
-  knights can tank but can't heal. Does the guarantee skip death knight
-  clans (a tank only), or does one buddy come as a healer class anyway?
+- (Answered 2026-09-25) Death knight clans ignore the guarantee; they
+  tank-swap and heal themselves instead (617g).

@@ -84,6 +84,30 @@ re-roll. Is that terrible?"
   profiles: most points in holy or discipline (priest), holy (paladin),
   restoration (shaman, druid). The exact list is for the generator.
 
+### Decision, 2026-09-25 (Ritz): death knight clans
+
+"death knights should ignore the guarantee. Their specs might not even be
+"tank" specs, and that's okay. Death knights are expected to be able to
+handle very difficult types of content without dedicated healers. They
+should try and tank swap between each other, taunting enemies when they
+have more health than their target's target (unless in a regular group
+with "real" tanks, of course) and prioritize the abilities that provide
+healing when they need it. They should also start with level 300 in
+professions, so they should be able to create consumables which should
+help."
+- A death knight owner's buddies (all death knights, 617b) skip the
+  tank-and-healer guarantee; their profiles are random with no role
+  required.
+- **Tank swapping**: a death knight buddy taunts an enemy when its own
+  health is higher than that of the enemy's current target, so the
+  healthiest death knight holds it. Not when the group has a "real" tank
+  (a tank-profile member of another class).
+- **Self-healing first when hurt**: below some health, the abilities that
+  heal the death knight (Death Strike, Rune Tap, Death Pact and the like)
+  come before damage.
+- **Professions at 300** from the start, so they make their own
+  consumables (617k).
+
 ## Suggested Implementation Steps
 
 1. Read the capped trees (client `Talent.dbc`, `TalentTab.dbc`) into a

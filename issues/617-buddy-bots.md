@@ -210,5 +210,5 @@ bot code works.
   - (Answered) Death knight owners get death knight buddies (617b); the
     owner doesn't count toward the guarantee (617g); price memory is
     shared per faction pool, neutral its own (617a).
-  - Still open: storing tasks as JSON (617a); the healer guarantee for a
-    clan of death knights, who can't heal (617b).
+  - (Answered) Tasks stored as JSON; the data model agreed (617a). Death
+    knight clans skip the guarantee, tank-swap and self-heal (617g).

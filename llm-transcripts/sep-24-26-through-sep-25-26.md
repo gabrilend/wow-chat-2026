@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 22:34:22
+Generated on: 2026-09-25 23:12:43
 Models: claude-opus-5-5
 
 ## Contents
@@ -130,6 +130,10 @@ Models: claude-opus-5-5
     basic server, and the portal removal and 25-person Naxxramas books are
     built, tested and committed. Next, your call on the first of eleven open
     buddy questions: what gear, money and bags a new buddy starts with.
+31. 2026-09-25 22:37, after Request 100 - We're designing buddy bots for the
+    basic profile, and I just removed guild banks and recorded your ten buddy
+    answers. Next, I need you to confirm the proposed buddy data model and
+    settle what death knight owners' buddies are.
 
 --------------------------------------------------------------------------------
 
@@ -9751,6 +9755,71 @@ Two questions are still open:
   death knights with random races, or ordinary buddies of any random class?
 - **The tank-and-healer guarantee.** Does the owner count toward it? As written,
   only buddies count, so a tanking owner still gets a buddy tank.
+
+--------------------------------------------------------------------------------
+
+### User Request 101
+
+> - Death knight owners' buddies. You said both "death knight players get death
+> knight buddies" and "a random race and class is chosen". Are they all death
+> knights with random races,
+>     or ordinary buddies of any random class?
+
+death knight buddies for death knight players.
+
+> - The tank-and-healer guarantee. Does the owner count toward it? As written,
+> only buddies count, so a tanking owner still gets a buddy tank.
+
+the owner's class is ignored.
+
+> 1. Price memory per auction house: all buddies selling there share it. My
+> alternative was per buddy. Shared means two buddies don't both raise the same
+> price separately.
+
+shared is fine, as long as it's faction specific. Also neutral auction houses
+are their own pool.
+
+> 2. A task stored as one line of text in the command's own form, rather than
+> one database row per step. That keeps it identical to what the language model
+> writes.
+
+like... json?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 101
+
+I've recorded your answers and committed them:
+- **Death knight owners** get death knight buddies, each of a random race.
+  They're the one exception to basic's rule that no bot plays a death knight.
+- **The tank-and-healer guarantee** ignores the owner's class and counts buddies
+  only.
+- **Price memory** is shared in three pools: the Alliance's auction houses, the
+  Horde's, and the neutral houses.
+
+**On JSON: yes, that's what I'd use.** The project's MySQL has a JSON column
+type: it rejects badly formed text, and queries can read single fields out of
+it. Tool calls from a language model are JSON already, so the stored task would
+be exactly the call the model made. A hunt for runed copper bracers might look
+like:
+
+```json
+{"make": "Runed Copper Bracers", "for": "Ritz", "deliver": "hand",
+ "materials": [
+   {"item": "Copper Bar", "count": 2, "from": "backpack"},
+   {"item": "Copper Ore", "count": 4, "from": "mine"},
+   {"item": "Copper Bar", "count": 4, "from": "smelt"}]}
+```
+
+A second JSON column would hold progress: which entries are done. Changing a
+hunt mid-way is then just replacing the first column in one write.
+
+**Does JSON for tasks, and the rest of the table layout, work for you?**
+
+One question came out of your death knight answer. Death knights can tank but
+can't heal, so a clan of death knight buddies can never meet the healer
+guarantee. Should the guarantee skip death knight clans and require only a tank,
+or should one of their buddies be a healer class anyway?
 
 --------------------------------------------------------------------------------
 
