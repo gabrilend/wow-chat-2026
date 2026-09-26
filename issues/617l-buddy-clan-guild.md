@@ -63,7 +63,7 @@ a character belongs to at most one guild.
   taken character names).
 - (Answered 2026-09-25) Other players are never invited: a clan guild is
   one owner and their buddies; friends talk by whisper or custom channels.
-- **Conflict**: Ritz, 2026-09-25: "In-game player guilds should exist
+- (Answered 2026-09-25) **Conflict, settled**: Ritz, 2026-09-25: "In-game player guilds should exist
   though. They're useful abstractions!" But the stock game allows one
   guild per character, and an owner can't leave the clan guild, so no
   owner could ever join a player guild. Which gives way: clan chat moves
@@ -77,7 +77,8 @@ a character belongs to at most one guild.
   label, a shared token and its members' addresses; holding the token is
   being invited; rooms nest in a tree, each child room its own invitation,
   "tiers of trust"; labels belong to the reader; you choose who hears you,
-  never who hears anyone else.) Proposed reading, to confirm: the stock
+  never who hears anyone else.) Confirmed reading (Ritz, 2026-09-25: "Yep
+  that looks right"; parked until rao-chat is further along): the stock
   guild slot stays the clan guild, and **player guilds are rao-chat-style
   rooms**, a layer beside the stock guild, not in it. A character may be
   in any number; a guild's sub-groups (officers, a raid team) are child

@@ -8,7 +8,8 @@
   (clan guilds, which take a character's one in-game guild slot), 913f
   (another session's cross-node social relay, inside one clustered
   realm), 157 (the three-machine deployment)
-- Priority: Low (an idea; "When I have more games built")
+- Priority: Low (parked: "We can put a pin in the rao-chat integration
+  because it's still in development", 2026-09-25)
 
 ## Origin
 
@@ -61,7 +62,7 @@ specialize, rather than power to hierarchicalize"); you choose who hears
 you (withholding), never who hears anyone else; a direct message is a room
 with one other person.
 
-Read onto the game (proposed, to confirm): a player guild is a rao-chat
+Read onto the game (confirmed, Ritz 2026-09-25: "Yep that looks right"): a player guild is a rao-chat
 room, a sub-guild a child room, a friend a direct-message room; a game
 server takes part as a home server for its players, so the same guild
 reaches every server, the rao-chat phone and web clients, and later other

@@ -1,6 +1,6 @@
 # Conversation Summary: 5f0d7482-8aa0-400d-b224-d8993c8a1751
 
-Generated on: 2026-09-25 21:44:59
+Generated on: 2026-09-25 21:46:50
 Models: claude-opus-5-5
 
 ## Contents
@@ -9404,6 +9404,54 @@ should be ordinary. Check out rao-chat.
 > it runs: here's the design question rao-chat raises inside the game.
 
 The database test is still running. I'll commit once it passes.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "Re-run the RAM database test after the
+rename" completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 97 (continued)
+
+Death knight books are now "Runestone of …", for example "Runestone of Icy
+Touch V". The database test passes again, and it's committed.
+
+rao-chat isn't at the ai-playground path; I found it at
+`/mnt/mtwo/programs/rao-chat` and read its vision document. It works like this:
+- **No central server:** each person runs a small home server.
+- **A room is a contact:** a label, a shared token and the addresses of its
+  members. Holding the token is the invitation.
+- **Rooms nest in a tree,** and each child room needs its own invitation. That's
+  your "tiers of trust … task focus to specialize, rather than power to
+  hierarchicalize".
+- **Labels belong to the reader,** so each person names a room however they
+  like.
+- **You choose who hears you,** never who hears anyone else.
+
+**My reading of "player guilds, but not ordinary", to confirm:**
+- The stock guild slot stays the clan guild, and the owner still can't leave it.
+- **Player guilds are rao-chat rooms,** a separate layer beside the stock guild.
+- A character can belong to any number of them.
+- A guild's sub-groups, like officers or a raid team, are child rooms, and
+  anyone can start one.
+- A friend is a direct-message room.
+- The game server acts as a home server for its players. So the same guild
+  reaches every one of our servers, the rao-chat phone and web apps, and later
+  your other games. That also makes the cross-server friends-and-guilds issue
+  essentially "the game joins rao-chat".
+
+I've recorded this in the clan-guild and cross-server issues, marked "proposed,
+to confirm".
+
+**Is that the right reading?** If so, the next question is how a guild room
+shows up inside the stock client, with no addon. The closest built-in thing is a
+custom chat channel. Those already take a password (`/join name password`),
+which is close to rao-chat's token. Two things differ:
+- **Names:** a channel's name is the same for everyone on the server, whereas
+  rao-chat labels are each reader's own.
+- **Hierarchy:** a channel has an owner and moderators, whereas rao-chat has
+  nobody above anybody.
 
 --------------------------------------------------------------------------------
 
