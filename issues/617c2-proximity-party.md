@@ -9,6 +9,14 @@
 
 ## Current Behavior
 
+**2026-09-29:** a buddy is only ever taken out of its owner's party (past
+75 yards, or in a town) if the pass itself seated it; one the owner
+invited by hand stays (owner: "buddies shouldn't leave manually-invited
+groups"). The seated set is kept in memory, so after a restart every
+buddy still in the party counts as invited by hand. The starting valleys
+count as open country, not towns, though seven of eight carry the
+client's town flag (`buddies_roam_ground.cpp`).
+
 **Built 2026-09-27; compile-checked against the last beta build's
 settings, not yet run** (`modules/mod-buddies/src/buddies_party.cpp`,
 `buddies_xp.cpp`; source patch `patches/B037-playerbots-invite-alts-on-login.sh`;

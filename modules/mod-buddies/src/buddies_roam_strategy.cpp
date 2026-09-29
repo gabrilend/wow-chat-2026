@@ -23,11 +23,12 @@
  *                    (the "food" behaviour, which uses a cheat: regeneration
  *                    from nothing) is off for buddies; they eat only in the
  *                    meal below, from what they carry;
- *   walking        - "If they can't mount, then they shouldn't be running":
- *                    a roaming buddy walks unless it is mounted (the bot
- *                    module mounts a bot outdoors when it has a mount and
- *                    the level; indoors, or without one, it walks); a fight
- *                    puts it back to running at once. Not in dungeons,
+ *   walking        - run in the open, walk indoors (2026-09-29, replacing
+ *                    "If they can't mount, then they shouldn't be running"):
+ *                    a roaming buddy runs outdoors and walks where the
+ *                    map marks it indoors (a cave, a building); a mounted
+ *                    one always runs; a fight puts it back to running at
+ *                    once. Not in dungeons,
  *                    raids or battlegrounds, where roaming doesn't run.
  *
  * Three parts:
@@ -385,12 +386,17 @@ public:
         }
         StoreState(guid, s);
         BuddyRoam::Point const& p = path[target];
-        // Walk unless mounted (the owner: "If they can't mount, then they
-        // shouldn't be running"). The bot module mounts a bot itself when it
-        // may (outdoors, a mount, the level); indoors or without a mount the
-        // buddy walks. The walk flag stays on the buddy, so the moment a fight
-        // begins it is set back to running (OnPlayerEnterCombat below).
-        bool walk = !bot->IsMounted();
+        // Run in the open, walk indoors (the owner, 2026-09-29: "When we're
+        // in a questing area we don't have to rp walk, that's only for
+        // inside towns and dungeons and interior areas"; this replaces
+        // 2026-09-27's "If they can't mount, then they shouldn't be
+        // running"). Towns walk in the town visit (buddies_town.cpp) and
+        // roaming doesn't run in dungeons, so here only "indoors" is left:
+        // a cave or a building out in the country, as the server's map
+        // data marks it. A mounted buddy never walks. The walk flag stays
+        // on the buddy, so the moment a fight begins it is set back to
+        // running (OnPlayerEnterCombat below).
+        bool walk = !bot->IsMounted() && !bot->IsOutdoors();
         if (bot->IsWalking() != walk)
             bot->SetWalk(walk);
         // The wander priority: any other walking the bot module wants (to a

@@ -6,7 +6,9 @@
  * the area (617e). Kill experience is shared only inside a group, and only
  * with members within 74 yards of the kill. So groups follow distance
  * (the owner, 2026-09-27):
- *   - a buddy in the owner's group that wanders past 75 yards leaves it;
+ *   - a buddy in the owner's group that wanders past 75 yards leaves it
+ *     (only one this pass seated: one the owner invited by hand stays,
+ *     here and in towns; owner, 2026-09-29);
  *   - a buddy nearer than 60 yards joins the owner's group if it has room
  *     ("I think 60 yards is the farthest a buff spell can go");
  *   - buddies farther than 74 yards group with each other ("if some buddy
@@ -60,6 +62,14 @@ static constexpr float  FAR_LEAVE_YARDS   = 74.0f;  // a far-party buddy this fa
 static constexpr uint32 PARTY_SIZE        = 5;
 static constexpr uint32 PASS_EVERY_MS     = 5000;
 // }}}
+
+// Buddies this pass seated in their owner's party. Only these are ever
+// taken out of it again (past 75 yards, or in a town): a buddy the owner
+// invited by hand stays until the owner removes it (owner, 2026-09-29:
+// "buddies shouldn't leave manually-invited groups"). Kept in memory, so
+// after a server restart a buddy still in its owner's party counts as
+// invited by hand and stays; the owner can remove it.
+static std::set<uint32> sSeatedByPass;
 
 // {{{ IsFarParty
 // A group whose every member is one of this owner's buddies. Any other
@@ -181,8 +191,9 @@ static void ArrangeOwner(Player* owner, std::vector<uint32> const& buddyGuids)
             continue;
         if (g == owner->GetGroup())
         {
-            if (b.yards > LEAVE_OWNER_YARDS)
-                g->RemoveMember(b.bot->GetGUID());
+            uint32 guid = b.bot->GetGUID().GetCounter();
+            if (b.yards > LEAVE_OWNER_YARDS && sSeatedByPass.erase(guid))
+                g->RemoveMember(b.bot->GetGUID());     // seated by this pass: it may unseat; invited by hand: stays
         }
         else if (IsFarParty(g, buddySet) && (b.yards <= FAR_YARDS || !NearAnyMember(b.bot, g, FAR_LEAVE_YARDS)))
             g->RemoveMember(b.bot->GetGUID());
@@ -202,7 +213,9 @@ static void ArrangeOwner(Player* owner, std::vector<uint32> const& buddyGuids)
             g = NewParty(owner);
         if (!g || g->isRaidGroup() || g->GetMembersCount() >= PARTY_SIZE)
             break;
-        if (!g->AddMember(b.bot))
+        if (g->AddMember(b.bot))
+            sSeatedByPass.insert(b.bot->GetGUID().GetCounter());
+        else
             LOG_ERROR("module", "mod-buddies: {} could not join {}'s party (server refused); left ungrouped this pass",
                 b.bot->GetName(), owner->GetName());
     }
@@ -325,7 +338,9 @@ static void UngroupInTown(Player* owner, std::vector<uint32> const& buddyGuids)
         Group* g = bot->GetGroup();
         if (!g || g->isLFGGroup() || g->isBGGroup() || g->isBFGroup())
             continue;                                  // ungrouped already, or a dungeon-finder / battleground group
-        if (g == owner->GetGroup() || IsFarParty(g, buddySet))
+        // the owner's party: only a buddy this pass seated (one invited by
+        // hand stays, in town too); a far party is always this pass's own
+        if ((g == owner->GetGroup() && sSeatedByPass.erase(guid)) || IsFarParty(g, buddySet))
             g->RemoveMember(bot->GetGUID());
     }
 }

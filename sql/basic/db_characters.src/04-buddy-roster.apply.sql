@@ -21,6 +21,8 @@
 --   talents_reroll     1 while a re-roll is owed from an owner respec made
 --                      while this buddy was offline (617g)
 --   created            unix time the buddy character was made; 0 until then
+--   greeting           its entrance gesture (617b1): 0 none yet, 1 wave,
+--                      2 salute; an early personality trait, kept for later
 --
 -- A row moves through three states: owed (class 0), chosen (class set,
 -- buddy 0: the module makes the character), filled (buddy set).
@@ -46,9 +48,19 @@ CREATE TABLE IF NOT EXISTS `buddy_roster` (
   `role`           tinyint unsigned NOT NULL DEFAULT 0,
   `talents_reroll` tinyint unsigned NOT NULL DEFAULT 0,
   `created`        int unsigned     NOT NULL DEFAULT 0,
+  `greeting`       tinyint unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY (`owner`, `slot`),
   KEY `idx_buddy` (`buddy`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617a: each owner''s buddies, owed and filled';
+
+-- the greeting column (617b1, 2026-09-29) for a table made before it
+SET @has_greeting := (SELECT COUNT(*) FROM information_schema.columns
+  WHERE table_schema = DATABASE() AND table_name = 'buddy_roster' AND column_name = 'greeting');
+SET @add_greeting := IF(@has_greeting = 0,
+  'ALTER TABLE `buddy_roster` ADD COLUMN `greeting` tinyint unsigned NOT NULL DEFAULT 0 AFTER `created`', 'DO 0');
+PREPARE add_greeting FROM @add_greeting;
+EXECUTE add_greeting;
+DEALLOCATE PREPARE add_greeting;
 
 -- ============================================================================
 -- End of 04-buddy-roster.sql (apply)
