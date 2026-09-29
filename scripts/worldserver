@@ -163,7 +163,36 @@ fi
 # profile is the online one in the realm-select list. authserver does
 # the same flip but doing it again here covers the "worldserver booted
 # without authserver" case.
-pkill -f "${INSTALL_DIR%-*}-"*"/bin/worldserver" 2>/dev/null || true
+#
+# A squatter is found by the program it runs, not its command line: the
+# server is started as ./worldserver from its bin folder, so a pattern
+# naming the install path never matched it (and the old unquoted * spread
+# into several patterns, which pkill refuses: nothing was ever stopped).
+# Each gets the ordinary stop signal (it saves and shuts down cleanly),
+# and the start waits for it to be gone, so the port is free.
+SQUAT_BASE="$(readlink -f "${DIR}")/installed-files-"
+for SQUAT_PID in $(pgrep -x worldserver); do
+    SQUAT_EXE="$(readlink "/proc/${SQUAT_PID}/exe")"
+    SQUAT_EXE="${SQUAT_EXE% (deleted)}"       # a server started before the last reinstall runs a replaced binary
+    case "${SQUAT_EXE}" in
+        "${SQUAT_BASE}"*/bin/worldserver)
+            # one of this project's worldservers, any profile: stop it
+            echo "Stopping the running worldserver (pid ${SQUAT_PID}, ${SQUAT_EXE#${SQUAT_BASE%installed-files-}})..."
+            kill "${SQUAT_PID}"
+            for SQUAT_WAIT in $(seq 1 60); do
+                kill -0 "${SQUAT_PID}" 2>/dev/null || break
+                sleep 1
+            done
+            if kill -0 "${SQUAT_PID}" 2>/dev/null; then
+                echo "ERROR: worldserver ${SQUAT_PID} is still running after 60 s; not starting a second one"
+                exit 1
+            fi
+            ;;
+        *)
+            # someone else's worldserver (another project): left alone
+            ;;
+    esac
+done
 "${DIR}/scripts/set-active-realm" "${PROFILE}"
 
 # Auto-enable the crash catcher for debug builds. `compile --debug` stamps
