@@ -1,0 +1,602 @@
+#!/usr/bin/env luajit
+-- generate-crowsign-page - build the "Crowsign" design page: sprite-craft, the
+-- owner's idea of 2026-09-26 (notes/vision-enchanting-system-update.md, the
+-- section "Second Conversation"), set beside the game data that decides how
+-- it could be built without changing the game client.
+--
+-- For a general audience: the owner wants enchanting to gather magic from the
+-- world and turn it into small floating "sprites". The game client (the
+-- program players run) cannot be changed, so any new ability has to borrow
+-- a name, an icon and a recipe slot the client already knows. This tool reads
+-- the client's own data files (which skills, spells and recipes it knows) and
+-- the server's world database (who teaches what, what breaks down into what),
+-- and writes every list the decision needs into one page: the enchanting
+-- recipes by skill, every skill line a player could see, the spells whose
+-- names fit sprites, and the enchanting materials with the crafts that use
+-- them. The prose on the page is the design; the lists are regenerated here.
+--
+-- Usage: scripts/generate-crowsign-page [PROJECT_DIR]
+--   Reads   data-files/dbc/{SkillLine,SkillLineCategory,SkillLineAbility,
+--           SkillRaceClassInfo,SkillTiers,Spell,SpellIcon,SpellDuration}.dbc
+--           the world database acore_world_release (read-only SELECTs)
+--   Writes  docs/HTML/crowsign.html (from scripts/templates/crowsign.html,
+--           whose /*DATA*/ marker becomes the JSON built here)
+--
+-- The DBC files are WDBC: a 20-byte header ("WDBC", record count, field
+-- count, record size, string block size), then the records (every field four
+-- bytes), then a string block; a string field holds an offset into it. Field
+-- positions below are for client 3.3.5a (build 12340) and were checked on
+-- 2026-09-26 against known rows: Disenchant 13262, Prospecting 31252, Milling
+-- 51005, Enchant Bracer - Minor Health 7418 (learned at 1, yellow 70, grey
+-- 110), Runed Copper Rod 7421 (1 / 5 / 10).
+
+local ffi = require("ffi")
+
+-- {{{ DIR configuration
+local DIR      = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DBC      = DIR .. "/data-files/dbc/"
+local TEMPLATE = DIR .. "/scripts/templates/crowsign.html"
+local OUT      = DIR .. "/docs/HTML/crowsign.html"
+local MYSQL    = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch acore_world_release"
+-- }}}
+
+-- {{{ field positions (3.3.5a)
+-- SkillLine:          0 id, 1 category, 3 name (enUS), 37 spell icon, 38 verb
+-- SkillLineCategory:  0 id, 1 name
+-- SkillLineAbility:   0 id, 1 skill line, 2 spell, 7 skill needed to learn
+--                     (1 for nearly all; the real learning rank lives with
+--                     the trainer or the recipe item), 9 acquire method
+--                     (1 = learned the moment the skill is learned),
+--                     10 grey at (no more skill-ups), 11 yellow at
+-- SkillRaceClassInfo: 1 skill line, 2 race mask, 3 class mask, 4 flags
+--                     (0x400 = the client shows no bar), 6 skill tier
+-- SkillTiers:         17..32 the max value of each rank
+-- Spell:              37 max level, 38 base level, 39 spell level,
+--                     40 duration index, 52..59 reagents, 60..67 counts,
+--                     71..73 effect, 80..82 base points, 95..97 aura,
+--                     98..100 period (ms), 107..109 created item,
+--                     116..118 trigger spell (the spell a "learn" teaches),
+--                     110..112 misc value, 133 icon, 136 name, 153 rank,
+--                     170 description, 222 tool category (6 = runed rod)
+-- SpellIcon:          0 id, 1 texture path
+-- SpellDuration:      0 id, 1 duration (ms)
+local F = {
+    sl_cat = 1, sl_name = 3, sl_icon = 37, sl_verb = 38,
+    sla_skill = 1, sla_spell = 2, sla_req = 7, sla_acq = 9, sla_grey = 10, sla_yellow = 11,
+    rc_skill = 1, rc_race = 2, rc_class = 3, rc_flags = 4, rc_tier = 6,
+    sp_maxlvl = 37, sp_baselvl = 38, sp_lvl = 39, sp_dur = 40,
+    sp_reag = 52, sp_rcount = 60, sp_eff = 71, sp_bp = 80, sp_aura = 95, sp_amp = 98,
+    sp_item = 107, sp_misc = 110, sp_icon = 133, sp_name = 136, sp_rank = 153,
+    sp_desc = 170, sp_tcat = 222,
+}
+-- }}}
+
+-- {{{ the judgements
+-- What each skill line a player could see is doing in 3.3.5, read from the
+-- data on 2026-09-26 (source: SkillRaceClassInfo flags, trainer_spell,
+-- item_template.RequiredSkill, and the server source for Lockpicking and
+-- Runeforging). "free" means nobody uses it and it could carry Crowsign.
+local VERDICT = {
+    [142] = { "free",    "Survival: a cut secondary profession from before release. Everyone may hold it (all races, all classes), the client draws a progress bar (flags 0), nobody teaches it, no item needs it. Its one spell, Basic Campfire, Cooking also teaches. No recipe window." },
+    [769] = { "free",    "Internal: the developers' test skill. The client knows a recipe-window spell for it (Internal Knowledge, 36356) and 35 test spells (\"Uber Heal Over Time\", \"Master Buff (Magic)\", \"dmg4\"). Sits under Class Skills; flags 0x410 show a flat value, no bar." },
+    [148] = { "retired", "Horse Riding: a racial riding skill from before patch 2.0; Riding (762) replaced them all. A few old mounts still name it. Flags 0x492: no bar, always at max." },
+    [149] = { "retired", "Wolf Riding: as Horse Riding." },
+    [150] = { "retired", "Tiger Riding: as Horse Riding." },
+    [152] = { "retired", "Ram Riding: as Horse Riding." },
+    [533] = { "retired", "Raptor Riding: as Horse Riding." },
+    [553] = { "retired", "Mechanostrider Piloting: as Horse Riding." },
+    [554] = { "retired", "Undead Horsemanship: as Horse Riding." },
+    [713] = { "retired", "Kodo Riding: as Horse Riding." },
+    [155] = { "retired", "Swimming: no race/class row, so the server deletes it from any character at login unless one is added server-side." },
+    [633] = { "in use",  "Lockpicking: rogues' Pick Lock grows it; the server reads it when opening locks." },
+    [776] = { "in use",  "Runeforging: the death knight's rune window (flags 0x80). Death knights only." },
+    [183] = { "hidden",  "GENERIC (DND): category Not Displayed; every character holds it for Auto Attack, Opening, Duel." },
+    [138] = { "rare",    "Language: Draconic: spoken by NPCs; no player race starts with it." },
+    [140] = { "rare",    "Language: Titan: spoken by NPCs; no player race starts with it." },
+    [139] = { "rare",    "Language: Demon Tongue: spoken by NPCs." },
+    [141] = { "rare",    "Language: Old Tongue: spoken by NPCs." },
+}
+-- Words that make a spell a sprite candidate (whole-word or prefix match,
+-- case ignored).
+local SPRITE_WORDS = { "sprite", "wisp", "mote", "spirit", "elemental", "faerie", "fairy",
+                       "will%-o", "essence", "pixie", "firefly" }
+local SPRITE_WORDS_SQL = "Sprite|Wisp|Mote|Faerie|Fairy|Will-o|Pixie|Firefly|Elemental|Essence|Spirit"
+-- }}}
+
+-- {{{ names for spell effects and auras (3.3.5a enum values)
+local EFFECT = {
+    [1]="instant kill",[2]="school damage",[3]="dummy",[5]="teleport",[6]="apply aura",[8]="power drain",
+    [9]="health leech",[10]="heal",[16]="complete quest",[17]="weapon damage (no school)",[18]="resurrect",
+    [24]="create item",[25]="weapon",[27]="area aura on ground",[28]="summon",[30]="energize",[33]="open lock",
+    [35]="party aura",[36]="learn spell",[38]="dispel",[41]="jump",[44]="skill step",[47]="trade skill window",
+    [50]="summon object",[53]="enchant item",[54]="temporary enchant",[56]="summon pet",[58]="weapon damage",
+    [59]="create random item",[60]="proficiency",[62]="power burn",[64]="trigger spell",[67]="heal to max",
+    [74]="apply glyph",[76]="summon wild object",[77]="script effect",[78]="attack",[83]="duel",
+    [86]="activate object",[95]="skinning",[98]="knock back",[99]="disenchant",[101]="feed pet",
+    [104]="summon object slot 1",[113]="resurrect",[114]="taunt",[116]="skin player corpse",
+    [118]="skill",[119]="pet aura",[123]="send taxi",[124]="pull towards",[127]="prospecting",
+    [128]="friendly area aura",[129]="enemy area aura",[136]="heal percent",[140]="force cast",
+    [142]="trigger spell with value",[143]="owner aura",[152]="summon friend",[155]="titan grip",
+    [157]="create tradeskill item",[158]="milling",[162]="talent spec select",
+}
+local AURA = {
+    [1]="bind sight",[3]="damage over time",[4]="dummy",[5]="confuse",[6]="charm",[7]="fear",[8]="heal over time",
+    [10]="threat",[12]="stun",[13]="damage done",[15]="damage shield",[16]="stealth",[18]="invisibility",
+    [20]="% health over time",[22]="resistance",[23]="periodic trigger",[24]="power over time",[26]="root",
+    [29]="stat",[31]="speed up",[33]="slow",[34]="max health",[36]="shapeshift",[42]="proc trigger",
+    [53]="leech over time",[56]="transform",[61]="scale",[69]="absorb",[78]="mounted",[79]="damage done %",
+    [84]="health regen",[85]="power regen",[87]="damage taken %",[99]="attack power",[107]="flat modifier",
+    [108]="% modifier",[135]="healing done",[137]="stat %",[161]="combat health regen",[226]="periodic dummy",
+}
+-- }}}
+
+-- {{{ local function die
+local function die(msg)
+    io.stderr:write("generate-crowsign-page: " .. msg .. "\n")
+    os.exit(1)
+end
+-- }}}
+
+-- {{{ local function load_dbc
+-- Reads one WDBC file whole and returns readers for unsigned, signed and
+-- string fields by (row, field).
+local function load_dbc(name)
+    local f = io.open(DBC .. name .. ".dbc", "rb") or die("cannot open " .. DBC .. name .. ".dbc")
+    local d = f:read("*a")
+    f:close()
+    if d:sub(1, 4) ~= "WDBC" then die(name .. ".dbc is not a WDBC file") end
+    local p       = ffi.cast("const uint8_t*", d)
+    local h       = ffi.cast("const uint32_t*", p + 4)
+    local n, rs   = tonumber(h[0]), tonumber(h[2])
+    local sb      = 20 + n * rs
+    local t       = { data = d, n = n, fields = tonumber(h[1]) }
+    function t.u(r, i) return tonumber(ffi.cast("const uint32_t*", p + 20 + r * rs)[i]) end
+    function t.i(r, i) return tonumber(ffi.cast("const int32_t*",  p + 20 + r * rs)[i]) end
+    function t.s(r, i)
+        local o = t.u(r, i)
+        local e = d:find("\0", sb + o + 1, true)
+        return d:sub(sb + o + 1, e - 1)
+    end
+    return t
+end
+-- }}}
+
+-- {{{ local function query
+-- Runs one read-only SELECT and returns rows of tab-split columns. Any stderr
+-- line that is not the password warning is an error.
+local ERRFILE = os.getenv("TMPDIR") or "/tmp"
+ERRFILE = ERRFILE .. "/generate-crowsign-page.err"
+local function query(sql)
+    local cmd  = MYSQL .. " -e \"" .. sql:gsub('"', '\\"') .. "\" 2>" .. ERRFILE
+    local pipe = io.popen(cmd, "r")
+    local out  = pipe:read("*a")
+    pipe:close()
+    local ef   = io.open(ERRFILE, "r")
+    local err  = ef and ef:read("*a") or ""
+    if ef then ef:close() end
+    for line in err:gmatch("[^\n]+") do
+        if not line:find("Warning") then die("query failed: " .. line .. "\n  in: " .. sql) end
+    end
+    local rows = {}
+    for line in out:gmatch("[^\n]+") do
+        local cols = {}
+        for c in (line .. "\t"):gmatch("([^\t]*)\t") do cols[#cols + 1] = c end
+        rows[#rows + 1] = cols
+    end
+    return rows
+end
+-- }}}
+
+-- {{{ local function json
+-- A small JSON writer: a table with a [1] (or marked by ARRAY) is a list,
+-- any other table an object. Empty plain tables become [].
+local ARRAY = {}
+local function json(v, out)
+    local t = type(v)
+    if t == "number" then
+        out[#out + 1] = (v == math.floor(v)) and string.format("%d", v) or string.format("%.4g", v)
+    elseif t == "string" then
+        out[#out + 1] = '"' .. v:gsub('[%c"\\]', function(c)
+            if c == '"' then return '\\"' elseif c == "\\" then return "\\\\"
+            elseif c == "\n" then return "\\n" else return string.format("\\u%04x", c:byte()) end
+        end) .. '"'
+    elseif t == "boolean" then
+        out[#out + 1] = tostring(v)
+    elseif t == "nil" then
+        out[#out + 1] = "null"
+    elseif v[1] ~= nil or next(v) == nil or getmetatable(v) == ARRAY then
+        out[#out + 1] = "["
+        for i = 1, #v do
+            if i > 1 then out[#out + 1] = "," end
+            json(v[i], out)
+        end
+        out[#out + 1] = "]"
+    else
+        out[#out + 1] = "{"
+        local first = true
+        for k, x in pairs(v) do
+            if not first then out[#out + 1] = "," end
+            first = false
+            json(tostring(k), out)
+            out[#out + 1] = ":"
+            json(x, out)
+        end
+        out[#out + 1] = "}"
+    end
+    return out
+end
+-- }}}
+
+-- {{{ read the client data
+local sl, slc, sla = load_dbc("SkillLine"), load_dbc("SkillLineCategory"), load_dbc("SkillLineAbility")
+local rci, tiers   = load_dbc("SkillRaceClassInfo"), load_dbc("SkillTiers")
+local sp, icon_dbc = load_dbc("Spell"), load_dbc("SpellIcon")
+local dur_dbc      = load_dbc("SpellDuration")
+if sp.fields ~= 234 then die("Spell.dbc has " .. sp.fields .. " fields; 3.3.5a has 234") end
+if sla.fields ~= 14 then die("SkillLineAbility.dbc has " .. sla.fields .. " fields; 3.3.5a has 14") end
+
+local spell_row = {}
+for r = 0, sp.n - 1 do spell_row[sp.u(r, 0)] = r end
+for _, check in ipairs({ { 13262, "Disenchant" }, { 31252, "Prospecting" }, { 51005, "Milling" },
+                         { 7418, "Enchant Bracer - Minor Health" } }) do
+    local r = spell_row[check[1]]
+    if not r or sp.s(r, F.sp_name) ~= check[2] then die("spell " .. check[1] .. " is not " .. check[2] .. ": field positions moved") end
+end
+
+local icon_name = {}
+for r = 0, icon_dbc.n - 1 do icon_name[icon_dbc.u(r, 0)] = (icon_dbc.s(r, 1):match("([^\\]+)$") or ""):lower() end
+local duration_ms = {}
+for r = 0, dur_dbc.n - 1 do duration_ms[dur_dbc.u(r, 0)] = dur_dbc.i(r, 1) end
+
+local category_name = {}
+for r = 0, slc.n - 1 do category_name[slc.u(r, 0)] = slc.s(r, 1) end
+
+local tier_max = {}
+for r = 0, tiers.n - 1 do
+    local m = 0
+    for i = 17, 32 do m = math.max(m, tiers.u(r, i)) end
+    tier_max[tiers.u(r, 0)] = m
+end
+-- }}}
+
+-- {{{ read the world database
+-- trainer_spell: the lowest skill any trainer asks before teaching a spell.
+local trainer_rank, trainer_level = {}, {}
+for _, c in ipairs(query("SELECT SpellId, MIN(ReqSkillRank), MIN(ReqLevel) FROM trainer_spell GROUP BY SpellId")) do
+    trainer_rank[tonumber(c[1])], trainer_level[tonumber(c[1])] = tonumber(c[2]), tonumber(c[3])
+end
+-- recipe items (class 9): the item teaches spellid_2 when spellid_1 is the
+-- generic "learning" spell (483, 55884), otherwise spellid_1 itself.
+local formula = {}
+for _, c in ipairs(query("SELECT entry, name, RequiredSkillRank, spellid_1, spellid_2 FROM item_template WHERE class = 9")) do
+    local s1, s2 = tonumber(c[4]), tonumber(c[5])
+    local taught = (s1 == 483 or s1 == 55884) and s2 or s1
+    if taught and taught > 0 and (not formula[taught] or tonumber(c[3]) < formula[taught].rank) then
+        formula[taught] = { rank = tonumber(c[3]), item = tonumber(c[1]), name = c[2] }
+    end
+end
+-- a trainer often teaches a "learn" spell (effect 36) whose trigger spell
+-- is the real ability (Apprentice Enchanting 7411 comes through 7414); the
+-- ability inherits the trainer's rank
+local learned = {}                          -- collected first: a table must not grow while pairs() walks it
+for id, rank in pairs(trainer_rank) do
+    local r = spell_row[id]
+    if r then
+        for e = 0, 2 do
+            local taught = sp.u(r, 116 + e)
+            if sp.u(r, F.sp_eff + e) == 36 and taught > 0 and not trainer_rank[taught] then
+                learned[taught] = math.min(learned[taught] or rank, rank)
+            end
+        end
+    end
+end
+for taught, rank in pairs(learned) do trainer_rank[taught] = rank end
+local item_name = {}
+local function name_items(ids)
+    local want = {}
+    for id in pairs(ids) do if not item_name[id] then want[#want + 1] = id end end
+    for i = 1, #want, 500 do
+        local chunk = {}
+        for j = i, math.min(i + 499, #want) do chunk[#chunk + 1] = want[j] end
+        for _, c in ipairs(query("SELECT entry, name FROM item_template WHERE entry IN (" .. table.concat(chunk, ",") .. ")")) do
+            item_name[tonumber(c[1])] = c[2]
+        end
+    end
+end
+-- }}}
+
+-- {{{ local function describe
+-- One line on what a spell does now: its description with the common $
+-- variables filled from its own fields, or, when it has none, its effects.
+local function describe(r)
+    local d = sp.s(r, F.sp_desc)
+    local function points(i) return sp.i(r, F.sp_bp + i - 1) + 1 end
+    local dur = duration_ms[sp.u(r, F.sp_dur)] or 0
+    d = d:gsub("%$[sm](%d)", function(i) return tostring(math.abs(points(tonumber(i)))) end)
+    d = d:gsub("%$o(%d)", function(i)
+        local amp = sp.u(r, F.sp_amp + tonumber(i) - 1)
+        return (amp > 0 and dur > 0) and tostring(math.abs(points(tonumber(i))) * math.floor(dur / amp)) or "N"
+    end)
+    d = d:gsub("%$t(%d)", function(i) return tostring(sp.u(r, F.sp_amp + tonumber(i) - 1) / 1000) end)
+    d = d:gsub("%$d", function() return dur > 0 and (dur / 1000 .. " sec") or "until cancelled" end)
+    d = d:gsub("%$%d*%a%d?", "N"):gsub("[\r\n]+", " "):gsub("%s+", " ")
+    if #d > 170 then d = d:sub(1, 167):gsub("[\128-\191]*$", ""):gsub("[\192-\255]$", "") .. "..." end
+    local fx = {}
+    for e = 0, 2 do
+        local id = sp.u(r, F.sp_eff + e)
+        if id ~= 0 then
+            local name = EFFECT[id] or ("effect " .. id)
+            if id == 6 or id == 35 or id == 27 or id == 119 or id == 128 or id == 129 or id == 143 then
+                local a = sp.u(r, F.sp_aura + e)
+                name = name .. ": " .. (AURA[a] or ("aura " .. a))
+            end
+            fx[#fx + 1] = name
+        end
+    end
+    return d, table.concat(fx, "; ")
+end
+-- }}}
+
+-- {{{ local function kind_of
+-- Sorts a candidate spell into what it could lend a sprite.
+local function kind_of(r)
+    local k = "other"
+    for e = 0, 2 do
+        local id, a = sp.u(r, F.sp_eff + e), sp.u(r, F.sp_aura + e)
+        if id == 28 or id == 56 or id == 50 or id == 76 or id == 104 then return "summon" end
+        if a == 8 or a == 20 then k = "heal over time"
+        elseif (a == 3 or a == 53) and k ~= "heal over time" then k = "damage over time"
+        elseif (a == 56 or a == 61 or a == 4 or a == 226) and k == "other" then k = "visual / dummy"
+        elseif (id == 10 or id == 136) and k == "other" then k = "heal"
+        elseif id == 2 and k == "other" then k = "damage"
+        elseif (a == 29 or a == 137 or a == 22 or a == 84 or a == 85) and k == "other" then k = "buff" end
+    end
+    return k
+end
+-- }}}
+
+-- {{{ skill lines and their abilities
+local ability_by_skill, skills_of_spell = {}, {}
+for r = 0, sla.n - 1 do
+    local s, spell = sla.u(r, F.sla_skill), sla.u(r, F.sla_spell)
+    ability_by_skill[s] = ability_by_skill[s] or {}
+    ability_by_skill[s][#ability_by_skill[s] + 1] = r
+    skills_of_spell[spell] = true
+end
+local rc_by_skill = {}
+for r = 0, rci.n - 1 do
+    local s = rci.u(r, F.rc_skill)
+    rc_by_skill[s] = rc_by_skill[s] or {}
+    table.insert(rc_by_skill[s], r)
+end
+local window_of_skill = {}
+for s, rows in pairs(ability_by_skill) do
+    for _, r in ipairs(rows) do
+        local x = spell_row[sla.u(r, F.sla_spell)]
+        if x then for e = 0, 2 do if sp.u(x, F.sp_eff + e) == 47 then window_of_skill[s] = sla.u(r, F.sla_spell) end end end
+    end
+end
+local items_needing = {}
+for _, c in ipairs(query("SELECT RequiredSkill, COUNT(*) FROM item_template WHERE RequiredSkill > 0 GROUP BY RequiredSkill")) do
+    items_needing[tonumber(c[1])] = tonumber(c[2])
+end
+local trainers_of = {}
+for _, c in ipairs(query("SELECT ReqSkillLine, COUNT(DISTINCT SpellId) FROM trainer_spell WHERE ReqSkillLine > 0 GROUP BY ReqSkillLine")) do
+    trainers_of[tonumber(c[1])] = tonumber(c[2])
+end
+
+-- the skill lines a player could see: professions, secondary skills,
+-- languages, the hidden one, and every class-skill line that is not a
+-- talent tree or a pet family (those are listed by name for completeness)
+local VISIBLE = { [9] = true, [10] = true, [11] = true, [12] = true }
+local EXTRA   = { [633] = true, [769] = true, [776] = true }
+
+-- {{{ local function spell_entry
+local function spell_entry(sla_r, skill)
+    local id = sla.u(sla_r, F.sla_spell)
+    local r  = spell_row[id]
+    if not r then return nil end
+    local desc, fx = describe(r)
+    local req, src = nil, "none"
+    if trainer_rank[id] then req, src = trainer_rank[id], "trainer"
+    elseif formula[id] then req, src = formula[id].rank, "recipe item"
+    elseif sla.u(sla_r, F.sla_acq) == 1 then req, src = 1, "with the skill" end
+    if skill ~= 333 and src == "trainer" and trainer_rank[id] == 0 then req = nil end
+    local reag = {}
+    for i = 0, 7 do
+        local it, n = sp.i(r, F.sp_reag + i), sp.i(r, F.sp_rcount + i)
+        if it > 0 then reag[#reag + 1] = { it, n } end
+    end
+    local made = 0
+    for e = 0, 2 do if sp.u(r, F.sp_item + e) > 0 then made = sp.u(r, F.sp_item + e) end end
+    return {
+        id = id, name = sp.s(r, F.sp_name), rank = sp.s(r, F.sp_rank), lvl = sp.u(r, F.sp_lvl),
+        req = req, src = src, yellow = sla.u(sla_r, F.sla_yellow), grey = sla.u(sla_r, F.sla_grey),
+        reag = reag, made = made, fx = fx, desc = desc, tool = sp.u(r, F.sp_tcat),
+        icon = icon_name[sp.u(r, F.sp_icon)] or "",
+    }
+end
+-- }}}
+
+local skills, skill_spells, want_items = {}, {}, {}
+for r = 0, sl.n - 1 do
+    local id, cat = sl.u(r, 0), sl.u(r, F.sl_cat)
+    if VISIBLE[cat] or EXTRA[id] or VERDICT[id] then
+        local maxv, flags, holders = 0, {}, 0
+        for _, x in ipairs(rc_by_skill[id] or {}) do
+            maxv = math.max(maxv, tier_max[rci.u(x, F.rc_tier)] or 0)
+            flags[string.format("0x%x", rci.u(x, F.rc_flags))] = true
+            holders = holders + 1
+        end
+        local fl = {}
+        for k in pairs(flags) do fl[#fl + 1] = k end
+        table.sort(fl)
+        local v = VERDICT[id]
+        local verdict, note = v and v[1], v and v[2]
+        if not verdict then
+            if cat == 11 or id == 129 or id == 185 or id == 356 or id == 762 then verdict, note = "in use", "A working profession or secondary skill."
+            elseif cat == 10 then verdict, note = "in use", "A player language."
+            elseif cat == 9 then verdict, note = "in use", "A racial skill: holds the race's passive and active abilities; no bar."
+            else verdict, note = "in use", "" end
+        end
+        local list = {}
+        for _, a in ipairs(ability_by_skill[id] or {}) do
+            local e = spell_entry(a, id)
+            if e then
+                list[#list + 1] = e
+                for _, g in ipairs(e.reag) do want_items[g[1]] = true end
+                if e.made > 0 then want_items[e.made] = true end
+            end
+        end
+        local seen, uniq = {}, {}
+        for _, e in ipairs(list) do if not seen[e.id] then seen[e.id] = true; uniq[#uniq + 1] = e end end
+        table.sort(uniq, function(a, b)
+            if a.lvl ~= b.lvl then return a.lvl < b.lvl end
+            local ra, rb = a.req or 9999, b.req or 9999
+            if ra ~= rb then return ra < rb end
+            return a.id < b.id
+        end)
+        skill_spells[tostring(id)] = uniq
+        skills[#skills + 1] = {
+            id = id, cat = cat, category = category_name[cat] or tostring(cat), name = sl.s(r, F.sl_name),
+            max = maxv, rows = holders, flags = table.concat(fl, " "), abilities = #uniq,
+            window = window_of_skill[id] or 0, verb = sl.s(r, F.sl_verb), icon = sl.u(r, F.sl_icon),
+            items = items_needing[id] or 0, trainers = trainers_of[id] or 0,
+            verdict = verdict, note = note,
+        }
+    end
+end
+table.sort(skills, function(a, b) if a.cat ~= b.cat then return a.cat > b.cat end return a.id < b.id end)
+-- }}}
+
+-- {{{ the enchanting recipe list (skill line 333), by the skill it is learned at
+local enchanting = {}
+for _, e in ipairs(skill_spells["333"]) do enchanting[#enchanting + 1] = e end
+table.sort(enchanting, function(a, b)
+    local ra, rb = a.req or 9999, b.req or 9999
+    if ra ~= rb then return ra < rb end
+    if a.yellow ~= b.yellow then return a.yellow < b.yellow end
+    return a.id < b.id
+end)
+-- }}}
+
+-- {{{ sprite candidate spells
+local sprites = {}
+for r = 0, sp.n - 1 do
+    local name = sp.s(r, F.sp_name)
+    local low  = " " .. name:lower()
+    local hit
+    for _, w in ipairs(SPRITE_WORDS) do
+        if low:find("[^%a]" .. w) then hit = w:gsub("%%", ""); break end
+    end
+    if hit then
+        local id = sp.u(r, 0)
+        local desc, fx = describe(r)
+        sprites[#sprites + 1] = {
+            id = id, name = name, rank = sp.s(r, F.sp_rank), lvl = sp.u(r, F.sp_lvl), word = hit,
+            kind = kind_of(r), fx = fx, desc = desc, icon = icon_name[sp.u(r, F.sp_icon)] or "",
+            player = (skills_of_spell[id] or trainer_rank[id]) and true or false,
+        }
+    end
+end
+table.sort(sprites, function(a, b) if a.lvl ~= b.lvl then return a.lvl < b.lvl end return a.id < b.id end)
+-- }}}
+
+-- {{{ materials, and which professions use them
+local materials = {}
+for _, c in ipairs(query("SELECT d.Item, i.name, i.ItemLevel, i.Quality, COUNT(DISTINCT d.Entry), " ..
+        "(SELECT COUNT(*) FROM item_template g WHERE g.DisenchantID IN (SELECT Entry FROM disenchant_loot_template x WHERE x.Item = d.Item)) " ..
+        "FROM disenchant_loot_template d JOIN item_template i ON i.entry = d.Item GROUP BY d.Item ORDER BY i.ItemLevel, d.Item")) do
+    local name = c[2]
+    local kind = name:find("Dust") and "dust" or name:find("Essence") and "essence" or name:find("Shard") and "shard"
+              or name:find("Crystal") and "crystal" or "other"
+    materials[#materials + 1] = { id = tonumber(c[1]), name = name, ilvl = tonumber(c[3]), quality = tonumber(c[4]),
+                                  kind = kind, tables = tonumber(c[5]), sources = tonumber(c[6]), uses = {} }
+end
+local mat_index = {}
+for i, m in ipairs(materials) do mat_index[m.id] = i end
+local CRAFTS = { 164, 165, 171, 197, 202, 333, 755, 773, 185, 129 }
+local craft_names = {}
+for _, s in ipairs(CRAFTS) do
+    for _, sk in ipairs(skills) do if sk.id == s then craft_names[tostring(s)] = sk.name end end
+    for _, e in ipairs(skill_spells[tostring(s)] or {}) do
+        for _, g in ipairs(e.reag) do
+            local i = mat_index[g[1]]
+            if i then materials[i].uses[tostring(s)] = (materials[i].uses[tostring(s)] or 0) + 1 end
+        end
+    end
+end
+-- }}}
+
+-- {{{ what "investigate" could take: herbs, leather and hides, elementals
+local investigate = {}
+for _, c in ipairs(query("SELECT entry, name, subclass, ItemLevel, RequiredSkillRank, Flags, Quality, " ..
+        "(SELECT COUNT(*) FROM milling_loot_template m WHERE m.Entry = i.entry), " ..
+        "(SELECT COUNT(*) FROM skinning_loot_template s WHERE s.Item = i.entry) " ..
+        "FROM item_template i WHERE class = 7 AND subclass IN (6, 9, 10) AND name NOT LIKE '%DEPRECATED%' " ..
+        "AND name NOT LIKE 'zz%' AND name NOT LIKE '%Test%' AND name NOT LIKE 'NPC Equip%' ORDER BY ItemLevel, entry")) do
+    local flags = tonumber(c[6])
+    investigate[#investigate + 1] = {
+        id = tonumber(c[1]), name = c[2], group = ({ ["6"] = "leather and hides", ["9"] = "herb", ["10"] = "elemental" })[c[3]],
+        ilvl = tonumber(c[4]), req = tonumber(c[5]), quality = tonumber(c[7]),
+        millable = bit.band(flags, 0x20000000) ~= 0, milled = tonumber(c[8]) > 0, skinned = tonumber(c[9]),
+    }
+end
+-- }}}
+
+-- {{{ loot tables and item flags behind the three gathering spells
+local loot = {}
+for _, t in ipairs({ "disenchant_loot_template", "prospecting_loot_template", "milling_loot_template",
+                     "skinning_loot_template", "spell_loot_template" }) do
+    local c = query("SELECT COUNT(*), COUNT(DISTINCT Entry) FROM " .. t)[1]
+    loot[#loot + 1] = { table = t, rows = tonumber(c[1]), entries = tonumber(c[2]) }
+end
+local fl = query("SELECT SUM(DisenchantID > 0), SUM((Flags & 262144) <> 0), SUM((Flags & 536870912) <> 0) FROM item_template")[1]
+local item_flags = { disenchantable = tonumber(fl[1]), prospectable = tonumber(fl[2]), millable = tonumber(fl[3]) }
+local overrides = {}
+for _, t in ipairs({ "spell_dbc", "skillline_dbc", "skilllineability_dbc", "skillraceclassinfo_dbc", "skilltiers_dbc",
+                     "spellitemenchantment_dbc", "skill_discovery_template", "spell_linked_spell", "spell_script_names" }) do
+    overrides[#overrides + 1] = { table = t, rows = tonumber(query("SELECT COUNT(*) FROM " .. t)[1][1]) }
+end
+-- }}}
+
+-- {{{ creatures whose names fit sprites (for the look of a summoned sprite)
+local creatures = {}
+for _, c in ipairs(query("SELECT entry, name, subname, minlevel, maxlevel FROM creature_template WHERE name REGEXP '" ..
+        SPRITE_WORDS_SQL .. "' AND name NOT LIKE '%DND%' AND name NOT LIKE '%Trigger%' AND name NOT LIKE '%(%' ORDER BY minlevel, entry")) do
+    creatures[#creatures + 1] = { id = tonumber(c[1]), name = c[2], sub = c[3] ~= "NULL" and c[3] or "",
+                                  min = tonumber(c[4]), max = tonumber(c[5]) }
+end
+-- }}}
+
+-- {{{ name every item the lists mention
+for _, m in ipairs(materials) do want_items[m.id] = true end
+name_items(want_items)
+local names = {}
+for id in pairs(want_items) do names[tostring(id)] = item_name[id] or ("item " .. id) end
+-- }}}
+
+-- {{{ write the page
+local counts = {
+    enchanting = #enchanting, sprites = #sprites, skills = #skills, materials = #materials,
+    investigate = #investigate, creatures = #creatures,
+}
+local data = {
+    generated = os.date("!%Y-%m-%d %H:%M UTC"), counts = counts, enchanting = enchanting, skills = skills,
+    skillSpells = skill_spells, sprites = sprites, materials = materials, crafts = craft_names,
+    investigate = investigate, loot = loot, itemFlags = item_flags, overrides = overrides,
+    creatures = creatures, items = names,
+}
+local tf = io.open(TEMPLATE, "r") or die("cannot open " .. TEMPLATE)
+local page = tf:read("*a")
+tf:close()
+local at = page:find("/*DATA*/", 1, true) or die(TEMPLATE .. " has no /*DATA*/ marker")
+local body = table.concat(json(data, {}))
+page = page:sub(1, at - 1) .. body .. page:sub(at + #"/*DATA*/")
+local of = io.open(OUT, "w") or die("cannot write " .. OUT)
+of:write(page)
+of:close()
+print(string.format("generate-crowsign-page: %d enchanting spells, %d skill lines, %d sprite-name spells, " ..
+    "%d materials, %d investigate items, %d creatures, %d KB -> %s",
+    #enchanting, #skills, #sprites, #materials, #investigate, #creatures, math.floor(#page / 1024), OUT))
+-- }}}

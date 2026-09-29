@@ -375,3 +375,116 @@ to it for two hours. There is no rush — the magic *is* the speaking, and the s
 One more verse, then she'll set it down for the night.
 
 The gem already knows.
+
+---
+
+## Second Conversation — 2026-09-26: materials, sprites, and crowsign
+
+Arrived while deciding how the basic profile's guild bank sorts gems
+(issue 617l). Kept verbatim; not scheduled ("we don't have to invest too
+much in that").
+
+> level determines purity and size, colour determines magical effects when
+> crushed into enchantments for enchanting
+>
+> enchantment should be able to enchant dusts and crystals to apply a
+> certain effect. For example an arcane crystal might be a Large Glimmering
+> Shard or similar, which is a token of raw magic infused into a
+> mineralized [constructed form, but pronounced glass].
+>
+> then they can be given to jewelcrafters.
+>
+> alternatively, the enchantments could require cut gems instead of large
+> glimmering shards
+>
+> and large glimmering shards are created from disenchanted weapons and
+> given to jewelcrafters
+>
+> enchanted dust could be given to blacksmiths and leatherworkers and
+> tailors
+>
+> tailors could make dyes and processing steps, but pronounced sops, that
+> modified the threads and gave them enchantments
+>
+> leatherworkers could make paints that never go dry and adhere to the
+> leather
+>
+> blacksmiths could forge incredibly dense minerals
+>
+> and they'd be using enchanting as a gathering profession
+>
+> can we make a secondary profession? If no, then enchanting should have
+> the ability to "investigate" the natural world via herbs and leathers and
+> hides. these could be imbued into "sprites", which are floating
+> elementals of fist-to-watermelon size. if so, then that could be the
+> profession - crowsign.
+>
+> "investigate" is equivalent to "disenchant" in the enchanting
+> profession, it would be an additional ability to enchanting if we can't
+> make our own new profession. Then, we could cast profession spells (can
+> we add new ones?) that create (like a runed copper rod) a sprite
+> inventory item. They can be enchanted with upgrades, and they apply them
+> as small HoT effects. Or similar, the fire one can light foes on fire -
+> minor DoT, just enough to feel spiny. And you can have up to four, of any
+> color.
+>
+> we can of course enchant these onto vellums, stories and tales given to
+> the spirit world.
+>
+> return from your trial with a powerful vial, when drank it will give you
+> a powerful sword.
+>
+> (doesn't create items, that's conjuration. Instead, it applies magical
+> effects to weapons and armor like... y'know, enchantments)
+
+### The shape, as read
+
+- **Enchanting becomes the gathering profession of magic.** It turns
+  gear into dust and shards (disenchant) and the natural world into
+  sprites (investigate), and hands them on: shards and crystals to
+  jewelcrafters; dust to blacksmiths (dense minerals), leatherworkers
+  (paints that never dry) and tailors (dyes and thread "sops").
+- **A gem's level is its purity and size; its colour is the magic it
+  carries** when crushed into an enchantment.
+- **Crowsign**: the name for sprite-craft, as its own secondary profession
+  if one can be added, or as enchanting's "investigate" if not. Sprites:
+  small floating elementals, carried as items, upgraded by enchanting,
+  four at most, any colours; each gives a small effect over time (a heal,
+  a spark of fire).
+
+### What the client allows (read 2026-09-26)
+
+- **A new profession**, secondary or not, is a skill line the client must
+  know (its own skill and recipe files), so it needs a client patch; basic
+  makes none. "Investigate" as a part of enchanting avoids that.
+- **New spells** are also client data (name, icon, tooltip, cast). Without
+  a client patch, new abilities reuse spells the client already has
+  (unused or retired ones), with their effect changed on the server.
+- **Items** (the sprites, the rod) can be new: the server supplies an
+  item's name, stats and icon (any icon the client has). Whether a
+  brand-new item id shows its icon everywhere in this client, without the
+  client's own item file knowing it, is untested here; the class books
+  (155q), the project's first new items, will show it once installed.
+
+---
+
+## Future exploration, 2026-09-27: the server's elements (spirit stones)
+
+The owner, verbatim ("the spirit stones are the crowsign profession. Leave
+it as future exploration."):
+
+> Also can we make the arrangement of spirit stones that players have
+> (elements) across the server is measured and depending on what
+> percentage it is, there's a scaling buff from all four elements? So if
+> like 20% are life element, then healing is delivered every few moments
+> as a blessing boon. Then the server has 40% fire we'll say, so players
+> have a chance on hit to deal extra damage, N times 10 where N is your
+> level multiplied by the spell's ppm which increases every minute until
+> it sparks, the longer it goes the more damage it deals.
+>
+> storm and earth can have haste buffs and health and resistance bonus.
+
+Parked: the crowsign spirit stones (elements) held across the server,
+measured as shares, each share scaling a server-wide boon: life, a
+periodic heal; fire, a chance on hit of extra damage that grows every
+minute until it sparks; storm, haste; earth, health and resistances.
