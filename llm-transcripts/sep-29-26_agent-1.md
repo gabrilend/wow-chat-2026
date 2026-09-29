@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-29 14:17:12
+Generated on: 2026-09-29 14:25:24
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -1084,6 +1084,101 @@ dropping it.
    plain commit, which this project's commit rule blocks. If you want it done,
    type `! touch /tmp/claude-allow-foreign-commit` and I'll make that one
    commit.
+
+--------------------------------------------------------------------------------
+
+### User Request 10
+
+here's a warning from the server logs:
+
+
+
+<pasted_content id="f3e3">
+[3065] Expression #1 of ORDER BY clause is not in SELECT list, references column
+'acore_world_basic.it.RequiredLevel' which is not in SELECT
+list; this is incompatible with DISTINCT
+Unhandled MySQL errno 3065. Unexpected behaviour possible.
+[3065] Expression #1 of ORDER BY clause is not in SELECT list, references column
+'acore_world_basic.it.RequiredLevel' which is not in SELECT
+list; this is incompatible with DISTINCT
+Unhandled MySQL errno 3065. Unexpected behaviour possible.
+mod-buddies: new buddy Mozonn for owner 502 (level 1), starting kit incomplete:
+no white gear found at vendors; no food found at vendors for
+its level; no drink found at vendors for its level; wears nothing chosen for it;
+</pasted_content id="f3e3">
+
+
+touch /tmp/claude-allow-foreign-commit
+
+done
+
+any other concerns from the basic profile we could attend to?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 10
+
+> Taking `.profile` out of git's tracking first, as its own commit:
+
+> All three queries now return rows for a level-1 buddy: 246 gear items, 53
+> food/drink items, 8 bags. Syntax-checking, then scanning the last run's server
+> log for other basic-profile problems:
+
+> The server log is clean. Summarising the error log by kind:
+
+> Vanilla's log has only the two skill-cap kinds. Everything else is new in
+> basic, so basic's own SQL is leaving loose ends. Tracing a few sample numbers
+> to the SQL that made them:
+
+> None of those numbers appear in the project's SQL. The loose ends come from
+> rows basic deletes or rewrites in bulk, so tracing them is a real
+> investigation, not a quick fix. Committing the kit fix:
+
+> Committed. Checking whether Mozonn, already created without a kit, would ever
+> get one:
+
+The kit warning is fixed and committed. Here are the other basic-profile
+concerns I found, most valuable first.
+
+**The kit fix:**
+- The gear, food/drink and bag lookups failed because they sorted by columns
+  they didn't select, which this MySQL refuses (error 3065). A new buddy got no
+  gear, food or drink; the bag lookup had the same flaw.
+- All three now return items; for a level-1 buddy that's 246 gear items, 53
+  foods and drinks, 8 bags.
+- Takes effect after your compile, and the syntax check passes.
+- **Mozonn stays bare.** The kit is only given when a buddy is created, so she
+  won't get one retroactively. The simplest route is a new buddy after the
+  compile. I could also add a way to hand her a kit; say if you want that.
+
+**`.profile` untracking:** the permission file isn't there, so the command seems
+to have gone in as chat text. Run it with the `!` prefix: `! touch
+/tmp/claude-allow-foreign-commit`.
+
+**Other basic-profile concerns:**
+
+1. **160 creatures point at a loot table that doesn't exist**, so they probably
+   drop nothing. This is the one that affects play. Vanilla's log doesn't have
+   it, so something in basic's SQL removed those tables.
+2. **About 900 more loose ends**, also new in basic:
+   - loot conditions for items no longer in the loot they belong to (333);
+   - loot pointing at shared loot lists that no longer exist (256);
+   - holiday events naming creature spawns that are gone (204);
+   - linked respawns naming a missing object (54);
+   - unused skinning loot (19).
+
+   None of the sample numbers appear in the project's SQL, so a bulk delete or
+   rewrite is leaving them behind; the loot rescaling, the Outland changes and
+   the removed portals are the likely candidates. Mostly log noise, but it hides
+   real errors, like the kit one today. Tracing it is a real investigation, and
+   I'd write an issue first.
+3. **34 quests need profession skill above 300, and 30 conditions check for
+   it.** Basic caps professions at 300, so those quests can never be done. This
+   is expected, and vanilla has it too; disabling those quests would make the
+   cap deliberate rather than a log warning.
+
+For item 1, should I trace which basic SQL removed those loot tables, starting
+with an issue file?
 
 --------------------------------------------------------------------------------
 
