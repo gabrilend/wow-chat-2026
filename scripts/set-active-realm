@@ -73,11 +73,28 @@ fi
     -u ritz -pmenardi acore_auth 2>/dev/null <<'SQL'
 INSERT IGNORE INTO realmlist (id, name, address, localAddress, localSubnetMask, port, gamebuild)
 VALUES
-  (1, 'Everland Ghostsong (release)', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
-  (2, 'Everland Ghostsong (beta)',    '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
-  (3, 'Everland Ghostsong (vanilla)', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
-  (4, 'Everland Ghostsong (alpha)',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
-  (5, 'Everland Ghostsong (basic)',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340);
+  (1, 'release', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (2, 'beta',    '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (3, 'vanilla', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (4, 'alpha',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (5, 'basic',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340);
+SQL
+# }}}
+
+# {{{ name_realms
+# Each realm is named after its profile, so the realm-select list says
+# which rules you are about to play under. The seed above only inserts
+# missing rows, so existing ones (once "Everland Ghostsong (beta)" and
+# the like) are renamed here, every launch; this script owns the names.
+"${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+    -u ritz -pmenardi acore_auth <<'SQL'
+UPDATE realmlist SET name = CASE id
+    WHEN 1 THEN 'release'
+    WHEN 2 THEN 'beta'
+    WHEN 3 THEN 'vanilla'
+    WHEN 4 THEN 'alpha'
+    WHEN 5 THEN 'basic'
+    ELSE name END;
 SQL
 # }}}
 

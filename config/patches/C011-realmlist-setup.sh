@@ -52,7 +52,6 @@ config_realmlist_setup() {
     fi
 
     # Realm configuration
-    local REALM_NAME="Everland Ghostsong"
     local REALM_ADDRESS="wow.ritzmenardi.com"
     local REALM_LOCAL="127.0.0.1"
     local REALM_PORT=4462
@@ -71,12 +70,12 @@ config_realmlist_setup() {
 -- The old 'WHERE id = 1' left the beta/vanilla/alpha rows on 127.0.0.1, so a
 -- remote player could reach auth but was handed 127.0.0.1 for the world server
 -- and could not enter. Names and the online flag are managed elsewhere (the
--- set-active-realm seed + flip); id=1 keeps the unsuffixed public brand name.
+-- set-active-realm seed + flip). Every realm is named after its profile
+-- there; this patch used to rename id=1 "Everland Ghostsong" each install.
 UPDATE realmlist SET
     address = '${REALM_ADDRESS}',
     localAddress = '${REALM_LOCAL}',
     port = ${REALM_PORT};
-UPDATE realmlist SET name = '${REALM_NAME}' WHERE id = 1;
 EOF
 )
     local MYSQL_RC=$?
