@@ -1,0 +1,30 @@
+#!/bin/bash
+# test-roam-pattern - hold both implementations of the roaming pattern to
+# the pattern (docs/roaming-pattern.md).
+#
+# For a general audience: the buddies' roaming is written twice, once in
+# Lua (the model the GIFs and the server's C++ are checked against) and once
+# in JavaScript (the playable scenes in the gallery). This runs the same
+# seeded situations through both and compares what the pattern document
+# says must agree: the dungeon's map and walkable cells, the eight sensing
+# sectors' kinds and reach at 300 points, and the owner's waypoint rule at
+# 600 buddy states. It does not compare how either stores things.
+#
+# Usage: scripts/test-roam-pattern [PROJECT_DIR]
+#   Needs gjs (JavaScript) and luajit. Light: a few seconds of one core.
+DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+TMPD="${DIR}/tmp/shared-memory"
+mkdir -p "${TMPD}"
+JSOUT="${TMPD}/roam-pattern-js.txt"
+
+echo "test-roam-pattern: JavaScript (gjs) and Lua (luajit) on the same situations"
+if ! gjs "${DIR}/tests/roam-pattern/js-side.js" "${DIR}" > "${JSOUT}"; then
+    echo "FAIL: the JavaScript half did not run (see above); nothing compared"
+    exit 1
+fi
+if luajit "${DIR}/tests/roam-pattern/lua-side.lua" "${DIR}" "${JSOUT}"; then
+    echo "PASS: both implementations agree with each other on what the pattern fixes"
+else
+    echo "FAIL: the implementations disagree (listed above)"
+    exit 1
+fi

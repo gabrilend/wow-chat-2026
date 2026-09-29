@@ -1,0 +1,82 @@
+#!/usr/bin/env luajit
+-- generate-barrens-page - the zoomable Barrens page: the whole zone live in
+-- the browser, magnified where the mouse points (issue 617e7).
+--
+-- For a general audience: the zone-scale GIF shows thirty players and
+-- their buddies across all of The Barrens, but at that distance a person
+-- is a dot of five pixels. The owner's fallback (2026-09-28): "a
+-- dynamically zoomable widget interface hooked up to our data model [...]
+-- zoom supreme commander style, where the camera magnifies what's at the
+-- mouse's area coordinates." This tool takes the same data file the GIF
+-- uses (assets/barrens/barrens-data.lua, made by scripts/
+-- generate-barrens-data), turns it into compact JSON, and pours it into
+-- the page template, whose script runs the same simulation live in the
+-- browser. The page is self-contained (the published host runs only
+-- scripts from a few approved sources, so the script is inside the page).
+--
+-- Usage: scripts/generate-barrens-page [PROJECT_DIR]
+--   Reads   assets/barrens/barrens-data.lua
+--           scripts/templates/barrens-zone.html (the page; /*BARRENS_DATA*/ marks the data)
+--   Writes  docs/HTML/barrens-zone.html (beside docs/HTML/barrens/barrens-zone.gif)
+
+local DIR  = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local D    = dofile(DIR .. "/assets/barrens/barrens-data.lua")
+local TPL  = DIR .. "/scripts/templates/barrens-zone.html"
+local OUT  = DIR .. "/docs/HTML/barrens-zone.html"
+
+-- {{{ local function json
+-- A small JSON writer for the data's shapes (numbers, strings, booleans,
+-- arrays, objects with string keys). Numbers keep one decimal.
+local function json(v)
+    local t = type(v)
+    if t == "number" then
+        if v == math.floor(v) then return string.format("%d", v) end
+        return string.format("%.1f", v)
+    elseif t == "string" then
+        return '"' .. v:gsub('[%c"\\]', function(ch) return string.format("\\u%04x", ch:byte()) end) .. '"'
+    elseif t == "boolean" then return v and "true" or "false"
+    elseif t == "table" then
+        if #v > 0 or next(v) == nil then
+            local parts = {}
+            for i = 1, #v do parts[i] = json(v[i]) end
+            return "[" .. table.concat(parts, ",") .. "]"
+        end
+        local keys = {}
+        for k in pairs(v) do keys[#keys + 1] = k end
+        table.sort(keys, function(a, b) return tostring(a) < tostring(b) end)
+        local parts = {}
+        for _, k in ipairs(keys) do parts[#parts + 1] = json(tostring(k)) .. ":" .. json(v[k]) end
+        return "{" .. table.concat(parts, ",") .. "}"
+    end
+    error("generate-barrens-page: can't write a " .. t .. " as JSON")
+end
+-- }}}
+
+-- {{{ the compact data
+-- area: rows joined into one flat array (row-major); mobs: flat arrays of
+-- x, y, level, elite (0/1), respawn, area, six numbers each.
+local flat = {}
+for r = 1, #D.area do for c = 1, #D.area[r] do flat[#flat + 1] = D.area[r][c] end end
+local mobs = {}
+for _, m in ipairs(D.mobs) do
+    mobs[#mobs + 1] = m.x; mobs[#mobs + 1] = m.y; mobs[#mobs + 1] = m.level
+    mobs[#mobs + 1] = m.elite and 1 or 0; mobs[#mobs + 1] = m.respawn; mobs[#mobs + 1] = m.area
+end
+local areas = {}
+for id, a in pairs(D.areas) do areas[tostring(id)] = { name = a.name, x = a.x, y = a.y, squares = a.squares } end
+local towns = {}
+for i, t in ipairs(D.towns) do towns[i] = { id = t.id, name = t.name, x = t.x, y = t.y, r = t.r } end
+local data = json({ zone = D.zone, X0 = D.X0, Y0 = D.Y0, rows = #D.area, cols = #D.area[1],
+                    area = flat, areas = areas, towns = towns, mobs = mobs, db = D.db })
+-- }}}
+
+-- {{{ fill the template
+local f = assert(io.open(TPL)); local page = f:read("*a"); f:close()
+local a, b = page:find("/*BARRENS_DATA*/", 1, true)
+assert(a, "generate-barrens-page: the template has no /*BARRENS_DATA*/ mark")
+assert(not data:find("</script", 1, true), "generate-barrens-page: the data would end the script block early")
+page = page:sub(1, a - 1) .. data .. page:sub(b + 1)
+local o = assert(io.open(OUT, "w")); o:write(page); o:close()
+print(string.format("generate-barrens-page: %d squares, %d places, %d towns, %d monsters; page %d bytes -> %s",
+    #flat, (function() local n = 0 for _ in pairs(areas) do n = n + 1 end return n end)(), #towns, #D.mobs, #page, OUT))
+-- }}}

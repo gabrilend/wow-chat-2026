@@ -1,0 +1,315 @@
+#!/usr/bin/env luajit
+-- generate-barrens-data - The Barrens as plain data: its ground squares,
+-- sub-areas, Horde towns and the monsters that live there (issue 617e7).
+--
+-- For a general audience: the owner wants to watch players and buddies
+-- roam a whole zone, drawn from above. The drawing needs to know where the
+-- zone is, how it divides into named places (the Crossroads, the Stagnant
+-- Oasis ...), where the towns are, and where the monsters stand. This tool
+-- gathers all of that once, from the same files and database the server
+-- uses, and writes it into one data file; the drawing tool
+-- (scripts/generate-barrens-gif) reads only that file.
+--
+-- Sources:
+--   the server's map files (data-files/maps/001XXYY.map): each ~33-yard
+--     square's area label and ground height;
+--   the client's area table (data-files/dbc/AreaTable.dbc): area names and
+--     which area is inside which (a sub-area's parent chain reaches zone 17);
+--   the client's faction table (FactionTemplate.dbc): who is hostile to a
+--     Horde player;
+--   the world database (MySQL, project instance, port 3307): creature spawns
+--     and templates. The installed world database with the most creatures
+--     in the zone is used (acore_world_release, measured 2026-09-28: 8487
+--     spawns in the zone's box against 8485 vanilla and ~530 in the emptied
+--     beta databases); DB_NAME below says which.
+--
+-- Usage: scripts/generate-barrens-data [PROJECT_DIR]
+--   Writes assets/barrens/barrens-data.lua
+
+local ffi = require("ffi")
+
+local DIR     = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local MAPS    = DIR .. "/data-files/maps"
+local DBC     = DIR .. "/data-files/dbc"
+local OUT     = DIR .. "/assets/barrens/barrens-data.lua"
+local MYSQL   = DIR .. "/mysql/installed-files/bin/mysql"
+local DB_NAME = "acore_world_release"
+
+local MAP_ID, ZONE_ID = 1, 17                       -- Kalimdor, The Barrens
+local TOWNS = { 380, 392, 378 }                     -- The Crossroads, Ratchet, Camp Taurajo
+local HORDE_PLAYER_TEMPLATE = 2                     -- orc players' faction template
+local CRITTER_TYPE = 8                              -- creature_template.type
+
+-- {{{ map file format (see scripts/generate-buddy-area-centres for the full note)
+local SIZE_OF_GRIDS = 533.3333
+local SQUARE        = SIZE_OF_GRIDS / 16
+ffi.cdef [[
+typedef struct { uint32_t magic, version, build, areaOffset, areaSize, heightOffset, heightSize,
+                 liquidOffset, liquidSize, holesOffset, holesSize; } bar_map_header;
+typedef struct { uint32_t fourcc; uint16_t flags; uint16_t gridArea; } bar_area_header;
+typedef struct { uint32_t fourcc; uint32_t flags; float gridHeight; float gridMaxHeight; } bar_height_header;
+]]
+local MAP_AREA_NO_AREA, MAP_HEIGHT_NO_HEIGHT, MAP_HEIGHT_AS_INT16, MAP_HEIGHT_AS_INT8 = 1, 1, 2, 4
+-- a square's (X, Y) index and its world middle: X grows southward (world x
+-- falls), Y grows eastward (world y falls); so drawn top-down with north up,
+-- X is the row and Y the column
+local function square_middle(X, Y)
+    return (32 - (X + 0.5) / 16) * SIZE_OF_GRIDS, (32 - (Y + 0.5) / 16) * SIZE_OF_GRIDS
+end
+-- }}}
+
+-- {{{ local function read_dbc
+-- A WDBC file: records of 4-byte fields and a string block.
+local function read_dbc(path)
+    local f = assert(io.open(path, "rb"), "generate-barrens-data: cannot open " .. path)
+    local d = f:read("*a"); f:close()
+    assert(d:sub(1, 4) == "WDBC", "generate-barrens-data: " .. path .. " is not a WDBC file")
+    local p = ffi.cast("const uint8_t*", d)
+    local h = ffi.cast("const uint32_t*", p)
+    local recs, size = h[1], h[3]
+    local base, sbase = 20, 20 + h[1] * h[3]
+    return {
+        recs = recs, keep = d,
+        u = function(r, i) return ffi.cast("const uint32_t*", p + base + r * size + i * 4)[0] end,
+        s = function(r, i) return ffi.string(p + sbase + ffi.cast("const uint32_t*", p + base + r * size + i * 4)[0]) end,
+    }
+end
+-- }}}
+
+-- {{{ the areas: names, parents, which belong to the zone
+local area_name, area_parent = {}, {}
+do
+    local t = read_dbc(DBC .. "/AreaTable.dbc")
+    for r = 0, t.recs - 1 do
+        local id = t.u(r, 0)
+        area_parent[id], area_name[id] = t.u(r, 2), t.s(r, 11)
+    end
+end
+local function in_zone(id)
+    local seen = 0
+    while id and id ~= 0 and seen < 16 do
+        if id == ZONE_ID then return true end
+        id, seen = area_parent[id], seen + 1
+    end
+    return false
+end
+-- }}}
+
+-- {{{ the squares: area label and height of every Barrens square
+local squares = {}                                  -- key X * 1024 + Y -> { area, h }
+local files_read = 0
+do
+    local ls = io.popen(string.format("ls '%s' | grep '^%03d[0-9][0-9][0-9][0-9]\\.map$'", MAPS, MAP_ID))
+    for name in ls:lines() do
+        local gx, gy = tonumber(name:sub(4, 5)), tonumber(name:sub(6, 7))
+        local f = assert(io.open(MAPS .. "/" .. name, "rb"))
+        local data = f:read("*a"); f:close()
+        files_read = files_read + 1
+        local p = ffi.cast("const uint8_t*", data)
+        local mh = ffi.cast("const bar_map_header*", p)
+        assert(mh.magic == 0x5350414D and mh.version == 9, "generate-barrens-data: " .. name .. " is not a version-9 map file")
+        -- area labels
+        local labels = {}
+        if mh.areaOffset ~= 0 then
+            local ah = ffi.cast("const bar_area_header*", p + mh.areaOffset)
+            assert(ah.fourcc == 0x41455241, "generate-barrens-data: " .. name .. " area section has no AREA mark")
+            if bit.band(ah.flags, MAP_AREA_NO_AREA) ~= 0 then
+                for i = 0, 255 do labels[i] = ah.gridArea end
+            else
+                local ids = ffi.cast("const uint16_t*", p + mh.areaOffset + ffi.sizeof("bar_area_header"))
+                for i = 0, 255 do labels[i] = ids[i] end
+            end
+        end
+        -- heights: the V9 point nearest each square's middle (the V9 grid is
+        -- 129 x 129 points a grid, 8 points a square; index lx*8+4)
+        local height_at
+        if mh.heightOffset ~= 0 then
+            local hh = ffi.cast("const bar_height_header*", p + mh.heightOffset)
+            local v = p + mh.heightOffset + ffi.sizeof("bar_height_header")
+            if bit.band(hh.flags, MAP_HEIGHT_NO_HEIGHT) ~= 0 then
+                height_at = function() return hh.gridHeight end
+            elseif bit.band(hh.flags, MAP_HEIGHT_AS_INT16) ~= 0 then
+                local a, m = ffi.cast("const uint16_t*", v), (hh.gridMaxHeight - hh.gridHeight) / 65535
+                height_at = function(i) return hh.gridHeight + a[i] * m end
+            elseif bit.band(hh.flags, MAP_HEIGHT_AS_INT8) ~= 0 then
+                local a, m = ffi.cast("const uint8_t*", v), (hh.gridMaxHeight - hh.gridHeight) / 255
+                height_at = function(i) return hh.gridHeight + a[i] * m end
+            else
+                local a = ffi.cast("const float*", v)
+                height_at = function(i) return a[i] end
+            end
+        end
+        for lx = 0, 15 do
+            for ly = 0, 15 do
+                local id = labels[lx * 16 + ly]
+                if id and id ~= 0 and in_zone(id) then
+                    local h = height_at and height_at((lx * 8 + 4) * 129 + (ly * 8 + 4)) or 0
+                    squares[(gx * 16 + lx) * 1024 + gy * 16 + ly] = { area = id, h = h }
+                end
+            end
+        end
+    end
+    ls:close()
+end
+-- }}}
+
+-- {{{ the grid box and per-area middles
+local X0, X1, Y0, Y1 = math.huge, -math.huge, math.huge, -math.huge
+local areas, nsq = {}, 0
+for key, s in pairs(squares) do
+    local X, Y = math.floor(key / 1024), key % 1024
+    X0, X1, Y0, Y1 = math.min(X0, X), math.max(X1, X), math.min(Y0, Y), math.max(Y1, Y)
+    local a = areas[s.area] or { id = s.area, name = area_name[s.area] or ("area " .. s.area), n = 0, sx = 0, sy = 0 }
+    local mx, my = square_middle(X, Y)
+    a.n, a.sx, a.sy = a.n + 1, a.sx + mx, a.sy + my
+    areas[s.area] = a
+    nsq = nsq + 1
+end
+assert(nsq > 0, "generate-barrens-data: no square of zone " .. ZONE_ID .. " found in " .. MAPS)
+-- the middle: the average of the area's squares, moved to its nearest own
+-- square if the average lands elsewhere (as the buddy area table does)
+for id, a in pairs(areas) do
+    local cx, cy = a.sx / a.n, a.sy / a.n
+    local X = math.floor(16 * (32 - cx / SIZE_OF_GRIDS))
+    local Y = math.floor(16 * (32 - cy / SIZE_OF_GRIDS))
+    local s = squares[X * 1024 + Y]
+    if not s or s.area ~= id then
+        local best, bd
+        for key, q in pairs(squares) do
+            if q.area == id then
+                local mx, my = square_middle(math.floor(key / 1024), key % 1024)
+                local d = (mx - cx) ^ 2 + (my - cy) ^ 2
+                if not bd or d < bd then best, bd = { mx, my }, d end
+            end
+        end
+        cx, cy = best[1], best[2]
+    end
+    a.cx, a.cy = cx, cy
+end
+-- }}}
+
+-- {{{ the towns
+local towns = {}
+for _, id in ipairs(TOWNS) do
+    local a = areas[id]
+    assert(a, string.format("generate-barrens-data: town area %d (%s) has no square in the zone", id, area_name[id] or "?"))
+    -- radius: the circle holding the town's squares' area (sqrt(n / pi) squares)
+    towns[#towns + 1] = { id = id, name = a.name, x = a.cx, y = a.cy, r = math.sqrt(a.n / math.pi) * SQUARE }
+end
+-- }}}
+
+-- {{{ the monsters (MySQL)
+-- Hostile to a Horde player by the faction table's own rule
+-- (FactionTemplateEntry::IsHostileTo against template 2): a named enemy
+-- faction, else the hostile mask meeting the player's own mask.
+local hostile = {}
+do
+    local t = read_dbc(DBC .. "/FactionTemplate.dbc")
+    local rows = {}
+    for r = 0, t.recs - 1 do
+        local e = { faction = t.u(r, 1), our = t.u(r, 3), hostile = t.u(r, 5), enemies = {}, friends = {} }
+        for i = 0, 3 do e.enemies[i + 1], e.friends[i + 1] = t.u(r, 6 + i), t.u(r, 10 + i) end
+        rows[t.u(r, 0)] = e
+    end
+    local horde = assert(rows[HORDE_PLAYER_TEMPLATE], "generate-barrens-data: faction template 2 missing")
+    for id, e in pairs(rows) do
+        local h = bit.band(e.hostile, horde.our) ~= 0
+        for i = 1, 4 do
+            if e.friends[i] ~= 0 and e.friends[i] == horde.faction then h = false end
+            if e.enemies[i] ~= 0 and e.enemies[i] == horde.faction then h = true end
+        end
+        hostile[id] = h
+    end
+end
+
+local mobs, skipped = {}, { outside = 0, friendly = 0, critter = 0, service = 0 }
+do
+    local x0 = (32 - (X1 + 1) / 16) * SIZE_OF_GRIDS
+    local x1 = (32 - X0 / 16) * SIZE_OF_GRIDS
+    local y0 = (32 - (Y1 + 1) / 16) * SIZE_OF_GRIDS
+    local y1 = (32 - Y0 / 16) * SIZE_OF_GRIDS
+    local q = string.format(
+        "SELECT c.position_x, c.position_y, c.position_z, t.entry, t.minlevel, t.maxlevel, t.faction, t.type, t.npcflag, t.rank, c.spawntimesecs, t.name "
+        .. "FROM %s.creature c JOIN %s.creature_template t ON t.entry = c.id1 "
+        .. "WHERE c.map = %d AND c.position_x BETWEEN %.1f AND %.1f AND c.position_y BETWEEN %.1f AND %.1f",
+        DB_NAME, DB_NAME, MAP_ID, x0, x1, y0, y1)
+    local cmd = string.format("MYSQL_PWD=menardi '%s' -h127.0.0.1 -P3307 -uritz -N -B -e \"%s\"", MYSQL, q)
+    local p = assert(io.popen(cmd))
+    local n = 0
+    for line in p:lines() do
+        n = n + 1
+        local f = {}
+        for v in (line .. "\t"):gmatch("([^\t]*)\t") do f[#f + 1] = v end
+        local x, y, z = tonumber(f[1]), tonumber(f[2]), tonumber(f[3])
+        local X = math.floor(16 * (32 - x / SIZE_OF_GRIDS))
+        local Y = math.floor(16 * (32 - y / SIZE_OF_GRIDS))
+        local s = squares[X * 1024 + Y]
+        -- what each filter keeps out: outside the zone's squares (the box
+        -- holds neighbours); critters; anyone offering a service (npcflag:
+        -- vendors, trainers, flight masters, quest givers); anyone not
+        -- hostile to a Horde player (guards, Horde towns, neutral beasts)
+        if not s then skipped.outside = skipped.outside + 1
+        elseif tonumber(f[8]) == CRITTER_TYPE then skipped.critter = skipped.critter + 1
+        elseif tonumber(f[9]) ~= 0 then skipped.service = skipped.service + 1
+        elseif not hostile[tonumber(f[7])] then skipped.friendly = skipped.friendly + 1
+        else
+            local lo, hi = tonumber(f[5]), tonumber(f[6])
+            mobs[#mobs + 1] = { x = x, y = y, z = z, entry = tonumber(f[4]), level = math.floor((lo + hi) / 2),
+                                elite = tonumber(f[10]) > 0, respawn = tonumber(f[11]), area = s.area, name = f[12] }
+        end
+    end
+    local ok = p:close()
+    assert(n > 0, "generate-barrens-data: the creature query returned nothing (is MySQL running? ./scripts/start-mysql)")
+end
+-- }}}
+
+-- {{{ write
+os.execute("mkdir -p '" .. DIR .. "/assets/barrens'")
+local out = {}
+local function w(s) out[#out + 1] = s end
+w("-- assets/barrens/barrens-data.lua - GENERATED by scripts/generate-barrens-data; don't edit.\n")
+w("-- The Barrens (map 1, zone 17): squares, sub-areas, Horde towns, hostile monsters (issue 617e7).\n")
+w(string.format("-- Sources: data-files/maps (%d map files read), AreaTable.dbc, FactionTemplate.dbc, %s.\n", files_read, DB_NAME))
+w("-- Grid: X rows (southward), Y columns (eastward); square = 533.3333/16 yards; area 0 = not the zone.\n")
+w("return {\n")
+w(string.format("  map = %d, zone = %d, db = %q, square = %.6f,\n", MAP_ID, ZONE_ID, DB_NAME, SQUARE))
+w(string.format("  X0 = %d, X1 = %d, Y0 = %d, Y1 = %d,\n", X0, X1, Y0, Y1))
+-- the grid rows as strings of area ids and heights, row by row
+w("  area = {\n")
+for X = X0, X1 do
+    local row = {}
+    for Y = Y0, Y1 do local s = squares[X * 1024 + Y]; row[#row + 1] = s and s.area or 0 end
+    w("    {" .. table.concat(row, ",") .. "},\n")
+end
+w("  },\n  height = {\n")
+for X = X0, X1 do
+    local row = {}
+    for Y = Y0, Y1 do local s = squares[X * 1024 + Y]; row[#row + 1] = s and string.format("%.0f", s.h) or 0 end
+    w("    {" .. table.concat(row, ",") .. "},\n")
+end
+w("  },\n  areas = {\n")
+local ids = {}
+for id in pairs(areas) do ids[#ids + 1] = id end
+table.sort(ids)
+for _, id in ipairs(ids) do
+    local a = areas[id]
+    w(string.format("    [%d] = { name = %q, squares = %d, x = %.1f, y = %.1f },\n", id, a.name, a.n, a.cx, a.cy))
+end
+w("  },\n  towns = {\n")
+for _, t in ipairs(towns) do
+    w(string.format("    { id = %d, name = %q, x = %.1f, y = %.1f, r = %.1f },\n", t.id, t.name, t.x, t.y, t.r))
+end
+w("  },\n  mobs = {\n")
+for _, m in ipairs(mobs) do
+    w(string.format("    { x = %.1f, y = %.1f, z = %.1f, entry = %d, level = %d, elite = %s, respawn = %d, area = %d, name = %q },\n",
+        m.x, m.y, m.z, m.entry, m.level, tostring(m.elite), m.respawn, m.area, m.name))
+end
+w("  },\n}\n")
+local f = assert(io.open(OUT, "w")); f:write(table.concat(out)); f:close()
+
+print(string.format("generate-barrens-data: %d squares (%d x %d box), %d sub-areas, %d towns, %d hostile monsters -> %s",
+    nsq, X1 - X0 + 1, Y1 - Y0 + 1, #ids, #towns, #mobs, OUT))
+print(string.format("  database %s; creatures left out: %d outside the zone's squares, %d critters, %d offering a service, %d not hostile to the Horde",
+    DB_NAME, skipped.outside, skipped.critter, skipped.service, skipped.friendly))
+for _, t in ipairs(towns) do print(string.format("  town %-18s middle (%.0f, %.0f), radius %.0f yd", t.name, t.x, t.y, t.r)) end
+-- }}}

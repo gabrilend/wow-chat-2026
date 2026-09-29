@@ -1,0 +1,361 @@
+#!/usr/bin/env luajit
+-- generate-buddy-area-centres - every named area's borders and middle, read
+-- once from the server's map files, for the buddies' roaming (issue 617e2).
+--
+-- For a general audience: buddies circle the middle of the named area their
+-- owner is in (Fargodeep Mine, say). The game has no list of where each
+-- area begins and ends; what it has is the map files the server loads, in
+-- which the ground of every map is cut into squares about 33 yards across,
+-- each labelled with the area it belongs to. This tool reads those labels
+-- for every map, gathers each area's squares, and writes down the area's
+-- borders (the outermost squares on each side), how many squares it has,
+-- and its middle, as rows of a small table the server loads at startup. So
+-- the middle is worked out once, when the server is installed, instead of
+-- being searched for in game (the owner, 2026-09-27: "we should find the
+-- borders of the area, then calculate it's rough center from that [...] We
+-- could even pre-calculate the midpoints at compile time").
+--
+-- An area can lie in several separate places on one map (a mine with two
+-- entrances drawn apart, a road's name used twice); each separate place is
+-- its own row ("piece"), largest first, so a buddy circles the piece its
+-- owner stands in, not a point between two of them.
+--
+-- The work is split by map across one process per processor (the map files
+-- are independent until the rows are gathered).
+--
+-- Usage: scripts/generate-buddy-area-centres [PROJECT_DIR]
+--   Reads   data-files/maps/*.map (the server's map files)
+--           data-files/dbc/AreaTable.dbc (area names, for the comments)
+--   Writes  sql/basic/db_world.src/27-buddy-area-centres.apply.sql
+--           sql/basic/db_world.src/27-buddy-area-centres.revert.sql
+--   (internally: --worker DIR MAPID... reads those maps and prints rows)
+
+local ffi = require("ffi")
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local WORKER = false
+local WORKER_MAPS = {}
+if arg[1] == "--worker" then
+    WORKER, DIR = true, arg[2]
+    for i = 3, #arg do WORKER_MAPS[#WORKER_MAPS + 1] = tonumber(arg[i]) end
+elseif arg[1] then
+    DIR = arg[1]
+end
+local MAPS_DIR = DIR .. "/data-files/maps"
+local OUT_APPLY  = DIR .. "/sql/basic/db_world.src/27-buddy-area-centres.apply.sql"
+local OUT_REVERT = DIR .. "/sql/basic/db_world.src/27-buddy-area-centres.revert.sql"
+
+-- {{{ the map file format
+-- As the server reads it (source-beta: src/server/game/Grids/GridTerrainData
+-- .h/.cpp, written by src/tools/map_extractor):
+--   file name   MMMXXYY.map: map id, grid x, grid y (GridTerrainLoader.cpp)
+--   header      11 x uint32: "MAPS", version 9, build, then offset and size
+--               of the area, height, liquid and holes sections
+--   area        "AREA", uint16 flags, uint16 gridArea; unless flags has
+--               MAP_AREA_NO_AREA (1: the whole grid is gridArea), 16 x 16
+--               uint16 area ids, index lx * 16 + ly
+-- A grid is 533.3333 yards (SIZE_OF_GRIDS); 64 x 64 grids a map, the middle
+-- one at world 0, 0. GridTerrainData::getArea turns a world point into a
+-- square: X = 16 * (32 - x / 533.3333), lx = X & 15, and the same for y.
+-- So square (gx * 16 + lx, gy * 16 + ly) runs, in world x, from
+-- (32 - (X + 1) / 16) * 533.3333 to (32 - X / 16) * 533.3333: x falls as X
+-- grows.
+local SIZE_OF_GRIDS = 533.3333
+local SQUARE        = SIZE_OF_GRIDS / 16            -- about 33.3 yards
+local MAP_AREA_NO_AREA = 1
+local MAGIC_MAPS = 0x5350414D                      -- "MAPS" little-endian
+local MAGIC_AREA = 0x41455241                      -- "AREA"
+local VERSION    = 9
+
+ffi.cdef [[
+typedef struct { uint32_t magic, version, build, areaOffset, areaSize, heightOffset, heightSize,
+                 liquidOffset, liquidSize, holesOffset, holesSize; } map_header;
+typedef struct { uint32_t fourcc; uint16_t flags; uint16_t gridArea; } area_header;
+]]
+
+-- the world position of the middle of square (X, Y)
+local function square_middle(X, Y)
+    return (32 - (X + 0.5) / 16) * SIZE_OF_GRIDS, (32 - (Y + 0.5) / 16) * SIZE_OF_GRIDS
+end
+-- }}}
+
+-- {{{ local function read_grid
+-- One map file's area labels into `squares` (key X * 1024 + Y -> area id).
+-- A file that isn't a map file of this version is an error naming it: the
+-- rows would be wrong otherwise.
+local function read_grid(path, gx, gy, squares)
+    local f = assert(io.open(path, "rb"), "cannot open " .. path)
+    local head = f:read(ffi.sizeof("map_header"))
+    local h = ffi.cast("const map_header*", head)
+    if #head < ffi.sizeof("map_header") or h.magic ~= MAGIC_MAPS or h.version ~= VERSION then
+        f:close()
+        error(string.format("%s: not a version-%d map file (magic %08x, version %d)", path, VERSION, h.magic, h.version))
+    end
+    if h.areaOffset == 0 then f:close() return end  -- no area section: nothing labelled here
+    f:seek("set", h.areaOffset)
+    local ah_raw = f:read(ffi.sizeof("area_header"))
+    local ah = ffi.cast("const area_header*", ah_raw)
+    if ah.fourcc ~= MAGIC_AREA then
+        f:close()
+        error(string.format("%s: area section at %d has no AREA mark", path, h.areaOffset))
+    end
+    -- whole grid one area, or 256 labels
+    if bit.band(ah.flags, MAP_AREA_NO_AREA) ~= 0 then
+        if ah.gridArea ~= 0 then
+            for lx = 0, 15 do for ly = 0, 15 do squares[(gx * 16 + lx) * 1024 + gy * 16 + ly] = ah.gridArea end end
+        end
+    else
+        local raw = f:read(512)
+        local ids = ffi.cast("const uint16_t*", raw)
+        for lx = 0, 15 do
+            for ly = 0, 15 do
+                local id = ids[lx * 16 + ly]
+                if id ~= 0 then squares[(gx * 16 + lx) * 1024 + gy * 16 + ly] = id end
+            end
+        end
+    end
+    f:close()
+end
+-- }}}
+
+-- {{{ local function pieces_of_map
+-- All squares of one map, grouped by area into separate pieces (squares
+-- touching side to side, across grid borders too), each with its borders,
+-- count and middle. Rows are printed as tab-separated numbers.
+--
+-- The middle is the average of the piece's square middles, not the middle
+-- of its borders: "find the borders [...] calculate it's rough center from
+-- that" asks for a rough centre, and the borders' middle of an L-shaped or
+-- crescent area can fall outside it, where no buddy can walk; the average
+-- sits in the area's bulk. If even the average falls on a square of another
+-- area (a ring-shaped area), the middle moves to the piece's square nearest
+-- it, so the middle always stands in the area (marked, `moved`).
+local function pieces_of_map(map, out)
+    local squares = {}
+    local handle = io.popen(string.format("ls '%s' | grep '^%03d[0-9][0-9][0-9][0-9]\\.map$'", MAPS_DIR, map))
+    for name in handle:lines() do
+        local gx, gy = tonumber(name:sub(4, 5)), tonumber(name:sub(6, 7))
+        read_grid(MAPS_DIR .. "/" .. name, gx, gy, squares)
+    end
+    handle:close()
+
+    local seen = {}
+    local by_area = {}                              -- area -> list of pieces
+    for key, area in pairs(squares) do
+        if not seen[key] then
+            -- flood the piece this square starts
+            local stack, cells = { key }, {}
+            seen[key] = true
+            while #stack > 0 do
+                local k = table.remove(stack)
+                cells[#cells + 1] = k
+                local X, Y = math.floor(k / 1024), k % 1024
+                for _, n in ipairs({ { X + 1, Y }, { X - 1, Y }, { X, Y + 1 }, { X, Y - 1 } }) do
+                    if n[1] >= 0 and n[1] < 1024 and n[2] >= 0 and n[2] < 1024 then
+                        local nk = n[1] * 1024 + n[2]
+                        if not seen[nk] and squares[nk] == area then seen[nk] = true; stack[#stack + 1] = nk end
+                    end
+                end
+            end
+            by_area[area] = by_area[area] or {}
+            table.insert(by_area[area], cells)
+        end
+    end
+
+    for area, list in pairs(by_area) do
+        table.sort(list, function(a, b) return #a > #b end)   -- largest piece first
+        for piece, cells in ipairs(list) do
+            local sx, sy = 0, 0
+            local minx, maxx, miny, maxy = math.huge, -math.huge, math.huge, -math.huge
+            for _, k in ipairs(cells) do
+                local X, Y = math.floor(k / 1024), k % 1024
+                local mx, my = square_middle(X, Y)
+                sx, sy = sx + mx, sy + my
+                -- each square's own edges, half a square either side of its middle
+                minx, maxx = math.min(minx, mx - SQUARE / 2), math.max(maxx, mx + SQUARE / 2)
+                miny, maxy = math.min(miny, my - SQUARE / 2), math.max(maxy, my + SQUARE / 2)
+            end
+            local cx, cy = sx / #cells, sy / #cells
+            -- the square under the average: the same area, or move to the nearest of the piece's
+            local X = math.floor(16 * (32 - cx / SIZE_OF_GRIDS))
+            local Y = math.floor(16 * (32 - cy / SIZE_OF_GRIDS))
+            local moved = 0
+            if squares[X * 1024 + Y] ~= area then
+                local best, bd
+                for _, k in ipairs(cells) do
+                    local mx, my = square_middle(math.floor(k / 1024), k % 1024)
+                    local d = (mx - cx) ^ 2 + (my - cy) ^ 2
+                    if not bd or d < bd then best, bd = { mx, my }, d end
+                end
+                cx, cy, moved = best[1], best[2], 1
+            end
+            out[#out + 1] = string.format("%d\t%d\t%d\t%.1f\t%.1f\t%.1f\t%.1f\t%d\t%.1f\t%.1f\t%d",
+                map, area, piece, minx, maxx, miny, maxy, #cells, cx, cy, moved)
+        end
+    end
+end
+-- }}}
+
+-- {{{ worker
+if WORKER then
+    local out = {}
+    for _, map in ipairs(WORKER_MAPS) do pieces_of_map(map, out) end
+    io.write(table.concat(out, "\n"), #out > 0 and "\n" or "")
+    os.exit(0)
+end
+-- }}}
+
+-- {{{ local function area_names
+-- AreaTable.dbc: id -> name (field 11, the English name), for the SQL's
+-- comments only.
+local function area_names()
+    local f = assert(io.open(DIR .. "/data-files/dbc/AreaTable.dbc", "rb"))
+    local d = f:read("*a"); f:close()
+    local p = ffi.cast("const uint8_t*", d)
+    local h = ffi.cast("const uint32_t*", p)
+    assert(ffi.string(p, 4) == "WDBC", "AreaTable.dbc is not a DBC file")
+    local recs, size = h[1], h[3]
+    local sbase = 20 + recs * size
+    local names = {}
+    for r = 0, recs - 1 do
+        local row = ffi.cast("const uint32_t*", p + 20 + r * size)
+        names[row[0]] = ffi.string(p + sbase + row[11])
+    end
+    return names
+end
+-- }}}
+
+-- {{{ main: split the maps over one process per processor, gather, write
+local maps, have = {}, {}
+local listing = io.popen("ls '" .. MAPS_DIR .. "'")
+for name in listing:lines() do
+    local m = name:match("^(%d%d%d)%d%d%d%d%.map$")
+    if m and not have[tonumber(m)] then have[tonumber(m)] = true; maps[#maps + 1] = tonumber(m) end
+end
+listing:close()
+if #maps == 0 then error("no map files in " .. MAPS_DIR .. " (are the client maps extracted?)") end
+table.sort(maps)
+
+local nproc = tonumber(io.popen("nproc"):read("*l")) or 1
+local groups = {}
+for i, m in ipairs(maps) do
+    local g = (i - 1) % nproc + 1
+    groups[g] = groups[g] or {}
+    table.insert(groups[g], tostring(m))
+end
+local self_path = arg[0]
+local pipes = {}
+for g, list in ipairs(groups) do
+    pipes[g] = io.popen(string.format("luajit '%s' --worker '%s' %s", self_path, DIR, table.concat(list, " ")))
+end
+local rows = {}
+for g, pipe in ipairs(pipes) do
+    for line in pipe:lines() do rows[#rows + 1] = line end
+    local ok, why, code = pipe:close()
+    if not ok then error(string.format("worker %d (maps %s) failed: %s %s", g, table.concat(groups[g], " "), tostring(why), tostring(code))) end
+end
+-- stable order: map, area, piece
+local parsed = {}
+for _, line in ipairs(rows) do
+    local f = {}
+    for v in line:gmatch("[^\t]+") do f[#f + 1] = tonumber(v) end
+    parsed[#parsed + 1] = f
+end
+table.sort(parsed, function(a, b)
+    if a[1] ~= b[1] then return a[1] < b[1] end
+    if a[2] ~= b[2] then return a[2] < b[2] end
+    return a[3] < b[3]
+end)
+
+local names = area_names()
+local areas, split, moved = {}, 0, 0
+for _, f in ipairs(parsed) do
+    areas[f[1] * 100000 + f[2]] = true
+    if f[3] == 2 then split = split + 1 end
+    moved = moved + f[11]
+end
+local area_count = 0
+for _ in pairs(areas) do area_count = area_count + 1 end
+
+local apply = {}
+apply[#apply + 1] = [[-- MARKER_E044_APPLY basic-buddy-area-centres
+-- ============================================================================
+-- 27-buddy-area-centres.sql (issue 617e2) — APPLY SOURCE, GENERATED
+-- ============================================================================
+-- Every named area's borders and middle, for the buddies' roaming: they
+-- circle the middle of the area their owner is in. Made by
+-- scripts/generate-buddy-area-centres from the server's own map files
+-- (data-files/maps: each map cut into squares about 33 yards across, each
+-- labelled with its area); regenerate after re-extracting the maps, don't
+-- edit by hand.
+--
+-- One row per separate piece of an area on a map (piece 1 the largest):
+--   min_x..max_x, min_y..max_y  the piece's borders (world yards)
+--   cells                       how many 33-yard squares it covers
+--   centre_x, centre_y          the average of its squares' middles (moved
+--                               to its nearest own square when the average
+--                               falls on another area's; centre_moved = 1)
+]]
+apply[#apply + 1] = string.format("-- %d rows: %d areas on %d maps; %d areas in more than one piece; %d middles moved.\n", #parsed, area_count, #maps, split, moved)
+apply[#apply + 1] = [[-- Database: acore_world_basic. Applied by E044. Re-applicable: the table
+-- is dropped and made anew.
+-- ============================================================================
+
+DROP TABLE IF EXISTS `buddy_area_centre`;
+CREATE TABLE `buddy_area_centre` (
+    `map`          SMALLINT UNSIGNED NOT NULL,
+    `area`         SMALLINT UNSIGNED NOT NULL,
+    `piece`        SMALLINT UNSIGNED NOT NULL,
+    `min_x`        FLOAT NOT NULL,
+    `max_x`        FLOAT NOT NULL,
+    `min_y`        FLOAT NOT NULL,
+    `max_y`        FLOAT NOT NULL,
+    `cells`        INT UNSIGNED NOT NULL,
+    `centre_x`     FLOAT NOT NULL,
+    `centre_y`     FLOAT NOT NULL,
+    `centre_moved` TINYINT UNSIGNED NOT NULL,
+    PRIMARY KEY (`map`, `area`, `piece`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='617e2: named areas'' borders and middles for buddy roaming (generated)';
+]]
+-- rows in batches of 500, a comment naming each area's first piece
+local batch = {}
+local function flush()
+    if #batch == 0 then return end
+    apply[#apply + 1] = "INSERT INTO `buddy_area_centre` (`map`, `area`, `piece`, `min_x`, `max_x`, `min_y`, `max_y`, `cells`, `centre_x`, `centre_y`, `centre_moved`) VALUES\n"
+        .. table.concat(batch, ",\n") .. ";\n"
+    batch = {}
+end
+for _, f in ipairs(parsed) do
+    local name = (names[f[2]] or "?"):gsub("[\r\n]", " "):gsub("%*/", "* /")
+    batch[#batch + 1] = string.format("(%d, %d, %d, %.1f, %.1f, %.1f, %.1f, %d, %.1f, %.1f, %d) /* %s */",
+        f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8], f[9], f[10], f[11], name)
+    if #batch >= 500 then flush() end
+end
+flush()
+apply[#apply + 1] = [[
+-- ============================================================================
+-- End of 27-buddy-area-centres.sql (apply)
+-- ============================================================================
+]]
+
+local revert = [[-- MARKER_E044_REVERT basic-buddy-area-centres
+-- ============================================================================
+-- 27-buddy-area-centres.sql (issue 617e2) — REVERT SOURCE, GENERATED
+-- ============================================================================
+-- Removes the table of areas' borders and middles. Nothing else was changed.
+-- ============================================================================
+
+DROP TABLE IF EXISTS `buddy_area_centre`;
+
+-- ============================================================================
+-- End of 27-buddy-area-centres.sql (revert)
+-- ============================================================================
+]]
+
+local f = assert(io.open(OUT_APPLY, "w")); f:write(table.concat(apply)); f:close()
+f = assert(io.open(OUT_REVERT, "w")); f:write(revert); f:close()
+print(string.format("generate-buddy-area-centres: %d maps (%d processes), %d rows, %d areas, %d split, %d middles moved",
+    #maps, #groups, #parsed, area_count, split, moved))
+print("  " .. OUT_APPLY)
+print("  " .. OUT_REVERT)
+-- }}}

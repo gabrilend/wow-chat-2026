@@ -1,0 +1,772 @@
+#!/usr/bin/env luajit
+-- generate-barrens-gif - a whole zone, The Barrens, seen from high above,
+-- with thirty players and their buddies questing across it (issue 617e7).
+--
+-- For a general audience: the gallery's other animations show a few
+-- buddies in one small place. This one pulls far back to show a whole zone
+-- at once, so the owner can watch the larger rhythm: players leave the
+-- Horde towns, walk out to a named place (the Stagnant Oasis, the Dry
+-- Hills ...), circle it for about thirty stops fighting what they meet,
+-- and walk back to town when their bags are full, or on to another place
+-- when not. Buddies go where their player goes but explore that place on
+-- their own, never grouping up. A faint warm glow builds where people have
+-- walked, so the circling round each place shows as rings of wear.
+--
+-- It reads only the data file made by scripts/generate-barrens-data (the
+-- zone's squares, its named places, the three Horde towns, and every
+-- hostile monster from the world database), runs a small simulation, and
+-- draws one frame every few game seconds. Frames are compressed by several
+-- worker processes at once (frames are independent), then joined.
+--
+-- The simulation is a drawing of intended behaviour, not the game:
+--   walking     7 yards a second (a running player); monsters 10% faster,
+--               so they can always reach a kiter (the owner, 2026-09-27)
+--   roaming     the owner's waypoint rule round the chosen place's middle:
+--               the bearing turns a tenth of a circle each stop, the
+--               distance out is a percent 1..100 of the way to the place's
+--               edge on that bearing, moved 1..20 in or out at even odds,
+--               never nearer than 10 yards (src/lua-basic/lib/buddy-roam.lua,
+--               the "step" reading)
+--   fighting    the solo kiting of the gallery's kiting animation (24),
+--               simplified: stand and cast (Frostbolt for mages, Aimed Shot
+--               for hunters); a monster in melee reach is escaped with Blink
+--               or Disengage, else walked away from while casting instants;
+--               the mage's Frostbolt and the hunter's Concussive Shot slow
+--               it; the way to kite is the most open way (fewest other
+--               monsters) avoiding directions where the kiter remembers
+--               danger lately, or a kill that is due back
+--   bags        one slot a kill, 18 a character; full: to the nearest
+--               town to sell, else on to another place after ~30 stops
+--   monsters    aggro radius 20 yards, one less per level the character is
+--               above it (5..45, the server's rule); leash 120 yards from
+--               home; respawn after their spawn time (2..10 minutes)
+--   pulling     adventuring (not travelling), a character with room in its
+--               bags opens on the nearest idle monster within 30 yards with
+--               a cast (Frostbolt / Aimed Shot), as a player pulls: first
+--               drafts let monsters walk into aggro range instead, and they
+--               reached melee before any cast finished (9 casts to 177
+--               blinks in 7 game minutes)
+--
+-- Usage: scripts/generate-barrens-gif [PROJECT_DIR] [--frames N] [--seed S]
+--   Reads   assets/barrens/barrens-data.lua
+--           the gif-generator project's encoder (src/004-gif.lua)
+--   Writes  docs/HTML/barrens/barrens-zone.gif (and prints what happened)
+--   Uses    tmp/shared-memory/barrens-gif/ for the raw frames (RAM)
+--   (internally: --compress-worker RAWFILE FIRST LAST W H OUTFILE)
+
+local ffi = require("ffi")
+
+local DIR    = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local GEN    = "/home/ritz/programming/ai-stuff/gif-generator"
+local FRAMES, SEED = 420, 7
+local WORKER = nil
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--frames" then FRAMES = tonumber(arg[i + 1]); i = i + 2
+        elseif a == "--seed" then SEED = tonumber(arg[i + 1]); i = i + 2
+        elseif a == "--compress-worker" then
+            WORKER = { raw = arg[i + 1], first = tonumber(arg[i + 2]), last = tonumber(arg[i + 3]),
+                       w = tonumber(arg[i + 4]), h = tonumber(arg[i + 5]), out = arg[i + 6] }
+            i = i + 7
+        elseif a:sub(1, 2) == "--" then error("generate-barrens-gif: unknown option " .. a)
+        else DIR = a; i = i + 1 end
+    end
+end
+package.path = GEN .. "/src/?.lua;" .. package.path
+local gif = require("004-gif")
+
+-- {{{ compress worker
+-- Reads frames FIRST..LAST (1-based) from the raw file (W*H bytes each),
+-- compresses each, writes them to OUTFILE as length-prefixed records.
+if WORKER then
+    local n = WORKER.w * WORKER.h
+    local f = assert(io.open(WORKER.raw, "rb"))
+    local o = assert(io.open(WORKER.out, "wb"))
+    local buf = ffi.new("uint8_t[?]", n)
+    for k = WORKER.first, WORKER.last do
+        f:seek("set", (k - 1) * n)
+        local s = f:read(n)
+        ffi.copy(buf, s, n)
+        local c = gif.compress_frame(buf, n)
+        o:write(string.format("%010d", #c), c)
+    end
+    f:close(); o:close()
+    os.exit(0)
+end
+-- }}}
+
+local D = dofile(DIR .. "/assets/barrens/barrens-data.lua")
+local OUT_DIR = DIR .. "/docs/HTML/barrens"
+local OUT_GIF = OUT_DIR .. "/barrens-zone.gif"
+local TMP     = DIR .. "/tmp/shared-memory/barrens-gif"
+
+-- {{{ numbers (tuning: docs/balance-updates.md when they change in game)
+local SECONDS_PER_FRAME = 10          -- game seconds between frames
+local DT                = 0.5         -- simulation step, seconds
+local PLAYERS           = 30
+local RUN               = 7.0         -- yards a second, players and buddies
+local MOB_SPEED         = RUN * 1.1   -- monsters: a little faster, so they can always hit
+local STOPS             = 30          -- waypoints round a place before moving on
+local BAG               = 18          -- slots, one a kill
+local TURN              = 2 * math.pi / 10
+local NEAR              = 10          -- yards: no waypoint nearer the middle
+local ARRIVE            = 4           -- yards: a waypoint reached
+local LEASH             = 120         -- yards from home before a monster gives up (80 reset most kites, 2026-09-28)
+local PULL_RANGE        = 30          -- yards: a kiter opens on a monster this near with a cast
+local TOWN_STAY         = { 30, 60 }  -- seconds selling
+local DEATH_WAIT        = 30          -- seconds before rising in the nearest town
+-- }}}
+
+-- {{{ random numbers (seeded, so the GIF is the same each time)
+local seed_state = SEED
+local function rand()
+    seed_state = (seed_state * 1103515245 + 12345) % 2147483648
+    return seed_state / 2147483648
+end
+local function rint(a, b) return a + math.floor(rand() * (b - a + 1)) end
+-- }}}
+
+-- {{{ the grid
+local SIZE = 533.3333
+local X0, Y0 = D.X0, D.Y0
+local ROWS, COLS = #D.area, #D.area[1]
+local function sq_of(x, y)                            -- world -> row, col (1-based), may be off-grid
+    return math.floor(16 * (32 - x / SIZE)) - X0 + 1, math.floor(16 * (32 - y / SIZE)) - Y0 + 1
+end
+local function area_at(x, y)
+    local r, c = sq_of(x, y)
+    local row = D.area[r]
+    return row and row[c] or 0
+end
+local function dist(ax, ay, bx, by) return math.sqrt((ax - bx) ^ 2 + (ay - by) ^ 2) end
+-- }}}
+
+-- {{{ places worth adventuring in
+-- Every named sub-area with monsters, except the zone's own unnamed
+-- remainder (its middle is just the middle of the map) and the sea.
+local SKIP = { [D.zone] = true }
+for id, a in pairs(D.areas) do if a.name:find("Sea") then SKIP[id] = true end end
+local places = {}
+do
+    local levels = {}
+    for _, m in ipairs(D.mobs) do
+        levels[m.area] = levels[m.area] or {}
+        table.insert(levels[m.area], m.level)
+    end
+    for id, a in pairs(D.areas) do
+        local lv = levels[id]
+        local is_town = false
+        for _, t in ipairs(D.towns) do if t.id == id then is_town = true end end
+        if not SKIP[id] and not is_town and lv and #lv >= 4 then
+            table.sort(lv)
+            places[#places + 1] = { id = id, name = a.name, x = a.x, y = a.y, level = lv[math.ceil(#lv / 2)], mobs = #lv }
+        end
+    end
+    table.sort(places, function(p, q) return p.id < q.id end)
+end
+assert(#places > 0, "generate-barrens-gif: no place with monsters in the data")
+-- }}}
+
+-- {{{ monsters
+local mobs = {}
+local CELL = 133.3333                                 -- spatial hash cell, yards
+local cells = {}
+local function cell_key(x, y) return math.floor(x / CELL) * 100000 + math.floor(y / CELL) end
+for i, m in ipairs(D.mobs) do
+    local hp = 60 + 14 * m.level * (m.elite and 3 or 1)
+    local mob = { id = i, x = m.x, y = m.y, hx = m.x, hy = m.y, level = m.level, elite = m.elite,
+                  maxhp = hp, hp = hp, alive = true, respawn = math.max(120, math.min(600, m.respawn)),
+                  target = nil, slow_until = 0, swing = 0, evading = false }
+    mobs[i] = mob
+    local k = cell_key(m.x, m.y)
+    cells[k] = cells[k] or {}
+    table.insert(cells[k], mob)
+end
+local function near_mobs(x, y)
+    local out = {}
+    local cx, cy = math.floor(x / CELL), math.floor(y / CELL)
+    for dx = -1, 1 do for dy = -1, 1 do
+        local l = cells[(cx + dx) * 100000 + (cy + dy)]
+        if l then for _, m in ipairs(l) do out[#out + 1] = m end end
+    end end
+    return out
+end
+local function aggro_radius(char_level, mob_level)
+    return math.max(5, math.min(45, 20 - (char_level - mob_level)))
+end
+-- }}}
+
+-- {{{ characters
+local chars = {}
+local function nearest_town(x, y)
+    local best, bd
+    for _, t in ipairs(D.towns) do
+        local d = dist(x, y, t.x, t.y)
+        if not bd or d < bd then best, bd = t, d end
+    end
+    return best
+end
+-- a place whose monsters suit this level (within 3), else the nearest in level
+local function pick_place(level, not_id)
+    local fit = {}
+    for _, p in ipairs(places) do
+        if p.id ~= not_id and math.abs(p.level - level) <= 3 then fit[#fit + 1] = p end
+    end
+    if #fit == 0 then
+        local best, bd
+        for _, p in ipairs(places) do
+            if p.id ~= not_id and (not bd or math.abs(p.level - level) < bd) then best, bd = p, math.abs(p.level - level) end
+        end
+        return best
+    end
+    return fit[rint(1, #fit)]
+end
+local function new_char(kind, owner, town, level, cls)
+    local a = rand() * 2 * math.pi
+    local r = rand() * town.r * 0.6
+    local c = { kind = kind, owner = owner, cls = cls, level = level,
+                x = town.x + math.cos(a) * r, y = town.y + math.sin(a) * r,
+                maxhp = 90 + 16 * level, bag = 0, state = "town", wait = rint(TOWN_STAY[1], TOWN_STAY[2]) * rand(),
+                spin = rand() < 0.5 and 1 or -1, angle = 0, ypct = 0, stops = 0, place = nil,
+                wx = nil, wy = nil, cast = 0, cast_for = nil, blink_cd = 0, slow_cd = 0, instant_cd = 0,
+                danger = {}, kills = 0, deaths = 0 }
+    c.hp = c.maxhp
+    for s = 1, 16 do c.danger[s] = -1e9 end
+    chars[#chars + 1] = c
+    return c
+end
+for i = 1, PLAYERS do
+    local town = D.towns[(i - 1) % #D.towns + 1]
+    local level = rint(11, 24)
+    local p = new_char("player", nil, town, level, rand() < 0.5 and "mage" or "hunter")
+    -- 0 to 2 buddies, each its own class
+    for _ = 1, rint(0, 2) do new_char("buddy", p, town, level, rand() < 0.5 and "mage" or "hunter") end
+end
+-- }}}
+
+-- {{{ the waypoint rule round a place
+-- The edge along a bearing: the first square, stepping out 10 yards at a
+-- time, that isn't the place (or 1500 yards, whichever first).
+local function edge_along(p, bearing)
+    local d = 0
+    while d < 1500 do
+        local nd = d + 10
+        if area_at(p.x + math.cos(bearing) * nd, p.y + math.sin(bearing) * nd) ~= p.id then return d end
+        d = nd
+    end
+    return d
+end
+local function next_waypoint(c)
+    local p = c.place
+    c.angle = c.angle + TURN * c.spin
+    if c.ypct == 0 then c.ypct = rint(1, 100)
+    else
+        local change = rint(1, 20)
+        c.ypct = math.max(1, math.min(100, c.ypct + (rand() < 0.5 and -change or change)))
+    end
+    local reach = edge_along(p, c.angle)
+    local d = math.max(NEAR, reach * c.ypct / 100)
+    c.wx, c.wy = p.x + math.cos(c.angle) * d, p.y + math.sin(c.angle) * d
+end
+local function go_to_place(c, p)
+    c.place, c.state, c.stops, c.ypct = p, "travel", 0, 0
+    c.angle = math.atan2(c.y - p.y, c.x - p.x)
+    c.wx, c.wy = p.x, p.y
+end
+local function go_to_town(c)
+    local t = nearest_town(c.x, c.y)
+    c.state, c.town, c.wx, c.wy = "to_town", t, t.x, t.y
+end
+local function choose_next(c)
+    if c.bag >= BAG then return go_to_town(c) end
+    if c.kind == "buddy" and c.owner.place and c.owner.state ~= "to_town" and c.owner.state ~= "town" then
+        return go_to_place(c, c.owner.place)            -- buddies explore where their player is
+    end
+    return go_to_place(c, pick_place(c.level, c.place and c.place.id))
+end
+-- }}}
+
+-- {{{ moving
+local function step_toward(e, tx, ty, speed, dt)
+    local d = dist(e.x, e.y, tx, ty)
+    if d < 1e-6 then return true end
+    local s = speed * dt
+    if s >= d then e.x, e.y = tx, ty return true end
+    e.x, e.y = e.x + (tx - e.x) / d * s, e.y + (ty - e.y) / d * s
+    return false
+end
+local function sector_of(a) return (math.floor(((a % (2 * math.pi)) / (2 * math.pi)) * 16) % 16) + 1 end
+-- }}}
+
+-- {{{ counts (the caption reports them)
+local count = { frostbolts = 0, aimed = 0, slows = 0, blinks = 0, disengages = 0, kills = 0, deaths = 0,
+                town_visits = 0, places_visited = 0, evades = 0 }
+-- }}}
+
+-- {{{ fighting
+-- A character's current foe: the living monster targeting it that is nearest.
+local function foe_of(c)
+    local best, bd
+    for _, m in ipairs(near_mobs(c.x, c.y)) do
+        if m.alive and m.target == c and not m.evading then
+            local d = dist(c.x, c.y, m.x, m.y)
+            if not bd or d < bd then best, bd = m, d end
+        end
+    end
+    return best, bd
+end
+-- the kiting direction: away from the foe, turned up to 60 degrees toward
+-- the most open side, avoiding sectors of recent or due danger
+local function kite_angle(c, m, now)
+    local away = math.atan2(c.y - m.y, c.x - m.x)
+    local best, bs
+    for _, off in ipairs({ 0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5 }) do
+        local a = away + off
+        local px, py = c.x + math.cos(a) * 40, c.y + math.sin(a) * 40
+        local open = 60
+        for _, o in ipairs(near_mobs(px, py)) do
+            if o.alive and o ~= m and not o.target then open = math.min(open, dist(px, py, o.x, o.y)) end
+        end
+        local recent = now - c.danger[sector_of(a)]
+        local score = open - (recent < 120 and 40 or 0) - math.abs(off) * 5
+        if area_at(px, py) == 0 then score = score - 100 end   -- not off the zone's map
+        -- stay within reach of the monster's home: kiting straight away
+        -- dragged it past its leash (1083 resets to 432 kills in 20 game
+        -- minutes, 2026-09-28); players kite in circles round the spot
+        score = score - math.max(0, dist(px, py, m.hx, m.hy) - 70) * 1.5
+        if not bs or score > bs then best, bs = a, score end
+    end
+    return best
+end
+local function damage_mob(m, amount, c, now)
+    m.hp = m.hp - amount
+    if m.hp <= 0 then
+        m.alive, m.target, m.dead_since = false, nil, now
+        m.back_at = now + m.respawn
+        c.bag, c.kills = math.min(BAG, c.bag + 1), c.kills + 1
+        count.kills = count.kills + 1
+        -- remember where a kill will come back: that way is "due" danger then
+        c.danger[sector_of(math.atan2(m.hy - c.y, m.hx - c.x))] = m.back_at - 120
+    end
+end
+local function fight(c, m, d, now, dt)
+    c.blink_cd, c.slow_cd, c.instant_cd = c.blink_cd - dt, c.slow_cd - dt, c.instant_cd - dt
+    -- in melee reach: escape
+    if d < 5 then
+        if c.blink_cd <= 0 then
+            local a = kite_angle(c, m, now)
+            c.x, c.y = c.x + math.cos(a) * 20, c.y + math.sin(a) * 20
+            c.blink_cd, c.cast = (c.cls == "mage" and 15 or 25), 0
+            if c.cls == "mage" then count.blinks = count.blinks + 1 else count.disengages = count.disengages + 1 end
+            c.flash = { kind = "blink", t = now }
+            return
+        end
+        c.cast = 0
+        local a = kite_angle(c, m, now)
+        step_toward(c, c.x + math.cos(a) * 10, c.y + math.sin(a) * 10, RUN, dt)
+        if c.instant_cd <= 0 then damage_mob(m, 5 + c.level, c, now); c.instant_cd = 1.5 end
+        return
+    end
+    -- the hunter's slow when it closes in
+    if c.cls == "hunter" and d < 15 and c.slow_cd <= 0 then
+        m.slow_until, c.slow_cd = now + 4, 12
+        count.slows = count.slows + 1
+        damage_mob(m, 6 + c.level, c, now)
+        return
+    end
+    -- out of range: close in
+    if d > 30 then c.cast = 0; step_toward(c, m.x, m.y, RUN, dt) return end
+    -- stand and cast
+    if c.cast <= 0 then c.cast = (c.cls == "mage" and 2.5 or 3.0) return end
+    c.cast = c.cast - dt
+    if c.cast <= 0 then
+        if c.cls == "mage" then
+            damage_mob(m, 22 + 5 * c.level, c, now)
+            m.slow_until = now + 5
+            count.frostbolts, count.slows = count.frostbolts + 1, count.slows + 1
+        else
+            damage_mob(m, 26 + 5 * c.level, c, now)
+            count.aimed = count.aimed + 1
+        end
+        c.bolt = { tx = m.x, ty = m.y, t = now }
+    end
+end
+-- }}}
+
+-- {{{ local function pull
+-- Adventuring with room in the bags: the nearest idle monster within
+-- PULL_RANGE is opened on with a cast; when it lands the monster is the
+-- character's foe (and slowed, for a Frostbolt). Returns true while busy.
+local function pull(c, now, dt)
+    if not c.pulling or not c.pulling.alive or c.pulling.target or c.pulling.evading then
+        c.pulling, c.cast = nil, 0
+        local best, bd
+        for _, m in ipairs(near_mobs(c.x, c.y)) do
+            if m.alive and not m.target and not m.evading and math.abs(m.level - c.level) <= 4 then
+                local d = dist(c.x, c.y, m.x, m.y)
+                if d <= PULL_RANGE and (not bd or d < bd) then best, bd = m, d end
+            end
+        end
+        if not best then return false end
+        c.pulling, c.cast = best, (c.cls == "mage" and 2.5 or 3.0)
+        return true
+    end
+    c.cast = c.cast - dt
+    if c.cast > 0 then return true end
+    local m = c.pulling
+    c.pulling = nil
+    m.target = c
+    c.danger[sector_of(math.atan2(m.y - c.y, m.x - c.x))] = now
+    if c.cls == "mage" then
+        m.slow_until = now + 5
+        count.frostbolts, count.slows = count.frostbolts + 1, count.slows + 1
+        damage_mob(m, 22 + 5 * c.level, c, now)
+    else
+        count.aimed = count.aimed + 1
+        damage_mob(m, 26 + 5 * c.level, c, now)
+    end
+    c.bolt = { tx = m.x, ty = m.y, t = now }
+    return true
+end
+-- }}}
+
+-- {{{ one step of the world
+local function world_step(now, dt)
+    -- monsters: respawn, notice, chase, hit, leash
+    for _, m in ipairs(mobs) do
+        if not m.alive then
+            if now >= m.back_at then m.alive, m.hp, m.x, m.y = true, m.maxhp, m.hx, m.hy end
+        elseif m.evading then
+            if step_toward(m, m.hx, m.hy, MOB_SPEED * 2, dt) then m.evading, m.hp = false, m.maxhp end
+        elseif m.target then
+            local c = m.target
+            if c.state == "dead" or dist(m.x, m.y, m.hx, m.hy) > LEASH then
+                m.target, m.evading = nil, true
+                count.evades = count.evades + 1
+            else
+                local d = dist(m.x, m.y, c.x, c.y)
+                if d > 4 then
+                    step_toward(m, c.x, c.y, MOB_SPEED * (now < m.slow_until and 0.5 or 1), dt)
+                else
+                    m.swing = m.swing - dt
+                    if m.swing <= 0 then
+                        m.swing = 2.0
+                        c.hp = c.hp - (3 + 1.1 * m.level) * (m.elite and 2.5 or 1)
+                        c.in_combat_at = now
+                        if c.hp <= 0 then
+                            c.state, c.dead_at, c.deaths = "dead", now, c.deaths + 1
+                            count.deaths = count.deaths + 1
+                            m.target = nil
+                        end
+                    end
+                end
+            end
+        end
+    end
+    -- characters
+    for _, c in ipairs(chars) do
+        if c.state == "dead" then
+            if now - c.dead_at >= DEATH_WAIT then
+                local t = nearest_town(c.x, c.y)
+                c.x, c.y, c.hp, c.state, c.wait = t.x, t.y, c.maxhp * 0.5, "town", 10
+            end
+        else
+            -- notice: idle monsters within their aggro radius take this character
+            for _, m in ipairs(near_mobs(c.x, c.y)) do
+                if m.alive and not m.target and not m.evading and c.state ~= "town"
+                    and dist(c.x, c.y, m.x, m.y) < aggro_radius(c.level, m.level) then
+                    m.target = c
+                    c.danger[sector_of(math.atan2(m.y - c.y, m.x - c.x))] = now
+                end
+            end
+            local m, d = foe_of(c)
+            if m then
+                c.in_combat_at = now
+                fight(c, m, d, now, dt)
+            else
+                c.cast = 0
+                if now - (c.in_combat_at or -1e9) > 5 then c.hp = math.min(c.maxhp, c.hp + c.maxhp * 0.02 * dt) end
+                if c.state == "town" then
+                    c.wait = c.wait - dt
+                    if c.wait <= 0 then choose_next(c) end
+                elseif c.state == "to_town" then
+                    if step_toward(c, c.wx, c.wy, RUN, dt) or dist(c.x, c.y, c.town.x, c.town.y) < c.town.r * 0.4 then
+                        c.state, c.bag, c.wait = "town", 0, rint(TOWN_STAY[1], TOWN_STAY[2])
+                        count.town_visits = count.town_visits + 1
+                    end
+                elseif c.state == "travel" then
+                    if step_toward(c, c.wx, c.wy, RUN, dt) or dist(c.x, c.y, c.place.x, c.place.y) < 30 then
+                        c.state = "adventure"
+                        count.places_visited = count.places_visited + 1
+                        next_waypoint(c)
+                    end
+                elseif c.state == "adventure" and c.bag < BAG and pull(c, now, dt) then
+                    -- casting the opening shot (pull handles it)
+                elseif c.state == "adventure" then
+                    if step_toward(c, c.wx, c.wy, RUN, dt) or dist(c.x, c.y, c.wx, c.wy) < ARRIVE then
+                        c.stops = c.stops + 1
+                        if c.bag >= BAG or c.stops >= STOPS then choose_next(c) else next_waypoint(c) end
+                    end
+                end
+            end
+        end
+    end
+end
+-- }}}
+
+-- {{{ the canvas and palette
+-- The whole zone fits the canvas: 3x the gallery's 320-pixel height, the
+-- width from the zone's own shape (it is taller than wide).
+local H_PX  = 960
+local PS    = (H_PX - 20) / ROWS                      -- pixels per ~33-yard square
+local W_PX  = math.floor(COLS * PS + 20 + 0.5)
+local MARGIN = 10
+local YARDS_PER_PX = (SIZE / 16) / PS
+
+-- Background gray outside the zone; each place a tint of it: darker, and
+-- nudged toward red, green or blue, at one of two strengths (six tints),
+-- coloured so no two touching places share one. Each tint has four heat
+-- steps, blended toward a warm white as people wear paths into it.
+local GRAY = 104
+local TINTS = {}                                      -- 1..6: {r,g,b}
+for s = 1, 2 do
+    for ch = 1, 3 do
+        local base = GRAY * (s == 1 and 0.90 or 0.82)
+        local v = { base, base, base }
+        v[ch] = v[ch] + (s == 1 and 9 or 15)            -- slight: the owner's "lightly different colors"
+        TINTS[#TINTS + 1] = v
+    end
+end
+local HEAT = { 0, 0.14, 0.28, 0.44 }
+local WARM = { 255, 214, 150 }
+local palette = ffi.new("uint8_t[768]")
+local function set_color(i, r, g, b) palette[i * 3], palette[i * 3 + 1], palette[i * 3 + 2] = r, g, b end
+-- index 0: outside the zone
+set_color(0, GRAY, GRAY, GRAY + 4)
+-- index 1 + (tint-1)*4 + heat: the zone's floor
+for t = 1, 6 do
+    for h = 1, 4 do
+        local k = HEAT[h]
+        set_color(1 + (t - 1) * 4 + (h - 1),
+            math.floor(TINTS[t][1] * (1 - k) + WARM[1] * k + 0.5),
+            math.floor(TINTS[t][2] * (1 - k) + WARM[2] * k + 0.5),
+            math.floor(TINTS[t][3] * (1 - k) + WARM[3] * k + 0.5))
+    end
+end
+local C_TOWN      = 30; set_color(C_TOWN, 236, 236, 236)
+local C_MOB       = 31; set_color(C_MOB, 120, 32, 32)
+local C_MOB_FIGHT = 32; set_color(C_MOB_FIGHT, 238, 64, 52)
+local C_PLAYER    = 33; set_color(C_PLAYER, 255, 244, 170)
+local C_BUDDY     = 34; set_color(C_BUDDY, 110, 214, 255)
+local C_BOLT      = 35; set_color(C_BOLT, 170, 214, 255)
+local C_BLINK     = 36; set_color(C_BLINK, 255, 255, 255)
+local C_DEAD      = 37; set_color(C_DEAD, 70, 70, 76)
+local C_WAYPOINT  = 38; set_color(C_WAYPOINT, 200, 200, 200)
+local C_OUTLINE   = 39; set_color(C_OUTLINE, 20, 20, 24)
+
+-- colour the places: greedy, most-connected first, first tint no
+-- neighbour uses; the order R1, G1, B1, R2, G2, B2 uses the three light
+-- tints before the stronger ones
+local tint_of = {}
+local used_tints = 0
+do
+    local nb = {}
+    for r = 1, ROWS do for c = 1, COLS do
+        local a = D.area[r][c]
+        if a ~= 0 then
+            nb[a] = nb[a] or {}
+            for _, o in ipairs({ { r + 1, c }, { r, c + 1 } }) do
+                local b = D.area[o[1]] and D.area[o[1]][o[2]] or 0
+                if b ~= 0 and b ~= a then nb[a][b] = true; nb[b] = nb[b] or {}; nb[b][a] = true end
+            end
+        end
+    end end
+    local order = {}
+    for a in pairs(nb) do order[#order + 1] = a end
+    table.sort(order, function(p, q)
+        local dp, dq = 0, 0
+        for _ in pairs(nb[p]) do dp = dp + 1 end
+        for _ in pairs(nb[q]) do dq = dq + 1 end
+        if dp ~= dq then return dp > dq end
+        return p < q
+    end)
+    for _, a in ipairs(order) do
+        local taken = {}
+        for b in pairs(nb[a]) do if tint_of[b] then taken[tint_of[b]] = true end end
+        local t = 1
+        while taken[t] and t <= 6 do t = t + 1 end
+        assert(t <= 6, "generate-barrens-gif: place " .. a .. " touches all six tints")
+        tint_of[a] = t
+        used_tints = math.max(used_tints, t)
+    end
+end
+
+-- which square each pixel shows (0: outside)
+local NPIX = W_PX * H_PX
+local pix_sq = ffi.new("int32_t[?]", NPIX)
+for py = 0, H_PX - 1 do
+    for px = 0, W_PX - 1 do
+        local r = math.floor((py - MARGIN) / PS) + 1
+        local c = math.floor((px - MARGIN) / PS) + 1
+        if r >= 1 and r <= ROWS and c >= 1 and c <= COLS and D.area[r][c] ~= 0 then
+            pix_sq[py * W_PX + px] = (r - 1) * COLS + c
+        else
+            pix_sq[py * W_PX + px] = 0
+        end
+    end
+end
+local heat = ffi.new("float[?]", ROWS * COLS + 1)
+local sq_color = ffi.new("uint8_t[?]", ROWS * COLS + 1)
+
+local function to_px(x, y)
+    local fx = 16 * (32 - x / SIZE) - X0
+    local fy = 16 * (32 - y / SIZE) - Y0
+    return math.floor(MARGIN + fy * PS + 0.5), math.floor(MARGIN + fx * PS + 0.5)
+end
+-- }}}
+
+-- {{{ drawing
+local frame = ffi.new("uint8_t[?]", NPIX)
+local function plot(x, y, c) if x >= 0 and x < W_PX and y >= 0 and y < H_PX then frame[y * W_PX + x] = c end end
+local function disc(cx, cy, r, c) for y = -r, r do for x = -r, r do if x * x + y * y <= r * r then plot(cx + x, cy + y, c) end end end end
+local function ring(cx, cy, r, c, dash)
+    local steps = math.max(24, math.floor(r * 6))
+    for k = 0, steps - 1 do
+        if not dash or k % 4 < 2 then
+            local a = 2 * math.pi * k / steps
+            plot(math.floor(cx + math.cos(a) * r + 0.5), math.floor(cy + math.sin(a) * r + 0.5), c)
+        end
+    end
+end
+local function line(x0, y0, x1, y1, c)
+    local dx, dy = math.abs(x1 - x0), -math.abs(y1 - y0)
+    local sx, sy = x0 < x1 and 1 or -1, y0 < y1 and 1 or -1
+    local err = dx + dy
+    for _ = 1, 4000 do
+        plot(x0, y0, c)
+        if x0 == x1 and y0 == y1 then break end
+        local e2 = 2 * err
+        if e2 >= dy then err = err + dy; x0 = x0 + sx end
+        if e2 <= dx then err = err + dx; y0 = y0 + sy end
+    end
+end
+
+local function draw(now)
+    -- the floor: each square's tint and heat step
+    for i = 1, ROWS * COLS do
+        local r, c = math.floor((i - 1) / COLS) + 1, (i - 1) % COLS + 1
+        local a = D.area[r][c]
+        if a == 0 then sq_color[i] = 0
+        else
+            local h = heat[i]
+            local step = h >= 400 and 3 or h >= 90 and 2 or h >= 12 and 1 or 0
+            sq_color[i] = 1 + (tint_of[a] - 1) * 4 + step
+        end
+    end
+    for i = 0, NPIX - 1 do frame[i] = sq_color[pix_sq[i]] end
+    -- towns
+    for _, t in ipairs(D.towns) do
+        local x, y = to_px(t.x, t.y)
+        ring(x, y, t.r / YARDS_PER_PX, C_TOWN)
+        ring(x, y, t.r / YARDS_PER_PX + 1, C_TOWN)
+    end
+    -- monsters
+    for _, m in ipairs(mobs) do
+        if m.alive then
+            local x, y = to_px(m.x, m.y)
+            if m.target then disc(x, y, 1, C_MOB_FIGHT) else plot(x, y, C_MOB) end
+        end
+    end
+    -- characters: buddies smaller, players larger with an outline
+    for _, c in ipairs(chars) do
+        local x, y = to_px(c.x, c.y)
+        if c.state == "dead" then
+            plot(x, y, C_DEAD)
+        else
+            if c.bolt and now - c.bolt.t < SECONDS_PER_FRAME then
+                local tx, ty = to_px(c.bolt.tx, c.bolt.ty)
+                line(x, y, tx, ty, C_BOLT)
+            end
+            if c.flash and now - c.flash.t < SECONDS_PER_FRAME then ring(x, y, 5, C_BLINK) end
+            if c.kind == "player" then
+                disc(x, y, 3, C_OUTLINE)
+                disc(x, y, 2, C_PLAYER)
+            else
+                disc(x, y, 2, C_OUTLINE)
+                disc(x, y, 1, C_BUDDY)
+            end
+        end
+    end
+end
+-- }}}
+
+-- {{{ main
+os.execute("mkdir -p '" .. OUT_DIR .. "' '" .. TMP .. "'")
+local RAW = TMP .. "/frames.raw"
+local rawf = assert(io.open(RAW, "wb"))
+local now = 0
+local steps_per_frame = math.floor(SECONDS_PER_FRAME / DT + 0.5)
+local t0 = os.clock()
+for fno = 1, FRAMES do
+    for _ = 1, steps_per_frame do
+        world_step(now, DT)
+        -- paint: each living character wears its square a little
+        for _, c in ipairs(chars) do
+            if c.state ~= "dead" then
+                local r, col = sq_of(c.x, c.y)
+                if r >= 1 and r <= ROWS and col >= 1 and col <= COLS then
+                    local i = (r - 1) * COLS + col
+                    heat[i] = heat[i] + DT
+                end
+            end
+        end
+        now = now + DT
+    end
+    draw(now)
+    rawf:write(ffi.string(frame, NPIX))
+end
+rawf:close()
+local sim_s = os.clock() - t0
+
+-- compress in parallel: one worker per processor, frames split evenly
+local nproc = tonumber(io.popen("nproc"):read("*l")) or 4
+local per = math.ceil(FRAMES / nproc)
+local handles, outs = {}, {}
+for w = 1, nproc do
+    local first, last = (w - 1) * per + 1, math.min(FRAMES, w * per)
+    if first <= last then
+        local out = string.format("%s/part-%02d.bin", TMP, w)
+        outs[#outs + 1] = out
+        handles[#handles + 1] = io.popen(string.format("luajit '%s' '%s' --compress-worker '%s' %d %d %d %d '%s'",
+            arg[0], DIR, RAW, first, last, W_PX, H_PX, out))
+    end
+end
+for _, h in ipairs(handles) do h:read("*a"); h:close() end
+local compressed = {}
+for _, out in ipairs(outs) do
+    local f = assert(io.open(out, "rb"))
+    while true do
+        local len = f:read(10)
+        if not len then break end
+        compressed[#compressed + 1] = f:read(tonumber(len))
+    end
+    f:close()
+end
+assert(#compressed == FRAMES, string.format("generate-barrens-gif: %d frames compressed of %d", #compressed, FRAMES))
+local bytes = gif.assemble({ width = W_PX, height = H_PX, palette_bytes = palette, compressed = compressed, delay_cs = 8 })
+local f = assert(io.open(OUT_GIF, "wb")); f:write(bytes); f:close()
+os.remove(RAW)
+for _, out in ipairs(outs) do os.remove(out) end
+
+local players, buddies = 0, 0
+for _, c in ipairs(chars) do if c.kind == "player" then players = players + 1 else buddies = buddies + 1 end end
+print(string.format("generate-barrens-gif: %d x %d, %d frames (%d game s each, %.0f game minutes), %d bytes -> %s",
+    W_PX, H_PX, FRAMES, SECONDS_PER_FRAME, FRAMES * SECONDS_PER_FRAME / 60, #bytes, OUT_GIF))
+print(string.format("  %.2f yards a pixel; %d places to adventure in; tints used %d of 6; %d players, %d buddies; simulation %.1f s, %d workers",
+    YARDS_PER_PX, #places, used_tints, players, buddies, sim_s, #outs))
+print(string.format("  kills %d, deaths %d, frostbolts %d, aimed shots %d, slows %d, blinks %d, disengages %d, leash resets %d, town visits %d, places reached %d",
+    count.kills, count.deaths, count.frostbolts, count.aimed, count.slows, count.blinks, count.disengages, count.evades,
+    count.town_visits, count.places_visited))
+-- }}}

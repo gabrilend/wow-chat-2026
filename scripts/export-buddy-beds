@@ -1,0 +1,67 @@
+#!/usr/bin/env luajit
+-- export-buddy-beds - carry the beds placed in game into the project
+-- (issue 617e4).
+--
+-- For a general audience: inn beds are part of the buildings, so the game
+-- has no list of them; a game master walks to each bed and types
+-- ".buddy bed add", which writes a row into the live server's database.
+-- This tool reads those rows and writes them into the install file
+-- sql/basic/db_world.src/28-buddy-beds.apply.sql, between its BEDS markers,
+-- so every fresh install gets the same beds and the placements are kept in
+-- git with the rest of the project.
+--
+-- Usage: scripts/export-buddy-beds [PROJECT_DIR]
+--   Reads   the live table acore_world_basic.buddy_bed (project MySQL,
+--           port 3307)
+--   Writes  sql/basic/db_world.src/28-buddy-beds.apply.sql (the rows only)
+
+local DIR   = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql"
+local DB    = "acore_world_basic"
+local FILE  = DIR .. "/sql/basic/db_world.src/28-buddy-beds.apply.sql"
+local BEGIN_MARK = "-- >>> BEDS BEGIN"
+local END_MARK   = "-- <<< BEDS END"
+
+-- {{{ read the live rows
+-- Tab-separated, no header; each field checked so a changed table stops the
+-- tool with a message instead of writing a broken file.
+local cmd = string.format("MYSQL_PWD=menardi '%s' -h127.0.0.1 -P3307 -uritz -N -B -e "
+    .. "\"SELECT id, map, x, y, z, facing, area, tier, link, note FROM %s.buddy_bed ORDER BY id\"", MYSQL, DB)
+local pipe = assert(io.popen(cmd, "r"))
+local rows = {}
+for line in pipe:lines() do
+    local id, map, x, y, z, facing, area, tier, link, note = line:match("^(%d+)\t(%d+)\t([-%d%.e]+)\t([-%d%.e]+)\t([-%d%.e]+)\t([-%d%.e]+)\t(%d+)\t(%d+)\t(%d+)\t(.*)$")
+    if not id then
+        io.stderr:write("export-buddy-beds: a row could not be read (has the table changed?): " .. line .. "\n")
+        os.exit(1)
+    end
+    note = note:gsub("\\", "\\\\"):gsub("'", "''")
+    rows[#rows + 1] = string.format("INSERT IGNORE INTO `buddy_bed` (`id`, `map`, `x`, `y`, `z`, `facing`, `area`, `tier`, `link`, `note`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, '%s');",
+        id, map, x, y, z, facing, area, tier, link, note)
+end
+local ok, why, code = pipe:close()
+if not ok then
+    io.stderr:write(string.format("export-buddy-beds: reading %s.buddy_bed failed (%s %s); is ./scripts/start-mysql running and E045 installed?\n",
+        DB, tostring(why), tostring(code)))
+    os.exit(1)
+end
+-- }}}
+
+-- {{{ rewrite the section
+local f = assert(io.open(FILE, "r"))
+local text = f:read("*a")
+f:close()
+local a = text:find(BEGIN_MARK, 1, true)
+local b = text:find(END_MARK, 1, true)
+if not a or not b or b < a then
+    io.stderr:write("export-buddy-beds: the BEDS markers were not found in " .. FILE .. "\n")
+    os.exit(1)
+end
+local head_end = text:find("\n", a, true)
+local body = #rows > 0 and (table.concat(rows, "\n") .. "\n") or "-- (no beds placed yet)\n"
+text = text:sub(1, head_end) .. body .. text:sub(b)
+f = assert(io.open(FILE, "w"))
+f:write(text)
+f:close()
+print(string.format("export-buddy-beds: %d bed(s) written to %s", #rows, FILE))
+-- }}}

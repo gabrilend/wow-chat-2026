@@ -1,0 +1,2504 @@
+<title>Buddy Roaming</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+:root { --ground: #eef0f3; --panel: #ffffff; --ink: #1b2230; --muted: #5b6576; --rule: #d5d9e1; --accent: #8a5d0c; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; } }
+:root[data-theme="dark"] { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; }
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 16px/1.55 "Alegreya Sans", "Segoe UI", system-ui, sans-serif; }
+.wrap { max-width: 760px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 28px; }
+h1, h2 { font-family: "Alegreya SC", Georgia, serif; margin: 0; text-wrap: balance; }
+h1 { font-size: 2.1rem; } h2 { font-size: 1.3rem; }
+p { margin: 0; }
+.lede { color: var(--muted); }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; display: grid; gap: 12px; }
+.card img { width: 100%; height: auto; max-width: 100%; border-radius: 6px; image-rendering: pixelated; background: #12161d; }
+.before { color: var(--ink); }
+.after { color: var(--muted); border-left: 3px solid var(--accent); padding-left: 12px; }
+.key { display: flex; flex-wrap: wrap; gap: 14px; font-size: .9rem; color: var(--muted); }
+footer { color: var(--muted); font-size: .85rem; }
+.part { display: grid; gap: 6px; padding-block: 14px 0; border-top: 2px solid var(--accent); }
+.part h2 { font-size: 1.55rem; color: var(--accent); }
+.part p { color: var(--muted); max-width: 62ch; }
+.lede a { color: var(--accent); }
+.ot-stage.jl-stage canvas { aspect-ratio: 128 / 98; }       /* the grouping widget's area: 128 by 98 yards */
+.jl-groups { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; font-size: .95rem; }
+.jl-groups dt { color: var(--muted); }
+.jl-groups dd { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ot-stage canvas { display: block; width: 100%; aspect-ratio: 17 / 11; max-width: 100%; border-radius: 6px; background: #12161d; touch-action: none; cursor: crosshair; }
+.ot-panel { display: grid; gap: 12px; font-size: .95rem; }
+.ot-key { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: .88rem; }
+.ot-key span { display: inline-flex; align-items: center; gap: 6px; }
+.ot-key span::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c); border: 1px solid var(--rule); }
+.ot-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.ot-mode { font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--rule); color: var(--muted); }
+.ot-mode[data-mode="kraken"] { color: var(--accent); border-color: var(--accent); }
+.ot-mode[data-mode="plain"] { color: var(--ink); }
+.ot-buttons { display: flex; gap: 8px; }
+.ot-buttons button { font: inherit; padding: 5px 14px; border-radius: 6px; border: 1px solid var(--rule); background: var(--ground); color: var(--ink); cursor: pointer; }
+.ot-buttons button:hover { border-color: var(--accent); }
+.ot-buttons button:focus-visible, .ot-melee input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ot-meters { display: grid; gap: 6px; }
+.ot-meter { display: grid; grid-template-columns: minmax(0, 15em) 1fr 3.2em; align-items: center; gap: 10px; color: var(--muted); }
+.ot-meter b { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.ot-bar { height: 8px; border-radius: 4px; background: var(--ground); border: 1px solid var(--rule); overflow: hidden; }
+.ot-fill { display: block; height: 100%; width: 0; }
+.ot-hp { background: #5fae6e; } .ot-dg { background: var(--accent); } .ot-th { background: #7fa6e6; }
+.ot-th[data-over="yes"] { background: #d0524f; }
+.ot-melee { border: 1px solid var(--rule); border-radius: 6px; padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 14px; margin: 0; }
+.ot-melee legend { color: var(--muted); padding: 0 4px; font-size: .88rem; }
+.ot-melee label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.ot-note, .ot-counts { color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+.ot-log { margin: 0; padding-left: 18px; color: var(--ink); font-size: .9rem; display: grid; gap: 2px; min-height: 5.6em; }
+@media (max-width: 520px) { .ot-meter { grid-template-columns: 1fr 3em; } .ot-meter .ot-bar { grid-column: 1 / -1; grid-row: 2; } }
+</style>
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1>Buddy Roaming</h1>
+    <p class="lede">How buddies <strong>roam</strong> a named place while their owner is out and about (issue 617e): the readings of the owner's description, each running the <strong>same</strong> model the server will use. Circles are buddies, the <strong>white</strong> circle the owner, grey blobs rocks, the outline the named area's edge. The short tick on a buddy shows which <strong>way</strong> it circles the centre. The scenes with you in them are <strong>play</strong>able: <a href="#play">Part 6</a>.</p>
+  </header>
+  <header class="part" id="readings">
+    <h2>Part 1 · First readings</h2>
+    <p>The owner's first description (spacing, a pinwheel round the centre, lists of who is far enough) read <strong>four</strong> ways, before the owner's own waypoint rule.</p>
+  </header>
+  <section class="card">
+    <h2>Reading A: a &quot;far enough&quot; list for every step</h2>
+    <p class="before">Six buddies spread over <strong>one</strong> named area (about 120 by 90 yards, rocks in grey). Each tick, every buddy looks at <strong>twelve</strong> possible steps and standing still. The short tick on each circle shows which way it circles the area's centre; faint dots are the <strong>last</strong> few seconds of its path.</p>
+    <img src="buddy-roaming/01-far-lists.gif" alt="Reading A: a &quot;far enough&quot; list for every step" width="400" height="320" loading="lazy">
+    <p class="after">For each possible step, the buddy works out which others it would be at <strong>least</strong> the spacing away from: that step's &quot;far enough&quot; list. It <strong>prefers</strong> the step that brings it closest to having everyone on its list (measured by distance, so every yard gained counts), then the one that turns with its circling direction, then the one keeping its nearest neighbour near the spacing. Watch the <strong>start</strong>: bunched in a corner, they burst apart, then settle into an even spread across the whole area that slowly wheels, each on its own heading. This is the reading <strong>closest</strong> to &quot;they each have their own separate 'far enough away from these buddy-bots' lists, one for each direction&quot;, with &quot;direction&quot; meaning each way it could step. <strong>Two</strong> fixes came from watching it: a buddy is gently pushed back once within 12 yards of the area's edge (without it they circled the rim in pairs), and the spacing is judged by distance rather than a yes/no count (without it a buddy inside a crowd saw no difference between steps and never left).</p>
+  </section>
+  <section class="card">
+    <h2>Inside one buddy's choice</h2>
+    <p class="before">The same model, watching <strong>only</strong> the red buddy's decision. The rays are its twelve possible steps, brighter the <strong>long</strong>er that step's &quot;far enough&quot; list; dark rays are refused (a rock, or the area's edge). Green lines go to the buddies it <strong>will</strong> be far enough from after its chosen step, red lines to the ones still too close.</p>
+    <img src="buddy-roaming/02-one-buddys-choice.gif" alt="Inside one buddy's choice" width="400" height="320" loading="lazy">
+    <p class="after">Early on, when they start bunched together, most lines are <strong>red</strong> and it steps outward, whichever way turns with its circle. Once the group has spread, the lines go green and the choice is decided mostly by the circling and a small random nudge, so it <strong>drifts</strong> rather than marching. Refused rays are how rocks are walked around: no pathfinding, just <strong>never</strong> choosing a step into one.</p>
+  </section>
+  <section class="card">
+    <h2>Reading B: a spring to the spacing, no lists</h2>
+    <p class="before">Each buddy looks <strong>only</strong> at its nearest neighbour: pushed away if closer than the spacing, pulled in if farther, and turning with its circle. The <strong>pale</strong> rings are the spacing around each buddy.</p>
+    <img src="buddy-roaming/03-spring.gif" alt="Reading B: a spring to the spacing, no lists" width="400" height="320" loading="lazy">
+    <p class="after">Simpler, and it also spreads them, but <strong>differently</strong>: since only the nearest neighbour counts, buddies tend to sit in twos and short chains at the spacing rather than covering the area evenly. A buddy far from everyone is pulled <strong>back</strong> toward the others (&quot;they just try and congregate at a certain distance&quot;), which keeps them together; Reading A lets a buddy wander alone as long as everyone is far enough. Fewer numbers to keep, <strong>less</strong> even coverage.</p>
+  </section>
+  <section class="card">
+    <h2>Reading C: a list for each way round</h2>
+    <p class="before">Here &quot;one for each direction&quot; means the <strong>two</strong> ways round the centre. Every tick, each buddy looks a few steps ahead both ways and keeps a &quot;far enough&quot; list for each; it circles the way whose list is <strong>long</strong>er. Orange buddies circle clockwise, blue counter-clockwise; watch them <strong>switch</strong>.</p>
+    <img src="buddy-roaming/04-spin-lists.gif" alt="Reading C: a list for each way round" width="400" height="320" loading="lazy">
+    <p class="after">In practice most buddies end up circling the <strong>same</strong> way: whichever way has more room wins, and once most go one way, that way stays roomier. The <strong>occasional</strong> blue one turns back when it would crowd the one ahead, which reads as &quot;pseudo-random&quot; wandering from a distance. So in this reading the random starting direction <strong>doesn't</strong> last; if the owner wants each buddy to keep its own direction, Reading A holds it (the direction there never changes).</p>
+  </section>
+  <section class="card">
+    <h2>The spacing: close or far</h2>
+    <p class="before">The same Reading A, run <strong>twice</strong> on the same map from the same start: dim-ringed buddies with a 12-yard spacing (close), bright ones with a 30-yard spacing (far). The owner said &quot;whether that's close or far, doesn't matter&quot;.</p>
+    <img src="buddy-roaming/05-close-and-far.gif" alt="The spacing: close or far" width="400" height="320" loading="lazy">
+    <p class="after">The spacing sets the <strong>whole</strong> look: close, they move as a loose pack that wheels together; far, they cover the area like sentries. Without a setting the model uses <strong>0.6</strong> of the even share (the side of the square each would get if the area were divided among them), about 22 yards here for six; the whole share, about 37 yards, was tried first and pushed them against the edges. Which reads best in game is a <strong>tuning</strong> choice, logged in the balance file when made.</p>
+  </section>
+  <header class="part" id="waypoints">
+    <h2>Part 2 · The owner's waypoint rule</h2>
+    <p>Waypoints round the centre: the bearing turns a <strong>steady</strong> step, the distance out moves a little each time, crowded spots are nudged, and runs toward the middle cross it.</p>
+  </header>
+  <section class="card">
+    <h2>Reading D: waypoints round the centre</h2>
+    <p class="before">The owner's suggestion, in place of keeping an <strong>even</strong> distance. Each buddy walks to a <strong>way</strong>point (the cross, joined to it by a dashed line). When it arrives, it turns its bearing from the area's centre 40 degrees <strong>further</strong> in its own direction and picks the next waypoint on that bearing, a random share of the way from the centre to the area's edge. Waypoints stay 3 yards <strong>off</strong> rocks and the edge. Six buddies <strong>scattered</strong> over the area; the paths are drawn for the last several seconds.</p>
+    <img src="buddy-roaming/08-waypoints.gif" alt="Reading D: waypoints round the centre" width="400" height="320" loading="lazy">
+    <p class="after">Every buddy goes round, but at its <strong>own</strong> rate: a run of waypoints near the centre makes a quick small lap, and one far out sends it on a long walk to the rim. So buddies <strong>overtake</strong> each other, cross paths, and now and then share a patch of ground for a moment before one leaves. <strong>Nothing</strong> keeps them apart: two may walk side by side for a waypoint or two. Measured over a long run (6000 ticks): the nearest other buddy is on average 19 yards away (24 in Reading A), and under 6 yards 9% of the time (0% in Reading A). Since the share is uniform along the bearing, half of the waypoints fall in the inner half of the distance to the edge, which is only a quarter of the area; the middle is visited <strong>more</strong> than the rim.</p>
+  </section>
+  <section class="card">
+    <h2>Inside one buddy's waypoints</h2>
+    <p class="before"><strong>Only</strong> the red buddy. The small plus is the area's centre; the grey line runs from the centre along the buddy's current bearing to the area's edge, the <strong>whole</strong> length its waypoint could fall on. The cross is where the <strong>random</strong> share put it. Earlier waypoints <strong>stay</strong> as dots.</p>
+    <img src="buddy-roaming/09-one-buddys-waypoints.gif" alt="Inside one buddy's waypoints" width="400" height="320" loading="lazy">
+    <p class="after">The bearing moves on by the <strong>same</strong> angle every time, so the dots form a spiral-like fan: some close to the plus, some near the rim, in no order. Short hops near the centre go by <strong>fast</strong>, long ones out to the rim slow the lap down. When a rock blocks the chosen spot the share is re-rolled; when a rock covers the whole bearing, the bearing turns <strong>one</strong> more step. A buddy that can't reach its waypoint (stuck behind a rock for twice the straight-line time) gives <strong>up</strong> on it and takes the next one.</p>
+  </section>
+  <section class="card">
+    <h2>A blend: waypoints kept apart</h2>
+    <p class="before">The owner, on Reading D: &quot;we might want some combination of these behaviors&quot;. One way to <strong>combine</strong> them: the same waypoints, but a spot within 20 yards of another buddy's current waypoint is passed over for another on the same bearing. The pale rings are <strong>those</strong> 20 yards round each waypoint.</p>
+    <img src="buddy-roaming/10-waypoints-kept-apart.gif" alt="A blend: waypoints kept apart" width="400" height="320" loading="lazy">
+    <p class="after">Spacing is now kept between <strong>destinations</strong> rather than step by step, so buddies still bunch briefly while passing each other, but they no longer end up heading for the same spot. It costs <strong>one</strong> check per waypoint instead of one per step, and leaves the random lap speeds of Reading D alone. Other blends are possible (Reading A's spacing steps while walking to the waypoint, or re-rolling only waypoints near other buddies themselves); this is the <strong>cheap</strong>est. Measured the same way as Reading D: the nearest other buddy averages 23 yards away and is under 6 yards 2% of the time. Up to 8 spots are tried on the bearing; when none is 20 yards clear, the <strong>room</strong>iest is taken rather than turning the bearing further (turning further was tried first: a quarter of the waypoints skipped a step, and a buddy could be sent across the whole area).</p>
+  </section>
+  <section class="card">
+    <h2>Reading D, each distance 1 to 20 points from the last</h2>
+    <p class="before">The owner's <strong>rule</strong> for Reading D. Call a waypoint's distance from the centre its <strong>Y</strong> (a share of the way to the edge on its bearing) and its bearing round the centre its X. Y is a <strong>whole</strong> number from 1 to 100, the percent of the way out. Each new waypoint adds or takes away, at <strong>even</strong> odds, a whole number from 1 to 20: from 50% of the way out, the next is anywhere from 30% to 70%, and never nearer the centre than 10 yards. X turns a <strong>tenth</strong> of a circle (36 degrees) each waypoint (it was 40). The map now has small rocks, ruined crates (squares), raised ground (rings), two hills and a dip (lighter is higher) and a road (brown); here buddies <strong>still</strong> walk straight and orbit obstacles.</p>
+    <img src="buddy-roaming/11-waypoints-y-limited.gif" alt="Reading D, each distance 1 to 20 points from the last" width="400" height="320" loading="lazy">
+    <p class="after">Each buddy drifts in and out gradually, so its laps change size a <strong>little</strong> at a time: a few tight fast laps near the middle, then a slow spiral out. Measured over a long run, the waypoints fall in each fifth of the way out (inner to outer) 24%, 20%, 18%, 16%, 22% of the time. Adding and taking away the same amounts leans <strong>neither</strong> way, so over time every distance is drawn about equally (a rock in the way moves that one waypoint along its bearing to the nearest clear spot, without changing the drawn Y the next one starts from), a little more at the very middle and the very edge, where the 1 and 100 limits hold a buddy for a step or two. (Multiplying Y by 1 plus or minus the change was built first, a <strong>mis</strong>reading of the rule: it leaned inward, a step out and back in multiplying Y by (1 + c)(1 - c), just under 1, and over half the waypoints ended in the inner fifth.)</p>
+  </section>
+  <section class="card">
+    <h2>Through the middle: S shapes and figure eights</h2>
+    <p class="before">The owner: &quot;if the buddy-bot's waypoint gets pretty close to middle after having two low 1-20% rolls, we should pierce through the center and reverse their orientation [...] To make an S shape, or a figure 8 passing through the middle&quot;. Two buddies, long trails. After two inward rolls in a row that leave Y at 25 or under, the next waypoint goes on the <strong>far</strong> side of the centre at the same Y, and the buddy turns the other way round.</p>
+    <img src="buddy-roaming/17-piercing-the-middle.gif" alt="Through the middle: S shapes and figure eights" width="400" height="320" loading="lazy">
+    <p class="after">A buddy spirals in over a few waypoints, crosses the middle, and carries on round the other way, so its trail draws an <strong>S</strong>; the next time it spirals in and crosses, the loops close into a figure eight. Measured over a long run: 5.4 crossings per 100 waypoints. The count of inward rolls starts again after each crossing, so a buddy <strong>never</strong> crosses twice in a row.</p>
+  </section>
+  <header class="part" id="ground">
+    <h2>Part 3 · Paths and the ground</h2>
+    <p>Getting to <strong>each</strong> waypoint: round rocks, crates and raised ground, down gentle slopes, along roads, out of a side tunnel.</p>
+  </header>
+  <section class="card">
+    <h2>Walking round the rocks</h2>
+    <p class="before">A crowded start in the <strong>rock</strong>iest corner, with long trails. No path is planned: each tick a buddy <strong>simply</strong> refuses any step that would enter a rock (keeping a yard and a half clear) or leave the area.</p>
+    <img src="buddy-roaming/07-round-the-rocks.gif" alt="Walking round the rocks" width="400" height="320" loading="lazy">
+    <p class="after">Twelve headings are <strong>enough</strong> to slide round rocks of this size; the trails curve along the rock edges. What this <strong>can't</strong> do is find the way out of a dead end (a cave mouth, a U of rocks): in game those areas would need the server's own pathfinding for the step, which is the next thing to decide once the reading is chosen.</p>
+  </section>
+  <section class="card">
+    <h2>Orbiting round things in the way</h2>
+    <p class="before">Three buddies on the <strong>cluttered</strong> map, with the owner's Y rule. Each obstacle has a dashed orbit circle 2.5 yards <strong>out</strong>. When the straight line to a buddy's waypoint crosses one within 15 yards, the buddy aims along the <strong>tangent</strong> to that circle, on the side its waypoint lies; the circle it is going round lights up.</p>
+    <img src="buddy-roaming/12-orbiting-obstacles.gif" alt="Orbiting round things in the way" width="400" height="320" loading="lazy">
+    <p class="after">Paths bend round rocks, crates and raised ground at a <strong>distance</strong> instead of walking up to them and sliding along. Measured: a buddy is within a yard of an obstacle's edge 6% of the time with orbiting, 21% without. The side is <strong>kept</strong> until the buddy is past, so it doesn't dither; when the waypoint is straight behind the obstacle, it goes round the way it circles the area. This walker knows every obstacle in <strong>advance</strong>, which the game won't; the planner in the next animations finds them by testing the ground.</p>
+  </section>
+  <section class="card">
+    <h2>Planned paths: test points, bends, slopes and roads</h2>
+    <p class="before">The owner's <strong>planner</strong>. On picking a waypoint, a buddy draws the straight line to it and places test points along it one <strong>body</strong> width apart (the dots ahead of each buddy). At each it reads the ground height, under its centre and <strong>both</strong> shoulders. A jump in height that <strong>stands out</strong> from the slope around it is an obstacle: the path bulges round it with a half-cosine ease out, a straight run past it at the peak, and an ease back to the line. The same is tried along four gentle bows either side of the line, and the <strong>cheapest</strong> wins: each yard costs more the steeper it is, up or down, and less on the road.</p>
+    <img src="buddy-roaming/13-planned-paths.gif" alt="Planned paths: test points, bends, slopes and roads" width="400" height="320" loading="lazy">
+    <p class="after">Buddies now plan round crates and rocks they only <strong>discovered</strong> by testing the ground, and bend onto the road when it runs their way. The hills here are <strong>gentle</strong> (the steepest about 21 degrees), so steering off their slopes only saves a little climbing; steeper ground would show it more. Measured over a long run against the straight walker of the last animation: height climbed or descended per 100 yards walked 8 (planned) against 9 (straight); share of walking on the road 13% against 7%; time standing on an obstacle 0.0% against 0.0%. Buddies here are sized like different races (0.6 to 1.95 yards wide), so their dots are spaced <strong>differently</strong>. The owner's 5-yard rule is <strong>on</strong> from here: a waypoint landing within 5 yards of another buddy moves 10 points toward the middle of the way out. It moved 5% of waypoints; with it the nearest other buddy averages 22 yards and is under 6 yards 6% of the time, against 22 yards and 7% without.</p>
+  </section>
+  <section class="card">
+    <h2>Inside one plan</h2>
+    <p class="before">One buddy, 1.95 yards wide (a <strong>tau</strong>ren). At each new waypoint all <strong>five</strong> candidate paths it weighed stay drawn until the next: the straight line and a gentle bow either side at two heights, each with the bulges it needed round obstacles. The chosen one is <strong>bright</strong>, the others grey; a candidate that couldn't get past something within 16 yards is darker.</p>
+    <img src="buddy-roaming/14-one-plan.gif" alt="Inside one plan" width="400" height="320" loading="lazy">
+    <p class="after">Most trips pick the straight line or the smaller bow; a <strong>big</strong> bow wins when the line runs over a hill or along the dip, and a bow onto the road wins when the road lies between. The bulges round a crate are small and <strong>sharp</strong>, round a big rock wide. Planning happens <strong>once</strong> per waypoint and took 1 to 15 milliseconds per trip in the model; in game each test point costs three height lookups, a few hundred per trip.</p>
+  </section>
+  <section class="card">
+    <h2>The same trips, two sizes</h2>
+    <p class="before">Two buddies making the <strong>same</strong> random choices, so they get the same waypoints: a human, 0.61 yards wide (green), and a tauren, drawn 3 yards wide to show the effect (purple; a real tauren is 1.95). Each is drawn to its <strong>real</strong> size, and tests the ground every body width along its way. Whoever reaches a waypoint <strong>first</strong> waits there for the other.</p>
+    <img src="buddy-roaming/15-two-sizes.gif" alt="The same trips, two sizes" width="400" height="320" loading="lazy">
+    <p class="after">Their paths <strong>mostly</strong> agree but part where the ground is tight: the tauren's shoulders touch rocks the human's clear, so it bulges wider round them or takes another bow, and its test points are five times farther apart. Waiting at each waypoint keeps them <strong>side</strong> by side, so each difference shows as the two paths splitting and meeting again at the next cross. So <strong>larger</strong> races pathfind round obstacles &quot;in differing increments&quot;, as the owner put it.</p>
+  </section>
+  <section class="card">
+    <h2>A side tunnel</h2>
+    <p class="before">A chamber with a tunnel 8 yards wide running <strong>east</strong> to a small side chamber. Each waypoint is placed on its bearing from the chamber's centre (the small plus), and the line along that bearing stops at the <strong>first</strong> wall it meets (the owner: &quot;move the 'edge' of the map to the closest of the walls&quot;); the percent is of that distance. A bearing <strong>down</strong> the tunnel reaches the side chamber's back wall, one at the chamber's side stops there. One <strong>pull</strong> toward openings is added: when a bearing is chosen, the buddy looks up to half a step either side, and if the line there runs 20 yards or more farther (the tunnel's mouth), this one waypoint takes the middle of that opening. Buddies plan their paths as <strong>before</strong>; a ring marks a turning point.</p>
+    <img src="buddy-roaming/16-side-tunnel.gif" alt="A side tunnel" width="400" height="320" loading="lazy">
+    <p class="after">Every buddy's lap now passes the tunnel <strong>once</strong>, and when its distance number is past about half, it walks in, sometimes to the side chamber, and comes back out on the next waypoint. Measured over a long run: 4.7% of waypoints fall past the tunnel's mouth and 6 of the 6 buddies went in, against 0.3% and 1 of 6 with the walls rule alone. Without the pull, the tunnel is <strong>almost</strong> never reached: X turns exactly a tenth of a circle, so each buddy repeats the same ten bearings lap after lap, and only bearings within a few degrees of the tunnel's line reach into it. Half a step either side covers the whole circle between one bearing and the next, so <strong>no</strong> opening is missed, and the pinwheel's own bearing is left as it was. Leaving the tunnel, the straight line to the next waypoint runs through rock, so the buddy walks toward the centre until the waypoint comes into view and turns there: every waypoint is placed in <strong>sight</strong> of the centre, so that point always exists.</p>
+  </section>
+  <header class="part" id="exploring">
+    <h2>Part 4 · Exploring: paint, rooms and tunnels</h2>
+    <p>Buddies paint what they see and go where the paint is <strong>thin</strong>; the systems compared side by side.</p>
+  </header>
+  <section class="card">
+    <h2>Exploring as painting: four systems side by side</h2>
+    <p class="before">The owner's painting idea, tried <strong>four</strong> ways on one new arena, all four clans of four starting at the same entrance (white square, at the foot of the L). The arena: a main hall with an <strong>L</strong>-shaped leg, a dead-end passage off the leg, and a tunnel from the hall to a side room that leads down a second tunnel to a far room. Each buddy lays paint on what it can <strong>see</strong>, most where it stands, less out to 60 yards; the floor is shaded by how much paint it has (dark: none; warm: much). In every panel the walls paint their <strong>own</strong> fringe too, within 5 yards of themselves, topped up every 3 seconds (blue-grey where the walls' paint is the greater); regenerated 2026-09-27 after the owner saw no wall paint in the first version, where the walls' paint was too weak to matter and was not drawn. The bar under each panel is how much of the arena has been <strong>seen</strong> from within 20 yards. Panels (counted by the white dots in each corner): 1, top left, today's pinwheel (the owner's rules), paint only drawn; 2, top right, the same pinwheel choosing by paint: of its proposal and eight near it, the least painted, farthest from the entrance, wins; 3, bottom left, no pinwheel at all: of 30 random spots 12 to 70 yards off, the least painted wins, and walls paint the ground within 5 yards of themselves every 3 seconds; 4, bottom right, the pinwheel run in the squished circle (the arena mapped onto a disc, see below) choosing by paint. Paths run through <strong>un</strong>painted ground where they can (3 and 4, and 2), and round walls on their own.</p>
+    <img src="buddy-roaming/19-painting-compared.gif" alt="Exploring as painting: four systems side by side" width="642" height="494" loading="lazy">
+    <p class="after">What the panels show, measured over six minutes of each system from the same start (the generator prints these): 1, today's pinwheel: 66%, 69%, 69% and 69% explored after about 20 seconds, 40 seconds, 1.5 minutes and 6 minutes; 0.8% of its time within 3 yards of a wall; 49% of its steps onto ground walked in the last 25 seconds; in tunnels 0.1% of its time, on average 1.5 yards off a tunnel's middle line. 2, choosing by paint: 67%, 69%, 69% and 69% explored after about 20 seconds, 40 seconds, 1.5 minutes and 6 minutes; 1.0% of its time within 3 yards of a wall; 43% of its steps onto ground walked in the last 25 seconds; in tunnels 0.2% of its time, on average 1.0 yards off a tunnel's middle line. 3, least paint and wall paint: 91%, 100%, 100% and 100% explored after about 20 seconds, 40 seconds, 1.5 minutes and 6 minutes; 0.6% of its time within 3 yards of a wall; 57% of its steps onto ground walked in the last 25 seconds; in tunnels 5.1% of its time, on average 1.0 yards off a tunnel's middle line. 4, the squished circle: 87%, 97%, 100% and 100% explored after about 20 seconds, 40 seconds, 1.5 minutes and 6 minutes; 0.9% of its time within 3 yards of a wall; 42% of its steps onto ground walked in the last 25 seconds; in tunnels 26.7% of its time, on average 1.2 yards off a tunnel's middle line. The two plain pinwheels <strong>never</strong> reach the tunnels: every waypoint sits on a straight line from the centre, and from the L's centre no straight line runs down the tunnel, so the side and far rooms stay dark whatever paint says. The squished circle <strong>fixes</strong> that: its rim is the whole outline in order, so the tunnels and the dead end are stretches of the circle's edge, and a pinwheel lap in the disc walks into every room; with paint choosing among nearby disc points, it explores everything with the fewest revisits. Least paint alone explores <strong>fast</strong>est but wanders: it has no laps, doubles back more, and its route is hard to predict. For least paint the walls' paint changes <strong>little</strong> in time near walls (0.5% without it): its spots are already chosen 3 yards off walls and its paths keep 1.5 yards off; where it matters is the room orbit's tunnels (the next comparison but one, 21). The disc map is made by laying the outline round a circle by distance along it and settling every inner cell at the average of its neighbours (a harmonic map); onto a convex shape like a circle such a map <strong>never</strong> folds, so each point of the disc names one place in the arena (the property in docs/reference/jacobian-conjecture/).</p>
+  </section>
+  <section class="card">
+    <h2>Rooms and tunnels: orbiting each room's middle</h2>
+    <p class="before">The owner, after the last comparison: &quot;the third one I think looked the most natural. Don't forget to add the 'paint from walls' behavior! [...] their midpoint is the midpoint of the entire area, when it should be the midpoint of the room that they're in [...] we should identify rooms, as in, not tunnels, and we should orbit around those until the paint system tells us to be drawn toward a tunnel. If the walls extrude paint, then characters will be encouraged to walk through the center of the tunnel, not glide along it's walls.&quot; The hall is split by how <strong>far</strong> each spot is from the outline: places at least 7 yards deep (14 across) are room middles, the ground within 7 yards of them joins their room, and what is left, the narrow places, is tunnel. Here that makes <strong>three</strong> rooms (the hall with its L, the side room, the far room, each middle marked with a plus) and three tunnels (hall to side room, side room to far room, and the dead end). Panels: 1, least paint with the walls' paint (the one the owner liked); 2, the room orbit: the owner's pinwheel round the middle of the room the buddy is in, in that room's own coordinates, choosing by paint, until the room is 80% explored; then the paint draws it to the least explored place, a room or a tunnel (the dead end too), farther from the entrance weighing more (a thin line to that place while it goes); once every place is past 80%, to the least explored one if it is clearly less explored than where it is, so the last corners get seen; 3, the squished circle with paint; 4, the room orbit without the walls' paint. Walls' paint shows <strong>blue</strong>-grey.</p>
+    <img src="buddy-roaming/21-rooms-and-tunnels.gif" alt="Rooms and tunnels: orbiting each room's middle" width="642" height="494" loading="lazy">
+    <p class="after">Measured over six minutes each from the same start: 1, least paint: 91%, 100%, 100% and 100% explored after about 20 seconds, 40 seconds, 1.5 minutes and 6 minutes; 0.6% of its time within 3 yards of a wall; 57% of its steps onto ground walked in the last 25 seconds; in tunnels 5.1% of its time, on average 1.0 yards off a tunnel's middle line. 2, the room orbit: 79%, 95%, 100% and 100% explored after about 20 seconds, 40 seconds, 1.5 minutes and 6 minutes; 0.6% of its time within 3 yards of a wall; 60% of its steps onto ground walked in the last 25 seconds; in tunnels 3.8% of its time, on average 0.7 yards off a tunnel's middle line. 3, the squished circle: 87%, 97%, 100% and 100% explored after about 20 seconds, 40 seconds, 1.5 minutes and 6 minutes; 0.9% of its time within 3 yards of a wall; 42% of its steps onto ground walked in the last 25 seconds; in tunnels 26.7% of its time, on average 1.2 yards off a tunnel's middle line. 4, the room orbit without the walls' paint: 80%, 91%, 100% and 100% explored after about 20 seconds, 40 seconds, 1.5 minutes and 6 minutes; 1.9% of its time within 3 yards of a wall; 36% of its steps onto ground walked in the last 25 seconds; in tunnels 3.2% of its time, on average 1.2 yards off a tunnel's middle line. The room orbit reaches <strong>every</strong> room and tunnel, the dead end included, which the whole-area pinwheel of the last comparison never did: each room's own middle sees its own walls, and the paint, not the lap, decides when to go on. Its laps round each room's middle keep it <strong>off</strong> the walls. Panels 2 and 4 show what the walls' paint <strong>does</strong>: with it, a buddy spends less time near walls and walks nearer a tunnel's middle line; it also makes buddies share those middle lines, so more of their steps land on ground walked just before. A first version counted a room as <strong>done</strong> at 80% and never drew buddies into tunnels: it stopped at 88% explored, with the dead end and the rooms' last corners unseen.</p>
+  </section>
+  <section class="card" id="dungeon-sense">
+    <h2>Sensing tunnels by quadrants</h2>
+    <p class="before">A clan of <strong>buddies</strong> explores the big dungeon: five rooms joined by a straight tunnel, an L, a fork, a loop and a <strong>dead</strong> end. Each goes where the paint is <strong>thin</strong>, and with sensing on it also reads <strong>eight</strong> sectors round itself: gold a tunnel, red a wall, grey open ground. <strong>Click</strong> a buddy to see its sectors; try sensing <strong>off</strong>, or a different blocked share, and watch the time to reach both far rooms.</p>
+    <div id="ds-root"></div>
+    <p class="after">A sector is a <strong>wall</strong> when most of what lies within the radius is rock, weighted toward what is near; it is a <strong>tunnel</strong> when, even so, a walkable way reaches the edge of the radius through its middle. A tunnel not seen up close <strong>lately</strong> is taken; with none, the buddy chooses by least <strong>paint</strong>. The walls paint a thin <strong>fringe</strong> every 3 seconds (blue-grey), which keeps paths in a tunnel's middle. The rules are the roaming <strong>pattern</strong> (docs/roaming-pattern.md), built twice: in Lua for the model, in JavaScript for this page, with a check holding both to the pattern. A drawn simulation, not the <strong>game</strong>.</p>
+  </section>
+  <script>
+// roam-pattern.js - the JavaScript implementation of the roaming pattern
+// (docs/roaming-pattern.md): the ground grid, paint and the walls' paint,
+// paths, the eight-sector sensing, and the owner's waypoint rule. No page
+// code here (that is scene-kit.js); the playable scenes build on this, and
+// scripts/test-roam-pattern runs it under gjs beside the Lua model
+// (src/lua-basic/lib/buddy-roam.lua), holding both to the pattern.
+//
+// The owner, 2026-09-28: "the datamodel being the same doesn't mean that
+// it's implementation in a specific language needs to be the same. Build
+// the pattern, build it twice." So this follows the pattern document, not
+// the Lua code: its own structures and names. Where the pattern leaves a
+// detail open, the choice is noted; where the check compares results, the
+// pattern's words are the contract.
+(function (global) {
+  "use strict";
+
+  // {{{ maps
+  // The big dungeon (pattern: "the dungeon's grid"; also drawn in the
+  // gallery's scenes 25 and 26): five rooms and tunnels of every kind the
+  // owner named, as rectangles (a loop needs a hole a single outline can't
+  // have). Each rectangle carries its name and kind for the scenes' counts.
+  const dungeon = {
+    rects: [
+      { x0: 20, y0: 190, x1: 110, y1: 340, name: "the entrance room", kind: "room" },
+      { x0: 190, y0: 140, x1: 310, y1: 240, name: "the hall", kind: "room" },
+      { x0: 20, y0: 20, x1: 120, y1: 100, name: "the north-west room", kind: "room" },
+      { x0: 370, y0: 20, x1: 480, y1: 110, name: "the north-east room", kind: "room" },
+      { x0: 380, y0: 170, x1: 480, y1: 330, name: "the south-east room", kind: "room" },
+      { x0: 110, y0: 215, x1: 190, y1: 225, name: "the straight tunnel", kind: "tunnel" },
+      { x0: 245, y0: 60, x1: 255, y1: 140, name: "the fork's stem", kind: "tunnel" },
+      { x0: 120, y0: 55, x1: 370, y1: 65, name: "the fork", kind: "tunnel" },
+      { x0: 60, y0: 165, x1: 190, y1: 175, name: "the L", kind: "tunnel" },
+      { x0: 60, y0: 100, x1: 70, y1: 175, name: "the L", kind: "tunnel" },
+      { x0: 310, y0: 180, x1: 380, y1: 190, name: "the loop (north way)", kind: "tunnel" },
+      { x0: 280, y0: 240, x1: 290, y1: 300, name: "the loop (south way)", kind: "tunnel" },
+      { x0: 280, y0: 290, x1: 380, y1: 300, name: "the loop (south way)", kind: "tunnel" },
+      { x0: 440, y0: 110, x1: 450, y1: 150, name: "the dead end", kind: "dead" }
+    ],
+    rocks: [{ x: 250, y: 190, r: 6 }, { x: 60, y: 280, r: 5 }, { x: 470, y: 30, r: 4 }, { x: 440, y: 250, r: 6 }],
+    entrance: { x: 40, y: 330 },
+    farRooms: [3, 4]                        // the north-east and south-east rooms: farthest from the entrance
+  };
+  // }}}
+
+  // {{{ geometry of outlines
+  function insidePolygon(poly, x, y) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+  function edgeDistance(poly, x, y) {
+    let best = Infinity;
+    for (let i = 0; i < poly.length; i++) {
+      const [ax, ay] = poly[i], [bx, by] = poly[(i + 1) % poly.length];
+      const vx = bx - ax, vy = by - ay;
+      const t = Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy)));
+      best = Math.min(best, Math.hypot(ax + vx * t - x, ay + vy * t - y));
+    }
+    return best;
+  }
+  // yards from (cx, cy) along `bearing` to the first side of the outline
+  function rayToEdge(poly, cx, cy, bearing) {
+    const dx = Math.cos(bearing), dy = Math.sin(bearing);
+    let best = Infinity;
+    for (let i = 0; i < poly.length; i++) {
+      const [ax, ay] = poly[i], [bx, by] = poly[(i + 1) % poly.length];
+      const ex = bx - ax, ey = by - ay, den = dx * ey - dy * ex;
+      if (Math.abs(den) <= 1e-9) continue;
+      const t = ((ax - cx) * ey - (ay - cy) * ex) / den, u = ((ax - cx) * dy - (ay - cy) * dx) / den;
+      if (t > 0 && u >= 0 && u <= 1 && t < best) best = t;
+    }
+    return best;
+  }
+  function inRects(rects, x, y) {
+    for (let k = 0; k < rects.length; k++) {
+      const r = rects[k];
+      if (x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) return k;
+    }
+    return -1;
+  }
+  // }}}
+
+  // {{{ the ground grid
+  const STEPS = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]];
+
+  // The pattern's grid over a rectangles area: corner at the bounds less one
+  // cell; open = inside and not strictly inside a rock; edge distance to the
+  // nearest outside cell's square; wall distance also to rock rims.
+  class Grid {
+    constructor(area, cell) {
+      const xs = area.rects.flatMap(r => [r.x0, r.x1]), ys = area.rects.flatMap(r => [r.y0, r.y1]);
+      this.area = area;
+      this.cell = cell;
+      this.x0 = Math.min(...xs) - cell;
+      this.y0 = Math.min(...ys) - cell;
+      this.nx = Math.ceil((Math.max(...xs) + cell - this.x0) / cell);
+      this.ny = Math.ceil((Math.max(...ys) + cell - this.y0) / cell);
+      this.n = this.nx * this.ny;
+      this.rect = new Int8Array(this.n).fill(-1);     // which rectangle (room, tunnel, dead end), -1 outside
+      this.open = new Uint8Array(this.n);
+      this.edge = new Float32Array(this.n).fill(Infinity);
+      this.wall = new Float32Array(this.n).fill(-1);
+      for (let i = 0; i < this.n; i++) {
+        const { x, y } = this.middle(i);
+        this.rect[i] = inRects(area.rects, x, y);
+        if (this.rect[i] >= 0) this.open[i] = area.rocks.some(k => (x - k.x) ** 2 + (y - k.y) ** 2 < k.r * k.r) ? 0 : 1;
+      }
+      this.measureEdges();
+      this.openCount = this.open.reduce((s, v) => s + v, 0);
+    }
+    middle(i) { return { x: this.x0 + (i % this.nx + 0.5) * this.cell, y: this.y0 + (Math.floor(i / this.nx) + 0.5) * this.cell }; }
+    cellAt(x, y) {
+      const ix = Math.floor((x - this.x0) / this.cell), iy = Math.floor((y - this.y0) / this.cell);
+      return ix < 0 || iy < 0 || ix >= this.nx || iy >= this.ny ? -1 : iy * this.nx + ix;
+    }
+    isOpen(x, y) { const i = this.cellAt(x, y); return i >= 0 && this.open[i] === 1; }
+    // every square the line crosses (sampled at half a cell) is open
+    sight(x0, y0, x1, y1) {
+      const len = Math.hypot(x1 - x0, y1 - y0), steps = Math.ceil(len / (this.cell / 2));
+      for (let k = 1; k < steps; k++) if (!this.isOpen(x0 + (x1 - x0) * k / steps, y0 + (y1 - y0) * k / steps)) return false;
+      return true;
+    }
+    // edge distance: spread outward from the outside cells that touch an
+    // inside one, each inside cell keeping the nearest such square
+    measureEdges() {
+      const { nx, ny, cell } = this, inside = i => this.rect[i] >= 0;
+      const nearest = new Int32Array(this.n).fill(-1), queue = [];
+      for (let i = 0; i < this.n; i++) {
+        if (inside(i)) continue;
+        const ix = i % nx, iy = Math.floor(i / nx);
+        if (STEPS.some(([dx, dy]) => { const jx = ix + dx, jy = iy + dy; return jx >= 0 && jy >= 0 && jx < nx && jy < ny && inside(jy * nx + jx); })) {
+          nearest[i] = i; queue.push(i);
+        }
+      }
+      const toSquare = (x, y, s) => {
+        const sx = this.x0 + (s % nx) * cell, sy = this.y0 + Math.floor(s / nx) * cell;
+        return Math.hypot(Math.max(sx - x, 0, x - (sx + cell)), Math.max(sy - y, 0, y - (sy + cell)));
+      };
+      for (let h = 0; h < queue.length; h++) {
+        const c = queue[h], ix = c % nx, iy = Math.floor(c / nx);
+        for (const [dx, dy] of STEPS) {
+          const jx = ix + dx, jy = iy + dy;
+          if (jx < 0 || jy < 0 || jx >= nx || jy >= ny) continue;
+          const j = jy * nx + jx;
+          if (!inside(j)) continue;
+          const { x, y } = this.middle(j), d = toSquare(x, y, nearest[c]);
+          if (nearest[j] < 0) { nearest[j] = nearest[c]; this.edge[j] = d; queue.push(j); }
+          else if (d < this.edge[j]) { nearest[j] = nearest[c]; this.edge[j] = d; }
+        }
+      }
+      for (let i = 0; i < this.n; i++) {
+        if (!this.open[i]) continue;
+        const { x, y } = this.middle(i);
+        this.wall[i] = this.area.rocks.reduce((d, k) => Math.min(d, Math.hypot(x - k.x, y - k.y) - k.r), this.edge[i]);
+      }
+    }
+  }
+  // }}}
+
+  // {{{ paths
+  // The cheapest way over open cells (eight neighbours, no corner cutting);
+  // a step costs its length, more within 4 yards of a wall, plus `extra(i)`
+  // (paint: unpainted ground cheaper). Returns waypoints (start excluded),
+  // straightened where the line of sight allows, or null.
+  function findPath(grid, from, to, extra) {
+    const s = grid.cellAt(from.x, from.y), t = grid.cellAt(to.x, to.y);
+    if (s < 0 || t < 0 || !grid.open[t]) return null;
+    if (s === t) return [{ x: to.x, y: to.y }];
+    const { nx, n, cell } = grid, cost = new Float32Array(n).fill(Infinity), came = new Int32Array(n).fill(-1), done = new Uint8Array(n);
+    const tx = t % nx, ty = Math.floor(t / nx);
+    const guess = i => { const dx = Math.abs(i % nx - tx), dy = Math.abs(Math.floor(i / nx) - ty); return (Math.max(dx, dy) + (Math.SQRT2 - 1) * Math.min(dx, dy)) * cell; };
+    const heap = new MinHeap();
+    cost[s] = 0; heap.push(guess(s), s);
+    while (heap.size) {
+      const c = heap.pop();
+      if (done[c]) continue;
+      done[c] = 1;
+      if (c === t) break;
+      const cx = c % nx, cy = Math.floor(c / nx);
+      for (let k = 0; k < 8; k++) {
+        const [dx, dy, len] = STEPS[k], jx = cx + dx, jy = cy + dy;
+        if (jx < 0 || jy < 0 || jx >= nx || jy >= grid.ny) continue;
+        const j = jy * nx + jx;
+        if (!grid.open[j] || done[j]) continue;
+        if (k >= 4 && (!grid.open[cy * nx + jx] || !grid.open[jy * nx + cx])) continue;
+        const near = grid.wall[j] < 4 ? (4 - grid.wall[j]) * 0.6 : 0;
+        const c2 = cost[c] + len * cell * (1 + near + (extra ? extra(j) : 0));
+        if (c2 < cost[j]) { cost[j] = c2; came[j] = c; heap.push(c2 + guess(j), j); }
+      }
+    }
+    if (!done[t]) return null;
+    const cells = [];
+    for (let c = t; c !== s && c >= 0; c = came[c]) cells.push(grid.middle(c));
+    cells.reverse();
+    cells[cells.length - 1] = { x: to.x, y: to.y };
+    const out = [];
+    let at = from, k = 0;
+    while (k < cells.length) {
+      let far = k;
+      for (let m = cells.length - 1; m > k; m--) if (grid.sight(at.x, at.y, cells[m].x, cells[m].y)) { far = m; break; }
+      out.push(cells[far]); at = cells[far]; k = far + 1;
+    }
+    return out;
+  }
+  class MinHeap {
+    constructor() { this.keys = []; this.vals = []; }
+    get size() { return this.keys.length; }
+    push(key, val) {
+      const K = this.keys, V = this.vals;
+      let i = K.length;
+      K.push(key); V.push(val);
+      while (i > 0) { const p = (i - 1) >> 1; if (K[p] <= K[i]) break; [K[p], K[i]] = [K[i], K[p]]; [V[p], V[i]] = [V[i], V[p]]; i = p; }
+    }
+    pop() {
+      const K = this.keys, V = this.vals, top = V[0], lk = K.pop(), lv = V.pop();
+      if (K.length) {
+        K[0] = lk; V[0] = lv;
+        for (let i = 0; ;) {
+          const l = 2 * i + 1, r = l + 1;
+          let m = i;
+          if (l < K.length && K[l] < K[m]) m = l;
+          if (r < K.length && K[r] < K[m]) m = r;
+          if (m === i) break;
+          [K[m], K[i]] = [K[i], K[m]]; [V[m], V[i]] = [V[i], V[m]]; i = m;
+        }
+      }
+      return top;
+    }
+  }
+  // }}}
+
+  // {{{ paint
+  // A clan's paint over one grid (pattern: "Paint"). Float counts here: the
+  // page never runs long enough to reach a wrap; the in-game counters are
+  // fixed width and may wrap (accepted by the owner, 2026-09-27).
+  class Paint {
+    constructor(grid) {
+      this.grid = grid;
+      this.buddies = new Float32Array(grid.n);
+      this.walls = new Float32Array(grid.n);
+      this.seenAt = new Float32Array(grid.n).fill(-Infinity);    // last time seen up close (within 20 yards)
+    }
+    // what the buddy at (x, y) can see within `vision`, most at its feet
+    deposit(x, y, vision, amount, now) {
+      const g = this.grid, c = g.cellAt(x, y);
+      if (c < 0) return;
+      const r = Math.ceil(vision / g.cell), cx = c % g.nx, cy = Math.floor(c / g.nx);
+      for (let oy = -r; oy <= r; oy++) for (let ox = -r; ox <= r; ox++) {
+        const ix = cx + ox, iy = cy + oy;
+        if (ix < 0 || iy < 0 || ix >= g.nx || iy >= g.ny) continue;
+        const i = iy * g.nx + ix, d = Math.hypot(ox, oy) * g.cell;
+        if (!g.open[i] || d > vision) continue;
+        const p = g.middle(i);
+        if (d > g.cell * 1.5 && !g.sight(x, y, p.x, p.y)) continue;
+        this.buddies[i] += amount * (1 - d / vision);
+        if (d <= 20) this.seenAt[i] = now;
+      }
+    }
+    // the walls' pulse: open cells within 5 yards of a wall topped up to
+    // 400 x (1 - wall distance / 5)^2, never lowered
+    wallPulse(level = 400, reach = 5) {
+      const g = this.grid;
+      for (let i = 0; i < g.n; i++) {
+        if (!g.open[i] || g.wall[i] >= reach) continue;
+        const want = level * (1 - g.wall[i] / reach) ** 2;
+        if (this.walls[i] < want) this.walls[i] = want;
+      }
+    }
+    at(i, withWalls = true) { return this.buddies[i] + (withWalls ? this.walls[i] : 0); }
+    explored() {
+      let seen = 0;
+      for (let i = 0; i < this.grid.n; i++) if (this.grid.open[i] && this.seenAt[i] > -Infinity) seen++;
+      return seen / this.grid.openCount;
+    }
+  }
+  // }}}
+
+  // {{{ sensing: the eight sectors
+  // Pattern: blocked share weighted 1 - d/radius over the sectors' 45-degree
+  // halves (outside the grid counts as blocked); reach by a breadth-first
+  // walk over open cells within the radius, per sector's 22.5-degree middle
+  // half; tunnel = blocked >= threshold and reach >= radius - 1.5 cells.
+  function senseSectors(grid, x, y, radius = 40, threshold = 0.6) {
+    const sectors = Array.from({ length: 8 }, (_, k) => ({ bearing: k * Math.PI / 4, weight: 0, blockedWeight: 0, reach: 0, far: -1 }));
+    const start = grid.cellAt(x, y);
+    if (start < 0) return sectors.map(s => ({ ...s, blocked: 1, kind: "wall" }));
+    const { nx, ny, cell } = grid, sx = start % nx, sy = Math.floor(start / nx), rc = Math.ceil(radius / cell);
+    const within = (a, half) => sectors.filter(s => Math.abs(wrap(a - s.bearing)) <= half + 1e-9);
+    for (let oy = -rc; oy <= rc; oy++) for (let ox = -rc; ox <= rc; ox++) {
+      if (!ox && !oy) continue;
+      const d = Math.hypot(ox, oy) * cell;
+      if (d > radius) continue;
+      const ix = sx + ox, iy = sy + oy;
+      const blocked = !(ix >= 0 && iy >= 0 && ix < nx && iy < ny && grid.open[iy * nx + ix]);
+      const w = 1 - d / radius;
+      for (const s of within(Math.atan2(oy, ox), Math.PI / 4)) { s.weight += w; if (blocked) s.blockedWeight += w; }
+    }
+    const seen = new Set([start]), queue = [start];
+    for (let h = 0; h < queue.length; h++) {
+      const c = queue[h], ox = c % nx - sx, oy = Math.floor(c / nx) - sy, d = Math.hypot(ox, oy) * cell;
+      if (c !== start) for (const s of within(Math.atan2(oy, ox), Math.PI / 8)) if (d > s.reach) { s.reach = d; s.far = c; }
+      for (const [dx, dy] of STEPS) {
+        const jx = c % nx + dx, jy = Math.floor(c / nx) + dy;
+        if (jx < 0 || jy < 0 || jx >= nx || jy >= ny) continue;
+        const j = jy * nx + jx;
+        if (seen.has(j) || !grid.open[j] || ((jx - sx) ** 2 + (jy - sy) ** 2) * cell * cell > radius * radius) continue;
+        seen.add(j); queue.push(j);
+      }
+    }
+    return sectors.map(s => {
+      const blocked = s.weight > 0 ? s.blockedWeight / s.weight : 1;
+      const through = s.reach >= radius - 1.5 * cell;
+      return { bearing: s.bearing, blocked, reach: s.reach, far: s.far, kind: blocked >= threshold ? (through ? "tunnel" : "wall") : "open" };
+    });
+  }
+  // an angle folded into -pi..pi
+  function wrap(a) { return ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; }
+  // }}}
+
+  // {{{ the owner's waypoint rule
+  const WAYPOINT_RULES = {
+    turn: 2 * Math.PI / 10, clearance: 3, near: 10, changeMin: 1, changeMax: 20,
+    crowd: 5, crowdShift: 10, pierce: 25, turnTries: 12, slideSteps: 99
+  };
+  // Pick the buddy's next waypoint on an outline area (pattern: "the
+  // owner's waypoint rule", steps 1-6). buddy: { x, y, angle, spin, y100
+  // (1..100, or null before its first waypoint), inward }; area: { outline,
+  // centre, rocks }; others: [{ x, y }] (other buddies and players).
+  // Changes the buddy and returns the waypoint { x, y }, or null.
+  function pickWaypoint(buddy, area, others, rand, rules = WAYPOINT_RULES) {
+    const [cx, cy] = area.centre, rocks = area.rocks || [];
+    const clear = (x, y) => insidePolygon(area.outline, x, y)
+      && rocks.every(k => (x - k.x) ** 2 + (y - k.y) ** 2 >= (k.r + rules.clearance) ** 2)
+      && edgeDistance(area.outline, x, y) >= rules.clearance;
+    for (let tryTurn = 0; tryTurn < rules.turnTries; tryTurn++) {
+      buddy.angle += rules.turn * buddy.spin;
+      let bearing = buddy.angle;
+      let reach = rayToEdge(area.outline, cx, cy, bearing) - rules.clearance;
+      let y100;
+      if (buddy.y100 == null) {
+        y100 = null;                                     // the first waypoint: any share, no step
+      } else {
+        const change = rules.changeMin + Math.floor(rand() * (rules.changeMax - rules.changeMin + 1));
+        const sign = rand() < 0.5 ? -1 : 1;
+        y100 = Math.max(1, Math.min(100, buddy.y100 + sign * change));
+        // piercing: the second (or later) inward roll in a row at or under the line
+        buddy.inward = y100 < buddy.y100 ? buddy.inward + 1 : 0;
+        if (buddy.inward >= 2 && y100 <= rules.pierce) {
+          buddy.angle += Math.PI; buddy.spin = -buddy.spin; buddy.inward = 0;
+          bearing = buddy.angle;
+          reach = rayToEdge(area.outline, cx, cy, bearing) - rules.clearance;
+        }
+        // crowding: someone within 5 yards of where Y lands moves it 10 toward 50
+        const d0 = Math.max(rules.near, y100 / 100 * reach);
+        const px = cx + Math.cos(bearing) * d0, py = cy + Math.sin(bearing) * d0;
+        if (others.some(o => (o.x - px) ** 2 + (o.y - py) ** 2 < rules.crowd * rules.crowd)) {
+          const side = y100 < 50 ? 1 : y100 > 50 ? -1 : (rand() < 0.5 ? 1 : -1);
+          y100 += side * rules.crowdShift;
+        }
+      }
+      // place: slide along the bearing a percent at a time, in then out; a
+      // first waypoint instead draws up to 8 free shares
+      const tries = y100 == null ? Array.from({ length: 8 }, () => rand() * 100) : slideOrder(y100, rules.slideSteps);
+      for (const pct of tries) {
+        if (y100 != null && (pct < 1 || pct > 100)) continue;
+        const d = Math.max(rules.near, pct / 100 * reach);
+        const x = cx + Math.cos(bearing) * d, y = cy + Math.sin(bearing) * d;
+        if (clear(x, y)) {
+          buddy.y100 = y100 == null ? Math.round(pct) : y100;    // the drawn Y, not the slid one
+          buddy.waypoint = { x, y };
+          return buddy.waypoint;
+        }
+      }
+    }
+    return null;
+  }
+  function slideOrder(y100, steps) {
+    const out = [y100];
+    for (let k = 1; k <= steps; k++) out.push(y100 - k, y100 + k);     // in, then out
+    return out;
+  }
+  // }}}
+
+  // {{{ seeded random numbers: s = (s * 1103515245 + 12345) mod 2^31
+  function seeded(seed) {
+    let s = seed;
+    return () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };
+  }
+  // }}}
+
+  global.RoamPattern = { maps: { dungeon }, Grid, Paint, findPath, senseSectors, pickWaypoint, WAYPOINT_RULES, seeded,
+                         insidePolygon, edgeDistance, rayToEdge, wrap };
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+  <script>
+// scene-kit.js - the page side of the playable scenes of the buddy roaming
+// gallery: the control strip (buttons, choices, sliders), the map layer
+// drawn once into an offscreen canvas, the page's colours, and the frame
+// loop. No roaming rules here: those are the pattern (roam-pattern.js,
+// docs/roaming-pattern.md). The gallery generator inlines this file after
+// roam-pattern.js and before the scene scripts (the artifact host runs no
+// linked scripts).
+//
+// Why playable pages instead of GIFs (the owner, 2026-09-28): "the gallery
+// rendering was taking too long, my computer can't keep up [...] ok let's
+// make them playable scenes and allow the user to change certain things
+// with their mouse on buttons." The browser draws only what is on screen,
+// on the graphics card, and nothing has to be compressed.
+(function (global) {
+  "use strict";
+  if (global.SceneKit) return;
+
+  // {{{ styles, once per page, from the page's own tokens
+  function addStyles() {
+    if (document.getElementById("scene-kit-styles")) return;
+    const s = document.createElement("style");
+    s.id = "scene-kit-styles";
+    s.textContent = `
+      .sk { display: grid; gap: 10px; }
+      .sk canvas { width: 100%; height: auto; max-width: 100%; border-radius: 6px; background: #0c0f14; touch-action: manipulation; cursor: pointer; }
+      .sk-row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: .9rem; color: var(--muted); }
+      .sk-group { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+      .sk-group > .sk-label { margin-right: 2px; }
+      .sk button { font: inherit; font-size: .85rem; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); cursor: pointer; }
+      .sk button[aria-pressed="true"] { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+      .sk button:focus-visible, .sk input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .sk input[type=range] { width: 110px; accent-color: var(--accent); }
+      .sk-value { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+      .sk-counts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 14px; font-size: .88rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+      .sk-counts b { color: var(--ink); }
+      .sk-note { font-size: .88rem; color: var(--muted); min-height: 1.4em; }`;
+    document.head.appendChild(s);
+  }
+  // }}}
+
+  // {{{ the control strip
+  // One row of controls. Each item: { kind: "button" | "toggle" | "choice" |
+  // "range", id, label?, text?, value?, options?: [[value, text]], min,
+  // max, step, format? }. `onChange(id, value, element)` after each change.
+  // Returns a live object of the current values by id.
+  function controlRow(root, items, onChange) {
+    addStyles();
+    const row = document.createElement("div");
+    row.className = "sk-row";
+    const values = {};
+    for (const it of items) {
+      const group = document.createElement("span");
+      group.className = "sk-group";
+      if (it.label) group.insertAdjacentHTML("beforeend", `<span class="sk-label">${it.label}</span>`);
+      if (it.kind === "button") {
+        const b = button(it.id, it.text);
+        b.addEventListener("click", () => onChange(it.id, null, b));
+        group.append(b);
+      } else if (it.kind === "toggle") {
+        values[it.id] = !!it.value;
+        const b = button(it.id, it.text, values[it.id]);
+        b.addEventListener("click", () => { values[it.id] = !values[it.id]; b.setAttribute("aria-pressed", String(values[it.id])); onChange(it.id, values[it.id], b); });
+        group.append(b);
+      } else if (it.kind === "choice") {
+        values[it.id] = it.value;
+        for (const [v, text] of it.options) {
+          const b = button(`${it.id}-${v}`, text, v === it.value);
+          b.addEventListener("click", () => {
+            values[it.id] = v;
+            group.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+            onChange(it.id, v, b);
+          });
+          group.append(b);
+        }
+      } else if (it.kind === "range") {
+        values[it.id] = +it.value;
+        const r = document.createElement("input");
+        Object.assign(r, { type: "range", id: it.id, min: it.min, max: it.max, step: it.step, value: it.value });
+        r.setAttribute("aria-label", it.label || it.id);
+        const shown = document.createElement("span");
+        shown.className = "sk-value";
+        const fmt = it.format || String;
+        shown.textContent = fmt(+it.value);
+        r.addEventListener("input", () => { values[it.id] = +r.value; shown.textContent = fmt(+r.value); onChange(it.id, +r.value, r); });
+        group.append(r, shown);
+      }
+      row.append(group);
+    }
+    root.append(row);
+    return values;
+  }
+  function button(id, text, pressed) {
+    const b = document.createElement("button");
+    b.type = "button"; b.id = id; b.textContent = text;
+    if (pressed !== undefined) b.setAttribute("aria-pressed", String(!!pressed));
+    return b;
+  }
+  // }}}
+
+  // {{{ colours and the map layer
+  function pageColours(el) {
+    const cs = getComputedStyle(el), v = (name, fallback) => cs.getPropertyValue(name).trim() || fallback;
+    const ground = v("--ground", "#eef0f3");
+    const m = /#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(ground);
+    const dark = m ? (parseInt(m[1], 16) + parseInt(m[2], 16) + parseInt(m[3], 16)) / 3 < 110 : false;
+    return { dark, accent: v("--accent", "#8a5d0c") };
+  }
+  // The grid's ground drawn once: rock dark, rooms light, tunnels a shade
+  // darker, the dead end warm; rocks as circles.
+  function mapLayer(grid, scale, dark) {
+    const cv = document.createElement("canvas");
+    cv.width = Math.round((grid.x0 + grid.nx * grid.cell) * scale);
+    cv.height = Math.round((grid.y0 + grid.ny * grid.cell) * scale);
+    const c = cv.getContext("2d"), rock = dark ? "#0c0f14" : "#2a2622";
+    c.fillStyle = rock; c.fillRect(0, 0, cv.width, cv.height);
+    const shade = { room: dark ? "#28303b" : "#cfd5dc", tunnel: dark ? "#222933" : "#bfc6cf", dead: dark ? "#3a2c2c" : "#dcc9c4" };
+    const s = grid.cell * scale;
+    for (let i = 0; i < grid.n; i++) {
+      if (!grid.open[i]) continue;
+      const { x, y } = grid.middle(i);
+      c.fillStyle = shade[grid.area.rects[grid.rect[i]].kind];
+      c.fillRect((x - grid.cell / 2) * scale, (y - grid.cell / 2) * scale, s + 0.6, s + 0.6);
+    }
+    c.fillStyle = rock;
+    for (const k of grid.area.rocks) { c.beginPath(); c.arc(k.x * scale, k.y * scale, k.r * scale, 0, 2 * Math.PI); c.fill(); }
+    cv.dark = dark;
+    return cv;
+  }
+  // }}}
+
+  // {{{ the frame loop
+  // `step(dt)` runs `api.rate` simulated seconds per real second in fixed
+  // steps of dt, then `draw()`. Paused while the scene is off screen or the
+  // tab is hidden; starts paused when the viewer asks for reduced motion
+  // (returns true then).
+  function runLoop(el, dt, step, draw, api) {
+    let visible = true, last = 0, carry = 0;
+    const reduce = !!(global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    api.running = !reduce;
+    if ("IntersectionObserver" in global) new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(el);
+    function frame(now) {
+      requestAnimationFrame(frame);
+      const real = last ? Math.min(0.1, (now - last) / 1000) : 0;
+      last = now;
+      if (!visible || document.hidden) return;
+      if (api.running) {
+        carry += real * api.rate;
+        let guard = 0;
+        while (carry >= dt && guard++ < 400) { step(dt); carry -= dt; }
+        if (guard >= 400) carry = 0;          // too far behind: drop it rather than freeze the page
+      }
+      draw();
+    }
+    requestAnimationFrame(frame);
+    return reduce;
+  }
+  // }}}
+
+  global.SceneKit = { controlRow, pageColours, mapLayer, runLoop, addStyles };
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+  <script>
+// dungeon-sense.js - the playable "sensing tunnels" scene of the buddy
+// roaming gallery (issue 617e6). A drawn simulation, not the game. A clan
+// of buddies explores the big dungeon by the roaming pattern
+// (docs/roaming-pattern.md; the rules come from roam-pattern.js, the page
+// parts from scene-kit.js): least paint, the walls' paint, paths through
+// unpainted ground, and, with sensing on, the owner's quadrant sensing:
+//
+//   the owner, 2026-09-27: "let's look at the 4 quadrants around us, then
+//   at the 4 peridicular quadrants (rotated 45 degrees, isometric style)
+//   and if a high percentage of the terrain in a quadrant is impassible
+//   then it's probably a surface. But if there is a high percentage but we
+//   can still pathfind to the edge of our pathfinding radius, then it's a
+//   tunnel there. [...] we prioritize the tunnel areas unless we've
+//   already painted that area recently."
+//
+// The viewer turns sensing on and off, sets the clan's size, the blocked
+// share that makes a wall or a tunnel, the sensing radius, and whether the
+// walls paint, and clicks a buddy to see its eight sectors.
+(function () {
+  "use strict";
+  const root = document.getElementById("ds-root");
+  const RP = window.RoamPattern, SK = window.SceneKit;
+  if (!root || !RP || !SK) return;
+
+  // {{{ numbers
+  const DT = 0.1;                           // simulated seconds per step
+  const SPEED = 8.4;                        // yards a second (the widgets' pace, 2026-09-28)
+  const PAINT_EVERY = 0.5, VISION = 45, PAINT_AMOUNT = 100;
+  const WALL_EVERY = 3;                     // the walls' pulse (pattern: every 3 seconds)
+  const PICK = { n: 30, min: 12, max: 70 }; // least paint: 30 spots 12..70 yards off
+  const RECENT = 90, RECENT_MAX = 0.35;     // seconds; a tunnel whose far half is more than this share that recently seen is passed over
+  const COLOURS = ["#e0735a", "#e2c16a", "#74d1bd", "#7fa6e6"];
+  const SCALE = 2;                          // canvas pixels per yard
+  // }}}
+
+  const map = RP.maps.dungeon, grid = new RP.Grid(map, 3);
+
+  // {{{ the widget's parts
+  root.classList.add("sk");
+  const api = { running: true, rate: 4 };
+  const opt = Object.assign(
+    SK.controlRow(root, [
+      { kind: "toggle", id: "ds-sense", text: "Sensing", value: true },
+      { kind: "choice", id: "ds-n", label: "Buddies", value: 2, options: [[1, "1"], [2, "2"], [4, "4"]] },
+      { kind: "range", id: "ds-block", label: "Blocked share", min: 0.4, max: 0.7, step: 0.05, value: 0.6, format: v => Math.round(v * 100) + "%" },
+      { kind: "choice", id: "ds-radius", label: "Sensing radius", value: 40, options: [[25, "25 yd"], [40, "40 yd"], [60, "60 yd"]] }
+    ], id => { if (id === "ds-n") reset(); }),
+    SK.controlRow(root, [
+      { kind: "toggle", id: "ds-paint", text: "Show paint", value: true },
+      { kind: "toggle", id: "ds-walls", text: "Walls paint", value: true },
+      { kind: "choice", id: "ds-rate", label: "Speed", value: 4, options: [[1, "1×"], [4, "4×"], [12, "12×"]] },
+      { kind: "button", id: "ds-play", text: "Pause" },
+      { kind: "button", id: "ds-reset", text: "Start over" }
+    ], (id, v, el) => {
+      if (id === "ds-rate") api.rate = v;
+      if (id === "ds-play") { api.running = !api.running; el.textContent = api.running ? "Pause" : "Play"; }
+      if (id === "ds-reset") reset();
+    }));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round((grid.x0 + grid.nx * grid.cell) * SCALE);
+  canvas.height = Math.round((grid.y0 + grid.ny * grid.cell) * SCALE);
+  canvas.setAttribute("aria-label", "The dungeon from above: rooms light, tunnels darker, the buddies as coloured dots");
+  const counts = document.createElement("div"); counts.className = "sk-counts";
+  const note = document.createElement("div"); note.className = "sk-note";
+  root.append(canvas, counts, note);
+  const ctx = canvas.getContext("2d");
+  // }}}
+
+  let state, selected = 0, layer = null, heat = null;
+
+  // {{{ reset
+  function reset() {
+    const e = map.entrance;
+    state = {
+      t: 0, paint: new RP.Paint(grid), nextPaint: 0, nextWall: 0,
+      buddies: Array.from({ length: opt["ds-n"] }, (_, k) => ({ x: e.x - 6 + k * 4, y: e.y - 8, path: null, goal: null, why: "", rect: 0, trail: [] })),
+      tunnels: 0, deadEnds: 0, reached: {}, bothFar: null, bySensing: 0, explored: 0
+    };
+    selected = 0; shownSectors = null;
+    say("Buddy 1 is selected: its eight sectors are drawn round it. Click another buddy to follow it.");
+  }
+  const say = s => { note.textContent = s; };
+  // }}}
+
+  // {{{ choosing where to go
+  const paintAt = i => state.paint.at(i, opt["ds-walls"]);
+  const fromEntrance = p => Math.hypot(p.x - map.entrance.x, p.y - map.entrance.y);
+
+  // least paint (pattern): of 30 random spots 12..70 yards off, the least
+  // paint round each (a 6-yard disc), farther from the entrance weighing more
+  function leastPainted(b) {
+    let best = null, bestScore = Infinity;
+    for (let k = 0; k < PICK.n; k++) {
+      const a = Math.random() * 2 * Math.PI, r = PICK.min + Math.random() * (PICK.max - PICK.min);
+      const x = b.x + Math.cos(a) * r, y = b.y + Math.sin(a) * r, i = grid.cellAt(x, y);
+      if (i < 0 || !grid.open[i] || grid.wall[i] < 1.5) continue;
+      let sum = 0, n = 0;
+      for (let oy = -2; oy <= 2; oy++) for (let ox = -2; ox <= 2; ox++) {
+        const j = i + oy * grid.nx + ox;
+        if (j >= 0 && j < grid.n && grid.open[j]) { sum += paintAt(j); n++; }
+      }
+      const score = sum / Math.max(1, n) - 0.8 * fromEntrance({ x, y });
+      if (score < bestScore) { bestScore = score; best = { x, y }; }
+    }
+    return best;
+  }
+  // share of a sector's far half seen up close within RECENT seconds
+  function recentShare(b, far) {
+    let n = 0, hit = 0;
+    for (let k = 5; k <= 10; k++) {
+      const i = grid.cellAt(b.x + (far.x - b.x) * k / 10, b.y + (far.y - b.y) * k / 10);
+      if (i < 0 || !grid.open[i]) continue;
+      n++;
+      if (state.t - state.paint.seenAt[i] < RECENT) hit++;
+    }
+    return n ? hit / n : 1;
+  }
+  function choose(b) {
+    if (opt["ds-sense"]) {
+      let best = null, bestScore = -Infinity;
+      for (const s of RP.senseSectors(grid, b.x, b.y, opt["ds-radius"], opt["ds-block"])) {
+        if (s.kind !== "tunnel" || s.far < 0) continue;
+        const far = grid.middle(s.far), recent = recentShare(b, far);
+        if (recent > RECENT_MAX) continue;
+        const score = s.blocked - recent + 0.3 * fromEntrance(far) / 500;
+        if (score > bestScore) { bestScore = score; best = far; }
+      }
+      if (best) { state.bySensing++; return { at: best, why: "a tunnel it sensed" }; }
+    }
+    const l = leastPainted(b);
+    return l && { at: l, why: "the least painted ground" };
+  }
+  // }}}
+
+  // {{{ one step
+  function step(dt) {
+    const st = state;
+    st.t += dt;
+    if (st.t >= st.nextPaint) {
+      st.nextPaint = st.t + PAINT_EVERY;
+      for (const b of st.buddies) st.paint.deposit(b.x, b.y, VISION, PAINT_AMOUNT, st.t);
+      st.explored = st.paint.explored();
+    }
+    if (opt["ds-walls"] && st.t >= st.nextWall) { st.nextWall = st.t + WALL_EVERY; st.paint.wallPulse(); }
+    for (const b of st.buddies) {
+      if (!b.path || !b.path.length) {
+        const pick = choose(b);
+        if (!pick) continue;
+        b.path = RP.findPath(grid, b, pick.at, j => { const p = paintAt(j); return 0.6 * p / (p + 300); });
+        b.goal = pick.at; b.why = pick.why;
+        if (!b.path) continue;
+      }
+      let left = SPEED * dt;
+      while (left > 0 && b.path.length) {
+        const p = b.path[0], d = Math.hypot(p.x - b.x, p.y - b.y);
+        if (d <= left) { b.x = p.x; b.y = p.y; left -= d; b.path.shift(); }
+        else { b.x += (p.x - b.x) / d * left; b.y += (p.y - b.y) / d * left; left = 0; }
+      }
+      // counts: tunnels entered from a room, dead-end visits, far rooms reached
+      const i = grid.cellAt(b.x, b.y), r = i >= 0 ? grid.rect[i] : -1;
+      if (r >= 0 && r !== b.rect) {
+        const was = map.rects[b.rect].kind, now = map.rects[r].kind;
+        if (now === "tunnel" && was === "room") st.tunnels++;
+        if (now === "dead" && was !== "dead") st.deadEnds++;
+        if (map.farRooms.includes(r) && st.reached[r] == null) {
+          st.reached[r] = st.t;
+          if (map.farRooms.every(fr => st.reached[fr] != null)) st.bothFar = st.t;
+        }
+        b.rect = r;
+      }
+      const last = b.trail[b.trail.length - 1];
+      if (!last || Math.abs(last.x - b.x) + Math.abs(last.y - b.y) > 4) { b.trail.push({ x: b.x, y: b.y }); if (b.trail.length > 90) b.trail.shift(); }
+    }
+  }
+  // }}}
+
+  // {{{ drawing
+  let shownSectors = null, sectorsAt = -1, lastHud = -1;
+  function draw() {
+    const { dark } = SK.pageColours(root);
+    if (!layer || layer.dark !== dark) layer = SK.mapLayer(grid, SCALE, dark);
+    ctx.drawImage(layer, 0, 0);
+    if (opt["ds-paint"]) drawHeat();
+    const e = map.entrance;
+    ctx.fillStyle = "#f5f5f5"; ctx.fillRect((e.x - 4) * SCALE, (e.y - 4) * SCALE, 8 * SCALE, 8 * SCALE);
+    // the selected buddy's sectors, read again once a simulated second
+    const sb = state.buddies[selected];
+    if (sb) {
+      if (!shownSectors || state.t - sectorsAt >= 1 || sectorsAt > state.t) { shownSectors = RP.senseSectors(grid, sb.x, sb.y, opt["ds-radius"], opt["ds-block"]); sectorsAt = state.t; }
+      const R = opt["ds-radius"] * SCALE, fill = { tunnel: "rgba(226,193,106,0.45)", wall: "rgba(214,90,80,0.35)", open: "rgba(200,205,212,0.18)" };
+      for (const s of shownSectors) {
+        ctx.beginPath(); ctx.moveTo(sb.x * SCALE, sb.y * SCALE);
+        ctx.arc(sb.x * SCALE, sb.y * SCALE, R, s.bearing - Math.PI / 8, s.bearing + Math.PI / 8);
+        ctx.closePath(); ctx.fillStyle = fill[s.kind]; ctx.fill();
+      }
+      ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(sb.x * SCALE, sb.y * SCALE, R, 0, 2 * Math.PI); ctx.stroke();
+    }
+    state.buddies.forEach((b, k) => {
+      const col = COLOURS[k % COLOURS.length];
+      ctx.strokeStyle = col; ctx.globalAlpha = 0.35; ctx.lineWidth = 2;
+      ctx.beginPath(); b.trail.forEach((p, m) => m ? ctx.lineTo(p.x * SCALE, p.y * SCALE) : ctx.moveTo(p.x * SCALE, p.y * SCALE)); ctx.stroke();
+      ctx.globalAlpha = 1;
+      if (b.goal) {
+        ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(b.x * SCALE, b.y * SCALE); ctx.lineTo(b.goal.x * SCALE, b.goal.y * SCALE); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(b.x * SCALE, b.y * SCALE, 5, 0, 2 * Math.PI); ctx.fill();
+      if (k === selected) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x * SCALE, b.y * SCALE, 8, 0, 2 * Math.PI); ctx.stroke(); }
+    });
+    hud();
+  }
+  // the paint as a warm shading, the walls' fringe blue-grey where the
+  // walls' paint is the greater; drawn at grid size and scaled up
+  function drawHeat() {
+    if (!heat) { heat = document.createElement("canvas"); heat.width = grid.nx; heat.height = grid.ny; heat.img = heat.getContext("2d").createImageData(grid.nx, grid.ny); }
+    const d = heat.img.data, p = state.paint;
+    for (let i = 0; i < grid.n; i++) {
+      const o = i * 4, b = p.buddies[i], w = opt["ds-walls"] ? p.walls[i] : 0;
+      if (!grid.open[i]) d[o + 3] = 0;
+      else if (w > b && w > 20) { d[o] = 110; d[o + 1] = 140; d[o + 2] = 180; d[o + 3] = Math.min(150, w / 400 * 150); }
+      else if (b > 1) { const a = Math.min(1, b / 1500); d[o] = 235; d[o + 1] = 150 - a * 60; d[o + 2] = 60; d[o + 3] = 40 + a * 150; }
+      else d[o + 3] = 0;
+    }
+    heat.getContext("2d").putImageData(heat.img, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(heat, grid.x0 * SCALE, grid.y0 * SCALE, grid.nx * grid.cell * SCALE, grid.ny * grid.cell * SCALE);
+    ctx.imageSmoothingEnabled = true;
+  }
+  function hud() {
+    const sec = Math.floor(state.t);
+    if (sec === lastHud) return;
+    lastHud = sec;
+    const tm = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+    counts.innerHTML = [
+      ["Explored", Math.round(100 * state.explored) + "%"], ["Tunnels entered", state.tunnels], ["Dead-end visits", state.deadEnds],
+      ["Both far rooms", state.bothFar != null ? tm(state.bothFar) : "not yet"], ["Picks by sensing", state.bySensing], ["Time", tm(state.t)]
+    ].map(([k, v]) => `<span>${k} <b>${v}</b></span>`).join("");
+    const b = state.buddies[selected];
+    if (b && b.goal) say(`Buddy ${selected + 1} is heading for ${b.why}. Its sectors: gold a tunnel, red a wall, grey open ground.`);
+  }
+  // }}}
+
+  // {{{ picking a buddy with the mouse
+  canvas.addEventListener("click", e => {
+    const r = canvas.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width * canvas.width / SCALE, y = (e.clientY - r.top) / r.height * canvas.height / SCALE;
+    let best = -1, bd = 14;
+    state.buddies.forEach((b, k) => { const d = Math.hypot(b.x - x, b.y - y); if (d < bd) { bd = d; best = k; } });
+    if (best >= 0) { selected = best; shownSectors = null; lastHud = -1; }
+  });
+  // }}}
+
+  reset();
+  if (SK.runLoop(root, DT, step, draw, api)) {
+    document.getElementById("ds-play").textContent = "Play";
+    say("Paused because your system asks for reduced motion: press Play to start.");
+  }
+})();
+</script>
+  <header class="part" id="fighting">
+    <h2>Part 5 · Fighting together</h2>
+    <p>Drawing monsters' attention, pulling packs to a tank, the <strong>kraken</strong>, and kiting alone. Drawn simulations of the intended behaviour, not the game's combat.</p>
+  </header>
+  <section class="card">
+    <h2>Drawing the monsters' attention</h2>
+    <p class="before">Monsters (red) with their aggro radius (dashed): a buddy that comes <strong>inside</strong> it is noticed and attacked. The owner: &quot;bots will try to move within aggro range of monsters that they are near, nudging their waypoints to move the tangent line between them and the mob's aggro radius somewhere interior to the radius&quot;. When the line to a buddy's next waypoint passes within 25 yards outside a living monster's radius, the trip <strong>bends</strong> through a point 70% of the way in from the edge of that radius, on the side the line passes; a ring marks that point. A fight here is the buddy standing <strong>still</strong> for a few seconds while the monster falls; it comes back later.</p>
+    <img src="buddy-roaming/18-monsters.gif" alt="Drawing the monsters' attention" width="400" height="320" loading="lazy">
+    <p class="after">Buddies now bend their laps to <strong>brush</strong> past monsters near their way and pull them, instead of passing them by, and after the fight carry on round. Only the <strong>first</strong> monster along each trip bends it, so a buddy isn't dragged from one to the next across the area. Measured over a long run: 8.9 fights per 100 waypoints with the nudge, 6.1 without (a fight then only when a lap happens to cross a radius). In game the radius comes from the <strong>server</strong> itself (each creature's aggro range against that buddy), and only monsters that attack on sight count.</p>
+  </section>
+  <section class="card">
+    <h2>Fighting together: pulling a pack</h2>
+    <p class="before">The owner's fighting design (617e5), drawn as a <strong>simple</strong> simulation, not the game's combat: health, damage and casting times are round numbers picked so the whole sequence fits. Monsters (red) within 16 yards of each other are one pack (faint lines join them; dashed circles are how near a buddy must come to be noticed): pulling one brings them <strong>all</strong>. The tank (red) walks up to a pack, is noticed, and brings the <strong>whole</strong> pack back to a gathering spot (dashed white circle) 35 yards toward its clan; while bringing it back and holding it there, it reaches out and taunts any other monster within 30 yards into the fight (a gold line), the owner's &quot;blender reaching out and pulling foes into it's maw&quot;, as long as the fight stays within what it can hold (six monsters, its health above half). The mage (blue) casts an <strong>area</strong> spell (blue storm) when two or more monsters stand together, single frostbolts otherwise; the rogue (yellow, instant attacks only) keeps moving at its target's side, hopping (a ring over it) now and then, and fans its knives (a yellow ring) when three are round it; the healer (green) heals the tank (green line). The hunter (purple) roams on its <strong>own</strong> until it sees its clanmates fighting within 90 yards, then comes to help (dashed line) and shoots the tank's target.</p>
+    <img src="buddy-roaming/20-cluster-pull.gif" alt="Fighting together: pulling a pack" width="540" height="400" loading="lazy">
+    <p class="after">The elite boss stands about 25 yards from the first pack's gathering spot, so the tank taunts it <strong>in</strong> while bringing the first pack back, and the first fight takes the pack and the boss together, down in the same area spells (in the first version the tank left the boss for a third fight of its own). Then the <strong>second</strong> pack. With the first pack, the storm draws one monster onto the mage: it frostbolts it (a blue ring: slowed), <strong>blinks</strong> away (dashed white line), and the tank takes it back (red line), the owner's &quot;blink to try and get distance, ideally after doing a frostbolt to slow them down&quot;. While the boss is in the fight the mage weighs area and single spells about <strong>equally</strong>, as the owner put it (&quot;unless there's a boss or something, in which case they'll prefer AoE and single-target spells roughly equally&quot;). What this <strong>needs</strong> from the game, for 617e5: finding packs by the server's own link and assist ranges, a gathering spot clear of other packs, and the damage dealers' area-spell thresholds lowered for buddies; playerbots already has area and single-target strategies to weigh.</p>
+  </section>
+  <section class="card">
+    <h2>The kraken: a tank's maw and its tentacles</h2>
+    <p class="before">The owner's battle pattern (617e5), drawn as a <strong>simple</strong> simulation, not the game's combat: health, damage, speeds and cast times are round numbers picked so a whole run fits. The maw (the blue ring) is where the pack is <strong>held</strong> and the area spells land (the blue storm); faint lines divide the ground round it into quadrants, and the faint circle is the ranged damage dealers' orbit. The tank (red) stays <strong>within</strong> a few yards of the maw, leaning toward the nearest monster outside it and taking it with its 30-yard taunt (a gold tentacle line); when a monster is taken from one side, the tank steps to the maw's far side until that monster is inside. The mage (blue) and the hunter (purple) are the <strong>other</strong> tentacles: they orbit the maw casting instants on the move, go out to a monster the tank can't reach (a dashed line to it), hit it once and slow it (a pale blue ring), then lead it to the far side of a neighbouring quadrant (a small ring marks where), never the opposite one, blinking or disengaging (a dashed white line) when it gets too close, and kiting it round the maw until the tank takes it. The rogue (yellow) fights at the <strong>tank's</strong> target and fans its knives in the pack; the healer (green) heals the tank. When everything held is dead and the maw is empty, the whole formation <strong>moves</strong> on to the next pack.</p>
+    <img src="buddy-roaming/22-kraken.gif" alt="The kraken: a tank's maw and its tentacles" width="620" height="460" loading="lazy">
+    <p class="after">What happened in this run (counted as it was drawn): the tank's taunts 17 (2 reaching out for a monster in range, 12 taking back one that was on someone else); the mage's and the hunter's pulls 10, slows 13, blinks 4, disengages 4; area spells 21; heals 7; 20 of 20 monsters killed; the formation moved on 3 times. What drawing it showed: most pulled monsters are <strong>taken</strong> by the tank's taunt before they ever reach the puller (the neighbouring quadrant keeps them within the taunt's 30 yards of the maw), so the tentacles work as the owner put it, the puller only has to bring a monster into reach. Escapes (blinks, disengages) happen <strong>only</strong> because the puller stands to cast: a monster as fast as the puller never catches one that keeps walking away, so the kiting rhythm (cast, the monster closes, blink or disengage) comes from the cast-time spells. A ranged pull brings the monster's <strong>whole</strong> linked pack, not just the one hit: a pulled pair keeps a puller kiting for a taunt's cooldown while the tank takes them one at a time.</p>
+  </section>
+  <section class="card" id="dungeon-kraken">
+    <h2>The kraken in a dungeon</h2>
+    <p class="before">A party of <strong>five</strong> explores the same dungeon, the tank leading by least paint; packs stand in the rooms, each with a lone <strong>outlier</strong>, and patrols (gold rings) walk the tunnels. When a fight starts, the maw (blue ring) is set and the <strong>kraken</strong> plays out: gold lines are the tank's taunts, pale blue rings slows, dashed white lines blinks and disengages. Try the kraken <strong>off</strong> for an ordinary fight, more <strong>patrols</strong>, or a different melee buddy.</p>
+    <div id="dk-root"></div>
+    <p class="after">The tank holds within 6 yards of the maw and <strong>reaches</strong> out with its 30-yard taunt while the hold is light; the mage and the hunter fetch outliers with one hit and a <strong>slow</strong>, lead them into a neighbouring quadrant, and kite round the maw until the tank takes them. Monsters are <strong>faster</strong> than the party, so slows, blinks and taunts save a puller, not its legs. Area spells land when two or more stand in the <strong>maw</strong>; against an elite, area and single-target spells about <strong>equally</strong>. When everything held is dead, the party moves <strong>on</strong>. Health, damage and speeds are round numbers: a drawn simulation of the intended behaviour, not the game's <strong>combat</strong>.</p>
+  </section>
+  <script>
+// dungeon-kraken.js - the playable "kraken in the dungeon" scene of the
+// buddy roaming gallery (issue 617e5). A drawn simulation of the intended
+// behaviour, not the game's combat: health, damage, speeds and cooldowns
+// are round numbers. A party of five explores the big dungeon
+// (the roaming pattern, docs/roaming-pattern.md: rules from roam-pattern.js,
+// page parts from scene-kit.js), the tank leading by least paint; packs stand in the
+// rooms and patrols walk the tunnels between them. With the kraken on, a
+// fight is the owner's battle pattern (2026-09-27):
+//
+//   "picture a kraken sitting at the base of a massive whirlpool. It has
+//   tentacles that reach out and grab nearby ships and pulls them into it's
+//   insatiable maw. That is the tank [...] The tank should be able to move
+//   in a small radius from the AoE spot [...] DPS, especially ranged DPS,
+//   can pull monsters [...] hit them once to generate as little threat as
+//   possible, and apply a movement slowing effect. Then they move to the
+//   opposite side of a neighboring quadrant [...] If all the mobs are slain
+//   and the AoE zone is empty, then the entire structure moves on."
+//
+// With it off, the party fights the ordinary way: everyone on the tank's
+// target, nobody pulling. Monsters are faster than the party (the owner,
+// 2026-09-27: "the enemies should move faster than the player, so they can
+// always hit"), so slows, blinks, disengages and the tank's taunt are what
+// save a puller, not its legs.
+(function () {
+  "use strict";
+  var root = document.getElementById("dk-root");
+  var RP = window.RoamPattern, SK = window.SceneKit;
+  if (!root || !RP || !SK) return;
+  var map = RP.maps.dungeon, g = new RP.Grid(map, 3);
+
+  // {{{ numbers
+  var DT = 0.1;
+  var RUN = 8.4, MOB_SPEED = 9.6;            // yards a second (the widgets' pace, 2026-09-28)
+  var AGGRO = 10, SEE_PACK = 40, TAUNT = 30, TAUNT_CD = 2.5;
+  // PULL_REACH 50 first (the open-field widget's): in the dungeon the next
+  // monsters stood 50-85 yards from the maw and nothing was ever pulled
+  // (2026-09-28); each pack now also has a lone outlier 25-40 yards off.
+  var MAW_R = 9, HOLD_R = 6, LEAD_R = 20, KITE_R = 16, PULL_REACH = 75;
+  var HOLD_MAX = 6;                          // the tank reaches out while holding this many or fewer
+  var LINK = 12;                             // a patrol this near a fighting monster blunders in
+  var RESPAWN = 180;
+  var PACK_SPOTS = [[250, 160], [222, 218], [292, 224], [60, 45], [98, 82], [405, 45], [458, 88], [410, 200], [458, 262], [418, 312], [72, 232], [300, 150]];
+  var ROUTES = [[[250, 190], [65, 60]], [[250, 190], [420, 60]], [[250, 190], [430, 250]], [[285, 235], [420, 300]],
+                [[70, 300], [240, 200]], [[70, 50], [430, 45]], [[65, 140], [180, 170]], [[300, 170], [470, 180]],
+                [[230, 100], [250, 170]], [[420, 90], [445, 140]], [[330, 60], [140, 60]], [[395, 185], [320, 185]]];
+  var ROLE = {
+    tank:   { letter: "T", color: "#e0735a", hp: 220, range: 2,  dps: 3 },
+    mage:   { letter: "M", color: "#7fa6e6", hp: 100, range: 30, dps: 5 },
+    hunter: { letter: "H", color: "#9ccc65", hp: 110, range: 35, dps: 5 },
+    healer: { letter: "P", color: "#f0e2a0", hp: 100, range: 40, dps: 0 },
+    melee:  { letter: "F", color: "#c9a0ee", hp: 130, range: 2,  dps: 6 }
+  };
+  // }}}
+
+  // {{{ the widget's parts
+  root.classList.add("sk");
+  var SCALE = 2;
+  var cv = document.createElement("canvas");
+  cv.width = Math.round((g.x0 + g.nx * g.cell) * SCALE); cv.height = Math.round((g.y0 + g.ny * g.cell) * SCALE);
+  cv.setAttribute("aria-label", "The dungeon from above: the party as lettered dots, monsters red, patrols ringed in gold");
+  var counts = document.createElement("div"); counts.className = "sk-counts";
+  var note = document.createElement("div"); note.className = "sk-note";
+  var api = { running: true, rate: 4 };
+  var opt = SK.controlRow(root, [
+    { kind: "toggle", id: "dk-kraken", text: "Kraken pattern", value: true },
+    { kind: "choice", id: "dk-packs", label: "Packs", value: 8, options: [[4, "4"], [8, "8"], [12, "12"]] },
+    { kind: "choice", id: "dk-patrols", label: "Patrols", value: 8, options: [[0, "0"], [4, "4"], [8, "8"], [12, "12"]] },
+    { kind: "choice", id: "dk-melee", label: "Melee", value: "whirlwind", options: [["whirlwind", "Whirlwind"], ["heavy", "Heavy hitter"], ["control", "Control"]] }
+  ], function (id) { if (id === "dk-packs" || id === "dk-patrols") reset(); });
+  SK.controlRow(root, [
+    { kind: "choice", id: "dk-rate", label: "Speed", value: 4, options: [[1, "1×"], [4, "4×"], [12, "12×"]] },
+    { kind: "button", id: "dk-play", text: "Pause" },
+    { kind: "button", id: "dk-reset", text: "Start over" }
+  ], function (id, v, el) {
+    if (id === "dk-rate") api.rate = v;
+    if (id === "dk-play") { api.running = !api.running; el.textContent = api.running ? "Pause" : "Play"; }
+    if (id === "dk-reset") reset();
+  });
+  root.appendChild(cv); root.appendChild(counts); root.appendChild(note);
+  var ctx = cv.getContext("2d");
+  // }}}
+
+  var S, layer = null;
+
+  // {{{ reset
+  function reset() {
+    var e = map.entrance;
+    S = { t: 0, paint: new RP.Paint(g), nextPaint: 0,
+          party: ["tank", "mage", "hunter", "healer", "melee"].map(function (r, i) {
+            return { role: r, x: e.x - 8 + i * 4, y: e.y - 10, hp: ROLE[r].hp, max: ROLE[r].hp, dead: 0,
+                     cd: 0, blink: 0, pull: null, path: null, pathTo: null, pathAt: -9, hop: 0 };
+          }),
+          mobs: [], fight: false, maw: null, lines: [], goal: null,
+          c: { taunts: 0, reach: 0, pulls: 0, slows: 0, blinks: 0, disengages: 0, kills: 0, blunders: 0, deaths: 0, fights: 0, aoe: 0 } };
+    var id = 0;
+    PACK_SPOTS.slice(0, opt["dk-packs"]).forEach(function (p, k) {
+      for (var m = 0; m < 3; m++) {
+        var a = m * 2.1, x = p[0] + Math.cos(a) * 4, y = p[1] + Math.sin(a) * 4;
+        S.mobs.push(mob(id++, x, y, m === 0 && k % 3 === 0, k));
+      }
+      // its outlier: a lone monster on open ground 25-40 yards off, the
+      // kind the tank reaches for and the pullers fetch
+      for (var tries = 0; tries < 20; tries++) {
+        var oa = Math.random() * 2 * Math.PI, od = 25 + Math.random() * 15, ox = p[0] + Math.cos(oa) * od, oy = p[1] + Math.sin(oa) * od;
+        if (g.isOpen(ox, oy) && g.sight(p[0], p[1], ox, oy)) { S.mobs.push(mob(id++, ox, oy, false, -1)); break; }
+      }
+    });
+    ROUTES.slice(0, opt["dk-patrols"]).forEach(function (r) {
+      var m = mob(id++, r[0][0], r[0][1], false, -1);
+      m.route = RP.findPath(g, { x: r[0][0], y: r[0][1] }, { x: r[1][0], y: r[1][1] }) || [];
+      m.route.unshift({ x: r[0][0], y: r[0][1] });
+      m.leg = 1; m.dir = 1;
+      S.mobs.push(m);
+    });
+    say("The tank leads by the least painted ground; the party follows. Patrols (gold rings) walk the tunnels.");
+  }
+  function mob(id, x, y, elite, pack) {
+    return { id: id, hx: x, hy: y, x: x, y: y, elite: elite, pack: pack, hp: elite ? 420 : 160, max: elite ? 420 : 160,   // tougher than a first try (260 / 90): fights of ~7 s ended before any puller reached an outlier (2026-09-28)
+             state: "idle", target: null, slow: 0, respawn: 0, path: null, pathTo: null, pathAt: -9, route: null };
+  }
+  function say(s) { note.textContent = s; }
+  // }}}
+
+  // {{{ small helpers
+  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  function tank() { return S.party[0]; }
+  function alive(p) { return !p.dead; }
+  function line(a, b, color, dash, life) { S.lines.push({ x0: a.x, y0: a.y, x1: b.x, y1: b.y, color: color, dash: dash, until: S.t + (life || 0.6) }); }
+  // Walk toward (tx, ty): straight when in sight, else along a path over
+  // the grid, re-planned twice a second. A straight step that would land on
+  // closed ground (the line of sight is sampled, so a corner can look
+  // clear) switches to the path for a second: without that a walker at a
+  // tunnel's corner could stand still for good (found 2026-09-28).
+  // Returns true once within `stop`.
+  function move(e, tx, ty, speed, stop, dt) {
+    var d = Math.hypot(tx - e.x, ty - e.y);
+    if (d <= (stop || 0.5)) return true;
+    var aim = { x: tx, y: ty };
+    e.forcePath = Math.max(0, (e.forcePath || 0) - dt);
+    if (e.forcePath > 0 || !g.sight(e.x, e.y, tx, ty)) {
+      if (!e.path || S.t - e.pathAt > 0.5 || !e.pathTo || Math.hypot(e.pathTo.x - tx, e.pathTo.y - ty) > 4) {
+        e.path = RP.findPath(g, e, { x: tx, y: ty }); e.pathTo = { x: tx, y: ty }; e.pathAt = S.t;
+      }
+      if (e.path && e.path.length) { aim = e.path[0]; if (Math.hypot(aim.x - e.x, aim.y - e.y) < 1) { e.path.shift(); if (e.path.length) aim = e.path[0]; } }
+    } else e.path = null;
+    var ad = Math.hypot(aim.x - e.x, aim.y - e.y), step = Math.min(speed * dt, Math.max(0, ad - (aim.x === tx && aim.y === ty ? (stop || 0.5) : 0)));
+    if (ad > 1e-6) {
+      var nx = e.x + (aim.x - e.x) / ad * step, ny = e.y + (aim.y - e.y) / ad * step;
+      if (g.isOpen(nx, ny)) { e.x = nx; e.y = ny; }
+      else { e.forcePath = 1; e.path = null; }
+    }
+    return false;
+  }
+  function engaged() { return S.mobs.filter(function (m) { return m.state === "fight"; }); }
+  function engage(m, who) {
+    if (m.state !== "idle") return;
+    m.state = "fight"; m.target = who;
+    // its pack comes with it
+    if (m.pack >= 0) S.mobs.forEach(function (o) { if (o.pack === m.pack && o.state === "idle") { o.state = "fight"; o.target = who; } });
+  }
+  function threat() { return engaged().reduce(function (s, m) { return s + (m.elite ? 3 : 1); }, 0); }
+  // }}}
+
+  // {{{ one step
+  function step(dt) {
+    S.t += dt;
+    var T = tank(), kraken = opt["dk-kraken"];
+    S.lines = S.lines.filter(function (l) { return l.until > S.t; });
+    if (S.t >= S.nextPaint) { S.nextPaint = S.t + 0.5; S.paint.deposit(T.x, T.y, 40, 100, S.t); }
+
+    // {{{ monsters
+    S.mobs.forEach(function (m) {
+      if (m.state === "dead") { if (S.t >= m.respawn) { m.state = "idle"; m.hp = m.max; m.x = m.hx; m.y = m.hy; m.target = null; if (m.route) { m.leg = 1; m.dir = 1; } } return; }
+      m.slow = Math.max(0, m.slow - dt);
+      var sp = MOB_SPEED * (m.slow > 0 ? 0.5 : 1);
+      if (m.state === "idle") {
+        // patrols walk their route back and forth
+        if (m.route && m.route.length > 1) {
+          var p = m.route[m.leg];
+          if (move(m, p.x, p.y, MOB_SPEED * 0.45, 1, dt)) {
+            if (m.leg + m.dir >= m.route.length || m.leg + m.dir < 0) m.dir = -m.dir;
+            m.leg += m.dir;
+          }
+          // a patrol near a fight blunders in
+          var f = S.mobs.find(function (o) { return o.state === "fight" && dist(o, m) < LINK; });
+          if (f) { engage(m, f.target); S.c.blunders++; line(m, f, "#e2c16a", true, 1); }
+        }
+        // anyone of the party in reach and sight is noticed
+        S.party.forEach(function (b) {
+          if (m.state === "idle" && alive(b) && dist(b, m) < AGGRO + (m.elite ? 2 : 0) && g.sight(m.x, m.y, b.x, b.y)) engage(m, b);
+        });
+        return;
+      }
+      // fighting: go for its target and hit it
+      if (!m.target || m.target.dead) m.target = T.dead ? S.party.find(alive) : T;
+      if (!m.target) return;
+      if (move(m, m.target.x, m.target.y, sp, 1.6, dt)) {
+        m.target.hp -= (m.elite ? 9 : 4) * dt;
+        if (m.target.hp <= 0 && !m.target.dead) { m.target.dead = 1; m.target.hp = 0; S.c.deaths++; }
+      }
+    });
+    // }}}
+
+    var fighting = engaged();
+    if (fighting.length && !S.fight) {
+      S.fight = true; S.c.fights++;
+      S.maw = kraken ? mawSpot(fighting) : null;
+    }
+    if (!fighting.length && S.fight) {
+      S.fight = false; S.maw = null;
+      S.party.forEach(function (b) { if (b.dead) { b.dead = 0; b.hp = b.max * 0.5; } b.pull = null; });   // back on their feet: the fight is over
+      say("The maw is empty: the whole party moves on.");
+    }
+
+    // {{{ the party
+    S.party.forEach(function (b, k) {
+      if (b.dead) return;
+      b.cd = Math.max(0, b.cd - dt); b.blink = Math.max(0, b.blink - dt);
+      if (!S.fight) { roam(b, k, dt); return; }
+      if (b.role === "tank") return tankTurn(b, fighting, kraken, dt);
+      if (b.role === "healer") return healTurn(b, dt);
+      if ((b.role === "mage" || b.role === "hunter") && kraken && pullerTurn(b, fighting, dt)) return;
+      dpsTurn(b, fighting, kraken, dt);
+    });
+    // }}}
+    // regeneration out of a fight
+    if (!S.fight) S.party.forEach(function (b) { if (!b.dead) b.hp = Math.min(b.max, b.hp + 4 * dt); });
+  }
+  // }}}
+
+  // {{{ roaming: the tank leads by least paint, the rest follow
+  function roam(b, k, dt) {
+    if (k === 0) {
+      // a new goal on arrival, or when 5 seconds brought no 2 yards of progress
+      if (!b.since || Math.hypot(b.x - b.since.x, b.y - b.since.y) > 2) b.since = { x: b.x, y: b.y, t: S.t };
+      if (!S.goal || Math.hypot(S.goal.x - b.x, S.goal.y - b.y) < 3 || S.t - b.since.t > 5) { S.goal = pickLeast(b); b.since = { x: b.x, y: b.y, t: S.t }; }
+      if (S.goal) move(b, S.goal.x, S.goal.y, RUN * 0.8, 2, dt);
+      // a pack in sight and in reach: open the fight (the tank's pull)
+      var pack = S.mobs.find(function (m) { return m.state === "idle" && !m.route && dist(m, b) < SEE_PACK && g.sight(b.x, b.y, m.x, m.y); });
+      if (pack && b.cd <= 0) { engage(pack, b); b.cd = TAUNT_CD; S.c.taunts++; line(b, pack, "#e2c16a", false, 0.8); }
+      return;
+    }
+    var T = tank(), a = Math.PI * (0.6 + k * 0.2) + Math.atan2(T.y - b.y, T.x - b.x);
+    move(b, T.x + Math.cos(a) * 6, T.y + Math.sin(a) * 6, RUN, 1.5, dt);
+  }
+  function pickLeast(b) {
+    var best = null, bs = Infinity;
+    for (var k = 0; k < 30; k++) {
+      var a = Math.random() * 6.283, r = 15 + Math.random() * 60, x = b.x + Math.cos(a) * r, y = b.y + Math.sin(a) * r;
+      var i = g.cellAt(x, y);
+      if (i < 0 || !g.open[i] || g.wall[i] < 2) continue;
+      var sc = S.paint.at(i, false) - 0.5 * Math.hypot(x - map.entrance.x, y - map.entrance.y);
+      if (sc < bs) { bs = sc; best = { x: x, y: y }; }
+    }
+    return best;
+  }
+  // }}}
+
+  // {{{ the fight
+  // The maw: where the damage dealers' ranges overlap best. Here: the
+  // monsters' middle pulled toward the party, kept on open ground.
+  function mawSpot(ms) {
+    var mx = 0, my = 0;
+    ms.forEach(function (m) { mx += m.x; my += m.y; });
+    mx /= ms.length; my /= ms.length;
+    var T = tank(), x = mx + (T.x - mx) * 0.4, y = my + (T.y - my) * 0.4;
+    return g.isOpen(x, y) ? { x: x, y: y } : { x: T.x, y: T.y };
+  }
+  function tankTurn(b, fighting, kraken, dt) {
+    // taunt back anything on someone else
+    var loose = fighting.find(function (m) { return m.target !== b && dist(m, b) < TAUNT && g.sight(b.x, b.y, m.x, m.y); });
+    if (loose && b.cd <= 0) { loose.target = b; b.cd = TAUNT_CD; S.c.taunts++; line(b, loose, "#e2c16a"); b.lean = loose; }
+    // reach out: an idle monster in taunt range, while the hold is light
+    if (kraken && b.cd <= 0 && threat() <= HOLD_MAX && b.hp > b.max * 0.5) {
+      var near = S.mobs.find(function (m) { return m.state === "idle" && dist(m, b) < TAUNT && dist(m, S.maw) < PULL_REACH && g.sight(b.x, b.y, m.x, m.y); });
+      if (near) { engage(near, b); b.cd = TAUNT_CD; S.c.taunts++; S.c.reach++; line(b, near, "#e2c16a"); b.lean = near; }
+    }
+    var tgt = fighting.find(function (m) { return m.target === b; }) || fighting[0];
+    if (kraken && S.maw) {
+      // hold within HOLD_R of the maw; step to the far side from the newest arrival
+      var ax = S.maw.x, ay = S.maw.y;
+      if (b.lean && b.lean.state === "fight" && dist(b.lean, S.maw) > MAW_R) {
+        var a = Math.atan2(b.lean.y - ay, b.lean.x - ax) + Math.PI;
+        ax += Math.cos(a) * HOLD_R; ay += Math.sin(a) * HOLD_R;
+      }
+      move(b, ax, ay, RUN, 1, dt);
+    } else if (tgt) move(b, tgt.x, tgt.y, RUN, 1.5, dt);
+    if (tgt && dist(tgt, b) < 3) hit(tgt, ROLE.tank.dps * dt);
+  }
+  function healTurn(b, dt) {
+    var hurt = S.party.filter(function (p) { return !p.dead && p.hp < p.max * 0.8; }).sort(function (x, y) { return x.hp / x.max - y.hp / y.max; })[0];
+    var T = tank(), stand = S.maw || T;
+    move(b, stand.x - 16, stand.y + 10, RUN, 3, dt);
+    if (hurt && dist(hurt, b) < ROLE.healer.range && b.cd <= 0) { hurt.hp = Math.min(hurt.max, hurt.hp + 40); b.cd = 1.5; line(b, hurt, "#9fe0a0", false, 0.4); }
+  }
+  // A ranged puller: an idle monster within reach of the maw, not too much
+  // held already: go in range, hit once and slow it, lead it round to a
+  // neighbouring quadrant, blink or disengage when it closes, kite until the
+  // tank takes it.
+  function pullerTurn(b, fighting, dt) {
+    var T = tank(), range = ROLE[b.role].range;
+    if (b.pull) {
+      var m = b.pull.mob;
+      if (m.state !== "fight" || m.target !== b) { b.pull = null; return false; }     // taken, or dead
+      if (dist(m, b) < 6 && b.blink <= 0) {
+        var away = Math.atan2(b.y - m.y, b.x - m.x), nx = b.x + Math.cos(away) * 15, ny = b.y + Math.sin(away) * 15;
+        if (g.isOpen(nx, ny) && g.sight(b.x, b.y, nx, ny)) {
+          line(b, { x: nx, y: ny }, "#ffffff", true, 0.6);
+          b.x = nx; b.y = ny; b.blink = b.role === "mage" ? 15 : 20;
+          if (b.role === "mage") S.c.blinks++; else S.c.disengages++;
+          m.slow = Math.max(m.slow, 3); S.c.slows++;
+        }
+      }
+      var d = b.pull.dest;
+      if (!b.pull.kite) { if (move(b, d.x, d.y, RUN, 1.5, dt)) b.pull.kite = true; }
+      else {
+        var ka = Math.atan2(b.y - S.maw.y, b.x - S.maw.x) + 0.35;
+        move(b, S.maw.x + Math.cos(ka) * KITE_R, S.maw.y + Math.sin(ka) * KITE_R, RUN, 0.5, dt);
+      }
+      if (b.cd <= 0 && dist(m, b) < range) { hit(m, 6); b.cd = 1.2; }
+      return true;
+    }
+    if (threat() > HOLD_MAX || T.hp < T.max * 0.5 || !S.maw) return false;
+    var cand = S.mobs.find(function (m) { return m.state === "idle" && dist(m, S.maw) < PULL_REACH && !m.route; });
+    if (!cand) return false;
+    if (dist(cand, b) > range - 2 || !g.sight(b.x, b.y, cand.x, cand.y)) { move(b, cand.x, cand.y, RUN, range - 3, dt); return true; }
+    // the one hit and the slow; lead to the far side of a neighbouring quadrant
+    engage(cand, b); hit(cand, 4); cand.slow = 5; S.c.pulls++; S.c.slows++;
+    line(b, cand, ROLE[b.role].color, true, 0.8);
+    var q = Math.floor((Math.atan2(cand.y - S.maw.y, cand.x - S.maw.x) + Math.PI) / (Math.PI / 2));
+    var nq = (q + (Math.random() < 0.5 ? 1 : 3)) % 4, da = -Math.PI + (nq + 0.5) * Math.PI / 2;
+    var dest = { x: S.maw.x + Math.cos(da) * LEAD_R, y: S.maw.y + Math.sin(da) * LEAD_R };
+    if (!g.isOpen(dest.x, dest.y)) dest = { x: S.maw.x, y: S.maw.y };
+    b.pull = { mob: cand, dest: dest, kite: false };
+    return true;
+  }
+  function dpsTurn(b, fighting, kraken, dt) {
+    var T = tank(), R = ROLE[b.role];
+    var tgt = fighting.find(function (m) { return m.target === T; }) || fighting[0];
+    if (!tgt) return;
+    if (b.role === "melee") {
+      var kind = opt["dk-melee"];
+      if (kind === "heavy") tgt = fighting.slice().sort(function (x, y) { return y.max - x.max || x.id - y.id; })[0];       // skull, then cross
+      if (kind === "control") {
+        var off = fighting.find(function (m) { return m.target !== T && m.slow <= 0; });
+        if (off) tgt = off;
+      }
+      b.hop = (b.hop + dt) % 1.4;
+      var j = b.hop < 0.2 ? 1.5 : 0;                     // shift about: instant-cast users hop
+      move(b, tgt.x + j, tgt.y + j, RUN, 1.8, dt);
+      if (dist(tgt, b) < 3) {
+        if (kind === "whirlwind") fighting.forEach(function (m) { if (dist(m, b) < 6) hit(m, R.dps * 0.8 * dt); });
+        else hit(tgt, R.dps * (kind === "heavy" ? 1.4 : 0.8) * dt);
+        if (kind === "control" && tgt.target !== T) tgt.slow = Math.max(tgt.slow, 1);
+      }
+      return;
+    }
+    // ranged: stand at range from the maw (or the target) and cast
+    var centre = S.maw || tgt, a = Math.atan2(b.y - centre.y, b.x - centre.x);
+    move(b, centre.x + Math.cos(a) * (R.range - 6), centre.y + Math.sin(a) * (R.range - 6), RUN, 2, dt);
+    if (b.cd > 0) return;
+    var inMaw = S.maw ? fighting.filter(function (m) { return dist(m, S.maw) < MAW_R; }) : [];
+    var boss = fighting.some(function (m) { return m.elite; });
+    if (kraken && inMaw.length >= 2 && (!boss || Math.random() < 0.5)) {
+      inMaw.forEach(function (m) { hit(m, 6); }); S.c.aoe++; b.cd = 1.5;
+      S.lines.push({ ring: S.maw, r: MAW_R, color: "rgba(127,166,230,0.5)", until: S.t + 0.4 });
+    } else if (dist(tgt, b) < R.range + 4) { hit(tgt, 11); b.cd = 1.5; line(b, tgt, R.color, false, 0.3); }
+  }
+  function hit(m, amount) {
+    if (m.state === "dead") return;
+    m.hp -= amount;
+    if (m.hp <= 0) { m.state = "dead"; m.respawn = S.t + RESPAWN; m.target = null; S.c.kills++; }
+  }
+  // }}}
+
+  // {{{ drawing
+  function draw() {
+    var dark = SK.pageColours(root).dark;
+    if (!layer || layer.dark !== dark) layer = SK.mapLayer(g, SCALE, dark);
+    ctx.drawImage(layer, 0, 0);
+    // patrol routes, faint
+    ctx.setLineDash([3, 5]); ctx.strokeStyle = "rgba(226,193,106,0.35)"; ctx.lineWidth = 1;
+    S.mobs.forEach(function (m) {
+      if (!m.route) return;
+      ctx.beginPath(); m.route.forEach(function (p, k) { if (k) ctx.lineTo(p.x * SCALE, p.y * SCALE); else ctx.moveTo(p.x * SCALE, p.y * SCALE); }); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+    // the maw and its quadrants
+    if (S.maw) {
+      var mx = S.maw.x * SCALE, my = S.maw.y * SCALE;
+      ctx.strokeStyle = "rgba(127,166,230,0.9)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(mx, my, MAW_R * SCALE, 0, 7); ctx.stroke();
+      ctx.strokeStyle = "rgba(200,205,212,0.25)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(mx - 40 * SCALE, my); ctx.lineTo(mx + 40 * SCALE, my); ctx.moveTo(mx, my - 40 * SCALE); ctx.lineTo(mx, my + 40 * SCALE); ctx.stroke();
+      ctx.beginPath(); ctx.arc(mx, my, KITE_R * SCALE, 0, 7); ctx.stroke();
+    }
+    // short-lived lines: taunts, pulls, heals, blinks, area spells
+    S.lines.forEach(function (l) {
+      ctx.strokeStyle = l.color; ctx.lineWidth = 2;
+      if (l.ring) { ctx.fillStyle = l.color; ctx.beginPath(); ctx.arc(l.ring.x * SCALE, l.ring.y * SCALE, l.r * SCALE, 0, 7); ctx.fill(); return; }
+      if (l.dash) ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(l.x0 * SCALE, l.y0 * SCALE); ctx.lineTo(l.x1 * SCALE, l.y1 * SCALE); ctx.stroke();
+      ctx.setLineDash([]);
+    });
+    // monsters
+    S.mobs.forEach(function (m) {
+      if (m.state === "dead") return;
+      var r = m.elite ? 5 : 3.5;
+      ctx.fillStyle = m.state === "fight" ? "#ff5a4a" : "#b8453c";
+      ctx.beginPath(); ctx.arc(m.x * SCALE, m.y * SCALE, r, 0, 7); ctx.fill();
+      if (m.route) { ctx.strokeStyle = "#e2c16a"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(m.x * SCALE, m.y * SCALE, r + 3, 0, 7); ctx.stroke(); }
+      if (m.slow > 0) { ctx.strokeStyle = "rgba(170,210,255,0.9)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(m.x * SCALE, m.y * SCALE, r + 5, 0, 7); ctx.stroke(); }
+    });
+    // the party
+    ctx.font = "bold 9px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    S.party.forEach(function (b) {
+      var R = ROLE[b.role];
+      ctx.globalAlpha = b.dead ? 0.35 : 1;
+      ctx.fillStyle = R.color; ctx.beginPath(); ctx.arc(b.x * SCALE, b.y * SCALE, 7, 0, 7); ctx.fill();
+      ctx.fillStyle = "#12161d"; ctx.fillText(R.letter, b.x * SCALE, b.y * SCALE + 0.5);
+      ctx.globalAlpha = 1;
+    });
+    hud();
+  }
+  var lastHud = -1;
+  function hud() {
+    var s = Math.floor(S.t * 2);
+    if (s === lastHud) return;
+    lastHud = s;
+    var c = S.c;
+    counts.innerHTML = [["Kills", c.kills], ["Fights", c.fights], ["Taunts", c.taunts], ["…reaching out", c.reach], ["Pulls", c.pulls],
+      ["Slows", c.slows], ["Blinks", c.blinks], ["Disengages", c.disengages], ["Area spells", c.aoe], ["Patrols blundered in", c.blunders], ["Deaths", c.deaths]]
+      .map(function (p) { return "<span>" + p[0] + " <b>" + p[1] + "</b></span>"; }).join("");
+    if (S.fight) say(opt["dk-kraken"] ? "The kraken: the tank holds the maw (blue ring) and reaches out; the mage and hunter pull, slow and kite outliers round it." : "An ordinary fight: everyone on the tank's target, nobody pulling.");
+  }
+  // }}}
+
+  reset();
+  var reduced = SK.runLoop(root, DT, step, draw, api);
+  if (reduced) { var pb = document.getElementById("dk-play"); if (pb) pb.textContent = "Play"; say("Paused because your system asks for reduced motion: press Play to start."); }
+})();
+</script>
+  <section class="card">
+    <h2>Kiting alone: room to run, and a memory for danger</h2>
+    <p class="before">The owner's kiting in the wild (617e5): a lone mage (blue, left half) and a lone hunter (purple, right half), each among its <strong>own</strong> monsters, drawn as a simple simulation, not the game's combat. Each pulls a monster (one hit and a slow: the pale blue ring) and leads it toward the <strong>most</strong> room: from points a little way out in 16 directions, the one farthest from monsters not already chasing it (the white tick shows the way chosen). A monster that gets too <strong>close</strong> is escaped with a blink or a disengage (the dashed white line). The mage <strong>stands</strong> to cast frostbolts when its monster is slowed and far enough (a dashed ring while casting); the hunter shoots on the move. Killed monsters come <strong>back</strong> where they stood (a closing dashed ring shows when). The ring of sectors round each kiter is its <strong>memory</strong> of danger by direction, brighter where danger was met recently or where a monster it killed is due back; a direction that is due is avoided even when it has the most room (a red ring flashes when that happens).</p>
+    <img src="buddy-roaming/24-kiting-alone.gif" alt="Kiting alone: room to run, and a memory for danger" width="620" height="460" loading="lazy">
+    <p class="after">What happened (counted as drawn): pulls 6, slows 29, blinks 9, disengages 10, killed 5, came back 2, monsters that noticed a kiter on their own 1, times a kiter turned away from the roomiest direction because danger was due there 7. The memory makes the kiter <strong>steer</strong> round places where it has been killing, just before they fill again. What it needs from the game: each buddy's <strong>own</strong> record of where it met monsters and killed them (the server knows every creature's respawn time, but a buddy &quot;keeps mental track&quot; of what it saw, so the record is its own, not the server's).</p>
+  </section>
+  <header class="part" id="play">
+    <h2>Part 6 · Play it yourself</h2>
+    <p>The scenes with you in them, <strong>play</strong>able: move the cursor (or a finger) over the area and your dot follows.</p>
+  </header>
+  <section class="card" id="joining">
+    <h2>Joining and leaving your group</h2>
+    <p class="before">You are the <strong>white</strong> dot; it walks toward your cursor (or finger). <strong>Five</strong> buddies roam the area with the owner's waypoint rule (the small crosses are where each is heading) and group by distance as they go. The rings round you are drawn at <strong>half</strong> the real distances so the drawn area can hold them: green, join inside 60 yards; gold, 74 (the range kill experience is shared in); red, leave outside 75. A white ring and line mark a buddy in <strong>your</strong> group, which holds four; a gold ring marks one in a far party, its members joined by gold lines.</p>
+    <div class="ot-stage jl-stage">
+      <canvas id="jl-canvas" aria-label="Area: you, five buddies roaming, and the grouping rings round you"></canvas>
+    </div>
+    <p class="ot-key"><span style="--c:#ffffff">You</span><span style="--c:#e07a62">W warrior</span><span style="--c:#7fa6e6">M mage</span><span style="--c:#9ccc65">H hunter</span><span style="--c:#f0e2a0">P priest</span><span style="--c:#c4a3ee">R rogue</span></p>
+    <div class="ot-panel">
+      <div class="ot-row">
+        <dl class="jl-groups">
+          <dt>Your group</dt><dd id="jl-owner">0 of 4</dd>
+          <dt>Far parties</dt><dd id="jl-far">none</dd>
+          <dt>In no group</dt><dd id="jl-alone">nobody</dd>
+        </dl>
+        <div class="ot-buttons">
+          <button type="button" id="jl-play" aria-pressed="false">Pause</button>
+          <button type="button" id="jl-reset">Start over</button>
+        </div>
+      </div>
+      <ul class="ot-log" id="jl-log" aria-live="polite"></ul>
+    </div>
+    <p class="after">A buddy joins your group when its roaming brings it <strong>inside</strong> 60 yards and a seat is free, nearest first, and leaves only once past 75, so a grouped buddy is almost never outside the 74-yard experience range, and the gap between the rings keeps one at the edge from flickering in and out. Past 74 an ungrouped buddy finds a <strong>far</strong> party: one with room that has a member within 70 yards, or another loose far buddy within 70 to start one with; two far parties merge when members come within 70 and together they fit in five. A far-party buddy <strong>leaves</strong> its party when it comes back within 74 yards of you (and so whenever it could join yours) or strays more than 74 from every other member; a party left with one member breaks up. Between 60 and 74, or nearer while your group is full, a buddy is in <strong>no</strong> group. Buddies don't <strong>steer</strong> toward you: grouping follows wherever their roaming takes them. The rules are checked <strong>twice</strong> a second here (every 5 seconds in game). A drawn simulation of the intended behaviour, not the game.</p>
+  </section>
+  <script>
+// join-leave.js - the interactive "joining and leaving the owner's group"
+// widget of the buddy roaming gallery (issues 617c2, 617e5). A drawn
+// simulation of the intended behaviour, not the game: the owner's dot eases
+// toward the cursor (or finger); five buddies roam the area with the
+// owner's waypoint rule (the bearing turns a tenth of a circle a waypoint,
+// the distance out moves 1 to 20 points of 100 at even odds, never nearer
+// the centre than 10 yards, a waypoint within 5 yards of someone moves 10
+// points toward the middle, a blocked spot slides along its bearing); and
+// the grouping rules of 617c2 run live, drawn at half their real distances
+// so the drawn area can show them (the GIF it replaces did the same).
+//
+// The page embeds this file's text in a <script> of its own (the artifact
+// host only runs scripts from a few approved CDNs, so a separate file next
+// to the page was blocked there, 2026-09-27); this file is the source the
+// generator reads.
+(function () {
+  "use strict";
+  var cv = document.getElementById("jl-canvas");
+  if (!cv) return;
+  var ctx = cv.getContext("2d");
+
+  // {{{ the area and its numbers (yards)
+  var AW = 128, AH = 98;                     // the drawn world
+  var OUTLINE = [[6, 14], [40, 4], [88, 8], [122, 24], [124, 60], [104, 88], [60, 94], [22, 84], [2, 52]];
+  var ROCKS = [[42, 34, 6], [80, 30, 5], [64, 60, 7], [30, 64, 4], [100, 58, 4], [88, 76, 3]];
+  var DT = 1 / 30;
+  var OWNER_SPEED = 8.4, BUDDY_SPEED = 4.8;  // yards a second (both 20% up, 2026-09-28: the owner, "a little faster [...] Just for the scenes with the player dot")
+  // the grouping distances, drawn at half the real ones (60, 74, 75, 70)
+  var HALF = 0.5;
+  var JOIN = 60 * HALF, FAR = 74 * HALF, LEAVE = 75 * HALF, MERGE = 70 * HALF;
+  var SEATS = 4;                             // the owner's party holds four buddies
+  var FAR_SIZE = 5;                          // a far party holds five
+  var PASS = 0.5;                            // seconds between grouping passes (5 in game)
+  // the owner's waypoint rule
+  var TURN = Math.PI * 2 / 10, NEAR = 10, CLEAR = 3, CROWD = 5, CROWD_SHIFT = 10;
+  var BUDDIES = [
+    { name: "Warrior", letter: "W", color: "#e07a62" },
+    { name: "Mage",    letter: "M", color: "#7fa6e6" },
+    { name: "Hunter",  letter: "H", color: "#9ccc65" },
+    { name: "Priest",  letter: "P", color: "#f0e2a0" },
+    { name: "Rogue",   letter: "R", color: "#c4a3ee" }
+  ];
+  // }}}
+
+  // {{{ geometry
+  function inside(x, y) {
+    var r = false, j = OUTLINE.length - 1;
+    for (var i = 0; i < OUTLINE.length; i++) {
+      var xi = OUTLINE[i][0], yi = OUTLINE[i][1], xj = OUTLINE[j][0], yj = OUTLINE[j][1];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) r = !r;
+      j = i;
+    }
+    return r;
+  }
+  function edgeDistance(x, y) {
+    var best = Infinity;
+    for (var i = 0; i < OUTLINE.length; i++) {
+      var a = OUTLINE[i], b = OUTLINE[(i + 1) % OUTLINE.length];
+      var vx = b[0] - a[0], vy = b[1] - a[1];
+      var t = Math.max(0, Math.min(1, ((x - a[0]) * vx + (y - a[1]) * vy) / (vx * vx + vy * vy)));
+      best = Math.min(best, Math.hypot(a[0] + vx * t - x, a[1] + vy * t - y));
+    }
+    return best;
+  }
+  // a place a body can stand: inside, `margin` clear of rocks
+  function walkable(x, y, margin) {
+    if (!inside(x, y)) return false;
+    for (var i = 0; i < ROCKS.length; i++) {
+      var k = ROCKS[i];
+      if (Math.hypot(x - k[0], y - k[1]) < k[2] + margin) return false;
+    }
+    return true;
+  }
+  // yards from the centre along a bearing to the area's edge
+  function rayToEdge(cx, cy, a) {
+    var dx = Math.cos(a), dy = Math.sin(a), best = Infinity;
+    for (var i = 0; i < OUTLINE.length; i++) {
+      var p = OUTLINE[i], q = OUTLINE[(i + 1) % OUTLINE.length];
+      var ex = q[0] - p[0], ey = q[1] - p[1];
+      var den = dx * ey - dy * ex;
+      if (Math.abs(den) < 1e-9) continue;
+      var t = ((p[0] - cx) * ey - (p[1] - cy) * ex) / den;
+      var u = ((p[0] - cx) * dy - (p[1] - cy) * dx) / den;
+      if (t > 0 && u >= 0 && u <= 1 && t < best) best = t;
+    }
+    return best;
+  }
+  var CX = 0, CY = 0;
+  OUTLINE.forEach(function (p) { CX += p[0]; CY += p[1]; });
+  CX /= OUTLINE.length; CY /= OUTLINE.length;
+  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  // }}}
+
+  var S, pointer = null, running = true, visible = true;
+
+  // {{{ the owner's waypoint rule
+  function pickWaypoint(b) {
+    for (var turns = 0; turns < 12; turns++) {
+      b.angle += TURN * b.spin;
+      var reach = rayToEdge(CX, CY, b.angle) - CLEAR;
+      // the step: 1..20 points in or out at even odds, kept within 1..100
+      var change = 1 + Math.floor(Math.random() * 20);
+      var pct = Math.max(1, Math.min(100, b.pct + (Math.random() < 0.5 ? -change : change)));
+      // crowding: someone within 5 yards of that spot moves it 10 toward 50
+      var d0 = Math.max(NEAR, pct / 100 * reach);
+      var sx = CX + Math.cos(b.angle) * d0, sy = CY + Math.sin(b.angle) * d0;
+      var crowded = [S.owner].concat(S.buddies).some(function (o) { return o !== b && Math.hypot(o.x - sx, o.y - sy) < CROWD; });
+      if (crowded) pct = pct < 50 ? pct + CROWD_SHIFT : pct > 50 ? pct - CROWD_SHIFT : pct + (Math.random() < 0.5 ? -CROWD_SHIFT : CROWD_SHIFT);
+      b.pct = pct;
+      // a blocked spot slides along the bearing, nearer first then farther
+      for (var k = 1; k < 200; k++) {
+        var share = pct / 100 + Math.floor(k / 2) * (k % 2 === 0 ? -1 : 1) / 100;
+        if (share < 0.01 || share > 1) continue;
+        var d = Math.max(NEAR, share * reach);
+        var x = CX + Math.cos(b.angle) * d, y = CY + Math.sin(b.angle) * d;
+        if (walkable(x, y, CLEAR) && edgeDistance(x, y) >= CLEAR) { b.wp = { x: x, y: y }; b.wpTime = 0; return; }
+      }
+    }
+  }
+  // walk toward the waypoint: of sixteen headings that stay walkable, the
+  // one pointing most nearly at it (so rocks are slid round)
+  function walk(b) {
+    b.wpTime += DT;
+    var dx = b.wp.x - b.x, dy = b.wp.y - b.y, d = Math.hypot(dx, dy);
+    var step = BUDDY_SPEED * DT;
+    if (d <= step || b.wpTime > 25) { pickWaypoint(b); return; }
+    var best = -2, bx = b.x, by = b.y;
+    for (var k = 0; k < 16; k++) {
+      var a = k * Math.PI / 8, hx = Math.cos(a), hy = Math.sin(a);
+      var x = b.x + hx * step, y = b.y + hy * step;
+      if (!walkable(x, y, 1)) continue;
+      var aim = (hx * dx + hy * dy) / d;
+      if (aim > best) { best = aim; bx = x; by = y; }
+    }
+    b.x = bx; b.y = by;
+  }
+  // }}}
+
+  // {{{ the grouping pass (617c2), at half distances
+  function say(t) { S.log.unshift(t); if (S.log.length > 6) S.log.length = 6; }
+  function farPartyOf(b) { for (var i = 0; i < S.far.length; i++) if (S.far[i].indexOf(b) >= 0) return S.far[i]; return null; }
+  function leaveFar(b, why) {
+    var p = farPartyOf(b);
+    if (!p) return;
+    p.splice(p.indexOf(b), 1);
+    say(b.name + " left the far party (" + why + ").");
+    if (p.length === 1) { say(p[0].name + " is alone: that far party breaks up."); p.length = 0; }
+    S.far = S.far.filter(function (q) { return q.length > 0; });
+  }
+  function groupingPass() {
+    var O = S.owner;
+    // the owner's party: leave past 75
+    S.buddies.forEach(function (b) {
+      if (b.inOwner && dist(b, O) > LEAVE) { b.inOwner = false; say(b.name + " left your group (past 75 yards)."); }
+    });
+    var seatsUsed = S.buddies.filter(function (b) { return b.inOwner; }).length;
+    // far parties: leave within 74 of the owner (so also whenever it could
+    // join the owner's party), or when more than 74 from every other member
+    S.buddies.forEach(function (b) {
+      var p = farPartyOf(b);
+      if (!p) return;
+      if (dist(b, O) <= FAR) { leaveFar(b, "back within 74 yards of you"); return; }
+      var near = p.some(function (o) { return o !== b && dist(o, b) <= FAR; });
+      if (!near) leaveFar(b, "more than 74 yards from the rest of it");
+    });
+    // join the owner's party within 60, nearest first, while it has room
+    S.buddies.filter(function (b) { return !b.inOwner && !farPartyOf(b) && dist(b, O) <= JOIN; })
+      .sort(function (a, b) { return dist(a, O) - dist(b, O); })
+      .forEach(function (b) {
+        if (seatsUsed < SEATS) { b.inOwner = true; seatsUsed++; say(b.name + " joined your group (inside 60 yards)."); }
+      });
+    // far buddies (past 74, ungrouped): join a far party with room that has
+    // a member within 70, else pair with another loose far buddy within 70
+    var loose = S.buddies.filter(function (b) { return !b.inOwner && !farPartyOf(b) && dist(b, O) > FAR; });
+    loose.forEach(function (b) {
+      if (farPartyOf(b)) return;
+      var home = S.far.filter(function (p) { return p.length < FAR_SIZE && p.some(function (o) { return dist(o, b) <= MERGE; }); })[0];
+      if (home) { home.push(b); say(b.name + " joined a far party."); return; }
+      var mate = loose.filter(function (o) { return o !== b && !farPartyOf(o) && dist(o, b) <= MERGE; })[0];
+      if (mate) { S.far.push([b, mate]); say(b.name + " and " + mate.name + " formed a far party."); }
+    });
+    // two far parties merge when members come within 70 and they fit
+    for (var i = 0; i < S.far.length; i++) for (var j = i + 1; j < S.far.length; j++) {
+      var p = S.far[i], q = S.far[j];
+      if (!p.length || !q.length || p.length + q.length > FAR_SIZE) continue;
+      var close = p.some(function (a) { return q.some(function (c) { return dist(a, c) <= MERGE; }); });
+      if (close) { Array.prototype.push.apply(p, q.splice(0)); say("Two far parties merged."); }
+    }
+    S.far = S.far.filter(function (p) { return p.length > 0; });
+  }
+  // }}}
+
+  // {{{ reset and update
+  function reset() {
+    S = { t: 0, sincePass: 0, owner: { x: 14, y: 50, isOwner: true }, far: [], log: [], buddies: [] };
+    BUDDIES.forEach(function (d, i) {
+      var b = { name: d.name, letter: d.letter, color: d.color, inOwner: false, pct: 20 + Math.floor(Math.random() * 60) };
+      do { b.x = 10 + Math.random() * 108; b.y = 10 + Math.random() * 80; } while (!walkable(b.x, b.y, 2));
+      b.angle = Math.atan2(b.y - CY, b.x - CX); b.spin = Math.random() < 0.5 ? 1 : -1;
+      S.buddies.push(b);
+    });
+    S.buddies.forEach(pickWaypoint);
+    pointer = null;
+    say("A new day. Move the cursor over the area: you follow it.");
+    groupingPass();
+    hud();
+  }
+  function update() {
+    S.t += DT;
+    var O = S.owner;
+    // the owner eases toward the cursor, stopping a yard short, and keeps
+    // to the area (a step that would leave it isn't taken)
+    if (pointer) {
+      var dx = pointer.x - O.x, dy = pointer.y - O.y, d = Math.hypot(dx, dy);
+      if (d > 1) {
+        var s = Math.min(d - 1, OWNER_SPEED * DT);
+        var nx = O.x + dx / d * s, ny = O.y + dy / d * s;
+        if (walkable(nx, ny, 0.5)) { O.x = nx; O.y = ny; }
+        else if (walkable(nx, O.y, 0.5)) O.x = nx;
+        else if (walkable(O.x, ny, 0.5)) O.y = ny;
+      }
+    }
+    S.buddies.forEach(walk);
+    S.sincePass += DT;
+    if (S.sincePass >= PASS) { S.sincePass = 0; groupingPass(); }
+  }
+  // }}}
+
+  // {{{ drawing
+  var scale = 1;
+  function resize() {
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 600;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(w * AH / AW * dpr);
+    scale = cv.width / AW;
+  }
+  function X(v) { return v * scale; }
+  function ringAt(x, y, r, color, dash, width) {
+    ctx.beginPath(); ctx.setLineDash(dash ? [X(1.4), X(1.1)] : []);
+    ctx.arc(X(x), X(y), X(r), 0, Math.PI * 2);
+    ctx.lineWidth = Math.max(1, X(width || 0.3)); ctx.strokeStyle = color; ctx.stroke(); ctx.setLineDash([]);
+  }
+  function draw() {
+    ctx.fillStyle = "#12161d"; ctx.fillRect(0, 0, cv.width, cv.height);
+    // the area and its rocks
+    ctx.beginPath();
+    OUTLINE.forEach(function (p, i) { if (i) ctx.lineTo(X(p[0]), X(p[1])); else ctx.moveTo(X(p[0]), X(p[1])); });
+    ctx.closePath(); ctx.fillStyle = "#1f2833"; ctx.fill();
+    ctx.lineWidth = Math.max(1, X(0.3)); ctx.strokeStyle = "#4a5a6e"; ctx.stroke();
+    ROCKS.forEach(function (k) {
+      ctx.beginPath(); ctx.arc(X(k[0]), X(k[1]), X(k[2]), 0, Math.PI * 2);
+      ctx.fillStyle = "#5a5146"; ctx.fill(); ctx.strokeStyle = "#7a6e60"; ctx.stroke();
+    });
+    var O = S.owner;
+    // the rings round the owner (half the real distances)
+    ringAt(O.x, O.y, JOIN, "#5ec27a", true);
+    ringAt(O.x, O.y, FAR, "#d7b85a", false);
+    ringAt(O.x, O.y, LEAVE, "#e06c5a", true);
+    // far parties: members joined by faint gold lines
+    S.far.forEach(function (p) {
+      ctx.strokeStyle = "rgba(215,184,90,0.45)"; ctx.lineWidth = Math.max(1, X(0.35));
+      for (var i = 0; i < p.length; i++) for (var j = i + 1; j < p.length; j++) {
+        ctx.beginPath(); ctx.moveTo(X(p[i].x), X(p[i].y)); ctx.lineTo(X(p[j].x), X(p[j].y)); ctx.stroke();
+      }
+    });
+    // lines from the owner to its party
+    S.buddies.forEach(function (b) {
+      if (!b.inOwner) return;
+      ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = Math.max(1, X(0.3));
+      ctx.beginPath(); ctx.moveTo(X(O.x), X(O.y)); ctx.lineTo(X(b.x), X(b.y)); ctx.stroke();
+    });
+    // waypoints: a small faint cross each
+    S.buddies.forEach(function (b) {
+      var x = X(b.wp.x), y = X(b.wp.y), r = X(1.1);
+      ctx.strokeStyle = b.color; ctx.globalAlpha = 0.5; ctx.lineWidth = Math.max(1, X(0.3));
+      ctx.beginPath(); ctx.moveTo(x - r, y - r); ctx.lineTo(x + r, y + r); ctx.moveTo(x - r, y + r); ctx.lineTo(x + r, y - r); ctx.stroke();
+      ctx.globalAlpha = 1;
+    });
+    // the buddies: a disc with a letter; a white ring in your group, gold in a far party
+    S.buddies.forEach(function (b) {
+      ctx.beginPath(); ctx.arc(X(b.x), X(b.y), X(1.9), 0, Math.PI * 2); ctx.fillStyle = b.color; ctx.fill();
+      ctx.fillStyle = "#12161d"; ctx.font = "700 " + Math.round(X(2.2)) + "px system-ui, sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(b.letter, X(b.x), X(b.y) + X(0.1));
+      if (b.inOwner) ringAt(b.x, b.y, 3.1, "#ffffff", false, 0.45);
+      else if (farPartyOf(b)) ringAt(b.x, b.y, 3.1, "#d7b85a", false, 0.45);
+    });
+    // the owner
+    ctx.beginPath(); ctx.arc(X(O.x), X(O.y), X(2.1), 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill();
+    if (pointer) {
+      ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.setLineDash([X(0.8), X(0.8)]);
+      ctx.beginPath(); ctx.moveTo(X(O.x), X(O.y)); ctx.lineTo(X(pointer.x), X(pointer.y)); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  var el = {
+    owner: document.getElementById("jl-owner"), far: document.getElementById("jl-far"),
+    alone: document.getElementById("jl-alone"), log: document.getElementById("jl-log")
+  };
+  function hud() {
+    var inOwner = S.buddies.filter(function (b) { return b.inOwner; });
+    var alone = S.buddies.filter(function (b) { return !b.inOwner && !farPartyOf(b); });
+    if (el.owner) el.owner.textContent = inOwner.length + " of " + SEATS + (inOwner.length ? ": " + inOwner.map(function (b) { return b.name; }).join(", ") : "");
+    if (el.far) el.far.textContent = S.far.length ? S.far.map(function (p) { return p.map(function (b) { return b.name; }).join(" + "); }).join(" · ") : "none";
+    if (el.alone) el.alone.textContent = alone.length ? alone.map(function (b) { return b.name; }).join(", ") : "nobody";
+    if (el.log) el.log.innerHTML = S.log.map(function (s) { return "<li>" + s + "</li>"; }).join("");
+  }
+  // }}}
+
+  // {{{ the loop: fixed steps, drawn each frame; stops when off screen
+  var acc = 0, last = 0, lastHud = 0;
+  function frame(now) {
+    if (!visible) { last = 0; return; }
+    requestAnimationFrame(frame);
+    if (!last) last = now;
+    acc += Math.min(0.25, (now - last) / 1000); last = now;
+    if (running) while (acc >= DT) { update(); acc -= DT; } else acc = 0;
+    draw();
+    if (S.t - lastHud > 0.25 || !running) { hud(); lastHud = S.t; }
+  }
+  // }}}
+
+  // {{{ input
+  function toWorld(ev) {
+    var r = cv.getBoundingClientRect();
+    return { x: (ev.clientX - r.left) / r.width * AW, y: (ev.clientY - r.top) / r.height * AH };
+  }
+  cv.addEventListener("pointermove", function (ev) { pointer = toWorld(ev); });
+  cv.addEventListener("pointerdown", function (ev) { pointer = toWorld(ev); });
+  cv.addEventListener("pointerleave", function (ev) { if (ev.pointerType === "mouse") pointer = null; });
+  var play = document.getElementById("jl-play");
+  function setRunning(on) { running = on; if (play) { play.textContent = on ? "Pause" : "Play"; play.setAttribute("aria-pressed", on ? "false" : "true"); } }
+  if (play) play.addEventListener("click", function () { setRunning(!running); });
+  var rst = document.getElementById("jl-reset");
+  if (rst) rst.addEventListener("click", function () { reset(); draw(); });
+  window.addEventListener("resize", function () { resize(); draw(); });
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries) {
+      var v = entries[0].isIntersecting;
+      if (v && !visible) { visible = true; requestAnimationFrame(frame); }
+      visible = v;
+    }).observe(cv);
+  }
+  // }}}
+
+  reset();
+  resize();
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  setRunning(!reduce);                         // reduced motion: waits for Play
+  draw(); hud();
+  requestAnimationFrame(frame);
+})();
+</script>
+  <section class="card" id="owner-tank">
+    <h2>The owner as the tank</h2>
+    <p class="before">You are the <strong>white</strong> dot; it walks toward your cursor (or finger). <strong>Four</strong> buddies follow you: a mage, a hunter, a priest and a melee fighter. Walk <strong>into</strong> monsters to start a fight. A <strong>lone</strong> monster gets an ordinary fight. When three or more monsters stand where area spells reach them all, the buddies run the <strong>kraken</strong> round you: the damage dealers pick the maw (gold), and you drag monsters to it. You take a monster by coming within <strong>8</strong> yards of it; that stands for all of a tank's ways of taking one. The mage and the hunter pull <strong>outliers</strong> to you: one hit and a slow (blue), a lead into a neighbouring quadrant, a blink or disengage when it gets close, then kiting round the maw until you take it.</p>
+    <div class="ot-stage">
+      <canvas id="ot-canvas" aria-label="Arena: the owner, four buddies and the monsters"></canvas>
+    </div>
+    <p class="ot-key"><span style="--c:#ffffff">You</span><span style="--c:#7fa6e6">M mage</span><span style="--c:#9ccc65">H hunter</span><span style="--c:#f0e2a0">P priest</span><span style="--c:#e07a62">F melee fighter</span><span style="--c:#d0524f">monster (a big one is an elite)</span></p>
+    <div class="ot-panel">
+      <div class="ot-row">
+        <span class="ot-mode" id="ot-mode" data-mode="rest">Out of combat</span>
+        <div class="ot-buttons">
+          <button type="button" id="ot-play" aria-pressed="false">Pause</button>
+          <button type="button" id="ot-reset">Start over</button>
+        </div>
+      </div>
+      <div class="ot-meters">
+        <div class="ot-meter"><span>Your health</span><div class="ot-bar"><i id="ot-health" class="ot-fill ot-hp"></i></div><b id="ot-health-n">100%</b></div>
+        <div class="ot-meter"><span>What the buddies think you can take</span><div class="ot-bar"><i id="ot-danger" class="ot-fill ot-dg"></i></div><b id="ot-danger-n">2.0</b></div>
+        <div class="ot-meter"><span>Enemies on the party now</span><div class="ot-bar"><i id="ot-threat" class="ot-fill ot-th"></i></div><b id="ot-threat-n">0</b></div>
+      </div>
+      <fieldset class="ot-melee">
+        <legend>The melee buddy</legend>
+        <label><input type="radio" name="ot-melee" id="ot-melee-whirl" value="whirlwind" checked> Whirlwind</label>
+        <label><input type="radio" name="ot-melee" id="ot-melee-heavy" value="heavy"> Heavy hitter</label>
+        <label><input type="radio" name="ot-melee" id="ot-melee-control" value="control"> Control</label>
+      </fieldset>
+      <p class="ot-note" id="ot-melee-note">The melee buddy spins blades through everything near it.</p>
+      <ul class="ot-log" id="ot-log" aria-live="polite"></ul>
+      <p class="ot-counts" id="ot-counts"></p>
+    </div>
+    <p class="after">Pullers pull <strong>only</strong> while the enemies on the party count for less than what the buddies think you can take. They start <strong>cautious</strong>, at 2 (an elite counts 3). The number <strong>rises</strong> while you hold that much and stay healthy, and falls when your health runs low or you go down. The melee buddy's <strong>kind</strong> changes whom it hits: a whirlwind hits everything near the maw; a heavy hitter kills the marked skull, then the cross; a control fighter slows the monsters not yet on you. Monsters come <strong>back</strong> 30 seconds after they die. A drawn simulation of the intended behaviour, not the game's combat.</p>
+  </section>
+  <script>
+// owner-tank.js - the interactive "owner as the tank" widget of the buddy
+// roaming gallery (issue 617e5). A drawn simulation of the intended
+// behaviour, not the game's combat: the owner's dot eases toward the
+// cursor, the four buddies follow, and when 3 or more monsters stand where
+// area spells reach them all the buddies run the "kraken" round the owner:
+// the damage dealers pick the maw (where their ranges overlap best), pull
+// outliers with one hit and a slow, lead them to a neighbouring quadrant,
+// blink or disengage to keep their distance, and kite them round the maw
+// until the owner takes them by coming near. Pullers only pull while the
+// enemies' total threat stays under what they have learned the owner can
+// take (the danger meter). Units are yards; one tick is 1/30 of a second.
+(function () {
+  "use strict";
+  var cv = document.getElementById("ot-canvas");
+  if (!cv) return;
+  var ctx = cv.getContext("2d");
+
+  // {{{ the arena and its numbers
+  var AW = 170, AH = 110;                    // arena, yards
+  var DT = 1 / 30;
+  // monsters are faster than you and the buddies (the owner, 2026-09-27:
+  // "the enemies should move faster than the player, so they can always
+  // hit"); 6.2 before. Slows and blinks save a kiter, not its legs.
+  // Melee as the server does it (AzerothCore, read 2026-09-28; the owner:
+  // "we should be trying to build the datamodel to match the game"). All
+  // distances centre to centre, yards.
+  //   reach      every body's combat reach; players and ordinary monsters
+  //              1.5 (DEFAULT_COMBAT_REACH), elites here 2.0
+  //   chase      a chasing monster stops at the sum of the two reaches
+  //              (GetChaseRange), and starts again only when the target is
+  //              more than CONTACT (0.5) beyond that, checked every 0.4 s
+  //              (ChaseMovementGenerator: maxTarget, i_recheckDistance)
+  //   melee      a swing lands if the target is within the two reaches plus
+  //              4/3, never less than 5 (Unit::GetMeleeRange), plus the
+  //              leeway of 2.66 when both are running and one is a player
+  //              (GetLeewayBonusRange): the "thin strip" the owner asked for
+  //   swing      melee lands once per attack time (2 s here), not as a drain
+  var REACH = 1.5, REACH_ELITE = 2.0, CONTACT = 0.5, RECHECK = 0.4;
+  var MELEE_MIN = 5.0, LEEWAY = 2.66, SWING = 2.0;
+  var RUN = 8.4, MOB_SPEED = 9.6;            // yards a second (both 20% up, 2026-09-28: the owner, "a little faster [...] Just for the scenes with the player dot"; monsters still outpace players)
+  var AGGRO = 9, AGGRO_ELITE = 11;           // an idle monster notices a party member this near
+  var TAKE = 8;                              // the owner takes a monster this near (the abstract taunt)
+  var MAW_R = 9, AOE_MIN = 2;                // area spells need this many in the maw
+  var CLUSTER_R = 12, CLUSTER_N = 3;         // the owner's rule: 3+ monsters where area spells reach them all
+  var PULL_REACH = 50, PULL_RANGE = { mage: 30, hunter: 35 };
+  var KITE_R = 17, LEAD_R = 20;
+  var RESPAWN = 30, LEASH = 60;
+  var SPAWNS = [                             // x, y, elite, pack (0 = alone)
+    [118, 42, 0, 1], [124, 48, 0, 1], [114, 50, 0, 1], [122, 38, 0, 1],
+    [142, 22, 0, 0], [96, 66, 0, 0],
+    [58, 88, 0, 2], [64, 92, 1, 2], [54, 94, 0, 2],
+    [34, 28, 0, 0], [150, 92, 0, 0], [84, 18, 0, 0]
+  ];
+  var ROLE = {
+    mage:   { label: "Mage",   letter: "M", color: "#7fa6e6", range: 30 },
+    hunter: { label: "Hunter", letter: "H", color: "#9ccc65", range: 35 },
+    healer: { label: "Priest", letter: "P", color: "#f0e2a0", range: 40 },
+    melee:  { label: "Melee",  letter: "F", color: "#e07a62", range: 3 }
+  };
+  var MELEE_KIND = {
+    whirlwind: "spins blades through everything near it",
+    heavy: "kills the skull, then the cross, with heavy blows",
+    control: "slows and stuns the monsters not yet on the owner"
+  };
+  // }}}
+
+  var S;                                     // the whole state, rebuilt by reset()
+  var pointer = null;                        // where the cursor is, in yards (null: not over the arena)
+  var running = true, visible = true, meleeKind = "whirlwind";
+
+  // {{{ reset
+  function reset() {
+    S = {
+      t: 0,
+      owner: { x: 18, y: 72, hp: 100, max: 100, isOwner: true },
+      buddies: ["mage", "hunter", "healer", "melee"].map(function (r, i) {
+        var a = Math.PI * (0.65 + i * 0.23);          // the same loose fan behind the owner they keep when following
+        return { role: r, x: 18 + Math.cos(a) * 6, y: 72 + Math.sin(a) * 6, hp: 100, max: 100, cd: 0, pull: null, cast: 0, hop: 0 };
+      }),
+      mobs: SPAWNS.map(function (s, i) {
+        return { id: i, sx: s[0], sy: s[1], x: s[0], y: s[1], elite: !!s[2], pack: s[3],
+                 max: s[2] ? 260 : 90, hp: s[2] ? 260 : 90, state: "idle", holder: null, target: null,
+                 slow: 0, respawn: 0, pulled: null, flash: 0 };
+      }),
+      kraken: false, maw: null,
+      danger: 2, calm: 0,                      // what the buddies believe the owner can take
+      lines: [],                               // short-lived drawn lines: tentacles, tags
+      log: [], counts: { taken: 0, pulls: 0, slows: 0, blinks: 0, disengages: 0, aoe: 0, kills: 0, krakens: 0 }
+    };
+    pointer = null; lastLearn = 0; lastHud = -1;
+    say("A new day in the arena. Move the cursor: the owner follows it.");
+    hud();
+  }
+  // }}}
+
+  // {{{ small helpers
+  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  function clampArena(p) { p.x = Math.max(2, Math.min(AW - 2, p.x)); p.y = Math.max(2, Math.min(AH - 2, p.y)); }
+  function moveToward(e, tx, ty, speed, stop) {
+    var dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy);
+    if (d <= (stop || 0.3)) return true;
+    var step = Math.min(speed * DT, d - (stop || 0));
+    e.x += dx / d * step; e.y += dy / d * step; clampArena(e);
+    return false;
+  }
+  function party() { return [S.owner].concat(S.buddies); }
+  function alive(m) { return m.state !== "dead"; }
+  function fighting() { return S.mobs.filter(function (m) { return m.state === "fight"; }); }
+  function say(text) { S.log.unshift(text); if (S.log.length > 4) S.log.pop(); }
+  function line(a, b, color, life) { S.lines.push({ ax: a.x, ay: a.y, bx: b.x, by: b.y, color: color, life: life || 0.6 }); }
+  function threatOf(m) { return m.elite ? 3 : 1; }
+  function packOf(m) { return m.pack ? S.mobs.filter(function (o) { return o.pack === m.pack && o.state === "idle"; }) : [m]; }
+  function buddy(role) { for (var i = 0; i < S.buddies.length; i++) if (S.buddies[i].role === role) return S.buddies[i]; }
+  // }}}
+
+  // {{{ engage
+  // A monster (and its idle pack-mates) turns on `who`.
+  function engage(m, who) {
+    packOf(m).concat([m]).forEach(function (o) {
+      if (o.state !== "idle") return;
+      o.state = "fight"; o.target = who;
+    });
+  }
+  // }}}
+
+  // {{{ the kraken's parts
+  // Is there a cluster the owner's rule allows: 3+ living monsters, one of
+  // them fighting, all within area-spell reach of their middle?
+  function clusterNow() {
+    var live = S.mobs.filter(alive);
+    for (var i = 0; i < live.length; i++) {
+      if (live[i].state !== "fight") continue;
+      var near = live.filter(function (o) { return dist(o, live[i]) <= CLUSTER_R; });
+      if (near.length >= CLUSTER_N) return true;
+    }
+    return false;
+  }
+  // The maw: the damage dealers' choice. Start from the middle of what the
+  // owner holds (or of the fight), then lean toward where the two ranged
+  // buddies stand, so every one of them reaches all of it and can switch
+  // targets freely; it moves smoothly, never jumps.
+  function placeMaw() {
+    var held = fighting().filter(function (m) { return m.holder === S.owner; });
+    var set = held.length ? held : fighting();
+    if (!set.length) return;
+    var cx = 0, cy = 0;
+    set.forEach(function (m) { cx += m.x; cy += m.y; });
+    cx /= set.length; cy /= set.length;
+    var mg = buddy("mage"), hn = buddy("hunter");
+    var rx = (mg.x + hn.x) / 2 - cx, ry = (mg.y + hn.y) / 2 - cy, rl = Math.hypot(rx, ry);
+    var lean = Math.min(5, rl * 0.25);
+    var tx = cx + (rl ? rx / rl * lean : 0), ty = cy + (rl ? ry / rl * lean : 0);
+    if (!S.maw) S.maw = { x: tx, y: ty };
+    S.maw.x += (tx - S.maw.x) * Math.min(1, 1.5 * DT);
+    S.maw.y += (ty - S.maw.y) * Math.min(1, 1.5 * DT);
+  }
+  function inMaw(m) { return S.maw && m.state === "fight" && dist(m, S.maw) <= MAW_R; }
+  function enemyThreat() { return fighting().reduce(function (a, m) { return a + threatOf(m); }, 0); }
+  // Hand an outlier to a free puller, if the danger allows the whole pack.
+  function assignPulls() {
+    if (!S.kraken || !S.maw) return;
+    ["hunter", "mage"].forEach(function (role) {
+      var b = buddy(role);
+      if (b.pull) return;
+      var best = null, bd = 1e9;
+      S.mobs.forEach(function (m) {
+        if (m.state !== "idle" || m.pulled) return;
+        var d = dist(m, S.maw);
+        if (d < 16 || d > PULL_REACH) return;
+        if (d < bd) { bd = d; best = m; }
+      });
+      if (!best) return;
+      var size = packOf(best).reduce(function (a, o) { return a + threatOf(o); }, 0);
+      if (enemyThreat() + size > S.danger) return;        // the owner has enough on them
+      best.pulled = b;
+      b.pull = { mob: best, phase: "approach", dest: null, time: 0 };
+    });
+  }
+  // }}}
+
+  // {{{ update
+  function update() {
+    S.t += DT;
+    var O = S.owner;
+
+    // the owner eases toward the cursor (not onto it: it stops a yard short)
+    if (pointer && O.hp > 0) moveToward(O, pointer.x, pointer.y, RUN, 1.2);
+
+    // monsters notice what comes near
+    S.mobs.forEach(function (m) {
+      if (m.state === "dead") {
+        m.respawn -= DT;
+        if (m.respawn <= 0) { m.state = "idle"; m.hp = m.max; m.x = m.sx; m.y = m.sy; m.holder = null; m.target = null; m.pulled = null; }
+        return;
+      }
+      if (m.state === "idle") {
+        var reach = m.elite ? AGGRO_ELITE : AGGRO;
+        party().forEach(function (p) { if (m.state === "idle" && dist(m, p) <= reach) engage(m, p); });
+      }
+    });
+
+    // the owner takes a monster by coming near it (the abstract taunt)
+    fighting().forEach(function (m) {
+      if (m.holder !== O && dist(m, O) <= TAKE) {
+        m.holder = O; m.target = O; S.counts.taken++;
+        line(O, m, "#d7b85a", 0.8);
+        if (m.pulled) { m.pulled.pull = null; m.pulled = null; }
+      }
+    });
+
+    // kraken or an ordinary fight
+    var hadFight = S.hadFight;
+    S.hadFight = fighting().length > 0;
+    if (!fighting().length) {
+      if (S.kraken) { say("The pack is down; the party moves on."); }
+      S.kraken = false; S.maw = null;
+    } else if (!S.kraken && clusterNow()) {
+      S.kraken = true; S.counts.krakens++;
+      say("Three or more together: the kraken forms round the owner.");
+    }
+    if (S.kraken) { placeMaw(); assignPulls(); }
+    else if (!hadFight && S.hadFight) say("A lone fight: no maw, no pulls.");
+
+    // monsters: chase whoever they are on, hit when close, leash home
+    fighting().forEach(function (m) {
+      var tgt = m.holder || m.target;
+      if (!tgt) return;
+      var sp = MOB_SPEED * (m.slow > 0 ? 0.5 : 1);
+      if (m.slow > 0) m.slow -= DT;
+      // the chase and the swing, as the server does them (constants above).
+      // The owner's rule this matches (2026-09-28): "a pathing range where
+      // they path to be close to, then a thin strip beyond that where they
+      // can attack within. They shouldn't move after getting in range again
+      // until the tank pulls beyond their pathing radius".
+      var reach = m.elite ? REACH_ELITE : REACH;
+      var chaseR = reach + REACH;                         // the two combat reaches
+      var d = dist(m, tgt);
+      m.recheck = (m.recheck || 0) - DT;
+      if (!m.chasing && m.recheck <= 0) {                 // the 0.4 s look: has the target got away?
+        m.recheck = RECHECK;
+        if (d > chaseR + CONTACT) m.chasing = true;
+      }
+      if (m.chasing && moveToward(m, tgt.x, tgt.y, sp, chaseR)) m.chasing = false;
+      // the target is running if it moved since the last tick (the owner
+      // and buddies are players to the server, so the leeway applies)
+      var tgtRunning = tgt.lx !== undefined && Math.hypot(tgt.x - tgt.lx, tgt.y - tgt.ly) > 0.05;
+      var melee = Math.max(reach + REACH + 4 / 3, MELEE_MIN) + (m.chasing && tgtRunning ? LEEWAY : 0);
+      m.swing = (m.swing || 0) - DT;
+      if (m.swing <= 0 && dist(m, tgt) <= melee) {
+        m.swing = SWING;
+        tgt.hp = Math.max(0, tgt.hp - (m.elite ? 6 : 2.6) * SWING);   // the same damage as before, landed in blows
+      }
+      if (Math.hypot(m.x - m.sx, m.y - m.sy) > LEASH && m.holder !== O && !m.pulled) {
+        m.state = "idle"; m.hp = m.max; m.x = m.sx; m.y = m.sy; m.target = null;
+      }
+    });
+
+    party().forEach(function (u) { u.lx = u.x; u.ly = u.y; });   // where each stood this tick: next tick, "has it moved?"
+
+    // the owner goes down: everything resets, the owner stands up again
+    if (O.hp <= 0) {
+      say("The owner went down: the monsters reset. The buddies trust the owner a little less.");
+      S.danger = Math.max(1.5, S.danger - 1);
+      S.mobs.forEach(function (m) { if (m.state === "fight") { m.state = "idle"; m.hp = m.max; m.x = m.sx; m.y = m.sy; m.holder = null; m.target = null; m.pulled = null; } });
+      S.buddies.forEach(function (b) { b.pull = null; });
+      O.hp = O.max; S.kraken = false; S.maw = null;
+    }
+
+    S.buddies.forEach(stepBuddy);
+
+    // deaths
+    S.mobs.forEach(function (m) {
+      if (m.state === "fight" && m.hp <= 0) {
+        m.state = "dead"; m.respawn = RESPAWN; m.holder = null; m.target = null; S.counts.kills++;
+        if (m.pulled) { m.pulled.pull = null; m.pulled = null; }
+      }
+    });
+
+    // regeneration out of combat; a buddy never drops below a tenth
+    var inFight = fighting().length > 0;
+    party().forEach(function (p) {
+      if (!inFight) p.hp = Math.min(p.max, p.hp + 8 * DT);
+      if (!p.isOwner) p.hp = Math.max(p.max * 0.1, p.hp);
+    });
+
+    learnDanger();
+    S.lines = S.lines.filter(function (l) { l.life -= DT; return l.life > 0; });
+  }
+  // }}}
+
+  // {{{ learnDanger
+  // Every second: the buddies start deferential (the owner can take 2), and
+  // raise their belief while the owner holds at least that much and stays
+  // healthy; they drop it when the owner's health runs low.
+  var lastLearn = 0;
+  function learnDanger() {
+    if (S.t - lastLearn < 1) return;
+    lastLearn = S.t;
+    var O = S.owner;
+    var held = fighting().filter(function (m) { return m.holder === O; }).reduce(function (a, m) { return a + threatOf(m); }, 0);
+    if (held >= Math.floor(S.danger) && O.hp / O.max > 0.6) {
+      if (++S.calm >= 4) { S.danger = Math.min(9, S.danger + 0.5); S.calm = 0; say("The owner is holding up: the buddies will pull a little more."); }
+    } else S.calm = 0;
+    if (O.hp / O.max < 0.35 && S.danger > 1.5) { S.danger = Math.max(1.5, S.danger - 1); say("The owner is struggling: no more pulls for now."); }
+  }
+  // }}}
+
+  // {{{ stepBuddy
+  function stepBuddy(b, i) {
+    var O = S.owner;
+    var fights = fighting();
+    if (b.cd > 0) b.cd -= DT;
+    if (b.cast > 0) b.cast -= DT;
+
+    // out of combat: follow the owner in a loose fan behind
+    if (!fights.length) {
+      var a = Math.PI * (0.65 + i * 0.23);
+      moveToward(b, O.x + Math.cos(a) * 6, O.y + Math.sin(a) * 6, RUN, 0.4);
+      return;
+    }
+
+    if (b.pull) { stepPull(b); return; }
+
+    if (b.role === "healer") {
+      var low = party().filter(function (p) { return dist(p, b) <= 40; })
+        .sort(function (p, q) { return p.hp / p.max - q.hp / q.max; })[0];
+      if (low && low.hp < low.max) { low.hp = Math.min(low.max, low.hp + 9 * DT); if (Math.random() < 0.03) line(b, low, "#f0e2a0", 0.4); }
+      var hx = (S.maw || O).x - 16, hy = (S.maw || O).y + 10;
+      moveToward(b, hx, hy, RUN, 3);
+      return;
+    }
+
+    if (b.role === "melee") { stepMelee(b); return; }
+
+    // mage and hunter: area spells on a full maw, otherwise the priority target
+    var centre = S.maw || O;
+    var ang = Math.atan2(b.y - centre.y, b.x - centre.x) + (b.role === "mage" ? 0.25 : -0.25) * DT;
+    var standX = centre.x + Math.cos(ang) * 22, standY = centre.y + Math.sin(ang) * 22;
+    if (b.cast <= 0) moveToward(b, standX, standY, RUN, 1);   // casters stand still to cast
+    var inside = fights.filter(inMaw);
+    if (S.kraken && inside.length >= AOE_MIN) {
+      inside.forEach(function (m) { m.hp -= (b.role === "mage" ? 3.6 : 2.6) * DT; });
+      if (Math.random() < 0.02) { S.counts.aoe++; b.cast = b.role === "mage" ? 1.2 : 0; }
+    } else {
+      var tgt = priorityTarget(b);
+      if (tgt && dist(b, tgt) <= ROLE[b.role].range) {
+        tgt.hp -= 7 * DT;
+        if (tgt.target === null) tgt.target = b;
+        if (b.role === "mage" && b.cast <= 0 && Math.random() < 0.02) b.cast = 2.5;   // frostbolt: stands to cast
+      } else if (tgt) moveToward(b, tgt.x, tgt.y, RUN, ROLE[b.role].range - 2);
+    }
+  }
+  // }}}
+
+  // {{{ priorityTarget
+  // Skull then cross: the hardest monster the owner holds first (an elite),
+  // then the next; without marks, the one nearest the owner.
+  function marks() {
+    var held = fighting().filter(function (m) { return m.holder === S.owner; })
+      .sort(function (p, q) { return q.max - p.max || q.hp - p.hp; });
+    return { skull: held[0] || null, cross: held[1] || null };
+  }
+  function priorityTarget() {
+    var mk = marks();
+    if (mk.skull) return mk.skull;
+    var O = S.owner;
+    return fighting().sort(function (p, q) { return dist(p, O) - dist(q, O); })[0] || null;
+  }
+  // }}}
+
+  // {{{ stepMelee
+  function stepMelee(b) {
+    var fights = fighting();
+    b.hop += DT;
+    var jitter = Math.sin(b.hop * 5) * 0.8;          // instant-cast fighters shift about
+    if (meleeKind === "whirlwind") {
+      var c = S.maw || priorityTarget() || S.owner;
+      moveToward(b, c.x + jitter, c.y + 2, RUN, 1);
+      fights.forEach(function (m) { if (dist(m, b) <= 6) m.hp -= 3.2 * DT; });
+    } else if (meleeKind === "heavy") {
+      var t = priorityTarget();
+      if (t) { if (moveToward(b, t.x + jitter, t.y + 1.5, RUN, 1.5)) t.hp -= 11 * DT; }
+    } else {
+      var loose = fights.filter(function (m) { return m.holder !== S.owner; })
+        .sort(function (p, q) { return dist(p, b) - dist(q, b); })[0];
+      var tc = loose || priorityTarget();
+      if (tc && moveToward(b, tc.x + jitter, tc.y + 1.5, RUN, 1.5)) {
+        tc.hp -= 4 * DT;
+        if (loose && tc.slow <= 0) { tc.slow = 4; S.counts.slows++; }
+      }
+    }
+  }
+  // }}}
+
+  // {{{ stepPull
+  // approach (circling the maw, instants on the move) -> tag (one hit and a
+  // slow) -> lead (to the far side of a neighbouring quadrant, never the
+  // opposite one) -> kite (round the maw) until the owner takes it.
+  function stepPull(b) {
+    var p = b.pull, m = p.mob, M = S.maw;
+    p.time += DT;
+    if (!M || m.state === "dead" || m.holder === S.owner || p.time > 25) {
+      if (m.pulled === b) m.pulled = null;
+      b.pull = null; return;
+    }
+    var range = PULL_RANGE[b.role];
+    if (p.phase === "approach") {
+      var a = Math.atan2(b.y - M.y, b.x - M.x), am = Math.atan2(m.y - M.y, m.x - M.x);
+      var da = Math.atan2(Math.sin(am - a), Math.cos(am - a));
+      var step = Math.max(-0.9 * DT, Math.min(0.9 * DT, da));
+      var r = Math.min(dist(b, M) + RUN * DT, Math.max(KITE_R, dist(m, M) - range + 4));
+      if (Math.abs(da) > 0.25) moveToward(b, M.x + Math.cos(a + step) * r, M.y + Math.sin(a + step) * r, RUN, 0.2);
+      else moveToward(b, m.x, m.y, RUN, range - 2);
+      if (m.state === "fight" && m.target !== b) { b.pull = null; m.pulled = null; return; }   // it woke on someone else
+      if (dist(b, m) <= range) {
+        m.hp -= m.max * 0.05;                         // one hit: as little threat as possible
+        m.slow = 6; S.counts.slows++; S.counts.pulls++;
+        engage(m, b);
+        packOf(m).forEach(function (o) { o.target = b; });
+        line(b, m, "#9fd0ff", 0.7);
+        var q = Math.floor(((Math.atan2(b.y - M.y, b.x - M.x) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 2));
+        var q2 = (q + (Math.random() < 0.5 ? 1 : 3)) % 4;   // a neighbouring quadrant, never the opposite (q + 2)
+        var far = q2 * Math.PI / 2 + (q2 === (q + 1) % 4 ? Math.PI / 2 * 0.8 : Math.PI / 2 * 0.2);
+        p.dest = { x: M.x + Math.cos(far) * LEAD_R, y: M.y + Math.sin(far) * LEAD_R };
+        p.phase = "lead";
+        say(ROLE[b.role].label + " tags a monster and leads it in (" + ["east", "south", "west", "north"][q2] + " quadrant).");
+      }
+      return;
+    }
+    // lead, then kite round the maw; make distance when it closes in
+    if (dist(m, b) < 4 && b.cd <= 0) {
+      var ax = b.x - m.x, ay = b.y - m.y, al = Math.hypot(ax, ay) || 1;
+      b.x += ax / al * 12; b.y += ay / al * 12; clampArena(b);
+      b.cd = b.role === "mage" ? 15 : 10;
+      if (b.role === "mage") S.counts.blinks++; else S.counts.disengages++;
+      say(ROLE[b.role].label + (b.role === "mage" ? " blinks away." : " disengages."));
+    }
+    if (p.phase === "lead") {
+      if (moveToward(b, p.dest.x, p.dest.y, RUN, 1)) p.phase = "kite";
+    } else {
+      var ka = Math.atan2(b.y - M.y, b.x - M.x) + 0.35;
+      moveToward(b, M.x + Math.cos(ka) * KITE_R, M.y + Math.sin(ka) * KITE_R, RUN, 0.5);
+    }
+    if (Math.random() < 0.02 && m.slow <= 0) { m.slow = 5; S.counts.slows++; line(b, m, "#9fd0ff", 0.5); }
+  }
+  // }}}
+
+  // {{{ drawing
+  var scale = 1;
+  function resize() {
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 600;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(w * AH / AW * dpr);
+    scale = cv.width / AW;
+  }
+  function X(v) { return v * scale; }
+  function dot(e, r, fill, stroke) {
+    ctx.beginPath(); ctx.arc(X(e.x), X(e.y), X(r), 0, Math.PI * 2);
+    ctx.fillStyle = fill; ctx.fill();
+    if (stroke) { ctx.lineWidth = Math.max(1, X(0.35)); ctx.strokeStyle = stroke; ctx.stroke(); }
+  }
+  function ring(x, y, r, color, dash) {
+    ctx.beginPath(); ctx.setLineDash(dash ? [X(1.2), X(1)] : []);
+    ctx.arc(X(x), X(y), X(r), 0, Math.PI * 2); ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, X(0.3)); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  function draw() {
+    ctx.fillStyle = "#12161d"; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = "#1c2430"; ctx.fillRect(X(1), X(1), X(AW - 2), X(AH - 2));
+    var M = S.maw;
+    if (S.kraken && M) {
+      ctx.strokeStyle = "rgba(215,184,90,0.18)"; ctx.lineWidth = 1;
+      for (var q = 0; q < 4; q++) {                 // the quadrants, seen from the maw
+        var a = q * Math.PI / 2 + Math.PI / 4;
+        ctx.beginPath(); ctx.moveTo(X(M.x), X(M.y)); ctx.lineTo(X(M.x + Math.cos(a) * 40), X(M.y + Math.sin(a) * 40)); ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(215,184,90," + (0.10 + 0.05 * Math.sin(S.t * 6)) + ")";
+      ctx.beginPath(); ctx.arc(X(M.x), X(M.y), X(MAW_R), 0, Math.PI * 2); ctx.fill();
+      ring(M.x, M.y, MAW_R, "#d7b85a", true);
+      ring(M.x, M.y, KITE_R, "rgba(159,208,255,0.25)", true);
+      var O = S.owner;
+      if (dist(O, M) > 6) {                         // a hint: drag them to the maw
+        ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.setLineDash([X(0.8), X(1.2)]);
+        ctx.beginPath(); ctx.moveTo(X(O.x), X(O.y)); ctx.lineTo(X(M.x), X(M.y)); ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+    S.lines.forEach(function (l) {
+      ctx.strokeStyle = l.color; ctx.globalAlpha = Math.min(1, l.life * 2); ctx.lineWidth = Math.max(1.5, X(0.45));
+      ctx.beginPath(); ctx.moveTo(X(l.ax), X(l.ay)); ctx.lineTo(X(l.bx), X(l.by)); ctx.stroke(); ctx.globalAlpha = 1;
+    });
+    var mk = marks();
+    S.mobs.forEach(function (m) {
+      if (m.state === "dead") { ctx.fillStyle = "#3a4250"; ctx.fillRect(X(m.x - 0.6), X(m.y - 0.6), X(1.2), X(1.2)); return; }
+      var r = m.elite ? 2.2 : 1.5;
+      dot(m, r, m.state === "fight" ? "#d0524f" : "#8a3d3f", m.holder === S.owner ? "#d7b85a" : null);
+      if (m.slow > 0) ring(m.x, m.y, r + 1, "#9fd0ff");
+      if (m.state === "fight") {                    // health
+        ctx.fillStyle = "#2b313b"; ctx.fillRect(X(m.x - 2), X(m.y - r - 1.6), X(4), X(0.5));
+        ctx.fillStyle = "#e7eaef"; ctx.fillRect(X(m.x - 2), X(m.y - r - 1.6), X(4 * Math.max(0, m.hp) / m.max), X(0.5));
+      }
+      if (meleeKind === "heavy" && (m === mk.skull || m === mk.cross)) {
+        ctx.fillStyle = "#ffffff"; ctx.font = Math.round(X(2.2)) + "px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(m === mk.skull ? "☠" : "✕", X(m.x), X(m.y - r - 2.2));
+      }
+    });
+    // a buddy: its colour, with its initial inside (the key under the
+    // arena names them); names beside the dots overlapped while they walked
+    // together behind the owner
+    S.buddies.forEach(function (b) {
+      dot(b, 1.8, ROLE[b.role].color, b.pull ? "#9fd0ff" : "#12161d");
+      ctx.fillStyle = "#12161d"; ctx.font = "bold " + Math.round(X(2.1)) + "px sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(ROLE[b.role].letter, X(b.x), X(b.y + 0.1));
+      ctx.textBaseline = "alphabetic";
+    });
+    dot(S.owner, 1.8, "#ffffff", "#d7b85a");
+    ctx.fillStyle = "#ffffff"; ctx.font = Math.round(X(1.9)) + "px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("You", X(S.owner.x), X(S.owner.y + 4));
+    if (pointer) {                                  // where the owner is heading
+      ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(X(pointer.x - 1), X(pointer.y)); ctx.lineTo(X(pointer.x + 1), X(pointer.y));
+      ctx.moveTo(X(pointer.x), X(pointer.y - 1)); ctx.lineTo(X(pointer.x), X(pointer.y + 1)); ctx.stroke();
+    }
+  }
+  // }}}
+
+  // {{{ the readout beside the arena
+  var el = {
+    danger: document.getElementById("ot-danger"), dangerN: document.getElementById("ot-danger-n"),
+    threat: document.getElementById("ot-threat"), threatN: document.getElementById("ot-threat-n"),
+    mode: document.getElementById("ot-mode"), log: document.getElementById("ot-log"),
+    counts: document.getElementById("ot-counts"), health: document.getElementById("ot-health"),
+    healthN: document.getElementById("ot-health-n"), melee: document.getElementById("ot-melee-note")
+  };
+  var lastHud = -1;
+  function hud() {
+    if (!el.danger) return;
+    var th = enemyThreat();
+    el.danger.style.width = Math.min(100, S.danger / 9 * 100) + "%";
+    el.dangerN.textContent = S.danger.toFixed(1);
+    el.threat.style.width = Math.min(100, th / 9 * 100) + "%";
+    el.threat.dataset.over = th > S.danger ? "yes" : "no";
+    el.threatN.textContent = th.toFixed(0);
+    el.health.style.width = Math.max(0, S.owner.hp) + "%";
+    el.healthN.textContent = Math.round(Math.max(0, S.owner.hp)) + "%";
+    el.mode.textContent = !fighting().length ? "Out of combat" : S.kraken ? "Kraken: pulling toward the maw" : "Ordinary fight";
+    el.mode.dataset.mode = !fighting().length ? "rest" : S.kraken ? "kraken" : "plain";
+    el.log.innerHTML = S.log.map(function (s) { return "<li>" + s + "</li>"; }).join("");
+    var c = S.counts;
+    el.counts.textContent = "Taken " + c.taken + " · pulls " + c.pulls + " · slows " + c.slows +
+      " · blinks " + c.blinks + " · disengages " + c.disengages + " · area spells " + c.aoe + " · kills " + c.kills;
+    el.melee.textContent = "The melee buddy " + MELEE_KIND[meleeKind] + ".";
+  }
+  // }}}
+
+  // {{{ the loop: fixed steps, drawn each frame; stops when hidden
+  var acc = 0, last = 0;
+  function frame(now) {
+    if (!visible) { last = 0; return; }
+    requestAnimationFrame(frame);
+    if (!last) last = now;
+    acc += Math.min(0.25, (now - last) / 1000); last = now;
+    if (running) while (acc >= DT) { update(); acc -= DT; } else acc = 0;
+    draw();
+    if (S.t - lastHud > 0.2 || !running) { hud(); lastHud = S.t; }
+  }
+  // }}}
+
+  // {{{ input
+  function toWorld(ev) {
+    var r = cv.getBoundingClientRect();
+    return { x: (ev.clientX - r.left) / r.width * AW, y: (ev.clientY - r.top) / r.height * AH };
+  }
+  cv.addEventListener("pointermove", function (ev) { pointer = toWorld(ev); });
+  cv.addEventListener("pointerdown", function (ev) { pointer = toWorld(ev); });
+  cv.addEventListener("pointerleave", function () { pointer = null; });
+  var play = document.getElementById("ot-play");
+  function setRunning(on) { running = on; if (play) { play.textContent = on ? "Pause" : "Play"; play.setAttribute("aria-pressed", on ? "false" : "true"); } }
+  if (play) play.addEventListener("click", function () { setRunning(!running); });
+  var rst = document.getElementById("ot-reset");
+  if (rst) rst.addEventListener("click", function () { reset(); draw(); });
+  document.querySelectorAll('input[name="ot-melee"]').forEach(function (r) {
+    r.addEventListener("change", function () { if (r.checked) { meleeKind = r.value; hud(); } });
+  });
+  window.addEventListener("resize", function () { resize(); draw(); });
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries) {
+      var v = entries[0].isIntersecting;
+      if (v && !visible) { visible = true; requestAnimationFrame(frame); }
+      visible = v;
+    }).observe(cv);
+  }
+  // }}}
+
+  reset();
+  resize();
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  setRunning(!reduce);                         // reduced motion: waits for Play
+  draw(); hud();
+  requestAnimationFrame(frame);
+})();
+</script>
+  <footer>Generated by scripts/generate-buddy-roaming-gifs from src/lua-basic/lib/buddy-roam.lua (the model) and the gif-generator project's encoder.</footer>
+</div>

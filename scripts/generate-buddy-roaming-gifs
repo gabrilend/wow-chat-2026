@@ -1,0 +1,2957 @@
+#!/usr/bin/env luajit
+-- generate-buddy-roaming-gifs - animate the buddy roaming design, one GIF per
+-- idea, and gather them into a gallery page (issue 617e).
+--
+-- For a general audience: the owner described how buddies should roam a
+-- place (keep an even distance from one another, circle the place's centre,
+-- each its own way) and asked to see the readings of that description
+-- before one is built. This tool runs the very model the server will use
+-- (src/lua-basic/lib/buddy-roam.lua) on a drawn map about the size of a
+-- mine or farm, with rocks to walk around, and draws each tick as a frame:
+-- circles for buddies, a white circle for the owner, lines for who is "far
+-- enough" from whom. Each idea becomes a looping GIF; a page shows them in
+-- order, each with what to watch for above it and what it means below.
+--
+-- Usage: scripts/generate-buddy-roaming-gifs [PROJECT_DIR] [GIF_GENERATOR_DIR]
+--   Reads   src/lua-basic/lib/buddy-roam.lua (the model)
+--           the GIF encoder of the gif-generator project (src/004-gif.lua)
+--   Writes  docs/HTML/buddy-roaming/*.gif and docs/HTML/buddy-roaming.html
+
+local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local GEN = arg[2] or "/home/ritz/programming/ai-stuff/gif-generator"
+package.path = GEN .. "/src/?.lua;" .. package.path
+local ffi  = require("ffi")
+local gif  = require("004-gif")
+local Roam = dofile(DIR .. "/src/lua-basic/lib/buddy-roam.lua")
+local OUT_DIR  = DIR .. "/docs/HTML/buddy-roaming"
+local OUT_HTML = DIR .. "/docs/HTML/buddy-roaming.html"
+
+-- {{{ canvas and palette
+local W, H   = 400, 320          -- pixels
+local SCALE  = 3.0               -- pixels per yard
+local OX, OY = 20, 20            -- where yard (0, 0) lands
+local FRAMES, DELAY_CS = 440, 6  -- about 26 seconds at ~16 frames a second (doubled 2026-09-27, the owner)
+
+local COLORS = {                 -- index = position - 1
+    { 18, 22, 29 },    -- 0 background
+    { 31, 40, 51 },    -- 1 area floor
+    { 74, 90, 110 },   -- 2 area edge
+    { 90, 81, 70 },    -- 3 rock
+    { 122, 110, 96 },  -- 4 rock edge
+    { 255, 255, 255 }, -- 5 owner
+    { 224, 108, 90 },  -- 6 buddy 1
+    { 226, 193, 106 }, -- 7 buddy 2
+    { 116, 209, 189 }, -- 8 buddy 3
+    { 127, 166, 230 }, -- 9 buddy 4
+    { 196, 163, 238 }, -- 10 buddy 5
+    { 156, 204, 101 }, -- 11 buddy 6
+    { 94, 194, 122 },  -- 12 far enough (green)
+    { 176, 72, 74 },   -- 13 too close (red)
+    { 45, 58, 72 },    -- 14 trail
+    { 215, 184, 90 },  -- 15 experience ring (74)
+    { 94, 194, 122 },  -- 16 join ring (54)
+    { 224, 108, 90 },  -- 17 leave ring (75)
+    { 107, 122, 140 }, -- 18 candidate step
+    { 58, 63, 71 },    -- 19 refused step
+    { 231, 234, 239 }, -- 20 highlight
+    { 70, 84, 104 },   -- 21 spacing circle
+    { 150, 104, 62 },  -- 22 crate (colliding doodad)
+    { 88, 104, 78 },   -- 23 raised ground (a step up in height)
+    { 110, 128, 96 },  -- 24 raised ground's contour
+    { 22, 30, 40 },    -- 25 ground: a dip
+    { 31, 40, 51 },    -- 26 ground: level (the plain floor)
+    { 38, 49, 60 },    -- 27 ground: a little up
+    { 46, 58, 68 },    -- 28 ground: up
+    { 55, 67, 76 },    -- 29 ground: high
+    { 64, 76, 84 },    -- 30 ground: hilltop
+    { 104, 88, 60 },   -- 31 road
+    { 34, 50, 60 },    -- 32 paint: a trace (heat ramp 32-39, the painting comparison)
+    { 40, 66, 72 },    -- 33
+    { 46, 86, 84 },    -- 34
+    { 58, 108, 92 },   -- 35
+    { 92, 130, 92 },   -- 36
+    { 140, 146, 86 },  -- 37
+    { 190, 150, 76 },  -- 38
+    { 224, 128, 66 },  -- 39 paint: the most
+    { 110, 170, 255 }, -- 40 area spell (the cluster pull)
+    { 150, 210, 255 }, -- 41 frost: a frostbolt, a slowed monster
+    { 44, 50, 84 },    -- 42 walls' paint: faint (the painting comparisons; a blue-grey
+    { 56, 62, 112 },   -- 43   fringe, so the walls' paint shows apart from the buddies' heat)
+    { 72, 78, 146 },   -- 44 walls' paint: strong
+}
+local palette = ffi.new("uint8_t[768]")
+for i, c in ipairs(COLORS) do palette[(i - 1) * 3], palette[(i - 1) * 3 + 1], palette[(i - 1) * 3 + 2] = c[1], c[2], c[3] end
+local BUDDY = { 6, 7, 8, 9, 10, 11 }
+-- }}}
+
+-- {{{ drawing
+local function px(x) return math.floor(OX + x * SCALE + 0.5) end
+local function py(y) return math.floor(OY + y * SCALE + 0.5) end
+
+local function new_frame() return ffi.new("uint8_t[?]", W * H) end
+local function copy(dst, src) ffi.copy(dst, src, W * H) end
+local function plot(f, x, y, c) if x >= 0 and x < W and y >= 0 and y < H then f[y * W + x] = c end end
+
+-- {{{ local function line
+local function line(f, x0, y0, x1, y1, c, dash)
+    local dx, dy = math.abs(x1 - x0), -math.abs(y1 - y0)
+    local sx, sy = x0 < x1 and 1 or -1, y0 < y1 and 1 or -1
+    local err, n = dx + dy, 0
+    while true do
+        if not dash or (n % 6) < 3 then plot(f, x0, y0, c) end
+        n = n + 1
+        if x0 == x1 and y0 == y1 then break end
+        local e2 = 2 * err
+        if e2 >= dy then err = err + dy; x0 = x0 + sx end
+        if e2 <= dx then err = err + dx; y0 = y0 + sy end
+    end
+end
+-- }}}
+
+-- {{{ local function disc / ring
+local function disc(f, cx, cy, r, c)
+    for y = -r, r do for x = -r, r do if x * x + y * y <= r * r then plot(f, cx + x, cy + y, c) end end end
+end
+local function ring(f, cx, cy, r, c, dash)
+    local steps = math.max(24, math.floor(r * 6))
+    for k = 0, steps - 1 do
+        if not dash or (k % 4) < 2 then
+            local a = 2 * math.pi * k / steps
+            plot(f, math.floor(cx + math.cos(a) * r + 0.5), math.floor(cy + math.sin(a) * r + 0.5), c)
+        end
+    end
+end
+-- }}}
+
+-- {{{ local function base_map
+-- The area (floor, edge) and its rocks, drawn once per GIF.
+local function base_map(area)
+    local f = new_frame()
+    for y = 0, H - 1 do
+        for x = 0, W - 1 do
+            local wx, wy = (x - OX) / SCALE, (y - OY) / SCALE
+            if Roam.walkable({ outline = area.outline, walls = {} }, wx, wy, 0) then
+                -- a map with ground: road, or a shade by the lie of the
+                -- land (hills only; obstacles are drawn below)
+                if area.road and area.road(wx, wy) then f[y * W + x] = 31
+                elseif area.ground then f[y * W + x] = 25 + math.max(0, math.min(5, math.floor((area.ground(wx, wy) + 3) / 2)))
+                else f[y * W + x] = 1 end
+            end
+        end
+    end
+    local o = area.outline
+    for i = 1, #o do
+        local j = i % #o + 1
+        line(f, px(o[i][1]), py(o[i][2]), px(o[j][1]), py(o[j][2]), 2)
+    end
+    -- obstacles by kind (the 4th field; none = a rock): a crate is a
+    -- square, raised ground a disc with contour rings
+    for _, w in ipairs(area.walls) do
+        local x, y, r = px(w[1]), py(w[2]), math.floor(w[3] * SCALE)
+        if w[4] == "crate" then
+            local h = math.floor(r * 0.8)
+            for yy = -h, h do for xx = -h, h do plot(f, x + xx, y + yy, 22) end end
+            line(f, x - h, y - h, x + h, y + h, 4); line(f, x - h, y + h, x + h, y - h, 4)
+        elseif w[4] == "mound" then
+            disc(f, x, y, r, 23)
+            ring(f, x, y, r, 24); ring(f, x, y, r * 0.6, 24); ring(f, x, y, r * 0.25, 24)
+        else
+            disc(f, x, y, r, 3)
+            ring(f, x, y, r, 4)
+        end
+    end
+    return f
+end
+-- }}}
+
+-- {{{ local function draw_buddy
+-- A buddy: a filled circle in its colour, a short tick showing which way it
+-- circles the centre, a white ring when grouped with the owner.
+local function draw_buddy(f, s, b, color, to_scale)
+    local x, y = px(b.x), py(b.y)
+    -- to scale (scene.to_scale): the disc is the body's real width, with a
+    -- ring two pixels out so a small one still shows
+    if to_scale then
+        local r = math.max(1, math.floor(b.body / 2 * SCALE + 0.5))
+        disc(f, x, y, r, color)
+        ring(f, x, y, r + 2, color)
+    else
+        disc(f, x, y, 4, color)
+    end
+    local rx, ry = b.x - s.cx, b.y - s.cy
+    local len = math.sqrt(rx * rx + ry * ry)
+    if len > 0.1 then
+        local tx, ty = -ry / len * b.spin, rx / len * b.spin
+        line(f, x, y, math.floor(x + tx * 9 + 0.5), math.floor(y + ty * 9 + 0.5), color)
+    end
+    if b.grouped then ring(f, x, y, 7, 20) end
+end
+-- }}}
+-- }}}
+
+-- {{{ the map: a mine-sized named area with rocks
+-- About 120 by 90 yards (Fargodeep Mine's outdoor part is of this order),
+-- with rocks of 3-7 yards to walk round.
+local AREA = {
+    outline = { { 6, 14 }, { 40, 4 }, { 88, 8 }, { 122, 24 }, { 124, 60 }, { 104, 88 }, { 60, 94 }, { 22, 84 }, { 2, 52 } },
+    walls = { { 42, 34, 6 }, { 80, 30, 5 }, { 64, 60, 7 }, { 30, 64, 4 }, { 100, 58, 4 }, { 88, 76, 3 } },
+}
+-- The same area, cluttered the way a real camp is (2026-09-27): small
+-- rocks, ruined crates and other colliding doodads, and raised ground (a
+-- step up in height the owner asked buddies to walk round, "no need to
+-- step on that"). All are circles to the model; in game they are found by
+-- probing (617e, Suggested Implementation Steps).
+local AREA_CLUTTERED = { outline = AREA.outline, walls = {} }
+for _, w in ipairs(AREA.walls) do AREA_CLUTTERED.walls[#AREA_CLUTTERED.walls + 1] = w end
+for _, w in ipairs({
+    { 22, 30, 1.5, "crate" }, { 56, 22, 1.2, "crate" }, { 96, 44, 1.5, "crate" }, { 50, 80, 1.2, "crate" }, { 112, 36, 1.2, "crate" },
+    { 16, 46, 2.0 }, { 70, 14, 1.5 }, { 46, 50, 2.0 }, { 84, 88, 1.5 }, { 108, 72, 2.0 },
+    { 26, 76, 4.0, "mound" }, { 64, 38, 3.5, "mound" }, { 100, 20, 3.0, "mound" },
+}) do AREA_CLUTTERED.walls[#AREA_CLUTTERED.walls + 1] = w end
+
+-- Its ground, for the path planner (2026-09-27): two hills and a dip
+-- ({x, y, height, spread}, bell-shaped), obstacles standing on it (big
+-- rocks 5 yards tall, small rocks 1.2, crates 1, raised ground 1.5), and a
+-- road (a band 5 yards wide along a line of points).
+local HILLS = { { 30, 42, 6, 13 }, { 98, 68, 7, 11 }, { 72, 24, -3, 9 } }
+local TALL  = { crate = 1.0, mound = 1.5 }
+local ROAD  = { { 4, 50 }, { 36, 56 }, { 62, 78 }, { 96, 84 }, { 118, 70 } }
+function AREA_CLUTTERED.ground(x, y)
+    local h = 0
+    for _, k in ipairs(HILLS) do h = h + k[3] * math.exp(-((x - k[1]) ^ 2 + (y - k[2]) ^ 2) / (2 * k[4] ^ 2)) end
+    return h
+end
+function AREA_CLUTTERED.height(x, y)
+    local top = 0
+    for _, w in ipairs(AREA_CLUTTERED.walls) do
+        if (x - w[1]) ^ 2 + (y - w[2]) ^ 2 < w[3] ^ 2 then top = math.max(top, TALL[w[4]] or (w[3] > 2 and 5 or 1.2)) end
+    end
+    return AREA_CLUTTERED.ground(x, y) + top
+end
+function AREA_CLUTTERED.road(x, y)
+    for i = 1, #ROAD - 1 do
+        local ax, ay, bx, by = ROAD[i][1], ROAD[i][2], ROAD[i + 1][1], ROAD[i + 1][2]
+        local vx, vy = bx - ax, by - ay
+        local k = math.max(0, math.min(1, ((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy)))
+        if (ax + vx * k - x) ^ 2 + (ay + vy * k - y) ^ 2 < 2.5 * 2.5 then return true end
+    end
+    return false
+end
+
+-- A chamber with a side tunnel (2026-09-27, the owner: "can you make a gif
+-- that has a side tunnel, and ensure the buddy-bots are encouraged to walk
+-- through it?"): the main chamber on the left, a tunnel 8 yards wide
+-- running east from it, and a small side chamber at its end. The centre is
+-- the main chamber's own centre of area (the corners' average would sit
+-- near the tunnel's mouth). Level ground; a few rocks and crates.
+local function centroid(poly)
+    local a, cx, cy = 0, 0, 0
+    for i = 1, #poly do
+        local j = i % #poly + 1
+        local k = poly[i][1] * poly[j][2] - poly[j][1] * poly[i][2]
+        a, cx, cy = a + k, cx + (poly[i][1] + poly[j][1]) * k, cy + (poly[i][2] + poly[j][2]) * k
+    end
+    return { cx / (3 * a), cy / (3 * a) }
+end
+local CHAMBER = { { 6, 20 }, { 30, 6 }, { 62, 6 }, { 80, 18 }, { 84, 40 }, { 84, 48 }, { 82, 72 }, { 60, 88 }, { 26, 86 }, { 4, 60 } }
+local AREA_TUNNEL = {
+    outline = { { 6, 20 }, { 30, 6 }, { 62, 6 }, { 80, 18 }, { 84, 40 }, { 104, 39 }, { 104, 26 }, { 122, 24 }, { 124, 60 },
+                { 104, 60 }, { 104, 48 }, { 84, 48 }, { 82, 72 }, { 60, 88 }, { 26, 86 }, { 4, 60 } },
+    walls = { { 30, 36, 5 }, { 56, 66, 4 }, { 48, 20, 1.2, "crate" }, { 114, 52, 1.2, "crate" }, { 20, 70, 3, "mound" }, { 66, 30, 1.5 } },
+    centre = centroid(CHAMBER),
+    tunnel_x = 84,                                   -- past here is the tunnel or the side chamber
+}
+function AREA_TUNNEL.ground() return 0 end
+function AREA_TUNNEL.height(x, y)
+    for _, w in ipairs(AREA_TUNNEL.walls) do
+        if (x - w[1]) ^ 2 + (y - w[2]) ^ 2 < w[3] ^ 2 then return TALL[w[4]] or (w[3] > 2 and 5 or 1.2) end
+    end
+    return 0
+end
+function AREA_TUNNEL.road() return false end
+-- }}}
+
+-- {{{ local function lcg
+-- A seeded random source, so each GIF is the same every time it is made.
+local function lcg(seed)
+    local s = seed
+    return function()
+        s = (s * 1103515245 + 12345) % 2147483648
+        return s / 2147483648
+    end
+end
+-- }}}
+
+-- {{{ local function place_buddies
+local function place_buddies(n, rand, near, area)
+    area = area or AREA
+    local out = {}
+    while #out < n do
+        local x, y
+        if near then x, y = near[1] + (rand() - 0.5) * 16, near[2] + (rand() - 0.5) * 16
+        else x, y = 8 + rand() * 112, 8 + rand() * 82 end
+        if Roam.walkable(area, x, y, 2) then out[#out + 1] = { id = #out + 1, x = x, y = y } end
+    end
+    return out
+end
+-- }}}
+
+-- {{{ local function render
+-- Run a scene for FRAMES ticks (or scene.frames: the waypoint readings
+-- need longer to show a lap) and write the GIF. scene.overlay draws the
+-- idea's extras on each frame after the buddies.
+local function render(name, scene)
+    local rand  = lcg(scene.seed or 7)
+    local state = scene.setup(rand)
+    local base  = base_map(scene.area or AREA)
+    local trails = {}
+    local frames = {}
+    local count  = scene.frames or FRAMES
+    -- scene.rand_per_sim: each sim draws from its own copy of the same
+    -- seeded source, so two sims make the same random choices (the same
+    -- waypoints) and differ only by their settings
+    local rands = {}
+    for si in ipairs(state.sims) do rands[si] = scene.rand_per_sim and lcg(scene.seed or 7) or rand end
+    for t = 1, count do
+        if scene.before_tick then scene.before_tick(state, t, rand) end
+        for si, s in ipairs(state.sims) do Roam.tick(s, rands[si]) end
+        if scene.after_tick then scene.after_tick(state, t, rand) end
+        local f = new_frame()
+        copy(f, base)
+        for si, s in ipairs(state.sims) do
+            for _, b in ipairs(s.buddies) do
+                local key = si * 100 + b.id
+                trails[key] = trails[key] or {}
+                table.insert(trails[key], { px(b.x), py(b.y) })
+                if #trails[key] > (scene.trail or 40) then table.remove(trails[key], 1) end
+                for _, p in ipairs(trails[key]) do plot(f, p[1], p[2], 14) end
+            end
+        end
+        if scene.under then scene.under(f, state, t) end
+        for _, s in ipairs(state.sims) do
+            for _, b in ipairs(s.buddies) do draw_buddy(f, s, b, scene.color and scene.color(b) or BUDDY[(b.id - 1) % #BUDDY + 1], scene.to_scale) end
+        end
+        if scene.overlay then scene.overlay(f, state, t) end
+        frames[t] = f
+    end
+    local path = OUT_DIR .. "/" .. name .. ".gif"
+    local bytes = gif.write(path, { width = W, height = H, palette_bytes = palette, frames = frames, delay_cs = DELAY_CS })
+    print(string.format("  %-26s %4d frames, %7d bytes", name .. ".gif", count, bytes))
+    return path
+end
+-- }}}
+
+-- {{{ the scenes, in the order the page shows them
+local SCENES = {}
+
+-- 1. the reading taken as the default: far-enough lists per step
+SCENES[#SCENES + 1] = {
+    name = "01-far-lists",
+    title = "Reading A: a \"far enough\" list for every step",
+    before = "Six buddies spread over **one** named area (about 120 by 90 yards, rocks in grey). Each tick, every buddy looks at **twelve** possible steps and standing still. The short tick on each circle shows which way it circles the area's centre; faint dots are the **last** few seconds of its path.",
+    after = "For each possible step, the buddy works out which others it would be at **least** the spacing away from: that step's \"far enough\" list. It **prefers** the step that brings it closest to having everyone on its list (measured by distance, so every yard gained counts), then the one that turns with its circling direction, then the one keeping its nearest neighbour near the spacing. Watch the **start**: bunched in a corner, they burst apart, then settle into an even spread across the whole area that slowly wheels, each on its own heading. This is the reading **closest** to \"they each have their own separate 'far enough away from these buddy-bots' lists, one for each direction\", with \"direction\" meaning each way it could step. **Two** fixes came from watching it: a buddy is gently pushed back once within 12 yards of the area's edge (without it they circled the rim in pairs), and the spacing is judged by distance rather than a yes/no count (without it a buddy inside a crowd saw no difference between steps and never left).",
+    setup = function(rand)
+        return { sims = { Roam.new(AREA, place_buddies(6, rand, { 40, 20 }), { reading = "far-lists" }, rand) } }
+    end,
+}
+
+-- 2. inside the decision of one buddy
+SCENES[#SCENES + 1] = {
+    name = "02-one-buddys-choice",
+    title = "Inside one buddy's choice",
+    before = "The same model, watching **only** the red buddy's decision. The rays are its twelve possible steps, brighter the **long**er that step's \"far enough\" list; dark rays are refused (a rock, or the area's edge). Green lines go to the buddies it **will** be far enough from after its chosen step, red lines to the ones still too close.",
+    after = "Early on, when they start bunched together, most lines are **red** and it steps outward, whichever way turns with its circle. Once the group has spread, the lines go green and the choice is decided mostly by the circling and a small random nudge, so it **drifts** rather than marching. Refused rays are how rocks are walked around: no pathfinding, just **never** choosing a step into one.",
+    setup = function(rand)
+        return { sims = { Roam.new(AREA, place_buddies(6, rand, { 60, 40 }), { reading = "far-lists" }, rand) } }
+    end,
+    overlay = function(f, st)
+        local s = st.sims[1]
+        local b = s.buddies[1]
+        if not b.last then return end
+        local x0, y0 = px(b.x), py(b.y)
+        local maxn = 0
+        for _, c in ipairs(b.last.candidates) do if c.ok and c.list and #c.list > maxn then maxn = #c.list end end
+        for i = 2, #b.last.candidates do
+            local c = b.last.candidates[i]
+            local ex = x0 + (c.x - b.x) * SCALE * 6
+            local ey = y0 + (c.y - b.y) * SCALE * 6
+            line(f, x0, y0, math.floor(ex + 0.5), math.floor(ey + 0.5), c.ok and ((c.list and #c.list == maxn) and 20 or 18) or 19)
+        end
+        local far = {}
+        for _, id in ipairs(b.last.chosen.list or {}) do far[id] = true end
+        for _, o in ipairs(s.buddies) do
+            if o ~= b then line(f, x0, y0, px(o.x), py(o.y), far[o.id] and 12 or 13, true) end
+        end
+        draw_buddy(f, s, b, 6)
+    end,
+}
+
+-- 3. the spring reading
+SCENES[#SCENES + 1] = {
+    name = "03-spring",
+    title = "Reading B: a spring to the spacing, no lists",
+    before = "Each buddy looks **only** at its nearest neighbour: pushed away if closer than the spacing, pulled in if farther, and turning with its circle. The **pale** rings are the spacing around each buddy.",
+    after = "Simpler, and it also spreads them, but **differently**: since only the nearest neighbour counts, buddies tend to sit in twos and short chains at the spacing rather than covering the area evenly. A buddy far from everyone is pulled **back** toward the others (\"they just try and congregate at a certain distance\"), which keeps them together; Reading A lets a buddy wander alone as long as everyone is far enough. Fewer numbers to keep, **less** even coverage.",
+    setup = function(rand)
+        return { sims = { Roam.new(AREA, place_buddies(6, rand, { 60, 40 }), { reading = "spring" }, rand) } }
+    end,
+    under = function(f, st)
+        local s = st.sims[1]
+        for _, b in ipairs(s.buddies) do ring(f, px(b.x), py(b.y), s.spacing * SCALE, 21, true) end
+    end,
+}
+
+-- 4. lists per circling direction
+SCENES[#SCENES + 1] = {
+    name = "04-spin-lists",
+    title = "Reading C: a list for each way round",
+    before = "Here \"one for each direction\" means the **two** ways round the centre. Every tick, each buddy looks a few steps ahead both ways and keeps a \"far enough\" list for each; it circles the way whose list is **long**er. Orange buddies circle clockwise, blue counter-clockwise; watch them **switch**.",
+    after = "In practice most buddies end up circling the **same** way: whichever way has more room wins, and once most go one way, that way stays roomier. The **occasional** blue one turns back when it would crowd the one ahead, which reads as \"pseudo-random\" wandering from a distance. So in this reading the random starting direction **doesn't** last; if the owner wants each buddy to keep its own direction, Reading A holds it (the direction there never changes).",
+    setup = function(rand)
+        return { sims = { Roam.new(AREA, place_buddies(6, rand), { reading = "spin-lists" }, rand) } }
+    end,
+    color = function(b) return b.spin == -1 and 7 or 9 end,
+}
+
+-- 5. spacing, close and far
+SCENES[#SCENES + 1] = {
+    name = "05-close-and-far",
+    title = "The spacing: close or far",
+    before = "The same Reading A, run **twice** on the same map from the same start: dim-ringed buddies with a 12-yard spacing (close), bright ones with a 30-yard spacing (far). The owner said \"whether that's close or far, doesn't matter\".",
+    after = "The spacing sets the **whole** look: close, they move as a loose pack that wheels together; far, they cover the area like sentries. Without a setting the model uses **0.6** of the even share (the side of the square each would get if the area were divided among them), about 22 yards here for six; the whole share, about 37 yards, was tried first and pushed them against the edges. Which reads best in game is a **tuning** choice, logged in the balance file when made.",
+    setup = function(rand)
+        local start = place_buddies(5, rand, { 60, 45 })
+        local copy2 = {}
+        for i, b in ipairs(start) do copy2[i] = { id = b.id + 10, x = b.x, y = b.y } end
+        return { sims = {
+            Roam.new(AREA, start, { reading = "far-lists", spacing = 12 }, rand),
+            Roam.new(AREA, copy2, { reading = "far-lists", spacing = 30 }, rand),
+        } }
+    end,
+    color = function(b) return b.id > 10 and 20 or 18 end,
+}
+
+-- 6. grouping by distance
+-- The rings are drawn at half the real distances (the owner, 2026-09-27:
+-- at full size the join ring covered the whole drawn area, so nothing
+-- happened): join 30 (60), experience 37 (74), leave 37.5 (75).
+local HALF_JOIN, HALF_FAR, HALF_LEAVE = 30, 37, 37.5
+SCENES[#SCENES + 1] = {
+    name = "06-joining-and-leaving",
+    title = "Joining and leaving the owner's group",
+    -- the page shows an interactive widget here instead of the GIF (the
+    -- owner, 2026-09-27: "can we also make the drawn gifs be interactible
+    -- with the mouse? Highest priority. Just the ones that feature the
+    -- player dot"); the GIF is still drawn, so the files stay as they were
+    widget = [=[
+  <section class="card" id="joining">
+    <h2>Joining and leaving your group</h2>
+    <p class="before">You are the **white** dot; it walks toward your cursor (or finger). **Five** buddies roam the area with the owner's waypoint rule (the small crosses are where each is heading) and group by distance as they go. The rings round you are drawn at **half** the real distances so the drawn area can hold them: green, join inside 60 yards; gold, 74 (the range kill experience is shared in); red, leave outside 75. A white ring and line mark a buddy in **your** group, which holds four; a gold ring marks one in a far party, its members joined by gold lines.</p>
+    <div class="ot-stage jl-stage">
+      <canvas id="jl-canvas" aria-label="Area: you, five buddies roaming, and the grouping rings round you"></canvas>
+    </div>
+    <p class="ot-key"><span style="--c:#ffffff">You</span><span style="--c:#e07a62">W warrior</span><span style="--c:#7fa6e6">M mage</span><span style="--c:#9ccc65">H hunter</span><span style="--c:#f0e2a0">P priest</span><span style="--c:#c4a3ee">R rogue</span></p>
+    <div class="ot-panel">
+      <div class="ot-row">
+        <dl class="jl-groups">
+          <dt>Your group</dt><dd id="jl-owner">0 of 4</dd>
+          <dt>Far parties</dt><dd id="jl-far">none</dd>
+          <dt>In no group</dt><dd id="jl-alone">nobody</dd>
+        </dl>
+        <div class="ot-buttons">
+          <button type="button" id="jl-play" aria-pressed="false">Pause</button>
+          <button type="button" id="jl-reset">Start over</button>
+        </div>
+      </div>
+      <ul class="ot-log" id="jl-log" aria-live="polite"></ul>
+    </div>
+    <p class="after">A buddy joins your group when its roaming brings it **inside** 60 yards and a seat is free, nearest first, and leaves only once past 75, so a grouped buddy is almost never outside the 74-yard experience range, and the gap between the rings keeps one at the edge from flickering in and out. Past 74 an ungrouped buddy finds a **far** party: one with room that has a member within 70 yards, or another loose far buddy within 70 to start one with; two far parties merge when members come within 70 and together they fit in five. A far-party buddy **leaves** its party when it comes back within 74 yards of you (and so whenever it could join yours) or strays more than 74 from every other member; a party left with one member breaks up. Between 60 and 74, or nearer while your group is full, a buddy is in **no** group. Buddies don't **steer** toward you: grouping follows wherever their roaming takes them. The rules are checked **twice** a second here (every 5 seconds in game). A drawn simulation of the intended behaviour, not the game.</p>
+  </section>
+  <!--EMBED:join-leave.js-->]=],
+    before = "Five buddies roam with the owner's waypoint rule while the owner (white) walks across the area. Rings round the owner, drawn at half the real distances so the drawn area can show them: green, join inside 60 yards; gold, 74 (the range kill experience is shared in, and past it a buddy joins the far buddies' own party); red, leave outside 75. A white ring marks a buddy in the owner's group (it holds four), a gold ring one in the far party.",
+    after = "A buddy joins the owner's group when it drifts inside 60 yards and a seat is free, nearest first, and leaves only once past 75, so a grouped buddy is almost never outside the 74-yard experience range, and the gap between the rings keeps a buddy at the edge from flickering in and out. Past 74 an ungrouped buddy is in the far party with the other far buddies, sharing their own kills' experience; back inside 74 it leaves that party, and inside 60 joins the owner's again. Between 60 and 74, or nearer while the owner's group is full, it is in no group. Buddies don't steer toward the owner: grouping follows wherever their roaming takes them.",
+    setup = function(rand)
+        local params = { reading = "waypoints", headings = 16, turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, near = 10, crowd = 5, orbit = 2.5 }
+        return { sims = { Roam.new(AREA, place_buddies(5, rand), params, rand) }, owner = { 14, 50 } }
+    end,
+    after_tick = function(st, t)
+        local path = { { 14, 50 }, { 60, 18 }, { 110, 40 }, { 70, 84 }, { 14, 50 } }
+        local seg = (t - 1) / FRAMES * (#path - 1)
+        local i = math.floor(seg) + 1
+        local k = seg - (i - 1)
+        local a, b = path[i], path[math.min(i + 1, #path)]
+        st.owner = { a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k }
+        Roam.grouping(st.sims[1].buddies, st.owner[1], st.owner[2], HALF_JOIN, HALF_LEAVE, 4, HALF_FAR)
+    end,
+    under = function(f, st)
+        local ox, oy = px(st.owner[1]), py(st.owner[2])
+        ring(f, ox, oy, HALF_JOIN * SCALE, 16, true)
+        ring(f, ox, oy, HALF_FAR * SCALE, 15)
+        ring(f, ox, oy, HALF_LEAVE * SCALE, 17, true)
+    end,
+    overlay = function(f, st)
+        disc(f, px(st.owner[1]), py(st.owner[2]), 5, 5)
+        for _, b in ipairs(st.sims[1].buddies) do
+            if b.far then ring(f, px(b.x), py(b.y), 7, 15) end
+        end
+    end,
+}
+
+-- 7. walking round rocks
+SCENES[#SCENES + 1] = {
+    name = "07-round-the-rocks",
+    title = "Walking round the rocks",
+    before = "A crowded start in the **rock**iest corner, with long trails. No path is planned: each tick a buddy **simply** refuses any step that would enter a rock (keeping a yard and a half clear) or leave the area.",
+    after = "Twelve headings are **enough** to slide round rocks of this size; the trails curve along the rock edges. What this **can't** do is find the way out of a dead end (a cave mouth, a U of rocks): in game those areas would need the server's own pathfinding for the step, which is the next thing to decide once the reading is chosen.",
+    trail = 90,
+    setup = function(rand)
+        return { sims = { Roam.new(AREA, place_buddies(6, rand, { 72, 44 }), { reading = "far-lists" }, rand) } }
+    end,
+}
+-- {{{ local function spread
+-- Measured, not written in: run six buddies for 6000 ticks (the first 500
+-- left out, while they spread from the start) and report the average yards
+-- to each one's nearest other buddy, and how often that is under 6 yards
+-- (standing on top of each other, as it would look in game). The captions
+-- of the waypoint scenes quote these, so they stay true when the model
+-- changes.
+local function spread(params, area)
+    area = area or AREA
+    local rand = lcg(11)
+    local bs = place_buddies(6, rand, nil, area)
+    local s = Roam.new(area, bs, params, rand)
+    local sum, n, close = 0, 0, 0
+    local fifths = { 0, 0, 0, 0, 0 }             -- waypoint shares, by fifth of the way out
+    local pressed, seen = 0, 0                   -- ticks within a yard of an obstacle's no-go margin
+    local last_wp = {}
+    local walked, climbed, on_road, perched = 0, 0, 0, 0   -- yards, yards up or down, yards on road, ticks on an obstacle
+    local was = {}
+    local tunnel_wps, tunnel_who = 0, {}
+    for tick = 1, 6000 do
+        Roam.tick(s, rand)
+        for _, b in ipairs(bs) do
+            if b.wp and b.wp ~= last_wp[b.id] then
+                last_wp[b.id] = b.wp
+                -- the tunnel map: waypoints past its mouth, and who went
+                if area.tunnel_x and b.wp.x > area.tunnel_x then
+                    tunnel_wps = tunnel_wps + 1
+                    tunnel_who[b.id] = true
+                end
+                local k = math.min(5, math.floor(b.share * 5 - 1e-9) + 1)   -- the rule's own Y (a rock may move the waypoint itself)
+                fifths[k] = fifths[k] + 1
+            end
+            local gap = math.huge
+            for _, w in ipairs(area.walls) do gap = math.min(gap, math.sqrt((b.x - w[1]) ^ 2 + (b.y - w[2]) ^ 2) - w[3] - s.margin) end
+            if gap < 1 then pressed = pressed + 1 end
+            seen = seen + 1
+            if area.height then
+                local h = area.height(b.x, b.y)
+                local p = was[b.id]
+                if p then
+                    local ds = math.sqrt((b.x - p.x) ^ 2 + (b.y - p.y) ^ 2)
+                    walked, climbed = walked + ds, climbed + math.abs(h - p.h)
+                    if area.road(b.x, b.y) then on_road = on_road + ds end
+                end
+                if h - area.ground(b.x, b.y) > 0.5 then perched = perched + 1 end
+                was[b.id] = { x = b.x, y = b.y, h = h }
+            end
+        end
+        if tick > 500 then
+            for _, b in ipairs(bs) do
+                local nn = math.huge
+                for _, o in ipairs(bs) do if o ~= b then nn = math.min(nn, math.sqrt((o.x - b.x) ^ 2 + (o.y - b.y) ^ 2)) end end
+                sum, n = sum + nn, n + 1
+                if nn < 6 then close = close + 1 end
+            end
+        end
+    end
+    local crowded, moves, pierced = 0, 0, 0
+    for _, b in ipairs(bs) do crowded, moves, pierced = crowded + (b.crowded or 0), moves + (b.crowd_moves or 0), pierced + (b.pierced or 0) end
+    local picks = 0
+    for i = 1, 5 do picks = picks + fifths[i] end
+    for i = 1, 5 do fifths[i] = picks > 0 and 100 * fifths[i] / picks or 0 end
+    local went = 0
+    for _ in pairs(tunnel_who) do went = went + 1 end
+    return { nearest = sum / n, close = 100 * close / n, crowded = crowded, fifths = fifths, pressed = 100 * pressed / seen,
+             moves = picks > 0 and 100 * moves / picks or 0, pierced = picks > 0 and 100 * pierced / picks or 0, tunnel = picks > 0 and 100 * tunnel_wps / picks or 0, went = went,
+             climb = walked > 0 and 100 * climbed / walked or 0, road = walked > 0 and 100 * on_road / walked or 0, perched = 100 * perched / seen }
+end
+local SPREAD = {
+    a     = spread({ reading = "far-lists" }),
+    d     = spread({ reading = "waypoints", headings = 16 }),
+    blend = spread({ reading = "waypoints", headings = 16, avoid = 20 }),
+    no_orbit   = spread({ reading = "waypoints", headings = 16, turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, near = 10, orbit = 0 }, AREA_CLUTTERED),
+    -- the owner's rule (2026-09-27): Y 1..100 moved +-1..20 points, X a
+    -- tenth of a circle, 10 yards off the centre
+    orbit_walk = spread({ reading = "waypoints", headings = 16, turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, near = 10, orbit = 2.5 }, AREA_CLUTTERED),
+    planned    = spread({ reading = "waypoints", turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, near = 10, body = 0.61 }, AREA_CLUTTERED),
+    -- the owner's 5-yard crowding rule (2026-09-27), against the same without
+    crowd      = spread({ reading = "waypoints", turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, near = 10, body = 0.61, crowd = 5 }, AREA_CLUTTERED),
+    tunnel     = spread({ reading = "waypoints", turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, near = 10, body = 0.61, crowd = 5 }, AREA_TUNNEL),
+    pierce     = spread({ reading = "waypoints", turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, near = 10, body = 0.61, crowd = 5, pierce = 25 }, AREA_CLUTTERED),
+    tunnel_open = spread({ reading = "waypoints", turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, near = 10, body = 0.61, crowd = 5, openings = 20 }, AREA_TUNNEL),
+}
+local function fifths(r)
+    return string.format("%.0f%%, %.0f%%, %.0f%%, %.0f%%, %.0f%%", r.fifths[1], r.fifths[2], r.fifths[3], r.fifths[4], r.fifths[5])
+end
+-- }}}
+
+-- {{{ local function draw_waypoints
+-- The waypoint readings: a dashed line from each buddy to its waypoint and
+-- a small cross on the waypoint, in the buddy's colour.
+local function draw_waypoints(f, st)
+    for _, s in ipairs(st.sims) do
+        for _, b in ipairs(s.buddies) do
+            if b.wp then
+                local c = BUDDY[(b.id - 1) % #BUDDY + 1]
+                local x, y = px(b.wp.x), py(b.wp.y)
+                -- by a turning point when the area's walls are in the way
+                -- (the straight walker; a planned path shows its own dots)
+                if b.via and not b.path then
+                    local vx, vy = px(b.via.x), py(b.via.y)
+                    line(f, px(b.x), py(b.y), vx, vy, c, true)
+                    line(f, vx, vy, x, y, c, true)
+                    ring(f, vx, vy, 3, c)
+                else
+                    line(f, px(b.x), py(b.y), x, y, c, true)
+                end
+                line(f, x - 3, y - 3, x + 3, y + 3, c)
+                line(f, x - 3, y + 3, x + 3, y - 3, c)
+            end
+        end
+    end
+end
+-- }}}
+
+-- 8. the owner's waypoint pinwheel
+SCENES[#SCENES + 1] = {
+    name = "08-waypoints",
+    title = "Reading D: waypoints round the centre",
+    before = "The owner's suggestion, in place of keeping an **even** distance. Each buddy walks to a **way**point (the cross, joined to it by a dashed line). When it arrives, it turns its bearing from the area's centre 40 degrees **further** in its own direction and picks the next waypoint on that bearing, a random share of the way from the centre to the area's edge. Waypoints stay 3 yards **off** rocks and the edge. Six buddies **scattered** over the area; the paths are drawn for the last several seconds.",
+    after = "Every buddy goes round, but at its **own** rate: a run of waypoints near the centre makes a quick small lap, and one far out sends it on a long walk to the rim. So buddies **overtake** each other, cross paths, and now and then share a patch of ground for a moment before one leaves. **Nothing** keeps them apart: two may walk side by side for a waypoint or two. Measured over a long run (6000 ticks): the nearest other buddy is on average %.0f yards away (%.0f in Reading A), and under 6 yards %.0f%% of the time (%.0f%% in Reading A). Since the share is uniform along the bearing, half of the waypoints fall in the inner half of the distance to the edge, which is only a quarter of the area; the middle is visited **more** than the rim.",
+    frames = 640,
+    trail = 70,
+    setup = function(rand)
+        return { sims = { Roam.new(AREA, place_buddies(6, rand), { reading = "waypoints", headings = 16 }, rand) } }
+    end,
+    under = draw_waypoints,
+}
+
+-- 9. one buddy's waypoints
+SCENES[#SCENES + 1] = {
+    name = "09-one-buddys-waypoints",
+    title = "Inside one buddy's waypoints",
+    before = "**Only** the red buddy. The small plus is the area's centre; the grey line runs from the centre along the buddy's current bearing to the area's edge, the **whole** length its waypoint could fall on. The cross is where the **random** share put it. Earlier waypoints **stay** as dots.",
+    after = "The bearing moves on by the **same** angle every time, so the dots form a spiral-like fan: some close to the plus, some near the rim, in no order. Short hops near the centre go by **fast**, long ones out to the rim slow the lap down. When a rock blocks the chosen spot the share is re-rolled; when a rock covers the whole bearing, the bearing turns **one** more step. A buddy that can't reach its waypoint (stuck behind a rock for twice the straight-line time) gives **up** on it and takes the next one.",
+    frames = 640,
+    trail = 120,
+    setup = function(rand)
+        local st = { sims = { Roam.new(AREA, place_buddies(1, rand, { 60, 30 }), { reading = "waypoints", headings = 16 }, rand) }, past = {} }
+        return st
+    end,
+    after_tick = function(st)
+        local b = st.sims[1].buddies[1]
+        if b.wp and b.wp ~= st.last_wp then
+            if st.last_wp then st.past[#st.past + 1] = st.last_wp end
+            st.last_wp = b.wp
+        end
+    end,
+    under = function(f, st)
+        local s = st.sims[1]
+        local b = s.buddies[1]
+        local cx, cy = px(s.cx), py(s.cy)
+        line(f, cx, cy, px(s.cx + math.cos(b.angle) * b.wp.reach), py(s.cy + math.sin(b.angle) * b.wp.reach), 18)
+        for _, w in ipairs(st.past) do disc(f, px(w.x), py(w.y), 1, 6) end
+        line(f, cx - 4, cy, cx + 4, cy, 20)
+        line(f, cx, cy - 4, cx, cy + 4, 20)
+        draw_waypoints(f, st)
+    end,
+}
+
+-- 10. waypoints blended with spacing
+SCENES[#SCENES + 1] = {
+    name = "10-waypoints-kept-apart",
+    title = "A blend: waypoints kept apart",
+    before = "The owner, on Reading D: \"we might want some combination of these behaviors\". One way to **combine** them: the same waypoints, but a spot within 20 yards of another buddy's current waypoint is passed over for another on the same bearing. The pale rings are **those** 20 yards round each waypoint.",
+    after = "Spacing is now kept between **destinations** rather than step by step, so buddies still bunch briefly while passing each other, but they no longer end up heading for the same spot. It costs **one** check per waypoint instead of one per step, and leaves the random lap speeds of Reading D alone. Other blends are possible (Reading A's spacing steps while walking to the waypoint, or re-rolling only waypoints near other buddies themselves); this is the **cheap**est. Measured the same way as Reading D: the nearest other buddy averages %.0f yards away and is under 6 yards %.0f%% of the time. Up to 8 spots are tried on the bearing; when none is 20 yards clear, the **room**iest is taken rather than turning the bearing further (turning further was tried first: a quarter of the waypoints skipped a step, and a buddy could be sent across the whole area).",
+    frames = 640,
+    trail = 70,
+    setup = function(rand)
+        return { sims = { Roam.new(AREA, place_buddies(6, rand), { reading = "waypoints", headings = 16, avoid = 20 }, rand) } }
+    end,
+    under = function(f, st)
+        for _, b in ipairs(st.sims[1].buddies) do
+            if b.wp then ring(f, px(b.wp.x), py(b.wp.y), 20 * SCALE, 21, true) end
+        end
+        draw_waypoints(f, st)
+    end,
+}
+-- }}}
+
+-- the settings the owner chose on 2026-09-27, shared by scenes 11-15:
+-- X (the bearing) turns a tenth of a circle a waypoint; Y (the percent of
+-- the way out, 1..100) moves 1 to 20 points in or out at even odds, and no
+-- waypoint is nearer the centre than 10 yards; one landing within 5 yards
+-- of another buddy moves 10 points toward the middle of the way out
+local OWNER_Y = { reading = "waypoints", turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, y_min = 1, near = 10, crowd = 5 }
+local function with(extra)
+    local p = {}
+    for k, v in pairs(OWNER_Y) do p[k] = v end
+    for k, v in pairs(extra) do p[k] = v end
+    return p
+end
+
+-- {{{ local function draw_paths
+-- Planned walking: the rest of each buddy's planned path as dots, one per
+-- test point, in its colour.
+local function draw_paths(f, st)
+    for _, s in ipairs(st.sims) do
+        for _, b in ipairs(s.buddies) do
+            if b.path then
+                local c = BUDDY[(b.id - 1) % #BUDDY + 1]
+                for i = b.path_i, #b.path do plot(f, px(b.path[i].x), py(b.path[i].y), c) end
+            end
+        end
+    end
+end
+-- }}}
+
+-- 11. the Y rule
+SCENES[#SCENES + 1] = {
+    name = "11-waypoints-y-limited",
+    title = "Reading D, each distance 1 to 20 points from the last",
+    before = "The owner's **rule** for Reading D. Call a waypoint's distance from the centre its **Y** (a share of the way to the edge on its bearing) and its bearing round the centre its X. Y is a **whole** number from 1 to 100, the percent of the way out. Each new waypoint adds or takes away, at **even** odds, a whole number from 1 to 20: from 50% of the way out, the next is anywhere from 30% to 70%, and never nearer the centre than 10 yards. X turns a **tenth** of a circle (36 degrees) each waypoint (it was 40). The map now has small rocks, ruined crates (squares), raised ground (rings), two hills and a dip (lighter is higher) and a road (brown); here buddies **still** walk straight and orbit obstacles.",
+    after = "Each buddy drifts in and out gradually, so its laps change size a **little** at a time: a few tight fast laps near the middle, then a slow spiral out. Measured over a long run, the waypoints fall in each fifth of the way out (inner to outer) %s of the time. Adding and taking away the same amounts leans **neither** way, so over time every distance is drawn about equally (a rock in the way moves that one waypoint along its bearing to the nearest clear spot, without changing the drawn Y the next one starts from), a little more at the very middle and the very edge, where the 1 and 100 limits hold a buddy for a step or two. (Multiplying Y by 1 plus or minus the change was built first, a **mis**reading of the rule: it leaned inward, a step out and back in multiplying Y by (1 + c)(1 - c), just under 1, and over half the waypoints ended in the inner fifth.)",
+    frames = 640,
+    trail = 90,
+    area = AREA_CLUTTERED,
+    setup = function(rand)
+        return { sims = { Roam.new(AREA_CLUTTERED, place_buddies(6, rand, nil, AREA_CLUTTERED), with({ headings = 16, orbit = 2.5 }), rand) } }
+    end,
+    under = draw_waypoints,
+}
+
+-- 12. orbiting obstacles
+SCENES[#SCENES + 1] = {
+    name = "12-orbiting-obstacles",
+    title = "Orbiting round things in the way",
+    before = "Three buddies on the **cluttered** map, with the owner's Y rule. Each obstacle has a dashed orbit circle 2.5 yards **out**. When the straight line to a buddy's waypoint crosses one within 15 yards, the buddy aims along the **tangent** to that circle, on the side its waypoint lies; the circle it is going round lights up.",
+    after = "Paths bend round rocks, crates and raised ground at a **distance** instead of walking up to them and sliding along. Measured: a buddy is within a yard of an obstacle's edge %.0f%% of the time with orbiting, %.0f%% without. The side is **kept** until the buddy is past, so it doesn't dither; when the waypoint is straight behind the obstacle, it goes round the way it circles the area. This walker knows every obstacle in **advance**, which the game won't; the planner in the next animations finds them by testing the ground.",
+    frames = 640,
+    trail = 140,
+    area = AREA_CLUTTERED,
+    setup = function(rand)
+        return { sims = { Roam.new(AREA_CLUTTERED, place_buddies(3, rand, nil, AREA_CLUTTERED), with({ headings = 16, orbit = 2.5 }), rand) } }
+    end,
+    under = function(f, st)
+        local s = st.sims[1]
+        for _, w in ipairs(s.area.walls) do ring(f, px(w[1]), py(w[2]), (w[3] + s.orbit) * SCALE, 21, true) end
+        draw_waypoints(f, st)
+    end,
+    overlay = function(f, st)
+        for _, b in ipairs(st.sims[1].buddies) do
+            if b.orbiting then
+                local w = b.orbiting
+                ring(f, px(w[1]), py(w[2]), (w[3] + st.sims[1].orbit) * SCALE, 20, true)
+            end
+        end
+    end,
+}
+
+-- 13. planned paths
+SCENES[#SCENES + 1] = {
+    name = "13-planned-paths",
+    title = "Planned paths: test points, bends, slopes and roads",
+    before = "The owner's **planner**. On picking a waypoint, a buddy draws the straight line to it and places test points along it one **body** width apart (the dots ahead of each buddy). At each it reads the ground height, under its centre and **both** shoulders. A jump in height that **stands out** from the slope around it is an obstacle: the path bulges round it with a half-cosine ease out, a straight run past it at the peak, and an ease back to the line. The same is tried along four gentle bows either side of the line, and the **cheapest** wins: each yard costs more the steeper it is, up or down, and less on the road.",
+    after = "Buddies now plan round crates and rocks they only **discovered** by testing the ground, and bend onto the road when it runs their way. The hills here are **gentle** (the steepest about 21 degrees), so steering off their slopes only saves a little climbing; steeper ground would show it more. Measured over a long run against the straight walker of the last animation: height climbed or descended per 100 yards walked %.0f (planned) against %.0f (straight); share of walking on the road %.0f%% against %.0f%%; time standing on an obstacle %.1f%% against %.1f%%. Buddies here are sized like different races (0.6 to 1.95 yards wide), so their dots are spaced **differently**. The owner's 5-yard rule is **on** from here: a waypoint landing within 5 yards of another buddy moves 10 points toward the middle of the way out. It moved %.0f%% of waypoints; with it the nearest other buddy averages %.0f yards and is under 6 yards %.0f%% of the time, against %.0f yards and %.0f%% without.",
+    frames = 640,
+    trail = 90,
+    area = AREA_CLUTTERED,
+    setup = function(rand)
+        local bs = place_buddies(6, rand, nil, AREA_CLUTTERED)
+        local widths = { 0.61, 1.95, 0.69, 0.78, 0.61, 1.95 }  -- human, tauren, dwarf, night elf, human, tauren (twice the model's radius)
+        for i, b in ipairs(bs) do b.body = widths[i] end
+        return { sims = { Roam.new(AREA_CLUTTERED, bs, with({ body = 0.61 }), rand) } }
+    end,
+    under = function(f, st) draw_paths(f, st); draw_waypoints(f, st) end,
+}
+
+-- 14. inside one plan
+SCENES[#SCENES + 1] = {
+    name = "14-one-plan",
+    title = "Inside one plan",
+    before = "One buddy, 1.95 yards wide (a **tau**ren). At each new waypoint all **five** candidate paths it weighed stay drawn until the next: the straight line and a gentle bow either side at two heights, each with the bulges it needed round obstacles. The chosen one is **bright**, the others grey; a candidate that couldn't get past something within 16 yards is darker.",
+    after = "Most trips pick the straight line or the smaller bow; a **big** bow wins when the line runs over a hill or along the dip, and a bow onto the road wins when the road lies between. The bulges round a crate are small and **sharp**, round a big rock wide. Planning happens **once** per waypoint and took 1 to 15 milliseconds per trip in the model; in game each test point costs three height lookups, a few hundred per trip.",
+    frames = 640,
+    trail = 200,
+    area = AREA_CLUTTERED,
+    setup = function(rand)
+        local bs = place_buddies(1, rand, { 30, 70 }, AREA_CLUTTERED)
+        bs[1].body = 1.95
+        return { sims = { Roam.new(AREA_CLUTTERED, bs, with({ body = 1.95 }), rand) } }
+    end,
+    under = function(f, st)
+        local b = st.sims[1].buddies[1]
+        if b.plan then
+            for _, c in ipairs(b.plan.candidates) do
+                if c ~= b.plan.chosen then
+                    for _, p in ipairs(c.points) do plot(f, px(p.x), py(p.y), c.ok and 18 or 19) end
+                end
+            end
+            for _, p in ipairs(b.plan.chosen.points) do disc(f, px(p.x), py(p.y), 1, 20) end
+        end
+        draw_waypoints(f, st)
+    end,
+}
+
+-- 15. two sizes, the same trips
+-- The tauren is drawn 3 yards wide here, wider than the real 1.95 (the
+-- owner, 2026-09-27: "increase the tauren radius a bit to show the effect
+-- better"); both are drawn to scale, and each waits at every waypoint
+-- until the other has reached the same one ("have them stop at each
+-- waypoint for their friend to catch up").
+local SHOW_TAUREN = 3.0
+SCENES[#SCENES + 1] = {
+    name = "15-two-sizes",
+    title = "The same trips, two sizes",
+    before = "Two buddies making the **same** random choices, so they get the same waypoints: a human, 0.61 yards wide (green), and a tauren, drawn 3 yards wide to show the effect (purple; a real tauren is 1.95). Each is drawn to its **real** size, and tests the ground every body width along its way. Whoever reaches a waypoint **first** waits there for the other.",
+    after = "Their paths **mostly** agree but part where the ground is tight: the tauren's shoulders touch rocks the human's clear, so it bulges wider round them or takes another bow, and its test points are five times farther apart. Waiting at each waypoint keeps them **side** by side, so each difference shows as the two paths splitting and meeting again at the next cross. So **larger** races pathfind round obstacles \"in differing increments\", as the owner put it.",
+    frames = 640,
+    trail = 200,
+    area = AREA_CLUTTERED,
+    rand_per_sim = true,
+    to_scale = true,
+    setup = function(rand)
+        local start = place_buddies(1, rand, { 20, 40 }, AREA_CLUTTERED)[1]
+        local small = { id = 1, x = start.x, y = start.y, body = 0.61, spin = 1 }
+        local large = { id = 2, x = start.x, y = start.y, body = SHOW_TAUREN, spin = 1 }
+        -- the tauren's sim first, so the small human is drawn on top of it
+        -- when they stand together waiting
+        return { sims = {
+            Roam.new(AREA_CLUTTERED, { large }, with({ body = SHOW_TAUREN }), rand),
+            Roam.new(AREA_CLUTTERED, { small }, with({ body = 0.61 }), rand),
+        }, reached = { 0, 0 }, last = {} }
+    end,
+    -- count the waypoints each has been given; the one ahead stands still
+    -- this tick (busy for one tick)
+    before_tick = function(st)
+        for i, s in ipairs(st.sims) do
+            local b = s.buddies[1]
+            if b.wp and b.wp ~= st.last[i] then st.last[i], st.reached[i] = b.wp, st.reached[i] + 1 end
+        end
+        if st.reached[1] > st.reached[2] then st.sims[1].buddies[1].busy = 1 end
+        if st.reached[2] > st.reached[1] then st.sims[2].buddies[1].busy = 1 end
+    end,
+    color = function(b) return b.id == 1 and 12 or 10 end,
+    under = function(f, st) draw_paths(f, st) end,
+}
+
+-- 16. the side tunnel
+SCENES[#SCENES + 1] = {
+    name = "16-side-tunnel",
+    title = "A side tunnel",
+    before = "A chamber with a tunnel 8 yards wide running **east** to a small side chamber. Each waypoint is placed on its bearing from the chamber's centre (the small plus), and the line along that bearing stops at the **first** wall it meets (the owner: \"move the 'edge' of the map to the closest of the walls\"); the percent is of that distance. A bearing **down** the tunnel reaches the side chamber's back wall, one at the chamber's side stops there. One **pull** toward openings is added: when a bearing is chosen, the buddy looks up to half a step either side, and if the line there runs 20 yards or more farther (the tunnel's mouth), this one waypoint takes the middle of that opening. Buddies plan their paths as **before**; a ring marks a turning point.",
+    after = "Every buddy's lap now passes the tunnel **once**, and when its distance number is past about half, it walks in, sometimes to the side chamber, and comes back out on the next waypoint. Measured over a long run: %.1f%% of waypoints fall past the tunnel's mouth and %d of the 6 buddies went in, against %.1f%% and %d of 6 with the walls rule alone. Without the pull, the tunnel is **almost** never reached: X turns exactly a tenth of a circle, so each buddy repeats the same ten bearings lap after lap, and only bearings within a few degrees of the tunnel's line reach into it. Half a step either side covers the whole circle between one bearing and the next, so **no** opening is missed, and the pinwheel's own bearing is left as it was. Leaving the tunnel, the straight line to the next waypoint runs through rock, so the buddy walks toward the centre until the waypoint comes into view and turns there: every waypoint is placed in **sight** of the centre, so that point always exists.",
+    frames = 640,
+    trail = 90,
+    area = AREA_TUNNEL,
+    setup = function(rand)
+        local bs = place_buddies(6, rand, { 40, 50 }, AREA_TUNNEL)
+        return { sims = { Roam.new(AREA_TUNNEL, bs, with({ body = 0.61, openings = 20 }), rand) } }
+    end,
+    under = function(f, st)
+        draw_paths(f, st)
+        draw_waypoints(f, st)
+        local c = st.sims[1]
+        local cx, cy = px(c.cx), py(c.cy)
+        line(f, cx - 4, cy, cx + 4, cy, 20)
+        line(f, cx, cy - 4, cx, cy + 4, 20)
+        for _, b in ipairs(c.buddies) do
+            if b.via and b.path then ring(f, px(b.via.x), py(b.via.y), 3, BUDDY[(b.id - 1) % #BUDDY + 1]) end
+        end
+    end,
+}
+-- 17. piercing the middle
+SCENES[#SCENES + 1] = {
+    name = "17-piercing-the-middle",
+    title = "Through the middle: S shapes and figure eights",
+    before = "The owner: \"if the buddy-bot's waypoint gets pretty close to middle after having two low 1-20% rolls, we should pierce through the center and reverse their orientation [...] To make an S shape, or a figure 8 passing through the middle\". Two buddies, long trails. After two inward rolls in a row that leave Y at 25 or under, the next waypoint goes on the **far** side of the centre at the same Y, and the buddy turns the other way round.",
+    after = "A buddy spirals in over a few waypoints, crosses the middle, and carries on round the other way, so its trail draws an **S**; the next time it spirals in and crosses, the loops close into a figure eight. Measured over a long run: %.1f crossings per 100 waypoints. The count of inward rolls starts again after each crossing, so a buddy **never** crosses twice in a row.",
+    frames = 640,
+    trail = 420,
+    area = AREA_CLUTTERED,
+    setup = function(rand)
+        return { sims = { Roam.new(AREA_CLUTTERED, place_buddies(2, rand, nil, AREA_CLUTTERED), with({ body = 0.61, pierce = 25 }), rand) } }
+    end,
+    under = function(f, st)
+        draw_paths(f, st)
+        local c = st.sims[1]
+        local cx, cy = px(c.cx), py(c.cy)
+        line(f, cx - 4, cy, cx + 4, cy, 20)
+        line(f, cx, cy - 4, cx, cy + 4, 20)
+    end,
+}
+
+-- 18. monsters
+-- The monsters of the cluttered map, each with its aggro radius against a
+-- buddy of its level (the server: 20 yards, one less for each level the
+-- buddy is above it); a few are higher or lower level.
+local MOBS = {
+    { 20, 20, 12 }, { 50, 12, 10 }, { 82, 16, 11 }, { 112, 48, 12 }, { 90, 62, 9 }, { 72, 86, 10 },
+    { 40, 60, 11 }, { 12, 62, 10 }, { 56, 44, 9 }, { 106, 30, 10 }, { 30, 84, 12 },
+}
+local FIGHT_TICKS, RESPAWN_TICKS = 40, 400
+local function fresh_mobs()
+    local list = {}
+    for _, m in ipairs(MOBS) do list[#list + 1] = { x = m[1], y = m[2], r = m[3], alive = true } end
+    return list
+end
+-- A buddy inside a living monster's radius is noticed: the two fight for
+-- FIGHT_TICKS (the buddy stands), the monster dies and comes back after
+-- RESPAWN_TICKS. Returns the fights begun this tick.
+local function fights(st, t)
+    local begun = 0
+    for _, m in ipairs(st.mobs) do
+        if not m.alive and m.back_at and t >= m.back_at then m.alive, m.back_at, m.foe = true, nil, nil end
+        if m.alive then
+            for _, s in ipairs(st.sims) do
+                for _, b in ipairs(s.buddies) do
+                    if m.alive and (b.busy or 0) == 0 and (b.x - m.x) ^ 2 + (b.y - m.y) ^ 2 < m.r * m.r then
+                        m.alive, m.foe, m.fight_end, m.back_at = false, b, t + FIGHT_TICKS, t + RESPAWN_TICKS
+                        b.busy = FIGHT_TICKS
+                        begun = begun + 1
+                    end
+                end
+            end
+        end
+    end
+    return begun
+end
+-- fights per 100 waypoints over a long run, with the nudge or without
+local function measure_fights(lure)
+    local rand = lcg(13)
+    local st = { mobs = fresh_mobs() }
+    local bs = place_buddies(6, rand, nil, AREA_CLUTTERED)
+    local s = Roam.new(AREA_CLUTTERED, bs, with({ body = 0.61, mobs = lure and st.mobs or {} }), rand)
+    st.sims = { s }
+    local n, picks, last = 0, 0, {}
+    for t = 1, 6000 do
+        Roam.tick(s, rand)
+        n = n + fights(st, t)
+        for _, b in ipairs(bs) do if b.wp ~= last[b.id] then last[b.id], picks = b.wp, picks + 1 end end
+    end
+    return 100 * n / picks
+end
+SCENES[#SCENES + 1] = {
+    name = "18-monsters",
+    title = "Drawing the monsters' attention",
+    before = "Monsters (red) with their aggro radius (dashed): a buddy that comes **inside** it is noticed and attacked. The owner: \"bots will try to move within aggro range of monsters that they are near, nudging their waypoints to move the tangent line between them and the mob's aggro radius somewhere interior to the radius\". When the line to a buddy's next waypoint passes within 25 yards outside a living monster's radius, the trip **bends** through a point 70% of the way in from the edge of that radius, on the side the line passes; a ring marks that point. A fight here is the buddy standing **still** for a few seconds while the monster falls; it comes back later.",
+    after = "Buddies now bend their laps to **brush** past monsters near their way and pull them, instead of passing them by, and after the fight carry on round. Only the **first** monster along each trip bends it, so a buddy isn't dragged from one to the next across the area. Measured over a long run: %.1f fights per 100 waypoints with the nudge, %.1f without (a fight then only when a lap happens to cross a radius). In game the radius comes from the **server** itself (each creature's aggro range against that buddy), and only monsters that attack on sight count.",
+    frames = 640,
+    trail = 90,
+    area = AREA_CLUTTERED,
+    setup = function(rand)
+        local st = { mobs = fresh_mobs() }
+        st.sims = { Roam.new(AREA_CLUTTERED, place_buddies(6, rand, nil, AREA_CLUTTERED), with({ body = 0.61, mobs = st.mobs }), rand) }
+        return st
+    end,
+    after_tick = function(st, t) fights(st, t) end,
+    under = function(f, st, t)
+        for _, m in ipairs(st.mobs) do
+            if m.alive then
+                ring(f, px(m.x), py(m.y), m.r * SCALE, 17, true)
+                disc(f, px(m.x), py(m.y), 3, 13)
+            elseif m.foe and m.fight_end and t < m.fight_end then
+                line(f, px(m.x), py(m.y), px(m.foe.x), py(m.foe.y), 13)
+                disc(f, px(m.x), py(m.y), 3, 13)
+            else
+                local x, y = px(m.x), py(m.y)
+                line(f, x - 2, y - 2, x + 2, y + 2, 19); line(f, x - 2, y + 2, x + 2, y - 2, 19)
+            end
+        end
+        draw_paths(f, st)
+        for _, b in ipairs(st.sims[1].buddies) do
+            if b.via and b.via_kind == "lure" and b.path and b.path_i <= #b.path then ring(f, px(b.via.x), py(b.via.y), 3, 20) end
+        end
+    end,
+}
+SCENES[17].after = string.format(SCENES[17].after, SPREAD.pierce.pierced)
+SCENES[18].after = string.format(SCENES[18].after, measure_fights(true), measure_fights(false))
+
+SCENES[16].after = string.format(SCENES[16].after, SPREAD.tunnel_open.tunnel, SPREAD.tunnel_open.went, SPREAD.tunnel.tunnel, SPREAD.tunnel.went)
+
+SCENES[11].after = string.format(SCENES[11].after, fifths(SPREAD.orbit_walk))
+SCENES[12].after = string.format(SCENES[12].after, SPREAD.orbit_walk.pressed, SPREAD.no_orbit.pressed)
+SCENES[13].after = string.format(SCENES[13].after, SPREAD.planned.climb, SPREAD.orbit_walk.climb, SPREAD.planned.road, SPREAD.orbit_walk.road, SPREAD.planned.perched, SPREAD.orbit_walk.perched, SPREAD.crowd.moves, SPREAD.crowd.nearest, SPREAD.crowd.close, SPREAD.planned.nearest, SPREAD.planned.close)
+SCENES[8].after  = string.format(SCENES[8].after, SPREAD.d.nearest, SPREAD.a.nearest, SPREAD.d.close, SPREAD.a.close)
+SCENES[10].after = string.format(SCENES[10].after, SPREAD.blend.nearest, SPREAD.blend.close)
+
+-- {{{ exploring as painting: the hall, the four systems side by side (19)
+-- A bigger arena, built to show the systems apart (the owner, 2026-09-27:
+-- "Don't be afraid to re-implement the arena"): a main hall with an L-leg
+-- (the entrance at the leg's foot), a dead-end passage off the leg, and a
+-- tunnel from the hall to a side room that leads on down a second tunnel
+-- to a far room. About 240 by 170 yards. The centre is the outline's own
+-- centre of area (as the in-game table's middle is an average over the
+-- area), which in an L falls near the hall's lower wall.
+local HALL_OUTLINE = {
+    { 10, 10 }, { 150, 10 }, { 150, 40 }, { 200, 40 }, { 200, 20 }, { 250, 20 }, { 250, 80 }, { 228, 80 }, { 228, 140 }, { 250, 140 },
+    { 250, 180 }, { 200, 180 }, { 200, 140 }, { 220, 140 }, { 220, 80 }, { 200, 80 }, { 200, 50 }, { 150, 50 }, { 150, 90 }, { 80, 90 },
+    { 80, 140 }, { 150, 140 }, { 150, 150 }, { 80, 150 }, { 80, 180 }, { 10, 180 },
+}
+local HALL = {
+    outline = HALL_OUTLINE,
+    walls   = { { 50, 40, 6 }, { 110, 65, 5 }, { 40, 130, 5 }, { 230, 50, 4 }, { 225, 162, 3 } },
+    centre  = centroid(HALL_OUTLINE),
+}
+local HALL_ENTRANCE = { 45, 176 }
+local HALL_CELL     = 2
+local HALL_DISC     = Roam.paint_grid(HALL, HALL_CELL)   -- the squished circle, worked out once
+Roam.paint_disc_map(HALL_DISC, 4000)
+
+local PAINT_SYSTEMS = {
+    { mode = "pinwheel", name = "A: today's pinwheel" },
+    { mode = "choose",   name = "B: pinwheel choosing by paint" },
+    { mode = "least",    name = "C: least paint, walls paint, no pinwheel" },
+    { mode = "disc",     name = "D: squished-circle pinwheel with paint" },
+}
+
+-- a clan of four on the hall, starting at the entrance, for one system
+local function paint_sim(mode, rand, wall_paint)
+    local g = Roam.paint_grid(HALL, HALL_CELL)
+    g.du, g.dv, g.rim, g.disc_clear = HALL_DISC.du, HALL_DISC.dv, HALL_DISC.rim, HALL_DISC.disc_clear
+    local bs = {}
+    for k = 1, 4 do bs[k] = { id = k, x = HALL_ENTRANCE[1] - 10 + k * 4, y = HALL_ENTRANCE[2] - 4 } end
+    return Roam.new(HALL, bs, { reading = "paint", paint_mode = mode, grid = g, entrance = HALL_ENTRANCE, wall_paint = wall_paint,
+        turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, near = 10, crowd = 5, openings = 20 }, rand)
+end
+
+-- Measured, not written in: each system for 6000 ticks (about six
+-- minutes of play) from the same start: explored ground (seen from within
+-- 20 yards) at four times, time within 3 yards of a wall, and the share of
+-- steps onto ground someone stood on in the last 25 seconds.
+local function paint_measure(mode, wall_paint)
+    local rand = lcg(5)
+    local s = paint_sim(mode, rand, wall_paint)
+    local r = { cov = {} }
+    for t = 1, 6000 do
+        Roam.tick(s, rand)
+        if t == 300 or t == 600 or t == 1500 or t == 6000 then r.cov[#r.cov + 1] = 100 * Roam.paint_coverage(s.grid) end
+    end
+    r.wall = 100 * s.stats.near_wall / s.stats.ticks
+    r.revisit = 100 * s.stats.revisits / s.stats.entries
+    -- in tunnels: yards off the middle line, on average (0 = dead centre)
+    r.tunnel = s.stats.tunnel_ticks > 0 and s.stats.tunnel_off / s.stats.tunnel_ticks or 0
+    r.tunnel_share = 100 * s.stats.tunnel_ticks / s.stats.ticks
+    return r
+end
+local PAINT_MEASURE = {}
+for _, sys in ipairs(PAINT_SYSTEMS) do PAINT_MEASURE[sys.mode] = paint_measure(sys.mode, true) end
+PAINT_MEASURE.least_bare = paint_measure("least", false)
+PAINT_MEASURE.rooms      = paint_measure("rooms", true)
+PAINT_MEASURE.rooms_bare = paint_measure("rooms", false)
+
+-- {{{ local function render_paint_panels
+-- The four systems in a 2x2 grid of panels, each with the paint shaded
+-- as heat (nothing, faint, ... hot) and a coverage bar under it (the share
+-- explored). Panel number = the count of white dots in its top-left corner.
+local PANEL_SCALE, PANEL_W, PANEL_H, PANEL_GAP, BAR_H = 1.2, 312, 228, 6, 6
+local function render_paint_panels(scene)
+    local systems = scene.systems or PAINT_SYSTEMS
+    local saveW, saveH, saveS, saveX, saveY = W, H, SCALE, OX, OY
+    W = PANEL_W * 2 + PANEL_GAP * 3
+    H = (PANEL_H + BAR_H + 4) * 2 + PANEL_GAP * 3
+    SCALE = PANEL_SCALE
+    local rand = lcg(scene.seed or 7)
+    local panels = {}
+    for k, sys in ipairs(systems) do
+        local col, row = (k - 1) % 2, math.floor((k - 1) / 2)
+        local p = { sys = sys, sim = paint_sim(sys.mode, rand, sys.walls ~= false),
+                    x0 = PANEL_GAP + col * (PANEL_W + PANEL_GAP), y0 = PANEL_GAP + row * (PANEL_H + BAR_H + 4 + PANEL_GAP) }
+        -- each pixel of the panel: which cell it shows (-1 outside the
+        -- hall), worked out once
+        p.map = {}
+        local g = p.sim.grid
+        for y = 0, PANEL_H - 1 do
+            for x = 0, PANEL_W - 1 do
+                local wx, wy = x / SCALE, y / SCALE
+                local i = Roam.paint_cell_of(g, wx, wy)
+                p.map[y * PANEL_W + x] = (i and g.inside[i]) and i or -1
+            end
+        end
+        panels[k] = p
+    end
+    local frames = {}
+    for t = 1, scene.frames do
+        local f = new_frame()
+        for k, p in ipairs(panels) do
+            Roam.tick(p.sim, rand)
+            local g = p.sim.grid
+            OX, OY = p.x0, p.y0
+            -- the floor: rock, or paint as heat (palette 32-39)
+            for y = 0, PANEL_H - 1 do
+                local row = (p.y0 + y) * W + p.x0
+                for x = 0, PANEL_W - 1 do
+                    local i = p.map[y * PANEL_W + x]
+                    if i >= 0 then
+                        if not g.open[i] then f[row + x] = 3
+                        else
+                            -- the buddies' paint as heat; where the walls'
+                            -- paint is the greater, its blue-grey fringe
+                            local v, w = g.buddy[i], g.wallp[i]
+                            if w > v then f[row + x] = 42 + math.min(2, math.floor(3 * w / (w + 150)))
+                            else f[row + x] = v == 0 and 1 or 32 + math.min(7, math.floor(8 * v / (v + 300))) end
+                        end
+                    end
+                end
+            end
+            local o = HALL.outline
+            for i = 1, #o do
+                local j = i % #o + 1
+                line(f, px(o[i][1]), py(o[i][2]), px(o[j][1]), py(o[j][2]), 2)
+            end
+            -- the entrance (white square) and, for the pinwheels, the centre (plus)
+            local ex, ey = px(HALL_ENTRANCE[1]), py(HALL_ENTRANCE[2])
+            for yy = -2, 2 do for xx = -2, 2 do plot(f, ex + xx, ey + yy, 5) end end
+            if p.sys.mode == "pinwheel" or p.sys.mode == "choose" then
+                local cx, cy = px(p.sim.cx), py(p.sim.cy)
+                line(f, cx - 4, cy, cx + 4, cy, 20); line(f, cx, cy - 4, cx, cy + 4, 20)
+            end
+            -- rooms: each room's middle (plus); a buddy heading for another
+            -- place (a room or a tunnel) gets a thin line to its middle
+            if p.sys.mode == "rooms" then
+                for _, room in ipairs(g.rooms) do
+                    local cx, cy = px(room.cx), py(room.cy)
+                    line(f, cx - 4, cy, cx + 4, cy, 20); line(f, cx, cy - 4, cx, cy + 4, 20)
+                end
+                for _, b in ipairs(p.sim.buddies) do
+                    if b.heading then
+                        local room = g.places[b.heading]   -- a room or a tunnel (Roam.paint_rooms: g.places)
+                        line(f, px(b.x), py(b.y), px(room.cx), py(room.cy), BUDDY[(b.id - 1) % #BUDDY + 1], true)
+                    end
+                end
+            end
+            -- buddies, their goals and paths
+            for _, b in ipairs(p.sim.buddies) do
+                local c = BUDDY[(b.id - 1) % #BUDDY + 1]
+                if b.path then for i = b.path_i, #b.path do plot(f, px(b.path[i].x), py(b.path[i].y), c) end end
+                if b.goal then
+                    local gx, gy = px(b.goal.x), py(b.goal.y)
+                    line(f, gx - 2, gy - 2, gx + 2, gy + 2, c); line(f, gx - 2, gy + 2, gx + 2, gy - 2, c)
+                end
+                disc(f, px(b.x), py(b.y), 3, c)
+            end
+            -- the panel's number as dots, and its coverage bar
+            for d = 1, k do disc(f, p.x0 + 4 + (d - 1) * 6, p.y0 + 4, 1, 5) end
+            local cov = Roam.paint_coverage(g)
+            local by = p.y0 + PANEL_H + 2
+            for yy = 0, BAR_H - 1 do
+                for xx = 0, PANEL_W - 1 do f[(by + yy) * W + p.x0 + xx] = xx < cov * PANEL_W and 20 or 19 end
+            end
+        end
+        frames[t] = f
+    end
+    local path = OUT_DIR .. "/" .. scene.name .. ".gif"
+    local bytes = gif.write(path, { width = W, height = H, palette_bytes = palette, frames = frames, delay_cs = DELAY_CS })
+    print(string.format("  %-26s %4d frames, %7d bytes (%dx%d)", scene.name .. ".gif", scene.frames, bytes, W, H))
+    scene.W, scene.H = W, H
+    W, H, SCALE, OX, OY = saveW, saveH, saveS, saveX, saveY
+end
+-- }}}
+
+local function pm(mode) local r = PAINT_MEASURE[mode]
+    return string.format("%.0f%%, %.0f%%, %.0f%% and %.0f%% explored after about 20 seconds, 40 seconds, 1.5 minutes and 6 minutes; %.1f%% of its time within 3 yards of a wall; %.0f%% of its steps onto ground walked in the last 25 seconds; in tunnels %.1f%% of its time, on average %.1f yards off a tunnel's middle line",
+        r.cov[1], r.cov[2], r.cov[3], r.cov[4], r.wall, r.revisit, r.tunnel_share, r.tunnel) end
+SCENES[#SCENES + 1] = {
+    name = "19-painting-compared",
+    title = "Exploring as painting: four systems side by side",
+    before = "The owner's painting idea, tried **four** ways on one new arena, all four clans of four starting at the same entrance (white square, at the foot of the L). The arena: a main hall with an **L**-shaped leg, a dead-end passage off the leg, and a tunnel from the hall to a side room that leads down a second tunnel to a far room. Each buddy lays paint on what it can **see**, most where it stands, less out to 60 yards; the floor is shaded by how much paint it has (dark: none; warm: much). In every panel the walls paint their **own** fringe too, within 5 yards of themselves, topped up every 3 seconds (blue-grey where the walls' paint is the greater); regenerated 2026-09-27 after the owner saw no wall paint in the first version, where the walls' paint was too weak to matter and was not drawn. The bar under each panel is how much of the arena has been **seen** from within 20 yards. Panels (counted by the white dots in each corner): 1, top left, today's pinwheel (the owner's rules), paint only drawn; 2, top right, the same pinwheel choosing by paint: of its proposal and eight near it, the least painted, farthest from the entrance, wins; 3, bottom left, no pinwheel at all: of 30 random spots 12 to 70 yards off, the least painted wins, and walls paint the ground within 5 yards of themselves every 3 seconds; 4, bottom right, the pinwheel run in the squished circle (the arena mapped onto a disc, see below) choosing by paint. Paths run through **un**painted ground where they can (3 and 4, and 2), and round walls on their own.",
+    after = "What the panels show, measured over six minutes of each system from the same start (the generator prints these): 1, today's pinwheel: %s. 2, choosing by paint: %s. 3, least paint and wall paint: %s. 4, the squished circle: %s. The two plain pinwheels **never** reach the tunnels: every waypoint sits on a straight line from the centre, and from the L's centre no straight line runs down the tunnel, so the side and far rooms stay dark whatever paint says. The squished circle **fixes** that: its rim is the whole outline in order, so the tunnels and the dead end are stretches of the circle's edge, and a pinwheel lap in the disc walks into every room; with paint choosing among nearby disc points, it explores everything with the fewest revisits. Least paint alone explores **fast**est but wanders: it has no laps, doubles back more, and its route is hard to predict. For least paint the walls' paint changes **little** in time near walls (%.1f%% without it): its spots are already chosen 3 yards off walls and its paths keep 1.5 yards off; where it matters is the room orbit's tunnels (the next comparison but one, 21). The disc map is made by laying the outline round a circle by distance along it and settling every inner cell at the average of its neighbours (a harmonic map); onto a convex shape like a circle such a map **never** folds, so each point of the disc names one place in the arena (the property in docs/reference/jacobian-conjecture/).",
+    render = render_paint_panels,
+    frames = 520,
+}
+SCENES[19].after = string.format(SCENES[19].after, pm("pinwheel"), pm("choose"), pm("least"), pm("disc"), PAINT_MEASURE.least_bare.wall)
+-- }}}
+
+-- {{{ rooms and tunnels (21)
+-- The owner, after 19: panel 3 (least paint) looked the most natural; the
+-- pinwheels' trouble was the whole area's midpoint; rooms should have
+-- their own. The same hall and start, four systems: the one the owner
+-- liked, the room orbit with paint and walls' paint, the squished circle,
+-- and the room orbit without the walls' paint (what the walls' paint does
+-- in the tunnels). Shown after the cluster pull (20), so the gallery's
+-- numbers stay in order.
+local ROOMS_SCENE = {
+    name = "21-rooms-and-tunnels",
+    title = "Rooms and tunnels: orbiting each room's middle",
+    before = "The owner, after the last comparison: \"the third one I think looked the most natural. Don't forget to add the 'paint from walls' behavior! [...] their midpoint is the midpoint of the entire area, when it should be the midpoint of the room that they're in [...] we should identify rooms, as in, not tunnels, and we should orbit around those until the paint system tells us to be drawn toward a tunnel. If the walls extrude paint, then characters will be encouraged to walk through the center of the tunnel, not glide along it's walls.\" The hall is split by how **far** each spot is from the outline: places at least 7 yards deep (14 across) are room middles, the ground within 7 yards of them joins their room, and what is left, the narrow places, is tunnel. Here that makes **three** rooms (the hall with its L, the side room, the far room, each middle marked with a plus) and three tunnels (hall to side room, side room to far room, and the dead end). Panels: 1, least paint with the walls' paint (the one the owner liked); 2, the room orbit: the owner's pinwheel round the middle of the room the buddy is in, in that room's own coordinates, choosing by paint, until the room is 80% explored; then the paint draws it to the least explored place, a room or a tunnel (the dead end too), farther from the entrance weighing more (a thin line to that place while it goes); once every place is past 80%, to the least explored one if it is clearly less explored than where it is, so the last corners get seen; 3, the squished circle with paint; 4, the room orbit without the walls' paint. Walls' paint shows **blue**-grey.",
+    after = "Measured over six minutes each from the same start: 1, least paint: %s. 2, the room orbit: %s. 3, the squished circle: %s. 4, the room orbit without the walls' paint: %s. The room orbit reaches **every** room and tunnel, the dead end included, which the whole-area pinwheel of the last comparison never did: each room's own middle sees its own walls, and the paint, not the lap, decides when to go on. Its laps round each room's middle keep it **off** the walls. Panels 2 and 4 show what the walls' paint **does**: with it, a buddy spends less time near walls and walks nearer a tunnel's middle line; it also makes buddies share those middle lines, so more of their steps land on ground walked just before. A first version counted a room as **done** at 80%% and never drew buddies into tunnels: it stopped at 88%% explored, with the dead end and the rooms' last corners unseen.",
+    render = render_paint_panels,
+    systems = {
+        { mode = "least", name = "least paint, walls' paint" },
+        { mode = "rooms", name = "room orbit with paint and walls' paint" },
+        { mode = "disc",  name = "squished circle with paint" },
+        { mode = "rooms", name = "room orbit, no walls' paint", walls = false },
+    },
+    frames = 520,
+}
+ROOMS_SCENE.after = string.format(ROOMS_SCENE.after, pm("least"), pm("rooms"), pm("disc"), pm("rooms_bare"))
+-- }}}
+
+-- {{{ fighting together: a cluster pull (20)
+-- A drawn simulation of the fighting the owner described (617e5), not the
+-- game's combat: hit points, damage and cast times are round numbers
+-- chosen so the whole sequence fits in the animation. The field: open
+-- ground about 240 by 170 yards; two clusters of monsters (monsters within
+-- 14 yards of each other are linked: pulling one brings them all) and one
+-- elite boss. The clan: a tank (red), a healer (green), a mage (blue), a
+-- rogue (yellow, instant attacks only), and a hunter (purple) roaming on
+-- its own until it sees its clanmates fighting.
+local FIELD_OUTLINE = { { 5, 5 }, { 255, 5 }, { 255, 185 }, { 5, 185 } }
+local FIELD = { outline = FIELD_OUTLINE, walls = { { 160, 110, 6 }, { 60, 60, 5 } } }
+local LINK, AGGRO, REACH = 16, 10, 4            -- yards: linked monsters, a monster noticing, melee reach
+                                                -- (4, wider than the game's, so monsters stay visible round the tank)
+-- The blender (the owner, 2026-09-27: "gather nearby enemies, using their
+-- ranged taunt abilities to pull them closer so they can be AoE'd down.
+-- Think like a blender reaching out and pulling foes into it's maw"):
+-- bringing a pack back or holding it, the tank taunts any idle monster
+-- within BLENDER_REACH (a ranged taunt's range) into the fight, with its
+-- pack, while the fight stays within what it can hold.
+local BLENDER_REACH, BLENDER_MAX, BLENDER_EVERY = 30, 6, 60   -- yards; monsters held at most; ticks between taunts
+local BLENDER_HEALTH = 50                                        -- the tank's health (of 100) needed to take on more
+
+local function cluster_sim()
+    local st = { t = 0, flashes = {} }
+    local function unit(role, x, y, color, hp, speed)
+        return { role = role, x = x, y = y, color = color, hp = hp, max = hp, speed = speed, cast = 0, hop = 0 }
+    end
+    st.tank   = unit("tank",   40, 160,  6, 100, 1.4)
+    st.healer = unit("healer", 28, 170, 12, 80, 1.3)
+    st.mage   = unit("mage",   52, 172,  9, 70, 1.3)
+    st.rogue  = unit("rogue",  46, 164,  7, 80, 1.5)
+    st.hunter = unit("hunter", 210, 150, 10, 80, 1.5)
+    st.buddies = { st.tank, st.healer, st.mage, st.rogue, st.hunter }
+    st.hunter.lap = 0
+    -- monsters are faster than every buddy (the owner, 2026-09-27: "in the
+    -- simulations, the enemies should move faster than the player, so they
+    -- can always hit"): 1.6 against the buddies' 1.3 to 1.5 (1.15 before)
+    local function mob(x, y, hp, elite) return { x = x, y = y, hp = hp, max = hp, speed = 1.6, elite = elite, state = "idle" } end
+    st.mobs = {
+        mob(112, 64, 100), mob(126, 60, 100), mob(120, 76, 100), mob(133, 72, 100),   -- cluster 1
+        mob(204, 50, 100), mob(217, 54, 100), mob(210, 66, 100),                      -- cluster 2
+        mob(92, 118, 420, true),                                                      -- the boss
+    }
+    st.plan = { { 1, 2, 3, 4 }, { 5, 6, 7 }, { 8 } }   -- what the tank pulls, in order (each group found by the link rule)
+    st.step = 1
+    return st
+end
+
+local function dist(a, b) return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2) end
+local function walk(u, x, y, speed)
+    local d = math.sqrt((x - u.x) ^ 2 + (y - u.y) ^ 2)
+    if d <= speed then u.x, u.y = x, y return true end
+    u.x, u.y = u.x + (x - u.x) / d * speed, u.y + (y - u.y) / d * speed
+    return false
+end
+local function flash(st, kind, a, b, ticks, extra) st.flashes[#st.flashes + 1] = { kind = kind, a = a, b = b, until_t = st.t + ticks, extra = extra } end
+local function engaged(st)
+    local list = {}
+    for _, m in ipairs(st.mobs) do if m.hp > 0 and m.state ~= "idle" then list[#list + 1] = m end end
+    return list
+end
+
+-- the linked group of a monster: every idle monster within LINK yards of
+-- one already in it (the "leash"/link reach of a pack)
+local function linked(st, first)
+    local group, seen = { first }, { [first] = true }
+    local k = 1
+    while group[k] do
+        for _, m in ipairs(st.mobs) do
+            if not seen[m] and m.hp > 0 and m.state == "idle" and dist(m, group[k]) <= LINK then seen[m] = true; group[#group + 1] = m end
+        end
+        k = k + 1
+    end
+    return group
+end
+
+local function cluster_tick(st, rand)
+    st.t = st.t + 1
+    local T, Hh, M, R, P = st.tank, st.healer, st.mage, st.rogue, st.hunter
+    local fight = engaged(st)
+    -- the tank: go to the next pack, notice it, bring it back to the
+    -- gathering spot, hold it there
+    local target_ids = st.plan[st.step]
+    if target_ids then
+        local alive = {}
+        for _, id in ipairs(target_ids) do if st.mobs[id].hp > 0 then alive[#alive + 1] = st.mobs[id] end end
+        if #alive == 0 then st.step, st.gather, T.phase = st.step + 1, nil, nil
+        else
+            if not st.gather then
+                -- the gathering spot: 35 yards back from the pack, toward the clan
+                local cx, cy = 0, 0
+                for _, m in ipairs(alive) do cx, cy = cx + m.x, cy + m.y end
+                cx, cy = cx / #alive, cy / #alive
+                local vx, vy = T.x - cx, T.y - cy
+                local l = math.sqrt(vx * vx + vy * vy)
+                st.gather = { x = cx + vx / l * 35, y = cy + vy / l * 35 }
+                T.phase = "go"
+            end
+            if T.phase == "go" then
+                if walk(T, alive[1].x, alive[1].y, T.speed) or dist(T, alive[1]) <= AGGRO then
+                    for _, m in ipairs(linked(st, alive[1])) do m.state, m.target = "chase", T end
+                    T.phase = "back"
+                end
+            elseif T.phase == "back" then
+                if walk(T, st.gather.x, st.gather.y, T.speed) then T.phase = "hold" end
+            elseif T.phase == "hold" and #fight == 0 then
+                -- the pulled ones are down but some of this pack were
+                -- left behind (out of link reach): go again
+                st.gather, T.phase = nil, nil
+            end
+        end
+    end
+    -- the blender: reach out and taunt the nearest idle monster in range
+    -- (and its linked pack) while bringing a pack back or holding it
+    if (T.phase == "back" or T.phase == "hold") and (T.pull_ready or 0) <= st.t and T.hp > BLENDER_HEALTH then
+        local best, bd
+        for _, m in ipairs(st.mobs) do
+            if m.hp > 0 and m.state == "idle" then
+                local d = dist(T, m)
+                if d <= BLENDER_REACH and (not bd or d < bd) then best, bd = m, d end
+            end
+        end
+        if best then
+            local pack = linked(st, best)
+            if #engaged(st) + #pack <= BLENDER_MAX then
+                for _, m in ipairs(pack) do m.state, m.target = "chase", T end
+                flash(st, "pull", T, best, 14)
+                T.pull_ready = st.t + BLENDER_EVERY
+            end
+        end
+    end
+    -- monsters chase their target and hit it in reach (slowed by frost)
+    for _, m in ipairs(st.mobs) do
+        if m.hp > 0 and m.target then
+            local sp = m.speed * ((m.slow_until or 0) > st.t and 0.4 or 1)
+            if dist(m, m.target) > REACH then walk(m, m.target.x, m.target.y, sp)
+            else m.state = "fight"; m.target.hp = math.max(1, m.target.hp - (m.elite and 0.3 or 0.12)) end
+        end
+    end
+    -- the group comes to the gathering spot when the tank holds
+    local g = st.gather or { x = T.x, y = T.y }
+    if T.phase == "hold" or #fight > 0 then
+        if (M.blink_until or 0) <= st.t and not M.peeled then walk(M, g.x - 14, g.y + 10, M.speed) end
+        walk(Hh, g.x - 20, g.y + 16, Hh.speed)
+    end
+    local fighting_near = #fight > 0 and (T.phase == "hold" or T.phase == "back")
+    -- the healer: heal the tank when it is hurt (a 25-tick cast)
+    if Hh.cast > 0 then Hh.cast = Hh.cast - 1; if Hh.cast == 0 then T.hp = math.min(T.max, T.hp + 30); flash(st, "heal", Hh, T, 8) end
+    elseif T.hp < 80 and dist(Hh, T) < 40 then Hh.cast = 25 end
+    -- the mage: area spells on a pack, single spells otherwise; on a boss,
+    -- both about equally; a monster that turns on it gets a frostbolt
+    -- (slowed), then it blinks away and the tank takes it back
+    local peeler
+    for _, m in ipairs(fight) do if m.target == M then peeler = m end end
+    if peeler and not M.peeled then
+        M.peeled = true; M.cast = 0
+        flash(st, "frost", M, peeler, 10); peeler.slow_until = st.t + 90; peeler.hp = peeler.hp - 22
+        M.blink_at = st.t + 10
+    end
+    if M.blink_at and st.t >= M.blink_at then
+        local from = { x = M.x, y = M.y }
+        local ax, ay = M.x - (M.peel_x or M.x), M.y - (M.peel_y or M.y)
+        local l = math.sqrt(ax * ax + ay * ay); if l < 0.1 then ax, ay, l = -1, 0.3, 1.04 end
+        M.x, M.y = M.x + ax / l * 18, M.y + ay / l * 18
+        flash(st, "blink", from, { x = M.x, y = M.y }, 12)
+        M.blink_at, M.blink_until = nil, st.t + 30
+        for _, m in ipairs(fight) do if m.target == M then m.target = T; flash(st, "taunt", T, m, 8) end end
+        M.peeled = false
+    end
+    if not fighting_near and M.cast > 0 then M.cast = 0 end   -- nothing left to cast at: the cast stops
+    if fighting_near and not M.blink_at and (M.blink_until or 0) <= st.t then
+        if M.cast > 0 then
+            M.cast = M.cast - 1
+            if M.spell == "aoe" then
+                for _, m in ipairs(st.mobs) do
+                    if m.hp > 0 and (m.x - M.aoe.x) ^ 2 + (m.y - M.aoe.y) ^ 2 <= 64 then
+                        m.hp = m.hp - 1.1
+                        -- the pack's last monster notices the mage once, the first time the storm lands
+                        if not st.peeled_once and m == st.mobs[4] and M.cast < 40 then m.target, st.peeled_once = M, true; M.peel_x, M.peel_y = m.x, m.y end
+                    end
+                end
+            elseif M.cast == 0 then
+                local tgt = T.target_mob
+                if tgt and tgt.hp > 0 then tgt.hp = tgt.hp - 24; flash(st, "frost", M, tgt, 6) end
+            end
+        else
+            local cx, cy, n = 0, 0, 0
+            for _, m in ipairs(fight) do cx, cy, n = cx + m.x, cy + m.y, n + 1 end
+            cx, cy = cx / math.max(n, 1), cy / math.max(n, 1)
+            local packed = 0
+            for _, m in ipairs(fight) do if (m.x - cx) ^ 2 + (m.y - cy) ^ 2 <= 64 then packed = packed + 1 end end
+            local boss = false
+            for _, m in ipairs(fight) do if m.elite then boss = true end end
+            local aoe = packed >= 2 or (boss and rand() < 0.5)
+            -- in range first (30 yards): out of it, walk in
+            if (M.x - cx) ^ 2 + (M.y - cy) ^ 2 > 900 then walk(M, cx, cy, M.speed)
+            elseif aoe then M.spell, M.cast, M.aoe = "aoe", 50, { x = cx, y = cy } else M.spell, M.cast = "bolt", 20 end
+        end
+    end
+    -- the tank's current target: the monster hitting it with the least health
+    T.target_mob = nil
+    for _, m in ipairs(fight) do if m.target == T and (not T.target_mob or m.hp < T.target_mob.hp) then T.target_mob = m end end
+    -- the rogue: instant attacks only, so it keeps moving: at its target's
+    -- side, hopping to a new spot now and then; fan of knives on a pack
+    if fighting_near and T.target_mob then
+        local tg = T.target_mob
+        if (R.next_hop or 0) <= st.t then
+            local a = rand() * 2 * math.pi
+            R.spot = { x = tg.x + math.cos(a) * 2, y = tg.y + math.sin(a) * 2 }
+            R.next_hop, R.hop = st.t + 22 + math.floor(rand() * 10), 5
+        end
+        walk(R, R.spot.x, R.spot.y, R.speed)
+        if dist(R, tg) <= REACH + 1 then tg.hp = tg.hp - 0.7 end
+        if st.t % 30 == 0 then
+            local near = 0
+            for _, m in ipairs(fight) do if dist(m, R) <= 8 then near = near + 1 end end
+            if near >= 3 then for _, m in ipairs(fight) do if dist(m, R) <= 8 then m.hp = m.hp - 6 end end; flash(st, "fan", R, R, 6) end
+        end
+    elseif T.phase ~= "hold" then walk(R, T.x - 6, T.y + 4, R.speed) end
+    if R.hop > 0 then R.hop = R.hop - 1 end
+    -- the hunter: its own lap until a clanmate within 90 yards is
+    -- fighting; then it comes to help and shoots the tank's target
+    local helping = false
+    for _, b in ipairs({ T, M, R, Hh }) do
+        for _, m in ipairs(fight) do if m.target == b and dist(P, b) <= 90 then helping = true end end
+    end
+    if helping and T.target_mob then
+        P.helping = true
+        if dist(P, T.target_mob) > 25 then walk(P, T.target_mob.x, T.target_mob.y, P.speed)
+        else T.target_mob.hp = T.target_mob.hp - 0.5; if st.t % 12 == 0 then flash(st, "shot", P, T.target_mob, 4) end end
+    elseif not P.helping then
+        P.lap = P.lap + 0.012
+        walk(P, 200 + math.cos(P.lap) * 22, 150 + math.sin(P.lap) * 14, P.speed * 0.6)
+    elseif #fight == 0 then walk(P, T.x + 10, T.y + 8, P.speed) end
+    -- the dead
+    for _, m in ipairs(st.mobs) do if m.hp <= 0 and m.state ~= "dead" then m.state, m.target = "dead", nil end end
+end
+
+local function render_cluster(scene)
+    local saveW, saveH, saveS, saveX, saveY = W, H, SCALE, OX, OY
+    W, H, SCALE, OX, OY = 540, 400, 2.0, 10, 15
+    local rand = lcg(scene.seed or 3)
+    local st = cluster_sim()
+    local base = base_map(FIELD)
+    local frames = {}
+    for t = 1, scene.frames do
+        cluster_tick(st, rand)
+        local f = new_frame()
+        copy(f, base)
+        -- links between monsters of a pack not yet pulled
+        for i, a in ipairs(st.mobs) do
+            if a.hp > 0 and a.state == "idle" then
+                ring(f, px(a.x), py(a.y), AGGRO * SCALE, 17, true)
+                for j = i + 1, #st.mobs do
+                    local b = st.mobs[j]
+                    if b.hp > 0 and b.state == "idle" and dist(a, b) <= LINK then line(f, px(a.x), py(a.y), px(b.x), py(b.y), 21, true) end
+                end
+            end
+        end
+        if st.gather then
+            local gx, gy = px(st.gather.x), py(st.gather.y)
+            ring(f, gx, gy, 6, 20, true)
+        end
+        -- the mage's area spell
+        if st.mage.cast > 0 and st.mage.spell == "aoe" then
+            local ax, ay = px(st.mage.aoe.x), py(st.mage.aoe.y)
+            for yy = -16, 16, 3 do for xx = -16, 16, 3 do if xx * xx + yy * yy <= 256 then plot(f, ax + xx + (t % 3), ay + yy, 40) end end end
+            ring(f, ax, ay, 16, 40)
+        end
+        for _, fl in ipairs(st.flashes) do
+            if fl.until_t >= st.t then
+                local colour = ({ heal = 12, frost = 41, blink = 5, taunt = 6, shot = 10, fan = 7, pull = 15 })[fl.kind]
+                if fl.kind == "fan" then ring(f, px(fl.a.x), py(fl.a.y), 8 * SCALE, 7)
+                else line(f, px(fl.a.x), py(fl.a.y), px(fl.b.x), py(fl.b.y), colour, fl.kind == "blink") end
+            end
+        end
+        for _, m in ipairs(st.mobs) do
+            local x, y = px(m.x), py(m.y)
+            if m.hp > 0 then
+                disc(f, x, y, m.elite and 5 or 3, 13)
+                if (m.slow_until or 0) > st.t then ring(f, x, y, (m.elite and 5 or 3) + 2, 41) end
+                if m.state ~= "idle" then
+                    local w = m.elite and 14 or 8
+                    for xx = 0, w - 1 do plot(f, x - w / 2 + xx, y - 7, xx < w * m.hp / m.max and 12 or 19) end
+                end
+            else
+                line(f, x - 2, y - 2, x + 2, y + 2, 19); line(f, x - 2, y + 2, x + 2, y - 2, 19)
+            end
+        end
+        for _, b in ipairs(st.buddies) do
+            local x, y = px(b.x), py(b.y)
+            disc(f, x, y, 4, b.color)
+            if b.hop and b.hop > 0 then ring(f, x, y - 3, 6, b.color) end
+            if b.cast > 0 then ring(f, x, y, 7, 20, true) end
+            if b == st.tank then for xx = 0, 9 do plot(f, x - 5 + xx, y - 8, xx < 10 * b.hp / b.max and 12 or 19) end end
+            if b == st.hunter and b.helping and #engaged(st) > 0 and dist(b, st.tank) > 30 then line(f, x, y, px(st.tank.x), py(st.tank.y), 10, true) end
+        end
+        frames[t] = f
+    end
+    local path = OUT_DIR .. "/" .. scene.name .. ".gif"
+    local bytes = gif.write(path, { width = W, height = H, palette_bytes = palette, frames = frames, delay_cs = DELAY_CS })
+    print(string.format("  %-26s %4d frames, %7d bytes (%dx%d)", scene.name .. ".gif", scene.frames, bytes, W, H))
+    -- what happened, so the caption can be checked against it
+    local kinds = {}
+    for _, fl in ipairs(st.flashes) do kinds[fl.kind] = (kinds[fl.kind] or 0) + 1 end
+    local dead = 0
+    for _, m in ipairs(st.mobs) do if m.hp <= 0 then dead = dead + 1 end end
+    print(string.format("    events: heal %d, frost %d, blink %d, taunt %d, pull %d, shot %d, fan %d; monsters down %d of %d",
+        kinds.heal or 0, kinds.frost or 0, kinds.blink or 0, kinds.taunt or 0, kinds.pull or 0, kinds.shot or 0, kinds.fan or 0, dead, #st.mobs))
+    scene.W, scene.H = W, H
+    W, H, SCALE, OX, OY = saveW, saveH, saveS, saveX, saveY
+end
+
+SCENES[#SCENES + 1] = {
+    name = "20-cluster-pull",
+    title = "Fighting together: pulling a pack",
+    before = "Monsters move **faster** than every buddy (the owner: \"the enemies should move faster than the player, so they can always hit\"). The owner's fighting design (617e5), drawn as a **simple** simulation, not the game's combat: health, damage and casting times are round numbers picked so the whole sequence fits. Monsters (red) within 16 yards of each other are one pack (faint lines join them; dashed circles are how near a buddy must come to be noticed): pulling one brings them **all**. The tank (red) walks up to a pack, is noticed, and brings the **whole** pack back to a gathering spot (dashed white circle) 35 yards toward its clan; while bringing it back and holding it there, it reaches out and taunts any other monster within 30 yards into the fight (a gold line), the owner's \"blender reaching out and pulling foes into it's maw\", as long as the fight stays within what it can hold (six monsters, its health above half). The mage (blue) casts an **area** spell (blue storm) when two or more monsters stand together, single frostbolts otherwise; the rogue (yellow, instant attacks only) keeps moving at its target's side, hopping (a ring over it) now and then, and fans its knives (a yellow ring) when three are round it; the healer (green) heals the tank (green line). The hunter (purple) roams on its **own** until it sees its clanmates fighting within 90 yards, then comes to help (dashed line) and shoots the tank's target.",
+    after = "The elite boss stands about 25 yards from the first pack's gathering spot, so the tank taunts it **in** while bringing the first pack back, and the first fight takes the pack and the boss together, down in the same area spells (in the first version the tank left the boss for a third fight of its own). Then the **second** pack. With the first pack, the storm draws one monster onto the mage: it frostbolts it (a blue ring: slowed), **blinks** away (dashed white line), and the tank takes it back (red line), the owner's \"blink to try and get distance, ideally after doing a frostbolt to slow them down\". While the boss is in the fight the mage weighs area and single spells about **equally**, as the owner put it (\"unless there's a boss or something, in which case they'll prefer AoE and single-target spells roughly equally\"). What this **needs** from the game, for 617e5: finding packs by the server's own link and assist ranges, a gathering spot clear of other packs, and the damage dealers' area-spell thresholds lowered for buddies; playerbots already has area and single-target strategies to weigh.",
+    render = render_cluster,
+    frames = 760,
+}
+-- }}}
+
+SCENES[#SCENES + 1] = ROOMS_SCENE
+
+-- {{{ the kraken: a battle pattern (22, 23)
+-- The owner, 2026-09-27 (617e5): "picture a kraken sitting at the base of a
+-- massive whirlpool. It has tentacles that reach out and grab nearby ships
+-- and pulls them into it's insatiable maw." A drawn simulation of that
+-- pattern, not the game's combat: health, damage, speeds and cast times are
+-- round numbers picked so a whole run fits in the animation.
+--   the maw       - the spot where the pack is held and the area spells land
+--                   (a blue ring, AOE yards across its middle)
+--   the tank      - stays within TANK_ROOM of the maw, leaning toward the
+--                   nearest outside monster; reaches it with its taunt
+--                   (TAUNT yards: a gold tentacle line), and steps to the
+--                   maw's far side from a newly taken monster until that one
+--                   is inside the maw
+--   the tentacles - the tank's taunts, and the ranged damage dealers' pulls:
+--                   a mage or hunter orbits the maw (instants on the move),
+--                   goes out to a monster the tank can't reach, hits it once
+--                   and slows it (a pale blue ring), then leads it to the far
+--                   side of a NEIGHBOURING quadrant of the maw (never the
+--                   opposite one), blinking or disengaging when it comes too
+--                   close, and keeps kiting round the maw until the tank
+--                   takes it (the owner: "until the tank picks them up")
+--   moving on     - when every monster held is dead and the maw is empty, the
+--                   whole formation goes to the next pack
+-- The quadrants are drawn faintly round the maw. Counts of what happened are
+-- kept, and the caption reads them (they are not typed in).
+local KF = { outline = { { 5, 5 }, { 300, 5 }, { 300, 222 }, { 5, 222 } }, walls = { { 128, 190, 6 }, { 214, 132, 5 } } }
+-- the patrols of 22: L-shaped routes, each three points, walked back and
+-- forth; chosen to cross the ground where the stops' fights happen, so the
+-- patrols blunder in
+local PATROLS_22 = {
+    { { 30, 60 }, { 120, 60 }, { 120, 110 } },
+    { { 212, 136 }, { 212, 60 }, { 272, 60 } },
+    { { 140, 196 }, { 206, 196 }, { 206, 140 } },
+    { { 286, 96 }, { 286, 196 }, { 232, 196 } },
+    { { 40, 176 }, { 146, 176 }, { 146, 116 } },
+    { { 236, 18 }, { 292, 18 }, { 292, 80 } },
+    { { 18, 118 }, { 18, 40 }, { 90, 40 } },
+}
+local K = {
+    AOE = 10, TANK_ROOM = 6, TAUNT = 30, ORBIT = 24, PULL_SCAN = 70, HOLD_MAX = 8,
+    PATROL = 0.5,   -- a patrol's walking pace (the fights' pace is 1.3 to 1.45)
+    TAUNT_EVERY = 40, LINK = 12, AGGRO = 7, REACH = 3.5, MAW_BACK = 20,
+    SLOW = 0.6, SLOW_TICKS = 140, ESCAPE = 8, JUMP = 14, JUMP_EVERY = 90,
+    TRAVEL = 1.8,   -- between stops the formation runs (a faster pace, so the drawing spends its time on the fights)
+}
+local function kd(a, b) return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2) end
+local function kwalk(u, x, y, speed)
+    local d = math.sqrt((x - u.x) ^ 2 + (y - u.y) ^ 2)
+    if d <= speed then u.x, u.y = x, y return true end
+    u.x, u.y = u.x + (x - u.x) / d * speed, u.y + (y - u.y) / d * speed
+    return false
+end
+-- In the dungeon (26) the ground has walls: KGRID is its paint grid, and
+-- every move goes through kmove, which walks straight where the line is
+-- clear and otherwise along a grid path (Roam.paint_path, kept for a while
+-- and remade when the target has moved). KGRID is nil for the open fields of
+-- 22 and 23, where kmove is kwalk exactly, so those runs are unchanged.
+local KGRID, KNOW = nil, 0
+local function kmove(u, x, y, speed)
+    if not KGRID then return kwalk(u, x, y, speed) end
+    if Roam.paint_line_clear(KGRID, u.x, u.y, x, y) then u.gp = nil return kwalk(u, x, y, speed) end
+    if not u.gp or KNOW - u.gp_t > 25 or (u.gp_goal.x - x) ^ 2 + (u.gp_goal.y - y) ^ 2 > 36 then
+        u.gp, u.gp_i, u.gp_t, u.gp_goal = Roam.paint_path(KGRID, u.x, u.y, x, y, 0), 1, KNOW, { x = x, y = y }
+    end
+    if not u.gp then return false end
+    local p = u.gp[u.gp_i]
+    if kwalk(u, p.x, p.y, speed) then
+        u.gp_i = u.gp_i + 1
+        if u.gp_i > #u.gp then u.gp = nil return true end
+    end
+    return false
+end
+local function kflash(st, kind, a, b, ticks) st.flashes[#st.flashes + 1] = { kind = kind, a = { x = a.x, y = a.y }, b = b, until_t = st.t + ticks } end
+local function kcount(st, what) st.counts[what] = (st.counts[what] or 0) + 1 end
+
+-- {{{ local function kraken_sim
+-- `owner_tanks`: the owner (white) is the tank; the buddies run the pattern
+-- round it only at a pack of 3 or more standing within area-spell reach of
+-- each other (the owner: "only if 3 or more monsters are near each other and
+-- AoE-able"); at anything smaller they just fight beside it.
+local function kraken_sim(owner_tanks)
+    local st = { t = 0, flashes = {}, counts = {}, owner_tanks = owner_tanks }
+    local function unit(role, x, y, color, hp, speed) return { role = role, x = x, y = y, color = color, hp = hp, max = hp, speed = speed, cast = 0, hop = 0, jump_ready = 0 } end
+    st.tank   = unit("tank",   36, 196, owner_tanks and 5 or 6, 100, 1.4)
+    st.healer = unit("healer", 24, 206, 12, 80, 1.3)
+    st.mage   = unit("mage",   48, 208, 9, 70, 1.35)
+    st.hunter = unit("hunter", 30, 186, 10, 80, 1.35)
+    st.rogue  = unit("rogue",  44, 190, 7, 80, 1.45)
+    st.buddies = { st.tank, st.healer, st.mage, st.hunter, st.rogue }
+    st.mage.dir, st.hunter.dir = 1, -1
+    -- monsters are faster than every buddy (the owner, 2026-09-27: "in the
+    -- simulations, the enemies should move faster than the player, so they
+    -- can always hit"): 1.6 against the buddies' 1.3 to 1.45 (1.35 before,
+    -- as fast as the ranged buddies). No puller out-walks a monster: a slow
+    -- (x0.6: 0.96), a blink, a disengage or the tank's taunt is what saves it
+    local function mob(x, y, hp) return { x = x, y = y, hp = hp or 100, max = hp or 100, speed = 1.6, state = "idle" } end
+    -- a patrol: starts at its route's first point and walks it (an L: three
+    -- points) to the end and back, at K.PATROL
+    local function patrol(route) local m = mob(route[1][1], route[1][2]); m.route, m.route_i, m.route_dir = route, 2, 1; return m end
+    st.patrol = patrol
+    if owner_tanks then
+        st.mobs = {
+            mob(96, 150),                                                 -- a lone one: an ordinary fight
+            mob(176, 96), mob(186, 90), mob(182, 104), mob(192, 100),     -- a pack of four: the kraken
+            mob(152, 70), mob(214, 122),                                  -- outliers, for the tentacles
+        }
+    else
+        -- a third are patrols (the owner, 2026-09-27: "can we make 1/3rd of
+        -- the monsters be patrols that wander? Just on a set path, an L shape
+        -- is enough for this size map."): 14 standing, 7 walking L-shaped
+        -- routes back and forth. Six outliers of the first version made way
+        -- for them.
+        st.mobs = {
+            mob(76, 128), mob(86, 122), mob(82, 136),                     -- stop 1: a pack of three
+            mob(110, 156),                                                --   one within the taunt
+            mob(170, 74), mob(181, 68), mob(177, 84), mob(188, 79),       -- stop 2: a pack of four
+            mob(146, 44), mob(152, 36),                                   --   a pair beyond the taunt
+            mob(252, 166), mob(264, 160), mob(258, 176, 260),             -- stop 3: two and a tougher one
+            mob(226, 200),                                                --   an outlier
+        }
+        for _, r in ipairs(PATROLS_22) do st.mobs[#st.mobs + 1] = patrol(r) end
+    end
+    st.phase = "travel"
+    return st
+end
+-- }}}
+
+-- {{{ kraken helpers
+-- the linked pack of an idle monster (idle monsters within LINK yards of
+-- one already in it)
+local function kpack(st, first)
+    local group, seen, k = { first }, { [first] = true }, 1
+    while group[k] do
+        for _, m in ipairs(st.mobs) do
+            if not seen[m] and m.hp > 0 and m.state == "idle" and kd(m, group[k]) <= K.LINK then seen[m] = true; group[#group + 1] = m end
+        end
+        k = k + 1
+    end
+    return group
+end
+local function kheld(st)
+    local list = {}
+    for _, m in ipairs(st.mobs) do if m.hp > 0 and m.state ~= "idle" then list[#list + 1] = m end end
+    return list
+end
+local function kwake(st, m, who)
+    for _, p in ipairs(kpack(st, m)) do p.state, p.target = "chase", who end
+end
+-- the next stop: the nearest idle monster's pack; the maw MAW_BACK yards
+-- short of the pack's middle, toward the formation. Returns the pack too.
+local function knext_stop(st)
+    local T, best, bd = st.tank, nil, nil
+    -- standing monsters first: a patrol walks away from a stop chosen on it;
+    -- once only patrols are left, the nearest of them
+    for pass = 1, 2 do
+        for _, m in ipairs(st.mobs) do
+            if m.hp > 0 and m.state == "idle" and (pass == 2 or not m.route) then
+                local d = kd(T, m)
+                if not bd or d < bd then best, bd = m, d end
+            end
+        end
+        if best then break end
+    end
+    if not best then return nil end
+    local pack = kpack(st, best)
+    local cx, cy = 0, 0
+    for _, m in ipairs(pack) do cx, cy = cx + m.x, cy + m.y end
+    cx, cy = cx / #pack, cy / #pack
+    local vx, vy = T.x - cx, T.y - cy
+    local l = math.max(0.01, math.sqrt(vx * vx + vy * vy))
+    return { x = cx + vx / l * K.MAW_BACK, y = cy + vy / l * K.MAW_BACK }, pack
+end
+-- a pack "AoE-able": 3 or more of it within the maw's reach of its middle
+local function kaoeable(pack)
+    local cx, cy = 0, 0
+    for _, m in ipairs(pack) do cx, cy = cx + m.x, cy + m.y end
+    cx, cy = cx / #pack, cy / #pack
+    local n = 0
+    for _, m in ipairs(pack) do if (m.x - cx) ^ 2 + (m.y - cy) ^ 2 <= (2 * K.AOE) ^ 2 then n = n + 1 end end
+    return n >= 3
+end
+-- }}}
+
+-- {{{ local function kraken_tick
+local function kraken_tick(st, rand)
+    st.t = st.t + 1
+    local T, Hh, M, P, R = st.tank, st.healer, st.mage, st.hunter, st.rogue
+    local held = kheld(st)
+    -- moving on: nothing held and nothing in the maw: the next stop
+    if st.phase == "fight" and #held == 0 then
+        -- in the dungeon (26) the formation goes back to exploring; on the
+        -- open fields, to the next stop
+        st.phase = st.dungeon and "explore" or "travel"
+        kcount(st, "moved_on")
+    end
+    if st.phase == "travel" and not st.maw_next then
+        st.maw_next, st.stop_pack = knext_stop(st)
+        if not st.maw_next then st.phase = "done" end
+    end
+    if st.phase == "travel" then
+        local g = st.maw_next
+        -- the tank leads; the others fall in behind
+        if kmove(T, g.x, g.y, T.speed * K.TRAVEL) then
+            st.maw, st.maw_next, st.phase = g, nil, "fight"
+            -- the owner's rule: the pattern only at a pack of 3+ in reach
+            st.kraken = (not st.owner_tanks) or kaoeable(st.stop_pack)
+            if st.kraken then kcount(st, "kraken_stops") else kcount(st, "plain_stops") end
+            -- the opening: the tank takes the pack's nearest
+            local first, fd
+            for _, m in ipairs(st.stop_pack) do if m.hp > 0 and m.state == "idle" and (not fd or kd(T, m) < fd) then first, fd = m, kd(T, m) end end
+            if first then
+                kwake(st, first, T)
+                kflash(st, "tentacle", T, first, 14); kcount(st, "taunts")
+            end
+        end
+        for i, b in ipairs({ Hh, M, P, R }) do kmove(b, T.x - 10 + i * 4, T.y + 8 + (i % 2) * 4, b.speed * K.TRAVEL) end
+    end
+    local maw = st.maw or { x = T.x, y = T.y }
+    held = kheld(st)
+    -- idle monsters notice a buddy that comes within AGGRO yards
+    for _, m in ipairs(st.mobs) do
+        if m.hp > 0 and m.state == "idle" then
+            for _, b in ipairs(st.buddies) do if kd(m, b) <= K.AGGRO then kwake(st, m, b); kcount(st, "noticed") break end end
+        end
+    end
+    if st.phase == "fight" then
+        -- {{{ the tank
+        -- pick-up: an engaged monster on someone else, within the taunt:
+        -- taunt it, and step to the maw's far side from it until it's in
+        if T.taunt_ready == nil or T.taunt_ready <= st.t then
+            for _, m in ipairs(held) do
+                if m.target ~= T and kd(T, m) <= K.TAUNT then
+                    m.target = T
+                    kflash(st, "tentacle", T, m, 12); kcount(st, "taunts"); kcount(st, "pickups")
+                    T.taunt_ready, T.step_from = st.t + K.TAUNT_EVERY, m
+                    break
+                end
+            end
+        end
+        -- reach: while holding what it can, taunt the nearest idle monster
+        -- in reach (its pack comes too); lean toward it within the room
+        local lean
+        if st.kraken and #held < K.HOLD_MAX and T.hp > 50 then
+            local best, bd
+            for _, m in ipairs(st.mobs) do
+                if m.hp > 0 and m.state == "idle" and not m.claimed then
+                    local d = kd(maw, m)
+                    if d <= K.TAUNT + K.TANK_ROOM and (not bd or d < bd) then best, bd = m, d end
+                end
+            end
+            if best then
+                lean = best
+                if kd(T, best) <= K.TAUNT and (T.taunt_ready or 0) <= st.t then
+                    kwake(st, best, T)
+                    kflash(st, "tentacle", T, best, 14); kcount(st, "taunts"); kcount(st, "tank_pulls")
+                    T.taunt_ready, T.step_from = st.t + K.TAUNT_EVERY, best
+                end
+            end
+        end
+        local gx, gy = maw.x, maw.y
+        if T.step_from and T.step_from.hp > 0 and kd(T.step_from, maw) > K.AOE then
+            local vx, vy = T.step_from.x - maw.x, T.step_from.y - maw.y
+            local l = math.max(0.01, math.sqrt(vx * vx + vy * vy))
+            gx, gy = maw.x - vx / l * K.TANK_ROOM, maw.y - vy / l * K.TANK_ROOM
+        else
+            T.step_from = nil
+            if lean then
+                local vx, vy = lean.x - maw.x, lean.y - maw.y
+                local l = math.max(0.01, math.sqrt(vx * vx + vy * vy))
+                gx, gy = maw.x + vx / l * K.TANK_ROOM, maw.y + vy / l * K.TANK_ROOM
+            end
+        end
+        kmove(T, gx, gy, T.speed)
+        -- }}}
+    end
+    held = kheld(st)
+    -- the tank's target: the monster on it with the least health
+    T.target_mob = nil
+    for _, m in ipairs(held) do if m.target == T and (not T.target_mob or m.hp < T.target_mob.hp) then T.target_mob = m end end
+    local in_maw = 0
+    for _, m in ipairs(held) do if kd(m, maw) <= K.AOE then in_maw = in_maw + 1 end end
+    -- {{{ the pullers: mage and hunter
+    for _, B in ipairs({ M, P }) do
+        if st.phase == "fight" then
+            -- their monster: one that is on them
+            local chaser
+            for _, m in ipairs(held) do if m.target == B and (not chaser or kd(m, B) < kd(chaser, B)) then chaser = m end end
+            if B.state == "approach" and B.claim and (B.claim.hp <= 0 or B.claim.state ~= "idle") then B.state, B.claim = nil, nil end
+            if chaser and B.state ~= "draw" then B.state = "kite" end
+            if not chaser and (B.state == "kite" or B.state == "draw") then B.state = nil end
+            -- choose a pull: an idle monster the tank can't reach, within
+            -- PULL_SCAN of the maw, nobody's claim, nearest to this puller
+            if st.kraken and not B.state and #held < K.HOLD_MAX and (B.pull_ready or 0) <= st.t then
+                local best, bd
+                for _, m in ipairs(st.mobs) do
+                    if m.hp > 0 and m.state == "idle" and not m.claimed and kd(T, m) > K.TAUNT and kd(maw, m) <= K.PULL_SCAN then
+                        local d = kd(B, m)
+                        if not bd or d < bd then best, bd = m, d end
+                    end
+                end
+                if best then B.state, B.claim, best.claimed = "approach", best, true end
+            end
+            local ang = math.atan2(B.y - maw.y, B.x - maw.x)
+            if B.state == "approach" then
+                local m = B.claim
+                if kd(B, m) <= 26 then
+                    -- the tag: one hit, and a slow
+                    m.hp = m.hp - 5; m.slow_until = st.t + K.SLOW_TICKS; m.claimed = nil
+                    kwake(st, m, B)
+                    kflash(st, B == M and "frost" or "shot", B, m, 10); kcount(st, "ranged_pulls"); kcount(st, "slows")
+                    -- lead it to the far side of a NEIGHBOURING quadrant
+                    local q = math.floor(((math.atan2(m.y - maw.y, m.x - maw.x) % (2 * math.pi)) / (math.pi / 2)))
+                    local side = (((ang - math.atan2(m.y - maw.y, m.x - maw.x)) % (2 * math.pi)) < math.pi) and 1 or -1
+                    local nq = (q + side) % 4
+                    -- the far edge of that quadrant, away from the monster's
+                    local a = side > 0 and ((nq + 1) * math.pi / 2 - 0.25) or (nq * math.pi / 2 + 0.25)
+                    B.dest = { x = maw.x + math.cos(a) * K.ORBIT, y = maw.y + math.sin(a) * K.ORBIT }
+                    B.dir, B.state, B.claim = side, "draw", nil
+                    B.pull_ready = st.t + 60
+                else
+                    kmove(B, m.x, m.y, B.speed)
+                end
+            elseif B.state == "draw" or B.state == "kite" then
+                -- a cast-time spell on the monster leading it: the mage's
+                -- frostbolt, the hunter's aimed shot. The puller stands to
+                -- cast, so the monster closes in; that is what makes the
+                -- blink or disengage needed (walking away at the same speed,
+                -- nothing ever catches it)
+                if B.cast > 0 and chaser then
+                    B.cast = B.cast - 1
+                    if B.cast == 0 then
+                        chaser.hp = chaser.hp - 20
+                        if B == M then chaser.slow_until = st.t + K.SLOW_TICKS; kcount(st, "slows") end
+                        kflash(st, B == M and "frost" or "shot", B, chaser, 8)
+                    end
+                    if kd(chaser, B) <= K.ESCAPE then B.cast = 0 end       -- too close: the cast is dropped for the escape below
+                elseif chaser and kd(chaser, B) > 16 and (B.cast_ready or 0) <= st.t then
+                    B.cast, B.cast_ready = (B == M and 30 or 24), st.t + 70
+                end
+                -- too close: blink / disengage, onward round the circle
+                if B.cast > 0 then
+                    -- standing to cast
+                elseif chaser and kd(chaser, B) <= K.ESCAPE and B.jump_ready <= st.t then
+                    local from = { x = B.x, y = B.y }
+                    local na = ang + B.dir * K.JUMP / K.ORBIT
+                    B.x, B.y = maw.x + math.cos(na) * K.ORBIT, maw.y + math.sin(na) * K.ORBIT
+                    kflash(st, "jump", from, { x = B.x, y = B.y }, 12)
+                    kcount(st, B == M and "blinks" or "disengages")
+                    B.jump_ready = st.t + K.JUMP_EVERY
+                elseif B.state == "draw" then
+                    if kmove(B, B.dest.x, B.dest.y, B.speed) then B.state = "kite" end
+                else
+                    -- kiting round the maw until the tank takes it
+                    local na = ang + B.dir * B.speed / K.ORBIT
+                    kmove(B, maw.x + math.cos(na) * K.ORBIT, maw.y + math.sin(na) * K.ORBIT, B.speed)
+                    if chaser and (chaser.slow_until or 0) < st.t and (B.reslow_ready or 0) <= st.t then
+                        chaser.slow_until = st.t + K.SLOW_TICKS; B.reslow_ready = st.t + 80
+                        kflash(st, B == M and "frost" or "shot", B, chaser, 8); kcount(st, "slows")
+                    end
+                end
+            else
+                -- orbiting the maw: instants on the move; the mage stops to
+                -- cast its area spell when two or more are in the maw
+                if B == M and M.cast > 0 then
+                    M.cast = M.cast - 1
+                    if M.spell == "aoe" then
+                        for _, m in ipairs(held) do if kd(m, maw) <= K.AOE then m.hp = m.hp - 1.3 end end
+                    elseif M.cast == 0 and T.target_mob then T.target_mob.hp = T.target_mob.hp - 22; kflash(st, "frost", M, T.target_mob, 6) end
+                elseif B == M and #held > 0 and in_maw >= 2 and st.kraken then
+                    M.spell, M.cast = "aoe", 40; kcount(st, "area_spells")
+                elseif B == M and #held > 0 and T.target_mob and not st.kraken then
+                    M.spell, M.cast = "bolt", 18
+                else
+                    local na = ang + B.dir * B.speed / K.ORBIT
+                    kmove(B, maw.x + math.cos(na) * K.ORBIT, maw.y + math.sin(na) * K.ORBIT, B.speed)
+                    if T.target_mob and st.t % 12 == (B == M and 0 or 6) then
+                        T.target_mob.hp = T.target_mob.hp - 3
+                        kflash(st, B == M and "frost" or "shot", B, T.target_mob, 4)
+                    end
+                end
+            end
+        end
+    end
+    -- }}}
+    -- {{{ the rogue and the healer
+    if st.phase == "fight" and T.target_mob then
+        local tg = T.target_mob
+        if (R.next_hop or 0) <= st.t then
+            local a = rand() * 2 * math.pi
+            R.spot = { x = tg.x + math.cos(a) * 2, y = tg.y + math.sin(a) * 2 }
+            R.next_hop, R.hop = st.t + 22 + math.floor(rand() * 10), 5
+        end
+        kmove(R, R.spot.x, R.spot.y, R.speed)
+        if kd(R, tg) <= K.REACH + 1 then tg.hp = tg.hp - 0.6 end
+        if st.kraken and st.t % 30 == 0 then
+            local near = 0
+            for _, m in ipairs(held) do if kd(m, R) <= 8 then near = near + 1 end end
+            if near >= 3 then for _, m in ipairs(held) do if kd(m, R) <= 8 then m.hp = m.hp - 6 end end; kflash(st, "fan", R, R, 6); kcount(st, "area_spells") end
+        end
+    elseif st.phase == "fight" then kmove(R, maw.x - 4, maw.y + 4, R.speed) end
+    if R.hop > 0 then R.hop = R.hop - 1 end
+    if st.phase == "fight" then
+        -- the healer stands back from the maw, on the formation's side
+        kmove(Hh, maw.x - 14, maw.y + 12, Hh.speed)
+        if Hh.cast > 0 then Hh.cast = Hh.cast - 1; if Hh.cast == 0 then T.hp = math.min(T.max, T.hp + 30); kflash(st, "heal", Hh, T, 8); kcount(st, "heals") end
+        elseif T.hp < 75 then Hh.cast = 25 end
+    end
+    -- }}}
+    -- {{{ the monsters
+    -- patrols: an idle patrol walks its route; one that passes within
+    -- LINK yards of a monster already fighting joins that fight, on the
+    -- same target (it blunders in); within AGGRO of a buddy it notices it
+    -- like any monster (above)
+    for _, m in ipairs(st.mobs) do
+        if m.hp > 0 and m.state == "idle" and m.route then
+            local p = m.route[m.route_i]
+            if kmove(m, p[1], p[2], K.PATROL) then
+                if not m.route[m.route_i + m.route_dir] then m.route_dir = -m.route_dir end
+                m.route_i = m.route_i + m.route_dir
+            end
+            for _, o in ipairs(st.mobs) do
+                if o.hp > 0 and o.state ~= "idle" and o.target and kd(m, o) <= K.LINK then
+                    m.state, m.target = "chase", o.target
+                    kcount(st, "patrols_blundered")
+                    break
+                end
+            end
+        end
+    end
+    for _, m in ipairs(st.mobs) do
+        if m.hp > 0 and m.target then
+            local sp = m.speed * ((m.slow_until or 0) > st.t and K.SLOW or 1)
+            if kd(m, m.target) > K.REACH then kmove(m, m.target.x, m.target.y, sp)
+            else m.state = "fight"; m.target.hp = math.max(1, m.target.hp - 0.1) end
+        end
+    end
+    for _, m in ipairs(st.mobs) do
+        if m.hp <= 0 and m.state ~= "dead" then m.state, m.target, m.claimed = "dead", nil, nil; kcount(st, "killed") end
+    end
+    -- }}}
+end
+-- }}}
+
+local KRAKEN_FLASH = { heal = 12, frost = 41, jump = 5, tentacle = 15, shot = 10, fan = 7 }
+-- {{{ local function kdraw
+-- One frame of a kraken run: the patrols' routes, the idle monsters'
+-- notice rings and pack links, the maw and its quadrants, the pullers'
+-- claims, the flashes, the monsters and the buddies. Shared by the open
+-- field (22, 23) and the dungeon (26).
+local function kdraw(f, st, t)
+    -- a patrol's route (dashed) while it walks it, and a gold ring on it
+    for _, m in ipairs(st.mobs) do
+        if m.route and m.hp > 0 and m.state == "idle" then
+            for k = 1, #m.route - 1 do
+                line(f, px(m.route[k][1]), py(m.route[k][2]), px(m.route[k + 1][1]), py(m.route[k + 1][2]), 19, true)
+            end
+        end
+    end
+    -- links between the monsters of a pack not yet taken, and how near a
+    -- buddy must come to be noticed
+    for i, a in ipairs(st.mobs) do
+        if a.hp > 0 and a.state == "idle" then
+            ring(f, px(a.x), py(a.y), K.AGGRO * SCALE, 17, true)
+            for j = i + 1, #st.mobs do
+                local b = st.mobs[j]
+                if b.hp > 0 and b.state == "idle" and kd(a, b) <= K.LINK then line(f, px(a.x), py(a.y), px(b.x), py(b.y), 21, true) end
+            end
+        end
+    end
+    -- the maw and its quadrants (only while the pattern is on)
+    if st.maw and st.phase == "fight" and st.kraken then
+        local mx, my = px(st.maw.x), py(st.maw.y)
+        local reach = (K.ORBIT + 8) * SCALE
+        line(f, mx - reach, my, mx + reach, my, 21, true)
+        line(f, mx, my - reach, mx, my + reach, 21, true)
+        ring(f, mx, my, K.ORBIT * SCALE, 21, true)
+        ring(f, mx, my, K.AOE * SCALE, 40)
+        if st.mage.cast > 0 and st.mage.spell == "aoe" then
+            local r = K.AOE * SCALE
+            for yy = -r, r, 3 do for xx = -r, r, 3 do if xx * xx + yy * yy <= r * r then plot(f, mx + xx + (t % 3), my + yy, 40) end end end
+        end
+    elseif st.maw_next then
+        ring(f, px(st.maw_next.x), py(st.maw_next.y), 5, 20, true)
+    end
+    -- a puller's claim: a dashed line to the monster it is going for
+    for _, b in ipairs({ st.mage, st.hunter }) do
+        if b.state == "approach" and b.claim then line(f, px(b.x), py(b.y), px(b.claim.x), py(b.claim.y), b.color, true) end
+        if b.state == "draw" and b.dest then ring(f, px(b.dest.x), py(b.dest.y), 3, b.color) end
+    end
+    for _, fl in ipairs(st.flashes) do
+        if fl.until_t >= st.t then
+            if fl.kind == "fan" then ring(f, px(fl.a.x), py(fl.a.y), 8 * SCALE, 7)
+            else line(f, px(fl.a.x), py(fl.a.y), px(fl.b.x), py(fl.b.y), KRAKEN_FLASH[fl.kind], fl.kind == "jump") end
+        end
+    end
+    for _, m in ipairs(st.mobs) do
+        local x, y = px(m.x), py(m.y)
+        if m.hp > 0 then
+            disc(f, x, y, m.max > 150 and 5 or 3, 13)
+            if (m.slow_until or 0) > st.t then ring(f, x, y, (m.max > 150 and 5 or 3) + 2, 41) end
+            if m.state ~= "idle" then
+                local w = m.max > 150 and 14 or 8
+                for xx = 0, w - 1 do plot(f, x - w / 2 + xx, y - 7, xx < w * m.hp / m.max and 12 or 19) end
+            end
+        else
+            line(f, x - 2, y - 2, x + 2, y + 2, 19); line(f, x - 2, y + 2, x + 2, y - 2, 19)
+        end
+    end
+    for _, b in ipairs(st.buddies) do
+        local x, y = px(b.x), py(b.y)
+        disc(f, x, y, 4, b.color)
+        if b.hop and b.hop > 0 then ring(f, x, y - 3, 6, b.color) end
+        if b.cast > 0 then ring(f, x, y, 7, 20, true) end
+        if b == st.tank then for xx = 0, 9 do plot(f, x - 5 + xx, y - 8, xx < 10 * b.hp / b.max and 12 or 19) end end
+    end
+    for _, m in ipairs(st.mobs) do
+        if m.route and m.hp > 0 then ring(f, px(m.x), py(m.y), 5, 15) end
+    end
+end
+-- }}}
+
+-- {{{ local function render_kraken
+local function render_kraken(scene)
+    local saveW, saveH, saveS, saveX, saveY = W, H, SCALE, OX, OY
+    W, H, SCALE, OX, OY = 620, 460, 2.0, 8, 8
+    local rand = lcg(scene.seed or 5)
+    local st = kraken_sim(scene.owner_tanks)
+    local base = base_map(KF)
+    local frames = {}
+    for t = 1, scene.frames do
+        kraken_tick(st, rand)
+        local f = new_frame()
+        copy(f, base)
+        kdraw(f, st, t)
+        frames[t] = f
+    end
+    local path = OUT_DIR .. "/" .. scene.name .. ".gif"
+    local bytes = gif.write(path, { width = W, height = H, palette_bytes = palette, frames = frames, delay_cs = DELAY_CS })
+    print(string.format("  %-26s %4d frames, %7d bytes (%dx%d)", scene.name .. ".gif", scene.frames, bytes, W, H))
+    local c = st.counts
+    print(string.format("    counts: taunts %d (tank pulls %d, pick-ups %d), ranged pulls %d, slows %d, blinks %d, disengages %d, area spells %d, heals %d, noticed %d, killed %d of %d, moved on %d, kraken stops %d, plain stops %d",
+        c.taunts or 0, c.tank_pulls or 0, c.pickups or 0, c.ranged_pulls or 0, c.slows or 0, c.blinks or 0, c.disengages or 0, c.area_spells or 0, c.heals or 0, c.noticed or 0, c.killed or 0, #st.mobs, c.moved_on or 0, c.kraken_stops or 0, c.plain_stops or 0))
+    scene.counts = c
+    scene.mob_count = #st.mobs
+    if scene.fill then scene.after = scene.fill(scene) end
+    scene.W, scene.H = W, H
+    W, H, SCALE, OX, OY = saveW, saveH, saveS, saveX, saveY
+end
+-- }}}
+
+SCENES[#SCENES + 1] = {
+    name = "22-kraken",
+    title = "The kraken: a tank's maw and its tentacles",
+    before = "The owner's battle pattern (617e5), drawn as a **simple** simulation, not the game's combat: health, damage, speeds and cast times are round numbers picked so a whole run fits. The maw (the blue ring) is where the pack is **held** and the area spells land (the blue storm); faint lines divide the ground round it into quadrants, and the faint circle is the ranged damage dealers' orbit. The tank (red) stays **within** a few yards of the maw, leaning toward the nearest monster outside it and taking it with its 30-yard taunt (a gold tentacle line); when a monster is taken from one side, the tank steps to the maw's far side until that monster is inside. The mage (blue) and the hunter (purple) are the **other** tentacles: they orbit the maw casting instants on the move, go out to a monster the tank can't reach (a dashed line to it), hit it once and slow it (a pale blue ring), then lead it to the far side of a neighbouring quadrant (a small ring marks where), never the opposite one, blinking or disengaging (a dashed white line) when it gets too close, and kiting it round the maw until the tank takes it. The rogue (yellow) fights at the **tank's** target and fans its knives in the pack; the healer (green) heals the tank. When everything held is dead and the maw is empty, the whole formation **moves** on to the next pack. A third of the monsters are **patrols** (gold rings) walking L-shaped routes (dashed) back and forth; a patrol that passes near a fight blunders into it. Monsters move **faster** than every buddy (the owner: \"the enemies should move faster than the player, so they can always hit\"), so **nobody** escapes by walking: slows, blinks, disengages and the tank's taunt do it.",
+    after = "",
+    render = render_kraken,
+    frames = 1100,
+    fill = function(sc)
+        local c = sc.counts
+        return string.format("What happened in this run (counted as it was drawn): the tank's taunts %d (%d reaching out for a monster in range, %d taking back one that was on someone else); the mage's and the hunter's pulls %d, slows %d, blinks %d, disengages %d; area spells %d; heals %d; %d of %d monsters killed; the formation moved on %d times; patrols that blundered into a fight %d. What drawing it showed: most pulled monsters are **taken** by the tank's taunt before they ever reach the puller (the neighbouring quadrant keeps them within the taunt's 30 yards of the maw), so the tentacles work as the owner put it, the puller only has to bring a monster into reach. With monsters faster than the pullers, a pulled monster closes in **what**ever the puller does, so the kiting rhythm is slow, walk, and when it closes, blink or disengage; a first version with monsters as fast as the pullers only needed escapes when a puller stood to cast. A ranged pull brings the monster's **whole** linked pack, not just the one hit: a pulled pair keeps a puller kiting for a taunt's cooldown while the tank takes them one at a time.",
+            c.taunts or 0, c.tank_pulls or 0, c.pickups or 0, c.ranged_pulls or 0, c.slows or 0, c.blinks or 0, c.disengages or 0, c.area_spells or 0, c.heals or 0, c.killed or 0, sc.mob_count, c.moved_on or 0, c.patrols_blundered or 0)
+    end,
+}
+SCENES[#SCENES + 1] = {
+    name = "23-owner-tanks",
+    title = "The owner as the tank",
+    -- the page shows an interactive widget here instead of the GIF (the
+    -- owner, 2026-09-27: "instead of a gif, can we create an interactable
+    -- widget where the player dot follows the cursor?"); the GIF is still
+    -- drawn, so the files stay as they were
+    widget = [=[
+  <section class="card" id="owner-tank">
+    <h2>The owner as the tank</h2>
+    <p class="before">You are the **white** dot; it walks toward your cursor (or finger). **Four** buddies follow you: a mage, a hunter, a priest and a melee fighter. Walk **into** monsters to start a fight. A **lone** monster gets an ordinary fight. When three or more monsters stand where area spells reach them all, the buddies run the **kraken** round you: the damage dealers pick the maw (gold), and you drag monsters to it. You take a monster by coming within **8** yards of it; that stands for all of a tank's ways of taking one. The mage and the hunter pull **outliers** to you: one hit and a slow (blue), a lead into a neighbouring quadrant, a blink or disengage when it gets close, then kiting round the maw until you take it.</p>
+    <div class="ot-stage">
+      <canvas id="ot-canvas" aria-label="Arena: the owner, four buddies and the monsters"></canvas>
+    </div>
+    <p class="ot-key"><span style="--c:#ffffff">You</span><span style="--c:#7fa6e6">M mage</span><span style="--c:#9ccc65">H hunter</span><span style="--c:#f0e2a0">P priest</span><span style="--c:#e07a62">F melee fighter</span><span style="--c:#d0524f">monster (a big one is an elite)</span></p>
+    <div class="ot-panel">
+      <div class="ot-row">
+        <span class="ot-mode" id="ot-mode" data-mode="rest">Out of combat</span>
+        <div class="ot-buttons">
+          <button type="button" id="ot-play" aria-pressed="false">Pause</button>
+          <button type="button" id="ot-reset">Start over</button>
+        </div>
+      </div>
+      <div class="ot-meters">
+        <div class="ot-meter"><span>Your health</span><div class="ot-bar"><i id="ot-health" class="ot-fill ot-hp"></i></div><b id="ot-health-n">100%</b></div>
+        <div class="ot-meter"><span>What the buddies think you can take</span><div class="ot-bar"><i id="ot-danger" class="ot-fill ot-dg"></i></div><b id="ot-danger-n">2.0</b></div>
+        <div class="ot-meter"><span>Enemies on the party now</span><div class="ot-bar"><i id="ot-threat" class="ot-fill ot-th"></i></div><b id="ot-threat-n">0</b></div>
+      </div>
+      <fieldset class="ot-melee">
+        <legend>The melee buddy</legend>
+        <label><input type="radio" name="ot-melee" id="ot-melee-whirl" value="whirlwind" checked> Whirlwind</label>
+        <label><input type="radio" name="ot-melee" id="ot-melee-heavy" value="heavy"> Heavy hitter</label>
+        <label><input type="radio" name="ot-melee" id="ot-melee-control" value="control"> Control</label>
+      </fieldset>
+      <p class="ot-note" id="ot-melee-note">The melee buddy spins blades through everything near it.</p>
+      <ul class="ot-log" id="ot-log" aria-live="polite"></ul>
+      <p class="ot-counts" id="ot-counts"></p>
+    </div>
+    <p class="after">Pullers pull **only** while the enemies on the party count for less than what the buddies think you can take. They start **cautious**, at 2 (an elite counts 3). The number **rises** while you hold that much and stay healthy, and falls when your health runs low or you go down. The melee buddy's **kind** changes whom it hits: a whirlwind hits everything near the maw; a heavy hitter kills the marked skull, then the cross; a control fighter slows the monsters not yet on you. Monsters come **back** 30 seconds after they die. A drawn simulation of the intended behaviour, not the game's combat.</p>
+  </section>
+  <!--EMBED:owner-tank.js-->]=],
+    before = "The same pattern with the owner (white) as the tank. The owner's rule: the buddies run it round the owner only when 3 or more monsters stand near each other where area spells reach them all. A lone monster first: an ordinary fight beside the owner (no maw, no pulls). Then a pack of four with two outliers: the maw appears and the tentacles reach out. Drawn as a simple simulation, not the game's combat.",
+    after = "",
+    render = render_kraken,
+    owner_tanks = true,
+    frames = 430,
+    fill = function(sc)
+        local c = sc.counts
+        return string.format("What happened (counted as drawn): ordinary fights %d, kraken fights %d; taunts %d; ranged pulls %d; slows %d; blinks %d; disengages %d; area spells %d; %d of %d monsters killed. In game the owner's own taunts and positioning are the owner's; what the buddies can do is choose the maw (where the owner holds the pack), pull toward it, and hold back their area spells at a lone monster. Which spot counts as the owner's maw (where the owner stands after the first monster is on them?) is an open question.",
+            c.plain_stops or 0, c.kraken_stops or 0, c.taunts or 0, c.ranged_pulls or 0, c.slows or 0, c.blinks or 0, c.disengages or 0, c.area_spells or 0, c.killed or 0, sc.mob_count)
+    end,
+}
+-- }}}
+
+-- {{{ kiting alone (24)
+-- The owner, 2026-09-27 (617e5): "When they're alone, they'll try and kite
+-- the mobs to the area that has the most distance to other enemy mobs - they
+-- want the most space to kite within. They will also try and avoid areas
+-- that they expect to find mobs spawning at soon, because they keep mental
+-- track of how long it's been since there was danger in that direction."
+-- A drawn simulation. A lone mage (left half) and a lone hunter (right half),
+-- each among its own monsters, which come back where they died after
+-- RESPAWN ticks. Each kiter remembers every place it met danger (a monster
+-- seen, one killed) and when; round it a ring of 16 sectors shows that
+-- memory, brighter where danger was recent or where a monster it killed is
+-- due back. Its next step goes toward the most room (farthest from monsters
+-- not already chasing it), turned away from sectors where danger is due.
+local SK = { RESPAWN = 300, SECTORS = 16, LOOK = 22, SEE = 60, ESCAPE = 7, JUMP = 15, JUMP_EVERY = 80, SLOW = 0.45, SLOW_TICKS = 100, AGGRO = 7,
+             HUNTER_SLOW_EVERY = 190 }
+local function solo_sim()
+    local st = { t = 0, flashes = {}, counts = {} }
+    local function kiter(role, x, y, color, lo, hi)
+        return { role = role, x = x, y = y, color = color, lo = lo, hi = hi, memory = {}, jump_ready = 0, cast = 0, speed = 1.35, next_shot = 0 }
+    end
+    st.kiters = { kiter("mage", 70, 110, 9, 8, 150), kiter("hunter", 230, 110, 10, 156, 298) }
+    -- monsters run as fast as the kiters: only a slow keeps a kiter ahead
+    -- monsters faster than the kiters (the owner, 2026-09-27: "the enemies
+    -- should move faster than the player, so they can always hit"): 1.6
+    -- against 1.35 (1.35 before); slows (x0.45), blinks and disengages keep
+    -- the kiter alive, not its legs
+    local function mob(x, y) return { x = x, y = y, hx = x, hy = y, hp = 100, max = 100, speed = 1.6, state = "idle" } end
+    st.mobs = {
+        mob(40, 40), mob(110, 60), mob(30, 170), mob(120, 180), mob(90, 30), mob(60, 205),
+        mob(190, 40), mob(270, 60), mob(200, 190), mob(285, 170), mob(240, 20), mob(175, 120),
+    }
+    return st
+end
+local function sector_of(k, x, y)
+    local a = math.atan2(y - k.y, x - k.x) % (2 * math.pi)
+    return math.floor(a / (2 * math.pi / SK.SECTORS)) % SK.SECTORS + 1
+end
+-- the memory's weight per sector: recent danger (fading over 200 ticks),
+-- or a monster it killed there that is due back (from 60% of the respawn
+-- time on, until a little after it)
+local function sector_danger(st, k)
+    local w = {}
+    for s = 1, SK.SECTORS do w[s] = 0 end
+    for _, m in ipairs(k.memory) do
+        local s = sector_of(k, m.x, m.y)
+        local recent = math.max(0, 1 - (st.t - m.seen) / 200)
+        local due = 0
+        if m.died then
+            local age = st.t - m.died
+            if age >= 0.6 * SK.RESPAWN and age <= 1.2 * SK.RESPAWN then due = 1 end
+        end
+        w[s] = math.max(w[s], recent, due)
+    end
+    return w
+end
+local function remember(k, m, t, died)
+    for _, e in ipairs(k.memory) do
+        if e.mob == m then e.x, e.y, e.seen = m.hx, m.hy, t; if died then e.died = t end return end
+    end
+    k.memory[#k.memory + 1] = { mob = m, x = m.hx, y = m.hy, seen = t, died = died and t or nil }
+end
+local function solo_tick(st, rand)
+    st.t = st.t + 1
+    for _, m in ipairs(st.mobs) do
+        if m.state == "dead" and st.t >= m.back_at then m.state, m.hp, m.x, m.y, m.target = "idle", m.max, m.hx, m.hy, nil; kcount(st, "respawns") end
+    end
+    for _, k in ipairs(st.kiters) do
+        -- what it sees: monsters within SEE, remembered with the time
+        for _, m in ipairs(st.mobs) do
+            if m.state ~= "dead" and kd(k, m) <= SK.SEE then remember(k, m, st.t, false) end
+            if m.state ~= "dead" and m.state == "idle" and kd(k, m) <= SK.AGGRO then m.state, m.target = "chase", k; kcount(st, "noticed") end
+        end
+        local chasers = {}
+        for _, m in ipairs(st.mobs) do if m.state == "chase" and m.target == k then chasers[#chasers + 1] = m end end
+        if #chasers == 0 then
+            -- a pull: the nearest monster in its own half (walking to it)
+            local best, bd
+            for _, m in ipairs(st.mobs) do
+                if m.state == "idle" and m.hx >= k.lo and m.hx <= k.hi and (not bd or kd(k, m) < bd) then best, bd = m, kd(k, m) end
+            end
+            if best then
+                if bd <= 30 then
+                    best.state, best.target, best.slow_until = "chase", k, st.t + SK.SLOW_TICKS
+                    best.hp = best.hp - 8
+                    kflash(st, k.role == "mage" and "frost" or "shot", k, best, 10); kcount(st, "pulls"); kcount(st, "slows")
+                else
+                    kwalk(k, best.x, best.y, k.speed * 0.8)
+                end
+            end
+        else
+            -- kiting: the nearest chaser decides
+            local near = chasers[1]
+            for _, m in ipairs(chasers) do if kd(m, k) < kd(near, k) then near = m end end
+            local danger = sector_danger(st, k)
+            -- each sector's room: from a point LOOK yards out, the distance
+            -- to the nearest monster not chasing it (and to the field's edge)
+            local best_s, best_v, raw_s, raw_v
+            for s = 1, SK.SECTORS do
+                local a = (s - 0.5) * 2 * math.pi / SK.SECTORS
+                local x, y = k.x + math.cos(a) * SK.LOOK, k.y + math.sin(a) * SK.LOOK
+                local room = math.min(x - 8, 300 - x, y - 8, 222 - y)
+                if x < k.lo or x > k.hi then room = -1 end              -- its own half
+                for _, m in ipairs(st.mobs) do
+                    if m.state ~= "dead" and m.target ~= k then room = math.min(room, math.sqrt((m.x - x) ^ 2 + (m.y - y) ^ 2)) end
+                end
+                -- away from the chaser, a little
+                local away = ((x - k.x) * (k.x - near.x) + (y - k.y) * (k.y - near.y)) / (SK.LOOK * math.max(1, kd(k, near)))
+                -- a kiter keeps its heading unless another is clearly better
+                -- (without this it swung back and forth over the middle)
+                local keep = (k.heading and (math.abs(s - k.heading) <= 1 or math.abs(s - k.heading) == SK.SECTORS - 1)) and 10 or 0
+                local v = room + 30 * away + keep
+                if not raw_v or v > raw_v then raw_s, raw_v = s, v end
+                v = v - 60 * danger[s]
+                if not best_v or v > best_v then best_s, best_v = s, v end
+            end
+            if raw_s ~= best_s and danger[raw_s] >= 1 then
+                if (k.avoiding or 0) <= st.t then kcount(st, "avoided_due") end   -- a new episode, not every tick of one
+                k.avoiding = st.t + 20
+            end
+            k.heading = best_s
+            local a = (best_s - 0.5) * 2 * math.pi / SK.SECTORS
+            local d = kd(k, near)
+            if d <= SK.ESCAPE and k.jump_ready <= st.t then
+                local from = { x = k.x, y = k.y }
+                k.x = math.max(k.lo, math.min(k.hi, k.x + math.cos(a) * SK.JUMP))
+                k.y = math.max(10, math.min(220, k.y + math.sin(a) * SK.JUMP))
+                kflash(st, "jump", from, { x = k.x, y = k.y }, 12); kcount(st, k.role == "mage" and "blinks" or "disengages")
+                k.jump_ready = st.t + SK.JUMP_EVERY
+            elseif k.cast == 0 and ((k.role == "mage" and d > 16 and (near.slow_until or 0) > st.t) or (k.role == "hunter" and d > 10)) then
+                -- a cast-time spell, standing: the mage's frostbolt (only on
+                -- a slowed monster, from 16 yards out); the hunter's steady
+                -- shot (from 10 yards out: a hunter in this game stands to
+                -- shoot, only its arcane shot fires on the move). Standing
+                -- lets the monster close in; that is what the blink or the
+                -- disengage is for
+                k.cast = (k.role == "mage" and 18 or 22)
+            elseif k.cast > 0 then
+                k.cast = k.cast - 1
+                if d <= SK.ESCAPE then k.cast = 0 end                   -- too close: dropped, the escape comes next tick
+                if k.cast == 0 and d > SK.ESCAPE then
+                    near.hp = near.hp - 30
+                    if k.role == "mage" then near.slow_until = st.t + SK.SLOW_TICKS; kcount(st, "slows") end
+                    kflash(st, k.role == "mage" and "frost" or "shot", k, near, 8)
+                end
+            else
+                kwalk(k, k.x + math.cos(a) * 3, k.y + math.sin(a) * 3, k.speed)
+                if k.role == "hunter" and k.next_shot <= st.t then
+                    near.hp = near.hp - 9; k.next_shot = st.t + 96        -- the arcane shot, on its cooldown
+                    kflash(st, "shot", k, near, 4)
+                    -- the hunter's slow (a concussive shot) has a cooldown
+                    -- longer than the slow, as in the game: the gap between
+                    -- is when a monster catches up and a disengage is needed
+                    if (near.slow_until or 0) <= st.t and (k.slow_ready or 0) <= st.t then
+                        near.slow_until, k.slow_ready = st.t + SK.SLOW_TICKS, st.t + SK.HUNTER_SLOW_EVERY
+                        kcount(st, "slows")
+                    end
+                end
+            end
+        end
+    end
+    for _, m in ipairs(st.mobs) do
+        if m.state == "chase" and m.target then
+            local sp = m.speed * ((m.slow_until or 0) > st.t and SK.SLOW or 1)
+            if kd(m, m.target) > 3 then kwalk(m, m.target.x, m.target.y, sp) end
+        end
+        if m.state ~= "dead" and m.hp <= 0 then
+            m.state, m.back_at = "dead", st.t + SK.RESPAWN
+            for _, k in ipairs(st.kiters) do if m.target == k then remember(k, m, st.t, true) end end
+            m.target = nil
+            kcount(st, "killed")
+        end
+    end
+end
+local function render_solo(scene)
+    local saveW, saveH, saveS, saveX, saveY = W, H, SCALE, OX, OY
+    W, H, SCALE, OX, OY = 620, 460, 2.0, 8, 8
+    local rand = lcg(scene.seed or 9)
+    local st = solo_sim()
+    local base = base_map(KF)
+    local frames = {}
+    for t = 1, scene.frames do
+        solo_tick(st, rand)
+        local f = new_frame()
+        copy(f, base)
+        line(f, px(153), py(8), px(153), py(220), 21, true)               -- the two halves
+        for _, m in ipairs(st.mobs) do
+            local x, y = px(m.x), py(m.y)
+            if m.state == "dead" then
+                -- where it will come back, and how soon (a ring that closes)
+                local left = (m.back_at - st.t) / SK.RESPAWN
+                ring(f, px(m.hx), py(m.hy), 3 + left * 8, 19, true)
+            else
+                if m.state == "idle" then ring(f, x, y, SK.AGGRO * SCALE, 17, true) end
+                disc(f, x, y, 3, 13)
+                if (m.slow_until or 0) > st.t and m.state == "chase" then ring(f, x, y, 5, 41) end
+                if m.state == "chase" then for xx = 0, 7 do plot(f, x - 4 + xx, y - 7, xx < 8 * m.hp / m.max and 12 or 19) end end
+            end
+        end
+        for _, fl in ipairs(st.flashes) do
+            if fl.until_t >= st.t then line(f, px(fl.a.x), py(fl.a.y), px(fl.b.x), py(fl.b.y), KRAKEN_FLASH[fl.kind], fl.kind == "jump") end
+        end
+        for _, k in ipairs(st.kiters) do
+            local x, y = px(k.x), py(k.y)
+            -- the memory ring: 16 sectors, brighter = more dangerous
+            local w = sector_danger(st, k)
+            for s = 1, SK.SECTORS do
+                local shade = 32 + math.floor(math.min(1, w[s]) * 7 + 0.5)
+                for step = 0, 5 do
+                    local a = ((s - 1) + step / 5) * 2 * math.pi / SK.SECTORS
+                    for r = 13, 16 do plot(f, math.floor(x + math.cos(a) * r + 0.5), math.floor(y + math.sin(a) * r + 0.5), shade) end
+                end
+            end
+            -- the heading chosen
+            if k.heading then
+                local a = (k.heading - 0.5) * 2 * math.pi / SK.SECTORS
+                line(f, x, y, math.floor(x + math.cos(a) * 11 + 0.5), math.floor(y + math.sin(a) * 11 + 0.5), 20)
+            end
+            disc(f, x, y, 4, k.color)
+            if k.cast > 0 then ring(f, x, y, 7, 20, true) end
+            if (k.avoiding or 0) > st.t then ring(f, x, y, 19, 17) end
+        end
+        frames[t] = f
+    end
+    local path = OUT_DIR .. "/" .. scene.name .. ".gif"
+    local bytes = gif.write(path, { width = W, height = H, palette_bytes = palette, frames = frames, delay_cs = DELAY_CS })
+    print(string.format("  %-26s %4d frames, %7d bytes (%dx%d)", scene.name .. ".gif", scene.frames, bytes, W, H))
+    local c = st.counts
+    print(string.format("    counts: pulls %d, slows %d, blinks %d, disengages %d, killed %d, respawns %d, noticed %d, turned from a due direction %d",
+        c.pulls or 0, c.slows or 0, c.blinks or 0, c.disengages or 0, c.killed or 0, c.respawns or 0, c.noticed or 0, c.avoided_due or 0))
+    scene.after = string.format(scene.after, c.pulls or 0, c.slows or 0, c.blinks or 0, c.disengages or 0, c.killed or 0, c.respawns or 0, c.noticed or 0, c.avoided_due or 0)
+    scene.W, scene.H = W, H
+    W, H, SCALE, OX, OY = saveW, saveH, saveS, saveX, saveY
+end
+SCENES[#SCENES + 1] = {
+    name = "24-kiting-alone",
+    title = "Kiting alone: room to run, and a memory for danger",
+    before = "The owner's kiting in the wild (617e5): a lone mage (blue, left half) and a lone hunter (purple, right half), each among its **own** monsters, drawn as a simple simulation, not the game's combat. Each pulls a monster (one hit and a slow: the pale blue ring) and leads it toward the **most** room: from points a little way out in 16 directions, the one farthest from monsters not already chasing it (the white tick shows the way chosen). A monster that gets too **close** is escaped with a blink or a disengage (the dashed white line). The mage **stands** to cast frostbolts when its monster is slowed and far enough (a dashed ring while casting); the hunter shoots on the move. Killed monsters come **back** where they stood (a closing dashed ring shows when). Monsters move faster than the kiters (the owner: \"the enemies should move faster than the player, so they can always hit\"): **only** slows, blinks and disengages keep a kiter ahead. The ring of sectors round each kiter is its **memory** of danger by direction, brighter where danger was met recently or where a monster it killed is due back; a direction that is due is avoided even when it has the most room (a red ring flashes when that happens).",
+    after = "What happened (counted as drawn): pulls %d, slows %d, blinks %d, disengages %d, killed %d, came back %d, monsters that noticed a kiter on their own %d, times a kiter turned away from the roomiest direction because danger was due there %d. The memory makes the kiter **steer** round places where it has been killing, just before they fill again. What it needs from the game: each buddy's **own** record of where it met monsters and killed them (the server knows every creature's respawn time, but a buddy \"keeps mental track\" of what it saw, so the record is its own, not the server's).",
+    render = render_solo,
+    frames = 800,
+}
+-- }}}
+
+-- {{{ the big dungeon (25, 26)
+-- The owner, 2026-09-27: "can we have that behavior on a paint heat map,
+-- except without the paint, but with the pathing of the 3rd one? The map
+-- can be increased in size because we only need one - so how about 4x in
+-- size [...] more tunnels to explore, more connection types to see
+-- examined. The pathing of monsters between them will be especially
+-- apparent." About 480 by 340 yards (four times the painting hall's
+-- bounds): five rooms joined by tunnels 10 yards wide of every kind the
+-- owner named: a straight one (entrance room to the hall), an L (the hall
+-- round to the north-west room), a fork (up from the hall, splitting west to
+-- the north-west room and east to the north-east room), a loop (two ways
+-- from the hall to the south-east room, round a block of rock), and a dead
+-- end (off the north-east room). Made of rectangles (Roam.walkable's
+-- area.rects), since a loop needs a hole a single outline can't have.
+local DUNGEON_RECTS = {
+    { 20, 190, 110, 340 },   -- R1, the entrance room
+    { 190, 140, 310, 240 },  -- R2, the hall
+    { 20, 20, 120, 100 },    -- R3, north-west
+    { 370, 20, 480, 110 },   -- R4, north-east
+    { 380, 170, 480, 330 },  -- R5, south-east
+    { 110, 215, 190, 225 },  -- straight: R1 to R2
+    { 245, 60, 255, 140 },   -- the fork's stem, up from R2
+    { 120, 55, 370, 65 },    -- the fork's bar: west to R3, east to R4
+    { 60, 165, 190, 175 },   -- the L: west from R2 ...
+    { 60, 100, 70, 175 },    -- ... and up to R3
+    { 310, 180, 380, 190 },  -- the loop's north way, R2 to R5
+    { 280, 240, 290, 300 },  -- the loop's south way: down from R2 ...
+    { 280, 290, 380, 300 },  -- ... and east to R5
+    { 440, 110, 450, 150 },  -- the dead end, off R4
+}
+local DUNGEON = {
+    rects   = DUNGEON_RECTS,
+    walls   = { { 250, 190, 6 }, { 60, 280, 5 }, { 470, 30, 4 }, { 440, 250, 6 } },
+    outline = { { 10, 10 }, { 490, 10 }, { 490, 350 }, { 10, 350 } },   -- the bounds, for the few things that want an outline
+    centre  = { 250, 180 },
+}
+local DUNGEON_ENTRANCE = { 40, 330 }
+local DUNGEON_CELL = 3
+
+-- {{{ the sensing comparison (25), measured
+-- Each of `seeds` runs, `n` buddies from the entrance, 5000 ticks, "least"
+-- (the owner's favourite) against "sense" (least with the quadrant
+-- sensing): ticks until 90% of the dungeon is seen up close, ticks until
+-- both far rooms (R4, R5) have had a buddy in them, entries into the dead
+-- end, and revisits.
+local function sense_run(mode, seed, n)
+    local rand = lcg(seed)
+    local g = Roam.paint_grid(DUNGEON, DUNGEON_CELL)
+    local r4 = g.room[Roam.paint_cell_of(g, 425, 65)]
+    local r5 = g.room[Roam.paint_cell_of(g, 430, 250)]
+    local dead = g.tunnel[Roam.paint_cell_of(g, 445, 140)]
+    local bs = {}
+    for k = 1, n do bs[k] = { id = k, x = DUNGEON_ENTRANCE[1] - 6 + k * 3, y = DUNGEON_ENTRANCE[2] - 6 } end
+    local s = Roam.new(DUNGEON, bs, { reading = "paint", paint_mode = mode, grid = g, entrance = DUNGEON_ENTRANCE, wall_paint = true,
+        turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, near = 10, crowd = 5 }, rand)
+    local t90, far4, far5, dead_in, where = nil, nil, nil, 0, {}
+    for t = 1, 5000 do
+        Roam.tick(s, rand)
+        for _, b in ipairs(bs) do
+            local ci = Roam.paint_cell_of(g, b.x, b.y)
+            local rm, tn = ci and g.room[ci], ci and g.tunnel[ci]
+            if rm == r4 and not far4 then far4 = t end
+            if rm == r5 and not far5 then far5 = t end
+            local w = tn and ("t" .. tn) or (rm and ("r" .. rm)) or where[b.id]
+            if w ~= where[b.id] then if tn == dead then dead_in = dead_in + 1 end; where[b.id] = w end
+        end
+        if not t90 and t % 50 == 0 and Roam.paint_coverage(g) >= 0.9 then t90 = t end
+    end
+    return t90 or 5000, math.max(far4 or 5000, far5 or 5000), dead_in, 100 * s.stats.revisits / s.stats.entries, s.stats.sense_tunnel or 0
+end
+local SENSE_SEEDS = { 5, 11, 23, 31, 47, 59, 61, 73 }
+local function sense_measure(mode, n)
+    local a = { 0, 0, 0, 0, 0 }
+    for _, sd in ipairs(SENSE_SEEDS) do
+        local r = { sense_run(mode, sd, n) }
+        for k = 1, 5 do a[k] = a[k] + r[k] end
+    end
+    for k = 1, 5 do a[k] = a[k] / #SENSE_SEEDS end
+    return { t90 = a[1], far = a[2], dead = a[3], revisit = a[4], picks = a[5] }
+end
+local SENSE_MEASURE = {}
+for _, n in ipairs({ 1, 2 }) do
+    SENSE_MEASURE["least" .. n] = sense_measure("least", n)
+    SENSE_MEASURE["sense" .. n] = sense_measure("sense", n)
+end
+-- }}}
+
+-- {{{ local function dungeon_base
+-- The dungeon's floor, drawn once: rock (dark) where no rectangle is, the
+-- floor where one is, rocks standing in it.
+local function dungeon_base(g)
+    local f = new_frame()
+    for y = 0, H - 1 do
+        for x = 0, W - 1 do
+            local wx, wy = (x - OX) / SCALE, (y - OY) / SCALE
+            local i = Roam.paint_cell_of(g, wx, wy)
+            if i and g.inside[i] then f[y * W + x] = g.open[i] and 1 or 3 end
+        end
+    end
+    return f
+end
+-- }}}
+
+-- {{{ local function render_sense
+-- 25: a clan of two exploring the dungeon with the quadrant sensing. The
+-- floor shows the paint as heat (as in 19); round the first buddy (red),
+-- its eight sectors as it last read them: each drawn as an arc at the
+-- sensing radius, gold for a tunnel, red for a wall, grey for open ground,
+-- the one it chose white, with a line to where it is heading.
+local SECTOR_COLOUR = { tunnel = 15, wall = 13, open = 18 }
+local function render_sense(scene)
+    local saveW, saveH, saveS, saveX, saveY = W, H, SCALE, OX, OY
+    W, H, SCALE, OX, OY = 650, 470, 1.3, -7, -7
+    local rand = lcg(scene.seed or 9)
+    local g = Roam.paint_grid(DUNGEON, DUNGEON_CELL)
+    local bs = {}
+    for k = 1, 2 do bs[k] = { id = k, x = DUNGEON_ENTRANCE[1] - 6 + k * 3, y = DUNGEON_ENTRANCE[2] - 6 } end
+    local s = Roam.new(DUNGEON, bs, { reading = "paint", paint_mode = "sense", grid = g, entrance = DUNGEON_ENTRANCE, wall_paint = true,
+        turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, near = 10, crowd = 5 }, rand)
+    local base = dungeon_base(g)
+    -- each pixel's cell, once
+    local cellmap = {}
+    for y = 0, H - 1 do for x = 0, W - 1 do
+        local i = Roam.paint_cell_of(g, (x - OX) / SCALE, (y - OY) / SCALE)
+        cellmap[y * W + x] = (i and g.open[i]) and i or -1
+    end end
+    local frames = {}
+    for t = 1, scene.frames do
+        for _ = 1, scene.ticks_per_frame do Roam.tick(s, rand) end
+        local f = new_frame()
+        copy(f, base)
+        for p = 0, W * H - 1 do
+            local i = cellmap[p]
+            if i >= 0 then
+                local v, w = g.buddy[i], g.wallp[i]
+                if w > v then f[p] = 42 + math.min(2, math.floor(3 * w / (w + 150)))
+                elseif v > 0 then f[p] = 32 + math.min(7, math.floor(8 * v / (v + 300))) end
+            end
+        end
+        local ex, ey = px(DUNGEON_ENTRANCE[1]), py(DUNGEON_ENTRANCE[2])
+        for yy = -2, 2 do for xx = -2, 2 do plot(f, ex + xx, ey + yy, 5) end end
+        local b1 = bs[1]
+        if b1.sense then
+            local r = Roam.SENSE.RADIUS * SCALE
+            for k, sc in ipairs(b1.sense) do
+                local c = (k == b1.sense_pick) and 20 or SECTOR_COLOUR[sc.kind]
+                for step = -8, 8 do
+                    local a = sc.angle + step * (math.pi / 8) / 8 * 0.9
+                    for dr = 0, (k == b1.sense_pick) and 2 or 1 do
+                        plot(f, math.floor(px(b1.x) + math.cos(a) * (r - dr) + 0.5), math.floor(py(b1.y) + math.sin(a) * (r - dr) + 0.5), c)
+                    end
+                end
+            end
+        end
+        for _, b in ipairs(bs) do
+            local c = BUDDY[(b.id - 1) % #BUDDY + 1]
+            if b.path then for i = b.path_i, #b.path do plot(f, px(b.path[i].x), py(b.path[i].y), c) end end
+            if b.goal then
+                local gx, gy = px(b.goal.x), py(b.goal.y)
+                line(f, gx - 2, gy - 2, gx + 2, gy + 2, c); line(f, gx - 2, gy + 2, gx + 2, gy - 2, c)
+                if b == b1 and b1.sense_pick then line(f, px(b.x), py(b.y), gx, gy, 20, true) end
+            end
+            disc(f, px(b.x), py(b.y), 3, c)
+        end
+        -- the explored bar along the bottom
+        local cov = Roam.paint_coverage(g)
+        for yy = H - 5, H - 2 do for xx = 0, W - 1 do f[yy * W + xx] = xx < cov * W and 20 or 19 end end
+        frames[t] = f
+    end
+    local path = OUT_DIR .. "/" .. scene.name .. ".gif"
+    local bytes = gif.write(path, { width = W, height = H, palette_bytes = palette, frames = frames, delay_cs = DELAY_CS })
+    print(string.format("  %-26s %4d frames, %7d bytes (%dx%d), picks by sensing %d", scene.name .. ".gif", scene.frames, bytes, W, H, s.stats.sense_tunnel or 0))
+    scene.W, scene.H = W, H
+    W, H, SCALE, OX, OY = saveW, saveH, saveS, saveX, saveY
+end
+-- }}}
+
+local function sm(key) local r = SENSE_MEASURE[key]
+    return string.format("90%% explored after %.0f ticks, both far rooms reached after %.0f, %.1f walks into the dead end, %.0f%% of steps onto ground walked in the last 25 seconds",
+        r.t90, r.far, r.dead, r.revisit) end
+SCENES[#SCENES + 1] = {
+    name = "25-sensing-tunnels",
+    title = "Sensing tunnels by quadrants",
+    -- a playable scene on the page instead of the GIF (the owner,
+    -- 2026-09-28: "the gallery rendering was taking too long, my computer
+    -- can't keep up [...] ok let's make them playable scenes"); the GIF
+    -- code stays but isn't drawn (widget_only)
+    widget_only = true,
+    widget = [=[  <section class="card" id="dungeon-sense">
+    <h2>Sensing tunnels by quadrants</h2>
+    <p class="before">A clan of **buddies** explores the big dungeon: five rooms joined by a straight tunnel, an L, a fork, a loop and a **dead** end. Each goes where the paint is **thin**, and with sensing on it also reads **eight** sectors round itself: gold a tunnel, red a wall, grey open ground. **Click** a buddy to see its sectors; try sensing **off**, or a different blocked share, and watch the time to reach both far rooms.</p>
+    <div id="ds-root"></div>
+    <p class="after">A sector is a **wall** when most of what lies within the radius is rock, weighted toward what is near; it is a **tunnel** when, even so, a walkable way reaches the edge of the radius through its middle. A tunnel not seen up close **lately** is taken; with none, the buddy chooses by least **paint**. The walls paint a thin **fringe** every 3 seconds (blue-grey), which keeps paths in a tunnel's middle. The rules are the roaming **pattern** (docs/roaming-pattern.md), built twice: in Lua for the model, in JavaScript for this page, with a check holding both to the pattern. A drawn simulation, not the **game**.</p>
+  </section>
+  <!--EMBED:roam-pattern.js-->
+  <!--EMBED:scene-kit.js-->
+  <!--EMBED:dungeon-sense.js-->]=],
+    before = "The owner's quadrant **sens**ing (617e6), on a new dungeon four times the painting hall's size: five rooms joined by tunnels 10 yards wide of every kind, a straight one (the entrance room, bottom left, to the hall in the middle), an L (the hall round to the north-west room), a fork (up from the hall, splitting to the north-west and north-east rooms), a loop (two ways from the hall to the south-east room round a block of rock) and a dead end (off the north-east room). Two buddies explore it by the owner's **favourite** system (least paint with the walls' paint), with the sensing added. When a buddy chooses where to go next, it reads **eight** sectors round itself, the four quadrants and the four turned 45 degrees, out to 40 yards, weighting what is near it most: a sector mostly blocked is a wall; mostly blocked but with a walkable way through to the edge of the 40 yards (straight ahead within the sector's middle half) is a tunnel. A tunnel it hasn't seen up **close** lately is taken: the buddy heads for the far end of that way, and reads again when it gets there. With **none**, it chooses by least paint as before. Round the first buddy (red) its **last** reading: an arc per sector at 40 yards, gold a tunnel, red a wall, grey open; the chosen one white, with a dashed line to where it is going. The floor shows the **paint** (warm: much; blue-grey: the walls' own); the bar along the bottom is how much of the dungeon has been seen up close.",
+    after = "Measured by the generator, 8 runs of 5000 ticks each from the entrance: one buddy, least paint alone: %s; with sensing: %s. Two buddies, least paint alone: %s; with sensing: %s. What tuning showed (16 runs each, 1, 2 and 4 buddies): the share of a sector that must be **blocked** for it to count, first 0.5, was the knob that mattered most: at 0.4 corners of rooms read as tunnels and buddies chased them; at 0.7 almost nothing read as a tunnel and sensing did nothing; 0.6 reached the far rooms soonest. The way through had to be read in each sector's **middle** half: over the whole quarter, a straight tunnel's line sat on the edge of the diagonal sectors beside it, and they read as tunnels too. The sensing radius (25, 40, 60 yards) and how recent \"recently\" is changed **little**; 40 yards and about a minute were kept. With four buddies the two systems are about **level**: four buddies spread by paint find everything quickly anyway; sensing matters most for a buddy alone. The dead end is **still** walked into about as often: sensing never picks it (no way runs through it), but least paint does, once its far end is the least painted place left.",
+    render = render_sense,
+    frames = 700,
+    ticks_per_frame = 2,
+}
+SCENES[#SCENES].after = string.format(SCENES[#SCENES].after, sm("least1"), sm("sense1"), sm("least2"), sm("sense2"))
+
+-- {{{ the kraken in the dungeon (26)
+-- The formation explores with the tank leading by least paint and the
+-- walls' paint (the owner's favourite system; paint not drawn), the others
+-- following its trail; a standing pack in sight within DETECT yards stops
+-- it, and it fights with the kraken pattern (the same code as 22) at a maw
+-- short of the pack; when the maw is empty it explores on. Monsters that
+-- notice a buddy, or patrols that blunder into a fight, start a fight where
+-- the tank stands. A third of the monsters are patrols walking L-shaped
+-- routes from room to room through the tunnels.
+local DG = { DETECT = 40, TRAIL_GAP = 9 }
+local DUNGEON_PATROLS = {
+    { { 60, 300 }, { 60, 220 }, { 205, 220 } },    -- entrance room, along the straight tunnel, into the hall
+    { { 205, 170 }, { 65, 170 }, { 65, 90 } },     -- the L, hall to the north-west room
+    { { 250, 132 }, { 250, 60 }, { 130, 60 } },    -- up the fork's stem and west
+    { { 250, 70 }, { 385, 60 }, { 385, 95 } },     -- along the fork's bar east, into the north-east room
+    { { 300, 185 }, { 392, 185 }, { 392, 230 } },  -- the loop's north way into the south-east room
+    { { 285, 232 }, { 285, 295 }, { 392, 295 } },  -- the loop's south way
+    { { 400, 320 }, { 470, 320 }, { 470, 200 } },  -- round the south-east room
+    { { 30, 30 }, { 110, 30 }, { 110, 90 } },      -- round the north-west room
+    { { 30, 200 }, { 100, 200 }, { 100, 320 } },   -- round the entrance room
+    { { 200, 150 }, { 300, 150 }, { 300, 230 } },  -- round the hall
+}
+local function dungeon_sim(rand)
+    local st = { t = 0, flashes = {}, counts = {}, dungeon = true, phase = "explore", trail = {} }
+    local function unit(role, x, y, color, hp, speed) return { role = role, x = x, y = y, color = color, hp = hp, max = hp, speed = speed, cast = 0, hop = 0, jump_ready = 0 } end
+    local ex, ey = DUNGEON_ENTRANCE[1], DUNGEON_ENTRANCE[2]
+    st.tank   = unit("tank",   ex + 4, ey - 8, 6, 100, 1.4)
+    st.healer = unit("healer", ex - 6, ey - 2, 12, 80, 1.3)
+    st.mage   = unit("mage",   ex + 10, ey - 2, 9, 70, 1.35)
+    st.hunter = unit("hunter", ex - 2, ey - 10, 10, 80, 1.35)
+    st.rogue  = unit("rogue",  ex + 8, ey - 12, 7, 80, 1.45)
+    st.buddies = { st.tank, st.healer, st.mage, st.hunter, st.rogue }
+    st.mage.dir, st.hunter.dir = 1, -1
+    st.tank.id = 1
+    -- monsters faster than every buddy (the owner: "the enemies should move
+    -- faster than the player, so they can always hit")
+    local function mob(x, y, hp) return { x = x, y = y, hp = hp or 100, max = hp or 100, speed = 1.6, state = "idle" } end
+    local function patrol(route) local m = mob(route[1][1], route[1][2]); m.route, m.route_i, m.route_dir = route, 2, 1; return m end
+    st.mobs = {
+        mob(90, 206),                                                        -- the entrance room: one
+        mob(262, 206), mob(274, 198), mob(270, 214), mob(282, 208),          -- the hall: a pack of four
+        mob(210, 158),                                                       --   and one by the fork's foot
+        mob(52, 46), mob(64, 40), mob(58, 56),                               -- north-west: a pack of three
+        mob(400, 84), mob(411, 92), mob(396, 96), mob(452, 44, 260),         -- north-east: three, and an elite
+        mob(440, 300), mob(452, 292), mob(448, 312), mob(432, 306),          -- south-east: a pack of four
+        mob(400, 192),                                                       --   and one at the loop's mouth
+        mob(150, 220), mob(65, 140),                                         -- one in the straight tunnel, one in the L
+    }
+    for _, r in ipairs(DUNGEON_PATROLS) do st.mobs[#st.mobs + 1] = patrol(r) end
+    st.g = Roam.paint_grid(DUNGEON, DUNGEON_CELL)
+    st.explore = Roam.new(DUNGEON, { st.tank }, { reading = "paint", paint_mode = "least", grid = st.g, entrance = DUNGEON_ENTRANCE,
+        wall_paint = true, turn = 2 * math.pi / 10, y_mode = "step", y_limit = 20, near = 10, crowd = 5, step = 1.4 }, rand)
+    for _, u in ipairs(st.buddies) do u.lx, u.ly = u.x, u.y end
+    for _, m in ipairs(st.mobs) do m.lx, m.ly = m.x, m.y end
+    return st
+end
+-- a fight here: the maw at `maw`, the pack's nearest idle monster taken first
+local function dungeon_fight(st, maw, pack)
+    st.maw, st.phase, st.kraken = maw, "fight", true
+    kcount(st, "stops")
+    local T, first, fd = st.tank, nil, nil
+    for _, m in ipairs(pack) do if m.hp > 0 and m.state == "idle" and (not fd or kd(T, m) < fd) then first, fd = m, kd(T, m) end end
+    if first then kwake(st, first, T); kflash(st, "tentacle", T, first, 14); kcount(st, "taunts") end
+end
+-- the maw for a pack seen from the tank: MAW_BACK yards short of the
+-- pack's middle toward the tank, pulled back toward the tank until it is
+-- on open ground with a clear line to the tank
+local function dungeon_maw(st, pack)
+    local T, g = st.tank, st.g
+    local cx, cy = 0, 0
+    for _, m in ipairs(pack) do cx, cy = cx + m.x, cy + m.y end
+    cx, cy = cx / #pack, cy / #pack
+    local vx, vy = T.x - cx, T.y - cy
+    local l = math.max(0.01, math.sqrt(vx * vx + vy * vy))
+    local ax, ay = cx + vx / l * math.min(K.MAW_BACK, l), cy + vy / l * math.min(K.MAW_BACK, l)
+    for k = 0, 20 do
+        local x, y = ax + (T.x - ax) * k / 20, ay + (T.y - ay) * k / 20
+        local i = Roam.paint_cell_of(g, x, y)
+        if i and Roam.paint_passable(g, i) and Roam.paint_line_clear(g, T.x, T.y, x, y) then return { x = x, y = y } end
+    end
+    return { x = T.x, y = T.y }
+end
+local function dungeon_tick(st, rand)
+    KNOW = st.t
+    local T, g = st.tank, st.g
+    if st.phase == "explore" then
+        local held = kheld(st)
+        if #held > 0 then
+            -- something noticed us (or a patrol blundered in): fight here
+            dungeon_fight(st, dungeon_maw(st, held), held)
+            kcount(st, "ambushed")
+        else
+            Roam.tick(st.explore, rand)
+            st.trail[#st.trail + 1] = { x = T.x, y = T.y }
+            -- a standing pack in sight: stop and fight it
+            local best, bd
+            for _, m in ipairs(st.mobs) do
+                if m.hp > 0 and m.state == "idle" and not m.route then
+                    local d = kd(T, m)
+                    if d <= DG.DETECT and (not bd or d < bd) and Roam.paint_line_clear(g, T.x, T.y, m.x, m.y) then best, bd = m, d end
+                end
+            end
+            if best then
+                local pack = kpack(st, best)
+                dungeon_fight(st, dungeon_maw(st, pack), pack)
+            end
+        end
+        -- the others follow the tank's trail, each a few steps further back
+        for i, b in ipairs({ st.healer, st.mage, st.hunter, st.rogue }) do
+            local p = st.trail[math.max(1, #st.trail - i * DG.TRAIL_GAP)] or T
+            kmove(b, p.x, p.y, b.speed)
+        end
+    end
+    local was = st.phase
+    kraken_tick(st, rand)
+    -- back to exploring: the tank chooses afresh from where it stands
+    if was == "fight" and st.phase == "explore" then T.path = nil; st.trail = { { x = T.x, y = T.y } } end
+    -- everyone paints what they see (fighting too), every 4 ticks
+    if st.t % 4 == 0 then for _, b in ipairs(st.buddies) do Roam.paint_deposit(g, b.x, b.y) end end
+    -- nobody ends a tick inside rock (a blink, or a step cut across a
+    -- corner): back to where it last stood on open ground
+    local function keep(u)
+        local i = Roam.paint_cell_of(g, u.x, u.y)
+        if i and g.open[i] then u.lx, u.ly = u.x, u.y else u.x, u.y = u.lx, u.ly end
+    end
+    for _, b in ipairs(st.buddies) do keep(b) end
+    for _, m in ipairs(st.mobs) do if m.hp > 0 then keep(m) end end
+end
+local function render_dungeon(scene)
+    local saveW, saveH, saveS, saveX, saveY = W, H, SCALE, OX, OY
+    W, H, SCALE, OX, OY = 650, 470, 1.3, -7, -7
+    local rand = lcg(scene.seed or 5)
+    local st = dungeon_sim(rand)
+    KGRID = st.g
+    local base = dungeon_base(st.g)
+    local frames = {}
+    for t = 1, scene.frames do
+        for _ = 1, scene.ticks_per_frame do dungeon_tick(st, rand) end
+        local f = new_frame()
+        copy(f, base)
+        -- where the tank is heading while it explores
+        if st.phase == "explore" then
+            local T = st.tank
+            if T.path then for i = T.path_i, #T.path do plot(f, px(T.path[i].x), py(T.path[i].y), T.color) end end
+        end
+        kdraw(f, st, t)
+        local cov = Roam.paint_coverage(st.g)
+        for yy = H - 5, H - 2 do for xx = 0, W - 1 do f[yy * W + xx] = xx < cov * W and 20 or 19 end end
+        frames[t] = f
+    end
+    KGRID = nil
+    local path = OUT_DIR .. "/" .. scene.name .. ".gif"
+    local bytes = gif.write(path, { width = W, height = H, palette_bytes = palette, frames = frames, delay_cs = DELAY_CS })
+    print(string.format("  %-26s %4d frames, %7d bytes (%dx%d)", scene.name .. ".gif", scene.frames, bytes, W, H))
+    local c, dead = st.counts, 0
+    for _, m in ipairs(st.mobs) do if m.hp <= 0 then dead = dead + 1 end end
+    print(string.format("    counts: stops %d (ambushed %d), taunts %d (reach-outs %d, pick-ups %d), ranged pulls %d, slows %d, blinks %d, disengages %d, area spells %d, heals %d, patrols blundered in %d, killed %d of %d, explored %.0f%%",
+        c.stops or 0, c.ambushed or 0, c.taunts or 0, c.tank_pulls or 0, c.pickups or 0, c.ranged_pulls or 0, c.slows or 0, c.blinks or 0, c.disengages or 0, c.area_spells or 0, c.heals or 0, c.patrols_blundered or 0, dead, #st.mobs, 100 * Roam.paint_coverage(st.g)))
+    scene.counts, scene.killed, scene.mob_count, scene.explored = c, dead, #st.mobs, 100 * Roam.paint_coverage(st.g)
+    if scene.fill then scene.after = scene.fill(scene) end
+    scene.W, scene.H = W, H
+    W, H, SCALE, OX, OY = saveW, saveH, saveS, saveX, saveY
+end
+SCENES[#SCENES + 1] = {
+    name = "26-kraken-dungeon",
+    title = "The kraken in a dungeon",
+    widget_only = true,                     -- playable on the page (as 25)
+    widget = [=[  <section class="card" id="dungeon-kraken">
+    <h2>The kraken in a dungeon</h2>
+    <p class="before">A party of **five** explores the same dungeon, the tank leading by least paint; packs stand in the rooms, each with a lone **outlier**, and patrols (gold rings) walk the tunnels. When a fight starts, the maw (blue ring) is set and the **kraken** plays out: gold lines are the tank's taunts, pale blue rings slows, dashed white lines blinks and disengages. Try the kraken **off** for an ordinary fight, more **patrols**, or a different melee buddy.</p>
+    <div id="dk-root"></div>
+    <p class="after">The tank holds within 6 yards of the maw and **reaches** out with its 30-yard taunt while the hold is light; the mage and the hunter fetch outliers with one hit and a **slow**, lead them into a neighbouring quadrant, and kite round the maw until the tank takes them. Monsters are **faster** than the party, so slows, blinks and taunts save a puller, not its legs. Area spells land when two or more stand in the **maw**; against an elite, area and single-target spells about **equally**. When everything held is dead, the party moves **on**. Health, damage and speeds are round numbers: a drawn simulation of the intended behaviour, not the game's **combat**.</p>
+  </section>
+  <!--EMBED:dungeon-kraken.js-->]=],
+    before = "The kraken (22) on the **dungeon** of 25, drawn as a simple simulation, not the game's combat. The formation explores with the **tank** leading by the owner's favourite system, least paint with the walls' paint (the paint is laid but not drawn), the others following its trail (the tank's planned path in red dots). A standing pack in sight within 40 yards **stops** it: the maw is set short of the pack toward the tank, on open ground, and the kraken fights as in 22 (gold tentacle lines: the tank's taunts; pale blue rings: slows; dashed white lines: blinks and disengages; the blue storm: area spells). When everything held is dead it explores **on**. A third of the monsters are patrols (gold rings) walking L-shaped routes (dashed) between and round the rooms through the **tunnels**; a patrol that passes near a fight joins it, and any monster that notices a buddy starts a fight where the tank stands. Monsters are **faster** than every buddy. The bar along the bottom is how much of the dungeon has been **seen**.",
+    after = "",
+    render = render_dungeon,
+    frames = 1100,
+    ticks_per_frame = 2,
+    fill = function(sc)
+        local c = sc.counts
+        return string.format("What happened in this run (counted as it was drawn): %d fights (%d begun by a monster that noticed a buddy or a patrol walking in); the tank's taunts %d (%d reaching out, %d taking back a monster on someone else); the mage's and the hunter's pulls %d, slows %d, blinks %d, disengages %d; area spells %d; heals %d; patrols that blundered into a fight %d; %d of %d monsters killed; %.0f%% of the dungeon seen.",
+            c.stops or 0, c.ambushed or 0, c.taunts or 0, c.tank_pulls or 0, c.pickups or 0, c.ranged_pulls or 0, c.slows or 0, c.blinks or 0, c.disengages or 0, c.area_spells or 0, c.heals or 0, c.patrols_blundered or 0, sc.killed, sc.mob_count, sc.explored)
+    end,
+}
+-- }}}
+-- }}}
+
+-- {{{ local function esc
+local function esc(s) return (s:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub("\"", "&quot;")) end
+-- }}}
+
+-- {{{ local function em
+-- The owner's emphasis (2026-09-28): about one bold word (or part of a word)
+-- per sentence, sometimes two, none where a flat tone is the point; a bold
+-- word is fully pronounced, not sharp. Captions carry it as **...**, turned
+-- into <strong> after escaping (so it can't break the page), and before a
+-- widget's script is embedded (a script may use ** itself). An odd number
+-- of ** would leave markup half open, so it stops the page instead.
+local function em(s)
+    local out, n = s:gsub("%*%*(.-)%*%*", "<strong>%1</strong>")
+    assert(not out:find("**", 1, true), "em: an unmatched ** in: " .. s:sub(1, 120))
+    return out
+end
+-- }}}
+
+-- {{{ main
+os.execute("mkdir -p '" .. OUT_DIR .. "'")
+print("generate-buddy-roaming-gifs: " .. #SCENES .. " scenes -> " .. OUT_DIR)
+local cards = {}
+-- {{{ local function embed_scripts
+-- A widget's card names its script as <!--EMBED:file.js-->; the file's text
+-- (docs/HTML/buddy-roaming/file.js, the source) goes into the page inside a
+-- <script>. Embedded, not linked: the artifact host runs scripts only from
+-- a few approved CDNs, so a script file published beside the page never
+-- ran there (the owner, 2026-09-27: the widget "doesn't seem to be built
+-- and functional on my end"); in a local browser the linked file ran fine.
+local function embed_scripts(html)
+    return (html:gsub("<!%-%-EMBED:([%w%-%.]+)%-%->", function(file)
+        local fh = assert(io.open(OUT_DIR .. "/" .. file, "r"), "embed: no script " .. OUT_DIR .. "/" .. file)
+        local js = fh:read("*a"); fh:close()
+        assert(not js:lower():find("</script", 1, true), "embed: " .. file .. " contains </script, which would end the page's script early")
+        return "<script>\n" .. js .. "</script>"
+    end))
+end
+-- }}}
+local card_by = {}
+-- BUDDY_GIF_ONLY=pattern renders only the scenes whose names match (for
+-- working on one scene; the page is not written then, since the others'
+-- sizes aren't known)
+local ONLY = os.getenv("BUDDY_GIF_ONLY")
+for _, sc in ipairs(SCENES) do
+  if not ONLY or sc.name:find(ONLY, 1, true) then
+    -- a scene may draw itself (its own canvas size: the painting panels,
+    -- the cluster pull); it then records its size in sc.W, sc.H
+    -- a scene that is only a playable widget on the page isn't drawn
+    -- (widget_only: the owner's machine couldn't keep up with rendering)
+    if sc.widget_only then -- nothing to draw
+    elseif sc.render then sc.render(sc) else render(sc.name, sc) end
+    -- the GIFs are linked, not embedded: twelve embedded passed the 16 MB
+    -- limit of a published page (2026-09-27); linked, they are published
+    -- beside the page and open the same way from disk
+    if sc.widget then card_by[sc.name] = embed_scripts(em(sc.widget)) else
+    card_by[sc.name] = string.format([[
+  <section class="card">
+    <h2>%s</h2>
+    <p class="before">%s</p>
+    <img src="buddy-roaming/%s.gif" alt="%s" width="%d" height="%d" loading="lazy">
+    <p class="after">%s</p>
+  </section>]], esc(sc.title), em(esc(sc.before)), sc.name, esc(sc.title), sc.W or W, sc.H or H, em(esc(sc.after))) end
+  end
+end
+if ONLY then print("  (BUDDY_GIF_ONLY set: the page is left as it was)") os.exit(0) end
+
+-- {{{ the parts
+-- The page groups the scenes into parts at their natural breaks (the owner,
+-- 2026-09-27: "can you make 'part 1' and 'part 2' headers at natural
+-- breaking points?"). The page's order is the parts' order, not the
+-- scenes' numbers (which name the files and stay as they are). Every scene
+-- must be in exactly one part: a scene left out, or named twice, stops the
+-- generator.
+local PARTS = {
+    { id = "readings", title = "Part 1 · First readings",
+      blurb = "The owner's first description (spacing, a pinwheel round the centre, lists of who is far enough) read **four** ways, before the owner's own waypoint rule.",
+      scenes = { "01-far-lists", "02-one-buddys-choice", "03-spring", "04-spin-lists", "05-close-and-far" } },
+    { id = "waypoints", title = "Part 2 · The owner's waypoint rule",
+      blurb = "Waypoints round the centre: the bearing turns a **steady** step, the distance out moves a little each time, crowded spots are nudged, and runs toward the middle cross it.",
+      scenes = { "08-waypoints", "09-one-buddys-waypoints", "10-waypoints-kept-apart", "11-waypoints-y-limited", "17-piercing-the-middle" } },
+    { id = "ground", title = "Part 3 · Paths and the ground",
+      blurb = "Getting to **each** waypoint: round rocks, crates and raised ground, down gentle slopes, along roads, out of a side tunnel.",
+      scenes = { "07-round-the-rocks", "12-orbiting-obstacles", "13-planned-paths", "14-one-plan", "15-two-sizes", "16-side-tunnel" } },
+    { id = "exploring", title = "Part 4 · Exploring: paint, rooms and tunnels",
+      blurb = "Buddies paint what they see and go where the paint is **thin**; the systems compared side by side.",
+      scenes = { "19-painting-compared", "21-rooms-and-tunnels", "25-sensing-tunnels" } },
+    { id = "fighting", title = "Part 5 · Fighting together",
+      blurb = "Drawing monsters' attention, pulling packs to a tank, the **kraken**, and kiting alone. Drawn simulations of the intended behaviour, not the game's combat.",
+      scenes = { "18-monsters", "20-cluster-pull", "22-kraken", "26-kraken-dungeon", "24-kiting-alone" } },
+    { id = "play", title = "Part 6 · Play it yourself",
+      blurb = "The scenes with you in them, **play**able: move the cursor (or a finger) over the area and your dot follows.",
+      scenes = { "06-joining-and-leaving", "23-owner-tanks" } },
+}
+local placed = {}
+for _, part in ipairs(PARTS) do
+    cards[#cards + 1] = string.format([[
+  <header class="part" id="%s">
+    <h2>%s</h2>
+    <p>%s</p>
+  </header>]], part.id, esc(part.title), em(esc(part.blurb)))
+    for _, name in ipairs(part.scenes) do
+        assert(card_by[name], "parts: scene " .. name .. " has no card (renamed or removed?)")
+        assert(not placed[name], "parts: scene " .. name .. " is in two parts")
+        placed[name] = true
+        cards[#cards + 1] = card_by[name]
+    end
+end
+for _, sc in ipairs(SCENES) do
+    assert(placed[sc.name], "parts: scene " .. sc.name .. " is in no part; add it to PARTS")
+end
+-- }}}
+
+local page = [[<title>Buddy Roaming</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+:root { --ground: #eef0f3; --panel: #ffffff; --ink: #1b2230; --muted: #5b6576; --rule: #d5d9e1; --accent: #8a5d0c; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; } }
+:root[data-theme="dark"] { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; }
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 16px/1.55 "Alegreya Sans", "Segoe UI", system-ui, sans-serif; }
+.wrap { max-width: 760px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 28px; }
+h1, h2 { font-family: "Alegreya SC", Georgia, serif; margin: 0; text-wrap: balance; }
+h1 { font-size: 2.1rem; } h2 { font-size: 1.3rem; }
+p { margin: 0; }
+.lede { color: var(--muted); }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; display: grid; gap: 12px; }
+.card img { width: 100%; height: auto; max-width: 100%; border-radius: 6px; image-rendering: pixelated; background: #12161d; }
+.before { color: var(--ink); }
+.after { color: var(--muted); border-left: 3px solid var(--accent); padding-left: 12px; }
+.key { display: flex; flex-wrap: wrap; gap: 14px; font-size: .9rem; color: var(--muted); }
+footer { color: var(--muted); font-size: .85rem; }
+.part { display: grid; gap: 6px; padding-block: 14px 0; border-top: 2px solid var(--accent); }
+.part h2 { font-size: 1.55rem; color: var(--accent); }
+.part p { color: var(--muted); max-width: 62ch; }
+.lede a { color: var(--accent); }
+.ot-stage.jl-stage canvas { aspect-ratio: 128 / 98; }       /* the grouping widget's area: 128 by 98 yards */
+.jl-groups { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; font-size: .95rem; }
+.jl-groups dt { color: var(--muted); }
+.jl-groups dd { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ot-stage canvas { display: block; width: 100%; aspect-ratio: 17 / 11; max-width: 100%; border-radius: 6px; background: #12161d; touch-action: none; cursor: crosshair; }
+.ot-panel { display: grid; gap: 12px; font-size: .95rem; }
+.ot-key { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: .88rem; }
+.ot-key span { display: inline-flex; align-items: center; gap: 6px; }
+.ot-key span::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c); border: 1px solid var(--rule); }
+.ot-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.ot-mode { font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--rule); color: var(--muted); }
+.ot-mode[data-mode="kraken"] { color: var(--accent); border-color: var(--accent); }
+.ot-mode[data-mode="plain"] { color: var(--ink); }
+.ot-buttons { display: flex; gap: 8px; }
+.ot-buttons button { font: inherit; padding: 5px 14px; border-radius: 6px; border: 1px solid var(--rule); background: var(--ground); color: var(--ink); cursor: pointer; }
+.ot-buttons button:hover { border-color: var(--accent); }
+.ot-buttons button:focus-visible, .ot-melee input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ot-meters { display: grid; gap: 6px; }
+.ot-meter { display: grid; grid-template-columns: minmax(0, 15em) 1fr 3.2em; align-items: center; gap: 10px; color: var(--muted); }
+.ot-meter b { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.ot-bar { height: 8px; border-radius: 4px; background: var(--ground); border: 1px solid var(--rule); overflow: hidden; }
+.ot-fill { display: block; height: 100%; width: 0; }
+.ot-hp { background: #5fae6e; } .ot-dg { background: var(--accent); } .ot-th { background: #7fa6e6; }
+.ot-th[data-over="yes"] { background: #d0524f; }
+.ot-melee { border: 1px solid var(--rule); border-radius: 6px; padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 14px; margin: 0; }
+.ot-melee legend { color: var(--muted); padding: 0 4px; font-size: .88rem; }
+.ot-melee label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.ot-note, .ot-counts { color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+.ot-log { margin: 0; padding-left: 18px; color: var(--ink); font-size: .9rem; display: grid; gap: 2px; min-height: 5.6em; }
+@media (max-width: 520px) { .ot-meter { grid-template-columns: 1fr 3em; } .ot-meter .ot-bar { grid-column: 1 / -1; grid-row: 2; } }
+</style>
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1>Buddy Roaming</h1>
+    <p class="lede">How buddies <strong>roam</strong> a named place while their owner is out and about (issue 617e): the readings of the owner's description, each running the <strong>same</strong> model the server will use. Circles are buddies, the <strong>white</strong> circle the owner, grey blobs rocks, the outline the named area's edge. The short tick on a buddy shows which <strong>way</strong> it circles the centre. The scenes with you in them are <strong>play</strong>able: <a href="#play">Part 6</a>.</p>
+  </header>
+]] .. table.concat(cards, "\n") .. [[
+
+  <footer>Generated by scripts/generate-buddy-roaming-gifs from src/lua-basic/lib/buddy-roam.lua (the model) and the gif-generator project's encoder.</footer>
+</div>
+]]
+local f = io.open(OUT_HTML, "w"); f:write(page); f:close()
+print("  page -> " .. OUT_HTML)
+-- }}}

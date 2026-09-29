@@ -1,0 +1,109 @@
+#!/bin/bash
+# test-buddy-roam-core - holds the server's C++ roaming core to the Lua model
+# the owner designed buddy roaming with (issue 617e2).
+#
+# For a general audience: buddy roaming was designed by watching animations
+# drawn from a Lua model (src/lua-basic/lib/buddy-roam.lua). The server runs
+# the same design written again in C++ (modules/mod-buddies/src/roam/). This
+# test makes a few thousand situations on the animations' two drawn maps (a
+# cluttered mine-sized area and a chamber with a side tunnel), asks both
+# versions what the buddy does next with the very same random numbers, and
+# counts where they agree: the waypoint picked, the bearing, the distance
+# number, the crowding rule, how many random numbers were drawn, and every
+# point of the planned path. It needs no server: the C++ core is built
+# alone with the system compiler.
+#
+# A second part (issue 617e6) does the same for exploring as painting: on
+# the gallery's hall, the model's grid, rooms and tunnels, squished circle,
+# and a clan of four exploring with each of the three painting choosers
+# (least paint, the room orbit, the squished circle), compared step by step
+# with the C++ exploring core; plus the grid distances and the traced
+# border the server uses in place of the model's exact outline.
+#
+# Usage: scripts/test-buddy-roam-core [PROJECT_DIR] [CASES_PER_MAP]
+#   PROJECT_DIR    defaults to the hard-coded path below
+#   CASES_PER_MAP  situations of each kind per map (default 600)
+# Builds into tmp/tmp/ (the executable tier), writes its data files into
+# tmp/shared-memory/ (RAM). Exits non-zero when any check fails.
+
+set -uo pipefail
+
+# {{{ configuration
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+PER_MAP="${2:-600}"
+
+CORE="${DIR}/modules/mod-buddies/src/roam"
+TESTS="${DIR}/tests/buddy-roam-core"
+EXEC_DIR="${DIR}/tmp/tmp"
+DATA_DIR="${DIR}/tmp/shared-memory/test-buddy-roam-core"
+# }}}
+
+# {{{ scratch directories
+# The project's tmp/ link points at the RAM-backed tiers; both must exist.
+[[ -d "${DIR}/tmp" ]] || { echo "ERROR: ${DIR}/tmp missing (the project's link to /tmp/<project>)"; exit 1; }
+[[ -d "${DIR}/tmp/shared-memory" ]] || { echo "ERROR: ${DIR}/tmp/shared-memory missing (the link to /dev/shm/<project>)"; exit 1; }
+mkdir -p "${EXEC_DIR}"
+mkdir -p "${DATA_DIR}"
+# }}}
+
+echo "test-buddy-roam-core: ${PER_MAP} situations of each kind per map"
+
+# {{{ build
+BINARY="${EXEC_DIR}/buddy-roam-cross-check"
+if ! g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${CORE}" "${TESTS}/cross-check.cpp" "${CORE}/buddy_roam_core.cpp" -o "${BINARY}"; then
+    echo "FAIL: the C++ core or its driver does not build (done: nothing; stopped at the build)"
+    exit 1
+fi
+echo "  built ${BINARY}"
+# }}}
+
+# {{{ run
+# 1. the maps, from their one description; 2. the C++ side makes the
+# situations and answers them; 3. the Lua model answers the same; 4. compare.
+if ! luajit "${TESTS}/lua-driver.lua" "${DIR}" dump "${DATA_DIR}/maps.txt"; then
+    echo "FAIL: writing the drawn maps (done: build; stopped at the map dump)"
+    exit 1
+fi
+if ! "${BINARY}" "${DATA_DIR}/maps.txt" "${DATA_DIR}/cases.txt" "${DATA_DIR}/cpp-results.txt" "${PER_MAP}"; then
+    echo "FAIL: the C++ side stopped (done: build, maps; stopped at the C++ run)"
+    exit 1
+fi
+if ! luajit "${TESTS}/lua-driver.lua" "${DIR}" run "${DATA_DIR}/cases.txt" "${DATA_DIR}/lua-results.txt"; then
+    echo "FAIL: the Lua model stopped (done: build, maps, C++ run; stopped at the Lua run)"
+    exit 1
+fi
+luajit "${TESTS}/lua-driver.lua" "${DIR}" compare "${DATA_DIR}/cpp-results.txt" "${DATA_DIR}/lua-results.txt"
+STATUS=$?
+# }}}
+
+# {{{ exploring as painting (617e6)
+EXPLORE_TICKS=1500
+EXPLORE_SEED=5
+EXPLORE_BINARY="${EXEC_DIR}/buddy-explore-check"
+echo "exploring as painting: ${EXPLORE_TICKS} ticks per chooser, seed ${EXPLORE_SEED}"
+if ! g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${CORE}" "${TESTS}/explore-check.cpp" "${CORE}/buddy_explore_core.cpp" -o "${EXPLORE_BINARY}"; then
+    echo "FAIL: the exploring core or its check does not build (done: the roaming check; stopped at the exploring build)"
+    exit 1
+fi
+if ! luajit "${TESTS}/explore-driver.lua" "${DIR}" grid "${DATA_DIR}/explore-grid.txt"; then
+    echo "FAIL: the model's hall grid (done: the roaming check, the exploring build; stopped at the grid)"
+    exit 1
+fi
+for MODE in least rooms disc; do
+    if ! luajit "${TESTS}/explore-driver.lua" "${DIR}" trace "${MODE}" "${EXPLORE_SEED}" "${EXPLORE_TICKS}" "${DATA_DIR}/lua-${MODE}.txt"; then
+        echo "FAIL: the model's ${MODE} clan (done: the grid; stopped at the ${MODE} trace)"
+        exit 1
+    fi
+done
+"${EXPLORE_BINARY}" "${DATA_DIR}/explore-grid.txt" "${DATA_DIR}" "${EXPLORE_TICKS}" "${EXPLORE_SEED}"
+EXPLORE_STATUS=$?
+[[ ${EXPLORE_STATUS} -ne 0 ]] && STATUS=1
+# }}}
+
+if [[ ${STATUS} -eq 0 ]]; then
+    echo "PASS: the C++ roaming and exploring cores agree with the Lua model"
+else
+    echo "FAIL: the C++ cores and the Lua model disagree (data kept in ${DATA_DIR})"
+fi
+exit ${STATUS}

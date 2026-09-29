@@ -6,6 +6,7 @@
 - Parent: 617
 - Blocked by: 617a
 - Priority: High
+- Sub-issues: 617c1 through 617c4
 
 ## Origin
 
@@ -92,6 +93,17 @@ distance, and nothing draws a dungeon party.
 A buddy away gathering (617k) leaves the proximity party when being in it
 brings no benefit: "they should drop out of the proximity party if there's
 no benefit to being in a party together."
+
+## Sub-Issues (split 2026-09-27)
+
+| ID | Name | Dependencies | Description |
+|---|---|---|---|
+| 617c1 | buddy-login-and-logout | None | Buddies log in with their owner (the companion account linked to the owner's in the bot database), appear 20-30 yards away, and log out with the owner |
+| 617c2 | proximity-party | 617c1 | The owner's four closest buddies grouped, re-checked every 5 seconds; ungrouped in towns |
+| 617c3 | dungeon-draw | 617c2 | Four buddies drawn without replacement on entering a dungeon |
+| 617c4 | buddy-loyalty | 617c1 | Buddies refuse other players' invitations |
+
+Execution order: `617c1 → (617c2 ∥ 617c4) → 617c3`.
 
 ## Suggested Implementation Steps
 

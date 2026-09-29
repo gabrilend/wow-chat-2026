@@ -1,0 +1,535 @@
+<title>Barrens From Above</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --ground: #e8e9eb; --panel: #f6f6f7; --ink: #1c1e23; --muted: #5d626b;
+  --rule: #cfd2d7; --accent: #a4622a; --map-edge: #b9bcc2;
+  --display: "IM Fell English SC", "Iowan Old Style", Georgia, serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #14161a; --panel: #1d2026; --ink: #e7e8eb; --muted: #99a0aa;
+    --rule: #2e333b; --accent: #d8954f; --map-edge: #353a43;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #14161a; --panel: #1d2026; --ink: #e7e8eb; --muted: #99a0aa;
+  --rule: #2e333b; --accent: #d8954f; --map-edge: #353a43;
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 16px/1.5 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 56px; display: grid; gap: 22px; }
+header { display: grid; gap: 6px; max-width: 70ch; }
+h1, h2 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap: balance; letter-spacing: .01em; }
+h1 { font-size: clamp(2rem, 4vw, 2.8rem); line-height: 1.05; }
+h2 { font-size: 1.35rem; }
+p { margin: 0; }
+.lede { color: var(--muted); }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+@media (max-width: 860px) { .stage { grid-template-columns: 1fr; } }
+.map {
+  position: relative; background: #686870; border: 1px solid var(--map-edge); border-radius: 6px;
+  aspect-ratio: 873 / 960; width: 100%; max-width: 100%; overflow: hidden; touch-action: none; cursor: grab;
+}
+.map.dragging { cursor: grabbing; }
+.map canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.map .hint {
+  position: absolute; left: 10px; bottom: 10px; font: 12px/1.3 var(--mono); color: #f2f2f2;
+  background: rgba(20, 20, 24, .62); padding: 5px 8px; border-radius: 4px; pointer-events: none;
+}
+.map .place {
+  position: absolute; left: 10px; top: 10px; font: 600 13px/1.3 var(--body); color: #f4f1ea;
+  background: rgba(20, 20, 24, .62); padding: 4px 8px; border-radius: 4px; pointer-events: none;
+}
+aside { display: grid; gap: 16px; }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; display: grid; gap: 10px; }
+.panel h2 { font-size: 1.1rem; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+button {
+  font: 600 14px/1 var(--body); color: var(--ink); background: transparent; border: 1px solid var(--rule);
+  border-radius: 4px; padding: 8px 11px; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.key { display: grid; grid-template-columns: 18px 1fr; gap: 6px 10px; align-items: center; font-size: 14px; }
+.sw { width: 12px; height: 12px; border-radius: 50%; justify-self: center; }
+.sw.ring { background: transparent; border: 2px solid; }
+.sw.line { width: 16px; height: 2px; border-radius: 0; }
+.sw.sq { border-radius: 2px; width: 14px; height: 14px; }
+.counts { display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; font: 13px/1.45 var(--mono); font-variant-numeric: tabular-nums; }
+.counts dt { color: var(--muted); }
+.counts dd { margin: 0; text-align: right; }
+.follow { font: 13px/1.5 var(--mono); color: var(--muted); min-height: 3em; }
+.recorded { display: grid; gap: 10px; }
+.recorded img { width: 100%; max-width: 873px; height: auto; border: 1px solid var(--map-edge); border-radius: 6px; image-rendering: pixelated; }
+.note { color: var(--muted); font-size: 14px; max-width: 75ch; }
+.note strong { color: var(--ink); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Barrens From Above</h1>
+    <p class="lede">Thirty Horde players and their buddies quest across <strong>all of The Barrens</strong>, live: each leaves a town, circles a named place for about <strong>thirty stops</strong> fighting what it meets, and walks back to <strong>sell</strong> when its eighteen bag slots are full. Scroll on the map to <strong>magnify</strong> where you point; drag to move.</p>
+  </header>
+
+  <section class="stage" aria-label="The zone, live">
+    <div class="map" id="map">
+      <canvas id="cv" aria-label="The Barrens from above: places tinted, towns ringed, monsters red, players yellow, buddies blue"></canvas>
+      <div class="place" id="place" hidden></div>
+      <div class="hint" id="hint">scroll to zoom · drag to pan</div>
+    </div>
+    <aside>
+      <div class="panel">
+        <h2>Watch</h2>
+        <div class="controls">
+          <button type="button" id="play" aria-pressed="true">Pause</button>
+          <button type="button" id="speed1" data-speed="10">10×</button>
+          <button type="button" id="speed2" data-speed="30" aria-pressed="true">30×</button>
+          <button type="button" id="speed3" data-speed="90">90×</button>
+        </div>
+        <div class="controls">
+          <button type="button" id="follow">Follow someone</button>
+          <button type="button" id="whole">Whole zone</button>
+        </div>
+        <p class="follow" id="followinfo">Pick "Follow someone" to ride along with one player.</p>
+      </div>
+      <div class="panel">
+        <h2>Key</h2>
+        <div class="key">
+          <span class="sw" style="background:#fff4aa;border:2px solid #141418"></span><span>Player</span>
+          <span class="sw" style="background:#6ed6ff;border:2px solid #141418;width:9px;height:9px"></span><span>Buddy (explores its player's place, never groups)</span>
+          <span class="sw" style="background:#7a2020;width:6px;height:6px"></span><span>Monster, idle</span>
+          <span class="sw" style="background:#ee4034"></span><span>Monster, fighting</span>
+          <span class="sw line" style="background:#aad6ff"></span><span>Frostbolt or Aimed Shot</span>
+          <span class="sw ring" style="border-color:#ffffff"></span><span>Blink or Disengage</span>
+          <span class="sw ring" style="border-color:#ececec;width:16px;height:16px"></span><span>Horde town</span>
+          <span class="sw sq" style="background:#d9b77a"></span><span>Worn ground (paint), warmer with use</span>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>So far</h2>
+        <dl class="counts" id="counts"></dl>
+      </div>
+    </aside>
+  </section>
+
+  <section class="recorded">
+    <h2>The recorded run</h2>
+    <p class="note">The same simulation drawn to a GIF, 873 × 960, one frame every <strong>10 game seconds</strong>, 70 game minutes. Made by <code>scripts/generate-barrens-gif</code> from the data <code>scripts/generate-barrens-data</code> pulls out of the map files and the world database.</p>
+    <img src="barrens/barrens-zone.gif" alt="The Barrens from above over 70 game minutes: paths wearing in from the towns, rings of wear round each place" width="873" height="960" loading="lazy">
+  </section>
+
+  <p class="note">A drawing of intended behaviour, not the game's combat: health, damage and cast times are round numbers. <strong>Movement</strong>: players and buddies run 7 yards a second; monsters 10% faster, so a kiter survives on slows and blinks, not by outwalking. <strong>Roaming</strong>: each stop's bearing from the place's middle turns a tenth of a circle; its distance out is a percent of the way to the place's edge, moved 1 to 20 in or out at even odds. <strong>Fighting</strong>: a character opens from 30 yards with a cast, blinks or disengages out of melee, and kites in circles near the monster's home, away from where it last met danger. <strong>Monsters</strong>: aggro 20 yards, one less per level of difference; leash 120 yards; they come back after their spawn time. Places are tinted from the zone's grey toward red, green or blue so no two touching places match.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var D = /*BARRENS_DATA*/;
+
+  // {{{ numbers (as in scripts/generate-barrens-gif)
+  var DT = 0.5, PLAYERS = 30, RUN = 7, MOB_SPEED = 7.7, STOPS = 30, BAG = 18;
+  var TURN = Math.PI * 2 / 10, NEAR = 10, ARRIVE = 4, LEASH = 120, PULL_RANGE = 30;
+  var TOWN_STAY = [30, 60], DEATH_WAIT = 30, SIZE = 533.3333, SQ = SIZE / 16;
+  // }}}
+
+  // {{{ random numbers: a small seeded generator (not the Lua one's exact
+  // sequence: JavaScript numbers can't hold its products exactly)
+  var seed = 7;
+  function rand() { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+  function rint(a, b) { return a + Math.floor(rand() * (b - a + 1)); }
+  // }}}
+
+  // {{{ the grid
+  var ROWS = D.rows, COLS = D.cols;
+  function sqOf(x, y) { return [Math.floor(16 * (32 - x / SIZE)) - D.X0, Math.floor(16 * (32 - y / SIZE)) - D.Y0]; }
+  function areaAt(x, y) { var s = sqOf(x, y); if (s[0] < 0 || s[0] >= ROWS || s[1] < 0 || s[1] >= COLS) return 0; return D.area[s[0] * COLS + s[1]]; }
+  function dist(ax, ay, bx, by) { var dx = ax - bx, dy = ay - by; return Math.sqrt(dx * dx + dy * dy); }
+  // }}}
+
+  // {{{ places, monsters, characters
+  var places = [], levels = {};
+  var mobs = [], cells = {}, CELL = 133.3333;
+  var M = D.mobs;
+  for (var i = 0; i < M.length; i += 6) {
+    var lv = M[i + 2], elite = M[i + 3] === 1, hp = 60 + 14 * lv * (elite ? 3 : 1);
+    var mob = { x: M[i], y: M[i + 1], hx: M[i], hy: M[i + 1], level: lv, elite: elite, maxhp: hp, hp: hp,
+                alive: true, respawn: Math.max(120, Math.min(600, M[i + 4])), area: M[i + 5], target: null, slowUntil: 0, swing: 0, evading: false };
+    mobs.push(mob);
+    (levels[mob.area] = levels[mob.area] || []).push(lv);
+    var k = Math.floor(mob.x / CELL) * 100000 + Math.floor(mob.y / CELL);
+    (cells[k] = cells[k] || []).push(mob);
+  }
+  function nearMobs(x, y) {
+    var out = [], cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+    for (var dx = -1; dx <= 1; dx++) for (var dy = -1; dy <= 1; dy++) { var l = cells[(cx + dx) * 100000 + (cy + dy)]; if (l) out.push.apply(out, l); }
+    return out;
+  }
+  var townIds = {}; D.towns.forEach(function (t) { townIds[t.id] = true; });
+  Object.keys(D.areas).forEach(function (id) {
+    var a = D.areas[id], n = +id, lv = levels[n];
+    if (n === D.zone || townIds[n] || /Sea/.test(a.name) || !lv || lv.length < 4) return;
+    lv.sort(function (p, q) { return p - q; });
+    places.push({ id: n, name: a.name, x: a.x, y: a.y, level: lv[Math.ceil(lv.length / 2) - 1] });
+  });
+  places.sort(function (p, q) { return p.id - q.id; });
+  function aggro(cl, ml) { return Math.max(5, Math.min(45, 20 - (cl - ml))); }
+  function nearestTown(x, y) { var b = null, bd = 1e18; D.towns.forEach(function (t) { var d = dist(x, y, t.x, t.y); if (d < bd) { b = t; bd = d; } }); return b; }
+  function pickPlace(level, notId) {
+    var fit = places.filter(function (p) { return p.id !== notId && Math.abs(p.level - level) <= 3; });
+    if (!fit.length) { var b = null, bd = 1e9; places.forEach(function (p) { if (p.id !== notId && Math.abs(p.level - level) < bd) { b = p; bd = Math.abs(p.level - level); } }); return b; }
+    return fit[rint(0, fit.length - 1)];
+  }
+  var chars = [];
+  function newChar(kind, owner, town, level, cls) {
+    var a = rand() * Math.PI * 2, r = rand() * town.r * 0.6, danger = [];
+    for (var s = 0; s < 16; s++) danger.push(-1e9);
+    var c = { kind: kind, owner: owner, cls: cls, level: level, x: town.x + Math.cos(a) * r, y: town.y + Math.sin(a) * r,
+              maxhp: 90 + 16 * level, bag: 0, state: "town", wait: rint(TOWN_STAY[0], TOWN_STAY[1]) * rand(),
+              spin: rand() < 0.5 ? 1 : -1, angle: 0, ypct: 0, stops: 0, place: null, wx: 0, wy: 0, cast: 0,
+              blinkCd: 0, slowCd: 0, instantCd: 0, danger: danger, kills: 0, deaths: 0, pulling: null, inCombatAt: -1e9 };
+    c.hp = c.maxhp; chars.push(c); return c;
+  }
+  for (var p = 0; p < PLAYERS; p++) {
+    var town = D.towns[p % D.towns.length], level = rint(11, 24);
+    var pl = newChar("player", null, town, level, rand() < 0.5 ? "mage" : "hunter");
+    var nb = rint(0, 2);
+    for (var b = 0; b < nb; b++) newChar("buddy", pl, town, level, rand() < 0.5 ? "mage" : "hunter");
+  }
+  // }}}
+
+  // {{{ the owner's waypoint rule round a place
+  function edgeAlong(pl, bearing) {
+    var d = 0;
+    while (d < 1500) { var nd = d + 10; if (areaAt(pl.x + Math.cos(bearing) * nd, pl.y + Math.sin(bearing) * nd) !== pl.id) return d; d = nd; }
+    return d;
+  }
+  function nextWaypoint(c) {
+    var pl = c.place;
+    c.angle += TURN * c.spin;
+    if (c.ypct === 0) c.ypct = rint(1, 100);
+    else { var ch = rint(1, 20); c.ypct = Math.max(1, Math.min(100, c.ypct + (rand() < 0.5 ? -ch : ch))); }
+    var d = Math.max(NEAR, edgeAlong(pl, c.angle) * c.ypct / 100);
+    c.wx = pl.x + Math.cos(c.angle) * d; c.wy = pl.y + Math.sin(c.angle) * d;
+  }
+  function goToPlace(c, pl) { c.place = pl; c.state = "travel"; c.stops = 0; c.ypct = 0; c.angle = Math.atan2(c.y - pl.y, c.x - pl.x); c.wx = pl.x; c.wy = pl.y; }
+  function goToTown(c) { var t = nearestTown(c.x, c.y); c.state = "to_town"; c.town = t; c.wx = t.x; c.wy = t.y; }
+  function chooseNext(c) {
+    if (c.bag >= BAG) return goToTown(c);
+    if (c.kind === "buddy" && c.owner.place && c.owner.state !== "to_town" && c.owner.state !== "town") return goToPlace(c, c.owner.place);
+    goToPlace(c, pickPlace(c.level, c.place ? c.place.id : 0));
+  }
+  function stepToward(e, tx, ty, speed, dt) {
+    var d = dist(e.x, e.y, tx, ty); if (d < 1e-6) return true;
+    var s = speed * dt; if (s >= d) { e.x = tx; e.y = ty; return true; }
+    e.x += (tx - e.x) / d * s; e.y += (ty - e.y) / d * s; return false;
+  }
+  function sectorOf(a) { var t = ((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2); return Math.floor(t / (Math.PI * 2) * 16) % 16; }
+  // }}}
+
+  // {{{ fighting
+  var count = { kills: 0, deaths: 0, casts: 0, slows: 0, blinks: 0, disengages: 0, leash: 0, towns: 0, places: 0 };
+  function foeOf(c) {
+    var best = null, bd = 1e18;
+    nearMobs(c.x, c.y).forEach(function (m) { if (m.alive && m.target === c && !m.evading) { var d = dist(c.x, c.y, m.x, m.y); if (d < bd) { best = m; bd = d; } } });
+    return best ? [best, bd] : null;
+  }
+  function kiteAngle(c, m, now) {
+    var away = Math.atan2(c.y - m.y, c.x - m.x), best = away, bs = -1e18;
+    [0, 0.5, -0.5, 1, -1, 1.5, -1.5].forEach(function (off) {
+      var a = away + off, px = c.x + Math.cos(a) * 40, py = c.y + Math.sin(a) * 40, open = 60;
+      nearMobs(px, py).forEach(function (o) { if (o.alive && o !== m && !o.target) open = Math.min(open, dist(px, py, o.x, o.y)); });
+      var score = open - (now - c.danger[sectorOf(a)] < 120 ? 40 : 0) - Math.abs(off) * 5;
+      if (areaAt(px, py) === 0) score -= 100;
+      score -= Math.max(0, dist(px, py, m.hx, m.hy) - 70) * 1.5;   // circle near the monster's home, inside its leash
+      if (score > bs) { best = a; bs = score; }
+    });
+    return best;
+  }
+  function damageMob(m, amount, c, now) {
+    m.hp -= amount;
+    if (m.hp <= 0) {
+      m.alive = false; m.target = null; m.backAt = now + m.respawn;
+      c.bag = Math.min(BAG, c.bag + 1); c.kills++; count.kills++;
+      c.danger[sectorOf(Math.atan2(m.hy - c.y, m.hx - c.x))] = m.backAt - 120;
+    }
+  }
+  function castLands(c, m, now) {
+    if (c.cls === "mage") { m.slowUntil = now + 5; count.slows++; damageMob(m, 22 + 5 * c.level, c, now); }
+    else damageMob(m, 26 + 5 * c.level, c, now);
+    count.casts++;
+    c.bolt = { tx: m.x, ty: m.y, t: now };
+  }
+  function fight(c, m, d, now, dt) {
+    c.blinkCd -= dt; c.slowCd -= dt; c.instantCd -= dt;
+    if (d < 5) {
+      var a = kiteAngle(c, m, now);
+      if (c.blinkCd <= 0) {
+        c.x += Math.cos(a) * 20; c.y += Math.sin(a) * 20; c.blinkCd = c.cls === "mage" ? 15 : 25; c.cast = 0;
+        if (c.cls === "mage") count.blinks++; else count.disengages++;
+        c.flash = now; return;
+      }
+      c.cast = 0; stepToward(c, c.x + Math.cos(a) * 10, c.y + Math.sin(a) * 10, RUN, dt);
+      if (c.instantCd <= 0) { damageMob(m, 5 + c.level, c, now); c.instantCd = 1.5; }
+      return;
+    }
+    if (c.cls === "hunter" && d < 15 && c.slowCd <= 0) { m.slowUntil = now + 4; c.slowCd = 12; count.slows++; damageMob(m, 6 + c.level, c, now); return; }
+    if (d > 30) { c.cast = 0; stepToward(c, m.x, m.y, RUN, dt); return; }
+    if (c.cast <= 0) { c.cast = c.cls === "mage" ? 2.5 : 3; return; }
+    c.cast -= dt;
+    if (c.cast <= 0) castLands(c, m, now);
+  }
+  function pull(c, now, dt) {
+    if (!c.pulling || !c.pulling.alive || c.pulling.target || c.pulling.evading) {
+      c.pulling = null; c.cast = 0;
+      var best = null, bd = 1e18;
+      nearMobs(c.x, c.y).forEach(function (m) {
+        if (m.alive && !m.target && !m.evading && Math.abs(m.level - c.level) <= 4) { var d = dist(c.x, c.y, m.x, m.y); if (d <= PULL_RANGE && d < bd) { best = m; bd = d; } }
+      });
+      if (!best) return false;
+      c.pulling = best; c.cast = c.cls === "mage" ? 2.5 : 3; return true;
+    }
+    c.cast -= dt;
+    if (c.cast > 0) return true;
+    var m = c.pulling; c.pulling = null; m.target = c;
+    c.danger[sectorOf(Math.atan2(m.y - c.y, m.x - c.x))] = now;
+    castLands(c, m, now);
+    return true;
+  }
+  // }}}
+
+  // {{{ one step of the world
+  var heat = new Float32Array(ROWS * COLS);
+  function worldStep(now, dt) {
+    mobs.forEach(function (m) {
+      if (!m.alive) { if (now >= m.backAt) { m.alive = true; m.hp = m.maxhp; m.x = m.hx; m.y = m.hy; } return; }
+      if (m.evading) { if (stepToward(m, m.hx, m.hy, MOB_SPEED * 2, dt)) { m.evading = false; m.hp = m.maxhp; } return; }
+      var c = m.target; if (!c) return;
+      if (c.state === "dead" || dist(m.x, m.y, m.hx, m.hy) > LEASH) { m.target = null; m.evading = true; count.leash++; return; }
+      var d = dist(m.x, m.y, c.x, c.y);
+      if (d > 4) stepToward(m, c.x, c.y, MOB_SPEED * (now < m.slowUntil ? 0.5 : 1), dt);
+      else {
+        m.swing -= dt;
+        if (m.swing <= 0) {
+          m.swing = 2; c.hp -= (3 + 1.1 * m.level) * (m.elite ? 2.5 : 1); c.inCombatAt = now;
+          if (c.hp <= 0) { c.state = "dead"; c.deadAt = now; c.deaths++; count.deaths++; m.target = null; }
+        }
+      }
+    });
+    chars.forEach(function (c) {
+      if (c.state === "dead") {
+        if (now - c.deadAt >= DEATH_WAIT) { var t = nearestTown(c.x, c.y); c.x = t.x; c.y = t.y; c.hp = c.maxhp * 0.5; c.state = "town"; c.wait = 10; }
+        return;
+      }
+      if (c.state !== "town") nearMobs(c.x, c.y).forEach(function (m) {
+        if (m.alive && !m.target && !m.evading && dist(c.x, c.y, m.x, m.y) < aggro(c.level, m.level)) { m.target = c; c.danger[sectorOf(Math.atan2(m.y - c.y, m.x - c.x))] = now; }
+      });
+      var f = foeOf(c);
+      if (f) { c.inCombatAt = now; fight(c, f[0], f[1], now, dt); }
+      else {
+        if (now - c.inCombatAt > 5) c.hp = Math.min(c.maxhp, c.hp + c.maxhp * 0.02 * dt);
+        if (c.state === "town") { c.cast = 0; c.wait -= dt; if (c.wait <= 0) chooseNext(c); }
+        else if (c.state === "to_town") {
+          c.cast = 0;
+          if (stepToward(c, c.wx, c.wy, RUN, dt) || dist(c.x, c.y, c.town.x, c.town.y) < c.town.r * 0.4) { c.state = "town"; c.bag = 0; c.wait = rint(TOWN_STAY[0], TOWN_STAY[1]); count.towns++; }
+        } else if (c.state === "travel") {
+          c.cast = 0;
+          if (stepToward(c, c.wx, c.wy, RUN, dt) || dist(c.x, c.y, c.place.x, c.place.y) < 30) { c.state = "adventure"; count.places++; nextWaypoint(c); }
+        } else if (c.state === "adventure") {
+          if (c.bag < BAG && pull(c, now, dt)) { /* opening cast */ }
+          else if (stepToward(c, c.wx, c.wy, RUN, dt) || dist(c.x, c.y, c.wx, c.wy) < ARRIVE) {
+            c.stops++;
+            if (c.bag >= BAG || c.stops >= STOPS) chooseNext(c); else nextWaypoint(c);
+          }
+        }
+      }
+      var s = sqOf(c.x, c.y);
+      if (s[0] >= 0 && s[0] < ROWS && s[1] >= 0 && s[1] < COLS) heat[s[0] * COLS + s[1]] += dt;
+    });
+  }
+  // }}}
+
+  // {{{ colours: the zone's grey tinted toward R, G or B, touching places apart
+  var GRAY = 104, TINTS = [];
+  [1, 2].forEach(function (s) { [0, 1, 2].forEach(function (ch) { var base = GRAY * (s === 1 ? 0.90 : 0.82), v = [base, base, base]; v[ch] += s === 1 ? 9 : 15; TINTS.push(v); }); });
+  var HEATK = [0, 0.14, 0.28, 0.44], WARM = [255, 214, 150];
+  var tintOf = {};
+  (function colour() {
+    var nb = {};
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+      var a = D.area[r * COLS + c]; if (!a) continue;
+      nb[a] = nb[a] || {};
+      [[r + 1, c], [r, c + 1]].forEach(function (o) {
+        if (o[0] >= ROWS || o[1] >= COLS) return;
+        var b = D.area[o[0] * COLS + o[1]];
+        if (b && b !== a) { nb[a][b] = true; nb[b] = nb[b] || {}; nb[b][a] = true; }
+      });
+    }
+    var order = Object.keys(nb).map(Number).sort(function (p, q) { var dp = Object.keys(nb[p]).length, dq = Object.keys(nb[q]).length; return dp !== dq ? dq - dp : p - q; });
+    order.forEach(function (a) { var taken = {}; Object.keys(nb[a]).forEach(function (b) { if (tintOf[b] !== undefined) taken[tintOf[b]] = true; }); var t = 0; while (taken[t] && t < 5) t++; tintOf[a] = t; });
+  })();
+  // }}}
+
+  // {{{ drawing: a floor image one pixel a square, scaled; marks at fixed sizes
+  var map = document.getElementById("map"), cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+  var floor = document.createElement("canvas"); floor.width = COLS; floor.height = ROWS;
+  var fctx = floor.getContext("2d"), img = fctx.createImageData(COLS, ROWS);
+  function paintFloor() {
+    for (var i = 0; i < ROWS * COLS; i++) {
+      var a = D.area[i], o = i * 4;
+      if (!a) { img.data[o] = GRAY; img.data[o + 1] = GRAY; img.data[o + 2] = GRAY + 4; img.data[o + 3] = 255; continue; }
+      var h = heat[i], k = HEATK[h >= 400 ? 3 : h >= 90 ? 2 : h >= 12 ? 1 : 0], t = TINTS[tintOf[a]];
+      img.data[o] = t[0] * (1 - k) + WARM[0] * k; img.data[o + 1] = t[1] * (1 - k) + WARM[1] * k; img.data[o + 2] = t[2] * (1 - k) + WARM[2] * k; img.data[o + 3] = 255;
+    }
+    fctx.putImageData(img, 0, 0);
+  }
+  // view: square coordinates (col, row) -> screen pixels; scale = pixels a square
+  var W = 0, H = 0, dpr = 1, view = { scale: 1, ox: 0, oy: 0 }, fitScale = 1;
+  function resize() {
+    var r = map.getBoundingClientRect(); dpr = window.devicePixelRatio || 1;
+    W = r.width; H = r.height; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    var old = fitScale; fitScale = Math.min(W / COLS, H / ROWS);
+    if (view.scale === old || view.scale < fitScale) wholeZone();
+  }
+  function wholeZone() { view.scale = fitScale; view.ox = (W - COLS * fitScale) / 2; view.oy = (H - ROWS * fitScale) / 2; }
+  function toScreen(x, y) {
+    var fr = 16 * (32 - x / SIZE) - D.X0, fc = 16 * (32 - y / SIZE) - D.Y0;
+    return [view.ox + fc * view.scale, view.oy + fr * view.scale];
+  }
+  function toWorld(sx, sy) {
+    var fc = (sx - view.ox) / view.scale, fr = (sy - view.oy) / view.scale;
+    return [(32 - (fr + D.X0) / 16) * SIZE, (32 - (fc + D.Y0) / 16) * SIZE];
+  }
+  function zoomAt(sx, sy, factor) {
+    var ns = Math.max(fitScale, Math.min(fitScale * 60, view.scale * factor));
+    view.ox = sx - (sx - view.ox) * ns / view.scale; view.oy = sy - (sy - view.oy) * ns / view.scale; view.scale = ns;
+  }
+  function draw(now) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = "#686870"; ctx.fillRect(0, 0, W, H);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(floor, view.ox, view.oy, COLS * view.scale, ROWS * view.scale);
+    var ypx = SQ / view.scale;               // yards a screen pixel
+    var zoomed = view.scale / fitScale;
+    // towns
+    ctx.strokeStyle = "#ececec"; ctx.lineWidth = 2;
+    D.towns.forEach(function (t) { var s = toScreen(t.x, t.y); ctx.beginPath(); ctx.arc(s[0], s[1], t.r / ypx, 0, Math.PI * 2); ctx.stroke(); });
+    // monsters (and, zoomed in, their aggro rings)
+    mobs.forEach(function (m) {
+      if (!m.alive) return;
+      var s = toScreen(m.x, m.y);
+      if (s[0] < -20 || s[1] < -20 || s[0] > W + 20 || s[1] > H + 20) return;
+      ctx.fillStyle = m.target ? "#ee4034" : "#7a2020";
+      var r = m.target ? 2.5 : 1.0 + Math.min(2, zoomed / 8);   // idle monsters faint at whole-zone scale, fuller zoomed in
+      ctx.beginPath(); ctx.arc(s[0], s[1], r, 0, Math.PI * 2); ctx.fill();
+    });
+    // characters
+    chars.forEach(function (c) {
+      var s = toScreen(c.x, c.y);
+      if (c.state === "dead") { ctx.fillStyle = "#46464c"; ctx.fillRect(s[0] - 1, s[1] - 1, 3, 3); return; }
+      if (c.bolt && now - c.bolt.t < 3) { var b = toScreen(c.bolt.tx, c.bolt.ty); ctx.strokeStyle = "#aad6ff"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(s[0], s[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+      if (c.flash !== undefined && now - c.flash < 3) { ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(s[0], s[1], 7, 0, Math.PI * 2); ctx.stroke(); }
+      var big = c.kind === "player";
+      ctx.fillStyle = "#141418"; ctx.beginPath(); ctx.arc(s[0], s[1], big ? 4.5 : 3.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = big ? "#fff4aa" : "#6ed6ff"; ctx.beginPath(); ctx.arc(s[0], s[1], big ? 3 : 2, 0, Math.PI * 2); ctx.fill();
+      if (c === followed) { ctx.strokeStyle = "#d8954f"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(s[0], s[1], 10, 0, Math.PI * 2); ctx.stroke();
+        if (c.state === "adventure" || c.state === "travel") { var w = toScreen(c.wx, c.wy); ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(s[0], s[1]); ctx.lineTo(w[0], w[1]); ctx.stroke(); ctx.setLineDash([]); } }
+    });
+  }
+  // }}}
+
+  // {{{ input: wheel zooms at the pointer, drag pans, pinch zooms
+  var pointers = {}, lastPinch = 0, dragMoved = false;
+  map.addEventListener("wheel", function (e) {
+    e.preventDefault(); followed = null; updateFollow();
+    var r = map.getBoundingClientRect();
+    zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0015));
+  }, { passive: false });
+  map.addEventListener("pointerdown", function (e) { map.setPointerCapture(e.pointerId); pointers[e.pointerId] = { x: e.clientX, y: e.clientY }; map.classList.add("dragging"); dragMoved = false; });
+  map.addEventListener("pointermove", function (e) {
+    var r = map.getBoundingClientRect();
+    var here = placeAt(e.clientX - r.left, e.clientY - r.top); showPlace(here);
+    var p = pointers[e.pointerId]; if (!p) return;
+    var ids = Object.keys(pointers);
+    if (ids.length === 2) {
+      var o = pointers[ids[0] == e.pointerId ? ids[1] : ids[0]];
+      var d = Math.hypot(e.clientX - o.x, e.clientY - o.y);
+      if (lastPinch) zoomAt((e.clientX + o.x) / 2 - r.left, (e.clientY + o.y) / 2 - r.top, d / lastPinch);
+      lastPinch = d;
+    } else { view.ox += e.clientX - p.x; view.oy += e.clientY - p.y; if (Math.abs(e.clientX - p.x) + Math.abs(e.clientY - p.y) > 1) { dragMoved = true; followed = null; updateFollow(); } }
+    p.x = e.clientX; p.y = e.clientY;
+  });
+  function lift(e) { delete pointers[e.pointerId]; lastPinch = 0; if (!Object.keys(pointers).length) map.classList.remove("dragging"); }
+  map.addEventListener("pointerup", lift); map.addEventListener("pointercancel", lift);
+  map.addEventListener("pointerleave", function () { showPlace(null); });
+  var placeEl = document.getElementById("place");
+  function placeAt(sx, sy) { var w = toWorld(sx, sy), a = areaAt(w[0], w[1]); return a ? (D.areas[a] ? D.areas[a].name : null) : null; }
+  function showPlace(name) { if (name) { placeEl.textContent = name; placeEl.hidden = false; } else placeEl.hidden = true; }
+  // }}}
+
+  // {{{ controls: play, speed, follow, whole zone
+  var playing = true, speed = 30, followed = null;
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var playBtn = document.getElementById("play");
+  function setPlaying(v) { playing = v; playBtn.textContent = v ? "Pause" : "Play"; playBtn.setAttribute("aria-pressed", v ? "true" : "false"); }
+  if (reduce) setPlaying(false);
+  playBtn.addEventListener("click", function () { setPlaying(!playing); });
+  ["speed1", "speed2", "speed3"].forEach(function (id) {
+    var b = document.getElementById(id);
+    b.addEventListener("click", function () { speed = +b.dataset.speed; ["speed1", "speed2", "speed3"].forEach(function (o) { document.getElementById(o).setAttribute("aria-pressed", o === id ? "true" : "false"); }); });
+  });
+  var followInfo = document.getElementById("followinfo");
+  document.getElementById("follow").addEventListener("click", function () {
+    var ps = chars.filter(function (c) { return c.kind === "player" && c.state !== "dead"; });
+    followed = ps[rint(0, ps.length - 1)];
+    view.scale = Math.max(view.scale, fitScale * 12);
+    updateFollow();
+  });
+  document.getElementById("whole").addEventListener("click", function () { followed = null; wholeZone(); updateFollow(); });
+  var WHAT = { town: "in town", to_town: "walking to town to sell", travel: "walking to", adventure: "adventuring round", dead: "dead, rising in town soon" };
+  function updateFollow() {
+    if (!followed) { followInfo.textContent = "Pick “Follow someone” to ride along with one player."; return; }
+    var c = followed, what = WHAT[c.state] || c.state;
+    if ((c.state === "travel" || c.state === "adventure") && c.place) what += " " + c.place.name;
+    if (c.state === "adventure") what += " (stop " + (c.stops + 1) + " of " + STOPS + ")";
+    followInfo.textContent = "Level " + c.level + " " + c.cls + ", " + what + ". Bags " + c.bag + "/" + BAG + ", kills " + c.kills + ", deaths " + c.deaths + ".";
+  }
+  // }}}
+
+  // {{{ counts
+  var countsEl = document.getElementById("counts"), buddies = chars.filter(function (c) { return c.kind === "buddy"; }).length;
+  function showCounts(now) {
+    var rows = [["Game time", Math.floor(now / 60) + " min"], ["Players / buddies", PLAYERS + " / " + buddies], ["Monsters", mobs.length],
+                ["Kills", count.kills], ["Deaths", count.deaths], ["Casts landed", count.casts], ["Slows", count.slows],
+                ["Blinks / disengages", count.blinks + " / " + count.disengages], ["Leash resets", count.leash], ["Places reached", count.places], ["Town visits", count.towns]];
+    countsEl.innerHTML = rows.map(function (r) { return "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>"; }).join("");
+  }
+  // }}}
+
+  // {{{ the loop
+  var now = 0, last = 0, acc = 0, heatTick = 0;
+  function frame(t) {
+    var dt = last ? Math.min(0.1, (t - last) / 1000) : 0; last = t;
+    if (playing) {
+      acc += dt * speed;
+      var steps = 0;
+      while (acc >= DT && steps < 400) { worldStep(now, DT); now += DT; acc -= DT; steps++; }
+      if (steps >= 400) acc = 0;
+    }
+    if (followed) { var s = toScreen(followed.x, followed.y); view.ox += W / 2 - s[0]; view.oy += H / 2 - s[1]; }
+    if ((heatTick += dt) > 0.25) { heatTick = 0; paintFloor(); showCounts(now); updateFollow(); }
+    draw(now);
+    requestAnimationFrame(frame);
+  }
+  window.addEventListener("resize", resize);
+  resize(); paintFloor(); showCounts(0); draw(0);
+  requestAnimationFrame(frame);
+  // }}}
+})();
+</script>
