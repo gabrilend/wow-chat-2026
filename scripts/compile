@@ -389,13 +389,35 @@ do_build() {
     fi
     mkdir -p "${CCACHE_CACHE_DIR}"
     export CCACHE_DIR="${CCACHE_CACHE_DIR}"
+    # Precompiled headers: without these, ccache turns away every compile
+    # that uses one ("Could not use precompiled header": 10,711 of 18,782
+    # calls, 2026-09-29, i.e. every game and script file). The build uses
+    # them, and the source patches' apply/revert re-dates headers inside
+    # them, so make rebuilds nearly everything each time; ccache, which
+    # compares content, is what turns that back into a short build. Clang
+    # also needs its precompiled headers built without a timestamp
+    # (-fno-pch-timestamp, in the cmake flags below). ccache's own manual,
+    # "Precompiled headers".
+    export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
     echo "Using local ccache from ${CCACHE_BIN}"
     echo "  Cache: ${CCACHE_CACHE_DIR}"
 
-    # Only run cmake if not already configured, or if forced
-    if [[ ! -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" || "${FORCE_REBUILD}" == "true" ]]; then
+    # Only run cmake if not already configured, or if forced, or if the
+    # configuration predates the timestamp-free precompiled headers ccache
+    # needs (then once more, to add that flag; that build compiles
+    # everything afresh, after which the cache carries the builds)
+    local PCH_FLAG="-Xclang -fno-pch-timestamp"
+    local RECONFIGURE_WHY=""
+    if [[ ! -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" ]]; then
+        RECONFIGURE_WHY="not configured yet"
+    elif [[ "${FORCE_REBUILD}" == "true" ]]; then
+        RECONFIGURE_WHY="--force"
+    elif ! grep -q -- "-fno-pch-timestamp" "${BUILD_DIR_SHADOW}/CMakeCache.txt"; then
+        RECONFIGURE_WHY="adding ${PCH_FLAG} so ccache can cache precompiled-header compiles (this build compiles everything once)"
+    fi
+    if [[ -n "${RECONFIGURE_WHY}" ]]; then
         echo ""
-        echo "Running cmake..."
+        echo "Running cmake (${RECONFIGURE_WHY})..."
         if ! cmake "${AC_CODE_DIR}" \
           -DCMAKE_BUILD_TYPE="$([[ "${DEBUG_BUILD}" == "true" ]] && echo Debug || echo RelWithDebInfo)" \
           -DBOOST_ROOT="${BOOST_DIR}" \
@@ -408,7 +430,7 @@ do_build() {
           -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}" \
           -DCMAKE_C_COMPILER_LAUNCHER="${CCACHE_BIN}" \
           -DCMAKE_CXX_COMPILER_LAUNCHER="${CCACHE_BIN}" \
-          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common -I${LUAJIT_INC} -Wno-enum-constexpr-conversion -fcolor-diagnostics" \
+          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common -I${LUAJIT_INC} -Wno-enum-constexpr-conversion -fcolor-diagnostics ${PCH_FLAG}" \
           -DCMAKE_BINARY_DIR="${BUILD_DIR_SHADOW}" \
           -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}" \
           -DCMAKE_COLOR_DIAGNOSTICS=ON \
