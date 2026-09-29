@@ -23,8 +23,11 @@ DELETE FROM `trainer_spell`             WHERE `TrainerId`  BETWEEN 155001   AND 
 DELETE FROM `trainer`                   WHERE `Id`         BETWEEN 155001   AND 155008;
 
 INSERT IGNORE INTO `creature` SELECT * FROM `basic_155e_goblin_backup`;
+CREATE TABLE IF NOT EXISTS `basic_155e_goblin_events` LIKE `game_event_creature`;
+INSERT IGNORE INTO `game_event_creature` SELECT * FROM `basic_155e_goblin_events`;
 
 DROP TABLE IF EXISTS `basic_155e_goblin_backup`;
+DROP TABLE IF EXISTS `basic_155e_goblin_events`;
 DROP TABLE IF EXISTS `basic_155e_missing`;
 DROP TABLE IF EXISTS `basic_155e_hubs`;
 DROP TABLE IF EXISTS `basic_155e_valleys`;

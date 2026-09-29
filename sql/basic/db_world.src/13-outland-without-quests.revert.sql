@@ -8,12 +8,15 @@
 
 CREATE TABLE IF NOT EXISTS `basic_155l_disabled` (`entry` int unsigned NOT NULL, PRIMARY KEY (`entry`));
 CREATE TABLE IF NOT EXISTS `basic_155l_gameobject` LIKE `gameobject`;
+CREATE TABLE IF NOT EXISTS `basic_155l_game_event_gameobject` LIKE `game_event_gameobject`;
 
 DELETE d FROM `disables` d JOIN `basic_155l_disabled` b ON b.`entry` = d.`entry` WHERE d.`sourceType` = 1;
 INSERT IGNORE INTO `gameobject` SELECT * FROM `basic_155l_gameobject`;
+INSERT IGNORE INTO `game_event_gameobject` SELECT * FROM `basic_155l_game_event_gameobject`;
 
 DROP TABLE `basic_155l_disabled`;
 DROP TABLE `basic_155l_gameobject`;
+DROP TABLE `basic_155l_game_event_gameobject`;
 DROP TABLE IF EXISTS `tmp_155l_quests`;   -- working tables, in case an apply stopped part-way
 DROP TABLE IF EXISTS `tmp_155l_maps`;
 DROP TABLE IF EXISTS `tmp_155l_areas`;

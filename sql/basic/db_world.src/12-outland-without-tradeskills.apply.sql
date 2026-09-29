@@ -228,6 +228,87 @@ CREATE TABLE IF NOT EXISTS `basic_155n_npc_vendor` LIKE `npc_vendor`;
 INSERT IGNORE INTO `basic_155n_npc_vendor` SELECT v.* FROM `npc_vendor` v JOIN `tmp_155n_recipes` r ON r.`entry` = v.`item`;
 DELETE v FROM `npc_vendor` v JOIN `tmp_155n_recipes` r ON r.`entry` = v.`item`;
 
+-- ---- 8. loose ends ------------------------------------------------------------------
+-- What 1-7 removed was pointed at from elsewhere. Left pointing at nothing,
+-- each such pointer was an error line at every server start (about 1,200 of
+-- them, 2026-09-29), and 160 creatures whose only drop was a removed recipe
+-- kept a loot table with nothing in it. Each pointer goes too, saved first;
+-- the revert puts it back. The rules read "points at nothing now", so a
+-- re-apply finds the same rows.
+CREATE TABLE IF NOT EXISTS `basic_155n_lootid` (`entry` int unsigned NOT NULL, `lootid` int unsigned NOT NULL, PRIMARY KEY (`entry`));
+CREATE TABLE IF NOT EXISTS `basic_155n_conditions` LIKE `conditions`;
+CREATE TABLE IF NOT EXISTS `basic_155n_linked_respawn` LIKE `linked_respawn`;
+CREATE TABLE IF NOT EXISTS `basic_155n_skinning_loot` LIKE `skinning_loot_template`;
+
+-- 8a. loot rows handing over a shared loot list (a reference) that has no
+--     rows left. A reference can hand over another, so twice; the list of
+--     live references is copied first (MySQL won't read the table it is
+--     deleting from).
+DROP TABLE IF EXISTS `tmp_155n_live_refs`;
+CREATE TABLE `tmp_155n_live_refs` (`entry` int unsigned NOT NULL, PRIMARY KEY (`entry`));
+INSERT INTO `tmp_155n_live_refs` SELECT DISTINCT `Entry` FROM `reference_loot_template`;
+INSERT IGNORE INTO `basic_155n_creature_loot`   SELECT l.* FROM `creature_loot_template` l   WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `creature_loot_template` l   WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+INSERT IGNORE INTO `basic_155n_gameobject_loot` SELECT l.* FROM `gameobject_loot_template` l WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `gameobject_loot_template` l WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+INSERT IGNORE INTO `basic_155n_item_loot`       SELECT l.* FROM `item_loot_template` l       WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `item_loot_template` l       WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+INSERT IGNORE INTO `basic_155n_reference_loot`  SELECT l.* FROM `reference_loot_template` l  WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `reference_loot_template` l  WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+-- the second pass: a reference emptied by the first
+DELETE FROM `tmp_155n_live_refs`;
+INSERT INTO `tmp_155n_live_refs` SELECT DISTINCT `Entry` FROM `reference_loot_template`;
+INSERT IGNORE INTO `basic_155n_creature_loot`   SELECT l.* FROM `creature_loot_template` l   WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `creature_loot_template` l   WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+INSERT IGNORE INTO `basic_155n_gameobject_loot` SELECT l.* FROM `gameobject_loot_template` l WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `gameobject_loot_template` l WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+INSERT IGNORE INTO `basic_155n_item_loot`       SELECT l.* FROM `item_loot_template` l       WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `item_loot_template` l       WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+INSERT IGNORE INTO `basic_155n_reference_loot`  SELECT l.* FROM `reference_loot_template` l  WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `reference_loot_template` l  WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DROP TABLE `tmp_155n_live_refs`;
+
+-- 8b. a creature whose loot table is now empty drops nothing from it: its
+--     loot id is cleared (a stock world has no such creature, so each one
+--     found is ours)
+INSERT IGNORE INTO `basic_155n_lootid` (`entry`, `lootid`)
+SELECT t.`entry`, t.`lootid` FROM `creature_template` t
+WHERE t.`lootid` <> 0 AND NOT EXISTS (SELECT 1 FROM `creature_loot_template` l WHERE l.`Entry` = t.`lootid`);
+UPDATE `creature_template` t JOIN `basic_155n_lootid` b ON b.`entry` = t.`entry` SET t.`lootid` = 0;
+
+-- 8c. loot conditions naming a loot row that no longer exists (source
+--     types: 1 creature, 3 fishing, 4 object, 5 item, 10 reference, 11
+--     skinning loot)
+INSERT IGNORE INTO `basic_155n_conditions` SELECT c.* FROM `conditions` c
+WHERE (c.`SourceTypeOrReferenceId` = 1  AND NOT EXISTS (SELECT 1 FROM `creature_loot_template` l   WHERE l.`Entry` = c.`SourceGroup` AND l.`Item` = c.`SourceEntry`))
+   OR (c.`SourceTypeOrReferenceId` = 3  AND NOT EXISTS (SELECT 1 FROM `fishing_loot_template` l    WHERE l.`Entry` = c.`SourceGroup` AND l.`Item` = c.`SourceEntry`))
+   OR (c.`SourceTypeOrReferenceId` = 4  AND NOT EXISTS (SELECT 1 FROM `gameobject_loot_template` l WHERE l.`Entry` = c.`SourceGroup` AND l.`Item` = c.`SourceEntry`))
+   OR (c.`SourceTypeOrReferenceId` = 5  AND NOT EXISTS (SELECT 1 FROM `item_loot_template` l       WHERE l.`Entry` = c.`SourceGroup` AND l.`Item` = c.`SourceEntry`))
+   OR (c.`SourceTypeOrReferenceId` = 10 AND NOT EXISTS (SELECT 1 FROM `reference_loot_template` l  WHERE l.`Entry` = c.`SourceGroup` AND l.`Item` = c.`SourceEntry`))
+   OR (c.`SourceTypeOrReferenceId` = 11 AND NOT EXISTS (SELECT 1 FROM `skinning_loot_template` l   WHERE l.`Entry` = c.`SourceGroup` AND l.`Item` = c.`SourceEntry`));
+DELETE c FROM `conditions` c JOIN `basic_155n_conditions` b
+  ON  b.`SourceTypeOrReferenceId` = c.`SourceTypeOrReferenceId` AND b.`SourceGroup` = c.`SourceGroup`
+  AND b.`SourceEntry` = c.`SourceEntry` AND b.`SourceId` = c.`SourceId` AND b.`ElseGroup` = c.`ElseGroup`
+  AND b.`ConditionTypeOrReference` = c.`ConditionTypeOrReference` AND b.`ConditionTarget` = c.`ConditionTarget`
+  AND b.`ConditionValue1` = c.`ConditionValue1` AND b.`ConditionValue2` = c.`ConditionValue2` AND b.`ConditionValue3` = c.`ConditionValue3`;
+
+-- 8d. respawn links naming a node or creature that 1-2 removed (link types:
+--     0 creature follows creature, 1 creature follows object, 2 object
+--     follows object, 3 object follows creature)
+INSERT IGNORE INTO `basic_155n_linked_respawn` SELECT r.* FROM `linked_respawn` r
+WHERE (r.`linkType` IN (1, 2) AND r.`linkedGuid` IN (SELECT `guid` FROM `basic_155n_gameobject`))
+   OR (r.`linkType` IN (2, 3) AND r.`guid`       IN (SELECT `guid` FROM `basic_155n_gameobject`))
+   OR (r.`linkType` IN (0, 3) AND r.`linkedGuid` IN (SELECT `guid` FROM `basic_155n_creature`))
+   OR (r.`linkType` IN (0, 1) AND r.`guid`       IN (SELECT `guid` FROM `basic_155n_creature`));
+DELETE r FROM `linked_respawn` r JOIN `basic_155n_linked_respawn` b ON b.`guid` = r.`guid` AND b.`linkType` = r.`linkType`;
+
+-- 8e. skinning loot tables no creature skins any more (step 3 took them off
+--     Outland's creatures)
+INSERT IGNORE INTO `basic_155n_skinning_loot` SELECT s.* FROM `skinning_loot_template` s
+WHERE s.`Entry` IN (SELECT `skinloot` FROM `basic_155n_skinloot`)
+  AND NOT EXISTS (SELECT 1 FROM `creature_template` t WHERE t.`skinloot` = s.`Entry`);
+DELETE s FROM `skinning_loot_template` s JOIN `basic_155n_skinning_loot` b ON b.`Entry` = s.`Entry` AND b.`Item` = s.`Item`;
+
 DROP TABLE `tmp_155n_recipes`;
 DROP TABLE `tmp_155n_empty`;
 DROP TABLE `tmp_155n_pools`;

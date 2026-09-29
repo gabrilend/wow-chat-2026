@@ -36,6 +36,15 @@ Answers, verbatim, 2026-09-24:
 
 ## Current Behavior
 
+**2026-09-29:** the removals left rows pointing at what they removed (about
+1,200 error lines at every start, and 160 creatures, mostly heroic-dungeon
+versions, whose only drop was a removed recipe and so had an empty loot
+table). Step 8 of the SQL now removes those pointers too, saved first and
+put back by the revert: loot handing over an emptied shared loot list,
+the emptied tables' loot ids, loot conditions naming removed loot rows,
+respawn links naming removed nodes, and skinning loot no creature uses.
+`scripts/validate-basic-state` checks none are left.
+
 **Built 2026-09-24** as install step E027,
 `sql/basic/db_world.src/12-outland-without-tradeskills.apply.sql` (+ revert),
 with its client-data lists written by

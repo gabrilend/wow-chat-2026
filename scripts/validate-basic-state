@@ -210,6 +210,19 @@ report "no Guild Vault (guild bank object) is spawned anywhere; the stock spawns
         UNION ALL SELECT 'saved', COUNT(*) FROM ${WORLD}.basic_617l_guild_vaults HAVING COUNT(*) = 0")"
 # }}}
 
+# {{{ nothing left pointing at removed rows
+# Removing rows (155n's recipes, nodes and skinning; 155l's Quel'Danas portal; 155e's placeholder
+# trainers) left other rows pointing at them: about 1,400 error lines at
+# every start, and 160 creatures with an empty loot table, until
+# 2026-09-29. A stock world has none of these, so any found is ours.
+report "no creature has an empty loot table, no loot hands over a missing shared list, no event or respawn link names a missing spawn" \
+    "$(run_sql "SELECT 'empty loot table', COUNT(*) FROM ${WORLD}.creature_template t WHERE t.lootid <> 0 AND NOT EXISTS (SELECT 1 FROM ${WORLD}.creature_loot_template l WHERE l.Entry = t.lootid) HAVING COUNT(*) > 0
+        UNION ALL SELECT 'missing reference', COUNT(*) FROM ${WORLD}.creature_loot_template l WHERE l.Reference <> 0 AND NOT EXISTS (SELECT 1 FROM ${WORLD}.reference_loot_template r WHERE r.Entry = l.Reference) HAVING COUNT(*) > 0
+        UNION ALL SELECT 'event names missing creature', COUNT(*) FROM ${WORLD}.game_event_creature e WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.creature c WHERE c.guid = ABS(e.guid)) HAVING COUNT(*) > 0
+        UNION ALL SELECT 'event names missing object', COUNT(*) FROM ${WORLD}.game_event_gameobject e WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.gameobject g WHERE g.guid = ABS(e.guid)) HAVING COUNT(*) > 0
+        UNION ALL SELECT 'respawn link names missing object', COUNT(*) FROM ${WORLD}.linked_respawn r WHERE r.linkType IN (1, 2) AND NOT EXISTS (SELECT 1 FROM ${WORLD}.gameobject g WHERE g.guid = r.linkedGuid) HAVING COUNT(*) > 0")"
+# }}}
+
 # {{{ spawn ids under the server's cap
 # The server hands out new spawn ids from MAX(guid)+1 and stops at startup
 # ("Creature spawn id overflow", TCE00007) the first time one passes

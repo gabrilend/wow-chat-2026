@@ -82,6 +82,11 @@ plus source patch B029:
   faction, and no look is used twice. The eight valleys use the looks
   picked with the owner (e.g. a tauren druid on Sunstrider Isle, a night elf
   druid in Northshire). Name "Visiting Mentor", subname "Class Trainer".
+- **The placeholders' holiday rows go with them** (2026-09-29): the stock
+  placeholder trainers removed at each site also appear in holiday-event
+  spawn lists; those rows are saved and removed with the spawns (204 of
+  them had been left naming removed spawns, one error line each at every
+  start), and the revert restores both.
 - **Generated, not hand-written:** `scripts/generate-basic-mentor-hubs`
   (LuaJIT) reads the stock SQL and the client's faction table, computes
   the sites, missing classes and looks, and rewrites only the GENERATED

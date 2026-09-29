@@ -67,6 +67,12 @@ SELECT 1, `entry`, 0, '', '', 'basic 155l: no quests in Outland' FROM `basic_155
 -- ---- the Shattrath portal to the Isle of Quel'Danas ---------------------------
 CREATE TABLE IF NOT EXISTS `basic_155l_gameobject` LIKE `gameobject`;
 INSERT IGNORE INTO `basic_155l_gameobject` SELECT * FROM `gameobject` WHERE `id` = 187056;   -- Shattrath Portal to Isle of Quel'Danas
+-- its holiday-event row goes with it, saved too (2026-09-29: left naming
+-- the removed portal, it was an error line at every start)
+CREATE TABLE IF NOT EXISTS `basic_155l_game_event_gameobject` LIKE `game_event_gameobject`;
+INSERT IGNORE INTO `basic_155l_game_event_gameobject`
+SELECT e.* FROM `game_event_gameobject` e WHERE ABS(e.`guid`) IN (SELECT `guid` FROM `basic_155l_gameobject`);
+DELETE e FROM `game_event_gameobject` e JOIN `basic_155l_game_event_gameobject` b ON b.`guid` = e.`guid` AND b.`eventEntry` = e.`eventEntry`;
 DELETE FROM `gameobject` WHERE `id` = 187056;
 
 DROP TABLE `tmp_155l_quests`;

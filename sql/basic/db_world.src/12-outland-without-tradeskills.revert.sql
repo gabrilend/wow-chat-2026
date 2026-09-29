@@ -28,6 +28,10 @@ CREATE TABLE IF NOT EXISTS `basic_155n_reference_loot` LIKE `reference_loot_temp
 CREATE TABLE IF NOT EXISTS `basic_155n_gameobject_loot` LIKE `gameobject_loot_template`;
 CREATE TABLE IF NOT EXISTS `basic_155n_item_loot` LIKE `item_loot_template`;
 CREATE TABLE IF NOT EXISTS `basic_155n_npc_vendor` LIKE `npc_vendor`;
+CREATE TABLE IF NOT EXISTS `basic_155n_lootid` (`entry` int unsigned NOT NULL, `lootid` int unsigned NOT NULL, PRIMARY KEY (`entry`));
+CREATE TABLE IF NOT EXISTS `basic_155n_conditions` LIKE `conditions`;
+CREATE TABLE IF NOT EXISTS `basic_155n_linked_respawn` LIKE `linked_respawn`;
+CREATE TABLE IF NOT EXISTS `basic_155n_skinning_loot` LIKE `skinning_loot_template`;
 
 INSERT IGNORE INTO `pool_template`          SELECT * FROM `basic_155n_pool_template`;
 INSERT IGNORE INTO `pool_pool`              SELECT * FROM `basic_155n_pool_pool`;
@@ -54,6 +58,12 @@ INSERT IGNORE INTO `gameobject_loot_template` SELECT * FROM `basic_155n_gameobje
 INSERT IGNORE INTO `item_loot_template`     SELECT * FROM `basic_155n_item_loot`;
 INSERT IGNORE INTO `npc_vendor`             SELECT * FROM `basic_155n_npc_vendor`;
 
+-- step 8's loose ends (its loot rows are back with the loot above)
+UPDATE `creature_template` t JOIN `basic_155n_lootid` b ON b.`entry` = t.`entry` SET t.`lootid` = b.`lootid`;
+INSERT IGNORE INTO `conditions`             SELECT * FROM `basic_155n_conditions`;
+INSERT IGNORE INTO `linked_respawn`         SELECT * FROM `basic_155n_linked_respawn`;
+INSERT IGNORE INTO `skinning_loot_template` SELECT * FROM `basic_155n_skinning_loot`;
+
 DROP TABLE `basic_155n_gameobject`;
 DROP TABLE `basic_155n_gameobject_addon`;
 DROP TABLE `basic_155n_game_event_gameobject`;
@@ -74,7 +84,12 @@ DROP TABLE `basic_155n_reference_loot`;
 DROP TABLE `basic_155n_gameobject_loot`;
 DROP TABLE `basic_155n_item_loot`;
 DROP TABLE `basic_155n_npc_vendor`;
+DROP TABLE `basic_155n_lootid`;
+DROP TABLE `basic_155n_conditions`;
+DROP TABLE `basic_155n_linked_respawn`;
+DROP TABLE `basic_155n_skinning_loot`;
 -- working tables, in case an apply stopped part-way
+DROP TABLE IF EXISTS `tmp_155n_live_refs`;
 DROP TABLE IF EXISTS `tmp_155n_locks`;
 DROP TABLE IF EXISTS `tmp_155n_areas`;
 DROP TABLE IF EXISTS `tmp_155n_rank_spells`;

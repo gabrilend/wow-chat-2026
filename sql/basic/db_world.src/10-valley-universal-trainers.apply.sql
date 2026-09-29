@@ -183,6 +183,13 @@ WHERE c.`id` BETWEEN 26324 AND 26332
   AND POW(c.`position_x` - v.`x`, 2) + POW(c.`position_y` - v.`y`, 2) < 60 * 60;   -- a site's stack stands within a few yards
 DELETE c FROM `creature` c
 JOIN `basic_155e_goblin_backup` b ON b.`guid` = c.`guid`;
+-- their holiday-event rows go with them (saved too): left naming a removed
+-- spawn, each was an error line at every server start (204, 2026-09-29).
+-- An event row's guid is negative when the event hides the spawn.
+CREATE TABLE IF NOT EXISTS `basic_155e_goblin_events` LIKE `game_event_creature`;
+INSERT IGNORE INTO `basic_155e_goblin_events`
+SELECT e.* FROM `game_event_creature` e WHERE ABS(e.`guid`) IN (SELECT `guid` FROM `basic_155e_goblin_backup`);
+DELETE e FROM `game_event_creature` e JOIN `basic_155e_goblin_events` b ON b.`guid` = e.`guid` AND b.`eventEntry` = e.`eventEntry`;
 
 -- ---- spawns: where each site's placeholders stood ------------------------
 INSERT INTO `creature`

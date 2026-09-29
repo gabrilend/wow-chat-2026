@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-29 14:25:24
+Generated on: 2026-09-29 14:39:20
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -1179,6 +1179,140 @@ to have gone in as chat text. Run it with the `!` prefix: `! touch
 
 For item 1, should I trace which basic SQL removed those loot tables, starting
 with an issue file?
+
+--------------------------------------------------------------------------------
+
+### User Request 11
+
+$ touch /tmp/claude-allow-foreign-commit
+
+I ran it in a separate terminal. If you still can't access it, then probably
+there's a problem with the harness hook.
+
+> 1. 160 creatures point at a loot table that doesn't exist, so they probably
+> drop nothing. This is the one that affects play. Vanilla's log
+>      doesn't have it, so something in basic's SQL removed those tables.
+
+
+
+<pasted_content id="f3e3">
+>   2. About 900 more loose ends, also new in basic:
+>      - loot conditions for items no longer in the loot they belong to (333);
+>      - loot pointing at shared loot lists that no longer exist (256);
+>      - holiday events naming creature spawns that are gone (204);
+>      - linked respawns naming a missing object (54);
+>      - unused skinning loot (19).
+>
+>      None of the sample numbers appear in the project's SQL, so a bulk delete or rewrite is leaving them behind; the loot rescaling, the
+>      Outland changes and the removed portals are the likely candidates. Mostly log noise, but it hides real errors, like the kit one today.
+>      Tracing it is a real investigation, and I'd write an issue first.
+</pasted_content id="f3e3">
+
+
+let's investigate.
+
+> 3. 34 quests need profession skill above 300, and 30 conditions check for it.
+> Basic caps professions at 300, so those quests can never be
+>      done. This is expected, and vanilla has it too; disabling those quests would make the cap deliberate rather than a log warning.
+
+can we disable these in the same patch that sets the max level to 60?
+
+I'm going to recompile while this is happening.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 11
+
+> Checking the permission file first:
+
+> It's there now; my earlier check just ran before you created it. Making the
+> one plain commit:
+
+> Likely culprits: Outland without quests (13), Darkmoon cards (15), gem supply
+> (18) and ability tomes (22). Their bulk deletes:
+
+> Those deletes are narrow and targeted, so they don't explain hundreds of loose
+> ends. A different angle: compare whole-table row counts between basic's world
+> database and vanilla's.
+
+> Basic has *more* loot rows than vanilla but fewer creature and object spawns.
+> Checking one sample directly, creature 20583, whose loot table is reported
+> missing:
+
+> The event creature is entry 26330 and isn't in any backup table. Checking what
+> it is and which SQL removed it:
+
+> These are holiday-event class trainers, "Shaman Trainer" and so on, one set
+> per class. Basic removes class trainers somewhere. Finding which SQL:
+
+> Now the fix itself. Reading 155n's revert so the cleanup's backups restore in
+> the same pass:
+
+> The rule for the cleanup: remove anything that now points at nothing, saving
+> it first. It's written as "points at nothing now" so a re-apply finds the same
+> rows. Adding it as step 8 of 155n:
+
+> Now the matching restores in 155n's revert:
+
+> Now 155e: the holiday-event rows for the placeholder trainers it removes.
+
+> While the test runs, finding the two issue files so their descriptions can be
+> updated:
+
+> Issues updated. Waiting for the RAM database test to finish.
+
+Two things are still open while the test runs:
+
+- **`.profile` untracking:** the permission is single-use, and my first attempt
+  used it up. That attempt, committing by path, recorded `.profile`'s contents
+  (vanilla → basic) instead of removing it. The removal is staged; one more
+  `touch /tmp/claude-allow-foreign-commit` lets me finish it.
+- **The 34 quests that need skill above 300:** they can't go in the level-60
+  patch. That patch only edits the config file, and it has no way to undo
+  database changes. The warning comes from the quest data itself: the server
+  checks each quest against its maximum skill, which is the level cap × 5. So
+  switching the quests off wouldn't silence it; they'd have to be removed along
+  with the NPC links that offer them. The 30 skill conditions above 300 are the
+  same case. The natural home is the 300-skill cap SQL (155n), which already
+  removes recipes above 300, with backups and a revert. Want me to add them
+  there?
+
+I'll report the loose-ends test result when it finishes.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "nice -n 19
+/mnt/mtwo/games/azeroth-core/wow-chat-2026/scripts/test-basic-sql-in-ram &gt;
+/mnt/mtwo/games/azeroth-core/wow-chat-2026/tmp/shared-memory/basic-sql-ram-test.log
+2&gt;&amp;1; echo "exit=$?" &gt;&gt;
+/mnt/mtwo/games/azeroth-core/wow-chat-2026/tmp/shared-memory/basic-sql-ram-test.log;
+tail -40
+/mnt/mtwo/games/azeroth-core/wow-chat-2026/tmp/shared-memory/basic-sql-ram-test.log"
+completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 11 (continued)
+
+> The RAM test passes: every basic SQL file applied, reverted and re-applied
+> cleanly, and all checks pass, including the new one. Applying both files to
+> the live basic database:
+
+> The live database passes too. Checking the error kinds the validator doesn't
+> cover (loot conditions, skinning, the object event row):
+
+> Everything else is clean. One left: a holiday-event row naming a missing
+> object. Checking whether it's the object issue 13's SQL deletes (entry
+> 187056):
+
+> It is: the Shattrath portal to the Isle of Quel'Danas, removed by issue 155l
+> (file 13) without its holiday-event row. Same fix:
+
+> Cleared on the live database. Extending the validator to cover object event
+> rows too, and rerunning the RAM test in the background since file 13 changed:
+
+The live database passes. The RAM test is re-running with file 13's change; I'll
+commit when it passes.
 
 --------------------------------------------------------------------------------
 
