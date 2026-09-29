@@ -21,8 +21,15 @@ ordinary quest logs.
 
 ## Intended Behavior
 
-- When the owner accepts a quest, every buddy (grouped or not) gets it,
-  regardless of whether they could have picked it up themselves.
+- **Owner, 2026-09-27: "we also don't need to track quest progress for
+  bots - it is irrelevant. They get a completed quest when you turn yours
+  in."** So a buddy never holds the quest in its log: nothing happens on
+  accept or abandon, and on the owner's turn-in each buddy is given the
+  quest as completed, with its rewards. (Replaces the accept and abandon
+  mirroring below.)
+- *(Superseded 2026-09-27)* When the owner accepts a quest, every buddy
+  (grouped or not) gets it, regardless of whether they could have picked
+  it up themselves.
 - When the owner turns a quest in, every buddy completes it and receives
   its experience, money and a reward item. For a choice reward, a buddy
   picks the way every playerbot already does (Ritz, 2026-09-23: "what
@@ -38,14 +45,14 @@ ordinary quest logs.
   list the choices to the owner instead.
 - Kill credit and collection are not tracked for buddies; their copy
   completes when the owner's does.
-- Abandoning a quest abandons it for the buddies.
+- *(Superseded 2026-09-27)* Abandoning a quest abandons it for the buddies.
 
 ## Suggested Implementation Steps
 
-1. Hooks in mod-buddies on accept, reward, and abandon.
-2. For each buddy: add the quest if absent; on the owner's reward, mark it
-   complete and reward it through the core's own quest-reward path, so
-   follow-up quests unlock normally.
+1. A hook in mod-buddies on the owner's quest reward only.
+2. For each buddy: add the quest, mark it complete and reward it through
+   the core's own quest-reward path in one step, so follow-up quests
+   unlock normally.
 3. Offline buddies can't exist (they log in with the owner, 617c), so no
    queue is needed.
 4. Test: accept, kill-quest, turn in; check every buddy's log and reward.
