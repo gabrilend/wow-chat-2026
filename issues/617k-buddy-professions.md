@@ -19,7 +19,19 @@ Verbatim, 2026-09-25:
 
 ## Current Behavior
 
-Not designed. What the bot module offers today (per
+**Secondary professions built 2026-09-27; compile-checked, not yet run**
+(`modules/mod-buddies/src/buddies_create.cpp`): every buddy made learns
+Cooking (spell 2550), First Aid (3273) and Fishing (7620), each its
+apprentice spell, which carries the skill itself (a "skill" effect naming
+the skill line, checked in Spell.dbc): skill 1 of 75, plus the recipes the
+game gives with the skill (first aid's Linen Bandage, cooking's Basic
+Campfire). None is cast by learning, so this is done on the new character
+before its first save. It also gets a Fishing Pole (item 6256, the bot
+module's own choice) in its bags. A buddy's login catches up anything
+missing (buddies made earlier, or full bags), logged when it can't. The
+pole is used for fishing in towns (617e4).
+
+Primary professions: not designed. What the bot module offers today (per
 `docs/playerbots/Playerbot-Commands.md`): the `maintenance` command has a
 bot learn its available spells and skills, restock consumables, enchant its
 gear and repair; a `master fishing` strategy lets a bot fish near its
@@ -179,6 +191,14 @@ it if the user wants."
   there's no benefit to being in a party together"), so its fights never
   pull onto the owner.
 - **Server load**: accepted ("that's fine. They're players too.").
+
+### Decision, 2026-09-27 (Ritz): cooking, first aid, fishing for all
+
+"They need real food. They should all have cooking and first aid and
+fishing." Every buddy knows the three secondary professions from its
+creation (the apprentice skill and its first recipes), on top of any
+primary professions; it cooks what it catches and uses bandages it makes.
+Towns: fishing as a pastime (617e4).
 
 ## Suggested Implementation Steps
 
