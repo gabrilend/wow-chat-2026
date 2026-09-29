@@ -56,6 +56,18 @@ doesn't care which one it is, and shouldn't be written so that it does.
 - Does the reply go only to the asker, or can others in the party see it?
   Visible replies make this a shared tool at a table; private replies
   keep the channel quiet.
+
+  **The owner's answer, 2026-09-29 (shared with neuron's issue 1003),
+  verbatim:**
+
+  > "statement: moving innkeeper to garage." and "query: who wants to go on an
+  > adventure?" and "warning, warband in the area" and "undocumented strangers
+  > demand circumspicion"
+
+  Read in neuron's 1003 as: who hears a line depends on its kind, named at its
+  front — statements, queries and warnings to everyone; the back-and-forth of
+  a request to the asker; and a speaker nobody has a record of met with
+  circumspection. That reading is being checked with the owner there.
 - Should the player be able to see the commands it wrote, not just the
   summary? Yes for debugging; possibly always, since watching it work is
   how someone learns to trust it.
