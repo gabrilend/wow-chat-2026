@@ -1,0 +1,137 @@
+#!/usr/bin/env luajit
+-- test-world-boss-countdown - checks the world bosses' respawn countdown
+-- (issue 155j) without a server.
+--
+-- For a general audience: a dead world boss comes back after 2.5 hours,
+-- held back by "moment tokens" that the players standing in its area
+-- deposit every 5 seconds (each worth 1% of those 5 seconds, so 100 players
+-- hold it back forever). This test runs the countdown's own code
+-- (src/lua-basic/lib/world-boss-countdown.lua) through whole deaths with
+-- different crowds and checks when each boss comes back against the
+-- arithmetic worked out by hand; then it loads the server script
+-- (src/lua-basic/world-boss-respawn.lua) with the game engine's calls faked
+-- (a pretend database, players, and command line) and checks that it sends
+-- the respawn command at exactly the pass the countdown says, saves the
+-- counters on every other pass, and counts only players (not bots) in the
+-- boss's own area.
+--
+-- Usage: scripts/test-world-boss-countdown [PROJECT_DIR]
+-- Exit status: 0 when every check passes, 1 otherwise.
+
+local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local LIB = DIR .. "/src/lua-basic/lib/world-boss-countdown.lua"
+local SCRIPT = DIR .. "/src/lua-basic/world-boss-respawn.lua"
+
+local passed, failed = 0, 0
+-- {{{ local function check
+local function check(what, ok, detail)
+    if ok then passed = passed + 1
+    else
+        failed = failed + 1
+        print("  [FAIL] " .. what .. (detail and ("  (" .. detail .. ")") or ""))
+    end
+end
+-- }}}
+
+local Countdown = dofile(LIB)
+
+-- {{{ the countdown alone: passes until due, for steady crowds
+-- With n players the whole time, pass k has elapsed 5k and tokens nk; due
+-- when 5k >= 9000 + nk x 5 / 100, i.e. k >= 1800 / (1 - n/100) for n < 100.
+local function passes_until_due(players, limit)
+    local elapsed, tokens = 0, 0
+    for k = 1, limit do
+        elapsed, tokens = Countdown.pass(elapsed, tokens, players)
+        if Countdown.due(elapsed, tokens) then return k end
+    end
+    return nil
+end
+for _, n in ipairs({ 0, 1, 10, 50, 90, 99 }) do
+    local want = math.ceil(1800 / (1 - n / 100) - 1e-9)
+    local got = passes_until_due(n, 1000000)
+    check(string.format("%d players present: due at pass %d (%.2f hours)", n, want, want * 5 / 3600), got == want,
+        "got " .. tostring(got))
+end
+check("nobody present: exactly 2.5 hours", (passes_until_due(0, 100000) or 0) * 5 == 9000)
+check("50 present: 5 hours", (passes_until_due(50, 100000) or 0) * 5 == 18000)
+check("100 present: never (a million passes, 58 days)", passes_until_due(100, 1000000) == nil)
+check("150 present: never", passes_until_due(150, 1000000) == nil)
+-- a crowd that comes and goes: 1 hour with 60 players, then nobody.
+-- 720 passes: elapsed 3600, tokens 43200 (worth 2160 s); then due when
+-- elapsed >= 9000 + 2160 = 11160, i.e. pass 2232.
+do
+    local elapsed, tokens, k = 0, 0, 0
+    repeat
+        k = k + 1
+        elapsed, tokens = Countdown.pass(elapsed, tokens, k <= 720 and 60 or 0)
+    until Countdown.due(elapsed, tokens) or k > 100000
+    check("60 players for an hour, then nobody: due at pass 2232 (3.1 hours)", k == 2232, "got " .. k)
+end
+-- }}}
+
+-- {{{ the server script, with the engine faked
+-- A pretend world: one boss (spawn 96999, map 530, area 3483) dead since
+-- pass 0; 3 players and 2 bots in its area, 4 players elsewhere. Due when
+-- 5k >= 9000 + 3k x 0.05, i.e. k >= 9000 / 4.85 = 1855.67 -> pass 1856.
+do
+    local rows = { [96999] = { alive = 0, elapsed = 0, tokens = 0 } }
+    local commands, timer = {}, nil
+    local function query(list)
+        if #list == 0 then return nil end
+        local i = 1
+        return {
+            GetUInt32 = function(_, c) return list[i][c + 1] end,
+            GetFloat  = function(_, c) return list[i][c + 1] end,
+            NextRow   = function() i = i + 1; return i <= #list end,
+        }
+    end
+    local function player(map, area, bot)
+        return { IsBot = function() return bot end, GetMapId = function() return map end, GetAreaId = function() return area end }
+    end
+    local env = setmetatable({
+        WorldDBQuery = function(sql)
+            if sql:find("basic_155j_world_bosses") then return query({ { 96999, 530, 943.5, 2269.8, 306.8 } }) end
+        end,
+        CharDBQuery = function(sql)
+            if sql:find("SHOW TABLES") then return query({ { 1 } }) end
+            local list = {}
+            for guid, r in pairs(rows) do if r.alive == 0 then list[#list + 1] = { guid, r.elapsed, r.tokens } end end
+            return query(list)
+        end,
+        CharDBExecute = function(sql)
+            local e, t, g = sql:match("SET elapsed = (%d+), tokens = (%d+) WHERE guid = (%d+)")
+            rows[tonumber(g)].elapsed, rows[tonumber(g)].tokens = tonumber(e), tonumber(t)
+        end,
+        GetMapById = function() return { GetAreaId = function() return 3483 end } end,
+        GetPlayersInWorld = function()
+            return { player(530, 3483, false), player(530, 3483, false), player(530, 3483, false),
+                     player(530, 3483, true), player(530, 3483, true),
+                     player(530, 3520, false), player(0, 3483, false), player(1, 1, false), player(530, 3521, false) }
+        end,
+        RunCommand = function(cmd) commands[#commands + 1] = cmd end,
+        CreateLuaEvent = function(fn, ms, times) timer = { fn = fn, ms = ms, times = times } end,
+        print = function() end,
+    }, { __index = _G })
+    local chunk = assert(loadfile(SCRIPT))
+    setfenv(chunk, env)
+    chunk()
+    check("the script sets one repeating 5-second pass", timer and timer.ms == 5000 and timer.times == 0)
+    local sent_at
+    for k = 1, 3000 do
+        timer.fn()
+        if #commands > 0 then sent_at = k; break end
+    end
+    check("respawn sent at pass 1856 (3 players in the area count, bots and other areas don't)", sent_at == 1856,
+        "sent at " .. tostring(sent_at))
+    check("the respawn command names the spawn", commands[1] == ".basic worldboss respawn 96999", tostring(commands[1]))
+    check("the counters were saved on the pass before", rows[96999].elapsed == 1855 * 5 and rows[96999].tokens == 1855 * 3,
+        rows[96999].elapsed .. " s, " .. rows[96999].tokens .. " tokens")
+    rows[96999].alive = 1                                 -- what the server's code does on the command
+    local before = #commands
+    for _ = 1, 10 do timer.fn() end
+    check("an alive boss is not counted down", #commands == before and rows[96999].elapsed == 1855 * 5)
+end
+-- }}}
+
+print(string.format("test-world-boss-countdown: %d passed, %d failed", passed, failed))
+os.exit(failed == 0 and 0 or 1)
