@@ -141,3 +141,17 @@ other.
 - **neuron's one addition to the list:** hand a bot a chat command as if its
   master had whispered it — how "follow", "stay" and "attack" are said to a
   playerbot today.
+- **Found since (2026-09-29): that addition, and `change_strategy`, need no
+  binding.** ALE's `player:Whisper(text, 0, bot)` calls the server's own
+  `Player::Whisper`, which runs `OnPlayerCanUseChat` before sending — and
+  mod-playerbots' `Playerbots.cpp` hooks exactly that, handing a whisper to a
+  bot to `botAI->HandleCommand` as a command from the whisperer. So
+  `change_strategy(bot, "+save_mana,-aggressive_heal", "combat")` is the
+  whisper `co +save_mana,-aggressive_heal` from the bot's master, and
+  non-combat is `nc …`. neuron's `character.order` (its `src/082-orders.lua`)
+  is built this way. What still needs this binding: `is_strategy_known`,
+  `get_party_state`, and `is_bot_within_yards_of_player`. One caution from the
+  same source: whispering `logout` to a bot used to crash the server, and the
+  module carries a hotfix for it with the root cause unfound (upstream
+  mod-playerbots PR 1838) — a reason for any whispered command to come from a
+  closed list.
