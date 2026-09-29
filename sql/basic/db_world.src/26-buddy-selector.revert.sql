@@ -7,6 +7,9 @@
 -- script and never saved, so there is nothing of his to remove here.
 -- ============================================================================
 
+DELETE FROM `creature`                WHERE `guid`       BETWEEN 6170001  AND 6170099;
+-- the old spawn range, past the server's 16777215 spawn-id cap (it stopped at
+-- startup); cleared so a database that holds it is repaired on re-apply
 DELETE FROM `creature`                WHERE `guid`       BETWEEN 61700001 AND 61700099;
 DELETE FROM `creature_template_model` WHERE `CreatureID` BETWEEN 6170001  AND 6170002;
 DELETE FROM `creature_template`       WHERE `entry`      BETWEEN 6170001  AND 6170002;

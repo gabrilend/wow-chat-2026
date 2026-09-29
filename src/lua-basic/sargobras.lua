@@ -92,6 +92,39 @@ local JOKE_EVERY_MS     = { 45000, 90000 }
 local JOKE_RANGE        = 30
 -- }}}
 
+-- {{{ menu icons
+-- The 3.3.5a client draws eleven gossip icons: 0 chat bubble, 1 bag,
+-- 2 wings, 3 book, 4 cogwheel, 5 cogwheel (alt), 6 coin bag, 7 talk
+-- bubble with dots, 8 tabard, 9 crossed swords, 10 yellow dot. One per
+-- class and per people (owner, 2026-09-29: "can we pick one for each race
+-- / class?"); eleven icons for nineteen rows, so peoples reuse some. A
+-- first pass, by feel; retune freely. A missing id falls back to the chat
+-- bubble. Class and race ids are the client's (ChrClasses, ChrRaces).
+local CLASS_ICON = {
+    [1]  = 9,   -- Warrior       crossed swords
+    [2]  = 8,   -- Paladin       tabard (an order's colours)
+    [3]  = 2,   -- Hunter        wings
+    [4]  = 6,   -- Rogue         coin bag
+    [5]  = 10,  -- Priest        yellow dot (a light)
+    [7]  = 4,   -- Shaman        cogwheel (the turning of the elements)
+    [8]  = 3,   -- Mage          book
+    [9]  = 5,   -- Warlock       cogwheel (alt)
+    [11] = 1,   -- Druid         bag (the forager's)
+}
+local RACE_ICON = {
+    [1]  = 8,   -- Human         tabard
+    [2]  = 9,   -- Orc           crossed swords
+    [3]  = 6,   -- Dwarf         coin bag
+    [4]  = 2,   -- Night Elf     wings
+    [5]  = 5,   -- Undead        cogwheel (alt)
+    [6]  = 1,   -- Tauren        bag
+    [7]  = 4,   -- Gnome         cogwheel
+    [8]  = 3,   -- Troll         book
+    [10] = 10,  -- Blood Elf     yellow dot
+    [11] = 7,   -- Draenei       talk bubble with dots
+}
+-- }}}
+
 -- intids: 1 ask for a class, 2 ask for a people, 100+class, 200+race
 local INTID_CLASSES, INTID_RACES, INTID_CLASS, INTID_RACE = 1, 2, 100, 200
 
@@ -269,21 +302,18 @@ local function show_menu(player, creature, page)
     -- no clan yet: each pick also names the clan, typed in its pop-up box
     local ask_name = not player:IsInGuild()
     local popup    = ask_name and CLAN_POPUP or nil
-    local first    = ask_name and " as my first buddy, and I'd like to name our clan." or ", please."
-    if page == INTID_CLASSES then
+    -- One page: every class, then every people, each with its own icon
+    -- (owner, 2026-09-29: "can we put them all on the first menu instead
+    -- of having a sub-menu?"). `page` is no longer used; kept so an old
+    -- menu still open in a client, whose options ask for a page, lands here.
+    if owed_slot(player:GetGUIDLow()) then
         for _, c in ipairs(classes) do
-            local text = ask_name and ("I want " .. article(c.name):lower() .. " " .. c.name .. first) or (article(c.name) .. " " .. c.name .. first)
-            player:GossipMenuAddItem(GOSSIP_ICON_CHAT, text, 0, INTID_CLASS + c.id, ask_name, popup)
+            local text = c.name                 -- just the name (owner, 2026-09-29: "\"paladin\" or \"druid\" [...] and that's it")
+            player:GossipMenuAddItem(CLASS_ICON[c.id] or GOSSIP_ICON_CHAT, text, 0, INTID_CLASS + c.id, ask_name, popup)
         end
-    elseif page == INTID_RACES then
         for _, r in ipairs(races) do
-            local text = ask_name and ("I want someone of the " .. r.name .. " people" .. first) or ("Someone of the " .. r.name .. " people.")
-            player:GossipMenuAddItem(GOSSIP_ICON_CHAT, text, 0, INTID_RACE + r.id, ask_name, popup)
-        end
-    else
-        if owed_slot(player:GetGUIDLow()) then
-            player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "I know what kind of fighter I want.", 0, INTID_CLASSES)
-            player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "I know which people I want them from.", 0, INTID_RACES)
+            local text = r.name
+            player:GossipMenuAddItem(RACE_ICON[r.id] or GOSSIP_ICON_CHAT, text, 0, INTID_RACE + r.id, ask_name, popup)
         end
     end
     player:GossipSendMenu(TEXT_OWED, creature)

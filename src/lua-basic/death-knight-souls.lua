@@ -10,9 +10,11 @@
 --   1. The ledger: a new death knight's first login writes an "owed" row
 --      (characters database, basic_718_souls, E041). A death knight made
 --      before this rule has no row and is never held.
---   2. The gate: an owing death knight who reaches anywhere but Acherus
---      (map 609) or the Ebon Hold (map 0, area 4281) is sent back to
---      Sargobras (spawned by 25-death-knight-sargobras, E040).
+--   2. The gate: an owing death knight who steps out of the necropolis
+--      (map 609, area 4342) is sent back to Sargobras before the Lich King,
+--      who withholds the first quest until the soul is paid (spawns in
+--      25-death-knight-sargobras, E040; a second one stays in the Ebon Hold
+--      on map 0, for the undo after the chain).
 --   3. The trade: Sargobras lists the account's characters at level 55 or
 --      higher ("level 55 or greater"), death knights left out. The chosen
 --      one moves to a hidden holding account ("put into a holding area
@@ -49,6 +51,7 @@ local GOSSIP_EVENT_ON_SELECT = 2
 local PLAYER_EVENT_ON_LOGIN       = 3
 local PLAYER_EVENT_ON_UPDATE_ZONE = 27
 local PLAYER_EVENT_ON_FIRST_LOGIN = 30
+local PLAYER_EVENT_ON_UPDATE_AREA = 47              -- mod-ale Hooks.h: (event, player, oldArea, newArea)
 local GOSSIP_ICON_CHAT = 0
 
 local CLASS_DEATH_KNIGHT = 6
@@ -57,10 +60,10 @@ local TEXT_OWED, TEXT_GIVEN, TEXT_OTHER = 7180001, 7180002, 7180003
 local SOUL_MIN_LEVEL     = 55
 
 -- where an owing death knight may be, and where it is sent back to
-local ACHERUS_MAP        = 609                      -- the Scarlet Enclave: the whole intro chain
-local EBON_HOLD_MAP      = 0
-local EBON_HOLD_AREA     = 4281                     -- "Acherus: The Ebon Hold" over the Eastern Plaguelands
-local SARGOBRAS_SPOT     = { map = 0, x = 2338.5, y = -5676.2, z = 382.3, o = 3.8 }   -- a step in front of him, facing him
+local ACHERUS_MAP        = 609                      -- the Scarlet Enclave, where the intro chain is played
+local ACHERUS_AREA       = 4342                     -- "Acherus: The Ebon Hold" on map 609: the necropolis itself (AreaTable.dbc)
+local SARGOBRAS_SPOT     = { map = 609, x = 2352.6, y = -5666.8, z = 426.07, o = 3.77 } -- a step in front of the Heart of Acherus one (spawn 7180002), facing him
+local LICH_KING          = 25462                    -- gives the chain's first quest, In Service Of The Lich King (12593)
 
 local STATE_OWED, STATE_GIVEN, STATE_RETURNING = 0, 1, 2
 local INTID_RETURN       = 1                        -- the undo; a soul's own intid is its guid (always far above 2)
@@ -78,11 +81,31 @@ end
 -- }}}
 
 -- {{{ local function allowed_here
--- An owing death knight may be anywhere in Acherus, or in the Ebon Hold.
+-- An owing death knight may only be inside the necropolis (map 609, area
+-- 4342). Ritz, 2026-09-29: "acherus shouldn't be left at all until they
+-- comply" -- not the Enclave below, and not the Ebon Hold on map 0.
 local function allowed_here(player, area)
-    local map = player:GetMapId()
-    if map == ACHERUS_MAP then return true end
-    return map == EBON_HOLD_MAP and (area == EBON_HOLD_AREA or player:GetAreaId() == EBON_HOLD_AREA)
+    return player:GetMapId() == ACHERUS_MAP and (area == ACHERUS_AREA or player:GetAreaId() == ACHERUS_AREA)
+end
+-- }}}
+
+-- {{{ local function hold_selection
+-- While a soul is owed, no creature but Sargobras can be selected by the
+-- death knight (owner, 2026-09-29: the Lich King "should be untargetable
+-- unless you've given a soul. In-fact, it'd be great if all the NPCs
+-- were"). The per-player rule is issue 164: a source patch (B040) and its
+-- Lua calls (B041). A server built before them has no such call; that is
+-- logged as an error, not passed over: the death knight is then held only
+-- by the gate and the Lich King's withheld quest.
+local function hold_selection(player, hold)
+    local ok, err = pcall(function()
+        if hold then player:SetUnselectableCreatures({ SARGOBRAS }, true)
+        else player:ClearUnselectableCreatures() end
+    end)
+    if not ok then
+        print("[death-knight-souls] ERROR: could not " .. (hold and "hold" or "release") .. " what "
+            .. player:GetName() .. " can select (is the server built with B040/B041, issue 164?): " .. tostring(err))
+    end
 end
 -- }}}
 
@@ -95,6 +118,12 @@ local function check_gate(player, area)
     if not row or row.state ~= STATE_OWED then return end
     if allowed_here(player, area) then return end
     local s = SARGOBRAS_SPOT
+    -- Already standing at his feet: the area lookup disagrees with the map
+    -- here, and teleporting again would only loop. Say so instead.
+    if player:GetMapId() == s.map and player:GetDistance(s.x, s.y, s.z) < 10 then
+        print(string.format("[718] ERROR: the spot before Sargobras reads as area %d, not %d; the gate cannot hold here", player:GetAreaId(), ACHERUS_AREA))
+        return
+    end
     player:Teleport(s.map, s.x, s.y, s.z, s.o)
     player:SendBroadcastMessage("Sargobras says: Not so fast. The living will want to know who you were. Come and tell me.")
 end
@@ -193,6 +222,7 @@ local function give_soul(player, soul_guid)
     end
     CharDBExecute("UPDATE basic_718_souls SET soul = " .. soul.guid .. ", soul_account = " .. account .. ", holding_account = " .. holding_id
         .. ", state = " .. STATE_GIVEN .. ", changed = UNIX_TIMESTAMP() WHERE dk = " .. player:GetGUIDLow())
+    hold_selection(player, false)                   -- everyone selectable again (164)
     player:SendBroadcastMessage(string.format("Sargobras says: %s, for the Lich King. You, for the living. Off you go. "
         .. "(%d profession skills and %d recipes carried over.)", soul.name, skills, learned))
     -- the four buddies a death knight gets, at this moment and no other (617b)
@@ -295,6 +325,23 @@ local function on_select(event, player, creature, sender, intid, code)
 end
 -- }}}
 
+-- {{{ local function on_lich_king_hello
+-- The Lich King gives no first quest to a death knight that still owes a
+-- soul (Ritz, 2026-09-29: "The Lich King just, shouldn't give the player
+-- the first quest until Sargobras is dealt with"). Returning true replaces
+-- his quest menu (the Lua engine's gossip hook runs before the default);
+-- returning false lets it through: a paid-up or pre-rule death knight, and
+-- anyone else, gets his quests as normal.
+local function on_lich_king_hello(event, player, creature)
+    if player:GetClass() ~= CLASS_DEATH_KNIGHT then return false end
+    local row = ledger(player:GetGUIDLow())
+    if not row or row.state ~= STATE_OWED then return false end
+    creature:SendUnitWhisper("You still carry a life that is not mine. Settle it with Sargobras, and then I will have work for you.", 0, player)
+    player:GossipComplete()
+    return true
+end
+-- }}}
+
 -- {{{ local function on_first_login
 -- Every death knight made from now on owes a soul, except a buddy: a
 -- death-knight owner's buddies are death knights made by the buddy module
@@ -305,11 +352,27 @@ local function on_first_login(event, player)
     if player:GetClass() ~= CLASS_DEATH_KNIGHT then return end
     if CharDBQuery("SELECT 1 FROM buddy_roster WHERE buddy = " .. player:GetGUIDLow()) then return end
     CharDBExecute("INSERT IGNORE INTO basic_718_souls (dk, state, changed) VALUES (" .. player:GetGUIDLow() .. ", " .. STATE_OWED .. ", UNIX_TIMESTAMP())")
+    hold_selection(player, true)                    -- the row is still being written: held directly
+end
+-- }}}
+
+-- {{{ local function on_login
+-- The gate, and an owing death knight's selection held again (the rule is
+-- in memory only and ends at logout).
+local function on_login(event, player)
+    check_gate(player, player:GetAreaId())
+    if player:GetClass() ~= CLASS_DEATH_KNIGHT then return end
+    local row = ledger(player:GetGUIDLow())
+    if row and row.state == STATE_OWED then hold_selection(player, true) end
 end
 -- }}}
 
 RegisterPlayerEvent(PLAYER_EVENT_ON_FIRST_LOGIN, on_first_login)
-RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, function(event, player) check_gate(player, player:GetAreaId()) end)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, on_login)
 RegisterPlayerEvent(PLAYER_EVENT_ON_UPDATE_ZONE, function(event, player, new_zone, new_area) check_gate(player, new_area) end)
+-- an area change inside one zone (the necropolis to Death's Breach below it,
+-- both zone 4298) fires no zone event, so the gate listens for areas too
+RegisterPlayerEvent(PLAYER_EVENT_ON_UPDATE_AREA, function(event, player, old_area, new_area) check_gate(player, new_area) end)
+RegisterCreatureGossipEvent(LICH_KING, GOSSIP_EVENT_ON_HELLO, on_lich_king_hello)
 RegisterCreatureGossipEvent(SARGOBRAS, GOSSIP_EVENT_ON_HELLO,  on_hello)
 RegisterCreatureGossipEvent(SARGOBRAS, GOSSIP_EVENT_ON_SELECT, on_select)

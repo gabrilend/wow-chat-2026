@@ -63,9 +63,20 @@ Three different death-knight arrangements exist, one per profile family:
   no death knight bots), plus **layer 1, the sacrifice, built 2026-09-25**
   and not yet tried in game:
   - `sql/basic/db_world.src/25-death-knight-sargobras.apply.sql` (E040):
-    Sargobras (creature 7180001, spawn 71800001) between the Ebon Hold's
-    portals, every phase, three texts (owed, given, anyone else); model a
-    stand-in (Lord Gregor Lescovar's) until 617f.
+    Sargobras (creature 7180001) twice, every phase, three texts (owed,
+    given, anyone else); model a stand-in (Lord Gregor Lescovar's) until
+    617f. Spawn 7180002 stands in the Heart of Acherus (map 609), between
+    where a new death knight appears and the Lich King, who withholds the
+    first quest (12593) while a soul is owed (Ritz, 2026-09-29: "acherus
+    shouldn't be left at all until they comply. The Lich King just,
+    shouldn't give the player the first quest until Sargobras is dealt
+    with"). Spawn 7180001 stays between the Ebon Hold's portals on map 0,
+    so the undo is still reachable after the chain. The gate holds an
+    owing death knight to the necropolis alone (map 609, area 4342),
+    checked on login, zone change and area change. While owed, no
+    creature but Sargobras can be selected by the death knight (164).
+    Both Sargobras texts pools are riddles now (2026-09-29: "The options
+    the player can pick should explain").
   - `sql/basic/db_characters.src/03-death-knight-souls.apply.sql` (E041):
     the soul ledger `basic_718_souls`; its revert hands every held soul
     back to its own account before dropping the table.

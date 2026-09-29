@@ -33,6 +33,14 @@ And his life cycle, verbatim, 2026-09-23:
 
 ## Current Behavior
 
+**2026-09-29:** the menu is one page: every class, then every people, each
+with its own icon (a table at the top of `src/lua-basic/sargobras.lua`,
+first pass, by feel). His three texts (6170001-6170003) are one pool of
+eight cryptic lines, three of them the owner's own ("You know why you
+are here.", "Justice is always forgiven eventually.", "The kind mind, to
+the future is aligned."), picked at random by the client. A new buddy's
+entrance from behind him is 617b1.
+
 **Built 2026-09-26; tested offline, not yet run** (needs the owner's build
 and install).
 

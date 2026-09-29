@@ -210,9 +210,19 @@ report "no Guild Vault (guild bank object) is spawned anywhere; the stock spawns
         UNION ALL SELECT 'saved', COUNT(*) FROM ${WORLD}.basic_617l_guild_vaults HAVING COUNT(*) = 0")"
 # }}}
 
+# {{{ spawn ids under the server's cap
+# The server hands out new spawn ids from MAX(guid)+1 and stops at startup
+# ("Creature spawn id overflow", TCE00007) the first time one passes
+# 16777215. A custom spawn numbered past it (61700001, 71800001 did, until
+# 2026-09-29) makes every boot halt right after "ready".
+report "every creature and gameobject spawn id is below 16777215, the server's cap" \
+    "$(run_sql "SELECT 'creature', guid FROM ${WORLD}.creature WHERE guid >= 16777215
+        UNION ALL SELECT 'gameobject', guid FROM ${WORLD}.gameobject WHERE guid >= 16777215")"
+# }}}
+
 # {{{ 718: the death knight sacrifice
 report "Sargobras (7180001) stands in the Ebon Hold, in every phase, with his three texts" \
-    "$(run_sql "SELECT 'spawn', COUNT(*) FROM ${WORLD}.creature WHERE guid = 71800001 AND id = 7180001 AND map = 0 AND phaseMask = 4294967295 HAVING COUNT(*) <> 1
+    "$(run_sql "SELECT 'spawn', COUNT(*) FROM ${WORLD}.creature WHERE guid = 7180001 AND id = 7180001 AND map = 0 AND phaseMask = 4294967295 HAVING COUNT(*) <> 1
         UNION ALL SELECT 'gossip flag', npcflag FROM ${WORLD}.creature_template WHERE entry = 7180001 AND npcflag & 1 = 0
         UNION ALL SELECT 'texts', COUNT(*) FROM ${WORLD}.npc_text WHERE ID BETWEEN 7180001 AND 7180003 HAVING COUNT(*) <> 3")"
 report "the soul ledger (basic_718_souls) exists in the characters database" \
