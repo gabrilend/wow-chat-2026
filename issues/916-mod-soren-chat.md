@@ -430,3 +430,21 @@ mod-soren-chat could evolve into mod-soren if guidance becomes the
 larger half, or if we add a third dimension (combat coordination
 voice lines, dungeon-specific tactical commentary, narration of
 ambush spawns). The name is a handle, not a contract.
+
+## Shared Build Pass (neuron)
+
+neuron's `docs/shared-with-wow-chat-2026.md`, pass 4. neuron already calls a
+model — from **outside** the server (`src/050-api.lua`, `src/051-loop.lua`), for
+changes a person agrees to. This module calls one from **inside** (916d, 916e),
+for bot chatter that must not wait on anything outside. Not one piece of code;
+what is shared is the formats:
+
+- a voice or persona is one file shape (916k here, neuron 1001, and 918);
+- checking a reply against a closed list of real names is one idea (916i
+  against strategy names; neuron's registry against its words).
+
+And 916b's bindings are shared outright — see its own section.
+
+**Open question, the owner's:** which side owns which model calls? Perhaps
+neuron for anything that changes the world with agreement and this module for
+bots' own chatter — or one of them for both.

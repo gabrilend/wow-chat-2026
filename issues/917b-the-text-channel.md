@@ -69,4 +69,19 @@ doesn't care which one it is, and shouldn't be written so that it does.
   the AIO precedent if the addon surface is chosen
 - [1006 - rmail in-game text editor](1006-rmail-ingame-text-editor) —
   the existing thinking about typing prose inside the client
+
+## Shared Build Pass (neuron)
+
+neuron's `docs/shared-with-wow-chat-2026.md`, pass 2. A fourth surface, needing
+no addon: **a custom chat channel.** neuron's issue **1003** designs it — a
+player joins `neuron`, a server-side hook (`PLAYER_EVENT_ON_CHANNEL_CHAT`)
+hears what is said there, and replies go back as chat packets shaped like
+channel messages. Comfortable for long sentences, and it "feels like talking to
+someone". Built once, used by both.
+
+This issue's second open question — reply to the asker only, or to others? —
+is 1003's second open question too. One answer serves both.
+
+155x refuses only the built-in numbered channels, so a player-made channel is
+unaffected.
 </content>

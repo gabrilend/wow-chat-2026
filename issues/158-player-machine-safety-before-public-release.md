@@ -99,7 +99,10 @@ install-time setup — see the `upstream-patch-system` skill before adding).
    git-ignored files).
 2. **Config patch: remote admin lockdown.** Set `Ra.IP` to `127.0.0.1` so
    the disabled console stays local if ever enabled; decide whether SOAP is
-   used by anything (grep `scripts/`) and disable it if not.
+   used by anything (grep `scripts/`) and disable it if not. **It is:** neuron
+   (the sibling repository, `wow-chat-neuron`) sends game-master commands over
+   it (`src/003-live-hand.lua`), and a grep of this repository cannot see that.
+   Keep it on and loopback-only (`C021-soap-loopback-console.sh`).
 3. **Config patch: failed-login lockout.** Set `WrongPass.MaxCount`,
    `WrongPass.BanTime` and `WrongPass.BanType` in `authserver.conf` for every
    profile.
@@ -156,8 +159,12 @@ Likely split into lettered sub-issues when work starts: server hardening
 5. Does AIO really run server-sent Lua on the client, contradicting the
    connection guide's "display-only" description? Verify from AIO's source
    before step 10 is designed.
-6. Is anything using SOAP today? If not, disabling it removes a local GM
-   command path.
+6. ~~Is anything using SOAP today?~~ **Answered 2026-09-29: yes** — neuron's
+   live hand, and this repository's bot governor (151). The open part is
+   whether they should share one game-master account; today each has its own
+   (151's in `scripts/credentials`, neuron's in its `secrets/soap.key`), which
+   is two accounts with the same power to secure. See neuron's
+   `docs/shared-with-wow-chat-2026.md`, pass 5.
 
 ## Related
 
