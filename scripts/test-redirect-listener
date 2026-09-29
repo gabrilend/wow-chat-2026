@@ -1,0 +1,51 @@
+#!/bin/bash
+# test-redirect-listener
+# Checks the redirect experiment's "pretend second server" without starting
+# the game. It starts the listener on a spare port, sends a pretend client
+# at it that behaves like the real 3.3.5a client after a redirect, and then
+# reads the listener's log to confirm it accepted the client's proof and
+# unscrambled the client's next packet. Passes or fails with the step that
+# broke.
+#
+# Usage: scripts/test-redirect-listener [DIR]
+
+set -euo pipefail
+
+DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+PORT=14463
+# a made-up session key: 40 bytes 01..28, never a real account's
+KEY="0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728"
+LOG="${DIR}/tmp/shared-memory/redirect-listener.log"
+
+[[ -d "${DIR}/tmp/shared-memory" ]] || { echo "ERROR: ${DIR}/tmp/shared-memory missing (RAM scratch link)"; exit 1; }
+
+# {{{ start_listener
+: > "${LOG}"
+luajit "${DIR}/src/tools/redirect-listener.lua" "${DIR}" --port "${PORT}" --key "${KEY}" --answer auth-ok > /dev/null &
+LISTENER_PID=$!
+trap 'kill ${LISTENER_PID}' EXIT
+sleep 0.5
+# }}}
+
+# {{{ run_fake_client
+luajit "${DIR}/src/tools/redirect-fake-client.lua" "${PORT}" "${KEY}"
+sleep 0.3
+# }}}
+
+# {{{ check_log
+FAILED=0
+for expected in "digest MATCHES" "sent scrambled auth response" "client sent opcode 0x1DC, 8 body bytes: 2A00000000000000"; do
+    if grep -q "${expected}" "${LOG}"; then
+        echo "ok:   listener log has \"${expected}\""
+    else
+        echo "FAIL: listener log lacks \"${expected}\""
+        FAILED=1
+    fi
+done
+if [[ ${FAILED} -ne 0 ]]; then
+    echo "--- listener log ---"
+    cat "${LOG}"
+    exit 1
+fi
+echo "test-redirect-listener: passed"
+# }}}

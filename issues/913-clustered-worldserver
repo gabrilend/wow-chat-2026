@@ -548,6 +548,42 @@ Total: ~1.5 MB/s between nodes (manageable on gigabit LAN)
 - **Spatial OS**: Commercial distributed game server platform
 - **Agones**: Kubernetes-based game server hosting
 
+## Map Placement by Thread Weight
+
+Each node has a number of map-update threads sized to its hardware (the
+existing `MapUpdate.Threads` setting). The scheduler runs on the machine
+that also runs the authserver, and it treats those threads as capacity. It
+assigns **whole maps** to nodes, weighted by each node's thread count and by
+how many players (and their bots) are on each map. Then it redirects players
+as maps change hands.
+
+A single map is never split between machines. Threads updating one map share
+its memory: grids, creature lists, visibility. Across a LAN every shared read
+turns into a network round trip, which is far too slow. So the unit that
+moves between machines is a map, and the threads inside a node keep dividing
+that node's maps among themselves, exactly as they do today.
+
+## Sub-issues
+
+| ID | Name | Dependencies | Description |
+|---|---|---|---|
+| 913a | client-redirect-handoff | None | Reads the stock client's "reconnect elsewhere" message and tests it against a listener; research spike, not gated |
+| 913b | connectivity-reliance-improvements-required | 157 | The gate: a measurement that says whether one world machine is the ceiling |
+| 913c | redirect-takeover-on-second-worldserver | 913a, 913b | A real worldserver accepts a redirected client; the old one hands the player over |
+| 913d | shared-id-counters | 913b | Non-overlapping identifier ranges per worldserver |
+| 913e | map-placement-scheduler | 913b, 913c, 913d | Assigns whole maps to nodes by thread capacity; moves them at loading screens |
+| 913f | cross-node-social-relay | 913b, 913e | Whispers, channels, guilds, who list, groups across nodes |
+| 913g | playerbots-follow-owner | 913b, 913c | Bots log out and back in beside their owner after a redirect |
+| 913h | global-service-coherence | 913b, 913e | One owner each for mail, auction house, instance saves, per-player Lua state |
+
+**Why split:** each piece can be built and tested on its own. The gate
+(913b) keeps all of it shelved until measurement shows that one machine
+running the world, with the database and authserver moved off it by issue
+157, is no longer enough.
+
+**Order:**
+`157 → 913b (gate) → 913c, 913d (parallel; 913c also needs 913a) → 913e → 913f, 913g, 913h (parallel)`
+
 ## Open Questions
 
 1. **Database scaling**: Single MySQL vs cluster vs sharding?
