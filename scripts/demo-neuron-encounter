@@ -1,0 +1,125 @@
+#!/bin/bash
+# scripts/demo-neuron-encounter - Preview a themed encounter via neuron
+# A concrete use for scripts/call-neuron (issue 162): picks a creature kind
+# and previews placing several of them near a named spot, for dropping into
+# a phase demo or a QA session. Defaults to a dry-run plan; nothing is
+# placed in the world unless --apply is also given, and there is currently
+# no automated undo for what this places (neuron's world.spawn undo column
+# reads "none yet" -- see issue 162's second open question before wiring
+# this into anything that runs unattended).
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+PLACE=""
+CREATURE=""
+CREATURE_TYPE=""
+CREATURE_LEVEL=""
+CREATURE_NAME=""
+COUNT=3
+SPREAD=8
+APPLY=0
+
+# {{{ show_help
+show_help() {
+    echo "Usage: scripts/demo-neuron-encounter --place NAME [options]"
+    echo ""
+    echo "Two-step flow, because guessing an entry number from a name is how"
+    echo "you spawn the wrong one of the several hundred things called"
+    echo "'Skeleton':"
+    echo ""
+    echo "  1. Search for a creature kind (no --creature given):"
+    echo "       scripts/demo-neuron-encounter --place goldshire --type undead --level 10-14"
+    echo "     Prints neuron's own world.creatures results. Pick an entry number."
+    echo ""
+    echo "  2. Preview (default) or place the encounter:"
+    echo "       scripts/demo-neuron-encounter --place goldshire --creature 1234 --count 4"
+    echo "       scripts/demo-neuron-encounter --place goldshire --creature 1234 --count 4 --apply"
+    echo ""
+    echo "Options:"
+    echo "  --dir PATH          this project's root (default: ${DIR})"
+    echo "  --place NAME        required; a fragment from neuron's place book"
+    echo "  --creature ENTRY    the creature_template entry to place (step 2)"
+    echo "  --type TEXT         creature type filter for the search (step 1)"
+    echo "  --level RANGE       creature level filter for the search (step 1)"
+    echo "  --name TEXT         creature name filter for the search (step 1)"
+    echo "  --count N           how many to place (default: ${COUNT})"
+    echo "  --spread N          yards apart (default: ${SPREAD})"
+    echo "  --apply             actually place them; default is --plan only"
+    echo ""
+    echo "Without --apply, this only ever reads. With --apply and no"
+    echo "--creature, it refuses -- there is nothing to place yet."
+}
+# }}}
+
+# {{{ parse_args
+while [[ $# -gt 0 ]]; do
+    case "${1}" in
+        --dir)      DIR="${2}"; shift 2 ;;
+        --place)    PLACE="${2}"; shift 2 ;;
+        --creature) CREATURE="${2}"; shift 2 ;;
+        --type)     CREATURE_TYPE="${2}"; shift 2 ;;
+        --level)    CREATURE_LEVEL="${2}"; shift 2 ;;
+        --name)     CREATURE_NAME="${2}"; shift 2 ;;
+        --count)    COUNT="${2}"; shift 2 ;;
+        --spread)   SPREAD="${2}"; shift 2 ;;
+        --apply)    APPLY=1; shift ;;
+        --help|-h)  show_help; exit 0 ;;
+        *)
+            echo "Error: unrecognized argument '${1}'"
+            echo "Run with --help to see usage."
+            exit 1
+            ;;
+    esac
+done
+# }}}
+
+if [[ -z "${PLACE}" ]]; then
+    echo "Error: --place is required."
+    echo "Run with --help to see usage."
+    exit 1
+fi
+
+CALL_NEURON="${DIR}/scripts/call-neuron"
+
+if [[ ! -x "${CALL_NEURON}" ]]; then
+    echo "Error: ${CALL_NEURON} not found or not executable."
+    echo "To debug: is issue 162's scripts/call-neuron present in this checkout?"
+    exit 1
+fi
+
+# {{{ step 1: search, when no entry number was given
+# Passes straight through to neuron's own world.creatures and prints its
+# output verbatim -- no parsing here, so there is nothing in this script
+# that can silently misread a creature name into the wrong entry number.
+if [[ -z "${CREATURE}" ]]; then
+    if [[ "${APPLY}" -eq 1 ]]; then
+        echo "Error: --apply with no --creature has nothing to place."
+        echo "Run the search first (drop --apply), pick an entry number, then"
+        echo "re-run with --creature <entry> --apply."
+        exit 1
+    fi
+
+    SEARCH_ARGS=(creatures)
+    [[ -n "${CREATURE_TYPE}"  ]] && SEARCH_ARGS+=(--type  "${CREATURE_TYPE}")
+    [[ -n "${CREATURE_LEVEL}" ]] && SEARCH_ARGS+=(--level "${CREATURE_LEVEL}")
+    [[ -n "${CREATURE_NAME}"  ]] && SEARCH_ARGS+=(--name  "${CREATURE_NAME}")
+
+    echo "Searching for a creature kind (pass --creature <entry> to place one):"
+    echo ""
+    exec "${CALL_NEURON}" "${SEARCH_ARGS[@]}"
+fi
+# }}}
+
+# {{{ step 2: preview or place
+SPAWN_ARGS=(spawn --creature "${CREATURE}" --place "${PLACE}"
+            --count "${COUNT}" --spread "${SPREAD}")
+
+if [[ "${APPLY}" -ne 1 ]]; then
+    SPAWN_ARGS+=(--plan)
+    echo "PLAN ONLY -- pass --apply to actually place these. No undo exists"
+    echo "for world.spawn yet (issue 162)."
+    echo ""
+fi
+
+exec "${CALL_NEURON}" "${SPAWN_ARGS[@]}"
+# }}}

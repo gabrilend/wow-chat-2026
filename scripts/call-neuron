@@ -1,0 +1,93 @@
+#!/bin/bash
+# scripts/call-neuron - Forward to the sibling neuron control-plane checkout
+# neuron (../wow-chat-neuron) is a separate project that reaches into this
+# deployment through SQL, the GM SOAP console, and resident Lua scripts. This
+# wrapper just means a script in THIS project can pull one of its levers
+# ("scripts/call-neuron places ratchet") without knowing where neuron lives
+# or reconstructing its path by hand. See issue 162.
+
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+
+# --dir overrides where THIS project is taken to live (matches every other
+# script's convention); --neuron-dir overrides where the neuron checkout is
+# taken to live, independently, since it is a sibling project rather than a
+# subdirectory of this one.
+NEURON_DIR=""
+
+# {{{ show_help
+show_help() {
+    echo "Usage: scripts/call-neuron [--dir PATH] [--neuron-dir PATH] <neuron-args...>"
+    echo ""
+    echo "Forwards every remaining argument to the sibling neuron checkout's"
+    echo "own scripts/neuron. Run with no arguments to see neuron's own"
+    echo "command list."
+    echo ""
+    echo "  --dir PATH         this project's root (default: ${DIR})"
+    echo "  --neuron-dir PATH  the neuron checkout's root"
+    echo "                     (default: sibling of --dir, i.e."
+    echo "                     \$(dirname DIR)/wow-chat-neuron)"
+    echo ""
+    echo "Examples:"
+    echo "  scripts/call-neuron places ratchet"
+    echo "  scripts/call-neuron who 'bots hunters 18-20'"
+    echo "  scripts/call-neuron teleport --roster 'bots hunters 18-20' --place ratchet --plan"
+}
+# }}}
+
+# {{{ parse_args
+# Only the two path overrides are ours to parse; everything else (including
+# a bare --help meant for neuron itself) passes through untouched.
+ARGS=()
+while [[ $# -gt 0 ]]; do
+    case "${1}" in
+        --dir)
+            DIR="${2}"
+            shift 2
+            ;;
+        --dir=*)
+            DIR="${1#*=}"
+            shift
+            ;;
+        --neuron-dir)
+            NEURON_DIR="${2}"
+            shift 2
+            ;;
+        --neuron-dir=*)
+            NEURON_DIR="${1#*=}"
+            shift
+            ;;
+        --help|-h)
+            if [[ ${#ARGS[@]} -eq 0 ]]; then
+                show_help
+                exit 0
+            fi
+            ARGS+=("${1}")
+            shift
+            ;;
+        *)
+            ARGS+=("${1}")
+            shift
+            ;;
+    esac
+done
+# }}}
+
+# All paths relative to DIR, per house convention -- NEURON_DIR defaults to
+# DIR's own sibling rather than to anything absolute.
+if [[ -z "${NEURON_DIR}" ]]; then
+    NEURON_DIR="$(dirname "${DIR}")/wow-chat-neuron"
+fi
+
+if [[ ! -x "${NEURON_DIR}/scripts/neuron" ]]; then
+    echo "Error: no neuron checkout found at ${NEURON_DIR}"
+    echo ""
+    echo "Checked: ${NEURON_DIR}/scripts/neuron"
+    echo "To debug:"
+    echo "  - is the sibling checkout actually named wow-chat-neuron, next to"
+    echo "    $(dirname "${DIR}")/$(basename "${DIR}")?"
+    echo "  - pass --neuron-dir to point at it explicitly if it lives"
+    echo "    somewhere else"
+    exit 1
+fi
+
+exec "${NEURON_DIR}/scripts/neuron" "${ARGS[@]}"
