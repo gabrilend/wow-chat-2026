@@ -142,3 +142,12 @@ logs-vanilla
 
 # Conversation pages, rebuilt before every push (install-pages-hook)
 **/llm-transcripts/HTML/
+
+# The active profile: local to each checkout, written by scripts/install
+# when missing (2026-09-29; it was tracked, so every profile switch showed
+# as a change to commit)
+.profile
+
+# basic's install dir and log symlink, derived like vanilla's above
+installed-files-basic/
+logs-basic

@@ -301,6 +301,15 @@ get_profile_paths() {
 parse_args "$@"
 get_profile_paths
 
+# .profile names the active profile; every script reads it. It is local to
+# each checkout (gitignored), so a fresh clone has none: the first install
+# writes the profile it installs. An existing .profile is left as it is;
+# switching profiles is done by editing it (or --profile, for one run).
+if [[ ! -f "${DIR}/.profile" ]]; then
+    echo "${PROFILE}" > "${DIR}/.profile"
+    echo "No .profile yet: wrote '${PROFILE}' to ${DIR}/.profile"
+fi
+
 REPO="${PROFILE_REPO[$PROFILE]}"
 BRANCH="${PROFILE_BRANCH[$PROFILE]}"
 COMMIT="${PROFILE_COMMIT[$PROFILE]}"
