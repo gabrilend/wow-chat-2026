@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+# generate-stones-per-icon-page - build the "Stones Per Icon" page: every gem
+# icon in the client, how many stones each one shows, and so how many of that
+# gem stack in one bag or bank slot on the basic profile (issue 617l).
+#
+# For a general audience: the owner decided a gem should stack, per slot, to
+# the number of stones its picture shows (three Tigerseyes in the icon, three
+# to a slot). The pictures live inside the game client's archives. This tool
+# pulls out every gem's picture, pairs it with the gems that use it (from the
+# world database), and writes one page that shows them with the counted
+# numbers, so the owner can check the counts by eye. The counts themselves are
+# a table below: they were read by eye, and that reading is the design.
+#
+# Usage: scripts/generate-stones-per-icon-page [--dir=PROJECT_DIR]
+#   Reads   the world database (acore_world_release on the project MySQL,
+#           read-only): gem items (class 3) and the Gold Bar
+#           data-files/dbc/ItemDisplayInfo.dbc (item -> icon name)
+#           the client's archives beside the project (the icon pictures)
+#   Writes  docs/HTML/stones-per-icon.html (from scripts/templates/)
+# Needs Pillow (system package) and mpyq (pure Python; installed into
+# libs/pylibs, which git ignores: pip install --target libs/pylibs mpyq).
+
+import sys, os, io, json, base64, struct, subprocess
+
+# {{{ DIR configuration
+DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if len(sys.argv) > 1 and sys.argv[1].startswith("--dir="):
+    DIR = sys.argv.pop(1)[len("--dir="):]
+DBC      = DIR + "/data-files/dbc/"
+CLIENT   = os.path.dirname(DIR) + "/client/client-files/Data/"
+TEMPLATE = DIR + "/scripts/templates/stones-per-icon.html"
+OUT      = DIR + "/docs/HTML/stones-per-icon.html"
+MYSQL    = [DIR + "/mysql/installed-files/bin/mysql", "-h127.0.0.1", "-P3307", "-uritz", "-pmenardi",
+            "-N", "--batch", "acore_world_release"]
+sys.path.insert(0, os.environ.get("PYLIBS", DIR + "/libs/pylibs"))
+# }}}
+
+from mpyq import MPQArchive
+from PIL import Image
+
+# {{{ the counts
+# Stones drawn in each icon, read by eye on 2026-09-26 from all 132 gem icons
+# and published for the owner to check. Icons not listed show one stone.
+# Rule (owner, 2026-09-26): a gem stacks to its icon's count, cut or raw;
+# single stones and crystal clusters stack to one.
+STONES = {
+    "inv_misc_gem_emerald_03": 3,          # Malachite
+    "inv_misc_gem_opal_03": 3,             # Tigerseye
+    "inv_misc_gem_bloodstone_03": 3,       # Blood of the Mountain
+    "inv_misc_gem_ruby_03": 3,             # Tourmaline (the level-55 cut set)
+    "inv_misc_gem_deepperidot_01": 3,      # Barbed Deep Peridot
+    "inv_jewelcrafting_shadowspirit_01": 3,  # Earthsiege Diamond
+    "inv_misc_gem_crystal_01": 2,          # Lesser Moonstone
+    "inv_misc_gem_crystal_03": 2,          # Zircon (the level-55 cut set)
+    "inv_misc_gem_topaz_03": 2,            # Amber (the level-55 cut set)
+    "inv_misc_gem_diamond_07": 2,          # cut Skyfire Diamonds
+    "inv_misc_gem_diamond_05": 2,          # Skyfire Diamond
+    "inv_misc_gem_pearl_11": 2,            # Siren's Tear
+    "inv_jewelcrafting_icediamond_01": 2,  # Skyflare Diamond
+}
+# One crystal formation on a single base (several points, one stone).
+CLUSTERS = {
+    "inv_jewelcrafting_livingruby_02", "inv_jewelcrafting_talasite_02", "inv_jewelcrafting_starofelune_02",
+    "inv_jewelcrafting_nobletopaz_02", "inv_jewelcrafting_dawnstone_02", "inv_jewelcrafting_nightseye_02",
+    "inv_jewelcrafting_crimsonspinel_01", "inv_jewelcrafting_empyreansapphire_01", "inv_jewelcrafting_lionseye_01",
+    "inv_jewelcrafting_shadowsongamethyst_01", "inv_jewelcrafting_pyrestone_01", "inv_jewelcrafting_seasprayemerald_01",
+    "inv_jewelcrafting_gem_31", "inv_jewelcrafting_gem_32", "inv_jewelcrafting_gem_33",
+    "inv_jewelcrafting_gem_34", "inv_jewelcrafting_gem_35", "inv_jewelcrafting_gem_36",
+}
+# In the gem item class but not gems.
+NOT_GEMS = {"inv_stone_weightstone_05": "not a gem (Heavy Tonk Armor)", "inv_misc_crop_02": "not a gem (Riding Crop)"}
+GOLD_BAR = 3577                             # counted too: one bar in its icon
+ARCHIVES = ["enUS/patch-enUS-3.MPQ", "enUS/patch-enUS-2.MPQ", "enUS/patch-enUS.MPQ", "patch-3.MPQ", "patch-2.MPQ",
+            "patch.MPQ", "enUS/lichking-locale-enUS.MPQ", "enUS/expansion-locale-enUS.MPQ", "enUS/locale-enUS.MPQ",
+            "lichking.MPQ", "expansion.MPQ", "common-2.MPQ", "common.MPQ"]
+# }}}
+
+# {{{ def die
+def die(msg):
+    sys.stderr.write("generate-stones-per-icon-page: " + msg + "\n")
+    sys.exit(1)
+# }}}
+
+# {{{ def query
+def query(sql):
+    p = subprocess.run(MYSQL + ["-e", sql], capture_output=True, text=True)
+    errors = [l for l in p.stderr.splitlines() if "Warning" not in l]
+    if p.returncode != 0 or errors:
+        die("query failed: " + " ".join(errors))
+    return [l.split("\t") for l in p.stdout.splitlines() if l]
+# }}}
+
+# {{{ def icon_names
+# ItemDisplayInfo.dbc: 0 id, 5 the inventory icon's name (a string offset).
+def icon_names():
+    d = open(DBC + "ItemDisplayInfo.dbc", "rb").read()
+    if d[:4] != b"WDBC": die("ItemDisplayInfo.dbc is not a WDBC file")
+    n, fields, size = struct.unpack_from("<III", d, 4)
+    strings = 20 + n * size
+    out = {}
+    for r in range(n):
+        base = 20 + r * size
+        disp, = struct.unpack_from("<I", d, base)
+        off, = struct.unpack_from("<I", d, base + 20)
+        end = d.index(b"\0", strings + off)
+        out[disp] = d[strings + off:end].decode("latin-1")
+    return out
+# }}}
+
+# {{{ def picture
+archives = [MPQArchive(CLIENT + a) for a in ARCHIVES if os.path.exists(CLIENT + a)]
+def picture(icon):
+    for a in archives:
+        try:
+            blp = a.read_file("Interface\\Icons\\" + icon + ".blp")
+        except Exception:
+            blp = None
+        if blp:
+            buf = io.BytesIO()
+            Image.open(io.BytesIO(blp)).convert("RGBA").save(buf, "PNG")
+            return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+    die("icon " + icon + " is in no client archive under " + CLIENT)
+# }}}
+
+# {{{ main
+if not archives: die("no client archives found under " + CLIENT)
+icons = icon_names()
+rows = query("SELECT entry, name, displayid, ItemLevel, stackable FROM item_template "
+             "WHERE (class = 3 AND name NOT LIKE '%DEPRECATED%' AND name NOT LIKE 'zz%' AND name NOT LIKE '%Test%' "
+             "AND name NOT LIKE 'NPC Equip%') OR entry = " + str(GOLD_BAR) + " ORDER BY ItemLevel, entry")
+groups, order = {}, []
+for entry, name, disp, level, stack in rows:
+    icon = icons.get(int(disp)) or die("item " + entry + " (" + name + ") has display " + disp + " with no icon")
+    key = icon.lower()
+    if key not in groups:
+        order.append(key)
+        groups[key] = {"icon": icon, "items": [], "levels": [], "stacks": [], "goldbar": False}
+    g = groups[key]
+    g["items"].append(name); g["levels"].append(int(level)); g["stacks"].append(int(stack))
+    if int(entry) == GOLD_BAR: g["goldbar"] = True
+
+out = []
+for n, key in enumerate(order, 1):
+    g = groups[key]
+    kind = "goldbar" if g["goldbar"] else "notgem" if key in NOT_GEMS else "cluster" if key in CLUSTERS else "gem"
+    names = sorted(set(g["items"]))
+    out.append({"n": n, "icon": g["icon"], "img": picture(g["icon"]), "kind": kind,
+                "count": STONES.get(key, 1), "note": NOT_GEMS.get(key, ""),
+                "items": names[:8], "more": max(0, len(names) - 8),
+                "level": min(g["levels"]), "stack": max(g["stacks"])})
+
+missing = [k for k in list(STONES) + list(CLUSTERS) if k not in groups]
+if missing: die("counted icons no gem uses any more: " + ", ".join(missing))
+
+page = open(TEMPLATE).read()
+if "/*DATA*/" not in page: die(TEMPLATE + " has no /*DATA*/ marker")
+os.makedirs(os.path.dirname(OUT), exist_ok=True)
+open(OUT, "w").write(page.replace("/*DATA*/", json.dumps(out), 1))
+print("generate-stones-per-icon-page: %d icons (%d gem items) -> %s" % (len(out), len(rows), OUT))
+# }}}

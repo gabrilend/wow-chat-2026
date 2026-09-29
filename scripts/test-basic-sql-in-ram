@@ -144,11 +144,23 @@ apply_all() {
     step "E038 the Dark Portal as the only door"           "${WORLD}" "${B}/db_world.src/23-outland-one-door.apply.sql"
     step "E039 no guild banks"                             "${WORLD}" "${B}/db_world.src/24-no-guild-banks.apply.sql"
     step "E040 Sargobras at the gate of Acherus"          "${WORLD}" "${B}/db_world.src/25-death-knight-sargobras.apply.sql"
+    step "E043 Sargobras the buddy selector"              "${WORLD}" "${B}/db_world.src/26-buddy-selector.apply.sql"
+    step "E044 named areas' borders and middles"          "${WORLD}" "${B}/db_world.src/27-buddy-area-centres.apply.sql"
+    step "E045 beds buddies sleep on"                     "${WORLD}" "${B}/db_world.src/28-buddy-beds.apply.sql"
+    step "E046 world bosses respawned by hand"            "${WORLD}" "${B}/db_world.src/29-world-boss-respawn.apply.sql"
+    step "E048 buddy kit items wearable at their tier"    "${WORLD}" "${B}/db_world.src/30-buddy-kit-required-level.apply.sql"
     step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${V}/db_characters.src/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
     step "E041 death knight soul ledger"                  "${CHARS}" "${B}/db_characters.src/03-death-knight-souls.apply.sql"
+    step "E042 buddy clan and roster tables"              "${CHARS}" "${B}/db_characters.src/04-buddy-roster.apply.sql"
+    step "E047 world boss countdowns"                     "${CHARS}" "${B}/db_characters.src/05-world-boss-timers.apply.sql"
 }
 revert_all() {
+    step "E048 revert" "${WORLD}" "${B}/db_world.src/30-buddy-kit-required-level.revert.sql"
+    step "E046 revert" "${WORLD}" "${B}/db_world.src/29-world-boss-respawn.revert.sql"
+    step "E045 revert" "${WORLD}" "${B}/db_world.src/28-buddy-beds.revert.sql"
+    step "E044 revert" "${WORLD}" "${B}/db_world.src/27-buddy-area-centres.revert.sql"
+    step "E043 revert" "${WORLD}" "${B}/db_world.src/26-buddy-selector.revert.sql"
     step "E040 revert" "${WORLD}" "${B}/db_world.src/25-death-knight-sargobras.revert.sql"
     step "E039 revert" "${WORLD}" "${B}/db_world.src/24-no-guild-banks.revert.sql"
     step "E038 revert" "${WORLD}" "${B}/db_world.src/23-outland-one-door.revert.sql"
@@ -168,6 +180,8 @@ revert_all() {
     step "E024 revert" "${WORLD}" "${B}/db_world.src/09-outland-dungeons-64.revert.sql"
     step "E022 revert" "${WORLD}" "${B}/db_world.src/08-faction-quest-gating.revert.sql"
     step "E020 revert" "${WORLD}" "${V}/db_world.src/05-mount-level-requirements.revert.sql"
+    step "E047 revert" "${CHARS}" "${B}/db_characters.src/05-world-boss-timers.revert.sql"
+    step "E042 revert" "${CHARS}" "${B}/db_characters.src/04-buddy-roster.revert.sql"
     step "E041 revert" "${CHARS}" "${B}/db_characters.src/03-death-knight-souls.revert.sql"
     step "E023 revert" "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.revert.sql"
 }
@@ -176,7 +190,7 @@ revert_all() {
 # revert). E008 (vanilla's flight-path removal, shared) has no revert file
 # here (its revert lives inline in E-patches.sh), so it is applied first and
 # the snapshot is taken after it.
-TOUCHED="creature_template, creature_template_model, creature_default_trainer, trainer, game_event, game_event_creature, item_template, prospecting_loot_template, dungeon_access_template, dungeon_access_requirements, quest_template, creature, gossip_menu, npc_text, gameobject, pool_template, pool_pool, pool_gameobject, pool_creature, skill_fishing_base_level, fishing_loot_template, trainer_spell, creature_loot_template, reference_loot_template, gameobject_loot_template, item_loot_template, npc_vendor, disables, spell_group"
+TOUCHED="creature_template, creature_template_model, creature_model_info, creature_default_trainer, trainer, game_event, game_event_creature, item_template, prospecting_loot_template, dungeon_access_template, dungeon_access_requirements, quest_template, creature, gossip_menu, npc_text, gameobject, pool_template, pool_pool, pool_gameobject, pool_creature, skill_fishing_base_level, fishing_loot_template, trainer_spell, creature_loot_template, reference_loot_template, gameobject_loot_template, item_loot_template, npc_vendor, disables, spell_group"
 echo "Before the snapshot:"
 step "E008 flight paths removed (vanilla's, shared)"  "${WORLD}" "${V}/db_world.src/03-remove-flight-paths.apply.sql"
 stock_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")

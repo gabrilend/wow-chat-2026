@@ -1,0 +1,303 @@
+#!/usr/bin/env luajit
+-- test-buddy-talents - level every class's buddy through every talent
+-- shape, many times with different dice, and check each talent it learns
+-- against the server's own rules (issue 617g).
+--
+-- For a general audience: buddies pick their talents at random inside a
+-- fixed shape. Random choices are easy to get subtly wrong, and a wrong
+-- one only shows up in game as a talent the server quietly refuses. This
+-- test plays the buddy's whole career offline (one point per level from 10
+-- to 60, and a full re-roll at 60, as after a respec) for all ten classes,
+-- all ten shapes, and many random seeds. A separate referee, written from
+-- the server's learn-a-talent rules and basic's talent cap rather than from
+-- the spender, checks every single point. It then prints how evenly the
+-- talents get used, so a talent nobody ever picks is visible.
+--
+-- Checks, per point: the cap allows it (rows above 6; in row 6 one-point
+-- talents only), its row is open, its prerequisite holds enough points, it
+-- is exactly one rank above what is held; a tree never holds two
+-- unfinished talents; the pick order inside a tree holds (a legal
+-- one-point talent first; then the unfinished talent; then a starter on a
+-- one-pointer's prerequisite chain; then the first talent of a newly opened
+-- row; then anything). Per level: the shape's split holds to
+-- within one point; no point is left while a legal talent exists; overflow
+-- (all-in-one-tree shapes in small trees) lands in one tree. Per class: ten
+-- shape draws for seven same-class buddies never repeat; a role asked for
+-- is given whenever the class has it.
+--
+-- Usage: scripts/test-buddy-talents [PROJECT_DIR] [SEEDS]
+--   SEEDS  random seeds per class and shape (default 100)
+-- Classes run in parallel, one process each. Exit status 0 if all pass.
+
+local DIR   = (arg[1] and arg[1] ~= "--class") and arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local SEEDS = tonumber(arg[2]) or 100
+local SELF  = arg[0]
+
+-- {{{ local function script_path
+local DATA_FILE    = DIR .. "/src/lua-basic/data/buddy-talent-data.lua"
+local SPENDER_FILE = DIR .. "/src/lua-basic/lib/buddy-talent-spender.lua"
+-- }}}
+
+-- {{{ referee rules
+-- Written from Player::LearnTalent (source-beta, Player.cpp) and basic's
+-- cap (src/cpp-basic/basic_rules.cpp), not from the spender.
+local CAPSTONE_ROW, POINTS_PER_ROW = 6, 5
+-- }}}
+
+-- {{{ local function run_class
+-- Every check for one class; returns failures (list of strings) and a
+-- report (list of strings).
+local function run_class(class_id)
+    local DATA    = dofile(DATA_FILE)
+    local Spender = dofile(SPENDER_FILE)
+    local cls     = DATA.classes[class_id] or error("no class " .. class_id)
+    local fails, report = {}, {}
+    local function fail(msg) if #fails < 20 then fails[#fails + 1] = msg end end
+
+    -- referee's own tables
+    local by_id, tree_of, chain = {}, {}, {}
+    for t, tree in ipairs(cls.trees) do
+        for _, tal in ipairs(tree.talents) do by_id[tal.id] = tal; tree_of[tal.id] = t end
+    end
+    local function cap_allows(tal) return tal.row < CAPSTONE_ROW or (tal.row == CAPSTONE_ROW and tal.ranks == 1) end
+    for _, tal in pairs(by_id) do
+        if cap_allows(tal) and tal.ranks == 1 then
+            local d = tal.dep
+            while d ~= 0 do chain[d] = true; d = by_id[d].dep end
+        end
+    end
+    local function spent_of(held)
+        local s = { 0, 0, 0 }
+        for id, p in pairs(held) do s[tree_of[id]] = s[tree_of[id]] + p end
+        return s
+    end
+    local function server_allows(tal, held, spent)
+        local h = held[tal.id] or 0
+        return cap_allows(tal) and h < tal.ranks
+           and spent[tree_of[tal.id]] >= tal.row * POINTS_PER_ROW
+           and (tal.dep == 0 or (held[tal.dep] or 0) >= tal.dep_points)
+    end
+    local function unfinished(held, t)
+        local n = 0
+        for _, tal in ipairs(cls.trees[t].talents) do
+            local h = held[tal.id] or 0
+            if h > 0 and h < tal.ranks then n = n + 1 end
+        end
+        return n
+    end
+
+    -- {{{ local function apply
+    -- Referee one plan against held (modified in place). Returns false on
+    -- the first broken rule.
+    local function apply(steps, held, where)
+        for i, st in ipairs(steps) do
+            local tal = by_id[st.id]
+            if not tal then fail(where .. ": step " .. i .. " names unknown talent " .. tostring(st.id)); return false end
+            local spent = spent_of(held)
+            local h     = held[tal.id] or 0
+            if st.rank ~= h then
+                fail(string.format("%s: %s learned at rank index %d while holding %d", where, tal.name, st.rank, h)); return false
+            end
+            if not server_allows(tal, held, spent) then
+                fail(string.format("%s: %s (row %d, %d ranks) refused by the server's rules (tree has %d points)",
+                    where, tal.name, tal.row, tal.ranks, spent[tree_of[tal.id]])); return false
+            end
+            -- pick order in the tree: a legal one-pointer always first; then
+            -- the unfinished talent; then a starter on a one-pointer's
+            -- prerequisite chain; then a newly opened row's first talent;
+            -- then anything
+            local t = tree_of[tal.id]
+            if tal.ranks ~= 1 then
+                for _, other in ipairs(cls.trees[t].talents) do
+                    if other.ranks == 1 and server_allows(other, held, spent) then
+                        fail(string.format("%s: took %s while one-point %s was open", where, tal.name, other.name)); return false
+                    end
+                end
+                if h == 0 and unfinished(held, t) > 0 then
+                    fail(string.format("%s: started %s with a talent in its tree unfinished", where, tal.name)); return false
+                end
+                -- a newly opened row with no points yet gets the next start
+                local deepest, deepest_taken, deepest_open = math.floor(spent[t] / POINTS_PER_ROW), false, false
+                for _, other in ipairs(cls.trees[t].talents) do
+                    if other.row == deepest then
+                        if (held[other.id] or 0) > 0 then deepest_taken = true end
+                        if other.ranks ~= 1 and (held[other.id] or 0) == 0 and server_allows(other, held, spent) then deepest_open = true end
+                    end
+                end
+                -- (a prerequisite-chain start outranks the new row)
+                local chain_open = false
+                for _, other in ipairs(cls.trees[t].talents) do
+                    if chain[other.id] and (held[other.id] or 0) == 0 and server_allows(other, held, spent) then chain_open = true end
+                end
+                local row_rule = h == 0 and not deepest_taken and deepest_open and not chain_open
+                if row_rule and tal.row ~= deepest then
+                    fail(string.format("%s: started %s (row %d) while newly opened row %d was untouched",
+                        where, tal.name, tal.row, deepest)); return false
+                end
+                if h == 0 and not chain[tal.id] then
+                    for _, other in ipairs(cls.trees[t].talents) do
+                        if chain[other.id] and (held[other.id] or 0) == 0 and server_allows(other, held, spent) then
+                            fail(string.format("%s: started %s while %s (opens a one-pointer) was open",
+                                where, tal.name, other.name)); return false
+                        end
+                    end
+                end
+            end
+            if h > 0 and unfinished(held, t) > 1 then
+                fail(where .. ": tree " .. t .. " already had two unfinished talents"); return false
+            end
+            held[tal.id] = h + 1
+            if unfinished(held, t) > 1 then
+                fail(where .. ": " .. tal.name .. " left tree " .. t .. " with two unfinished talents"); return false
+            end
+        end
+        return true
+    end
+    -- }}}
+
+    -- {{{ local function check_level
+    -- After a level's spend: split within one point, nothing left while a
+    -- legal talent exists, overflow in one tree.
+    local function check_level(shape, held, unspent, where)
+        local spent = spent_of(held)
+        if unspent > 0 then
+            for _, tal in pairs(by_id) do
+                if server_allows(tal, held, spent) then
+                    fail(string.format("%s: %d point(s) left unspent while %s was legal", where, unspent, tal.name)); return
+                end
+            end
+        end
+        local shared, room_left = 0, false
+        for t = 1, 3 do if shape.thirds[t] > 0 then shared = shared + spent[t] end end
+        for t = 1, 3 do
+            if shape.thirds[t] > 0 then
+                if spent[t] < cls.trees[t].room then room_left = true end
+            end
+        end
+        if room_left then
+            for t = 1, 3 do
+                if shape.thirds[t] > 0 and spent[t] < cls.trees[t].room then
+                    local target = shape.thirds[t] * shared / 3
+                    if math.abs(spent[t] - target) > 1 then
+                        fail(string.format("%s: tree %d holds %d, its share is %.1f", where, t, spent[t], target)); return
+                    end
+                end
+            end
+        end
+        local overflow_trees = 0
+        for t = 1, 3 do if shape.thirds[t] == 0 and spent[t] > 0 then overflow_trees = overflow_trees + 1 end end
+        if overflow_trees > 1 then fail(where .. ": overflow spread over two trees") end
+    end
+    -- }}}
+
+    local picks, runs, capstone_ok, capstone_runs = {}, 0, 0, 0
+    for shape_id, shape in ipairs(cls.shapes) do
+        for seed = 1, SEEDS do
+            math.randomseed(seed * 7919 + shape_id * 104729 + class_id)
+            local rand = function(n) return math.random(n) end
+            local where_base = string.format("%s shape %d (%s) seed %d", cls.name, shape_id, shape.label, seed)
+
+            -- a career: one point per level, 10 to 60
+            local held = {}
+            for level = 10, 60 do
+                local steps, unspent = Spender.plan(cls, shape_id, held, 1, rand)
+                local where = where_base .. " level " .. level
+                if not apply(steps, held, where) then break end
+                check_level(shape, held, unspent, where)
+            end
+
+            -- a respec at 60: all 51 points at once
+            local fresh = {}
+            local steps, unspent = Spender.plan(cls, shape_id, {}, 51, rand)
+            if apply(steps, fresh, where_base .. " re-roll") then
+                check_level(shape, fresh, unspent, where_base .. " re-roll")
+            end
+            for id, p in pairs(fresh) do picks[id] = (picks[id] or 0) + 1 end
+            runs = runs + 1
+
+            -- a two-thirds or all-in tree at 60 reaches its capstone row
+            for t = 1, 3 do
+                if shape.thirds[t] >= 2 then
+                    capstone_runs = capstone_runs + 1
+                    for _, tal in ipairs(cls.trees[t].talents) do
+                        if tal.row == CAPSTONE_ROW and (held[tal.id] or 0) > 0 then capstone_ok = capstone_ok + 1; break end
+                    end
+                end
+            end
+        end
+    end
+
+    -- shape draws: seven buddies of this class, twice each way
+    for seed = 1, SEEDS do
+        math.randomseed(seed)
+        local rand = function(n) return math.random(n) end
+        for _, need in ipairs({ false, "tank", "healer" }) do
+            local taken = {}
+            for b = 1, 7 do
+                local id, filled = Spender.draw_shape(cls, taken, need or nil, rand)
+                if not id then fail(cls.name .. ": draw " .. b .. " found no free shape: " .. tostring(filled)); break end
+                if taken[id] then fail(cls.name .. ": shape " .. id .. " drawn twice") end
+                taken[id] = true
+                if need and b == 1 and Spender.can_fill(cls, need) ~= filled then
+                    fail(string.format("%s: asked for %s, can_fill=%s, filled=%s", cls.name, need,
+                        tostring(Spender.can_fill(cls, need)), tostring(filled)))
+                end
+            end
+        end
+    end
+
+    -- evenness report: share of re-rolls that took each allowed talent
+    local allowed, never, lo, hi = 0, {}, 1, 0
+    for _, tal in pairs(by_id) do
+        if cap_allows(tal) then
+            allowed = allowed + 1
+            local share = (picks[tal.id] or 0) / runs
+            if share == 0 then never[#never + 1] = tal.name end
+            if share < lo then lo = share end
+            if share > hi then hi = share end
+        end
+    end
+    table.sort(never)
+    report[#report + 1] = string.format("%-12s %3d allowed talents; taken in %3.0f%%..%3.0f%% of level-60 builds; capstone reached %d/%d; never taken: %s",
+        cls.name, allowed, lo * 100, hi * 100, capstone_ok, capstone_runs, #never > 0 and table.concat(never, ", ") or "none")
+    return fails, report
+end
+-- }}}
+
+-- {{{ main
+if arg[1] == "--class" or arg[3] == "--class" then
+    -- child process: one class; prints FAIL / REPORT lines
+    local class_id = tonumber(arg[#arg])
+    local ok, fails, report = pcall(run_class, class_id)
+    if not ok then print("FAIL class " .. class_id .. " crashed: " .. tostring(fails)); os.exit(1) end
+    for _, f in ipairs(fails)  do print("FAIL " .. f) end
+    for _, r in ipairs(report) do print("REPORT " .. r) end
+    os.exit(#fails == 0 and 0 or 1)
+end
+
+local DATA = dofile(DATA_FILE)
+local ids  = {}
+for id in pairs(DATA.classes) do ids[#ids + 1] = id end
+table.sort(ids)
+
+-- start every class at once, then collect (each popen runs concurrently)
+local procs = {}
+for _, id in ipairs(ids) do
+    local cmd = string.format("luajit %q %q %d --class %d 2>&1", SELF, DIR, SEEDS, id)
+    procs[#procs + 1] = { id = id, p = io.popen(cmd) }
+end
+local failures, reports = 0, {}
+for _, pr in ipairs(procs) do
+    local out = pr.p:read("*a")
+    pr.p:close()
+    for line in out:gmatch("[^\n]+") do
+        if line:find("^FAIL") then failures = failures + 1; print(line)
+        elseif line:find("^REPORT ") then reports[#reports + 1] = line:sub(8)
+        else print("?? " .. line); failures = failures + 1 end
+    end
+end
+print(string.format("test-buddy-talents: %d classes x 10 shapes x %d seeds, careers 10-60 plus a re-roll at 60", #ids, SEEDS))
+for _, r in ipairs(reports) do print("  " .. r) end
+print(failures == 0 and "Result: all checks passed." or ("Result: " .. failures .. " failure(s)."))
+os.exit(failures == 0 and 0 or 1)
+-- }}}

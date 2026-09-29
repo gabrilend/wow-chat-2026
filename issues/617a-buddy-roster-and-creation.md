@@ -5,6 +5,7 @@
 - Phase: 6
 - Parent: 617
 - Priority: High (every other 617 part stands on it)
+- Sub-issues: 617a1 through 617a5
 
 ## Current Behavior
 
@@ -89,7 +90,7 @@ the world, like vendor prices). Every id is `int unsigned` unless noted.
 | Table | Key | Fields | Holds |
 |---|---|---|---|
 | `buddy_clan` | owner | companion account; clan guild id | one row per owner: the hidden account (617a) and the clan guild (617l) |
-| `buddy_roster` | owner, slot (`tinyint`: 1 at creation, 2 at level 10, …) | buddy character (empty while the slot is owed); class, race, profile, role (`tinyint` each: role 0 damage, 1 tank, 2 healer); created (unix time) | who the buddies are; an owed slot is a row with no buddy yet (617b fills it) |
+| `buddy_roster` | owner, slot (`tinyint`: 1 at creation, 2 at level 10, …) | buddy character (empty while the slot is owed); class, race, profile, role (`tinyint` each: role 0 damage, 1 tank, 2 healer); talents_reroll (`tinyint`, 0/1: a re-roll owed from an owner respec while the buddy was offline; 617g); created (unix time). `profile` is the talent shape id 1-10, drawn by 617g's `draw_shape` (src/lua-basic/lib/buddy-talent-spender.lua) | who the buddies are; an owed slot is a row with no buddy yet (617b fills it) |
 | `buddy_draw` | owner, buddy | had a turn (`tinyint` 0/1) | the dungeon draw bag (617c): drawn without replacement; when every buddy has had a turn, all reset to 0 |
 | `buddy_task` | buddy, task number | kind (`tinyint`: errand, gathering, task hunt), place in line (`smallint`; the first three hunts active, the rest the backlog, 617m), the task itself (JSON: the command as the model's tool call writes it, one entry per material and source), progress (JSON: which entries are done) | what each buddy is doing, so logout and restart resume it (617c) |
 | `buddy_price` | auction house pool (`tinyint`: Alliance, Horde, neutral; each faction's houses share one pool, the neutral houses another), item | steps up (`tinyint`, each +0.5× the vendor price, 617h), last listed price (copper), updated (unix time) | the rising-price memory; reset to 0 steps after a sale |
@@ -97,6 +98,19 @@ the world, like vendor prices). Every id is `int unsigned` unless noted.
 
 Choices in it: price memory shared per pool (answered below); the task
 itself kept as the command's own text, proposed as JSON (open below).
+
+## Sub-Issues (split 2026-09-26)
+
+| ID | Name | Dependencies | Description |
+|---|---|---|---|
+| 617a1 | buddy-module-and-roster-tables | None | The project's mod-buddies module linked into the build, and the clan and roster tables; the roster row is how the Lua selector hands a choice to the C++ creator |
+| 617a2 | companion-account | 617a1 | One hidden account per owner character, owed slots at creation and every tenth level, everything deleted with the owner |
+| 617a3 | buddy-creation | 617a1, 617a2 | A chosen roster row becomes a character of that race and class at the owner's level (the bot factory's parts, with the race fixed) |
+| 617a4 | buddy-starting-kit | 617a3 | White gear, level-in-silver, the owner's bag-slot total in even cheap bags |
+| 617a5 | buddies-hidden-and-locked | 617a1 | Out of /who and friend lists, deaf to bot chat commands, no renaming |
+
+Execution order: `617a1 → 617a2 → 617a3 → (617a4 ∥ 617a5)`; 617a5 can
+start once 617a1 is done.
 
 ## Suggested Implementation Steps
 

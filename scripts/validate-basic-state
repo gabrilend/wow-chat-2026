@@ -219,6 +219,78 @@ report "the soul ledger (basic_718_souls) exists in the characters database" \
     "$(run_sql "SELECT 'missing' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '${CHARS}' AND table_name = 'basic_718_souls')")"
 # }}}
 
+# {{{ 617b: Sargobras the buddy selector
+report "Sargobras: both creatures (valley, wandering) with gossip, three texts, a valley one in each of 8 starting valleys" \
+    "$(run_sql "SELECT 'templates', COUNT(*) FROM ${WORLD}.creature_template WHERE entry BETWEEN 6170001 AND 6170002 AND npcflag & 1 = 1 HAVING COUNT(*) <> 2
+        UNION ALL SELECT 'texts', COUNT(*) FROM ${WORLD}.npc_text WHERE ID BETWEEN 6170001 AND 6170003 HAVING COUNT(*) <> 3
+        UNION ALL SELECT 'valley spawns', COUNT(DISTINCT map, ROUND(position_x), ROUND(position_y)) FROM ${WORLD}.creature WHERE id = 6170001 HAVING COUNT(DISTINCT map, ROUND(position_x), ROUND(position_y)) <> 8
+        UNION ALL SELECT 'wandering one saved', COUNT(*) FROM ${WORLD}.creature WHERE id = 6170002 HAVING COUNT(*) <> 0")"
+# }}}
+
+# {{{ 617e2: named areas' borders and middles
+# Generated from the map files (scripts/generate-buddy-area-centres). A
+# table with too few rows means the maps were missing or the generator was
+# not run; a middle outside its own borders means the generator is wrong;
+# Fargodeep Mine (area 57, Elwynn) is the owner's first roaming test ground.
+report "the named areas' table is full, every middle within its borders, Fargodeep Mine present" \
+    "$(run_sql "SELECT 'rows', COUNT(*) FROM ${WORLD}.buddy_area_centre HAVING COUNT(*) < 2000
+        UNION ALL SELECT CONCAT('middle outside borders: map ', map, ' area ', area, ' piece ', piece), 1 FROM ${WORLD}.buddy_area_centre
+            WHERE centre_x < min_x OR centre_x > max_x OR centre_y < min_y OR centre_y > max_y
+        UNION ALL SELECT 'Fargodeep Mine (0, 57) missing', COUNT(*) FROM ${WORLD}.buddy_area_centre WHERE map = 0 AND area = 57 HAVING COUNT(*) = 0")"
+# }}}
+
+# {{{ 617e4: the beds buddies sleep on
+# Placed by hand (".buddy bed add"); the table may be empty, but must have
+# every column the buddy module reads (buddies_beds.cpp).
+report "the beds table (buddy_bed) has every column" \
+    "$(run_sql "SELECT w.c FROM (
+          SELECT 'id' c UNION ALL SELECT 'map' UNION ALL SELECT 'x' UNION ALL SELECT 'y' UNION ALL SELECT 'z'
+          UNION ALL SELECT 'facing' UNION ALL SELECT 'area' UNION ALL SELECT 'note'
+          UNION ALL SELECT 'tier' UNION ALL SELECT 'link') w
+        LEFT JOIN information_schema.columns ic ON ic.table_schema = '${WORLD}' AND ic.table_name = 'buddy_bed' AND ic.column_name = w.c
+        WHERE ic.column_name IS NULL")"
+# }}}
+
+# {{{ 155j: world bosses respawned by hand
+# The list names every world boss spawn (seven: Doom Lord Kazzak, Doomwalker,
+# Azuregos and the four Emerald Dragons), each still a spawn, each with the
+# year-long stock delay (so only the Lua countdown brings it back); the
+# countdown table has every column the Lua script and basic_rules.cpp use.
+report "world bosses: seven listed, each a spawn, each off the server's own respawn" \
+    "$(run_sql "SELECT 'listed', COUNT(*) FROM ${WORLD}.basic_155j_world_bosses HAVING COUNT(*) <> 7
+        UNION ALL SELECT CONCAT('listed spawn missing: ', b.guid), 1 FROM ${WORLD}.basic_155j_world_bosses b
+            LEFT JOIN ${WORLD}.creature c ON c.guid = b.guid WHERE c.guid IS NULL
+        UNION ALL SELECT CONCAT('still on a stock respawn: ', c.guid), c.spawntimesecs FROM ${WORLD}.creature c
+            WHERE c.id IN (18728, 17711, 6109, 14887, 14888, 14889, 14890) AND c.spawntimesecs <> 31536000")"
+report "Doom Lord Kazzak four times his stock size, twice his speeds, his reach and radius kept stock" \
+    "$(run_sql "SELECT 'no stock row', COUNT(*) FROM ${WORLD}.basic_155j_kazzak_stock HAVING COUNT(*) <> 1
+        UNION ALL SELECT 'size', m.DisplayScale FROM ${WORLD}.creature_template_model m JOIN ${WORLD}.basic_155j_kazzak_stock s
+            WHERE m.CreatureID = 18728 AND m.Idx = 0 AND ABS(m.DisplayScale - 4 * s.DisplayScale) > 0.001
+        UNION ALL SELECT 'speeds', t.speed_walk FROM ${WORLD}.creature_template t JOIN ${WORLD}.basic_155j_kazzak_stock s
+            WHERE t.entry = 18728 AND (ABS(t.speed_walk - 2 * s.speed_walk) > 0.001 OR ABS(t.speed_run - 2 * s.speed_run) > 0.001)
+        UNION ALL SELECT 'reach after scale', i.CombatReach * m.DisplayScale FROM ${WORLD}.creature_model_info i
+            JOIN ${WORLD}.creature_template_model m ON m.CreatureID = 18728 AND m.Idx = 0 JOIN ${WORLD}.basic_155j_kazzak_stock s
+            WHERE i.DisplayID = 17887 AND ABS(i.CombatReach * m.DisplayScale - s.CombatReach * s.DisplayScale) > 0.01")"
+report "the world boss countdown table (basic_world_boss_timer) has every column" \
+    "$(run_sql "SELECT w.c FROM (
+          SELECT 'guid' c UNION ALL SELECT 'alive' UNION ALL SELECT 'elapsed' UNION ALL SELECT 'tokens') w
+        LEFT JOIN information_schema.columns ic ON ic.table_schema = '${CHARS}' AND ic.table_name = 'basic_world_boss_timer' AND ic.column_name = w.c
+        WHERE ic.column_name IS NULL")"
+# }}}
+
+# {{{ 617a1: the buddy clan and roster tables
+# Every column the buddy module and the Lua scripts read (buddy-talents.lua
+# reads profile and talents_reroll), listed so a missing one names itself.
+report "the buddy tables (buddy_clan, buddy_roster) have every column" \
+    "$(run_sql "SELECT CONCAT(w.t, '.', w.c) FROM (
+          SELECT 'buddy_clan' t, 'owner' c UNION ALL SELECT 'buddy_clan', 'companion_account' UNION ALL SELECT 'buddy_clan', 'clan_guild'
+          UNION ALL SELECT 'buddy_roster', 'owner' UNION ALL SELECT 'buddy_roster', 'slot' UNION ALL SELECT 'buddy_roster', 'buddy'
+          UNION ALL SELECT 'buddy_roster', 'class' UNION ALL SELECT 'buddy_roster', 'race' UNION ALL SELECT 'buddy_roster', 'profile'
+          UNION ALL SELECT 'buddy_roster', 'role' UNION ALL SELECT 'buddy_roster', 'talents_reroll' UNION ALL SELECT 'buddy_roster', 'created') w
+        LEFT JOIN information_schema.columns ic ON ic.table_schema = '${CHARS}' AND ic.table_name = w.t AND ic.column_name = w.c
+        WHERE ic.column_name IS NULL")"
+# }}}
+
 # {{{ 155o: Inscription without glyphs
 report "no trainer teaches a glyph" \
     "$(run_sql "SELECT ts.TrainerId, ts.SpellId FROM ${WORLD}.trainer_spell ts JOIN ${WORLD}.basic_155o_glyph_trainer_spell b ON b.SpellId = ts.SpellId LIMIT 10")"

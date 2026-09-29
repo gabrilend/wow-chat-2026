@@ -1,0 +1,134 @@
+<title>Stones Per Icon</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --ground: #eef0f3; --panel: #ffffff; --ink: #1b2230; --muted: #5b6576; --rule: #d5d9e1;
+  --brass: #8a5d0c; --brass-bg: #f6ecd6; --slot: #10141b;
+  --multi: #2c5aa0; --multi-bg: #e3ebf7; --clus: #6b3fa0; --clus-bg: #eee5f7; --off: #6b7280; --off-bg: #eceef1;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440;
+    --brass: #dcb45c; --brass-bg: #2d2615; --slot: #06080b;
+    --multi: #7fa6e6; --multi-bg: #1b2940; --clus: #c4a3ee; --clus-bg: #2b2140; --off: #9aa1ad; --off-bg: #232a34;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440;
+  --brass: #dcb45c; --brass-bg: #2d2615; --slot: #06080b;
+  --multi: #7fa6e6; --multi-bg: #1b2940; --clus: #c4a3ee; --clus-bg: #2b2140; --off: #9aa1ad; --off-bg: #232a34;
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 16px/1.5 "Alegreya Sans", "Segoe UI", system-ui, sans-serif; }
+.wrap { max-width: 1100px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 34px; }
+h1, h2 { font-family: "Alegreya SC", Georgia, serif; margin: 0; text-wrap: balance; }
+h1 { font-size: 2.1rem; } h2 { font-size: 1.4rem; }
+p { margin: 0; max-width: 70ch; }
+.lede { color: var(--muted); }
+.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .78rem; font-variant-numeric: tabular-nums; }
+section { display: grid; gap: 12px; }
+section > p { color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 10px; display: flex; gap: 12px; align-items: flex-start; }
+.slot { width: 72px; height: 72px; border-radius: 6px; background: var(--slot); box-shadow: inset 0 0 0 2px #3b3322, inset 0 0 0 3px #000; display: grid; place-items: center; flex: none; }
+.slot img { width: 68px; height: 68px; display: block; }
+.body { display: grid; gap: 4px; min-width: 0; }
+.head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.count { font: 700 1.5rem/1 "Alegreya SC", Georgia, serif; }
+.names { font-size: .9rem; overflow-wrap: anywhere; }
+.sub { color: var(--muted); }
+.chip { font-size: .72rem; font-weight: 700; border-radius: 999px; padding: 1px 8px; justify-self: start; }
+.chip.multi { color: var(--multi); background: var(--multi-bg); }
+.chip.clus { color: var(--clus); background: var(--clus-bg); }
+.chip.off { color: var(--off); background: var(--off-bg); }
+.summary { display: flex; flex-wrap: wrap; gap: 18px; }
+.summary div { display: grid; }
+.summary b { font: 700 1.6rem/1.1 "Alegreya SC", Georgia, serif; font-variant-numeric: tabular-nums; }
+.summary span { color: var(--muted); font-size: .85rem; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+button { font: inherit; font-weight: 500; color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+button[aria-pressed="true"] { background: var(--brass-bg); border-color: var(--brass); }
+button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+footer { color: var(--muted); font-size: .85rem; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1>Stones Per Icon</h1>
+    <p class="lede">Every gem icon in the 3.3.5 client, with the number of separate stones drawn in each, counted by eye. On the basic profile a gem stacks, per bag or bank slot, to the number of stones its icon shows (issue 617l).</p>
+  </header>
+  <div class="summary" id="summary"></div>
+
+  <section aria-labelledby="counted-h">
+    <h2 id="counted-h">Icons with more than one stone</h2>
+    <p>Here are the icons we counted to see how many should stack per slot.</p>
+    <div class="grid" id="multi"></div>
+  </section>
+
+  <section aria-labelledby="one-h">
+    <h2 id="one-h">Gems that stack to one</h2>
+    <p>Here are the gems we found to stack to one: a single stone, or one crystal cluster growing from a single base.</p>
+    <div class="filters" role="group" aria-label="Show">
+      <button id="f-single" aria-pressed="true">Single stones</button>
+      <button id="f-clus" aria-pressed="false">Crystal clusters</button>
+    </div>
+    <div class="grid" id="one"></div>
+  </section>
+
+  <section aria-labelledby="other-h">
+    <h2 id="other-h">Also counted</h2>
+    <p>Not gems, counted for the same rule: the gold bar (the other thing the clan's vault keeps), and two items that only share a gem's item class.</p>
+    <div class="grid" id="other"></div>
+  </section>
+
+  <footer class="mono">Generated by scripts/generate-stones-per-icon-page from the client's icons and the world database; counts are the table in that script.</footer>
+</div>
+
+<script>
+const ROWS = /*DATA*/;
+function card(r) {
+  const c = document.createElement("div"); c.className = "card";
+  const s = document.createElement("div"); s.className = "slot";
+  const i = document.createElement("img"); i.src = r.img; i.alt = r.icon; i.loading = "lazy"; s.append(i);
+  const b = document.createElement("div"); b.className = "body";
+  const h = document.createElement("div"); h.className = "head";
+  const n = document.createElement("span"); n.className = "count"; n.textContent = r.kind === "notgem" ? "–" : r.count;
+  const id = document.createElement("span"); id.className = "mono sub"; id.textContent = "#" + r.n + " · " + r.icon;
+  h.append(n, id);
+  const names = document.createElement("div"); names.className = "names";
+  names.textContent = r.note || (r.items.join(", ") + (r.more ? ", +" + r.more + " more" : ""));
+  b.append(h, names);
+  if (r.kind !== "notgem") {
+    const sub = document.createElement("div"); sub.className = "mono sub";
+    sub.textContent = "from item level " + r.level + " · stacks to " + r.stack + " today";
+    b.append(sub);
+  }
+  const chip = document.createElement("span");
+  if (r.kind === "notgem") { chip.className = "chip off"; chip.textContent = "not a gem"; }
+  else if (r.kind === "cluster") { chip.className = "chip clus"; chip.textContent = "one crystal cluster"; }
+  else if (r.count > 1) { chip.className = "chip multi"; chip.textContent = r.count + " separate stones"; }
+  if (chip.className) b.append(chip);
+  c.append(s, b); return c;
+}
+const fill = (id, rows) => document.getElementById(id).replaceChildren(...rows.map(card));
+fill("multi", ROWS.filter(r => r.kind === "gem" && r.count > 1));
+fill("other", ROWS.filter(r => r.kind === "notgem" || r.kind === "goldbar"));
+function showOne(which) {
+  document.getElementById("f-single").setAttribute("aria-pressed", which === "single");
+  document.getElementById("f-clus").setAttribute("aria-pressed", which === "cluster");
+  fill("one", ROWS.filter(r => which === "cluster" ? r.kind === "cluster" : (r.kind === "gem" && r.count === 1)));
+}
+document.getElementById("f-single").addEventListener("click", () => showOne("single"));
+document.getElementById("f-clus").addEventListener("click", () => showOne("cluster"));
+showOne("single");
+const sum = document.getElementById("summary");
+[[ROWS.filter(r => r.kind === "gem" && r.count > 1).length, "icons with more than one stone"],
+ [ROWS.filter(r => r.kind === "gem" && r.count === 1).length, "single stones"],
+ [ROWS.filter(r => r.kind === "cluster").length, "crystal clusters"],
+ [ROWS.filter(r => r.kind !== "notgem" && r.kind !== "goldbar").length, "gem icons in all"]].forEach(([v, l]) => {
+  const d = document.createElement("div"); const b = document.createElement("b"); b.textContent = v;
+  const s = document.createElement("span"); s.textContent = l; d.append(b, s); sum.append(d);
+});
+</script>

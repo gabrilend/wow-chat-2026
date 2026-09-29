@@ -1,0 +1,118 @@
+#!/usr/bin/env luajit
+-- test-buddy-choice - play thousands of buddy picks at Sargobras and check
+-- each result against the owner's rules (issue 617b).
+--
+-- For a general audience: a player asks Sargobras for a class or a race and
+-- gets a whole buddy back (class, race, talent shape, role). The rules for
+-- what comes back are simple to say and easy to get subtly wrong, especially
+-- the tank-and-healer guarantee that only acts at the last two buddies. This
+-- test builds random clans, makes every pick the menu offers at every slot,
+-- many times over, and checks every result with a referee written from the
+-- decisions in 617b and 617g, not from the code being tested.
+--
+-- Checks: the race is of the owner's faction and can play the class; a class
+-- pick keeps its class, a race pick keeps its race; no death knight for a
+-- non-death-knight owner, only death knights for one; the shape is one no
+-- same-class clan-mate holds; at slots 6 and 7, while the clan lacks a tank
+-- (then a healer), a class that can fill it gets a shape of that role and a
+-- race with a class that can fill it gets such a class; at slots 1-5 no
+-- steering (shapes of other roles do appear); the menu never offers a death
+-- knight or another faction's race.
+--
+-- Usage: scripts/test-buddy-choice [PROJECT_DIR] [RUNS]
+--   RUNS  random clans per faction and owner kind (default 300)
+-- Exit status 0 if all pass.
+
+local DIR  = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local RUNS = tonumber(arg[2]) or 300
+
+local RC      = dofile(DIR .. "/src/lua-basic/data/race-class-data.lua")
+local TD      = dofile(DIR .. "/src/lua-basic/data/buddy-talent-data.lua")
+local Spender = dofile(DIR .. "/src/lua-basic/lib/buddy-talent-spender.lua")
+local Choice  = dofile(DIR .. "/src/lua-basic/lib/buddy-choice.lua")
+
+local fails, checks = {}, 0
+local function fail(msg) if #fails < 25 then fails[#fails + 1] = msg end end
+local function check(ok, msg) checks = checks + 1; if not ok then fail(msg) end end
+
+-- {{{ referee's own facts
+local ROLE = { damage = 0, tank = 1, healer = 2 }
+local function class_roles(class)            -- the roles any of a class's shapes plays
+    local r = {}
+    for _, s in ipairs(TD.classes[class].shapes) do r[ROLE[s.role]] = true end
+    return r
+end
+local function missing_role(roster)          -- tank first, then healer
+    local have = {}
+    for _, b in ipairs(roster) do have[b.role] = true end
+    if not have[ROLE.tank] then return ROLE.tank end
+    if not have[ROLE.healer] then return ROLE.healer end
+    return nil
+end
+-- }}}
+
+local unsteered_offrole = 0                  -- slots 1-5: a capable class drew another role
+for _, team in ipairs({ "alliance", "horde" }) do
+    for _, dk in ipairs({ false, true }) do
+        local classes, races = Choice.menu(RC, team, dk)
+        for _, c in ipairs(classes) do check(c.id ~= 6, team .. ": the menu offers death knights") end
+        for _, r in ipairs(races) do check(RC.races[r.id].team == team, team .. ": the menu offers " .. r.name) end
+        if dk then check(#classes == 0 and #races == 0, "a death-knight owner is offered a menu") end
+
+        for run = 1, RUNS do
+            math.randomseed(run * 131 + (dk and 7 or 0) + (team == "horde" and 3 or 0))
+            local rand = function(n) return math.random(n) end
+            local roster = {}
+            for slot = 1, 7 do
+                local pick
+                if not dk then
+                    if math.random(2) == 1 then pick = { kind = "class", id = classes[rand(#classes)].id }
+                    else pick = { kind = "race", id = races[rand(#races)].id } end
+                end
+                local need = (not dk and slot >= 6) and missing_role(roster) or nil
+                local b, err = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = rand, team = team,
+                    owner_is_dk = dk, slot = slot, roster = roster, pick = pick })
+                local where = string.format("%s %s run %d slot %d", team, dk and "DK owner" or "owner", run, slot)
+                if not b then fail(where .. ": no buddy: " .. tostring(err)); break end
+
+                local r = RC.races[b.race]
+                check(r and r.team == team, where .. ": race " .. b.race .. " is not " .. team)
+                local plays = false
+                for _, c in ipairs(r and r.classes or {}) do if c == b.class then plays = true end end
+                check(plays, where .. ": race " .. b.race .. " can't be class " .. b.class)
+                if dk then check(b.class == 6, where .. ": a DK owner got class " .. b.class)
+                else check(b.class ~= 6, where .. ": a non-DK owner got a death knight") end
+                if pick and pick.kind == "class" then check(b.class == pick.id, where .. ": the picked class changed") end
+                if pick and pick.kind == "race"  then check(b.race  == pick.id, where .. ": the picked race changed") end
+                for _, m in ipairs(roster) do
+                    check(not (m.class == b.class and m.profile == b.profile), where .. ": shape " .. b.profile .. " repeats a clan-mate's")
+                end
+                check(ROLE[TD.classes[b.class].shapes[b.profile].role] == b.role, where .. ": role doesn't match the shape")
+
+                if need then
+                    if pick.kind == "class" and class_roles(b.class)[need] then
+                        check(b.role == need, where .. ": a capable picked class wasn't steered to role " .. need)
+                    end
+                    if pick.kind == "race" then
+                        local any = false
+                        for _, c in ipairs(RC.races[pick.id].classes) do
+                            if c ~= 6 and class_roles(c)[need] then any = true end
+                        end
+                        if any then check(class_roles(b.class)[need], where .. ": the race's drawn class can't fill role " .. need) end
+                        if any then check(b.role == need, where .. ": the race's buddy wasn't given role " .. need) end
+                    end
+                elseif slot < 6 and not dk then
+                    local m = missing_role(roster)
+                    if m and class_roles(b.class)[m] and b.role ~= m then unsteered_offrole = unsteered_offrole + 1 end
+                end
+                roster[#roster + 1] = { class = b.class, profile = b.profile, role = b.role }
+            end
+        end
+    end
+end
+check(unsteered_offrole > 0, "slots 1-5 look steered: no capable class ever drew another role")
+
+print(string.format("test-buddy-choice: %d checks over %d clans per faction and owner kind", checks, RUNS))
+for _, f in ipairs(fails) do print("FAIL " .. f) end
+print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s) shown."))
+os.exit(#fails == 0 and 0 or 1)

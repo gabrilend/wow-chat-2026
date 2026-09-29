@@ -51,6 +51,17 @@ declare -a EXPECT_basic=(
     "modules/playerbots.conf|AiPlayerbot.DisableDeathKnightLogin|1"
     # no dual spec on basic (C026, 2026-09-25, issue 155r): above the level cap
     "worldserver.conf|MinDualSpecLevel|255"
+    # buddies' talents by the project's own script (C027, 2026-09-26, issue 617g)
+    "modules/playerbots.conf|AiPlayerbot.AltMaintenanceTalentTree|0"
+    # honor effectively uncapped (C028, 2026-09-26, issue 155t)
+    "worldserver.conf|MaxHonorPoints|2147483647"
+    "worldserver.conf|MaxHonorPointsMoneyPerPoint|0"
+    # buddies' far parties survive a login (C029, 2026-09-27, issue 617c2)
+    "modules/playerbots.conf|AiPlayerbot.KeepAltsInGroup|1"
+    # no playerbots group invite at a buddy's login (C030 + B037, 2026-09-27, issue 617c2)
+    "modules/playerbots.conf|AiPlayerbot.InviteAltsOnLogin|0"
+    # nobody joins General, Trade, LocalDefense, WorldDefense, GuildRecruitment, LookingForGroup (C031 + B038, 2026-09-27, issue 155x)
+    "worldserver.conf|Basic.RefusedChannels|1 2 22 23 25 26"
 )
 # }}}
 

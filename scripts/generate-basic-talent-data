@@ -1,0 +1,240 @@
+#!/usr/bin/env luajit
+-- generate-basic-talent-data - read every class's talent trees out of the
+-- client's files and write them, with basic's cap and the ten buddy talent
+-- shapes, as a Lua data file the server scripts load (issue 617g).
+--
+-- For a general audience: buddies (a player's bot companions) spend their
+-- own talent points, picking at random inside a fixed "shape" such as
+-- two-thirds Holy and one-third Protection. To pick legally they need to
+-- know each class's three talent trees: every talent, its row and column,
+-- how many points it takes, what it depends on, and whether basic's talent
+-- cap (issue 155g) allows it. That knowledge lives in the game client's
+-- data files. This tool reads it once and writes it out as plain data, so
+-- the server script and the offline test both work from the same facts and
+-- nobody types talent lists by hand.
+--
+-- Usage: scripts/generate-basic-talent-data [PROJECT_DIR]
+--   Reads   data-files/dbc/{Talent,TalentTab,Spell}.dbc
+--   Writes  src/lua-basic/data/buddy-talent-data.lua (whole file, generated)
+
+local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DBC = DIR .. "/data-files/dbc/"
+local OUT = DIR .. "/src/lua-basic/data/buddy-talent-data.lua"
+
+-- {{{ configuration
+-- basic's talent cap (issue 155g, src/cpp-basic/basic_rules.cpp): rows
+-- above CAPSTONE_ROW are stock; in CAPSTONE_ROW only one-rank talents are
+-- open; deeper rows are sealed. Must match the compiled rule.
+local CAPSTONE_ROW    = 6
+local POINTS_PER_ROW  = 5                          -- row n opens at 5n points in the tree (Player::LearnTalent)
+local MAX_TALENT_RANK = 5                          -- DBCStructure.h: TalentEntry::RankID has 5 used slots
+
+-- Player classes (ChrClasses.dbc ids; 10 is unused in this client).
+local CLASSES = {
+    { id =  1, name = "Warrior"      }, { id =  2, name = "Paladin" },
+    { id =  3, name = "Hunter"       }, { id =  4, name = "Rogue"   },
+    { id =  5, name = "Priest"       }, { id =  6, name = "Death Knight" },
+    { id =  7, name = "Shaman"       }, { id =  8, name = "Mage"    },
+    { id =  9, name = "Warlock"      }, { id = 11, name = "Druid"   },
+}
+
+-- Which trees tank and which heal, by TalentTab.dbc id (stable across
+-- client builds of 3.3.5). Every other tree is "damage". Owner decisions,
+-- 2026-09-25 and 2026-09-26: feral is a tank (bear); death knight trees are
+-- left as damage because death-knight clans skip the tank-and-healer
+-- guarantee, so their role is never asked.
+local TREE_ROLE = {
+    [163] = "tank",   -- Warrior Protection
+    [383] = "tank",   -- Paladin Protection
+    [281] = "tank",   -- Druid Feral Combat
+    [201] = "healer", -- Priest Discipline
+    [202] = "healer", -- Priest Holy
+    [382] = "healer", -- Paladin Holy
+    [262] = "healer", -- Shaman Restoration
+    [282] = "healer", -- Druid Restoration
+}
+
+-- The ten shapes, as thirds per tree (trees in the client's left-to-right
+-- order). The position in this list IS the shape id stored in each buddy's
+-- roster row (617a), so the order must never change; add new shapes at the
+-- end only.
+local SHAPES = {
+    { 2, 1, 0 }, { 2, 0, 1 },                      --  1,  2: two-thirds first tree
+    { 1, 2, 0 }, { 0, 2, 1 },                      --  3,  4: two-thirds second tree
+    { 1, 0, 2 }, { 0, 1, 2 },                      --  5,  6: two-thirds third tree
+    { 1, 1, 1 },                                   --  7:     one-third each
+    { 3, 0, 0 }, { 0, 3, 0 }, { 0, 0, 3 },         --  8-10:  all in one tree
+}
+-- }}}
+
+-- {{{ local function die
+local function die(msg)
+    io.stderr:write("generate-basic-talent-data: ", msg, "\n")
+    os.exit(1)
+end
+-- }}}
+
+-- {{{ local function u32
+local function u32(d, o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+-- }}}
+
+-- {{{ local function load_dbc
+-- Returns the record count, record size, a uint32 reader, and a reader for
+-- a string field (the value is an offset into the string block after the
+-- records).
+local function load_dbc(name)
+    local f = io.open(DBC .. name, "rb") or die("cannot open " .. DBC .. name)
+    local d = f:read("*a")
+    f:close()
+    if d:sub(1, 4) ~= "WDBC" then die(name .. " is not a WDBC file") end
+    local n, rs = u32(d, 4), u32(d, 12)
+    local strings = 20 + n * rs
+    local function str(o)
+        local s = strings + u32(d, o)
+        return d:sub(s + 1, (d:find("\0", s + 1, true) or s + 1) - 1)
+    end
+    return n, rs, function(o) return u32(d, o) end, str
+end
+-- }}}
+
+-- {{{ local function lua_string
+local function lua_string(s) return string.format("%q", s) end
+-- }}}
+
+-- {{{ main
+-- TalentTab.dbc (DBCfmt.h TalentTabEntryfmt): 0 id, 1 English name,
+-- 20 class mask, 21 pet mask, 22 tab page (left-to-right position).
+local tn, trs, tu, tstr = load_dbc("TalentTab.dbc")
+local tabs = {}                                              -- tab id -> { name, class_mask, page }
+for r = 0, tn - 1 do
+    local b = 20 + r * trs
+    local mask = tu(b + 20 * 4)
+    if mask ~= 0 then                                        -- 0: a hunter pet tree, never a player's
+        tabs[tu(b)] = { name = tstr(b + 1 * 4), class_mask = mask, page = tu(b + 22 * 4) }
+    end
+end
+
+-- Talent.dbc (TalentEntryfmt): 0 id, 1 tab, 2 row, 3 column, 4-8 the spell
+-- of each rank, 13 the talent it depends on, 16 the rank index (0-based) it
+-- needs there. Player::LearnTalent accepts the prerequisite at that rank
+-- index or higher, so dep_points = that index + 1.
+local n, rs, u = load_dbc("Talent.dbc")
+local talents_by_tab = {}
+local rank1_spells   = {}
+for r = 0, n - 1 do
+    local b   = 20 + r * rs
+    local tab = u(b + 4)
+    if tabs[tab] then
+        local t = { id = u(b), row = u(b + 8), col = u(b + 12), spells = {} }
+        for k = 0, MAX_TALENT_RANK - 1 do
+            local s = u(b + (4 + k) * 4)
+            if s ~= 0 then t.spells[#t.spells + 1] = s end
+        end
+        if #t.spells == 0 then die("talent " .. t.id .. " has no rank spells") end
+        t.ranks      = #t.spells
+        t.dep        = u(b + 13 * 4)
+        t.dep_points = t.dep ~= 0 and (u(b + 16 * 4) + 1) or 0
+        -- basic's cap (155g): open above the capstone row, and in it only
+        -- a talent costing one point
+        t.allowed    = t.row < CAPSTONE_ROW or (t.row == CAPSTONE_ROW and t.ranks == 1)
+        talents_by_tab[tab] = talents_by_tab[tab] or {}
+        table.insert(talents_by_tab[tab], t)
+        rank1_spells[t.spells[1]] = true
+    end
+end
+
+-- Spell.dbc: 0 id, 136 the English name. Only the rank-1 spells, for
+-- names readable in logs and the test report.
+-- Prerequisites the client file doesn't hold. Player::LearnTalent looks the
+-- prerequisite up and skips the check when the lookup finds nothing, so
+-- such a talent has no prerequisite in practice. Two exist (checked
+-- 2026-09-26): Sanctified Retribution names 1409, Merciless Combat 1994;
+-- keeping them made both unlearnable in the spender. A prerequisite in
+-- another tree would be a data surprise the spender can't handle: stop.
+local all_ids = {}
+for r = 0, n - 1 do all_ids[u(20 + r * rs)] = true end
+for tab, list in pairs(talents_by_tab) do
+    local here = {}
+    for _, t in ipairs(list) do here[t.id] = true end
+    for _, t in ipairs(list) do
+        if t.dep ~= 0 and not all_ids[t.dep] then
+            io.stderr:write(string.format("generate-basic-talent-data: note: talent %d's prerequisite %d is not in Talent.dbc; the server ignores it, so it is dropped\n", t.id, t.dep))
+            t.dep, t.dep_points = 0, 0
+        elseif t.dep ~= 0 and not here[t.dep] then
+            die(string.format("talent %d's prerequisite %d is in another tree", t.id, t.dep))
+        end
+    end
+end
+
+local sn, srs, su, sstr = load_dbc("Spell.dbc")
+local spell_name = {}
+for r = 0, sn - 1 do
+    local b = 20 + r * srs
+    local id = su(b)
+    if rank1_spells[id] then spell_name[id] = sstr(b + 136 * 4) end
+end
+
+local out = {}
+local function w(s) out[#out + 1] = s end
+w("-- buddy-talent-data.lua - GENERATED by scripts/generate-basic-talent-data")
+w("-- from the client's Talent.dbc, TalentTab.dbc and Spell.dbc; do not edit by hand (issue 617g).")
+w("--")
+w("-- classes[class id] = { name, trees = { [1..3] = tree }, shapes = { [1..10] = shape } }")
+w("--   tree  = { tab, name, role, room, talents = { talent, ... } }  (trees left to right)")
+w("--           room: points the tree holds under basic's cap")
+w("--   talent = { id, name, row, col, ranks, spells = { rank 1 spell, ... },")
+w("--              dep (talent id or 0), dep_points (points needed in dep), allowed }")
+w("--   shape = { thirds = { a, b, c }, role, label }   (shape id = position; stored in buddy_roster)")
+w("return {")
+w(string.format("    capstone_row = %d, points_per_row = %d,", CAPSTONE_ROW, POINTS_PER_ROW))
+w("    classes = {")
+local counted = 0
+for _, cls in ipairs(CLASSES) do
+    local mask  = 2 ^ (cls.id - 1)
+    local trees = {}
+    for tab, info in pairs(tabs) do
+        if bit.band(info.class_mask, mask) ~= 0 then trees[#trees + 1] = { tab = tab, info = info } end
+    end
+    if #trees ~= 3 then die(string.format("%s has %d talent trees, expected 3", cls.name, #trees)) end
+    table.sort(trees, function(a, b) return a.info.page < b.info.page end)
+
+    w(string.format("        [%d] = { name = %s, trees = {", cls.id, lua_string(cls.name)))
+    for _, tr in ipairs(trees) do
+        local list = talents_by_tab[tr.tab] or die("tree " .. tr.info.name .. " has no talents")
+        table.sort(list, function(a, b) return a.row < b.row or (a.row == b.row and a.col < b.col) end)
+        local room = 0
+        for _, t in ipairs(list) do if t.allowed then room = room + t.ranks end end
+        tr.role = TREE_ROLE[tr.tab] or "damage"
+        w(string.format("            { tab = %d, name = %s, role = %q, room = %d, talents = {",
+            tr.tab, lua_string(tr.info.name), tr.role, room))
+        for _, t in ipairs(list) do
+            local name = spell_name[t.spells[1]] or die("no name for talent " .. t.id .. "'s spell " .. t.spells[1])
+            w(string.format("                { id = %d, name = %s, row = %d, col = %d, ranks = %d, spells = { %s }, dep = %d, dep_points = %d, allowed = %s },",
+                t.id, lua_string(name), t.row, t.col, t.ranks, table.concat(t.spells, ", "), t.dep, t.dep_points, tostring(t.allowed)))
+            counted = counted + 1
+        end
+        w("            } },")
+    end
+    w("        }, shapes = {")
+    for id, th in ipairs(SHAPES) do
+        -- role: the tree holding two-thirds or all; one-third each is damage
+        local role, parts = "damage", {}
+        for k = 1, 3 do
+            if th[k] >= 2 then role = trees[k].role end
+            if th[k] == 3 then parts[#parts + 1] = "all " .. trees[k].info.name
+            elseif th[k] > 0 then parts[#parts + 1] = string.format("%d/3 %s", th[k], trees[k].info.name) end
+        end
+        w(string.format("            { thirds = { %d, %d, %d }, role = %q, label = %s },  -- %d",
+            th[1], th[2], th[3], role, lua_string(table.concat(parts, ", ")), id))
+    end
+    w("        } },")
+end
+w("    },")
+w("}")
+
+local f = io.open(OUT, "w") or die("cannot write " .. OUT)
+f:write(table.concat(out, "\n"), "\n")
+f:close()
+print(string.format("generate-basic-talent-data: %d classes, %d talents, %d shapes each -> %s",
+    #CLASSES, counted, #SHAPES, OUT))
+-- }}}

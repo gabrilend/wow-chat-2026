@@ -2166,6 +2166,248 @@ unpatch_E040_basic_death_knight_sargobras() {
 }
 # -- }}}
 
+# -- {{{ patch_E043_basic_buddy_selector
+# Sargobras, the buddy selector (issue 617b): his two creatures (the valley
+# one and the wandering one), their texts, and one valley Sargobras per
+# starting valley. World database. His menu and wandering are Lua
+# (src/lua-basic/sargobras.lua). Same cp-apply / cp-revert idiom as E040.
+patch_E043_basic_buddy_selector() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/26-buddy-selector.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/26-buddy-selector.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E043] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E043] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E043] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E043_basic_buddy_selector() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/26-buddy-selector.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/26-buddy-selector.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E043_REVERT" "${SQL_FILE}"; then
+        echo "  [E043] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E043] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E043] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_E044_basic_buddy_area_centres
+# Every named area's borders and middle (issue 617e2), for the buddies'
+# roaming: the buddy module loads the table at startup. World database.
+# The source is generated from the server's map files by
+# scripts/generate-buddy-area-centres. Same cp-apply / cp-revert idiom as E040.
+patch_E044_basic_buddy_area_centres() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/27-buddy-area-centres.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/27-buddy-area-centres.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E044] Apply source missing: ${SRC_FILE} (run scripts/generate-buddy-area-centres)"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E044] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E044] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E044_basic_buddy_area_centres() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/27-buddy-area-centres.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/27-buddy-area-centres.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E044_REVERT" "${SQL_FILE}"; then
+        echo "  [E044] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E044] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E044] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_E045_basic_buddy_beds
+# The beds buddies sleep on in towns (issue 617e4), placed by hand in game
+# with ".buddy bed add" and carried into the project by
+# scripts/export-buddy-beds. World database. The apply never drops the table
+# (placed beds live in it); the revert does (export first). Same cp-apply /
+# cp-revert idiom as E040.
+patch_E045_basic_buddy_beds() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/28-buddy-beds.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/28-buddy-beds.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E045] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E045] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E045] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E045_basic_buddy_beds() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/28-buddy-beds.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/28-buddy-beds.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E045_REVERT" "${SQL_FILE}"; then
+        echo "  [E045] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E045] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E045] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_E046_basic_world_boss_respawn
+# The world bosses' respawn taken off the server's timer (issue 155j): the
+# list of world boss spawns (basic_155j_world_bosses, read by
+# src/lua-basic/world-boss-respawn.lua and src/cpp-basic/basic_rules.cpp)
+# and their stock delay set to a year, saved for the revert. World
+# database. Same cp-apply / cp-revert idiom as E045.
+patch_E046_basic_world_boss_respawn() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/29-world-boss-respawn.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/29-world-boss-respawn.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E046] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E046] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E046] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E046_basic_world_boss_respawn() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/29-world-boss-respawn.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/29-world-boss-respawn.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E046_REVERT" "${SQL_FILE}"; then
+        echo "  [E046] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E046] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E046] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_E048_basic_buddy_kit_required_level
+# The buddies' gear tiers wearable from their tier's level (issue 617a4): a
+# tier item whose required level is above it comes down to it, originals
+# saved for the revert. World database. Generated by
+# scripts/generate-buddy-kit-tiers. Same cp-apply / cp-revert idiom as E046.
+patch_E048_basic_buddy_kit_required_level() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/30-buddy-kit-required-level.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/30-buddy-kit-required-level.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E048] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E048] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E048] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E048_basic_buddy_kit_required_level() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/30-buddy-kit-required-level.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/30-buddy-kit-required-level.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E048_REVERT" "${SQL_FILE}"; then
+        echo "  [E048] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E048] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E048] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_E047_basic_world_boss_timers
+# Each world boss's state and countdown (issue 155j), so a restart keeps
+# them. Characters database, per-realm runtime state (as E023, E042). Same
+# cp-apply / cp-revert idiom as E042.
+patch_E047_basic_world_boss_timers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/05-world-boss-timers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/05-world-boss-timers.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E047] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    # Register on every run (see E023 for why this comes before the check).
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E047] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E047] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E047_basic_world_boss_timers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/05-world-boss-timers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/05-world-boss-timers.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E047_REVERT" "${SQL_FILE}"; then
+        echo "  [E047] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E047] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    echo "  [E047] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
 # -- {{{ patch_E041_basic_death_knight_souls
 # The soul ledger (issue 718): which character each death knight was made
 # from, and where that character is held. Characters database, because it
@@ -2204,6 +2446,48 @@ unpatch_E041_basic_death_knight_souls() {
     _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
 
     echo "  [E041] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_E042_basic_buddy_roster
+# The buddy clan and roster tables (issue 617a1): each owner's companion
+# account, and each owed or filled buddy slot. Characters database, per-realm
+# runtime state (as E023, E041). The revert drops both tables; the buddy
+# characters and accounts they name are left alone. Same cp-apply /
+# cp-revert idiom as E023.
+patch_E042_basic_buddy_roster() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/04-buddy-roster.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/04-buddy-roster.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E042] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    # Register on every run (see E023 for why this comes before the check).
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E042] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E042] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E042_basic_buddy_roster() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/04-buddy-roster.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/04-buddy-roster.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E042_REVERT" "${SQL_FILE}"; then
+        echo "  [E042] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E042] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    echo "  [E042] Copying revert-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
