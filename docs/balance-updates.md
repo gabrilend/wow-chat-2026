@@ -168,6 +168,72 @@ leaves it for tuning.
 
 ---
 
+## 2026-09-26 — Basic: how smoothly Sargobras turns (defaults)
+
+The wandering Sargobras (`src/lua-basic/sargobras.lua`, issue 617b) turns
+toward his owner in small steps, because the server can only set a facing,
+not animate one: a step every `TURN_STEP_MS`, at `TURN_SPEED`. **Why:** Ritz
+asked for a slow, lerp-style turn, stepped "once every N frames, where N is
+the number we pick that 'feels fine' that's as high as possible so there's
+less performance demands on the server". These are first guesses; raise
+the step time until the turn starts to look jerky in game, then back off.
+
+---
+
+## 2026-09-27 — Basic: when a travelling buddy counts as stuck
+
+A buddy walking to its owner's area (`modules/mod-buddies/src/buddies_town.cpp`,
+issue 617e4) is moved to a random spot within 30 yards when it hasn't
+gained `PROGRESS_YARDS` toward its owner in `STUCK_MS`. The progress needed
+went from 5 yards to 10 (90 seconds unchanged). **Why:** Ritz: "let's make
+it 10" — a buddy shuffling back and forth against an obstacle can gain a
+few yards by accident and never count as stuck; 10 asks for real headway.
+A buddy stuck again after the move is left for the owner's hearthstone to
+rescue ("the player can always rescue them with a hearthstone cast").
+
+---
+
+## 2026-09-27 — Crushing blows: later start, ramped (basic, B031)
+
+- **Crushing blows** start at a level gap of **8** (was: stock 4 below
+  level-64 creatures, none from 64 up), at the stock chance × (gap − 7) / 5,
+  full stock chance from a gap of 12. At 8 levels up: 13% instead of 65%.
+- Why: Ritz, "can we re-enable the crushing blow penalty at +4 the level it
+  normally is? And have it scale up to it's nominal percentage with another
+  4 levels." Crushing returns as a real threat from much stronger foes, for
+  every creature level, without the stock cliff from none to every hit over
+  four levels. Table: `docs/patches/crushing-blows-late.md`.
+
+## 2026-09-27 — World bosses: the respawn countdown and the battle bonus (basic, 155j)
+
+- **Respawn**: a dead world boss is due back after **2.5 hours plus its
+  moment tokens' worth**: every 5-second pass, each player (not bot) in the
+  boss's area deposits a token worth **1% of the pass**. Nobody there: 2.5
+  hours; 50 players: 5 hours; 100 or more: never. No random share. Values:
+  `src/lua-basic/lib/world-boss-countdown.lua` (`BASE_SECONDS`,
+  `PASS_SECONDS`, `TOKEN_PERCENT`). Was: the stock timers (Kazzak about 2
+  hours, Doomwalker a day, Azuregos and the dragons about 10 days).
+- **Battle bonus**: while any world boss lives, every monster hostile to
+  both factions deals **+1% damage** and has **+1% health**, server-wide.
+  Values: `src/cpp-basic/basic_rules.cpp` (`BATTLE_BONUS_DAMAGE`,
+  `BATTLE_BONUS_HEALTH_DIV`).
+- **Kazzak's swarm**: **one elite demon pack per player** in his zone when
+  he comes back, **3 demons a pack** (an Overseer and two Peons), at most
+  packs **60 yards** apart and from him; **no cap** on packs (owner,
+  2026-09-27: "no cap. demons will be long slain by the time he's done").
+- **Kazzak's size**: model scale **x4**; walk **5 -> 10**, run **10 -> 20**
+  yards a second (square-root-of-size gait); reach and radius kept stock
+  (15.75, 9). Values: `sql/basic/db_world.src/29-world-boss-respawn.apply.sql`.
+  Owner: "scale up his model 4x [...] Large enough to be 6 people tall, at
+  least." Steps to judge in game. Values:
+  `basic_rules.cpp` (`SWARM_*`). First guesses, to tune after a fight.
+- Why: the owner, 2026-09-27: world bosses are for "vast swarms of
+  parties" fought in the open, so they come back often ("Can we change
+  their respawn time to 2.5 hours?"), wait while a crowd holds the ground
+  ("if 100 players are there, then it'll never happen"), lift every
+  monster while alive ("all monsters get a 1% battle bonus"), and Kazzak
+  brings "wayyyy too many demons [...] about one elite pack per person".
+
 ## How to add an entry
 
 ```markdown
@@ -180,3 +246,4 @@ this log doesn't go stale.)
 
 If the change is structural enough to need a rollback path, design notes,
 or before/after testing — it's an issue file, not a balance entry.
+
