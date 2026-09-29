@@ -1,0 +1,223 @@
+#!/usr/bin/env luajit
+-- test-model-formats - hold our readers and writer of 3D model files to the
+-- game's own files (issue 506h).
+--
+-- For a general audience: the Feldowinn pipeline keeps its models in glTF
+-- (an open format) and exports them to the game's own .m2/.skin files for
+-- the stock client. This test checks, without the game running:
+--   1. glTF: a known shape written to .glb and read back is unchanged;
+--   2. the game's own models (a stock helm, shoulder pad and two-handed
+--      sword, copied out of the client by scripts/extract-m2-references)
+--      read cleanly and keep every rule a drawable model keeps;
+--   3. our writer, given the stock helm's and shoulder's own triangles,
+--      writes files that read back to exactly the same geometry, shaped
+--      like the stock ones (the same animation, texture kind, lookups,
+--      16-byte block alignment, 304-byte header);
+--   4. a .glb converted by scripts/convert-gltf-to-m2 lands in the game's
+--      axes and units (glTF's front becomes the model's front, up stays up);
+--   5. broken input is refused: a triangle pointing past the vertices is
+--      reported, and a mesh too big for the format's 16-bit counts is
+--      stopped with an error rather than cut.
+--
+-- Usage: scripts/test-model-formats [PROJECT_DIR]
+--   Needs PROJECT_DIR/tmp/shared-memory/m2-reference/ (run
+--   scripts/extract-m2-references first); without it parts 2 and 3 are
+--   reported as skipped, and the test fails, since they are its point.
+--   Exit 1 on any failure.
+
+local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local ffi = require("ffi")
+local Gltf = dofile(DIR .. "/src/tools/model/gltf.lua")
+local M2 = dofile(DIR .. "/src/tools/model/m2.lua")
+local SCRATCH = DIR .. "/tmp/shared-memory/model-formats-test"
+local REF = DIR .. "/tmp/shared-memory/m2-reference"
+os.execute("rm -rf '" .. SCRATCH .. "' && mkdir -p '" .. SCRATCH .. "'")
+
+local passed, failed = 0, 0
+local function check(ok, what, detail)
+    if ok then passed = passed + 1
+    else failed = failed + 1; print("  FAIL " .. what .. (detail and (": " .. detail) or "")) end
+end
+local function read(path) local f = io.open(path, "rb"); if not f then return nil end local s = f:read("*a"); f:close(); return s end
+local function f32(x) return tonumber(ffi.new("float", x)) end
+
+-- {{{ a known shape: a dome (half a sphere), glTF axes (+Y up), metres
+local function dome(rings, segs, r)
+    local m = { positions = {}, normals = {}, uvs = {}, indices = {} }
+    for i = 0, rings do
+        local phi = (i / rings) * math.pi / 2
+        for j = 0, segs do
+            local th = (j / segs) * 2 * math.pi
+            local x, y, z = math.cos(phi) * math.cos(th), math.sin(phi), math.cos(phi) * math.sin(th)
+            local n = #m.positions
+            m.positions[n + 1], m.positions[n + 2], m.positions[n + 3] = x * r, y * r, z * r
+            m.normals[n + 1], m.normals[n + 2], m.normals[n + 3] = x, y, z
+            local k = #m.uvs
+            m.uvs[k + 1], m.uvs[k + 2] = j / segs, i / rings
+        end
+    end
+    for i = 0, rings - 1 do
+        for j = 0, segs - 1 do
+            local a, b = i * (segs + 1) + j, (i + 1) * (segs + 1) + j
+            for _, v in ipairs({ a, b, a + 1, a + 1, b, b + 1 }) do m.indices[#m.indices + 1] = v end
+        end
+    end
+    return m
+end
+-- }}}
+
+-- {{{ 1. glTF round trip
+do
+    local m = dome(6, 12, 0.3)
+    local path = SCRATCH .. "/dome.glb"
+    Gltf.write_glb(path, m)
+    local g = Gltf.read_glb(path)
+    check(#g.positions == #m.positions and #g.indices == #m.indices, "the dome reads back with as many vertices and triangles")
+    local same = true
+    for i = 1, #m.positions do if g.positions[i] ~= f32(m.positions[i]) then same = false break end end
+    for i = 1, #m.uvs do if g.uvs[i] ~= f32(m.uvs[i]) then same = false break end end
+    for i = 1, #m.indices do if g.indices[i] ~= m.indices[i] then same = false break end end
+    check(same, "the dome's positions, texture coordinates and triangles read back unchanged")
+end
+-- }}}
+
+-- {{{ 2 and 3. the game's own models
+local REFS = { { "Helm_Plate_D_01_HuM", static = true }, { "LShoulder_Plate_A_01", static = true }, { "Sword_2H_AhnQiraj_D_01" } }
+local have = read(REF .. "/" .. REFS[1][1] .. ".m2") ~= nil
+if not have then
+    failed = failed + 1
+    print("  FAIL no reference models in " .. REF .. " (run scripts/extract-m2-references); parts 2 and 3 skipped")
+else
+    for _, r in ipairs(REFS) do
+        local name = r[1]
+        local m2, skin = read(REF .. "/" .. name .. ".m2"), read(REF .. "/" .. name .. "00.skin")
+        local ok, model = pcall(M2.read, m2, skin)
+        check(ok, "the stock " .. name .. " reads", not ok and tostring(model) or nil)
+        if ok then
+            local problems = M2.validate(model)
+            check(#problems == 0, "the stock " .. name .. " keeps every rule", problems[1])
+        end
+        -- 3. rewrite the static ones with our writer
+        if ok and r.static then
+            local mesh = M2.mesh_of(model)
+            local two = model.materials[1] and (model.materials[1].flags % 8 >= 4)
+            local wm2, wskin = M2.write_static(mesh, model.name, { two_sided = two })
+            local back = M2.read(wm2, wskin)
+            local problems = M2.validate(back)
+            check(#problems == 0, "our rewrite of " .. name .. " keeps every rule", problems[1])
+            local bm = M2.mesh_of(back)
+            local same = #bm.positions == #mesh.positions and #bm.indices == #mesh.indices
+            for i = 1, #mesh.positions do if bm.positions[i] ~= mesh.positions[i] or bm.normals[i] ~= mesh.normals[i] then same = false break end end
+            for i = 1, #mesh.uvs do if bm.uvs[i] ~= mesh.uvs[i] then same = false break end end
+            for i = 1, #mesh.indices do if bm.indices[i] ~= mesh.indices[i] then same = false break end end
+            check(same, "our rewrite of " .. name .. " has exactly the stock triangles, normals and texture coordinates")
+            local box = true
+            for k = 1, 3 do
+                if math.abs(back.bounds.min[k] - model.bounds.min[k]) > 1e-4 or math.abs(back.bounds.max[k] - model.bounds.max[k]) > 1e-4 then box = false end
+            end
+            check(box, "our rewrite of " .. name .. " has the stock bounding box")
+            local s, t = back.sequences[1], model.sequences[1]
+            check(s.id == t.id and s.flags == t.flags and s.frequency == t.frequency and s.blend_time == t.blend_time,
+                "our rewrite of " .. name .. " has the stock 'Stand' animation record (id, flags, frequency, blend)")
+            check(back.textures[1].type == model.textures[1].type, "our rewrite of " .. name .. " uses the stock texture kind (" .. model.textures[1].type .. ")")
+            local lk = true
+            for _, key in ipairs({ "texture_replace", "texture", "texture_unit", "transparency", "texture_anim", "key_bone" }) do
+                local a, b = back.lookups[key], model.lookups[key]
+                if #a ~= #b then lk = false end
+                for i = 1, #a do if a[i] ~= b[i] then lk = false end end
+            end
+            check(lk, "our rewrite of " .. name .. " has the stock lookups")
+            check(#back.bones == 1 and back.bones[1].parent == -1 and not back.bones[1].keyframed, "our rewrite of " .. name .. " has one still root bone, as stock")
+            -- the raw layout: header size, 16-byte alignment of every block
+            local h = ffi.cast("const m2_header*", wm2)
+            check(h.name.ofs == 304, "our file's name starts right after a 304-byte header")
+            local aligned = true
+            for _, f in ipairs({ "name", "sequences", "bones", "key_bone_lookup", "vertices", "textures", "transparency",
+                "texture_replace", "materials", "bone_lookup", "texture_lookup", "texture_unit_lookup", "transparency_lookup", "texture_anim_lookup" }) do
+                if h[f].n > 0 and h[f].ofs % 16 ~= 0 then aligned = false end
+            end
+            check(aligned and #wm2 % 16 == 0 and #wskin % 16 == 0, "our blocks and files are aligned to 16 bytes, as stock")
+        end
+    end
+end
+-- }}}
+
+-- {{{ 4. a .glb through the converter: the game's axes and units
+do
+    local g = dome(4, 8, 0.25)
+    -- stretch it so the axes can be told apart: 0.25 m wide in x, 0.5 m up, 1 m to the front
+    for i = 0, #g.positions / 3 - 1 do
+        g.positions[i * 3 + 2] = g.positions[i * 3 + 2] * 2
+        g.positions[i * 3 + 3] = g.positions[i * 3 + 3] * 4
+    end
+    local path = SCRATCH .. "/stretched.glb"
+    Gltf.write_glb(path, g)
+    local p = io.popen("luajit " .. DIR .. "/scripts/convert-gltf-to-m2 " .. DIR .. " --in " .. path .. " --name Stretched --out " .. SCRATCH .. " 2>&1; echo \"__exit=$?\"")
+    local out = p:read("*a"); p:close()
+    check(out:match("__exit=0"), "convert-gltf-to-m2 converts a .glb and its own read-back check passes", out)
+    local m2, skin = read(SCRATCH .. "/Stretched.m2"), read(SCRATCH .. "/Stretched00.skin")
+    if m2 and skin then
+        local back = M2.read(m2, skin)
+        check(#back.vertices.positions == #g.positions and #back.skin.indices == #g.indices, "the converted model has the .glb's vertices and triangles")
+        local b = back.bounds
+        local yd = 1 / 0.9144
+        local function near(a, e) return math.abs(a - e) < 1e-3 end
+        -- game x (front) = glTF z (1 m deep each way), game y = glTF x (0.25 m), game z (up) = glTF y (0 to 0.5 m)
+        check(near(b.max[1], 1.0 * yd) and near(b.min[1], -1.0 * yd), "glTF's front (+Z) became the model's front (+X), metres to yards")
+        check(near(b.max[2], 0.25 * yd) and near(b.min[2], -0.25 * yd), "glTF's side (X) became the model's side (Y)")
+        check(near(b.max[3], 0.5 * yd) and near(b.min[3], 0), "glTF's up (+Y) became the model's up (+Z)")
+        -- winding: the turn is a proper rotation, so each triangle's normal
+        -- (from its winding) still points the way its vertex normals do
+        -- count, in each file, the triangles whose winding faces the way
+        -- their first corner's normal does; a mirroring turn would flip
+        -- every one of them, so the two counts must match triangle for
+        -- triangle
+        local function facing(P, N, I)
+            local out = {}
+            for t = 0, #I / 3 - 1 do
+                local a, bb, c = I[t * 3 + 1], I[t * 3 + 2], I[t * 3 + 3]
+                local ux, uy, uz = P[bb * 3 + 1] - P[a * 3 + 1], P[bb * 3 + 2] - P[a * 3 + 2], P[bb * 3 + 3] - P[a * 3 + 3]
+                local vx, vy, vz = P[c * 3 + 1] - P[a * 3 + 1], P[c * 3 + 2] - P[a * 3 + 2], P[c * 3 + 3] - P[a * 3 + 3]
+                local nx, ny, nz = uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx
+                local d = nx * N[a * 3 + 1] + ny * N[a * 3 + 2] + nz * N[a * 3 + 3]
+                out[t + 1] = d > 0 and 1 or d < 0 and -1 or 0
+            end
+            return out
+        end
+        local before = facing(g.positions, g.normals, g.indices)
+        local after = facing(back.vertices.positions, back.vertices.normals, back.skin.indices)
+        local match, decided = 0, 0
+        for t = 1, #before do
+            if before[t] ~= 0 then decided = decided + 1 end
+            if before[t] ~= 0 and before[t] == after[t] then match = match + 1 end
+        end
+        check(decided > 0 and match == decided, "every converted triangle keeps its winding (no mirroring)", match .. " of " .. decided)
+    end
+end
+-- }}}
+
+-- {{{ 5. broken input is refused
+do
+    local m = dome(3, 6, 0.2)
+    local wm2, wskin = M2.write_static(m, "Broken")
+    -- point the first triangle's first corner past the vertex lookup
+    local buf = ffi.new("uint8_t[?]", #wskin)
+    ffi.copy(buf, wskin, #wskin)
+    local sh = ffi.cast("m2_skin_header*", buf)
+    ffi.cast("uint16_t*", buf + sh.indices.ofs)[0] = 60000
+    local back = M2.read(wm2, ffi.string(buf, #wskin))
+    check(#M2.validate(back) > 0, "a triangle pointing past the vertices is reported")
+    local big = { positions = {}, normals = {}, uvs = {}, indices = { 0, 1, 2 } }
+    for i = 1, 65536 * 3 do big.positions[i] = 0; big.normals[i] = 0 end
+    for i = 1, 65536 * 2 do big.uvs[i] = 0 end
+    local ok, err = pcall(M2.write_static, big, "Big")
+    check(not ok and tostring(err):find("65,535", 1, true), "a mesh too big for 16-bit counts is stopped, not cut", tostring(err))
+    local nouv = dome(2, 4, 0.1)
+    nouv.uvs = nil
+    local ok2 = pcall(M2.from_gltf, nouv)
+    check(not ok2, "a glTF mesh with no texture coordinates is refused unless allowed")
+end
+-- }}}
+
+print(string.format("test-model-formats: %d passed, %d failed", passed, failed))
+os.exit(failed == 0 and 0 or 1)

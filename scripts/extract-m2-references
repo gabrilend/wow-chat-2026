@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+# extract-m2-references - copy a few of the game's own item models out of the
+# client's archives, for the model-format tests (issue 506h).
+#
+# For a general audience: our reader and writer of the game's model files
+# are held to the game's own files: a stock helm, a shoulder pad and a
+# two-handed sword, each an .m2 with its .skin. They are the client's data,
+# so they are not kept in the project; this copies them out of the client's
+# archives (MPQ files) into the project's RAM scratch folder, where
+# scripts/test-model-formats looks for them. Python only because the one
+# MPQ reader already installed here is Python's mpyq (libs/pylibs).
+#
+# Usage: scripts/extract-m2-references [PROJECT_DIR] [CLIENT_DATA_DIR]
+#   defaults: /mnt/mtwo/games/azeroth-core/wow-chat-2026, /mnt/dile/ritz/games/wotlk/Data
+#   writes:   PROJECT_DIR/tmp/shared-memory/m2-reference/*.m2, *.skin
+
+import os
+import sys
+
+DIR = sys.argv[1] if len(sys.argv) > 1 else "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DATA = sys.argv[2] if len(sys.argv) > 2 else "/mnt/dile/ritz/games/wotlk/Data"
+sys.path.insert(0, os.path.join(DIR, "libs/pylibs"))
+import mpyq  # noqa: E402
+
+OUT = os.path.join(DIR, "tmp/shared-memory/m2-reference")
+os.makedirs(OUT, exist_ok=True)
+# the models the tests expect: (folder, name) in common-2.MPQ, the archive
+# holding the WotLK-format (version 264) item models
+WANT = [
+    (b"item\\objectcomponents\\head\\", b"helm_plate_d_01_hum"),
+    (b"item\\objectcomponents\\shoulder\\", b"lshoulder_plate_a_01"),
+    (b"item\\objectcomponents\\weapon\\", b"sword_2h_ahnqiraj_d_01"),
+]
+archive = mpyq.MPQArchive(os.path.join(DATA, "common-2.MPQ"), listfile=True)
+files = archive.files or []
+missing = []
+for folder, stem in WANT:
+    hits = [f for f in files if f.lower().startswith(folder + stem) and (f.lower().endswith(b".m2") or f.lower().endswith(b".skin"))]
+    if not hits:
+        missing.append(stem.decode())
+        continue
+    for f in hits:
+        data = archive.read_file(f)
+        name = f.split(b"\\")[-1].decode()
+        with open(os.path.join(OUT, name), "wb") as out:
+            out.write(data)
+        print("extract-m2-references: %s (%d bytes)" % (name, len(data)))
+if missing:
+    sys.stderr.write("extract-m2-references: not found in common-2.MPQ: %s\n" % ", ".join(missing))
+    sys.exit(1)

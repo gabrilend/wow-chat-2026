@@ -1,0 +1,167 @@
+#!/usr/bin/env luajit
+-- generate-feldowinn-profiles - make the next round of Feldowinn gear designs
+-- (issue 506a).
+--
+-- For a general audience: Feldowinn is the owner's design target for
+-- Retribution Paladin gear. Each run makes a new "round" of design profiles
+-- (one gear piece each, with its answers to the open design questions and a
+-- text prompt for image generation), leaning toward questions nobody has
+-- settled yet and away from designs the developer has voted down. The votes
+-- come from the gallery page (issue 506d), exported to a small text file.
+--
+-- Usage: scripts/generate-feldowinn-profiles [PROJECT_DIR] [--count N] [--seed S] [--votes PATH]
+--   Reads   assets/feldowinn/design-questions.lua   the questions and options
+--           assets/feldowinn/profiles/round-*.lua   every earlier round
+--           assets/feldowinn/votes.tsv              votes: profile id, ups, downs
+--                                                   (missing: no votes yet)
+--   Writes  assets/feldowinn/profiles/round-NNN.lua the next round (NNN = one more
+--                                                   than the last)
+-- Defaults: 24 profiles; the seed is the round number, so a round made again
+-- from the same votes comes out the same.
+
+local DIR, COUNT, SEED, VOTES = "/mnt/mtwo/games/azeroth-core/wow-chat-2026", 24, nil, nil
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--count" then COUNT = tonumber(arg[i + 1]); i = i + 2
+        elseif a == "--seed" then SEED = tonumber(arg[i + 1]); i = i + 2
+        elseif a == "--votes" then VOTES = arg[i + 1]; i = i + 2
+        elseif a:sub(1, 2) == "--" then error("generate-feldowinn-profiles: unknown option " .. a .. " (known: --count N, --seed S, --votes PATH)")
+        else DIR = a; i = i + 1 end
+    end
+end
+assert(COUNT and COUNT > 0, "generate-feldowinn-profiles: --count needs a positive number")
+
+local HERE    = DIR .. "/assets/feldowinn"
+local ROUNDS  = HERE .. "/profiles"
+local P       = dofile(DIR .. "/src/tools/feldowinn/profiles.lua")
+local Q       = dofile(HERE .. "/design-questions.lua")
+
+-- {{{ local function earlier_rounds
+-- Every round file, in order; returns the list of rounds and all their
+-- profiles in one list. Round files are named round-NNN.lua.
+local function earlier_rounds()
+    local names = {}
+    local ls = io.popen("ls -1 '" .. ROUNDS .. "' 2>/dev/null")
+    for name in ls:lines() do
+        if name:match("^round%-%d+%.lua$") then names[#names + 1] = name end
+    end
+    ls:close()
+    table.sort(names)
+    local rounds, all = {}, {}
+    for _, name in ipairs(names) do
+        local r = dofile(ROUNDS .. "/" .. name)
+        rounds[#rounds + 1] = r
+        for _, pr in ipairs(r.profiles) do all[#all + 1] = pr end
+    end
+    return rounds, all
+end
+-- }}}
+
+-- {{{ local function read_votes
+-- votes.tsv: one line per profile, "id<TAB>ups<TAB>downs"; # lines and a
+-- header line starting with "id" are skipped. A malformed line is an error
+-- naming the line (a vote silently dropped would steer the next round
+-- wrong without anyone knowing).
+local function read_votes(path)
+    local votes, f = {}, io.open(path)
+    if not f then return votes, false end
+    local n = 0
+    for line in f:lines() do
+        n = n + 1
+        if line ~= "" and not line:match("^#") and not line:match("^id\t") then
+            local id, up, down = line:match("^(%x+)\t(%d+)\t(%d+)%s*$")
+            if not id then error(string.format("generate-feldowinn-profiles: %s line %d is not \"id<TAB>ups<TAB>downs\": %q", path, n, line)) end
+            votes[id] = { up = tonumber(up), down = tonumber(down) }
+        end
+    end
+    f:close()
+    return votes, true
+end
+-- }}}
+
+-- {{{ local function serialize
+-- A value as Lua source (tables with sorted keys, so files diff cleanly).
+local function serialize(v, indent)
+    indent = indent or ""
+    local t = type(v)
+    if t == "string" then return string.format("%q", v) end
+    if t ~= "table" then return tostring(v) end
+    local inner = indent .. "    "
+    local parts = {}
+    if #v > 0 then
+        for _, x in ipairs(v) do parts[#parts + 1] = inner .. serialize(x, inner) end
+    else
+        local keys = {}
+        for k in pairs(v) do keys[#keys + 1] = k end
+        table.sort(keys)
+        for _, k in ipairs(keys) do parts[#parts + 1] = inner .. k .. " = " .. serialize(v[k], inner) end
+    end
+    if #parts == 0 then return "{}" end
+    return "{\n" .. table.concat(parts, ",\n") .. ",\n" .. indent .. "}"
+end
+-- }}}
+
+-- {{{ local function mtime
+-- A file's modification time (seconds), or nil when it doesn't exist.
+local function mtime(path)
+    local p = io.popen("stat -c %Y '" .. path .. "' 2>/dev/null")
+    local s = p:read("*l"); p:close()
+    return tonumber(s)
+end
+-- }}}
+
+-- {{{ local function votes_path
+-- Where the votes come from. The gallery page's Export button saves
+-- votes.tsv into the browser's download folder, not here; the first owner
+-- votes (2026-09-28) never reached this generator for that reason. So:
+--   --votes PATH       read that file;
+--   otherwise          read assets/feldowinn/votes.tsv, but if a votes
+--                      file in ~/Downloads (votes.tsv, or a browser's
+--                      "votes (1).tsv") is newer, stop and say so, rather
+--                      than make a round from stale votes without anyone
+--                      knowing. Move it here, pass --votes, or delete it.
+local function votes_path()
+    if VOTES then return VOTES end
+    local here = HERE .. "/votes.tsv"
+    local home = os.getenv("HOME")
+    if home then
+        local p = io.popen("ls -1t '" .. home .. "/Downloads/'votes*.tsv 2>/dev/null")
+        local newest = p:read("*l"); p:close()
+        if newest then
+            local dt, ht = mtime(newest), mtime(here)
+            if dt and (not ht or dt > ht) then
+                error(string.format("generate-feldowinn-profiles: %s is newer than %s (the gallery's Export saves to the download folder). "
+                    .. "Move it to %s, or pass --votes %q, or delete it; nothing was generated.", newest, here, here, newest))
+            end
+        end
+    end
+    return here
+end
+-- }}}
+
+-- {{{ main
+local rounds, all = earlier_rounds()
+local votes, had_votes = read_votes(votes_path())
+local number = #rounds + 1
+local seed = SEED or number
+local profiles, t, notes = P.round(Q, all, votes, COUNT, seed)
+
+os.execute("mkdir -p '" .. ROUNDS .. "'")
+local out = string.format("%s/round-%03d.lua", ROUNDS, number)
+local f = assert(io.open(out, "w"))
+f:write("-- round-" .. string.format("%03d", number) .. ".lua - Feldowinn design profiles, GENERATED by\n")
+f:write("-- scripts/generate-feldowinn-profiles (issue 506a); don't edit by hand:\n")
+f:write("-- make the next round instead. Votes are kept apart (votes.tsv), by id.\n")
+f:write("return " .. serialize({ round = number, seed = seed, count = COUNT, profiles = profiles }) .. "\n")
+f:close()
+
+-- what the round leaned on, so a run shows its reasoning
+local answered, open = 0, 0
+for _, q in ipairs(Q.questions) do if t.answered[q.id] then answered = answered + 1 else open = open + 1 end end
+print(string.format("generate-feldowinn-profiles: round %d, %d profiles, seed %d -> %s", number, #profiles, seed, out))
+print(string.format("  earlier profiles %d; votes file %s (%d voted profiles); questions answered %d, open %d",
+    #all, had_votes and "read" or "absent", (function() local n = 0 for _ in pairs(votes) do n = n + 1 end return n end)(), answered, open))
+for _, note in ipairs(notes) do print("  warning: " .. note) end
+-- }}}

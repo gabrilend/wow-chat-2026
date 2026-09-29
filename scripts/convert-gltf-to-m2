@@ -1,0 +1,66 @@
+#!/usr/bin/env luajit
+-- convert-gltf-to-m2 - turn a generated .glb model into the game's model
+-- files, for a static item: a helm, shoulder, weapon or shield (issue 506h).
+--
+-- For a general audience: the image-to-3D stage leaves a .glb (an open 3D
+-- format) in each Feldowinn design's folder. The 3.3.5 game client can
+-- only draw its own format, an .m2 model plus an .skin file beside it. This
+-- reads the .glb, turns it into the game's axes and units, writes the two
+-- files next to it, then reads them back with our own reader and checks
+-- them against the rules a drawable model keeps (every triangle pointing at
+-- real vertices, the bounding box holding every vertex, and so on). The
+-- files are shaped like the game's own item models (measured from stock
+-- ones: docs/m2-format-wotlk.md). Moving models (creatures, characters) are
+-- a later step: they need a borrowed skeleton (issue 506g).
+--
+-- Seeing it in the game needs the item's display record to point at the
+-- new file, which lives in the client's data: no client changes are made
+-- until the custom client exists, so for now these files are checked here
+-- and viewed in a model viewer, not in game.
+--
+-- Usage: scripts/convert-gltf-to-m2 [PROJECT_DIR] --in FILE.glb --name NAME [options]
+--   --out DIR       where to write NAME.m2 and NAME00.skin (default: beside
+--                   the .glb, i.e. the design's folder in the generator's output)
+--   --scale S       glTF units to the game's (default 1/0.9144: metres to yards)
+--   --two-sided     draw both faces of each triangle (stock helms do)
+--   --allow-no-uv   write a mesh with no texture coordinates (the texture
+--                   won't sit right; for looking at the shape only)
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local opt = {}
+do
+    local takes = { ["in"] = 1, name = 1, out = 1, scale = 1 }
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        local key = a:match("^%-%-(.+)$")
+        if key and takes[key] then opt[key] = arg[i + 1]; i = i + 2
+        elseif key then opt[key] = true; i = i + 1
+        else DIR = a; i = i + 1 end
+    end
+end
+if not opt["in"] or not opt.name then
+    io.stderr:write("usage: convert-gltf-to-m2 [PROJECT_DIR] --in FILE.glb --name NAME [--out DIR] [--scale S] [--two-sided] [--allow-no-uv]\n")
+    os.exit(2)
+end
+local Gltf = dofile(DIR .. "/src/tools/model/gltf.lua")
+local M2 = dofile(DIR .. "/src/tools/model/m2.lua")
+
+local out_dir = opt.out or opt["in"]:match("^(.*)/[^/]*$") or "."
+local g = Gltf.read_glb(opt["in"])
+local mesh = M2.from_gltf(g, { scale = tonumber(opt.scale), allow_no_uv = opt["allow-no-uv"] })
+local m2, skin = M2.write_static(mesh, opt.name, { two_sided = opt["two-sided"] })
+local m2_path, skin_path = out_dir .. "/" .. opt.name .. ".m2", out_dir .. "/" .. opt.name .. "00.skin"
+local f = assert(io.open(m2_path, "wb"), "convert-gltf-to-m2: can't write " .. m2_path); f:write(m2); f:close()
+f = assert(io.open(skin_path, "wb"), "convert-gltf-to-m2: can't write " .. skin_path); f:write(skin); f:close()
+
+-- read back and check: what was written must read as a sound model
+local back = M2.read(m2, skin)
+local problems = M2.validate(back)
+local b = back.bounds
+print(string.format("convert-gltf-to-m2: %s -> %s (+ skin): %d vertices, %d triangles, box %.3f..%.3f x %.3f..%.3f x %.3f..%.3f yd",
+    opt["in"], m2_path, #back.vertices.positions / 3, #back.skin.indices / 3, b.min[1], b.max[1], b.min[2], b.max[2], b.min[3], b.max[3]))
+if #problems > 0 then
+    for _, p in ipairs(problems) do io.stderr:write("  problem: " .. p .. "\n") end
+    os.exit(1)
+end

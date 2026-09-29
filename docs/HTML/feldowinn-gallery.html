@@ -1,0 +1,392 @@
+<title>Feldowinn's Armoury</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --ground: #f2f4ef; --panel: #ffffff; --ink: #1f2a26; --muted: #5f6f68; --rule: #d7ded8;
+  --gold: #a8792a; --gold-soft: #f3e8d2; --leaf: #3f7d5c; --leaf-soft: #e1efe6; --ember: #a8492f; --ember-soft: #f6e3dc;
+  --art: #e7ece6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #101613; --panel: #172019; --ink: #e6eee9; --muted: #97a89f; --rule: #2a362f;
+    --gold: #ddb45a; --gold-soft: #2e2716; --leaf: #6fbf93; --leaf-soft: #17291f; --ember: #e0806a; --ember-soft: #2f1c16;
+    --art: #1d2721;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #101613; --panel: #172019; --ink: #e6eee9; --muted: #97a89f; --rule: #2a362f;
+  --gold: #ddb45a; --gold-soft: #2e2716; --leaf: #6fbf93; --leaf-soft: #17291f; --ember: #e0806a; --ember-soft: #2f1c16;
+  --art: #1d2721;
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 17px/1.55 "Spectral", Georgia, "Times New Roman", serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 36px 72px; display: grid; gap: 40px; }
+h1, h2, h3 { font-family: "Cinzel", "Trajan Pro", Georgia, serif; margin: 0; text-wrap: balance; letter-spacing: .02em; }
+h1 { font-size: clamp(2rem, 5vw, 3.1rem); font-weight: 700; line-height: 1.05; }
+h2 { font-size: 1.25rem; font-weight: 600; }
+h3 { font-size: 1.02rem; font-weight: 600; }
+p { margin: 0; max-width: 66ch; }
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .76rem; font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+
+header { display: grid; gap: 14px; }
+.eyebrow { font-family: "Cinzel", Georgia, serif; font-size: .78rem; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); }
+.lede em { color: var(--ink); }
+.bar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.status { font-size: .92rem; color: var(--muted); }
+.status strong { color: var(--ink); font-weight: 500; }
+button { font: inherit; cursor: pointer; }
+.btn { font-family: "Cinzel", Georgia, serif; font-size: .82rem; letter-spacing: .06em; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--gold); background: var(--gold-soft); color: var(--ink); }
+.btn:disabled { opacity: .5; cursor: default; }
+button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* the questions ledger */
+.ledger { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 22px 32px; }
+.q { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.q-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.q-ask { font-style: italic; }
+.chip { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .68rem; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.settled { background: var(--leaf-soft); color: var(--leaf); }
+.chip.open { background: var(--gold-soft); color: var(--gold); }
+.opts { display: grid; gap: 4px; }
+.opt { display: grid; grid-template-columns: 7.5rem 1fr 2.2rem; gap: 10px; align-items: center; font-size: .86rem; }
+.opt .name { overflow-wrap: anywhere; }
+.opt.lead .name { font-weight: 500; color: var(--gold); }
+.track { position: relative; height: 8px; background: var(--art); border-radius: 4px; }
+.track .mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--rule); }
+.track .fill { position: absolute; top: 0; bottom: 0; border-radius: 4px; }
+.opt .net { text-align: right; }
+
+/* filters */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filter { font-size: .86rem; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); }
+.filter[aria-pressed="true"] { border-color: var(--gold); background: var(--gold-soft); }
+
+/* the designs */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: 20px; }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+.card.up { border-color: var(--leaf); }
+.card.down { opacity: .72; }
+.art { position: relative; aspect-ratio: 2 / 3; width: 100%; max-width: 100%; background: var(--art); overflow: hidden; }
+.art img, .art svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.art .views { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,.55); color: #fff; border: 0; border-radius: 999px; padding: 2px 9px; }
+.art .sketch { position: absolute; left: 8px; bottom: 8px; background: rgba(0,0,0,.45); color: #fff; border-radius: 999px; padding: 2px 9px; }
+.card-body { padding: 14px 16px 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 8px; }
+.focus { display: flex; flex-wrap: wrap; gap: 6px; }
+.focus .chip { background: var(--gold-soft); color: var(--gold); white-space: normal; border-radius: 8px; }
+dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: .84rem; }
+dt { color: var(--muted); }
+dd { margin: 0; }
+dd.focused { color: var(--gold); font-weight: 500; }
+.votes { display: flex; gap: 8px; }
+.vote { flex: 1 1 0; min-width: 0; display: flex; justify-content: center; align-items: center; gap: 6px; padding: 7px 0; border-radius: 8px; border: 1px solid var(--rule); background: transparent; color: var(--ink); font-size: .9rem; }
+.vote.up[aria-pressed="true"] { background: var(--leaf-soft); border-color: var(--leaf); color: var(--leaf); }
+.vote.down[aria-pressed="true"] { background: var(--ember-soft); border-color: var(--ember); color: var(--ember); }
+.vote:disabled { cursor: default; opacity: .55; }
+.empty { color: var(--muted); font-style: italic; }
+footer { color: var(--muted); font-size: .86rem; display: grid; gap: 6px; }
+@media (prefers-reduced-motion: no-preference) { .vote, .filter, .card { transition: background .15s, border-color .15s, opacity .15s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Retribution gear · design votes</div>
+    <h1>Feldowinn's Armoury</h1>
+    <p class="lede">A legendary healing fairy, a warrior friend, <em>a link to time</em>. Each card is one gear design, built from answers to the open questions below. Vote a design up or down; the next round leans toward what is winning and tries new answers where nothing is settled yet.</p>
+    <div class="bar">
+      <span class="status" id="status">Loading votes…</span>
+      <button class="btn" id="export" type="button" hidden>Export votes (votes.tsv)</button>
+    </div>
+  </header>
+
+  <section aria-labelledby="ledger-h" style="display:grid;gap:16px">
+    <h2 id="ledger-h">The open questions</h2>
+    <p class="muted">Each option's bar is the net vote of every design that used it. A question is settled when one answer leads with at least <span id="rule-net">3</span> net votes and <span id="rule-margin">2</span> more than the next.</p>
+    <div class="ledger" id="ledger"></div>
+  </section>
+
+  <section aria-labelledby="designs-h" style="display:grid;gap:16px">
+    <h2 id="designs-h">The designs</h2>
+    <div class="filters" id="filters" role="group" aria-label="Show pieces"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <footer>
+    <p id="footnote"></p>
+    <p>Pictures come from the image generator's output folder, one folder per design; a design without a picture yet is shown as a sketch in its colours. Made by scripts/generate-feldowinn-gallery (issue 506d).</p>
+  </footer>
+</div>
+
+<script type="application/json" id="data">{"made":"2026-09-28 03:34 UTC","questions":[{"pieces":"all","options":[{"id":"gilded","says":"gilded plate armour, polished gold over white steel"},{"id":"bark","says":"plate armour grown from living silver bark"},{"id":"crystal","says":"translucent crystal plate armour"},{"id":"scale","says":"silvered overlapping scale armour, light and flexible"}],"id":"armour","ask":"What is her plate made of?"},{"pieces":"all","options":[{"id":"sunrise","says":"sunrise gold and leaf green"},{"id":"moon","says":"moon silver and pale blue"},{"id":"dawn","says":"dawn rose and white gold"},{"id":"verdigris","says":"verdigris bronze and ivory"}],"id":"palette","ask":"What colours is she?"},{"pieces":"all","options":[{"id":"hourglass","says":"hourglass motifs with drifting golden sand"},{"id":"clockwork","says":"fine gold clockwork gears set into the metal"},{"id":"sundial","says":"sundial halos and engraved hour lines"},{"id":"shards","says":"floating shards of frozen time, like cracked glass"}],"id":"time","ask":"How does 'a link to time' show?"},{"pieces":"all","options":[{"id":"runes","says":"softly glowing healing runes"},{"id":"blossom","says":"small flowers blooming from the joints"},{"id":"seams","says":"warm light seeping through the seams"},{"id":"halo","says":"a faint halo of motes around it"}],"id":"healing","ask":"How does her healing show on the gear?"},{"pieces":"all","options":[{"id":"subtle","says":"elegant, with a subtle fey delicacy"},{"id":"winged","says":"with gossamer wing shapes worked into the metal"},{"id":"woodland","says":"with leaf and vine filigree, woodland fey"},{"id":"starlit","says":"with tiny starlight points, a fairy-tale shimmer"}],"id":"fairy","ask":"How much fairy is in the armour?"},{"pieces":["helm"],"options":[{"id":"circlet","says":"an open circlet crown that leaves the face bare"},{"id":"winged","says":"a winged half-helm"},{"id":"visor","says":"a full visor with two slender antennae"}],"id":"helm_shape","ask":"What shape is the helm?"},{"pieces":["shoulders","chest"],"options":[{"id":"pauldrons","says":"wing-shaped pauldrons sweeping upward"},{"id":"back","says":"leaf-thin gossamer wing panels mounted on the back"},{"id":"light","says":"no metal wings, only a trail of light behind"}],"id":"wings","ask":"Where are her wings?"},{"pieces":["weapon"],"options":[{"id":"sword","says":"a long two-handed greatsword"},{"id":"mace","says":"a two-handed mace with a lantern-like head"},{"id":"polearm","says":"a slender glaive polearm"},{"id":"hammer","says":"a great hammer shaped like a bell"}],"id":"weapon_kind","ask":"What does she fight with?"},{"pieces":["chest","legs","boots","gloves"],"options":[{"id":"massive","says":"massive and heroic, far larger than she is"},{"id":"fitted","says":"close-fitted and graceful"},{"id":"layered","says":"layered plates with cloth beneath"}],"id":"weight","ask":"Heavy or light?"}],"pieces":["helm","shoulders","chest","gloves","belt","legs","boots","weapon","shield"],"votes":[],"rule":{"margin":2,"net":3},"profiles":[{"round":1,"piece":"belt","prompt":"fantasy concept art of a single belt and buckle worn by Feldowinn, a legendary healing fairy paladin, plate armour grown from living silver bark, verdigris bronze and ivory, hourglass motifs with drifting golden sand, a faint halo of motes around it, elegant, with a subtle fey delicacy, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"halo","fairy":"subtle","armour":"bark","time":"hourglass"},"focus":["armour","palette"],"id":"e5b4e007","how":{"palette":"focus","healing":"random","fairy":"random","armour":"focus","time":"random"}},{"round":1,"piece":"shoulders","prompt":"fantasy concept art of a single shoulder pauldrons worn by Feldowinn, a legendary healing fairy paladin, with gossamer wing shapes worked into the metal, fine gold clockwork gears set into the metal, translucent crystal plate armour, verdigris bronze and ivory, softly glowing healing runes, no metal wings, only a trail of light behind, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"runes","fairy":"winged","wings":"light","armour":"crystal","time":"clockwork"},"focus":["fairy","time"],"id":"6b0e2e00","how":{"palette":"random","healing":"random","fairy":"focus","wings":"random","armour":"random","time":"focus"}},{"round":1,"piece":"chest","prompt":"fantasy concept art of a single breastplate worn by Feldowinn, a legendary healing fairy paladin, elegant, with a subtle fey delicacy, silvered overlapping scale armour, light and flexible, dawn rose and white gold, floating shards of frozen time, like cracked glass, warm light seeping through the seams, no metal wings, only a trail of light behind, layered plates with cloth beneath, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"dawn","healing":"seams","weight":"layered","fairy":"subtle","wings":"light","armour":"scale","time":"shards"},"focus":["fairy","armour"],"id":"7a45b2b1","how":{"palette":"random","healing":"random","weight":"random","fairy":"focus","wings":"random","armour":"focus","time":"random"}},{"round":1,"piece":"legs","prompt":"fantasy concept art of a single leg plates worn by Feldowinn, a legendary healing fairy paladin, warm light seeping through the seams, close-fitted and graceful, translucent crystal plate armour, verdigris bronze and ivory, sundial halos and engraved hour lines, with gossamer wing shapes worked into the metal, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"seams","weight":"fitted","fairy":"winged","armour":"crystal","time":"sundial"},"focus":["healing","weight"],"id":"bc2533cc","how":{"palette":"random","healing":"focus","weight":"focus","fairy":"random","armour":"random","time":"random"}},{"round":1,"piece":"boots","prompt":"fantasy concept art of a single sabatons (armoured boots) worn by Feldowinn, a legendary healing fairy paladin, silvered overlapping scale armour, light and flexible, fine gold clockwork gears set into the metal, dawn rose and white gold, softly glowing healing runes, elegant, with a subtle fey delicacy, massive and heroic, far larger than she is, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"dawn","healing":"runes","weight":"massive","fairy":"subtle","armour":"scale","time":"clockwork"},"focus":["armour","time"],"id":"3d68a2c8","how":{"palette":"random","healing":"random","weight":"random","fairy":"random","armour":"focus","time":"focus"}},{"round":1,"piece":"chest","prompt":"fantasy concept art of a single breastplate worn by Feldowinn, a legendary healing fairy paladin, with gossamer wing shapes worked into the metal, silvered overlapping scale armour, light and flexible, dawn rose and white gold, hourglass motifs with drifting golden sand, softly glowing healing runes, no metal wings, only a trail of light behind, massive and heroic, far larger than she is, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"dawn","healing":"runes","weight":"massive","fairy":"winged","wings":"light","armour":"scale","time":"hourglass"},"focus":["fairy"],"id":"7f34d1fb","how":{"palette":"random","healing":"random","weight":"random","fairy":"focus","wings":"random","armour":"random","time":"random"}},{"round":1,"piece":"boots","prompt":"fantasy concept art of a single sabatons (armoured boots) worn by Feldowinn, a legendary healing fairy paladin, fine gold clockwork gears set into the metal, layered plates with cloth beneath, plate armour grown from living silver bark, sunrise gold and leaf green, a faint halo of motes around it, with leaf and vine filigree, woodland fey, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"sunrise","healing":"halo","weight":"layered","fairy":"woodland","armour":"bark","time":"clockwork"},"focus":["time","weight"],"id":"e0c6cd44","how":{"palette":"random","healing":"random","weight":"focus","fairy":"random","armour":"random","time":"focus"}},{"round":1,"piece":"boots","prompt":"fantasy concept art of a single sabatons (armoured boots) worn by Feldowinn, a legendary healing fairy paladin, verdigris bronze and ivory, translucent crystal plate armour, floating shards of frozen time, like cracked glass, small flowers blooming from the joints, with leaf and vine filigree, woodland fey, close-fitted and graceful, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"blossom","weight":"fitted","fairy":"woodland","armour":"crystal","time":"shards"},"focus":["palette"],"id":"fad5c5f5","how":{"palette":"focus","healing":"random","weight":"random","fairy":"random","armour":"random","time":"random"}},{"round":1,"piece":"legs","prompt":"fantasy concept art of a single leg plates worn by Feldowinn, a legendary healing fairy paladin, massive and heroic, far larger than she is, sunrise gold and leaf green, translucent crystal plate armour, fine gold clockwork gears set into the metal, small flowers blooming from the joints, elegant, with a subtle fey delicacy, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"sunrise","healing":"blossom","weight":"massive","fairy":"subtle","armour":"crystal","time":"clockwork"},"focus":["weight","palette"],"id":"5579a720","how":{"palette":"focus","healing":"random","weight":"focus","fairy":"random","armour":"random","time":"random"}},{"round":1,"piece":"weapon","prompt":"fantasy concept art of a single two-handed weapon worn by Feldowinn, a legendary healing fairy paladin, a long two-handed greatsword, translucent crystal plate armour, verdigris bronze and ivory, fine gold clockwork gears set into the metal, a faint halo of motes around it, elegant, with a subtle fey delicacy, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"halo","fairy":"subtle","weapon_kind":"sword","armour":"crystal","time":"clockwork"},"focus":["weapon_kind"],"id":"b4675bf0","how":{"palette":"random","healing":"random","fairy":"random","weapon_kind":"focus","armour":"random","time":"random"}},{"round":1,"piece":"belt","prompt":"fantasy concept art of a single belt and buckle worn by Feldowinn, a legendary healing fairy paladin, hourglass motifs with drifting golden sand, with tiny starlight points, a fairy-tale shimmer, gilded plate armour, polished gold over white steel, verdigris bronze and ivory, softly glowing healing runes, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"runes","fairy":"starlit","armour":"gilded","time":"hourglass"},"focus":["time","fairy"],"id":"fe73b02c","how":{"palette":"random","healing":"random","fairy":"focus","armour":"random","time":"focus"}},{"round":1,"piece":"shoulders","prompt":"fantasy concept art of a single shoulder pauldrons worn by Feldowinn, a legendary healing fairy paladin, with leaf and vine filigree, woodland fey, plate armour grown from living silver bark, sunrise gold and leaf green, hourglass motifs with drifting golden sand, a faint halo of motes around it, no metal wings, only a trail of light behind, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"sunrise","healing":"halo","fairy":"woodland","wings":"light","armour":"bark","time":"hourglass"},"focus":["fairy","armour"],"id":"665d34b4","how":{"palette":"random","healing":"random","fairy":"focus","wings":"random","armour":"focus","time":"random"}},{"round":1,"piece":"weapon","prompt":"fantasy concept art of a single two-handed weapon worn by Feldowinn, a legendary healing fairy paladin, verdigris bronze and ivory, plate armour grown from living silver bark, floating shards of frozen time, like cracked glass, small flowers blooming from the joints, with leaf and vine filigree, woodland fey, a two-handed mace with a lantern-like head, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"blossom","fairy":"woodland","weapon_kind":"mace","armour":"bark","time":"shards"},"focus":["palette"],"id":"28d37a88","how":{"palette":"focus","healing":"random","fairy":"random","weapon_kind":"random","armour":"random","time":"random"}},{"round":1,"piece":"helm","prompt":"fantasy concept art of a single helmet worn by Feldowinn, a legendary healing fairy paladin, translucent crystal plate armour, moon silver and pale blue, floating shards of frozen time, like cracked glass, small flowers blooming from the joints, with tiny starlight points, a fairy-tale shimmer, a full visor with two slender antennae, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"moon","healing":"blossom","fairy":"starlit","helm_shape":"visor","time":"shards","armour":"crystal"},"focus":["armour"],"id":"4ef78d80","how":{"palette":"random","healing":"random","fairy":"random","helm_shape":"random","time":"random","armour":"focus"}},{"round":1,"piece":"helm","prompt":"fantasy concept art of a single helmet worn by Feldowinn, a legendary healing fairy paladin, with gossamer wing shapes worked into the metal, plate armour grown from living silver bark, verdigris bronze and ivory, floating shards of frozen time, like cracked glass, warm light seeping through the seams, an open circlet crown that leaves the face bare, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"seams","fairy":"winged","helm_shape":"circlet","time":"shards","armour":"bark"},"focus":["fairy"],"id":"9f6a743c","how":{"palette":"random","healing":"random","fairy":"focus","helm_shape":"random","time":"random","armour":"random"}},{"round":1,"piece":"shoulders","prompt":"fantasy concept art of a single shoulder pauldrons worn by Feldowinn, a legendary healing fairy paladin, warm light seeping through the seams, plate armour grown from living silver bark, verdigris bronze and ivory, hourglass motifs with drifting golden sand, elegant, with a subtle fey delicacy, wing-shaped pauldrons sweeping upward, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"seams","fairy":"subtle","wings":"pauldrons","armour":"bark","time":"hourglass"},"focus":["healing"],"id":"6f90b288","how":{"palette":"random","healing":"focus","fairy":"random","wings":"random","armour":"random","time":"random"}},{"round":1,"piece":"legs","prompt":"fantasy concept art of a single leg plates worn by Feldowinn, a legendary healing fairy paladin, dawn rose and white gold, plate armour grown from living silver bark, hourglass motifs with drifting golden sand, warm light seeping through the seams, with gossamer wing shapes worked into the metal, massive and heroic, far larger than she is, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"dawn","healing":"seams","weight":"massive","fairy":"winged","armour":"bark","time":"hourglass"},"focus":["palette"],"id":"2d4766bc","how":{"palette":"focus","healing":"random","weight":"random","fairy":"random","armour":"random","time":"random"}},{"round":1,"piece":"gloves","prompt":"fantasy concept art of a single gauntlets worn by Feldowinn, a legendary healing fairy paladin, fine gold clockwork gears set into the metal, warm light seeping through the seams, gilded plate armour, polished gold over white steel, verdigris bronze and ivory, elegant, with a subtle fey delicacy, massive and heroic, far larger than she is, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"seams","weight":"massive","fairy":"subtle","armour":"gilded","time":"clockwork"},"focus":["time","healing"],"id":"7bc2cf74","how":{"palette":"random","healing":"focus","weight":"random","fairy":"random","armour":"random","time":"focus"}},{"round":1,"piece":"shoulders","prompt":"fantasy concept art of a single shoulder pauldrons worn by Feldowinn, a legendary healing fairy paladin, small flowers blooming from the joints, silvered overlapping scale armour, light and flexible, verdigris bronze and ivory, floating shards of frozen time, like cracked glass, with gossamer wing shapes worked into the metal, leaf-thin gossamer wing panels mounted on the back, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"blossom","fairy":"winged","wings":"back","armour":"scale","time":"shards"},"focus":["healing"],"id":"5e362124","how":{"palette":"random","healing":"focus","fairy":"random","wings":"random","armour":"random","time":"random"}},{"round":1,"piece":"weapon","prompt":"fantasy concept art of a single two-handed weapon worn by Feldowinn, a legendary healing fairy paladin, floating shards of frozen time, like cracked glass, silvered overlapping scale armour, light and flexible, dawn rose and white gold, a faint halo of motes around it, elegant, with a subtle fey delicacy, a slender glaive polearm, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"dawn","healing":"halo","fairy":"subtle","weapon_kind":"polearm","armour":"scale","time":"shards"},"focus":["time"],"id":"dbf27280","how":{"palette":"random","healing":"random","fairy":"random","weapon_kind":"random","armour":"random","time":"focus"}},{"round":1,"piece":"shoulders","prompt":"fantasy concept art of a single shoulder pauldrons worn by Feldowinn, a legendary healing fairy paladin, sunrise gold and leaf green, translucent crystal plate armour, hourglass motifs with drifting golden sand, softly glowing healing runes, elegant, with a subtle fey delicacy, wing-shaped pauldrons sweeping upward, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"sunrise","healing":"runes","fairy":"subtle","wings":"pauldrons","armour":"crystal","time":"hourglass"},"focus":["palette"],"id":"f3dbcfd8","how":{"palette":"focus","healing":"random","fairy":"random","wings":"random","armour":"random","time":"random"}},{"round":1,"piece":"belt","prompt":"fantasy concept art of a single belt and buckle worn by Feldowinn, a legendary healing fairy paladin, small flowers blooming from the joints, verdigris bronze and ivory, silvered overlapping scale armour, light and flexible, hourglass motifs with drifting golden sand, with gossamer wing shapes worked into the metal, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"blossom","fairy":"winged","armour":"scale","time":"hourglass"},"focus":["healing","palette"],"id":"09415984","how":{"palette":"focus","healing":"focus","fairy":"random","armour":"random","time":"random"}},{"round":1,"piece":"chest","prompt":"fantasy concept art of a single breastplate worn by Feldowinn, a legendary healing fairy paladin, silvered overlapping scale armour, light and flexible, fine gold clockwork gears set into the metal, verdigris bronze and ivory, warm light seeping through the seams, with leaf and vine filigree, woodland fey, leaf-thin gossamer wing panels mounted on the back, close-fitted and graceful, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"verdigris","healing":"seams","weight":"fitted","fairy":"woodland","wings":"back","armour":"scale","time":"clockwork"},"focus":["armour","time"],"id":"6c4d28f0","how":{"palette":"random","healing":"random","weight":"random","fairy":"random","wings":"random","armour":"focus","time":"focus"}},{"round":1,"piece":"gloves","prompt":"fantasy concept art of a single gauntlets worn by Feldowinn, a legendary healing fairy paladin, dawn rose and white gold, gilded plate armour, polished gold over white steel, fine gold clockwork gears set into the metal, warm light seeping through the seams, with tiny starlight points, a fairy-tale shimmer, close-fitted and graceful, isolated on a plain soft background, full view, highly detailed, game asset","answers":{"palette":"dawn","healing":"seams","weight":"fitted","fairy":"starlit","armour":"gilded","time":"clockwork"},"focus":["palette"],"id":"e97fba45","how":{"palette":"focus","healing":"random","weight":"random","fairy":"random","armour":"random","time":"random"}}],"rounds":1,"views":[]}</script>
+<script>
+(function () {
+  "use strict";
+  var DATA = JSON.parse(document.getElementById("data").textContent);
+  var Q = DATA.questions, PROFILES = DATA.profiles, VIEWS = DATA.views || {}, RULE = DATA.rule;
+  // votes: profile id -> 1 (up), -1 (down); absent = no vote. Starts from the
+  // snapshot baked in when the page was made; the live store replaces it.
+  var votes = {};
+  Object.keys(DATA.votes || {}).forEach(function (id) { var v = DATA.votes[id]; votes[id] = v.up > v.down ? 1 : (v.down > v.up ? -1 : 0); });
+  var db = null, pending = {}, piece = "all", viewIndex = {};
+  var byQ = {};
+  Q.forEach(function (q) { byQ[q.id] = q; });
+
+  // {{{ palette and sketch
+  // The placeholder art: the piece's outline in its palette's two colours,
+  // with its time motif, until a generated picture exists.
+  var PALETTE = { sunrise: ["#e0a93b", "#5e9e5a"], moon: ["#c9d2dc", "#6f93b8"], dawn: ["#e8b7b0", "#e2bf6f"], verdigris: ["#5c9c8c", "#e6dcc3"] };
+  var SHAPES = {
+    helm: "M40 70 Q40 30 80 28 Q120 30 120 70 L120 96 L100 104 L96 84 L64 84 L60 104 L40 96 Z",
+    shoulders: "M20 70 Q30 38 70 44 L74 82 Q46 76 26 96 Z M140 70 Q130 38 90 44 L86 82 Q114 76 134 96 Z",
+    chest: "M44 36 L116 36 L128 60 L118 120 Q80 138 42 120 L32 60 Z",
+    gloves: "M56 40 L80 40 L84 76 L100 70 L106 80 L86 104 Q66 112 54 100 Z",
+    belt: "M24 70 L136 70 L136 90 L24 90 Z M70 64 L90 64 L90 96 L70 96 Z",
+    legs: "M52 30 L78 30 L76 130 L56 130 Z M82 30 L108 30 L104 130 L84 130 Z",
+    boots: "M50 40 L74 40 L76 110 L104 112 L106 128 L48 128 Z",
+    weapon: "M78 14 L82 14 L84 104 L100 104 L100 112 L84 112 L84 140 L76 140 L76 112 L60 112 L60 104 L76 104 Z",
+    shield: "M44 34 L116 34 L116 80 Q116 116 80 134 Q44 116 44 80 Z"
+  };
+  var MOTIF = {
+    hourglass: "M72 52 L88 52 L80 64 Z M72 76 L88 76 L80 64 Z",
+    clockwork: "M80 56 m-8 0 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0",
+    sundial: "M80 64 L80 50 M80 64 L91 70 M68 64 a12 12 0 0 1 24 0",
+    shards: "M74 52 L82 58 L76 70 Z M84 60 L90 66 L84 74 Z"
+  };
+  function sketch(p) {
+    var pal = PALETTE[p.answers.palette] || ["#b8b0a0", "#8a9a8a"];
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 160 160"); svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Sketch of the " + p.piece + " in its colours");
+    var bg = document.createElementNS(ns, "rect");
+    bg.setAttribute("width", "160"); bg.setAttribute("height", "160"); bg.setAttribute("fill", pal[1]); bg.setAttribute("fill-opacity", "0.18");
+    svg.appendChild(bg);
+    var body = document.createElementNS(ns, "path");
+    body.setAttribute("d", SHAPES[p.piece] || SHAPES.chest);
+    body.setAttribute("fill", pal[0]); body.setAttribute("stroke", pal[1]); body.setAttribute("stroke-width", "3"); body.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(body);
+    if (MOTIF[p.answers.time]) {
+      var m = document.createElementNS(ns, "path");
+      m.setAttribute("d", MOTIF[p.answers.time]);
+      m.setAttribute("fill", "none"); m.setAttribute("stroke", pal[1]); m.setAttribute("stroke-width", "2.5");
+      svg.appendChild(m);
+    }
+    return svg;
+  }
+  // }}}
+
+  // {{{ tally
+  // The generator's rule, mirrored (src/tools/feldowinn/profiles.lua,
+  // P.tally): an option's net = votes of the designs that used it; the
+  // leader is the highest net above 0; settled = leader >= RULE.net and
+  // >= the next + RULE.margin.
+  function tally() {
+    var t = {};
+    Q.forEach(function (q) { t[q.id] = {}; q.options.forEach(function (o) { t[q.id][o.id] = 0; }); });
+    PROFILES.forEach(function (p) {
+      var v = votes[p.id] || 0;
+      if (!v) return;
+      Object.keys(p.answers).forEach(function (qid) {
+        var oid = p.answers[qid];
+        if (t[qid] && t[qid][oid] !== undefined) t[qid][oid] += v;   // answers to retired questions are skipped
+      });
+    });
+    var out = {};
+    Q.forEach(function (q) {
+      var best = null, lead = -Infinity, second = -Infinity;
+      q.options.forEach(function (o) {
+        var s = t[q.id][o.id];
+        if (s > lead) { best = o.id; second = lead; lead = s; } else if (s > second) { second = s; }
+      });
+      out[q.id] = { net: t[q.id], leader: lead > 0 ? best : null, settled: lead >= RULE.net && lead - second >= RULE.margin };
+    });
+    return out;
+  }
+  // }}}
+
+  // {{{ render
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  function renderLedger(t) {
+    var box = document.getElementById("ledger");
+    box.textContent = "";
+    Q.forEach(function (q) {
+      var r = t[q.id];
+      var item = el("div", "q");
+      var head = el("div", "q-head");
+      head.appendChild(el("span", "q-ask", q.ask));
+      head.appendChild(el("span", "chip " + (r.settled ? "settled" : "open"), r.settled ? "settled" : "open"));
+      item.appendChild(head);
+      var max = 1;
+      q.options.forEach(function (o) { max = Math.max(max, Math.abs(r.net[o.id])); });
+      var opts = el("div", "opts");
+      q.options.forEach(function (o) {
+        var n = r.net[o.id];
+        var row = el("div", "opt" + (r.leader === o.id ? " lead" : ""));
+        row.appendChild(el("span", "name", o.id));
+        var track = el("div", "track");
+        track.appendChild(el("span", "mid"));
+        var fill = el("span", "fill");
+        var w = Math.abs(n) / max * 50;
+        fill.style.left = (n >= 0 ? 50 : 50 - w) + "%";
+        fill.style.width = w + "%";
+        fill.style.background = n >= 0 ? "var(--leaf)" : "var(--ember)";
+        track.appendChild(fill);
+        row.appendChild(track);
+        row.appendChild(el("span", "net mono", (n > 0 ? "+" : "") + n));
+        opts.appendChild(row);
+      });
+      item.appendChild(opts);
+      box.appendChild(item);
+    });
+  }
+
+  function renderFilters() {
+    var box = document.getElementById("filters");
+    box.textContent = "";
+    ["all"].concat(DATA.pieces).forEach(function (p) {
+      var count = p === "all" ? PROFILES.length : PROFILES.filter(function (x) { return x.piece === p; }).length;
+      if (!count) return;
+      var b = el("button", "filter", (p === "all" ? "Every piece" : p) + " · " + count);
+      b.type = "button"; b.id = "filter-" + p;
+      b.setAttribute("aria-pressed", String(piece === p));
+      b.addEventListener("click", function () { piece = p; renderFilters(); renderGrid(); });
+      box.appendChild(b);
+    });
+  }
+
+  function artFor(p) {
+    var art = el("div", "art");
+    var views = VIEWS[p.id] || [];
+    if (views.length) {
+      var i = (viewIndex[p.id] || 0) % views.length;
+      var img = el("img");
+      img.src = views[i]; img.alt = "Generated concept of the " + p.piece + ", view " + (i + 1) + " of " + views.length;
+      img.loading = "lazy";
+      art.appendChild(img);
+      if (views.length > 1) {
+        var b = el("button", "views mono", (i + 1) + " / " + views.length);
+        b.type = "button"; b.setAttribute("aria-label", "Next view");
+        b.addEventListener("click", function () { viewIndex[p.id] = i + 1; renderGrid(); });
+        art.appendChild(b);
+      }
+    } else {
+      art.appendChild(sketch(p));
+      art.appendChild(el("span", "sketch mono", "sketch · no picture yet"));
+    }
+    return art;
+  }
+
+  function renderGrid() {
+    var grid = document.getElementById("grid");
+    grid.textContent = "";
+    var list = PROFILES.filter(function (p) { return piece === "all" || p.piece === piece; });
+    if (!list.length) { grid.appendChild(el("p", "empty", "No designs for this piece yet.")); return; }
+    list.forEach(function (p) {
+      var v = votes[p.id] || 0;
+      var card = el("article", "card" + (v > 0 ? " up" : v < 0 ? " down" : ""));
+      card.appendChild(artFor(p));
+      var body = el("div", "card-body");
+      var top = el("div", "card-top");
+      top.appendChild(el("h3", null, p.piece));
+      top.appendChild(el("span", "mono muted", "round " + p.round + " · " + p.id));
+      body.appendChild(top);
+      var focus = el("div", "focus");
+      p.focus.forEach(function (qid) { focus.appendChild(el("span", "chip", "exploring: " + (byQ[qid] ? byQ[qid].ask : qid))); });
+      body.appendChild(focus);
+      var dl = el("dl");
+      Q.forEach(function (q) {
+        if (!(q.id in p.answers)) return;
+        dl.appendChild(el("dt", null, q.id));
+        dl.appendChild(el("dd", p.how[q.id] === "focus" ? "focused" : null, p.answers[q.id]));
+      });
+      body.appendChild(dl);
+      var row = el("div", "votes");
+      [[1, "up", "▲ Keep"], [-1, "down", "▼ Drop"]].forEach(function (spec) {
+        var b = el("button", "vote " + spec[1], spec[2]);
+        b.type = "button"; b.id = "vote-" + spec[1] + "-" + p.id;
+        b.setAttribute("aria-pressed", String(v === spec[0]));
+        b.disabled = !db || !!pending[p.id];
+        b.addEventListener("click", function () { cast(p, v === spec[0] ? 0 : spec[0]); });
+        row.appendChild(b);
+      });
+      body.appendChild(row);
+      card.appendChild(body);
+      grid.appendChild(card);
+    });
+  }
+
+  function renderAll() {
+    renderLedger(tally());
+    renderGrid();
+    var voted = Object.keys(votes).filter(function (id) { return votes[id]; }).length;
+    var pics = PROFILES.filter(function (p) { return (VIEWS[p.id] || []).length; }).length;
+    document.getElementById("footnote").textContent = PROFILES.length + " designs in " + DATA.rounds + " round" + (DATA.rounds === 1 ? "" : "s") + ", " + voted + " voted, " + pics + " with pictures. Page made " + DATA.made + ".";
+  }
+  // }}}
+
+  // {{{ votes: the live store
+  // One document per design, votes/<design id> = { vote: 1 | -1 | 0, at }:
+  // the developer's current verdict, changed by clicking (clicking the
+  // active one clears it). A state, not a counter: the store is
+  // last-writer-wins, so counting clicks would drift.
+  function setStatus(html) { document.getElementById("status").innerHTML = html; }
+  function cast(p, v) {
+    if (!db || pending[p.id]) return;
+    pending[p.id] = true;
+    var before = votes[p.id] || 0;
+    votes[p.id] = v;
+    renderAll();
+    db.doc("votes/" + p.id).set({ vote: v, piece: p.piece, round: p.round, at: new Date().toISOString() })
+      .then(function () { pending[p.id] = false; renderAll(); })
+      .catch(function (e) {
+        pending[p.id] = false; votes[p.id] = before; renderAll();
+        setStatus(e && e.code === "invalid_argument" ? "Your vote wasn't saved: this view can read votes but not change them." : "Your vote wasn't saved (" + (e && e.code || "error") + "); try again in a moment.");
+      });
+  }
+  function tsv() {
+    var lines = ["id\tup\tdown"];
+    PROFILES.forEach(function (p) { var v = votes[p.id] || 0; if (v) lines.push(p.id + "\t" + (v > 0 ? 1 : 0) + "\t" + (v < 0 ? 1 : 0)); });
+    return lines.join("\n") + "\n";
+  }
+  // }}}
+
+  renderFilters();
+  renderAll();
+  document.getElementById("rule-net").textContent = RULE.net;
+  document.getElementById("rule-margin").textContent = RULE.margin;
+  setStatus("Votes shown are the ones saved when this page was made; live votes are loading.");
+
+  var claude = window.claude;
+  if (claude && claude.use) {
+    claude.use("db").then(function (d) {
+      if (!d) { setStatus("Votes can't be changed in this view; showing the votes saved when the page was made."); return; }
+      db = d;
+      db.collection("votes").onSnapshot(function (snap) {
+        snap.docs.forEach(function (doc) {
+          var b = doc.data();
+          if (b && !pending[doc.id]) votes[doc.id] = b.vote || 0;
+        });
+        var n = Object.keys(votes).filter(function (id) { return votes[id]; }).length;
+        setStatus("<strong>" + n + "</strong> designs voted. Votes are saved as you click.");
+        renderAll();
+      }, function (e) { setStatus("Live votes stopped (" + (e && e.code) + "); reload the page to reconnect."); });
+    });
+    claude.use("downloads").then(function (dl) {
+      if (!dl) return;
+      var b = document.getElementById("export");
+      b.hidden = false;
+      b.addEventListener("click", function () {
+        dl.save({ filename: "votes.tsv", data: tsv() })
+          .then(function () { setStatus("Saved votes.tsv: put it at assets/feldowinn/votes.tsv, then make the next round."); })
+          .catch(function (e) { if (e && e.code !== "declined") setStatus("Couldn't save votes.tsv (" + e.code + ")."); });
+      });
+    });
+  } else {
+    setStatus("Showing the votes saved when this page was made (live voting works on the published page).");
+  }
+})();
+</script>
