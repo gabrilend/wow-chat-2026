@@ -53,7 +53,7 @@ static constexpr uint32 MEALS = 5;    // servings of food, and of drink, in the 
 static uint32 GiveGear(Player* buddy, std::string& problems)
 {
     QueryResult rows = WorldDatabase.Query(
-        "SELECT DISTINCT it.entry FROM item_template it JOIN npc_vendor v ON v.item = it.entry "
+        "SELECT DISTINCT it.entry, it.RequiredLevel, it.ItemLevel FROM item_template it JOIN npc_vendor v ON v.item = it.entry "
         "WHERE it.Quality = 1 AND it.class IN (2, 4) AND it.RequiredLevel <= {} "
         "ORDER BY it.RequiredLevel DESC, it.ItemLevel DESC, it.entry", buddy->GetLevel());
     if (!rows)
@@ -132,7 +132,7 @@ static uint32 GiveGear(Player* buddy, std::string& problems)
 static void GiveMeals(Player* buddy, std::string& problems)
 {
     QueryResult rows = WorldDatabase.Query(
-        "SELECT DISTINCT it.entry FROM item_template it JOIN npc_vendor v ON v.item = it.entry "
+        "SELECT DISTINCT it.entry, it.RequiredLevel, it.ItemLevel FROM item_template it JOIN npc_vendor v ON v.item = it.entry "
         "WHERE it.class = 0 AND it.subclass = 5 AND it.RequiredLevel <= {} "
         "ORDER BY it.RequiredLevel DESC, it.ItemLevel DESC, it.entry", buddy->GetLevel());
     bool wantDrink = buddy->getPowerType() == POWER_MANA;
@@ -186,7 +186,7 @@ static void GiveBags(Player* buddy, uint32 ownerGuid, std::string& problems)
 
     std::map<uint32, uint32> bagOfSize;                 // slots -> the lowest-quality bag of that size
     if (QueryResult bags = WorldDatabase.Query(
-            "SELECT DISTINCT it.entry, it.ContainerSlots FROM item_template it JOIN npc_vendor v ON v.item = it.entry "
+            "SELECT DISTINCT it.entry, it.ContainerSlots, it.Quality, it.ItemLevel FROM item_template it JOIN npc_vendor v ON v.item = it.entry "
             "WHERE it.class = 1 AND it.subclass = 0 AND it.ContainerSlots > 0 "
             "ORDER BY it.Quality ASC, it.ItemLevel ASC, it.entry"))
         do
