@@ -8,9 +8,11 @@
 #
 # Strategy: read whatever MaxPlayerLevel the .conf currently holds (set
 # upstream by the C006* family) and pin both knobs to that value, so
-# the validator passes on first read. C-patches are sourced in
-# filename-sorted order, so C006* runs before C017 and the value
-# parsed here is the profile-correct one.
+# the validator passes on first read. The runner (apply_config_values
+# in patches/E-patches.sh) applies patches in filename order, so C006*
+# runs before C017 and the value parsed here is the profile-correct one.
+# Until 2026-09-29 it applied them in alphabetical function-name order,
+# which ran this patch first and pinned both knobs to the stock 80.
 #
 # StartHeroicPlayerLevel — required level to enter a heroic dungeon.
 #                          No heroic dungeons exist below the level cap

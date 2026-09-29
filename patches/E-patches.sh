@@ -188,6 +188,13 @@ apply_config_values() {
     echo "  Loading config patches:"
     local patch_count=0
     declare -A patches_by_profile
+    # Config functions in the order their files were loaded (C001 first).
+    # Application order matters: C017 reads the MaxPlayerLevel that a
+    # C006* patch writes, so it must run after it. `declare -F` lists
+    # functions alphabetically by name, which put config_level_correlated_caps
+    # (C017) ahead of config_max_level_60 (C006d) -- C017 then read the
+    # stock 80 and pinned StartHeroicPlayerLevel and RecruitAFriend.MaxLevel
+    # to 80, which fail the server's "<= MaxPlayerLevel" check at boot.
     for patch_file in "${DIR}/config/patches"/C*.sh; do
         [[ -f "${patch_file}" ]] || continue
         local patch_name=$(basename "${patch_file}" .sh)
@@ -225,13 +232,21 @@ apply_config_values() {
         done <<< "${patches_by_profile[$profile]}"
     done
 
-    # Get list of all config functions
-    local config_funcs=$(declare -F | grep "^declare -f config_" | sed 's/declare -f //')
+    # Sort every config_ function by the file that defined it, then by its
+    # line in that file. With extdebug on, `declare -F name` answers
+    # "name line file"; the file names carry the C001, C002... order.
+    local config_funcs_in_file_order
+    config_funcs_in_file_order=$(
+        shopt -s extdebug
+        for fn in $(declare -F | sed -n 's/^declare -f \(config_.*\)/\1/p'); do
+            declare -F "${fn}"
+        done | sort -k3,3 -k2,2n | cut -d' ' -f1
+    )
 
     echo "  Applying for profile '${PROFILE}':"
     local applied_count=0
     local failed_count=0
-    for func in ${config_funcs}; do
+    for func in ${config_funcs_in_file_order}; do
         local profiles="${CONFIG_PROFILES[$func]:-}"
         local desc="${CONFIG_DESCRIPTIONS[$func]:-${func}}"
 

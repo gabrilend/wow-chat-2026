@@ -101,33 +101,17 @@ echo "Scratch:            ${SCRATCH}"
 export INSTALL_DIR="${SCRATCH}"
 export PROJECT_DIR="${DIR}"
 export PROFILE DIR
-declare -A CONFIG_PROFILES
-declare -A CONFIG_DESCRIPTIONS
-for patch_file in "${DIR}/config/patches"/C*.sh; do
-    source "${patch_file}" || { echo "ERROR: ${patch_file} failed to source"; exit 1; }
-done
-
-applied=0
+# The real runner, not a copy of it. This test once re-implemented the
+# runner's loop in filename order while the runner itself went in
+# alphabetical function-name order; the copy passed and the install still
+# wrote StartHeroicPlayerLevel = 80 (C017 ran before C006d). Calling the
+# runner itself means the order tested is the order installed.
+source "${DIR}/patches/E-patches.sh" || { echo "ERROR: patches/E-patches.sh failed to source"; exit 1; }
 failed=0
-# Same selection rule as apply_config_values in patches/E-patches.sh,
-# in the same filename-sorted order (C017 reads what C006* wrote).
-for patch_file in "${DIR}/config/patches"/C*.sh; do
-    name=$(basename "${patch_file}" .sh)
-    func="config_${name#C[0-9]*-}"
-    func="${func//-/_}"
-    profiles="${CONFIG_PROFILES[$func]:-}"
-    if [[ " ${profiles} " =~ " ${PROFILE} " || " ${profiles} " =~ " all " ]]; then
-        # Output of each patch is kept: a patch that fails says why.
-        if ${func} > "${SCRATCH}/${name}.log" 2>&1; then
-            applied=$((applied + 1))
-        else
-            echo "  [✗] ${name} failed:"
-            sed 's/^/        /' "${SCRATCH}/${name}.log"
-            failed=$((failed + 1))
-        fi
-    fi
-done
-echo "Config patches applied for '${PROFILE}': ${applied} ok, ${failed} failed"
+apply_config_values > "${SCRATCH}/apply-config-values.log" 2>&1 || failed=1
+# Only the applying half of the runner's report; its listing of every
+# patch by profile is noise here. A failed patch shows as [✗].
+sed -n '/Applying for profile/,$p' "${SCRATCH}/apply-config-values.log"
 # }}}
 
 # {{{ check_expectations
