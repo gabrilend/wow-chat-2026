@@ -37,6 +37,24 @@ is loud.
 Rendered as text, not JSON. The reader is a language model, and a
 sentence costs fewer tokens than a nested object saying the same thing.
 
+### Where the block goes — revised 2026-09-03
+
+Not in one block at the front. Per `docs/context-placement.md`, a fact belongs
+at the point it is referred to, repeated if it is referred to more than once.
+
+That splits this issue's output in two. The **stable** half — the ID-to-name
+caches, the vocabulary, the shape of what a bot report looks like — never
+changes between requests and belongs at the front, where a prefix cache can
+hold it across every request the layer ever sends. The **volatile** half — who
+is at what health, where, fighting what — changes every time, and belongs
+beside whatever sentence in the prompt actually asks about it. Front-loading it
+ends the shared prefix at the first byte of it and throws away the reuse.
+
+So this issue still assembles the state; it stops assuming the assembly is a
+single contiguous block. The renderer should be able to emit any one bot's
+line, or any one field across bots, on demand at the position the prompt
+builder wants it.
+
 ## Implementation Steps
 
 1. Build the name caches at ALE load; report counts.
@@ -65,4 +83,15 @@ sentence costs fewer tokens than a nested object saying the same thing.
 - [916b - ALE bindings for playerbots](916b-ale-bindings-playerbots.md) —
   likely home for the playerbot-internal reads
 - `docs/wiki/docs/creature_template.md`, `docs/wiki/docs/areatable.md`
+
+## Shared Build Pass (neuron)
+
+neuron's `docs/shared-with-wow-chat-2026.md`, pass 3. neuron has built the
+outside-the-server half of this: character records with race, class and
+"logged in" in words (`src/005-world-read.lua`), everything within some yards
+of a place with distance and compass direction (`src/077-nearby.lua`), and
+"me", a character or "that tree" resolved to a position (`src/079-pointing.lua`).
+If this is built inside the server, it uses the same wording — flat yards,
+eight compass words, "last saved position" for a logged-in character — so a
+model reading either sees one language.
 </content>

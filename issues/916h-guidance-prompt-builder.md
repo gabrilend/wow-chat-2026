@@ -23,6 +23,23 @@ expressive range the system has.
 
 No guidance prompt builder exists. 916g would have nothing to call.
 
+## Context Placement — added 2026-09-03
+
+The sketch below builds one struct and renders it into one block ahead of the
+question. Per `docs/context-placement.md`, that is the wrong order.
+
+The directive vocabulary and the output schema are the same in every request
+this builder ever makes, and belong at the front where a prefix cache can hold
+them. The party state is different every request, and each part of it belongs
+next to the sentence that asks about it — health beside the survivability
+question, the enemy summary beside the targeting question, recent events beside
+whatever reasons about them. A fact used in two questions is written into both.
+
+Two payoffs, and they are separate. Attention over a short distance is more
+reliable than attention over a thousand tokens of preamble. And a prompt whose
+stable part is genuinely a shared prefix is a prompt the cluster can serve from
+cache; one that opens with volatile party state is not.
+
 ## Intended Behavior
 
 After this sub-issue lands, `lua/05-prompt-guidance.lua` exposes:
