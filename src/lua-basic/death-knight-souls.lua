@@ -63,7 +63,8 @@ local EBON_HOLD_AREA     = 4281                     -- "Acherus: The Ebon Hold" 
 local SARGOBRAS_SPOT     = { map = 0, x = 2338.5, y = -5676.2, z = 382.3, o = 3.8 }   -- a step in front of him, facing him
 
 local STATE_OWED, STATE_GIVEN, STATE_RETURNING = 0, 1, 2
-local INTID_RETURN       = 1                        -- the undo; a soul's own intid is its guid (always far above 1)
+local INTID_RETURN       = 1                        -- the undo; a soul's own intid is its guid (always far above 2)
+local INTID_CLAN         = 2                        -- naming the clan later, if the trade's name failed (617l)
 local HOLDING_PREFIX     = "SOULS"                  -- holding account name: SOULS<player account id>
 local RETURN_DELAY_MS    = 5000                     -- after the erase, before the soul is moved back (the erase's writes land first)
 
@@ -194,6 +195,10 @@ local function give_soul(player, soul_guid)
         .. ", state = " .. STATE_GIVEN .. ", changed = UNIX_TIMESTAMP() WHERE dk = " .. player:GetGUIDLow())
     player:SendBroadcastMessage(string.format("Sargobras says: %s, for the Lich King. You, for the living. Off you go. "
         .. "(%d profession skills and %d recipes carried over.)", soul.name, skills, learned))
+    -- the four buddies a death knight gets, at this moment and no other (617b)
+    if BuddiesGiveDeathKnightBuddies then BuddiesGiveDeathKnightBuddies(player)
+    else print("[death-knight-souls] ERROR: sargobras.lua isn't loaded; " .. player:GetName() .. " got no buddies (its next login gives them)") end
+    return true
 end
 -- }}}
 
@@ -231,6 +236,12 @@ local function take_back(player, row)
     player:SendBroadcastMessage("Sargobras says: As you wish. " .. soul_name .. " walks again. Mostly.")
     CreateLuaEvent(function()
         RunCommand(".character erase " .. dk_name)
+        -- the erase command skips the character-delete event the buddy
+        -- module listens to, so its buddies go here: their hidden account
+        -- (deleting it deletes them) and the clan's rows (617a2)
+        RunCommand(".account delete BUDDY" .. dk_guid)
+        CharDBExecute("DELETE FROM buddy_roster WHERE owner = " .. dk_guid)
+        CharDBExecute("DELETE FROM buddy_clan WHERE owner = " .. dk_guid)
     end, 1000, 1)
     CreateLuaEvent(function()
         RunCommand(".character changeaccount " .. home_name .. " " .. soul_name)
@@ -247,14 +258,21 @@ local function on_hello(event, player, creature)
     player:GossipClearMenu()
     local row = player:GetClass() == CLASS_DEATH_KNIGHT and ledger(player:GetGUIDLow()) or nil
     if row and row.state == STATE_OWED then
+        -- no clan yet: the trade's pop-up also asks the clan's name (617l;
+        -- the four buddies it brings are the clan)
+        local ask_name = not player:IsInGuild() and BuddiesClanPopup ~= nil
         for _, c in ipairs(candidates(player)) do
-            player:GossipMenuAddItem(GOSSIP_ICON_CHAT, string.format("Give %s (level %d) to the Lich King.", c.name, c.level), 0, c.guid, false,
-                string.format("Give %s to the Lich King? %s leaves your character list; you can ask for them back here later.", c.name, c.name))
+            local confirm = string.format("Give %s to the Lich King? %s leaves your character list; you can ask for them back here later.", c.name, c.name)
+            player:GossipMenuAddItem(GOSSIP_ICON_CHAT, string.format("Give %s (level %d) to the Lich King.", c.name, c.level), 0, c.guid, ask_name,
+                ask_name and (confirm .. " " .. BuddiesClanPopup) or confirm)
         end
         player:GossipSendMenu(TEXT_OWED, creature)
     elseif row and row.state == STATE_GIVEN then
         player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "I want my old life back.", 0, INTID_RETURN, false,
             "This death knight will be erased for good, and your old self returns to your character list, undead-pale. Are you sure?")
+        if not player:IsInGuild() and BuddiesClanPopup then
+            player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "Let me name our clan.", 0, INTID_CLAN, true, BuddiesClanPopup)
+        end
         player:GossipSendMenu(TEXT_GIVEN, creature)
     else
         player:GossipSendMenu(TEXT_OTHER, creature)
@@ -263,22 +281,29 @@ end
 -- }}}
 
 -- {{{ local function on_select
-local function on_select(event, player, creature, sender, intid)
+local function on_select(event, player, creature, sender, intid, code)
     player:GossipComplete()
     local row = player:GetClass() == CLASS_DEATH_KNIGHT and ledger(player:GetGUIDLow()) or nil
     if not row then return end
     if row.state == STATE_GIVEN and intid == INTID_RETURN then
         take_back(player, row)
-    elseif row.state == STATE_OWED and intid ~= INTID_RETURN then
-        give_soul(player, intid)
+    elseif row.state == STATE_GIVEN and intid == INTID_CLAN then
+        if BuddiesTryClanName then BuddiesTryClanName(player, creature, code) end
+    elseif row.state == STATE_OWED and intid ~= INTID_RETURN and intid ~= INTID_CLAN then
+        if give_soul(player, intid) and BuddiesTryClanName then BuddiesTryClanName(player, creature, code) end
     end
 end
 -- }}}
 
 -- {{{ local function on_first_login
--- Every death knight made from now on owes a soul.
+-- Every death knight made from now on owes a soul, except a buddy: a
+-- death-knight owner's buddies are death knights made by the buddy module
+-- (617a3) on the owner's companion account, and they follow the owner out
+-- of Acherus rather than paying their own way. A buddy is a character
+-- named in buddy_roster (its row is filled before it first logs in).
 local function on_first_login(event, player)
     if player:GetClass() ~= CLASS_DEATH_KNIGHT then return end
+    if CharDBQuery("SELECT 1 FROM buddy_roster WHERE buddy = " .. player:GetGUIDLow()) then return end
     CharDBExecute("INSERT IGNORE INTO basic_718_souls (dk, state, changed) VALUES (" .. player:GetGUIDLow() .. ", " .. STATE_OWED .. ", UNIX_TIMESTAMP())")
 end
 -- }}}

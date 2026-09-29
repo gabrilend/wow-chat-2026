@@ -153,6 +153,17 @@ Two layers, one per half of the user's design.
   (617b, 2026-09-25). That setting stops every death knight bot from
   logging in, so the buddy module will need its own exception (or the
   setting off, with random bots already off on basic, 155b).
+- **Four buddies at the trade** (owner, 2026-09-26): accepting the soul
+  trade gives the death knight exactly four buddies, death knights of
+  random races, and never more; built in `src/lua-basic/sargobras.lua`,
+  called from the trade in `death-knight-souls.lua`. Taking the soul back
+  erases the death knight with a command that fires no character-delete
+  event, so the take-back also deletes its companion account (and with it
+  the four) and its roster rows.
+- **Buddies owe no soul** (2026-09-26, found building 617a3): the first-
+  login rule that makes a new death knight owe a soul skips any character
+  named in `buddy_roster`, so a death-knight owner's buddies follow it out
+  of Acherus instead of being held there.
 - The user named two ways to make the choice of *which* level-55 character is
   consumed:
   - **(a) a chooser NPC in Acherus.** A freshly created death knight cannot
