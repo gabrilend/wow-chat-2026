@@ -5,7 +5,7 @@
 - Phase: 1 (Foundation — profile model, alongside 148's vanilla cluster)
 - Priority: High — basic is the baseline every later feature is developed
   against, starting with custom classes.
-- Sub-issues: 155a through 155r
+- Sub-issues: 155a through 155x
 
 ## Origin
 
@@ -41,6 +41,19 @@ drafted as "plain" until this answer):
 > oh and since the early Outland dungeons give blues, let's tune them higher
 > (level 64) as a "heroic" mode. Also let's implement the patch that removes
 > the accuracy penalty for level gaps.
+
+On priorities, verbatim, 2026-09-26:
+
+> Don't worry about any profile except basic for now. We don't have to have
+> anything for greater than level 50 built yet. We should address buddy-bot
+> concerns, professions, and other similar things.
+
+Clarified, verbatim, 2026-09-26: "our goal isn't to stop at 50, it's to go
+to 60. It just... takes a long time to get there, so we'd want to make sure
+the low level stuff is built first." So the cap stays 60 and every design
+is made for 60; the build order runs from low levels up. The high-level
+sub-issues (155f, 155h, 155j, 155k, 155l, 155p's upper gems, 155q, 155s)
+come after the buddy bots (617) and professions.
 
 ## What This Profile Is
 
@@ -109,7 +122,7 @@ in the rows of this table:
 | Crushing blows | **none from creatures level 64 and up**, as its own patch; armor, resists and aggro radius stay stock (803) | user directive 2026-09-24 |
 | Outland quests | **removed** (givers stay); one flight from the Dark Portal to Honor Hold / Thrallmar (155l) | user directive 2026-09-24 |
 | Accuracy penalty for level gaps | **capped at ±3 levels** (source patch B005, issue 803) | user directive 2026-09-23 |
-| Talents | **nothing from tier 6 down** (30+ points in a tree), as vanilla-era trees (155g) | user directive 2026-09-23 |
+| Talents | **tier 6 (30 points in a tree) keeps only its one-point capstones; nothing deeper**, as vanilla-era trees (155g) | user directive 2026-09-23; capstone rule 2026-09-26 |
 | Class starter kit + cloned kit items + bots-wear-the-kit | **not applied** | head-start |
 | Pretrained abilities + the config switch that reads them | **not applied** | head-start |
 | Starting professions at skill 125 | **not applied** | user directive |
@@ -143,6 +156,11 @@ in the rows of this table:
 | 155q | outland-ability-tomes | 155h, 405 | Level 61–80 class abilities from tomes that drop in Azeroth, the Wrath-era ones from Naxxramas (an idea) |
 | 155r | no-dual-spec-uncapped-respec | 155g | No dual spec; respec cost 1, 5, 10, then +10 gold uncapped, dropping a step each weekly reset |
 | 155s | northrend-at-sixty | 155f, 155k, 155m | Later: Northrend opened to basic, scaled like Outland (about 60 plus 4); closed until then |
+| 155t | capital-glyph-traders | 155o, 155p | A trader beside each capital's leader trades glyphs for gems (minor gems for minor glyphs); planned, not built |
+| 155v | aldor-and-scryer-by-deeds | 155l, 155j | Aldor and Scryer reputation from kills and camp defence, the test case for 161; their vendors sell weapons, rings, trinkets, consumables and gem crates under Kazzak's level; planned, not built |
+| 155w | no-mounts-in-towns | None | Nobody rides in towns; withdrawn the same day ("No restrictions on player behavior"), buddies walk their mounts in town (617e4) |
+| 155x | no-world-channels | None | Nobody joins General, Trade, LocalDefense, WorldDefense, GuildRecruitment or LookingForGroup (B038 in the channel join, the list set by C031); built, not yet run |
+| 155u | battleground-rewards | None | What battlegrounds pay on basic: stock honor, marks and supply officers, plus options (gems, experience, loot bags); planned, not built |
 
 Execution order: `155a → (155b ∥ 155c ∥ 155e ∥ 155i) → (155d ∥ 155f ∥ 155h ∥ 155k ∥ 155l ∥ 155m ∥ 155n) → (155j ∥ 155o)`. 155d depends on 155e
 because a human sent to Shadowglen before 155e lands arrives in a valley

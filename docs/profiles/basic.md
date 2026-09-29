@@ -68,8 +68,9 @@ Design and build record: issue 155 and its sub-issues 155a–155f.
   the talent. Teleport and Portal: Dalaran are left out (Northrend is
   closed).
 - **Level gaps stop hurting past three.** Hit and miss chances worsen with
-  level difference only up to 3 levels (source patch B005), and creatures
-  of level 64 and up never land crushing blows (B031).
+  level difference only up to 3 levels (source patch B005), and crushing
+  blows start only 8 levels up (stock: 4), ramping to their full chance at
+  12 levels up (B031; 13% instead of 65% at 8 levels up).
 - **Slower movement (80%), heavier fall damage (10×).**
 - **Death knights allowed, with two limits.** An account needs a level-55
   character on the realm to create one, and no playerbot plays a death

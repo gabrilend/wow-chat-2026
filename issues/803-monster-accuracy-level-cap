@@ -13,6 +13,10 @@
 - Source is now patched during build and reverted after (Issue 334)
 
 ## Current Behavior
+- Basic (2026-09-27, B031 retargeted, not yet compiled): crushing blows start
+  at 8 levels above the target (stock 4) and ramp to the stock chance at 12;
+  B005 caps the hit/miss/skill level gap at 3. The lines below describe the
+  stock server this issue started from.
 - Monster accuracy scales linearly with level difference
 - Higher level monsters are much harder to hit and hit you more often
 - Lower level monsters are trivial - easy to hit, rarely hit you
@@ -143,9 +147,9 @@ makes sense for more powerful foes to approach from farther away. That's
 okay." And on beta: "they can pull from our patchlist if they want. Let's
 keep them separate so they can be separately applied."
 
-- **Crushing blows**: a creature of level 64 or higher never crushes. (Below
-  64 the stock rule stands: e.g. a level-45 creature can still crush a
-  level-40 player.) This was the one steep effect: it jumps from none to
+- **Crushing blows** (as first decided, 2026-09-24; replaced 2026-09-27,
+  below): a creature of level 64 or higher never crushes. (Below 64 the
+  stock rule stood.) This was the one steep effect: it jumps from none to
   every landed hit over about four levels.
 - **Aggro radius, armor and spell resists stay stock.** Aggro radius grows
   1 yard per level (stronger foes notice you from farther). Armor's level
@@ -154,12 +158,32 @@ keep them separate so they can be separately applied."
   level, so a level-60 caster's average resist rises to ~22% around level
   76 and then falls again (~20% at 80).
 
-### Built (2026-09-24)
+### Decision, 2026-09-27 (Ritz): crushing blows later, ramped
 
-`patches/B031-no-crushing-blows-64.sh`, listed for basic in
+Verbatim: "can we re-enable the crushing blow penalty at +4 the level it
+normally is? And have it scale up to it's nominal percentage with another
+4 levels." And, asked: "Is it 100% damage bonus or 150% damage applied?"
+(Answer: 150% damage applied, a 50% bonus; unchanged.)
+
+- For creatures of every level (the level-64 cut is gone): no crushing
+  blows below a level gap of 8; from 8 to 11 the stock chance times
+  (gap − 7) / 5 (1/5 at 8 so a creature 8 levels up really can crush, 4/5
+  at 11); the stock chance from 12 up. At a gap of 8: 13% instead of the
+  stock 65%; 10: 51% instead of 85%; the full table is in the patch doc.
+
+### Built (2026-09-24, retargeted 2026-09-27)
+
+`patches/B031-crushing-blows-late.sh` (was `B031-no-crushing-blows-64.sh`,
+renamed with its history when its meaning changed), listed for basic in
 `patches/patches.sh`, with a probe; patch doc
-`docs/patches/no-crushing-blows-64.md`. The crushing branch's opening
-condition gains "attacker below level 64". `scripts/test-source-patches`
+`docs/patches/crushing-blows-late.md` (was `no-crushing-blows-64.md`). Two
+lines of the crushing branch change: the opening condition's "+ 4" levels
+becomes "+ 8", and the chance line gains the ramp factor below a gap of 12.
+`scripts/test-source-patches` and `scripts/test-patched-syntax` pass for
+basic (2026-09-27).
+
+As first built (2026-09-24): the crushing branch's opening condition gained
+"attacker below level 64". `scripts/test-source-patches`
 applies all 23 basic source patches to a RAM copy of the tree and reverts
 them byte-identically; a second apply is a no-op. **Not yet compiled**
 (Ritz runs the compile); after it, a level-60 tank against a +4 Outland
@@ -175,8 +199,8 @@ attacker is a creature of level 64 or more. Listed for basic in
 
 ### Open questions (extension)
 
-- (Answered 2026-09-24) Crushing blows: none from level 64 up, as its own
-  patch. Armor, resists and aggro radius: stock. Beta: may pull the patch
+- (Answered 2026-09-24; replaced 2026-09-27 by the late ramp above)
+  Crushing blows: none from level 64 up, as its own patch. Armor, resists and aggro radius: stock. Beta: may pull the patch
   from basic's list.
 
 ## Design Philosophy

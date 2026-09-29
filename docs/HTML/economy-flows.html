@@ -1,0 +1,378 @@
+<title>Honor and Gold Ledger</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --ground: #eef0f3; --panel: #ffffff; --ink: #1b2230; --muted: #5b6576; --rule: #d5d9e1;
+  --brass: #8a5d0c; --brass-bg: #f6ecd6;
+  --gem: #2f7a6b; --gem-bg: #e0f1ed; --honor: #6b3fa0; --honor-bg: #eee5f7; --gold: #9a6a08; --gold-bg: #f7eed4;
+  --stock: #5b6576; --stock-bg: #eceef1; --plan: #2c5aa0; --plan-bg: #e3ebf7; --open: #a02a20; --open-bg: #f7e4e2;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440;
+    --brass: #dcb45c; --brass-bg: #2d2615;
+    --gem: #74d1bd; --gem-bg: #15302b; --honor: #c4a3ee; --honor-bg: #2b2140; --gold: #e2c16a; --gold-bg: #332a12;
+    --stock: #9aa3b2; --stock-bg: #232a34; --plan: #7fa6e6; --plan-bg: #1b2940; --open: #ec8277; --open-bg: #3a1c1a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440;
+  --brass: #dcb45c; --brass-bg: #2d2615;
+  --gem: #74d1bd; --gem-bg: #15302b; --honor: #c4a3ee; --honor-bg: #2b2140; --gold: #e2c16a; --gold-bg: #332a12;
+  --stock: #9aa3b2; --stock-bg: #232a34; --plan: #7fa6e6; --plan-bg: #1b2940; --open: #ec8277; --open-bg: #3a1c1a;
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 16px/1.5 "Alegreya Sans", "Segoe UI", system-ui, sans-serif; }
+.wrap { max-width: 1100px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 36px; }
+h1, h2, h3 { font-family: "Alegreya SC", Georgia, serif; margin: 0; text-wrap: balance; }
+h1 { font-size: 2.1rem; } h2 { font-size: 1.4rem; } h3 { font-size: 1.05rem; color: var(--muted); font-weight: 500; letter-spacing: .03em; }
+p { margin: 0; max-width: 70ch; }
+.lede, .note { color: var(--muted); }
+.note { font-size: .9rem; }
+.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+section { display: grid; gap: 14px; }
+
+/* the flow chart */
+.flow { overflow-x: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; }
+.flow svg { display: block; min-width: 980px; width: 100%; height: auto; }
+.flow text { font-family: "Alegreya Sans", system-ui, sans-serif; fill: var(--ink); }
+.flow .small { font-size: 12px; fill: var(--muted); }
+.flow .label { font-size: 14px; font-weight: 700; }
+.flow .rate { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; fill: var(--ink); }
+.box-stock { fill: var(--stock-bg); stroke: var(--stock); }
+.box-plan  { fill: var(--plan-bg);  stroke: var(--plan); }
+.box-open  { fill: var(--open-bg);  stroke: var(--open); stroke-dasharray: 5 4; }
+.cur-gem   { fill: var(--gem-bg);   stroke: var(--gem); }
+.cur-honor { fill: var(--honor-bg); stroke: var(--honor); }
+.cur-gold  { fill: var(--gold-bg);  stroke: var(--gold); }
+.cur-mark  { fill: var(--stock-bg); stroke: var(--stock); }
+.edge-gem   { stroke: var(--gem); }
+.edge-honor { stroke: var(--honor); }
+.edge-gold  { stroke: var(--gold); }
+.edge-mark  { stroke: var(--stock); }
+.edge { fill: none; stroke-width: 2; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .88rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid; display: inline-block; }
+
+/* tables */
+.tables { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; align-items: start; }
+.tbl { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: "Alegreya SC", Georgia, serif; font-weight: 500; color: var(--muted); letter-spacing: .03em; }
+td.num, th.num { text-align: right; font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+caption { caption-side: top; text-align: left; padding: 10px 12px 4px; font-family: "Alegreya SC", Georgia, serif; font-size: 1.05rem; }
+
+/* calculator */
+.calc { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; display: grid; gap: 14px; }
+.calc-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.calc label { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); }
+.calc select, .calc input { font: inherit; color: var(--ink); background: var(--ground); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 8px; min-width: 0; }
+.calc input { width: 8em; }
+.calc select:focus-visible, .calc input:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.out { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.out div { border-left: 3px solid var(--honor); padding: 4px 10px; }
+.out b { display: block; font: 700 1.4rem/1.2 "Alegreya SC", Georgia, serif; font-variant-numeric: tabular-nums; }
+.out span { color: var(--muted); font-size: .85rem; }
+.chip { font-size: .75rem; font-weight: 700; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.chip.stock { color: var(--stock); background: var(--stock-bg); }
+.chip.plan { color: var(--plan); background: var(--plan-bg); }
+.chip.open { color: var(--open); background: var(--open-bg); }
+ul.open { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 75ch; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1>Honor and Gold Ledger</h1>
+    <p class="lede">Where gems, honor and gold bars come from and where they go on the basic profile, as decided up to 26 September 2026 (later the same day: glyphs repriced, honor uncapped, gold bars worth 4 gold, professions added). Most of it is planned, not built; each part says which. The issues that hold the decisions are named beside each flow (155p, 155t, 155u, 617l).</p>
+  </header>
+
+  <section aria-labelledby="flow-h">
+    <h2 id="flow-h">The flows</h2>
+    <div class="legend" aria-label="Legend">
+      <span><i class="sw" style="background:var(--stock-bg);border-color:var(--stock)"></i>in the stock game</span>
+      <span><i class="sw" style="background:var(--plan-bg);border-color:var(--plan)"></i>decided, not built</span>
+      <span><i class="sw" style="background:var(--open-bg);border-color:var(--open);border-style:dashed"></i>not decided</span>
+      <span><i class="sw" style="background:var(--gem-bg);border-color:var(--gem)"></i>gems</span>
+      <span><i class="sw" style="background:var(--honor-bg);border-color:var(--honor)"></i>honor</span>
+      <span><i class="sw" style="background:var(--gold-bg);border-color:var(--gold)"></i>gold bars</span>
+    </div>
+    <div class="flow" role="img" aria-label="Flow of gems, honor and gold bars from their sources, through the goblin auction houses, to glyphs, gear, vendors and the clan vault">
+      <svg viewBox="0 0 1060 700" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"></path>
+          </marker>
+        </defs>
+
+        <!-- column headings -->
+        <text x="20"  y="22" class="small">WHERE IT COMES FROM</text>
+        <text x="380" y="22" class="small">WHAT YOU HOLD</text>
+        <text x="820" y="22" class="small">WHERE IT GOES</text>
+
+        <!-- sources -->
+        <rect x="20" y="40"  width="250" height="70" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="32" y="64"  class="label">Prospecting &amp; drops</text>
+        <text x="32" y="84"  class="small">ores prospected, world loot (155p)</text>
+        <text x="32" y="100" class="small">Azeroth gems, level 7–60</text>
+
+        <rect x="20" y="130" width="250" height="70" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="32" y="154" class="label">Onyxia's hoard</text>
+        <text x="32" y="174" class="small">ten gem piles + 15–45 gold bars</text>
+        <text x="32" y="190" class="small">built (155p, install step E033)</text>
+
+        <rect x="20" y="220" width="250" height="60" rx="8" class="box-stock" stroke-width="1.5"></rect>
+        <text x="32" y="244" class="label">Smelting gold ore</text>
+        <text x="32" y="264" class="small">Mining: 1 ore → 1 Gold Bar</text>
+
+        <rect x="20" y="300" width="250" height="110" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="32" y="324" class="label">Battlegrounds</text>
+        <text x="32" y="344" class="small">honor per kill and per match (stock)</text>
+        <text x="32" y="360" class="small">a Mark of Honor per match (stock)</text>
+        <text x="32" y="376" class="small">gold bars by thirds of honor gained,</text>
+        <text x="32" y="392" class="small">within your team: 3 · 2 · 1 (155u)</text>
+
+        <rect x="20" y="430" width="250" height="60" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="32" y="454" class="label">Travelling traders</text>
+        <text x="32" y="474" class="small">wandering goblins: 6 gold, a few at a time</text>
+
+        <rect x="20" y="510" width="250" height="45" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="32" y="538" class="label">Chests, now and then</text>
+
+        <!-- held -->
+        <rect x="380" y="50"  width="240" height="80" rx="10" class="cur-gem" stroke-width="2"></rect>
+        <text x="394" y="76"  class="label">Gems</text>
+        <text x="394" y="96"  class="small">stack to the stones in the icon</text>
+        <text x="394" y="112" class="small">(617l; Tigerseye 3, Arcane Crystal 1)</text>
+
+        <rect x="380" y="200" width="240" height="80" rx="10" class="cur-honor" stroke-width="2"></rect>
+        <text x="394" y="226" class="label">Honor</text>
+        <text x="394" y="246" class="small">a counter with no real cap</text>
+        <text x="394" y="262" class="small">(MaxHonorPoints raised, C028)</text>
+
+        <rect x="380" y="320" width="240" height="70" rx="10" class="cur-gold" stroke-width="2"></rect>
+        <text x="394" y="346" class="label">Gold Bars</text>
+        <text x="394" y="366" class="small">stack to 6 (617l, 155u)</text>
+
+        <rect x="380" y="430" width="240" height="60" rx="10" class="cur-mark" stroke-width="2"></rect>
+        <text x="394" y="456" class="label">Marks of Honor</text>
+        <text x="394" y="474" class="small">1 mark → Commendation → ~1,850 honor</text>
+
+        <!-- the goblin exchange, between gems and honor -->
+        <rect x="720" y="120" width="300" height="80" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="732" y="144" class="label">Goblin auction houses</text>
+        <text x="732" y="164" class="rate">gem → 10–150 honor, ±5–15%</text>
+        <text x="732" y="182" class="small">bought at once; deposit back; tenths carried (155t)</text>
+
+        <!-- sinks -->
+        <rect x="720" y="220" width="300" height="60" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="732" y="244" class="label">Glyph trader, each capital</text>
+        <text x="732" y="264" class="rate">minor 33,333 · major 77,777 honor</text>
+
+        <rect x="720" y="300" width="300" height="70" rx="8" class="box-stock" stroke-width="1.5"></rect>
+        <text x="732" y="324" class="label">Supply officers (8)</text>
+        <text x="732" y="344" class="small">level 10–60 gear, for honor only</text>
+        <text x="732" y="360" class="small">prices under review (155u)</text>
+
+        <rect x="720" y="390" width="300" height="50" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="732" y="412" class="label">Any vendor</text>
+        <text x="732" y="430" class="rate">Gold Bar → 4 gold (decided)</text>
+
+        <rect x="720" y="455" width="300" height="45" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="732" y="483" class="label">Clan gem vault (storage)</text>
+
+        <rect x="720" y="510" width="300" height="42" rx="8" class="box-open" stroke-width="1.5"></rect>
+        <text x="732" y="536" class="label">Gold bars' main use: to decide</text>
+
+        <rect x="380" y="580" width="640" height="100" rx="8" class="box-stock" stroke-width="1.5"></rect>
+        <text x="394" y="604" class="label">Into the professions (recipes that use it, all levels)</text>
+        <text x="394" y="626" class="rate">Gold Bar: Blacksmithing 15 · Jewelcrafting 5 · Tailoring 4 · Engineering 1</text>
+        <text x="394" y="646" class="rate">Azeroth gems: Blacksmithing 126 · Jewelcrafting 68 · Engineering 57</text>
+        <text x="394" y="664" class="rate">              Tailoring 17 · Leatherworking 10 · Enchanting 6 · Alchemy 1</text>
+
+        <!-- edges: sources to held -->
+        <path class="edge edge-gem"   d="M270,75 C320,75 330,90 378,90"   marker-end="url(#ah)"></path>
+        <path class="edge edge-gem"   d="M270,160 C320,160 330,110 378,105" marker-end="url(#ah)"></path>
+        <path class="edge edge-gold"  d="M270,175 C330,175 330,340 378,340" marker-end="url(#ah)"></path>
+        <path class="edge edge-gold"  d="M270,250 C320,250 330,350 378,350" marker-end="url(#ah)"></path>
+        <path class="edge edge-honor" d="M270,335 C320,335 330,245 378,245" marker-end="url(#ah)"></path>
+        <path class="edge edge-gold"  d="M270,385 C320,385 330,362 378,362" marker-end="url(#ah)"></path>
+        <path class="edge edge-mark"  d="M270,360 C320,360 330,460 378,460" marker-end="url(#ah)"></path>
+
+        <!-- held to exchange and sinks -->
+        <path class="edge edge-gem"   d="M620,90 C670,90 670,150 718,150"   marker-end="url(#ah)"></path>
+        <path class="edge edge-honor" d="M720,190 C600,200 670,230 622,236" marker-end="url(#ah)"></path>
+        <path class="edge edge-honor" d="M620,240 C670,240 670,250 718,250" marker-end="url(#ah)"></path>
+        <path class="edge edge-honor" d="M620,260 C670,260 670,320 718,320" marker-end="url(#ah)"></path>
+        <path class="edge edge-mark"  d="M620,445 C720,420 670,290 622,272" marker-end="url(#ah)"></path>
+        <path class="edge edge-gold"  d="M620,350 C675,350 670,412 718,412" marker-end="url(#ah)"></path>
+        <path class="edge edge-gold"  d="M620,370 C675,370 670,470 718,470" marker-end="url(#ah)"></path>
+        <path class="edge edge-gem"   d="M620,120 C710,300 660,470 718,478" marker-end="url(#ah)"></path>
+        <path class="edge edge-gold"  d="M620,380 C675,380 670,530 718,530" marker-end="url(#ah)"></path>
+        <path class="edge edge-gold"  d="M270,460 C320,460 330,372 378,372" marker-end="url(#ah)"></path>
+        <path class="edge edge-gold"  d="M270,532 C330,532 330,380 378,380" marker-end="url(#ah)"></path>
+        <path class="edge edge-gold"  d="M500,390 C500,480 520,540 520,578" marker-end="url(#ah)"></path>
+        <path class="edge edge-gem"   d="M400,130 C360,300 360,520 430,578" marker-end="url(#ah)"></path>
+      </svg>
+    </div>
+    <p class="note">Not on the chart: sockets take cut gems (155p); battleground kills also move experience from the slain to the slayer (155u), which is not a currency.</p>
+  </section>
+
+  <section aria-labelledby="calc-h">
+    <h2 id="calc-h">Gems to glyphs</h2>
+    <div class="calc">
+      <div class="calc-row">
+        <label for="gem">Gem
+          <select id="gem"></select>
+        </label>
+        <label for="count">How many
+          <input id="count" type="number" min="1" step="1" value="67" inputmode="numeric">
+        </label>
+      </div>
+      <div class="out" aria-live="polite">
+        <div><b id="o-honor">–</b><span>honor at the gem's value</span></div>
+        <div><b id="o-range">–</b><span>range after ±5–15% per sale</span></div>
+        <div><b id="o-minor">–</b><span>of a minor glyph (33,333)</span></div>
+        <div><b id="o-major">–</b><span>of a major glyph (77,777)</span></div>
+      </div>
+      <p class="note">The range is the far ends: every sale 15% up, or every sale 15% down. Over many sales the ups and downs roughly cancel. Tenths left over carry to the next sale.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="num-h">
+    <h2 id="num-h">The numbers</h2>
+    <div class="tables">
+      <div class="tbl">
+        <table>
+          <caption>Honor per gem at the goblins (155t)</caption>
+          <thead><tr><th>Level</th><th>Gems</th><th class="num">Honor</th><th class="num">Minor</th><th class="num">Major</th></tr></thead>
+          <tbody id="gem-rows"></tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <caption>Set so far</caption>
+          <tbody>
+            <tr><td>Minor glyph</td><td class="num">33,333 honor</td><td><span class="chip plan">decided</span></td></tr>
+            <tr><td>Major glyph</td><td class="num">77,777 honor</td><td><span class="chip plan">decided</span></td></tr>
+            <tr><td>Honor cap</td><td class="num">none (2,147,483,647)</td><td><span class="chip plan">built, C028</span></td></tr>
+            <tr><td>Goblin price swing</td><td class="num">±5–15%</td><td><span class="chip plan">decided</span></td></tr>
+            <tr><td>Gold bars, top third of your team</td><td class="num">3</td><td><span class="chip plan">decided</span></td></tr>
+            <tr><td>Gold bars, middle third</td><td class="num">2</td><td><span class="chip plan">decided</span></td></tr>
+            <tr><td>Gold bars, bottom third</td><td class="num">1</td><td><span class="chip plan">decided</span></td></tr>
+            <tr><td>Gold Bar stack</td><td class="num">6</td><td><span class="chip plan">decided</span></td></tr>
+            <tr><td>Gold Bar to a vendor</td><td class="num">4 gold</td><td><span class="chip plan">decided</span></td></tr>
+            <tr><td>Gold Bar from a travelling trader</td><td class="num">6 gold, few</td><td><span class="chip plan">decided</span></td></tr>
+            <tr><td>A Mark of Honor, traded</td><td class="num">~1,850 honor</td><td><span class="chip stock">stock</span></td></tr>
+            <tr><td>Onyxia's hoard, gold bars</td><td class="num">15–45</td><td><span class="chip plan">built</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="prof-h">
+    <h2 id="prof-h">Into the professions</h2>
+    <p class="note">How many recipes use each as a reagent, counted from the client's recipe list (every profession recipe in SkillLineAbility.dbc whose spell lists the item among its reagents, Spell.dbc). All levels; basic's own limits (no trainer past 300, 155n) leave some of the higher ones out of reach.</p>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Material</th><th class="num">Blacksmithing</th><th class="num">Jewelcrafting</th><th class="num">Engineering</th><th class="num">Tailoring</th><th class="num">Leatherworking</th><th class="num">Enchanting</th><th class="num">Alchemy</th></tr></thead>
+        <tbody id="prof-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="open-h">
+    <h2 id="open-h">Not decided yet</h2>
+    <ul class="open">
+      <li><b>Gold bars' main use.</b> Kept in the clan vault and sold to vendors for now.</li>
+      <li><b>Supply officers' prices.</b> Their gear costs honor only; gem sales and traded marks (about 1,850 honor each) add honor, so honor prices may rise.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+// honor per gem: ten times the badge curve (1 at item level 15, 15 at 60), rounded (155t)
+const GEMS = [
+  { lvl: "7, 15", names: "Malachite, Tigerseye, Small Lustrous Pearl", honor: 10 },
+  { lvl: "20", names: "Shadowgem", honor: 30 },
+  { lvl: "25", names: "Moss Agate, Iridescent Pearl", honor: 40 },
+  { lvl: "30", names: "Lesser Moonstone", honor: 60 },
+  { lvl: "35", names: "Jade", honor: 70 },
+  { lvl: "40", names: "Citrine, Black Pearl, Golden Pearl", honor: 90 },
+  { lvl: "45", names: "Aquamarine", honor: 100 },
+  { lvl: "50", names: "Star Ruby, Souldarite, Blood of the Mountain", honor: 120 },
+  { lvl: "55", names: "Blue Sapphire, Large Opal", honor: 130 },
+  { lvl: "60", names: "Arcane Crystal, Huge Emerald, Azerothian Diamond", honor: 150 },
+];
+const MINOR = 33333, MAJOR = 77777;
+// recipes using each material, by profession (from the client's recipe list, 2026-09-26)
+const PROF = ["Blacksmithing", "Jewelcrafting", "Engineering", "Tailoring", "Leatherworking", "Enchanting", "Alchemy"];
+const USES = [
+  ["Gold Bar",              { Blacksmithing: 15, Jewelcrafting: 5, Engineering: 1, Tailoring: 4 }],
+  ["Malachite",             { Blacksmithing: 3, Jewelcrafting: 3, Engineering: 4 }],
+  ["Tigerseye",             { Blacksmithing: 5, Jewelcrafting: 3, Engineering: 3 }],
+  ["Small Lustrous Pearl",  { Blacksmithing: 2, Jewelcrafting: 2, Tailoring: 2, Leatherworking: 2 }],
+  ["Shadowgem",             { Blacksmithing: 5, Jewelcrafting: 4, Engineering: 2 }],
+  ["Moss Agate",            { Blacksmithing: 5, Jewelcrafting: 5, Engineering: 5, Leatherworking: 1 }],
+  ["Iridescent Pearl",      { Blacksmithing: 2, Tailoring: 3, Leatherworking: 1, Enchanting: 1 }],
+  ["Lesser Moonstone",      { Blacksmithing: 8, Jewelcrafting: 6, Engineering: 2 }],
+  ["Jade",                  { Blacksmithing: 4, Jewelcrafting: 7, Engineering: 6, Tailoring: 1, Leatherworking: 3 }],
+  ["Citrine",               { Blacksmithing: 7, Jewelcrafting: 7, Engineering: 10, Tailoring: 1, Leatherworking: 1 }],
+  ["Black Pearl",           { Blacksmithing: 2, Jewelcrafting: 2, Tailoring: 1, Leatherworking: 2, Enchanting: 1 }],
+  ["Golden Pearl",          { Tailoring: 5, Enchanting: 2 }],
+  ["Aquamarine",            { Blacksmithing: 6, Jewelcrafting: 5, Engineering: 5, Enchanting: 1 }],
+  ["Star Ruby",             { Blacksmithing: 16, Jewelcrafting: 8, Engineering: 10, Tailoring: 2 }],
+  ["Souldarite",            { Blacksmithing: 6 }],
+  ["Blood of the Mountain", { Blacksmithing: 5, Jewelcrafting: 1 }],
+  ["Blue Sapphire",         { Blacksmithing: 11, Jewelcrafting: 3, Engineering: 2 }],
+  ["Large Opal",            { Blacksmithing: 13, Jewelcrafting: 3, Engineering: 3 }],
+  ["Arcane Crystal",        { Jewelcrafting: 1, Enchanting: 1, Alchemy: 1 }],
+  ["Huge Emerald",          { Blacksmithing: 14, Jewelcrafting: 4, Engineering: 1, Tailoring: 1 }],
+  ["Azerothian Diamond",    { Blacksmithing: 12, Jewelcrafting: 4, Engineering: 4, Tailoring: 1 }],
+];
+const prow = document.getElementById("prof-rows");
+USES.forEach(([name, by]) => {
+  const tr = document.createElement("tr");
+  const th = document.createElement("td"); th.textContent = name; if (name === "Gold Bar") th.style.fontWeight = "700"; tr.append(th);
+  PROF.forEach(p => { const td = document.createElement("td"); td.className = "num"; td.textContent = by[p] || "·"; tr.append(td); });
+  prow.append(tr);
+});
+const fmt = n => n.toLocaleString("en-US");
+
+const rows = document.getElementById("gem-rows");
+GEMS.forEach(g => {
+  const tr = document.createElement("tr");
+  [g.lvl, g.names, fmt(g.honor), fmt(Math.ceil(MINOR / g.honor)), fmt(Math.ceil(MAJOR / g.honor))].forEach((v, i) => {
+    const td = document.createElement("td"); td.textContent = v; if (i >= 2) td.className = "num"; tr.append(td);
+  });
+  rows.append(tr);
+});
+
+const sel = document.getElementById("gem");
+GEMS.forEach((g, i) => {
+  g.names.split(", ").forEach(n => {
+    const o = document.createElement("option"); o.value = i; o.textContent = n + " (" + g.honor + ")"; sel.append(o);
+  });
+});
+sel.value = "9";
+const count = document.getElementById("count");
+function update() {
+  const g = GEMS[+sel.value] || GEMS[0];
+  const n = Math.max(0, Math.floor(+count.value || 0));
+  const honor = g.honor * n;
+  document.getElementById("o-honor").textContent = fmt(honor);
+  document.getElementById("o-range").textContent = fmt(Math.floor(honor * 0.85)) + "–" + fmt(Math.floor(honor * 1.15));
+  document.getElementById("o-minor").textContent = Math.round(honor / MINOR * 100) + "%";
+  document.getElementById("o-major").textContent = Math.round(honor / MAJOR * 100) + "%";
+}
+sel.addEventListener("change", update);
+count.addEventListener("input", update);
+// the Arcane Crystal row selects the first name of its group; pick it by label
+[...sel.options].forEach(o => { if (o.textContent.startsWith("Arcane Crystal")) o.selected = true; });
+update();
+</script>
