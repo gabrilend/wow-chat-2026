@@ -20,6 +20,15 @@ Verbatim, 2026-09-24:
 > in a battleground, they will leave the battleground and join their group
 > instead.
 
+Change, verbatim, 2026-09-26 (from 155u): "can we make it so if you wanna
+join a battleground you gotta go to the battleground and talk to the
+battlemasters? [...] This means buddy-bots will have to walk to them when
+the player does, almost ensuring they won't be in the same battleground.
+But sometimes it'll happen, especially if they all gather for it."
+So a buddy doesn't join its owner's queue from wherever it stands: when the
+owner queues at a battlemaster, each buddy walks to that battlemaster and
+queues there itself (155u).
+
 ## Current Behavior
 
 Buddies do not exist yet. The bot module can queue random bots for
