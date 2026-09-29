@@ -357,8 +357,9 @@ Enclave on top.
   certain number of sacrificed characters causes it to shift". How many is
   still to set.
 - (Answered 2026-09-25) 148a's premise was wrong; corrected in 148a.
-- A death knight whose account has no character of 55 or higher left (the
-  only one deleted after the death knight was made) owes a soul it can't
-  pay, and stays in Acherus. Is that right, or does Sargobras let it go?
+- (Answered 2026-09-29: "yes.") A death knight whose account has no
+  character of 55 or higher left (the only one deleted after the death
+  knight was made) owes a soul it can't pay, and stays in Acherus. Is that
+  right, or does Sargobras let it go?
 - A held soul's own buddies (617): they belong to that character, so do
   they wait with it on the holding account, and come back with it?

@@ -16,6 +16,7 @@ wow-chat-2026/
 │   ├── roaming-pattern.md         The roaming pattern, language-free: grid, paint, sensing, waypoints, the kraken (built twice: Lua model, gallery JavaScript)
 │   ├── architecture.md            System architecture and data flow
 │   ├── configuration.md           Configuration options reference
+│   ├── custom-id-ranges.md        How added rows are numbered (issue x 10,000; the spawn cap)
 │   ├── installation.md            Setup and installation guide (server)
 │   ├── connection-guide.md        Player connection guide (client)
 │   ├── rmail-integration.md       rmail setup for server services
