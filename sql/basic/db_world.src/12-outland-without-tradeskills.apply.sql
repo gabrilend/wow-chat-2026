@@ -309,6 +309,26 @@ WHERE s.`Entry` IN (SELECT `skinloot` FROM `basic_155n_skinloot`)
   AND NOT EXISTS (SELECT 1 FROM `creature_template` t WHERE t.`skinloot` = s.`Entry`);
 DELETE s FROM `skinning_loot_template` s JOIN `basic_155n_skinning_loot` b ON b.`Entry` = s.`Entry` AND b.`Item` = s.`Item`;
 
+-- ---- 9. nothing asks for more than 300 ----------------------------------------------
+-- Skills stop at 300 here (the level cap, 60, times five), but 46 quests
+-- and 19 skill conditions (in loot and dialogue rules) asked for 325 to
+-- 450: the quests could never be done, and every start logged 34 of them
+-- and all 19 conditions.
+-- They ask for 300 instead (owner, 2026-09-29: "can we just set their
+-- required profession level to 300 in the same patch that sets the max
+-- profession level to 300?"). The old numbers are saved; the revert puts
+-- them back.
+CREATE TABLE IF NOT EXISTS `basic_155n_quest_skill` (`ID` int unsigned NOT NULL, `RequiredSkillPoints` smallint unsigned NOT NULL, PRIMARY KEY (`ID`));
+INSERT IGNORE INTO `basic_155n_quest_skill` (`ID`, `RequiredSkillPoints`)
+SELECT `ID`, `RequiredSkillPoints` FROM `quest_template_addon` WHERE `RequiredSkillPoints` > 300;   -- the quest's skill lives in its addon row
+UPDATE `quest_template_addon` q JOIN `basic_155n_quest_skill` b ON b.`ID` = q.`ID` SET q.`RequiredSkillPoints` = 300;
+
+-- skill conditions (condition type 7: value 1 the skill, value 2 the rank)
+CREATE TABLE IF NOT EXISTS `basic_155n_skill_conditions` LIKE `conditions`;
+INSERT IGNORE INTO `basic_155n_skill_conditions`
+SELECT * FROM `conditions` WHERE `ConditionTypeOrReference` = 7 AND `ConditionValue2` > 300;
+UPDATE `conditions` SET `ConditionValue2` = 300 WHERE `ConditionTypeOrReference` = 7 AND `ConditionValue2` > 300;
+
 DROP TABLE `tmp_155n_recipes`;
 DROP TABLE `tmp_155n_empty`;
 DROP TABLE `tmp_155n_pools`;

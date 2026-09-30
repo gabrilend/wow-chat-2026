@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS `basic_155n_lootid` (`entry` int unsigned NOT NULL, `
 CREATE TABLE IF NOT EXISTS `basic_155n_conditions` LIKE `conditions`;
 CREATE TABLE IF NOT EXISTS `basic_155n_linked_respawn` LIKE `linked_respawn`;
 CREATE TABLE IF NOT EXISTS `basic_155n_skinning_loot` LIKE `skinning_loot_template`;
+CREATE TABLE IF NOT EXISTS `basic_155n_quest_skill` (`ID` int unsigned NOT NULL, `RequiredSkillPoints` smallint unsigned NOT NULL, PRIMARY KEY (`ID`));
+CREATE TABLE IF NOT EXISTS `basic_155n_skill_conditions` LIKE `conditions`;
 
 INSERT IGNORE INTO `pool_template`          SELECT * FROM `basic_155n_pool_template`;
 INSERT IGNORE INTO `pool_pool`              SELECT * FROM `basic_155n_pool_pool`;
@@ -64,6 +66,15 @@ INSERT IGNORE INTO `conditions`             SELECT * FROM `basic_155n_conditions
 INSERT IGNORE INTO `linked_respawn`         SELECT * FROM `basic_155n_linked_respawn`;
 INSERT IGNORE INTO `skinning_loot_template` SELECT * FROM `basic_155n_skinning_loot`;
 
+-- step 9's skill numbers: the quests' back; each capped condition swapped for its original
+UPDATE `quest_template_addon` q JOIN `basic_155n_quest_skill` b ON b.`ID` = q.`ID` SET q.`RequiredSkillPoints` = b.`RequiredSkillPoints`;
+DELETE c FROM `conditions` c JOIN `basic_155n_skill_conditions` b
+  ON  b.`SourceTypeOrReferenceId` = c.`SourceTypeOrReferenceId` AND b.`SourceGroup` = c.`SourceGroup`
+  AND b.`SourceEntry` = c.`SourceEntry` AND b.`SourceId` = c.`SourceId` AND b.`ElseGroup` = c.`ElseGroup`
+  AND b.`ConditionTypeOrReference` = c.`ConditionTypeOrReference` AND b.`ConditionTarget` = c.`ConditionTarget`
+  AND b.`ConditionValue1` = c.`ConditionValue1` AND c.`ConditionValue2` = 300 AND b.`ConditionValue3` = c.`ConditionValue3`;
+INSERT IGNORE INTO `conditions`             SELECT * FROM `basic_155n_skill_conditions`;
+
 DROP TABLE `basic_155n_gameobject`;
 DROP TABLE `basic_155n_gameobject_addon`;
 DROP TABLE `basic_155n_game_event_gameobject`;
@@ -88,6 +99,8 @@ DROP TABLE `basic_155n_lootid`;
 DROP TABLE `basic_155n_conditions`;
 DROP TABLE `basic_155n_linked_respawn`;
 DROP TABLE `basic_155n_skinning_loot`;
+DROP TABLE `basic_155n_quest_skill`;
+DROP TABLE `basic_155n_skill_conditions`;
 -- working tables, in case an apply stopped part-way
 DROP TABLE IF EXISTS `tmp_155n_live_refs`;
 DROP TABLE IF EXISTS `tmp_155n_locks`;

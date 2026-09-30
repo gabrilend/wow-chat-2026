@@ -223,6 +223,12 @@ report "no creature has an empty loot table, no loot hands over a missing shared
         UNION ALL SELECT 'respawn link names missing object', COUNT(*) FROM ${WORLD}.linked_respawn r WHERE r.linkType IN (1, 2) AND NOT EXISTS (SELECT 1 FROM ${WORLD}.gameobject g WHERE g.guid = r.linkedGuid) HAVING COUNT(*) > 0")"
 # }}}
 
+# {{{ nothing asks for more than 300 skill (155n step 9)
+report "no quest or skill condition asks for more than 300 in a skill" \
+    "$(run_sql "SELECT 'quest', ID FROM ${WORLD}.quest_template_addon WHERE RequiredSkillPoints > 300
+        UNION ALL SELECT 'condition', SourceGroup FROM ${WORLD}.conditions WHERE ConditionTypeOrReference = 7 AND ConditionValue2 > 300")"
+# }}}
+
 # {{{ spawn ids under the server's cap
 # The server hands out new spawn ids from MAX(guid)+1 and stops at startup
 # ("Creature spawn id overflow", TCE00007) the first time one passes
