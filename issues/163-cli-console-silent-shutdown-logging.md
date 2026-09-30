@@ -1,8 +1,23 @@
-# 163 - Log Why the Console Thread Shuts the World Down
+# 163 - Log Why the World Stops
 
 ## Status: Open
 
 ## Current Behavior
+
+**Every stop now says who asked for it, 2026-09-29 (B043)** (owner: "I'm
+wondering how far upstream we could trace that particular problem, and
+then if we could add output for each similar type of problem" /
+"definitely this one"). The world's stop call keeps the file and line of
+the first request; a macro makes each of the ~19 existing calls pass its
+own, and the two places that set the stop flag directly (a timed or
+immediate `.server shutdown`) go through the call too. The halt reads
+"Halting process... (asked for at ObjectMgr.cpp:7783; exit code 1: an
+error; its ERROR line is above)", and a stop signal logs its name first
+(SIGINT: Ctrl+C in the terminal; SIGTERM: a kill or service manager).
+B039 is kept (its line may still fire someday). Proposed, not built: a
+load-time check of every ID counter against its limit, naming the rows
+past it (the earliest point this morning's halt was knowable). Not yet
+compiled.
 
 `CliRunnable.cpp` (`source-beta/src/server/apps/worldserver/CommandLine/CliRunnable.cpp`)
 runs a dedicated thread that reads worldserver console commands from
