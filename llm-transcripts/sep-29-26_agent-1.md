@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-29 14:41:57
+Generated on: 2026-09-29 18:17:24
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -1370,6 +1370,120 @@ if any are left. It failed on the old database and passes on the new one.
    mistaken commit by path.
 3. **B039 (the crash-logging patch):** keep or drop? The per-player selection
    patches (B040/B041) and issue 164 commit together with that answer.
+
+--------------------------------------------------------------------------------
+
+### User Request 12
+
+okay the server has been recompiled and started. Can you check the logs? Both
+logs, for warnings or errors, then categorize them for me?
+
+alright now I got a buddy bot to spawn, and they're very blinged out. So cool. I
+spawned in Tirisfal glades down in the crypt, and they followed me out... but
+then just kinda stood there. until they left my party, then they started moving.
+They moved in my direction, possibly by chance because that's how the zone kinda
+looks, and then they rejoined my party at the right distance and walked up to me
+and just stood there. I think they might be using playerbots AI sometimes?
+Sometimes they say "reset to default AI" which seems weird.
+
+also, death knights are starting at level 60 and they should start at 55.
+
+I'm getting some errors in the worldserver log from the buddy bots, that's
+probably the pathing issues.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 12
+
+> Server log: nothing but two harmless startup lines. Error log: down to 55
+> lines. Pulling the real numbers for the buddy lines:
+
+> Two different buddy problems show up in the log, plus your report. Checking
+> the "reset to default AI" message in the bot module, since it probably
+> explains the standing still:
+
+> Findings so far. Three issues trace to clear causes, and one is my fault.
+> Checking the last two useless shared loot lists:
+
+> Both lists exist in vanilla too. They probably lost their only users when step
+> 8 removed the unused Outland skinning tables. Checking:
+
+> The Knothide Leather list (21887) is confirmed: its only user was one of the
+> unused Outland skinning tables step 8 removed. For the T7.5 glove-token list
+> (34377), searching every basic backup table:
+
+> Fixed and tested: 25/25, and the installed config now says 55. Committing:
+
+> Committed. Now the buddy movement. Checking the roaming data for the two areas
+> in the errors: the crypt (2117, "no row") and Deathknell (154, "no waypoint"):
+
+Here's the categorised log report. The death-knight level is fixed and
+committed; the buddy movement needs a deeper look, and I've stopped short of
+that for now.
+
+## Logs
+**Server log:** clean. Only two harmless lines: "Can't set process priority"
+(normal without root) and the routine invalid-mail cleanup.
+
+**Auth log:** clean.
+
+**Error log:** 55 lines, down from about 1,400:
+
+| Kind | Count | Cause | Status |
+|---|---|---|---|
+| Quests needing skill above 300 | 34 | The level-60 cap limits skill to 300 | Waiting on your OK to remove them in the 300-skill cap SQL (155n) |
+| Skill conditions above 300 | 19 | Same | Same |
+| Shared loot list nothing uses | 2 | One (Knothide Leather) lost its only user when step 8 removed the unused Outland skinning tables; the other (T7.5 glove tokens) is unused in stock AzerothCore too | Small follow-up to step 8 for the first; the second is stock |
+
+**Buddy lines in the server log:**
+- 18× "Pozeta found no waypoint in Deathknell (area 154)… roaming paused 10
+  s". She was near the crypt exit on the hillside, at heights 126 and 141.
+- 1× "area 2117 has no row in buddy_area_centre". Area 2117 is the Shadow
+  Grave, the crypt where undead start. It's missing from the roaming table, so
+  buddies can't roam there.
+
+## Death knights starting at 60: my regression, fixed
+The setting the level-cap patch pins is **the level a new death knight starts
+at**, not a heroic-dungeon level. Both the patch's comment and I had it wrong.
+Before my ordering fix, its value failed the server's check, so the server fell
+back to its default of 55. Once the patches ran in the right order, the patch
+pinned it to 60. It now keeps the stock 55, lowered only where the cap is below
+it.
+- Committed, and the config test expects 55.
+- I set your installed config to 55 too; a server restart applies it.
+- Death knights already created at 60 stay at 60.
+
+## Your buddy's behaviour
+My reading of the logs and your description, not yet verified in code:
+1. **Following you out of the crypt** was the bot module's default behaviour.
+   The crypt has no roaming data, so her roaming never started there, and bots
+   follow their master by default.
+2. **Standing still in Deathknell** matches the 18 "no waypoint" lines. Each
+   failed search pauses her for 10 seconds, and it failed again every time from
+   the crypt-exit hillside.
+3. **"AI was reset to defaults"** is the bot module's own message. It fires when
+   a bot's group changes, so it would come every time the party check moves her
+   in or out of your party. It resets her behaviours, and our roaming check
+   restores them a few seconds later. It's noise from the bot module, not a
+   second AI taking over. It can be silenced.
+4. **Why the crypt is missing:** my guess is the roaming-area generator reads
+   outdoor terrain, and the crypt exists only as indoor building data, so it
+   never sees it. I haven't confirmed this.
+
+Did you see the entrance behind Sargobras when she first appeared, the steps
+forward and the wave or salute?
+
+**Next steps, most valuable first:**
+1. Find why roaming fails from the Deathknell hillside (the waypoint search).
+2. Give indoor starting areas like the Shadow Grave roaming data, or let buddies
+   use the surrounding area's.
+3. Silence the "AI was reset" message.
+4. The Knothide Leather follow-up to step 8.
+
+Which should I take on?
+
+Still waiting on you: the 34 quests, `.profile` (one more `touch
+/tmp/claude-allow-foreign-commit`), and B039 keep or drop.
 
 --------------------------------------------------------------------------------
 

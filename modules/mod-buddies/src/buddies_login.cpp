@@ -123,7 +123,7 @@ static constexpr float  HANG_RELEASE_YARDS    = 10.0f;   // this far: it runs of
 
 enum class Greeting : uint8 { None = 0, Wave = 1, Salute = 2 };
 
-// stage 1 arriving, 2 walking, 3 hanging out
+// stage 1 arriving, 2 walking (then turning to the owner), 3 the gesture, 4 hanging out
 struct Entrance
 {
     uint64   startMs, dueMs;
@@ -176,8 +176,8 @@ static bool BeginEntrance(Player* buddy, Player* owner, uint32 buddyGuid)
     return true;
 }
 
-// One stage of each entrance that is due: 1 the steps, 2 the gesture,
-// 3 the hang-out, a quarter second at a time.
+// One stage of each entrance that is due: 1 the steps, 2 the turn, 3 the gesture,
+// 4 the hang-out, a quarter second at a time.
 static void StepEntrances(uint64 now)
 {
     for (auto it = sEntrances.begin(); it != sEntrances.end(); )
@@ -219,12 +219,34 @@ static void StepEntrances(uint64 now)
         bool ownerHere = owner && owner->IsInWorld() && owner->GetMapId() == buddy->GetMapId();
         if (e.stage == 2)
         {
-            // the gesture, to the owner
+            // the steps done: stop and turn to the owner. The gesture waits
+            // for the next tick: played in the same moment as the walk's
+            // end and the turn, the client showed none (2026-09-29: "she
+            // walked forward, but didn't wave or salute"; the greeting was
+            // recorded all the same)
+            if (buddy->isMoving())
+            {
+                if (ai)
+                    ai->SetNextCheckDelay(HANG_TICK_MS * 2);
+                e.dueMs = now + HANG_TICK_MS;          // still walking: next tick
+                ++it;
+                continue;
+            }
             if (ownerHere)
                 buddy->SetFacingToObject(owner);
+            if (ai)
+                ai->SetNextCheckDelay(HANG_TICK_MS * 4);
+            e.stage = 3;
+            e.dueMs = now + HANG_TICK_MS * 2;          // half a second to finish turning
+            ++it;
+            continue;
+        }
+        if (e.stage == 3)
+        {
+            // the gesture, to the owner
             buddy->HandleEmoteCommand(e.greeting == Greeting::Wave ? EMOTE_ONESHOT_WAVE : EMOTE_ONESHOT_SALUTE);
             CharacterDatabase.Execute("UPDATE buddy_roster SET greeting = {} WHERE buddy = {}", uint8(e.greeting), it->first);
-            e.stage = 3;
+            e.stage = 4;
         }
         // the hang-out: the owner gone, or 10 yards from their spot, lets
         // it go; 5 yards and it turns to them; nearer, it stands

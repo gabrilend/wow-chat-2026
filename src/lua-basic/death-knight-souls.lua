@@ -64,6 +64,9 @@ local ACHERUS_MAP        = 609                      -- the Scarlet Enclave, wher
 local ACHERUS_AREA       = 4342                     -- "Acherus: The Ebon Hold" on map 609: the necropolis itself (AreaTable.dbc)
 local SARGOBRAS_SPOT     = { map = 609, x = 2352.6, y = -5666.8, z = 426.07, o = 3.77 } -- a step in front of the Heart of Acherus one (spawn 7180002), facing him
 local LICH_KING          = 25462                    -- gives the chain's first quest, In Service Of The Lich King (12593)
+local INTRO_LAST_QUEST   = 13166                    -- The Battle For The Ebon Hold: the chain's last shared quest
+local FLAME_SPELL        = 51195                    -- Cosmetic - Low Poly Fire (Spell.dbc): a soft flame, no harm
+local VANISH_AFTER_MS    = 3000                     -- how long he burns before he is gone
 
 local STATE_OWED, STATE_GIVEN, STATE_RETURNING = 0, 1, 2
 local INTID_RETURN       = 1                        -- the undo; a soul's own intid is its guid (always far above 2)
@@ -106,6 +109,31 @@ local function hold_selection(player, hold)
         print("[death-knight-souls] ERROR: could not " .. (hold and "hold" or "release") .. " what "
             .. player:GetName() .. " can select (is the server built with B040/B041, issue 164?): " .. tostring(err))
     end
+end
+-- }}}
+
+-- {{{ local function intro_done
+-- Whether the death knight has finished Acherus's quest chain: "The Battle
+-- For The Ebon Hold" (13166) turned in, the last quest both factions share
+-- (only the trips to Stormwind or Orgrimmar come after). Sargobras gives a
+-- soul back only then (owner, 2026-09-29: "Sargobras can only return a DK
+-- to life once they've completed the intro zone").
+local function intro_done(player)
+    return player:GetQuestRewardStatus(INTRO_LAST_QUEST)
+end
+-- }}}
+
+-- {{{ local function vanish
+-- His part done, Sargobras goes up in a soft flame and is gone (owner,
+-- 2026-09-29: "Can we make him invisible over a short duration after
+-- you've made your choice of who to sacrifice? Maybe a soft fire
+-- effect."). The flame burns a few seconds, then he despawns; being a
+-- spawn from the database, he comes back after his respawn time (300 s)
+-- for the next death knight. Everyone near sees him go, not only the one
+-- who traded: a per-player vanish would need its own mechanism.
+local function vanish(creature)
+    creature:CastSpell(creature, FLAME_SPELL, true)
+    creature:RegisterEvent(function(_, _, _, c) c:DespawnOrUnsummon(0) end, VANISH_AFTER_MS, 1)
 end
 -- }}}
 
@@ -298,8 +326,10 @@ local function on_hello(event, player, creature)
         end
         player:GossipSendMenu(TEXT_OWED, creature)
     elseif row and row.state == STATE_GIVEN then
-        player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "I want my old life back.", 0, INTID_RETURN, false,
-            "This death knight will be erased for good, and your old self returns to your character list, undead-pale. Are you sure?")
+        if intro_done(player) then                   -- only once Acherus's chain is done
+            player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "I want my old life back.", 0, INTID_RETURN, false,
+                "This death knight will be erased for good, and your old self returns to your character list, undead-pale. Are you sure?")
+        end
         if not player:IsInGuild() and BuddiesClanPopup then
             player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "Let me name our clan.", 0, INTID_CLAN, true, BuddiesClanPopup)
         end
@@ -316,11 +346,14 @@ local function on_select(event, player, creature, sender, intid, code)
     local row = player:GetClass() == CLASS_DEATH_KNIGHT and ledger(player:GetGUIDLow()) or nil
     if not row then return end
     if row.state == STATE_GIVEN and intid == INTID_RETURN then
-        take_back(player, row)
+        if intro_done(player) then take_back(player, row) end    -- the menu only offers it then; checked again here
     elseif row.state == STATE_GIVEN and intid == INTID_CLAN then
         if BuddiesTryClanName then BuddiesTryClanName(player, creature, code) end
     elseif row.state == STATE_OWED and intid ~= INTID_RETURN and intid ~= INTID_CLAN then
-        if give_soul(player, intid) and BuddiesTryClanName then BuddiesTryClanName(player, creature, code) end
+        if give_soul(player, intid) then
+            if BuddiesTryClanName then BuddiesTryClanName(player, creature, code) end
+            vanish(creature)
+        end
     end
 end
 -- }}}
