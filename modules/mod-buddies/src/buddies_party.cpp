@@ -53,6 +53,9 @@
 #include "GroupMgr.h"
 #include "Log.h"
 #include "Map.h"
+#include "MotionMaster.h"
+#include "PlayerbotAI.h"
+#include "Playerbots.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -435,6 +438,86 @@ static std::vector<uint32> DrawFromBag(uint32 owner, std::vector<uint32> const& 
 }
 // }}}
 
+// {{{ walking in (617c3)
+// The owner, 2026-09-30, of the drawn buddies: "they should have to walk".
+// A drawn buddy walks (runs, outdoors) on the navigation mesh to the spot
+// where its owner last stood outside before entering (kept every half
+// second while the owner is out in the world, so it is the dungeon's
+// entrance), and on reaching it steps through: it arrives inside where
+// the owner arrived. The bot module's own decisions are held off while it
+// walks. Stuck (no yard of progress in WALK_STUCK_MS) it is brought in all
+// the same, with a warning: a fallback, logged as one. On another map
+// than the entrance it can't walk there: it stays out, logged.
+static constexpr uint32 WALK_TICK_MS    = 1000;
+static constexpr float  WALK_ARRIVED    = 4.0f;     // yards from the entrance: through the portal
+static constexpr uint32 WALK_STUCK_MS   = 60000;
+struct Spot { uint32 map; float x, y, z, o; };
+struct WalkIn { uint32 buddy; uint32 owner; Spot entrance; Spot inside; float best; uint64 progressMs; };
+static std::map<uint32, Spot> sLastOutside;           // owner -> where they last stood outside (world thread only)
+static std::vector<WalkIn> sWalkIns;                  // world thread only
+
+static void StartWalkIn(Player* b, Player* owner)
+{
+    auto it = sLastOutside.find(owner->GetGUID().GetCounter());
+    Spot inside { owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), owner->GetOrientation() };
+    if (it == sLastOutside.end())
+    {
+        LOG_ERROR("module", "mod-buddies: no entrance known for {}'s dungeon (they were never seen outside since the server "
+            "started); drawn buddy {} is brought in beside them", owner->GetName(), b->GetName());
+        b->TeleportTo(inside.map, inside.x, inside.y, inside.z, inside.o);
+        return;
+    }
+    if (b->GetMapId() != it->second.map)
+    {
+        LOG_ERROR("module", "mod-buddies: drawn buddy {} is on map {}, the entrance to {}'s dungeon on map {}; it can't walk "
+            "there (walking between maps is not built) and stays out", b->GetName(), b->GetMapId(), owner->GetName(), it->second.map);
+        return;
+    }
+    sWalkIns.push_back({ b->GetGUID().GetCounter(), owner->GetGUID().GetCounter(), it->second, inside,
+        b->GetExactDist(it->second.x, it->second.y, it->second.z), uint64(GameTime::GetGameTimeMS().count()) });
+}
+
+static void RunWalkIns()
+{
+    uint64 now = uint64(GameTime::GetGameTimeMS().count());
+    for (auto it = sWalkIns.begin(); it != sWalkIns.end(); )
+    {
+        WalkIn& w = *it;
+        Player* b = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(w.buddy));
+        Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(w.owner));
+        if (!b || !owner || !b->IsInWorld() || !b->IsAlive() || !IsFiveManDungeon(owner->GetMap())
+            || b->GetMapId() != w.entrance.map)
+        {
+            it = sWalkIns.erase(it);                   // logged out, dead, owner left, or moved elsewhere
+            continue;
+        }
+        float d = b->GetExactDist(w.entrance.x, w.entrance.y, w.entrance.z);
+        bool stuck = false;
+        if (d + 1.0f < w.best)
+            w.best = d, w.progressMs = now;            // a yard closer: progress
+        else if (now - w.progressMs > WALK_STUCK_MS)
+            stuck = true;
+        if (d <= WALK_ARRIVED || stuck)
+        {
+            if (stuck)
+                LOG_WARN("module", "mod-buddies: drawn buddy {} made no progress toward {}'s dungeon entrance for {} s "
+                    "({:.0f} yards off); FALLBACK: brought in without walking the rest", b->GetName(), owner->GetName(),
+                    WALK_STUCK_MS / 1000, d);
+            b->TeleportTo(w.inside.map, w.inside.x, w.inside.y, w.inside.z, w.inside.o);   // through the portal
+            it = sWalkIns.erase(it);
+            continue;
+        }
+        if (PlayerbotAI* ai = GET_PLAYERBOT_AI(b))
+            ai->SetNextCheckDelay(WALK_TICK_MS * 3);   // its own decisions wait while it walks
+        if (b->IsWalking())
+            b->SetWalk(false);
+        if (!b->isMoving())
+            b->GetMotionMaster()->MovePoint(0, w.entrance.x, w.entrance.y, w.entrance.z);   // routed on the navigation mesh
+        ++it;
+    }
+}
+// }}}
+
 // {{{ BringDrawn
 static void BringDrawn(Player* owner, std::vector<uint32> const& buddyGuids)
 {
@@ -488,7 +571,7 @@ static void BringDrawn(Player* owner, std::vector<uint32> const& buddyGuids)
             continue;
         }
         sSeatedByPass.insert(guid);                    // outside again, the distance rule may unseat it
-        b->TeleportTo(owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), owner->GetOrientation());
+        StartWalkIn(b, owner);                         // it walks to the entrance (below): "they should have to walk"
         names += (names.empty() ? "" : ", ") + b->GetName();
     }
     LOG_INFO("module", "mod-buddies: {} entered {}; drawn in: {}", owner->GetName(), owner->GetMap()->GetMapName(), names);
@@ -698,6 +781,23 @@ public:
         RunDraws();                                    // the dungeon draw's due entries, every tick (617c3)
         RunPulls();                                    // buddies invited out of a match (617i)
 
+        // owners' last spot outside (a dungeon's entrance, once they go in),
+        // and the drawn buddies walking there (617c3)
+        _sinceWalk += diff;
+        if (_sinceWalk >= WALK_TICK_MS / 2 && BuddiesEnabled())
+        {
+            _sinceWalk = 0;
+            std::set<uint32> owners;
+            for (auto const& [buddy, owner] : BuddyRosterPairs())
+                owners.insert(owner);
+            for (uint32 o : owners)
+                if (Player* p = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(o)))
+                    if (p->IsInWorld() && !p->GetMap()->Instanceable() && !p->IsBeingTeleported())
+                        sLastOutside[o] = { p->GetMapId(), p->GetPositionX(), p->GetPositionY(), p->GetPositionZ(), p->GetOrientation() };
+            if (!sWalkIns.empty())
+                RunWalkIns();
+        }
+
         _sinceQueues += diff;
         if (_sinceQueues >= QUEUE_EVERY_MS && BuddiesEnabled())
         {
@@ -764,6 +864,7 @@ private:
 
     uint32 _sinceLast = 0;
     uint32 _sinceQueues = 0;
+    uint32 _sinceWalk = 0;
 };
 
 // {{{ AddSC_buddies_party
