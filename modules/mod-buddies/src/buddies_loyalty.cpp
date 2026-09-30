@@ -79,6 +79,16 @@ public:
         if (!invited)
             return true;                                   // not online: the server's own answer applies
         uint32 owner = OwnerOf(invited);
+        if (owner && MayInvite(inviter, owner) && invited->InBattleground())
+        {
+            // its owner's side invites a buddy that is in a match: it leaves
+            // the match at once and joins the inviter's group (617i). This
+            // request may be read off the world's thread, so the leaving and
+            // the joining are done by the party pass (buddies_party.cpp);
+            // the invite itself is held, having nothing to join yet.
+            BuddyPullFromBattleground(invited->GetGUID().GetCounter(), inviter->GetGUID().GetCounter());
+            return false;
+        }
         if (!owner || MayInvite(inviter, owner))
             return true;                                   // not a buddy, or its owner's side asking
         invited->Whisper(REFUSAL, LANG_UNIVERSAL, inviter);

@@ -42,7 +42,12 @@
 
 #include "buddies.h"
 #include "buddies_roam.h"
+#include "BattlegroundMgr.h"
+#include "BattlegroundQueue.h"
 #include "DatabaseEnv.h"
+#include "SpellAuras.h"
+#include "WorldPacket.h"
+#include "WorldSession.h"
 #include "GameTime.h"
 #include "Group.h"
 #include "GroupMgr.h"
@@ -526,6 +531,159 @@ public:
 };
 // }}}
 
+// {{{ battleground queues (617i)
+// The owner, 2026-09-24: when the owner joins a battleground queue, every
+// buddy joins the same queue as an individual (they may land in different
+// matches); when the owner leaves it, every buddy still waiting leaves it
+// too; a buddy in a match plays it to the end. Mirrored by comparison every
+// 2 seconds rather than by hooks (the server has none for leaving a queue,
+// and its "can join" hook comes before it knows whether the join worked):
+// each buddy's queues are brought in line with its owner's. A buddy is put
+// in a queue once per time the owner is in it; if its join is refused (a
+// full queue list, Deserter), it isn't asked again until the owner queues
+// anew. Only queues this pass put it in are ever taken away. Arenas are
+// not mirrored: their teams are drawn from the buddies (not built).
+//
+// Deserter: "what if we made it last 1/3rd as long for buddies?" A buddy's
+// Deserter, found at its stock length, is cut to a third.
+static constexpr uint32 QUEUE_EVERY_MS    = 2000;
+static constexpr uint32 SPELL_DESERTER    = 26013;
+static constexpr int32  DESERTER_STOCK_MS = 15 * MINUTE * IN_MILLISECONDS;
+static std::map<uint32, std::set<BattlegroundQueueTypeId>> sQueuedByPass;   // buddy -> queues it was put in
+
+static void MirrorQueues(Player* owner, std::vector<uint32> const& buddyGuids)
+{
+    std::set<BattlegroundQueueTypeId> ownerQueues;
+    for (uint32 i = 0; i < PLAYER_MAX_BATTLEGROUND_QUEUES; ++i)
+    {
+        BattlegroundQueueTypeId q = owner->GetBattlegroundQueueTypeId(i);
+        if (q != BATTLEGROUND_QUEUE_NONE && !BattlegroundMgr::BGArenaType(q))
+            ownerQueues.insert(q);                     // battlegrounds only; arenas are drawn (not built)
+    }
+    for (uint32 guid : buddyGuids)
+    {
+        Player* b = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid));
+        if (!b || !b->IsInWorld())
+            continue;
+        // Deserter at its stock length: a third of it
+        if (Aura* deserter = b->GetAura(SPELL_DESERTER))
+            if (deserter->GetMaxDuration() >= DESERTER_STOCK_MS)
+            {
+                deserter->SetMaxDuration(deserter->GetMaxDuration() / 3);
+                deserter->SetDuration(std::min(deserter->GetDuration(), deserter->GetMaxDuration()));
+            }
+        if (b->InBattleground())
+            continue;                                  // in a match: plays it to the end
+        std::set<BattlegroundQueueTypeId>& mine = sQueuedByPass[guid];
+        // the owner's queues it hasn't been put in yet
+        for (BattlegroundQueueTypeId q : ownerQueues)
+        {
+            if (mine.count(q) || b->InBattlegroundQueueForBattlegroundQueueType(q))
+                continue;
+            mine.insert(q);                            // asked once, joined or not
+            if (!b->HasFreeBattlegroundQueueId())
+                continue;
+            // the request the client's battleground window sends, from
+            // anywhere (the player's own id where a battlemaster's would
+            // go), alone rather than as a group; answered on the buddy's
+            // next session update, as the bot module queues its bots
+            WorldPacket* p = new WorldPacket(CMSG_BATTLEMASTER_JOIN, 20);
+            *p << b->GetGUID() << uint32(BattlegroundMgr::BGTemplateId(q)) << uint32(0) << uint8(0);
+            b->GetSession()->QueuePacket(p);
+        }
+        // queues it was put in that the owner has left: out of them
+        for (auto it = mine.begin(); it != mine.end(); )
+        {
+            if (ownerQueues.count(*it))
+            {
+                ++it;
+                continue;
+            }
+            if (b->InBattlegroundQueueForBattlegroundQueueType(*it))
+            {
+                sBattlegroundMgr->GetBattlegroundQueue(*it).RemovePlayer(b->GetGUID(), true);
+                b->RemoveBattlegroundQueueId(*it);     // as the server's own "leave queue" does
+            }
+            it = mine.erase(it);
+        }
+    }
+}
+// }}}
+
+// {{{ pulled out of a match (617i)
+// "If the owner invites a buddy that is inside a battleground, it leaves
+// the battleground at once and joins the owner's group." The invite is
+// caught as it arrives (buddies_loyalty.cpp) and handed here: the buddy
+// leaves the match (Deserter, cut to a third above), and once it is back
+// in the world it joins the inviter's group, as one invited by hand (it
+// keeps its seat). Given up after PULL_GIVE_UP_MS.
+static constexpr uint32 PULL_GIVE_UP_MS = 30000;
+struct PullDue { uint32 buddy; uint32 inviter; uint64 sinceMs; bool left; };
+static std::mutex sPullLock;
+static std::vector<PullDue> sPulls;
+
+void BuddyPullFromBattleground(uint32 buddyGuid, uint32 inviterGuid)
+{
+    std::lock_guard<std::mutex> lock(sPullLock);
+    sPulls.push_back({ buddyGuid, inviterGuid, uint64(GameTime::GetGameTimeMS().count()), false });
+}
+
+static void RunPulls()
+{
+    std::vector<PullDue> work;
+    {
+        std::lock_guard<std::mutex> lock(sPullLock);
+        if (sPulls.empty())
+            return;
+        work.swap(sPulls);
+    }
+    uint64 now = uint64(GameTime::GetGameTimeMS().count());
+    std::vector<PullDue> again;
+    for (PullDue& p : work)
+    {
+        Player* b = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(p.buddy));
+        Player* inviter = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(p.inviter));
+        if (!b || !inviter)
+            continue;                                  // logged out: nothing to do
+        if (now - p.sinceMs > PULL_GIVE_UP_MS)
+        {
+            LOG_ERROR("module", "mod-buddies: buddy {} was to leave its battleground for {}'s group, but after {} s it "
+                "was still not back in the world; given up", b->GetName(), inviter->GetName(), PULL_GIVE_UP_MS / 1000);
+            continue;
+        }
+        if (!p.left)
+        {
+            if (b->InBattleground())
+                b->LeaveBattleground();                // out of the match, back where it came from
+            p.left = true;
+            again.push_back(p);
+            continue;
+        }
+        if (b->InBattleground() || !b->IsInWorld() || b->IsBeingTeleported())
+        {
+            again.push_back(p);                        // still on its way out
+            continue;
+        }
+        Group* g = inviter->GetGroup();
+        if (!g)
+            g = NewParty(inviter);
+        if (!g || g->isRaidGroup() || g->GetMembersCount() >= PARTY_SIZE || g->IsMember(b->GetGUID()))
+            continue;                                  // no room (or joined already): out of the match all the same
+        if (Group* old = b->GetGroup())
+            old->RemoveMember(b->GetGUID());
+        if (!g->AddMember(b))
+            LOG_ERROR("module", "mod-buddies: buddy {} left its battleground but could not join {}'s group (server refused)",
+                b->GetName(), inviter->GetName());
+        sSeatedByPass.erase(p.buddy);                  // invited by hand: keeps its seat
+    }
+    if (!again.empty())
+    {
+        std::lock_guard<std::mutex> lock(sPullLock);
+        sPulls.insert(sPulls.end(), again.begin(), again.end());
+    }
+}
+// }}}
+
 class buddies_party_world : public WorldScript
 {
 public:
@@ -538,6 +696,20 @@ public:
     void OnUpdate(uint32 diff) override
     {
         RunDraws();                                    // the dungeon draw's due entries, every tick (617c3)
+        RunPulls();                                    // buddies invited out of a match (617i)
+
+        _sinceQueues += diff;
+        if (_sinceQueues >= QUEUE_EVERY_MS && BuddiesEnabled())
+        {
+            _sinceQueues = 0;
+            std::map<uint32, std::vector<uint32>> byOwner;
+            for (auto const& [buddy, owner] : BuddyRosterPairs())
+                byOwner[owner].push_back(buddy);
+            for (auto const& [ownerGuid, buddyGuids] : byOwner)
+                if (Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(ownerGuid)))
+                    if (owner->IsInWorld())
+                        MirrorQueues(owner, buddyGuids);   // battleground queues (617i)
+        }
 
         _sinceLast += diff;
         if (_sinceLast < PASS_EVERY_MS || !BuddiesEnabled())
@@ -591,6 +763,7 @@ private:
     }
 
     uint32 _sinceLast = 0;
+    uint32 _sinceQueues = 0;
 };
 
 // {{{ AddSC_buddies_party

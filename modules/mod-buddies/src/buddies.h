@@ -31,6 +31,11 @@ uint32 BuddyCompanionAccountId(uint32 ownerGuid);
 // characters are buddies: no clan, no account, no owed slots of their own.
 bool BuddyIsCompanionAccount(uint32 accountId);
 
+// A buddy in a battleground, invited by its owner's side, leaves the match
+// and joins the inviter's group; done by the party pass on the world's
+// thread (buddies_party.cpp, 617i). Safe to call from any thread.
+void BuddyPullFromBattleground(uint32 buddyGuid, uint32 inviterGuid);
+
 // Log the owner's made buddies in soon, if the owner is online
 // (buddies_login.cpp, 617c1): at the owner's login, and when creation
 // makes a buddy while the owner is online.

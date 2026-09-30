@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-29 23:54:21
+Generated on: 2026-09-29 23:57:56
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -2394,6 +2394,57 @@ What else needs building, most important first:
    checked how far they've been built.
 6. **The load-time ID-limit check.** This is the other half of this morning's
    crash tracing.
+
+--------------------------------------------------------------------------------
+
+### User Request 23
+
+oh please continue
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 23
+
+> Errands are built around NPCs, and a mailbox is an object, so the
+> walk-and-arrive step needs a small branch. Reading that step:
+
+> `MoveNear` already works with objects (chairs use it). Reading the mail
+> handlers' packet layouts:
+
+> Checking the delete packet's last field and the mail record's fields:
+
+> Collect-on-COD mail is skipped, since that needs paying. Checking the player's
+> mail lookup and the file's includes:
+
+> Writing the mail errand:
+
+> The mail errand compiles. Now the quest side: stop bailing out when bags are
+> full, and let the server's reward step mail the overflow.
+
+Full bags now go to mail, and buddies collect their mail in town. It's committed
+and the code compiles cleanly, but it hasn't been built into the server or tried
+in game.
+
+- **Rewards:** I removed my "bags full, give nothing" check. The server's own
+  reward step already mails anything that doesn't fit, so the quest now always
+  completes, and anything that doesn't fit arrives by mail.
+- **Collecting it:** a buddy with mail waiting does a mail errand first on its
+  next town visit, before training, selling or repairing. It walks to the
+  nearest mailbox, takes out every item and any money, then deletes the emptied
+  mail.
+  - It uses the same server requests as a player clicking at the mailbox, so the
+    normal checks apply: the box must be in reach, and the bags must have room.
+  - An item that still doesn't fit stays in the mail until the next visit.
+  - Cash-on-delivery mail is left alone.
+- **Not playerbots' mail check:** that one is built for its random bots' guild
+  tasks. It destroys or sends back what it finds, and it never runs for a bot
+  with a master, which buddies have.
+
+I also recorded in the kraken issue that casters without a slow only damage the
+maw, and that the kraken waits for now.
+
+These changes and the earlier ones (quest auto-completion, the dungeon draw)
+were made after your current compile started. They'll need one more compile.
 
 --------------------------------------------------------------------------------
 
