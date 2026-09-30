@@ -141,10 +141,13 @@ local TAKEN_QUIPS = {
 
 local TAG = "[sargobras] "
 
--- Owner guid (low) -> the wandering Sargobras's guid; wanderer guid (low) ->
--- owner guid (low); the campfire each wanderer lit. Summoned creatures are
--- never saved, so this only has to live as long as the server runs.
-local wanderer_of, owner_of, fire_of = {}, {}, {}
+-- Owner guid (low) -> { slot -> the wandering Sargobras's guid }: one per
+-- owed slot, a Sargobras per tier (owner, 2026-09-30: "Remember, one
+-- sargobras per tier! Eventually they're gonna have different outfits.");
+-- wanderer guid (low) -> owner guid (low), and -> the slot he serves; the
+-- campfire each wanderer lit. Summoned creatures are never saved, so this
+-- only has to live as long as the server runs.
+local wanderer_of, owner_of, slot_of, fire_of = {}, {}, {}, {}
 -- Wanderer guid (low) -> when he last started a turn (ms, GetCurrTime), and
 -- whether a turn is under way.
 local turned_at, turning = {}, {}
@@ -324,8 +327,9 @@ end
 local function remove_wanderer(creature)
     local low = creature:GetGUIDLow()
     local owner = owner_of[low]
-    if owner then wanderer_of[owner] = nil end
+    if owner and wanderer_of[owner] and slot_of[low] then wanderer_of[owner][slot_of[low]] = nil end
     owner_of[low] = nil
+    slot_of[low] = nil
     turned_at[low] = nil
     turning[low] = nil
     local fire = fire_of[low]
@@ -394,10 +398,11 @@ local function follow_tick(_, _, _, creature)
     end
     local d = creature:GetDistance(player)
     if d > FOLLOW_AGAIN_AT then
+        -- each tier's Sargobras keeps his own place in a ring round the
+        -- owner, so several don't stand in one spot
         local px, py, pz = player:GetLocation()
-        local cx, cy     = creature:GetLocation()
-        local k = STOP_AT / d
-        creature:MoveTo(1, px + (cx - px) * k, py + (cy - py) * k, pz)
+        local a = ((slot_of[creature:GetGUIDLow()] or 1) - 1) * 2 * math.pi / 7
+        creature:MoveTo(1, px + math.cos(a) * STOP_AT, py + math.sin(a) * STOP_AT, pz)
     elseif not creature:IsMoving() then
         local now, low = GetCurrTime(), creature:GetGUIDLow()
         if not turned_at[low] or now - turned_at[low] >= TURN_EVERY_MS then
@@ -409,29 +414,43 @@ end
 -- }}}
 
 -- {{{ local function summon_wanderer
--- Beside the owner, unless one is already theirs or the spot is crowded.
+-- One beside the owner for each owed slot that has none yet, each in his
+-- own place round them, unless the spot is crowded with others' Sargobras
+-- (the owner's own don't count toward the crowd).
 local function summon_wanderer(player)
     local owner = player:GetGUIDLow()
     if player:GetClass() == CLASS_DEATH_KNIGHT or player:GetLevel() < WANDER_FROM_LEVEL then return end
-    if not owed_slot(owner) then return end
-    if wanderer_of[owner] then return end
+    local slots = owed_slots(owner)
+    if #slots == 0 then return end
+    wanderer_of[owner] = wanderer_of[owner] or {}
+    local mine = wanderer_of[owner]
 
-    local near = #(player:GetCreaturesInRange(CROWD_RANGE, VALLEY) or {}) + #(player:GetCreaturesInRange(CROWD_RANGE, WANDERER) or {})
+    local near = #(player:GetCreaturesInRange(CROWD_RANGE, VALLEY) or {})
+    for _, c in ipairs(player:GetCreaturesInRange(CROWD_RANGE, WANDERER) or {}) do
+        if owner_of[c:GetGUIDLow()] ~= owner then near = near + 1 end
+    end
     if near > CROWD_MAX then
-        -- crowded: try again shortly, until he fits or nothing is owed
+        -- crowded: try again shortly, until they fit or nothing is owed
         player:RegisterEvent(function(_, _, _, p) summon_wanderer(p) end, CROWD_RETRY_MS, 1)
         return
     end
 
     local x, y, z, o = player:GetLocation()
-    local c = player:SpawnCreature(WANDERER, x, y, z, o, TEMPSUMMON_MANUAL_DESPAWN, 0)
-    if not c then
-        print(string.format("%sERROR: could not summon Sargobras for owner %d", TAG, owner))
-        return
+    for _, slot in ipairs(slots) do
+        if not mine[slot] then
+            local a = (slot - 1) * 2 * math.pi / 7
+            local c = player:SpawnCreature(WANDERER, x + math.cos(a) * STOP_AT, y + math.sin(a) * STOP_AT, z,
+                math.atan2(-math.sin(a), -math.cos(a)), TEMPSUMMON_MANUAL_DESPAWN, 0)
+            if not c then
+                print(string.format("%sERROR: could not summon Sargobras for owner %d, slot %d", TAG, owner, slot))
+            else
+                mine[slot]               = c:GetGUID()
+                owner_of[c:GetGUIDLow()] = owner
+                slot_of[c:GetGUIDLow()]  = slot
+                c:RegisterEvent(follow_tick, 1000, 0)
+            end
+        end
     end
-    wanderer_of[owner]      = c:GetGUID()
-    owner_of[c:GetGUIDLow()] = owner
-    c:RegisterEvent(follow_tick, 1000, 0)
 end
 -- }}}
 
@@ -462,7 +481,12 @@ local function on_select(event, player, creature, sender, intid, code)
     local owner = player:GetGUIDLow()
     local owed  = owed_slots(owner)
     if #owed == 0 then return end
-    local b = choose(player, owed[1], clan_roster(owner), pick)
+    -- a tier's own Sargobras serves his slot (while it is still owed);
+    -- a valley Sargobras, the first owed
+    local slot = owed[1]
+    local mine = slot_of[creature:GetGUIDLow()]
+    for _, s in ipairs(owed) do if s == mine then slot = mine end end
+    local b = choose(player, slot, clan_roster(owner), pick)
     if not b then
         creature:SendUnitSay("Hm. The stars are cloudy tonight. Ask me again in a moment.", 0)
         return
@@ -474,9 +498,9 @@ local function on_select(event, player, creature, sender, intid, code)
     -- the name typed in the pick's pop-up, when there was no clan yet
     try_clan_name(player, creature, code)
 
-    -- that was the last owed buddy: a wanderer goes on break (he still
+    -- his tier is chosen: a wanderer goes on break (he still
     -- answers, so an unnamed clan can be named at the fire)
-    if #owed == 1 and creature:GetEntry() == WANDERER then go_on_break(creature) end
+    if creature:GetEntry() == WANDERER then go_on_break(creature) end
 end
 -- }}}
 
@@ -515,10 +539,14 @@ local function on_level_change(event, player, old_level)
 end
 
 local function on_logout(event, player)
-    local guid = wanderer_of[player:GetGUIDLow()]
-    if not guid then return end
-    local c = player:GetMap():GetWorldObject(guid)
-    if c then remove_wanderer(c) else wanderer_of[player:GetGUIDLow()] = nil end
+    -- every tier's Sargobras leaves with the owner
+    local mine = wanderer_of[player:GetGUIDLow()]
+    if not mine then return end
+    for _, guid in pairs(mine) do
+        local c = player:GetMap():GetWorldObject(guid)
+        if c then remove_wanderer(c) end
+    end
+    wanderer_of[player:GetGUIDLow()] = nil
 end
 -- }}}
 

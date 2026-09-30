@@ -33,6 +33,7 @@ And his life cycle, verbatim, 2026-09-23:
 
 ## Current Behavior
 
+
 **2026-09-29:** the menu is one page: every class, then every people, each
 with its own icon (a table at the top of `src/lua-basic/sargobras.lua`,
 first pass, by feel). His three texts (6170001-6170003) are one pool of

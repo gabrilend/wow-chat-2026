@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-29 23:57:56
+Generated on: 2026-09-30 00:30:57
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -2445,6 +2445,190 @@ maw, and that the kraken waits for now.
 
 These changes and the earlier ones (quest auto-completion, the dungeon draw)
 were made after your current compile started. They'll need one more compile.
+
+--------------------------------------------------------------------------------
+
+### User Request 24
+
+> 4. Buddy battlegrounds (617i) and auction house (617h). Both are designed but
+> not built.
+> 5. Buddy task hunts (617m) and professions (617k). Designed; I haven't checked
+> how far they've been built.
+
+can we work on these next? the compilation finished :)
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 24
+
+> Checking how far each of the four has got:
+
+> Battlegrounds are fully specified, with every question answered. Checking
+> which server hooks exist for battleground queues, and how playerbots joins a
+> queue for its bots:
+
+> Both compile. Recording in 617i and committing:
+
+> Committed. Next, the auction house (617h). Reading its design:
+
+> Writing it into the town file. First, the existing "junk" and "worn" helpers,
+> so the new code fits them:
+
+> Writing the auction step: sorting each bag item into auction, vendor,
+> mail-to-owner or keep, then pricing per the rules. Checking two constant names
+> first:
+
+> Now writing the auction section, placed before the errand list:
+
+> The mail step (written earlier in the file) needs to count auction mail and
+> send epics to the owner, so those two get forward declarations. Then the
+> errand list, the sale step and the registration:
+
+> Now the errand list in the auction house design's order, and the vendor stop
+> selling what the auction rules sent it:
+
+> Compiles. Now the two tables in the roster SQL: the price memory, and the
+> owner's fixed prices for items with no vendor price.
+
+> All five buddy tables are in the live database. Recording in 617h and
+> committing:
+
+> Committed. Starting the RAM database test in the background, since the roster
+> SQL gained three tables. Then reading the professions design (617k):
+
+> All seven tool items check out. Reading the two places that give secondary
+> professions (at creation, and catch-up at login) to add the primary ones
+> beside them:
+
+> Writing the primary professions and calling them at both places:
+
+> Compiles. Recording in 617k and committing:
+
+I made a first pass on three of the four, and task hunts need a decision from
+you. Everything below is committed and passes a syntax-only compile check, but
+none of it is compiled into the server or tried in game yet.
+
+**Battlegrounds (617i)**
+- When you queue for a battleground, each buddy joins the same queue on its own.
+  They may land in different matches. When you leave the queue, they leave it
+  too. Only queues the buddy module put them in are ever taken away.
+- A buddy that gets a match plays it to the end.
+- A buddy's Deserter lasts 5 minutes instead of 15.
+- If you invite a buddy who's in a match, it leaves the match and takes a seat
+  in your group.
+- Not built: arenas (teams drawn from your buddies), and ranking buddies in a
+  battleground last in the dungeon draw. Right now the draw just skips them.
+
+**Auction house (617h)**
+- **Town errand order:** repair a broken item, trainer, repair a badly worn
+  item, mailbox, auction house, any other repair, vendor. A town missing one of
+  these simply skips it.
+- **What happens to each bag item:**
+  - Anything the buddy has a use for stays.
+  - Whites and greys go to the vendor, as before.
+  - Bind-on-equip epics it can't use are mailed to you and never sold.
+  - Everything else is auctioned by your rules: minimum price by quality,
+    undercutting, near-minimum listings, gluts, random enchantments kept apart,
+    epics always posted, random stack sizes, durations and deposits.
+- **Rising prices:** after each unsold expiry the price goes up, until one
+  sells. This is remembered per auction house, read from the buddy's auction
+  mail.
+- **Items with no vendor price** use a hand-kept price table, which is empty for
+  now. I put that table in the characters database rather than the world
+  database your data model named.
+- **One assumption:** "badly worn" means a fifth of durability or less. Say if
+  the client's yellow warning uses a different threshold.
+- Not built: buying consumables and upgrades for the clan, wandering after
+  errands, and the full-bags rule for towns without an auction house.
+
+**Professions (617k), first step**
+- Each buddy picks a crafting profession at random, plus the gathering
+  profession that feeds it. Tailors and enchanters get any gathering profession.
+- It gets the tools in its bags: mining pick, skinning knife, and so on.
+- Buddies that already exist choose at their next login, and a choice is kept
+  once made.
+- Next steps: crafting (upgrades for the clan first, then consumables handed
+  out), gathering trips in lower-level zones, and death-knight buddies starting
+  with maxed professions.
+
+**Task hunts (617m):** your design says they need "the language model work",
+since buddies take requests in plain words, so they're their own project. Do you
+want to start that design, or finish the professions first? Crafting is what
+task hunts would be asking buddies to do.
+
+Needs a compile: all of the above, plus quest completion, dungeons and the mail
+errand from before. The RAM database test for the three new tables is still
+running; I'll report the result when it finishes.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command
+"L=/mnt/mtwo/games/azeroth-core/wow-chat-2026/tmp/shared-memory/basic-sql-ram-test.log;
+nice -n 19
+/mnt/mtwo/games/azeroth-core/wow-chat-2026/scripts/test-basic-sql-in-ram &gt; $L
+2&gt;&amp;1; echo "exit=$?" &gt;&gt; $L; grep -E "FAIL|ERROR|All checks|exit="
+$L | tail -6" completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 24 (continued)
+
+The RAM database test passed. It applied every basic database change with the
+three new buddy tables (the dungeon draw, auction prices and fixed prices),
+undid them, applied them again, and all checks passed.
+
+The next compile will bring in everything since the last one: quest completion,
+the dungeon draw, mail collecting, battlegrounds, the auction house and
+professions. I'm still waiting on your answer about task hunts versus finishing
+professions.
+
+--------------------------------------------------------------------------------
+
+### User Request 25
+
+I wanna try a dungeon!
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 25
+
+Buddy dungeons aren't in the server you just compiled yet. That compile started
+before I built the dungeon draw, so it needs one more compile and a restart.
+After that:
+
+**Getting there**
+1. Use a character that has buddies, ideally several.
+   - Each buddy is picked at Sargobras: one when a character is made, then one
+     more every 10 levels.
+   - To test quickly, `.levelup` a character to about 20. The travelling
+     Sargobras should come by to offer the buddies it's owed.
+2. Pick a dungeon for your level:
+   - **Ragefire Chasm** (Orgrimmar, about 13–18).
+   - **The Deadmines** (Westfall, about 17–26).
+   - **Wailing Caverns** (the Barrens, about 17–24).
+   - As a GM you can use `.tele` with the dungeon's name, or walk in through the
+     entrance.
+3. Walk in alone, or with only your own buddies in your party.
+
+**What should happen**
+- About 1.5 seconds after you arrive, your party's empty seats (up to five) fill
+  with buddies drawn at random. They're teleported in beside you.
+- Buddies the distance rule had put in your party give up their seats for the
+  draw. A buddy you invited yourself keeps its seat.
+- Inside, they fight by the playerbots rules: the tank holds, damage dealers
+  attack its target, healers heal.
+- When you leave, the buddies inside come out with you.
+- On your next run, buddies who haven't had a turn are drawn first.
+- If another player is in your group, nobody is drawn. That's by design.
+
+**If something's off**, the server log names it. Look for lines starting
+`mod-buddies:`:
+- `…entered <dungeon>; drawn in: <names>` means the draw worked.
+- `could not join … party (server refused)` or `no party could be made` means
+  something failed.
+
+Tell me what you see, especially how they fight. That's what the kraken will
+eventually replace.
 
 --------------------------------------------------------------------------------
 

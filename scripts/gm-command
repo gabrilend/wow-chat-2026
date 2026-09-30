@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# gm-command - run one game-master console command on the running
+# worldserver and print its reply.
+#
+# For a general audience: the world server takes console commands (the
+# same ones a game master types in chat, without the leading dot) over a
+# small web connection on this machine only (SOAP, set up by config patch
+# C021 and "bot-governor setup"). This script sends one command through it
+# and prints what the server answered. Safe while the server runs: the
+# server does the work itself, so nothing it holds in memory is
+# overwritten behind its back (as editing its database directly could).
+#
+# Usage: scripts/gm-command [--dir PROJECT_DIR] "character level Felicity 44"
+#   Several commands: run the script once for each.
+# Exit status: 0 on the server's answer, 1 when it couldn't be reached,
+# refused the login, or reported the command failed (its words printed).
+
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if [[ "${1:-}" == "--dir" ]]; then DIR="$2"; shift 2; fi
+COMMAND="${1:-}"
+if [[ -z "${COMMAND}" ]]; then
+    echo "Usage: $0 [--dir PROJECT_DIR] \"<console command, no leading dot>\""
+    exit 1
+fi
+
+# {{{ credentials and endpoint (as scripts/bot-governor reads them)
+[[ -f "${DIR}/scripts/credentials" ]] || { echo "ERROR: ${DIR}/scripts/credentials not found"; exit 1; }
+source "${DIR}/scripts/credentials" "${DIR}"
+SOAP_USER="$(cred_get soap_user)"
+SOAP_PASS="$(cred_get soap_pass)"
+[[ -n "${SOAP_USER}" && -n "${SOAP_PASS}" ]] || { echo "ERROR: no SOAP login in the credentials store (run: scripts/bot-governor setup)"; exit 1; }
+PROFILE="$(cat "${DIR}/.profile")"
+WORLD_CONF="${DIR}/installed-files-${PROFILE}/etc/worldserver.conf"
+SOAP_IP="$(sed -n 's|^SOAP\.IP[[:space:]]*=[[:space:]]*"\?\([^"]*\)"\?.*|\1|p' "${WORLD_CONF}" | tail -1)"
+SOAP_PORT="$(sed -n 's|^SOAP\.Port[[:space:]]*=[[:space:]]*\([0-9]*\).*|\1|p' "${WORLD_CONF}" | tail -1)"
+[[ -n "${SOAP_IP}" && -n "${SOAP_PORT}" ]] || { echo "ERROR: SOAP.IP / SOAP.Port not found in ${WORLD_CONF}"; exit 1; }
+# }}}
+
+# {{{ send
+ESCAPED="${COMMAND//&/&amp;}"
+ESCAPED="${ESCAPED//</&lt;}"
+ESCAPED="${ESCAPED//>/&gt;}"
+ENVELOPE="<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ns1=\"urn:AC\">
+<SOAP-ENV:Body><ns1:executeCommand><command>${ESCAPED}</command></ns1:executeCommand></SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"
+RAW="$(curl -s --max-time 15 -w $'\n%{http_code}' --basic -u "${SOAP_USER}:${SOAP_PASS}" \
+    -H "Content-Type: text/xml" --data "${ENVELOPE}" "http://${SOAP_IP}:${SOAP_PORT}/")"
+CODE="${RAW##*$'\n'}"
+BODY="${RAW%$'\n'*}"
+# }}}
+
+# {{{ answer
+case "${CODE}" in
+    200) ;;
+    000) echo "ERROR: no answer at ${SOAP_IP}:${SOAP_PORT} (worldserver down, or SOAP off)"; exit 1 ;;
+    401|403) echo "ERROR: SOAP login refused (HTTP ${CODE}) for '${SOAP_USER}'"; exit 1 ;;
+    *) echo "ERROR: HTTP ${CODE}: ${BODY}"; exit 1 ;;
+esac
+if [[ "${BODY}" == *"<faultstring>"* ]]; then
+    echo "FAILED: $(sed -n 's|.*<faultstring>\(.*\)</faultstring>.*|\1|p' <<< "${BODY}" | tr -d '\r')"
+    exit 1
+fi
+tr '\n' '\001' <<< "${BODY}" | sed -n 's|.*<result>\(.*\)</result>.*|\1|p' | tr '\001' '\n' | sed 's/&#xD;//g; s/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g'
+# }}}
