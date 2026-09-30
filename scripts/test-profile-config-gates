@@ -32,7 +32,7 @@ PROFILE="${2:-basic}"
 declare -a EXPECT_basic=(
     "worldserver.conf|MaxPlayerLevel|60"
     "worldserver.conf|StartPlayerLevel|1"
-    "worldserver.conf|StartHeroicPlayerLevel|60"
+    "worldserver.conf|StartHeroicPlayerLevel|55"          # death knights start at 55 (C017)
     "worldserver.conf|RecruitAFriend.MaxLevel|60"
     "worldserver.conf|Rate.Damage.Fall|10.0"
     "worldserver.conf|Rate.MoveSpeed.Player|0.8"

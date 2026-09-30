@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-29 14:39:20
+Generated on: 2026-09-29 14:41:57
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -1313,6 +1313,63 @@ completed (exit code 0)*
 
 The live database passes. The RAM test is re-running with file 13's change; I'll
 commit when it passes.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command
+"L=/mnt/mtwo/games/azeroth-core/wow-chat-2026/tmp/shared-memory/basic-sql-ram-test.log;
+nice -n 19
+/mnt/mtwo/games/azeroth-core/wow-chat-2026/scripts/test-basic-sql-in-ram &gt; $L
+2&gt;&amp;1; echo "exit=$?" &gt;&gt; $L; grep -E "FAIL|ERROR|All checks|exit="
+$L | tail -10" completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 11 (continued)
+
+> It passes. Committing the loose-ends fix:
+
+The loot and link problems are fixed and committed. After your next server
+restart, about 1,200 of the roughly 1,400 basic-only error lines should be gone.
+I cleared them in the live database, but I haven't booted the server to confirm.
+What's left in the log is the quest and skill warnings vanilla also has.
+
+**What was wrong:** three basic changes removed rows but left other rows
+pointing at them.
+
+| Change | What it left behind |
+|---|---|
+| Recipes above 300 taken out of every drop (155n) | **160 creatures, mostly heroic-dungeon versions, with an empty loot table**; loot pointing at shared loot lists that no longer existed; loot conditions naming removed items |
+| Outland herb and ore nodes and skinning removed (155n) | Respawn links naming removed nodes; skinning loot nothing uses |
+| Placeholder trainers replaced by Visiting Mentors (155e), and Shattrath's portal to Quel'Danas removed (155l) | Holiday-event rows naming removed spawns |
+
+The 160 creatures were the real play problem. A creature whose only drop was a
+removed recipe now has no loot table at all, which is what the loot data already
+said.
+
+**Fix:** each of those changes now removes the rows pointing at what it removed,
+saving them first so its revert restores them. The basic-state checker now fails
+if any are left. It failed on the old database and passes on the new one.
+
+**Tested:**
+- The RAM database test passes twice: every basic SQL file applied, undone and
+  applied again, with all checks passing.
+- Applied to the live basic world, where every kind of loose end I counted is
+  now zero.
+
+**Still open:**
+1. **The 34 quests that need skill above 300:** they can't go in the level-60
+   patch, which only edits the config file and can't undo database changes.
+   Switching them off wouldn't silence the warning either, because the server
+   checks the quest's own required skill against its cap when it loads quests.
+   They'd have to be removed along with the NPC links that offer them, with
+   backups, most naturally in the 300-skill cap SQL (155n), together with the 30
+   skill conditions. Should I?
+2. **`.profile` untracking:** the removal is staged and needs one more `touch
+   /tmp/claude-allow-foreign-commit`. The first permission was used up by my
+   mistaken commit by path.
+3. **B039 (the crash-logging patch):** keep or drop? The per-player selection
+   patches (B040/B041) and issue 164 commit together with that answer.
 
 --------------------------------------------------------------------------------
 
