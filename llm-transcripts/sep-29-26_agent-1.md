@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-29 22:44:21
+Generated on: 2026-09-29 23:38:14
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -2074,6 +2074,124 @@ teleport when stuck. The town-visit notes call out that teleport.
 
 Do you want the load-time ID counter check next, or a look at whether buddies
 could follow quest map markers the same way?
+
+--------------------------------------------------------------------------------
+
+### User Request 17
+
+can you make a test character on my account, then teleport me to the gurubashi
+arena, and spawn some buddy-bots into my party and some level appropriate
+monsters spaced periodically? I want to test the kraken style AI pathfinding in
+a "dungeon". We can have the monsters spawn in 3 groups of 3, and new ones spawn
+in one of 6 places in the ring, not the one that the party is collectively
+closest to. The 3 farthest away from everyone.
+
+That number (3). travel mesh will come in handy later, don't lose track of it.
+
+So, for the quest map markers, we're going to auto-complete buddy quests to
+ensure they level up alongside you (generally). How does it handle dungeon
+combat? Move into range, deal damage, repeat? I'm wondering if there's anything
+we can take for our kraken model of pathfinding. What else do we have to do
+before we're ready to play?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 17
+
+> Checking whether the server is up and how scripts send it commands, and
+> whether the "kraken" exists in game code or only in the design model:
+
+> The creature table's column is `id`, not `id1`, as the earlier error showed.
+> Fixing that, and checking which faction numbers Stranglethorn's hostiles
+> actually use:
+
+> Those factions are all hostile monster groups. Widening the list to them,
+> leaving out faction 46 (Kurzen's rebels, mostly named quest NPCs), then a stub
+> load test:
+
+> Loads, with both hooks registered. Running the monster query as the script
+> would for a level-40 player:
+
+> The query finds a good mix: trolls, ogres, basilisks and panthers. Recording
+> your "travel mesh" note in the buddy-adventuring issue so it's kept:
+
+> Recorded. Checking the bot module's group-combat features, so the dungeon
+> answer is accurate:
+
+> Committing the harness and the note:
+
+I couldn't set up the arena scene: the server isn't running, and the kraken
+exists only in the design doc and gallery, not in the buddy module. What I did
+instead is build the arena test ring as a GM command script. It's committed and
+loads with the engine stubbed out, but it hasn't run on a server yet.
+
+## The arena test ring
+Type `.arena start` while standing in the middle of the ring:
+- Six spawn places are marked 28 yards out, round the ring.
+- Three groups of three monsters appear at the three places farthest from the
+  party. "Farthest" means farthest from whichever party member is nearest, so a
+  place only counts as far if it's far from everyone.
+- The monsters are ordinary Stranglethorn hostiles within one level of you:
+  trolls, ogres, basilisks, panthers and so on. They only exist for levels of
+  roughly 30–50.
+- Each monster that dies is replaced at a random one of the three places
+  farthest from everyone.
+- `.arena stop` clears it, and logging out ends it.
+
+Until the kraken is built, this ring will show the bot module's own combat plus
+buddy roaming.
+
+**To run it once the server is up:**
+1. Create a character. There's no GM command for creating characters, so this
+   one is yours to do.
+2. Raise it to 40 with `.levelup 39`. The travelling Sargobras should come to
+   offer the buddies you're owed; pick them.
+3. `.tele GurubashiArena`, walk to the middle of the ring, then `.arena start`.
+   Buddies join your party automatically when they're within 60 yards.
+
+## The travel mesh
+Noted in the buddy-adventuring issue under Open Questions: the bot module's
+graph of routes between zones and continents, including paths, flights, boats
+and portals, to reuse rather than rebuild.
+
+## How the bot module fights in dungeons
+It's more than "move into range, hit, repeat", but it's all per-bot rules with
+no shared plan:
+- **Roles:** tanks hold threat, turn the boss away from the group and taunt
+  monsters that go after others. Damage dealers attack whatever the tank is on,
+  or the target marked by a raid icon. Healers heal.
+- **Positioning:** melee move behind their target. Ranged hold their spell
+  range. Everyone steps out of area spells on the ground and keeps a formation
+  around the leader. A few classes kite or flee.
+- **Per-dungeon scripts** exist for many bosses across the classic, Burning
+  Crusade and Wrath dungeons and raids.
+
+**Worth borrowing for the kraken:**
+- "Step out of area spells" is useful for the maw, the spot where the pack is
+  held and the area spells land.
+- Taunting whatever is on someone else is the tank's job in the kraken too.
+- The bot module's attack-the-marked-target rule is the same as the kraken's
+  heavy hitters (skull, then cross).
+
+What it lacks is exactly what the kraken adds: a shared place to hold the pack,
+pullers leading monsters in around it, and the tank's hold limit.
+
+## Before you can play
+1. **Compile and restart.** That brings in the per-player hide and selection,
+   the quiet bot reset, the stop reasons, rooms indoors, town buildings, the
+   entrance wave, and the kit fix.
+2. **Mesa's failed buddy pick.** Next time, watch whether Sargobras says
+   anything after you pick.
+3. **Quest auto-completion for buddies.** I read your "we're going to
+   auto-complete buddy quests" as a decision. It's the quest-mirroring issue
+   (617d) and isn't built yet; I'd write the issue first.
+4. **The kraken itself in game.** It's the biggest remaining piece, and the
+   arena is ready for it.
+5. **Buddy dungeons** (617c3, not built). Without it, buddies don't follow you
+   into instances.
+
+Should I start on auto-completing buddy quests next, or on porting the kraken
+into the game?
 
 --------------------------------------------------------------------------------
 
