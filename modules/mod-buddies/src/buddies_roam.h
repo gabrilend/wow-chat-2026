@@ -39,6 +39,18 @@ std::vector<std::pair<uint32, uint32>> const& BuddyRosterPairs();
 bool BuddyAreaIsTown(uint32 areaId);
 // }}}
 
+// {{{ BuddyTownArea
+// The town a player is in, or 0. A building inside a town often has its
+// own area number without the town flag (an inn, a crypt, a guild hall);
+// indoors, the ground outside at that spot says whose building it is.
+// So a player indoors counts as in the town their building stands in, and
+// buddies keep their town manners there instead of taking the building
+// for a separate place to roam (owner, 2026-09-29: "make sure we account
+// for indoors areas inside of towns"). Returns the town's own area number,
+// the same for everyone anywhere inside it.
+uint32 BuddyTownArea(Player* who);
+// }}}
+
 // {{{ BuddyRoamGround
 // The core's four questions answered over a map, for one named area and
 // phase (see roam/buddy_roam_core.h, Ground). Heights are searched from

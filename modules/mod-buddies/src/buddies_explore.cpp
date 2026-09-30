@@ -534,7 +534,7 @@ public:
                 auto f = sForcedAt.find(ownerGuid);
                 wants = wants || (f != sForcedAt.end() && uint64(GameTime::GetGameTimeMS().count()) - f->second < FORCED_KEEP_MS);
             }
-            if (!wants || BuddyAreaIsTown(owner->GetAreaId()))
+            if (!wants || BuddyTownArea(owner))
                 continue;
             GridKey key;
             std::shared_ptr<GridEntry> grid = RequestGrid(owner, owner->GetAreaId(), key);

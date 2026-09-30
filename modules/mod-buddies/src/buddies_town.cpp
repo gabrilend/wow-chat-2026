@@ -404,6 +404,10 @@ public:
         }
         if (bot->GetMap()->Instanceable())
             return false;
+        // in the same town (a building inside it included) is not "elsewhere"
+        if (uint32 town = BuddyTownArea(owner))
+            if (BuddyTownArea(bot) == town)
+                return false;
         return bot->GetAreaId() != owner->GetAreaId();
     }
 
@@ -501,14 +505,16 @@ public:
             return false;
         if (owner->GetMapId() != bot->GetMapId() || bot->GetMap()->Instanceable())
             return false;
-        uint32 areaId = owner->GetAreaId();
-        return BuddyAreaIsTown(areaId) && bot->GetAreaId() == areaId;
+        uint32 town = BuddyTownArea(owner);            // a building inside a town counts as the town
+        return town && BuddyTownArea(bot) == town;
     }
 
     bool Execute(Event /*event*/) override
     {
         uint32 guid   = bot->GetGUID().GetCounter();
-        uint32 areaId = bot->GetAreaId();
+        // the town's own area number, also inside its buildings, so stepping
+        // into an inn with its own number is not a new town (errands afresh)
+        uint32 areaId = BuddyTownArea(bot) ? BuddyTownArea(bot) : bot->GetAreaId();
         uint64 now    = Now();
         TownState s   = LoadTown(guid);
 

@@ -31,7 +31,9 @@
 #include "DatabaseEnv.h"
 #include "GameTime.h"
 #include "Log.h"
+#include "GridTerrainData.h"
 #include "Map.h"
+#include "Player.h"
 #include "QueryResult.h"
 #include <algorithm>
 #include <cmath>
@@ -87,6 +89,27 @@ bool BuddyAreaIsTown(uint32 areaId)
     if (!area)
         return false;                                  // unknown id: treated as open country
     return (area->flags & (AREA_FLAG_TOWN | AREA_FLAG_CAPITAL | AREA_FLAG_SLAVE_CAPITAL)) != 0;
+}
+// }}}
+
+// {{{ BuddyTownArea
+uint32 BuddyTownArea(Player* who)
+{
+    uint32 here = who->GetAreaId();
+    if (BuddyAreaIsTown(here))
+        return here;                                   // the area itself is a town
+    if (who->IsOutdoors())
+        return 0;                                      // outdoors and not a town: open country
+    // indoors: the outdoor ground's own area at this spot (the terrain map
+    // under the building), which is the town the building stands in
+    float x = who->GetPositionX(), y = who->GetPositionY();
+    if (GridTerrainData* ground = who->GetMap()->GetGridTerrainData(x, y))
+    {
+        uint32 outside = ground->getArea(x, y);
+        if (BuddyAreaIsTown(outside))
+            return outside;
+    }
+    return 0;                                          // a building or cave out in the country
 }
 // }}}
 

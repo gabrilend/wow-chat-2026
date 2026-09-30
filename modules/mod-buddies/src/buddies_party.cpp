@@ -370,7 +370,7 @@ public:
             Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(ownerGuid));
             if (!owner || !owner->IsInWorld() || owner->GetMap()->Instanceable())
                 continue;                              // offline, or in a dungeon or battleground
-            if (BuddyAreaIsTown(owner->GetAreaId()))
+            if (BuddyTownArea(owner))                  // a building inside a town counts as the town
                 UngroupInTown(owner, buddyGuids);      // in town: nobody grouped
             else
                 ArrangeOwner(owner, buddyGuids);

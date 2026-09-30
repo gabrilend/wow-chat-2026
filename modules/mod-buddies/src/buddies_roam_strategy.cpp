@@ -256,7 +256,7 @@ public:
             return false;
         if (owner->GetMapId() != bot->GetMapId() || bot->GetMap()->Instanceable())
             return false;
-        if (BuddyAreaIsTown(owner->GetAreaId()))
+        if (BuddyTownArea(owner))                      // in a town, a building in one included
             return false;
         // In another named area than the owner's: "buddy travel" walks it
         // there first (buddies_town.cpp, 617e4); roaming the owner's area
@@ -780,7 +780,7 @@ public:
             Player* owner = ai->GetMaster();
             if (!owner || owner->GetGUID().GetCounter() != ownerGuid)
                 continue;                              // not driven by its owner (no master yet)
-            bool town = BuddyAreaIsTown(owner->GetAreaId());
+            bool town = BuddyTownArea(owner) != 0;     // a building inside a town counts as the town
             std::vector<Want> const& wants = town ? sTown : sOpenCountry;
             for (Want const& w : wants)
                 if (ai->HasStrategy(w.name, BOT_STATE_NON_COMBAT) != w.on)

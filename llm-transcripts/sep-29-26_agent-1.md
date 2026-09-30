@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-29 18:46:01
+Generated on: 2026-09-29 18:58:16
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -1770,6 +1770,187 @@ git -C /mnt/mtwo/games/azeroth-core/wow-chat-2026 commit -m "Stop tracking .prof
 ```
 
 **Still open:** what did Sargobras say when Mesa's pick failed?
+
+--------------------------------------------------------------------------------
+
+### User Request 15
+
+<pasted_content id="f3e3">
+> You already designed the indoor answer: issue 617e6, "exploration modes".
+> Instead of circling a centre, it paces out the ground as a grid
+> from where you stand, indoors included. It paints what buddies have explored,
+> finds rooms and tunnels, and picks the least-explored place
+> next. It's built and wired in: .buddy explore paint (or rooms, disc, mixed)
+> switches it on for your buddies. But it's opt-in, and the "no
+>   centre" check stops roaming before any mode gets a chance.
+>
+> The fix I'd make: a missing centre no longer stops roaming, and pinwheel
+> buddies switch to a grid mode when they're indoors or can't find a
+> waypoint. Which mode should indoors use: rooms (orbit each room until it's 80%
+> explored, then move to the least-explored room or tunnel),
+> paint (always head for the least-explored ground), or mixed? You could also
+> try .buddy explore rooms in the crypt now to see how it looks.
+</pasted_content id="f3e3">
+
+
+let's say the rooms mode.
+
+
+
+<pasted_content id="f3e3">
+> B039: when the server was "crashing" this morning, the log just said "Halting
+> process", with no reason. The last session guessed the cause
+> was the console window's input closing, and B039 added a log line at that
+> spot. After your compile, the server halted again and that line
+> never printed. That ruled out the console and sent us to gdb, which found the
+> real cause: spawn numbers past the server's limit. So B039
+> was only useful by staying silent. Its one Linux line guards something that
+> probably can't happen, and it adds a patch to every build. I
+> recommend dropping it. Its registration line is shared with B040–B042, which
+> is why those are still uncommitted.
+</pasted_content id="f3e3">
+
+
+if there's a chance it'll be useful, let's keep it. When spawn numbers past the
+server limits caused the crash, was it specifically the spawn numbers, or was
+there some loader or initialization step that should have printed proper error
+messages? I'm wondering how far upstream we could trace that particular problem,
+and then if we could add output for each similar type of problem that the
+computer works on.
+
+
+
+<pasted_content id="f3e3">
+> The 34 quests: in Wrath, professions go to 450. Some quests (mostly Wrath
+> cooking, engineering and similar) require 325–450 skill. Basic
+> caps levels at 60, which caps skills at 300, so the server says at every
+> start: "Quest X requires 350 skill but max possible is 300, quest
+> can't be done". The 19 "skill condition" lines are the same thing inside loot
+> and gossip rules. They're harmless for play, since the quests
+> just never appear as doable, but they're 53 lines of noise. Removing them
+> means deleting those quests and the NPC links that offer them,
+> with backups and a revert, in the same SQL that already removes recipes above
+> 300 (155n). Say yes or no.
+</pasted_content id="f3e3">
+
+
+can we just set their required profession level to 300 in the same patch that
+sets the max profession level to 300?
+
+>   Still open: what did Sargobras say when Mesa's pick failed?
+
+nothing the first time. I haven't rebooted the server yet to check.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 15
+
+> Keeping B039. Taking ownership of last session's left-behind pieces (the B039
+> patch, its issue, and its line in the patch list) so everything commits
+> together:
+
+> Those lines belong to the earlier session, which has ended. Adopting them
+> explicitly from it:
+
+> The quest-skill column isn't in the quest table itself. Finding where it
+> lives:
+
+> 46 quests ask for more than 300. The server logged 34 of them; the other 12
+> probably fail an earlier check. Correcting the comment and adding a validator
+> check:
+
+> Running the RAM database test in the background, at low priority:
+
+> Meanwhile, rooms mode indoors. Reading how the roam action chooses between the
+> pinwheel and the exploration modes, and where it gives up:
+
+> Exploration also looks up the area's "piece" in the same table, so a
+> building-only area like the crypt would fail there too. Checking how the grid
+> builder starts, and whether it needs that table:
+
+> One more gap: the world pass only builds a grid when the owner's chosen mode
+> needs one. So the rooms override must also tell it to build one. Making the
+> edits, starting with the explore side:
+
+> Now the header, and the roam action itself:
+
+> Now the lookup's own log line, which still says "buddies don't roam there":
+
+> The quest change passes the RAM test, and all three buddy files compile.
+> Applying the quest change to the live database and committing both pieces:
+
+> Now the roaming change: a note in 617e6's current behavior, then the commit.
+
+The quest fix and indoor rooms mode are built and committed, and B039 is kept
+and committed with B040–B042. Your tracing question is answered at the end,
+with a proposed fix. The C++ needs a compile; none of it has been tried in game
+yet.
+
+**Commits:**
+1. **Server patches B039–B042, with issues 163 and 164.** Per-player selection
+   and hiding, the quiet automatic bot reset, and the console-shutdown log line.
+   I took over last session's leftover pieces so they could commit together. All
+   four apply and revert cleanly and pass the compiler syntax check.
+2. **Nothing asks for more than 300 skill.**
+   - 46 quests and 19 skill conditions now require 300. This is in the same
+     database change that caps professions at 300, with the old values saved for
+     the revert.
+   - The server had logged 34 of those quests; all 46 are changed.
+   - The RAM database test passes, it's applied to the live world, and the
+     validator now checks for it.
+   - The next server start should drop those 53 log lines.
+3. **Buddies explore buildings and caves by rooms.**
+   - Rooms mode is used whenever the buddy is indoors (as the map marks it), or
+     the area only exists indoors, like the crypt.
+   - In the open, if circling the area finds nothing, rooms is tried before she
+     pauses.
+   - An indoor-only area is measured in a 200-yard square around you.
+   - This commit also includes "run outdoors, walk indoors" from earlier, which
+     hadn't been committed yet.
+
+**`.profile`:** since committing by path failed, and that was my wrong advice,
+run the plain version in your terminal. Only the removal is staged, so it's all
+that gets committed:
+```
+git -C /mnt/mtwo/games/azeroth-core/wow-chat-2026 commit -m "Stop tracking .profile"
+```
+
+**Mesa:** next time, watch for what Sargobras says after the pick. If he says
+nothing, the pick never reached the script, which would point at the menu, not
+the buddy code.
+
+## How far upstream the halt traces
+The chain, from source to symptom:
+1. **Our SQL** inserted spawns numbered 61,700,001. Nothing checks numbers when
+   rows are inserted.
+2. **At startup** the server reads the highest spawn number and sets "next =
+   that + 1". It doesn't check it against the 16,777,215 limit here. **This is
+   the earliest place the problem was knowable, and it stayed silent.**
+3. **During world setup**, Zangarmarsh's outdoor PvP asked for a new spawn
+   number. The generator saw it was past the limit, logged "Creature spawn id
+   overflow!!" and stopped the world.
+4. **The stop was quiet in practice:** that line was 60 lines above the end of
+   the log, and "Halting process..." says nothing about who asked for the stop
+   or why.
+
+Two fixes would cover the whole class of problem:
+- **(a) Check every number counter at load.** The server keeps about a dozen
+  counters: creature and object spawns, items, mail, groups, pets, corpses,
+  auctions and so on. Each has a limit, and each stops the world when a new
+  number would pass it. A load-time check would name the offending rows, e.g.
+  "creature spawn 61700001 (Sargobras) is past the limit; the first new spawn
+  will stop the server". That turns a delayed, confusing stop into an immediate,
+  named error.
+- **(b) Make every stop say where it came from.** About 25 places in the code
+  can stop the world. One small change to the stop call would record the file
+  and line that requested it and its exit code. "Halting process" would then
+  print, for example, "requested by ObjectMgr.cpp:7783, exit code 1 (error)".
+  That covers all 25, including signals and commands, with no per-caller work.
+
+Both are source patches, so they'd need a compile. (b) touches a header that
+nearly everything includes, but your builds are full rebuilds anyway, and the
+cache fix should make that cheap from now on. Should I write the issue and build
+them?
 
 --------------------------------------------------------------------------------
 
