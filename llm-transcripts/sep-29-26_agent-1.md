@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-29 18:58:16
+Generated on: 2026-09-29 22:44:21
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -1951,6 +1951,129 @@ Both are source patches, so they'd need a compile. (b) touches a header that
 nearly everything includes, but your builds are full rebuilds anyway, and the
 cache fix should make that cheap from now on. Should I write the issue and build
 them?
+
+--------------------------------------------------------------------------------
+
+### User Request 16
+
+> - Rooms mode is used whenever the buddy is indoors (as the map marks it), or
+> the area only exists indoors, like the crypt.
+
+make sure we account for indoors areas inside of towns.
+
+definitely this one:
+
+
+
+<pasted_content id="f3e3">
+> - (b) Make every stop say where it came from. About 25 places in the code can
+> stop the world. One small change to the stop call would
+>     record the file and line that requested it and its exit code. "Halting process" would then print, for example, "requested by
+>     ObjectMgr.cpp:7783, exit code 1 (error)". That covers all 25, including signals and commands, with no per-caller work.
+</pasted_content id="f3e3">
+
+
+can you tell me how playerbots handles pathfinding through zones while questing?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 16
+
+> Starting with (b). First, every place that stops the world, including the ones
+> that bypass the stop call:
+
+> Anchors are all unique. Writing B043:
+
+> Registering B043 and testing the round trip:
+
+> Meanwhile, indoor areas inside towns. In a town the roaming is switched off
+> and the town visit (errands, then leisure) runs instead. Checking how the town
+> visit moves a buddy:
+
+> Now the town visit's three spots. Checking the header declares `Player`, then
+> editing:
+
+> The line numbers shifted after the first edit, so the town-trigger edit
+> missed. Redoing it by content:
+
+> All five compile. Recording the town rule in the town-visit issue (617e4) and
+> committing:
+
+> Committed. While B043's syntax check runs, the playerbots question. Surveying
+> how it moves bots across a zone while questing:
+
+> `MoveFarTo` is the core of it. Now how it picks *where* a quest objective is:
+
+> Enough for the pathfinding explanation. Waiting for B043's syntax check:
+
+> B043 passes. Recording it in issue 163 and committing:
+
+Both changes are committed. Neither has been compiled yet; both pass the
+syntax-only compile check.
+
+## Buildings inside towns
+A building in a town often has its own area number without the town flag: an
+inn, a crypt, a guild hall. Before this, stepping inside looked to buddies like
+leaving town. They'd start running, regroup with you, follow you into the
+building, and restart their errands.
+
+Now, when someone is indoors, the server also checks the outdoor ground under
+that spot, and that says which town the building belongs to. Every town decision
+uses that check: the town visit, following you between areas, the party rule,
+and exploring. So inside a town building, buddies keep town manners. Only indoor
+places out in the country get explored by rooms.
+
+## "Halting process" now names the cause
+- The stop call records the file and line of the first request. All ~19 existing
+  callers get this without being edited.
+- The two shutdown-command paths that bypassed the stop call now go through it.
+- The halt line reads, for example: *"Halting process... (asked for at
+  ObjectMgr.cpp:7783; exit code 1: an error; its ERROR line is above)"*.
+- A stop signal logs its name first: *"SIGINT: Ctrl+C in the terminal"* or
+  *"SIGTERM: a kill or service manager"*.
+- It applies and reverts byte-identical. It edits a header included almost
+  everywhere, so the next compile is a full one.
+- I haven't built the other idea, checking every ID counter against its limit at
+  startup. It's noted in issue 163.
+
+## How playerbots finds its way while questing
+This is the bot module's "RPG" behaviour (`Ai/World/Rpg/`). A bot switches
+between states: questing, grinding, camping, wandering near NPCs, wandering
+randomly, taking a flight, resting, and outdoor PvP.
+
+**1. Choosing where to go.** For a quest it uses the client's quest map markers,
+the shaded regions on the world map. It averages the marker's corner points with
+random weights, so the target is a random point inside the region. It skips
+regions more than 1,500 yards away, off its map, or in another zone. To turn a
+quest in, it uses the "return here" marker. For grinding or camping, it picks
+random spots suited to its level.
+
+**2. Getting there** (`MoveFarTo`):
+- **Close targets** go straight to the server's navigation mesh, a precomputed
+  map of walkable ground.
+- **Far targets:** it asks the mesh for a route to the real destination. If the
+  route is complete, or partial (routes are capped at about 296 yards per
+  request), it walks to the furthest point the route reaches. It only commits if
+  that point gets meaningfully closer to the target. Otherwise it tries up to
+  two random stepping stones in a cone toward the target and re-routes from
+  there.
+- **While walking**, it doesn't re-plan until the current walk finishes. The
+  code comments say re-planning mid-walk made bots oscillate at cave mouths.
+- **When stuck**, it tracks the closest it has got. After about 5 attempts with
+  less than 5 yards of improvement over a stuck period, it **teleports to the
+  destination** and carries on.
+
+**3. Across zones and continents:** there's an older, separate travel system
+(`Mgr/Travel/TravelMgr`, `TravelNode`). It keeps a precomputed graph of travel
+nodes connected by paths, flights, boats, zeppelins and portals, for long trips.
+The RPG behaviour itself stays inside its zone, and can take flights to random
+flight masters.
+
+The buddies' "travel to the owner's area" reuses this long walk, including its
+teleport when stuck. The town-visit notes call out that teleport.
+
+Do you want the load-time ID counter check next, or a look at whether buddies
+could follow quest map markers the same way?
 
 --------------------------------------------------------------------------------
 

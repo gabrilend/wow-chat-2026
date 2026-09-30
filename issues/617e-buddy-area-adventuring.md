@@ -761,6 +761,16 @@ Verbatim:
 
 ## Open Questions
 
+- **Keep in view: the bot module's travel mesh** (owner, 2026-09-29: "travel
+  mesh will come in handy later, don't lose track of it"). mod-playerbots
+  keeps a precomputed graph of travel nodes joined by paths, flights, boats,
+  zeppelins and portals, for trips across zones and continents
+  (`source-beta/modules/mod-playerbots/src/Mgr/Travel/TravelMgr.*`,
+  `TravelNode.*`). Buddies today walk only within a map (617e4's travel,
+  via the bot module's long walk); crossing continents, or routing between
+  far areas, could ride that graph instead of a new one. Where it is first
+  needed is the open question.
+
 - (Answered 2026-09-23) Buddies stay in the owner's area; in towns they
   visit NPCs on foot. The level band is whatever lives in that area.
 - (Answered 2026-09-23) Towns and cities, not rested areas. The client's
