@@ -67,6 +67,7 @@ local LICH_KING          = 25462                    -- gives the chain's first q
 local INTRO_LAST_QUEST   = 13166                    -- The Battle For The Ebon Hold: the chain's last shared quest
 local FLAME_SPELL        = 51195                    -- Cosmetic - Low Poly Fire (Spell.dbc): a soft flame, no harm
 local VANISH_AFTER_MS    = 3000                     -- how long he burns before he is gone
+local SARGOBRAS_ACHERUS_SPAWN = 7180002             -- the Heart of Acherus one (25-death-knight-sargobras); the Ebon Hold one stays seen, for the undo
 
 local STATE_OWED, STATE_GIVEN, STATE_RETURNING = 0, 1, 2
 local INTID_RETURN       = 1                        -- the undo; a soul's own intid is its guid (always far above 2)
@@ -127,13 +128,26 @@ end
 -- His part done, Sargobras goes up in a soft flame and is gone (owner,
 -- 2026-09-29: "Can we make him invisible over a short duration after
 -- you've made your choice of who to sacrifice? Maybe a soft fire
--- effect."). The flame burns a few seconds, then he despawns; being a
--- spawn from the database, he comes back after his respawn time (300 s)
--- for the next death knight. Everyone near sees him go, not only the one
--- who traded: a per-player vanish would need its own mechanism.
-local function vanish(creature)
+-- effect."). The flame burns a few seconds (everyone near sees the flame),
+-- then he is gone for the one who traded alone (per-player hiding, issue
+-- 164: "okay let's build that mechanism then"); other death knights still
+-- see him and trade with him. He stays hidden from them at later logins
+-- (on_login). A server built without B040/B041 has no hiding call: logged
+-- as an error, he simply stays.
+local function hide_from(player)
+    local ok, err = pcall(function() player:SetCreatureSpawnHidden(SARGOBRAS_ACHERUS_SPAWN, true) end)
+    if not ok then
+        print("[death-knight-souls] ERROR: could not hide Sargobras from " .. player:GetName()
+            .. " (is the server built with B040/B041, issue 164?): " .. tostring(err))
+    end
+end
+local function vanish(creature, player)
     creature:CastSpell(creature, FLAME_SPELL, true)
-    creature:RegisterEvent(function(_, _, _, c) c:DespawnOrUnsummon(0) end, VANISH_AFTER_MS, 1)
+    local guid = player:GetGUID()
+    creature:RegisterEvent(function()
+        local p = GetPlayerByGUID(guid)
+        if p then hide_from(p) end
+    end, VANISH_AFTER_MS, 1)
 end
 -- }}}
 
@@ -352,7 +366,7 @@ local function on_select(event, player, creature, sender, intid, code)
     elseif row.state == STATE_OWED and intid ~= INTID_RETURN and intid ~= INTID_CLAN then
         if give_soul(player, intid) then
             if BuddiesTryClanName then BuddiesTryClanName(player, creature, code) end
-            vanish(creature)
+            vanish(creature, player)
         end
     end
 end
@@ -396,7 +410,8 @@ local function on_login(event, player)
     check_gate(player, player:GetAreaId())
     if player:GetClass() ~= CLASS_DEATH_KNIGHT then return end
     local row = ledger(player:GetGUIDLow())
-    if row and row.state == STATE_OWED then hold_selection(player, true) end
+    if row and row.state == STATE_OWED then hold_selection(player, true)
+    elseif row and row.state == STATE_GIVEN then hide_from(player) end   -- he went up in flame for them
 end
 -- }}}
 

@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-29 18:17:24
+Generated on: 2026-09-29 18:31:58
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -1484,6 +1484,134 @@ Which should I take on?
 
 Still waiting on you: the 34 quests, `.profile` (one more `touch
 /tmp/claude-allow-foreign-commit`), and B039 keep or drop.
+
+--------------------------------------------------------------------------------
+
+### User Request 13
+
+we should make it so that Sargobras can only return a DK to life once they've
+completed the intro zone. Can we make him invisible over a short duration after
+you've made your choice of who to sacrifice? Maybe a soft fire effect.
+
+> Did you see the entrance behind Sargobras when she first appeared, the steps
+> forward and the wave or salute?
+
+I saw her appear, she walked forward, but didn't wave or salute.
+
+okay now I created a new alliance character in Ammen Vale and Sargobras doesn't
+seem to create a new buddy-bot for her? The guild name check goes through, but
+no guild is created. Can you ensure that it's not just once, and instead is
+per-character?
+
+> 2. Give indoor starting areas like the Shadow Grave roaming data, or let
+> buddies use the surrounding area's.
+
+this points to buddy-bots not knowing how to roam in indoor buildings, I don't
+think it has anything to do with the starting area. Though I haven't seem them
+roaming yet.
+
+  3. Silence the "AI was reset" message.
+
+sure.
+
+  4. The Knothide Leather follow-up to step 8.
+
+huh?
+
+> .profile (one more touch /tmp/claude-allow-foreign-commit)
+
+this doesn't seem to be working. Must be an error with the harness.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 13
+
+> Several threads. First, the checks that are just lookups: the new character's
+> buddy and clan, whether the entrance recorded a gesture, and the permission
+> file.
+
+> No script errors reached the log files; the Lua engine's own messages only go
+> to the console. Reading the pick-and-clan code path directly:
+
+> No Lua errors: the engine logs errors to the server log, and there are none.
+> So the code ran and quietly did nothing. Reading Sargobras's greeting and
+> selection handlers as they stand:
+
+> "Cosmetic - Low Poly Fire" (51195) looks like the soft fire you mean: a low
+> flame on a unit. Now "has completed the intro": checking the Acherus chain's
+> last quests:
+
+> `vanish` has to be defined before the selection handler that calls it. I put
+> it after, which would fail at runtime, so I'm moving it up next to the other
+> helpers, with the intro check:
+
+> That compiles. Next, silencing "AI was reset to defaults". Checking whether
+> the bot module has a built-in way to keep a bot quiet:
+
+> Confirmed: the automatic resets come from group packets ("group list", "group
+> set leader"), which carry a packet, while the typed command doesn't. Writing
+> the patch:
+
+> Round trip clean. Running the compiler syntax check on the patched files in
+> the background, and committing the finished parts meanwhile:
+
+> Committed. Checking that the `.profile` removal is still staged, so you can
+> finish it yourself:
+
+Everything you asked for is built except Mesa's missing buddy, which needs an
+answer from you first. None of it has been tried in game.
+
+**Sargobras (death knights):**
+- **"I want my old life back"** only appears after the death knight has turned
+  in "The Battle For The Ebon Hold". That's the last quest both factions share
+  in Acherus; only the trips to Stormwind or Orgrimmar come after it. If an old
+  menu is still open, choosing the option is refused.
+- **After a soul is traded** he burns with a soft flame ("Cosmetic - Low Poly
+  Fire") for three seconds, then disappears. He respawns after 5 minutes for the
+  next death knight.
+  - Everyone nearby sees him go, not just the player who traded. A vanish only
+    one player sees would need its own mechanism.
+  - It's a flame followed by a disappearance, not a gradual fade.
+- These are Lua changes: `.reload ale` or a restart applies them. The script
+  loads cleanly and commits went through.
+
+**The wave that didn't show:** her wave *was* recorded, so the entrance ran to
+the end. The gesture fired at the same instant her walk ended and she turned to
+you, and the client dropped it. Now she waits until she has stopped, turns, and
+gestures half a second later. It's C++, so it needs a compile; it's committed.
+
+**"AI was reset to defaults":** the bot module resets a bot's behaviour both
+when you type the reset command and automatically whenever its group changes.
+Buddies change groups by distance all the time, so it kept whispering. A new
+source patch (B042) makes only the typed reset answer. It applies and reverts
+cleanly; the compiler syntax check is still running. It isn't committed yet,
+because its registration line also carries B039/B040/B041.
+
+**Mesa's buddy:** her buddy slot is still "owed, nothing chosen", so the pick
+never registered, and the clan is only founded after a successful pick. There
+are no script errors in the logs. The code is already per-character, not
+per-account. What did Sargobras say right after you picked, and which option was
+it? A failed pick should make him say "The stars are cloudy tonight."
+
+**Indoor roaming:** agreed, it's the roaming that can't handle indoor spaces,
+not a starting-area problem. I'll leave the waypoint search as the next buddy
+investigation.
+
+**The "Knothide Leather" item:** skip it. It's one leftover log line from the
+loot cleanup and affects nothing.
+
+**`.profile`:** my first commit used up the single-use permission, and a second
+one never registered. The removal is still staged, so the quickest fix is to run
+this in your own terminal:
+```
+git -C /mnt/mtwo/games/azeroth-core/wow-chat-2026 commit -m "Stop tracking .profile" -- .profile
+```
+Committing by path records the file's contents when it isn't staged, but here
+the removal is staged, so it records the removal. `git show --stat HEAD` should
+then say `.profile | 1 -`.
+
+**Still waiting on you:** B039 keep or drop (it holds up committing
+B040–B042), and the 34 quests above 300 skill.
 
 --------------------------------------------------------------------------------
 
