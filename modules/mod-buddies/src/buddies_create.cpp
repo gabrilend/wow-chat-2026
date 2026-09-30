@@ -177,6 +177,80 @@ static std::string GiveSecondaryProfessions(Player* buddy)
 }
 // }}}
 
+// {{{ primary professions (617k)
+// Ritz, 2026-09-25: "It picks totally randomly [...] The crafting profession
+// is the one that is chosen, and the gathering profession for that
+// crafting profession is selected" / "if tailoring or enchanting is
+// selected, a random gathering profession is chosen. One crafting
+// profession per character." So: one crafting profession at random, the
+// gathering profession that feeds it (alchemy and inscription: herbalism;
+// blacksmithing, engineering and jewelcrafting: mining; leatherworking:
+// skinning; tailoring and enchanting: any of the three), each by its
+// apprentice spell (skill 1 of 75), with the tools the work needs in its
+// bags. Chosen once: a buddy that has a crafting profession keeps it, and
+// one that has a gathering profession keeps that. Buddies made before
+// this get theirs at their next login. Spell and item numbers: Spell.dbc
+// and item_template, read 2026-09-30.
+struct CraftingProfession { uint32 skill; uint32 spell; uint32 tool; uint32 feedsFrom; };   // feedsFrom 0: any gathering
+struct GatheringProfession { uint32 skill; uint32 spell; uint32 tool; uint32 extra[2]; };
+static CraftingProfession const sCrafting[] = {
+    { SKILL_ALCHEMY,        2259,  0,     SKILL_HERBALISM },
+    { SKILL_BLACKSMITHING,  2018,  5956,  SKILL_MINING    },   // Blacksmith Hammer
+    { SKILL_ENCHANTING,     7411,  6218,  0               },   // Runed Copper Rod
+    { SKILL_ENGINEERING,    4036,  6219,  SKILL_MINING    },   // Arclight Spanner
+    { SKILL_INSCRIPTION,    45357, 39505, SKILL_HERBALISM },   // Virtuoso Inking Set
+    { SKILL_JEWELCRAFTING,  25229, 20815, SKILL_MINING    },   // Jeweler's Kit
+    { SKILL_LEATHERWORKING, 2108,  0,     SKILL_SKINNING  },
+    { SKILL_TAILORING,      3908,  0,     0               },
+};
+static GatheringProfession const sGathering[] = {
+    { SKILL_HERBALISM, 2366, 0,    { 2383, 0    } },   // Find Herbs
+    { SKILL_MINING,    2575, 2901, { 2580, 2656 } },   // Mining Pick; Find Minerals, Smelting
+    { SKILL_SKINNING,  8613, 7005, { 0,    0    } },   // Skinning Knife
+};
+
+// Learns a crafting and a gathering profession if it has none, and puts
+// the tools of the ones it has in its bags when missing. Returns what it
+// could not do, empty when all is well.
+static std::string GivePrimaryProfessions(Player* buddy)
+{
+    CraftingProfession const* craft = nullptr;
+    for (CraftingProfession const& c : sCrafting)
+        if (buddy->HasSkill(c.skill))
+            craft = &c;                                // chosen before: kept
+    if (!craft)
+    {
+        craft = &sCrafting[urand(0, uint32(std::size(sCrafting)) - 1)];
+        buddy->learnSpell(craft->spell, false);
+    }
+    GatheringProfession const* gather = nullptr;
+    for (GatheringProfession const& g : sGathering)
+        if (buddy->HasSkill(g.skill))
+            gather = &g;                               // chosen before: kept
+    if (!gather)
+    {
+        for (GatheringProfession const& g : sGathering)
+            if (g.skill == craft->feedsFrom)
+                gather = &g;                           // the one that feeds its craft
+        if (!gather)
+            gather = &sGathering[urand(0, uint32(std::size(sGathering)) - 1)];   // tailors, enchanters: any
+        buddy->learnSpell(gather->spell, false);
+        for (uint32 extra : gather->extra)
+            if (extra)
+                buddy->learnSpell(extra, false);
+    }
+    std::string problems;
+    for (uint32 tool : { craft->tool, gather->tool })
+        if (tool && !buddy->HasItemCount(tool, 1, true) && !buddy->StoreNewItemInBestSlots(tool, 1))
+            problems += "no room in its bags for tool " + std::to_string(tool) + "; ";
+    if (!buddy->HasSkill(craft->skill))
+        problems += "learning spell " + std::to_string(craft->spell) + " did not give skill " + std::to_string(craft->skill) + "; ";
+    if (!buddy->HasSkill(gather->skill))
+        problems += "learning spell " + std::to_string(gather->spell) + " did not give skill " + std::to_string(gather->skill) + "; ";
+    return problems;
+}
+// }}}
+
 // {{{ Fail
 static void Fail(uint32 owner, uint8 slot, uint8 race, uint8 cls, std::string const& why)
 {
@@ -245,7 +319,7 @@ static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
         buddy->learnSpell(50977, false);            // Death Gate, as the bot factory gives it
     if (ownerLevel > buddy->GetLevel())
         buddy->SetLevel(ownerLevel);                // the rest follows at first login
-    std::string missing = GiveSecondaryProfessions(buddy);
+    std::string missing = GiveSecondaryProfessions(buddy) + GivePrimaryProfessions(buddy);   // 617k
     if (!missing.empty())
         LOG_ERROR("module", "mod-buddies: new buddy {} for owner {}: {}; it tries again at its first login",
             name, owner, missing);
@@ -330,7 +404,7 @@ public:
     {
         if (BuddiesEnabled() && BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
         {
-            std::string missing = GiveSecondaryProfessions(player);
+            std::string missing = GiveSecondaryProfessions(player) + GivePrimaryProfessions(player);   // 617k
             if (!missing.empty())
                 LOG_ERROR("module", "mod-buddies: buddy {}: {}", player->GetName(), missing);
             return;
