@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-29 18:31:58
+Generated on: 2026-09-29 18:46:01
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -1612,6 +1612,164 @@ then say `.profile | 1 -`.
 
 **Still waiting on you:** B039 keep or drop (it holds up committing
 B040–B042), and the 34 quests above 300 skill.
+
+--------------------------------------------------------------------------------
+
+### User Request 14
+
+<pasted_content id="f3e3">
+> - After a soul is traded he burns with a soft flame ("Cosmetic - Low Poly
+> Fire") for three seconds, then disappears. He respawns after 5
+>     minutes for the next death knight.
+>     - Everyone nearby sees him go, not just the player who traded. A vanish only one player sees would need its own mechanism.
+</pasted_content id="f3e3">
+
+
+okay let's build that mechanism then. We will need it for the neus anyway.
+
+
+
+<pasted_content id="f3e3">
+$ git -C /mnt/mtwo/games/azeroth-core/wow-chat-2026 commit -m "Stop tracking
+.profile" -- .profile
+On branch main
+Your branch is ahead of 'origin/main' by 33 commits.
+  (use "git push" to publish your local commits)
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        modified:   llm-transcripts/sep-29-26_agent-1.md
+        modified:   patches/patches.sh
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        issues/163-cli-console-silent-shutdown-logging.md
+        issues/164-per-player-unselectable-creatures.md
+        patches/B039-cli-console-silent-shutdown-logging.sh
+        patches/B040-per-player-unselectable.sh
+        patches/B041-ale-per-player-unselectable.sh
+        patches/B042-quiet-automatic-ai-reset.sh
+
+no changes added to commit (use "git add" and/or "git commit -a")
+</pasted_content id="f3e3">
+
+
+done
+
+> Still waiting on you: B039 keep or drop (it holds up committing B040–B042),
+> and the 34 quests above 300 skill.
+
+explain these more? I need context.
+
+> Indoor roaming: agreed, it's the roaming that can't handle indoor spaces, not
+> a starting-area problem. I'll leave the waypoint search as
+>   the next buddy investigation.
+
+let's work on that.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 14
+
+> Checking what that commit did:
+
+> Now the header, the rules and the new hide calls, inside B040:
+
+> Adding the Object.cpp insertion to B040's apply, and Object.cpp to its revert:
+
+> Now the Lua call in B041:
+
+> Both patches apply and revert cleanly. Compiler syntax check in the
+> background, and the Lua side meanwhile: vanish for the trader only, and stay
+> hidden for them on later logins.
+
+> Now on_login: hide him again for death knights who have already traded.
+
+> Loads cleanly. Recording the "seeing" half in issue 164:
+
+> Now indoor roaming. Finding the code behind "found no waypoint":
+
+> Issue 617e6, "exploration modes in game", mentions buildings with rooms and
+> caves, and there's already a 988-line exploration core in the module. Checking
+> what it covers and how far it got:
+
+> All patched files pass the compiler syntax check. Committing the death-knight
+> script:
+
+The per-player vanish is built and waiting on a compile. For indoor roaming I've
+found the cause, and one question decides the fix.
+
+## Per-player vanish (built)
+- A script can now hide one creature spawn from one player; everyone else still
+  sees it.
+  - It works by spawn number, so it can be set at login before the creature has
+    loaded.
+  - The creature disappears for that player immediately, and GM mode still sees
+    it.
+  - The Lua call is `player:SetCreatureSpawnHidden(spawnId, hidden)`.
+- **Sargobras uses it:** after a trade he burns for three seconds, then vanishes
+  for that death knight only, and stays gone for them at later logins. The flame
+  itself is visible to everyone nearby. The Ebon Hold Sargobras stays visible so
+  the soul can still be taken back.
+- It's built into the same two patches as per-player selection. Both apply and
+  revert byte-identical, and every patched file passes the compiler syntax
+  check. The Lua is committed; the patches wait on the B039 question below.
+
+## Indoor roaming: the cause
+Today's default roaming (the "pinwheel") circles the **centre of the area**
+you're in. That centre comes from the outdoor terrain map. Indoors this fails
+two ways:
+- **A building-only area** like the Shadow Grave crypt has no terrain, so it has
+  no centre, and buddies don't roam there at all. That's why she followed you
+  out: that was the bot module's default follow.
+- **Indoors or against a building in an outdoor area** (the crypt exit in
+  Deathknell), every waypoint fails "clear of obstacles" or "in sight of the
+  centre". She retried every 10 seconds, 18 times, and stood still.
+
+**You already designed the indoor answer: issue 617e6, "exploration modes".**
+Instead of circling a centre, it paces out the ground as a grid from where you
+stand, indoors included. It paints what buddies have explored, finds rooms and
+tunnels, and picks the least-explored place next. It's built and wired in:
+`.buddy explore paint` (or `rooms`, `disc`, `mixed`) switches it on for your
+buddies. But it's opt-in, and the "no centre" check stops roaming before any
+mode gets a chance.
+
+**The fix I'd make:** a missing centre no longer stops roaming, and pinwheel
+buddies switch to a grid mode when they're indoors or can't find a waypoint.
+**Which mode should indoors use: `rooms` (orbit each room until it's 80%
+explored, then move to the least-explored room or tunnel), `paint` (always head
+for the least-explored ground), or `mixed`?** You could also try `.buddy explore
+rooms` in the crypt now to see how it looks.
+
+## B039 and the 34 quests, with context
+**B039:** when the server was "crashing" this morning, the log just said
+"Halting process", with no reason. The last session guessed the cause was the
+console window's input closing, and B039 added a log line at that spot. After
+your compile, the server halted again and that line never printed. That ruled
+out the console and sent us to gdb, which found the real cause: spawn numbers
+past the server's limit. So B039 was only useful by staying silent. Its one
+Linux line guards something that probably can't happen, and it adds a patch to
+every build. **I recommend dropping it.** Its registration line is shared with
+B040–B042, which is why those are still uncommitted.
+
+**The 34 quests:** in Wrath, professions go to 450. Some quests (mostly Wrath
+cooking, engineering and similar) require 325–450 skill. Basic caps levels at
+60, which caps skills at 300, so the server says at every start: "Quest X
+requires 350 skill but max possible is 300, quest can't be done". The 19 "skill
+condition" lines are the same thing inside loot and gossip rules. They're
+harmless for play, since the quests just never appear as doable, but they're 53
+lines of noise. **Removing them** means deleting those quests and the NPC links
+that offer them, with backups and a revert, in the same SQL that already removes
+recipes above 300 (155n). Say yes or no.
+
+**`.profile`:** run this in your terminal. It commits only what's staged, which
+is just the `.profile` removal:
+```
+git -C /mnt/mtwo/games/azeroth-core/wow-chat-2026 commit -m "Stop tracking .profile"
+```
+
+**Still open:** what did Sargobras say when Mesa's pick failed?
 
 --------------------------------------------------------------------------------
 
