@@ -58,6 +58,7 @@
 #include "ItemPackets.h"
 #include "ItemUsageValue.h"
 #include "Log.h"
+#include "AuctionHouseMgr.h"
 #include "Mail.h"
 #include "Map.h"
 #include "MovementActions.h"
@@ -76,6 +77,7 @@
 #include "WorldSession.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <list>
 #include <mutex>
@@ -132,7 +134,7 @@ static constexpr uint32 UNSTUCK_TRIES       = 12;      // random spots tried for
 // their map's update thread and maps update in parallel. A buddy's entry is
 // copied out, worked on and written back; the seat-timer sharing (below)
 // reads the others' entries under the same lock.
-enum class Errand : uint8 { Train, Sell, Repair, Mail };   // Mail: at a mailbox, not an NPC
+enum class Errand : uint8 { Train, Sell, Repair, Mail, Auction };   // Mail: at a mailbox, not an NPC
 enum class Doing  : uint8 { Nothing, Errand, Visit, Sit, Sleep, Fish };
 
 struct ErrandStop
@@ -325,7 +327,9 @@ static GameObject* NearestMailbox(Player* bot)
 // requests a player's clicks send (they check the mailbox is in reach, the
 // bags have room, and save). An item that doesn't fit stays in the mail
 // for the next visit.
-static void DoMail(Player* bot, GameObject* box)
+static void CountAuctionMail(Player* bot, Mail const* m);   // the auction house section, below (617h)
+static void MailToOwner(PlayerbotAI* ai, Player* bot);
+static void DoMail(PlayerbotAI* ai, Player* bot, GameObject* box)
 {
     time_t now = GameTime::GetGameTime().count();
     std::vector<uint32> ids;
@@ -338,6 +342,7 @@ static void DoMail(Player* bot, GameObject* box)
         Mail* m = bot->GetMail(id);
         if (!m)
             continue;
+        CountAuctionMail(bot, m);                     // sold / expired: the rising price (617h)
         std::vector<ObjectGuid::LowType> items;
         for (MailItemInfo const& mi : m->items)
             items.push_back(mi.item_guid);
@@ -362,20 +367,350 @@ static void DoMail(Player* bot, GameObject* box)
             session->HandleMailDelete(p);
         }
     }
+    MailToOwner(ai, bot);                             // bind-on-equip epics it has no use for: the owner's (617h)
 }
 // }}}
 
+// {{{ the auction house (617h)
+// The owner's rules (2026-09-24/25), for a buddy at a town's auctioneer:
+//   - what goes: green quality and up, not bound, and nothing it has a use
+//     for (the bot module's item judgement: an upgrade, a quest item, a
+//     skill's or a consumable it uses is kept); whites and greys are the
+//     vendor's (Junk above);
+//   - epics: an upgrade is kept (it equips it, 617j); gear with a required
+//     level that is bind-on-equip and not an upgrade is never sold: it is
+//     mailed to the owner at a mailbox; soulbound such gear is vendored;
+//     other epics (no required level, not gear) are auctioned;
+//   - the minimum, per unit: the vendor price times 1.5 (green), 2 (blue),
+//     2.5 (epic); an item with no vendor price is listed at the owner's
+//     fixed price (buddy_fixed_price) or not at all;
+//   - undercut: the lowest competing listing (same item, same random
+//     enchantment) minus 10% for gear, 5% for the rest; when that would
+//     fall below the minimum the competition counts as at the minimum: an
+//     epic, or an item with fewer than 5 listed, still posts at the minimum
+//     if that is below the competitor; otherwise gear is vendored and the
+//     rest listed at the minimum;
+//   - glut: 5 or more listings of it and not an epic: vendored;
+//   - rising: with nothing of it listed, after unsold expiries its price is
+//     its last price plus half the vendor price per expiry, with no
+//     ceiling, until a copy sells (buddy_price, per auction house; updated
+//     from its auction mail at the mailbox, DoMail);
+//   - stacks: more than a full stack's worth goes up in random-sized
+//     stacks, each 1 to the stack limit; otherwise all at once;
+//   - durations: gear 48 hours, trade goods 12, the rest 24;
+//   - no money for the deposit: the rest goes to the vendor this visit.
+// The bid equals the buyout (the rules name one price).
+static constexpr uint32 AH_GLUT          = 5;
+static constexpr float  AH_UNDERCUT_GEAR = 0.90f;
+static constexpr float  AH_UNDERCUT_REST = 0.95f;
+static constexpr float  AH_RISE          = 0.5f;   // x the vendor price, per unsold expiry
+static constexpr uint32 AH_MIN_GEAR = 48 * 60, AH_MIN_GOODS = 12 * 60, AH_MIN_REST = 24 * 60;   // minutes
+
+enum class Fate : uint8 { Keep, Auction, Vendor, MailOwner };
+
+static std::mutex sAuctionLock;
+static std::unordered_map<uint32, std::set<ObjectGuid>> sToVendor;   // buddy -> items the auction rules sent to the vendor
+static std::unordered_map<uint32, std::set<uint32>>     sMailSeen;   // buddy -> auction mails already counted
+
+static bool IsGear(ItemTemplate const* p) { return p->Class == ITEM_CLASS_WEAPON || p->Class == ITEM_CLASS_ARMOR; }
+
+// {{{ FixedPrice
+static uint32 FixedPrice(uint32 entry)
+{
+    if (QueryResult r = CharacterDatabase.Query("SELECT price FROM buddy_fixed_price WHERE item = {}", entry))
+        return (*r)[0].Get<uint32>();
+    return 0;
+}
+// }}}
+
+// {{{ FateOf
+static Fate FateOf(PlayerbotAI* ai, Item* item)
+{
+    ItemTemplate const* p = item->GetTemplate();
+    if (p->Quality < ITEM_QUALITY_UNCOMMON)
+        return Fate::Keep;                             // whites and greys: the vendor's own rules (Junk)
+    if (p->Class == ITEM_CLASS_QUEST || p->Class == ITEM_CLASS_KEY || p->Class == ITEM_CLASS_CONTAINER)
+        return Fate::Keep;                             // quest items, keys; bags are a clan upgrade (617k)
+    ItemUsage u = ai->GetAiObjectContext()->GetValue<ItemUsage>("item usage", item->GetEntry())->Get();
+    switch (u)
+    {
+        case ITEM_USAGE_EQUIP: case ITEM_USAGE_REPLACE: case ITEM_USAGE_BROKEN_EQUIP: case ITEM_USAGE_QUEST:
+        case ITEM_USAGE_SKILL: case ITEM_USAGE_USE: case ITEM_USAGE_KEEP: case ITEM_USAGE_AMMO: case ITEM_USAGE_GUILD_TASK:
+            return Fate::Keep;                         // it has a use for it
+        default:
+            break;
+    }
+    if (p->Quality >= ITEM_QUALITY_EPIC && IsGear(p) && p->RequiredLevel > 0)
+    {
+        if (item->IsSoulBound())
+            return Fate::Vendor;                       // bound, and no use to it
+        if (p->Bonding == BIND_WHEN_EQUIPPED)
+            return Fate::MailOwner;                    // never sold: the owner's
+    }
+    if (item->IsSoulBound())
+        return Fate::Keep;                             // bound: can't be auctioned (the vendor's rules decide)
+    if (!p->SellPrice && !FixedPrice(p->ItemId))
+        return Fate::Keep;                             // no vendor price and no fixed price: nothing to go by
+    return Fate::Auction;
+}
+// }}}
+
+// {{{ ItemsForOwner
+static std::vector<Item*> ItemsForOwner(PlayerbotAI* ai, Player* bot)
+{
+    std::vector<Item*> out;
+    for (Item* item : BagItems(bot))
+        if (FateOf(ai, item) == Fate::MailOwner)
+            out.push_back(item);
+    return out;
+}
+// }}}
+
+// {{{ AnythingToAuction
+static bool AnythingToAuction(PlayerbotAI* ai, Player* bot)
+{
+    for (Item* item : BagItems(bot))
+        if (FateOf(ai, item) == Fate::Auction)
+            return true;
+    return false;
+}
+// }}}
+
+// {{{ DoAuction
+static void DoAuction(PlayerbotAI* ai, Player* bot, Creature* npc)
+{
+    AuctionHouseEntry const* ahEntry = AuctionHouseMgr::GetAuctionHouseEntryFromFactionTemplate(npc->GetFaction());
+    AuctionHouseObject* house = sAuctionMgr->GetAuctionsMap(npc->GetFaction());
+    if (!ahEntry || !house)
+        return;
+    uint32 pool = ahEntry->houseId;
+    uint32 guid = bot->GetGUID().GetCounter();
+
+    // the lots: same item and same random enchantment together
+    struct Lot { uint32 entry = 0; int32 prop = 0; std::vector<std::pair<ObjectGuid, uint32>> items; uint32 total = 0; };
+    std::map<std::pair<uint32, int32>, Lot> lots;
+    std::set<ObjectGuid> toVendor;
+    for (Item* item : BagItems(bot))
+    {
+        Fate f = FateOf(ai, item);
+        if (f == Fate::Vendor)
+            toVendor.insert(item->GetGUID());
+        if (f != Fate::Auction)
+            continue;
+        Lot& lot = lots[{ item->GetEntry(), item->GetItemRandomPropertyId() }];
+        lot.entry = item->GetEntry(), lot.prop = item->GetItemRandomPropertyId();
+        lot.items.push_back({ item->GetGUID(), item->GetCount() });
+        lot.total += item->GetCount();
+    }
+
+    bool broke = false;                                // no money for a deposit: the rest to the vendor
+    for (auto& [key, lot] : lots)
+    {
+        ItemTemplate const* p = sObjectMgr->GetItemTemplate(lot.entry);
+        auto vendorLot = [&]() { for (auto const& it : lot.items) toVendor.insert(it.first); };
+        if (broke)
+        {
+            vendorLot();
+            continue;
+        }
+        // the competition: listings of this item with this enchantment
+        uint32 listed = 0, lowest = 0;                 // lowest: per unit, buyout
+        for (auto const& [id, a] : house->GetAuctions())
+        {
+            if (a->item_template != lot.entry)
+                continue;
+            Item* listedItem = sAuctionMgr->GetAItem(a->item_guid);
+            if (listedItem && listedItem->GetItemRandomPropertyId() != lot.prop)
+                continue;                              // "of the Tiger" doesn't compete with "of the Whale"
+            ++listed;
+            if (a->buyout && a->itemCount)
+                if (uint32 unit = a->buyout / a->itemCount; !lowest || unit < lowest)
+                    lowest = unit;
+        }
+        bool epic = p->Quality >= ITEM_QUALITY_EPIC, gear = IsGear(p);
+        uint32 price = 0;                              // per unit
+        if (!p->SellPrice)
+            price = FixedPrice(lot.entry);             // the owner's hand-kept price, as it is
+        else
+        {
+            uint32 minimum = uint32(float(p->SellPrice) * (1.0f + 0.5f * float(p->Quality - ITEM_QUALITY_NORMAL)));
+            if (listed >= AH_GLUT && !epic)
+            {
+                vendorLot();                           // a glut
+                continue;
+            }
+            if (!lowest)
+            {
+                price = minimum;                       // nothing to compete with: the minimum, or the risen price
+                if (QueryResult r = CharacterDatabase.Query(
+                        "SELECT steps, last_price FROM buddy_price WHERE pool = {} AND item = {}", pool, lot.entry))
+                    if ((*r)[0].Get<uint32>() > 0)
+                        price = std::max(minimum, (*r)[1].Get<uint32>());
+            }
+            else
+            {
+                uint32 under = uint32(float(lowest) * (gear ? AH_UNDERCUT_GEAR : AH_UNDERCUT_REST));
+                if (under >= minimum)
+                    price = under;                     // the undercut
+                else if ((epic || listed < AH_GLUT) && minimum < lowest)
+                    price = minimum;                   // near the minimum, still below the competitor
+                else if (gear)
+                {
+                    vendorLot();                       // only minimum-price gear listed: vendored
+                    continue;
+                }
+                else
+                    price = minimum;                   // trade goods and the rest: listed at the minimum
+            }
+        }
+        if (!price)
+            continue;
+        uint32 minutes = gear ? AH_MIN_GEAR : p->Class == ITEM_CLASS_TRADE_GOODS ? AH_MIN_GOODS : AH_MIN_REST;
+
+        // the stacks: random sizes when there is more than a full stack
+        uint32 maxStack = std::max<uint32>(1, p->GetMaxStackSize());
+        std::vector<uint32> stacks;
+        for (uint32 left = lot.total; left; )
+        {
+            uint32 n = lot.total > maxStack ? std::min(left, urand(1, maxStack)) : left;
+            stacks.push_back(n);
+            left -= n;
+        }
+        size_t next = 0;                               // the lot's item being drawn from
+        uint32 usedOfNext = 0;
+        for (uint32 n : stacks)
+        {
+            // the items (and how many of each) that make up this stack
+            std::vector<std::pair<ObjectGuid, uint32>> parts;
+            for (uint32 need = n; need && next < lot.items.size(); )
+            {
+                uint32 take = std::min(need, lot.items[next].second - usedOfNext);
+                parts.push_back({ lot.items[next].first, take });
+                need -= take, usedOfNext += take;
+                if (usedOfNext == lot.items[next].second)
+                    ++next, usedOfNext = 0;
+            }
+            Item* first = bot->GetItemByGuid(parts.front().first);
+            if (!first)
+                continue;
+            uint32 deposit = AuctionHouseMgr::GetAuctionDeposit(ahEntry, minutes * MINUTE, first, n);
+            if (!bot->HasEnoughMoney(deposit))
+            {
+                // "They need the coin, and they need it now!"
+                broke = true;
+                vendorLot();
+                break;
+            }
+            // the request the auction window sends
+            WorldPacket req(CMSG_AUCTION_SELL_ITEM);
+            req << npc->GetGUID() << uint32(parts.size());
+            for (auto const& part : parts)
+                req << part.first << part.second;
+            req << uint32(price * n) << uint32(price * n) << minutes;
+            bot->GetSession()->HandleAuctionSellItem(req);
+        }
+        if (!broke)
+            CharacterDatabase.Execute("INSERT INTO buddy_price (pool, item, steps, last_price, updated) VALUES ({}, {}, 0, {}, UNIX_TIMESTAMP()) "
+                "ON DUPLICATE KEY UPDATE last_price = {}, updated = UNIX_TIMESTAMP()", pool, lot.entry, price, price);
+    }
+    std::lock_guard<std::mutex> lock(sAuctionLock);
+    sToVendor[guid].insert(toVendor.begin(), toVendor.end());
+}
+// }}}
+
+// {{{ CountAuctionMail
+// An auction mail, read before it is collected: "sold" resets the item's
+// rising price; "expired" raises it by half the vendor price (the next
+// listing uses it when nothing of the item is listed). The subject is the
+// server's own "item:0:outcome:auction:count"; the sender, the auction
+// house. Each mail counted once, even if it has to wait for bag room.
+static void CountAuctionMail(Player* bot, Mail const* m)
+{
+    if (m->messageType != MAIL_AUCTION)
+        return;
+    {
+        std::lock_guard<std::mutex> lock(sAuctionLock);
+        if (!sMailSeen[bot->GetGUID().GetCounter()].insert(m->messageID).second)
+            return;
+    }
+    uint32 entry = 0, zero = 0, outcome = 0;
+    if (std::sscanf(m->subject.c_str(), "%u:%u:%u", &entry, &zero, &outcome) != 3 || !entry)
+        return;
+    ItemTemplate const* p = sObjectMgr->GetItemTemplate(entry);
+    if (!p)
+        return;
+    if (outcome == AUCTION_SUCCESSFUL || outcome == AUCTION_SALE_PENDING)
+        CharacterDatabase.Execute("UPDATE buddy_price SET steps = 0 WHERE pool = {} AND item = {}", m->sender, entry);
+    else if (outcome == AUCTION_EXPIRED)
+        CharacterDatabase.Execute("UPDATE buddy_price SET steps = steps + 1, last_price = last_price + {}, updated = UNIX_TIMESTAMP() "
+            "WHERE pool = {} AND item = {}", uint32(float(p->SellPrice) * AH_RISE), m->sender, entry);
+}
+// }}}
+
+// {{{ MailToOwner
+// Bind-on-equip epics it has no use for go to its owner (never sold).
+static void MailToOwner(PlayerbotAI* ai, Player* bot)
+{
+    std::vector<Item*> items = ItemsForOwner(ai, bot);
+    if (items.empty())
+        return;
+    QueryResult row = CharacterDatabase.Query("SELECT owner FROM buddy_roster WHERE buddy = {}", bot->GetGUID().GetCounter());
+    if (!row)
+        return;
+    ObjectGuid owner = ObjectGuid::Create<HighGuid::Player>((*row)[0].Get<uint32>());
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    MailDraft draft("For the clan", "Found this and thought of you.");
+    uint32 n = 0;
+    for (Item* item : items)
+    {
+        if (n == MAX_MAIL_ITEMS)
+            break;                                     // a mail holds twelve; the rest go next visit
+        bot->MoveItemFromInventory(item->GetBagSlot(), item->GetSlot(), true);
+        item->DeleteFromInventoryDB(trans);
+        item->SetOwnerGUID(owner);
+        item->SaveToDB(trans);
+        draft.AddItem(item);
+        ++n;
+    }
+    draft.SendMailTo(trans, MailReceiver(ObjectAccessor::FindConnectedPlayer(owner), owner.GetCounter()), MailSender(bot), MAIL_CHECK_MASK_COPIED);
+    CharacterDatabase.CommitTransaction(trans);
+}
+// }}}
+// }}}
+
 // {{{ BuildTodo
-// The town's errands for this buddy, from what the town's people offer
-// ("some towns don't even have repair stations"): its class trainer when it
-// has something to learn; a vendor with odds equal to how full its bags are,
-// when it carries anything to sell; a repairer when anything is worn. The
-// nearest of each. Order (617e, 617h): trainer, vendor, repair.
+// The town's errands for this buddy, from what the town offers ("some
+// towns don't even have repair stations"; a missing service is skipped),
+// the nearest of each, in the owner's order (617h, 2026-09-24):
+//   1 repair       something worn is broken (the client shows it red)
+//   2 trainer      it has something to learn
+//   3 repair       something is badly worn (yellow), nothing broken
+//   4 mailbox      mail to collect (a reward that didn't fit its bags,
+//                  617d; auction money and returned items), or a
+//                  bind-on-equip epic to send its owner
+//   5 auction      something to auction
+//   6 repair       anything worn at all
+//   7 vendor       junk (odds equal to how full its bags are), and
+//                  whatever the auction rules send to a vendor
+static constexpr float YELLOW_SHARE = 0.2f;   // "badly worn": a fifth of its durability or less (assumed from the client's warning)
+
+// Whether some worn item is at or below `share` of its durability.
+static bool WornAtMost(Player* bot, float share)
+{
+    for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+        if (Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            if (uint32 max = item->GetUInt32Value(ITEM_FIELD_MAXDURABILITY))
+                if (float(item->GetUInt32Value(ITEM_FIELD_DURABILITY)) <= share * float(max))
+                    return true;
+    return false;
+}
+
 static std::vector<ErrandStop> BuildTodo(PlayerbotAI* ai, Player* bot, uint32 areaId)
 {
-    Creature* trainer = nullptr;
-    Creature* vendor  = nullptr;
-    Creature* repairer = nullptr;
+    Creature* trainer    = nullptr;
+    Creature* vendor     = nullptr;
+    Creature* repairer   = nullptr;
+    Creature* auctioneer = nullptr;
     auto nearer = [&](Creature* best, Creature* c) { return !best || bot->GetDistance(c) < bot->GetDistance(best); };
     for (Unit* u : UnitsNear(bot, TOWN_SCAN_YARDS))
     {
@@ -388,22 +723,33 @@ static std::vector<ErrandStop> BuildTodo(PlayerbotAI* ai, Player* bot, uint32 ar
             vendor = c;
         if (c->IsArmorer() && nearer(repairer, c))
             repairer = c;
+        if (c->IsAuctioner() && nearer(auctioneer, c))
+            auctioneer = c;
     }
     std::vector<ErrandStop> todo;
-    // Mail first: a quest reward that didn't fit its bags was mailed to it
-    // (the server's own reward step does that, 617d), and it collects it
-    // at the town's nearest mailbox (owner, 2026-09-29: "for full bags,
-    // can you mail them the item instead? make sure they actually check
-    // their mail...").
-    if (MailWaiting(bot))
+    bool repairing = false;
+    if (repairer && WornAtMost(bot, 0.0f))
+        todo.push_back({ Errand::Repair, repairer->GetGUID() }), repairing = true;          // 1 broken
+    if (trainer)
+        todo.push_back({ Errand::Train, trainer->GetGUID() });                                // 2
+    if (repairer && !repairing && WornAtMost(bot, YELLOW_SHARE))
+        todo.push_back({ Errand::Repair, repairer->GetGUID() }), repairing = true;          // 3 badly worn
+    if (MailWaiting(bot) || !ItemsForOwner(ai, bot).empty())                                  // 4
         if (GameObject* box = NearestMailbox(bot))
             todo.push_back({ Errand::Mail, box->GetGUID() });
-    if (trainer)
-        todo.push_back({ Errand::Train, trainer->GetGUID() });
-    if (vendor && !Junk(ai, bot).empty() && rand_norm() < BagFullness(bot))
-        todo.push_back({ Errand::Sell, vendor->GetGUID() });
-    if (repairer && AnythingWorn(bot))
-        todo.push_back({ Errand::Repair, repairer->GetGUID() });
+    bool auctioning = auctioneer && AnythingToAuction(ai, bot);
+    if (auctioning)
+        todo.push_back({ Errand::Auction, auctioneer->GetGUID() });                           // 5
+    if (repairer && !repairing && AnythingWorn(bot))
+        todo.push_back({ Errand::Repair, repairer->GetGUID() });                              // 6 anything worn
+    bool vendorWork = false;
+    {
+        std::lock_guard<std::mutex> lock(sAuctionLock);
+        auto it = sToVendor.find(bot->GetGUID().GetCounter());
+        vendorWork = it != sToVendor.end() && !it->second.empty();
+    }
+    if (vendor && ((!Junk(ai, bot).empty() && rand_norm() < BagFullness(bot)) || auctioning || vendorWork))
+        todo.push_back({ Errand::Sell, vendor->GetGUID() });                                  // 7
     return todo;
 }
 // }}}
@@ -424,7 +770,20 @@ static void DoTrain(PlayerbotAI* /*ai*/, Player* bot, Creature* npc)
 }
 static void DoSell(PlayerbotAI* ai, Player* bot, Creature* npc)
 {
-    for (ObjectGuid itemGuid : Junk(ai, bot))
+    // junk, and what the auction rules sent to a vendor (617h)
+    std::vector<ObjectGuid> selling = Junk(ai, bot);
+    {
+        std::lock_guard<std::mutex> lock(sAuctionLock);
+        auto it = sToVendor.find(bot->GetGUID().GetCounter());
+        if (it != sToVendor.end())
+        {
+            for (ObjectGuid g : it->second)
+                if (std::find(selling.begin(), selling.end(), g) == selling.end())
+                    selling.push_back(g);
+            sToVendor.erase(it);
+        }
+    }
+    for (ObjectGuid itemGuid : selling)
     {
         Item* item = bot->GetItemByGuid(itemGuid);
         if (!item)
@@ -445,6 +804,7 @@ static std::unordered_map<uint8, ErrandFn> const sErrands = {
     { uint8(Errand::Train),  DoTrain  },
     { uint8(Errand::Sell),   DoSell   },
     { uint8(Errand::Repair), DoRepair },
+    { uint8(Errand::Auction), DoAuction },
 };
 // }}}
 
@@ -699,7 +1059,7 @@ private:
             if (bot->GetDistance(box) > ARRIVED_YARDS)
                 return MoveNear(box, NPC_YARDS);
             bot->SetFacingToObject(box);
-            DoMail(bot, box);
+            DoMail(botAI, bot, box);
             s.todo.erase(s.todo.begin());
             Finish(s, now);
             return true;

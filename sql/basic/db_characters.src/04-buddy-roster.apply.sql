@@ -72,6 +72,31 @@ CREATE TABLE IF NOT EXISTS `buddy_draw` (
   PRIMARY KEY (`owner`, `buddy`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617c3: the dungeon draw bag';
 
+-- buddy_price (617h, 2026-09-30): the auction house's rising-price memory,
+-- shared by every buddy selling at the same house (pool: the auction house's
+-- id, 2 Alliance, 6 Horde, 7 neutral). steps: unsold expiries in a row;
+-- last_price: copper per unit, the last listing's, raised by half the vendor
+-- price per expiry; a sale puts steps back to 0.
+CREATE TABLE IF NOT EXISTS `buddy_price` (
+  `pool`       tinyint unsigned NOT NULL,
+  `item`       int unsigned     NOT NULL,
+  `steps`      tinyint unsigned NOT NULL DEFAULT 0,
+  `last_price` int unsigned     NOT NULL DEFAULT 0,
+  `updated`    int unsigned     NOT NULL DEFAULT 0,
+  PRIMARY KEY (`pool`, `item`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617h: rising auction prices';
+
+-- buddy_fixed_price (617h): the owner's hand-kept prices, copper per unit,
+-- for items with no vendor price (rare items); an item without a row is
+-- not auctioned. Filled by hand. Kept here with the other buddy tables
+-- (617a's data model placed it in the world database).
+CREATE TABLE IF NOT EXISTS `buddy_fixed_price` (
+  `item`  int unsigned NOT NULL,
+  `price` int unsigned NOT NULL,
+  `note`  varchar(255) NOT NULL DEFAULT '',
+  PRIMARY KEY (`item`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617h: fixed auction prices';
+
 -- ============================================================================
 -- End of 04-buddy-roster.sql (apply)
 -- ============================================================================
