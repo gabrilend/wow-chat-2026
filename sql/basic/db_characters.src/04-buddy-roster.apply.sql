@@ -62,6 +62,16 @@ PREPARE add_greeting FROM @add_greeting;
 EXECUTE add_greeting;
 DEALLOCATE PREPARE add_greeting;
 
+-- buddy_draw (617c3, 2026-09-29): the dungeon draw's bag, a row per owner
+-- and buddy; had_turn 1 once drawn into a dungeon party, all back to 0 when
+-- too few are left to draw
+CREATE TABLE IF NOT EXISTS `buddy_draw` (
+  `owner`    int unsigned     NOT NULL,
+  `buddy`    int unsigned     NOT NULL,
+  `had_turn` tinyint unsigned NOT NULL DEFAULT 0,
+  PRIMARY KEY (`owner`, `buddy`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617c3: the dungeon draw bag';
+
 -- ============================================================================
 -- End of 04-buddy-roster.sql (apply)
 -- ============================================================================

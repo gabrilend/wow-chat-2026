@@ -11,6 +11,7 @@
 -- ".account delete BUDDY<n>", which deletes its buddies too (617a2).
 -- ============================================================================
 
+DROP TABLE IF EXISTS `buddy_draw`;
 DROP TABLE IF EXISTS `buddy_roster`;
 DROP TABLE IF EXISTS `buddy_clan`;
 

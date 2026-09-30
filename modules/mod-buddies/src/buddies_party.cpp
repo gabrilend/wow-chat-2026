@@ -42,6 +42,8 @@
 
 #include "buddies.h"
 #include "buddies_roam.h"
+#include "DatabaseEnv.h"
+#include "GameTime.h"
 #include "Group.h"
 #include "GroupMgr.h"
 #include "Log.h"
@@ -51,7 +53,10 @@
 #include "ScriptMgr.h"
 #include <algorithm>
 #include <map>
+#include <mutex>
 #include <set>
+#include <string>
+#include <vector>
 
 // {{{ tuning (the owner's numbers, docs/balance-updates.md)
 static constexpr float  JOIN_OWNER_YARDS  = 60.0f;  // an ungrouped buddy this near joins the owner's group
@@ -346,6 +351,181 @@ static void UngroupInTown(Player* owner, std::vector<uint32> const& buddyGuids)
 }
 // }}}
 
+// {{{ the dungeon draw (617c3)
+// The owner, 2026-09-23: "If you enter a dungeon, then enough join to make
+// a dungeon party. We can choose them randomly, without replacement,
+// cycling through to make sure everyone gets a chance to go." On entering
+// a five-player dungeon, the owner's party's empty seats (up to five) are
+// filled with buddies drawn from a bag (buddy_draw: a row per buddy, had_turn
+// 1 once drawn; when too few are left, the bag is refilled and the draw
+// goes on from the full bag, skipping those already drawn this time). The
+// drawn are brought in beside the owner; the rest wait outside. Buddies the
+// distance rule had seated make way for the draw; one invited by hand keeps
+// its seat. A group with two or more players is left alone (Ritz,
+// 2026-09-24: no auto-fill when more than one player is grouped). Raids,
+// battlegrounds and the dungeon finder's groups are not ours. When the owner
+// comes back out, the buddies inside come out with them.
+//
+// The owner's map change is seen on the owner's map thread; the draw
+// (groups and teleports of other players) waits for the world pass, which
+// runs after every map has finished its update.
+static constexpr uint32 DRAW_AFTER_MS = 1500;      // after the owner's arrival, before the drawn are brought
+struct DrawDue { uint32 owner; bool entering; uint64 dueMs; };
+static std::mutex sDrawLock;
+static std::vector<DrawDue> sDrawDue;
+
+static bool IsFiveManDungeon(Map* map) { return map->IsDungeon() && !map->IsRaid(); }
+
+// {{{ PlayersIn
+// The players (not buddies) of a group who are online.
+static uint32 PlayersIn(Group* g)
+{
+    uint32 n = 0;
+    for (GroupReference* r = g->GetFirstMember(); r; r = r->next())
+        if (Player* m = r->GetSource())
+            if (!BuddyIsCompanionAccount(m->GetSession()->GetAccountId()))
+                ++n;
+    return n;
+}
+// }}}
+
+// {{{ DrawFromBag
+// `count` buddies of `eligible`, at random, without replacement across
+// runs. Written straight to the table (a few rows, world thread).
+static std::vector<uint32> DrawFromBag(uint32 owner, std::vector<uint32> const& eligible, uint32 count)
+{
+    for (uint32 b : eligible)
+        CharacterDatabase.DirectExecute("INSERT IGNORE INTO buddy_draw (owner, buddy, had_turn) VALUES ({}, {}, 0)", owner, b);
+    std::set<uint32> waiting;                          // eligible and not yet had a turn
+    if (QueryResult rows = CharacterDatabase.Query("SELECT buddy FROM buddy_draw WHERE owner = {} AND had_turn = 0", owner))
+        do
+            waiting.insert((*rows)[0].Get<uint32>());
+        while (rows->NextRow());
+    std::vector<uint32> bag;
+    for (uint32 b : eligible)
+        if (waiting.count(b))
+            bag.push_back(b);
+    std::vector<uint32> drawn;
+    for (int round = 0; round < 2 && drawn.size() < count; ++round)
+    {
+        if (round == 1)
+        {
+            // everyone has had a turn: the bag refills (those drawn just now excepted)
+            CharacterDatabase.DirectExecute("UPDATE buddy_draw SET had_turn = 0 WHERE owner = {}", owner);
+            bag.clear();
+            for (uint32 b : eligible)
+                if (std::find(drawn.begin(), drawn.end(), b) == drawn.end())
+                    bag.push_back(b);
+        }
+        while (!bag.empty() && drawn.size() < count)
+        {
+            size_t i = urand(0, uint32(bag.size() - 1));
+            drawn.push_back(bag[i]);
+            bag.erase(bag.begin() + i);
+        }
+    }
+    for (uint32 b : drawn)
+        CharacterDatabase.DirectExecute("UPDATE buddy_draw SET had_turn = 1 WHERE owner = {} AND buddy = {}", owner, b);
+    return drawn;
+}
+// }}}
+
+// {{{ BringDrawn
+static void BringDrawn(Player* owner, std::vector<uint32> const& buddyGuids)
+{
+    if (!IsFiveManDungeon(owner->GetMap()))
+        return;                                        // left again already, or not a five-player dungeon
+    Group* g = owner->GetGroup();
+    if (g && (g->isRaidGroup() || g->isLFGGroup() || g->isBGGroup() || g->isBFGroup()))
+        return;                                        // a raid, or the dungeon finder's: not ours
+    if (g && PlayersIn(g) >= 2)
+        return;                                        // two or more players: no auto-fill
+
+    // the distance rule's seats make way for the draw
+    if (g)
+        for (uint32 guid : buddyGuids)
+            if (g->IsMember(ObjectGuid::Create<HighGuid::Player>(guid)) && sSeatedByPass.erase(guid))
+                g->RemoveMember(ObjectGuid::Create<HighGuid::Player>(guid));
+    g = owner->GetGroup();                             // a party left with one member was disbanded
+    uint32 have = g ? g->GetMembersCount() : 1;
+    if (have >= PARTY_SIZE)
+        return;
+
+    std::vector<uint32> eligible;                      // online, alive buddies not in the party already
+    for (uint32 guid : buddyGuids)
+    {
+        Player* b = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid));
+        if (b && b->IsInWorld() && b->IsAlive() && !b->InBattleground() && (!g || !g->IsMember(b->GetGUID())))
+            eligible.push_back(guid);
+    }
+    std::vector<uint32> drawn = DrawFromBag(owner->GetGUID().GetCounter(), eligible, PARTY_SIZE - have);
+    if (drawn.empty())
+        return;
+    if (!g)
+        g = NewParty(owner);
+    if (!g)
+    {
+        LOG_ERROR("module", "mod-buddies: {} entered a dungeon but no party could be made; no buddies drawn in", owner->GetName());
+        return;
+    }
+    std::string names;
+    for (uint32 guid : drawn)
+    {
+        Player* b = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid));
+        if (!b)
+            continue;
+        if (Group* old = b->GetGroup())
+            old->RemoveMember(b->GetGUID());           // a far party, most likely
+        if (!g->AddMember(b))
+        {
+            LOG_ERROR("module", "mod-buddies: drawn buddy {} could not join {}'s party (server refused); left outside",
+                b->GetName(), owner->GetName());
+            continue;
+        }
+        sSeatedByPass.insert(guid);                    // outside again, the distance rule may unseat it
+        b->TeleportTo(owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), owner->GetOrientation());
+        names += (names.empty() ? "" : ", ") + b->GetName();
+    }
+    LOG_INFO("module", "mod-buddies: {} entered {}; drawn in: {}", owner->GetName(), owner->GetMap()->GetMapName(), names);
+}
+// }}}
+
+// {{{ BringOut
+// The owner is back in the open world: buddies still in an instance
+// (drawn in earlier) come out beside them.
+static void BringOut(Player* owner, std::vector<uint32> const& buddyGuids)
+{
+    if (owner->GetMap()->Instanceable())
+        return;                                        // into another instance: its own draw handles it
+    for (uint32 guid : buddyGuids)
+    {
+        Player* b = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid));
+        if (b && b->IsInWorld() && b->GetMap()->Instanceable() && !b->InBattleground())
+            b->TeleportTo(owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), owner->GetOrientation());
+    }
+}
+// }}}
+
+class buddies_draw_player : public PlayerScript
+{
+public:
+    buddies_draw_player() : PlayerScript("buddies_draw_player", { PLAYERHOOK_ON_MAP_CHANGED }) { }
+
+    void OnPlayerMapChanged(Player* player) override
+    {
+        if (!BuddiesEnabled() || BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
+            return;                                    // buddies' own moves are not draws
+        Map* map = player->GetMap();
+        bool entering = IsFiveManDungeon(map);
+        if (!entering && map->Instanceable())
+            return;                                    // a raid or battleground: not ours
+        std::lock_guard<std::mutex> lock(sDrawLock);
+        sDrawDue.push_back({ player->GetGUID().GetCounter(), entering,
+            uint64(GameTime::GetGameTimeMS().count()) + DRAW_AFTER_MS });
+    }
+};
+// }}}
+
 class buddies_party_world : public WorldScript
 {
 public:
@@ -357,6 +537,8 @@ public:
     // the bot module makes its own group changes from the same hook.
     void OnUpdate(uint32 diff) override
     {
+        RunDraws();                                    // the dungeon draw's due entries, every tick (617c3)
+
         _sinceLast += diff;
         if (_sinceLast < PASS_EVERY_MS || !BuddiesEnabled())
             return;
@@ -378,6 +560,36 @@ public:
     }
 
 private:
+    // Owners whose map change is due for its draw (entering) or its bringing
+    // out (leaving).
+    static void RunDraws()
+    {
+        std::vector<DrawDue> due;
+        {
+            std::lock_guard<std::mutex> lock(sDrawLock);
+            if (sDrawDue.empty())
+                return;
+            uint64 now = uint64(GameTime::GetGameTimeMS().count());
+            for (auto it = sDrawDue.begin(); it != sDrawDue.end(); )
+                if (it->dueMs <= now) { due.push_back(*it); it = sDrawDue.erase(it); }
+                else ++it;
+        }
+        for (DrawDue const& d : due)
+        {
+            Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(d.owner));
+            if (!owner || !owner->IsInWorld())
+                continue;
+            std::vector<uint32> buddies;
+            for (auto const& [buddy, o] : BuddyRosterPairs())
+                if (o == d.owner)
+                    buddies.push_back(buddy);
+            if (d.entering)
+                BringDrawn(owner, buddies);
+            else
+                BringOut(owner, buddies);
+        }
+    }
+
     uint32 _sinceLast = 0;
 };
 
@@ -385,5 +597,6 @@ private:
 void AddSC_buddies_party()
 {
     new buddies_party_world();
+    new buddies_draw_player();                         // the dungeon draw (617c3)
 }
 // }}}
