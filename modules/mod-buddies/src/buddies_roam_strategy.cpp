@@ -130,6 +130,7 @@ struct RoamState
     BuddyRoam::Area  area;
     uint32           mapId      = 0;
     bool             begun      = false;
+    bool             noCentre   = false;    // the area has no centre (indoors only): explored by rooms, never the pinwheel
     bool             justArrived = false;   // the last path point was reached; roll for a rest
     uint64           retryAt    = 0;        // game-time ms; after a failure, no roaming before this
     bool             meal       = false;    // eating (and drinking) at a waypoint
@@ -286,18 +287,23 @@ public:
         // the piece of the area the owner stands in.
         if (!s.begun || s.area.id != areaId || s.mapId != map->GetId())
         {
+            // An area with no centre in the table exists only inside a
+            // building or cave (the table is read from the outdoor terrain):
+            // the pinwheel can't circle it, so it is explored by rooms
+            // (owner, 2026-09-29: "let's say the rooms mode").
             BuddyRoam::Area area;
-            if (!BuddyAreaCentre(map, owner->GetPhaseMask(), areaId,
-                                 owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), area))
+            bool noCentre = !BuddyAreaCentre(map, owner->GetPhaseMask(), areaId,
+                                             owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), area);
+            if (noCentre)
             {
-                s.retryAt = now + RETRY_MS;            // logged once by the lookup (an area missing from the table)
-                StoreState(guid, s);
-                return false;
+                area.id     = areaId;
+                area.centre = { owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ() };   // not circled
             }
             s = RoamState();
-            s.area  = area;
-            s.mapId = map->GetId();
-            s.begun = true;
+            s.area     = area;
+            s.mapId    = map->GetId();
+            s.begun    = true;
+            s.noCentre = noCentre;
             BuddyRoam::Begin(s.buddy, area, at, rng);
             s.buddy.body = BodyWidth(bot);
         }
@@ -332,15 +338,29 @@ public:
             // the area's measured grid (buddies_explore.cpp); the pinwheel
             // (and those three while the grid is still being measured,
             // logged once) is the roaming core below.
+            //
+            // Indoors (a building or cave, as the map marks it), and in an
+            // area with no centre, the pinwheel can't work: it circles the
+            // area's middle and needs a clear line to it, which walls
+            // break. There the rooms mode is used whatever the owner chose
+            // (it measures the floor cell by cell, rooms and tunnels
+            // included). Outdoors, when the pinwheel finds no waypoint
+            // (standing against a building, on a ledge), rooms is tried
+            // before giving up.
             std::vector<BuddyRoam::Point> explored;
-            if (BuddyExploreNext(bot, owner, areaId, explored))
+            bool indoors = s.noCentre || !bot->IsOutdoors();
+            bool found   = BuddyExploreNext(bot, owner, areaId, explored,
+                                            indoors ? BUDDY_EXPLORE_ROOMS : BUDDY_EXPLORE_PINWHEEL);
+            if (!found && indoors)
             {
-                s.buddy.path        = explored;
-                s.buddy.pathIndex   = 0;
-                s.buddy.waypoint    = explored.back();
-                s.buddy.hasWaypoint = true;
+                // the rooms grid is still being measured (logged once by
+                // the explorer): wait for it rather than circle a middle
+                // that can't be reached
+                s.retryAt = now + RETRY_MS;
+                StoreState(guid, s);
+                return false;
             }
-            else
+            if (!found)
             {
                 BuddyRoam::Settings settings;
                 BuddyRoam::Ground ground = BuddyRoamGround(map, owner->GetPhaseMask(), areaId, settings);
@@ -348,13 +368,26 @@ public:
                 std::vector<BuddyRoam::Mob> mobs = MobsNear();
                 if (!BuddyRoam::NextWaypoint(s.buddy, s.area, at, others, mobs, ground, settings, rng))
                 {
-                    LOG_ERROR("module", "mod-buddies: buddy {} found no waypoint in area {} on map {} from ({:.1f}, {:.1f}, {:.1f}) "
-                        "(no clear spot in a full circle of bearings, no sight of the centre, or no path); roaming paused {} s",
-                        bot->GetName(), areaId, map->GetId(), at.x, at.y, at.z, RETRY_MS / 1000);
-                    s.retryAt = now + RETRY_MS;
-                    StoreState(guid, s);
-                    return false;
+                    // the pinwheel found nothing from here: rooms, once
+                    found = BuddyExploreNext(bot, owner, areaId, explored, BUDDY_EXPLORE_ROOMS);
+                    if (!found)
+                    {
+                        LOG_ERROR("module", "mod-buddies: buddy {} found no waypoint in area {} on map {} from ({:.1f}, {:.1f}, {:.1f}) "
+                            "(the pinwheel: no clear spot in a full circle of bearings, no sight of the centre, or no path; "
+                            "rooms: grid not measured yet, or no way over it); roaming paused {} s",
+                            bot->GetName(), areaId, map->GetId(), at.x, at.y, at.z, RETRY_MS / 1000);
+                        s.retryAt = now + RETRY_MS;
+                        StoreState(guid, s);
+                        return false;
+                    }
                 }
+            }
+            if (found)
+            {
+                s.buddy.path        = explored;
+                s.buddy.pathIndex   = 0;
+                s.buddy.waypoint    = explored.back();
+                s.buddy.hasWaypoint = true;
             }
         }
 

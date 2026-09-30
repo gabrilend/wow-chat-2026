@@ -260,7 +260,7 @@ static AreaPiece const* PieceAt(uint32 mapId, uint32 areaId, float fromX, float 
         std::lock_guard<std::mutex> lock(sReportLock);
         if (sReported.insert(key).second)
             LOG_ERROR("module", "mod-buddies: area {} on map {} has no row in buddy_area_centre (looked up for a buddy "
-                "whose owner stands at {:.1f}, {:.1f}, {:.1f}); buddies don't roam there. Is the table from the same "
+                "whose owner stands at {:.1f}, {:.1f}, {:.1f}); buddies explore it by rooms (an indoor-only area has no row). Is the table from the same "
                 "map files the server loads? (regenerate: scripts/generate-buddy-area-centres)",
                 areaId, mapId, fromX, fromY, fromZ);
         return nullptr;

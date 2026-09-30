@@ -44,7 +44,10 @@ BuddyExploreMode BuddyExploreModeFor(uint32 ownerGuid, uint32 buddyGuid);
 // point the waypoint), false when the area's grid is not ready yet (being
 // built: the caller walks the pinwheel meanwhile, logged once per area) or
 // nothing can be chosen. Called from the roam action (a map thread).
-bool BuddyExploreNext(Player* bot, Player* owner, uint32 areaId, std::vector<BuddyRoam::Point>& path);
+// `forced`: a mode the roam action needs whatever the owner chose (rooms,
+// indoors and where the pinwheel finds nothing); PINWHEEL means none.
+bool BuddyExploreNext(Player* bot, Player* owner, uint32 areaId, std::vector<BuddyRoam::Point>& path,
+                      BuddyExploreMode forced = BUDDY_EXPLORE_PINWHEEL);
 
 // ".buddy explore <mode>", registered in buddies_beds.cpp's "buddy" table.
 bool BuddyExploreHandleCommand(ChatHandler* handler, std::string const& word);

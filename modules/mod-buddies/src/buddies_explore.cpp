@@ -71,6 +71,9 @@ static constexpr uint32 PAINT_EVERY_MS  = 1000;    // each buddy paints this oft
 static constexpr uint32 PULSE_EVERY_MS  = 3000;    // the walls' pulse (the owner: "a pulse every 3 seconds or so")
 static constexpr uint32 DROP_AFTER_MS   = 15000;   // paint dropped this long after the owner leaves the area
 static constexpr uint32 RETRY_FAILED_MS = 60000;   // a grid whose measuring failed is tried again after this
+static constexpr float  INDOOR_BOX_YARDS = 100.0f; // an area with no piece in the table: measured this far around the owner
+static constexpr uint32 NO_PIECE        = 0xFFFFFFFFu;   // ... under this piece number
+static constexpr uint32 FORCED_KEEP_MS  = 60000;   // an owner whose buddy needed rooms keeps its grid wanted this long
 static constexpr int32  DISC_SWEEPS     = 4000;    // the squished circle's passes at most ...
 static constexpr double DISC_TOLERANCE  = 1e-6;    // ... or until no cell moves more than this in a pass
 // }}}
@@ -159,14 +162,30 @@ using GridKey = std::tuple<uint32, uint32, uint32>;   // map, area, piece
 static std::mutex sGridLock;
 static std::map<GridKey, std::shared_ptr<GridEntry>> sGrids;
 
+// The piece of the area the owner stands in, from the area table. An area
+// the table doesn't have (one that exists only inside a building or cave,
+// like the Shadow Grave under Deathknell: the table is read from the
+// outdoor terrain, which never carries its number) gets a square around
+// the owner instead; the measuring reads the area number cell by cell, and
+// indoors that number comes from the building itself, so the grid still
+// finds the rooms. (2026-09-29, owner: "buddy-bots not knowing how to roam
+// in indoor buildings".)
+static bool PieceAt(Player* owner, uint32 areaId, BuddyAreaPieceInfo& piece)
+{
+    if (BuddyAreaPieceAt(owner->GetMapId(), areaId, owner->GetPositionX(), owner->GetPositionY(), piece))
+        return true;                                   // the table's piece
+    piece.piece = NO_PIECE;                            // no piece: a square around the owner
+    piece.minX = owner->GetPositionX() - INDOOR_BOX_YARDS, piece.maxX = owner->GetPositionX() + INDOOR_BOX_YARDS;
+    piece.minY = owner->GetPositionY() - INDOOR_BOX_YARDS, piece.maxY = owner->GetPositionY() + INDOOR_BOX_YARDS;
+    return true;
+}
+
 // Start measuring the grid of the area piece the owner stands in (the
-// cell under the owner is the first floor). Null when the area has no row
-// in the area table (logged there) or the owner stands off it.
+// cell under the owner is the first floor).
 static std::shared_ptr<GridEntry> RequestGrid(Player* owner, uint32 areaId, GridKey& key)
 {
     BuddyAreaPieceInfo piece;
-    if (!BuddyAreaPieceAt(owner->GetMapId(), areaId, owner->GetPositionX(), owner->GetPositionY(), piece))
-        return nullptr;
+    PieceAt(owner, areaId, piece);
     key = GridKey(owner->GetMapId(), areaId, piece.piece);
     uint64 now = uint64(GameTime::GetGameTimeMS().count());
     std::lock_guard<std::mutex> lock(sGridLock);
@@ -365,6 +384,7 @@ struct Entered { uint32 mapId = 0, areaId = 0; float x = 0.0f, y = 0.0f; };
 static std::unordered_map<uint32, Entered> sEntered;          // world thread only
 static std::mutex sWarnLock;
 static std::set<std::tuple<uint32, uint32, uint32>> sWarned;  // (owner, map, area): "not ready yet" logged once
+static std::map<uint32, uint64> sForcedAt;                      // owner -> when a buddy of theirs last needed rooms (sWarnLock)
 
 // The clan's paint for the owner's area, made when first needed (paint
 // starts empty, the walls pulse at once). Caller holds sPaintLock.
@@ -386,20 +406,27 @@ static ClanPaint* PaintFor(uint32 ownerGuid, GridKey const& key, std::shared_ptr
 // }}}
 
 // {{{ BuddyExploreNext
-bool BuddyExploreNext(Player* bot, Player* owner, uint32 areaId, std::vector<BuddyRoam::Point>& path)
+bool BuddyExploreNext(Player* bot, Player* owner, uint32 areaId, std::vector<BuddyRoam::Point>& path, BuddyExploreMode forced)
 {
     uint32 ownerGuid = owner->GetGUID().GetCounter(), guid = bot->GetGUID().GetCounter();
-    BuddyExploreMode mode = BuddyExploreModeFor(ownerGuid, guid);
+    // a mode forced by the roam action (rooms, indoors) wins over the
+    // owner's setting; the owner's grid is then wanted by the world pass
+    // for a while, so it gets measured
+    BuddyExploreMode mode = forced != BUDDY_EXPLORE_PINWHEEL ? forced : BuddyExploreModeFor(ownerGuid, guid);
     if (mode == BUDDY_EXPLORE_PINWHEEL || mode == BUDDY_EXPLORE_MIXED)
         return false;
+    if (forced != BUDDY_EXPLORE_PINWHEEL)
+    {
+        std::lock_guard<std::mutex> lock(sWarnLock);
+        sForcedAt[ownerGuid] = uint64(GameTime::GetGameTimeMS().count());
+    }
     GridKey key;
     std::shared_ptr<GridEntry> entry;
     {
         // the grid is requested from here the first time; measuring then
         // goes on in the world update
         BuddyAreaPieceInfo piece;
-        if (!BuddyAreaPieceAt(owner->GetMapId(), areaId, owner->GetPositionX(), owner->GetPositionY(), piece))
-            return false;
+        PieceAt(owner, areaId, piece);
         key = GridKey(owner->GetMapId(), areaId, piece.piece);
         entry = ReadyGrid(key);
     }
@@ -501,6 +528,12 @@ public:
                     BuddyExploreMode m = BuddyExploreModeFor(ownerGuid, pair.first);
                     wants = wants || (m != BUDDY_EXPLORE_PINWHEEL && m != BUDDY_EXPLORE_MIXED);
                 }
+            {
+                // a buddy needed rooms lately (indoors, or the pinwheel found nothing)
+                std::lock_guard<std::mutex> lock(sWarnLock);
+                auto f = sForcedAt.find(ownerGuid);
+                wants = wants || (f != sForcedAt.end() && uint64(GameTime::GetGameTimeMS().count()) - f->second < FORCED_KEEP_MS);
+            }
             if (!wants || BuddyAreaIsTown(owner->GetAreaId()))
                 continue;
             GridKey key;
