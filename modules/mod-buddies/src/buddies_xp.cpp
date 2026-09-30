@@ -168,17 +168,12 @@ static void GiveCompletedQuest(Player* buddy, Player* owner, Quest const* quest)
         buddy->AddQuest(quest, nullptr);
     }
     buddy->CompleteQuest(id);
-    uint32 reward = ChooseQuestReward(buddy, quest);
-    if (!buddy->CanRewardQuest(quest, reward, false))
-    {
-        // no room in its bags for the reward, most likely: the quest is
-        // taken back out of its log rather than left there, never turned in
-        LOG_ERROR("module", "mod-buddies: buddy {} of {} can't be rewarded for quest {} ({}) (bags full?); quest removed, no reward",
-            buddy->GetName(), owner->GetName(), id, quest->GetTitle());
-        buddy->RemoveActiveQuest(id);
-        return;
-    }
-    buddy->RewardQuest(quest, reward, nullptr, false);
+    // No bag check first: the server's reward step mails whatever doesn't
+    // fit (its own "items that couldn't be added" mail), and the buddy
+    // collects it at a mailbox on its next town visit (buddies_town.cpp,
+    // the mail errand; owner, 2026-09-29: "for full bags, can you mail
+    // them the item instead? make sure they actually check their mail").
+    buddy->RewardQuest(quest, ChooseQuestReward(buddy, quest), nullptr, false);
 }
 // }}}
 

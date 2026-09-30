@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-29 23:38:14
+Generated on: 2026-09-29 23:54:21
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -2192,6 +2192,208 @@ pullers leading monsters in around it, and the tank's hold limit.
 
 Should I start on auto-completing buddy quests next, or on porting the kraken
 into the game?
+
+--------------------------------------------------------------------------------
+
+### User Request 18
+
+● I couldn't set up the arena scene: the server isn't running, and the kraken
+exists only in the design doc and gallery, not in the buddy
+  module.
+
+the gallery is supposed to have generated it's gifs using the correct data
+model, so we should be able to just copy/paste it in and adjust accordingly.
+
+> 3. Quest auto-completion for buddies. I read your "we're going to
+> auto-complete buddy quests" as a decision. It's the quest-mirroring issue
+>      (617d) and isn't built yet; I'd write the issue first.
+
+can we work on that then?
+
+> 5. Buddy dungeons (617c3, not built). Without it, buddies don't follow you
+> into instances.
+
+we should ensure that's working too
+
+> 4. The kraken itself in game. It's the biggest remaining piece, and the arena
+> is ready for it.
+
+this should be the default combat style when following a tank.
+
+I'll recompile now.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 18
+
+> You're recompiling, so I'll stay out of `source-beta`. Buddy module edits
+> won't affect this compile, since its copy is taken at the start. I'll go in
+> order: quest auto-completion (617d), then buddy dungeons (617c3), then the
+> kraken. Reading 617d:
+
+> The turn-in hook is `OnPlayerCompleteQuest`: it fires at the end of the core's
+> reward step. The bot module's reward picker is private to its class, so
+> reading it to reuse its rule:
+
+> Adding the quest completion to `buddies_xp.cpp`, before its registration:
+
+> Compiles. Updating 617d and committing:
+
+> Committed. Next, buddy dungeons (617c3). Reading its design:
+
+> The world pass runs every 5 seconds. I'll give the draw its own short
+> due-list, since teleporting other players from inside the owner's own
+> map-change hook isn't safe. Reading the pass:
+
+> Writing the draw:
+
+> Compiles. Now the draw table in the roster SQL, with its revert:
+
+> The table exists in the live database. Updating 617c3 and committing:
+
+> Committed. Now the kraken. You're right that the gallery scenes run the real
+> data model, so the port starts from that code. Sizing it up:
+
+> This is too large to rush: the design issue alone is 433 lines. Before writing
+> the plan, checking what the bot module already offers for roles, pulling and
+> slows, so the plan reuses it:
+
+Quest auto-completion and buddy dungeons are built and committed. Neither is in
+the compile you're running now, since I edited them after it started, so they
+need one more. The kraken has a written plan but no code yet: three questions
+below decide how it's built.
+
+## Quest auto-completion (617d)
+When you turn in a quest, each of your buddies who is in the world gets it
+completed and rewarded on the spot, through the server's own quest steps.
+Experience, money, reputation and follow-up quests all work as they would for a
+player, so buddies level alongside you.
+- They never carry the quest or track its progress.
+- For a choice of rewards, they pick the way playerbots bots already do: an
+  upgrade first, then the bot's stat weights.
+- Level, class and race requirements aren't checked, on the idea that you earned
+  it for the clan.
+- A quest a buddy has already done is skipped unless it's repeatable.
+- A full quest log or full bags are logged as errors and the buddy gets nothing.
+
+## Buddy dungeons (617c3)
+When you enter a five-player dungeon, your party's empty seats are filled with
+buddies drawn at random.
+- It's without replacement across runs: the "bag" only refills once every buddy
+  has had a turn.
+- The drawn buddies are teleported in beside you; the rest wait outside. When
+  you leave, the ones inside come out with you.
+- Buddies placed in your party by the distance rule give up their seats for the
+  draw; one you invited yourself keeps its seat.
+- Parties with two or more players, raids, battlegrounds and dungeon-finder
+  groups are left alone.
+- The bag is a new table, `buddy_draw`, in the characters database. I applied
+  the table to the live database, but haven't re-run the RAM database test with
+  it.
+- Inside, buddies fight by the playerbots rules until the kraken exists in game.
+
+## The kraken (plan written, not built)
+The gallery scene says of itself that it's "a drawn simulation… not the game's
+combat": health, damage, speeds and cooldowns are round numbers. So its rules
+carry over, but the numbers and spells have to come from the game. Playerbots
+already has most of the pieces: role detection, pull, taunt, per-class slows,
+kiting and area damage. The kraken becomes an ordering-and-positioning layer on
+top of those. Issue 617e5a maps each scene rule to them:
+- **The maw:** the spot where the pack is held.
+- **The tank:** stays within 6 yards of the maw, taunts, and takes monsters only
+  while its hold is light.
+- **Pullers:** hit a monster once, slow it, lead it round the neighbouring
+  quadrant, and hand it to the tank.
+- **Damage dealers:** area spells on the maw from two monsters up.
+- **Moving on:** when every held monster is dead.
+
+It runs whenever the party has a tank; otherwise buddies keep the playerbots way
+of fighting.
+
+**Three questions before I build it:**
+1. **Who counts as a tank?** Playerbots decides by talent spec, or by a "main
+   tank" mark. Is an owner a tank only by spec, or also by marking themselves?
+2. **When you're the tank**, should the maw follow you continuously, or be set
+   where you first hold the pack and move only when you walk more than 6 yards
+   from it?
+3. **Casters without a slow** (priests, most warlocks): do they pull at all, or
+   only damage the maw?
+
+--------------------------------------------------------------------------------
+
+### User Request 19
+
+> - A full quest log or full bags are logged as errors and the buddy gets
+> nothing.
+
+for full bags, can you mail them the item instead? make sure they actually check
+their mail...
+
+for the kraken let's just use playerbots for now. What else do we have to build?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 19
+
+Checking how the core's reward step handles reward items that don't fit:
+
+--------------------------------------------------------------------------------
+
+### User Request 20
+
+[Request interrupted by user]
+
+--------------------------------------------------------------------------------
+
+### User Request 21
+
+> 3. Casters without a slow (priests, most warlocks): do they pull at all, or
+> only damage the maw?
+
+--------------------------------------------------------------------------------
+
+### User Request 22
+
+> 3. Casters without a slow (priests, most warlocks): do they pull at all, or
+> only damage the maw?
+
+just damage.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 22
+
+I've recorded your answer in the kraken issue (617e5a): casters without a slow
+only damage the maw. I also marked the kraken as deferred, so buddies fight with
+the playerbots rules for now, dungeons included.
+
+I stopped when you interrupted. The mail change for full bags isn't started:
+nothing is edited or committed yet. Should I carry on with it? The plan is to
+mail the reward instead, and have buddies actually collect their mail. They'd
+walk to a mailbox during their town visit, or I'd use playerbots' own
+mail-checking behaviour if it has one.
+
+What else needs building, most important first:
+1. **Mesa's failed buddy pick.** It's still unexplained, and new characters may
+   not get buddies. Next time, watch whether Sargobras says anything after you
+   pick.
+2. **A test pass after this compile:**
+   - The entrance wave and hang-out.
+   - Hand-invited buddies staying in your party.
+   - Rooms mode in the crypt, and town buildings counting as the town.
+   - The death-knight gate.
+   - Sargobras vanishing for one player.
+   - The quiet bot reset.
+   - "Halting process" naming who stopped the world.
+   - The kit fix.
+   - Quest auto-completion and the dungeon draw.
+3. **Mailing rewards that don't fit** (above).
+4. **Buddy battlegrounds (617i)** and **auction house (617h)**. Both are
+   designed but not built.
+5. **Buddy task hunts (617m)** and **professions (617k)**. Designed; I haven't
+   checked how far they've been built.
+6. **The load-time ID-limit check.** This is the other half of this morning's
+   crash tracing.
 
 --------------------------------------------------------------------------------
 

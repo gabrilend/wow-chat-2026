@@ -58,6 +58,7 @@
 #include "ItemPackets.h"
 #include "ItemUsageValue.h"
 #include "Log.h"
+#include "Mail.h"
 #include "Map.h"
 #include "MovementActions.h"
 #include "NewRpgBaseAction.h"
@@ -131,7 +132,7 @@ static constexpr uint32 UNSTUCK_TRIES       = 12;      // random spots tried for
 // their map's update thread and maps update in parallel. A buddy's entry is
 // copied out, worked on and written back; the seat-timer sharing (below)
 // reads the others' entries under the same lock.
-enum class Errand : uint8 { Train, Sell, Repair };
+enum class Errand : uint8 { Train, Sell, Repair, Mail };   // Mail: at a mailbox, not an NPC
 enum class Doing  : uint8 { Nothing, Errand, Visit, Sit, Sleep, Fish };
 
 struct ErrandStop
@@ -292,6 +293,78 @@ static bool Townsperson(Creature* c, Player* bot, uint32 areaId)
 }
 // }}}
 
+// {{{ the mail
+// Mail it can collect now: delivered, not deleted, not cash-on-delivery,
+// with items or money in it.
+static bool MailWaiting(Player* bot)
+{
+    time_t now = GameTime::GetGameTime().count();
+    for (Mail const* m : bot->GetMails())
+        if (m && m->state != MAIL_STATE_DELETED && m->deliver_time <= now && m->COD == 0 && (!m->items.empty() || m->money))
+            return true;
+    return false;
+}
+
+// The nearest mailbox within the town's reach.
+static GameObject* NearestMailbox(Player* bot)
+{
+    std::list<GameObject*> objects;
+    Acore::GameObjectInRangeCheck check(bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), TOWN_SCAN_YARDS);
+    Acore::GameObjectListSearcher<Acore::GameObjectInRangeCheck> searcher(bot, objects, check);
+    Cell::VisitObjects(bot, searcher, TOWN_SCAN_YARDS);
+    GameObject* best = nullptr;
+    for (GameObject* go : objects)
+        if (go->GetGoType() == GAMEOBJECT_TYPE_MAILBOX && go->isSpawned() &&
+            (!best || bot->GetDistance(go) < bot->GetDistance(best)))
+            best = go;
+    return best;
+}
+
+// At the mailbox: every item and all the money out of each collectable
+// mail, then the emptied mail thrown away, through the same server
+// requests a player's clicks send (they check the mailbox is in reach, the
+// bags have room, and save). An item that doesn't fit stays in the mail
+// for the next visit.
+static void DoMail(Player* bot, GameObject* box)
+{
+    time_t now = GameTime::GetGameTime().count();
+    std::vector<uint32> ids;
+    for (Mail const* m : bot->GetMails())
+        if (m && m->state != MAIL_STATE_DELETED && m->deliver_time <= now && m->COD == 0)
+            ids.push_back(m->messageID);
+    WorldSession* session = bot->GetSession();
+    for (uint32 id : ids)
+    {
+        Mail* m = bot->GetMail(id);
+        if (!m)
+            continue;
+        std::vector<ObjectGuid::LowType> items;
+        for (MailItemInfo const& mi : m->items)
+            items.push_back(mi.item_guid);
+        for (ObjectGuid::LowType low : items)
+        {
+            WorldPacket p(CMSG_MAIL_TAKE_ITEM);
+            p << box->GetGUID() << id << uint32(low);
+            session->HandleMailTakeItem(p);
+        }
+        m = bot->GetMail(id);
+        if (m && m->money)
+        {
+            WorldPacket p(CMSG_MAIL_TAKE_MONEY);
+            p << box->GetGUID() << id;
+            session->HandleMailTakeMoney(p);
+        }
+        m = bot->GetMail(id);
+        if (m && m->items.empty() && !m->money)
+        {
+            WorldPacket p(CMSG_MAIL_DELETE);
+            p << box->GetGUID() << id << uint32(0);   // the last field is a mail template, unused here
+            session->HandleMailDelete(p);
+        }
+    }
+}
+// }}}
+
 // {{{ BuildTodo
 // The town's errands for this buddy, from what the town's people offer
 // ("some towns don't even have repair stations"): its class trainer when it
@@ -317,6 +390,14 @@ static std::vector<ErrandStop> BuildTodo(PlayerbotAI* ai, Player* bot, uint32 ar
             repairer = c;
     }
     std::vector<ErrandStop> todo;
+    // Mail first: a quest reward that didn't fit its bags was mailed to it
+    // (the server's own reward step does that, 617d), and it collects it
+    // at the town's nearest mailbox (owner, 2026-09-29: "for full bags,
+    // can you mail them the item instead? make sure they actually check
+    // their mail...").
+    if (MailWaiting(bot))
+        if (GameObject* box = NearestMailbox(bot))
+            todo.push_back({ Errand::Mail, box->GetGUID() });
     if (trainer)
         todo.push_back({ Errand::Train, trainer->GetGUID() });
     if (vendor && !Junk(ai, bot).empty() && rand_norm() < BagFullness(bot))
@@ -605,6 +686,24 @@ private:
     bool RunErrand(TownState& s, uint64 now)
     {
         ErrandStop stop = s.todo.front();
+        if (stop.kind == Errand::Mail)
+        {
+            // a mailbox is an object, not a person: walk to it, open it
+            GameObject* box = ObjectAccessor::GetGameObject(*bot, stop.npc);
+            if (!box || TooLong(s, now))
+            {
+                s.todo.erase(s.todo.begin());          // gone or out of reach: the next visit tries again
+                Finish(s, now);
+                return false;
+            }
+            if (bot->GetDistance(box) > ARRIVED_YARDS)
+                return MoveNear(box, NPC_YARDS);
+            bot->SetFacingToObject(box);
+            DoMail(bot, box);
+            s.todo.erase(s.todo.begin());
+            Finish(s, now);
+            return true;
+        }
         Creature* npc = ObjectAccessor::GetCreature(*bot, stop.npc);
         if (!npc || !npc->IsAlive() || TooLong(s, now))
         {

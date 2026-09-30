@@ -14,7 +14,21 @@ complete it automatically whenever you do."
 
 ## Current Behavior
 
-Nothing mirrors quests. The core fires `OnPlayerQuestAccept(player, quest)`
+**Built 2026-09-29, not yet compiled or tried in game** (owner: "we're
+going to auto-complete buddy quests to ensure they level up alongside
+you"): `modules/mod-buddies/src/buddies_xp.cpp`, at its end. On the
+server's quest-reward hook for an owner, each of the owner's buddies in
+the world is given the quest, has it completed and rewarded in one step
+(skipped if done before and not repeatable; a full quest log is logged as
+an error and nothing is given). A reward item that doesn't fit its bags is
+mailed by the server's own reward step, and the buddy collects its mail at
+the town's nearest mailbox, first of its town errands (owner: "for full
+bags, can you mail them the item instead? make sure they actually check
+their mail"; `buddies_town.cpp`, the mail errand). Choice rewards by the bot
+module's own rule, written out there (its function is private).
+Requirements are not checked. A buddy's own reward is never passed on.
+
+Before: nothing mirrored quests. The core fires `OnPlayerQuestAccept(player, quest)`
 and `OnPlayerCompleteQuest(player, quest)`
 (`src/server/game/Scripting/ScriptDefines/PlayerScript.h`). Bots keep
 ordinary quest logs.

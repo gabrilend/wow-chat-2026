@@ -67,5 +67,9 @@ numbers and the spells:
 - **The maw with an owner tank**: the owner stands wherever they like.
   Should the maw follow the owner continuously, or be set when they first
   hold and moved only when they walk more than 6 yards from it?
-- **Casters without a slow** (priests, warlocks without Curse of
-  Exhaustion): do they pull at all, or only damage the maw?
+- (Answered 2026-09-29: "just damage.") **Casters without a slow**
+  (priests, warlocks without Curse of Exhaustion): do they pull at all, or
+  only damage the maw? They only damage the maw.
+- **Deferred, 2026-09-29** (owner: "for the kraken let's just use
+  playerbots for now"): buddies fight by the bot module's own rules, in
+  dungeons too, until this is taken up again.
