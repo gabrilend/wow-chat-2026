@@ -251,6 +251,36 @@ static std::string GivePrimaryProfessions(Player* buddy)
 }
 // }}}
 
+// {{{ death knight buddies: maxed professions (718, 617k)
+// Ritz, 2026-09-25: "death knight buddies start with maxed professions as
+// well. They are the professions they knew in life." Every profession a
+// death knight buddy has (its crafting and gathering ones, and cooking,
+// first aid and fishing) is raised to Artisan 300: the Artisan rank spell
+// (which sets the maximum; Spell.dbc, and the rank the trainers teach at
+// 200, trainer_spell) and the skill itself. Once raised it is left alone.
+struct ArtisanRank { uint32 skill; uint32 spell; };
+static ArtisanRank const sArtisan[] = {
+    { SKILL_ALCHEMY, 11611 }, { SKILL_BLACKSMITHING, 9785 }, { SKILL_ENCHANTING, 13920 }, { SKILL_ENGINEERING, 12656 },
+    { SKILL_INSCRIPTION, 45360 }, { SKILL_JEWELCRAFTING, 28895 }, { SKILL_LEATHERWORKING, 10662 }, { SKILL_TAILORING, 12180 },
+    { SKILL_HERBALISM, 11993 }, { SKILL_MINING, 10248 }, { SKILL_SKINNING, 10768 },
+    { SKILL_COOKING, 18260 }, { SKILL_FIRST_AID, 10846 }, { SKILL_FISHING, 18248 },
+};
+static constexpr uint16 ARTISAN_STEP = 4, ARTISAN_MAX = 300;
+
+static std::string MaxDeathKnightProfessions(Player* buddy)
+{
+    if (buddy->getClass() != CLASS_DEATH_KNIGHT)
+        return std::string();
+    for (ArtisanRank const& a : sArtisan)
+        if (buddy->HasSkill(a.skill) && buddy->GetMaxSkillValue(a.skill) < ARTISAN_MAX)
+        {
+            buddy->learnSpell(a.spell, false);
+            buddy->SetSkill(a.skill, ARTISAN_STEP, ARTISAN_MAX, ARTISAN_MAX);
+        }
+    return std::string();
+}
+// }}}
+
 // {{{ Fail
 static void Fail(uint32 owner, uint8 slot, uint8 race, uint8 cls, std::string const& why)
 {
@@ -319,7 +349,8 @@ static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
         buddy->learnSpell(50977, false);            // Death Gate, as the bot factory gives it
     if (ownerLevel > buddy->GetLevel())
         buddy->SetLevel(ownerLevel);                // the rest follows at first login
-    std::string missing = GiveSecondaryProfessions(buddy) + GivePrimaryProfessions(buddy);   // 617k
+    std::string missing = GiveSecondaryProfessions(buddy) + GivePrimaryProfessions(buddy)
+        + MaxDeathKnightProfessions(buddy);         // 617k; death knights maxed (718)
     if (!missing.empty())
         LOG_ERROR("module", "mod-buddies: new buddy {} for owner {}: {}; it tries again at its first login",
             name, owner, missing);
@@ -404,7 +435,8 @@ public:
     {
         if (BuddiesEnabled() && BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
         {
-            std::string missing = GiveSecondaryProfessions(player) + GivePrimaryProfessions(player);   // 617k
+            std::string missing = GiveSecondaryProfessions(player) + GivePrimaryProfessions(player)
+                + MaxDeathKnightProfessions(player);   // 617k; death knights maxed (718)
             if (!missing.empty())
                 LOG_ERROR("module", "mod-buddies: buddy {}: {}", player->GetName(), missing);
             return;

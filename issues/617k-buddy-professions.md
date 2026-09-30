@@ -31,7 +31,19 @@ module's own choice) in its bags. A buddy's login catches up anything
 missing (buddies made earlier, or full bags), logged when it can't. The
 pole is used for fishing in towns (617e4).
 
-Primary professions: not designed. What the bot module offers today (per
+**Primary professions chosen and learned, 2026-09-30; compile-checked, not
+yet run** (`buddies_create.cpp`, "primary professions"): one crafting
+profession at random and the gathering profession that feeds it (tailors
+and enchanters: any of the three), apprentice spells (Mining also Find
+Minerals and Smelting; Herbalism Find Herbs), and their tools (Mining
+Pick, Skinning Knife, Blacksmith Hammer, Runed Copper Rod, Arclight
+Spanner, Jeweler's Kit, Virtuoso Inking Set) in its bags. At the making,
+and at the login of buddies made before; a buddy that has one keeps it.
+**Not built yet:** crafting (clan upgrades first, then consumables handed
+out), gathering mode in lower zones, levelling at trainers, and death
+knight buddies' maxed professions (718).
+
+Before that: primary professions not designed. What the bot module offers today (per
 `docs/playerbots/Playerbot-Commands.md`): the `maintenance` command has a
 bot learn its available spells and skills, restock consumables, enchant its
 gear and repair; a `master fishing` strategy lets a bot fish near its
@@ -199,6 +211,9 @@ fishing." Every buddy knows the three secondary professions from its
 creation (the apprentice skill and its first recipes), on top of any
 primary professions; it cooks what it catches and uses bandages it makes.
 Towns: fishing as a pastime (617e4).
+
+
+
 
 ## Suggested Implementation Steps
 

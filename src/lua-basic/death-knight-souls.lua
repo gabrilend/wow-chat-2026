@@ -52,6 +52,7 @@ local PLAYER_EVENT_ON_LOGIN       = 3
 local PLAYER_EVENT_ON_UPDATE_ZONE = 27
 local PLAYER_EVENT_ON_FIRST_LOGIN = 30
 local PLAYER_EVENT_ON_UPDATE_AREA = 47              -- mod-ale Hooks.h: (event, player, oldArea, newArea)
+local PLAYER_EVENT_ON_LEARN_SPELL = 44              -- mod-ale Hooks.h: (event, player, spellId)
 local GOSSIP_ICON_CHAT = 0
 
 local CLASS_DEATH_KNIGHT = 6
@@ -207,11 +208,51 @@ local function candidates(player)
 end
 -- }}}
 
+-- {{{ maxed professions at training
+-- A death knight player's first two primary professions learned from a
+-- trainer are raised to Artisan 300 at once (owner, 2026-09-30: "what about
+-- DK players? They should have maxed professions too, but only for the
+-- first ones they train"). Keyed by each profession's apprentice spell:
+-- { skill line, its Artisan rank spell } (Spell.dbc; the Artisan rank
+-- spell sets the skill's maximum to 300). Counted in basic_718_maxed, so
+-- dropping one and training another doesn't max it again. Professions
+-- carried from the soul (carry_professions) are not trained: skipped.
+local APPRENTICE_TO_ARTISAN = {
+    [2259]  = { 171, 11611 },  -- Alchemy
+    [2018]  = { 164, 9785  },  -- Blacksmithing
+    [7411]  = { 333, 13920 },  -- Enchanting
+    [4036]  = { 202, 12656 },  -- Engineering
+    [45357] = { 773, 45360 },  -- Inscription
+    [25229] = { 755, 28895 },  -- Jewelcrafting
+    [2108]  = { 165, 10662 },  -- Leatherworking
+    [3908]  = { 197, 12180 },  -- Tailoring
+    [2366]  = { 182, 11993 },  -- Herbalism
+    [2575]  = { 186, 10248 },  -- Mining
+    [8613]  = { 393, 10768 },  -- Skinning
+}
+local MAXED_AT_TRAINING = 2
+local carrying = {}                                  -- death knight guid -> true while the soul's professions are copied
+
+local function on_learn_spell(event, player, spell)
+    local prof = APPRENTICE_TO_ARTISAN[spell]
+    if not prof or player:GetClass() ~= CLASS_DEATH_KNIGHT then return end
+    local guid = player:GetGUIDLow()
+    if carrying[guid] then return end                -- the soul's, not trained
+    local q = CharDBQuery("SELECT COUNT(*) FROM basic_718_maxed WHERE dk = " .. guid)
+    if q and q:GetUInt32(0) >= MAXED_AT_TRAINING then return end
+    player:LearnSpell(prof[2])                       -- Artisan: the maximum becomes 300
+    player:SetSkill(prof[1], 4, 300, 300)            -- step 4 = Artisan
+    CharDBExecute(string.format("INSERT IGNORE INTO basic_718_maxed (dk, skill) VALUES (%d, %d)", guid, prof[1]))
+    player:SendBroadcastMessage("What you learned in life comes back to you at once.")
+end
+-- }}}
+
 -- {{{ local function carry_professions
 -- Teach the death knight the soul's professions: the recipes and rank
 -- spells first (a rank spell opens the skill), then the skill values
 -- exactly as the soul had them. Read before the soul moves accounts.
 local function carry_professions(player, soul_guid)
+    carrying[player:GetGUIDLow()] = true             -- what it learns here is the soul's, not trained
     local learned, skills = 0, 0
     local q = CharDBQuery("SELECT spell FROM character_spell WHERE guid = " .. soul_guid)
     if q then
@@ -234,6 +275,7 @@ local function carry_professions(player, soul_guid)
             end
         until not q:NextRow()
     end
+    carrying[player:GetGUIDLow()] = nil
     return learned, skills
 end
 -- }}}
@@ -416,6 +458,7 @@ end
 -- }}}
 
 RegisterPlayerEvent(PLAYER_EVENT_ON_FIRST_LOGIN, on_first_login)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LEARN_SPELL, on_learn_spell)
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, on_login)
 RegisterPlayerEvent(PLAYER_EVENT_ON_UPDATE_ZONE, function(event, player, new_zone, new_area) check_gate(player, new_area) end)
 -- an area change inside one zone (the necropolis to Death's Breach below it,

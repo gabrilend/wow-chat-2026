@@ -28,6 +28,18 @@ CREATE TABLE IF NOT EXISTS `basic_718_souls` (
   KEY `idx_soul` (`soul`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 718: death knight souls given to Sargobras';
 
+-- basic_718_maxed (2026-09-30): the primary professions a death knight
+-- player trained that were raised to Artisan 300 at once (owner: "DK players
+-- [...] should have maxed professions too, but only for the first ones they
+-- train"); at most two rows per death knight, so dropping one and training
+-- another doesn't max it again. Professions carried from the soul are not
+-- trained and never counted. Written by death-knight-souls.lua.
+CREATE TABLE IF NOT EXISTS `basic_718_maxed` (
+  `dk`    int unsigned      NOT NULL,
+  `skill` smallint unsigned NOT NULL,
+  PRIMARY KEY (`dk`, `skill`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 718: professions maxed at training';
+
 -- ============================================================================
 -- End of 03-death-knight-souls.sql (apply)
 -- ============================================================================
