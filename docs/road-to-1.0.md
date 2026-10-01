@@ -109,9 +109,11 @@ similarity score (W05a), like any model made there.
    the most downvoted. Waits on the owner's Linode host. (Choosing *which*
    model to rework by its score is allowed; the score is still never
    shown to whatever builds the next candidate, W05a.)
-2. **Which machine renders the startup photoshoot** (W05a): the game
-   server draws nothing, so a copy of the custom client, drawing off
-   screen, has to do it while logins wait.
+2. ~~Which machine renders the startup photoshoot~~ (W05a). Answered
+   2026-10-01: "the server will spin up a client and pose them
+   appropriately", a copy of the custom client drawing off screen on the
+   server's machine while logins wait, at the vistas the owner saves while
+   playing (the vista command: issue 506j).
 
 ## Related documents
 

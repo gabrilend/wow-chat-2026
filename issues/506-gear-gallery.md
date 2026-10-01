@@ -10,7 +10,7 @@
   506c (image to 3D through ComfyUI), 506d (the gallery and its votes),
   506e (camera plan and multi-view rings), 506f (mesh and texture from
   views), 506g (skeleton borrowing), 506h (model formats: glTF kept, M2
-  exported), 506i (generated animations)
+  exported), 506i (generated animations), 506j (scenic vista command)
 - Related: 159 (equipment portrait grid: pictures of existing items);
   world-edit-to-execute W05 (the asset forge: find or generate a model),
   whose generate route this is the first real target for
@@ -106,6 +106,7 @@ design gets voted down, the carrying loosens and variation widens.
 | 506g | gear-skeleton-borrowing | 506f, 506h | A stock skeleton and its animations for a creature mesh |
 | 506h | gear-model-formats | None | glTF kept, M2 + .skin exported (static items built) |
 | 506i | gear-generated-animations | 506g, 506e | Pose, render, match the next frame's views, keyframe |
+| 506j | gear-scenic-vista-command | None | `.vista save` remembers scenic spots; the startup photoshoot (W05a) poses models there |
 
 Rationale: four streams, each testable apart. The profiles and the gallery
 run today; the two ComfyUI stages wait on the installation and on the
