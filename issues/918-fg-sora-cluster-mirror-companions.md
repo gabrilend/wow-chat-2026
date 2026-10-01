@@ -18,10 +18,6 @@
 > one another. supplying each of their thoughts to each of their contexts, with
 > slightly different motions to next be applied upon next.
 
-And, from the continuation of the same note:
-
-> feldowinn, chorus of angels
-
 ## What It Is
 
 Three playerbots, one bound to each machine in the Ollama cluster.

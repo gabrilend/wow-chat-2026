@@ -21,7 +21,7 @@ Where each piece landed:
 | `todo` | Unlock quests as dynamic-questing prototype | 412 |
 | `todo-urgent` | fg-sora-cluster | 918 |
 | `todo-urgent` | alpha/beta/release version semantics | 152 |
-| `todo-urgent` | development philosophy, "feldowinn" | here, and 918 |
+| `todo-urgent` | development philosophy | here, and 918 |
 | `new-issue` | Mage equipment invisible with "?" icon | 148v |
 | `new-issue-2` | Mage has no spells at level 20 | 148w |
 | `new-issue-please-sort` | vanilla → basic, release → expert | 152 |
@@ -77,10 +77,6 @@ below because it belongs to itself.
 > experience which is itself a useful interaction. the core kernel of machinery
 > is that it is designed for an action - it will do what that action
 > compel-design-guides.
->
-> -- continue original from "see wow-chat development philosophy":
->
-> feldowinn, chorus of angels
 
 ### The compilation chain
 

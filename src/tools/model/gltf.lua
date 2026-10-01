@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- gltf.lua - read and write binary glTF (.glb) meshes (issue 506h)
 --
--- For a general audience: glTF is the open 3D format the Feldowinn pipeline
+-- For a general audience: glTF is the open 3D format the gear pipeline
 -- keeps its models in (the image-to-3D stage, Hunyuan3D-2, writes .glb
 -- files). This reads one into a plain list of triangles (positions,
 -- normals, texture coordinates), which the converter to the game's model
@@ -28,7 +28,7 @@ local ffi = require("ffi")
 local Gltf = {}
 
 -- {{{ local function json
--- dkjson from the shared libraries (the same one the Feldowinn tools use).
+-- dkjson from the shared libraries (the same one the gear-design tools use).
 local json_lib
 local function json()
     if not json_lib then

@@ -392,8 +392,9 @@ To fix (not built):
   the ground opens, unless there is combat.
 - Damage dealers: an area spell at 3 or more targets in reach, otherwise
   the lowest-health target first. "The fairy dps" is to be asked (the
-  scene has no fairy; Feldowinn, the healing fairy, is a Retribution
-  Paladin: is she meant, as a fifth party member?).
+  scene has no fairy; the healing-fairy gear theme it may have come from
+  was test data, taken out of the design 2026-10-01, so it is not a fifth
+  party member).
 - The owner has trouble seeing updates in the page; the widgets are
   renderers of the data model, and the game client handles much of this
   in the end.

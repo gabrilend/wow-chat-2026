@@ -11,14 +11,14 @@
 # MPQ reader already installed here is Python's mpyq (libs/pylibs).
 #
 # Usage: scripts/extract-m2-references [PROJECT_DIR] [CLIENT_DATA_DIR]
-#   defaults: /mnt/mtwo/games/azeroth-core/wow-chat-2026, /mnt/dile/ritz/games/wotlk/Data
+#   defaults: /mnt/mtwo/games/azeroth-core/wow-chat-2026, /mnt/mtwo/games/azeroth-core/client/client-files/Data
 #   writes:   PROJECT_DIR/tmp/shared-memory/m2-reference/*.m2, *.skin
 
 import os
 import sys
 
 DIR = sys.argv[1] if len(sys.argv) > 1 else "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
-DATA = sys.argv[2] if len(sys.argv) > 2 else "/mnt/dile/ritz/games/wotlk/Data"
+DATA = sys.argv[2] if len(sys.argv) > 2 else "/mnt/mtwo/games/azeroth-core/client/client-files/Data"
 sys.path.insert(0, os.path.join(DIR, "libs/pylibs"))
 import mpyq  # noqa: E402
 

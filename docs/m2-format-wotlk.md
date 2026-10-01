@@ -1,6 +1,6 @@
 # The Game's Model Files: M2 and .skin (WotLK, version 264)
 
-How the 3.3.5 client's model files are laid out, as far as the Feldowinn
+How the 3.3.5 client's model files are laid out, as far as the gear
 pipeline needs them (issue 506h). Written from three sources, in this order
 of trust:
 
@@ -149,7 +149,7 @@ it. The project makes no client changes until its own client exists, and
 building the pipeline is part of building that client (owner,
 2026-09-27: "building this *is* the custom client though"). So the M2 is
 the export for the stock client; the kept format is glTF (or the project's
-own), see `docs/feldowinn-3d-pipeline.md`.
+own), see `docs/gear-3d-pipeline.md`.
 
 ## Body armour is not a model
 
@@ -157,6 +157,6 @@ In WotLK only some gear is its own model: helms, shoulders, weapons,
 shields and a few others. Chest, legs, gloves, boots, belts and wrists are
 **textures painted onto the character's body** (regions of the body's
 texture, chosen by the item's display data), plus a few body-mesh variants
-(geosets: sleeves, robe skirts, boot tops). So Feldowinn's chest, gloves,
+(geosets: sleeves, robe skirts, boot tops). So a gear set's chest, gloves,
 legs and boots in the stock client are images in the body's texture
 layout, not meshes; a custom client can do otherwise.

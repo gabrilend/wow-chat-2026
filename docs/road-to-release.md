@@ -90,13 +90,17 @@ Most of basic's content issues wait on these being finished and checked.
 
 ## After release: the custom client and generated content
 
-- **The custom client**, built in world-edit-to-execute: readers for the
+- **The custom client**, a third project of its own
+  (`/mnt/mtwo/games/azeroth-core/custom-client/`), separate from this one
+  and from world-edit-to-execute, playing the assets and gameplay of both;
+  the two projects do most of the work on it (owner, 2026-10-01). Its
+  first stages come from world-edit-to-execute's phase W: readers for the
   game's files (W01), drawing its models (W03), a capture rig (W04), then
   the asset forge that finds or generates replacement models (W05), a
   shared theme (W06). This is where client patches become possible, and
   so everything above that waited on them: Sargobras's look, Kazzak's
   hitbox, new item models, the gem vault's bag-per-tab.
-- **Generated 3D models, Feldowinn first** (506): the ComfyUI build
+- **Generated 3D models, a Retribution Paladin set first** (506): the ComfyUI build
   finished and tested (it is installing its packages; then image-to-3D
   weights, possibly on a remote host); concept art (506b); the 40-view
   camera rings and multi-view generation (506e); meshes and textures from
@@ -115,4 +119,4 @@ Most of basic's content issues wait on these being finished and checked.
 
 - `docs/roadmap.md`: the earlier roadmap, from the beta profile's design.
 - `docs/profiles/basic.md`: what basic is.
-- `docs/feldowinn-3d-pipeline.md`: the 3D pipeline in detail.
+- `docs/gear-3d-pipeline.md`: the 3D pipeline in detail.

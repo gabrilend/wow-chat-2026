@@ -3,7 +3,7 @@
 -- files, for a static item: a helm, shoulder, weapon or shield (issue 506h).
 --
 -- For a general audience: the image-to-3D stage leaves a .glb (an open 3D
--- format) in each Feldowinn design's folder. The 3.3.5 game client can
+-- format) in each gear design.s folder. The 3.3.5 game client can
 -- only draw its own format, an .m2 model plus an .skin file beside it. This
 -- reads the .glb, turns it into the game's axes and units, writes the two
 -- files next to it, then reads them back with our own reader and checks

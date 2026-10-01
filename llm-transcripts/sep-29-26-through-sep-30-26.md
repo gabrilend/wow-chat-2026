@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-30 00:30:57
+Generated on: 2026-09-30 01:09:23
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -2629,6 +2629,142 @@ After that:
 
 Tell me what you see, especially how they fight. That's what the kraken will
 eventually replace.
+
+--------------------------------------------------------------------------------
+
+### User Request 26
+
+> - About 1.5 seconds after you arrive, your party's empty seats (up to five)
+> fill with buddies drawn at random. They're teleported in beside
+    you.
+
+--------------------------------------------------------------------------------
+
+### User Request 27
+
+> - About 1.5 seconds after you arrive, your party's empty seats (up to five)
+> fill with buddies drawn at random. They're teleported in beside
+    you.
+
+they should have to walk
+
+> - Next steps: crafting (upgrades for the clan first, then consumables handed
+> out), gathering trips in lower-level zones, and death-knight
+>     buddies starting with maxed professions.
+
+yay! Question... what about DK players? They should have maxed professions too,
+but only for the first ones they train.
+
+> Task hunts (617m): your design says they need "the language model work", since
+> buddies take requests in plain words, so they're their own
+> project. Do you want to start that design, or finish the professions first?
+> Crafting is what task hunts would be asking buddies to do.
+
+for now let's just say that buddies try to make upgrades for the clan and
+consumables that they think they'll need and want to share. Enchanting should
+put enchanting vellums to use and mail them to clanmembers, and inscriptionists
+should make vellums and give them to enchanters. They should buy them from the
+AH if needed.
+
+can you edit the DB and give one of my characters Felicity decent gear for
+Uldaman, put her in front of the instance, and also Sargobrases for each of the
+level increments she needs? Remember, one sargobras per tier! Eventually they're
+gonna have different outfits. Also make her the correct level.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 27
+
+> Four things: buddies walking to the dungeon instead of being teleported,
+> death-knight professions, the crafting direction, and setting Felicity up for
+> Uldaman. Starting with the lookups for Felicity: her record, whether she's
+> online, the Uldaman entrance, and how owed buddy slots get created:
+
+> Writing the console-command tool:
+
+> It connected (exit 0), but printed nothing: the reply spans several lines and
+> my parser only reads one. Checking the raw reply:
+
+> A good blue-heavy set. No wand matched, because wands rarely carry stats, so
+> finding the best wand separately:
+
+> Making the change:
+
+> Now the selection (serve that Sargobras's own tier) and logout (all of them
+> leave):
+
+> Checking the edited selection lines, then applying the Lua live with `.reload
+> ale`:
+
+> Correct. Now setting up Felicity through the console, then reloading the Lua
+> so one-per-tier is live:
+
+> Level 44, standing at the Uldaman entrance, and two mails sent. The Lua reload
+> printed nothing, so checking the server log for it:
+
+> Now the walking itself, defined before the draw:
+
+> Compiles. Updating 617c3 and committing:
+
+> Nothing came back. Checking which of those rank spells trainers teach at all,
+> and at what skill:
+
+> Table in place. Now the Lua for death-knight players:
+
+> All three confirmed through the spells trainers use to teach them: cooking
+> 18260, first aid 10846, fishing 18248. Adding the death-knight maxing to buddy
+> creation, and to the login catch-up:
+
+> Compiles. Recording the crafting direction you gave in 617k, noting the
+> death-knight rules in 718 and 617k, and committing:
+
+Felicity is ready for Uldaman, and everything else you asked for is built and
+committed. The buddy C++ needs another compile. None of it has been tried in
+game.
+
+**Felicity** (blood elf warlock)
+- Level 44, standing at the Uldaman entrance. I did this through a new tool,
+  `scripts/gm-command`, which sends console commands to the running server.
+  That's safer than editing the database while the server is up.
+- Her gear is in two mails. There's no mailbox at Uldaman, so type `.mailbox` in
+  game to open one:
+  - **Blue:** Bad Mojo Mask, Lifeblood Amulet, Grimlok's Tribal Vestments,
+    Satyrmane Sash, Furen's Boots, Forgotten Wraps, Jumanza Grips, rings
+    Brainlash and Mindseye Circle, Blackmetal Cape, the staff Zum'rah's Vexing
+    Cane, and the wand Flaming Incinerator.
+  - **Green:** Venomshroud Mantle and Hibernal Pants.
+- **Sargobras, one per tier:** at level 44 she's owed five buddies (from levels
+  1, 10, 20, 30 and 40). When she logs in, five travelling Sargobras should
+  come, one per tier, each in his own place around her. Each serves his own slot
+  and goes on break once it's chosen. It's a Lua change. The console reload
+  didn't confirm, so type `.reload ale` in game before logging her in.
+
+**Walking into dungeons:** a drawn buddy now runs to where you last stood
+outside (the entrance) and steps through, arriving where you did. While it
+walks, playerbots' own decisions are paused.
+- If a buddy gets stuck for a minute, it's brought in anyway. That's a fallback,
+  and the log says so.
+- A buddy on another continent stays out, with an error in the log.
+- Leaving still brings buddies out beside you.
+
+**Death knights' professions**
+- **Death-knight buddies:** all their professions start at Artisan 300
+  (crafting, gathering, cooking, first aid, fishing).
+- **Death-knight players:** the first two primary professions they train become
+  Artisan 300 at once. Professions carried over from the sacrificed character
+  don't count. A small new table remembers which were maxed, so dropping one and
+  retraining doesn't max it again.
+- The player part is Lua (live after `.reload ale`); the buddy part needs the
+  compile.
+
+**Crafting direction:** recorded in the professions issue as your decision.
+Buddies craft upgrades and consumables for the clan. Enchanters put enchants on
+vellums and mail the scrolls to clanmates. Inscriptionists make vellums for the
+enchanters. They buy from the auction house when short. Building it is next on
+professions.
+
+**Before the Uldaman run:** compile and restart first. The buddies' walk into
+the dungeon only exists after that.
 
 --------------------------------------------------------------------------------
 

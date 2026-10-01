@@ -1,0 +1,391 @@
+<title>Retribution Armoury</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --ground: #f2f4ef; --panel: #ffffff; --ink: #1f2a26; --muted: #5f6f68; --rule: #d7ded8;
+  --gold: #a8792a; --gold-soft: #f3e8d2; --leaf: #3f7d5c; --leaf-soft: #e1efe6; --ember: #a8492f; --ember-soft: #f6e3dc;
+  --art: #e7ece6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #101613; --panel: #172019; --ink: #e6eee9; --muted: #97a89f; --rule: #2a362f;
+    --gold: #ddb45a; --gold-soft: #2e2716; --leaf: #6fbf93; --leaf-soft: #17291f; --ember: #e0806a; --ember-soft: #2f1c16;
+    --art: #1d2721;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #101613; --panel: #172019; --ink: #e6eee9; --muted: #97a89f; --rule: #2a362f;
+  --gold: #ddb45a; --gold-soft: #2e2716; --leaf: #6fbf93; --leaf-soft: #17291f; --ember: #e0806a; --ember-soft: #2f1c16;
+  --art: #1d2721;
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 17px/1.55 "Spectral", Georgia, "Times New Roman", serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 36px 72px; display: grid; gap: 40px; }
+h1, h2, h3 { font-family: "Cinzel", "Trajan Pro", Georgia, serif; margin: 0; text-wrap: balance; letter-spacing: .02em; }
+h1 { font-size: clamp(2rem, 5vw, 3.1rem); font-weight: 700; line-height: 1.05; }
+h2 { font-size: 1.25rem; font-weight: 600; }
+h3 { font-size: 1.02rem; font-weight: 600; }
+p { margin: 0; max-width: 66ch; }
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .76rem; font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+
+header { display: grid; gap: 14px; }
+.eyebrow { font-family: "Cinzel", Georgia, serif; font-size: .78rem; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); }
+.lede em { color: var(--ink); }
+.bar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.status { font-size: .92rem; color: var(--muted); }
+.status strong { color: var(--ink); font-weight: 500; }
+button { font: inherit; cursor: pointer; }
+.btn { font-family: "Cinzel", Georgia, serif; font-size: .82rem; letter-spacing: .06em; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--gold); background: var(--gold-soft); color: var(--ink); }
+.btn:disabled { opacity: .5; cursor: default; }
+button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* the questions ledger */
+.ledger { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 22px 32px; }
+.q { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.q-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.q-ask { font-style: italic; }
+.chip { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .68rem; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.settled { background: var(--leaf-soft); color: var(--leaf); }
+.chip.open { background: var(--gold-soft); color: var(--gold); }
+.opts { display: grid; gap: 4px; }
+.opt { display: grid; grid-template-columns: 7.5rem 1fr 2.2rem; gap: 10px; align-items: center; font-size: .86rem; }
+.opt .name { overflow-wrap: anywhere; }
+.opt.lead .name { font-weight: 500; color: var(--gold); }
+.track { position: relative; height: 8px; background: var(--art); border-radius: 4px; }
+.track .mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--rule); }
+.track .fill { position: absolute; top: 0; bottom: 0; border-radius: 4px; }
+.opt .net { text-align: right; }
+
+/* filters */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filter { font-size: .86rem; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); }
+.filter[aria-pressed="true"] { border-color: var(--gold); background: var(--gold-soft); }
+
+/* the designs */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: 20px; }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+.card.up { border-color: var(--leaf); }
+.card.down { opacity: .72; }
+.art { position: relative; aspect-ratio: 2 / 3; width: 100%; max-width: 100%; background: var(--art); overflow: hidden; }
+.art img, .art svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.art .views { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,.55); color: #fff; border: 0; border-radius: 999px; padding: 2px 9px; }
+.art .sketch { position: absolute; left: 8px; bottom: 8px; background: rgba(0,0,0,.45); color: #fff; border-radius: 999px; padding: 2px 9px; }
+.card-body { padding: 14px 16px 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 8px; }
+.focus { display: flex; flex-wrap: wrap; gap: 6px; }
+.focus .chip { background: var(--gold-soft); color: var(--gold); white-space: normal; border-radius: 8px; }
+dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: .84rem; }
+dt { color: var(--muted); }
+dd { margin: 0; }
+dd.focused { color: var(--gold); font-weight: 500; }
+.votes { display: flex; gap: 8px; }
+.vote { flex: 1 1 0; min-width: 0; display: flex; justify-content: center; align-items: center; gap: 6px; padding: 7px 0; border-radius: 8px; border: 1px solid var(--rule); background: transparent; color: var(--ink); font-size: .9rem; }
+.vote.up[aria-pressed="true"] { background: var(--leaf-soft); border-color: var(--leaf); color: var(--leaf); }
+.vote.down[aria-pressed="true"] { background: var(--ember-soft); border-color: var(--ember); color: var(--ember); }
+.vote:disabled { cursor: default; opacity: .55; }
+.empty { color: var(--muted); font-style: italic; }
+footer { color: var(--muted); font-size: .86rem; display: grid; gap: 6px; }
+@media (prefers-reduced-motion: no-preference) { .vote, .filter, .card { transition: background .15s, border-color .15s, opacity .15s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Retribution gear · design votes</div>
+    <h1>Retribution Armoury</h1>
+    <p class="lede">Each card is one gear design, built from answers to the open questions below. Vote a design up or down; the next round leans toward what is winning and tries new answers where nothing is settled yet.</p>
+    <div class="bar">
+      <span class="status" id="status">Loading votes…</span>
+      <button class="btn" id="export" type="button" hidden>Export votes (votes.tsv)</button>
+    </div>
+  </header>
+
+  <section aria-labelledby="ledger-h" style="display:grid;gap:16px">
+    <h2 id="ledger-h">The open questions</h2>
+    <p class="muted">Each option's bar is the net vote of every design that used it. A question is settled when one answer leads with at least <span id="rule-net">3</span> net votes and <span id="rule-margin">2</span> more than the next.</p>
+    <div class="ledger" id="ledger"></div>
+  </section>
+
+  <section aria-labelledby="designs-h" style="display:grid;gap:16px">
+    <h2 id="designs-h">The designs</h2>
+    <div class="filters" id="filters" role="group" aria-label="Show pieces"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <footer>
+    <p id="footnote"></p>
+    <p>Pictures come from the image generator's output folder, one folder per design; a design without a picture yet is shown as a sketch in its colours. Made by scripts/generate-gear-gallery (issue 506d).</p>
+  </footer>
+</div>
+
+<script type="application/json" id="data">{"questions":[{"options":[{"says":"gilded plate armour, polished gold over white steel","id":"gilded"},{"says":"plain heavy steel plate, hammered and riveted","id":"steel"},{"says":"dark bronze plate with a worn patina","id":"bronze"},{"says":"overlapping scale armour over mail","id":"scale"}],"id":"armour","pieces":"all","ask":"What is the plate made of?"},{"options":[{"says":"crimson and gold","id":"crimson"},{"says":"silver and deep blue","id":"silver"},{"says":"ivory and brass","id":"ivory"},{"says":"black iron and pale silver","id":"night"}],"id":"palette","pieces":"all","ask":"What colours is the set?"},{"options":[{"says":"softly glowing engraved runes","id":"runes"},{"says":"a sunburst emblem worked into the metal","id":"sunburst"},{"says":"warm light seeping through the seams","id":"seams"},{"says":"no glow, the holiness shown only in its emblems","id":"none"}],"id":"light","pieces":"all","ask":"How does the Light show on the gear?"},{"options":[{"says":"plain and practical, battle-worn","id":"plain"},{"says":"with fine filigree along the edges","id":"filigree"},{"says":"with heraldic tabards and pennants","id":"heraldic"},{"says":"hung with small relics, prayer scrolls and wax seals","id":"relic"}],"id":"ornament","pieces":"all","ask":"How ornate is it?"},{"options":[{"says":"a closed great helm with a cross-shaped visor","id":"greathelm"},{"says":"a winged half-helm","id":"winged"},{"says":"an open helm over a mail coif","id":"coif"},{"says":"a tall helm with a plumed crest","id":"crested"}],"id":"helm_shape","pieces":["helm"],"ask":"What shape is the helm?"},{"options":[{"says":"a long two-handed greatsword","id":"sword"},{"says":"a heavy two-handed mace","id":"mace"},{"says":"a broad-bladed halberd","id":"polearm"},{"says":"a great warhammer","id":"hammer"}],"id":"weapon_kind","pieces":["weapon"],"ask":"What does the set fight with?"},{"options":[{"says":"massive and heroic, oversized","id":"massive"},{"says":"close-fitted and graceful","id":"fitted"},{"says":"layered plates with cloth beneath","id":"layered"}],"id":"weight","pieces":["chest","legs","boots","gloves"],"ask":"Heavy or light?"}],"pieces":["helm","shoulders","chest","gloves","belt","legs","boots","weapon","shield"],"made":"2026-10-01 19:56 UTC","rule":{"net":3,"margin":2},"rounds":1,"votes":[],"views":[],"profiles":[{"focus":["armour","palette"],"id":"927b7604","round":1,"piece":"belt","prompt":"fantasy concept art of a single belt and buckle for a Retribution Paladin, plain heavy steel plate, hammered and riveted, black iron and pale silver, softly glowing engraved runes, hung with small relics, prayer scrolls and wax seals, isolated on a plain soft background, full view, highly detailed, game asset","how":{"palette":"focus","ornament":"random","armour":"focus","light":"random"},"answers":{"palette":"night","ornament":"relic","armour":"steel","light":"runes"}},{"focus":["palette","ornament"],"id":"c902c8f8","round":1,"piece":"shoulders","prompt":"fantasy concept art of a single shoulder pauldrons for a Retribution Paladin, ivory and brass, with fine filigree along the edges, plain heavy steel plate, hammered and riveted, no glow, the holiness shown only in its emblems, isolated on a plain soft background, full view, highly detailed, game asset","how":{"palette":"focus","ornament":"focus","armour":"random","light":"random"},"answers":{"palette":"ivory","ornament":"filigree","armour":"steel","light":"none"}},{"focus":["ornament","palette"],"id":"7c02c008","round":1,"piece":"shoulders","prompt":"fantasy concept art of a single shoulder pauldrons for a Retribution Paladin, hung with small relics, prayer scrolls and wax seals, ivory and brass, plain heavy steel plate, hammered and riveted, softly glowing engraved runes, isolated on a plain soft background, full view, highly detailed, game asset","how":{"palette":"focus","ornament":"focus","armour":"random","light":"random"},"answers":{"palette":"ivory","ornament":"relic","armour":"steel","light":"runes"}},{"focus":["light"],"id":"dcd272e5","round":1,"piece":"belt","prompt":"fantasy concept art of a single belt and buckle for a Retribution Paladin, no glow, the holiness shown only in its emblems, gilded plate armour, polished gold over white steel, ivory and brass, with heraldic tabards and pennants, isolated on a plain soft background, full view, highly detailed, game asset","how":{"palette":"random","ornament":"random","armour":"random","light":"focus"},"answers":{"palette":"ivory","ornament":"heraldic","armour":"gilded","light":"none"}},{"focus":["weight"],"id":"2d71425c","round":1,"piece":"gloves","prompt":"fantasy concept art of a single gauntlets for a Retribution Paladin, close-fitted and graceful, dark bronze plate with a worn patina, black iron and pale silver, warm light seeping through the seams, with heraldic tabards and pennants, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"random","armour":"random","palette":"random","weight":"focus","light":"random"},"answers":{"ornament":"heraldic","armour":"bronze","palette":"night","weight":"fitted","light":"seams"}},{"focus":["palette"],"id":"13b7c43d","round":1,"piece":"legs","prompt":"fantasy concept art of a single leg plates for a Retribution Paladin, silver and deep blue, gilded plate armour, polished gold over white steel, no glow, the holiness shown only in its emblems, with heraldic tabards and pennants, close-fitted and graceful, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"random","armour":"random","palette":"focus","weight":"random","light":"random"},"answers":{"ornament":"heraldic","armour":"gilded","palette":"silver","weight":"fitted","light":"none"}},{"focus":["armour","light"],"id":"ec15a144","round":1,"piece":"helm","prompt":"fantasy concept art of a single helmet for a Retribution Paladin, overlapping scale armour over mail, no glow, the holiness shown only in its emblems, ivory and brass, with heraldic tabards and pennants, a closed great helm with a cross-shaped visor, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"random","armour":"focus","helm_shape":"random","palette":"random","light":"focus"},"answers":{"ornament":"heraldic","armour":"scale","helm_shape":"greathelm","palette":"ivory","light":"none"}},{"focus":["helm_shape","armour"],"id":"e6c97180","round":1,"piece":"helm","prompt":"fantasy concept art of a single helmet for a Retribution Paladin, a winged half-helm, overlapping scale armour over mail, crimson and gold, a sunburst emblem worked into the metal, hung with small relics, prayer scrolls and wax seals, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"random","armour":"focus","helm_shape":"focus","palette":"random","light":"random"},"answers":{"ornament":"relic","armour":"scale","helm_shape":"winged","palette":"crimson","light":"sunburst"}},{"focus":["ornament","light"],"id":"089c8300","round":1,"piece":"shoulders","prompt":"fantasy concept art of a single shoulder pauldrons for a Retribution Paladin, plain and practical, battle-worn, no glow, the holiness shown only in its emblems, dark bronze plate with a worn patina, black iron and pale silver, isolated on a plain soft background, full view, highly detailed, game asset","how":{"palette":"random","ornament":"focus","armour":"random","light":"focus"},"answers":{"palette":"night","ornament":"plain","armour":"bronze","light":"none"}},{"focus":["weight"],"id":"cf3ad148","round":1,"piece":"boots","prompt":"fantasy concept art of a single sabatons (armoured boots) for a Retribution Paladin, massive and heroic, oversized, plain heavy steel plate, hammered and riveted, ivory and brass, a sunburst emblem worked into the metal, with heraldic tabards and pennants, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"random","armour":"random","palette":"random","weight":"focus","light":"random"},"answers":{"ornament":"heraldic","armour":"steel","palette":"ivory","weight":"massive","light":"sunburst"}},{"focus":["ornament","armour"],"id":"7d72c9d0","round":1,"piece":"weapon","prompt":"fantasy concept art of a single two-handed weapon for a Retribution Paladin, plain and practical, battle-worn, plain heavy steel plate, hammered and riveted, silver and deep blue, softly glowing engraved runes, a great warhammer, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"focus","armour":"focus","palette":"random","weapon_kind":"random","light":"random"},"answers":{"ornament":"plain","armour":"steel","palette":"silver","weapon_kind":"hammer","light":"runes"}},{"focus":["ornament"],"id":"7309c5b0","round":1,"piece":"boots","prompt":"fantasy concept art of a single sabatons (armoured boots) for a Retribution Paladin, plain and practical, battle-worn, overlapping scale armour over mail, silver and deep blue, no glow, the holiness shown only in its emblems, massive and heroic, oversized, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"focus","armour":"random","palette":"random","weight":"random","light":"random"},"answers":{"ornament":"plain","armour":"scale","palette":"silver","weight":"massive","light":"none"}},{"focus":["palette","ornament"],"id":"723df7d0","round":1,"piece":"belt","prompt":"fantasy concept art of a single belt and buckle for a Retribution Paladin, black iron and pale silver, plain and practical, battle-worn, gilded plate armour, polished gold over white steel, softly glowing engraved runes, isolated on a plain soft background, full view, highly detailed, game asset","how":{"palette":"focus","ornament":"focus","armour":"random","light":"random"},"answers":{"palette":"night","ornament":"plain","armour":"gilded","light":"runes"}},{"focus":["armour","ornament"],"id":"b07c6acc","round":1,"piece":"boots","prompt":"fantasy concept art of a single sabatons (armoured boots) for a Retribution Paladin, gilded plate armour, polished gold over white steel, plain and practical, battle-worn, silver and deep blue, softly glowing engraved runes, layered plates with cloth beneath, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"focus","armour":"focus","palette":"random","weight":"random","light":"random"},"answers":{"ornament":"plain","armour":"gilded","palette":"silver","weight":"layered","light":"runes"}},{"focus":["weight"],"id":"ee33aec4","round":1,"piece":"legs","prompt":"fantasy concept art of a single leg plates for a Retribution Paladin, layered plates with cloth beneath, overlapping scale armour over mail, crimson and gold, a sunburst emblem worked into the metal, hung with small relics, prayer scrolls and wax seals, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"random","armour":"random","palette":"random","weight":"focus","light":"random"},"answers":{"ornament":"relic","armour":"scale","palette":"crimson","weight":"layered","light":"sunburst"}},{"focus":["palette"],"id":"4ea602e0","round":1,"piece":"chest","prompt":"fantasy concept art of a single breastplate for a Retribution Paladin, ivory and brass, gilded plate armour, polished gold over white steel, softly glowing engraved runes, with heraldic tabards and pennants, close-fitted and graceful, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"random","armour":"random","palette":"focus","weight":"random","light":"random"},"answers":{"ornament":"heraldic","armour":"gilded","palette":"ivory","weight":"fitted","light":"runes"}},{"focus":["weapon_kind","light"],"id":"3c46bafe","round":1,"piece":"weapon","prompt":"fantasy concept art of a single two-handed weapon for a Retribution Paladin, a great warhammer, no glow, the holiness shown only in its emblems, gilded plate armour, polished gold over white steel, black iron and pale silver, with fine filigree along the edges, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"random","armour":"random","palette":"random","weapon_kind":"focus","light":"focus"},"answers":{"ornament":"filigree","armour":"gilded","palette":"night","weapon_kind":"hammer","light":"none"}},{"focus":["palette"],"id":"0b24d968","round":1,"piece":"weapon","prompt":"fantasy concept art of a single two-handed weapon for a Retribution Paladin, crimson and gold, gilded plate armour, polished gold over white steel, warm light seeping through the seams, with heraldic tabards and pennants, a heavy two-handed mace, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"random","armour":"random","palette":"focus","weapon_kind":"random","light":"random"},"answers":{"ornament":"heraldic","armour":"gilded","palette":"crimson","weapon_kind":"mace","light":"seams"}},{"focus":["ornament","armour"],"id":"f907725c","round":1,"piece":"weapon","prompt":"fantasy concept art of a single two-handed weapon for a Retribution Paladin, plain and practical, battle-worn, gilded plate armour, polished gold over white steel, ivory and brass, warm light seeping through the seams, a heavy two-handed mace, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"focus","armour":"focus","palette":"random","weapon_kind":"random","light":"random"},"answers":{"ornament":"plain","armour":"gilded","palette":"ivory","weapon_kind":"mace","light":"seams"}},{"focus":["ornament","palette"],"id":"63f730f0","round":1,"piece":"legs","prompt":"fantasy concept art of a single leg plates for a Retribution Paladin, with fine filigree along the edges, silver and deep blue, plain heavy steel plate, hammered and riveted, softly glowing engraved runes, close-fitted and graceful, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"focus","armour":"random","palette":"focus","weight":"random","light":"random"},"answers":{"ornament":"filigree","armour":"steel","palette":"silver","weight":"fitted","light":"runes"}},{"focus":["palette"],"id":"b5998f90","round":1,"piece":"shoulders","prompt":"fantasy concept art of a single shoulder pauldrons for a Retribution Paladin, crimson and gold, dark bronze plate with a worn patina, softly glowing engraved runes, plain and practical, battle-worn, isolated on a plain soft background, full view, highly detailed, game asset","how":{"palette":"focus","ornament":"random","armour":"random","light":"random"},"answers":{"palette":"crimson","ornament":"plain","armour":"bronze","light":"runes"}},{"focus":["ornament"],"id":"106b7a04","round":1,"piece":"weapon","prompt":"fantasy concept art of a single two-handed weapon for a Retribution Paladin, with fine filigree along the edges, overlapping scale armour over mail, black iron and pale silver, a sunburst emblem worked into the metal, a broad-bladed halberd, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"focus","armour":"random","palette":"random","weapon_kind":"random","light":"random"},"answers":{"ornament":"filigree","armour":"scale","palette":"night","weapon_kind":"polearm","light":"sunburst"}},{"focus":["palette"],"id":"8810edec","round":1,"piece":"weapon","prompt":"fantasy concept art of a single two-handed weapon for a Retribution Paladin, ivory and brass, overlapping scale armour over mail, no glow, the holiness shown only in its emblems, hung with small relics, prayer scrolls and wax seals, a long two-handed greatsword, isolated on a plain soft background, full view, highly detailed, game asset","how":{"ornament":"random","armour":"random","palette":"focus","weapon_kind":"random","light":"random"},"answers":{"ornament":"relic","armour":"scale","palette":"ivory","weapon_kind":"sword","light":"none"}},{"focus":["light","armour"],"id":"9fac3eec","round":1,"piece":"belt","prompt":"fantasy concept art of a single belt and buckle for a Retribution Paladin, softly glowing engraved runes, dark bronze plate with a worn patina, crimson and gold, plain and practical, battle-worn, isolated on a plain soft background, full view, highly detailed, game asset","how":{"palette":"random","ornament":"random","armour":"focus","light":"focus"},"answers":{"palette":"crimson","ornament":"plain","armour":"bronze","light":"runes"}}]}</script>
+<script>
+(function () {
+  "use strict";
+  var DATA = JSON.parse(document.getElementById("data").textContent);
+  var Q = DATA.questions, PROFILES = DATA.profiles, VIEWS = DATA.views || {}, RULE = DATA.rule;
+  // votes: profile id -> 1 (up), -1 (down); absent = no vote. Starts from the
+  // snapshot baked in when the page was made; the live store replaces it.
+  var votes = {};
+  Object.keys(DATA.votes || {}).forEach(function (id) { var v = DATA.votes[id]; votes[id] = v.up > v.down ? 1 : (v.down > v.up ? -1 : 0); });
+  var db = null, pending = {}, piece = "all", viewIndex = {};
+  var byQ = {};
+  Q.forEach(function (q) { byQ[q.id] = q; });
+
+  // {{{ palette and sketch
+  // The placeholder art: the piece's outline in its palette's two colours,
+  // with its Light motif, until a generated picture exists.
+  var PALETTE = { crimson: ["#a8323a", "#d9a93b"], silver: ["#c9d2dc", "#2f4f86"], ivory: ["#e6dcc3", "#b58a3c"], night: ["#2b2b30", "#c9ccd3"] };
+  var SHAPES = {
+    helm: "M40 70 Q40 30 80 28 Q120 30 120 70 L120 96 L100 104 L96 84 L64 84 L60 104 L40 96 Z",
+    shoulders: "M20 70 Q30 38 70 44 L74 82 Q46 76 26 96 Z M140 70 Q130 38 90 44 L86 82 Q114 76 134 96 Z",
+    chest: "M44 36 L116 36 L128 60 L118 120 Q80 138 42 120 L32 60 Z",
+    gloves: "M56 40 L80 40 L84 76 L100 70 L106 80 L86 104 Q66 112 54 100 Z",
+    belt: "M24 70 L136 70 L136 90 L24 90 Z M70 64 L90 64 L90 96 L70 96 Z",
+    legs: "M52 30 L78 30 L76 130 L56 130 Z M82 30 L108 30 L104 130 L84 130 Z",
+    boots: "M50 40 L74 40 L76 110 L104 112 L106 128 L48 128 Z",
+    weapon: "M78 14 L82 14 L84 104 L100 104 L100 112 L84 112 L84 140 L76 140 L76 112 L60 112 L60 104 L76 104 Z",
+    shield: "M44 34 L116 34 L116 80 Q116 116 80 134 Q44 116 44 80 Z"
+  };
+  var MOTIF = {   // keyed by the "light" question; "none" draws nothing
+    runes: "M72 54 L72 72 M72 54 L80 62 M86 54 L86 72 L92 66",
+    sunburst: "M80 64 m-6 0 a6 6 0 1 0 12 0 a6 6 0 1 0 -12 0 M80 50 L80 54 M80 74 L80 78 M66 64 L70 64 M90 64 L94 64",
+    seams: "M66 58 L94 58 M66 70 L94 70",
+  };
+  function sketch(p) {
+    var pal = PALETTE[p.answers.palette] || ["#b8b0a0", "#8a9a8a"];
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 160 160"); svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Sketch of the " + p.piece + " in its colours");
+    var bg = document.createElementNS(ns, "rect");
+    bg.setAttribute("width", "160"); bg.setAttribute("height", "160"); bg.setAttribute("fill", pal[1]); bg.setAttribute("fill-opacity", "0.18");
+    svg.appendChild(bg);
+    var body = document.createElementNS(ns, "path");
+    body.setAttribute("d", SHAPES[p.piece] || SHAPES.chest);
+    body.setAttribute("fill", pal[0]); body.setAttribute("stroke", pal[1]); body.setAttribute("stroke-width", "3"); body.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(body);
+    if (MOTIF[p.answers.light]) {
+      var m = document.createElementNS(ns, "path");
+      m.setAttribute("d", MOTIF[p.answers.light]);
+      m.setAttribute("fill", "none"); m.setAttribute("stroke", pal[1]); m.setAttribute("stroke-width", "2.5");
+      svg.appendChild(m);
+    }
+    return svg;
+  }
+  // }}}
+
+  // {{{ tally
+  // The generator's rule, mirrored (src/tools/gear-designs/profiles.lua,
+  // P.tally): an option's net = votes of the designs that used it; the
+  // leader is the highest net above 0; settled = leader >= RULE.net and
+  // >= the next + RULE.margin.
+  function tally() {
+    var t = {};
+    Q.forEach(function (q) { t[q.id] = {}; q.options.forEach(function (o) { t[q.id][o.id] = 0; }); });
+    PROFILES.forEach(function (p) {
+      var v = votes[p.id] || 0;
+      if (!v) return;
+      Object.keys(p.answers).forEach(function (qid) {
+        var oid = p.answers[qid];
+        if (t[qid] && t[qid][oid] !== undefined) t[qid][oid] += v;   // answers to retired questions are skipped
+      });
+    });
+    var out = {};
+    Q.forEach(function (q) {
+      var best = null, lead = -Infinity, second = -Infinity;
+      q.options.forEach(function (o) {
+        var s = t[q.id][o.id];
+        if (s > lead) { best = o.id; second = lead; lead = s; } else if (s > second) { second = s; }
+      });
+      out[q.id] = { net: t[q.id], leader: lead > 0 ? best : null, settled: lead >= RULE.net && lead - second >= RULE.margin };
+    });
+    return out;
+  }
+  // }}}
+
+  // {{{ render
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  function renderLedger(t) {
+    var box = document.getElementById("ledger");
+    box.textContent = "";
+    Q.forEach(function (q) {
+      var r = t[q.id];
+      var item = el("div", "q");
+      var head = el("div", "q-head");
+      head.appendChild(el("span", "q-ask", q.ask));
+      head.appendChild(el("span", "chip " + (r.settled ? "settled" : "open"), r.settled ? "settled" : "open"));
+      item.appendChild(head);
+      var max = 1;
+      q.options.forEach(function (o) { max = Math.max(max, Math.abs(r.net[o.id])); });
+      var opts = el("div", "opts");
+      q.options.forEach(function (o) {
+        var n = r.net[o.id];
+        var row = el("div", "opt" + (r.leader === o.id ? " lead" : ""));
+        row.appendChild(el("span", "name", o.id));
+        var track = el("div", "track");
+        track.appendChild(el("span", "mid"));
+        var fill = el("span", "fill");
+        var w = Math.abs(n) / max * 50;
+        fill.style.left = (n >= 0 ? 50 : 50 - w) + "%";
+        fill.style.width = w + "%";
+        fill.style.background = n >= 0 ? "var(--leaf)" : "var(--ember)";
+        track.appendChild(fill);
+        row.appendChild(track);
+        row.appendChild(el("span", "net mono", (n > 0 ? "+" : "") + n));
+        opts.appendChild(row);
+      });
+      item.appendChild(opts);
+      box.appendChild(item);
+    });
+  }
+
+  function renderFilters() {
+    var box = document.getElementById("filters");
+    box.textContent = "";
+    ["all"].concat(DATA.pieces).forEach(function (p) {
+      var count = p === "all" ? PROFILES.length : PROFILES.filter(function (x) { return x.piece === p; }).length;
+      if (!count) return;
+      var b = el("button", "filter", (p === "all" ? "Every piece" : p) + " · " + count);
+      b.type = "button"; b.id = "filter-" + p;
+      b.setAttribute("aria-pressed", String(piece === p));
+      b.addEventListener("click", function () { piece = p; renderFilters(); renderGrid(); });
+      box.appendChild(b);
+    });
+  }
+
+  function artFor(p) {
+    var art = el("div", "art");
+    var views = VIEWS[p.id] || [];
+    if (views.length) {
+      var i = (viewIndex[p.id] || 0) % views.length;
+      var img = el("img");
+      img.src = views[i]; img.alt = "Generated concept of the " + p.piece + ", view " + (i + 1) + " of " + views.length;
+      img.loading = "lazy";
+      art.appendChild(img);
+      if (views.length > 1) {
+        var b = el("button", "views mono", (i + 1) + " / " + views.length);
+        b.type = "button"; b.setAttribute("aria-label", "Next view");
+        b.addEventListener("click", function () { viewIndex[p.id] = i + 1; renderGrid(); });
+        art.appendChild(b);
+      }
+    } else {
+      art.appendChild(sketch(p));
+      art.appendChild(el("span", "sketch mono", "sketch · no picture yet"));
+    }
+    return art;
+  }
+
+  function renderGrid() {
+    var grid = document.getElementById("grid");
+    grid.textContent = "";
+    var list = PROFILES.filter(function (p) { return piece === "all" || p.piece === piece; });
+    if (!list.length) { grid.appendChild(el("p", "empty", "No designs for this piece yet.")); return; }
+    list.forEach(function (p) {
+      var v = votes[p.id] || 0;
+      var card = el("article", "card" + (v > 0 ? " up" : v < 0 ? " down" : ""));
+      card.appendChild(artFor(p));
+      var body = el("div", "card-body");
+      var top = el("div", "card-top");
+      top.appendChild(el("h3", null, p.piece));
+      top.appendChild(el("span", "mono muted", "round " + p.round + " · " + p.id));
+      body.appendChild(top);
+      var focus = el("div", "focus");
+      p.focus.forEach(function (qid) { focus.appendChild(el("span", "chip", "exploring: " + (byQ[qid] ? byQ[qid].ask : qid))); });
+      body.appendChild(focus);
+      var dl = el("dl");
+      Q.forEach(function (q) {
+        if (!(q.id in p.answers)) return;
+        dl.appendChild(el("dt", null, q.id));
+        dl.appendChild(el("dd", p.how[q.id] === "focus" ? "focused" : null, p.answers[q.id]));
+      });
+      body.appendChild(dl);
+      var row = el("div", "votes");
+      [[1, "up", "▲ Keep"], [-1, "down", "▼ Drop"]].forEach(function (spec) {
+        var b = el("button", "vote " + spec[1], spec[2]);
+        b.type = "button"; b.id = "vote-" + spec[1] + "-" + p.id;
+        b.setAttribute("aria-pressed", String(v === spec[0]));
+        b.disabled = !db || !!pending[p.id];
+        b.addEventListener("click", function () { cast(p, v === spec[0] ? 0 : spec[0]); });
+        row.appendChild(b);
+      });
+      body.appendChild(row);
+      card.appendChild(body);
+      grid.appendChild(card);
+    });
+  }
+
+  function renderAll() {
+    renderLedger(tally());
+    renderGrid();
+    var voted = Object.keys(votes).filter(function (id) { return votes[id]; }).length;
+    var pics = PROFILES.filter(function (p) { return (VIEWS[p.id] || []).length; }).length;
+    document.getElementById("footnote").textContent = PROFILES.length + " designs in " + DATA.rounds + " round" + (DATA.rounds === 1 ? "" : "s") + ", " + voted + " voted, " + pics + " with pictures. Page made " + DATA.made + ".";
+  }
+  // }}}
+
+  // {{{ votes: the live store
+  // One document per design, votes/<design id> = { vote: 1 | -1 | 0, at }:
+  // the developer's current verdict, changed by clicking (clicking the
+  // active one clears it). A state, not a counter: the store is
+  // last-writer-wins, so counting clicks would drift.
+  function setStatus(html) { document.getElementById("status").innerHTML = html; }
+  function cast(p, v) {
+    if (!db || pending[p.id]) return;
+    pending[p.id] = true;
+    var before = votes[p.id] || 0;
+    votes[p.id] = v;
+    renderAll();
+    db.doc("votes/" + p.id).set({ vote: v, piece: p.piece, round: p.round, at: new Date().toISOString() })
+      .then(function () { pending[p.id] = false; renderAll(); })
+      .catch(function (e) {
+        pending[p.id] = false; votes[p.id] = before; renderAll();
+        setStatus(e && e.code === "invalid_argument" ? "Your vote wasn't saved: this view can read votes but not change them." : "Your vote wasn't saved (" + (e && e.code || "error") + "); try again in a moment.");
+      });
+  }
+  function tsv() {
+    var lines = ["id\tup\tdown"];
+    PROFILES.forEach(function (p) { var v = votes[p.id] || 0; if (v) lines.push(p.id + "\t" + (v > 0 ? 1 : 0) + "\t" + (v < 0 ? 1 : 0)); });
+    return lines.join("\n") + "\n";
+  }
+  // }}}
+
+  renderFilters();
+  renderAll();
+  document.getElementById("rule-net").textContent = RULE.net;
+  document.getElementById("rule-margin").textContent = RULE.margin;
+  setStatus("Votes shown are the ones saved when this page was made; live votes are loading.");
+
+  var claude = window.claude;
+  if (claude && claude.use) {
+    claude.use("db").then(function (d) {
+      if (!d) { setStatus("Votes can't be changed in this view; showing the votes saved when the page was made."); return; }
+      db = d;
+      db.collection("votes").onSnapshot(function (snap) {
+        snap.docs.forEach(function (doc) {
+          var b = doc.data();
+          if (b && !pending[doc.id]) votes[doc.id] = b.vote || 0;
+        });
+        var n = Object.keys(votes).filter(function (id) { return votes[id]; }).length;
+        setStatus("<strong>" + n + "</strong> designs voted. Votes are saved as you click.");
+        renderAll();
+      }, function (e) { setStatus("Live votes stopped (" + (e && e.code) + "); reload the page to reconnect."); });
+    });
+    claude.use("downloads").then(function (dl) {
+      if (!dl) return;
+      var b = document.getElementById("export");
+      b.hidden = false;
+      b.addEventListener("click", function () {
+        dl.save({ filename: "votes.tsv", data: tsv() })
+          .then(function () { setStatus("Saved votes.tsv: put it at assets/gear-designs/votes.tsv, then make the next round."); })
+          .catch(function (e) { if (e && e.code !== "declined") setStatus("Couldn't save votes.tsv (" + e.code + ")."); });
+      });
+    });
+  } else {
+    setStatus("Showing the votes saved when this page was made (live voting works on the published page).");
+  }
+})();
+</script>

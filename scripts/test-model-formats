@@ -2,7 +2,7 @@
 -- test-model-formats - hold our readers and writer of 3D model files to the
 -- game's own files (issue 506h).
 --
--- For a general audience: the Feldowinn pipeline keeps its models in glTF
+-- For a general audience: the gear pipeline keeps its models in glTF
 -- (an open format) and exports them to the game's own .m2/.skin files for
 -- the stock client. This test checks, without the game running:
 --   1. glTF: a known shape written to .glb and read back is unchanged;
