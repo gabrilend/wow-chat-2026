@@ -77,7 +77,17 @@ The first design target is a set of Retribution Paladin gear. It is not
 anyone's character: the design questions are neutral placeholders until a
 theme is chosen on purpose (owner, 2026-10-01, taking a person out of the
 design: "it's not a game about her, it's a game *for* her"). The subject
-the prompts name is a field of the question bank. The loop:
+the prompts name is a field of the question bank.
+
+The set is a **template for templates** (owner, 2026-10-01): "We don't
+have to treat it as bearing any actual content or asset data yet. It's
+just the shape of the receptacle that such things will eventually
+occupy." It proves the loop end to end (bank, rounds, gallery, votes,
+pictures, models, formats) so that each later bank, for a class's set, a
+creature, or a stock model being replaced, is a new question bank poured
+into the same shape. It replaces no Blizzard model, so it has no original
+and no similarity score; the score (world-edit-to-execute W05a) starts
+with the first bank that targets a stock model. The loop:
 1. **Profiles** (506a): design variations of each gear piece, each a
    structured record answering one or two open design questions, with a
    text prompt for image generation.

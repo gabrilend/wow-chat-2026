@@ -7,9 +7,14 @@
 -- of these answers, and the developer's votes on those designs slowly settle
 -- each question.
 --
--- The set is not anyone's character: the questions are neutral placeholders
--- until a theme is chosen on purpose (owner, 2026-10-01). The earlier
--- bank's votes were test clicks and were cleared with it.
+-- The set is not anyone's character: the questions are neutral placeholders,
+-- and the votes sort them out (owner, 2026-10-01). The earlier bank's votes
+-- were test clicks and were cleared with it.
+--
+-- The set itself is a template for templates: no real content or asset
+-- data yet, "just the shape of the receptacle that such things will
+-- eventually occupy" (owner, 2026-10-01). Later banks (a class's set, a
+-- creature, a stock model being replaced) are new files of this same shape.
 --
 -- Each question:
 --   id       short name, used in profiles and vote tallies (never rename one
