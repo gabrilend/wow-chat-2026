@@ -234,6 +234,35 @@ rescue ("the player can always rescue them with a hearthstone cast").
   monster while alive ("all monsters get a 1% battle bonus"), and Kazzak
   brings "wayyyy too many demons [...] about one elite pack per person".
 
+## 2026-10-02 — Basic: how far a chest or node pulls a roaming buddy (617e3)
+
+- **Pull distance**: a chest, or a herb or ore node the buddy can open,
+  farther than the bot module's own loot reach (15 yards) and **within 45
+  yards** becomes its next waypoint. The issue's test is a copper vein
+  passed 40 yards off in Fargodeep Mine; 45 covers it with a little to
+  spare, while keeping the detour well short of the 100 yards the bot
+  module sees (the owner on grind: "100 yards is a long ways").
+- **Look interval** 2 s, **give up** after 30 s (also how long a clan claim
+  lasts), **not the same object again** for 10 minutes.
+- Values: `modules/mod-buddies/src/buddies_roam_strategy.cpp` (`DETOUR_*`).
+  First guesses, to judge in game.
+
+## 2026-10-02 — Basic: buddies wandering towns, clearing full bags, buying meals (617h)
+
+- **Wandering reach**: the next townsperson is looked for within 100
+  yards, about a 40-second walk, so it fits inside the existing 60-second
+  give-up on a town walk; 150 would use the whole timer.
+- **"General direction"**: within 45° either side of the bearing toward the
+  town's most distant person or a class trainer.
+- **Full bags**: the clearance in a town without an auction house starts at
+  90% full, the owner's own "still 90% full" line.
+- **Meals**: buy up to 20 servings (one stack, under the bot module's
+  two-stack surplus line, so a buddy never sells what it just bought);
+  under 10 servings sends it to a vendor that sells its meal; at most a
+  quarter of its money per stop, leaving the rest for repairs and training.
+- Values: `modules/mod-buddies/src/buddies_town.cpp`. First guesses, to
+  judge in game.
+
 ## How to add an entry
 
 ```markdown

@@ -37,6 +37,14 @@
  * trainer actions: those report every step to the owner in a whisper
  * ("Selling [item]", "Repair: 1g 20s", "--- Can learn from ..."), and the
  * owner wants no chat. The same server calls they use are made silently.
+ *
+ * Built 2026-10-02 from the owner's town design (617h): after the errands
+ * a buddy wanders the town from townsperson to townsperson, each next one
+ * picked one of three ways (toward the town's farthest townsperson, toward
+ * one of its class trainers, or anyone at random); at a vendor or repair
+ * stop it buys the food (and, using mana, the drink) its meal eats; and in
+ * a town with no auction house, bags at or past nine tenths full are
+ * cleared at the vendor in three rounds, then an error if still full.
  */
 
 #include "buddies.h"
@@ -47,6 +55,7 @@
 #include "Containers.h"
 #include "FishingAction.h"
 #include "Spell.h"
+#include "SpellMgr.h"
 #include "Timer.h"
 #include "CellImpl.h"
 #include "Creature.h"
@@ -54,6 +63,7 @@
 #include "GameTime.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "GridTerrainData.h"
 #include "Item.h"
 #include "ItemPackets.h"
 #include "ItemUsageValue.h"
@@ -127,6 +137,15 @@ static constexpr uint32 STUCK_MS            = 90000;   // no progress on a long 
 static constexpr float  PROGRESS_YARDS      = 10.0f;   // what counts as progress toward the owner
 static constexpr float  UNSTUCK_YARDS       = 30.0f;   // "a random spot within 30 yards"
 static constexpr uint32 UNSTUCK_TRIES       = 12;      // random spots tried for walkable ground
+static constexpr float  WANDER_SCAN_YARDS   = 100.0f;  // the wander's townspeople this far: a walk of about 40 s,
+                                                       // inside WALK_GIVE_UP_MS (150 yards would be the whole 60 s)
+static constexpr float  WANDER_CONE         = 0.785f;  // "the general direction": within 45 degrees either side
+static constexpr float  FULL_BAGS_SHARE     = 0.9f;    // bags this full in a town without an auction house: cleared
+static constexpr uint32 MEAL_STOCK          = 20;      // servings of food (and drink) bought up to: one stack, under
+                                                       // the bot module's 2-stack line, so its judgement never sells them
+static constexpr uint32 MEAL_LOW            = 10;      // fewer than this: it looks for a vendor that sells its meal
+static constexpr float  MEAL_SPEND_SHARE    = 0.25f;   // at most this share of its money on meals per stop (repairs
+                                                       // and training need the rest: "make them earn it")
 // }}}
 
 // {{{ each buddy's town state
@@ -162,6 +181,7 @@ struct TownState
     bool                    casting  = false;    // fishing: a cast is out (counted when it ends)
     ObjectGuid              mainHand;            // fishing: what it held before the pole, put back after
     ObjectGuid              offHand;
+    ObjectGuid              lastVisit;           // the wander's last townsperson, so the next is someone else
 };
 
 // Each buddy's long walk toward its owner's area: the nearest it has come
@@ -208,15 +228,40 @@ static std::list<Unit*> UnitsNear(Player* bot, float yards)
     return units;
 }
 
-// How full the buddy's bags are, 0..1 (the backpack's 16 slots and every
-// bag's). "merchants, with priority equal to how full the buddy's bags
-// are (half-full bags: 50% priority)" (617e, 2026-09-23).
-static float BagFullness(Player* bot)
+// Whether `o` stands in the town `town`: in the town's own area, or in a
+// building or district of it, where the ground under it (the terrain map
+// beneath the building) is the town's. The same reading BuddyTownArea
+// gives a player (buddies_roam_ground.cpp), for an NPC: a trainer indoors
+// counts as being in the town.
+//   own area      - yes
+//   ground's area - yes when it is the town (a building in it)
+//   otherwise     - no (another place, or no terrain loaded under it)
+static bool InTown(WorldObject* o, uint32 town)
+{
+    if (o->GetAreaId() == town)
+        return true;
+    float x = o->GetPositionX(), y = o->GetPositionY();
+    if (GridTerrainData* ground = o->GetMap()->GetGridTerrainData(x, y))
+        return ground->getArea(x, y) == town;
+    return false;
+}
+
+// The buddy's bag slots in all: the backpack's 16 and every bag's.
+static uint32 BagSlots(Player* bot)
 {
     uint32 total = INVENTORY_SLOT_ITEM_END - INVENTORY_SLOT_ITEM_START;
     for (uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; ++i)
         if (Bag* bag = bot->GetBagByPos(i))
             total += bag->GetBagSize();
+    return total;
+}
+
+// How full the buddy's bags are, 0..1. "merchants, with priority equal to
+// how full the buddy's bags are (half-full bags: 50% priority)" (617e,
+// 2026-09-23).
+static float BagFullness(Player* bot)
+{
+    uint32 total = BagSlots(bot);
     uint32 freeSlots = bot->GetFreeInventorySpace();
     return total ? float(total - std::min(freeSlots, total)) / float(total) : 0.0f;
 }
@@ -284,12 +329,13 @@ static Trainer::Trainer* ClassLessons(Creature* npc, Player* bot)
 
 // A townsperson worth visiting: alive, not in a fight, not hostile to the
 // buddy, not a critter or anyone's pet, and a person (humanoid) or someone
-// with a service (a vendor gnome counts, a stray cat does not).
+// with a service (a vendor gnome counts, a stray cat does not). In the
+// town, indoors included (InTown).
 static bool Townsperson(Creature* c, Player* bot, uint32 areaId)
 {
     if (c->IsInCombat() || c->IsHostileTo(bot) || c->IsCritter() || c->IsTotem() || c->IsPet() || c->IsGuardian())
         return false;
-    if (!c->GetCharmerOrOwnerGUID().IsEmpty() || c->GetAreaId() != areaId)
+    if (!c->GetCharmerOrOwnerGUID().IsEmpty() || !InTown(c, areaId))
         return false;
     return c->GetCreatureType() == CREATURE_TYPE_HUMANOID || c->GetNpcFlags() != UNIT_NPC_FLAG_NONE;
 }
@@ -678,6 +724,267 @@ static void MailToOwner(PlayerbotAI* ai, Player* bot)
 // }}}
 // }}}
 
+// {{{ the meals (617h)
+// "At a repair or vendor stop the buddy may also buy consumables it will
+// actually use in the field" (the owner, 2026-09-24). What a buddy eats is
+// what the roam action's meal eats (buddies_roam_strategy.cpp, the meal:
+// the bot module's own eating is switched off for buddies, being its food
+// cheat, "they need real food"), so the same rule picks what to buy: a
+// consumable of the food-and-drink kind whose spell restores health (food)
+// or mana (drink), that the buddy can use at its level; the starting kit
+// gives the same (buddies_kit.cpp, GiveMeals). Drink only for mana users.
+// Bought with gold only (never a token or badge price), up to MEAL_STOCK
+// servings, spending at most MEAL_SPEND_SHARE of its money per stop. Potions
+// wait for the vendor lists the owner will fill in later ("Don't worry about
+// that now").
+struct MealKind { AuraType regen; bool manaOnly; };
+static MealKind const MEAL_KINDS[] = {
+    { SPELL_AURA_MOD_REGEN,       false },   // food: health
+    { SPELL_AURA_MOD_POWER_REGEN, true  },   // drink: mana, for those who use it
+};
+
+static bool WantsMeal(Player* bot, MealKind const& k) { return !k.manaOnly || bot->getPowerType() == POWER_MANA; }
+
+// {{{ IsMealFor
+static bool IsMealFor(Player* bot, ItemTemplate const* p, AuraType regen)
+{
+    if (p->Class != ITEM_CLASS_CONSUMABLE || p->SubClass != ITEM_SUBCLASS_FOOD)
+        return false;
+    SpellInfo const* spell = sSpellMgr->GetSpellInfo(uint32(p->Spells[0].SpellId));
+    return spell && spell->HasAura(regen) && bot->CanUseItem(p) == EQUIP_ERR_OK;
+}
+// }}}
+
+// {{{ MealsCarried
+static uint32 MealsCarried(Player* bot, AuraType regen)
+{
+    uint32 n = 0;
+    for (Item* item : BagItems(bot))
+        if (IsMealFor(bot, item->GetTemplate(), regen))
+            n += item->GetCount();
+    return n;
+}
+// }}}
+
+// {{{ MealOnSale
+// The best meal of this kind the vendor sells for gold (highest item level,
+// as the meal eats the best first), and its place in the vendor's list;
+// false when it sells none the buddy can use.
+static bool MealOnSale(Creature* npc, Player* bot, AuraType regen, uint32& slot, ItemTemplate const*& best)
+{
+    best = nullptr;
+    VendorItemData const* items = npc->GetVendorItems();
+    if (!items)
+        return false;
+    for (uint32 i = 0; i < items->GetItemCount(); ++i)
+    {
+        VendorItem const* v = items->GetItem(i);
+        if (!v || v->ExtendedCost)
+            continue;                                  // a token or badge price: not for meals
+        ItemTemplate const* p = sObjectMgr->GetItemTemplate(v->item);
+        if (!p || !IsMealFor(bot, p, regen))
+            continue;
+        if (!best || p->ItemLevel > best->ItemLevel)
+            best = p, slot = i;
+    }
+    return best != nullptr;
+}
+// }}}
+
+// {{{ HungryFor
+// Whether some meal it wants is below `below` servings and this vendor sells
+// one (BuildTodo's choice of shop when a buddy is running short).
+static bool HungryFor(Creature* npc, Player* bot, uint32 below)
+{
+    for (MealKind const& k : MEAL_KINDS)
+    {
+        uint32 slot = 0;
+        ItemTemplate const* p = nullptr;
+        if (WantsMeal(bot, k) && MealsCarried(bot, k.regen) < below && MealOnSale(npc, bot, k.regen, slot, p))
+            return true;
+    }
+    return false;
+}
+// }}}
+
+// {{{ BuyMeals
+// One purchase at a time, through the server's own vendor purchase (its
+// checks: in reach, money, room, a limited stock), so a refusal stops that
+// kind there and leaves what was bought.
+static void BuyMeals(Player* bot, Creature* npc)
+{
+    if (!npc->IsVendor())
+        return;                                        // a repairer that sells nothing
+    uint32 budget = uint32(float(bot->GetMoney()) * MEAL_SPEND_SHARE);
+    uint32 spent  = 0;
+    float  discount = bot->GetReputationPriceDiscount(npc);
+    for (MealKind const& k : MEAL_KINDS)
+    {
+        if (!WantsMeal(bot, k))
+            continue;
+        uint32 slot = 0;
+        ItemTemplate const* p = nullptr;
+        if (!MealOnSale(npc, bot, k.regen, slot, p))
+            continue;                                  // this vendor sells none of this kind
+        uint32 have  = MealsCarried(bot, k.regen);
+        uint32 price = uint32(std::floor(float(p->BuyPrice) * discount));
+        uint32 per   = std::max<uint32>(1, p->BuyCount);
+        while (have < MEAL_STOCK && spent + price <= budget)
+        {
+            if (!bot->BuyItemFromVendorSlot(npc->GetGUID(), slot, p->ItemId, 1, NULL_BAG, NULL_SLOT))
+                break;                                 // refused (no room, sold out): what it has will do
+            spent += price;
+            have  += per;
+        }
+    }
+}
+// }}}
+// }}}
+
+// {{{ full bags without an auction house (617h)
+// The owner's rule (2026-09-25), for a town with no auction house: "sell the
+// lowest-value half of the bag space (keeping hearthstone, consumables,
+// profession trade goods); still 90% full: sell trade goods; still 90%
+// full: sell consumables; past that, an error." Done at the vendor stop,
+// after the junk, when the bags are FULL_BAGS_SHARE full or more:
+//   1 the lowest-value half - the cheapest items (vendor price times count),
+//                             up to half the bag slots' worth of them, held
+//                             back: the hearthstone, consumables, trade
+//                             goods, and what the buddy can't spare (below)
+//   2 trade goods           - cheapest first, until under the line
+//   3 consumables           - cheapest first, until under the line (never
+//                             the hearthstone)
+//   still full              - an error, with what each round did
+// Never sold in any round (assumed 2026-10-02, open question in 617h): a
+// bind-on-equip epic for its owner ("They should never vendor a BoE epic
+// item"), a profession tool or fishing pole (selling one ends that
+// profession), and anything the bot module judges in use (gear it would
+// wear, ammo, quest items). "Lowest value" is the vendor's price for the
+// slot's whole stack.
+static constexpr uint32 HEARTHSTONE = 6948;
+
+// {{{ SellItem
+// The client's sell request at `npc`; whether the item left the bags.
+static bool SellItem(Player* bot, Creature* npc, Item* item)
+{
+    ObjectGuid itemGuid = item->GetGUID();
+    WorldPacket p(CMSG_SELL_ITEM);
+    p << npc->GetGUID() << itemGuid << uint32(item->GetCount());
+    WorldPackets::Item::SellItem request(std::move(p));
+    request.Read();
+    bot->GetSession()->HandleSellItemOpcode(request);
+    return bot->GetItemByGuid(itemGuid) == nullptr;
+}
+// }}}
+
+// {{{ CantSpare
+// What no round sells (see above).
+static bool CantSpare(PlayerbotAI* ai, Item* item)
+{
+    ItemTemplate const* p = item->GetTemplate();
+    if (p->ItemId == HEARTHSTONE || p->TotemCategory)
+        return true;                                   // the hearthstone; a tool (pick, knife, rod, hammer)
+    if (p->Class == ITEM_CLASS_WEAPON && p->SubClass == ITEM_SUBCLASS_WEAPON_FISHING_POLE)
+        return true;
+    if (FateOf(ai, item) == Fate::MailOwner)
+        return true;                                   // the owner's epic, waiting for a mailbox
+    switch (ai->GetAiObjectContext()->GetValue<ItemUsage>("item usage", item->GetEntry())->Get())
+    {
+        case ITEM_USAGE_EQUIP: case ITEM_USAGE_REPLACE: case ITEM_USAGE_BROKEN_EQUIP:
+        case ITEM_USAGE_QUEST: case ITEM_USAGE_AMMO:
+            return true;                               // in use, or about to be
+        default:
+            return false;
+    }
+}
+// }}}
+
+// {{{ the rounds
+// Each round: which items it may sell, and whether it stops at half the bag
+// slots sold (round 1) or as soon as the bags are under the line (2 and 3).
+struct ClearRound { char const* name; bool (*maySell)(PlayerbotAI*, Item*); bool halfTheSpace; };
+static bool RoundLowestHalf(PlayerbotAI*, Item* i) { uint32 c = i->GetTemplate()->Class; return c != ITEM_CLASS_CONSUMABLE && c != ITEM_CLASS_TRADE_GOODS; }
+static bool RoundTradeGoods(PlayerbotAI*, Item* i) { return i->GetTemplate()->Class == ITEM_CLASS_TRADE_GOODS; }
+static bool RoundConsumable(PlayerbotAI*, Item* i) { return i->GetTemplate()->Class == ITEM_CLASS_CONSUMABLE; }
+static ClearRound const CLEAR_ROUNDS[] = {
+    { "the lowest-value half", RoundLowestHalf, true  },
+    { "trade goods",           RoundTradeGoods, false },
+    { "consumables",           RoundConsumable, false },
+};
+// }}}
+
+// {{{ TownHasAuctioneer
+static bool TownHasAuctioneer(Player* bot, uint32 town)
+{
+    for (Unit* u : UnitsNear(bot, TOWN_SCAN_YARDS))
+        if (Creature* c = u->ToCreature())
+            if (c->IsAuctioner() && !c->IsHostileTo(bot) && InTown(c, town))
+                return true;
+    return false;
+}
+// }}}
+
+// {{{ ClearFullBags
+static void ClearFullBags(PlayerbotAI* ai, Player* bot, Creature* npc, uint32 town)
+{
+    uint32 slots  = BagSlots(bot);
+    float  before = BagFullness(bot);
+    std::string done;                                  // each round's outcome, for the error
+    for (ClearRound const& round : CLEAR_ROUNDS)
+    {
+        if (BagFullness(bot) < FULL_BAGS_SHARE)
+            break;                                     // under the line: the rest of the rounds aren't needed
+        std::vector<Item*> pile;
+        for (Item* item : BagItems(bot))
+            if (item->GetTemplate()->SellPrice && !CantSpare(ai, item) && round.maySell(ai, item))
+                pile.push_back(item);
+        std::sort(pile.begin(), pile.end(), [](Item* a, Item* b)
+        {
+            uint64 va = uint64(a->GetTemplate()->SellPrice) * a->GetCount();
+            uint64 vb = uint64(b->GetTemplate()->SellPrice) * b->GetCount();
+            return va != vb ? va < vb : a->GetEntry() < b->GetEntry();
+        });
+        uint32 sold = 0, refused = 0;
+        for (Item* item : pile)
+        {
+            if (round.halfTheSpace ? sold >= slots / 2 : BagFullness(bot) < FULL_BAGS_SHARE)
+                break;
+            if (SellItem(bot, npc, item))
+                ++sold;
+            else
+                ++refused;
+        }
+        done += Acore::StringFormat("{}: {} sold{}, bags then {:.0f}% full; ", round.name, sold,
+            refused ? Acore::StringFormat(" ({} refused by the vendor)", refused) : std::string(), BagFullness(bot) * 100.0f);
+    }
+    if (BagFullness(bot) < FULL_BAGS_SHARE)
+        return;
+
+    // still full: what is left, counted when the message is made
+    uint32 spared = 0, unsellable = 0, other = 0;
+    for (Item* item : BagItems(bot))
+    {
+        if (CantSpare(ai, item))
+            ++spared;
+        else if (!item->GetTemplate()->SellPrice)
+            ++unsellable;
+        else
+            ++other;
+    }
+    LOG_ERROR("module", "mod-buddies: buddy {} in town area {} (no auction house) could not clear its full bags at vendor {}. "
+        "Done: bags were {:.0f}% full of {} slots; {}"
+        "Not done: still {:.0f}% full, at or above the {:.0f}% line. Left: {} it can't spare (hearthstone, tools, gear and "
+        "ammo in use, quest items, epics for its owner), {} no vendor buys, {} sellable that no round took. To debug: "
+        "were sales refused (is the vendor still in reach; does the sell request reach it)? are the no-price items quest "
+        "or mail leftovers (only a mailbox or the bin clears those)? are epics for its owner waiting because this town "
+        "has no mailbox (they wait for the next town with one)? is 'sellable that no round took' above 0 (then a round's "
+        "item rule misses a kind of item: which class are they)?",
+        bot->GetName(), town, npc->GetName(), before * 100.0f, slots, done,
+        BagFullness(bot) * 100.0f, FULL_BAGS_SHARE * 100.0f, spared, unsellable, other);
+}
+// }}}
+// }}}
+
 // {{{ BuildTodo
 // The town's errands for this buddy, from what the town offers ("some
 // towns don't even have repair stations"; a missing service is skipped),
@@ -691,7 +998,11 @@ static void MailToOwner(PlayerbotAI* ai, Player* bot)
 //   5 auction      something to auction
 //   6 repair       anything worn at all
 //   7 vendor       junk (odds equal to how full its bags are), and
-//                  whatever the auction rules send to a vendor
+//                  whatever the auction rules send to a vendor; always
+//                  when its bags are FULL_BAGS_SHARE full in a town with no
+//                  auction house (the clearance, above); always when its
+//                  food or drink is under MEAL_LOW and a vendor here sells
+//                  it (that vendor is the stop, the meals are bought there)
 static constexpr float YELLOW_SHARE = 0.2f;   // "badly worn": a fifth of its durability or less (assumed from the client's warning)
 
 // Whether some worn item is at or below `share` of its durability.
@@ -711,16 +1022,19 @@ static std::vector<ErrandStop> BuildTodo(PlayerbotAI* ai, Player* bot, uint32 ar
     Creature* vendor     = nullptr;
     Creature* repairer   = nullptr;
     Creature* auctioneer = nullptr;
+    Creature* grocer     = nullptr;                    // a vendor selling the meal it is short of
     auto nearer = [&](Creature* best, Creature* c) { return !best || bot->GetDistance(c) < bot->GetDistance(best); };
     for (Unit* u : UnitsNear(bot, TOWN_SCAN_YARDS))
     {
         Creature* c = u->ToCreature();
-        if (!c || c->IsHostileTo(bot) || c->GetAreaId() != areaId)
+        if (!c || c->IsHostileTo(bot) || !InTown(c, areaId))
             continue;
         if (ClassLessons(c, bot) && nearer(trainer, c))
             trainer = c;
         if (c->IsVendor() && nearer(vendor, c))
             vendor = c;
+        if (c->IsVendor() && nearer(grocer, c) && HungryFor(c, bot, MEAL_LOW))
+            grocer = c;
         if (c->IsArmorer() && nearer(repairer, c))
             repairer = c;
         if (c->IsAuctioner() && nearer(auctioneer, c))
@@ -748,8 +1062,15 @@ static std::vector<ErrandStop> BuildTodo(PlayerbotAI* ai, Player* bot, uint32 ar
         auto it = sToVendor.find(bot->GetGUID().GetCounter());
         vendorWork = it != sToVendor.end() && !it->second.empty();
     }
-    if (vendor && ((!Junk(ai, bot).empty() && rand_norm() < BagFullness(bot)) || auctioning || vendorWork))
-        todo.push_back({ Errand::Sell, vendor->GetGUID() });                                  // 7
+    // 7: the shop is the grocer when it is short of a meal (selling works at
+    // any vendor), else the nearest vendor
+    //   hungry     - the grocer, whatever else there is to do
+    //   full bags  - no auction house here and bags past the line: cleared
+    //   otherwise  - junk by the bag-fullness odds, or the auction's leftovers
+    Creature* shop = grocer ? grocer : vendor;
+    bool clearing  = !auctioneer && BagFullness(bot) >= FULL_BAGS_SHARE;
+    if (shop && (grocer || clearing || (!Junk(ai, bot).empty() && rand_norm() < BagFullness(bot)) || auctioning || vendorWork))
+        todo.push_back({ Errand::Sell, shop->GetGUID() });                                    // 7
     return todo;
 }
 // }}}
@@ -759,8 +1080,11 @@ static std::vector<ErrandStop> BuildTodo(PlayerbotAI* ai, Player* bot, uint32 ar
 // server calls the bot module's own actions make.
 //   Train  - every spell the trainer can teach it now, paid as a player
 //            pays (the server's Trainer::TeachSpell: checks and money)
-//   Sell   - everything Junk() lists, as the client's sell request
-//   Repair - everything worn, paid, with the NPC's reputation discount
+//   Sell   - everything Junk() lists, as the client's sell request; then,
+//            in a town with no auction house and bags past the line, the
+//            clearance; then its meals bought (617h)
+//   Repair - everything worn, paid, with the NPC's reputation discount;
+//            then its meals, if the repairer sells them (617h)
 static void DoTrain(PlayerbotAI* /*ai*/, Player* bot, Creature* npc)
 {
     if (Trainer::Trainer* trainer = ClassLessons(npc, bot))
@@ -784,20 +1108,20 @@ static void DoSell(PlayerbotAI* ai, Player* bot, Creature* npc)
         }
     }
     for (ObjectGuid itemGuid : selling)
-    {
-        Item* item = bot->GetItemByGuid(itemGuid);
-        if (!item)
-            continue;
-        WorldPacket p(CMSG_SELL_ITEM);
-        p << npc->GetGUID() << itemGuid << uint32(item->GetCount());
-        WorldPackets::Item::SellItem request(std::move(p));
-        request.Read();
-        bot->GetSession()->HandleSellItemOpcode(request);
-    }
+        if (Item* item = bot->GetItemByGuid(itemGuid))
+            SellItem(bot, npc, item);
+
+    // full bags where no auctioneer takes the surplus (the town is read the
+    // way the visit reads it: a building inside the town is the town)
+    uint32 town = BuddyTownArea(bot) ? BuddyTownArea(bot) : bot->GetAreaId();
+    if (BagFullness(bot) >= FULL_BAGS_SHARE && !TownHasAuctioneer(bot, town))
+        ClearFullBags(ai, bot, npc, town);
+    BuyMeals(bot, npc);                               // after selling: room in the bags, coin in the purse
 }
 static void DoRepair(PlayerbotAI* /*ai*/, Player* bot, Creature* npc)
 {
     bot->DurabilityRepairAll(true, bot->GetReputationPriceDiscount(npc), false);
+    BuyMeals(bot, npc);                               // after repairing, so the repair is paid first
 }
 using ErrandFn = void (*)(PlayerbotAI*, Player*, Creature*);
 static std::unordered_map<uint8, ErrandFn> const sErrands = {
@@ -1085,11 +1409,11 @@ private:
     // }}}
 
     // {{{ ChoosePastime
-    // Leisure, by the odds above: a townsperson, a chair (sociable ones
-    // preferred), a sleep on one of the town's beds, or fishing. A pastime
-    // with nothing to use (no chair near, no free bed, no water, no pole)
-    // falls to a townsperson; with no townsperson either, it stands about for
-    // a pause.
+    // Leisure, by the odds above: a townsperson (the wander, below), a chair
+    // (sociable ones preferred), a sleep on one of the town's beds, or
+    // fishing. A pastime with nothing to use (no chair near, no free bed, no
+    // water, no pole) falls to a townsperson; with no townsperson either, it
+    // stands about for a pause.
     void ChoosePastime(TownState& s, uint32 areaId, uint64 now)
     {
         uint32 roll = urand(1, WEIGHT_VISIT + WEIGHT_SIT + WEIGHT_SLEEP + WEIGHT_FISH);
@@ -1099,18 +1423,103 @@ private:
             return;
         if (roll > WEIGHT_VISIT && roll <= WEIGHT_VISIT + WEIGHT_SIT && ChooseChair(s, areaId, now))
             return;
-        std::vector<Creature*> people;
-        for (Unit* u : UnitsNear(bot, LEISURE_SCAN_YARDS))
-            if (Creature* c = u->ToCreature())
-                if (Townsperson(c, bot, areaId))
-                    people.push_back(c);
-        if (people.empty())
+        Creature* next = WanderTarget(s, areaId);
+        if (!next)
         {
-            s.idleUntil = now + urand(GAP_MIN_MS, GAP_MAX_MS);
+            s.idleUntil = now + urand(GAP_MIN_MS, GAP_MAX_MS);   // nobody about but whom it just left: a pause
             return;
         }
-        Begin(s, Doing::Visit, people[urand(0, uint32(people.size()) - 1)]->GetGUID(), now);
+        Begin(s, Doing::Visit, next->GetGUID(), now);
+        s.lastVisit = next->GetGUID();
     }
+
+    // {{{ the wander (617h)
+    // Which townsperson next, one of the owner's three ways (2026-09-24),
+    // picked at random:
+    //   toward the farthest - the next closest townsperson in the general
+    //                         direction of the town's most distant one
+    //   toward a trainer    - the next closest in the general direction of
+    //                         one of its class trainers in the town
+    //   anyone              - a random townsperson
+    // "General direction" is within WANDER_CONE either side of the bearing;
+    // the townsperson aimed at is itself in it, so a way finds someone unless
+    // the buddy already stands beside them. A way with nothing to go on (a
+    // town without its class trainer; the buddy beside the one aimed at)
+    // gives way to the next in a fresh random order, as a town lacking a
+    // service skips it; "anyone" always finds someone while anyone is about.
+    // The one it just visited is left out, so it moves on. The walk is the
+    // visit's own (MoveNear: the navigation mesh, at a walk in towns).
+    using WayFn = Creature* (BuddyTownStepAction::*)(std::vector<Creature*> const&);
+
+    Creature* WanderTarget(TownState const& s, uint32 areaId)
+    {
+        std::vector<Creature*> people;
+        for (Unit* u : UnitsNear(bot, WANDER_SCAN_YARDS))
+            if (Creature* c = u->ToCreature())
+                if (c->GetGUID() != s.lastVisit && Townsperson(c, bot, areaId))
+                    people.push_back(c);
+        if (people.empty())
+            return nullptr;
+        static WayFn const ways[] = {
+            &BuddyTownStepAction::TowardFarthest,
+            &BuddyTownStepAction::TowardClassTrainer,
+            &BuddyTownStepAction::AnyTownsperson,
+        };
+        std::vector<uint32> order = { 0, 1, 2 };
+        Acore::Containers::RandomShuffle(order);
+        for (uint32 i : order)
+            if (Creature* c = (this->*ways[i])(people))
+                return c;
+        return nullptr;
+    }
+
+    // The nearest of `people` within WANDER_CONE of the bearing to `aim`,
+    // not one it already stands beside; null when there is none.
+    Creature* NextToward(std::vector<Creature*> const& people, Creature* aim)
+    {
+        float bearing = bot->GetAngle(aim);
+        Creature* best = nullptr;
+        for (Creature* c : people)
+        {
+            if (bot->GetDistance(c) <= ARRIVED_YARDS)
+                continue;                              // already there
+            float off = std::fabs(std::remainder(bot->GetAngle(c) - bearing, 2.0f * float(M_PI)));
+            if (off > WANDER_CONE)
+                continue;                              // not the general direction
+            if (!best || bot->GetDistance(c) < bot->GetDistance(best))
+                best = c;
+        }
+        return best;
+    }
+
+    Creature* TowardFarthest(std::vector<Creature*> const& people)
+    {
+        Creature* farthest = *std::max_element(people.begin(), people.end(),
+            [this](Creature* a, Creature* b) { return bot->GetDistance(a) < bot->GetDistance(b); });
+        return NextToward(people, farthest);
+    }
+
+    Creature* TowardClassTrainer(std::vector<Creature*> const& people)
+    {
+        std::vector<Creature*> trainers;
+        for (Creature* c : people)
+        {
+            if (!c->IsTrainer())
+                continue;
+            Trainer::Trainer* t = sObjectMgr->GetTrainer(c->GetEntry());
+            if (t && t->GetTrainerType() == Trainer::Type::Class && t->IsTrainerValidForPlayer(bot))
+                trainers.push_back(c);                 // its class's trainer, lessons or not
+        }
+        if (trainers.empty())
+            return nullptr;                            // none in this town (or none within reach)
+        return NextToward(people, trainers[urand(0, uint32(trainers.size()) - 1)]);
+    }
+
+    Creature* AnyTownsperson(std::vector<Creature*> const& people)
+    {
+        return people[urand(0, uint32(people.size()) - 1)];
+    }
+    // }}}
 
     // A chair near the buddy: type "chair" game objects in the area. The
     // sociable ones (townspeople and buddies seated or standing within

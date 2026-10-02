@@ -103,6 +103,51 @@ Answers to the edge cases, verbatim, 2026-09-24:
 
 ## Current Behavior
 
+model put it in the world database), empty until filled.
+
+**Built 2026-10-02, syntax-checked with the last build's flags, not yet
+compiled or tried in game** (`buddies_town.cpp`: "the wander", "the
+meals", "full bags without an auction house"):
+
+- **The wander.** Leisure's townsperson visit now picks its next
+  townsperson within 100 yards one of the three ways, at random: the
+  nearest within 45° of the bearing to the town's farthest townsperson;
+  the same toward one of its class trainers (lessons or not); or anyone.
+  A way with nothing to go on (no class trainer in reach) gives way to the
+  others in a fresh random order; the one just visited is never next. The
+  walk is the visit's own (navigation mesh, walking). Chairs, beds and
+  fishing keep their odds (617e4); the wander is the townsperson share.
+- **Meals.** At a vendor or repair stop (after selling or repairing) the
+  buddy buys food, and drink if it uses mana, up to 20 servings each,
+  spending at most a quarter of its money per stop, gold prices only. What
+  it buys is what its meal eats (the roam action's meal: real food, since
+  the bot module's own eating is its food cheat and is off for buddies):
+  food-type consumables whose spell restores health or mana, usable at its
+  level, best item level first. Under 10 servings, the vendor stop goes to
+  the nearest vendor that sells its meal, even with nothing to sell. 20 is
+  one stack, under the bot module's two-stack line, so its item judgement
+  never marks the food for sale.
+- **Full bags without an auction house.** With no auctioneer in the town
+  and bags 90% full or more, the vendor stop is always made; after the
+  junk, three rounds at the vendor: (1) the cheapest items by vendor value
+  of the stack, up to half the bag slots, keeping hearthstone, consumables
+  and trade goods; (2) if still 90% full, trade goods, cheapest first,
+  until under the line; (3) consumables likewise. Never sold in any
+  round: bind-on-equip epics for the owner, profession tools and fishing
+  poles, gear it would wear, ammo, quest items. Still full after round 3:
+  an error in the server log naming each round's result, what is left and
+  why, and what to check.
+- Fixed in passing: the errand survey and the townsperson check took an
+  NPC indoors in a town (its own area number) for outside the town, so a
+  trainer or vendor in a building was never an errand; both now read the
+  ground under the NPC as `BuddyTownArea` does for players.
+
+**Not built:** buying clan members' upgrades (bag slots, gear, and
+materials for a low crafting skill, 2026-09-25). It needs 617j's
+clan scoring (who an item upgrades, by stat weights), being built
+separately; it goes here once that exists.
+
+
 Buddies do not exist yet. 617e's town behavior has buddies walk (never run)
 between NPCs: merchants weighted by how full their bags are, their class
 trainer first when they have spells to learn, otherwise a random NPC.
@@ -260,6 +305,17 @@ cutting through walls or teleporting.
   no ceiling. Epics: upgrades equipped; bind-on-equip non-upgrades mailed
   to the owner, never sold; soulbound non-upgrades vendored; non-gear and
   no-level epics auctioned.
+- (Open, 2026-10-02) The full-bags rounds also never sell profession
+  tools, fishing poles, gear the buddy would wear, ammo, quest items and
+  the owner's epics, beyond the hearthstone, consumables and trade goods
+  the rule names. Is that right, or should round 1 take any of them?
+- (Open, 2026-10-02) Round 1 "the lowest-value half of the bag space" is
+  read as: the cheapest stacks, by vendor price times count, up to half the
+  total bag slots in number. Rounds 2 and 3 stop as soon as the bags are
+  under 90%, not when every trade good or consumable is gone. Right?
+- (Open, 2026-10-02) Meal stock 20 servings, restocked below 10 by a trip
+  to a food vendor, at most a quarter of the buddy's money per stop.
+  Right sizes?
 - (Answered 2026-09-24) Required level decides "60+ epic". Only-minimum:
   equipment vendored, trade goods listed. No vendor price: a hand-kept
   price list. Random stacks. Near-minimum counts as minimum. Undercutting

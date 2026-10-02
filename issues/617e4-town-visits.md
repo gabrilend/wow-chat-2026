@@ -49,8 +49,11 @@ settings, not yet run** (`modules/mod-buddies/src/buddies_town.cpp`,
     owner wants no chat.
   - **Leisure** when the list is done, by weights 60 / 30 / 10 / 15
     (townsperson, chair, sleep, fishing):
-    - a **townsperson** within 60 yards (humanoid or with a service, not
-      hostile, not a critter or pet): stand 2.5 yards off, facing it,
+    - a **townsperson** within 100 yards (humanoid or with a service, not
+      hostile, not a critter or pet; indoors in the town counts, 2026-10-02),
+      chosen by 617h's wander rule (2026-10-02: toward the town's
+      farthest townsperson, toward a class trainer, or at random; never the
+      one just visited): stand 2.5 yards off, facing it,
       talking animations (talk, question, exclamation, laugh, yes, no)
       every 3 to 7 seconds for 10 to 25 seconds; never a chat line;
     - a **chair** (chair-type game object in the area): the one with the
