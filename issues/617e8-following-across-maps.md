@@ -79,22 +79,42 @@ the Thandol Span and every road between them were already walked by
   - three sailings leaving without it is a failure.
 - **The same ship** (built 2026-10-02, the owner's "move the buddy bot to
   the same dock"; `NoteWaiting`, `StepSameShip` in `buddies_crossing.cpp`):
-  - an owner within 60 yards (flat) of any ship's stop on its map for 8
-    seconds is waiting to sail; aboard a ship that is in, it is waiting
-    aboard that ship (its boarding spot and deck spot noted); stepping back
-    off before it sails is waiting on the dock again; more than 90 yards
-    from every stop, or into an instance, it is not waiting;
+  - an owner within 60 yards (flat) of any ship's stop on its map is
+    waiting to sail at once (no dwell, 2026-10-02); aboard a ship that is
+    in, it is waiting aboard that ship (its boarding spot and deck spot
+    noted); stepping back off before it sails is waiting on the dock again;
+    more than 90 yards from every stop, or into an instance, it is not
+    waiting. Each of these changes takes a new stamp;
   - its buddies on the same map are then the crossing's ("buddy travel"
     runs it), except one partway through a town errand, which finishes the
     errand first (`BuddyTownErrandUnderway`, `buddies_town.cpp`); pastimes
     (sitting, sleeping, fishing, wandering) give way at once;
-  - while the owner is on the dock, each buddy walks to within 6 yards of
-    it and waits standing; once the owner is aboard, each boards that same
-    ship from the owner's boarding spot, by recording first (617e9);
+  - **the beat**: each buddy answers each stamp only after its own random
+    1–3 s (`InBeat`), so a clan doesn't move as one;
+  - **owner on the dock**: the dock's ship is the one whose stop is nearest
+    the owner (`NearestStop`). Each buddy holds an unheld embark recording
+    start of that ship at that stop, walks to it and waits on it facing the
+    way it began. With no recording there it waits within 6 yards of the
+    owner instead (a "FALLBACK" warning, once per buddy per dock). A buddy
+    standing at *another* stop of that same ship (an island dock, such as
+    Auberdine and Rut'theran Village, which no walk joins) doesn't walk:
+    it takes that ship from where it stands, as a transport trip;
+  - **owner aboard**: each buddy boards that same ship from the owner's
+    boarding spot; a start it already holds for that very ship is kept, so
+    it walks the recording from where it waits (617e9);
   - aboard with the owner aboard too, a buddy stays aboard, even at a dock
     on the owner's map (so a buddy that boarded with its owner doesn't step
     straight back off); the owner stepping off, there or at the far dock,
     is what sends it ashore;
+  - **owner jumps off** a ship that isn't at a stop (a zeppelin in the air,
+    a boat at sea), seen as leaving the ship while within 40 yards of it:
+    each buddy aboard that ship, after its own beat, is taken off the
+    passenger list and jumps 8 yards out toward the owner, landing on the
+    water or the ground below (`JumpOff`: the server's jump move, paced so
+    the drop takes as long as a real fall). Nothing else moves it until it
+    lands; then the crossing is over and "buddy travel" walks (the bot
+    module's long walk swims through water; nothing in the buddy code stops
+    swimming). A jump older than 30 s is not followed;
   - the owner walking away releases its buddies (any held recording too);
     a ship that sails with the owner and without a buddy is followed as a
     crossing (above), from that same dock.
@@ -107,8 +127,16 @@ the Thandol Span and every road between them were already walked by
   A ship that sails before the buddy reached its deck is a missed sailing:
   back to the recording's start.
 - **Owner comes back first**: a buddy not yet aboard drops the trip and
-  walks to the owner; one already aboard rides on and steps off when the
-  transport is next in on the owner's map.
+  walks to the owner.
+- **Riding without the owner** ("ride it round", 2026-10-02; `StepAboard`):
+  docked on the owner's map, a buddy steps off only at the stop of this
+  route nearest the owner, and rides on past any other; docked off the
+  owner's map, it rides on while the route reaches the owner's map at all,
+  so it usually stays aboard until the ship loops back. A route that never
+  reaches the owner's map (the owner went on elsewhere) is left at its
+  next stop, and the way is planned afresh from there. Riding on is logged
+  once per docking. "Fastest" is read as "the stop nearest the owner":
+  route times aren't compared (see Open Questions).
 - **Failures** are logged as errors in the house shape (what failed, what
   was done, where the buddy and the owner stood, what to check). The buddy
   is paused a minute, then plans again from the start. They are: no way
@@ -134,11 +162,39 @@ the owner's map), and anything for instances (617c3).
   we also detect when you are standing at a dock / on a ship / waiting for
   a zeppelin and move the buddy bot to the same dock? The goal is to get
   them to take the same ship as you if possible."): an owner standing at a
-  dock or zeppelin tower (near a stop on a transport's route) for a little
-  while, or already aboard a docked ship, is read as waiting to sail. Each
-  buddy then finishes its task and walks to that same dock to board the
-  same sailing, using a boarding recording (617e9) when one exists. An
-  owner who walks away from the dock without sailing releases them.
+  dock or zeppelin tower (near a stop on a transport's route), or aboard a
+  ship, is read as waiting to sail. Each buddy then finishes its task and
+  walks to that same dock to board the same sailing, using a boarding
+  recording (617e9) when one exists. An owner who walks away from the dock
+  without sailing releases them.
+- **No dwell, a human beat** (Ritz, 2026-10-02: "8 seconds might be a
+  little too long. If you're on a dock, they should go to the dock too. If
+  you're on a boat, they should board too. No need to wait, although +/-
+  1-3 seconds could be a good way to get them to seem a bit more
+  natural."): the owner on a dock sends buddies to it at once, and the
+  owner aboard sends them aboard at once; each buddy starts after its own
+  random 1–3 seconds, so they don't move as one.
+- **Straight to a starting spot** (Ritz, 2026-10-02: "they should move to a
+  starting point as soon as you enter the dock. Also, if you leave the
+  dock, they do whatever they normally would be doing."): as soon as the
+  owner is on the dock, each buddy goes to an unheld recording start for
+  that stop (617e9) and waits there, rather than near the owner; the owner
+  leaving the dock returns them to whatever they would otherwise do.
+- **Jump when the owner jumps** (Ritz, 2026-10-02: "If you jump off the
+  zeppelin while it's in mid-air or off of the ship into the water, they
+  jump with you."): an owner leaving a moving ship by jumping (off a
+  zeppelin in the air, or off a boat into the water) has every buddy
+  aboard that ship jump off too, from where it stands, after its own
+  1–3 second beat; then it follows as usual from wherever it lands.
+- **Missed the window: ride it round** (Ritz, 2026-10-02: "If they missed
+  the window and end up sailing to the other side of the world, that's
+  fine, they just wait until they're back, attempting to travel to
+  whichever zone you're in by the fastest route, which almost always will
+  mean just... waiting on the boat until it loops back around again."): a
+  buddy aboard a ship its owner is no longer on takes the fastest route to
+  the owner's zone, which is usually staying aboard until the ship docks on
+  the owner's side again; it gets off there, or wherever the fastest route
+  says.
 - **Finish, then go.** Each buddy finishes the task it is on (as in towns,
   617h), then walks to that same means on its own map: the dock or tower
   the owner's boat or zeppelin left from, or the Dark Portal.
@@ -215,20 +271,34 @@ the owner's map), and anything for instances (617c3).
   embark recording no longer needs a deck spot learned since startup. A
   ship with no recording at a dock, and nobody seen aboard, is still a
   failure there.
-- (2026-10-02) **How long a ship waits**: a buddy waiting with its owner on
-  the dock only walks to a recording's start once the owner is aboard,
-  then walks the recording; a ship that is only in for a short while may
-  leave first (a missed sailing, then followed as a crossing). Should
-  buddies stand on a recording's start while the owner still waits on the
-  dock (guessing the ship from the docks' recordings), rather than near
-  the owner?
-- (2026-10-02) **Arriving at a dock without sailing**: an owner who steps
-  off a ship at a dock waits there (within 60 yards of a stop for 8 s),
-  so buddies left on that map (not aboard) walk to that dock. On a boat
-  between two places of one map (Auberdine to Rut'theran Village) the
-  walk may have no way by land; they would walk until 617e4's travel takes
-  over. Wanted, or should an owner who has just stepped off not count as
-  waiting?
+- (Answered 2026-10-02) **How long a ship waits**: buddies go to a
+  recording's start as soon as the owner is on the dock (Intended
+  Behavior, "Straight to a starting spot").
+- (Answered 2026-10-02) **Arriving at a dock without sailing**: the owner
+  on a dock is the owner on a dock, arriving or leaving ("If you're on a
+  dock, they should go to the dock too"); buddies left on that map head
+  for it.
+- (2026-10-02) **Which ship, at a dock that serves two**: a dock may serve
+  more than one ship (a zeppelin tower with two arms). With the owner only
+  standing on the dock, buddies can't know which ship the owner will take;
+  they take starts of the nearest stop's ship. Good enough, or should a
+  start near the owner's own position decide?
+- (2026-10-02) **Fall damage on a jump**: basic has 10× fall damage, so a
+  buddy jumping after its owner off a zeppelin in the air will almost
+  surely die (as will the owner, without a slow fall). Follow anyway (as
+  built: "they jump with you"), or only jump into water, or only when the
+  drop is survivable?
+- (2026-10-02) **Fastest route, read simply**: riding without the owner
+  steps off at the stop nearest the owner and otherwise rides on; it
+  doesn't compare the ship's timetable against walking or another ship.
+  A case where getting off early and walking would be faster is ridden
+  round instead. Worth a real comparison (route timings plus walking
+  distance), or is "nearest stop" right?
+- (2026-10-02) **Island dock, buddy elsewhere**: a buddy at an island dock
+  sails to its owner; a buddy on the same map but neither at the owner's
+  dock nor at another stop of that ship walks toward the owner's dock,
+  which may have no way by land (Rut'theran Village). Should such a buddy
+  find the nearest stop of that ship instead?
 - **Mage teleport first**: a mage buddy teleports whenever it can, even
   when its owner took a boat it could follow. Is that wanted, or should
   the owner's own means come first and the teleport only replace a summon

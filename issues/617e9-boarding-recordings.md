@@ -72,6 +72,12 @@ with any fresh install (as `scripts/export-buddy-beds` does for beds).
 - **Choosing**: a buddy boarding a ship at a stop takes a recording of
   that ship, stop and direction whose start no other buddy holds, nearest
   first (else the nearest held one), and holds it until its boarding ends.
+- **When it goes to the start** (2026-10-02, 617e8): with its owner on the
+  dock, a buddy walks to a start as soon as the owner arrives (after its
+  own 1–3 s beat), not once the owner is aboard, so a ship that is in only
+  briefly isn't missed; the start is kept when the owner boards that ship.
+  Following a crossing without its owner, it goes to the start on reaching
+  the dock.
 - **Replay**: the buddy walks to the start on the navigation mesh, waits
   facing the way the recording began, and once the ship is in walks it
   one leg at a time: a straight move to each kept step (no path search:

@@ -311,6 +311,23 @@ rescue ("the player can always rescue them with a hearthstone cast").
 - Values: `modules/mod-buddies/src/buddies_crossing.cpp` and
   `buddies_recorder.cpp`. First guesses, to judge in game.
 
+## 2026-10-02 — Basic: no dwell at the dock, a 1–3 s beat instead; jumping after the owner (617e8)
+
+- **The 8 s dwell is removed**: an owner within 60 yards of a ship's stop
+  is at the dock at once. Owner: "8 seconds might be a little too long. If
+  you're on a dock, they should go to the dock too. If you're on a boat,
+  they should board too. No need to wait, although +/- 1-3 seconds could be
+  a good way to get them to seem a bit more natural."
+- **The beat**: each buddy answers each of its owner's moves (arrived on
+  the dock, boarded, stepped back off, jumped) after its own random
+  **1–3 s**, so a clan doesn't move as one.
+- **Jumping**: an owner leaving a ship that isn't at a stop while within
+  **40 yards** of it has jumped (farther is a teleport); buddies jump
+  **8 yards** out with a **4 yd/s** hop, the drop paced by the client's
+  gravity (19.29 yd/s²) with **0.6 s** at least; a jump older than **30 s**
+  is not followed (a buddy boarding later doesn't leap off).
+- Values: `modules/mod-buddies/src/buddies_crossing.cpp` (tuning block).
+
 ## How to add an entry
 
 ```markdown
