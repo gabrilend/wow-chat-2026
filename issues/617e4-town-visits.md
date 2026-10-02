@@ -9,6 +9,16 @@
 
 ## Current Behavior
 
+**Buildings inside towns, 2026-09-29** (owner: "make sure we account for
+indoors areas inside of towns"): a building in a town often has its own
+area number without the town flag (an inn, a crypt, a guild hall).
+Indoors, the ground outside at that spot now says whose building it is
+(`BuddyTownArea`), so a player or buddy inside counts as in that town:
+buddies keep walking, stay ungrouped, don't troop into the building
+after the owner, and don't restart their errands as if in a new town.
+Only an indoor place out in the country explores by rooms (617e6). Not
+yet compiled or seen in game.
+
 **Built 2026-09-27; compile-checked against the last beta build's
 settings, not yet run** (`modules/mod-buddies/src/buddies_town.cpp`,
 `buddies_town.h`; wired in `buddies_roam_strategy.cpp` and

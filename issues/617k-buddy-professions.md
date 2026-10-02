@@ -212,8 +212,25 @@ creation (the apprentice skill and its first recipes), on top of any
 primary professions; it cooks what it catches and uses bandages it makes.
 Towns: fishing as a pastime (617e4).
 
+### Crafting, decided 2026-09-30 (Ritz)
 
+Verbatim: "for now let's just say that buddies try to make upgrades for
+the clan and consumables that they think they'll need and want to share.
+Enchanting should put enchanting vellums to use and mail them to
+clanmembers, and inscriptionists should make vellums and give them to
+enchanters. They should buy them from the AH if needed."
 
+- **What a buddy crafts**: upgrades for clanmates, and consumables it
+  expects to need and to share. No requests from players (617m waits).
+- **Enchanters** put their enchants on vellums (enchanting onto a vellum
+  makes a scroll anyone can use) and mail the scrolls to clanmates.
+- **Inscriptionists** make vellums and give them to the clan's enchanters.
+- **Buying**: materials and vellums a buddy lacks are bought at the auction
+  house when needed (617h's buying side).
+- **Death knights**: a death knight buddy's professions are all Artisan 300
+  from the start; a death knight player's first two primary professions
+  trained become Artisan 300 at once (2026-09-30: "only for the first ones
+  they train"). Built 2026-09-30.
 
 ## Suggested Implementation Steps
 

@@ -33,6 +33,12 @@ And his life cycle, verbatim, 2026-09-23:
 
 ## Current Behavior
 
+**One Sargobras per tier, 2026-09-30** (owner: "Remember, one sargobras per
+tier! Eventually they're gonna have different outfits."): an owner owed
+several slots gets a wandering Sargobras for each, each keeping his own
+place in a ring round the owner; each serves his own slot, and goes on
+break once it is chosen. The owner's own Sargobras don't count toward the
+crowding rule.
 
 **2026-09-29:** the menu is one page: every class, then every people, each
 with its own icon (a table at the top of `src/lua-basic/sargobras.lua`,

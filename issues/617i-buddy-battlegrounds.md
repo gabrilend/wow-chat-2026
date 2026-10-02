@@ -31,7 +31,21 @@ queues there itself (155u).
 
 ## Current Behavior
 
-Buddies do not exist yet. The bot module can queue random bots for
+**Battlegrounds built 2026-09-30, not yet compiled or tried in game**
+(`buddies_party.cpp`: "battleground queues", "pulled out of a match";
+`buddies_loyalty.cpp`). Every 2 seconds each buddy's queues are brought
+in line with its owner's: joined once per time the owner is queued (the
+battleground window's own request, from anywhere, alone), left when the
+owner leaves; only queues it was put in are ever taken away. In a match
+it plays to the end (the bot module accepts the invitation and plays).
+A buddy's Deserter found at its stock 15 minutes is cut to 5. An invite
+from the owner's side to a buddy in a match takes it out of the match
+and seats it in the inviter's group (keeping its seat). Logging out ends
+queues with the bots. **Not built: arenas** (teams drawn from buddies,
+and a group leader inviting other members' buddies), and the dungeon
+draw's lower priority for a buddy in a battleground (it skips them).
+
+Before: buddies did not exist yet. The bot module can queue random bots for
 battlegrounds on its own (its battleground section in the bot config);
 basic turns random bots off (155b), so on basic nothing queues bots.
 

@@ -18,6 +18,12 @@ the party's empty seats up to five are filled from the bag
 random, marked had-a-turn; when too few are left the bag refills and the
 draw goes on, skipping those just drawn. Buddies the distance rule had
 seated make way; hand-invited ones keep their seats. The drawn join the
+party and **walk in** (2026-09-30, owner: "they should have to walk"): to
+where the owner last stood outside (kept every half second while out in
+the world: the entrance), on the navigation mesh, then step through and
+arrive where the owner arrived; stuck a minute, brought in with a logged
+FALLBACK warning; on another map, left out with an error. The joined
+party this way; the rest wait outside.
 Two or more players grouped, a raid, a battleground or a dungeon-finder
 group: left alone. On the owner's return to the open world, buddies still
 in an instance come out beside them. Buddies in battlegrounds are simply

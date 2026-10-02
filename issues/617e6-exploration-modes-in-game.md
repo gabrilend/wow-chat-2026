@@ -10,6 +10,16 @@
 
 ## Current Behavior
 
+**Rooms indoors, 2026-09-29** (owner: "buddy-bots not knowing how to roam
+in indoor buildings" / "let's say the rooms mode"): whatever the owner
+chose, a buddy indoors (a building or cave, as the map marks it), or in an
+area with no centre in the table (one that exists only indoors, like the
+Shadow Grave crypt), explores by rooms; outdoors, when the pinwheel finds
+no waypoint (against a building, on a ledge), rooms is tried before it
+pauses. An area missing from the table is measured in a 200-yard square
+around the owner. The owner's grid is then wanted for a minute, so it
+gets measured. Not yet compiled or seen in game.
+
 **The pattern written down, and playable, 2026-09-28**: the rules of
 roaming (the ground grid, paint and the walls' paint, rooms and tunnels,
 the eight-sector sensing, the owner's waypoint rule, the kraken) are in

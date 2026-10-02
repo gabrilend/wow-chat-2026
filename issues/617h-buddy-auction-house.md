@@ -103,6 +103,22 @@ Answers to the edge cases, verbatim, 2026-09-24:
 
 ## Current Behavior
 
+**Built 2026-09-30, not yet compiled or tried in game**
+(`buddies_town.cpp`: "the auction house", the errand list, the mail
+errand). The town errands follow the priority table (broken repair,
+trainer, badly-worn repair (a fifth of durability or less, assumed from
+the client's warning), mailbox, auction house, any repair, vendor); a
+town lacking a service skips it. At the auctioneer each bag item is
+sorted: kept (whites and greys to the vendor's own rules; anything it has
+a use for by the bot module's item judgement; bound items), auctioned,
+vendored, or mailed to the owner (bind-on-equip epic gear with a required
+level and no use to it); auctions priced by every auction rule below
+(minimum by quality, undercut, near-minimum, only-minimum, glut, random
+enchantments apart, epics always posted, random stacks, durations,
+deposit), posted through the auction window's own request, bid equal to
+buyout. Rising prices in `buddy_price` (per auction house), counted from
+its auction mail at the mailbox (sold resets, expired adds half the vendor
+price). Fixed prices in `buddy_fixed_price`, characters database (617a's
 model put it in the world database), empty until filled.
 
 **Built 2026-10-02, syntax-checked with the last build's flags, not yet
@@ -147,6 +163,7 @@ materials for a low crafting skill, 2026-09-25). It needs 617j's
 clan scoring (who an item upgrades, by stat weights), being built
 separately; it goes here once that exists.
 
+Before:
 
 Buddies do not exist yet. 617e's town behavior has buddies walk (never run)
 between NPCs: merchants weighted by how full their bags are, their class
