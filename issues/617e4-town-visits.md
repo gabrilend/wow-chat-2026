@@ -24,7 +24,9 @@ settings, not yet run** (`modules/mod-buddies/src/buddies_town.cpp`,
     routed, re-aimed at the owner each step) until it is in the owner's
     area; roaming (617e1) stands aside meanwhile. A different map (another
     continent, an instance) is not walked: logged once per buddy, it stays
-    put. **Unstuck** (2026-09-27): playerbots' own recovery (after 90
+    put (crossing by boat, zeppelin or the Dark Portal is 617e8; Lordaeron
+    and Azeroth are one map, so the Thandol Span is already walked).
+    **Unstuck** (2026-09-27): playerbots' own recovery (after 90
     seconds without progress, put at the destination) is switched off by
     resetting its stuck clock (`rpgInfo.stuckTs`, public) before each step;
     instead, no 10-yard gain toward the owner in 90 seconds (5 until the
