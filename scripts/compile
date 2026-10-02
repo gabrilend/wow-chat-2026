@@ -303,6 +303,37 @@ check_modules_configured() {
         echo "Forcing cmake reconfiguration to include new modules."
         FORCE_REBUILD=true
     fi
+
+    # A new .cpp inside a module that is already configured is also unseen:
+    # the module build collects its sources by a file glob, read only when
+    # cmake runs, so the build compiles the old file list and the link then
+    # fails on whatever the new file defines. compile_commands.json is that
+    # file list as last configured. Project-owned modules (modules/ at the
+    # project root) are checked from their project copy, because B036-style
+    # patches copy them into the source tree only after this check.
+    local COMMANDS_FILE="${BUILD_DIR_SHADOW}/compile_commands.json"
+    [[ -f "${COMMANDS_FILE}" ]] || return 0      # no list yet: cmake runs anyway
+
+    local unseen_sources=()
+    local source_file
+    while IFS= read -r source_file; do
+        # path as the build sees it: project modules/ becomes the tree's modules/
+        local built_path="${AC_CODE_DIR}/modules/${source_file#"${DIR}/modules/"}"
+        if ! grep -qF "\"${built_path}\"" "${COMMANDS_FILE}"; then
+            unseen_sources+=("${built_path#"${AC_CODE_DIR}/"}")
+        fi
+    done < <(find "${DIR}/modules" -path '*/src/*' -name '*.cpp')
+
+    # Any unseen file: reconfigure so the glob picks it up. None: nothing to do.
+    if [[ ${#unseen_sources[@]} -gt 0 ]]; then
+        echo ""
+        echo "Detected module source files the last configure did not see:"
+        for source_file in "${unseen_sources[@]}"; do
+            echo "  - ${source_file}"
+        done
+        echo "Forcing cmake reconfiguration to include them."
+        FORCE_REBUILD=true
+    fi
 }
 # }}}
 
