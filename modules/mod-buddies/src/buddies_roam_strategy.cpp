@@ -336,6 +336,11 @@ public:
             return false;
         if (owner->GetMapId() != bot->GetMapId() || bot->GetMap()->Instanceable())
             return false;
+        // Aboard a boat or zeppelin: "buddy travel" holds it still and steps
+        // it off at the dock (buddies_crossing.cpp, 617e8); a roaming walk
+        // from the deck would steer it off the side into the sea.
+        if (bot->GetTransport())
+            return false;
         if (BuddyTownArea(owner))                      // in a town, a building in one included
             return false;
         // In another named area than the owner's: "buddy travel" walks it

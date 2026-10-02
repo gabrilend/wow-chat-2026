@@ -263,6 +263,23 @@ rescue ("the player can always rescue them with a hearthstone cast").
 - Values: `modules/mod-buddies/src/buddies_town.cpp`. First guesses, to
   judge in game.
 
+## 2026-10-02 — Basic: buddies crossing by boat, zeppelin and portal (617e8)
+
+- **Missed sailings**: a buddy waiting on the dock gives up, loudly, after
+  its boat or zeppelin has left **3** times without it. A first guess, so
+  one bad boarding or a late arrival doesn't strand it, while a deck spot
+  it can never walk onto is reported within a few sailings rather than
+  waited on forever; the owner confirmed it, 2026-10-02: "um yeah sure 3
+  missed boats is fine."
+- **Docked**: a transport counts as in when within **8 yards** of one of
+  its route's stops (the transport's own moving flag is private to it).
+- **Dock reach** 60 yards (a transport this near the departure spot is
+  the one waited for), **deck walk** from 40 yards in a straight line, a
+  **failed crossing pauses** the buddy 60 s, **stepping off** gives up
+  after 20 s.
+- Values: `modules/mod-buddies/src/buddies_crossing.cpp` (tuning block).
+  First guesses, to judge in game.
+
 ## How to add an entry
 
 ```markdown

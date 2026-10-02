@@ -22,7 +22,10 @@
  *                  module's own long-distance walking (routed on the server's
  *                  navigation mesh; see the note at TravelStep on its one
  *                  teleport). On arrival the area's own behaviour takes over:
- *                  roaming outside towns, the town visit inside.
+ *                  roaming outside towns, the town visit inside. With the
+ *                  owner on another continent it walks where the crossing
+ *                  says (buddies_crossing.cpp, 617e8): to a dock or portal,
+ *                  onto a deck and off it.
  *   buddy town   - in a town: the to-do list, then leisure.
  *
  * Decisions of 2026-09-27 built here: sleeping only on beds placed by hand
@@ -51,6 +54,7 @@
 #include "buddies_roam.h"
 #include "buddies_town.h"
 #include "buddies_beds.h"
+#include "buddies_crossing.h"
 #include "Bag.h"
 #include "Containers.h"
 #include "FishingAction.h"
@@ -207,9 +211,9 @@ static void StoreTown(uint32 guid, TownState const& s)
     sTown[guid] = s;
 }
 
-// Buddies on another map than their owner, reported once each: walking
-// between continents or into an instance is not this issue's (a later one
-// decides boats, zeppelins and the dungeon draw, 617c3).
+// Buddies left on another map than their owner, reported once each: an
+// instance (the dungeon draw's, 617c3), or a crossing between continents
+// paused after a failure (buddies_crossing.cpp, 617e8, logs its own error).
 static std::mutex sOtherMapLock;
 static std::set<uint32> sOtherMapLogged;
 // }}}
@@ -1157,13 +1161,18 @@ public:
         Player* owner = botAI->GetMaster();
         if (!owner || !owner->IsInWorld() || !bot->IsAlive() || bot->IsInCombat())
             return false;
+        // Aboard a boat, stepping off one, or the owner on another
+        // continent: the crossing (buddies_crossing.cpp, 617e8) says where
+        // to walk, and this action walks it.
+        if (BuddyCrossingWanted(bot, owner))
+            return true;
         if (owner->GetMapId() != bot->GetMapId())
         {
-            // another continent or an instance: not walked here (logged once)
+            // an instance, or a crossing paused after a failure: stays (logged once)
             std::lock_guard<std::mutex> lock(sOtherMapLock);
             if (sOtherMapLogged.insert(bot->GetGUID().GetCounter()).second)
-                LOG_INFO("module", "mod-buddies: buddy {} is on map {} and its owner {} on map {}; walking between maps is "
-                    "not built (617e4), so it stays until the owner returns or the bot module moves it",
+                LOG_INFO("module", "mod-buddies: buddy {} is on map {} and its owner {} on map {}, an instance or a crossing "
+                    "paused after a failure (logged as an error then), so it stays for now",
                     bot->GetName(), bot->GetMapId(), owner->GetName(), owner->GetMapId());
             return false;
         }
@@ -1185,8 +1194,27 @@ public:
             bot->SetWalk(false);
         {
             std::lock_guard<std::mutex> lock(sOtherMapLock);
-            sOtherMapLogged.erase(bot->GetGUID().GetCounter()); // on the same map again: report anew next time
+            sOtherMapLogged.erase(bot->GetGUID().GetCounter()); // moving again: report anew next time
         }
+
+        // the crossing's step: walk where it says (straight on and off a
+        // deck, the long walk otherwise), or nothing when it handled the step
+        if (BuddyCrossingWanted(bot, owner))
+        {
+            BuddyCrossingMove move;
+            if (!BuddyCrossingStep(bot, owner, move))
+                return true;
+            botAI->rpgInfo.stuckTs = getMSTime();     // the bot module's own teleport-to-destination stays off
+            botAI->rpgInfo.stuckAttempts = 0;
+            if (move.straight)
+            {
+                bot->GetMotionMaster()->MovePoint(0, move.x, move.y, move.z, FORCED_MOVEMENT_NONE, 0.0f, 0.0f,
+                    /*generatePath*/ false, /*forceDestination*/ false);
+                return true;
+            }
+            return MoveFarTo(WorldPosition(move.mapId, move.x, move.y, move.z));
+        }
+        BuddyCrossingForget(bot);                      // on the owner's map again: any crossing is over
 
         // the stuck rule (see above): progress is the distance to the owner
         uint32 guid = bot->GetGUID().GetCounter();
@@ -1269,6 +1297,8 @@ public:
         if (!owner || !owner->IsInWorld() || !bot->IsAlive() || bot->IsInCombat())
             return false;
         if (owner->GetMapId() != bot->GetMapId() || bot->GetMap()->Instanceable())
+            return false;
+        if (bot->GetTransport())                       // aboard at a port town's dock: travel steps it off first (617e8)
             return false;
         uint32 town = BuddyTownArea(owner);            // a building inside a town counts as the town
         return town && BuddyTownArea(bot) == town;

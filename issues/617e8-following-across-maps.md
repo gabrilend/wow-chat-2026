@@ -24,27 +24,74 @@ their earliest convenience and attempt to rejoin the player."
 
 ## Current Behavior
 
-Not built. A buddy follows its owner only within one **map**: the server's
-unit of world, one per continent plus one per instance. Lordaeron and
-Azeroth are one map (Eastern Kingdoms, map 0), so the Thandol Span, the
-Deeprun Tram's two ends and every road between them are already walked by
-617e4's "buddy travel" (the bot module's long walk on the navigation mesh,
-re-aimed at the owner each step). What stops a buddy is a change of map:
+**Built 2026-10-02, syntax-checked, not yet compiled or tried in game**
+(`modules/mod-buddies/src/buddies_crossing.cpp` and `.h`; wired into
+"buddy travel" in `buddies_town.cpp`; roaming and the town visit stand
+aside while a buddy is aboard).
 
-| Owner goes | Map change | Today |
-|---|---|---|
-| boat or zeppelin, Eastern Kingdoms ↔ Kalimdor | 0 ↔ 1 | buddy stays, logged once |
-| the Dark Portal into Outland (155l: the only door) | 0 → 530 | buddy stays, logged once |
-| boat or zeppelin to Northrend (155s, not designed) | 0/1 → 571 | buddy stays, logged once |
-| into a dungeon or raid | → instance map | handled apart: the dungeon draw (617c3) takes drawn buddies in; the rest stay out by design (617e: rest, quest, or a graveyard walk) |
-| hearthstone | any | designed in 617e (buddies hearth after the owner), not built |
+A map is the server's unit of world, one per continent plus one per
+instance. Lordaeron and Azeroth are one map (Eastern Kingdoms, map 0), so
+the Thandol Span and every road between them were already walked by
+617e4's "buddy travel". This issue covers a change of continent.
 
-The bot module already holds what a crossing needs: a precomputed graph of
-travel nodes whose links are walks, flights, boats and zeppelins
-("transport" links, with the transport's id), and portals
-(`source-beta/modules/mod-playerbots/src/Mgr/Travel/TravelMgr.*`,
-`TravelNode.*`; the owner, 2026-09-29: "travel mesh will come in handy
-later, don't lose track of it").
+- **Watching owners** (every real player, bots skipped):
+  - Twice a second the player's footing is noted: the last ground it
+    stood on, and on first being seen aboard a boat or zeppelin, the
+    ground it boarded from and where on the deck it stood. That deck spot
+    is also kept per transport, for buddies taking it without their owner.
+    Elevators are ignored.
+  - At a map change between two continents (the server's before-teleport
+    hook, which fires while the player is still a passenger on the old
+    map), the means is recorded: the transport it rode, with its boarding
+    spot and deck spot; or the portal, found as the area trigger whose
+    destination is exactly where the teleport lands. Anything else (a
+    summon, a teleport spell, a hearthstone) erases the record. Into or
+    out of an instance records nothing.
+  - On first being seen ashore on the far side, the landing spot is noted.
+- **The buddy's way**, chosen when the owner is on another continent:
+  1. a mage buddy with a Rune of Teleportation casts its own Teleport
+     spell whose destination (read from the server's spell-destination
+     table) is on the owner's map, nearest the owner; never a Portal; a
+     refused or interrupted cast is not tried again that trip;
+  2. the owner's own recorded means, when it left from the buddy's map;
+  3. the nearest portal on the buddy's map whose destination is the
+     owner's map;
+  4. the nearest stop of a boat or zeppelin whose route reaches the
+     owner's map. The routes are read once from the transport templates
+     and their flight paths (each wait on the route is a stop). Its pier
+     is the nearest walking node of the bot module's travel graph within
+     80 yards of the stop. Its deck spot is the one learned from any
+     player seen aboard; when none is known, that is a failure (below).
+- **Doing it**:
+  - walking is the bot module's long walk to the dock or portal;
+  - at a portal, inside its trigger, the buddy steps through by handing
+    the server the "entered an area trigger" message, as the bot module
+    does for its own bots;
+  - at the dock it waits standing; when the transport is in (within 8
+    yards of one of its route's stops, since the transport's own moving
+    flag is private to it), it walks straight onto the deck spot and is
+    put on the passenger list once there (what a client's report of
+    standing on a deck ends in), then holds still while carried;
+  - docked on the owner's map, it is taken off the list and walks
+    straight ashore: to where the owner stepped off, else back to where it
+    boarded (the owner came back first), else the travel graph's pier;
+    then "buddy travel"'s usual walk goes on.
+  - three sailings leaving without it is a failure.
+- **Owner comes back first**: a buddy not yet aboard drops the trip and
+  walks to the owner; one already aboard rides on and steps off when the
+  transport is next in on the owner's map.
+- **Failures** are logged as errors in the house shape (what failed, what
+  was done, where the buddy and the owner stood, what to check). The buddy
+  is paused a minute, then plans again from the start. They are: no way
+  found, a transport's deck spot never learned, no pier known, an area
+  trigger missing, three missed sailings, no spot ashore.
+- Numbers: the tuning block of `buddies_crossing.cpp`, logged in
+  `docs/balance-updates.md` (2026-10-02).
+
+**Not built:** hearthstones (designed in 617e), Northrend (155s, not
+designed; its boats would be found by the same route reading once
+designed), the unstuck rule on the walk to a dock (617e4's applies only on
+the owner's map), and anything for instances (617c3).
 
 ## Intended Behavior
 
@@ -64,6 +111,11 @@ later, don't lose track of it").
   nearest way to the owner's map it can use, chosen on the bot module's
   travel graph (the 617e decision: "it heads for the nearest way there it
   can use"). Hearthstones follow 617e's own design.
+- **Mage buddies teleport, never portal** (Ritz, 2026-10-02: "they can
+  only teleport, not create portals"): a mage buddy that knows a Teleport
+  spell landing on the owner's new map, and carries its rune, may cast it
+  instead of walking to a dock; it never casts a Portal, so other buddies
+  still take the boat.
 - **Owner comes back first**: a buddy still on its way to the dock when the
   owner returns to its map drops the crossing and walks to the owner.
 - **Failure is loud**: a buddy that can't find the means, misses three
@@ -103,11 +155,35 @@ later, don't lose track of it").
 
 ## Open Questions
 
-- **Portals costing a reagent**: 617e records "we should make portals cost
-  a crafting reagent from Jewelcrafting or enchanting". Does that mean the
-  Dark Portal itself, the mage portals buddies might use, or portals a
-  buddy opens in place of the owner's means?
-- **Waiting at the dock with the owner gone**: while waiting, does the
-  buddy stand still, sit, or roam the dock town (617h's wandering)?
-- **Missed sailings**: three missed sailings before giving up is a first
-  guess; should a buddy instead wait forever?
+- (Answered 2026-10-02) **Portals costing a reagent**: "just mage portals"
+  (Ritz), so the Dark Portal and the boats are free. The reagent itself was
+  already considered and dropped in 617e (2026-09-27: a spell's reagent is
+  client data, so the tooltip would keep naming the old one); it waits on
+  the custom client. Ritz also recalled "they can only teleport, not create
+  portals": a mage buddy may use its own Teleport spells but never opens a
+  Portal for others. No earlier record of that rule was found, so it is
+  recorded here as of 2026-10-02.
+- (Answered 2026-10-02) **Waiting at the dock with the owner gone**: "yeah
+  it can just wait at the dock, that's fine." (Ritz) It stands near the
+  departure spot.
+- (Answered 2026-10-02) **Missed sailings**: "um yeah sure 3 missed boats is
+  fine." (Ritz) Three, then a loud failure.
+- **Deck spots before anyone rides**: a boat or zeppelin nobody has been
+  seen aboard since the server started has no known deck spot, so a buddy
+  finding its own way (its owner summoned or teleported) can't take it
+  until someone rides it once. Record every transport's deck spot ahead of
+  time (a small table, or one measured at startup from the transport's
+  shape), or accept the gap?
+- **Mage teleport first**: a mage buddy teleports whenever it can, even
+  when its owner took a boat it could follow. Is that wanted, or should
+  the owner's own means come first and the teleport only replace a summon
+  or a teleport?
+- **Unstuck on the way to a dock**: 617e4's stuck rule (no 10-yard gain
+  in 90 s) measures progress toward the owner, so it is off while walking
+  to a dock or portal on another continent; the bot module's own
+  teleport-to-destination is kept off too. Should the stuck rule measure
+  progress toward the dock instead?
+- **Off the deck in a straight line**: stepping aboard and ashore walks a
+  straight line, since the navigation mesh has no deck. A gangway with a
+  bend, or a zeppelin tower's platform, may need more than one straight
+  leg. To be seen in game.
