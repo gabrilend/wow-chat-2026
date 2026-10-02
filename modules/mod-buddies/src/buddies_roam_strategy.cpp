@@ -57,6 +57,20 @@
  *                    to come back by ordinary regeneration (logged once
  *                    per buddy); the starting kit and cooking (617a4,
  *                    617k) are where food comes from.
+ *
+ * And one thing it does between waypoints (2026-10-02, 617e3):
+ *   the detour     - the bot module's loot and gather behaviours only walk
+ *                    15 yards to a chest or a herb or ore node, though it
+ *                    sees 100. Every couple of seconds the roam action looks
+ *                    for one farther than that and within DETOUR_YARDS
+ *                    which the buddy could open (skill, skill level, tool,
+ *                    key), claims it for its clan so a clanmate doesn't go
+ *                    for the same one, and walks to it as a one-off
+ *                    waypoint. Once it is within 15 yards the bot module's
+ *                    own looting takes over (it outranks roaming); when the
+ *                    object is opened or gone the claim is let go and the
+ *                    lap carries on from where the buddy stands, its
+ *                    pinwheel bearing and Y untouched.
  */
 
 #include "buddies.h"
@@ -66,10 +80,14 @@
 #include "Bag.h"
 #include "CellImpl.h"
 #include "Creature.h"
+#include "GameObject.h"
 #include "GameTime.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "Item.h"
+#include "LootObjectStack.h"
+#include "ObjectAccessor.h"
+#include "PlayerbotAIConfig.h"
 #include "Spell.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
@@ -95,9 +113,11 @@
 #include "ShamanAiObjectContext.h"
 #include "WarlockAiObjectContext.h"
 #include "WarriorAiObjectContext.h"
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <list>
+#include <map>
 #include <mutex>
 #include <set>
 #include <unordered_map>
@@ -116,6 +136,16 @@ static constexpr uint32 CAMPFIRE_SPELL    = 818;     // Basic Campfire: taught w
                                                      // 617k); in this version it needs no wood, flint or tinder
                                                      // (no reagents or tools in the spell data), and places a
                                                      // campfire object for a few minutes
+
+static constexpr float  DETOUR_YARDS      = 45.0f;   // a chest or node this near (and past loot's own 15) pulls the buddy off its lap
+static constexpr uint32 DETOUR_LOOK_MS    = 2000;    // how often a roaming buddy looks around for one
+static constexpr uint32 DETOUR_GIVE_UP_MS = 30000;   // a detour not finished by now is dropped (no way there, a
+                                                     // loot that keeps failing); also how long a claim lasts
+static constexpr uint32 DETOUR_TRIED_MS   = 600000;  // an object a buddy detoured to is not its target again
+                                                     // for this long ("once"): nodes respawn under the same guid
+static constexpr uint32 MINING_PICK_TOOL  = 165;     // the "Mining Pick" tool category (item_template.TotemCategory
+                                                     // of item 2901); the core's own test for "carries a pick",
+                                                     // which also accepts the army knife and the hammer picks
 // }}}
 
 // {{{ each buddy's roaming state
@@ -137,6 +167,10 @@ struct RoamState
     bool             sitRest    = false;    // this rest has no food: sitting it out by a campfire
     uint64           mealStarted = 0;       // game-time ms
     uint32           wellFed    = 0;        // the Well Fed spell the food it ate gives, 0 when none
+    ObjectGuid       detour;                // the chest or node it is walking to; empty when on its lap
+    uint64           detourStarted = 0;     // game-time ms
+    uint64           nextLook   = 0;        // game-time ms; no look for a detour before this
+    std::vector<std::pair<ObjectGuid, uint64>> tried;   // objects already detoured to, and until when they are skipped
 };
 static std::mutex sRoamLock;
 static std::unordered_map<uint32, RoamState> sRoam;
@@ -156,6 +190,52 @@ static void StoreState(uint32 guid, RoamState const& state)
 // once per buddy per server run, not at every waypoint.
 static std::mutex sNoFoodLock;
 static std::set<uint32> sNoFoodLogged;
+// }}}
+
+// {{{ the clan's claims
+// Which chest or node each clan's buddies are already walking to, so two
+// of them don't go for the same one: "the first to claim it keeps it"
+// (617e3). Kept per owner (character guid, low part): buddies of other
+// owners may race for the same vein, as players do. A claim is let go by
+// the buddy that holds it when its detour ends (opened, gone, given up),
+// and lapses on its own after DETOUR_GIVE_UP_MS, which covers a buddy that
+// logged out or changed area mid-detour. Locked: the clan's buddies may
+// stand on maps updating in parallel.
+struct DetourClaim
+{
+    uint32 buddy = 0;
+    uint64 until = 0;    // game-time ms
+};
+static std::mutex sClaimLock;
+static std::unordered_map<uint32, std::map<ObjectGuid, DetourClaim>> sClaims;
+
+// Take the claim, or confirm this buddy already holds it. False when a
+// clanmate holds a claim that hasn't lapsed.
+static bool ClaimDetour(uint32 ownerGuid, ObjectGuid object, uint32 buddyGuid, uint64 now)
+{
+    std::lock_guard<std::mutex> lock(sClaimLock);
+    auto& claims = sClaims[ownerGuid];
+    for (auto it = claims.begin(); it != claims.end(); )
+        it = it->second.until <= now ? claims.erase(it) : std::next(it);
+    auto found = claims.find(object);
+    if (found != claims.end() && found->second.buddy != buddyGuid)
+        return false;
+    claims[object] = { buddyGuid, now + DETOUR_GIVE_UP_MS };
+    return true;
+}
+
+// Let go of a claim this buddy holds (another buddy's is left alone: this
+// one's may have lapsed and been taken since).
+static void ReleaseDetour(uint32 ownerGuid, ObjectGuid object, uint32 buddyGuid)
+{
+    std::lock_guard<std::mutex> lock(sClaimLock);
+    auto owner = sClaims.find(ownerGuid);
+    if (owner == sClaims.end())
+        return;
+    auto found = owner->second.find(object);
+    if (found != owner->second.end() && found->second.buddy == buddyGuid)
+        owner->second.erase(found);
+}
 // }}}
 
 // {{{ the meal's helpers
@@ -299,6 +379,8 @@ public:
                 area.id     = areaId;
                 area.centre = { owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ() };   // not circled
             }
+            if (s.detour)
+                ReleaseDetour(owner->GetGUID().GetCounter(), s.detour, guid);   // a detour in the old area ends with it
             s = RoamState();
             s.area     = area;
             s.mapId    = map->GetId();
@@ -314,6 +396,28 @@ public:
             TendMeal(s, now);
             StoreState(guid, s);
             return true;
+        }
+
+        // A chest or node off the lap (617e3): end a detour that is over,
+        // or look for a new one every DETOUR_LOOK_MS. Either changes only
+        // the path being walked; the pinwheel's bearing and Y stay as they
+        // were, so the next waypoint pick carries the lap on from here.
+        // Within the bot module's loot reach, roaming stands aside: its loot
+        // and gather actions (which outrank this one) walk the last yards
+        // and open it; this action only keeps the buddy from wandering off
+        // meanwhile, until the object is opened, gone, or given up on.
+        if (s.detour)
+        {
+            if (TendDetour(s, owner, now))
+            {
+                StoreState(guid, s);
+                return false;
+            }
+        }
+        else if (now >= s.nextLook)
+        {
+            s.nextLook = now + DETOUR_LOOK_MS;
+            StartDetour(s, owner, areaId, now);
         }
 
         // At the end of a path: first the rest roll (the owner: "a chance to
@@ -483,6 +587,138 @@ private:
             mobs.push_back({ { c->GetPositionX(), c->GetPositionY(), c->GetPositionZ() }, aggro });
         }
         return mobs;
+    }
+    // }}}
+
+    // {{{ the detour
+    // Whether the buddy could open this object, were it there: the bot
+    // module's own reading of the object (LootObject: a chest with only
+    // quest items the buddy doesn't need is skipped; the lock says which
+    // skill, skill level or key opens it), then the checks its
+    // IsLootPossible makes, all but one. Each test and what failing it means:
+    //   a chest-type object        - chests, herb and ore nodes are all of
+    //                                this kind; anything else (a door, a
+    //                                mailbox, a quest object to use) is not
+    //                                a detour
+    //   spawned, closed, idle      - not on its respawn timer, not already
+    //                                opened, not being opened by someone
+    //   selectable, no condition   - the bot module's own skip, e.g. the
+    //                                Gunship Armory before its event
+    //   the bot module would loot  - its reading found something worth it
+    //   the key                    - a locked chest needs its key carried
+    //   the skill                  - none needed; never fishing (pools are
+    //                                not walked to); known and high enough
+    //   the pick                   - mining needs a mining pick, by the
+    //                                core's tool-category test rather than
+    //                                the bot module's list of pick items
+    // Left out on purpose: IsLootPossible's height test (within about 3
+    // yards of the buddy's height), meant for an object in arm's reach; a
+    // node 40 yards off on a slope would fail it. The bot module applies it
+    // itself once the buddy arrives; if it still refuses there, the detour
+    // gives up after DETOUR_GIVE_UP_MS.
+    bool DetourWorthy(GameObject* go)
+    {
+        if (go->GetGOInfo()->type != GAMEOBJECT_TYPE_CHEST)
+            return false;
+        if (!go->isSpawned() || go->GetGoState() != GO_STATE_READY || go->getLootState() != GO_READY)
+            return false;
+        if (go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_INTERACT_COND | GO_FLAG_NOT_SELECTABLE))
+            return false;
+        LootObject loot(bot, go->GetGUID());
+        if (loot.IsEmpty())
+            return false;
+        if (loot.reqItem && !bot->HasItemCount(loot.reqItem, 1))
+            return false;
+        if (loot.skillId == SKILL_NONE)
+            return true;
+        if (loot.skillId == SKILL_FISHING || !bot->HasSkill(loot.skillId))
+            return false;
+        if (bot->GetSkillValue(loot.skillId) < loot.reqSkillValue)
+            return false;
+        if (loot.skillId == SKILL_MINING && !bot->HasItemTotemCategory(MINING_PICK_TOOL))
+            return false;
+        return true;
+    }
+
+    // Look for the nearest worthy object among those the bot module already
+    // sees (its "nearest game objects", 100 yards, refreshed each second; it
+    // doesn't test sight, so this does) that lies past its loot reach and
+    // within DETOUR_YARDS, in the owner's area (the roaming stays in it),
+    // not tried by this buddy lately, and not claimed by a clanmate. Found:
+    // claimed, and the buddy's path becomes the one point. Its old waypoint
+    // is dropped rather than kept for later: the pinwheel's bearing and Y
+    // are what make the lap, and the next pick goes on from them.
+    void StartDetour(RoamState& s, Player* owner, uint32 areaId, uint64 now)
+    {
+        s.tried.erase(std::remove_if(s.tried.begin(), s.tried.end(),
+                                     [now](std::pair<ObjectGuid, uint64> const& t) { return t.second <= now; }),
+                      s.tried.end());
+        float reach = sPlayerbotAIConfig.lootDistance;
+        GameObject* best     = nullptr;
+        float       bestDist = DETOUR_YARDS;
+        for (ObjectGuid const& g : AI_VALUE(GuidVector, "nearest game objects"))
+        {
+            GameObject* go = ObjectAccessor::GetGameObject(*bot, g);
+            if (!go)
+                continue;                              // left the map since the bot module's last look
+            float dist = bot->GetDistance(go);
+            if (dist <= reach || dist > bestDist)
+                continue;                              // the bot module's own reach, or no nearer than the best so far
+            if (go->GetAreaId() != areaId || !DetourWorthy(go) || !bot->IsWithinLOSInMap(go))
+                continue;
+            bool tried = std::any_of(s.tried.begin(), s.tried.end(),
+                                     [&g](std::pair<ObjectGuid, uint64> const& t) { return t.first == g; });
+            if (tried)
+                continue;
+            best     = go;
+            bestDist = dist;
+        }
+        if (!best || !ClaimDetour(owner->GetGUID().GetCounter(), best->GetGUID(), bot->GetGUID().GetCounter(), now))
+            return;                                    // nothing near, or a clanmate got there first (looked at again next time)
+        BuddyRoam::Point p { best->GetPositionX(), best->GetPositionY(), best->GetPositionZ() };
+        s.detour            = best->GetGUID();
+        s.detourStarted     = now;
+        s.tried.push_back({ best->GetGUID(), now + DETOUR_TRIED_MS });
+        s.buddy.path        = { p };
+        s.buddy.pathIndex   = 0;
+        s.buddy.waypoint    = p;
+        s.buddy.hasWaypoint = true;
+        s.justArrived       = false;
+        LOG_DEBUG("module", "mod-buddies: buddy {} detours {:.0f} yards to {} (entry {}) in area {}",
+            bot->GetName(), bestDist, best->GetName(), best->GetEntry(), areaId);
+    }
+
+    // A detour under way. Its three ends, each letting go of the claim and
+    // sending the buddy back to its lap (a fresh waypoint pick, no rest
+    // roll):
+    //   gone or opened  - the object left the map, or isn't worthy any more
+    //                     (looted, on its respawn timer, the skill lost)
+    //   too long        - DETOUR_GIVE_UP_MS passed: no path there, or the
+    //                     bot module refuses to loot it on arrival (the
+    //                     height test above); logged, since the next time
+    //                     the buddy passes it it will have been skipped
+    //   neither         - still going: true when the buddy is within the
+    //                     bot module's loot reach (it holds still and the
+    //                     loot action does the rest), false while it still
+    //                     has to walk there along the path
+    bool TendDetour(RoamState& s, Player* owner, uint64 now)
+    {
+        GameObject* go = ObjectAccessor::GetGameObject(*bot, s.detour);
+        bool gone      = !go || !DetourWorthy(go);
+        bool tooLong   = !gone && now - s.detourStarted > DETOUR_GIVE_UP_MS;
+        if (!gone && !tooLong)
+            return bot->GetDistance(go) <= sPlayerbotAIConfig.lootDistance;
+        if (tooLong)
+            LOG_WARN("module", "mod-buddies: buddy {} gave up its detour to {} (entry {}) after {} s, {:.1f} yards short "
+                "(no path there, or the bot module would not open it here: its height test allows about 3 yards)",
+                bot->GetName(), go->GetName(), go->GetEntry(), DETOUR_GIVE_UP_MS / 1000, bot->GetDistance(go));
+        ReleaseDetour(owner->GetGUID().GetCounter(), s.detour, bot->GetGUID().GetCounter());
+        s.detour.Clear();
+        s.buddy.path.clear();
+        s.buddy.pathIndex   = 0;
+        s.buddy.hasWaypoint = false;
+        s.justArrived       = false;
+        return false;
     }
     // }}}
 

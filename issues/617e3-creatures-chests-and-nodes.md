@@ -18,7 +18,31 @@ and aggressive toward the buddy, and worth experience to it; each with the
 server's own aggro radius for the pair (`Creature::GetAggroRange`: 20
 yards, a yard less per level the buddy is above it, 5 to 45). The core
 bends the trip through the first such radius on the way (617e2's nudge).
-Chests and nodes: not built.
+
+**Chests and nodes built 2026-10-02, syntax-checked, not yet compiled or
+tried in game** (same file, "the detour" and "the clan's claims"). Every
+2 seconds (`DETOUR_LOOK_MS`) a roaming buddy not on a detour looks through
+the objects the bot module already sees (its "nearest game objects", 100
+yards; the bot module doesn't test line of sight there, so the detour
+does) for the nearest one farther than the bot module's loot reach (15)
+and within `DETOUR_YARDS` (45), in the owner's area, which it could open:
+a chest-type object (chests and herb and ore nodes all are), spawned,
+closed and idle, read as worth looting by the bot module's own loot
+reading (`LootObject`: quest-only chests it doesn't need are skipped; the
+lock gives skill, skill level or key), its key carried, the skill known
+and high enough (never fishing), and for mining a pick by the core's
+tool-category test (165, which also accepts the army knife and hammer
+picks). The bot module's height test (about 3 yards) is left out at
+range, since a node up a slope would fail it; it still applies on
+arrival. The object is claimed for the clan (per owner; a claim lapses
+after 30 s), marked tried for 10 minutes, and becomes the buddy's only
+path point; the pinwheel's bearing and Y are untouched, and the old
+waypoint is dropped, so the next pick carries the lap on from the object.
+Within loot reach roaming stands aside for the bot module's loot and
+gather actions (which outrank it). The detour ends, letting go of the
+claim, when the object is opened or gone, or after `DETOUR_GIVE_UP_MS`
+(30 s, logged as a warning with the yards still short). Numbers in
+`docs/balance-updates.md`.
 
 The owner, 2026-09-27: "Don't forget about creatures, treasure chests,
 and profession gathering nodes."
@@ -51,7 +75,22 @@ bot, with the skill and tool checks.
    usable node within the pull distance; set it as a one-off waypoint.
 2. The claim list per owner, cleared when the object is looted or gone.
 3. In game at Fargodeep Mine: a buddy with mining walks to a copper vein
-   it passes 40 yards away, mines it, and carries on round.
+   it passes 40 yards away, mines it, and carries on round. Also: two
+   clanmates near one vein, only one goes; a vein up a ledge the bot module
+   won't open on arrival is given up after 30 s (one warning) and skipped
+   for 10 minutes.
+
+## Open Questions
+
+- (2026-10-02) A vein above or below the buddy by more than about 3 yards
+  passes the detour's look but the bot module won't open it on arrival
+  (its height test is for arm's reach), so the buddy walks there, stands
+  30 s, and gives up. In a mine with levels this may happen often. Patch
+  the bot module's height test for buddies, accept it, or skip such nodes
+  from the start (losing the ones a path really climbs to)?
+- (2026-10-02) A detour drops the lap's current waypoint instead of
+  returning to it afterwards; the bearing and Y are kept, so the lap goes
+  on from the object. Is that what "the lap resumes after" meant?
 
 ## Related Issues
 
