@@ -33,7 +33,63 @@ can't mail to its owner:
 
 ## Current Behavior
 
-Buddies do not exist yet. The bot module already rolls on loot (its loot
+**Steps 1–4 built 2026-10-02, syntax-checked, not yet compiled or run.**
+In progress: the giving within the clan and the class-book hand-over are
+not built (below), and nothing has been seen in game.
+
+- **Source patch B046** (`patches/B046-playerbots-buddy-loot-judgement.sh`,
+  bot module only): the stat-weight scorer (`StatsWeightCalculator`) asks
+  the buddy module for a buddy's talent plan before scoring; for a buddy
+  the item's score is each tree's score weighted by its share of the
+  plan's points (the scorer gains "score as this tree" for the parts, each
+  part keeping the caller's switches). The loot roll action hands the
+  buddy module its own judgement before and after the config's need/greed
+  switches and casts what comes back. Anyone not a buddy is untouched.
+  Needs B036 (the module in the build): without it, a link error.
+  Round trip in a RAM copy (apply, apply again, revert, revert again):
+  apply idempotent, revert byte-identical. Every patched file and the new
+  module file pass the compiler's syntax check with the last build's
+  flags (a planted error in the same check was caught).
+- **`modules/mod-buddies/src/buddies_loot.cpp` / `.h`**:
+  - the plans: `buddy_roster.profile` 1–10 read as points per tree in
+    thirds (the generator writes the ten shapes in one order for every
+    class; checked 2026-10-02); each tree's kind of stats by the bot
+    module's own per-class, per-tree rules, except a feral druid is a tank
+    by its plan's role rather than by bear form;
+  - the clan gear score: average equipped item level (the server's own
+    formula) of the owner and every buddy of the owner; refreshed every 10
+    seconds on the world thread; online characters as they stand, offline
+    ones read once from the database (their gear can't change offline);
+  - the roll: class books (155q, and the stock ones they copy) pass when
+    the owner needs one and is in the group, need when the buddy itself
+    needs it, otherwise greed; an upgrade is needed, except by a "third in
+    each tree" buddy (plan 7), which needs it only while its own average is
+    below the clan's and greeds otherwise; a unique item it already holds
+    is passed; greed and disenchant as judged; else pass. This ignores
+    basic's playerbots config for buddies (need-level 1 turns need into
+    greed, greed off turns greed into pass), which applies to other bots.
+- **Always equip upgrades** is the bot module's own: it equips upgrades
+  when an item is pushed into a bot's bags (loot, roll won, trade) and on
+  its periodic check (which is what catches mail; taking mail sends no
+  push), with `AiPlayerbot.AutoEquipUpgradeLoot` on (basic: on). Scored
+  by the plan through B046, that is this rule. Its threshold
+  `AiPlayerbot.EquipUpgradeThreshold` is 1.1: an item must score 10%
+  better to be worn.
+- **A third in each tree, scored as a blend:** the owner's 2026-09-24
+  stat-weight answer ("a thirds buddy uses a third of each") is what is
+  built; the earlier "an upgrade to any of the three specs" reading is not,
+  because scoring each item by its best tree lets two items each beat the
+  other (each better for a different tree) and the buddy would swap them
+  forever. See Open Questions.
+
+**Not built:** giving within the clan (a buddy holding an item it can't
+use trades it to the clan member it upgrades most, the owner scored once
+per tree of their class; the "so-and-so was also interested" line), and a
+buddy holding a class book handing it to the owner or a buddy who needs
+it. Both need the trade window driven between two characters; nothing in
+the module does that yet.
+
+Before: buddies did not exist. The bot module already rolls on loot (its loot
 roll action): need when the item is usable by the bot and an upgrade, greed
 otherwise, disenchant when its config allows; recipes it can learn get
 need. The stock server already lets bind-on-pickup loot be traded for 2
@@ -140,3 +196,13 @@ bind-on-pickup" flag).
   owner and that owner's buddies.
 - (Answered 2026-09-24) Clan average: average equipped item level.
   Bind-on-equip epics that aren't upgrades are mailed to the owner.
+- (Open, 2026-10-02) A buddy with a third in each tree: scored as a blend
+  of a third of each tree (built), or "an upgrade to any one of its three
+  specs" (the earlier wording)? The second makes the buddy swap two items
+  back and forth when each is better for a different tree.
+- (Open, 2026-10-02) Class book when the owner needs it but isn't in the
+  group: the buddy greeds it now (to keep it in the clan), but nothing
+  hands it over yet. Should it need instead?
+- (Open, 2026-10-02) The bot module's 10% upgrade threshold
+  (`AiPlayerbot.EquipUpgradeThreshold` 1.1) keeps "always equip upgrades"
+  from equipping small ones. Keep, or lower it for basic?

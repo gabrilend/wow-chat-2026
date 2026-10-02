@@ -19,6 +19,8 @@ void AddSC_buddies_party();
 void AddSC_buddies_xp();
 void AddSC_buddies_beds();
 void AddSC_buddies_explore();
+void AddSC_buddies_hidden();
+void AddSC_buddies_loot();
 
 // {{{ Addmod_buddiesScripts
 void Addmod_buddiesScripts()
@@ -34,5 +36,7 @@ void Addmod_buddiesScripts()
     AddSC_buddies_xp();
     AddSC_buddies_beds();
     AddSC_buddies_explore();
+    AddSC_buddies_hidden();
+    AddSC_buddies_loot();
 }
 // }}}
