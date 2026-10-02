@@ -280,6 +280,37 @@ rescue ("the player can always rescue them with a hearthstone cast").
 - Values: `modules/mod-buddies/src/buddies_crossing.cpp` (tuning block).
   First guesses, to judge in game.
 
+## 2026-10-02 — Basic: how close a path must reach a herb or ore node (617e3)
+
+- **Node reach**: a buddy's best walking path to a herb or ore node must end
+  within **3 yards** of it, or the node is moved and its spot retired for
+  good. Three yards is the owner's number ("a location that is within 3
+  yards") and matches the bot module's own height test for opening an
+  object (about 3 yards).
+- Value: `NODE_REACH_YARDS` in `modules/mod-buddies/src/buddies_roam_strategy.cpp`;
+  the retired spots: `buddy_retired_node`, characters database.
+
+## 2026-10-02 — Basic: buddies gathering at the owner's dock, and boarding by recording (617e8, 617e9)
+
+- **At a dock**: the owner within 60 yards (flat) of a ship's stop, the
+  stop being the ship's docked spot out on the water, piers lying within
+  about 60 of it; **8 s** there before buddies come, so a stroll along the
+  pier summons nobody; let go past **90 yards** from every stop, a gap
+  above 60 so standing at the edge doesn't flicker; buddies wait within
+  **6 yards** of the owner, close enough to board in time without crowding.
+- **A dock spot belongs to a stop** within 80 yards, the pier search
+  distance already in use.
+- **Recording**: a step kept every 1 yard or turn of 0.3 rad (about 17°),
+  fine enough for gangways and small to store; at most 1,500 steps, to
+  catch a forgotten stop; a ship counts as docked for a recording within
+  60 yards of a route stop, rejecting recordings made at sea.
+- **Replay**: a leg may take 1.5 × its walking time + 2 s (start-up and
+  small slowdowns); arrived within 1.5 yards (enough to be on the deck);
+  a short leg re-sent twice before a loud failure (the bot module may
+  nudge a buddy once or twice).
+- Values: `modules/mod-buddies/src/buddies_crossing.cpp` and
+  `buddies_recorder.cpp`. First guesses, to judge in game.
+
 ## How to add an entry
 
 ```markdown

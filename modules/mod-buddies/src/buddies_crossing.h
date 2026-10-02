@@ -37,9 +37,19 @@ struct BuddyCrossingMove
 
 // Whether the crossing has something for this buddy now: it is aboard a
 // boat or zeppelin, or its owner is on another map that is not an instance
-// (dungeons are the dungeon draw's, 617c3) and the buddy isn't paused after
-// a failure.
+// (dungeons are the dungeon draw's, 617c3), or its owner is waiting to sail
+// from a dock on the buddy's own map (the same ship, 617e8) and the buddy
+// isn't partway through a town errand; and it isn't paused after a failure.
 bool BuddyCrossingWanted(Player* bot, Player* owner);
+
+// Which stop of a boat's or zeppelin's route lies within `reach` yards
+// (flat distance) of x, y on mapId: its index in the route's stops, which is
+// how boarding recordings name their stop (617e9). False when none does.
+bool BuddyTransportStop(uint32 entry, uint32 mapId, float x, float y, float reach, uint8& stop);
+
+// Where that stop is (the ship's own position when docked there). False
+// when the ship or the stop is unknown.
+bool BuddyTransportStopSpot(uint32 entry, uint8 stop, uint32& mapId, float& x, float& y, float& z);
 
 // One step of the crossing. True, with `move` filled: walk there. False:
 // the step was handled here (holding still aboard or on the dock, boarding,

@@ -97,6 +97,28 @@ CREATE TABLE IF NOT EXISTS `buddy_fixed_price` (
   PRIMARY KEY (`item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617h: fixed auction prices';
 
+-- buddy_retired_node (617e3, 2026-10-02): herb and ore spawn spots no
+-- walking path reaches within 3 yards of, found by a buddy about to walk to
+-- one. Every spawn at the spot (each ore or herb variant there) gets a row;
+-- the buddy module keeps them out of their pools from then on, for
+-- everyone (buddies_nodes.cpp). Written by the module; deleting a row
+-- returns its spot at the next restart.
+--   spawn    the game-object spawn (acore_world.gameobject.guid)
+--   entry    its template, map and x, y, z: where it stood, for reading
+--   retired  unix time it was retired
+--   buddy    the buddy that found it (characters.guid)
+CREATE TABLE IF NOT EXISTS `buddy_retired_node` (
+  `spawn`   int unsigned      NOT NULL,
+  `entry`   int unsigned      NOT NULL,
+  `map`     smallint unsigned NOT NULL,
+  `x`       float             NOT NULL,
+  `y`       float             NOT NULL,
+  `z`       float             NOT NULL,
+  `retired` int unsigned      NOT NULL,
+  `buddy`   int unsigned      NOT NULL,
+  PRIMARY KEY (`spawn`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617e3: unreachable gathering spots';
+
 -- ============================================================================
 -- End of 04-buddy-roster.sql (apply)
 -- ============================================================================

@@ -32,6 +32,22 @@
  *                     the transport is in, rides, and steps off at the far
  *                     dock, after which "buddy travel" walks on as usual.
  *
+ * The same ship, when possible (Ritz, 2026-10-02: "detect when you are
+ * standing at a dock / on a ship / waiting for a zeppelin and move the
+ * buddy bot to the same dock? The goal is to get them to take the same ship
+ * as you if possible."): an owner who stands near a ship's stop for a few
+ * seconds, or is aboard a docked ship, is waiting to sail. Its buddies on
+ * that map (once any town errand is done) walk to it and wait; when the
+ * owner is aboard, they board that same ship. Walking away from the dock
+ * releases them. A ship that sails without them is followed as above.
+ *
+ * Boarding walks a recording of the owner's own boarding when that dock has
+ * one (buddies_recorder.cpp, 617e9): the buddy stands on a recording's start
+ * spot no other buddy holds, waits for the ship, and walks it step by step;
+ * stepping off at the far dock walks a disembark recording the same way.
+ * Only a stop with no recording falls back to the straight walk below, and
+ * says so in the log.
+ *
  * Boarding is what a player does - walking onto the deck while the
  * transport is docked, then being carried - not a teleport onto it. The
  * server's transports carry whoever is on their passenger list; a client
@@ -46,6 +62,8 @@
 
 #include "buddies.h"
 #include "buddies_crossing.h"
+#include "buddies_recorder.h"
+#include "buddies_town.h"
 #include "DBCStores.h"
 #include "GameObject.h"
 #include "GameTime.h"
@@ -81,6 +99,11 @@ static constexpr uint32 MISSED_SAILINGS      = 3;       // transports seen leavi
 static constexpr uint32 FAIL_PAUSE_MS        = 60000;   // a failed crossing waits this long before starting over
 static constexpr uint32 STEP_OFF_MS          = 20000;   // stepping off ends by then, ashore or not
 static constexpr uint32 RUNE_OF_TELEPORTATION = 17031;  // the reagent of every mage Teleport spell
+static constexpr float  STOP_NEAR_YARDS      = 80.0f;   // a dock spot this near a ship's stop belongs to that stop (recordings)
+static constexpr float  DOCK_NEAR_YARDS      = 60.0f;   // an owner this near a ship's stop is at its dock
+static constexpr uint32 DOCK_WAIT_MS         = 8000;    // ... and waiting to sail once there this long
+static constexpr float  DOCK_LEAVE_YARDS     = 90.0f;   // an owner this far from every stop has walked away
+static constexpr float  WAIT_NEAR_OWNER_YARDS = 6.0f;   // buddies wait this near an owner who waits on the dock
 
 // The mage's Teleport spells (never the Portals: "they can only teleport,
 // not create portals"). Where each lands is read from the server's own
@@ -130,6 +153,18 @@ struct OwnerTrack
     uint32   entry = 0;                  // which one
     Spot     boardedFrom;                // the ground it last stood on before boarding
     DeckSpot deck;                       // where on the deck it stood
+    uint64   nearDockSince = 0;          // game-time ms it came within DOCK_NEAR_YARDS of a ship's stop (0: not near one)
+};
+
+// An owner waiting to sail from a dock on its map (the same ship, 617e8).
+// The ship isn't known until the owner steps aboard one.
+struct OwnerWaiting
+{
+    uint32   mapId = 0;
+    Spot     spot;                       // where the owner stood waiting on the dock
+    uint32   entry = 0;                  // the ship it is aboard, once aboard (0: still on the dock)
+    Spot     departure;                  // ... the ground it boarded from
+    DeckSpot deck;                       // ... where on the deck it stands
 };
 
 // How an owner last left a map. Only boats, zeppelins and portals are
@@ -153,10 +188,12 @@ struct OwnerCrossing
 static std::unordered_map<uint32, OwnerTrack>    sTrack;      // by owner guid (low part)
 static std::unordered_map<uint32, OwnerCrossing> sCrossing;   // by owner guid
 static std::unordered_map<uint32, DeckSpot>      sDeckSeen;   // by transport entry: a deck spot any player stood on
+static std::unordered_map<uint32, OwnerWaiting>  sWaiting;    // by owner guid: waiting to sail from a dock
 static uint32 sStamp = 0;
 
-// A buddy's own trip.
-enum class Way : uint8 { None, Teleport, Portal, Transport };
+// A buddy's own trip. SameShip: the owner waits at a dock on the buddy's
+// own map (or is aboard a docked ship there); the buddy goes to it.
+enum class Way : uint8 { None, Teleport, Portal, Transport, SameShip };
 
 struct BuddyTrip
 {
@@ -176,6 +213,14 @@ struct BuddyTrip
     uint64      steppedOffAt = 0;
     uint64      pausedUntil = 0;         // after a failure
     std::set<uint32> spellsFailed;       // teleports that failed this trip: not tried again
+    // boarding recordings (617e9)
+    bool        embarkPicked = false;    // a recording was looked for at this dock (found or not)
+    bool        recorded = false;        // ... and one is held: wait at its start, walk it when the ship is in
+    BuddyBoardingStart waitAt;           // ... its start spot
+    bool        replaying = false;       // walking a recording now
+    bool        disembarking = false;    // ... and it is a disembark
+    ObjectGuid  replayShip;              // ... the ship it is walked against
+    BuddyReplay replay;                  // ... and where in it the buddy is
 };
 
 static std::unordered_map<uint32, BuddyTrip> sTrip;           // by buddy guid
@@ -294,6 +339,61 @@ static bool Docked(MotionTransport* mt)
     }
     return false;                                    // no route read for it: never counted as in
 }
+
+// The flat distance from x, y to the nearest stop of any ship on mapId
+// (a very large number when none stops on that map).
+static float NearestStopDist(uint32 mapId, float x, float y)
+{
+    float best = 1.0e9f;
+    for (TransportRoute const& route : Routes())
+        for (Spot const& s : route.stops)
+            if (s.mapId == mapId)
+                best = std::min(best, std::hypot(s.x - x, s.y - y));
+    return best;
+}
+// }}}
+
+// {{{ BuddyTransportStop
+bool BuddyTransportStop(uint32 entry, uint32 mapId, float x, float y, float reach, uint8& stop)
+{
+    for (TransportRoute const& route : Routes())
+    {
+        if (route.entry != entry)
+            continue;
+        float best = reach;
+        bool  found = false;
+        for (uint32 i = 0; i < route.stops.size(); ++i)
+        {
+            Spot const& s = route.stops[i];
+            float d = std::hypot(s.x - x, s.y - y);
+            if (s.mapId == mapId && d <= best)
+            {
+                best  = d;
+                stop  = uint8(i);
+                found = true;
+            }
+        }
+        return found;                                // its route: a stop within reach, or none
+    }
+    return false;                                    // no route read for this ship
+}
+// }}}
+
+// {{{ BuddyTransportStopSpot
+bool BuddyTransportStopSpot(uint32 entry, uint8 stop, uint32& mapId, float& x, float& y, float& z)
+{
+    for (TransportRoute const& route : Routes())
+    {
+        if (route.entry != entry)
+            continue;
+        if (stop >= route.stops.size())
+            return false;                            // a stop number this route doesn't have (the route data changed?)
+        Spot const& s = route.stops[stop];
+        mapId = s.mapId; x = s.x; y = s.y; z = s.z;
+        return true;
+    }
+    return false;
+}
 // }}}
 
 // {{{ failing
@@ -311,6 +411,7 @@ static void Fail(Player* bot, Player* owner, BuddyTrip& trip, std::string const&
         "  it waits {} s, then plans the crossing again from the start",
         bot->GetName(), owner->GetName(), owner->GetMapId(), what, done, Where(bot), Where(owner), toDebug,
         FAIL_PAUSE_MS / 1000);
+    BuddyBoardingRelease(bot->GetGUID().GetCounter());   // a held boarding recording goes back for others
     BuddyTrip fresh;
     fresh.pausedUntil = Now() + FAIL_PAUSE_MS;
     trip = fresh;
@@ -543,6 +644,47 @@ static bool StepTransport(Player* bot, Player* owner, BuddyTrip& trip, BuddyCros
         }
     }
 
+    // a boarding recording of this dock, looked for once per trip (617e9)
+    if (!trip.embarkPicked)
+    {
+        trip.embarkPicked = true;
+        uint8 stop = 0;
+        trip.recorded = BuddyTransportStop(trip.entry, trip.departure.mapId, trip.departure.x, trip.departure.y,
+                            STOP_NEAR_YARDS, stop)
+                     && BuddyBoardingPick(BUDDY_BOARD_EMBARK, trip.entry, stop, bot, trip.replay, trip.waitAt);
+        if (!trip.recorded)
+            LOG_WARN("module", "mod-buddies: FALLBACK: no embark recording for transport {} at the dock near ({:.0f}, {:.0f}) "
+                "on map {}; buddy {} boards by the straight walk to the deck instead (to fix: record some with "
+                ".buddy record start / stop there, 617e9)",
+                trip.entry, trip.departure.x, trip.departure.y, trip.departure.mapId, bot->GetName());
+    }
+
+    // with a recording: wait on its start spot, walk it when the ship is in
+    if (trip.recorded)
+    {
+        float toStart = Dist(bot, trip.waitAt.x, trip.waitAt.y, trip.waitAt.z);
+        if (toStart > AT_SPOT_YARDS)
+        {
+            move = { trip.waitAt.mapId, trip.waitAt.x, trip.waitAt.y, trip.waitAt.z, false };
+            return true;                             // walk to the recording's start
+        }
+        if (!docked)
+        {
+            if (bot->isMoving())
+                bot->StopMoving();
+            bot->SetFacingTo(trip.waitAt.o);
+            return false;                            // wait on the start spot, facing the way the recording began
+        }
+        trip.sawDocked    = true;
+        trip.replaying    = true;
+        trip.disembarking = false;
+        trip.replayShip   = mt->GetGUID();
+        trip.replay.next  = 0;
+        trip.replay.legStarted = 0;
+        LOG_INFO("module", "mod-buddies: buddy {} boards transport {} by recording {}", bot->GetName(), trip.entry, trip.replay.id);
+        return false;                                // the replay walks it from the next step on
+    }
+
     float toDepart = Dist(bot, trip.departure.x, trip.departure.y, trip.departure.z);
     if (!docked)
     {
@@ -553,7 +695,7 @@ static bool StepTransport(Player* bot, Player* owner, BuddyTrip& trip, BuddyCros
         }
         if (bot->isMoving())
             bot->StopMoving();
-        return false;                                // wait on the dock (sit or roam: open question, 617e8)
+        return false;                                // wait standing on the dock (owner, 2026-10-02: "it can just wait at the dock")
     }
 
     trip.sawDocked = true;
@@ -578,12 +720,120 @@ static bool StepTransport(Player* bot, Player* owner, BuddyTrip& trip, BuddyCros
 }
 // }}}
 
+// {{{ StepSameShip
+// The owner waits at a dock on this map. Still on the dock: walk to it and
+// wait close by. Aboard a ship that is in: board that same ship, as a
+// transport trip from the owner's own boarding spot (recording first).
+static bool StepSameShip(Player* bot, Player* owner, BuddyTrip& trip, BuddyCrossingMove& move)
+{
+    auto w = sWaiting.find(owner->GetGUID().GetCounter());
+    if (w == sWaiting.end())
+    {
+        trip.way = Way::None;                        // the owner walked away meanwhile: nothing to do
+        return false;
+    }
+    OwnerWaiting const& wait = w->second;
+    if (!wait.entry)
+    {
+        if (bot->GetExactDist(owner) > WAIT_NEAR_OWNER_YARDS)
+        {
+            move = { owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), false };
+            return true;                             // to the owner on the dock
+        }
+        if (bot->isMoving())
+            bot->StopMoving();
+        return false;                                // wait with the owner until it boards
+    }
+    if (trip.entry != wait.entry)
+    {
+        // the owner boarded a ship (or another one than before): board that one
+        BuddyBoardingRelease(bot->GetGUID().GetCounter());
+        trip.entry        = wait.entry;
+        trip.departure    = wait.departure;
+        trip.deck         = wait.deck;
+        trip.embarkPicked = false;
+        trip.recorded     = false;
+        trip.sawDocked    = false;
+        trip.missed       = 0;
+    }
+    return StepTransport(bot, owner, trip, move);
+}
+// }}}
+
+// {{{ StepReplay
+// Walking a boarding recording (617e9), either way; the trip's replay holds
+// the place. An embark whose ship sails before the buddy reached the deck
+// is a missed sailing: back to the recording's start for the next one.
+static bool StepReplay(Player* bot, Player* owner, BuddyTrip& trip)
+{
+    Transport*       t  = bot->GetMap()->GetTransport(trip.replayShip);
+    MotionTransport* mt = t ? t->ToMotionTransport() : nullptr;
+    if (!mt)
+    {
+        Fail(bot, owner, trip, "the ship of the boarding recording it was walking is no longer on this map",
+             std::string(trip.disembarking ? "disembark" : "embark") + " recording " + std::to_string(trip.replay.id) +
+             " walked to step " + std::to_string(trip.replay.next),
+             "did the ship sail or despawn mid-replay? was the buddy teleported?");
+        return false;
+    }
+    if (!trip.disembarking && bot->GetTransport() != mt && !Docked(mt))
+    {
+        ++trip.missed;
+        trip.replaying         = false;
+        trip.sawDocked         = false;
+        trip.replay.next       = 0;
+        trip.replay.legStarted = 0;
+        LOG_INFO("module", "mod-buddies: buddy {} missed a sailing of transport {} partway through recording {} ({} of {})",
+            bot->GetName(), mt->GetEntry(), trip.replay.id, trip.missed, MISSED_SAILINGS);
+        if (trip.missed >= MISSED_SAILINGS)
+            Fail(bot, owner, trip, "transport " + std::to_string(mt->GetEntry()) + " left " + std::to_string(MISSED_SAILINGS) +
+                 " times before its recording was walked", "waited on the recording's start and began walking it",
+                 "is the recording slow (a long approach)? record one that starts nearer the deck");
+        return false;
+    }
+
+    std::string why;
+    switch (BuddyReplayStep(bot, mt, trip.replay, why))
+    {
+        case BuddyReplayResult::Running:
+            return false;                            // a leg under way
+        case BuddyReplayResult::Done:
+            trip.replaying = false;
+            BuddyBoardingRelease(bot->GetGUID().GetCounter());
+            if (trip.disembarking)
+            {
+                LOG_INFO("module", "mod-buddies: buddy {} stepped off transport {} by recording {} at {}",
+                    bot->GetName(), mt->GetEntry(), trip.replay.id, Where(bot));
+                trip = BuddyTrip();                  // the crossing is done: "buddy travel" walks on from here
+                return false;
+            }
+            if (bot->GetTransport() != mt)
+            {
+                Fail(bot, owner, trip, "embark recording " + std::to_string(trip.replay.id) + " ended with the buddy not aboard",
+                     "walked every step of the recording", "does the recording end on the deck? .buddy record list shows it");
+                return false;
+            }
+            LOG_INFO("module", "mod-buddies: buddy {} boarded transport {} by recording {} to follow {}",
+                bot->GetName(), mt->GetEntry(), trip.replay.id, owner->GetName());
+            return false;
+        case BuddyReplayResult::Failed:
+            Fail(bot, owner, trip, "walking boarding recording " + std::to_string(trip.replay.id) + " went wrong: " + why,
+                 std::string(trip.disembarking ? "disembark" : "embark") + " walked to step " + std::to_string(trip.replay.next),
+                 "is something in the way that wasn't when it was recorded (another ship, a crowd)? does the recording "
+                 "look right (.buddy record list)? delete a bad one with .buddy record delete <id>");
+            return false;
+    }
+    return false;
+}
+// }}}
+
 typedef bool (*WayStep)(Player*, Player*, BuddyTrip&, BuddyCrossingMove&);
 static WayStep const WAY_STEPS[] = {
     nullptr,          // Way::None: planned before any step
     StepTeleport,     // Way::Teleport
     StepPortal,       // Way::Portal
     StepTransport,    // Way::Transport
+    StepSameShip,     // Way::SameShip
 };
 // }}}
 
@@ -594,12 +844,30 @@ static WayStep const WAY_STEPS[] = {
 // boarded from, else the pier the travel graph knows.
 static bool StepAboard(Player* bot, Player* owner, BuddyTrip& trip, MotionTransport* mt, BuddyCrossingMove& move)
 {
-    if (!Docked(mt) || bot->GetMapId() != owner->GetMapId())
+    if (!Docked(mt) || bot->GetMapId() != owner->GetMapId() || owner->GetTransport() == mt)
     {
         if (bot->isMoving())
             bot->StopMoving();
-        return false;                                // at sea, or docked somewhere the owner isn't: stay aboard
+        return false;                                // at sea, docked where the owner isn't, or the owner aboard too: stay
     }
+
+    // a disembark recording for this stop: walk it (617e9)
+    uint8 stop = 0;
+    BuddyBoardingStart start;
+    bool  atStop = BuddyTransportStop(mt->GetEntry(), mt->GetMapId(), mt->GetPositionX(), mt->GetPositionY(), DOCKED_YARDS, stop);
+    if (atStop && BuddyBoardingPick(BUDDY_BOARD_DISEMBARK, mt->GetEntry(), stop, bot, trip.replay, start))
+    {
+        trip.replaying    = true;
+        trip.disembarking = true;
+        trip.replayShip   = mt->GetGUID();
+        LOG_INFO("module", "mod-buddies: buddy {} steps off transport {} by recording {}", bot->GetName(), mt->GetEntry(),
+            trip.replay.id);
+        return false;                                // the replay walks it from the next step on
+    }
+    LOG_WARN("module", "mod-buddies: FALLBACK: no disembark recording for transport {} at {} on map {}; buddy {} "
+        "steps off by the straight walk ashore instead (to fix: record some with .buddy record start / stop aboard, 617e9)",
+        mt->GetEntry(), atStop ? "stop " + std::to_string(stop) : std::string("this dock (no route stop found under the ship)"),
+        mt->GetMapId(), bot->GetName());
 
     Spot ashore;
     bool found = false;
@@ -646,12 +914,29 @@ bool BuddyCrossingWanted(Player* bot, Player* owner)
     if (Transport* t = bot->GetTransport())
         if (t->ToMotionTransport())
             return true;                             // aboard a boat or zeppelin: only the crossing moves it
+    // asked before the crossing's lock, so the two files' locks never nest
+    bool errand = BuddyTownErrandUnderway(bot->GetGUID().GetCounter());
     std::lock_guard<std::mutex> lock(sCrossLock);
     BuddyTrip& trip = sTrip[bot->GetGUID().GetCounter()];
     if (trip.steppingOff && bot->GetMapId() == trip.ashore.mapId)
         return true;                                 // walking ashore from the deck
+    if (trip.replaying)
+        return true;                                 // partway through a boarding recording: finish it
     if (owner->GetMapId() == bot->GetMapId())
-        return false;                                // same map: "buddy travel"'s own walk
+    {
+        bool waiting = sWaiting.count(owner->GetGUID().GetCounter()) && !IsInstanceMap(bot->GetMapId());
+        if (!waiting && trip.way == Way::SameShip)
+        {
+            // the owner walked away from the dock: the buddy is let go
+            BuddyBoardingRelease(bot->GetGUID().GetCounter());
+            uint64 paused = trip.pausedUntil;
+            trip = BuddyTrip();
+            trip.pausedUntil = paused;
+        }
+        // waiting at a dock: the same ship, once any errand is done ("finish
+        // the current task first", 617h); otherwise "buddy travel"'s own walk
+        return waiting && !errand && Now() >= trip.pausedUntil;
+    }
     if (IsInstanceMap(bot->GetMapId()) || IsInstanceMap(owner->GetMapId()))
         return false;                                // instances are the dungeon draw's (617c3)
     return Now() >= trip.pausedUntil;                // paused after a failure: not yet
@@ -663,6 +948,10 @@ bool BuddyCrossingStep(Player* bot, Player* owner, BuddyCrossingMove& move)
 {
     std::lock_guard<std::mutex> lock(sCrossLock);
     BuddyTrip& trip = sTrip[bot->GetGUID().GetCounter()];
+
+    // walking a boarding recording, onto a deck or off one (617e9)
+    if (trip.replaying)
+        return StepReplay(bot, owner, trip);
 
     // aboard: riding, then stepping off
     if (Transport* t = bot->GetTransport())
@@ -689,13 +978,30 @@ bool BuddyCrossingStep(Player* bot, Player* owner, BuddyCrossingMove& move)
 
     // a new owner crossing replaces a plan that followed the old one
     auto rec = sCrossing.find(owner->GetGUID().GetCounter());
-    if (trip.way != Way::None && trip.ownerStamp && (rec == sCrossing.end() || rec->second.stamp != trip.ownerStamp))
+    bool stale = (trip.way != Way::None && trip.ownerStamp
+                  && (rec == sCrossing.end() || rec->second.stamp != trip.ownerStamp))
+              || (trip.way != Way::None && trip.toMap != owner->GetMapId());   // the owner moved on to yet another map
+    if (stale)
+    {
+        BuddyBoardingRelease(bot->GetGUID().GetCounter());
         trip.way = Way::None;
-    if (trip.way != Way::None && trip.toMap != owner->GetMapId())
-        trip.way = Way::None;                        // the owner has moved on to yet another map
+    }
 
-    if (trip.way == Way::None && !Plan(bot, owner, trip))
-        return false;
+    if (trip.way == Way::None)
+    {
+        if (owner->GetMapId() == bot->GetMapId())
+        {
+            // same map: only asked while the owner waits at a dock (see
+            // BuddyCrossingWanted), so go to it and sail with it
+            BuddyTrip plan;
+            plan.way         = Way::SameShip;
+            plan.toMap       = owner->GetMapId();
+            plan.pausedUntil = trip.pausedUntil;
+            trip = plan;
+        }
+        else if (!Plan(bot, owner, trip))
+            return false;
+    }
     return WAY_STEPS[uint8(trip.way)](bot, owner, trip, move);
 }
 // }}}
@@ -705,6 +1011,7 @@ void BuddyCrossingForget(Player* bot)
 {
     std::lock_guard<std::mutex> lock(sCrossLock);
     sTrip.erase(bot->GetGUID().GetCounter());
+    BuddyBoardingRelease(bot->GetGUID().GetCounter());
 }
 // }}}
 
@@ -716,6 +1023,73 @@ class buddies_crossing_player : public PlayerScript
 public:
     buddies_crossing_player() : PlayerScript("buddies_crossing_player",
         { PLAYERHOOK_ON_UPDATE, PLAYERHOOK_ON_BEFORE_TELEPORT }) { }
+
+    // {{{ NoteWaiting
+    // Whether the owner is waiting to sail (the same ship, 617e8), noted on
+    // each look with sCrossLock held:
+    //   in an instance            - never waiting
+    //   aboard a ship that is in  - waiting, aboard that ship: buddies board it
+    //   near a ship's stop        - waiting once there DOCK_WAIT_MS (a moment's
+    //                               pass along the pier doesn't count); an owner
+    //                               who stepped back off a ship waits on the dock
+    //   far from every stop       - not waiting (walked away: buddies let go)
+    // Aboard a ship at sea nothing changes: the owner's map change (or its
+    // arrival at another dock of the same map) settles it.
+    static void NoteWaiting(Player* player, uint32 guid, OwnerTrack& track, Spot const& here, MotionTransport* ship)
+    {
+        if (IsInstanceMap(here.mapId))
+        {
+            sWaiting.erase(guid);
+            track.nearDockSince = 0;
+            return;
+        }
+        auto w = sWaiting.find(guid);
+        if (ship)
+        {
+            if (!Docked(ship) || (w != sWaiting.end() && w->second.entry == ship->GetEntry()))
+                return;                              // at sea, or already noted aboard this one
+            OwnerWaiting wait;
+            wait.mapId     = here.mapId;
+            wait.spot      = track.haveGround ? track.ground : here;
+            wait.entry     = ship->GetEntry();
+            wait.departure = (track.aboard && track.entry == ship->GetEntry()) ? track.boardedFrom : wait.spot;
+            player->m_movementInfo.transport.pos.GetPosition(wait.deck.x, wait.deck.y, wait.deck.z, wait.deck.o);
+            sWaiting[guid] = wait;
+            LOG_INFO("module", "mod-buddies: {} is aboard transport {} at a dock; its buddies come to sail with it",
+                player->GetName(), wait.entry);
+            return;
+        }
+        float d = NearestStopDist(here.mapId, here.x, here.y);
+        if (d <= DOCK_NEAR_YARDS)
+        {
+            if (w != sWaiting.end() && w->second.entry)
+            {
+                w->second.entry = 0;                 // stepped back off before it sailed: waiting on the dock again
+                w->second.spot  = here;
+                return;
+            }
+            uint64 now = Now();
+            if (!track.nearDockSince)
+                track.nearDockSince = now;
+            else if (now - track.nearDockSince >= DOCK_WAIT_MS && w == sWaiting.end())
+            {
+                OwnerWaiting wait;
+                wait.mapId = here.mapId;
+                wait.spot  = here;
+                sWaiting[guid] = wait;
+                LOG_INFO("module", "mod-buddies: {} is waiting at a dock (map {}, {:.0f}, {:.0f}); its buddies come to it",
+                    player->GetName(), here.mapId, here.x, here.y);
+            }
+            return;
+        }
+        track.nearDockSince = 0;
+        if (d > DOCK_LEAVE_YARDS && w != sWaiting.end())
+        {
+            sWaiting.erase(w);
+            LOG_INFO("module", "mod-buddies: {} walked away from the dock; its buddies are let go", player->GetName());
+        }
+    }
+    // }}}
 
     // {{{ OnPlayerUpdate
     // Twice a second: on ground, the ground is noted; on first being seen
@@ -739,6 +1113,8 @@ public:
         Transport* t = player->GetTransport();
         if (t && !t->ToMotionTransport())
             return;                                  // an elevator: neither ground nor a crossing
+
+        NoteWaiting(player, guid, track, here, t ? t->ToMotionTransport() : nullptr);
 
         if (!t)
         {
@@ -785,6 +1161,7 @@ public:
 
         std::lock_guard<std::mutex> lock(sCrossLock);
         uint32 guid = player->GetGUID().GetCounter();
+        sWaiting.erase(guid);                        // left the map: no longer waiting at its dock
         OwnerCrossing c;
         c.fromMap = fromMap;
         c.toMap   = mapId;

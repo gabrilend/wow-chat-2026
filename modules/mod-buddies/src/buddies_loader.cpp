@@ -9,6 +9,7 @@
 
 // From the module's script files
 void AddSC_buddies_roster();
+void AddSC_buddies_nodes();
 void AddSC_buddies_clan();
 void AddSC_buddies_create();
 void AddSC_buddies_login();
@@ -22,11 +23,13 @@ void AddSC_buddies_explore();
 void AddSC_buddies_hidden();
 void AddSC_buddies_loot();
 void AddSC_buddies_crossing();
+void AddSC_buddies_recorder();
 
 // {{{ Addmod_buddiesScripts
 void Addmod_buddiesScripts()
 {
     AddSC_buddies_roster();
+    AddSC_buddies_nodes();
     AddSC_buddies_clan();
     AddSC_buddies_create();
     AddSC_buddies_login();
@@ -40,5 +43,6 @@ void Addmod_buddiesScripts()
     AddSC_buddies_hidden();
     AddSC_buddies_loot();
     AddSC_buddies_crossing();
+    AddSC_buddies_recorder();
 }
 // }}}

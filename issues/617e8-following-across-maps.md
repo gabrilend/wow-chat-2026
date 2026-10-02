@@ -77,6 +77,35 @@ the Thandol Span and every road between them were already walked by
     boarded (the owner came back first), else the travel graph's pier;
     then "buddy travel"'s usual walk goes on.
   - three sailings leaving without it is a failure.
+- **The same ship** (built 2026-10-02, the owner's "move the buddy bot to
+  the same dock"; `NoteWaiting`, `StepSameShip` in `buddies_crossing.cpp`):
+  - an owner within 60 yards (flat) of any ship's stop on its map for 8
+    seconds is waiting to sail; aboard a ship that is in, it is waiting
+    aboard that ship (its boarding spot and deck spot noted); stepping back
+    off before it sails is waiting on the dock again; more than 90 yards
+    from every stop, or into an instance, it is not waiting;
+  - its buddies on the same map are then the crossing's ("buddy travel"
+    runs it), except one partway through a town errand, which finishes the
+    errand first (`BuddyTownErrandUnderway`, `buddies_town.cpp`); pastimes
+    (sitting, sleeping, fishing, wandering) give way at once;
+  - while the owner is on the dock, each buddy walks to within 6 yards of
+    it and waits standing; once the owner is aboard, each boards that same
+    ship from the owner's boarding spot, by recording first (617e9);
+  - aboard with the owner aboard too, a buddy stays aboard, even at a dock
+    on the owner's map (so a buddy that boarded with its owner doesn't step
+    straight back off); the owner stepping off, there or at the far dock,
+    is what sends it ashore;
+  - the owner walking away releases its buddies (any held recording too);
+    a ship that sails with the owner and without a buddy is followed as a
+    crossing (above), from that same dock.
+- **Boarding by recording** (617e9): a dock with embark recordings for the
+  ship has the buddy walk to a recording's start (a free one, nearest
+  first), wait there facing the way it began, and walk it once the ship is
+  in; a stop with disembark recordings has it step off the same way. A dock
+  with none uses the straight walk above, logged once per boarding as a
+  warning beginning "FALLBACK", naming the ship and dock and how to fix it.
+  A ship that sails before the buddy reached its deck is a missed sailing:
+  back to the recording's start.
 - **Owner comes back first**: a buddy not yet aboard drops the trip and
   walks to the owner; one already aboard rides on and steps off when the
   transport is next in on the owner's map.
@@ -84,7 +113,9 @@ the Thandol Span and every road between them were already walked by
   was done, where the buddy and the owner stood, what to check). The buddy
   is paused a minute, then plans again from the start. They are: no way
   found, a transport's deck spot never learned, no pier known, an area
-  trigger missing, three missed sailings, no spot ashore.
+  trigger missing, three missed sailings, no spot ashore, and (617e9) a
+  boarding recording that couldn't be walked (a leg stuck or repeatedly
+  short, the ship gone mid-recording, an embark that ended off the deck).
 - Numbers: the tuning block of `buddies_crossing.cpp`, logged in
   `docs/balance-updates.md` (2026-10-02).
 
@@ -99,6 +130,15 @@ the owner's map), and anything for instances (617c3).
   records how: which transport the owner was riding when the map changed
   (boat or zeppelin, by its id), or the area trigger stepped through (the
   Dark Portal), or neither (a summon, a mage's teleport, a hearthstone).
+- **Same ship as the owner, when possible** (Ritz, 2026-10-02: "how about
+  we also detect when you are standing at a dock / on a ship / waiting for
+  a zeppelin and move the buddy bot to the same dock? The goal is to get
+  them to take the same ship as you if possible."): an owner standing at a
+  dock or zeppelin tower (near a stop on a transport's route) for a little
+  while, or already aboard a docked ship, is read as waiting to sail. Each
+  buddy then finishes its task and walks to that same dock to board the
+  same sailing, using a boarding recording (617e9) when one exists. An
+  owner who walks away from the dock without sailing releases them.
 - **Finish, then go.** Each buddy finishes the task it is on (as in towns,
   617h), then walks to that same means on its own map: the dock or tower
   the owner's boat or zeppelin left from, or the Dark Portal.
@@ -149,6 +189,7 @@ the owner's map), and anything for instances (617c3).
 
 - **617e** parent (the 2026-09-25 decision on the owner far away)
 - **617e4** buddy travel, which this carries past a map's edge
+- **617e9** boarding recordings, replayed when boarding
 - **617c3** dungeon draw (instances, kept apart)
 - **155l** the Dark Portal as the only door into Outland
 - **155s** Northrend at sixty (not designed; its boats come with it)
@@ -168,12 +209,26 @@ the owner's map), and anything for instances (617c3).
   departure spot.
 - (Answered 2026-10-02) **Missed sailings**: "um yeah sure 3 missed boats is
   fine." (Ritz) Three, then a loud failure.
-- **Deck spots before anyone rides**: a boat or zeppelin nobody has been
-  seen aboard since the server started has no known deck spot, so a buddy
-  finding its own way (its owner summoned or teleported) can't take it
-  until someone rides it once. Record every transport's deck spot ahead of
-  time (a small table, or one measured at startup from the transport's
-  shape), or accept the gap?
+- (Answered 2026-10-02) **Deck spots before anyone rides**: the owner will
+  record boardings at each dock (617e9: "go to each boat and record myself
+  embarking and disembarking like 10 times per stop"). A dock with an
+  embark recording no longer needs a deck spot learned since startup. A
+  ship with no recording at a dock, and nobody seen aboard, is still a
+  failure there.
+- (2026-10-02) **How long a ship waits**: a buddy waiting with its owner on
+  the dock only walks to a recording's start once the owner is aboard,
+  then walks the recording; a ship that is only in for a short while may
+  leave first (a missed sailing, then followed as a crossing). Should
+  buddies stand on a recording's start while the owner still waits on the
+  dock (guessing the ship from the docks' recordings), rather than near
+  the owner?
+- (2026-10-02) **Arriving at a dock without sailing**: an owner who steps
+  off a ship at a dock waits there (within 60 yards of a stop for 8 s),
+  so buddies left on that map (not aboard) walk to that dock. On a boat
+  between two places of one map (Auberdine to Rut'theran Village) the
+  walk may have no way by land; they would walk until 617e4's travel takes
+  over. Wanted, or should an owner who has just stepped off not count as
+  waiting?
 - **Mage teleport first**: a mage buddy teleports whenever it can, even
   when its owner took a boat it could follow. Is that wanted, or should
   the owner's own means come first and the teleport only replace a summon

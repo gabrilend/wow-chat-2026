@@ -77,6 +77,7 @@
 #include "buddies_roam.h"
 #include "buddies_town.h"
 #include "buddies_explore.h"
+#include "buddies_nodes.h"
 #include "Bag.h"
 #include "CellImpl.h"
 #include "Creature.h"
@@ -93,6 +94,7 @@
 #include "SpellMgr.h"
 #include "Log.h"
 #include "Map.h"
+#include "PathGenerator.h"
 #include "MovementActions.h"
 #include "NonCombatStrategy.h"
 #include "Player.h"
@@ -146,6 +148,10 @@ static constexpr uint32 DETOUR_TRIED_MS   = 600000;  // an object a buddy detour
 static constexpr uint32 MINING_PICK_TOOL  = 165;     // the "Mining Pick" tool category (item_template.TotemCategory
                                                      // of item 2901); the core's own test for "carries a pick",
                                                      // which also accepts the army knife and the hammer picks
+static constexpr float  NODE_REACH_YARDS  = 3.0f;    // a herb or ore node whose best walking path ends farther
+                                                     // than this from it can't be gathered (the bot module's
+                                                     // height test allows about 3 yards): the node is moved and
+                                                     // its spot retired (owner, 2026-10-02; buddies_nodes.cpp)
 // }}}
 
 // {{{ each buddy's roaming state
@@ -629,6 +635,8 @@ private:
             return false;
         if (go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_INTERACT_COND | GO_FLAG_NOT_SELECTABLE))
             return false;
+        if (go->GetSpawnId() && BuddyNodeRetired(go->GetSpawnId()))
+            return false;                              // a retired spot still up (no free spot to move it to)
         LootObject loot(bot, go->GetGUID());
         if (loot.IsEmpty())
             return false;
@@ -643,6 +651,67 @@ private:
         if (loot.skillId == SKILL_MINING && !bot->HasItemTotemCategory(MINING_PICK_TOOL))
             return false;
         return true;
+    }
+
+    // Whether the buddy could walk to within NODE_REACH_YARDS of this object,
+    // asked of the walking map (the same path search the server's own
+    // movement uses) before a step is taken. Only herb and ore nodes are
+    // judged; a chest is never moved, so it is always "reachable" here and
+    // left to the give-up timer.
+    //
+    // A trap in the path search, read 2026-10-02 (PathGenerator.cpp,
+    // BuildPolyPath): when either end lies off the walking map's ground, a
+    // path for a player (not a creature) is answered "straight line, not
+    // using the map" rather than "no path", the same answer as on a map with
+    // no navigation data at all. So the buddy's own spot is asked first, as
+    // a path from itself to itself: if even that is a straight line, the
+    // search has nothing to say here; if not, a straight-line answer for the
+    // node means the node is off the walkable ground.
+    //
+    // Each answer and what it brings:
+    //   buddy off the map         - no navigation data, or the buddy is
+    //                               swimming or not on walkable ground: no
+    //                               verdict, the detour goes ahead
+    //   cut short by length       - the search's point limit stopped it: no
+    //                               verdict, the detour goes ahead
+    //   node in water             - a swim may reach it: no verdict
+    //   node off the ground       - unreachable (straight-line answer, or the
+    //                               end far from any walkable polygon)
+    //   no path, or ends short    - unreachable
+    //   ends within reach         - reachable: the detour goes ahead
+    // Unreachable is handed to the node keeper (buddies_nodes.cpp), which
+    // retires the spot and moves the node, and logs it.
+    bool NodeReachable(GameObject* go)
+    {
+        LootObject loot(bot, go->GetGUID());
+        if (loot.skillId != SKILL_HERBALISM && loot.skillId != SKILL_MINING)
+            return true;
+        float gx = go->GetPositionX(), gy = go->GetPositionY(), gz = go->GetPositionZ();
+
+        PathGenerator self(bot);
+        self.CalculatePath(bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), false);
+        if (self.GetPathType() & PATHFIND_NOT_USING_PATH)
+            return true;                               // buddy off the map
+
+        PathGenerator path(bot);
+        path.CalculatePath(gx, gy, gz, false);
+        uint32 type = path.GetPathType();
+        if (type & PATHFIND_SHORT)
+            return true;                               // cut short by length
+        bool offGround = (type & (PATHFIND_NOT_USING_PATH | PATHFIND_FARFROMPOLY_END)) != 0;
+        if (offGround && bot->GetMap()->IsInWater(bot->GetPhaseMask(), gx, gy, gz, bot->GetCollisionHeight()))
+            return true;                               // node in water
+        G3D::Vector3 const& end = path.GetActualEndPosition();
+        float shortBy = go->GetExactDist(end.x, end.y, end.z);
+        if (!offGround && !(type & PATHFIND_NOPATH) && shortBy <= NODE_REACH_YARDS)
+            return true;                               // ends within reach
+
+        std::string what = offGround                ? " (it stands off the walkable ground)"
+                         : (type & PATHFIND_NOPATH) ? " (no path at all)"
+                         : " (the best path ends " + std::to_string(int(shortBy)) + " yards from it)";
+        BuddyRetireNode(uint32(go->GetSpawnId()), bot->GetGUID().GetCounter(),
+            "buddy " + bot->GetName() + " found no walking path to " + go->GetName() + what);
+        return false;
     }
 
     // Look for the nearest worthy object among those the bot module already
@@ -680,6 +749,12 @@ private:
         }
         if (!best || !ClaimDetour(owner->GetGUID().GetCounter(), best->GetGUID(), bot->GetGUID().GetCounter(), now))
             return;                                    // nothing near, or a clanmate got there first (looked at again next time)
+        if (!NodeReachable(best))
+        {
+            ReleaseDetour(owner->GetGUID().GetCounter(), best->GetGUID(), bot->GetGUID().GetCounter());
+            s.tried.push_back({ best->GetGUID(), now + DETOUR_TRIED_MS });
+            return;                                    // handed to the node keeper, which moves it; the next look picks anew
+        }
         BuddyRoam::Point p { best->GetPositionX(), best->GetPositionY(), best->GetPositionZ() };
         s.detour            = best->GetGUID();
         s.detourStarted     = now;

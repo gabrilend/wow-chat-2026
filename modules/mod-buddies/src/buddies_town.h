@@ -29,4 +29,8 @@ Trigger*  NewBuddyTownDueTrigger(PlayerbotAI* ai);
 Action*   NewBuddyTownStepAction(PlayerbotAI* ai);
 // }}}
 
+// Whether the buddy is partway through a town errand; the crossing waits
+// for it before heading for the dock (617e8: "finish the current task").
+bool BuddyTownErrandUnderway(unsigned int buddyGuid);
+
 #endif

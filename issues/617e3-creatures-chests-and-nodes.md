@@ -44,6 +44,46 @@ claim, when the object is opened or gone, or after `DETOUR_GIVE_UP_MS`
 (30 s, logged as a warning with the yards still short). Numbers in
 `docs/balance-updates.md`.
 
+**Unreachable nodes moved, built 2026-10-02, syntax-checked and its table
+tested in RAM (`scripts/test-basic-sql-in-ram`, every step and check
+passing), not yet compiled or tried in game.** Before a detour to a herb or
+ore node (never a chest), the roam action asks the walking map for a path
+(`NodeReachable`, the server's own path search). The buddy's own spot is
+asked first, because the search answers "straight line" both for "no walking
+map here" and, for players, for "the far end is off the walkable ground"
+(`PathGenerator::BuildPolyPath`): a buddy off the map, a search cut short by
+its length limit, or a node in water gives no verdict and the detour goes
+ahead. A node off the walkable ground, with no path, or whose best path ends
+more than `NODE_REACH_YARDS` (3) from it is handed to the node keeper
+(`buddies_nodes.cpp`, `BuddyRetireNode`) and the buddy looks again 2 seconds
+later. On the world's thread, after the map updates, the keeper:
+- **retires** every spawn at the spot (all of a spot pool's ore or herb
+  variants) in `buddy_retired_node` (characters database, added to
+  `04-buddy-roster.sql` beside the other buddy tables, E042) and in memory;
+- **moves** the node: within its spawn group (the zone's mother pool when
+  the spot is a spot pool, else the spawn's own pool), the nearest member on
+  the same map that is not up and not retired is spawned and the old one
+  despawned, through the pool's own despawn-one and spawn-one steps with the
+  pool manager's active record kept in step (the manager has no public
+  "spawn this member" call; its read-only accessors and those steps are
+  used, see the file's header for why that is sound);
+- **leaves it in place** when the group has no free spot, or the spawn is in
+  no pool; a retired spot left up is skipped by every buddy's detour;
+- **keeps retired spots out**: at startup every retired spot the pools put
+  up is moved off; a node entering a map at a retired spot later (a respawn
+  roll picked it) is queued and moved.
+Logs: a warning per retirement (spot, node, the buddy's path verdict, where
+the node went); a later move as information; a pool out of reachable spots
+as an error once per run. Known limit: a node standing in a map tile with no
+navigation data would read as "off the walkable ground" and be retired;
+counted 2026-10-02, no herb or ore spawn on basic stands in such a tile
+(every one of the type-3 spawns whose lock needs Herbalism or Mining has
+its `.mmtile`), so the limit is theoretical today. To recount after the
+map data or the spawns change: read the herb/mining lock ids out of
+`Lock.dbc` (a lock slot of type 2 whose index is 2 or 3), take each such
+spawn's square by the server's rule (`int(32 - x / 533.333)`, the same for
+y), and look for `data-files/mmaps/MMMXXYY.mmtile`.
+
 The owner, 2026-09-27: "Don't forget about creatures, treasure chests,
 and profession gathering nodes."
 
@@ -68,6 +108,17 @@ bot, with the skill and tool checks.
   keeps it.
 - Numbers to tune (balance file): how far a chest or node may pull a
   buddy off its lap.
+- **Unreachable nodes are moved, for good** (Ritz, 2026-10-02: "if it's
+  path can't find a route to a location that is within 3 yards, then we
+  should despawn the ore node and create a new ore node at the nearest
+  spawn spot, and remove the impossible node from the list of nodes that
+  can spawn."): before walking, the detour asks the navigation mesh for a
+  path ending within 3 yards of the node (the bot module's arm's reach). No
+  such path: the node is despawned, the same kind of node appears at the
+  nearest unoccupied spawn spot of its own spawn group, and the impossible
+  spot is recorded so it never spawns again, for anyone, across restarts.
+  Chests are not moved (only herb and ore nodes). Each removal is logged
+  with the spot, the node, and where its replacement went.
 
 ## Suggested Implementation Steps
 
@@ -75,19 +126,30 @@ bot, with the skill and tool checks.
    usable node within the pull distance; set it as a one-off waypoint.
 2. The claim list per owner, cleared when the object is looted or gone.
 3. In game at Fargodeep Mine: a buddy with mining walks to a copper vein
-   it passes 40 yards away, mines it, and carries on round. Also: two
+   it passes 40 yards away, mines it, and carries on round. A vein up an
+   unclimbable ledge is moved to the nearest free spot of its group, logged,
+   and does not come back after a restart. Also: two
    clanmates near one vein, only one goes; a vein up a ledge the bot module
    won't open on arrival is given up after 30 s (one warning) and skipped
    for 10 minutes.
 
 ## Open Questions
 
-- (2026-10-02) A vein above or below the buddy by more than about 3 yards
-  passes the detour's look but the bot module won't open it on arrival
-  (its height test is for arm's reach), so the buddy walks there, stands
-  30 s, and gives up. In a mine with levels this may happen often. Patch
-  the bot module's height test for buddies, accept it, or skip such nodes
-  from the start (losing the ones a path really climbs to)?
+- (Answered 2026-10-02) A vein the buddy can't path to within 3 yards of:
+  moved to the nearest spawn spot of its group and its own spot retired
+  (Intended Behavior). Known cost: a spot a player could reach by jumping,
+  but the navigation mesh can't, is retired too.
+- (Answered 2026-10-02) A node whose spawn group has no other free spot is
+  left in place, logged, and skipped by buddies (Ritz: "that's fine").
+- (Answered 2026-10-02) Nodes in tiles without navigation data: there are
+  none on basic (counted, Current Behavior), so no rule is needed yet.
+- (2026-10-02) **Sweeping ahead of time** (Ritz: "isn't this something we
+  could cache ahead of time? Pre-process like, right now?"): either a
+  one-time GM sweep inside the server, using its own pathfinder from a
+  nearby open-ground spot (road, graveyard, flight point) to every herb and
+  ore spawn, or a standalone tool reading the map files with the same
+  pathfinding library. Which, and what counts as "the open ground" a node
+  must connect to?
 - (2026-10-02) A detour drops the lap's current waypoint instead of
   returning to it afterwards; the bearing and Y are kept, so the lap goes
   on from the object. Is that what "the lap resumes after" meant?

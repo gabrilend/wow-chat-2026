@@ -211,6 +211,21 @@ static void StoreTown(uint32 guid, TownState const& s)
     sTown[guid] = s;
 }
 
+// {{{ BuddyTownErrandUnderway
+// Whether this buddy is partway through a town errand (walking to a
+// trainer, a vendor, the mailbox, the auctioneer). The crossing (617e8)
+// waits for it before sending the buddy to the dock: "finish the current
+// task first" (617h). Pastimes (sitting, sleeping, fishing, wandering) are
+// not errands and give way at once; each notices it was interrupted and
+// tidies up (stands, puts the pole away) the next time it runs.
+bool BuddyTownErrandUnderway(uint32 buddyGuid)
+{
+    std::lock_guard<std::mutex> lock(sTownLock);
+    auto it = sTown.find(buddyGuid);
+    return it != sTown.end() && it->second.doing == Doing::Errand;
+}
+// }}}
+
 // Buddies left on another map than their owner, reported once each: an
 // instance (the dungeon draw's, 617c3), or a crossing between continents
 // paused after a failure (buddies_crossing.cpp, 617e8, logs its own error).

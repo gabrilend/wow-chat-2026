@@ -64,6 +64,70 @@ DEALLOCATE PREPARE buddy_bed_stmt;
 -- (no beds placed yet)
 -- <<< BEDS END
 
+-- ----------------------------------------------------------------------------
+-- Boarding recordings (issue 617e9, 2026-10-02): a game master's own walk
+-- onto a boat or zeppelin (an embark) or off one (a disembark), made in game
+-- with ".buddy record start" / ".buddy record stop" and walked by buddies
+-- boarding that ship at that dock. Hand-made world data like the beds, so
+-- kept here (same install step, E045) and carried into the project by
+-- scripts/export-buddy-boardings, which rewrites the rows between the
+-- BOARDINGS markers below.
+--
+-- buddy_boarding: one row per recording
+--   id         a number (the commands name recordings by it)
+--   kind       1 embark (dock to deck), 2 disembark (deck to dock)
+--   transport  the ship (gameobject_template entry of the boat or zeppelin)
+--   stop       which stop of the ship's route: the index among its route's
+--              waiting points, in the order the client's flight-path data
+--              lists them (buddies_crossing.cpp, the transport routes)
+--   map        the map of that stop
+--   author     the character that recorded it
+--   note       free text given to ".buddy record stop"
+-- buddy_boarding_step: one row per kept step, in order
+--   boarding   the recording (buddy_boarding.id)
+--   seq        0, 1, 2 ... in walking order
+--   ms         milliseconds from the start of the recording
+--   flags      1 on the deck (x, y, z, o are offsets from the ship, not world
+--              yards), 2 a jump left from here, 4 a jump or fall landed
+--              here, 8 walking (not running) on the way here
+--   x, y, z, o world yards and facing (radians), or deck offsets (flag 1)
+--   jump_xy,   the jump's sideways and upward speeds (flag 2), as the
+--   jump_z     client reported them
+-- Re-applicable: the tables are created only when missing, and the exported
+-- rows are inserted with INSERT IGNORE, so recordings made in game since the
+-- last export are kept.
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `buddy_boarding` (
+    `id`        INT UNSIGNED NOT NULL,
+    `kind`      TINYINT UNSIGNED NOT NULL,
+    `transport` INT UNSIGNED NOT NULL,
+    `stop`      TINYINT UNSIGNED NOT NULL,
+    `map`       SMALLINT UNSIGNED NOT NULL,
+    `author`    VARCHAR(12) NOT NULL DEFAULT '',
+    `note`      VARCHAR(100) NOT NULL DEFAULT '',
+    PRIMARY KEY (`id`),
+    KEY `ship_stop` (`transport`, `stop`, `kind`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='617e9: boarding recordings, made in game';
+
+CREATE TABLE IF NOT EXISTS `buddy_boarding_step` (
+    `boarding`  INT UNSIGNED NOT NULL,
+    `seq`       SMALLINT UNSIGNED NOT NULL,
+    `ms`        INT UNSIGNED NOT NULL,
+    `flags`     TINYINT UNSIGNED NOT NULL,
+    `x`         FLOAT NOT NULL,
+    `y`         FLOAT NOT NULL,
+    `z`         FLOAT NOT NULL,
+    `o`         FLOAT NOT NULL,
+    `jump_xy`   FLOAT NOT NULL DEFAULT 0,
+    `jump_z`    FLOAT NOT NULL DEFAULT 0,
+    PRIMARY KEY (`boarding`, `seq`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='617e9: the steps of each boarding recording';
+
+-- >>> BOARDINGS BEGIN (written by scripts/export-buddy-boardings; hand edits here are overwritten)
+-- (no boardings recorded yet)
+-- <<< BOARDINGS END
+
 -- ============================================================================
 -- End of 28-buddy-beds.sql (apply)
 -- ============================================================================
