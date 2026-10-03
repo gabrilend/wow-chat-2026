@@ -1154,7 +1154,13 @@ static bool PickLanding(Player* bot, Player* owner, Landing& out, uint32& unknow
             }
             LiquidData const liquid = map->GetLiquidData(bot->GetPhaseMask(), c.x, c.y, ground, bot->GetCollisionHeight(),
                                                          MAP_LIQUID_TYPE_WATER | MAP_LIQUID_TYPE_OCEAN);
-            c.water  = liquid.Level > ground && liquid.Level < fromZ && map->HasEnoughWater(bot, liquid);
+            // The depth test is the position form of Map::HasEnoughWater: the
+            // form taking ready-made liquid data is declared in Map.h but has
+            // no body upstream, so calling it fails at link time ("undefined
+            // reference", first build 2026-10-02). The position form looks
+            // the liquid up again itself (all liquid kinds) and applies the
+            // same swimming-depth rule.
+            c.water  = liquid.Level > ground && liquid.Level < fromZ && map->HasEnoughWater(bot, c.x, c.y, ground);
             c.z      = c.water ? liquid.Level : ground;
             c.drop   = fromZ - c.z;
             float secs = std::max(JUMP_MIN_SECONDS, std::sqrt(2.0f * c.drop / FALL_GRAVITY));
