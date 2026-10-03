@@ -291,11 +291,18 @@ the owner's map), and anything for instances (617c3).
   on a dock is the owner on a dock, arriving or leaving ("If you're on a
   dock, they should go to the dock too"); buddies left on that map head
   for it.
-- (2026-10-02) **Which ship, at a dock that serves two**: a dock may serve
-  more than one ship (a zeppelin tower with two arms). With the owner only
-  standing on the dock, buddies can't know which ship the owner will take;
-  they take starts of the nearest stop's ship. Good enough, or should a
-  start near the owner's own position decide?
+- (Answered 2026-10-02) **Which ship, at a dock that serves two**: the
+  nearest stop's ship, "so long as they dynamically re-calculate if you
+  move within a certain radius of the other stop" (Ritz). Built: the pick
+  is taken from the owner's present spot, and the owner coming within 30
+  yards of a different stop than the one picked drops the pick and picks
+  again (`DOCK_REPICK_YARDS`, logged as a switch).
+- (Answered 2026-10-02) **A landing that leaves a sliver of health**:
+  survivable is survivable, 1 health left included: "yeah that's fine."
+  (Ritz) The stays-aboard log now reports the gentlest landing's damage
+  against the buddy's health, not a count of deadly landings (the owner:
+  "won't that answer always be 25?"; nearly so, since the points in reach
+  usually share one drop).
 - (Answered 2026-10-02) **Fall damage on a jump** (basic has 10× fall
   damage): "only jump if the fall is survivable or they could aim to land
   in water of a sufficient depth" (Ritz). A buddy jumps only when the fall

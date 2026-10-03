@@ -1,6 +1,6 @@
 # Conversation Summary: agent-a1e66b066097821fd
 
-Generated on: 2026-10-02 17:02:02
+Generated on: 2026-10-02 17:05:43
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -50,8 +50,66 @@ results, numbers, unbuilt, open questions.
 
 > Now the landing judgement and the rewritten jump:
 
-Now applying the fall on landing, outside the crossing's lock (dying runs other
-hooks, which could take the same lock):
+> Now applying the fall on landing, outside the crossing's lock (dying runs
+> other hooks, which could take the same lock):
+
+> It passes with no warnings. Now the balance log and the issue:
+
+Task: buddies jump after their owner only when the fall is survivable or there's
+deep enough water to aim for. Done. It passes a syntax check (exit 0, no
+warnings). Not compiled, not tried in game, not committed.
+
+**Bug found and fixed:** a buddy's jump never took fall damage at all. The
+server only runs its fall handling when a real client reports a landing, and
+bots have no client. So until now a buddy could jump off a zeppelin unhurt. On a
+ground landing the server's own fall handling is now run for the buddy by hand,
+the same way the bot module handles a forced dismount. A deep-water landing
+deals nothing.
+
+**What players will see:** when you jump off a moving ship, each buddy judges
+where it could land:
+- **Deep enough water:** it aims for it and lands unhurt. "Deep enough" is the
+  server's own swimming depth.
+- **No water, but a survivable fall:** it takes the gentlest such landing.
+  Survivable is judged by the server's own fall-damage formula at basic's 10×
+  rate, against its current health. Feather Fall, Safe Fall, Divine Protection,
+  Gust of Wind and immunity all count, the same as for a player.
+- **Neither:** it stays aboard and rides round, and the log says how many
+  landings would have killed it. If no ground at all is found below, that's an
+  error, with what to check.
+
+**Files:**
+- `modules/mod-buddies/src/buddies_crossing.cpp`:
+  - new tuning: the landing points, a 1,000-yard search downward, and the
+    fall-damage constants copied from the server's fall handler;
+  - new functions: one computing the fall damage, one picking the landing, and
+    the jump itself rewritten;
+  - the landing applies the fall outside the crossing's lock, because a fatal
+    fall runs death hooks;
+  - two new includes for the world's fall-damage rate.
+
+  I claimed the file whole because I added the includes with sed.
+- `docs/balance-updates.md`: new entry.
+- `issues/617e8-following-across-maps.md`: Current Behavior updated. The
+  validator is clean.
+
+**Numbers (in the balance log):**
+- 25 landing points: toward you first, then 30° and 60° either side, at 8, 14,
+  20, 26 and 32 yards.
+- A point counts only within a running jump's carry for its own drop: 8 yards
+  plus run speed × fall time.
+- The first deep-water point wins. Otherwise the survivable landing with the
+  least damage.
+
+**Not built:** absorb shields and armor-based reductions inside the server's
+damage step aren't counted, so the survivability judgement is slightly cautious.
+
+**Open questions:**
+1. Should a buddy also refuse a fall that's survivable but leaves it nearly
+   dead? The rule as built is strictly "survivable", so 1 health left counts.
+2. The copied fall-damage constants have to be kept in step if upstream changes
+   the fall handler. That's noted in a code comment; should it get a test
+   instead?
 
 --------------------------------------------------------------------------------
 

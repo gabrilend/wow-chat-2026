@@ -136,7 +136,8 @@ class buddies_hidden_player : public PlayerScript
 {
 public:
     buddies_hidden_player() : PlayerScript("buddies_hidden_player",
-        { PLAYERHOOK_ON_CREATE, PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_SAVE }) { }
+        { PLAYERHOOK_ON_CREATE, PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_SAVE,
+          PLAYERHOOK_ON_BEFORE_CRITERIA_PROGRESS, PLAYERHOOK_ON_BEFORE_ACHI_COMPLETE }) { }
 
     // {{{ OnPlayerCreate
     // A buddy just made (617a3): its account is hidden before it ever
@@ -176,6 +177,33 @@ public:
         player->RemoveAtLoginFlag(AT_LOGIN_RENAME);
         player->RemoveAtLoginFlag(AT_LOGIN_CHANGE_FACTION);
         player->RemoveAtLoginFlag(AT_LOGIN_CHANGE_RACE);
+    }
+    // }}}
+
+    // {{{ OnPlayerBeforeCriteriaProgress
+    // Buddies earn no achievements (Ritz, 2026-10-02: "Can we disable
+    // achievements for buddybots?"). Refusing every criterion's progress
+    // is the root of it: nothing is counted, so nothing is saved, nothing
+    // completes, and no "realm first" or guild announcement ever names a
+    // buddy. Fires on every counted event of every player, so it asks the
+    // in-memory list only.
+    //   a buddy   - refused: the criterion doesn't move
+    //   anyone else - allowed, as stock
+    bool OnPlayerBeforeCriteriaProgress(Player* player, AchievementCriteriaEntry const* /*criteria*/) override
+    {
+        return !CompanionAccounts::Is(player->GetSession()->GetAccountId());
+    }
+    // }}}
+
+    // {{{ OnPlayerBeforeAchievementComplete
+    // The second lock on the same door: an achievement completed without
+    // criteria progress (a game master's grant, a script's direct award)
+    // is refused for a buddy too.
+    //   a buddy     - refused: not awarded, not announced
+    //   anyone else - allowed, as stock
+    bool OnPlayerBeforeAchievementComplete(Player* player, AchievementEntry const* /*achievement*/) override
+    {
+        return !CompanionAccounts::Is(player->GetSession()->GetAccountId());
     }
     // }}}
 };

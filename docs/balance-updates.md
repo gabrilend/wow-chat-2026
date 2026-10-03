@@ -356,6 +356,16 @@ rescue ("the player can always rescue them with a hearthstone cast").
   instant the whisper is sent.
 - Values: `modules/mod-buddies/src/buddies_whisper.cpp`. First guesses.
 
+## 2026-10-02 — Basic: re-picking the ship at a dock that serves two (617e8)
+
+- **30 yards**: an owner this near a different ship's stop than the one
+  buddies picked makes them pick again. The owner asked for a re-pick
+  "if you move within a certain radius of the other stop"; 30 is half the
+  60 yards that counts as being at a dock at all, so the owner has to walk
+  clearly over to the other arm, and merely standing between the two
+  doesn't flip the pick back and forth.
+- Value: `DOCK_REPICK_YARDS`, `modules/mod-buddies/src/buddies_crossing.cpp`.
+
 ## How to add an entry
 
 ```markdown

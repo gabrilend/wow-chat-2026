@@ -109,6 +109,7 @@ static constexpr float  STOP_NEAR_YARDS      = 80.0f;   // a dock spot this near
 static constexpr float  DOCK_NEAR_YARDS      = 60.0f;   // an owner this near a ship's stop is at its dock (at once: no dwell)
 static constexpr float  DOCK_LEAVE_YARDS     = 90.0f;   // an owner this far from every stop has walked away
 static constexpr float  WAIT_NEAR_OWNER_YARDS = 6.0f;   // buddies wait this near an owner on a dock with no recording
+static constexpr float  DOCK_REPICK_YARDS    = 30.0f;   // an owner this near another ship's stop re-picks the ship buddies wait for
 static constexpr uint32 BEAT_MIN_MS          = 1000;    // each buddy's own pause before it answers the owner's move
 static constexpr uint32 BEAT_MAX_MS          = 3000;    // ... (owner: "+/- 1-3 seconds ... seem a bit more natural")
 static constexpr float  JUMP_NEAR_YARDS      = 40.0f;   // an owner this near the ship it just left, at sea, jumped off it
@@ -863,12 +864,35 @@ static bool StepSameShip(Player* bot, Player* owner, BuddyTrip& trip, BuddyCross
 
     if (!wait.entry)
     {
+        // A dock can serve two ships (a zeppelin tower's two arms). The pick
+        // follows the owner (Ritz, 2026-10-02: "so long as they dynamically
+        // re-calculate if you move within a certain radius of the other
+        // stop"): the owner within DOCK_REPICK_YARDS of a different stop than
+        // the one picked drops the pick, and the block below picks again
+        // from where the owner now stands; otherwise the pick stands.
+        if (trip.dockPicked && trip.dockEntry)
+        {
+            uint32 nearEntry = 0;
+            uint8  nearStop  = 0;
+            if (NearestStop(owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), DOCK_REPICK_YARDS,
+                            nearEntry, nearStop)
+                && (nearEntry != trip.dockEntry || nearStop != trip.dockStop))
+            {
+                LOG_INFO("module", "mod-buddies: buddy {} switches from transport {} to transport {}: its owner {} "
+                    "moved to that ship's stop", bot->GetName(), trip.dockEntry, nearEntry, owner->GetName());
+                trip.dockPicked = false;
+            }
+        }
+
         if (!trip.dockPicked)
         {
             trip.dockPicked = true;
             trip.dockEntry  = 0;
             BuddyBoardingRelease(bot->GetGUID().GetCounter());
-            if (!NearestStop(wait.mapId, wait.spot.x, wait.spot.y, DOCK_NEAR_YARDS, trip.dockEntry, trip.dockStop))
+            // from the owner's present spot, not where it began waiting, so a
+            // re-pick lands on the stop the owner moved to
+            if (!NearestStop(owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), DOCK_NEAR_YARDS,
+                             trip.dockEntry, trip.dockStop))
                 trip.dockEntry = 0;                  // the owner's waiting spot lost its stop (route data changed?): near the owner below
 
             // the buddy stands at another stop of that same ship: sail from here
@@ -1064,14 +1088,18 @@ struct Landing
 //   ground the drop would kill     - refused;
 //   out of a running jump's reach  - refused (for that drop's fall time).
 // Returns false when nothing is safe: the buddy stays aboard and rides round.
-static bool PickLanding(Player* bot, Player* owner, Landing& out, uint32& unknown, uint32& deadly)
+// `gentlestDeadly` is the least damage among the deadly landings (0 when none
+// was judged deadly): the log reports it against the buddy's health, which
+// says how far from survivable the jump was. A count of deadly landings
+// would say little, since every point in reach is usually the same drop.
+static bool PickLanding(Player* bot, Player* owner, Landing& out, uint32& unknown, uint32& gentlestDeadly)
 {
     Map*  map    = bot->GetMap();
     float fromX  = bot->GetPositionX(), fromY = bot->GetPositionY(), fromZ = bot->GetPositionZ();
     float toward = bot->GetAngle(owner);
     float run    = bot->GetSpeed(MOVE_RUN);
     bool  found  = false;
-    unknown = deadly = 0;
+    unknown = gentlestDeadly = 0;
 
     for (float turn : LANDING_BEARINGS)
         for (float yards : LANDING_YARDS)
@@ -1101,7 +1129,8 @@ static bool PickLanding(Player* bot, Player* owner, Landing& out, uint32& unknow
             c.damage = FallDamage(bot, fromZ - ground);
             if (c.damage >= bot->GetHealth())
             {
-                ++deadly;                            // this fall would kill it
+                if (!gentlestDeadly || c.damage < gentlestDeadly)
+                    gentlestDeadly = c.damage;       // this fall would kill it; the gentlest such is reported
                 continue;
             }
             if (!found || c.damage < out.damage)
@@ -1168,10 +1197,10 @@ static bool StepAboard(Player* bot, Player* owner, BuddyTrip& trip, MotionTransp
         trip.jumpStamp = jump->second.stamp;         // judged once per jump, either way
         trip.jumpAt    = 0;
         Landing land;
-        uint32  unknown = 0, deadly = 0;
+        uint32  unknown = 0, gentlestDeadly = 0;
         // somewhere safe to land: jump; nowhere: stay aboard and ride round
         // (the riding rules below carry it back to the owner's side)
-        if (PickLanding(bot, owner, land, unknown, deadly))
+        if (PickLanding(bot, owner, land, unknown, gentlestDeadly))
             JumpOff(bot, owner, trip, mt, land);
         else if (unknown == std::size(LANDING_BEARINGS) * std::size(LANDING_YARDS))
             LOG_ERROR("module", "mod-buddies: buddy {} did not jump after its owner {} off transport {}: no ground was "
@@ -1180,9 +1209,10 @@ static bool StepAboard(Player* bot, Player* owner, BuddyTrip& trip, MotionTransp
                 "transport over the map's edge?", bot->GetName(), owner->GetName(), mt->GetEntry(), unknown,
                 LANDING_YARDS[std::size(LANDING_YARDS) - 1], Where(bot), FALL_SEARCH_YARDS);
         else
-            LOG_INFO("module", "mod-buddies: buddy {} stays aboard transport {} rather than jump after its owner {}: of "
-                "the landings within reach, {} would kill it ({} health), none is deep water, {} had no ground below; it "
-                "rides round", bot->GetName(), mt->GetEntry(), owner->GetName(), deadly, bot->GetHealth(), unknown);
+            LOG_INFO("module", "mod-buddies: buddy {} stays aboard transport {} rather than jump after its owner {}: no "
+                "deep water within reach, and the gentlest landing would deal {} damage against its {} health ({} of the "
+                "landing points had no ground below); it rides round", bot->GetName(), mt->GetEntry(), owner->GetName(),
+                gentlestDeadly, bot->GetHealth(), unknown);
         return false;
     }
 

@@ -55,6 +55,15 @@ syntax-checked. Not yet compiled or tried in game.**
   language-word code in it; /say travels as plain text plus a language
   number), so the scrambling is the client's: confirmed for /say, to be
   seen in game for a whisper.
+- **No achievements** (`buddies_hidden.cpp`, built 2026-10-02,
+  syntax-checked with B044's header supplied, not yet compiled): the
+  player hook that runs before any achievement criterion moves refuses it
+  for a character on the companion list, so a buddy counts nothing, saves
+  nothing and completes nothing; the hook before an achievement completes
+  refuses it too, for awards that skip the criteria (a game master's grant,
+  a script's direct award). No "realm first" or guild line ever names a
+  buddy. Both hooks are stock (`AchievementMgr.cpp` calls them), so no
+  source patch was needed.
 
 Untested until the owner compiles: in game, /who and add-friend against a
 buddy, a whisper "follow" to a buddy (ignored, and answered in scrambled
@@ -95,6 +104,9 @@ From 617a's decisions of 2026-09-25:
   a language the whisperer doesn't know (Orcish to the Alliance, Common to
   the Horde), so the client shows it scrambled. Placeholder until the
   language-model chat layer (916/917) answers properly.
+- **No achievements** (Ritz, 2026-10-02: "Can we disable achievements for
+  buddybots?"): a buddy never progresses or completes an achievement, so
+  none is ever announced in its name.
 
 ## Suggested Implementation Steps
 
@@ -117,5 +129,5 @@ From 617a's decisions of 2026-09-25:
   whisper only the game can show. If the line arrives readable, the server
   would have to scramble it itself (from the client's own word lists in
   `LanguageWords.dbc`, which the server doesn't load today).
-- (2026-10-02) **Game masters** may know every language and so read the
-  line plainly; fine for a placeholder?
+- (Answered 2026-10-02) **Game masters** may know every language and so
+  read the line plainly: "yeah that's fine." (Ritz)
