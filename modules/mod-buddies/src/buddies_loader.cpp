@@ -15,6 +15,7 @@ void AddSC_buddies_create();
 void AddSC_buddies_login();
 void AddSC_buddies_clan_lock();
 void AddSC_buddies_loyalty();
+void AddSC_buddies_whisper();
 void AddSC_buddies_roam_strategy();
 void AddSC_buddies_party();
 void AddSC_buddies_xp();
@@ -35,6 +36,7 @@ void Addmod_buddiesScripts()
     AddSC_buddies_login();
     AddSC_buddies_clan_lock();
     AddSC_buddies_loyalty();
+    AddSC_buddies_whisper();
     AddSC_buddies_roam_strategy();
     AddSC_buddies_party();
     AddSC_buddies_xp();

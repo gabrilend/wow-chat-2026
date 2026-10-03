@@ -108,13 +108,26 @@ the Thandol Span and every road between them were already walked by
     is what sends it ashore;
   - **owner jumps off** a ship that isn't at a stop (a zeppelin in the air,
     a boat at sea), seen as leaving the ship while within 40 yards of it:
-    each buddy aboard that ship, after its own beat, is taken off the
-    passenger list and jumps 8 yards out toward the owner, landing on the
-    water or the ground below (`JumpOff`: the server's jump move, paced so
-    the drop takes as long as a real fall). Nothing else moves it until it
-    lands; then the crossing is over and "buddy travel" walks (the bot
-    module's long walk swims through water; nothing in the buddy code stops
-    swimming). A jump older than 30 s is not followed;
+    each buddy aboard that ship, after its own beat, judges where it could
+    land (`PickLanding`, built 2026-10-02 for the owner's "only jump if the
+    fall is survivable or they could aim to land in water of a sufficient
+    depth"): 25 points out to 32 yards, toward the owner first, each within
+    a running jump's carry for its drop. Deep enough water (the server's
+    own swimming depth) is aimed for at once; otherwise the survivable
+    ground landing with the least damage, judged by the server's own
+    fall-damage rule at basic's 10× rate against its current health
+    (`FallDamage`, Player::HandleFall's formula and exemptions copied);
+    otherwise it stays aboard and rides round, logged with how many
+    landings would have killed it (an error when no ground at all was
+    found below). Jumping: taken off the passenger list, the server's jump
+    move paced so the drop takes as long as a real fall. Nothing else moves
+    it until it lands. On landing on ground the server's fall handling is
+    run for it by hand (a bot sends no landing report, so without this a
+    buddy took no fall damage at all), outside the crossing's lock since a
+    fatal fall runs death hooks; in deep water nothing is dealt. Then the
+    crossing is over and "buddy travel" walks (the bot module's long walk
+    swims through water). A jump older than 30 s is not followed;
+    syntax-checked, not yet compiled or tried in game;
   - the owner walking away releases its buddies (any held recording too);
     a ship that sails with the owner and without a buddy is followed as a
     crossing (above), from that same dock.
@@ -283,11 +296,13 @@ the owner's map), and anything for instances (617c3).
   standing on the dock, buddies can't know which ship the owner will take;
   they take starts of the nearest stop's ship. Good enough, or should a
   start near the owner's own position decide?
-- (2026-10-02) **Fall damage on a jump**: basic has 10× fall damage, so a
-  buddy jumping after its owner off a zeppelin in the air will almost
-  surely die (as will the owner, without a slow fall). Follow anyway (as
-  built: "they jump with you"), or only jump into water, or only when the
-  drop is survivable?
+- (Answered 2026-10-02) **Fall damage on a jump** (basic has 10× fall
+  damage): "only jump if the fall is survivable or they could aim to land
+  in water of a sufficient depth" (Ritz). A buddy jumps only when the fall
+  to the ground below would leave it alive at its current health, or when
+  water deep enough to break the fall lies within its jump's reach, and
+  then it aims for that water. Otherwise it stays aboard and follows by
+  the ship (riding round).
 - (2026-10-02) **Fastest route, read simply**: riding without the owner
   steps off at the stop nearest the owner and otherwise rides on; it
   doesn't compare the ship's timetable against walking or another ship.

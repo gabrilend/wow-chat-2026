@@ -39,10 +39,27 @@ syntax-checked. Not yet compiled or tried in game.**
   from memory at every save of an online buddy (the save hook runs just
   before the character row is written). The faction and race change flags
   are cleared with it, because basic offers neither.
+- **The whispered answer** (`modules/mod-buddies/src/buddies_whisper.cpp`,
+  built 2026-10-02, syntax-checked with B044's header supplied, not yet
+  compiled): the private-chat hook, called inside every whisper a player
+  sends (`Player::Whisper`, which the typed-whisper handler ends in), sees
+  a whisper whose receiver is on the companion list and queues an answer
+  behind a lock; the world's update hook sends it 1.5 s later on the
+  world's thread. The answer is the placeholder line, in a whisper packet
+  built by hand with Orcish (to an Alliance whisperer) or Common (to a
+  Horde one), because `Player::Whisper` forces every whisper to the
+  universal language. No answer to a bot (no bot-to-bot loops), none to a
+  neutral side, at most one per whisperer per 10 s (a flood gets one
+  reply), and none if either logged out during the pause. Nothing is
+  logged per whisper. The server never scrambles chat itself (no
+  language-word code in it; /say travels as plain text plus a language
+  number), so the scrambling is the client's: confirmed for /say, to be
+  seen in game for a whisper.
 
 Untested until the owner compiles: in game, /who and add-friend against a
-buddy, a whisper "follow" to a buddy (ignored), and `.character rename` on
-a buddy (cleared within a minute, and the buddy still logs in).
+buddy, a whisper "follow" to a buddy (ignored, and answered in scrambled
+Orcish or Common), and `.character rename` on a buddy (cleared within a
+minute, and the buddy still logs in).
 
 Read 2026-09-26 in the server source, before building:
 
@@ -69,6 +86,15 @@ From 617a's decisions of 2026-09-25:
   reaches the same actions later as tool calls, 917 / 617m);
 - no renaming (a rename flag on a buddy is cleared);
 - no faction or race change (basic offers none).
+- **A whisper gets an answer nobody can read** (Ritz, 2026-10-02: "they
+  should respond in a language that you don't know. Like... Orcish if
+  you're alliance or something. It should just say something like 'I'm
+  sorry, I am a large language model and I have no idea what you're
+  saying'. This is placeholder behavior for when we build proper LLM
+  systems."): a buddy whispered by anyone whispers back that line, sent in
+  a language the whisperer doesn't know (Orcish to the Alliance, Common to
+  the Horde), so the client shows it scrambled. Placeholder until the
+  language-model chat layer (916/917) answers properly.
 
 ## Suggested Implementation Steps
 
@@ -83,3 +109,13 @@ From 617a's decisions of 2026-09-25:
 ## Related Issues
 
 - **617a** parent; blocked by **617a1** (the buddy list lives there)
+
+## Open Questions
+
+- (2026-10-02) **Does the client scramble a whisper?** It scrambles /say
+  in a language its character doesn't know; whether it does the same for a
+  whisper only the game can show. If the line arrives readable, the server
+  would have to scramble it itself (from the client's own word lists in
+  `LanguageWords.dbc`, which the server doesn't load today).
+- (2026-10-02) **Game masters** may know every language and so read the
+  line plainly; fine for a placeholder?

@@ -80,6 +80,8 @@
 #include "SpellMgr.h"
 #include "Transport.h"
 #include "TravelNode.h"
+#include "World.h"
+#include "WorldConfig.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
 #include <cmath>
@@ -111,10 +113,32 @@ static constexpr uint32 BEAT_MIN_MS          = 1000;    // each buddy's own paus
 static constexpr uint32 BEAT_MAX_MS          = 3000;    // ... (owner: "+/- 1-3 seconds ... seem a bit more natural")
 static constexpr float  JUMP_NEAR_YARDS      = 40.0f;   // an owner this near the ship it just left, at sea, jumped off it
 static constexpr uint32 JUMP_FOLLOW_MS       = 30000;   // a jump this old is no longer followed
-static constexpr float  JUMP_OUT_YARDS       = 8.0f;    // how far out from the rail a buddy jumps
+static constexpr float  JUMP_OUT_YARDS       = 8.0f;    // how far out from the rail a buddy jumps, standing
 static constexpr float  JUMP_HOP_SPEED       = 4.0f;    // the jump's upward speed (yards/s): a hop over the rail
 static constexpr float  FALL_GRAVITY         = 19.2911f; // the client's gravity (yards/s^2), for how long a drop takes
 static constexpr float  JUMP_MIN_SECONDS     = 0.6f;    // the shortest jump, even onto a deck-high landing
+static constexpr float  FALL_SEARCH_YARDS    = 1000.0f; // how far down the ground is looked for (a zeppelin flies high)
+
+// Where a jump may land (owner, 2026-10-02: "only jump if the fall is
+// survivable or they could aim to land in water of a sufficient depth").
+// Candidates are tried toward the owner first, then 30 and 60 degrees
+// either side, each from near to far. A point is within reach when a
+// running jump could carry there: JUMP_OUT_YARDS plus the buddy's run speed
+// for as long as that drop takes (a long fall carries a jumper far out).
+static constexpr float  LANDING_BEARINGS[]   = { 0.0f, 0.5236f, -0.5236f, 1.0472f, -1.0472f };
+static constexpr float  LANDING_YARDS[]      = { 8.0f, 14.0f, 20.0f, 26.0f, 32.0f };
+
+// The server's own fall-damage rule, copied from Player::HandleFall
+// (Player.cpp), where these are file-local: damage, as a share of maximum
+// health, is SLOPE x (drop - safe fall) + INTERCEPT, nothing under
+// MIN_FALL_DMG_DIST, times the world's fall rate (basic: 10x, C004), capped
+// at maximum health; Gust of Wind sets it to half, Divine Protection halves
+// it. Keep in step with HandleFall if upstream changes it.
+static constexpr float  FALL_DMG_SLOPE       = 0.018f;
+static constexpr float  FALL_DMG_INTERCEPT   = -0.2426f;
+static constexpr float  MIN_FALL_DMG_DIST    = 13.48f;
+static constexpr uint32 SPELL_GUST_OF_WIND   = 43621;
+static constexpr uint32 SPELL_DIVINE_PROTECTION = 498;
 
 // The mage's Teleport spells (never the Portals: "they can only teleport,
 // not create portals"). Where each lands is read from the server's own
@@ -257,6 +281,8 @@ struct BuddyTrip
     uint32      jumpStamp = 0;           // the owner's last jump this buddy has answered
     uint64      jumpAt = 0;              // game-time ms it jumps after the owner (0: no jump due)
     uint64      jumpingUntil = 0;        // mid-jump until then: nothing else may move it
+    float       jumpFromZ = 0.0f;        // ... the height it jumped from (its fall starts there)
+    bool        jumpIntoWater = false;   // ... aimed at water deep enough to break the fall: no damage
     bool        rideOnLogged = false;    // "rides on past this stop" logged for this docking
 };
 
@@ -997,27 +1023,117 @@ static WayStep const WAY_STEPS[] = {
 // }}}
 
 // {{{ aboard
-// JumpOff: the owner jumped off this ship at sea or in the air; the buddy
-// jumps too, from where it stands, out toward the owner, landing on the
-// water or the ground below. The drop takes as long as a real fall would
-// (so a zeppelin's height isn't crossed in an instant); nothing else moves
-// the buddy until it has landed, then "buddy travel" walks (or swims) on.
-static void JumpOff(Player* bot, Player* owner, BuddyTrip& trip, MotionTransport* mt)
+// FallDamage: what the server would deal this buddy for a fall of `drop`
+// yards onto the ground, by Player::HandleFall's own rule (see the copied
+// constants in tuning). Every exemption HandleFall makes is made here too:
+// a short drop, Feather Fall, hovering, flying, physical immunity, god mode.
+static uint32 FallDamage(Player* bot, float drop)
 {
-    float angle = bot->GetAngle(owner);
-    float tx    = bot->GetPositionX() + std::cos(angle) * JUMP_OUT_YARDS;
-    float ty    = bot->GetPositionY() + std::sin(angle) * JUMP_OUT_YARDS;
-    float tz    = bot->GetMap()->GetWaterOrGroundLevel(bot->GetPhaseMask(), tx, ty, bot->GetPositionZ(), nullptr, true,
-                                                        bot->GetCollisionHeight());
-    float drop  = std::max(0.0f, bot->GetPositionZ() - tz);
-    float secs  = std::max(JUMP_MIN_SECONDS, std::sqrt(2.0f * drop / FALL_GRAVITY));
-    float path  = std::hypot(JUMP_OUT_YARDS, drop);                 // the spline is paced along its whole length
+    if (drop < MIN_FALL_DMG_DIST || bot->isDead() || bot->IsGameMaster() || bot->GetCommandStatus(CHEAT_GOD)
+        || bot->HasHoverAura() || bot->HasFeatherFallAura() || bot->HasFlyAura())
+        return 0;                                    // HandleFall ignores the fall altogether
+    int32 safeFall = bot->GetTotalAuraModifier(SPELL_AURA_SAFE_FALL);
+    float share    = FALL_DMG_SLOPE * (drop - safeFall) + FALL_DMG_INTERCEPT;
+    if (share <= 0.0f || bot->IsImmunedToDamageOrSchool(SPELL_SCHOOL_MASK_NORMAL))
+        return 0;                                    // too short after Safe Fall, or immune: unhurt
+    uint32 damage = uint32(share * bot->GetMaxHealth() * sWorld->getRate(RATE_DAMAGE_FALL));
+    damage = std::min(damage, bot->GetMaxHealth());  // never more than a full health bar
+    if (bot->HasAura(SPELL_GUST_OF_WIND))
+        damage = bot->GetMaxHealth() / 2;            // Gust of Wind: always half
+    if (bot->HasAura(SPELL_DIVINE_PROTECTION))
+        damage /= 2;                                 // Divine Protection: halved
+    return damage;
+}
+
+// One place a jump could land.
+struct Landing
+{
+    float  x = 0.0f, y = 0.0f, z = 0.0f;
+    float  drop = 0.0f;                  // from the jump's height to where it lands
+    bool   water = false;                // water deep enough to swim in: the fall does no harm
+    uint32 damage = 0;                   // onto ground: the fall's damage by the server's rule
+};
+
+// PickLanding: where to jump, if anywhere. Each candidate (toward the owner
+// first, near to far) is judged by what lies below it:
+//   no ground found below          - skipped (counted for the log);
+//   water deep enough to swim in   - taken at once: aim for it (the server's
+//                                    own depth rule, Map::HasEnoughWater; a
+//                                    swimmer's landing ends the fall unhurt);
+//   ground the drop wouldn't kill  - kept, the gentlest such fall wins;
+//   ground the drop would kill     - refused;
+//   out of a running jump's reach  - refused (for that drop's fall time).
+// Returns false when nothing is safe: the buddy stays aboard and rides round.
+static bool PickLanding(Player* bot, Player* owner, Landing& out, uint32& unknown, uint32& deadly)
+{
+    Map*  map    = bot->GetMap();
+    float fromX  = bot->GetPositionX(), fromY = bot->GetPositionY(), fromZ = bot->GetPositionZ();
+    float toward = bot->GetAngle(owner);
+    float run    = bot->GetSpeed(MOVE_RUN);
+    bool  found  = false;
+    unknown = deadly = 0;
+
+    for (float turn : LANDING_BEARINGS)
+        for (float yards : LANDING_YARDS)
+        {
+            Landing c;
+            c.x = fromX + std::cos(toward + turn) * yards;
+            c.y = fromY + std::sin(toward + turn) * yards;
+            float ground = map->GetHeight(bot->GetPhaseMask(), c.x, c.y, fromZ, true, FALL_SEARCH_YARDS);
+            if (ground <= INVALID_HEIGHT || ground >= fromZ)
+            {
+                ++unknown;                           // no ground below (or above the rail): can't judge it
+                continue;
+            }
+            LiquidData const liquid = map->GetLiquidData(bot->GetPhaseMask(), c.x, c.y, ground, bot->GetCollisionHeight(),
+                                                         MAP_LIQUID_TYPE_WATER | MAP_LIQUID_TYPE_OCEAN);
+            c.water  = liquid.Level > ground && liquid.Level < fromZ && map->HasEnoughWater(bot, liquid);
+            c.z      = c.water ? liquid.Level : ground;
+            c.drop   = fromZ - c.z;
+            float secs = std::max(JUMP_MIN_SECONDS, std::sqrt(2.0f * c.drop / FALL_GRAVITY));
+            if (yards > JUMP_OUT_YARDS + run * secs)
+                continue;                            // a running jump from the rail can't carry this far
+            if (c.water)
+            {
+                out = c;                             // deep water: the safest landing there is
+                return true;
+            }
+            c.damage = FallDamage(bot, fromZ - ground);
+            if (c.damage >= bot->GetHealth())
+            {
+                ++deadly;                            // this fall would kill it
+                continue;
+            }
+            if (!found || c.damage < out.damage)
+            {
+                out   = c;                           // the gentlest survivable fall so far
+                found = true;
+            }
+        }
+    return found;
+}
+
+// JumpOff: the owner jumped off this ship at sea or in the air; the buddy
+// jumps too, from where it stands, to `land`. The drop takes as long as a
+// real fall would (so a zeppelin's height isn't crossed in an instant);
+// nothing else moves the buddy until it has landed, then "buddy travel"
+// walks (or swims) on. The fall's damage is dealt on landing (see
+// BuddyCrossingStep): a bot sends no landing report, so the server's own
+// fall handling would otherwise never run for it.
+static void JumpOff(Player* bot, Player* owner, BuddyTrip& trip, MotionTransport* mt, Landing const& land)
+{
+    float out  = bot->GetExactDist2d(land.x, land.y);
+    float secs = std::max(JUMP_MIN_SECONDS, std::sqrt(2.0f * land.drop / FALL_GRAVITY));
+    float path = std::hypot(out, land.drop);                     // the spline is paced along its whole length
+    trip.jumpFromZ     = bot->GetPositionZ();
+    trip.jumpIntoWater = land.water;
     mt->RemovePassenger(bot, true);
-    bot->GetMotionMaster()->MoveJump(tx, ty, tz, path / secs, JUMP_HOP_SPEED);
+    bot->GetMotionMaster()->MoveJump(land.x, land.y, land.z, path / secs, JUMP_HOP_SPEED);
     trip.jumpAt       = 0;
     trip.jumpingUntil = Now() + uint64(secs * 1000.0f) + 500;
-    LOG_INFO("module", "mod-buddies: buddy {} jumps off transport {} after its owner {} ({:.0f} yards down, {:.1f} s)",
-        bot->GetName(), mt->GetEntry(), owner->GetName(), drop, secs);
+    LOG_INFO("module", "mod-buddies: buddy {} jumps off transport {} after its owner {}: {:.0f} yards out, {:.0f} down, "
+        "into {} ({} damage of {} health, {:.1f} s)", bot->GetName(), mt->GetEntry(), owner->GetName(), out, land.drop,
+        land.water ? "deep water" : "ground", land.damage, bot->GetHealth(), secs);
 }
 
 // Riding. In order:
@@ -1049,8 +1165,24 @@ static bool StepAboard(Player* bot, Player* owner, BuddyTrip& trip, MotionTransp
             trip.jumpAt = Now() + urand(BEAT_MIN_MS, BEAT_MAX_MS);
         if (Now() < trip.jumpAt)
             return false;                            // its own beat at the rail
-        trip.jumpStamp = jump->second.stamp;
-        JumpOff(bot, owner, trip, mt);
+        trip.jumpStamp = jump->second.stamp;         // judged once per jump, either way
+        trip.jumpAt    = 0;
+        Landing land;
+        uint32  unknown = 0, deadly = 0;
+        // somewhere safe to land: jump; nowhere: stay aboard and ride round
+        // (the riding rules below carry it back to the owner's side)
+        if (PickLanding(bot, owner, land, unknown, deadly))
+            JumpOff(bot, owner, trip, mt, land);
+        else if (unknown == std::size(LANDING_BEARINGS) * std::size(LANDING_YARDS))
+            LOG_ERROR("module", "mod-buddies: buddy {} did not jump after its owner {} off transport {}: no ground was "
+                "found below any of the {} landing points within {:.0f} yards of {} (search {:.0f} yards down). Stays "
+                "aboard and rides round. To debug: are the map and vmap files present for this map (DataDir)? Is the "
+                "transport over the map's edge?", bot->GetName(), owner->GetName(), mt->GetEntry(), unknown,
+                LANDING_YARDS[std::size(LANDING_YARDS) - 1], Where(bot), FALL_SEARCH_YARDS);
+        else
+            LOG_INFO("module", "mod-buddies: buddy {} stays aboard transport {} rather than jump after its owner {}: of "
+                "the landings within reach, {} would kill it ({} health), none is deep water, {} had no ground below; it "
+                "rides round", bot->GetName(), mt->GetEntry(), owner->GetName(), deadly, bot->GetHealth(), unknown);
         return false;
     }
 
@@ -1181,7 +1313,7 @@ bool BuddyCrossingWanted(Player* bot, Player* owner)
 // {{{ BuddyCrossingStep
 bool BuddyCrossingStep(Player* bot, Player* owner, BuddyCrossingMove& move)
 {
-    std::lock_guard<std::mutex> lock(sCrossLock);
+    std::unique_lock<std::mutex> lock(sCrossLock);
     BuddyTrip& trip = sTrip[bot->GetGUID().GetCounter()];
 
     // mid-jump after the owner: hold; landed: the crossing is over, and
@@ -1190,9 +1322,23 @@ bool BuddyCrossingStep(Player* bot, Player* owner, BuddyCrossingMove& move)
     {
         if (Now() < trip.jumpingUntil)
             return false;
-        uint32 answered = trip.jumpStamp;
+        uint32 answered  = trip.jumpStamp;
+        float  fromZ     = trip.jumpFromZ;
+        bool   intoWater = trip.jumpIntoWater;
         trip = BuddyTrip();
         trip.jumpStamp = answered;                   // the same jump is never answered twice
+        lock.unlock();                               // a deadly fall runs death hooks: never under this lock
+        // landed on ground: the server's own fall handling, which a client's
+        // landing report would have started (the bot module does the same
+        // for a forced dismount); landed in deep water: the fall did no harm
+        if (!intoWater)
+        {
+            MovementInfo landed = bot->m_movementInfo;
+            landed.pos.Relocate(bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ());
+            bot->SetFallInformation(0, fromZ);
+            bot->HandleFall(landed);
+            bot->RemoveUnitMovementFlag(MOVEMENTFLAG_FALLING | MOVEMENTFLAG_FALLING_FAR);
+        }
         return false;
     }
 

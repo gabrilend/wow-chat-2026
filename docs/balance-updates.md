@@ -328,6 +328,34 @@ rescue ("the player can always rescue them with a hearthstone cast").
   is not followed (a buddy boarding later doesn't leap off).
 - Values: `modules/mod-buddies/src/buddies_crossing.cpp` (tuning block).
 
+## 2026-10-02 — Basic: a buddy jumps only where it would live (617e8)
+
+- **The rule** (owner: "only jump if the fall is survivable or they could
+  aim to land in water of a sufficient depth"): survivable is judged by
+  the server's own fall-damage rule at basic's 10× rate, against the
+  buddy's current health; "sufficient depth" is the server's own swimming
+  depth (`Map::HasEnoughWater`), not a number of ours.
+- **Where it looks**: 25 points, toward the owner first, then 30° and 60°
+  either side, at **8, 14, 20, 26 and 32 yards** out. 32 is about how far a
+  running jumper carries over a zeppelin-height fall (run speed × about
+  three seconds of falling, plus the 8-yard hop); each point must also be
+  within that carry for its own drop, so a short boat-deck drop only
+  reaches the near points. Ground is searched up to **1,000 yards** down,
+  higher than any zeppelin flies.
+- **Choice**: the first deep-water point found wins; else the survivable
+  ground landing with the least damage; else it stays aboard and rides
+  round.
+- Values: `modules/mod-buddies/src/buddies_crossing.cpp` (tuning block:
+  `LANDING_*`, `FALL_SEARCH_YARDS`; the copied fall-damage constants).
+
+## 2026-10-02 — Basic: a whispered buddy's scrambled answer (617a5)
+
+- **One answer per whisperer per 10 s**, so a flood of whispers gets a
+  single reply rather than an echo of each.
+- **1.5 s before answering**, a typing beat so the reply doesn't land the
+  instant the whisper is sent.
+- Values: `modules/mod-buddies/src/buddies_whisper.cpp`. First guesses.
+
 ## How to add an entry
 
 ```markdown
