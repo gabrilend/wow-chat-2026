@@ -293,10 +293,15 @@ the owner's map), and anything for instances (617c3).
   for it.
 - (Answered 2026-10-02) **Which ship, at a dock that serves two**: the
   nearest stop's ship, "so long as they dynamically re-calculate if you
-  move within a certain radius of the other stop" (Ritz). Built: the pick
-  is taken from the owner's present spot, and the owner coming within 30
-  yards of a different stop than the one picked drops the pick and picks
-  again (`DOCK_REPICK_YARDS`, logged as a switch).
+  move within a certain radius of the other stop" (Ritz), refined the same
+  day: "the docks are smaller than 30 yards. We need to calculate the
+  distance between each dock, and use that number as the radius that a
+  player needs to leave before the buddy-bots re-calculate." Built: the
+  pick is taken from the owner's present spot. Each picked stop's radius
+  is its own distance to the nearest other ship's stop at that dock, read
+  from the route data (`StopSeparation`); an owner who leaves that radius
+  has the nearest stop worked out again, and a different one is switched
+  to (logged). A dock with one ship has no radius and is never re-picked.
 - (Answered 2026-10-02) **A landing that leaves a sliver of health**:
   survivable is survivable, 1 health left included: "yeah that's fine."
   (Ritz) The stays-aboard log now reports the gentlest landing's damage

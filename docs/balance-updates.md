@@ -366,6 +366,17 @@ rescue ("the player can always rescue them with a hearthstone cast").
   doesn't flip the pick back and forth.
 - Value: `DOCK_REPICK_YARDS`, `modules/mod-buddies/src/buddies_crossing.cpp`.
 
+## 2026-10-02 — Basic: the dock re-pick radius is measured per dock, not fixed (617e8)
+
+- **Replaces the 30 yards above.** The owner: "the docks are smaller than
+  30 yards. We need to calculate the distance between each dock, and use
+  that number as the radius that a player needs to leave before the
+  buddy-bots re-calculate." Each picked stop's radius is now its distance
+  to the nearest other ship's stop at the same dock, read from the route
+  data; leaving it makes buddies work out the nearest stop again. No fixed
+  number remains to tune; `DOCK_REPICK_YARDS` is removed.
+- Value: `StopSeparation`, `modules/mod-buddies/src/buddies_crossing.cpp`.
+
 ## How to add an entry
 
 ```markdown

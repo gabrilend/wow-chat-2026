@@ -109,7 +109,6 @@ static constexpr float  STOP_NEAR_YARDS      = 80.0f;   // a dock spot this near
 static constexpr float  DOCK_NEAR_YARDS      = 60.0f;   // an owner this near a ship's stop is at its dock (at once: no dwell)
 static constexpr float  DOCK_LEAVE_YARDS     = 90.0f;   // an owner this far from every stop has walked away
 static constexpr float  WAIT_NEAR_OWNER_YARDS = 6.0f;   // buddies wait this near an owner on a dock with no recording
-static constexpr float  DOCK_REPICK_YARDS    = 30.0f;   // an owner this near another ship's stop re-picks the ship buddies wait for
 static constexpr uint32 BEAT_MIN_MS          = 1000;    // each buddy's own pause before it answers the owner's move
 static constexpr uint32 BEAT_MAX_MS          = 3000;    // ... (owner: "+/- 1-3 seconds ... seem a bit more natural")
 static constexpr float  JUMP_NEAR_YARDS      = 40.0f;   // an owner this near the ship it just left, at sea, jumped off it
@@ -445,6 +444,32 @@ static bool NearestStop(uint32 mapId, float x, float y, float reach, uint32& ent
             }
         }
     return found;
+}
+
+// How far this ship's stop lies from the nearest stop of any other ship
+// on the same map, within DOCK_NEAR_YARDS (flat): the size of "its own
+// patch" of a dock that serves two ships. 0 when no other ship stops that
+// near (a dock with one ship: nothing to re-pick between). Measured from
+// the route data itself, so each dock gets its own spacing rather than
+// one number for every dock (Ritz, 2026-10-02: "the docks are smaller than
+// 30 yards. We need to calculate the distance between each dock").
+static float StopSeparation(uint32 entry, uint8 stop)
+{
+    // entry/stop come from NearestStop's reading of Routes(): the route exists
+    Spot const& at   = RouteOf(entry)->stops[stop];
+    float       best = 0.0f;
+    for (TransportRoute const& route : Routes())
+    {
+        if (route.entry == entry)
+            continue;                                // its own other stops are other docks, not this one's neighbour
+        for (Spot const& s : route.stops)
+        {
+            float d = std::hypot(s.x - at.x, s.y - at.y);
+            if (s.mapId == at.mapId && d <= DOCK_NEAR_YARDS && (best == 0.0f || d < best))
+                best = d;                            // a nearer neighbouring ship's stop at this dock
+        }
+    }
+    return best;
 }
 // }}}
 
@@ -867,15 +892,29 @@ static bool StepSameShip(Player* bot, Player* owner, BuddyTrip& trip, BuddyCross
         // A dock can serve two ships (a zeppelin tower's two arms). The pick
         // follows the owner (Ritz, 2026-10-02: "so long as they dynamically
         // re-calculate if you move within a certain radius of the other
-        // stop"): the owner within DOCK_REPICK_YARDS of a different stop than
-        // the one picked drops the pick, and the block below picks again
-        // from where the owner now stands; otherwise the pick stands.
+        // stop"; then: "calculate the distance between each dock, and use
+        // that number as the radius that a player needs to leave before the
+        // buddy-bots re-calculate"). The picked stop's radius is its distance
+        // to the neighbouring ship's stop (StopSeparation):
+        //   one ship at this dock          - never re-picked here (leaving
+        //                                    the dock altogether releases them);
+        //   owner within the radius        - the pick stands;
+        //   owner outside it, and another
+        //   stop is now the nearest        - re-picked from where the owner
+        //                                    stands (the block below);
+        //   owner outside it, same nearest - the pick stands.
         if (trip.dockPicked && trip.dockEntry)
         {
+            // dockEntry/dockStop came out of NearestStop, which reads them
+            // from Routes(), built once at first use: the route is there
+            Spot const& picked = RouteOf(trip.dockEntry)->stops[trip.dockStop];
+            float       radius = StopSeparation(trip.dockEntry, trip.dockStop);
             uint32 nearEntry = 0;
             uint8  nearStop  = 0;
-            if (NearestStop(owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), DOCK_REPICK_YARDS,
-                            nearEntry, nearStop)
+            if (radius > 0.0f
+                && std::hypot(owner->GetPositionX() - picked.x, owner->GetPositionY() - picked.y) > radius
+                && NearestStop(owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), DOCK_NEAR_YARDS,
+                               nearEntry, nearStop)
                 && (nearEntry != trip.dockEntry || nearStop != trip.dockStop))
             {
                 LOG_INFO("module", "mod-buddies: buddy {} switches from transport {} to transport {}: its owner {} "
