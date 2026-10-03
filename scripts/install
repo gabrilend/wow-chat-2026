@@ -144,6 +144,13 @@ declare -A MODULE_REPOS=(
 # against; its sibling core pin (52f58186a533) lives in PROFILE_COMMIT
 # above. Un-pin both together once upstream fixes the corrupt-facade
 # construction. The release:mod-eluna pin predates 148 and stays.
+# 2026-10-02: mod-ale pinned to 9e5b8c6 (2026-07-16) beside it, for every
+# profile in the shared source-beta tree. Left on HEAD, an update pulled
+# bd74eae (2026-09-09), whose Lua playerbot methods call a free function
+# "is this a real player" that only newer mod-playerbots has; against the
+# pinned 93aaea3d the build stops ("no member named 'IsRealPlayer' in the
+# global namespace", PlayerBotMethods.h). 9e5b8c6 is what the last good
+# basic build (2026-09-30) compiled. Un-pin it with mod-playerbots.
 # Must match scripts/update's block.
 declare -A PROFILE_MODULE_COMMITS=(
     ["release:mod-eluna"]="1abf244"
@@ -151,6 +158,10 @@ declare -A PROFILE_MODULE_COMMITS=(
     ["release:mod-playerbots"]="93aaea3d"
     ["vanilla:mod-playerbots"]="93aaea3d"
     ["basic:mod-playerbots"]="93aaea3d"
+    ["beta:mod-ale"]="9e5b8c6"
+    ["release:mod-ale"]="9e5b8c6"
+    ["vanilla:mod-ale"]="9e5b8c6"
+    ["basic:mod-ale"]="9e5b8c6"
 )
 # }}}
 
