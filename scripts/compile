@@ -589,16 +589,18 @@ reset_source_trees
 # apply_patches_begin now stops on the first failing patch, and under
 # set -e that exits here, so a trap set afterward would never fire and the
 # patches applied before the failure would stay in the tree.
-trap 'unapply_patches_begin' EXIT
+trap 'unapply_patches_begin; leave_source_trees_clean' EXIT
 # Apply pre-compile patches (idempotent)
 apply_patches_begin
 
 # Build
 do_build
 
-# Clear trap and revert patches after successful build
+# Clear trap and revert patches after successful build; then the trees are
+# reset to their commits whatever the reverts did (leave_source_trees_clean)
 trap - EXIT
 unapply_patches_begin
+leave_source_trees_clean
 
 echo ""
 echo "Compile complete! Shadow build ready."

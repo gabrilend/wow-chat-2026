@@ -11,66 +11,38 @@
 # Affected: BattleGroundTactics.cpp:2188-2195
 
 # {{{ patch_B014_playerbots_switch_enum_default
+#
+# Rewritten 2026-10-03 as exact whole-line edits (patches.sh,
+# line_edits_apply / line_edits_revert): each edited line carries the tag
+# "  // B014", the revert turns back only tagged lines, and an old line not
+# found the expected number of times stops the patch as stale. The old sed
+# revert also changed lines upstream had since written the fixed way
+# (scripts/verify-patches). Kept: the switch-on-enum casts. Dropped: the inserted "default: break;",
+# made unnecessary by the cast on that same switch.
+
+# path (from the source root) <TAB> old line <TAB> new line
+B014_EDITS=$(cat <<'EDITS'
+modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp	        switch (bgType)	        switch (static_cast<int>(bgType))
+modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp	    switch (bgType)	    switch (static_cast<int>(bgType))
+modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp	        switch (bot->GetMotionMaster()->GetCurrentMovementGeneratorType())	        switch (static_cast<int>(bot->GetMotionMaster()->GetCurrentMovementGeneratorType()))
+modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp	    switch (bgType)	    switch (static_cast<int>(bgType))
+modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp	            switch (strategy)	            switch (static_cast<int>(strategy))
+modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp	            switch (strategy)	            switch (static_cast<int>(strategy))
+modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp	                switch (strategy)	                switch (static_cast<int>(strategy))
+modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp	    switch (bgType)	    switch (static_cast<int>(bgType))
+modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp	        switch (bgType)	        switch (static_cast<int>(bgType))
+modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp	    switch (bg->GetBgTypeID())	    switch (static_cast<int>(bg->GetBgTypeID()))
+EDITS
+)
+
+# {{{ patch_B014_playerbots_switch_enum_default
 patch_B014_playerbots_switch_enum_default() {
-    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp"
-
-    [[ -f "${FILE}" ]] || return 0
-
-    # Check if already patched (default case exists after case 9)
-    if grep -q "case 9:.*default:" "${FILE}" 2>/dev/null; then
-        return 0
-    fi
-
-    # Add default: after case 9: Heavy Defense block
-    # Pattern: "case 9:  // Heavy Defense" ... "break;" -> add "default: break;" after
-    sed -i '/case 9:.*Heavy Defense/,/break;/ {
-        /break;/ {
-            a\                default:
-            a\                    break;
-        }
-    }' "${FILE}"
-
-    # --- 2026-05-19: Upstream introduced many more switches over enum
-    # types in this file (Battleground types, motion generator types, AV
-    # and EY strategies, and the same WS strategy switch shifted lines).
-    # Adding a `default:` to every one of them would require fragile
-    # multi-line sed inserts inside nested braces — too many drift
-    # surfaces. The lower-cost workaround is to cast the switch
-    # discriminant to int. Once the discriminant is no longer the
-    # enum's own type, `-Wswitch` stops checking enum-coverage and stops
-    # complaining about case values outside the enum. Runtime behavior
-    # is unchanged — every case label still compares as an integer
-    # against the same integer value.
-
-    # bgType switches (6 instances, all `switch (bgType)`)
-    if ! grep -q "switch (static_cast<int>(bgType))" "${FILE}" 2>/dev/null; then
-        sed -i 's#switch (bgType)#switch (static_cast<int>(bgType))#g' "${FILE}" 2>/dev/null || true
-    fi
-    # GetBgTypeID() switch (line 4330)
-    if ! grep -q "switch (static_cast<int>(bg->GetBgTypeID()))" "${FILE}" 2>/dev/null; then
-        sed -i 's#switch (bg->GetBgTypeID())#switch (static_cast<int>(bg->GetBgTypeID()))#g' "${FILE}" 2>/dev/null || true
-    fi
-    # MotionGeneratorType switch (line 1661)
-    if ! grep -q "switch (static_cast<int>(bot->GetMotionMaster" "${FILE}" 2>/dev/null; then
-        sed -i 's#switch (bot->GetMotionMaster()->GetCurrentMovementGeneratorType())#switch (static_cast<int>(bot->GetMotionMaster()->GetCurrentMovementGeneratorType()))#g' "${FILE}" 2>/dev/null || true
-    fi
-    # Strategy switches (AV/WS/EY all use `switch (strategy)`)
-    if ! grep -q "switch (static_cast<int>(strategy))" "${FILE}" 2>/dev/null; then
-        sed -i 's#switch (strategy)#switch (static_cast<int>(strategy))#g' "${FILE}" 2>/dev/null || true
-    fi
+    line_edits_apply B014 <<< "${B014_EDITS}"
 }
 # }}}
 
 # {{{ unpatch_B014_playerbots_switch_enum_default
 unpatch_B014_playerbots_switch_enum_default() {
-    local FILE="${AC_CODE_DIR}/modules/mod-playerbots/src/Ai/Base/Actions/BattleGroundTactics.cpp"
-
-    [[ -f "${FILE}" ]] || return 0
-
-    # Remove the added default: case
-    sed -i '/^[[:space:]]*default:$/,/^[[:space:]]*break;$/ {
-        /default:/d
-        /break;/d
-    }' "${FILE}"
+    line_edits_revert B014 <<< "${B014_EDITS}"
 }
 # }}}

@@ -23,6 +23,7 @@
 # BEGIN" / "<<< ... END" marker comments, after anchors that must each occur
 # exactly once (else the patch stops); the revert deletes the blocks.
 # Requires: B044 (the CompanionAccounts header it includes).
+# Needs: B044 (its CompanionAccounts.h)
 # Parallelizable: No (needs B044 applied first)
 
 B045_TAG='B045-companions-take-no-commands'

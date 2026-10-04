@@ -36,7 +36,7 @@ patch_B022_runtime_conf_dir_override() {
     # 1. Config.h — declare the public setter. Anchored on the unique
     #    GetConfigPath() declaration that already sits in the public
     #    section; the new declaration is inserted right below it.
-    if [[ -f "${CFG_H}" ]]; then
+    if [[ -f "${CFG_H}" ]] && ! grep -qF "B022-conf-dir-override" "${CFG_H}"; then   # already applied here: skip (repeatable)
         sed -i '/std::string const GetConfigPath();/a\
     // {{{ B022-conf-dir-override\
     void SetConfigPathOverride(std::string const\& path);\
@@ -46,7 +46,7 @@ patch_B022_runtime_conf_dir_override() {
     # 2. Config.cpp anonymous namespace — declare the storage. Anchored
     #    on the unique `_configLock` declaration which already lives in
     #    the same anonymous namespace as all other file-scope state.
-    if [[ -f "${CFG_C}" ]]; then
+    if [[ -f "${CFG_C}" ]] && ! grep -qF "B022-conf-dir-override" "${CFG_C}"; then   # already applied here: skip (repeatable)
         sed -i '/std::mutex _configLock;/a\
     // {{{ B022-conf-dir-override\
     std::string _configPathOverride;\
@@ -77,7 +77,7 @@ void ConfigMgr::SetConfigPathOverride(std::string const\& path)\
 
     # 5-6. worldserver Main.cpp — add the --conf-dir option and wire it
     #      into ConfigMgr before Configure() is called.
-    if [[ -f "${WS_M}" ]]; then
+    if [[ -f "${WS_M}" ]] && ! grep -qF "B022-conf-dir-override" "${WS_M}"; then   # already applied here: skip (repeatable)
         sed -i '/"override config severity policy/a\
     // {{{ B022-conf-dir-override\
     all.add_options()\
@@ -94,7 +94,7 @@ void ConfigMgr::SetConfigPathOverride(std::string const\& path)\
     # 7-8. authserver Main.cpp — same pattern as worldserver. The
     #      Configure() signature differs slightly (std::vector instead
     #      of brace-init), so the anchor for the wiring sed is distinct.
-    if [[ -f "${AS_M}" ]]; then
+    if [[ -f "${AS_M}" ]] && ! grep -qF "B022-conf-dir-override" "${AS_M}"; then   # already applied here: skip (repeatable)
         sed -i '/"override config severity policy/a\
     // {{{ B022-conf-dir-override\
     all.add_options()\
@@ -112,7 +112,7 @@ void ConfigMgr::SetConfigPathOverride(std::string const\& path)\
     #       not load module configs in practice, but symmetry across all
     #       three apps lets future module-config-reading tools just
     #       work without another patch round.
-    if [[ -f "${DBI_M}" ]]; then
+    if [[ -f "${DBI_M}" ]] && ! grep -qF "B022-conf-dir-override" "${DBI_M}"; then   # already applied here: skip (repeatable)
         sed -i '/"override config severity policy/a\
     // {{{ B022-conf-dir-override\
     all.add_options()\

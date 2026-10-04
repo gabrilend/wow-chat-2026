@@ -2343,6 +2343,80 @@ unpatch_E046_basic_world_boss_respawn() {
 }
 # -- }}}
 
+# -- {{{ patch_E050_basic_buddy_town_circles
+# The world's little towns as circles (issue 617e4a): every cluster of
+# helpful people, found by scripts/generate-buddy-town-circles, and the
+# circles placed by hand in game as they stood when it last ran. World
+# database. Same cp-apply / cp-revert idiom as E048.
+patch_E050_basic_buddy_town_circles() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/31-buddy-town-circles.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/31-buddy-town-circles.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E050] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E050] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E050] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E050_basic_buddy_town_circles() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/31-buddy-town-circles.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/31-buddy-town-circles.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E050_REVERT" "${SQL_FILE}"; then
+        echo "  [E050] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E050] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E050] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_E049_basic_buddy_town_bake
+# Every town's exploring grid baked ahead of time (issue 617o3), so buddies
+# cross a town by its distance maps from their first visit: runs
+# scripts/bake-buddy-towns, which writes <DataDir>/buddy-towns/*.btown.
+# It reads the area pieces from the world database (install step E044's
+# table), which a fresh install only fills at the server's first start; with
+# the table not there yet the step is skipped, and says so, and the bake is
+# run by hand after that first start. Re-baking is harmless (the files are
+# rewritten), so the step runs every install.
+patch_E049_basic_buddy_town_bake() {
+    local WORLD_DB
+    WORLD_DB="$(_profile_db_name acore_world)"
+    local PIECES
+    PIECES="$("${DIR}/mysql/installed-files/bin/mysql" -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch "${WORLD_DB}" \
+        -e "SELECT COUNT(*) FROM buddy_area_centre" 2>&1 | grep -v "Using a password" | tail -1)"
+    if ! [[ "${PIECES}" =~ ^[0-9]+$ ]] || [[ "${PIECES}" -eq 0 ]]; then
+        echo "  [E049] the database answered: ${PIECES}"
+        echo "  [E049] SKIPPED: ${WORLD_DB}.buddy_area_centre is empty or missing (E044's table is loaded at the server's"
+        echo "         first start); run scripts/bake-buddy-towns after it. Until then towns are measured live."
+        return 0
+    fi
+    echo "  [E049] Baking the towns' exploring grids (scripts/bake-buddy-towns)"
+    "${DIR}/scripts/bake-buddy-towns" "${DIR}" || { echo "  [E049] ERROR: the bake failed (its output is above)"; return 1; }
+}
+
+unpatch_E049_basic_buddy_town_bake() {
+    local DATA
+    DATA="$(sed -n 's|^DataDir[[:space:]]*=[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}.*|\1|p' "${DIR}/installed-files-${PROFILE}/etc/worldserver.conf" | tail -1)"
+    [[ -n "${DATA}" && -d "${DATA}/buddy-towns" ]] || return 0
+    echo "  [E049] Removing the baked towns (${DATA}/buddy-towns); the server measures towns live again"
+    rm -rf "${DATA}/buddy-towns"
+}
+# -- }}}
+
 # -- {{{ patch_E048_basic_buddy_kit_required_level
 # The buddies' gear tiers wearable from their tier's level (issue 617a4): a
 # tier item whose required level is above it comes down to it, originals
