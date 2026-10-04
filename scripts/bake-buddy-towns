@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# bake-buddy-towns - bake every town's exploring grid ahead of time, so
+# buddies cross a town by its distance maps from their very first visit
+# (issue 617o3).
+#
+# For a general audience: the server measures an area's walkable ground the
+# first time a buddy needs it, which takes a minute or so; during that
+# minute a buddy in town walks the old, plain way. This script measures
+# every town in advance from the game's own map files, the same way the
+# server would (the rules are shared code), and saves one file per town in
+# the data directory, where the server picks them up. It:
+#   1. lists the towns' area pieces from the world database (full precision,
+#      so the baked layout is exactly the server's);
+#   2. compiles the baker (tools/buddy-town-baker/) if it is missing or older
+#      than its sources, into the project's RAM-backed exec directory;
+#   3. runs it, writing <data dir>/buddy-towns/*.btown.
+# Re-run it after the navigation mesh files change (the server refuses a
+# bake made from other mesh files, logs it, and measures that town live).
+#
+# Usage: scripts/bake-buddy-towns [PROJECT_DIR]
+
+set -euo pipefail
+
+DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+PROFILE="$(cat "${DIR}/.profile")"
+DATA="$(sed -n 's|^DataDir[[:space:]]*=[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}.*|\1|p' "${DIR}/installed-files-${PROFILE}/etc/worldserver.conf" | tail -1)"
+WORLD_DB="$(sed -n 's|^WorldDatabaseInfo[[:space:]]*=[[:space:]]*"[^;]*;[^;]*;[^;]*;[^;]*;\([^"]*\)".*|\1|p' "${DIR}/installed-files-${PROFILE}/etc/worldserver.conf" | tail -1)"
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+SRC="${DIR}/source-beta"
+DETOUR="${SRC}/deps/recastnavigation/Detour"
+BAKER_SRC="${DIR}/tools/buddy-town-baker/buddy-town-baker.cpp"
+CORE="${DIR}/modules/mod-buddies/src/roam"
+
+# the project's RAM tiers: tmp/ (executables) and tmp/shared-memory/ (data)
+EXEC_DIR="${DIR}/tmp/tmp"
+SHM_DIR="${DIR}/tmp/shared-memory"
+mkdir -p "${EXEC_DIR}" "${SHM_DIR}"
+BAKER="${EXEC_DIR}/buddy-town-baker"
+PIECES="${SHM_DIR}/buddy-town-pieces.tsv"
+
+[[ -n "${DATA}" && -d "${DATA}/mmaps" ]] || { echo "ERROR: data directory '${DATA}' (DataDir in worldserver.conf) has no mmaps/"; exit 1; }
+[[ -n "${WORLD_DB}" ]] || { echo "ERROR: no WorldDatabaseInfo in installed-files-${PROFILE}/etc/worldserver.conf"; exit 1; }
+[[ -d "${DETOUR}/Source" ]] || { echo "ERROR: the mesh library's sources are missing (${DETOUR}); is source-beta cloned?"; exit 1; }
+
+# {{{ 1. the pieces
+# "+ 0e0" turns the stored single-precision borders into doubles printed in
+# full, so the baker reads back the very floats the server reads.
+echo "Listing area pieces from ${WORLD_DB}..."
+"${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch "${WORLD_DB}" \
+    -e "SELECT map, area, piece, min_x + 0e0, max_x + 0e0, min_y + 0e0, max_y + 0e0 FROM buddy_area_centre ORDER BY map, area, piece" \
+    2>&1 > "${PIECES}" | grep -v "Using a password" || true
+COUNT="$(wc -l < "${PIECES}")"
+[[ "${COUNT}" -gt 0 ]] || { echo "ERROR: buddy_area_centre in ${WORLD_DB} is empty (install step E044 makes it)"; exit 1; }
+echo "  ${COUNT} area pieces (only towns are baked)"
+# }}}
+
+# {{{ 2. the baker
+NEWEST_SRC="$(ls -t "${BAKER_SRC}" "${CORE}"/buddy_*.h "${CORE}"/buddy_explore_core.cpp | head -1)"
+if [[ ! -x "${BAKER}" || "${NEWEST_SRC}" -nt "${BAKER}" ]]; then
+    echo "Compiling the baker..."
+    g++ -std=c++17 -O2 -o "${BAKER}" \
+        -I"${CORE}" -I"${DETOUR}/Include" \
+        "${BAKER_SRC}" "${CORE}/buddy_explore_core.cpp" "${DETOUR}"/Source/*.cpp
+fi
+# }}}
+
+# {{{ 3. the bake
+mkdir -p "${DATA}/buddy-towns"
+"${BAKER}" "${DATA}" "${PIECES}"
+# }}}

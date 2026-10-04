@@ -26,6 +26,7 @@
 
 #include "buddies.h"
 #include "buddies_roam.h"
+#include "roam/buddy_town_rules.h"
 #include "DBCEnums.h"
 #include "DBCStores.h"
 #include "DatabaseEnv.h"
@@ -71,30 +72,23 @@ std::vector<std::pair<uint32, uint32>> const& BuddyRosterPairs()
 // }}}
 
 // {{{ BuddyAreaIsTown
-// The starting valleys are countryside to a buddy, whatever the client's
-// area table says. Seven of the eight carry its "town" flag (AreaTable.dbc,
-// read 2026-09-29: Northshire, Deathknell, Shadowglen, Red Cloud Mesa,
-// Valley of Trials, Sunstrider Isle, Ammen Vale; Coldridge Valley alone
-// does not), so a buddy in one ran the town visit -- errands and fishing
-// -- instead of roaming beside a new character (owner, 2026-09-29: "she's
-// trying to fish...? But, we're not in a town! We're in Ammen Vale!").
-static constexpr uint32 STARTING_VALLEY_AREAS[] = { 9, 132, 154, 188, 220, 363, 3431, 3526 };
-
+// The rule (and why the starting valleys are left out) is shared with the
+// town baker: roam/buddy_town_rules.h.
 bool BuddyAreaIsTown(uint32 areaId)
 {
-    for (uint32 valley : STARTING_VALLEY_AREAS)
-        if (areaId == valley)
-            return false;                              // a starting valley: open country
     AreaTableEntry const* area = sAreaTableStore.LookupEntry(areaId);
     if (!area)
         return false;                                  // unknown id: treated as open country
-    return (area->flags & (AREA_FLAG_TOWN | AREA_FLAG_CAPITAL | AREA_FLAG_SLAVE_CAPITAL)) != 0;
+    return BuddyTownRules::IsTown(areaId, area->flags);
 }
 // }}}
 
 // {{{ BuddyTownArea
 uint32 BuddyTownArea(Player* who)
 {
+    // a town circle first (617e4a): a valley's camp, an unmarked quest hub
+    if (uint32 circle = BuddyTownCircleArea(who))
+        return circle;
     uint32 here = who->GetAreaId();
     if (BuddyAreaIsTown(here))
         return here;                                   // the area itself is a town

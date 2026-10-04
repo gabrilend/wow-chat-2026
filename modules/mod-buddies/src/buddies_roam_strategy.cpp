@@ -75,6 +75,10 @@
 
 #include "buddies.h"
 #include "buddies_roam.h"
+#include "buddies_navmesh.h"
+#include "buddies_steer.h"
+#include "buddies_npcs.h"
+#include "MoveSpline.h"
 #include "buddies_town.h"
 #include "buddies_explore.h"
 #include "buddies_nodes.h"
@@ -128,6 +132,61 @@
 static constexpr float  ROAM_RELEVANCE    = 3.0f;    // below attacking (4.0) and loot's actions (5 to 8)
 static constexpr float  LEG_YARDS         = 8.0f;    // how far along the planned path each walking order reaches
 static constexpr float  REACHED_YARDS     = 2.0f;    // a path point this near counts as reached
+// The mesh's word on every spot (617o1, 2026-10-03: a point on a rock held
+// Mozonn still for good; a point the mesh can't route to is walked to in a
+// straight line, through walls, by the server's own fallback)
+static constexpr float  SNAP_WAYPOINT_YARDS = 6.0f;  // a picked waypoint is moved onto the mesh from at most this far ...
+static constexpr float  SNAP_POINT_YARDS  = 3.0f;    // ... and a path point before its leg, from at most this far
+static constexpr float  SNAP_RISE_YARDS   = 6.0f;    // up or down, for both
+static constexpr uint32 MESH_RETRY_MS     = 2000;    // a waypoint the mesh refused: a new pick after this
+static constexpr uint32 STUCK_MS          = 3000;    // a path point with no progress toward it for this long is skipped
+static constexpr float  PROGRESS_YARDS    = 0.5f;    // getting this much nearer counts as progress
+// The monster approach (617o4, 617e3; the owner, 2026-10-03: "steer the
+// buddy-bot to the edge of that circle [...] Then they should start
+// casting spells or charging in to fight or stealthing up or whatever the
+// class the buddy-bot is does. Once the monster is slain, they continue on
+// their circuit.")
+static constexpr uint32 PREY_LOOK_MS      = 1000;    // a roaming buddy looks for a monster to approach this often
+static constexpr float  EDGE_SLACK_YARDS  = 1.5f;    // within this of the circle's edge counts as arrived
+static constexpr float  EDGE_SNAP_YARDS   = 4.0f;    // the edge spot is moved onto the mesh from at most this far
+static constexpr uint32 PREY_SHUN_MS      = 60000;   // a monster given up on (no route, out of reach) is skipped this long
+static constexpr uint32 PREY_GIVE_UP_MS   = 20000;   // an approach not at the edge by now is given up
+static constexpr uint32 OPEN_GRACE_MS     = 5000;    // an opened fight not begun by now failed (Carago, 2026-10-03)
+// People nearby (617p)
+static constexpr uint32 NPC_LOOK_MS       = 5000;    // a roaming buddy looks round for people this often
+static constexpr uint32 NPC_GIVE_UP_MS    = 60000;   // not at the person by now: given up
+static constexpr uint32 NPC_TALK_MIN_MS   = 4000;    // a chat lasts 4 ...
+static constexpr uint32 NPC_TALK_MAX_MS   = 9000;    // ... to 9 seconds
+static constexpr uint32 NPC_TALK_EVERY_MS = 2000;    // a talking gesture this often during it
+static constexpr float  NPC_ARRIVED_YARDS = 1.5f;
+
+// The selling trip (617h1; the owner, 2026-10-03: "they should move to the
+// nearest town / vendor and sell what they need to")
+static constexpr float  SELL_NEAR_YARDS   = 40.0f;   // this near the vendor's spot, the vendor itself is looked for
+static constexpr float  SELL_TALK_YARDS   = 4.0f;    // this near the vendor, the sale
+static constexpr float  SELL_STRETCH_YARDS = 80.0f;  // each walking order reaches at most this far toward the vendor ...
+static constexpr float  SELL_SHORT_YARDS  = 30.0f;   // ... or this far, when the longer stretch has no route
+static constexpr uint32 SELL_GIVE_UP_MS   = 180000;  // a trip not done by now is given up
+static constexpr uint32 SELL_SHUN_MS      = 600000;  // a vendor given up on is skipped this long
+// A view of the middle (617o5; the owner, 2026-10-03): "walk to the top of
+// the hill that is nearest to the middle [...] We only have to walk to the
+// top ~85% of the hill though. If the line-of-sight check still doesn't
+// work, then we walk upward until it does." And: "if there's a doodad in
+// the way, then we should orbit that doodad until we get a good
+// line-of-sight. If we do a complete circle, then we should prune the
+// waypoint paths until they reach out of the circle we made, and then
+// route to that spot instead." Which hill: "one of these three randomly";
+// the circle: "From it's center to it's most distant component, add
+// 15-30%"; "She should orbit in a random direction each time".
+enum : uint8 { VIEW_NONE = 0, VIEW_CLIMB = 1, VIEW_ORBIT = 2 };
+static constexpr float  VANTAGE_SHARE     = 0.85f;   // the share of the hill's rise climbed before the first look
+static constexpr float  CLIMB_STEP_YARDS  = 6.0f;    // each order up the hill reaches about this far
+static constexpr float  CLIMB_TOP_YARDS   = 3.0f;    // this near the top is the top
+static constexpr float  ORBIT_MARGIN_MIN  = 1.15f;   // the circle's radius: the object's reach times 1.15 ...
+static constexpr float  ORBIT_MARGIN_MAX  = 1.30f;   // ... to 1.30, picked each time
+static constexpr float  ORBIT_STEP_YARDS  = 4.0f;    // each order round the circle reaches about this far
+static constexpr float  ORBIT_OUT_YARDS   = 3.0f;    // after a whole circle, the spot this far outside it toward the middle
+static constexpr uint32 VIEW_GIVE_UP_MS   = 60000;   // a climb or circle not done by now is given up
 static constexpr uint32 RETRY_MS          = 10000;   // after a failed pick or centre lookup, wait this long
 static constexpr float  OTHERS_YARDS      = 100.0f;  // players this near a buddy count for the crowding rule
 static constexpr float  MIN_BODY_YARDS    = 0.5f;    // no body is tested more finely than this
@@ -177,6 +236,45 @@ struct RoamState
     uint64           detourStarted = 0;     // game-time ms
     uint64           nextLook   = 0;        // game-time ms; no look for a detour before this
     std::vector<std::pair<ObjectGuid, uint64>> tried;   // objects already detoured to, and until when they are skipped
+    // the leg checks and the stuck rule (617o1)
+    size_t           checkedLeg = SIZE_MAX; // the path point whose leg the mesh last judged complete (none: SIZE_MAX)
+    size_t           orderedLeg = SIZE_MAX; // the path point the last walking order went to (the turn rule turns before a new one)
+    size_t           watched    = SIZE_MAX; // the bookmarked point progress is measured toward
+    float            nearest    = 0.0f;     // the nearest the buddy has been to it, yards
+    uint64           progressAt = 0;        // game-time ms of the last progress toward it
+    // the monster approach (617o4)
+    ObjectGuid       prey;                  // the monster being approached; empty when none
+    uint64           nextPreyLook = 0;      // game-time ms; no new monster chosen before this
+    uint64           nextAim    = 0;        // game-time ms; the prey is aimed at again then
+    uint64           preyStarted = 0;       // game-time ms the approach began
+    // the people nearby (617p)
+    ObjectGuid       npc;                   // the person it is going to; empty when none
+    uint8            npcUse     = 0;        // BuddyNpcUse
+    BuddyRoam::Point npcSpot;               // its claimed standing spot
+    uint64           npcStarted = 0, nextNpcLook = 0, talkUntil = 0, nextGesture = 0;
+    // the selling trip (617h1)
+    bool             selling    = false;
+    uint32           sellSpawn  = 0;        // the vendor's spawn (creature table guid)
+    uint32           sellEntry  = 0;        // its creature entry
+    BuddyRoam::Point sellAt;                // its spawn spot
+    uint64           sellStarted = 0;       // game-time ms
+    std::vector<std::pair<uint32, uint64>> vendorShun;   // vendor spawns given up on, and until when
+    ObjectGuid       opened;                // the monster a fight was last opened on, until it begins or fails
+    uint64           openedAt   = 0;        // game-time ms
+    bool             turning    = false;    // at the edge, stopped and turning to face the prey
+    bool             aimed      = false;    // the first aim's turn is done
+    std::vector<std::pair<ObjectGuid, uint64>> shunned;   // monsters given up on, and until when
+    // looking for a view of the middle (617o5)
+    uint8            view       = VIEW_NONE;
+    uint64           viewStarted = 0;       // game-time ms
+    BuddyRoam::Point viewGoal;              // the hilltop climbed, or the centre of the object circled
+    float            viewBaseZ  = 0.0f;     // climbing: the height it began at
+    BuddyRoam::Point viewNext;              // circling: the spot on the circle it is walking to
+    bool             viewHasNext = false;
+    float            orbitRadius = 0.0f;    // circling: yards from the object's centre
+    float            orbitAngle = 0.0f;     // circling: where on the circle, radians
+    float            orbitTurned = 0.0f;    // circling: how far round so far, radians
+    int8             orbitDir   = 1;        // circling: 1 anticlockwise, -1 clockwise
 };
 static std::mutex sRoamLock;
 static std::unordered_map<uint32, RoamState> sRoam;
@@ -431,6 +529,38 @@ public:
             StartDetour(s, owner, areaId, now);
         }
 
+        // People within 100 yards it needs (lessons, selling, repairs), or
+        // now and then a chat (617p); before the selling trip, so a vendor
+        // close by is used rather than the database's nearest
+        if (!s.detour && NpcErrand(s, now))
+        {
+            StoreState(guid, s);
+            return true;
+        }
+
+        // Full bags: a trip to the nearest vendor first (617h1)
+        if (!s.detour && SellingTrip(s, now))
+        {
+            StoreState(guid, s);
+            return true;
+        }
+
+        // A monster worth fighting near: approach it and open the fight
+        // (617o4); roaming waits meanwhile and carries on after the kill
+        if (!s.detour && Approach(s, now))
+        {
+            StoreState(guid, s);
+            return true;
+        }
+
+        // Looking for a view of the middle (617o5): a climb or a circle
+        // under way holds roaming until it sees the middle or gives up
+        if (s.view != VIEW_NONE && View(s, owner, areaId, now))
+        {
+            StoreState(guid, s);
+            return true;
+        }
+
         // At the end of a path: first the rest roll (the owner: "a chance to
         // sit down and eat food or regenerate health every time they reach a
         // waypoint", half the share of health missing). A rest is a meal
@@ -485,6 +615,24 @@ public:
                 {
                     // the pinwheel found nothing from here: rooms, once
                     found = BuddyExploreNext(bot, owner, areaId, explored, BUDDY_EXPLORE_ROOMS);
+                    // no sight of the middle: climb for it, or circle what
+                    // blocks it (617o5), from the next tick
+                    if (!found && StartView(s, owner, areaId, at, now))
+                    {
+                        StoreState(guid, s);
+                        return true;
+                    }
+                    // then a few steps toward the middle by its distance map
+                    // (617o3): the pinwheel needs a straight sight of the
+                    // middle, the map walks round whatever blocks it
+                    BuddyRoam::Point toward;
+                    if (!found && BuddyExploreStepToward(bot, owner, areaId, s.area.centre, LEG_YARDS * 2.0f, toward))
+                    {
+                        explored = { toward };
+                        found    = true;
+                        BuddyTrace(bot, "roam: no pinwheel waypoint; {:.1f} yards toward the middle by its distance map",
+                            bot->GetExactDist2d(toward.x, toward.y));
+                    }
                     if (!found)
                     {
                         LOG_ERROR("module", "mod-buddies: buddy {} found no waypoint in area {} on map {} from ({:.1f}, {:.1f}, {:.1f}) "
@@ -504,6 +652,41 @@ public:
                 s.buddy.waypoint    = explored.back();
                 s.buddy.hasWaypoint = true;
             }
+            // found: the explorer's grid chose it; not found but here: the
+            // pinwheel core did (a failure returned above)
+            BuddyTrace(bot, "roam: waypoint ({:.1f}, {:.1f}, {:.1f}), {:.1f} yards off, {} path points, chosen by {}",
+                s.buddy.waypoint.x, s.buddy.waypoint.y, s.buddy.waypoint.z,
+                bot->GetExactDist2d(s.buddy.waypoint.x, s.buddy.waypoint.y), s.buddy.path.size(),
+                found ? "the explorer's grid" : "the pinwheel");
+
+            // The mesh's word on the waypoint (617o1): moved onto the mesh,
+            // and a complete route there, or the pick is dropped and another
+            // made shortly. Every planner judges ground its own way; only
+            // the mesh is what the walking walks on.
+            BuddyRoam::Point onMesh;
+            std::vector<BuddyRoam::Point> route;
+            BuddyRouteKind kind = BuddyRouteKind::None;
+            bool snapped = BuddyMeshSnap(map, s.buddy.waypoint, SNAP_WAYPOINT_YARDS, SNAP_RISE_YARDS, onMesh);
+            if (snapped)
+                kind = BuddyMeshRoute(bot, onMesh, route);
+            if (!snapped || kind != BuddyRouteKind::Complete)
+            {
+                BuddyTrace(bot, "roam: waypoint dropped: {}", snapped
+                    ? Acore::StringFormat("the mesh's route there is {}", BuddyRouteKindName(kind))
+                    : Acore::StringFormat("no mesh within {:.0f} yards of it", SNAP_WAYPOINT_YARDS));
+                s.buddy.hasWaypoint = false;
+                s.retryAt = now + MESH_RETRY_MS;
+                StoreState(guid, s);
+                return false;
+            }
+            BuddyTrace(bot, "roam: waypoint on the mesh at ({:.1f}, {:.1f}, {:.1f}), {:.1f} yards from the pick; route complete",
+                onMesh.x, onMesh.y, onMesh.z,
+                std::hypot(onMesh.x - s.buddy.waypoint.x, onMesh.y - s.buddy.waypoint.y));
+            s.buddy.waypoint    = onMesh;
+            s.buddy.path.back() = onMesh;
+            s.checkedLeg        = SIZE_MAX;
+            s.watched           = SIZE_MAX;
+            s.orderedLeg        = SIZE_MAX;
         }
 
         // Walk: points already within reach are passed; the order goes to
@@ -511,10 +694,44 @@ public:
         // bot module's walking plans each leg on the navigation mesh while
         // the core's plan decides the line (round steps, onto gentle
         // ground). The last point is the waypoint.
+        //
+        // Passed means within reach of that point or of any point further
+        // along (617o1): a planned point the walking can't come within 2
+        // yards of (on a rock beside the path) no longer holds the
+        // bookmark when the buddy stands on a later one.
         auto& path = s.buddy.path;
-        while (s.buddy.pathIndex < path.size() &&
-               bot->GetExactDist2d(path[s.buddy.pathIndex].x, path[s.buddy.pathIndex].y) <= REACHED_YARDS)
-            ++s.buddy.pathIndex;
+        for (size_t i = path.size(); i > s.buddy.pathIndex; --i)
+            if (bot->GetExactDist2d(path[i - 1].x, path[i - 1].y) <= REACHED_YARDS)
+            {
+                s.buddy.pathIndex = i;
+                break;
+            }
+
+        // Stuck: no progress toward the bookmarked point for STUCK_MS (the
+        // order refused, the buddy standing) skips it; skipping the last
+        // ends the waypoint as reached.
+        if (s.buddy.pathIndex < path.size())
+        {
+            float d = bot->GetExactDist2d(path[s.buddy.pathIndex].x, path[s.buddy.pathIndex].y);
+            if (s.watched != s.buddy.pathIndex)
+            {
+                s.watched    = s.buddy.pathIndex;       // a new point to watch: start its clock
+                s.nearest    = d;
+                s.progressAt = now;
+            }
+            else if (d < s.nearest - PROGRESS_YARDS)
+            {
+                s.nearest    = d;                       // nearer: progress
+                s.progressAt = now;
+            }
+            else if (now - s.progressAt > STUCK_MS)
+            {
+                BuddyTrace(bot, "roam: path point {} of {} skipped: no progress in {} s, {:.1f} yards off",
+                    s.buddy.pathIndex + 1, path.size(), STUCK_MS / 1000, d);
+                ++s.buddy.pathIndex;
+                s.watched = SIZE_MAX;
+            }
+        }
         if (s.buddy.pathIndex >= path.size())
         {
             s.buddy.hasWaypoint = false;
@@ -532,6 +749,48 @@ public:
             along += step;
             ++target;
         }
+
+        // The leg's check (617o1), once per target point: onto the mesh,
+        // and a complete route to it. Anything else would end short (the
+        // buddy waiting for good) or be walked in a straight line by the
+        // server's fallback, so the planned path is given up for the mesh's
+        // own route to the waypoint; with no complete route there either,
+        // the waypoint is dropped.
+        if (s.checkedLeg != target)
+        {
+            BuddyRoam::Point onMesh;
+            std::vector<BuddyRoam::Point> route;
+            BuddyRouteKind kind = BuddyRouteKind::None;
+            bool snapped = BuddyMeshSnap(map, path[target], SNAP_POINT_YARDS, SNAP_RISE_YARDS, onMesh);
+            if (snapped)
+                kind = BuddyMeshRoute(bot, onMesh, route);
+            if (snapped && kind == BuddyRouteKind::Complete)
+            {
+                path[target]  = onMesh;
+                s.checkedLeg  = target;
+            }
+            else
+            {
+                BuddyRouteKind whole = BuddyMeshRoute(bot, s.buddy.waypoint, route);
+                BuddyTrace(bot, "roam: leg to path point {} of {} refused by the mesh ({}); {}",
+                    target + 1, path.size(), snapped ? BuddyRouteKindName(kind) : "no mesh near it",
+                    whole == BuddyRouteKind::Complete ? "following the mesh's own route to the waypoint" : "waypoint dropped");
+                if (whole == BuddyRouteKind::Complete)
+                {
+                    path              = route;
+                    s.buddy.pathIndex = 0;
+                    s.checkedLeg      = SIZE_MAX;
+                    s.watched         = SIZE_MAX;
+                    s.orderedLeg      = SIZE_MAX;
+                    StoreState(guid, s);
+                    return true;                        // walked from the next tick
+                }
+                s.buddy.hasWaypoint = false;
+                s.retryAt = now + MESH_RETRY_MS;
+                StoreState(guid, s);
+                return false;
+            }
+        }
         StoreState(guid, s);
         BuddyRoam::Point const& p = path[target];
         // Run in the open, walk indoors (the owner, 2026-09-29: "When we're
@@ -547,13 +806,599 @@ public:
         bool walk = !bot->IsMounted() && !bot->IsOutdoors();
         if (bot->IsWalking() != walk)
             bot->SetWalk(walk);
+        // the turn rule (buddies_steer.h): before setting off toward a new
+        // point, face it smoothly, standing still or along a short curve;
+        // the same point again (most ticks) needs no turn
+        if (target != s.orderedLeg)
+        {
+            float want = std::atan2(p.y - bot->GetPositionY(), p.x - bot->GetPositionX());
+            if (BuddyTurnToward(bot, want))
+                return true;                            // turning: the order waits for it
+            s.orderedLeg = target;
+            StoreState(guid, s);
+        }
         // The wander priority: any other walking the bot module wants (to a
         // fight, a corpse) is not held up waiting for this one.
         bool ordered = MoveTo(map->GetId(), p.x, p.y, p.z, false, false, false, false, MovementPriority::MOVEMENT_WANDER);
+        // "not re-ordered": the bot module ignores an order to where it is
+        // already headed or standing, which is most ticks of a leg
+        BuddyTrace(bot, "roam: leg to path point {} of {} ({:.1f}, {:.1f}, {:.1f}), {:.1f} yards, {}{}",
+            target + 1, path.size(), p.x, p.y, p.z, bot->GetExactDist2d(p.x, p.y),
+            ordered ? "ordered" : "not re-ordered", walk ? ", walking" : ", running");
         return ordered || bot->isMoving();
     }
 
 private:
+    // {{{ the people nearby (617p)
+    void EndNpcErrand(RoamState& s)
+    {
+        BuddyNpcRelease(bot, s.npc);
+        s.npc.Clear();
+        s.npcUse = 0;
+    }
+
+    // One step of going to a person and using them; true while it holds
+    // the buddy.
+    bool NpcErrand(RoamState& s, uint64 now)
+    {
+        if (!s.npc)
+        {
+            if (now < s.nextNpcLook)
+                return false;
+            s.nextNpcLook = now + NPC_LOOK_MS;
+            BuddyNpcPick pick;
+            if (!BuddyNpcNotice(bot, pick))
+                return false;
+            s.npc = pick.npc, s.npcUse = uint8(pick.use), s.npcSpot = pick.spot, s.npcStarted = now, s.talkUntil = 0;
+            BuddyTrace(bot, "people: going to {} for {}", pick.npc.ToString(), BuddyNpcUseName(pick.use));
+        }
+        Creature* npc = ObjectAccessor::GetCreature(*bot, s.npc);
+        if (!npc || !npc->IsAlive())
+        {
+            BuddyTrace(bot, "people: the person is gone");
+            EndNpcErrand(s);
+            return false;
+        }
+        if (now - s.npcStarted > NPC_GIVE_UP_MS)
+        {
+            BuddyTrace(bot, "people: not there in {} s; given up", NPC_GIVE_UP_MS / 1000);
+            EndNpcErrand(s);
+            return false;
+        }
+        // walk to the claimed spot (turning first, by the turn rule)
+        if (bot->GetExactDist2d(s.npcSpot.x, s.npcSpot.y) > NPC_ARRIVED_YARDS)
+        {
+            if (!bot->movespline->Finalized())
+                return true;
+            if (BuddyTurnToward(bot, std::atan2(s.npcSpot.y - bot->GetPositionY(), s.npcSpot.x - bot->GetPositionX())))
+                return true;
+            MoveTo(bot->GetMapId(), s.npcSpot.x, s.npcSpot.y, s.npcSpot.z, false, false, false, false, MovementPriority::MOVEMENT_WANDER);
+            return true;
+        }
+        // there: face them, then whatever they offer that it can use, decided
+        // now (617p: "only test to see what they do the first time they
+        // arrive"), or, with nothing to use, a chat over a few seconds
+        if (BuddyTurnToward(bot, bot->GetAngle(npc)))
+            return true;
+        if (!s.talkUntil)
+        {
+            bool talk = false;
+            std::string done = BuddyNpcArrive(botAI, bot, npc, talk);
+            BuddyTrace(bot, "people: at {} (came for {}): {}", npc->GetName(), BuddyNpcUseName(BuddyNpcUse(s.npcUse)), done);
+            if (!talk)
+            {
+                bot->HandleEmoteCommand(EMOTE_ONESHOT_TALK);
+                EndNpcErrand(s);
+                return true;
+            }
+            s.talkUntil   = now + urand(NPC_TALK_MIN_MS, NPC_TALK_MAX_MS);
+            s.nextGesture = now;
+        }
+        if (now >= s.talkUntil)
+        {
+            EndNpcErrand(s);
+            return false;
+        }
+        if (now >= s.nextGesture)
+        {
+            bot->HandleEmoteCommand(EMOTE_ONESHOT_TALK);
+            s.nextGesture = now + NPC_TALK_EVERY_MS;
+        }
+        return true;
+    }
+    // }}}
+
+    // {{{ the selling trip (617h1)
+    // Every vendor of the world that sells something (its spawn spot),
+    // read once; hidden stand-ins left out as the town circles leave them.
+    struct VendorSpawn { uint32 spawn, entry, map; BuddyRoam::Point at; };
+    static std::vector<VendorSpawn> const& Vendors()
+    {
+        static std::once_flag once;
+        static std::vector<VendorSpawn> list;
+        std::call_once(once, [] {
+            QueryResult rows = WorldDatabase.Query(
+                "SELECT DISTINCT c.guid, c.id, c.map, c.position_x, c.position_y, c.position_z FROM creature c "
+                "JOIN creature_template ct ON ct.entry = c.id JOIN npc_vendor v ON v.entry = c.id "
+                "WHERE (ct.npcflag & 128) <> 0 AND ct.name NOT LIKE '%[DND]%' AND (ct.unit_flags & 33554432) = 0 "
+                "AND (ct.flags_extra & 128) = 0");
+            if (rows)
+                do
+                {
+                    Field* f = rows->Fetch();
+                    list.push_back({ f[0].Get<uint32>(), f[1].Get<uint32>(), f[2].Get<uint32>(),
+                                     { f[3].Get<float>(), f[4].Get<float>(), f[5].Get<float>() } });
+                } while (rows->NextRow());
+            LOG_INFO("module", "mod-buddies: {} vendors known for selling trips (617h1)", list.size());
+        });
+        return list;
+    }
+
+    void ShunVendor(RoamState& s, uint64 now, char const* why)
+    {
+        s.vendorShun.erase(std::remove_if(s.vendorShun.begin(), s.vendorShun.end(),
+            [now](auto const& v) { return v.second <= now; }), s.vendorShun.end());
+        s.vendorShun.push_back({ s.sellSpawn, now + SELL_SHUN_MS });
+        BuddyTrace(bot, "sell: trip given up ({}); that vendor skipped for {} minutes", why, SELL_SHUN_MS / 60000);
+        s.selling = false;
+    }
+
+    // One step of the trip; true while it holds the buddy.
+    bool SellingTrip(RoamState& s, uint64 now)
+    {
+        if (!s.selling)
+        {
+            if (BuddyBagFullness(bot) < BuddyFullBagsShare())
+                return false;
+            VendorSpawn const* best = nullptr;
+            float bestD = 1e30f;
+            for (VendorSpawn const& v : Vendors())
+            {
+                if (v.map != bot->GetMapId())
+                    continue;
+                bool shunned = false;
+                for (auto const& sh : s.vendorShun)
+                    if (sh.first == v.spawn && sh.second > now)
+                        shunned = true;
+                float d = bot->GetExactDist2d(v.at.x, v.at.y);
+                if (!shunned && d < bestD)
+                    best = &v, bestD = d;
+            }
+            if (!best)
+                return false;                           // no vendor on this map (or all given up on): keep roaming
+            s.selling     = true;
+            s.sellSpawn   = best->spawn;
+            s.sellEntry   = best->entry;
+            s.sellAt      = best->at;
+            s.sellStarted = now;
+            BuddyTrace(bot, "sell: bags {:.0f}% full; off to the vendor {} yards away (creature {}, at ({:.1f}, {:.1f}, {:.1f}))",
+                BuddyBagFullness(bot) * 100.0f, uint32(bestD), best->entry, best->at.x, best->at.y, best->at.z);
+        }
+        if (now - s.sellStarted > SELL_GIVE_UP_MS)
+        {
+            ShunVendor(s, now, "not there in time");
+            return false;
+        }
+
+        // near: the vendor itself, then the sale
+        if (bot->GetExactDist2d(s.sellAt.x, s.sellAt.y) <= SELL_NEAR_YARDS)
+        {
+            Creature* npc = bot->FindNearestCreature(s.sellEntry, SELL_NEAR_YARDS * 1.5f);
+            if (!npc)
+            {
+                ShunVendor(s, now, "the vendor isn't there");
+                return false;
+            }
+            if (bot->GetDistance(npc) > SELL_TALK_YARDS)
+            {
+                MoveNear(npc, SELL_TALK_YARDS - 1.0f);
+                return true;
+            }
+            bot->SetFacingToObject(npc);
+            float before = BuddyBagFullness(bot);
+            BuddySellAtVendor(botAI, bot, npc);
+            BuddyTrace(bot, "sell: sold at {}: bags {:.0f}% full, now {:.0f}%", npc->GetName(), before * 100.0f,
+                BuddyBagFullness(bot) * 100.0f);
+            s.selling = false;
+            s.buddy.hasWaypoint = false;                // roaming picks a fresh waypoint from here
+            return true;
+        }
+
+        // the walk: a stretch toward the vendor that the mesh has a whole
+        // route for (80 yards, or 30 when that has none); ordered when
+        // standing or near the end of the last stretch
+        if (!bot->movespline->Finalized())
+        {
+            G3D::Vector3 end = bot->movespline->FinalDestination();
+            if (bot->GetExactDist2d(end.x, end.y) > 5.0f)
+                return true;
+        }
+        BuddyRoam::Point here { bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ() };
+        float d = bot->GetExactDist2d(s.sellAt.x, s.sellAt.y);
+        for (float reach : { SELL_STRETCH_YARDS, SELL_SHORT_YARDS })
+        {
+            float k = std::min(1.0f, reach / std::max(d, 0.01f));
+            BuddyRoam::Point toward { here.x + (s.sellAt.x - here.x) * k, here.y + (s.sellAt.y - here.y) * k,
+                                      here.z + (s.sellAt.z - here.z) * k }, onMesh;
+            std::vector<BuddyRoam::Point> route;
+            if (!BuddyMeshSnap(bot->GetMap(), toward, SNAP_WAYPOINT_YARDS, 40.0f, onMesh) ||
+                BuddyMeshRoute(bot, onMesh, route) != BuddyRouteKind::Complete)
+                continue;
+            if (BuddyTurnToward(bot, std::atan2(onMesh.y - here.y, onMesh.x - here.x)))
+                return true;
+            MoveTo(bot->GetMapId(), onMesh.x, onMesh.y, onMesh.z, false, false, false, false, MovementPriority::MOVEMENT_WANDER);
+            return true;
+        }
+        ShunVendor(s, now, "no route toward it from here");
+        return false;
+    }
+    // }}}
+
+    // {{{ the monster approach (617o4)
+    // The nearest monster a buddy would fight: alive, nobody's pet, not a
+    // critter or civilian or immune to players, not already fighting, not
+    // someone else's kill, one the buddy may attack, worth experience to
+    // it, hostile or neutral (617e3: starting zones are nearly all neutral
+    // monsters), not recently given up on.
+    Creature* PreyNear(RoamState const& s, uint64 now)
+    {
+        std::list<Unit*> units;
+        Acore::AnyUnitInObjectRangeCheck check(bot, MOBS_YARDS);
+        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(bot, units, check);
+        Cell::VisitObjects(bot, searcher, MOBS_YARDS);
+        Creature* best = nullptr;
+        float bestDist = MOBS_YARDS + 1.0f;
+        for (Unit* u : units)
+        {
+            Creature* c = u->ToCreature();
+            if (!c || !c->IsAlive() || !c->GetCharmerOrOwnerGUID().IsEmpty())
+                continue;
+            if (c->IsCritter() || c->IsCivilian() || c->IsImmuneToPC() || c->IsInCombat())
+                continue;
+            if (c->hasLootRecipient() && !c->isTappedBy(bot))
+                continue;
+            if (!bot->IsValidAttackTarget(c) || !bot->isHonorOrXPTarget(c))
+                continue;
+            bool shunned = false;
+            for (auto const& sh : s.shunned)
+                if (sh.first == c->GetGUID() && sh.second > now)
+                    shunned = true;
+            if (shunned)
+                continue;
+            float d = bot->GetExactDist(c);
+            if (d < bestDist)
+            {
+                best = c;
+                bestDist = d;
+            }
+        }
+        return best;
+    }
+
+    void Shun(RoamState& s, ObjectGuid guid, uint64 now, char const* why)
+    {
+        s.shunned.erase(std::remove_if(s.shunned.begin(), s.shunned.end(),
+            [now](auto const& sh) { return sh.second <= now; }), s.shunned.end());
+        s.shunned.push_back({ guid, now + PREY_SHUN_MS });
+        BuddyTrace(bot, "approach: monster given up on ({}), skipped for {} s", why, PREY_SHUN_MS / 1000);
+        s.prey.Clear();
+        s.turning = false;
+    }
+
+    // Open the fight the bot module's way (as its attack action does): the
+    // target selected and remembered, the fighting engine switched on, the
+    // first swing begun; from then on the class's own fighting (a pull
+    // spell, a charge, stealth) takes over.
+    //
+    // Seen 2026-10-03 (Carago, a rogue, at a neutral Volatile Mutation 20
+    // yards off): the bot module dropped the target at once and the
+    // approach chose the same monster again, round and round. A neutral
+    // monster not yet struck is no fight to the bot module, so a melee
+    // buddy now also runs in after it (the server's chase), which makes
+    // the first blow land and the fight real; a ranged one is left to its
+    // class's pull from the edge. OPEN_GRACE_MS later, no fight means the
+    // opening failed: the monster is skipped for a while (Shun) and the
+    // trace says what the bot module would have objected to.
+    void OpenFight(Creature* c, RoamState& s, uint64 now)
+    {
+        bool melee = botAI->IsMelee(bot);
+        bot->SetSelection(c->GetGUID());
+        context->GetValue<Unit*>("current target")->Set(c);
+        botAI->ChangeEngine(BOT_STATE_COMBAT);
+        bot->Attack(c, melee);
+        if (melee)
+            bot->GetMotionMaster()->MoveChase(c);
+        s.opened   = c->GetGUID();
+        s.openedAt = now;
+    }
+
+    // An opened fight that never began: given up on, with the reasons the
+    // bot module checks (its "invalid target" rule) written to the trace.
+    void CheckOpening(RoamState& s, uint64 now)
+    {
+        if (!s.opened || now - s.openedAt < OPEN_GRACE_MS)
+            return;
+        ObjectGuid opened = s.opened;
+        s.opened.Clear();
+        if (bot->IsInCombat())
+            return;                                     // the fight began: nothing to check
+        Creature* c = ObjectAccessor::GetCreature(*bot, opened);
+        if (c)
+            BuddyTrace(bot, "approach: the fight with {} never began in {} s (in sight {}, it sees us {}, friendly {}, alive {})",
+                c->GetName(), OPEN_GRACE_MS / 1000, bot->IsWithinLOSInMap(c), bot->CanSeeOrDetect(c), c->IsFriendlyTo(bot), c->IsAlive());
+        Shun(s, opened, now, "the fight never began");
+    }
+
+    // One step of the approach; true while it holds the buddy (roaming
+    // waits), false when there is nothing to approach.
+    bool Approach(RoamState& s, uint64 now)
+    {
+        CheckOpening(s, now);
+        if (!s.prey && now >= s.nextPreyLook)
+        {
+            s.nextPreyLook = now + PREY_LOOK_MS;
+            if (Creature* c = PreyNear(s, now))
+            {
+                s.prey      = c->GetGUID();
+                s.nextAim   = 0;
+                s.turning   = false;
+                s.aimed     = false;
+                s.preyStarted = now;
+                BuddyTrace(bot, "approach: {} (entry {}, level {}, {}), {:.1f} yards off, notice radius {:.1f}",
+                    c->GetName(), c->GetEntry(), c->GetLevel(), c->IsHostileTo(bot) ? "hostile" : "neutral",
+                    bot->GetExactDist(c), BuddyNoticeRadius(c, bot));
+            }
+        }
+        if (!s.prey)
+            return false;
+        Creature* c = ObjectAccessor::GetCreature(*bot, s.prey);
+        if (!c || !c->IsAlive() || (c->IsInCombat() && c->GetVictim() != bot) || !bot->IsValidAttackTarget(c))
+        {
+            BuddyTrace(bot, "approach: ended (the monster is gone, dead, or busy with someone else)");
+            s.prey.Clear();
+            s.turning = false;
+            return false;
+        }
+        if (now - s.preyStarted > PREY_GIVE_UP_MS)
+        {
+            Shun(s, c->GetGUID(), now, "not at the edge in time");
+            return false;
+        }
+
+        // the radius: the server's own; with aggro off (0) the edge is the
+        // monster's own reach, so the buddy still stops short of touching it
+        float radius = BuddyNoticeRadius(c, bot);
+        if (radius <= 0.0f)
+            radius = c->GetCombatReach() + bot->GetCombatReach();
+        float d = bot->GetExactDist2d(c);
+
+        // at the edge: turn to face it over BUDDY_TURN_MS, then open the fight
+        if (d <= radius + EDGE_SLACK_YARDS)
+        {
+            if (!s.turning)
+            {
+                bot->StopMoving();                      // arrived: stand, then face it by the turn rule
+                s.turning = true;
+            }
+            if (BuddyTurnToward(bot, bot->GetAngle(c)))
+                return true;
+            BuddyTrace(bot, "approach: at the edge of {}'s notice ({:.1f} yards), the fight opened", c->GetName(), d);
+            OpenFight(c, s, now);
+            s.prey.Clear();
+            s.turning = false;
+            return true;
+        }
+
+        // on the way: aim again every BUDDY_STEER_MS at where it stands now
+        if (now < s.nextAim)
+            return true;
+        s.nextAim = now + BUDDY_STEER_MS;
+        BuddyRoam::Point here  { bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ() };
+        BuddyRoam::Point there { c->GetPositionX(), c->GetPositionY(), c->GetPositionZ() };
+        BuddyRoam::Point edge = BuddySteerEdge(there, here, radius);
+        BuddyRoam::Point onMesh;
+        if (!BuddyMeshSnap(bot->GetMap(), edge, EDGE_SNAP_YARDS, SNAP_RISE_YARDS, onMesh))
+        {
+            Shun(s, c->GetGUID(), now, "no standing spot at the edge of its notice");
+            return false;
+        }
+        bool straight = BuddyMeshLineClear(bot->GetMap(), here, onMesh);
+        if (!straight)
+        {
+            std::vector<BuddyRoam::Point> route;
+            BuddyRouteKind kind = BuddyMeshRoute(bot, onMesh, route);
+            if (kind != BuddyRouteKind::Complete)
+            {
+                Shun(s, c->GetGUID(), now, BuddyRouteKindName(kind));
+                return false;
+            }
+        }
+        // the turn rule on the first aim only: later aims follow a target
+        // that moves a little, and turning for each would stall the chase
+        if (!s.aimed)
+        {
+            if (BuddyTurnToward(bot, std::atan2(onMesh.y - here.y, onMesh.x - here.x)))
+            {
+                s.nextAim = 0;                          // aim again as soon as the turn is done
+                return true;
+            }
+            s.aimed = true;
+        }
+        bool ordered = MoveTo(bot->GetMapId(), onMesh.x, onMesh.y, onMesh.z, false, false, false, false, MovementPriority::MOVEMENT_WANDER);
+        BuddyTrace(bot, "approach: aim at ({:.1f}, {:.1f}, {:.1f}), {:.1f} yards, {}, {}", onMesh.x, onMesh.y, onMesh.z,
+            bot->GetExactDist2d(onMesh.x, onMesh.y), straight ? "straight (the line is clear)" : "by the mesh's route",
+            ordered ? "ordered" : "not re-ordered");
+        return true;
+    }
+    // }}}
+
+    // {{{ the view (617o5)
+    // What blocks the look at the middle decides: an object is circled, the
+    // ground climbed. False when neither can start (nothing blocks the look,
+    // no hill, the object too big, the grid not ready).
+    bool StartView(RoamState& s, Player* owner, uint32 areaId, BuddyRoam::Point const& at, uint64 now)
+    {
+        BuddyRoam::Point hit;
+        BuddySight sight = BuddySightBlocker(bot->GetMap(), bot->GetPhaseMask(), at, s.area.centre, hit);
+        if (sight == BuddySight::Object)
+        {
+            BuddyRoam::Point centre;
+            float reach = 0.0f;
+            if (!BuddyExploreObstacle(owner, areaId, hit, centre, reach))
+            {
+                BuddyTrace(bot, "view: an object at ({:.1f}, {:.1f}, {:.1f}) blocks the middle, but it can't be circled "
+                    "(too big, off the grid, or the grid isn't ready)", hit.x, hit.y, hit.z);
+                return false;
+            }
+            s.view        = VIEW_ORBIT;
+            s.viewStarted = now;
+            s.viewGoal    = centre;
+            s.orbitRadius = reach * frand(ORBIT_MARGIN_MIN, ORBIT_MARGIN_MAX);
+            s.orbitAngle  = std::atan2(at.y - centre.y, at.x - centre.x);
+            s.orbitTurned = 0.0f;
+            s.orbitDir    = urand(0, 1) ? 1 : -1;
+            s.viewHasNext = false;
+            BuddyTrace(bot, "view: an object blocks the middle; circling it {} at {:.1f} yards (its reach {:.1f}), round "
+                "({:.1f}, {:.1f})", s.orbitDir > 0 ? "anticlockwise" : "clockwise", s.orbitRadius, reach, centre.x, centre.y);
+            return true;
+        }
+        if (sight == BuddySight::Ground)
+        {
+            static BuddyHillChoice const choices[] = { BuddyHillChoice::NearestMiddle, BuddyHillChoice::InTheWay,
+                                                       BuddyHillChoice::NearestBuddy };
+            static char const* const names[] = { "the hilltop nearest the middle", "the hill in the way",
+                                                 "the high ground nearest her" };
+            uint32 pick = urand(0, 2);
+            BuddyRoam::Point top;
+            if (!BuddyExploreHilltop(bot, owner, areaId, choices[pick], s.area.centre, top))
+            {
+                BuddyTrace(bot, "view: the ground hides the middle, but {} can't be found or reached", names[pick]);
+                return false;
+            }
+            s.view        = VIEW_CLIMB;
+            s.viewStarted = now;
+            s.viewGoal    = top;
+            s.viewBaseZ   = at.z;
+            BuddyTrace(bot, "view: the ground hides the middle; climbing {} at ({:.1f}, {:.1f}, {:.1f}), {:.1f} yards up",
+                names[pick], top.x, top.y, top.z, top.z - at.z);
+            return true;
+        }
+        return false;                                   // the look is clear: the pinwheel failed for another reason
+    }
+
+    // One step of a climb or a circle; true while it holds the buddy.
+    bool View(RoamState& s, Player* owner, uint32 areaId, uint64 now)
+    {
+        if (now - s.viewStarted > VIEW_GIVE_UP_MS)
+        {
+            BuddyTrace(bot, "view: given up after {} s", VIEW_GIVE_UP_MS / 1000);
+            s.view = VIEW_NONE;
+            return false;
+        }
+        BuddyRoam::Point at { bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ() }, hit;
+        bool seen = BuddySightBlocker(bot->GetMap(), bot->GetPhaseMask(), at, s.area.centre, hit) == BuddySight::Clear;
+
+        if (s.view == VIEW_CLIMB)
+        {
+            float rise = s.viewGoal.z - s.viewBaseZ;
+            bool  high = at.z >= s.viewBaseZ + VANTAGE_SHARE * rise;
+            if (high && seen)
+            {
+                BuddyTrace(bot, "view: the middle is in sight from ({:.1f}, {:.1f}, {:.1f}); roaming on from here", at.x, at.y, at.z);
+                s.view = VIEW_NONE;
+                s.buddy.hasWaypoint = false;
+                s.retryAt = 0;
+                return false;
+            }
+            if (bot->GetExactDist2d(s.viewGoal.x, s.viewGoal.y) <= CLIMB_TOP_YARDS)
+            {
+                BuddyTrace(bot, "view: at the top and still no sight of the middle; given up");
+                s.view = VIEW_NONE;
+                return false;
+            }
+            BuddyRoam::Point next;
+            if (!BuddyExploreStepToward(bot, owner, areaId, s.viewGoal, CLIMB_STEP_YARDS, next))
+            {
+                BuddyTrace(bot, "view: lost the way up; given up");
+                s.view = VIEW_NONE;
+                return false;
+            }
+            if (!bot->movespline->Finalized())
+            {
+                G3D::Vector3 end = bot->movespline->FinalDestination();
+                if (bot->GetExactDist2d(end.x, end.y) > 2.0f)
+                    return true;                        // the last stretch still has some way to go: no new order yet
+            }
+            if (BuddyTurnToward(bot, std::atan2(next.y - at.y, next.x - at.x)))
+                return true;
+            MoveTo(bot->GetMapId(), next.x, next.y, next.z, false, false, false, false, MovementPriority::MOVEMENT_WANDER);
+            return true;
+        }
+
+        // circling: the middle in sight from here means the pinwheel's way
+        // out crosses the circle here ("We don't even need to make a full
+        // circle if the intended path crosses the orbit circle she's
+        // making, then great! Just follow the path.")
+        if (seen)
+        {
+            BuddyTrace(bot, "view: the middle came in sight {:.0f} degrees round; roaming on from here",
+                s.orbitTurned * 180.0f / float(M_PI));
+            s.view = VIEW_NONE;
+            s.buddy.hasWaypoint = false;
+            s.retryAt = 0;
+            return false;
+        }
+        if (s.orbitTurned >= 2.0f * float(M_PI))
+        {
+            // a whole circle: the way toward the middle, cut where it leaves
+            // the circle, and a route there
+            float dx = s.area.centre.x - s.viewGoal.x, dy = s.area.centre.y - s.viewGoal.y;
+            float d  = std::max(0.01f, std::hypot(dx, dy));
+            float r  = s.orbitRadius + ORBIT_OUT_YARDS;
+            BuddyRoam::Point out { s.viewGoal.x + dx / d * r, s.viewGoal.y + dy / d * r, at.z }, onMesh;
+            std::vector<BuddyRoam::Point> route;
+            s.view = VIEW_NONE;
+            if (BuddyMeshSnap(bot->GetMap(), out, SNAP_WAYPOINT_YARDS, SNAP_RISE_YARDS, onMesh) &&
+                BuddyMeshRoute(bot, onMesh, route) == BuddyRouteKind::Complete)
+            {
+                s.buddy.path        = route;
+                s.buddy.pathIndex   = 0;
+                s.buddy.waypoint    = onMesh;
+                s.buddy.hasWaypoint = true;
+                s.checkedLeg = s.watched = s.orderedLeg = SIZE_MAX;
+                BuddyTrace(bot, "view: a whole circle without sight; routing out past it to ({:.1f}, {:.1f}, {:.1f})",
+                    onMesh.x, onMesh.y, onMesh.z);
+            }
+            else
+                BuddyTrace(bot, "view: a whole circle without sight, and no route out past it; given up");
+            return false;
+        }
+        // the next spot round the circle, once the last is reached (or the
+        // buddy stands): ORBIT_STEP_YARDS further, in its own direction
+        if (s.viewHasNext && !bot->movespline->Finalized() && bot->GetExactDist2d(s.viewNext.x, s.viewNext.y) > 1.5f)
+            return true;
+        if (!s.viewHasNext || bot->GetExactDist2d(s.viewNext.x, s.viewNext.y) <= 1.5f)
+        {
+            float step = ORBIT_STEP_YARDS / std::max(1.0f, s.orbitRadius);
+            s.orbitAngle  += float(s.orbitDir) * step;
+            s.orbitTurned += step;
+            BuddyRoam::Point spot { s.viewGoal.x + std::cos(s.orbitAngle) * s.orbitRadius,
+                                    s.viewGoal.y + std::sin(s.orbitAngle) * s.orbitRadius, at.z }, onMesh;
+            if (!BuddyMeshSnap(bot->GetMap(), spot, SNAP_POINT_YARDS, SNAP_RISE_YARDS, onMesh))
+            {
+                s.viewHasNext = false;                  // no floor there: on round to the next spot next tick
+                return true;
+            }
+            s.viewNext    = onMesh;
+            s.viewHasNext = true;
+        }
+        if (BuddyTurnToward(bot, std::atan2(s.viewNext.y - at.y, s.viewNext.x - at.x)))
+            return true;
+        MoveTo(bot->GetMapId(), s.viewNext.x, s.viewNext.y, s.viewNext.z, false, false, false, false, MovementPriority::MOVEMENT_WANDER);
+        return true;
+    }
+    // }}}
+
     // {{{ MobsNear
     // The monsters near the buddy that would notice and attack it, for the
     // core's nudge (a trip bent through an aggro radius, 617e3). Each filter
@@ -766,6 +1611,8 @@ private:
         s.justArrived       = false;
         LOG_DEBUG("module", "mod-buddies: buddy {} detours {:.0f} yards to {} (entry {}) in area {}",
             bot->GetName(), bestDist, best->GetName(), best->GetEntry(), areaId);
+        BuddyTrace(bot, "roam: detour begun, {:.0f} yards to {} (entry {}) at ({:.1f}, {:.1f}, {:.1f})",
+            bestDist, best->GetName(), best->GetEntry(), p.x, p.y, p.z);
     }
 
     // A detour under way. Its three ends, each letting go of the claim and
@@ -792,6 +1639,7 @@ private:
             LOG_WARN("module", "mod-buddies: buddy {} gave up its detour to {} (entry {}) after {} s, {:.1f} yards short "
                 "(no path there, or the bot module would not open it here: its height test allows about 3 yards)",
                 bot->GetName(), go->GetName(), go->GetEntry(), DETOUR_GIVE_UP_MS / 1000, bot->GetDistance(go));
+        BuddyTrace(bot, "roam: detour ended ({})", gone ? "the object is gone or no longer worth opening" : "given up: too long");
         ReleaseDetour(owner->GetGUID().GetCounter(), s.detour, bot->GetGUID().GetCounter());
         s.detour.Clear();
         s.buddy.path.clear();
@@ -846,6 +1694,7 @@ private:
         {
             s.meal = true;
             s.mealStarted = now;
+            BuddyTrace(bot, "roam: meal begun (eating or drinking), health {}/{}", bot->GetHealth(), bot->GetMaxHealth());
             return;
         }
         {
@@ -864,6 +1713,7 @@ private:
         s.meal = true;
         s.sitRest = true;
         s.mealStarted = now;
+        BuddyTrace(bot, "roam: meal begun (sitting it out, no food), health {}/{}", bot->GetHealth(), bot->GetMaxHealth());
     }
 
     // Keep a meal going, or end it. The owner's rule:
@@ -1061,6 +1911,15 @@ static std::vector<Want> const sTown = {
     { "follow", false }, { "buddy roam", false }, { "grind", false }, { "food", false },
     { "buddy travel", true }, { "buddy town", true },
 };
+// In a dungeon, raid or battleground: the bot module's own way of running
+// one, which is to follow its leader and fight beside it (its bots don't
+// clear a dungeon by themselves; the leader leads the pulls). Seen
+// 2026-10-03 in Zul'Farrak: buddies stood at the entrance, because the
+// open-country set (no "follow") was left as it was when they went in.
+static std::vector<Want> const sInstance = {
+    { "follow", true }, { "buddy roam", false }, { "grind", false }, { "loot", true },
+    { "buddy travel", false }, { "buddy town", false },
+};
 // }}}
 
 class buddies_roam_world : public WorldScript
@@ -1075,10 +1934,11 @@ public:
     }
 
     // Each online buddy's peace-time set put right, only where it differs
-    // (so a buddy already right costs a few lookups). Buddies in a dungeon,
-    // raid or battleground are left to the bot module (the dungeon draw is
-    // 617c3); dead buddies too (the bot module's own dead behaviours bring
-    // them back, then this pass takes over again).
+    // (so a buddy already right costs a few lookups). In a dungeon, raid or
+    // battleground the set is the bot module's own following (sInstance;
+    // who goes in is the dungeon draw, 617c3); dead buddies are left alone
+    // (the bot module's own dead behaviours bring them back, then this pass
+    // takes over again).
     void OnUpdate(uint32 diff) override
     {
         _sinceLast += diff;
@@ -1088,7 +1948,7 @@ public:
         for (auto const& [buddyGuid, ownerGuid] : BuddyRosterPairs())
         {
             Player* bot = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(buddyGuid));
-            if (!bot || !bot->IsInWorld() || !bot->IsAlive() || bot->GetMap()->Instanceable())
+            if (!bot || !bot->IsInWorld() || !bot->IsAlive())
                 continue;
             PlayerbotAI* ai = GET_PLAYERBOT_AI(bot);
             if (!ai)
@@ -1096,8 +1956,13 @@ public:
             Player* owner = ai->GetMaster();
             if (!owner || owner->GetGUID().GetCounter() != ownerGuid)
                 continue;                              // not driven by its owner (no master yet)
-            bool town = BuddyTownArea(owner) != 0;     // a building inside a town counts as the town
-            std::vector<Want> const& wants = town ? sTown : sOpenCountry;
+            // inside an instance: follow; else town or country by where the
+            // owner stands (a building inside a town counts as the town)
+            bool inside = bot->GetMap()->Instanceable();
+            bool town   = !inside && BuddyTownArea(owner) != 0;
+            std::vector<Want> const& wants = inside ? sInstance : (town ? sTown : sOpenCountry);
+            if (inside && bot->IsWalking())
+                bot->SetWalk(false);                   // following runs
             for (Want const& w : wants)
                 if (ai->HasStrategy(w.name, BOT_STATE_NON_COMBAT) != w.on)
                     ai->ChangeStrategy(std::string(w.on ? "+" : "-") + w.name, BOT_STATE_NON_COMBAT);

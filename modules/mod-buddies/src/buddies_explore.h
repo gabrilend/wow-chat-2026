@@ -52,4 +52,32 @@ bool BuddyExploreNext(Player* bot, Player* owner, uint32 areaId, std::vector<Bud
 // ".buddy explore <mode>", registered in buddies_beds.cpp's "buddy" table.
 bool BuddyExploreHandleCommand(ChatHandler* handler, std::string const& word);
 
+// {{{ BuddyExploreStepToward (617o3)
+// A spot about `lookahead` yards along the shortest walk from the buddy to
+// `goal` over the area's exploring grid (whose steps the navigation mesh
+// allows), from a distance map baked for that goal on first use and kept.
+// False while the area's grid is still being measured (asking starts the
+// measuring), or when the goal or the buddy is off its floor, or no joined
+// way links them; the caller then walks its own way.
+bool BuddyExploreStepToward(Player* bot, Player* owner, uint32 areaId, BuddyRoam::Point const& goal, float lookahead,
+                            BuddyRoam::Point& next);
+// }}}
+
+// {{{ the view (617o5)
+// Which hill a buddy with no sight of the area's middle climbs; the owner,
+// 2026-10-03, of the three: "one of these three randomly".
+enum class BuddyHillChoice : uint8 { NearestMiddle, InTheWay, NearestBuddy };
+// The top of that hill on the area's grid (at least a few yards above the
+// buddy, reachable from it over the grid's joins); false when there is
+// none, or the grid isn't ready.
+bool BuddyExploreHilltop(Player* bot, Player* owner, uint32 areaId, BuddyHillChoice choice, BuddyRoam::Point const& middle,
+                         BuddyRoam::Point& top);
+// The object a look struck at `hit`, as the grid sees it: the patch of
+// non-floor cells round it. `centre` is that patch's middle, `reach` the
+// distance from there to its farthest part (the owner: "From it's center
+// to it's most distant component"). False when the grid isn't ready, or
+// the patch is too big to walk round (a cliff, a wall) or runs off the grid.
+bool BuddyExploreObstacle(Player* owner, uint32 areaId, BuddyRoam::Point const& hit, BuddyRoam::Point& centre, float& reach);
+// }}}
+
 #endif

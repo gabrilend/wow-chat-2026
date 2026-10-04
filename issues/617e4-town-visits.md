@@ -6,6 +6,7 @@
 - Parent: 617e
 - Blocked by: 617e1 (the roam strategy and its pass)
 - Priority: High (owner, 2026-09-27: "can we build town behavior next?")
+- Sub-issues: 617e4a (town circles: towns found from the people in them, and placed by hand)
 
 ## Current Behavior
 

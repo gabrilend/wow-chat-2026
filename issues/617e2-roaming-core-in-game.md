@@ -9,9 +9,21 @@
 
 ## Current Behavior
 
-**The pure core built 2026-09-27 and cross-checked; the server side (step
-2) and the rest chance's use (step 4) not built.** Nothing runs in game
-yet.
+**Runs in game** (seen 2026-10-03, Mozonn in Ammen Vale): the pure core
+(built 2026-09-27, cross-checked against the Lua model) drives the "buddy
+roam" action in `buddies_roam_strategy.cpp` (step 2: the ground's
+callbacks in `buddies_roam_ground.cpp`, the area centres, each buddy's
+state), with the rest roll on arrival (step 4: a meal, or sitting by a
+campfire without food). Seen wrong in game the same day: walks through
+walls and a buddy standing still for good, both from the planner judging
+ground differently from the walking; answered by 617o (the navigation
+mesh decides), which changes this file's walking step.
+
+**The movement trace (step 5) built 2026-10-03 and used in game**
+(`.buddy trace <name>`, lines in Playerbots.log): `buddies_trace.cpp`, the
+`BuddyTrace` call in `buddies.h`, and trace lines in the roam action at
+the waypoint pick, each leg order, the detour's start and end, and the
+meal's start.
 
 - **The model**: `src/lua-basic/lib/buddy-roam.lua` (the "waypoints"
   reading, the owner's settings), drawn and measured by
@@ -147,6 +159,23 @@ over the real world:
 - A test compiled without the server runs the C++ core and the Lua model
   on the same drawn map with the same random numbers and requires the
   same waypoints and paths.
+- **A movement trace, for watching one buddy in game** (the owner,
+  2026-10-03, "let's build this", after Mozonn, a level-1 buddy in Ammen
+  Vale, kept walking between exactly two fixed spots about 5 yards apart
+  and nothing in the logs said why: roaming logs only its failures).
+  `.buddy trace <buddy name>` (game masters) switches it on for one
+  buddy, `.buddy trace off` for all. While on, the buddy's movements are
+  written into the bot module's own log (`Playerbots.log`), interleaved
+  with that log's lines of which action the bot ran, so each line of
+  movement sits next to the action that caused it:
+  - every half second: where it stands, whether it is moving, where its
+    current movement is headed, and which kind of movement holds it (the
+    server's movement generator: a point, a follow, a chase, idle);
+  - a line whenever that destination changes, with the distance from the
+    previous one, so a back-and-forth shows as two destinations taking
+    turns;
+  - from roaming itself: each waypoint picked (and by which mode), each
+    walking leg ordered, each detour begun and ended, each meal begun.
 
 ## Suggested Implementation Steps
 
@@ -159,8 +188,31 @@ over the real world:
    the cluttered map of the gallery, compared with the Lua model's output.
 4. The rest chance on arrival (playerbots' food / drink actions, or a sit
    emote and the regeneration of sitting).
+5. The movement trace: `modules/mod-buddies/src/buddies_trace.cpp` (the
+   command, the set of traced buddies, the half-second sampler on each
+   player update) and its one call for other files (`BuddyTrace`, in
+   `buddies.h`), called from the roam action at the waypoint pick, the
+   leg order, the detour and the meal. Writing to the "playerbots" log
+   channel puts the lines in the same file as the bot's action lines,
+   whose engine keeps its last-action record private.
 
 ## Open Questions
+
+- **Baked paths for fixed places, live paths for moving targets** (the
+  owner, 2026-10-03, "for another session"): "the world is static and
+  baked with it's navmeshes and such. I'm thinking pathfinding between
+  areas, pathfinding in towns, and other similar places could use a baked
+  pathfinding map. Then, when we're fighting monsters or chasing down
+  dynamically moving NPCs or other such things, then we'd do path-based
+  calculations with straight-line paths updated every half-second or so,
+  and lerping the orientation to the intended direction over 2/5ths of a
+  second." A baked map here would be a distance-to-destination number in
+  every cell of the exploring grid (a Dijkstra map; about 290 KB per
+  destination per area at 3-yard cells), stepped down by its gradient. It
+  would also end the pinwheel's "no sight of the centre" failure, since a
+  distance-to-middle map gives a walkable way toward the middle from
+  anywhere. Which destinations get a map (area middles, area borders,
+  docks, trainers, town errand spots) is not yet listed.
 
 - **One map description**: the drawn maps now live twice, in the
   generator and in `tests/buddy-roam-core/drawn-maps.lua`. Should the

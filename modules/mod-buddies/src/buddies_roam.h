@@ -39,6 +39,15 @@ std::vector<std::pair<uint32, uint32>> const& BuddyRosterPairs();
 bool BuddyAreaIsTown(uint32 areaId);
 // }}}
 
+// {{{ BuddyTownCircleArea (617e4a)
+// The area of the town circle this player stands in (the area its middle
+// stands in), held until 10 yards past the circle's edge; 0 outside every
+// circle. Town circles are found from the helpful people standing together
+// (scripts/generate-buddy-town-circles) or placed by hand
+// (buddies_town_circles.cpp). Safe from any thread.
+uint32 BuddyTownCircleArea(Player* who);
+// }}}
+
 // {{{ BuddyTownArea
 // The town a player is in, or 0. A building inside a town often has its
 // own area number without the town flag (an inn, a crypt, a guild hall);

@@ -19,6 +19,39 @@ server's own aggro radius for the pair (`Creature::GetAggroRange`: 20
 yards, a yard less per level the buddy is above it, 5 to 45). The core
 bends the trip through the first such radius on the way (617e2's nudge).
 
+**Seen in game 2026-10-03: neutral monsters are never fought.** Every
+monster in Ammen Vale (Vale Moth, Volatile Mutation, Mutated Root Lasher,
+Blood Elf Scout, Mutated Owlkin, Nestlewood Owlkin) is of the neutral
+"Creature" faction (7): yellow, never attacking first. The "hostile and
+aggressive" test above drops all of them, grind is off (617e1), and a
+neutral monster never starts a fight, so a level-1 buddy there (Mozonn,
+Constine's paladin) has nothing to be nudged toward and nothing that
+attacks it: it walked to the area's middle (stored at about 23 yards from
+the Ammen Vale graveyard, which is why it looked like it was heading for
+the graveyard) and moved back and forth near it. Starting zones are
+mostly neutral monsters, so this is the common case at low level, not an
+edge.
+
+**Decided 2026-10-03 (the owner), not yet built: neutral monsters join
+the steering.** A neutral monster worth experience is treated like a
+hostile one for the nudge (option 1 of three offered; not grind, which
+drops the circuit and beelines to anything within 100 yards). The owner:
+"we should dynamically calculate the radius, and steer the buddy-bot to
+the edge of that circle. It'll be different depending on the bot level and
+the monster and maybe some other things. Then they should start casting
+spells or charging in to fight or stealthing up or whatever the class the
+buddy-bot is does. Once the monster is slain, they continue on their
+circuit." So:
+- the radius is worked out per buddy and monster, as the aggro radius is
+  for a hostile one (level difference, the monster's own reach); a
+  neutral monster has no aggro radius of its own to read, so the formula
+  is ours to write (an open question: which inputs beyond the two levels);
+- the buddy is steered to the edge of that circle, not into it;
+- at the edge it opens the fight the way its class does (the bot module's
+  class strategies: a pull spell, a charge, stealth first), which a
+  neutral monster otherwise never gives it the chance to do;
+- after the kill, the circuit carries on from where it bent.
+
 **Chests and nodes built 2026-10-02, syntax-checked, not yet compiled or
 tried in game** (same file, "the detour" and "the clan's claims"). Every
 2 seconds (`DETOUR_LOOK_MS`) a roaming buddy not on a detour looks through

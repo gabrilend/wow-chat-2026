@@ -33,7 +33,12 @@
 #include "buddies.h"
 #include "buddies_explore.h"
 #include "buddies_roam.h"
+#include "buddies_navmesh.h"
 #include "roam/buddy_explore_core.h"
+#include "roam/buddy_grid_rules.h"
+#include "roam/buddy_town_file.h"
+#include "Config.h"
+#include <sys/stat.h>
 #include "Chat.h"
 #include "GameTime.h"
 #include "Log.h"
@@ -57,15 +62,15 @@
 #include <unordered_map>
 
 // {{{ tuning
-// Cell size: 3 yards. The model's drawn hall used 2; in the world 3 keeps a
-// good-sized named area (500 by 500 yards) at under 28,000 cells, still
-// splits a 6-yard tunnel into two cells a path can walk (paths keep 1.5
-// yards off walls), and is about a body and a stride. Areas so big they
-// would pass MAX_CELLS get bigger cells instead (logged).
-static constexpr float  CELL_YARDS      = 3.0f;
-static constexpr int32  MAX_CELLS       = 250000;
+// The cell size, the slope limit and the mesh's reach for a floor cell are
+// shared with the town baker (roam/buddy_grid_rules.h), so a baked town
+// and a measured one are the same grid.
+using BuddyGridRules::CELL_YARDS;
+using BuddyGridRules::MAX_CELLS;
+using BuddyGridRules::MAX_GRADE;
+using BuddyGridRules::MESH_SNAP_YARDS;
+using BuddyGridRules::MESH_RISE_YARDS;
 static constexpr uint32 PROBES_PER_TICK = 600;     // ground measurements per world tick while a grid is measured
-static constexpr float  MAX_GRADE       = 1.0f;    // rise over run a buddy walks (45 degrees); more is a wall
 static constexpr float  PROBE_DROP      = 50.0f;   // yards below a cell's neighbour its ground is looked for
 static constexpr uint32 PAINT_EVERY_MS  = 1000;    // each buddy paints this often
 static constexpr uint32 PULSE_EVERY_MS  = 3000;    // the walls' pulse (the owner: "a pulse every 3 seconds or so")
@@ -154,6 +159,11 @@ struct GridEntry
     std::deque<int32>    queue;      // walkable cells whose neighbours are still to be measured
     std::vector<uint8_t> probed;     // measured
     uint32  probes = 0, noGround = 0;
+    uint32  noMesh = 0, walled = 0;  // cells with ground but no mesh there; joins the mesh's line refused (617o2)
+    // which neighbours a buddy can step to from each cell (bits: 1 east,
+    // 2 west, 4 north, 8 south), and which pairs were tested; complete when
+    // the grid is Ready (617o3's distance maps walk these)
+    std::vector<uint8_t> joins, tested;
     uint64  startedMs = 0, failedAt = 0;
     double  computeMs = 0.0;
     int32   sweeps = 0;
@@ -182,6 +192,59 @@ static bool PieceAt(Player* owner, uint32 areaId, BuddyAreaPieceInfo& piece)
 
 // Start measuring the grid of the area piece the owner stands in (the
 // cell under the owner is the first floor).
+// {{{ LoadBaked (617o3)
+// A town baked ahead of time (scripts/bake-buddy-towns) is read instead of
+// measured: same layout (checked), and only if every mesh file it was
+// baked from is still the same size and age on disk; otherwise an error
+// says why and the caller measures live. No file is the ordinary case for
+// anything but a town, and says nothing.
+static void FinishGrid(std::shared_ptr<GridEntry> e);
+static bool LoadBaked(std::shared_ptr<GridEntry> const& e)
+{
+    std::string dataDir = sConfigMgr->GetOption<std::string>("DataDir", ".");
+    std::string path = BuddyTownFile::Name(dataDir, e->mapId, e->areaId, e->piece);
+    BuddyTownFile::Town t;
+    std::string why;
+    if (!BuddyTownFile::Read(path, t, why))
+    {
+        if (why != "no file")
+            LOG_ERROR("module", "mod-buddies: baked town {} unreadable ({}); measuring area {} live", path, why, e->areaId);
+        return false;
+    }
+    BuddyExplore::Grid& g = e->grid;
+    if (t.nx != g.nx || t.ny != g.ny || t.cell != g.cell || t.x0 != g.x0 || t.y0 != g.y0)
+    {
+        LOG_ERROR("module", "mod-buddies: baked town {} has another layout ({}x{} cells of {:.1f} at ({:.1f}, {:.1f}); the area table "
+            "gives {}x{} of {:.1f} at ({:.1f}, {:.1f})); re-run scripts/bake-buddy-towns. Measuring live.", path, t.nx, t.ny, t.cell,
+            t.x0, t.y0, g.nx, g.ny, g.cell, g.x0, g.y0);
+        return false;
+    }
+    for (BuddyTownFile::Tile const& tile : t.tiles)
+    {
+        char name[64];
+        std::snprintf(name, sizeof(name), "/mmaps/%03u%02u%02u.mmtile", e->mapId, tile.x, tile.y);
+        struct stat st;
+        if (::stat((dataDir + name).c_str(), &st) != 0 || uint64(st.st_size) != tile.size || int64(st.st_mtime) != tile.mtime)
+        {
+            LOG_ERROR("module", "mod-buddies: baked town {} was baked from a mesh file that has changed or gone ({}); re-run "
+                "scripts/bake-buddy-towns. Measuring area {} live.", path, dataDir + name, e->areaId);
+            return false;
+        }
+    }
+    size_t n = size_t(g.Count());
+    g.inside = t.inside, g.open = t.open, g.height = t.height;
+    e->joins = t.joins;
+    e->tested.assign(n, 0x0F);
+    e->probed.assign(n, 1);
+    e->queue.clear();
+    e->state = GRID_COMPUTING;
+    LOG_INFO("module", "mod-buddies: area {} on map {} (piece {}) read from its bake, {} ({} mesh files checked)",
+        e->areaId, e->mapId, e->piece, path, uint32(t.tiles.size()));
+    std::thread(FinishGrid, e).detach();
+    return true;
+}
+// }}}
+
 static std::shared_ptr<GridEntry> RequestGrid(Player* owner, uint32 areaId, GridKey& key)
 {
     BuddyAreaPieceInfo piece;
@@ -202,23 +265,20 @@ static std::shared_ptr<GridEntry> RequestGrid(Player* owner, uint32 areaId, Grid
     e->mapId = owner->GetMapId(), e->areaId = areaId, e->phaseMask = owner->GetPhaseMask(), e->piece = piece.piece;
     e->startedMs = now;
     BuddyExplore::Grid& g = e->grid;
-    // the piece's borders (its 33-yard squares' edges) and one cell more
-    float cell = CELL_YARDS;
-    float w = piece.maxX - piece.minX + 2.0f * cell, h = piece.maxY - piece.minY + 2.0f * cell;
-    if (w * h / (cell * cell) > float(MAX_CELLS))
-    {
-        cell = std::ceil(std::sqrt(w * h / float(MAX_CELLS)) * 2.0f) / 2.0f;   // up to the next half yard
+    // the piece's borders and one cell more, laid out by the shared rule
+    if (!BuddyGridRules::Layout(piece.minX, piece.maxX, piece.minY, piece.maxY, g))
         LOG_INFO("module", "mod-buddies: area {} on map {} is {:.0f} by {:.0f} yards; its exploring grid uses {:.1f}-yard cells "
-            "to stay under {} cells", areaId, e->mapId, w, h, cell, MAX_CELLS);
-    }
-    g.cell = cell;
-    g.x0 = piece.minX - cell, g.y0 = piece.minY - cell;
-    g.nx = int32(std::ceil((piece.maxX - piece.minX + 2.0f * cell) / cell));
-    g.ny = int32(std::ceil((piece.maxY - piece.minY + 2.0f * cell) / cell));
+            "to stay under {} cells", areaId, e->mapId, piece.maxX - piece.minX, piece.maxY - piece.minY, g.cell, MAX_CELLS);
     size_t n = size_t(g.nx) * size_t(g.ny);
     g.inside.assign(n, 0), g.open.assign(n, 0), g.height.assign(n, 0.0f);
     g.edge.assign(n, -1.0), g.wall.assign(n, -1.0);
     e->probed.assign(n, 0);
+    e->joins.assign(n, 0), e->tested.assign(n, 0);
+    if (piece.piece != NO_PIECE && LoadBaked(e))
+    {
+        sGrids[key] = e;
+        return e;
+    }
     int32 start = g.CellOf(owner->GetPositionX(), owner->GetPositionY());
     if (start < 0)
     {
@@ -258,9 +318,10 @@ static void FinishGrid(std::shared_ptr<GridEntry> e)
     }, DISC_SWEEPS, DISC_TOLERANCE);
     e->computeMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     LOG_INFO("module", "mod-buddies: exploring grid of area {} on map {} ready: {} walkable cells of {}, {} rooms, {} tunnels; "
-        "measured with {} probes ({} without ground) in {:.1f} s, worked out in {:.0f} ms ({} disc passes)",
+        "measured with {} probes ({} without ground, {} with ground but no mesh, {} steps the mesh walls off) in {:.1f} s, "
+        "worked out in {:.0f} ms ({} disc passes)",
         e->areaId, e->mapId, uint32(g.openList.size()), g.Count(), uint32(g.rooms.size()), uint32(g.tunnels.size()),
-        e->probes, e->noGround, double(uint64(GameTime::GetGameTimeMS().count()) - e->startedMs) / 1000.0, e->computeMs, e->sweeps);
+        e->probes, e->noGround, e->noMesh, e->walled, double(uint64(GameTime::GetGameTimeMS().count()) - e->startedMs) / 1000.0, e->computeMs, e->sweeps);
     e->state = GRID_READY;
 }
 
@@ -306,8 +367,29 @@ static void MeasureSome()
                 if (jx < 0 || jy < 0 || jx >= g.nx || jy >= g.ny)
                     continue;
                 int32 j = jy * g.nx + jx;
+                uint8 dirBit = uint8(1u << (&nb - NB)), backBit = uint8(1u << ((&nb - NB) ^ 1));   // E W N S; ^1 is the opposite
                 if (g.open[j])
+                {
+                    // both floor: whether a buddy can step between them is
+                    // recorded once per pair for the distance maps (617o3);
+                    // the flood itself needs nothing more from this pair
+                    if (e->tested[i] & dirBit)
+                        continue;
+                    if (!budget)
+                    {
+                        all = false;
+                        break;
+                    }
+                    --budget;
+                    e->tested[i] |= dirBit, e->tested[j] |= backBit;
+                    double xi, yi, xj, yj;
+                    g.CellXY(i, xi, yi);
+                    g.CellXY(j, xj, yj);
+                    if (BuddyGridRules::Gentle(zi, g.height[j], g.cell) &&
+                        BuddyMeshLineClear(map, { float(xi), float(yi), zi }, { float(xj), float(yj), g.height[j] }))
+                        e->joins[i] |= dirBit, e->joins[j] |= backBit;
                     continue;
+                }
                 if (!e->probed[j])
                 {
                     if (!budget)
@@ -327,15 +409,43 @@ static void MeasureSome()
                         ++e->noGround;
                         continue;                       // no ground: outside the walkable
                     }
+                    // floor only where the navigation mesh is (617o2): the
+                    // height lookup above knows terrain and buildings but not
+                    // placed rocks, crystals or wreckage, which the mesh (what
+                    // the walking walks on) leaves holes for; the cell's
+                    // height is the mesh's
+                    BuddyRoam::Point onMesh;
+                    if (!BuddyMeshSnap(map, { float(x), float(y), z }, MESH_SNAP_YARDS, MESH_RISE_YARDS, onMesh))
+                    {
+                        ++e->noMesh;
+                        continue;                       // ground, but nowhere to stand
+                    }
+                    z = onMesh.z;
                     g.height[j] = z;
                     g.inside[j] = map->GetAreaId(e->phaseMask, float(x), float(y), z) == e->areaId ? 1 : 0;
                 }
                 // part of the area and a gentle enough change from here: walkable,
                 // and its own neighbours are measured in turn; too steep from here
-                // may still be walked onto from another side
-                if (g.inside[j] && std::fabs(g.height[j] - zi) <= float(g.cell) * MAX_GRADE)
+                // may still be walked onto from another side. The step must also
+                // stay on the mesh (617o2): a wall, cliff edge or gap between the
+                // two middles refuses it, though either may be reached another way
+                bool gentle = g.inside[j] && BuddyGridRules::Gentle(zi, g.height[j], g.cell);
+                if (gentle)
+                {
+                    double xi, yi, xj, yj;
+                    g.CellXY(i, xi, yi);
+                    g.CellXY(j, xj, yj);
+                    if (!BuddyMeshLineClear(map, { float(xi), float(yi), zi }, { float(xj), float(yj), g.height[j] }))
+                    {
+                        ++e->walled;
+                        gentle = false;
+                    }
+                }
+                e->tested[i] |= dirBit, e->tested[j] |= backBit;
+                if (gentle)
                 {
                     g.open[j] = 1;
+                    e->joins[i] |= dirBit, e->joins[j] |= backBit;
                     e->queue.push_back(j);
                 }
             }
@@ -360,6 +470,323 @@ static std::shared_ptr<GridEntry> ReadyGrid(GridKey const& key)
     if (found == sGrids.end() || found->second->state.load() != GRID_READY)
         return nullptr;
     return found->second;
+}
+// }}}
+
+// {{{ the distance maps (617o3)
+// For one goal on one grid: every floor cell's walking distance to the
+// goal, in cells, over the joins the measuring recorded (a step between two
+// cells counts only where the mesh lets a buddy take it). A flood outward
+// from the goal fills it, each cell once (every step costs the same, so a
+// plain first-in-first-out flood gives the shortest distances). A buddy
+// walks one by stepping to a joined neighbour with a lower number. Built
+// the first time a goal is asked for, on the asking thread (an area of
+// 30,000 floor cells floods in about a millisecond), and kept for the
+// server's run: the ground doesn't change. At most MAPS_KEPT, the least
+// recently used dropped first.
+static constexpr size_t MAPS_KEPT    = 64;
+static constexpr int32  GOAL_SEARCH  = 3;      // cells round a goal's own cell searched for floor when it isn't floor
+static constexpr int32  UNREACHED    = -1;
+struct DistMap
+{
+    std::vector<int32_t> dist;     // cells to the goal; UNREACHED where the flood never came
+    uint64               usedAt = 0;
+};
+using DistKey = std::tuple<uint32, uint32, uint32, int32>;   // map, area, piece, goal cell
+static std::mutex sDistLock;
+static std::map<DistKey, std::shared_ptr<DistMap>> sDist;
+
+// The floor cell nearest (x, y) within GOAL_SEARCH cells, or -1.
+static int32 FloorNear(BuddyExplore::Grid const& g, double x, double y)
+{
+    int32 c = g.CellOf(x, y);
+    if (c >= 0 && g.open[c])
+        return c;
+    int32 best = -1;
+    double bestD = 1e30;
+    int32 cx = int32((x - g.x0) / g.cell), cy = int32((y - g.y0) / g.cell);
+    for (int32 dy = -GOAL_SEARCH; dy <= GOAL_SEARCH; ++dy)
+        for (int32 dx = -GOAL_SEARCH; dx <= GOAL_SEARCH; ++dx)
+        {
+            int32 jx = cx + dx, jy = cy + dy;
+            if (jx < 0 || jy < 0 || jx >= g.nx || jy >= g.ny)
+                continue;
+            int32 j = jy * g.nx + jx;
+            if (!g.open[j])
+                continue;
+            double d = double(dx * dx + dy * dy);
+            if (d < bestD)
+                best = j, bestD = d;
+        }
+    return best;
+}
+
+static std::shared_ptr<DistMap> DistFor(GridKey const& key, std::shared_ptr<GridEntry> const& e, int32 goal)
+{
+    DistKey dk(std::get<0>(key), std::get<1>(key), std::get<2>(key), goal);
+    uint64 now = uint64(GameTime::GetGameTimeMS().count());
+    {
+        std::lock_guard<std::mutex> lock(sDistLock);
+        auto it = sDist.find(dk);
+        if (it != sDist.end())
+        {
+            it->second->usedAt = now;
+            return it->second;
+        }
+    }
+    BuddyExplore::Grid const& g = e->grid;
+    auto t0 = std::chrono::steady_clock::now();
+    auto m = std::make_shared<DistMap>();
+    m->dist.assign(size_t(g.Count()), UNREACHED);
+    m->usedAt = now;
+    std::deque<int32> flood { goal };
+    m->dist[goal] = 0;
+    int32 const offset[4] = { 1, -1, g.nx, -g.nx };   // east, west, north, south: the joins' bit order
+    uint32 reached = 1;
+    while (!flood.empty())
+    {
+        int32 i = flood.front();
+        flood.pop_front();
+        for (int32 d = 0; d < 4; ++d)
+        {
+            if (!(e->joins[i] & (1u << d)))
+                continue;
+            int32 j = i + offset[d];
+            if (m->dist[j] != UNREACHED)
+                continue;
+            m->dist[j] = m->dist[i] + 1;
+            ++reached;
+            flood.push_back(j);
+        }
+    }
+    double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    double gx, gy;
+    g.CellXY(goal, gx, gy);
+    LOG_INFO("module", "mod-buddies: distance map for ({:.1f}, {:.1f}) in area {} on map {}: {} of {} floor cells reached, "
+        "built in {:.1f} ms", gx, gy, e->areaId, e->mapId, reached, uint32(g.openList.size()), ms);
+    std::lock_guard<std::mutex> lock(sDistLock);
+    if (sDist.size() >= MAPS_KEPT)
+    {
+        auto oldest = sDist.begin();
+        for (auto it = sDist.begin(); it != sDist.end(); ++it)
+            if (it->second->usedAt < oldest->second->usedAt)
+                oldest = it;
+        sDist.erase(oldest);
+    }
+    sDist[dk] = m;
+    return m;
+}
+
+bool BuddyExploreStepToward(Player* bot, Player* owner, uint32 areaId, BuddyRoam::Point const& goal, float lookahead,
+                            BuddyRoam::Point& next)
+{
+    GridKey key;
+    RequestGrid(owner, areaId, key);                   // starts the measuring if this area has none yet
+    std::shared_ptr<GridEntry> e = ReadyGrid(key);
+    if (!e)
+        return false;                                  // still being measured (or failed): no map yet
+    BuddyExplore::Grid const& g = e->grid;
+    int32 goalCell = FloorNear(g, goal.x, goal.y);
+    int32 here     = FloorNear(g, bot->GetPositionX(), bot->GetPositionY());
+    if (goalCell < 0 || here < 0)
+        return false;                                  // the goal or the buddy is off this grid's floor
+    std::shared_ptr<DistMap> m = DistFor(key, e, goalCell);
+    if (m->dist[here] == UNREACHED)
+        return false;                                  // no joined way from here to there on this grid
+    int32 const offset[4] = { 1, -1, g.nx, -g.nx };
+    int32 steps = std::max(1, int32(lookahead / float(g.cell)));
+    int32 at = here;
+    while (steps-- > 0 && m->dist[at] > 0)
+    {
+        int32 bestJ = -1;
+        for (int32 d = 0; d < 4; ++d)
+            if ((e->joins[at] & (1u << d)) && m->dist[at + offset[d]] == m->dist[at] - 1)
+            {
+                bestJ = at + offset[d];
+                break;
+            }
+        if (bestJ < 0)
+            break;                                     // cannot happen on a finished flood; stop rather than wander
+        at = bestJ;
+    }
+    double x, y;
+    g.CellXY(at, x, y);
+    next = { float(x), float(y), g.height[at] };
+    return true;
+}
+// }}}
+
+// {{{ the view: hilltops and what stands in the way (617o5)
+// Read from a Ready grid only (its floor, heights and joins are final).
+static constexpr int32 HILL_RADIUS     = 3;      // cells: a hilltop is the highest floor cell this far round
+static constexpr float HILL_MIN_RISE   = 3.0f;   // yards: a "hill" stands at least this far above the buddy
+static constexpr int32 BLOB_MAX_CELLS  = 1500;   // an obstacle's outline bigger than this (a whole cliff, a town wall) is not orbited
+
+// Whether floor cell i is a hilltop: no floor cell within HILL_RADIUS is
+// higher (an equal one with a lower number wins, so a flat top has one).
+static bool IsHilltop(BuddyExplore::Grid const& g, int32 i)
+{
+    int32 ix = i % g.nx, iy = i / g.nx;
+    for (int32 dy = -HILL_RADIUS; dy <= HILL_RADIUS; ++dy)
+        for (int32 dx = -HILL_RADIUS; dx <= HILL_RADIUS; ++dx)
+        {
+            int32 jx = ix + dx, jy = iy + dy;
+            if ((!dx && !dy) || jx < 0 || jy < 0 || jx >= g.nx || jy >= g.ny)
+                continue;
+            int32 j = jy * g.nx + jx;
+            if (g.open[j] && (g.height[j] > g.height[i] || (g.height[j] == g.height[i] && j < i)))
+                return false;
+        }
+    return true;
+}
+
+bool BuddyExploreHilltop(Player* bot, Player* owner, uint32 areaId, BuddyHillChoice choice, BuddyRoam::Point const& middle,
+                         BuddyRoam::Point& top)
+{
+    GridKey key;
+    RequestGrid(owner, areaId, key);
+    std::shared_ptr<GridEntry> e = ReadyGrid(key);
+    if (!e)
+        return false;
+    BuddyExplore::Grid const& g = e->grid;
+    int32 here = FloorNear(g, bot->GetPositionX(), bot->GetPositionY());
+    if (here < 0)
+        return false;
+    float baseZ = g.height[here];
+
+    // the hill in the way: the highest floor cell under the straight line
+    // to the middle, then uphill from it (joined steps only) to its top
+    int32 start = -1;
+    if (choice == BuddyHillChoice::InTheWay)
+    {
+        double len = std::hypot(middle.x - bot->GetPositionX(), middle.y - bot->GetPositionY());
+        for (double s = 0.0; s < len; s += g.cell)
+        {
+            double k = s / std::max(len, 1.0);
+            int32 c = g.CellOf(bot->GetPositionX() + (middle.x - bot->GetPositionX()) * k,
+                               bot->GetPositionY() + (middle.y - bot->GetPositionY()) * k);
+            if (c >= 0 && g.open[c] && (start < 0 || g.height[c] > g.height[start]))
+                start = c;
+        }
+        if (start < 0)
+            return false;
+        int32 const offset[4] = { 1, -1, g.nx, -g.nx };
+        for (bool climbed = true; climbed; )
+        {
+            climbed = false;
+            for (int32 d = 0; d < 4; ++d)
+                if ((e->joins[start] & (1u << d)) && g.height[start + offset[d]] > g.height[start])
+                {
+                    start   = start + offset[d];
+                    climbed = true;
+                    break;
+                }
+        }
+    }
+    else
+    {
+        // a hilltop high enough, nearest the middle or nearest the buddy
+        double fromX = choice == BuddyHillChoice::NearestMiddle ? middle.x : bot->GetPositionX();
+        double fromY = choice == BuddyHillChoice::NearestMiddle ? middle.y : bot->GetPositionY();
+        double best = 1e30;
+        for (int32 i : g.openList)
+        {
+            if (g.height[i] < baseZ + HILL_MIN_RISE || !IsHilltop(g, i))
+                continue;
+            double x, y;
+            g.CellXY(i, x, y);
+            double d = (x - fromX) * (x - fromX) + (y - fromY) * (y - fromY);
+            if (d < best)
+                best = d, start = i;
+        }
+        if (start < 0)
+            return false;
+    }
+    if (g.height[start] < baseZ + HILL_MIN_RISE)
+        return false;                                  // nothing worth calling a hill
+    std::shared_ptr<DistMap> m = DistFor(key, e, start);
+    if (m->dist[here] == UNREACHED)
+        return false;                                  // no joined way up it from here
+    double x, y;
+    g.CellXY(start, x, y);
+    top = { float(x), float(y), g.height[start] };
+    return true;
+}
+
+bool BuddyExploreObstacle(Player* owner, uint32 areaId, BuddyRoam::Point const& hit, BuddyRoam::Point& centre, float& reach)
+{
+    GridKey key;
+    RequestGrid(owner, areaId, key);
+    std::shared_ptr<GridEntry> e = ReadyGrid(key);
+    if (!e)
+        return false;
+    BuddyExplore::Grid const& g = e->grid;
+    // the obstacle's footprint: the cells that aren't floor (inside the
+    // area's borders, or measured and found without mesh) joined to the
+    // cell the look struck, flooded until floor surrounds them
+    int32 seed = g.CellOf(hit.x, hit.y);
+    if (seed < 0)
+        return false;
+    if (g.open[seed])
+    {
+        // struck above open floor (an overhang, a thin trunk): the
+        // nearest non-floor cell round it is the footprint's start
+        int32 sx = seed % g.nx, sy = seed / g.nx;
+        seed = -1;
+        for (int32 r = 1; r <= 2 && seed < 0; ++r)
+            for (int32 dy = -r; dy <= r && seed < 0; ++dy)
+                for (int32 dx = -r; dx <= r && seed < 0; ++dx)
+                {
+                    int32 jx = sx + dx, jy = sy + dy;
+                    if (jx >= 0 && jy >= 0 && jx < g.nx && jy < g.ny && !g.open[jy * g.nx + jx])
+                        seed = jy * g.nx + jx;
+                }
+        if (seed < 0)
+            return false;
+    }
+    std::vector<uint8_t> seen(size_t(g.Count()), 0);
+    std::deque<int32> flood { seed };
+    std::vector<int32> blob;
+    seen[seed] = 1;
+    while (!flood.empty())
+    {
+        int32 i = flood.front();
+        flood.pop_front();
+        blob.push_back(i);
+        if (int32(blob.size()) > BLOB_MAX_CELLS)
+            return false;                              // too big to walk round: a cliff or a wall, not a doodad
+        int32 ix = i % g.nx, iy = i / g.nx;
+        static int32 const NB[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        for (auto const& nb : NB)
+        {
+            int32 jx = ix + nb[0], jy = iy + nb[1];
+            if (jx < 0 || jy < 0 || jx >= g.nx || jy >= g.ny)
+                return false;                          // runs off the grid: not something to circle
+            int32 j = jy * g.nx + jx;
+            if (seen[j] || g.open[j])
+                continue;
+            seen[j] = 1;
+            flood.push_back(j);
+        }
+    }
+    double sx = 0.0, sy = 0.0;
+    for (int32 i : blob)
+    {
+        double x, y;
+        g.CellXY(i, x, y);
+        sx += x, sy += y;
+    }
+    sx /= double(blob.size()), sy /= double(blob.size());
+    double far = 0.0;
+    for (int32 i : blob)
+    {
+        double x, y;
+        g.CellXY(i, x, y);
+        far = std::max(far, std::hypot(x - sx, y - sy));
+    }
+    centre = { float(sx), float(sy), hit.z };
+    reach  = float(far + g.cell * 0.5);                 // to the far side of its farthest cell
+    return true;
 }
 // }}}
 
