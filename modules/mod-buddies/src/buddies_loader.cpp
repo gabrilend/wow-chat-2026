@@ -9,6 +9,9 @@
 
 // From the module's script files
 void AddSC_buddies_roster();
+void AddSC_buddies_stage();
+void AddSC_buddies_gems();
+void AddSC_buddies_dungeon_bags();
 void AddSC_buddies_nodes();
 void AddSC_buddies_clan();
 void AddSC_buddies_create();
@@ -25,11 +28,20 @@ void AddSC_buddies_hidden();
 void AddSC_buddies_loot();
 void AddSC_buddies_crossing();
 void AddSC_buddies_recorder();
+void AddSC_buddies_trace();
+void AddSC_buddies_steer();
+void AddSC_buddies_spells();
+void AddSC_buddies_outfits();
+void AddSC_buddies_town_circles();
+void AddSC_buddies_kit();
 
 // {{{ Addmod_buddiesScripts
 void Addmod_buddiesScripts()
 {
     AddSC_buddies_roster();
+    AddSC_buddies_stage();
+    AddSC_buddies_gems();
+    AddSC_buddies_dungeon_bags();
     AddSC_buddies_nodes();
     AddSC_buddies_clan();
     AddSC_buddies_create();
@@ -46,5 +58,11 @@ void Addmod_buddiesScripts()
     AddSC_buddies_loot();
     AddSC_buddies_crossing();
     AddSC_buddies_recorder();
+    AddSC_buddies_trace();
+    AddSC_buddies_steer();
+    AddSC_buddies_spells();
+    AddSC_buddies_outfits();
+    AddSC_buddies_town_circles();
+    AddSC_buddies_kit();
 }
 // }}}

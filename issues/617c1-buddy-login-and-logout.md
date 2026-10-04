@@ -9,6 +9,20 @@
 
 ## Current Behavior
 
+**The keeper, added 2026-10-03, syntax-checked, not yet built or run**
+(`buddies_login.cpp`, the keeper). Seen live the same day: a player left
+by "Exit Game" and came straight back; her buddy stayed in her group but
+disconnected and never came in. The single request made at the new login
+found the buddy still online (the old session was still closing) and did
+nothing; the old session's closing then logged it out. The owner: "make
+some kind of timer, after any player logs in, that logs in one buddy bot
+per 1-3 seconds until they're all logged in". Now the login only links the
+accounts; while the owner is online, the keeper looks at its buddies, asks
+one missing buddy in every 1 to 3 seconds until all are in, and then looks
+again every 5 seconds, so a buddy lost later is brought back too (the
+bot manager ignores a request for a buddy already loading or online).
+
+Before this:
 **Built 2026-09-27; compile-checked, not yet run.**
 `modules/mod-buddies/src/buddies_login.cpp`:
 

@@ -23,6 +23,13 @@
 --   created            unix time the buddy character was made; 0 until then
 --   greeting           its entrance gesture (617b1): 0 none yet, 1 wave,
 --                      2 salute; an early personality trait, kept for later
+--   stage              (617a6) 0 with its owner; 1 waiting: its slot is
+--                      above the owner's level, so it stays out of the
+--                      world until the owner reaches the buddy's own level;
+--                      4 recording: its slot is kept but it is above the
+--                      owner's level, so it is recorded first; 3 remake:
+--                      made again at the owner's level at its next login,
+--                      then 0
 --
 -- A row moves through three states: owed (class 0), chosen (class set,
 -- buddy 0: the module makes the character), filled (buddy set).
@@ -61,6 +68,69 @@ SET @add_greeting := IF(@has_greeting = 0,
 PREPARE add_greeting FROM @add_greeting;
 EXECUTE add_greeting;
 DEALLOCATE PREPARE add_greeting;
+
+-- the stage column (617a6, 2026-10-03), the same way
+SET @has_stage := (SELECT COUNT(*) FROM information_schema.columns
+  WHERE table_schema = DATABASE() AND table_name = 'buddy_roster' AND column_name = 'stage');
+SET @add_stage := IF(@has_stage = 0,
+  'ALTER TABLE `buddy_roster` ADD COLUMN `stage` tinyint unsigned NOT NULL DEFAULT 0 AFTER `greeting`',
+  'DO 0');
+PREPARE add_stage FROM @add_stage;
+EXECUTE add_stage;
+DEALLOCATE PREPARE add_stage;
+
+-- The stage record (617a6): a buddy as it was when its owner's level went
+-- below it (whether it then waits or is made again), kept for the later
+-- level-scaling
+-- (the owner, 2026-10-03: "we *wouldn't* want to re-instantiate the
+-- buddy-bots, hence why we're recording their equipment and such at the
+-- time of the player character's de-levelling"). One record per buddy, the
+-- newest; written by the buddy module (buddies_stage.cpp) in one
+-- transaction, a few seconds after the buddy's logout save.
+--   buddy_stage_record   level, experience (xp), money (copper), recorded
+--                        (unix time)
+--   buddy_stage_item     every item it wore or carried: item (its id as it
+--                        was), bag (the id of the bag it sat in, 0 for the
+--                        body and backpack; that bag is in the record too),
+--                        slot, entry, count, enchantments (enchants and
+--                        gems, as item_instance keeps them), random
+--                        (its random suffix, "of the Bear"), durability
+--   buddy_stage_spell    every spell it knew
+--   buddy_stage_talent   every talent it had, and in which spec (specMask)
+CREATE TABLE IF NOT EXISTS `buddy_stage_record` (
+  `buddy`    int unsigned     NOT NULL,
+  `level`    tinyint unsigned NOT NULL,
+  `xp`       int unsigned     NOT NULL,
+  `money`    int unsigned     NOT NULL,
+  `recorded` int unsigned     NOT NULL,
+  PRIMARY KEY (`buddy`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617a6: a stored buddy as it was';
+
+CREATE TABLE IF NOT EXISTS `buddy_stage_item` (
+  `buddy`        int unsigned      NOT NULL,
+  `item`         int unsigned      NOT NULL,
+  `bag`          int unsigned      NOT NULL,
+  `slot`         tinyint unsigned  NOT NULL,
+  `entry`        int unsigned      NOT NULL,
+  `count`        int unsigned      NOT NULL,
+  `enchantments` text              NOT NULL,
+  `random`       int               NOT NULL,
+  `durability`   smallint unsigned NOT NULL,
+  PRIMARY KEY (`buddy`, `item`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617a6: a stored buddy''s items';
+
+CREATE TABLE IF NOT EXISTS `buddy_stage_spell` (
+  `buddy` int unsigned NOT NULL,
+  `spell` int unsigned NOT NULL,
+  PRIMARY KEY (`buddy`, `spell`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617a6: a stored buddy''s spells';
+
+CREATE TABLE IF NOT EXISTS `buddy_stage_talent` (
+  `buddy`    int unsigned     NOT NULL,
+  `spell`    int unsigned     NOT NULL,
+  `specMask` tinyint unsigned NOT NULL,
+  PRIMARY KEY (`buddy`, `spell`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617a6: a stored buddy''s talents';
 
 -- buddy_draw (617c3, 2026-09-29): the dungeon draw's bag, a row per owner
 -- and buddy; had_turn 1 once drawn into a dungeon party, all back to 0 when

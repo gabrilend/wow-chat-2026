@@ -8,8 +8,13 @@
 -- (scripts/test-buddy-talents) run the very same code.
 --
 -- The rules, all owner decisions of 2026-09-25/26 recorded in 617g:
---   - each point goes to the tree furthest below its share of the points
---     spent so far, so the shape's split holds at every level;
+--   - a two-thirds / one-third shape: 2:1 odds for the main tree, until
+--     the main tree reaches its bottom row or the side tree its mark (the
+--     owner, 2026-10-03; two_tree_choice); a third-in-each shape: even
+--     odds among the trees short of a third of the level-cap points
+--     (thirds_choice); otherwise, and after that,
+--     each point goes to the tree furthest below its share of the points
+--     spent so far;
 --   - inside a tree, a legal one-point talent is taken first, always;
 --   - then a talent that already has a point is finished before another
 --     is started (only a share running out leaves one partial);
@@ -201,6 +206,86 @@ local function choose_tree(cls, thirds, held, spent, rand)
 end
 -- }}}
 
+-- {{{ local function two_tree_choice
+-- A two-thirds / one-third shape (the owner, 2026-10-03, replacing the
+-- even split of 2026-09-26 at its start): "2:1 odds to put them in the
+-- main tree vs off tree, until either the main tree has reached the
+-- bottom tier, or the side talent tree has reached the number that it
+-- would be if the main tree has gotten to that point". So, each point:
+--   - while neither has happened: the main tree two times in three, the
+--     side tree one in three, at random;
+--   - the side tree at its mark (half the points the main tree needs to
+--     put one in its bottom row: the side tree's count at that moment, by
+--     the 2:1 split) and the main tree not yet at its bottom row: the main
+--     tree, until it is;
+--   - the main tree at its bottom row (a point in the deepest row basic's
+--     cap allows it), the side tree short of its mark: the side tree, up
+--     to the mark;
+--   - both done: the even split again (choose_tree's deficit rule).
+-- A tree with no legal talent left gives its turn to the other.
+-- Returns the tree, or nil when this shape isn't two-thirds / one-third
+-- (the caller then uses choose_tree).
+local function bottom_row(cls, t)
+    local deepest = 0
+    for _, tal in ipairs(cls.trees[t].talents) do
+        if tal.allowed and tal.row > deepest then deepest = tal.row end
+    end
+    return deepest
+end
+
+local function two_tree_choice(cls, thirds, held, spent, rand)
+    local main, side
+    for t = 1, 3 do
+        if thirds[t] == 2 then main = t elseif thirds[t] == 1 then side = t end
+    end
+    if not main or not side then return nil end
+    local row = bottom_row(cls, main)
+    local at_bottom = false
+    for _, tal in ipairs(cls.trees[main].talents) do
+        if tal.row == row and (held[tal.id] or 0) > 0 then at_bottom = true end
+    end
+    local side_mark = math.floor((row * 5 + 1) / 2)
+    local side_done = spent[side] >= side_mark
+    local main_room = has_room(cls, main, held, spent)
+    local side_room = has_room(cls, side, held, spent)
+    if at_bottom and side_done then return nil end              -- both done: the even split
+    local want
+    if not at_bottom and not side_done then
+        want = (rand(3) <= 2) and main or side
+    elseif side_done then
+        want = main
+    else
+        want = side
+    end
+    if want == main and not main_room then want = side_room and side or nil end
+    if want == side and not side_room then want = main_room and main or nil end
+    return want
+end
+-- }}}
+
+-- {{{ local function thirds_choice
+-- A third-in-each shape, by the same principle (the owner, 2026-10-03:
+-- "We should change the 1/3rd in each to follow the same principles,
+-- except 1/3rd in each tree until we reach the goal for that tree"): each
+-- point to one of the trees still short of its goal, at even odds; a
+-- tree's goal is a third of the points a character has at basic's level
+-- cap (EACH_GOAL: 51 / 3 = 17, two points into the fourth row). All three
+-- at their goal, or no tree short of it with room: the even split
+-- (choose_tree). Returns nil for any other shape.
+local MAX_POINTS = 51                  -- talent points at level 60, basic's cap (one a level from 10)
+local EACH_GOAL  = math.floor(MAX_POINTS / 3)
+
+local function thirds_choice(cls, thirds, held, spent, rand)
+    if not (thirds[1] == 1 and thirds[2] == 1 and thirds[3] == 1) then return nil end
+    local short = {}
+    for t = 1, 3 do
+        if spent[t] < EACH_GOAL and has_room(cls, t, held, spent) then short[#short + 1] = t end
+    end
+    if #short == 0 then return nil end
+    return short[rand(#short)]
+end
+-- }}}
+
 -- {{{ function Spender.plan
 -- The talents to learn, in order, for `free` points.
 --   cls      the class's entry in buddy-talent-data.lua
@@ -223,7 +308,8 @@ function Spender.plan(cls, shape_id, held, free, rand)
     local steps = {}
 
     for _ = 1, free do
-        local t = choose_tree(cls, shape.thirds, h, spent, rand)
+        local t = two_tree_choice(cls, shape.thirds, h, spent, rand) or thirds_choice(cls, shape.thirds, h, spent, rand)
+            or choose_tree(cls, shape.thirds, h, spent, rand)
         if not t then break end
         local tal = pick_in_tree(cls, t, h, spent, rand)
         h[tal.id] = (h[tal.id] or 0) + 1

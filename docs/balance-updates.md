@@ -377,6 +377,31 @@ rescue ("the player can always rescue them with a hearthstone cast").
   number remains to tune; `DOCK_REPICK_YARDS` is removed.
 - Value: `StopSeparation`, `modules/mod-buddies/src/buddies_crossing.cpp`.
 
+## 2026-10-03 — Basic: buddies buying gems at the auction house (617j2)
+
+| Knob | Value | Where |
+|---|---|---|
+| Share of its money a buddy spends on gems per visit | 25% | `buddies_gems.cpp`, `GEM_SPEND_SHARE` |
+| A buddy's old gear kept in its mail | 900 days (stock mail: 30) | `buddies_stage.cpp`, `KEPT_DAYS` |
+
+Why: the owner asked for gems "from the auction house" and named no
+spending limit; the quarter matches what a buddy may spend on meals per
+stop (617e4). A first rule of buying only with more than 2 free bag slots
+was dropped the same day: bought gems arrive by mail, so bag room matters
+at the mailbox, not at the auction house. The 900 days are the owner's
+("we should change the duration to be 900 days"), so old gear waits for a
+buddy to level back into it.
+
+## 2026-10-03 — Basic: buddies remember the people they visited (617p)
+
+| Knob | Value | Where |
+|---|---|---|
+| How long a visited person is remembered | 15 to 30 minutes: two buffers, swapped server-wide every 15 minutes | `buddies_npcs.cpp`, `SWAP_MS` |
+
+Why: the owner first said "every 30 minutes or so", then asked for "a
+double-buffer system, and a server-wide 15 minute timer". Replaces the 3%
+chance per look of going to chat.
+
 ## How to add an entry
 
 ```markdown

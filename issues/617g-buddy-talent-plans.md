@@ -345,6 +345,38 @@ and the spending are kept apart.
   there is nothing to plan for them.
 - (Answered 2026-09-26) Leveling order: keep the two-to-one split at
   every level (capstone around level 54), not main-tree-first.
+- (Asked again 2026-10-03, open) The owner, after level-40 paladins came
+  out with about 25 points in the main tree and the rest in the second:
+  "they seem to only be going far enough in their main talent tree to
+  have 25 points before branching off - I thought we were going to 31
+  before we started putting in the alternate talent tree?" That is the
+  2026-09-26 answer above working as built (two points in the main tree
+  for every one elsewhere, at every level). Should it change to: the main
+  tree first, to 31 points, then the other tree?
+  (Answered 2026-10-03) "How about we make it 2:1 odds to put them in the
+  main tree vs off tree, until either the main tree has reached the
+  bottom tier, or the side talent tree has reached the number that it
+  would be if the main tree has gotten to that point?" Built the same day
+  for two-thirds / one-third shapes (`src/lua-basic/lib/buddy-talent-
+  spender.lua`, `two_tree_choice`): each point the main tree two times in
+  three at random, until the main tree has a point in the deepest row
+  basic's cap allows it, or the side tree reaches its mark (half the
+  points that open that row: its count at that moment by the 2:1 split);
+  then only the tree still short of its goal; then, both reached, the
+  even split. `scripts/test-buddy-talents` checks instead of the exact
+  split that the side tree never passes its mark before the main tree's
+  bottom row (all ten classes, ten shapes, 100 seeds: every capstone
+  reached, all checks pass). Buddies already made keep their talents until
+  their next re-roll (an owner respec). With basic's capstone in row 7
+  (index 6), the main tree's goal is 31 points and the side tree's mark 15:
+  46 of the 51 points at 60, the last 5 by the even split (ending near
+  34/17).
+- (Answered 2026-10-03) A third in each: "We should change the 1/3rd in
+  each to follow the same principles, except 1/3rd in each tree until we
+  reach the goal for that tree." Built the same day (`thirds_choice`):
+  each point to a tree still short of 17 (a third of the 51 points at 60),
+  at even odds; then the even split. The test checks that no tree passes
+  17 while another with room is short of it (all checks pass).
 - (Answered 2026-09-26) One-third each: kept; at 60, 2 points per tree
   in the fourth row.
 - (Answered 2026-09-26) Feral druids: a feral two-thirds buddy is a tank

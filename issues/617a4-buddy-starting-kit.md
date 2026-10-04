@@ -9,6 +9,27 @@
 
 ## Current Behavior
 
+**Changed again 2026-10-03, syntax-checked, not yet built.** Seen in game:
+level-40 paladin buddies in mail with a cloth hat, no cloak and no weapon
+(the owner: "Can we make sure they have cloaks as well? Also, none of them
+have weapons. They should have weapons appropriate to the talent set they
+were assigned at their creation."). Causes and changes
+(`buddies_kit.cpp`, the gear step):
+- the kit ran before the buddy learned its spells, so a paladin's plate
+  (learned at 40) wasn't wearable: creation now teaches first;
+- ties between a cloth hat and a mail helm were broken by item number:
+  the heaviest armour the buddy can wear is now preferred within a slot;
+- the 5-level window often has no white cloak or weapon: a slot left
+  empty there is filled from lower levels (never required level 0 or 1);
+- weapons come from the talent plan's main tree, per class (the weapon
+  table `WANTS`: e.g. a retribution paladin a two-hander, holy a one-hander
+  and a shield, a rogue daggers or one-handers in both hands, casters a
+  staff or a one-hander with an off-hand item, and a wand; hunters a bow,
+  gun or crossbow), falling back to the next kind the buddy can use;
+- `.buddy kit <name>` (game masters) gives a buddy in the world the kit's
+  gear for its level now, replacing what it wears.
+
+Before this:
 **Built 2026-09-28; compiles, not yet run.** Right after a buddy is made
 and before its first save (`buddies_create.cpp`), `BuddyGiveStartingKit`
 (`modules/mod-buddies/src/buddies_kit.cpp`) gives it:
@@ -27,9 +48,16 @@ and before its first save (`buddies_create.cpp`), `BuddyGiveStartingKit`
   the proposed system"); its 46 items whose required level is above 20
   come down to 20 (install step E048, generated with the tiers; originals
   saved and restored by the revert); then every
-  slot still empty: the white item of the highest required level at
-  or below its own that it can use (the game's own check), from what
-  vendors sell, replacing the stock starting item;
+  slot still empty: the white item of the highest required level it can
+  use (the game's own check), from what vendors sell, replacing the stock
+  starting item, chosen only from required levels (its level − 4) to its
+  level and never 0 or 1 (`KIT_WINDOW_LEVELS`, `KIT_LOWEST_LEVEL`); a slot
+  with no candidate keeps its stock item. **A level-1 buddy is given no
+  gear at all** and wears the starting outfit the game dresses a new
+  character of its race and class in. Changed 2026-10-03 (code edited,
+  awaiting the owner's rebuild): a level-1 Mozonn had taken a fishing pole
+  as its weapon, since a fishing pole is a white vendor weapon with no
+  level requirement;
 - **food**, and **drink** for mana users: the best a vendor sells for its
   level, 5 of each (the owner, 2026-09-27: "they need real food"; 2026-09-28:
   "we should give 5, so they have something to buy from vendors");
@@ -54,6 +82,12 @@ slots."
 - **Gear**: white (common) items in every slot the class can fill at its
   level, of the best level at or below the buddy's, of armour types the
   class wears. Chosen by a generator from the world database, not by hand.
+  The owner, 2026-10-03: "we should start level 1 buddy-bots with the same
+  starting equipment that a player gets. But only for level 1's, otherwise
+  the old algorithm works, where we pick the best white gear item within
+  the previous 5 levels (but not from level 1 or without a level
+  requirement, because then you get weird cosmetic gear and holiday items
+  and such.)"
 - **Money**: level x 1 silver; none at level 1.
 - **Bags**: the owner's current bag-slot total, split over four bags as
   evenly as the existing bag sizes allow, lowest quality first.

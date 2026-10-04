@@ -33,6 +33,9 @@
  */
 
 #include "buddies.h"
+#include "buddies_spells.h"
+#include "buddies_loot.h"
+#include "buddies_gems.h"
 #include "buddies_kit.h"
 #include "CharacterCache.h"
 #include "DatabaseEnv.h"
@@ -354,12 +357,26 @@ static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
     if (!missing.empty())
         LOG_ERROR("module", "mod-buddies: new buddy {} for owner {}: {}; it tries again at its first login",
             name, owner, missing);
+    // everything up to its level, free (617n; the owner, 2026-10-03:
+    // "Everything up to it's level"): trainer lessons and quest spells.
+    // Before the kit, so the armour and weapons it learns to wear (a
+    // paladin's plate at 40) count when the kit chooses.
+    uint32 lessons = BuddyLearnEverything(buddy);
+    LOG_INFO("module", "mod-buddies: new buddy {} (level {}) knows {} spells from trainers and quests", name, buddy->GetLevel(), lessons);
+    QueryResult plan = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE owner = {} AND slot = {}", owner, slot);
+    uint8 profile = plan ? (*plan)[0].Get<uint8>() : 0;
+    uint8 role    = plan ? (*plan)[1].Get<uint8>() : 0;
+    int8 mainTree = BuddyPlanMainTree(profile);
     // the starting kit: white gear, food (and drink), level x 1 silver,
     // bags like the owner's (617a4); made now, before the first save
-    std::string kitProblems = BuddyGiveStartingKit(buddy, owner);
+    std::string kitProblems = BuddyGiveStartingKit(buddy, owner, mainTree);
     if (!kitProblems.empty())
         LOG_ERROR("module", "mod-buddies: new buddy {} for owner {} (level {}), starting kit incomplete: {}",
             name, owner, buddy->GetLevel(), kitProblems);
+    // its gear's sockets filled by its plan (617j2), free
+    std::string gemProblems = BuddyGemKit(buddy, profile, role);
+    if (!gemProblems.empty())
+        LOG_ERROR("module", "mod-buddies: new buddy {} for owner {}, kit gems incomplete: {}", name, owner, gemProblems);
 
     uint32 guid = buddy->GetGUID().GetCounter();
     buddy->SaveToDB(true, false);

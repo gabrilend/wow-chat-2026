@@ -125,8 +125,17 @@ local RACE_ICON = {
 }
 -- }}}
 
--- intids: 1 ask for a class, 2 ask for a people, 100+class, 200+race
+-- intids: 1 ask for a class, 2 ask for a people, 3 name the clan,
+-- 100+class, 200+race
 local INTID_CLASSES, INTID_RACES, INTID_CLASS, INTID_RACE = 1, 2, 100, 200
+local INTID_NAME                                         = 3
+-- [FIXME 2026-10-03, Claude]: TEMPORARY, a test. The old name box, offered
+-- beside the spoken naming. It worked once per side on account 101
+-- (Constine, Alliance; Growth, Horde; 2026-09-29) and never since (Karson,
+-- Alliance). The owner's test: a new Horde character on the same account.
+-- If its box answer arrives (gossip-trace.log: "answer received ... code"),
+-- the box works once per side per account. Remove with gossip-trace.lua.
+local INTID_NAME_BOX                                     = 4
 
 -- {{{ clan names
 -- The server's own rule for guild names is checked by its guild command;
@@ -277,8 +286,8 @@ end
 -- }}}
 
 -- {{{ local function try_clan_name
--- A typed name: check it, then found the clan, or say why not (a joke for
--- a taken one). Empty text does nothing.
+-- A spoken (or typed) name: check it, then found the clan, or say why not
+-- (a joke for a taken one). Empty text does nothing.
 local CLAN_POPUP = "And what will your clan be called? (letters and spaces, 2 to 24)"
 local function try_clan_name(player, speaker, code)
     if player:IsInGuild() then return end
@@ -298,25 +307,69 @@ BuddiesTryClanName  = function(player, speaker, code) try_clan_name(player, spea
 BuddiesClanPopup    = CLAN_POPUP
 -- }}}
 
+-- {{{ the clan name, spoken aloud
+-- The client's own name box doesn't work here: on 2026-10-03 the server
+-- sent menus with boxed options (first page, second page, plain icons and
+-- fancy ones) and not one boxed answer ever came back, while plain clicks
+-- on the same menus did (gossip-trace.lua's packet log). So Sargobras asks,
+-- the window closes, and the owner says the name aloud in /say within
+-- NAME_LISTEN_MS. The words still reach everyone nearby: naming a clan is
+-- said, not whispered.
+local NAME_LISTEN_MS        = 60000
+local PLAYER_EVENT_ON_CHAT  = 18
+local CHAT_MSG_SAY          = 1
+local listening = {}            -- owner guid (low) -> { npc = creature guid, map = map id, until_ms = game time }
+
+local function listen_for_name(player, creature)
+    listening[player:GetGUIDLow()] = { npc = creature:GetGUID(), until_ms = GetCurrTime() + NAME_LISTEN_MS }
+    creature:SendUnitSay("Every clan needs a name. Say it aloud, and I'll see it written. Letters and spaces, two to twenty-four.", 0)
+end
+
+-- what was said in /say by an owner he is listening to is the name;
+-- anything else, and anyone else, passes untouched
+local function on_chat(event, player, msg, msg_type, lang)
+    local wait = listening[player:GetGUIDLow()]
+    if not wait or msg_type ~= CHAT_MSG_SAY then return end
+    listening[player:GetGUIDLow()] = nil
+    if GetCurrTime() > wait.until_ms then return end                 -- too late: he stopped listening
+    local creature = player:GetMap():GetWorldObject(wait.npc)
+    if not creature then
+        -- a wandering Sargobras can leave between the asking and the
+        -- saying: tell the owner plainly, the clan isn't named
+        print(string.format('%sERROR: owner %d said a clan name but Sargobras (%s) is gone; nothing founded',
+            TAG, player:GetGUIDLow(), tostring(wait.npc)))
+        player:SendBroadcastMessage("Sargobras isn't here to hear it. Ask him again.")
+        return
+    end
+    try_clan_name(player, creature, msg)
+end
+-- The soul trade in Acherus names its clan the same way (a plain global,
+-- since the two scripts are loaded separately).
+BuddiesListenForClanName = function(player, creature) listen_for_name(player, creature) end
+-- }}}
+
 -- {{{ local function show_menu
+-- No clan yet: one option, to name it (owner, 2026-10-03: "we should make
+-- Sargobras have ONE option, which lets you pick a clan name. Once you've
+-- done that, then he presents the [...] options"), so a name that fails
+-- never costs a pick, and an owner whose buddies are all chosen can still
+-- name the clan. With a clan: every class, then every people, each with
+-- its own icon (owner, 2026-09-29: "can we put them all on the first menu
+-- instead of having a sub-menu?"). `page` is no longer used; kept so an
+-- old menu still open in a client, whose options ask for a page, lands here.
 local function show_menu(player, creature, page)
     player:GossipClearMenu()
-    local classes, races = Choice.menu(RC, team_name(player), false)
-    -- no clan yet: each pick also names the clan, typed in its pop-up box
-    local ask_name = not player:IsInGuild()
-    local popup    = ask_name and CLAN_POPUP or nil
-    -- One page: every class, then every people, each with its own icon
-    -- (owner, 2026-09-29: "can we put them all on the first menu instead
-    -- of having a sub-menu?"). `page` is no longer used; kept so an old
-    -- menu still open in a client, whose options ask for a page, lands here.
-    if owed_slot(player:GetGUIDLow()) then
+    if not player:IsInGuild() then
+        player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "First, our clan needs a name.", 0, INTID_NAME)
+        player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "(test) Type our clan's name in a box.", 0, INTID_NAME_BOX, true, CLAN_POPUP)
+    elseif owed_slot(player:GetGUIDLow()) then
+        local classes, races = Choice.menu(RC, team_name(player), false)
         for _, c in ipairs(classes) do
             local text = c.name                 -- just the name (owner, 2026-09-29: "\"paladin\" or \"druid\" [...] and that's it")
-            player:GossipMenuAddItem(CLASS_ICON[c.id] or GOSSIP_ICON_CHAT, text, 0, INTID_CLASS + c.id, ask_name, popup)
+            player:GossipMenuAddItem(CLASS_ICON[c.id] or GOSSIP_ICON_CHAT, text, 0, INTID_CLASS + c.id)
         end
         for _, r in ipairs(races) do
-            local text = r.name
-            player:GossipMenuAddItem(RACE_ICON[r.id] or GOSSIP_ICON_CHAT, text, 0, INTID_RACE + r.id, ask_name, popup)
+            player:GossipMenuAddItem(RACE_ICON[r.id] or GOSSIP_ICON_CHAT, r.name, 0, INTID_RACE + r.id)
         end
     end
     player:GossipSendMenu(TEXT_OWED, creature)
@@ -377,7 +430,9 @@ local function start_turn(creature, player)
         local owner = owner_of[c:GetGUIDLow()]
         local p = owner and GetPlayerByGUID(GetPlayerGUID(owner))
         local delta = p and ((c:GetAngle(p) - c:GetO() + math.pi) % (2 * math.pi) - math.pi)
-        if not delta or c:IsMoving() or math.abs(delta) <= TURN_DONE then
+        -- "moving" is asked as "not stopped": the pinned Lua engine (July
+        -- 2026) gives IsMoving to players only; IsStopped is on every unit
+        if not delta or not c:IsStopped() or math.abs(delta) <= TURN_DONE then
             turning[c:GetGUIDLow()] = nil
             return c:RemoveEventById(event_id)
         end
@@ -403,7 +458,7 @@ local function follow_tick(_, _, _, creature)
         local px, py, pz = player:GetLocation()
         local a = ((slot_of[creature:GetGUIDLow()] or 1) - 1) * 2 * math.pi / 7
         creature:MoveTo(1, px + math.cos(a) * STOP_AT, py + math.sin(a) * STOP_AT, pz)
-    elseif not creature:IsMoving() then
+    elseif creature:IsStopped() then                -- see start_turn: no IsMoving on creatures
         local now, low = GetCurrTime(), creature:GetGUIDLow()
         if not turned_at[low] or now - turned_at[low] >= TURN_EVERY_MS then
             turned_at[low] = now
@@ -460,7 +515,10 @@ local function on_hello(event, player, creature)
         player:GossipClearMenu()
         return player:GossipSendMenu(TEXT_NOT_YOURS, creature)
     end
-    if player:GetClass() == CLASS_DEATH_KNIGHT or not owed_slot(player:GetGUIDLow()) then
+    -- nothing for him to do: a death knight (named in Acherus), or an
+    -- owner with a clan and every buddy chosen; a clanless owner always
+    -- gets the naming option, buddies owed or not
+    if player:GetClass() == CLASS_DEATH_KNIGHT or (player:IsInGuild() and not owed_slot(player:GetGUIDLow())) then
         player:GossipClearMenu()
         return player:GossipSendMenu(TEXT_NONE, creature)
     end
@@ -471,12 +529,24 @@ end
 -- {{{ local function on_select
 local function on_select(event, player, creature, sender, intid, code)
     if intid == INTID_CLASSES or intid == INTID_RACES then return show_menu(player, creature, intid) end
+    -- the box test (see INTID_NAME_BOX): the typed name, if it ever arrives
+    if intid == INTID_NAME_BOX then
+        player:GossipComplete()
+        return try_clan_name(player, creature, code)
+    end
+    -- the clan's name: the window closes and he listens for it in /say
+    if intid == INTID_NAME then
+        player:GossipComplete()
+        if player:IsInGuild() then return end       -- named meanwhile (another Sargobras, or Acherus)
+        return listen_for_name(player, creature)
+    end
 
     local pick
     if intid > INTID_RACE then pick = { kind = "race", id = intid - INTID_RACE }
     elseif intid > INTID_CLASS then pick = { kind = "class", id = intid - INTID_CLASS } end
     player:GossipComplete()
     if not pick then return end
+    if not player:IsInGuild() then return end       -- an old menu still open from before the clan rule: name first
 
     local owner = player:GetGUIDLow()
     local owed  = owed_slots(owner)
@@ -495,11 +565,7 @@ local function on_select(event, player, creature, sender, intid, code)
     creature:SendUnitSay(string.format("%s %s %s. They'll find you soon.",
         article(race_name), race_name, RC.classes[b.class].name), 0)
 
-    -- the name typed in the pick's pop-up, when there was no clan yet
-    try_clan_name(player, creature, code)
-
-    -- his tier is chosen: a wanderer goes on break (he still
-    -- answers, so an unnamed clan can be named at the fire)
+    -- his tier is chosen: a wanderer goes on break (he still answers)
     if creature:GetEntry() == WANDERER then go_on_break(creature) end
 end
 -- }}}
@@ -554,6 +620,7 @@ if roster_ready() then
     RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN,        on_login)
     RegisterPlayerEvent(PLAYER_EVENT_ON_LEVEL_CHANGE, on_level_change)
     RegisterPlayerEvent(PLAYER_EVENT_ON_LOGOUT,       on_logout)
+    RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT,         on_chat)
     for _, entry in ipairs({ VALLEY, WANDERER }) do
         RegisterCreatureGossipEvent(entry, GOSSIP_EVENT_ON_HELLO,  on_hello)
         RegisterCreatureGossipEvent(entry, GOSSIP_EVENT_ON_SELECT, on_select)

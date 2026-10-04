@@ -6,7 +6,9 @@
  * for that character logs in too, as the player's own bot, and appears
  * 20 to 30 yards away, facing them. When the player logs out, the bot
  * module logs its bots out with them (its own rule), so nothing is needed
- * here for that.
+ * here for that. While the player is online the buddies are kept online:
+ * one missing buddy is logged in every 1 to 3 seconds until all are (the
+ * keeper, below).
  *
  * How the bot module is persuaded: it lets a player control a bot only when
  * the bot is on the player's account, in their guild, or on an account
@@ -21,6 +23,7 @@
  */
 
 #include "buddies.h"
+#include "buddies_steer.h"
 #include "Creature.h"
 #include "DatabaseEnv.h"
 #include "GameTime.h"
@@ -46,11 +49,17 @@ static constexpr uint32 OWNER_TRIES      = 20;     // passes to wait for the bot
 static constexpr float  PLACE_MIN_YARDS  = 20.0f;  // "near the owner's area (not on top of the owner)"
 static constexpr float  PLACE_MAX_YARDS  = 30.0f;
 static constexpr int    PLACE_TRIES      = 6;      // directions tried for solid ground
+// The keeper (owner, 2026-10-03: "after any player logs in, that logs in
+// one buddy bot per 1-3 seconds until they're all logged in"):
+static constexpr uint32 KEEP_STEP_MIN_MS = 1000;   // one missing buddy asked in every 1 ...
+static constexpr uint32 KEEP_STEP_MAX_MS = 3000;   // ... to 3 seconds
+static constexpr uint32 KEEP_WATCH_MS    = 5000;   // all in: looked at again this often while the owner is online
 // }}}
 
 struct BuddyWait { uint64 dueMs; uint32 tries; };
 static std::map<uint32, BuddyWait> sOwnersDue;     // owner guid -> when to log its buddies in
 static std::map<uint32, BuddyWait> sBuddiesDue;    // buddy guid -> when to place it
+static std::map<uint32, uint64>    sKeepers;       // owner guid -> when its buddies are next looked at (game-time ms)
 
 // {{{ BuddyQueueLogin
 // Log the owner's made buddies in soon (at the owner's login, and when a new
@@ -82,13 +91,61 @@ static bool LogInBuddies(uint32 ownerGuid)
     PlayerbotsDatabase.DirectExecute("INSERT IGNORE INTO playerbots_account_links (account_id, linked_account_id) VALUES ({}, {})",
         companion, ownerAccount);
 
-    QueryResult buddies = CharacterDatabase.Query("SELECT buddy FROM buddy_roster WHERE owner = {} AND buddy <> 0", ownerGuid);
-    if (!buddies)
-        return true;
-    do
-        mgr->AddPlayerBot(ObjectGuid::Create<HighGuid::Player>((*buddies)[0].Get<uint32>()), ownerAccount);
-    while (buddies->NextRow());
+    // the buddies themselves are asked in by the keeper, one at a time
+    sKeepers[ownerGuid] = 0;
     return true;
+}
+// }}}
+
+// {{{ the keeper
+// While an owner is online, its buddies are kept online: one missing buddy
+// is asked in every KEEP_STEP_MIN..MAX, and once all are in they are
+// looked at again every KEEP_WATCH_MS. Seen 2026-10-03: a player left by
+// "Exit Game" and came straight back; the old session was still being
+// closed, so the single request made at the new login found the buddy
+// still online and did nothing, and the old session's closing then logged
+// it out for good (the group showing it disconnected). Asking again
+// whenever one is missing undoes that, and any other lost buddy. The bot
+// manager ignores a request for a buddy already loading or online, so
+// asking twice is harmless.
+static void KeepBuddies(uint64 now)
+{
+    for (auto it = sKeepers.begin(); it != sKeepers.end(); )
+    {
+        if (it->second > now) { ++it; continue; }
+        Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(it->first));
+        if (!owner)
+        {
+            it = sKeepers.erase(it);                   // logged out: its bots go with it (the bot module's rule)
+            continue;
+        }
+        PlayerbotMgr* mgr = owner->IsInWorld() ? GET_PLAYERBOT_MGR(owner) : nullptr;
+        if (!mgr)
+        {
+            it->second = now + KEEP_STEP_MIN_MS;       // still arriving: soon
+            ++it;
+            continue;
+        }
+        uint32 missing = 0;
+        // only the owner's stage of buddies (617a6, buddies_stage.cpp):
+        // waiting and still-recording ones stay out; one to be made again
+        // is brought in for that
+        QueryResult buddies = CharacterDatabase.Query("SELECT buddy FROM buddy_roster WHERE owner = {} AND buddy <> 0 AND stage IN (0, 3)", it->first);
+        if (buddies)
+            do
+            {
+                ObjectGuid buddy = ObjectGuid::Create<HighGuid::Player>((*buddies)[0].Get<uint32>());
+                if (ObjectAccessor::FindConnectedPlayer(buddy))
+                    continue;
+                if (!missing++)                        // the first missing one is asked in now
+                {
+                    LOG_INFO("module", "mod-buddies: {}'s buddy {} is not online; logging it in", owner->GetName(), buddy.GetCounter());
+                    mgr->AddPlayerBot(buddy, owner->GetSession()->GetAccountId());
+                }
+            } while (buddies->NextRow());
+        it->second = now + (missing > 0 ? urand(KEEP_STEP_MIN_MS, KEEP_STEP_MAX_MS) : KEEP_WATCH_MS);
+        ++it;
+    }
 }
 // }}}
 
@@ -101,13 +158,17 @@ static bool LogInBuddies(uint32 ownerGuid)
 // yet, 1 wave, 2 salute), which also marks the entrance as done: "We
 // should remember which one they did because it'll inform their
 // personality later."
-// Then it hangs out: it stands until the owner has moved 5 yards from
-// where they stood when it appeared, then turns to face them every
-// quarter second, and once the owner is 10 yards from that spot it
-// "starts to run toward adventure" (its ordinary roaming and distance
-// grouping). The bot module's AI is held off from the teleport to that
-// moment, so nothing walks the buddy away early. No Sargobras near:
-// placed the ordinary way, silently ("This should never happen").
+// Then (owner, 2026-10-03, replacing the hang-out that waited for the
+// owner to walk 10 yards off, which read as "just standing around"): "have
+// them wave / salute / bow / flex / nod [...] Then once they've done that,
+// wait a couple seconds 3-4, then turn lerp style in a direction and go
+// off to adventure." The gesture is one of the five at random; after
+// GESTURE_PAUSE_MIN..MAX it turns, smoothly (the turn rule,
+// buddies_steer.h), to a random heading, and is let go to roam (its
+// ordinary roaming and distance grouping). The bot module's AI is held off
+// from the teleport to that moment, so nothing walks the buddy away
+// early. No Sargobras near: placed the ordinary way, silently ("This
+// should never happen").
 static constexpr uint32 SARGOBRAS_VALLEY      = 6170001;  // 26-buddy-selector.sql
 static constexpr uint32 SARGOBRAS_WANDERER    = 6170002;
 static constexpr float  ENTRANCE_NEAR_YARDS   = 50.0f;   // a Sargobras this near the owner stages it
@@ -117,13 +178,19 @@ static constexpr float  ENTRANCE_STEP_YARDS   = 2.5f;    // "about 3 steps" forw
 static constexpr uint32 ENTRANCE_ARRIVE_MS    = 1500;    // after the teleport, before the steps
 static constexpr uint32 ENTRANCE_WALK_MS      = 1500;    // the steps
 static constexpr uint32 ENTRANCE_GIVE_UP_MS   = 10000;   // a teleport that never settles: abandoned, logged
-static constexpr uint32 HANG_TICK_MS          = 250;     // "turn every quarter second to them"
-static constexpr float  HANG_TURN_YARDS       = 5.0f;    // the owner this far from their spot: it starts turning
-static constexpr float  HANG_RELEASE_YARDS    = 10.0f;   // this far: it runs off to roam
+static constexpr uint32 HANG_TICK_MS          = 250;     // the entrance's steps are looked at this often
+static constexpr uint32 GESTURE_PAUSE_MIN_MS  = 3000;    // after the gesture, a pause of 3 ...
+static constexpr uint32 GESTURE_PAUSE_MAX_MS  = 4000;    // ... to 4 seconds ("wait a couple seconds 3-4")
 
-enum class Greeting : uint8 { None = 0, Wave = 1, Salute = 2 };
+// The gesture, kept in the roster (greeting): "We should remember which one
+// they did because it'll inform their personality later." Values 1 and 2
+// were the only ones before 2026-10-03; numbers already stored keep their
+// meaning.
+enum class Greeting : uint8 { None = 0, Wave = 1, Salute = 2, Bow = 3, Flex = 4, Nod = 5 };
+static uint32 const GESTURE_EMOTE[] = { 0, EMOTE_ONESHOT_WAVE, EMOTE_ONESHOT_SALUTE, EMOTE_ONESHOT_BOW,
+                                        EMOTE_ONESHOT_FLEX, EMOTE_ONESHOT_YES };   // indexed by Greeting
 
-// stage 1 arriving, 2 walking (then turning to the owner), 3 the gesture, 4 hanging out
+// stage 1 arriving, 2 walking (then turning to the owner), 3 the gesture, 4 the pause then the turn, 5 off
 struct Entrance
 {
     uint64   startMs, dueMs;
@@ -171,7 +238,7 @@ static bool BeginEntrance(Player* buddy, Player* owner, uint32 buddyGuid)
     // ground he faces, where the newcomers arrive
     sEntrances[buddyGuid] = { now, now + ENTRANCE_ARRIVE_MS, 1,
         x + std::cos(o) * ENTRANCE_STEP_YARDS, y + std::sin(o) * ENTRANCE_STEP_YARDS, z,
-        urand(0, 1) ? Greeting::Wave : Greeting::Salute,
+        Greeting(urand(uint32(Greeting::Wave), uint32(Greeting::Nod))),
         owner->GetGUID().GetCounter(), ox, oy, oz };
     return true;
 }
@@ -243,26 +310,41 @@ static void StepEntrances(uint64 now)
         }
         if (e.stage == 3)
         {
-            // the gesture, to the owner
-            buddy->HandleEmoteCommand(e.greeting == Greeting::Wave ? EMOTE_ONESHOT_WAVE : EMOTE_ONESHOT_SALUTE);
+            // the gesture, to the owner, then the pause
+            buddy->HandleEmoteCommand(GESTURE_EMOTE[uint8(e.greeting)]);
             CharacterDatabase.Execute("UPDATE buddy_roster SET greeting = {} WHERE buddy = {}", uint8(e.greeting), it->first);
+            uint32 pause = urand(GESTURE_PAUSE_MIN_MS, GESTURE_PAUSE_MAX_MS);
+            if (ai)
+                ai->SetNextCheckDelay(pause + HANG_TICK_MS * 4);
             e.stage = 4;
-        }
-        // the hang-out: the owner gone, or 10 yards from their spot, lets
-        // it go; 5 yards and it turns to them; nearer, it stands
-        float moved = ownerHere ? owner->GetExactDist(e.ox, e.oy, e.oz) : HANG_RELEASE_YARDS;
-        if (moved >= HANG_RELEASE_YARDS)
-        {
-            buddy->SetWalk(false);                     // "starts to run toward adventure"
-            it = sEntrances.erase(it);                 // the AI's next check picks roaming up
+            e.dueMs = now + pause;
+            ++it;
             continue;
         }
-        if (moved > HANG_TURN_YARDS)
-            buddy->SetFacingToObject(owner);
-        if (ai)
-            ai->SetNextCheckDelay(HANG_TICK_MS * 2);
-        e.dueMs = now + HANG_TICK_MS;
-        ++it;
+        if (e.stage == 4)
+        {
+            // the turn, smoothly, to a heading of its own choosing
+            float heading = frand(0.0f, 2.0f * float(M_PI));
+            BuddyTurnToward(buddy, heading);
+            if (ai)
+                ai->SetNextCheckDelay(HANG_TICK_MS * 4);
+            e.stage = 5;
+            e.dueMs = now + HANG_TICK_MS;
+            ++it;
+            continue;
+        }
+        // stage 5: the turn done, off to adventure (the AI's next check
+        // picks roaming up)
+        if (BuddyTurnBusy(buddy))
+        {
+            if (ai)
+                ai->SetNextCheckDelay(HANG_TICK_MS * 2);
+            e.dueMs = now + HANG_TICK_MS;
+            ++it;
+            continue;
+        }
+        buddy->SetWalk(false);                         // "go off to adventure"
+        it = sEntrances.erase(it);
     }
 }
 // }}}
@@ -352,6 +434,7 @@ public:
         uint64 now = uint64(GameTime::GetGameTimeMS().count());
         Run(sOwnersDue, now, LogInBuddies, "log in the buddies of owner");
         Run(sBuddiesDue, now, PlaceBuddy, "place buddy");
+        KeepBuddies(now);
     }
 
 private:

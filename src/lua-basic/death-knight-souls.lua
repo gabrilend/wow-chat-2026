@@ -372,13 +372,17 @@ local function on_hello(event, player, creature)
     player:GossipClearMenu()
     local row = player:GetClass() == CLASS_DEATH_KNIGHT and ledger(player:GetGUIDLow()) or nil
     if row and row.state == STATE_OWED then
-        -- no clan yet: the trade's pop-up also asks the clan's name (617l;
-        -- the four buddies it brings are the clan)
-        local ask_name = not player:IsInGuild() and BuddiesClanPopup ~= nil
-        for _, c in ipairs(candidates(player)) do
-            local confirm = string.format("Give %s to the Lich King? %s leaves your character list; you can ask for them back here later.", c.name, c.name)
-            player:GossipMenuAddItem(GOSSIP_ICON_CHAT, string.format("Give %s (level %d) to the Lich King.", c.name, c.level), 0, c.guid, ask_name,
-                ask_name and (confirm .. " " .. BuddiesClanPopup) or confirm)
+        -- no clan yet: naming it comes first, alone (617l; the four buddies
+        -- the trade brings are the clan). The client's name box never sends
+        -- its answer (2026-10-03, see sargobras.lua's "spoken aloud"), so
+        -- the name is said in /say after this option, as at Sargobras.
+        if not player:IsInGuild() then
+            player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "First, our clan needs a name.", 0, INTID_CLAN)
+        else
+            for _, c in ipairs(candidates(player)) do
+                local confirm = string.format("Give %s to the Lich King? %s leaves your character list; you can ask for them back here later.", c.name, c.name)
+                player:GossipMenuAddItem(GOSSIP_ICON_CHAT, string.format("Give %s (level %d) to the Lich King.", c.name, c.level), 0, c.guid, false, confirm)
+            end
         end
         player:GossipSendMenu(TEXT_OWED, creature)
     elseif row and row.state == STATE_GIVEN then
@@ -386,8 +390,8 @@ local function on_hello(event, player, creature)
             player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "I want my old life back.", 0, INTID_RETURN, false,
                 "This death knight will be erased for good, and your old self returns to your character list, undead-pale. Are you sure?")
         end
-        if not player:IsInGuild() and BuddiesClanPopup then
-            player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "Let me name our clan.", 0, INTID_CLAN, true, BuddiesClanPopup)
+        if not player:IsInGuild() then
+            player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "Let me name our clan.", 0, INTID_CLAN)
         end
         player:GossipSendMenu(TEXT_GIVEN, creature)
     else
@@ -403,13 +407,13 @@ local function on_select(event, player, creature, sender, intid, code)
     if not row then return end
     if row.state == STATE_GIVEN and intid == INTID_RETURN then
         if intro_done(player) then take_back(player, row) end    -- the menu only offers it then; checked again here
-    elseif row.state == STATE_GIVEN and intid == INTID_CLAN then
-        if BuddiesTryClanName then BuddiesTryClanName(player, creature, code) end
-    elseif row.state == STATE_OWED and intid ~= INTID_RETURN and intid ~= INTID_CLAN then
-        if give_soul(player, intid) then
-            if BuddiesTryClanName then BuddiesTryClanName(player, creature, code) end
-            vanish(creature, player)
-        end
+    elseif intid == INTID_CLAN then
+        -- naming, before the trade (owed) or after it (given): he listens
+        -- for the name in /say; sargobras.lua must be loaded for that
+        if not player:IsInGuild() then BuddiesListenForClanName(player, creature) end
+    elseif row.state == STATE_OWED and intid ~= INTID_RETURN then
+        if not player:IsInGuild() then return end   -- an old menu from before the name-first rule
+        if give_soul(player, intid) then vanish(creature, player) end
     end
 end
 -- }}}

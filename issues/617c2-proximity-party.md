@@ -9,6 +9,17 @@
 
 ## Current Behavior
 
+**Seats filled at random, 2026-10-04, syntax-checked, not yet built or
+run** (`buddies_party.cpp`, the seat filling): each pass, after every
+owner's leaving step, the free seats of each group with players (and of
+each owner alone, who then leads a new party) go to buddies picked at
+random among the ungrouped ones within 60 yards of their own owner,
+whose owner is in that group. A member leaving any group (the server's
+group hook) has the world thread fill seats at its next update, not
+waiting for the 5-second pass. An invite into a full party first takes
+out one distance-seated buddy at random (617c4). Far parties unchanged
+(open question below).
+
 **2026-09-29:** a buddy is only ever taken out of its owner's party (past
 75 yards, or in a town) if the pass itself seated it; one the owner
 invited by hand stays (owner: "buddies shouldn't leave manually-invited
@@ -168,6 +179,62 @@ they are near and you don't have a full group."
   of five outdoors gets ×1.4.)
 - (Answered 2026-09-27) Far parties merge: two far parties of the same
   owner merge while there is room ("Sure they can merge").
+- (Noted 2026-10-03) Several players in one group: the owner: "if a
+  player is invited to a group, or two players, or up to 3 other players
+  for a total of 4 players in a group, we should still keep the dynamic
+  party grouping with their buddy-bots active [...] the empty party slots
+  would be filled by whichever bots were in range from among the
+  player's clans." Out in the world the pass already does this: each
+  player's buddies within 60 yards of their own owner join the group
+  that owner is in, while it has seats, whoever leads it; buddies invited
+  by hand (617c4's override) keep their seats. Owners are passed in roster
+  order, so with fewer seats than buddies in range, the first owner's
+  buddies fill first.
+- (Answered 2026-10-03) Filling seats: "whenever there's space created in
+  a dynamic group, we should select a valid buddy-bot at random from
+  within the radius. If there's none who aren't in a group, then we do
+  nothing until one is." So a free seat in a group with players goes to a
+  buddy picked at random among every ungrouped buddy within 60 yards of
+  its own owner, whose owner is in that group (any of its players'
+  clans), not the nearest and not owner by owner.
+- (Answered 2026-10-03) A seat freed by someone leaving is filled at
+  once, not at the next 5-second pass: the server's "a member left a
+  group" moment marks the group, and the world thread fills it on its
+  next update. Distances are still looked at every 5 seconds (see the
+  question below).
+- (Answered 2026-10-04) "Buddy-bots should only ever be in parties if
+  their player-partner is in that party" does not end the far parties:
+  "No they stay. Good point. Let's not take it too literally, only
+  contextually, when we were talking about other players inviting other
+  clan's buddy-bots when that particular player-partner was not in the
+  group."
+- (Open, 2026-10-03) Polling or events: the owner asked "How are we
+  checking for that by the way? Can we make like, custom hook triggers or
+  something for when a character enters a zone / radius from another
+  creature? Or are we polling periodically?" Polling, every 5 seconds,
+  for each online owner: its buddies' distances to it (a few square roots
+  per owner; the roster is cached and re-read every minute). The server
+  has no "came within N yards" event; its own sight updates are the same
+  kind of periodic check (every unit's surroundings, about every second).
+  Events now used: a member leaving a group (above), map changes (the
+  dungeon draw), invites. Making the radius itself an event would mean a
+  source patch in the server's sight updates. Worth it, or is the
+  5-second look fine at this size?
+  (Answered 2026-10-04, with a design) The owner: "seven buddies, *per
+  max level player*" (so up to seven per player online, which the
+  5-second look still handles in microseconds per player). And: "We
+  register a particular game-object as having a radius. This radius is
+  the kind of radius that triggers when another gameobject enters it's
+  field. It runs these functions, A, B, and C, with these arguments, 1,
+  2, and 3, every time an object enters the radius. Could do other such
+  things like 'when a spell is cast on this item' or whatever. Do you
+  think that would be performant?" Answered: yes, if it rides on what
+  the server already does: every moving unit already tells the creatures
+  around it that it moved (the relocation notifier, which is how a
+  monster notices a player entering its aggro radius), so a registered
+  radius is one more listener on that same walk, paid only when
+  something moves, and nothing for objects with no radius registered.
+  Not built: it is a server patch of its own (a new issue if wanted).
 - **The far party's leader**: the lowest-numbered far buddy (a stable
   choice), or whoever has been far longest?
 

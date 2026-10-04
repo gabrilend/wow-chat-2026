@@ -5,7 +5,7 @@
 - Phase: 6
 - Parent: 617
 - Priority: High (every other 617 part stands on it)
-- Sub-issues: 617a1 through 617a5
+- Sub-issues: 617a1 through 617a6 (617a6: buddies by stage, stored above the owner's level)
 
 ## Current Behavior
 

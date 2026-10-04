@@ -42,6 +42,7 @@
 
 #include "buddies.h"
 #include "buddies_roam.h"
+#include "buddies_roles.h"
 #include "BattlegroundMgr.h"
 #include "BattlegroundQueue.h"
 #include "DatabaseEnv.h"
@@ -60,6 +61,7 @@
 #include "Player.h"
 #include "ScriptMgr.h"
 #include <algorithm>
+#include <atomic>
 #include <map>
 #include <mutex>
 #include <set>
@@ -83,6 +85,10 @@ static constexpr uint32 PASS_EVERY_MS     = 5000;
 // after a server restart a buddy still in its owner's party counts as
 // invited by hand and stays; the owner can remove it.
 static std::set<uint32> sSeatedByPass;
+
+// Set when any member leaves any group (the server's group hook, from any
+// thread): the world pass fills seats at its next update.
+static std::atomic<bool> sFillSoon { false };
 
 // {{{ IsFarParty
 // A group whose every member is one of this owner's buddies. Any other
@@ -161,8 +167,25 @@ static Group* NewParty(Player* leader)
 // }}}
 
 // {{{ ArrangeOwner
-// One owner's buddies put in the right groups by distance.
+// One owner's buddies put in the right groups by distance: leaving
+// (step 1), then, after every owner's leaving, the seats filled across
+// all groups at random (FillSeats, below), then the far parties (steps 3
+// and 4, ArrangeFar).
 struct Near { Player* bot; float yards; };
+
+// The online buddies on the owner's map, with their distances.
+static std::vector<Near> BuddiesNear(Player* owner, std::vector<uint32> const& buddyGuids)
+{
+    std::vector<Near> buddies;
+    for (uint32 guid : buddyGuids)
+    {
+        Player* bot = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid));
+        if (!bot || !bot->IsInWorld() || bot->GetMapId() != owner->GetMapId())
+            continue;
+        buddies.push_back({ bot, bot->GetExactDist(owner) });
+    }
+    return buddies;
+}
 
 static void ArrangeOwner(Player* owner, std::vector<uint32> const& buddyGuids)
 {
@@ -179,24 +202,16 @@ static void ArrangeOwner(Player* owner, std::vector<uint32> const& buddyGuids)
         return;
     }
 
-    // The online buddies on the owner's map, with their distances.
-    std::vector<Near> buddies;
-    for (uint32 guid : buddyGuids)
-    {
-        Player* bot = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid));
-        if (!bot || !bot->IsInWorld() || bot->GetMapId() != owner->GetMapId())
-            continue;
-        buddies.push_back({ bot, bot->GetExactDist(owner) });
-    }
+    std::vector<Near> buddies = BuddiesNear(owner, buddyGuids);
 
     // 1. Leaving: out of the owner's group past 75; out of a far party
     //    within 74 of the owner, or more than 74 from every other member of
     //    it. RemoveMember disbands a group left with one member. The owner
     //    (2026-09-27) also has a far-party buddy leave "when it could join
     //    the player's party": within the 60-yard join distance it is within
-    //    74 too, so it leaves here, and step 2 below adds it to the owner's
-    //    party in this same pass when there is room (with no room it stays
-    //    ungrouped until a seat frees).
+    //    74 too, so it leaves here, and the seat filling (FillSeats) may
+    //    seat it in the owner's party in this same pass (with no seat, or
+    //    another buddy drawn for it, it stays ungrouped until a seat frees).
     for (Near const& b : buddies)
     {
         Group* g = b.bot->GetGroup();
@@ -212,26 +227,16 @@ static void ArrangeOwner(Player* owner, std::vector<uint32> const& buddyGuids)
             g->RemoveMember(b.bot->GetGUID());
     }
 
-    // 2. Joining the owner: ungrouped buddies within 60, nearest first,
-    //    while the party has room. With no group yet, the owner leads a new
-    //    one. A raid the owner made with other players is never joined (the
-    //    owner's rule is a party of five, no conversion).
-    std::sort(buddies.begin(), buddies.end(), [](Near const& a, Near const& b) { return a.yards < b.yards; });
-    for (Near const& b : buddies)
-    {
-        if (b.bot->GetGroup() || b.yards > JOIN_OWNER_YARDS)
-            continue;
-        Group* g = owner->GetGroup();
-        if (!g)
-            g = NewParty(owner);
-        if (!g || g->isRaidGroup() || g->GetMembersCount() >= PARTY_SIZE)
-            break;
-        if (g->AddMember(b.bot))
-            sSeatedByPass.insert(b.bot->GetGUID().GetCounter());
-        else
-            LOG_ERROR("module", "mod-buddies: {} could not join {}'s party (server refused); left ungrouped this pass",
-                b.bot->GetName(), owner->GetName());
-    }
+}
+
+// Steps 3 and 4: far buddies grouping with each other.
+static void ArrangeFar(Player* owner, std::vector<uint32> const& buddyGuids)
+{
+    std::set<uint32> buddySet(buddyGuids.begin(), buddyGuids.end());
+    Group* ownerGroup = owner->GetGroup();
+    if (ownerGroup && (ownerGroup->isLFGGroup() || ownerGroup->isBGGroup() || ownerGroup->isBFGroup()))
+        return;                                        // a dungeon-finder or battleground group: not ours
+    std::vector<Near> buddies = BuddiesNear(owner, buddyGuids);
 
     // 3. Far parties: each ungrouped buddy past 74 (lowest guid first, so
     //    the order is stable) joins a far party with room one of
@@ -335,6 +340,80 @@ static void ArrangeOwner(Player* owner, std::vector<uint32> const& buddyGuids)
 }
 // }}}
 
+// {{{ FillSeats
+// The owner, 2026-10-03: "whenever there's space created in a dynamic
+// group, we should select a valid buddy-bot at random from within the
+// radius. If there's none who aren't in a group, then we do nothing until
+// one is." For each group of players out in the world (and each owner
+// alone, who leads a new party for the first buddy): its free seats go to
+// buddies picked at random among the ungrouped buddies within 60 yards of
+// their own owner, whose owner is in it (so from all its players' clans).
+// A buddy is only ever seated in its owner's group. Owners in a town,
+// inside an instance, or in a raid, dungeon-finder or battleground group
+// take no part.
+static void FillSeats(std::map<uint32, std::vector<uint32>> const& byOwner)
+{
+    std::map<Group*, std::vector<Player*>> forGroup;   // a group with players -> its candidates
+    std::map<Player*, std::vector<Player*>> forAlone;  // an owner in no group -> its candidates
+    for (auto const& [ownerGuid, buddyGuids] : byOwner)
+    {
+        Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(ownerGuid));
+        if (!owner || !owner->IsInWorld() || owner->GetMap()->Instanceable() || BuddyTownArea(owner))
+            continue;
+        Group* g = owner->GetGroup();
+        if (g && (g->isRaidGroup() || g->isLFGGroup() || g->isBGGroup() || g->isBFGroup()))
+            continue;                                  // a raid made with others, or a system group: not ours
+        for (Near const& b : BuddiesNear(owner, buddyGuids))
+            if (!b.bot->GetGroup() && b.bot->IsAlive() && b.yards <= JOIN_OWNER_YARDS)
+                (g ? forGroup[g] : forAlone[owner]).push_back(b.bot);
+    }
+    auto seat = [](Group* g, std::vector<Player*>& candidates) {
+        while (!candidates.empty() && g->GetMembersCount() < PARTY_SIZE)
+        {
+            size_t i = urand(0, uint32(candidates.size() - 1));
+            Player* b = candidates[i];
+            candidates.erase(candidates.begin() + i);
+            if (g->AddMember(b))
+                sSeatedByPass.insert(b->GetGUID().GetCounter());
+            else
+                LOG_ERROR("module", "mod-buddies: {} could not join its owner's party (server refused); left ungrouped this pass",
+                    b->GetName());
+        }
+    };
+    for (auto& [g, candidates] : forGroup)
+        seat(g, candidates);
+    for (auto& [owner, candidates] : forAlone)
+    {
+        if (candidates.empty() || owner->GetGroup())
+            continue;
+        if (Group* g = NewParty(owner))
+            seat(g, candidates);
+    }
+}
+// }}}
+
+// {{{ MakeRoom
+// A seat in a full party: one buddy the distance grouping seated (not one
+// invited by hand, not `keep`), at random, taken out. False when every
+// member was invited by hand (the owner, 2026-10-03: "If there are none,
+// then we know that everyone in the party was manually invited, and we
+// shouldn't drop anyone.").
+static bool MakeRoom(Group* g, ObjectGuid keep)
+{
+    std::vector<ObjectGuid> seated;
+    for (auto const& slot : g->GetMemberSlots())
+        if (slot.guid != keep && sSeatedByPass.count(slot.guid.GetCounter()))
+            seated.push_back(slot.guid);
+    if (seated.empty())
+        return false;
+    ObjectGuid out = seated[urand(0, uint32(seated.size() - 1))];
+    sSeatedByPass.erase(out.GetCounter());
+    g->RemoveMember(out);
+    LOG_INFO("module", "mod-buddies: a full party made room for an invite: buddy {} stepped out", out.GetCounter());
+    return true;
+}
+// }}}
+
 // {{{ UngroupInTown
 // The owner is in a town: each online buddy leaves the owner's group or its
 // far party. A group left with one member is disbanded by the server (the
@@ -369,8 +448,10 @@ static void UngroupInTown(Player* owner, std::vector<uint32> const& buddyGuids)
 // goes on from the full bag, skipping those already drawn this time). The
 // drawn are brought in beside the owner; the rest wait outside. Buddies the
 // distance rule had seated make way for the draw; one invited by hand keeps
-// its seat. A group with two or more players is left alone (Ritz,
-// 2026-09-24: no auto-fill when more than one player is grouped). Raids,
+// its seat. A group with several players is filled from all their clans,
+// with a tank and a healer first when it lacks them (the owner,
+// 2026-10-03, replacing 2026-09-24's "no auto-fill when more than one
+// player is grouped"; BringDrawn). Raids,
 // battlegrounds and the dungeon finder's groups are not ours. When the owner
 // comes back out, the buddies inside come out with them.
 //
@@ -384,18 +465,6 @@ static std::vector<DrawDue> sDrawDue;
 
 static bool IsFiveManDungeon(Map* map) { return map->IsDungeon() && !map->IsRaid(); }
 
-// {{{ PlayersIn
-// The players (not buddies) of a group who are online.
-static uint32 PlayersIn(Group* g)
-{
-    uint32 n = 0;
-    for (GroupReference* r = g->GetFirstMember(); r; r = r->next())
-        if (Player* m = r->GetSource())
-            if (!BuddyIsCompanionAccount(m->GetSession()->GetAccountId()))
-                ++n;
-    return n;
-}
-// }}}
 
 // {{{ DrawFromBag
 // `count` buddies of `eligible`, at random, without replacement across
@@ -519,41 +588,150 @@ static void RunWalkIns()
 // }}}
 
 // {{{ BringDrawn
-static void BringDrawn(Player* owner, std::vector<uint32> const& buddyGuids)
+// Buddies drawn into a group inside a dungeon: kept apart from those
+// seated by distance, so a later player's arrival doesn't send them out
+// to be drawn again. Cleared as they come back out.
+static std::set<uint32> sDrawnIn;
+
+// A buddy's role, as its plan's (buddy_roster.role).
+static BuddyRole RosterRole(uint32 buddy)
 {
-    if (!IsFiveManDungeon(owner->GetMap()))
+    QueryResult r = CharacterDatabase.Query("SELECT role FROM buddy_roster WHERE buddy = {}", buddy);
+    return r ? BuddyRole((*r)[0].Get<uint8>()) : BuddyRole::Damage;
+}
+
+// `player` has just arrived in a five-player dungeon. The group's empty
+// seats are filled from the buddies of every player in it (the owner,
+// 2026-10-03: "Yes they should. Please ensure there's at least one tank
+// and healer too."): a tank first if the group has none, a healer second
+// if it has none, then one at a time from each player's draw bag in turn.
+// The ones drawn walk in (StartWalkIn). Unused here: `buddyGuids`, the
+// arriving player's own (every group player's are read from the roster).
+static void BringDrawn(Player* player, std::vector<uint32> const& /*buddyGuids*/)
+{
+    if (!IsFiveManDungeon(player->GetMap()))
         return;                                        // left again already, or not a five-player dungeon
-    Group* g = owner->GetGroup();
+    Group* g = player->GetGroup();
     if (g && (g->isRaidGroup() || g->isLFGGroup() || g->isBGGroup() || g->isBFGroup()))
         return;                                        // a raid, or the dungeon finder's: not ours
-    if (g && PlayersIn(g) >= 2)
-        return;                                        // two or more players: no auto-fill
 
-    // the distance rule's seats make way for the draw
+    // the group's players (just this one, alone)
+    std::vector<Player*> players;
     if (g)
-        for (uint32 guid : buddyGuids)
-            if (g->IsMember(ObjectGuid::Create<HighGuid::Player>(guid)) && sSeatedByPass.erase(guid))
-                g->RemoveMember(ObjectGuid::Create<HighGuid::Player>(guid));
-    g = owner->GetGroup();                             // a party left with one member was disbanded
+    {
+        for (GroupReference* r = g->GetFirstMember(); r; r = r->next())
+            if (Player* m = r->GetSource())
+                if (!BuddyIsCompanionAccount(m->GetSession()->GetAccountId()))
+                    players.push_back(m);
+    }
+    else
+        players.push_back(player);
+    std::set<uint32> playerGuids;
+    for (Player* p : players)
+        playerGuids.insert(p->GetGUID().GetCounter());
+
+    // the distance rule's seats make way for the draw (those drawn in before stay)
+    if (g)
+    {
+        std::vector<ObjectGuid> out;
+        for (auto const& slot : g->GetMemberSlots())
+            if (sSeatedByPass.count(slot.guid.GetCounter()) && !sDrawnIn.count(slot.guid.GetCounter()))
+                out.push_back(slot.guid);
+        for (ObjectGuid guid : out)
+        {
+            sSeatedByPass.erase(guid.GetCounter());
+            if (Group* now = player->GetGroup())
+                now->RemoveMember(guid);
+        }
+    }
+    g = player->GetGroup();                            // a party left with one member was disbanded
     uint32 have = g ? g->GetMembersCount() : 1;
     if (have >= PARTY_SIZE)
         return;
 
-    std::vector<uint32> eligible;                      // online, alive buddies not in the party already
-    for (uint32 guid : buddyGuids)
+    // the roles the group has: its players' specs (every role a tied spec
+    // allows: a feral druid counts as a tank), its buddies' plans
+    BuddyRoles haveRoles = 0;
+    if (g)
     {
-        Player* b = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid));
-        if (b && b->IsInWorld() && b->IsAlive() && !b->InBattleground() && (!g || !g->IsMember(b->GetGUID())))
-            eligible.push_back(guid);
+        for (GroupReference* r = g->GetFirstMember(); r; r = r->next())
+            if (Player* m = r->GetSource())
+                haveRoles |= BuddyIsCompanionAccount(m->GetSession()->GetAccountId())
+                    ? BuddyRoleBit(RosterRole(m->GetGUID().GetCounter())) : BuddyPlayerRoles(m);
     }
-    std::vector<uint32> drawn = DrawFromBag(owner->GetGUID().GetCounter(), eligible, PARTY_SIZE - have);
+    else
+        haveRoles = BuddyPlayerRoles(player);
+    bool haveTank   = haveRoles & BuddyRoleBit(BuddyRole::Tank);
+    bool haveHealer = haveRoles & BuddyRoleBit(BuddyRole::Healer);
+
+    // every group player's buddies who could come: online, alive, out of a
+    // match, not in the group already
+    std::map<uint32, std::vector<uint32>> eligible;    // owner -> its eligible buddies
+    std::map<uint32, BuddyRole> roleOf;
+    std::map<uint32, uint32> ownerOf;
+    for (auto const& [buddy, owner] : BuddyRosterPairs())
+    {
+        if (!playerGuids.count(owner))
+            continue;
+        Player* b = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(buddy));
+        if (b && b->IsInWorld() && b->IsAlive() && !b->InBattleground() && (!g || !g->IsMember(b->GetGUID())))
+        {
+            eligible[owner].push_back(buddy);
+            roleOf[buddy]  = RosterRole(buddy);
+            ownerOf[buddy] = owner;
+        }
+    }
+    std::vector<uint32> drawn;
+    auto take = [&](uint32 buddy) {
+        drawn.push_back(buddy);
+        std::vector<uint32>& mine = eligible[ownerOf[buddy]];
+        mine.erase(std::remove(mine.begin(), mine.end(), buddy), mine.end());
+        CharacterDatabase.DirectExecute("INSERT INTO buddy_draw (owner, buddy, had_turn) VALUES ({}, {}, 1) "
+            "ON DUPLICATE KEY UPDATE had_turn = 1", ownerOf[buddy], buddy);
+    };
+    // a tank, then a healer, when missing: a random one of that role
+    for (BuddyRole need : { BuddyRole::Tank, BuddyRole::Healer })
+    {
+        if ((need == BuddyRole::Tank ? haveTank : haveHealer) || have + drawn.size() >= PARTY_SIZE)
+            continue;
+        std::vector<uint32> ofRole;
+        for (auto const& [owner, list] : eligible)
+            for (uint32 b : list)
+                if (roleOf[b] == need)
+                    ofRole.push_back(b);
+        if (ofRole.empty())
+        {
+            LOG_INFO("module", "mod-buddies: {}'s group entered {} without a {} and has no {} buddy to draw", player->GetName(),
+                player->GetMap()->GetMapName(), need == BuddyRole::Tank ? "tank" : "healer", need == BuddyRole::Tank ? "tank" : "healer");
+            continue;
+        }
+        take(ofRole[urand(0, uint32(ofRole.size() - 1))]);
+    }
+    // the rest: one from each player's bag in turn, the players in a random order
+    std::vector<uint32> order(playerGuids.begin(), playerGuids.end());
+    for (size_t i = order.size(); i > 1; --i)
+        std::swap(order[i - 1], order[urand(0, uint32(i - 1))]);
+    for (bool any = true; any && have + drawn.size() < PARTY_SIZE; )
+    {
+        any = false;
+        for (uint32 owner : order)
+        {
+            if (have + drawn.size() >= PARTY_SIZE)
+                break;
+            std::vector<uint32> one = DrawFromBag(owner, eligible[owner], 1);
+            if (one.empty())
+                continue;
+            take(one.front());
+            any = true;
+        }
+    }
     if (drawn.empty())
         return;
     if (!g)
-        g = NewParty(owner);
+        g = NewParty(player);
     if (!g)
     {
-        LOG_ERROR("module", "mod-buddies: {} entered a dungeon but no party could be made; no buddies drawn in", owner->GetName());
+        LOG_ERROR("module", "mod-buddies: {} entered a dungeon but no party could be made; no buddies drawn in", player->GetName());
         return;
     }
     std::string names;
@@ -567,14 +745,16 @@ static void BringDrawn(Player* owner, std::vector<uint32> const& buddyGuids)
         if (!g->AddMember(b))
         {
             LOG_ERROR("module", "mod-buddies: drawn buddy {} could not join {}'s party (server refused); left outside",
-                b->GetName(), owner->GetName());
+                b->GetName(), player->GetName());
             continue;
         }
         sSeatedByPass.insert(guid);                    // outside again, the distance rule may unseat it
-        StartWalkIn(b, owner);                         // it walks to the entrance (below): "they should have to walk"
-        names += (names.empty() ? "" : ", ") + b->GetName();
+        sDrawnIn.insert(guid);
+        StartWalkIn(b, player);                        // it walks to the entrance (below): "they should have to walk"
+        names += (names.empty() ? "" : ", ") + b->GetName() + " (" + (roleOf[guid] == BuddyRole::Tank ? "tank" :
+            roleOf[guid] == BuddyRole::Healer ? "healer" : "damage") + ")";
     }
-    LOG_INFO("module", "mod-buddies: {} entered {}; drawn in: {}", owner->GetName(), owner->GetMap()->GetMapName(), names);
+    LOG_INFO("module", "mod-buddies: {} entered {}; drawn in: {}", player->GetName(), player->GetMap()->GetMapName(), names);
 }
 // }}}
 
@@ -590,6 +770,7 @@ static void BringOut(Player* owner, std::vector<uint32> const& buddyGuids)
         Player* b = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid));
         if (b && b->IsInWorld() && b->GetMap()->Instanceable() && !b->InBattleground())
             b->TeleportTo(owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), owner->GetOrientation());
+        sDrawnIn.erase(guid);                          // out: the distance rule's again
     }
 }
 // }}}
@@ -693,21 +874,25 @@ static void MirrorQueues(Player* owner, std::vector<uint32> const& buddyGuids)
 }
 // }}}
 
-// {{{ pulled out of a match (617i)
-// "If the owner invites a buddy that is inside a battleground, it leaves
-// the battleground at once and joins the owner's group." The invite is
-// caught as it arrives (buddies_loyalty.cpp) and handed here: the buddy
-// leaves the match (Deserter, cut to a third above), and once it is back
-// in the world it joins the inviter's group, as one invited by hand (it
-// keeps its seat). Given up after PULL_GIVE_UP_MS.
+// {{{ pulled into the inviter's group (617i, 617c4)
+// Every invite of a buddy the loyalty rule allows is caught as it arrives
+// (buddies_loyalty.cpp) and handed here, so it works whatever party the
+// buddy is in (the owner, 2026-10-03: "We should be able to override the
+// dynamic party system by inviting bots to our group"). In a battleground
+// ("If the owner invites a buddy that is inside a battleground, it leaves
+// the battleground at once and joins the owner's group") it leaves the
+// match first (Deserter, cut to a third above) and waits to be back in the
+// world. Then it leaves any other party and joins the inviter's group, as
+// one invited by hand (it keeps its seat). Given up after PULL_GIVE_UP_MS.
 static constexpr uint32 PULL_GIVE_UP_MS = 30000;
 struct PullDue { uint32 buddy; uint32 inviter; uint64 sinceMs; bool left; };
 static std::mutex sPullLock;
 static std::vector<PullDue> sPulls;
 
-void BuddyPullFromBattleground(uint32 buddyGuid, uint32 inviterGuid)
+void BuddyPullIntoGroup(uint32 buddyGuid, uint32 inviterGuid)
 {
     std::lock_guard<std::mutex> lock(sPullLock);
+    // `left` starts false: the pass asks whether it is in a match first
     sPulls.push_back({ buddyGuid, inviterGuid, uint64(GameTime::GetGameTimeMS().count()), false });
 }
 
@@ -730,17 +915,19 @@ static void RunPulls()
             continue;                                  // logged out: nothing to do
         if (now - p.sinceMs > PULL_GIVE_UP_MS)
         {
-            LOG_ERROR("module", "mod-buddies: buddy {} was to leave its battleground for {}'s group, but after {} s it "
-                "was still not back in the world; given up", b->GetName(), inviter->GetName(), PULL_GIVE_UP_MS / 1000);
+            LOG_ERROR("module", "mod-buddies: buddy {} was to join {}'s group, but after {} s it was still not back in "
+                "the world (leaving a battleground, or teleporting); given up", b->GetName(), inviter->GetName(), PULL_GIVE_UP_MS / 1000);
             continue;
         }
         if (!p.left)
         {
-            if (b->InBattleground())
-                b->LeaveBattleground();                // out of the match, back where it came from
             p.left = true;
-            again.push_back(p);
-            continue;
+            if (b->InBattleground())
+            {
+                b->LeaveBattleground();                // out of the match, back where it came from
+                again.push_back(p);
+                continue;
+            }
         }
         if (b->InBattleground() || !b->IsInWorld() || b->IsBeingTeleported())
         {
@@ -750,13 +937,23 @@ static void RunPulls()
         Group* g = inviter->GetGroup();
         if (!g)
             g = NewParty(inviter);
-        if (!g || g->isRaidGroup() || g->GetMembersCount() >= PARTY_SIZE || g->IsMember(b->GetGUID()))
-            continue;                                  // no room (or joined already): out of the match all the same
+        if (g && g->IsMember(b->GetGUID()))
+        {
+            sSeatedByPass.erase(p.buddy);              // seated by distance already: now it counts as invited by hand
+            continue;
+        }
+        if (g && !g->isRaidGroup() && g->GetMembersCount() >= PARTY_SIZE)
+            MakeRoom(g, b->GetGUID());                 // a buddy seated by distance steps out, if there is one
+        if (!g || g->isRaidGroup() || g->GetMembersCount() >= PARTY_SIZE)
+        {
+            BuddyTrace(b, "party: {} invited me, but their group has no seat for me", inviter->GetName());
+            continue;                                  // no room: it stays where it is (out of any match all the same)
+        }
         if (Group* old = b->GetGroup())
-            old->RemoveMember(b->GetGUID());
+            old->RemoveMember(b->GetGUID());           // a far party (never its owner's: the inviter's group holds the owner)
         if (!g->AddMember(b))
-            LOG_ERROR("module", "mod-buddies: buddy {} left its battleground but could not join {}'s group (server refused)",
-                b->GetName(), inviter->GetName());
+            LOG_ERROR("module", "mod-buddies: buddy {} could not join {}'s group after leaving its own (server refused); "
+                "it is ungrouped", b->GetName(), inviter->GetName());
         sSeatedByPass.erase(p.buddy);                  // invited by hand: keeps its seat
     }
     if (!again.empty())
@@ -765,6 +962,59 @@ static void RunPulls()
         sPulls.insert(sPulls.end(), again.begin(), again.end());
     }
 }
+// }}}
+
+// {{{ held invites (617c4)
+// An invite of anyone into a full party is held as it arrives
+// (buddies_loyalty.cpp) and handled here, on the world's thread: one
+// buddy seated by distance steps out (MakeRoom), then the invite is given
+// to the server's own invite handling as it arrived. With no such buddy,
+// the server answers "full" as it would have.
+struct HeldInvite { uint32 inviter; std::vector<uint8> packet; };
+static std::mutex sHeldLock;
+static std::vector<HeldInvite> sHeld;
+
+void BuddyHoldInviteForRoom(uint32 inviterGuid, WorldPacket const& packet)
+{
+    std::lock_guard<std::mutex> lock(sHeldLock);
+    sHeld.push_back({ inviterGuid, std::vector<uint8>(packet.contents(), packet.contents() + packet.size()) });
+}
+
+static void RunHeldInvites()
+{
+    std::vector<HeldInvite> work;
+    {
+        std::lock_guard<std::mutex> lock(sHeldLock);
+        if (sHeld.empty())
+            return;
+        work.swap(sHeld);
+    }
+    for (HeldInvite const& h : work)
+    {
+        Player* inviter = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(h.inviter));
+        if (!inviter || !inviter->GetSession())
+            continue;
+        if (Group* g = inviter->GetGroup(); g && !g->isRaidGroup() && g->GetMembersCount() >= PARTY_SIZE)
+            MakeRoom(g, ObjectGuid::Empty);
+        WorldPacket again(CMSG_GROUP_INVITE, h.packet.size());
+        if (!h.packet.empty())
+            again.append(h.packet.data(), h.packet.size());
+        inviter->GetSession()->HandleGroupInviteOpcode(again);
+    }
+}
+// }}}
+
+// {{{ a member left: seats to fill
+class buddies_party_group : public GroupScript
+{
+public:
+    buddies_party_group() : GroupScript("buddies_party_group", { GROUPHOOK_ON_REMOVE_MEMBER }) { }
+
+    void OnRemoveMember(Group* /*group*/, ObjectGuid /*guid*/, RemoveMethod /*method*/, ObjectGuid /*kicker*/, char const* /*reason*/) override
+    {
+        sFillSoon = true;
+    }
+};
 // }}}
 
 class buddies_party_world : public WorldScript
@@ -779,7 +1029,18 @@ public:
     void OnUpdate(uint32 diff) override
     {
         RunDraws();                                    // the dungeon draw's due entries, every tick (617c3)
-        RunPulls();                                    // buddies invited out of a match (617i)
+        RunPulls();                                    // buddies invited into a group (617i, 617c4)
+        RunHeldInvites();                              // invites into full parties (617c4)
+        if (sFillSoon && BuddiesEnabled())
+        {
+            // a member left a group since the last look: its seat is filled
+            // now rather than at the next 5-second pass
+            sFillSoon = false;
+            std::map<uint32, std::vector<uint32>> byOwner;
+            for (auto const& [buddy, owner] : BuddyRosterPairs())
+                byOwner[owner].push_back(buddy);
+            FillSeats(byOwner);
+        }
 
         // owners' last spot outside (a dungeon's entrance, once they go in),
         // and the drawn buddies walking there (617c3)
@@ -819,6 +1080,7 @@ public:
         std::map<uint32, std::vector<uint32>> byOwner;
         for (auto const& [buddy, owner] : BuddyRosterPairs())
             byOwner[owner].push_back(buddy);
+        std::vector<std::pair<Player*, std::vector<uint32> const*>> outside;
         for (auto const& [ownerGuid, buddyGuids] : byOwner)
         {
             Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(ownerGuid));
@@ -827,8 +1089,15 @@ public:
             if (BuddyTownArea(owner))                  // a building inside a town counts as the town
                 UngroupInTown(owner, buddyGuids);      // in town: nobody grouped
             else
-                ArrangeOwner(owner, buddyGuids);
+            {
+                ArrangeOwner(owner, buddyGuids);       // leaving
+                outside.push_back({ owner, &buddyGuids });
+            }
         }
+        FillSeats(byOwner);                            // free seats, at random, across all groups
+        sFillSoon = false;
+        for (auto const& [owner, buddyGuids] : outside)
+            ArrangeFar(owner, *buddyGuids);            // the far parties
     }
 
 private:
@@ -871,6 +1140,7 @@ private:
 void AddSC_buddies_party()
 {
     new buddies_party_world();
+    new buddies_party_group();                         // a member left: its seat filled soon
     new buddies_draw_player();                         // the dungeon draw (617c3)
 }
 // }}}

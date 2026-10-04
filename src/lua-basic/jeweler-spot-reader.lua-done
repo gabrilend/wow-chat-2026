@@ -1,0 +1,42 @@
+--------------------------------------------------------------------------------
+-- jeweler-spot-reader.lua (TEMPORARY - remove once the Uldaman spots are saved)
+--
+-- Reads where the Uldaman Earthen pair (the Crystal-Keeper and the
+-- Gemcutter) stand right now in the running world, and writes it to a RAM
+-- file, so spots chosen in game by hand can be carried into the SQL that
+-- spawns them. The owner moved both in game on 2026-10-03; the move lived
+-- only in the server's memory (the world database still held the generated
+-- spots), so a restart would have put them back.
+--
+-- How: on load (a ".reload ale" counts), for every player in the world, ask
+-- for each Earthen within 300 yards of them. A creature is only found while
+-- some player is near it, since an empty part of the map is unloaded.
+-- Output: tmp/shared-memory/jeweler-spots.log, one line per creature found:
+--   entry map x y z orientation
+--------------------------------------------------------------------------------
+
+local DIR       = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local OUT_PATH  = DIR .. "/tmp/shared-memory/jeweler-spots.log"
+local ENTRIES   = { 1550210, 1550211 }  -- Earthen Crystal-Keeper, Earthen Gemcutter
+local RANGE     = 300                   -- yards around each player
+
+-- {{{ local function read_spots
+local function read_spots()
+    local f = assert(io.open(OUT_PATH, "w"), "jeweler-spot-reader: cannot open " .. OUT_PATH)
+    local found = 0
+    for _, player in ipairs(GetPlayersInWorld() or {}) do
+        for _, entry in ipairs(ENTRIES) do
+            for _, c in ipairs(player:GetCreaturesInRange(RANGE, entry) or {}) do
+                local x, y, z, o = c:GetLocation()
+                f:write(string.format("%d %d %.2f %.2f %.2f %.3f near %s\n",
+                    entry, c:GetMapId(), x, y, z, o, player:GetName()))
+                found = found + 1
+            end
+        end
+    end
+    f:write(string.format("found %d\n", found))
+    f:close()
+end
+-- }}}
+
+read_spots()

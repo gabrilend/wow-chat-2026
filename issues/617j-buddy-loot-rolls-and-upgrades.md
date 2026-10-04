@@ -8,6 +8,7 @@
   buddies)
 - Related: 617h (what buddies sell or mail)
 - Priority: Medium
+- Sub-issues: 617j1 (loot turns: the group's loot rule, and who opens which corpse), 617j2 (gems and sockets by the talent plan)
 
 ## Origin
 

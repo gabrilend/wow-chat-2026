@@ -36,7 +36,7 @@
 // Slot n is owed from this level: 1 at creation, then every tenth level.
 // Seven slots reach 60, basic's cap.
 static constexpr uint8 BUDDY_SLOTS = 7;
-static uint8 BuddySlotLevel(uint8 slot) { return slot == 1 ? 1 : uint8((slot - 1) * 10); }
+uint8 BuddySlotLevel(uint8 slot) { return slot == 1 ? 1 : uint8((slot - 1) * 10); }
 
 // {{{ BuddyCompanionAccountName
 std::string BuddyCompanionAccountName(uint32 ownerGuid)

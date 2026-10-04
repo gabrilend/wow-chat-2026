@@ -11,7 +11,9 @@
 #define MOD_BUDDIES_H
 
 #include "Define.h"
+#include "StringFormat.h"
 #include <string>
+#include <string_view>
 
 // Whether the roster tables were found at startup (buddies_roster.cpp).
 // Every buddy hook does nothing while this is false.
@@ -31,14 +33,53 @@ uint32 BuddyCompanionAccountId(uint32 ownerGuid);
 // characters are buddies: no clan, no account, no owed slots of their own.
 bool BuddyIsCompanionAccount(uint32 accountId);
 
-// A buddy in a battleground, invited by its owner's side, leaves the match
-// and joins the inviter's group; done by the party pass on the world's
-// thread (buddies_party.cpp, 617i). Safe to call from any thread.
-void BuddyPullFromBattleground(uint32 buddyGuid, uint32 inviterGuid);
+class Player;
+
+// A buddy invited by its owner's side leaves whatever it is in (a
+// battleground match, 617i, or another party: a far party, its owner's
+// party, 617c4's override) and joins the inviter's group as one invited by
+// hand; done by the party pass on the world's thread (buddies_party.cpp).
+// Safe to call from any thread.
+void BuddyPullIntoGroup(uint32 buddyGuid, uint32 inviterGuid);
+
+// An invite of anyone into the inviter's full party, held: on the world's
+// thread one buddy seated by distance steps out, at random, and the invite
+// is then handled by the server as it arrived (buddies_party.cpp, 617c4).
+// Safe to call from any thread.
+class WorldPacket;
+void BuddyHoldInviteForRoom(uint32 inviterGuid, WorldPacket const& packet);
 
 // Log the owner's made buddies in soon, if the owner is online
 // (buddies_login.cpp, 617c1): at the owner's login, and when creation
 // makes a buddy while the owner is online.
 void BuddyQueueLogin(uint32 ownerGuid);
+
+// The level a buddy slot is owed from (buddies_clan.cpp, 617a2): slot 1 at
+// creation (level 1), then every tenth level. Also the level below which
+// an owner's buddy in that slot is stored (617a6).
+uint8 BuddySlotLevel(uint8 slot);
+
+// The owner's buddies matched to its level now (buddies_stage.cpp, 617a6):
+// those whose slot is above it wait (recorded, kept out of the world) until
+// the owner reaches their own level; those of the slots it keeps, if above
+// its level, are recorded and made again at its level. Run at the owner's
+// login and at every level change.
+void BuddyStageCheck(Player* owner);
+
+// The movement trace (buddies_trace.cpp, 617e2): whether a game master has
+// switched it on for this buddy with ".buddy trace <name>", and one line
+// of it, written to the bot module's log so it sits among the bot's own
+// action lines. BuddyTrace formats only when the buddy is traced, so a
+// call costs one set lookup otherwise.
+class Player;
+bool BuddyTraced(Player const* bot);
+void BuddyTraceLine(Player const* bot, std::string const& text);
+
+template<typename... Args>
+inline void BuddyTrace(Player const* bot, std::string_view fmt, Args&&... args)
+{
+    if (BuddyTraced(bot))
+        BuddyTraceLine(bot, Acore::StringFormat(fmt, std::forward<Args>(args)...));
+}
 
 #endif

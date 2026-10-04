@@ -9,6 +9,28 @@
 
 ## Current Behavior
 
+**Groups with several players, 2026-10-04, syntax-checked, not yet built
+or run** (`buddies_party.cpp`, `BringDrawn`; roles in `buddies_roles.cpp`):
+a player arriving in a five-player dungeon fills its group's empty seats
+from the buddies of every player in the group; a tank first if the
+group's players (by spec: the tree with the most points) and buddies
+(by plan) have none, then a healer, then one at a time from each
+player's draw bag in turn, players in a random order. Buddies drawn in
+are kept apart from distance-seated ones, so a later player's arrival
+doesn't redraw them; they rejoin the distance rule when they come out.
+
+**Inside an instance, changed 2026-10-03 (syntax-checked, not yet built):**
+seen in Zul'Farrak the same day, buddies stood at the entrance: the
+open-country strategy set (no "follow") was left on them inside, since the
+strategy pass skipped instances. Now the pass gives a buddy inside a
+dungeon, raid or battleground the bot module's own way of running one:
+"follow" on, roaming, travel and town visits off, running pace
+(`buddies_roam_strategy.cpp`, `sInstance`). The bot module's bots don't
+clear a dungeon by themselves: they follow the leader, attack what the
+leader attacks and whatever attacks the group, and play their class's
+role; the leader leads the pulls.
+
+Before this:
 **Built 2026-09-29, not yet compiled or tried in game** (owner: "we should
 ensure that's working too"): `buddies_party.cpp`, "the dungeon draw". On
 the owner's arrival in a five-player dungeon (the map-change hook; the
@@ -39,7 +61,39 @@ instance; only empty slots filled when the owner is already in a party; no
 auto-fill when two or more players are grouped; a buddy in a battleground
 drawn last (617i).
 
+## Open Questions
+
+- (Answered 2026-10-03; replaces the 2026-09-24 rule of no fill with two
+  or more players) Several players entering a dungeon together: "Yes they
+  should. Please ensure there's at least one tank and healer too. Player
+  talents should be summed per tree, and whichever one has the most points
+  should be counted as their spec for the purposes of this check. Though
+  we should probably abstract that functionality because we'll probably
+  need it elsewhere." So the draw fills the group's empty seats from the
+  buddies of every player in it; first a tank if the group has none, then
+  a healer if it has none, then the rest. A player's role is its spec's:
+  the talent tree with the most points (ties: the leftmost), each tree's
+  role by class (`buddies_roles.cpp`, a table shared with anything else
+  that needs it). A buddy's role is its plan's (the roster's `role`).
+- (Answered 2026-10-04) A feral druid player: "Yeah they can do both."
+  A tree may carry two roles; feral counts as tank and damage.
+- (Answered 2026-10-04) Ties between trees: "ties should pick one of the
+  potentials randomly. Unless we can return a tuple of the two or
+  something?" Both: the shared reader returns every tied tree (and every
+  role they allow); a caller needing one tree gets one of them at random.
+  The draw counts every role a tied player can take.
+
 ## Suggested Implementation Steps
+
+(The draw for several players, 2026-10-03:) the draw runs once per group
+on the first player's arrival (later arrivals find the seats taken); the
+group's buddies seated by distance make way; the eligible are every
+group player's online buddies; seats left = five less the members; a
+tank first and a healer second when the group's players and hand-invited
+buddies have none (from the eligible of that role, a random one); then
+one at a time from each player's draw bag in turn (a random order of the
+players), each bag as before.
+
 
 1. The `buddy_draw` table (characters database, an install step).
 2. A dungeon-entry hook: draw, re-form the group, bring the drawn in.

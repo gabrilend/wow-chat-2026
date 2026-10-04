@@ -20,14 +20,24 @@ Verbatim, 2026-09-25, while designing buddy professions:
 
 ## Current Behavior
 
-**Naming built 2026-09-26, not yet run**: an owner with no guild picks its
-first buddy at Sargobras (617b, `src/lua-basic/sargobras.lua`) through an
-option that opens the client's pop-up box, and types the clan's name there
-(owner, 2026-09-26: "when the player talks to sargobras to select which
-character type they want their first buddy to be, after they select an
-option a text-pop-up appears"); a death knight types it in the soul
-trade's pop-up in Acherus (`death-knight-souls.lua`). If that name fails,
-"Let me name our clan" stays in his menu. A typed name is checked (letters and spaces, 2-24; not taken, else a joke and
+**Naming reworked 2026-10-03, not yet run.** The 2026-09-26 design (the
+name typed into the client's pop-up box that opened with the first buddy
+pick: "after they select an option a text-pop-up appears") never worked
+in game: with a packet log on (`src/lua-basic/gossip-trace.lua`,
+temporary), Sargobras's boxed options went out on the first page and on
+a second page, with fancy icons and with plain ones, and no boxed answer
+ever came back from the client, while plain clicks on the same menus
+did. Now (owner, 2026-10-03: "we should make Sargobras have ONE option,
+which lets you pick a clan name. Once you've done that, then he presents
+the [...] options"): an owner with no guild sees only "First, our clan
+needs a name." at Sargobras (`sargobras.lua`, the menu builder); choosing
+it closes the window, he asks for the name aloud, and what the owner says
+in /say within 60 seconds is the name (the chat listener). Only with a
+clan does he offer the class and people options, so a refused name never
+costs a pick, and a clanless owner with every buddy chosen can still name
+it. The soul trade in Acherus (`death-knight-souls.lua`) follows the same
+rule: naming first, alone, by the same listener; its trade options carry
+only their confirmation, no box. A said name is checked (letters and spaces, 2-24; not taken, else a joke and
 another try), and the guild is made with the server's own guild command so
 its name rules apply, then checked two seconds later; the guild id is kept
 in `buddy_clan.clan_guild` and the buddies made so far are invited (the

@@ -6,6 +6,7 @@
 - Parent: 617
 - Blocked by: 617e (town behavior)
 - Priority: Medium
+- Sub-issues: 617h1 (the selling trip: full bags send a buddy to a vendor)
 
 ## Origin
 

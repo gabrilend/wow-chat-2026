@@ -19,6 +19,19 @@ Verbatim, the owner, 2026-09-29:
 
 ## Current Behavior
 
+**Changed 2026-10-03, syntax-checked, not yet built or run.** Seen in game
+the same day: a new buddy "is just standing around" (the hang-out, waiting
+for the owner to walk 10 yards off). The owner: "have them wave / salute /
+bow / flex / nod [...] Then once they've done that, wait a couple seconds
+3-4, then turn lerp style in a direction and go off to adventure. I think
+that'll be a bit cleaner." Now (`buddies_login.cpp`, the entrance): the
+steps forward and the turn to the owner as before; then one of five
+gestures at random (wave, salute, bow, flex, nod), recorded in the roster
+(`greeting` 1 to 5; 1 and 2 keep their old meaning); a pause of 3 to 4
+seconds; a smooth turn (the turn rule, 617o4) to a random heading; then it
+is let go to roam. The hang-out is gone.
+
+Before this:
 **Built 2026-09-29, not yet compiled or tried in game** (`buddies_login.cpp`,
 the entrance; roster column `greeting`). As built, following the owner's
 answers of 2026-09-29: the buddy appears behind Sargobras facing the

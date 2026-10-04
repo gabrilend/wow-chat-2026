@@ -32,7 +32,12 @@ local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz
 -- stands and in which direction (radians; nil = along the landmark's facing)
 local SITES = {
     { site = "uldaman", query = "SELECT target_map, target_position_x, target_position_y, target_position_z, target_orientation FROM areatrigger_teleport WHERE ID = 288",
-      out = 6, dir = nil },                                      -- Uldaman's front exit, the Badlands side: ahead of where you walk out
+      out = 6, dir = nil,                                        -- Uldaman's front exit, the Badlands side: ahead of where you walk out
+      -- placed by hand in game by the owner, 2026-10-03 ("I moved the Earthen
+      -- Jewelcutter and Crystal-Keeper to better spots outside Uldaman"), read
+      -- from the live world (map, x, y, z, facing); these win over the worked-out spot
+      placed = { trader  = { 0, -6069.84, -2963.40, 209.78, 1.587 },
+                 jeweler = { 0, -6070.53, -2947.52, 209.78, 4.779 } } },
     { site = "uldum",   query = "SELECT map, position_x, position_y, position_z, orientation FROM gameobject WHERE id = 142343 LIMIT 1",
       out = 7, dir = 0 },                                         -- the Uldum Pedestal, Tanaris: to its north
     { site = "pylon_n", query = "SELECT map, position_x, position_y, position_z, orientation FROM gameobject WHERE id = 164955 LIMIT 1",
@@ -139,7 +144,11 @@ for _, s in ipairs(SITES) do
     for role, sgn in pairs({ trader = 1, jeweler = -1 }) do
         local x, y = cx + sgn * PAIR_GAP * math.cos(side), cy + sgn * PAIR_GAP * math.sin(side)
         local z = under_rock and lz or ground(map, x, y)
-        rows[#rows + 1] = string.format("('%s','%s',%d,%.2f,%.2f,%.2f,%.3f)", s.site, role, map, x, y, z, face)
+        local o = face
+        -- a hand-placed spot replaces the worked-out one whole: the owner
+        -- stood them where they look right, ground height included
+        if s.placed then map, x, y, z, o = unpack(s.placed[role]) end
+        rows[#rows + 1] = string.format("('%s','%s',%d,%.2f,%.2f,%.2f,%.3f)", s.site, role, map, x, y, z, o)
     end
     report[#report + 1] = string.format("  %-8s landmark z %.1f, ground under it %.1f%s", s.site, lz, ground(map, lx, ly),
         under_rock and " (under rock: the pair uses the landmark's height)" or "")

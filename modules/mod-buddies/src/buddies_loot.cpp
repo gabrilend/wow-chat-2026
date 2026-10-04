@@ -70,6 +70,20 @@ static constexpr uint8 PLAN_THIRDS[10][3] = {
     { 0, 0, 3 },  // 10  all third
 };
 static constexpr uint8 PLAN_THIRDS_EACH  = 7;
+
+// The main tree of plan 1-10: the one with the most thirds (a plan with a
+// third in each, 7, counts its first). -1 for no plan (0, or out of range).
+int8 BuddyPlanMainTree(uint8 profile)
+{
+    if (profile < 1 || profile > 10)
+        return -1;
+    uint8 const* t = PLAN_THIRDS[profile - 1];
+    int8 best = 0;
+    for (int8 i = 1; i < 3; ++i)
+        if (t[i] > t[best])
+            best = i;
+    return best;
+}
 static constexpr uint8 ROLE_TANK         = 1;           // buddy_roster.role: 0 damage, 1 tank, 2 healer
 
 static constexpr uint32 REFRESH_MS       = 10000;       // how stale the remembered facts may be
@@ -248,10 +262,19 @@ bool BuddyTalentPlan(Player* player, uint8 (&thirds)[3], CollectorType (&types)[
             player->GetName(), f.profile);
         return false;
     }
+    return BuddyPlanShape(player->getClass(), f.profile, f.role, thirds, types);
+}
+// }}}
+
+// {{{ BuddyPlanShape
+bool BuddyPlanShape(uint8 cls, uint8 profile, uint8 role, uint8 (&thirds)[3], CollectorType (&types)[3])
+{
+    if (profile == 0 || profile > 10)
+        return false;
     for (int t = 0; t < 3; ++t)
     {
-        thirds[t] = PLAN_THIRDS[f.profile - 1][t];
-        types[t]  = TreeCollector(player->getClass(), t, f.role);
+        thirds[t] = PLAN_THIRDS[profile - 1][t];
+        types[t]  = TreeCollector(cls, t, role);
     }
     return true;
 }

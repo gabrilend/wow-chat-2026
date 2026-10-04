@@ -35,6 +35,20 @@ enum RollVote : uint8;
 bool BuddyTalentPlan(Player* player, uint8 (&thirds)[3], CollectorType (&types)[3]);
 // }}}
 
+// {{{ BuddyPlanShape
+// Talent plan 1-10's shape for a class: `thirds` per tree and each tree's
+// kind of stats, as BuddyTalentPlan gives them for a buddy in the roster;
+// for callers that know the plan before the roster does (a buddy being
+// made, 617j2's kit gems). False for plan 0 (none) or out of range.
+bool BuddyPlanShape(uint8 cls, uint8 profile, uint8 role, uint8 (&thirds)[3], CollectorType (&types)[3]);
+// }}}
+
+// {{{ BuddyPlanMainTree
+// The main tree (0-2, the talent window's order) of talent plan 1-10, as
+// buddy_roster.profile holds it; -1 for no plan.
+int8 BuddyPlanMainTree(uint8 profile);
+// }}}
+
 // {{{ BuddyLootRollVote
 // The vote `bot` casts on a group-loot roll for `proto`. `judged` is the
 // bot module's judgement (need for an upgrade it would wear, greed for

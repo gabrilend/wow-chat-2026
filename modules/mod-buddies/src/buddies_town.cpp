@@ -51,7 +51,12 @@
  */
 
 #include "buddies.h"
+#include "buddies_explore.h"
+#include "buddies_spells.h"
+#include "buddies_steer.h"
+#include "MoveSpline.h"
 #include "buddies_roam.h"
+#include "buddies_gems.h"
 #include "buddies_town.h"
 #include "buddies_beds.h"
 #include "buddies_crossing.h"
@@ -105,6 +110,8 @@ WorldPosition FindLandFromPosition(PlayerbotAI* botAI, float startDistance, floa
                                    float orientation, WorldPosition targetPos, float fishingSearchWindow, bool checkLOS);
 
 // {{{ tuning
+static constexpr float  MAP_WALK_YARDS      = 20.0f;   // a walk longer than this crosses town by the distance map (617o3)
+static constexpr float  MAP_LOOKAHEAD_YARDS = 12.0f;   // each stretch of it reaches about this far
 // First guesses; when tuned in game they are logged in docs/balance-updates.md.
 static constexpr float  TRAVEL_RELEVANCE    = 3.5f;    // above roaming (3.0), below fighting (4.0) and looting (5-8)
 static constexpr float  TOWN_RELEVANCE      = 3.0f;    // the town visit ranks with roaming (never both on at once)
@@ -320,6 +327,24 @@ static std::vector<ObjectGuid> Junk(PlayerbotAI* ai, Player* bot)
     return junk;
 }
 
+// What the buddy would part with for money (617h1's dungeon rule): every
+// grey, and what the bot module judges it would sell to a vendor or put up
+// at auction; only items a vendor pays for.
+static std::vector<Item*> Disposable(PlayerbotAI* ai, Player* bot)
+{
+    std::vector<Item*> out;
+    for (Item* item : BagItems(bot))
+    {
+        ItemTemplate const* proto = item->GetTemplate();
+        if (!proto->SellPrice)
+            continue;
+        ItemUsage usage = ai->GetAiObjectContext()->GetValue<ItemUsage>("item usage", item->GetEntry())->Get();
+        if (proto->Quality == ITEM_QUALITY_POOR || usage == ITEM_USAGE_VENDOR || usage == ITEM_USAGE_AH)
+            out.push_back(item);
+    }
+    return out;
+}
+
 // Whether anything worn is worn down.
 static bool AnythingWorn(Player* bot)
 {
@@ -362,13 +387,22 @@ static bool Townsperson(Creature* c, Player* bot, uint32 areaId)
 
 // {{{ the mail
 // Mail it can collect now: delivered, not deleted, not cash-on-delivery,
-// with items or money in it.
+// with items or money in it. Its own old gear (617a6's "Kept for you")
+// counts only while some of it is usable now, so gear it hasn't levelled
+// into doesn't send it to the mailbox every visit.
 static bool MailWaiting(Player* bot)
 {
     time_t now = GameTime::GetGameTime().count();
     for (Mail const* m : bot->GetMails())
-        if (m && m->state != MAIL_STATE_DELETED && m->deliver_time <= now && m->COD == 0 && (!m->items.empty() || m->money))
+    {
+        if (!m || m->state == MAIL_STATE_DELETED || m->deliver_time > now || m->COD != 0 || (m->items.empty() && !m->money))
+            continue;
+        if (m->money || m->sender != bot->GetGUID().GetCounter() || m->subject != "Kept for you")
             return true;
+        for (MailItemInfo const& mi : m->items)
+            if (Item* waiting = bot->GetMItem(mi.item_guid); waiting && bot->CanUseItem(waiting) == EQUIP_ERR_OK)
+                return true;
+    }
     return false;
 }
 
@@ -408,14 +442,27 @@ static void DoMail(PlayerbotAI* ai, Player* bot, GameObject* box)
         if (!m)
             continue;
         CountAuctionMail(bot, m);                     // sold / expired: the rising price (617h)
+        // its own old gear, mailed when it was made again at a lower level
+        // (617a6, buddies_stage.cpp): only what it can use now comes out;
+        // the rest waits in the mail until it has levelled into it
+        bool kept = m->sender == bot->GetGUID().GetCounter() && m->subject == "Kept for you";
         std::vector<ObjectGuid::LowType> items;
         for (MailItemInfo const& mi : m->items)
+        {
+            if (kept)
+                if (Item* waiting = bot->GetMItem(mi.item_guid); waiting && bot->CanUseItem(waiting) != EQUIP_ERR_OK)
+                    continue;
             items.push_back(mi.item_guid);
+        }
         for (ObjectGuid::LowType low : items)
         {
             WorldPacket p(CMSG_MAIL_TAKE_ITEM);
             p << box->GetGUID() << id << uint32(low);
             session->HandleMailTakeItem(p);
+            // into its bags, if it fit: an arrival, as loot is (617j2's gems)
+            ObjectGuid taken = ObjectGuid::Create<HighGuid::Item>(low);
+            if (bot->GetItemByGuid(taken))
+                BuddyItemArrived(bot->GetGUID().GetCounter(), taken);
         }
         m = bot->GetMail(id);
         if (m && m->money)
@@ -678,6 +725,8 @@ static void DoAuction(PlayerbotAI* ai, Player* bot, Creature* npc)
             CharacterDatabase.Execute("INSERT INTO buddy_price (pool, item, steps, last_price, updated) VALUES ({}, {}, 0, {}, UNIX_TIMESTAMP()) "
                 "ON DUPLICATE KEY UPDATE last_price = {}, updated = UNIX_TIMESTAMP()", pool, lot.entry, price, price);
     }
+    // gems for its empty sockets, while it has spare bag slots (617j2)
+    BuddyBuyGemsAtAuction(bot, npc);
     std::lock_guard<std::mutex> lock(sAuctionLock);
     sToVendor[guid].insert(toVendor.begin(), toVendor.end());
 }
@@ -1106,10 +1155,7 @@ static std::vector<ErrandStop> BuildTodo(PlayerbotAI* ai, Player* bot, uint32 ar
 //            then its meals, if the repairer sells them (617h)
 static void DoTrain(PlayerbotAI* /*ai*/, Player* bot, Creature* npc)
 {
-    if (Trainer::Trainer* trainer = ClassLessons(npc, bot))
-        for (Trainer::Spell const& spell : trainer->GetSpells())
-            if (trainer->CanTeachSpell(bot, &spell))
-                trainer->TeachSpell(npc, bot, spell.SpellId);
+    BuddyTrainAtTrainer(bot, npc);                     // cheapest first, until the purse runs short; then quest spells (617n)
 }
 static void DoSell(PlayerbotAI* ai, Player* bot, Creature* npc)
 {
@@ -1142,6 +1188,12 @@ static void DoRepair(PlayerbotAI* /*ai*/, Player* bot, Creature* npc)
     bot->DurabilityRepairAll(true, bot->GetReputationPriceDiscount(npc), false);
     BuyMeals(bot, npc);                               // after repairing, so the repair is paid first
 }
+// the selling trip's way in (617h1, buddies_town.h)
+float BuddyBagFullness(Player* bot) { return BagFullness(bot); }
+float BuddyFullBagsShare() { return FULL_BAGS_SHARE; }
+void  BuddySellAtVendor(PlayerbotAI* ai, Player* bot, Creature* npc) { DoSell(ai, bot, npc); }
+std::vector<Item*> BuddyDisposableItems(PlayerbotAI* ai, Player* bot) { return Disposable(ai, bot); }
+
 using ErrandFn = void (*)(PlayerbotAI*, Player*, Creature*);
 static std::unordered_map<uint8, ErrandFn> const sErrands = {
     { uint8(Errand::Train),  DoTrain  },
@@ -1319,6 +1371,38 @@ public:
         return town && BuddyTownArea(bot) == town;
     }
 
+    // {{{ WalkTo (617o3)
+    // A walk across town to a person or object: by the town's distance map
+    // to it (baked once per spot, over the town's exploring grid, whose
+    // steps the navigation mesh allows) a stretch at a time, then the last
+    // yards by the bot module's own approach. The town's grid is measured
+    // the first time one is asked for; until it is ready (the first
+    // minute or so of the first visit) the walk is the bot module's alone,
+    // as before, and the trace says so.
+    bool WalkTo(WorldObject* to, float nearYards)
+    {
+        // the turn rule (buddies_steer.h): setting off from standing, face
+        // the way first; once walking, the town's stretches follow on
+        if (bot->movespline->Finalized() && BuddyTurnToward(bot, bot->GetAngle(to)))
+            return true;
+        Player* owner = botAI->GetMaster();
+        uint32 town = owner ? BuddyTownArea(owner) : 0;
+        if (town && bot->GetDistance(to) > MAP_WALK_YARDS)
+        {
+            BuddyRoam::Point goal { to->GetPositionX(), to->GetPositionY(), to->GetPositionZ() }, next;
+            if (BuddyExploreStepToward(bot, owner, town, goal, MAP_LOOKAHEAD_YARDS, next))
+            {
+                BuddyTrace(bot, "town: toward {} by the town's distance map, next ({:.1f}, {:.1f}, {:.1f})",
+                    to->GetName(), next.x, next.y, next.z);
+                return MoveTo(bot->GetMapId(), next.x, next.y, next.z);
+            }
+            BuddyTrace(bot, "town: toward {} by the bot module's walking (no distance map: the town's grid isn't ready, "
+                "or {} is off it)", to->GetName(), to->GetName());
+        }
+        return MoveNear(to, nearYards);
+    }
+    // }}}
+
     bool Execute(Event /*event*/) override
     {
         uint32 guid   = bot->GetGUID().GetCounter();
@@ -1426,7 +1510,7 @@ private:
                 return false;
             }
             if (bot->GetDistance(box) > ARRIVED_YARDS)
-                return MoveNear(box, NPC_YARDS);
+                return WalkTo(box, NPC_YARDS);
             bot->SetFacingToObject(box);
             DoMail(botAI, bot, box);
             s.todo.erase(s.todo.begin());
@@ -1441,7 +1525,7 @@ private:
             return false;
         }
         if (bot->GetDistance(npc) > ARRIVED_YARDS)
-            return MoveNear(npc, NPC_YARDS);
+            return WalkTo(npc, NPC_YARDS);
         bot->SetFacingToObject(npc);
         bot->HandleEmoteCommand(EMOTE_ONESHOT_TALK);
         auto fn = sErrands.find(uint8(stop.kind));
@@ -1689,7 +1773,7 @@ private:
         if (!s.there)
         {
             if (bot->GetDistance(npc) > ARRIVED_YARDS)
-                return MoveNear(npc, NPC_YARDS);
+                return WalkTo(npc, NPC_YARDS);
             s.there = true;
             s.until = now + urand(VISIT_MIN_MS, VISIT_MAX_MS);
         }
