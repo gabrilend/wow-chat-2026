@@ -5,7 +5,7 @@
 - Phase: 6 (Companions — bot behaviors)
 - Priority: High for basic (155): "players always have at least one buddy"
 - First profile: basic
-- Sub-issues: 617a–617m
+- Sub-issues: 617a–617q
 
 ## Origin
 
@@ -168,6 +168,10 @@ handler, which B028 (155d) now patches. Bots never pass through it.
 | 617l | buddy-clan-guild | 617a | A guild per clan (owner and buddies), created automatically, named by the owner, used for clan chat |
 | 617m | buddy-task-hunts | 617k, 917 | Crafting on request: the buddy counts her supply, plans where to get the rest, fetches it, crafts and delivers; needs the language model layer |
 | 617i | buddy-battlegrounds | 617c, 617e | Buddies join and leave the owner's battleground queues, finish their matches, then return; an owner's invite pulls them out |
+| 617n | buddy-spell-learning | 617a, 617e | Class trainer lessons in towns, cheapest first until the purse runs out; quest-reward and pet spells from a generated list; everything up to its level when made |
+| 617o | buddy-navmesh-pathfinding | 617e | Plan and walk on the navigation mesh: no straight-line walks through walls, rooms measured on the mesh, baked distance maps for fixed goals, steering toward moving targets |
+| 617p | npc-awareness | 617e4, 617n | Buddies notice friendly NPCs within 100 yards, read what each offers from the creature itself, and use it (train, sell, repair, talk), taking turns at standing spots; works with NPCs spawned in game |
+| 617q | owner-renamed-partner | None | The word "owner" (a buddy's player) renamed "partner" in code, tables, logs, issues and docs |
 
 Execution order: `617a → (617b ∥ 617c) → (617d ∥ 617e) → (617h ∥ 617i ∥ 617j); 617b → 617f`.
 
