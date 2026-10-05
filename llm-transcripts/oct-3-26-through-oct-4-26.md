@@ -1,6 +1,6 @@
 # Conversation Summary: ac2bf3cc-364a-4384-a952-e3550028e78d
 
-Generated on: 2026-10-04 00:59:27
+Generated on: 2026-10-04 01:01:15
 Models: claude-opus-5-5
 
 ## Contents
@@ -5513,6 +5513,70 @@ Open questions still waiting on you are written into their issues; nothing needs
 an answer tonight. Two are new from today:
 - "Partner" or "player-partner" in names for the rename issue.
 - Which actions the radius triggers should start with.
+
+--------------------------------------------------------------------------------
+
+### User Request 48
+
+Oh. Let's make git commits please.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 48
+
+> Committing in four batches: patch system, walking and towns, the rest of the
+> buddy work, then the two new planning issues.
+
+*[commit] adf90118a in wow-chat-2026 - Source patches take themselves back off exactly, and the build leaves the source as upstream wrote it*
+
+> The two retired-patch renames weren't taken (they were staged as renames
+> earlier). Trying them separately.
+
+*[commit] f02309bd2 in wow-chat-2026 - Two source patches retired: upstream now ships their fixes*
+
+> The deletions of the old names didn't go in. Checking how the commit tool
+> takes a deletion.
+
+> The commit tool can't record a file deletion, so the old names B016/B019 are
+> still in git. I'll come back to that at the end. Next, the walking and towns
+> batch.
+
+*[commit] 7bf4d353f in wow-chat-2026 - Buddies walk where the navigation mesh says they can, and know the starting valleys' towns*
+
+> Now the two planning issues on their own, then everything left in one commit.
+
+*[commit] be0b2b9a7 in wow-chat-2026 - Plan two backend pieces: triggers when something enters a radius, and "owner" renamed "partner"*
+
+*[commit] 3efe47784 in wow-chat-2026 - Buddies learn, gear, gem, group and level down the way the live test asked*
+
+> All this session's work is committed, apart from one leftover. Trying a plain
+> commit for the two old patch names; the commit gate may refuse it.
+
+Everything from this session is committed in five commits, transcripts included,
+except one leftover:
+
+| Commit | What |
+|---|---|
+| adf9011 | Patches take themselves back off exactly; checker for that; two new patches; install steps |
+| f02309b | Two patches retired (kept under retired names) |
+| 7bf4d35 | Walking on the navigation mesh, town walking maps, town circles, the five mesh-stage issues |
+| be0b2b9 | Plans: radius triggers, and renaming "owner" to "partner" |
+| 3efe477 | Everything else: spells, kit, talents, gems, people nearby, parties, levelling down, dungeon bags, login |
+
+**The leftover:** the two retired patches are now in git under both their old
+and new names. The commit tool can't record a file deletion, and the commit gate
+refuses a plain commit unless you allow it. It's harmless for builds, since the
+old files are already gone from disk. If you want it tidied, type `! touch
+/tmp/claude-allow-foreign-commit` and I'll commit just those two deletions.
+
+`vision-mindscape/` isn't mine, so I left it out.
+
+The temporary tools (the gossip packet trace, the jeweler spot reader,
+Sargobras's typed-name test option) are now in one commit, so they can be
+removed next session. Removing those two files is also a deletion, so it'll need
+the same permission.
+
+Good night!
 
 --------------------------------------------------------------------------------
 

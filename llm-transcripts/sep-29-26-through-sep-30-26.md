@@ -1,6 +1,6 @@
 # Conversation Summary: 642508d0-51dc-4c69-9476-a7ffe10297b8
 
-Generated on: 2026-09-30 01:09:23
+Generated on: 2026-10-04 17:28:08
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -1005,6 +1005,8 @@ was it useful?
 
 > Commit 1: the config-patch order fix.
 
+*[commit] 99ff72f71 - Config patches apply in file order, so the level cap is set before anything copies it*
+
 > The project commits through a helper that takes only this session's own
 > changed lines. Unstaging what I staged, then previewing with it:
 
@@ -1013,16 +1015,26 @@ was it useful?
 
 > Commit 2, realm names:
 
+*[commit] 3b9132a4c - Each realm is named after its profile: release, beta, vanilla, alpha, basic*
+
 > Commit 3: the Sargobras work. It shares files with the spawn-ID fix, so they
 > go together, with the message explaining both.
 
+*[commit] 5624b1d13 - Sargobras: spawn numbers under the server's cap, a death knight's gate inside Acherus, and riddles*
+
 > Commit 4, the buddy module:
+
+*[commit] f984eed08 - Buddies: starting valleys are countryside, invited buddies stay, and a new buddy makes an entrance*
 
 > `.profile` is now ignored and gets written by the installer when it's missing.
 > Checking whether the commit helper can carry the "stop tracking `.profile`"
 > change:
 
+*[commit] f0d8cdf54 - The active profile is local to each checkout, written by the installer when missing*
+
 > The dry run now picks the right process. Committing:
+
+*[commit] 68b85a5c8 - Starting a server stops the project's old one first, for real this time*
 
 > Now the compile speed. Asking ccache *why* it called most compiles
 > uncacheable:
@@ -1034,8 +1046,12 @@ was it useful?
 > A rebuilt precompiled header comes out byte-identical, and the compile behind
 > it still hits the cache. Committing:
 
+*[commit] 6764c850c - The compile cache now covers precompiled-header files, which is nearly all of them*
+
 > Committed. Recording your "stays stuck" answer in the death-knight issue, and
 > checking where the spawn-numbering convention is written down:
+
+*[commit] c4b75d1ba - How added database rows are numbered: issue x 10,000, under the spawn cap*
 
 Everything except two items is committed. Those two wait on you, below.
 
@@ -1120,6 +1136,8 @@ any other concerns from the basic profile we could attend to?
 
 > Taking `.profile` out of git's tracking first, as its own commit:
 
+*[commit] 132fe577c - Stop tracking .profile: it names this checkout's active profile, is gitignored, and the installer writes it when missing*
+
 > All three queries now return rows for a level-1 buddy: 246 gear items, 53
 > food/drink items, 8 bags. Syntax-checking, then scanning the last run's server
 > log for other basic-profile problems:
@@ -1133,6 +1151,8 @@ any other concerns from the basic profile we could attend to?
 > None of those numbers appear in the project's SQL. The loose ends come from
 > rows basic deletes or rewrites in bulk, so tracing them is a real
 > investigation, not a quick fix. Committing the kit fix:
+
+*[commit] d5afec6d7 - A new buddy's starting kit finds its gear, food, drink and bags again*
 
 > Committed. Checking whether Mozonn, already created without a kit, would ever
 > get one:
@@ -1329,6 +1349,8 @@ $L | tail -10" completed (exit code 0)*
 
 > It passes. Committing the loose-ends fix:
 
+*[commit] 3f9446404 - Basic's removals take their pointers with them: loot, conditions, links and event rows*
+
 The loot and link problems are fixed and committed. After your next server
 restart, about 1,200 of the roughly 1,400 basic-only error lines should be gone.
 I cleared them in the live database, but I haven't booted the server to confirm.
@@ -1413,6 +1435,8 @@ probably the pathing issues.
 > (34377), searching every basic backup table:
 
 > Fixed and tested: 25/25, and the installed config now says 55. Committing:
+
+*[commit] dea76b404 - Death knights start at 55 again, not at the level cap*
 
 > Committed. Now the buddy movement. Checking the roaming data for the two areas
 > in the errors: the crypt (2117, "no row") and Deathknell (154, "no waypoint"):
@@ -1555,6 +1579,8 @@ this doesn't seem to be working. Must be an error with the harness.
 > Round trip clean. Running the compiler syntax check on the patched files in
 > the background, and committing the finished parts meanwhile:
 
+*[commit] c5743a7b6 - Sargobras gives a soul back only after Acherus, and goes up in flame after a trade; a buddy's wave now shows*
+
 > Committed. Checking that the `.profile` removal is still staged, so you can
 > finish it yourself:
 
@@ -1696,6 +1722,8 @@ let's work on that.
 
 > All patched files pass the compiler syntax check. Committing the death-knight
 > script:
+
+*[commit] bb4bb9e9b - After a soul trade Sargobras vanishes for that death knight alone*
 
 The per-player vanish is built and waiting on a compile. For indoor roaming I've
 found the cause, and one question decides the fix.
@@ -1852,6 +1880,8 @@ nothing the first time. I haven't rebooted the server yet to check.
 > Those lines belong to the earlier session, which has ended. Adopting them
 > explicitly from it:
 
+*[commit] bf16e4622 - Server patches: creatures one player can't select or see, a quiet automatic bot reset, and a console-shutdown log line*
+
 > The quest-skill column isn't in the quest table itself. Finding where it
 > lives:
 
@@ -1879,7 +1909,11 @@ nothing the first time. I haven't rebooted the server yet to check.
 > The quest change passes the RAM test, and all three buddy files compile.
 > Applying the quest change to the live database and committing both pieces:
 
+*[commit] f9d9901bb - Nothing on basic asks for more than 300 in a skill*
+
 > Now the roaming change: a note in 617e6's current behavior, then the commit.
+
+*[commit] 48c479ffb - Buddies explore buildings and caves by rooms instead of standing still*
 
 The quest fix and indoor rooms mode are built and committed, and B039 is kept
 and committed with B040–B042. Your tracing question is answered at the end,
@@ -1999,6 +2033,8 @@ can you tell me how playerbots handles pathfinding through zones while questing?
 > All five compile. Recording the town rule in the town-visit issue (617e4) and
 > committing:
 
+*[commit] 466188be0 - A building inside a town counts as the town, for buddies*
+
 > Committed. While B043's syntax check runs, the playerbots question. Surveying
 > how it moves bots across a zone while questing:
 
@@ -2007,6 +2043,8 @@ can you tell me how playerbots handles pathfinding through zones while questing?
 > Enough for the pathfinding explanation. Waiting for B043's syntax check:
 
 > B043 passes. Recording it in issue 163 and committing:
+
+*[commit] 45f671147 - "Halting process" now says who asked for the stop, and why*
 
 Both changes are committed. Neither has been compiled yet; both pass the
 syntax-only compile check.
@@ -2119,6 +2157,8 @@ before we're ready to play?
 > answer is accurate:
 
 > Committing the harness and the note:
+
+*[commit] ebf03dc6e - An arena test ring for watching buddies fight, and a note to keep the bot module's travel mesh in view*
 
 I couldn't set up the arena scene: the server isn't running, and the kraken
 exists only in the design doc and gallery, not in the buddy module. What I did
@@ -2239,6 +2279,8 @@ I'll recompile now.
 
 > Compiles. Updating 617d and committing:
 
+*[commit] bb5ad72cf - Buddies complete every quest their owner turns in*
+
 > Committed. Next, buddy dungeons (617c3). Reading its design:
 
 > The world pass runs every 5 seconds. I'll give the draw its own short
@@ -2251,12 +2293,16 @@ I'll recompile now.
 
 > The table exists in the live database. Updating 617c3 and committing:
 
+*[commit] 3d7bdaad5 - Buddies come into dungeons: the draw*
+
 > Committed. Now the kraken. You're right that the gallery scenes run the real
 > data model, so the port starts from that code. Sizing it up:
 
 > This is too large to rush: the design issue alone is 433 lines. Before writing
 > the plan, checking what the bot module already offers for roles, pulling and
 > slows, so the plan reuses it:
+
+*[commit] 3dcdced63 - The kraken's plan for the game: the gallery scene's rules mapped onto the bot module's own actions*
 
 Quest auto-completion and buddy dungeons are built and committed. Neither is in
 the compile you're running now, since I edited them after it started, so they
@@ -2421,6 +2467,8 @@ oh please continue
 > The mail errand compiles. Now the quest side: stop bailing out when bags are
 > full, and let the server's reward step mail the overflow.
 
+*[commit] 2b8c2bca4 - A quest reward that doesn't fit a buddy's bags is mailed, and buddies collect their mail in town*
+
 Full bags now go to mail, and buddies collect their mail in town. It's committed
 and the code compiles cleanly, but it hasn't been built into the server or tried
 in game.
@@ -2469,6 +2517,8 @@ can we work on these next? the compilation finished :)
 
 > Both compile. Recording in 617i and committing:
 
+*[commit] ca827e682 - Buddies queue for battlegrounds with their owner*
+
 > Committed. Next, the auction house (617h). Reading its design:
 
 > Writing it into the town file. First, the existing "junk" and "worn" helpers,
@@ -2493,6 +2543,8 @@ can we work on these next? the compilation finished :)
 > All five buddy tables are in the live database. Recording in 617h and
 > committing:
 
+*[commit] 8a067527f - Buddies sell at the auction house by the owner's rules*
+
 > Committed. Starting the RAM database test in the background, since the roster
 > SQL gained three tables. Then reading the professions design (617k):
 
@@ -2503,6 +2555,8 @@ can we work on these next? the compilation finished :)
 > Writing the primary professions and calling them at both places:
 
 > Compiles. Recording in 617k and committing:
+
+*[commit] 23a4c1432 - Each buddy takes up a crafting profession and the gathering one that feeds it*
 
 I made a first pass on three of the four, and task hunts need a decision from
 you. Everything below is committed and passes a syntax-only compile check, but
@@ -2702,9 +2756,13 @@ gonna have different outfits. Also make her the correct level.
 > Level 44, standing at the Uldaman entrance, and two mails sent. The Lua reload
 > printed nothing, so checking the server log for it:
 
+*[commit] 4deb68825 - One wandering Sargobras per owed tier, and a tool for console commands*
+
 > Now the walking itself, defined before the draw:
 
 > Compiles. Updating 617c3 and committing:
+
+*[commit] 358e554ce - Drawn buddies walk to the dungeon's entrance instead of appearing inside*
 
 > Nothing came back. Checking which of those rank spells trainers teach at all,
 > and at what skill:
@@ -2717,6 +2775,8 @@ gonna have different outfits. Also make her the correct level.
 
 > Compiles. Recording the crafting direction you gave in 617k, noting the
 > death-knight rules in 718 and 617k, and committing:
+
+*[commit] 96ecb83b4 - Death knights' professions start at Artisan: buddies all of theirs, players the first two they train*
 
 Felicity is ready for Uldaman, and everything else you asked for is built and
 committed. The buddy C++ needs another compile. None of it has been tried in
@@ -2765,6 +2825,13 @@ professions.
 
 **Before the Uldaman run:** compile and restart first. The buddies' walk into
 the dungeon only exists after that.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "until ! pgrep -f test-patched-syntax &gt;
+/dev/null; do sleep 5; done; grep -E "World.cpp|Main.cpp|✗|failed"
+/mnt/mtwo/games/azeroth-core/wow-chat-2026/tmp/shared-memory/patched-syntax.log"
+was stopped (killed)*
 
 --------------------------------------------------------------------------------
 

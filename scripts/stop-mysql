@@ -15,6 +15,19 @@ INSTALL_DIR="${MYSQL_DIR}/installed-files"
 DATA_DIR="${MYSQL_DIR}/databases"
 PID_FILE="${DATA_DIR}/mysqld.pid"
 SOCKET="${DATA_DIR}/mysql.sock"
+MYSQLD_BIN="$(readlink -f "${INSTALL_DIR}/bin/mysqld")"
+# }}}
+
+# {{{ is_our_mysqld
+# True when process $1 is running this project's mysqld binary. Process
+# numbers are recycled after a reboot, so a leftover PID file can name an
+# unrelated program; this check keeps us from signalling (or kill -9ing) it.
+is_our_mysqld() {
+    local exe
+    exe="$(readlink "/proc/${1}/exe" 2>/dev/null)" || return 1
+    exe="${exe% (deleted)}"
+    [[ "${exe}" == "${MYSQLD_BIN}" ]]
+}
 # }}}
 
 # {{{ stop
@@ -25,8 +38,8 @@ fi
 
 PID=$(cat "${PID_FILE}")
 
-if ! kill -0 "${PID}" 2>/dev/null; then
-    echo "MySQL not running (stale PID file)"
+if ! is_our_mysqld "${PID}"; then
+    echo "MySQL not running (stale PID file: process ${PID} is not this project's mysqld)"
     rm -f "${PID_FILE}"
     exit 0
 fi
@@ -38,8 +51,9 @@ echo "Stopping MySQL (PID ${PID})..."
     -u root \
     shutdown 2>/dev/null || kill "${PID}"
 
-# Wait for shutdown
-for i in {1..10}; do
+# Wait for shutdown. InnoDB flushes its buffer pool first, which can take
+# well over 10 s; a kill -9 mid-flush forces crash recovery on next start.
+for i in {1..60}; do
     if ! kill -0 "${PID}" 2>/dev/null; then
         echo "MySQL stopped"
         rm -f "${PID_FILE}"

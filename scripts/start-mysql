@@ -1,7 +1,21 @@
 #!/bin/bash
 # start-mysql
-# Starts the local MySQL server for wow-chat-2
-# Ensures tmp/ symlink exists (destroyed on reboot since target is /tmp)
+# Starts the project's own MySQL server (port 3307) and returns only once it
+# is answering — so anything run right after it (authserver, worldserver,
+# install) can connect on its first try. Safe to run when MySQL is already up:
+# it notices and says so. The authserver and worldserver launchers call it
+# every time they start.
+#
+# How "already running" is decided: the PID file names a process number, but
+# after a reboot that number can belong to any unrelated program (process
+# numbers are recycled). So the number is trusted only when that process is
+# running this project's own mysqld binary. A PID file that fails that test is
+# stale and is removed. (2026-10-04: a recycled number made the launchers skip
+# starting MySQL entirely; both servers then failed with "Can't connect".)
+#
+# How "started" is decided: mysqld writes its PID file early, well before it
+# opens the port. So we wait for mysqladmin ping to get an answer, and we
+# stop waiting early if the new mysqld process exits (startup failed).
 
 # {{{ set_dir
 DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
@@ -16,12 +30,16 @@ INSTALL_DIR="${MYSQL_DIR}/installed-files"
 CONF_FILE="${MYSQL_DIR}/conf/my.cnf"
 DATA_DIR="${MYSQL_DIR}/databases"
 PID_FILE="${DATA_DIR}/mysqld.pid"
-TMP_DIR="${DIR}/tmp"
+SOCKET="${DATA_DIR}/mysql.sock"
+ERROR_LOG="${DATA_DIR}/error.log"
+MYSQLD_BIN="$(readlink -f "${INSTALL_DIR}/bin/mysqld")"
+READY_TIMEOUT=60      # seconds; InnoDB crash recovery after an unclean stop can be slow
 # }}}
 
 # {{{ ensure_tmp_symlink
-# tmp/ is a symlink to /tmp/wow-chat-2 for RAM-backed temp storage
-# target directory is destroyed on reboot, so recreate if missing
+# tmp/ is a symlink to /tmp/wow-chat-2 for RAM-backed temp storage, and
+# my.cnf names it as mysqld's tmpdir: if the target is gone (it is wiped on
+# reboot) mysqld refuses to start, so recreate it first.
 TMP_TARGET="/tmp/wow-chat-2"
 if [[ ! -d "${TMP_TARGET}" ]]; then
     echo "Creating ${TMP_TARGET}..."
@@ -29,17 +47,58 @@ if [[ ! -d "${TMP_TARGET}" ]]; then
 fi
 # }}}
 
+# {{{ is_our_mysqld
+# True when process $1 exists and is running this project's mysqld binary.
+# A recycled process number fails here because its program is something else.
+is_our_mysqld() {
+    local exe
+    exe="$(readlink "/proc/${1}/exe" 2>/dev/null)" || return 1
+    exe="${exe% (deleted)}"   # a mysqld started before the binary was reinstalled
+    [[ "${exe}" == "${MYSQLD_BIN}" ]]
+}
+# }}}
+
+# {{{ is_answering
+# True when the server on our socket answers a ping. mysqladmin exits 0 for
+# any answer, including "access denied", so no credentials are needed.
+is_answering() {
+    "${INSTALL_DIR}/bin/mysqladmin" --no-defaults --socket="${SOCKET}" \
+        --connect-timeout=2 ping >/dev/null 2>&1
+}
+# }}}
+
 # {{{ check_running
 if [[ -f "${PID_FILE}" ]]; then
-    PID=$(cat "${PID_FILE}")
-    if kill -0 "${PID}" 2>/dev/null; then
-        echo "MySQL already running (PID ${PID})"
-        exit 0
+    PID="$(cat "${PID_FILE}")"
+    if is_our_mysqld "${PID}"; then
+        # ours is running; it may still be mid-startup, so wait for an answer
+        for i in $(seq 1 "${READY_TIMEOUT}"); do
+            if is_answering; then
+                echo "MySQL already running (PID ${PID})"
+                exit 0
+            fi
+            sleep 1
+        done
+        echo "ERROR: MySQL process ${PID} is running but not answering on ${SOCKET} after ${READY_TIMEOUT} s"
+        echo "  done:    found our mysqld by its PID file"
+        echo "  stopped: it never answered a ping"
+        echo "  to debug: tail ${ERROR_LOG} — is it doing crash recovery (wait), or stuck on a lock (another mysqld on this datadir)?"
+        exit 1
     else
-        echo "Removing stale PID file"
+        echo "Removing stale PID file (process ${PID} is not this project's mysqld)"
         rm -f "${PID_FILE}"
     fi
 fi
+
+# no PID file, but a mysqld of ours may still hold the datadir (PID file
+# deleted by hand); starting a second one fails with "Unable to lock ./ibdata1"
+for OTHER_PID in $(pgrep -x mysqld); do
+    if is_our_mysqld "${OTHER_PID}"; then
+        echo "ERROR: this project's mysqld is already running as PID ${OTHER_PID}, but ${PID_FILE} is missing"
+        echo "  to debug: stop it with 'kill ${OTHER_PID}' and run start-mysql again"
+        exit 1
+    fi
+done
 # }}}
 
 # {{{ start
@@ -49,23 +108,29 @@ echo "Data:   ${DATA_DIR}"
 
 "${INSTALL_DIR}/bin/mysqld" \
     --defaults-file="${CONF_FILE}" \
-    --user=$(whoami) \
+    --user="$(whoami)" \
     --pid-file="${PID_FILE}" \
     &
+MYSQLD_PID=$!
 
-# wait up to 10 seconds for PID file
-for i in {1..10}; do
-    if [[ -f "${PID_FILE}" ]]; then
-        PID=$(cat "${PID_FILE}")
-        echo "MySQL started (PID ${PID})"
-        echo "Socket: ${DATA_DIR}/mysql.sock"
+for i in $(seq 1 "${READY_TIMEOUT}"); do
+    if is_answering; then
+        echo "MySQL started (PID ${MYSQLD_PID}, ready after ~${i} s)"
+        echo "Socket: ${SOCKET}"
         echo "Port: 3307"
         exit 0
+    fi
+    if ! kill -0 "${MYSQLD_PID}" 2>/dev/null; then
+        echo "ERROR: mysqld (PID ${MYSQLD_PID}) exited during startup"
+        echo "  done:    launched mysqld"
+        echo "  stopped: it quit before answering; last lines of ${ERROR_LOG}:"
+        tail -n 15 "${ERROR_LOG}" | sed 's/^/    /'
+        exit 1
     fi
     sleep 1
 done
 
-echo "ERROR: MySQL failed to start"
-echo "Check ${DATA_DIR}/error.log for details"
+echo "ERROR: MySQL (PID ${MYSQLD_PID}) still not answering after ${READY_TIMEOUT} s; it is left running"
+echo "  to debug: tail ${ERROR_LOG}; run start-mysql again to keep waiting"
 exit 1
 # }}}

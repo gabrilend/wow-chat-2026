@@ -1,0 +1,68 @@
+#!/bin/bash
+# test-mysql-start
+# Checks that the project's MySQL starter can't be fooled by a leftover
+# PID file. After a reboot the number in that file can belong to some
+# unrelated program; the old starter saw "a process with that number
+# exists" and skipped starting MySQL, and the game servers then failed with
+# "Can't connect". This test plants exactly that situation (a live,
+# unrelated process's number in the PID file) and checks the starter still
+# brings MySQL up and that it answers. Then it runs the starter a second
+# time and checks that it recognizes the running server and doesn't start
+# another.
+#
+# It uses the real project MySQL. If MySQL is already running, the test
+# refuses to run rather than stop it. MySQL is left running afterwards.
+
+# {{{ set_dir
+DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+if [[ -n "$1" ]]; then
+    DIR="$1"
+fi
+# }}}
+
+DATA_DIR="${DIR}/mysql/databases"
+PID_FILE="${DATA_DIR}/mysqld.pid"
+SOCKET="${DATA_DIR}/mysql.sock"
+ADMIN="${DIR}/mysql/installed-files/bin/mysqladmin"
+FAILS=0
+
+# {{{ check
+check() {
+    if eval "${2}"; then echo "  ok:   ${1}"; else echo "  FAIL: ${1}"; FAILS=$((FAILS + 1)); fi
+}
+# }}}
+
+# precondition: MySQL down, so the starter has real work to do
+if "${ADMIN}" --no-defaults --socket="${SOCKET}" --connect-timeout=2 ping >/dev/null 2>&1; then
+    echo "MySQL is already running; stop it with ${DIR}/scripts/stop-mysql and rerun this test."
+    exit 1
+fi
+
+# plant a recycled process number: a live process that is not mysqld
+sleep 300 &
+DECOY_PID=$!
+echo "${DECOY_PID}" > "${PID_FILE}"
+echo "Planted PID file naming an unrelated live process (sleep, PID ${DECOY_PID})"
+
+echo "Run 1: starter with a recycled PID in the file"
+OUT1="$("${DIR}/scripts/start-mysql" "${DIR}")"
+RC1=$?
+echo "${OUT1}" | sed 's/^/    | /'
+check "starter exited 0"                         '[[ ${RC1} -eq 0 ]]'
+check "starter called the PID file stale"        '[[ "${OUT1}" == *"Removing stale PID file"* ]]'
+check "server answers a ping"                    '"${ADMIN}" --no-defaults --socket="${SOCKET}" --connect-timeout=2 ping >/dev/null 2>&1'
+check "decoy process was left untouched"         'kill -0 ${DECOY_PID} 2>/dev/null'
+check "PID file now names a mysqld"              '[[ "$(readlink /proc/$(cat "${PID_FILE}")/exe)" == */mysqld ]]'
+
+echo "Run 2: starter with MySQL already up"
+OUT2="$("${DIR}/scripts/start-mysql" "${DIR}")"
+RC2=$?
+echo "${OUT2}" | sed 's/^/    | /'
+check "starter exited 0"                         '[[ ${RC2} -eq 0 ]]'
+check "starter reported 'already running'"       '[[ "${OUT2}" == *"MySQL already running"* ]]'
+check "exactly one mysqld on our datadir"        '[[ $(pgrep -f -- "--defaults-file=${DIR}/mysql/conf/my.cnf" | wc -l) -eq 1 ]]'
+
+kill "${DECOY_PID}"
+echo ""
+if [[ "${FAILS}" -eq 0 ]]; then echo "All checks passed (MySQL left running)"; else echo "${FAILS} check(s) failed"; fi
+[[ "${FAILS}" -eq 0 ]]

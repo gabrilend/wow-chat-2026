@@ -1,6 +1,6 @@
 # Conversation Summary: f6b0c04d-40f6-437a-ad3d-cd4a401aa9f5
 
-Generated on: 2026-09-26 13:25:28
+Generated on: 2026-10-04 17:28:20
 Models: claude-opus-4-8
 
 ## Contents
@@ -1206,10 +1206,14 @@ yeah okay let's do professions and mounts
 
 > Index clean. Committing the validator first:
 
+*[commit] eb643ebc5 - feat(Vanilla): starter-state validator for the 148o pass*
+
 > Now commit 2 — the 148s patch set. Let me verify `patches.sh` holds only my
 > B025 changes before staging:
 
 > Clean — only B025 changes. Committing the 148s patch set:
+
+*[commit] 648d62b91 - feat(Vanilla): playerbots start in the 148h kit (148s)*
 
 > Both committed cleanly (`eb643eb` validator, `648d62b` 148s) — tree stays
 > isolated.
@@ -1372,10 +1376,14 @@ how about you finish up their changes and build out a commit for them?
 > Clean split (0 E020, 23 E018 mentions), scripts parse. The staged set is
 > exactly the 148h feature. Committing it:
 
+*[commit] f7d47de8a - feat(Vanilla): Class-specific level-20 starter kit (148h)*
+
 > 148h committed as `f7d47de`. Now restore my E020 block for the 148l commit:
 
 > E020 restored. Now stage 148l (E-patches.sh should now show only E020) and
 > commit:
+
+*[commit] 8a47d81f9 - feat(Vanilla): Classic mount level gates (148l)*
 
 > 148l committed as `8a47d81` (the "E018" mentions in its diff are just my
 > comment referencing the E008/E018 pattern — the E018 *function* is safely in
@@ -1394,6 +1402,8 @@ how about you finish up their changes and build out a commit for them?
 > pair. Let me land the three remaining finished threads as clean commits: the
 > 148j bitmask fix, the bot-progression tuning, and this session's issue
 > bookkeeping:
+
+*[commit] bac3a32b1 - fix(Vanilla): correct class-bitmask keying in the level-20 pretrain (148j)*
 
 Done — the tree is untangled. This turn I landed **5 clean, per-concern
 commits**, splitting `E-patches.sh` cleanly between the two features that shared
@@ -1748,9 +1758,13 @@ yes and yes
 > Both purely additive — E021 block and the profession-bump, nothing else
 > touched. Committing 148q (transcripts auto-bundle):
 
+*[commit] a1d6d59c3 - feat(Vanilla): starting professions at skill 125 (148q)*
+
 > The pre-commit hook worked — transcripts auto-bundled into the commit (17
 > files, the `llm-transcripts/*.md` included). Now the 148u issue as its own
 > commit:
+
+*[commit] fac2da268 - docs(issues): file 148u — first-login weapon sharpen send-off*
 
 Both committed — `a1d6d59` (148q) and `fac2da2` (148u). And the transcript
 automation is proven: the pre-commit hook auto-bundled all the
@@ -1887,6 +1901,8 @@ well then read them, silly :)
 > 148q fix is validated. Committing it (a fix atop the earlier 148q commit;
 > transcripts auto-bundle):
 
+*[commit] 27c24ed10 - fix(Vanilla): cap starting professions at two (148q)*
+
 > 148q's two-profession fix is committed (`27c24ed`). Now 148u — let me pull
 > the temporary weapon-enhancement data (required levels + effects) so I can
 > pick the best tier usable at level 20:
@@ -1922,6 +1938,8 @@ well then read them, silly :)
 
 > 148u is built. Committing the hook sharpen function + ticket update (verifying
 > the hook change is purely additive first):
+
+*[commit] ecdac532a - feat(Vanilla): first-login weapon sharpen send-off (148u)*
 
 Both done and committed — `27c24ed` (148q fix) and `ecdac53` (148u). Here's
 the close-out on everything you raised.

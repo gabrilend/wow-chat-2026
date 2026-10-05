@@ -120,28 +120,16 @@ setup_log_symlinks() {
 # }}}
 
 # {{{ check_mysql
-# Ensures MySQL is running before server startup
-# Calls start-mysql if not running (which handles already-running case gracefully)
+# Ensures MySQL is up and answering before server startup. start-mysql is
+# safe to call every time: it verifies the PID file really names our mysqld
+# (process numbers are recycled after a reboot) and waits until the server
+# answers a ping, so the server binary's first connection succeeds.
 check_mysql() {
-    local PID_FILE="${DIR}/mysql/databases/mysqld.pid"
-    local MYSQL_RUNNING=0
-
-    if [[ -f "${PID_FILE}" ]]; then
-        local PID
-        PID=$(cat "${PID_FILE}")
-        if kill -0 "${PID}" 2>/dev/null; then
-            MYSQL_RUNNING=1
-        fi
+    if ! "${DIR}/scripts/start-mysql" "${DIR}"; then
+        echo "ERROR: MySQL is not available; not starting the server"
+        exit 1
     fi
-
-    if [[ "${MYSQL_RUNNING}" -eq 0 ]]; then
-        echo "MySQL not running, starting..."
-        if ! "${DIR}/scripts/start-mysql"; then
-            echo "ERROR: Failed to start MySQL"
-            exit 1
-        fi
-        echo ""
-    fi
+    echo ""
 }
 # }}}
 
