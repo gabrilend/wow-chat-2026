@@ -94,6 +94,25 @@ adds to it) is logged with the sum reached. Then the rest as before.
 
 Raids: all of a player's buddies join them (open question below).
 
+### Decision, 2026-10-04 (Ritz): buddies have an aggro radius inside
+
+Verbatim: "also can we make buddy-bots have an aggro radius in dungeons?
+They should attack when they are ~10% farther than the monster's aggro
+radius. Otherwise, they follow the player."
+
+Inside a dungeon or raid, a buddy not already fighting looks round every
+half second (`AGGRO_LOOK_MS`) for a monster that would attack on sight:
+hostile to it, aggressive, not a critter or civilian, nobody's pet, not
+already fighting, alive, in line of sight. If one is within 1.1 times that
+monster's own aggro radius for the buddy (`AGGRO_REACH`; the server's
+radius for the pair: 20 yards less a yard per level the buddy is above
+it, 5 to 45), the buddy opens the fight on the nearest such monster, the
+way a roaming buddy opens one (the target selected and remembered, the
+fighting engine on, the first swing; a melee buddy runs in). So a buddy
+strikes just before the monster would have noticed it. Otherwise it
+follows its leader as before. (`buddies_roam_strategy.cpp`, the world
+pass; written 2026-10-04, syntax-checked, not yet compiled.)
+
 ## Open Questions
 
 - (Asked 2026-10-04) "For raids, all of your characters join you so...":

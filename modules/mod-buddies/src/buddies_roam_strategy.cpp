@@ -191,6 +191,12 @@ static constexpr uint32 RETRY_MS          = 10000;   // after a failed pick or c
 static constexpr float  OTHERS_YARDS      = 100.0f;  // players this near a buddy count for the crowding rule
 static constexpr float  MIN_BODY_YARDS    = 0.5f;    // no body is tested more finely than this
 static constexpr uint32 PASS_EVERY_MS     = 3000;    // the strategy pass
+// inside a dungeon or raid (617c3, owner 2026-10-04: "They should attack
+// when they are ~10% farther than the monster's aggro radius. Otherwise,
+// they follow the player.")
+static constexpr uint32 AGGRO_LOOK_MS     = 500;     // a buddy inside looks round for monsters this often
+static constexpr float  AGGRO_REACH       = 1.1f;    // it strikes within this times the monster's own aggro radius
+static constexpr float  AGGRO_SEARCH_YARDS = 50.0f;  // the farthest that can be: the largest radius (45) x 1.1
 static constexpr float  MOBS_YARDS        = 60.0f;   // monsters this near a buddy are offered to the nudge
 static constexpr uint32 MEAL_MAX_MS       = 120000;  // a meal that hasn't finished by now is ended (and logged)
 static constexpr uint32 CAMPFIRE_SPELL    = 818;     // Basic Campfire: taught with Cooking (every buddy has it,
@@ -1941,6 +1947,12 @@ public:
     // takes over again).
     void OnUpdate(uint32 diff) override
     {
+        _sinceAggro += diff;
+        if (_sinceAggro >= AGGRO_LOOK_MS && BuddiesEnabled())
+        {
+            _sinceAggro = 0;
+            AggroPass();
+        }
         _sinceLast += diff;
         if (_sinceLast < PASS_EVERY_MS || !BuddiesEnabled())
             return;
@@ -1973,7 +1985,74 @@ public:
     }
 
 private:
-    uint32 _sinceLast = 0;
+    // {{{ AggroPass
+    // Inside a dungeon or raid, each buddy not already fighting strikes the
+    // nearest monster that would attack it on sight, once that monster is
+    // within AGGRO_REACH times its own aggro radius for the buddy: a little
+    // before the monster would notice it. Each filter, and what failing it
+    // means:
+    //   a creature, nobody's pet     - players, buddies and pets are no prey
+    //   alive, not already fighting  - a fight already on is the bot
+    //                                  module's (it attacks what attacks the
+    //                                  group)
+    //   not a critter or civilian,
+    //   not immune to players        - these never start a fight
+    //   hostile and aggressive       - only these attack on sight; a neutral
+    //                                  one is left for the leader to pull
+    //   in line of sight             - no striking through a wall
+    // Otherwise nothing is done and the buddy follows its leader (sInstance).
+    void AggroPass()
+    {
+        for (auto const& [buddyGuid, ownerGuid] : BuddyRosterPairs())
+        {
+            Player* bot = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(buddyGuid));
+            if (!bot || !bot->IsInWorld() || !bot->IsAlive() || bot->IsInCombat() || !bot->GetMap()->IsDungeon())
+                continue;                              // outside, dead, or already fighting
+            PlayerbotAI* ai = GET_PLAYERBOT_AI(bot);
+            if (!ai)
+                continue;                              // still logging in
+            std::list<Unit*> units;
+            Acore::AnyUnitInObjectRangeCheck check(bot, AGGRO_SEARCH_YARDS);
+            Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(bot, units, check);
+            Cell::VisitObjects(bot, searcher, AGGRO_SEARCH_YARDS);
+            Creature* best = nullptr;
+            float bestDist = 0.0f;
+            for (Unit* u : units)
+            {
+                Creature* c = u->ToCreature();
+                if (!c || !c->GetCharmerOrOwnerGUID().IsEmpty() || !c->IsAlive() || c->IsInCombat())
+                    continue;
+                if (c->IsCritter() || c->IsCivilian() || c->IsImmuneToPC())
+                    continue;
+                if (!c->IsHostileTo(bot) || !c->HasReactState(REACT_AGGRESSIVE))
+                    continue;
+                float aggro = c->GetAggroRange(bot);
+                if (aggro <= 0.0f)
+                    continue;                          // the server has aggro switched off (rate 0)
+                float d = bot->GetExactDist(c);
+                if (d > aggro * AGGRO_REACH || (best && d >= bestDist) || !bot->IsWithinLOSInMap(c))
+                    continue;
+                best = c;
+                bestDist = d;
+            }
+            if (!best)
+                continue;
+            // open the fight the bot module's way (as OpenFight does when roaming)
+            bool melee = ai->IsMelee(bot);
+            bot->SetSelection(best->GetGUID());
+            ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Set(best);
+            ai->ChangeEngine(BOT_STATE_COMBAT);
+            bot->Attack(best, melee);
+            if (melee)
+                bot->GetMotionMaster()->MoveChase(best);
+            BuddyTrace(bot, "inside: struck {} at {:.1f} yards (its aggro radius {:.1f}, reach x{:.1f})",
+                best->GetName(), bestDist, best->GetAggroRange(bot), AGGRO_REACH);
+        }
+    }
+    // }}}
+
+    uint32 _sinceLast  = 0;
+    uint32 _sinceAggro = 0;
 };
 
 // {{{ buddies_roam_player
