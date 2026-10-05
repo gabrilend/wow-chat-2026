@@ -43,6 +43,17 @@ bool BuddyTalentPlan(Player* player, uint8 (&thirds)[3], CollectorType (&types)[
 bool BuddyPlanShape(uint8 cls, uint8 profile, uint8 role, uint8 (&thirds)[3], CollectorType (&types)[3]);
 // }}}
 
+// {{{ BuddySpiritWorth
+// What one spirit is worth in stamina to `player` right now (issue 617j3),
+// for the bot module's stat weights (source patch B050 asks): spirit heals
+// stamina / 100 every 5 seconds (issue 167), so over a fight of
+// FIGHT_SECONDS its worth is (S/100 x T/5) / (10 + P/100 x T/5), S and P the
+// player's stamina and spirit as they stand. Negative for anyone not a
+// buddy (the bot module then leaves its weights alone). Called from the map
+// threads.
+float BuddySpiritWorth(Player* player);
+// }}}
+
 // {{{ BuddyPlanMainTree
 // The main tree (0-2, the talent window's order) of talent plan 1-10, as
 // buddy_roster.profile holds it; -1 for no plan.

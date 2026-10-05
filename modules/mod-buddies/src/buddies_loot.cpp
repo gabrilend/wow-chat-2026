@@ -266,6 +266,29 @@ bool BuddyTalentPlan(Player* player, uint8 (&thirds)[3], CollectorType (&types)[
 }
 // }}}
 
+// {{{ BuddySpiritWorth
+// The fight length spirit's healing is counted over (617j3): longer fights
+// make spirit worth more against stamina. A guess until seen in game.
+static constexpr float FIGHT_SECONDS = 30.0f;
+static constexpr float HEALTH_PER_STAMINA = 10.0f;
+
+float BuddySpiritWorth(Player* player)
+{
+    if (!BuddiesEnabled())
+        return -1.0f;                                  // module off: stock weights
+    BuddyLootFacts f;
+    if (!FactsFor(player, f))
+        return -1.0f;                                  // not a buddy: stock weights
+    float stamina = player->GetStat(STAT_STAMINA);
+    float spirit  = player->GetStat(STAT_SPIRIT);
+    float ticks   = FIGHT_SECONDS / 5.0f;              // 5-second spans in the fight
+    // health over the fight from one more spirit, and from one more stamina
+    float fromSpirit  = stamina / 100.0f * ticks;
+    float fromStamina = HEALTH_PER_STAMINA + spirit / 100.0f * ticks;
+    return fromSpirit / fromStamina;
+}
+// }}}
+
 // {{{ BuddyPlanShape
 bool BuddyPlanShape(uint8 cls, uint8 profile, uint8 role, uint8 (&thirds)[3], CollectorType (&types)[3])
 {

@@ -1,6 +1,6 @@
 # Conversation Summary: 3cca55b1-1e96-4489-a864-41157a21299a
 
-Generated on: 2026-10-05 00:34:43
+Generated on: 2026-10-05 02:21:14
 Models: claude-opus-5-5
 
 ## Contents
@@ -2616,6 +2616,725 @@ picks. **Open:** which Acherus vendor, and at what price? Not built yet.
 2. How do players get through the door, now that the Master's Key chain is
    disabled?
 3. Ten players, or larger?
+
+--------------------------------------------------------------------------------
+
+### User Request 15
+
+can we have kharazhan's item level rewards span from the level 60 dungeon blues
+to the beginning 20% of Molten Core's item level distribution? Also, can we
+range the required level from 58 to 60 at the end for the final bosses, because
+they're that hard? It's an azeroth dungeon. It should be treated as such, but,
+it's a raid. Beginner raid. Ideally, we'd also have Zul'Aman and Zul'Gurub as
+another raid tier, maybe in the early 50s? question... Is the various Maraudon
+and Dire Maul dungeons connected or on the same map in any way? Can we create a
+connection between them? I'm thinking we could make the entire dungeon
+collection into a raid, where if you're going faster (proportionally) than the
+other side, you get a tougher enemy to fight until you slow down, and the other
+starts keeping pace with you. Then you can speed up until you face something
+that you can't. Then, you are expected to swap characters, which you can do by
+simply moving them into a different raid group. You teleport to the centroid
+between your allies, on the closest spot on the pathable grid that is also
+within an un-obstructed 10-yard straight-line path.
+
+Note, it should never hurt you when your allies are doing well. It should
+challenge them more, as they escalate their fights. So, emphasize the level
+difference over spans.
+
+> - Open: bigger sides mean raising the server's own size limits. Should real
+> players also be able to queue into the bigger sizes, or should only stand-ins
+> fill the extra places?
+
+only stand-ins. Also, we should make it so that anyone who is in a duel can
+fight and deal damage to anyone else who is in a duel near them. Also there
+should be at least 15 stand-ins always fighting at all times in front of
+Orgrimmar and Stormwind - they are always on alert, practicing and recovering
+and staying fit and strong. They are from a variety of different levels, and
+every 15 duels +/- 1 they go to the side and sit down next to a fire for a
+while. Also, duels end at 20% health on this server. Basically everytime they
+lose a fight, they go sit on the side until they recover. Also, we should make
+campfires stack, so they can boost each other's regeneration if they sit near
+each other.
+
+also can we ensure that buddy-bots always always get teleported correctly when
+the player-partner casts hearthstone? Even if their cast didn't complete, or if
+they were interrupted by combat or dying... we still teleport them manually with
+lua
+
+  1. Where on the ladder does it go?
+
+between BRD and MC's first 20% of item levels okay maybe not BRD it's item
+levels 58 and 47 for blues and epics respectively. Up until... let's say... 63?
+With a gap from 60. if there's any karazhan blues or w/e they can be 47 to 63
+for epics, and 58 to... some other number for blues.
+
+> 2. How do players get through the door, now that the Master's Key chain is
+> disabled?
+
+can we add a flight path from a high vantage point that can see down onto it?
+The flight path creature can glide down, then walk back up with an escort
+waiting down below.
+
+  3. Ten players, or larger?
+
+I forgot the default size, is it 10? How parallelizable is this dungeon?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 15
+
+> A long list. Doing the one you need working first (buddies always following a
+> hearthstone) and checking facts in parallel. The rest becomes issues.
+>
+> Facts first: Molten Core's item-level spread, Karazhan's size and its bosses'
+> item levels, and whether Maraudon and Dire Maul share a map.
+
+> Writing its offline test: a stand-in partner with three buddies (one dead, one
+> mid-cast), plus a buddy hearthing on its own.
+
+> All 10 checks pass. Recording it in the buddy-adventuring issue, then
+> committing. The Lua takes effect at the server's next start (or a reload, if
+> it's up).
+
+*[commit] 76e32102e in wow-chat-2026 - Buddies always follow their partner's hearthstone*
+
+Buddies now always follow your hearthstone; that's committed. Everything else
+this round is written up as issues, nothing built. The server is still down, so
+the hearthstone follow goes live at its next start.
+
+## Buddies follow your hearthstone, always
+
+When your hearthstone (or a shaman's Astral Recall) finishes, 1.5 seconds later
+each of your buddies in the world has its own casting stopped, then is moved
+onto an arc around where you arrived, facing you. That happens alive or dead,
+mid-fight or not, whatever happened to its own hearthstone.
+
+A buddy that finishes its own hearthstone, which still points at its starting
+valley, is sent to your bind spot instead.
+
+The offline test passes 10 of 10. It's recorded in the buddy-adventuring issue.
+
+## Your questions
+
+- **Are Maraudon and Dire Maul connected?** No. They're separate instance maps:
+  Maraudon's entrance is in Desolace, Dire Maul's in Feralas, two zones that
+  border each other. They can be joined with portals that teleport straight from
+  one instance to the other. That's the first step of issue 810.
+- **Karazhan's default size** is ten players.
+- **How parallelizable is Karazhan?** From memory of the stock raid, so it needs
+  checking against its door scripts: after Attumen and Moroes, several bosses
+  can be done in any order (the Maiden, the Opera, the Curator's path, the
+  Servants' Quarters). Shade of Aran and Netherspite open after the Curator, and
+  Chess, Prince and Nightbane come later. So two groups could split for the
+  middle part.
+- **Molten Core's spread**, for your Karazhan numbers: its drops apart from the
+  Tier 1 set (item level 66) run from item level 58 to 71. The bottom 20% are at
+  61 or below; the median is 65.
+
+## Written up as issues (uncommitted)
+
+**808, Karazhan:**
+- **The tier:** a beginner raid with the level-60 dungeon blues at the bottom.
+- **Loot:** epics item level 47–63, blues from 58 up.
+- **Required level:** 58, rising to 60 for the last bosses' loot.
+- **The door:** a flight from a vantage point in Deadwind Pass that glides down
+  to the door, the mount walking back up, and an escort waiting below.
+
+**809, Zul'Aman and Zul'Gurub:** a raid tier for the early fifties.
+
+**810, Maraudon and Dire Maul as one raid:**
+- **Pacing:** each side's progress is measured as a share of its own wing. A
+  side that pulls ahead meets higher-level enemies, in steps, until the others
+  catch up, and allies doing well never makes your side harder.
+- **Swapping:** moving a character to another raid group puts it at the middle
+  point of that group's members, on the nearest walkable spot with a clear
+  straight line of at most 10 yards to that point.
+
+**169, duels:**
+- Anyone in a duel can hit anyone else in a duel nearby.
+- Duels end at 20% health.
+
+**170, sparring grounds at Orgrimmar and Stormwind:**
+- At least 15 stand-ins of mixed levels duel at all times.
+- Every 15 duels (give or take one), and after every loss, a stand-in sits by a
+  fire to recover.
+- Campfires stack, so stand-ins resting side by side boost each other's
+  regeneration.
+
+**617t, stand-ins:** the doubled battleground and arena places are filled by
+stand-ins only. Players queue to the normal sizes.
+
+## Open questions
+
+1. **Karazhan items:** what does "with a gap from 60" mean (no items between
+   which level and 60?), and where do Karazhan's blues top out?
+2. **Karazhan size:** ten, or larger now that two groups can split inside?
+3. **Zul'Aman and Zul'Gurub:** which levels exactly (50–54?), which item
+   levels, and their stock sizes (Zul'Gurub 20, Zul'Aman 10)?
+4. **The joined raid:** one side per wing (five or six), or two (Maraudon and
+   Dire Maul)? How big is a level step, and over how much progress?
+5. **Duels:** how near is "near"? Can you heal someone in another nearby duel?
+   Does a duel loser at 20% stay in the shared fight?
+6. **Campfires:** how much does one fire add to regeneration, is there a cap on
+   stacking, and does stacking apply to all campfires or only the sparring
+   grounds'?
+
+Still open from before: the stamina-to-spirit point rate, and which Acherus
+vendor sells the death knight story items, at what price.
+
+--------------------------------------------------------------------------------
+
+### User Request 16
+
+- Molten Core's spread, for your Karazhan numbers: its drops apart from the Tier
+  1 set (item level 66) run from item level 58 to 71. The bottom 20% are at 61
+  or below; the median is 65.
+
+yes and the NPCs should be level scaled such that the earliest ones are level
+53ish I think? Same approximate level as BRD. The final boss and the last 20% of
+bosses are level 60 only.
+
+> - Swapping: moving a character to another raid group puts it at the middle
+> point of that group's members, on the nearest walkable spot with a clear
+> straight line of at most 10 yards to that point.
+
+at most 10 yards to the point of the nearest group member. So they are
+teleported 10 yards away, at the closest spot to their spot.
+
+> - Every 15 duels (give or take one), and after every loss, a stand-in sits by
+> a fire to recover.
+
+every fifteenish duels they tap out with another person who came to watch on at
+their 14ish'th duel. They'd stand by the side, and when the 15th duel came
+around they'd replace them in the fight. which, by the way, is a better way to
+guard places.
+
+>   2. Karazhan size: ten, or larger now that two groups can split inside?
+
+if 10 is the default then 10
+
+> 4. The joined raid: one side per wing (five or six), or two (Maraudon and Dire
+> Maul)? How big is a level step, and over how much progress?
+
+each tier is joined to the same one. So Maraudon has many parallel paths through
+it, right? Same for Dire Maul. Also Scarlet Monastery. You could argue Razorfen
+Kraul and Downs. Possibly others... WC is parallelizable, go left at the T or
+right, team up for the murloc fight... But SFK is not parallelizable, there's
+only one route through. Can you ask me about various dungeons and I'll provide a
+final ruling?
+
+> 5. Duels: how near is "near"? Can you heal someone in another nearby duel?
+> Does a duel loser at 20% stay in the shared fight?
+
+dueling should just be consenting to free-for-all-ing. If you drop to 20% health
+you can't be targeted or ask for duels or be asked until you hit 100% health
+again.
+
+> 6. Campfires: how much does one fire add to regeneration, is there a cap on
+> stacking, and does stacking apply to all campfires or only the sparring
+> grounds'?
+
+1 campfire gives 1 spirit per campfire within 20 yards. If any are overlapping
+each other, only one of them counts, whichever one is closer to the centroid of
+the other campfires. (second pass calculation)
+
+> Still open from before: the stamina-to-spirit point rate, and which Acherus
+> vendor sells the death knight story items, at what price.
+
+I think it's stamina * spirit / 100? The acherus vendor... Pick someone noble
+for the capes, and someone vicious for the weapons.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 16
+
+> Recording your answers. Choosing the two Acherus vendors means seeing who's
+> there, so first: listing the people standing in Acherus.
+
+All your answers are written into their issues. None of these files are
+committed yet, and nothing new is built.
+
+**Recorded:**
+- **Karazhan (808, 808a):**
+  - **Size:** ten players.
+  - **Monster levels:** the first bosses and their halls about level 53
+    (Blackrock Depths' level), rising boss by boss. The last fifth of the
+    bosses, including the final boss, are level 60.
+- **Swapping groups (810):** a moved character lands within 10 yards of the new
+  group's member nearest that group's middle, on the walkable spot closest to
+  them with a clear line.
+- **Duels (169):** a duel is consent to a free-for-all, so you can hit and heal
+  any other duellist. At 20% health you're out: untargetable, and you can't ask
+  for or be asked to a duel until your health is full.
+- **Sparring (170):** around a fighter's 14th duel a fresh stand-in comes to
+  watch from the side; at the 15th it takes the fighter's place and the fighter
+  rests by a fire. A loss also sends a fighter to rest. The same relay is noted
+  as the model for guard posts.
+- **Campfires (170):** +1 spirit for each campfire within 20 yards. Of fires
+  that overlap, only the one nearest the middle of the others counts.
+- **Death knight vendors (718):**
+  - **Cloaks:** Lady Alistra, a noble death knight trainer in the upper hall.
+  - **Weapons:** Instructor Razuvious, the drillmaster beside the Lich King.
+
+  Neither is a vendor today, so each gains a shop.
+
+**Dungeon rulings for the joined raids (810).** You said Wailing Caverns,
+Scarlet Monastery, Maraudon and Dire Maul are parallel, and Shadowfang Keep
+isn't. The rest, from my memory of the stock maps (worth checking), for your
+final ruling:
+
+| Dungeon | Paths through it |
+|---|---|
+| Ragefire Chasm | one route |
+| The Deadmines | one route |
+| Blackfathom Deeps | mostly one route, a few side rooms |
+| The Stockade | two halls off one corridor |
+| Gnomeregan | front and back entrances meet partway |
+| Razorfen Kraul | branching tunnels |
+| Razorfen Downs | mostly one route |
+| Uldaman | two entrances, then mostly one route |
+| Zul'Farrak | an open courtyard, bosses in any order |
+| Sunken Temple | a ring of rooms, some in any order |
+| Blackrock Depths | many branches, much in any order |
+| Lower Blackrock Spire | branches, a few in any order |
+| Upper Blackrock Spire | one route |
+| Scholomance | a ring of rooms, several in any order |
+| Stratholme | two halves: the living side and the undead side |
+
+**Open questions:**
+1. **Spirit on gear:** "stamina × spirit / 100" is the healing rule from the
+   spirit patch, which is what spirit does once it's on an item. The open
+   question is how many spirit points an item gets for the stamina it gives up.
+   I propose one for one, so 20 stamina becomes 20 spirit.
+2. **Campfires:**
+   - Does "overlapping" mean fires whose flames touch (within a couple of
+     yards), or fires whose 20-yard reaches overlap? The second would let only
+     one fire count in any cluster, which would cancel the stacking.
+   - Does stacking apply to all campfires, or only the sparring grounds'?
+3. **Death knight vendors:** what price for the five story items?
+
+--------------------------------------------------------------------------------
+
+### User Request 17
+
+- Monster levels: the first bosses and their halls about level 53 (Blackrock
+  Depths' level), rising boss by boss. The last fifth of the bosses, including
+  the final boss, are level 60.
+
+make sure the item levels of the dropped items are adjusted accordingly
+
+> - Duels (169): a duel is consent to a free-for-all, so you can hit and heal
+> any other duellist. At 20% health you're out: untargetable, and you can't ask
+> for or be asked to a duel until your health is full.
+
+healers should be able to heal anyone in a duel without being engaged in a duel.
+They will run out of mana eventually. Also can we remove the health restorative
+effects of food and water when near a duel? It's not good to fight where you
+eat. So characters have to either walk far away (back into the city, to a cafe
+or something for food) or they can just sit by the fire with their allies at the
+duel place. Either way, there must be the correct number of combatants at all
+time, so if they want to leave another ally will walk to the duel area, until
+that time they wait, when the ally arrives they can swap places and go wander
+about.
+
+> - Sparring (170): around a fighter's 14th duel a fresh stand-in comes to watch
+> from the side; at the 15th it takes the fighter's place and the fighter rests
+> by a fire. A loss also sends a fighter to rest. The same relay is noted as the
+> model for guard posts.
+
+instead of resting by the fire, the stand-in should walk to an inn or resting
+spot (buddy-bot beds issue perhaps?) and goes to sleep. They'll despawn after
+30-45 seconds. Stored in the database for the next task they're job is. That
+way, we maintain the same amount.
+
+> - Campfires (170): +1 spirit for each campfire within 20 yards. Of fires that
+> overlap, only the one nearest the middle of the others counts.
+
+no, +1 spirit per campfire for each campfire within 20 yards. So 5 campfires
+gives 5 spirit per campfire, for a total of 25 spirit. They can't overlap so the
+max is probably 3*20 squared or something? Sorry math is hard
+
+
+
+<pasted_content id="7f61">
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Ragefire Chasm │ one route │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ The Deadmines │ one route │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Blackfathom Deeps │ mostly one route, a few side rooms │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+</pasted_content id="7f61">
+
+
+these are single-threaded
+
+
+
+<pasted_content id="7f61">
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ The Stockade │ two halls off one corridor │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Gnomeregan │ front and back entrances meet partway │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+</pasted_content id="7f61">
+
+
+these are parallel
+
+
+
+<pasted_content id="7f61">
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Razorfen Kraul │ branching tunnels │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+</pasted_content id="7f61">
+
+
+near the last boss, by the tuber quest, there's a labyrinth that has hardly any
+monsters in it. We should make an issue file for populating that area, then we
+can have two groups in there I think.
+
+
+
+<pasted_content id="7f61">
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Uldaman │ two entrances, then mostly one route │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+</pasted_content id="7f61">
+
+
+Uldaman can be a raid.
+
+
+
+<pasted_content id="7f61">
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Sunken Temple │ a ring of rooms, some in any order │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+</pasted_content id="7f61">
+
+
+Sunken Temple can be a raid.
+
+
+
+<pasted_content id="7f61">
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Blackrock Depths │ many branches, much in any order │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+</pasted_content id="7f61">
+
+
+definitely
+
+
+
+<pasted_content id="7f61">
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Lower Blackrock Spire │ branches, a few in any order │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+</pasted_content id="7f61">
+
+
+yup
+
+
+
+<pasted_content id="7f61">
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Stratholme │ two halves: the living side and the undead side │
+  └───────────────────────┴─────────────────────────────────────────────────┘
+</pasted_content id="7f61">
+
+
+yesssss
+
+> 1. Spirit on gear: "stamina × spirit / 100" is the healing rule from the
+> spirit patch, which is what spirit does once it's on an item. The open
+> question is how many spirit points an item gets for the stamina it gives up. I
+> propose one for one, so 20 stamina becomes 20 spirit.
+
+1x stamina gives 10hp, and 1x spirit gives 0.1hp per stamina. So really, stamina
+gives 0.1hp per spirit too. Is that right? Per 5 seconds? that means it takes
+100 seconds to recover 1 stamina worth of hit points... That seems, kinda bad
+actually. Wait hang on my math is incomplete, can you help? Math is hard :(
+
+>      - Does "overlapping" mean fires whose flames touch (within a couple of yards), or fires whose 20-yard reaches overlap? The second would let only one fire count in any cluster, which would cancel the stacking.
+
+within a couple of yards
+
+>      - Does stacking apply to all campfires, or only the sparring grounds'?
+
+all campfires
+
+>   3. Death knight vendors: what price for the five story items?
+
+1g each, they sell for no gold. Or 1c if we need to.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 17
+
+> Your spirit math first, since you asked for help; then everything gets
+> recorded.
+>
+> **Spirit healing.** The rule is health per 5 seconds = spirit × stamina ÷
+> 100, and each point of stamina is worth about 10 health. Stamina sets both the
+> size of your health pool and how fast spirit refills it, so it cancels out:
+> - Every 5 seconds you regain spirit ÷ 10 percent of your maximum health.
+> - So 100 spirit refills 10% every 5 seconds, which is empty to full in 50
+>   seconds. 300 spirit is 30% every 5 seconds, about 17 seconds to full.
+> - At half rate after taking damage, double those times.
+>
+> Your "100 seconds to recover 1 stamina worth" is right for a character with
+> only 1 spirit. At real amounts of spirit it's much faster.
+>
+> **What the 1:1 gear swap trades** (example: 20 stamina becomes 20 spirit, on a
+> character with 5,000 health):
+> - You lose 200 health from your pool, once.
+> - You gain 2% of 5,000 = 100 health every 5 seconds.
+> - Spirit catches up with the lost stamina after about 10 seconds of healing at
+>   full rate, or 20 seconds at half rate.
+>
+> So in fights longer than that, spirit gives more total health; for burst,
+> stamina wins. That's your sustain-versus-throughput trade.
+>
+> Recording everything now.
+
+Everything is recorded in the issues, plus one new issue (811). These files are
+uncommitted, as before.
+
+**Recorded:**
+- **Karazhan loot (808b):** each boss's loot follows that boss's level, so its
+  item level and required level rise with it, from about level 53 to 60.
+- **Duels (169):**
+  - Anyone can heal a duellist without joining the fight.
+  - Food and drink restore nothing near a duel, so fighters either walk back to
+    the city to eat or sit by the fire at the duel ground.
+  - A fighter who wants to leave waits until a replacement walks up, then swaps
+    out.
+- **Sparring (170):** a fighter who's swapped out walks to an inn or a bed, lies
+  down, and leaves the world 30–45 seconds later, kept in the database for its
+  next job.
+- **Campfires (170):** stacking applies to all campfires. Fires within a couple
+  of yards of each other count as one.
+- **Death knight items (718):** 1 gold each, and they sell for nothing.
+- **Dungeon rulings (810):**
+  - **Single route:** Ragefire Chasm, the Deadmines, Blackfathom Deeps.
+  - **Parallel:** the Stockade, Gnomeregan, Blackrock Depths, Lower Blackrock
+    Spire, Stratholme.
+  - **Raids:** Uldaman and the Sunken Temple.
+  - **Razorfen Kraul:** parallel once its labyrinth is populated, which is the
+    new issue 811: it fills the near-empty maze by the tuber quest with packs of
+    quilboar and their beasts at the nearby halls' levels, so a second group has
+    a path.
+- **Spirit on gear (155k2):** the math above is written into the issue.
+
+**Campfire stacking has no ceiling as stated.** With n campfires within 20
+yards, each gives n spirit, so n × n in total (5 fires make 25). A 20-yard
+circle holds about 1,257 square yards, and fires kept 2 yards apart each need
+about 3.5 of those. So about 360 fires fit, which would give about 130,000
+spirit; at 3 yards apart, about 160 fires and 26,000 spirit. Without a cap,
+enough fires make spirit unlimited.
+
+**Open questions:**
+1. **Campfire cap:** at most how many fires should count? Five gives 25 spirit,
+   ten gives 100.
+2. **Food near duels:** how close to a duel does food stop working?
+3. **Spirit on gear:** with the math in hand, is one spirit for one stamina
+   right?
+4. **Dungeons still without a ruling:** Zul'Farrak (an open courtyard, bosses in
+   any order), Razorfen Downs (mostly one route), Upper Blackrock Spire (one
+   route) and Scholomance (a ring of rooms, several in any order).
+
+--------------------------------------------------------------------------------
+
+### User Request 18
+
+for the stockade dungeon, can we spawn the players on the inside, one in each
+wing, depending on which raid group they're in? They can meet up in the middle.
+There should be twice as many enemies in the middle sections.
+
+>     - Food and drink restore nothing near a duel, so fighters either walk back to the city to eat or sit by the fire at the duel ground.
+
+also monsters deal 2x damage to dueling characters
+
+what's the difference between "parallel" and "raids"? characters are split
+between entrances, or perhaps in a sister dungeon progressing at the same time,
+with a shared party chat and coordination... and the ability to easily switch
+groups, so you can put the correct attackers and defenders to the right tasks.
+
+>     - Razorfen Kraul: parallel once its labyrinth is populated, which is the new issue 811: it fills the near-empty maze by the tuber quest with packs of quilboar and their beasts at the nearby halls' levels, so a second group has a path.
+
+we will need bosses too, so we should bring level adjusted rare elite quilboards
+from everywhere in the map and have them wander through the labyrinth. The
+patrols and the rares should try and spread themselves throughout the maze, with
+both of them sharing separate pathing maps. Make sure their loot is level
+adjusted too, we will probably have to make duplicates or something because we
+want them to also spawn in the world. It's just... they're wandering through.
+There should be about as many as there are bosses on the previous path.
+Remember, if the other paths are say... 30% of the way through the dungeon and
+you're 50% of the way through, then there's a 20% discrepancy. This means the
+bosses and monsters maybe have 20% more stats? Or levels? I dunno. But they
+should be harder. The labyrinth is very dense, which means that it will have
+less walking, meaning, parties will clear it faster. So it's gotta be tougher
+too, and depending on how fast... it might seem to speed up partway through. Or
+slow down if you're doing great at your fights. But it only adjusts for monsters
+that are not in combat.
+
+> Campfire stacking has no ceiling as stated. With n campfires within 20 yards,
+> each gives n spirit, so n × n in total (5 fires make 25). A 20-yard circle
+> holds about 1,257 square yards, and fires kept 2 yards apart each need about
+> 3.5 of those. So about 360 fires fit, which would
+> give about 130,000 spirit; at 3 yards apart, about 160 fires and 26,000
+> spirit. Without a cap, enough fires make spirit unlimited.
+
+haha absurd. How about 3 yards apart?
+
+>   2. Food near duels: how close to a duel does food stop working?
+
+100 yards
+
+> 3. Spirit on gear: with the math in hand, is one spirit for one stamina right?
+
+I dunno probably
+
+> 4. Dungeons still without a ruling: Zul'Farrak (an open courtyard, bosses in
+> any order), Razorfen Downs (mostly one route), Upper Blackrock Spire (one
+> route) and Scholomance (a ring of rooms, several in any order).
+
+Zul'Farrak is a loop, so, let's say it's serial
+
+Razorfen Downs is 1 route, but if you wanted we could double the player count
+and double the number of creature monsters.
+
+for Scholomance let's say it's a dungeon for now. For Blackrock Spire, let's say
+UBRS and LBRS are combined, and each one is level adjusted such that LBRS has
+the same level range as UBRS, which is the range from their current minimum to
+their current maximum. And each one will be affected by the buff/debuff system.
+
+How many players in BRD? Can you give me estimates for number of looted items
+per route? We can go through them one-by-one or two-by-two if you please in a
+table that lists each boss, and how many items it drops. Also, which path it's
+on, with an arbitrary label. Then we will tune how many items they drop. Also
+can you add how many items they are able to drop? To assess variety - give the
+more varied ones more item drops comparatively.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 18
+
+> Answering the "parallel versus raid" question, then BRD, which needs real loot
+> data. Pulling Blackrock Depths' bosses and their loot from the world database
+> now.
+
+> That filter caught only some. Querying the full boss list by name instead.
+
+> Some numbers look wrong: the Emperor at 0.0 drops per kill, most bosses at
+> 0.3. Looking at their raw loot rows before trusting any of it.
+
+All your answers are recorded. None of these issue files are committed yet.
+
+## "Parallel" versus "raid"
+
+There's really one thing, which I'll call **the joined run**: a raid group whose
+parties progress at the same time, sharing raid chat, with any character movable
+between parties and the pacing between them. The words in the ruling table only
+describe how a dungeon holds a joined run:
+- **Parallel:** the dungeon's own map has separate paths, one party each.
+- **Single:** one route, so it joins a run only beside a sister dungeon, or by
+  doubling players and monsters (as you said for Razorfen Downs).
+- **"A raid":** your word for Uldaman and the Sunken Temple; it means the same
+  joined run.
+
+That definition is now written into issue 810.
+
+## Recorded
+
+- **The Stockade:** each party appears inside at the far end of its own wing, by
+  party number. You meet in the middle, where the enemies are doubled.
+- **Rulings:**
+  - **Zul'Farrak:** single (a loop).
+  - **Razorfen Downs:** single, with the doubling option.
+  - **Scholomance:** a dungeon for now.
+  - **Blackrock Spire:** Upper and Lower joined into one run. Each half spans
+    the lowest-to-highest level of the pair, and both are under the pacing.
+- **The labyrinth (811):**
+  - **Bosses:** copies of the world's rare elite quilboar, with their levels and
+    their loot's levels set for the labyrinth. The originals stay in the world.
+    There are as many as the other path has bosses.
+  - **Movement:** patrols and rares walk the maze on two separate distance maps,
+    spreading away from their own kind.
+  - **Harder:** it's tougher than the other path because it's dense, with little
+    walking between fights.
+  - **Pacing:** the step changes only monsters not yet in combat.
+- **Duels (169):** monsters do double damage to duellists, and food stops
+  working within 100 yards of a duel.
+- **Fires (170):** fires within 3 yards of each other count as one.
+- **Spirit on gear (155k2):** one stamina becomes one spirit, as the working
+  rule.
+
+## Blackrock Depths
+
+Five players, as in any stock five-player dungeon. Below is the loot per boss,
+from a scratch count of the world database's loot tables:
+- **Drops per kill** counts expected green-or-better items per kill. Quest
+  items, grey junk and trade goods aren't counted.
+- **Own items** is how many different green-or-better items the boss can drop
+  from its own lists.
+- **Shared pool** is the zone's random world drops some bosses also roll on.
+- **The path labels are arbitrary**, and I placed bosses on paths from memory of
+  the map, so correct anything that's wrong.
+
+| Path | Boss | Level | Drops per kill | Own items | Shared pool |
+|---|---|---|---|---|---|
+| A: prison | High Interrogator Gerstahn | 52 | 1.0 | 4 | – |
+| A: prison | Lord Roccor | 51 | 1.3 | 6 | – |
+| A: prison | Houndmaster Grebmar | 52 | 1.0 | 4 | – |
+| B: Ring of Law (one of six per run) | Anub'shiah | 52 | 1.1 | 4 | – |
+| B: Ring of Law | Eviscerator | 52 | 1.0 | 4 | – |
+| B: Ring of Law | Gorosh the Dervish | 52 | 1.0 | 4 | – |
+| B: Ring of Law | Grizzle | 52 | 2.0 | 5 | – |
+| B: Ring of Law | Hedrum the Creeper | 52 | 1.0 | 4 | – |
+| B: Ring of Law | Ok'thor the Breaker | 52 | 1.0 | 4 | – |
+| C: tavern | Hurley Blackbreath | 55 | 1.0 | 4 | – |
+| C: tavern | Phalanx | 55 | 1.0 | 4 | – |
+| C: tavern | Plugger Spazzring | 55 | 0.5 | 3 | – |
+| C: tavern | Ribbly Screwspigot | 53 | 1.0 | 4 | – |
+| D: forges | Bael'Gar | 52 | 1.0 | 4 | – |
+| D: forges | Fineous Darkvire | 53 | 1.0 | 4 | – |
+| D: forges | Lord Incendius | 53 | 1.0 | 5 | – |
+| D: forges | General Angerforge | 55 | 1.0 | 5 | – |
+| D: forges | Golem Lord Argelmach | 55 | 1.6 | 5 | – |
+| E: vault & shrine | Warder Stilgiss | 54 | 1.0 | about 340 with the pool | 52 |
+| E: vault & shrine | Verek | 53 | 0.3 | about 340 with the pool | 52 |
+| E: vault & shrine | Pyromancer Loregrain (rare) | 52 | 1.2 | about 350 with the pool | 59 |
+| E: vault & shrine | Watchman Doomgrip | 54 | 0.4 | 65 | 742 |
+| F: inner city | Ambassador Flamelash | 55 | 1.0 | 5 | – |
+| F: inner city | The Seven (their chest) | 55–56 | 2.0 | 8 | – |
+| F: inner city | Magmus | 56 | 1.0 | 5 | – |
+| G: throne | Princess Moira Bronzebeard | 55 | 1.0 | 4 | – |
+| G: throne | Emperor Dagran Thaurissan | 56 | 2.0 | 11 | – |
+| (rare, wanders) | Panzor the Invincible | 56 | 1.0 | about 300 with the pool | 104 |
+
+What the table shows:
+- Most bosses drop one item from four or five possibilities.
+- The **Emperor** (2 per kill, 11 possible) and **The Seven's chest** (2, 8
+  possible) have the most variety.
+- **Grizzle** and **Golem Lord Argelmach** give more per kill than their peers.
+- **Plugger Spazzring** gives the least (0.5 per kill, 3 possible).
+
+## Open questions
+
+1. **Campfire cap:** 3-yard spacing still allows about 160 fires in a 20-yard
+   circle, so n × n could reach about 26,000 spirit. At most how many fires
+   should count?
+2. **Labyrinth pacing:** if a path is 20 points ahead, how much harder do its
+   monsters get: more levels (+2?) or more stats (+20%)?
+3. **Labyrinth packs:** how many packs?
+4. **Blackrock Depths loot:** which bosses should drop more or less? Your rule
+   was to give the more varied ones more drops. Do the path labels look right?
 
 --------------------------------------------------------------------------------
 
