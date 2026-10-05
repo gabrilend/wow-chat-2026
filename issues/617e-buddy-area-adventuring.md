@@ -184,6 +184,19 @@ buddy, since buddies never bind):
   teleport is cancelled and it is moved by script to its stored spot and
   facing instead. An interrupted cast moves nothing and stays on the
   to-do list.
+- **Following a hearthstone, always (built 2026-10-04,
+  `src/lua-basic/buddy-hearth.lua`, tested offline by
+  `scripts/test-buddy-hearth`, 10 checks).** Owner: "can we ensure that
+  buddy-bots always always get teleported correctly when the player-partner
+  casts hearthstone? Even if their cast didn't complete, or if they were
+  interrupted by combat or dying... we still teleport them manually with
+  lua". When a partner's hearthstone (or Astral Recall) completes, 1.5
+  seconds later every buddy of theirs in the world has its own cast
+  stopped and is moved onto an arc round the partner's arrival spot,
+  facing them (`lib/buddy-arc.lua`, "centre"), alive or dead, wherever it
+  was. A buddy that finishes its own hearthstone is moved the same way to
+  its partner's bind spot instead of its own (still the starting valley).
+  The stored per-buddy bind spot above replaces the arc when built.
 - **Until this is built**, and for mending any time, game masters have
   three commands (`src/lua-basic/buddy-gm.lua`, in game or with a name on
   the server console; owner, 2026-10-04): `.buddies to partner [name]`,

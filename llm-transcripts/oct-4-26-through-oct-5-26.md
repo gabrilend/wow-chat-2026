@@ -1,6 +1,6 @@
 # Conversation Summary: 3cca55b1-1e96-4489-a864-41157a21299a
 
-Generated on: 2026-10-05 00:20:27
+Generated on: 2026-10-05 00:34:43
 Models: claude-opus-5-5
 
 ## Contents
@@ -2468,6 +2468,154 @@ committed. Until someone commits that deletion, the next ordinary `git commit`
 in the project will include it, whatever it's meant to be about. My commits go
 around the staging area, so they don't pick it up. Shall I commit just those two
 deletions on their own, finishing the retirement?
+
+--------------------------------------------------------------------------------
+
+### User Request 14
+
+Karazhan (issue 808, four sub-issues)
+
+to answer anything about this, I'd need to see the gear stats firefox HTML page
+opened. Can you find it for me? It was a claude artifact, and we have a local
+copy somewhere. Gotta put it in docs/HTML/
+
+> 1. One stamina for one spirit, or by stat budget? Stamina costs about two
+> thirds as much budget as spirit, so a budget-true swap gives fewer spirit
+> points.
+
+less about budget, more about combat utility. Healing rate, vs extra opportunity
+for healing... Do you help the healer's sustain (spirit) or throughput
+(stamina)? If they have to cast powerful, expensive spells to keep up, then
+spirit can be better. But if you're taking so much damage they can't get the
+slower, more efficient spells off, then stamina might be better. It depends on
+the healer, and the character. Trolls usually will want spirit, same for blood
+death knights :)
+
+>   2. Are rings, necklaces, cloaks and trinkets in?
+
+no to trinkets. yes to the others.
+
+>   3. Does "PvP gear" include world PvP rewards (Halaa, Hellfire's towers)?
+
+yes, because requires faction, right?
+
+> - Reuse: kept stand-ins work in low-level dungeons, at any higher bracket, and
+> never go down a level.
+
+they can also do the same dungeon they just completed. If they do a slightly
+higher dungeon, in the same tier, they can be bumped up to that level too. For
+each dungeon they complete, they should get a free, powerful blue item for their
+spec from the loot table randomly selected of the dungeon they just completed.
+But only the visible items, the non PvP ones.
+
+>   1. Up to what level is "low-level" for dungeons?
+
+up to 30, then up to 49 if they lack a class. Actually it's 59 if they get a
+tank for example and the player is dps spec, then they could lack a healer until
+level 59
+
+>   2. What's the battleground buddy allowance today, the number that doubles?
+
+I think it's 15 for WSG, AB, and 40 for AV? I think EotS is 15. Can we also do
+it for arenas? So, 3v3 becomes 6v6 where 3 and 3 are stand-ins.
+
+>   - the skip takes back the item the server picked for those two;
+> - Sargobras at the Ebon Hold then offers two quests of our own that complete
+> as soon as you take them, each with the same reward choices.
+
+changed my mind, we should just sell those quest items at a vendor in Acherus.
+They should be unsellable, nobody wants to handle them because they know that
+Acherus wants them back.
+
+> Your commit last night ("Two source patches retired") added the retired copies
+> of those two patches. But the deletion of the original two files
+> (B016-playerbots-constructor-reorder.sh and
+> B019-playerbots-unused-parameter.sh) was left staged in git and never
+> committed. Until someone
+> commits that deletion, the next ordinary git commit in the project will
+> include it, whatever it's meant to be about. My commits go around the staging
+> area, so they don't pick it up. Shall I commit just those two deletions on
+> their own, finishing the retirement?
+
+oh sure.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 14
+
+> Starting with the gear page: searching the project and your home folder for a
+> saved copy of the "Level-60 Gear Ladder" artifact.
+
+> Found it: `docs/profiles/basic-gear-ladder.html` (the `/home` path is the same
+> folder through a link). Checking it's tracked in git and what refers to it,
+> then moving it into `docs/HTML/`.
+
+> Moved and indexed. Checking the local copy matches the published artifact,
+> then opening it in Firefox.
+
+> Same 46 rows as the published one. Opening it.
+
+> The page should be open in Firefox. Next, finishing the B016/B019 retirement
+> through the project's commit tool. A preview first, since that work belongs to
+> an earlier session.
+
+*[commit] 858506a76 in wow-chat-2026 - Finish retiring two source patches: their old files go*
+
+> Done; nothing of B016/B019 is left staged. Committing the page move with its
+> updated references.
+
+*[commit] 195733577 in wow-chat-2026 - The level-60 gear ladder page moves in with the other HTML pages*
+
+> The new location is committed, but the removal of the old file wasn't picked
+> up. My change tracker doesn't see deletions made by git's move command.
+> Recording it as mine and committing it.
+
+*[commit] dff1a0f0d in wow-chat-2026 - The gear ladder page's old copy goes (its move's second half)*
+
+> The move is fully committed and git is clean for both paths. Last, writing
+> your answers into the issues.
+
+The gear page is at `docs/HTML/basic-gear-ladder.html` and should now be open in
+Firefox. It's the same 46 rows as the published artifact, and the table of
+contents and the two notes that pointed at its old place now point at the new
+one. The B016/B019 retirement is finished and committed. Your other answers are
+written into their issues, uncommitted.
+
+**Spirit on gear (155k2):**
+- **No fixed exchange rate:** the item offers the choice between helping the
+  healer's sustain (spirit) and throughput (stamina), and which is better
+  depends on the wearer. Your troll and blood death knight note is in.
+- **Which items:** rings, necklaces and cloaks are in; trinkets are out.
+- **World PvP rewards are out:** yes, they need a faction's standing, so the "no
+  faction-restricted items" rule already excludes them.
+- **Open:** with no budget rate, is it one stamina becomes one spirit?
+
+**Stand-ins (617t):**
+- **Dungeons:** up to 30; up to 49 while a tank or healer is missing; up to 59
+  if you have a tank, play damage yourself, and still lack a healer.
+- **Repeat runs:** a stand-in may repeat the same dungeon, or move up to a
+  higher one in the same tier and be raised to its level.
+- **Reward:** each dungeon completed gives it one random blue from that
+  dungeon's loot, for its spec, visible items only, no PvP gear.
+- **Battlegrounds:** each side doubles, the added half stand-ins. A correction:
+  Warsong Gulch is 10 a side in this version, not 15. Arathi Basin, Eye of the
+  Storm and Strand of the Ancients are 15; Alterac Valley and Isle of Conquest
+  are 40.
+- **Arenas:** 2v2 becomes 4v4, 3v3 becomes 6v6, 5v5 becomes 10v10.
+- **Open:** bigger sides mean raising the server's own size limits. Should real
+  players also be able to queue into the bigger sizes, or should only stand-ins
+  fill the extra places?
+
+**Death knight skip gear (718):** a vendor in Acherus sells the five choice
+items: the three cloaks from Havenshire and the two Ebon Blade two-handers. None
+of them can be sold to any vendor, and the skip keeps whichever one the server
+picks. **Open:** which Acherus vendor, and at what price? Not built yet.
+
+**Karazhan:** the open questions are waiting until you've looked at the page:
+1. Where on the ladder does it go?
+2. How do players get through the door, now that the Master's Key chain is
+   disabled?
+3. Ten players, or larger?
 
 --------------------------------------------------------------------------------
 
