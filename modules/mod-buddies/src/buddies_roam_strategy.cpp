@@ -195,7 +195,7 @@ static constexpr uint32 PASS_EVERY_MS     = 3000;    // the strategy pass
 // when they are ~10% farther than the monster's aggro radius. Otherwise,
 // they follow the player.")
 static constexpr uint32 AGGRO_LOOK_MS     = 500;     // a buddy inside looks round for monsters this often
-static constexpr float  AGGRO_REACH       = 1.1f;    // it strikes within this times the monster's own aggro radius
+static constexpr float  AGGRO_REACH       = 1.1f;    // the owner within this times a monster's aggro radius for them: the buddies go
 static constexpr float  AGGRO_SEARCH_YARDS = 50.0f;  // the farthest that can be: the largest radius (45) x 1.1
 static constexpr float  MOBS_YARDS        = 60.0f;   // monsters this near a buddy are offered to the nudge
 static constexpr uint32 MEAL_MAX_MS       = 120000;  // a meal that hasn't finished by now is ended (and logged)
@@ -1939,12 +1939,16 @@ public:
         LOG_INFO("module", ">> mod-buddies: \"buddy roam\" taught to the bot module (ten classes)");
     }
 
-    // Each online buddy's peace-time set put right, only where it differs
-    // (so a buddy already right costs a few lookups). In a dungeon, raid or
-    // battleground the set is the bot module's own following (sInstance;
-    // who goes in is the dungeon draw, 617c3); dead buddies are left alone
-    // (the bot module's own dead behaviours bring them back, then this pass
-    // takes over again).
+    // Each online buddy's peace-time set put on when its kind of place
+    // changes (open country, town, instance) or it comes online, and not
+    // otherwise: what the owner then types (".. nc -follow", "nc +stay")
+    // stays until the buddy next changes place. (Until 2026-10-04 the set
+    // was put right every pass, every three seconds, undoing any order the
+    // owner gave; owner: "whoa 3 seconds? That seems like a bad design.")
+    // In a dungeon, raid or battleground the set is the bot module's own
+    // following (sInstance; who goes in is the dungeon draw, 617c3); dead
+    // buddies are left alone (the bot module's own dead behaviours bring
+    // them back, then this pass takes over again).
     void OnUpdate(uint32 diff) override
     {
         _sinceAggro += diff;
@@ -1960,6 +1964,8 @@ public:
         for (auto const& [buddyGuid, ownerGuid] : BuddyRosterPairs())
         {
             Player* bot = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(buddyGuid));
+            if (!bot)
+                _placeSetFor.erase(buddyGuid);         // offline: its set is put on again when it is back
             if (!bot || !bot->IsInWorld() || !bot->IsAlive())
                 continue;
             PlayerbotAI* ai = GET_PLAYERBOT_AI(bot);
@@ -1973,6 +1979,11 @@ public:
             bool inside = bot->GetMap()->Instanceable();
             bool town   = !inside && BuddyTownArea(owner) != 0;
             std::vector<Want> const& wants = inside ? sInstance : (town ? sTown : sOpenCountry);
+            uint8 place = inside ? PLACE_INSIDE : (town ? PLACE_TOWN : PLACE_COUNTRY);
+            auto set = _placeSetFor.find(buddyGuid);
+            if (set != _placeSetFor.end() && set->second == place)
+                continue;                              // set already put on for this place: the owner's orders stand
+            _placeSetFor[buddyGuid] = place;
             if (inside && bot->IsWalking())
                 bot->SetWalk(false);                   // following runs
             for (Want const& w : wants)
@@ -1986,11 +1997,14 @@ public:
 
 private:
     // {{{ AggroPass
-    // Inside a dungeon or raid, each buddy not already fighting strikes the
-    // nearest monster that would attack it on sight, once that monster is
-    // within AGGRO_REACH times its own aggro radius for the buddy: a little
-    // before the monster would notice it. Each filter, and what failing it
-    // means:
+    // Inside a dungeon or raid: when an owner comes within AGGRO_REACH times
+    // a monster's aggro radius for the owner (a little before it would
+    // notice them), every buddy of that owner inside and not fighting goes
+    // at that monster: melee runs in, casters move into range and cast (the
+    // bot module's fighting does the moving once the target is set). The
+    // owner, 2026-10-04: "walks into range and attacks / spellcasts when
+    // the player is at 110% aggro range of the monster." The nearest such
+    // monster to the owner is taken. Each filter, and what failing it means:
     //   a creature, nobody's pet     - players, buddies and pets are no prey
     //   alive, not already fighting  - a fight already on is the bot
     //                                  module's (it attacks what attacks the
@@ -1998,61 +2012,75 @@ private:
     //   not a critter or civilian,
     //   not immune to players        - these never start a fight
     //   hostile and aggressive       - only these attack on sight; a neutral
-    //                                  one is left for the leader to pull
-    //   in line of sight             - no striking through a wall
-    // Otherwise nothing is done and the buddy follows its leader (sInstance).
+    //                                  one is left for the owner to pull
+    //   in the owner's line of sight - nothing behind a wall
+    // Otherwise nothing is done and the buddies follow (sInstance).
     void AggroPass()
     {
+        std::map<uint32, Creature*> targetOf;          // owner -> the monster their buddies go at (nullptr: none)
         for (auto const& [buddyGuid, ownerGuid] : BuddyRosterPairs())
         {
             Player* bot = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(buddyGuid));
             if (!bot || !bot->IsInWorld() || !bot->IsAlive() || bot->IsInCombat() || !bot->GetMap()->IsDungeon())
                 continue;                              // outside, dead, or already fighting
             PlayerbotAI* ai = GET_PLAYERBOT_AI(bot);
-            if (!ai)
-                continue;                              // still logging in
-            std::list<Unit*> units;
-            Acore::AnyUnitInObjectRangeCheck check(bot, AGGRO_SEARCH_YARDS);
-            Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(bot, units, check);
-            Cell::VisitObjects(bot, searcher, AGGRO_SEARCH_YARDS);
-            Creature* best = nullptr;
-            float bestDist = 0.0f;
-            for (Unit* u : units)
-            {
-                Creature* c = u->ToCreature();
-                if (!c || !c->GetCharmerOrOwnerGUID().IsEmpty() || !c->IsAlive() || c->IsInCombat())
-                    continue;
-                if (c->IsCritter() || c->IsCivilian() || c->IsImmuneToPC())
-                    continue;
-                if (!c->IsHostileTo(bot) || !c->HasReactState(REACT_AGGRESSIVE))
-                    continue;
-                float aggro = c->GetAggroRange(bot);
-                if (aggro <= 0.0f)
-                    continue;                          // the server has aggro switched off (rate 0)
-                float d = bot->GetExactDist(c);
-                if (d > aggro * AGGRO_REACH || (best && d >= bestDist) || !bot->IsWithinLOSInMap(c))
-                    continue;
-                best = c;
-                bestDist = d;
-            }
-            if (!best)
+            Player* owner = ai ? ai->GetMaster() : nullptr;
+            if (!owner || owner->GetGUID().GetCounter() != ownerGuid || owner->GetMap() != bot->GetMap())
+                continue;                              // still logging in, or the owner is elsewhere
+            auto known = targetOf.find(ownerGuid);
+            Creature* target = known != targetOf.end() ? known->second : (targetOf[ownerGuid] = ThreatNearOwner(owner));
+            if (!target)
                 continue;
-            // open the fight the bot module's way (as OpenFight does when roaming)
             bool melee = ai->IsMelee(bot);
-            bot->SetSelection(best->GetGUID());
-            ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Set(best);
+            bot->SetSelection(target->GetGUID());
+            ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Set(target);
             ai->ChangeEngine(BOT_STATE_COMBAT);
-            bot->Attack(best, melee);
+            bot->Attack(target, melee);
             if (melee)
-                bot->GetMotionMaster()->MoveChase(best);
-            BuddyTrace(bot, "inside: struck {} at {:.1f} yards (its aggro radius {:.1f}, reach x{:.1f})",
-                best->GetName(), bestDist, best->GetAggroRange(bot), AGGRO_REACH);
+                bot->GetMotionMaster()->MoveChase(target);
+            BuddyTrace(bot, "inside: {} came within {:.1f} yards of {} (its aggro radius for them {:.1f}, reach x{:.1f}); going at it",
+                owner->GetName(), owner->GetExactDist(target), target->GetName(), target->GetAggroRange(owner), AGGRO_REACH);
         }
+    }
+
+    // The nearest monster to `owner` that would attack them on sight and
+    // that they are within AGGRO_REACH times its aggro radius of; nullptr
+    // when none (the filters are AggroPass's).
+    Creature* ThreatNearOwner(Player* owner)
+    {
+        std::list<Unit*> units;
+        Acore::AnyUnitInObjectRangeCheck check(owner, AGGRO_SEARCH_YARDS);
+        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(owner, units, check);
+        Cell::VisitObjects(owner, searcher, AGGRO_SEARCH_YARDS);
+        Creature* best = nullptr;
+        float bestDist = 0.0f;
+        for (Unit* u : units)
+        {
+            Creature* c = u->ToCreature();
+            if (!c || !c->GetCharmerOrOwnerGUID().IsEmpty() || !c->IsAlive() || c->IsInCombat())
+                continue;
+            if (c->IsCritter() || c->IsCivilian() || c->IsImmuneToPC())
+                continue;
+            if (!c->IsHostileTo(owner) || !c->HasReactState(REACT_AGGRESSIVE))
+                continue;
+            float aggro = c->GetAggroRange(owner);
+            if (aggro <= 0.0f)
+                continue;                              // the server has aggro switched off (rate 0)
+            float d = owner->GetExactDist(c);
+            if (d > aggro * AGGRO_REACH || (best && d >= bestDist) || !owner->IsWithinLOSInMap(c))
+                continue;
+            best = c;
+            bestDist = d;
+        }
+        return best;
     }
     // }}}
 
     uint32 _sinceLast  = 0;
     uint32 _sinceAggro = 0;
+    // buddy guid -> the kind of place its set was last put on for
+    static constexpr uint8 PLACE_COUNTRY = 0, PLACE_TOWN = 1, PLACE_INSIDE = 2;
+    std::map<uint32, uint8> _placeSetFor;
 };
 
 // {{{ buddies_roam_player

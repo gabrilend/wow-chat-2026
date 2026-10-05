@@ -100,18 +100,26 @@ Verbatim: "also can we make buddy-bots have an aggro radius in dungeons?
 They should attack when they are ~10% farther than the monster's aggro
 radius. Otherwise, they follow the player."
 
-Inside a dungeon or raid, a buddy not already fighting looks round every
-half second (`AGGRO_LOOK_MS`) for a monster that would attack on sight:
-hostile to it, aggressive, not a critter or civilian, nobody's pet, not
-already fighting, alive, in line of sight. If one is within 1.1 times that
-monster's own aggro radius for the buddy (`AGGRO_REACH`; the server's
-radius for the pair: 20 yards less a yard per level the buddy is above
-it, 5 to 45), the buddy opens the fight on the nearest such monster, the
-way a roaming buddy opens one (the target selected and remembered, the
-fighting engine on, the first swing; a melee buddy runs in). So a buddy
-strikes just before the monster would have noticed it. Otherwise it
-follows its leader as before. (`buddies_roam_strategy.cpp`, the world
-pass; written 2026-10-04, syntax-checked, not yet compiled.)
+Corrected the same day: "walks into range and attacks / spellcasts when
+the player is at 110% aggro range of the monster." The trigger is the
+owner's distance, not the buddy's. Every half second (`AGGRO_LOOK_MS`),
+for each owner inside a dungeon or raid: the nearest monster that would
+attack the owner on sight (hostile, aggressive, not a critter or
+civilian, nobody's pet, not already fighting, alive, in the owner's line
+of sight) whose aggro radius for the owner, times 1.1 (`AGGRO_REACH`),
+reaches the owner. Each of that owner's buddies inside and not fighting
+then goes at it: target set and remembered, fighting engine on; melee
+runs in, casters move into range and cast (the bot module's own fighting
+does the moving). Otherwise they follow. (`buddies_roam_strategy.cpp`,
+`AggroPass` and `ThreatNearOwner`; written 2026-10-04, syntax-checked,
+not yet compiled.)
+
+**The strategy set is put on once per place** (owner, 2026-10-04: "whoa 3
+seconds? That seems like a bad design."): the pass used to put each
+buddy's non-combat set back every three seconds, undoing any order the
+owner typed (`nc -follow`, `nc +stay`). Now it is put on when the buddy's
+kind of place changes (open country, town, instance) or it comes back
+online, and the owner's orders stand until then.
 
 ## Open Questions
 
