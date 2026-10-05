@@ -74,6 +74,7 @@ local STATE_OWED, STATE_GIVEN, STATE_RETURNING = 0, 1, 2
 local INTID_RETURN       = 1                        -- the undo; a soul's own intid is its guid (always far above 2)
 local INTID_CLAN         = 2                        -- naming the clan later, if the trade's name failed (617l)
 local INTID_SKIP         = 3                        -- "I'd rather skip the story" (2026-10-04)
+local INTID_UNSKIP       = 4                        -- "I changed my mind, I want to follow the Lich King for a time"
 -- After the trade, a death knight who asked to skip the story is placed a
 -- step in front of the Ebon Hold's Sargobras (spawn 7180001, map 0), where
 -- the story ends, facing him: between the portals to the capitals.
@@ -379,7 +380,8 @@ end
 -- death knight story? They otherwise can talk to Arthas for the first DK
 -- quest." While a soul is owed, Sargobras also offers "I'd rather skip the
 -- story."; once asked, each soul in his list reads "..., and skip the
--- story", and that trade is followed by the skip. Asked for and not traded
+-- story", and that trade is followed by the skip; and "I changed my mind,
+-- I want to follow the Lich King for a time." takes the asking back. Asked for and not traded
 -- yet is kept in memory only (a relog asks again).
 local DK_STORY = dofile(script_dir() .. "data/death-knight-skip-quests.lua")  -- { quest, races } in play order
 local skip_wanted = {}                              -- death knight guid (low) -> true
@@ -434,6 +436,10 @@ local function on_hello(event, player, creature)
             local skip = skip_wanted[player:GetGUIDLow()]
             if not skip then
                 player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "I'd rather skip the story.", 0, INTID_SKIP)
+            else
+                -- the way back (owner, 2026-10-04: "there should also be a second
+                -- option that says ... which undoes it")
+                player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "I changed my mind, I want to follow the Lich King for a time.", 0, INTID_UNSKIP)
             end
             for _, c in ipairs(candidates(player)) do
                 local confirm = string.format("Give %s to the Lich King? %s leaves your character list; you can ask for them back here later.%s",
@@ -472,6 +478,9 @@ local function on_select(event, player, creature, sender, intid, code)
     elseif row.state == STATE_OWED and intid == INTID_SKIP then
         skip_wanted[player:GetGUIDLow()] = true
         on_hello(event, player, creature)           -- the soul list again, each soul now with the skip
+    elseif row.state == STATE_OWED and intid == INTID_UNSKIP then
+        skip_wanted[player:GetGUIDLow()] = nil
+        on_hello(event, player, creature)           -- the soul list again, plain: the story is played
     elseif row.state == STATE_OWED and intid ~= INTID_RETURN then
         if not player:IsInGuild() then return end   -- an old menu from before the name-first rule
         if give_soul(player, intid) then

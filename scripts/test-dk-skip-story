@@ -86,6 +86,14 @@ on_select(2, dk, creature, 0, 3)
 check(texts():find("I.d rather skip") == nil, "the skip option is gone once asked")
 check(texts():find("Give Hoofwise %(level 60%) to the Lich King, and skip the story%.") ~= nil, "each soul now carries the skip")
 
+check(texts():find("I changed my mind, I want to follow the Lich King for a time%.") ~= nil, "the way back is offered")
+
+print("changing one's mind, then asking again")
+on_select(2, dk, creature, 0, 4)
+check(texts():find("I'd rather skip the story%.") ~= nil and texts():find("and skip the story") == nil, "taken back: the souls are plain again")
+on_select(2, dk, creature, 0, 3)
+check(texts():find("and skip the story") ~= nil, "asked again: the skip is back")
+
 print("the trade, then the skip")
 on_select(2, dk, creature, 0, 501)
 check(traded == 501, "the soul is traded")

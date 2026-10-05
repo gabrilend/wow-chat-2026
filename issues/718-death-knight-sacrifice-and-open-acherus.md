@@ -308,7 +308,11 @@ already rewarded are passed over; the death knight then stands at the
 Ebon Hold, a step in front of the other Sargobras, between the portals to
 the capitals. A quest that won't go through is named to the player and
 logged as an error with what did. Asked for and not traded yet is kept in
-memory (a relog asks again). Without asking, nothing changes: the Lich
+memory (a relog asks again). Once asked, the menu also offers "I changed
+my mind, I want to follow the Lich King for a time." (owner, 2026-10-04:
+"there should also be a second option ... which undoes it"), which takes
+the asking back: the souls read plain again and the story is played. The
+offline test has 15 checks. Without asking, nothing changes: the Lich
 King gives the first quest once the soul is paid.
 
 The story's quests come from `scripts/generate-basic-dk-skip-quests`
