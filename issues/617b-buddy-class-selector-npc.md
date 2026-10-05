@@ -76,8 +76,11 @@ and install).
   - the wandering one comes at each tenth level (where the owner levelled)
     and at login, from level 10, while a slot is owed; not if more than two
     Sargobras are within 30 yards (then tried again every 30 seconds);
-    only his owner may use him; he follows (stops at 7 yards, sets off past
-    15), turns toward the owner at most every 5 seconds; after the last
+    only his owner may use him; he follows with the server's own follow,
+    about 10 yards behind on the side the owner came from, at the owner's
+    pace (walking when they walk); when both have stopped he lets go, and
+    sets off again only once the owner is past 25 yards; while waiting he
+    turns toward the owner at most every 5 seconds; after the last
     owed choice he lights a campfire, sits, tells a joke from
     `data/sargobras-jokes.lua` every 45-90 seconds to anyone within 30
     yards, and goes when no player is within 100 yards; he goes when his
@@ -141,6 +144,21 @@ style) rotate toward you, but he'll only initiate such movement once every
 5 seconds or so." So: spawn at the level-up spot; walk to about 7 yards;
 stand until the owner is 15 yards away, then follow again; turn smoothly
 to face the owner, starting a turn at most every 5 seconds.
+
+### Decision, 2026-10-04 (Ritz): walk with me, and give me some slack
+
+"Sargobras follows too quickly. sargobras isn't walking when I walk, he
+runs, then stops, then runs... also, he follows too closely, you should
+have to walk a bit (just back from where you've come)." The first design
+sent him once a second, at his own running speed, to a point 7 yards from
+where the owner stood at that instant: a walking owner saw him sprint,
+stop and wait, and sprint again. Now he is handed to the server's own
+follow movement, which copies the owner's walk or run on every step, and
+keeps him behind the owner (several tiers' Sargobras fan out behind).
+When owner and Sargobras have both stopped he lets go, so the owner has
+to walk off past 25 yards before he follows again. Distances: 10 yards
+trailing (was 7), 25 yards slack (was 15); recorded in
+`docs/balance-updates.md`. Checked offline by `scripts/test-sargobras-follow`.
 
 ### Decision, 2026-09-25 (Ritz): a class or a race; death knights skip him
 

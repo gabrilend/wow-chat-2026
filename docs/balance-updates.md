@@ -402,6 +402,19 @@ Why: the owner first said "every 30 minutes or so", then asked for "a
 double-buffer system, and a server-wide 15 minute timer". Replaces the 3%
 chance per look of going to chat.
 
+## 2026-10-04 — Basic: the wandering Sargobras trails farther back (617b)
+
+| Knob | Value | Where |
+|---|---|---|
+| How far behind the owner he walks | 10 yards (was 7) | `src/lua-basic/sargobras.lua`, `STOP_AT` |
+| How far the owner must walk off before he follows | 25 yards (was 15) | `src/lua-basic/sargobras.lua`, `FOLLOW_AGAIN_AT` |
+| Spread between several tiers' Sargobras behind the owner | about 23 degrees | `src/lua-basic/sargobras.lua`, `FAN_STEP` |
+
+Why: the owner said "he follows too closely, you should have to walk a
+bit (just back from where you've come)". Changed together with how he
+moves (the server's own follow at the owner's pace, instead of sprinting
+to a point once a second), which is in the issue, not here.
+
 ## How to add an entry
 
 ```markdown
@@ -414,4 +427,3 @@ this log doesn't go stale.)
 
 If the change is structural enough to need a rollback path, design notes,
 or before/after testing — it's an issue file, not a balance entry.
-

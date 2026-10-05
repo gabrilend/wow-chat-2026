@@ -1,0 +1,144 @@
+#!/usr/bin/env luajit
+-- test-sargobras-follow
+-- Checks how the wandering Sargobras keeps up with his owner, without a
+-- server. The real Sargobras script is loaded into a stand-in world: a fake
+-- owner who can be moved around and told to stand still, and a fake
+-- Sargobras who records every movement order he is given. The test then
+-- walks the owner through the situations the owner reported on 2026-10-04
+-- ("he runs, then stops, then runs"; "he follows too closely") and checks
+-- what Sargobras is told to do in each:
+--
+--   owner a short way off       -> he waits (no orders)
+--   owner past the slack        -> he is handed to the server's own follow,
+--                                  trailing behind (the side they came from)
+--   owner still walking         -> the follow is left alone
+--   owner and he both stopped   -> he lets go and waits again
+--   owner a short way off again -> still waiting: they must walk off again
+--
+-- Usage: scripts/test-sargobras-follow [PROJECT_DIR]
+-- Exits non-zero when any check fails.
+
+-- {{{ configuration
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local SCRIPT = DIR .. "/src/lua-basic/sargobras.lua"
+-- }}}
+
+local fails, checks = 0, 0
+-- {{{ local function check
+local function check(name, ok)
+    checks = checks + 1
+    if ok then print("  ok:   " .. name) else print("  FAIL: " .. name); fails = fails + 1 end
+end
+-- }}}
+
+-- {{{ stand-in objects
+-- Any method a test doesn't care about answers nil; the ones that matter
+-- are written out. Unknown globals the script reads (constants, helpers)
+-- also answer harmlessly, so the script loads as it would in the server.
+local function object(fields)
+    return setmetatable(fields, { __index = function() return function() return nil end end })
+end
+
+local player = object({
+    x = 0, y = 0, z = 0, moving = false,
+    GetGUIDLow  = function() return 42 end,
+    GetGUID     = function() return 42 end,
+    GetClass    = function() return 1 end,
+    GetLevel    = function() return 10 end,
+    GetTeam     = function() return 0 end,
+    GetMapId    = function() return 0 end,
+    IsInWorld   = function() return true end,
+    GetLocation = function(s) return s.x, s.y, s.z, 0 end,
+    IsMoving    = function(s) return s.moving end,
+    GetCreaturesInRange = function() return {} end,
+    RegisterEvent = function() end,
+})
+
+local orders, tick = {}, nil
+local sarg = object({
+    x = 0, y = 0, z = 0, stopped = true,
+    GetGUIDLow  = function() return 7 end,
+    GetGUID     = function() return 7 end,
+    GetMapId    = function() return 0 end,
+    GetLocation = function(s) return s.x, s.y, s.z, 0 end,
+    IsStopped   = function(s) return s.stopped end,
+    GetDistance = function(s, o) return math.sqrt((s.x - o.x) ^ 2 + (s.y - o.y) ^ 2) end,
+    GetAngle    = function() return 0 end,
+    GetO        = function() return 0 end,
+    MoveFollow  = function(_, target, dist, angle) orders[#orders + 1] = { "follow", target, dist, angle } end,
+    MoveIdle    = function() orders[#orders + 1] = { "idle" } end,
+    MoveTo      = function() orders[#orders + 1] = { "moveto" } end,
+    -- the once-a-second check is the first repeating event registered on him
+    RegisterEvent = function(_, fn, ms, times) if ms == 1000 and times == 0 and not tick then tick = fn end end,
+})
+player.SpawnCreature = function(_, _, x, y, z) sarg.x, sarg.y, sarg.z = x, y, z; return sarg end
+-- }}}
+
+-- {{{ stand-in server
+local handlers = {}
+local function db_result(rows)
+    local i = 1
+    return { GetUInt32 = function(_, c) return rows[i][c + 1] end,
+             NextRow   = function() i = i + 1; return rows[i] ~= nil end }
+end
+local stubs = {
+    CharDBQuery = function(sql)
+        if sql:match("^SHOW TABLES") then return db_result({ { 1 } }) end
+        if sql:match("SELECT slot FROM buddy_roster") then return db_result({ { 1 } }) end
+        return nil
+    end,
+    RegisterPlayerEvent = function(ev, fn) handlers[#handlers + 1] = fn end,
+    RegisterCreatureGossipEvent = function() end,
+    GetPlayerByGUID = function() return player end,
+    GetPlayerGUID   = function(low) return low end,
+    GetCurrTime     = function() return 0 end,
+}
+setmetatable(_G, { __index = function(_, k)
+    if stubs[k] ~= nil then return stubs[k] end
+    return function() return nil end
+end })
+-- }}}
+
+
+-- load the real script; registration order puts the login handler first
+dofile(SCRIPT)
+local on_login = handlers[1]
+check("script registered its login handler", type(on_login) == "function")
+if not on_login then os.exit(1) end
+on_login(3, player)
+check("he was summoned and given a once-a-second check", type(tick) == "function")
+if not tick then os.exit(1) end
+
+local function step() orders = {}; tick(0, 0, 0, sarg) end
+local function placed(dx) player.x = sarg.x + dx; player.y = sarg.y end
+
+print("owner walks a short way off (20 yards)")
+placed(20); player.moving = true; step()
+check("he waits: no orders", #orders == 0)
+
+print("owner keeps walking, now 30 yards off")
+placed(30); step()
+check("one order", #orders == 1)
+local o = orders[1] or {}
+check("it is the server's own follow (it copies walk or run from the owner)", o[1] == "follow")
+check("following the owner", o[2] == player)
+check("trailing 10 yards", o[3] == 10)
+check("straight behind them (the side they came from)", o[4] and math.abs(o[4] - math.pi) < 1e-9)
+check("never the old hop-to-a-point order", o[1] ~= "moveto")
+
+print("owner still walking; he is moving too")
+sarg.stopped = false; step()
+check("the follow is left alone", #orders == 0)
+
+print("owner stops; he arrives and stops")
+player.moving = false; sarg.stopped = true; step()
+check("he lets go", #orders == 1 and orders[1][1] == "idle")
+
+print("owner wanders 15 yards off")
+placed(15); step()
+check("he waits: they must walk off again", #orders == 0)
+
+print("")
+if fails == 0 then print("All " .. checks .. " checks passed") else print(fails .. " of " .. checks .. " checks failed") end
+os.exit(fails == 0 and 0 or 1)

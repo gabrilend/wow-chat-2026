@@ -9,8 +9,9 @@
 --   the wandering Sargobras (creature 6170002): summoned beside an owner who
 --     is owed a buddy, at each tenth level (where they levelled) and at
 --     login (where they logged in), once they are level 10 or more. Only
---     that owner may ask him. He follows at about 7 yards, sets off again
---     when they are 15 yards away, and turns to face them now and then.
+--     that owner may ask him. He trails about 10 yards behind them at their
+--     own pace (walking when they walk), lets go when they stop, sets off
+--     again once they are 25 yards away, and turns to face them now and then.
 --     Once every owed buddy is chosen he lights a campfire, sits, tells
 --     jokes, and goes when no player is within sight.
 --
@@ -74,8 +75,9 @@ local CLASS_DEATH_KNIGHT           = 6
 
 -- {{{ tuning (owner decisions, 617b)
 local WANDER_FROM_LEVEL = 10        -- below this only the valley Sargobras
-local STOP_AT           = 7         -- yards: he stops this close
-local FOLLOW_AGAIN_AT   = 15        -- yards: he sets off again past this
+local STOP_AT           = 10        -- yards: he trails this far behind (was 7: "follows too closely", 2026-10-04)
+local FOLLOW_AGAIN_AT   = 25        -- yards: he sets off again past this (was 15: "you should have to walk a bit")
+local FAN_STEP          = 0.4       -- radians (~23 degrees) between neighbouring tiers' places behind the owner
 local TURN_EVERY_MS     = 5000      -- he starts a turn toward the owner at most this often
 -- The server can only set a facing, not animate one, so a turn is played as
 -- small steps (a linear interpolation sampled every TURN_STEP_MS). Owner,
@@ -160,6 +162,9 @@ local wanderer_of, owner_of, slot_of, fire_of = {}, {}, {}, {}
 -- Wanderer guid (low) -> when he last started a turn (ms, GetCurrTime), and
 -- whether a turn is under way.
 local turned_at, turning = {}, {}
+-- following[low] = true while the server's own follow is carrying him
+-- (follow_tick); nil while he stands and waits for the owner to walk off
+local following = {}
 
 -- {{{ local function roster_ready
 local function roster_ready()
@@ -385,6 +390,7 @@ local function remove_wanderer(creature)
     slot_of[low] = nil
     turned_at[low] = nil
     turning[low] = nil
+    following[low] = nil
     local fire = fire_of[low]
     fire_of[low] = nil
     if fire then
@@ -402,6 +408,8 @@ end
 local function go_on_break(creature)
     creature:RemoveEvents()
     turning[creature:GetGUIDLow()] = nil        -- any turn in progress was among those events
+    following[creature:GetGUIDLow()] = nil
+    creature:MoveIdle()                          -- drop the server's follow, or he'd get up and trail the owner
     creature:MoveStop()
     local x, y, z, o = creature:GetLocation()
     local fire = creature:SummonGameObject(CAMPFIRE, x + math.cos(o) * 2, y + math.sin(o) * 2, z, o, 3600)
@@ -443,21 +451,49 @@ end
 -- }}}
 
 -- {{{ local function follow_tick
--- Once a second: keep near the owner (stop at 7 yards, set off again past
--- 15), turn toward them at most every 5 seconds, and leave if they are gone.
+-- Once a second, one of two states:
+--
+--   waiting (following[low] nil): he stands where he last stopped. Once the
+--     owner is past FOLLOW_AGAIN_AT he hands himself to the server's own
+--     follow, which walks him when the owner walks and runs him when they
+--     run (it copies the owner's walk state on every step). Until then he
+--     turns toward them at most every TURN_EVERY_MS.
+--   following (following[low] true): the server keeps him STOP_AT behind
+--     the owner, on the side they came from. When the owner has stopped
+--     and so has he, he lets go and goes back to waiting, so the owner has
+--     to walk off again before he follows: slack, not a leash.
+--
+-- (Until 2026-10-04 he was sent each second, at his own running pace, to a
+-- point 7 yards from where the owner stood at that moment: a walking owner
+-- saw him sprint, stop, wait, and sprint again.)
+--
+-- Leaves if the owner is gone.
 local function follow_tick(_, _, _, creature)
-    local owner = owner_of[creature:GetGUIDLow()]
+    local low   = creature:GetGUIDLow()
+    local owner = owner_of[low]
     local player = owner and GetPlayerByGUID(GetPlayerGUID(owner))
     if not player or not player:IsInWorld() or player:GetMapId() ~= creature:GetMapId() then
         return remove_wanderer(creature)
     end
+
+    if following[low] then
+        -- owner and he both still: let go, keep the spot he reached
+        if not player:IsMoving() and creature:IsStopped() then
+            following[low] = nil
+            creature:MoveIdle()
+        end
+        return
+    end
+
     local d = creature:GetDistance(player)
     if d > FOLLOW_AGAIN_AT then
-        -- each tier's Sargobras keeps his own place in a ring round the
-        -- owner, so several don't stand in one spot
-        local px, py, pz = player:GetLocation()
-        local a = ((slot_of[creature:GetGUIDLow()] or 1) - 1) * 2 * math.pi / 7
-        creature:MoveTo(1, px + math.cos(a) * STOP_AT, py + math.sin(a) * STOP_AT, pz)
+        -- each tier's Sargobras keeps his own place in a fan behind the
+        -- owner (slot 1 straight behind, then alternating left and right),
+        -- so several don't walk in one line
+        local k   = (slot_of[low] or 1) - 1
+        local fan = math.ceil(k / 2) * (k % 2 == 1 and 1 or -1) * FAN_STEP
+        following[low] = true
+        creature:MoveFollow(player, STOP_AT, math.pi + fan)
     elseif creature:IsStopped() then                -- see start_turn: no IsMoving on creatures
         local now, low = GetCurrTime(), creature:GetGUIDLow()
         if not turned_at[low] or now - turned_at[low] >= TURN_EVERY_MS then
