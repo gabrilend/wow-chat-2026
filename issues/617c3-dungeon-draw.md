@@ -9,6 +9,12 @@
 
 ## Current Behavior
 
+**Weighted roles, 2026-10-04, written, not yet built (the owner
+compiles):** the tank and healer sums below (decision 2026-10-04) replace
+"a tank first if none": `BringDrawn` in `buddies_party.cpp` scores each
+eligible buddy with `RoleTenths` (10 for its plan's role, 4 for a third or
+two thirds in a tree of that role) and draws until each sum reaches 10.
+
 **Groups with several players, 2026-10-04, syntax-checked, not yet built
 or run** (`buddies_party.cpp`, `BringDrawn`; roles in `buddies_roles.cpp`):
 a player arriving in a five-player dungeon fills its group's empty seats
@@ -61,7 +67,39 @@ instance; only empty slots filled when the owner is already in a party; no
 auto-fill when two or more players are grouped; a buddy in a battleground
 drawn last (617i).
 
+### Decision, 2026-10-04 (Ritz): partial specs count toward a role
+
+Verbatim: "can we make it so that when we assemble random dungeon groups
+dynamically from buddy-bots in a clan, that we always ensure there's a
+tank and healer present? We can count half-specs and third specs as 0.3
+for the role - half and third both are 0.4 let's say, so you need at least
+1 healer for example, or 3 half healers. For raids, all of your characters
+join you so..."
+
+Each role (tank, healer) is a sum the group must bring to at least 1.0:
+
+- a player whose spec takes the role, or a buddy whose plan's role is it:
+  1.0;
+- a buddy whose plan puts a third or two thirds (a "third spec" or "half
+  spec") into a tree of that role, without the role itself: 0.4. One
+  buddy counts once per role, however many such trees.
+- everyone else: 0.
+
+The draw fills the tank sum first, then the healer sum: while a sum is
+under 1.0 and seats are left, it draws the eligible buddy that adds the
+most to it (a full one before a partial; a random one among equals). With
+no full healer, three partial healers make 1.2. Kept as tenths (integers:
+10 and 4) so no rounding decides a draw. A sum left short (nobody left who
+adds to it) is logged with the sum reached. Then the rest as before.
+
+Raids: all of a player's buddies join them (open question below).
+
 ## Open Questions
+
+- (Asked 2026-10-04) "For raids, all of your characters join you so...":
+  today nothing is drawn into a raid. Should entering a raid bring every
+  online buddy of every player in the raid group, and must the raid then
+  also reach a tank and healer sum (or several: one per five)?
 
 - (Answered 2026-10-03; replaces the 2026-09-24 rule of no fill with two
   or more players) Several players entering a dungeon together: "Yes they

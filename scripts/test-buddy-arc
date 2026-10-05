@@ -1,0 +1,65 @@
+#!/usr/bin/env luajit
+-- test-buddy-arc - checks where a partner's buddies are placed when a game
+-- master brings or revives them all at once (src/lua-basic/lib/buddy-arc.lua).
+--
+-- For a general audience: the buddies stand on a circle round an anchor
+-- (the partner, the game master, a graveyard). In the "ring" shape the
+-- anchor is one of the circle's places, in the "centre" shape it stands in
+-- the middle with the buddies on an arc in front. This checks, for every
+-- count of buddies from 1 to 7 and both shapes: the places are evenly
+-- spaced and never closer than the spacing; nobody stands on the anchor;
+-- in a ring the anchor sits exactly on the circle; everyone faces the
+-- circle's middle (ring) or the anchor (centre); and "no shape asked" picks
+-- the ring three times in four.
+--
+-- Usage: scripts/test-buddy-arc [PROJECT_DIR]
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local Arc = dofile(DIR .. "/src/lua-basic/lib/buddy-arc.lua")
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("  FAIL: " .. what) end
+end
+local function dist(a, b) return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2) end
+local function angle_off(o, toward) return math.abs((toward - o + math.pi) % (2 * math.pi) - math.pi) end
+
+local anchor = { x = 100, y = 50 }
+local ao = 0.7
+for _, shape in ipairs({ "ring", "centre" }) do
+    for n = 1, 7 do
+        local p = Arc.places(anchor.x, anchor.y, ao, n, shape)
+        check(#p == n, string.format("%s, %d buddies: %d places", shape, n, #p))
+        local closest = math.huge
+        for i = 1, n do
+            check(dist(p[i], anchor) > 1, string.format("%s, %d: place %d not on the anchor", shape, n, i))
+            for j = i + 1, n do closest = math.min(closest, dist(p[i], p[j])) end
+        end
+        if n > 1 then check(closest >= 2.0, string.format("%s, %d: nearest two places %.2f yards apart", shape, n, closest)) end
+        if shape == "ring" then
+            -- the centre: the mean of all n + 1 places (the anchor included)
+            local cx, cy = anchor.x, anchor.y
+            for i = 1, n do cx = cx + p[i].x; cy = cy + p[i].y end
+            cx, cy = cx / (n + 1), cy / (n + 1)
+            local r = dist(anchor, { x = cx, y = cy })
+            for i = 1, n do
+                check(math.abs(dist(p[i], { x = cx, y = cy }) - r) < 1e-6, string.format("ring, %d: place %d on the anchor's circle", n, i))
+                check(angle_off(p[i].o, math.atan2(cy - p[i].y, cx - p[i].x)) < 1e-6, string.format("ring, %d: place %d faces the middle", n, i))
+            end
+        else
+            for i = 1, n do
+                check(angle_off(p[i].o, math.atan2(anchor.y - p[i].y, anchor.x - p[i].x)) < 1e-6, string.format("centre, %d: place %d faces the anchor", n, i))
+            end
+        end
+    end
+end
+
+local rings = 0
+for i = 0, 999 do if Arc.pick_shape(nil, i / 1000) == "ring" then rings = rings + 1 end end
+check(rings == 750, "no shape asked: ring 750 times in 1000 (" .. rings .. ")")
+check(Arc.pick_shape("centre", 0) == "centre" and Arc.pick_shape("ring", 0.99) == "ring", "a shape asked for is kept")
+
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)

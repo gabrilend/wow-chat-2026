@@ -41,6 +41,7 @@
  */
 
 #include "buddies.h"
+#include "buddies_loot.h"
 #include "buddies_roam.h"
 #include "buddies_roles.h"
 #include "BattlegroundMgr.h"
@@ -600,11 +601,44 @@ static BuddyRole RosterRole(uint32 buddy)
     return r ? BuddyRole((*r)[0].Get<uint8>()) : BuddyRole::Damage;
 }
 
+// {{{ RoleTenths
+// How much a buddy adds toward a role the group must bring to a whole one
+// (the owner, 2026-10-04: "half and third both are 0.4 ... you need at
+// least 1 healer for example, or 3 half healers"), in tenths so no
+// rounding decides a draw:
+//   ROLE_FULL     its plan's role is this one;
+//   ROLE_PARTIAL  its plan puts a third or two thirds into a tree of this
+//                 role (the tree kinds are the loot judge's, TreeCollector:
+//                 a feral tree is a tank tree only for a tank-role druid);
+//   0             neither. One buddy counts once, however many such trees.
+static constexpr uint32 ROLE_FULL    = 10;
+static constexpr uint32 ROLE_PARTIAL = 4;
+static uint32 RoleTenths(uint32 buddy, BuddyRole need)
+{
+    QueryResult r = CharacterDatabase.Query("SELECT role, profile, class FROM buddy_roster WHERE buddy = {}", buddy);
+    if (!r)
+        return 0;                                      // not a buddy: a player, counted by spec instead
+    uint8 role = (*r)[0].Get<uint8>(), profile = (*r)[1].Get<uint8>(), cls = (*r)[2].Get<uint8>();
+    if (BuddyRole(role) == need)
+        return ROLE_FULL;
+    uint8 thirds[3];
+    CollectorType types[3];
+    if (!BuddyPlanShape(cls, profile, role, thirds, types))
+        return 0;                                      // no plan chosen yet: no trees to count
+    CollectorType want = need == BuddyRole::Tank ? CollectorType::MELEE_TANK : CollectorType::SPELL_HEAL;
+    for (int t = 0; t < 3; ++t)
+        if (types[t] == want && thirds[t] > 0)
+            return ROLE_PARTIAL;
+    return 0;
+}
+// }}}
+
 // `player` has just arrived in a five-player dungeon. The group's empty
 // seats are filled from the buddies of every player in it (the owner,
 // 2026-10-03: "Yes they should. Please ensure there's at least one tank
-// and healer too."): a tank first if the group has none, a healer second
-// if it has none, then one at a time from each player's draw bag in turn.
+// and healer too."): the group's tank sum brought to a whole one first,
+// then its healer sum (RoleTenths: a partial spec counts 0.4, 2026-10-04),
+// then one at a time from each player's draw bag in turn.
 // The ones drawn walk in (StartWalkIn). Unused here: `buddyGuids`, the
 // arriving player's own (every group player's are read from the roster).
 static void BringDrawn(Player* player, std::vector<uint32> const& /*buddyGuids*/)
@@ -649,20 +683,30 @@ static void BringDrawn(Player* player, std::vector<uint32> const& /*buddyGuids*/
     if (have >= PARTY_SIZE)
         return;
 
-    // the roles the group has: its players' specs (every role a tied spec
-    // allows: a feral druid counts as a tank), its buddies' plans
-    BuddyRoles haveRoles = 0;
+    // the tank and healer sums the group already has, in tenths: a player
+    // whose spec takes the role (every role a tied spec allows: a feral
+    // druid counts as a tank) a whole one; a buddy by RoleTenths
+    uint32 tankSum = 0, healSum = 0;
+    auto count = [&](Player* m) {
+        if (BuddyIsCompanionAccount(m->GetSession()->GetAccountId()))
+        {
+            uint32 low = m->GetGUID().GetCounter();
+            tankSum += RoleTenths(low, BuddyRole::Tank);
+            healSum += RoleTenths(low, BuddyRole::Healer);
+            return;
+        }
+        BuddyRoles roles = BuddyPlayerRoles(m);
+        if (roles & BuddyRoleBit(BuddyRole::Tank))   tankSum += ROLE_FULL;
+        if (roles & BuddyRoleBit(BuddyRole::Healer)) healSum += ROLE_FULL;
+    };
     if (g)
     {
         for (GroupReference* r = g->GetFirstMember(); r; r = r->next())
             if (Player* m = r->GetSource())
-                haveRoles |= BuddyIsCompanionAccount(m->GetSession()->GetAccountId())
-                    ? BuddyRoleBit(RosterRole(m->GetGUID().GetCounter())) : BuddyPlayerRoles(m);
+                count(m);
     }
     else
-        haveRoles = BuddyPlayerRoles(player);
-    bool haveTank   = haveRoles & BuddyRoleBit(BuddyRole::Tank);
-    bool haveHealer = haveRoles & BuddyRoleBit(BuddyRole::Healer);
+        count(player);
 
     // every group player's buddies who could come: online, alive, out of a
     // match, not in the group already
@@ -689,23 +733,42 @@ static void BringDrawn(Player* player, std::vector<uint32> const& /*buddyGuids*/
         CharacterDatabase.DirectExecute("INSERT INTO buddy_draw (owner, buddy, had_turn) VALUES ({}, {}, 1) "
             "ON DUPLICATE KEY UPDATE had_turn = 1", ownerOf[buddy], buddy);
     };
-    // a tank, then a healer, when missing: a random one of that role
+    // the tank sum, then the healer sum, brought to a whole one: while short
+    // and seats are left, draw the eligible buddy adding the most to it (a
+    // full one before a partial; a random one among equals). A buddy drawn
+    // for one role also counts toward the other (a holy/protection paladin).
     for (BuddyRole need : { BuddyRole::Tank, BuddyRole::Healer })
     {
-        if ((need == BuddyRole::Tank ? haveTank : haveHealer) || have + drawn.size() >= PARTY_SIZE)
-            continue;
-        std::vector<uint32> ofRole;
-        for (auto const& [owner, list] : eligible)
-            for (uint32 b : list)
-                if (roleOf[b] == need)
-                    ofRole.push_back(b);
-        if (ofRole.empty())
+        uint32& sum = need == BuddyRole::Tank ? tankSum : healSum;
+        char const* what = need == BuddyRole::Tank ? "tank" : "healer";
+        while (sum < ROLE_FULL && have + drawn.size() < PARTY_SIZE)
         {
-            LOG_INFO("module", "mod-buddies: {}'s group entered {} without a {} and has no {} buddy to draw", player->GetName(),
-                player->GetMap()->GetMapName(), need == BuddyRole::Tank ? "tank" : "healer", need == BuddyRole::Tank ? "tank" : "healer");
-            continue;
+            uint32 best = 0;
+            std::vector<uint32> top;
+            for (auto const& [owner, list] : eligible)
+                for (uint32 b : list)
+                {
+                    uint32 w = RoleTenths(b, need);
+                    if (w == 0 || w < best)
+                        continue;
+                    if (w > best)
+                    {
+                        best = w;
+                        top.clear();
+                    }
+                    top.push_back(b);
+                }
+            if (top.empty())
+            {
+                LOG_INFO("module", "mod-buddies: {}'s group entered {} with a {} sum of {}.{} and no buddy left to add to it",
+                    player->GetName(), player->GetMap()->GetMapName(), what, sum / 10, sum % 10);
+                break;
+            }
+            uint32 pick = top[urand(0, uint32(top.size() - 1))];
+            take(pick);
+            tankSum += RoleTenths(pick, BuddyRole::Tank);
+            healSum += RoleTenths(pick, BuddyRole::Healer);
         }
-        take(ofRole[urand(0, uint32(ofRole.size() - 1))]);
     }
     // the rest: one from each player's bag in turn, the players in a random order
     std::vector<uint32> order(playerGuids.begin(), playerGuids.end());

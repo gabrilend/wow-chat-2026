@@ -184,11 +184,25 @@ buddy, since buddies never bind):
   teleport is cancelled and it is moved by script to its stored spot and
   facing instead. An interrupted cast moves nothing and stays on the
   to-do list.
-- **Until this is built**, a game master can bring a partner's buddies to
-  them with `.buddies here <partner>` (`src/lua-basic/buddies-here.lua`,
-  also from the server console): each buddy is moved onto a 3-yard ring
-  round the partner by roster slot, facing them. Used 2026-10-04 to bring
-  Growth's six to Growth after a hearth.
+- **Until this is built**, and for mending any time, game masters have
+  three commands (`src/lua-basic/buddy-gm.lua`, in game or with a name on
+  the server console; owner, 2026-10-04): `.buddies to partner [name]`,
+  `.buddies to me [name]`, and `.buddies revive [name] at
+  me|partner|graveyard` (the graveyard nearest the partner that their side
+  may use; only the dead are revived). No name: the selected target, a
+  partner or one of their buddies. They are placed round the anchor by
+  `lib/buddy-arc.lua`: "with an arc around a circle with a certain radius.
+  The arc should be modified depending on how many buddy-bots are
+  registered to the player. The player's should often count as one, but
+  sometimes the player-partner is the center." So: a ring the anchor is
+  part of (n + 1 places, the circle's centre in front of the anchor), or
+  the anchor at the centre with the buddies on an arc in front of it;
+  ring three times in four unless "ring" or "centre" is typed; each buddy
+  at its roster index's place, so places don't shift with who is present.
+  Tested offline by `scripts/test-buddy-arc` (the geometry) and
+  `scripts/test-buddy-gm` (the commands in a stand-in world). The first
+  version, `.buddies here <partner>`, brought Growth's six to Growth after
+  a hearth.
 
 ### Decisions, 2026-09-25 (Ritz): the owner dies, or enters an instance
 
