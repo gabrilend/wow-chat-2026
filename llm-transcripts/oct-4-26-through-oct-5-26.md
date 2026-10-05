@@ -1,6 +1,6 @@
 # Conversation Summary: 3cca55b1-1e96-4489-a864-41157a21299a
 
-Generated on: 2026-10-05 00:00:14
+Generated on: 2026-10-05 00:20:27
 Models: claude-opus-5-5
 
 ## Contents
@@ -14,6 +14,10 @@ Models: claude-opus-5-5
    your basic-profile server. The tank-and-healer draw, the aggro trigger and
    the 3-second fix are committed but waiting on your compile. Next: compile,
    restart, and answer the compass-formation questions.
+3. 2026-10-05 00:03, after Request 12 - Building out Everland's buddy-bots and
+   basic-profile tuning; the latest spirit-healing patch and death knight story
+   skip are committed and waiting on your compile. Next, please answer whether
+   casters should also use the new stamina-based spirit healing.
 
 --------------------------------------------------------------------------------
 
@@ -2258,6 +2262,212 @@ soul list reads plain again. The offline test now has 15 checks, all passing.
 
 The two old patch-file deletions (B016, B019) are still staged from the earlier
 retirement. I've left them alone since they aren't mine.
+
+--------------------------------------------------------------------------------
+
+### User Request 13
+
+> - Unchanged: sitting still adds a third, and health-regeneration effects still
+> multiply it.
+
+what kind of health regeneration effects?
+
+> To know when someone was last hurt, the player now carries a "last hurt at"
+> time, set wherever damage lands on a player. That field lives in a header
+> almost every server file includes, so your next compile will rebuild most of
+> the server.
+
+how do we handle it for spirit? Can't we use the same system, just abstracted a
+little?
+
+Can we add issue files to add Karazhan as an endgame raid? Because it's in
+Azeroth...
+
+> - Stand-ins: kept after the dungeon, raised to the next level bracket with
+> gear remade for it, and reused the next time anyone needs that race, class and
+> role.
+
+including, I might add, for dungeons. But only the low level ones, teehee. Maybe
+they can also fill in slots in battlegrounds? Like what if we doubled the number
+of buddy-bots that could join a battleground, but the "doubled" amount was the
+buddy-bot templates that we had on file? They should be able to be chosen for
+*any* higher level bracket btw. But their level doesn't go down.
+
+> 1. Casters and spirit: I read "the same rate as everyone else" as the stamina
+> rule replacing the mana-based one for casters too, which is how it's built. Is
+> that right?
+
+no the mana regeneration should remain unchanged.
+
+> 2. Spirit on gear: you leaned toward taking its budget from stamina. At what
+> exchange rate? Spirit's healing is worth more on a high-stamina character, so
+> a straight swap wouldn't keep survivability the same.
+
+How about roughly 1/5th of items have their stamina cost 100% replaced for
+spirit. Only if they don't have any spirit already on that item, and also only
+if there's at least some stamina on that item. Another 1/5th can have the
+stamina amount reduced by half, and made into spirit. We should have roughly the
+same amount from each armor category (cloth, leather, mail, plate) normalized
+for number of items in that category. Also, we shouldn't touch any gear that
+requires a certain class or faction. Also we shouldn't touch PvP gear, there's
+enough healing there already... But spirit still takes effect in PvP of course,
+just, not from PvP gear.
+
+> 3. Stand-ins: is a bracket ten levels? And does "fewer than 4 buddy-bots" mean
+> in your roster, or able to come right now?
+
+yes a bracket is 10 levels. In your roster, unlocked for your level. So between
+levels 1 and 30. Alternatively, if the user doesn't have a tank/healer until
+level 50 and 60, for levels 30 through 49 the farthest party member that isn't
+required can be replaced by a stand-in buddy-bot that is that particular role.
+
+> 4. Skip gear: where a quest offers a choice of gear, the skip takes the first
+> choice. Should it pick by spec instead?
+
+No isn't there a way to have a quest appear to everyone in a zone? Can we do
+that, and target it specifically to the player in question? Or was that a
+cataclysm or later innovation? I thought it was the prepatch maybe... Anyway, if
+that's not an option, we can let an NPC in Acherus give a quest that rewards
+those items. Maybe even Sargobras. The quest should be auto-completed, so they
+can choose.
+
+> The two old patch-file deletions (B016, B019) are still staged from the
+> earlier retirement. I've left them alone since they aren't mine.
+
+huh?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 13
+
+> Several answers and new work here. Gathering facts first, in parallel:
+> - which effects multiply health regeneration in this client;
+> - how the server tracks the mana "five-second rule";
+> - which death knight story quests offer a gear choice;
+> - whether any issue already covers Karazhan.
+
+> Applies once. Compiling both changed files with the patched header in front,
+> then reverting and comparing.
+
+> Both compile now that the precompiled header is out of the way. That also
+> means the earlier `Player.h` version's check wasn't trustworthy; it's replaced
+> anyway. Round trip next.
+
+> The round trip is byte-identical. Updating issue 167 to match. Then the
+> reward-choice question for the death knight skip: checking which story quests
+> offer a choice of gear.
+
+> Karazhan is written (808, four sub-issues). Now spirit on gear, the stand-in
+> rules, and the skip's gear choices.
+
+> All valid. Committing the reworked spirit patch and its issue.
+
+*[commit] 0e3007cc7 in wow-chat-2026 - The half-rate healing after damage is now the twin of the mana five-second rule*
+
+I rebuilt the spirit patch on the server's own mana rule, as you asked; it's
+committed. Karazhan, spirit on gear, the stand-in rules and the skip's gear
+choices are written up as issues, and none of that is built yet.
+
+## Health-regeneration effects
+
+Only a handful of spells in this client change the health-regeneration
+percentage:
+- **Troll racial, Regeneration:** +10% health regeneration.
+- **Death knight Blood Presence.**
+- **A few potions and buffs:** Pure Water, the Ahn'Qiraj reward buffs.
+- **Mostly monster debuffs that cut regeneration:** Rabies, Cadaver Worms,
+  Putrid Bile, Enfeeble, Aura of Suffering.
+
+Sitting adds a third on top. Mana regeneration isn't touched.
+
+## The half rate after damage, built like the mana rule
+
+Your instinct was right. The mana five-second rule works this way:
+- every unit (player or creature) keeps "time I last spent mana";
+- regeneration asks "was that under 5 seconds ago?".
+
+I rebuilt B049 as that rule's twin: "time I last took damage" and "was that
+under 5 seconds ago?", placed right beside the mana versions in the same shape,
+set wherever any unit takes damage.
+
+The rebuild cost doesn't go away: any new per-unit time sits in that same widely
+included header, just as the mana one does.
+
+**Checks:** applies once, both changed files compile, and reverting is
+byte-identical. While checking I found my earlier compile test had been fooled
+by the build's precompiled header (a cached copy of the original header). The
+check now runs without it.
+
+## Karazhan (issue 808, four sub-issues)
+
+1. Its monsters set for level 60, the same way the Outland dungeons were raised.
+2. Its loot placed on the gear ladder.
+3. The door opened, since the Master's Key chain is Outland quests, which basic
+   disables.
+4. Your buddies fill the raid.
+
+Questions:
+1. Where on the ladder: between Blackwing Lair and Naxxramas, or above Naxxramas
+   as the new top?
+2. The door: hand out the key (and how), or open it to anyone at 60?
+3. Ten players, or larger?
+
+## Spirit on gear (issue 155k2)
+
+Your rules as written:
+- One fifth of eligible items have all their stamina become spirit; another
+  fifth, half.
+- The fifths are drawn per armour type (cloth, leather, mail, plate), with
+  weapons as their own group.
+- Only items with some stamina and no spirit; never class-restricted,
+  faction-restricted or PvP gear.
+- The draw is seeded by item id, so it never changes between rebuilds.
+
+Questions:
+1. One stamina for one spirit, or by stat budget? Stamina costs about two thirds
+   as much budget as spirit, so a budget-true swap gives fewer spirit points.
+2. Are rings, necklaces, cloaks and trinkets in?
+3. Does "PvP gear" include world PvP rewards (Halaa, Hellfire's towers)?
+
+## Stand-ins (617t)
+
+Recorded:
+- **Who gets them:** a player counts only roster buddies unlocked for their
+  level, so everyone below 30 qualifies.
+- **Missing roles, 30–59:** a missing tank or healer replaces the farthest
+  party member who isn't needed for a role.
+- **Reuse:** kept stand-ins work in low-level dungeons, at any higher bracket,
+  and never go down a level.
+- **Battlegrounds:** double the buddy allowance, the extra half from kept
+  stand-ins.
+
+Questions:
+1. Up to what level is "low-level" for dungeons?
+2. What's the battleground buddy allowance today, the number that doubles?
+
+## Skip gear choices (issue 718)
+
+Only two story quests offer a choice:
+- **Tonight We Dine In Havenshire:** one of three cloaks.
+- **The Light of Dawn:** the Greatsword or the Greataxe of the Ebon Blade.
+
+So it's your fallback:
+- the skip takes back the item the server picked for those two;
+- Sargobras at the Ebon Hold then offers two quests of our own that complete as
+  soon as you take them, each with the same reward choices.
+
+That's designed, not built yet.
+
+## B016 and B019
+
+Your commit last night ("Two source patches retired") added the retired copies
+of those two patches. But the deletion of the original two files
+(`B016-playerbots-constructor-reorder.sh` and
+`B019-playerbots-unused-parameter.sh`) was left staged in git and never
+committed. Until someone commits that deletion, the next ordinary `git commit`
+in the project will include it, whatever it's meant to be about. My commits go
+around the staging area, so they don't pick it up. Shall I commit just those two
+deletions on their own, finishing the retirement?
 
 --------------------------------------------------------------------------------
 
