@@ -1,0 +1,45 @@
+#!/bin/bash
+# test-lua-unique-names - checks that no two Lua files in one profile's
+# script folder share a file name.
+#
+# For a general audience: the server's Lua engine loads every .lua file
+# under its scripts folder, in any subfolder, and refuses a second file
+# whose name it has already seen elsewhere ("File with same name already
+# loaded ... rename either file"). The refused file simply never runs. On
+# 2026-10-04 a data file (data/elite-outfits.lua) shared its name with the
+# command script that read it, and the ".elite" command did not exist in
+# game. This finds such pairs before the server does.
+#
+# Usage: scripts/test-lua-unique-names [PROJECT_DIR]
+#   Checks every src/lua-<profile>/ folder (each is one profile's scripts
+#   folder, linked in by install step E001). Exits non-zero on any clash.
+
+# {{{ set_dir
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if [[ -n "$1" ]]; then
+    DIR="$1"
+fi
+# }}}
+
+FAILS=0
+for TREE in "${DIR}"/src/lua-*/; do
+    NAMES="$(find "${TREE}" -name '*.lua' -printf '%f\n' | sort)"
+    CLASHES="$(echo "${NAMES}" | uniq -d)"
+    COUNT="$(echo "${NAMES}" | grep -c .)"
+    if [[ -z "${CLASHES}" ]]; then
+        echo "  ok:   ${TREE#${DIR}/} (${COUNT} Lua files, every name once)"
+    else
+        while read -r NAME; do
+            echo "  FAIL: ${TREE#${DIR}/} has more than one ${NAME}:"
+            find "${TREE}" -name "${NAME}" | sed "s|^${DIR}/|          |"
+            FAILS=$((FAILS + 1))
+        done <<< "${CLASHES}"
+    fi
+done
+
+if [[ "${FAILS}" -eq 0 ]]; then
+    echo "All script folders have unique Lua file names"
+else
+    echo "${FAILS} name clash(es): the server loads only the first of each; rename one"
+fi
+[[ "${FAILS}" -eq 0 ]]

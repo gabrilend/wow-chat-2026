@@ -15,6 +15,12 @@
 --   owner and he both stopped   -> he lets go and waits again
 --   owner a short way off again -> still waiting: they must walk off again
 --
+-- A second part checks his break after the owner chooses (2026-10-04): the
+-- fire under the owner's feet, his walk to a seat on a ring round it at an
+-- angle, the turn to face the fire before he sits, no targeting while he
+-- sits, the burn per tier (dealt by the burning player to themself), and
+-- his leaving with the fire.
+--
 -- Usage: scripts/test-sargobras-follow [PROJECT_DIR]
 -- Exits non-zero when any check fails.
 
@@ -77,6 +83,7 @@ player.SpawnCreature = function(_, _, x, y, z) sarg.x, sarg.y, sarg.z = x, y, z;
 
 -- {{{ stand-in server
 local handlers = {}
+local captured = {}   -- handlers the script registers that a check needs later
 local function db_result(rows)
     local i = 1
     return { GetUInt32 = function(_, c) return rows[i][c + 1] end,
@@ -89,7 +96,7 @@ local stubs = {
         return nil
     end,
     RegisterPlayerEvent = function(ev, fn) handlers[#handlers + 1] = fn end,
-    RegisterCreatureGossipEvent = function() end,
+    RegisterCreatureGossipEvent = function(_, ev, fn) if ev == 2 then captured.on_select = fn end end,
     GetPlayerByGUID = function() return player end,
     GetPlayerGUID   = function(low) return low end,
     GetCurrTime     = function() return 0 end,
@@ -138,6 +145,109 @@ check("he lets go", #orders == 1 and orders[1][1] == "idle")
 print("owner wanders 15 yards off")
 placed(15); step()
 check("he waits: they must walk off again", #orders == 0)
+
+
+-- {{{ part 2: his break (owner, 2026-10-04)
+-- The break is reached through the choice handler, so it is taken from
+-- that handler's own references (no change to the script for testing).
+print("")
+print("his break, after the owner chooses")
+local go_on_break
+do
+    local i = 1
+    while captured.on_select and true do
+        local name, value = debug.getupvalue(captured.on_select, i)
+        if not name then break end
+        if name == "go_on_break" then go_on_break = value end
+        i = i + 1
+    end
+end
+check("the break is found behind the choice handler", type(go_on_break) == "function")
+if not go_on_break then os.exit(1) end
+
+local FIRE_SECONDS, FIRE_RADIUS, FIRE_PCT_PER_TIER, SIT_RADIUS, SIT_SWING = 120, 2.5, 2, 3, 1.0
+local events, fire_at, dest, walking, stand, flags, said = {}, nil, nil, false, 0, 0, 0
+local next_id = 0
+local hurt = {}
+local function chooser(x, y, hp)
+    return object({ x = x, y = y, z = 0, hp = hp,
+        GetLocation = function(s) return s.x, s.y, s.z, 0 end,
+        GetO = function() return 0 end, IsAlive = function() return true end,
+        GetMaxHealth = function(s) return s.hp end,
+        DealDamage = function(s, target, amount, _, school) hurt[#hurt + 1] = { who = s, target = target, amount = amount, school = school } end })
+end
+local owner_p = chooser(0, 0, 1000)              -- the owner, standing at the origin
+local passer  = chooser(5, 0, 1000)              -- someone 5 yards off: outside the fire
+local b = object({
+    x = 2, y = 0, z = 0, o = math.pi,            -- he stands 2 yards east of the owner, facing them
+    GetGUIDLow = function() return 7 end,
+    GetLocation = function(s) return s.x, s.y, s.z, s.o end,
+    GetO = function(s) return s.o end,
+    SetFacing = function(s, o) s.o = o end,
+    SummonGameObject = function(_, entry, x, y, z, o, secs) fire_at = { x = x, y = y, secs = secs }; return object({ GetGUID = function() return 99 end }) end,
+    GetMap = function() return object({ GetHeight = function() return 0 end }) end,
+    SetWalk = function(_, on) walking = on end,
+    MoveTo = function(_, _, x, y) dest = { x = x, y = y } end,
+    RegisterEvent = function(_, fn, ms, times) next_id = next_id + 1; events[next_id] = { fn = fn, ms = ms, times = times }; return next_id end,
+    RemoveEventById = function(_, id) events[id] = nil end,
+    SetStandState = function(_, st) stand = st end,
+    GetUnitFlags = function() return flags end,
+    SetUnitFlags = function(_, f) flags = f end,
+    GetPlayersInRange = function() return { owner_p, passer } end,
+    SendUnitSay = function() said = said + 1 end,
+})
+-- give him a slot (tier 3) the way the summon does, through the script's own table
+do
+    local i = 1
+    while true do
+        local name, value = debug.getupvalue(go_on_break, i)
+        if not name then break end
+        if name == "slot_of" then value[7] = 3 end
+        i = i + 1
+    end
+end
+go_on_break(b, owner_p)
+
+check("the fire is lit under the owner's feet", fire_at and fire_at.x == 0 and fire_at.y == 0)
+check("the fire lasts " .. FIRE_SECONDS .. " seconds", fire_at and fire_at.secs == FIRE_SECONDS)
+check("he walks (not runs) to his seat", walking == true)
+local r = dest and math.sqrt(dest.x ^ 2 + dest.y ^ 2) or -1
+check("his seat is " .. SIT_RADIUS .. " yards from the fire", math.abs(r - SIT_RADIUS) < 1e-6)
+local seat_angle = dest and math.atan2(dest.y, dest.x) or 0
+check("he walks off at an angle, not straight back (swung " .. SIT_SWING .. " rad)", math.abs(seat_angle - SIT_SWING) < 1e-6)
+
+-- find the events by their timing: the 200 ms turn-and-sit, the 1 s fire,
+-- the one-shot goodbye
+local turn_ev, fire_ev, bye_ev
+for id, e in pairs(events) do
+    if e.ms == 200 then turn_ev = id elseif e.ms == 1000 and e.times == 0 then fire_ev = id
+    elseif e.times == 1 then bye_ev = id end
+end
+check("he goes when the fire does (one timer at " .. FIRE_SECONDS .. " s)", bye_ev and events[bye_ev].ms == FIRE_SECONDS * 1000)
+
+-- arrive at the seat, then let the turn run
+b.x, b.y = dest.x, dest.y
+local sat_before_facing, turns = false, 0
+while events[turn_ev] and turns < 100 do
+    if stand == 1 then sat_before_facing = true end
+    events[turn_ev].fn(turn_ev, 0, 0, b); turns = turns + 1
+end
+local to_fire = math.atan2(0 - b.y, 0 - b.x)
+local off = math.abs((to_fire - b.o + math.pi) % (2 * math.pi) - math.pi)
+check("he faces the fire", off <= 0.05)
+check("he turned in steps (" .. turns .. " ticks), not a snap", turns > 2)
+check("he sat only after facing it", not sat_before_facing and stand == 1)
+check("he can't be targeted while he sits", bit.band(flags, 0x02000000) ~= 0)
+
+-- the fire burns the one in it, by tier
+events[fire_ev].fn(fire_ev, 0, 0, b)
+local in_fire, outside = nil, nil
+for _, h in ipairs(hurt) do if h.target == owner_p then in_fire = h end if h.target == passer then outside = h end end
+check("the owner, standing in it, burns: " .. FIRE_PCT_PER_TIER .. "% x tier 3 of 1000 = 60", in_fire and in_fire.amount == 60)
+check("by their own hand (Sargobras is never in a fight)", in_fire and in_fire.who == owner_p)
+check("as fire damage", in_fire and in_fire.school == 2)
+check("someone 5 yards off doesn't", outside == nil)
+-- }}}
 
 print("")
 if fails == 0 then print("All " .. checks .. " checks passed") else print(fails .. " of " .. checks .. " checks failed") end

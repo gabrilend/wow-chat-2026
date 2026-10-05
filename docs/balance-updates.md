@@ -415,6 +415,20 @@ bit (just back from where you've come)". Changed together with how he
 moves (the server's own follow at the owner's pace, instead of sprinting
 to a point once a second), which is in the issue, not here.
 
+## 2026-10-04 — Basic: Sargobras's campfire burns, and he leaves with it (617b)
+
+| Knob | Value | Where |
+|---|---|---|
+| How long the fire burns (he leaves with it) | 120 seconds | `src/lua-basic/sargobras.lua`, `FIRE_SECONDS` |
+| How far from its centre the fire burns | 2.5 yards | `FIRE_RADIUS` |
+| Burn per second | 2% of max health per tier he serves | `FIRE_PCT_PER_TIER` |
+| His seat: distance from the fire, swing off the line back | 3 yards, 1.0 radian | `SIT_RADIUS`, `SIT_SWING` |
+
+Why: the owner asked for the fire under the player, "increase in damage
+for each tier", and for him to go "after the fire does". The duration and
+the percentage are first guesses; the old rule (leave when no player is
+within 100 yards) is gone.
+
 ## How to add an entry
 
 ```markdown

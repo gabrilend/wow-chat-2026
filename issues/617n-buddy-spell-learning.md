@@ -12,6 +12,11 @@
 
 ## Current Behavior
 
+**Gap, 2026-10-04:** weapon masters are not visited and the armour
+proficiencies a trainer teaches at 40 are not known to be in the creation
+lessons (item 7 below); level-60 buddies made earlier lacked Plate Mail,
+Mail, bows and guns.
+
 **Written 2026-10-03, syntax-checked with the build's own flags, not yet
 built or run** (`modules/mod-buddies/src/buddies_spells.cpp`):
 - the town visit's train errand (`buddies_town.cpp`) now calls
@@ -93,6 +98,17 @@ list of spells we teach to each class."
    owner respecs. It never tames in the world.
 6. **Running out of money is normal**: the errand just ends; nothing is
    said, and only a debug-level log line records it.
+7. **Proficiencies are lessons too.** Armour proficiencies a class
+   trainer teaches at 40 (Plate Mail for warriors and paladins, Mail for
+   shamans and hunters) and the weapon skills a weapon master teaches
+   (bows, guns, crossbows, thrown, and each weapon kind the class may use)
+   are learned like any other lesson: at creation for a buddy made above
+   the level, and from the town's trainer and weapon master on visits.
+   Found 2026-10-04: Growth's level-60 buddies, made before item 3 runs,
+   had none of them, and the game refused their Tier 1 armour and their
+   bows and guns. `.elite` (617r) now teaches a missing proficiency before
+   it equips an item and says so in its report; that is a mend, and this
+   item is the fix.
 
 ## Suggested Implementation Steps
 

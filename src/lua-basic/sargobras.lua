@@ -92,6 +92,20 @@ local CROWD_RETRY_MS    = 30000     -- a crowded owner is tried again this often
 local SIGHT             = 100       -- yards: the server's outdoor visibility, roughly
 local JOKE_EVERY_MS     = { 45000, 90000 }
 local JOKE_RANGE        = 30
+-- his break (owner, 2026-10-04: fire under the player, harder per tier;
+-- walk off at an angle, face the fire, sit untargetable, go with the fire)
+local FIRE_SECONDS      = 120       -- the fire burns this long; he goes with it
+local FIRE_RADIUS       = 2.5       -- yards from the fire's centre that burn
+local FIRE_PCT_PER_TIER = 2         -- percent of max health a second, per tier he serves
+local SIT_RADIUS        = 3         -- yards from the fire to his seat
+local SIT_SWING         = 1.0       -- radians (~57 degrees) he swings round the fire, off the line back
+local SEAT_REACHED      = 0.75      -- yards: close enough to the seat
+local WALK_GIVE_UP_MS   = 15000     -- a seat he can't reach: sit where he is after this long
+-- }}}
+
+-- {{{ game constants (3.3.5a)
+local UNIT_FLAG_NOT_SELECTABLE = 0x02000000
+local SCHOOL_FIRE              = 2
 -- }}}
 
 -- {{{ menu icons
@@ -403,26 +417,77 @@ end
 -- }}}
 
 -- {{{ local function go_on_break
--- Every owed buddy is chosen: a campfire, a seat, jokes, and gone once no
--- player is in sight.
-local function go_on_break(creature)
+-- His tier is chosen (owner, 2026-10-04): the campfire is lit right under
+-- the player who chose; he turns and walks off at an angle round it, faces
+-- it, sits, and can't be targeted by anyone while he sits; he tells jokes;
+-- he goes when the fire does (FIRE_SECONDS). The fire burns whoever stands
+-- in it, harder for each tier he serves.
+--
+-- The geometry, with F the fire (the player's feet) and S where he stands:
+--   a0   = the direction from F to S            atan2(Sy - Fy, Sx - Fx)
+--   a    = a0 swung round by SIT_SWING           so he walks off at an angle,
+--                                               not straight back from you
+--   seat = F + SIT_RADIUS * (cos a, sin a)      on a circle round the fire
+--   face = the direction from seat to F         atan2(Fy - y, Fx - x)
+-- He turns toward `face` in small steps (as start_turn does), then sits.
+local function go_on_break(creature, player)
+    local low = creature:GetGUIDLow()
     creature:RemoveEvents()
-    turning[creature:GetGUIDLow()] = nil        -- any turn in progress was among those events
-    following[creature:GetGUIDLow()] = nil
+    turning[low]   = nil                         -- any turn in progress was among those events
+    following[low] = nil
     creature:MoveIdle()                          -- drop the server's follow, or he'd get up and trail the owner
     creature:MoveStop()
-    local x, y, z, o = creature:GetLocation()
-    local fire = creature:SummonGameObject(CAMPFIRE, x + math.cos(o) * 2, y + math.sin(o) * 2, z, o, 3600)
-    if fire then fire_of[creature:GetGUIDLow()] = fire:GetGUID() end
-    creature:SetStandState(STAND_STATE_SIT)
+
+    -- the fire, under the player
+    local fx, fy, fz = player:GetLocation()
+    local fire = creature:SummonGameObject(CAMPFIRE, fx, fy, fz, player:GetO(), FIRE_SECONDS)
+    if fire then fire_of[low] = fire:GetGUID() end
+
+    -- the seat, on a circle round the fire, swung off to one side
+    local sx, sy  = creature:GetLocation()
+    local a       = math.atan2(sy - fy, sx - fx) + SIT_SWING
+    local seat_x  = fx + math.cos(a) * SIT_RADIUS
+    local seat_y  = fy + math.sin(a) * SIT_RADIUS
+    local seat_z  = creature:GetMap():GetHeight(seat_x, seat_y) or fz
+    creature:SetWalk(true)
+    creature:MoveTo(1, seat_x, seat_y, seat_z)
+
+    -- arrived (or given up walking): turn to the fire a step at a time, then sit
+    local walked, step = 0, TURN_SPEED * TURN_STEP_MS / 1000
+    creature:RegisterEvent(function(event_id, _, _, c)
+        walked = walked + TURN_STEP_MS
+        local x, y = c:GetLocation()
+        local there = (x - seat_x) ^ 2 + (y - seat_y) ^ 2 <= SEAT_REACHED ^ 2
+        if not there and walked < WALK_GIVE_UP_MS then return end
+        local delta = (math.atan2(fy - y, fx - x) - c:GetO() + math.pi) % (2 * math.pi) - math.pi
+        if math.abs(delta) > TURN_DONE then
+            c:SetFacing((c:GetO() + math.min(math.abs(delta), step) * (delta > 0 and 1 or -1)) % (2 * math.pi))
+            return
+        end
+        c:RemoveEventById(event_id)
+        c:SetStandState(STAND_STATE_SIT)
+        c:SetUnitFlags(bit.bor(c:GetUnitFlags(), UNIT_FLAG_NOT_SELECTABLE))
+    end, TURN_STEP_MS, 0)
+
+    -- the fire burns: each second, whoever stands in it loses FIRE_PCT_PER_TIER
+    -- percent of their health per tier he serves (tier = his slot: 1 for
+    -- the level-1 buddy, 2 for level 10, ...). The player burns themself,
+    -- so Sargobras is never in a fight with anyone.
+    local tier = slot_of[low] or 1
+    creature:RegisterEvent(function(_, _, _, c)
+        for _, p in ipairs(c:GetPlayersInRange(SIT_RADIUS + FIRE_RADIUS) or {}) do
+            local px, py = p:GetLocation()
+            if (px - fx) ^ 2 + (py - fy) ^ 2 <= FIRE_RADIUS ^ 2 and p:IsAlive() then
+                p:DealDamage(p, math.ceil(p:GetMaxHealth() * FIRE_PCT_PER_TIER * tier / 100), false, SCHOOL_FIRE)
+            end
+        end
+    end, 1000, 0)
+
     creature:RegisterEvent(function(_, _, _, c)
         local near = c:GetPlayersInRange(JOKE_RANGE)
         if near and #near > 0 then c:SendUnitSay(JOKES[math.random(#JOKES)], 0) end
     end, JOKE_EVERY_MS, 0)
-    creature:RegisterEvent(function(_, _, _, c)
-        local seen = c:GetPlayersInRange(SIGHT)
-        if not seen or #seen == 0 then remove_wanderer(c) end
-    end, 5000, 0)
+    creature:RegisterEvent(function(_, _, _, c) remove_wanderer(c) end, FIRE_SECONDS * 1000, 1)
 end
 -- }}}
 
@@ -602,7 +667,7 @@ local function on_select(event, player, creature, sender, intid, code)
         article(race_name), race_name, RC.classes[b.class].name), 0)
 
     -- his tier is chosen: a wanderer goes on break (he still answers)
-    if creature:GetEntry() == WANDERER then go_on_break(creature) end
+    if creature:GetEntry() == WANDERER then go_on_break(creature, player) end
 end
 -- }}}
 
@@ -661,4 +726,17 @@ if roster_ready() then
         RegisterCreatureGossipEvent(entry, GOSSIP_EVENT_ON_HELLO,  on_hello)
         RegisterCreatureGossipEvent(entry, GOSSIP_EVENT_ON_SELECT, on_select)
     end
+
+    -- A reload of the Lua engine (".reload ale") forgets every wandering
+    -- Sargobras's owner and stops his timers, but leaves him standing in
+    -- the world, owned by no one, forever (2026-10-04). So on load, every
+    -- wandering Sargobras near a player in the world goes, and each player
+    -- gets theirs again as at login.
+    local players = GetPlayersInWorld() or {}
+    for _, p in ipairs(players) do
+        for _, c in ipairs(p:GetCreaturesInRange(SIGHT, WANDERER) or {}) do
+            if not owner_of[c:GetGUIDLow()] then c:DespawnOrUnsummon(0) end
+        end
+    end
+    for _, p in ipairs(players) do summon_wanderer(p) end
 end

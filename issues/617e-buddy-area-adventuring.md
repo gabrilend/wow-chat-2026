@@ -155,6 +155,41 @@ grind where the module sends them. Neither is "in my area, on its own".
   town actually offers (repair, trainer, mailbox, auction house, vendor),
   one system for every town, with 617h's order where both apply.
 
+### Decision, 2026-10-04 (Ritz): the hearthstone is a cast, then a placed move
+
+Verbatim:
+
+> I tried using my hearthstone, and my buddy-bots didn't come to me.
+> Probably because they used their hearthstone, which teleported them to
+> our starting area. Instead, they should cast teleport hearthstone, and
+> then be lua moved to the correct location. Which is stored as their
+> hearthstone location and orientation - remember, orienting themselves
+> around the place the player-partner places their hearthstone bind
+> location.
+
+This replaces the buddy using the game's own hearthstone teleport (which
+goes to the buddy's own bind point, still the starting valley for every
+buddy, since buddies never bind):
+
+- **The bind is the buddy's own record, not the game's.** When the
+  partner binds, each buddy stores a spot of its own: map (integer),
+  x, y, z (numbers) and facing (radians, a number), on a ring round the
+  partner's bind spot (the 2026-09-25 rule above put the ring round the
+  innkeeper; it is now round the place the partner bound), spread round
+  the ring by roster slot, each facing the centre. Stored in the
+  characters database beside the roster, so it survives restarts.
+- **The hearth.** After the partner's hearthstone lands (the timing and
+  the to-do rule above stand), the buddy casts the hearthstone spell for
+  its look and its cast time; when the cast completes, the buddy's own
+  teleport is cancelled and it is moved by script to its stored spot and
+  facing instead. An interrupted cast moves nothing and stays on the
+  to-do list.
+- **Until this is built**, a game master can bring a partner's buddies to
+  them with `.buddies here <partner>` (`src/lua-basic/buddies-here.lua`,
+  also from the server console): each buddy is moved onto a 3-yard ring
+  round the partner by roster slot, facing them. Used 2026-10-04 to bring
+  Growth's six to Growth after a hearth.
+
 ### Decisions, 2026-09-25 (Ritz): the owner dies, or enters an instance
 
 **The owner dies.** "There's two resolutions - either the player resurrects

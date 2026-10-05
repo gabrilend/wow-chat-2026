@@ -81,9 +81,10 @@ and install).
     pace (walking when they walk); when both have stopped he lets go, and
     sets off again only once the owner is past 25 yards; while waiting he
     turns toward the owner at most every 5 seconds; after the last
-    owed choice he lights a campfire, sits, tells a joke from
-    `data/sargobras-jokes.lua` every 45-90 seconds to anyone within 30
-    yards, and goes when no player is within 100 yards; he goes when his
+    owed choice he lights a campfire under the chooser (it burns, harder
+    per tier), walks off at an angle to a seat 3 yards from it, faces it,
+    sits untargetable, tells a joke from `data/sargobras-jokes.lua` every
+    45-90 seconds to anyone within 30 yards, and goes when the fire does; he goes when his
     owner logs out or changes map;
   - death-knight owners never see him and are owed nothing by level: they
     get **exactly four** buddies, death knights of random races, when they
@@ -159,6 +160,35 @@ When owner and Sargobras have both stopped he lets go, so the owner has
 to walk off past 25 yards before he follows again. Distances: 10 yards
 trailing (was 7), 25 yards slack (was 15); recorded in
 `docs/balance-updates.md`. Checked offline by `scripts/test-sargobras-follow`.
+
+### Decision, 2026-10-04 (Ritz): the fire under you, and how he sits
+
+"should despawn according to his 'finished talking to a player, should
+despawn myself with these conditions' rules. If I remember correctly, he
+turns, walks away at an angle, and sits at the fire that he lit underneath
+the player when they chose an option. Oh by the way can we ensure that the
+fire he lights is underneath the player? and make it increase in damage for
+each tier of buddy-bot he's summoning. also make sure he faces the fire
+before he sits. You can accomplish all of this with rotations, angles, and
+high-school geometry. Then he despawns after the fire does, and he becomes
+un-targettable to anyone while he's sitting."
+
+When a tier's choice is made, the campfire is lit at the chooser's feet.
+He walks (not runs) to a seat 3 yards from the fire, on a ring round it,
+swung about 57 degrees round from the line he came in on, so he walks off
+at an angle rather than straight back. There he turns toward the fire in
+small steps, sits only once he faces it, and can't be selected by anyone
+while he sits. The fire burns whoever stands in it each second for 2% of
+their health per tier he serves (his slot: 1 for the level-1 buddy, 2 for
+level 10, ...), dealt by the burning player to themself so Sargobras is
+never in a fight. He tells jokes as before, and goes when the fire does
+(120 seconds), replacing "goes when no player is within 100 yards".
+
+A reload of the Lua engine used to leave every wandering Sargobras ownerless
+and standing forever; the script now removes ownerless ones near players on
+load and summons each owed player's afresh, as at login. Numbers in
+`docs/balance-updates.md`; checked offline by `scripts/test-sargobras-follow`
+(part 2).
 
 ### Decision, 2026-09-25 (Ritz): a class or a race; death knights skip him
 
