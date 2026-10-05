@@ -49,7 +49,7 @@ Design and build record: issue 155 and its sub-issues 155a–155f.
   dungeon's step, so end bosses climb from 66 (Hellfire Ramparts) to 76
   (Magisters' Terrace), with Kael'thas at 78; health and damage follow the
   level. Heroic modes are stock (and closed). The full ladder, and how its
-  loot compares with the vanilla raids: `docs/profiles/basic-gear-ladder.html`.
+  loot compares with the vanilla raids: `docs/HTML/basic-gear-ladder.html`.
 - **Outland gear rescaled onto the ladder.** Same items, same loot tables,
   smaller numbers, all wearable at 60: greens run from about level-60
   dungeon blues (Hellfire Peninsula) to about Emerald Dragon epics (the

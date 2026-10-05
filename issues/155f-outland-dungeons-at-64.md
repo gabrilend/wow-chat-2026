@@ -290,7 +290,7 @@ server's combat code; this is why +4 is more than +4):
 
 - Confirm the proposed upper-dungeon ladder above (levels and budgets).
   Drawn in the gear-ladder chart's Proposed view
-  (`docs/profiles/basic-gear-ladder.html`), as the owner asked ("I'm a
+  (`docs/HTML/basic-gear-ladder.html`), as the owner asked ("I'm a
   visual learner"). Raw blue item levels for the targets: Old Hillsbrad
   102, Sethekk 104, Black Morass 105, Shadow Labyrinth 106, Shattered
   Halls 107, Steamvault 109, Mechanar 110, Botanica 111, Arcatraz 112,

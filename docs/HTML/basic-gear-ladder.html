@@ -1,0 +1,401 @@
+<title>Level-60 Gear Ladder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Cormorant+SC:wght@600&display=swap">
+<style>
+:root{
+  --bg:#f6f5f1; --surface:#fcfcfb; --ink:#17160f; --ink-2:#55534a; --ink-3:#8a877b;
+  --rule:#e3e1d8; --grid:#ecebe4; --band:rgba(42,120,214,.10); --band-edge:rgba(42,120,214,.45);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --tip:#17160f; --tip-ink:#f6f5f1;
+  --q2:#1f8a00; --q3:#0b5fc4; --q4:#8a2bd6;   /* item quality: uncommon, rare, epic */
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  color-scheme:dark; --bg:#131311; --surface:#1a1a19; --ink:#f3f2ec; --ink-2:#c3c2b7; --ink-3:#8f8d82;
+  --rule:#2c2b27; --grid:#24231f; --band:rgba(57,135,229,.16); --band-edge:rgba(57,135,229,.6);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --tip:#f3f2ec; --tip-ink:#131311;
+  --q2:#3fcf2b; --q3:#4a95ff; --q4:#b77bff; } }
+:root[data-theme="dark"]{
+  color-scheme:dark; --bg:#131311; --surface:#1a1a19; --ink:#f3f2ec; --ink-2:#c3c2b7; --ink-3:#8f8d82;
+  --rule:#2c2b27; --grid:#24231f; --band:rgba(57,135,229,.16); --band-edge:rgba(57,135,229,.6);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --tip:#f3f2ec; --tip-ink:#131311;
+  --q2:#3fcf2b; --q3:#4a95ff; --q4:#b77bff; }
+body{background:var(--bg);color:var(--ink);font:15px/1.55 "IBM Plex Sans",system-ui,sans-serif;padding-inline:16px;padding-block:28px 48px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:22px}
+h1{font:600 clamp(28px,4vw,40px)/1.1 "Cormorant SC",Georgia,serif;margin:0;letter-spacing:.02em;text-wrap:balance}
+.lede{color:var(--ink-2);max-width:68ch;margin:6px 0 0}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{font:500 13px "IBM Plex Sans",sans-serif;color:var(--ink-2);background:none;border:0;padding:7px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg button:focus-visible{outline:2px solid var(--s1);outline-offset:-2px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:8px;border-radius:2px;display:inline-block}
+.chartbox{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:14px 10px 8px;overflow-x:auto;position:relative}
+svg{display:block;min-width:720px;width:100%;height:auto}
+svg text{font-family:"IBM Plex Sans",sans-serif;fill:var(--ink-2);font-size:12px}
+svg .grp{font:600 11px "IBM Plex Mono",monospace;fill:var(--ink-3);letter-spacing:.08em;text-transform:uppercase}
+svg .tick{font:400 11px "IBM Plex Mono",monospace;fill:var(--ink-3)}
+svg .lvl{font:400 11px "IBM Plex Mono",monospace;fill:var(--ink-3)}
+.hint{font-size:13px;color:var(--ink-3);margin:6px 4px 0}
+#tip{position:absolute;pointer-events:none;background:var(--tip);color:var(--tip-ink);font-size:12.5px;line-height:1.4;padding:7px 9px;border-radius:6px;max-width:280px}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px 28px;font-size:14px;color:var(--ink-2)}
+.notes h2{font:600 13px "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin:0 0 4px}
+.notes p{margin:0}
+code{font:12.5px "IBM Plex Mono",monospace}
+details{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:10px 14px}
+summary{cursor:pointer;font-weight:500}
+.tbl{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--rule);white-space:nowrap}
+th{color:var(--ink-3);font-weight:500}
+@media (prefers-reduced-motion:no-preference){ .bar{transition:x .35s ease,width .35s ease} }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Level-60 Gear Ladder</h1>
+    <p class="lede">Three gear sources on one scale, for deciding where each tier should sit on the basic profile: vanilla raids, the Outland dungeons, and Outland open-world farming, as proposed for basic or as stock. Hover any row to project its range across the chart.</p>
+  </header>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Values">
+      <button id="view-prop" aria-pressed="true">Proposed</button>
+      <button id="view-stock" aria-pressed="false">Stock</button>
+    </div>
+    <div class="seg" role="group" aria-label="Scale">
+      <button id="mode-eq" aria-pressed="true">Stat budget (≈ epic item level)</button>
+      <button id="mode-raw" aria-pressed="false">Raw item level</button>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span><i style="background:var(--s1)"></i>Vanilla raids &amp; Azeroth</span>
+      <span><i style="background:var(--s2)"></i>Outland dungeons</span>
+      <span><i style="background:var(--s3)"></i>Outland open world &amp; world bosses</span>
+      <span><i style="background:none;border:1.5px dashed var(--ink-3)"></i>stock values (proposed view; hover it for its own tooltip)</span>
+      <span>names: <b style="color:var(--q2)">green</b> · <b style="color:var(--q3)">blue</b> · <b style="color:var(--q4)">epic</b> gear</span>
+    </div>
+  </div>
+
+  <div class="chartbox" id="box">
+    <svg id="chart" role="img" aria-label="Range chart of gear item levels by source"></svg>
+    <div id="tip" hidden></div>
+  </div>
+  <p class="hint">Hover a creature level on the right to light up every row fought at overlapping levels; hover the axis along the bottom to light up every row whose gear includes that item level. Proposed view: solid bars are the planned values; a changed row (marked •) also shows the stock values it replaces as a dashed bar, which has its own tooltip. Right-hand numbers are the creature levels you fight for that gear: trash to boss for dungeons (after their level offset); for open-world zones, the middle half of the zone's hostile creature spawns (a few much higher-level spots, like a zone's level-70 corner, are left out). Open-world bars are the middle half of what each zone's normal creatures drop.</p>
+
+  <section class="notes">
+    <div><h2>Stat budget</h2><p>Item level means different amounts of stats at each quality. Converted with the commonly cited budget curves: green ≈ (ilvl − 4) ÷ 2, blue ≈ (ilvl − 1.84) ÷ 1.6, epic ≈ (ilvl − 1.3) ÷ 1.3, then expressed as the epic item level with the same budget. Approximate.</p></div>
+    <div><h2>Ratings at 60</h2><p>Ratings convert by the wearer's level: 14 crit rating is 1% at 60, about 22 at 70. Vanilla gear carries ratings too (its old "+1% crit" equip effects are +14 crit rating in this client), sized for level 60. Burning Crusade gear's ratings were sized for 70, so on a level 60 they are ~1.6× stronger than this scale shows. Proposed: Burning Crusade items' rating stats × 0.63 (14 ÷ 22.1), vanilla untouched.</p></div>
+    <div><h2>Source</h2><p>Stock world database (vanilla profile copy), 2026-09-24. Zones from the client's map bounds; the Isle of Quel'Danas is Burning Crusade content on the Eastern Kingdoms side, with fixed spawns (one phase) in this database. Bosses = creatures with a boss script; dungeon values are boss blues, normal mode.</p></div>
+  </section>
+
+  <details>
+    <summary>Table view</summary>
+    <div class="tbl"><table id="tbl"><thead><tr><th>Source</th><th>Group</th><th>Quality</th><th>Item level</th><th>≈ epic item level</th><th>Creature level</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+  </details>
+</div>
+
+<script>
+// quality: 2 green, 3 blue, 4 epic. lo/hi are raw item levels; lv is the creature level range fought.
+// p: the proposed values (issues 155f, 155k, 155j) where they differ from stock.
+// only: "stock" or "proposed" rows that exist in one view.
+// Proposed raw blue item level = (target budget + 0.195) / 0.8125, the inverse of the blue budget curve.
+// World greens and blues are mapped proportionally on the ≈ epic scale, so every item keeps its place in the range
+// and its loot table (Ritz, 2026-09-24): greens raw 84..116 onto ≈ epic 47..72 (Hellfire Peninsula ≈ level-60
+// dungeon blues, Isle of Quel'Danas ≈ Emerald Dragons); blues raw 85..115 onto ≈ epic 60..83 (from the middle of
+// the green scale to half a green scale above its top, which lands at the start of Naxxramas-40).
+const ROWS = [
+  {g:0,n:"Level-60 dungeons (blues)",q:3,lo:58,hi:63,lv:"58–62"},
+  {g:0,n:"Molten Core",q:4,lo:61,hi:71,lv:"60–63"},
+  {g:0,n:"Zul'Gurub",q:4,lo:65,hi:68,lv:"56–63"},
+  {g:0,n:"Ahn'Qiraj 20",q:4,lo:66,hi:72,lv:"60–63"},
+  {g:0,n:"Emerald Dragons, Azuregos",q:4,lo:71,hi:72,lv:"63"},
+  {g:0,n:"Onyxia (vanilla loot, 155h)",q:4,lo:71,hi:76,lv:"60–63"},
+  {g:0,n:"Blackwing Lair",q:4,lo:73,hi:77,lv:"60–63"},
+  {g:0,n:"Ahn'Qiraj 40",q:4,lo:73,hi:88,lv:"60–63"},
+  {g:0,n:"Naxxramas-40 (vanilla loot, 155h)",q:4,lo:83,hi:92,lv:"60–63"},
+  {g:1,n:"Hellfire Ramparts",q:3,lo:85,hi:85,lv:"63–66"},
+  {g:1,n:"Blood Furnace",q:3,lo:88,hi:88,lv:"65–67"},
+  {g:1,n:"Slave Pens",q:3,lo:91,hi:91,lv:"65–68"},
+  {g:1,n:"Underbog",q:3,lo:94,hi:94,lv:"66–69"},
+  {g:1,n:"Mana-Tombs",q:3,lo:97,hi:97,lv:"68–70"},
+  {g:1,n:"Auchenai Crypts",q:3,lo:100,hi:100,lv:"69–71"},
+  {g:1,n:"Old Hillsbrad",q:3,lo:102,hi:102,lv:"67–71",only:"proposed"},
+  {g:1,n:"Sethekk Halls",q:3,lo:112,hi:115,lv:"70–73",p:{lo:104,hi:104,lv:"70–72"}},
+  {g:1,n:"Black Morass",q:3,lo:105,hi:105,lv:"68–72",only:"proposed"},
+  {g:1,n:"Shadow Labyrinth",q:3,lo:112,hi:115,lv:"73–76",p:{lo:106,hi:106,lv:"70–73"}},
+  {g:1,n:"Shattered Halls",q:3,lo:112,hi:115,lv:"73–76",p:{lo:107,hi:107,lv:"70–73"}},
+  {g:1,n:"Steamvault",q:3,lo:112,hi:115,lv:"74–76",p:{lo:109,hi:109,lv:"71–74"}},
+  {g:1,n:"Mechanar",q:3,lo:115,hi:115,lv:"74–76",p:{lo:110,hi:110,lv:"71–74"}},
+  {g:1,n:"Botanica",q:3,lo:115,hi:115,lv:"74–76",p:{lo:111,hi:111,lv:"72–75"}},
+  {g:1,n:"Arcatraz",q:3,lo:115,hi:115,lv:"74–76",p:{lo:112,hi:112,lv:"72–75"}},
+  {g:1,n:"Magisters' Terrace",q:3,lo:115,hi:115,lv:"74–76",p:{lo:113,hi:113,lv:"73–76"}},
+  {g:1,n:"Kael'thas epics, Magisters' Terrace",q:4,lo:110,hi:110,lv:"76",p:{lo:100,hi:100,lv:"78"}},
+  {g:1,n:"Rare trash epics (upper dungeons)",q:4,lo:100,hi:100,lv:"67–71",p:{lv:"67–76"}},
+  {g:2,n:"Hellfire Peninsula greens",q:2,lo:84,hi:92,lv:"59–62",p:{lo:74,hi:84,lv:"63–66"}},
+  {g:2,n:"Zangarmarsh greens",q:2,lo:92,hi:95,lv:"62–63",p:{lo:84,hi:88,lv:"66–67"}},
+  {g:2,n:"Terokkar Forest greens",q:2,lo:95,hi:104,lv:"64–67",p:{lo:88,hi:98,lv:"68–71"}},
+  {g:2,n:"Nagrand greens",q:2,lo:98,hi:105,lv:"65–67",p:{lo:91,hi:100,lv:"69–71"}},
+  {g:2,n:"Blade's Edge greens",q:2,lo:102,hi:107,lv:"66–68",p:{lo:96,hi:102,lv:"70–72"}},
+  {g:2,n:"Netherstorm greens",q:2,lo:108,hi:111,lv:"68–69",p:{lo:103,hi:107,lv:"72–73"}},
+  {g:2,n:"Shadowmoon Valley greens",q:2,lo:110,hi:114,lv:"69–70",p:{lo:106,hi:110,lv:"73–74"}},
+  {g:2,n:"Isle of Quel'Danas greens",q:2,lo:114,hi:116,lv:"69–70",p:{lo:110,hi:113,lv:"75–76"}},
+  {g:2,n:"Hellfire Peninsula blues (rare)",q:3,lo:88,hi:91,lv:"59–62",p:{lo:77,hi:80,lv:"63–66"}},
+  {g:2,n:"Zangarmarsh blues (rare)",q:3,lo:91,hi:97,lv:"62–63",p:{lo:80,hi:85,lv:"66–67"}},
+  {g:2,n:"Terokkar Forest blues (rare)",q:3,lo:97,hi:106,lv:"64–67",p:{lo:85,hi:94,lv:"68–71"}},
+  {g:2,n:"Nagrand blues (rare)",q:3,lo:100,hi:108,lv:"65–67",p:{lo:88,hi:96,lv:"69–71"}},
+  {g:2,n:"Blade's Edge blues (rare)",q:3,lo:105,hi:109,lv:"66–68",p:{lo:93,hi:97,lv:"70–72"}},
+  {g:2,n:"Netherstorm blues (rare)",q:3,lo:111,hi:112,lv:"68–69",p:{lo:99,hi:100,lv:"72–73"}},
+  {g:2,n:"Shadowmoon Valley blues (rare)",q:3,lo:111,hi:114,lv:"69–70",p:{lo:99,hi:101,lv:"73–74"}},
+  {g:2,n:"Isle of Quel'Danas blues (rare)",q:3,lo:114,hi:114,lv:"69–70",p:{lo:101,hi:101,lv:"75–76"}},
+  {g:2,n:"Fel Reaver ×2 (Karazhan epics ≤120, 155j)",q:4,lo:115,hi:120,lv:"70",only:"proposed"},
+  {g:2,n:"Doomwalker (own 10 items)",q:4,lo:120,hi:120,lv:"73"},
+  {g:2,n:"Doom Lord Kazzak (own 10 items)",q:4,lo:120,hi:120,lv:"73"}
+];
+const GROUPS = ["Vanilla raids & Azeroth","Outland dungeons","Outland open world & world bosses"];
+const QN = {2:"green",3:"blue",4:"epic"};
+const eq = (il,q) => q===2 ? 1.3*((il-4)/2)+1.3 : q===3 ? 1.3*((il-1.84)/1.6)+1.3 : il;
+const rng = (a,b) => a===b ? `${a}` : `${a}–${b}`;
+
+let mode = "eq", view = "proposed";
+let lastTip = null;   // where the last tooltip came to rest (container pixels), so the next one starts near it
+let lastGroup = null; // colour group (0 blue, 1 orange, 2 green) of that tooltip; a different group starts fresh
+let tipAnim = 0;      // animation token: a newer path cancels an older one
+const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// move the tooltip along a path of corner points: first point at once, then each leg in a straight line
+function animateTip(path){
+  const token = ++tipAnim, legMs = 140;
+  const set = p => { tip.style.left = p.lx+"px"; tip.style.top = p.ly+"px"; };
+  set(path[0]);
+  if(reduceMotion || path.length < 2){ set(path[path.length-1]); return; }
+  let leg = 1, t0 = null;
+  const frame = ts => {
+    if(token !== tipAnim) return;
+    if(t0 === null) t0 = ts;
+    const a = path[leg-1], b = path[leg], f = Math.min((ts-t0)/legMs, 1);
+    set({lx:a.lx+(b.lx-a.lx)*f, ly:a.ly+(b.ly-a.ly)*f});
+    if(f < 1) return requestAnimationFrame(frame);
+    if(++leg < path.length){ t0 = ts; requestAnimationFrame(frame); }
+  };
+  requestAnimationFrame(frame);
+}
+const svg = document.getElementById("chart"), tip = document.getElementById("tip"), box = document.getElementById("box");
+const NS = "http://www.w3.org/2000/svg";
+const W = 1040, L = 290, R = 70, ROW = 22, GH = 30, TOP = 34;
+const el = (t,a,p) => { const e=document.createElementNS(NS,t); for(const k in a) e.setAttribute(k,a[k]); (p||svg).appendChild(e); return e; };
+const fmt = v => Math.round(v);
+// the rows as shown in the current view; a changed row keeps its stock values as r.s (drawn as a dashed bar on the same row)
+const shown = () => ROWS.filter(r => !r.only || r.only===view).map(r => view==="proposed" && r.p ? {...r, ...r.p, changed:true, s:r} : {...r});
+
+function draw(){
+  svg.textContent = "";
+  const dom = mode==="eq" ? [40,130] : [50,130];
+  const x = v => L + (v-dom[0])/(dom[1]-dom[0])*(W-L-R);
+  const val = (il,q) => mode==="eq" ? eq(il,q) : il;
+  const list = shown();
+  let y = TOP, rows = [];
+  GROUPS.forEach((gname,gi) => {
+    y += (gi?10:0); rows.push({head:gname,y}); y += GH-8;
+    list.filter(r=>r.g===gi).forEach(r => { rows.push({r,y}); y += ROW; });
+  });
+  const H = y + 26;
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  // hover guides: a column over the row's range, a strip across its row, and the range's two values on the axis
+  const band = el("rect",{x:0,y:TOP-6,width:0,height:H-TOP-20,fill:"var(--band)",stroke:"var(--band-edge)","stroke-width":1,visibility:"hidden"});
+  const hband = el("rect",{x:L-4,y:0,width:W-R-L+8,height:ROW,fill:"var(--band)",stroke:"var(--band-edge)","stroke-width":1,visibility:"hidden"});
+  const edgeLabel = () => { const g=el("g",{visibility:"hidden"}); const r=el("rect",{rx:3,height:14,fill:"var(--band-edge)"},g); const t=el("text",{"text-anchor":"middle",class:"tick",style:"fill:var(--surface)"},g); return {g,r,t}; };
+  let eL, eR; // created after the rows so they sit on top of the axis numbers
+  const putEdge = (e, xv, v) => { e.t.textContent = v; e.t.setAttribute("x",xv); e.t.setAttribute("y",H-8); const w=String(v).length*7+8; e.r.setAttribute("x",xv-w/2); e.r.setAttribute("y",H-19); e.r.setAttribute("width",w); e.g.setAttribute("visibility","visible"); };
+  const ticks = []; // {v, t}: axis numbers, so the axis hover can hide the one nearest the pointer
+  for(let v=dom[0]; v<=dom[1]; v+=10){
+    el("line",{x1:x(v),x2:x(v),y1:TOP-6,y2:H-20,stroke:"var(--grid)","stroke-width":1});
+    const t = el("text",{x:x(v),y:H-6,"text-anchor":"middle",class:"tick"}); t.textContent = v;
+    ticks.push({v,t});
+  }
+  const cap = el("text",{x:L,y:16,class:"grp"}); cap.textContent = (mode==="eq" ? "≈ epic item level (stat budget)" : "raw item level") + (view==="proposed" ? " · proposed" : " · stock");
+  const lvcap = el("text",{x:W-4,y:16,"text-anchor":"end",class:"grp"}); lvcap.textContent = "Creature lvl";
+  const colors = ["var(--s1)","var(--s2)","var(--s3)"];
+  const bars = []; // every drawn bar and stock outline, in chart units {x,y,w,h}
+  const rowInfo = []; // per drawn row: its group, its level text, its range on the current scale and its levels
+  // "58–62" -> [58,62], "63" -> [63,63], anything else (e.g. "—") -> null
+  const parseLv = t => { const m = String(t).match(/^(\d+)(?:–(\d+))?$/); return m ? [+m[1], +(m[2]||m[1])] : null; };
+  // dim every row that doesn't match; matched rows stay full strength
+  const spotlight = test => rowInfo.forEach(ri => { const on = test(ri); ri.g.style.opacity = on ? "" : ".18"; ri.lvText.style.opacity = on ? "" : ".25"; });
+  const unspotlight = () => rowInfo.forEach(ri => { ri.g.style.opacity = ""; ri.lvText.style.opacity = ""; });
+  rows.forEach(o => {
+    if(o.head){ const t=el("text",{x:4,y:o.y+12,class:"grp"}); t.textContent=o.head; return; }
+    const r=o.r, a = val(r.lo,r.q), b = val(r.hi,r.q);
+    const cy = o.y+ROW/2;
+    const g = el("g",{tabindex:0,role:"img","aria-label":`${r.n}: ${QN[r.q]} item level ${rng(r.lo,r.hi)}, about epic ${rng(fmt(eq(r.lo,r.q)),fmt(eq(r.hi,r.q)))}, creature level ${r.lv}`});
+    el("rect",{x:0,y:o.y,width:W-R+8,height:ROW,fill:"transparent"},g);
+    // the row's name wears the colour of the gear quality it stands for (green / blue / purple)
+    const lab = el("text",{x:L-10,y:cy+4,"text-anchor":"end",style:`fill:var(--q${r.q})`},g); lab.textContent = (r.changed || r.only==="proposed") ? r.n+" •" : r.n;
+    const w = Math.max(x(b)-x(a),8), x0 = x(a)-(b===a?4:0);
+    el("rect",{class:"bar",x:x0,y:cy-5,width:w,height:10,rx:4,fill:colors[r.g],"fill-opacity":r.q===2?.55:1},g);
+    bars.push({x:x0,y:cy-5,w:w,h:10});
+    // a changed row's stock values: a dashed bar on the same row and at the same height, drawn over the row
+    // so it can be hovered on its own (its own tooltip); where it overlaps the proposed bar, it takes the hover
+    let sx0 = 0, sw = 0, sa = 0, sb = 0, stockBar = null;
+    if(r.s){
+      sa = val(r.s.lo,r.q); sb = val(r.s.hi,r.q); sw = Math.max(x(sb)-x(sa),8); sx0 = x(sa)-(sb===sa?4:0);
+      bars.push({x:sx0,y:cy-5,w:sw,h:10});
+    }
+    // the creature-level column: its own hover target, outside the row, that spotlights every row whose levels overlap
+    const lvg = el("g",{});
+    // hover zone runs from this row down to the next row (across a group heading too), so the column has no gaps
+    const nextRow = rows.slice(rows.indexOf(o)+1).find(q => !q.head);
+    // 1 unit of overlap with the next zone: scaled SVG edges land between pixels, and without the overlap
+    // a one-pixel seam can fall between two zones
+    el("rect",{x:W-R+8,y:o.y,width:R-8,height:(nextRow ? nextRow.y-o.y : ROW)+1,fill:"transparent"},lvg);
+    const lv = el("text",{x:W-4,y:cy+4,"text-anchor":"end",class:"lvl"},lvg); lv.textContent = r.lv;
+    const myLv = parseLv(r.lv);
+    rowInfo.push({g, lvText:lv, a, b, lvRange:myLv});
+    lvg.addEventListener("mouseenter", () => {
+      if(!myLv) return;
+      lv.style.fontWeight = "700"; lv.style.fill = "var(--ink)";
+      spotlight(ri => ri.lvRange && ri.lvRange[0] <= myLv[1] && ri.lvRange[1] >= myLv[0]);
+    });
+    lvg.addEventListener("mouseleave", () => { lv.style.fontWeight = ""; lv.style.fill = ""; unspotlight(); });
+    let cur = {x0, w};   // the bar the tooltip belongs to: the row's own, or its stock bar
+    const place = (ev) => {
+      // The tooltip starts at the clear spot nearest where the last tooltip was (or, the first time, nearest the
+      // selected bar), then slides toward the selected bar's centre: along x, then along y, repeating, one step at a
+      // time while the spot stays clear and gets closer. The result is a straight or L-shaped path that keeps the
+      // tooltip on the same side it was on. "Clear" = covers no bar and not this row's name or level.
+      const bb = box.getBoundingClientRect(), sb = svg.getBoundingClientRect(), k = sb.width/W;
+      const ox = sb.left-bb.left+box.scrollLeft, oy = sb.top-bb.top;
+      const cx = ox + (cur.x0+cur.w/2)*k, cyy = oy + cy*k;
+      const tw = tip.offsetWidth, th = tip.offsetHeight, pad = 3;
+      const maxX = Math.max(box.scrollWidth - tw, 0), maxY = Math.max(box.clientHeight - th, 0);
+      const toBox = (q) => { const r = q.getBoundingClientRect(); return [r.left-bb.left+box.scrollLeft-pad, r.top-bb.top-pad, r.right-bb.left+box.scrollLeft+pad, r.bottom-bb.top+pad]; };
+      const rects = bars.map(q => [ox+q.x*k-pad, oy+q.y*k-pad, ox+(q.x+q.w)*k+pad, oy+(q.y+q.h)*k+pad]).concat([toBox(lab), toBox(lv)]);
+      const inside = (lx,ly) => lx >= 0 && ly >= 0 && lx <= maxX && ly <= maxY;
+      const clear = (lx,ly) => inside(lx,ly) && !rects.some(([a0,b0,a1,b1]) => lx < a1 && lx+tw > a0 && ly < b1 && ly+th > b0);
+      // distance from the bar's centre to the nearest point of a tooltip placed at (lx,ly)
+      const dist = (lx,ly) => Math.hypot(Math.max(lx-cx, 0, cx-(lx+tw)), Math.max(ly-cyy, 0, cyy-(ly+th)));
+      // nearest clear grid spot to an anchor point (the last tooltip's corner, or the bar)
+      const nearestClear = (score) => {
+        let best = null;
+        for(let ly = 0; ly <= maxY; ly += 6) for(let lx = 0; lx <= maxX; lx += 8){
+          const d = score(lx,ly);
+          if(best && d >= best.d) continue;
+          if(clear(lx,ly)) best = {lx,ly,d};
+        }
+        return best;
+      };
+      // Move toward the bar: the destination is the clear spot closest to the bar's centre on the same side of
+      // it as the tooltip already is (the same corner around the bar), or the closest clear spot anywhere if that
+      // side has none. The route is one or two straight legs, the longer axis first; it may pass over bars and
+      // labels on the way, only the destination must be clear.
+      const slide = (px, py, path) => {
+        const sx = Math.sign(px+tw/2-cx), sy = Math.sign(py+th/2-cyy);
+        const sameSide = (lx,ly) => (!sx || Math.sign(lx+tw/2-cx) === sx) && (!sy || Math.sign(ly+th/2-cyy) === sy);
+        let dest = null;
+        for(let ly = 0; ly <= maxY; ly += 6) for(let lx = 0; lx <= maxX; lx += 8){
+          if(!sameSide(lx,ly)) continue;
+          const d = dist(lx,ly);
+          if(dest && d >= dest.d) continue;
+          if(clear(lx,ly)) dest = {lx,ly,d};
+        }
+        if(!dest) dest = nearestClear(dist);
+        if(!dest || dist(dest.lx,dest.ly) >= dist(px,py) && clear(px,py)) return {lx:px, ly:py};
+        const xFirst = Math.abs(dest.lx-px) >= Math.abs(dest.ly-py);
+        path.push(xFirst ? {lx:dest.lx, ly:py} : {lx:px, ly:dest.ly});
+        path.push({lx:dest.lx, ly:dest.ly});
+        return {lx:dest.lx, ly:dest.ly};
+      };
+      // Fresh start (first row selected, a new colour group, or after the pointer left the chart): the tooltip
+      // appears at the pointer, then moves to the clear spot nearest the pointer in the corner facing away from the bar.
+      if(!lastTip || lastGroup !== r.g){
+        const mx = ev && ev.clientX!=null ? ev.clientX-bb.left+box.scrollLeft : cx;
+        const my = ev && ev.clientY!=null ? ev.clientY-bb.top : cyy;
+        const sx = mx >= cx ? 1 : -1, sy = my >= cyy ? 1 : -1, gap = 12;
+        const inCorner = (lx,ly) => (sx > 0 ? lx >= mx+gap : lx+tw <= mx-gap) && (sy > 0 ? ly >= my+gap : ly+th <= my-gap);
+        let spot = null;
+        for(let ly = 0; ly <= maxY; ly += 6) for(let lx = 0; lx <= maxX; lx += 8){
+          if(!inCorner(lx,ly)) continue;
+          const d = Math.hypot(lx-mx, ly-my);
+          if(spot && d >= spot.d) continue;
+          if(clear(lx,ly)) spot = {lx,ly,d};
+        }
+        if(!spot) spot = nearestClear(dist) || {lx:Math.min(Math.max(mx+gap,0),maxX), ly:Math.min(Math.max(my+gap,0),maxY)};
+        const from = {lx:Math.min(Math.max(mx,0),maxX), ly:Math.min(Math.max(my,0),maxY)};
+        const fpath = [from, {lx:spot.lx, ly:from.ly}, {lx:spot.lx, ly:spot.ly}];
+        const fend = slide(spot.lx, spot.ly, fpath);
+        lastTip = fend; lastGroup = r.g;
+        animateTip(fpath);
+        return;
+      }
+      let start = nearestClear((lx,ly) => Math.hypot(lx-lastTip.lx, ly-lastTip.ly));
+      if(!start) start = {lx:Math.min(Math.max(cx+12,0),maxX), ly:Math.min(Math.max(cyy+12,0),maxY)};
+      const path = [{lx:start.lx, ly:start.ly}];
+      const end = slide(start.lx, start.ly, path);
+      const px = end.lx, py = end.ly;
+      lastTip = {lx:px, ly:py}; lastGroup = r.g;
+      animateTip(path);
+    };
+    // which: "main" (the row's own values) or "stock" (the dashed bar's)
+    const show = (ev, which) => {
+      const st = which === "stock";
+      const lo = st ? r.s.lo : r.lo, hi = st ? r.s.hi : r.hi, va = st ? sa : a, vb = st ? sb : b;
+      cur = st ? {x0:sx0, w:sw} : {x0, w};
+      band.setAttribute("x",cur.x0); band.setAttribute("width",cur.w); band.setAttribute("visibility","visible");
+      hband.setAttribute("y",o.y); hband.setAttribute("visibility","visible");
+      for(const t of [lab,lv]){ t.style.fontWeight = "700"; t.style.fontStyle = "italic"; }
+      lv.style.fill = "var(--ink)";
+      // edge labels; two that would touch (values within 2) are pushed apart
+      const close = vb !== va && Math.abs(fmt(vb) - fmt(va)) <= 2, push = close ? 12 : 0;
+      putEdge(eL, cur.x0 - push, fmt(va)); if(vb!==va) putEdge(eR, cur.x0+cur.w + push, fmt(vb)); else eR.g.setAttribute("visibility","hidden");
+      // an axis number within 2 of either edge value would sit under its label: hide it while this row is selected
+      // (compared with the numbers the labels show, rounded; 2 inclusive: a label reading 58–62 hides the 60)
+      ticks.forEach(k => { k.t.style.visibility = (Math.abs(k.v - fmt(va)) <= 2 || Math.abs(k.v - fmt(vb)) <= 2) ? "hidden" : ""; });
+      const e1=fmt(eq(lo,r.q)), e2=fmt(eq(hi,r.q));
+      const tag = st ? "Stock (the dashed bar)" : (r.changed || r.only==="proposed") ? "Proposed" : "";
+      let h = `<b>${r.n}</b>${tag ? "<br>"+tag : ""}<br>Item level ${rng(lo,hi)}<br>≈ epic item level ${rng(e1,e2)}`;
+      if(!st && r.only==="proposed") h += `<br><i>new on basic</i>`;
+      tip.innerHTML = h; tip.hidden = false;
+      place(ev);
+    };
+    const hide = () => { for(const e of [band,hband,eL.g,eR.g]) e.setAttribute("visibility","hidden"); for(const t of [lab,lv]){ t.style.fontWeight = ""; t.style.fontStyle = ""; } lv.style.fill = ""; ticks.forEach(k => k.t.style.visibility = ""); tip.hidden = true; };
+    g.addEventListener("mouseenter", ev => show(ev, "main")); g.addEventListener("focus", ev => show(ev, "main"));
+    g.addEventListener("mouseleave",hide); g.addEventListener("blur",hide);
+    if(r.s){
+      stockBar = el("rect",{class:"bar",x:sx0,y:cy-5,width:sw,height:10,rx:4,fill:"transparent",stroke:colors[r.g],"stroke-width":1.5,"stroke-dasharray":"3 2",style:"cursor:default"});
+      stockBar.addEventListener("mouseenter", ev => show(ev, "stock"));
+      stockBar.addEventListener("mouseleave", hide);
+    }
+  });
+  eL = edgeLabel(); eR = edgeLabel();
+  // item-level axis: hovering it picks one whole number on the current scale, draws a line there with the
+  // number, hides the axis number nearest it, and spotlights every row whose range contains that number
+  const vline = el("line",{x1:0,x2:0,y1:TOP-6,y2:H-20,stroke:"var(--band-edge)","stroke-width":1.5,visibility:"hidden"});
+  const vLabel = edgeLabel();
+  const axisHit = el("rect",{x:L-6,y:H-24,width:W-R-L+12,height:24,fill:"transparent",style:"cursor:none"});
+  const axisOff = () => { vline.setAttribute("visibility","hidden"); vLabel.g.setAttribute("visibility","hidden"); ticks.forEach(k => k.t.style.visibility = ""); unspotlight(); };
+  axisHit.addEventListener("mousemove", ev => {
+    const sb = svg.getBoundingClientRect();
+    const xs = (ev.clientX - sb.left) / sb.width * W;
+    const v = Math.max(dom[0], Math.min(dom[1], Math.round(dom[0] + (xs - L) / (W - L - R) * (dom[1] - dom[0]))));
+    vline.setAttribute("x1", x(v)); vline.setAttribute("x2", x(v)); vline.setAttribute("visibility","visible");
+    let near = null; ticks.forEach(k => { k.t.style.visibility = ""; if(!near || Math.abs(k.v - v) < Math.abs(near.v - v)) near = k; });
+    if(near) near.t.style.visibility = "hidden";
+    putEdge(vLabel, x(v), v);
+    vLabel.r.setAttribute("y", H-17); vLabel.t.setAttribute("y", H-6);
+    spotlight(ri => Math.round(ri.a) <= v && v <= Math.round(ri.b));
+  });
+  axisHit.addEventListener("mouseleave", axisOff);
+  table();
+}
+function table(){
+  const tb = document.querySelector("#tbl tbody");
+  tb.innerHTML = shown().map(r=>`<tr><td>${r.n}</td><td>${GROUPS[r.g]}</td><td>${QN[r.q]}</td><td>${rng(r.lo,r.hi)}</td><td>${rng(fmt(eq(r.lo,r.q)),fmt(eq(r.hi,r.q)))}</td><td>${r.lv}</td><td>${r.changed ? "proposed (stock: ilvl "+rng(r.s.lo,r.s.hi)+")" : (r.only==="proposed" ? "new" : "same")}</td></tr>`).join("");
+}
+const press = (id,on) => document.getElementById(id).setAttribute("aria-pressed",on);
+const setMode = m => { mode=m; press("mode-eq",m==="eq"); press("mode-raw",m==="raw"); try{localStorage.setItem("ladder-mode",m)}catch(e){} draw(); };
+const setView = v => { view=v; press("view-prop",v==="proposed"); press("view-stock",v==="stock"); try{localStorage.setItem("ladder-view",v)}catch(e){} draw(); };
+box.addEventListener("mouseleave", () => { lastTip = null; lastGroup = null; });
+document.getElementById("mode-eq").onclick = () => setMode("eq");
+document.getElementById("mode-raw").onclick = () => setMode("raw");
+document.getElementById("view-prop").onclick = () => setView("proposed");
+document.getElementById("view-stock").onclick = () => setView("stock");
+try{ if(localStorage.getItem("ladder-mode")==="raw") mode="raw"; if(localStorage.getItem("ladder-view")==="stock") view="stock"; }catch(e){}
+press("view-prop",view==="proposed"); press("view-stock",view==="stock");
+setMode(mode);
+</script>
