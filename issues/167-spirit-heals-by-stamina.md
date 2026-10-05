@@ -59,8 +59,12 @@ spirit: 450. Each 2-second health tick gives 2/5 of that.
   taken, spirit heals at half rate (as mana from spirit drops while
   casting). Damage taken is any damage dealt to the player (`Unit::DealDamage`,
   after the server's own damage hooks).
-- Unchanged: sitting adds a third; health-regeneration effects multiply
-  it; the other sources of health regeneration add to it as before.
+- Unchanged: sitting adds a third; health-regeneration percentage effects
+  multiply it (in this client a short list, Spell.dbc aura 88: the troll
+  racial Regeneration, Blood Presence, a few potions and many monster
+  debuffs that cut regeneration: Rabies, Cadaver Worms, Putrid Bile,
+  Enfeeble, Aura of Suffering); the other sources of health regeneration
+  add to it as before. Mana regeneration is untouched.
 
 **Later (not this patch): spirit on gear.** Weapons and armour carry
 little or no spirit today. Adding it means taking budget from another
@@ -69,16 +73,26 @@ question 2).
 
 ## Suggested Implementation Steps
 
-1. (Done) B049, three files, insertion only:
-   - `Player.h`: the player keeps when it was last hurt (a millisecond
-     game time, 0 = never).
-   - `Unit.cpp`: damage dealt to a player sets it.
+1. (Done) B049, three files, insertion only. The half rate after damage is
+   the twin of the server's own five-second rule for mana (owner,
+   2026-10-04: "how do we handle it for spirit? Can't we use the same
+   system, just abstracted a little?"): every unit keeps when it last
+   spent mana (`m_lastManaUse`, `SetLastManaUse`), and regeneration asks
+   `IsUnderLastManaUseEffect` (under 5 seconds ago?). Beside those three,
+   in the same shape:
+   - `Unit.h`: `SetLastHurt`, `IsUnderLastHurtEffect`, `m_lastHurt`
+     (milliseconds of game time, 0 = never).
+   - `Unit.cpp`: damage dealt to any unit sets it; the check is defined
+     beside the mana one.
    - `Player.cpp`: the health-per-spirit function returns spirit x stamina
-     / 100 x 2/5, halved within 5 seconds of being hurt; the regeneration
-     tick runs in combat too for a player the stock check would skip, and
-     adds the spirit part in combat.
-   `Player.h` is included almost everywhere, so a compile after this patch
-   rebuilds most of the server.
+     / 100 x 2/5, halved while `IsUnderLastHurtEffect`; the 2-second tick
+     runs in combat too for a player the stock check would skip, and adds
+     the spirit part in combat.
+   `Unit.h` is included almost everywhere (as `m_lastManaUse` is), so a
+   compile after this patch rebuilds most of the server; any new per-unit
+   time would. Checked 2026-10-04 on clean copies: applies once, both
+   .cpp files compile with the build's flags (without its precompiled
+   header, which would hide the patched header), reverts byte-identical.
 2. `scripts/test-source-patches basic` once the source tree is clean.
 3. In game: the tank example's 900 per 5 seconds standing still out of
    combat; half for 5 seconds after a hit; still healing mid-fight.
@@ -90,5 +104,6 @@ question 2).
 2. Spirit on gear: take its budget from stamina (keeping survivability
    about the same), and at what exchange (spirit's healing is worth more
    on a high-stamina character)?
-3. Does "the same rate as everyone else" mean the stamina rule replaces the
-   mana-equal rule for casters too (as built), or casters keep the mana rule?
+3. (Answered 2026-10-04) "no the mana regeneration should remain
+   unchanged": mana from spirit is untouched (B049 never changes it); the
+   stamina rule is everyone's health from spirit.

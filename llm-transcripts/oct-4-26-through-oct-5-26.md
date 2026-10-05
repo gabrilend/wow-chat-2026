@@ -1,6 +1,6 @@
 # Conversation Summary: 3cca55b1-1e96-4489-a864-41157a21299a
 
-Generated on: 2026-10-04 23:43:02
+Generated on: 2026-10-05 00:00:14
 Models: claude-opus-5-5
 
 ## Contents
@@ -2119,6 +2119,145 @@ Open:
 
 The new and updated issue files aren't committed; only the death knight skip and
 the spirit patch are.
+
+--------------------------------------------------------------------------------
+
+### User Request 12
+
+> - The option: while a soul is owed, Sargobras in Acherus also offers "I'd
+> rather skip the story." After you choose it, each soul in his list reads "Give
+> X (level N) to the Lich King, and skip the story."
+
+there should also be a second option that says "I changed my mind, I want to
+follow the Lich King for a time" which undoes it
+
+> Each 2-second health tick out of combat, spirit now heals what it would give
+> back as mana in 2 seconds while not casting. Warriors, rogues and death
+> knights have a mana-from-spirit ratio of 0 in the game's tables, so they keep
+> the stock rate. A level-60 priest with 300 spirit and
+>   300 intellect goes from about 25–30 health a tick to about 69.
+
+Can we have warriors, rogues, and death knights gain the same rate as everyone
+else, and make that rate equal to about 1/100th of the amount of stamina (not
+hit points) they have? So 100 stamina means 1hp5 per spirit, right? so a tank
+with 300 stamina would get 3hp5 per spirit, so 300 spirit means 900hp per 5
+seconds, right?
+
+>   2. Out of combat only, as stock, or in combat too?
+
+in combat too. Interrupted by taking damage, and recovers at 50%, just like
+spirit does with mana
+
+we'll probably want to add spirit to weapons and armor, but I'm not sure how to
+do that in a balanced way. Probably need to replace another attribute or divide
+it and use the other parts of the budget as spirit
+
+probably stamina tbh... should keep roughly the same amount of survivability?
+Maybe?
+
+> - 168, Chromie, keeper of settings: a player's own switches, such as the
+> formation on or off, world-fixed directions, and the ring's radius.
+> Server-wide settings stay with your config patches.
+
+she should live in the caverns of time and shattrath city
+
+  1. "5, 5, 25": default 5 and step 5 are clear. But 25 can't be the minimum
+     when the default is 5. Is 25 the new maximum (it was 40)?
+
+yes. And 5 is the minimum.
+
+  2. How often should sidesteps happen?
+
+inbetween a spellcast, when they're casting an instant spell
+
+> 4. Should stand-ins be deleted after the dungeon? And does "fewer than 4
+> buddy-bots" mean in your roster, or able to come right now?
+
+you can scale them up to the next bracket and have them spawn the next time
+someone needs that particular race/class combination.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 12
+
+> Starting with the spirit patch, since it changes most. One thing your rule
+> needs is whether the server already remembers when a player last took damage.
+> Checking.
+
+> All four anchors occur exactly once, and the field can go in the player's
+> public section. Updating issue 167 first, then rewriting B049.
+
+> Functions are found by patch number, so any name after it works. Writing the
+> new patch.
+
+> B049 passes: it applies once even when run twice, both changed files compile,
+> and reverting twice returns all three files byte-identical to upstream.
+>
+> Now the death knight change-of-mind option.
+
+> All 15 checks pass. Recording the change-of-mind option in the death knight
+> issue, then your other answers.
+
+> Committing the patch rework, the rename and the death knight option.
+
+*[commit] 6877fb283 in wow-chat-2026 - Spirit heals by stamina for every class, in combat too; death knights can take back asking to skip*
+
+I made all the changes from your answers. The spirit patch and the death knight
+option are committed. The other answers are written into their issues but those
+files aren't committed. Nothing has run in game yet: the server was down, so the
+Lua changes load at its next start, and the spirit patch waits for your compile.
+
+## Spirit heals by stamina (patch B049, issue 167)
+
+- **Every class:** health per 5 seconds = spirit × stamina ÷ 100. Your math is
+  right: 300 stamina and 300 spirit gives 900 per 5 seconds, delivered as 360 on
+  each 2-second tick. A priest with 150 stamina and 300 spirit gets 450.
+- **In combat too.**
+- **After taking damage:** half rate for 5 seconds.
+- **Unchanged:** sitting still adds a third, and health-regeneration effects
+  still multiply it.
+
+To know when someone was last hurt, the player now carries a "last hurt at"
+time, set wherever damage lands on a player. That field lives in a header almost
+every server file includes, so **your next compile will rebuild most of the
+server**.
+
+**Checks:** on clean upstream copies of the three files, applying twice changes
+nothing more, both changed files compile with the build's own flags, and
+reverting returns all three byte-identical. The patch and issue are renamed to
+"spirit heals by stamina"; the first version was never compiled.
+
+## Death knight skip
+
+Once a death knight has asked to skip, Sargobras also offers "I changed my mind,
+I want to follow the Lich King for a time." It takes the request back, and the
+soul list reads plain again. The offline test now has 15 checks, all passing.
+
+## Answers recorded (uncommitted)
+
+- **Chromie:** lives in the Caverns of Time and Shattrath City.
+- **Ring:** default 5, step 5, minimum 5, maximum 25.
+- **Sidesteps:** happen between spellcasts, when a buddy is about to cast an
+  instant spell.
+- **Stand-ins:** kept after the dungeon, raised to the next level bracket with
+  gear remade for it, and reused the next time anyone needs that race, class and
+  role.
+
+## Open questions
+
+1. **Casters and spirit:** I read "the same rate as everyone else" as the
+   stamina rule replacing the mana-based one for casters too, which is how it's
+   built. Is that right?
+2. **Spirit on gear:** you leaned toward taking its budget from stamina. At what
+   exchange rate? Spirit's healing is worth more on a high-stamina character, so
+   a straight swap wouldn't keep survivability the same.
+3. **Stand-ins:** is a bracket ten levels? And does "fewer than 4 buddy-bots"
+   mean in your roster, or able to come right now?
+4. **Skip gear:** where a quest offers a choice of gear, the skip takes the
+   first choice. Should it pick by spec instead?
+
+The two old patch-file deletions (B016, B019) are still staged from the earlier
+retirement. I've left them alone since they aren't mine.
 
 --------------------------------------------------------------------------------
 

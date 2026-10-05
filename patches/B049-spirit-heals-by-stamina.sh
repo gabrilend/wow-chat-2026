@@ -14,32 +14,40 @@
 # regeneration effects apply as before.
 #
 # Mechanics, three files, every edit an insertion inside ">>> B049 ...
-# BEGIN" / "<<< B049 ... END" marker comments:
-#   Player.h    the player keeps when it was last hurt (game time in
-#               milliseconds, 0 = never). Player.h is included almost
-#               everywhere: the next compile rebuilds most of the server.
-#   Unit.cpp    damage dealt to a player sets it (after the server's own
-#               damage hooks, which may have changed the amount).
+# BEGIN" / "<<< B049 ... END" marker comments. The half rate after damage
+# is built as the twin of the server's own five-second rule for mana (a
+# unit keeps when it last spent mana, m_lastManaUse, and regeneration asks
+# IsUnderLastManaUseEffect: under 5 s ago?); the health twin sits beside it
+# in the same shape (owner, 2026-10-04: "Can't we use the same system, just
+# abstracted a little?"):
+#   Unit.h      SetLastHurt / IsUnderLastHurtEffect / m_lastHurt (ms game
+#               time, 0 = never), beside the mana rule's three. Unit.h is
+#               included almost everywhere: the next compile rebuilds most
+#               of the server (as any new per-unit field would).
+#   Unit.cpp    damage dealt to any unit sets it (after the server's own
+#               damage hooks, which may have changed the amount), and
+#               IsUnderLastHurtEffect is defined beside the mana one.
 #   Player.cpp  OCTRegenHPPerSpirit returns the stamina rule (halved when
 #               hurt within 5 s) before the stock tables; the 2-second tick
 #               also runs for a player in combat whom the stock check would
 #               skip; RegenerateHealth adds the spirit part in combat (out of
 #               combat its stock branch already adds it).
 # Anchors must occur exactly once or the patch stops with an error.
-# Parallelizable: No (Player.h)
+# Parallelizable: No (Unit.h)
 
 B049_TAG='B049-spirit-heals-by-stamina'
 B049_BEGIN="// >>> ${B049_TAG} BEGIN"
 B049_END="// <<< ${B049_TAG} END"
-B049_H_ANCHOR='    void RegenerateHealth();'
+B049_H_ANCHOR='    [[nodiscard]] bool IsUnderLastManaUseEffect() const;'
 B049_U_ANCHOR='    damage = sScriptMgr->DealDamage(attacker, victim, damage, damagetype);'
+B049_U_DEF='bool Unit::IsUnderLastManaUseEffect() const'
 B049_P_FORMULA='    // Formula from PaperDollFrame script'
 B049_P_TICK='        // Not in combat or they have regeneration'
 B049_P_ALWAYS='    // always regeneration bonus (including combat)'
 
 # {{{ _b049_files
 _b049_files() {
-    B049_H="${AC_CODE_DIR}/src/server/game/Entities/Player/Player.h"
+    B049_H="${AC_CODE_DIR}/src/server/game/Entities/Unit/Unit.h"
     B049_U="${AC_CODE_DIR}/src/server/game/Entities/Unit/Unit.cpp"
     B049_P="${AC_CODE_DIR}/src/server/game/Entities/Player/Player.cpp"
 }
@@ -54,40 +62,52 @@ patch_B049_spirit_heals_by_stamina() {
     done
     grep -qF "${B049_TAG}" "${B049_P}" && return 0      # witness guard
 
-    local a b c d e
+    local a b c d e g
     a=$(grep -cxF -- "${B049_H_ANCHOR}"  "${B049_H}")
     b=$(grep -cxF -- "${B049_U_ANCHOR}"  "${B049_U}")
+    g=$(grep -cxF -- "${B049_U_DEF}"     "${B049_U}")
     c=$(grep -cxF -- "${B049_P_FORMULA}" "${B049_P}")
     d=$(grep -cxF -- "${B049_P_TICK}"    "${B049_P}")
     e=$(grep -cxF -- "${B049_P_ALWAYS}"  "${B049_P}")
-    if [[ "${a}${b}${c}${d}${e}" != "11111" ]]; then
-        echo "  [B049] ERROR: anchors found (want 1 each): Player.h RegenerateHealth ${a}, Unit.cpp damage hook ${b}," \
+    if [[ "${a}${b}${g}${c}${d}${e}" != "111111" ]]; then
+        echo "  [B049] ERROR: anchors found (want 1 each): Unit.h mana rule ${a}, Unit.cpp damage hook ${b}, mana rule definition ${g}," \
              "Player.cpp spirit formula ${c}, regen tick ${d}, always-bonus ${e}"
         return 1
     fi
 
-    # Player.h: the last-hurt time, after the RegenerateHealth declaration
+    # Unit.h: the health twin of the mana rule, beside it
     ANCHOR="${B049_H_ANCHOR}" BEGIN_M="${B049_BEGIN}" END_M="${B049_END}" awk '
         { print }
         $0 == ENVIRON["ANCHOR"] {
             print "    " ENVIRON["BEGIN_M"]
-            print "    // Everland Ghostsong (issue 167): when this player last took damage (game"
-            print "    // time, ms; 0 = never). Set in Unit::DealDamage; spirit heals at half rate"
-            print "    // for 5 seconds after it."
-            print "    uint64 m_everlandHurtAt = 0;"
+            print "    // Everland Ghostsong (issue 167): the mana rule'"'"'s twin for health. When"
+            print "    // this unit last took damage (ms game time, 0 = never), and whether that was"
+            print "    // under 5 seconds ago: spirit heals a player at half rate then."
+            print "    void SetLastHurt(uint32 hurtTime) { m_lastHurt = hurtTime; }"
+            print "    [[nodiscard]] bool IsUnderLastHurtEffect() const;"
+            print "    uint32 m_lastHurt = 0;                              // msecs"
             print "    " ENVIRON["END_M"]
         }' "${B049_H}" > "${B049_H}.b049" && mv "${B049_H}.b049" "${B049_H}"
 
-    # Unit.cpp: damage dealt to a player marks it hurt
-    ANCHOR="${B049_U_ANCHOR}" BEGIN_M="${B049_BEGIN}" END_M="${B049_END}" awk '
+    # Unit.cpp: damage marks the unit hurt; the check beside the mana one
+    ANCHOR="${B049_U_ANCHOR}" DEF="${B049_U_DEF}" BEGIN_M="${B049_BEGIN}" END_M="${B049_END}" awk '
+        $0 == ENVIRON["DEF"] {
+            print ENVIRON["BEGIN_M"]
+            print "// Everland Ghostsong (issue 167): as IsUnderLastManaUseEffect below, for damage taken."
+            print "bool Unit::IsUnderLastHurtEffect() const"
+            print "{"
+            print "    return m_lastHurt && getMSTimeDiff(m_lastHurt, GameTime::GetGameTimeMS().count()) < 5000;"
+            print "}"
+            print ""
+            print ENVIRON["END_M"]
+        }
         { print }
         $0 == ENVIRON["ANCHOR"] {
             print "    " ENVIRON["BEGIN_M"]
-            print "    // Everland Ghostsong (issue 167): a player taking damage heals by spirit"
-            print "    // at half rate for the next 5 seconds."
+            print "    // Everland Ghostsong (issue 167): taking damage starts the 5 seconds of"
+            print "    // half-rate healing from spirit (IsUnderLastHurtEffect)."
             print "    if (damage > 0)"
-            print "        if (Player* hurt = victim->ToPlayer())"
-            print "            hurt->m_everlandHurtAt = GameTime::GetGameTimeMS().count();"
+            print "        victim->SetLastHurt(GameTime::GetGameTimeMS().count());"
             print "    " ENVIRON["END_M"]
         }' "${B049_U}" > "${B049_U}.b049" && mv "${B049_U}.b049" "${B049_U}"
 
@@ -100,7 +120,7 @@ patch_B049_spirit_heals_by_stamina() {
             print "    // after taking damage. The stock tables below are not reached."
             print "    {"
             print "        float perTick = GetStat(STAT_SPIRIT) * GetStat(STAT_STAMINA) / 100.0f * 2.0f / 5.0f;"
-            print "        if (m_everlandHurtAt && GameTime::GetGameTimeMS().count() - m_everlandHurtAt < 5000)"
+            print "        if (IsUnderLastHurtEffect())"
             print "            perTick *= 0.5f;"
             print "        return perTick;"
             print "    }"
