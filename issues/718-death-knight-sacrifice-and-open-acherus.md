@@ -287,7 +287,44 @@ Enclave on top.
   selection NPC, **709** class Lua format, **711** class configuration
   schema, **716** class combinations) — the infrastructure this waits on
 
+### Decision, 2026-10-04 (Ritz): the story may be skipped, at Sargobras
+
+Verbatim: "can we make a patch based on the one we have already that
+makes death knights have an option when talking to Sargobras to skip the
+death knight story? They otherwise can talk to Arthas for the first DK
+quest." (2026-09-25 kept the story for everyone; it is now kept by
+default and skippable.)
+
+Built 2026-10-04 in `death-knight-souls.lua`, tested offline by
+`scripts/test-dk-skip-story` (12 checks), not yet tried in game. While a
+soul is owed, Sargobras in Acherus also offers "I'd rather skip the
+story."; once asked, each soul in his list reads "Give X (level N) to the
+Lich King, and skip the story." and its confirmation says so. Two seconds
+after that trade, every quest of the story is taken, completed and
+rewarded in play order, the server's own way, so its spells (Runeforging,
+the Deathcharger, Death Gate), talent points, gear (the first choice where
+a quest offers several) and experience arrive as if it were played; quests
+already rewarded are passed over; the death knight then stands at the
+Ebon Hold, a step in front of the other Sargobras, between the portals to
+the capitals. A quest that won't go through is named to the player and
+logged as an error with what did. Asked for and not traded yet is kept in
+memory (a relog asks again). Without asking, nothing changes: the Lich
+King gives the first quest once the soul is paid.
+
+The story's quests come from `scripts/generate-basic-dk-skip-quests`
+(writes `src/lua-basic/data/death-knight-skip-quests.lua`): every quest
+given by a creature or object in Acherus (map 609) plus the last, The
+Battle For The Ebon Hold (13166), ordered after the quests they follow on
+from: 55 quests. "A Special Surprise" is ten quests, one per race (the
+prisoner of your own people); the world database marks them only by
+faction, so the generator pins each to its race from the scene's server
+script (`ScarletEnclave/chapter2.cpp`), and a death knight gets only its own.
+
 ## Open Questions
+
+- (Asked 2026-10-04) Skipping: the first reward choice is taken where a
+  quest offers several (the story's gear). Should the skip choose by the
+  death knight's spec instead, or let the player pick afterwards?
 
 - (Answered 2026-09-25, no longer blocking) **Which issues are "the custom-class infrastructure"?** This issue was
   scheduled second-to-fourth after it. The owner's description (recorded

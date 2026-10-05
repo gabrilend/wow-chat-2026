@@ -73,6 +73,12 @@ local SARGOBRAS_ACHERUS_SPAWN = 7180002             -- the Heart of Acherus one 
 local STATE_OWED, STATE_GIVEN, STATE_RETURNING = 0, 1, 2
 local INTID_RETURN       = 1                        -- the undo; a soul's own intid is its guid (always far above 2)
 local INTID_CLAN         = 2                        -- naming the clan later, if the trade's name failed (617l)
+local INTID_SKIP         = 3                        -- "I'd rather skip the story" (2026-10-04)
+-- After the trade, a death knight who asked to skip the story is placed a
+-- step in front of the Ebon Hold's Sargobras (spawn 7180001, map 0), where
+-- the story ends, facing him: between the portals to the capitals.
+local SKIP_LANDING       = { map = 0, x = 2336.2 + math.cos(0.66) * 2, y = -5677.9 + math.sin(0.66) * 2, z = 382.3, o = (0.66 + math.pi) % (2 * math.pi) }
+local SKIP_AFTER_MS      = 2000                     -- after the trade's own writes and his flame
 local HOLDING_PREFIX     = "SOULS"                  -- holding account name: SOULS<player account id>
 local RETURN_DELAY_MS    = 5000                     -- after the erase, before the soul is moved back (the erase's writes land first)
 
@@ -367,6 +373,52 @@ local function take_back(player, row)
 end
 -- }}}
 
+-- {{{ the story skipped (2026-10-04)
+-- The owner: "can we make a patch based on the one we have already that
+-- makes death knights have an option when talking to Sargobras to skip the
+-- death knight story? They otherwise can talk to Arthas for the first DK
+-- quest." While a soul is owed, Sargobras also offers "I'd rather skip the
+-- story."; once asked, each soul in his list reads "..., and skip the
+-- story", and that trade is followed by the skip. Asked for and not traded
+-- yet is kept in memory only (a relog asks again).
+local DK_STORY = dofile(script_dir() .. "data/death-knight-skip-quests.lua")  -- { quest, races } in play order
+local skip_wanted = {}                              -- death knight guid (low) -> true
+
+-- {{{ local function skip_story
+-- Every quest of the story for this death knight's race, in play order,
+-- taken, completed and rewarded the server's own way, so the story's
+-- spells, talent points, gear and experience arrive as if it were played
+-- (the first reward choice where a quest offers several). Quests already
+-- rewarded are passed over. Then it stands at the Ebon Hold. Any quest
+-- that would not go through is named to the player and the log, with what
+-- did go through.
+local function skip_story(player)
+    local mask, done, already, failed = player:GetRaceMask(), 0, 0, {}
+    for _, q in ipairs(DK_STORY) do
+        local quest, races = q[1], q[2]
+        if races == 0 or bit.band(races, mask) ~= 0 then
+            if player:GetQuestRewardStatus(quest) then
+                already = already + 1
+            else
+                player:AddQuest(quest)
+                player:CompleteQuest(quest)
+                player:RewardQuest(quest)
+                if player:GetQuestRewardStatus(quest) then done = done + 1 else failed[#failed + 1] = tostring(quest) end
+            end
+        end
+    end
+    local line = string.format("Your story is told: %d quests rewarded, %d already were.", done, already)
+    if #failed > 0 then
+        line = line .. " These would not go through: " .. table.concat(failed, ", ") .. " (a game master can finish them by hand)."
+        print(string.format("[death-knight-souls] ERROR: skipping the story for %s: %d rewarded, %d already, refused: %s (to debug: quest log full? an item-started quest? check each with .quest add / .quest complete)",
+            player:GetName(), done, already, table.concat(failed, ", ")))
+    end
+    player:SendBroadcastMessage(line)
+    player:Teleport(SKIP_LANDING.map, SKIP_LANDING.x, SKIP_LANDING.y, SKIP_LANDING.z, SKIP_LANDING.o)
+end
+-- }}}
+-- }}}
+
 -- {{{ local function on_hello
 local function on_hello(event, player, creature)
     player:GossipClearMenu()
@@ -379,9 +431,15 @@ local function on_hello(event, player, creature)
         if not player:IsInGuild() then
             player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "First, our clan needs a name.", 0, INTID_CLAN)
         else
+            local skip = skip_wanted[player:GetGUIDLow()]
+            if not skip then
+                player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "I'd rather skip the story.", 0, INTID_SKIP)
+            end
             for _, c in ipairs(candidates(player)) do
-                local confirm = string.format("Give %s to the Lich King? %s leaves your character list; you can ask for them back here later.", c.name, c.name)
-                player:GossipMenuAddItem(GOSSIP_ICON_CHAT, string.format("Give %s (level %d) to the Lich King.", c.name, c.level), 0, c.guid, false, confirm)
+                local confirm = string.format("Give %s to the Lich King? %s leaves your character list; you can ask for them back here later.%s",
+                    c.name, c.name, skip and " Your story in Acherus will be told for you, and you will stand at the Ebon Hold." or "")
+                player:GossipMenuAddItem(GOSSIP_ICON_CHAT, string.format("Give %s (level %d) to the Lich King%s.", c.name, c.level,
+                    skip and ", and skip the story" or ""), 0, c.guid, false, confirm)
             end
         end
         player:GossipSendMenu(TEXT_OWED, creature)
@@ -411,9 +469,18 @@ local function on_select(event, player, creature, sender, intid, code)
         -- naming, before the trade (owed) or after it (given): he listens
         -- for the name in /say; sargobras.lua must be loaded for that
         if not player:IsInGuild() then BuddiesListenForClanName(player, creature) end
+    elseif row.state == STATE_OWED and intid == INTID_SKIP then
+        skip_wanted[player:GetGUIDLow()] = true
+        on_hello(event, player, creature)           -- the soul list again, each soul now with the skip
     elseif row.state == STATE_OWED and intid ~= INTID_RETURN then
         if not player:IsInGuild() then return end   -- an old menu from before the name-first rule
-        if give_soul(player, intid) then vanish(creature, player) end
+        if give_soul(player, intid) then
+            vanish(creature, player)
+            if skip_wanted[player:GetGUIDLow()] then
+                skip_wanted[player:GetGUIDLow()] = nil
+                player:RegisterEvent(function(_, _, _, p) skip_story(p) end, SKIP_AFTER_MS, 1)
+            end
+        end
     end
 end
 -- }}}

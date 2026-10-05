@@ -1,0 +1,113 @@
+#!/usr/bin/env luajit
+-- generate-basic-dk-skip-quests - the death knight story's quests, in the
+-- order they are played, for Sargobras's "skip the story" (issue 718).
+--
+-- For a general audience: a new death knight plays a long story in Acherus
+-- before entering the world. On basic it may skip it (owner, 2026-10-04):
+-- Sargobras then takes, completes and rewards every quest of the story for
+-- it, so it gets what the story gives (its spells, talent points, gear and
+-- experience) the server's own way. This reads which quests make up the
+-- story out of the world database (every quest given by a creature or an
+-- object standing in Acherus, map 609, plus the story's last quest, given
+-- outside it), orders them so each comes after the quest it follows on
+-- from, and writes them, with the races each is for, as plain data:
+-- src/lua-basic/data/death-knight-skip-quests.lua. Re-run after the world
+-- database changes.
+--
+-- Usage: scripts/generate-basic-dk-skip-quests [PROJECT_DIR] [WORLD_DATABASE]
+
+local DIR   = arg[1] and arg[1] ~= "" and arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local WORLD = arg[2] or "acore_world_basic"
+local OUT   = DIR .. "/src/lua-basic/data/death-knight-skip-quests.lua"
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql"
+local ACHERUS_MAP     = 609
+local LAST_QUEST      = 13166            -- The Battle For The Ebon Hold, given outside Acherus
+local CLASS_DK_MASK   = 32
+
+-- {{{ local function query
+local function query(sql)
+    local p = io.popen(string.format("MYSQL_PWD=menardi '%s' -h127.0.0.1 -P3307 -uritz -N -B %s -e \"%s\" 2>&1", MYSQL, WORLD, sql))
+    local rows = {}
+    for line in p:lines() do
+        if line:match("^ERROR") then
+            io.stderr:write("generate-basic-dk-skip-quests: MySQL refused a query on " .. WORLD .. ": " .. line ..
+                "\n  to debug: is MySQL running (scripts/start-mysql)? does " .. WORLD .. " exist?\n")
+            os.exit(2)
+        end
+        local r = {}
+        for v in (line .. "\t"):gmatch("([^\t]*)\t") do r[#r + 1] = v end
+        rows[#rows + 1] = r
+    end
+    p:close()
+    return rows
+end
+-- }}}
+
+-- the story's quests: given in Acherus (creatures, then objects), plus the last
+local ids = {}
+for _, r in ipairs(query("SELECT DISTINCT qs.quest FROM creature c JOIN creature_queststarter qs ON qs.id = c.id WHERE c.map = " .. ACHERUS_MAP)) do ids[tonumber(r[1])] = true end
+for _, r in ipairs(query("SELECT DISTINCT gs.quest FROM gameobject g JOIN gameobject_queststarter gs ON gs.id = g.id WHERE g.map = " .. ACHERUS_MAP)) do ids[tonumber(r[1])] = true end
+ids[LAST_QUEST] = true
+local list = {}
+for id in pairs(ids) do list[#list + 1] = id end
+table.sort(list)
+
+local facts = {}
+for _, r in ipairs(query("SELECT q.ID, q.LogTitle, IFNULL(a.PrevQuestID, 0), q.AllowableRaces, IFNULL(a.AllowableClasses, 0) " ..
+        "FROM quest_template q LEFT JOIN quest_template_addon a ON a.ID = q.ID WHERE q.ID IN (" .. table.concat(list, ",") .. ")")) do
+    facts[tonumber(r[1])] = { id = tonumber(r[1]), title = r[2], prev = tonumber(r[3]), races = tonumber(r[4]), classes = tonumber(r[5]) }
+end
+for _, id in ipairs(list) do
+    if not facts[id] then io.stderr:write("generate-basic-dk-skip-quests: quest " .. id .. " is given in Acherus but has no quest_template row\n"); os.exit(1) end
+end
+
+-- "A Special Surprise" is ten quests, one per race: the death knight is
+-- shown a prisoner of its own people. The world database marks each only
+-- by faction (five Alliance, five Horde), so a whole faction's five would
+-- be rewarded; the server script that runs the scene
+-- (ScarletEnclave/chapter2.cpp, MeetQuestCondition) pairs each quest with
+-- its prisoner, and the prisoner's people give the race. quest -> race id.
+local SPECIAL_SURPRISE_RACE = {
+    [12742] = 1,    -- Ellen Stanbridge: human
+    [12748] = 2,    -- Kug Ironjaw: orc
+    [12744] = 3,    -- Donovan Pulfrost: dwarf
+    [12743] = 4,    -- Yazmina Oakenthorn: night elf
+    [12750] = 5,    -- Antoine Brack: undead
+    [12739] = 6,    -- Malar Bravehorn: tauren
+    [12745] = 7,    -- Goby Blastenheimer: gnome
+    [12749] = 8,    -- Iggy Darktusk: troll
+    [12747] = 10,   -- Lady Eonys: blood elf
+    [12746] = 11,   -- Valok the Righteous: draenei
+}
+for id, race in pairs(SPECIAL_SURPRISE_RACE) do
+    if not facts[id] then io.stderr:write("generate-basic-dk-skip-quests: per-race quest " .. id .. " is not among the story's quests\n"); os.exit(1) end
+    facts[id].races = bit.lshift(1, race - 1)
+end
+
+-- order: a quest after the one it follows on from (PrevQuestID > 0); ties
+-- and quests with no listed predecessor by id, which is the order the story
+-- was written in
+local placed, order = {}, {}
+local function place(id, depth)
+    if placed[id] then return end
+    if depth > 100 then io.stderr:write("generate-basic-dk-skip-quests: the quest chain loops at " .. id .. "\n"); os.exit(1) end
+    local prev = facts[id].prev
+    if prev > 0 and facts[prev] then place(prev, depth + 1) end
+    placed[id] = true
+    order[#order + 1] = facts[id]
+end
+for _, id in ipairs(list) do place(id, 0) end
+
+local f = assert(io.open(OUT, "w"))
+f:write("-- GENERATED by scripts/generate-basic-dk-skip-quests from " .. WORLD .. "; don't edit by hand.\n")
+f:write("-- The death knight story's quests in the order they are played (issue 718,\n")
+f:write("-- Sargobras's \"skip the story\"): { quest id, races (a mask, 0 = all) }.\n")
+f:write("-- Each is for death knights only (class mask " .. CLASS_DK_MASK .. ") unless noted.\n")
+f:write("return {\n")
+for _, q in ipairs(order) do
+    local note = (q.classes ~= 0 and q.classes ~= CLASS_DK_MASK) and string.format(" (class mask %d)", q.classes) or ""
+    f:write(string.format("    { %5d, %4d },   -- %s%s\n", q.id, q.races, q.title, note))
+end
+f:write("}\n")
+f:close()
+print(string.format("wrote %d quests to %s", #order, OUT))

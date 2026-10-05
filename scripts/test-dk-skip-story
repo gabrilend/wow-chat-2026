@@ -1,0 +1,108 @@
+#!/usr/bin/env luajit
+-- test-dk-skip-story - Sargobras's "skip the story" for death knights
+-- (src/lua-basic/death-knight-souls.lua, issue 718), in a stand-in world.
+--
+-- For a general audience: a fake tauren death knight that owes a soul talks
+-- to Sargobras in Acherus. The test checks the menu offers "I'd rather skip
+-- the story.", that asking turns each soul in his list into "..., and skip
+-- the story", and that the trade is then followed by the skip: every quest
+-- of the story rewarded in play order, the tauren's own "A Special
+-- Surprise" and no other race's, quests already done passed over, and the
+-- death knight placed at the Ebon Hold. The trade itself (moving a
+-- character between accounts) is replaced by a stand-in: it is the same
+-- trade as before the skip existed.
+--
+-- Usage: scripts/test-dk-skip-story [PROJECT_DIR]
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local STORY = dofile(DIR .. "/src/lua-basic/data/death-knight-skip-quests.lua")
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+
+-- {{{ the stand-in world
+local TAUREN = 6
+local menu, rewarded, log_order, events, heard, tele = {}, {}, {}, {}, {}, nil
+local dk = setmetatable({
+    GetClass = function() return 6 end, GetGUIDLow = function() return 900 end, GetGUID = function() return 900 end,
+    GetName = function() return "Rotbrow" end, GetAccountId = function() return 77 end,
+    IsInGuild = function() return true end, GetRace = function() return TAUREN end,
+    GetRaceMask = function() return bit.lshift(1, TAUREN - 1) end,
+    GossipClearMenu = function() menu = {} end,
+    GossipMenuAddItem = function(_, _, text, _, intid) menu[#menu + 1] = { text = text, intid = intid } end,
+    GossipSendMenu = function() end, GossipComplete = function() end,
+    GetQuestRewardStatus = function(_, q) return rewarded[q] == true end,
+    AddQuest = function(_, q) log_order[#log_order + 1] = q end,
+    CompleteQuest = function() end,
+    RewardQuest = function(_, q) if q ~= 12801 then rewarded[q] = true end end,   -- 12801 refuses, to see the report
+    SendBroadcastMessage = function(_, t) heard[#heard + 1] = t end,
+    Teleport = function(_, map, x, y, z, o) tele = { map = map, x = x, y = y, o = o } end,
+    RegisterEvent = function(self, fn, ms, n) events[#events + 1] = { fn = fn, ms = ms } end,
+}, { __index = function() return function() end end })
+rewarded[12593] = true                              -- the first quest was already done by hand
+local creature = setmetatable({}, { __index = function() return function() end end })
+local handlers = {}
+local env = setmetatable({
+    RegisterCreatureGossipEvent = function(entry, ev, fn) if entry == 7180001 then handlers[#handlers + 1] = fn end end,   -- Sargobras: hello, then select
+    RegisterPlayerEvent = function() end,
+    CharDBQuery = function(sql)
+        if sql:find("FROM basic_718_souls") then
+            return { GetUInt32 = function(_, c) return ({ 0, 0, 0, 0 })[c + 1] end }      -- owed
+        end
+        if sql:find("FROM characters WHERE account") then
+            local rows, i = { { 501, "Hoofwise", 60 } }, 1
+            return { GetUInt32 = function(_, c) return rows[i][c + 1] end, GetString = function(_, c) return rows[i][c + 1] end,
+                     NextRow = function() i = i + 1; return rows[i] ~= nil end }
+        end
+        return nil
+    end,
+    print = function() end,
+}, { __index = _G })
+local chunk = assert(loadfile(DIR .. "/src/lua-basic/death-knight-souls.lua"))
+setfenv(chunk, env)()
+local on_hello, on_select = handlers[1], handlers[2]
+-- the trade and his flame, replaced by stand-ins (found behind the choice handler)
+local traded
+for i = 1, 60 do
+    local name = debug.getupvalue(on_select, i)
+    if not name then break end
+    if name == "give_soul" then debug.setupvalue(on_select, i, function(_, guid) traded = guid; return true end) end
+    if name == "vanish" then debug.setupvalue(on_select, i, function() end) end
+end
+-- }}}
+
+print("the menu while a soul is owed")
+on_hello(1, dk, creature)
+local function texts() local t = {} for _, m in ipairs(menu) do t[#t + 1] = m.text end return table.concat(t, " | ") end
+check(texts():find("I'd rather skip the story%.") ~= nil, "Sargobras offers to skip the story")
+check(texts():find("Give Hoofwise %(level 60%) to the Lich King%.") ~= nil, "the soul is offered as before")
+
+print("asking to skip")
+on_select(2, dk, creature, 0, 3)
+check(texts():find("I.d rather skip") == nil, "the skip option is gone once asked")
+check(texts():find("Give Hoofwise %(level 60%) to the Lich King, and skip the story%.") ~= nil, "each soul now carries the skip")
+
+print("the trade, then the skip")
+on_select(2, dk, creature, 0, 501)
+check(traded == 501, "the soul is traded")
+check(#events == 1, "the skip waits a moment after the trade")
+events[1].fn(0, 0, 0, dk)
+local special = {}
+for _, q in ipairs(log_order) do if q >= 12739 and q <= 12750 then special[#special + 1] = q end end
+check(#special == 1 and special[1] == 12739, "only the tauren's own A Special Surprise (12739), got: " .. table.concat(special, ","))
+local pos = {}
+for i, q in ipairs(log_order) do pos[q] = i end
+check(pos[12619] and pos[12842] and pos[12619] < pos[12842] and pos[13165] < pos[13166], "quests in play order")
+check(pos[12593] == nil, "an already rewarded quest is passed over")
+check(rewarded[13166] == true, "the story's last quest is rewarded")
+local said = table.concat(heard, " ")
+check(said:find("already were") and said:find("12801"), "the refused quest is named, with what went through")
+check(tele and tele.map == 0 and math.abs(tele.x - 2337.8) < 0.1, "placed at the Ebon Hold, before Sargobras")
+
+print("")
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)
