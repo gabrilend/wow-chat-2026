@@ -1,6 +1,6 @@
 # Conversation Summary: 3cca55b1-1e96-4489-a864-41157a21299a
 
-Generated on: 2026-10-05 02:21:14
+Generated on: 2026-10-05 03:01:32
 Models: claude-opus-5-5
 
 ## Contents
@@ -3335,6 +3335,456 @@ What the table shows:
 3. **Labyrinth packs:** how many packs?
 4. **Blackrock Depths loot:** which bosses should drop more or less? Your rule
    was to give the more varied ones more drops. Do the path labels look right?
+
+--------------------------------------------------------------------------------
+
+### User Request 19
+
+once we've successfully planned the item levels for each dungeon and raid, can
+you re-build the gear level chart? We can expand it out horizontally if you'd
+like.
+
+can you update the buddy-bot stat profile preferences according to the relative
+value compared to stamina of the spirit update? It should update dynamically as
+their gear shifts. They should try and keep them in balance.
+
+for BRD, can we have one path be prison and ring of law, then they fight their
+way to the tavern and everyone inside is hostile. The second party starts in the
+tavern, and everyone is friendly. Second party goes through forges and vaults.
+Inner city and throne are a third route, for a total of 15 players.
+
+We need to make sure there's the same amount of item drops on each route. Number
+of items dropped. We should drop more items from characters who have large loot
+pools. Also, rare elites should always spawn, and they should be included in
+these calculations.
+
+> 1. Campfire cap: 3-yard spacing still allows about 160 fires in a 20-yard
+> circle, so n × n could reach about 26,000 spirit. At most how many fires
+> should count?
+
+how about 4 and 5 yards?
+
+> 2. Labyrinth pacing: if a path is 20 points ahead, how much harder do its
+> monsters get: more levels (+2?) or more stats (+20%)?
+
+not sure about the scaling on it...
+
+  3. Labyrinth packs: how many packs?
+
+enough so that it's hard to pull. they redistribute while you're in the
+labyrinth...
+
+Each BRD boss should give a minimum of 1.0 items per fight
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 19
+
+> Checking where buddies score gear today, so the spirit-against-stamina value
+> can go in the right place.
+
+> Adding the buddy module's answer and its declaration.
+
+> Now the bot-module patch, B050.
+
+> B050 is written and registered. Testing it on a clean copy of the scorer:
+> apply, compile, revert, compare. Then compiling the buddy module's file.
+
+> B050 passes: it applies once, both changed files compile with the build's
+> flags, and the revert is byte-identical. Committing it with the buddy-module
+> change and the issue.
+
+*[commit] 018e58312 in wow-chat-2026 - Buddies weigh spirit by what it heals, so they keep spirit and stamina in balance*
+
+> The issue file was left out because my last edit to it was made by a script.
+> Claiming and committing it.
+
+*[commit] 22d3525ae in wow-chat-2026 - The issue describing how buddies weigh spirit against stamina*
+
+The buddy spirit weighting is done and committed; the rest of this round is
+planning recorded in the issues.
+
+**Buddies weigh spirit by what it heals (patch B050, issue 617j3).** Whenever
+the bot module scores an item for a buddy, it asks the buddy module what one
+spirit is worth in stamina for that buddy right now. The comparison is health
+over a 30-second fight:
+- one more spirit heals stamina ÷ 100 every 5 seconds;
+- one more stamina holds 10 health and also adds to spirit's healing.
+
+Stamina's weight times that worth is added on top of spirit's normal weight,
+which mana users already get. It's worked out from the buddy's current stats
+every time, so the more stamina it has the more spirit is worth, and vice versa;
+its choices drift toward balance. With 300 stamina and 100 spirit, one spirit is
+worth about 1.1 stamina; with 300 of each, about 0.64. Players and other bots
+are unchanged.
+
+It applies once, both files compile with the build's own flags, and it reverts
+byte-identically. It needs your compile.
+
+**Recorded in the issues (uncommitted):**
+- **Blackrock Depths (810):** your three routes, three parties of five, each
+  totalling 10 drops as in the plan above, with the rares always present. Bosses
+  are placed on routes from my memory of the map, so it's worth a check.
+- **The labyrinth (811):** packs dense enough that a pull usually draws a
+  neighbour, and they keep spreading out while you're inside.
+- **Campfires (170):** the 4- and 5-yard numbers above.
+- **The gear chart (155k):** once the dungeon and raid item levels are settled,
+  the "Level-60 Gear Ladder" page gets rebuilt wider. It's hand-written today;
+  the rebuild will generate it from the plans' numbers like the other pages.
+
+**Open questions:**
+1. **Blackrock Depths tavern:** it's hostile to route 1's party but friendly to
+   route 2's at the same moment. That means the tavern's people see each party
+   differently. Is that what you want, or does route 2 start only after route 1
+   has fought through?
+2. **Pacing step:** how much harder for being ahead, for both the labyrinth and
+   the joined runs? You weren't sure yet; it stays open.
+3. **Campfire cap:** 4 or 5 yards gives about 8,100 or 3,400 spirit at the
+   extreme. Is spacing alone enough, or should only the nearest few fires count?
+4. **Fight length:** buddies count spirit's healing over a 30-second fight.
+   Longer makes them prefer spirit more. Is 30 right?
+
+--------------------------------------------------------------------------------
+
+### User Request 20
+
+can we also have raid bosses drop an enchanting vellum with a random enchantment
+from around that level on it? Just for the low level dungeons. The higher level
+ones give gems, I think. Or is it jewels? It shouldn't replace an item, but it
+should still drop more from characters with large loot tables.
+
+> 1. Blackrock Depths tavern: it's hostile to route 1's party but friendly to
+> route 2's at the same moment. That means the tavern's people see each party
+> differently. Is that what you want, or does route 2 start only after route 1
+> has fought through?
+
+yes they'll probably never be in the same room at the same time so
+
+> 2. Pacing step: how much harder for being ahead, for both the labyrinth and
+> the joined runs? You weren't sure yet; it stays open.
+
+should be very harder to encourage pacing
+
+would it be a good / bad idea to share the need/greed rolls between the entire
+parallel groups? so a 15 man raid gets 15x more loot with 15x more competition.
+
+> 3. Campfire cap: 4 or 5 yards gives about 8,100 or 3,400 spirit at the
+> extreme. Is spacing alone enough, or should only the nearest few fires count?
+
+and 6 yards?
+
+> 4. Fight length: buddies count spirit's healing over a 30-second fight. Longer
+> makes them prefer spirit more. Is 30 right?
+
+sure.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 20
+
+> Checking which existing issue covers higher-level dungeons dropping gems, and
+> which enchanting scrolls exist in the game data, so the vellum drop builds on
+> them.
+
+Recorded everything, plus one new issue (812); none of these files are
+committed. Your question about sharing need/greed rolls needs an answer, though,
+so here's the comparison.
+
+**What the server does today:** an item is rolled on only by raid members near
+the corpse when it's looted (within reward range, about 74 yards). Parties in
+different rooms never see each other's rolls.
+
+**Shared rolls across the whole 15-person run, compared with each party rolling
+its own:**
+
+| | Each party rolls its own | The whole run rolls together |
+|---|---|---|
+| Items per person per run | 10 items ÷ 5 people = 2 | 30 items ÷ 15 people = 2 |
+| Who gets an item | the best fit among 5 | the best fit among 15 |
+| Items nobody in the party wants | more often greeded or wasted | rarer, since 15 people are asking |
+| Roll windows per person per run | about 10 | about 30, three times as many |
+| How unevenly loot lands | more uneven (small pool) | more even (larger pool) |
+| Server work | none | rolls offered raid-wide regardless of distance, and the winner's item delivered to their bags, since they may be rooms away |
+
+The average stays exactly the same: 15 times the loot shared by 15 times the
+people. What changes is that items land with whoever wants them most across all
+three routes, at the cost of three times as many roll windows. With mostly
+buddies, their clan rules would make most of those rolls automatically, so the
+extra windows fall mostly on the real players. The question stays open in 810
+until you decide.
+
+**Recorded:**
+- **Scrolls from dungeon bosses (812):**
+  - Bosses of the low-level dungeons drop extra "Scroll of Enchant" items on top
+    of their loot, never instead of an item.
+  - A boss draws among scrolls near its own level. A scroll's level comes from
+    how much Enchanting skill its recipe needs, at about skill ÷ 5 = character
+    level.
+  - Bosses with more possible items drop more scrolls.
+  - Gems were the right word for the higher end: Outland's monsters already drop
+    uncut gems (155p). In this expansion "jewel" means only the jewelcrafters'
+    Dragon's Eyes.
+- **Blackrock Depths' tavern (810):** hostile to one party and friendly to the
+  other at the same time, per party.
+- **Pacing:** much harder for being ahead, steep enough that pulling ahead stops
+  paying.
+- **Campfires (170):** at 6 yards apart about 40 fires fit in the 20-yard
+  circle, giving about 1,600 spirit at the extreme.
+- **Fight length (617j3):** stays 30 seconds.
+
+**Open questions:**
+1. **Scrolls (812):** up to which level do they drop: 30, or up to the level-60
+   dungeons? And how many per boss: one, and two for the most varied?
+2. **Shared rolls:** yes or no, given the comparison above.
+3. **Campfire cap:** is spacing alone the cap (3, 4, 5 or 6 yards), or should
+   only the nearest few fires count?
+4. **Pacing step:** the exact step. For example, every 10 points ahead adds 3
+   levels to monsters not yet in combat?
+
+--------------------------------------------------------------------------------
+
+### User Request 21
+
+can we add an issue file to add a wikipedia style page generated from the issue
+files and such? It should also contain a full database, with all the times the
+item is affected listed as a link to the transcript where the edit took place.
+So you can see why and how something changed. We should have two different types
+of sections for the default things, and the changed things.
+
+
+
+<pasted_content id="7f61">
+  ├─────────────────────────────────┼──────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Server work │ none │ rolls offered raid-wide regardless of distance,
+  and the winner's item delivered to their bags, since they may be rooms away
+  │
+  └─────────────────────────────────┴──────────────────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+</pasted_content id="7f61">
+
+
+different instance too. Might even be on a different server.
+
+> - Campfires (170): at 6 yards apart about 40 fires fit in the 20-yard circle,
+> giving about 1,600 spirit at the extreme.
+
+that's fine. But it only takes effect outside of combat, and only near a duel,
+to counteract the extra damage from monsters. AH I DON'T KNOW I don't want
+players lighting so many fires! Ah! What do you think?
+
+> 1. Scrolls (812): up to which level do they drop: 30, or up to the level-60
+> dungeons? And how many per boss: one, and two for the most varied?
+
+up until level 60 dungeons. not in raids.
+
+>   2. Shared rolls: yes or no, given the comparison above.
+
+ideally, yes.
+
+> 3. Campfire cap: is spacing alone the cap (3, 4, 5 or 6 yards), or should only
+> the nearest few fires count?
+
+good point. Let's say the nearest 6 campfires can count. Or rather, it stacks to
+6. That might be the easiest implementation.
+
+> 4. Pacing step: the exact step. For example, every 10 points ahead adds 3
+> levels to monsters not yet in combat?
+
+what do you mean 10 points? Like... 10 percent more of the way through the raid?
+Maybe every 20 percent... How about it starts at 10 % and scales up to 20% over
+the course of the dungeon. So early bosses have less of a penalty, but later
+bosses are much stronger unless your allies are also attacking their core.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 21
+
+> Writing the wiki page as an issue, plus your other answers. Getting the next
+> free number first.
+
+> Tidying a leftover line from that edit in the sparring-grounds issue.
+
+I wrote the wiki as issue 171 and recorded your other answers; none of these
+issue files are committed.
+
+## The wiki (issue 171)
+
+A generated encyclopedia with one page per item, creature, quest, spell, zone
+and dungeon, linked to each other and to the issues. Every page has two kinds of
+section:
+- **Stock:** the thing as the game ships it, read from a stock copy of the world
+  database.
+- **Changed on Everland:** each change the project makes to it, newest first:
+  before and after, which install step or patch makes it, the issue that asked
+  for it, and a link to the line of the conversation where it was decided.
+
+It's rebuilt by one command and never edited by hand. The install steps already
+save the original values before changing anything, so those saved tables become
+the record of what changed.
+
+Questions:
+1. A page for every stock thing (tens of thousands), or only changed things plus
+   what links to them?
+2. Where do rule changes made in C++ go (for example "spirit heals by stamina"):
+   on the stat's page, the class's, or both?
+
+## Campfires: what I think
+
+The worry is one person lighting a field of fires. The cap of 6 already limits
+the reward: at most 6 fires count, so at most 36 spirit, and only out of combat
+near a duel.
+
+What remains is someone lighting six fires alone to get the full 36. I'd add one
+more rule: **count at most one fire per person who lit it.** Then reaching six
+fires takes six people resting together, which is the picture you described:
+allies boosting each other by the fire. It's in the issue as an open question.
+
+## Recorded
+
+- **Scrolls (812):** from every dungeon up to the level-60 ones, never raids.
+- **Shared rolls (810):**
+  - **Who rolls:** yes, every member of a joined run rolls on everything it
+    drops, wherever they are: another room, another instance, even another
+    server.
+  - **Delivery:** the winner gets the item in their bags.
+- **Campfires (170):** stack to 6, count only out of combat and near a duel, to
+  offset the double damage from monsters.
+- **Pacing (810):** a side that's ahead faces monsters 10% stronger near the
+  start of the dungeon, rising to 20% near the end, applied only to monsters not
+  yet fighting.
+
+## Open questions
+
+1. **Pacing:** is the 10–20% for any lead at all, or for each step of lead
+   (say every 10 percentage points of progress ahead of the slowest side)? And
+   "stronger" in stats (health and damage), or in levels?
+2. **Campfires:** one fire per person, yes?
+3. **Scrolls:** how many per boss? One, and two for the most varied?
+
+--------------------------------------------------------------------------------
+
+### User Request 22
+
+> - Changed on Everland: each change the project makes to it, newest first:
+> before and after, which install step or patch makes it, the issue that asked
+> for it, and a link to the line of the conversation where it was decided.
+
+maybe we can have the patch file update the wiki page? No need to dismantle the
+wiki page after undoing the source-patch.
+
+> 1. A page for every stock thing (tens of thousands), or only changed things
+> plus what links to them?
+
+full database, extracted from mysql during compilation
+
+this includes things like... altered placements for NPCs, or changes to item
+drop rates or whatever...
+
+> 2. Where do rule changes made in C++ go (for example "spirit heals by
+> stamina"): on the stat's page, the class's, or both?
+
+for that one, on the stats page. Also in a "changes" page sorted by generally
+how major the feature is.
+
+
+
+<pasted_content id="7f61">
+> The worry is one person lighting a field of fires. The cap of 6 already limits
+> the reward: at most 6 fires count, so at most 36 spirit, and only out of
+> combat near a duel.
+>
+> What remains is someone lighting six fires alone to get the full 36. I'd add
+> one more rule: count at most one fire per person who lit it. Then reaching six
+> fires takes six people resting together, which is the picture you described:
+> allies boosting each other by the fire. It's in
+>   the issue as an open question.
+</pasted_content id="7f61">
+
+
+mmmmm nah how about when you light a fire, if there's another fire of yours then
+it douses that one and lights the new one. They should last until you move more
+than their buff radius away.
+
+> 1. Pacing: is the 10–20% for any lead at all, or for each step of lead (say
+> every 10 percentage points of progress ahead of the slowest side)? And
+> "stronger" in stats (health and damage), or in levels?
+
+I don't knoooooowwwww
+
+>   3. Scrolls: how many per boss? One, and two for the most varied?
+
+just one each time
+
+Also... I don't think there's any profession that can create staffs and off-hand
+items. Is that true? If so, can we make Enchanting do that too?
+
+How difficult would it be to make a custom libram / totem / idol etc?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 22
+
+> Checking which professions make staves and off-hand items in this game data,
+> before answering. The check reads the client's spell and skill tables for
+> every recipe that creates a staff or an off-hand item.
+
+Everything is recorded, and I've opened issue 172 for Enchanting making staves
+and off-hands. None of the issue files are committed.
+
+**Recorded:**
+- **Wiki (171):**
+  - **Patches write their own entries:** each source patch, install step and
+    config patch writes its wiki entry when it applies. Undoing the patch leaves
+    the entry, so the wiki is a history.
+  - **Full database:** every item, creature, quest and spell gets a page,
+    extracted during the build, including moved creature spawns and changed drop
+    chances.
+  - **Rule changes:** a C++ change like "spirit heals by stamina" goes on the
+    stat's page, and on a Changes page sorted by how major the feature is.
+- **Campfires (170):** lighting a fire douses your previous one, and a fire goes
+  out when you move more than 20 yards (its reach) from it. So one fire per
+  person.
+- **Scrolls (812):** one per boss kill.
+- **Staves and off-hands (172):** you're right. No profession makes a staff;
+  only Inscription makes off-hand items (14 recipes, the expansion's tomes).
+  Basic turned Inscription into a buff-scroll profession, so whether those 14
+  are still taught there needs checking. The issue proposes Enchanting recipes
+  for both.
+
+**Pacing:** since you weren't sure, I put a first setting to try into issue 810,
+to tune later in the balance log. For every 10 points of progress a side is
+ahead of the slowest side, its monsters not yet fighting gain 10% health and
+damage near the start of the dungeon, rising to 20% near the end. I chose stats
+over levels because level gaps also change hit and crit chances. Basic already
+caps those gaps at 3 levels, so levels would be a lumpier dial.
+
+**How hard is a custom libram, totem or idol?** It depends on what it does:
+- **Easy, no client change: stats only** (say stamina and spell power). The
+  server can add a new item row, and the 3.3.5 client asks the server about
+  items it doesn't know. The item needs an icon the client already has, which is
+  fine since there are plenty of relic icons to reuse.
+- **Easy: an existing relic's effect with new stats.** For example, "your
+  Rejuvenation heals more," reusing a spell the client already knows. The
+  effect's numbers stay fixed, since they live in the client's spell data.
+- **Harder: a new effect.** The server can define new spells in a database
+  table, and they'll work in game. But the client doesn't know them, so the
+  item's "Equip:" line can't describe the effect. The optional tooltip addon
+  (719) or your custom client could fill that in.
+
+So relics with stats, or with existing effects, are a few database rows and work
+today. A truly new effect works too, but its tooltip stays silent until there's
+a way to show it.
+
+**Open questions:**
+1. **Wiki:** who decides how major a change is, for sorting the Changes page: a
+   field in each patch's header (major, minor, tuning), or the size of what it
+   touches?
+2. **Enchanting crafts (172):** real recipes in the profession window need spell
+   ids the client already knows, so we'd reuse unused ones. The alternative is a
+   crafting menu at the enchanting trainer, in Lua with no client change. Which
+   way?
+3. **Enchanting crafts (172):** what item level should the staves and off-hands
+   reach: like Enchanting's other products, or up to the dungeon blues?
+4. **Pacing:** is the starting setting above worth trying?
 
 --------------------------------------------------------------------------------
 
