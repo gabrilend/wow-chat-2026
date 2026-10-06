@@ -40,8 +40,7 @@ See 173f (the owner's order, 2026-10-05).
     gives none).
   - Strafing plays the run with her body turned toward the strafe: 45
     degrees on a diagonal, 90 straight sideways, eased at 10 radians a
-    second. This is this client's reading of the original, still to be
-    compared.
+    second. The owner confirmed the original turns her (2026-10-06).
 - **`main.c`** bends her points each frame and copies them into her pieces.
 - **Picture option:** `--pose ID MS` holds her in an animation for
   pictures. Standing and mid-run pictures look right.
@@ -56,7 +55,6 @@ See 173f (the owner's order, 2026-10-05).
     the right rate.
 
 **Left:**
-- Comparing the strafe body-turn with the original.
 - The walk (only used when walking is toggled, which isn't built yet).
 
 ## Intended Behavior
@@ -80,6 +78,5 @@ speed the original client plays them for her movement speed (120%).
 
 ## Open Questions
 
-1. When the original strafes straight sideways, does her body turn a
-   full 90 degrees and run, or does she side-step facing forward? This
-   client turns her 90 degrees for now.
+None. (Answered 2026-10-06, owner: strafing straight sideways, "she
+turns": the body turns 90 degrees and runs, as built.)

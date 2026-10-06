@@ -56,6 +56,18 @@ face's name in the hair's row. Neither is in any archive. `character.c`
 now leaves such a layer unpainted and reports it. Open: whether the hair
 row is read right for races other than the night elf (the column layout
 was checked only on her), or whether the original also lacks these.
+The owner (2026-10-06): in the original "the tauren looks mostly fine but
+he's missing his tail". So the tail is a piece (geoset) `character.c`
+doesn't switch on, separate from the pictures. His pieces, listed
+(2026-10-06): 0-73, 102-109, 202-208, 302-309, 401-404, 505, 701, 702,
+802, 803, 903, 1002, 1102, 1104, 1202, 1301, 1302, 1501-1506, 1703, 1802.
+`character.c` shows the body (0), the hair style's piece and the fixed
+"bare" set 401, 501, 702, 1301 and 1501, which was checked only on the
+night elf. He has no 501 (his feet are 505), and his facial-hair groups 1
+to 3 start at variant 2. The fix belongs here: choose each group's piece
+by the game's own tables (CharacterFacialHairStyles for groups 1-3, the
+race's defaults for the rest) rather than by fixed numbers, then check the
+tail and hooves against the original.
 
 ## Intended Behavior
 
