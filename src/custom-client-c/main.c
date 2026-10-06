@@ -19,6 +19,7 @@
  *   --turn DEG        (pictures) the camera turned DEG degrees round her, held there
  *   --pitch DEG       (pictures) the camera raised DEG degrees (up to 83)
  *   --clock MS        (pictures) start the world's animations MS milliseconds in
+ *   --hour H          the time of day, 0 to 24 (default: this machine's clock)
  *   --pose ID MS      (pictures) hold her in animation ID (AnimationData.dbc:
  *                     0 stand, 5 run, 13 walk backwards, 38 jump ...) at MS
  */
@@ -28,12 +29,14 @@
 #include "doodads.h"
 #include "figure.h"
 #include "ground.h"
+#include "light.h"
 #include "maps.h"
 #include "mover.h"
 #include "moves.h"
 #include "mpq.h"
 #include "navmesh_slope.h"
 #include "settings.h"
+#include "sky.h"
 
 #include "raylib.h"
 #include "raymath.h"
@@ -43,6 +46,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /* {{{ settings */
 #define MAP_ID       1                                 /* Kalimdor */
@@ -55,7 +59,6 @@
 #define ELF_HEIGHT   2.3f                              /* yards: the camera looks at her shoulders */
 #define ZOOM_MIN     2.0f
 #define ZOOM_BASE    20.0f                             /* yards; times cameraDistanceMaxFactor (1 to 2) is the zoom-out limit (173b4) */
-static const float SKY[3] = { 0.52f, 0.66f, 0.78f };
 /* her look: ChrRaces id, sex, and the character-creation choices (from 0);
  * a stand-in for the ids the server will send (173d, 617r5) */
 static const CharacterLook LOOK = { 4, 1, 0, 0, 0, 0 };
@@ -79,14 +82,14 @@ static const char *GROUND_VS =
     "}\n";
 static const char *MODEL_FS =
     "#version 330\n"
-    "in vec3 n; in vec4 col; in vec2 uv; in float dist; out vec4 frag; uniform vec3 sky; uniform sampler2D texture0;\n"
+    "in vec3 n; in vec4 col; in vec2 uv; in float dist; out vec4 frag; uniform sampler2D texture0;\n"
+    "uniform vec3 sun_dir, sun_col, shade_col, fog_col; uniform vec2 fog_range;\n"
     "void main() {\n"
     "  vec4 t = texture(texture0, uv);\n"
     "  if (t.a < 0.5) discard;\n"
-    "  vec3 sun = normalize(vec3(0.45, 0.30, 0.84));\n"
-    "  float light = max(dot(normalize(n), sun), 0.0) * 0.6 + 0.45;\n"
-    "  float fog = clamp((dist - 120.0) / 520.0, 0.0, 1.0);\n"
-    "  frag = vec4(mix(t.rgb * light, sky, fog), 1.0);\n"
+    "  vec3 light = shade_col + sun_col * max(dot(normalize(n), sun_dir), 0.0);\n"
+    "  float fog = clamp((dist - fog_range.x) / max(fog_range.y - fog_range.x, 1.0), 0.0, 1.0);\n"
+    "  frag = vec4(mix(t.rgb * light, fog_col, fog), 1.0);\n"
     "}\n";
 /* }}} */
 
@@ -157,6 +160,12 @@ int main(int argc, char **argv)
     const char *maps = NULL, *client = NULL, *shot = NULL, *settings_file = NULL;
     int pose_id = -1;                                    /* --pose: hold her in this animation */
     double start_ms = 0;                                 /* --clock: the world's animations start this far in */
+    /* the time of day: the original follows the realm's clock, which is
+     * real time; until the client talks to a server, this machine's own
+     * (--hour H for pictures) */
+    time_t now = time(NULL);
+    struct tm *lt = localtime(&now);
+    float hours = (float)lt->tm_hour + (float)lt->tm_min / 60.0f;
     float pose_ms = 0;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--maps") && i + 1 < argc) maps = argv[++i];
@@ -169,8 +178,9 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--pitch") && i + 1 < argc) view.pitch = (float)(atof(argv[++i]) * DEG2RAD);
         else if (!strcmp(argv[i], "--pose") && i + 2 < argc) { pose_id = atoi(argv[++i]); pose_ms = (float)atof(argv[++i]); }
         else if (!strcmp(argv[i], "--clock") && i + 1 < argc) start_ms = atof(argv[++i]);
+        else if (!strcmp(argv[i], "--hour") && i + 1 < argc) hours = (float)atof(argv[++i]);
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H]\n"); return 2; }
 
     /* the settings: defaults, then the player's file; a line it refuses is
      * named on the terminal and skipped (173b1) */
@@ -227,8 +237,14 @@ int main(int argc, char **argv)
     }
     if (ground_init(&chain, MAP_NAME, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     if (doodads_init(&chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
-    int eye_m = GetShaderLocation(model_sh, "eye"),  sky_m = GetShaderLocation(model_sh, "sky");
-    SetShaderValue(model_sh, sky_m, SKY, SHADER_UNIFORM_VEC3);
+    LightTables lights;
+    if (light_open(&lights, &chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    sky_init();
+    LightNow light;
+    int light_id = light_at(&lights, MAP_ID, (float)elf.x, (float)elf.y, (float)elf.z, hours, &light);
+    if (light_id < 0) printf("light: map %d has no lights in Light.dbc; a plain grey day is used\n", MAP_ID);
+    else printf("light: %02d:%02d, light %d, fog from %.0f to %.0f yards\n", (int)hours, (int)(fmodf(hours, 1.0f) * 60), light_id, light.fog_start, light.fog_end);
+    int eye_m = GetShaderLocation(model_sh, "eye");
     refresh_tiles();
     int dm, dc, ds, dmov;
     doodads_counts(&dm, &dc, &ds, &dmov);
@@ -323,7 +339,12 @@ int main(int argc, char **argv)
         /* }}} */
 
         BeginDrawing();
-        ClearBackground((Color){ (unsigned char)(SKY[0] * 255), (unsigned char)(SKY[1] * 255), (unsigned char)(SKY[2] * 255), 255 });
+        /* the light here, now: time runs on in real time */
+        hours = fmodf(hours + dt / 3600.0f, 24.0f);
+        int lit = light_at(&lights, MAP_ID, (float)elf.x, (float)elf.y, (float)elf.z, hours, &light);
+        if (lit != light_id) { light_id = lit; printf("light: now light %d\n", lit); }
+        sky_light_shader(model_sh, &light);
+        ClearBackground((Color){ (unsigned char)(fminf(light.fog[0], 1) * 255), (unsigned char)(fminf(light.fog[1], 1) * 255), (unsigned char)(fminf(light.fog[2], 1) * 255), 255 });
         BeginMode3D(cam);
         /* the Lua client's projection: 60 degrees, near 0.3, far 1600 yards
          * (Raylib's own far plane is 1000; this Raylib has no setter, so the
@@ -333,11 +354,12 @@ int main(int argc, char **argv)
         rlMultMatrixf(MatrixToFloat(MatrixPerspective(60 * DEG2RAD, (double)GetScreenWidth() / GetScreenHeight(), 0.3, 1600)));
         rlMatrixMode(RL_MODELVIEW);
         rlDisableBackfaceCulling();
+        sky_draw(eye, &light);                           /* first, behind everything */
         ground_blob(at.x, at.y, (float)elf.z, 1.3f);     /* her shadow, a little wider than her shoulders */
         for (int i = 0; i < nothers; ++i)                /* theirs, sized by their display's scale */
             ground_blob((float)(other_at[i].x - ox), (float)(other_at[i].y - oy), (float)other_at[i].z, 1.3f * others[i].scale);
-        ground_draw(eye, SKY);
-        doodads_draw(eye, SKY);
+        ground_draw(eye, &light);
+        doodads_draw(eye, &light);
         Matrix place = MatrixMultiply(MatrixRotateZ((float)elf.o + moves.body_turn), MatrixTranslate(at.x, at.y, (float)elf.z));
         figure_draw(&her, model_sh, place);
         for (int i = 0; i < nothers; ++i)
@@ -356,6 +378,7 @@ int main(int argc, char **argv)
         }
     }
     CloseWindow();
+    light_close(&lights);
     figure_free(&her);
     for (int i = 0; i < nothers; ++i) figure_free(&others[i]);
     mpq_chain_close(&chain);

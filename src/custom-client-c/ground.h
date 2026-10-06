@@ -8,7 +8,7 @@
  * chunk's blend maps into one small picture: red, green and blue say how
  * strongly layers 1, 2 and 3 show, alpha holds the baked shadow (for
  * 173h). A shader then blends the pictures point by point, lights them by
- * the sun and fades them into the sky, as the first-light ground was.
+ * the zone's sun and shade, and fades them into its fog (173n).
  *
  * Drawing needs Raylib and a window; reading (adt.c) doesn't, and is what
  * the tests check.
@@ -17,6 +17,7 @@
 #define EG_GROUND_H
 
 #include "adt.h"
+#include "light.h"
 #include "maps.h"
 #include "mpq.h"
 #include "raylib.h"
@@ -41,6 +42,6 @@ int  ground_load_tile(int tx, int ty, double ox, double oy, MapWorld *world, Adt
 void ground_blob(float x, float y, float z, float radius);
 
 /* Draws every loaded tile. `eye` is the camera's position (for the fog). */
-void ground_draw(Vector3 eye, const float sky[3]);
+void ground_draw(Vector3 eye, const LightNow *light);
 
 #endif

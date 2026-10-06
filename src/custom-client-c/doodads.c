@@ -11,6 +11,7 @@
 #include "anim.h"
 #include "blp.h"
 #include "m2.h"
+#include "sky.h"
 #include "wmo.h"
 
 #include "raymath.h"
@@ -24,7 +25,7 @@
 /* {{{ the shader
  * One copy's place arrives per instance (instanceTransform); `cutoff`
  * cuts out pixels whose alpha is under it (leaves), -1 for none. Lit by
- * the same sun as the ground and her, unless the piece is marked unlit.
+ * the zone's sun and shade (173n), unless the piece is marked unlit.
  * A building's indoor parts are lit by the light baked into their points
  * instead (`indoor`; MOCV colours, plus a little ambient light: this
  * client's first reading of it, to be compared with the original's). */
@@ -42,15 +43,14 @@ static const char *VS =
 static const char *FS =
     "#version 330\n"
     "in vec3 n; in vec2 uv; in vec4 col; in float dist; out vec4 frag;\n"
-    "uniform sampler2D texture0; uniform vec3 sky; uniform float cutoff; uniform float unlit; uniform float indoor;\n"
+    "uniform sampler2D texture0; uniform float cutoff; uniform float unlit; uniform float indoor; uniform vec3 sun_dir, sun_col, shade_col, fog_col; uniform vec2 fog_range;\n"
     "void main() {\n"
     "  vec4 t = texture(texture0, uv);\n"
     "  if (t.a < cutoff) discard;\n"
-    "  vec3 sun = normalize(vec3(0.45, 0.30, 0.84));\n"
-    "  vec3 light = vec3(mix(max(dot(normalize(n), sun), 0.0) * 0.6 + 0.45, 1.0, unlit));\n"
+    "  vec3 light = mix(shade_col + sun_col * max(dot(normalize(n), sun_dir), 0.0), vec3(1.0), unlit);\n"
     "  light = mix(light, col.rgb + 0.35, indoor);\n"
-    "  float fog = clamp((dist - 120.0) / 520.0, 0.0, 1.0);\n"
-    "  frag = vec4(mix(t.rgb * light, sky, fog), t.a);\n"
+    "  float fog = clamp((dist - fog_range.x) / max(fog_range.y - fog_range.x, 1.0), 0.0, 1.0);\n"
+    "  frag = vec4(mix(t.rgb * light, fog_col, fog), t.a);\n"
     "}\n";
 /* }}} */
 
@@ -89,7 +89,7 @@ static uint32_t *seen_b;    static int nseen_b, seen_b_cap;
 static int       skipped_pieces, moving_models;
 static Shader    shader;
 static Material  material;
-static int       loc_eye, loc_sky, loc_cutoff, loc_unlit, loc_indoor;
+static int       loc_eye, loc_cutoff, loc_unlit, loc_indoor;
 /* }}} */
 
 /* {{{ doodads_init */
@@ -100,7 +100,6 @@ int doodads_init(MpqChain *c, char *why, int why_len)
     if (!IsShaderReady(shader)) { snprintf(why, why_len, "the doodad shader didn't compile (see Raylib's messages above)"); return 1; }
     shader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(shader, "instanceTransform");
     loc_eye = GetShaderLocation(shader, "eye");
-    loc_sky = GetShaderLocation(shader, "sky");
     loc_cutoff = GetShaderLocation(shader, "cutoff");
     loc_unlit = GetShaderLocation(shader, "unlit");
     loc_indoor = GetShaderLocation(shader, "indoor");
@@ -398,10 +397,10 @@ static void draw_pass(int see_through)
         }
     }
 }
-void doodads_draw(Vector3 eye, const float sky[3])
+void doodads_draw(Vector3 eye, const LightNow *light)
 {
     SetShaderValue(shader, loc_eye, &eye, SHADER_UNIFORM_VEC3);
-    SetShaderValue(shader, loc_sky, sky, SHADER_UNIFORM_VEC3);
+    sky_light_shader(shader, light);
     draw_pass(0);
     rlDrawRenderBatchActive();
     rlDisableDepthMask();

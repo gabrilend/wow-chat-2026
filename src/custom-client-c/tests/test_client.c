@@ -21,6 +21,7 @@
 #include "../camera.h"
 #include "../character.h"
 #include "../dbc.h"
+#include "../light.h"
 #include "../m2.h"
 #include "../maps.h"
 #include "../mover.h"
@@ -537,6 +538,32 @@ ground_done:
         mpq_chain_close(&ac);
     }
 anim_done:
+    /* }}} */
+
+    /* {{{ the zone's light (173n) */
+    printf("the zone's light\n");
+    {
+        MpqChain lc;
+        LightTables lt;
+        if (mpq_chain_open(&lc, client, "enUS", why, sizeof why) || light_open(&lt, &lc, why, sizeof why)) { check(0, why); goto light_done; }
+        LightNow noon, night, far;
+        int id = light_at(&lt, 1, 2717, -400, 110, 12, &noon);
+        light_at(&lt, 1, 2717, -400, 110, 0.5f, &night);
+        snprintf(line, sizeof line, "at Astranaar the light is Ashenvale's own (light %d), not Kalimdor's default (191)", id);
+        check(id == 192, line);
+        float sn = noon.sun[0] + noon.sun[1] + noon.sun[2], sm = night.sun[0] + night.sun[1] + night.sun[2];
+        snprintf(line, sizeof line, "noon's sun is brighter than half past midnight's (%.2f against %.2f, red + green + blue)", sn, sm);
+        check(sn > sm, line);
+        snprintf(line, sizeof line, "the fog ends %.0f yards off at noon, and starts nearer than it ends (%.0f)", noon.fog_end, noon.fog_start);
+        check(noon.fog_end > 100 && noon.fog_end < 1600 && noon.fog_start < noon.fog_end, line);
+        int far_id = light_at(&lt, 1, -600, -4200, 40, 12, &far);       /* Durotar, across the continent */
+        snprintf(line, sizeof line, "across the continent, in Durotar, another light (%d)", far_id);
+        check(far_id >= 0 && far_id != 192, line);
+        check(noon.sun_dir[2] > 0.9f && night.sun_dir[2] < noon.sun_dir[2], "the sun is high at noon and low in the night");
+        light_close(&lt);
+        mpq_chain_close(&lc);
+    }
+light_done:
     /* }}} */
 
     /* {{{ the camera (173m) */

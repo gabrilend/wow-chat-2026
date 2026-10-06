@@ -7,6 +7,7 @@
 #include "ground.h"
 #include "adt.h"
 #include "blp.h"
+#include "sky.h"
 
 #include "raymath.h"
 #include "rlgl.h"
@@ -40,7 +41,7 @@ static const char *VS =
 static const char *FS =
     "#version 330\n"
     "in vec3 n; in vec2 uv; in vec2 uv2; in vec3 tint; in float dist; in vec3 pos; out vec4 frag;\n"
-    "uniform sampler2D layer0, layer1, layer2, layer3, blend; uniform vec3 sky;\n"
+    "uniform sampler2D layer0, layer1, layer2, layer3, blend; uniform vec3 sun_dir, sun_col, shade_col, fog_col; uniform vec2 fog_range;\n"
     "uniform vec4 blobs[8]; uniform int nblobs;\n"
     "void main() {\n"
     "  vec4 a = texture(blend, uv2);\n"
@@ -54,10 +55,9 @@ static const char *FS =
     "    float above = clamp(1.0 - abs(pos.z - blobs[i].z) / 3.0, 0.0, 1.0);\n"
     "    c *= 1.0 - 0.6 * (1.0 - smoothstep(0.3, 1.0, d)) * above;\n"
     "  }\n"
-    "  vec3 sun = normalize(vec3(0.45, 0.30, 0.84));\n"
-    "  float light = max(dot(normalize(n), sun), 0.0) * 0.75 + 0.30;\n"
-    "  float fog = clamp((dist - 120.0) / 520.0, 0.0, 1.0);\n"
-    "  frag = vec4(mix(c * light, sky, fog), 1.0);\n"
+    "  vec3 light = shade_col + sun_col * max(dot(normalize(n), sun_dir), 0.0);\n"
+    "  float fog = clamp((dist - fog_range.x) / max(fog_range.y - fog_range.x, 1.0), 0.0, 1.0);\n"
+    "  frag = vec4(mix(c * light, fog_col, fog), 1.0);\n"
     "}\n";
 /* }}} */
 
@@ -82,7 +82,7 @@ static char      map_name[64];
 static int       big_alpha;
 static Shader    shader;
 static Material  material;
-static int       loc_eye, loc_sky, loc_blobs, loc_nblobs;
+static int       loc_eye, loc_blobs, loc_nblobs;
 static float     blobs[8][4];
 static int       nblobs;
 /* }}} */
@@ -112,7 +112,6 @@ int ground_init(MpqChain *c, const char *name, char *why, int why_len)
     shader.locs[SHADER_LOC_MAP_ROUGHNESS] = GetShaderLocation(shader, "layer3");
     shader.locs[SHADER_LOC_MAP_OCCLUSION] = GetShaderLocation(shader, "blend");
     loc_eye = GetShaderLocation(shader, "eye");
-    loc_sky = GetShaderLocation(shader, "sky");
     loc_blobs = GetShaderLocation(shader, "blobs");
     loc_nblobs = GetShaderLocation(shader, "nblobs");
     material = LoadMaterialDefault();
@@ -268,10 +267,10 @@ void ground_blob(float x, float y, float z, float radius)
     blobs[nblobs][0] = x; blobs[nblobs][1] = y; blobs[nblobs][2] = z; blobs[nblobs][3] = radius;
     ++nblobs;
 }
-void ground_draw(Vector3 eye, const float sky[3])
+void ground_draw(Vector3 eye, const LightNow *light)
 {
     SetShaderValue(shader, loc_eye, &eye, SHADER_UNIFORM_VEC3);
-    SetShaderValue(shader, loc_sky, sky, SHADER_UNIFORM_VEC3);
+    sky_light_shader(shader, light);
     SetShaderValueV(shader, loc_blobs, blobs, SHADER_UNIFORM_VEC4, 8);
     SetShaderValue(shader, loc_nblobs, &nblobs, SHADER_UNIFORM_INT);
     nblobs = 0;                                         /* blobs are given afresh each frame */

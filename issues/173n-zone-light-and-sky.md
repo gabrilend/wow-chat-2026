@@ -15,9 +15,44 @@ Verbatim, 2026-10-06: "can we work on doodad animations / lighting next?"
 
 ## Current Behavior
 
-Not built. Everything is lit by one fixed sun direction with fixed
-strengths (ground: 0.30 + 0.75 x facing; models: 0.45 + 0.6 x facing),
-fogged into one fixed sky colour from 120 to 640 yards.
+**Built 2026-10-06**, in C:
+- **`light.h` / `light.c` read the light tables** (Light,
+  LightIntBand, LightFloatBand; the parameter set's id is used directly,
+  so LightParams itself isn't needed yet).
+- **`light_at` answers "the light here, now".** Lights are blended by
+  place: the map's default first, then every sphere that reaches, the
+  larger first, each blended from its outer to its inner radius.
+  Colours and fog are blended by time of day (half-minutes, wrapping
+  round midnight).
+- **The sun's direction** comes from the hour: it rises in the east at 6,
+  stands high in the south at noon, and sets in the west at 18, staying
+  a little above the horizon at night, as moonlight. This is this
+  client's reading; the original's own path is not read.
+- **Every world shader** (ground, doodads and buildings' outdoor parts,
+  figures) lights by shade + sun x facing, and fogs into the zone's fog
+  colour between its fog distances. `sky_light_shader` hands each one
+  the light.
+- **`sky.h` / `sky.c`** draw a dome of five rings, coloured by the five
+  sky bands, behind everything. The window clears to the fog colour.
+- **The time of day** is this machine's clock (the realm's clock is real
+  time too), running on as the game runs. `--hour H` sets it for
+  pictures.
+- **At Astranaar** the light is Ashenvale's own (light 192): fog from 36
+  to 361 yards at noon. Pictures at noon, 19:00 and 01:00 show
+  Ashenvale's blue-green light.
+- **Tests:** 5 checks.
+  - At Astranaar the light is Ashenvale's own, not Kalimdor's default.
+  - Noon's sun is brighter than half past midnight's.
+  - The fog ends between 100 and 1600 yards.
+  - Durotar, across the continent, gets another light.
+  - The sun is high at noon and low at night.
+
+**Left:**
+- Weather lights (storms), underwater light, and the ghost world's
+  light after death.
+- Clouds, the sun and moon drawn in the sky, stars.
+- Comparing against the original side by side.
+- Indoor parts of buildings still use their baked colours (173g).
 
 ## Intended Behavior
 
