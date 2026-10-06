@@ -21,7 +21,7 @@
  *   LightIntBand: 1 id (= set * 18 - 17 + band), 2 count, 3-18 times
  *     (half-minutes since midnight, 0-2880), 19-34 colours (0xRRGGBB).
  *     Bands used: 0 sun, 1 shade (ambient), 2-6 sky overhead to horizon,
- *     7 fog.
+ *     7 fog, 14-15 ocean near and deep, 16-17 river near and deep (173r).
  *   LightFloatBand: 1 id (= set * 6 - 5 + band), 2 count, 3-18 times,
  *     19-34 values. Band 0: where the fog ends (times 36), band 1: where it
  *     starts, as a share of that.
@@ -34,6 +34,7 @@
  *   sun[3], shade[3]     the sun's light and the light in shadow
  *   sky[5][3]            the sky's colours, overhead first, horizon last
  *   fog[3]               the fog's colour
+ *   water[4][3]          ocean near, ocean deep, river near, river deep
  *   fog_start, fog_end   float, yards
  *   sun_dir[3]           a unit vector toward the sun (world axes)
  */
@@ -47,6 +48,7 @@ typedef struct {
     float sun[3], shade[3];
     float sky[5][3];
     float fog[3];
+    float water[4][3];
     float fog_start, fog_end;
     float sun_dir[3];
 } LightNow;

@@ -182,6 +182,47 @@ int adt_read(const unsigned char *s, size_t len, int big_alpha, AdtTile *out, ch
                 name += strlen(name) + 1;
             }
             out->ntextures = n;
+        } else if (is_tag(s, at, "MH2O")) {
+            /* water: per chunk, its layers (173r) */
+            const unsigned char *w = s + at + 8;
+            if (size < 256 * 12) { snprintf(why, why_len, "MH2O is %zu bytes, shorter than its 256 heads", size); adt_free(out); return 1; }
+            for (int k = 0; k < 256; ++k) {
+                uint32_t oi = u32(w, (size_t)k * 12), layers = u32(w, (size_t)k * 12 + 4);
+                for (uint32_t l = 0; l < layers; ++l) {
+                    size_t e = oi + (size_t)l * 24;
+                    if (e + 24 > size) { snprintf(why, why_len, "chunk %d's water layer %u runs past MH2O", k, l); adt_free(out); return 1; }
+                    AdtLiquid q;
+                    memset(&q, 0, sizeof q);
+                    q.chunk = k;
+                    q.kind = w[e] | w[e + 1] << 8;
+                    int fmt = w[e + 2] | w[e + 3] << 8;
+                    float lo = f32(w, e + 4);
+                    q.col = w[e + 12]; q.row = w[e + 13]; q.w = w[e + 14]; q.h = w[e + 15];
+                    if (q.col + q.w > 8 || q.row + q.h > 8) { snprintf(why, why_len, "chunk %d's water covers cells past the chunk", k); adt_free(out); return 1; }
+                    uint32_t ob = u32(w, e + 16), ov = u32(w, e + 20);
+                    for (int r = 0; r < q.h; ++r)
+                        for (int c = 0; c < q.w; ++c) {
+                            int bit = r * q.w + c;
+                            q.wet[q.row + r][q.col + c] = ob == 0 ? 1 : (ob + (size_t)bit / 8 < size ? (w[ob + bit / 8] >> (bit % 8)) & 1 : 0);
+                        }
+                    for (int r = 0; r <= 8; ++r) for (int c = 0; c <= 8; ++c) q.height[r][c] = lo;
+                    /* heights where the format has them (0, 1, 3); else flat.
+                     * A height outside the layer's own stated range is not
+                     * a surface: some layers hold 0 at points round their
+                     * wet cells (Kalimdor_32_26 chunk 152: stated
+                     * 102.76-102.76, points of 0), which drew the water as a
+                     * slanted wall; such a point takes the lowest height. */
+                    float hi = f32(w, e + 8);
+                    if (ov && fmt != 2 && ov + (size_t)(q.w + 1) * (q.h + 1) * 4 <= size)
+                        for (int r = 0; r <= q.h; ++r)
+                            for (int c = 0; c <= q.w; ++c) {
+                                float h = f32(w, ov + ((size_t)r * (q.w + 1) + c) * 4);
+                                q.height[q.row + r][q.col + c] = (h >= lo - 0.01f && h <= hi + 0.01f) ? h : lo;
+                            }
+                    out->liquids = realloc(out->liquids, sizeof *out->liquids * (out->nliquids + 1));
+                    out->liquids[out->nliquids++] = q;
+                }
+            }
         } else if (is_tag(s, at, "MMDX")) { mmdx = s + at + 8; mmdx_len = size;
         } else if (is_tag(s, at, "MWMO")) { mwmo = s + at + 8; mwmo_len = size;
         } else if (is_tag(s, at, "MMID") || is_tag(s, at, "MWID")) {
@@ -309,7 +350,8 @@ void adt_inside_matrix(const float b[16], const float pos[3], const float q[4], 
 
 void adt_free(AdtTile *t)
 {
-    free(t->textures); free(t->models); free(t->doodads); free(t->buildings); free(t->places);
+    free(t->textures); free(t->models); free(t->doodads); free(t->buildings); free(t->places); free(t->liquids);
+    t->liquids = NULL; t->nliquids = 0;
     t->textures = NULL; t->models = NULL; t->doodads = NULL; t->buildings = NULL; t->places = NULL;
     t->ntextures = t->nmodels = t->ndoodads = t->nbuildings = t->nplaces = 0;
 }

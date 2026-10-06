@@ -20,6 +20,8 @@
  *                   int, 0 or 1: what she is being asked to do
  *   grounded        int, 0 or 1: standing on ground after the move
  *   rising          int, 0 or 1: going up (a jump) rather than down
+ *   swimming        int, 0 or 1: swimming (173r): swim, swim backwards,
+ *                   swim left and right (no body turn), or treading water
  *   speed           float, yards a second along the ground this frame
  *   dt              float, seconds
  * A MovesState:
@@ -42,11 +44,13 @@
 enum {
     MOVE_STAND = 0, MOVE_WALK = 4, MOVE_RUN = 5, MOVE_SHUFFLE_LEFT = 11, MOVE_SHUFFLE_RIGHT = 12,
     MOVE_WALK_BACK = 13, MOVE_JUMP_START = 37, MOVE_JUMP = 38, MOVE_JUMP_END = 39, MOVE_FALL = 40,
+    MOVE_SWIM_IDLE = 41, MOVE_SWIM = 42, MOVE_SWIM_LEFT = 43, MOVE_SWIM_RIGHT = 44, MOVE_SWIM_BACK = 45,
 };
 
 typedef struct {
     int   forward, back, strafe_left, strafe_right, turn_left, turn_right;
     int   grounded, rising;
+    int   swimming;                   /* in deep water (173r): the swim animations instead */
     float speed;
     float dt;
 } MovesInput;

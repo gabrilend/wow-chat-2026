@@ -33,6 +33,7 @@
 #include "figure.h"
 #include "ground.h"
 #include "light.h"
+#include "liquid.h"
 #include "maps.h"
 #include "mover.h"
 #include "moves.h"
@@ -40,6 +41,7 @@
 #include "navmesh_slope.h"
 #include "settings.h"
 #include "sky.h"
+#include "water.h"
 
 #include "raylib.h"
 #include "raymath.h"
@@ -156,6 +158,13 @@ static float ground_at(void *ctx, float x, float y, float z_top, float *gx, floa
     *gx = tx; *gy = ty;
     return t;
 }
+static LiquidWorld *waters;          /* every loaded tile's water (173r) */
+static float water_at(void *ctx, double x, double y)
+{
+    (void)ctx;
+    int kind;
+    return liquid_surface(waters, x, y, &kind);
+}
 static int wall_at(void *ctx, double x0, double y0, double x1, double y1, double z, float *nx, float *ny)
 {
     (void)ctx;
@@ -176,6 +185,8 @@ static void refresh_tiles(void)
             int got = ground_load_tile(x, y, ox, oy, &world, &adt, why, sizeof why);
             if (got < 0) { fprintf(stderr, "painting tile (%d, %d): %s\n", x, y, why); exit(1); }
             if (got == 0) {
+                liquid_add_tile(waters, x, y, adt);
+                water_add_tile(adt, ox, oy);
                 if (doodads_add_tile(adt, ox, oy, why, sizeof why)) { fprintf(stderr, "doodads on tile (%d, %d): %s\n", x, y, why); exit(1); }
                 adt_free(adt);
                 free(adt);
@@ -273,7 +284,9 @@ int main(int argc, char **argv)
     }
     if (ground_init(&chain, MAP_NAME, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     solids = collide_new(ox, oy);
+    waters = liquid_new();
     if (doodads_init(&chain, solids, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    if (water_init(&chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     LightTables lights;
     if (light_open(&lights, &chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     sky_init();
@@ -318,9 +331,12 @@ int main(int argc, char **argv)
             .strafe_right = IsKeyDown(KEY_E),
             .strafe_turns = drag_r,
             .jump = IsKeyDown(KEY_SPACE),
+            .swim_down = IsKeyDown(KEY_X),               /* swimming down; up is the jump key (173r) */
+            .pitch = -view.pitch,                        /* where the camera looks, up positive */
         };
         double before_o = elf.o, before_x = elf.x, before_y = elf.y;
-        mover_step(&elf, &in, dt, ground_at, wall_at, &world);
+        MoverWorld mw = { ground_at, wall_at, water_at, &world };
+        mover_step(&elf, &in, dt, &mw);
         /* moving = she moved along the ground this frame, by any cause
          * (keys, both buttons, sliding); turning in place isn't moving */
         int moving = hypot(elf.x - before_x, elf.y - before_y) > 1e-4;
@@ -333,7 +349,7 @@ int main(int argc, char **argv)
             .forward = in.forward, .back = in.back,
             .strafe_left = in.strafe_left || (drag_r && in.left), .strafe_right = in.strafe_right || (drag_r && in.right),
             .turn_left = turning && in.left, .turn_right = turning && in.right,
-            .grounded = elf.grounded, .rising = elf.vz > 0,
+            .grounded = elf.grounded || elf.swimming, .rising = elf.vz > 0, .swimming = elf.swimming,
             .speed = dt > 0 ? (float)(hypot(elf.x - before_x, elf.y - before_y) / dt) : 0, .dt = dt,
         };
         moves_step(&moves, &her.anim, &mi);
@@ -397,6 +413,7 @@ int main(int argc, char **argv)
             ground_blob((float)(other_at[i].x - ox), (float)(other_at[i].y - oy), (float)other_at[i].z, 1.3f * others[i].scale);
         ground_draw(eye, &light);
         doodads_draw(eye, &light);
+        water_draw(eye, &light, clock_ms / 1000.0);       /* see-through, after the solid world */
         Matrix place = MatrixMultiply(MatrixRotateZ((float)elf.o + moves.body_turn), MatrixTranslate(at.x, at.y, (float)elf.z));
         figure_draw(&her, model_sh, place);
         for (int i = 0; i < nothers; ++i)
@@ -411,13 +428,14 @@ int main(int argc, char **argv)
             int ok = ExportImage(im, shot);
             UnloadImage(im);
             printf(ok ? "picture saved: %s\n" : "could not save the picture to %s\n", shot);
-            printf("she ended at x %.2f y %.2f z %.2f, %s\n", elf.x, elf.y, elf.z, elf.grounded ? "on the ground" : "in the air");
+            printf("she ended at x %.2f y %.2f z %.2f, %s\n", elf.x, elf.y, elf.z, elf.swimming ? "swimming" : elf.grounded ? "on the ground" : "in the air");
             break;
         }
     }
     CloseWindow();
     light_close(&lights);
     collide_free(solids);
+    liquid_free(waters);
     figure_free(&her);
     for (int i = 0; i < nothers; ++i) figure_free(&others[i]);
     mpq_chain_close(&chain);

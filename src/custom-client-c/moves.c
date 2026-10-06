@@ -59,6 +59,22 @@ void moves_step(MovesState *s, const Anim *a, const MovesInput *in)
     int moving = in->forward || in->back || in->strafe_left || in->strafe_right;
     int side = (in->strafe_left ? 1 : 0) - (in->strafe_right ? 1 : 0);   /* +1 left, -1 right */
 
+    /* swimming (173r): its own animations, chosen first; the body faces
+     * ahead (swimming has sideways strokes of its own) */
+    if (in->swimming) {
+        s->airborne = 0;
+        s->body_turn += fmaxf(-10.0f * in->dt, fminf(10.0f * in->dt, -s->body_turn));
+        int id = in->forward ? MOVE_SWIM : in->back ? MOVE_SWIM_BACK : side > 0 ? MOVE_SWIM_LEFT : side < 0 ? MOVE_SWIM_RIGHT : MOVE_SWIM_IDLE;
+        start(s, a, id, 0, 0);
+        float rate = (moving && s->seq >= 0 && a->seqs[s->seq].move_speed > 0) ? in->speed / a->seqs[s->seq].move_speed : 1.0f;
+        s->ms += dt_ms * rate;
+        if (s->seq >= 0 && a->seqs[s->seq].length) s->ms = fmodf(s->ms, (float)a->seqs[s->seq].length);
+        if (s->from >= 0) s->from_ms += dt_ms;
+        if (s->blend_left > 0) s->blend_left -= dt_ms;
+        if (s->blend_left <= 0) { s->blend_left = 0; s->from = -1; }
+        return;
+    }
+
     /* the body turns toward a strafe (backwards strafes turn the other way) */
     float target = 0;
     if (side) target = (float)side * (in->forward || in->back ? 0.785398f : 1.570796f) * (in->back ? -1.0f : 1.0f);

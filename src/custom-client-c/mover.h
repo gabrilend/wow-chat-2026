@@ -19,6 +19,14 @@
 #define MOVER_GRAVITY  19.29110527    /* yards a second squared */
 #define MOVER_JUMP     7.95554        /* yards a second upward at take-off */
 #define MOVER_TERMINAL 60.148003      /* the fastest fall, yards a second */
+#define MOVER_SWIM     4.722222       /* yards a second swimming forward (173r) */
+#define MOVER_SWIM_BACK 2.5           /* yards a second swimming backward */
+/* how deep her feet are below the surface when she swims at it, and so
+ * how deep water must be over her feet before she swims rather than
+ * wades (173r; the original's own number is per model and not yet read:
+ * this is about her shoulders' height below her head) */
+#define MOVER_SWIM_DEPTH 1.6
+#define MOVER_FLOAT    2.0            /* yards a second a still swimmer rises to the surface (this client's) */
 
 typedef struct {
     double x, y, z, o;                /* position (yards), facing (radians); doubles, as the Lua twin */
@@ -26,12 +34,16 @@ typedef struct {
     double vz;                        /* upward speed, yards a second */
     double vx, vy;                    /* sliding speed, yards a second */
     int   grounded, sliding;
+    int   swimming;                   /* in water deeper than MOVER_SWIM_DEPTH (173r) */
     double max_grad;                  /* rise per yard at the slope limit */
 } Mover;
 
 typedef struct {
     int forward, back, left, right, strafe_left, strafe_right, jump;
     int strafe_turns;                 /* the right mouse button: A and D strafe */
+    int swim_down;                    /* swimming: down (X); up is `jump` */
+    double pitch;                     /* swimming with the right button held: forward follows
+                                       * this pitch (radians, up positive), as the camera looks */
 } MoverInput;
 
 /* The ground at (x, y): the highest surface at or below `z_top` (the
@@ -49,8 +61,20 @@ typedef int (*MoverWall)(void *ctx, double x0, double y0, double x1, double y1, 
  * number is not yet measured) */
 #define MOVER_STEP_UP  1.0
 
+/* Water (173r): the water's surface at (x, y), below -10000 for none. */
+typedef float (*MoverWater)(void *ctx, double x, double y);
+
+/* What the mover may ask of the world; any question may be NULL (no
+ * walls, no water), except the ground. */
+typedef struct {
+    MoverGround ground;
+    MoverWall   wall;
+    MoverWater  water;
+    void       *ctx;
+} MoverWorld;
+
 /* max_slope: degrees, the steepest walkable ground (navmesh_slope_read). */
 void mover_init(Mover *m, double x, double y, double z, double o, double speed, double max_slope);
-void mover_step(Mover *m, const MoverInput *in, double dt, MoverGround ground, MoverWall wall, void *ctx);
+void mover_step(Mover *m, const MoverInput *in, double dt, const MoverWorld *world);
 
 #endif

@@ -35,9 +35,28 @@ static int gradient(MoverGround ground, void *ctx, double x, double y, double z_
 /* }}} */
 
 /* {{{ mover_step */
-void mover_step(Mover *m, const MoverInput *in, double dt, MoverGround ground, MoverWall wall, void *ctx)
+static void swim_step(Mover *m, const MoverInput *in, double dt, const MoverWorld *w, double surface);
+void mover_step(Mover *m, const MoverInput *in, double dt, const MoverWorld *world)
 {
+    MoverGround ground = world->ground;
+    MoverWall wall = world->wall;
+    void *ctx = world->ctx;
     double k = m->speed;
+
+    /* in deep water she swims (173r): the swim step replaces the rest */
+    if (world->water) {
+        double surface = world->water(ctx, m->x, m->y);
+        if (surface > -10000 && m->z < surface - MOVER_SWIM_DEPTH + 0.01) {
+            float hx, hy;
+            double floor_z = ground(ctx, (float)m->x, (float)m->y, (float)(m->z + MOVER_STEP_UP), &hx, &hy);
+            if (floor_z < surface - MOVER_SWIM_DEPTH) {   /* deep enough here to swim */
+                if (!m->swimming) { m->swimming = 1; m->grounded = 0; m->vz = 0; m->vx = m->vy = 0; m->sliding = 0; }
+                swim_step(m, in, dt, world, surface);
+                return;
+            }
+        }
+    }
+    if (m->swimming) { m->swimming = 0; m->grounded = 1; }   /* she walked out: the ground below takes her */
     /* the floor she may stand on: on the ground, anything up to a step
      * above her feet (she walks up it); in the air, only what is below
      * her (she lands on it, never snaps up through a bridge) */
@@ -125,5 +144,55 @@ void mover_step(Mover *m, const MoverInput *in, double dt, MoverGround ground, M
         m->z += m->vz * dt;
         if (floor_z > -10000 && m->z <= floor_z) { m->z = floor_z; m->vz = 0; m->grounded = 1; }   /* landed */
     }
+}
+/* }}} */
+
+/* {{{ static swim_step
+ * Swimming (173r): turning as on land; forward, backward and strafing at
+ * the swim speeds; forward follows the camera's pitch while the right
+ * button is held; up with jump, down with X; no gravity. She can't rise
+ * above floating at the surface (feet MOVER_SWIM_DEPTH under), nor sink
+ * through the ground or a model's floor; walls stop her as on land. */
+static void swim_step(Mover *m, const MoverInput *in, double dt, const MoverWorld *w, double surface)
+{
+    double k = m->speed;
+    int strafe_l = in->strafe_left  || (in->strafe_turns && in->left);
+    int strafe_r = in->strafe_right || (in->strafe_turns && in->right);
+    if (!in->strafe_turns) {
+        if (in->left)  m->o += MOVER_TURN * dt;
+        if (in->right) m->o -= MOVER_TURN * dt;
+        m->o = fmod(m->o, 2 * PI);
+        if (m->o < 0) m->o += 2 * PI;
+    }
+    int ahead = (in->forward ? 1 : 0) - (in->back ? 1 : 0);
+    int left  = (strafe_l ? 1 : 0) - (strafe_r ? 1 : 0);
+    double dz = 0;
+    if (ahead != 0 || left != 0) {
+        double speed = (ahead < 0 ? MOVER_SWIM_BACK : MOVER_SWIM) * k;
+        double len = sqrt((double)(ahead * ahead + left * left));
+        double pitch = in->strafe_turns && ahead > 0 ? in->pitch : 0, flat = cos(pitch);
+        double dx = (ahead * cos(m->o) * flat + left * cos(m->o + PI / 2)) / len;
+        double dy = (ahead * sin(m->o) * flat + left * sin(m->o + PI / 2)) / len;
+        dz = ahead > 0 ? sin(pitch) / len * speed * dt : 0;
+        double nx = m->x + dx * speed * dt, ny = m->y + dy * speed * dt;
+        float wx, wy;
+        if (!(w->wall && w->wall(w->ctx, m->x, m->y, nx, ny, m->z, &wx, &wy))) { m->x = nx; m->y = ny; }
+    }
+    if (in->jump) dz += MOVER_SWIM * k * dt;
+    if (in->swim_down) dz -= MOVER_SWIM * k * dt;
+    /* left alone (nothing taking her up or down), she floats up toward the
+     * surface, as the original's swimmers do */
+    if (!in->jump && !in->swim_down && dz == 0) dz = MOVER_FLOAT * dt;
+    m->z += dz;
+    double top = surface - MOVER_SWIM_DEPTH;
+    if (w->water) {
+        double here = w->water(w->ctx, m->x, m->y);
+        if (here > -10000) top = here - MOVER_SWIM_DEPTH;
+    }
+    if (m->z > top) m->z = top;                          /* floating at the surface */
+    float hx, hy;
+    double floor_z = w->ground(w->ctx, (float)m->x, (float)m->y, (float)(m->z + MOVER_STEP_UP), &hx, &hy);
+    if (floor_z > -10000 && m->z < floor_z) m->z = floor_z;   /* resting on the bottom */
+    m->vz = 0;
 }
 /* }}} */

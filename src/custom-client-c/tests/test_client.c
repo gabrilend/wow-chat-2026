@@ -23,6 +23,7 @@
 #include "../collide.h"
 #include "../dbc.h"
 #include "../light.h"
+#include "../liquid.h"
 #include "../m2.h"
 #include "../maps.h"
 #include "../mover.h"
@@ -82,11 +83,23 @@ static int w_solid(void *c, double x0, double y0, double x1, double y1, double z
 }
 /* }}} */
 
+/* {{{ the swimming tests' world: a shore rising out of water 5 deep */
+static float g_shore(void *c, float x, float y, float zt, float *gx, float *gy)
+{
+    (void)c; (void)y; (void)zt;
+    *gy = 0;
+    if (x < 10) { *gx = 0; return 0; }
+    *gx = 0.5f;
+    return (x - 10) * 0.5f;
+}
+static float w_sea(void *c, double x, double y) { (void)c; (void)x; (void)y; return 5; }
+/* }}} */
+
 /* {{{ static run: seconds of steps of 0.01 s */
 static void run(Mover *m, MoverInput in, double seconds, MoverGround g)
 {
     int steps = (int)(seconds * 100 + 0.5);
-    for (int i = 0; i < steps; ++i) mover_step(m, &in, 0.01, g, NULL, NULL);
+    for (int i = 0; i < steps; ++i) mover_step(m, &in, 0.01, &(MoverWorld){ g, NULL, NULL, NULL });
 }
 /* }}} */
 
@@ -137,9 +150,9 @@ int main(int argc, char **argv)
 
     mover_init(&m, 0, 0, 10, 0, 1.2, 60);
     in = none; in.jump = 1;
-    mover_step(&m, &in, 0.001, g_flat, NULL, NULL);
+    mover_step(&m, &in, 0.001, &(MoverWorld){ g_flat, NULL, NULL, NULL });
     double top = 10;
-    for (int i = 0; i < 200; ++i) { mover_step(&m, &none, 0.005, g_flat, NULL, NULL); if (m.z > top) top = m.z; }
+    for (int i = 0; i < 200; ++i) { mover_step(&m, &none, 0.005, &(MoverWorld){ g_flat, NULL, NULL, NULL }); if (m.z > top) top = m.z; }
     double expect = MOVER_JUMP * MOVER_JUMP / (2 * MOVER_GRAVITY);
     snprintf(line, sizeof line, "a jump rises %.3f yards (expected %.3f)", top - 10, expect);
     check(near(top - 10, expect, 0.02), line);
@@ -166,7 +179,7 @@ int main(int argc, char **argv)
     mover_init(&m, 0, 0, 10, 0, 1.2, limit); run(&m, in, 1, g_ramp);
     check(m.x < 2.3 && m.z < 10.8, "into a 70-degree slope: stopped at its foot");
     mover_init(&m, 5, 0, 10 + 3 * ramp_tan, 0, 1.2, limit);
-    mover_step(&m, &none, 0.01, g_ramp, NULL, NULL);
+    mover_step(&m, &none, 0.01, &(MoverWorld){ g_ramp, NULL, NULL, NULL });
     check(m.sliding && m.x < 5, "on a 70-degree slope with no keys pressed: sliding down it");
     run(&m, none, 3, g_ramp);
     check(m.grounded && !m.sliding && m.x < 2 && m.z == 10, "and comes to rest on the flat at the bottom");
@@ -176,7 +189,7 @@ int main(int argc, char **argv)
     /* the real ground: a second's run from the start point stays on the map */
     mover_init(&m, 2717, -400, maps_world_height(w, 2717, -400, &gx, &gy), 3.6, 1.2, limit);
     in = none; in.forward = 1;
-    for (int i = 0; i < 100; ++i) mover_step(&m, &in, 0.01, g_world, NULL, w);
+    for (int i = 0; i < 100; ++i) mover_step(&m, &in, 0.01, &(MoverWorld){ g_world, NULL, NULL, w });
     check(m.grounded, "a second's run from the start point on Ashenvale's real ground stays on it");
     /* }}} */
 
@@ -442,6 +455,19 @@ int main(int argc, char **argv)
             check(roots == t->nplaces && groups_ok, line);
             snprintf(line, sizeof line, "%d of their %d furnishings land inside their building's box", inside, furnished);
             check(furnished > 0 && inside == furnished, line);
+            /* water (173r) */
+            float wlo = 1e9f, whi = -1e9f;
+            for (int k = 0; k < t->nliquids; ++k)
+                for (int r = 0; r <= 8; ++r) for (int c = 0; c <= 8; ++c) { wlo = fminf(wlo, t->liquids[k].height[r][c]); whi = fmaxf(whi, t->liquids[k].height[r][c]); }
+            snprintf(line, sizeof line, "its %d water layers read, every surface between %.2f and %.2f yards (no stray zeros)", t->nliquids, wlo, whi);
+            check(t->nliquids == 60 && wlo > 90 && whi < 110, line);
+            LiquidWorld *lw = liquid_new();
+            liquid_add_tile(lw, 26, 32, t);
+            int wk = 0;
+            float lake = liquid_surface(lw, 2761, -499, &wk), town = liquid_surface(lw, 2717, -400, &wk);
+            snprintf(line, sizeof line, "the lake east of town has water (surface %.2f), the town itself none", lake);
+            check(lake > 99 && lake < 104 && town < -10000, line);
+            liquid_free(lw);
             check(fixed, "every blend map's last column copies the one before, as the original fills the unpainted edge");
             check(painted, "the blend maps hold soft edges, not only all-or-nothing");
             adt_free(t);
@@ -544,6 +570,18 @@ ground_done:
         for (int i = 0; i < 50; ++i) moves_step(&ms, &a, &mi);
         snprintf(line, sizeof line, "strafing left: the run, her body turned %.0f degrees toward it", ms.body_turn / 3.14159265358979 * 180);
         check(ms.seq == run && near(ms.body_turn, 3.14159265358979 / 2, 1e-3), line);
+        /* swimming (173r) */
+        moves_init(&ms, &a);
+        mi = (MovesInput){ .swimming = 1, .grounded = 1, .dt = 0.01f };
+        moves_step(&ms, &a, &mi);
+        check(ms.seq == anim_find(&a, MOVE_SWIM_IDLE, 0) && ms.seq >= 0, "in deep water, standing still: treading water");
+        mi.forward = 1; mi.speed = 5.67f;
+        moves_step(&ms, &a, &mi);
+        check(ms.seq == anim_find(&a, MOVE_SWIM, 0) && ms.seq >= 0, "swimming forward: the swim");
+        mi = (MovesInput){ .swimming = 1, .grounded = 1, .strafe_left = 1, .speed = 5.67f, .dt = 0.01f };
+        moves_step(&ms, &a, &mi);
+        check(ms.seq == anim_find(&a, MOVE_SWIM_LEFT, 0) && ms.seq >= 0, "swimming left: its own sideways stroke");
+
         /* figures with no mover (173j): play, then advance at the animation's own pace */
         moves_init(&ms, &a);
         moves_play(&ms, &a, 60);                            /* EmoteTalk */
@@ -588,33 +626,62 @@ anim_done:
         Mover m;
         MoverInput fwd = { .forward = 1 };
         mover_init(&m, 0, 0, 0, 0, 1.2, 60);              /* facing +x, toward the wall */
-        for (int i = 0; i < 200; ++i) mover_step(&m, &fwd, 0.01, g_solid, w_solid, NULL);
+        for (int i = 0; i < 200; ++i) mover_step(&m, &fwd, 0.01, &(MoverWorld){ g_solid, w_solid, NULL, NULL });
         snprintf(line, sizeof line, "running at the wall for 2 s, she stops short of it (x %.2f; the wall at 5, her radius 0.4)", m.x);
         check(m.x < 4.65 && m.x > 4.0, line);
         mover_init(&m, 0, 0, 0, 0.6, 1.2, 60);            /* at an angle: she slides along it, then past its end */
         double most_x = 0;
         for (int i = 0; i < 200; ++i) {
-            mover_step(&m, &fwd, 0.01, g_solid, w_solid, NULL);
+            mover_step(&m, &fwd, 0.01, &(MoverWorld){ g_solid, w_solid, NULL, NULL });
             if (m.y < 4.5 && m.x > most_x) most_x = m.x;
         }
         snprintf(line, sizeof line, "running at it at an angle, she slides along it (never past x %.2f beside it) and on past its end (x %.2f, y %.2f)", most_x, m.x, m.y);
         check(most_x < 4.65 && m.y > 5 && m.x > 5, line);
         mover_init(&m, 35, 0, 0, 0, 1.2, 60);
-        for (int i = 0; i < 150; ++i) mover_step(&m, &fwd, 0.01, g_solid, w_solid, NULL);
+        for (int i = 0; i < 150; ++i) mover_step(&m, &fwd, 0.01, &(MoverWorld){ g_solid, w_solid, NULL, NULL });
         snprintf(line, sizeof line, "a half-yard step: she walks up onto it (x %.2f, z %.2f)", m.x, m.z);
         check(m.x > 42 && near(m.z, 0.5, 1e-3), line);
         mover_init(&m, 55, 0, 0, 0, 1.2, 60);
-        for (int i = 0; i < 150; ++i) mover_step(&m, &fwd, 0.01, g_solid, w_solid, NULL);
+        for (int i = 0; i < 150; ++i) mover_step(&m, &fwd, 0.01, &(MoverWorld){ g_solid, w_solid, NULL, NULL });
         snprintf(line, sizeof line, "a two-yard ledge: she stops at its face (x %.2f, z %.2f)", m.x, m.z);
         check(m.x < 60 && near(m.z, 0, 1e-3), line);
         mover_init(&m, 25, 0, 8, 0, 1.2, 60);
         m.grounded = 0;
         MoverInput none = { 0 };
-        for (int i = 0; i < 200; ++i) mover_step(&m, &none, 0.01, g_solid, w_solid, NULL);
+        for (int i = 0; i < 200; ++i) mover_step(&m, &none, 0.01, &(MoverWorld){ g_solid, w_solid, NULL, NULL });
         snprintf(line, sizeof line, "dropped over the plank, she lands on it (z %.2f)", m.z);
         check(m.grounded && near(m.z, 5, 1e-3), line);
         collide_free(cw);
         solids_test = NULL;
+    }
+    /* }}} */
+
+    /* {{{ swimming (173r): flat ground at 0 rising past x 10 (a shore),
+     * water to 5 everywhere */
+    printf("swimming\n");
+    {
+        Mover m;
+        MoverWorld sea = { g_shore, NULL, w_sea, NULL };
+        MoverInput none = { 0 }, fwd = { .forward = 1 }, down = { .swim_down = 1 };
+        mover_init(&m, 0, 0, 0, 0, 1.2, 60);
+        mover_step(&m, &none, 0.01, &sea);
+        check(m.swimming, "standing in water deeper than 1.6 yards over her feet, she swims");
+        for (int i = 0; i < 300; ++i) mover_step(&m, &none, 0.01, &sea);
+        snprintf(line, sizeof line, "left alone she floats up, feet 1.6 under the surface (z %.2f)", m.z);
+        check(near(m.z, 5 - MOVER_SWIM_DEPTH, 1e-6), line);
+        for (int i = 0; i < 50; ++i) mover_step(&m, &down, 0.01, &sea);
+        snprintf(line, sizeof line, "X takes her down at swim speed (half a second: z %.2f)", m.z);
+        check(near(m.z, 5 - MOVER_SWIM_DEPTH - 0.5 * MOVER_SWIM * 1.2, 1e-3), line);
+        mover_init(&m, -30, 0, 3.4, 0, 1.2, 60);
+        mover_step(&m, &none, 0.01, &sea);
+        double x0 = m.x;
+        for (int i = 0; i < 100; ++i) mover_step(&m, &fwd, 0.01, &sea);
+        snprintf(line, sizeof line, "she swims forward at 4.72 x 1.2 = %.2f yards a second (%.2f)", MOVER_SWIM * 1.2, m.x - x0);
+        check(near(m.x - x0, MOVER_SWIM * 1.2, 0.05), line);
+        for (int i = 0; i < 1000 && m.swimming; ++i) mover_step(&m, &fwd, 0.01, &sea);
+        for (int i = 0; i < 50; ++i) mover_step(&m, &fwd, 0.01, &sea);
+        snprintf(line, sizeof line, "swimming to the shore, she walks out onto it (x %.2f, z %.2f, on the ground)", m.x, m.z);
+        check(!m.swimming && m.grounded && m.x > 10, line);
     }
     /* }}} */
 

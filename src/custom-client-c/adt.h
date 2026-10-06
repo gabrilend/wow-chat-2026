@@ -61,6 +61,16 @@
  * A building crossing tile edges is listed in every tile it touches,
  * with the same unique id.
  *
+ * Water (173r). MH2O: 256 heads of 12 bytes (offset of the chunk's
+ * layers, layer count, offset of attributes; offsets from MH2O's data),
+ * then each layer (24 bytes): 0 liquid kind (u16, LiquidType.dbc), 2
+ * point format (u16: 0 heights and depths, 1 heights and picture
+ * positions, 2 depths only: flat at the lowest height, 3 all three),
+ * 4 lowest height, 8 highest height, 12 first column, 13 first row, 14
+ * width, 15 height (cells, u8), 16 offset of a which-cells bitmap
+ * (width x height bits, row by row, lowest bit first; 0: all), 20
+ * offset of the points ((width+1) x (height+1) heights, floats, first).
+ *
  * An AdtTile, field by field:
  *   textures     char[nt][128]: the picture names (MTEX), in file order
  *   ntextures    int
@@ -84,6 +94,15 @@
  *   x, y, z      float: world position
  *   rot[3]       float: the file's rotation, degrees (see doodads.c)
  *   scale        float: 1.0 = as made (buildings always 1)
+ * An AdtLiquid (one water layer in one chunk):
+ *   chunk        int: which chunk (row * 16 + column)
+ *   kind         int: LiquidType.dbc id (1 water, 2 ocean, 3 magma, 4 slime,
+ *                5 slow water ...)
+ *   col, row, w, h  int: the cells it covers, 0-8 within the chunk
+ *   wet[8][8]    uint8_t: per cell of the chunk (row, column), 1 when it
+ *                has water
+ *   height[9][9] float: the surface's height at each corner (row, column)
+ *                of the chunk's cell grid, where the layer gives one
  *   doodad_set   int: buildings only, which set of furnishings to show
  *   lo[3], hi[3] float: buildings only, the world box the building fills
  *                (MODF's extents, turned into world axes)
@@ -119,7 +138,16 @@ typedef struct {
 } AdtPlace;
 
 typedef struct {
+    int     chunk, kind;
+    int     col, row, w, h;
+    uint8_t wet[8][8];
+    float   height[9][9];
+} AdtLiquid;
+
+typedef struct {
     char   (*textures)[128];
+    AdtLiquid *liquids;               /* MH2O's layers (173r) */
+    int      nliquids;
     int      ntextures;
     char   (*models)[260];            /* doodad model names (MMDX via MMID) */
     int      nmodels;

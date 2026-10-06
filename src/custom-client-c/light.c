@@ -71,11 +71,15 @@ static void band_at(const Dbc *d, int row, uint32_t t, int is_colour, float out[
 /* {{{ static params_at: one parameter set's light at a time */
 static void params_at(const LightTables *t, uint32_t set, uint32_t when, LightNow *o)
 {
-    float *slots[8] = { o->sun, o->shade, o->sky[0], o->sky[1], o->sky[2], o->sky[3], o->sky[4], o->fog };
-    for (uint32_t band = 0; band < 8; ++band) {
+    float *slots[12] = { o->sun, o->shade, o->sky[0], o->sky[1], o->sky[2], o->sky[3], o->sky[4], o->fog,
+                         o->water[0], o->water[1], o->water[2], o->water[3] };
+    static const uint32_t BAND[12] = { 0, 1, 2, 3, 4, 5, 6, 7, 14, 15, 16, 17 };
+    for (uint32_t i = 0; i < 12; ++i) {
+        uint32_t band = BAND[i];
+        float *slot = slots[i];
         int row = find_row(&t->ints, set * 18 - 17 + band);
-        if (row < 0) { slots[band][0] = slots[band][1] = slots[band][2] = 0; continue; }
-        band_at(&t->ints, row, when, 1, slots[band]);
+        if (row < 0) { slot[0] = slot[1] = slot[2] = 0; continue; }
+        band_at(&t->ints, row, when, 1, slot);
     }
     float v[3];
     int row = find_row(&t->floats, set * 6 - 5);
