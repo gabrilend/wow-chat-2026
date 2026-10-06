@@ -190,6 +190,7 @@ profile's race wearing the profile's items.
 | 617r4 | gearsets-on-creatures | None | The selected creature dressed in a record through the mirror image (617f) |
 | 617r5 | gearset-gallery | 617r1, 173k | Pictures of every record on its race's model (random sex), to curate fashionable sets fast |
 | 617r6 | spec-profiles-choose-the-gems | 617r1 | No gems in gearsets: per class and shape, desired stat weights (the project's own spec profiles) choose the gems whenever anyone is dressed |
+| 617r7 | buddy-gear-copies | 175, 617r2 | Buddies' starting gear as copies with no required level, bound when picked up (no trade, mail or auction; vendors still buy) |
 
 Execution order: `617r1 → 617r2 → (617r3 ∥ 617r5)`; 617r4 any time.
 
