@@ -16,6 +16,7 @@
  *                     without it, every setting is at its default
  *   --shot FILE       draw a few frames, save a picture there, quit
  */
+#include "camera.h"
 #include "character.h"
 #include "maps.h"
 #include "mover.h"
@@ -42,7 +43,6 @@
 #define ELF_HEIGHT   2.3f                              /* yards: the camera looks at her shoulders */
 #define ZOOM_MIN     2.0f
 #define ZOOM_BASE    20.0f                             /* yards; times cameraDistanceMaxFactor (1 to 2) is the zoom-out limit (173b4) */
-#define DRAG_RATE    0.006f                            /* radians a pixel at a cameraYawMoveSpeed of 180 */
 static const float SKY[3] = { 0.52f, 0.66f, 0.78f };
 /* her look: ChrRaces id, sex, and the character-creation choices (from 0);
  * a stand-in for the ids the server will send (173d, 617r5) */
@@ -219,7 +219,7 @@ static Mesh   tile_mesh[64 * 64];
 static char   tile_state[64 * 64];                      /* 0 not tried, 1 mesh, 2 none */
 static double ox, oy;                                    /* the drawing origin, near the start */
 static Mover  elf;
-static float  cam_yaw = (float)START_O, cam_pitch = 0.35f, cam_dist = 12.0f;
+static FollowCam view = { .yaw = (float)START_O, .pitch = 0.35f, .dist = 12.0f, .rest_pitch = 0.35f };   /* camera.h */
 static int    cam_held;                                  /* --front: the camera keeps its own heading */
 
 static float ground_at(void *ctx, float x, float y, float *gx, float *gy) { return maps_world_height((MapWorld *)ctx, x, y, gx, gy); }
@@ -247,8 +247,8 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--settings") && i + 1 < argc) settings_file = argv[++i];
         else if (!strcmp(argv[i], "--client") && i + 1 < argc) client = argv[++i];
         else if (!strcmp(argv[i], "--shot") && i + 1 < argc) shot = argv[++i];
-        else if (!strcmp(argv[i], "--zoom") && i + 1 < argc) cam_dist = (float)atof(argv[++i]);
-        else if (!strcmp(argv[i], "--front")) { cam_yaw = (float)(START_O + PI); cam_pitch = 0.1f; cam_held = 1; }
+        else if (!strcmp(argv[i], "--zoom") && i + 1 < argc) view.dist = (float)atof(argv[++i]);
+        else if (!strcmp(argv[i], "--front")) { view.yaw = (float)(START_O + PI); view.pitch = 0.1f; cam_held = 1; }
     }
     if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front]\n"); return 2; }
 
@@ -298,23 +298,17 @@ int main(int argc, char **argv)
         float dt = GetFrameTime();
         if (dt > 0.1f) dt = 0.1f;                        /* a stalled frame doesn't fling her */
         if (IsKeyPressed(KEY_ESCAPE)) break;            /* the owner, 2026-10-06: Escape quits until there are menus (173b2) */
-        drag_l = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+        /* the mouse: left drag looks around her, right drag turns her too (camera.c) */
         int was_r = drag_r;
+        drag_l = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
         drag_r = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
-        if (drag_r && !was_r) cam_yaw = (float)elf.o;
-        if (drag_l || drag_r) {
-            Vector2 d = GetMouseDelta();
-            float rate = DRAG_RATE * (float)settings_num("cameraYawMoveSpeed") / 180.0f;
-            cam_yaw -= d.x * rate;
-            cam_pitch += d.y * rate;
-            if (cam_pitch < -0.4f) cam_pitch = -0.4f;
-            if (cam_pitch > 1.45f) cam_pitch = 1.45f;
-            if (drag_r) elf.o = fmod(fmod(cam_yaw, 2 * PI) + 2 * PI, 2 * PI);   /* the right button turns her with the camera */
-        }
+        Vector2 d = GetMouseDelta();
+        FollowCamInput mouse = { .left = drag_l, .right = drag_r, .dx = d.x, .dy = d.y, .dt = dt };
+        camera_drag(&view, &mouse, was_r, &elf.o);
         float wheel = GetMouseWheelMove();
         float zoom_max = ZOOM_BASE * (float)settings_num("cameraDistanceMaxFactor");
-        if (wheel != 0) cam_dist *= wheel > 0 ? 0.85f : 1.18f;
-        cam_dist = Clamp(cam_dist, ZOOM_MIN, zoom_max);   /* every frame, so a lowered limit pulls the camera in at once */
+        if (wheel != 0) view.dist *= wheel > 0 ? 0.85f : 1.18f;
+        view.dist = Clamp(view.dist, ZOOM_MIN, zoom_max);   /* every frame, so a lowered limit pulls the camera in at once */
         MoverInput in = {
             .forward = IsKeyDown(KEY_W) || IsKeyDown(KEY_UP) || (drag_l && drag_r),
             .back = IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN),
@@ -325,18 +319,21 @@ int main(int argc, char **argv)
             .strafe_turns = drag_r,
             .jump = IsKeyDown(KEY_SPACE),
         };
-        double before = elf.o;
+        double before_o = elf.o, before_x = elf.x, before_y = elf.y;
         mover_step(&elf, &in, dt, ground_at, &world);
-        if (!drag_l && !cam_held) cam_yaw += (float)(elf.o - before);   /* the camera follows her turns */
+        /* moving = she moved along the ground this frame, by any cause
+         * (keys, both buttons, sliding); turning in place isn't moving */
+        int moving = hypot(elf.x - before_x, elf.y - before_y) > 1e-4;
+        if (!cam_held) camera_follow(&view, &mouse, camera_turn_between((float)before_o, (float)elf.o), moving, elf.o);
         refresh_tiles();
         SetWindowTitle(TextFormat("Everland Ghostsong  -  Ashenvale  x %.1f  y %.1f  z %.1f", elf.x, elf.y, elf.z));
         /* }}} */
 
         /* {{{ the camera: behind her by its own heading, raised by its pitch */
         Vector3 at = { (float)(elf.x - ox), (float)(elf.y - oy), (float)elf.z + ELF_HEIGHT * 0.85f };
-        Vector3 eye = { at.x - cosf(cam_yaw) * cosf(cam_pitch) * cam_dist,
-                        at.y - sinf(cam_yaw) * cosf(cam_pitch) * cam_dist,
-                        at.z + sinf(cam_pitch) * cam_dist };
+        Vector3 eye = { at.x - cosf(view.yaw) * cosf(view.pitch) * view.dist,
+                        at.y - sinf(view.yaw) * cosf(view.pitch) * view.dist,
+                        at.z + sinf(view.pitch) * view.dist };
         float floor_z = maps_world_height(&world, eye.x + (float)ox, eye.y + (float)oy, &gx, &gy);
         if (floor_z > -10000 && eye.z < floor_z + 0.6f) eye.z = floor_z + 0.6f;   /* never under the ground */
         Camera3D cam = { .position = eye, .target = at, .up = { 0, 0, 1 }, .fovy = 60, .projection = CAMERA_PERSPECTIVE };

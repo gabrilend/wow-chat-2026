@@ -23,20 +23,33 @@ Verbatim, 2026-10-06:
 
 ## Current Behavior
 
-Built in both clients (`src/custom-client-c/main.c`, its camera block;
-`src/custom-client/main.lua`): the camera sits behind her at a distance
-(starting 12 yards, the wheel zooms it), raised by a pitch angle, never
-below the ground.
-- Left drag turns the camera around her; she doesn't turn.
-- Right drag turns the camera, and she turns to face where it faces. While
-  right is held, A and D step sideways instead of turning.
-- Both buttons held walk her forward.
-- When she turns with A or D, the camera turns with her (unless left is
-  held).
+**The drags and the following styles are built (2026-10-06)**, in C,
+in `src/custom-client-c/camera.h` and `camera.c`, with 21 checks in
+`tests/test_client.c` (75 in the program, all passing).
+- **The camera is its own module.** `main.c` hands it this frame's mouse
+  (buttons and movement), how far the keys turned her, whether she moved
+  along the ground, and her facing. It gives back the camera's heading,
+  pitch and distance (and her facing, for a right drag). It never touches
+  the window, so the tests drive it directly.
+- **Left drag** turns only the camera. **Right drag** turns her with it.
+  Pressing right turns her to where the camera looks. First light did
+  the reverse: it snapped the camera behind her, unlike the original.
+- **Following styles** are a table in `camera.c`, one row per
+  `cameraSmoothStyle` value (1, 4, 2, 0), each a one-line rule. The
+  setting's choices in `settings.c` must match the rows, and the client
+  stops if they ever don't.
+- **"Moving"** is measured, not guessed from keys: she moved along the
+  ground this frame (keys, both buttons, or sliding). Turning in place
+  isn't moving; the keys' turning already carries the camera round.
+- **Settings now in the store:** Camera Following Style
+  (`cameraSmoothStyle`, default 1), Auto Follow Speed
+  (`cameraYawSmoothSpeed`, 180), Invert Mouse (`mouseInvertPitch`, off),
+  Mouse Look Speed and Max Camera Distance (from 173b1).
 
-Missing: when she walks after a left-drag, the camera stays where it was
-left. It never swings back behind her. There is one fixed behaviour and no
-settings.
+**Not built yet:** Follow Terrain, Water Collision (there's no water yet),
+Smart Pivot, Head Bob (there's no first person or walking animation yet),
+the saved views and the other camera key bindings (they wait for key
+bindings, 173b3).
 
 ## Intended Behavior
 
@@ -47,7 +60,7 @@ settings.
 - **Right drag steers.** The camera turns, and she turns with it on the
   horizontal axis, so she always faces away from the camera. The vertical
   drag only pitches the camera. Pressing right after a left-drag first
-  turns her to the camera's heading, as now.
+  turns her to the camera's heading.
 
 **Following styles.** What the camera does on its own while she moves is
 one of several *following styles*. Each style is an entry in a table of

@@ -16,6 +16,7 @@
  * Usage: test-client PROJECT_DIR CLIENT_DATA_DIR
  */
 #include "../blp.h"
+#include "../camera.h"
 #include "../character.h"
 #include "../dbc.h"
 #include "../m2.h"
@@ -306,6 +307,104 @@ int main(int argc, char **argv)
     check(skipped == 0 && log && strstr(log, "no file at") && settings_num("cameraDistanceMaxFactor") == 2,
           "no file yet: said once, every setting at its default");
     free(log);
+    /* }}} */
+
+    /* {{{ the camera (173m) */
+    printf("the camera\n");
+    {
+        settings_init();
+        const double deg = 3.14159265358979323846 / 180;
+        const float px90 = (float)(90 * deg / 0.006);          /* pixels of drag for 90 degrees at the default speed */
+        FollowCamInput idle = { .dt = 0.01f }, held_l = { .left = 1, .dt = 0.01f };
+        FollowCam cam;
+        double facing;
+
+        /* left drag 90 degrees, then a quarter second of running in style 1 */
+        cam = (FollowCam){ .yaw = 0, .pitch = 0.35f, .dist = 12, .rest_pitch = 0.35f };
+        facing = 0;
+        FollowCamInput drag = { .left = 1, .dx = -px90, .dy = 50, .dt = 0.01f };
+        camera_drag(&cam, &drag, 0, &facing);
+        float pitch_after_drag = cam.pitch;
+        check(near(cam.yaw, 90 * deg, 1e-4) && facing == 0, "a left drag turns the camera 90 degrees and not her");
+        for (int i = 0; i < 25; ++i) camera_follow(&cam, &idle, 0, 1, facing);
+        snprintf(line, sizeof line, "style 1, a quarter second running: the camera swings back 45 degrees at 180 a second (now %.2f degrees off)", cam.yaw / deg);
+        check(near(cam.yaw, 45 * deg, 1e-3), line);
+        check(cam.pitch == pitch_after_drag, "style 1 leaves the pitch where it was put");
+        for (int i = 0; i < 50; ++i) camera_follow(&cam, &idle, 0, 1, facing);
+        check(near(cam.yaw, 0, 1e-5), "and it comes to rest exactly behind her, without overshooting");
+
+        /* standing still in style 1: nothing moves */
+        cam.yaw = (float)(90 * deg);
+        for (int i = 0; i < 100; ++i) camera_follow(&cam, &idle, 0, 0, facing);
+        check(near(cam.yaw, 90 * deg, 1e-6), "style 1, standing still: the camera stays where it was put");
+
+        /* a held button beats the style; letting go mid-run starts the swing that frame */
+        for (int i = 0; i < 100; ++i) camera_follow(&cam, &held_l, 0, 1, facing);
+        check(near(cam.yaw, 90 * deg, 1e-6), "running while the left button is held: no swing");
+        camera_follow(&cam, &idle, 0, 1, facing);
+        check(near(cam.yaw, 88.2 * deg, 1e-4), "letting go mid-run: the swing starts that same frame (1.8 degrees in a hundredth of a second)");
+
+        /* the shorter way round */
+        cam.yaw = (float)(350 * deg);
+        camera_follow(&cam, &idle, 0, 1, facing);
+        check(near(cam.yaw, 351.8 * deg, 1e-4), "from 350 degrees it swings on round through 360, the shorter way");
+
+        /* style 4: the pitch returns too */
+        check(!settings_set("cameraSmoothStyle", "4", why, sizeof why), "the style can be changed to 4 (only when moving)");
+        cam = (FollowCam){ .yaw = (float)(30 * deg), .pitch = 1.0f, .dist = 12, .rest_pitch = 0.35f };
+        for (int i = 0; i < 100; ++i) camera_follow(&cam, &idle, 0, 1, facing);
+        check(near(cam.yaw, 0, 1e-5) && near(cam.pitch, 0.35, 1e-5), "style 4, running: heading and pitch both return to rest");
+
+        /* style 2: also while standing; style 0: never */
+        settings_set("cameraSmoothStyle", "2", why, sizeof why);
+        cam.yaw = (float)(30 * deg);
+        for (int i = 0; i < 100; ++i) camera_follow(&cam, &idle, 0, 0, facing);
+        check(near(cam.yaw, 0, 1e-5), "style 2, standing still: still swings back behind her");
+        settings_set("cameraSmoothStyle", "0", why, sizeof why);
+        cam.yaw = (float)(30 * deg);
+        for (int i = 0; i < 100; ++i) camera_follow(&cam, &idle, 0, 1, facing);
+        check(near(cam.yaw, 30 * deg, 1e-6), "style 0, running: never moves on its own");
+        check(settings_set("cameraSmoothStyle", "3", why, sizeof why) != 0, "a style the table doesn't have is refused by the store");
+
+        /* follow speed */
+        settings_set("cameraSmoothStyle", "1", why, sizeof why);
+        settings_set("cameraYawSmoothSpeed", "90", why, sizeof why);
+        cam.yaw = (float)(90 * deg);
+        for (int i = 0; i < 100; ++i) camera_follow(&cam, &idle, 0, 1, facing);
+        check(near(cam.yaw, 0, 1e-4), "Auto Follow Speed 90: a full second to swing back 90 degrees");
+        settings_set("cameraYawSmoothSpeed", "180", why, sizeof why);
+
+        /* the keys turn the camera with her, unless the left button holds it */
+        cam.yaw = 0;
+        camera_follow(&cam, &idle, 0.5, 0, 0.5);
+        check(near(cam.yaw, 0.5, 1e-6), "turning her with the keys turns the camera with her");
+        camera_follow(&cam, &held_l, 0.5, 0, 1.0);
+        check(near(cam.yaw, 0.5, 1e-6), "but not while the left button holds the camera");
+
+        /* the right button */
+        cam = (FollowCam){ .yaw = (float)(90 * deg), .pitch = 0.35f, .dist = 12, .rest_pitch = 0.35f };
+        facing = 0;
+        FollowCamInput press_r = { .right = 1, .dt = 0.01f };
+        camera_drag(&cam, &press_r, 0, &facing);
+        check(near(facing, 90 * deg, 1e-5), "pressing the right button turns her to where the camera looks");
+        FollowCamInput drag_r = { .right = 1, .dx = px90, .dt = 0.01f };
+        camera_drag(&cam, &drag_r, 1, &facing);
+        check(near(facing, 0, 1e-4) && near(cam.yaw, 0, 1e-4), "a right drag turns her and the camera together");
+
+        /* mouse look speed and invert */
+        cam.pitch = 0.35f;
+        FollowCamInput down = { .left = 1, .dy = 10, .dt = 0.01f };
+        camera_drag(&cam, &down, 0, &facing);
+        check(near(cam.pitch, 0.35 + 0.06, 1e-5), "dragging down 10 pixels raises the camera 0.06 radians");
+        settings_set("mouseInvertPitch", "1", why, sizeof why);
+        camera_drag(&cam, &down, 0, &facing);
+        check(near(cam.pitch, 0.35, 1e-5), "with Invert Mouse, the same drag lowers it");
+        settings_set("cameraYawMoveSpeed", "90", why, sizeof why);
+        cam.yaw = 0;
+        camera_drag(&cam, &(FollowCamInput){ .left = 1, .dx = -px90, .dt = 0.01f }, 0, &facing);
+        check(near(cam.yaw, 45 * deg, 1e-4), "Mouse Look Speed 90: the same drag turns half as far");
+        settings_init();
+    }
     /* }}} */
 
     maps_world_free(w);

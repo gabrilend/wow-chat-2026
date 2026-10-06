@@ -22,8 +22,20 @@
  * cameraYawMoveSpeed: how fast a mouse drag turns the camera. 180 keeps
  *   first light's 0.006 radians a pixel; the rate scales with it (90 is
  *   half as fast, 270 one and a half times).
+ * cameraSmoothStyle: the following style (173m). Its values must match
+ *   the rows of camera.c's styles table; the camera stops the client if
+ *   they ever disagree. "1" is the owner's choice (2026-10-06).
+ * cameraYawSmoothSpeed: degrees a second the camera drifts back behind her.
  */
 static const char *check_resolution(const char *value);
+
+static const SettingChoice CAMERA_STYLES[] = {
+    { "Only horizontal when moving", "1" },
+    { "Only when moving",            "4" },
+    { "Always adjust camera",        "2" },
+    { "Never adjust camera",         "0" },
+    { NULL, NULL },
+};
 
 static const SettingDecl DECLS[] = {
     { .name = "gxResolution",            .section = "Resolution", .kind = SETTING_TEXT,   .def = "1280x720",
@@ -32,6 +44,14 @@ static const SettingDecl DECLS[] = {
     { .name = "cameraDistanceMaxFactor", .section = "Camera",     .kind = SETTING_SLIDER, .def = "2",
       .min = 1,  .max = 2,   .step = 0.1,
       .label = "Max Camera Distance", .explain = "Adjust the maximum distance the camera will follow behind you." },
+    { .name = "cameraYawSmoothSpeed",    .section = "Camera",     .kind = SETTING_SLIDER, .def = "180",
+      .min = 90, .max = 270, .step = 10,
+      .label = "Auto Follow Speed", .explain = "Adjust the camera movement speed in Always and Smart following styles." },
+    { .name = "cameraSmoothStyle",       .section = "Camera",     .kind = SETTING_CHOICE, .def = "1",
+      .choices = CAMERA_STYLES,
+      .label = "Camera Following Style", .explain = "How the camera returns behind your character on its own." },
+    { .name = "mouseInvertPitch",        .section = "Mouse",      .kind = SETTING_TOGGLE, .def = "0",
+      .label = "Invert Mouse", .explain = "Invert the way that the mouse affects camera pitch." },
     { .name = "cameraYawMoveSpeed",      .section = "Mouse",      .kind = SETTING_SLIDER, .def = "180",
       .min = 90, .max = 270, .step = 10,
       .label = "Mouse Look Speed", .explain = "Adjust the speed at which you turn the camera when using mouse look." },
