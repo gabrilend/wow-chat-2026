@@ -26,6 +26,7 @@ typedef struct {
     uint8_t *shown;                        /* per piece: 1 when it shows */
     BlpImage skin;                         /* texture kind 1: the finished skin sheet */
     BlpImage hair;                         /* texture kind 6 (width 0 when none) */
+    char     base[200];                    /* the model's archive path without its extension (for its .anim files) */
 } Character;
 
 int  character_build(MpqChain *archives, const CharacterLook *look, Character *out, char *why, int why_len);

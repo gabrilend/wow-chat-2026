@@ -83,6 +83,7 @@ int character_build(MpqChain *archives, const CharacterLook *look, Character *ou
     const char *sexname = look->sex == 1 ? "Female" : "Male";
     char base[200], name[260];
     snprintf(base, sizeof base, "Character\\%s\\%s\\%s%s", folder, sexname, folder, sexname);
+    snprintf(out->base, sizeof out->base, "%s", base);
 
     size_t m2_len, skin_len;
     snprintf(name, sizeof name, "%s.m2", base);

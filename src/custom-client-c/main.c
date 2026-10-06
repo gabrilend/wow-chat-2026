@@ -18,13 +18,17 @@
  *   --zoom N          (pictures) the camera N yards back
  *   --turn DEG        (pictures) the camera turned DEG degrees round her, held there
  *   --pitch DEG       (pictures) the camera raised DEG degrees (up to 83)
+ *   --pose ID MS      (pictures) hold her in animation ID (AnimationData.dbc:
+ *                     0 stand, 5 run, 13 walk backwards, 38 jump ...) at MS
  */
+#include "anim.h"
 #include "camera.h"
 #include "character.h"
 #include "doodads.h"
 #include "ground.h"
 #include "maps.h"
 #include "mover.h"
+#include "moves.h"
 #include "mpq.h"
 #include "navmesh_slope.h"
 #include "settings.h"
@@ -84,11 +88,17 @@ static const char *MODEL_FS =
     "}\n";
 /* }}} */
 
-/* {{{ her model: one mesh per shown piece, each with its picture */
-typedef struct { Mesh mesh; int texture; } Piece;
+/* {{{ her model: one mesh per shown piece, each with its picture
+ * Each piece's mesh lists its own copy of every corner (three a triangle);
+ * point_of says which model point each copy is, so the bent model
+ * (anim.c) can be copied in each frame. rest[] keeps the model's points
+ * and facings as made, the bending's starting place. */
+typedef struct { Mesh mesh; int texture; uint32_t *point_of; } Piece;
 static Piece pieces[64];
 static int npieces;
 static Texture2D tex_skin, tex_hair;
+static M2Vertex *rest;  static uint32_t nrest;
+static char      elf_base[200];                          /* her model's archive path, for its animations */
 
 static Texture2D texture_of(const BlpImage *img)
 {
@@ -124,11 +134,17 @@ static int build_elf(MpqChain *chain, char *why, int why_len)
             m.normals[i * 3] = v.nx; m.normals[i * 3 + 1] = v.ny; m.normals[i * 3 + 2] = v.nz;
             m.texcoords[i * 2] = v.u; m.texcoords[i * 2 + 1] = v.v;
         }
-        UploadMesh(&m, false);
+        pieces[npieces].point_of = malloc(sizeof(uint32_t) * p.count);
+        for (uint32_t i = 0; i < p.count; ++i) pieces[npieces].point_of[i] = ch.model.indices[p.first + i];
+        UploadMesh(&m, true);                            /* dynamic: bent every frame */
         pieces[npieces].mesh = m;
         pieces[npieces].texture = (int)kind;
         ++npieces;
     }
+    nrest = ch.model.nvertices;
+    rest = malloc(sizeof *rest * nrest);
+    memcpy(rest, ch.model.vertices, sizeof *rest * nrest);
+    snprintf(elf_base, sizeof elf_base, "%s", ch.base);
     character_free(&ch);
     if (npieces == 0) { snprintf(why, why_len, "her model has nothing to draw: no shown piece has a picture"); return -1; }
     return 0;
@@ -172,6 +188,8 @@ static void refresh_tiles(void)
 int main(int argc, char **argv)
 {
     const char *maps = NULL, *client = NULL, *shot = NULL, *settings_file = NULL;
+    int pose_id = -1;                                    /* --pose: hold her in this animation */
+    float pose_ms = 0;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--maps") && i + 1 < argc) maps = argv[++i];
         else if (!strcmp(argv[i], "--settings") && i + 1 < argc) settings_file = argv[++i];
@@ -181,8 +199,9 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--front")) { view.yaw = (float)(START_O + PI); view.pitch = 0.1f; cam_held = 1; }
         else if (!strcmp(argv[i], "--turn") && i + 1 < argc) { view.yaw = (float)(START_O + atof(argv[++i]) * DEG2RAD); cam_held = 1; }
         else if (!strcmp(argv[i], "--pitch") && i + 1 < argc) view.pitch = (float)(atof(argv[++i]) * DEG2RAD);
+        else if (!strcmp(argv[i], "--pose") && i + 2 < argc) { pose_id = atoi(argv[++i]); pose_ms = (float)atof(argv[++i]); }
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS]\n"); return 2; }
 
     /* the settings: defaults, then the player's file; a line it refuses is
      * named on the terminal and skipped (173b1) */
@@ -227,6 +246,35 @@ int main(int argc, char **argv)
     printf("doodads: %d models, %d placed\n", dm, dc);
     if (ds) printf("doodads: %d pieces left out: their picture is chosen by the game at run time (not built yet)\n", ds);
 
+    /* her animations (173i): the skeleton from her model file, and any
+     * animation kept in a .anim file beside it */
+    Anim anim;
+    {
+        char path[300];
+        size_t len;
+        const char *from;
+        snprintf(path, sizeof path, "%s.m2", elf_base);
+        unsigned char *m2 = mpq_chain_read(&chain, path, &len, &from);
+        if (!m2 || anim_read(m2, len, &anim, why, sizeof why)) { fprintf(stderr, "her animations (%s): %s\n", path, m2 ? why : "not in the archives"); CloseWindow(); return 1; }
+        free(m2);
+        for (int i = 0; i < anim.nseqs; ++i) {
+            if (!anim_needs_file(&anim, i)) continue;
+            snprintf(path, sizeof path, "%s%04d-%02d.anim", elf_base, anim.seqs[i].id, anim.seqs[i].variation);
+            unsigned char *f = mpq_chain_read(&chain, path, &len, &from);
+            if (!f) { fprintf(stderr, "her animations: %s is in none of the archives; that animation leaves her at rest\n", path); continue; }
+            anim_attach_file(&anim, i, f, len);
+        }
+        if (anim.npoints != nrest) { fprintf(stderr, "her animations: the skeleton's model has %u points, her mesh %u\n", anim.npoints, nrest); CloseWindow(); return 1; }
+        static const int NEEDED[] = { MOVE_STAND, MOVE_RUN, MOVE_WALK_BACK, MOVE_SHUFFLE_LEFT, MOVE_SHUFFLE_RIGHT, MOVE_JUMP_START, MOVE_JUMP, MOVE_JUMP_END, MOVE_FALL };
+        for (unsigned i = 0; i < sizeof NEEDED / sizeof NEEDED[0]; ++i)
+            if (anim_find(&anim, NEEDED[i], 0) < 0) fprintf(stderr, "her animations: her model has no animation %d; she stands instead\n", NEEDED[i]);
+    }
+    MovesState moves;
+    moves_init(&moves, &anim);
+    float (*poses)[16] = malloc(sizeof *poses * anim.nbones), (*scratch)[16] = malloc(sizeof *scratch * anim.nbones);
+    float *bent = malloc(sizeof(float) * 6 * nrest);       /* each point's bent position, then facing */
+    double clock_ms = 0;
+
     int frames = 0, drag_l = 0, drag_r = 0;
     while (!WindowShouldClose()) {
         /* {{{ input and movement */
@@ -260,6 +308,39 @@ int main(int argc, char **argv)
          * (keys, both buttons, sliding); turning in place isn't moving */
         int moving = hypot(elf.x - before_x, elf.y - before_y) > 1e-4;
         if (!cam_held) camera_follow(&view, &mouse, camera_turn_between((float)before_o, (float)elf.o), moving, elf.o);
+
+        /* her animation: chosen from what she did this frame, then her
+         * points bent by the bones and copied into each piece's mesh */
+        int turning = !drag_r && (in.left || in.right);
+        MovesInput mi = {
+            .forward = in.forward, .back = in.back,
+            .strafe_left = in.strafe_left || (drag_r && in.left), .strafe_right = in.strafe_right || (drag_r && in.right),
+            .turn_left = turning && in.left, .turn_right = turning && in.right,
+            .grounded = elf.grounded, .rising = elf.vz > 0,
+            .speed = dt > 0 ? (float)(hypot(elf.x - before_x, elf.y - before_y) / dt) : 0, .dt = dt,
+        };
+        moves_step(&moves, &anim, &mi);
+        if (pose_id >= 0) {
+            int seq = anim_find(&anim, pose_id, 0);
+            if (seq < 0) { fprintf(stderr, "--pose %d: her model has no such animation\n", pose_id); break; }
+            moves.seq = seq; moves.ms = pose_ms; moves.from = -1; moves.once = 0;
+        }
+        clock_ms += dt * 1000.0;
+        moves_pose(&moves, &anim, (uint32_t)clock_ms, poses, scratch);
+        for (uint32_t i = 0; i < nrest; ++i) {
+            float p[3] = { rest[i].x, rest[i].y, rest[i].z }, n[3] = { rest[i].nx, rest[i].ny, rest[i].nz };
+            anim_skin_point(&anim, (const float (*)[16])poses, i, p, bent + i * 6, n, bent + i * 6 + 3);
+        }
+        for (int k = 0; k < npieces; ++k) {
+            Mesh *m = &pieces[k].mesh;
+            for (int v = 0; v < m->vertexCount; ++v) {
+                const float *b = bent + pieces[k].point_of[v] * 6;
+                memcpy(m->vertices + v * 3, b, sizeof(float) * 3);
+                memcpy(m->normals + v * 3, b + 3, sizeof(float) * 3);
+            }
+            UpdateMeshBuffer(*m, 0, m->vertices, (int)(sizeof(float) * 3 * m->vertexCount), 0);   /* buffer 0: positions */
+            UpdateMeshBuffer(*m, 2, m->normals, (int)(sizeof(float) * 3 * m->vertexCount), 0);    /* buffer 2: facings */
+        }
         refresh_tiles();
         SetWindowTitle(TextFormat("Everland Ghostsong  -  Ashenvale  x %.1f  y %.1f  z %.1f", elf.x, elf.y, elf.z));
         /* }}} */
@@ -288,7 +369,7 @@ int main(int argc, char **argv)
         rlDisableBackfaceCulling();
         ground_draw(eye, SKY);
         doodads_draw(eye, SKY);
-        Matrix place = MatrixMultiply(MatrixRotateZ((float)elf.o), MatrixTranslate(at.x, at.y, (float)elf.z));
+        Matrix place = MatrixMultiply(MatrixRotateZ((float)elf.o + moves.body_turn), MatrixTranslate(at.x, at.y, (float)elf.z));
         for (int i = 0; i < npieces; ++i) DrawMesh(pieces[i].mesh, pieces[i].texture == 6 ? hair_mat : skin_mat, place);
         EndMode3D();
         EndDrawing();
@@ -303,6 +384,8 @@ int main(int argc, char **argv)
         }
     }
     CloseWindow();
+    anim_free(&anim);
+    free(poses); free(scratch); free(bent);
     mpq_chain_close(&chain);
     maps_world_free(&world);
     return 0;

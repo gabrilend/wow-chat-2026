@@ -11,14 +11,15 @@
 # then, gets no new features, and is removed once the C engine is fully
 # built.
 #
-# Usage: scripts/custom-client [PROJECT_DIR] [--lua] [--shot [--zoom N] [--front] [--turn DEG] [--pitch DEG]]
+# Usage: scripts/custom-client [PROJECT_DIR] [--lua] [--shot [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS]]
 #   --lua    run the deprecated Lua (LÖVE) version instead of the C one
 #   --shot   draw a few frames, save a picture to
 #            tmp/shared-memory/custom-client-shot.png, and quit (the window
 #            shows for a moment). After it: --zoom N (camera N yards off,
 #            up to the zoom limit), --front (looking at her face), --turn DEG
 #            (the camera turned DEG degrees round her), --pitch DEG (raised
-#            DEG degrees, up to 83: from above).
+#            DEG degrees, up to 83: from above), --pose ID MS (her held in
+#            animation ID at MS milliseconds: 0 stand, 5 run, 38 jump ...).
 
 # {{{ set_dir
 DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
@@ -47,7 +48,7 @@ ARGS=(--maps "${MAPS}" --client "${CLIENT}")
 if [[ "${1:-}" == "--shot" ]]; then
     shift
     mkdir -p "${DIR}/tmp/shared-memory"
-    ARGS+=(--shot "${DIR}/tmp/shared-memory/custom-client-shot.png" "$@")   # then any picture options (--zoom, --front, --turn, --pitch)
+    ARGS+=(--shot "${DIR}/tmp/shared-memory/custom-client-shot.png" "$@")   # then any picture options (--zoom, --front, --turn, --pitch, --pose)
 fi
 
 if [[ ${LUA} -eq 1 ]]; then

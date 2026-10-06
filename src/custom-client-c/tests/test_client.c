@@ -16,6 +16,7 @@
  * Usage: test-client PROJECT_DIR CLIENT_DATA_DIR
  */
 #include "../adt.h"
+#include "../anim.h"
 #include "../blp.h"
 #include "../camera.h"
 #include "../character.h"
@@ -23,6 +24,7 @@
 #include "../m2.h"
 #include "../maps.h"
 #include "../mover.h"
+#include "../moves.h"
 #include "../mpq.h"
 #include "../navmesh_slope.h"
 #include "../settings.h"
@@ -433,6 +435,100 @@ int main(int argc, char **argv)
         mpq_chain_close(&gc);
     }
 ground_done:
+    /* }}} */
+
+    /* {{{ her animations (173i) */
+    printf("her animations\n");
+    {
+        MpqChain ac;
+        if (mpq_chain_open(&ac, client, "enUS", why, sizeof why)) { check(0, why); goto anim_done; }
+        size_t len;
+        const char *from;
+        const char *base = "Character\\NightElf\\Female\\NightElfFemale";
+        snprintf(path, sizeof path, "%s.m2", base);
+        unsigned char *s = mpq_chain_read(&ac, path, &len, &from);
+        Anim a;
+        int bad = !s || anim_read(s, len, &a, why, sizeof why);
+        free(s);
+        snprintf(line, sizeof line, "her skeleton reads (%d bones, %d animations, %u points)", bad ? 0 : a.nbones, bad ? 0 : a.nseqs, bad ? 0 : a.npoints);
+        check(!bad && a.nbones > 50 && a.npoints == 4113, bad ? why : line);
+        if (bad) { mpq_chain_close(&ac); goto anim_done; }
+        int needed = 0, found = 0;
+        for (int i = 0; i < a.nseqs; ++i) {
+            if (!anim_needs_file(&a, i)) continue;
+            ++needed;
+            snprintf(path, sizeof path, "%s%04d-%02d.anim", base, a.seqs[i].id, a.seqs[i].variation);
+            unsigned char *f = mpq_chain_read(&ac, path, &len, &from);
+            if (f) { ++found; anim_attach_file(&a, i, f, len); }
+        }
+        snprintf(line, sizeof line, "all %d animations kept in .anim files are in the archives (%d found)", needed, found);
+        check(found == needed, line);
+        static const int USED[] = { MOVE_STAND, MOVE_RUN, MOVE_WALK_BACK, MOVE_SHUFFLE_LEFT, MOVE_SHUFFLE_RIGHT, MOVE_JUMP_START, MOVE_JUMP, MOVE_JUMP_END, MOVE_FALL };
+        int all = 1;
+        for (unsigned i = 0; i < sizeof USED / sizeof USED[0]; ++i) if (anim_find(&a, USED[i], 0) < 0) all = 0;
+        check(all, "she has every animation the mover uses: stand, run, walk back, both turns, jump start, jump, jump end, fall");
+
+        /* poses: her bent body, measured */
+        float (*poses)[16] = malloc(sizeof *poses * a.nbones), (*scratch)[16] = malloc(sizeof *scratch * a.nbones);
+        float *at0 = malloc(sizeof(float) * 3 * a.npoints), *at1 = malloc(sizeof(float) * 3 * a.npoints);
+        uint32_t points_at = (uint32_t)(a.m2[64] | a.m2[65] << 8 | a.m2[66] << 16 | (uint32_t)a.m2[67] << 24);
+        #define BEND(seq, ms, outp) do { \
+            anim_pose(&a, (seq), (ms), 0, poses); \
+            for (uint32_t i = 0; i < a.npoints; ++i) { float in[3]; memcpy(in, a.m2 + points_at + (size_t)i * 48, 12); \
+                anim_skin_point(&a, (const float (*)[16])poses, i, in, (outp) + i * 3, NULL, NULL); } } while (0)
+        int stand = anim_find(&a, MOVE_STAND, 0), run = anim_find(&a, MOVE_RUN, 0);
+        BEND(stand, 0, at0);
+        float lo = 1e9f, hi = -1e9f;
+        for (uint32_t i = 0; i < a.npoints; ++i) { lo = fminf(lo, at0[i * 3 + 2]); hi = fmaxf(hi, at0[i * 3 + 2]); }
+        snprintf(line, sizeof line, "standing, her feet are on the ground (lowest point %.3f) and she is %.2f yards tall", lo, hi);
+        check(fabsf(lo) < 0.1f && hi > 1.9f && hi < 2.4f, line);
+        BEND(run, 0, at0);
+        BEND(run, a.seqs[run].length / 2, at1);
+        float most = 0;
+        for (uint32_t i = 0; i < a.npoints * 3; ++i) most = fmaxf(most, fabsf(at0[i] - at1[i]));
+        snprintf(line, sizeof line, "half a stride apart, the run moves some point of her %.2f yards", most);
+        check(most > 0.3f, line);
+        BEND(run, a.seqs[run].length, at1);
+        most = 0;
+        for (uint32_t i = 0; i < a.npoints * 3; ++i) most = fmaxf(most, fabsf(at0[i] - at1[i]));
+        check(most < 1e-4f, "the run's end is its start: it loops without a jump");
+        #undef BEND
+
+        /* choosing the animation */
+        MovesState ms;
+        moves_init(&ms, &a);
+        check(ms.seq == stand, "she starts standing");
+        MovesInput mi = { .forward = 1, .grounded = 1, .speed = 8.4f, .dt = 0.1f };
+        moves_step(&ms, &a, &mi);
+        snprintf(line, sizeof line, "running at 8.4 yards a second: the run, played %.0f ms in a tenth of a second (made for %.2f, so 121)", ms.ms, a.seqs[run].move_speed);
+        check(ms.seq == run && near(ms.ms, 100 * 8.4 / a.seqs[run].move_speed, 0.5), line);
+        check(ms.from == stand && ms.blend_left > 0, "and blends in from the stand");
+        mi = (MovesInput){ .grounded = 0, .rising = 1, .dt = 0.01f };
+        moves_step(&ms, &a, &mi);
+        int jstart = anim_find(&a, MOVE_JUMP_START, 0), jump = anim_find(&a, MOVE_JUMP, 0);
+        check(ms.seq == jstart, "leaving the ground going up: the jump's start");
+        for (uint32_t t = 0; t < a.seqs[jstart].length + 20; t += 10) moves_step(&ms, &a, &mi);
+        check(ms.seq == jump, "after it, the jump loops in the air");
+        mi = (MovesInput){ .grounded = 1, .dt = 0.01f };
+        moves_step(&ms, &a, &mi);
+        check(ms.seq == anim_find(&a, MOVE_JUMP_END, 0), "landing standing still: the landing");
+        moves_init(&ms, &a);
+        mi = (MovesInput){ .grounded = 0, .rising = 0, .dt = 0.01f };
+        moves_step(&ms, &a, &mi);
+        check(ms.seq == anim_find(&a, MOVE_FALL, 0), "dropping off an edge: the fall");
+        moves_init(&ms, &a);
+        mi = (MovesInput){ .turn_left = 1, .grounded = 1, .dt = 0.01f };
+        moves_step(&ms, &a, &mi);
+        check(ms.seq == anim_find(&a, MOVE_SHUFFLE_LEFT, 0), "turning on the spot: the turning shuffle");
+        mi = (MovesInput){ .strafe_left = 1, .grounded = 1, .speed = 8.4f, .dt = 0.01f };
+        for (int i = 0; i < 50; ++i) moves_step(&ms, &a, &mi);
+        snprintf(line, sizeof line, "strafing left: the run, her body turned %.0f degrees toward it", ms.body_turn / 3.14159265358979 * 180);
+        check(ms.seq == run && near(ms.body_turn, 3.14159265358979 / 2, 1e-3), line);
+        free(poses); free(scratch); free(at0); free(at1);
+        anim_free(&a);
+        mpq_chain_close(&ac);
+    }
+anim_done:
     /* }}} */
 
     /* {{{ the camera (173m) */
