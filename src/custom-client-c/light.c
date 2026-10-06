@@ -92,6 +92,11 @@ static void params_at(const LightTables *t, uint32_t set, uint32_t when, LightNo
     /* some sets give a negative share (Northrend light 1386: -0.1 at
      * night); fog doesn't start behind the camera, so it starts at 0 */
     if (o->fog_start < 0) o->fog_start = 0;
+    /* the water's opacity (173r); a set with no parameter row keeps the
+     * 0.75 this client drew all water with before it read them */
+    int prow = find_row(&t->params, set);
+    static const int FIELD[4] = { 8, 9, 6, 7 };              /* in water[]'s order: ocean, then river */
+    for (int i = 0; i < 4; ++i) o->water_alpha[i] = prow < 0 ? 0.75f : as_float(dbc_u32(&t->params, (uint32_t)prow, FIELD[i]));
 }
 static void mix_into(LightNow *a, const LightNow *b, float w)
 {
@@ -152,6 +157,7 @@ int light_at(const LightTables *t, int map, float x, float y, float z, float hou
     if (used < 0) {
         for (int c = 0; c < 3; ++c) { out->sun[c] = 0.8f; out->shade[c] = 0.4f; out->fog[c] = 0.6f; for (int s = 0; s < 5; ++s) out->sky[s][c] = 0.6f; }
         out->fog_end = 500; out->fog_start = 125;
+        for (int i = 0; i < 4; ++i) out->water_alpha[i] = 0.75f;
     }
 
     /* the sun: rises in the east at 6, overhead-south at noon, sets in the

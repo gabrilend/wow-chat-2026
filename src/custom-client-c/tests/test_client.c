@@ -558,6 +558,21 @@ int main(int argc, char **argv)
             float lake = liquid_surface(lw, 2761, -499, &wk), town = liquid_surface(lw, 2717, -400, &wk);
             snprintf(line, sizeof line, "the lake east of town has water (surface %.2f), the town itself none", lake);
             check(lake > 99 && lake < 104 && town < -10000, line);
+            /* the lake's depths (173r): the file's byte is about 9 a yard,
+             * so the deepest corner (20.8 yards, at 2866, -331) is near 187,
+             * and the shore's near 0 */
+            {
+                int deepest = 0, shallowest = 255;
+                for (int k = 0; k < t->nliquids; ++k)
+                    for (int r = 0; r < 8; ++r) for (int c = 0; c < 8; ++c) {
+                        if (!t->liquids[k].wet[r][c]) continue;
+                        int d = t->liquids[k].depth[r][c];
+                        if (d > deepest) deepest = d;
+                        if (d < shallowest) shallowest = d;
+                    }
+                snprintf(line, sizeof line, "the lake's depths read from 0 at the shore to the deepest's byte (%d to %d; about 0 to 187)", shallowest, deepest);
+                check(shallowest < 5 && deepest > 170 && deepest < 200, line);
+            }
             /* a building's pool (173r): the small night-elf house at
              * 2808.6, -321.0 holds a 2 x 2-cell basin of building water */
             {
@@ -940,6 +955,9 @@ particles_done:
         check(sn > sm, line);
         snprintf(line, sizeof line, "the fog ends %.0f yards off at noon, and starts nearer than it ends (%.0f)", noon.fog_end, noon.fog_start);
         check(noon.fog_end > 100 && noon.fog_end < 1600 && noon.fog_start < noon.fog_end, line);
+        snprintf(line, sizeof line, "the water's opacity at Astranaar: sea %.2f shallow to %.2f deep, river %.2f to %.2f (0.75-1, 0.5-1)",
+                 noon.water_alpha[0], noon.water_alpha[1], noon.water_alpha[2], noon.water_alpha[3]);
+        check(fabsf(noon.water_alpha[0] - 0.75f) < 0.01f && fabsf(noon.water_alpha[1] - 1) < 0.01f && fabsf(noon.water_alpha[2] - 0.5f) < 0.01f && fabsf(noon.water_alpha[3] - 1) < 0.01f, line);
         int far_id = light_at(&lt, 1, -600, -4200, 40, 12, &far);       /* Durotar, across the continent */
         snprintf(line, sizeof line, "across the continent, in Durotar, another light (%d)", far_id);
         check(far_id >= 0 && far_id != 192, line);

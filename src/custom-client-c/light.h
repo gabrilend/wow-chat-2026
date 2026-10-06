@@ -22,6 +22,9 @@
  *     (half-minutes since midnight, 0-2880), 19-34 colours (0xRRGGBB).
  *     Bands used: 0 sun, 1 shade (ambient), 2-6 sky overhead to horizon,
  *     7 fog, 14-15 ocean near and deep, 16-17 river near and deep (173r).
+ *   LightParams (9 fields): 1 id, 2 highlight sky, 3 skybox (LightSkybox
+ *     id), 4 cloud kind, 5 glow, 6-7 the river's opacity shallow and deep,
+ *     8-9 the ocean's (floats; Ashenvale's: 0.5, 1, 0.75, 1).
  *   LightFloatBand: 1 id (= set * 6 - 5 + band), 2 count, 3-18 times,
  *     19-34 values. Band 0: where the fog ends (times 36), band 1: where it
  *     starts, as a share of that.
@@ -36,6 +39,9 @@
  *   fog[3]               the fog's colour
  *   water[4][3]          ocean near, ocean deep, river near, river deep
  *   fog_start, fog_end   float, yards
+ *   water_alpha[4]       the water's opacity, 0-1, in water[]'s order:
+ *                        ocean shallow, ocean deep, river shallow, river
+ *                        deep (LightParams 8, 9, 6, 7; 173r)
  *   sun_dir[3]           a unit vector toward the sun (world axes)
  *   skybox[128]          the skybox model the strongest light names
  *                        (LightParams 3 -> LightSkybox 2), "" for none
@@ -52,6 +58,7 @@ typedef struct {
     float fog[3];
     float water[4][3];
     float fog_start, fog_end;
+    float water_alpha[4];             /* opacity: ocean shallow, ocean deep, river shallow, river deep (LightParams 8, 9, 6, 7) */
     float sun_dir[3];
     char  skybox[128];
 } LightNow;

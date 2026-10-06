@@ -83,9 +83,21 @@ after the walk.
   turned and placed, its surface is found where the original's files put
   it (109.88), none 15 yards off; dropping the tile forgets it.
 
+**Depth (built 2026-10-06):** the ground files' water carries a depth
+byte per point (formats 0, 2 and 3); measured against the ground at
+Astranaar's lake, it is the depth in yards times about 9 (174 at 19.4
+yards), so 255 is about 28 yards. `adt.c` reads it (`AdtLiquid.depth`),
+`light.c` reads the water's shallow and deep opacity from LightParams
+(fields 6-9, blended between lights like the colours), and `water.c`
+shades each point from the near colour and shallow opacity to the deep
+ones by depth / 255. Seen: by the shore the lake is see-through, out in
+the middle opaque. The straight 0-255 curve is this client's guess (check
+list); buildings' pools have no depth in their files and are drawn
+shallow. Tests: the lake's bytes run 0 to 186 (its deepest is 20.8
+yards); Astranaar's water opacity is 0.75-1 for the sea, 0.5-1 for rivers.
+
 **Left:**
 - The original's own swim depth for her model (an open question, below).
-- Depth-darkened water (deep against shallow colours).
 - Telling the server she swims (with the network).
 
 ## Intended Behavior

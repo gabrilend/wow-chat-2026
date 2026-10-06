@@ -103,6 +103,10 @@
  *                has water
  *   height[9][9] float: the surface's height at each corner (row, column)
  *                of the chunk's cell grid, where the layer gives one
+ *   depth[9][9]  uint8_t: the water's depth at each corner as the file
+ *                stores it: yards times about 9 (measured at Astranaar's
+ *                lake: 174 at 19.4 yards, 92 at 10.2), so 255 is about 28
+ *                yards or deeper; 255 where the layer's format has none
  *   doodad_set   int: buildings only, which set of furnishings to show
  *   lo[3], hi[3] float: buildings only, the world box the building fills
  *                (MODF's extents, turned into world axes)
@@ -142,6 +146,7 @@ typedef struct {
     int     col, row, w, h;
     uint8_t wet[8][8];
     float   height[9][9];
+    uint8_t depth[9][9];
 } AdtLiquid;
 
 typedef struct {

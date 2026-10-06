@@ -64,6 +64,9 @@ that issue and strike it here (keep the line, so the history stays).
     garden at Astranaar (`--goto 2796 -320.6 --pitch 40`), and the pool
     in the Timbermaw cave (3257, -660). Is the water where the
     original's is, and is it the same colour as the lake's?
+10d. **Water by depth** (173r): Astranaar's lake (`--goto 2800 -420
+    --face -60 --zoom 14 --pitch 35`). Does it go from see-through at
+    the shore to opaque as quickly as the original's, and darken the same?
 11. **Camera follow speed** (173m): the swing behind her at 180 degrees a
     second.
 11b. **First person and Head Bob** (173m): roll the wheel in past the

@@ -17,26 +17,32 @@
 #include <string.h>
 
 /* {{{ the shader
- * The ripple picture, tinted toward the zone's near-water colour (water
- * and sea), lit a little by the sun, fogged; see-through (alpha 0.75).
- * Lava and slime (`raw`): the picture alone, solid. */
+ * The ripple picture, tinted by the zone's water colours (water and sea),
+ * lit a little by the sun, fogged, see-through. Each point carries its
+ * depth as a share (the file's depth byte over 255, in the second picture
+ * position's x): the tint goes from the near colour to the deep one, and
+ * the opacity from the shallow to the deep (the light's water_alpha), by
+ * that share. The straight 0-255 reading is this client's guess at the
+ * original's curve (check list). Lava and slime (`raw`): the picture
+ * alone, solid. */
 static const char *VS =
     "#version 330\n"
-    "in vec3 vertexPosition; in vec2 vertexTexCoord;\n"
+    "in vec3 vertexPosition; in vec2 vertexTexCoord; in vec2 vertexTexCoord2;\n"
     "uniform mat4 mvp; uniform vec3 eye;\n"
-    "out vec2 uv; out float dist;\n"
-    "void main() { uv = vertexTexCoord; dist = length(vertexPosition - eye); gl_Position = mvp * vec4(vertexPosition, 1.0); }\n";
+    "out vec2 uv; out float dist; out float depth;\n"
+    "void main() { uv = vertexTexCoord; depth = vertexTexCoord2.x; dist = length(vertexPosition - eye); gl_Position = mvp * vec4(vertexPosition, 1.0); }\n";
 static const char *FS =
     "#version 330\n"
-    "in vec2 uv; in float dist; out vec4 frag;\n"
-    "uniform sampler2D texture0; uniform vec3 tint; uniform float raw;\n"
+    "in vec2 uv; in float dist; in float depth; out vec4 frag;\n"
+    "uniform sampler2D texture0; uniform vec3 tint_near, tint_deep; uniform vec2 opacity; uniform float raw;\n"
     "uniform vec3 sun_dir, sun_col, shade_col, fog_col; uniform vec2 fog_range;\n"
     "void main() {\n"
     "  vec3 t = texture(texture0, uv).rgb;\n"
+    "  vec3 tint = mix(tint_near, tint_deep, depth);\n"
     "  vec3 c = mix(t * 0.6 + tint * 0.6, t, raw);\n"
     "  c *= mix(shade_col + sun_col * max(sun_dir.z, 0.0), vec3(1.0), raw);\n"
     "  float fog = clamp((dist - fog_range.x) / max(fog_range.y - fog_range.x, 1.0), 0.0, 1.0);\n"
-    "  frag = vec4(mix(c, fog_col, fog), mix(0.75, 1.0, raw));\n"
+    "  frag = vec4(mix(c, fog_col, fog), mix(mix(opacity.x, opacity.y, depth), 1.0, raw));\n"
     "}\n";
 /* }}} */
 
@@ -53,7 +59,7 @@ static MpqChain *chain;
 static Dbc   table;  static unsigned char *table_bytes;
 static Shader shader;
 static Material material;
-static int   loc_eye, loc_tint, loc_raw;
+static int   loc_eye, loc_near, loc_deep, loc_opacity, loc_raw;
 /* }}} */
 
 /* {{{ water_init */
@@ -69,7 +75,9 @@ int water_init(MpqChain *c, char *why, int why_len)
     shader = LoadShaderFromMemory(VS, FS);
     if (!IsShaderReady(shader)) { snprintf(why, why_len, "the water shader didn't compile (see Raylib's messages above)"); return 1; }
     loc_eye = GetShaderLocation(shader, "eye");
-    loc_tint = GetShaderLocation(shader, "tint");
+    loc_near = GetShaderLocation(shader, "tint_near");
+    loc_deep = GetShaderLocation(shader, "tint_deep");
+    loc_opacity = GetShaderLocation(shader, "opacity");
     loc_raw = GetShaderLocation(shader, "raw");
     material = LoadMaterialDefault();
     material.shader = shader;
@@ -134,6 +142,7 @@ void water_add_tile(const AdtTile *t, int tile, double ox, double oy)
         m.triangleCount = cells * 2;
         m.vertices = MemAlloc(sizeof(float) * 3 * m.vertexCount);
         m.texcoords = MemAlloc(sizeof(float) * 2 * m.vertexCount);
+        m.texcoords2 = MemAlloc(sizeof(float) * 2 * m.vertexCount);
         int v = 0;
         for (int r = 0; r < 8; ++r)
             for (int col = 0; col < 8; ++col) {
@@ -147,6 +156,8 @@ void water_add_tile(const AdtTile *t, int tile, double ox, double oy)
                     m.vertices[v * 3 + 2] = q->height[rr][cc];
                     m.texcoords[v * 2] = (float)(wy / step);
                     m.texcoords[v * 2 + 1] = (float)(wx / step);
+                    m.texcoords2[v * 2] = q->depth[rr][cc] / 255.0f;
+                    m.texcoords2[v * 2 + 1] = 0;
                     ++v;
                 }
             }
@@ -171,6 +182,7 @@ void water_add_pool(int tile, const float at[16], const WmoPool *p, int kind)
     m.triangleCount = cells * 2;
     m.vertices = MemAlloc(sizeof(float) * 3 * m.vertexCount);
     m.texcoords = MemAlloc(sizeof(float) * 2 * m.vertexCount);
+    m.texcoords2 = MemAlloc(sizeof(float) * 2 * m.vertexCount);   /* depth 0: a pool has none in its file; drawn shallow (basins) */
     int v = 0;
     for (int y = 0; y < cy; ++y)
         for (int x = 0; x < cx; ++x) {
@@ -219,8 +231,11 @@ void water_draw(Vector3 eye, const LightNow *light, double seconds)
         if (layers[i].kind < 0) continue;
         Kind *k = &kinds[layers[i].kind];
         float raw = k->type >= 2 ? 1.0f : 0.0f;
-        const float *tint = k->type == 1 ? light->water[0] : light->water[2];   /* the sea's near colour, or a river's */
-        SetShaderValue(shader, loc_tint, tint, SHADER_UNIFORM_VEC3);
+        int sea = k->type == 1;                         /* the sea's colours and opacity, or a river's */
+        float opacity[2] = { light->water_alpha[sea ? 0 : 2], light->water_alpha[sea ? 1 : 3] };
+        SetShaderValue(shader, loc_near, light->water[sea ? 0 : 2], SHADER_UNIFORM_VEC3);
+        SetShaderValue(shader, loc_deep, light->water[sea ? 1 : 3], SHADER_UNIFORM_VEC3);
+        SetShaderValue(shader, loc_opacity, opacity, SHADER_UNIFORM_VEC2);
         SetShaderValue(shader, loc_raw, &raw, SHADER_UNIFORM_FLOAT);
         if (k->nframes) material.maps[MATERIAL_MAP_DIFFUSE].texture = k->frames[(int)(seconds * 15.0) % k->nframes];
         DrawMesh(layers[i].mesh, material, MatrixIdentity());

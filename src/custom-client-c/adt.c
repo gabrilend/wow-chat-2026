@@ -205,7 +205,7 @@ int adt_read(const unsigned char *s, size_t len, int big_alpha, AdtTile *out, ch
                             int bit = r * q.w + c;
                             q.wet[q.row + r][q.col + c] = ob == 0 ? 1 : (ob + (size_t)bit / 8 < size ? (w[ob + bit / 8] >> (bit % 8)) & 1 : 0);
                         }
-                    for (int r = 0; r <= 8; ++r) for (int c = 0; c <= 8; ++c) q.height[r][c] = lo;
+                    for (int r = 0; r <= 8; ++r) for (int c = 0; c <= 8; ++c) { q.height[r][c] = lo; q.depth[r][c] = 255; }
                     /* heights where the format has them (0, 1, 3); else flat.
                      * A height outside the layer's own stated range is not
                      * a surface: some layers hold 0 at points round their
@@ -219,6 +219,15 @@ int adt_read(const unsigned char *s, size_t len, int big_alpha, AdtTile *out, ch
                                 float h = f32(w, ov + ((size_t)r * (q.w + 1) + c) * 4);
                                 q.height[q.row + r][q.col + c] = (h >= lo - 0.01f && h <= hi + 0.01f) ? h : lo;
                             }
+                    /* depths (173r), a byte a point, where the format has
+                     * them: 0 after the heights, 2 alone, 3 after the heights
+                     * and picture positions (4 bytes a point each); 1 has
+                     * none (left 255, deep) */
+                    size_t np = (size_t)(q.w + 1) * (q.h + 1);
+                    size_t dat = fmt == 0 ? ov + np * 4 : fmt == 2 ? ov : fmt == 3 ? ov + np * 8 : 0;
+                    if (ov && dat && dat + np <= size)
+                        for (int r = 0; r <= q.h; ++r)
+                            for (int c = 0; c <= q.w; ++c) q.depth[q.row + r][q.col + c] = w[dat + (size_t)r * (q.w + 1) + c];
                     out->liquids = realloc(out->liquids, sizeof *out->liquids * (out->nliquids + 1));
                     out->liquids[out->nliquids++] = q;
                 }
