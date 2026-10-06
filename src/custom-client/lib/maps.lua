@@ -125,9 +125,11 @@ end
 -- {{{ function Maps.height_in_tile
 -- The ground height at world (x, y) inside tile t, exactly as the server
 -- works it out: which of the cell's four triangles the point is in, then
--- the plane through that triangle. INVALID_HEIGHT in a hole.
+-- the plane through that triangle. INVALID_HEIGHT in a hole. Also gives
+-- that plane's rise per yard along world x and y (numbers): the ground's
+-- exact steepness there, which the mover holds to the slope rule.
 function Maps.height_in_tile(t, x, y)
-    if t.flat then return t.flat end
+    if t.flat then return t.flat, 0, 0 end
     local fx = RESOLUTION * (32 - x / GRID_SIZE)
     local fy = RESOLUTION * (32 - y / GRID_SIZE)
     local xi, yi = math.floor(fx), math.floor(fy)
@@ -155,7 +157,8 @@ function Maps.height_in_tile(t, x, y)
             a, b, c = h4 - h3, h3 + h4 - h5, h5 - h4
         end
     end
-    return a * fx + b * fy + c
+    -- fx and fy fall as x and y rise (RESOLUTION cells a GRID_SIZE tile)
+    return a * fx + b * fy + c, -a * RESOLUTION / GRID_SIZE, -b * RESOLUTION / GRID_SIZE
 end
 -- }}}
 

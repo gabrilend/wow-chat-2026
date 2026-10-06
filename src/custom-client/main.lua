@@ -23,6 +23,7 @@ local Maps   = require("lib.maps")
 local Mover  = require("lib.mover")
 local Mat4   = require("lib.mat4")
 local Ground = require("lib.ground-mesh")
+local NavmeshSlope = require("lib.navmesh-slope")
 
 -- {{{ settings
 local MAP_ID      = 1                                 -- Kalimdor
@@ -104,7 +105,10 @@ function love.load()
         error(string.format("no ground at the start (%.1f, %.1f) in map %d from %s: is the maps folder right?",
             START.x, START.y, MAP_ID, dir))
     end
-    elf = Mover.new(START.x, START.y, z, START.o, SPEED)
+    -- the steepest walkable ground, from the server's navigation tiles
+    -- (data-files/mmaps sits beside data-files/maps)
+    local max_slope = NavmeshSlope.read(dir:gsub("/maps/?$", "/mmaps"), MAP_ID)
+    elf = Mover.new(START.x, START.y, z, START.o, SPEED, max_slope)
     origin = { x = math.floor(START.x), y = math.floor(START.y) }
     shader = love.graphics.newShader([[
         uniform mat4 u_proj;

@@ -24,15 +24,20 @@ floor to rock by steepness, fog in the distance), and a stand-in night elf
 (a violet upright box 2.3 yards tall with a pale face) moved by the
 game's controls at 120% (`lib/mover.lua`: run 8.4, back 5.4, turning half a
 circle a second, jumps and falls by the game's gravity). q quits.
-`scripts/test-custom-client` (14 checks) holds the ground and the movement
+**Steep ground** (2026-10-05): no walking up ground steeper than the
+server's own limit, read from the header of its navigation tiles
+(`lib/navmesh-slope.lua`; 60 degrees in every tile built here), and
+sliding down such ground as on a frictionless slope until she reaches
+ground she can stand on. Steepness is the exact slope of the map triangle
+she stands on (`lib/maps.lua` gives it with each height).
+`scripts/test-custom-client` (22 checks) holds the ground and the movement
 to their numbers without a window: Astranaar at 106.7 yards, no step where
 tiles meet, a second's run 8.4 yards, a jump about 1.64 yards high, slopes
 walked, cliffs fallen off.
 
 Not yet: comparing heights with the running server point for point (the
 server was down; it needs a console command or a Lua call reporting the
-server's height at a point); the real night elf (173d); slopes too steep
-to climb (open question 1). Window smoothing (multisampling) is off: with
+server's height at a point); the real night elf (173d). Window smoothing (multisampling) is off: with
 it on, the `--shot` picture came out black.
 
 ## Intended Behavior
@@ -55,6 +60,16 @@ same ground the server walks on:
 - **Speeds**, the game's base speeds at 120%: run 7 x 1.2 = 8.4 yards a
   second, back 4.5 x 1.2 = 5.4, turning pi radians a second; gravity
   19.29 yards a second squared, a jump's lift 7.96.
+- **Steep ground**: she can't walk up ground steeper than the server's
+  navigation limit, and slides down it when she stands on it (owner,
+  2026-10-05: "when they're too steep, you should start falling, using
+  the same rules that the server uses").
+- **Done means** (owner, 2026-10-05): "if the server accepts the movement
+  packs without correcting, then we have a client that handles movement
+  correctly. We're trying to render the world exactly as it's expected to
+  render in the proprietary client." So the measure of movement is a
+  connected client whose movement the server never corrects, and the
+  measure of drawing is the original client's picture.
 - She is drawn as a stand-in shape (a night elf's height, about 2.3
   yards) until models come (173d).
 
@@ -69,5 +84,11 @@ same ground the server walks on:
 
 ## Open Questions
 
-1. Slopes: the game stops you walking up slopes steeper than about 50
-   degrees. Wanted now, or later?
+1. (Answered 2026-10-05) Slopes: now ("Sure. Also, when they're too
+   steep, you should start falling, using the same rules that the server
+   uses"). The server's rule is its navigation mesh's 60 degrees. The
+   original game client has its own limit, which I believe is nearer 50
+   degrees but have not measured. Since the client decides movement and
+   the server does not check slopes, the two can differ without the
+   server correcting anyone. Should the client follow the original
+   client's limit instead, once it is measured?

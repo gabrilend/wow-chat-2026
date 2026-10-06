@@ -44,9 +44,10 @@ check(worst < 0.05, string.format("no step where tiles meet (largest jump across
 check(world:height(1e6, 1e6) < -10000, "far outside the world: no ground, not an error")
 
 print("movement at 120% (made-up ground)")
-local flat = function() return 10 end
+-- made-up grounds give height, then rise per yard along x and along y, as the map does
+local flat = function() return 10, 0, 0 end
 local function run(input, seconds, ground, m)
-    m = m or Mover.new(0, 0, 10, 0, 1.2)
+    m = m or Mover.new(0, 0, 10, 0, 1.2, 60)
     for _ = 1, seconds * 100 do Mover.step(m, input, 0.01, ground or flat) end
     return m
 end
@@ -64,7 +65,7 @@ m = run({ right = true, strafe_turns = true }, 1)
 check(near(m.o, 0, 1e-9) and near(m.y, -8.4, 1e-6), "with the right button held, D strafes instead of turning")
 
 -- a jump: the highest point and the landing
-m = Mover.new(0, 0, 10, 0, 1.2)
+m = Mover.new(0, 0, 10, 0, 1.2, 60)
 local top = 10
 Mover.step(m, { jump = true }, 0.001, flat)
 for _ = 1, 200 do Mover.step(m, {}, 0.005, flat); top = math.max(top, m.z) end
@@ -73,14 +74,42 @@ check(near(top - 10, expect, 0.02), string.format("a jump rises %.3f yards (expe
 check(m.grounded and m.z == 10, "and lands back on the ground")
 
 -- a slope down: stays on it; a cliff: falls
-local slope = function(x) return 10 - x * 0.5 end
+local slope = function(x) return 10 - x * 0.5, -0.5, 0 end
 m = run({ forward = true }, 1, slope)
 check(m.grounded and near(m.z, slope(m.x), 1e-6), "walking down a slope stays on the ground")
-local cliff = function(x) return x < 3 and 10 or -40 end
+local cliff = function(x) return x < 3 and 10 or -40, 0, 0 end
 m = run({ forward = true }, 0.5, cliff)
 check(not m.grounded and m.z < 10 and m.z > -40, "walking off a cliff falls")
 m = run({}, 3, cliff, m)
 check(m.grounded and m.z == -40, "and lands at the bottom")
+
+print("steep ground (the server's navigation rule)")
+local NavmeshSlope = require("lib.navmesh-slope")
+local limit = NavmeshSlope.read(DIR .. "/data-files/mmaps", 1)
+check(near(limit, 60, 1e-4), string.format("the server's tiles for Kalimdor say %.1f degrees is the steepest walkable", limit))
+local ok_missing = pcall(Mover.new, 0, 0, 10, 0, 1.2)
+check(not ok_missing, "a character can't be made without the slope rule")
+
+-- a ramp rising north at a given angle from x = 2, flat before it
+local function ramp(deg) local t = math.tan(math.rad(deg)); return function(x) if x < 2 then return 10, 0, 0 end; return 10 + (x - 2) * t, t, 0 end end
+m = run({ forward = true }, 1, ramp(45), Mover.new(0, 0, 10, 0, 1.2, limit))
+check(m.x > 6 and near(m.z, ramp(45)(m.x), 1e-6), string.format("up a 45-degree ramp: walks on (%.2f yards north)", m.x))
+m = run({ forward = true }, 1, ramp(70), Mover.new(0, 0, 10, 0, 1.2, limit))
+check(m.x < 2.3 and m.z < 10.8, string.format("into a 70-degree slope: stopped at its foot (%.2f yards north, %.2f up)", m.x, m.z - 10))
+
+-- standing halfway up a 70-degree slope that runs down to flat ground at x = 2
+local steep = ramp(70)
+m = Mover.new(5, 0, steep(5), 0, 1.2, limit)
+Mover.step(m, {}, 0.01, steep)
+check(m.sliding and m.x < 5, "on a 70-degree slope with no keys pressed: sliding down it")
+m = run({}, 3, steep, m)
+check(m.grounded and not m.sliding and m.x < 2 and m.z == 10, string.format("and comes to rest on the flat at the bottom (%.2f yards north)", m.x))
+m = Mover.new(5, 0, steep(5), 0, 1.2, limit)
+local x0 = m.x
+m = run({ forward = true }, 0.5, steep, m)
+check(m.x < x0, "pressing forward up it doesn't stop the slide")
+m = run({}, 1, ramp(45), Mover.new(4, 0, ramp(45)(4), 0, 1.2, limit))
+check(near(m.x, 4, 1e-9) and not m.sliding, "on a 45-degree slope, standing still stays put")
 
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)
