@@ -44,7 +44,7 @@ they stand):
 
 ## Current Behavior
 
-Built 2026-10-05; tested offline (`scripts/test-valley-deal`, 31 checks),
+Built 2026-10-05; tested offline (`scripts/test-valley-deal`, 37 checks),
 not yet tried in game. It needs the owner's rebuild (B028 changed) and an
 install (E023 adds a column) before it works on the server; until then the
 Lua option teleports and binds correctly but its +1 to the rotation fails
@@ -66,6 +66,16 @@ on the missing column.
   has nothing else to offer. The choice is checked again on select, so a
   menu left open past level 1 does nothing. He says "<valley>, then. Hold
   still.", binds the hearthstone, teleports.
+- **Buddies come along** (owner, 2026-10-05: "if we've already selected a
+  buddy-bot, and are still level 1, can we teleport the buddy-bot to the
+  new valley too? We can spawn them in a compass orientation around the
+  player, either back and to the left 45 degrees, or to the right 45
+  degrees."): every buddy of the partner that is in the world lands 3
+  yards behind the partner at 45 degrees off straight back, alternating
+  left and right in roster order, each later pair 2 yards further out,
+  facing the partner's way, dropped from a yard up. A buddy not in the
+  world stays where it is (the partner's hearthstone fetches it later).
+  Checked in `scripts/test-valley-deal` (37 checks).
 - **Counting toward the rotation**: B028 keeps its count in memory and
   writes it whole, so a +1 written beside it would be overwritten. A new
   column, `dealt_in_batch`, is the Lua script's own tally: the script adds

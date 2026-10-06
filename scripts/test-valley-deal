@@ -100,10 +100,24 @@ local sarg = object({
     SendUnitSay = function(_, text) said[#said + 1] = text end,
 })
 
+-- the partner's buddies: two chosen so far, one of them not in the world
+local buddies = {}
+for _, g in ipairs({ 901, 902, 903 }) do
+    buddies[g] = object({ guid = g, in_world = g ~= 903,
+        IsInWorld = function(s) return s.in_world end,
+        Teleport  = function(s, map, x, y, z, o) s.at = { map = map, x = x, y = y, z = z, o = o } end })
+end
+local roster = { 901, 902, 903 }
+local function rows(list)
+    local i = 1
+    return { GetUInt32 = function() return list[i] end, NextRow = function() i = i + 1; return list[i] ~= nil end }
+end
+
 local hello, select_
 local stubs = {
     CharDBQuery = function(sql)
         if sql:match("^SHOW TABLES") then return { GetUInt32 = function() return 1 end, NextRow = function() return false end } end
+        if sql:match("^SELECT buddy FROM buddy_roster WHERE owner") then return #roster > 0 and rows(roster) or nil end
         return nil                                               -- nothing owed: he only offers the journey
     end,
     CharDBExecute = function(sql) executed[#executed + 1] = sql end,
@@ -112,6 +126,8 @@ local stubs = {
         if entry == 6170001 and ev == 2 then select_ = fn end
     end,
     GetPlayersInWorld = function() return {} end,
+    GetPlayerGUID     = function(low) return low end,
+    GetPlayerByGUID   = function(g) return buddies[g] end,
 }
 setmetatable(_G, { __index = function(_, k)
     if stubs[k] ~= nil then return stubs[k] end
@@ -143,6 +159,21 @@ end
 check("the first three presses land in three different valleys, none the start",
     landed[1] ~= landed[2] and landed[2] ~= landed[3] and landed[1] ~= landed[3])
 check("the fourth press is back in the Valley of Trials", player.x == -618.518 and player.y == -4251.67)
+
+-- her buddies came along: back-left and back-right of her, 45 degrees off straight back
+local function bearing(b)
+    local a = math.atan2(b.at.y - player.y, b.at.x - player.x) - (Valleys[1][0].o + math.pi)
+    return (a + math.pi) % (2 * math.pi) - math.pi                         -- relative to straight behind her
+end
+local b1, b2 = buddies[901], buddies[902]
+check("both buddies in the world came to the Valley of Trials", b1.at and b2.at and b1.at.map == 1 and b2.at.map == 1)
+check(string.format("the first stands 45 degrees off straight back, to her left (%.1f degrees)", math.deg(bearing(b1))),
+    math.abs(bearing(b1) + math.pi / 4) < 1e-6)
+check(string.format("the second 45 degrees the other way, to her right (%.1f degrees)", math.deg(bearing(b2))),
+    math.abs(bearing(b2) - math.pi / 4) < 1e-6)
+check("3 yards behind her", math.abs(math.sqrt((b1.at.x - player.x) ^ 2 + (b1.at.y - player.y) ^ 2) - 3) < 1e-6)
+check("facing the way she faces", b1.at.o == Valleys[1][0].o)
+check("a buddy not in the world is left where it is", rawget(buddies[903], "at") == nil)
 
 player.level = 2
 check("at level 2 the option is gone", option() == nil)

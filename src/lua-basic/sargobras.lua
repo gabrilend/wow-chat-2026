@@ -104,6 +104,11 @@ local SIT_RADIUS        = 3         -- yards from the fire to his seat
 local SIT_SWING         = 1.0       -- radians (~57 degrees) he swings round the fire, off the line back
 local SEAT_REACHED      = 0.75      -- yards: close enough to the seat
 local WALK_GIVE_UP_MS   = 15000     -- a seat he can't reach: sit where he is after this long
+-- buddies following a "somewhere else" deal (155d1, owner 2026-10-05:
+-- "back and to the left 45 degrees, or to the right 45 degrees")
+local DEAL_BUDDY_ANGLE  = math.pi * 3 / 4   -- radians from the partner's facing: 45 degrees off straight back
+local DEAL_BUDDY_DIST   = 3         -- yards behind the partner, the first pair
+local DEAL_BUDDY_STEP   = 2         -- yards further out for each later pair
 -- }}}
 
 -- {{{ game constants (3.3.5a)
@@ -402,6 +407,28 @@ local function go_elsewhere(player, creature)
     creature:SendUnitSay(string.format("%s, then. Hold still.", v.name), 0)
     player:SetBindPoint(v.x, v.y, v.z, v.map, v.zone)
     player:Teleport(v.map, v.x, v.y, v.z, v.o)
+
+    -- buddies already chosen come along (owner, 2026-10-05): each lands
+    -- behind the partner at a 45-degree angle off straight back, the first
+    -- to the left, the second to the right, further ones a step further
+    -- out on the same two lines; all facing the way the partner faces.
+    -- Dropped a yard above the arrival point's height so uneven ground
+    -- never puts one underneath it. Buddies not in the world stay put
+    -- (their partner's hearthstone fetches them later, buddy-hearth.lua).
+    local q = CharDBQuery("SELECT buddy FROM buddy_roster WHERE owner = " .. player:GetGUIDLow() .. " AND buddy <> 0 ORDER BY slot")
+    if q then
+        local i = 0
+        repeat
+            local b = GetPlayerByGUID(GetPlayerGUID(q:GetUInt32(0)))
+            if b and b:IsInWorld() then
+                i = i + 1
+                local side  = (i % 2 == 1) and 1 or -1                       -- 1 back-left, -1 back-right
+                local angle = v.o + side * DEAL_BUDDY_ANGLE
+                local dist  = DEAL_BUDDY_DIST + math.floor((i - 1) / 2) * DEAL_BUDDY_STEP
+                b:Teleport(v.map, v.x + math.cos(angle) * dist, v.y + math.sin(angle) * dist, v.z + 1, v.o)
+            end
+        until not q:NextRow()
+    end
     CharDBExecute(string.format(
         "UPDATE basic_starting_valley_rotation SET dealt_in_batch = dealt_in_batch + 1 WHERE team = %d AND current_valley = %d",
         team, index))
