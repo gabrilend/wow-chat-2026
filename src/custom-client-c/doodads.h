@@ -31,9 +31,13 @@ int  doodads_add_tile(const AdtTile *t, double ox, double oy, char *why, int why
 /* Draws every doodad. `eye` is the camera's position (for the fog). */
 void doodads_draw(Vector3 eye, const float sky[3]);
 
-/* How many models and copies are loaded, and how many pieces were left
- * out because their picture is chosen by the game at run time (for the
- * start-up report). */
-void doodads_counts(int *models, int *copies, int *skipped_pieces);
+/* Bends every moving model (one whose standing animation moves: trees
+ * swaying) to its pose at `ms` since start; all copies share it. */
+void doodads_animate(uint32_t ms);
+
+/* How many models and copies are loaded, how many pieces were left out
+ * because their picture is chosen by the game at run time, and how many
+ * models move (for the start-up report). */
+void doodads_counts(int *models, int *copies, int *skipped_pieces, int *moving);
 
 #endif

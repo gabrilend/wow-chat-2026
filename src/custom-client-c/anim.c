@@ -180,6 +180,25 @@ static int sample(const Anim *a, const AnimTrack *tr, int seq, uint32_t ms, uint
 }
 /* }}} */
 
+/* {{{ anim_moves */
+static int track_moves(const Anim *a, const AnimTrack *tr, int seq)
+{
+    uint32_t sub = tr->global >= 0 ? 0 : (uint32_t)seq;
+    if (sub >= tr->nsub) return 0;
+    size_t head = tr->sub_at + (size_t)sub * 8;
+    if (head + 8 > a->m2_len) return 0;
+    return u32(a->m2, head) > 1;
+}
+int anim_moves(const Anim *a, int seq)
+{
+    if (seq < 0 || seq >= a->nseqs) return 0;
+    for (int i = 0; i < a->nbones; ++i)
+        if (track_moves(a, &a->bones[i].move, seq) || track_moves(a, &a->bones[i].turn, seq) || track_moves(a, &a->bones[i].stretch, seq))
+            return 1;
+    return 0;
+}
+/* }}} */
+
 /* {{{ anim_pose */
 static void mul4(const float a[16], const float b[16], float out[16])   /* out = a * b, column-major */
 {

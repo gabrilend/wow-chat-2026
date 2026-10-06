@@ -8,6 +8,7 @@
  * first, then see-through and glowing ones over them.
  */
 #include "doodads.h"
+#include "anim.h"
 #include "blp.h"
 #include "m2.h"
 #include "wmo.h"
@@ -59,11 +60,20 @@ static const char *FS =
  * places (as Raylib matrices, relative to the drawing origin). seen[]
  * holds every placement id drawn so far, so a doodad listed by two tiles
  * is drawn once. */
-typedef struct { Mesh mesh; int picture; uint16_t blend, flags; int indoor; } DoodadPiece;
+typedef struct { Mesh mesh; int picture; uint16_t blend, flags; int indoor; uint32_t *point_of; } DoodadPiece;
+/* A model that moves while standing (trees swaying, lamps flickering)
+ * also keeps its skeleton, its points as made, and per piece which model
+ * point each mesh corner is (point_of); every frame its points are bent
+ * once and all its copies share that pose, as the original plays them, in
+ * step. `anim` is NULL for a model that doesn't move. */
 typedef struct {
     char    name[260];
     DoodadPiece  *pieces;   int npieces;
     Matrix *copies;   int ncopies, cap;
+    Anim   *anim;     int stand;
+    M2Vertex *rest;   uint32_t nrest;
+    float (*poses)[16];
+    float  *bent;
 } DoodadModel;
 
 static MpqChain *chain;
@@ -76,7 +86,7 @@ static uint32_t *seen;     static int nseen, seen_cap;
 typedef struct { int model; WmoRoot root; } Building;
 static Building *buildings; static int nbuildings, buildings_cap;
 static uint32_t *seen_b;    static int nseen_b, seen_b_cap;
-static int       skipped_pieces;
+static int       skipped_pieces, moving_models;
 static Shader    shader;
 static Material  material;
 static int       loc_eye, loc_sky, loc_cutoff, loc_unlit, loc_indoor;
@@ -162,8 +172,39 @@ static int load_model(const char *name)
         return nmodels++;
     }
     int bad = m2_read(m2, mlen, skin, slen, &mod, why, sizeof why);
-    free(m2); free(skin);
-    if (bad) { fprintf(stderr, "doodads: %s: %s; left out\n", name, why); return nmodels++; }
+    free(skin);
+    if (bad) { free(m2); fprintf(stderr, "doodads: %s: %s; left out\n", name, why); return nmodels++; }
+
+    /* does it move while standing? (its stand animation, id 0, moving
+     * any bone) If so it keeps its skeleton and is bent every frame. */
+    Anim *an = calloc(1, sizeof *an);
+    int moving = 0;
+    if (!anim_read(m2, mlen, an, why, sizeof why)) {
+        md->stand = anim_find(an, 0, 0);
+        if (md->stand >= 0 && anim_needs_file(an, md->stand)) {
+            snprintf(path, sizeof path, "%s%04d-%02d.anim", base, an->seqs[md->stand].id, an->seqs[md->stand].variation);
+            size_t alen;
+            unsigned char *af = mpq_chain_read(chain, path, &alen, &from);
+            if (af) anim_attach_file(an, md->stand, af, alen);
+            else fprintf(stderr, "doodads: %s is in none of the archives; %s stands still\n", path, name);
+        }
+        moving = md->stand >= 0 && an->npoints == mod.nvertices && anim_moves(an, md->stand);
+    } else {
+        fprintf(stderr, "doodads: %s's skeleton: %s; it stands still\n", name, why);
+    }
+    free(m2);
+    if (moving) {
+        md->anim = an;
+        md->nrest = mod.nvertices;
+        md->rest = malloc(sizeof *md->rest * md->nrest);
+        memcpy(md->rest, mod.vertices, sizeof *md->rest * md->nrest);
+        md->poses = malloc(sizeof *md->poses * (an->nbones ? an->nbones : 1));
+        md->bent = malloc(sizeof(float) * 6 * md->nrest);
+        ++moving_models;
+    } else {
+        anim_free(an);
+        free(an);
+    }
 
     md->pieces = calloc(mod.nunits ? mod.nunits : 1, sizeof *md->pieces);
     for (uint32_t u = 0; u < mod.nunits; ++u) {
@@ -190,8 +231,13 @@ static int load_model(const char *name)
             m.texcoords[i * 2] = v.u; m.texcoords[i * 2 + 1] = v.v;
         }
         if (!ok) { UnloadMesh(m); fprintf(stderr, "doodads: %s: a piece names a point the model doesn't have; piece left out\n", name); continue; }
-        UploadMesh(&m, false);
-        md->pieces[md->npieces++] = (DoodadPiece){ m, pic, un.blend, un.flags, 0 };
+        uint32_t *point_of = NULL;
+        if (md->anim) {
+            point_of = malloc(sizeof(uint32_t) * p.count);
+            for (uint32_t i = 0; i < p.count; ++i) point_of[i] = mod.indices[p.first + i];
+        }
+        UploadMesh(&m, md->anim != NULL);                  /* a moving model's meshes are refreshed every frame */
+        md->pieces[md->npieces++] = (DoodadPiece){ m, pic, un.blend, un.flags, 0, point_of };
     }
     m2_free(&mod);
     return nmodels++;
@@ -265,7 +311,7 @@ static int load_building(const char *name)
             }
             UploadMesh(&m, false);
             int indoor = (g.flags & 0x2000) && g.has_colours;
-            md->pieces[md->npieces++] = (DoodadPiece){ m, pic, (uint16_t)mat.blend, (uint16_t)mat.flags, indoor };
+            md->pieces[md->npieces++] = (DoodadPiece){ m, pic, (uint16_t)mat.blend, (uint16_t)mat.flags, indoor, NULL };
         }
         wmo_free_group(&g);
     }
@@ -365,11 +411,40 @@ void doodads_draw(Vector3 eye, const float sky[3])
 }
 /* }}} */
 
+/* {{{ doodads_animate
+ * Each moving model's stand animation at `ms` (its own length wraps it;
+ * global sequences use `ms` too), its points bent and copied into its
+ * pieces' meshes. Only models with copies placed are bent. */
+void doodads_animate(uint32_t ms)
+{
+    for (int i = 0; i < nmodels; ++i) {
+        DoodadModel *md = &models[i];
+        if (!md->anim || !md->ncopies) continue;
+        anim_pose(md->anim, md->stand, ms, ms, md->poses);
+        for (uint32_t k = 0; k < md->nrest; ++k) {
+            float p[3] = { md->rest[k].x, md->rest[k].y, md->rest[k].z }, n[3] = { md->rest[k].nx, md->rest[k].ny, md->rest[k].nz };
+            anim_skin_point(md->anim, (const float (*)[16])md->poses, k, p, md->bent + k * 6, n, md->bent + k * 6 + 3);
+        }
+        for (int j = 0; j < md->npieces; ++j) {
+            DoodadPiece *pc = &md->pieces[j];
+            Mesh *m = &pc->mesh;
+            for (int v = 0; v < m->vertexCount; ++v) {
+                const float *b = md->bent + pc->point_of[v] * 6;
+                memcpy(m->vertices + v * 3, b, sizeof(float) * 3);
+                memcpy(m->normals + v * 3, b + 3, sizeof(float) * 3);
+            }
+            UpdateMeshBuffer(*m, 0, m->vertices, (int)(sizeof(float) * 3 * m->vertexCount), 0);   /* positions */
+            UpdateMeshBuffer(*m, 2, m->normals, (int)(sizeof(float) * 3 * m->vertexCount), 0);    /* facings */
+        }
+    }
+}
+/* }}} */
+
 /* {{{ doodads_counts */
-void doodads_counts(int *nm, int *nc, int *ns)
+void doodads_counts(int *nm, int *nc, int *ns, int *nmoving)
 {
     int copies = 0;
     for (int i = 0; i < nmodels; ++i) copies += models[i].ncopies;
-    *nm = nmodels; *nc = copies; *ns = skipped_pieces;
+    *nm = nmodels; *nc = copies; *ns = skipped_pieces; *nmoving = moving_models;
 }
 /* }}} */

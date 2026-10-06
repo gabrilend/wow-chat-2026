@@ -83,6 +83,11 @@ int  anim_find(const Anim *a, int id, int variation);
 int  anim_needs_file(const Anim *a, int seq);
 void anim_attach_file(Anim *a, int seq, unsigned char *data, size_t len);   /* takes the buffer */
 
+/* 1 when animation `seq` moves any bone: some track has more than one
+ * moment in it (or in a global sequence it uses). A model whose standing
+ * animation doesn't move is drawn as made, never bent (most rocks). */
+int  anim_moves(const Anim *a, int seq);
+
 /* Every bone's pose for animation `seq` at `ms` into it (wrapped to its
  * length) and `global_ms` since start (for bones on global sequences),
  * as 4 x 4 matrices laid out as Raylib's (see adt.h). `poses` holds

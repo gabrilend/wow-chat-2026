@@ -18,6 +18,7 @@
  *   --zoom N          (pictures) the camera N yards back
  *   --turn DEG        (pictures) the camera turned DEG degrees round her, held there
  *   --pitch DEG       (pictures) the camera raised DEG degrees (up to 83)
+ *   --clock MS        (pictures) start the world's animations MS milliseconds in
  *   --pose ID MS      (pictures) hold her in animation ID (AnimationData.dbc:
  *                     0 stand, 5 run, 13 walk backwards, 38 jump ...) at MS
  */
@@ -155,6 +156,7 @@ int main(int argc, char **argv)
 {
     const char *maps = NULL, *client = NULL, *shot = NULL, *settings_file = NULL;
     int pose_id = -1;                                    /* --pose: hold her in this animation */
+    double start_ms = 0;                                 /* --clock: the world's animations start this far in */
     float pose_ms = 0;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--maps") && i + 1 < argc) maps = argv[++i];
@@ -166,8 +168,9 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--turn") && i + 1 < argc) { view.yaw = (float)(START_O + atof(argv[++i]) * DEG2RAD); cam_held = 1; }
         else if (!strcmp(argv[i], "--pitch") && i + 1 < argc) view.pitch = (float)(atof(argv[++i]) * DEG2RAD);
         else if (!strcmp(argv[i], "--pose") && i + 2 < argc) { pose_id = atoi(argv[++i]); pose_ms = (float)atof(argv[++i]); }
+        else if (!strcmp(argv[i], "--clock") && i + 1 < argc) start_ms = atof(argv[++i]);
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS]\n"); return 2; }
 
     /* the settings: defaults, then the player's file; a line it refuses is
      * named on the terminal and skipped (173b1) */
@@ -227,14 +230,14 @@ int main(int argc, char **argv)
     int eye_m = GetShaderLocation(model_sh, "eye"),  sky_m = GetShaderLocation(model_sh, "sky");
     SetShaderValue(model_sh, sky_m, SKY, SHADER_UNIFORM_VEC3);
     refresh_tiles();
-    int dm, dc, ds;
-    doodads_counts(&dm, &dc, &ds);
-    printf("doodads: %d models, %d placed\n", dm, dc);
+    int dm, dc, ds, dmov;
+    doodads_counts(&dm, &dc, &ds, &dmov);
+    printf("doodads: %d models (%d of them moving), %d placed\n", dm, dmov, dc);
     if (ds) printf("doodads: %d pieces left out: their picture is chosen by the game at run time (not built yet)\n", ds);
 
     MovesState moves;
     moves_init(&moves, &her.anim);
-    double clock_ms = 0;
+    double clock_ms = start_ms;
 
     int frames = 0, drag_l = 0, drag_r = 0;
     while (!WindowShouldClose()) {
@@ -288,6 +291,7 @@ int main(int argc, char **argv)
         }
         clock_ms += dt * 1000.0;
         figure_bend(&her, &moves, (uint32_t)clock_ms);
+        doodads_animate((uint32_t)clock_ms);
         /* the bystanders: each holds an animation for HOLD_MS, then the
          * next of CYCLE its model has */
         for (int i = 0; i < nothers; ++i) {

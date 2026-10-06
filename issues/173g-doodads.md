@@ -60,10 +60,30 @@ See 173f (the owner's order, 2026-10-05).
 - **Picture options** for checking: `--turn DEG` and `--pitch DEG` aim
   the camera.
 
+**Moving doodads built 2026-10-06:**
+- **What moves:** a doodad whose standing animation moves any bone
+  (`anim_moves`: a track with more than one moment in it) keeps its
+  skeleton.
+- **How:** `doodads_animate` bends it once a frame on the processor. All
+  its copies share that pose and play in step, as the original plays
+  them.
+- **At Astranaar:** 51 of the 394 models move. Measured on Astranaar's
+  own tile:
+  - birds circle overhead, up to 38 yards;
+  - fish swim, up to 4 yards;
+  - the hippogryph roost moves, up to 5 yards;
+  - fireflies drift, up to 1.6 yards;
+  - street lamps sway 0.3 yards, banners 0.08.
+  The giant Ashenvale trees don't move: their standing animation is
+  still in the original too.
+- **Picture option:** `--clock MS` starts the world's animations later.
+
 **Left:**
 - Pieces whose picture the game chooses at run time (none so far at
   Astranaar).
-- Swaying and other animation (models are drawn in their resting pose).
+- Particles (torch flames, wisps, firefly glow) and picture animations
+  (scrolling water, glowing runes): what makes the torches and wisps look
+  alive. Both are separate parts of the model files, not read yet.
 - Step 4's cross-check against the server's collision placements
   (`data-files/vmaps`). The furnishing-box check and the pictures cover
   placement for now.
