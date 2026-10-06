@@ -1,0 +1,6 @@
+## Interface: 30300
+## Title: Everland: No Map
+## Notes: The intended way to play Everland Ghostsong: no minimap, and the world map only at a planning table or a map (the Dark Portal, the throne rooms).
+## Author: gabrilend
+## Version: 1.0
+EverlandNoMap.lua

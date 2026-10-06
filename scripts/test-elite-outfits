@@ -1,0 +1,283 @@
+#!/usr/bin/env luajit
+-- test-elite-outfits - holds every elite outfit (issue 617r) to its rule,
+-- against the world database.
+--
+-- For a general audience: elites are full outfits for buddy types, the
+-- bannermen of the Horde and the Alliance. The owner's rule (2026-10-04):
+-- nothing beyond Molten Core, no Onyxia or Zul'Gurub, "just MC and dungeons
+-- and previous stuff", no PvP gear. This reads the outfits from
+-- src/lua-basic/data/elite-outfit-profiles.lua and, for every item, asks the world
+-- database: does it exist; does it fit the slot it is listed for; can the
+-- class wear or wield it; is its required level 60 or less; does it need an
+-- honor rank (PvP); and does some creature or chest in Molten Core or a
+-- classic dungeon drop it (following shared loot lists down to the item).
+-- It also checks that a profile never lists a unique item twice and never
+-- pairs a two-handed weapon with an off-hand item. A second part runs the
+-- real ".elite" command script in a stand-in world (fake buddies, no
+-- server) and checks what it takes off, puts on, and reports.
+--
+-- Usage: scripts/test-elite-outfits [PROJECT_DIR] [WORLD_DATABASE]
+--   WORLD_DATABASE defaults to the active profile's (acore_world_<profile>).
+-- Needs MySQL running (scripts/start-mysql). Exits non-zero on any failure.
+
+-- {{{ configuration
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local MYSQL   = DIR .. "/mysql/installed-files/bin/mysql"
+local PROFILE = io.open(DIR .. "/.profile"):read("*l")
+local WORLD   = arg[2] or ("acore_world_" .. PROFILE)
+local OUTFITS = os.getenv("ELITE_OUTFITS") or (DIR .. "/src/lua-basic/data/elite-outfit-profiles.lua")   -- the environment variable lets the test be pointed at a planted-bad copy
+local MAX_LEVEL = 60
+
+-- Where an elite's items may drop: Molten Core and the classic dungeons
+-- (map ids). Onyxia's Lair 249, Zul'Gurub 309, Blackwing Lair 469 and
+-- Ahn'Qiraj 509/531 are left out on purpose: an item must drop somewhere
+-- in this list to pass.
+local ALLOWED_MAPS = {
+    [409] = "Molten Core",
+    [33]  = "Shadowfang Keep",  [34]  = "The Stockade",       [36]  = "The Deadmines",
+    [43]  = "Wailing Caverns",  [47]  = "Razorfen Kraul",     [48]  = "Blackfathom Deeps",
+    [70]  = "Uldaman",          [90]  = "Gnomeregan",         [109] = "Sunken Temple",
+    [129] = "Razorfen Downs",   [189] = "Scarlet Monastery",  [209] = "Zul'Farrak",
+    [229] = "Blackrock Spire",  [230] = "Blackrock Depths",   [289] = "Scholomance",
+    [329] = "Stratholme",       [349] = "Maraudon",           [389] = "Ragefire Chasm",
+    [429] = "Dire Maul",
+}
+-- }}}
+
+-- {{{ the game's rules, as tables (3.3.5a)
+-- equipment slot -> inventory types that may go there
+local SLOT_FITS = {
+    [0] = { [1] = true },  [1] = { [2] = true },  [2] = { [3] = true },
+    [4] = { [5] = true, [20] = true },            [5] = { [6] = true },
+    [6] = { [7] = true },  [7] = { [8] = true },  [8] = { [9] = true },  [9] = { [10] = true },
+    [10] = { [11] = true }, [11] = { [11] = true }, [12] = { [12] = true }, [13] = { [12] = true },
+    [14] = { [16] = true },
+    [15] = { [13] = true, [17] = true, [21] = true },
+    [16] = { [14] = true, [22] = true, [23] = true },
+    [17] = { [15] = true, [25] = true, [26] = true, [28] = true },
+}
+local TWO_HAND = 17
+-- weapon subclass a class may wield (class id -> { subclass = true })
+local function set(...) local t = {} for _, v in ipairs({ ... }) do t[v] = true end return t end
+local WEAPONS = {
+    [1]  = set(0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 13, 15, 16, 18),   -- warrior
+    [2]  = set(0, 1, 4, 5, 6, 7, 8),                             -- paladin
+    [3]  = set(0, 1, 2, 3, 6, 7, 8, 10, 13, 15, 16, 18),         -- hunter
+    [4]  = set(0, 2, 3, 4, 7, 13, 15, 16, 18),                   -- rogue
+    [5]  = set(4, 10, 15, 19),                                   -- priest
+    [6]  = set(0, 1, 4, 5, 6, 7, 8),                             -- death knight
+    [7]  = set(0, 1, 4, 5, 10, 13, 15),                          -- shaman
+    [8]  = set(7, 10, 15, 19),                                   -- mage
+    [9]  = set(7, 10, 15, 19),                                   -- warlock
+    [11] = set(4, 5, 6, 10, 13, 15),                             -- druid
+}
+-- armor subclass a class may wear at 60: 1 cloth, 2 leather, 3 mail,
+-- 4 plate, 6 shield, 7 libram, 8 idol, 9 totem, 10 sigil; 0 is jewelry
+local ARMOR = {
+    [1]  = set(0, 1, 2, 3, 4, 6),     [2] = set(0, 1, 2, 3, 4, 6, 7),
+    [3]  = set(0, 1, 2, 3),           [4] = set(0, 1, 2),
+    [5]  = set(0, 1),                 [6] = set(0, 1, 2, 3, 4, 10),
+    [7]  = set(0, 1, 2, 3, 6, 9),     [8] = set(0, 1),
+    [9]  = set(0, 1),                [11] = set(0, 1, 2, 8),
+}
+local ITEM_CLASS_WEAPON, ITEM_CLASS_ARMOR = 2, 4
+local FLAG_UNIQUE_EQUIPPED = 524288
+-- }}}
+
+-- {{{ local function query
+-- Rows of tab-separated fields; stops the test when MySQL can't answer.
+local function query(sql)
+    local cmd = string.format("MYSQL_PWD=menardi '%s' -h127.0.0.1 -P3307 -uritz -N -B %s -e \"%s\" 2>&1",
+        MYSQL, WORLD, sql:gsub('"', '\\"'))
+    local pipe = assert(io.popen(cmd, "r"))
+    local rows = {}
+    for line in pipe:lines() do
+        if line:match("^ERROR") then
+            io.stderr:write("test-elite-outfits: MySQL refused a query on " .. WORLD .. ": " .. line .. "\n" ..
+                "  to debug: is MySQL running (scripts/start-mysql)? does " .. WORLD .. " exist?\n")
+            os.exit(2)
+        end
+        local row = {}
+        for field in (line .. "\t"):gmatch("([^\t]*)\t") do row[#row + 1] = field end
+        rows[#rows + 1] = row
+    end
+    pipe:close()
+    return rows
+end
+-- }}}
+
+local outfits = dofile(OUTFITS)
+
+-- every item named anywhere, once
+local ids, seen = {}, {}
+for _, elite in pairs(outfits) do
+    for _, item in pairs(elite.items) do
+        if not seen[item] then seen[item] = true; ids[#ids + 1] = item end
+    end
+end
+local id_list = table.concat(ids, ",")
+
+-- the items' own facts
+local facts = {}
+for _, r in ipairs(query("SELECT entry, name, InventoryType, class, subclass, AllowableClass, RequiredLevel, RequiredHonorRank, Flags FROM item_template WHERE entry IN (" .. id_list .. ")")) do
+    facts[tonumber(r[1])] = { name = r[2], inv = tonumber(r[3]), class = tonumber(r[4]), sub = tonumber(r[5]),
+        allow = tonumber(r[6]), level = tonumber(r[7]), honor = tonumber(r[8]), flags = tonumber(r[9]) }
+end
+
+-- where they drop: creatures and chests standing in the allowed maps,
+-- following shared loot lists (reference rows) down to the item
+local map_list = {}
+for map in pairs(ALLOWED_MAPS) do map_list[#map_list + 1] = map end
+map_list = table.concat(map_list, ",")
+local drops = {}   -- item -> { map = true }
+for _, r in ipairs(query(
+    "WITH RECURSIVE src(item, map, via) AS (" ..
+    " SELECT l.Item, c.map, l.Reference FROM creature_loot_template l JOIN creature_template t ON t.lootid = l.Entry JOIN creature c ON c.id = t.entry WHERE c.map IN (" .. map_list .. ")" ..
+    " UNION SELECT l.Item, g.map, l.Reference FROM gameobject_loot_template l JOIN gameobject_template gt ON gt.type = 3 AND gt.Data1 = l.Entry JOIN gameobject g ON g.id = gt.entry WHERE g.map IN (" .. map_list .. ")" ..
+    " UNION SELECT r.Item, s.map, r.Reference FROM reference_loot_template r JOIN src s ON s.via > 0 AND r.Entry = s.via)" ..
+    " SELECT DISTINCT item, map FROM src WHERE via = 0 AND item IN (" .. id_list .. ")")) do
+    local item = tonumber(r[1])
+    drops[item] = drops[item] or {}
+    drops[item][tonumber(r[2])] = true
+end
+
+-- {{{ checks
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("  FAIL: " .. what) end
+end
+
+local names = {}
+for name in pairs(outfits) do names[#names + 1] = name end
+table.sort(names)
+for _, name in ipairs(names) do
+    local elite = outfits[name]
+    print(name)
+    local uniques = {}
+    for slot, item in pairs(elite.items) do
+        local f = facts[item]
+        local label = string.format("slot %d, item %d %s", slot, item, f and ("(" .. f.name .. ")") or "")
+        local fails_before = fails
+        check(f ~= nil, label .. ": no such item in " .. WORLD)
+        if f then
+            check(SLOT_FITS[slot] and SLOT_FITS[slot][f.inv], label .. ": inventory type " .. f.inv .. " does not go in this slot")
+            check(f.allow == -1 or bit.band(f.allow, bit.lshift(1, elite.class - 1)) ~= 0, label .. ": the item's class list leaves out class " .. elite.class)
+            if f.class == ITEM_CLASS_WEAPON then
+                check(WEAPONS[elite.class][f.sub], label .. ": class " .. elite.class .. " can't wield weapon kind " .. f.sub)
+            elseif f.class == ITEM_CLASS_ARMOR then
+                check(ARMOR[elite.class][f.sub], label .. ": class " .. elite.class .. " can't wear armor kind " .. f.sub)
+            end
+            check(f.level <= MAX_LEVEL, label .. ": needs level " .. f.level)
+            check(f.honor == 0, label .. ": needs an honor rank (PvP gear)")
+            local where = {}
+            for map in pairs(drops[item] or {}) do where[#where + 1] = ALLOWED_MAPS[map] end
+            table.sort(where)
+            check(#where > 0, label .. ": drops in neither Molten Core nor a classic dungeon")
+            if bit.band(f.flags, FLAG_UNIQUE_EQUIPPED) ~= 0 then
+                check(not uniques[item], label .. ": unique, listed twice")
+                uniques[item] = true
+            end
+            print(string.format("  %s %-3d %-32s %s", fails == fails_before and "ok" or "--", slot, f.name, table.concat(where, ", ")))
+        end
+    end
+    local main = facts[elite.items[15]]
+    check(not (main and main.inv == TWO_HAND and elite.items[16]), "a two-handed weapon with something in the off hand")
+end
+-- }}}
+
+-- {{{ the command, in a stand-in world (no server)
+-- Loads the real src/lua-basic/elite-outfits.lua with fake buddies that
+-- record what is removed and equipped, and runs ".elite growth" through it:
+-- every listed slot is emptied and filled; the off hand is emptied for a
+-- two-hander; shirt and tabard are left alone; a buddy with no elite and a
+-- buddy not in the world are reported, not dressed.
+print("")
+print("The .elite command (stand-in world)")
+local templates
+do
+    local function item(entry) return { entry = entry, GetCount = function() return 1 end, GetEntry = function() return entry end } end
+    local function buddy(name, worn)
+        local b = { name = name, worn = worn, removed = {}, equipped = {}, saved = false, spells = {}, dead = false, refuse = {} }
+        b.GetName = function() return name end
+        b.IsInWorld = function() return true end
+        b.IsDead = function() return b.dead end
+        b.HasSpell = function(_, s) return b.spells[s] == true end
+        b.LearnSpell = function(_, s) b.spells[s] = true end
+        b.GetEquippedItemBySlot = function(_, slot) return b.worn[slot] end
+        b.RemoveItem = function(_, it) for s, w in pairs(b.worn) do if w == it then b.worn[s] = nil; b.removed[s] = true end end end
+        -- refuses plate (item class 4, subclass 4) without Plate Mail (750),
+        -- and anything listed in b.refuse, as the game would
+        b.EquipItem = function(_, entry, slot)
+            if b.worn[slot] or b.refuse[entry] then return nil end
+            local t = templates[entry]
+            if t and t.class == 4 and t.sub == 4 and not b.spells[750] then return nil end
+            b.worn[slot] = item(entry); b.equipped[slot] = entry; return b.worn[slot]
+        end
+        b.SaveToDB = function() b.saved = true end
+        return b
+    end
+    -- item kinds the stand-in game knows (class, subclass), from the facts read above
+    templates = {}
+    for id, f in pairs(facts) do templates[id] = { class = f.class, sub = f.sub } end
+    -- roster rows: slot, guid, race, class, role
+    local rows = {
+        { 1, 575, 6, 1, 0 },     -- tauren warrior, damage: a two-hander elite; no Plate Mail yet
+        { 2, 599, 3, 4, 0 },     -- dwarf rogue: no elite
+        { 3, 600, 6, 1, 0 },     -- not in the world
+        { 4, 596, 8, 8, 0 },     -- troll mage, dead
+        { 5, 595, 8, 1, 1 },     -- troll warrior tank: its shield will be refused
+    }
+    local pozeta = buddy("Pozeta", { [3] = item(3427), [15] = item(1194), [16] = item(2362), [18] = item(22999), [0] = item(34008) })
+    local rogue  = buddy("Rogue", {})
+    local ecaexo = buddy("Ecaexo", { [0] = item(1) }); ecaexo.dead = true
+    local xazian = buddy("Xazian", { [16] = item(2362) }); xazian.spells[750] = true
+    xazian.refuse[outfits["Troll Warrior (tank)"].items[16]] = true
+    local players = { [575] = pozeta, [599] = rogue, [596] = ecaexo, [595] = xazian }
+    local said, handler_fn = {}, nil
+    local env = setmetatable({
+        RegisterPlayerEvent = function(_, fn) handler_fn = fn end,
+        GetPlayerGUID = function(g) return g end,
+        GetPlayerByGUID = function(g) return players[g] end,
+        GetItemTemplate = function(entry)
+            local t = templates[entry]
+            return t and { GetClass = function() return t.class end, GetSubClass = function() return t.sub end }
+        end,
+        CharDBQuery = function(sql)
+            local i = 1
+            return { GetUInt32 = function(_, c) return rows[i][c + 1] end,
+                     NextRow   = function() i = i + 1; return rows[i] ~= nil end }
+        end,
+    }, { __index = _G })
+    local chunk = assert(loadfile(DIR .. "/src/lua-basic/elite-outfits.lua"))
+    setfenv(chunk, env)()
+    check(type(handler_fn) == "function", "the script registers a command handler")
+    local console = { SendSysMessage = function(_, text) said[#said + 1] = text end }
+    local handled = handler_fn(42, nil, "elite growth", console)
+    check(handled == false, "the console command is reported handled")
+    local want = outfits["Tauren Warrior (damage)"].items
+    local all = true
+    for slot, entry in pairs(want) do if pozeta.equipped[slot] ~= entry then all = false end end
+    check(all, "Pozeta wears every item of Tauren Warrior (damage)")
+    check(pozeta.removed[16] and not pozeta.worn[16], "Pozeta's shield is taken off for the two-hander")
+    check(pozeta.worn[3] and pozeta.worn[18] and not pozeta.removed[3] and not pozeta.removed[18], "shirt and tabard are left alone")
+    check(pozeta.saved, "Pozeta is saved")
+    local text = table.concat(said, "\n")
+    check(text:find("Rogue %(race 3, class 4, role 0%): no elite") ~= nil, "a buddy with no elite is named, not dressed")
+    check(next(rogue.equipped) == nil, "nothing is put on a buddy with no elite")
+    check(text:find("character 600%): not in the world") ~= nil, "a buddy not in the world is reported")
+    check(pozeta.spells[750], "Pozeta is taught Plate Mail (750) before the Might set")
+    check(text:find("Pozeta lacked proficiencies.-750") ~= nil, "the teaching is reported")
+    check(text:find("Ecaexo is dead: skipped") ~= nil and ecaexo.worn[0] and not ecaexo.removed[0], "a dead buddy is reported and nothing is taken off")
+    check(xazian.equipped[16] == 2362, "a refused shield puts the old one back")
+    check(text:find("old item back on") ~= nil, "and says so")
+    check(text:find("Growth: 1 of 5 buddies fully dressed") ~= nil, "the summary counts the dressed")
+    for _, line in ipairs(said) do print("  | " .. line) end
+end
+-- }}}
+
+print("")
+if fails == 0 then print(string.format("All %d checks passed (%d elites, %d items)", checks, #names, #ids))
+else print(string.format("%d of %d checks failed", fails, checks)) end
+os.exit(fails == 0 and 0 or 1)

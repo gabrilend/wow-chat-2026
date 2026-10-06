@@ -1,6 +1,6 @@
 # Conversation Summary: 3cca55b1-1e96-4489-a864-41157a21299a
 
-Generated on: 2026-10-05 03:01:32
+Generated on: 2026-10-05 05:03:03
 Models: claude-opus-5-5
 
 ## Contents
@@ -18,6 +18,10 @@ Models: claude-opus-5-5
    basic-profile tuning; the latest spirit-healing patch and death knight story
    skip are committed and waiting on your compile. Next, please answer whether
    casters should also use the new stamina-based spirit healing.
+4. 2026-10-05 03:04, after Request 22 - We're planning basic's dungeons, raids
+   and buddy behaviour, and just recorded your wiki, campfire, scroll and pacing
+   answers in the issues. Next: your call on how the wiki ranks changes, and the
+   starting pacing setting.
 
 --------------------------------------------------------------------------------
 
@@ -3785,6 +3789,240 @@ a way to show it.
 3. **Enchanting crafts (172):** what item level should the staves and off-hands
    reach: like Enchanting's other products, or up to the dungeon blues?
 4. **Pacing:** is the starting setting above worth trying?
+
+--------------------------------------------------------------------------------
+
+### User Request 23
+
+> - Staves and off-hands (172): you're right. No profession makes a staff; only
+> Inscription makes off-hand items (14 recipes, the expansion's tomes). Basic
+> turned Inscription into a buff-scroll profession, so whether those 14 are
+> still taught there needs checking. The issue proposes
+>     Enchanting recipes for both.
+
+how about inscription makes the precursor ingredient (runed staff) and
+Enchanting makes the equipment
+
+> - Easy: an existing relic's effect with new stats. For example, "your
+> Rejuvenation heals more," reusing a spell the client already knows. The
+> effect's numbers stay fixed, since they live in the client's spell data.
+
+let's consider this option impossible, because it modifies something the player
+can't see.
+
+> - Harder: a new effect. The server can define new spells in a database table,
+> and they'll work in game. But the client doesn't know them, so the item's
+> "Equip:" line can't describe the effect. The optional tooltip addon (719) or
+> your custom client could fill that in.
+
+this one as well, because it hides information.
+
+> - Easy, no client change: stats only (say stamina and spell power). The server
+> can add a new item row, and the 3.3.5 client asks the server about items it
+> doesn't know. The item needs an icon the client already has, which is fine
+> since there are plenty of relic icons to reuse.
+
+we should consider making idols be part inscription, part leatherworking or
+herbalism (spec), and totems be mining and librams be enchanting and ranged
+weapons do blacksmithing thrown gets 2x as many recipes than bows and crossbows
+and such - any others?
+
+> 1. Wiki: who decides how major a change is, for sorting the Changes page: a
+> field in each patch's header (major, minor, tuning), or the size of what it
+> touches?
+
+use your best judgement
+
+> 2. Enchanting crafts (172): real recipes in the profession window need spell
+> ids the client already knows, so we'd reuse unused ones. The alternative is a
+> crafting menu at the enchanting trainer, in Lua with no client change. Which
+> way?
+
+ideally, real recipes. fallback implementation would be the crafting menu, if
+it'd work. And we'd have to craft them at a place of deep spiritual value, like
+the altar of storms or a grand cathedral.
+
+> 3. Enchanting crafts (172): what item level should the staves and off-hands
+> reach: like Enchanting's other products, or up to the dungeon blues?
+
+ya up to level 60
+
+can we add an issue file to the custom client for the options menu and it's
+settings? We should allow all resolutions up to ultrawide. The user should be
+able to type in a value if they want. Or there's a drop-down with common
+increments.
+
+god... custom client is such a priority
+
+can we work on that until it's done? I'm thinking something as simple as a game
+character able to move about the world exactly as the server expects. Same
+control scheme, no UI for now. q to quit.
+
+specifically, a night-elf in ashenvale. They should move at 120% speed.
+
+You know the in-game UI elements in World of Warcraft? I love those. We should
+build an image generator for those, if we possibly can. It could build a UI for
+us like we were assembling our own... Neato. Anyway, we should be able to draw
+them like gizmos. "scrollbar" and "x_button" and "clicking-to-drag" etc that
+handle common UI patterns. Then we should draw the UI, when it exists, very flat
+and possibly shaded.
+
+no need for most of the UI for the custom client. We just want to be able to
+load vmaps and such and load all the models and display it in 3d space.
+
+in the RGPL. fan-artists and copyright rulebreakers should be able to sue. If
+the person wants to defend the copyright, they have to pay to make the art
+suitably different. They will be compensated with the ability to buy the artwork
+in question.
+
+at all times, it must have proper credits and references to prior art.
+fanfiction kills the copyright industry. torrenting kills the movie industry. Do
+fewer films get made? No. They are for all of us.
+
+... anyway, can we actually handle buddy-bot inventories in lua, and just fake
+talking to the NPCs in the town? Same for their spell learning.
+
+also buddy-bots shouldn't loot corpses. The items that are on them when the
+creature despawns (if you left it behind) gets added to an appropriate
+buddy-bot's inventory. We'll need an event that's emitted when creatures
+despawn, and only if they had an inventory item. appropriate goods should be
+given to other buddy-bots and the player.
+
+but, how about, a nearby buddy-bot still walks up to every corpse and kneels
+before it, randomly, once per corpse. The items are left on the body so the
+player can grab them if they want, otherwise they'll get sorted into the
+buddy-bot's inventory first based on need, then based on bag space. If someone's
+low on bag space they can re-distribute, but only while kneeling around a
+campfire, facing 45 degrees from the fire a yard or two away.
+
+we should choose which buddy-bot to select with a random select without
+replacement. But prioritizing the nearest buddy-bot by 2x. They'll have to
+transfer items though - oh I guess I should say the items that despawn get put
+into the inventory of the person who kneeled to grab them, or the player if they
+checked and pulled the items before they despawned. The nearest buddy bot is a
+"with replacement" shuffled in extra draw choice. Essentially guaranteeing it.
+This means the tank does a lot of looting, but everyone else has just as much of
+an even chance. It all depends on who's closest when the monster is slain. Keep
+track of who should be assigned to who, and only go kneel when there's no
+fighting going on. Visit all the corpses assigned to you, then move forward and
+continue on.
+
+the tank should move to the next mobs in a dungeon or raid automatically. The
+buddy-bots should orient themselves around the tank (half circle though, facing
+away from where the tank is facing, arcing behind the tank like a peacock
+tailfeather display.) and do the thing where they only get a new waypoint when
+the previous one is reached. The compass style follow mode will also be of use.
+Same for the "goto" target spell. We will make great things with this system.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 23
+
+> This round has a lot in it. You asked to keep going on the custom client until
+> the first version is done, so that's the main work. The rest I'll write up as
+> issues (plus your license idea, saved word for word as a note), then build the
+> client.
+>
+> First, checking what this machine has for drawing 3D and what map data we have
+> to load.
+
+> Now the drawing side: a small matrix helper, the ground-mesh builder, and the
+> main program.
+
+> No virtual display here, so the screenshot run will flash the window on your
+> screen for about two seconds. Writing the screenshot mode, the offline tests,
+> and the run script.
+
+> It ran and saved a picture, but at 637 bytes it's probably a single flat
+> colour. Looking at it.
+
+> Timed out. Probably my test broke itself: with the sky colour unused, sending
+> it raises an error, and LÖVE's error screen waits instead of quitting.
+> Keeping it in use and rerunning.
+
+> As expected, the send fails. In the scratch copy I'm wrapping the sends so a
+> dropped value is skipped instead of stopping everything.
+
+*[commit] c0bf83e25 in wow-chat-2026 - First light for the custom client: a night elf walks Ashenvale on the server's own ground*
+
+> First light is committed. Issues 173c and 173d were left out of that commit
+> because a script wrote them; committing them now.
+
+*[commit] f2ba333c0 in wow-chat-2026 - The custom client's next two steps: interface pieces drawn by name, and models*
+
+The custom client's first light runs: a stand-in night elf walks Ashenvale
+around Astranaar at 120% speed, with the game's controls and q to quit. It isn't
+yet compared with the running server, and she's a violet box until models come.
+
+**Run it:** `scripts/custom-client`
+
+**Controls:**
+- W / S: forward and back.
+- A / D: turn; with the right mouse button held, they strafe.
+- E: strafe right. Q would normally strafe left, but here it quits.
+- Space: jump.
+- Left mouse drag: turn the camera.
+- Right mouse drag: turn her and the camera together.
+- Mouse wheel: zoom.
+
+**What it does:**
+- **The ground** comes from the same map files the server uses for heights,
+  divided into triangles exactly as the server divides it. The heights match the
+  server's own arithmetic: Astranaar's flight point comes out at 106.7 yards.
+- **Drawing:** the ground is sunlit, forest green going to grey rock on steep
+  slopes, with fog in the distance. The tiles around her load as she walks.
+- **She's a stand-in:** a violet box her height (2.3 yards) with a pale patch
+  for her face, so you can see which way she's facing.
+- **Speeds:** 120% of the game's base: 8.4 yards a second running, 5.4 backing
+  up, half a circle a second turning, the game's gravity for jumps and falls.
+
+**Checks:**
+- **Movement and ground:** `scripts/test-custom-client` runs 14 checks offline,
+  all passing: running speed, backing speed, strafing, turning, jump height,
+  landing, slopes, cliffs, and no seams where tiles meet.
+- **A picture:** `scripts/custom-client --shot` draws a few frames, saves a
+  picture and quits. That's how I looked at it. I turned off edge smoothing,
+  because with it on the saved picture comes out black.
+
+**Still missing:**
+- **A point-for-point match with the server.** It needs the server running and a
+  way to ask it for the ground height at a spot. It was down.
+- **Her real model** (issue 173d). That needs reading the game's data archives
+  and its model format. It's the biggest next piece.
+- **Slopes too steep to climb.** The game blocks slopes steeper than about 50
+  degrees, and the client doesn't yet.
+
+**Also written up this round** (uncommitted except the client issues):
+- **Inscription makes blanks, Enchanting finishes them (172):** Inscription
+  makes runed staves and blanks; Enchanting turns them into staves and off-hands
+  up to level 60, at a place like the Altar of Storms or a cathedral. Real
+  recipes first, a crafting menu as the fallback.
+- **Crafted relics and ranged weapons (174):** relics carry stats only, since
+  effects the player can't read are out.
+  - Idols: Inscription plus Leatherworking or Herbalism.
+  - Totems: Mining.
+  - Librams: Enchanting.
+  - Ranged weapons: Blacksmithing, with twice as many thrown recipes.
+- **The custom client:** the options menu (173b), any resolution up to
+  ultrawide, typed in or picked from a list; and the interface pieces drawn by
+  name (173c).
+- **Buddy errands in Lua (617u):** they still walk to the vendor or trainer,
+  then a script does the trade.
+- **Kneeling at the fallen (617v):** buddies don't loot. One kneels at each
+  corpse, and the items go to it when the corpse despawns, or to you if you took
+  them first. Buddies rearrange bags only kneeling around a campfire.
+- **The tank leads (617w):** the tank advances on its own, with the buddies
+  fanned out behind it like tail feathers.
+- **Your license idea** is saved word for word in `notes/rgpl.md`.
+
+**Open questions:**
+1. **Next for the client:** go straight on to her real model (173d), or first
+   check heights against the server once it's up?
+2. **Steep slopes:** add the game's limit now, or later?
+3. **Where the client lives:** inside this project as now
+   (`src/custom-client/`), or as its own project?
+4. **Sigils:** who makes the death knights' relics, Inscription or
+   Blacksmithing? And do wands stay Enchanting's and guns Engineering's?
 
 --------------------------------------------------------------------------------
 
