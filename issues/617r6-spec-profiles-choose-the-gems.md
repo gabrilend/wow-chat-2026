@@ -67,5 +67,8 @@ want from it; the gems make the difference.
 
 ## Open Questions
 
-1. Should the loot scoring (617j) also read the spec profile, so one set
-   of weights decides gems, gear upgrades and rolls alike?
+1. (Answered 2026-10-05: "yep") The loot scoring (617j: upgrades,
+   need or greed, quest rewards) reads the spec profile too, so one set of
+   weights decides gems, upgrades and rolls alike. The bot module asks the
+   buddy module for a buddy's weights (B046 today passes the plan), so the
+   spec profile reaches it through the buddy module.

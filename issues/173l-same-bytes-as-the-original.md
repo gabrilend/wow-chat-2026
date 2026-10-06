@@ -17,12 +17,46 @@ Verbatim, 2026-10-05:
 > if they both emit the exact same bytes to the server, then we are in
 > the clear.
 
+Simplified by the owner, 2026-10-05:
+
+> Why don't we just... catch all the packets that the custom client are
+> sending with the twinned inputs, and compare at the end? We should also
+> keep track of what packets the proprietary client sends, and what packets
+> the server receives, to ensure there's no difference between the three.
+> I think just a small utility (or three) that intercepts the packets,
+> records them, and passes them along, with a compare step at the end, is
+> sufficient.
+
 ## Current Behavior
 
 Not built. The custom client has no network layer; the original client
 talks to the server directly.
 
 ## Intended Behavior
+
+**Record now, compare at the end.** Three records of one play session,
+compared afterwards by one small program:
+
+1. **What the original client sent**: a tap (a small relay between the
+   original client and the server) passes every packet along unchanged and
+   writes a copy to a record.
+2. **What the server received**: the server's own packet log
+   (`PacketLogFile` in worldserver.conf, empty today; the core writes
+   every packet in and out to it when set).
+3. **What the custom client would have sent**: the custom client, in a
+   shadow mode, given the owner's twinned inputs (recorded from the input
+   devices while playing) and the server's replies (from the tap's record),
+   writes what it would send to a third record instead of a server.
+   Because the inputs and replies are recorded, this can run live beside
+   the original or be replayed afterwards from the records; either way
+   its output is only compared at the end.
+
+The compare step lines the three up packet by packet: original vs server
+(proves the tap is transparent), original vs custom (proves the custom
+client). The rest of this section is the detail of what each record
+needs.
+
+The earlier (live comparer) design, kept for the detail it holds:
 
 The owner plays the original client as usual. Beside it, the custom
 client runs as a **shadow**: it sees exactly what the original client
@@ -97,7 +131,9 @@ check is for.
 
 ## Open Questions
 
-1. The input mirror needs read access to the input devices (the `input`
-   group). Is that acceptable on this machine?
+1. (Answered 2026-10-05) The owner is in the `input` group (checked:
+   `id` lists group 25, input), so the input recorder can read the devices
+   with no change; group membership counts from the login that started
+   the session.
 2. Should the tap also become the place the custom client connects
    through later (one program for logging, comparing and debugging)?

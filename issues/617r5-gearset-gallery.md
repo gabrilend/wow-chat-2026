@@ -32,6 +32,12 @@ gathered into one page with each picture's keys and item names. Re-run
 after editing the profile, it redraws only changed records, so a
 gearset can be tried, looked at and changed in a minute.
 
+**Beside each picture** (owner, 2026-10-05: "taste is impossible to
+describe, sorry. All I need is the item names and IDs. Ideally, with a link
+to the wowhead.com/wotlk/ page, so I can use their gear profile dressing
+room builder to assemble an outfit."): every item's slot, name and number,
+each linked to `https://www.wowhead.com/wotlk/item=<number>`.
+
 ## Suggested Implementation Steps
 
 1. Items on characters in the client: ItemDisplayInfo (the item's model

@@ -2512,8 +2512,9 @@ unpatch_E049_basic_buddy_town_bake() {
 # has been through an install, E048 can leave the basic list for good.
 # (The owner, 2026-10-05, asked whether copies of those items without a
 # level requirement could replace it: new item numbers aren't in the
-# original client's own item table, Item.dbc, so worn copies would be drawn
-# as nothing on the body; see 148v. Not needed now anyway.)
+# original client's own item table, Item.dbc, so worn copies are drawn
+# as nothing until the client has asked about them; see 148v and 175.
+# Not needed now anyway.)
 patch_E048_basic_buddy_kit_required_level() {
     unpatch_E048_basic_buddy_kit_required_level
 }

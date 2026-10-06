@@ -51,10 +51,12 @@ compile commands; not yet rebuilt or run.** Needs the owner's rebuild
   and E048's apply form. E048 now applies its own revert on every
   install: the 46 starter items get their own required levels back (a
   database it never touched is left alone). Copies of those items without
-  a level requirement (the owner asked) would not help: a new item number
-  isn't in the original client's own item table (`Item.dbc`, 46096 items,
-  checked 2026-10-05), so a worn copy is drawn as nothing on the body
-  (148v). Once every database has had an install, E048 leaves the list.
+  a level requirement (the owner asked) aren't needed now; they are
+  possible: a new item number isn't in the original client's own item
+  table (`Item.dbc`, 46096 items, checked 2026-10-05), so a worn copy is
+  drawn as nothing only until the client has asked the server about it
+  (148v); issue 175 plans to tell the client ahead of time. Once every
+  database has had an install, E048 leaves the list.
 - What the old rules can't give, the profile doesn't have either: no
   white cloak is sold anywhere (so no cloak in any record), and level 40
   plate classes wear level-32 mail until plate appears at 45. Both are
