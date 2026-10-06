@@ -77,6 +77,8 @@ The project's own game client, built up in steps:
 | 173j | models-standing-around | 173i | A few other models standing near her, cycling their animations |
 | 173k | client-in-c-with-raylib | 173a, 173d | The client ported to C on Raylib, the start of the project's engine; the Lua version kept beside it as the reference |
 | 173l | same-bytes-as-the-original | 173e | A shadow custom client fed the original client's server packets and the owner's inputs; every packet it would send compared with the original's |
+| 173o | particles | 173g, 173n | Torch flames, wisps, fireflies' glow: each model's particle emitters read and run, drawn as camera-facing sprites |
+| 173p | equipment-on-the-body | 173d | Gear worn: armour painted onto the skin sheet, body pieces switched by the item (sleeves, boots, gloves, robes, a tauren's tail), helmets, shoulders and weapons on the bones' attachment points |
 | 173n | zone-light-and-sky | 173f, 173g | The world lit by the original's own light tables: sun, ambient, fog and sky colours by place and time of day |
 | 173m | camera | 173a, 173b1 | Left drag orbits, right drag steers her; following styles in a table of behaviours (the owner's default: swing back behind her, horizontally only, while she moves); every camera setting live |
 

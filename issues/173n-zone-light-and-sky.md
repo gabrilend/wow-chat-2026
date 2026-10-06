@@ -47,10 +47,16 @@ Verbatim, 2026-10-06: "can we work on doodad animations / lighting next?"
   - Durotar, across the continent, gets another light.
   - The sun is high at noon and low at night.
 
+**Night light:** the owner (2026-10-06) on Ashenvale at night: "that's
+approximately how it looks, but we can adjust it later if we need to."
+
 **Left:**
 - Weather lights (storms), underwater light, and the ghost world's
   light after death.
-- Clouds, the sun and moon drawn in the sky, stars.
+- The skybox (owner, 2026-10-06: "and skybox!"): many lights name a
+  skybox model (LightParams' skybox, through LightSkybox.dbc: an M2 drawn
+  round the camera, such as Ashenvale's tall trees against the sky). The
+  clouds, the sun and moon, and the stars come with it.
 - Comparing against the original side by side.
 - Indoor parts of buildings still use their baked colours (173g).
 
