@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+static uint32_t u32le(const unsigned char *s, size_t at) { return s[at] | s[at + 1] << 8 | s[at + 2] << 16 | (uint32_t)s[at + 3] << 24; }
+
 /* {{{ static texture_of: a decoded picture onto the graphics card */
 static Texture2D texture_of(const BlpImage *img)
 {
@@ -129,9 +131,10 @@ int figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look,
     if (character_build(chain, look, &ch, why, why_len)) return 1;
     snprintf(f->name, sizeof f->name, "%.63s", strrchr(ch.base, '\\') ? strrchr(ch.base, '\\') + 1 : ch.base);
     Texture2D pics[64] = { 0 };
-    Texture2D skin = texture_of(&ch.skin), hair = { 0 }, fur = { 0 };
+    Texture2D skin = texture_of(&ch.skin), hair = { 0 }, fur = { 0 }, cape = { 0 };
     if (ch.hair.width) hair = texture_of(&ch.hair);
     if (ch.fur.width) fur = texture_of(&ch.fur);
+    if (ch.cape.width) cape = texture_of(&ch.cape);
     /* a character's slots: kind 1 its skin sheet, kind 6 its hair, kind 8
      * its fur (a tauren's tail and coat); the rest (capes, armour) wait for
      * items (173p) */
@@ -139,9 +142,70 @@ int figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look,
         if (ch.model.textures[t].kind == 1) pics[t] = skin;
         if (ch.model.textures[t].kind == 6) pics[t] = hair;
         if (ch.model.textures[t].kind == 8) pics[t] = fur;
+        if (ch.model.textures[t].kind == 2) pics[t] = cape;   /* the cloak (173p) */
     }
     int bad = build(f, chain, &ch.model, ch.shown, pics, ch.base, why, why_len);
+    /* the attached items (173p): each its own figure, hung from the
+     * attachment point it names (header 240: count, 244: offset; 40 bytes
+     * each: 0 id, 4 bone, 8 position); one that can't be read is named and
+     * left off */
+    for (int i = 0; !bad && i < ch.nattached; ++i) {
+        const CharacterAttachment *a = &ch.attached[i];
+        const unsigned char *m2 = f->anim.m2;
+        uint32_t na = u32le(m2, 240), oa = u32le(m2, 244);
+        int found = -1;
+        for (uint32_t k = 0; k < na && (uint64_t)oa + (k + 1) * 40 <= f->anim.m2_len; ++k)
+            if ((int)u32le(m2, oa + k * 40) == a->point) { found = (int)k; break; }
+        if (found < 0) { fprintf(stderr, "character: the model has no attachment point %d; %s is left off\n", a->point, a->model); continue; }
+        Figure *it = calloc(1, sizeof *it);
+        char inner[400];
+        if (figure_from_item(it, chain, a->model, a->picture, inner, sizeof inner)) {
+            fprintf(stderr, "character: %s; left off\n", inner);
+            free(it);
+            continue;
+        }
+        FigureItem *fi = &f->items[f->nitems++];
+        size_t e = oa + (size_t)found * 40;
+        fi->fig = it;
+        fi->bone = m2[e + 4] | m2[e + 5] << 8;
+        for (int c = 0; c < 3; ++c) { uint32_t u = u32le(m2, e + 8 + (size_t)c * 4); memcpy(&fi->pos[c], &u, 4); }
+        if (fi->bone >= f->anim.nbones) fi->bone = 0;
+    }
     character_free(&ch);
+    return bad;
+}
+/* }}} */
+
+/* {{{ figure_from_item: an item's model, its pictures named inside it
+ * (kind 0) or the item's own picture (kind 2, "object skin") */
+int figure_from_item(Figure *f, MpqChain *chain, const char *model, const char *picture_path, char *why, int why_len)
+{
+    memset(f, 0, sizeof *f);
+    f->scale = 1;
+    char base[260], path[300], inner[300];
+    snprintf(base, sizeof base, "%s", model);
+    char *dot = strrchr(base, '.');
+    if (dot) *dot = '\0';
+    snprintf(f->name, sizeof f->name, "%.63s", strrchr(base, '\\') ? strrchr(base, '\\') + 1 : base);
+    size_t mlen, slen;
+    const char *from;
+    snprintf(path, sizeof path, "%s.m2", base);
+    unsigned char *m2 = mpq_chain_read(chain, path, &mlen, &from);
+    snprintf(path, sizeof path, "%s00.skin", base);
+    unsigned char *skin = mpq_chain_read(chain, path, &slen, &from);
+    if (!m2 || !skin) { snprintf(why, why_len, "%.200s is in none of the archives", !m2 ? model : path); free(m2); free(skin); return 1; }
+    M2Model mod;
+    int bad = m2_read(m2, mlen, skin, slen, &mod, inner, sizeof inner);
+    free(m2); free(skin);
+    if (bad) { snprintf(why, why_len, "%.100s: %.200s", f->name, inner); return 1; }
+    Texture2D pics[64] = { 0 };
+    for (uint32_t t = 0; t < mod.ntextures && t < 64; ++t) {
+        const char *name = mod.textures[t].kind == 0 ? mod.textures[t].file : mod.textures[t].kind == 2 ? picture_path : NULL;
+        if (!name || !name[0]) continue;
+        if (load_picture(chain, name, &pics[t], inner, sizeof inner)) { snprintf(why, why_len, "%.100s: %.200s", f->name, inner); m2_free(&mod); return 1; }
+    }
+    bad = build(f, chain, &mod, NULL, pics, base, why, why_len);
+    m2_free(&mod);
     return bad;
 }
 /* }}} */
@@ -242,6 +306,14 @@ void figure_bend(Figure *f, const MovesState *moves, uint32_t global_ms)
         UpdateMeshBuffer(*m, 0, m->vertices, (int)(sizeof(float) * 3 * m->vertexCount), 0);   /* buffer 0: positions */
         UpdateMeshBuffer(*m, 2, m->normals, (int)(sizeof(float) * 3 * m->vertexCount), 0);    /* buffer 2: facings */
     }
+    /* the items follow their bones: bone pose times the point's place */
+    for (int i = 0; i < f->nitems; ++i) {
+        const float *b = f->poses[f->items[i].bone];
+        const float *p = f->items[i].pos;
+        float *o = f->items[i].at;
+        memcpy(o, b, sizeof(float) * 16);
+        for (int r = 0; r < 3; ++r) o[12 + r] = b[r] * p[0] + b[4 + r] * p[1] + b[8 + r] * p[2] + b[12 + r];
+    }
 }
 /* }}} */
 
@@ -255,10 +327,21 @@ void figure_draw(const Figure *f, Shader shader, Matrix place)
         mat.maps[MATERIAL_MAP_DIFFUSE].texture = f->pieces[k].tex;
         DrawMesh(f->pieces[k].mesh, mat, at);
     }
+    for (int i = 0; i < f->nitems; ++i) {
+        const float *m = f->items[i].at;
+        Matrix on = { m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15] };
+        const Figure *it = f->items[i].fig;
+        Matrix item_at = MatrixMultiply(on, at);
+        for (int k = 0; k < it->npieces; ++k) {
+            mat.maps[MATERIAL_MAP_DIFFUSE].texture = it->pieces[k].tex;
+            DrawMesh(it->pieces[k].mesh, mat, item_at);
+        }
+    }
     MemFree(mat.maps);                                  /* the default material's map list; the shader and pictures are kept */
 }
 void figure_free(Figure *f)
 {
+    for (int i = 0; i < f->nitems; ++i) { figure_free(f->items[i].fig); free(f->items[i].fig); }
     for (int k = 0; k < f->npieces; ++k) { UnloadMesh(f->pieces[k].mesh); free(f->pieces[k].point_of); }
     anim_free(&f->anim);
     free(f->rest); free(f->poses); free(f->scratch); free(f->bent);

@@ -9,8 +9,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 /* {{{ races: ChrRaces ids and their model folder names */
+/* the two letters item models carry for each race (helms are made per
+ * race and sex: Helm_..._NiF.m2), by ChrRaces id */
+static const char *race_prefix(int race)
+{
+    static const char *const P[12] = { NULL, "Hu", "Or", "Dw", "Ni", "Sc", "Ta", "Gn", "Tr", NULL, "Be", "Dr" };
+    return (race >= 0 && race < 12) ? P[race] : NULL;
+}
 static const char *race_folder(int race)
 {
     static const char *const NAMES[12] = { NULL, "Human", "Orc", "Dwarf", "NightElf", "Scourge", "Tauren", "Gnome", "Troll",
@@ -156,6 +164,70 @@ static int wear(MpqChain *archives, const CharacterLook *look, Character *out, i
             blp_free(&img);
         }
     }
+    /* attached models (helm, shoulders, weapons), the helm's hidden
+     * pieces, and the cloak's picture */
+    for (int s = SLOT_HEAD; s < SLOT_COUNT; ++s) {
+        if (!look->items[s]) continue;
+        int row = -1;
+        for (uint32_t r = 0; r < d.rows; ++r) if ((int)dbc_u32(&d, r, 1) == look->items[s]) { row = (int)r; break; }
+        if (row < 0) continue;                                /* said above */
+        char base[260];
+        const char *m0 = dbc_text(&d, (uint32_t)row, 2), *m1 = dbc_text(&d, (uint32_t)row, 3);
+        const char *p0 = dbc_text(&d, (uint32_t)row, 4), *p1 = dbc_text(&d, (uint32_t)row, 5);
+        #define STRIP(dst, src) do { snprintf(dst, sizeof dst, "%s", src); char *dot_ = strrchr(dst, '.'); if (dot_) *dot_ = '\0'; } while (0)
+        #define HANG(folder, name, pic, pt) do { if ((name)[0] && out->nattached < 6) { \
+                CharacterAttachment *a_ = &out->attached[out->nattached++]; \
+                STRIP(base, name); \
+                snprintf(a_->model, sizeof a_->model, "Item\\ObjectComponents\\%s\\%.200s.m2", folder, base); \
+                snprintf(a_->picture, sizeof a_->picture, "Item\\ObjectComponents\\%s\\%.200s.blp", folder, pic); \
+                a_->point = pt; } } while (0)
+        if (s == SLOT_HEAD && m0[0]) {
+            const char *pre = race_prefix(look->race);
+            if (pre && out->nattached < 6) {
+                CharacterAttachment *a = &out->attached[out->nattached++];
+                STRIP(base, m0);
+                snprintf(a->model, sizeof a->model, "Item\\ObjectComponents\\Head\\%.200s_%s%s.m2", base, pre, look->sex == 1 ? "F" : "M");
+                snprintf(a->picture, sizeof a->picture, "Item\\ObjectComponents\\Head\\%.200s.blp", p0);
+                a->point = 11;
+            }
+            /* what the helm hides (HelmetGeosetVisData: 2 hair, 3-5 facial
+             * hair groups 1-3, 6 ears; each a mask of races, bit race - 1),
+             * the row named by the look's field 14 (men) or 15 (women) */
+            uint32_t vis = dbc_u32(&d, (uint32_t)row, look->sex == 1 ? 15 : 14);
+            size_t vlen;
+            unsigned char *vt = vis ? mpq_chain_read(archives, "DBFilesClient\\HelmetGeosetVisData.dbc", &vlen, NULL) : NULL;
+            Dbc vd;
+            if (vt && !dbc_open(&vd, vt, vlen, w2, sizeof w2))
+                for (uint32_t r = 0; r < vd.rows; ++r) {
+                    if (dbc_u32(&vd, r, 1) != vis) continue;
+                    uint32_t bit = 1u << (look->race - 1);
+                    static const int GROUP[5] = { 0, 1, 2, 3, 7 };
+                    for (int k = 0; k < 5; ++k) {
+                        if (!(dbc_u32(&vd, r, 2 + (uint32_t)k) & bit)) continue;
+                        for (uint32_t i = 0; i < out->model.npieces; ++i) {
+                            uint32_t id = out->model.pieces[i].id;
+                            if ((GROUP[k] == 0 && id > 0 && id < 100) || (GROUP[k] > 0 && id / 100 == (uint32_t)GROUP[k])) out->shown[i] = 0;
+                        }
+                    }
+                }
+            free(vt);
+        }
+        if (s == SLOT_SHOULDERS) { HANG("Shoulder", m0, p0, 6); HANG("Shoulder", m1, p1, 5); }
+        if (s == SLOT_MAIN_HAND) HANG("Weapon", m0, p0, 1);
+        if (s == SLOT_OFF_HAND) {
+            if (!strncasecmp(m0, "Shield", 6) || !strncasecmp(m0, "Buckler", 7)) HANG("Shield", m0, p0, 0);
+            else HANG("Weapon", m0, p0, 2);
+        }
+        if (s == SLOT_BACK && p0[0]) {
+            char path[300];
+            snprintf(path, sizeof path, "Item\\ObjectComponents\\Cape\\%.200s.blp", p0);
+            int got = picture(archives, path, &out->cape, w2, sizeof w2);
+            if (got == -2) fprintf(stderr, "character: the cloak's picture %s is in no archive\n", path);
+            else if (got) { free(t); snprintf(why, why_len, "%s", w2); return -1; }
+        }
+        #undef HANG
+        #undef STRIP
+    }
     free(t);
     /* the pieces: each chosen group shows its variant alone */
     for (int g = 1; g < 20; ++g) {
@@ -290,5 +362,6 @@ void character_free(Character *c)
     blp_free(&c->skin);
     blp_free(&c->hair);
     blp_free(&c->fur);
+    blp_free(&c->cape);
 }
 /* }}} */

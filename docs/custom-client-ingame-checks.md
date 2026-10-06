@@ -40,7 +40,9 @@ that issue and strike it here (keep the line, so the history stays).
     (a rogue's leather set). Do the painted leather, the glove cuffs and
     the tall boots look like the same items on a night elf in the
     original? The piece rules (sleeves, robes, boots, gloves) are this
-    client's reading.
+    client's reading. With `,head:41139,shoulders:41142,mainhand:40857`:
+    do the hood, shoulders and sword sit where the original puts them, and
+    does the hood hide what the original's hides?
 
 ## Feel
 

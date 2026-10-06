@@ -30,6 +30,12 @@ typedef struct {
     int items[SLOT_COUNT];                 /* each slot's item look (ItemDisplayInfo.dbc id), 0 for none (173p) */
 } CharacterLook;
 
+/* an item model hung from one of the character's attachment points (173p):
+ * model and picture archive paths, and the point (M2 attachment id: 1
+ * right hand, 2 left hand, 0 shield, 5 right shoulder, 6 left shoulder,
+ * 11 helm) */
+typedef struct { char model[260]; char picture[260]; int point; } CharacterAttachment;
+
 typedef struct {
     M2Model  model;                        /* the whole model */
     uint8_t *shown;                        /* per piece: 1 when it shows */
@@ -38,6 +44,9 @@ typedef struct {
     BlpImage fur;                          /* texture kind 8: the skin row's second picture, a tauren's fur
                                             * and tail (width 0 when the race has none) */
     char     base[200];                    /* the model's archive path without its extension (for its .anim files) */
+    CharacterAttachment attached[6];       /* helm, shoulders, weapons (173p) */
+    int      nattached;
+    BlpImage cape;                         /* texture kind 2: the cloak's picture (width 0 when none) */
 } Character;
 
 int  character_build(MpqChain *archives, const CharacterLook *look, Character *out, char *why, int why_len);

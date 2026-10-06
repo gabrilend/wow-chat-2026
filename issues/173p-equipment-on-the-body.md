@@ -17,8 +17,7 @@ character models to be done. Where are we at with equipment and such?"
 
 ## Current Behavior
 
-**Painted items and switched pieces built (2026-10-06); attachments
-not yet.**
+**Painted items, switched pieces and hung items built (2026-10-06).**
 - **The look:** `CharacterLook` carries an item look (ItemDisplayInfo id)
   per slot: shirt, legs, feet, wrists, chest, hands, tabard, waist, head,
   shoulders, back, main hand, off hand. The slots are listed in the order
@@ -43,11 +42,32 @@ not yet.**
 - **Test:** dressed in the rogue's set, her upper torso is painted, her
   boots (504) show, and her bare feet (501) don't.
 - **The tail (173d)** was fixed separately: the fur picture.
+- **Hung items:** `character.c` resolves each hung slot into an item
+  model, its picture, and the attachment point it hangs from:
+  - head: Item\ObjectComponents\Head\<model>_<race><sex>.m2 (made per
+    race and sex, as _NiF), point 11;
+  - shoulders: left model at 6, right at 5;
+  - main hand: a weapon at 1;
+  - off hand: a weapon at 2, or a shield or buckler at 0.
+  `figure.c` loads each as its own figure (`figure_from_item`: pictures
+  named inside, or the item's own picture for kind 2). Each frame it
+  hangs from her bone at the attachment point's place, read from her
+  model (header 240), and is drawn with her.
+- **The helm's hiding:** the look's HelmetGeosetVisData row (field 14 for
+  men, 15 for women: masks of races for hair, three facial-hair groups
+  and ears) hides those pieces for her race.
+- **Cloaks:** their picture (Item\ObjectComponents\Cape) is model
+  texture kind 2.
+- **Seen:** in the rogue's full set (plus hood 41139, shoulders 41142,
+  sword 40857), the hood hides her hair, the spiked shoulders sit on her
+  shoulders, and the sword is in her right hand.
+- **Tests:** 2 more checks. The four hung items hang from points 11, 6,
+  5 and 1, the hood hides her hair, and the hood's _NiF model is in the
+  archives.
 
 **Left:**
-- Attachments: helmets (with the helm's hidden hair and ears), shoulders,
-  weapons, shields.
-- Cape pictures (model texture kind 2).
+- Items' own animations and particles (glowing weapons).
+- Sheathing (weapons on the back or hip when not fighting).
 - Comparing the piece rules with the original on a few sets.
 - The server sending each character's looks (with the network).
 

@@ -307,6 +307,22 @@ int main(int argc, char **argv)
             character_free(&dc);
             character_free(&bc);
         }
+        /* hung items: the rogue's hood hides her hair; shoulders and a sword */
+        dressed.items[SLOT_HEAD] = 41139; dressed.items[SLOT_SHOULDERS] = 41142; dressed.items[SLOT_MAIN_HAND] = 40857;
+        if (character_build(&chain, &dressed, &dc, why, sizeof why)) check(0, why);
+        else {
+            int points = 0, hair = 0;
+            for (int i = 0; i < dc.nattached; ++i) points |= 1 << dc.attached[i].point;
+            for (uint32_t i = 0; i < dc.model.npieces; ++i) if (dc.model.pieces[i].id > 0 && dc.model.pieces[i].id < 100 && dc.shown[i]) hair = 1;
+            snprintf(line, sizeof line, "the hood, both shoulders and the sword hang from points 11, 6, 5 and 1 (%d items: %.80s), and the hood hides her hair", dc.nattached, dc.nattached ? dc.attached[0].model : "-");
+            check(dc.nattached == 4 && points == ((1 << 11) | (1 << 6) | (1 << 5) | (1 << 1)) && !hair, line);
+            size_t ml;
+            const char *from;
+            unsigned char *hm = mpq_chain_read(&chain, dc.attached[0].model, &ml, &from);
+            check(hm != NULL, "the hood's model, made for a night elf woman (_NiF), is in the archives");
+            free(hm);
+            character_free(&dc);
+        }
     }
     {
         /* a tauren man: his tail (piece 1501) uses the fur picture (kind 8),

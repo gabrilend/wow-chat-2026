@@ -35,7 +35,13 @@ typedef struct {
     int        layers, moving_uv;     /* two-picture pieces and moving picture positions (not drawn for figures yet) */
 } FigurePiece;
 
-typedef struct {
+/* an item hung on the figure (173p): its own figure, the bone it hangs
+ * from and where on it (the model's attachment point), and its place in
+ * the wearer's model space this frame (figure_bend) */
+struct Figure;
+typedef struct { struct Figure *fig; int bone; float pos[3]; float at[16]; } FigureItem;
+
+typedef struct Figure {
     char         name[64];            /* for messages */
     FigurePiece  pieces[64];  int npieces;
     M2Vertex    *rest;        uint32_t nrest;      /* points and facings as made */
@@ -43,10 +49,16 @@ typedef struct {
     float      (*poses)[16], (*scratch)[16];
     float       *bent;                /* per point: bent position, then facing */
     float        scale;               /* the display's size (1 for characters) */
+    FigureItem   items[6];  int nitems;   /* helm, shoulders, weapons (173p) */
 } Figure;
 
 int  figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look, char *why, int why_len);
 int  figure_from_display(Figure *f, MpqChain *chain, int display_id, char *why, int why_len);
+
+/* An item's model (a helm, a shoulder, a weapon), its pictures named
+ * inside it or the item's own picture (kind 2); hung on a character
+ * figure by figure_from_character (173p). */
+int  figure_from_item(Figure *f, MpqChain *chain, const char *model, const char *picture, char *why, int why_len);
 
 /* Poses the bones by `moves` and bends the points into the meshes. */
 void figure_bend(Figure *f, const MovesState *moves, uint32_t global_ms);
