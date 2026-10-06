@@ -64,5 +64,4 @@ Players are untouched (the stock scorer), and so are other bots.
 
 ## Open Questions
 
-1. `FIGHT_SECONDS`, 30: the longer the fights counted, the more spirit is
-   worth. Is 30 seconds right for the fights buddies have?
+1. (Answered 2026-10-04) `FIGHT_SECONDS` stays 30 ("sure").

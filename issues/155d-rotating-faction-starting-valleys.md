@@ -5,6 +5,7 @@
 - Phase: 1
 - Parent: 155
 - Blocked by: 155a, 155e
+- Blocks: 155d1 (the valley Sargobras deals another valley to level-1 characters)
 - Priority: Medium
 
 ## Origin

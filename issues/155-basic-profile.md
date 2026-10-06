@@ -161,6 +161,8 @@ in the rows of this table:
 | 155w | no-mounts-in-towns | None | Nobody rides in towns; withdrawn the same day ("No restrictions on player behavior"), buddies walk their mounts in town (617e4) |
 | 155x | no-world-channels | None | Nobody joins General, Trade, LocalDefense, WorldDefense, GuildRecruitment or LookingForGroup (B038 in the channel join, the list set by C031); built, not yet run |
 | 155u | battleground-rewards | None | What battlegrounds pay on basic: stock honor, marks and supply officers, plus options (gems, experience, loot bags); planned, not built |
+| 155y | no-map-no-minimap | None | No minimap, and the world map only at planning tables and maps (the Dark Portal, throne rooms): a client addon offered on the website as the intended way to play; built, not yet tried in the client |
+| 155z | dark-portal-front | 155k, 155l | A war that never stops at the Dark Portal (lanes, reinforcements through the portal, a demon tide in three sizes, elite heroes, flight at hand), and Outland's folk scaled to their threats; seven sub-issues, planned, not built |
 
 Execution order: `155a → (155b ∥ 155c ∥ 155e ∥ 155i) → (155d ∥ 155f ∥ 155h ∥ 155k ∥ 155l ∥ 155m ∥ 155n) → (155j ∥ 155o)`. 155d depends on 155e
 because a human sent to Shadowglen before 155e lands arrives in a valley

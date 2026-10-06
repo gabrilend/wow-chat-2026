@@ -223,6 +223,17 @@ on all of it are ~1.6× stronger at level 60 (see 155f).
 - **155j** Kazzak (top of the ladder) and Fel Reaver (a possible world
   boss between)
 
+### Request, 2026-10-04 (Ritz): rebuild the ladder page
+
+"once we've successfully planned the item levels for each dungeon and
+raid, can you re-build the gear level chart? We can expand it out
+horizontally if you'd like." When the plans settle (808 Karazhan, 809
+Zul'Aman and Zul'Gurub, 810's joined runs, 811), the "Level-60 Gear
+Ladder" page (`docs/HTML/basic-gear-ladder.html`, published as
+https://claude.ai/artifact/MZ1mumH84gVxVicSnskvD8) is regenerated with
+the new rows, wider. It is hand-written today; the rebuild makes it
+generated from the plans' numbers (a generator, as the other pages).
+
 ## Open Questions
 
 - **Gem sockets and socket bonuses** when item stats are scaled. Ritz,

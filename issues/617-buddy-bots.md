@@ -172,6 +172,10 @@ handler, which B028 (155d) now patches. Bots never pass through it.
 | 617o | buddy-navmesh-pathfinding | 617e | Plan and walk on the navigation mesh: no straight-line walks through walls, rooms measured on the mesh, baked distance maps for fixed goals, steering toward moving targets |
 | 617p | npc-awareness | 617e4, 617n | Buddies notice friendly NPCs within 100 yards, read what each offers from the creature itself, and use it (train, sell, repair, talk), taking turns at standing spots; works with NPCs spawned in game |
 | 617q | owner-renamed-partner | None | The word "owner" (a buddy's player) renamed "partner" in code, tables, logs, issues and docs |
+| 617r | elite-outfits | 617g | Elites: full Tier 1 and Molten Core or dungeon outfits per buddy type (race, class, role), the bannermen; ".elite <partner>" dresses a partner's buddies; Growth's party built and checked, not yet worn in game |
+| 617s | compass-formation | 617o | In follow mode buddies hold a ring round their owner at their own compass places, the tank in front; ring radius commands; sidesteps in a fight; one buddy sent to a clicked spot; six sub-issues, planned |
+| 617t | dungeon-stand-ins | 617c3 | Fewer than four buddies: stand-in companions fill the dungeon group, exactly one tank and one healer, white gear in every slot (PvP jewellery where no white exists), sockets by class style; planned |
+| 617j3 | spirit-worth-in-gear-choice | 617j, 167 | Buddies weigh spirit by what it heals against stamina (B050), by their stats as they stand, so they keep the two in balance |
 
 Execution order: `617a → (617b ∥ 617c) → (617d ∥ 617e) → (617h ∥ 617i ∥ 617j); 617b → 617f`.
 

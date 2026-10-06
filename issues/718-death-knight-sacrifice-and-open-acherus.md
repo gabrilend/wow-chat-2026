@@ -326,9 +326,29 @@ script (`ScarletEnclave/chapter2.cpp`), and a death knight gets only its own.
 
 ## Open Questions
 
-- (Asked 2026-10-04) Skipping: the first reward choice is taken where a
-  quest offers several (the story's gear). Should the skip choose by the
-  death knight's spec instead, or let the player pick afterwards?
+- (Answered 2026-10-04) Skipping and the story's gear choices: "isn't
+  there a way to have a quest appear to everyone in a zone? ... Anyway, if
+  that's not an option, we can let an NPC in Acherus give a quest that
+  rewards those items. Maybe even Sargobras. The quest should be
+  auto-completed, so they can choose." In 3.3.5a a quest window without
+  an NPC is shown only for quests an item starts, and completing one away
+  from its giver with a reward choice came later (Cataclysm); so the
+  NPC way. Two story quests offer a choice: Tonight We Dine In Havenshire
+  (12679: one of three cloaks) and The Light of Dawn (12801: Greatsword or
+  Greataxe of the Ebon Blade). Changed the same day: "we should just sell
+  those quest items at a vendor in Acherus. They should be unsellable,
+  nobody wants to handle them because they know that Acherus wants them
+  back." Planned: a vendor in Acherus sells the five choice items (the
+  three cloaks of 12679, the two two-handers of 12801); none of the five
+  can be sold to any vendor (no sell price); the skip keeps the item the
+  server picks. Vendors (owner, 2026-10-04: "Pick someone noble for the
+  capes, and someone vicious for the weapons"): Lady Alistra (28471, a
+  death knight trainer in the upper hall) sells the three cloaks;
+  Instructor Razuvious (28357, the drillmaster beside the Lich King) the
+  two two-handers; each gains a vendor flag and its list. Price 1 gold each,
+  and they sell for nothing ("1g each, they sell for no gold. Or 1c if we
+  need to.").
+  Not built yet.
 
 - (Answered 2026-09-25, no longer blocking) **Which issues are "the custom-class infrastructure"?** This issue was
   scheduled second-to-fourth after it. The owner's description (recorded
