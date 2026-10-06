@@ -28,6 +28,7 @@
 #include "../moves.h"
 #include "../mpq.h"
 #include "../navmesh_slope.h"
+#include "../particles.h"
 #include "../settings.h"
 #include "../wmo.h"
 
@@ -538,6 +539,49 @@ ground_done:
         mpq_chain_close(&ac);
     }
 anim_done:
+    /* }}} */
+
+    /* {{{ particles (173o) */
+    printf("particles\n");
+    {
+        MpqChain pc;
+        if (mpq_chain_open(&pc, client, "enUS", why, sizeof why)) { check(0, why); goto particles_done; }
+        size_t len;
+        const char *from;
+        unsigned char *s = mpq_chain_read(&pc, "World\\Generic\\PassiveDoodads\\Lights\\GeneralTorch01.m2", &len, &from);
+        Anim a;
+        Emitter *em = NULL;
+        int ne = 0;
+        int bad = !s || anim_read(s, len, &a, why, sizeof why) || particles_read(&a, &em, &ne, why, sizeof why);
+        free(s);
+        snprintf(line, sizeof line, "the torch has %d emitters (a flame and its glow), each on a bone", ne);
+        check(!bad && ne == 2, bad ? why : line);
+        if (!bad && ne == 2) {
+            int st = anim_find(&a, 0, 0);
+            float rate = 0, life = 0;
+            anim_track_value(&a, &em[0].rate, st, 0, 0, ANIM_FLOAT, &rate);
+            anim_track_value(&a, &em[0].life, st, 0, 0, ANIM_FLOAT, &life);
+            snprintf(line, sizeof line, "its flame: %.0f a second, each living %.1f s, added light (blend %d), from a %dx%d picture grid", rate, life, em[0].blend, em[0].rows, em[0].cols);
+            check(near(rate, 20, 0.01) && near(life, 1, 0.01) && em[0].blend == 4 && em[0].rows == 4 && em[0].cols == 4, line);
+            EmitterRun run = { 0 };
+            float w[16] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 100, 200, 50, 1 };   /* the bone 100, 200, 50 yards off, unturned */
+            for (int t = 0; t < 200; ++t) particles_step(&a, &em[0], &run, w, st, (uint32_t)(t * 10), 0.01f);
+            float lo = 1e9f, hi = -1e9f;
+            for (int k = 0; k < run.n; ++k) { lo = fminf(lo, run.ps[k].p[2]); hi = fmaxf(hi, run.ps[k].p[2]); }
+            snprintf(line, sizeof line, "after 2 s, %d sparks live (about rate x life) and rise from the flame (%.2f to %.2f yards up)", run.n, lo, hi);
+            check(run.n >= 15 && run.n <= 25 && lo >= 50 && hi > lo, line);
+            float rgba[4], size[2];
+            Particle young = { .age = 0, .life = 1 };
+            particles_look(&em[0], &young, rgba, size);
+            snprintf(line, sizeof line, "a new spark is orange (%.2f, %.2f, %.2f)", rgba[0], rgba[1], rgba[2]);
+            check(rgba[0] > 0.9f && rgba[1] < 0.5f && rgba[2] < 0.2f, line);
+            particles_free_run(&run);
+            free(em);
+            anim_free(&a);
+        }
+        mpq_chain_close(&pc);
+    }
+particles_done:
     /* }}} */
 
     /* {{{ the zone's light (173n) */

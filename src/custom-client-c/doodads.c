@@ -11,6 +11,7 @@
 #include "anim.h"
 #include "blp.h"
 #include "m2.h"
+#include "particles.h"
 #include "sky.h"
 #include "wmo.h"
 
@@ -71,10 +72,18 @@ typedef struct {
     DoodadPiece  *pieces;   int npieces;
     Matrix *copies;   int ncopies, cap;
     Anim   *anim;     int stand;
+    int     moving;                   /* its stand animation moves bones: bend it */
     M2Vertex *rest;   uint32_t nrest;
     float (*poses)[16];
     float  *bent;
+    /* particles (173o): the model's emitters, each one's picture, and one
+     * run per emitter per copy (copy * nemitters + emitter), made when
+     * first needed and grown as copies are added */
+    Emitter    *emitters;  int nemitters;
+    int        *emit_pic;
+    EmitterRun *runs;      int nruns;
 } DoodadModel;
+#define PARTICLE_REACH 150.0f         /* yards: copies further from the camera run no particles */
 
 static MpqChain *chain;
 static DoodadModel    *models;   static int nmodels, models_cap;
@@ -86,10 +95,11 @@ static uint32_t *seen;     static int nseen, seen_cap;
 typedef struct { int model; WmoRoot root; } Building;
 static Building *buildings; static int nbuildings, buildings_cap;
 static uint32_t *seen_b;    static int nseen_b, seen_b_cap;
-static int       skipped_pieces, moving_models;
+static int       skipped_pieces, moving_models, emitting_models;
 static Shader    shader;
 static Material  material;
 static int       loc_eye, loc_cutoff, loc_unlit, loc_indoor;
+static Vector3   view_right = { 1, 0, 0 }, view_up = { 0, 0, 1 };   /* the camera's, for particles (doodads_animate) */
 /* }}} */
 
 /* {{{ doodads_init */
@@ -188,19 +198,37 @@ static int load_model(const char *name)
             else fprintf(stderr, "doodads: %s is in none of the archives; %s stands still\n", path, name);
         }
         moving = md->stand >= 0 && an->npoints == mod.nvertices && anim_moves(an, md->stand);
+        /* its particle emitters, each with its picture (the model's own
+         * picture slot, named in the file) */
+        if (particles_read(an, &md->emitters, &md->nemitters, why, sizeof why))
+            fprintf(stderr, "doodads: %s's particles: %s; it shows none\n", name, why);
+        if (md->nemitters) {
+            md->emit_pic = malloc(sizeof(int) * md->nemitters);
+            for (int i = 0; i < md->nemitters; ++i) {
+                int slot = md->emitters[i].slot;
+                md->emit_pic[i] = (slot < (int)mod.ntextures && mod.textures[slot].kind == 0 && mod.textures[slot].file[0])
+                                  ? picture(mod.textures[slot].file) : -1;
+                if (md->emit_pic[i] < 0) fprintf(stderr, "doodads: %s's emitter %d has no picture it can use; it shows none\n", name, i);
+            }
+            ++emitting_models;
+        }
     } else {
         fprintf(stderr, "doodads: %s's skeleton: %s; it stands still\n", name, why);
     }
     free(m2);
-    if (moving) {
+    md->moving = moving;
+    if (moving || md->nemitters) {
         md->anim = an;
+        md->poses = malloc(sizeof *md->poses * (an->nbones ? an->nbones : 1));
+    }
+    if (moving) {
         md->nrest = mod.nvertices;
         md->rest = malloc(sizeof *md->rest * md->nrest);
         memcpy(md->rest, mod.vertices, sizeof *md->rest * md->nrest);
-        md->poses = malloc(sizeof *md->poses * (an->nbones ? an->nbones : 1));
         md->bent = malloc(sizeof(float) * 6 * md->nrest);
         ++moving_models;
-    } else {
+    }
+    if (!md->anim) {
         anim_free(an);
         free(an);
     }
@@ -231,11 +259,11 @@ static int load_model(const char *name)
         }
         if (!ok) { UnloadMesh(m); fprintf(stderr, "doodads: %s: a piece names a point the model doesn't have; piece left out\n", name); continue; }
         uint32_t *point_of = NULL;
-        if (md->anim) {
+        if (md->moving) {
             point_of = malloc(sizeof(uint32_t) * p.count);
             for (uint32_t i = 0; i < p.count; ++i) point_of[i] = mod.indices[p.first + i];
         }
-        UploadMesh(&m, md->anim != NULL);                  /* a moving model's meshes are refreshed every frame */
+        UploadMesh(&m, md->moving);                        /* a moving model's meshes are refreshed every frame */
         md->pieces[md->npieces++] = (DoodadPiece){ m, pic, un.blend, un.flags, 0, point_of };
     }
     m2_free(&mod);
@@ -397,6 +425,53 @@ static void draw_pass(int see_through)
         }
     }
 }
+/* the particles: squares facing the camera (its right and up), each from
+ * its picture's cell, coloured and sized by its age, blended as its
+ * emitter says (2 see-through, 3-4 added light; 0-1 drawn see-through),
+ * without writing depth, after everything solid */
+static void draw_particles(Vector3 right, Vector3 up)
+{
+    for (int i = 0; i < nmodels; ++i) {
+        DoodadModel *md = &models[i];
+        if (!md->nemitters || !md->nruns) continue;
+        for (int k = 0; k < md->nemitters; ++k) {
+            const Emitter *e = &md->emitters[k];
+            if (md->emit_pic[k] < 0) continue;
+            BeginBlendMode(e->blend >= 3 ? BLEND_ADDITIVE : BLEND_ALPHA);
+            rlSetTexture(pictures[md->emit_pic[k]].tex.id);
+            rlBegin(RL_QUADS);
+            for (int c = 0; c < md->ncopies; ++c) {
+                const EmitterRun *run = &md->runs[c * md->nemitters + k];
+                for (int q = 0; q < run->n; ++q) {
+                    const Particle *p = &run->ps[q];
+                    float rgba[4], size[2];
+                    particles_look(e, p, rgba, size);
+                    int cell = p->cell;
+                    if (e->cell.n) {                    /* the cell follows its life */
+                        float t = p->age / p->life;
+                        int kk = 0;
+                        while (kk + 1 < e->cell.n && t >= e->cell.t[kk + 1]) ++kk;
+                        cell = (int)e->cell.v[kk][0];
+                    }
+                    cell %= e->rows * e->cols;
+                    float u0 = (float)(cell % e->cols) / e->cols, v0 = (float)(cell / e->cols) / e->rows;
+                    float u1 = u0 + 1.0f / e->cols, v1 = v0 + 1.0f / e->rows;
+                    float sx = size[0], sy = size[1];
+                    Vector3 c0 = { p->p[0], p->p[1], p->p[2] };
+                    rlColor4f(rgba[0], rgba[1], rgba[2], rgba[3]);
+                    rlTexCoord2f(u0, v1); rlVertex3f(c0.x - right.x * sx - up.x * sy, c0.y - right.y * sx - up.y * sy, c0.z - right.z * sx - up.z * sy);
+                    rlTexCoord2f(u1, v1); rlVertex3f(c0.x + right.x * sx - up.x * sy, c0.y + right.y * sx - up.y * sy, c0.z + right.z * sx - up.z * sy);
+                    rlTexCoord2f(u1, v0); rlVertex3f(c0.x + right.x * sx + up.x * sy, c0.y + right.y * sx + up.y * sy, c0.z + right.z * sx + up.z * sy);
+                    rlTexCoord2f(u0, v0); rlVertex3f(c0.x - right.x * sx + up.x * sy, c0.y - right.y * sx + up.y * sy, c0.z - right.z * sx + up.z * sy);
+                }
+            }
+            rlEnd();
+            rlSetTexture(0);
+            EndBlendMode();
+        }
+    }
+}
+
 void doodads_draw(Vector3 eye, const LightNow *light)
 {
     SetShaderValue(shader, loc_eye, &eye, SHADER_UNIFORM_VEC3);
@@ -406,6 +481,8 @@ void doodads_draw(Vector3 eye, const LightNow *light)
     rlDisableDepthMask();
     draw_pass(1);
     rlDrawRenderBatchActive();
+    draw_particles(view_right, view_up);
+    rlDrawRenderBatchActive();
     rlEnableDepthMask();
 }
 /* }}} */
@@ -414,12 +491,46 @@ void doodads_draw(Vector3 eye, const LightNow *light)
  * Each moving model's stand animation at `ms` (its own length wraps it;
  * global sequences use `ms` too), its points bent and copied into its
  * pieces' meshes. Only models with copies placed are bent. */
-void doodads_animate(uint32_t ms)
+static void run_particles(DoodadModel *md, uint32_t ms, float dt, Vector3 eye)
 {
+    int want = md->ncopies * md->nemitters;
+    if (md->nruns < want) {
+        md->runs = realloc(md->runs, sizeof *md->runs * want);
+        memset(md->runs + md->nruns, 0, sizeof *md->runs * (want - md->nruns));
+        md->nruns = want;
+    }
+    for (int c = 0; c < md->ncopies; ++c) {
+        float at[16];
+        memcpy(at, MatrixToFloatV(md->copies[c]).v, sizeof at);
+        float dx = at[12] - eye.x, dy = at[13] - eye.y, dz = at[14] - eye.z;
+        int near_eye = dx * dx + dy * dy + dz * dz < PARTICLE_REACH * PARTICLE_REACH;
+        for (int k = 0; k < md->nemitters; ++k) {
+            EmitterRun *run = &md->runs[c * md->nemitters + k];
+            if (!near_eye) { run->n = 0; continue; }       /* far copies hold none */
+            /* the emitter's bone in the world: the copy's place times the bone's pose */
+            const float *b = md->poses[md->emitters[k].bone];
+            float w[16];
+            for (int row = 0; row < 4; ++row)
+                for (int col = 0; col < 4; ++col) {
+                    float sum = 0;
+                    for (int q = 0; q < 4; ++q) sum += at[q * 4 + row] * b[col * 4 + q];
+                    w[col * 4 + row] = sum;
+                }
+            particles_step(md->anim, &md->emitters[k], run, w, md->stand, ms, dt);
+        }
+    }
+}
+void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target)
+{
+    Vector3 ahead = Vector3Normalize(Vector3Subtract(target, eye));
+    view_right = Vector3Normalize(Vector3CrossProduct(ahead, (Vector3){ 0, 0, 1 }));
+    view_up = Vector3CrossProduct(view_right, ahead);
     for (int i = 0; i < nmodels; ++i) {
         DoodadModel *md = &models[i];
         if (!md->anim || !md->ncopies) continue;
         anim_pose(md->anim, md->stand, ms, ms, md->poses);
+        if (md->nemitters) run_particles(md, ms, dt, eye);
+        if (!md->moving) continue;
         for (uint32_t k = 0; k < md->nrest; ++k) {
             float p[3] = { md->rest[k].x, md->rest[k].y, md->rest[k].z }, n[3] = { md->rest[k].nx, md->rest[k].ny, md->rest[k].nz };
             anim_skin_point(md->anim, (const float (*)[16])md->poses, k, p, md->bent + k * 6, n, md->bent + k * 6 + 3);
@@ -440,10 +551,10 @@ void doodads_animate(uint32_t ms)
 /* }}} */
 
 /* {{{ doodads_counts */
-void doodads_counts(int *nm, int *nc, int *ns, int *nmoving)
+void doodads_counts(int *nm, int *nc, int *ns, int *nmoving, int *nemitting)
 {
     int copies = 0;
     for (int i = 0; i < nmodels; ++i) copies += models[i].ncopies;
-    *nm = nmodels; *nc = copies; *ns = skipped_pieces; *nmoving = moving_models;
+    *nm = nmodels; *nc = copies; *ns = skipped_pieces; *nmoving = moving_models; *nemitting = emitting_models;
 }
 /* }}} */

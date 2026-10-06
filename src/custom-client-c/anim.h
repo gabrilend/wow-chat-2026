@@ -83,6 +83,15 @@ int  anim_find(const Anim *a, int id, int variation);
 int  anim_needs_file(const Anim *a, int seq);
 void anim_attach_file(Anim *a, int seq, unsigned char *data, size_t len);   /* takes the buffer */
 
+/* A track's value at a moment of animation `seq` (blended between the
+ * two recorded moments around it), read as `kind`: ANIM_VEC3 3 floats,
+ * ANIM_TURN a turn (4 floats, x y z w), ANIM_FLOAT 1 float, ANIM_BYTE 1
+ * byte. Tracks other than bones' (particle settings, 173o) use it too.
+ * 0 when the track has nothing for this animation (`out` untouched). */
+enum { ANIM_VEC3, ANIM_TURN, ANIM_FLOAT, ANIM_BYTE };
+AnimTrack anim_track_at(const unsigned char *m2, size_t at);   /* a track's 20-byte head, read at `at` */
+int  anim_track_value(const Anim *a, const AnimTrack *tr, int seq, uint32_t ms, uint32_t global_ms, int kind, float *out);
+
 /* 1 when animation `seq` moves any bone: some track has more than one
  * moment in it (or in a global sequence it uses). A model whose standing
  * animation doesn't move is drawn as made, never bent (most rocks). */

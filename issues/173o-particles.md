@@ -15,8 +15,41 @@ Verbatim, 2026-10-06: "let's work on particle effects next." (after:
 
 ## Current Behavior
 
-Not built. Models with particle emitters (torches, wisps, fireflies)
-draw only their solid pieces.
+**Built for doodads, 2026-10-06**, in C:
+- **`particles.h` / `particles.c` (no Raylib) read and run emitters.**
+  - Each emitter's bone, position, picture slot and grid, blend, shape,
+    animated settings (as tracks, through `anim_track_value`, which
+    `anim.c` now exports for any track kind), and its colour, opacity,
+    size and cell over life.
+  - Each frame the living age, fall by gravity, slow by drag and move.
+    New ones are born at the rate (with its variation), placed over a
+    plane or a sphere shell, shot up or outward within the spreads, at
+    the speed and its variation.
+  - Particles live in the world: once born, they don't follow the emitter.
+- **`doodads.c` runs them:**
+  - Each placed copy of a model with emitters runs its own, while within
+    150 yards of the camera. Farther copies hold none.
+  - The model keeps its skeleton for this even when it doesn't move.
+  - They're drawn after everything solid as squares facing the camera,
+    added or see-through as the emitter says, without writing depth.
+- **At Astranaar:** 47 of the 394 models have particles. At night the
+  gate's orb and the lamp posts glow.
+- **Picture mode** now runs 3 world-seconds (60 steady frames) before
+  its picture, so particles have filled out.
+- **Tests:** 4 checks.
+  - The torch has 2 emitters. Its flame makes 20 sparks a second, each
+    living 1 second, added light, from a 4 x 4 grid.
+  - After 2 seconds about 20 live, rising from the flame.
+  - A new spark is orange.
+
+**Left:**
+- Figures' particles (spells, weapon glows).
+- Ribbons (trails).
+- Spline emitters, which are run as planes.
+- Wind and twinkle.
+- Particles in fog.
+- Lit particles (flag 0x1).
+- Comparing torches with the original up close.
 
 ## Intended Behavior
 

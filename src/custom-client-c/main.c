@@ -246,9 +246,9 @@ int main(int argc, char **argv)
     else printf("light: %02d:%02d, light %d, fog from %.0f to %.0f yards\n", (int)hours, (int)(fmodf(hours, 1.0f) * 60), light_id, light.fog_start, light.fog_end);
     int eye_m = GetShaderLocation(model_sh, "eye");
     refresh_tiles();
-    int dm, dc, ds, dmov;
-    doodads_counts(&dm, &dc, &ds, &dmov);
-    printf("doodads: %d models (%d of them moving), %d placed\n", dm, dmov, dc);
+    int dm, dc, ds, dmov, demit;
+    doodads_counts(&dm, &dc, &ds, &dmov, &demit);
+    printf("doodads: %d models (%d of them moving, %d with particles), %d placed\n", dm, dmov, demit, dc);
     if (ds) printf("doodads: %d pieces left out: their picture is chosen by the game at run time (not built yet)\n", ds);
 
     MovesState moves;
@@ -258,7 +258,7 @@ int main(int argc, char **argv)
     int frames = 0, drag_l = 0, drag_r = 0;
     while (!WindowShouldClose()) {
         /* {{{ input and movement */
-        float dt = GetFrameTime();
+        float dt = shot ? 0.05f : GetFrameTime();          /* pictures: steady 20 frames a world-second */
         if (dt > 0.1f) dt = 0.1f;                        /* a stalled frame doesn't fling her */
         if (IsKeyPressed(KEY_ESCAPE)) break;            /* the owner, 2026-10-06: Escape quits until there are menus (173b2) */
         /* the mouse: left drag looks around her, right drag turns her too (camera.c) */
@@ -307,7 +307,6 @@ int main(int argc, char **argv)
         }
         clock_ms += dt * 1000.0;
         figure_bend(&her, &moves, (uint32_t)clock_ms);
-        doodads_animate((uint32_t)clock_ms);
         /* the bystanders: each holds an animation for HOLD_MS, then the
          * next of CYCLE its model has */
         for (int i = 0; i < nothers; ++i) {
@@ -335,6 +334,7 @@ int main(int argc, char **argv)
         float floor_z = maps_world_height(&world, eye.x + (float)ox, eye.y + (float)oy, &gx, &gy);
         if (floor_z > -10000 && eye.z < floor_z + 0.6f) eye.z = floor_z + 0.6f;   /* never under the ground */
         Camera3D cam = { .position = eye, .target = at, .up = { 0, 0, 1 }, .fovy = 60, .projection = CAMERA_PERSPECTIVE };
+        doodads_animate((uint32_t)clock_ms, dt, eye, at);   /* moving doodads, and particles near the camera */
         SetShaderValue(model_sh, eye_m, &eye, SHADER_UNIFORM_VEC3);
         /* }}} */
 
@@ -368,8 +368,8 @@ int main(int argc, char **argv)
         EndMode3D();
         EndDrawing();
 
-        /* --shot: after a few frames, the picture, then quit */
-        if (shot && ++frames == 5) {
+        /* --shot: after 3 world-seconds, the picture, then quit */
+        if (shot && ++frames == 60) {                     /* 3 world-seconds in: particles have filled out */
             Image im = LoadImageFromScreen();
             int ok = ExportImage(im, shot);
             UnloadImage(im);

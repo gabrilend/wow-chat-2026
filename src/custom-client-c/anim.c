@@ -16,7 +16,7 @@
 static uint32_t u32(const unsigned char *s, size_t at) { return s[at] | s[at + 1] << 8 | s[at + 2] << 16 | (uint32_t)s[at + 3] << 24; }
 static uint16_t u16(const unsigned char *s, size_t at) { return (uint16_t)(s[at] | s[at + 1] << 8); }
 static float    f32(const unsigned char *s, size_t at) { uint32_t u = u32(s, at); float f; memcpy(&f, &u, 4); return f; }
-static AnimTrack track(const unsigned char *s, size_t at)
+AnimTrack anim_track_at(const unsigned char *s, size_t at)
 {
     return (AnimTrack){ u16(s, at), (int16_t)u16(s, at + 2), u32(s, at + 4), u32(s, at + 8), u32(s, at + 12), u32(s, at + 16) };
 }
@@ -60,9 +60,9 @@ int anim_read(const unsigned char *m2, size_t len, Anim *out, char *why, int why
         size_t e = u32(m2, 48) + (size_t)i * 88;
         AnimBone *b = &out->bones[i];
         b->parent = (int16_t)u16(m2, e + 8);
-        b->move = track(m2, e + 16);
-        b->turn = track(m2, e + 36);
-        b->stretch = track(m2, e + 56);
+        b->move = anim_track_at(m2, e + 16);
+        b->turn = anim_track_at(m2, e + 36);
+        b->stretch = anim_track_at(m2, e + 56);
         for (int k = 0; k < 3; ++k) b->pivot[k] = f32(m2, e + 76 + k * 4);
         if (b->parent >= i) { snprintf(why, why_len, "bone %d hangs from bone %d, which doesn't come before it", i, b->parent); anim_free(out); return 1; }
     }
@@ -124,15 +124,18 @@ void anim_attach_file(Anim *a, int seq, unsigned char *data, size_t len)
  * when the track has nothing for this animation (the bone stays at rest
  * for that part). `size` is the value's byte size; out gets 3 floats
  * (moves, stretches) or 4 (turns). */
-static void decode(const unsigned char *s, size_t at, int is_turn, float *v)
+static const size_t KIND_SIZE[4] = { 12, 8, 4, 1 };          /* ANIM_VEC3, ANIM_TURN, ANIM_FLOAT, ANIM_BYTE */
+static void decode(const unsigned char *s, size_t at, int kind, float *v)
 {
-    if (!is_turn) { for (int k = 0; k < 3; ++k) v[k] = f32(s, at + k * 4); return; }
+    if (kind == ANIM_VEC3) { for (int k = 0; k < 3; ++k) v[k] = f32(s, at + k * 4); return; }
+    if (kind == ANIM_FLOAT) { v[0] = f32(s, at); return; }
+    if (kind == ANIM_BYTE) { v[0] = (float)s[at]; return; }
     for (int k = 0; k < 4; ++k) {
         int16_t n = (int16_t)u16(s, at + k * 2);
         v[k] = (n < 0 ? (float)(n + 32768) : (float)(n - 32767)) / 32767.0f;
     }
 }
-static int sample(const Anim *a, const AnimTrack *tr, int seq, uint32_t ms, uint32_t global_ms, int is_turn, float *out)
+int anim_track_value(const Anim *a, const AnimTrack *tr, int seq, uint32_t ms, uint32_t global_ms, int kind, float *out)
 {
     uint32_t sub = (uint32_t)seq, t = ms;
     const unsigned char *data = a->m2;
@@ -151,7 +154,7 @@ static int sample(const Anim *a, const AnimTrack *tr, int seq, uint32_t ms, uint
     size_t ts_head = tr->sub_at + (size_t)sub * 8, vs_head = tr->vsub_at + (size_t)sub * 8;
     if (ts_head + 8 > a->m2_len || vs_head + 8 > a->m2_len) return 0;
     uint32_t n = u32(a->m2, ts_head), ts = u32(a->m2, ts_head + 4), vs = u32(a->m2, vs_head + 4);
-    size_t size = is_turn ? 8 : 12, stride = tr->interp >= 2 ? size * 3 : size;
+    size_t size = KIND_SIZE[kind], stride = tr->interp >= 2 ? size * 3 : size;
     if (n == 0 || u32(a->m2, vs_head) < n || (uint64_t)ts + n * 4 > data_len || (uint64_t)vs + n * stride > data_len) return 0;
     /* the last moment at or before t */
     uint32_t lo = 0, hi = n - 1;
@@ -161,12 +164,13 @@ static int sample(const Anim *a, const AnimTrack *tr, int seq, uint32_t ms, uint
         while (hi - lo > 1) { uint32_t mid = (lo + hi) / 2; if (u32(data, ts + (size_t)mid * 4) <= t) lo = mid; else hi = mid; }
     }
     float va[4], vb[4];
-    decode(data, vs + lo * stride, is_turn, va);
-    if (hi == lo || tr->interp == 0) { memcpy(out, va, sizeof(float) * (is_turn ? 4 : 3)); return 1; }
-    decode(data, vs + hi * stride, is_turn, vb);
+    int nout = kind == ANIM_TURN ? 4 : kind == ANIM_VEC3 ? 3 : 1;
+    decode(data, vs + lo * stride, kind, va);
+    if (hi == lo || tr->interp == 0) { memcpy(out, va, sizeof(float) * nout); return 1; }
+    decode(data, vs + hi * stride, kind, vb);
     uint32_t t0 = u32(data, ts + (size_t)lo * 4), t1 = u32(data, ts + (size_t)hi * 4);
     float f = t1 > t0 ? (float)(t - t0) / (float)(t1 - t0) : 0;
-    if (is_turn) {
+    if (kind == ANIM_TURN) {
         /* the shorter way round, then normalised (the original's own blend) */
         float dot = va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2] + va[3] * vb[3];
         float sign = dot < 0 ? -1.0f : 1.0f, len = 0;
@@ -174,7 +178,7 @@ static int sample(const Anim *a, const AnimTrack *tr, int seq, uint32_t ms, uint
         len = sqrtf(len);
         if (len > 0) for (int k = 0; k < 4; ++k) out[k] /= len;
     } else {
-        for (int k = 0; k < 3; ++k) out[k] = va[k] * (1 - f) + vb[k] * f;
+        for (int k = 0; k < nout; ++k) out[k] = va[k] * (1 - f) + vb[k] * f;
     }
     return 1;
 }
@@ -218,9 +222,9 @@ void anim_pose(const Anim *a, int seq, uint32_t ms, uint32_t global_ms, float (*
         const AnimBone *b = &a->bones[i];
         float move[3] = { 0, 0, 0 }, turn[4] = { 0, 0, 0, 1 }, stretch[3] = { 1, 1, 1 };
         if (seq >= 0 && seq < a->nseqs) {
-            sample(a, &b->move, seq, ms, global_ms, 0, move);
-            sample(a, &b->turn, seq, ms, global_ms, 1, turn);
-            sample(a, &b->stretch, seq, ms, global_ms, 0, stretch);
+            anim_track_value(a, &b->move, seq, ms, global_ms, ANIM_VEC3, move);
+            anim_track_value(a, &b->turn, seq, ms, global_ms, ANIM_TURN, turn);
+            anim_track_value(a, &b->stretch, seq, ms, global_ms, ANIM_VEC3, stretch);
         }
         float x = turn[0], y = turn[1], z = turn[2], w = turn[3];
         const float *p = b->pivot;

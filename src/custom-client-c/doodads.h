@@ -32,13 +32,15 @@ int  doodads_add_tile(const AdtTile *t, double ox, double oy, char *why, int why
 /* Draws every doodad. `eye` is the camera's position (for the fog). */
 void doodads_draw(Vector3 eye, const LightNow *light);
 
-/* Bends every moving model (one whose standing animation moves: trees
- * swaying) to its pose at `ms` since start; all copies share it. */
-void doodads_animate(uint32_t ms);
+/* Bends every moving model (one whose standing animation moves: birds,
+ * banners) to its pose at `ms` since start; all copies share it. Runs the
+ * particles of every copy within 150 yards of the camera (`eye`, looking
+ * at `target`) for `dt` seconds (173o). */
+void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target);
 
 /* How many models and copies are loaded, how many pieces were left out
- * because their picture is chosen by the game at run time, and how many
- * models move (for the start-up report). */
-void doodads_counts(int *models, int *copies, int *skipped_pieces, int *moving);
+ * because their picture is chosen by the game at run time, how many
+ * models move, and how many have particles (for the start-up report). */
+void doodads_counts(int *models, int *copies, int *skipped_pieces, int *moving, int *emitting);
 
 #endif
