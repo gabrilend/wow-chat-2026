@@ -21,7 +21,10 @@
  *   otherwise in <model><id:4>-<variation:2>.anim; 0x40: an alias of the
  *   animation at 62), 16 how often it is picked among variations, 28
  *   blend time (ms), 60 next variation, 62 alias.
- * Bone (88 bytes): 0 key bone id, 4 flags, 8 parent (-1 none), 16 move
+ * Bone (88 bytes): 0 key bone id, 4 flags (0x8: always faces the camera,
+ *   "spherical billboard"; 0x40: turns only round its upright to face it,
+ *   "cylindrical"; 0x10 and 0x20 the same round its other axes, treated as
+ *   0x40), 8 parent (-1 none), 16 move
  *   track, 36 turn track, 56 stretch track, 76 pivot (3 floats).
  * Track (20 bytes): 0 interpolation (0 none, 1 linear, 2-3 curves whose
  *   values come in threes: value, in, out), 2 global sequence (-1 none),
@@ -56,6 +59,7 @@ typedef struct { uint16_t interp; int16_t global; uint32_t nsub, sub_at, nvsub, 
 
 typedef struct {
     int16_t   parent;
+    uint32_t  flags;
     float     pivot[3];
     AnimTrack move, turn, stretch;
 } AnimBone;
@@ -103,6 +107,16 @@ int  anim_moves(const Anim *a, int seq);
  * nbones matrices. A track with no moments for this animation leaves
  * that part of the bone at rest. */
 void anim_pose(const Anim *a, int seq, uint32_t ms, uint32_t global_ms, float (*poses)[16]);
+
+/* The same, with camera-facing bones (flags 0x8, 0x10-0x40) turned to face
+ * the camera. `view` holds, in the model's own space, three unit vectors:
+ * toward the camera, the camera's right, and its up (9 floats). A facing
+ * bone keeps its pivot where its pose put it; its own x axis (the side
+ * the original's billboard squares face) points at the camera. */
+void anim_pose_facing(const Anim *a, int seq, uint32_t ms, uint32_t global_ms, float (*poses)[16], const float view[9]);
+
+/* 1 when any bone faces the camera (the model must be posed per copy). */
+int  anim_has_billboards(const Anim *a);
 
 /* A point of the model bent by the poses: position (and facing, when
  * `n` is given), weighted over its up to four bones. */

@@ -93,8 +93,24 @@ flat? But only some of them)". Likely causes, to be confirmed:
   billboards). The client ignores the marks, so they stay flat as made.
   Only some orbs are built this way, which fits "only some of them".
 
+**Flat halos fixed (2026-10-06), to be confirmed by the owner:**
+- **The cause, as suspected:** camera-facing bones. Around Astranaar the
+  street lamps, the wisps and the fireflies have bones marked to face
+  the camera (flag 0x8), and the boat and the gazebo have ones marked to
+  turn upright toward it (0x40).
+- **The fix:** `anim_pose_facing` turns such a bone so that its x axis
+  (the side the original's billboard squares face) points at the camera,
+  keeping its pivot where its pose put it. Upright ones turn round z
+  only.
+- **In the drawer:** a model with such bones is posed and bent per copy,
+  into its own meshes (`bend_copies` in `doodads.c`), since each copy is
+  turned its own way. Every other model still shares one pose.
+- **Seen:** the street lamp's halo is now a round glow.
+- **Test:** the lamp's glow bone turns its face to a camera off to the
+  side.
+
 **Left:**
-- The two faults above.
+- The moss fault above.
 - Pieces whose picture the game chooses at run time (none so far at
   Astranaar).
 - Particles (torch flames, wisps, firefly glow) and picture animations

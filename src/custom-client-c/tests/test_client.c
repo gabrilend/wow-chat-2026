@@ -723,6 +723,22 @@ anim_done:
             free(em);
             anim_free(&a);
         }
+        /* camera-facing bones (173g's flat halos): the street lamp's glow */
+        s = mpq_chain_read(&pc, "World\\Generic\\NightElf\\Passive Doodads\\Lamps\\KalidarStreetLamp02.m2", &len, &from);
+        Anim lamp;
+        if (s && !anim_read(s, len, &lamp, why, sizeof why)) {
+            int bb = -1;
+            for (int i = 0; i < lamp.nbones && bb < 0; ++i) if (lamp.bones[i].flags & 0x8) bb = i;
+            float (*po)[16] = malloc(sizeof *po * lamp.nbones);
+            const float view[9] = { 0, 1, 0,   -1, 0, 0,   0, 0, 1 };   /* the camera off to her left (+y) */
+            anim_pose_facing(&lamp, anim_find(&lamp, 0, 0), 0, 0, po, view);
+            float *m = po[bb < 0 ? 0 : bb], l = sqrtf(m[0] * m[0] + m[1] * m[1] + m[2] * m[2]);
+            snprintf(line, sizeof line, "the lamp's glow bone (%d) turns its face to the camera (its x axis %.2f %.2f %.2f, the camera's way 0 1 0)", bb, m[0] / l, m[1] / l, m[2] / l);
+            check(bb >= 0 && anim_has_billboards(&lamp) && near(m[1] / l, 1, 1e-4), line);
+            free(po);
+            anim_free(&lamp);
+        } else check(0, "the street lamp's model reads");
+        free(s);
         mpq_chain_close(&pc);
     }
 particles_done:

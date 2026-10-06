@@ -21,8 +21,9 @@ that issue and strike it here (keep the line, so the history stays).
    see-throughness, and how fast its ripples run (15 pictures a second
    here).
 6. **Known faults, already recorded** (173g): the moss stretched over the
-   archway near the bridge, and the halos drawn flat. Mentioned here so
-   they aren't reported twice.
+   archway near the bridge. Mentioned here so it isn't reported twice.
+   **The halos** should now be round from every side (lamps, wisps,
+   fireflies): check they look like the original's orbs.
 7. **The tauren** (173d, 173p): his skin layers that the client's tables
    name but its files lack. Patchy, or as in the original? (His tail is
    known missing.)

@@ -74,6 +74,11 @@ typedef struct {
     Matrix *copies;   int ncopies, cap;
     Anim   *anim;     int stand;
     int     moving;                   /* its stand animation moves bones: bend it */
+    /* camera-facing bones (glow orbs on lamps, wisps): each copy is turned
+     * its own way, so each is posed and bent alone, into its own meshes
+     * (copy_mesh[copy * npieces + piece], made when first needed) */
+    int     billboard;
+    Mesh   *copy_mesh;  int ncopy_mesh;
     M2Vertex *rest;   uint32_t nrest;
     float (*poses)[16];
     float  *bent;
@@ -225,16 +230,17 @@ static int load_model(const char *name)
         fprintf(stderr, "doodads: %s's solid shape: %s; it is walked through\n", name, why);
     free(m2);
     md->moving = moving;
-    if (moving || md->nemitters) {
+    md->billboard = an->npoints == mod.nvertices && anim_has_billboards(an);   /* an is all zero when its skeleton failed to read */
+    if (moving || md->nemitters || md->billboard) {
         md->anim = an;
         md->poses = malloc(sizeof *md->poses * (an->nbones ? an->nbones : 1));
     }
-    if (moving) {
+    if (moving || md->billboard) {
         md->nrest = mod.nvertices;
         md->rest = malloc(sizeof *md->rest * md->nrest);
         memcpy(md->rest, mod.vertices, sizeof *md->rest * md->nrest);
         md->bent = malloc(sizeof(float) * 6 * md->nrest);
-        ++moving_models;
+        if (moving) ++moving_models;
     }
     if (!md->anim) {
         anim_free(an);
@@ -267,7 +273,7 @@ static int load_model(const char *name)
         }
         if (!ok) { UnloadMesh(m); fprintf(stderr, "doodads: %s: a piece names a point the model doesn't have; piece left out\n", name); continue; }
         uint32_t *point_of = NULL;
-        if (md->moving) {
+        if (md->moving || md->billboard) {
             point_of = malloc(sizeof(uint32_t) * p.count);
             for (uint32_t i = 0; i < p.count; ++i) point_of[i] = mod.indices[p.first + i];
         }
@@ -441,7 +447,11 @@ static void draw_pass(int see_through)
             SetShaderValue(shader, loc_unlit, &unlit, SHADER_UNIFORM_FLOAT);
             if (see_through) BeginBlendMode(p->blend == 2 ? BLEND_ALPHA : p->blend >= 5 ? BLEND_MULTIPLIED : BLEND_ADDITIVE);
             material.maps[MATERIAL_MAP_DIFFUSE].texture = pictures[p->picture].tex;
-            DrawMeshInstanced(p->mesh, material, md->copies, md->ncopies);
+            if (md->billboard && md->ncopy_mesh >= md->ncopies * md->npieces) {   /* each copy its own pose */
+                for (int c = 0; c < md->ncopies; ++c) DrawMeshInstanced(md->copy_mesh[c * md->npieces + k], material, &md->copies[c], 1);
+            } else {
+                DrawMeshInstanced(p->mesh, material, md->copies, md->ncopies);
+            }
             if (see_through) EndBlendMode();
         }
     }
@@ -541,6 +551,62 @@ static void run_particles(DoodadModel *md, uint32_t ms, float dt, Vector3 eye)
         }
     }
 }
+/* {{{ static bend_copies: a camera-facing model, each copy posed alone
+ * The camera's toward, right and up, turned into the copy's own space (its
+ * turn undone: the transpose over its size squared), give the facing
+ * bones their turn; the copy's points are bent into its own meshes. */
+static void bend_copies(DoodadModel *md, uint32_t ms, Vector3 eye)
+{
+    if (md->ncopy_mesh < md->ncopies * md->npieces) {
+        md->copy_mesh = realloc(md->copy_mesh, sizeof(Mesh) * md->ncopies * md->npieces);
+        for (int i = md->ncopy_mesh; i < md->ncopies * md->npieces; ++i) {
+            const Mesh *src = &md->pieces[i % md->npieces].mesh;
+            Mesh m = { 0 };
+            m.vertexCount = src->vertexCount;
+            m.triangleCount = src->triangleCount;
+            m.vertices = MemAlloc(sizeof(float) * 3 * m.vertexCount);
+            m.normals = MemAlloc(sizeof(float) * 3 * m.vertexCount);
+            m.texcoords = MemAlloc(sizeof(float) * 2 * m.vertexCount);
+            memcpy(m.vertices, src->vertices, sizeof(float) * 3 * m.vertexCount);
+            memcpy(m.normals, src->normals, sizeof(float) * 3 * m.vertexCount);
+            memcpy(m.texcoords, src->texcoords, sizeof(float) * 2 * m.vertexCount);
+            UploadMesh(&m, true);
+            md->copy_mesh[i] = m;
+        }
+        md->ncopy_mesh = md->ncopies * md->npieces;
+    }
+    for (int c = 0; c < md->ncopies; ++c) {
+        float at[16];
+        memcpy(at, MatrixToFloatV(md->copies[c]).v, sizeof at);
+        float s2 = at[0] * at[0] + at[1] * at[1] + at[2] * at[2];
+        float world[3][3] = { { eye.x - at[12], eye.y - at[13], eye.z - at[14] },
+                              { view_right.x, view_right.y, view_right.z }, { view_up.x, view_up.y, view_up.z } };
+        float view[9];
+        for (int v = 0; v < 3; ++v) {
+            float o[3], l = 0;
+            for (int k = 0; k < 3; ++k) { o[k] = (at[k * 4] * world[v][0] + at[k * 4 + 1] * world[v][1] + at[k * 4 + 2] * world[v][2]) / s2; l += o[k] * o[k]; }
+            l = sqrtf(l);
+            for (int k = 0; k < 3; ++k) view[v * 3 + k] = l > 0 ? o[k] / l : 0;
+        }
+        anim_pose_facing(md->anim, md->stand, ms, ms, md->poses, view);
+        for (uint32_t k = 0; k < md->nrest; ++k) {
+            float p[3] = { md->rest[k].x, md->rest[k].y, md->rest[k].z }, n[3] = { md->rest[k].nx, md->rest[k].ny, md->rest[k].nz };
+            anim_skin_point(md->anim, (const float (*)[16])md->poses, k, p, md->bent + k * 6, n, md->bent + k * 6 + 3);
+        }
+        for (int j = 0; j < md->npieces; ++j) {
+            Mesh *m = &md->copy_mesh[c * md->npieces + j];
+            const uint32_t *point_of = md->pieces[j].point_of;
+            for (int v = 0; v < m->vertexCount; ++v) {
+                memcpy(m->vertices + v * 3, md->bent + point_of[v] * 6, sizeof(float) * 3);
+                memcpy(m->normals + v * 3, md->bent + point_of[v] * 6 + 3, sizeof(float) * 3);
+            }
+            UpdateMeshBuffer(*m, 0, m->vertices, (int)(sizeof(float) * 3 * m->vertexCount), 0);
+            UpdateMeshBuffer(*m, 2, m->normals, (int)(sizeof(float) * 3 * m->vertexCount), 0);
+        }
+    }
+}
+/* }}} */
+
 void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target)
 {
     Vector3 ahead = Vector3Normalize(Vector3Subtract(target, eye));
@@ -551,6 +617,7 @@ void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target)
         if (!md->anim || !md->ncopies) continue;
         anim_pose(md->anim, md->stand, ms, ms, md->poses);
         if (md->nemitters) run_particles(md, ms, dt, eye);
+        if (md->billboard) { bend_copies(md, ms, eye); continue; }
         if (!md->moving) continue;
         for (uint32_t k = 0; k < md->nrest; ++k) {
             float p[3] = { md->rest[k].x, md->rest[k].y, md->rest[k].z }, n[3] = { md->rest[k].nx, md->rest[k].ny, md->rest[k].nz };

@@ -60,6 +60,7 @@ int anim_read(const unsigned char *m2, size_t len, Anim *out, char *why, int why
         size_t e = u32(m2, 48) + (size_t)i * 88;
         AnimBone *b = &out->bones[i];
         b->parent = (int16_t)u16(m2, e + 8);
+        b->flags = u32(m2, e + 4);
         b->move = anim_track_at(m2, e + 16);
         b->turn = anim_track_at(m2, e + 36);
         b->stretch = anim_track_at(m2, e + 56);
@@ -215,7 +216,16 @@ static void mul4(const float a[16], const float b[16], float out[16])   /* out =
         }
     memcpy(out, r, sizeof r);
 }
+int anim_has_billboards(const Anim *a)
+{
+    for (int i = 0; i < a->nbones; ++i) if (a->bones[i].flags & 0x78) return 1;
+    return 0;
+}
 void anim_pose(const Anim *a, int seq, uint32_t ms, uint32_t global_ms, float (*poses)[16])
+{
+    anim_pose_facing(a, seq, ms, global_ms, poses, NULL);
+}
+void anim_pose_facing(const Anim *a, int seq, uint32_t ms, uint32_t global_ms, float (*poses)[16], const float view[9])
 {
     if (seq >= 0 && seq < a->nseqs && a->seqs[seq].length) ms %= a->seqs[seq].length;
     for (int i = 0; i < a->nbones; ++i) {
@@ -244,6 +254,27 @@ void anim_pose(const Anim *a, int seq, uint32_t ms, uint32_t global_ms, float (*
         local[15] = 1;
         if (b->parent >= 0) mul4(poses[b->parent], local, poses[i]);
         else memcpy(poses[i], local, sizeof local);
+
+        /* facing the camera: keep where the pose puts the pivot and the
+         * pose's size on each axis; replace its turn by the camera's
+         * (x toward the camera, y its right, z its up), or for an upright
+         * billboard by a turn round z alone toward the camera */
+        if (view && (b->flags & 0x78)) {
+            float *m = poses[i], at[3], size[3], ax[3][3];
+            for (int r = 0; r < 3; ++r) at[r] = m[r] * p[0] + m[4 + r] * p[1] + m[8 + r] * p[2] + m[12 + r];
+            for (int c = 0; c < 3; ++c) size[c] = sqrtf(m[c * 4] * m[c * 4] + m[c * 4 + 1] * m[c * 4 + 1] + m[c * 4 + 2] * m[c * 4 + 2]);
+            if (b->flags & 0x8) {
+                for (int r = 0; r < 3; ++r) { ax[0][r] = view[r]; ax[1][r] = view[3 + r]; ax[2][r] = view[6 + r]; }
+            } else {
+                float tx = view[0], ty = view[1], l = sqrtf(tx * tx + ty * ty);
+                if (l < 1e-6f) { tx = 1; ty = 0; l = 1; }
+                ax[0][0] = tx / l; ax[0][1] = ty / l; ax[0][2] = 0;
+                ax[2][0] = 0; ax[2][1] = 0; ax[2][2] = 1;
+                ax[1][0] = -ax[0][1]; ax[1][1] = ax[0][0]; ax[1][2] = 0;   /* z x x: the left-hand side seen from the camera */
+            }
+            for (int c = 0; c < 3; ++c) for (int r = 0; r < 3; ++r) m[c * 4 + r] = ax[c][r] * size[c];
+            for (int r = 0; r < 3; ++r) m[12 + r] = at[r] - (m[r] * p[0] + m[4 + r] * p[1] + m[8 + r] * p[2]);
+        }
     }
 }
 /* }}} */
