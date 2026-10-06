@@ -1,0 +1,42 @@
+# figure
+
+*Written by `scripts/generate-custom-client-info` from `figure.h`; don't edit, re-run it.*
+
+figure.h (issues 173i, 173j) - an animated model in the world
+
+For a general audience: a "figure" is one animated model drawn in the
+world: her, another player's race, or a creature. It holds the model's
+pieces (one mesh and picture each), its points as made, and its
+skeleton and animations (anim.h). Each frame its bones are posed (by a
+MovesState, moves.h), its points bent to follow, and each piece's mesh
+refreshed from them.
+
+Where a figure's pictures come from:
+  a character (figure_from_character): its finished skin sheet and its
+    hair, as character.c paints them;
+  a creature (figure_from_display): the creature's display row in the
+    client's CreatureDisplayInfo table names its model (through
+    CreatureModelData) and up to three skins; a model's pictures of kind
+    11, 12 and 13 are those skins, found in the model's own folder;
+  any model: pictures of kind 0 are named inside the model.
+
+## What it offers
+
+- `type FigurePiece`
+- `type FigureItem`
+  an item hung on the figure (173p): its own figure, the bone it hangs
+  from and where on it (the model's attachment point), and its place in
+  the wearer's model space this frame (figure_bend)
+- `type Figure`
+- `int figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look, char *why, int why_len);`
+- `int figure_from_display(Figure *f, MpqChain *chain, int display_id, char *why, int why_len);`
+- `int figure_from_item(Figure *f, MpqChain *chain, const char *model, const char *picture, char *why, int why_len);`
+  An item's model (a helm, a shoulder, a weapon), its pictures named
+  inside it or the item's own picture (kind 2); hung on a character
+  figure by figure_from_character (173p).
+- `void figure_bend(Figure *f, const MovesState *moves, uint32_t global_ms);`
+  Poses the bones by `moves` and bends the points into the meshes.
+- `void figure_draw(const Figure *f, Shader shader, Matrix place);`
+  Draws it at `place` (turn and position; the figure's own scale is
+  applied inside) with `shader` (the model shader: texture0, cut-outs).
+- `void figure_free(Figure *f);`
