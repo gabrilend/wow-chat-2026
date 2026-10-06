@@ -56,8 +56,34 @@ optional layer that the core doesn't depend on.
 
 ## Current Behavior
 
-Not built (first light under way, 173a). Players use the stock 3.3.5a
-client.
+**In progress (2026-10-06): a world to walk in, no network yet.** The
+client is in C on Raylib (`src/custom-client-c/`, 173k; the Lua first
+version is deprecated). Run it with `scripts/custom-client`; build and test
+it with `scripts/build-custom-client --test`. Players still use the stock
+3.3.5a client to play. Everything below is read from the original
+client's own files, nothing hand-placed:
+- **The world:**
+  - painted ground (173f);
+  - doodads and buildings with their furniture, moving doodads, and
+    pieces with layered and moving pictures (173g);
+  - particles (173o);
+  - the zone's light, the sky, and skyboxes (173n);
+  - shadows (173h);
+  - water, and the view underwater (173r).
+- **Movement:**
+  - collision with walls, floors and bridges, and the camera kept out of
+    walls (173q);
+  - swimming (173r);
+  - the camera's drags and following styles (173m);
+  - tiles streaming in and out (173s).
+- **Characters:**
+  - her model and animations (173d, 173i);
+  - creatures and other races standing near her (173j);
+  - equipment painted on, switched pieces, and hung items (173p).
+- **Settings:** the settings store (173b1) and the first settings,
+  including View Distance (173b6).
+- **Anywhere:** `--map ID X Y` starts the client on any map.
+- **To check against the original:** `docs/custom-client-ingame-checks.md`.
 
 ## Intended Behavior
 
