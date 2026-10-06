@@ -69,9 +69,23 @@ they shift round their target now and then. Each part is a sub-issue:
 | 617s6 | send-one-buddy | 617s2 | One buddy, chosen by the bot module's own addressing (its name, @tank, @heal...), sent to a spot the owner clicks; it holds there until told to follow again, and the ring leaves its slot empty meanwhile |
 
 | 617s7 | box-select-in-the-custom-client | 617s6 | In the project's own client, buddies chosen by clicking and dragging a box over them |
+| 617s8 | nearest-open-slot | 617s2, 168 | The other follow mode, switched at Chromie: no buddy owns a compass place; each time a buddy reaches its waypoint it takes the nearest ring slot no other buddy has claimed |
 
 Execution order: 617s1 → (617s2, 617s3) → 617s4; 617s5 and 617s6 after
-617s2; 617s7 waits for the custom client.
+617s2; 617s8 after 617s2 and Chromie (168); 617s7 waits for the custom
+client.
+
+**Two follow modes, one ring** (owner, 2026-10-05): "does this include the
+Chromie settings alteration NPC? To enable / disable the NPCs following
+the compass, and instead moving to the nearest unclaimed open waypoint
+each time they reach a waypoint, instead of their assigned, compass based
+slot." The ring's slots are the same in both; only who takes which slot
+differs. Compass mode: each buddy's slot is the one nearest its own
+compass direction (617s1), so a buddy keeps its side. Open-slot mode
+(617s8): a buddy claims a slot only on arriving at its last one, and
+takes the nearest unclaimed slot from where it stands, so buddies settle
+wherever is closest and rarely cross the ring. The tank's front slot
+(617s3) holds in both. The switch is per player, kept by Chromie (168).
 
 ## Suggested Implementation Steps
 

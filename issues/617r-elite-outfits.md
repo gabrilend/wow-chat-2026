@@ -1,4 +1,4 @@
-# 617r - Elites: Bannermen's Outfits
+# 617r - Gearset Profiles (the first: "elite", the bannermen)
 
 ## Status
 - Created: 2026-10-04
@@ -7,7 +7,10 @@
 - Priority: Medium
 - Related: 617a4 (buddy starting kit; its tiers are race-and-class lists),
   617f (selector appearance; the mirror-image outfits Sargobras wears),
-  617g (talent plans; a buddy's plan and role pick its elite)
+  617g (talent plans; a buddy's plan and role pick its elite),
+  617t (dungeon stand-ins wear a profile), 155z6 (the Portal's hero NPCs
+  wear one), 148h / 148k / 148s (the vanilla level-20 starter kit, which
+  moves into this system)
 - Related files: `src/lua-basic/data/elite-outfit-profiles.lua` (the profiles),
   `src/lua-basic/elite-outfits.lua` (puts them on buddies),
   `scripts/test-elite-outfits` (checks every item against the world database)
@@ -55,6 +58,51 @@ issue built is a partner's buddies dressed in full Tier 1 sets, in the
 format the elites will use; its name is an open question below.
 
 ## Intended Behavior
+
+**Gearset profiles** (owner, 2026-10-05): "we're just going to have
+several different 'outfits' that can be applied to buddy-bots,
+player-characters, stand-ins, or NPCs via the mirror image trick.
+Essentially it should just be a list of gear, sorted by class and then
+race. We should make these profiles very abstract, and able to be
+referenced by certain chat commands. The 'elite' group is just the first
+profile we made. Note how it's one profile: 'elite', and it has records
+for every race/class. We should also transition the old 'level 20
+starting gear' patch from... I wanna say the Vanilla profile? To this
+profile system, and ensure that the patch is updated to use it correctly.
+We will create additional 'gearset profiles' later on."
+
+So a **gearset profile** is one named list of gear (`elite`,
+`vanilla-starter`, later others), holding one record per class and, under
+each class, per race. Nothing in a profile knows who will wear it: the
+same record dresses a buddy, a player character, a stand-in (617t) or an
+NPC (through the mirror image, 617f). One data file per profile, one
+reader shared by every command and hook, one test that holds every
+profile's items to that profile's own rule (the elite rule below is the
+first such rule; the starter kit's is "white quality, level 20 or less").
+
+| Level | Key | Type | Holds |
+|---|---|---|---|
+| profile | name | text | the gearset's rule name and its classes |
+| class | class id | integer | the races of that class |
+| race | race id | integer | the record: `items` (equipment slot integer to item id integer), and for the starter kit also `bags` (list of item ids), `ammo` (item id and count) |
+
+Applied by chat command (game master): `.gearset <profile> <target>`,
+where the target is a partner's name (all their buddies), one character's
+name, or the selected creature (the mirror image). `.elite <partner>`
+stays as the short form of `.gearset elite <partner>`.
+
+**The vanilla starter kit moves in.** Today the level-20 kit is a matrix
+inside a bash generator (`scripts/generate-vanilla-starting-equipment-sql`)
+that stamps rows into the stock "items a new character gets" table
+(`playercreateinfo_item`); the first-login hook (148k) and the bot gearing
+patch (B025) both read those rows. After the move the matrix is the
+`vanilla-starter` profile's data file, and the generator reads the profile
+to write the same rows, so the creation step, the hook and B025 keep their
+one source in the database while the gear itself lives in the profile
+system. A test checks that the SQL the generator writes matches the
+profile record for record.
+
+### The first profile, "elite"
 
 An **elite** is an outfit profile for one buddy type: race, class and role
 (the talent plan's main tree: damage, tank or healer). Elites are the
@@ -129,6 +177,20 @@ profile's race wearing the profile's items.
 
 ## Suggested Implementation Steps
 
+Gearset profiles (2026-10-05):
+
+1. Reshape `elite-outfit-profiles.lua` into the profile shape (profile,
+   class, race), keeping role where one class and race needs two records
+   (see the open question); one reader both commands use.
+2. `.gearset <profile> <target>`, with `.elite` kept as its short form;
+   targets: a partner's buddies, one character, a selected creature.
+3. Move the starter-kit matrix out of the bash generator into the
+   `vanilla-starter` profile; the generator reads it and writes the same
+   SQL (byte-identical output is the test that the move lost nothing).
+4. Re-check B025 and the first-login hook against the regenerated rows.
+
+The elite profile, as first built:
+
 1. Write the profiles as data (`src/lua-basic/data/elite-outfit-profiles.lua`).
 2. Write the test: for each profile item, run the rule's checks against
    the world database, with the loot-source search done once per run.
@@ -139,9 +201,15 @@ profile's race wearing the profile's items.
 
 ## Open Questions
 
-1. Elites are now the Dark Portal's hero NPCs (155z6). Should this tool
-   and its data be renamed (say "buddy outfits", `.outfit <partner>`) so
-   "elite" means only those heroes, or keep the name?
+1. (Answered 2026-10-05) The tool becomes gearset profiles; "elite" is
+   the name of its first profile, not of the tool (quote above).
+4. Role: "sorted by class and then race" leaves no place for two records
+   of one class and race (a troll warrior tank and a troll warrior damage
+   dealer). Add role as an optional third level, or make a role its own
+   profile (`elite-tank`)?
+5. The starter kit carries bags, a quiver and ammo as well as worn gear.
+   Are those part of a gearset, or does the starter kit keep them outside
+   the profile?
 2. Should a buddy's outfit come back after it is remade (617a6), or is it
    a one-time gift?
 3. Do world drops that also fall in Molten Core (Lady Maye's Pendant)

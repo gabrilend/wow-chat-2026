@@ -37,8 +37,12 @@ module where each behaviour is decided. A setting not chosen keeps the
 server's default.
 
 First settings:
-- the compass formation on or off (617s), and whether its directions are
-  fixed to the world or turn with the owner;
+- the follow mode (617s): compass (each buddy keeps its own compass
+  place round the owner) or open slot (617s8: each time a buddy reaches
+  its waypoint it takes the nearest ring slot nobody has claimed); owner,
+  2026-10-05, asking that this be Chromie's switch;
+- whether the compass directions are fixed to the world or turn with the
+  owner;
 - the ring's radius (the same value `.buddy wider` / `.buddy closer`
   change, 617s4).
 
