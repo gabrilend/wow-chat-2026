@@ -113,6 +113,19 @@ void moves_step(MovesState *s, const Anim *a, const MovesInput *in)
 }
 /* }}} */
 
+/* {{{ moves_play, moves_advance */
+void moves_play(MovesState *s, const Anim *a, int id) { start(s, a, id, 0, 0); }
+void moves_advance(MovesState *s, const Anim *a, float dt)
+{
+    float dt_ms = dt * 1000.0f;
+    s->ms += dt_ms;
+    if (s->seq >= 0 && a->seqs[s->seq].length) s->ms = fmodf(s->ms, (float)a->seqs[s->seq].length);
+    if (s->from >= 0) s->from_ms += dt_ms;
+    if (s->blend_left > 0) s->blend_left -= dt_ms;
+    if (s->blend_left <= 0) { s->blend_left = 0; s->from = -1; }
+}
+/* }}} */
+
 /* {{{ moves_pose */
 void moves_pose(const MovesState *s, const Anim *a, uint32_t global_ms, float (*poses)[16], float (*scratch)[16])
 {

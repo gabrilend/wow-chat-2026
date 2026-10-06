@@ -68,6 +68,12 @@ void moves_init(MovesState *s, const Anim *a);
 /* One frame: picks and advances the animation. */
 void moves_step(MovesState *s, const Anim *a, const MovesInput *in);
 
+/* For figures with no mover (173j): play animation `id` (variation 0),
+ * looping, blended in from the current one; and advance the clock at the
+ * animation's own pace. Neither looks at movement. */
+void moves_play(MovesState *s, const Anim *a, int id);
+void moves_advance(MovesState *s, const Anim *a, float dt);
+
 /* The bones' poses for this frame (the blend applied); `scratch` holds
  * nbones matrices for the blended-from pose. */
 void moves_pose(const MovesState *s, const Anim *a, uint32_t global_ms, float (*poses)[16], float (*scratch)[16]);

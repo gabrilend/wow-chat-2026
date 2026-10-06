@@ -48,6 +48,15 @@ Not yet: animation (her bones; she doesn't walk or run, she glides), the
 eye glow, buildings and trees (the server's collision shapes, then the
 game's own WMO and M2 doodads), the ground's own textures.
 
+**Finding (2026-10-06, 173j): CharSections names pictures the archives
+lack.** For a tauren man (race 6, sex 0, all choices 0), the scalp layer
+names `Character\Tauren\ScalpUpperHair00_00.blp`, and the hair section's
+first picture is `Character\Tauren\TaurenMaleFaceLower04_18.blp`, a
+face's name in the hair's row. Neither is in any archive. `character.c`
+now leaves such a layer unpainted and reports it. Open: whether the hair
+row is read right for races other than the night elf (the column layout
+was checked only on her), or whether the original also lacks these.
+
 ## Intended Behavior
 
 The world's buildings and trees and the characters' models drawn in 3D:

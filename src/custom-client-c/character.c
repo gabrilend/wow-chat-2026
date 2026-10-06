@@ -60,12 +60,14 @@ static void paste(uint8_t *sheet, int sw, const BlpImage *img, const int *r, int
 }
 /* }}} */
 
-/* {{{ static picture */
+/* {{{ static picture
+ * -1 and `why` on a fault; -2 when the archives hold no such file (the
+ * layers above the skin treat that as "not painted", see below). */
 static int picture(MpqChain *c, const char *name, BlpImage *img, char *why, int why_len)
 {
     size_t len;
     unsigned char *s = mpq_chain_read(c, name, &len, NULL);
-    if (!s) { snprintf(why, why_len, "the client's archives hold no %s", name); return -1; }
+    if (!s) { snprintf(why, why_len, "the client's archives hold no %s", name); return -2; }
     char w2[200];
     int rc = blp_decode(s, len, img, w2, sizeof w2);
     free(s);
@@ -140,7 +142,12 @@ int character_build(MpqChain *archives, const CharacterLook *look, Character *ou
     free(t);
     if (!have[0]) { snprintf(why, why_len, "no skin colour %d", look->skin); return -1; }
 
-    /* the skin sheet: body, then face, scalp, underwear on top */
+    /* the skin sheet: body, then face, scalp, underwear on top. The body
+     * must exist. A layer above it that CharSections names but the
+     * archives lack is left unpainted, as the original leaves it (found
+     * with a tauren man: CharSections names Character\Tauren\
+     * ScalpUpperHair00_00.blp, which no archive holds); each such layer
+     * is reported by name. */
     if (picture(archives, sect[0][0], &out->skin, why, why_len)) return -1;
     int k = out->skin.width / 256;
     struct { int s, t, region; } lays[] = {
@@ -151,11 +158,17 @@ int character_build(MpqChain *archives, const CharacterLook *look, Character *ou
     for (size_t i = 0; i < sizeof lays / sizeof lays[0]; ++i) {
         if (!have[lays[i].s] || !sect[lays[i].s][lays[i].t][0]) continue;
         BlpImage img;
-        if (picture(archives, sect[lays[i].s][lays[i].t], &img, why, why_len)) return -1;
+        int got = picture(archives, sect[lays[i].s][lays[i].t], &img, why, why_len);
+        if (got == -2) { fprintf(stderr, "character: %s; that layer is left unpainted\n", why); continue; }
+        if (got) return -1;
         paste(out->skin.rgba, out->skin.width, &img, REGION[lays[i].region], k);
         blp_free(&img);
     }
-    if (have[3] && sect[3][0][0] && picture(archives, sect[3][0], &out->hair, why, why_len)) return -1;
+    if (have[3] && sect[3][0][0]) {
+        int got = picture(archives, sect[3][0], &out->hair, why, why_len);
+        if (got == -2) fprintf(stderr, "character: %s; the hair is left unpainted\n", why);
+        else if (got) return -1;
+    }
     return 0;
 }
 /* }}} */

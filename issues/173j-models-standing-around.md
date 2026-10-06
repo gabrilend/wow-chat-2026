@@ -14,7 +14,43 @@ models that just stand around and do various animations").
 
 ## Current Behavior
 
-Not built.
+**Built 2026-10-06**, in C:
+- **`figure.h` / `figure.c` make any animated model a "figure".** A
+  figure has its pieces, its points as made, its skeleton and
+  animations, and its bending each frame. A figure comes from either:
+  - a character's look (her, a tauren), with pictures painted by
+    `character.c`; or
+  - a creature display: the client's CreatureDisplayInfo row gives the
+    model (through CreatureModelData), its size, and up to three skins,
+    which fill the model's picture slots of kind 11-13.
+- **Creature pieces:** the body group (ids under 100) and the first
+  variant of each other group show. The display's own geoset choice
+  isn't read yet.
+- **She is now a figure too.** `main.c` lost its own copy of the model
+  code.
+- **The bystanders**, in a table in `main.c` (configuration in
+  structure, not in the settings file):
+  - a tauren man;
+  - a furbolg (display 145);
+  - the ancient protector (display 860, which the game draws at 0.33
+    size, about 2 yards: no model is called a treant);
+  - a nightsaber (display 321, the black-striped tiger model).
+  They stand 7 to 14 yards ahead of her start, facing her. Each casts a
+  ground shadow sized by its scale.
+- **Cycling:** each holds an animation for 4 seconds, then moves to the
+  next its model has: stand, talk, roar, unarmed attack, ready, dance,
+  wave, bow, cheer, cast. The changes are blended, and staggered so the
+  figures don't change together.
+- **Calls added to `moves.c`** for figures with no mover: one plays an
+  animation, one advances its clock.
+- **A gap found with the tauren:** the client's CharSections table names
+  pictures its archives don't hold (a scalp, and a hair picture named
+  like a face). The character builder now leaves such a layer unpainted
+  and reports it by name, rather than refusing the whole character.
+  Recorded in 173d.
+- **Tests:** two checks. A bystander's next animation blends in, and
+  loops at its own pace.
+- **Pictures:** all four stand facing her.
 
 ## Intended Behavior
 
@@ -32,5 +68,5 @@ models other than hers.
 
 ## Open Questions
 
-1. Which models? (A first pick: a tauren, a furbolg, an Ashenvale
-   treant, a nightsaber.)
+None. (Which models: the first pick, with the ancient protector for the
+treant and the tiger model for the nightsaber; 2026-10-06.)

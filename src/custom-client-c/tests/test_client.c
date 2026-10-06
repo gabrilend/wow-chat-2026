@@ -524,6 +524,14 @@ ground_done:
         for (int i = 0; i < 50; ++i) moves_step(&ms, &a, &mi);
         snprintf(line, sizeof line, "strafing left: the run, her body turned %.0f degrees toward it", ms.body_turn / 3.14159265358979 * 180);
         check(ms.seq == run && near(ms.body_turn, 3.14159265358979 / 2, 1e-3), line);
+        /* figures with no mover (173j): play, then advance at the animation's own pace */
+        moves_init(&ms, &a);
+        moves_play(&ms, &a, 60);                            /* EmoteTalk */
+        int talk = anim_find(&a, 60, 0);
+        check(talk >= 0 && ms.seq == talk && ms.from == stand, "a bystander's next animation starts, blended in from the last");
+        for (int i = 0; i < 100; ++i) moves_advance(&ms, &a, 0.05f);
+        snprintf(line, sizeof line, "and loops at its own pace (5 s in, %.0f ms into its %u ms), the blend long finished", ms.ms, a.seqs[talk].length);
+        check(near(ms.ms, fmod(5000.0, a.seqs[talk].length), 1.0) && ms.from == -1, line);
         free(poses); free(scratch); free(at0); free(at1);
         anim_free(&a);
         mpq_chain_close(&ac);

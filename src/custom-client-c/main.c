@@ -25,6 +25,7 @@
 #include "camera.h"
 #include "character.h"
 #include "doodads.h"
+#include "figure.h"
 #include "ground.h"
 #include "maps.h"
 #include "mover.h"
@@ -88,67 +89,32 @@ static const char *MODEL_FS =
     "}\n";
 /* }}} */
 
-/* {{{ her model: one mesh per shown piece, each with its picture
- * Each piece's mesh lists its own copy of every corner (three a triangle);
- * point_of says which model point each copy is, so the bent model
- * (anim.c) can be copied in each frame. rest[] keeps the model's points
- * and facings as made, the bending's starting place. */
-typedef struct { Mesh mesh; int texture; uint32_t *point_of; } Piece;
-static Piece pieces[64];
-static int npieces;
-static Texture2D tex_skin, tex_hair;
-static M2Vertex *rest;  static uint32_t nrest;
-static char      elf_base[200];                          /* her model's archive path, for its animations */
-
-static Texture2D texture_of(const BlpImage *img)
-{
-    Image im = { .data = img->rgba, .width = img->width, .height = img->height, .mipmaps = 1,
-                 .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 };
-    Texture2D t = LoadTextureFromImage(im);
-    GenTextureMipmaps(&t);
-    SetTextureFilter(t, TEXTURE_FILTER_TRILINEAR);
-    SetTextureWrap(t, TEXTURE_WRAP_REPEAT);
-    return t;
-}
-static int build_elf(MpqChain *chain, char *why, int why_len)
-{
-    Character ch;
-    if (character_build(chain, &LOOK, &ch, why, why_len)) return -1;
-    tex_skin = texture_of(&ch.skin);
-    if (ch.hair.width) tex_hair = texture_of(&ch.hair);
-    for (uint32_t u = 0; u < ch.model.nunits && npieces < 64; ++u) {
-        M2Unit un = ch.model.units[u];
-        if (un.piece >= ch.model.npieces || !ch.shown[un.piece] || un.texture >= ch.model.ntextures) continue;
-        uint32_t kind = ch.model.textures[un.texture].kind;
-        if (kind != 1 && !(kind == 6 && ch.hair.width)) continue;
-        M2Piece p = ch.model.pieces[un.piece];
-        Mesh m = { 0 };
-        m.vertexCount = (int)p.count;
-        m.triangleCount = (int)p.count / 3;
-        m.vertices  = MemAlloc(sizeof(float) * 3 * p.count);
-        m.normals   = MemAlloc(sizeof(float) * 3 * p.count);
-        m.texcoords = MemAlloc(sizeof(float) * 2 * p.count);
-        for (uint32_t i = 0; i < p.count; ++i) {
-            M2Vertex v = ch.model.vertices[ch.model.indices[p.first + i]];
-            m.vertices[i * 3] = v.x; m.vertices[i * 3 + 1] = v.y; m.vertices[i * 3 + 2] = v.z;
-            m.normals[i * 3] = v.nx; m.normals[i * 3 + 1] = v.ny; m.normals[i * 3 + 2] = v.nz;
-            m.texcoords[i * 2] = v.u; m.texcoords[i * 2 + 1] = v.v;
-        }
-        pieces[npieces].point_of = malloc(sizeof(uint32_t) * p.count);
-        for (uint32_t i = 0; i < p.count; ++i) pieces[npieces].point_of[i] = ch.model.indices[p.first + i];
-        UploadMesh(&m, true);                            /* dynamic: bent every frame */
-        pieces[npieces].mesh = m;
-        pieces[npieces].texture = (int)kind;
-        ++npieces;
-    }
-    nrest = ch.model.nvertices;
-    rest = malloc(sizeof *rest * nrest);
-    memcpy(rest, ch.model.vertices, sizeof *rest * nrest);
-    snprintf(elf_base, sizeof elf_base, "%s", ch.base);
-    character_free(&ch);
-    if (npieces == 0) { snprintf(why, why_len, "her model has nothing to draw: no shown piece has a picture"); return -1; }
-    return 0;
-}
+/* {{{ the figures: her, and the models standing around her (173j)
+ * Each bystander: who (a character's look, or a creature display from
+ * CreatureDisplayInfo), where (yards ahead of her start and to her left,
+ * facing back toward her), and the animations it cycles through, by the
+ * game's numbers (AnimationData.dbc), each held for HOLD_MS. A number
+ * its model lacks is skipped. The owner's first pick (2026-10-05): a
+ * tauren, a furbolg, an Ashenvale treant (the ancient protector: no
+ * treant model is named so) and a nightsaber (the tiger model, the
+ * nightsaber's body). */
+#define HOLD_MS 4000
+static const int CYCLE[] = { 0, 60, 74, 16, 25, 69, 67, 66, 68, 53 };   /* stand, talk, roar, attack, ready, dance, wave, bow, cheer, cast */
+static const struct {
+    int race, sex;                    /* a character (race 0: a creature) */
+    int display;                      /* a creature's display */
+    float ahead, left;                /* yards from her start */
+} BYSTANDERS[] = {
+    { 6, 0, 0,   9.0f,  -4.0f },      /* a tauren man */
+    { 0, 0, 145, 10.0f,  1.0f },      /* a furbolg */
+    { 0, 0, 860, 14.0f,  7.0f },      /* the ancient protector */
+    { 0, 0, 321, 7.0f,   5.0f },      /* a nightsaber */
+};
+#define NBYSTANDERS ((int)(sizeof BYSTANDERS / sizeof BYSTANDERS[0]))
+static Figure her;
+static Figure others[NBYSTANDERS];
+static int    nothers;
+static struct { double x, y, z; float facing; MovesState moves; int cycle; float held; } other_at[NBYSTANDERS];
 /* }}} */
 
 /* {{{ the world and the camera */
@@ -233,11 +199,31 @@ int main(int argc, char **argv)
     SetExitKey(KEY_NULL);                                /* Escape is read in the loop, so it can open the game menu later */
     Shader model_sh  = LoadShaderFromMemory(GROUND_VS, MODEL_FS);
     if (mpq_chain_open(&chain, client, "enUS", why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
-    if (build_elf(&chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    if (figure_from_character(&her, &chain, &LOOK, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    static const int NEEDED[] = { MOVE_STAND, MOVE_RUN, MOVE_WALK_BACK, MOVE_SHUFFLE_LEFT, MOVE_SHUFFLE_RIGHT, MOVE_JUMP_START, MOVE_JUMP, MOVE_JUMP_END, MOVE_FALL };
+    for (unsigned i = 0; i < sizeof NEEDED / sizeof NEEDED[0]; ++i)
+        if (anim_find(&her.anim, NEEDED[i], 0) < 0) fprintf(stderr, "her animations: her model has no animation %d; she stands instead\n", NEEDED[i]);
+    /* the bystanders: each stands round her start, facing her; one that
+     * can't be built is named and left out */
+    for (int i = 0; i < NBYSTANDERS; ++i) {
+        Figure *f = &others[nothers];
+        CharacterLook look = { BYSTANDERS[i].race, BYSTANDERS[i].sex, 0, 0, 0, 0 };
+        int bad = BYSTANDERS[i].race ? figure_from_character(f, &chain, &look, why, sizeof why)
+                                     : figure_from_display(f, &chain, BYSTANDERS[i].display, why, sizeof why);
+        if (bad) { fprintf(stderr, "bystander %d left out: %s\n", i, why); continue; }
+        double fx = cos(START_O), fy = sin(START_O);
+        other_at[nothers].x = START_X + fx * BYSTANDERS[i].ahead - fy * BYSTANDERS[i].left;
+        other_at[nothers].y = START_Y + fy * BYSTANDERS[i].ahead + fx * BYSTANDERS[i].left;
+        other_at[nothers].z = maps_world_height(&world, (float)other_at[nothers].x, (float)other_at[nothers].y, &gx, &gy);
+        other_at[nothers].facing = (float)atan2(START_Y - other_at[nothers].y, START_X - other_at[nothers].x);
+        moves_init(&other_at[nothers].moves, &f->anim);
+        other_at[nothers].cycle = 0;
+        other_at[nothers].held = (float)(i * 900);        /* staggered, so they don't change together */
+        printf("bystander: %s\n", f->name);
+        ++nothers;
+    }
     if (ground_init(&chain, MAP_NAME, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     if (doodads_init(&chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
-    Material skin_mat = LoadMaterialDefault(); skin_mat.shader = model_sh; skin_mat.maps[MATERIAL_MAP_DIFFUSE].texture = tex_skin;
-    Material hair_mat = LoadMaterialDefault(); hair_mat.shader = model_sh; hair_mat.maps[MATERIAL_MAP_DIFFUSE].texture = tex_hair;
     int eye_m = GetShaderLocation(model_sh, "eye"),  sky_m = GetShaderLocation(model_sh, "sky");
     SetShaderValue(model_sh, sky_m, SKY, SHADER_UNIFORM_VEC3);
     refresh_tiles();
@@ -246,33 +232,8 @@ int main(int argc, char **argv)
     printf("doodads: %d models, %d placed\n", dm, dc);
     if (ds) printf("doodads: %d pieces left out: their picture is chosen by the game at run time (not built yet)\n", ds);
 
-    /* her animations (173i): the skeleton from her model file, and any
-     * animation kept in a .anim file beside it */
-    Anim anim;
-    {
-        char path[300];
-        size_t len;
-        const char *from;
-        snprintf(path, sizeof path, "%s.m2", elf_base);
-        unsigned char *m2 = mpq_chain_read(&chain, path, &len, &from);
-        if (!m2 || anim_read(m2, len, &anim, why, sizeof why)) { fprintf(stderr, "her animations (%s): %s\n", path, m2 ? why : "not in the archives"); CloseWindow(); return 1; }
-        free(m2);
-        for (int i = 0; i < anim.nseqs; ++i) {
-            if (!anim_needs_file(&anim, i)) continue;
-            snprintf(path, sizeof path, "%s%04d-%02d.anim", elf_base, anim.seqs[i].id, anim.seqs[i].variation);
-            unsigned char *f = mpq_chain_read(&chain, path, &len, &from);
-            if (!f) { fprintf(stderr, "her animations: %s is in none of the archives; that animation leaves her at rest\n", path); continue; }
-            anim_attach_file(&anim, i, f, len);
-        }
-        if (anim.npoints != nrest) { fprintf(stderr, "her animations: the skeleton's model has %u points, her mesh %u\n", anim.npoints, nrest); CloseWindow(); return 1; }
-        static const int NEEDED[] = { MOVE_STAND, MOVE_RUN, MOVE_WALK_BACK, MOVE_SHUFFLE_LEFT, MOVE_SHUFFLE_RIGHT, MOVE_JUMP_START, MOVE_JUMP, MOVE_JUMP_END, MOVE_FALL };
-        for (unsigned i = 0; i < sizeof NEEDED / sizeof NEEDED[0]; ++i)
-            if (anim_find(&anim, NEEDED[i], 0) < 0) fprintf(stderr, "her animations: her model has no animation %d; she stands instead\n", NEEDED[i]);
-    }
     MovesState moves;
-    moves_init(&moves, &anim);
-    float (*poses)[16] = malloc(sizeof *poses * anim.nbones), (*scratch)[16] = malloc(sizeof *scratch * anim.nbones);
-    float *bent = malloc(sizeof(float) * 6 * nrest);       /* each point's bent position, then facing */
+    moves_init(&moves, &her.anim);
     double clock_ms = 0;
 
     int frames = 0, drag_l = 0, drag_r = 0;
@@ -319,27 +280,28 @@ int main(int argc, char **argv)
             .grounded = elf.grounded, .rising = elf.vz > 0,
             .speed = dt > 0 ? (float)(hypot(elf.x - before_x, elf.y - before_y) / dt) : 0, .dt = dt,
         };
-        moves_step(&moves, &anim, &mi);
+        moves_step(&moves, &her.anim, &mi);
         if (pose_id >= 0) {
-            int seq = anim_find(&anim, pose_id, 0);
+            int seq = anim_find(&her.anim, pose_id, 0);
             if (seq < 0) { fprintf(stderr, "--pose %d: her model has no such animation\n", pose_id); break; }
             moves.seq = seq; moves.ms = pose_ms; moves.from = -1; moves.once = 0;
         }
         clock_ms += dt * 1000.0;
-        moves_pose(&moves, &anim, (uint32_t)clock_ms, poses, scratch);
-        for (uint32_t i = 0; i < nrest; ++i) {
-            float p[3] = { rest[i].x, rest[i].y, rest[i].z }, n[3] = { rest[i].nx, rest[i].ny, rest[i].nz };
-            anim_skin_point(&anim, (const float (*)[16])poses, i, p, bent + i * 6, n, bent + i * 6 + 3);
-        }
-        for (int k = 0; k < npieces; ++k) {
-            Mesh *m = &pieces[k].mesh;
-            for (int v = 0; v < m->vertexCount; ++v) {
-                const float *b = bent + pieces[k].point_of[v] * 6;
-                memcpy(m->vertices + v * 3, b, sizeof(float) * 3);
-                memcpy(m->normals + v * 3, b + 3, sizeof(float) * 3);
+        figure_bend(&her, &moves, (uint32_t)clock_ms);
+        /* the bystanders: each holds an animation for HOLD_MS, then the
+         * next of CYCLE its model has */
+        for (int i = 0; i < nothers; ++i) {
+            other_at[i].held += dt * 1000.0f;
+            if (other_at[i].held >= HOLD_MS) {
+                other_at[i].held = 0;
+                for (int tries = 0; tries < (int)(sizeof CYCLE / sizeof CYCLE[0]); ++tries) {
+                    other_at[i].cycle = (other_at[i].cycle + 1) % (int)(sizeof CYCLE / sizeof CYCLE[0]);
+                    if (anim_find(&others[i].anim, CYCLE[other_at[i].cycle], 0) >= 0) break;
+                }
+                moves_play(&other_at[i].moves, &others[i].anim, CYCLE[other_at[i].cycle]);
             }
-            UpdateMeshBuffer(*m, 0, m->vertices, (int)(sizeof(float) * 3 * m->vertexCount), 0);   /* buffer 0: positions */
-            UpdateMeshBuffer(*m, 2, m->normals, (int)(sizeof(float) * 3 * m->vertexCount), 0);    /* buffer 2: facings */
+            moves_advance(&other_at[i].moves, &others[i].anim, dt);
+            figure_bend(&others[i], &other_at[i].moves, (uint32_t)clock_ms);
         }
         refresh_tiles();
         SetWindowTitle(TextFormat("Everland Ghostsong  -  Ashenvale  x %.1f  y %.1f  z %.1f", elf.x, elf.y, elf.z));
@@ -368,10 +330,15 @@ int main(int argc, char **argv)
         rlMatrixMode(RL_MODELVIEW);
         rlDisableBackfaceCulling();
         ground_blob(at.x, at.y, (float)elf.z, 1.3f);     /* her shadow, a little wider than her shoulders */
+        for (int i = 0; i < nothers; ++i)                /* theirs, sized by their display's scale */
+            ground_blob((float)(other_at[i].x - ox), (float)(other_at[i].y - oy), (float)other_at[i].z, 1.3f * others[i].scale);
         ground_draw(eye, SKY);
         doodads_draw(eye, SKY);
         Matrix place = MatrixMultiply(MatrixRotateZ((float)elf.o + moves.body_turn), MatrixTranslate(at.x, at.y, (float)elf.z));
-        for (int i = 0; i < npieces; ++i) DrawMesh(pieces[i].mesh, pieces[i].texture == 6 ? hair_mat : skin_mat, place);
+        figure_draw(&her, model_sh, place);
+        for (int i = 0; i < nothers; ++i)
+            figure_draw(&others[i], model_sh, MatrixMultiply(MatrixRotateZ(other_at[i].facing),
+                        MatrixTranslate((float)(other_at[i].x - ox), (float)(other_at[i].y - oy), (float)other_at[i].z)));
         EndMode3D();
         EndDrawing();
 
@@ -385,8 +352,8 @@ int main(int argc, char **argv)
         }
     }
     CloseWindow();
-    anim_free(&anim);
-    free(poses); free(scratch); free(bent);
+    figure_free(&her);
+    for (int i = 0; i < nothers; ++i) figure_free(&others[i]);
     mpq_chain_close(&chain);
     maps_world_free(&world);
     return 0;
