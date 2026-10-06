@@ -17,11 +17,24 @@ Verbatim, 2026-10-05:
 
 ## Current Behavior
 
-Not built. The client is Lua on LÖVE (`src/custom-client/`): map reader,
-mover with the slope rule, navigation-tile slope reader, archive reader,
-model, picture and table readers, character assembly, and a 3D draw with
-two shaders. Tests: `scripts/test-custom-client` (22),
-`scripts/test-client-models` (20).
+**Ported 2026-10-05.** `src/custom-client-c/`: `maps`, `navmesh_slope`,
+`mover`, `mpq`, `blp`, `dbc`, `m2`, `character` (each a `.h` saying what
+it is and a `.c` ported line for line from its Lua twin) and `main.c`
+(Raylib window, camera, controls, ground meshes, her model in pieces with
+their textures, two GLSL 330 shaders, the `--shot`, `--zoom`, `--front`
+picture options). Raylib 5.1-dev from `/usr/local` (installed static),
+zlib from the system. `scripts/build-custom-client [--test]` builds both
+programs into `tmp/tmp/custom-client-c/` with `-Wall -Wextra -Werror`.
+`tests/test_client.c` holds the C to the Lua tests' facts on the same
+files: 43 checks, every number equal to the Lua's (Astranaar 106.71,
+8.4 yards a second, the 60-degree rule, her 2.29 yards and 5148
+triangles, 393 face samples changed). Pictures from both versions match.
+`scripts/custom-client` now runs the C version (rebuilt when its sources
+are newer), `--lua` the original.
+
+Differences from the Lua: the mover keeps doubles as LuaJIT does; the
+projection is loaded by hand (this Raylib has no clip-plane setter; far
+1600 yards as before); the window size follows the window manager.
 
 ## Intended Behavior
 

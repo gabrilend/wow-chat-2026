@@ -1,0 +1,42 @@
+#!/bin/bash
+# build-custom-client - builds the custom client in C (issue 173k) and its tests.
+#
+# For a general audience: compiles the project's own game client, written
+# in C on Raylib (a small library for games: windows, input, OpenGL
+# drawing), from src/custom-client-c/, and its test program. Raylib comes
+# from the system (/usr/local, where it is installed as a static library);
+# zlib, for the game's archives, too. Outputs go to the RAM tier
+# (tmp/tmp/custom-client-c/), as every build product here does.
+#
+# Usage: scripts/build-custom-client [PROJECT_DIR] [--test]
+#   --test   also run the test program after building
+
+# {{{ set_dir
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if [[ -n "$1" && "$1" != --* ]]; then
+    DIR="$1"
+    shift
+fi
+# }}}
+
+set -euo pipefail
+SRC="${DIR}/src/custom-client-c"
+OUT="${DIR}/tmp/tmp/custom-client-c"
+mkdir -p "${OUT}"
+[[ -f /usr/local/include/raylib.h && -f /usr/local/lib/libraylib.a ]] || {
+    echo "ERROR: Raylib not found in /usr/local (raylib.h, libraylib.a): build and install raylib first"; exit 1; }
+
+CFLAGS=(-std=c11 -D_FILE_OFFSET_BITS=64 -D_POSIX_C_SOURCE=200809L -O2 -g -Wall -Wextra -Werror -I/usr/local/include)
+CORE=("${SRC}/maps.c" "${SRC}/mover.c" "${SRC}/navmesh_slope.c" "${SRC}/mpq.c" "${SRC}/blp.c" "${SRC}/dbc.c"
+      "${SRC}/m2.c" "${SRC}/character.c")
+
+echo "building the test program"
+cc "${CFLAGS[@]}" "${CORE[@]}" "${SRC}/tests/test_client.c" -lz -lm -o "${OUT}/test-client"
+echo "building the client"
+cc "${CFLAGS[@]}" "${CORE[@]}" "${SRC}/main.c" /usr/local/lib/libraylib.a -lz -lm -lpthread -ldl -lrt -lX11 -lGL \
+    -o "${OUT}/custom-client"
+echo "built: ${OUT}/custom-client, ${OUT}/test-client"
+
+if [[ "${1:-}" == "--test" ]]; then
+    "${OUT}/test-client" "${DIR}"
+fi

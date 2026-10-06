@@ -1,16 +1,21 @@
 #!/bin/bash
 # custom-client - the project's own game client (issue 173).
 #
-# For a general audience: opens the first light of the custom client: a
-# night elf on the ground of Ashenvale near Astranaar, read from the same
-# map files the game server uses, moved with the game's own controls at
-# 120% speed. q quits. Needs LÖVE (the game framework; the client is Lua).
+# For a general audience: opens the custom client: a night elf, the
+# original game's own model, on the ground of Ashenvale near Astranaar,
+# read from the same map files the game server uses, moved with the
+# game's own controls at 120% speed. q quits. The client is written in C
+# on Raylib (issue 173k; built by scripts/build-custom-client when its
+# sources are newer than the program); the first version, Lua on LÖVE,
+# still runs with --lua and is kept as the reference the C is checked
+# against.
 #
-# Usage: scripts/custom-client [PROJECT_DIR] [--shot]
+# Usage: scripts/custom-client [PROJECT_DIR] [--lua] [--shot [--zoom N] [--front]]
+#   --lua    run the Lua (LÖVE) version instead of the C one
 #   --shot   draw a few frames, save a picture to
-#            tmp/shared-memory/custom-client-shot.png, and quit (a check
-#            that it draws; the window shows for a moment). After it:
-#            --zoom N (camera N yards off), --front (looking at her face).
+#            tmp/shared-memory/custom-client-shot.png, and quit (the window
+#            shows for a moment). After it: --zoom N (camera N yards off),
+#            --front (looking at her face).
 
 # {{{ set_dir
 DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
@@ -20,14 +25,15 @@ if [[ -n "$1" && "$1" != --* ]]; then
 fi
 # }}}
 
-command -v love > /dev/null || { echo "ERROR: LÖVE (the 'love' program) is not installed; the custom client runs on it"; exit 1; }
 MAPS="${DIR}/data-files/maps"
 [[ -d "${MAPS}" ]] || { echo "ERROR: ${MAPS} missing: the server's extracted maps (scripts/extract-maps)"; exit 1; }
-
 # the original 3.3.5a client's Data folder: her model and its pictures
 # come out of its archives (read in place, nothing copied)
 CLIENT="${CLIENT:-/mnt/dile/ritz/games/World of Warcraft 3.3.5a/Data}"
 [[ -f "${CLIENT}/common.MPQ" ]] || { echo "ERROR: ${CLIENT} has no common.MPQ: set CLIENT to the 3.3.5a client's Data folder"; exit 1; }
+
+LUA=0
+if [[ "${1:-}" == "--lua" ]]; then LUA=1; shift; fi
 
 ARGS=(--maps "${MAPS}" --client "${CLIENT}")
 if [[ "${1:-}" == "--shot" ]]; then
@@ -35,4 +41,15 @@ if [[ "${1:-}" == "--shot" ]]; then
     mkdir -p "${DIR}/tmp/shared-memory"
     ARGS+=(--shot "${DIR}/tmp/shared-memory/custom-client-shot.png" "$@")   # then any picture options (--zoom N, --front)
 fi
-exec love "${DIR}/src/custom-client" "${ARGS[@]}"
+
+if [[ ${LUA} -eq 1 ]]; then
+    command -v love > /dev/null || { echo "ERROR: LÖVE (the 'love' program) is not installed; the Lua client runs on it"; exit 1; }
+    exec love "${DIR}/src/custom-client" "${ARGS[@]}"
+fi
+
+# the C client: rebuilt when any of its sources is newer than the program
+BIN="${DIR}/tmp/tmp/custom-client-c/custom-client"
+if [[ ! -x "${BIN}" ]] || [[ -n "$(find "${DIR}/src/custom-client-c" -newer "${BIN}" -name '*.[ch]' -print -quit)" ]]; then
+    "${DIR}/scripts/build-custom-client" "${DIR}" || exit 1
+fi
+exec "${BIN}" "${ARGS[@]}"
