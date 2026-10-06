@@ -103,8 +103,8 @@ tail and hooves against the original.
   positions (none of the figures shown today has either: a one-off
   probe listed every unit of the five models, 2026-10-06).
 
-**Still open:** the fixed "bare" piece list (401, 501, 702, 1301, 1501, 1702)
-against the game's own tables. Group 5 for him has only 505, which the
+**Decided, not yet built:** the fixed "bare" piece list (401, 501, 702,
+1301, 1501, 1702) gives way to the game's own tables (Open Questions, 3). Group 5 for him has only 505, which the
 fixed list never shows; whether bare hooves need it is to check in-game.
 The two missing pictures (scalp, and a hair row naming a face) are
 still reported.
@@ -139,3 +139,10 @@ M2 for characters and doodads, WMO for buildings) with their textures.
    archives first, a player's own assets over them. Two players may see
    the same character differently, each with their own assets. Her look
    in `main.lua` is a stand-in for the ids the server will send.
+3. (Answered 2026-10-06) Which pieces a bare character shows: a fixed
+   list of piece numbers (typed in from the night elf), or the game's
+   own tables? The owner: "Yes? How else would we do it?" So the tables:
+   facial hair from CharacterFacialHairStyles.dbc (groups 1-3, by race,
+   sex and style), hair from CharHairGeosets.dbc (already), and every
+   other group its bare variant (g * 100 + 1) where the model has it, the
+   fixed list retired.
