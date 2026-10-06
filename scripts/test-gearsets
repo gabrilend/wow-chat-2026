@@ -333,12 +333,27 @@ do
 end
 -- }}}
 
--- {{{ buddy-white: what buddies are made wearing (617r2)
+-- {{{ buddy-white-<tier>: what buddies are made wearing (617r2)
 print("")
-print("The buddy-white profile")
+print("The buddy-white tier profiles")
 do
-    local bw = dofile(DIR .. "/src/lua-basic/data/gearsets/buddy-white.lua")
-    check(table.concat(bw.keys, ",") == "shape,level", "buddy-white is keyed by shape, then level")
+    -- the seven tiers read into one view: shape key -> level -> record; each
+    -- tier's records must lie inside its own ten levels
+    local bw = { records = {} }
+    local keyed, inside = true, true
+    for _, tier in ipairs({ 1, 10, 20, 30, 40, 50, 60 }) do
+        local p = dofile(DIR .. "/src/lua-basic/data/gearsets/buddy-white-" .. tier .. ".lua")
+        if p.name ~= "buddy-white-" .. tier or table.concat(p.keys, ",") ~= "shape,level" then keyed = false end
+        for key, by_level in pairs(p.records) do
+            bw.records[key] = bw.records[key] or {}
+            for level, rec in pairs(by_level) do
+                if level < (tier == 1 and 2 or tier) or level > (tier == 1 and 9 or tier + 9) then inside = false end
+                bw.records[key][level] = rec
+            end
+        end
+    end
+    check(keyed, "each tier profile is named buddy-white-<tier> and keyed by shape, then level")
+    check(inside, "each tier's records lie inside its own ten levels")
     local missing, records, ids, seen_b = 0, 0, {}, {}
     for class, c in pairs(TD.classes) do
         for shape in ipairs(c.shapes) do

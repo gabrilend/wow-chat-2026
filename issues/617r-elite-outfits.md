@@ -189,6 +189,7 @@ profile's race wearing the profile's items.
 | 617r3 | players-sorted-into-a-shape | 617r1 | Each character's nearest shape stored, updated at login and at each talent point; shape 7 (thirds) before level 10 or with no points |
 | 617r4 | gearsets-on-creatures | None | The selected creature dressed in a record through the mirror image (617f) |
 | 617r5 | gearset-gallery | 617r1, 173k | Pictures of every record on its race's model (random sex), to curate fashionable sets fast |
+| 617r6 | spec-profiles-choose-the-gems | 617r1 | No gems in gearsets: per class and shape, desired stat weights (the project's own spec profiles) choose the gems whenever anyone is dressed |
 
 Execution order: `617r1 → 617r2 → (617r3 ∥ 617r5)`; 617r4 any time.
 

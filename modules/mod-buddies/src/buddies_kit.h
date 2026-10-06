@@ -14,7 +14,7 @@ class Player;
 
 // Gives the kit to a buddy just made (before its first save). `shape` is
 // its talent shape (1-10, buddy_roster.profile), which with its class and
-// level finds its gear in the "buddy-white" gearset (617r2). Returns what
+// level finds its gear in its tier's "buddy-white-<tier>" gearset (617r2). Returns what
 // could not be given, empty when all is well, for the caller to log.
 std::string BuddyGiveStartingKit(Player* buddy, uint32 ownerGuid, uint8 shape);
 

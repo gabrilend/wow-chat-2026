@@ -24,9 +24,14 @@ Verbatim, 2026-10-05:
 compile commands; not yet rebuilt or run.** Needs the owner's rebuild
 (the buddy module changed) and an install (E052).
 
+- **One profile per ten-level tier** (owner, 2026-10-05: "We should
+  call it buddy-white-20 because we're going to have one for each level
+  tier"): `buddy-white-1` (levels 2-9), `buddy-white-10`, `-20` ... `-60`,
+  each keyed shape then level (a record each five levels inside the tier).
+  The buddy module picks the profile by the buddy's tier.
 - `scripts/translate-buddy-kit-to-gearset` (Lua) applies the old rules
-  offline and writes `src/lua-basic/data/gearsets/buddy-white.lua`: 1300
-  records (10 classes x 10 shapes x 13 level brackets: 2, 5, 10 ... 60),
+  offline and writes the seven `src/lua-basic/data/gearsets/buddy-white-*.lua`:
+  1300 records (10 classes x 10 shapes x 13 level brackets: 2, 5, 10 ... 60),
   from the 266 white vendor armour and weapon items between required
   levels 2 and 60, in a third of a second. Items are scored by the bot
   module's own per-tree stat weights (`acore_playerbots_basic.
@@ -42,10 +47,14 @@ compile commands; not yet rebuilt or run.** Needs the owner's rebuild
   The live chooser (`WANTS`, the candidate sort) is gone; `.buddy kit`
   re-kits from the profile by the buddy's shape. Creation and the
   stage remake pass the roster's shape.
-- Kept for now, for the owner to retire: `buddies_kit_tiers.h` and
-  `scripts/generate-buddy-kit-tiers`, still the source of install step
-  E048's SQL (46 starter items' required level lowered to 20). The
-  module no longer reads the header.
+- **Retired 2026-10-05**: `buddies_kit_tiers.h`, `scripts/generate-buddy-kit-tiers`
+  and E048's apply form. E048 now applies its own revert on every
+  install: the 46 starter items get their own required levels back (a
+  database it never touched is left alone). Copies of those items without
+  a level requirement (the owner asked) would not help: a new item number
+  isn't in the original client's own item table (`Item.dbc`, 46096 items,
+  checked 2026-10-05), so a worn copy is drawn as nothing on the body
+  (148v). Once every database has had an install, E048 leaves the list.
 - What the old rules can't give, the profile doesn't have either: no
   white cloak is sold anywhere (so no cloak in any record), and level 40
   plate classes wear level-32 mail until plate appears at 45. Both are
@@ -108,6 +117,7 @@ data file:
 
 ## Open Questions
 
-1. The level-20 tier came from the vanilla starter kit by race. With no
-   race key, should `buddy-white`'s level-20 records keep the starter
-   kit's look (class-wide, the first race's pick), or follow the rules?
+1. (Answered 2026-10-05) "the rules were just there to throw together a
+   programmatically gathered gear list. We're going to curate them all
+   eventually." The level-20 records follow the rules like the rest.
+2. Gems are not in gearsets (owner, 2026-10-05): see 617r6.

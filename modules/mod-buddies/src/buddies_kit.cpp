@@ -11,7 +11,7 @@
  * Everything is chosen from the world database when the buddy is made, not
  * from a hand-written list, and only from what some vendor sells, so a
  * buddy never carries an item a player couldn't get:
- *   gear   from the gearset profile "buddy-white" (issue 617r2): the
+ *   gear   from the gearset profile "buddy-white-<tier>" (issue 617r2): the
  *          record for its class and talent shape at the highest level at or
  *          below its own, read from the world database's gearset_item table
  *          (install step E052, written from
@@ -54,7 +54,13 @@
 using namespace Acore::ChatCommands;
 
 // {{{ tuning
-static char const* const KIT_GEARSET = "buddy-white";   // the gearset profile new buddies wear (617r2)
+// the gearset profiles new buddies wear (617r2): one per ten-level tier,
+// "buddy-white-1" for levels 2-9, then "buddy-white-10", "-20" ... (the
+// owner, 2026-10-05: "we're going to have one for each level tier")
+static std::string KitGearset(uint8 level)
+{
+    return "buddy-white-" + std::to_string(level < 10 ? 1 : level / 10 * 10);
+}
 static constexpr uint32 GEARSET_SLOTS = EQUIPMENT_SLOT_END; // gearset_item slots 0-18 are equipment; 100+ bags, 200 ammo
 static constexpr uint32 MEALS = 5;    // servings of food, and of drink, in the kit: a few, so it has something to buy (the owner, 2026-09-28)
 // }}}
@@ -86,13 +92,14 @@ static uint32 GiveGear(Player* buddy, uint8 shape, std::string& problems)
         return 0;
     }
     uint32 key = uint32(buddy->getClass()) * 100 + shape;
+    std::string const gearset = KitGearset(buddy->GetLevel());
     QueryResult rows = WorldDatabase.Query(
         "SELECT slot, item FROM gearset_item WHERE profile = '{}' AND key1 = {} AND slot < {} AND key2 = "
         "(SELECT MAX(key2) FROM gearset_item WHERE profile = '{}' AND key1 = {} AND key2 <= {}) ORDER BY slot",
-        KIT_GEARSET, key, GEARSET_SLOTS, KIT_GEARSET, key, buddy->GetLevel());
+        gearset, key, GEARSET_SLOTS, gearset, key, buddy->GetLevel());
     if (!rows)
     {
-        problems += "no " + std::string(KIT_GEARSET) + " record for shape key " + std::to_string(key) + " at or below level "
+        problems += "no " + gearset + " record for shape key " + std::to_string(key) + " at or below level "
             + std::to_string(buddy->GetLevel()) + " (is install step E052 applied? does the profile have it?); ";
         return 0;
     }
@@ -255,7 +262,7 @@ public:
         QueryResult row = CharacterDatabase.Query("SELECT profile FROM buddy_roster WHERE buddy = {}", buddy->GetGUID().GetCounter());
         uint8 shape = row ? (*row)[0].Get<uint8>() : 0;
         std::string problems = BuddyRegear(buddy, shape);
-        handler->PSendSysMessage("{} (level {}) re-kitted from {} by its talent shape {}{}{}", name, buddy->GetLevel(), KIT_GEARSET,
+        handler->PSendSysMessage("{} (level {}) re-kitted from {} by its talent shape {}{}{}", name, buddy->GetLevel(), KitGearset(buddy->GetLevel()),
             uint32(shape), problems.empty() ? "" : "; ", problems);
         return true;
     }
