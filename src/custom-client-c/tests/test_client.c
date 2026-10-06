@@ -15,6 +15,7 @@
  *
  * Usage: test-client PROJECT_DIR CLIENT_DATA_DIR
  */
+#include "../adt.h"
 #include "../blp.h"
 #include "../camera.h"
 #include "../character.h"
@@ -307,6 +308,76 @@ int main(int argc, char **argv)
     check(skipped == 0 && log && strstr(log, "no file at") && settings_num("cameraDistanceMaxFactor") == 2,
           "no file yet: said once, every setting at its default");
     free(log);
+    /* }}} */
+
+    /* {{{ the ground files (173f) */
+    printf("the ground files (the original's ADTs)\n");
+    {
+        MpqChain gc;
+        if (mpq_chain_open(&gc, client, "enUS", why, sizeof why)) { check(0, why); goto ground_done; }
+        size_t len;
+        const char *from;
+        unsigned char *s = mpq_chain_read(&gc, "World\\Maps\\Kalimdor\\Kalimdor.wdt", &len, &from);
+        check(s && adt_wdt_big_alpha(s, len, why, sizeof why) == 0, "Kalimdor's blend maps are the 4-bit form");
+        free(s);
+        s = mpq_chain_read(&gc, "World\\Maps\\Northrend\\Northrend.wdt", &len, &from);
+        check(s && adt_wdt_big_alpha(s, len, why, sizeof why) == 1, "Northrend's are the 8-bit form");
+        free(s);
+
+        AdtTile *t = malloc(sizeof *t);
+        s = mpq_chain_read(&gc, "World\\Maps\\Kalimdor\\Kalimdor_32_26.adt", &len, &from);
+        int bad = !s || adt_read(s, len, 0, t, why, sizeof why);
+        free(s);
+        check(!bad, bad ? why : "Astranaar's tile (Kalimdor_32_26) reads: 256 chunks");
+        if (!bad) {
+            int found = 0;
+            for (int i = 0; i < t->ntextures; ++i) {
+                unsigned char *p = mpq_chain_read(&gc, t->textures[i], &len, &from);
+                if (p) ++found;
+                free(p);
+            }
+            snprintf(line, sizeof line, "all %d of its ground pictures are in the archives (%d found; first %s)", t->ntextures, found, t->textures[0]);
+            check(found == t->ntextures && t->ntextures > 0, line);
+            int placed = 1;
+            for (int k = 0; k < 256; ++k) {
+                AdtChunk *c = &t->chunks[k];
+                if (c->ix != k % 16 || c->iy != k / 16 || !near(c->x, 3200 - c->iy * ADT_CHUNK_SIZE, 0.01) || !near(c->y, 0 - c->ix * ADT_CHUNK_SIZE, 0.01)) placed = 0;
+            }
+            check(placed, "each chunk sits where its row and column say (rows run south, columns east)");
+            /* the client's heights against the server's own map file, at
+             * every corner and centre of every chunk */
+            float worst_h = 0;
+            const float step = ADT_CHUNK_SIZE / 8;
+            for (int k = 0; k < 256; ++k)
+                for (int i = 0; i < 145; ++i) {
+                    AdtChunk *c = &t->chunks[k];
+                    int r17 = i % 17;
+                    float row = (float)(i / 17) + (r17 >= 9 ? 0.5f : 0.0f), col = r17 >= 9 ? (float)(r17 - 9) + 0.5f : (float)r17;
+                    float hs = maps_world_height(w, c->x - row * step, c->y - col * step, &gx, &gy);
+                    if (hs > -10000 && fabsf(hs - (c->z + c->heights[i])) > worst_h) worst_h = fabsf(hs - (c->z + c->heights[i]));
+                }
+            snprintf(line, sizeof line, "its 37,120 heights match the server's own map, within %.4f yards", worst_h);
+            check(worst_h < 0.01f, line);
+            /* 4-bit blend maps: an unpainted last column copies the one before */
+            int fixed = 1, painted = 0;
+            for (int k = 0; k < 256; ++k)
+                for (int l = 1; l < t->chunks[k].nlayers; ++l) {
+                    for (int r = 0; r < 64; ++r) if (t->chunks[k].alpha[l][r * 64 + 63] != t->chunks[k].alpha[l][r * 64 + 62]) fixed = 0;
+                    for (int i = 0; i < 4096; ++i) if (t->chunks[k].alpha[l][i] != 0 && t->chunks[k].alpha[l][i] != 255) { painted = 1; break; }
+                }
+            check(fixed, "every blend map's last column copies the one before, as the original fills the unpainted edge");
+            check(painted, "the blend maps hold soft edges, not only all-or-nothing");
+            adt_free(t);
+        }
+        s = mpq_chain_read(&gc, "World\\Maps\\Northrend\\Northrend_30_20.adt", &len, &from);
+        bad = !s || adt_read(s, len, 1, t, why, sizeof why);
+        free(s);
+        check(!bad, bad ? why : "a Northrend tile with packed and plain 8-bit blend maps reads (Northrend_30_20)");
+        if (!bad) adt_free(t);
+        free(t);
+        mpq_chain_close(&gc);
+    }
+ground_done:
     /* }}} */
 
     /* {{{ the camera (173m) */

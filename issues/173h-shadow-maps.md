@@ -13,7 +13,10 @@ See 173f (the owner's order, 2026-10-05).
 
 ## Current Behavior
 
-Not built. Nothing casts a shadow.
+Not built. Nothing casts a shadow. The ground's baked shadows are
+already read (`adt.c`, MCSH) and packed into each chunk's blend picture's
+alpha channel (`ground.c`: 255 lit, 0 shadowed); the shader doesn't use
+them yet.
 
 ## Intended Behavior
 

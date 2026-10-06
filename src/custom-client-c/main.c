@@ -18,6 +18,7 @@
  */
 #include "camera.h"
 #include "character.h"
+#include "ground.h"
 #include "maps.h"
 #include "mover.h"
 #include "mpq.h"
@@ -35,6 +36,7 @@
 
 /* {{{ settings */
 #define MAP_ID       1                                 /* Kalimdor */
+#define MAP_NAME     "Kalimdor"                        /* its folder in the archives (World\\Maps\\Kalimdor) */
 #define START_X      2717.0                            /* Astranaar, Ashenvale */
 #define START_Y      (-400.0)
 #define START_O      3.6                               /* facing the town's west side */
@@ -50,9 +52,10 @@ static const CharacterLook LOOK = { 4, 1, 0, 0, 0, 0 };
 /* }}} */
 
 /* {{{ shaders
- * Both light by the sun from one direction and fade into the sky with
- * distance. The model's cuts out see-through pixels (hair strands). GLSL
- * 330, with Raylib's own attribute and uniform names. */
+ * Her model's: lit by the sun from one direction, faded into the sky with
+ * distance, see-through pixels (hair strands) cut out. GLSL 330, with
+ * Raylib's own attribute and uniform names. The ground has its own, in
+ * ground.c. */
 static const char *GROUND_VS =
     "#version 330\n"
     "in vec3 vertexPosition; in vec3 vertexNormal; in vec4 vertexColor; in vec2 vertexTexCoord;\n"
@@ -63,15 +66,6 @@ static const char *GROUND_VS =
     "  n = mat3(matModel) * vertexNormal; col = vertexColor; uv = vertexTexCoord;\n"
     "  dist = length(w.xyz - eye);\n"
     "  gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
-    "}\n";
-static const char *GROUND_FS =
-    "#version 330\n"
-    "in vec3 n; in vec4 col; in vec2 uv; in float dist; out vec4 frag; uniform vec3 sky;\n"
-    "void main() {\n"
-    "  vec3 sun = normalize(vec3(0.45, 0.30, 0.84));\n"
-    "  float light = max(dot(normalize(n), sun), 0.0) * 0.75 + 0.30;\n"
-    "  float fog = clamp((dist - 120.0) / 520.0, 0.0, 1.0);\n"
-    "  frag = vec4(mix(col.rgb * light, sky, fog), 1.0);\n"
     "}\n";
 static const char *MODEL_FS =
     "#version 330\n"
@@ -84,79 +78,6 @@ static const char *MODEL_FS =
     "  float fog = clamp((dist - 120.0) / 520.0, 0.0, 1.0);\n"
     "  frag = vec4(mix(t.rgb * light, sky, fog), 1.0);\n"
     "}\n";
-/* }}} */
-
-/* {{{ static ground_colour
- * nz: how upward the surface faces (1 level, 0 a wall): forest floor to rock. */
-static void ground_colour(float nz, unsigned char *c)
-{
-    static const float FLOOR[3] = { 0.20f, 0.33f, 0.24f }, ROCK[3] = { 0.38f, 0.36f, 0.33f };
-    float t = (0.92f - nz) / 0.25f;
-    t = t < 0 ? 0 : (t > 1 ? 1 : t);
-    for (int i = 0; i < 3; ++i) c[i] = (unsigned char)((FLOOR[i] + (ROCK[i] - FLOOR[i]) * t) * 255);
-    c[3] = 255;
-}
-/* }}} */
-
-/* {{{ static build_ground
- * One tile as a mesh: 129 x 129 corners and 128 x 128 centres as points,
- * the server's four triangles per cell, none over holes; positions
- * relative to the origin so single-precision floats stay exact. */
-static int build_ground(const MapTile *t, double ox, double oy, Mesh *out)
-{
-    if (t->is_flat) return 0;
-    const int corners = 129 * 129, count = corners + 128 * 128;
-    const float step = MAPS_GRID_SIZE / MAPS_RESOLUTION;
-    Mesh m = { 0 };
-    m.vertexCount = count;
-    m.vertices = MemAlloc(sizeof(float) * 3 * count);
-    m.normals  = MemAlloc(sizeof(float) * 3 * count);
-    m.colors   = MemAlloc(4 * count);
-    #define H9(ix, iy) t->v9[((ix) < 0 ? 0 : (ix) > 128 ? 128 : (ix)) * 129 + ((iy) < 0 ? 0 : (iy) > 128 ? 128 : (iy))]
-    for (int ix = 0; ix <= 128; ++ix)
-        for (int iy = 0; iy <= 128; ++iy) {
-            int i = ix * 129 + iy;
-            float wx, wy;
-            maps_corner_position(t->tx, t->ty, (float)ix, (float)iy, &wx, &wy);
-            m.vertices[i * 3] = (float)(wx - ox); m.vertices[i * 3 + 1] = (float)(wy - oy); m.vertices[i * 3 + 2] = t->v9[i];
-            /* world x falls as ix rises, so the x slope is (back - ahead) */
-            float sx = (H9(ix - 1, iy) - H9(ix + 1, iy)) / (2 * step);
-            float sy = (H9(ix, iy - 1) - H9(ix, iy + 1)) / (2 * step);
-            Vector3 nv = Vector3Normalize((Vector3){ -sx, -sy, 1 });
-            m.normals[i * 3] = nv.x; m.normals[i * 3 + 1] = nv.y; m.normals[i * 3 + 2] = nv.z;
-            ground_colour(nv.z, m.colors + i * 4);
-        }
-    #undef H9
-    for (int ix = 0; ix < 128; ++ix)
-        for (int iy = 0; iy < 128; ++iy) {
-            int i = corners + ix * 128 + iy;
-            float wx, wy;
-            maps_corner_position(t->tx, t->ty, ix + 0.5f, iy + 0.5f, &wx, &wy);
-            m.vertices[i * 3] = (float)(wx - ox); m.vertices[i * 3 + 1] = (float)(wy - oy); m.vertices[i * 3 + 2] = t->v8[ix * 128 + iy];
-            int c[4] = { ix * 129 + iy, (ix + 1) * 129 + iy, ix * 129 + iy + 1, (ix + 1) * 129 + iy + 1 };
-            Vector3 nv = { 0 };
-            for (int k = 0; k < 4; ++k) nv = Vector3Add(nv, (Vector3){ m.normals[c[k] * 3], m.normals[c[k] * 3 + 1], m.normals[c[k] * 3 + 2] });
-            nv = Vector3Normalize(nv);
-            m.normals[i * 3] = nv.x; m.normals[i * 3 + 1] = nv.y; m.normals[i * 3 + 2] = nv.z;
-            ground_colour(nv.z, m.colors + i * 4);
-        }
-    /* triangles: per cell the server's four (h1 h2 h5, h1 h5 h3, h2 h4 h5, h3 h5 h4) */
-    m.indices = MemAlloc(sizeof(unsigned short) * 128 * 128 * 12);
-    int n = 0;
-    for (int ix = 0; ix < 128; ++ix)
-        for (int iy = 0; iy < 128; ++iy) {
-            if (maps_is_hole(t, ix, iy)) continue;
-            unsigned short h1 = ix * 129 + iy, h2 = (ix + 1) * 129 + iy, h3 = ix * 129 + iy + 1, h4 = (ix + 1) * 129 + iy + 1;
-            unsigned short h5 = corners + ix * 128 + iy;
-            unsigned short tri[12] = { h1, h2, h5, h1, h5, h3, h2, h4, h5, h3, h5, h4 };
-            memcpy(m.indices + n, tri, sizeof tri);
-            n += 12;
-        }
-    m.triangleCount = n / 3;
-    UploadMesh(&m, false);
-    *out = m;
-    return 1;
-}
 /* }}} */
 
 /* {{{ her model: one mesh per shown piece, each with its picture */
@@ -175,13 +96,10 @@ static Texture2D texture_of(const BlpImage *img)
     SetTextureWrap(t, TEXTURE_WRAP_REPEAT);
     return t;
 }
-static int build_elf(const char *client, char *why, int why_len)
+static int build_elf(MpqChain *chain, char *why, int why_len)
 {
-    MpqChain chain;
-    if (mpq_chain_open(&chain, client, "enUS", why, why_len)) return -1;
     Character ch;
-    if (character_build(&chain, &LOOK, &ch, why, why_len)) { mpq_chain_close(&chain); return -1; }
-    mpq_chain_close(&chain);
+    if (character_build(chain, &LOOK, &ch, why, why_len)) return -1;
     tex_skin = texture_of(&ch.skin);
     if (ch.hair.width) tex_hair = texture_of(&ch.hair);
     for (uint32_t u = 0; u < ch.model.nunits && npieces < 64; ++u) {
@@ -215,8 +133,8 @@ static int build_elf(const char *client, char *why, int why_len)
 
 /* {{{ the world and the camera */
 static MapWorld world;
-static Mesh   tile_mesh[64 * 64];
-static char   tile_state[64 * 64];                      /* 0 not tried, 1 mesh, 2 none */
+static MpqChain chain;                                   /* the original client's archives, open for the whole run */
+static char   tile_state[64 * 64];                      /* 0 not tried, 1 painted, 2 no ground file (open sea) */
 static double ox, oy;                                    /* the drawing origin, near the start */
 static Mover  elf;
 static FollowCam view = { .yaw = (float)START_O, .pitch = 0.35f, .dist = 12.0f, .rest_pitch = 0.35f };   /* camera.h */
@@ -232,8 +150,10 @@ static void refresh_tiles(void)
         for (int dy = -TILE_REACH; dy <= TILE_REACH; ++dy) {
             int x = tx + dx, y = ty + dy;
             if (x < 0 || x >= 64 || y < 0 || y >= 64 || tile_state[x * 64 + y]) continue;
-            MapTile *t = maps_world_tile(&world, x, y);
-            tile_state[x * 64 + y] = (t && build_ground(t, ox, oy, &tile_mesh[x * 64 + y])) ? 1 : 2;
+            char why[600];
+            int got = ground_load_tile(x, y, ox, oy, &world, why, sizeof why);
+            if (got < 0) { fprintf(stderr, "painting tile (%d, %d): %s\n", x, y, why); exit(1); }
+            tile_state[x * 64 + y] = got == 0 ? 1 : 2;
         }
 }
 /* }}} */
@@ -280,15 +200,13 @@ int main(int argc, char **argv)
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
     InitWindow(win_w, win_h, "Everland Ghostsong");
     SetExitKey(KEY_NULL);                                /* Escape is read in the loop, so it can open the game menu later */
-    Shader ground_sh = LoadShaderFromMemory(GROUND_VS, GROUND_FS);
     Shader model_sh  = LoadShaderFromMemory(GROUND_VS, MODEL_FS);
-    if (build_elf(client, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
-    Material ground_mat = LoadMaterialDefault(); ground_mat.shader = ground_sh;
+    if (mpq_chain_open(&chain, client, "enUS", why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    if (build_elf(&chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    if (ground_init(&chain, MAP_NAME, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     Material skin_mat = LoadMaterialDefault(); skin_mat.shader = model_sh; skin_mat.maps[MATERIAL_MAP_DIFFUSE].texture = tex_skin;
     Material hair_mat = LoadMaterialDefault(); hair_mat.shader = model_sh; hair_mat.maps[MATERIAL_MAP_DIFFUSE].texture = tex_hair;
-    int eye_g = GetShaderLocation(ground_sh, "eye"), sky_g = GetShaderLocation(ground_sh, "sky");
     int eye_m = GetShaderLocation(model_sh, "eye"),  sky_m = GetShaderLocation(model_sh, "sky");
-    SetShaderValue(ground_sh, sky_g, SKY, SHADER_UNIFORM_VEC3);
     SetShaderValue(model_sh, sky_m, SKY, SHADER_UNIFORM_VEC3);
     refresh_tiles();
 
@@ -337,7 +255,6 @@ int main(int argc, char **argv)
         float floor_z = maps_world_height(&world, eye.x + (float)ox, eye.y + (float)oy, &gx, &gy);
         if (floor_z > -10000 && eye.z < floor_z + 0.6f) eye.z = floor_z + 0.6f;   /* never under the ground */
         Camera3D cam = { .position = eye, .target = at, .up = { 0, 0, 1 }, .fovy = 60, .projection = CAMERA_PERSPECTIVE };
-        SetShaderValue(ground_sh, eye_g, &eye, SHADER_UNIFORM_VEC3);
         SetShaderValue(model_sh, eye_m, &eye, SHADER_UNIFORM_VEC3);
         /* }}} */
 
@@ -352,7 +269,7 @@ int main(int argc, char **argv)
         rlMultMatrixf(MatrixToFloat(MatrixPerspective(60 * DEG2RAD, (double)GetScreenWidth() / GetScreenHeight(), 0.3, 1600)));
         rlMatrixMode(RL_MODELVIEW);
         rlDisableBackfaceCulling();
-        for (int i = 0; i < 64 * 64; ++i) if (tile_state[i] == 1) DrawMesh(tile_mesh[i], ground_mat, MatrixIdentity());
+        ground_draw(eye, SKY);
         Matrix place = MatrixMultiply(MatrixRotateZ((float)elf.o), MatrixTranslate(at.x, at.y, (float)elf.z));
         for (int i = 0; i < npieces; ++i) DrawMesh(pieces[i].mesh, pieces[i].texture == 6 ? hair_mat : skin_mat, place);
         EndMode3D();
@@ -368,6 +285,7 @@ int main(int argc, char **argv)
         }
     }
     CloseWindow();
+    mpq_chain_close(&chain);
     maps_world_free(&world);
     return 0;
 }
