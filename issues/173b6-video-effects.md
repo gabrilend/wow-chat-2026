@@ -15,8 +15,18 @@ See 173b (the owner's words, 2026-10-06).
 
 ## Current Behavior
 
-Not built. The client draws 3 x 3 map tiles round her (its tile reach),
-with a far plane of 1600 yards and fog in the distance, all fixed.
+**View Distance built (2026-10-06); the other rows wait for their
+features.**
+- `farclip` (177 to 1277 yards, step 110, the original's range; default
+  507) is in the store.
+- **What it controls:**
+  - how many tiles load round her: enough to cover it, 3 x 3 up to 7 x 7;
+  - the far plane: 1.25 times it, plus 100 yards;
+  - where the fog ends, at the latest: a zone's fog reaching further is
+    pulled in to it, its start in proportion.
+- **The default** keeps the 3 x 3 the client had before. Set to 1057 in
+  the settings file, she loads 5 x 5 (25 tiles, 14,967 placements around
+  Astranaar).
 
 ## Intended Behavior
 

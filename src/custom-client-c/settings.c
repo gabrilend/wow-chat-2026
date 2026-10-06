@@ -26,6 +26,10 @@
  *   the rows of camera.c's styles table; the camera stops the client if
  *   they ever disagree. "1" is the owner's choice (2026-10-06).
  * cameraYawSmoothSpeed: degrees a second the camera drifts back behind her.
+ * farclip: the view distance, yards (173b6): the far plane, how far the
+ *   fog may reach, and how many tiles load round her (one tile covers
+ *   533 yards). 507 keeps the 3 x 3 the client had before; the range and
+ *   step are the original's.
  */
 static const char *check_resolution(const char *value);
 
@@ -41,6 +45,9 @@ static const SettingDecl DECLS[] = {
     { .name = "gxResolution",            .section = "Resolution", .kind = SETTING_TEXT,   .def = "1280x720",
       .check = check_resolution, .restart = 1,
       .label = "Resolution", .explain = "The window's width and height in pixels, typed as WIDTHxHEIGHT (up to 7680x4320, ultrawide included)." },
+    { .name = "farclip",                 .section = "Effects",    .kind = SETTING_SLIDER, .def = "507",
+      .min = 177, .max = 1277, .step = 110,
+      .label = "View Distance", .explain = "Changes how far you can see. Decreasing this may greatly improve performance." },
     { .name = "cameraDistanceMaxFactor", .section = "Camera",     .kind = SETTING_SLIDER, .def = "2",
       .min = 1,  .max = 2,   .step = 0.1,
       .label = "Max Camera Distance", .explain = "Adjust the maximum distance the camera will follow behind you." },

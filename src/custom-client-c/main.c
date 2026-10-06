@@ -68,7 +68,6 @@ static double start_x = 2717.0, start_y = -400.0;       /* Astranaar, Ashenvale 
 /* {{{ settings */
 #define START_O      3.6                               /* facing the town's west side */
 #define SPEED        1.2                               /* 120% of the base speeds (owner, 2026-10-04) */
-#define TILE_REACH   1                                 /* tiles drawn round her own: 3 x 3 */
 #define ELF_HEIGHT   2.3f                              /* yards: the camera looks at her shoulders */
 #define ZOOM_MIN     2.0f
 #define ZOOM_BASE    20.0f                             /* yards; times cameraDistanceMaxFactor (1 to 2) is the zoom-out limit (173b4) */
@@ -181,8 +180,16 @@ static int wall_at(void *ctx, double x0, double y0, double x1, double y1, double
 }
 /* }}} */
 
+/* tiles loaded round hers: enough to cover the view distance (farclip,
+ * 173b6), 1 to 3 (3 x 3 up to 7 x 7) */
+static int tile_reach(void)
+{
+    int r = (int)ceil(settings_num("farclip") / 533.33333);
+    return r < 1 ? 1 : r > 3 ? 3 : r;
+}
 static void refresh_tiles(void)
 {
+    const int TILE_REACH = tile_reach();
     int tx, ty;
     maps_tile_of((float)elf.x, (float)elf.y, &tx, &ty);
     for (int dx = -TILE_REACH; dx <= TILE_REACH; ++dx)
@@ -450,16 +457,20 @@ int main(int argc, char **argv)
         /* the light here, now: time runs on in real time */
         hours = fmodf(hours + dt / 3600.0f, 24.0f);
         int lit = light_at(&lights, map_id, (float)elf.x, (float)elf.y, (float)elf.z, hours, &light);
+        /* the fog ends by the view distance at the latest (173b6) */
+        float farclip = (float)settings_num("farclip");
+        if (light.fog_end > farclip) { light.fog_start *= farclip / light.fog_end; light.fog_end = farclip; }
         if (lit != light_id) { light_id = lit; printf("light: now light %d\n", lit); }
         sky_light_shader(model_sh, &light);
         ClearBackground((Color){ (unsigned char)(fminf(light.fog[0], 1) * 255), (unsigned char)(fminf(light.fog[1], 1) * 255), (unsigned char)(fminf(light.fog[2], 1) * 255), 255 });
         BeginMode3D(cam);
-        /* the Lua client's projection: 60 degrees, near 0.3, far 1600 yards
+        /* the projection: 60 degrees, near 0.3, far a little past the view
+         * distance (farclip, 173b6) so the fog, which ends by it, hides the edge
          * (Raylib's own far plane is 1000; this Raylib has no setter, so the
          * projection is loaded directly) */
         rlMatrixMode(RL_PROJECTION);
         rlLoadIdentity();
-        rlMultMatrixf(MatrixToFloat(MatrixPerspective(60 * DEG2RAD, (double)GetScreenWidth() / GetScreenHeight(), 0.3, 1600)));
+        rlMultMatrixf(MatrixToFloat(MatrixPerspective(60 * DEG2RAD, (double)GetScreenWidth() / GetScreenHeight(), 0.3, settings_num("farclip") * 1.25 + 100)));
         rlMatrixMode(RL_MODELVIEW);
         rlDisableBackfaceCulling();
         sky_draw(eye, &light, dt);                       /* first, behind everything */
