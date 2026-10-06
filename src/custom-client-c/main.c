@@ -367,6 +367,7 @@ int main(int argc, char **argv)
         rlMultMatrixf(MatrixToFloat(MatrixPerspective(60 * DEG2RAD, (double)GetScreenWidth() / GetScreenHeight(), 0.3, 1600)));
         rlMatrixMode(RL_MODELVIEW);
         rlDisableBackfaceCulling();
+        ground_blob(at.x, at.y, (float)elf.z, 1.3f);     /* her shadow, a little wider than her shoulders */
         ground_draw(eye, SKY);
         doodads_draw(eye, SKY);
         Matrix place = MatrixMultiply(MatrixRotateZ((float)elf.o + moves.body_turn), MatrixTranslate(at.x, at.y, (float)elf.z));

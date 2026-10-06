@@ -21,27 +21,39 @@
  * times across a chunk (once every 4.2 yards, as the original tiles them),
  * `uv2` spans the blend picture once. Blending is the original's: each
  * layer laid over the ones below by its strength, then tinted by the
- * chunk's colours (MCCV; 127 = unchanged, so 0 to 2 times). */
+ * chunk's colours (MCCV; 127 = unchanged, so 0 to 2 times), then darkened
+ * where the chunk's baked shadow says (173h: to 60%, the blend picture's
+ * alpha), and under each character by a soft round patch (a "blob": its
+ * centre, its radius; fading out over 3 yards of height, so a character
+ * high above the ground casts none). */
 static const char *VS =
     "#version 330\n"
     "in vec3 vertexPosition; in vec3 vertexNormal; in vec2 vertexTexCoord; in vec2 vertexTexCoord2; in vec4 vertexColor;\n"
     "uniform mat4 mvp; uniform vec3 eye;\n"
-    "out vec3 n; out vec2 uv; out vec2 uv2; out vec3 tint; out float dist;\n"
+    "out vec3 n; out vec2 uv; out vec2 uv2; out vec3 tint; out float dist; out vec3 pos;\n"
     "void main() {\n"
+    "  pos = vertexPosition;\n"
     "  n = vertexNormal; uv = vertexTexCoord; uv2 = vertexTexCoord2; tint = vertexColor.rgb * (255.0 / 127.0);\n"
     "  dist = length(vertexPosition - eye);\n"
     "  gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
     "}\n";
 static const char *FS =
     "#version 330\n"
-    "in vec3 n; in vec2 uv; in vec2 uv2; in vec3 tint; in float dist; out vec4 frag;\n"
+    "in vec3 n; in vec2 uv; in vec2 uv2; in vec3 tint; in float dist; in vec3 pos; out vec4 frag;\n"
     "uniform sampler2D layer0, layer1, layer2, layer3, blend; uniform vec3 sky;\n"
+    "uniform vec4 blobs[8]; uniform int nblobs;\n"
     "void main() {\n"
     "  vec4 a = texture(blend, uv2);\n"
     "  vec3 c = texture(layer0, uv).rgb;\n"
     "  c = mix(c, texture(layer1, uv).rgb, a.r);\n"
     "  c = mix(c, texture(layer2, uv).rgb, a.g);\n"
     "  c = mix(c, texture(layer3, uv).rgb, a.b) * tint;\n"
+    "  c *= mix(0.6, 1.0, a.a);\n"
+    "  for (int i = 0; i < nblobs; ++i) {\n"
+    "    float d = length(pos.xy - blobs[i].xy) / blobs[i].w;\n"
+    "    float above = clamp(1.0 - abs(pos.z - blobs[i].z) / 3.0, 0.0, 1.0);\n"
+    "    c *= 1.0 - 0.6 * (1.0 - smoothstep(0.3, 1.0, d)) * above;\n"
+    "  }\n"
     "  vec3 sun = normalize(vec3(0.45, 0.30, 0.84));\n"
     "  float light = max(dot(normalize(n), sun), 0.0) * 0.75 + 0.30;\n"
     "  float fog = clamp((dist - 120.0) / 520.0, 0.0, 1.0);\n"
@@ -70,7 +82,9 @@ static char      map_name[64];
 static int       big_alpha;
 static Shader    shader;
 static Material  material;
-static int       loc_eye, loc_sky;
+static int       loc_eye, loc_sky, loc_blobs, loc_nblobs;
+static float     blobs[8][4];
+static int       nblobs;
 /* }}} */
 
 /* {{{ ground_init */
@@ -99,6 +113,8 @@ int ground_init(MpqChain *c, const char *name, char *why, int why_len)
     shader.locs[SHADER_LOC_MAP_OCCLUSION] = GetShaderLocation(shader, "blend");
     loc_eye = GetShaderLocation(shader, "eye");
     loc_sky = GetShaderLocation(shader, "sky");
+    loc_blobs = GetShaderLocation(shader, "blobs");
+    loc_nblobs = GetShaderLocation(shader, "nblobs");
     material = LoadMaterialDefault();
     material.shader = shader;
     return 0;
@@ -245,11 +261,20 @@ int ground_load_tile(int tx, int ty, double ox, double oy, MapWorld *world, AdtT
 }
 /* }}} */
 
-/* {{{ ground_draw */
+/* {{{ ground_blob, ground_draw */
+void ground_blob(float x, float y, float z, float radius)
+{
+    if (nblobs == 8) return;                            /* the eight nearest are enough (the caller adds nearest first) */
+    blobs[nblobs][0] = x; blobs[nblobs][1] = y; blobs[nblobs][2] = z; blobs[nblobs][3] = radius;
+    ++nblobs;
+}
 void ground_draw(Vector3 eye, const float sky[3])
 {
     SetShaderValue(shader, loc_eye, &eye, SHADER_UNIFORM_VEC3);
     SetShaderValue(shader, loc_sky, sky, SHADER_UNIFORM_VEC3);
+    SetShaderValueV(shader, loc_blobs, blobs, SHADER_UNIFORM_VEC4, 8);
+    SetShaderValue(shader, loc_nblobs, &nblobs, SHADER_UNIFORM_INT);
+    nblobs = 0;                                         /* blobs are given afresh each frame */
     for (int t = 0; t < 64 * 64; ++t) {
         GroundTile *g = tiles[t];
         if (!g) continue;
