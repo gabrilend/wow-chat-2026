@@ -43,7 +43,7 @@ CORE=("${SRC}/maps.c" "${SRC}/mover.c" "${SRC}/navmesh_slope.c" "${SRC}/mpq.c" "
 echo "building the test program"
 cc "${CFLAGS[@]}" "${CORE[@]}" "${SRC}/tests/test_client.c" -lz -lm -o "${OUT}/test-client"
 echo "building the client"
-cc "${CFLAGS[@]}" "${CORE[@]}" "${SRC}/ground.c" "${SRC}/doodads.c" "${SRC}/figure.c" "${SRC}/sky.c" "${SRC}/water.c" "${SRC}/main.c" /usr/local/lib/libraylib.a -lz -lm -lpthread -ldl -lrt -lX11 -lGL \
+cc "${CFLAGS[@]}" "${CORE[@]}" "${SRC}/ground.c" "${SRC}/doodads.c" "${SRC}/figure.c" "${SRC}/sky.c" "${SRC}/water.c" "${SRC}/horizon.c" "${SRC}/main.c" /usr/local/lib/libraylib.a -lz -lm -lpthread -ldl -lrt -lX11 -lGL \
     -o "${OUT}/custom-client"
 echo "built: ${OUT}/custom-client, ${OUT}/test-client"
 SECONDS_TAKEN=$(( $(date +%s) - START ))
@@ -60,7 +60,7 @@ for arg in "$@"; do
         command -v clang > /dev/null || { echo "ERROR: --asan needs clang (gcc's address checker isn't installed here)"; exit 1; }
         echo "building the address-checked client"
         clang -std=c11 -D_FILE_OFFSET_BITS=64 -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address -fno-omit-frame-pointer \
-            -I/usr/local/include "${CORE[@]}" "${SRC}/ground.c" "${SRC}/doodads.c" "${SRC}/figure.c" "${SRC}/sky.c" "${SRC}/water.c" \
+            -I/usr/local/include "${CORE[@]}" "${SRC}/ground.c" "${SRC}/doodads.c" "${SRC}/figure.c" "${SRC}/sky.c" "${SRC}/water.c" "${SRC}/horizon.c" \
             "${SRC}/main.c" /usr/local/lib/libraylib.a -lz -lm -lpthread -ldl -lrt -lX11 -lGL -o "${OUT}/custom-client-asan"
         echo "built: ${OUT}/custom-client-asan (run it with ASAN_OPTIONS=detect_leaks=0)"
     fi

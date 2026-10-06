@@ -39,6 +39,7 @@
 #include "doodads.h"
 #include "figure.h"
 #include "ground.h"
+#include "horizon.h"
 #include "light.h"
 #include "liquid.h"
 #include "maps.h"
@@ -210,6 +211,7 @@ static int tile_reach(void)
     int r = (int)ceil(settings_num("farclip") / 533.33333);
     return r < 1 ? 1 : r > 3 ? 3 : r;
 }
+static int tile_loaded(int x, int y) { return tile_state[x * 64 + y] == 1; }   /* for the horizon (173s) */
 static void refresh_tiles(void)
 {
     const int TILE_REACH = tile_reach();
@@ -366,6 +368,7 @@ int main(int argc, char **argv)
     solids = collide_new(ox, oy);
     waters = liquid_new();
     if (doodads_init(&chain, solids, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    if (horizon_init(&chain, map_name, ox, oy, why, sizeof why)) printf("horizon: %s\n", why);
     if (water_init(&chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     LightTables lights;
     if (light_open(&lights, &chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
@@ -516,10 +519,15 @@ int main(int argc, char **argv)
          * projection is loaded directly) */
         rlMatrixMode(RL_PROJECTION);
         rlLoadIdentity();
-        rlMultMatrixf(MatrixToFloat(MatrixPerspective(60 * DEG2RAD, (double)GetScreenWidth() / GetScreenHeight(), 0.3, settings_num("farclip") * 1.25 + 100)));
+        rlMultMatrixf(MatrixToFloat(MatrixPerspective(60 * DEG2RAD, (double)GetScreenWidth() / GetScreenHeight(), 0.3, fmax(settings_num("farclip") * 1.25 + 100, (HORIZON_REACH + 1) * 533.33))));   /* out to the far horizon (173s) */
         rlMatrixMode(RL_MODELVIEW);
         rlDisableBackfaceCulling();
         sky_draw(eye, &light);                           /* first, behind everything */
+        {
+            int htx, hty;
+            maps_tile_of((float)elf.x, (float)elf.y, &htx, &hty);
+            horizon_draw(htx, hty, tile_loaded, eye, &light);   /* low-detail tiles beyond the loaded ones (173s) */
+        }
         ground_blob(at.x, at.y, (float)elf.z, 1.3f);     /* her shadow, a little wider than her shoulders */
         for (int i = 0; i < nothers; ++i)                /* theirs, sized by their display's scale */
             ground_blob((float)(other_at[i].x - ox), (float)(other_at[i].y - oy), (float)other_at[i].z, 1.3f * others[i].scale);

@@ -19,7 +19,19 @@ to, could we build the entire continent?"
 
 ## Current Behavior
 
-**Dropping built 2026-10-06** (the far horizon not yet):
+**Dropping and the far horizon built 2026-10-06:**
+- **The horizon** (`horizon.h` / `horizon.c`):
+  - The map's .wdl is read: one coarse 17 x 17 height grid per tile, with
+    hole bits. Its corner at Astranaar's tile (164) matches the ground
+    file's (164.69).
+  - Each tile within 6 of hers that isn't loaded in full is drawn as a
+    coarse mesh in the fog's colour, a little darker on slopes facing
+    away from the sun.
+  - The far plane now reaches the horizon (7 tiles out).
+  - At the Crossroads the far mountains stand as blue-grey silhouettes.
+  - There's no check in the test program yet: the reader sits with the
+    drawing (it needs a window); a split would let the tests reach it.
+
 - **What drops:** `refresh_tiles` (`main.c`) drops every tile more than
   one tile beyond the loaded 3 x 3. Each part forgets what the tile
   brought:
@@ -60,8 +72,8 @@ to, could we build the entire continent?"
 - **Placements:** a doodad listed by two tiles belongs to the first that
   loaded it. If that tile is dropped while the other stays, the other
   tile places it again.
-- **The far horizon** (later): the WDL's low-detail heights drawn beyond
-  the loaded tiles, as the original draws distant mountains.
+- **The far horizon:** the WDL's low-detail heights drawn beyond the
+  loaded tiles, as the original draws distant mountains.
 
 ## Suggested Implementation Steps
 
