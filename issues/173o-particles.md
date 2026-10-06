@@ -36,18 +36,22 @@ Verbatim, 2026-10-06: "let's work on particle effects next." (after:
   gate's orb and the lamp posts glow.
 - **Picture mode** now runs 3 world-seconds (60 steady frames) before
   its picture, so particles have filled out.
-- **Tests:** 4 checks.
+- **Particles in fog** (`particles_fog`): by its distance into the fog,
+  a see-through particle's colour goes to the fog's, and an added-light
+  one's goes dark, so far sparks vanish rather than lighting the fog.
+- **Tests:** 7 checks.
   - The torch has 2 emitters. Its flame makes 20 sparks a second, each
     living 1 second, added light, from a 4 x 4 grid.
   - After 2 seconds about 20 live, rising from the flame.
   - A new spark is orange.
+  - Past the fog's end a spark adds nothing and a see-through particle
+    is the fog's colour; before its start, a spark is untouched.
 
 **Left:**
 - Figures' particles (spells, weapon glows).
 - Ribbons (trails).
 - Spline emitters, which are run as planes.
 - Wind and twinkle.
-- Particles in fog.
 - Lit particles (flag 0x1).
 - Comparing torches with the original up close.
 

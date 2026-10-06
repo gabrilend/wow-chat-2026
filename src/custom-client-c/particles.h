@@ -71,6 +71,13 @@ void particles_step(const Anim *a, const Emitter *e, EmitterRun *run, const floa
 /* A particle's colour (red, green, blue, opacity; 0-1) and size (yards). */
 void particles_look(const Emitter *e, const Particle *p, float rgba[4], float size[2]);
 
+/* The fog over a particle's colour (`rgba`, changed in place): `share` is
+ * how far into the fog it is (0 at the fog's start, 1 at its end; held to
+ * 0-1). A see-through particle (blend below 3) goes to the fog's colour
+ * `fog`; an added-light one goes dark, so it adds nothing (adding the
+ * fog's colour would make a spark light up the fog). Opacity stays. */
+void particles_fog(int blend, float rgba[4], const float fog[3], float share);
+
 void particles_free_run(EmitterRun *run);
 
 #endif

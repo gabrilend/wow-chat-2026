@@ -634,9 +634,14 @@ static void draw_pass(int see_through)
 /* the particles: squares facing the camera (its right and up), each from
  * its picture's cell, coloured and sized by its age, blended as its
  * emitter says (2 see-through, 3-4 added light; 0-1 drawn see-through),
- * without writing depth, after everything solid */
-static void draw_particles(Vector3 right, Vector3 up)
+ * without writing depth, after everything solid. The fog takes them as it
+ * takes the solid world (173o): by the distance from the eye between the
+ * fog's start and end, a see-through particle's colour goes to the fog's,
+ * and an added-light one's goes to nothing (adding the fog's colour would
+ * light the fog up instead of hiding the spark) */
+static void draw_particles(Vector3 right, Vector3 up, Vector3 eye, const LightNow *light)
 {
+    float fog_span = fmaxf(light->fog_end - light->fog_start, 1.0f);
     for (int i = 0; i < nmodels; ++i) {
         DoodadModel *md = &models[i];
         if (!md->nemitters || !md->nruns) continue;
@@ -664,6 +669,7 @@ static void draw_particles(Vector3 right, Vector3 up)
                     float u1 = u0 + 1.0f / e->cols, v1 = v0 + 1.0f / e->rows;
                     float sx = size[0], sy = size[1];
                     Vector3 c0 = { p->p[0], p->p[1], p->p[2] };
+                    particles_fog(e->blend, rgba, light->fog, (Vector3Distance(c0, eye) - light->fog_start) / fog_span);
                     rlColor4f(rgba[0], rgba[1], rgba[2], rgba[3]);
                     rlTexCoord2f(u0, v1); rlVertex3f(c0.x - right.x * sx - up.x * sy, c0.y - right.y * sx - up.y * sy, c0.z - right.z * sx - up.z * sy);
                     rlTexCoord2f(u1, v1); rlVertex3f(c0.x + right.x * sx - up.x * sy, c0.y + right.y * sx - up.y * sy, c0.z + right.z * sx - up.z * sy);
@@ -687,7 +693,7 @@ void doodads_draw(Vector3 eye, const LightNow *light)
     rlDisableDepthMask();
     draw_pass(1);
     rlDrawRenderBatchActive();
-    draw_particles(view_right, view_up);
+    draw_particles(view_right, view_up, eye, light);
     rlDrawRenderBatchActive();
     rlEnableDepthMask();
 }

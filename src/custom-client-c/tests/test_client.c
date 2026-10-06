@@ -804,6 +804,15 @@ anim_done:
             particles_look(&em[0], &young, rgba, size);
             snprintf(line, sizeof line, "a new spark is orange (%.2f, %.2f, %.2f)", rgba[0], rgba[1], rgba[2]);
             check(rgba[0] > 0.9f && rgba[1] < 0.5f && rgba[2] < 0.2f, line);
+            /* the fog (173o): a spark adding light fades out; a see-through one takes the fog's colour */
+            const float fog[3] = { 0.2f, 0.3f, 0.4f };
+            float spark[4] = { 1, 0.5f, 0.1f, 0.8f }, smoke[4] = { 1, 0.5f, 0.1f, 0.8f }, near_one[4] = { 1, 0.5f, 0.1f, 0.8f };
+            particles_fog(4, spark, fog, 1.5f);
+            particles_fog(2, smoke, fog, 1);
+            particles_fog(4, near_one, fog, -2);
+            check(spark[0] == 0 && spark[1] == 0 && spark[2] == 0 && spark[3] == 0.8f, "past the fog's end, an added-light spark adds nothing");
+            check(near(smoke[0], 0.2, 1e-6) && near(smoke[2], 0.4, 1e-6) && smoke[3] == 0.8f, "past it, a see-through particle is the fog's colour");
+            check(near_one[0] == 1 && near_one[1] == 0.5f, "before the fog starts, a spark is untouched");
             particles_free_run(&run);
             free(em);
             anim_free(&a);

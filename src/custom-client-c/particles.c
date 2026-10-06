@@ -189,3 +189,12 @@ void particles_look(const Emitter *e, const Particle *p, float rgba[4], float si
 }
 void particles_free_run(EmitterRun *run) { free(run->ps); memset(run, 0, sizeof *run); }
 /* }}} */
+
+/* {{{ particles_fog */
+void particles_fog(int blend, float rgba[4], const float fog[3], float share)
+{
+    float f = share < 0 ? 0 : share > 1 ? 1 : share;
+    for (int ch = 0; ch < 3; ++ch)
+        rgba[ch] = blend >= 3 ? rgba[ch] * (1 - f) : rgba[ch] + (fog[ch] - rgba[ch]) * f;
+}
+/* }}} */
