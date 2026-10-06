@@ -109,6 +109,14 @@ flat? But only some of them)". Likely causes, to be confirmed:
 - **Test:** the lamp's glow bone turns its face to a camera off to the
   side.
 
+**The moss: causes ruled out (2026-10-06), the arch not yet found.**
+- No small model on Astranaar's tile has a two-picture piece, a picture
+  animation, or a second set of picture positions.
+- No building there uses a second picture or a special shader in its
+  materials.
+- So the arch's own spot is needed, from the owner: its place, or a
+  picture (asked in docs/custom-client-ingame-checks.md).
+
 **Left:**
 - The moss fault above.
 - Pieces whose picture the game chooses at run time (none so far at

@@ -26,6 +26,8 @@ typedef struct {
     uint8_t *shown;                        /* per piece: 1 when it shows */
     BlpImage skin;                         /* texture kind 1: the finished skin sheet */
     BlpImage hair;                         /* texture kind 6 (width 0 when none) */
+    BlpImage fur;                          /* texture kind 8: the skin row's second picture, a tauren's fur
+                                            * and tail (width 0 when the race has none) */
     char     base[200];                    /* the model's archive path without its extension (for its .anim files) */
 } Character;
 

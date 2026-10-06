@@ -69,6 +69,26 @@ by the game's own tables (CharacterFacialHairStyles for groups 1-3, the
 race's defaults for the rest) rather than by fixed numbers, then check the
 tail and hooves against the original.
 
+**The tail found and fixed (2026-10-06).** It isn't a piece left off.
+- **Where it is:** his tail is piece 1501 (group 15, "no cape": the
+  bare back). Measured, it sits half a yard behind him at waist height.
+  `character.c` already shows 1501.
+- **The cause:** the tail is drawn with picture slot kind 8, the fur:
+  the skin row's second picture in CharSections. The figure filled only
+  kinds 1 (skin) and 6 (hair), so every piece using the fur was skipped:
+  the tail, and parts of his coat and face.
+- **The fix:** `character.c` now loads the fur (`Character.fur`),
+  reporting it by name if its file is missing, and `figure.c` fills kind
+  8 with it.
+- **Seen:** from behind, he has his tail and coat.
+- **Test:** a tauren man's tail shows, painted with his fur.
+
+**Still open:** the fixed "bare" piece list (401, 501, 702, 1301, 1501)
+against the game's own tables. Group 5 for him has only 505, which the
+fixed list never shows; whether bare hooves need it is to check in-game.
+The two missing pictures (scalp, and a hair row naming a face) are
+still reported.
+
 ## Intended Behavior
 
 The world's buildings and trees and the characters' models drawn in 3D:

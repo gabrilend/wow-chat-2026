@@ -164,6 +164,14 @@ int character_build(MpqChain *archives, const CharacterLook *look, Character *ou
         paste(out->skin.rgba, out->skin.width, &img, REGION[lays[i].region], k);
         blp_free(&img);
     }
+    /* the fur (kind 8): the skin row's second picture, where the race has
+     * one (a tauren's tail and coat; found 2026-10-06, the owner's missing
+     * tail: the pieces using it were skipped for want of a picture) */
+    if (sect[0][1][0]) {
+        int got = picture(archives, sect[0][1], &out->fur, why, why_len);
+        if (got == -2) fprintf(stderr, "character: %s; the fur is left unpainted\n", why);
+        else if (got) return -1;
+    }
     if (have[3] && sect[3][0][0]) {
         int got = picture(archives, sect[3][0], &out->hair, why, why_len);
         if (got == -2) fprintf(stderr, "character: %s; the hair is left unpainted\n", why);
@@ -180,5 +188,6 @@ void character_free(Character *c)
     free(c->shown);
     blp_free(&c->skin);
     blp_free(&c->hair);
+    blp_free(&c->fur);
 }
 /* }}} */

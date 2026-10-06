@@ -284,6 +284,24 @@ int main(int argc, char **argv)
         check(ch.hair.width > 0, "her hair has its picture");
         character_free(&ch);
     }
+    {
+        /* a tauren man: his tail (piece 1501) uses the fur picture (kind 8),
+         * the skin row's second; without it the tail was skipped (173d) */
+        CharacterLook tauren = { 6, 0, 0, 0, 0, 0 };
+        Character tc;
+        if (character_build(&chain, &tauren, &tc, why, sizeof why)) check(0, why);
+        else {
+            int tail = 0, tail_fur = 0;
+            for (uint32_t i = 0; i < tc.model.npieces; ++i) if (tc.model.pieces[i].id == 1501 && tc.shown[i]) tail = 1;
+            for (uint32_t u = 0; u < tc.model.nunits; ++u) {
+                M2Unit un = tc.model.units[u];
+                if (un.piece < tc.model.npieces && tc.model.pieces[un.piece].id == 1501 && un.texture < tc.model.ntextures && tc.model.textures[un.texture].kind == 8) tail_fur = 1;
+            }
+            snprintf(line, sizeof line, "a tauren man's tail shows, painted with his fur (%d x %d)", tc.fur.width, tc.fur.height);
+            check(tail && tail_fur && tc.fur.width > 0, line);
+            character_free(&tc);
+        }
+    }
     blp_free(&img);
     mpq_chain_close(&chain);
     /* }}} */

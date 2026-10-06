@@ -124,13 +124,16 @@ int figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look,
     if (character_build(chain, look, &ch, why, why_len)) return 1;
     snprintf(f->name, sizeof f->name, "%.63s", strrchr(ch.base, '\\') ? strrchr(ch.base, '\\') + 1 : ch.base);
     Texture2D pics[64] = { 0 };
-    Texture2D skin = texture_of(&ch.skin), hair = { 0 };
+    Texture2D skin = texture_of(&ch.skin), hair = { 0 }, fur = { 0 };
     if (ch.hair.width) hair = texture_of(&ch.hair);
-    /* a character's slots: kind 1 its skin sheet, kind 6 its hair; the
-     * rest (capes, armour) wait for items (173d) */
+    if (ch.fur.width) fur = texture_of(&ch.fur);
+    /* a character's slots: kind 1 its skin sheet, kind 6 its hair, kind 8
+     * its fur (a tauren's tail and coat); the rest (capes, armour) wait for
+     * items (173p) */
     for (uint32_t t = 0; t < ch.model.ntextures && t < 64; ++t) {
         if (ch.model.textures[t].kind == 1) pics[t] = skin;
         if (ch.model.textures[t].kind == 6) pics[t] = hair;
+        if (ch.model.textures[t].kind == 8) pics[t] = fur;
     }
     int bad = build(f, chain, &ch.model, ch.shown, pics, ch.base, why, why_len);
     character_free(&ch);

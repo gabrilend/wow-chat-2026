@@ -20,13 +20,16 @@ that issue and strike it here (keep the line, so the history stays).
 5. **Water** (173r): the lake round Astranaar. Its colour,
    see-throughness, and how fast its ripples run (15 pictures a second
    here).
-6. **Known faults, already recorded** (173g): the moss stretched over the
-   archway near the bridge. Mentioned here so it isn't reported twice.
+6. **The moss over the archway near the bridge** (173g): where exactly
+   is it (which bridge, or a picture)? The likely causes have been ruled
+   out on Astranaar's own tile, so it may be on a neighbouring tile, or a
+   different fault.
    **The halos** should now be round from every side (lamps, wisps,
    fireflies): check they look like the original's orbs.
-7. **The tauren** (173d, 173p): his skin layers that the client's tables
-   name but its files lack. Patchy, or as in the original? (His tail is
-   known missing.)
+7. **The tauren** (173d, 173p): his tail and coat now show (they used a
+   fur picture the client skipped). Do they look like the original's? Are
+   his hooves right? Are the two skin layers the client's tables name but
+   its files lack (scalp, and a hair picture) visible as patches?
 
 ## Feel
 
