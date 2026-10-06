@@ -94,9 +94,15 @@ the interface panels with the interface (173c onward).
    a different client build. The script fails rather than guessing when a
    panel it expects is missing.
 
+## Decisions
+
+- **The original's settings file is not read** (owner, 2026-10-06). Its
+  stored names are still used where a setting is the same thing, because
+  they are a ready-made, well-known vocabulary.
+- **The original first.** The plan rebuilds the original's settings
+  before adding new ones. The client is for any WoW private server, not
+  only this project's profiles (see 173, *Who the client is for*).
+
 ## Open Questions
 
-1. **Read the original's settings file?** The store uses the original's
-   stored names (`cameraSmoothStyle`, `farclip` ...) where a setting is
-   the same thing. So it could read a player's existing `WTF/Config.wtf`
-   on first start and carry their choices over. Wanted?
+None.

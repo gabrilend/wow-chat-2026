@@ -4,7 +4,7 @@
 # For a general audience: opens the custom client: a night elf, the
 # original game's own model, on the ground of Ashenvale near Astranaar,
 # read from the same map files the game server uses, moved with the
-# game's own controls at 120% speed. q quits. The client is written in C
+# game's own controls at 120% speed. Escape quits. The client is written in C
 # on Raylib (issue 173k; built by scripts/build-custom-client when its
 # sources are newer than the program); the first version, Lua on LÖVE,
 # still runs with --lua and is kept as the reference the C is checked

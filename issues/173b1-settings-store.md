@@ -49,8 +49,13 @@ silently returns a default.
 
 **Saving:** the player's changes go to one plain text file, one
 `name value` per line, in the same shape as the original's
-`WTF/Config.wtf` (`SET cameraSmoothStyle "1"`), kept beside the client's
-other per-player files. Only values that differ from the default are
+`WTF/Config.wtf` (`SET cameraSmoothStyle "1"`). The file lives in the
+client's installation folder (owner, 2026-10-06). That folder isn't built
+yet, so for now the file is kept in the project, at
+`src/custom-client/settings/` (git-ignored: it is the player's, not the
+project's). Its one path is defined in one place, so moving it later
+changes one line. The original's own `Config.wtf` is never read (owner,
+2026-10-06: "no"). Only values that differ from the default are
 written. On load, a line naming an unknown setting, or holding a value out
 of its range, is reported by name and line number and skipped. The
 report is never silent.
@@ -70,6 +75,4 @@ tables to the same names, kinds, ranges and defaults.
 
 ## Open Questions
 
-1. **Where the file lives.** Beside the client in the project
-   (`tmp/shared-memory/` is RAM and is lost at reboot, so not there), or in
-   the player's home (`~/.config/everland-ghostsong/`)?
+None.

@@ -31,18 +31,27 @@ when other characters are drawn:
 - *Allow Overlapping Unit Nameplates* (`nameplateAllowOverlap`): off
   stacks them so they don't cover each other.
 
-In this project nearly every character near the player is a buddy or a
-monster, so the switches decide most of what floats over the world. One
-"kind" test (friend / enemy, player / pet / guardian / totem / critter)
-answers all 21 switches.
+One "kind" test (friend / enemy, player / pet / guardian / totem /
+critter) answers all 21 switches. It uses only what any 3.3.5a server
+sends about a unit, nothing particular to this project's servers.
 
 ## Suggested Implementation Steps
 
 1. The kind test, tested against a few creature and player records.
 2. Names, then nameplates, each switch read live.
 
+## Decisions
+
+- **No buddy switches in the client** (owner, 2026-10-06: "that's a great
+  idea. But I'm not sure how integrated we want our custom changes to be,
+  so try and keep the client separate from the various changes we've made
+  to the server profiles. We want to make something that anyone can use
+  to play World of Warcraft private servers."). Buddies are players and
+  party members as far as the client knows, and the original's switches
+  cover them. If buddy-specific switches are ever built, they would come
+  from a separate, optional layer (see 173, *Who the client is for*), not
+  from this panel.
+
 ## Open Questions
 
-1. **A buddy kind?** Should buddies have their own switches (names and
-   nameplates for the player's buddies, separate from other players)? The
-   original has no such kind; this project's world is mostly buddies.
+None.

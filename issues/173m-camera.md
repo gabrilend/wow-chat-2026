@@ -6,7 +6,8 @@
 - Parent: 173 (the custom client)
 - Blocked by: 173a (first light), 173b1 (the settings store)
 - Settings: 173b4 (camera and mouse settings, camera key bindings)
-- Related: 617s7 (box select also wants a left-button drag)
+- Related: 617s7 (box select also wants a left-button drag; it waits
+  until the original's behaviour is rebuilt)
 - Priority: High
 
 ## Origin
@@ -109,13 +110,17 @@ actions in the key-binding store (173b3), not fixed keys.
    both unchanged; a held button freezes every style.
 5. Add the remaining camera settings, one at a time, each with a test.
 
+## Decisions
+
+- **Left drag belongs to the camera**, as in the original. Box select
+  (617s7) is a new feature and waits until the original's behaviour is
+  rebuilt (owner, 2026-10-06: "let's focus on re-implementing the
+  original client before we build new features").
+- **Defaults are this client's own.** The original's defaults aren't
+  looked up (owner, 2026-10-06: "Don't worry too much about what the
+  defaults on the original client are"). Style 1 is the default because
+  the owner asked for it.
+
 ## Open Questions
 
-1. **Left drag over the world vs box select (617s7).** Box select also
-   wants left-drag on the world. Which gets the plain drag, and which needs
-   a held key (for example Shift + left drag for the box)?
-2. **The original's default style.** The stock client's default for
-   `cameraSmoothStyle` is kept inside its program, not in the interface
-   files, so the menu files don't say what it is. The owner's choice (1)
-   is used either way. Should the original's default be checked against a
-   fresh `Config.wtf` for the record?
+None.

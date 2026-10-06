@@ -8,11 +8,11 @@
 -- move with the game's own controls at 120% of the base speeds
 -- (lib/mover.lua). No interface, no server connection yet.
 --
--- Controls (the game's, except q):
+-- Controls (the game's, except Escape):
 --   W / S      forward / back            A / D     turn (strafe with the right mouse button held)
---   E          strafe right              space     jump
+--   Q / E      strafe left / right       space     jump
 --   left mouse drag   turn the camera    right mouse drag   turn her and the camera
---   mouse wheel       zoom               q                  quit
+--   mouse wheel       zoom               Escape             quit (until the game menu exists, 173b2)
 --
 -- Run: scripts/custom-client [PROJECT_DIR]
 -- Check: scripts/custom-client [PROJECT_DIR] --shot   draws a few frames,
@@ -214,6 +214,7 @@ local function input_now()
         back         = k("s") or k("down"),
         left         = k("a") or k("left"),
         right        = k("d") or k("right"),
+        strafe_left  = k("q"),
         strafe_right = k("e"),
         strafe_turns = dragging.right,
         jump         = k("space"),
@@ -254,7 +255,7 @@ function love.wheelmoved(_, wy)
     cam.dist = math.max(ZOOM_MIN, math.min(ZOOM_MAX, cam.dist * (wy > 0 and 0.85 or 1.18)))
 end
 function love.keypressed(key)
-    if key == "q" then love.event.quit() end
+    if key == "escape" then love.event.quit() end   -- the owner, 2026-10-06: Escape quits until there are menus
 end
 -- }}}
 

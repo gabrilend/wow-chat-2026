@@ -5,11 +5,11 @@
  * Astranaar, read from the server's own map files, with the night elf of
  * the original game's archives standing on it; moves her with the game's
  * own controls at 120% speed (W/S forward and back, A/D turn or, with the
- * right mouse button held, strafe, E strafe right, space jump, left drag
- * turns the camera, right drag turns her with it, the wheel zooms; q
- * quits). Written in C on Raylib (owner, 2026-10-05: "let's port now. We
- * should build something like an engine in C anyway, for performance
- * reasons").
+ * right mouse button held, strafe, Q and E strafe, space jump, left drag
+ * turns the camera, right drag turns her with it, the wheel zooms; Escape
+ * quits until the game menu exists). Written in C on Raylib (owner,
+ * 2026-10-05: "let's port now. We should build something like an engine
+ * in C anyway, for performance reasons").
  *
  * Usage: custom-client --maps DIR --client DIR [--shot FILE] [--zoom N] [--front]
  *   --shot FILE   draw a few frames, save a picture there, quit
@@ -266,7 +266,7 @@ int main(int argc, char **argv)
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
     InitWindow(1280, 720, "Everland Ghostsong");
-    SetExitKey(KEY_NULL);                                /* q quits, not Escape */
+    SetExitKey(KEY_NULL);                                /* Escape is read in the loop, so it can open the game menu later */
     Shader ground_sh = LoadShaderFromMemory(GROUND_VS, GROUND_FS);
     Shader model_sh  = LoadShaderFromMemory(GROUND_VS, MODEL_FS);
     if (build_elf(client, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
@@ -284,7 +284,7 @@ int main(int argc, char **argv)
         /* {{{ input and movement */
         float dt = GetFrameTime();
         if (dt > 0.1f) dt = 0.1f;                        /* a stalled frame doesn't fling her */
-        if (IsKeyPressed(KEY_Q)) break;
+        if (IsKeyPressed(KEY_ESCAPE)) break;            /* the owner, 2026-10-06: Escape quits until there are menus (173b2) */
         drag_l = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
         int was_r = drag_r;
         drag_r = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
@@ -304,6 +304,7 @@ int main(int argc, char **argv)
             .back = IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN),
             .left = IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT),
             .right = IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT),
+            .strafe_left = IsKeyDown(KEY_Q),
             .strafe_right = IsKeyDown(KEY_E),
             .strafe_turns = drag_r,
             .jump = IsKeyDown(KEY_SPACE),

@@ -34,6 +34,26 @@ Verbatim, 2026-10-04:
 > "clicking-to-drag" etc that handle common UI patterns. Then we should
 > draw the UI, when it exists, very flat and possibly shaded.
 
+## Who the client is for
+
+Verbatim, 2026-10-06:
+
+> I'm not sure how integrated we want our custom changes to be, so try and
+> keep the client separate from the various changes we've made to the
+> server profiles. We want to make something that anyone can use to play
+> World of Warcraft private servers.
+
+> let's focus on re-implementing the original client before we build new
+> features.
+
+So the client is a general 3.3.5a client. It reads the original's data
+files, speaks the original's protocol to any server, and offers the
+original's controls and settings. Nothing in its core assumes this
+project's profiles, buddies or custom items. Features made for this
+project (box select of buddies, 617s7; buddy-specific switches) wait
+until the original is rebuilt. When they come, they go in a separate,
+optional layer that the core doesn't depend on.
+
 ## Current Behavior
 
 Not built (first light under way, 173a). Players use the stock 3.3.5a
@@ -45,7 +65,7 @@ The project's own game client, built up in steps:
 
 | ID | Name | Dependencies | Description |
 |---|---|---|---|
-| 173a | first-light | None | A night elf in Ashenvale walking on the server's own ground, the stock controls, 120% speed, q to quit; no UI, no network |
+| 173a | first-light | None | A night elf in Ashenvale walking on the server's own ground, the stock controls, 120% speed, Escape to quit (q at first); no UI, no network |
 | 173b | options-menu | 173a | Settings: any resolution up to ultrawide, typed in or from a list of common sizes |
 | 173c | ui-gizmo-image-generator | None | WoW-like interface pieces drawn by name ("scrollbar", "x_button", "clicking-to-drag"), flat and lightly shaded, assembled into interfaces |
 | 173d | models-and-world-objects | 173a | The game's models and buildings (from the client's data files and the server's collision meshes) drawn in 3D |

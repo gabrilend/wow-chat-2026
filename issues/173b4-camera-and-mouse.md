@@ -50,6 +50,12 @@ behaviour each controls:
 **Camera key bindings** (Camera Functions, 173b3): zoom in and out, next
 and previous view, five saved views (set, save, reset), flip camera yaw.
 
+**The zoom limit** (owner, 2026-10-06: "We will adjust as we go. So,
+just pick a limit that seems fine"): a base of 20 yards, times *Max Camera
+Distance*. The slider's top (2) gives 40 yards, today's fixed limit, and
+its bottom (1) gives 20. The closest zoom stays 2 yards. These are tuning
+numbers. Later changes go to `docs/balance-updates.md` with the reason.
+
 ## Suggested Implementation Steps
 
 1. With 173m's steps: each setting declared in the same change as the
@@ -57,6 +63,4 @@ and previous view, five saved views (set, save, reset), flip camera yaw.
 
 ## Open Questions
 
-1. **The base zoom limit.** The original's limit, before the 1-to-2
-   factor, is kept inside its program. The custom client zooms out to its
-   own limit (`ZOOM_MAX`). Keep that limit, or measure the original's?
+None.

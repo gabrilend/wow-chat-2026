@@ -4,8 +4,10 @@
 - Created: 2026-10-04
 - Phase: 6
 - Parent: 617s (the compass formation)
-- Related: 173m (the camera: its left drag orbits, so the two must share
-  the left button; open question there)
+- Related: 173m (the camera: its left drag orbits, as in the original)
+- Waits on: the custom client rebuilding the original first, and then a
+  separate, optional layer for this project's own features (173, *Who
+  the client is for*; owner, 2026-10-06)
 - Blocked by: 617s6 (sending buddies), the project's own client (not yet
   an issue; 916o also waits on it)
 - Priority: Low

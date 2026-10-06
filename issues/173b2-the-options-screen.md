@@ -15,13 +15,16 @@ setting is now 173b5's, drawn by this screen.
 
 ## Current Behavior
 
-Not built. The client has no menu; q quits and Escape does nothing.
+Not built. The client has no menu; Escape quits.
 
 ## Intended Behavior
 
-**Escape opens the game menu**, as in the original: Video, Sound, Interface,
-Key Bindings, then Return to Game. Macros, Help, Logout and Exit come later
-with their features. Escape again closes the top window.
+**Escape opens a small pop-up** (owner, 2026-10-06: "esc should open up a
+small pop-up where you can click "settings" or "quit game""): Settings,
+which opens the settings windows, and Quit Game. Further entries (the
+original's Key Bindings, Macros, Help, Logout) join it with their
+features. Escape again closes the top window. Until this exists, Escape
+quits. The menu's look waits on menu design, which hasn't started.
 
 **Each settings window** (Video, Sound & Voice, Interface) has its panel
 list on the left (the original's order, from the reference page) and the
