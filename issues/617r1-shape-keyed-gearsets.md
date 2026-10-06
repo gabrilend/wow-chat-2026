@@ -17,9 +17,15 @@ Verbatim, 2026-10-05:
 
 ## Current Behavior
 
-Not built. Profiles are found by spec (the talent tree holding most
-points) or by class, then race; a Retribution paladin leaning Holy and
-one leaning Protection get the same record.
+Built 2026-10-05, tested offline (`scripts/test-gearsets`, 2532
+checks); not yet run in game. `lib/gearsets.lua` reads each profile's
+`keys` list and walks it (`record(profile, who)`); `nearest_shape` and
+`points_of` work out a shape from spent points. `elite` was re-filed by
+`scripts/rekey-gearsets-by-shape` (one-off): each of the seven outfits
+copied to the three shapes led by the tree it was made for (21 records;
+the even shape gets none); `vanilla-starter` is keyed `class, race`.
+The gearset command finds a character's shape from its spent points, or,
+for a buddy with none spent, its planned shape (roster), else shape 7.
 
 ## Intended Behavior
 

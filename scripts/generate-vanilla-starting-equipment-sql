@@ -111,7 +111,7 @@ end
 -- }}}
 
 local profile = dofile(PROFILE)
-if profile.keyed_by ~= "class" then error(PROFILE .. ": the starter kit must be keyed by class (a new character has no spec)") end
+if table.concat(profile.keys, ",") ~= "class,race" then error(PROFILE .. ": the starter kit must be keyed by class, then race (a new character has no talent shape)") end
 
 local out = { HEADER, "-- {{{ playercreateinfo_item: per (race, class) starter kit" }
 local classes, total, combos = {}, 0, 0

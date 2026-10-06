@@ -120,6 +120,22 @@ local function dress(b, rec)
 end
 -- }}}
 
+-- {{{ local function shape_of
+-- A character's talent shape (1-10): a buddy's planned shape from its
+-- roster row until it has spent its points (owner, 2026-10-05: "yes", use
+-- the plan), then, like anyone else, the shape nearest the points it has
+-- spent; shape 7 (one-third each) with none spent. Storing players'
+-- shapes is 617r3; until then this works it out each time.
+local function shape_of(b, class)
+    local trees = TD.classes[class] and TD.classes[class].trees
+    local per = trees and Gearsets.points_of(trees, function(s) return b:HasSpell(s) end) or { 0, 0, 0 }
+    if per[1] + per[2] + per[3] > 0 then return Gearsets.nearest_shape(TD.classes[class].shapes, per) end
+    local q = CharDBQuery("SELECT profile FROM buddy_roster WHERE buddy = " .. b:GetGUIDLow())
+    if q and q:GetUInt32(0) > 0 then return q:GetUInt32(0) end
+    return Gearsets.EVEN_SHAPE
+end
+-- }}}
+
 -- {{{ local function dress_one
 -- Finds `b`'s record in `profile` and dresses it; one report line (or
 -- two, with a proficiency teaching) through `say`. Returns true when fully
@@ -130,17 +146,13 @@ local function dress_one(b, profile, say)
         say(string.format("%s%s is dead: skipped (revive them, then run this again)", TAG, b:GetName()))
         return false
     end
-    local class, race = b:GetClass(), b:GetRace()
-    local spec, points
-    if profile.keyed_by == "spec" then
-        local trees = TD.classes[class] and TD.classes[class].trees
-        if trees then spec, points = Gearsets.spec_of(trees, function(s) return b:HasSpell(s) end) end
-    end
-    local rec, why = Gearsets.record(profile, class, spec, race)
+    local who = { class = b:GetClass(), race = b:GetRace(), level = b:GetLevel() }
+    who.shape = shape_of(b, who.class)
+    local rec, why = Gearsets.record(profile, who)
     if not rec then
         -- a missing record, reported rather than filled with something close
-        say(string.format("%s%s (race %d, class %d%s): %s in %s; add one to data/gearsets/%s.lua",
-            TAG, b:GetName(), race, class, spec and (", spec " .. spec) or "", why, profile.name, profile.name))
+        say(string.format("%s%s (race %d, class %d, shape %s, level %d): %s in %s; add one to data/gearsets/%s.lua",
+            TAG, b:GetName(), who.race, who.class, tostring(who.shape), who.level, why, profile.name, profile.name))
         return false
     end
     local on, want, refused, taught = dress(b, rec)

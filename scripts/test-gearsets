@@ -118,14 +118,16 @@ local function query(sql, db)
 end
 -- }}}
 
--- the elite profile, flattened to one entry per (spec, race): the
+-- the elite profile, flattened to one entry per (shape, race): the
 -- outfit's name for reports, its class, and its items
 local profile = dofile(OUTFITS)
 local outfits = {}
-for spec, by_race in pairs(profile.records) do
-    local sp = SPEC[spec] or error("elite: spec " .. spec .. " is no talent tree")
+for key, by_race in pairs(profile.records) do
+    local class, shape = math.floor(key / 100), key % 100
+    local c = TD.classes[class] or error("elite: shape key " .. key .. " names no class")
+    local sh = c.shapes[shape] or error("elite: shape key " .. key .. " names no shape")
     for race, rec in pairs(by_race) do
-        outfits[string.format("%s (race %d)", sp.name, race)] = { class = sp.class, spec = spec, race = race, items = rec.items }
+        outfits[string.format("%s %s (race %d)", c.name, sh.label, race)] = { class = class, race = race, items = rec.items }
     end
 end
 
@@ -225,6 +227,8 @@ do
         if spec then local t = SPEC[spec].tree.talents[1]; b.spells[t.spells[#t.spells] ] = true end
         b.GetName = function() return name end
         b.GetRace = function() return race end
+        b.GetLevel = function() return 60 end
+        b.GetGUIDLow = function() return 0 end
         b.GetClass = function() return class end
         b.AddItem = function() return true end
         b.IsInWorld = function() return true end
@@ -253,7 +257,7 @@ do
     local rogue  = buddy("Rogue", {}, 3, 4, 181)                                    -- dwarf rogue, Combat: no record
     local ecaexo = buddy("Ecaexo", { [0] = item(1) }, 8, 8, 61); ecaexo.dead = true -- troll mage, dead
     local xazian = buddy("Xazian", { [16] = item(2362) }, 8, 1, 163); xazian.spells[750] = true   -- troll warrior, Protection: its shield will be refused
-    xazian.refuse[profile.records[163][8].items[16] ] = true
+    xazian.refuse[profile.records[110][8].items[16] ] = true      -- all Protection, troll
     local players = { [575] = pozeta, [599] = rogue, [596] = ecaexo, [595] = xazian }
     local said, handler_fn = {}, nil
     local env = setmetatable({
@@ -277,15 +281,15 @@ do
     local console = { SendSysMessage = function(_, text) said[#said + 1] = text end }
     local handled = handler_fn(42, nil, "elite growth", console)
     check(handled == false, "the console command is reported handled")
-    local want = profile.records[161][6].items
+    local want = profile.records[108][6].items
     local all = true
     for slot, entry in pairs(want) do if pozeta.equipped[slot] ~= entry then all = false end end
-    check(all, "Pozeta (Arms, by her talents) wears every item of the elite Arms tauren record")
+    check(all, "Pozeta (points only in Arms: shape 8, all Arms) wears every item of that record")
     check(pozeta.removed[16] and not pozeta.worn[16], "Pozeta's shield is taken off for the two-hander")
     check(pozeta.worn[3] and pozeta.worn[18] and not pozeta.removed[3] and not pozeta.removed[18], "shirt and tabard are left alone")
     check(pozeta.saved, "Pozeta is saved")
     local text = table.concat(said, "\n")
-    check(text:find("Rogue %(race 3, class 4, spec 181%): no record for spec 181 in elite") ~= nil, "a buddy with no record is named, not dressed")
+    check(text:find("Rogue %(race 3, class 4, shape 9, level 60%): no record for shape 409 in elite") ~= nil, "a buddy with no record is named, not dressed")
     check(next(rogue.equipped) == nil, "nothing is put on a buddy with no elite")
     check(text:find("character 600%): not in the world") ~= nil, "a buddy not in the world is reported")
     check(pozeta.spells[750], "Pozeta is taught Plate Mail (750) before the Might set")
@@ -306,13 +310,36 @@ do
 end
 -- }}}
 
+-- {{{ finding records (lib/gearsets.lua)
+print("")
+print("Finding records")
+do
+    local G = dofile(DIR .. "/src/lua-basic/lib/gearsets.lua")
+    local shapes = TD.classes[2].shapes                         -- paladin: Holy, Protection, Retribution
+    check(G.nearest_shape(shapes, { 0, 0, 0 }) == 7, "no points: shape 7, one-third each")
+    check(G.nearest_shape(shapes, { 10, 0, 21 }) == 5, "10 Holy, 21 Retribution: shape 5 (1/3 Holy, 2/3 Retribution)")
+    check(G.nearest_shape(shapes, { 0, 10, 21 }) == 6, "10 Protection, 21 Retribution: shape 6 (1/3 Protection, 2/3 Retribution)")
+    check(G.nearest_shape(shapes, { 0, 0, 31 }) == 10, "all Retribution: shape 10")
+    local p = { name = "t", keys = { "shape", "level" }, records = {
+        [205] = { [10] = { items = { [15] = 1 } }, [20] = { items = { [15] = 2 } } },
+        [206] = { [10] = { items = { [15] = 3 } } } } }
+    check(G.record(p, { class = 2, shape = 5, level = 24 }).items[15] == 2, "a level key takes the highest record at or below (24 -> 20)")
+    check(G.record(p, { class = 2, shape = 5, level = 19 }).items[15] == 1, "and 19 -> 10")
+    check(G.record(p, { class = 2, shape = 6, level = 60 }).items[15] == 3, "the Protection-leaning paladin has its own record")
+    local none, why = G.record(p, { class = 2, shape = 5, level = 5 })
+    check(none == nil and why:find("no record at or below level 5"), "below every level: named, not guessed")
+    none, why = G.record(p, { class = 2, shape = 4, level = 30 })
+    check(none == nil and why:find("no record for shape 204"), "a missing shape: named, not a near match")
+end
+-- }}}
+
 -- {{{ the vanilla starter kit
 print("")
 print("The vanilla starter kit profile")
 do
     local VANILLA = "acore_world_vanilla"
     local kit = dofile(DIR .. "/src/lua-basic/data/gearsets/vanilla-starter.lua")
-    check(kit.keyed_by == "class", "the starter kit is keyed by class")
+    check(table.concat(kit.keys, ",") == "class,race", "the starter kit is keyed by class, then race")
     local kit_ids, seen_k = {}, {}
     for _, by_race in pairs(kit.records) do
         for _, rec in pairs(by_race) do

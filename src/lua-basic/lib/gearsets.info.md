@@ -1,21 +1,22 @@
 # lib/gearsets.lua
 
-Finds a character's record in a gearset profile (issue 617r). Pure Lua;
-the talent check is passed in. Tested by `scripts/test-gearsets`.
+Finds a character's record in a gearset profile (issues 617r, 617r1).
+Pure Lua; the talent check is passed in. Tested by `scripts/test-gearsets`.
 
 | Function | Takes | Gives |
 |---|---|---|
 | `Gearsets.load(dir, name)` | dir: text, the profiles folder ending in `/`; name: text, letters, digits and dashes | the profile table; errors naming the file when missing or misshapen |
-| `Gearsets.spec_of(class_trees, knows)` | class_trees: the class's three trees from `data/buddy-talent-data.lua`; knows: function(spell id integer) -> boolean | the talent tree id (integer) with most points and the count, or nil, 0 with none spent; ties go to the leftmost tree |
-| `Gearsets.record(profile, class, spec, race)` | profile: from `load`; class, race: integers; spec: integer or nil | the record, or nil and the reason (text); never a near match |
+| `Gearsets.points_of(class_trees, knows)` | class_trees: the class's three trees from `data/buddy-talent-data.lua`; knows: function(spell id integer) -> boolean | points spent per tree, a list of three integers |
+| `Gearsets.nearest_shape(shapes, per)` | shapes: the class's ten shapes; per: three integers | the shape id (1-10) whose thirds lie nearest; `EVEN_SHAPE` (7) with no points |
+| `Gearsets.record(profile, who)` | who: `{ class, shape, race, level }` integers | the record, or nil and the reason (text); never a near match |
 
 ## A profile (`data/gearsets/<name>.lua`)
 
 | Field | Type | Meaning |
 |---|---|---|
 | `name` | text | the file's own name |
-| `keyed_by` | text | `"spec"` (talent tree id, TalentTab) or `"class"` (class id), the first level of `records` |
-| `records` | table | spec or class (integer) -> race id (integer) -> record |
+| `keys` | list of text | the order records are filed in, from `shape` (class x 100 + shape id), `class`, `race`, `level` (the highest key at or below the character's level) |
+| `records` | nested tables | one level per key, the record at the bottom |
 
 A record:
 

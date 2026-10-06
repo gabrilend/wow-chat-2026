@@ -1,0 +1,69 @@
+#!/usr/bin/env luajit
+-- rekey-gearsets-by-shape
+--
+-- What it is: a one-off mover (issue 617r1, 2026-10-05). The elite
+-- profile's records were filed by spec (the talent tree each outfit was
+-- made for); gearsets are now filed by talent shape (class x 100 + one of
+-- the ten thirds-patterns). This copies each spec's block, as written
+-- (comments and item names kept), to every shape of that class whose
+-- largest share is that tree; the even shape (one-third each) has no
+-- largest tree and gets none. It also turns the profiles' old `keyed_by`
+-- line into the new `keys` list. Kept for one commit, then -done.
+--
+-- Usage: scripts/rekey-gearsets-by-shape [PROJECT_DIR]
+
+-- {{{ configuration
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local GEARSETS = DIR .. "/src/lua-basic/data/gearsets/"
+local TD = dofile(DIR .. "/src/lua-basic/data/buddy-talent-data.lua")
+-- }}}
+
+-- {{{ local function read, write
+local function read(p) local f = assert(io.open(p)); local s = f:read("*a"); f:close(); return s end
+local function write(p, s) local f = assert(io.open(p, "w")); f:write(s); f:close(); print("wrote " .. p) end
+-- }}}
+
+-- tree id -> class, tree position (1-3), names
+local TREE = {}
+for class, c in pairs(TD.classes) do
+    for i, tree in ipairs(c.trees) do TREE[tree.tab] = { class = class, pos = i } end
+end
+
+-- {{{ elite: spec blocks -> shape blocks
+do
+    local path = GEARSETS .. "elite.lua"
+    local s = read(path)
+    local head, body, tail = s:match("^(.-    records  = {\n)(.-)(    },\n}\n)$")
+    assert(head, path .. ": records block not found")
+    local out = {}
+    -- each block: "        [spec] = {   -- label" ... "        },"
+    for spec, label, inner in body:gmatch("        %[(%d+)%] = {   %-%- ([^\n]*)\n(.-)\n        },\n") do
+        local t = TREE[tonumber(spec)] or error("spec " .. spec .. " is no talent tree")
+        for id, shape in ipairs(TD.classes[t.class].shapes) do
+            local th = shape.thirds
+            local most = math.max(th[1], th[2], th[3])
+            local leaders = 0
+            for i = 1, 3 do if th[i] == most then leaders = leaders + 1 end end
+            if leaders == 1 and th[t.pos] == most then
+                out[#out + 1] = string.format("        [%d] = {   -- %s %s (made for %s)\n%s\n        },\n",
+                    t.class * 100 + id, TD.classes[t.class].name, shape.label, label, inner)
+            end
+        end
+    end
+    local keyed = head:gsub('    keyed_by = "spec",\n', '    keys     = { "shape", "race" },\n')
+    assert(keyed ~= head, "elite: keyed_by line not found")
+    write(path, keyed .. table.concat(out) .. tail)
+end
+-- }}}
+
+-- {{{ vanilla-starter: the key line only
+do
+    local path = GEARSETS .. "vanilla-starter.lua"
+    local s = read(path)
+    local n
+    s, n = s:gsub('    keyed_by = "class",\n', '    keys     = { "class", "race" },\n')
+    assert(n == 1, "vanilla-starter: keyed_by line not found")
+    write(path, s)
+end
+-- }}}

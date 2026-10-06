@@ -13,7 +13,7 @@
 
 return {
     name     = "vanilla-starter",
-    keyed_by = "class",
+    keys     = { "class", "race" },
     records  = {
         [1] = {   -- Warrior
             [1] = {   -- Human

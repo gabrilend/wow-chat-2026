@@ -13,9 +13,9 @@
 
 return {
     name     = "elite",
-    keyed_by = "spec",
+    keys     = { "shape", "race" },
     records  = {
-        [61] = {   -- Mage: Frost
+        [805] = {   -- Mage 1/3 Arcane, 2/3 Frost (made for Mage: Frost)
             [8] = {   -- Troll
                 items = {
                     [ 0] = 16795,   -- head      Arcanist Crown
@@ -38,7 +38,53 @@ return {
                 },
             },
         },
-        [161] = {   -- Warrior: Arms
+        [806] = {   -- Mage 1/3 Fire, 2/3 Frost (made for Mage: Frost)
+            [8] = {   -- Troll
+                items = {
+                    [ 0] = 16795,   -- head      Arcanist Crown
+                    [ 1] = 17109,   -- neck      Choker of Enlightenment
+                    [ 2] = 16797,   -- shoulders Arcanist Mantle
+                    [ 4] = 16798,   -- chest     Arcanist Robes
+                    [ 5] = 16802,   -- waist     Arcanist Belt
+                    [ 6] = 16796,   -- legs      Arcanist Leggings
+                    [ 7] = 16800,   -- feet      Arcanist Boots
+                    [ 8] = 16799,   -- wrists    Arcanist Bindings
+                    [ 9] = 16801,   -- hands     Arcanist Gloves
+                    [10] = 19147,   -- finger    Ring of Spell Power
+                    [11] = 17110,   -- finger    Seal of the Archmagus
+                    [12] = 18820,   -- trinket   Talisman of Ephemeral Power
+                    [13] = 12930,   -- trinket   Briarwood Reed
+                    [14] = 18811,   -- back      Fireproof Cloak
+                    [15] = 17103,   -- main hand Azuresong Mageblade
+                    [16] = 19142,   -- off hand  Fire Runed Grimoire
+                    [17] = 17077,   -- ranged    Crimson Shocker
+                },
+            },
+        },
+        [810] = {   -- Mage all Frost (made for Mage: Frost)
+            [8] = {   -- Troll
+                items = {
+                    [ 0] = 16795,   -- head      Arcanist Crown
+                    [ 1] = 17109,   -- neck      Choker of Enlightenment
+                    [ 2] = 16797,   -- shoulders Arcanist Mantle
+                    [ 4] = 16798,   -- chest     Arcanist Robes
+                    [ 5] = 16802,   -- waist     Arcanist Belt
+                    [ 6] = 16796,   -- legs      Arcanist Leggings
+                    [ 7] = 16800,   -- feet      Arcanist Boots
+                    [ 8] = 16799,   -- wrists    Arcanist Bindings
+                    [ 9] = 16801,   -- hands     Arcanist Gloves
+                    [10] = 19147,   -- finger    Ring of Spell Power
+                    [11] = 17110,   -- finger    Seal of the Archmagus
+                    [12] = 18820,   -- trinket   Talisman of Ephemeral Power
+                    [13] = 12930,   -- trinket   Briarwood Reed
+                    [14] = 18811,   -- back      Fireproof Cloak
+                    [15] = 17103,   -- main hand Azuresong Mageblade
+                    [16] = 19142,   -- off hand  Fire Runed Grimoire
+                    [17] = 17077,   -- ranged    Crimson Shocker
+                },
+            },
+        },
+        [101] = {   -- Warrior 2/3 Arms, 1/3 Fury (made for Warrior: Arms)
             [6] = {   -- Tauren
                 items = {
                     [ 0] = 16866,   -- head      Helm of Might
@@ -60,7 +106,51 @@ return {
                 },
             },
         },
-        [163] = {   -- Warrior: Protection
+        [102] = {   -- Warrior 2/3 Arms, 1/3 Protection (made for Warrior: Arms)
+            [6] = {   -- Tauren
+                items = {
+                    [ 0] = 16866,   -- head      Helm of Might
+                    [ 1] = 12929,   -- neck      Emberfury Talisman
+                    [ 2] = 16868,   -- shoulders Pauldrons of Might
+                    [ 4] = 16865,   -- chest     Breastplate of Might
+                    [ 5] = 16864,   -- waist     Belt of Might
+                    [ 6] = 16867,   -- legs      Legplates of Might
+                    [ 7] = 16862,   -- feet      Sabatons of Might
+                    [ 8] = 16861,   -- wrists    Bracers of Might
+                    [ 9] = 16863,   -- hands     Gauntlets of Might
+                    [10] = 18821,   -- finger    Quick Strike Ring
+                    [11] = 13098,   -- finger    Painweaver Band
+                    [12] = 11815,   -- trinket   Hand of Justice
+                    [13] = 22321,   -- trinket   Heart of Wyrmthalak
+                    [14] = 13340,   -- back      Cape of the Black Baron
+                    [15] = 18822,   -- main hand Obsidian Edged Blade
+                    [17] = 17069,   -- ranged    Striker's Mark
+                },
+            },
+        },
+        [108] = {   -- Warrior all Arms (made for Warrior: Arms)
+            [6] = {   -- Tauren
+                items = {
+                    [ 0] = 16866,   -- head      Helm of Might
+                    [ 1] = 12929,   -- neck      Emberfury Talisman
+                    [ 2] = 16868,   -- shoulders Pauldrons of Might
+                    [ 4] = 16865,   -- chest     Breastplate of Might
+                    [ 5] = 16864,   -- waist     Belt of Might
+                    [ 6] = 16867,   -- legs      Legplates of Might
+                    [ 7] = 16862,   -- feet      Sabatons of Might
+                    [ 8] = 16861,   -- wrists    Bracers of Might
+                    [ 9] = 16863,   -- hands     Gauntlets of Might
+                    [10] = 18821,   -- finger    Quick Strike Ring
+                    [11] = 13098,   -- finger    Painweaver Band
+                    [12] = 11815,   -- trinket   Hand of Justice
+                    [13] = 22321,   -- trinket   Heart of Wyrmthalak
+                    [14] = 13340,   -- back      Cape of the Black Baron
+                    [15] = 18822,   -- main hand Obsidian Edged Blade
+                    [17] = 17069,   -- ranged    Striker's Mark
+                },
+            },
+        },
+        [105] = {   -- Warrior 1/3 Arms, 2/3 Protection (made for Warrior: Protection)
             [8] = {   -- Troll
                 items = {
                     [ 0] = 16866,   -- head      Helm of Might
@@ -83,7 +173,53 @@ return {
                 },
             },
         },
-        [261] = {   -- Shaman: Elemental
+        [106] = {   -- Warrior 1/3 Fury, 2/3 Protection (made for Warrior: Protection)
+            [8] = {   -- Troll
+                items = {
+                    [ 0] = 16866,   -- head      Helm of Might
+                    [ 1] = 17065,   -- neck      Medallion of Steadfast Might
+                    [ 2] = 16868,   -- shoulders Pauldrons of Might
+                    [ 4] = 16865,   -- chest     Breastplate of Might
+                    [ 5] = 16864,   -- waist     Belt of Might
+                    [ 6] = 16867,   -- legs      Legplates of Might
+                    [ 7] = 16862,   -- feet      Sabatons of Might
+                    [ 8] = 16861,   -- wrists    Bracers of Might
+                    [ 9] = 16863,   -- hands     Gauntlets of Might
+                    [10] = 18879,   -- finger    Heavy Dark Iron Ring
+                    [11] = 11669,   -- finger    Naglering
+                    [12] = 11810,   -- trinket   Force of Will
+                    [13] = 18370,   -- trinket   Vigilance Charm
+                    [14] = 13397,   -- back      Stoneskin Gargoyle Cape
+                    [15] = 18832,   -- main hand Brutality Blade
+                    [16] = 17066,   -- off hand  Drillborer Disk
+                    [17] = 17072,   -- ranged    Blastershot Launcher
+                },
+            },
+        },
+        [110] = {   -- Warrior all Protection (made for Warrior: Protection)
+            [8] = {   -- Troll
+                items = {
+                    [ 0] = 16866,   -- head      Helm of Might
+                    [ 1] = 17065,   -- neck      Medallion of Steadfast Might
+                    [ 2] = 16868,   -- shoulders Pauldrons of Might
+                    [ 4] = 16865,   -- chest     Breastplate of Might
+                    [ 5] = 16864,   -- waist     Belt of Might
+                    [ 6] = 16867,   -- legs      Legplates of Might
+                    [ 7] = 16862,   -- feet      Sabatons of Might
+                    [ 8] = 16861,   -- wrists    Bracers of Might
+                    [ 9] = 16863,   -- hands     Gauntlets of Might
+                    [10] = 18879,   -- finger    Heavy Dark Iron Ring
+                    [11] = 11669,   -- finger    Naglering
+                    [12] = 11810,   -- trinket   Force of Will
+                    [13] = 18370,   -- trinket   Vigilance Charm
+                    [14] = 13397,   -- back      Stoneskin Gargoyle Cape
+                    [15] = 18832,   -- main hand Brutality Blade
+                    [16] = 17066,   -- off hand  Drillborer Disk
+                    [17] = 17072,   -- ranged    Blastershot Launcher
+                },
+            },
+        },
+        [701] = {   -- Shaman 2/3 Elemental, 1/3 Enhancement (made for Shaman: Elemental)
             [2] = {   -- Orc
                 items = {
                     [ 0] = 16842,   -- head      Earthfury Helmet
@@ -105,7 +241,51 @@ return {
                 },
             },
         },
-        [262] = {   -- Shaman: Restoration
+        [702] = {   -- Shaman 2/3 Elemental, 1/3 Restoration (made for Shaman: Elemental)
+            [2] = {   -- Orc
+                items = {
+                    [ 0] = 16842,   -- head      Earthfury Helmet
+                    [ 1] = 17109,   -- neck      Choker of Enlightenment
+                    [ 2] = 16844,   -- shoulders Earthfury Epaulets
+                    [ 4] = 16841,   -- chest     Earthfury Vestments
+                    [ 5] = 16838,   -- waist     Earthfury Belt
+                    [ 6] = 16843,   -- legs      Earthfury Legguards
+                    [ 7] = 16837,   -- feet      Earthfury Boots
+                    [ 8] = 16840,   -- wrists    Earthfury Bracers
+                    [ 9] = 16839,   -- hands     Earthfury Gauntlets
+                    [10] = 19147,   -- finger    Ring of Spell Power
+                    [11] = 17110,   -- finger    Seal of the Archmagus
+                    [12] = 18820,   -- trinket   Talisman of Ephemeral Power
+                    [13] = 12930,   -- trinket   Briarwood Reed
+                    [14] = 18811,   -- back      Fireproof Cloak
+                    [15] = 18842,   -- main hand Staff of Dominance
+                    [17] = 23199,   -- ranged    Totem of the Storm
+                },
+            },
+        },
+        [708] = {   -- Shaman all Elemental (made for Shaman: Elemental)
+            [2] = {   -- Orc
+                items = {
+                    [ 0] = 16842,   -- head      Earthfury Helmet
+                    [ 1] = 17109,   -- neck      Choker of Enlightenment
+                    [ 2] = 16844,   -- shoulders Earthfury Epaulets
+                    [ 4] = 16841,   -- chest     Earthfury Vestments
+                    [ 5] = 16838,   -- waist     Earthfury Belt
+                    [ 6] = 16843,   -- legs      Earthfury Legguards
+                    [ 7] = 16837,   -- feet      Earthfury Boots
+                    [ 8] = 16840,   -- wrists    Earthfury Bracers
+                    [ 9] = 16839,   -- hands     Earthfury Gauntlets
+                    [10] = 19147,   -- finger    Ring of Spell Power
+                    [11] = 17110,   -- finger    Seal of the Archmagus
+                    [12] = 18820,   -- trinket   Talisman of Ephemeral Power
+                    [13] = 12930,   -- trinket   Briarwood Reed
+                    [14] = 18811,   -- back      Fireproof Cloak
+                    [15] = 18842,   -- main hand Staff of Dominance
+                    [17] = 23199,   -- ranged    Totem of the Storm
+                },
+            },
+        },
+        [705] = {   -- Shaman 1/3 Elemental, 2/3 Restoration (made for Shaman: Restoration)
             [6] = {   -- Tauren
                 items = {
                     [ 0] = 16842,   -- head      Earthfury Helmet
@@ -128,7 +308,53 @@ return {
                 },
             },
         },
-        [283] = {   -- Druid: Balance
+        [706] = {   -- Shaman 1/3 Enhancement, 2/3 Restoration (made for Shaman: Restoration)
+            [6] = {   -- Tauren
+                items = {
+                    [ 0] = 16842,   -- head      Earthfury Helmet
+                    [ 1] = 14558,   -- neck      Lady Maye's Pendant
+                    [ 2] = 16844,   -- shoulders Earthfury Epaulets
+                    [ 4] = 16841,   -- chest     Earthfury Vestments
+                    [ 5] = 16838,   -- waist     Earthfury Belt
+                    [ 6] = 16843,   -- legs      Earthfury Legguards
+                    [ 7] = 16837,   -- feet      Earthfury Boots
+                    [ 8] = 16840,   -- wrists    Earthfury Bracers
+                    [ 9] = 16839,   -- hands     Earthfury Gauntlets
+                    [10] = 19140,   -- finger    Cauterizing Band
+                    [11] = 13001,   -- finger    Maiden's Circle
+                    [12] = 11819,   -- trinket   Second Wind
+                    [13] = 18371,   -- trinket   Mindtap Talisman
+                    [14] = 18811,   -- back      Fireproof Cloak
+                    [15] = 17105,   -- main hand Aurastone Hammer
+                    [16] = 18485,   -- off hand  Observer's Shield
+                    [17] = 23200,   -- ranged    Totem of Sustaining
+                },
+            },
+        },
+        [710] = {   -- Shaman all Restoration (made for Shaman: Restoration)
+            [6] = {   -- Tauren
+                items = {
+                    [ 0] = 16842,   -- head      Earthfury Helmet
+                    [ 1] = 14558,   -- neck      Lady Maye's Pendant
+                    [ 2] = 16844,   -- shoulders Earthfury Epaulets
+                    [ 4] = 16841,   -- chest     Earthfury Vestments
+                    [ 5] = 16838,   -- waist     Earthfury Belt
+                    [ 6] = 16843,   -- legs      Earthfury Legguards
+                    [ 7] = 16837,   -- feet      Earthfury Boots
+                    [ 8] = 16840,   -- wrists    Earthfury Bracers
+                    [ 9] = 16839,   -- hands     Earthfury Gauntlets
+                    [10] = 19140,   -- finger    Cauterizing Band
+                    [11] = 13001,   -- finger    Maiden's Circle
+                    [12] = 11819,   -- trinket   Second Wind
+                    [13] = 18371,   -- trinket   Mindtap Talisman
+                    [14] = 18811,   -- back      Fireproof Cloak
+                    [15] = 17105,   -- main hand Aurastone Hammer
+                    [16] = 18485,   -- off hand  Observer's Shield
+                    [17] = 23200,   -- ranged    Totem of Sustaining
+                },
+            },
+        },
+        [1101] = {   -- Druid 2/3 Balance, 1/3 Feral Combat (made for Druid: Balance)
             [6] = {   -- Tauren
                 items = {
                     [ 0] = 16834,   -- head      Cenarion Helm
@@ -150,7 +376,95 @@ return {
                 },
             },
         },
-        [381] = {   -- Paladin: Retribution
+        [1102] = {   -- Druid 2/3 Balance, 1/3 Restoration (made for Druid: Balance)
+            [6] = {   -- Tauren
+                items = {
+                    [ 0] = 16834,   -- head      Cenarion Helm
+                    [ 1] = 17109,   -- neck      Choker of Enlightenment
+                    [ 2] = 16836,   -- shoulders Cenarion Spaulders
+                    [ 4] = 16833,   -- chest     Cenarion Vestments
+                    [ 5] = 16828,   -- waist     Cenarion Belt
+                    [ 6] = 16835,   -- legs      Cenarion Leggings
+                    [ 7] = 16829,   -- feet      Cenarion Boots
+                    [ 8] = 16830,   -- wrists    Cenarion Bracers
+                    [ 9] = 16831,   -- hands     Cenarion Gloves
+                    [10] = 19147,   -- finger    Ring of Spell Power
+                    [11] = 13283,   -- finger    Magus Ring
+                    [12] = 18820,   -- trinket   Talisman of Ephemeral Power
+                    [13] = 22268,   -- trinket   Draconic Infused Emblem
+                    [14] = 18389,   -- back      Cloak of the Cosmos
+                    [15] = 18842,   -- main hand Staff of Dominance
+                    [17] = 23197,   -- ranged    Idol of the Moon
+                },
+            },
+        },
+        [1108] = {   -- Druid all Balance (made for Druid: Balance)
+            [6] = {   -- Tauren
+                items = {
+                    [ 0] = 16834,   -- head      Cenarion Helm
+                    [ 1] = 17109,   -- neck      Choker of Enlightenment
+                    [ 2] = 16836,   -- shoulders Cenarion Spaulders
+                    [ 4] = 16833,   -- chest     Cenarion Vestments
+                    [ 5] = 16828,   -- waist     Cenarion Belt
+                    [ 6] = 16835,   -- legs      Cenarion Leggings
+                    [ 7] = 16829,   -- feet      Cenarion Boots
+                    [ 8] = 16830,   -- wrists    Cenarion Bracers
+                    [ 9] = 16831,   -- hands     Cenarion Gloves
+                    [10] = 19147,   -- finger    Ring of Spell Power
+                    [11] = 13283,   -- finger    Magus Ring
+                    [12] = 18820,   -- trinket   Talisman of Ephemeral Power
+                    [13] = 22268,   -- trinket   Draconic Infused Emblem
+                    [14] = 18389,   -- back      Cloak of the Cosmos
+                    [15] = 18842,   -- main hand Staff of Dominance
+                    [17] = 23197,   -- ranged    Idol of the Moon
+                },
+            },
+        },
+        [205] = {   -- Paladin 1/3 Holy, 2/3 Retribution (made for Paladin: Retribution)
+            [10] = {   -- Blood Elf
+                items = {
+                    [ 0] = 16854,   -- head      Lawbringer Helm
+                    [ 1] = 12929,   -- neck      Emberfury Talisman
+                    [ 2] = 16856,   -- shoulders Lawbringer Spaulders
+                    [ 4] = 16853,   -- chest     Lawbringer Chestguard
+                    [ 5] = 16858,   -- waist     Lawbringer Belt
+                    [ 6] = 16855,   -- legs      Lawbringer Legplates
+                    [ 7] = 16859,   -- feet      Lawbringer Boots
+                    [ 8] = 16857,   -- wrists    Lawbringer Bracers
+                    [ 9] = 16860,   -- hands     Lawbringer Gauntlets
+                    [10] = 18821,   -- finger    Quick Strike Ring
+                    [11] = 13098,   -- finger    Painweaver Band
+                    [12] = 11815,   -- trinket   Hand of Justice
+                    [13] = 22321,   -- trinket   Heart of Wyrmthalak
+                    [14] = 13340,   -- back      Cape of the Black Baron
+                    [15] = 18822,   -- main hand Obsidian Edged Blade
+                    [17] = 23203,   -- ranged    Libram of Fervor
+                },
+            },
+        },
+        [206] = {   -- Paladin 1/3 Protection, 2/3 Retribution (made for Paladin: Retribution)
+            [10] = {   -- Blood Elf
+                items = {
+                    [ 0] = 16854,   -- head      Lawbringer Helm
+                    [ 1] = 12929,   -- neck      Emberfury Talisman
+                    [ 2] = 16856,   -- shoulders Lawbringer Spaulders
+                    [ 4] = 16853,   -- chest     Lawbringer Chestguard
+                    [ 5] = 16858,   -- waist     Lawbringer Belt
+                    [ 6] = 16855,   -- legs      Lawbringer Legplates
+                    [ 7] = 16859,   -- feet      Lawbringer Boots
+                    [ 8] = 16857,   -- wrists    Lawbringer Bracers
+                    [ 9] = 16860,   -- hands     Lawbringer Gauntlets
+                    [10] = 18821,   -- finger    Quick Strike Ring
+                    [11] = 13098,   -- finger    Painweaver Band
+                    [12] = 11815,   -- trinket   Hand of Justice
+                    [13] = 22321,   -- trinket   Heart of Wyrmthalak
+                    [14] = 13340,   -- back      Cape of the Black Baron
+                    [15] = 18822,   -- main hand Obsidian Edged Blade
+                    [17] = 23203,   -- ranged    Libram of Fervor
+                },
+            },
+        },
+        [210] = {   -- Paladin all Retribution (made for Paladin: Retribution)
             [10] = {   -- Blood Elf
                 items = {
                     [ 0] = 16854,   -- head      Lawbringer Helm
