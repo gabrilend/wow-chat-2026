@@ -101,9 +101,15 @@ project might add) never corrects, kicks or flags it:
 
 ## Open Questions
 
-1. The original client and the server's navigation mesh disagree about
-   slopes (60 degrees in the mesh; the original client's limit is its
-   own and not yet measured). The server never checks slopes, so it can't
-   be a correction. Match the original client once measured?
+1. (Answered 2026-10-05) Slopes: "sounds like we need different slopes
+   for players and monsters? The monsters probably have a different slope
+   rule so they can follow players no matter what. Blizzard was very
+   concerned about people exploiting the game mechanics because people
+   used to do that stuff in Everquest." So two rules: monsters path on
+   the navigation mesh's 60 degrees (steeper than players may climb, so
+   a player can't escape up a slope a monster can't follow); the player
+   in the custom client climbs by the original client's own limit, to be
+   measured in the original client and then used in place of the 60 the
+   custom client reads today (173a).
 2. Should the project's own server ever turn Warden off for custom-client
    accounts instead, or must the custom client always pass it?

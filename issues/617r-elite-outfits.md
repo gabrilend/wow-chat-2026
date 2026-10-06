@@ -180,6 +180,18 @@ restart or a compile.
 mirror-image route (617f): the creature looks like a player of the
 profile's race wearing the profile's items.
 
+## Sub-issues (2026-10-05)
+
+| ID | Name | Dependencies | Description |
+|---|---|---|---|
+| 617r1 | shape-keyed-gearsets | None | Records found by class and talent shape (thirds per tree), race, level: a Ret paladin leaning Holy and one leaning Protection wear different gear |
+| 617r2 | buddy-kit-from-a-gearset | 617r1 | A translator writes today's buddy gear rules as the `buddy-white` profile; profiles become a database table; the buddy module dresses new buddies from it; the live chooser goes |
+| 617r3 | players-sorted-into-a-shape | 617r1 | Each character's nearest shape stored, updated at login and at each talent point; shape 7 (thirds) before level 10 or with no points |
+| 617r4 | gearsets-on-creatures | None | The selected creature dressed in a record through the mirror image (617f) |
+| 617r5 | gearset-gallery | 617r1, 173k | Pictures of every record on its race's model (random sex), to curate fashionable sets fast |
+
+Execution order: `617r1 → 617r2 → (617r3 ∥ 617r5)`; 617r4 any time.
+
 ## Checklist: Growth's party
 
 - [x] Pozeta: tauren warrior, Arms (damage). Elite "Tauren Warrior (damage)":

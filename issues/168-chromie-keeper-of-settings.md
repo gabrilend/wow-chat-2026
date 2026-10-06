@@ -37,10 +37,13 @@ module where each behaviour is decided. A setting not chosen keeps the
 server's default.
 
 First settings:
-- the follow mode (617s): compass (each buddy keeps its own compass
-  place round the owner) or open slot (617s8: each time a buddy reaches
-  its waypoint it takes the nearest ring slot nobody has claimed); owner,
-  2026-10-05, asking that this be Chromie's switch;
+- **compass on or off** (617s): on, each buddy keeps its own compass
+  place round the owner; off, each time a buddy reaches its waypoint it
+  takes the nearest ring slot nobody has claimed (617s8). The bot
+  module's stock follow is not offered. Owner, 2026-10-05: "I think we
+  should do compass orientation, and nearest free waypoint. An on/off
+  flag is easier to understand than 3 options, and players never
+  understand...";
 - whether the compass directions are fixed to the world or turn with the
   owner;
 - the ring's radius (the same value `.buddy wider` / `.buddy closer`

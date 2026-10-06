@@ -16,6 +16,9 @@ Verbatim, 2026-10-05:
 > nearest unclaimed open waypoint each time they reach a waypoint, instead
 > of their assigned, compass based slot.
 
+Owner, 2026-10-05: one on/off switch, compass on or off; off is this
+mode. The bot module's stock follow is not one of the choices.
+
 ## Current Behavior
 
 Not built. The compass formation (617s) is planned with one way of

@@ -55,6 +55,7 @@ The project's own game client, built up in steps:
 | 173h | shadow-maps | 173f, 173g | The ground's baked shadows and blob shadows under characters |
 | 173i | night-elf-animation | 173d | Her bones and animations: stand, walk, run, jump, fall, fidget |
 | 173j | models-standing-around | 173i | A few other models standing near her, cycling their animations |
+| 173k | client-in-c-with-raylib | 173a, 173d | The client ported to C on Raylib, the start of the project's engine; the Lua version kept beside it as the reference |
 
 The owner's order for the next steps (2026-10-05): painted ground, then
 doodads, then shadow maps, then her animation, then models standing
