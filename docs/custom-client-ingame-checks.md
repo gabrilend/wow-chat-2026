@@ -60,6 +60,14 @@ that issue and strike it here (keep the line, so the history stays).
      pitch.
 11. **Camera follow speed** (173m): the swing behind her at 180 degrees a
     second.
+11b. **First person and Head Bob** (173m): roll the wheel in past the
+    nearest (2 yards) and the view goes to her eyes, she hidden.
+   - Is the eye height right (92 % of her height here)?
+   - With Head Bob on (`SET cameraBobbing "1"` in the settings file), is
+     the bob as high (0.05 yards here) and once a step (every 1.4 yards
+     here) as in the original?
+   - The original's first person: does it allow looking straight up, as
+     this one does?
 
 ## How to look
 

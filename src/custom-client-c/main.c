@@ -15,7 +15,7 @@
  *   --settings FILE   the player's settings (SET name "value" lines; 173b1);
  *                     without it, every setting is at its default
  *   --shot FILE       draw a few frames, save a picture there, quit
- *   --zoom N          (pictures) the camera N yards back
+ *   --zoom N          (pictures) the camera N yards back; 0 is first person
  *   --turn DEG        (pictures) the camera turned DEG degrees round her, held there
  *   --pitch DEG       (pictures) the camera raised DEG degrees (up to 83)
  *   --clock MS        (pictures) start the world's animations MS milliseconds in
@@ -74,7 +74,7 @@ static double start_x = 2717.0, start_y = -400.0;       /* Astranaar, Ashenvale 
 #define START_O      3.6                               /* facing the town's west side */
 #define SPEED        1.2                               /* 120% of the base speeds (owner, 2026-10-04) */
 #define ELF_HEIGHT   2.3f                              /* yards: the camera looks at her shoulders */
-#define ZOOM_MIN     2.0f
+#define EYE_SHARE    0.92f                             /* first person: her eyes, as a share of her height (this client's guess) */
 #define ZOOM_BASE    20.0f                             /* yards; times cameraDistanceMaxFactor (1 to 2) is the zoom-out limit (173b4) */
 /* her look: ChrRaces id, sex, and the character-creation choices (from 0);
  * a stand-in for the ids the server will send (173d, 617r5) */
@@ -167,6 +167,7 @@ static double ox, oy;                                    /* the drawing origin, 
 static Mover  elf;
 static FollowCam view = { .yaw = (float)START_O, .pitch = 0.35f, .dist = 12.0f, .rest_pitch = 0.35f };   /* camera.h */
 static int    cam_held;                                  /* --front: the camera keeps its own heading */
+static float  bob_phase;                                 /* Head Bob's place in her step, yards (camera_bob) */
 
 /* {{{ the ground and walls the mover asks about (173q)
  * The floor: the map's ground or a model's floor (bridge, stair, a
@@ -413,8 +414,7 @@ int main(int argc, char **argv)
         camera_drag(&view, &mouse, was_r, &elf.o);
         float wheel = GetMouseWheelMove();
         float zoom_max = ZOOM_BASE * (float)settings_num("cameraDistanceMaxFactor");
-        if (wheel != 0) view.dist *= wheel > 0 ? 0.85f : 1.18f;
-        view.dist = Clamp(view.dist, ZOOM_MIN, zoom_max);   /* every frame, so a lowered limit pulls the camera in at once */
+        camera_zoom(&view, wheel, zoom_max);            /* in past the nearest is first person (173m) */
         MoverInput in = {
             .forward = IsKeyDown(KEY_W) || IsKeyDown(KEY_UP) || (drag_l && drag_r) || (walk_s > 0 && frames * 0.05f < walk_s),
             .back = IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN),
@@ -477,44 +477,62 @@ int main(int argc, char **argv)
         SetWindowTitle(TextFormat("Everland Ghostsong  -  Ashenvale  x %.1f  y %.1f  z %.1f", elf.x, elf.y, elf.z));
         /* }}} */
 
-        /* {{{ the camera: behind her by its own heading, raised by its pitch */
+        /* {{{ the camera: behind her by its own heading, raised by its pitch;
+         * or, zoomed all the way in, first person: the view from her eyes
+         * along the camera's heading, looking down by its pitch, she not
+         * drawn (as the original hides you), Head Bob lifting it with her
+         * steps (173m). First person skips the third-person keeping-out
+         * below: her eyes are where she is, which the mover already keeps
+         * out of walls, ground and (unless swimming) water */
+        int first_person = view.dist == 0;
         Vector3 at = { (float)(elf.x - ox), (float)(elf.y - oy), (float)elf.z + ELF_HEIGHT * 0.85f };
         Vector3 eye = { at.x - cosf(view.yaw) * cosf(view.pitch) * view.dist,
                         at.y - sinf(view.yaw) * cosf(view.pitch) * view.dist,
                         at.z + sinf(view.pitch) * view.dist };
-        /* something solid between her head and the camera (a wall, a
-         * tree, a roof): the camera comes in to just before it (173m) */
-        float in_way = collide_ray(solids, at.x + ox, at.y + oy, at.z, eye.x + ox, eye.y + oy, eye.z);
-        if (in_way < 1) {
-            float keep = fmaxf(in_way - 0.3f / fmaxf(view.dist, 0.3f), 0.05f);   /* 0.3 yards short of it */
-            eye = (Vector3){ at.x + (eye.x - at.x) * keep, at.y + (eye.y - at.y) * keep, at.z + (eye.z - at.z) * keep };
-        }
-        float floor_z = maps_world_height(&world, eye.x + (float)ox, eye.y + (float)oy, &gx, &gy);
-        if (floor_z > -10000 && eye.z < floor_z + 0.6f) {
-            /* never under the ground. Smart Pivot on: the camera slides along
-             * the ground and looks up at her; off: it stops lowering, the
-             * pitch held where the camera meets the ground (173m) */
-            eye.z = floor_z + 0.6f;
-            if (settings_num("cameraPivot") == 0 && view.dist > 0.1f) {
-                float s = (eye.z - at.z) / view.dist;
-                float hold = asinf(s < -1 ? -1 : s > 1 ? 1 : s);
-                if (view.pitch < hold) view.pitch = hold;
+        Vector3 look = at;                               /* where the camera points */
+        {
+            float stepped = elf.grounded && !elf.swimming ? (float)hypot(elf.x - before_x, elf.y - before_y) : 0;
+            float lift = camera_bob(&bob_phase, stepped, dt);   /* runs in third person too, so the phase carries over */
+            if (first_person) {
+                eye = (Vector3){ at.x, at.y, (float)elf.z + ELF_HEIGHT * EYE_SHARE + lift };
+                look = (Vector3){ eye.x + cosf(view.yaw) * cosf(view.pitch), eye.y + sinf(view.yaw) * cosf(view.pitch), eye.z - sinf(view.pitch) };
             }
         }
-        /* Water Collision (173m): the camera stays on her side of the
-         * water's surface: above it while her head is above, below while
-         * under */
-        if (settings_num("cameraWaterCollision") != 0) {
-            int wk = 0;
-            float surface = liquid_surface(waters, eye.x + ox, eye.y + oy, &wk);
-            float head = at.z;
-            if (surface > -10000) {
-                if (head >= surface && eye.z < surface + 0.25f) eye.z = surface + 0.25f;
-                else if (head < surface && eye.z > surface - 0.25f) eye.z = surface - 0.25f;
+        if (!first_person) {
+            /* something solid between her head and the camera (a wall, a
+             * tree, a roof): the camera comes in to just before it (173m) */
+            float in_way = collide_ray(solids, at.x + ox, at.y + oy, at.z, eye.x + ox, eye.y + oy, eye.z);
+            if (in_way < 1) {
+                float keep = fmaxf(in_way - 0.3f / fmaxf(view.dist, 0.3f), 0.05f);   /* 0.3 yards short of it */
+                eye = (Vector3){ at.x + (eye.x - at.x) * keep, at.y + (eye.y - at.y) * keep, at.z + (eye.z - at.z) * keep };
+            }
+            float floor_z = maps_world_height(&world, eye.x + (float)ox, eye.y + (float)oy, &gx, &gy);
+            if (floor_z > -10000 && eye.z < floor_z + 0.6f) {
+                /* never under the ground. Smart Pivot on: the camera slides along
+                 * the ground and looks up at her; off: it stops lowering, the
+                 * pitch held where the camera meets the ground (173m) */
+                eye.z = floor_z + 0.6f;
+                if (settings_num("cameraPivot") == 0 && view.dist > 0.1f) {
+                    float s = (eye.z - at.z) / view.dist;
+                    float hold = asinf(s < -1 ? -1 : s > 1 ? 1 : s);
+                    if (view.pitch < hold) view.pitch = hold;
+                }
+            }
+            /* Water Collision (173m): the camera stays on her side of the
+             * water's surface: above it while her head is above, below while
+             * under */
+            if (settings_num("cameraWaterCollision") != 0) {
+                int wk = 0;
+                float surface = liquid_surface(waters, eye.x + ox, eye.y + oy, &wk);
+                float head = at.z;
+                if (surface > -10000) {
+                    if (head >= surface && eye.z < surface + 0.25f) eye.z = surface + 0.25f;
+                    else if (head < surface && eye.z > surface - 0.25f) eye.z = surface - 0.25f;
+                }
             }
         }
-        Camera3D cam = { .position = eye, .target = at, .up = { 0, 0, 1 }, .fovy = 60, .projection = CAMERA_PERSPECTIVE };
-        doodads_animate((uint32_t)clock_ms, dt, eye, at);   /* moving doodads, and particles near the camera */
+        Camera3D cam = { .position = eye, .target = look, .up = { 0, 0, 1 }, .fovy = 60, .projection = CAMERA_PERSPECTIVE };
+        doodads_animate((uint32_t)clock_ms, dt, eye, look);   /* moving doodads, and particles near the camera */
         SetShaderValue(model_sh, eye_m, &eye, SHADER_UNIFORM_VEC3);
         /* }}} */
 
@@ -565,7 +583,7 @@ int main(int argc, char **argv)
         doodads_draw(eye, &light);
         water_draw(eye, &light, clock_ms / 1000.0);       /* see-through, after the solid world */
         Matrix place = MatrixMultiply(MatrixRotateZ((float)elf.o + moves.body_turn), MatrixTranslate(at.x, at.y, (float)elf.z));
-        figure_draw(&her, model_sh, place);
+        if (!first_person) figure_draw(&her, model_sh, place);   /* first person: she isn't drawn (173m) */
         for (int i = 0; i < nothers; ++i)
             figure_draw(&others[i], model_sh, MatrixMultiply(MatrixRotateZ(other_at[i].facing),
                         MatrixTranslate((float)(other_at[i].x - ox), (float)(other_at[i].y - oy), (float)other_at[i].z)));

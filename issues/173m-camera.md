@@ -60,9 +60,23 @@ in `src/custom-client-c/camera.h` and `camera.c`, with 21 checks in
   held where the camera meets the ground.
 - **The camera kept out of walls** (173q's `collide_ray`).
 
-**Not built yet:** Head Bob (there is no first-person view yet), the saved
-views and the other camera key bindings (they wait for key bindings,
-173b3).
+- **First person** (`camera_zoom` in `camera.c`): rolling the wheel in
+  past the nearest (2 yards) puts the view at her eyes (92 % of her
+  height), looking along the camera's heading and down by its pitch,
+  which may now go as far up as down; she isn't drawn. Rolling out goes
+  back to the nearest, the pitch brought back into the third-person
+  range. The third-person keeping-out (walls, ground, water) is skipped:
+  her eyes are where the mover already keeps her. `--zoom 0` takes a
+  first-person picture.
+- **Head Bob** (`cameraBobbing`, off by default; `camera_bob`): in first
+  person the view lifts 0.05 yards mid-step, once every 1.4 yards she
+  travels on the ground; standing, it settles to the next foot-down. The
+  numbers are this client's guesses (check list 11b).
+- Tests: zoom into and out of first person, the pitch range, a lowered
+  limit, the bob off, on, and settling.
+
+**Not built yet:** the saved views and the other camera key bindings
+(they wait for key bindings, 173b3).
 
 ## Intended Behavior
 

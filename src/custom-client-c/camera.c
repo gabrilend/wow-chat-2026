@@ -27,6 +27,17 @@ float camera_turn_between(float from, float to)
 }
 /* }}} */
 
+/* {{{ static keep_pitch: within the range for the camera's distance;
+ * first person may look as far up as down, third person can't go much
+ * below her shoulders */
+static void keep_pitch(FollowCam *c)
+{
+    float low = c->dist == 0 ? -CAMERA_PITCH_MAX : CAMERA_PITCH_MIN;
+    if (c->pitch < low) c->pitch = low;
+    if (c->pitch > CAMERA_PITCH_MAX) c->pitch = CAMERA_PITCH_MAX;
+}
+/* }}} */
+
 /* {{{ camera_drag */
 void camera_drag(FollowCam *c, const FollowCamInput *in, int was_right, double *facing)
 {
@@ -39,8 +50,7 @@ void camera_drag(FollowCam *c, const FollowCamInput *in, int was_right, double *
     float invert = settings_num("mouseInvertPitch") != 0 ? -1.0f : 1.0f;
     c->yaw   -= in->dx * rate;
     c->pitch += in->dy * rate * invert;            /* dragging down raises the camera, as in the original */
-    if (c->pitch < CAMERA_PITCH_MIN) c->pitch = CAMERA_PITCH_MIN;
-    if (c->pitch > CAMERA_PITCH_MAX) c->pitch = CAMERA_PITCH_MAX;
+    keep_pitch(c);
     if (in->right) *facing = fmod(fmod((double)c->yaw, 2 * PI_D) + 2 * PI_D, 2 * PI_D);
 }
 /* }}} */
@@ -91,8 +101,39 @@ void camera_tilt(FollowCam *c, const FollowCamInput *in, int moving, float slope
     float target = c->rest_pitch - atanf(slope);
     float most = (float)settings_num("cameraYawSmoothSpeed") * PI_F / 180.0f * in->dt;
     c->pitch = step_toward(c->pitch, target, most);
-    if (c->pitch < CAMERA_PITCH_MIN) c->pitch = CAMERA_PITCH_MIN;
-    if (c->pitch > CAMERA_PITCH_MAX) c->pitch = CAMERA_PITCH_MAX;
+    keep_pitch(c);
+}
+/* }}} */
+
+/* {{{ camera_zoom */
+void camera_zoom(FollowCam *c, float wheel, float zoom_max)
+{
+    if (wheel > 0 && c->dist > 0) {                /* in: nearer, or into first person from the nearest */
+        c->dist = c->dist <= CAMERA_ZOOM_MIN + 1e-3f ? 0 : c->dist * 0.85f;
+        if (c->dist > 0 && c->dist < CAMERA_ZOOM_MIN) c->dist = CAMERA_ZOOM_MIN;
+    } else if (wheel < 0) {                        /* out: from first person to the nearest, else farther */
+        c->dist = c->dist == 0 ? CAMERA_ZOOM_MIN : c->dist * 1.18f;
+    }
+    if (c->dist > zoom_max) c->dist = zoom_max;    /* first person stays first person; any other distance is held in range */
+    if (c->dist > 0 && c->dist < CAMERA_ZOOM_MIN) c->dist = CAMERA_ZOOM_MIN;
+    keep_pitch(c);
+}
+/* }}} */
+
+/* {{{ camera_bob
+ * The lift is |sin| of the phase over one step: 0 at each foot-down, the
+ * full height mid-step. Standing, the phase runs on to the next whole step
+ * (lift 0) and stops there. */
+float camera_bob(float *phase, float moved, float dt)
+{
+    if (moved > 0) *phase += moved;
+    else {
+        float next = ceilf(*phase / CAMERA_BOB_STEP - 1e-4f) * CAMERA_BOB_STEP;
+        *phase = fminf(*phase + 2.0f * dt, next);
+    }
+    *phase = fmodf(*phase, CAMERA_BOB_STEP * 1000);   /* kept small, so the float holds its precision */
+    if (settings_num("cameraBobbing") == 0) return 0;
+    return CAMERA_BOB_HEIGHT * fabsf(sinf(PI_F * *phase / CAMERA_BOB_STEP));
 }
 /* }}} */
 

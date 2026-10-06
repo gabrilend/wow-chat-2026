@@ -21,7 +21,10 @@
  *   pitch       float, radians: how far above her the camera is raised,
  *               from CAMERA_PITCH_MIN (below her shoulders) to
  *               CAMERA_PITCH_MAX (nearly overhead)
- *   dist        float, yards: how far back from her it sits
+ *   dist        float, yards: how far back from her it sits; 0 is first
+ *               person (the view from her eyes, she isn't drawn), where
+ *               pitch is how far the view looks down, and may go as far
+ *               up as down (CAMERA_PITCH_MAX either way)
  *   rest_pitch  float, radians: the pitch styles 4 and 2 drift back to
  *
  * A FollowCamInput, field by field (all for this frame only):
@@ -35,6 +38,9 @@
 #define CAMERA_PITCH_MIN  (-0.4f)
 #define CAMERA_PITCH_MAX  1.45f
 #define CAMERA_DRAG_RATE  0.006f      /* radians a pixel at a cameraYawMoveSpeed of 180 */
+#define CAMERA_ZOOM_MIN   2.0f        /* yards: the nearest the camera sits behind her; one wheel step nearer is first person */
+#define CAMERA_BOB_HEIGHT 0.05f       /* yards: how far Head Bob lifts the view at the top of a step (this client's guess) */
+#define CAMERA_BOB_STEP   1.4f        /* yards she travels per step: one bob each (this client's guess) */
 
 typedef struct {
     float yaw, pitch, dist;
@@ -70,6 +76,24 @@ void camera_follow(FollowCam *c, const FollowCamInput *in, double turned, int mo
  * facing), so climbing tilts it up and descending down. Off, or still:
  * nothing. Not while a button holds the camera. */
 void camera_tilt(FollowCam *c, const FollowCamInput *in, int moving, float slope);
+
+/* The mouse wheel (`wheel`: positive rolls in). Each step moves the
+ * camera 15 % nearer or 18 % farther, held between CAMERA_ZOOM_MIN and
+ * `zoom_max` yards. A step in from the nearest goes to first person (dist
+ * 0), as the original does; a step out of first person goes back to the
+ * nearest. Called every frame (wheel 0 too) so a lowered limit pulls the
+ * camera in at once. Leaving first person also brings a pitch looking up
+ * back within the third-person range. */
+void camera_zoom(FollowCam *c, float wheel, float zoom_max);
+
+/* Head Bob (cameraBobbing, 173m): how far (yards, up) the first-person
+ * view is lifted this frame. `phase` (yards, kept by the caller between
+ * frames, start 0) runs on by `moved`, how far she travelled along the
+ * ground this frame; the lift is CAMERA_BOB_HEIGHT times the rise of one
+ * step every CAMERA_BOB_STEP yards. Standing still (moved 0), the phase
+ * runs on to the next foot-down at 2 yards a second, so the view settles
+ * rather than freezing mid-step. 0 when the setting is off. */
+float camera_bob(float *phase, float moved, float dt);
 
 /* The angle from `from` to `to` the shorter way round, in -pi to pi. */
 float camera_turn_between(float from, float to);

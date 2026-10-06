@@ -26,9 +26,10 @@
  *   the rows of camera.c's styles table; the camera stops the client if
  *   they ever disagree. "1" is the owner's choice (2026-10-06).
  * cameraYawSmoothSpeed: degrees a second the camera drifts back behind her.
- * cameraTerrainTilt, cameraWaterCollision, cameraPivot: the Camera panel's
- *   Follow Terrain (off), Water Collision (on) and Smart Pivot (on): what
- *   each does is in camera.c and main.c (173m); defaults are this client's.
+ * cameraTerrainTilt, cameraWaterCollision, cameraPivot, cameraBobbing:
+ *   the Camera panel's Follow Terrain (off), Water Collision (on), Smart
+ *   Pivot (on) and Head Bob (off): what each does is in camera.c and
+ *   main.c (173m); defaults are this client's.
  * farclip: the view distance, yards (173b6): the far plane, how far the
  *   fog may reach, and how many tiles load round her (one tile covers
  *   533 yards). 507 keeps the 3 x 3 the client had before; the range and
@@ -66,6 +67,8 @@ static const SettingDecl DECLS[] = {
       .label = "Water Collision", .explain = "Set the camera to be above water when your character is above water, and below water when your character is below water." },
     { .name = "cameraPivot",             .section = "Camera",     .kind = SETTING_TOGGLE, .def = "1",
       .label = "Smart Pivot", .explain = "Lets you free look when the camera is on the ground." },
+    { .name = "cameraBobbing",           .section = "Camera",     .kind = SETTING_TOGGLE, .def = "0",
+      .label = "Head Bob", .explain = "Simulate head bobbing when in first-person perspective." },
     { .name = "mouseInvertPitch",        .section = "Mouse",      .kind = SETTING_TOGGLE, .def = "0",
       .label = "Invert Mouse", .explain = "Invert the way that the mouse affects camera pitch." },
     { .name = "cameraYawMoveSpeed",      .section = "Mouse",      .kind = SETTING_SLIDER, .def = "180",

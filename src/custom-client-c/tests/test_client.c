@@ -983,6 +983,32 @@ light_done:
         camera_drag(&cam, &(FollowCamInput){ .left = 1, .dx = -px90, .dt = 0.01f }, 0, &facing);
         check(near(cam.yaw, 45 * deg, 1e-4), "Mouse Look Speed 90: the same drag turns half as far");
         settings_init();
+
+        /* first person and Head Bob (173m) */
+        cam = (FollowCam){ .yaw = 0, .pitch = 0.35f, .dist = 2.2f, .rest_pitch = 0.35f };
+        camera_zoom(&cam, 1, 40);
+        check(near(cam.dist, CAMERA_ZOOM_MIN, 1e-6), "zooming in from 2.2 yards stops at the nearest, 2 yards");
+        camera_zoom(&cam, 1, 40);
+        check(cam.dist == 0, "one more step in is first person");
+        camera_zoom(&cam, 0, 40);
+        check(cam.dist == 0, "and first person stays put while the wheel rests");
+        camera_drag(&cam, &(FollowCamInput){ .left = 1, .dy = -300, .dt = 0.01f }, 0, &facing);
+        check(near(cam.pitch, -CAMERA_PITCH_MAX, 1e-6), "in first person the view may look as far up as down");
+        camera_zoom(&cam, -1, 40);
+        check(near(cam.dist, CAMERA_ZOOM_MIN, 1e-6) && near(cam.pitch, CAMERA_PITCH_MIN, 1e-6),
+              "a step out goes back to the nearest, the pitch brought back within the third-person range");
+        cam.dist = 30;
+        camera_zoom(&cam, 0, 20);
+        check(near(cam.dist, 20, 1e-6), "a lowered zoom limit pulls the camera in at once");
+        float phase = 0;
+        check(camera_bob(&phase, CAMERA_BOB_STEP / 2, 0.05f) == 0, "Head Bob off (the default): the view doesn't move");
+        settings_set("cameraBobbing", "1", why, sizeof why);
+        phase = 0;
+        check(near(camera_bob(&phase, CAMERA_BOB_STEP / 2, 0.05f), CAMERA_BOB_HEIGHT, 1e-5), "Head Bob on: mid-step the view is lifted its full height");
+        float lift = 1;
+        for (int i = 0; i < 100; ++i) lift = camera_bob(&phase, 0, 0.05f);
+        check(near(lift, 0, 1e-5) && near(phase, CAMERA_BOB_STEP, 1e-4), "standing still, the view settles at the next foot-down and stays");
+        settings_init();
     }
     /* }}} */
 

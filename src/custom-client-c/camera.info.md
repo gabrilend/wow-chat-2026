@@ -24,7 +24,10 @@ A FollowCam (named so beside Raylib's own Camera), field by field:
   pitch       float, radians: how far above her the camera is raised,
               from CAMERA_PITCH_MIN (below her shoulders) to
               CAMERA_PITCH_MAX (nearly overhead)
-  dist        float, yards: how far back from her it sits
+  dist        float, yards: how far back from her it sits; 0 is first
+              person (the view from her eyes, she isn't drawn), where
+              pitch is how far the view looks down, and may go as far
+              up as down (CAMERA_PITCH_MAX either way)
   rest_pitch  float, radians: the pitch styles 4 and 2 drift back to
 
 A FollowCamInput, field by field (all for this frame only):
@@ -57,5 +60,21 @@ A FollowCamInput, field by field (all for this frame only):
   less the slope's angle ahead of her (`slope`: rise per yard along her
   facing), so climbing tilts it up and descending down. Off, or still:
   nothing. Not while a button holds the camera.
+- `void camera_zoom(FollowCam *c, float wheel, float zoom_max);`
+  The mouse wheel (`wheel`: positive rolls in). Each step moves the
+  camera 15 % nearer or 18 % farther, held between CAMERA_ZOOM_MIN and
+  `zoom_max` yards. A step in from the nearest goes to first person (dist
+  0), as the original does; a step out of first person goes back to the
+  nearest. Called every frame (wheel 0 too) so a lowered limit pulls the
+  camera in at once. Leaving first person also brings a pitch looking up
+  back within the third-person range.
+- `float camera_bob(float *phase, float moved, float dt);`
+  Head Bob (cameraBobbing, 173m): how far (yards, up) the first-person
+  view is lifted this frame. `phase` (yards, kept by the caller between
+  frames, start 0) runs on by `moved`, how far she travelled along the
+  ground this frame; the lift is CAMERA_BOB_HEIGHT times the rise of one
+  step every CAMERA_BOB_STEP yards. Standing still (moved 0), the phase
+  runs on to the next foot-down at 2 yards a second, so the view settles
+  rather than freezing mid-step. 0 when the setting is off.
 - `float camera_turn_between(float from, float to);`
   The angle from `from` to `to` the shorter way round, in -pi to pi.
