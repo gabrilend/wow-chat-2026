@@ -23,6 +23,7 @@
  *   --face DEG        her start facing turned DEG degrees (left)
  *   --walk S          (pictures) hold forward for S world-seconds
  *   --dive S          (pictures) then hold X (swim down) for S world-seconds
+ *   --wait S          (pictures) then wait S world-seconds more
  *   --wear SLOT:LOOK,...  dress her: each slot's item look (ItemDisplayInfo id),
  *                     e.g. chest:41143,hands:41138,legs:41140,waist:41476,feet:41480
  *   --goto X Y        (pictures) one world-second in, move her to world (X, Y)
@@ -262,6 +263,7 @@ int main(int argc, char **argv)
     double face_deg = 0;                                 /* --face: her start facing turned this far (left) */
     float  walk_s = 0;                                   /* --walk: hold forward this many world-seconds (pictures) */
     float  dive_s = 0;                                   /* --dive: then hold X (swim down) this many world-seconds */
+    float  wait_s = 0;                                   /* --wait: then this many world-seconds more before the picture */
     int    go_to = 0;                                    /* --goto: one world-second in, she is moved to (goto_x, goto_y) */
     double goto_x = 0, goto_y = 0;
     /* the time of day: the original follows the realm's clock, which is
@@ -286,6 +288,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--face") && i + 1 < argc) face_deg = atof(argv[++i]);
         else if (!strcmp(argv[i], "--walk") && i + 1 < argc) walk_s = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--dive") && i + 1 < argc) dive_s = (float)atof(argv[++i]);
+        else if (!strcmp(argv[i], "--wait") && i + 1 < argc) wait_s = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--wear") && i + 1 < argc) {
             char bad[200];
             if (wear_option(argv[++i], bad, sizeof bad)) {
@@ -296,7 +299,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--map") && i + 3 < argc) { map_id = atoi(argv[++i]); start_x = atof(argv[++i]); start_y = atof(argv[++i]); }
         else if (!strcmp(argv[i], "--goto") && i + 2 < argc) { goto_x = atof(argv[++i]); goto_y = atof(argv[++i]); go_to = 1; }
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--dive S] [--wear SLOT:LOOK,...] [--goto X Y] [--map ID X Y]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--dive S] [--wait S] [--wear SLOT:LOOK,...] [--goto X Y] [--map ID X Y]\n"); return 2; }
 
     /* the settings: defaults, then the player's file; a line it refuses is
      * named on the terminal and skipped (173b1) */
@@ -430,7 +433,12 @@ int main(int argc, char **argv)
         /* moving = she moved along the ground this frame, by any cause
          * (keys, both buttons, sliding); turning in place isn't moving */
         int moving = hypot(elf.x - before_x, elf.y - before_y) > 1e-4;
-        if (!cam_held) camera_follow(&view, &mouse, camera_turn_between((float)before_o, (float)elf.o), moving, elf.o);
+        if (!cam_held) {
+            camera_follow(&view, &mouse, camera_turn_between((float)before_o, (float)elf.o), moving, elf.o);
+            float sgx, sgy;
+            ground_at(&world, (float)elf.x, (float)elf.y, (float)elf.z + 1.0f, &sgx, &sgy);
+            camera_tilt(&view, &mouse, moving && elf.grounded, (float)(sgx * cos(elf.o) + sgy * sin(elf.o)));   /* Follow Terrain (173m) */
+        }
 
         /* her animation: chosen from what she did this frame, then her
          * points bent by the bones and copied into each piece's mesh */
@@ -482,7 +490,29 @@ int main(int argc, char **argv)
             eye = (Vector3){ at.x + (eye.x - at.x) * keep, at.y + (eye.y - at.y) * keep, at.z + (eye.z - at.z) * keep };
         }
         float floor_z = maps_world_height(&world, eye.x + (float)ox, eye.y + (float)oy, &gx, &gy);
-        if (floor_z > -10000 && eye.z < floor_z + 0.6f) eye.z = floor_z + 0.6f;   /* never under the ground */
+        if (floor_z > -10000 && eye.z < floor_z + 0.6f) {
+            /* never under the ground. Smart Pivot on: the camera slides along
+             * the ground and looks up at her; off: it stops lowering, the
+             * pitch held where the camera meets the ground (173m) */
+            eye.z = floor_z + 0.6f;
+            if (settings_num("cameraPivot") == 0 && view.dist > 0.1f) {
+                float s = (eye.z - at.z) / view.dist;
+                float hold = asinf(s < -1 ? -1 : s > 1 ? 1 : s);
+                if (view.pitch < hold) view.pitch = hold;
+            }
+        }
+        /* Water Collision (173m): the camera stays on her side of the
+         * water's surface: above it while her head is above, below while
+         * under */
+        if (settings_num("cameraWaterCollision") != 0) {
+            int wk = 0;
+            float surface = liquid_surface(waters, eye.x + ox, eye.y + oy, &wk);
+            float head = at.z;
+            if (surface > -10000) {
+                if (head >= surface && eye.z < surface + 0.25f) eye.z = surface + 0.25f;
+                else if (head < surface && eye.z > surface - 0.25f) eye.z = surface - 0.25f;
+            }
+        }
         Camera3D cam = { .position = eye, .target = at, .up = { 0, 0, 1 }, .fovy = 60, .projection = CAMERA_PERSPECTIVE };
         doodads_animate((uint32_t)clock_ms, dt, eye, at);   /* moving doodads, and particles near the camera */
         SetShaderValue(model_sh, eye_m, &eye, SHADER_UNIFORM_VEC3);
@@ -543,7 +573,7 @@ int main(int argc, char **argv)
         EndDrawing();
 
         /* --shot: after 3 world-seconds, the picture, then quit */
-        if (shot && ++frames == 60 + (int)((walk_s + dive_s) * 20)) {   /* 3 world-seconds after any walk: particles have filled out */
+        if (shot && ++frames == 60 + (int)((walk_s + dive_s + wait_s) * 20)) {   /* 3 world-seconds after any walk: particles have filled out */
             Image im = LoadImageFromScreen();
             int ok = ExportImage(im, shot);
             UnloadImage(im);

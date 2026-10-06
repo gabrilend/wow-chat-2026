@@ -64,6 +64,13 @@ void camera_drag(FollowCam *c, const FollowCamInput *in, int was_right, double *
  * moves the camera. Reads cameraSmoothStyle and cameraYawSmoothSpeed. */
 void camera_follow(FollowCam *c, const FollowCamInput *in, double turned, int moving, double facing);
 
+/* Follow Terrain (cameraTerrainTilt, 173m): while she moves along the
+ * ground, the camera's pitch drifts (at the follow speed) toward its rest
+ * less the slope's angle ahead of her (`slope`: rise per yard along her
+ * facing), so climbing tilts it up and descending down. Off, or still:
+ * nothing. Not while a button holds the camera. */
+void camera_tilt(FollowCam *c, const FollowCamInput *in, int moving, float slope);
+
 /* The angle from `from` to `to` the shorter way round, in -pi to pi. */
 float camera_turn_between(float from, float to);
 

@@ -936,6 +936,15 @@ light_done:
         check(near(cam.yaw, 30 * deg, 1e-6), "style 0, running: never moves on its own");
         check(settings_set("cameraSmoothStyle", "3", why, sizeof why) != 0, "a style the table doesn't have is refused by the store");
 
+        /* Follow Terrain: off, nothing; on, climbing tilts the camera up */
+        cam = (FollowCam){ .yaw = 0, .pitch = 0.35f, .dist = 12, .rest_pitch = 0.35f };
+        camera_tilt(&cam, &idle, 1, 0.5f);
+        check(cam.pitch == 0.35f, "Follow Terrain off (the default): a slope doesn't tilt the camera");
+        settings_set("cameraTerrainTilt", "1", why, sizeof why);
+        for (int i = 0; i < 100; ++i) camera_tilt(&cam, &idle, 1, 0.5f);
+        snprintf(line, sizeof line, "Follow Terrain on: running up a 1-in-2 slope, the camera tilts up to rest less the slope's angle (pitch %.3f, %.3f expected)", cam.pitch, 0.35 - atan(0.5));
+        check(near(cam.pitch, 0.35 - atan(0.5), 1e-4), line);
+        settings_set("cameraTerrainTilt", "0", why, sizeof why);
         /* follow speed */
         settings_set("cameraSmoothStyle", "1", why, sizeof why);
         settings_set("cameraYawSmoothSpeed", "90", why, sizeof why);

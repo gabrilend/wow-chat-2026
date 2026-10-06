@@ -46,10 +46,23 @@ in `src/custom-client-c/camera.h` and `camera.c`, with 21 checks in
   (`cameraYawSmoothSpeed`, 180), Invert Mouse (`mouseInvertPitch`, off),
   Mouse Look Speed and Max Camera Distance (from 173b1).
 
-**Not built yet:** Follow Terrain, Water Collision (there's no water yet),
-Smart Pivot, Head Bob (there's no first person or walking animation yet),
-the saved views and the other camera key bindings (they wait for key
-bindings, 173b3).
+**Built later the same day:**
+- **Follow Terrain** (`cameraTerrainTilt`, off by default): `camera_tilt`.
+  While she moves on the ground, the pitch drifts at the follow speed
+  toward its rest less the angle of the slope ahead. Tests: off does
+  nothing; on, running up a 1-in-2 slope settles at rest less atan(0.5).
+- **Water Collision** (`cameraWaterCollision`, on): the camera stays 0.25
+  yards on her side of the water's surface (above while her head is
+  above, below while under). Seen: swimming at the surface with the
+  camera pitched low, it holds just above the water.
+- **Smart Pivot** (`cameraPivot`, on): on, a camera that touches the
+  ground slides along it and looks up (as before). Off, the pitch is
+  held where the camera meets the ground.
+- **The camera kept out of walls** (173q's `collide_ray`).
+
+**Not built yet:** Head Bob (there is no first-person view yet), the saved
+views and the other camera key bindings (they wait for key bindings,
+173b3).
 
 ## Intended Behavior
 

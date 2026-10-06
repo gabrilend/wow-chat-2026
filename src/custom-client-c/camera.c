@@ -84,6 +84,18 @@ static float step_toward(float at, float to, float most)
 }
 /* }}} */
 
+/* {{{ camera_tilt */
+void camera_tilt(FollowCam *c, const FollowCamInput *in, int moving, float slope)
+{
+    if (settings_num("cameraTerrainTilt") == 0 || !moving || in->left || in->right) return;
+    float target = c->rest_pitch - atanf(slope);
+    float most = (float)settings_num("cameraYawSmoothSpeed") * PI_F / 180.0f * in->dt;
+    c->pitch = step_toward(c->pitch, target, most);
+    if (c->pitch < CAMERA_PITCH_MIN) c->pitch = CAMERA_PITCH_MIN;
+    if (c->pitch > CAMERA_PITCH_MAX) c->pitch = CAMERA_PITCH_MAX;
+}
+/* }}} */
+
 /* {{{ camera_follow */
 void camera_follow(FollowCam *c, const FollowCamInput *in, double turned, int moving, double facing)
 {

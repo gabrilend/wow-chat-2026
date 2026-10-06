@@ -14,7 +14,13 @@ See 173b and 173m (the owner's words, 2026-10-06).
 
 ## Current Behavior
 
-Not built. The camera's numbers are fixed (see 173m).
+**Built with 173m (2026-10-06):** in the store and read live:
+- following style, Auto Follow Speed, Max Camera Distance;
+- Follow Terrain, Water Collision, Smart Pivot;
+- Mouse Look Speed, Invert Mouse.
+Left: Head Bob (no first-person view yet), Mouse Sensitivity (no drawn
+pointer yet), click-to-move and its camera style (not planned yet), and
+the camera key bindings (with the action bar).
 
 ## Intended Behavior
 
