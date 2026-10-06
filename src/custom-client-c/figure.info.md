@@ -38,5 +38,10 @@ Where a figure's pictures come from:
   Poses the bones by `moves` and bends the points into the meshes.
 - `void figure_draw(const Figure *f, Shader shader, Matrix place);`
   Draws it at `place` (turn and position; the figure's own scale is
-  applied inside) with `shader` (the model shader: texture0, cut-outs).
+  applied inside) with `shader` (main.c's model shader: texture0, and the
+  uniforms `tint`, `mode` and `unlit`). Two passes, as the doodads': solid
+  and cut-out pieces (blend 0-1) first, writing depth; then see-through
+  (2) and added-light (3 and up) pieces over them without writing depth
+  (an eye's glow, a weapon's shine), each tinted by its animated colour
+  and opacity (anim_unit_tint) at the moment it was bent to.
 - `void figure_free(Figure *f);`

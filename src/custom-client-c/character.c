@@ -57,8 +57,10 @@ static const struct { int field, region; const char *folder; } ITEM_REGION[8] = 
 /* {{{ static naked
  * Which pieces show on a naked character besides the body (0) and the hair
  * style: 401 bare hands, 501 bare feet, 702 ears, 1301 bare legs, 1501 the
- * back without a cape. Everything else belongs to clothes or effects. */
-static int naked(uint32_t id) { return id == 401 || id == 501 || id == 702 || id == 1301 || id == 1501; }
+ * back without a cape, 1702 the race's eye glow (a night elf's glowing
+ * eyes; group 17's 1703 is a death knight's, 1701 none; a model without
+ * 1702 shows no glow). Everything else belongs to clothes or effects. */
+static int naked(uint32_t id) { return id == 401 || id == 501 || id == 702 || id == 1301 || id == 1501 || id == 1702; }
 /* }}} */
 
 /* {{{ static paste

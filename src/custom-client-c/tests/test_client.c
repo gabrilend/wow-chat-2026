@@ -282,6 +282,39 @@ int main(int argc, char **argv)
         snprintf(line, sizeof line, "her face is painted onto her skin sheet (%d of 512 samples changed; Lua: 393)", changed);
         check(changed == 393, line);
         check(ch.hair.width > 0, "her hair has its picture");
+        /* her eyes' glow (173o): piece 1702 shows (1703, a death knight's,
+         * doesn't), drawn as added light with a picture named in the model
+         * that the archives hold, and tinted visibly while she stands */
+        {
+            int glow = 0, dk = 0, unit = -1;
+            for (uint32_t i = 0; i < ch.model.npieces; ++i) {
+                if (ch.shown[i] && ch.model.pieces[i].id == 1702) glow = 1;
+                if (ch.shown[i] && ch.model.pieces[i].id == 1703) dk = 1;
+            }
+            for (uint32_t u = 0; u < ch.model.nunits; ++u)
+                if (ch.model.pieces[ch.model.units[u].piece].id == 1702) unit = (int)u;
+            check(glow && !dk, "her race's eye glow (1702) shows, a death knight's (1703) doesn't");
+            if (unit >= 0) {
+                M2Unit un = ch.model.units[unit];
+                size_t gl;
+                const char *gfrom;
+                unsigned char *gpic = mpq_chain_read(&chain, ch.model.textures[un.texture].file, &gl, &gfrom);
+                snprintf(line, sizeof line, "the glow is added light (blend %u) with its own picture (%.100s)", un.blend, ch.model.textures[un.texture].file);
+                check(un.blend >= 3 && ch.model.textures[un.texture].kind == 0 && gpic, line);
+                free(gpic);
+                size_t ml;
+                unsigned char *gm2 = mpq_chain_read(&chain, "Character\\NightElf\\Female\\NightElfFemale.m2", &ml, &gfrom);
+                Anim ga;
+                if (gm2 && !anim_read(gm2, ml, &ga, why, sizeof why)) {
+                    float tint[4];
+                    anim_unit_tint(&ga, un.colour, un.fade, anim_find(&ga, 0, 0), 0, 0, tint);
+                    snprintf(line, sizeof line, "standing, the glow's tint is visible (%.2f %.2f %.2f, opacity %.2f)", tint[0], tint[1], tint[2], tint[3]);
+                    check(tint[3] > 0.1f && tint[0] + tint[1] + tint[2] > 0.1f, line);
+                    anim_free(&ga);
+                } else check(0, "her model's skeleton could not be read for the glow's tint");
+                free(gm2);
+            } else check(0, "her model has no unit drawing piece 1702");
+        }
         character_free(&ch);
     }
     {

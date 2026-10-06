@@ -564,28 +564,11 @@ void doodads_drop_tile(int tile)
 }
 /* }}} */
 
-/* {{{ static piece_tint: a piece's animated colour and opacity now
- * (header 76: colour and opacity track pairs, 40 bytes; 92: transparency
- * tracks, 20 bytes), on the model's stand animation */
+/* {{{ static piece_tint: a piece's animated colour and opacity now, on the
+ * model's stand animation (anim.h's anim_unit_tint) */
 static void piece_tint(const DoodadModel *md, const DoodadPiece *p, float rgba[4])
 {
-    const unsigned char *m2 = md->anim->m2;
-    uint32_t ms = clock_ms;
-    if (p->colour >= 0) {
-        size_t at = (size_t)(m2[76] | m2[77] << 8 | m2[78] << 16 | (uint32_t)m2[79] << 24) + (size_t)p->colour * 40;
-        AnimTrack c = anim_track_at(m2, at), a = anim_track_at(m2, at + 20);
-        float col[3] = { 1, 1, 1 }, op = 1;
-        anim_track_value(md->anim, &c, md->stand, ms, ms, ANIM_VEC3, col);
-        anim_track_value(md->anim, &a, md->stand, ms, ms, ANIM_SHARE, &op);
-        rgba[0] = col[0]; rgba[1] = col[1]; rgba[2] = col[2]; rgba[3] = op;
-    }
-    if (p->fade >= 0) {
-        size_t at = (size_t)(m2[92] | m2[93] << 8 | m2[94] << 16 | (uint32_t)m2[95] << 24) + (size_t)p->fade * 20;
-        AnimTrack t = anim_track_at(m2, at);
-        float op = 1;
-        anim_track_value(md->anim, &t, md->stand, ms, ms, ANIM_SHARE, &op);
-        rgba[3] *= op;
-    }
+    anim_unit_tint(md->anim, p->colour, p->fade, md->stand, clock_ms, clock_ms, rgba);
 }
 /* }}} */
 

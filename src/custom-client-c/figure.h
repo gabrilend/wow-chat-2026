@@ -30,7 +30,7 @@ typedef struct {
     Mesh       mesh;
     Texture2D  tex;
     uint32_t  *point_of;              /* per mesh corner: the model point it is */
-    uint16_t   blend;                 /* the piece's blend mode (m2.h: 0 solid ... 4 added light) */
+    uint16_t   blend, flags;          /* the piece's blend mode (m2.h: 0 solid ... 4 added light) and render flags (0x1 unlit) */
     int        colour, fade;          /* its animated tint's tracks (m2.h's M2Unit), -1 none */
     int        layers, moving_uv;     /* two-picture pieces and moving picture positions (not drawn for figures yet) */
 } FigurePiece;
@@ -50,6 +50,7 @@ typedef struct Figure {
     float       *bent;                /* per point: bent position, then facing */
     float        scale;               /* the display's size (1 for characters) */
     FigureItem   items[6];  int nitems;   /* helm, shoulders, weapons (173p) */
+    int          seq;  uint32_t ms, global_ms;   /* the animation and moment it was last bent to (for the pieces' tints) */
 } Figure;
 
 int  figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look, char *why, int why_len);
@@ -64,7 +65,12 @@ int  figure_from_item(Figure *f, MpqChain *chain, const char *model, const char 
 void figure_bend(Figure *f, const MovesState *moves, uint32_t global_ms);
 
 /* Draws it at `place` (turn and position; the figure's own scale is
- * applied inside) with `shader` (the model shader: texture0, cut-outs). */
+ * applied inside) with `shader` (main.c's model shader: texture0, and the
+ * uniforms `tint`, `mode` and `unlit`). Two passes, as the doodads': solid
+ * and cut-out pieces (blend 0-1) first, writing depth; then see-through
+ * (2) and added-light (3 and up) pieces over them without writing depth
+ * (an eye's glow, a weapon's shine), each tinted by its animated colour
+ * and opacity (anim_unit_tint) at the moment it was bent to. */
 void figure_draw(const Figure *f, Shader shader, Matrix place);
 
 void figure_free(Figure *f);

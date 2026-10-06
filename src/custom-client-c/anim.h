@@ -103,6 +103,13 @@ int  anim_track_value(const Anim *a, const AnimTrack *tr, int seq, uint32_t ms, 
  * (this client: none seen yet that turns). */
 void anim_uv(const Anim *a, int uvanim, int seq, uint32_t ms, uint32_t global_ms, float out[4]);
 
+/* A unit's animated tint at a moment of animation `seq` (m2.h's M2Unit
+ * colour and fade; -1 for none): red, green, blue and opacity, 0-1,
+ * starting from white and opaque. The colour track pair is at the
+ * header's 76 (40 bytes each: a colour track, then an opacity share),
+ * the transparency track at 92 (20 bytes each, a share), multiplied in. */
+void anim_unit_tint(const Anim *a, int colour, int fade, int seq, uint32_t ms, uint32_t global_ms, float rgba[4]);
+
 /* 1 when animation `seq` moves any bone: some track has more than one
  * moment in it (or in a global sequence it uses). A model whose standing
  * animation doesn't move is drawn as made, never bent (most rocks). */

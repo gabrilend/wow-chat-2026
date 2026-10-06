@@ -323,3 +323,30 @@ void anim_skin_point(const Anim *a, const float (*poses)[16], uint32_t point, co
     }
 }
 /* }}} */
+
+/* {{{ anim_unit_tint */
+void anim_unit_tint(const Anim *a, int colour, int fade, int seq, uint32_t ms, uint32_t global_ms, float rgba[4])
+{
+    const unsigned char *m2 = a->m2;
+    rgba[0] = rgba[1] = rgba[2] = rgba[3] = 1;
+    if (colour >= 0) {
+        size_t at = (size_t)(m2[76] | m2[77] << 8 | m2[78] << 16 | (uint32_t)m2[79] << 24) + (size_t)colour * 40;
+        if (at + 40 <= a->m2_len) {                /* a lookup past the table is a broken model: left untinted */
+            AnimTrack c = anim_track_at(m2, at), o = anim_track_at(m2, at + 20);
+            float col[3] = { 1, 1, 1 }, op = 1;
+            anim_track_value(a, &c, seq, ms, global_ms, ANIM_VEC3, col);
+            anim_track_value(a, &o, seq, ms, global_ms, ANIM_SHARE, &op);
+            rgba[0] = col[0]; rgba[1] = col[1]; rgba[2] = col[2]; rgba[3] = op;
+        }
+    }
+    if (fade >= 0) {
+        size_t at = (size_t)(m2[92] | m2[93] << 8 | m2[94] << 16 | (uint32_t)m2[95] << 24) + (size_t)fade * 20;
+        if (at + 20 <= a->m2_len) {
+            AnimTrack t = anim_track_at(m2, at);
+            float op = 1;
+            anim_track_value(a, &t, seq, ms, global_ms, ANIM_SHARE, &op);
+            rgba[3] *= op;
+        }
+    }
+}
+/* }}} */

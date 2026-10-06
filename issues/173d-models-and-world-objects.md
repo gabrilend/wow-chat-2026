@@ -62,7 +62,7 @@ doesn't switch on, separate from the pictures. His pieces, listed
 (2026-10-06): 0-73, 102-109, 202-208, 302-309, 401-404, 505, 701, 702,
 802, 803, 903, 1002, 1102, 1104, 1202, 1301, 1302, 1501-1506, 1703, 1802.
 `character.c` shows the body (0), the hair style's piece and the fixed
-"bare" set 401, 501, 702, 1301 and 1501, which was checked only on the
+"bare" set 401, 501, 702, 1301 and 1501 (and, later, 1702), which was checked only on the
 night elf. He has no 501 (his feet are 505), and his facial-hair groups 1
 to 3 start at variant 2. The fix belongs here: choose each group's piece
 by the game's own tables (CharacterFacialHairStyles for groups 1-3, the
@@ -83,7 +83,27 @@ tail and hooves against the original.
 - **Seen:** from behind, he has his tail and coat.
 - **Test:** a tauren man's tail shows, painted with his fur.
 
-**Still open:** the fixed "bare" piece list (401, 501, 702, 1301, 1501)
+**Glowing and see-through pieces on figures (2026-10-06).**
+- **The eye glow:** a night elf's glowing eyes are piece 1702 (group 17:
+  1701 none, 1702 the race's glow, 1703 a death knight's), drawn as
+  added light with a picture named inside the model. `character.c` now
+  shows 1702 among the bare pieces (a model without it, as the tauren's,
+  shows none), and `figure.c` loads pictures named inside a character's
+  model (kind 0), which it never did, so the glow had no picture.
+- **Drawing by blend:** `figure_draw` now draws as the doodads do: solid
+  and cut-out pieces first, writing depth; then see-through and
+  added-light pieces without writing depth, each tinted by its animated
+  colour and opacity (`anim_unit_tint`, now in `anim.c` and shared with
+  the doodads), unlit pieces skipping the sun, added light fading to
+  nothing in fog. Before, every piece was drawn solid.
+- **Seen:** her eyes glow white-blue, as night elves' do.
+- **Tests:** 1702 shows and 1703 doesn't; the glow is added light with
+  its own picture in the archives; its tint is visible while she stands.
+- **Not yet for figures:** two-picture pieces and moving picture
+  positions (none of the figures shown today has either: a one-off
+  probe listed every unit of the five models, 2026-10-06).
+
+**Still open:** the fixed "bare" piece list (401, 501, 702, 1301, 1501, 1702)
 against the game's own tables. Group 5 for him has only 505, which the
 fixed list never shows; whether bare hooves need it is to check in-game.
 The two missing pictures (scalp, and a hair row naming a face) are

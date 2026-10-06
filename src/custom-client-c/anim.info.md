@@ -68,6 +68,12 @@ move back from pivot, as the original builds it.
   stretch, a vec3 track): out = slide x, slide y, stretch x, stretch y
   (positions become position * stretch + slide). The turn isn't applied
   (this client: none seen yet that turns).
+- `void anim_unit_tint(const Anim *a, int colour, int fade, int seq, uint32_t ms, uint32_t global_ms, float rgba[4]);`
+  A unit's animated tint at a moment of animation `seq` (m2.h's M2Unit
+  colour and fade; -1 for none): red, green, blue and opacity, 0-1,
+  starting from white and opaque. The colour track pair is at the
+  header's 76 (40 bytes each: a colour track, then an opacity share),
+  the transparency track at 92 (20 bytes each, a share), multiplied in.
 - `int anim_moves(const Anim *a, int seq);`
   1 when animation `seq` moves any bone: some track has more than one
   moment in it (or in a global sequence it uses). A model whose standing

@@ -48,7 +48,11 @@ Verbatim, 2026-10-06: "let's work on particle effects next." (after:
     is the fog's colour; before its start, a spark is untouched.
 
 **Left:**
-- Figures' particles (spells, weapon glows).
+- Figures' particles (spells, weapon glows). None of the figures shown
+  today (her, the tauren, furbolg, ancient protector and nightsaber)
+  has an emitter (checked 2026-10-06: each model's emitter count is 0),
+  so this waits for spells and items that carry them. Their glowing
+  pieces (an eye's glow) are drawn now (173d).
 - Ribbons (trails).
 - Spline emitters, which are run as planes.
 - Wind and twinkle.

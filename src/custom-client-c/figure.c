@@ -10,6 +10,7 @@
 #include "dbc.h"
 
 #include "raymath.h"
+#include "rlgl.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,6 +81,7 @@ static int build(Figure *f, MpqChain *chain, const M2Model *mod, const uint8_t *
         fp->mesh = m;
         fp->tex = pics[un.texture];
         fp->blend = un.blend;
+        fp->flags = un.flags;
         fp->colour = un.colour;
         fp->fade = un.fade;
         fp->layers = un.layers;
@@ -136,13 +138,18 @@ int figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look,
     if (ch.fur.width) fur = texture_of(&ch.fur);
     if (ch.cape.width) cape = texture_of(&ch.cape);
     /* a character's slots: kind 1 its skin sheet, kind 6 its hair, kind 8
-     * its fur (a tauren's tail and coat); the rest (capes, armour) wait for
-     * items (173p) */
+     * its fur (a tauren's tail and coat), kind 2 its cloak, kind 0 a picture
+     * named inside the model (the eye glow's) */
     for (uint32_t t = 0; t < ch.model.ntextures && t < 64; ++t) {
         if (ch.model.textures[t].kind == 1) pics[t] = skin;
         if (ch.model.textures[t].kind == 6) pics[t] = hair;
         if (ch.model.textures[t].kind == 8) pics[t] = fur;
         if (ch.model.textures[t].kind == 2) pics[t] = cape;   /* the cloak (173p) */
+        if (ch.model.textures[t].kind == 0 && ch.model.textures[t].file[0]) {   /* named inside the model: the eye glow's */
+            char inner[300];
+            if (load_picture(chain, ch.model.textures[t].file, &pics[t], inner, sizeof inner))
+                fprintf(stderr, "character: %s; the pieces using it are left off\n", inner);
+        }
     }
     int bad = build(f, chain, &ch.model, ch.shown, pics, ch.base, why, why_len);
     /* the attached items (173p): each its own figure, hung from the
@@ -292,6 +299,7 @@ int figure_from_display(Figure *f, MpqChain *chain, int display_id, char *why, i
 void figure_bend(Figure *f, const MovesState *moves, uint32_t global_ms)
 {
     moves_pose(moves, &f->anim, global_ms, f->poses, f->scratch);
+    f->seq = moves->seq; f->ms = (uint32_t)moves->ms; f->global_ms = global_ms;
     for (uint32_t i = 0; i < f->nrest; ++i) {
         float p[3] = { f->rest[i].x, f->rest[i].y, f->rest[i].z }, n[3] = { f->rest[i].nx, f->rest[i].ny, f->rest[i].nz };
         anim_skin_point(&f->anim, (const float (*)[16])f->poses, i, p, f->bent + i * 6, n, f->bent + i * 6 + 3);
@@ -317,26 +325,51 @@ void figure_bend(Figure *f, const MovesState *moves, uint32_t global_ms)
 }
 /* }}} */
 
-/* {{{ figure_draw, figure_free */
+/* {{{ figure_draw, figure_free
+ * A piece is drawn in the pass its blend belongs to: solid ones (mode 0,
+ * cut-out) in pass 0; see-through (mode 1) and added light (mode 2,
+ * Raylib's additive blending) in pass 1, depth not written. The tint is
+ * the piece's animated colour and opacity; the shader's `unlit` skips the
+ * sun for pieces flagged unlit (glows). */
+static void draw_pieces(const Figure *f, Material *mat, Matrix at, int pass, int loc_tint, int loc_mode, int loc_unlit)
+{
+    for (int k = 0; k < f->npieces; ++k) {
+        const FigurePiece *p = &f->pieces[k];
+        int see_through = p->blend >= 2;
+        if (see_through != pass) continue;
+        float tint[4];
+        anim_unit_tint(&f->anim, p->colour, p->fade, f->seq, f->ms, f->global_ms, tint);
+        int mode = p->blend >= 3 ? 2 : p->blend == 2 ? 1 : 0, unlit = p->flags & 0x1;
+        SetShaderValue(mat->shader, loc_tint, tint, SHADER_UNIFORM_VEC4);
+        SetShaderValue(mat->shader, loc_mode, &mode, SHADER_UNIFORM_INT);
+        SetShaderValue(mat->shader, loc_unlit, &unlit, SHADER_UNIFORM_INT);
+        if (see_through) BeginBlendMode(mode == 2 ? BLEND_ADDITIVE : BLEND_ALPHA);
+        mat->maps[MATERIAL_MAP_DIFFUSE].texture = p->tex;
+        DrawMesh(p->mesh, *mat, at);
+        if (see_through) EndBlendMode();
+    }
+}
 void figure_draw(const Figure *f, Shader shader, Matrix place)
 {
     Material mat = LoadMaterialDefault();
     mat.shader = shader;
+    int loc_tint = GetShaderLocation(shader, "tint"), loc_mode = GetShaderLocation(shader, "mode"), loc_unlit = GetShaderLocation(shader, "unlit");
     Matrix at = MatrixMultiply(MatrixScale(f->scale, f->scale, f->scale), place);
-    for (int k = 0; k < f->npieces; ++k) {
-        mat.maps[MATERIAL_MAP_DIFFUSE].texture = f->pieces[k].tex;
-        DrawMesh(f->pieces[k].mesh, mat, at);
-    }
-    for (int i = 0; i < f->nitems; ++i) {
-        const float *m = f->items[i].at;
-        Matrix on = { m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15] };
-        const Figure *it = f->items[i].fig;
-        Matrix item_at = MatrixMultiply(on, at);
-        for (int k = 0; k < it->npieces; ++k) {
-            mat.maps[MATERIAL_MAP_DIFFUSE].texture = it->pieces[k].tex;
-            DrawMesh(it->pieces[k].mesh, mat, item_at);
+    for (int pass = 0; pass < 2; ++pass) {
+        if (pass == 1) { rlDrawRenderBatchActive(); rlDisableDepthMask(); }
+        draw_pieces(f, &mat, at, pass, loc_tint, loc_mode, loc_unlit);
+        for (int i = 0; i < f->nitems; ++i) {
+            const float *m = f->items[i].at;
+            Matrix on = { m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15] };
+            draw_pieces(f->items[i].fig, &mat, MatrixMultiply(on, at), pass, loc_tint, loc_mode, loc_unlit);
         }
+        if (pass == 1) { rlDrawRenderBatchActive(); rlEnableDepthMask(); }
     }
+    float white[4] = { 1, 1, 1, 1 };
+    int zero = 0;
+    SetShaderValue(shader, loc_tint, white, SHADER_UNIFORM_VEC4);   /* left as plain solid drawing for whoever uses the shader next */
+    SetShaderValue(shader, loc_mode, &zero, SHADER_UNIFORM_INT);
+    SetShaderValue(shader, loc_unlit, &zero, SHADER_UNIFORM_INT);
     MemFree(mat.maps);                                  /* the default material's map list; the shader and pictures are kept */
 }
 void figure_free(Figure *f)

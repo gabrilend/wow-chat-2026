@@ -117,16 +117,23 @@ static const char *GROUND_VS =
     "  dist = length(w.xyz - eye);\n"
     "  gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
     "}\n";
+/* `mode` (figure.c): 0 solid, pixels under half opacity cut out; 1
+ * see-through, the picture's opacity times the tint's; 2 added light,
+ * which the fog dims to nothing rather than tinting (as particles,
+ * 173o). `tint` is the piece's animated colour and opacity, `unlit` skips
+ * the sun (glows). */
 static const char *MODEL_FS =
     "#version 330\n"
     "in vec3 n; in vec4 col; in vec2 uv; in float dist; out vec4 frag; uniform sampler2D texture0;\n"
     "uniform vec3 sun_dir, sun_col, shade_col, fog_col; uniform vec2 fog_range;\n"
+    "uniform vec4 tint; uniform int mode, unlit;\n"
     "void main() {\n"
-    "  vec4 t = texture(texture0, uv);\n"
-    "  if (t.a < 0.5) discard;\n"
-    "  vec3 light = shade_col + sun_col * max(dot(normalize(n), sun_dir), 0.0);\n"
+    "  vec4 t = texture(texture0, uv) * tint;\n"
+    "  if (mode == 0 && t.a < 0.5 * tint.a) discard;\n"
+    "  vec3 light = unlit != 0 ? vec3(1.0) : shade_col + sun_col * max(dot(normalize(n), sun_dir), 0.0);\n"
     "  float fog = clamp((dist - fog_range.x) / max(fog_range.y - fog_range.x, 1.0), 0.0, 1.0);\n"
-    "  frag = vec4(mix(t.rgb * light, fog_col, fog), 1.0);\n"
+    "  if (mode == 2) frag = vec4(t.rgb * light * (1.0 - fog), t.a);\n"
+    "  else frag = vec4(mix(t.rgb * light, fog_col, fog), mode == 1 ? t.a : 1.0);\n"
     "}\n";
 /* }}} */
 

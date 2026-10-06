@@ -36,6 +36,8 @@ that issue and strike it here (keep the line, so the history stays).
    his hooves right? Are the two skin layers the client's tables name but
    its files lack (scalp, and a hair picture) visible as patches?
 
+8b. **Her glowing eyes** (173d): `--front --zoom 2 --hour 23`. Is the
+    glow as bright and as large as the original's, by night and by day?
 12. **Equipment** (173p): `--wear chest:41143,hands:41138,legs:41140,waist:41476,feet:41480`
     (a rogue's leather set). Do the painted leather, the glove cuffs and
     the tall boots look like the same items on a night elf in the
