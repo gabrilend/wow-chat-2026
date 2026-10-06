@@ -34,6 +34,22 @@ static int gradient(MoverGround ground, void *ctx, double x, double y, double z_
 }
 /* }}} */
 
+/* {{{ static walled: does stepping from her place to (nx, ny) run into a
+ * wall? Asked from her feet, and again from the height she will stand at
+ * there when that is higher: the ground under the new spot can lift her
+ * by more than her height in one step (out of a river onto a bank), and a
+ * wall that starts above her head now would be round her body then (the
+ * owner, 2026-10-06: "climbing out of a river into a building"). */
+static int walled(const Mover *m, double nx, double ny, double reach, MoverGround ground, MoverWall wall, void *ctx, float *wx, float *wy)
+{
+    if (!wall) return 0;
+    if (wall(ctx, m->x, m->y, nx, ny, m->z, wx, wy)) return 1;
+    float hx, hy;
+    double there = ground(ctx, (float)nx, (float)ny, (float)(m->z + reach), &hx, &hy);
+    return there > m->z + 0.05 && wall(ctx, m->x, m->y, nx, ny, there, wx, wy);
+}
+/* }}} */
+
 /* {{{ mover_step */
 static void swim_step(Mover *m, const MoverInput *in, double dt, const MoverWorld *w, double surface);
 void mover_step(Mover *m, const MoverInput *in, double dt, const MoverWorld *world)
@@ -97,11 +113,11 @@ void mover_step(Mover *m, const MoverInput *in, double dt, const MoverWorld *wor
         /* a wall: she stops short of it, and slides along it with what is
          * left of her step once the part into the wall is taken away */
         float wx, wy;
-        if (!blocked && wall && wall(ctx, m->x, m->y, nx, ny, m->z, &wx, &wy)) {
+        if (!blocked && walled(m, nx, ny, reach, ground, wall, ctx, &wx, &wy)) {
             double sx = nx - m->x, sy = ny - m->y, into = sx * wx + sy * wy;
             sx -= into * wx; sy -= into * wy;
             nx = m->x + sx; ny = m->y + sy;
-            if (wall(ctx, m->x, m->y, nx, ny, m->z, &wx, &wy)) blocked = 1;   /* a corner: no way along */
+            if (walled(m, nx, ny, reach, ground, wall, ctx, &wx, &wy)) blocked = 1;   /* a corner: no way along */
         }
         if (!blocked) { m->x = nx; m->y = ny; }
     }
@@ -125,7 +141,7 @@ void mover_step(Mover *m, const MoverInput *in, double dt, const MoverWorld *wor
     if (m->vx != 0 || m->vy != 0) {
         double sx = m->x + m->vx * dt, sy = m->y + m->vy * dt;
         float wx, wy;
-        if (wall && wall(ctx, m->x, m->y, sx, sy, m->z, &wx, &wy)) { m->vx = 0; m->vy = 0; }   /* a slide ends against a wall */
+        if (walled(m, sx, sy, reach, ground, wall, ctx, &wx, &wy)) { m->vx = 0; m->vy = 0; }   /* a slide ends against a wall */
         else { m->x = sx; m->y = sy; }
     }
 
@@ -176,7 +192,7 @@ static void swim_step(Mover *m, const MoverInput *in, double dt, const MoverWorl
         dz = ahead > 0 ? sin(pitch) / len * speed * dt : 0;
         double nx = m->x + dx * speed * dt, ny = m->y + dy * speed * dt;
         float wx, wy;
-        if (!(w->wall && w->wall(w->ctx, m->x, m->y, nx, ny, m->z, &wx, &wy))) { m->x = nx; m->y = ny; }
+        if (!walled(m, nx, ny, MOVER_STEP_UP, w->ground, w->wall, w->ctx, &wx, &wy)) { m->x = nx; m->y = ny; }   /* (swimming up onto a bank lifts her too) */
     }
     if (in->jump) dz += MOVER_SWIM * k * dt;
     if (in->swim_down) dz -= MOVER_SWIM * k * dt;

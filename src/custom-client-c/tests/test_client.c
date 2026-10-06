@@ -83,6 +83,16 @@ static int w_solid(void *c, double x0, double y0, double x1, double y1, double z
 }
 /* }}} */
 
+/* {{{ a bank: ground at 0, rising 3 yards at x 100 (as a river's bank
+ * onto which a building's wall is set; the wall is in solids_test) */
+static float g_bank(void *c, float x, float y, float zt, float *gx, float *gy)
+{
+    (void)c; (void)y; (void)zt;
+    *gx = 0; *gy = 0;
+    return x < 100 ? 0 : 3;
+}
+/* }}} */
+
 /* {{{ the swimming tests' world: a shore rising out of water 5 deep */
 static float g_shore(void *c, float x, float y, float zt, float *gx, float *gy)
 {
@@ -806,6 +816,19 @@ anim_done:
         float hit = collide_ray(cw, 0, 0, 1, 10, 0, 1), clear = collide_ray(cw, 0, 6, 1, 10, 6, 1);
         snprintf(line, sizeof line, "a line from her to the camera through the wall is struck half way along (%.3f); past the wall's end, nothing (%.1f)", hit, clear);
         check(near(hit, 0.5, 1e-4) && clear > 1, line);
+        /* from below (the owner, 2026-10-06: "climbing out of a river
+         * into a building"): the ground rises 3 yards at x 100, where a
+         * building's wall stands on the higher ground (z 3 to 10). Her
+         * step onto the bank would lift her into it; the wall is asked
+         * about from the height she would stand at, so she stops */
+        {
+            const float bank_wall[] = { 100, -5, 3,  100, 5, 3,  100, 5, 10,   100, -5, 3,  100, 5, 10,  100, -5, 10 };
+            collide_add(cw, bank_wall, 2, id16, 0);
+            mover_init(&m, 97, 0, 0, 0, 1.2, 60);
+            for (int i = 0; i < 200; ++i) mover_step(&m, &fwd, 0.01, &(MoverWorld){ g_bank, w_solid, NULL, NULL });
+            snprintf(line, sizeof line, "walking up onto a bank where a wall stands, she stops outside it (x %.2f, z %.2f; the wall at 100)", m.x, m.z);
+            check(m.x < 100 && near(m.z, 0, 1e-3), line);
+        }
         /* dropping a tile (173s): its triangles go, the others stay */
         const float plank2[] = { 80, -2, 3,  90, -2, 3,  90, 2, 3,   80, -2, 3,  90, 2, 3,  80, 2, 3 };
         collide_add(cw, plank2, 2, id16, 7);

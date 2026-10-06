@@ -33,7 +33,14 @@ and swimming."
   above her feet on the ground, or just below her in the air, so she
   lands on bridges and never snaps up through them. A wall stops her;
   she slides along it with what's left of her step. In a corner she
-  stops. A slide down a slope ends at a wall.
+  stops. A slide down a slope ends at a wall. **Walls are asked about
+  twice when a step lifts her:** from her feet, and from the height she
+  will stand at on the new spot. The map's ground can lift her by more
+  than her height in one step (out of a river onto a bank), and a wall
+  starting above her head beforehand would be round her body afterwards
+  (the owner, 2026-10-06: "you can walk into doodads if you approach
+  from below ... climbing out of a river "into" a building"). Swimming
+  steps are checked the same way.
 - **`main.c` combines the map's ground with the models' floors:** the
   model's wins when higher, or when the map's ground is above her (she
   is beneath it).
@@ -42,13 +49,15 @@ and swimming."
   she stops at its edge.
 - **Picture options** for this: `--face DEG` and `--walk S`. The picture
   waits until the walk is done.
-- **Tests:** 11 checks, on made-up shapes.
+- **Tests:** 12 checks, on made-up shapes.
   - A plank is the floor above it, and not below it.
   - A wall is hit when walked at, not past its end.
   - A riser lower than her step isn't a wall; a higher ledge is.
   - She stops 0.46 yards short of a wall, slides along it at an angle
     and on past its end, walks up a half-yard step, stops at a two-yard
     ledge, and lands on a plank dropped onto.
+  - Walking up onto a bank 3 yards higher, where a wall stands on the
+    bank, she stops outside it (before the fix she walked 14 yards in).
 
 **The camera and walls (2026-10-06):** `collide_ray` finds the nearest
 solid triangle on the line from her head to the camera. When something
