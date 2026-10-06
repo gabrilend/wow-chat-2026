@@ -78,7 +78,23 @@ See 173f (the owner's order, 2026-10-05).
   still in the original too.
 - **Picture option:** `--clock MS` starts the world's animations later.
 
+**Faults the owner saw (2026-10-06):** "there's some scaling issues on
+some doodads (like the archway near the bridge has weird moss stretched
+over it?) and some of the particles halos seem off (like they are meant
+to be 360 degrees displayed as an orb, but they turn out to be painted
+flat? But only some of them)". Likely causes, to be confirmed:
+- **Moss:** a piece drawn with two pictures (a skin unit's picture count
+  above 1). The client draws only the first, with the first set of
+  picture positions, and ignores picture-position animation (the M2's
+  UV animations). A second, moss layer meant to blend or scroll is
+  instead stretched across the arch.
+- **Flat halos:** these are not particles but flat squares in the model
+  on bones marked to face the camera (bone flags 0x8 and 0x40-0x200:
+  billboards). The client ignores the marks, so they stay flat as made.
+  Only some orbs are built this way, which fits "only some of them".
+
 **Left:**
+- The two faults above.
 - Pieces whose picture the game chooses at run time (none so far at
   Astranaar).
 - Particles (torch flames, wisps, firefly glow) and picture animations
