@@ -265,7 +265,7 @@ int main(int argc, char **argv)
     /* {{{ putting her together */
     printf("putting her together\n");
     Character ch;
-    CharacterLook look = { 4, 1, 0, 0, 0, 0, { 0 } };
+    CharacterLook look = { 4, 1, 0, 0, 0, 0, { 0 }, 0 };
     int built = character_build(&chain, &look, &ch, why, sizeof why) == 0;
     check(built, built ? "she is put together" : why);
     if (built) {
@@ -330,7 +330,7 @@ int main(int argc, char **argv)
     {
         /* dressed (173p): the rogue's set paints her torso and switches on
          * her boots (feet group 5: 501 + 3 for these boots) */
-        CharacterLook dressed = { 4, 1, 0, 0, 0, 0, { 0 } }, bare = { 4, 1, 0, 0, 0, 0, { 0 } };
+        CharacterLook dressed = { 4, 1, 0, 0, 0, 0, { 0 }, 0 }, bare = { 4, 1, 0, 0, 0, 0, { 0 }, 0 };
         dressed.items[SLOT_CHEST] = 41143; dressed.items[SLOT_FEET] = 41480; dressed.items[SLOT_HANDS] = 41138;
         Character dc, bc;
         if (character_build(&chain, &dressed, &dc, why, sizeof why) || character_build(&chain, &bare, &bc, why, sizeof why)) check(0, why);
@@ -370,7 +370,7 @@ int main(int argc, char **argv)
     {
         /* a tauren man: his tail (piece 1501) uses the fur picture (kind 8),
          * the skin row's second; without it the tail was skipped (173d) */
-        CharacterLook tauren = { 6, 0, 0, 0, 0, 0, { 0 } };
+        CharacterLook tauren = { 6, 0, 0, 0, 0, 0, { 0 }, 0 };
         Character tc;
         if (character_build(&chain, &tauren, &tc, why, sizeof why)) check(0, why);
         else {
@@ -384,6 +384,39 @@ int main(int argc, char **argv)
             check(tail && tail_fur && tc.fur.width > 0, line);
             character_free(&tc);
         }
+        /* the game's own tables pick a bare character's pieces (173d):
+         * CharacterFacialHairStyles gives his beard's three pieces in the
+         * order groups 1, 3, 2; choice 0 is clean-shaven (no 1xx-3xx), choice
+         * 1 shows 102, 302 and 202; his race has no eye glow */
+        int shaven_any = 1, beard = 0, glow = 0;
+        if (character_build(&chain, &tauren, &tc, why, sizeof why)) check(0, why);
+        else {
+            shaven_any = 0;
+            for (uint32_t i = 0; i < tc.model.npieces; ++i) {
+                uint32_t id = tc.model.pieces[i].id;
+                if (tc.shown[i] && id >= 100 && id < 400) shaven_any = 1;
+                if (tc.shown[i] && id / 100 == 17) glow = 1;
+            }
+            character_free(&tc);
+        }
+        tauren.facial_hair = 1;
+        if (character_build(&chain, &tauren, &tc, why, sizeof why)) check(0, why);
+        else {
+            for (uint32_t i = 0; i < tc.model.npieces; ++i) {
+                uint32_t id = tc.model.pieces[i].id;
+                if (tc.shown[i]) beard |= (id == 102) | (id == 302) << 1 | (id == 202) << 2;   /* by id: some ids are two meshes (fur and skin) */
+            }
+            character_free(&tc);
+            beard = (beard & 1) + (beard >> 1 & 1) + (beard >> 2 & 1);
+        }
+        snprintf(line, sizeof line, "a tauren man's facial-hair choice 0 shows no beard pieces (%s), choice 1 shows 102, 302 and 202 (%d of 3), and he has no eye glow (%s)",
+                 shaven_any ? "some" : "none", beard, glow ? "one" : "none");
+        check(!shaven_any && beard == 3 && !glow, line);
+        tauren.facial_hair = 99;
+        int refused = character_build(&chain, &tauren, &tc, why, sizeof why) != 0;
+        snprintf(line, sizeof line, "a facial-hair choice the table lacks is refused, naming it (%.80s)", refused ? why : "built");
+        check(refused && strstr(why, "facial-hair choice 99"), line);
+        if (!refused) character_free(&tc);
     }
     blp_free(&img);
     mpq_chain_close(&chain);

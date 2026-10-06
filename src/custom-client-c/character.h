@@ -6,8 +6,9 @@
  * clothing shape at once, and its skin is painted from several pictures
  * laid onto one sheet (body, face, scalp, underwear). The game picks which
  * pieces show and which pictures go where from its own tables
- * (CharHairGeosets, CharSections); this does the same for one character's
- * choices. Naked for now: clothes come with items (617r5).
+ * (CharHairGeosets, CharacterFacialHairStyles, CharSections); this does
+ * the same for one character's choices, and dresses it in its items
+ * (173p).
  */
 #ifndef EG_CHARACTER_H
 #define EG_CHARACTER_H
@@ -28,6 +29,8 @@ typedef struct {
     int race, sex;                         /* ChrRaces id; 0 male, 1 female */
     int skin, face, hair_style, hair_color;/* the character-creation choices, from 0 */
     int items[SLOT_COUNT];                 /* each slot's item look (ItemDisplayInfo.dbc id), 0 for none (173p) */
+    int facial_hair;                       /* the creation choice of facial hair (or a woman's earrings, markings ...), from 0
+                                            * (last, so the looks written out by position keep their meaning) */
 } CharacterLook;
 
 /* an item model hung from one of the character's attachment points (173p):

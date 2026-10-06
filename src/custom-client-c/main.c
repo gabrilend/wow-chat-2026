@@ -78,7 +78,7 @@ static double start_x = 2717.0, start_y = -400.0;       /* Astranaar, Ashenvale 
 #define ZOOM_BASE    20.0f                             /* yards; times cameraDistanceMaxFactor (1 to 2) is the zoom-out limit (173b4) */
 /* her look: ChrRaces id, sex, and the character-creation choices (from 0);
  * a stand-in for the ids the server will send (173d, 617r5) */
-static CharacterLook LOOK = { 4, 1, 0, 0, 0, 0, { 0 } };   /* --wear dresses her (173p) */
+static CharacterLook LOOK = { 4, 1, 0, 0, 0, 0, { 0 }, 0 };   /* --wear dresses her (173p) */
 
 /* {{{ static wear_option: "--wear chest:41143,hands:41138": slot names to
  * item looks (ItemDisplayInfo ids); 0 on success, else the bad part */
@@ -152,11 +152,12 @@ static const struct {
     int race, sex;                    /* a character (race 0: a creature) */
     int display;                      /* a creature's display */
     float ahead, left;                /* yards from her start */
+    int facial_hair;                  /* a character's facial-hair choice (173d) */
 } BYSTANDERS[] = {
-    { 6, 0, 0,   9.0f,  -4.0f },      /* a tauren man */
-    { 0, 0, 145, 10.0f,  1.0f },      /* a furbolg */
-    { 0, 0, 860, 14.0f,  7.0f },      /* the ancient protector */
-    { 0, 0, 321, 7.0f,   5.0f },      /* a nightsaber */
+    { 6, 0, 0,   9.0f,  -4.0f, 1 },   /* a tauren man, bearded */
+    { 0, 0, 145, 10.0f,  1.0f, 0 },   /* a furbolg */
+    { 0, 0, 860, 14.0f,  7.0f, 0 },   /* the ancient protector */
+    { 0, 0, 321, 7.0f,   5.0f, 0 },   /* a nightsaber */
 };
 #define NBYSTANDERS ((int)(sizeof BYSTANDERS / sizeof BYSTANDERS[0]))
 static Figure her;
@@ -348,7 +349,7 @@ int main(int argc, char **argv)
      * can't be built is named and left out */
     for (int i = 0; i < NBYSTANDERS; ++i) {
         Figure *f = &others[nothers];
-        CharacterLook look = { BYSTANDERS[i].race, BYSTANDERS[i].sex, 0, 0, 0, 0, { 0 } };
+        CharacterLook look = { BYSTANDERS[i].race, BYSTANDERS[i].sex, 0, 0, 0, 0, { 0 }, BYSTANDERS[i].facial_hair };
         int bad = BYSTANDERS[i].race ? figure_from_character(f, &chain, &look, why, sizeof why)
                                      : figure_from_display(f, &chain, BYSTANDERS[i].display, why, sizeof why);
         if (bad) { fprintf(stderr, "bystander %d left out: %s\n", i, why); continue; }

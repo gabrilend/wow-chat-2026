@@ -54,13 +54,44 @@ static const struct { int field, region; const char *folder; } ITEM_REGION[8] = 
 };
 /* }}} */
 
-/* {{{ static naked
- * Which pieces show on a naked character besides the body (0) and the hair
- * style: 401 bare hands, 501 bare feet, 702 ears, 1301 bare legs, 1501 the
- * back without a cape, 1702 the race's eye glow (a night elf's glowing
- * eyes; group 17's 1703 is a death knight's, 1701 none; a model without
- * 1702 shows no glow). Everything else belongs to clothes or effects. */
-static int naked(uint32_t id) { return id == 401 || id == 501 || id == 702 || id == 1301 || id == 1501 || id == 1702; }
+/* {{{ static bare_pieces: which variant of each piece group a bare
+ * character shows (173d; the owner, 2026-10-06: the game's own tables).
+ * A group g shows piece g * 100 + variant; variant 0 shows nothing.
+ *   groups 1, 3, 2 and 17: CharacterFacialHairStyles.dbc's row for the
+ *     race, sex and facial-hair choice. Its columns (3.3.5a, no id): 1
+ *     race, 2 sex, 3 the choice, 4-8 five variants: group 1, group 3,
+ *     group 2, group 16 (always 0), group 17 (the race's eye glow: a night
+ *     elf's 2, so 1702). The order 1, 3, 2 was measured: across every
+ *     playable race and sex, 185 of the variants it names are pieces the
+ *     model has, against 127 for 1, 2, 3; the 27 it misses miss either way
+ *     (a variant 1 on a model with no x01 piece: bare).
+ *   group 0 below 100: the hair style (CharHairGeosets, the caller's).
+ *   group 7, the ears: variant 2 (701 is earless; every race's ears are
+ *     702). No table names it; the client's own rule.
+ *   every other group: variant 1, its bare shape (401 bare hands, 501 bare
+ *     feet, 1301 bare legs, 1501 the back without a cape ...), where the
+ *     model has it; items change these (wear).
+ * A choice with no row is an error, said with the race and sex. */
+static int bare_pieces(MpqChain *archives, const CharacterLook *look, int variant[20], char *why, int why_len)
+{
+    for (int g = 0; g < 20; ++g) variant[g] = 1;
+    variant[7] = 2;
+    size_t len;
+    unsigned char *t = mpq_chain_read(archives, "DBFilesClient\\CharacterFacialHairStyles.dbc", &len, NULL);
+    Dbc d;
+    char w2[300];
+    if (!t || dbc_open(&d, t, len, w2, sizeof w2)) { free(t); snprintf(why, why_len, "CharacterFacialHairStyles: %s", t ? w2 : "not in the archives"); return -1; }
+    int found = 0;
+    for (uint32_t r = 0; r < d.rows && !found; ++r) {
+        if ((int)dbc_u32(&d, r, 1) != look->race || (int)dbc_u32(&d, r, 2) != look->sex || (int)dbc_u32(&d, r, 3) != look->facial_hair) continue;
+        static const int GROUP[5] = { 1, 3, 2, 16, 17 };
+        for (int i = 0; i < 5; ++i) variant[GROUP[i]] = (int)dbc_u32(&d, r, 4 + (uint32_t)i);
+        found = 1;
+    }
+    free(t);
+    if (!found) { snprintf(why, why_len, "no facial-hair choice %d for race %d sex %d in CharacterFacialHairStyles", look->facial_hair, look->race, look->sex); return -1; }
+    return 0;
+}
 /* }}} */
 
 /* {{{ static paste
@@ -285,10 +316,12 @@ int character_build(MpqChain *archives, const CharacterLook *look, Character *ou
     free(t);
     if (hair_piece < 0) { snprintf(why, why_len, "no hair style %d for race %d sex %d", look->hair_style, look->race, look->sex); return -1; }
 
+    int variant[20];
+    if (bare_pieces(archives, look, variant, why, why_len)) return -1;
     out->shown = calloc(out->model.npieces ? out->model.npieces : 1, 1);
     for (uint32_t i = 0; i < out->model.npieces; ++i) {
-        uint32_t id = out->model.pieces[i].id;
-        out->shown[i] = id == 0 || id == (uint32_t)hair_piece || naked(id);
+        uint32_t id = out->model.pieces[i].id, g = id / 100;
+        out->shown[i] = id == 0 || id == (uint32_t)hair_piece || (g > 0 && g < 20 && variant[g] > 0 && id == g * 100 + (uint32_t)variant[g]);
     }
 
     /* the pictures: CharSections rows are ID, race, sex, section (0 skin,

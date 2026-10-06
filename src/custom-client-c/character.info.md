@@ -9,8 +9,9 @@ For a general audience: a race's model holds every hair style and
 clothing shape at once, and its skin is painted from several pictures
 laid onto one sheet (body, face, scalp, underwear). The game picks which
 pieces show and which pictures go where from its own tables
-(CharHairGeosets, CharSections); this does the same for one character's
-choices. Naked for now: clothes come with items (617r5).
+(CharHairGeosets, CharacterFacialHairStyles, CharSections); this does
+the same for one character's choices, and dresses it in its items
+(173p).
 
 ## What it offers
 
