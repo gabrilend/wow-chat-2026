@@ -60,12 +60,25 @@ Verbatim, 2026-10-06: "can we work on doodad animations / lighting next?"
     after the dome, and tints each piece by its animated colour and
     transparency (`figure_tint`; `m2.c` now reads each unit's colour and
     transparency tracks).
-- **Not drawn yet:** an aurora lays two pictures on each piece (the light
-  under a mask) and scrolls the mask (picture-position animation). Drawn
-  with its first picture alone, it filled the sky as a solid yellow wall.
-  So a skybox whose pieces layer or move pictures is left out, and said
-  once. `m2.c` now gives each unit its layer count and whether its
-  picture positions move.
+- **Layered pictures, now drawn (the same day):** an aurora lays two
+  pictures on each piece (the light under a mask) and scrolls the mask.
+  Drawn first with its first picture alone, it filled the sky as a solid
+  yellow wall, so it was left out until the drawer could layer.
+  - **The reader:** `m2.c` now reads, per piece, each layer's picture,
+    which set of picture positions it uses (models carry two), its
+    picture-position animation, and the combine code.
+  - **The animations:** `anim_uv` reads picture-position animations,
+    sliding and stretching (turning is read but not applied).
+  - **The shader:** `doodads.c`'s shader lays a second layer over the
+    first by the combine code (this client's reading: the code's low 3
+    bits name how), each layer with its own positions and animation,
+    tinted by the piece's animated colour and transparency.
+  - **The skybox** is drawn by the doodad drawer (`doodads_skybox`,
+    `doodads_draw_skybox`): round the camera, unlit, unfogged, behind
+    everything. `sky.c` hands it the light's choice. The figure-based
+    skybox code is gone.
+  - **Seen:** Northrend's aurora now shows as a faint glow over the
+    glacier cliffs. Its colours are to be checked against the original.
 - **Also:**
   - `--map ID X Y` starts the client on any map (Map.dbc gives the folder
     name). Northrend at (3694, 3440) shows snow, a frozen lake and glacier
@@ -77,8 +90,8 @@ Verbatim, 2026-10-06: "can we work on doodad animations / lighting next?"
 approximately how it looks, but we can adjust it later if we need to."
 
 **Left:**
-- Drawing pieces that layer two pictures and move picture positions
-  (auroras; perhaps the moss, 173g).
+- The combine code's reading, and turning picture animations, checked
+  against the original.
 - Weather lights (storms), underwater light, and the ghost world's
   light after death.
 - The skybox (owner, 2026-10-06: "and skybox!"): many lights name a

@@ -186,6 +186,22 @@ int anim_track_value(const Anim *a, const AnimTrack *tr, int seq, uint32_t ms, u
 }
 /* }}} */
 
+/* {{{ anim_uv */
+void anim_uv(const Anim *a, int uvanim, int seq, uint32_t ms, uint32_t global_ms, float out[4])
+{
+    out[0] = out[1] = 0; out[2] = out[3] = 1;
+    if (uvanim < 0 || (uint32_t)uvanim >= u32(a->m2, 96)) return;
+    size_t at = u32(a->m2, 100) + (size_t)uvanim * 60;
+    if (at + 60 > a->m2_len) return;
+    AnimTrack slide = anim_track_at(a->m2, at), stretch = anim_track_at(a->m2, at + 40);
+    float v[3] = { 0, 0, 0 }, sc[3] = { 1, 1, 1 };
+    if (seq >= 0 && seq < a->nseqs && a->seqs[seq].length) ms %= a->seqs[seq].length;
+    anim_track_value(a, &slide, seq, ms, global_ms, ANIM_VEC3, v);
+    anim_track_value(a, &stretch, seq, ms, global_ms, ANIM_VEC3, sc);
+    out[0] = v[0]; out[1] = v[1]; out[2] = sc[0]; out[3] = sc[1];
+}
+/* }}} */
+
 /* {{{ anim_moves */
 static int track_moves(const Anim *a, const AnimTrack *tr, int seq)
 {

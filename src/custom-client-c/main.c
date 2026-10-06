@@ -337,7 +337,7 @@ int main(int argc, char **argv)
     if (water_init(&chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     LightTables lights;
     if (light_open(&lights, &chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
-    sky_init(&chain);
+    sky_init();
     LightNow light;
     int light_id = light_at(&lights, map_id, (float)elf.x, (float)elf.y, (float)elf.z, hours, &light);
     if (light_id < 0) printf("light: map %d has no lights in Light.dbc; a plain grey day is used\n", map_id);
@@ -473,7 +473,7 @@ int main(int argc, char **argv)
         rlMultMatrixf(MatrixToFloat(MatrixPerspective(60 * DEG2RAD, (double)GetScreenWidth() / GetScreenHeight(), 0.3, settings_num("farclip") * 1.25 + 100)));
         rlMatrixMode(RL_MODELVIEW);
         rlDisableBackfaceCulling();
-        sky_draw(eye, &light, dt);                       /* first, behind everything */
+        sky_draw(eye, &light);                           /* first, behind everything */
         ground_blob(at.x, at.y, (float)elf.z, 1.3f);     /* her shadow, a little wider than her shoulders */
         for (int i = 0; i < nothers; ++i)                /* theirs, sized by their display's scale */
             ground_blob((float)(other_at[i].x - ox), (float)(other_at[i].y - oy), (float)other_at[i].z, 1.3f * others[i].scale);

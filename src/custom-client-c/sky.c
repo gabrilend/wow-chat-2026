@@ -6,6 +6,7 @@
  * it behind everything.
  */
 #include "sky.h"
+#include "doodads.h"
 
 #include "raymath.h"
 #include "rlgl.h"
@@ -22,18 +23,12 @@ static const int   RING_SKY[] = { 4, 4, 3, 2, 1, 0 };           /* which sky col
 #define RADIUS 900.0f                                            /* inside the far plane (1600) */
 static Mesh     dome;
 static Material plain;
-static MpqChain *archives;
-static Figure   box;                  /* the skybox now drawn (box.name empty: none) */
-static char     box_path[128];        /* which skybox `box` is ("" none) */
-static MovesState box_moves;
-static float    box_scale;
-static double   box_ms;
+static char     box_path[128];        /* the skybox now drawn ("" none) */
 /* }}} */
 
 /* {{{ sky_init */
-void sky_init(MpqChain *chain)
+void sky_init(void)
 {
-    archives = chain;
     Mesh m = { 0 };
     m.vertexCount = RINGS * (SEGMENTS + 1);
     m.vertices = MemAlloc(sizeof(float) * 3 * m.vertexCount);
@@ -77,43 +72,16 @@ void sky_light_shader(Shader sh, const LightNow *l)
 /* }}} */
 
 /* {{{ sky_draw */
-/* the skybox the light names, loaded when it changes; one that can't be
- * read is said once and not drawn */
+/* the skybox the light names, handed to the doodads when it changes */
 static void skybox_for(const LightNow *light)
 {
     if (!strcmp(light->skybox, box_path)) return;
-    if (box_path[0]) figure_free(&box);
     snprintf(box_path, sizeof box_path, "%s", light->skybox);
-    if (!box_path[0]) return;
-    char why[400];
-    if (figure_from_model(&box, archives, box_path, why, sizeof why)) {
-        fprintf(stderr, "sky: the skybox %s: %s; none drawn\n", box_path, why);
-        memset(&box, 0, sizeof box);
-        return;
-    }
-    /* its size: the model's bounding radius (header 184) to 800 yards */
-    float radius = 0;
-    for (uint32_t i = 0; i < box.nrest; ++i) {
-        float r = sqrtf(box.rest[i].x * box.rest[i].x + box.rest[i].y * box.rest[i].y + box.rest[i].z * box.rest[i].z);
-        if (r > radius) radius = r;
-    }
-    box_scale = radius > 0 ? 800.0f / radius : 1;
-    /* a skybox built from pieces that lay two pictures over each other or
-     * move their pictures (an aurora: light under a scrolling mask) can't
-     * be drawn right yet; drawn with its first picture alone it fills the
-     * sky as a solid wall, so it isn't drawn at all (said once) */
-    for (int k = 0; k < box.npieces; ++k)
-        if (box.pieces[k].layers > 1 || box.pieces[k].moving_uv) {
-            fprintf(stderr, "sky: the skybox %s lays pictures over each other or moves them, which isn't drawn yet (173n); it is left out\n", box_path);
-            figure_free(&box);
-            memset(&box, 0, sizeof box);
-            return;
-        }
-    moves_init(&box_moves, &box.anim);
-    printf("sky: the skybox %s\n", box_path);
+    doodads_skybox(box_path);
+    if (box_path[0]) printf("sky: the skybox %s\n", box_path);
 }
 
-void sky_draw(Vector3 eye, const LightNow *light, float dt)
+void sky_draw(Vector3 eye, const LightNow *light)
 {
     skybox_for(light);
     for (int r = 0; r < RINGS; ++r)
@@ -126,25 +94,7 @@ void sky_draw(Vector3 eye, const LightNow *light, float dt)
     rlDisableDepthMask();
     DrawMesh(dome, plain, MatrixTranslate(eye.x, eye.y, eye.z));
     rlDrawRenderBatchActive();
-    if (box.npieces) {
-        box_ms += dt * 1000.0;
-        moves_advance(&box_moves, &box.anim, dt);
-        figure_bend(&box, &box_moves, (uint32_t)box_ms);
-        Matrix at = MatrixMultiply(MatrixScale(box_scale, box_scale, box_scale), MatrixTranslate(eye.x, eye.y, eye.z));
-        for (int k = 0; k < box.npieces; ++k) {
-            BeginBlendMode(box.pieces[k].blend >= 3 ? BLEND_ADDITIVE : BLEND_ALPHA);
-            float tint[4];
-            figure_tint(&box, k, &box_moves, (uint32_t)box_ms, tint);
-            plain.maps[MATERIAL_MAP_DIFFUSE].color = (Color){ (unsigned char)(fminf(tint[0], 1) * 255), (unsigned char)(fminf(tint[1], 1) * 255),
-                                                             (unsigned char)(fminf(tint[2], 1) * 255), (unsigned char)(fminf(tint[3], 1) * 255) };
-            plain.maps[MATERIAL_MAP_DIFFUSE].texture = box.pieces[k].tex;
-            DrawMesh(box.pieces[k].mesh, plain, at);
-            rlDrawRenderBatchActive();
-            EndBlendMode();
-        }
-        plain.maps[MATERIAL_MAP_DIFFUSE].texture = (Texture2D){ rlGetTextureIdDefault(), 1, 1, 1, 7 };
-        plain.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
-    }
+    doodads_draw_skybox(eye);
     rlEnableDepthMask();
     rlEnableDepthTest();
 }

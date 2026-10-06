@@ -9,10 +9,9 @@
  *
  * A skybox (173n): when the zone's light names one (LightSkybox: in
  * Kalimdor and the Eastern Kingdoms none do; in Northrend the auroras),
- * its model is drawn round the camera after the dome, behind everything,
- * sized to fit inside the far plane (its bounding radius to 800 yards),
- * playing its standing animation, each piece blended as it says (added
- * light for the auroras), unlit.
+ * the doodad drawer draws its model round the camera after the dome
+ * (doodads_skybox): behind everything, sized to 800 yards, posed,
+ * layered and tinted as any doodad, unlit.
  *
  * Rings, by height above the horizon (degrees): -30 and 0 the horizon
  * colour (sky[4]), 6 sky[3], 15 sky[2], 35 sky[1], 90 overhead (sky[0]).
@@ -22,16 +21,15 @@
 #ifndef EG_SKY_H
 #define EG_SKY_H
 
-#include "figure.h"
 #include "light.h"
 #include "raylib.h"
 
-void sky_init(MpqChain *chain);
+void sky_init(void);
 
 /* Hands a shader the light: its uniforms sun_dir, sun_col, shade_col,
  * fog_col (vec3) and fog_range (vec2: where the fog starts and ends,
  * yards). Every world shader (ground, doodads, figures) declares them. */
 void sky_light_shader(Shader sh, const LightNow *light);
-void sky_draw(Vector3 eye, const LightNow *light, float dt);
+void sky_draw(Vector3 eye, const LightNow *light);
 
 #endif

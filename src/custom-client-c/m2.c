@@ -35,6 +35,9 @@ int m2_read(const unsigned char *m2, size_t m2_len, const unsigned char *skin, s
     FITS(m2_len, u32(m2, 84), u32(m2, 80), 16, "the model's pictures")
     FITS(m2_len, u32(m2, 116), u32(m2, 112), 4, "the model's materials")
     FITS(m2_len, u32(m2, 132), u32(m2, 128), 2, "the model's picture lookup")
+    FITS(m2_len, u32(m2, 140), u32(m2, 136), 2, "the model's picture-position-set lookup")
+    FITS(m2_len, u32(m2, 156), u32(m2, 152), 2, "the model's picture-animation lookup")
+    FITS(m2_len, u32(m2, 100), u32(m2, 96), 60, "the model's picture animations")
     FITS(skin_len, u32(skin, 8), u32(skin, 4), 2, "the skin's point list")
     FITS(skin_len, u32(skin, 16), u32(skin, 12), 2, "the skin's triangles")
     FITS(skin_len, u32(skin, 32), u32(skin, 28), 48, "the skin's pieces")
@@ -50,6 +53,7 @@ int m2_read(const unsigned char *m2, size_t m2_len, const unsigned char *skin, s
         v->x = f32(m2, at); v->y = f32(m2, at + 4); v->z = f32(m2, at + 8);
         v->nx = f32(m2, at + 20); v->ny = f32(m2, at + 24); v->nz = f32(m2, at + 28);
         v->u = f32(m2, at + 32); v->v = f32(m2, at + 36);
+        v->u2 = f32(m2, at + 40); v->v2 = f32(m2, at + 44);
     }
 
     uint32_t nt = u32(m2, 80), ot = u32(m2, 84);
@@ -101,6 +105,18 @@ int m2_read(const unsigned char *m2, size_t m2_len, const unsigned char *skin, s
                                   && (int16_t)u16(m2, u32(m2, 156) + (size_t)uv_look * 2) >= 0;
         out->units[i].piece = u16(skin, at + 4);
         out->units[i].texture = look < nl ? u16(m2, ol + (size_t)look * 2) : 0;
+        /* each layer's picture, picture-position set and animation, by the
+         * unit's combo indices into the lookup tables (pictures 128/132,
+         * position sets 136/140, animations 152/156) */
+        uint32_t coord_look = u16(skin, at + 18), anim_look = u16(skin, at + 22);
+        out->units[i].shader = (uint16_t)u16(skin, at + 2);
+        for (int l = 0; l < 2; ++l) {
+            out->units[i].tex[l] = (look + l < nl) ? (int)u16(m2, ol + (size_t)(look + l) * 2) : -1;
+            out->units[i].uvset[l] = (coord_look + l < u32(m2, 136)) ? (int)(int16_t)u16(m2, u32(m2, 140) + (size_t)(coord_look + l) * 2) : 0;
+            out->units[i].uvanim[l] = (anim_look + l < u32(m2, 152)) ? (int)(int16_t)u16(m2, u32(m2, 156) + (size_t)(anim_look + l) * 2) : -1;
+            if (out->units[i].tex[l] >= (int)nt) out->units[i].tex[l] = -1;
+            if (out->units[i].uvanim[l] >= (int)u32(m2, 96)) out->units[i].uvanim[l] = -1;
+        }
         if (mat < u32(m2, 112)) {
             out->units[i].flags = (uint16_t)u16(m2, u32(m2, 116) + (size_t)mat * 4);
             out->units[i].blend = (uint16_t)u16(m2, u32(m2, 116) + (size_t)mat * 4 + 2);
@@ -138,6 +154,10 @@ int m2_collision(const unsigned char *m2, size_t len, float **tris, int *ntri, c
     *ntri = kept;
     return 0;
 }
+/* }}} */
+
+/* {{{ m2_combine */
+int m2_combine(uint16_t shader) { return shader & 0x7; }
 /* }}} */
 
 /* {{{ m2_free */

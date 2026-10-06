@@ -18,7 +18,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef struct { float x, y, z, nx, ny, nz, u, v; } M2Vertex;          /* model space: +x front, +y left, +z up */
+typedef struct { float x, y, z, nx, ny, nz, u, v, u2, v2; } M2Vertex; /* model space: +x front, +y left, +z up; two sets of picture positions */
 typedef struct { uint32_t kind; char file[260]; } M2Texture;          /* kind 0 named file; 1 skin; 2 cape; 6 hair; ... */
 typedef struct { uint32_t id, first, count; } M2Piece;                 /* id = group * 100 + variant; first/count: triangle indices */
 /* A unit: one piece drawn with one picture, and how (its material, from
@@ -37,7 +37,21 @@ typedef struct {
     int      fade;                    /* into its transparency tracks (header 88, through the lookup at 144), -1 none */
     int      layers;                  /* how many pictures it lays over each other (skin unit +14; usually 1) */
     int      moving_uv;               /* 1 when its picture positions are animated (skin unit +22 names a UV animation) */
+    /* per layer (up to 2): its picture (model texture slot), which set of
+     * picture positions it uses (0 first, 1 second; -1 a reflection, drawn
+     * with the first), and its picture-position animation (into the
+     * header's UV animations, 96; -1 none); and the combine code (skin
+     * unit +2), saying how layer 2 joins layer 1 (m2.c's m2_combine) */
+    int      tex[2], uvset[2], uvanim[2];
+    uint16_t shader;
 } M2Unit;
+
+/* How a unit's second layer joins its first, from its combine code.
+ * This client's reading, to be compared with the original: the low 3 bits
+ * name the second stage: 0 opaque (the second replaces), 1 multiply, 2 decal
+ * (laid over by its alpha), 3 add, 4 multiply twice, 5 fade, 6 multiply
+ * twice without alpha, 7 add without alpha. */
+int m2_combine(uint16_t shader);
 
 typedef struct {
     M2Vertex  *vertices;  uint32_t nvertices;

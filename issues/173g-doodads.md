@@ -117,8 +117,13 @@ flat? But only some of them)". Likely causes, to be confirmed:
 - So the arch's own spot is needed, from the owner: its place, or a
   picture (asked in docs/custom-client-ingame-checks.md).
 
+**Two-picture pieces, moving pictures, animated tints (2026-10-06,
+173n's work):** every doodad now draws them. Drawn as one picture, a
+two-picture piece can look stretched, so the moss may be fixed if its
+arch is such a piece on another tile. To check in-game.
+
 **Left:**
-- The moss fault above.
+- The moss fault above (to check: perhaps fixed).
 - Pieces whose picture the game chooses at run time (none so far at
   Astranaar).
 - Particles (torch flames, wisps, firefly glow) and picture animations

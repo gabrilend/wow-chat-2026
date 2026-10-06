@@ -23,10 +23,12 @@ that issue and strike it here (keep the line, so the history stays).
 6. **Water** (173r): the lake round Astranaar. Its colour,
    see-throughness, and how fast its ripples run (15 pictures a second
    here).
-7. **The moss over the archway near the bridge** (173g): where exactly
-   is it (which bridge, or a picture)? The likely causes have been ruled
-   out on Astranaar's own tile, so it may be on a neighbouring tile, or a
-   different fault.
+7. **The moss over the archway near the bridge** (173g): is it still
+   stretched? Two-picture pieces and moving pictures are now drawn, which
+   may have fixed it. If not, where exactly is it (which bridge, or a
+   picture)?
+7b. **Northrend's aurora** (173n): `--map 571 3694 3440 --hour 23`. Is its
+   glow the original's colour and strength?
    **The halos** should now be round from every side (lamps, wisps,
    fireflies): check they look like the original's orbs.
 8. **The tauren** (173d, 173p): his tail and coat now show (they used a

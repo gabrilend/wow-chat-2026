@@ -25,6 +25,11 @@
 #include <strings.h>
 
 /* {{{ the shader
+ * A piece lays one or two pictures (`layers`), each from its own set of
+ * picture positions (`set0`, `set1`: 0 the first, 1 the second), each
+ * slid and stretched by its picture animation (`move0`, `move1`: slide
+ * x y, stretch x y), the second joined to the first by `combine` (m2.h's
+ * m2_combine), then tinted by its animated colour and opacity (`tint`).
  * One copy's place arrives per instance (instanceTransform); `cutoff`
  * cuts out pixels whose alpha is under it (leaves), -1 for none. Lit by
  * the zone's sun and shade (173n), unless the piece is marked unlit.
@@ -33,21 +38,34 @@
  * client's first reading of it, to be compared with the original's). */
 static const char *VS =
     "#version 330\n"
-    "in vec3 vertexPosition; in vec3 vertexNormal; in vec2 vertexTexCoord; in vec4 vertexColor; in mat4 instanceTransform;\n"
+    "in vec3 vertexPosition; in vec3 vertexNormal; in vec2 vertexTexCoord; in vec2 vertexTexCoord2; in vec4 vertexColor; in mat4 instanceTransform;\n"
     "uniform mat4 mvp; uniform vec3 eye;\n"
-    "out vec3 n; out vec2 uv; out vec4 col; out float dist;\n"
+    "out vec3 n; out vec2 uv; out vec2 uv2; out vec4 col; out float dist;\n"
     "void main() {\n"
     "  vec4 w = instanceTransform * vec4(vertexPosition, 1.0);\n"
-    "  n = mat3(instanceTransform) * vertexNormal; uv = vertexTexCoord; col = vertexColor;\n"
+    "  n = mat3(instanceTransform) * vertexNormal; uv = vertexTexCoord; uv2 = vertexTexCoord2; col = vertexColor;\n"
     "  dist = length(w.xyz - eye);\n"
     "  gl_Position = mvp * w;\n"
     "}\n";
 static const char *FS =
     "#version 330\n"
-    "in vec3 n; in vec2 uv; in vec4 col; in float dist; out vec4 frag;\n"
-    "uniform sampler2D texture0; uniform float cutoff; uniform float unlit; uniform float indoor; uniform vec3 sun_dir, sun_col, shade_col, fog_col; uniform vec2 fog_range;\n"
+    "in vec3 n; in vec2 uv; in vec2 uv2; in vec4 col; in float dist; out vec4 frag;\n"
+    "uniform sampler2D texture0, texture1; uniform float cutoff; uniform float unlit; uniform float indoor; uniform vec3 sun_dir, sun_col, shade_col, fog_col; uniform vec2 fog_range;\n"
+    "uniform int layers, combine, set0, set1; uniform vec4 move0, move1, tint;\n"
     "void main() {\n"
-    "  vec4 t = texture(texture0, uv);\n"
+    "  vec2 a = (set0 == 1 ? uv2 : uv) * move0.zw + move0.xy;\n"
+    "  vec4 t = texture(texture0, a);\n"
+    "  if (layers > 1) {\n"
+    "    vec4 u = texture(texture1, (set1 == 1 ? uv2 : uv) * move1.zw + move1.xy);\n"
+    "    if (combine == 0) t = u;\n"
+    "    else if (combine == 1) t = t * u;\n"
+    "    else if (combine == 2) t = vec4(mix(t.rgb, u.rgb, u.a), t.a);\n"
+    "    else if (combine == 3 || combine == 7) t = vec4(t.rgb + u.rgb, combine == 3 ? t.a + u.a : t.a);\n"
+    "    else if (combine == 4) t = t * u * 2.0;\n"
+    "    else if (combine == 5) t = vec4(mix(t.rgb, u.rgb, u.a), t.a);\n"
+    "    else t = vec4(t.rgb * u.rgb * 2.0, t.a);\n"
+    "  }\n"
+    "  t *= tint;\n"
     "  if (t.a < cutoff) discard;\n"
     "  vec3 light = mix(shade_col + sun_col * max(dot(normalize(n), sun_dir), 0.0), vec3(1.0), unlit);\n"
     "  light = mix(light, col.rgb + 0.35, indoor);\n"
@@ -62,7 +80,12 @@ static const char *FS =
  * places (as Raylib matrices, relative to the drawing origin), each with
  * the tile that brought it. Which tile places a doodad listed by two is
  * kept with the placements, below (seen_list). */
-typedef struct { Mesh mesh; int picture; uint16_t blend, flags; int indoor; uint32_t *point_of; } DoodadPiece;
+typedef struct {
+    Mesh mesh; int picture; uint16_t blend, flags; int indoor; uint32_t *point_of;
+    int picture2, layers, combine;    /* the second layer's picture (-1 none), how many, how joined */
+    int set[2], uvanim[2];            /* each layer's picture-position set and animation (-1 none) */
+    int colour, fade;                 /* its animated tint's tracks (m2.h), -1 none */
+} DoodadPiece;
 /* A model that moves while standing (trees swaying, lamps flickering)
  * also keeps its skeleton, its points as made, and per piece which model
  * point each mesh corner is (point_of); every frame its points are bent
@@ -75,6 +98,7 @@ typedef struct {
     int    *copy_tile;                /* per copy: the map tile that brought it (173s) */
     Anim   *anim;     int stand;
     int     moving;                   /* its stand animation moves bones: bend it */
+    int     needs_anim;               /* a piece's pictures move, or its tint is animated: keep the skeleton's file */
     /* camera-facing bones (glow orbs on lamps, wisps): each copy is turned
      * its own way, so each is posed and bent alone, into its own meshes
      * (copy_mesh[copy * npieces + piece], made when first needed) */
@@ -92,6 +116,7 @@ typedef struct {
     /* its solid shape (173q): triangles, 9 floats each, model space; every
      * copy placed adds them, placed, to the collision world */
     float      *solid;     int nsolid;
+    float       radius;               /* the farthest point from its middle, as made (for skyboxes) */
 } DoodadModel;
 #define PARTICLE_REACH 150.0f         /* yards: copies further from the camera run no particles */
 
@@ -107,7 +132,9 @@ static Building *buildings; static int nbuildings, buildings_cap;
 static int       skipped_pieces, moving_models, emitting_models;
 static Shader    shader;
 static Material  material;
-static int       loc_eye, loc_cutoff, loc_unlit, loc_indoor;
+static int       loc_eye, loc_cutoff, loc_unlit, loc_indoor, loc_layers, loc_combine, loc_set0, loc_set1, loc_move0, loc_move1, loc_tint;
+static uint32_t  clock_ms;            /* the world's animation clock (doodads_animate) */
+static int       skybox = -1;         /* the model drawn round the camera (doodads_skybox), -1 none */
 static Vector3   view_right = { 1, 0, 0 }, view_up = { 0, 0, 1 };   /* the camera's, for particles (doodads_animate) */
 /* }}} */
 
@@ -123,6 +150,14 @@ int doodads_init(MpqChain *c, CollideWorld *collide, char *why, int why_len)
     loc_cutoff = GetShaderLocation(shader, "cutoff");
     loc_unlit = GetShaderLocation(shader, "unlit");
     loc_indoor = GetShaderLocation(shader, "indoor");
+    loc_layers = GetShaderLocation(shader, "layers");
+    loc_combine = GetShaderLocation(shader, "combine");
+    loc_set0 = GetShaderLocation(shader, "set0");
+    loc_set1 = GetShaderLocation(shader, "set1");
+    loc_move0 = GetShaderLocation(shader, "move0");
+    loc_move1 = GetShaderLocation(shader, "move1");
+    loc_tint = GetShaderLocation(shader, "tint");
+    shader.locs[SHADER_LOC_MAP_METALNESS] = GetShaderLocation(shader, "texture1");   /* the second layer's slot */
     material = LoadMaterialDefault();
     material.shader = shader;
     return 0;
@@ -229,8 +264,17 @@ static int load_model(const char *name)
         fprintf(stderr, "doodads: %s's solid shape: %s; it is walked through\n", name, why);
     free(m2);
     md->moving = moving;
+    for (uint32_t i = 0; i < mod.nvertices; ++i) {
+        float r = sqrtf(mod.vertices[i].x * mod.vertices[i].x + mod.vertices[i].y * mod.vertices[i].y + mod.vertices[i].z * mod.vertices[i].z);
+        if (r > md->radius) md->radius = r;
+    }
     md->billboard = an->npoints == mod.nvertices && anim_has_billboards(an);   /* an is all zero when its skeleton failed to read */
-    if (moving || md->nemitters || md->billboard) {
+    /* pieces whose pictures move, or whose tint is animated, read their
+     * tracks from the skeleton's file too */
+    for (uint32_t u = 0; u < mod.nunits; ++u)
+        if (mod.units[u].uvanim[0] >= 0 || mod.units[u].uvanim[1] >= 0 || mod.units[u].colour >= 0 || mod.units[u].fade >= 0) md->needs_anim = 1;
+    if (an->m2 == NULL) md->needs_anim = 0;               /* its skeleton failed to read: nothing moves */
+    if (moving || md->nemitters || md->billboard || md->needs_anim) {
         md->anim = an;
         md->poses = malloc(sizeof *md->poses * (an->nbones ? an->nbones : 1));
     }
@@ -252,6 +296,9 @@ static int load_model(const char *name)
         if (un.piece >= mod.npieces || un.texture >= mod.ntextures) continue;
         if (mod.textures[un.texture].kind != 0) { ++skipped_pieces; continue; }   /* picture chosen at run time */
         int pic = picture(mod.textures[un.texture].file);
+        int layers = un.layers > 1 && un.tex[1] >= 0 && mod.textures[un.tex[1]].kind == 0 && mod.textures[un.tex[1]].file[0] ? 2 : 1;
+        int pic2 = layers > 1 ? picture(mod.textures[un.tex[1]].file) : -1;
+        if (layers > 1 && pic2 < 0) layers = 1;
         if (pic < 0) continue;
         M2Piece p = mod.pieces[un.piece];
         if (p.first + p.count > mod.nindices || p.count == 0) continue;
@@ -261,6 +308,7 @@ static int load_model(const char *name)
         m.vertices  = MemAlloc(sizeof(float) * 3 * p.count);
         m.normals   = MemAlloc(sizeof(float) * 3 * p.count);
         m.texcoords = MemAlloc(sizeof(float) * 2 * p.count);
+        m.texcoords2 = MemAlloc(sizeof(float) * 2 * p.count);
         int ok = 1;
         for (uint32_t i = 0; i < p.count; ++i) {
             uint32_t k = mod.indices[p.first + i];
@@ -269,6 +317,7 @@ static int load_model(const char *name)
             m.vertices[i * 3] = v.x; m.vertices[i * 3 + 1] = v.y; m.vertices[i * 3 + 2] = v.z;
             m.normals[i * 3] = v.nx; m.normals[i * 3 + 1] = v.ny; m.normals[i * 3 + 2] = v.nz;
             m.texcoords[i * 2] = v.u; m.texcoords[i * 2 + 1] = v.v;
+            m.texcoords2[i * 2] = v.u2; m.texcoords2[i * 2 + 1] = v.v2;
         }
         if (!ok) { UnloadMesh(m); fprintf(stderr, "doodads: %s: a piece names a point the model doesn't have; piece left out\n", name); continue; }
         uint32_t *point_of = NULL;
@@ -277,7 +326,9 @@ static int load_model(const char *name)
             for (uint32_t i = 0; i < p.count; ++i) point_of[i] = mod.indices[p.first + i];
         }
         UploadMesh(&m, md->moving);                        /* a moving model's meshes are refreshed every frame */
-        md->pieces[md->npieces++] = (DoodadPiece){ m, pic, un.blend, un.flags, 0, point_of };
+        md->pieces[md->npieces++] = (DoodadPiece){ m, pic, un.blend, un.flags, 0, point_of, pic2, layers, m2_combine(un.shader),
+                                                   { un.uvset[0] == 1, un.uvset[1] == 1 }, { un.uvanim[0], layers > 1 ? un.uvanim[1] : -1 },
+                                                   un.colour, un.fade };
     }
     m2_free(&mod);
     return nmodels++;
@@ -363,7 +414,7 @@ static int load_building(const char *name)
             }
             UploadMesh(&m, false);
             int indoor = (g.flags & 0x2000) && g.has_colours;
-            md->pieces[md->npieces++] = (DoodadPiece){ m, pic, (uint16_t)mat.blend, (uint16_t)mat.flags, indoor, NULL };
+            md->pieces[md->npieces++] = (DoodadPiece){ m, pic, (uint16_t)mat.blend, (uint16_t)mat.flags, indoor, NULL, -1, 1, 1, { 0, 0 }, { -1, -1 }, -1, -1 };
         }
         wmo_free_group(&g);
     }
@@ -513,6 +564,31 @@ void doodads_drop_tile(int tile)
 }
 /* }}} */
 
+/* {{{ static piece_tint: a piece's animated colour and opacity now
+ * (header 76: colour and opacity track pairs, 40 bytes; 92: transparency
+ * tracks, 20 bytes), on the model's stand animation */
+static void piece_tint(const DoodadModel *md, const DoodadPiece *p, float rgba[4])
+{
+    const unsigned char *m2 = md->anim->m2;
+    uint32_t ms = clock_ms;
+    if (p->colour >= 0) {
+        size_t at = (size_t)(m2[76] | m2[77] << 8 | m2[78] << 16 | (uint32_t)m2[79] << 24) + (size_t)p->colour * 40;
+        AnimTrack c = anim_track_at(m2, at), a = anim_track_at(m2, at + 20);
+        float col[3] = { 1, 1, 1 }, op = 1;
+        anim_track_value(md->anim, &c, md->stand, ms, ms, ANIM_VEC3, col);
+        anim_track_value(md->anim, &a, md->stand, ms, ms, ANIM_SHARE, &op);
+        rgba[0] = col[0]; rgba[1] = col[1]; rgba[2] = col[2]; rgba[3] = op;
+    }
+    if (p->fade >= 0) {
+        size_t at = (size_t)(m2[92] | m2[93] << 8 | m2[94] << 16 | (uint32_t)m2[95] << 24) + (size_t)p->fade * 20;
+        AnimTrack t = anim_track_at(m2, at);
+        float op = 1;
+        anim_track_value(md->anim, &t, md->stand, ms, ms, ANIM_SHARE, &op);
+        rgba[3] *= op;
+    }
+}
+/* }}} */
+
 /* {{{ doodads_draw
  * Two passes: blend 0 and 1 (solid, cut-out) writing depth; then 2-6
  * (see-through, added, multiplied) over them without writing depth. */
@@ -526,6 +602,21 @@ static void draw_pass(int see_through)
             if ((p->blend >= 2) != see_through) continue;
             float cutoff = p->blend == 0 ? -1.0f : p->blend == 1 ? 0.5f : 1.0f / 255.0f;
             float unlit = (p->flags & 0x1) ? 1.0f : 0.0f, indoor = p->indoor ? 1.0f : 0.0f;
+            /* its layers, their picture animations and its tint, now */
+            float move0[4] = { 0, 0, 1, 1 }, move1[4] = { 0, 0, 1, 1 }, tint[4] = { 1, 1, 1, 1 };
+            if (md->anim) {
+                anim_uv(md->anim, p->uvanim[0], md->stand, clock_ms, clock_ms, move0);
+                anim_uv(md->anim, p->uvanim[1], md->stand, clock_ms, clock_ms, move1);
+                piece_tint(md, p, tint);
+            }
+            SetShaderValue(shader, loc_layers, &p->layers, SHADER_UNIFORM_INT);
+            SetShaderValue(shader, loc_combine, &p->combine, SHADER_UNIFORM_INT);
+            SetShaderValue(shader, loc_set0, &p->set[0], SHADER_UNIFORM_INT);
+            SetShaderValue(shader, loc_set1, &p->set[1], SHADER_UNIFORM_INT);
+            SetShaderValue(shader, loc_move0, move0, SHADER_UNIFORM_VEC4);
+            SetShaderValue(shader, loc_move1, move1, SHADER_UNIFORM_VEC4);
+            SetShaderValue(shader, loc_tint, tint, SHADER_UNIFORM_VEC4);
+            material.maps[MATERIAL_MAP_METALNESS].texture = p->picture2 >= 0 ? pictures[p->picture2].tex : pictures[p->picture].tex;
             SetShaderValue(shader, loc_indoor, &indoor, SHADER_UNIFORM_FLOAT);
             SetShaderValue(shader, loc_cutoff, &cutoff, SHADER_UNIFORM_FLOAT);
             SetShaderValue(shader, loc_unlit, &unlit, SHADER_UNIFORM_FLOAT);
@@ -693,12 +784,13 @@ static void bend_copies(DoodadModel *md, uint32_t ms, Vector3 eye)
 
 void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target)
 {
+    clock_ms = ms;
     Vector3 ahead = Vector3Normalize(Vector3Subtract(target, eye));
     view_right = Vector3Normalize(Vector3CrossProduct(ahead, (Vector3){ 0, 0, 1 }));
     view_up = Vector3CrossProduct(view_right, ahead);
     for (int i = 0; i < nmodels; ++i) {
         DoodadModel *md = &models[i];
-        if (!md->anim || !md->ncopies) continue;
+        if (!md->anim || (!md->ncopies && i != skybox)) continue;
         anim_pose(md->anim, md->stand, ms, ms, md->poses);
         if (md->nemitters) run_particles(md, ms, dt, eye);
         if (md->billboard) { bend_copies(md, ms, eye); continue; }
@@ -719,6 +811,54 @@ void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target)
             UpdateMeshBuffer(*m, 2, m->normals, (int)(sizeof(float) * 3 * m->vertexCount), 0);    /* facings */
         }
     }
+}
+/* }}} */
+
+/* {{{ doodads_skybox, doodads_draw_skybox (173n) */
+void doodads_skybox(const char *path)
+{
+    skybox = path && path[0] ? load_model(path) : -1;
+    if (skybox >= 0 && !models[skybox].npieces) { fprintf(stderr, "sky: the skybox %s has nothing to draw\n", path); skybox = -1; }
+}
+void doodads_draw_skybox(Vector3 eye)
+{
+    if (skybox < 0) return;
+    DoodadModel *md = &models[skybox];
+    float s = md->radius > 0 ? 800.0f / md->radius : 1;                       /* inside the far plane */
+    Matrix at = MatrixMultiply(MatrixScale(s, s, s), MatrixTranslate(eye.x, eye.y, eye.z));
+    float unlit = 1, indoor = 0, far_fog[2] = { 1e6f, 2e6f };
+    SetShaderValue(shader, loc_eye, &eye, SHADER_UNIFORM_VEC3);
+    SetShaderValue(shader, GetShaderLocation(shader, "fog_range"), far_fog, SHADER_UNIFORM_VEC2);
+    SetShaderValue(shader, loc_unlit, &unlit, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(shader, loc_indoor, &indoor, SHADER_UNIFORM_FLOAT);
+    rlDisableDepthTest();
+    rlDisableDepthMask();
+    for (int k = 0; k < md->npieces; ++k) {
+        DoodadPiece *p = &md->pieces[k];
+        float move0[4] = { 0, 0, 1, 1 }, move1[4] = { 0, 0, 1, 1 }, tint[4] = { 1, 1, 1, 1 };
+        if (md->anim) {
+            anim_uv(md->anim, p->uvanim[0], md->stand, clock_ms, clock_ms, move0);
+            anim_uv(md->anim, p->uvanim[1], md->stand, clock_ms, clock_ms, move1);
+            piece_tint(md, p, tint);
+        }
+        float cutoff = -1;
+        SetShaderValue(shader, loc_cutoff, &cutoff, SHADER_UNIFORM_FLOAT);
+        SetShaderValue(shader, loc_layers, &p->layers, SHADER_UNIFORM_INT);
+        SetShaderValue(shader, loc_combine, &p->combine, SHADER_UNIFORM_INT);
+        SetShaderValue(shader, loc_set0, &p->set[0], SHADER_UNIFORM_INT);
+        SetShaderValue(shader, loc_set1, &p->set[1], SHADER_UNIFORM_INT);
+        SetShaderValue(shader, loc_move0, move0, SHADER_UNIFORM_VEC4);
+        SetShaderValue(shader, loc_move1, move1, SHADER_UNIFORM_VEC4);
+        SetShaderValue(shader, loc_tint, tint, SHADER_UNIFORM_VEC4);
+        material.maps[MATERIAL_MAP_DIFFUSE].texture = pictures[p->picture].tex;
+        material.maps[MATERIAL_MAP_METALNESS].texture = p->picture2 >= 0 ? pictures[p->picture2].tex : pictures[p->picture].tex;
+        BeginBlendMode(p->blend >= 3 ? BLEND_ADDITIVE : BLEND_ALPHA);
+        DrawMeshInstanced(p->mesh, material, &at, 1);
+        EndBlendMode();
+    }
+    rlDrawRenderBatchActive();
+    rlEnableDepthMask();
+    rlEnableDepthTest();
 }
 /* }}} */
 

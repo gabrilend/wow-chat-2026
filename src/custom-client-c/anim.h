@@ -96,6 +96,13 @@ enum { ANIM_VEC3, ANIM_TURN, ANIM_FLOAT, ANIM_BYTE, ANIM_SHARE };   /* ANIM_SHAR
 AnimTrack anim_track_at(const unsigned char *m2, size_t at);   /* a track's 20-byte head, read at `at` */
 int  anim_track_value(const Anim *a, const AnimTrack *tr, int seq, uint32_t ms, uint32_t global_ms, int kind, float *out);
 
+/* A picture-position animation's state at a moment (header 96 count, 100
+ * offset; 60 bytes each: slide, a vec3 track; turn, a quaternion track;
+ * stretch, a vec3 track): out = slide x, slide y, stretch x, stretch y
+ * (positions become position * stretch + slide). The turn isn't applied
+ * (this client: none seen yet that turns). */
+void anim_uv(const Anim *a, int uvanim, int seq, uint32_t ms, uint32_t global_ms, float out[4]);
+
 /* 1 when animation `seq` moves any bone: some track has more than one
  * moment in it (or in a global sequence it uses). A model whose standing
  * animation doesn't move is drawn as made, never bent (most rocks). */

@@ -45,6 +45,13 @@ void doodads_draw(Vector3 eye, const LightNow *light);
  * at `target`) for `dt` seconds (173o). */
 void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target);
 
+/* The skybox (173n): the model at `path` (an M2; "" or NULL: none) is
+ * drawn round the camera, behind everything, unlit and unfogged, sized to
+ * 800 yards, posed by its stand animation and tinted and layered as any
+ * doodad. doodads_draw_skybox draws it (call it first). */
+void doodads_skybox(const char *path);
+void doodads_draw_skybox(Vector3 eye);
+
 /* How many models and copies are loaded, how many pieces were left out
  * because their picture is chosen by the game at run time, how many
  * models move, and how many have particles (for the start-up report). */
