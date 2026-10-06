@@ -58,6 +58,8 @@ local TD      = dofile(script_dir() .. "data/buddy-talent-data.lua")
 local JOKES   = dofile(script_dir() .. "data/sargobras-jokes.lua")
 local Spender = dofile(script_dir() .. "lib/buddy-talent-spender.lua")
 local Choice  = dofile(script_dir() .. "lib/buddy-choice.lua")
+local Valleys = dofile(script_dir() .. "data/starting-valleys.lua")
+local Deck    = dofile(script_dir() .. "lib/valley-deck.lua")
 
 local VALLEY, WANDERER                   = 6170001, 6170002
 local TEXT_OWED, TEXT_NOT_YOURS, TEXT_NONE = 6170001, 6170002, 6170003
@@ -69,6 +71,7 @@ local PLAYER_EVENT_ON_LEVEL_CHANGE = 13
 local GOSSIP_EVENT_ON_HELLO        = 1
 local GOSSIP_EVENT_ON_SELECT       = 2
 local GOSSIP_ICON_CHAT             = 0
+local GOSSIP_ICON_FLIGHT           = 2    -- the wings: a journey
 local TEMPSUMMON_MANUAL_DESPAWN    = 8
 local STAND_STATE_SIT, STAND_STATE_STAND = 1, 0
 local CLASS_DEATH_KNIGHT           = 6
@@ -152,6 +155,7 @@ local INTID_NAME                                         = 3
 -- If its box answer arrives (gossip-trace.log: "answer received ... code"),
 -- the box works once per side per account. Remove with gossip-trace.lua.
 local INTID_NAME_BOX                                     = 4
+local INTID_ELSEWHERE                                    = 5   -- "Actually, can I go somewhere else?" (155d1)
 
 -- {{{ clan names
 -- The server's own rule for guild names is checked by its guild command;
@@ -367,6 +371,43 @@ end
 BuddiesListenForClanName = function(player, creature) listen_for_name(player, creature) end
 -- }}}
 
+-- {{{ local function may_go_elsewhere
+-- The valley Sargobras offers "somewhere else" to level-1 characters only
+-- (155d1). Nothing is stored: at level 2 the option is simply not offered,
+-- and a character returned to level 1 gets it back, with the same order.
+-- Death knights never meet him (they start in Acherus).
+local function may_go_elsewhere(player, creature)
+    return creature:GetEntry() == VALLEY and player:GetLevel() == 1
+       and player:GetClass() ~= CLASS_DEATH_KNIGHT
+end
+-- }}}
+
+-- {{{ local function go_elsewhere
+-- Deal the character's next valley from its own deck (lib/valley-deck.lua),
+-- send it there, bind its hearthstone there (the same position and area the
+-- creation step binds a new character to), and count the arrival toward the
+-- rotation's batch of 30 when the dealt valley is the faction's current one
+-- (owner, 2026-10-04: "let's say yes"). The count is a +1 in the database
+-- (dealt_in_batch), which the creation patch B028 reads fresh; a dealt
+-- valley that is not the current one has no batch to join, and the WHERE
+-- leaves the row untouched.
+local function go_elsewhere(player, creature)
+    local team    = player:GetTeam()                         -- 0 Alliance, 1 Horde
+    local valleys = Valleys[team]
+    local x, y    = player:GetLocation()
+    local here    = Deck.standing_in(valleys, player:GetMapId(), x, y)
+    local index   = Deck.next(player:GetGUIDLow(), here)
+    local v       = valleys[index]
+
+    creature:SendUnitSay(string.format("%s, then. Hold still.", v.name), 0)
+    player:SetBindPoint(v.x, v.y, v.z, v.map, v.zone)
+    player:Teleport(v.map, v.x, v.y, v.z, v.o)
+    CharDBExecute(string.format(
+        "UPDATE basic_starting_valley_rotation SET dealt_in_batch = dealt_in_batch + 1 WHERE team = %d AND current_valley = %d",
+        team, index))
+end
+-- }}}
+
 -- {{{ local function show_menu
 -- No clan yet: one option, to name it (owner, 2026-10-03: "we should make
 -- Sargobras have ONE option, which lets you pick a clan name. Once you've
@@ -390,6 +431,9 @@ local function show_menu(player, creature, page)
         for _, r in ipairs(races) do
             player:GossipMenuAddItem(RACE_ICON[r.id] or GOSSIP_ICON_CHAT, r.name, 0, INTID_RACE + r.id)
         end
+    end
+    if may_go_elsewhere(player, creature) then
+        player:GossipMenuAddItem(GOSSIP_ICON_FLIGHT, "Actually, can I go somewhere else?", 0, INTID_ELSEWHERE)
     end
     player:GossipSendMenu(TEXT_OWED, creature)
 end
@@ -621,6 +665,10 @@ local function on_hello(event, player, creature)
     -- gets the naming option, buddies owed or not
     if player:GetClass() == CLASS_DEATH_KNIGHT or (player:IsInGuild() and not owed_slot(player:GetGUIDLow())) then
         player:GossipClearMenu()
+        -- nothing owed, but a level-1 character may still ask to move on
+        if may_go_elsewhere(player, creature) then
+            player:GossipMenuAddItem(GOSSIP_ICON_FLIGHT, "Actually, can I go somewhere else?", 0, INTID_ELSEWHERE)
+        end
         return player:GossipSendMenu(TEXT_NONE, creature)
     end
     show_menu(player, creature, nil)
@@ -630,6 +678,12 @@ end
 -- {{{ local function on_select
 local function on_select(event, player, creature, sender, intid, code)
     if intid == INTID_CLASSES or intid == INTID_RACES then return show_menu(player, creature, intid) end
+    -- another valley (155d1); checked again here, as a menu can stay open past level 1
+    if intid == INTID_ELSEWHERE then
+        player:GossipComplete()
+        if may_go_elsewhere(player, creature) then go_elsewhere(player, creature) end
+        return
+    end
     -- the box test (see INTID_NAME_BOX): the typed name, if it ever arrives
     if intid == INTID_NAME_BOX then
         player:GossipComplete()

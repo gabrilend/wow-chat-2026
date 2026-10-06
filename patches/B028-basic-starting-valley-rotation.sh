@@ -25,6 +25,15 @@
 # refuses the creation with an error rather than quietly using the race's
 # own valley.
 #
+# Characters who ask the valley Sargobras to go somewhere else (155d1) also
+# count toward the batch when he sends them into the current valley; his
+# script keeps that tally in its own column, which this reads fresh each
+# creation and clears when a new valley is drawn.
+#
+# The VALLEYS table below is the one list of the eight valleys: the Lua data
+# file src/lua-basic/data/starting-valleys.lua is generated from it by
+# scripts/generate-starting-valleys-lua (never typed in by hand).
+#
 # Only listed for the basic profile in patches/patches.sh.
 # Parallelizable: Yes (unique file: CharacterHandler.cpp)
 
@@ -143,8 +152,25 @@ namespace BasicValleyRotation
         if (!st.loaded && !Load(team))
             return nullptr;
 
-        if (st.current == NO_VALLEY_YET || st.count >= BATCH_SIZE)
+        // Re-deals (155d1): the valley Sargobras's "somewhere else" option
+        // adds one to dealt_in_batch, in the database, for each character it
+        // sends into this faction's current valley. Read fresh every time,
+        // never cached: the Lua script writes it beside this cache.
+        QueryResult dealtRow = CharacterDatabase.Query(
+            "SELECT dealt_in_batch FROM basic_starting_valley_rotation WHERE team = {}", team);
+        if (!dealtRow)
         {
+            LOG_ERROR("entities.player.character",
+                "B028: no dealt_in_batch for team {} — was the 155d1 column added by E023 to this characters database? "
+                "Character creation refused.", team);
+            return nullptr;
+        }
+        uint32 const dealt = dealtRow->Fetch()[0].Get<uint32>();
+
+        bool drew = false;
+        if (st.current == NO_VALLEY_YET || st.count + dealt >= BATCH_SIZE)
+        {
+            drew = true;
             if (st.bag.empty())
             {
                 st.bag = { 0, 1, 2, 3 };
@@ -162,8 +188,14 @@ namespace BasicValleyRotation
         std::string bagText;
         for (uint8 v : st.bag)
             bagText += (bagText.empty() ? "" : ",") + std::to_string(v);
-        trans->Append("UPDATE basic_starting_valley_rotation SET current_valley = {}, count_in_batch = {}, bag = '{}' WHERE team = {}",
-            st.current, st.count, bagText, team);
+        // A new batch starts its re-deals at zero; within a batch they are
+        // left alone (the Lua script owns that count).
+        if (drew)
+            trans->Append("UPDATE basic_starting_valley_rotation SET current_valley = {}, count_in_batch = {}, dealt_in_batch = 0, bag = '{}' WHERE team = {}",
+                st.current, st.count, bagText, team);
+        else
+            trans->Append("UPDATE basic_starting_valley_rotation SET current_valley = {}, count_in_batch = {}, bag = '{}' WHERE team = {}",
+                st.current, st.count, bagText, team);
 
         return &VALLEYS[team][st.current];
     }

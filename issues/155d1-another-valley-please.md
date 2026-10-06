@@ -44,9 +44,37 @@ they stand):
 
 ## Current Behavior
 
-Not built. A new character lands in its faction's current valley (155d,
-source patch B028), with its hearthstone bound there. The valley Sargobras
-there offers only the buddy choice (617b).
+Built 2026-10-05; tested offline (`scripts/test-valley-deal`, 31 checks),
+not yet tried in game. It needs the owner's rebuild (B028 changed) and an
+install (E023 adds a column) before it works on the server; until then the
+Lua option teleports and binds correctly but its +1 to the rotation fails
+on the missing column.
+
+- **The one list of valleys** stays in B028's C++ table;
+  `scripts/generate-starting-valleys-lua` reads it and writes
+  `src/lua-basic/data/starting-valleys.lua` (marked generated), and
+  `--check` fails when the two differ.
+- **The deck** is `src/lua-basic/lib/valley-deck.lua`: the character's
+  order is a Fisher-Yates shuffle of the four driven by a Park-Miller
+  generator seeded from its guid (its own numbers, so the shared
+  `math.random` is never disturbed); "where it stands" is the nearest of its
+  faction's four valleys on its map within 400 yards, else none (the first
+  card is dealt). All 24 orders occur, evenly, across 2000 characters.
+- **Sargobras** (`sargobras.lua`) shows "Actually, can I go somewhere
+  else?" (the wings icon) to a level-1 character who is not a death knight,
+  at the valley Sargobras only; on the full buddy menu and also when he
+  has nothing else to offer. The choice is checked again on select, so a
+  menu left open past level 1 does nothing. He says "<valley>, then. Hold
+  still.", binds the hearthstone, teleports.
+- **Counting toward the rotation**: B028 keeps its count in memory and
+  writes it whole, so a +1 written beside it would be overwritten. A new
+  column, `dealt_in_batch`, is the Lua script's own tally: the script adds
+  one (`WHERE team = .. AND current_valley = ..`, so a deal into a valley
+  that isn't the current one counts nowhere, there being no batch to
+  join); B028 reads it fresh at each creation, compares
+  `count_in_batch + dealt_in_batch` with 30, and sets it to 0 when it draws
+  the next valley. A deal landing between B028's read and its commit can
+  be lost (one count, rarely); accepted.
 
 ## Intended Behavior
 
@@ -106,6 +134,10 @@ one data file. They are never typed in twice.
    the same id always gives the same order; four presses visit four
    different valleys and return; the hearthstone matches each landing;
    the option is absent at level 2 and back at level 1.
+
+Remaining: rebuild and install (owner), then in game: a level-1 character
+presses four times, hearths after each, and the rotation table's
+`dealt_in_batch` rises for deals into the current valley.
 
 ## Open Questions
 
