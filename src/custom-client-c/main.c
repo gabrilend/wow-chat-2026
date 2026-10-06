@@ -432,6 +432,13 @@ int main(int argc, char **argv)
         Vector3 eye = { at.x - cosf(view.yaw) * cosf(view.pitch) * view.dist,
                         at.y - sinf(view.yaw) * cosf(view.pitch) * view.dist,
                         at.z + sinf(view.pitch) * view.dist };
+        /* something solid between her head and the camera (a wall, a
+         * tree, a roof): the camera comes in to just before it (173m) */
+        float in_way = collide_ray(solids, at.x + ox, at.y + oy, at.z, eye.x + ox, eye.y + oy, eye.z);
+        if (in_way < 1) {
+            float keep = fmaxf(in_way - 0.3f / fmaxf(view.dist, 0.3f), 0.05f);   /* 0.3 yards short of it */
+            eye = (Vector3){ at.x + (eye.x - at.x) * keep, at.y + (eye.y - at.y) * keep, at.z + (eye.z - at.z) * keep };
+        }
         float floor_z = maps_world_height(&world, eye.x + (float)ox, eye.y + (float)oy, &gx, &gy);
         if (floor_z > -10000 && eye.z < floor_z + 0.6f) eye.z = floor_z + 0.6f;   /* never under the ground */
         Camera3D cam = { .position = eye, .target = at, .up = { 0, 0, 1 }, .fovy = 60, .projection = CAMERA_PERSPECTIVE };

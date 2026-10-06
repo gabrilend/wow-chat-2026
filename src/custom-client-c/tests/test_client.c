@@ -671,6 +671,10 @@ anim_done:
         for (int i = 0; i < 200; ++i) mover_step(&m, &none, 0.01, &(MoverWorld){ g_solid, w_solid, NULL, NULL });
         snprintf(line, sizeof line, "dropped over the plank, she lands on it (z %.2f)", m.z);
         check(m.grounded && near(m.z, 5, 1e-3), line);
+        /* the camera's line of sight (173m): the wall at x 5 is struck half way */
+        float hit = collide_ray(cw, 0, 0, 1, 10, 0, 1), clear = collide_ray(cw, 0, 6, 1, 10, 6, 1);
+        snprintf(line, sizeof line, "a line from her to the camera through the wall is struck half way along (%.3f); past the wall's end, nothing (%.1f)", hit, clear);
+        check(near(hit, 0.5, 1e-4) && clear > 1, line);
         /* dropping a tile (173s): its triangles go, the others stay */
         const float plank2[] = { 80, -2, 3,  90, -2, 3,  90, 2, 3,   80, -2, 3,  90, 2, 3,  80, 2, 3 };
         collide_add(cw, plank2, 2, id16, 7);

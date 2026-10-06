@@ -50,9 +50,16 @@ and swimming."
     and on past its end, walks up a half-yard step, stops at a two-yard
     ledge, and lands on a plank dropped onto.
 
+**The camera and walls (2026-10-06):** `collide_ray` finds the nearest
+solid triangle on the line from her head to the camera. When something
+is in the way (a wall, a tree, a roof), `main.c` brings the camera in to
+0.3 yards before it. With the camera turned toward a house wall behind
+her, it comes in close in front of her face instead of sitting inside
+the wall. Test: a line through a made-up wall is struck half way; past
+the wall's end, nothing.
+
 **Left:**
 - The original's own step height and body radius (open question 1).
-- Walls for the camera (it still passes through models).
 - Doors and moving objects (game objects come with the server).
 
 ## Intended Behavior

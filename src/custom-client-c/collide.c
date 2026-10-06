@@ -140,6 +140,43 @@ float collide_floor(CollideWorld *w, double x, double y, double z_top, float *gx
 }
 /* }}} */
 
+/* {{{ collide_ray: every triangle in the squares the line's outline
+ * touches, each once (Moller-Trumbore, both faces) */
+float collide_ray(CollideWorld *w, double x0, double y0, double z0, double x1, double y1, double z1)
+{
+    float o[3] = { (float)(x0 - w->ox), (float)(y0 - w->oy), (float)z0 };
+    float dir[3] = { (float)(x1 - x0), (float)(y1 - y0), (float)(z1 - z0) };
+    float best = 2;
+    ++w->asked;
+    float lo_x = fminf(o[0], o[0] + dir[0]), hi_x = fmaxf(o[0], o[0] + dir[0]);
+    float lo_y = fminf(o[1], o[1] + dir[1]), hi_y = fmaxf(o[1], o[1] + dir[1]);
+    for (int cx = (int)floorf(lo_x / CELL); cx <= (int)floorf(hi_x / CELL); ++cx)
+        for (int cy = (int)floorf(lo_y / CELL); cy <= (int)floorf(hi_y / CELL); ++cy) {
+            Square *s = square(w, cx, cy, 0);
+            if (!s) continue;
+            for (int i = 0; i < s->n; ++i) {
+                int id = s->ids[i];
+                if (w->stamp[id] == w->asked) continue;
+                w->stamp[id] = w->asked;
+                const float *t = w->tris + (size_t)id * 9;
+                float e1[3] = { t[3] - t[0], t[4] - t[1], t[5] - t[2] }, e2[3] = { t[6] - t[0], t[7] - t[1], t[8] - t[2] };
+                float p[3] = { dir[1] * e2[2] - dir[2] * e2[1], dir[2] * e2[0] - dir[0] * e2[2], dir[0] * e2[1] - dir[1] * e2[0] };
+                float det = e1[0] * p[0] + e1[1] * p[1] + e1[2] * p[2];
+                if (fabsf(det) < 1e-12f) continue;
+                float inv = 1.0f / det, tv[3] = { o[0] - t[0], o[1] - t[1], o[2] - t[2] };
+                float u = (tv[0] * p[0] + tv[1] * p[1] + tv[2] * p[2]) * inv;
+                if (u < 0 || u > 1) continue;
+                float q[3] = { tv[1] * e1[2] - tv[2] * e1[1], tv[2] * e1[0] - tv[0] * e1[2], tv[0] * e1[1] - tv[1] * e1[0] };
+                float v = (dir[0] * q[0] + dir[1] * q[1] + dir[2] * q[2]) * inv;
+                if (v < 0 || u + v > 1) continue;
+                float f = (e2[0] * q[0] + e2[1] * q[1] + e2[2] * q[2]) * inv;
+                if (f >= 0 && f < best) best = f;
+            }
+        }
+    return best;
+}
+/* }}} */
+
 /* {{{ collide_wall
  * Rays along the step at three heights (knee, waist, head), each reaching
  * `radius` past the step's end, against every steep triangle near the

@@ -45,6 +45,12 @@ float collide_floor(CollideWorld *w, double x, double y, double z_top, float *gx
 int collide_wall(CollideWorld *w, double x0, double y0, double x1, double y1, double z,
                  float radius, float step, float height, float max_grad, float *nx, float *ny);
 
+/* The nearest solid triangle along the straight line from (x0, y0, z0)
+ * to (x1, y1, z1): the share of the way (0 to 1) where it is struck, or
+ * above 1 when nothing is in the way. For the camera (173m: it comes in
+ * to stay on her side of walls, trees and roofs). */
+float collide_ray(CollideWorld *w, double x0, double y0, double z0, double x1, double y1, double z1);
+
 /* How many triangles are kept (for the start-up report and the tests). */
 int collide_count(const CollideWorld *w);
 
