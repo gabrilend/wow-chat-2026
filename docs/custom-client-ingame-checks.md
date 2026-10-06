@@ -41,7 +41,10 @@ that issue and strike it here (keep the line, so the history stays).
 9. **Step height and body width** (173q): can she walk up the same
    ledges, and get as close to walls, as in the original (1 yard and 0.4
    yards here)?
-10. **Swimming** (173r):
+10. **Underwater** (173r): dive in Astranaar's lake (`--goto 2866 -331
+    --dive 2`). Is the murk the original's colour, and as close (40 yards
+    here)?
+10b. **Swimming** (173r):
    - How deep the water gets before she swims (1.6 yards over her feet
      here).
    - How fast she floats up when left alone (2 yards a second here).

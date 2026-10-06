@@ -22,6 +22,7 @@
  *   --hour H          the time of day, 0 to 24 (default: this machine's clock)
  *   --face DEG        her start facing turned DEG degrees (left)
  *   --walk S          (pictures) hold forward for S world-seconds
+ *   --dive S          (pictures) then hold X (swim down) for S world-seconds
  *   --goto X Y        (pictures) one world-second in, move her to world (X, Y)
  *   --map ID X Y      start on map ID (Map.dbc: 0 Eastern Kingdoms, 1 Kalimdor,
  *                     530 Outland, 571 Northrend) at world (X, Y)
@@ -236,6 +237,7 @@ int main(int argc, char **argv)
     double start_ms = 0;                                 /* --clock: the world's animations start this far in */
     double face_deg = 0;                                 /* --face: her start facing turned this far (left) */
     float  walk_s = 0;                                   /* --walk: hold forward this many world-seconds (pictures) */
+    float  dive_s = 0;                                   /* --dive: then hold X (swim down) this many world-seconds */
     int    go_to = 0;                                    /* --goto: one world-second in, she is moved to (goto_x, goto_y) */
     double goto_x = 0, goto_y = 0;
     /* the time of day: the original follows the realm's clock, which is
@@ -259,10 +261,11 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--hour") && i + 1 < argc) hours = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--face") && i + 1 < argc) face_deg = atof(argv[++i]);
         else if (!strcmp(argv[i], "--walk") && i + 1 < argc) walk_s = (float)atof(argv[++i]);
+        else if (!strcmp(argv[i], "--dive") && i + 1 < argc) dive_s = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--map") && i + 3 < argc) { map_id = atoi(argv[++i]); start_x = atof(argv[++i]); start_y = atof(argv[++i]); }
         else if (!strcmp(argv[i], "--goto") && i + 2 < argc) { goto_x = atof(argv[++i]); goto_y = atof(argv[++i]); go_to = 1; }
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--goto X Y] [--map ID X Y]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--dive S] [--goto X Y] [--map ID X Y]\n"); return 2; }
 
     /* the settings: defaults, then the player's file; a line it refuses is
      * named on the terminal and skipped (173b1) */
@@ -386,7 +389,7 @@ int main(int argc, char **argv)
             .strafe_right = IsKeyDown(KEY_E),
             .strafe_turns = drag_r,
             .jump = IsKeyDown(KEY_SPACE),
-            .swim_down = IsKeyDown(KEY_X),               /* swimming down; up is the jump key (173r) */
+            .swim_down = IsKeyDown(KEY_X) || (dive_s > 0 && frames * 0.05f >= walk_s && frames * 0.05f < walk_s + dive_s),   /* swimming down; up is the jump key (173r) */
             .pitch = -view.pitch,                        /* where the camera looks, up positive */
         };
         double before_o = elf.o, before_x = elf.x, before_y = elf.y;
@@ -457,6 +460,20 @@ int main(int argc, char **argv)
         /* the light here, now: time runs on in real time */
         hours = fmodf(hours + dt / 3600.0f, 24.0f);
         int lit = light_at(&lights, map_id, (float)elf.x, (float)elf.y, (float)elf.z, hours, &light);
+        /* underwater (173r): with the camera below the water's surface the
+         * world closes in to the water's deep colour (the zone's river or sea
+         * band, 173n) within 40 yards, as the original's underwater view does;
+         * this client's distances, to compare */
+        {
+            int kind = 0;
+            float surface = liquid_surface(waters, eye.x + ox, eye.y + oy, &kind);
+            if (surface > -10000 && eye.z < surface) {
+                const float *deep = kind == 2 || kind == 6 ? light.water[1] : light.water[3];
+                for (int c = 0; c < 3; ++c) light.fog[c] = deep[c];
+                light.fog_start = 0;
+                light.fog_end = 40;
+            }
+        }
         /* the fog ends by the view distance at the latest (173b6) */
         float farclip = (float)settings_num("farclip");
         if (light.fog_end > farclip) { light.fog_start *= farclip / light.fog_end; light.fog_end = farclip; }
@@ -489,7 +506,7 @@ int main(int argc, char **argv)
         EndDrawing();
 
         /* --shot: after 3 world-seconds, the picture, then quit */
-        if (shot && ++frames == 60 + (int)(walk_s * 20)) {   /* 3 world-seconds after any walk: particles have filled out */
+        if (shot && ++frames == 60 + (int)((walk_s + dive_s) * 20)) {   /* 3 world-seconds after any walk: particles have filled out */
             Image im = LoadImageFromScreen();
             int ok = ExportImage(im, shot);
             UnloadImage(im);

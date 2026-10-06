@@ -53,9 +53,19 @@ Verbatim, 2026-10-06: "Then water and swimming."
     with X, swims at 5.67 yards a second, and walks out onto a shore.
   - The swim animations are chosen right.
 
+**The view underwater (2026-10-06):** with the camera below the water's
+surface, the fog becomes the zone's deep-water colour (river or sea band)
+from 0 to 40 yards (this client's distances). Diving at Astranaar's
+deepest water (20.8 yards, at 2866, -331), murky water closes in round
+her, with seaweed and the lake bed. Picture option `--dive S` holds X
+after the walk.
+
+**Buildings' pools:** around Astranaar only one building carries water (a
+small house: a 2 x 2 patch), so buildings' pools (MLIQ) wait; recorded,
+low priority.
+
 **Left:**
 - Buildings' pools (WMO MLIQ).
-- The view underwater (fog and colour below the surface).
 - The original's own swim depth for her model (an open question, below).
 - Depth-darkened water (deep against shallow colours).
 - Telling the server she swims (with the network).
