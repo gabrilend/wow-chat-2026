@@ -10,6 +10,7 @@
 #include "doodads.h"
 #include "blp.h"
 #include "m2.h"
+#include "wmo.h"
 
 #include "raymath.h"
 #include "rlgl.h"
@@ -22,27 +23,31 @@
 /* {{{ the shader
  * One copy's place arrives per instance (instanceTransform); `cutoff`
  * cuts out pixels whose alpha is under it (leaves), -1 for none. Lit by
- * the same sun as the ground and her, unless the piece is marked unlit. */
+ * the same sun as the ground and her, unless the piece is marked unlit.
+ * A building's indoor parts are lit by the light baked into their points
+ * instead (`indoor`; MOCV colours, plus a little ambient light: this
+ * client's first reading of it, to be compared with the original's). */
 static const char *VS =
     "#version 330\n"
-    "in vec3 vertexPosition; in vec3 vertexNormal; in vec2 vertexTexCoord; in mat4 instanceTransform;\n"
+    "in vec3 vertexPosition; in vec3 vertexNormal; in vec2 vertexTexCoord; in vec4 vertexColor; in mat4 instanceTransform;\n"
     "uniform mat4 mvp; uniform vec3 eye;\n"
-    "out vec3 n; out vec2 uv; out float dist;\n"
+    "out vec3 n; out vec2 uv; out vec4 col; out float dist;\n"
     "void main() {\n"
     "  vec4 w = instanceTransform * vec4(vertexPosition, 1.0);\n"
-    "  n = mat3(instanceTransform) * vertexNormal; uv = vertexTexCoord;\n"
+    "  n = mat3(instanceTransform) * vertexNormal; uv = vertexTexCoord; col = vertexColor;\n"
     "  dist = length(w.xyz - eye);\n"
     "  gl_Position = mvp * w;\n"
     "}\n";
 static const char *FS =
     "#version 330\n"
-    "in vec3 n; in vec2 uv; in float dist; out vec4 frag;\n"
-    "uniform sampler2D texture0; uniform vec3 sky; uniform float cutoff; uniform float unlit;\n"
+    "in vec3 n; in vec2 uv; in vec4 col; in float dist; out vec4 frag;\n"
+    "uniform sampler2D texture0; uniform vec3 sky; uniform float cutoff; uniform float unlit; uniform float indoor;\n"
     "void main() {\n"
     "  vec4 t = texture(texture0, uv);\n"
     "  if (t.a < cutoff) discard;\n"
     "  vec3 sun = normalize(vec3(0.45, 0.30, 0.84));\n"
-    "  float light = mix(max(dot(normalize(n), sun), 0.0) * 0.6 + 0.45, 1.0, unlit);\n"
+    "  vec3 light = vec3(mix(max(dot(normalize(n), sun), 0.0) * 0.6 + 0.45, 1.0, unlit));\n"
+    "  light = mix(light, col.rgb + 0.35, indoor);\n"
     "  float fog = clamp((dist - 120.0) / 520.0, 0.0, 1.0);\n"
     "  frag = vec4(mix(t.rgb * light, sky, fog), t.a);\n"
     "}\n";
@@ -54,7 +59,7 @@ static const char *FS =
  * places (as Raylib matrices, relative to the drawing origin). seen[]
  * holds every placement id drawn so far, so a doodad listed by two tiles
  * is drawn once. */
-typedef struct { Mesh mesh; int picture; uint16_t blend, flags; } DoodadPiece;
+typedef struct { Mesh mesh; int picture; uint16_t blend, flags; int indoor; } DoodadPiece;
 typedef struct {
     char    name[260];
     DoodadPiece  *pieces;   int npieces;
@@ -66,10 +71,15 @@ static DoodadModel    *models;   static int nmodels, models_cap;
 static struct { char name[260]; Texture2D tex; } *pictures;
 static int       npictures, pictures_cap;
 static uint32_t *seen;     static int nseen, seen_cap;
+/* buildings: the model entry holding its pieces, and its root (for the
+ * furnishings, placed when the building is) */
+typedef struct { int model; WmoRoot root; } Building;
+static Building *buildings; static int nbuildings, buildings_cap;
+static uint32_t *seen_b;    static int nseen_b, seen_b_cap;
 static int       skipped_pieces;
 static Shader    shader;
 static Material  material;
-static int       loc_eye, loc_sky, loc_cutoff, loc_unlit;
+static int       loc_eye, loc_sky, loc_cutoff, loc_unlit, loc_indoor;
 /* }}} */
 
 /* {{{ doodads_init */
@@ -83,6 +93,7 @@ int doodads_init(MpqChain *c, char *why, int why_len)
     loc_sky = GetShaderLocation(shader, "sky");
     loc_cutoff = GetShaderLocation(shader, "cutoff");
     loc_unlit = GetShaderLocation(shader, "unlit");
+    loc_indoor = GetShaderLocation(shader, "indoor");
     material = LoadMaterialDefault();
     material.shader = shader;
     return 0;
@@ -180,10 +191,94 @@ static int load_model(const char *name)
         }
         if (!ok) { UnloadMesh(m); fprintf(stderr, "doodads: %s: a piece names a point the model doesn't have; piece left out\n", name); continue; }
         UploadMesh(&m, false);
-        md->pieces[md->npieces++] = (DoodadPiece){ m, pic, un.blend, un.flags };
+        md->pieces[md->npieces++] = (DoodadPiece){ m, pic, un.blend, un.flags, 0 };
     }
     m2_free(&mod);
     return nmodels++;
+}
+/* }}} */
+
+/* {{{ static load_building: a building by name, loaded once
+ * Its pieces are every group's batches, kept as one model entry so its
+ * copies draw like any doodad's. A group or picture that can't be read is
+ * reported and left out; a root that can't be read leaves the building
+ * out (reported once). */
+static int load_building(const char *name)
+{
+    for (int i = 0; i < nbuildings; ++i) if (!strcasecmp(models[buildings[i].model].name, name)) return i;
+    if (nbuildings == buildings_cap) {
+        buildings_cap = buildings_cap ? buildings_cap * 2 : 64;
+        buildings = realloc(buildings, sizeof *buildings * buildings_cap);
+    }
+    if (nmodels == models_cap) {
+        models_cap = models_cap ? models_cap * 2 : 256;
+        models = realloc(models, sizeof *models * models_cap);
+    }
+    Building *b = &buildings[nbuildings];
+    memset(b, 0, sizeof *b);
+    b->model = nmodels;
+    DoodadModel *md = &models[nmodels++];
+    memset(md, 0, sizeof *md);
+    snprintf(md->name, sizeof md->name, "%s", name);
+
+    size_t len;
+    const char *from;
+    char why[400], path[300];
+    unsigned char *s = mpq_chain_read(chain, name, &len, &from);
+    if (!s) { fprintf(stderr, "buildings: %s is in none of the client's archives; left out\n", name); return nbuildings++; }
+    int bad = wmo_read_root(s, len, &b->root, why, sizeof why);
+    free(s);
+    if (bad) { fprintf(stderr, "buildings: %s: %s; left out\n", name, why); return nbuildings++; }
+
+    char base[260];
+    snprintf(base, sizeof base, "%s", name);
+    char *dot = strrchr(base, '.');
+    if (dot) *dot = '\0';
+    for (int gi = 0; gi < b->root.ngroups; ++gi) {
+        snprintf(path, sizeof path, "%s_%03d.wmo", base, gi);
+        s = mpq_chain_read(chain, path, &len, &from);
+        if (!s) { fprintf(stderr, "buildings: %s is in none of the client's archives; that part is left out\n", path); continue; }
+        WmoGroup g;
+        bad = wmo_read_group(s, len, &g, why, sizeof why);
+        free(s);
+        if (bad) { fprintf(stderr, "buildings: %s: %s; that part is left out\n", path, why); continue; }
+        md->pieces = realloc(md->pieces, sizeof *md->pieces * (md->npieces + g.nbatches + 1));
+        for (int k = 0; k < g.nbatches; ++k) {
+            WmoBatch bt = g.batches[k];
+            if (bt.material >= b->root.nmaterials || bt.count == 0) continue;
+            WmoMaterial mat = b->root.materials[bt.material];
+            int pic = picture(mat.picture);
+            if (pic < 0) continue;
+            Mesh m = { 0 };
+            m.vertexCount = (int)bt.count;
+            m.triangleCount = (int)bt.count / 3;
+            m.vertices  = MemAlloc(sizeof(float) * 3 * bt.count);
+            m.normals   = MemAlloc(sizeof(float) * 3 * bt.count);
+            m.texcoords = MemAlloc(sizeof(float) * 2 * bt.count);
+            m.colors    = MemAlloc(4 * bt.count);
+            for (uint32_t i = 0; i < bt.count; ++i) {
+                WmoVertex v = g.vertices[g.indices[bt.first + i]];
+                m.vertices[i * 3] = v.x; m.vertices[i * 3 + 1] = v.y; m.vertices[i * 3 + 2] = v.z;
+                m.normals[i * 3] = v.nx; m.normals[i * 3 + 1] = v.ny; m.normals[i * 3 + 2] = v.nz;
+                m.texcoords[i * 2] = v.u; m.texcoords[i * 2 + 1] = v.v;
+                m.colors[i * 4] = v.r; m.colors[i * 4 + 1] = v.g; m.colors[i * 4 + 2] = v.b; m.colors[i * 4 + 3] = 255;
+            }
+            UploadMesh(&m, false);
+            int indoor = (g.flags & 0x2000) && g.has_colours;
+            md->pieces[md->npieces++] = (DoodadPiece){ m, pic, (uint16_t)mat.blend, (uint16_t)mat.flags, indoor };
+        }
+        wmo_free_group(&g);
+    }
+    return nbuildings++;
+}
+/* }}} */
+
+/* {{{ static add_copy: one more place for model `which` */
+static void add_copy(int which, Matrix at)
+{
+    DoodadModel *md = &models[which];
+    if (md->ncopies == md->cap) { md->cap = md->cap ? md->cap * 2 : 16; md->copies = realloc(md->copies, sizeof *md->copies * md->cap); }
+    md->copies[md->ncopies++] = at;
 }
 /* }}} */
 
@@ -199,11 +294,36 @@ int doodads_add_tile(const AdtTile *t, double ox, double oy, char *why, int why_
         if (nseen == seen_cap) { seen_cap = seen_cap ? seen_cap * 2 : 4096; seen = realloc(seen, sizeof *seen * seen_cap); }
         seen[nseen++] = p->uid;
         int which = load_model(t->models[p->name]);         /* may grow (move) the models list */
-        DoodadModel *md = &models[which];
-        if (md->ncopies == md->cap) { md->cap = md->cap ? md->cap * 2 : 16; md->copies = realloc(md->copies, sizeof *md->copies * md->cap); }
         float m[16];
         adt_place_matrix(p, ox, oy, m);
-        md->copies[md->ncopies++] = (Matrix){ m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15] };
+        add_copy(which, (Matrix){ m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15] });
+    }
+    /* buildings, and the furnishings of the set each placement asks for
+     * (set 0 holds what every placement shows, so it is always added) */
+    for (int k = 0; k < t->nplaces; ++k) {
+        const AdtPlace *p = &t->places[k];
+        int dup = 0;
+        for (int i = 0; i < nseen_b && !dup; ++i) dup = seen_b[i] == p->uid;
+        if (dup) continue;
+        if (nseen_b == seen_b_cap) { seen_b_cap = seen_b_cap ? seen_b_cap * 2 : 256; seen_b = realloc(seen_b, sizeof *seen_b * seen_b_cap); }
+        seen_b[nseen_b++] = p->uid;
+        int bi = load_building(t->buildings[p->name]);
+        float m[16];
+        adt_place_matrix(p, ox, oy, m);
+        Matrix place = { m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15] };
+        add_copy(buildings[bi].model, place);
+        for (int si = 0; si < buildings[bi].root.nsets; ++si) {
+            if (si != 0 && si != p->doodad_set) continue;
+            WmoSet set = buildings[bi].root.sets[si];
+            for (int fi = set.first; fi < set.first + set.count; ++fi) {
+                WmoFurnishing f = buildings[bi].root.furnishings[fi];
+                if (!f.model[0]) continue;
+                float fm[16];
+                adt_inside_matrix(m, f.pos, f.quat, f.scale, fm);
+                int which = load_model(f.model);
+                add_copy(which, (Matrix){ fm[0], fm[4], fm[8], fm[12], fm[1], fm[5], fm[9], fm[13], fm[2], fm[6], fm[10], fm[14], fm[3], fm[7], fm[11], fm[15] });
+            }
+        }
     }
     return 0;
 }
@@ -221,7 +341,8 @@ static void draw_pass(int see_through)
             DoodadPiece *p = &md->pieces[k];
             if ((p->blend >= 2) != see_through) continue;
             float cutoff = p->blend == 0 ? -1.0f : p->blend == 1 ? 0.5f : 1.0f / 255.0f;
-            float unlit = (p->flags & 0x1) ? 1.0f : 0.0f;
+            float unlit = (p->flags & 0x1) ? 1.0f : 0.0f, indoor = p->indoor ? 1.0f : 0.0f;
+            SetShaderValue(shader, loc_indoor, &indoor, SHADER_UNIFORM_FLOAT);
             SetShaderValue(shader, loc_cutoff, &cutoff, SHADER_UNIFORM_FLOAT);
             SetShaderValue(shader, loc_unlit, &unlit, SHADER_UNIFORM_FLOAT);
             if (see_through) BeginBlendMode(p->blend == 2 ? BLEND_ALPHA : p->blend >= 5 ? BLEND_MULTIPLIED : BLEND_ADDITIVE);

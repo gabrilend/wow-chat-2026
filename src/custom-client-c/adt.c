@@ -212,6 +212,15 @@ int adt_read(const unsigned char *s, size_t len, int big_alpha, AdtTile *out, ch
                 for (int r = 0; r < 3; ++r) p->rot[r] = f32(s, e + 20 + r * 4);
                 p->scale = is_d ? (float)(s[e + 32] | s[e + 33] << 8) / 1024.0f : 1.0f;
                 p->doodad_set = is_d ? 0 : (int)(s[e + 58] | s[e + 59] << 8);
+                if (!is_d)
+                    for (int a = 0; a < 2; ++a) {
+                        /* placement (x, y, z) -> world (17066.67 - z, 17066.67 - x, y);
+                         * the corners swap since the axes flip */
+                        size_t c = e + 32 + (size_t)a * 12;
+                        float wx = 17066.666f - f32(s, c + 8), wy = 17066.666f - f32(s, c), wz = f32(s, c + 4);
+                        if (a == 0) { p->hi[0] = wx; p->hi[1] = wy; p->lo[2] = wz; }
+                        else        { p->lo[0] = wx; p->lo[1] = wy; p->hi[2] = wz; }
+                    }
             }
             if (is_d) { out->doodads = list; out->ndoodads = n; } else { out->places = list; out->nplaces = n; }
         } else if (is_tag(s, at, "MCNK")) {
@@ -273,6 +282,28 @@ void adt_place_matrix(const AdtPlace *p, double ox, double oy, float m[16])
     m[13] = (float)(p->y - oy);
     m[14] = p->z;
     m[15] = 1;
+}
+void adt_inside_matrix(const float b[16], const float pos[3], const float q[4], float scale, float m[16])
+{
+    float x = q[0], y = q[1], z = q[2], w = q[3];
+    /* the quaternion's turn, row-major, times the size */
+    float r[9] = {
+        1 - 2 * (y * y + z * z), 2 * (x * y - z * w),     2 * (x * z + y * w),
+        2 * (x * y + z * w),     1 - 2 * (x * x + z * z), 2 * (y * z - x * w),
+        2 * (x * z - y * w),     2 * (y * z + x * w),     1 - 2 * (x * x + y * y),
+    };
+    float in[16];                                          /* the inside matrix, Raylib layout */
+    for (int row = 0; row < 3; ++row)
+        for (int col = 0; col < 3; ++col) in[col * 4 + row] = r[row * 3 + col] * scale;
+    in[3] = in[7] = in[11] = 0;
+    in[12] = pos[0]; in[13] = pos[1]; in[14] = pos[2]; in[15] = 1;
+    /* m = b * in (column-vector order: `in` first, then the building) */
+    for (int row = 0; row < 4; ++row)
+        for (int col = 0; col < 4; ++col) {
+            float sum = 0;
+            for (int k = 0; k < 4; ++k) sum += b[k * 4 + row] * in[col * 4 + k];
+            m[col * 4 + row] = sum;
+        }
 }
 /* }}} */
 

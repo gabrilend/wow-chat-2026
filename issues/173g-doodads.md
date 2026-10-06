@@ -38,9 +38,36 @@ See 173f (the owner's order, 2026-10-05).
     twice the size.
   - The tile places buildings.
 
-**Not built yet:** buildings (WMO, steps 3 and 4), and pieces whose
-picture the game chooses at run time (none so far at Astranaar). Pieces
-are drawn in their resting pose, with no swaying.
+**Buildings (WMO) built 2026-10-06:**
+- **The reader:** `wmo.h` / `wmo.c` read a building's root file (its
+  materials, furnishings and furnishing sets) and its group files (points,
+  facings, picture positions, baked colours, triangles, and batches of
+  one material each). Every block is bounds-checked.
+- **The drawer:** `doodads.c` keeps each building as one model entry
+  whose pieces are all its groups' batches, drawn like any doodad. Each
+  placement also places furnishing set 0 (shown by every copy) and the
+  set the placement names. A furnishing's matrix comes from
+  `adt_inside_matrix`: scale, turn, move, then the building's own place.
+- **Indoor light:** indoor groups are lit by their baked colours plus a
+  little ambient light. This is this client's first reading of the
+  original's indoor light, still to be compared with it.
+- **At Astranaar:** 394 models (doodads and buildings) and 7,383
+  placements.
+- **Tests:**
+  - All 7 of the tile's building placements read, with their first part.
+  - All 228 of their furnishings land inside the box the ground file
+    gives each building.
+- **Picture options** for checking: `--turn DEG` and `--pitch DEG` aim
+  the camera.
+
+**Left:**
+- Pieces whose picture the game chooses at run time (none so far at
+  Astranaar).
+- Swaying and other animation (models are drawn in their resting pose).
+- Step 4's cross-check against the server's collision placements
+  (`data-files/vmaps`). The furnishing-box check and the pictures cover
+  placement for now.
+- Comparing the indoor light with the original.
 
 ## Intended Behavior
 

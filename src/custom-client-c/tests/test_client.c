@@ -26,6 +26,7 @@
 #include "../mpq.h"
 #include "../navmesh_slope.h"
 #include "../settings.h"
+#include "../wmo.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -383,6 +384,42 @@ int main(int argc, char **argv)
             snprintf(line, sizeof line, "a turn of 30 degrees faces a model's front at 210 degrees (%.1f), upright, twice the size",
                      atan2(fy, fx) / 3.14159265358979 * 180 + (atan2(fy, fx) < 0 ? 360 : 0));
             check(near(atan2(fy, fx), (210 - 360) * 3.14159265358979 / 180, 1e-4) && near(hypot(fx, fy), 2, 1e-4) && near(up, 2, 1e-4), line);
+            /* buildings: each reads, and its furnishings land inside the box
+             * the ground file gives the building */
+            int roots = 0, groups_ok = 1, inside = 0, furnished = 0;
+            for (int k = 0; k < t->nplaces; ++k) {
+                AdtPlace *pl = &t->places[k];
+                unsigned char *rs = mpq_chain_read(&gc, t->buildings[pl->name], &len, &from);
+                WmoRoot root;
+                if (!rs || wmo_read_root(rs, len, &root, why, sizeof why)) { free(rs); continue; }
+                free(rs);
+                ++roots;
+                char base[260], gpath[300];
+                snprintf(base, sizeof base, "%s", t->buildings[pl->name]);
+                *strrchr(base, '.') = '\0';
+                snprintf(gpath, sizeof gpath, "%s_000.wmo", base);
+                unsigned char *gs = mpq_chain_read(&gc, gpath, &len, &from);
+                WmoGroup g;
+                if (!gs || wmo_read_group(gs, len, &g, why, sizeof why)) groups_ok = 0; else wmo_free_group(&g);
+                free(gs);
+                float bm[16], fm[16];
+                adt_place_matrix(pl, 0, 0, bm);
+                for (int si = 0; si < root.nsets; ++si) {
+                    if (si != 0 && si != pl->doodad_set) continue;
+                    for (int fi = root.sets[si].first; fi < root.sets[si].first + root.sets[si].count; ++fi) {
+                        adt_inside_matrix(bm, root.furnishings[fi].pos, root.furnishings[fi].quat, root.furnishings[fi].scale, fm);
+                        ++furnished;
+                        int in = 1;
+                        for (int a = 0; a < 3; ++a) if (fm[12 + a] < pl->lo[a] - 2 || fm[12 + a] > pl->hi[a] + 2) in = 0;
+                        inside += in;
+                    }
+                }
+                wmo_free_root(&root);
+            }
+            snprintf(line, sizeof line, "all %d of its building placements read, with their first parts", t->nplaces);
+            check(roots == t->nplaces && groups_ok, line);
+            snprintf(line, sizeof line, "%d of their %d furnishings land inside their building's box", inside, furnished);
+            check(furnished > 0 && inside == furnished, line);
             check(fixed, "every blend map's last column copies the one before, as the original fills the unpainted edge");
             check(painted, "the blend maps hold soft edges, not only all-or-nothing");
             adt_free(t);

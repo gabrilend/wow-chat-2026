@@ -85,6 +85,8 @@
  *   rot[3]       float: the file's rotation, degrees (see doodads.c)
  *   scale        float: 1.0 = as made (buildings always 1)
  *   doodad_set   int: buildings only, which set of furnishings to show
+ *   lo[3], hi[3] float: buildings only, the world box the building fills
+ *                (MODF's extents, turned into world axes)
  */
 #ifndef EG_ADT_H
 #define EG_ADT_H
@@ -113,6 +115,7 @@ typedef struct {
     float    rot[3];
     float    scale;
     int      doodad_set;
+    float    lo[3], hi[3];
 } AdtPlace;
 
 typedef struct {
@@ -152,6 +155,13 @@ void adt_free(AdtTile *t);
  * only ry set, a model's front ends up facing world angle ry + 180
  * degrees (tests). */
 void adt_place_matrix(const AdtPlace *p, double ox, double oy, float m[16]);
+
+/* Something placed inside a building (a furnishing: position, turn as a
+ * quaternion x, y, z, w, and size, all in the building's own space) as a
+ * matrix in the world: building = the building's adt_place_matrix. Same
+ * layout as above. Scale first, then the turn, then the move, then the
+ * building's own place. */
+void adt_inside_matrix(const float building[16], const float pos[3], const float quat[4], float scale, float m[16]);
 
 /* MCVT index of corner (row 0-8, col 0-8) and centre (row 0-7, col 0-7). */
 static inline int adt_corner(int row, int col) { return row * 17 + col; }

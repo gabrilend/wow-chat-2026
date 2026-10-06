@@ -11,10 +11,13 @@
  * 2026-10-05: "let's port now. We should build something like an engine
  * in C anyway, for performance reasons").
  *
- * Usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front]
+ * Usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG]
  *   --settings FILE   the player's settings (SET name "value" lines; 173b1);
  *                     without it, every setting is at its default
  *   --shot FILE       draw a few frames, save a picture there, quit
+ *   --zoom N          (pictures) the camera N yards back
+ *   --turn DEG        (pictures) the camera turned DEG degrees round her, held there
+ *   --pitch DEG       (pictures) the camera raised DEG degrees (up to 83)
  */
 #include "camera.h"
 #include "character.h"
@@ -176,8 +179,10 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--shot") && i + 1 < argc) shot = argv[++i];
         else if (!strcmp(argv[i], "--zoom") && i + 1 < argc) view.dist = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--front")) { view.yaw = (float)(START_O + PI); view.pitch = 0.1f; cam_held = 1; }
+        else if (!strcmp(argv[i], "--turn") && i + 1 < argc) { view.yaw = (float)(START_O + atof(argv[++i]) * DEG2RAD); cam_held = 1; }
+        else if (!strcmp(argv[i], "--pitch") && i + 1 < argc) view.pitch = (float)(atof(argv[++i]) * DEG2RAD);
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG]\n"); return 2; }
 
     /* the settings: defaults, then the player's file; a line it refuses is
      * named on the terminal and skipped (173b1) */
