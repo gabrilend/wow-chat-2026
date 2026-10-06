@@ -13,7 +13,34 @@ See 173f (the owner's order, 2026-10-05).
 
 ## Current Behavior
 
-Not built. Only the ground and the night elf are drawn.
+**Small models (M2 doodads) built 2026-10-06**, in C:
+- **Reading the placements:** `adt.c` reads each ground file's model
+  names (MMDX/MMID) and placements (MDDF), and its building names and
+  placements (MWMO/MWID/MODF) too. Each placement becomes a world
+  position, turn and size.
+- **Placing them:** `adt_place_matrix` builds the turn the way the
+  original's model viewer orders it, around the game's axes. With only
+  the heading set, a model faces 180 degrees past its angle.
+- **Drawing them:** `doodads.c` loads each model once, with its pieces,
+  pictures and materials. It draws every copy of a piece in one call.
+  Solid and cut-out pieces (leaves) come first, then see-through and
+  glowing ones without depth writing. A doodad listed by two tiles is
+  drawn once.
+- **The model reader:** `m2.c` now gives each piece its material (blend
+  mode and flags) and checks that every table it reads lies inside the
+  file.
+- **At Astranaar:** 247 models and 6,671 placements in the 3 x 3 tiles,
+  none left out.
+- **Tests:**
+  - 925 of the tile's 1,074 doodads stand within 2 yards of the server's
+    ground. The rest stand on rocks, roots or buildings.
+  - A 30-degree turn faces a model's front at 210 degrees, upright, at
+    twice the size.
+  - The tile places buildings.
+
+**Not built yet:** buildings (WMO, steps 3 and 4), and pieces whose
+picture the game chooses at run time (none so far at Astranaar). Pieces
+are drawn in their resting pose, with no swaying.
 
 ## Intended Behavior
 

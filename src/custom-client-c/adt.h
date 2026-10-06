@@ -9,7 +9,7 @@
  * picture above the first, saying how strongly it shows at each of
  * 64 x 64 points. The client paints the ground by blending them. It also
  * holds a baked shadow map per chunk (173h) and the list of trees,
- * rocks and buildings placed on the tile (173g, not read here yet).
+ * rocks and buildings placed on the tile (173g).
  *
  * File layout (3.3.5a; little-endian; every block is a four-letter tag
  * stored reversed, then its size, then its data): MVER, MHDR, MCIN,
@@ -48,6 +48,19 @@
  *   MCVT's order; 127 means "unchanged", so the ground's colour is
  *   multiplied by value / 127 (0 to 2). Added in 3.3.5a.
  *
+ * Placements (173g). MMDX: small-model names, each ended by a zero byte;
+ * MMID: where each name starts in MMDX; MDDF: 36 bytes a placement:
+ * name number (into MMID), unique id, position (3 floats), rotation
+ * (3 floats, degrees), scale (u16, 1024 = 1.0), flags (u16). MWMO / MWID /
+ * MODF the same for buildings, 64 bytes each: name number, unique id,
+ * position, rotation, bounding box (6 floats), flags, doodad set (u16),
+ * name set (u16), unused (u16).
+ * Positions are in placement space, measured from the map's north-west
+ * corner: world x = 17066.67 - p[2], world y = 17066.67 - p[0],
+ * world z = p[1] (checked: trees stand on the server's ground; tests).
+ * A building crossing tile edges is listed in every tile it touches,
+ * with the same unique id.
+ *
  * An AdtTile, field by field:
  *   textures     char[nt][128]: the picture names (MTEX), in file order
  *   ntextures    int
@@ -65,6 +78,13 @@
  *   shadow[4096] uint8_t: 1 where shadowed, 0 where lit
  *   tint[145][3] uint8_t: red, green, blue per height, 127 = unchanged
  *                (all 127 when the chunk has no MCCV)
+ * An AdtPlace (a doodad or a building):
+ *   name         int: into models (doodads) or buildings
+ *   uid          uint32_t: the placement's unique id, shared across tiles
+ *   x, y, z      float: world position
+ *   rot[3]       float: the file's rotation, degrees (see doodads.c)
+ *   scale        float: 1.0 = as made (buildings always 1)
+ *   doodad_set   int: buildings only, which set of furnishings to show
  */
 #ifndef EG_ADT_H
 #define EG_ADT_H
@@ -87,8 +107,25 @@ typedef struct {
 } AdtChunk;
 
 typedef struct {
+    int      name;
+    uint32_t uid;
+    float    x, y, z;
+    float    rot[3];
+    float    scale;
+    int      doodad_set;
+} AdtPlace;
+
+typedef struct {
     char   (*textures)[128];
     int      ntextures;
+    char   (*models)[260];            /* doodad model names (MMDX via MMID) */
+    int      nmodels;
+    AdtPlace *doodads;                /* MDDF */
+    int      ndoodads;
+    char   (*buildings)[260];         /* building names (MWMO via MWID) */
+    int      nbuildings;
+    AdtPlace *places;                 /* MODF */
+    int      nplaces;
     AdtChunk chunks[256];
 } AdtTile;
 
@@ -102,6 +139,19 @@ int adt_wdt_big_alpha(const unsigned char *s, size_t len, char *why, int why_len
  * allocate it, don't put it on the stack. */
 int adt_read(const unsigned char *s, size_t len, int big_alpha, AdtTile *out, char *why, int why_len);
 void adt_free(AdtTile *t);
+
+/* A placement's turn, size and position as a 4 x 4 matrix, laid out as
+ * Raylib's Matrix is (m[0], m[4], m[8], m[12] the first row; a point p
+ * goes to m[0]*p.x + m[4]*p.y + m[8]*p.z + m[12], and so on), relative to
+ * the drawing origin (ox, oy). The turn follows the order the original's
+ * own model viewer uses, with its rotation angles in degrees:
+ *   world = to_world * turn_y(ry - 90) * turn_z(-rx) * turn_x(rz) * to_placement * scale
+ * to_placement takes a model's axes (x front, y left, z up) into placement
+ * space (y up): (x, y, z) -> (x, z, -y). to_world takes placement space
+ * into the world (x north, y west, z up): (x, y, z) -> (-z, -x, y). With
+ * only ry set, a model's front ends up facing world angle ry + 180
+ * degrees (tests). */
+void adt_place_matrix(const AdtPlace *p, double ox, double oy, float m[16]);
 
 /* MCVT index of corner (row 0-8, col 0-8) and centre (row 0-7, col 0-7). */
 static inline int adt_corner(int row, int col) { return row * 17 + col; }

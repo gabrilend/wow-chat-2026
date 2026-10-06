@@ -21,7 +21,13 @@
 typedef struct { float x, y, z, nx, ny, nz, u, v; } M2Vertex;          /* model space: +x front, +y left, +z up */
 typedef struct { uint32_t kind; char file[260]; } M2Texture;          /* kind 0 named file; 1 skin; 2 cape; 6 hair; ... */
 typedef struct { uint32_t id, first, count; } M2Piece;                 /* id = group * 100 + variant; first/count: triangle indices */
-typedef struct { uint32_t piece, texture; } M2Unit;                    /* 0-based into pieces and textures */
+/* A unit: one piece drawn with one picture, and how (its material, from
+ * the model's render-flag table, header offset 112):
+ *   blend  0 opaque, 1 cut-out (see-through below an alpha threshold:
+ *          leaves, hair), 2 alpha blended, 3 added without alpha,
+ *          4 added, 5 multiplied, 6 multiplied twice (glows, glass ...)
+ *   flags  0x1 unlit, 0x2 no fog, 0x4 two-sided, 0x10 no depth writing */
+typedef struct { uint32_t piece, texture; uint16_t blend, flags; } M2Unit;
 
 typedef struct {
     M2Vertex  *vertices;  uint32_t nvertices;

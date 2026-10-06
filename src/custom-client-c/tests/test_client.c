@@ -365,6 +365,24 @@ int main(int argc, char **argv)
                     for (int r = 0; r < 64; ++r) if (t->chunks[k].alpha[l][r * 64 + 63] != t->chunks[k].alpha[l][r * 64 + 62]) fixed = 0;
                     for (int i = 0; i < 4096; ++i) if (t->chunks[k].alpha[l][i] != 0 && t->chunks[k].alpha[l][i] != 255) { painted = 1; break; }
                 }
+            /* placements (173g): doodads stand on the ground; turns go the original's way */
+            int on_ground = 0, measured = 0;
+            for (int k = 0; k < t->ndoodads; ++k) {
+                float hs = maps_world_height(w, t->doodads[k].x, t->doodads[k].y, &gx, &gy);
+                if (hs < -10000) continue;
+                ++measured;
+                if (fabsf(hs - t->doodads[k].z) < 2.0f) ++on_ground;
+            }
+            snprintf(line, sizeof line, "%d of its %d doodads stand within 2 yards of the server's ground (the rest on rocks, roots or buildings)", on_ground, measured);
+            check(t->ndoodads > 500 && on_ground * 10 > measured * 8, line);
+            check(t->nbuildings > 0 && t->nplaces > 0, "it places buildings too (WMOs)");
+            AdtPlace turn = { .x = 0, .y = 0, .z = 0, .rot = { 0, 30, 0 }, .scale = 2 };
+            float pm[16];
+            adt_place_matrix(&turn, 0, 0, pm);
+            double fx = pm[0], fy = pm[1], up = pm[10];            /* where the model's front (+x) and up (+z) go */
+            snprintf(line, sizeof line, "a turn of 30 degrees faces a model's front at 210 degrees (%.1f), upright, twice the size",
+                     atan2(fy, fx) / 3.14159265358979 * 180 + (atan2(fy, fx) < 0 ? 360 : 0));
+            check(near(atan2(fy, fx), (210 - 360) * 3.14159265358979 / 180, 1e-4) && near(hypot(fx, fy), 2, 1e-4) && near(up, 2, 1e-4), line);
             check(fixed, "every blend map's last column copies the one before, as the original fills the unpainted edge");
             check(painted, "the blend maps hold soft edges, not only all-or-nothing");
             adt_free(t);

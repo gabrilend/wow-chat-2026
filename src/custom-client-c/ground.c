@@ -191,8 +191,9 @@ static int chunk_mesh(const AdtChunk *c, double ox, double oy, MapWorld *world, 
 /* }}} */
 
 /* {{{ ground_load_tile */
-int ground_load_tile(int tx, int ty, double ox, double oy, MapWorld *world, char *why, int why_len)
+int ground_load_tile(int tx, int ty, double ox, double oy, MapWorld *world, AdtTile **kept, char *why, int why_len)
 {
+    *kept = NULL;
     if (tx < 0 || tx > 63 || ty < 0 || ty > 63) return 1;
     char path[200];
     snprintf(path, sizeof path, "World\\Maps\\%s\\%s_%d_%d.adt", map_name, map_name, ty, tx);   /* west-east number first */
@@ -238,8 +239,7 @@ int ground_load_tile(int tx, int ty, double ox, double oy, MapWorld *world, char
         SetTextureFilter(g->blend[k], TEXTURE_FILTER_BILINEAR);
         SetTextureWrap(g->blend[k], TEXTURE_WRAP_CLAMP);
     }
-    adt_free(adt);
-    free(adt);
+    *kept = adt;
     tiles[tx * 64 + ty] = g;
     return 0;
 }

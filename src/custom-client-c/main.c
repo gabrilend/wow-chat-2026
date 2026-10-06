@@ -18,6 +18,7 @@
  */
 #include "camera.h"
 #include "character.h"
+#include "doodads.h"
 #include "ground.h"
 #include "maps.h"
 #include "mover.h"
@@ -151,8 +152,14 @@ static void refresh_tiles(void)
             int x = tx + dx, y = ty + dy;
             if (x < 0 || x >= 64 || y < 0 || y >= 64 || tile_state[x * 64 + y]) continue;
             char why[600];
-            int got = ground_load_tile(x, y, ox, oy, &world, why, sizeof why);
+            AdtTile *adt;
+            int got = ground_load_tile(x, y, ox, oy, &world, &adt, why, sizeof why);
             if (got < 0) { fprintf(stderr, "painting tile (%d, %d): %s\n", x, y, why); exit(1); }
+            if (got == 0) {
+                if (doodads_add_tile(adt, ox, oy, why, sizeof why)) { fprintf(stderr, "doodads on tile (%d, %d): %s\n", x, y, why); exit(1); }
+                adt_free(adt);
+                free(adt);
+            }
             tile_state[x * 64 + y] = got == 0 ? 1 : 2;
         }
 }
@@ -204,11 +211,16 @@ int main(int argc, char **argv)
     if (mpq_chain_open(&chain, client, "enUS", why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     if (build_elf(&chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     if (ground_init(&chain, MAP_NAME, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    if (doodads_init(&chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     Material skin_mat = LoadMaterialDefault(); skin_mat.shader = model_sh; skin_mat.maps[MATERIAL_MAP_DIFFUSE].texture = tex_skin;
     Material hair_mat = LoadMaterialDefault(); hair_mat.shader = model_sh; hair_mat.maps[MATERIAL_MAP_DIFFUSE].texture = tex_hair;
     int eye_m = GetShaderLocation(model_sh, "eye"),  sky_m = GetShaderLocation(model_sh, "sky");
     SetShaderValue(model_sh, sky_m, SKY, SHADER_UNIFORM_VEC3);
     refresh_tiles();
+    int dm, dc, ds;
+    doodads_counts(&dm, &dc, &ds);
+    printf("doodads: %d models, %d placed\n", dm, dc);
+    if (ds) printf("doodads: %d pieces left out: their picture is chosen by the game at run time (not built yet)\n", ds);
 
     int frames = 0, drag_l = 0, drag_r = 0;
     while (!WindowShouldClose()) {
@@ -270,6 +282,7 @@ int main(int argc, char **argv)
         rlMatrixMode(RL_MODELVIEW);
         rlDisableBackfaceCulling();
         ground_draw(eye, SKY);
+        doodads_draw(eye, SKY);
         Matrix place = MatrixMultiply(MatrixRotateZ((float)elf.o), MatrixTranslate(at.x, at.y, (float)elf.z));
         for (int i = 0; i < npieces; ++i) DrawMesh(pieces[i].mesh, pieces[i].texture == 6 ? hair_mat : skin_mat, place);
         EndMode3D();

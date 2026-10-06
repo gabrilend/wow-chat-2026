@@ -16,6 +16,7 @@
 #ifndef EG_GROUND_H
 #define EG_GROUND_H
 
+#include "adt.h"
 #include "maps.h"
 #include "mpq.h"
 #include "raylib.h"
@@ -28,9 +29,11 @@ int  ground_init(MpqChain *chain, const char *map_name, char *why, int why_len);
 /* Loads tile (tx, ty), placed relative to the drawing origin (ox, oy).
  * Light comes from the server's heights in `world` (the same ground; the
  * tests hold the two together), smooth across chunk and tile edges.
+ * The ground file read is handed back in `*kept` (for the doodads and
+ * buildings on it); the caller frees it with adt_free and free.
  * 0 loaded; 1 the map has no ground file there (open sea); -1 an error,
  * with `why`. */
-int  ground_load_tile(int tx, int ty, double ox, double oy, MapWorld *world, char *why, int why_len);
+int  ground_load_tile(int tx, int ty, double ox, double oy, MapWorld *world, AdtTile **kept, char *why, int why_len);
 
 /* Draws every loaded tile. `eye` is the camera's position (for the fog). */
 void ground_draw(Vector3 eye, const float sky[3]);

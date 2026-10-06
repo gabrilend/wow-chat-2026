@@ -7,6 +7,7 @@
  */
 #include "adt.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -164,6 +165,10 @@ int adt_read(const unsigned char *s, size_t len, int big_alpha, AdtTile *out, ch
 {
     memset(out, 0, sizeof *out);
     int nchunks = 0;
+    /* names come in two blocks: the text (MMDX / MWMO), then where each
+     * name starts (MMID / MWID); kept until both are seen */
+    const unsigned char *mmdx = NULL, *mwmo = NULL;
+    size_t mmdx_len = 0, mwmo_len = 0;
     for (size_t at = 0; at + 8 <= len; at += 8 + u32(s, at + 4)) {
         size_t size = u32(s, at + 4);
         if (at + 8 + size > len) { snprintf(why, why_len, "a block at byte %zu says it is %zu bytes, past the file's end (%zu)", at, size, len); adt_free(out); return 1; }
@@ -177,6 +182,38 @@ int adt_read(const unsigned char *s, size_t len, int big_alpha, AdtTile *out, ch
                 name += strlen(name) + 1;
             }
             out->ntextures = n;
+        } else if (is_tag(s, at, "MMDX")) { mmdx = s + at + 8; mmdx_len = size;
+        } else if (is_tag(s, at, "MWMO")) { mwmo = s + at + 8; mwmo_len = size;
+        } else if (is_tag(s, at, "MMID") || is_tag(s, at, "MWID")) {
+            int is_m = is_tag(s, at, "MMID");
+            const unsigned char *text = is_m ? mmdx : mwmo;
+            size_t text_len = is_m ? mmdx_len : mwmo_len;
+            int n = (int)(size / 4);
+            char (*names)[260] = calloc(n ? n : 1, sizeof *names);
+            for (int k = 0; k < n; ++k) {
+                uint32_t o = u32(s, at + 8 + (size_t)k * 4);
+                if (!text || o >= text_len) { snprintf(why, why_len, "%s entry %d points past its names", is_m ? "MMID" : "MWID", k); free(names); adt_free(out); return 1; }
+                snprintf(names[k], sizeof names[k], "%.*s", (int)strnlen((const char *)text + o, text_len - o), text + o);
+            }
+            if (is_m) { out->models = names; out->nmodels = n; } else { out->buildings = names; out->nbuildings = n; }
+        } else if (is_tag(s, at, "MDDF") || is_tag(s, at, "MODF")) {
+            int is_d = is_tag(s, at, "MDDF");
+            size_t each = is_d ? 36 : 64;
+            int n = (int)(size / each);
+            AdtPlace *list = calloc(n ? n : 1, sizeof *list);
+            for (int k = 0; k < n; ++k) {
+                size_t e = at + 8 + (size_t)k * each;
+                AdtPlace *p = &list[k];
+                p->name = (int)u32(s, e);
+                p->uid  = u32(s, e + 4);
+                p->x = 17066.666f - f32(s, e + 16);
+                p->y = 17066.666f - f32(s, e + 8);
+                p->z = f32(s, e + 12);
+                for (int r = 0; r < 3; ++r) p->rot[r] = f32(s, e + 20 + r * 4);
+                p->scale = is_d ? (float)(s[e + 32] | s[e + 33] << 8) / 1024.0f : 1.0f;
+                p->doodad_set = is_d ? 0 : (int)(s[e + 58] | s[e + 59] << 8);
+            }
+            if (is_d) { out->doodads = list; out->ndoodads = n; } else { out->places = list; out->nplaces = n; }
         } else if (is_tag(s, at, "MCNK")) {
             if (nchunks == 256) { snprintf(why, why_len, "more than 256 MCNK blocks"); adt_free(out); return 1; }
             AdtChunk c;
@@ -186,6 +223,18 @@ int adt_read(const unsigned char *s, size_t len, int big_alpha, AdtTile *out, ch
         }
     }
     if (nchunks != 256) { snprintf(why, why_len, "%d MCNK blocks, not 256", nchunks); adt_free(out); return 1; }
+    for (int k = 0; k < out->ndoodads; ++k)
+        if (out->doodads[k].name < 0 || out->doodads[k].name >= out->nmodels) {
+            snprintf(why, why_len, "doodad placement %d names model %d; the tile lists %d", k, out->doodads[k].name, out->nmodels);
+            adt_free(out);
+            return 1;
+        }
+    for (int k = 0; k < out->nplaces; ++k)
+        if (out->places[k].name < 0 || out->places[k].name >= out->nbuildings) {
+            snprintf(why, why_len, "building placement %d names building %d; the tile lists %d", k, out->places[k].name, out->nbuildings);
+            adt_free(out);
+            return 1;
+        }
     for (int i = 0; i < 256; ++i)
         for (int l = 0; l < out->chunks[i].nlayers; ++l)
             if (out->chunks[i].tex[l] < 0 || out->chunks[i].tex[l] >= out->ntextures) {
@@ -195,5 +244,42 @@ int adt_read(const unsigned char *s, size_t len, int big_alpha, AdtTile *out, ch
             }
     return 0;
 }
-void adt_free(AdtTile *t) { free(t->textures); t->textures = NULL; t->ntextures = 0; }
+/* {{{ adt_place_matrix */
+static void mul3(const float a[9], const float b[9], float out[9])
+{
+    for (int r = 0; r < 3; ++r)
+        for (int c = 0; c < 3; ++c)
+            out[r * 3 + c] = a[r * 3] * b[c] + a[r * 3 + 1] * b[3 + c] + a[r * 3 + 2] * b[6 + c];
+}
+void adt_place_matrix(const AdtPlace *p, double ox, double oy, float m[16])
+{
+    const float rad = 3.14159265358979f / 180.0f;
+    float ax = p->rot[2] * rad, ay = (p->rot[1] - 90.0f) * rad, az = -p->rot[0] * rad;
+    /* row-major 3 x 3s, each the usual right-handed turn about its axis */
+    const float to_place[9] = { 1, 0, 0,   0, 0, 1,   0, -1, 0 };      /* (x, y, z) -> (x, z, -y) */
+    const float to_world[9] = { 0, 0, -1,  -1, 0, 0,   0, 1, 0 };      /* (x, y, z) -> (-z, -x, y) */
+    const float tx[9] = { 1, 0, 0,  0, cosf(ax), -sinf(ax),  0, sinf(ax), cosf(ax) };
+    const float ty[9] = { cosf(ay), 0, sinf(ay),  0, 1, 0,  -sinf(ay), 0, cosf(ay) };
+    const float tz[9] = { cosf(az), -sinf(az), 0,  sinf(az), cosf(az), 0,  0, 0, 1 };
+    float a[9], b[9], r[9];
+    mul3(tx, to_place, a);
+    mul3(tz, a, b);
+    mul3(ty, b, a);
+    mul3(to_world, a, r);
+    for (int row = 0; row < 3; ++row)
+        for (int col = 0; col < 3; ++col) m[col * 4 + row] = r[row * 3 + col] * p->scale;
+    m[3] = m[7] = m[11] = 0;
+    m[12] = (float)(p->x - ox);
+    m[13] = (float)(p->y - oy);
+    m[14] = p->z;
+    m[15] = 1;
+}
+/* }}} */
+
+void adt_free(AdtTile *t)
+{
+    free(t->textures); free(t->models); free(t->doodads); free(t->buildings); free(t->places);
+    t->textures = NULL; t->models = NULL; t->doodads = NULL; t->buildings = NULL; t->places = NULL;
+    t->ntextures = t->nmodels = t->ndoodads = t->nbuildings = t->nplaces = 0;
+}
 /* }}} */

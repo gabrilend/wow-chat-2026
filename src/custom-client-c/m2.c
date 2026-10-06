@@ -21,9 +21,25 @@ int m2_read(const unsigned char *m2, size_t m2_len, const unsigned char *skin, s
             M2Model *out, char *why, int why_len)
 {
     memset(out, 0, sizeof *out);
-    if (!m2 || m2_len < 136 || memcmp(m2, "MD20", 4) != 0) { snprintf(why, why_len, "not an M2 model (no MD20 mark)"); return -1; }
+    if (!m2 || m2_len < 160 || memcmp(m2, "MD20", 4) != 0) { snprintf(why, why_len, "not an M2 model (no MD20 mark)"); return -1; }
     if (u32(m2, 4) != 264) { snprintf(why, why_len, "model version %u; this reader knows 264 (3.3.5a)", u32(m2, 4)); return -1; }
     if (!skin || skin_len < 44 || memcmp(skin, "SKIN", 4) != 0) { snprintf(why, why_len, "the .skin file has no SKIN mark"); return -1; }
+
+    /* every table must lie inside its file: doodads are read by the
+     * thousand, and a short or odd file must fail by name, not crash */
+    #define FITS(len, at, count, each, what) \
+        if ((uint64_t)(at) + (uint64_t)(count) * (each) > (len)) { \
+            snprintf(why, why_len, "%s: %u entries at byte %u run past the file's end (%zu bytes)", what, (unsigned)(count), (unsigned)(at), (size_t)(len)); \
+            m2_free(out); return -1; }
+    FITS(m2_len, u32(m2, 64), u32(m2, 60), 48, "the model's points")
+    FITS(m2_len, u32(m2, 84), u32(m2, 80), 16, "the model's pictures")
+    FITS(m2_len, u32(m2, 116), u32(m2, 112), 4, "the model's materials")
+    FITS(m2_len, u32(m2, 132), u32(m2, 128), 2, "the model's picture lookup")
+    FITS(skin_len, u32(skin, 8), u32(skin, 4), 2, "the skin's point list")
+    FITS(skin_len, u32(skin, 16), u32(skin, 12), 2, "the skin's triangles")
+    FITS(skin_len, u32(skin, 32), u32(skin, 28), 48, "the skin's pieces")
+    FITS(skin_len, u32(skin, 40), u32(skin, 36), 24, "the skin's units")
+    #undef FITS
 
     uint32_t nv = u32(m2, 60), ov = u32(m2, 64);
     out->vertices = malloc(sizeof(M2Vertex) * (nv ? nv : 1));
@@ -43,7 +59,7 @@ int m2_read(const unsigned char *m2, size_t m2_len, const unsigned char *skin, s
         size_t at = ot + (size_t)i * 16;
         uint32_t len = u32(m2, at + 8), off = u32(m2, at + 12);
         out->textures[i].kind = u32(m2, at);
-        if (len > 1 && len < sizeof out->textures[i].file) memcpy(out->textures[i].file, m2 + off, len - 1);
+        if (len > 1 && len < sizeof out->textures[i].file && (uint64_t)off + len <= m2_len) memcpy(out->textures[i].file, m2 + off, len - 1);
     }
     uint32_t nl = u32(m2, 128), ol = u32(m2, 132);
 
@@ -70,9 +86,13 @@ int m2_read(const unsigned char *m2, size_t m2_len, const unsigned char *skin, s
     out->nunits = nu;
     for (uint32_t i = 0; i < nu; ++i) {
         size_t at = ou + (size_t)i * 24;
-        uint32_t look = u16(skin, at + 16);
+        uint32_t look = u16(skin, at + 16), mat = u16(skin, at + 10);
         out->units[i].piece = u16(skin, at + 4);
         out->units[i].texture = look < nl ? u16(m2, ol + (size_t)look * 2) : 0;
+        if (mat < u32(m2, 112)) {
+            out->units[i].flags = (uint16_t)u16(m2, u32(m2, 116) + (size_t)mat * 4);
+            out->units[i].blend = (uint16_t)u16(m2, u32(m2, 116) + (size_t)mat * 4 + 2);
+        }
     }
     return 0;
 }
