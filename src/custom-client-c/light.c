@@ -16,9 +16,10 @@
 int light_open(LightTables *t, MpqChain *chain, char *why, int why_len)
 {
     memset(t, 0, sizeof *t);
-    static const char *const NAMES[3] = { "DBFilesClient\\Light.dbc", "DBFilesClient\\LightIntBand.dbc", "DBFilesClient\\LightFloatBand.dbc" };
-    Dbc *dbcs[3] = { &t->light, &t->ints, &t->floats };
-    for (int i = 0; i < 3; ++i) {
+    static const char *const NAMES[5] = { "DBFilesClient\\Light.dbc", "DBFilesClient\\LightIntBand.dbc", "DBFilesClient\\LightFloatBand.dbc",
+                                          "DBFilesClient\\LightParams.dbc", "DBFilesClient\\LightSkybox.dbc" };
+    Dbc *dbcs[5] = { &t->light, &t->ints, &t->floats, &t->params, &t->skyboxes };
+    for (int i = 0; i < 5; ++i) {
         size_t len;
         const char *from;
         t->files[i] = mpq_chain_read(chain, NAMES[i], &len, &from);
@@ -33,7 +34,7 @@ int light_open(LightTables *t, MpqChain *chain, char *why, int why_len)
     }
     return 0;
 }
-void light_close(LightTables *t) { for (int i = 0; i < 3; ++i) free(t->files[i]); memset(t, 0, sizeof *t); }
+void light_close(LightTables *t) { for (int i = 0; i < 5; ++i) free(t->files[i]); memset(t, 0, sizeof *t); }
 /* }}} */
 
 /* {{{ static band readers: a band's value at a time, blended between its
@@ -88,6 +89,9 @@ static void params_at(const LightTables *t, uint32_t set, uint32_t when, LightNo
     row = find_row(&t->floats, set * 6 - 4);
     band_at(&t->floats, row < 0 ? 0 : row, when, 0, v);
     o->fog_start = o->fog_end * (row < 0 ? 0.25f : v[0]);
+    /* some sets give a negative share (Northrend light 1386: -0.1 at
+     * night); fog doesn't start behind the camera, so it starts at 0 */
+    if (o->fog_start < 0) o->fog_start = 0;
 }
 static void mix_into(LightNow *a, const LightNow *b, float w)
 {
@@ -133,6 +137,17 @@ int light_at(const LightTables *t, int map, float x, float y, float z, float hou
         if (def < 0 && i == 0) *out = l;
         else mix_into(out, &l, reach[i].w);
         if (reach[i].w >= most) { most = reach[i].w; used = (int)dbc_u32(&t->light, (uint32_t)reach[i].row, 1); }
+    }
+    /* the skybox: the strongest light's parameter set names one (field 3,
+     * into LightSkybox: 2 its model), or none */
+    out->skybox[0] = '\0';
+    for (uint32_t r = 0; used >= 0 && r < t->light.rows; ++r) {
+        if ((int)dbc_u32(&t->light, r, 1) != used) continue;
+        int prow = find_row(&t->params, dbc_u32(&t->light, r, 8));
+        uint32_t sky = prow >= 0 ? dbc_u32(&t->params, (uint32_t)prow, 3) : 0;
+        int srow = sky ? find_row(&t->skyboxes, sky) : -1;
+        if (srow >= 0) snprintf(out->skybox, sizeof out->skybox, "%s", dbc_text(&t->skyboxes, (uint32_t)srow, 2));
+        break;
     }
     if (used < 0) {
         for (int c = 0; c < 3; ++c) { out->sun[c] = 0.8f; out->shade[c] = 0.4f; out->fog[c] = 0.6f; for (int s = 0; s < 5; ++s) out->sky[s][c] = 0.6f; }

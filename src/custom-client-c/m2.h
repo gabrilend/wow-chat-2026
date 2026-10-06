@@ -26,8 +26,18 @@ typedef struct { uint32_t id, first, count; } M2Piece;                 /* id = g
  *   blend  0 opaque, 1 cut-out (see-through below an alpha threshold:
  *          leaves, hair), 2 alpha blended, 3 added without alpha,
  *          4 added, 5 multiplied, 6 multiplied twice (glows, glass ...)
- *   flags  0x1 unlit, 0x2 no fog, 0x4 two-sided, 0x10 no depth writing */
-typedef struct { uint32_t piece, texture; uint16_t blend, flags; } M2Unit;
+ *   flags  0x1 unlit, 0x2 no fog, 0x4 two-sided, 0x10 no depth writing
+ * and its animated tint: a colour track pair (colour, then opacity: 40
+ * bytes at header 76) and a transparency track (20 bytes at header 92),
+ * both read through anim.c (173n: an aurora's faint, shifting curtains) */
+typedef struct {
+    uint32_t piece, texture;
+    uint16_t blend, flags;
+    int      colour;                  /* into the model's colour tracks (header 72), -1 none */
+    int      fade;                    /* into its transparency tracks (header 88, through the lookup at 144), -1 none */
+    int      layers;                  /* how many pictures it lays over each other (skin unit +14; usually 1) */
+    int      moving_uv;               /* 1 when its picture positions are animated (skin unit +22 names a UV animation) */
+} M2Unit;
 
 typedef struct {
     M2Vertex  *vertices;  uint32_t nvertices;

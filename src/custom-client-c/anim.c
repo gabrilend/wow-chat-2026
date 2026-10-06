@@ -125,12 +125,13 @@ void anim_attach_file(Anim *a, int seq, unsigned char *data, size_t len)
  * when the track has nothing for this animation (the bone stays at rest
  * for that part). `size` is the value's byte size; out gets 3 floats
  * (moves, stretches) or 4 (turns). */
-static const size_t KIND_SIZE[4] = { 12, 8, 4, 1 };          /* ANIM_VEC3, ANIM_TURN, ANIM_FLOAT, ANIM_BYTE */
+static const size_t KIND_SIZE[5] = { 12, 8, 4, 1, 2 };       /* ANIM_VEC3, ANIM_TURN, ANIM_FLOAT, ANIM_BYTE, ANIM_SHARE */
 static void decode(const unsigned char *s, size_t at, int kind, float *v)
 {
     if (kind == ANIM_VEC3) { for (int k = 0; k < 3; ++k) v[k] = f32(s, at + k * 4); return; }
     if (kind == ANIM_FLOAT) { v[0] = f32(s, at); return; }
     if (kind == ANIM_BYTE) { v[0] = (float)s[at]; return; }
+    if (kind == ANIM_SHARE) { v[0] = (float)(int16_t)u16(s, at) / 32767.0f; return; }
     for (int k = 0; k < 4; ++k) {
         int16_t n = (int16_t)u16(s, at + k * 2);
         v[k] = (n < 0 ? (float)(n + 32768) : (float)(n - 32767)) / 32767.0f;

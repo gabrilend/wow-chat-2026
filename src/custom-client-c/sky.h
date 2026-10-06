@@ -7,6 +7,13 @@
  * between. It is drawn first, behind everything, and moves with the
  * camera so it can never be reached.
  *
+ * A skybox (173n): when the zone's light names one (LightSkybox: in
+ * Kalimdor and the Eastern Kingdoms none do; in Northrend the auroras),
+ * its model is drawn round the camera after the dome, behind everything,
+ * sized to fit inside the far plane (its bounding radius to 800 yards),
+ * playing its standing animation, each piece blended as it says (added
+ * light for the auroras), unlit.
+ *
  * Rings, by height above the horizon (degrees): -30 and 0 the horizon
  * colour (sky[4]), 6 sky[3], 15 sky[2], 35 sky[1], 90 overhead (sky[0]).
  * This client's reading of where the original's bands sit, to be
@@ -15,15 +22,16 @@
 #ifndef EG_SKY_H
 #define EG_SKY_H
 
+#include "figure.h"
 #include "light.h"
 #include "raylib.h"
 
-void sky_init(void);
+void sky_init(MpqChain *chain);
 
 /* Hands a shader the light: its uniforms sun_dir, sun_col, shade_col,
  * fog_col (vec3) and fog_range (vec2: where the fog starts and ends,
  * yards). Every world shader (ground, doodads, figures) declares them. */
 void sky_light_shader(Shader sh, const LightNow *light);
-void sky_draw(Vector3 eye, const LightNow *light);
+void sky_draw(Vector3 eye, const LightNow *light, float dt);
 
 #endif

@@ -47,10 +47,38 @@ Verbatim, 2026-10-06: "can we work on doodad animations / lighting next?"
   - Durotar, across the continent, gets another light.
   - The sun is high at noon and low at night.
 
+**Skyboxes (2026-10-06): loaded, drawn only when simple.**
+- **Where they are:** a light's parameter set names a skybox (LightParams
+  field 3, then LightSkybox's model). Ashenvale's names none, and a
+  search of maps 0 and 1 found none at all. The skyboxes on the main
+  maps are Northrend's auroras (AuroraYellowGreen, AuroraOrange).
+- **What's built:**
+  - `light.c` reads LightParams and LightSkybox and gives the strongest
+    light's skybox model with the light.
+  - `sky.c` loads it as a figure (`figure_from_model`), sizes it to 800
+    yards, plays its standing animation, draws it round the camera
+    after the dome, and tints each piece by its animated colour and
+    transparency (`figure_tint`; `m2.c` now reads each unit's colour and
+    transparency tracks).
+- **Not drawn yet:** an aurora lays two pictures on each piece (the light
+  under a mask) and scrolls the mask (picture-position animation). Drawn
+  with its first picture alone, it filled the sky as a solid yellow wall.
+  So a skybox whose pieces layer or move pictures is left out, and said
+  once. `m2.c` now gives each unit its layer count and whether its
+  picture positions move.
+- **Also:**
+  - `--map ID X Y` starts the client on any map (Map.dbc gives the folder
+    name). Northrend at (3694, 3440) shows snow, a frozen lake and glacier
+    cliffs.
+  - Fog no longer starts behind the camera: Northrend's light 1386 gives
+    a negative start share at night, now held at 0.
+
 **Night light:** the owner (2026-10-06) on Ashenvale at night: "that's
 approximately how it looks, but we can adjust it later if we need to."
 
 **Left:**
+- Drawing pieces that layer two pictures and move picture positions
+  (auroras; perhaps the moss, 173g).
 - Weather lights (storms), underwater light, and the ghost world's
   light after death.
 - The skybox (owner, 2026-10-06: "and skybox!"): many lights name a

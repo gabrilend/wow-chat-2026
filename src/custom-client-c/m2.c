@@ -87,6 +87,18 @@ int m2_read(const unsigned char *m2, size_t m2_len, const unsigned char *skin, s
     for (uint32_t i = 0; i < nu; ++i) {
         size_t at = ou + (size_t)i * 24;
         uint32_t look = u16(skin, at + 16), mat = u16(skin, at + 10);
+        int16_t colour = (int16_t)u16(skin, at + 8);
+        uint32_t fade_look = u16(skin, at + 20);
+        out->units[i].colour = colour >= 0 && (uint32_t)colour < u32(m2, 72) ? colour : -1;
+        out->units[i].fade = -1;
+        if (fade_look < u32(m2, 144) && (uint64_t)u32(m2, 148) + (uint64_t)(fade_look + 1) * 2 <= m2_len) {
+            uint32_t f = u16(m2, u32(m2, 148) + (size_t)fade_look * 2);
+            if (f < u32(m2, 88)) out->units[i].fade = (int)f;
+        }
+        out->units[i].layers = (int)u16(skin, at + 14);
+        uint32_t uv_look = u16(skin, at + 22);
+        out->units[i].moving_uv = uv_look < u32(m2, 152) && (uint64_t)u32(m2, 156) + (uint64_t)(uv_look + 1) * 2 <= m2_len
+                                  && (int16_t)u16(m2, u32(m2, 156) + (size_t)uv_look * 2) >= 0;
         out->units[i].piece = u16(skin, at + 4);
         out->units[i].texture = look < nl ? u16(m2, ol + (size_t)look * 2) : 0;
         if (mat < u32(m2, 112)) {

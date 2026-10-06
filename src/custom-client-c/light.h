@@ -37,6 +37,8 @@
  *   water[4][3]          ocean near, ocean deep, river near, river deep
  *   fog_start, fog_end   float, yards
  *   sun_dir[3]           a unit vector toward the sun (world axes)
+ *   skybox[128]          the skybox model the strongest light names
+ *                        (LightParams 3 -> LightSkybox 2), "" for none
  */
 #ifndef EG_LIGHT_H
 #define EG_LIGHT_H
@@ -51,11 +53,12 @@ typedef struct {
     float water[4][3];
     float fog_start, fog_end;
     float sun_dir[3];
+    char  skybox[128];
 } LightNow;
 
 typedef struct {
-    unsigned char *files[3];          /* the tables' bytes, kept while open */
-    Dbc light, ints, floats;
+    unsigned char *files[5];          /* the tables' bytes, kept while open */
+    Dbc light, ints, floats, params, skyboxes;
 } LightTables;
 
 int  light_open(LightTables *t, MpqChain *chain, char *why, int why_len);

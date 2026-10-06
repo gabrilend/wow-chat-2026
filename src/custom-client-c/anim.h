@@ -92,7 +92,7 @@ void anim_attach_file(Anim *a, int seq, unsigned char *data, size_t len);   /* t
  * ANIM_TURN a turn (4 floats, x y z w), ANIM_FLOAT 1 float, ANIM_BYTE 1
  * byte. Tracks other than bones' (particle settings, 173o) use it too.
  * 0 when the track has nothing for this animation (`out` untouched). */
-enum { ANIM_VEC3, ANIM_TURN, ANIM_FLOAT, ANIM_BYTE };
+enum { ANIM_VEC3, ANIM_TURN, ANIM_FLOAT, ANIM_BYTE, ANIM_SHARE };   /* ANIM_SHARE: a 16-bit share, 0-32767 read as 0-1 */
 AnimTrack anim_track_at(const unsigned char *m2, size_t at);   /* a track's 20-byte head, read at `at` */
 int  anim_track_value(const Anim *a, const AnimTrack *tr, int seq, uint32_t ms, uint32_t global_ms, int kind, float *out);
 

@@ -23,6 +23,8 @@
  *   --face DEG        her start facing turned DEG degrees (left)
  *   --walk S          (pictures) hold forward for S world-seconds
  *   --goto X Y        (pictures) one world-second in, move her to world (X, Y)
+ *   --map ID X Y      start on map ID (Map.dbc: 0 Eastern Kingdoms, 1 Kalimdor,
+ *                     530 Outland, 571 Northrend) at world (X, Y)
  *   --pose ID MS      (pictures) hold her in animation ID (AnimationData.dbc:
  *                     0 stand, 5 run, 13 walk backwards, 38 jump ...) at MS
  */
@@ -30,6 +32,7 @@
 #include "camera.h"
 #include "character.h"
 #include "collide.h"
+#include "dbc.h"
 #include "doodads.h"
 #include "figure.h"
 #include "ground.h"
@@ -54,11 +57,15 @@
 #include <string.h>
 #include <time.h>
 
+/* {{{ the map and the start (--map ID X Y chooses another; the folder
+ * name comes from the client's Map.dbc: 1 id, 2 its folder in the
+ * archives, World\\Maps\\<folder>) */
+static int    map_id = 1;                               /* Kalimdor */
+static char   map_name[64] = "Kalimdor";
+static double start_x = 2717.0, start_y = -400.0;       /* Astranaar, Ashenvale */
+/* }}} */
+
 /* {{{ settings */
-#define MAP_ID       1                                 /* Kalimdor */
-#define MAP_NAME     "Kalimdor"                        /* its folder in the archives (World\\Maps\\Kalimdor) */
-#define START_X      2717.0                            /* Astranaar, Ashenvale */
-#define START_Y      (-400.0)
 #define START_O      3.6                               /* facing the town's west side */
 #define SPEED        1.2                               /* 120% of the base speeds (owner, 2026-10-04) */
 #define TILE_REACH   1                                 /* tiles drawn round her own: 3 x 3 */
@@ -245,9 +252,10 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--hour") && i + 1 < argc) hours = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--face") && i + 1 < argc) face_deg = atof(argv[++i]);
         else if (!strcmp(argv[i], "--walk") && i + 1 < argc) walk_s = (float)atof(argv[++i]);
+        else if (!strcmp(argv[i], "--map") && i + 3 < argc) { map_id = atoi(argv[++i]); start_x = atof(argv[++i]); start_y = atof(argv[++i]); }
         else if (!strcmp(argv[i], "--goto") && i + 2 < argc) { goto_x = atof(argv[++i]); goto_y = atof(argv[++i]); go_to = 1; }
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--goto X Y]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--goto X Y] [--map ID X Y]\n"); return 2; }
 
     /* the settings: defaults, then the player's file; a line it refuses is
      * named on the terminal and skipped (173b1) */
@@ -258,10 +266,10 @@ int main(int argc, char **argv)
     settings_resolution(settings_text("gxResolution"), &win_w, &win_h);   /* accepted when set, so always a resolution */
 
     char why[900];
-    maps_world_init(&world, maps, MAP_ID);
+    maps_world_init(&world, maps, map_id);
     float gx, gy;
-    float z = maps_world_height(&world, (float)START_X, (float)START_Y, &gx, &gy);
-    if (z < -10000) { fprintf(stderr, "no ground at the start (%.1f, %.1f) in map %d from %s: is the maps folder right?\n", START_X, START_Y, MAP_ID, maps); return 1; }
+    float z = maps_world_height(&world, (float)start_x, (float)start_y, &gx, &gy);
+    if (z < -10000) { fprintf(stderr, "no ground at the start (%.1f, %.1f) in map %d from %s: is the maps folder right?\n", start_x, start_y, map_id, maps); return 1; }
     /* the steepest walkable ground, from the server's navigation tiles
      * (data-files/mmaps beside data-files/maps) */
     char mmaps[600];
@@ -269,11 +277,11 @@ int main(int argc, char **argv)
     char *cut = strstr(mmaps, "/maps");
     if (!cut) { fprintf(stderr, "the maps folder %s doesn't end in /maps; can't find mmaps beside it\n", maps); return 1; }
     strcpy(cut, "/mmaps");
-    float max_slope = navmesh_slope_read(mmaps, MAP_ID, why, sizeof why);
+    float max_slope = navmesh_slope_read(mmaps, map_id, why, sizeof why);
     if (max_slope < 0) { fprintf(stderr, "%s\n", why); return 1; }
-    mover_init(&elf, START_X, START_Y, z, START_O + face_deg * PI / 180, SPEED, max_slope);
+    mover_init(&elf, start_x, start_y, z, START_O + face_deg * PI / 180, SPEED, max_slope);
     view.yaw = (float)elf.o + (view.yaw - (float)START_O);   /* the camera keeps its place behind her */
-    ox = floor(START_X); oy = floor(START_Y);
+    ox = floor(start_x); oy = floor(start_y);
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
     InitWindow(win_w, win_h, "Everland Ghostsong");
@@ -293,27 +301,39 @@ int main(int argc, char **argv)
                                      : figure_from_display(f, &chain, BYSTANDERS[i].display, why, sizeof why);
         if (bad) { fprintf(stderr, "bystander %d left out: %s\n", i, why); continue; }
         double fx = cos(START_O), fy = sin(START_O);
-        other_at[nothers].x = START_X + fx * BYSTANDERS[i].ahead - fy * BYSTANDERS[i].left;
-        other_at[nothers].y = START_Y + fy * BYSTANDERS[i].ahead + fx * BYSTANDERS[i].left;
+        other_at[nothers].x = start_x + fx * BYSTANDERS[i].ahead - fy * BYSTANDERS[i].left;
+        other_at[nothers].y = start_y + fy * BYSTANDERS[i].ahead + fx * BYSTANDERS[i].left;
         other_at[nothers].z = maps_world_height(&world, (float)other_at[nothers].x, (float)other_at[nothers].y, &gx, &gy);
-        other_at[nothers].facing = (float)atan2(START_Y - other_at[nothers].y, START_X - other_at[nothers].x);
+        other_at[nothers].facing = (float)atan2(start_y - other_at[nothers].y, start_x - other_at[nothers].x);
         moves_init(&other_at[nothers].moves, &f->anim);
         other_at[nothers].cycle = 0;
         other_at[nothers].held = (float)(i * 900);        /* staggered, so they don't change together */
         printf("bystander: %s\n", f->name);
         ++nothers;
     }
-    if (ground_init(&chain, MAP_NAME, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    {
+        size_t len;
+        const char *from;
+        unsigned char *mt = mpq_chain_read(&chain, "DBFilesClient\\Map.dbc", &len, &from);
+        Dbc maps_table;
+        if (!mt || dbc_open(&maps_table, mt, len, why, sizeof why)) { fprintf(stderr, "Map.dbc: %s\n", mt ? why : "not in the archives"); CloseWindow(); return 1; }
+        int found = 0;
+        for (uint32_t r = 0; r < maps_table.rows && !found; ++r)
+            if ((int)dbc_u32(&maps_table, r, 1) == map_id) { snprintf(map_name, sizeof map_name, "%s", dbc_text(&maps_table, r, 2)); found = 1; }
+        free(mt);
+        if (!found) { fprintf(stderr, "no map %d in Map.dbc\n", map_id); CloseWindow(); return 1; }
+    }
+    if (ground_init(&chain, map_name, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     solids = collide_new(ox, oy);
     waters = liquid_new();
     if (doodads_init(&chain, solids, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     if (water_init(&chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     LightTables lights;
     if (light_open(&lights, &chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
-    sky_init();
+    sky_init(&chain);
     LightNow light;
-    int light_id = light_at(&lights, MAP_ID, (float)elf.x, (float)elf.y, (float)elf.z, hours, &light);
-    if (light_id < 0) printf("light: map %d has no lights in Light.dbc; a plain grey day is used\n", MAP_ID);
+    int light_id = light_at(&lights, map_id, (float)elf.x, (float)elf.y, (float)elf.z, hours, &light);
+    if (light_id < 0) printf("light: map %d has no lights in Light.dbc; a plain grey day is used\n", map_id);
     else printf("light: %02d:%02d, light %d, fog from %.0f to %.0f yards\n", (int)hours, (int)(fmodf(hours, 1.0f) * 60), light_id, light.fog_start, light.fog_end);
     int eye_m = GetShaderLocation(model_sh, "eye");
     refresh_tiles();
@@ -422,7 +442,7 @@ int main(int argc, char **argv)
         BeginDrawing();
         /* the light here, now: time runs on in real time */
         hours = fmodf(hours + dt / 3600.0f, 24.0f);
-        int lit = light_at(&lights, MAP_ID, (float)elf.x, (float)elf.y, (float)elf.z, hours, &light);
+        int lit = light_at(&lights, map_id, (float)elf.x, (float)elf.y, (float)elf.z, hours, &light);
         if (lit != light_id) { light_id = lit; printf("light: now light %d\n", lit); }
         sky_light_shader(model_sh, &light);
         ClearBackground((Color){ (unsigned char)(fminf(light.fog[0], 1) * 255), (unsigned char)(fminf(light.fog[1], 1) * 255), (unsigned char)(fminf(light.fog[2], 1) * 255), 255 });
@@ -435,7 +455,7 @@ int main(int argc, char **argv)
         rlMultMatrixf(MatrixToFloat(MatrixPerspective(60 * DEG2RAD, (double)GetScreenWidth() / GetScreenHeight(), 0.3, 1600)));
         rlMatrixMode(RL_MODELVIEW);
         rlDisableBackfaceCulling();
-        sky_draw(eye, &light);                           /* first, behind everything */
+        sky_draw(eye, &light, dt);                       /* first, behind everything */
         ground_blob(at.x, at.y, (float)elf.z, 1.3f);     /* her shadow, a little wider than her shoulders */
         for (int i = 0; i < nothers; ++i)                /* theirs, sized by their display's scale */
             ground_blob((float)(other_at[i].x - ox), (float)(other_at[i].y - oy), (float)other_at[i].z, 1.3f * others[i].scale);

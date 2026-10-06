@@ -30,6 +30,9 @@ typedef struct {
     Mesh       mesh;
     Texture2D  tex;
     uint32_t  *point_of;              /* per mesh corner: the model point it is */
+    uint16_t   blend;                 /* the piece's blend mode (m2.h: 0 solid ... 4 added light) */
+    int        colour, fade;          /* its animated tint's tracks (m2.h's M2Unit), -1 none */
+    int        layers, moving_uv;     /* two-picture pieces and moving picture positions (not drawn right yet) */
 } FigurePiece;
 
 typedef struct {
@@ -44,6 +47,15 @@ typedef struct {
 
 int  figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look, char *why, int why_len);
 int  figure_from_display(Figure *f, MpqChain *chain, int display_id, char *why, int why_len);
+
+/* Any model by its archive path (.mdx or .m2): every piece shows, every
+ * picture is named inside the model (kind 0); for skyboxes (173n). */
+int  figure_from_model(Figure *f, MpqChain *chain, const char *path, char *why, int why_len);
+
+/* A piece's animated tint now (red, green, blue, opacity, 0-1): its colour
+ * track pair times its transparency track at the moves' animation and
+ * moment; white and whole when it has none. */
+void figure_tint(const Figure *f, int piece, const MovesState *moves, uint32_t global_ms, float rgba[4]);
 
 /* Poses the bones by `moves` and bends the points into the meshes. */
 void figure_bend(Figure *f, const MovesState *moves, uint32_t global_ms);

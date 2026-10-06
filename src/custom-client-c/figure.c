@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+static uint32_t u32le(const unsigned char *s, size_t at) { return s[at] | s[at + 1] << 8 | s[at + 2] << 16 | (uint32_t)s[at + 3] << 24; }
+
 /* {{{ static texture_of: a decoded picture onto the graphics card */
 static Texture2D texture_of(const BlpImage *img)
 {
@@ -77,6 +79,11 @@ static int build(Figure *f, MpqChain *chain, const M2Model *mod, const uint8_t *
         UploadMesh(&m, true);                             /* dynamic: bent every frame */
         fp->mesh = m;
         fp->tex = pics[un.texture];
+        fp->blend = un.blend;
+        fp->colour = un.colour;
+        fp->fade = un.fade;
+        fp->layers = un.layers;
+        fp->moving_uv = un.moving_uv;
         ++f->npieces;
     }
     if (f->npieces == 0) { snprintf(why, why_len, "%s: nothing to draw (no shown piece has a picture)", f->name); return 1; }
@@ -216,6 +223,66 @@ int figure_from_display(Figure *f, MpqChain *chain, int display_id, char *why, i
     free(shown);
     m2_free(&mod);
     return bad;
+}
+/* }}} */
+
+/* {{{ figure_from_model */
+int figure_from_model(Figure *f, MpqChain *chain, const char *path_in, char *why, int why_len)
+{
+    memset(f, 0, sizeof *f);
+    f->scale = 1;
+    char base[260], path[300], inner[300];
+    snprintf(base, sizeof base, "%s", path_in);
+    char *dot = strrchr(base, '.');
+    if (dot) *dot = '\0';
+    snprintf(f->name, sizeof f->name, "%.63s", strrchr(base, '\\') ? strrchr(base, '\\') + 1 : base);
+    size_t mlen, slen;
+    const char *from;
+    snprintf(path, sizeof path, "%s.m2", base);
+    unsigned char *m2 = mpq_chain_read(chain, path, &mlen, &from);
+    snprintf(path, sizeof path, "%s00.skin", base);
+    unsigned char *skin = mpq_chain_read(chain, path, &slen, &from);
+    if (!m2 || !skin) { snprintf(why, why_len, "%s: its %s is in none of the archives", f->name, !m2 ? ".m2" : "00.skin"); free(m2); free(skin); return 1; }
+    M2Model mod;
+    int bad = m2_read(m2, mlen, skin, slen, &mod, inner, sizeof inner);
+    free(m2); free(skin);
+    if (bad) { snprintf(why, why_len, "%s: %s", f->name, inner); return 1; }
+    Texture2D pics[64] = { 0 };
+    for (uint32_t t = 0; t < mod.ntextures && t < 64; ++t) {
+        if (mod.textures[t].kind != 0 || !mod.textures[t].file[0]) continue;
+        if (load_picture(chain, mod.textures[t].file, &pics[t], inner, sizeof inner)) {
+            snprintf(why, why_len, "%s: %s", f->name, inner);
+            m2_free(&mod);
+            return 1;
+        }
+    }
+    bad = build(f, chain, &mod, NULL, pics, base, why, why_len);
+    m2_free(&mod);
+    return bad;
+}
+/* }}} */
+
+/* {{{ figure_tint */
+void figure_tint(const Figure *f, int piece, const MovesState *moves, uint32_t global_ms, float rgba[4])
+{
+    rgba[0] = rgba[1] = rgba[2] = rgba[3] = 1;
+    const FigurePiece *p = &f->pieces[piece];
+    const unsigned char *m2 = f->anim.m2;
+    uint32_t ms = moves->ms > 0 ? (uint32_t)moves->ms : 0;
+    if (p->colour >= 0) {
+        size_t at = (size_t)u32le(m2, 76) + (size_t)p->colour * 40;
+        AnimTrack c = anim_track_at(m2, at), a = anim_track_at(m2, at + 20);
+        float col[3] = { 1, 1, 1 }, op = 1;
+        anim_track_value(&f->anim, &c, moves->seq, ms, global_ms, ANIM_VEC3, col);
+        anim_track_value(&f->anim, &a, moves->seq, ms, global_ms, ANIM_SHARE, &op);
+        rgba[0] = col[0]; rgba[1] = col[1]; rgba[2] = col[2]; rgba[3] = op;
+    }
+    if (p->fade >= 0) {
+        AnimTrack t = anim_track_at(m2, (size_t)u32le(m2, 92) + (size_t)p->fade * 20);
+        float op = 1;
+        anim_track_value(&f->anim, &t, moves->seq, ms, global_ms, ANIM_SHARE, &op);
+        rgba[3] *= op;
+    }
 }
 /* }}} */
 
