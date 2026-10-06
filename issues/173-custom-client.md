@@ -57,6 +57,11 @@ The project's own game client, built up in steps:
 | 173j | models-standing-around | 173i | A few other models standing near her, cycling their animations |
 | 173k | client-in-c-with-raylib | 173a, 173d | The client ported to C on Raylib, the start of the project's engine; the Lua version kept beside it as the reference |
 | 173l | same-bytes-as-the-original | 173e | A shadow custom client fed the original client's server packets and the owner's inputs; every packet it would send compared with the original's |
+| 173m | camera | 173a, 173b1 | Left drag orbits, right drag steers her; following styles in a table of behaviours (the owner's default: swing back behind her, horizontally only, while she moves); every camera setting live |
+
+173b is itself split, one sub-issue per section of the original's
+Options menu (173b1 to 173b16), so that each feature is built together
+with its settings. The settings store (173b1) comes before the camera.
 
 The owner's order for the next steps (2026-10-05): painted ground, then
 doodads, then shadow maps, then her animation, then models standing
@@ -69,6 +74,8 @@ interface, 617s7's box select, 719's tooltips.
 
 1. 173a (in progress).
 2. 173d, then 173b; 173c alongside.
+3. 173b1 (the settings store), then 173m (the camera) with 173b3 and
+   173b4 (owner, 2026-10-06), before painted ground.
 
 ## Open Questions
 

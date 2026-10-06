@@ -4,6 +4,8 @@
 - Created: 2026-10-04
 - Phase: 6
 - Parent: 617s (the compass formation)
+- Related: 173m (the camera: its left drag orbits, so the two must share
+  the left button; open question there)
 - Blocked by: 617s6 (sending buddies), the project's own client (not yet
   an issue; 916o also waits on it)
 - Priority: Low

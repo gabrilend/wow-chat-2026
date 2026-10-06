@@ -29,6 +29,7 @@ wow-chat-2026/
 │   ├── design-principles.md       Rules of thumb: sustain → power → focus; honest tooltips; no required addons; the model routes, code behaves
 │   ├── gear-3d-pipeline.md        Profile -> views (8 x 1/3/5 rings) -> mesh -> glTF kept / M2 exported -> skeleton -> generated animations (506e-506i)
 │   ├── m2-format-wotlk.md         The game's model files (M2 + .skin, version 264), measured from stock items; body armour is texture, not model
+│   ├── custom-client-stock-options.md  The original client's whole Options menu: every panel, setting, range, drop-down choice and bindable key (generated; issue 173b)
 │   ├── bot-governor.md            Host-load-driven bot population governor
 │   ├── context-placement.md       Put a thing where it is referred to
 │   ├── class-spells-level-1-20.md Class ability reference (levels 1-20)
