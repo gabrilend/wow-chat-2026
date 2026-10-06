@@ -255,7 +255,7 @@ int main(int argc, char **argv)
     /* {{{ putting her together */
     printf("putting her together\n");
     Character ch;
-    CharacterLook look = { 4, 1, 0, 0, 0, 0 };
+    CharacterLook look = { 4, 1, 0, 0, 0, 0, { 0 } };
     int built = character_build(&chain, &look, &ch, why, sizeof why) == 0;
     check(built, built ? "she is put together" : why);
     if (built) {
@@ -285,9 +285,33 @@ int main(int argc, char **argv)
         character_free(&ch);
     }
     {
+        /* dressed (173p): the rogue's set paints her torso and switches on
+         * her boots (feet group 5: 501 + 3 for these boots) */
+        CharacterLook dressed = { 4, 1, 0, 0, 0, 0, { 0 } }, bare = { 4, 1, 0, 0, 0, 0, { 0 } };
+        dressed.items[SLOT_CHEST] = 41143; dressed.items[SLOT_FEET] = 41480; dressed.items[SLOT_HANDS] = 41138;
+        Character dc, bc;
+        if (character_build(&chain, &dressed, &dc, why, sizeof why) || character_build(&chain, &bare, &bc, why, sizeof why)) check(0, why);
+        else {
+            int changed = 0, boots = 0, bare_feet = 0;
+            int k = dc.skin.width / 256;
+            for (int y = 0; y < 64 * k; y += 4) for (int x = 128 * k; x < 256 * k; x += 4) {
+                size_t o = ((size_t)y * dc.skin.width + x) * 4;
+                if (dc.skin.rgba[o] != bc.skin.rgba[o] || dc.skin.rgba[o + 1] != bc.skin.rgba[o + 1]) ++changed;
+            }
+            for (uint32_t i = 0; i < dc.model.npieces; ++i) {
+                if (dc.model.pieces[i].id == 504 && dc.shown[i]) boots = 1;
+                if (dc.model.pieces[i].id == 501 && dc.shown[i]) bare_feet = 1;
+            }
+            snprintf(line, sizeof line, "dressed in the rogue's set, her upper torso is painted (%d of %d samples changed), her boots show and her bare feet don't", changed, 16 * k * 32 * k);
+            check(changed > 100 && boots && !bare_feet, line);
+            character_free(&dc);
+            character_free(&bc);
+        }
+    }
+    {
         /* a tauren man: his tail (piece 1501) uses the fur picture (kind 8),
          * the skin row's second; without it the tail was skipped (173d) */
-        CharacterLook tauren = { 6, 0, 0, 0, 0, 0 };
+        CharacterLook tauren = { 6, 0, 0, 0, 0, 0, { 0 } };
         Character tc;
         if (character_build(&chain, &tauren, &tc, why, sizeof why)) check(0, why);
         else {

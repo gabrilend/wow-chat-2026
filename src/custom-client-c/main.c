@@ -23,6 +23,8 @@
  *   --face DEG        her start facing turned DEG degrees (left)
  *   --walk S          (pictures) hold forward for S world-seconds
  *   --dive S          (pictures) then hold X (swim down) for S world-seconds
+ *   --wear SLOT:LOOK,...  dress her: each slot's item look (ItemDisplayInfo id),
+ *                     e.g. chest:41143,hands:41138,legs:41140,waist:41476,feet:41480
  *   --goto X Y        (pictures) one world-second in, move her to world (X, Y)
  *   --map ID X Y      start on map ID (Map.dbc: 0 Eastern Kingdoms, 1 Kalimdor,
  *                     530 Outland, 571 Northrend) at world (X, Y)
@@ -74,7 +76,27 @@ static double start_x = 2717.0, start_y = -400.0;       /* Astranaar, Ashenvale 
 #define ZOOM_BASE    20.0f                             /* yards; times cameraDistanceMaxFactor (1 to 2) is the zoom-out limit (173b4) */
 /* her look: ChrRaces id, sex, and the character-creation choices (from 0);
  * a stand-in for the ids the server will send (173d, 617r5) */
-static const CharacterLook LOOK = { 4, 1, 0, 0, 0, 0 };
+static CharacterLook LOOK = { 4, 1, 0, 0, 0, 0, { 0 } };   /* --wear dresses her (173p) */
+
+/* {{{ static wear_option: "--wear chest:41143,hands:41138": slot names to
+ * item looks (ItemDisplayInfo ids); 0 on success, else the bad part */
+static const char *const SLOT_NAMES[SLOT_COUNT] = {
+    "shirt", "legs", "feet", "wrists", "chest", "hands", "tabard", "waist", "head", "shoulders", "back", "mainhand", "offhand",
+};
+static int wear_option(const char *text, char *bad, int bad_len)
+{
+    char copy[600];
+    snprintf(copy, sizeof copy, "%s", text);
+    for (char *part = strtok(copy, ","); part; part = strtok(NULL, ",")) {
+        char *colon = strchr(part, ':');
+        int slot = -1;
+        if (colon) { *colon = '\0'; for (int k = 0; k < SLOT_COUNT; ++k) if (!strcmp(part, SLOT_NAMES[k])) slot = k; }
+        if (slot < 0 || atoi(colon + 1) <= 0) { snprintf(bad, bad_len, "%s", part); return 1; }
+        LOOK.items[slot] = atoi(colon + 1);
+    }
+    return 0;
+}
+/* }}} */
 /* }}} */
 
 /* {{{ shaders
@@ -262,10 +284,17 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--face") && i + 1 < argc) face_deg = atof(argv[++i]);
         else if (!strcmp(argv[i], "--walk") && i + 1 < argc) walk_s = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--dive") && i + 1 < argc) dive_s = (float)atof(argv[++i]);
+        else if (!strcmp(argv[i], "--wear") && i + 1 < argc) {
+            char bad[200];
+            if (wear_option(argv[++i], bad, sizeof bad)) {
+                fprintf(stderr, "--wear: \"%s\" isn't slot:look (slots: shirt legs feet wrists chest hands tabard waist head shoulders back mainhand offhand)\n", bad);
+                return 2;
+            }
+        }
         else if (!strcmp(argv[i], "--map") && i + 3 < argc) { map_id = atoi(argv[++i]); start_x = atof(argv[++i]); start_y = atof(argv[++i]); }
         else if (!strcmp(argv[i], "--goto") && i + 2 < argc) { goto_x = atof(argv[++i]); goto_y = atof(argv[++i]); go_to = 1; }
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--dive S] [--goto X Y] [--map ID X Y]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--dive S] [--wear SLOT:LOOK,...] [--goto X Y] [--map ID X Y]\n"); return 2; }
 
     /* the settings: defaults, then the player's file; a line it refuses is
      * named on the terminal and skipped (173b1) */
@@ -306,7 +335,7 @@ int main(int argc, char **argv)
      * can't be built is named and left out */
     for (int i = 0; i < NBYSTANDERS; ++i) {
         Figure *f = &others[nothers];
-        CharacterLook look = { BYSTANDERS[i].race, BYSTANDERS[i].sex, 0, 0, 0, 0 };
+        CharacterLook look = { BYSTANDERS[i].race, BYSTANDERS[i].sex, 0, 0, 0, 0, { 0 } };
         int bad = BYSTANDERS[i].race ? figure_from_character(f, &chain, &look, why, sizeof why)
                                      : figure_from_display(f, &chain, BYSTANDERS[i].display, why, sizeof why);
         if (bad) { fprintf(stderr, "bystander %d left out: %s\n", i, why); continue; }

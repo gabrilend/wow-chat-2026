@@ -17,9 +17,39 @@ character models to be done. Where are we at with equipment and such?"
 
 ## Current Behavior
 
-Not built. Characters are drawn bare: body, hair, face and underwear
-only. A tauren man lacks his tail and hooves, because pieces are switched
-on by fixed numbers checked only on the night elf (173d).
+**Painted items and switched pieces built (2026-10-06); attachments
+not yet.**
+- **The look:** `CharacterLook` carries an item look (ItemDisplayInfo id)
+  per slot: shirt, legs, feet, wrists, chest, hands, tabard, waist, head,
+  shoulders, back, main hand, off hand. The slots are listed in the order
+  they paint, the lower layers first.
+- **Painting** (`wear` in `character.c`): each item's region pictures
+  (fields 16-23) are painted onto the skin sheet's regions. The full
+  table of ten regions is now in `character.c`. The picture is
+  Item\TextureComponents\<region folder>\<name>_<F or M>.blp, else _U.
+  A picture missing from every archive is named, and its region left
+  unpainted.
+- **Pieces:** each slot switches the piece groups it governs. These rules
+  are this client's reading, to check against the original:
+  - shirt or chest: sleeves g8 = 1 + gg0, g10 = 1 + gg1, a robe's skirt
+    g13 = 1 + gg2;
+  - legs: g9, g11, g13;
+  - feet g5, hands g4, waist g18, back g15, tabard g12 = 2.
+  Later slots win, so a robe's skirt overrides the legs. A chosen variant
+  above 1 that the model lacks is named.
+- **Picture option:** `--wear SLOT:LOOK,...` dresses her. The rogue's
+  set (chest 41143, hands 41138, legs 41140, waist 41476, feet 41480)
+  shows painted dark leather, glove cuffs and tall boots.
+- **Test:** dressed in the rogue's set, her upper torso is painted, her
+  boots (504) show, and her bare feet (501) don't.
+- **The tail (173d)** was fixed separately: the fur picture.
+
+**Left:**
+- Attachments: helmets (with the helm's hidden hair and ears), shoulders,
+  weapons, shields.
+- Cape pictures (model texture kind 2).
+- Comparing the piece rules with the original on a few sets.
+- The server sending each character's looks (with the network).
 
 ## Intended Behavior
 

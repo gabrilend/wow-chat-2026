@@ -16,9 +16,18 @@
 #include "m2.h"
 #include "mpq.h"
 
+/* the slots a character wears things in (173p), in the order they are
+ * painted onto the skin sheet when two cover the same region: what lies
+ * under is painted first */
+enum {
+    SLOT_SHIRT, SLOT_LEGS, SLOT_FEET, SLOT_WRISTS, SLOT_CHEST, SLOT_HANDS, SLOT_TABARD, SLOT_WAIST,
+    SLOT_HEAD, SLOT_SHOULDERS, SLOT_BACK, SLOT_MAIN_HAND, SLOT_OFF_HAND, SLOT_COUNT
+};
+
 typedef struct {
     int race, sex;                         /* ChrRaces id; 0 male, 1 female */
     int skin, face, hair_style, hair_color;/* the character-creation choices, from 0 */
+    int items[SLOT_COUNT];                 /* each slot's item look (ItemDisplayInfo.dbc id), 0 for none (173p) */
 } CharacterLook;
 
 typedef struct {

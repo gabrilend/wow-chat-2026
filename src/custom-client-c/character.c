@@ -22,12 +22,27 @@ static const char *race_folder(int race)
 /* {{{ the skin sheet's patches
  * Where each picture goes, as the 3.3.5a client has it built in, for a
  * 256 x 256 sheet (x, y, width, height); doubled for 512 x 512 sheets. */
-enum { R_FACE_UPPER, R_FACE_LOWER, R_TORSO_UPPER, R_LEG_UPPER };
-static const int REGION[4][4] = {
+enum { R_ARM_UPPER, R_ARM_LOWER, R_HAND, R_FACE_UPPER, R_FACE_LOWER, R_TORSO_UPPER, R_TORSO_LOWER, R_LEG_UPPER, R_LEG_LOWER, R_FOOT };
+static const int REGION[10][4] = {
+    { 0, 0, 128, 64 },            /* arm upper */
+    { 0, 64, 128, 64 },           /* arm lower */
+    { 0, 128, 128, 32 },          /* hand */
     { 0, 160, 128, 32 },          /* face upper */
     { 0, 192, 128, 64 },          /* face lower */
     { 128, 0, 128, 64 },          /* torso upper */
+    { 128, 64, 128, 32 },         /* torso lower */
     { 128, 96, 128, 64 },         /* leg upper */
+    { 128, 160, 128, 64 },        /* leg lower */
+    { 128, 224, 128, 32 },        /* foot */
+};
+/* an item's picture for each region: ItemDisplayInfo's fields 16-23, in
+ * the region's own folder (Item\TextureComponents\<folder>\<name>_<F, M or
+ * U>.blp: the wearer's sex, or U for either) */
+static const struct { int field, region; const char *folder; } ITEM_REGION[8] = {
+    { 16, R_ARM_UPPER, "ArmUpperTexture" },   { 17, R_ARM_LOWER, "ArmLowerTexture" },
+    { 18, R_HAND, "HandTexture" },            { 19, R_TORSO_UPPER, "TorsoUpperTexture" },
+    { 20, R_TORSO_LOWER, "TorsoLowerTexture" }, { 21, R_LEG_UPPER, "LegUpperTexture" },
+    { 22, R_LEG_LOWER, "LegLowerTexture" },   { 23, R_FOOT, "FootTexture" },
 };
 /* }}} */
 
@@ -73,6 +88,92 @@ static int picture(MpqChain *c, const char *name, BlpImage *img, char *why, int 
     free(s);
     if (rc) snprintf(why, why_len, "%s: %s", name, w2);
     return rc;
+}
+/* }}} */
+
+/* {{{ static wear: each slot's item painted onto the skin sheet, and the
+ * body pieces it asks for switched on (173p)
+ * ItemDisplayInfo (3.3.5a): 1 id, 2-3 model names, 4-5 model pictures,
+ * 8-10 its piece choices (gg[0..2]), 16-23 its region pictures.
+ * The pieces, this client's reading of the original's rule (to check
+ * against it): a group g shows piece g*100 + variant, variant 1 when
+ * bare. Shirt and chest: sleeves g8 = 1 + gg0, g10 = 1 + gg1, and a robe
+ * (gg2) its skirt g13 = 1 + gg2 (chest only). Legs: g9 = 1 + gg0, g11 =
+ * 1 + gg1 when gg1, g13 = 1 + gg2 when gg2. Feet g5, hands g4, waist g18,
+ * back (the cape) g15 = 1 + gg0; the tabard g12 = 2. Slots are applied in
+ * their painting order, so a robe's skirt wins over the legs'. A group
+ * with no piece of the chosen variant shows nothing (said once). */
+static int wear(MpqChain *archives, const CharacterLook *look, Character *out, int k, char *why, int why_len)
+{
+    int any = 0;
+    for (int s = 0; s < SLOT_COUNT; ++s) any |= look->items[s] != 0;
+    if (!any) return 0;
+    size_t len;
+    unsigned char *t = mpq_chain_read(archives, "DBFilesClient\\ItemDisplayInfo.dbc", &len, NULL);
+    Dbc d;
+    char w2[300];
+    if (!t || dbc_open(&d, t, len, w2, sizeof w2)) { free(t); snprintf(why, why_len, "ItemDisplayInfo: %s", t ? w2 : "not in the archives"); return -1; }
+    int variant[20];
+    for (int g = 0; g < 20; ++g) variant[g] = -1;
+    for (int s = 0; s < SLOT_COUNT; ++s) {
+        if (!look->items[s]) continue;
+        int row = -1;
+        for (uint32_t r = 0; r < d.rows; ++r) if ((int)dbc_u32(&d, r, 1) == look->items[s]) { row = (int)r; break; }
+        if (row < 0) { fprintf(stderr, "character: no item look %d in ItemDisplayInfo; slot %d is left bare\n", look->items[s], s); continue; }
+        int gg[3] = { (int)dbc_u32(&d, (uint32_t)row, 8), (int)dbc_u32(&d, (uint32_t)row, 9), (int)dbc_u32(&d, (uint32_t)row, 10) };
+        switch (s) {
+            case SLOT_SHIRT: case SLOT_CHEST:
+                variant[8] = 1 + gg[0]; variant[10] = 1 + gg[1];
+                if (s == SLOT_CHEST && gg[2]) variant[13] = 1 + gg[2];
+                break;
+            case SLOT_LEGS:
+                variant[9] = 1 + gg[0];
+                if (gg[1]) variant[11] = 1 + gg[1];
+                if (gg[2]) variant[13] = 1 + gg[2];
+                break;
+            case SLOT_FEET:   variant[5] = 1 + gg[0]; break;
+            case SLOT_HANDS:  variant[4] = 1 + gg[0]; break;
+            case SLOT_WAIST:  variant[18] = 1 + gg[0]; break;
+            case SLOT_BACK:   variant[15] = 1 + gg[0]; break;
+            case SLOT_TABARD: variant[12] = 2; break;
+            default: break;
+        }
+        /* the region pictures, the wearer's sex first, then either sex */
+        for (int r = 0; r < 8; ++r) {
+            const char *name = dbc_text(&d, (uint32_t)row, (uint32_t)ITEM_REGION[r].field);
+            if (!name || !name[0]) continue;
+            char path[300];
+            BlpImage img;
+            snprintf(path, sizeof path, "Item\\TextureComponents\\%s\\%s_%s.blp", ITEM_REGION[r].folder, name, look->sex == 1 ? "F" : "M");
+            int got = picture(archives, path, &img, w2, sizeof w2);
+            if (got == -2) {
+                snprintf(path, sizeof path, "Item\\TextureComponents\\%s\\%s_U.blp", ITEM_REGION[r].folder, name);
+                got = picture(archives, path, &img, w2, sizeof w2);
+            }
+            if (got == -2) { fprintf(stderr, "character: item look %d's %s picture %s is in no archive; left unpainted\n", look->items[s], ITEM_REGION[r].folder, name); continue; }
+            if (got) { free(t); snprintf(why, why_len, "%s", w2); return -1; }
+            paste(out->skin.rgba, out->skin.width, &img, REGION[ITEM_REGION[r].region], k);
+            blp_free(&img);
+        }
+    }
+    free(t);
+    /* the pieces: each chosen group shows its variant alone */
+    for (int g = 1; g < 20; ++g) {
+        if (variant[g] < 0) continue;
+        uint32_t want = (uint32_t)(g * 100 + variant[g]);
+        int found = 0;
+        for (uint32_t i = 0; i < out->model.npieces; ++i) {
+            uint32_t id = out->model.pieces[i].id;
+            if (id / 100 != (uint32_t)g) continue;
+            out->shown[i] = id == want;
+            found |= id == want;
+        }
+        /* variant 1 missing is a group with nothing bare (sleeves, belts):
+         * no fault; a missing higher variant is the item asking for a
+         * shape the model lacks, said once */
+        if (!found && variant[g] > 1) fprintf(stderr, "character: the model has no piece %u (group %d's choice); the group shows nothing\n", want, g);
+    }
+    return 0;
 }
 /* }}} */
 
@@ -177,7 +278,7 @@ int character_build(MpqChain *archives, const CharacterLook *look, Character *ou
         if (got == -2) fprintf(stderr, "character: %s; the hair is left unpainted\n", why);
         else if (got) return -1;
     }
-    return 0;
+    return wear(archives, look, out, k, why, why_len);
 }
 /* }}} */
 

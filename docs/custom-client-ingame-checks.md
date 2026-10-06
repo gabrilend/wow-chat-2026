@@ -36,6 +36,12 @@ that issue and strike it here (keep the line, so the history stays).
    his hooves right? Are the two skin layers the client's tables name but
    its files lack (scalp, and a hair picture) visible as patches?
 
+12. **Equipment** (173p): `--wear chest:41143,hands:41138,legs:41140,waist:41476,feet:41480`
+    (a rogue's leather set). Do the painted leather, the glove cuffs and
+    the tall boots look like the same items on a night elf in the
+    original? The piece rules (sleeves, robes, boots, gloves) are this
+    client's reading.
+
 ## Feel
 
 9. **Step height and body width** (173q): can she walk up the same
