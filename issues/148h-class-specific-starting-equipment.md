@@ -613,11 +613,16 @@ any kit change; commit both the script and its output.
 
 ### File layout
 
-- `scripts/generate-vanilla-starting-equipment-sql` — the bash
-  generator. Holds `RACE_CLASS_KIT` (the 52-row matrix as data),
-  `RACE_CLASS_SKILL` (weapon-skill grants per row), and uses the
-  clone entry IDs from the cloning procedure above. Emits ~570
-  INSERT rows.
+- `src/lua-basic/data/gearsets/vanilla-starter.lua` — the kit, since
+  2026-10-05 a gearset profile (617r): each class and race's item per
+  equipment slot, bags and ammunition. Moved there from the bash
+  generator's `RACE_CLASS_KIT` matrix by `scripts/convert-to-gearsets`
+  (one-off); `scripts/test-gearsets` checks it.
+- `scripts/generate-vanilla-starting-equipment-sql` — the generator,
+  rewritten in Lua 2026-10-05 to read the profile; emits the same 581
+  item rows (race, class, item, amount) as the bash version did. (Its
+  earlier forms held the matrix itself and used the clone entry IDs of
+  the cloning procedure above.)
 - `sql/vanilla/db_world.src/02-starting-equipment.apply.sql` — the
   E009 patch's apply-form source. E009 cp's this into
   `sql/vanilla/db_world/02-starting-equipment.sql` at install
@@ -685,8 +690,8 @@ entries the engine populates).
   wand DPS ≈ spell DPS rebalance, now **declined** (2026-07-15). This
   kit's wands stay at the 20-DPS placeholder; the full parity pass is
   not planned.
-- `scripts/generate-vanilla-starting-equipment-sql` — kit data
-  source of truth.
+- `src/lua-basic/data/gearsets/vanilla-starter.lua` — kit data source
+  of truth (a gearset profile, 617r); the generator turns it into SQL.
 - `patches/E-patches.sh` — `patch_E009_vanilla_starting_equipment`,
   `patch_E018_vanilla_kit_required_level_cap` (the redesigned
   clone+tune variant).

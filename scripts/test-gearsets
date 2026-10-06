@@ -1,22 +1,26 @@
 #!/usr/bin/env luajit
--- test-elite-outfits - holds every elite outfit (issue 617r) to its rule,
--- against the world database.
+-- test-gearsets - holds the gearset profiles (issue 617r) to their rules,
+-- against the world database, and runs the gearset command offline.
 --
 -- For a general audience: elites are full outfits for buddy types, the
 -- bannermen of the Horde and the Alliance. The owner's rule (2026-10-04):
 -- nothing beyond Molten Core, no Onyxia or Zul'Gurub, "just MC and dungeons
--- and previous stuff", no PvP gear. This reads the outfits from
--- src/lua-basic/data/elite-outfit-profiles.lua and, for every item, asks the world
+-- and previous stuff", no PvP gear. This reads the elite profile from
+-- src/lua-basic/data/gearsets/elite.lua and, for every item, asks the world
 -- database: does it exist; does it fit the slot it is listed for; can the
 -- class wear or wield it; is its required level 60 or less; does it need an
 -- honor rank (PvP); and does some creature or chest in Molten Core or a
 -- classic dungeon drop it (following shared loot lists down to the item).
 -- It also checks that a profile never lists a unique item twice and never
 -- pairs a two-handed weapon with an off-hand item. A second part runs the
--- real ".elite" command script in a stand-in world (fake buddies, no
--- server) and checks what it takes off, puts on, and reports.
+-- real gearset command script in a stand-in world (fake buddies whose
+-- talents decide their spec, no server) and checks what it takes off,
+-- puts on, and reports. A third part holds the vanilla starter kit
+-- profile to its own rule (every item exists, fits its slot, suits the
+-- class) and checks the starter SQL on disk is exactly what the
+-- generator makes from the profile.
 --
--- Usage: scripts/test-elite-outfits [PROJECT_DIR] [WORLD_DATABASE]
+-- Usage: scripts/test-gearsets [PROJECT_DIR] [WORLD_DATABASE]
 --   WORLD_DATABASE defaults to the active profile's (acore_world_<profile>).
 -- Needs MySQL running (scripts/start-mysql). Exits non-zero on any failure.
 
@@ -26,7 +30,13 @@ if arg[1] and arg[1] ~= "" then DIR = arg[1] end
 local MYSQL   = DIR .. "/mysql/installed-files/bin/mysql"
 local PROFILE = io.open(DIR .. "/.profile"):read("*l")
 local WORLD   = arg[2] or ("acore_world_" .. PROFILE)
-local OUTFITS = os.getenv("ELITE_OUTFITS") or (DIR .. "/src/lua-basic/data/elite-outfit-profiles.lua")   -- the environment variable lets the test be pointed at a planted-bad copy
+local OUTFITS = os.getenv("ELITE_OUTFITS") or (DIR .. "/src/lua-basic/data/gearsets/elite.lua")   -- the environment variable lets the test be pointed at a planted-bad copy
+local TD      = dofile(DIR .. "/src/lua-basic/data/buddy-talent-data.lua")
+-- talent tree id -> { class, name }: a spec names its class
+local SPEC = {}
+for class, c in pairs(TD.classes) do
+    for _, tree in ipairs(c.trees) do SPEC[tree.tab] = { class = class, name = c.name .. ": " .. tree.name, tree = tree } end
+end
 local MAX_LEVEL = 60
 
 -- Where an elite's items may drop: Molten Core and the classic dungeons
@@ -54,7 +64,7 @@ local SLOT_FITS = {
     [10] = { [11] = true }, [11] = { [11] = true }, [12] = { [12] = true }, [13] = { [12] = true },
     [14] = { [16] = true },
     [15] = { [13] = true, [17] = true, [21] = true },
-    [16] = { [14] = true, [22] = true, [23] = true },
+    [16] = { [13] = true, [14] = true, [22] = true, [23] = true },   -- 13 one-hand: a dual-wielder's second weapon
     [17] = { [15] = true, [25] = true, [26] = true, [28] = true },
 }
 local TWO_HAND = 17
@@ -87,15 +97,16 @@ local FLAG_UNIQUE_EQUIPPED = 524288
 
 -- {{{ local function query
 -- Rows of tab-separated fields; stops the test when MySQL can't answer.
-local function query(sql)
+local function query(sql, db)
+    db = db or WORLD
     local cmd = string.format("MYSQL_PWD=menardi '%s' -h127.0.0.1 -P3307 -uritz -N -B %s -e \"%s\" 2>&1",
-        MYSQL, WORLD, sql:gsub('"', '\\"'))
+        MYSQL, db, sql:gsub('"', '\\"'))
     local pipe = assert(io.popen(cmd, "r"))
     local rows = {}
     for line in pipe:lines() do
         if line:match("^ERROR") then
-            io.stderr:write("test-elite-outfits: MySQL refused a query on " .. WORLD .. ": " .. line .. "\n" ..
-                "  to debug: is MySQL running (scripts/start-mysql)? does " .. WORLD .. " exist?\n")
+            io.stderr:write("test-gearsets: MySQL refused a query on " .. db .. ": " .. line .. "\n" ..
+                "  to debug: is MySQL running (scripts/start-mysql)? does " .. db .. " exist?\n")
             os.exit(2)
         end
         local row = {}
@@ -107,7 +118,16 @@ local function query(sql)
 end
 -- }}}
 
-local outfits = dofile(OUTFITS)
+-- the elite profile, flattened to one entry per (spec, race): the
+-- outfit's name for reports, its class, and its items
+local profile = dofile(OUTFITS)
+local outfits = {}
+for spec, by_race in pairs(profile.records) do
+    local sp = SPEC[spec] or error("elite: spec " .. spec .. " is no talent tree")
+    for race, rec in pairs(by_race) do
+        outfits[string.format("%s (race %d)", sp.name, race)] = { class = sp.class, spec = spec, race = race, items = rec.items }
+    end
+end
 
 -- every item named anywhere, once
 local ids, seen = {}, {}
@@ -188,19 +208,25 @@ end
 -- }}}
 
 -- {{{ the command, in a stand-in world (no server)
--- Loads the real src/lua-basic/elite-outfits.lua with fake buddies that
+-- Loads the real src/lua-basic/gearset-command.lua with fake buddies that
 -- record what is removed and equipped, and runs ".elite growth" through it:
 -- every listed slot is emptied and filled; the off hand is emptied for a
 -- two-hander; shirt and tabard are left alone; a buddy with no elite and a
 -- buddy not in the world are reported, not dressed.
 print("")
-print("The .elite command (stand-in world)")
+print("The gearset command (stand-in world)")
 local templates
 do
     local function item(entry) return { entry = entry, GetCount = function() return 1 end, GetEntry = function() return entry end } end
-    local function buddy(name, worn)
+    -- a buddy of `race` and `class` with talents in tree `spec`: the first
+    -- talent of that tree at full rank, so its spec reads as that tree
+    local function buddy(name, worn, race, class, spec)
         local b = { name = name, worn = worn, removed = {}, equipped = {}, saved = false, spells = {}, dead = false, refuse = {} }
+        if spec then local t = SPEC[spec].tree.talents[1]; b.spells[t.spells[#t.spells] ] = true end
         b.GetName = function() return name end
+        b.GetRace = function() return race end
+        b.GetClass = function() return class end
+        b.AddItem = function() return true end
         b.IsInWorld = function() return true end
         b.IsDead = function() return b.dead end
         b.HasSpell = function(_, s) return b.spells[s] == true end
@@ -221,19 +247,13 @@ do
     -- item kinds the stand-in game knows (class, subclass), from the facts read above
     templates = {}
     for id, f in pairs(facts) do templates[id] = { class = f.class, sub = f.sub } end
-    -- roster rows: slot, guid, race, class, role
-    local rows = {
-        { 1, 575, 6, 1, 0 },     -- tauren warrior, damage: a two-hander elite; no Plate Mail yet
-        { 2, 599, 3, 4, 0 },     -- dwarf rogue: no elite
-        { 3, 600, 6, 1, 0 },     -- not in the world
-        { 4, 596, 8, 8, 0 },     -- troll mage, dead
-        { 5, 595, 8, 1, 1 },     -- troll warrior tank: its shield will be refused
-    }
-    local pozeta = buddy("Pozeta", { [3] = item(3427), [15] = item(1194), [16] = item(2362), [18] = item(22999), [0] = item(34008) })
-    local rogue  = buddy("Rogue", {})
-    local ecaexo = buddy("Ecaexo", { [0] = item(1) }); ecaexo.dead = true
-    local xazian = buddy("Xazian", { [16] = item(2362) }); xazian.spells[750] = true
-    xazian.refuse[outfits["Troll Warrior (tank)"].items[16]] = true
+    -- roster rows: slot, guid
+    local rows = { { 1, 575 }, { 2, 599 }, { 3, 600 }, { 4, 596 }, { 5, 595 } }
+    local pozeta = buddy("Pozeta", { [3] = item(3427), [15] = item(1194), [16] = item(2362), [18] = item(22999), [0] = item(34008) }, 6, 1, 161)   -- tauren warrior, Arms: a two-hander; no Plate Mail yet
+    local rogue  = buddy("Rogue", {}, 3, 4, 181)                                    -- dwarf rogue, Combat: no record
+    local ecaexo = buddy("Ecaexo", { [0] = item(1) }, 8, 8, 61); ecaexo.dead = true -- troll mage, dead
+    local xazian = buddy("Xazian", { [16] = item(2362) }, 8, 1, 163); xazian.spells[750] = true   -- troll warrior, Protection: its shield will be refused
+    xazian.refuse[profile.records[163][8].items[16] ] = true
     local players = { [575] = pozeta, [599] = rogue, [596] = ecaexo, [595] = xazian }
     local said, handler_fn = {}, nil
     local env = setmetatable({
@@ -250,21 +270,22 @@ do
                      NextRow   = function() i = i + 1; return rows[i] ~= nil end }
         end,
     }, { __index = _G })
-    local chunk = assert(loadfile(DIR .. "/src/lua-basic/elite-outfits.lua"))
+    env.dofile = function(path) return dofile(path) end
+    local chunk = assert(loadfile(DIR .. "/src/lua-basic/gearset-command.lua"))
     setfenv(chunk, env)()
     check(type(handler_fn) == "function", "the script registers a command handler")
     local console = { SendSysMessage = function(_, text) said[#said + 1] = text end }
     local handled = handler_fn(42, nil, "elite growth", console)
     check(handled == false, "the console command is reported handled")
-    local want = outfits["Tauren Warrior (damage)"].items
+    local want = profile.records[161][6].items
     local all = true
     for slot, entry in pairs(want) do if pozeta.equipped[slot] ~= entry then all = false end end
-    check(all, "Pozeta wears every item of Tauren Warrior (damage)")
+    check(all, "Pozeta (Arms, by her talents) wears every item of the elite Arms tauren record")
     check(pozeta.removed[16] and not pozeta.worn[16], "Pozeta's shield is taken off for the two-hander")
     check(pozeta.worn[3] and pozeta.worn[18] and not pozeta.removed[3] and not pozeta.removed[18], "shirt and tabard are left alone")
     check(pozeta.saved, "Pozeta is saved")
     local text = table.concat(said, "\n")
-    check(text:find("Rogue %(race 3, class 4, role 0%): no elite") ~= nil, "a buddy with no elite is named, not dressed")
+    check(text:find("Rogue %(race 3, class 4, spec 181%): no record for spec 181 in elite") ~= nil, "a buddy with no record is named, not dressed")
     check(next(rogue.equipped) == nil, "nothing is put on a buddy with no elite")
     check(text:find("character 600%): not in the world") ~= nil, "a buddy not in the world is reported")
     check(pozeta.spells[750], "Pozeta is taught Plate Mail (750) before the Might set")
@@ -272,12 +293,60 @@ do
     check(text:find("Ecaexo is dead: skipped") ~= nil and ecaexo.worn[0] and not ecaexo.removed[0], "a dead buddy is reported and nothing is taken off")
     check(xazian.equipped[16] == 2362, "a refused shield puts the old one back")
     check(text:find("old item back on") ~= nil, "and says so")
-    check(text:find("Growth: 1 of 5 buddies fully dressed") ~= nil, "the summary counts the dressed")
+    check(text:find("Growth: 1 of 5 buddies fully dressed in elite") ~= nil, "the summary counts the dressed")
     for _, line in ipairs(said) do print("  | " .. line) end
+
+    -- the long form names the profile; an unknown profile is said so
+    said = {}
+    check(handler_fn(42, nil, "gearset elite buddies growth", console) == false, ".gearset elite buddies growth is handled")
+    check(table.concat(said, "\n"):find("Growth: %d of 5 buddies fully dressed in elite") ~= nil, "and dresses the same buddies")
+    said = {}
+    handler_fn(42, nil, "gearset nosuch buddies growth", console)
+    check(table.concat(said, "\n"):find("no gearset profile nosuch") ~= nil, "an unknown profile is named")
+end
+-- }}}
+
+-- {{{ the vanilla starter kit
+print("")
+print("The vanilla starter kit profile")
+do
+    local VANILLA = "acore_world_vanilla"
+    local kit = dofile(DIR .. "/src/lua-basic/data/gearsets/vanilla-starter.lua")
+    check(kit.keyed_by == "class", "the starter kit is keyed by class")
+    local kit_ids, seen_k = {}, {}
+    for _, by_race in pairs(kit.records) do
+        for _, rec in pairs(by_race) do
+            for _, id in pairs(rec.items) do if not seen_k[id] then seen_k[id] = true; kit_ids[#kit_ids + 1] = id end end
+        end
+    end
+    local kf = {}
+    for _, r in ipairs(query("SELECT entry, InventoryType, class, subclass, AllowableClass FROM item_template WHERE entry IN (" .. table.concat(kit_ids, ",") .. ")", VANILLA)) do
+        kf[tonumber(r[1])] = { inv = tonumber(r[2]), class = tonumber(r[3]), sub = tonumber(r[4]), allow = tonumber(r[5]) }
+    end
+    local combos, bad = 0, 0
+    for class, by_race in pairs(kit.records) do
+        for race, rec in pairs(by_race) do
+            combos = combos + 1
+            for slot, id in pairs(rec.items) do
+                local f = kf[id]
+                local ok = f and SLOT_FITS[slot] and SLOT_FITS[slot][f.inv]
+                    and (f.allow == -1 or bit.band(f.allow, bit.lshift(1, class - 1)) ~= 0)
+                    and (f.class ~= ITEM_CLASS_WEAPON or WEAPONS[class][f.sub])
+                    and (f.class ~= ITEM_CLASS_ARMOR or ARMOR[class][f.sub])
+                if not ok then bad = bad + 1; print(string.format("  FAIL: class %d race %d slot %d item %d", class, race, slot, id)) end
+            end
+        end
+    end
+    check(bad == 0, string.format("every item of all %d race-and-class kits exists in %s, fits its slot and suits its class", combos, VANILLA))
+    local pipe = io.popen(DIR .. "/scripts/generate-vanilla-starting-equipment-sql " .. DIR .. " --stdout")
+    local made = pipe:read("*a"); pipe:close()
+    local f = io.open(DIR .. "/sql/vanilla/db_world.src/02-starting-equipment.apply.sql")
+    local disk = f:read("*a"); f:close()
+    check(made == disk, "the starter SQL on disk is exactly what the generator makes from the profile")
 end
 -- }}}
 
 print("")
-if fails == 0 then print(string.format("All %d checks passed (%d elites, %d items)", checks, #names, #ids))
+if fails == 0 then print(string.format("All %d checks passed (%d elite records, %d items)", checks, #names, #ids))
 else print(string.format("%d of %d checks failed", fails, checks)) end
 os.exit(fails == 0 and 0 or 1)

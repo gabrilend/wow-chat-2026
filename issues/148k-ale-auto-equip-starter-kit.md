@@ -320,8 +320,9 @@ kit data, so it lives in the Lua.
   migration that lets the Orc Hunter and Rogue off-hand weapons
   actually equip. Without 148j, those slots stay empty even with
   this hook in place.
-- `scripts/generate-vanilla-starting-equipment-sql` — the kit
-  data source. The hook does NOT read this script; it derives
+- `src/lua-basic/data/gearsets/vanilla-starter.lua` (a gearset
+  profile, 617r) through `scripts/generate-vanilla-starting-equipment-sql`
+  — the kit data source. The hook does NOT read this script; it derives
   equip slots from each item's own `InventoryType` so kit changes
   propagate without Lua edits.
 - `docs/ale/docs/Global/RegisterPlayerEvent.html` — ALE event

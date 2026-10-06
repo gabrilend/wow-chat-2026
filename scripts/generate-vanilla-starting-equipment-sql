@@ -1,377 +1,48 @@
-#!/usr/bin/env bash
-# generate-vanilla-starting-equipment-sql
-#
-# What it does:
-#   Emits sql/vanilla/db_world.src/02-starting-equipment.apply.sql — the
-#   migration that issues every newly-created vanilla character a
-#   level-20-appropriate white-quality starter kit (148h, redesigned
-#   2026-06-12 with thematic-curation philosophy + item cloning).
-#   Applied by the existing E009 patch in E-patches.sh.
-#
-# Why it exists:
-#   The 52-combo (race × class) kit matrix locked down on 2026-06-12 plus
-#   the per-combo weapon-skill grants would be ~570 INSERT rows if hand-
-#   typed. This script holds the matrix as data and stamps the SQL
-#   deterministically. Re-run after any matrix change; commit both this
-#   script and its output.
-#
-# Idempotence:
-#   Every INSERT row carries a Note='vanilla-148h-<...>' tag. The SQL
-#   begins with `DELETE WHERE Note LIKE 'vanilla-148h-%'` on each
-#   affected table so re-applying leaves the same state without
-#   touching unrelated playercreateinfo_item / _skills rows.
-#
-# Entry IDs:
-#   References the ORIGINAL, canonical item entries — the same numbers
-#   Wowhead lists. Between 2026-06-12 and 2026-08-07 this script emitted
-#   cloned IDs (original + 2000000) instead; that design is reversed per
-#   148v, because an entry no client has ever cached renders as an
-#   invisible model with a red "?" icon and there is no server-side way
-#   to fix it. Canonical entries every client already knows are correct
-#   by construction.
-#
-#   The level-20 tuning those clones used to carry is now applied in
-#   place to these same originals by the E018 patch
-#   (06-kit-required-level-cap). That patch and this migration touch
-#   different tables — item_template versus playercreateinfo_item — so
-#   they no longer have an ordering dependency between them the way the
-#   clone design did.
+#!/usr/bin/env luajit
+-- generate-vanilla-starting-equipment-sql
+--
+-- What it does: writes sql/vanilla/db_world.src/02-starting-equipment.apply.sql,
+-- the rows that give every new vanilla character its level-20 starter kit
+-- (issue 148h). Applied by install step E009.
+--
+-- How: the kit itself is a gearset profile (issue 617r),
+-- src/lua-basic/data/gearsets/vanilla-starter.lua: for each class and race,
+-- the item in each equipment slot, the bags, the ammunition. This turns
+-- each record into rows of the game's "items a new character gets" table
+-- (playercreateinfo_item: race, class, item, amount, note), joining the
+-- same item in two slots into one row of two (a dual-wield pair) and the
+-- same bag three times into one row of three, and adds the hearthstone
+-- every character gets. Until 2026-10-05 the kit was a matrix inside this
+-- script (bash); it moved into the profile so one gear system serves
+-- buddies, players, stand-ins and the starter kit alike. The rows it
+-- writes give every race and class the same items as before
+-- (scripts/test-gearsets checks that against the last bash output).
+--
+-- Notes on each row start "vanilla-148h-", which the SQL's first step
+-- deletes by, so re-applying never doubles a kit.
+--
+-- Usage: scripts/generate-vanilla-starting-equipment-sql [PROJECT_DIR] [--stdout]
 
-set -euo pipefail
+-- {{{ configuration
+local DIR, STDOUT = "/mnt/mtwo/games/azeroth-core/wow-chat-2026", false
+for _, a in ipairs(arg) do
+    if a == "--stdout" then STDOUT = true elseif a ~= "" then DIR = a end
+end
+local PROFILE = DIR .. "/src/lua-basic/data/gearsets/vanilla-starter.lua"
+local OUT     = DIR .. "/sql/vanilla/db_world.src/02-starting-equipment.apply.sql"
+local HEARTHSTONE = 6948
+local CLASS = { [1] = "warrior", [2] = "paladin", [3] = "hunter", [4] = "rogue", [5] = "priest",
+                [7] = "shaman", [8] = "mage", [9] = "warlock", [11] = "druid" }
+local SLOT  = { [0] = "head", "neck", "shoulders", "shirt", "chest", "waist", "legs", "feet", "wrist",
+                "hands", "finger", "finger", "trinket", "trinket", "cape", "mainhand", "offhand", "ranged" }
+-- }}}
 
-# {{{ resolve_dir
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
-if [[ -n "${1:-}" && -d "${1:-}" ]]; then
-    DIR="$1"
-fi
-OUT="${DIR}/sql/vanilla/db_world.src/02-starting-equipment.apply.sql"
-# }}}
-
-# {{{ armor_sets
-# Six visible-armor pieces a class wears as its base kit. Picks reference
-# canonical item entries; the E018 patch tunes these same entries in
-# place per 148v.
-# Helmets and shoulders deliberately omitted per 148h's "clean
-# silhouette at start" rule.
-declare -A MAIL=(
-    [chest]=2153 [legs]=2152 [hands]=2151
-    [feet]=2149  [waist]=2148 [wrist]=2150
-)
-declare -A LEATHER=(
-    [chest]=2141 [legs]=2146 [hands]=2145
-    [feet]=2143  [waist]=2142 [wrist]=2144
-)
-declare -A CLOTH=(
-    [chest]=2160 [legs]=2159 [hands]=2158
-    [feet]=2156  [waist]=3591 [wrist]=3592
-)
-# Universal cape: Rugged Cape (2240).
-CAPE=2240
-# }}}
-
-# {{{ class_armor
-# Class ID → armor set. Warrior/Paladin have mail proficiency at L1.
-# Hunter/Shaman wait on mail until 40; at L20 start they wear leather.
-# Rogue/Druid leather; the cloth trio cloth.
-declare -A CLASS_ARMOR=(
-    [1]=MAIL     [2]=MAIL     [3]=LEATHER  [4]=LEATHER  [5]=CLOTH
-    [7]=LEATHER  [8]=CLOTH    [9]=CLOTH    [11]=LEATHER
-)
-# }}}
-
-# {{{ universal_items
-# Linen Bag (4238): three of these in every kit. White,
-# RequiredLevel 0, AllowableClass=-1.
-LINEN_BAG=4238
-LINEN_COUNT=3
-
-# Hearthstone (6948) in every kit. Bind point set by the
-# ALE auto-equip script (148k) on first login to the character's race's
-# spawn town per 148n.
-HEARTHSTONE=6948
-# }}}
-
-# {{{ race_class_kit
-# Per-(race, class) explicit weapon/offhand/ranged/relic kit. All 52
-# valid combos enumerated. Earlier generator used CLASS_DEFAULT_KIT +
-# RACE_CLASS_KIT_OVERRIDE; the new design's per-race main-hand
-# curation has so many race-specific picks that the default-plus-
-# override pattern stops compressing — explicit rows are cleaner.
-#
-# Format: newline-separated "itemid amount slotlabel" rows. Slotlabel
-# becomes the Note suffix. Item entries are canonical, per 148v.
-declare -A RACE_CLASS_KIT=(
-    # Human
-    [1:1]="1198 1 mainhand-2h-sword"
-    [1:2]="924 1 mainhand-2h-mace"
-    [1:4]="3445 2 dualwield-daggers"
-    [1:5]="5580 1 mainhand-mace
-3422 1 offhand-wildflowers
-5211 1 ranged-wand"
-    [1:8]="1159 1 mainhand-staff
-5210 1 ranged-wand"
-    [1:9]="2027 1 mainhand-sword
-19295 1 offhand-flower
-5211 1 ranged-wand"
-
-    # Orc
-    [2:1]="853 1 mainhand-axe
-2441 1 offhand-shield"
-    [2:3]="1292 2 dualwield-cleavers
-3027 1 ranged-bow
-2515 200 ammo-arrow
-11362 1 quiver"
-    [2:4]="925 1 mainhand-mace
-3445 1 offhand-dagger"
-    [2:7]="1197 1 mainhand-2h-mace
-46978 1 relic-totem"
-    [2:9]="1159 1 mainhand-staff
-5210 1 ranged-wand"
-
-    # Dwarf
-    [3:1]="15810 1 mainhand-polearm"
-    [3:2]="925 1 mainhand-mace
-2445 1 offhand-shield"
-    [3:3]="926 1 mainhand-2h-axe
-3027 1 ranged-bow
-2515 200 ammo-arrow
-11362 1 quiver"
-    [3:4]="3445 2 dualwield-daggers"
-    [3:5]="5580 1 mainhand-mace
-3422 1 offhand-wildflowers
-5211 1 ranged-wand"
-
-    # Night Elf
-    [4:1]="15810 1 mainhand-polearm"
-    [4:3]="922 1 mainhand-polearm
-3027 1 ranged-bow
-2515 200 ammo-arrow
-11362 1 quiver"
-    [4:4]="2027 2 dualwield-swords"
-    [4:5]="2030 1 mainhand-staff
-5211 1 ranged-wand"
-    [4:11]="1159 1 mainhand-staff"
-
-    # Undead
-    [5:1]="926 1 mainhand-2h-axe"
-    [5:4]="2027 1 mainhand-sword
-3445 1 offhand-dagger"
-    [5:5]="23923 1 mainhand-dagger
-3422 1 offhand-wildflowers
-5211 1 ranged-wand"
-    [5:8]="2030 1 mainhand-staff
-5210 1 ranged-wand"
-    [5:9]="2027 1 mainhand-sword
-19295 1 offhand-flower
-5210 1 ranged-wand"
-
-    # Tauren
-    [6:1]="15810 1 mainhand-polearm"
-    [6:3]="2030 1 mainhand-staff
-3027 1 ranged-bow
-2515 200 ammo-arrow
-11362 1 quiver"
-    [6:7]="1197 1 mainhand-2h-mace
-46978 1 relic-totem"
-    [6:11]="1159 1 mainhand-staff"
-
-    # Gnome
-    [7:1]="2027 2 dualwield-swords"
-    [7:4]="3445 2 dualwield-daggers"
-    [7:8]="2030 1 mainhand-staff
-5210 1 ranged-wand"
-    [7:9]="2027 1 mainhand-sword
-19295 1 offhand-flower
-5211 1 ranged-wand"
-
-    # Troll
-    [8:1]="926 1 mainhand-2h-axe"
-    [8:3]="1292 2 dualwield-cleavers
-3027 1 ranged-bow
-2515 200 ammo-arrow
-11362 1 quiver"
-    [8:4]="3445 2 dualwield-daggers"
-    [8:5]="925 1 mainhand-mace
-3422 1 offhand-wildflowers
-5211 1 ranged-wand"
-    [8:7]="926 1 mainhand-2h-axe
-46978 1 relic-totem"
-    [8:8]="23923 1 mainhand-dagger
-19295 1 offhand-flower
-5210 1 ranged-wand"
-
-    # Blood Elf
-    [10:2]="1198 1 mainhand-2h-sword"
-    [10:3]="15810 1 mainhand-polearm
-3027 1 ranged-bow
-2515 200 ammo-arrow
-11362 1 quiver"
-    [10:4]="2027 2 dualwield-swords"
-    [10:5]="23923 1 mainhand-dagger
-3422 1 offhand-wildflowers
-5211 1 ranged-wand"
-    [10:8]="2027 1 mainhand-sword
-19295 1 offhand-flower
-5210 1 ranged-wand"
-    [10:9]="23923 1 mainhand-dagger
-19295 1 offhand-flower
-5210 1 ranged-wand"
-
-    # Draenei
-    [11:1]="5580 1 mainhand-mace
-2445 1 offhand-shield"
-    [11:2]="924 1 mainhand-2h-mace"
-    [11:3]="1198 1 mainhand-2h-sword
-3027 1 ranged-bow
-2515 200 ammo-arrow
-11362 1 quiver"
-    [11:5]="5580 1 mainhand-mace
-3422 1 offhand-wildflowers
-5211 1 ranged-wand"
-    [11:7]="853 1 mainhand-axe
-2445 1 offhand-shield
-46978 1 relic-totem"
-    [11:8]="2030 1 mainhand-staff
-5210 1 ranged-wand"
-)
-# }}}
-
-# {{{ race_class_skill
-# Per-(race, class) starter weapon skill at rank 100 (= 5 × level 20).
-# Convention: the skill grant tracks the main-hand weapon's type. The
-# pre-trained skill applies ONLY to that weapon type — a Human Warrior
-# starting with a Claymore has Two-Handed Swords at 100, but if they
-# later pick up a Battle Axe their Two-Handed Axes skill starts at 1.
-declare -A RACE_CLASS_SKILL=(
-    # Human
-    [1:1]=55      # Warrior  → Two-Handed Swords (Claymore)
-    [1:2]=160     # Paladin  → Two-Handed Maces (Maul)
-    [1:4]=173     # Rogue    → Daggers (Ceremonial Knife dual)
-    [1:5]=54      # Priest   → Maces 1H (Militia Hammer)
-    [1:8]=136     # Mage     → Staves (Militia Quarterstaff)
-    [1:9]=43      # Warlock  → Swords 1H (Scimitar)
-
-    # Orc
-    [2:1]=44      # Warrior  → Axes 1H (Hatchet + Ringed Buckler)
-    [2:3]=44      # Hunter   → Axes 1H (dual Butcher's Cleaver)
-    [2:4]=54      # Rogue    → Maces 1H (Flail MH, mace-spec racial fit)
-    [2:7]=160     # Shaman   → Two-Handed Maces (Giant Mace)
-    [2:9]=136     # Warlock  → Staves (Militia Quarterstaff)
-
-    # Dwarf
-    [3:1]=229     # Warrior  → Polearms (Short Spear)
-    [3:2]=54      # Paladin  → Maces 1H (Flail + shield)
-    [3:3]=172     # Hunter   → Two-Handed Axes (Battle Axe)
-    [3:4]=173     # Rogue    → Daggers (Ceremonial Knife dual)
-    [3:5]=54      # Priest   → Maces 1H (Militia Hammer)
-
-    # Night Elf
-    [4:1]=229     # Warrior  → Polearms (Short Spear)
-    [4:3]=229     # Hunter   → Polearms (Dacian Falx)
-    [4:4]=43      # Rogue    → Swords 1H (Scimitar dual)
-    [4:5]=136     # Priest   → Staves (Gnarled Staff)
-    [4:11]=136    # Druid    → Staves (Militia Quarterstaff)
-
-    # Undead
-    [5:1]=172     # Warrior  → Two-Handed Axes (Battle Axe)
-    [5:4]=43      # Rogue    → Swords 1H (Scimitar MH, Ceremonial Knife OH)
-    [5:5]=173     # Priest   → Daggers (Amani Sacrificial Dagger)
-    [5:8]=136     # Mage     → Staves (Gnarled Staff)
-    [5:9]=43      # Warlock  → Swords 1H (Scimitar)
-
-    # Tauren
-    [6:1]=229     # Warrior  → Polearms (Short Spear)
-    [6:3]=136     # Hunter   → Staves (Gnarled Staff — the Tauren-staff oddity)
-    [6:7]=160     # Shaman   → Two-Handed Maces (Giant Mace)
-    [6:11]=136    # Druid    → Staves (Militia Quarterstaff)
-
-    # Gnome
-    [7:1]=43      # Warrior  → Swords 1H (Scimitar dual)
-    [7:4]=173     # Rogue    → Daggers (Ceremonial Knife dual)
-    [7:8]=136     # Mage     → Staves (Gnarled Staff)
-    [7:9]=43      # Warlock  → Swords 1H (Scimitar)
-
-    # Troll
-    [8:1]=172     # Warrior  → Two-Handed Axes (Battle Axe)
-    [8:3]=44      # Hunter   → Axes 1H (dual Butcher's Cleaver)
-    [8:4]=173     # Rogue    → Daggers (Ceremonial Knife dual)
-    [8:5]=54      # Priest   → Maces 1H (Flail — kept grim utilitarian)
-    [8:7]=172     # Shaman   → Two-Handed Axes (Battle Axe)
-    [8:8]=173     # Mage     → Daggers (Amani Sacrificial Dagger, vanilla-class restored)
-
-    # Blood Elf
-    [10:2]=55     # Paladin  → Two-Handed Swords (Claymore)
-    [10:3]=229    # Hunter   → Polearms (Short Spear)
-    [10:4]=43     # Rogue    → Swords 1H (Scimitar dual)
-    [10:5]=173    # Priest   → Daggers (Amani Sacrificial Dagger)
-    [10:8]=43     # Mage     → Swords 1H (Scimitar, the 1H mage with frill)
-    [10:9]=173    # Warlock  → Daggers (Amani Sacrificial Dagger)
-
-    # Draenei
-    [11:1]=54     # Warrior  → Maces 1H (Militia Hammer + shield)
-    [11:2]=160    # Paladin  → Two-Handed Maces (Maul)
-    [11:3]=55     # Hunter   → Two-Handed Swords (Claymore)
-    [11:5]=54     # Priest   → Maces 1H (Militia Hammer)
-    [11:7]=44     # Shaman   → Axes 1H (Hatchet + shield, no dual until L40)
-    [11:8]=136    # Mage     → Staves (Gnarled Staff)
-)
-
-declare -A SKILL_NAME=(
-    [43]=swords-1h   [44]=axes-1h    [45]=bows
-    [54]=maces-1h    [55]=swords-2h
-    [136]=staves     [160]=maces-2h  [172]=axes-2h
-    [173]=daggers    [229]=polearms
-)
-# }}}
-
-# {{{ bitmasks
-# classMask / raceMask bits for playercreateinfo_skills rows.
-declare -A CLASS_BIT=(
-    [1]=1    [2]=2    [3]=4    [4]=8    [5]=16
-    [7]=64   [8]=128  [9]=256  [11]=1024
-)
-declare -A RACE_BIT=(
-    [1]=1    [2]=2    [3]=4    [4]=8    [5]=16
-    [6]=32   [7]=64   [8]=128  [10]=512 [11]=1024
-)
-# }}}
-
-# {{{ names
-declare -A CLASS_NAME=(
-    [1]=warrior [2]=paladin [3]=hunter [4]=rogue [5]=priest
-    [7]=shaman  [8]=mage    [9]=warlock [11]=druid
-)
-declare -A RACE_NAME=(
-    [1]=human   [2]=orc     [3]=dwarf   [4]=nightelf [5]=undead
-    [6]=tauren  [7]=gnome   [8]=troll   [10]=bloodelf [11]=draenei
-)
-# }}}
-
-# {{{ valid_combos
-# Race-class validity matrix for 3.3.5a (DK excluded per 148a).
-# Troll Mage (8:8) IS included — it's a vanilla class. The earlier
-# generator excluded it as "Cataclysm-era," which was incorrect and
-# is the bug the 2026-06-12 redesign repairs.
-VALID_COMBOS=(
-    1:1  1:2  1:4  1:5  1:8  1:9                  # Human:    War Pal Rog Pri Mag Wlk
-    2:1  2:3  2:4  2:7  2:9                       # Orc:      War Hun Rog Sha Wlk
-    3:1  3:2  3:3  3:4  3:5                       # Dwarf:    War Pal Hun Rog Pri
-    4:1  4:3  4:4  4:5  4:11                      # NightElf: War Hun Rog Pri Dru
-    5:1  5:4  5:5  5:8  5:9                       # Undead:   War Rog Pri Mag Wlk
-    6:1  6:3  6:7  6:11                           # Tauren:   War Hun Sha Dru
-    7:1  7:4  7:8  7:9                            # Gnome:    War Rog Mag Wlk (Priest is Cata)
-    8:1  8:3  8:4  8:5  8:7  8:8                  # Troll:    War Hun Rog Pri Sha Mag
-    10:2 10:3 10:4 10:5 10:8 10:9                 # BloodElf: Pal Hun Rog Pri Mag Wlk
-    11:1 11:2 11:3 11:5 11:7 11:8                 # Draenei:  War Pal Hun Pri Sha Mag
-)
-# }}}
-
-# {{{ emit_header
-emit_header() {
-    cat <<'SQL'
+-- {{{ header
+local HEADER = [[
 -- MARKER_E009_APPLY vanilla-starting-equipment
--- AUTOGENERATED by scripts/generate-vanilla-starting-equipment-sql.
--- Do not edit by hand — change the generator and re-run.
+-- AUTOGENERATED by scripts/generate-vanilla-starting-equipment-sql from the
+-- gearset profile src/lua-basic/data/gearsets/vanilla-starter.lua.
+-- Do not edit by hand: change the profile and re-run.
 --
 -- Apply-form SOURCE for E009. The E-patch cp's this file to
 -- sql/vanilla/db_world/02-starting-equipment.sql, which AC's
@@ -382,26 +53,21 @@ emit_header() {
 -- starter kit per the 148h thematic-curation design. References the
 -- canonical item entries, which the E018 patch tunes in place to
 -- RequiredLevel 20 and level-appropriate damage (148v reversal of the
--- clone design — a cloned entry no client has cached renders as an
+-- clone design: a cloned entry no client has cached renders as an
 -- invisible model with a red "?" icon).
 --
 -- Idempotent: re-running deletes prior vanilla-148h rows by Note prefix
 -- and re-inserts. Default shirt/pants/quest-starter rows untouched.
 --
--- Dual Wield dependency: dual-wield kits (Orc/Troll Hunter dual cleavers,
--- Gnome Warrior twin Scimitars, every Rogue's twin-dagger or mixed-
--- pair kit) need spell 674 "Dual Wield" granted before the off-hand
--- can equip. 148j grants every level-≤20 trainer spell at creation,
--- including DW.
+-- Dual Wield dependency: dual-wield kits need spell 674 "Dual Wield"
+-- granted before the off-hand can equip. 148j grants every level-20
+-- trainer spell at creation, including Dual Wield.
 --
 -- Cross-references:
 --   issues/148h-class-specific-starting-equipment.md  -- behavior spec
 --   issues/148j-pretrain-level-20-abilities.md        -- DW dependency
 --   issues/148k-ale-auto-equip-starter-kit.md         -- equip hook
---   issues/148n-vanilla-racial-starting-zones.md      -- bind targets
---   issues/148o-vanilla-spawn-and-kit-validation-pass.md -- test pass
---   issues/148p-wand-spell-dps-parity-rebalance.md    -- wand follow-up
---   issues/148v-cloned-kit-items-render-invisible.md  -- why entries are canonical
+--   issues/617r-elite-outfits.md                      -- gearset profiles
 --   sql/vanilla/db_world.src/06-kit-required-level-cap.apply.sql  -- in-place tuning
 
 START TRANSACTION;
@@ -415,156 +81,66 @@ DELETE FROM playercreateinfo_skills
  WHERE comment LIKE 'vanilla-148h-%'
     OR comment LIKE 'vanilla starter %';
 -- }}}
+]]
+-- }}}
 
-SQL
-}
-# }}}
+-- {{{ local function rows_for
+-- One record's rows, in a fixed order: slots 0-17, then bags, then ammo,
+-- then the hearthstone. The same item in several slots (a dual-wield pair)
+-- or several times among the bags becomes one row with that amount, at the
+-- place of its first appearance.
+local function rows_for(rec)
+    local rows, at = {}, {}
+    local function add(item, amount, label)
+        if at[item] then
+            rows[at[item]].amount = rows[at[item]].amount + amount
+            rows[at[item]].label  = label == "offhand" and "dualwield" or rows[at[item]].label
+        else
+            rows[#rows + 1] = { item = item, amount = amount, label = label }
+            at[item] = #rows
+        end
+    end
+    for slot = 0, 17 do
+        if rec.items[slot] then add(rec.items[slot], 1, SLOT[slot]) end
+    end
+    for _, bag in ipairs(rec.bags or {}) do add(bag, 1, "bag") end
+    if rec.ammo then add(rec.ammo.item, rec.ammo.count, "ammo") end
+    add(HEARTHSTONE, 1, "hearthstone")
+    return rows
+end
+-- }}}
 
-# {{{ resolve_kit
-# Args: race, class. Echoes the kit (newline-separated rows).
-resolve_kit() {
-    local race="$1" class="$2"
-    local key="${race}:${class}"
-    if [[ -z "${RACE_CLASS_KIT[$key]:-}" ]]; then
-        echo "ERROR: no kit for race=$race class=$class" >&2
-        exit 1
-    fi
-    printf '%s\n' "${RACE_CLASS_KIT[$key]}"
-}
-# }}}
+local profile = dofile(PROFILE)
+if profile.keyed_by ~= "class" then error(PROFILE .. ": the starter kit must be keyed by class (a new character has no spec)") end
 
-# {{{ resolve_skill
-# Args: race, class. Echoes the starter weapon skill ID.
-resolve_skill() {
-    local race="$1" class="$2"
-    local key="${race}:${class}"
-    if [[ -z "${RACE_CLASS_SKILL[$key]:-}" ]]; then
-        echo "ERROR: no skill for race=$race class=$class" >&2
-        exit 1
-    fi
-    echo "${RACE_CLASS_SKILL[$key]}"
-}
-# }}}
+local out = { HEADER, "-- {{{ playercreateinfo_item: per (race, class) starter kit" }
+local classes, total, combos = {}, 0, 0
+for class in pairs(profile.records) do classes[#classes + 1] = class end
+table.sort(classes)
+for _, class in ipairs(classes) do
+    out[#out + 1] = string.format("\n-- %s (class %d)", CLASS[class] or ("class " .. class), class)
+    local races = {}
+    for race in pairs(profile.records[class]) do races[#races + 1] = race end
+    table.sort(races)
+    for _, race in ipairs(races) do
+        combos = combos + 1
+        for _, r in ipairs(rows_for(profile.records[class][race])) do
+            out[#out + 1] = string.format(
+                "INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (%d, %d, %d, %d, 'vanilla-148h-%s');",
+                race, class, r.item, r.amount, r.label)
+            total = total + 1
+        end
+    end
+end
+out[#out + 1] = "-- }}}\n\nCOMMIT;\n"
+local text = table.concat(out, "\n")
 
-# {{{ emit_items_for_combo
-# Args: race, class. Emits one INSERT row per kit item.
-emit_items_for_combo() {
-    local race="$1" class="$2"
-    local armor_type="${CLASS_ARMOR[$class]}"
-
-    # armor pieces (indirect array reference)
-    local slot itemid
-    for slot in chest legs hands feet waist wrist; do
-        eval "itemid=\${${armor_type}[$slot]}"
-        printf "INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (%d, %d, %d, 1, 'vanilla-148h-%s-%s');\n" \
-            "$race" "$class" "$itemid" "${armor_type,,}" "$slot"
-    done
-
-    # universal cape
-    printf "INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (%d, %d, %d, 1, 'vanilla-148h-cape');\n" \
-        "$race" "$class" "$CAPE"
-
-    # weapon kit
-    local kit
-    kit="$(resolve_kit "$race" "$class")"
-    local line
-    while IFS= read -r line; do
-        [[ -z "$line" ]] && continue
-        local item amount label
-        read -r item amount label <<< "$line"
-        printf "INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (%d, %d, %d, %d, 'vanilla-148h-%s');\n" \
-            "$race" "$class" "$item" "$amount" "$label"
-    done <<< "$kit"
-
-    # bags — three Linen Bags for everyone. Hunters get the Medium Quiver
-    # via their weapon kit row.
-    printf "INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (%d, %d, %d, %d, 'vanilla-148h-bag-linen');\n" \
-        "$race" "$class" "$LINEN_BAG" "$LINEN_COUNT"
-
-    # hearthstone — universal, bind point handled by 148k Lua hook
-    printf "INSERT INTO playercreateinfo_item (race, class, itemid, amount, Note) VALUES (%d, %d, %d, 1, 'vanilla-148h-hearthstone');\n" \
-        "$race" "$class" "$HEARTHSTONE"
-}
-# }}}
-
-# {{{ emit_items_section
-emit_items_section() {
-    echo "-- {{{ playercreateinfo_item — per (race, class) starter kit"
-    local prev_class=""
-    local combo race class
-    for combo in "${VALID_COMBOS[@]}"; do
-        race="${combo%:*}"
-        class="${combo#*:}"
-        if [[ "$class" != "$prev_class" ]]; then
-            printf "\n-- %s (class %d)\n" "${CLASS_NAME[$class]}" "$class"
-            prev_class="$class"
-        fi
-        emit_items_for_combo "$race" "$class"
-    done
-    echo "-- }}}"
-    echo ""
-}
-# }}}
-
-# {{{ emit_skills_section
-emit_skills_section() {
-    echo "-- {{{ playercreateinfo_skills — starter weapon skill at 100 per (race, class)"
-    local prev_class=""
-    local combo race class
-    for combo in "${VALID_COMBOS[@]}"; do
-        race="${combo%:*}"
-        class="${combo#*:}"
-        if [[ "$class" != "$prev_class" ]]; then
-            printf "\n-- %s\n" "${CLASS_NAME[$class]}"
-            prev_class="$class"
-        fi
-        local skill skill_name race_bit class_bit
-        skill="$(resolve_skill "$race" "$class")"
-        skill_name="${SKILL_NAME[$skill]}"
-        race_bit="${RACE_BIT[$race]}"
-        class_bit="${CLASS_BIT[$class]}"
-        printf "INSERT INTO playercreateinfo_skills (raceMask, classMask, skill, \`rank\`, comment) VALUES (%d, %d, %d, 100, 'vanilla-148h-%s-%s-%s-100');\n" \
-            "$race_bit" "$class_bit" "$skill" "${RACE_NAME[$race]}" "${CLASS_NAME[$class]}" "$skill_name"
-    done
-    echo "-- }}}"
-    echo ""
-}
-# }}}
-
-# {{{ emit_footer
-emit_footer() {
-    cat <<'SQL'
-COMMIT;
-SQL
-}
-# }}}
-
-# {{{ main
-main() {
-    mkdir -p "$(dirname "$OUT")"
-    {
-        emit_header
-        emit_items_section
-        # emit_skills_section removed (148h weapon-skill rework): the
-        # playercreateinfo_skills.rank column is a skill tier-STEP
-        # (< MAX_SKILL_STEP = 16), not a 0-100 value, and is ignored outright
-        # for weapon skills (SKILL_RANGE_LEVEL) — so the old rank=100 rows were
-        # rejected by the core and did nothing but log 52 warnings. Starter
-        # weapon/defense skill is now set to max-for-level ONCE, on first
-        # login, by the ALE hook (src/lua-vanilla/auto-equip-starter-kit.lua ->
-        # AdvanceSkillsToMax), which preserves normal weapon-skill progression
-        # past level 20. The idempotence_clear DELETE in emit_header still
-        # purges any previously-inserted vanilla-148h skill rows on re-apply.
-        emit_footer
-    } > "$OUT"
-    local item_rows skill_rows
-    item_rows="$(grep -c '^INSERT INTO playercreateinfo_item' "$OUT" || true)"
-    skill_rows="$(grep -c '^INSERT INTO playercreateinfo_skills' "$OUT" || true)"
-    echo "Wrote ${OUT}"
-    echo "  ${item_rows} item rows"
-    echo "  ${skill_rows} skill rows"
-    echo "  ${#VALID_COMBOS[@]} valid (race, class) combos"
-}
-
-main "$@"
-# }}}
+if STDOUT then
+    io.write(text)
+else
+    local f = assert(io.open(OUT, "w"))
+    f:write(text)
+    f:close()
+    print("Wrote " .. OUT)
+    print(string.format("  %d item rows\n  %d (race, class) combos", total, combos))
+end

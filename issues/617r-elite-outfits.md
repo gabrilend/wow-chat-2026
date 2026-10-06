@@ -1,4 +1,4 @@
-# 617r - Gearset Profiles (the first: "elite", the bannermen)
+# 617r - Gearset Profiles (the first: "elite", the bannermen; the vanilla starter kit)
 
 ## Status
 - Created: 2026-10-04
@@ -11,9 +11,12 @@
   617t (dungeon stand-ins wear a profile), 155z6 (the Portal's hero NPCs
   wear one), 148h / 148k / 148s (the vanilla level-20 starter kit, which
   moves into this system)
-- Related files: `src/lua-basic/data/elite-outfit-profiles.lua` (the profiles),
-  `src/lua-basic/elite-outfits.lua` (puts them on buddies),
-  `scripts/test-elite-outfits` (checks every item against the world database)
+- Related files: `src/lua-basic/data/gearsets/*.lua` (the profiles: `elite`,
+  `vanilla-starter`), `src/lua-basic/lib/gearsets.lua` (finds a
+  character's record), `src/lua-basic/gearset-command.lua` (puts them on),
+  `scripts/generate-vanilla-starting-equipment-sql` (the starter kit's
+  SQL from its profile), `scripts/test-gearsets` (checks every item
+  against the world database and runs the command offline)
 
 ## Origin
 
@@ -35,7 +38,38 @@ Verbatim, 2026-10-04:
 
 ## Current Behavior
 
-**Built and worn, 2026-10-04.** Seven outfit profiles, one per buddy type
+**Gearset profiles, built 2026-10-05; not yet run in game.** Two
+profiles, each a data file in `src/lua-basic/data/gearsets/`, written
+from the earlier lists by `scripts/convert-to-gearsets` (one-off):
+
+- `elite` (keyed by spec): the seven outfits below, each filed under the
+  spec its checklist names (Arms 161, Protection 163, Balance 283, Frost
+  61, Elemental 261, Restoration 262, Retribution 381) and race.
+- `vanilla-starter` (keyed by class): the level-20 starter kit for all
+  52 races and classes, moved out of the bash generator's matrix. Each
+  item sits in its slot by its own inventory type; a dual-wield pair is
+  the same item in main and off hand; three linen bags (and a quiver for
+  hunters) in `bags`; hunters' arrows in `ammo`. The generator, now Lua,
+  reads the profile and writes the same 581 rows (race, class, item,
+  amount) as before; only the rows' notes changed (still starting
+  "vanilla-148h-"), and nothing reads those beyond the prefix. The first-
+  login hook (148k) and the bot gearing patch (B025) read the database
+  rows, so they are unchanged.
+
+A character's spec is the talent tree holding most of its points, read
+from the talents it has (`lib/gearsets.lua`, ties to the leftmost tree);
+a character with no points has no spec, and a spec-keyed profile names it
+rather than guessing. `.gearset <profile> <character>`, `.gearset
+<profile> buddies <partner>`, and `.elite <partner>` (short for the
+second) put a record on; bags go only into empty bag slots, ammunition is
+added. `scripts/test-gearsets` (855 checks): the elite rule on every elite
+item; every starter item exists, fits its slot and suits its class in the
+vanilla world database; the starter SQL on disk is exactly what the
+generator makes; the command in a stand-in world, with talents deciding
+each buddy's spec. Not yet: the selected creature as a target (the mirror
+image, 617f); seeing it work in game.
+
+**Before that, 2026-10-04 (the first profile):** **Built and worn, 2026-10-04.** Seven outfit profiles, one per buddy type
 in Growth's party (Talriah, the blood elf paladin, added the same day:
 "can you also equip Talriah, Growth's newest buddy-bot?"), are plain data
 in `src/lua-basic/data/elite-outfit-profiles.lua` (not `elite-outfits.lua`:
@@ -82,14 +116,19 @@ first such rule; the starter kit's is "white quality, level 20 or less").
 
 | Level | Key | Type | Holds |
 |---|---|---|---|
-| profile | name | text | the gearset's rule name and its classes |
-| class | class id | integer | the races of that class |
-| race | race id | integer | the record: `items` (equipment slot integer to item id integer), and for the starter kit also `bags` (list of item ids), `ammo` (item id and count) |
+| profile | name, keyed_by | text, "spec" or "class" | what the records are filed under |
+| spec (or class) | talent tree id (TalentTab), or class id | integer | the races |
+| race | race id | integer | the record: `items` (equipment slot integer to item id integer), `bags` (list of item ids), `ammo` (`item` integer, `count` integer) |
 
-Applied by chat command (game master): `.gearset <profile> <target>`,
-where the target is a partner's name (all their buddies), one character's
-name, or the selected creature (the mirror image). `.elite <partner>`
-stays as the short form of `.gearset elite <partner>`.
+Owner, 2026-10-05: "it has to be *spec* profile and race. Not class,
+though that is self-apparent" (a spec names its class), and bags, quiver
+and ammo are part of a gearset ("sure"). A profile worn before talents
+exist (the starter kit) is keyed by class instead; each profile says which.
+
+Applied by chat command (game master): `.gearset <profile> <character>`,
+`.gearset <profile> buddies <partner>`, and later the selected creature
+(the mirror image). `.elite <partner>` stays as the short form of
+`.gearset elite buddies <partner>`.
 
 **The vanilla starter kit moves in.** Today the level-20 kit is a matrix
 inside a bash generator (`scripts/generate-vanilla-starting-equipment-sql`)
@@ -179,15 +218,18 @@ profile's race wearing the profile's items.
 
 Gearset profiles (2026-10-05):
 
-1. Reshape `elite-outfit-profiles.lua` into the profile shape (profile,
-   class, race), keeping role where one class and race needs two records
-   (see the open question); one reader both commands use.
-2. `.gearset <profile> <target>`, with `.elite` kept as its short form;
-   targets: a partner's buddies, one character, a selected creature.
-3. Move the starter-kit matrix out of the bash generator into the
-   `vanilla-starter` profile; the generator reads it and writes the same
-   SQL (byte-identical output is the test that the move lost nothing).
-4. Re-check B025 and the first-login hook against the regenerated rows.
+1. (Done) The profiles as data, keyed by spec (or class) then race, from
+   the earlier lists by a one-off converter; one reader
+   (`lib/gearsets.lua`) with the spec found from talents.
+2. (Done) `gearset-command.lua`: `.gearset <profile> <character>`,
+   `.gearset <profile> buddies <partner>`, `.elite <partner>`.
+3. (Done) The starter-kit matrix moved into `vanilla-starter`; the
+   generator (now Lua) reads it; the item rows are unchanged (compared
+   row for row with the last bash output; the notes changed, so the file
+   is not byte-identical).
+4. The selected creature as a target (the mirror image, 617f).
+5. In game: `.elite Growth` again; a new vanilla character still gets its
+   kit (install E009 on vanilla).
 
 The elite profile, as first built:
 
@@ -203,13 +245,12 @@ The elite profile, as first built:
 
 1. (Answered 2026-10-05) The tool becomes gearset profiles; "elite" is
    the name of its first profile, not of the tool (quote above).
-4. Role: "sorted by class and then race" leaves no place for two records
-   of one class and race (a troll warrior tank and a troll warrior damage
-   dealer). Add role as an optional third level, or make a role its own
-   profile (`elite-tank`)?
-5. The starter kit carries bags, a quiver and ammo as well as worn gear.
-   Are those part of a gearset, or does the starter kit keep them outside
-   the profile?
+4. (Answered 2026-10-05) Spec, then race (quote above).
+5. (Answered 2026-10-05) Bags, quiver and ammo are part of a gearset.
+6. A buddy's spec is read from its talents; a buddy whose points aren't
+   spent yet (just made) has none and is skipped with a message. Should
+   it use its talent plan (the roster's shape) instead until its points
+   are spent?
 2. Should a buddy's outfit come back after it is remade (617a6), or is it
    a one-time gift?
 3. Do world drops that also fall in Molten Core (Lady Maye's Pendant)
