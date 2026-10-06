@@ -60,12 +60,30 @@ deepest water (20.8 yards, at 2866, -331), murky water closes in round
 her, with seaweed and the lake bed. Picture option `--dive S` holds X
 after the walk.
 
-**Buildings' pools:** around Astranaar only one building carries water (a
-small house: a 2 x 2 patch), so buildings' pools (MLIQ) wait; recorded,
-low priority.
+**Buildings' pools (built 2026-10-06):**
+- **Reading** (`wmo.c`): each building part's pool (MLIQ): a grid of
+  points with surface heights, in the building's own space, and a flag
+  byte per cell (low four bits all set: dry). The layout and the dry rule
+  are the server's own (AzerothCore's `vmap4_extractor/wmo.cpp` and
+  `WorldModel.cpp`).
+- **Its kind** (`wmo_liquid_kind`): by the server's extractor's rule (the
+  part's liquid field, an older numbering unless the root says otherwise,
+  else the first wet cell's), mapped to the building liquids: water 13,
+  sea 14, magma 19, slime 20.
+- **Placed** (`doodads.c`): a building's pools are kept with it; each
+  placed copy hands them, with its placement, to the water drawer
+  (`water_add_pool`: its wet cells as a mesh, drawn as ground water is)
+  and to the water finder (`liquid_add_pool`: a spot turned into the
+  building's space, its cell found, the height blended and turned back).
+  They go with the tile that brought them.
+- **Around Astranaar:** the small night-elf houses hold a 2 x 2-cell basin
+  in their garden (seen: it fills inside its wooden rim, ankle-deep), and
+  the Timbermaw cave (3257, -660, under the hill) a 32 x 29-cell pool.
+- **Tests:** the house's pool reads as 3 x 3 points of building water;
+  turned and placed, its surface is found where the original's files put
+  it (109.88), none 15 yards off; dropping the tile forgets it.
 
 **Left:**
-- Buildings' pools (WMO MLIQ).
 - The original's own swim depth for her model (an open question, below).
 - Depth-darkened water (deep against shallow colours).
 - Telling the server she swims (with the network).

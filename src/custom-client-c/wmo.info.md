@@ -28,6 +28,15 @@ Group: MOGP's 68-byte header (8 flags: 0x2000 indoors, 0x4 has vertex
   batch: 12 first index (u32), 16 count (u16), 23 material (u8)), MOCV
   (colours, blue-green-red-alpha: indoor groups' baked light).
 
+Pool (MLIQ, inside MOGP; 173r): a 30-byte header (0 points across,
+  4 points along, 8 cells across, 12 cells along (ints), 16 the grid's
+  corner in the building's space (3 floats), 28 material (u16)); then 8
+  bytes a point (4: its surface height, float), row by row along y;
+  then a byte a cell, row by row: low four bits all set (0x?F) is a dry
+  cell (the server's rule, WorldModel.cpp). Cells are 533.33 / 128
+  yards (4.17) a side. The pool's kind (LiquidType.dbc id) comes from
+  the group header's liquid field (MOGP + 52), see wmo_liquid_kind.
+
 Material flags: 0x1 unlit, 0x2 no fog, 0x4 two-sided. Blend modes as
 in models (m2.h): 0 opaque, 1 cut-out, 2 see-through, 3+ added light.
 
@@ -35,6 +44,12 @@ in models (m2.h): 0 opaque, 1 cut-out, 2 see-through, 3+ added light.
 
 - `type WmoVertex`
 - `type WmoBatch`
+- `type WmoPool`
+  A building part's pool (MLIQ), in the building's own space; nx 0: none.
+    nx, ny        int: points across (x) and along (y); cells are one fewer each way
+    corner[3]     float: the grid's first point (x, y; z unused, heights are per point)
+    height        float[nx * ny]: each point's surface height, index y * nx + x
+    cell          uint8_t[(nx-1) * (ny-1)]: each cell's flags, index y * (nx-1) + x
 - `type WmoGroup`
 - `type WmoMaterial`
   Whether a building's triangle is solid (173q), from its MOPY flags:
@@ -45,5 +60,14 @@ in models (m2.h): 0 opaque, 1 cut-out, 2 see-through, 3+ added light.
 - `type WmoRoot`
 - `int wmo_read_root(const unsigned char *s, size_t len, WmoRoot *out, char *why, int why_len);`
 - `int wmo_read_group(const unsigned char *s, size_t len, WmoGroup *out, char *why, int why_len);`
+- `int wmo_liquid_kind(const WmoRoot *r, const WmoGroup *g);`
+  A part's pool's kind, as a LiquidType.dbc id, by the rule the server's
+  map extractor uses (vmap4_extractor/wmo.cpp): the group's liquid field
+  read as an id when the root's flag 0x4 says so, otherwise as an older
+  numbering (15 none, else one less than the id); with none, the first
+  wet cell's low four bits plus one. An older-numbered id under 21 maps
+  to the building liquids: water 13 (14, the sea's, when the group's
+  flag 0x80000), sea 14, magma 19, slime 20. 0 when the part has no
+  pool.
 - `void wmo_free_root(WmoRoot *r);`
 - `void wmo_free_group(WmoGroup *g);`

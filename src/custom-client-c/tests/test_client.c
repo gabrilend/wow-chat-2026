@@ -558,8 +558,37 @@ int main(int argc, char **argv)
             float lake = liquid_surface(lw, 2761, -499, &wk), town = liquid_surface(lw, 2717, -400, &wk);
             snprintf(line, sizeof line, "the lake east of town has water (surface %.2f), the town itself none", lake);
             check(lake > 99 && lake < 104 && town < -10000, line);
+            /* a building's pool (173r): the small night-elf house at
+             * 2808.6, -321.0 holds a 2 x 2-cell basin of building water */
+            {
+                int house = -1;
+                for (int k = 0; k < t->nplaces; ++k)
+                    if (strstr(t->buildings[t->places[k].name], "NIGHTELFSMALLHOUSE") && fabsf(t->places[k].z - 108.7f) < 0.1f) house = k;
+                size_t hl = 0, rl = 0;
+                unsigned char *hs = house < 0 ? NULL : mpq_chain_read(&gc, "World\\wmo\\Kalimdor\\Buildings\\NightElfSmallHouse\\NightElfSmallHouse_000.wmo", &hl, &from);
+                unsigned char *hr = house < 0 ? NULL : mpq_chain_read(&gc, "World\\wmo\\Kalimdor\\Buildings\\NightElfSmallHouse\\NightElfSmallHouse.wmo", &rl, &from);
+                WmoGroup hg;
+                WmoRoot hroot;
+                if (!hs || !hr || wmo_read_group(hs, hl, &hg, why, sizeof why) || wmo_read_root(hr, rl, &hroot, why, sizeof why))
+                    check(0, house < 0 ? "the small house isn't placed on the tile" : "the small house's files couldn't be read");
+                else {
+                    int kind = wmo_liquid_kind(&hroot, &hg);
+                    snprintf(line, sizeof line, "the house's pool is 3 x 3 points of building water (%d x %d, kind %d: 13)", hg.pool.nx, hg.pool.ny, kind);
+                    check(hg.pool.nx == 3 && hg.pool.ny == 3 && kind == 13, line);
+                    float hm[16];
+                    adt_place_matrix(&t->places[house], 0, 0, hm);
+                    liquid_add_pool(lw, 26 * 64 + 32, hm, 0, 0, &hg.pool, kind);
+                    int pk = 0;
+                    float in_pool = liquid_surface(lw, 2801.98, -320.59, &pk), beside = liquid_surface(lw, 2786.98, -320.59, &pk);
+                    snprintf(line, sizeof line, "turned and placed, its basin's surface is found (%.2f, kind %d; 109.88, 13), and none 15 yards off", in_pool, pk);
+                    check(fabsf(in_pool - 109.88f) < 0.05f && pk == 13 && beside < -10000, line);
+                    wmo_free_group(&hg);
+                    wmo_free_root(&hroot);
+                }
+                free(hs); free(hr);
+            }
             liquid_drop_tile(lw, 26, 32);
-            check(liquid_surface(lw, 2761, -499, &wk) < -10000, "dropping the tile forgets its water");
+            check(liquid_surface(lw, 2761, -499, &wk) < -10000 && liquid_surface(lw, 2801.98, -320.59, &wk) < -10000, "dropping the tile forgets its water, the house's pool too");
             liquid_free(lw);
             check(fixed, "every blend map's last column copies the one before, as the original fills the unpainted edge");
             check(painted, "the blend maps hold soft edges, not only all-or-nothing");

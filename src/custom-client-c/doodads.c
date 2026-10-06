@@ -13,6 +13,7 @@
 #include "collide.h"
 #include "m2.h"
 #include "particles.h"
+#include "water.h"
 #include "sky.h"
 #include "wmo.h"
 
@@ -127,7 +128,10 @@ static struct { char name[260]; Texture2D tex; } *pictures;
 static int       npictures, pictures_cap;
 /* buildings: the model entry holding its pieces, and its root (for the
  * furnishings, placed when the building is) */
-typedef struct { int model; WmoRoot root; } Building;
+typedef struct { WmoPool pool; int kind; } BuildingPool;   /* a part's pool and its LiquidType id (173r) */
+typedef struct { int model; WmoRoot root; BuildingPool *pools; int npools; } Building;
+static LiquidWorld *liquids;          /* where placed buildings' pools go (doodads_init) */
+static double origin_x, origin_y;     /* the drawing origin, from doodads_add_tile (pools are filed in world coordinates) */
 static Building *buildings; static int nbuildings, buildings_cap;
 static int       skipped_pieces, moving_models, emitting_models;
 static Shader    shader;
@@ -139,10 +143,11 @@ static Vector3   view_right = { 1, 0, 0 }, view_up = { 0, 0, 1 };   /* the camer
 /* }}} */
 
 /* {{{ doodads_init */
-int doodads_init(MpqChain *c, CollideWorld *collide, char *why, int why_len)
+int doodads_init(MpqChain *c, CollideWorld *collide, LiquidWorld *liquid_world, char *why, int why_len)
 {
     chain = c;
     solids = collide;
+    liquids = liquid_world;
     shader = LoadShaderFromMemory(VS, FS);
     if (!IsShaderReady(shader)) { snprintf(why, why_len, "the doodad shader didn't compile (see Raylib's messages above)"); return 1; }
     shader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(shader, "instanceTransform");
@@ -416,6 +421,16 @@ static int load_building(const char *name)
             int indoor = (g.flags & 0x2000) && g.has_colours;
             md->pieces[md->npieces++] = (DoodadPiece){ m, pic, (uint16_t)mat.blend, (uint16_t)mat.flags, indoor, NULL, -1, 1, 1, { 0, 0 }, { -1, -1 }, -1, -1 };
         }
+        /* its pool, if any, kept (the grid taken from the group) with its kind */
+        if (g.pool.nx) {
+            int kind = wmo_liquid_kind(&b->root, &g);
+            if (!kind) fprintf(stderr, "buildings: %s's pool has no kind of liquid by the server's rule; left out\n", path);
+            else {
+                b->pools = realloc(b->pools, sizeof *b->pools * (b->npools + 1));
+                b->pools[b->npools++] = (BuildingPool){ g.pool, kind };
+                g.pool.height = NULL; g.pool.cell = NULL;
+            }
+        }
         wmo_free_group(&g);
     }
     return nbuildings++;
@@ -470,6 +485,10 @@ static void realise(const TileRecord *r)
         add_copy(b->model, p->at, r->tile);
         float m[16];
         memcpy(m, MatrixToFloatV(p->at).v, sizeof m);
+        for (int k2 = 0; liquids && k2 < b->npools; ++k2) {   /* its pools (173r) */
+            water_add_pool(r->tile, m, &b->pools[k2].pool, b->pools[k2].kind);
+            liquid_add_pool(liquids, r->tile, m, origin_x, origin_y, &b->pools[k2].pool, b->pools[k2].kind);
+        }
         for (int si = 0; si < b->root.nsets; ++si) {
             if (si != 0 && si != p->set) continue;
             WmoSet set = b->root.sets[si];
@@ -491,6 +510,7 @@ static void realise(const TileRecord *r)
 int doodads_add_tile(const AdtTile *t, int tile, double ox, double oy, char *why, int why_len)
 {
     (void)why; (void)why_len;
+    origin_x = ox; origin_y = oy;
     records = realloc(records, sizeof *records * (nrecords + 1));
     TileRecord *r = &records[nrecords++];
     r->tile = tile;

@@ -171,7 +171,7 @@ separate layer. In C on Raylib; the first Lua version is deprecated.
 | 173o | particles | Built (doodads) | Torches, orbs, wisps, fading into fog; figures' particles wait for spells and items that carry them. |
 | 173p | equipment-on-the-body | Built | Painted items, switched pieces, helms, shoulders, weapons, cloaks. |
 | 173q | model-collision | Built | Walls, floors, bridges, the camera. |
-| 173r | water-and-swimming | Built | Ground water, swimming, underwater; buildings' pools to come. |
+| 173r | water-and-swimming | Built | Ground water, buildings' pools, swimming, underwater. |
 | 173s | streaming-tiles | Built | Tiles loaded and dropped as she moves; the far horizon from the low-detail map. |
 
 For current counts, run

@@ -160,6 +160,40 @@ void water_add_tile(const AdtTile *t, int tile, double ox, double oy)
 }
 /* }}} */
 
+/* {{{ water_add_pool */
+void water_add_pool(int tile, const float at[16], const WmoPool *p, int kind)
+{
+    int cx = p->nx - 1, cy = p->ny - 1, cells = 0;
+    for (int i = 0; i < cx * cy; ++i) cells += !wmo_pool_dry(p->cell[i]);
+    if (!cells) return;
+    Mesh m = { 0 };
+    m.vertexCount = cells * 6;
+    m.triangleCount = cells * 2;
+    m.vertices = MemAlloc(sizeof(float) * 3 * m.vertexCount);
+    m.texcoords = MemAlloc(sizeof(float) * 2 * m.vertexCount);
+    int v = 0;
+    for (int y = 0; y < cy; ++y)
+        for (int x = 0; x < cx; ++x) {
+            if (wmo_pool_dry(p->cell[y * cx + x])) continue;
+            static const int CORNER[6][2] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 0 }, { 1, 1 }, { 0, 1 } };
+            for (int k = 0; k < 6; ++k) {
+                int px = x + CORNER[k][0], py = y + CORNER[k][1];
+                float bx = p->corner[0] + px * WMO_POOL_CELL, by = p->corner[1] + py * WMO_POOL_CELL, bz = p->height[py * p->nx + px];
+                for (int r = 0; r < 3; ++r) m.vertices[v * 3 + r] = at[r] * bx + at[4 + r] * by + at[8 + r] * bz + at[12 + r];
+                m.texcoords[v * 2] = (float)px;
+                m.texcoords[v * 2 + 1] = (float)py;
+                ++v;
+            }
+        }
+    UploadMesh(&m, false);
+    if (nlayers == layers_cap) { layers_cap = layers_cap ? layers_cap * 2 : 128; layers = realloc(layers, sizeof *layers * layers_cap); }
+    layers[nlayers].mesh = m;
+    layers[nlayers].kind = kind_of(kind);
+    layers[nlayers].tile = tile;
+    ++nlayers;
+}
+/* }}} */
+
 /* {{{ water_drop_tile */
 void water_drop_tile(int tile)
 {

@@ -31,10 +31,10 @@ picture options; this page doesn't copy numbers that go stale.
 | `m2.c` | models (`.m2` + `00.skin`) | points, pieces, units (pictures, layers, blends, tints), solid shapes |
 | `anim.c` | the same models (and `.anim` files) | skeletons, animations, poses, bent points, picture animations |
 | `particles.c` | the same models | particle emitters, and their particles run over time |
-| `wmo.c` | buildings (root + group files) | materials, furniture sets, parts' points and batches, solid flags |
+| `wmo.c` | buildings (root + group files) | materials, furniture sets, parts' points and batches, solid flags, pools |
 | `character.c` | a character's look (race, sex, choices, items) | its model with the right pieces shown, its painted skin sheet, fur, hair, cloak, and the items to hang |
 | `light.c` | the light tables | the light here and now: sun, shade, sky, fog, water colours, skybox |
-| `liquid.c` | ground files' water | the water's surface anywhere (for the mover) |
+| `liquid.c` | ground files' water, buildings' pools | the water's surface anywhere (for the mover) |
 | `collide.c` | models' and buildings' solid shapes, placed | floors, walls and lines of sight (for the mover and camera) |
 
 ## 3. From memory to the screen (Raylib)
@@ -45,7 +45,8 @@ Each frame, in this order (`main.c`):
    ground file is read once and handed to:
    - `ground.c`: meshes, blend pictures;
    - `water.c` and `liquid.c`;
-   - `doodads.c`: copies, solid shapes into `collide.c`.
+   - `doodads.c`: copies, solid shapes into `collide.c`, buildings'
+     pools into `water.c` and `liquid.c`.
    Tiles left behind are dropped from all of them (173s).
 2. **Input and movement:**
    - the mouse drags the camera and the wheel zooms it, all the way in

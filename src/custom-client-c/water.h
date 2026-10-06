@@ -14,6 +14,7 @@
 #define EG_WATER_H
 
 #include "adt.h"
+#include "wmo.h"
 #include "light.h"
 #include "mpq.h"
 #include "raylib.h"
@@ -26,6 +27,13 @@ int  water_init(MpqChain *chain, char *why, int why_len);
  * drawing origin; drops it again (173s). */
 void water_add_tile(const AdtTile *t, int tile, double ox, double oy);
 void water_drop_tile(int tile);
+
+/* Adds a building's pool (wmo.h), of kind `kind` (LiquidType.dbc id),
+ * placed by `at` (the building's placement, Raylib's layout, relative to
+ * the drawing origin), brought by `tile`; water_drop_tile drops it. Its
+ * wet cells are drawn as the ground's water is, the picture repeating
+ * once a cell. */
+void water_add_pool(int tile, const float at[16], const WmoPool *p, int kind);
 
 /* Draws all water at `seconds` since start (the ripples' clock). */
 void water_draw(Vector3 eye, const LightNow *light, double seconds);

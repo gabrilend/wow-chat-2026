@@ -60,6 +60,10 @@ that issue and strike it here (keep the line, so the history stays).
    - How fast she floats up when left alone (2 yards a second here).
    - Swimming forward with the right button held follows the camera's
      pitch.
+10c. **Buildings' pools** (173r): the basin in a small night-elf house's
+    garden at Astranaar (`--goto 2796 -320.6 --pitch 40`), and the pool
+    in the Timbermaw cave (3257, -660). Is the water where the
+    original's is, and is it the same colour as the lake's?
 11. **Camera follow speed** (173m): the swing behind her at 180 degrees a
     second.
 11b. **First person and Head Bob** (173m): roll the wheel in past the

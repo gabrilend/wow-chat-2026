@@ -22,5 +22,11 @@ slime are drawn as their pictures, unlit and solid.
   Adds a tile's water (tile = tx * 64 + ty), placed relative to the
   drawing origin; drops it again (173s).
 - `void water_drop_tile(int tile);`
+- `void water_add_pool(int tile, const float at[16], const WmoPool *p, int kind);`
+  Adds a building's pool (wmo.h), of kind `kind` (LiquidType.dbc id),
+  placed by `at` (the building's placement, Raylib's layout, relative to
+  the drawing origin), brought by `tile`; water_drop_tile drops it. Its
+  wet cells are drawn as the ground's water is, the picture repeating
+  once a cell.
 - `void water_draw(Vector3 eye, const LightNow *light, double seconds);`
   Draws all water at `seconds` since start (the ripples' clock).

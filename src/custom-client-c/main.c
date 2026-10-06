@@ -378,7 +378,7 @@ int main(int argc, char **argv)
     if (ground_init(&chain, map_name, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     solids = collide_new(ox, oy);
     waters = liquid_new();
-    if (doodads_init(&chain, solids, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    if (doodads_init(&chain, solids, waters, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     if (horizon_init(&chain, map_name, ox, oy, why, sizeof why)) printf("horizon: %s\n", why);
     if (water_init(&chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     LightTables lights;

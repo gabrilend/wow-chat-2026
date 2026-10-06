@@ -43,6 +43,7 @@ int wmo_read_root(const unsigned char *s, size_t len, WmoRoot *out, char *why, i
         if (is_tag(s, at, "MOHD")) {
             if (size < 28) { snprintf(why, why_len, "its MOHD header is %zu bytes, too short", size); return 1; }
             out->ngroups = (int)u32(s, at + 8 + 4);
+            out->flags = size >= 64 ? u32(s, at + 8 + 60) : 0;
             got_header = 1;
         }
     }
@@ -101,6 +102,7 @@ int wmo_read_group(const unsigned char *s, size_t len, WmoGroup *out, char *why,
     }
     if (!mogp || mogp + 8 + 68 > mogp_end) { snprintf(why, why_len, "no MOGP block: not a building's group file"); return 1; }
     out->flags = u32(s, mogp + 8 + 8);
+    out->liquid = u32(s, mogp + 8 + 52);
     const unsigned char *movt = NULL, *monr = NULL, *motv = NULL, *mocv = NULL;
     size_t nmovt = 0, nmonr = 0, nmotv = 0, nmocv = 0;
     /* the group's own blocks follow its 68-byte header, inside MOGP */
@@ -120,6 +122,22 @@ int wmo_read_group(const unsigned char *s, size_t len, WmoGroup *out, char *why,
         } else if (is_tag(s, at, "MONR")) { monr = s + d; nmonr = size / 12;
         } else if (is_tag(s, at, "MOTV") && !motv) { motv = s + d; nmotv = size / 8;   /* the first set; a second can follow */
         } else if (is_tag(s, at, "MOCV") && !mocv) { mocv = s + d; nmocv = size / 4;
+        } else if (is_tag(s, at, "MLIQ") && size >= 30) {
+            int nx = (int)u32(s, d), ny = (int)u32(s, d + 4), cx = (int)u32(s, d + 8), cy = (int)u32(s, d + 12);
+            /* the cell counts must be one fewer than the points', and the
+             * whole grid inside the block; otherwise it's a broken pool,
+             * reported and left out (the building still stands) */
+            if (nx < 2 || ny < 2 || cx != nx - 1 || cy != ny - 1 || 30 + (size_t)nx * ny * 8 + (size_t)cx * cy > size) {
+                fprintf(stderr, "buildings: a pool of %d x %d points and %d x %d cells doesn't fit its %zu bytes; left out\n", nx, ny, cx, cy, size);
+            } else {
+                WmoPool *p = &out->pool;
+                p->nx = nx; p->ny = ny;
+                for (int c = 0; c < 3; ++c) p->corner[c] = f32(s, d + 16 + (size_t)c * 4);
+                p->height = malloc(sizeof(float) * (size_t)nx * ny);
+                p->cell = malloc((size_t)cx * cy);
+                for (int i = 0; i < nx * ny; ++i) p->height[i] = f32(s, d + 30 + (size_t)i * 8 + 4);
+                memcpy(p->cell, s + d + 30 + (size_t)nx * ny * 8, (size_t)cx * cy);
+            }
         } else if (is_tag(s, at, "MOBA")) {
             out->nbatches = (int)(size / 24);
             out->batches = calloc(out->nbatches ? out->nbatches : 1, sizeof *out->batches);
@@ -162,5 +180,26 @@ int wmo_read_group(const unsigned char *s, size_t len, WmoGroup *out, char *why,
 
 /* {{{ wmo_free_root, wmo_free_group */
 void wmo_free_root(WmoRoot *r) { free(r->materials); free(r->furnishings); free(r->sets); memset(r, 0, sizeof *r); }
-void wmo_free_group(WmoGroup *g) { free(g->vertices); free(g->indices); free(g->batches); free(g->tri_flags); memset(g, 0, sizeof *g); }
+void wmo_free_group(WmoGroup *g) { free(g->vertices); free(g->indices); free(g->batches); free(g->tri_flags); free(g->pool.height); free(g->pool.cell); memset(g, 0, sizeof *g); }
+/* }}} */
+
+/* {{{ wmo_liquid_kind */
+static uint32_t older_kind(uint32_t id, uint32_t group_flags)
+{
+    static const uint32_t BUILDING[4] = { 13, 14, 19, 20 };     /* water, sea, magma, slime */
+    if (id == 0 || id >= 21) return id;
+    uint32_t k = BUILDING[(id - 1) & 3];
+    return k == 13 && (group_flags & 0x80000) ? 14 : k;
+}
+int wmo_liquid_kind(const WmoRoot *r, const WmoGroup *g)
+{
+    if (!g->pool.nx) return 0;
+    uint32_t k;
+    if (r->flags & 0x4) k = older_kind(g->liquid, g->flags);   /* (the server maps even these through the older table) */
+    else if (g->liquid == 15) k = 0;
+    else k = older_kind(g->liquid + 1, g->flags);
+    for (int i = 0; !k && i < (g->pool.nx - 1) * (g->pool.ny - 1); ++i)
+        if (!wmo_pool_dry(g->pool.cell[i])) k = older_kind((uint32_t)(g->pool.cell[i] & 0x0F) + 1, g->flags);
+    return (int)k;
+}
 /* }}} */
