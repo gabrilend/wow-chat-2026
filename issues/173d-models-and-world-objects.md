@@ -68,6 +68,13 @@ M2 for characters and doodads, WMO for buildings) with their textures.
    (Chosen for now, 2026-10-05: read in place, nothing copied, so the
    project holds none of the game's files. Is that right, or should a
    copy live with the project?)
-2. Her look is fixed in `main.lua` (skin 0, face 0, hair style 0, hair
-   colour 0). Should it come from a character on the server, once the
-   client logs in, or be chosen in the client?
+2. (Answered 2026-10-05) Where looks live: "The looks can be stored on
+   the client and loaded by the server by model ID and such - the reason
+   is, when we implement custom assets, users should be able to supply
+   whatever assets they'd like, and another player would see them with
+   their own assets." So the server sends only ids (display id, race,
+   sex, the creation choices, item display ids), and each client turns
+   ids into models and pictures from its own asset store: the original
+   archives first, a player's own assets over them. Two players may see
+   the same character differently, each with their own assets. Her look
+   in `main.lua` is a stand-in for the ids the server will send.

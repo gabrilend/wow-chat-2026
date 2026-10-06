@@ -49,6 +49,16 @@ The project's own game client, built up in steps:
 | 173b | options-menu | 173a | Settings: any resolution up to ultrawide, typed in or from a list of common sizes |
 | 173c | ui-gizmo-image-generator | None | WoW-like interface pieces drawn by name ("scrollbar", "x_button", "clicking-to-drag"), flat and lightly shaded, assembled into interfaces |
 | 173d | models-and-world-objects | 173a | The game's models and buildings (from the client's data files and the server's collision meshes) drawn in 3D |
+| 173e | what-the-server-checks | 173a | The pass mark: every movement order acknowledged with the server's values, honest falls, Warden answered as the original client answers |
+| 173f | painted-ground | 173d | The ground's textures and blend layers from the map's own ground files |
+| 173g | doodads | 173f | Trees, rocks and buildings placed as the map places them (M2 and WMO) |
+| 173h | shadow-maps | 173f, 173g | The ground's baked shadows and blob shadows under characters |
+| 173i | night-elf-animation | 173d | Her bones and animations: stand, walk, run, jump, fall, fidget |
+| 173j | models-standing-around | 173i | A few other models standing near her, cycling their animations |
+
+The owner's order for the next steps (2026-10-05): painted ground, then
+doodads, then shadow maps, then her animation, then models standing
+around.
 
 Later steps (not yet issues): talking to the server, the rest of the
 interface, 617s7's box select, 719's tooltips.

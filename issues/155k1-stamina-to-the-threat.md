@@ -1,6 +1,9 @@
 # 155k1 - Stamina Scaled to the Threat
 
 ## Status
+- **On hold** (owner, 2026-10-05: "can we put this concern and issue file
+  on hold? Not sure if we want to implement it."). Nothing is built; the
+  design below is kept as it stands until the owner decides.
 - Created: 2026-10-04
 - Phase: 1
 - Parent: 155k (the Outland gear ladder)

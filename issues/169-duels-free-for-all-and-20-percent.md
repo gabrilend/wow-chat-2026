@@ -121,13 +121,22 @@ Split by mechanism, each one testable on its own:
    until full health.
 4. (Answered 2026-10-04) Food and drink stop working within 100 yards of
    a duellist.
-5. The free-for-all needs the FFA PvP flag (see above). Duellists will
-   show each other as hostile (red names) and may be hit by anyone else
-   with that flag, which means other duellists and players inside an
-   arena like Gurubashi. Is that acceptable?
-6. Can a monster (not a duellist) still kill a duellist, or does every
-   hit stop at 20% while they are in a duel?
-7. Duels are pairs: when A is beaten, A's opponent B wins and leaves the
-   free-for-all too, though nobody beat B. Should B stay in (still
-   flagged, still fighting) until B asks for a new duel, or is
-   "leaves with the win" right?
+5. (Answered 2026-10-05) The FFA flag: "Sure." No arena is drawn: the
+   flag belongs to each duellist, so the "arena" is wherever duellists
+   stand. Healers who aren't duelling: not flagged, so no duellist can
+   attack them, and they may heal duellists (step 3).
+6. (Answered 2026-10-05) "anytime the duelist is at or below 20% hp,
+   they exit the duel. In addition, any player damage to a duelist that
+   would take them below 20% will be set to exactly as much damage as it
+   takes to put them to 20% hp." So player damage stops at exactly 20%;
+   a monster's hit is not stopped and can kill; reaching 20% by any
+   means ends that duellist's part.
+7. (Answered 2026-10-05) "yes, unless they are the only two
+   participants": the winner stays in the free-for-all (still flagged,
+   still fighting) while others are duelling; when the last two are left
+   and one is beaten, the fight is over for both.
+8. Should this wait for the custom client (asked by the owner,
+   2026-10-05)? My answer: no. The custom client would remove the need
+   for the FFA flag trick on its own screen, but players on the original
+   client still need it, and the server's rules (who may hit whom, the
+   20% stop, outside healing) are server changes either way.
