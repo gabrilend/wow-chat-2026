@@ -78,8 +78,9 @@ the camera is the next feature (173m).
 | 173b15 | social-and-chat | 173b1 | Chat bubbles, filters, chat style, guild alerts, chat-window mouse behaviour |
 | 173b16 | features-help-and-languages | 173b1 | Tooltips, tips, error display, language; the panels the original has that this project won't copy, and why |
 
-Order: 173b1 first, then 173b3 and 173b4 with the camera (173m), then
-173b5. The rest follow their features: the effects panel with painted
+Order: 173b1 first, then 173b4 with the camera (173m), then 173b5. Key
+bindings (173b3) wait for the action bar (owner, 2026-10-06), because
+until then there is nothing to bind but movement. The rest follow their features: the effects panel with painted
 ground, doodads and shadows (173f, 173g, 173h), sound with the first sound,
 the interface panels with the interface (173c onward).
 

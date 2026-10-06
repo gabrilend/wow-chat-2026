@@ -11,14 +11,17 @@
  * 2026-10-05: "let's port now. We should build something like an engine
  * in C anyway, for performance reasons").
  *
- * Usage: custom-client --maps DIR --client DIR [--shot FILE] [--zoom N] [--front]
- *   --shot FILE   draw a few frames, save a picture there, quit
+ * Usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front]
+ *   --settings FILE   the player's settings (SET name "value" lines; 173b1);
+ *                     without it, every setting is at its default
+ *   --shot FILE       draw a few frames, save a picture there, quit
  */
 #include "character.h"
 #include "maps.h"
 #include "mover.h"
 #include "mpq.h"
 #include "navmesh_slope.h"
+#include "settings.h"
 
 #include "raylib.h"
 #include "raymath.h"
@@ -38,7 +41,8 @@
 #define TILE_REACH   1                                 /* tiles drawn round her own: 3 x 3 */
 #define ELF_HEIGHT   2.3f                              /* yards: the camera looks at her shoulders */
 #define ZOOM_MIN     2.0f
-#define ZOOM_MAX     40.0f
+#define ZOOM_BASE    20.0f                             /* yards; times cameraDistanceMaxFactor (1 to 2) is the zoom-out limit (173b4) */
+#define DRAG_RATE    0.006f                            /* radians a pixel at a cameraYawMoveSpeed of 180 */
 static const float SKY[3] = { 0.52f, 0.66f, 0.78f };
 /* her look: ChrRaces id, sex, and the character-creation choices (from 0);
  * a stand-in for the ids the server will send (173d, 617r5) */
@@ -237,15 +241,24 @@ static void refresh_tiles(void)
 /* {{{ main */
 int main(int argc, char **argv)
 {
-    const char *maps = NULL, *client = NULL, *shot = NULL;
+    const char *maps = NULL, *client = NULL, *shot = NULL, *settings_file = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--maps") && i + 1 < argc) maps = argv[++i];
+        else if (!strcmp(argv[i], "--settings") && i + 1 < argc) settings_file = argv[++i];
         else if (!strcmp(argv[i], "--client") && i + 1 < argc) client = argv[++i];
         else if (!strcmp(argv[i], "--shot") && i + 1 < argc) shot = argv[++i];
         else if (!strcmp(argv[i], "--zoom") && i + 1 < argc) cam_dist = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--front")) { cam_yaw = (float)(START_O + PI); cam_pitch = 0.1f; cam_held = 1; }
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--shot FILE] [--zoom N] [--front]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front]\n"); return 2; }
+
+    /* the settings: defaults, then the player's file; a line it refuses is
+     * named on the terminal and skipped (173b1) */
+    settings_init();
+    if (settings_file) settings_load(settings_file, stderr);
+    else fprintf(stderr, "settings: no --settings file given; every setting is at its default\n");
+    int win_w, win_h;
+    settings_resolution(settings_text("gxResolution"), &win_w, &win_h);   /* accepted when set, so always a resolution */
 
     char why[900];
     maps_world_init(&world, maps, MAP_ID);
@@ -265,7 +278,7 @@ int main(int argc, char **argv)
     ox = floor(START_X); oy = floor(START_Y);
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
-    InitWindow(1280, 720, "Everland Ghostsong");
+    InitWindow(win_w, win_h, "Everland Ghostsong");
     SetExitKey(KEY_NULL);                                /* Escape is read in the loop, so it can open the game menu later */
     Shader ground_sh = LoadShaderFromMemory(GROUND_VS, GROUND_FS);
     Shader model_sh  = LoadShaderFromMemory(GROUND_VS, MODEL_FS);
@@ -291,14 +304,17 @@ int main(int argc, char **argv)
         if (drag_r && !was_r) cam_yaw = (float)elf.o;
         if (drag_l || drag_r) {
             Vector2 d = GetMouseDelta();
-            cam_yaw -= d.x * 0.006f;
-            cam_pitch += d.y * 0.006f;
+            float rate = DRAG_RATE * (float)settings_num("cameraYawMoveSpeed") / 180.0f;
+            cam_yaw -= d.x * rate;
+            cam_pitch += d.y * rate;
             if (cam_pitch < -0.4f) cam_pitch = -0.4f;
             if (cam_pitch > 1.45f) cam_pitch = 1.45f;
             if (drag_r) elf.o = fmod(fmod(cam_yaw, 2 * PI) + 2 * PI, 2 * PI);   /* the right button turns her with the camera */
         }
         float wheel = GetMouseWheelMove();
-        if (wheel != 0) { cam_dist *= wheel > 0 ? 0.85f : 1.18f; cam_dist = Clamp(cam_dist, ZOOM_MIN, ZOOM_MAX); }
+        float zoom_max = ZOOM_BASE * (float)settings_num("cameraDistanceMaxFactor");
+        if (wheel != 0) cam_dist *= wheel > 0 ? 0.85f : 1.18f;
+        cam_dist = Clamp(cam_dist, ZOOM_MIN, zoom_max);   /* every frame, so a lowered limit pulls the camera in at once */
         MoverInput in = {
             .forward = IsKeyDown(KEY_W) || IsKeyDown(KEY_UP) || (drag_l && drag_r),
             .back = IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN),

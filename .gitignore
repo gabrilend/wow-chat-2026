@@ -151,3 +151,6 @@ logs-vanilla
 # basic's install dir and log symlink, derived like vanilla's above
 installed-files-basic/
 logs-basic
+
+# The custom client's player settings (issue 173b1): the player's, not the project's
+src/custom-client-c/settings/

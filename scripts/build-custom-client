@@ -8,6 +8,11 @@
 # zlib, for the game's archives, too. Outputs go to the RAM tier
 # (tmp/tmp/custom-client-c/), as every build product here does.
 #
+# Each build's length is printed at the end and appended, with the date,
+# to tmp/shared-memory/custom-client-build-times.log. Claude may run this
+# build while it stays under about five minutes (owner, 2026-10-06; the
+# rule is in CLAUDE.md, "Compiling").
+#
 # Usage: scripts/build-custom-client [PROJECT_DIR] [--test]
 #   --test   also run the test program after building
 
@@ -20,6 +25,7 @@ fi
 # }}}
 
 set -euo pipefail
+START=$(date +%s)
 SRC="${DIR}/src/custom-client-c"
 OUT="${DIR}/tmp/tmp/custom-client-c"
 mkdir -p "${OUT}"
@@ -28,7 +34,7 @@ mkdir -p "${OUT}"
 
 CFLAGS=(-std=c11 -D_FILE_OFFSET_BITS=64 -D_POSIX_C_SOURCE=200809L -O2 -g -Wall -Wextra -Werror -I/usr/local/include)
 CORE=("${SRC}/maps.c" "${SRC}/mover.c" "${SRC}/navmesh_slope.c" "${SRC}/mpq.c" "${SRC}/blp.c" "${SRC}/dbc.c"
-      "${SRC}/m2.c" "${SRC}/character.c")
+      "${SRC}/m2.c" "${SRC}/character.c" "${SRC}/settings.c")
 
 echo "building the test program"
 cc "${CFLAGS[@]}" "${CORE[@]}" "${SRC}/tests/test_client.c" -lz -lm -o "${OUT}/test-client"
@@ -36,6 +42,14 @@ echo "building the client"
 cc "${CFLAGS[@]}" "${CORE[@]}" "${SRC}/main.c" /usr/local/lib/libraylib.a -lz -lm -lpthread -ldl -lrt -lX11 -lGL \
     -o "${OUT}/custom-client"
 echo "built: ${OUT}/custom-client, ${OUT}/test-client"
+SECONDS_TAKEN=$(( $(date +%s) - START ))
+LOG="${DIR}/tmp/shared-memory/custom-client-build-times.log"
+mkdir -p "$(dirname "${LOG}")"
+echo "$(date '+%Y-%m-%d %H:%M:%S') ${SECONDS_TAKEN}s" >> "${LOG}"
+echo "build took ${SECONDS_TAKEN} seconds (log: ${LOG})"
+if (( SECONDS_TAKEN > 300 )); then
+    echo "WARNING: the build took over five minutes; by the rule in CLAUDE.md, builds go back to the owner"
+fi
 
 if [[ "${1:-}" == "--test" ]]; then
     "${OUT}/test-client" "${DIR}"

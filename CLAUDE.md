@@ -396,3 +396,19 @@ Patch documentation:
 - girl just search the database next time, don't do so many web searches.
 - a good error message has each value checked and verified at message-creation time, each idempotent. Possible causes can be filled in periodically (focusing on the most common or rarest) as derived from related issue files. It should offer questions about the potential results of its "to debug:" suggestions, explaining each succinctly and clearly. The error reports both what didn't complete AND what did, so the reader knows where in the pipeline things stopped.
 - let me run the compilation scripts. I want to see the output.
+  (Exception: the custom client, below in "Compiling".)
+
+## Compiling
+
+**The custom client (C, `src/custom-client-c/`) may be built by Claude**
+with `scripts/build-custom-client --test` (owner, 2026-10-06: "this project
+in it's current stage will compile very quickly"). The script prints how
+long each build took and appends it to
+`tmp/shared-memory/custom-client-build-times.log`. **If a build ever takes
+more than about five minutes, stop building it yourself**, tell the owner,
+and go back to handing the build to them, as with everything else. The
+script prints a warning when that line is crossed.
+
+Everything else (the AzerothCore server, its modules, anything through
+`scripts/azerothcore` or `scripts/compile`) is still built by the owner.
+Those builds are long and tie up the processor.

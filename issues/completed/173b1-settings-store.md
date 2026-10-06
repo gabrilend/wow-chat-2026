@@ -5,6 +5,7 @@
 - Phase: 1
 - Parent: 173b (the options menu)
 - Blocked by: None
+- Completed: 2026-10-06
 - Blocks: 173m (the camera), and every other 173b sub-issue
 - Priority: High
 
@@ -17,9 +18,26 @@ refactored."
 
 ## Current Behavior
 
-Not built. Every number the client uses is fixed in its source: the
-window's 1280 x 720, the run speed, the drag rate of 0.006 radians a pixel,
-the zoom limits, the keys.
+**Built 2026-10-06** in C (`src/custom-client-c/settings.h`, `settings.c`),
+with 11 checks in `tests/test_client.c`, all passing (54 in the program).
+- **The table** holds three rows so far, each replacing a number first
+  light had fixed in its source: `gxResolution` (1280x720, read at
+  start), `cameraDistanceMaxFactor` (2: the zoom-out limit is 20 yards
+  times it, so first light's 40), and `cameraYawMoveSpeed` (180: the drag
+  rate is 0.006 radians a pixel times speed / 180, first light's rate at
+  180).
+- **`main.c`** reads the window size at start, and reads the zoom limit
+  and drag rate every frame. The zoom limit is applied every frame, so
+  the `--zoom` picture option is held to it too.
+- **The file** is `src/custom-client-c/settings/Config.wtf` (git-ignored),
+  named once in `scripts/custom-client` and passed as `--settings`. It is
+  read at start and never written by the client yet (no menu).
+- **Refusals:** a value outside its declaration is refused with a reason
+  (`cameraYawMoveSpeed "20": out of its range (90 to 270)`). A bad file
+  line is printed with its line number and skipped. A default its own
+  declaration refuses stops the client at start, naming the row. A name
+  that code asks for and the table lacks stops the client, naming the file
+  and line that asked.
 
 ## Intended Behavior
 
@@ -52,26 +70,32 @@ silently returns a default.
 `WTF/Config.wtf` (`SET cameraSmoothStyle "1"`). The file lives in the
 client's installation folder (owner, 2026-10-06). That folder isn't built
 yet, so for now the file is kept in the project, at
-`src/custom-client/settings/` (git-ignored: it is the player's, not the
-project's). Its one path is defined in one place, so moving it later
-changes one line. The original's own `Config.wtf` is never read (owner,
+`src/custom-client-c/settings/Config.wtf` (git-ignored: it is the
+player's, not the project's). The run script (`scripts/custom-client`)
+names it in one line and hands it to the client, so moving it later
+changes that one line. Until the options screen exists (173b2), the file
+is edited by hand and read at start; the client doesn't write it on quit,
+so hand edits are never overwritten. The original's own `Config.wtf` is never read (owner,
 2026-10-06: "no"). Only values that differ from the default are
 written. On load, a line naming an unknown setting, or holding a value out
 of its range, is reported by name and line number and skipped. The
 report is never silent.
 
-**Both clients** (Lua and C) declare the same table. A test holds the two
-tables to the same names, kinds, ranges and defaults.
+**C only.** The Lua client is deprecated (173k), so the store has no Lua
+twin.
 
 ## Suggested Implementation Steps
 
-1. The declaration table and the lookup, in Lua first, then its C twin.
+1. The declaration table and the lookup (`settings.c`'s table of
+   declarations; `settings_find`, and `settings_num` / `settings_text`,
+   which stop the client on an unknown name).
 2. Load and save the file. Tests: a round trip keeps every non-default
    value; a bad line is reported with its line number; an unknown name
    asked for by code fails loudly.
-3. Move the client's existing fixed numbers that are settings (window
-   size, zoom limits, drag rate) into the table, as the first rows.
-4. A test comparing the Lua and C tables.
+3. Move the client's existing fixed numbers that are settings into the
+   table, as the first rows: the window's size (`gxResolution`), the
+   zoom-out limit (`cameraDistanceMaxFactor`), and the drag rate
+   (`cameraYawMoveSpeed`).
 
 ## Open Questions
 

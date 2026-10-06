@@ -6,7 +6,10 @@
 - Parent: 173b (the options menu)
 - Blocked by: 173b1 (the settings store)
 - Related: 173m (camera actions), 173a (today's fixed keys)
-- Priority: High
+- Priority: Low (owner, 2026-10-06: "Don't worry about keybindings for
+  now. We don't really have anything to change except movement. We'll
+  build keybinds when we build the action bar.")
+- Built with: the action bar (173b10)
 
 ## Origin
 

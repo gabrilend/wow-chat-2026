@@ -9,6 +9,10 @@
  * climbed and slid down, the archives' published keys, the night elf's
  * model and pictures, and which pieces of her show.
  *
+ * Since 2026-10-06 the Lua client is deprecated (173k), and parts written
+ * after that (the settings store, 173b1) are checked here on their own,
+ * with no Lua twin.
+ *
  * Usage: test-client PROJECT_DIR CLIENT_DATA_DIR
  */
 #include "../blp.h"
@@ -19,6 +23,7 @@
 #include "../mover.h"
 #include "../mpq.h"
 #include "../navmesh_slope.h"
+#include "../settings.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -243,6 +248,64 @@ int main(int argc, char **argv)
     }
     blp_free(&img);
     mpq_chain_close(&chain);
+    /* }}} */
+
+    /* {{{ the settings store (173b1) */
+    printf("the settings store\n");
+    settings_init();
+    check(settings_num("cameraYawMoveSpeed") == 180 && !strcmp(settings_text("gxResolution"), "1280x720"),
+          "every setting starts at its default (mouse look 180, window 1280x720)");
+    check(settings_find("noSuchSetting") == NULL, "an unknown name finds nothing (code asking for it by settings_num stops the client)");
+    check(settings_set("cameraYawMoveSpeed", "300", why, sizeof why) && strstr(why, "out of its range") && settings_num("cameraYawMoveSpeed") == 180,
+          "a slider refuses a value past its range, says so, and keeps its value");
+    check(settings_set("gxResolution", "wide", why, sizeof why) && settings_set("gxResolution", "9000x1000", why, sizeof why),
+          "the resolution refuses words and sizes past 7680x4320");
+    check(!settings_set("gxResolution", "5120x1440", why, sizeof why) && !settings_set("cameraYawMoveSpeed", "250.0", why, sizeof why)
+          && settings_num("cameraYawMoveSpeed") == 250 && !strcmp(settings_text("cameraYawMoveSpeed"), "250"),
+          "an ultrawide resolution and a slider value are accepted, the number kept in one written form");
+    snprintf(path, sizeof path, "%s/tmp/shared-memory/test-settings.wtf", dir);
+    check(!settings_save(path, why, sizeof why), "the changes are saved");
+    FILE *saved = fopen(path, "r");
+    char text[400] = "";
+    size_t got = saved ? fread(text, 1, sizeof text - 1, saved) : 0;
+    text[got] = '\0';
+    if (saved) fclose(saved);
+    check(!strcmp(text, "SET gxResolution \"5120x1440\"\nSET cameraYawMoveSpeed \"250\"\n"),
+          "the file holds only the two changed settings, as SET name \"value\" lines");
+    settings_init();
+    char *log = NULL;
+    size_t log_len = 0;
+    FILE *report = open_memstream(&log, &log_len);
+    int skipped = settings_load(path, report);
+    fclose(report);
+    check(skipped == 0 && log_len == 0 && settings_num("cameraYawMoveSpeed") == 250 && !strcmp(settings_text("gxResolution"), "5120x1440"),
+          "loading it back gives the same values, with nothing to report");
+    free(log);
+    FILE *bad = fopen(path, "w");
+    if (bad) {
+        fputs("# a comment\n\nSET cameraDistanceMaxFactor \"1.5\"\nSET nonsense \"1\"\nSET cameraYawMoveSpeed \"20\"\njunk\n", bad);
+        fclose(bad);
+    }
+    settings_init();
+    log = NULL;
+    report = open_memstream(&log, &log_len);
+    skipped = settings_load(path, report);
+    fclose(report);
+    check(skipped == 3 && settings_num("cameraDistanceMaxFactor") == 1.5 && settings_num("cameraYawMoveSpeed") == 180,
+          "a hand-edited file: the good line is taken, three bad lines are skipped");
+    check(log && strstr(log, "line 4: no setting named nonsense") && strstr(log, "line 5: cameraYawMoveSpeed \"20\": out of its range (90 to 270)")
+          && strstr(log, "line 6: not SET name"),
+          "each bad line is reported with its line number and why");
+    free(log);
+    remove(path);
+    settings_init();
+    log = NULL;
+    report = open_memstream(&log, &log_len);
+    skipped = settings_load(path, report);
+    fclose(report);
+    check(skipped == 0 && log && strstr(log, "no file at") && settings_num("cameraDistanceMaxFactor") == 2,
+          "no file yet: said once, every setting at its default");
+    free(log);
     /* }}} */
 
     maps_world_free(w);

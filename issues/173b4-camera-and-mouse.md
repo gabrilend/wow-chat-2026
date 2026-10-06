@@ -4,7 +4,7 @@
 - Created: 2026-10-06
 - Phase: 1
 - Parent: 173b (the options menu)
-- Blocked by: 173b1 (the settings store)
+- Blocked by: 173b1 (the settings store, completed 2026-10-06)
 - Built with: 173m (the camera)
 - Priority: High
 
@@ -49,6 +49,7 @@ behaviour each controls:
 
 **Camera key bindings** (Camera Functions, 173b3): zoom in and out, next
 and previous view, five saved views (set, save, reset), flip camera yaw.
+These wait for key bindings, which are built with the action bar.
 
 **The zoom limit** (owner, 2026-10-06: "We will adjust as we go. So,
 just pick a limit that seems fine"): a base of 20 yards, times *Max Camera

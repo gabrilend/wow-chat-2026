@@ -148,6 +148,23 @@ interesting finding than either defect: the validator checks that rows
 exist, and both failures are about what the client does with rows that
 do exist. Strengthening it is an implementation step in 148w.
 
+### Act 14 — The custom client (173 cluster)
+The project's own 3.3.5a game client, for any private server: rebuilt
+from the original's behaviour first, project features later in a
+separate layer. In C on Raylib; the first Lua version is deprecated.
+| Issue | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 173 | custom-client | In Progress | Parent; sub-issues 173a-173m. |
+| 173a | first-light | Built | Ground, controls at 120%, slopes; Escape quits, Q strafes left. |
+| 173d | models-and-world-objects | In Progress | Her own model and skin from the original's archives. |
+| 173k | client-in-c-with-raylib | Ported | The C client runs; builds in seconds (Claude may build it, CLAUDE.md "Compiling"). |
+| 173b | options-menu | In Progress | Parent of 173b1-173b16, one per section of the original's menu; reference page generated from the original's own files. |
+| 173b1 | settings-store | **Completed** | Every setting declared once, read by name live, kept in a Config.wtf-shaped file; first three settings. |
+| 173m | camera | Open (next) | Left drag orbits, right steers, following styles as a table. |
+
+For current counts, run
+`/home/ritz/programming/ai-stuff/scripts/progress-dashboard.lua <project> -m`.
+
 ## Completed: 14/44 (2 Will Not Implement, 4 Superseded, 1 Invalidated, 1 Deferred Low)
 
 ---

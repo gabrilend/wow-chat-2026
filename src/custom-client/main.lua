@@ -1,6 +1,10 @@
 --------------------------------------------------------------------------------
 -- main.lua (issue 173a) - first light: a night elf in Ashenvale
 --
+-- DEPRECATED (owner, 2026-10-06; issue 173k): the client is now built in C
+-- (src/custom-client-c/). This version gets no new features and is removed
+-- once the C engine is fully built.
+--
 -- For a general audience: the first step of the project's own game client.
 -- It opens a window on the ground of Ashenvale near Astranaar, read from
 -- the very files the game server uses for heights (lib/maps.lua), and puts

@@ -94,8 +94,10 @@ interface, 617s7's box select, 719's tooltips.
 
 1. 173a (in progress).
 2. 173d, then 173b; 173c alongside.
-3. 173b1 (the settings store), then 173m (the camera) with 173b3 and
-   173b4 (owner, 2026-10-06), before painted ground.
+3. 173b1 (the settings store), then 173m (the camera) with 173b4
+   (owner, 2026-10-06), before painted ground. Key bindings (173b3) wait
+   for the action bar. All new work is in C; the Lua client is
+   deprecated (173k).
 
 ## Open Questions
 

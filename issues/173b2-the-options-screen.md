@@ -4,7 +4,7 @@
 - Created: 2026-10-06
 - Phase: 1
 - Parent: 173b (the options menu)
-- Blocked by: 173b1 (the settings store), 173c (interface pieces by name)
+- Blocked by: 173b1 (the settings store, completed 2026-10-06), 173c (interface pieces by name)
 - Priority: Medium
 
 ## Origin

@@ -43,8 +43,18 @@ of the project's own engine: the same window, ground, night elf, controls,
 speeds, slope rule, and picture mode, built by one script from
 `src/custom-client-c/`. Every reader is a C module with its own test
 program checking the same facts as the Lua tests, on the same files.
-The Lua version stays beside it (the polyglot-source way) as the
-reference the C is checked against, until the owner retires it.
+**The Lua version is deprecated** (owner, 2026-10-06: "We should
+deprecate the lua client and possibly remove it if we have the engine
+fully built in C"). All new work is in C only: the settings store and the
+camera have no Lua twins. The Lua version stays runnable (`--lua`) as it
+stood on 2026-10-06, and is removed once the C engine is fully built.
+Before removing it, two things that depend on it must move:
+- `scripts/generate-stock-options-catalog` reads the client's archives
+  with the Lua archive reader (`src/custom-client/lib/mpq.lua`). Either
+  that reader is kept as a tool library, or the generator is rewritten to
+  use the C reader.
+- `scripts/test-custom-client` (the Lua tests). Its facts are already held
+  by the C tests.
 
 - Raylib from `libs/` if present, otherwise fetched once into `libs/`
   and built there (a static library), so the client builds the same on
@@ -66,5 +76,5 @@ reference the C is checked against, until the owner retires it.
 
 ## Open Questions
 
-1. When the C version matches, should the Lua version be kept as the
-   reference or removed?
+None. (Answered 2026-10-06: deprecated now, removed when the engine is
+fully built in C.)

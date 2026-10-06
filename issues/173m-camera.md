@@ -4,7 +4,7 @@
 - Created: 2026-10-06
 - Phase: 1
 - Parent: 173 (the custom client)
-- Blocked by: 173a (first light), 173b1 (the settings store)
+- Blocked by: 173a (first light), 173b1 (the settings store, completed 2026-10-06)
 - Settings: 173b4 (camera and mouse settings, camera key bindings)
 - Related: 617s7 (box select also wants a left-button drag; it waits
   until the original's behaviour is rebuilt)
@@ -68,6 +68,13 @@ The swing is a turn at a fixed rate, *Auto Follow Speed*: 90 to 270 degrees
 a second, set in steps of 10. It never snaps. A drag in progress always
 beats the swing: while either button is held, no style moves the camera.
 
+**"Moving" means moving now**, not "started moving" (owner, 2026-10-06:
+"it should spin behind her once you let go"). If she is running while you
+hold the left button to look at her face, the swing starts the moment you
+let go, mid-run. It doesn't wait for her to turn, or to stop and start
+again. Each frame, a style asks only "is she moving this frame, and is a
+button held?", and keeps no memory of when the movement began.
+
 More styles can be added later as new rows (the owner, 2026-10-06:
 "there's several camera options"). Click-to-move's own camera style
 (`cameraSmoothTrackingStyle`, the same four choices) uses the same table.
@@ -88,8 +95,8 @@ frame; see 173b4 for the full list):
 
 **Camera key bindings** (the original's Camera Functions section): zoom
 in and out, the next and previous view, five saved views (set, save,
-reset), and *flip camera yaw* (look at her face). These are bindable
-actions in the key-binding store (173b3), not fixed keys.
+reset), and *flip camera yaw* (look at her face). These wait for key
+bindings (173b3), which are built with the action bar.
 
 ## Suggested Implementation Steps
 
@@ -103,11 +110,12 @@ actions in the key-binding store (173b3), not fixed keys.
    function that returns the heading and pitch to drift toward. The swing
    turns toward that target at *Auto Follow Speed*, taking the shorter way
    round the circle.
-4. Add tests without a window (Lua and C twins, as `scripts/test-custom-client`
-   and `tests/test_client.c` do): after a left drag of 90 degrees, one
-   second of walking in style 1 brings the heading back by exactly the
-   follow speed's worth and leaves the pitch unchanged; style 0 leaves
-   both unchanged; a held button freezes every style.
+4. Add tests without a window (in C only, in `tests/test_client.c`; the
+   Lua client is deprecated): after a left drag of 90 degrees, one second
+   of walking in style 1 brings the heading back by exactly the follow
+   speed's worth and leaves the pitch unchanged; style 0 leaves both
+   unchanged; a held button freezes every style; letting go mid-run starts
+   the swing that same frame.
 5. Add the remaining camera settings, one at a time, each with a test.
 
 ## Decisions
