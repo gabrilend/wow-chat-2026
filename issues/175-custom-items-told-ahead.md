@@ -68,6 +68,28 @@ pictures come from the client's own files).
    items at first login, drawn right with no re-equip; a buddy in custom
    gear, inspected, right the first time.
 
+### An item's look (owner, 2026-10-05: "what do you mean 'pictures'?
+Also, if we make a new item id... can we define a model for it or will it
+have an unknown model or something?")
+
+An item's look is one number, its display id (`item_template.displayid`
+on the server, sent in the item's answer). It names a row of the
+client's own table `ItemDisplayInfo.dbc`, which lists the model file
+(for a helm, a weapon, shoulders) and the texture files: the "pictures",
+image files (BLP) painted onto a model, such as the chest, sleeve and leg
+patches an armour piece paints onto the body's skin sheet, and the icon.
+
+- A new item number with an **existing display id**: works (once the
+  client has its answer, above). Any look any item already has can be
+  given to a new item: a Tier 1 helm's look on a white-quality copy, a
+  sword's look on a different sword.
+- A **new look** (a new model, new textures, or a new combination of
+  existing ones): needs a new `ItemDisplayInfo.dbc` row, and the table
+  lives in the client's files, so the original client needs a patch (an
+  extra MPQ archive) to show it; without one it draws nothing. The custom
+  client (173) reads its own assets, so it can show new looks with no
+  patch, and players' own assets are planned to work that way (173d).
+
 ## Open Questions
 
 1. If the client ignores answers it didn't ask for, the fallback idea is

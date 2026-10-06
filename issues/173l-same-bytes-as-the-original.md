@@ -51,6 +51,16 @@ compared afterwards by one small program:
    the original or be replayed afterwards from the records; either way
    its output is only compared at the end.
 
+**Built for replays too** (owner, 2026-10-05: "this system will be
+useful if we ever wanna build a, I dunno, 'replay system' or something,
+so build it with that in mind maybe."): the records are a session's
+complete story, so they are kept in one documented, versioned file format
+(each packet with its direction, its time since the session began, and
+its plain bytes; the input events beside them), written so a later
+program can play a session back: the custom client fed a record's server
+packets draws the session as it happened, from any camera. The recorders
+write that format from the start; the comparer is its first reader.
+
 The compare step lines the three up packet by packet: original vs server
 (proves the tap is transparent), original vs custom (proves the custom
 client). The rest of this section is the detail of what each record
