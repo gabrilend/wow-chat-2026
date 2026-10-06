@@ -103,9 +103,30 @@ tail and hooves against the original.
   positions (none of the figures shown today has either: a one-off
   probe listed every unit of the five models, 2026-10-06).
 
-**Decided, not yet built:** the fixed "bare" piece list (401, 501, 702,
-1301, 1501, 1702) gives way to the game's own tables (Open Questions, 3). Group 5 for him has only 505, which the
-fixed list never shows; whether bare hooves need it is to check in-game.
+**Bare pieces from the game's tables (built 2026-10-06; Open Questions,
+3).** `character.c`'s fixed list (401, 501, 702, 1301, 1501, 1702) is
+gone. A bare character now shows, per piece group:
+- **Groups 1, 3, 2 and 17** from CharacterFacialHairStyles.dbc, by race,
+  sex and the new facial-hair choice (`CharacterLook.facial_hair`). Its
+  columns (no id): race, sex, choice, then five variants. Their order
+  (groups 1, 3, 2, 16, 17) was measured: over every playable race and
+  sex, 185 variants name pieces the model has under 1, 3, 2, against 127
+  under 1, 2, 3; the fifth always names a group-17 piece (the eye glow:
+  a night-elf woman's 1702 comes from here now, not from a hand-written
+  number); the fourth is always 0.
+- **Group 0 below 100:** the hair style (CharHairGeosets), as before.
+- **Group 7, the ears:** variant 2 (no table names it; 701 is earless).
+- **Every other group:** variant 1, its bare shape, where the model has
+  it. Items change these (173p).
+- A facial-hair choice missing from the table is refused by name.
+- The tauren bystander now wears facial-hair choice 1 (a beard).
+- **Tests:** a tauren man's choice 0 shows no beard pieces, choice 1
+  shows 102, 302 and 202, he has no eye glow; an unknown choice is
+  refused. (Some piece ids are two meshes, one drawn with fur and one
+  with skin, so pieces are counted by id.)
+
+Group 5 for him has only 505 (no 501), so his feet show the body's own
+hooves; whether the original shows 505 bare is to check in-game.
 The two missing pictures (scalp, and a hair row naming a face) are
 still reported.
 
