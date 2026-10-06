@@ -14,7 +14,11 @@
  *   a creature (figure_from_display): the creature's display row in the
  *     client's CreatureDisplayInfo table names its model (through
  *     CreatureModelData) and up to three skins; a model's pictures of kind
- *     11, 12 and 13 are those skins, found in the model's own folder;
+ *     11, 12 and 13 are those skins, found in the model's own folder. A
+ *     humanoid display (a townsperson: its row names a
+ *     CreatureDisplayInfoExtra row) is built as a character instead, with
+ *     that row's race, choices and clothes, wearing its baked skin sheet
+ *     (173t);
  *   any model: pictures of kind 0 are named inside the model.
  */
 #ifndef EG_FIGURE_H
@@ -51,6 +55,8 @@ typedef struct Figure {
     float        scale;               /* the display's size (1 for characters) */
     FigureItem   items[6];  int nitems;   /* helm, shoulders, weapons (173p) */
     int          seq;  uint32_t ms, global_ms;   /* the animation and moment it was last bent to (for the pieces' tints) */
+    Texture2D    owned[8];  int nowned;  /* pictures made for this figure alone (painted skin, hair), freed with it; pictures
+                                          * read from the archives are shared through a cache and kept (173t) */
 } Figure;
 
 int  figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look, char *why, int why_len);

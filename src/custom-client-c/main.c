@@ -11,10 +11,11 @@
  * 2026-10-05: "let's port now. We should build something like an engine
  * in C anyway, for performance reasons").
  *
- * Usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG]
+ * Usage: custom-client --maps DIR --client DIR [--settings FILE] [--world DIR] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG]
  *   --settings FILE   the player's settings (SET name "value" lines; 173b1);
  *                     without it, every setting is at its default
  *   --shot FILE       draw a few frames, save a picture there, quit
+ *   --world DIR       where the generated creature lists are (creatures-<map>.tsv, 173t)
  *   --zoom N          (pictures) the camera N yards back; 0 is first person
  *   --turn DEG        (pictures) the camera turned DEG degrees round her, held there
  *   --pitch DEG       (pictures) the camera raised DEG degrees (up to 83)
@@ -36,6 +37,7 @@
 #include "camera.h"
 #include "character.h"
 #include "collide.h"
+#include "creatures.h"
 #include "dbc.h"
 #include "doodads.h"
 #include "figure.h"
@@ -78,7 +80,7 @@ static double start_x = 2717.0, start_y = -400.0;       /* Astranaar, Ashenvale 
 #define ZOOM_BASE    20.0f                             /* yards; times cameraDistanceMaxFactor (1 to 2) is the zoom-out limit (173b4) */
 /* her look: ChrRaces id, sex, and the character-creation choices (from 0);
  * a stand-in for the ids the server will send (173d, 617r5) */
-static CharacterLook LOOK = { 4, 1, 0, 0, 0, 0, { 0 }, 0 };   /* --wear dresses her (173p) */
+static CharacterLook LOOK = { 4, 1, 0, 0, 0, 0, { 0 }, 0, 0 };   /* --wear dresses her (173p) */
 
 /* {{{ static wear_option: "--wear chest:41143,hands:41138": slot names to
  * item looks (ItemDisplayInfo ids); 0 on success, else the bad part */
@@ -177,6 +179,56 @@ static FollowCam view = { .yaw = (float)START_O, .pitch = 0.35f, .dist = 12.0f, 
 static int    cam_held;                                  /* --front: the camera keeps its own heading */
 static float  bob_phase;                                 /* Head Bob's place in her step, yards (camera_bob) */
 
+/* {{{ the world's creatures (173t)
+ * The generated list of the map's spawns (creatures.h), read once; each
+ * loaded tile brings its spawns in as figures standing where the list
+ * says, and takes them away when it is dropped. A display that can't be
+ * built is named once and its spawns left out. Each stands playing its
+ * standing animation from its own moment (the guid picks it), so they
+ * don't breathe in step. */
+static SpawnList spawns;
+static const char *world_dir = NULL;                     /* --world: where creatures-<map>.tsv lives */
+typedef struct { int spawn; Figure fig; MovesState moves; } Standing;
+static Standing *standing;   static int nstanding, standing_cap;
+static int    bad_display[512];  static int nbad_display;
+static double creature_build_s;                          /* seconds spent building creatures, for the report */
+static void bring_creatures(int tx, int ty)
+{
+    int first, n = creatures_in_tile(&spawns, tx, ty, &first);
+    for (int k = first; k < first + n; ++k) {
+        const Spawn *sp = &spawns.spawns[k];
+        int bad = 0;
+        for (int b = 0; b < nbad_display; ++b) bad |= bad_display[b] == sp->display;
+        if (bad) continue;
+        if (nstanding == standing_cap) { standing_cap = standing_cap ? standing_cap * 2 : 64; standing = realloc(standing, sizeof *standing * standing_cap); }
+        Standing *st = &standing[nstanding];
+        char why[600];
+        double t0 = GetTime();
+        int failed = figure_from_display(&st->fig, &chain, sp->display, why, sizeof why);
+        creature_build_s += GetTime() - t0;
+        if (failed) {
+            fprintf(stderr, "creatures: %s (%s and any others with its look are left out)\n", why, sp->name);
+            if (nbad_display < 512) bad_display[nbad_display++] = sp->display;
+            continue;
+        }
+        st->fig.scale *= sp->size;
+        st->spawn = k;
+        moves_init(&st->moves, &st->fig.anim);
+        moves_advance(&st->moves, &st->fig.anim, (float)(sp->guid % 4000) / 1000.0f);   /* its own moment */
+        ++nstanding;
+    }
+}
+static void drop_creatures(int tile)
+{
+    int kept = 0;
+    for (int i = 0; i < nstanding; ++i) {
+        if (spawns.spawns[standing[i].spawn].tile == tile) { figure_free(&standing[i].fig); continue; }
+        standing[kept++] = standing[i];
+    }
+    nstanding = kept;
+}
+/* }}} */
+
 /* {{{ the ground and walls the mover asks about (173q)
  * The floor: the map's ground or a model's floor (bridge, stair, a
  * building's floor), whichever is higher at or below z_top; the map's
@@ -243,6 +295,7 @@ static void refresh_tiles(void)
                 free(adt);
             }
             tile_state[x * 64 + y] = got == 0 ? 1 : 2;
+            bring_creatures(x, y);                       /* open sea too: its fish (173t) */
             ++tiles_loaded;
         }
     /* dropping (173s): tiles more than a tile beyond the loaded square go,
@@ -251,6 +304,7 @@ static void refresh_tiles(void)
     for (int x = 0; x < 64; ++x)
         for (int y = 0; y < 64; ++y) {
             if (!tile_state[x * 64 + y] || (abs(x - tx) <= TILE_REACH + 1 && abs(y - ty) <= TILE_REACH + 1)) continue;
+            drop_creatures(x * 64 + y);
             if (tile_state[x * 64 + y] == 1) {
                 ground_drop_tile(x, y);
                 water_drop_tile(x * 64 + y);
@@ -285,6 +339,7 @@ int main(int argc, char **argv)
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--maps") && i + 1 < argc) maps = argv[++i];
         else if (!strcmp(argv[i], "--settings") && i + 1 < argc) settings_file = argv[++i];
+        else if (!strcmp(argv[i], "--world") && i + 1 < argc) world_dir = argv[++i];
         else if (!strcmp(argv[i], "--client") && i + 1 < argc) client = argv[++i];
         else if (!strcmp(argv[i], "--shot") && i + 1 < argc) shot = argv[++i];
         else if (!strcmp(argv[i], "--zoom") && i + 1 < argc) view.dist = (float)atof(argv[++i]);
@@ -308,7 +363,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--map") && i + 3 < argc) { map_id = atoi(argv[++i]); start_x = atof(argv[++i]); start_y = atof(argv[++i]); }
         else if (!strcmp(argv[i], "--goto") && i + 2 < argc) { goto_x = atof(argv[++i]); goto_y = atof(argv[++i]); go_to = 1; }
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--dive S] [--wait S] [--wear SLOT:LOOK,...] [--goto X Y] [--map ID X Y]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--world DIR] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--dive S] [--wait S] [--wear SLOT:LOOK,...] [--goto X Y] [--map ID X Y]\n"); return 2; }
 
     /* the settings: defaults, then the player's file; a line it refuses is
      * named on the terminal and skipped (173b1) */
@@ -349,7 +404,7 @@ int main(int argc, char **argv)
      * can't be built is named and left out */
     for (int i = 0; i < NBYSTANDERS; ++i) {
         Figure *f = &others[nothers];
-        CharacterLook look = { BYSTANDERS[i].race, BYSTANDERS[i].sex, 0, 0, 0, 0, { 0 }, BYSTANDERS[i].facial_hair };
+        CharacterLook look = { BYSTANDERS[i].race, BYSTANDERS[i].sex, 0, 0, 0, 0, { 0 }, BYSTANDERS[i].facial_hair, 0 };
         int bad = BYSTANDERS[i].race ? figure_from_character(f, &chain, &look, why, sizeof why)
                                      : figure_from_display(f, &chain, BYSTANDERS[i].display, why, sizeof why);
         if (bad) { fprintf(stderr, "bystander %d left out: %s\n", i, why); continue; }
@@ -390,7 +445,17 @@ int main(int argc, char **argv)
     if (light_id < 0) printf("light: map %d has no lights in Light.dbc; a plain grey day is used\n", map_id);
     else printf("light: %02d:%02d, light %d, fog from %.0f to %.0f yards\n", (int)hours, (int)(fmodf(hours, 1.0f) * 60), light_id, light.fog_start, light.fog_end);
     int eye_m = GetShaderLocation(model_sh, "eye");
+    /* the map's creatures (173t): without the generated list, none */
+    if (world_dir) {
+        char path[600];
+        snprintf(path, sizeof path, "%s/creatures-%d.tsv", world_dir, map_id);
+        int got = creatures_read(path, &spawns, why, sizeof why);
+        if (got < 0) { fprintf(stderr, "creatures: %s\n", why); CloseWindow(); return 1; }
+        if (got > 0) fprintf(stderr, "creatures: %s\n", why);
+        else printf("creatures: %d spawns on this map in %s\n", spawns.n, path);
+    } else fprintf(stderr, "creatures: no --world folder given; running without creatures\n");
     refresh_tiles();
+    printf("creatures: %d standing round her (built in %.2f s)\n", nstanding, creature_build_s);
     int dm, dc, ds, dmov, demit;
     doodads_counts(&dm, &dc, &ds, &dmov, &demit);
     printf("doodads: %d models (%d of them moving, %d with particles), %d placed; %d solid triangles\n", dm, dmov, demit, dc, collide_count(solids));
@@ -401,6 +466,7 @@ int main(int argc, char **argv)
     double clock_ms = start_ms;
 
     int frames = 0, drag_l = 0, drag_r = 0;
+    double loop_start = GetTime();                       /* for the picture report's frame time */
     while (!WindowShouldClose()) {
         /* {{{ input and movement */
         float dt = shot ? 0.05f : GetFrameTime();          /* pictures: steady 20 frames a world-second */
@@ -480,6 +546,22 @@ int main(int argc, char **argv)
             }
             moves_advance(&other_at[i].moves, &others[i].anim, dt);
             figure_bend(&others[i], &other_at[i].moves, (uint32_t)clock_ms);
+        }
+        /* the world's creatures (173t): standing, breathing; only those
+         * within CREATURE_BEND_REACH are bent each frame (bending is most of
+         * their cost: 467 round Astranaar took 14 ms a frame); farther ones
+         * keep their last pose, too far to see the difference */
+        {
+            const float CREATURE_BEND_REACH = 100.0f;    /* yards; this client's choice */
+            float reach2 = fminf((float)settings_num("farclip"), CREATURE_BEND_REACH);
+            reach2 *= reach2;
+            for (int i = 0; i < nstanding; ++i) {
+                const Spawn *sp = &spawns.spawns[standing[i].spawn];
+                double dx = sp->x - elf.x, dy = sp->y - elf.y;
+                if (dx * dx + dy * dy > reach2) continue;
+                moves_advance(&standing[i].moves, &standing[i].fig.anim, dt);
+                figure_bend(&standing[i].fig, &standing[i].moves, (uint32_t)clock_ms);
+            }
         }
         refresh_tiles();
         SetWindowTitle(TextFormat("Everland Ghostsong  -  Ashenvale  x %.1f  y %.1f  z %.1f", elf.x, elf.y, elf.z));
@@ -587,6 +669,10 @@ int main(int argc, char **argv)
         ground_blob(at.x, at.y, (float)elf.z, 1.3f);     /* her shadow, a little wider than her shoulders */
         for (int i = 0; i < nothers; ++i)                /* theirs, sized by their display's scale */
             ground_blob((float)(other_at[i].x - ox), (float)(other_at[i].y - oy), (float)other_at[i].z, 1.3f * others[i].scale);
+        for (int i = 0; i < nstanding; ++i) {            /* the world's creatures' (173t) */
+            const Spawn *sp = &spawns.spawns[standing[i].spawn];
+            ground_blob((float)(sp->x - ox), (float)(sp->y - oy), (float)sp->z, 1.3f * standing[i].fig.scale);
+        }
         ground_draw(eye, &light);
         doodads_draw(eye, &light);
         water_draw(eye, &light, clock_ms / 1000.0);       /* see-through, after the solid world */
@@ -595,6 +681,12 @@ int main(int argc, char **argv)
         for (int i = 0; i < nothers; ++i)
             figure_draw(&others[i], model_sh, MatrixMultiply(MatrixRotateZ(other_at[i].facing),
                         MatrixTranslate((float)(other_at[i].x - ox), (float)(other_at[i].y - oy), (float)other_at[i].z)));
+        for (int i = 0; i < nstanding; ++i) {            /* the world's creatures (173t), within the view distance */
+            const Spawn *sp = &spawns.spawns[standing[i].spawn];
+            double dx = sp->x - elf.x, dy = sp->y - elf.y, far = settings_num("farclip");
+            if (dx * dx + dy * dy > far * far) continue;
+            figure_draw(&standing[i].fig, model_sh, MatrixMultiply(MatrixRotateZ(sp->facing), MatrixTranslate((float)(sp->x - ox), (float)(sp->y - oy), (float)sp->z)));
+        }
         EndMode3D();
         EndDrawing();
 
@@ -607,7 +699,23 @@ int main(int argc, char **argv)
             int dm2, dc2, ds2, dmov2, demit2;
             doodads_counts(&dm2, &dc2, &ds2, &dmov2, &demit2);
             printf("tiles: %d loaded, %d dropped over the run; now %d placed, %d solid triangles\n", tiles_loaded, tiles_dropped, dc2, collide_count(solids));
+            printf("frames took %.1f ms each on average, over %d (drawing, bending and all)\n", (GetTime() - loop_start) * 1000.0 / frames, frames);
             printf("she ended at x %.2f y %.2f z %.2f, %s\n", elf.x, elf.y, elf.z, elf.swimming ? "swimming" : elf.grounded ? "on the ground" : "in the air");
+            /* the creatures nearest her (173t), to check pictures against */
+            for (int pick = 0, used[5] = { -1, -1, -1, -1, -1 }; pick < 5 && pick < nstanding; ++pick) {
+                int best = -1;
+                double bd = 1e30;
+                for (int i = 0; i < nstanding; ++i) {
+                    int taken = 0;
+                    for (int u = 0; u < pick; ++u) taken |= used[u] == i;
+                    const Spawn *sp = &spawns.spawns[standing[i].spawn];
+                    double d = hypot(sp->x - elf.x, sp->y - elf.y);
+                    if (!taken && d < bd) { bd = d; best = i; }
+                }
+                used[pick] = best;
+                const Spawn *sp = &spawns.spawns[standing[best].spawn];
+                printf("near her: %s (%s) at x %.1f y %.1f z %.1f, %.1f yards off\n", sp->name, standing[best].fig.name, sp->x, sp->y, sp->z, bd);
+            }
             break;
         }
     }
@@ -617,6 +725,9 @@ int main(int argc, char **argv)
     liquid_free(waters);
     figure_free(&her);
     for (int i = 0; i < nothers; ++i) figure_free(&others[i]);
+    for (int i = 0; i < nstanding; ++i) figure_free(&standing[i].fig);
+    free(standing);
+    creatures_free(&spawns);
     mpq_chain_close(&chain);
     maps_world_free(&world);
     return 0;

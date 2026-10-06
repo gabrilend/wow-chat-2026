@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zlib.h>
+#include <ctype.h>
 
 /* block flags (the block table's flags field) */
 #define FILE_IMPLODE     0x00000100u
@@ -258,12 +259,59 @@ int mpq_chain_open(MpqChain *c, const char *data, const char *locale, char *why,
     if (c->count == 0) { snprintf(why, why_len, "no MPQ archives found in %s", data); return -1; }
     return 0;
 }
+/* {{{ static same_name: archive names match without regard to case, and
+ * either slash */
+static int same_name(const char *a, const char *b)
+{
+    for (; *a && *b; ++a, ++b) {
+        char x = *a == '/' ? '\\' : (char)toupper((unsigned char)*a), y = *b == '/' ? '\\' : (char)toupper((unsigned char)*b);
+        if (x != y) return 0;
+    }
+    return *a == *b;
+}
+/* }}} */
 unsigned char *mpq_chain_read(MpqChain *c, const char *name, size_t *size, const char **from)
 {
+    ++c->tick;
+    for (int k = 0; k < c->nkept; ++k)
+        if (same_name(c->kept[k].name, name)) {
+            unsigned char *copy = malloc(c->kept[k].len ? c->kept[k].len : 1);
+            memcpy(copy, c->kept[k].data, c->kept[k].len);
+            *size = c->kept[k].len;
+            if (from) *from = c->kept[k].from;
+            c->kept[k].used = c->tick;
+            ++c->hits;
+            return copy;
+        }
+    ++c->misses;
     char why[700];
     for (int i = 0; i < c->count; ++i) {
         unsigned char *s = mpq_read(c->archives[i], name, size, why, sizeof why);
-        if (s) { if (from) *from = c->archives[i]->path; return s; }
+        if (s) {
+            if (from) *from = c->archives[i]->path;
+            /* remembered, if it fits the budget once older ones are forgotten
+             * (a file bigger than a quarter of it isn't kept: a ground file
+             * read once shouldn't push out a hundred tables) */
+            if (*size <= MPQ_KEEP_BYTES / 4 && strlen(name) < sizeof c->kept[0].name) {
+                while (c->kept_bytes + *size > MPQ_KEEP_BYTES && c->nkept > 0) {
+                    int old = 0;
+                    for (int k = 1; k < c->nkept; ++k) if (c->kept[k].used < c->kept[old].used) old = k;
+                    c->kept_bytes -= c->kept[old].len;
+                    free(c->kept[old].data);
+                    c->kept[old] = c->kept[--c->nkept];
+                }
+                if (c->nkept == c->kept_cap) { c->kept_cap = c->kept_cap ? c->kept_cap * 2 : 256; c->kept = realloc(c->kept, sizeof *c->kept * c->kept_cap); }
+                MpqKept *kp = &c->kept[c->nkept++];
+                snprintf(kp->name, sizeof kp->name, "%s", name);
+                kp->data = malloc(*size ? *size : 1);
+                memcpy(kp->data, s, *size);
+                kp->len = *size;
+                kp->used = c->tick;
+                kp->from = c->archives[i]->path;
+                c->kept_bytes += *size;
+            }
+            return s;
+        }
         if (why[0]) { fprintf(stderr, "mpq: %s\n", why); return NULL; }
     }
     return NULL;
@@ -271,6 +319,9 @@ unsigned char *mpq_chain_read(MpqChain *c, const char *name, size_t *size, const
 void mpq_chain_close(MpqChain *c)
 {
     for (int i = 0; i < c->count; ++i) { mpq_close(c->archives[i]); free(c->archives[i]); }
+    for (int k = 0; k < c->nkept; ++k) free(c->kept[k].data);
+    free(c->kept);
+    c->kept = NULL; c->nkept = c->kept_cap = 0; c->kept_bytes = 0;
     c->count = 0;
 }
 /* }}} */

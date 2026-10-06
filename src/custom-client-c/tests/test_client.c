@@ -21,6 +21,7 @@
 #include "../camera.h"
 #include "../character.h"
 #include "../collide.h"
+#include "../creatures.h"
 #include "../dbc.h"
 #include "../light.h"
 #include "../liquid.h"
@@ -221,6 +222,17 @@ int main(int argc, char **argv)
     check(from && strstr(from, "patch-3.MPQ") != NULL, "and it is the newest patch's copy (patch-3)");
     size_t nolen;
     check(mpq_chain_read(&chain, "No\\Such\\File.m2", &nolen, NULL) == NULL, "a file no archive holds is none, not an error");
+    /* the chain's memory (173t): the same file again is served from it,
+     * byte for byte, under any case or slash, and reports where it came from */
+    {
+        uint64_t hits = chain.hits;
+        size_t again_len;
+        const char *again_from = NULL;
+        unsigned char *again = mpq_chain_read(&chain, "character/nightelf/female/NIGHTELFFEMALE.M2", &again_len, &again_from);
+        check(again && chain.hits == hits + 1 && again_len == m2_len && !memcmp(again, m2, m2_len) && again_from && strstr(again_from, "patch-3.MPQ"),
+              "read again (in other case and slashes), her model comes from the chain's memory, the same bytes and archive");
+        free(again);
+    }
     /* }}} */
 
     /* {{{ her model and pictures */
@@ -265,7 +277,7 @@ int main(int argc, char **argv)
     /* {{{ putting her together */
     printf("putting her together\n");
     Character ch;
-    CharacterLook look = { 4, 1, 0, 0, 0, 0, { 0 }, 0 };
+    CharacterLook look = { 4, 1, 0, 0, 0, 0, { 0 }, 0, 0 };
     int built = character_build(&chain, &look, &ch, why, sizeof why) == 0;
     check(built, built ? "she is put together" : why);
     if (built) {
@@ -330,7 +342,7 @@ int main(int argc, char **argv)
     {
         /* dressed (173p): the rogue's set paints her torso and switches on
          * her boots (feet group 5: 501 + 3 for these boots) */
-        CharacterLook dressed = { 4, 1, 0, 0, 0, 0, { 0 }, 0 }, bare = { 4, 1, 0, 0, 0, 0, { 0 }, 0 };
+        CharacterLook dressed = { 4, 1, 0, 0, 0, 0, { 0 }, 0, 0 }, bare = { 4, 1, 0, 0, 0, 0, { 0 }, 0, 0 };
         dressed.items[SLOT_CHEST] = 41143; dressed.items[SLOT_FEET] = 41480; dressed.items[SLOT_HANDS] = 41138;
         Character dc, bc;
         if (character_build(&chain, &dressed, &dc, why, sizeof why) || character_build(&chain, &bare, &bc, why, sizeof why)) check(0, why);
@@ -370,7 +382,7 @@ int main(int argc, char **argv)
     {
         /* a tauren man: his tail (piece 1501) uses the fur picture (kind 8),
          * the skin row's second; without it the tail was skipped (173d) */
-        CharacterLook tauren = { 6, 0, 0, 0, 0, 0, { 0 }, 0 };
+        CharacterLook tauren = { 6, 0, 0, 0, 0, 0, { 0 }, 0, 0 };
         Character tc;
         if (character_build(&chain, &tauren, &tc, why, sizeof why)) check(0, why);
         else {
@@ -417,9 +429,84 @@ int main(int argc, char **argv)
         snprintf(line, sizeof line, "a facial-hair choice the table lacks is refused, naming it (%.80s)", refused ? why : "built");
         check(refused && strstr(why, "facial-hair choice 99"), line);
         if (!refused) character_free(&tc);
+        /* a creature's look (173t) may use a choice players can't: an
+         * Astranaar sentinel's facial-hair 10 (a night-elf woman's rows stop
+         * at 9) takes the race's choice-0 pieces, keeping her eye glow;
+         * a player's look with it is refused */
+        CharacterLook sentinel = { 4, 1, 0, 0, 0, 0, { 0 }, 10, 1 };
+        int glow10 = 0;
+        if (character_build(&chain, &sentinel, &tc, why, sizeof why)) check(0, why);
+        else {
+            for (uint32_t i = 0; i < tc.model.npieces; ++i) if (tc.shown[i] && tc.model.pieces[i].id == 1702) glow10 = 1;
+            character_free(&tc);
+        }
+        sentinel.npc = 0;
+        int player_refused = character_build(&chain, &sentinel, &tc, why, sizeof why) != 0;
+        if (!player_refused) character_free(&tc);
+        check(glow10 && player_refused, "a creature's facial-hair choice beyond the table builds with the race's plain pieces (her eye glow kept); a player's is refused");
+        /* the sentinel's look: display 4841 names a CreatureDisplayInfoExtra
+         * row (a night-elf woman) whose baked skin sheet is in the archives */
+        {
+            size_t dl, el, bl;
+            unsigned char *ds = mpq_chain_read(&chain, "DBFilesClient\\CreatureDisplayInfo.dbc", &dl, NULL);
+            unsigned char *es = mpq_chain_read(&chain, "DBFilesClient\\CreatureDisplayInfoExtra.dbc", &el, NULL);
+            Dbc dd, ed;
+            uint32_t extra = 0;
+            int race = 0, sex = -1, baked = 0;
+            if (ds && es && !dbc_open(&dd, ds, dl, why, sizeof why) && !dbc_open(&ed, es, el, why, sizeof why)) {
+                for (uint32_t r = 0; r < dd.rows; ++r) if (dbc_u32(&dd, r, 1) == 4841) extra = dbc_u32(&dd, r, 4);
+                for (uint32_t r = 0; extra && r < ed.rows; ++r)
+                    if (dbc_u32(&ed, r, 1) == extra) {
+                        race = (int)dbc_u32(&ed, r, 2); sex = (int)dbc_u32(&ed, r, 3);
+                        char bp[300];
+                        snprintf(bp, sizeof bp, "Textures\\BakedNpcTextures\\%.200s", dbc_text(&ed, r, 21));
+                        unsigned char *b = mpq_chain_read(&chain, bp, &bl, NULL);
+                        baked = b != NULL;
+                        free(b);
+                    }
+            }
+            free(ds); free(es);
+            snprintf(line, sizeof line, "a sentinel's display (4841) is a dressed character: extra row %u, race %d, sex %d, its baked skin %s", extra, race, sex, baked ? "found" : "missing");
+            check(extra && race == 4 && sex == 1 && baked, line);
+        }
     }
     blp_free(&img);
     mpq_chain_close(&chain);
+    /* }}} */
+
+    /* {{{ the world's creatures (173t): a small written list */
+    printf("creatures\n");
+    {
+        char cpath[700];
+        snprintf(cpath, sizeof cpath, "%s/tmp/shared-memory/test-creatures.tsv", dir);
+        FILE *cf = fopen(cpath, "w");
+        if (!cf) check(0, "the test's creature list could not be written to tmp/shared-memory");
+        else {
+            fputs("# a comment\n"
+                  "33406\t6087\t4841\t1\t2735.93\t-416.844\t110.5\t3.1\tAstranaar Sentinel\n"
+                  "1\t883\t347\t1.5\t-9000\t300\t40\t0\tDeer far away\n"
+                  "33409\t6087\t4842\t1\t2814.51\t-272.127\t108\t0.5\tAstranaar Sentinel\n", cf);
+            fclose(cf);
+            SpawnList sl;
+            int got = creatures_read(cpath, &sl, why, sizeof why);
+            int tx, ty, first = -1;
+            maps_tile_of(2735.93f, -416.844f, &tx, &ty);
+            int n = got == 0 ? creatures_in_tile(&sl, tx, ty, &first) : 0;
+            snprintf(line, sizeof line, "the list reads 3 spawns (%d); Astranaar's tile holds the two sentinels (%d), named, sized and placed", got == 0 ? sl.n : -1, n);
+            check(got == 0 && sl.n == 3 && n == 2 && !strcmp(sl.spawns[first].name, "Astranaar Sentinel") && sl.spawns[first].display == 4841
+                  && near(sl.spawns[first].x, 2735.93, 1e-6) && near(sl.spawns[first].facing, 3.1, 1e-6), line);
+            check(creatures_in_tile(&sl, 0, 0, &first) == 0, "a tile with no spawns holds none");
+            if (got == 0) creatures_free(&sl);
+            cf = fopen(cpath, "w");
+            fputs("33406\t6087\tnot-a-number\n", cf);
+            fclose(cf);
+            got = creatures_read(cpath, &sl, why, sizeof why);
+            check(got < 0 && strstr(why, "line 1"), "a line that can't be read stops the reading, naming its line");
+            check(creatures_read("/no/such/list.tsv", &sl, why, sizeof why) == 1 && strstr(why, "generate-custom-client-creatures"),
+                  "no list at all: said, with how to make one");
+            remove(cpath);
+        }
+    }
     /* }}} */
 
     /* {{{ the settings store (173b1) */

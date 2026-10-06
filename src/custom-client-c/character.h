@@ -31,6 +31,8 @@ typedef struct {
     int items[SLOT_COUNT];                 /* each slot's item look (ItemDisplayInfo.dbc id), 0 for none (173p) */
     int facial_hair;                       /* the creation choice of facial hair (or a woman's earrings, markings ...), from 0
                                             * (last, so the looks written out by position keep their meaning) */
+    int npc;                               /* 1: a creature's look (CreatureDisplayInfoExtra, 173t), whose choices may lie
+                                            * outside the ones players can pick (see character.c's bare_pieces) */
 } CharacterLook;
 
 /* an item model hung from one of the character's attachment points (173p):

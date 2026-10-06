@@ -20,6 +20,11 @@ without the position fix. Anything else is an error naming the file.
 ## What it offers
 
 - `type MpqArchive`
+- `type MpqKept`
+  A chain also remembers files it has unpacked (173t): many figures read
+  the same tables, models and animations, and unpacking is what costs.
+  Up to MPQ_KEEP_BYTES of unpacked files are kept; past that, the one
+  read longest ago is forgotten. Readers still get their own copy.
 - `type MpqChain`
 - `uint32_t mpq_hash(const char *text, int kind);`
 - `int mpq_open(MpqArchive *a, const char *path, char *why, int why_len);`
@@ -32,4 +37,5 @@ without the position fix. Anything else is an error naming the file.
   The client's archives under `data` (its Data folder) for `locale` ("enUS").
 - `unsigned char *mpq_chain_read(MpqChain *c, const char *name, size_t *size, const char **from);`
   The newest archive's copy, its size, and which archive (may be NULL).
+  Served from the chain's memory when it was unpacked lately.
 - `void mpq_chain_close(MpqChain *c);`

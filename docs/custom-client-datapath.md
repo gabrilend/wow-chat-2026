@@ -20,6 +20,7 @@ picture options; this page doesn't copy numbers that go stale.
 | The server's map files (`data-files/maps`) | `maps.c` | the ground's heights the server uses (for the mover) |
 | The server's navigation tiles (`data-files/mmaps`) | `navmesh_slope.c` | the steepest walkable slope |
 | The player's settings file (`src/custom-client-c/settings/Config.wtf`) | `settings.c` | the player's choices (`SET name "value"`) |
+| The creature list (`src/custom-client-c/world/creatures-<map>.tsv`), generated from the server's world database by `scripts/generate-custom-client-creatures` | `creatures.c` | where each creature stands, its look and size (the network's stand-in, 173t) |
 
 ## 2. From the archives to things in memory (no window needed)
 
@@ -47,6 +48,9 @@ Each frame, in this order (`main.c`):
    - `water.c` and `liquid.c`;
    - `doodads.c`: copies, solid shapes into `collide.c`, buildings'
      pools into `water.c` and `liquid.c`.
+   Each tile also brings its creatures (`creatures.c` finds them,
+   `figure.c` builds each: a creature model, or a townsperson as a
+   dressed character with a baked skin).
    Tiles left behind are dropped from all of them (173s).
 2. **Input and movement:**
    - the mouse drags the camera and the wheel zooms it, all the way in
@@ -58,7 +62,8 @@ Each frame, in this order (`main.c`):
 3. **Animation:**
    - `moves.c` chooses her animation from what she did, and `figure.c`
      bends her and hangs her items;
-   - the bystanders cycle theirs;
+   - the bystanders cycle theirs; the world's creatures within 100 yards
+     breathe in their standing animation;
    - `doodads.c` bends moving doodads, poses camera-facing ones per copy,
      and runs particles near the camera.
 4. **Light:** `light.c` gives the light at her place and hour. View

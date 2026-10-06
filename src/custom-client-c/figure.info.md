@@ -17,7 +17,11 @@ Where a figure's pictures come from:
   a creature (figure_from_display): the creature's display row in the
     client's CreatureDisplayInfo table names its model (through
     CreatureModelData) and up to three skins; a model's pictures of kind
-    11, 12 and 13 are those skins, found in the model's own folder;
+    11, 12 and 13 are those skins, found in the model's own folder. A
+    humanoid display (a townsperson: its row names a
+    CreatureDisplayInfoExtra row) is built as a character instead, with
+    that row's race, choices and clothes, wearing its baked skin sheet
+    (173t);
   any model: pictures of kind 0 are named inside the model.
 
 ## What it offers

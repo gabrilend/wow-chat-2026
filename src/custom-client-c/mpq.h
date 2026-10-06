@@ -30,9 +30,20 @@ typedef struct {
     uint32_t *blocks, nblock;     /* 4 words an entry: position, packed size, size, flags */
 } MpqArchive;
 
+/* A chain also remembers files it has unpacked (173t): many figures read
+ * the same tables, models and animations, and unpacking is what costs.
+ * Up to MPQ_KEEP_BYTES of unpacked files are kept; past that, the one
+ * read longest ago is forgotten. Readers still get their own copy. */
+#define MPQ_KEEP_BYTES ((size_t)256 << 20)
+typedef struct { char name[260]; unsigned char *data; size_t len; uint64_t used; const char *from; } MpqKept;
+
 typedef struct {
     MpqArchive *archives[16];
     int         count;
+    MpqKept    *kept;  int nkept, kept_cap;
+    size_t      kept_bytes;
+    uint64_t    tick;                 /* counts reads, for "read longest ago" */
+    uint64_t    hits, misses;         /* for reports */
 } MpqChain;
 
 uint32_t mpq_hash(const char *text, int kind);
@@ -45,7 +56,8 @@ void     mpq_close(MpqArchive *a);
 
 /* The client's archives under `data` (its Data folder) for `locale` ("enUS"). */
 int      mpq_chain_open(MpqChain *c, const char *data, const char *locale, char *why, int why_len);
-/* The newest archive's copy, its size, and which archive (may be NULL). */
+/* The newest archive's copy, its size, and which archive (may be NULL).
+ * Served from the chain's memory when it was unpacked lately. */
 unsigned char *mpq_chain_read(MpqChain *c, const char *name, size_t *size, const char **from);
 void     mpq_chain_close(MpqChain *c);
 

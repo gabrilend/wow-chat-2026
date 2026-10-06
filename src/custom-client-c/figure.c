@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 static uint32_t u32le(const unsigned char *s, size_t at) { return s[at] | s[at + 1] << 8 | s[at + 2] << 16 | (uint32_t)s[at + 3] << 24; }
 
@@ -29,8 +30,17 @@ static Texture2D texture_of(const BlpImage *img)
     SetTextureWrap(t, TEXTURE_WRAP_REPEAT);
     return t;
 }
+/* load_picture: a picture named in the archives, through a cache kept for
+ * the whole run: figures come and go with their tiles (173t), and many
+ * share pictures (eleven sentinels, one set of hair), so a picture is read
+ * and sent to the graphics card once and never freed (the run's distinct
+ * pictures bound it). Names are matched without regard to case, as the
+ * archives match them. */
+static struct { char name[260]; Texture2D tex; } *cache;
+static int ncache, cache_cap;
 static int load_picture(MpqChain *chain, const char *name, Texture2D *out, char *why, int why_len)
 {
+    for (int i = 0; i < ncache; ++i) if (!strcasecmp(cache[i].name, name)) { *out = cache[i].tex; return 0; }
     size_t len;
     const char *from;
     unsigned char *s = mpq_chain_read(chain, name, &len, &from);
@@ -42,7 +52,17 @@ static int load_picture(MpqChain *chain, const char *name, Texture2D *out, char 
     if (bad) { snprintf(why, why_len, "the picture %.120s: %.150s", name, inner); return 1; }
     *out = texture_of(&img);
     blp_free(&img);
+    if (ncache == cache_cap) { cache_cap = cache_cap ? cache_cap * 2 : 64; cache = realloc(cache, sizeof *cache * cache_cap); }
+    snprintf(cache[ncache].name, sizeof cache[ncache].name, "%s", name);
+    cache[ncache++].tex = *out;
     return 0;
+}
+/* own: a picture made for this figure alone (a painted skin sheet), freed with it */
+static Texture2D own(Figure *f, const BlpImage *img)
+{
+    Texture2D t = texture_of(img);
+    if (f->nowned < (int)(sizeof f->owned / sizeof f->owned[0])) f->owned[f->nowned++] = t;
+    return t;
 }
 /* }}} */
 
@@ -124,8 +144,11 @@ static int build(Figure *f, MpqChain *chain, const M2Model *mod, const uint8_t *
 }
 /* }}} */
 
-/* {{{ figure_from_character */
-int figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look, char *why, int why_len)
+/* {{{ figure_from_character
+ * `baked` (NULL: none) names a finished skin sheet in the archives, which
+ * replaces the one character.c paints: a townsperson's (173t), whose
+ * clothes and face the game painted in advance. */
+static int from_character(Figure *f, MpqChain *chain, const CharacterLook *look, const char *baked, char *why, int why_len)
 {
     memset(f, 0, sizeof *f);
     f->scale = 1;
@@ -133,10 +156,14 @@ int figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look,
     if (character_build(chain, look, &ch, why, why_len)) return 1;
     snprintf(f->name, sizeof f->name, "%.63s", strrchr(ch.base, '\\') ? strrchr(ch.base, '\\') + 1 : ch.base);
     Texture2D pics[64] = { 0 };
-    Texture2D skin = texture_of(&ch.skin), hair = { 0 }, fur = { 0 }, cape = { 0 };
-    if (ch.hair.width) hair = texture_of(&ch.hair);
-    if (ch.fur.width) fur = texture_of(&ch.fur);
-    if (ch.cape.width) cape = texture_of(&ch.cape);
+    Texture2D skin = { 0 }, hair = { 0 }, fur = { 0 }, cape = { 0 };
+    if (baked) {
+        char inner[300];
+        if (load_picture(chain, baked, &skin, inner, sizeof inner)) { snprintf(why, why_len, "%.250s", inner); character_free(&ch); return 1; }
+    } else skin = own(f, &ch.skin);
+    if (ch.hair.width) hair = own(f, &ch.hair);
+    if (ch.fur.width) fur = own(f, &ch.fur);
+    if (ch.cape.width) cape = own(f, &ch.cape);
     /* a character's slots: kind 1 its skin sheet, kind 6 its hair, kind 8
      * its fur (a tauren's tail and coat), kind 2 its cloak, kind 0 a picture
      * named inside the model (the eye glow's) */
@@ -180,6 +207,10 @@ int figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look,
     }
     character_free(&ch);
     return bad;
+}
+int figure_from_character(Figure *f, MpqChain *chain, const CharacterLook *look, char *why, int why_len)
+{
+    return from_character(f, chain, look, NULL, why, why_len);
 }
 /* }}} */
 
@@ -242,9 +273,47 @@ int figure_from_display(Figure *f, MpqChain *chain, int display_id, char *why, i
     int row = -1;
     for (uint32_t r = 0; r < di.rows; ++r) if (dbc_u32(&di, r, 1) == (uint32_t)display_id) { row = (int)r; break; }
     if (row < 0) { snprintf(why, why_len, "no creature display %d in CreatureDisplayInfo", display_id); free(di_s); free(md_s); return 1; }
-    uint32_t model_id = dbc_u32(&di, (uint32_t)row, 2), scale_bits = dbc_u32(&di, (uint32_t)row, 5);
-    memcpy(&f->scale, &scale_bits, 4);
-    if (!(f->scale > 0.01f && f->scale < 100)) f->scale = 1;
+    uint32_t model_id = dbc_u32(&di, (uint32_t)row, 2), scale_bits = dbc_u32(&di, (uint32_t)row, 5), extra = dbc_u32(&di, (uint32_t)row, 4);
+    float scale;
+    memcpy(&scale, &scale_bits, 4);
+    if (!(scale > 0.01f && scale < 100)) scale = 1;
+    if (extra) {
+        /* a humanoid display (173t): drawn as a character, from its
+         * CreatureDisplayInfoExtra row (1 id, 2 race, 3 sex, 4 skin, 5 face,
+         * 6 hair style, 7 hair colour, 8 facial hair, 9-19 the item looks
+         * worn: head, shoulders, shirt, chest, waist, legs, feet, wrists,
+         * hands, tabard, back; 20 flags, 21 its baked skin sheet's name, in
+         * Textures\BakedNpcTextures\) */
+        free(di_s); free(md_s);
+        Dbc ex;
+        unsigned char *ex_s = NULL;
+        if (open_table(chain, "DBFilesClient\\CreatureDisplayInfoExtra.dbc", &ex, &ex_s, why, why_len)) { free(ex_s); return 1; }
+        int er = -1;
+        for (uint32_t r = 0; r < ex.rows; ++r) if (dbc_u32(&ex, r, 1) == extra) { er = (int)r; break; }
+        if (er < 0) { snprintf(why, why_len, "display %d names extra row %u, which CreatureDisplayInfoExtra lacks", display_id, extra); free(ex_s); return 1; }
+        static const int SLOT[11] = { SLOT_HEAD, SLOT_SHOULDERS, SLOT_SHIRT, SLOT_CHEST, SLOT_WAIST, SLOT_LEGS, SLOT_FEET, SLOT_WRISTS, SLOT_HANDS, SLOT_TABARD, SLOT_BACK };
+        CharacterLook look = { 0 };
+        uint32_t e = (uint32_t)er;
+        look.race = (int)dbc_u32(&ex, e, 2); look.sex = (int)dbc_u32(&ex, e, 3);
+        look.skin = (int)dbc_u32(&ex, e, 4); look.face = (int)dbc_u32(&ex, e, 5);
+        look.hair_style = (int)dbc_u32(&ex, e, 6); look.hair_color = (int)dbc_u32(&ex, e, 7);
+        look.facial_hair = (int)dbc_u32(&ex, e, 8);
+        look.npc = 1;
+        for (int k = 0; k < 11; ++k) look.items[SLOT[k]] = (int)dbc_u32(&ex, e, 9 + (uint32_t)k);
+        char baked[300] = "";
+        const char *bake = dbc_text(&ex, e, 21);
+        if (bake && bake[0]) snprintf(baked, sizeof baked, "Textures\\BakedNpcTextures\\%.200s", bake);
+        free(ex_s);
+        int bad = from_character(f, chain, &look, baked[0] ? baked : NULL, why, why_len);
+        if (!bad) {
+            char model_name[64];
+            snprintf(model_name, sizeof model_name, "%s", f->name);
+            f->scale = scale;
+            snprintf(f->name, sizeof f->name, "display %d (a %.40s)", display_id, model_name);
+        }
+        return bad;
+    }
+    f->scale = scale;
     char skins[3][128];
     for (int k = 0; k < 3; ++k) snprintf(skins[k], sizeof skins[k], "%s", dbc_text(&di, (uint32_t)row, 7 + k));
     char base[260] = "";
@@ -374,6 +443,7 @@ void figure_draw(const Figure *f, Shader shader, Matrix place)
 }
 void figure_free(Figure *f)
 {
+    for (int i = 0; i < f->nowned; ++i) UnloadTexture(f->owned[i]);
     for (int i = 0; i < f->nitems; ++i) { figure_free(f->items[i].fig); free(f->items[i].fig); }
     for (int k = 0; k < f->npieces; ++k) { UnloadMesh(f->pieces[k].mesh); free(f->pieces[k].point_of); }
     anim_free(&f->anim);

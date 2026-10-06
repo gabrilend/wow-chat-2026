@@ -49,6 +49,12 @@ that issue and strike it here (keep the line, so the history stays).
     do the hood, shoulders and sword sit where the original puts them, and
     does the hood hide what the original's hides?
 
+13. **Astranaar's townsfolk** (173t): `--front --zoom 6` or walk into
+    town. Do the sentinels, innkeeper and trainers stand where the
+    original's do, facing the same way, dressed the same? The sentinels'
+    facial-hair choice (10) is beyond the table and drawn with the plain
+    pieces: what does the original show?
+
 ## Feel
 
 9. **Step height and body width** (173q): can she walk up the same

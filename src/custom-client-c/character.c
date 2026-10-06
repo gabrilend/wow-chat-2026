@@ -71,7 +71,12 @@ static const struct { int field, region; const char *folder; } ITEM_REGION[8] = 
  *   every other group: variant 1, its bare shape (401 bare hands, 501 bare
  *     feet, 1301 bare legs, 1501 the back without a cape ...), where the
  *     model has it; items change these (wear).
- * A choice with no row is an error, said with the race and sex. */
+ * A choice with no row is an error, said with the race and sex, for a
+ * player's look. A creature's look (look->npc) may use choices players
+ * can't pick (an Astranaar sentinel's 10, where a night-elf woman's rows
+ * stop at 9); it takes the race's choice-0 row instead (keeping the eye
+ * glow), said once per race, sex and choice. A FALLBACK: what the
+ * original shows there is unknown (173t's open questions; check list). */
 static int bare_pieces(MpqChain *archives, const CharacterLook *look, int variant[20], char *why, int why_len)
 {
     for (int g = 0; g < 20; ++g) variant[g] = 1;
@@ -82,11 +87,26 @@ static int bare_pieces(MpqChain *archives, const CharacterLook *look, int varian
     char w2[300];
     if (!t || dbc_open(&d, t, len, w2, sizeof w2)) { free(t); snprintf(why, why_len, "CharacterFacialHairStyles: %s", t ? w2 : "not in the archives"); return -1; }
     int found = 0;
-    for (uint32_t r = 0; r < d.rows && !found; ++r) {
-        if ((int)dbc_u32(&d, r, 1) != look->race || (int)dbc_u32(&d, r, 2) != look->sex || (int)dbc_u32(&d, r, 3) != look->facial_hair) continue;
-        static const int GROUP[5] = { 1, 3, 2, 16, 17 };
-        for (int i = 0; i < 5; ++i) variant[GROUP[i]] = (int)dbc_u32(&d, r, 4 + (uint32_t)i);
-        found = 1;
+    int choice = look->facial_hair;
+    for (int pass = 0; pass < 2 && !found; ++pass) {
+        for (uint32_t r = 0; r < d.rows && !found; ++r) {
+            if ((int)dbc_u32(&d, r, 1) != look->race || (int)dbc_u32(&d, r, 2) != look->sex || (int)dbc_u32(&d, r, 3) != choice) continue;
+            static const int GROUP[5] = { 1, 3, 2, 16, 17 };
+            for (int i = 0; i < 5; ++i) variant[GROUP[i]] = (int)dbc_u32(&d, r, 4 + (uint32_t)i);
+            found = 1;
+        }
+        if (found || !look->npc || choice == 0) break;
+        /* a creature's choice beyond the table: the race's choice 0 (said once) */
+        static int said[64];
+        static int nsaid;
+        int key = look->race * 4096 + look->sex * 2048 + look->facial_hair, seen = 0;
+        for (int i = 0; i < nsaid; ++i) seen |= said[i] == key;
+        if (!seen && nsaid < 64) {
+            said[nsaid++] = key;
+            fprintf(stderr, "character: FALLBACK: a creature's facial-hair choice %d for race %d sex %d isn't in CharacterFacialHairStyles; it takes choice 0's pieces (173t)\n",
+                    look->facial_hair, look->race, look->sex);
+        }
+        choice = 0;
     }
     free(t);
     if (!found) { snprintf(why, why_len, "no facial-hair choice %d for race %d sex %d in CharacterFacialHairStyles", look->facial_hair, look->race, look->sex); return -1; }

@@ -67,6 +67,9 @@ if [[ ${LUA} -eq 1 ]]; then
 fi
 
 ARGS+=(--settings "${SETTINGS}")   # after the Lua branch: the deprecated Lua client has no settings
+# the world's creatures (issue 173t): lists generated from the server's
+# world database by scripts/generate-custom-client-creatures; git-ignored
+ARGS+=(--world "${DIR}/src/custom-client-c/world")
 
 # the C client: rebuilt when any of its sources is newer than the program
 BIN="${DIR}/tmp/tmp/custom-client-c/custom-client"

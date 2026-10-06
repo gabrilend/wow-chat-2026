@@ -154,3 +154,4 @@ logs-basic
 
 # The custom client's player settings (issue 173b1): the player's, not the project's
 src/custom-client-c/settings/
+src/custom-client-c/world/
