@@ -62,9 +62,8 @@ time.
 
 ## Open Questions
 
-1. Should the copies' names say they are a buddy's (for example the
-   original's name unchanged, or with a mark), so a player inspecting
-   can tell?
-2. Bound copies a buddy sells sit in that buddy's vendor buyback, never a
-   player's, so nothing leaks. Should they also be worth nothing to sell
-   (sell price 0), so buddies don't earn money from their starting gear?
+1. (Answered 2026-10-05: "nah") The copies keep the original's name
+   unchanged, with no mark.
+2. (Answered 2026-10-05: "they should sell for how they normally sell")
+   The copies keep the original's sell price. Bound copies a buddy sells
+   sit only in that buddy's vendor buyback, so nothing reaches a player.
