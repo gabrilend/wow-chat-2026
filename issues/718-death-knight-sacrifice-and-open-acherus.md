@@ -348,7 +348,14 @@ script (`ScarletEnclave/chapter2.cpp`), and a death knight gets only its own.
   two two-handers; each gains a vendor flag and its list. Price 1 gold each,
   and they sell for nothing ("1g each, they sell for no gold. Or 1c if we
   need to.").
-  Not built yet.
+  Built 2026-10-05 as install step E051
+  (`sql/basic/db_world.src/32-acherus-choice-vendors.{apply,revert}.sql`):
+  the vendor flag (128) is OR-ed onto both creatures so their training and
+  quests stay; the five items cost 10000 copper with a sell price of 0;
+  the revert puts the stock prices back (cloaks 42/8, two-handers 184/36
+  copper). `scripts/test-acherus-vendors` applies and reverts inside one
+  rolled-back transaction (4 checks). Not yet installed or seen in game.
+  Anyone who reaches Acherus may buy them; the owner named no limit.
 
 - (Answered 2026-09-25, no longer blocking) **Which issues are "the custom-class infrastructure"?** This issue was
   scheduled second-to-fourth after it. The owner's description (recorded
