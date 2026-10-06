@@ -66,7 +66,7 @@ client's own files, nothing hand-placed:
   - painted ground (173f);
   - doodads and buildings with their furniture, moving doodads, and
     pieces with layered and moving pictures (173g);
-  - particles (173o);
+  - particles, fading into the fog (173o);
   - the zone's light, the sky, and skyboxes (173n);
   - shadows (173h);
   - water, and the view underwater (173r).
@@ -74,10 +74,11 @@ client's own files, nothing hand-placed:
   - collision with walls, floors and bridges, and the camera kept out of
     walls (173q);
   - swimming (173r);
-  - the camera's drags and following styles (173m);
-  - tiles streaming in and out (173s).
+  - the camera's drags, following styles, its camera-panel settings,
+    and first person (173m);
+  - tiles streaming in and out, and the far horizon (173s).
 - **Characters:**
-  - her model and animations (173d, 173i);
+  - her model and animations, with glowing pieces (her eyes) (173d, 173i);
   - creatures and other races standing near her (173j);
   - equipment painted on, switched pieces, and hung items (173p).
 - **Settings:** the settings store (173b1) and the first settings,

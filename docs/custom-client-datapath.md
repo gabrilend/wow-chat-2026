@@ -48,10 +48,12 @@ Each frame, in this order (`main.c`):
    - `doodads.c`: copies, solid shapes into `collide.c`.
    Tiles left behind are dropped from all of them (173s).
 2. **Input and movement:**
-   - the mouse drags the camera (`camera.c`);
+   - the mouse drags the camera and the wheel zooms it, all the way in
+     to first person (`camera.c`);
    - the keys and the world move her (`mover.c`, asking `main.c`'s
      ground, wall and water questions);
-   - the camera follows (`camera.c`).
+   - the camera follows (`camera.c`); in first person it sits at her
+     eyes, lifted by Head Bob, and she isn't drawn.
 3. **Animation:**
    - `moves.c` chooses her animation from what she did, and `figure.c`
      bends her and hangs her items;
@@ -64,9 +66,11 @@ Each frame, in this order (`main.c`):
 5. **Drawing**, back to front:
    - the sky dome and skybox (`sky.c`, `doodads_draw_skybox`);
    - the painted ground with its shadows (`ground.c`);
-   - her and the figures (`figure.c`);
-   - doodads and buildings: solid, then see-through, then particles
-     (`doodads.c`);
+   - her and the figures (`figure.c`): solid pieces, then glowing and
+     see-through ones (her eyes' glow) over them, each tinted by its
+     animated colour (`anim.c`);
+   - doodads and buildings: solid, then see-through, then particles,
+     which fade into the fog by distance (`doodads.c`, `particles.c`);
    - water, see-through (`water.c`).
 
 ## 4. The mover's questions

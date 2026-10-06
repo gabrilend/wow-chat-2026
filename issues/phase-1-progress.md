@@ -156,7 +156,7 @@ separate layer. In C on Raylib; the first Lua version is deprecated.
 |-------|-------|--------|-------|
 | 173 | custom-client | In Progress | Parent; sub-issues 173a-173s. A world to walk in, read from the original's files; no network yet. |
 | 173a | first-light | Built | Ground, controls at 120%, slopes; Escape quits, Q strafes left. |
-| 173d | models-and-world-objects | In Progress | Her model and skin; a tauren's tail (fur picture); bare-piece rules still fixed numbers. |
+| 173d | models-and-world-objects | In Progress | Her model and skin; a tauren's tail (fur picture); glowing and see-through pieces (her eyes); bare-piece rules still fixed numbers. |
 | 173k | client-in-c-with-raylib | Ported | The C client runs; builds in seconds (Claude may build it, CLAUDE.md "Compiling"). |
 | 173b | options-menu | In Progress | Parent of 173b1-173b16, one per section of the original's menu. |
 | 173b1 | settings-store | **Completed** | Every setting declared once, read by name live, kept in a Config.wtf-shaped file. |
@@ -166,13 +166,13 @@ separate layer. In C on Raylib; the first Lua version is deprecated.
 | 173h | shadow-maps | Built | Baked ground shadows and soft character shadows. |
 | 173i | night-elf-animation | Built | Skeleton, animations chosen from movement, blending. |
 | 173j | models-standing-around | Built | Creatures and a tauren cycling animations. |
-| 173m | camera | In Progress | Drags, following styles, kept out of walls; terrain-follow, pivot, head bob to come. |
+| 173m | camera | In Progress | Drags, following styles, kept out of walls, Follow Terrain, Water Collision, Smart Pivot, first person and Head Bob; saved views wait for key bindings. |
 | 173n | zone-light-and-sky | Built | The zone's light by place and hour, sky dome, skyboxes. |
-| 173o | particles | Built (doodads) | Torches, orbs, wisps; figures' particles to come. |
+| 173o | particles | Built (doodads) | Torches, orbs, wisps, fading into fog; figures' particles wait for spells and items that carry them. |
 | 173p | equipment-on-the-body | Built | Painted items, switched pieces, helms, shoulders, weapons, cloaks. |
 | 173q | model-collision | Built | Walls, floors, bridges, the camera. |
 | 173r | water-and-swimming | Built | Ground water, swimming, underwater; buildings' pools to come. |
-| 173s | streaming-tiles | Built | Tiles dropped behind her; the far horizon to come. |
+| 173s | streaming-tiles | Built | Tiles loaded and dropped as she moves; the far horizon from the low-detail map. |
 
 For current counts, run
 `/home/ritz/programming/ai-stuff/scripts/progress-dashboard.lua <project> -m`.
