@@ -260,6 +260,19 @@ int ground_load_tile(int tx, int ty, double ox, double oy, MapWorld *world, AdtT
 }
 /* }}} */
 
+/* {{{ ground_drop_tile */
+void ground_drop_tile(int tx, int ty)
+{
+    if (tx < 0 || tx > 63 || ty < 0 || ty > 63) return;
+    GroundTile *g = tiles[tx * 64 + ty];
+    if (!g) return;
+    for (int k = 0; k < 256; ++k)
+        if (g->drawn[k]) { UnloadMesh(g->mesh[k]); UnloadTexture(g->blend[k]); }
+    free(g);
+    tiles[tx * 64 + ty] = NULL;
+}
+/* }}} */
+
 /* {{{ ground_blob, ground_draw */
 void ground_blob(float x, float y, float z, float radius)
 {

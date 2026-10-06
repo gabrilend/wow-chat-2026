@@ -36,6 +36,10 @@ int  ground_init(MpqChain *chain, const char *map_name, char *why, int why_len);
  * with `why`. */
 int  ground_load_tile(int tx, int ty, double ox, double oy, MapWorld *world, AdtTile **kept, char *why, int why_len);
 
+/* Drops tile (tx, ty): its meshes and blend pictures (its ground pictures
+ * stay loaded, shared and cached; 173s). */
+void ground_drop_tile(int tx, int ty);
+
 /* A soft round shadow on the ground under a character this frame:
  * centre (relative to the drawing origin) and radius in yards. Up to 8
  * a frame; the list empties after each ground_draw. */

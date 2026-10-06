@@ -27,8 +27,11 @@ void          collide_free(CollideWorld *w);
 
 /* Adds `ntri` triangles (9 floats each: three corners, model space)
  * placed by `m` (4 x 4, Raylib's layout as in adt.h, relative to the
- * origin). */
-void collide_add(CollideWorld *w, const float *tris, int ntri, const float m[16]);
+ * origin), brought by map tile `tile` (tx * 64 + ty; 173s). */
+void collide_add(CollideWorld *w, const float *tris, int ntri, const float m[16], int tile);
+
+/* Forgets every triangle tile `tile` brought (the tile is dropped, 173s). */
+void collide_drop_tile(CollideWorld *w, int tile);
 
 /* The highest surface under (x, y) at or below `z_top`: its height, and
  * its rise per yard along x and y; below -10000 when there is none. */

@@ -22,6 +22,7 @@
  *   --hour H          the time of day, 0 to 24 (default: this machine's clock)
  *   --face DEG        her start facing turned DEG degrees (left)
  *   --walk S          (pictures) hold forward for S world-seconds
+ *   --goto X Y        (pictures) one world-second in, move her to world (X, Y)
  *   --pose ID MS      (pictures) hold her in animation ID (AnimationData.dbc:
  *                     0 stand, 5 run, 13 walk backwards, 38 jump ...) at MS
  */
@@ -129,7 +130,8 @@ static struct { double x, y, z; float facing; MovesState moves; int cycle; float
 /* {{{ the world and the camera */
 static MapWorld world;
 static MpqChain chain;                                   /* the original client's archives, open for the whole run */
-static char   tile_state[64 * 64];                      /* 0 not tried, 1 painted, 2 no ground file (open sea) */
+static char   tile_state[64 * 64];                      /* 0 not loaded, 1 painted, 2 no ground file (open sea) */
+static int    tiles_loaded, tiles_dropped;               /* for the picture report */
 static double ox, oy;                                    /* the drawing origin, near the start */
 static Mover  elf;
 static FollowCam view = { .yaw = (float)START_O, .pitch = 0.35f, .dist = 12.0f, .rest_pitch = 0.35f };   /* camera.h */
@@ -186,12 +188,28 @@ static void refresh_tiles(void)
             if (got < 0) { fprintf(stderr, "painting tile (%d, %d): %s\n", x, y, why); exit(1); }
             if (got == 0) {
                 liquid_add_tile(waters, x, y, adt);
-                water_add_tile(adt, ox, oy);
-                if (doodads_add_tile(adt, ox, oy, why, sizeof why)) { fprintf(stderr, "doodads on tile (%d, %d): %s\n", x, y, why); exit(1); }
+                water_add_tile(adt, x * 64 + y, ox, oy);
+                if (doodads_add_tile(adt, x * 64 + y, ox, oy, why, sizeof why)) { fprintf(stderr, "doodads on tile (%d, %d): %s\n", x, y, why); exit(1); }
                 adt_free(adt);
                 free(adt);
             }
             tile_state[x * 64 + y] = got == 0 ? 1 : 2;
+            ++tiles_loaded;
+        }
+    /* dropping (173s): tiles more than a tile beyond the loaded square go,
+     * with all they brought; the margin keeps a walk back and forth over
+     * an edge from loading and dropping the same tile again and again */
+    for (int x = 0; x < 64; ++x)
+        for (int y = 0; y < 64; ++y) {
+            if (!tile_state[x * 64 + y] || (abs(x - tx) <= TILE_REACH + 1 && abs(y - ty) <= TILE_REACH + 1)) continue;
+            if (tile_state[x * 64 + y] == 1) {
+                ground_drop_tile(x, y);
+                water_drop_tile(x * 64 + y);
+                liquid_drop_tile(waters, x, y);
+                doodads_drop_tile(x * 64 + y);
+            }
+            tile_state[x * 64 + y] = 0;
+            ++tiles_dropped;
         }
 }
 /* }}} */
@@ -204,6 +222,8 @@ int main(int argc, char **argv)
     double start_ms = 0;                                 /* --clock: the world's animations start this far in */
     double face_deg = 0;                                 /* --face: her start facing turned this far (left) */
     float  walk_s = 0;                                   /* --walk: hold forward this many world-seconds (pictures) */
+    int    go_to = 0;                                    /* --goto: one world-second in, she is moved to (goto_x, goto_y) */
+    double goto_x = 0, goto_y = 0;
     /* the time of day: the original follows the realm's clock, which is
      * real time; until the client talks to a server, this machine's own
      * (--hour H for pictures) */
@@ -225,8 +245,9 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--hour") && i + 1 < argc) hours = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--face") && i + 1 < argc) face_deg = atof(argv[++i]);
         else if (!strcmp(argv[i], "--walk") && i + 1 < argc) walk_s = (float)atof(argv[++i]);
+        else if (!strcmp(argv[i], "--goto") && i + 2 < argc) { goto_x = atof(argv[++i]); goto_y = atof(argv[++i]); go_to = 1; }
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--goto X Y]\n"); return 2; }
 
     /* the settings: defaults, then the player's file; a line it refuses is
      * named on the terminal and skipped (173b1) */
@@ -311,6 +332,13 @@ int main(int argc, char **argv)
         float dt = shot ? 0.05f : GetFrameTime();          /* pictures: steady 20 frames a world-second */
         if (dt > 0.1f) dt = 0.1f;                        /* a stalled frame doesn't fling her */
         if (IsKeyPressed(KEY_ESCAPE)) break;            /* the owner, 2026-10-06: Escape quits until there are menus (173b2) */
+        if (go_to && frames == 20) {                     /* --goto: there, standing on the ground */
+            go_to = 0;
+            float gx2, gy2;
+            float gz = maps_world_height(&world, (float)goto_x, (float)goto_y, &gx2, &gy2);
+            if (gz < -10000) { fprintf(stderr, "--goto %.1f %.1f: no ground there in the server's maps\n", goto_x, goto_y); break; }
+            elf.x = goto_x; elf.y = goto_y; elf.z = gz; elf.grounded = 1; elf.swimming = 0;
+        }
         /* the mouse: left drag looks around her, right drag turns her too (camera.c) */
         int was_r = drag_r;
         drag_l = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
@@ -428,6 +456,9 @@ int main(int argc, char **argv)
             int ok = ExportImage(im, shot);
             UnloadImage(im);
             printf(ok ? "picture saved: %s\n" : "could not save the picture to %s\n", shot);
+            int dm2, dc2, ds2, dmov2, demit2;
+            doodads_counts(&dm2, &dc2, &ds2, &dmov2, &demit2);
+            printf("tiles: %d loaded, %d dropped over the run; now %d placed, %d solid triangles\n", tiles_loaded, tiles_dropped, dc2, collide_count(solids));
             printf("she ended at x %.2f y %.2f z %.2f, %s\n", elf.x, elf.y, elf.z, elf.swimming ? "swimming" : elf.grounded ? "on the ground" : "in the air");
             break;
         }

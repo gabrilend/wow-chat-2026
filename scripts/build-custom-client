@@ -13,8 +13,12 @@
 # build while it stays under about five minutes (owner, 2026-10-06; the
 # rule is in CLAUDE.md, "Compiling").
 #
-# Usage: scripts/build-custom-client [PROJECT_DIR] [--test]
+# Usage: scripts/build-custom-client [PROJECT_DIR] [--test] [--asan]
 #   --test   also run the test program after building
+#   --asan   also build an address-checked copy of the client
+#            (custom-client-asan, with clang): a program that reports any
+#            memory read or written after it was freed or past its end,
+#            with where it happened; slower, for hunting crashes
 
 # {{{ set_dir
 DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
@@ -51,6 +55,18 @@ if (( SECONDS_TAKEN > 300 )); then
     echo "WARNING: the build took over five minutes; by the rule in CLAUDE.md, builds go back to the owner"
 fi
 
-if [[ "${1:-}" == "--test" ]]; then
-    "${OUT}/test-client" "${DIR}"
-fi
+for arg in "$@"; do
+    if [[ "${arg}" == "--asan" ]]; then
+        command -v clang > /dev/null || { echo "ERROR: --asan needs clang (gcc's address checker isn't installed here)"; exit 1; }
+        echo "building the address-checked client"
+        clang -std=c11 -D_FILE_OFFSET_BITS=64 -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address -fno-omit-frame-pointer \
+            -I/usr/local/include "${CORE[@]}" "${SRC}/ground.c" "${SRC}/doodads.c" "${SRC}/figure.c" "${SRC}/sky.c" "${SRC}/water.c" \
+            "${SRC}/main.c" /usr/local/lib/libraylib.a -lz -lm -lpthread -ldl -lrt -lX11 -lGL -o "${OUT}/custom-client-asan"
+        echo "built: ${OUT}/custom-client-asan (run it with ASAN_OPTIONS=detect_leaks=0)"
+    fi
+done
+for arg in "$@"; do
+    if [[ "${arg}" == "--test" ]]; then
+        "${OUT}/test-client" "${DIR}"
+    fi
+done

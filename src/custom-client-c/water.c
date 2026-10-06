@@ -47,7 +47,7 @@ static const char *FS =
 #define MAX_FRAMES 32
 typedef struct { int id, type; Texture2D frames[MAX_FRAMES]; int nframes; } Kind;
 static Kind  kinds[64];   static int nkinds;
-static struct { Mesh mesh; int kind; } *layers;
+static struct { Mesh mesh; int kind, tile; } *layers;
 static int   nlayers, layers_cap;
 static MpqChain *chain;
 static Dbc   table;  static unsigned char *table_bytes;
@@ -120,7 +120,7 @@ static int kind_of(int id)
  * Each wet cell: two triangles over its four corners; the picture
  * repeats once a cell (4.2 yards), placed by world position so
  * neighbouring layers meet seamlessly. */
-void water_add_tile(const AdtTile *t, double ox, double oy)
+void water_add_tile(const AdtTile *t, int tile, double ox, double oy)
 {
     const float step = ADT_CHUNK_SIZE / 8;
     for (int i = 0; i < t->nliquids; ++i) {
@@ -154,8 +154,21 @@ void water_add_tile(const AdtTile *t, double ox, double oy)
         if (nlayers == layers_cap) { layers_cap = layers_cap ? layers_cap * 2 : 128; layers = realloc(layers, sizeof *layers * layers_cap); }
         layers[nlayers].mesh = m;
         layers[nlayers].kind = kind_of(q->kind);
+        layers[nlayers].tile = tile;
         ++nlayers;
     }
+}
+/* }}} */
+
+/* {{{ water_drop_tile */
+void water_drop_tile(int tile)
+{
+    int kept = 0;
+    for (int i = 0; i < nlayers; ++i) {
+        if (layers[i].tile == tile) { UnloadMesh(layers[i].mesh); continue; }
+        layers[kept++] = layers[i];
+    }
+    nlayers = kept;
 }
 /* }}} */
 

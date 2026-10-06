@@ -485,6 +485,8 @@ int main(int argc, char **argv)
             float lake = liquid_surface(lw, 2761, -499, &wk), town = liquid_surface(lw, 2717, -400, &wk);
             snprintf(line, sizeof line, "the lake east of town has water (surface %.2f), the town itself none", lake);
             check(lake > 99 && lake < 104 && town < -10000, line);
+            liquid_drop_tile(lw, 26, 32);
+            check(liquid_surface(lw, 2761, -499, &wk) < -10000, "dropping the tile forgets its water");
             liquid_free(lw);
             check(fixed, "every blend map's last column copies the one before, as the original fills the unpainted edge");
             check(painted, "the blend maps hold soft edges, not only all-or-nothing");
@@ -631,7 +633,7 @@ anim_done:
             60, -5, 2,  70, -5, 2,  70, 5, 2,    60, -5, 2,  70, 5, 2,  60, 5, 2,
             60, -5, 0,  60, 5, 0,   60, 5, 2,    60, -5, 0,  60, 5, 2,  60, -5, 2,
         };
-        collide_add(cw, shapes, (int)(sizeof shapes / sizeof shapes[0] / 9), id16);
+        collide_add(cw, shapes, (int)(sizeof shapes / sizeof shapes[0] / 9), id16, 0);
         float fgx, fgy;
         check(near(collide_floor(cw, 25, 0.5, 6, &fgx, &fgy), 5, 1e-4), "standing over a plank, its top is the floor");
         check(collide_floor(cw, 25, 0.5, 4, &fgx, &fgy) < -10000, "below it (under a bridge), the plank isn't her floor");
@@ -669,6 +671,13 @@ anim_done:
         for (int i = 0; i < 200; ++i) mover_step(&m, &none, 0.01, &(MoverWorld){ g_solid, w_solid, NULL, NULL });
         snprintf(line, sizeof line, "dropped over the plank, she lands on it (z %.2f)", m.z);
         check(m.grounded && near(m.z, 5, 1e-3), line);
+        /* dropping a tile (173s): its triangles go, the others stay */
+        const float plank2[] = { 80, -2, 3,  90, -2, 3,  90, 2, 3,   80, -2, 3,  90, 2, 3,  80, 2, 3 };
+        collide_add(cw, plank2, 2, id16, 7);
+        int before = collide_count(cw);
+        collide_drop_tile(cw, 7);
+        check(collide_count(cw) == before - 2 && collide_floor(cw, 85, 0, 10, &fgx, &fgy) < -10000 && near(collide_floor(cw, 25, 0.5, 6, &fgx, &fgy), 5, 1e-4),
+              "dropping a tile forgets its triangles, and only its own");
         collide_free(cw);
         solids_test = NULL;
     }

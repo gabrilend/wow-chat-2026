@@ -22,8 +22,10 @@
  * with `why`. */
 int  water_init(MpqChain *chain, char *why, int why_len);
 
-/* Adds a tile's water, placed relative to the drawing origin. */
-void water_add_tile(const AdtTile *t, double ox, double oy);
+/* Adds a tile's water (tile = tx * 64 + ty), placed relative to the
+ * drawing origin; drops it again (173s). */
+void water_add_tile(const AdtTile *t, int tile, double ox, double oy);
+void water_drop_tile(int tile);
 
 /* Draws all water at `seconds` since start (the ripples' clock). */
 void water_draw(Vector3 eye, const LightNow *light, double seconds);

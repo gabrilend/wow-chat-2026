@@ -81,6 +81,7 @@ The project's own game client, built up in steps:
 | 173p | equipment-on-the-body | 173d | Gear worn: armour painted onto the skin sheet, body pieces switched by the item (sleeves, boots, gloves, robes, a tauren's tail), helmets, shoulders and weapons on the bones' attachment points |
 | 173q | model-collision | 173g, 173a | She stands on bridges and in buildings and is stopped by walls: models' and buildings' collision shapes, read and placed, asked by the mover |
 | 173r | water-and-swimming | 173q, 173f | Rivers, lakes, the sea and buildings' pools drawn from the ground and building files, and she swims in them as the original's swimming does |
+| 173s | streaming-tiles | 173f, 173g, 173q, 173r | Tiles near her loaded, tiles left behind dropped with everything they brought; the far horizon from the low-detail map |
 | 173n | zone-light-and-sky | 173f, 173g | The world lit by the original's own light tables: sun, ambient, fog and sky colours by place and time of day |
 | 173m | camera | 173a, 173b1 | Left drag orbits, right drag steers her; following styles in a table of behaviours (the owner's default: swing back behind her, horizontally only, while she moves); every camera setting live |
 

@@ -30,7 +30,11 @@ int  doodads_init(MpqChain *chain, CollideWorld *collide, char *why, int why_len
  * loading any model not seen before. A model that can't be read is
  * reported once by name and left out; 0, or -1 with `why` for a fault
  * that stops the client (the graphics card refusing a shader). */
-int  doodads_add_tile(const AdtTile *t, double ox, double oy, char *why, int why_len);
+int  doodads_add_tile(const AdtTile *t, int tile, double ox, double oy, char *why, int why_len);
+
+/* Drops tile `tile` (tx * 64 + ty): its copies, their solid triangles,
+ * its placements; doodads it shared with a tile still loaded stay (173s). */
+void doodads_drop_tile(int tile);
 
 /* Draws every doodad. `eye` is the camera's position (for the fog). */
 void doodads_draw(Vector3 eye, const LightNow *light);

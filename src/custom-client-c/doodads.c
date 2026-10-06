@@ -59,9 +59,9 @@ static const char *FS =
 /* {{{ state
  * A model's piece: its mesh, its picture (into pictures[]), how it blends
  * (M2Unit's blend and flags, m2.h). A model: its pieces and its copies'
- * places (as Raylib matrices, relative to the drawing origin). seen[]
- * holds every placement id drawn so far, so a doodad listed by two tiles
- * is drawn once. */
+ * places (as Raylib matrices, relative to the drawing origin), each with
+ * the tile that brought it. Which tile places a doodad listed by two is
+ * kept with the placements, below (seen_list). */
 typedef struct { Mesh mesh; int picture; uint16_t blend, flags; int indoor; uint32_t *point_of; } DoodadPiece;
 /* A model that moves while standing (trees swaying, lamps flickering)
  * also keeps its skeleton, its points as made, and per piece which model
@@ -72,6 +72,7 @@ typedef struct {
     char    name[260];
     DoodadPiece  *pieces;   int npieces;
     Matrix *copies;   int ncopies, cap;
+    int    *copy_tile;                /* per copy: the map tile that brought it (173s) */
     Anim   *anim;     int stand;
     int     moving;                   /* its stand animation moves bones: bend it */
     /* camera-facing bones (glow orbs on lamps, wisps): each copy is turned
@@ -99,12 +100,10 @@ static CollideWorld *solids;          /* where placed copies' solid shapes go (d
 static DoodadModel    *models;   static int nmodels, models_cap;
 static struct { char name[260]; Texture2D tex; } *pictures;
 static int       npictures, pictures_cap;
-static uint32_t *seen;     static int nseen, seen_cap;
 /* buildings: the model entry holding its pieces, and its root (for the
  * furnishings, placed when the building is) */
 typedef struct { int model; WmoRoot root; } Building;
 static Building *buildings; static int nbuildings, buildings_cap;
-static uint32_t *seen_b;    static int nseen_b, seen_b_cap;
 static int       skipped_pieces, moving_models, emitting_models;
 static Shader    shader;
 static Material  material;
@@ -372,60 +371,145 @@ static int load_building(const char *name)
 }
 /* }}} */
 
-/* {{{ static add_copy: one more place for model `which` */
-static void add_copy(int which, Matrix at)
+/* {{{ placements by tile (173s)
+ * Each loaded tile keeps its own list of placements, every one it lists
+ * (a doodad or building on two tiles is in both lists, with one unique
+ * id). A placement is "realised" (copies made) by the first tile that
+ * meets it; seen[] says which tile that was. Dropping a tile removes the
+ * copies it realised, then lets the remaining tiles realise again, so a
+ * shared doodad stays while either of its tiles is loaded.
+ * A Placement: uid, building (0 doodad, 1 building), which (model or
+ * building number), at (where), set (a building's furnishing set). */
+typedef struct { uint32_t uid; int building, which, set; Matrix at; } Placement;
+typedef struct { int tile; Placement *p; int n; } TileRecord;
+static TileRecord *records;  static int nrecords;
+typedef struct { uint32_t uid; int building, tile; } Seen;
+static Seen *seen_list;      static int nseen_list, seen_list_cap;
+/* }}} */
+
+/* {{{ static add_copy: one more place for model `which`, brought by `tile` */
+static void add_copy(int which, Matrix at, int tile)
 {
     DoodadModel *md = &models[which];
-    if (md->ncopies == md->cap) { md->cap = md->cap ? md->cap * 2 : 16; md->copies = realloc(md->copies, sizeof *md->copies * md->cap); }
+    if (md->ncopies == md->cap) {
+        md->cap = md->cap ? md->cap * 2 : 16;
+        md->copies = realloc(md->copies, sizeof *md->copies * md->cap);
+        md->copy_tile = realloc(md->copy_tile, sizeof *md->copy_tile * md->cap);
+    }
+    md->copy_tile[md->ncopies] = tile;
     md->copies[md->ncopies++] = at;
-    if (solids && md->nsolid) collide_add(solids, md->solid, md->nsolid, MatrixToFloatV(at).v);
+    if (solids && md->nsolid) collide_add(solids, md->solid, md->nsolid, MatrixToFloatV(at).v, tile);
 }
 /* }}} */
 
-/* {{{ doodads_add_tile */
-int doodads_add_tile(const AdtTile *t, double ox, double oy, char *why, int why_len)
+/* {{{ static realise: a tile's placements not yet placed by another tile */
+static void realise(const TileRecord *r)
 {
-    (void)why; (void)why_len;
-    for (int k = 0; k < t->ndoodads; ++k) {
-        const AdtPlace *p = &t->doodads[k];
+    for (int k = 0; k < r->n; ++k) {
+        const Placement *p = &r->p[k];
         int dup = 0;
-        for (int i = 0; i < nseen && !dup; ++i) dup = seen[i] == p->uid;
+        for (int i = 0; i < nseen_list && !dup; ++i) dup = seen_list[i].uid == p->uid && seen_list[i].building == p->building;
         if (dup) continue;
-        if (nseen == seen_cap) { seen_cap = seen_cap ? seen_cap * 2 : 4096; seen = realloc(seen, sizeof *seen * seen_cap); }
-        seen[nseen++] = p->uid;
-        int which = load_model(t->models[p->name]);         /* may grow (move) the models list */
+        if (nseen_list == seen_list_cap) { seen_list_cap = seen_list_cap ? seen_list_cap * 2 : 4096; seen_list = realloc(seen_list, sizeof *seen_list * seen_list_cap); }
+        seen_list[nseen_list++] = (Seen){ p->uid, p->building, r->tile };
+        if (!p->building) { add_copy(p->which, p->at, r->tile); continue; }
+        /* a building, and the furnishings of the set it asks for (set 0
+         * holds what every placement shows, so it is always added) */
+        Building *b = &buildings[p->which];
+        add_copy(b->model, p->at, r->tile);
         float m[16];
-        adt_place_matrix(p, ox, oy, m);
-        add_copy(which, (Matrix){ m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15] });
-    }
-    /* buildings, and the furnishings of the set each placement asks for
-     * (set 0 holds what every placement shows, so it is always added) */
-    for (int k = 0; k < t->nplaces; ++k) {
-        const AdtPlace *p = &t->places[k];
-        int dup = 0;
-        for (int i = 0; i < nseen_b && !dup; ++i) dup = seen_b[i] == p->uid;
-        if (dup) continue;
-        if (nseen_b == seen_b_cap) { seen_b_cap = seen_b_cap ? seen_b_cap * 2 : 256; seen_b = realloc(seen_b, sizeof *seen_b * seen_b_cap); }
-        seen_b[nseen_b++] = p->uid;
-        int bi = load_building(t->buildings[p->name]);
-        float m[16];
-        adt_place_matrix(p, ox, oy, m);
-        Matrix place = { m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15] };
-        add_copy(buildings[bi].model, place);
-        for (int si = 0; si < buildings[bi].root.nsets; ++si) {
-            if (si != 0 && si != p->doodad_set) continue;
-            WmoSet set = buildings[bi].root.sets[si];
+        memcpy(m, MatrixToFloatV(p->at).v, sizeof m);
+        for (int si = 0; si < b->root.nsets; ++si) {
+            if (si != 0 && si != p->set) continue;
+            WmoSet set = b->root.sets[si];
             for (int fi = set.first; fi < set.first + set.count; ++fi) {
-                WmoFurnishing f = buildings[bi].root.furnishings[fi];
+                WmoFurnishing f = b->root.furnishings[fi];
                 if (!f.model[0]) continue;
                 float fm[16];
                 adt_inside_matrix(m, f.pos, f.quat, f.scale, fm);
                 int which = load_model(f.model);
-                add_copy(which, (Matrix){ fm[0], fm[4], fm[8], fm[12], fm[1], fm[5], fm[9], fm[13], fm[2], fm[6], fm[10], fm[14], fm[3], fm[7], fm[11], fm[15] });
+                b = &buildings[p->which];                       /* (load_model never moves buildings, but stay safe) */
+                add_copy(which, (Matrix){ fm[0], fm[4], fm[8], fm[12], fm[1], fm[5], fm[9], fm[13], fm[2], fm[6], fm[10], fm[14], fm[3], fm[7], fm[11], fm[15] }, r->tile);
             }
         }
     }
+}
+/* }}} */
+
+/* {{{ doodads_add_tile */
+int doodads_add_tile(const AdtTile *t, int tile, double ox, double oy, char *why, int why_len)
+{
+    (void)why; (void)why_len;
+    records = realloc(records, sizeof *records * (nrecords + 1));
+    TileRecord *r = &records[nrecords++];
+    r->tile = tile;
+    r->n = 0;
+    r->p = malloc(sizeof *r->p * (size_t)(t->ndoodads + t->nplaces + 1));
+    for (int k = 0; k < t->ndoodads; ++k) {
+        const AdtPlace *p = &t->doodads[k];
+        float m[16];
+        adt_place_matrix(p, ox, oy, m);
+        int which = load_model(t->models[p->name]);
+        r->p[r->n++] = (Placement){ p->uid, 0, which, 0, { m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15] } };
+    }
+    for (int k = 0; k < t->nplaces; ++k) {
+        const AdtPlace *p = &t->places[k];
+        float m[16];
+        adt_place_matrix(p, ox, oy, m);
+        int bi = load_building(t->buildings[p->name]);
+        r->p[r->n++] = (Placement){ p->uid, 1, bi, p->doodad_set, { m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15] } };
+    }
+    realise(r);
     return 0;
+}
+/* }}} */
+
+/* {{{ doodads_drop_tile
+ * Every model's copies from this tile go (with their particle runs and
+ * their own meshes, for camera-facing models), its solid triangles go, its
+ * record goes; then the remaining tiles realise what only it had placed. */
+void doodads_drop_tile(int tile)
+{
+    for (int i = 0; i < nmodels; ++i) {
+        DoodadModel *md = &models[i];
+        int kept = 0, gone = 0;
+        /* runs and own meshes exist for a leading run of copies only (made
+         * as needed); the kept copies among those stay a leading run */
+        int run_copies = md->nemitters ? md->nruns / md->nemitters : 0, mesh_copies = md->npieces ? md->ncopy_mesh / md->npieces : 0;
+        int kept_runs = 0, kept_meshes = 0;
+        for (int c = 0; c < md->ncopies; ++c) {
+            if (md->copy_tile[c] == tile) {
+                ++gone;
+                if (c < run_copies)
+                    for (int k = 0; k < md->nemitters; ++k) particles_free_run(&md->runs[c * md->nemitters + k]);
+                if (md->billboard && c < mesh_copies)
+                    for (int j = 0; j < md->npieces; ++j) UnloadMesh(md->copy_mesh[c * md->npieces + j]);
+                continue;
+            }
+            if (kept != c) {
+                md->copies[kept] = md->copies[c];
+                md->copy_tile[kept] = md->copy_tile[c];
+                if (c < run_copies)
+                    for (int k = 0; k < md->nemitters; ++k) md->runs[kept * md->nemitters + k] = md->runs[c * md->nemitters + k];
+                if (md->billboard && c < mesh_copies)
+                    for (int j = 0; j < md->npieces; ++j) md->copy_mesh[kept * md->npieces + j] = md->copy_mesh[c * md->npieces + j];
+            }
+            if (c < run_copies) ++kept_runs;
+            if (c < mesh_copies) ++kept_meshes;
+            ++kept;
+        }
+        if (!gone) continue;
+        md->ncopies = kept;
+        md->nruns = kept_runs * md->nemitters;
+        md->ncopy_mesh = kept_meshes * md->npieces;
+    }
+    if (solids) collide_drop_tile(solids, tile);
+    int k2 = 0;
+    for (int i = 0; i < nseen_list; ++i) if (seen_list[i].tile != tile) seen_list[k2++] = seen_list[i];
+    nseen_list = k2;
+    for (int i = 0; i < nrecords; ++i)
+        if (records[i].tile == tile) { free(records[i].p); records[i] = records[--nrecords]; break; }
+    for (int i = 0; i < nrecords; ++i) realise(&records[i]);
 }
 /* }}} */
 

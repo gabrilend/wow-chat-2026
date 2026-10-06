@@ -21,6 +21,7 @@ typedef struct { int cx, cy; int *ids; int n, cap; int next; } Square;
 struct CollideWorld {
     double  ox, oy;
     float  *tris;   int ntris, cap;
+    int    *tile;                     /* per triangle: the map tile that brought it */
     unsigned *stamp; unsigned asked;
     Square *squares; int nsquares, squares_cap;
     int     head[BUCKETS];            /* first square in each chain, -1 none */
@@ -52,37 +53,62 @@ CollideWorld *collide_new(double ox, double oy)
 void collide_free(CollideWorld *w)
 {
     for (int i = 0; i < w->nsquares; ++i) free(w->squares[i].ids);
-    free(w->squares); free(w->tris); free(w->stamp); free(w);
+    free(w->squares); free(w->tris); free(w->stamp); free(w->tile); free(w);
 }
 int collide_count(const CollideWorld *w) { return w->ntris; }
 /* }}} */
 
-/* {{{ collide_add */
-void collide_add(CollideWorld *w, const float *tris, int ntri, const float m[16])
+/* {{{ collide_add, collide_drop_tile */
+static void file(CollideWorld *w, int id)                /* into every square its outline reaches */
+{
+    const float *o = w->tris + (size_t)id * 9;
+    float lo[2] = { 1e30f, 1e30f }, hi[2] = { -1e30f, -1e30f };
+    for (int c = 0; c < 3; ++c)
+        for (int k = 0; k < 2; ++k) { lo[k] = fminf(lo[k], o[c * 3 + k]); hi[k] = fmaxf(hi[k], o[c * 3 + k]); }
+    for (int cx = (int)floorf(lo[0] / CELL); cx <= (int)floorf(hi[0] / CELL); ++cx)
+        for (int cy = (int)floorf(lo[1] / CELL); cy <= (int)floorf(hi[1] / CELL); ++cy) {
+            Square *s = square(w, cx, cy, 1);
+            if (s->n == s->cap) { s->cap = s->cap ? s->cap * 2 : 8; s->ids = realloc(s->ids, sizeof(int) * s->cap); }
+            s->ids[s->n++] = id;
+        }
+}
+void collide_add(CollideWorld *w, const float *tris, int ntri, const float m[16], int tile)
 {
     for (int t = 0; t < ntri; ++t) {
         if (w->ntris == w->cap) {
             w->cap = w->cap ? w->cap * 2 : 65536;
             w->tris = realloc(w->tris, sizeof(float) * 9 * w->cap);
             w->stamp = realloc(w->stamp, sizeof(unsigned) * w->cap);
+            w->tile = realloc(w->tile, sizeof(int) * w->cap);
         }
         float *o = w->tris + (size_t)w->ntris * 9;
-        float lo[2] = { 1e30f, 1e30f }, hi[2] = { -1e30f, -1e30f };
         for (int c = 0; c < 3; ++c) {
             const float *p = tris + (size_t)t * 9 + c * 3;
             for (int k = 0; k < 3; ++k) o[c * 3 + k] = m[k] * p[0] + m[4 + k] * p[1] + m[8 + k] * p[2] + m[12 + k];
-            for (int k = 0; k < 2; ++k) { lo[k] = fminf(lo[k], o[c * 3 + k]); hi[k] = fmaxf(hi[k], o[c * 3 + k]); }
         }
         w->stamp[w->ntris] = 0;
-        /* filed in every square its outline reaches */
-        for (int cx = (int)floorf(lo[0] / CELL); cx <= (int)floorf(hi[0] / CELL); ++cx)
-            for (int cy = (int)floorf(lo[1] / CELL); cy <= (int)floorf(hi[1] / CELL); ++cy) {
-                Square *s = square(w, cx, cy, 1);
-                if (s->n == s->cap) { s->cap = s->cap ? s->cap * 2 : 8; s->ids = realloc(s->ids, sizeof(int) * s->cap); }
-                s->ids[s->n++] = w->ntris;
-            }
+        w->tile[w->ntris] = tile;
+        file(w, w->ntris);
         ++w->ntris;
     }
+}
+/* the kept triangles close up, and the grid is filed afresh (a tile drop
+ * happens as she crosses a tile's edge: rare, and a few milliseconds) */
+void collide_drop_tile(CollideWorld *w, int tile)
+{
+    int kept = 0;
+    for (int i = 0; i < w->ntris; ++i) {
+        if (w->tile[i] == tile) continue;
+        if (kept != i) { memcpy(w->tris + (size_t)kept * 9, w->tris + (size_t)i * 9, sizeof(float) * 9); w->tile[kept] = w->tile[i]; }
+        w->stamp[kept] = 0;
+        ++kept;
+    }
+    if (kept == w->ntris) return;
+    w->ntris = kept;
+    for (int i = 0; i < w->nsquares; ++i) free(w->squares[i].ids);
+    w->nsquares = 0;
+    for (int i = 0; i < BUCKETS; ++i) w->head[i] = -1;
+    for (int i = 0; i < w->ntris; ++i) file(w, i);
 }
 /* }}} */
 
