@@ -98,6 +98,36 @@ int m2_read(const unsigned char *m2, size_t m2_len, const unsigned char *skin, s
 }
 /* }}} */
 
+/* {{{ m2_collision */
+int m2_collision(const unsigned char *m2, size_t len, float **tris, int *ntri, char *why, int why_len)
+{
+    *tris = NULL;
+    *ntri = 0;
+    if (len < 232) { snprintf(why, why_len, "the model file is too short for its collision lists"); return 1; }
+    uint32_t ni = u32(m2, 216), oi = u32(m2, 220), np = u32(m2, 224), op = u32(m2, 228);
+    if (ni < 3 || np == 0) return 0;
+    if ((uint64_t)oi + (uint64_t)ni * 2 > len || (uint64_t)op + (uint64_t)np * 12 > len) {
+        snprintf(why, why_len, "its collision lists (%u corners, %u points) run past the file's end", ni, np);
+        return 1;
+    }
+    int n = (int)(ni / 3);
+    float *out = malloc(sizeof(float) * 9 * (size_t)n);
+    int kept = 0;
+    for (int t = 0; t < n; ++t) {
+        int ok = 1;
+        for (int c = 0; c < 3; ++c) {
+            uint32_t k = u16(m2, oi + (size_t)(t * 3 + c) * 2);
+            if (k >= np) { ok = 0; break; }
+            for (int a = 0; a < 3; ++a) out[kept * 9 + c * 3 + a] = f32(m2, op + (size_t)k * 12 + (size_t)a * 4);
+        }
+        if (ok) ++kept;
+    }
+    *tris = out;
+    *ntri = kept;
+    return 0;
+}
+/* }}} */
+
 /* {{{ m2_free */
 void m2_free(M2Model *m)
 {

@@ -107,7 +107,12 @@ int wmo_read_group(const unsigned char *s, size_t len, WmoGroup *out, char *why,
     for (size_t at = mogp + 8 + 68; at + 8 <= mogp_end; at += 8 + u32(s, at + 4)) {
         size_t size = u32(s, at + 4), d = at + 8;
         if (d + size > mogp_end) { snprintf(why, why_len, "a block inside MOGP at byte %zu runs past it", at); wmo_free_group(out); return 1; }
-        if (is_tag(s, at, "MOVI")) {
+        if (is_tag(s, at, "MOPY")) {
+            size_t n = size / 2;
+            out->tri_flags = malloc(n ? n : 1);
+            out->nflags = (uint32_t)n;
+            for (size_t i = 0; i < n; ++i) out->tri_flags[i] = s[d + i * 2];
+        } else if (is_tag(s, at, "MOVI")) {
             out->nindices = (uint32_t)(size / 2);
             out->indices = malloc(sizeof(uint16_t) * (out->nindices ? out->nindices : 1));
             for (uint32_t i = 0; i < out->nindices; ++i) out->indices[i] = (uint16_t)u16(s, d + (size_t)i * 2);
@@ -157,5 +162,5 @@ int wmo_read_group(const unsigned char *s, size_t len, WmoGroup *out, char *why,
 
 /* {{{ wmo_free_root, wmo_free_group */
 void wmo_free_root(WmoRoot *r) { free(r->materials); free(r->furnishings); free(r->sets); memset(r, 0, sizeof *r); }
-void wmo_free_group(WmoGroup *g) { free(g->vertices); free(g->indices); free(g->batches); memset(g, 0, sizeof *g); }
+void wmo_free_group(WmoGroup *g) { free(g->vertices); free(g->indices); free(g->batches); free(g->tri_flags); memset(g, 0, sizeof *g); }
 /* }}} */

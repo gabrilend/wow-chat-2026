@@ -20,6 +20,7 @@
 #include "../blp.h"
 #include "../camera.h"
 #include "../character.h"
+#include "../collide.h"
 #include "../dbc.h"
 #include "../light.h"
 #include "../m2.h"
@@ -50,25 +51,42 @@ static int near(double a, double b, double tol) { return fabs(a - b) <= tol; }
 /* }}} */
 
 /* {{{ made-up grounds: height, then rise per yard along x and y, as the map gives */
-static float g_flat(void *c, float x, float y, float *gx, float *gy) { (void)c; (void)x; (void)y; *gx = 0; *gy = 0; return 10; }
-static float g_slope(void *c, float x, float y, float *gx, float *gy) { (void)c; (void)y; *gx = -0.5f; *gy = 0; return 10 - x * 0.5f; }
-static float g_cliff(void *c, float x, float y, float *gx, float *gy) { (void)c; (void)y; *gx = 0; *gy = 0; return x < 3 ? 10 : -40; }
+static float g_flat(void *c, float x, float y, float zt, float *gx, float *gy) { (void)zt; (void)c; (void)x; (void)y; *gx = 0; *gy = 0; return 10; }
+static float g_slope(void *c, float x, float y, float zt, float *gx, float *gy) { (void)zt; (void)c; (void)y; *gx = -0.5f; *gy = 0; return 10 - x * 0.5f; }
+static float g_cliff(void *c, float x, float y, float zt, float *gx, float *gy) { (void)zt; (void)c; (void)y; *gx = 0; *gy = 0; return x < 3 ? 10 : -40; }
 static double ramp_tan;
-static float g_ramp(void *c, float x, float y, float *gx, float *gy)
+static float g_ramp(void *c, float x, float y, float zt, float *gx, float *gy)
 {
-    (void)c; (void)y;
+    (void)c; (void)y; (void)zt;
     if (x < 2) { *gx = 0; *gy = 0; return 10; }
     *gx = (float)ramp_tan; *gy = 0;
     return (float)(10 + (x - 2) * ramp_tan);
 }
-static float g_world(void *c, float x, float y, float *gx, float *gy) { return maps_world_height((MapWorld *)c, x, y, gx, gy); }
+static float g_world(void *c, float x, float y, float zt, float *gx, float *gy) { (void)zt; return maps_world_height((MapWorld *)c, x, y, gx, gy); }
+/* }}} */
+
+/* {{{ a flat world at height 0 with the collision tests' shapes on it (173q) */
+static CollideWorld *solids_test;
+static float g_solid(void *c, float x, float y, float zt, float *gx, float *gy)
+{
+    (void)c;
+    float mx, my, m = collide_floor(solids_test, x, y, zt, &mx, &my);
+    if (m > 0) { *gx = mx; *gy = my; return m; }
+    *gx = 0; *gy = 0;
+    return 0;
+}
+static int w_solid(void *c, double x0, double y0, double x1, double y1, double z, float *nx, float *ny)
+{
+    (void)c;
+    return collide_wall(solids_test, x0, y0, x1, y1, z, 0.4f, (float)MOVER_STEP_UP, 2.3f, 1.73f, nx, ny);
+}
 /* }}} */
 
 /* {{{ static run: seconds of steps of 0.01 s */
 static void run(Mover *m, MoverInput in, double seconds, MoverGround g)
 {
     int steps = (int)(seconds * 100 + 0.5);
-    for (int i = 0; i < steps; ++i) mover_step(m, &in, 0.01, g, NULL);
+    for (int i = 0; i < steps; ++i) mover_step(m, &in, 0.01, g, NULL, NULL);
 }
 /* }}} */
 
@@ -119,9 +137,9 @@ int main(int argc, char **argv)
 
     mover_init(&m, 0, 0, 10, 0, 1.2, 60);
     in = none; in.jump = 1;
-    mover_step(&m, &in, 0.001, g_flat, NULL);
+    mover_step(&m, &in, 0.001, g_flat, NULL, NULL);
     double top = 10;
-    for (int i = 0; i < 200; ++i) { mover_step(&m, &none, 0.005, g_flat, NULL); if (m.z > top) top = m.z; }
+    for (int i = 0; i < 200; ++i) { mover_step(&m, &none, 0.005, g_flat, NULL, NULL); if (m.z > top) top = m.z; }
     double expect = MOVER_JUMP * MOVER_JUMP / (2 * MOVER_GRAVITY);
     snprintf(line, sizeof line, "a jump rises %.3f yards (expected %.3f)", top - 10, expect);
     check(near(top - 10, expect, 0.02), line);
@@ -148,7 +166,7 @@ int main(int argc, char **argv)
     mover_init(&m, 0, 0, 10, 0, 1.2, limit); run(&m, in, 1, g_ramp);
     check(m.x < 2.3 && m.z < 10.8, "into a 70-degree slope: stopped at its foot");
     mover_init(&m, 5, 0, 10 + 3 * ramp_tan, 0, 1.2, limit);
-    mover_step(&m, &none, 0.01, g_ramp, NULL);
+    mover_step(&m, &none, 0.01, g_ramp, NULL, NULL);
     check(m.sliding && m.x < 5, "on a 70-degree slope with no keys pressed: sliding down it");
     run(&m, none, 3, g_ramp);
     check(m.grounded && !m.sliding && m.x < 2 && m.z == 10, "and comes to rest on the flat at the bottom");
@@ -158,7 +176,7 @@ int main(int argc, char **argv)
     /* the real ground: a second's run from the start point stays on the map */
     mover_init(&m, 2717, -400, maps_world_height(w, 2717, -400, &gx, &gy), 3.6, 1.2, limit);
     in = none; in.forward = 1;
-    for (int i = 0; i < 100; ++i) mover_step(&m, &in, 0.01, g_world, w);
+    for (int i = 0; i < 100; ++i) mover_step(&m, &in, 0.01, g_world, NULL, w);
     check(m.grounded, "a second's run from the start point on Ashenvale's real ground stays on it");
     /* }}} */
 
@@ -539,6 +557,65 @@ ground_done:
         mpq_chain_close(&ac);
     }
 anim_done:
+    /* }}} */
+
+    /* {{{ collision (173q): made-up shapes, then the mover among them */
+    printf("collision\n");
+    {
+        CollideWorld *cw = collide_new(0, 0);
+        const float id16[16] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+        /* a plank 5 yards up over x 20..30, y -2..2; a wall at x 5, y -5..5,
+         * 10 tall; a low step (0.5 up) over x 40..50 with its riser; a high
+         * ledge (2 up) over x 60..70 with its face */
+        const float shapes[] = {
+            20, -2, 5,  30, -2, 5,  30, 2, 5,    20, -2, 5,  30, 2, 5,  20, 2, 5,
+            5, -5, 0,   5, 5, 0,    5, 5, 10,    5, -5, 0,   5, 5, 10,  5, -5, 10,
+            40, -5, 0.5f, 50, -5, 0.5f, 50, 5, 0.5f,   40, -5, 0.5f, 50, 5, 0.5f, 40, 5, 0.5f,
+            40, -5, 0,  40, 5, 0,   40, 5, 0.5f, 40, -5, 0,  40, 5, 0.5f, 40, -5, 0.5f,
+            60, -5, 2,  70, -5, 2,  70, 5, 2,    60, -5, 2,  70, 5, 2,  60, 5, 2,
+            60, -5, 0,  60, 5, 0,   60, 5, 2,    60, -5, 0,  60, 5, 2,  60, -5, 2,
+        };
+        collide_add(cw, shapes, (int)(sizeof shapes / sizeof shapes[0] / 9), id16);
+        float fgx, fgy;
+        check(near(collide_floor(cw, 25, 0.5, 6, &fgx, &fgy), 5, 1e-4), "standing over a plank, its top is the floor");
+        check(collide_floor(cw, 25, 0.5, 4, &fgx, &fgy) < -10000, "below it (under a bridge), the plank isn't her floor");
+        float wnx = 0, wny = 0;
+        check(collide_wall(cw, 0, 0, 6, 0, 0, 0.4f, 1, 2.3f, 1.73f, &wnx, &wny) && near(wnx, -1, 1e-4), "walking at a wall hits it, facing her");
+        check(!collide_wall(cw, 0, 6, 6, 6, 0, 0.4f, 1, 2.3f, 1.73f, &wnx, &wny), "walking past its end doesn't");
+        check(!collide_wall(cw, 35, 0, 41, 0, 0, 0.4f, 1, 2.3f, 1.73f, &wnx, &wny), "a riser lower than her step isn't a wall");
+        check(collide_wall(cw, 55, 0, 61, 0, 0, 0.4f, 1, 2.3f, 1.73f, &wnx, &wny), "a ledge higher than her step is");
+        solids_test = cw;
+        Mover m;
+        MoverInput fwd = { .forward = 1 };
+        mover_init(&m, 0, 0, 0, 0, 1.2, 60);              /* facing +x, toward the wall */
+        for (int i = 0; i < 200; ++i) mover_step(&m, &fwd, 0.01, g_solid, w_solid, NULL);
+        snprintf(line, sizeof line, "running at the wall for 2 s, she stops short of it (x %.2f; the wall at 5, her radius 0.4)", m.x);
+        check(m.x < 4.65 && m.x > 4.0, line);
+        mover_init(&m, 0, 0, 0, 0.6, 1.2, 60);            /* at an angle: she slides along it, then past its end */
+        double most_x = 0;
+        for (int i = 0; i < 200; ++i) {
+            mover_step(&m, &fwd, 0.01, g_solid, w_solid, NULL);
+            if (m.y < 4.5 && m.x > most_x) most_x = m.x;
+        }
+        snprintf(line, sizeof line, "running at it at an angle, she slides along it (never past x %.2f beside it) and on past its end (x %.2f, y %.2f)", most_x, m.x, m.y);
+        check(most_x < 4.65 && m.y > 5 && m.x > 5, line);
+        mover_init(&m, 35, 0, 0, 0, 1.2, 60);
+        for (int i = 0; i < 150; ++i) mover_step(&m, &fwd, 0.01, g_solid, w_solid, NULL);
+        snprintf(line, sizeof line, "a half-yard step: she walks up onto it (x %.2f, z %.2f)", m.x, m.z);
+        check(m.x > 42 && near(m.z, 0.5, 1e-3), line);
+        mover_init(&m, 55, 0, 0, 0, 1.2, 60);
+        for (int i = 0; i < 150; ++i) mover_step(&m, &fwd, 0.01, g_solid, w_solid, NULL);
+        snprintf(line, sizeof line, "a two-yard ledge: she stops at its face (x %.2f, z %.2f)", m.x, m.z);
+        check(m.x < 60 && near(m.z, 0, 1e-3), line);
+        mover_init(&m, 25, 0, 8, 0, 1.2, 60);
+        m.grounded = 0;
+        MoverInput none = { 0 };
+        for (int i = 0; i < 200; ++i) mover_step(&m, &none, 0.01, g_solid, w_solid, NULL);
+        snprintf(line, sizeof line, "dropped over the plank, she lands on it (z %.2f)", m.z);
+        check(m.grounded && near(m.z, 5, 1e-3), line);
+        collide_free(cw);
+        solids_test = NULL;
+    }
     /* }}} */
 
     /* {{{ particles (173o) */

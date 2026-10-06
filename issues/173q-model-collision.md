@@ -15,8 +15,45 @@ and swimming."
 
 ## Current Behavior
 
-Not built. She walks only on the map's ground: through trees, walls and
-buildings, and under bridges and floors.
+**Built 2026-10-06**, in C:
+- **Shapes:**
+  - `m2_collision` (`m2.c`) reads a small model's collision triangles.
+  - `wmo.c` reads each building triangle's MOPY flags. `wmo_solid` keeps
+    those marked collision, or drawn and not detail.
+  - `doodads.c` keeps each model's solid shape and adds it, placed, for
+    every copy, including buildings' furniture.
+- **`collide.h` / `collide.c` (no Raylib)** keep the placed triangles in
+  a grid of 4-yard squares and answer two questions.
+  - **The floor:** the highest surface under a point at or below a
+    height, with its slope.
+  - **Walls:** rays along the step at knee, waist and head height,
+    reaching her radius past the step, against triangles too steep to
+    stand on. The nearest hit gives the wall's facing.
+- **The mover** (`mover.c`) asks for the floor up to a step (1 yard)
+  above her feet on the ground, or just below her in the air, so she
+  lands on bridges and never snaps up through them. A wall stops her;
+  she slides along it with what's left of her step. In a corner she
+  stops. A slide down a slope ends at a wall.
+- **`main.c` combines the map's ground with the models' floors:** the
+  model's wins when higher, or when the map's ground is above her (she
+  is beneath it).
+- **At Astranaar:** 216,661 solid triangles. Running at a house, she
+  stops flush against its stone wall. Running at a raised wooden deck,
+  she stops at its edge.
+- **Picture options** for this: `--face DEG` and `--walk S`. The picture
+  waits until the walk is done.
+- **Tests:** 11 checks, on made-up shapes.
+  - A plank is the floor above it, and not below it.
+  - A wall is hit when walked at, not past its end.
+  - A riser lower than her step isn't a wall; a higher ledge is.
+  - She stops 0.46 yards short of a wall, slides along it at an angle
+    and on past its end, walks up a half-yard step, stops at a two-yard
+    ledge, and lands on a plank dropped onto.
+
+**Left:**
+- The original's own step height and body radius (open question 1).
+- Walls for the camera (it still passes through models).
+- Doors and moving objects (game objects come with the server).
 
 ## Intended Behavior
 

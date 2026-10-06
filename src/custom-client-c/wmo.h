@@ -43,7 +43,13 @@ typedef struct {
     WmoVertex *vertices;  uint32_t nvertices;
     uint16_t  *indices;   uint32_t nindices;
     WmoBatch  *batches;   int      nbatches;
+    uint8_t   *tri_flags;  uint32_t nflags;   /* MOPY, per triangle: see wmo_solid */
 } WmoGroup;
+
+/* Whether a building's triangle is solid (173q), from its MOPY flags:
+ * 0x08 collision, or 0x20 drawn and not 0x04 detail (the original's rule;
+ * invisible collision-only triangles are 0x08 alone). */
+static inline int wmo_solid(uint8_t flags) { return (flags & 0x08) || ((flags & 0x20) && !(flags & 0x04)); }
 
 typedef struct { uint32_t flags, blend; char picture[260]; } WmoMaterial;
 typedef struct { char model[260]; float pos[3]; float quat[4]; float scale; } WmoFurnishing;

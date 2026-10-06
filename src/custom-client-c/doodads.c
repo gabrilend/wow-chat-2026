@@ -10,6 +10,7 @@
 #include "doodads.h"
 #include "anim.h"
 #include "blp.h"
+#include "collide.h"
 #include "m2.h"
 #include "particles.h"
 #include "sky.h"
@@ -82,10 +83,14 @@ typedef struct {
     Emitter    *emitters;  int nemitters;
     int        *emit_pic;
     EmitterRun *runs;      int nruns;
+    /* its solid shape (173q): triangles, 9 floats each, model space; every
+     * copy placed adds them, placed, to the collision world */
+    float      *solid;     int nsolid;
 } DoodadModel;
 #define PARTICLE_REACH 150.0f         /* yards: copies further from the camera run no particles */
 
 static MpqChain *chain;
+static CollideWorld *solids;          /* where placed copies' solid shapes go (doodads_init) */
 static DoodadModel    *models;   static int nmodels, models_cap;
 static struct { char name[260]; Texture2D tex; } *pictures;
 static int       npictures, pictures_cap;
@@ -103,9 +108,10 @@ static Vector3   view_right = { 1, 0, 0 }, view_up = { 0, 0, 1 };   /* the camer
 /* }}} */
 
 /* {{{ doodads_init */
-int doodads_init(MpqChain *c, char *why, int why_len)
+int doodads_init(MpqChain *c, CollideWorld *collide, char *why, int why_len)
 {
     chain = c;
+    solids = collide;
     shader = LoadShaderFromMemory(VS, FS);
     if (!IsShaderReady(shader)) { snprintf(why, why_len, "the doodad shader didn't compile (see Raylib's messages above)"); return 1; }
     shader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(shader, "instanceTransform");
@@ -215,6 +221,8 @@ static int load_model(const char *name)
     } else {
         fprintf(stderr, "doodads: %s's skeleton: %s; it stands still\n", name, why);
     }
+    if (m2_collision(m2, mlen, &md->solid, &md->nsolid, why, sizeof why))
+        fprintf(stderr, "doodads: %s's solid shape: %s; it is walked through\n", name, why);
     free(m2);
     md->moving = moving;
     if (moving || md->nemitters) {
@@ -315,6 +323,18 @@ static int load_building(const char *name)
         bad = wmo_read_group(s, len, &g, why, sizeof why);
         free(s);
         if (bad) { fprintf(stderr, "buildings: %s: %s; that part is left out\n", path, why); continue; }
+        /* its solid triangles (173q), kept in the building's own space */
+        int nt = (int)(g.nindices / 3);
+        md->solid = realloc(md->solid, sizeof(float) * 9 * (size_t)(md->nsolid + nt + 1));
+        for (int t = 0; t < nt; ++t) {
+            if ((uint32_t)t >= g.nflags || !wmo_solid(g.tri_flags[t])) continue;
+            for (int c = 0; c < 3; ++c) {
+                WmoVertex v = g.vertices[g.indices[t * 3 + c]];
+                float *o = md->solid + (size_t)md->nsolid * 9 + c * 3;
+                o[0] = v.x; o[1] = v.y; o[2] = v.z;
+            }
+            ++md->nsolid;
+        }
         md->pieces = realloc(md->pieces, sizeof *md->pieces * (md->npieces + g.nbatches + 1));
         for (int k = 0; k < g.nbatches; ++k) {
             WmoBatch bt = g.batches[k];
@@ -352,6 +372,7 @@ static void add_copy(int which, Matrix at)
     DoodadModel *md = &models[which];
     if (md->ncopies == md->cap) { md->cap = md->cap ? md->cap * 2 : 16; md->copies = realloc(md->copies, sizeof *md->copies * md->cap); }
     md->copies[md->ncopies++] = at;
+    if (solids && md->nsolid) collide_add(solids, md->solid, md->nsolid, MatrixToFloatV(at).v);
 }
 /* }}} */
 

@@ -24,10 +24,10 @@ void mover_init(Mover *m, double x, double y, double z, double o, double speed, 
  * The ground's rise per yard along x and y at (x, y), from the map
  * triangle the point lies in; 0 (no slope known) in a hole or off the
  * loaded world, where the fall logic takes over. */
-static int gradient(MoverGround ground, void *ctx, double x, double y, double *gx, double *gy)
+static int gradient(MoverGround ground, void *ctx, double x, double y, double z_top, double *gx, double *gy)
 {
     float fx, fy;
-    float z = ground(ctx, (float)x, (float)y, &fx, &fy);
+    float z = ground(ctx, (float)x, (float)y, (float)z_top, &fx, &fy);
     if (z < -10000.0f) return 0;
     *gx = fx; *gy = fy;
     return 1;
@@ -35,9 +35,13 @@ static int gradient(MoverGround ground, void *ctx, double x, double y, double *g
 /* }}} */
 
 /* {{{ mover_step */
-void mover_step(Mover *m, const MoverInput *in, double dt, MoverGround ground, void *ctx)
+void mover_step(Mover *m, const MoverInput *in, double dt, MoverGround ground, MoverWall wall, void *ctx)
 {
     double k = m->speed;
+    /* the floor she may stand on: on the ground, anything up to a step
+     * above her feet (she walks up it); in the air, only what is below
+     * her (she lands on it, never snaps up through a bridge) */
+    double reach = m->grounded ? MOVER_STEP_UP : 0.05;
 
     /* turning (A / D), unless the right button makes them strafes */
     int strafe_l = in->strafe_left  || (in->strafe_turns && in->left);
@@ -67,9 +71,18 @@ void mover_step(Mover *m, const MoverInput *in, double dt, MoverGround ground, v
         if (m->grounded) {
             double gx, gy;
             float hx, hy;
-            if (gradient(ground, ctx, nx, ny, &gx, &gy) && gx * gx + gy * gy > m->max_grad * m->max_grad
-                && ground(ctx, (float)nx, (float)ny, &hx, &hy) > m->z)
+            if (gradient(ground, ctx, nx, ny, m->z + reach, &gx, &gy) && gx * gx + gy * gy > m->max_grad * m->max_grad
+                && ground(ctx, (float)nx, (float)ny, (float)(m->z + reach), &hx, &hy) > m->z)
                 blocked = 1;
+        }
+        /* a wall: she stops short of it, and slides along it with what is
+         * left of her step once the part into the wall is taken away */
+        float wx, wy;
+        if (!blocked && wall && wall(ctx, m->x, m->y, nx, ny, m->z, &wx, &wy)) {
+            double sx = nx - m->x, sy = ny - m->y, into = sx * wx + sy * wy;
+            sx -= into * wx; sy -= into * wy;
+            nx = m->x + sx; ny = m->y + sy;
+            if (wall(ctx, m->x, m->y, nx, ny, m->z, &wx, &wy)) blocked = 1;   /* a corner: no way along */
         }
         if (!blocked) { m->x = nx; m->y = ny; }
     }
@@ -79,7 +92,7 @@ void mover_step(Mover *m, const MoverInput *in, double dt, MoverGround ground, v
      * horizontal, downhill; the speed is kept until ground it can stand on */
     if (m->grounded) {
         double gx = 0, gy = 0;
-        double g2 = gradient(ground, ctx, m->x, m->y, &gx, &gy) ? gx * gx + gy * gy : 0;
+        double g2 = gradient(ground, ctx, m->x, m->y, m->z + reach, &gx, &gy) ? gx * gx + gy * gy : 0;
         if (g2 > m->max_grad * m->max_grad) {
             double g = sqrt(g2), a = atan(g);
             double push = MOVER_GRAVITY * sin(a) * cos(a) * dt;
@@ -90,12 +103,16 @@ void mover_step(Mover *m, const MoverInput *in, double dt, MoverGround ground, v
             m->vx = 0; m->vy = 0; m->sliding = 0;
         }
     }
-    m->x += m->vx * dt;
-    m->y += m->vy * dt;
+    if (m->vx != 0 || m->vy != 0) {
+        double sx = m->x + m->vx * dt, sy = m->y + m->vy * dt;
+        float wx, wy;
+        if (wall && wall(ctx, m->x, m->y, sx, sy, m->z, &wx, &wy)) { m->vx = 0; m->vy = 0; }   /* a slide ends against a wall */
+        else { m->x = sx; m->y = sy; }
+    }
 
     /* up and down: walking along the ground, or falling, or a jump */
     float hx, hy;
-    double floor_z = ground(ctx, (float)m->x, (float)m->y, &hx, &hy);
+    double floor_z = ground(ctx, (float)m->x, (float)m->y, (float)(m->z + reach), &hx, &hy);
     if (m->grounded && in->jump) { m->grounded = 0; m->vz = MOVER_JUMP; }
     if (m->grounded) {
         if (floor_z > -10000 && floor_z >= m->z - STICK_DOWN)

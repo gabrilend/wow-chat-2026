@@ -20,12 +20,15 @@
  *   --pitch DEG       (pictures) the camera raised DEG degrees (up to 83)
  *   --clock MS        (pictures) start the world's animations MS milliseconds in
  *   --hour H          the time of day, 0 to 24 (default: this machine's clock)
+ *   --face DEG        her start facing turned DEG degrees (left)
+ *   --walk S          (pictures) hold forward for S world-seconds
  *   --pose ID MS      (pictures) hold her in animation ID (AnimationData.dbc:
  *                     0 stand, 5 run, 13 walk backwards, 38 jump ...) at MS
  */
 #include "anim.h"
 #include "camera.h"
 #include "character.h"
+#include "collide.h"
 #include "doodads.h"
 #include "figure.h"
 #include "ground.h"
@@ -130,7 +133,35 @@ static Mover  elf;
 static FollowCam view = { .yaw = (float)START_O, .pitch = 0.35f, .dist = 12.0f, .rest_pitch = 0.35f };   /* camera.h */
 static int    cam_held;                                  /* --front: the camera keeps its own heading */
 
-static float ground_at(void *ctx, float x, float y, float *gx, float *gy) { return maps_world_height((MapWorld *)ctx, x, y, gx, gy); }
+/* {{{ the ground and walls the mover asks about (173q)
+ * The floor: the map's ground or a model's floor (bridge, stair, a
+ * building's floor), whichever is higher at or below z_top; the map's
+ * ground above z_top (she is under it, in a cave or a building's
+ * cellar) doesn't count. Walls: the models' steep triangles. Her body for
+ * walls: 0.4 yards round, 2.3 tall, stepping over 1 yard (173q's open
+ * question: the original's own numbers). */
+static CollideWorld *solids;
+static float ground_at(void *ctx, float x, float y, float z_top, float *gx, float *gy)
+{
+    float tx, ty, mx, my;
+    float t = maps_world_height((MapWorld *)ctx, x, y, &tx, &ty);
+    float m = collide_floor(solids, x, y, z_top, &mx, &my);
+    /* the model's floor wins when it is higher than a usable map ground,
+     * or when the map's ground is above her (she is beneath it) */
+    int map_below = t > -10000 && t <= z_top + 0.01f;
+    if (m > -10000 && (!map_below || m > t)) { *gx = mx; *gy = my; return m; }
+    /* otherwise the map's ground, as before models: also when it lies
+     * above her and no model floor does (she lands on it, or the slope
+     * rule decides) */
+    *gx = tx; *gy = ty;
+    return t;
+}
+static int wall_at(void *ctx, double x0, double y0, double x1, double y1, double z, float *nx, float *ny)
+{
+    (void)ctx;
+    return collide_wall(solids, x0, y0, x1, y1, z, 0.4f, (float)MOVER_STEP_UP, ELF_HEIGHT, (float)elf.max_grad, nx, ny);
+}
+/* }}} */
 
 static void refresh_tiles(void)
 {
@@ -160,6 +191,8 @@ int main(int argc, char **argv)
     const char *maps = NULL, *client = NULL, *shot = NULL, *settings_file = NULL;
     int pose_id = -1;                                    /* --pose: hold her in this animation */
     double start_ms = 0;                                 /* --clock: the world's animations start this far in */
+    double face_deg = 0;                                 /* --face: her start facing turned this far (left) */
+    float  walk_s = 0;                                   /* --walk: hold forward this many world-seconds (pictures) */
     /* the time of day: the original follows the realm's clock, which is
      * real time; until the client talks to a server, this machine's own
      * (--hour H for pictures) */
@@ -179,8 +212,10 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--pose") && i + 2 < argc) { pose_id = atoi(argv[++i]); pose_ms = (float)atof(argv[++i]); }
         else if (!strcmp(argv[i], "--clock") && i + 1 < argc) start_ms = atof(argv[++i]);
         else if (!strcmp(argv[i], "--hour") && i + 1 < argc) hours = (float)atof(argv[++i]);
+        else if (!strcmp(argv[i], "--face") && i + 1 < argc) face_deg = atof(argv[++i]);
+        else if (!strcmp(argv[i], "--walk") && i + 1 < argc) walk_s = (float)atof(argv[++i]);
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S]\n"); return 2; }
 
     /* the settings: defaults, then the player's file; a line it refuses is
      * named on the terminal and skipped (173b1) */
@@ -204,7 +239,8 @@ int main(int argc, char **argv)
     strcpy(cut, "/mmaps");
     float max_slope = navmesh_slope_read(mmaps, MAP_ID, why, sizeof why);
     if (max_slope < 0) { fprintf(stderr, "%s\n", why); return 1; }
-    mover_init(&elf, START_X, START_Y, z, START_O, SPEED, max_slope);
+    mover_init(&elf, START_X, START_Y, z, START_O + face_deg * PI / 180, SPEED, max_slope);
+    view.yaw = (float)elf.o + (view.yaw - (float)START_O);   /* the camera keeps its place behind her */
     ox = floor(START_X); oy = floor(START_Y);
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
@@ -236,7 +272,8 @@ int main(int argc, char **argv)
         ++nothers;
     }
     if (ground_init(&chain, MAP_NAME, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
-    if (doodads_init(&chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    solids = collide_new(ox, oy);
+    if (doodads_init(&chain, solids, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     LightTables lights;
     if (light_open(&lights, &chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     sky_init();
@@ -248,7 +285,7 @@ int main(int argc, char **argv)
     refresh_tiles();
     int dm, dc, ds, dmov, demit;
     doodads_counts(&dm, &dc, &ds, &dmov, &demit);
-    printf("doodads: %d models (%d of them moving, %d with particles), %d placed\n", dm, dmov, demit, dc);
+    printf("doodads: %d models (%d of them moving, %d with particles), %d placed; %d solid triangles\n", dm, dmov, demit, dc, collide_count(solids));
     if (ds) printf("doodads: %d pieces left out: their picture is chosen by the game at run time (not built yet)\n", ds);
 
     MovesState moves;
@@ -273,7 +310,7 @@ int main(int argc, char **argv)
         if (wheel != 0) view.dist *= wheel > 0 ? 0.85f : 1.18f;
         view.dist = Clamp(view.dist, ZOOM_MIN, zoom_max);   /* every frame, so a lowered limit pulls the camera in at once */
         MoverInput in = {
-            .forward = IsKeyDown(KEY_W) || IsKeyDown(KEY_UP) || (drag_l && drag_r),
+            .forward = IsKeyDown(KEY_W) || IsKeyDown(KEY_UP) || (drag_l && drag_r) || (walk_s > 0 && frames * 0.05f < walk_s),
             .back = IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN),
             .left = IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT),
             .right = IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT),
@@ -283,7 +320,7 @@ int main(int argc, char **argv)
             .jump = IsKeyDown(KEY_SPACE),
         };
         double before_o = elf.o, before_x = elf.x, before_y = elf.y;
-        mover_step(&elf, &in, dt, ground_at, &world);
+        mover_step(&elf, &in, dt, ground_at, wall_at, &world);
         /* moving = she moved along the ground this frame, by any cause
          * (keys, both buttons, sliding); turning in place isn't moving */
         int moving = hypot(elf.x - before_x, elf.y - before_y) > 1e-4;
@@ -369,16 +406,18 @@ int main(int argc, char **argv)
         EndDrawing();
 
         /* --shot: after 3 world-seconds, the picture, then quit */
-        if (shot && ++frames == 60) {                     /* 3 world-seconds in: particles have filled out */
+        if (shot && ++frames == 60 + (int)(walk_s * 20)) {   /* 3 world-seconds after any walk: particles have filled out */
             Image im = LoadImageFromScreen();
             int ok = ExportImage(im, shot);
             UnloadImage(im);
             printf(ok ? "picture saved: %s\n" : "could not save the picture to %s\n", shot);
+            printf("she ended at x %.2f y %.2f z %.2f, %s\n", elf.x, elf.y, elf.z, elf.grounded ? "on the ground" : "in the air");
             break;
         }
     }
     CloseWindow();
     light_close(&lights);
+    collide_free(solids);
     figure_free(&her);
     for (int i = 0; i < nothers; ++i) figure_free(&others[i]);
     mpq_chain_close(&chain);

@@ -34,12 +34,23 @@ typedef struct {
     int strafe_turns;                 /* the right mouse button: A and D strafe */
 } MoverInput;
 
-/* The ground at (x, y): height (below -10000 for none: a hole, or the edge
- * of the loaded world), and its rise per yard along x and along y. */
-typedef float (*MoverGround)(void *ctx, float x, float y, float *gx, float *gy);
+/* The ground at (x, y): the highest surface at or below `z_top` (the
+ * map's ground, or a model's floor: a bridge, a stair, 173q), its height
+ * (below -10000 for none: a hole, or the edge of the loaded world), and
+ * its rise per yard along x and along y. */
+typedef float (*MoverGround)(void *ctx, float x, float y, float z_top, float *gx, float *gy);
+
+/* Walls (173q): whether a step from (x0, y0) to (x1, y1), feet at z,
+ * runs into something too steep to stand on; if so, its facing along the
+ * ground in (nx, ny). NULL: no walls (the map's ground alone). */
+typedef int (*MoverWall)(void *ctx, double x0, double y0, double x1, double y1, double z, float *nx, float *ny);
+
+/* how high a ledge she walks up without jumping (173q; the original's own
+ * number is not yet measured) */
+#define MOVER_STEP_UP  1.0
 
 /* max_slope: degrees, the steepest walkable ground (navmesh_slope_read). */
 void mover_init(Mover *m, double x, double y, double z, double o, double speed, double max_slope);
-void mover_step(Mover *m, const MoverInput *in, double dt, MoverGround ground, void *ctx);
+void mover_step(Mover *m, const MoverInput *in, double dt, MoverGround ground, MoverWall wall, void *ctx);
 
 #endif
