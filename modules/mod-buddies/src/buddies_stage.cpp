@@ -254,7 +254,7 @@ static void Remake(Player* bot, uint32 owner, uint8 profile, uint8 role)
     bot->resetTalents(true);
 
     uint32 lessons = BuddyLearnEverything(bot);
-    std::string problems = BuddyGiveStartingKit(bot, owner, BuddyPlanMainTree(profile));
+    std::string problems = BuddyGiveStartingKit(bot, owner, profile);   // its gear by talent shape (617r2)
     problems += BuddyGemKit(bot, profile, role);       // its sockets filled, as at its making (617j2)
     bot->SaveToDB(false, false);
     // with its owner again; written directly, so a second login can't remake it twice

@@ -366,10 +366,9 @@ static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
     QueryResult plan = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE owner = {} AND slot = {}", owner, slot);
     uint8 profile = plan ? (*plan)[0].Get<uint8>() : 0;
     uint8 role    = plan ? (*plan)[1].Get<uint8>() : 0;
-    int8 mainTree = BuddyPlanMainTree(profile);
     // the starting kit: white gear, food (and drink), level x 1 silver,
     // bags like the owner's (617a4); made now, before the first save
-    std::string kitProblems = BuddyGiveStartingKit(buddy, owner, mainTree);
+    std::string kitProblems = BuddyGiveStartingKit(buddy, owner, profile);   // its gear by talent shape (617r2)
     if (!kitProblems.empty())
         LOG_ERROR("module", "mod-buddies: new buddy {} for owner {} (level {}), starting kit incomplete: {}",
             name, owner, buddy->GetLevel(), kitProblems);

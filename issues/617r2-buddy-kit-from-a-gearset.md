@@ -20,7 +20,41 @@ Verbatim, 2026-10-05:
 
 ## Current Behavior
 
-Not built. A buddy chosen at Sargobras is made by the buddy module
+**Built 2026-10-05; module syntax-checked against the build's own
+compile commands; not yet rebuilt or run.** Needs the owner's rebuild
+(the buddy module changed) and an install (E052).
+
+- `scripts/translate-buddy-kit-to-gearset` (Lua) applies the old rules
+  offline and writes `src/lua-basic/data/gearsets/buddy-white.lua`: 1300
+  records (10 classes x 10 shapes x 13 level brackets: 2, 5, 10 ... 60),
+  from the 266 white vendor armour and weapon items between required
+  levels 2 and 60, in a third of a second. Items are scored by the bot
+  module's own per-tree stat weights (`acore_playerbots_basic.
+  playerbots_weightscale*`), weighted by the shape's thirds. None of the
+  266 carries a stat, so today the score sees armour and weapon damage
+  only; the shape's weights matter once a record names better items.
+- `scripts/generate-gearset-sql` writes every profile into
+  `sql/basic/db_world.src/33-gearsets.apply.sql` (tables
+  `gearset_profile`, `gearset_item`; 11150 rows), install step E052.
+- The buddy module (`buddies_kit.cpp`): the gear step reads the
+  buddy's `buddy-white` record (class x 100 + shape, the highest level at
+  or below its own) and equips it; a missing record is logged in full.
+  The live chooser (`WANTS`, the candidate sort) is gone; `.buddy kit`
+  re-kits from the profile by the buddy's shape. Creation and the
+  stage remake pass the roster's shape.
+- Kept for now, for the owner to retire: `buddies_kit_tiers.h` and
+  `scripts/generate-buddy-kit-tiers`, still the source of install step
+  E048's SQL (46 starter items' required level lowered to 20). The
+  module no longer reads the header.
+- What the old rules can't give, the profile doesn't have either: no
+  white cloak is sold anywhere (so no cloak in any record), and level 40
+  plate classes wear level-32 mail until plate appears at 45. Both are
+  for hand curation (617r5).
+- Checked by `scripts/test-gearsets`: every class and shape has records
+  from level 2; every item white, sold, wearable at its record's level,
+  fitting, suiting the class; the E052 SQL equals what the profiles make.
+
+Before this: a buddy chosen at Sargobras is made by the buddy module
 (`buddies_create.cpp`), which gives its kit (`buddies_kit.cpp`): the gear
 step chooses each slot live from the world database (white vendor items
 of the buddy's last five levels, never required level 0 or 1, heaviest

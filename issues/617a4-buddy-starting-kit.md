@@ -9,6 +9,11 @@
 
 ## Current Behavior
 
+**The gear step moved to a gearset, 2026-10-05 (617r2).** The gear below
+is no longer chosen live: the same rules were written out once as the
+`buddy-white` gearset profile, which the buddy module now reads (install
+step E052). Bags, food and money are as described here.
+
 **Changed again 2026-10-03, syntax-checked, not yet built.** Seen in game:
 level-40 paladin buddies in mail with a cloth hat, no cloak and no weapon
 (the owner: "Can we make sure they have cloaks as well? Also, none of them

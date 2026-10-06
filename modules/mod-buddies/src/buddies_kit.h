@@ -12,15 +12,15 @@
 
 class Player;
 
-// Gives the kit to a buddy just made (before its first save). `mainTree` is
-// its talent plan's main tree (0-2, in the talent window's order; -1 with
-// no plan), which picks its weapons. Returns what could not be given, empty
-// when all is well, for the caller to log.
-std::string BuddyGiveStartingKit(Player* buddy, uint32 ownerGuid, int8 mainTree);
+// Gives the kit to a buddy just made (before its first save). `shape` is
+// its talent shape (1-10, buddy_roster.profile), which with its class and
+// level finds its gear in the "buddy-white" gearset (617r2). Returns what
+// could not be given, empty when all is well, for the caller to log.
+std::string BuddyGiveStartingKit(Player* buddy, uint32 ownerGuid, uint8 shape);
 
 // Gives an existing buddy, in the world, the kit's gear for its level now
 // (".buddy kit <name>"): the same choosing, replacing what it wears.
 // Returns what could not be given.
-std::string BuddyRegear(Player* buddy, int8 mainTree);
+std::string BuddyRegear(Player* buddy, uint8 shape);
 
 #endif

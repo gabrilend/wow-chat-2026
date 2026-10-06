@@ -1,0 +1,305 @@
+#!/usr/bin/env luajit
+-- translate-buddy-kit-to-gearset
+--
+-- What it is: the bridge from the buddy module's old way of dressing a
+-- new buddy to a gearset profile (issue 617r2). Until now the buddy module
+-- chose every slot live when a buddy was made (buddies_kit.cpp, GiveGear):
+-- white items some vendor sells, from the buddy's last five levels, never
+-- required level 0 or 1, the heaviest armour the class wears, and weapons
+-- by the talent plan's main tree. This applies the same rules here, once,
+-- for every class, talent shape and level bracket, and writes the answers
+-- as the profile src/lua-basic/data/gearsets/buddy-white.lua, which the
+-- buddy module then reads instead (and which can be looked at in the
+-- gallery, 617r5, and changed by hand). Run again to regenerate; removed
+-- once the profile is curated by hand (owner, 2026-10-05).
+--
+-- One addition to the old rules (owner, 2026-10-05: "a ret paladin who has
+-- half a tree of holy would want spellpower, while a ret paladin who has
+-- half a tree of prot would want dodge and parry"): within a slot, items
+-- are scored by the bot module's own stat weights for each talent tree
+-- (acore_playerbots_basic.playerbots_weightscale*), each tree counted by
+-- its share of the shape, as buddies already score loot (617j). White
+-- vendor gear carries no stats, so today the score sees armour and weapon
+-- damage only; stats count as soon as a profile names better items.
+--
+-- Usage: scripts/translate-buddy-kit-to-gearset [PROJECT_DIR] [MAX_LEVEL]
+
+-- {{{ configuration
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local MAX_LEVEL = tonumber(arg[2] or "") or 60          -- basic's level cap (C006)
+local MYSQL  = DIR .. "/mysql/installed-files/bin/mysql"
+local WORLD  = "acore_world_basic"
+local BOTS   = "acore_playerbots_basic"
+local OUT    = DIR .. "/src/lua-basic/data/gearsets/buddy-white.lua"
+local TD     = dofile(DIR .. "/src/lua-basic/data/buddy-talent-data.lua")
+
+local WINDOW, LOWEST = 5, 2                             -- buddies_kit.cpp's KIT_WINDOW_LEVELS, KIT_LOWEST_LEVEL
+-- the levels a record starts at: 2, then every five (5, 10, ... MAX_LEVEL);
+-- a record's items need no more than its own level, so all of them are
+-- wearable for the whole bracket. Level 1 has none: a level-1 buddy keeps
+-- the outfit the game dresses a new character in (617a4).
+local BRACKETS = { 2 }
+for l = 5, MAX_LEVEL, 5 do BRACKETS[#BRACKETS + 1] = l end
+-- }}}
+
+-- {{{ the game's rules (3.3.5a), as tables
+-- races each class can be (WotLK), as a mask of race bits
+local CLASS_RACES = {
+    [1] = { 1, 2, 3, 4, 5, 6, 7, 8, 10, 11 }, [2] = { 1, 3, 10, 11 }, [3] = { 2, 3, 4, 6, 8, 10, 11 },
+    [4] = { 1, 2, 3, 4, 5, 7, 8, 10 }, [5] = { 1, 3, 4, 5, 8, 10, 11 }, [6] = { 1, 2, 3, 4, 5, 6, 7, 8, 10, 11 },
+    [7] = { 2, 6, 8, 11 }, [8] = { 1, 5, 7, 8, 10, 11 }, [9] = { 1, 2, 5, 7, 10 }, [11] = { 4, 6 },
+}
+local function set(...) local t = {} for _, v in ipairs({ ... }) do t[v] = true end return t end
+-- weapon subclasses a class can learn (a buddy learns them all, 617n)
+local WEAPONS = {
+    [1] = set(0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 13, 15, 16, 18), [2] = set(0, 1, 4, 5, 6, 7, 8),
+    [3] = set(0, 1, 2, 3, 6, 7, 8, 10, 13, 15, 16, 18),        [4] = set(0, 2, 3, 4, 7, 13, 15, 16, 18),
+    [5] = set(4, 10, 15, 19),                                  [6] = set(0, 1, 4, 5, 6, 7, 8),
+    [7] = set(0, 1, 4, 5, 10, 13, 15),                         [8] = set(7, 10, 15, 19),
+    [9] = set(7, 10, 15, 19),                                  [11] = set(4, 5, 6, 10, 13, 15),
+}
+-- the heaviest armour a class wears at a level (1 cloth ... 4 plate): plate
+-- and mail are trained at 40
+local function armour_max(class, level)
+    if class == 1 or class == 2 then return level >= 40 and 4 or 3 end
+    if class == 6 then return 4 end
+    if class == 3 or class == 7 then return level >= 40 and 3 or 2 end
+    if class == 4 or class == 11 then return 2 end
+    return 1
+end
+local SHIELD_CLASSES = set(1, 2, 7)
+-- dual wield: warriors and hunters from 20, rogues from 10, death knights
+-- always; shamans by the Enhancement talent (a shape at least two-thirds
+-- Enhancement, from 40)
+local function dual_wield(class, level, thirds)
+    if class == 1 or class == 3 then return level >= 20 end
+    if class == 4 then return level >= 10 end
+    if class == 6 then return true end
+    if class == 7 then return thirds[2] >= 2 and level >= 40 end
+    return false
+end
+-- inventory type -> the equipment slots it may go in (hands handled apart)
+local ARMOUR_SLOTS = { [1] = { 0 }, [2] = { 1 }, [3] = { 2 }, [5] = { 4 }, [20] = { 4 }, [6] = { 5 }, [7] = { 6 },
+                       [8] = { 7 }, [9] = { 8 }, [10] = { 9 }, [11] = { 10, 11 }, [12] = { 12, 13 }, [16] = { 14 } }
+-- }}}
+
+-- {{{ the weapons a plan wants (buddies_kit.cpp WANTS, as it was 2026-10-05)
+local K = { TWO = "two", ONE = "one", OFF = "off", DAGGER = "dagger", STAFF = "staff", SHIELD = "shield",
+            HELD = "held", SHOOTER = "shooter", WAND = "wand" }
+local function W(main, off, ranged) return { main = main, off = off, ranged = ranged } end
+local WANTS = {
+    [1]  = { W({ K.TWO, K.ONE }, {}, K.SHOOTER), W({ K.ONE, K.TWO }, { K.OFF }, K.SHOOTER), W({ K.ONE }, { K.SHIELD }, K.SHOOTER) },
+    [2]  = { W({ K.ONE }, { K.SHIELD, K.HELD }), W({ K.ONE }, { K.SHIELD }), W({ K.TWO, K.ONE }, {}) },
+    [3]  = { W({ K.TWO, K.ONE }, {}, K.SHOOTER), W({ K.TWO, K.ONE }, {}, K.SHOOTER), W({ K.TWO, K.ONE }, {}, K.SHOOTER) },
+    [4]  = { W({ K.DAGGER, K.ONE }, { K.DAGGER, K.OFF }, K.SHOOTER), W({ K.ONE, K.DAGGER }, { K.OFF, K.DAGGER }, K.SHOOTER),
+             W({ K.DAGGER, K.ONE }, { K.DAGGER, K.OFF }, K.SHOOTER) },
+    [5]  = { W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND), W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND), W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND) },
+    [6]  = { W({ K.TWO }, {}), W({ K.ONE, K.TWO }, { K.OFF }), W({ K.TWO }, {}) },
+    [7]  = { W({ K.ONE }, { K.SHIELD, K.HELD }), W({ K.ONE, K.TWO }, { K.OFF, K.SHIELD }), W({ K.ONE }, { K.SHIELD, K.HELD }) },
+    [8]  = { W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND), W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND), W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND) },
+    [9]  = { W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND), W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND), W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND) },
+    [11] = { W({ K.STAFF, K.ONE }, { K.HELD }), W({ K.TWO, K.STAFF }, {}), W({ K.STAFF, K.ONE }, { K.HELD }) },
+}
+local function is_kind(f, k)
+    local weapon = f.class == 2
+    if k == K.TWO     then return weapon and f.inv == 17 end
+    if k == K.ONE     then return weapon and (f.inv == 13 or f.inv == 21) end
+    if k == K.OFF     then return weapon and (f.inv == 13 or f.inv == 22) end
+    if k == K.DAGGER  then return weapon and f.sub == 15 end
+    if k == K.STAFF   then return weapon and f.sub == 10 end
+    if k == K.SHIELD  then return f.class == 4 and f.sub == 6 end
+    if k == K.HELD    then return f.inv == 23 end
+    if k == K.SHOOTER then return weapon and (f.sub == 2 or f.sub == 3 or f.sub == 18) end
+    if k == K.WAND    then return weapon and f.sub == 19 end
+    return false
+end
+-- }}}
+
+-- {{{ local function query
+local function query(db, sql)
+    local pipe = assert(io.popen(string.format("MYSQL_PWD=menardi '%s' -h127.0.0.1 -P3307 -uritz -N -B %s -e \"%s\" 2>&1", MYSQL, db, sql)))
+    local rows = {}
+    for line in pipe:lines() do
+        if line:match("^ERROR") then error("MySQL: " .. line .. " (is it running? scripts/start-mysql)") end
+        local row = {}
+        for field in (line .. "\t"):gmatch("([^\t]*)\t") do row[#row + 1] = field end
+        rows[#rows + 1] = row
+    end
+    pipe:close()
+    return rows
+end
+-- }}}
+
+-- {{{ the candidates: white armour and weapons some vendor sells
+local STAT_NAME = { [3] = "agi", [4] = "str", [5] = "int", [6] = "spi", [7] = "sta", [12] = "defrtng", [13] = "dodgertng",
+                    [14] = "parryrtng", [15] = "blockrtng", [31] = "hitrtng", [32] = "critstrkrtng", [36] = "hastertng",
+                    [37] = "exprtng", [38] = "atkpwr", [43] = "manargn", [44] = "armorpenrtng", [45] = "splpwr", [48] = "block" }
+local items = {}
+do
+    local cols = { "it.entry", "it.name", "it.class", "it.subclass", "it.InventoryType", "it.RequiredLevel", "it.ItemLevel",
+                   "it.AllowableClass", "it.AllowableRace", "it.armor", "it.dmg_min1", "it.dmg_max1", "it.delay" }
+    for i = 1, 10 do cols[#cols + 1] = "it.stat_type" .. i; cols[#cols + 1] = "it.stat_value" .. i end
+    for _, r in ipairs(query(WORLD, "SELECT DISTINCT " .. table.concat(cols, ", ") ..
+        " FROM item_template it JOIN npc_vendor v ON v.item = it.entry WHERE it.Quality = 1 AND it.class IN (2, 4)" ..
+        " AND it.RequiredLevel BETWEEN " .. LOWEST .. " AND " .. MAX_LEVEL)) do
+        local f = { id = tonumber(r[1]), name = r[2], class = tonumber(r[3]), sub = tonumber(r[4]), inv = tonumber(r[5]),
+                    req = tonumber(r[6]), ilvl = tonumber(r[7]), allow_class = tonumber(r[8]), allow_race = tonumber(r[9]),
+                    armor = tonumber(r[10]), stats = {} }
+        local delay = tonumber(r[13])
+        f.dps = (delay > 0) and ((tonumber(r[11]) + tonumber(r[12])) / 2) / (delay / 1000) or 0
+        for i = 0, 9 do
+            local t, v = tonumber(r[14 + i * 2]), tonumber(r[15 + i * 2])
+            if v ~= 0 and STAT_NAME[t] then f.stats[STAT_NAME[t]] = (f.stats[STAT_NAME[t]] or 0) + v end
+        end
+        items[#items + 1] = f
+    end
+end
+-- }}}
+
+-- {{{ the stat weights: class -> tree position -> { stat = weight }
+-- the bot module's scales by class, in each class's tree order (a scale
+-- per tree; druid feral is the tank scale, death knight frost the dps one)
+local SCALE_OF = { [1] = { 1, 2, 3 }, [2] = { 4, 5, 6 }, [3] = { 7, 8, 9 }, [4] = { 10, 11, 12 }, [5] = { 13, 14, 15 },
+                   [6] = { 16, 17, 19 }, [7] = { 20, 21, 22 }, [8] = { 23, 24, 25 }, [9] = { 26, 27, 28 }, [11] = { 29, 30, 31 } }
+local scale = {}
+for _, r in ipairs(query(BOTS, "SELECT id, field, val FROM playerbots_weightscale_data")) do
+    local id = tonumber(r[1])
+    scale[id] = scale[id] or {}
+    scale[id][r[2]] = tonumber(r[3])
+end
+local function score(f, class, thirds)
+    local s = 0
+    for i = 1, 3 do
+        local w = scale[SCALE_OF[class][i]] or {}
+        local part = f.armor * (w.armor or 0) / 100
+        for stat, v in pairs(f.stats) do part = part + v * (w[stat] or 0) end
+        if f.class == 2 then part = part + f.dps * ((f.sub == 2 or f.sub == 3 or f.sub == 18) and (w.rgddps or 0) or (w.mledps or 0)) end
+        s = s + part * thirds[i] / 3
+    end
+    return s
+end
+-- }}}
+
+-- {{{ local function usable
+-- Can a buddy of this class wear the item at this level, whatever its race?
+local function usable(f, class, level, thirds)
+    if f.req > level then return false end
+    if f.allow_class ~= -1 and f.allow_class ~= 0 and bit.band(f.allow_class, bit.lshift(1, class - 1)) == 0 then return false end
+    if f.allow_race ~= -1 and f.allow_race ~= 0 then
+        for _, race in ipairs(CLASS_RACES[class]) do
+            if bit.band(f.allow_race, bit.lshift(1, race - 1)) == 0 then return false end
+        end
+    end
+    if f.class == 2 then
+        if not WEAPONS[class][f.sub] then return false end
+        if f.inv == 22 and not dual_wield(class, level, thirds) then return false end
+    elseif f.class == 4 then
+        if f.sub == 6 then return SHIELD_CLASSES[class] == true end
+        if f.sub >= 1 and f.sub <= 4 and f.sub > armour_max(class, level) then return false end
+        if f.sub > 6 then return false end                       -- relics: not in the old rules
+    end
+    return true
+end
+-- }}}
+
+-- {{{ local function dress
+-- The record for one class, shape and level, by the old rules.
+local function dress(class, shape_id, level)
+    local thirds = TD.classes[class].shapes[shape_id].thirds
+    local lowest = math.max(LOWEST, level - (WINDOW - 1))
+    local all = {}
+    for _, f in ipairs(items) do
+        if usable(f, class, level, thirds) then all[#all + 1] = { f = f, s = score(f, class, thirds) } end
+    end
+    -- the window first, then heavier armour (same inventory type), then the
+    -- shape's score, then higher level, item level, lower id
+    table.sort(all, function(a, b)
+        local wa, wb = a.f.req >= lowest, b.f.req >= lowest
+        if wa ~= wb then return wa end
+        local ha = a.f.class == 4 and a.f.sub or 0
+        local hb = b.f.class == 4 and b.f.sub or 0
+        if ha ~= hb and a.f.inv == b.f.inv then return ha > hb end
+        if math.abs(a.s - b.s) > 1e-9 then return a.s > b.s end
+        if a.f.req ~= b.f.req then return a.f.req > b.f.req end
+        if a.f.ilvl ~= b.f.ilvl then return a.f.ilvl > b.f.ilvl end
+        return a.f.id < b.f.id
+    end)
+    local rec = {}
+    local function hand(f) return f.class == 2 or f.inv == 14 or f.inv == 23 end
+    for _, c in ipairs(all) do
+        local slots = not hand(c.f) and ARMOUR_SLOTS[c.f.inv]
+        if slots then
+            for _, slot in ipairs(slots) do
+                if not rec[slot] then rec[slot] = c.f; break end
+            end
+        end
+    end
+    -- weapons: the plan's main tree (the largest third; the first on a tie)
+    local main_tree = 1
+    for i = 2, 3 do if thirds[i] > thirds[main_tree] then main_tree = i end end
+    local w = WANTS[class][main_tree]
+    local function take(slot, kinds)
+        for _, k in ipairs(kinds) do
+            for _, c in ipairs(all) do
+                if is_kind(c.f, k) and not (slot == 16 and k == K.OFF and not dual_wield(class, level, thirds)) then
+                    rec[slot] = c.f
+                    return c.f
+                end
+            end
+        end
+    end
+    local main = take(15, w.main)
+    if not main or main.inv ~= 17 then take(16, w.off) end
+    if w.ranged then take(17, { w.ranged }) end
+    return rec
+end
+-- }}}
+
+-- {{{ write the profile
+local o = {}
+local function wr(s) o[#o + 1] = s end
+wr("--------------------------------------------------------------------------------")
+wr("-- data/gearsets/buddy-white.lua (issue 617r2) - a gearset profile")
+wr("--")
+wr("-- What a buddy is made wearing: white vendor gear, by class and talent shape")
+wr("-- and level bracket. GENERATED by scripts/translate-buddy-kit-to-gearset from")
+wr("-- the buddy module's old dressing rules (plus the shape's stat weights); the")
+wr("-- buddy module reads it (through the gearset_item table, scripts/generate-")
+wr("-- gearset-sql). Edit by hand freely once the owner retires the translator;")
+wr("-- until then a re-run overwrites hand edits. Shape: lib/gearsets.info.md.")
+wr("--------------------------------------------------------------------------------")
+wr("")
+wr("return {")
+wr('    name    = "buddy-white",')
+wr('    keys    = { "shape", "level" },')
+wr("    records = {")
+local SLOTNAME = { [0] = "head", "neck", "shoulders", "shirt", "chest", "waist", "legs", "feet", "wrists",
+                   "hands", "finger", "finger", "trinket", "trinket", "back", "main hand", "off hand", "ranged" }
+local classes, count = {}, 0
+for class in pairs(WANTS) do classes[#classes + 1] = class end
+table.sort(classes)
+for _, class in ipairs(classes) do
+    for shape_id, shape in ipairs(TD.classes[class].shapes) do
+        wr(string.format("        [%d] = {   -- %s, %s", class * 100 + shape_id, TD.classes[class].name, shape.label))
+        for _, level in ipairs(BRACKETS) do
+            local rec = dress(class, shape_id, level)
+            wr(string.format("            [%d] = { items = {", level))
+            for slot = 0, 17 do
+                local f = rec[slot]
+                if f then wr(string.format("                [%2d] = %5d,   -- %-9s %s (level %d)", slot, f.id, SLOTNAME[slot], f.name, f.req)) end
+            end
+            wr("            } },")
+            count = count + 1
+        end
+        wr("        },")
+    end
+end
+wr("    },")
+wr("}")
+local f = assert(io.open(OUT, "w"))
+f:write(table.concat(o, "\n") .. "\n")
+f:close()
+print(string.format("wrote %s: %d records (%d classes x 10 shapes x %d brackets), from %d white vendor items",
+    OUT, count, #classes, #BRACKETS, #items))
+-- }}}

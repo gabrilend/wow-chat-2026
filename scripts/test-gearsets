@@ -333,6 +333,54 @@ do
 end
 -- }}}
 
+-- {{{ buddy-white: what buddies are made wearing (617r2)
+print("")
+print("The buddy-white profile")
+do
+    local bw = dofile(DIR .. "/src/lua-basic/data/gearsets/buddy-white.lua")
+    check(table.concat(bw.keys, ",") == "shape,level", "buddy-white is keyed by shape, then level")
+    local missing, records, ids, seen_b = 0, 0, {}, {}
+    for class, c in pairs(TD.classes) do
+        for shape in ipairs(c.shapes) do
+            local by_level = bw.records[class * 100 + shape]
+            if not by_level or not by_level[2] then missing = missing + 1 end
+            for _, rec in pairs(by_level or {}) do
+                records = records + 1
+                for _, id in pairs(rec.items) do if not seen_b[id] then seen_b[id] = true; ids[#ids + 1] = id end end
+            end
+        end
+    end
+    check(missing == 0, "every class and talent shape has records from level 2 (" .. records .. " records)")
+    local bf = {}
+    for _, r in ipairs(query("SELECT it.entry, it.Quality, it.InventoryType, it.class, it.subclass, it.AllowableClass, it.RequiredLevel," ..
+        " (SELECT COUNT(*) FROM npc_vendor v WHERE v.item = it.entry) FROM item_template it WHERE it.entry IN (" .. table.concat(ids, ",") .. ")")) do
+        bf[tonumber(r[1])] = { quality = tonumber(r[2]), inv = tonumber(r[3]), class = tonumber(r[4]), sub = tonumber(r[5]),
+                               allow = tonumber(r[6]), req = tonumber(r[7]), sold = tonumber(r[8]) }
+    end
+    local bad = 0
+    for key, by_level in pairs(bw.records) do
+        local class = math.floor(key / 100)
+        for level, rec in pairs(by_level) do
+            for slot, id in pairs(rec.items) do
+                local f = bf[id]
+                local ok = f and f.quality == 1 and f.sold > 0 and f.req <= level and f.req >= 2
+                    and SLOT_FITS[slot] and SLOT_FITS[slot][f.inv]
+                    and (f.allow == -1 or bit.band(f.allow, bit.lshift(1, class - 1)) ~= 0)
+                    and (f.class ~= ITEM_CLASS_WEAPON or WEAPONS[class][f.sub])
+                    and (f.class ~= ITEM_CLASS_ARMOR or ARMOR[class][f.sub])
+                if not ok then bad = bad + 1; if bad <= 10 then print(string.format("  FAIL: shape key %d level %d slot %d item %d", key, level, slot, id)) end end
+            end
+        end
+    end
+    check(bad == 0, "every item is white, sold by a vendor, wearable at its record's level (2 or more), fits its slot and suits its class")
+    local pipe = io.popen(DIR .. "/scripts/generate-gearset-sql " .. DIR .. " --stdout")
+    local made = pipe:read("*a"); pipe:close()
+    local f = io.open(DIR .. "/sql/basic/db_world.src/33-gearsets.apply.sql")
+    local disk = f and f:read("*a"); if f then f:close() end
+    check(made == disk, "the gearset SQL on disk (install step E052) is exactly what the profiles make")
+end
+-- }}}
+
 -- {{{ the vanilla starter kit
 print("")
 print("The vanilla starter kit profile")
