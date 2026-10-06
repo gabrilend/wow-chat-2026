@@ -754,6 +754,30 @@ anim_done:
             free(em);
             anim_free(&a);
         }
+        /* two-picture pieces and moving pictures (173n): the aurora */
+        {
+            size_t ml, sl;
+            unsigned char *am = mpq_chain_read(&pc, "Environments\\Stars\\AuroraYellowGreen.m2", &ml, &from);
+            unsigned char *as = mpq_chain_read(&pc, "Environments\\Stars\\AuroraYellowGreen00.skin", &sl, &from);
+            M2Model aur;
+            Anim aan;
+            if (am && as && !m2_read(am, ml, as, sl, &aur, why, sizeof why) && !anim_read(am, ml, &aan, why, sizeof why)) {
+                int two = 0, moving = -1;
+                for (uint32_t u = 0; u < aur.nunits; ++u) {
+                    if (aur.units[u].layers == 2 && aur.units[u].tex[1] >= 0) ++two;
+                    if (moving < 0 && aur.units[u].uvanim[1] >= 0) moving = aur.units[u].uvanim[1];
+                    if (moving < 0 && aur.units[u].uvanim[0] >= 0) moving = aur.units[u].uvanim[0];
+                }
+                float m0[4], m1[4];
+                anim_uv(&aan, moving, anim_find(&aan, 0, 0), 0, 0, m0);
+                anim_uv(&aan, moving, anim_find(&aan, 0, 0), 5000, 5000, m1);
+                snprintf(line, sizeof line, "the aurora: %d of its pieces lay two pictures, and a picture slides over time (%.3f, %.3f then %.3f, %.3f)", two, m0[0], m0[1], m1[0], m1[1]);
+                check(two > 0 && moving >= 0 && (m0[0] != m1[0] || m0[1] != m1[1]), line);
+                m2_free(&aur);
+                anim_free(&aan);
+            } else check(0, "the aurora model reads");
+            free(am); free(as);
+        }
         /* camera-facing bones (173g's flat halos): the street lamp's glow */
         s = mpq_chain_read(&pc, "World\\Generic\\NightElf\\Passive Doodads\\Lamps\\KalidarStreetLamp02.m2", &len, &from);
         Anim lamp;
