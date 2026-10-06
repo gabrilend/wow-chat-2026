@@ -191,6 +191,20 @@ void adt_place_matrix(const AdtPlace *p, double ox, double oy, float m[16]);
  * building's own place. */
 void adt_inside_matrix(const float building[16], const float pos[3], const float quat[4], float scale, float m[16]);
 
+/* A map's low-detail heights (its .wdl, 173s): per tile (tile x * 64 +
+ * tile y) a 17 x 17 grid of corner heights (rows south, columns east, as
+ * the ground files run), 16 rows of 16 hole bits (lowest bit the first
+ * column), and whether the tile has any. Layout: MAOF, 4096 file offsets
+ * (0 none), each to an MARE block (17 x 17 corners, then 16 x 16 centres,
+ * signed 16-bit yards) followed by MAHO (the holes). About 2.5 MB:
+ * allocate it. */
+typedef struct {
+    int16_t  heights[4096][17 * 17];
+    uint16_t holes[4096][16];
+    uint8_t  have[4096];
+} AdtWdl;
+int adt_wdl_read(const unsigned char *s, size_t len, AdtWdl *out, char *why, int why_len);
+
 /* MCVT index of corner (row 0-8, col 0-8) and centre (row 0-7, col 0-7). */
 static inline int adt_corner(int row, int col) { return row * 17 + col; }
 static inline int adt_centre(int row, int col) { return row * 17 + 9 + col; }

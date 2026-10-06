@@ -29,8 +29,9 @@ to, could we build the entire continent?"
     away from the sun.
   - The far plane now reaches the horizon (7 tiles out).
   - At the Crossroads the far mountains stand as blue-grey silhouettes.
-  - There's no check in the test program yet: the reader sits with the
-    drawing (it needs a window); a split would let the tests reach it.
+  - The reader is `adt_wdl_read` (`adt.c`, no window needed). Test: the
+    low-detail map covers 988 of Kalimdor's tiles, and its corner at
+    Astranaar's tile agrees with the full ground within 1.5 yards.
 
 - **What drops:** `refresh_tiles` (`main.c`) drops every tile more than
   one tile beyond the loaded 3 x 3. Each part forgets what the tile

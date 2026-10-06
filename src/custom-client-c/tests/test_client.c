@@ -532,6 +532,20 @@ int main(int argc, char **argv)
             check(painted, "the blend maps hold soft edges, not only all-or-nothing");
             adt_free(t);
         }
+        /* the far horizon (173s): the low-detail map agrees with the full
+         * ground at Astranaar's tile's corner */
+        s = mpq_chain_read(&gc, "World\\Maps\\Kalimdor\\Kalimdor.wdl", &len, &from);
+        AdtWdl *wdl = malloc(sizeof *wdl);
+        if (!s || adt_wdl_read(s, len, wdl, why, sizeof why)) check(0, s ? why : "Kalimdor.wdl is in the archives");
+        else {
+            int tiles = 0;
+            for (int i = 0; i < 4096; ++i) tiles += wdl->have[i];
+            float corner = wdl->heights[26 * 64 + 32][0];
+            snprintf(line, sizeof line, "Kalimdor's low-detail map covers %d tiles; at Astranaar's tile's corner it says %.0f, the full ground 164.69", tiles, corner);
+            check(tiles > 900 && fabsf(corner - 164.69f) < 1.5f, line);
+        }
+        free(wdl);
+        free(s);
         s = mpq_chain_read(&gc, "World\\Maps\\Northrend\\Northrend_30_20.adt", &len, &from);
         bad = !s || adt_read(s, len, 1, t, why, sizeof why);
         free(s);

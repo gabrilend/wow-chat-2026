@@ -294,6 +294,27 @@ int adt_read(const unsigned char *s, size_t len, int big_alpha, AdtTile *out, ch
             }
     return 0;
 }
+/* {{{ adt_wdl_read */
+int adt_wdl_read(const unsigned char *s, size_t len, AdtWdl *out, char *why, int why_len)
+{
+    memset(out, 0, sizeof *out);
+    size_t maof = 0;
+    for (size_t at = 0; at + 8 <= len && at + 8 + u32(s, at + 4) <= len; at += 8 + u32(s, at + 4))
+        if (is_tag(s, at, "MAOF")) { maof = at + 8; break; }
+    if (!maof || maof + 4096 * 4 > len) { snprintf(why, why_len, "no tile list (MAOF)"); return 1; }
+    for (int i = 0; i < 4096; ++i) {
+        uint32_t o = u32(s, maof + (size_t)i * 4);
+        if (!o || (size_t)o + 8 + 1090 > len || !is_tag(s, o, "MARE")) continue;
+        for (int k = 0; k < 17 * 17; ++k) out->heights[i][k] = (int16_t)(s[o + 8 + k * 2] | s[o + 9 + k * 2] << 8);
+        size_t h = o + 8 + 1090;
+        if (h + 8 + 32 <= len && is_tag(s, h, "MAHO"))
+            for (int r = 0; r < 16; ++r) out->holes[i][r] = (uint16_t)(s[h + 8 + r * 2] | s[h + 9 + r * 2] << 8);
+        out->have[i] = 1;
+    }
+    return 0;
+}
+/* }}} */
+
 /* {{{ adt_place_matrix */
 static void mul3(const float a[9], const float b[9], float out[9])
 {
