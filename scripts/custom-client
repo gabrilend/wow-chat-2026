@@ -9,7 +9,8 @@
 # Usage: scripts/custom-client [PROJECT_DIR] [--shot]
 #   --shot   draw a few frames, save a picture to
 #            tmp/shared-memory/custom-client-shot.png, and quit (a check
-#            that it draws; the window shows for a moment).
+#            that it draws; the window shows for a moment). After it:
+#            --zoom N (camera N yards off), --front (looking at her face).
 
 # {{{ set_dir
 DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
@@ -23,9 +24,15 @@ command -v love > /dev/null || { echo "ERROR: LÖVE (the 'love' program) is not 
 MAPS="${DIR}/data-files/maps"
 [[ -d "${MAPS}" ]] || { echo "ERROR: ${MAPS} missing: the server's extracted maps (scripts/extract-maps)"; exit 1; }
 
-ARGS=(--maps "${MAPS}")
+# the original 3.3.5a client's Data folder: her model and its pictures
+# come out of its archives (read in place, nothing copied)
+CLIENT="${CLIENT:-/mnt/dile/ritz/games/World of Warcraft 3.3.5a/Data}"
+[[ -f "${CLIENT}/common.MPQ" ]] || { echo "ERROR: ${CLIENT} has no common.MPQ: set CLIENT to the 3.3.5a client's Data folder"; exit 1; }
+
+ARGS=(--maps "${MAPS}" --client "${CLIENT}")
 if [[ "${1:-}" == "--shot" ]]; then
+    shift
     mkdir -p "${DIR}/tmp/shared-memory"
-    ARGS+=(--shot "${DIR}/tmp/shared-memory/custom-client-shot.png")
+    ARGS+=(--shot "${DIR}/tmp/shared-memory/custom-client-shot.png" "$@")   # then any picture options (--zoom N, --front)
 fi
 exec love "${DIR}/src/custom-client" "${ARGS[@]}"

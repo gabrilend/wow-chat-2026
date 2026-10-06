@@ -24,6 +24,8 @@ local Mover  = require("lib.mover")
 local Mat4   = require("lib.mat4")
 local Ground = require("lib.ground-mesh")
 local NavmeshSlope = require("lib.navmesh-slope")
+local Mpq       = require("lib.mpq")
+local Character = require("lib.character")
 
 -- {{{ settings
 local MAP_ID      = 1                                 -- Kalimdor
@@ -32,14 +34,16 @@ local SPEED       = 1.2                               -- 120% of the base speeds
 local TILE_REACH  = 1                                  -- tiles drawn round her own: 3 x 3
 local SKY         = { 0.52, 0.66, 0.78 }
 local ELF_HEIGHT  = 2.3                                -- yards, a night elf's height
-local ELF_WIDTH   = 0.7
+-- her look: ChrRaces id, sex, and the character-creation choices (from 0)
+local LOOK        = { race = 4, sex = 1, skin = 0, face = 0, hair_style = 0, hair_color = 0 }
 local ZOOM_MIN, ZOOM_MAX = 2.0, 40.0
 -- }}}
 
 local world, elf, origin
 local tiles_drawn = {}                                 -- tile key -> mesh (or false)
 local cam = { yaw = START.o, pitch = 0.35, dist = 12.0 }
-local shader, elf_mesh
+local shader, model_shader
+local elf_draws                                         -- her pieces: { mesh, texture } each
 local dragging = { left = false, right = false }
 local shot = { path = nil, frames = 0 }                 -- --shot: picture after a few frames, then quit
 
@@ -55,28 +59,56 @@ local function data_dir()
 end
 -- }}}
 
--- {{{ local function make_elf_mesh
--- The stand-in: an upright box her height, a pale point on her front so
--- her facing shows. Built at the origin, facing +x; moved each frame.
-local function make_elf_mesh()
-    local w, h = ELF_WIDTH / 2, ELF_HEIGHT
-    local verts = {}
-    local function quad(a, b, c, d, n, col)
-        for _, p in ipairs({ a, b, c, a, c, d }) do
-            verts[#verts + 1] = { p[1], p[2], p[3], n[1], n[2], n[3], col[1], col[2], col[3], 1 }
+
+-- {{{ local function client_data_dir
+-- The original game client's Data folder (its MPQ archives): given on the
+-- command line (--client DIR). Required: there is no stand-in any more.
+local function client_data_dir()
+    for i, a in ipairs(arg or {}) do
+        if a == "--client" and arg[i + 1] then return arg[i + 1] end
+    end
+    error("no --client DIR given: the 3.3.5a client's Data folder, where her model comes from (scripts/custom-client passes it)")
+end
+-- }}}
+
+-- {{{ local function make_elf_draws
+-- Her model (lib/character.lua) as LÖVE meshes: one mesh holding every
+-- corner point, drawn piece by piece with each piece's own picture.
+local MODEL_FORMAT = {
+    { "VertexPosition", "float", 3 },
+    { "VertexNormal",   "float", 3 },
+    { "VertexTexCoord", "float", 2 },
+}
+local function make_elf_draws()
+    local ch = Character.build(Mpq.chain(client_data_dir(), "enUS"), LOOK)
+    local m = ch.model
+    local textures = {}
+    for kind, img in pairs(ch.images) do
+        local data = love.image.newImageData(img.width, img.height, "rgba8", img.rgba)
+        textures[kind] = love.graphics.newImage(data, { mipmaps = true })
+        textures[kind]:setFilter("linear", "linear")
+        textures[kind]:setWrap("repeat", "repeat")
+    end
+    local shown = {}
+    for _, p in ipairs(m.pieces) do shown[p] = true end
+    local draws = {}
+    for _, u in ipairs(m.units) do
+        local piece = m.pieces_all and m.pieces_all[u.piece]
+        local tex = m.textures[u.texture]
+        -- a unit names a piece by its place in the full list; keep those shown
+        if piece and shown[piece] and textures[tex.kind] then
+            local verts = {}
+            for i = piece.first + 1, piece.first + piece.count do
+                local v = m.vertices[m.indices[i] ]
+                verts[#verts + 1] = { v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8] }
+            end
+            local mesh = love.graphics.newMesh(MODEL_FORMAT, verts, "triangles", "static")
+            mesh:setTexture(textures[tex.kind])
+            draws[#draws + 1] = mesh
         end
     end
-    local body = { 0.45, 0.30, 0.62 }                  -- night-elf violet
-    local p = { {-w,-w,0},{w,-w,0},{w,w,0},{-w,w,0},{-w,-w,h},{w,-w,h},{w,w,h},{-w,w,h} }
-    quad(p[1],p[2],p[6],p[5], {0,-1,0}, body)
-    quad(p[2],p[3],p[7],p[6], {1,0,0},  body)
-    quad(p[3],p[4],p[8],p[7], {0,1,0},  body)
-    quad(p[4],p[1],p[5],p[8], {-1,0,0}, body)
-    quad(p[5],p[6],p[7],p[8], {0,0,1},  body)
-    -- her front: a pale patch where her face is
-    local f = { 0.92, 0.88, 0.95 }
-    quad({w+0.01,-0.15,h-0.45},{w+0.01,0.15,h-0.45},{w+0.01,0.15,h-0.15},{w+0.01,-0.15,h-0.15}, {1,0,0}, f)
-    return love.graphics.newMesh(Ground.FORMAT, verts, "triangles", "static")
+    if #draws == 0 then error("her model has nothing to draw: no shown piece has a picture") end
+    return draws
 end
 -- }}}
 
@@ -136,10 +168,40 @@ function love.load()
             return vec4(mix(c, u_sky, fog), 1.0);
         }
     ]])
-    elf_mesh = make_elf_mesh()
+    model_shader = love.graphics.newShader([[
+        uniform mat4 u_proj;
+        uniform mat4 u_view;
+        uniform mat4 u_model;
+        attribute vec3 VertexNormal;
+        varying vec3 v_normal;
+        varying float v_dist;
+        vec4 position(mat4 transform_projection, vec4 vertex_position) {
+            vec4 world = u_model * vertex_position;
+            v_normal = mat3(u_model) * VertexNormal;
+            vec4 eye = u_view * world;
+            v_dist = length(eye.xyz);
+            return u_proj * eye;
+        }
+    ]], [[
+        uniform vec3 u_sky;
+        varying vec3 v_normal;
+        varying float v_dist;
+        vec4 effect(vec4 color, Image tex, vec2 tc, vec2 sc) {
+            vec4 t = Texel(tex, tc);
+            if (t.a < 0.5) discard;                     // hair strands and other cut-outs
+            vec3 sun = normalize(vec3(0.45, 0.30, 0.84));
+            float light = max(dot(normalize(v_normal), sun), 0.0) * 0.6 + 0.45;
+            float fog = clamp((v_dist - 120.0) / 520.0, 0.0, 1.0);
+            return vec4(mix(t.rgb * light, u_sky, fog), 1.0);
+        }
+    ]])
+    elf_draws = make_elf_draws()
     refresh_tiles()
     for i, a in ipairs(arg or {}) do
         if a == "--shot" then shot.path = arg[i + 1] end
+        -- for pictures: --zoom N puts the camera N yards off, --front looks at her face
+        if a == "--zoom" then cam.dist = tonumber(arg[i + 1]) end
+        if a == "--front" then cam.yaw = START.o + math.pi; cam.pitch = 0.1; cam.held = true end
     end
 end
 -- }}}
@@ -165,7 +227,7 @@ function love.update(dt)
     local before = elf.o
     Mover.step(elf, input_now(), dt, function(x, y) return world:height(x, y) end)
     -- the camera follows her turns (as the game's does) unless it is held
-    if not dragging.left then cam.yaw = cam.yaw + (elf.o - before) end
+    if not dragging.left and not cam.held then cam.yaw = cam.yaw + (elf.o - before) end
     refresh_tiles()
     love.window.setTitle(string.format("Everland Ghostsong  -  Ashenvale  x %.1f  y %.1f  z %.1f", elf.x, elf.y, elf.z))
 end
@@ -222,7 +284,12 @@ function love.draw()
     end
     local c, s = math.cos(elf.o), math.sin(elf.o)
     shader:send("u_model", "row", { {c,-s,0,hx}, {s,c,0,hy}, {0,0,1,elf.z}, {0,0,0,1} })
-    love.graphics.draw(elf_mesh)
+    love.graphics.setShader(model_shader)
+    model_shader:send("u_proj", "row", Mat4.perspective(math.rad(60), w / h, 0.3, 1600))
+    model_shader:send("u_view", "row", Mat4.look_at({ cx, cy, cz }, { hx, hy, hz }, { 0, 0, 1 }))
+    model_shader:send("u_sky", SKY)
+    model_shader:send("u_model", "row", { {c,-s,0,hx}, {s,c,0,hy}, {0,0,1,elf.z}, {0,0,0,1} })
+    for _, mesh in ipairs(elf_draws) do love.graphics.draw(mesh) end
 
     love.graphics.setShader()
     love.graphics.setDepthMode()
