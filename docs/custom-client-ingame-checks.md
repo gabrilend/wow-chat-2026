@@ -36,6 +36,11 @@ that issue and strike it here (keep the line, so the history stays).
    his hooves right? Are the two skin layers the client's tables name but
    its files lack (scalp, and a hair picture) visible as patches?
 
+8c. **Starting outfits** (173p): she wears a fresh night-elf hunter's
+    clothes and the tauren a fresh warrior's. Do they match a new
+    character's in the original? (The axe is held in her hand: the
+    original sheathes it on her back out of combat; sheathing isn't
+    built.)
 8a. **The tauren's beard and hooves** (173d): he wears facial-hair
     choice 1. Does it look like that choice in the original's character
     creation, and are his bare hooves the same?

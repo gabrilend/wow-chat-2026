@@ -429,6 +429,21 @@ int main(int argc, char **argv)
         snprintf(line, sizeof line, "a facial-hair choice the table lacks is refused, naming it (%.80s)", refused ? why : "built");
         check(refused && strstr(why, "facial-hair choice 99"), line);
         if (!refused) character_free(&tc);
+        /* starting outfits (173p): a fresh night-elf hunter woman wears the
+         * table's shirt, trousers, boots and axe; her bow, quiver and arrows
+         * have no slot here; a tauren warrior man his shirt, trousers, axe */
+        {
+            int hunter[SLOT_COUNT] = { 0 }, warrior[SLOT_COUNT] = { 0 };
+            int ok1 = !character_start_outfit(&chain, 4, 3, 1, hunter, why, sizeof why);
+            int ok2 = !character_start_outfit(&chain, 6, 1, 0, warrior, why, sizeof why);
+            int filled = 0;
+            for (int k = 0; k < SLOT_COUNT; ++k) filled += hunter[k] != 0;
+            snprintf(line, sizeof line, "a fresh night-elf hunter wears shirt %d, trousers %d, boots %d, axe %d and nothing else (%d slots)",
+                     hunter[SLOT_SHIRT], hunter[SLOT_LEGS], hunter[SLOT_FEET], hunter[SLOT_MAIN_HAND], filled);
+            check(ok1 && hunter[SLOT_SHIRT] == 9976 && hunter[SLOT_LEGS] == 9975 && hunter[SLOT_FEET] == 9977 && hunter[SLOT_MAIN_HAND] == 22291 && filled == 4, line);
+            check(ok2 && warrior[SLOT_SHIRT] == 9995 && warrior[SLOT_LEGS] == 9988 && warrior[SLOT_MAIN_HAND] == 8690, "a fresh tauren warrior wears his shirt, trousers and axe");
+            check(character_start_outfit(&chain, 4, 2, 1, hunter, why, sizeof why) != 0 && strstr(why, "class 2"), "a race and class with no outfit (a night-elf paladin) is refused, named");
+        }
         /* a creature's look (173t) may use a choice players can't: an
          * Astranaar sentinel's facial-hair 10 (a night-elf woman's rows stop
          * at 9) takes the race's choice-0 pieces, keeping her eye glow;

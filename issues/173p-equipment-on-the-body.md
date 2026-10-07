@@ -65,6 +65,18 @@ character models to be done. Where are we at with equipment and such?"
   5 and 1, the hood hides her hair, and the hood's _NiF model is in the
   archives.
 
+**Starting outfits (2026-10-06).** The owner: "can we give each character
+some equipment so they aren't naked?" `character_start_outfit` reads the
+client's starting-outfit table (CharStartOutfit.dbc: race, class, sex as
+bytes in field 2, then 24 items, 24 looks, 24 slot kinds) and fills a
+look's slots by kind; bows, guns, thrown weapons, ammunition, bags and
+food have no slot and are left out. She wears a fresh hunter's (shirt,
+trousers, boots, axe: `HER_CLASS` in `main.c`), the tauren bystander a
+fresh warrior's (shirt, trousers, axe). `--wear` now lays single slots
+over her outfit. Townsfolk already wear theirs (173t). Tests: the
+hunter's four looks, the warrior's three, and a race and class with no
+outfit refused.
+
 **Left:**
 - Items' own animations and particles (glowing weapons).
 - Sheathing (weapons on the back or hip when not fighting).

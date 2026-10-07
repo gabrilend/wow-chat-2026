@@ -25,7 +25,7 @@
  *   --walk S          (pictures) hold forward for S world-seconds
  *   --dive S          (pictures) then hold X (swim down) for S world-seconds
  *   --wait S          (pictures) then wait S world-seconds more
- *   --wear SLOT:LOOK,...  dress her: each slot's item look (ItemDisplayInfo id),
+ *   --wear SLOT:LOOK,...  dress her, over her starting outfit: each slot's item look (ItemDisplayInfo id),
  *                     e.g. chest:41143,hands:41138,legs:41140,waist:41476,feet:41480
  *   --goto X Y        (pictures) one world-second in, move her to world (X, Y)
  *   --map ID X Y      start on map ID (Map.dbc: 0 Eastern Kingdoms, 1 Kalimdor,
@@ -80,7 +80,9 @@ static double start_x = 2717.0, start_y = -400.0;       /* Astranaar, Ashenvale 
 #define ZOOM_BASE    20.0f                             /* yards; times cameraDistanceMaxFactor (1 to 2) is the zoom-out limit (173b4) */
 /* her look: ChrRaces id, sex, and the character-creation choices (from 0);
  * a stand-in for the ids the server will send (173d, 617r5) */
-static CharacterLook LOOK = { 4, 1, 0, 0, 0, 0, { 0 }, 0, 0 };   /* --wear dresses her (173p) */
+static CharacterLook LOOK = { 4, 1, 0, 0, 0, 0, { 0 }, 0, 0 };
+#define HER_CLASS 3                                       /* she wears a fresh hunter's outfit (CharStartOutfit; 3 hunter, 11 druid ...); --wear changes single slots over it */
+static int WEAR_OVER[SLOT_COUNT];                        /* --wear's choices, laid over her starting outfit (173p) */
 
 /* {{{ static wear_option: "--wear chest:41143,hands:41138": slot names to
  * item looks (ItemDisplayInfo ids); 0 on success, else the bad part */
@@ -96,7 +98,7 @@ static int wear_option(const char *text, char *bad, int bad_len)
         int slot = -1;
         if (colon) { *colon = '\0'; for (int k = 0; k < SLOT_COUNT; ++k) if (!strcmp(part, SLOT_NAMES[k])) slot = k; }
         if (slot < 0 || atoi(colon + 1) <= 0) { snprintf(bad, bad_len, "%s", part); return 1; }
-        LOOK.items[slot] = atoi(colon + 1);
+        WEAR_OVER[slot] = atoi(colon + 1);
     }
     return 0;
 }
@@ -155,11 +157,12 @@ static const struct {
     int display;                      /* a creature's display */
     float ahead, left;                /* yards from her start */
     int facial_hair;                  /* a character's facial-hair choice (173d) */
+    int class_id;                     /* a character's class: it wears that class's starting outfit (173p) */
 } BYSTANDERS[] = {
-    { 6, 0, 0,   9.0f,  -4.0f, 1 },   /* a tauren man, bearded */
-    { 0, 0, 145, 10.0f,  1.0f, 0 },   /* a furbolg */
-    { 0, 0, 860, 14.0f,  7.0f, 0 },   /* the ancient protector */
-    { 0, 0, 321, 7.0f,   5.0f, 0 },   /* a nightsaber */
+    { 6, 0, 0,   9.0f,  -4.0f, 1, 1 },   /* a tauren man, bearded, a fresh warrior */
+    { 0, 0, 145, 10.0f,  1.0f, 0, 0 },   /* a furbolg */
+    { 0, 0, 860, 14.0f,  7.0f, 0, 0 },   /* the ancient protector */
+    { 0, 0, 321, 7.0f,   5.0f, 0, 0 },   /* a nightsaber */
 };
 #define NBYSTANDERS ((int)(sizeof BYSTANDERS / sizeof BYSTANDERS[0]))
 static Figure her;
@@ -406,6 +409,9 @@ int main(int argc, char **argv)
     SetExitKey(KEY_NULL);                                /* Escape is read in the loop, so it can open the game menu later */
     Shader model_sh  = LoadShaderFromMemory(GROUND_VS, MODEL_FS);
     if (mpq_chain_open(&chain, client, "enUS", why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    /* her clothes: a fresh character's of her race and class, then any --wear on top */
+    if (character_start_outfit(&chain, LOOK.race, HER_CLASS, LOOK.sex, LOOK.items, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    for (int k = 0; k < SLOT_COUNT; ++k) if (WEAR_OVER[k]) LOOK.items[k] = WEAR_OVER[k];
     if (figure_from_character(&her, &chain, &LOOK, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     static const int NEEDED[] = { MOVE_STAND, MOVE_RUN, MOVE_WALK_BACK, MOVE_SHUFFLE_LEFT, MOVE_SHUFFLE_RIGHT, MOVE_JUMP_START, MOVE_JUMP, MOVE_JUMP_END, MOVE_FALL };
     for (unsigned i = 0; i < sizeof NEEDED / sizeof NEEDED[0]; ++i)
@@ -415,6 +421,10 @@ int main(int argc, char **argv)
     for (int i = 0; i < NBYSTANDERS; ++i) {
         Figure *f = &others[nothers];
         CharacterLook look = { BYSTANDERS[i].race, BYSTANDERS[i].sex, 0, 0, 0, 0, { 0 }, BYSTANDERS[i].facial_hair, 0 };
+        if (BYSTANDERS[i].race && character_start_outfit(&chain, look.race, BYSTANDERS[i].class_id, look.sex, look.items, why, sizeof why)) {
+            fprintf(stderr, "bystander %d left out: %s\n", i, why);
+            continue;
+        }
         int bad = BYSTANDERS[i].race ? figure_from_character(f, &chain, &look, why, sizeof why)
                                      : figure_from_display(f, &chain, BYSTANDERS[i].display, why, sizeof why);
         if (bad) { fprintf(stderr, "bystander %d left out: %s\n", i, why); continue; }

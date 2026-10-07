@@ -54,6 +54,15 @@ typedef struct {
     BlpImage cape;                         /* texture kind 2: the cloak's picture (width 0 when none) */
 } Character;
 
+/* A fresh character's clothes and weapons: the client's starting-outfit
+ * table (CharStartOutfit.dbc) row for race, class (ChrClasses id: 1
+ * warrior, 3 hunter, 11 druid ...) and sex, its items' looks put into
+ * `items` by the kind of slot each fills. Slots it doesn't fill are left
+ * as they were. Ranged weapons (bows, guns, thrown), ammunition, bags and
+ * food have no slot here and are left out. 0, or -1 with `why` (no such
+ * row). */
+int  character_start_outfit(MpqChain *archives, int race, int class_id, int sex, int items[SLOT_COUNT], char *why, int why_len);
+
 int  character_build(MpqChain *archives, const CharacterLook *look, Character *out, char *why, int why_len);
 void character_free(Character *c);
 

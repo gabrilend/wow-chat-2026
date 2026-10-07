@@ -302,6 +302,47 @@ static int wear(MpqChain *archives, const CharacterLook *look, Character *out, i
 }
 /* }}} */
 
+/* {{{ character_start_outfit
+ * CharStartOutfit.dbc (3.3.5a, 296 bytes a row): 0 id; 4-7 race, class,
+ * sex, outfit (a byte each); 8 24 item ids; 104 24 item looks
+ * (ItemDisplayInfo ids); 200 24 inventory types; unused entries -1 or 0.
+ * The inventory type says the slot: 1 head, 3 shoulders, 4 shirt, 5
+ * chest and 20 robe, 6 waist, 7 legs, 8 feet, 9 wrists, 10 hands, 16
+ * back, 19 tabard; 13 one-hand, 17 two-hand and 21 main hand to the main
+ * hand; 14 shield, 22 off hand and 23 held to the off hand. The rest (15
+ * bow, 25 thrown, 26 gun, 24 ammunition, 18 bag, 0 food and stones) have
+ * no slot here. */
+int character_start_outfit(MpqChain *archives, int race, int class_id, int sex, int items[SLOT_COUNT], char *why, int why_len)
+{
+    static const int SLOT_OF[27] = {
+        [1] = SLOT_HEAD, [3] = SLOT_SHOULDERS, [4] = SLOT_SHIRT, [5] = SLOT_CHEST, [20] = SLOT_CHEST, [6] = SLOT_WAIST,
+        [7] = SLOT_LEGS, [8] = SLOT_FEET, [9] = SLOT_WRISTS, [10] = SLOT_HANDS, [16] = SLOT_BACK, [19] = SLOT_TABARD,
+        [13] = SLOT_MAIN_HAND, [17] = SLOT_MAIN_HAND, [21] = SLOT_MAIN_HAND, [14] = SLOT_OFF_HAND, [22] = SLOT_OFF_HAND, [23] = SLOT_OFF_HAND,
+    };
+    static const int HAS_SLOT[27] = { [1] = 1, [3] = 1, [4] = 1, [5] = 1, [20] = 1, [6] = 1, [7] = 1, [8] = 1, [9] = 1, [10] = 1, [16] = 1, [19] = 1,
+                                      [13] = 1, [17] = 1, [21] = 1, [14] = 1, [22] = 1, [23] = 1 };
+    size_t len;
+    unsigned char *t = mpq_chain_read(archives, "DBFilesClient\\CharStartOutfit.dbc", &len, NULL);
+    Dbc d;
+    char w2[300];
+    if (!t || dbc_open(&d, t, len, w2, sizeof w2)) { free(t); snprintf(why, why_len, "CharStartOutfit: %s", t ? w2 : "not in the archives"); return -1; }
+    int found = 0;
+    for (uint32_t r = 0; r < d.rows && !found; ++r) {
+        uint32_t packed = dbc_u32(&d, r, 2);              /* race, class, sex, outfit: a byte each, lowest first */
+        if ((int)(packed & 0xff) != race || (int)(packed >> 8 & 0xff) != class_id || (int)(packed >> 16 & 0xff) != sex) continue;
+        found = 1;
+        for (uint32_t k = 0; k < 24; ++k) {
+            uint32_t look = dbc_u32(&d, r, 27 + k), kind = dbc_u32(&d, r, 51 + k);
+            if (look == 0 || look == 0xffffffffu || kind >= 27 || !HAS_SLOT[kind]) continue;
+            items[SLOT_OF[kind]] = (int)look;
+        }
+    }
+    free(t);
+    if (!found) { snprintf(why, why_len, "no starting outfit for race %d class %d sex %d in CharStartOutfit", race, class_id, sex); return -1; }
+    return 0;
+}
+/* }}} */
+
 /* {{{ character_build */
 int character_build(MpqChain *archives, const CharacterLook *look, Character *out, char *why, int why_len)
 {
