@@ -266,11 +266,13 @@ the tree is consistent before anything selects the new name.
 - **(2026-10-07, answered)** Do vanilla and release keep their names?
   Vanilla does. Release becomes `starter-edition` (Revised Direction,
   2026-10-07).
-- **(2026-10-07)** The installed tree `installed-files-release/` holds
-  tracked files. House rule: a directory is moved only when both the old
-  and the new version are tracked in git. Is the rename done as a `git mv`
-  of the tree (history follows), or is the tree rebuilt by an install
-  under the new name and the old one removed?
+- **(2026-10-07, answered)** The installed tree `installed-files-release/`
+  holds three tracked files (the default settings templates). Move it
+  with `git mv`, or rebuild it? Rebuild: "let's rebuild to test that the
+  pipeline works correctly." An install under the new name creates
+  `installed-files-starter-edition/` from nothing. That proves the
+  pipeline resolves the new name everywhere. The old tree is removed in
+  a later commit, after the new one is tracked.
 - **(2026-09-23, superseded 2026-10-07)** Vanilla and release are
   left alone for now (owner: "we're not really working on vanilla and
   release right now so let's just leave them alone"). This issue stays open,

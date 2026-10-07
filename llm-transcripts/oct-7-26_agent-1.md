@@ -1,6 +1,6 @@
 # Conversation Summary: ee3e437d-85af-485c-8ed0-8478da64add8
 
-Generated on: 2026-10-07 10:06:20
+Generated on: 2026-10-07 10:12:50
 Models: claude-opus-5-5
 
 ## Contents
@@ -533,6 +533,144 @@ It now says it's the client's half of 176a and that its questions live there.
 One thing to check: 176 belongs to the other session working on cc-test. I added
 one line to it saying where the test-patch system now lives, and nothing else in
 that file changed.
+
+--------------------------------------------------------------------------------
+
+### User Request 4
+
+okey dokey now can we work on abilities maybe?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 4
+
+> **[Asked the user]**
+>
+> *Q1 — Abilities:* Which "abilities" should we work on?
+> - Client: casting & action bar — Custom client: an action bar (173b10), her
+>   spells read from the game's own files, casting plays the cast animation and
+>   the spell's particles. All local, no server; I can build and test it myself.
+>   Note: networking moves to the W client, so this would move with it (173v).
+> - Server: ability tomes — 405 / 155q: abilities learned from tomes instead
+>   of trainers. Partly built; needs your server builds and in-game checks.
+> - Server: ability scaling — 715 linear ability scaling (no rank jumps)
+>   and/or 148w (mage arrives at 20 with an empty spellbook). Server-side; your
+>   builds and in-game checks.
+> - Server: true ability tooltips — 719: tooltips that show the server's real
+>   numbers (custom spells, changed coefficients). Needs client-side display
+>   too.
+> → **Selected:** Client: casting & action bar
+
+> Casting and the action bar it is. Reading the action-bar issue and anything on
+> spells and interface drawing in the client.
+
+> No issue exists yet for the client's action bars or casting (173b10 only
+> covers their settings and says so). Checking how far the interface drawing
+> (173c) has got, since the bar needs it.
+
+> Planning this as a new client sub-issue. First, what she is (class) and
+> whether the spell tables are readable already.
+
+> Before writing the plan I need three decisions from you.
+
+**[Asked the user]**
+
+*Q1 — Her class:* She's a night elf hunter today, and a hunter's early spells
+are mostly instant (Auto Shot, Aspects, Tracking), so casting shows little.
+Which class should her first spellbook be?
+- Druid (Recommended) — Night elf druid: Wrath and Healing Touch have cast
+  times, cast animations and visible spell effects; Rejuvenation and Mark of the
+  Wild are instant. Shows the most of casting. Her outfit becomes a druid's.
+- Keep hunter — Auto Shot, Serpent Sting, Arcane Shot, Aspects. Mostly
+  instant; tests the bar and cooldowns more than casting.
+- Selectable (--class) — A picture/run option picks the class; druid by
+  default. A little more work, but every class can be checked.
+→ *(no answer recorded)*
+
+*Q2 — Spellbook:* With no server yet, where does her list of known spells come
+from?
+- Game files by level (Recommended) — Everything her class learns up to a
+  chosen level, read from the client's own tables (SkillLineAbility: class,
+  level learned). No server needed; replaced by the server's list once
+  networking exists.
+- Server's world database — Generated from the world database (starting spells
+  + trainer lists), like the creature list (173t). Closest to what the server
+  teaches.
+- A hand-written list — A short fixed list in the code, e.g. from
+  docs/class-spells-level-1-20.md.
+→ *(no answer recorded)*
+
+*Q3 — Targets:* There's no combat or server, so what does a cast land on?
+- Bystanders as targets (Recommended) — Tab or a click targets a bystander or
+  creature; a cast faces it, its missile flies to it and its impact plays there.
+  Nothing takes damage. Self-cast spells land on her.
+- No targets yet — Casts play her animations, the cast bar and the effects at
+  her hands only; anything needing a target lands in front of her.
+→ *(no answer recorded)*
+
+--------------------------------------------------------------------------------
+
+### User Request 5
+
+[Request interrupted by user for tool use]
+
+--------------------------------------------------------------------------------
+
+### User Request 6
+
+oh, let's build the server interface first. Question, can you see the W client
+at ../custom-client? Does it have stuff we could work on? If so, I'm going to
+move you over there, let me know if you see potentials. We're going to merge
+this custom client into that one ASAP, is there an issue file for that here? If
+so, can we work on that instead?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 6
+
+Yes, I can see `../custom-client`, and yes, there's a merge issue here: **173v
+(moving to its own project)**. All 11 of its questions are answered, so it can
+be worked on now.
+
+**What the W client has:**
+- **Documents 000–012:** vision, architecture, technology stack, network
+  protocol, rendering, interface, audio, build, roadmap.
+- **Issues for phases 1–3** (foundation, rendering, world geometry), all
+  pending. Phases 4–11 exist only as roadmap headings and their phase-demo
+  files.
+- **No code:** `src/` is empty.
+
+Almost every pending W-client issue in phases 1–3 has already been built here,
+in C: the archive reader, data tables, pictures, window, camera, ground,
+buildings, light and sky, streaming. So there's little to *build* there that
+isn't merge work. The value is in landing this client's code there.
+
+**The merge (173v), as its answers set it:**
+1. Rewrite the W client's documents from three sources: this client, the W
+   client's own plans, and `world-edit-to-execute`. That third project has 119
+   issues and its own Lua code, including an archive reader and networking.
+   Where two sources built the same thing, pick one and record why. This happens
+   before any code moves.
+2. Write a crosswalk table from each file and 173 issue here to the W-client
+   issue it fills.
+3. Copy the code over with reading-order numbered file names, a bash build
+   script, our own archive reader, and system zlib. Run the tests before and
+   after, and compare pictures pixel for pixel.
+4. Move the scripts and documents, rewrite the W-client issues' current-behavior
+   sections, and add pointers from the 173 issues.
+
+**Two cautions:**
+- **Another session wrote those 11 answers today** (commits `9a6b049` and
+  `db4a569`). It may already be doing the merge, so check with it before you
+  send me over, or we'll both rewrite the same documents.
+- **"The server interface" means networking,** and 176 decided networking gets
+  built in the W client *after* the move. So the order is the merge first, then
+  the login and world connection there.
+
+If you move me over, I'd start with step 1: read the three projects' documents
+and draft the W client's rewritten ones. Do you want the merged documents
+drafted as one big change, or one W-client document at a time with you reading
+each?
 
 --------------------------------------------------------------------------------
 

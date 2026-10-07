@@ -859,12 +859,21 @@ Verbatim:
 - **How sharp a height step counts as an obstacle** (0.6 yards beyond the
   slope around it here), and **the planner's weights** (a yard costs
   1 + 6 × grade²; road 60%).
-- **Gnome body width**: the gnome models have no entry in the server's
-  model table; use the client's model data, or a set width?
-- **Road grid**: build the terrain-texture extractor, and which texture
-  names count as road?
-- **Rails for meta-pathing**: use playerbots' travel network (recommended)
-  or our own?
+- (Answered 2026-10-07) **Gnome body width**: measure it in the original
+  client: "we can measure from the regular client somehow. Maybe with a
+  test-scene and lua?" A cc-test scene (176) puts a gnome beside an
+  obstacle, and a Lua script records how close it can stand. The custom
+  client's reading of the gnome model's bounds is compared with that
+  measurement before either is trusted.
+- (Answered 2026-10-07) **Road grid**: not from texture names. "sometimes
+  those textures are used elsewhere. Sometimes they're used in large
+  squares, and not as roads. Sometimes a different texture is used. It's
+  not a sustainable solution." Roads come instead from the world
+  perception map (618), which looks at the world through the custom
+  client. Until then the planner has no road data, and the road weight
+  stays in the model only.
+- (Answered 2026-10-07) **Rails for meta-pathing**: playerbots' travel
+  network ("use it").
 - **The pull toward openings**: keep it (always, once a lap), make it a
   chance, or instead let the bearing wobble a few degrees so the ten
   bearings drift round over time?
@@ -873,7 +882,16 @@ Verbatim:
 - **Straight-and-orbit walker or planner**: the planner replaces the orbit
   walker in game (it finds obstacles itself); keep the orbit walker only
   as the drawing's comparison?
-- **Uniform share or even coverage**: a uniform share along the bearing
-  puts half the waypoints in the inner quarter of the area; a share drawn
-  as the square root of a uniform number would cover the area evenly but
-  lose the "hug the center" runs the owner described.
+- (Answered 2026-10-07) **Uniform share or even coverage**: an even wash.
+  The owner, asked what an hour of one buddy's footprints in a round
+  meadow would look like: "I'd expect to see something closest to an
+  even wash. The idea is that we run around the ring unless we are pulled
+  close to the center, then we pierce through and reverse our direction.
+  Also, when running around the ring, we don't stay at an even radius -
+  we move up and down incrementally with each incremental arc around the
+  circle." So the Y rule's walk (1..20 points at a time) stays as it is,
+  but a waypoint's distance from the centre becomes the edge distance
+  times the square root of Y's share, not Y's share itself. Each ring of
+  the meadow then gets waypoints in proportion to its size, while low Y
+  still brings the buddy near the centre to pierce through. To check: a
+  footprint painting of both rules side by side in the gallery.
