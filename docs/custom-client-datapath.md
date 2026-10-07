@@ -48,10 +48,13 @@ Each frame, in this order (`main.c`):
    - `water.c` and `liquid.c`;
    - `doodads.c`: copies, solid shapes into `collide.c`, buildings'
      pools into `water.c` and `liquid.c`.
-   Each tile also brings its creatures (`creatures.c` finds them,
-   `figure.c` builds each: a creature model, or a townsperson as a
+   Creatures (`creatures.c` finds them in the loaded tiles) are built as
+   they come within 110 yards, a few a frame, and freed beyond 130
+   (`figure.c` builds each: a creature model, or a townsperson as a
    dressed character with a baked skin).
-   Tiles left behind are dropped from all of them (173s).
+   Tiles left behind are dropped from all of them (173s). A second
+   thread (`prefetch.c`) reads the next ring of tiles' files ahead, into
+   the archive reader's memory (173u).
 2. **Input and movement:**
    - the mouse drags the camera and the wheel zooms it, all the way in
      to first person (`camera.c`);
@@ -69,7 +72,12 @@ Each frame, in this order (`main.c`):
 4. **Light:** `light.c` gives the light at her place and hour. View
    distance and being underwater adjust the fog. Every shader is handed
    the light (`sky_light_shader`).
-5. **Drawing**, back to front:
+5. **Drawing**, back to front. The processor decides what and where;
+   the graphics card bends and paints (173u, checklist:
+   `docs/custom-client-optimization-checklist.md`): pieces outside the
+   camera's view are skipped (`sight.c`), figures and moving doodads are
+   bent in their shaders from small bone pictures sent each frame,
+   pictures go to the card compressed (`texture.c`):
    - the sky dome and skybox (`sky.c`, `doodads_draw_skybox`);
    - the painted ground with its shadows (`ground.c`);
    - her and the figures (`figure.c`): solid pieces, then glowing and
