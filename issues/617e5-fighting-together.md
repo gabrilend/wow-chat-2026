@@ -143,7 +143,9 @@ Owner, 2026-09-27, verbatim:
   sections." In an instance, "within reach" means the ally is in the
   same section of the instance (810's parallel routes, such as Blackrock
   Depths' three parties of five) and can be walked to, not merely seen.
-  An ally fighting on another route is left to its own party.
+  An ally fighting on another route is left to its own party, even 20
+  yards away across the boundary (the owner: "they should ignore it. This
+  will be very uncommon"). Where a section's edge lies is 810's question.
 - **Taking on more**: a buddy judges whether it can handle one more
   monster (its health, the monsters' levels and number, its role), and if
   so pulls the next one near.

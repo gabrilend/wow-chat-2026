@@ -951,7 +951,11 @@ Verbatim:
     the stop nearest where its survey ended and walks the whole loop, so
     every buddy passes every stop, spaced out like runners on a track.
     A buddy that catches up with the one ahead on the loop (after a
-    fight, say) skips past it to the next stop, so they don't bunch.
+    fight, say) skips past it to the next stop, or turns round and walks
+    the loop the other way (the owner: "or reverses direction maybe. You
+    can always just * -1 one of the arguments too, randomly, if you
+    wanna, when recalculating the path"), so they don't bunch. Each
+    re-plan also picks the direction at random.
   - **Instances have no patrol** (mobs don't respawn there). Instead a
     help rule, in 617e5 (fighting together): go to an ally's fight in
     the part of the instance one belongs to.

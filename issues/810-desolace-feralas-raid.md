@@ -71,6 +71,14 @@ so it joins a run only beside a sister dungeon or by doubling (below);
 "a raid" (Uldaman, Sunken Temple) = the owner's word for the same joined
 run, there by whole-dungeon size.
 
+**Players together first** (owner, 2026-10-07): "players should be
+initially placed into groups with each other ... with the buddy-bots
+filling any empty space? It's more fun to play with players. They can
+adjust the groups later as the raid goes on." When a joined run forms,
+its players are packed into parties together before any buddy is placed.
+Buddies then fill the empty seats. Players move characters between
+parties afterwards with the swap above.
+
 - **The Stockade** ("can we spawn the players on the inside, one in each
   wing, depending on which raid group they're in? They can meet up in the
   middle. There should be twice as many enemies in the middle sections."):
@@ -192,4 +200,10 @@ run, there by whole-dungeon size.
    the dungeon, rising to 20% near the end; stats rather than levels,
    because level gaps also change hit and crit chances (and basic caps
    those gaps at 3, B005), which makes levels a lumpier dial.
+8. Where is a section's edge, when parallel routes share corridors (as
+   in Blackrock Depths)? The set of rooms on a route, a list of the
+   server's subzones, or the stretch up to that party's next boss? Buddies
+   help allies only inside their own section (617e5), so the buddies need
+   the edge as data. (Owner, 2026-10-07: decided here, when this issue is
+   built.)
 3. Its level and loot place on the ladder?
