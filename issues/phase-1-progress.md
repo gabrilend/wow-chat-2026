@@ -174,6 +174,7 @@ separate layer. In C on Raylib; the first Lua version is deprecated.
 | 173r | water-and-swimming | Built | Ground water, buildings' pools, swimming, underwater. |
 | 173s | streaming-tiles | Built | Tiles loaded and dropped as she moves; the far horizon from the low-detail map. |
 | 173t | creatures-from-the-world-database | In Progress | Townsfolk and creatures from a generated list, by tile; one open question (out-of-table facial hair). |
+| 173u | rendering-on-the-graphics-card | Open | Measured: the processor issues thousands of draw orders a frame; eight-step checklist in docs. |
 
 For current counts, run
 `/home/ritz/programming/ai-stuff/scripts/progress-dashboard.lua <project> -m`.
