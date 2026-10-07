@@ -92,7 +92,7 @@ The keystone. Every later build/profile decision derives from 136.
 |-------|-------|--------|-------|
 | 116 | git-branch-consolidation | Open | Clean up legacy branches. |
 | 121 | mysql-script-naming-aliases | Open | Verb-first vs noun-first script names. (was 321) |
-| 120 | parallel-update-status-spinners | Open | Better build feedback. |
+| 120 | parallel-update-status-spinners | Completed | Better build feedback (in completed/). |
 | 128 | script-command-history | Open | Per-script history. (was 411) |
 | 126 | upstream-warning-fixes | Open | Suppress AzerothCore upstream noise. (was 333) |
 

@@ -42,7 +42,7 @@ movement/pathfinding → social/cooperation → tooling/UI.
 | 611 | bot-wandering-traveller-style | Implemented | Natural movement. Pattern from Phase 5 travelers. |
 | 612 | dungeon-rail-pathfinding | Implemented | Reactive intersection sampling for caves/dungeons. |
 | 612b | mmap-route-precomputation | Open (Research) | Precompute full routes via mmap data. Complements/replaces 612. (was 329) |
-| 606b | getposition-nil-errors | Resolved | Bot crash fix when GetPosition returns nil. (was 328) |
+| 606b | getposition-nil-errors | Completed | Bot crash fix when GetPosition returns nil (in completed/). (was 328) |
 
 ### Social / cooperation
 | Issue | Title | Status | Notes |
