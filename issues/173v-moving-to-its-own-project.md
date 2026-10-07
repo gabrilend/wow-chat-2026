@@ -66,8 +66,9 @@ What was done, in 173v's step order:
    answer 5), the client's scripts and documents) renamed `-done` for one
    commit, the W client's code at its commit e1ebf84.
 
+   Removed in the next commit, as the house rule asks.
+
 Left:
-- Remove the `-done` files in the next commit (house rule).
 - The conversations (answer 7): copies to go with the client, after
   checking each transcript tool against a copied file (they file a
   conversation by where its session ran).
