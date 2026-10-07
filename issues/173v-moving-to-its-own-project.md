@@ -121,10 +121,10 @@ behind in this project.
    `moves`, `collide`, `navmesh_slope`, `water`, `liquid`) to phase 8;
    settings to 103 and phase 10. Pieces with no W-client issue get a new
    one in the right phase.
-3. **Carry the history over.** Either split the client's folders out of
-   this repository with their commits and merge them into the W client's
-   repository, or copy the files and name the source commit. The choice
-   is an open question.
+3. **Copy, don't carry history.** The files are copied into the W
+   client's repository in one commit that names the commit they came from
+   here. Their history stays in this project's git, where it is mixed in
+   with this project's other work.
 4. **Move the code** into the W client's `src/`, renamed to its
    reading-order numbers if that is decided, with
    `.file-index-counter` updated. Write a test before the move (the
@@ -151,21 +151,37 @@ behind in this project.
 
 ## Open Questions
 
-1. **History:** carry the client's git history into the W client's
-   repository (a split that keeps every commit that touched these
-   folders), or copy the files and name the commit they came from?
-2. **Build:** keep the one shell script that calls the compiler (fast,
-   working today), or adopt the CMake build the W client planned?
-3. **MPQ reader:** keep the project's own reader (built and tested, no
-   outside library) or switch to StormLib as the W client planned?
-   Likewise zlib versus miniz.
+1. (Answered 2026-10-07) **History:** carry it, or copy the files? Copy:
+   "nah we have wow-chat-2026 issues interspersed, it's not worth it.
+   We'll just migrate over there."
+2. (Answered 2026-10-07) **Build:** shell script or CMake? The shell
+   script: "bash is easier for me. We can always call cmake inside of
+   bash." The W client's build-system document (008) is rewritten to
+   match. If CMake is ever needed, the shell script calls it.
+3. (Answered 2026-10-07) **MPQ reader:** our own or StormLib? "We use our
+   own extracter." The W client's technology stack (002) is rewritten:
+   no StormLib. The W client also plans to *write* archives (replacement
+   packs), which our reader does not do yet. That becomes a W-client
+   issue. Compression stays the system's zlib unless decided otherwise.
+   - **How players share assets** (asked back, 2026-10-07): "either. A
+     plain folder of files would be converted into a compressed archive
+     when received. When we use our system to pass the files back and
+     forth over the network, we will work with the compressed archive
+     version, but we shouldn't require them to, and do the conversion as
+     part of the input process." So a player may hand in a folder or an
+     archive. A folder is packed into an archive when it is taken in, and
+     only archives travel over the network. This goes into the W client's
+     asset-replacement document (012).
 4. **Numbered file names:** rename the source files to reading-order
    numbers during the move (the house rule), or later?
 5. **The Lua first version** (`src/custom-client/`): move it too as the
    reference, or leave it here, deprecated, until it is removed?
-6. **The creature list generator** reads this project's world database
-   to stand in for the network (173t). Does it move (any AzerothCore world
-   database will do) or stay here?
+6. (Answered 2026-10-07) **The creature list generator:** move or stay?
+   Neither in the long run: "let's just build in networking." The client
+   gets real networking, tested against a stripped-down server profile,
+   cc-test (issue 176). The generator retires when the client's world
+   comes from the server. Where networking is built (here before the
+   move, or in the W client after it) is asked in 176.
 7. **The conversations:** the transcripts that built the client stay here
    (house rule: they ride with this project's commits). Should copies, or
    only references, go with the client?

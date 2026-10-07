@@ -78,8 +78,23 @@ darkens. This runs on the graphics card (the 173u rule).
    the sun's direction (above). The answer: "If so, then I am totally
    excited about that idea, and we should absolutely invent real-time
    shadows."
-2. Live shadows change the picture away from the original, and 173 says
-   to rebuild the original before adding new things. Are live shadows
-   always on, or a setting (the original's look kept as the other
-   choice, which keeps the pixel-for-pixel comparisons working)? And
-   are they built now, or after the original is rebuilt?
+2. (Answered 2026-10-07) Always on, or a setting? A setting: "sure let's
+   keep it as a setting to be cheaper on user's hardware demands." With
+   it off, the client draws the original's look, and the pixel-for-pixel
+   comparisons run with it off. Still open: built now, or after the
+   original is rebuilt?
+3. Shadows from characters, and light from torches (the owner asked,
+   2026-10-07). Characters: yes. They are drawn into the sun's depth
+   picture like everything else, so they cast shadows. Torches: the
+   models carry their own light (each model file can hold point lights,
+   with a colour, a reach and the bone they ride on, and the buildings
+   hold lights for their rooms). The buildings' room lights were baked
+   into the colour of each point when the map was made, so they don't
+   change live. As far as I know (not yet checked against the original), a
+   model's own lights light only that model, not the ground and walls
+   around it. Live torch light means the shaders add up the nearest few
+   lights for each pixel, which costs little. Shadows *from* torch light
+   cost more: each torch needs depth pictures in six directions, because
+   it shines every way. Should live torch light be part of this setting,
+   and should torches cast shadows too (perhaps only the nearest one or
+   two)?

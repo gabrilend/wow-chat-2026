@@ -1,0 +1,86 @@
+# 176 - The cc-test Profile
+
+## Status
+- Created: 2026-10-07
+- Phase: 1
+- Related: 173 (the custom client), 173e (what the server checks),
+  173v (moving the client to its own project), 136 (canonical profile
+  definitions), 153a (explore profile plumbing: the last time a profile
+  was added, and the checklist of places a profile name must resolve)
+- Priority: High (the custom client's networking is tested against it)
+
+## Origin
+
+The owner, 2026-10-07, asked whether the generated creature list (the
+custom client's stand-in for the network, 173t) should move with the
+client:
+
+> let's just build in networking. I think we should create a new .profile
+> for this project called "cc-test" for custom-client-test. It should have
+> most things stripped out except what we're testing, and we can have some
+> patches be tests. I think we might need to refactor the patching system
+> too by the way, but we can come back to that later.
+
+## Current Behavior
+
+There is no server for the custom client to talk to that is built for
+testing it. The profiles that exist (basic, vanilla, beta, release, alpha)
+each carry the whole game's customisations: playerbots, ambushes,
+travellers, buddies, level caps, custom items. Any of them would answer
+the custom client, but a failure could come from any of those layers. The
+custom client has no network code yet. Its world comes from a file
+generated out of a world database (`scripts/generate-custom-client-creatures`).
+
+## Intended Behavior
+
+A sixth profile, `cc-test` ("custom client test"), that resolves
+everywhere the others do (153a's table: source tree, installed tree, Lua
+directory, the four databases, build directory, log directory, config
+patch gates, source patch list, the word in `.profile`).
+
+- **Stripped down to what is being tested.** Stock AzerothCore as close to
+  upstream as the build allows: no playerbots, no ambush or traveller
+  scripts, no custom items, no level-cap changes. A difference from the
+  stock server shows up as a test failure, not as a mystery.
+- **The server's own checks left on, at their strictest useful setting.**
+  Warden on, with a failed check *kicking* the client instead of only
+  being logged. The movement checks are the core's own. The custom client
+  passes when a session leaves the server's logs empty (173e's pass mark).
+- **Some patches are tests.** A config or install patch gated to cc-test
+  can set up a known situation (a test account, a night elf standing in
+  Astranaar, a creature at a known spot) or turn a check up. Each such
+  patch says what it tests at its top, the way every patch says what it
+  changes.
+- **Its own databases,** so tests can create and wipe characters without
+  touching anyone's play.
+
+## Suggested Implementation Steps
+
+1. Read 136 (the canonical profile list) and 153a (the last profile
+   added), and list every place a profile name must resolve.
+2. Add `cc-test` to each: the source tree (`source-beta`), the installed
+   tree `installed-files-cc-test/`, an empty `src/lua-cc-test/`, its four
+   databases, its build and log directories, and its patch list in
+   `patches/patches.sh`, as short as the build allows.
+3. Gate the config patches: list which `config/patches/C*.sh` should
+   *not* run for cc-test (most), and which test settings it needs (Warden
+   kicks on failure). Add each test setting as its own patch with the
+   test it serves written at its top.
+4. A setup patch that creates the test account and character.
+5. A check that the installed cc-test server matches upstream except for
+   the listed patches (the patch system already round-trips the source to
+   upstream; this lists what remains different).
+6. Document the profile in `docs/profiles/cc-test.md` and add it to the
+   table of contents. Add it to CLAUDE.md's profile list.
+
+## Open Questions
+
+1. **Modules:** does cc-test include mod-ale (the Lua engine) so that test
+   setups can be written in Lua, or none at all (purest stock)?
+2. **The patching system's refactor** (the owner: "we might need to
+   refactor the patching system too ... we can come back to that later").
+   What is wrong with it today, as you see it? This will be its own issue
+   once described.
+3. **Where the client's networking is built:** here, before the client
+   moves (173v), or in the W client project after the move (its phase 5,
+   networking)? The cc-test server stays in this project either way.
