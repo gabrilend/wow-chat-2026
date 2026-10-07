@@ -75,7 +75,19 @@ reports now time them): 236 ms on average to 62, the slowest 706 to
 tiles beyond those loaded (`prefetch.h` / `prefetch.c`), unpacking every
 file each will want into the archive reader's memory (now locked, so
 the threads share it). Loads while she walks: 48 ms on average to 37.
-Left (8c): preparing the ground and parsing models on that thread too.
+
+**Step 8c built (2026-10-07):** a tile's ground is prepared without the
+window (`ground_prep.h` / `ground_prep.c`: the file read, the points and
+their light, the blend picture, the pictures not yet on the card
+unpacked with their smaller copies), by the reading-ahead thread for
+the ring ahead, kept until taken (`prefetch_take_ground`), let go when
+she turns away (`prefetch_keep_near`). The main thread only sends; each
+new picture goes into its own layer with its own smaller copies (the
+card's remaking of all 256 layers cost 5 ms a load). The server-height
+reader loads under a lock. Walking loads 31 ms to 14 (the ground 23 to
+5). Race-checked (`build-custom-client --tsan`) and address-checked.
+Left (8d): parsing new doodad models on that thread too (about 9 of the
+14 ms).
 
 ## Intended Behavior
 

@@ -23,6 +23,7 @@
 #include "../collide.h"
 #include "../creatures.h"
 #include "../dbc.h"
+#include "../ground_prep.h"
 #include "../light.h"
 #include "../liquid.h"
 #include "../m2.h"
@@ -55,6 +56,9 @@ static void check(int ok, const char *what)
     else { printf("  FAIL: %s\n", what); ++fails; }
 }
 static int near(double a, double b, double tol) { return fabs(a - b) <= tol; }
+/* a stand-in for the card's pictures (173u): an arbitrary half of them,
+ * those with an odd-length name, count as sent already */
+static int test_on_card(const char *name) { return strlen(name) % 2; }
 /* }}} */
 
 /* {{{ made-up grounds: height, then rise per yard along x and y, as the map gives */
@@ -521,15 +525,81 @@ int main(int argc, char **argv)
             prefetch_tile(26, 32);
             prefetch_tile(26, 32);                        /* asked twice: read once */
             prefetch_wait();
-            int pt, pf;
-            prefetch_counts(&pt, &pf);
+            int pt, pf, gm, gt;
+            prefetch_counts(&pt, &pf, &gm, &gt);
             uint64_t hits = rc.hits;
             size_t al;
             unsigned char *adt_s = mpq_chain_read(&rc, "World\\Maps\\Kalimdor\\Kalimdor_32_26.adt", &al, NULL);
             snprintf(line, sizeof line, "the helper read 1 tile (%d) and its files (%d); its ground file comes from memory afterwards", pt, pf);
             check(pt == 1 && pf > 100 && adt_s && rc.hits == hits + 1, line);
+            check(gm == 0 && prefetch_take_ground(26, 32, &(GroundPrep *){ 0 }) == 2, "without being told to, it prepares no ground");
             free(adt_s);
+
+            /* preparing the ground (173u): the helper's preparation of a
+             * tile is the very one the main thread would make, and the
+             * pictures said to be on the card already aren't unpacked */
+            {
+                /* a 4 x 4 picture's smaller copies: 2 x 2, then 1 x 1, each
+                 * pixel the rounded average of the four beneath it */
+                unsigned char four[64];
+                for (int i = 0; i < 64; ++i) four[i] = (unsigned char)(i * 4);
+                GroundPixels px = { four, 4, 4, NULL };
+                ground_prep_smaller(&px);
+                /* top-left 2 x 2 of channel 0: pixels 0, 1, 4, 5 -> 0, 16, 64, 80: 40 */
+                int top_left = px.smaller ? px.smaller[0] : -1, last = px.smaller ? px.smaller[16] : -1;
+                snprintf(line, sizeof line, "a picture's smaller copies average the pixels beneath (%d, then %d)", top_left, last);
+                check(top_left == 40 && last == (40 + 72 + 168 + 200 + 2) / 4, line);   /* the 2 x 2: 40, 72, 168, 200 */
+                free(px.smaller);
+                GroundPixels odd = { four, 4, 2, NULL };
+                ground_prep_smaller(&odd);
+                check(!odd.smaller, "a picture that isn't square gets none");
+            }
+            char maps_dir[700];
+            snprintf(maps_dir, sizeof maps_dir, "%s/data-files/maps", dir);
+            MapWorld gw;
+            maps_world_init(&gw, maps_dir, 1);
+            GroundPlace gp;
+            if (ground_place_init(&gp, &rc, "Kalimdor", &gw, 2700, -400, why, sizeof why)) check(0, why);
+            else {
+                prefetch_prepare_ground(&gp, test_on_card);
+                prefetch_tile(26, 31);
+                prefetch_wait();
+                GroundPrep *ahead = NULL, *here = NULL;
+                int took = prefetch_take_ground(26, 31, &ahead);
+                int made = ground_prep_tile(&gp, 26, 31, test_on_card, &here, why, sizeof why);
+                check(took == 0 && made == 0, "the helper prepared the tile's ground, and the main thread can too");
+                if (took == 0 && made == 0) {
+                    int same = 1, quarters = 0, unpacked = 0, skipped = 0;
+                    for (int q = 0; q < 4; ++q) {
+                        GroundQuarter *a = &ahead->quarter[q], *b = &here->quarter[q];
+                        quarters += a->made;
+                        same = same && a->nindex == b->nindex && a->made == b->made
+                            && !memcmp(a->vertices, b->vertices, sizeof(float) * 3 * 64 * 145)
+                            && !memcmp(a->normals, b->normals, sizeof(float) * 3 * 64 * 145)
+                            && !memcmp(a->indices, b->indices, sizeof(unsigned short) * (size_t)a->nindex);
+                    }
+                    same = same && !memcmp(ahead->blend, here->blend, 1024 * 1024 * 4);
+                    for (int t = 0; t < ahead->adt->ntextures; ++t) {
+                        if (!ahead->needed[t]) continue;
+                        if (test_on_card(ahead->adt->textures[t])) skipped += !ahead->pixels[t].rgba;
+                        else unpacked += ahead->pixels[t].rgba && ahead->pixels[t].width > 0;
+                    }
+                    snprintf(line, sizeof line, "both the same: points, light, triangles, blend picture (%d quarters drawn)", quarters);
+                    check(same && quarters == 4, line);
+                    snprintf(line, sizeof line, "pictures on the card left packed (%d), the rest unpacked (%d)", skipped, unpacked);
+                    check(skipped > 0 && unpacked > 0, line);
+                    prefetch_counts(&pt, &pf, &gm, &gt);
+                    check(gm == 1 && gt == 1 && prefetch_take_ground(26, 31, &(GroundPrep *){ 0 }) == 2, "taken once: a second take finds none");
+                    ground_prep_free(ahead, 0);
+                    ground_prep_free(here, 0);
+                }
+                prefetch_tile(30, 31);
+                prefetch_wait();
+                prefetch_keep_near(26, 31, 2);                /* (30, 31) is 4 tiles off */
+                check(prefetch_take_ground(30, 31, &(GroundPrep *){ 0 }) == 2, "a preparation she turned away from is let go");
+            }
             prefetch_stop();
+            maps_world_free(&gw);
             mpq_chain_close(&rc);
         }
     }

@@ -43,8 +43,11 @@ picture options; this page doesn't copy numbers that go stale.
 Each frame, in this order (`main.c`):
 
 1. **Tiles** (`refresh_tiles`): tiles round her are loaded. Each tile's
-   ground file is read once and handed to:
-   - `ground.c`: meshes, blend pictures;
+   ground file is read once, by `ground_prep.c` (which also works out the
+   ground's points, light and blend picture, and unpacks its new
+   pictures, with no window needed), and handed to:
+   - `ground.c`: sends the prepared meshes, blend picture and new
+     pictures to the card;
    - `water.c` and `liquid.c`;
    - `doodads.c`: copies, solid shapes into `collide.c`, buildings'
      pools into `water.c` and `liquid.c`.
@@ -54,7 +57,10 @@ Each frame, in this order (`main.c`):
    dressed character with a baked skin).
    Tiles left behind are dropped from all of them (173s). A second
    thread (`prefetch.c`) reads the next ring of tiles' files ahead, into
-   the archive reader's memory (173u).
+   the archive reader's memory, and prepares their ground; the load
+   takes a tile's preparation when there is one, or prepares it then
+   (the start's tiles, after a jump). Preparations beyond the ring are
+   let go (173u).
 2. **Input and movement:**
    - the mouse drags the camera and the wheel zooms it, all the way in
      to first person (`camera.c`);

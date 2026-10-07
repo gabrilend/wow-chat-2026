@@ -13,23 +13,28 @@ strongly layers 1, 2 and 3 show, alpha holds the baked shadow (for
 173h). A shader then blends the pictures point by point, lights them by
 the zone's sun and shade, and fades them into its fog (173n).
 
-Drawing needs Raylib and a window; reading (adt.c) doesn't, and is what
-the tests check.
+Drawing needs Raylib and a window; reading (adt.c) and preparing a tile
+(ground_prep.h: its points, blend picture and pictures, the arithmetic
+half, which the reading-ahead thread does ahead of her) don't, and are
+what the tests check. This file is the sending half.
 
 ## What it offers
 
-- `int ground_init(MpqChain *chain, const char *map_name, char *why, int why_len);`
-  Readies the painter for one map: `map_name` is the map's folder in the
-  archives ("Kalimdor"); the chain stays open and must outlive the painter.
-  Reads the map's WDT for its blend-map form. 0, or 1 with `why`.
-- `int ground_load_tile(int tx, int ty, double ox, double oy, MapWorld *world, AdtTile **kept, char *why, int why_len);`
-  Loads tile (tx, ty), placed relative to the drawing origin (ox, oy).
-  Light comes from the server's heights in `world` (the same ground; the
-  tests hold the two together), smooth across chunk and tile edges.
-  The ground file read is handed back in `*kept` (for the doodads and
-  buildings on it); the caller frees it with adt_free and free.
-  0 loaded; 1 the map has no ground file there (open sea); -1 an error,
+- `int ground_init(const GroundPlace *place, char *why, int why_len);`
+  Readies the painter for one map, at `place` (ground_place_init: the
+  archives, the map, its blend-map form, the server's heights, the
+  drawing origin); what it points to must outlive the painter. 0, or 1
   with `why`.
+- `int ground_on_card(const char *name);`
+  Whether a ground picture (by archive name) is on the card now. Safe on
+  any thread: given to ground_prep_tile so pictures already sent aren't
+  unpacked again.
+- `int ground_load_tile(GroundPrep *prepared, AdtTile **kept, char *why, int why_len);`
+  Sends a prepared tile (ground_prep_tile, on either thread) to the card
+  and draws it from then on; the preparation is used up (freed). The
+  ground file read is handed back in `*kept` (for the water, doodads and
+  buildings on it); the caller frees it with adt_free and free.
+  0, or -1 with `why` (a picture couldn't be had). Main thread only.
 - `void ground_drop_tile(int tx, int ty);`
   Drops tile (tx, ty): its meshes and blend pictures (its ground pictures
   stay loaded, shared and cached; 173s).

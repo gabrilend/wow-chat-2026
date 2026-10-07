@@ -13,12 +13,15 @@
 # build while it stays under about five minutes (owner, 2026-10-06; the
 # rule is in CLAUDE.md, "Compiling").
 #
-# Usage: scripts/build-custom-client [PROJECT_DIR] [--test] [--asan]
+# Usage: scripts/build-custom-client [PROJECT_DIR] [--test] [--asan] [--tsan]
 #   --test   also run the test program after building
 #   --asan   also build an address-checked copy of the client
 #            (custom-client-asan, with clang): a program that reports any
 #            memory read or written after it was freed or past its end,
 #            with where it happened; slower, for hunting crashes
+#   --tsan   also build a race-checked copy (custom-client-tsan, with
+#            clang): reports two threads using the same memory without a
+#            lock between them, with both places; slower
 
 # {{{ set_dir
 DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
@@ -38,7 +41,7 @@ mkdir -p "${OUT}"
 
 CFLAGS=(-std=c11 -D_FILE_OFFSET_BITS=64 -D_POSIX_C_SOURCE=200809L -O2 -g -Wall -Wextra -Werror -I/usr/local/include)
 CORE=("${SRC}/maps.c" "${SRC}/mover.c" "${SRC}/navmesh_slope.c" "${SRC}/mpq.c" "${SRC}/blp.c" "${SRC}/dbc.c"
-      "${SRC}/m2.c" "${SRC}/character.c" "${SRC}/settings.c" "${SRC}/camera.c" "${SRC}/adt.c" "${SRC}/wmo.c" "${SRC}/anim.c" "${SRC}/moves.c" "${SRC}/light.c" "${SRC}/particles.c" "${SRC}/collide.c" "${SRC}/liquid.c" "${SRC}/creatures.c" "${SRC}/sight.c" "${SRC}/prefetch.c")
+      "${SRC}/m2.c" "${SRC}/character.c" "${SRC}/settings.c" "${SRC}/camera.c" "${SRC}/adt.c" "${SRC}/wmo.c" "${SRC}/anim.c" "${SRC}/moves.c" "${SRC}/light.c" "${SRC}/particles.c" "${SRC}/collide.c" "${SRC}/liquid.c" "${SRC}/creatures.c" "${SRC}/sight.c" "${SRC}/prefetch.c" "${SRC}/ground_prep.c")
 
 echo "building the test program"
 cc "${CFLAGS[@]}" "${CORE[@]}" "${SRC}/tests/test_client.c" -lz -lm -lpthread -o "${OUT}/test-client"
@@ -63,6 +66,17 @@ for arg in "$@"; do
             -I/usr/local/include "${CORE[@]}" "${SRC}/ground.c" "${SRC}/doodads.c" "${SRC}/figure.c" "${SRC}/texture.c" "${SRC}/sky.c" "${SRC}/water.c" "${SRC}/horizon.c" \
             "${SRC}/main.c" /usr/local/lib/libraylib.a -lz -lm -lpthread -ldl -lrt -lX11 -lGL -o "${OUT}/custom-client-asan"
         echo "built: ${OUT}/custom-client-asan (run it with ASAN_OPTIONS=detect_leaks=0)"
+    fi
+    # the race-checked client: reports two threads touching the same memory
+    # without a lock between them (the reading-ahead thread shares the
+    # archive reader, the server's heights and prepared ground: 173u)
+    if [[ "${arg}" == "--tsan" ]]; then
+        command -v clang > /dev/null || { echo "ERROR: --tsan needs clang"; exit 1; }
+        echo "building the race-checked client"
+        clang -std=c11 -D_FILE_OFFSET_BITS=64 -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=thread \
+            -I/usr/local/include "${CORE[@]}" "${SRC}/ground.c" "${SRC}/doodads.c" "${SRC}/figure.c" "${SRC}/texture.c" "${SRC}/sky.c" "${SRC}/water.c" "${SRC}/horizon.c" \
+            "${SRC}/main.c" /usr/local/lib/libraylib.a -lz -lm -lpthread -ldl -lrt -lX11 -lGL -o "${OUT}/custom-client-tsan"
+        echo "built: ${OUT}/custom-client-tsan (a race prints \"WARNING: ThreadSanitizer\")"
     fi
 done
 for arg in "$@"; do

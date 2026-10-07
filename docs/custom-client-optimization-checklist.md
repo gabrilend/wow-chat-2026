@@ -133,13 +133,28 @@ and per-pixel work. Fewer, larger draw orders beat many small ones.
   61 to 50. `--no-read-ahead` turns it off, to measure. Checked with the
   address-checked build on a walk and a jump across the zone (18 tiles
   loaded, 8 dropped): no faults.
-- [ ] **8c. Preparing tiles on the second thread.** What still stalls a
-  load on the main thread (about 37 ms): the ground's points (each
-  point's slope from the server's heights: 4 lookups a point) and blend
-  picture, ground pictures unpacked for the array, and new doodad
-  models parsed. The worker could build all of it, leaving the main
-  thread only the sending to the card. Needs the server-height reader
-  locked (it loads its tiles lazily).
+- [x] **8c. Preparing the ground on the second thread.** Built
+  2026-10-07 (`ground_prep.c`, `prefetch.c`, `ground.c`): loading a
+  tile's ground is split in two. The arithmetic half (its file read, its
+  points with their light from the server's slopes, its blend picture,
+  its pictures not already on the card unpacked with their smaller
+  copies) needs no window, and the reading-ahead thread does it for the
+  ring of tiles ahead, keeping each until the main thread takes it. The
+  main thread only sends: the meshes, the blend picture, and each new
+  picture into its own layer of the array (the card's own remaking of
+  smaller copies redid all 256 layers a load: 5 ms). A preparation she
+  turns away from (beyond the ring) is let go. The server-height reader
+  now loads its tiles under a lock. **Measured** (a 30-second walk from
+  Astranaar, the loads while she moved): the ground 23 ms a load to 5;
+  the whole load 31 to 14 (`--no-read-ahead`: 42). The same pictures
+  (three views, at most 0.03% of pixels apart by more than 2%). Checked
+  with the address-checked build (a walk and a jump) and the new
+  race-checked one (`build-custom-client --tsan`): no faults, no races.
+- [ ] **8d. Parsing new doodad models on the second thread.** What still
+  stalls a walking load (about 9 of its 14 ms): water and doodads,
+  mostly new models' files parsed and their meshes built before sending.
+  The same split as 8c: the reading-ahead thread parses, the main thread
+  sends. Then the blend picture's sending (about 2.7 ms, 4 MB a tile).
 
 ## Not to do
 

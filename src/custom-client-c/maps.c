@@ -5,6 +5,7 @@
 #include "maps.h"
 
 #include <math.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -178,16 +179,28 @@ void maps_world_init(MapWorld *w, const char *dir, int map_id)
     snprintf(w->dir, sizeof w->dir, "%s", dir);
     w->map_id = map_id;
 }
+/* Two threads ask (the main one, and the reading-ahead one preparing
+ * ground: 173u). A tile once in its slot never changes or goes until
+ * maps_world_free, so a filled slot is read without the lock; an empty
+ * one is filled under it, checked again inside so it loads only once. */
+static pthread_mutex_t world_lock = PTHREAD_MUTEX_INITIALIZER;
 MapTile *maps_world_tile(MapWorld *w, int tx, int ty)
 {
     if (tx < 0 || tx >= 64 || ty < 0 || ty >= 64) return NULL;
     MapTile **slot = &w->tiles[tx * 64 + ty];
-    if (!*slot) {
-        char why[700];
-        MapTile *t = maps_load_tile(w->dir, w->map_id, tx, ty, why, sizeof why);
-        *slot = t ? t : MAPS_NO_TILE;
+    MapTile *t = __atomic_load_n(slot, __ATOMIC_ACQUIRE);
+    if (!t) {
+        pthread_mutex_lock(&world_lock);
+        t = *slot;
+        if (!t) {
+            char why[700];
+            t = maps_load_tile(w->dir, w->map_id, tx, ty, why, sizeof why);
+            if (!t) t = MAPS_NO_TILE;                    /* none there: asked once, remembered */
+            __atomic_store_n(slot, t, __ATOMIC_RELEASE);
+        }
+        pthread_mutex_unlock(&world_lock);
     }
-    return *slot == MAPS_NO_TILE ? NULL : *slot;
+    return t == MAPS_NO_TILE ? NULL : t;
 }
 float maps_world_height(MapWorld *w, float x, float y, float *gx, float *gy)
 {

@@ -6,13 +6,14 @@
  */
 #include "ground.h"
 #include "adt.h"
-#include "blp.h"
+#include "ground_prep.h"
 #include "sight.h"
 #include "sky.h"
 
 #include "raymath.h"
 #include "rlgl.h"
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -79,7 +80,6 @@ extern void (*glad_glBindTexture)(GLenum_ target, unsigned int texture);
 extern void (*glad_glTexImage3D)(GLenum_ target, int level, int internalformat, int width, int height, int depth, int border, GLenum_ format, GLenum_ type, const void *pixels);
 extern void (*glad_glTexSubImage3D)(GLenum_ target, int level, int x, int y, int z, int width, int height, int depth, GLenum_ format, GLenum_ type, const void *pixels);
 extern void (*glad_glTexParameteri)(GLenum_ target, GLenum_ pname, int param);
-extern void (*glad_glGenerateMipmap)(GLenum_ target);
 #define GL_TEXTURE_2D_ARRAY_       0x8C1A
 #define GL_RGBA_                   0x1908
 #define GL_RGBA8_                  0x8058
@@ -115,9 +115,8 @@ typedef struct {
 } GroundTile;
 static GroundTile *tiles[64 * 64];
 
-static MpqChain *chain;
-static char      map_name[64];
-static int       big_alpha;
+static GroundPlace place;                              /* the archives, map, heights and origin (ground_prep.h) */
+static pthread_mutex_t names_lock = PTHREAD_MUTEX_INITIALIZER;   /* guards layer_of's names: the reading-ahead thread reads them */
 static Shader    shader;
 static Material  material;
 static int       loc_eye, loc_blobs, loc_nblobs;
@@ -127,20 +126,9 @@ static int       nblobs;
 /* }}} */
 
 /* {{{ ground_init */
-int ground_init(MpqChain *c, const char *name, char *why, int why_len)
+int ground_init(const GroundPlace *p, char *why, int why_len)
 {
-    chain = c;
-    snprintf(map_name, sizeof map_name, "%s", name);
-    char path[200];
-    snprintf(path, sizeof path, "World\\Maps\\%s\\%s.wdt", name, name);
-    size_t len;
-    const char *from;
-    unsigned char *wdt = mpq_chain_read(chain, path, &len, &from);
-    if (!wdt) { snprintf(why, why_len, "%s is in none of the client's archives", path); return 1; }
-    big_alpha = adt_wdt_big_alpha(wdt, len, why, why_len);
-    free(wdt);
-    if (big_alpha < 0) return 1;
-
+    place = *p;
     shader = LoadShaderFromMemory(VS, FS);
     if (!IsShaderReady(shader)) { snprintf(why, why_len, "the ground shader didn't compile (see Raylib's messages above)"); return 1; }
     shader.locs[SHADER_LOC_MAP_ALBEDO] = GetShaderLocation(shader, "blend");   /* Raylib binds the material's first map to it */
@@ -166,12 +154,26 @@ int ground_init(MpqChain *c, const char *name, char *why, int why_len)
 }
 /* }}} */
 
+/* {{{ ground_on_card: whether a picture is in the array now (any thread;
+ * the reading-ahead thread asks, so it unpacks only pictures not there) */
+int ground_on_card(const char *name)
+{
+    pthread_mutex_lock(&names_lock);
+    int found = 0;
+    for (int i = 0; i < LAYERS && !found; ++i) found = layer_of[i].name[0] && !strcmp(layer_of[i].name, name);
+    pthread_mutex_unlock(&names_lock);
+    return found;
+}
+/* }}} */
+
 /* {{{ static picture: a ground picture's layer in the array, by archive
- * name, loaded once and shared; the caller holds one reference per tile.
- * A picture not 256 x 256 is resized to it (the two tiny ones seen are
- * plain colours; a larger one would lose detail, and is said). -1 with
- * `why` when it can't be read or the array is full. */
-static int picture(const char *name, char *why, int why_len)
+ * name, sent once and shared; the caller holds one reference per tile.
+ * `px` is its pixels when the preparing unpacked them, or NULL (it was on
+ * the card then: if it has gone since, it is unpacked here). A picture not
+ * 256 x 256 is resized to it (the two tiny ones seen are plain colours; a
+ * larger one would lose detail, and is said). -1 with `why` when it can't
+ * be read or the array is full. Main thread only (it sends). */
+static int picture(const char *name, GroundPixels *px, char *why, int why_len)
 {
     int free_slot = -1;
     for (int i = 0; i < LAYERS; ++i) {
@@ -179,183 +181,103 @@ static int picture(const char *name, char *why, int why_len)
         if (!layer_of[i].name[0] && free_slot < 0) free_slot = i;
     }
     if (free_slot < 0) { snprintf(why, why_len, "the ground's %d picture layers are all in use by loaded tiles", LAYERS); return -1; }
-    size_t len;
-    const char *from;
-    unsigned char *s = mpq_chain_read(chain, name, &len, &from);
-    if (!s) { snprintf(why, why_len, "the ground picture %s is in none of the client's archives", name); return -1; }
-    BlpImage img;
-    char inner[300];
-    int bad = blp_decode(s, len, &img, inner, sizeof inner);
-    free(s);
-    if (bad) { snprintf(why, why_len, "the ground picture %s: %s", name, inner); return -1; }
-    Image im = { .data = img.rgba, .width = img.width, .height = img.height, .mipmaps = 1, .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 };
-    Image sized = ImageCopy(im);
-    blp_free(&img);
-    if (sized.width != LAYER_SIZE || sized.height != LAYER_SIZE) {
-        if (sized.width > LAYER_SIZE || sized.height > LAYER_SIZE)
-            fprintf(stderr, "ground: %s is %d x %d; shrunk to the array's %d x %d, losing detail\n", name, sized.width, sized.height, LAYER_SIZE, LAYER_SIZE);
-        ImageResize(&sized, LAYER_SIZE, LAYER_SIZE);
+    GroundPixels own = { 0 };
+    if (!px->rgba) {                                     /* gone from the card since it was prepared */
+        if (ground_prep_pixels(place.chain, name, &own, why, why_len)) return -1;
+        px = &own;
     }
+    GroundPixels sized = *px;                            /* the picture as sent: 256 x 256, with its smaller copies */
+    Image resized = { 0 };
+    if (px->width != LAYER_SIZE || px->height != LAYER_SIZE) {
+        if (px->width > LAYER_SIZE || px->height > LAYER_SIZE)
+            fprintf(stderr, "ground: %s is %d x %d; shrunk to the array's %d x %d, losing detail\n", name, px->width, px->height, LAYER_SIZE, LAYER_SIZE);
+        Image im = { .data = px->rgba, .width = px->width, .height = px->height, .mipmaps = 1, .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 };
+        resized = ImageCopy(im);
+        ImageResize(&resized, LAYER_SIZE, LAYER_SIZE);
+        sized = (GroundPixels){ resized.data, LAYER_SIZE, LAYER_SIZE, NULL };
+        ground_prep_smaller(&sized);
+    }
+    /* the picture and each smaller copy, into its own layer only (the
+     * card's own remaking would redo every layer: 173u) */
     glad_glBindTexture(GL_TEXTURE_2D_ARRAY_, array_id);
-    glad_glTexSubImage3D(GL_TEXTURE_2D_ARRAY_, 0, 0, 0, free_slot, LAYER_SIZE, LAYER_SIZE, 1, GL_RGBA_, GL_UNSIGNED_BYTE_, sized.data);
+    glad_glTexSubImage3D(GL_TEXTURE_2D_ARRAY_, 0, 0, 0, free_slot, LAYER_SIZE, LAYER_SIZE, 1, GL_RGBA_, GL_UNSIGNED_BYTE_, sized.rgba);
+    const unsigned char *copy = sized.smaller;
+    for (int lv = 1; lv < LAYER_LEVELS; ++lv) {
+        int side = LAYER_SIZE >> lv;
+        glad_glTexSubImage3D(GL_TEXTURE_2D_ARRAY_, lv, 0, 0, free_slot, side, side, 1, GL_RGBA_, GL_UNSIGNED_BYTE_, copy);
+        copy += (size_t)side * side * 4;
+    }
     glad_glBindTexture(GL_TEXTURE_2D_ARRAY_, 0);
-    UnloadImage(sized);
+    if (resized.data) { UnloadImage(resized); free(sized.smaller); }
+    free(own.rgba); free(own.smaller);
+    pthread_mutex_lock(&names_lock);
     snprintf(layer_of[free_slot].name, sizeof layer_of[free_slot].name, "%s", name);
+    pthread_mutex_unlock(&names_lock);
     layer_of[free_slot].refs = 0;
     return free_slot;
 }
-/* }}} */
-
-/* {{{ static chunk_points: one chunk's 145 points and its triangles,
- * written into a quarter's mesh arrays at point `base` and index `*n`
- * The original's four triangles a cell (each corner pair with the
- * centre), none in a hole: hole bit (row / 2) * 4 + col / 2 hides a 2 x 2
- * block of cells. `bx`, `by` are the chunk's place in the tile's blend
- * picture (0-15 each), `lay` its four layers. */
-static void chunk_points(const AdtChunk *c, double ox, double oy, MapWorld *world, Mesh *m, int base, int *n, int bx, int by, const int lay[4])
+/* a layer no loaded tile uses any more is freed for reuse */
+static void let_go(int layer)
 {
-    const float step = ADT_CHUNK_SIZE / 8;
-    for (int i = 0; i < 145; ++i) {
-        int   r17 = i % 17, v = base + i;
-        float row = (float)(i / 17) + (r17 >= 9 ? 0.5f : 0.0f);      /* centres sit half a cell in */
-        float col = r17 >= 9 ? (float)(r17 - 9) + 0.5f : (float)r17;
-        float wx = c->x - row * step, wy = c->y - col * step;
-        m->vertices[v * 3]     = (float)(wx - ox);
-        m->vertices[v * 3 + 1] = (float)(wy - oy);
-        m->vertices[v * 3 + 2] = c->z + c->heights[i];
-        /* light: the server's ground's slope a yard either side, so it runs on
-         * smoothly over chunk and tile edges */
-        float gx, gy;
-        float hn = maps_world_height(world, wx + 1, wy, &gx, &gy), hs = maps_world_height(world, wx - 1, wy, &gx, &gy);
-        float hw = maps_world_height(world, wx, wy + 1, &gx, &gy), he = maps_world_height(world, wx, wy - 1, &gx, &gy);
-        /* where the server has no ground a yard away (the map's edge), the
-         * point is lit as level ground */
-        int edge = hn < -10000 || hs < -10000 || hw < -10000 || he < -10000;
-        Vector3 nv = edge ? (Vector3){ 0, 0, 1 } : Vector3Normalize((Vector3){ -(hn - hs) / 2, -(hw - he) / 2, 1 });
-        m->normals[v * 3] = nv.x; m->normals[v * 3 + 1] = nv.y; m->normals[v * 3 + 2] = nv.z;
-        m->colors[v * 4] = c->tint[i][0]; m->colors[v * 4 + 1] = c->tint[i][1]; m->colors[v * 4 + 2] = c->tint[i][2]; m->colors[v * 4 + 3] = 255;
-        m->texcoords[v * 2] = col;          /* 8 repeats across the chunk */
-        m->texcoords[v * 2 + 1] = row;
-        /* corners land on the chunk's blend square's first and last points' centres */
-        m->texcoords2[v * 2]     = ((float)bx * 64 + 0.5f + col / 8.0f * 63.0f) / 1024.0f;
-        m->texcoords2[v * 2 + 1] = ((float)by * 64 + 0.5f + row / 8.0f * 63.0f) / 1024.0f;
-        for (int l = 0; l < 4; ++l) m->tangents[v * 4 + l] = (float)lay[l];
-    }
-    for (int r = 0; r < 8; ++r)
-        for (int col = 0; col < 8; ++col) {
-            if (c->holes & (1 << ((r / 2) * 4 + col / 2))) continue;
-            unsigned short a = (unsigned short)(base + adt_corner(r, col)), b = (unsigned short)(base + adt_corner(r, col + 1));
-            unsigned short d = (unsigned short)(base + adt_corner(r + 1, col)), e = (unsigned short)(base + adt_corner(r + 1, col + 1));
-            unsigned short mid = (unsigned short)(base + adt_centre(r, col));
-            unsigned short tri[12] = { a, b, mid, b, e, mid, e, d, mid, d, a, mid };
-            memcpy(m->indices + *n, tri, sizeof tri);
-            *n += 12;
-        }
+    if (--layer_of[layer].refs) return;
+    pthread_mutex_lock(&names_lock);
+    layer_of[layer].name[0] = '\0';
+    pthread_mutex_unlock(&names_lock);
 }
 /* }}} */
 
 /* {{{ ground_load_tile */
-int ground_load_tile(int tx, int ty, double ox, double oy, MapWorld *world, AdtTile **kept, char *why, int why_len)
+int ground_load_tile(GroundPrep *p, AdtTile **kept, char *why, int why_len)
 {
     *kept = NULL;
-    if (tx < 0 || tx > 63 || ty < 0 || ty > 63) return 1;
-    char path[200];
-    snprintf(path, sizeof path, "World\\Maps\\%s\\%s_%d_%d.adt", map_name, map_name, ty, tx);   /* west-east number first */
-    size_t len;
-    const char *from;
-    unsigned char *s = mpq_chain_read(chain, path, &len, &from);
-    if (!s) return 1;
-    AdtTile *adt = malloc(sizeof *adt);
-    char inner[400];
-    if (adt_read(s, len, big_alpha, adt, inner, sizeof inner)) {
-        snprintf(why, why_len, "%s (from %s): %s", path, from, inner);
-        free(s); free(adt);
-        return -1;
-    }
-    free(s);
-    if (adt->ntextures > 256) {
-        snprintf(why, why_len, "%s lists %d ground pictures; at most 256 are expected", path, adt->ntextures);
-        adt_free(adt); free(adt);
-        return -1;
-    }
+    const AdtTile *adt = p->adt;
     int pic[256];                                     /* the tile's picture numbers: layers in the array */
-    for (int i = 0; i < adt->ntextures && i < 256; ++i) pic[i] = -2;   /* -2: not needed yet */
     GroundTile *g = calloc(1, sizeof *g);
-    unsigned char *blend = calloc(1024 * 1024, 4);
-    /* each quarter: 64 chunks of 145 points (9,280, within the 16-bit
-     * point numbers), 768 triangle corners a chunk at most */
-    for (int q = 0; q < 4; ++q) {
+    for (int t = 0; t < adt->ntextures; ++t) {
+        if (!p->needed[t]) continue;
+        pic[t] = picture(adt->textures[t], &p->pixels[t], why, why_len);
+        if (pic[t] < 0) {                             /* `why` says which picture; everything this tile took is given back */
+            for (int i = 0; i < g->nused; ++i) let_go(g->used[i]);
+            free(g);
+            ground_prep_free(p, 0);
+            return -1;
+        }
+        ++layer_of[pic[t]].refs;
+        g->used[g->nused++] = pic[t];
+    }
+    /* each quarter: the prepared arrays become the mesh's (Raylib frees
+     * them with it), plus each point's four layer numbers, known now */
+    for (int qn = 0; qn < 4; ++qn) {
+        GroundQuarter *q = &p->quarter[qn];
+        if (!q->made) continue;                       /* all holes: nothing to draw (its arrays go with the preparation) */
         Mesh m = { 0 };
         m.vertexCount = 64 * 145;
-        m.vertices   = MemAlloc(sizeof(float) * 3 * m.vertexCount);
-        m.normals    = MemAlloc(sizeof(float) * 3 * m.vertexCount);
-        m.texcoords  = MemAlloc(sizeof(float) * 2 * m.vertexCount);
-        m.texcoords2 = MemAlloc(sizeof(float) * 2 * m.vertexCount);
-        m.tangents   = MemAlloc(sizeof(float) * 4 * m.vertexCount);
-        m.colors     = MemAlloc(4 * m.vertexCount);
-        m.indices    = MemAlloc(sizeof(unsigned short) * 64 * 768);
-        int n = 0, made = 0;
-        float lo[3] = { 1e30f, 1e30f, 1e30f }, hi[3] = { -1e30f, -1e30f, -1e30f };
+        m.tangents = MemAlloc(sizeof(float) * 4 * m.vertexCount);
         for (int qk = 0; qk < 64; ++qk) {
-            /* quarter q holds chunk rows 8 * (q / 2) .. +7 and columns 8 * (q % 2) .. +7 */
-            int crow = (q / 2) * 8 + qk / 8, ccol = (q % 2) * 8 + qk % 8, k = crow * 16 + ccol;
-            const AdtChunk *c = &adt->chunks[k];
-            int lay[4];
-            for (int l = 0; l < 4; ++l) {
-                int t = c->tex[l < c->nlayers ? l : 0];  /* layers past nlayers repeat layer 0 (their strength is 0) */
-                if (t < 0 || t >= adt->ntextures) { snprintf(why, why_len, "%s: chunk %d names picture %d of %d", path, k, t, adt->ntextures); goto fail; }
-                if (pic[t] == -2) {
-                    pic[t] = picture(adt->textures[t], why, why_len);
-                    if (pic[t] < 0) goto fail;            /* `why` says which picture */
-                    ++layer_of[pic[t]].refs;
-                    g->used[g->nused++] = pic[t];
-                }
-                lay[l] = pic[t];
-            }
-            int before = n;
-            chunk_points(c, ox, oy, world, &m, qk * 145, &n, ccol, crow, lay);
-            if (n > before) made = 1;
-            for (int i = 0; i < 145; ++i) for (int d = 0; d < 3; ++d) {
-                float v = m.vertices[(qk * 145 + i) * 3 + d];
-                if (v < lo[d]) lo[d] = v;
-                if (v > hi[d]) hi[d] = v;
-            }
-            for (int i = 0; i < 4096; ++i) {
-                size_t o = ((size_t)(crow * 64 + i / 64) * 1024 + (size_t)(ccol * 64 + i % 64)) * 4;
-                blend[o]     = c->nlayers > 1 ? c->alpha[1][i] : 0;
-                blend[o + 1] = c->nlayers > 2 ? c->alpha[2][i] : 0;
-                blend[o + 2] = c->nlayers > 3 ? c->alpha[3][i] : 0;
-                blend[o + 3] = c->shadow[i] ? 0 : 255;    /* 173h: 255 lit, 0 shadowed */
-            }
+            int k = ((qn / 2) * 8 + qk / 8) * 16 + (qn % 2) * 8 + qk % 8;
+            for (int i = 0; i < 145; ++i)
+                for (int l = 0; l < 4; ++l) m.tangents[(qk * 145 + i) * 4 + l] = (float)pic[p->chunk_tex[k][l]];
         }
-        if (!made) { UnloadMesh(m); continue; }
-        m.triangleCount = n / 3;
+        m.vertices = q->vertices;     q->vertices = NULL;
+        m.normals = q->normals;       q->normals = NULL;
+        m.texcoords = q->texcoords;   q->texcoords = NULL;
+        m.texcoords2 = q->texcoords2; q->texcoords2 = NULL;
+        m.colors = q->colors;         q->colors = NULL;
+        m.indices = q->indices;       q->indices = NULL;
+        m.triangleCount = q->nindex / 3;
         UploadMesh(&m, false);
-        g->mesh[q] = m;
-        g->has[q] = 1;
-        g->centre[q] = (Vector3){ (lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2 };
-        g->radius[q] = Vector3Distance(g->centre[q], (Vector3){ hi[0], hi[1], hi[2] });
-        continue;
-    fail:
-        /* a picture that can't be had: everything this tile took is given back */
-        UnloadMesh(m);
-        for (int i = 0; i < g->nused; ++i) if (--layer_of[g->used[i]].refs == 0) layer_of[g->used[i]].name[0] = '\0';
-        for (int qq = 0; qq < q; ++qq) if (g->has[qq]) UnloadMesh(g->mesh[qq]);
-        free(blend); free(g);
-        adt_free(adt); free(adt);
-        return -1;
+        g->mesh[qn] = m;
+        g->has[qn] = 1;
+        g->centre[qn] = (Vector3){ q->centre[0], q->centre[1], q->centre[2] };
+        g->radius[qn] = q->radius;
     }
-    Image im = { .data = blend, .width = 1024, .height = 1024, .mipmaps = 1, .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 };
+    Image im = { .data = p->blend, .width = 1024, .height = 1024, .mipmaps = 1, .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 };
     g->blend = LoadTextureFromImage(im);
-    free(blend);
     SetTextureFilter(g->blend, TEXTURE_FILTER_BILINEAR);
     SetTextureWrap(g->blend, TEXTURE_WRAP_CLAMP);
-    /* the array's smaller copies, remade for every layer (the new ones among them) */
-    glad_glBindTexture(GL_TEXTURE_2D_ARRAY_, array_id);
-    glad_glGenerateMipmap(GL_TEXTURE_2D_ARRAY_);
-    glad_glBindTexture(GL_TEXTURE_2D_ARRAY_, 0);
-    *kept = adt;
-    tiles[tx * 64 + ty] = g;
+    *kept = p->adt;
+    tiles[p->tx * 64 + p->ty] = g;
+    ground_prep_free(p, 1);
     return 0;
 }
 /* }}} */
@@ -368,8 +290,7 @@ void ground_drop_tile(int tx, int ty)
     if (!g) return;
     for (int q = 0; q < 4; ++q) if (g->has[q]) UnloadMesh(g->mesh[q]);
     UnloadTexture(g->blend);
-    for (int i = 0; i < g->nused; ++i)                  /* a layer no loaded tile uses any more is freed for reuse */
-        if (--layer_of[g->used[i]].refs == 0) layer_of[g->used[i]].name[0] = '\0';
+    for (int i = 0; i < g->nused; ++i) let_go(g->used[i]);
     free(g);
     tiles[tx * 64 + ty] = NULL;
 }

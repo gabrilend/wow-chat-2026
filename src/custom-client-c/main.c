@@ -192,6 +192,7 @@ static struct { double x, y, z; float facing; MovesState moves; int cycle; float
 /* {{{ the world and the camera */
 static MapWorld world;
 static MpqChain chain;                                   /* the original client's archives, open for the whole run */
+static GroundPlace ground_place;                         /* where tiles' ground is prepared, on either thread (173u) */
 static char   tile_state[64 * 64];                      /* 0 not loaded, 1 painted, 2 no ground file (open sea) */
 static int    tiles_loaded, tiles_dropped;               /* for the picture report */
 static double ox, oy;                                    /* the drawing origin, near the start */
@@ -359,6 +360,7 @@ static int tile_loaded(int x, int y) { return tile_state[x * 64 + y] == 1; }   /
 static double tile_load_most_s, tile_load_total_s;   /* the slowest tile load and their sum, for the picture report (173u) */
 static double walk_load_most_s, walk_load_total_s;   /* the same for loads after the start (while she moves) */
 static int    walk_loads, started_walking;
+static double walk_ground_s, walk_doodads_s;            /* of the walking loads' time: the ground's, the doodads' (173u) */
 static int    read_ahead = 1;                            /* --no-read-ahead: off, to measure what it saves */
 static void refresh_tiles(void)
 {
@@ -372,12 +374,21 @@ static void refresh_tiles(void)
             char why[600];
             AdtTile *adt;
             double load_t0 = GetTime();
-            int got = ground_load_tile(x, y, ox, oy, &world, &adt, why, sizeof why);
+            /* the ground: prepared ahead by the helper thread when it got
+             * there first (then only sent to the card here), else prepared
+             * here (the start's tiles, a jump, or the helper turned off) */
+            GroundPrep *prep;
+            int got = prefetch_take_ground(x, y, &prep);
+            if (got == 2) got = ground_prep_tile(&ground_place, x, y, ground_on_card, &prep, why, sizeof why);
+            if (got == 0) got = ground_load_tile(prep, &adt, why, sizeof why);
             if (got < 0) { fprintf(stderr, "painting tile (%d, %d): %s\n", x, y, why); exit(1); }
+            double ground_t1 = GetTime();
+            if (started_walking) walk_ground_s += ground_t1 - load_t0;
             if (got == 0) {
                 liquid_add_tile(waters, x, y, adt);
                 water_add_tile(adt, x * 64 + y, ox, oy);
                 if (doodads_add_tile(adt, x * 64 + y, ox, oy, why, sizeof why)) { fprintf(stderr, "doodads on tile (%d, %d): %s\n", x, y, why); exit(1); }
+                if (started_walking) walk_doodads_s += GetTime() - ground_t1;
                 adt_free(adt);
                 free(adt);
             }
@@ -393,6 +404,7 @@ static void refresh_tiles(void)
     for (int dx = -TILE_REACH - 1; dx <= TILE_REACH + 1; ++dx)
         for (int dy = -TILE_REACH - 1; dy <= TILE_REACH + 1; ++dy)
             if (abs(dx) == TILE_REACH + 1 || abs(dy) == TILE_REACH + 1) prefetch_tile(tx + dx, ty + dy);
+    prefetch_keep_near(tx, ty, TILE_REACH + 1);          /* preparations she turned away from are let go */
     /* dropping (173s): tiles more than a tile beyond the loaded square go,
      * with all they brought; the margin keeps a walk back and forth over
      * an edge from loading and dropping the same tile again and again */
@@ -535,8 +547,13 @@ int main(int argc, char **argv)
         free(mt);
         if (!found) { fprintf(stderr, "no map %d in Map.dbc\n", map_id); CloseWindow(); return 1; }
     }
-    if (ground_init(&chain, map_name, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
-    if (read_ahead) prefetch_start(&chain, map_name);    /* reads tiles ahead of her on a second thread (173u) */
+    if (ground_place_init(&ground_place, &chain, map_name, &world, ox, oy, why, sizeof why) || ground_init(&ground_place, why, sizeof why)) {
+        fprintf(stderr, "%s\n", why); CloseWindow(); return 1;
+    }
+    if (read_ahead) {                                    /* reads tiles ahead of her on a second thread, and prepares their ground (173u) */
+        prefetch_start(&chain, map_name);
+        prefetch_prepare_ground(&ground_place, ground_on_card);
+    }
     solids = collide_new(ox, oy);
     waters = liquid_new();
     if (doodads_init(&chain, solids, waters, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
@@ -820,12 +837,14 @@ int main(int argc, char **argv)
             printf(ok ? "picture saved: %s\n" : "could not save the picture to %s\n", shot);
             int dm2, dc2, ds2, dmov2, demit2;
             doodads_counts(&dm2, &dc2, &ds2, &dmov2, &demit2);
-            int ahead_tiles, ahead_files;
-            prefetch_counts(&ahead_tiles, &ahead_files);
+            int ahead_tiles, ahead_files, grounds_made, grounds_taken;
+            prefetch_counts(&ahead_tiles, &ahead_files, &grounds_made, &grounds_taken);
             printf("unpacking files from the archives: %.0f ms over the run, both threads (%llu read, %llu from memory); read ahead: %d tiles, %d files\n",
                    chain.unpack_s * 1000, (unsigned long long)chain.misses, (unsigned long long)chain.hits, ahead_tiles, ahead_files);
+            printf("ground prepared ahead: %d tiles, %d of them loaded\n", grounds_made, grounds_taken);
             printf("tile loads: %.0f ms the slowest, %.0f ms on average (each stalls the frame it happens in; 173u)\n", tile_load_most_s * 1000, tiles_loaded ? tile_load_total_s * 1000 / tiles_loaded : 0.0);
             printf("  of those, while she moved: %d, %.0f ms the slowest, %.0f ms on average\n", walk_loads, walk_load_most_s * 1000, walk_loads ? walk_load_total_s * 1000 / walk_loads : 0.0);
+            if (walk_loads) printf("  of their average, the ground %.0f ms, water and doodads %.0f ms\n", walk_ground_s * 1000 / walk_loads, walk_doodads_s * 1000 / walk_loads);
             printf("tiles: %d loaded, %d dropped over the run; now %d placed, %d solid triangles\n", tiles_loaded, tiles_dropped, dc2, collide_count(solids));
             printf("frames took %.1f ms each on average, over %d (drawing, bending and all)\n", (GetTime() - loop_start) * 1000.0 / frames, frames);
             for (int ph = 0; ph < PH_COUNT; ++ph) printf("  %5.2f ms a frame: %s\n", phase_s[ph] * 1000.0 / frames, PHASE_NAME[ph]);
