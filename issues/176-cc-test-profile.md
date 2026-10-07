@@ -75,12 +75,18 @@ patch gates, source patch list, the word in `.profile`).
 
 ## Open Questions
 
-1. **Modules:** does cc-test include mod-ale (the Lua engine) so that test
-   setups can be written in Lua, or none at all (purest stock)?
-2. **The patching system's refactor** (the owner: "we might need to
-   refactor the patching system too ... we can come back to that later").
-   What is wrong with it today, as you see it? This will be its own issue
-   once described.
-3. **Where the client's networking is built:** here, before the client
-   moves (173v), or in the W client project after the move (its phase 5,
-   networking)? The cc-test server stays in this project either way.
+1. (Answered 2026-10-07) **Modules:** mod-ale, yes. Test scenes can be
+   written in Lua.
+2. (Answered 2026-10-07) **The patching system's refactor** is for tests:
+   "I'm thinking we could add a patch that runs a test by setting up a
+   particular scene. Each one could be in a different location so they
+   don't interfere, and then with a cc-test build they could all be tested
+   at once, to catch regressions." So a test patch sets up one scene (its
+   creatures, objects, a character's starting spot) in a place of its
+   own. A cc-test build installs every scene, and one run checks them all.
+   This is its own issue once its shape is clear. Still open: how is a
+   scene's result read (the server's logs, the client's report, a
+   picture)?
+3. (Answered 2026-10-07) **Where the client's networking is built:** in
+   the W client, after the move: "let's focus on moving over to to the W
+   client." The cc-test server stays in this project.

@@ -172,8 +172,20 @@ behind in this project.
      archive. A folder is packed into an archive when it is taken in, and
      only archives travel over the network. This goes into the W client's
      asset-replacement document (012).
-4. **Numbered file names:** rename the source files to reading-order
-   numbers during the move (the house rule), or later?
+4. (Answered 2026-10-07) **Numbered file names:** during the move:
+   "ideally yes, because we're merging two projects into a third."
+   - **The third project** (the owner, 2026-10-07): "I think there's been
+     a lot of work done in the
+     /home/ritz/programming/ai-stuff/world-edit-to-execute/ project too,
+     so we'll need to merge both systems into the W client's planning
+     documents." world-edit-to-execute has its own Phase W (W01 to W08:
+     reading the WoW archives, WC3 maps in the WoW client, WoW models
+     with WC3 behaviour, comparing against the real client, the asset
+     forge and similarity scores, one restyled theme, its own server) and
+     Lua code (`src/mpq`, `src/net`, `src/render` and more). The W
+     client's documents are rewritten from all three sources before any
+     code moves. Where two of them built the same thing (an MPQ reader
+     exists in both), the merge chooses one and records why.
 5. **The Lua first version** (`src/custom-client/`): move it too as the
    reference, or leave it here, deprecated, until it is removed?
 6. (Answered 2026-10-07) **The creature list generator:** move or stay?

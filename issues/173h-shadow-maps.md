@@ -83,7 +83,31 @@ darkens. This runs on the graphics card (the 173u rule).
    it off, the client draws the original's look, and the pixel-for-pixel
    comparisons run with it off. Still open: built now, or after the
    original is rebuilt?
-3. Shadows from characters, and light from torches (the owner asked,
+3. (Answered 2026-10-07) Torch light, spell light and the settings.
+   The owner: "torches should light the ground and such. The walls, other
+   characters, all of it. Also, spell effects should do the same, with
+   things like shadowbolt actually lowering light in the space around the
+   bolt." So every model's lights (a torch in a sconce, one in a hand, a
+   spell's glow) light the whole world around them, not just their own
+   model. A shadow spell's light is *negative*: it subtracts light inside
+   its reach. The original did not do this.
+
+   The settings, the owner's way: "let's make each 'step' be an interface
+   option - shadow quality, then shadow types as a checklist -
+   realtime/baked shadows from the environment, realtime/baked shadows on
+   characters, and realtime/baked shadows from torches. Unless you'd split
+   it a different way?" One suggestion, asked as question 4: only the
+   environment has a baked form (the ground's map). Characters have the
+   round blob, and torches have nothing baked.
+4. A different split, for the owner to accept or not. One "shadow
+   quality" setting (the depth pictures' size and how many cascades),
+   then one choice per source, each listing only the forms that exist:
+   - the world (ground, trees, buildings): baked / live;
+   - characters: blob / live;
+   - torches and spells: off / light only / light and shadows (nearest
+     few).
+   Does this fit, or should all three keep the same two choices?
+5. Shadows from characters, and light from torches (the owner asked,
    2026-10-07). Characters: yes. They are drawn into the sun's depth
    picture like everything else, so they cast shadows. Torches: the
    models carry their own light (each model file can hold point lights,
