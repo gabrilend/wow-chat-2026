@@ -897,7 +897,37 @@ Verbatim:
   whether it goes into the game alone or blended with another rule, and
   its numbers (sight 40 yards, forgetting after 240 seconds, a 12-yard
   claim round another buddy's goal), which were chosen for the page, not
-  measured.
+  measured. The owner's follow-ups, 2026-10-07:
+  - **Patrol, don't settle**, once a cave is all seen: "keep patrolling
+    because monsters respawn."
+  - **Explored means close**: "gotta get closer than 40 yards, because
+    otherwise how will you know if there's any secret passages or
+    whatever? Maybe 5 or 10 yards is better." So sight (40 yards) and
+    "explored" (5 or 10, to choose) are two different distances, and the
+    unseen edge is the edge of the *explored* floor.
+  - **The 240-second forgetting** "seems arbitrary": scale it by how much
+    is explored, and by how long a big dungeon with fights takes.
+    Proposed: no clock at all. Memory never fades while unexplored floor
+    is left; once all is explored, buddies patrol, and patrol order is
+    by time since explored (or by where monsters have respawned since).
+  - **Patrol order** (the owner: "Connect the nearest to the one nearest
+    to that ... Or is that the travelling salesman problem?"): it is. A
+    nearest-next tour, tidied by swapping crossed legs ("2-opt"), over
+    the skeleton's knots and far ends, by walking distance.
+  - **Dungeons reverse the claim**: "when exploring dungeons, we'll need
+    to inverse this behavior, to keep the group together" (with 617e10,
+    closer in danger, and 617c2, the proximity party).
+  - **Sight cost**: 96 lines twice a second per buddy, questioned by the
+    owner. Proposed instead: look only after moving 2 yards, and use
+    shadowcasting (the roguelike field-of-view method, each visible
+    square visited once) over the area's ground grid instead of lines.
+  - **Walking backward and sideways** for immersion: "if we figured out
+    reasons for bots to walk backward and sideways ... buddy-bots might be
+    able to since they're meant to be players." The server's spline
+    movement can face a point while moving and can move facing backward
+    (MoveSplineInit's facing and inverted-orientation options). Whether
+    other players' clients then show the backpedal and strafe animations
+    is to be checked in game. Reasons are still to be listed.
 - (Answered 2026-10-07) **Crowding**: the waypoint rule's direction
   changes. Someone within 5 yards moves a waypoint 10 points toward the
   middle if it is in the inner half of the area's radius, and toward the
