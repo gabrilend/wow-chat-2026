@@ -280,7 +280,18 @@ behind in this project.
       everyone sends their commands to it." So WC3 maps run on
       AzerothCore too: players send their orders to the server, which
       stamps each with its tick and passes it on.
-    - **Open: orders sent player to player as well.** The owner: "they
+    - (Answered 2026-10-07, replacing the lockstep host above) **Server
+      authority:** "I think lockstep isn't worth the implementation cost.
+      Let's just do server-authoritative and call it good. Maybe lockstep
+      for WETE LAN games or something...?" So on AzerothCore a WC3 map
+      runs as the WoW world does: players send orders, the server runs
+      the simulation and sends each player what they can see (a unit's
+      full state as it comes out of the fog). Lockstep is left as a
+      possible later mode for world-edit-to-execute's LAN games. Also
+      asked and set aside with it: switching a game to server-only when
+      a player's packets keep going missing (two systems to keep right,
+      and a hand-over mid-game, for a case server authority never has).
+    - **Set aside by the answer above: orders sent player to player as well.** The owner: "they
       also send their commands to every other player as well, who
       simulate what they can see on their end ... player A sends commands
       to the server and player B, player B simulates on their end, and

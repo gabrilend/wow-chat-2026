@@ -1,6 +1,6 @@
 # Conversation Summary: ee3e437d-85af-485c-8ed0-8478da64add8
 
-Generated on: 2026-10-07 10:33:53
+Generated on: 2026-10-07 10:45:22
 Models: claude-opus-5-5
 
 ## Contents
@@ -9,6 +9,10 @@ Models: claude-opus-5-5
    have no open questions, mostly in the custom client, and wrote your
    queued-inputs plan as issue 173w. Next, I need your answers to its four
    questions before building it.
+2. 2026-10-07 10:36, after Request 8 - We're merging this custom client into the
+   W client, and all of 173v's questions are answered: the parts move with
+   handles and typed errors. Next I rewrite the W client's documents, starting
+   with the tech stack and build system.
 
 --------------------------------------------------------------------------------
 
@@ -939,6 +943,109 @@ this down as the open networking question, with your words.
 Continuing with the merge: next I rewrite the W client's documents (tech stack,
 build, architecture with handles and typed errors, formats, rendering, roadmap
 and crosswalk), then the code moves.
+
+--------------------------------------------------------------------------------
+
+### User Request 9
+
+okay yeah I think we transition WETE to Azerothcore then. We can have AC be the
+lockstep host, meaning everyone sends their commands to it. But they also send
+their commands to every other player as well, who simulate what they can see on
+their end. Well, if a player can't see any part of a command, then the server
+just sends them the parts they can see. Though... Now that I think of it...
+Player A could just, not send their commands to player B, and the server would
+have to send them. Maybe we could detect that by player B saying "hey wait a
+minute I coulda seen that coming" and the server flags player A as a cheater?
+Like, player A sends commands to the server and player B, player B simulates on
+their end, and the server doesn't need to send player B player A's commands.
+Unless player B notices that something is amiss and then that player gets a big
+stamp on their head that says "don't trust this asshat" - is that valid? Any
+edge-cases?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 9
+
+> Recording the decision (WETE moves onto AzerothCore, AC as the lockstep host)
+> and your peer-to-peer idea as an open question in 173v, then the analysis.
+
+*[commit] 11d198ca4 in wow-chat-2026 - WC3 maps run on AzerothCore, the server stamping and passing on orders*
+
+Recorded in 173v (committed): WETE moves onto AzerothCore with the server as
+lockstep host, and your peer-to-peer idea is an open question there.
+
+The core of your scheme is valid: a server that holds its own copy of every
+order *can* catch a player who sends a different story to someone else. But
+"player B notices something is amiss" doesn't work as stated, and there are
+several edge cases. I'd go simpler unless peer-to-peer is solving a specific
+problem.
+
+**Edge cases:**
+
+1. **"Simulate only what you can see" breaks lockstep.** Lockstep only works if
+   every machine runs the *whole* game; that's what keeps them identical.
+   - If player B skips A's hidden units, then when one walks out of the fog, B
+     has no idea of its health, position or what it's carrying. B never computed
+     them.
+   - Worse, causes cross the fog: A's hidden catapult hits B's visible tower. B
+     can't compute the damage without the catapult's hidden state.
+   - So either everyone simulates everything (classic lockstep, where the fog is
+     only a drawing choice and map hacks are possible), or the server sends a
+     full snapshot of each unit as it comes into view. The second isn't lockstep
+     any more: it's the server being the authority.
+
+2. **B can't notice what B can't see.** If A withholds an order for a fogged
+   unit, B has nothing to compare against. The better detector is the server
+   itself, since it already has A's orders. Each tick, B sends the server a
+   short digest (a hash) of the orders it received from A. If it doesn't match
+   the server's copy, the server knows at once, with no accusation needed.
+
+3. **Packet loss looks exactly like cheating.** An honest A on bad Wi-Fi "fails
+   to send" to B all the time. A single miss can never mark anyone. It has to be
+   a pattern, and even then it could be B's connection.
+
+4. **B can lie about A.** "I never got it" can't be disproved over a network. So
+   B's report alone can't flag A; only the server's own records can.
+   - For "A sent me something different", A signs each order with a key the
+     server knows. Then B can prove what A sent, and A can't deny it.
+
+5. **A can stall B without technically cheating.** In lockstep, B waits for A's
+   orders for each tick. If A sends late to B but on time to the server, B lags
+   until the server fills the gap. It's free griefing, so the server has to step
+   in quickly.
+
+6. **Direct connections expose home addresses.** Players can then flood each
+   other's connections offline. Many home routers also refuse incoming
+   connections, so you end up relaying through the server anyway.
+
+7. **Every machine must compute bit-for-bit the same.** Floating-point maths can
+   differ between processors and compilers, and that desyncs a lockstep game.
+   It's solvable because everyone runs the same W client binary, but the
+   simulation needs care: fixed-point maths or strict floating-point settings.
+
+**What sending player-to-player actually buys:** almost nothing in traffic,
+because orders are tiny (a few bytes per click). The real gain is delay: A→B
+directly can be faster than A→server→B. It only matters if your server is
+far from players who are close to each other.
+
+**My suggestion:**
+- Everyone sends orders only to AzerothCore.
+- It stamps the tick and passes each order on, filtered by what each player may
+  see.
+- It also runs the simulation itself as referee, sending snapshots when things
+  come out of the fog.
+- That gives one trusted copy, no accusations, no exposed addresses, and fog
+  that can't be hacked. Add direct sending later only if delay turns out to
+  hurt.
+
+To put it back to you: what was the peer-to-peer part meant to save? Server
+traffic, delay, or server processing? And then, a second way: if the server
+already gets every order, what would player B be checking that the server
+couldn't check itself?
+
+I'll carry this into the W client's network document (004) when I rewrite it
+during the merge. I'm continuing with that rewrite now unless you want to keep
+going on networking first.
 
 --------------------------------------------------------------------------------
 
