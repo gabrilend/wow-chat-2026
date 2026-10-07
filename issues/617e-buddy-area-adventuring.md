@@ -893,7 +893,11 @@ Verbatim:
   server's navigation mesh (`scripts/generate-exploration-floors`), the
   rules live in `docs/HTML/exploration-compare/explore-engine.js`, and
   `scripts/test-exploration-engine` prints each rule's numbers per cave.
-  Still open: which rule, or which blend, goes into the game.
+  The owner, 2026-10-07, after watching: "Unseen edge wins!" Still open:
+  whether it goes into the game alone or blended with another rule, and
+  its numbers (sight 40 yards, forgetting after 240 seconds, a 12-yard
+  claim round another buddy's goal), which were chosen for the page, not
+  measured.
 - (Answered 2026-10-07) **Crowding**: the waypoint rule's direction
   changes. Someone within 5 yards moves a waypoint 10 points toward the
   middle if it is in the inner half of the area's radius, and toward the
