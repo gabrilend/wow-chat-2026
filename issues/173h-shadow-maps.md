@@ -81,8 +81,9 @@ darkens. This runs on the graphics card (the 173u rule).
 2. (Answered 2026-10-07) Always on, or a setting? A setting: "sure let's
    keep it as a setting to be cheaper on user's hardware demands." With
    it off, the client draws the original's look, and the pixel-for-pixel
-   comparisons run with it off. Still open: built now, or after the
-   original is rebuilt?
+   comparisons run with it off. Built when? "let's do it in the merged
+   engine" (2026-10-07): steps 4 to 6, and torch and spell light, wait
+   for the move (173v).
 3. (Answered 2026-10-07) Torch light, spell light and the settings.
    The owner: "torches should light the ground and such. The walls, other
    characters, all of it. Also, spell effects should do the same, with

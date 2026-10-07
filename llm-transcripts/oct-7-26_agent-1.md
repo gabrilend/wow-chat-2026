@@ -1,7 +1,14 @@
 # Conversation Summary: ee3e437d-85af-485c-8ed0-8478da64add8
 
-Generated on: 2026-10-07 09:59:14
+Generated on: 2026-10-07 10:06:20
 Models: claude-opus-5-5
+
+## Contents
+
+1. 2026-10-07 10:02, after Request 2 - I've been working through the issues that
+   have no open questions, mostly in the custom client, and wrote your
+   queued-inputs plan as issue 173w. Next, I need your answers to its four
+   questions before building it.
 
 --------------------------------------------------------------------------------
 
@@ -475,6 +482,57 @@ other open issues need a server build or in-game testing, which you run.
 On question 2, try putting it a second way: what do you most want to learn from
 many characters at once — that lots of separate behaviours each still work, or
 how characters behave around each other?
+
+--------------------------------------------------------------------------------
+
+### User Request 3
+
+can you write the queued inputs and test characters concepts ideas and questions
+into an issue file for me? We can come back to it later, when we implement the
+new test-patch system for the cc-test profile (see if you can find those issues,
+it might make sense to update them instead of creating a new issue)
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 3
+
+*[commit] 38c253b32 in wow-chat-2026 - The test-patch system gets its own issue: test scenes for cc-test*
+
+I wrote it into a new issue, **176a (test scenes)**, under the cc-test profile
+issue (176). It's committed.
+
+I looked for an existing issue to update first. 176 describes the test-patch
+idea in your answer to its second question, and says it would become "its own
+issue once its shape is clear". No such issue existed yet, so 176a is that
+issue, and the queued-inputs ideas go in it rather than in a separate one.
+
+176a contains:
+- **What a test patch is:** each one sets up a single scene in its own place in
+  the world. That covers the creatures, the test characters and where they
+  start, each character's queue of inputs, what each one logs, and what result
+  is expected.
+- **Queued inputs:** a list of timed moments, each pressing or releasing an
+  action under the original game's action names, taking a picture, or writing a
+  log line. The queue plays at a fixed pace, so every run comes out the same.
+- **Logs and checking:** logs are written to RAM, and ordinary test code
+  compares them with what's expected. Any difference goes to an agent, which
+  decides whether the new result is wanted and, if so, updates the test.
+- **Many test characters at once** in a run with no window, plus pictures taken
+  without a window.
+- **Your words quoted** from 176 and from this conversation.
+- **Six open questions:** the queue's format; who plays the characters (the
+  client logged into the server, the client alone without a server, or both);
+  whether characters in one run meet; who writes the log (the client, the
+  server, or both, compared); how scenes are kept apart; and whether the picture
+  options stay as shortcuts.
+
+The client-only plan from last turn (173w) is kept, as issues are never deleted.
+It now says it's the client's half of 176a and that its questions live there.
+176 points to 176a too.
+
+One thing to check: 176 belongs to the other session working on cc-test. I added
+one line to it saying where the test-patch system now lives, and nothing else in
+that file changed.
 
 --------------------------------------------------------------------------------
 

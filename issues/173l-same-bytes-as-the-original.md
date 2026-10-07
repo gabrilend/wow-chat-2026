@@ -145,5 +145,6 @@ check is for.
    `id` lists group 25, input), so the input recorder can read the devices
    with no change; group membership counts from the login that started
    the session.
-2. Should the tap also become the place the custom client connects
-   through later (one program for logging, comparing and debugging)?
+2. (Answered 2026-10-07) Should the tap also become the place the custom
+   client connects through later? No: "that's just for testing purposes.
+   It's not a Warden." The tap exists only in recorded test sessions.

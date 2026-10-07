@@ -34,21 +34,41 @@ original reasoning: the OSR Basic/Expert relationship it describes is
 exactly what 155 and 156 now carry out. Whether vanilla and release keep
 their names, or get new ones, is this issue's remaining open question.
 
+## Revised Direction (verbatim, 2026-10-07)
+
+Told what release holds (compile and crash fixes, one gameplay patch,
+level 20, 2x experience, 10x fall damage, bots held to 1-20, no Lua
+scripts):
+
+> Great, the release profile then is just the demo. Leave it at level 20,
+> and let's rename it to "starter-edition" instead.
+
+So **release → starter-edition**: the demo, at level 20, with its patches
+unchanged. Vanilla keeps its name.
+
 ## Current Behavior
 
 The profiles are named `vanilla`, `release`, `beta` and `alpha`, plus
 `basic` (issue 155, added 2026-09-23). The names this issue proposed for
 vanilla and release, `basic` and `expert`, now belong to two new profiles
-(155 built; 156 planned). Nothing has been renamed.
+(155 built; 156 planned). Nothing has been renamed. The release name
+appears in about 40 scripts and patch files. Some of those uses mean
+something else (a release build, a version release), so each hit has to
+be read, not replaced blindly.
 
 ## Intended Behavior
 
-Revised 2026-09-23: no rename of vanilla or release. The OSR Basic/Expert
-pairing this issue argued for is carried by new profiles instead:
-`basic` (levels 1–60) and `expert` (levels 61–80, starting at 60). What
-remains here is only the leftover question of whether vanilla and release
-keep their names (Open Questions). If they do, this issue completes as
-"superseded by 155 and 156" and moves to `completed/` unchanged otherwise.
+Revised 2026-10-07: **release is renamed `starter-edition`**, and nothing
+else about it changes. Level 20 and every patch it carries stay as they
+are. Everywhere a profile name resolves (the table in "Blast Radius"
+below: directories, patch gates, patch lists, scripts, `.profile`), the
+new name works and the old one is gone. It shares beta's unsuffixed
+databases, so no database is renamed. Vanilla keeps its name. The OSR
+Basic/Expert pairing is carried by `basic` (155) and `expert` (156).
+
+The sections below record the original rename reasoning. Their blast
+radius applies to release → starter-edition, with "expert" read as
+"starter-edition".
 
 The sections below record the original rename reasoning.
 
@@ -243,7 +263,15 @@ the tree is consistent before anything selects the new name.
 
 ## Open Questions
 
-- **(2026-09-23, supersedes the rest of this list)** Vanilla and release are
+- **(2026-10-07, answered)** Do vanilla and release keep their names?
+  Vanilla does. Release becomes `starter-edition` (Revised Direction,
+  2026-10-07).
+- **(2026-10-07)** The installed tree `installed-files-release/` holds
+  tracked files. House rule: a directory is moved only when both the old
+  and the new version are tracked in git. Is the rename done as a `git mv`
+  of the tree (history follows), or is the tree rebuilt by an install
+  under the new name and the old one removed?
+- **(2026-09-23, superseded 2026-10-07)** Vanilla and release are
   left alone for now (owner: "we're not really working on vanilla and
   release right now so let's just leave them alone"). This issue stays open,
   parked, until they are worked on again. The questions below were written

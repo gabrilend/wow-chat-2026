@@ -149,7 +149,10 @@ M2 for characters and doodads, WMO for buildings) with their textures.
 1. The client's data files: read from the installed game's Data folder, or extracted once into the project?
    (Chosen for now, 2026-10-05: read in place, nothing copied, so the
    project holds none of the game's files. Is that right, or should a
-   copy live with the project?)
+   copy live with the project?) Answered 2026-10-07: read in place for
+   now. Later, assets are installed per profile, and for a player each
+   server is a profile with its own assets and visual settings (173v,
+   question 9).
 2. (Answered 2026-10-05) Where looks live: "The looks can be stored on
    the client and loaded by the server by model ID and such - the reason
    is, when we implement custom assets, users should be able to supply

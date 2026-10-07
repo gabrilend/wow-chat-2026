@@ -211,5 +211,24 @@ behind in this project.
    where the session ran. Copied files from another project may be
    skipped, rebuilt over, or filed twice. Check each tool against a
    copied file before relying on it.
-8. **Issue numbers:** do the moved pieces keep their 173 letters (for
-   example "173f, now 301") or go only by the W client's numbers?
+8. (Answered 2026-10-07) **Issue numbers:** "W client numbers only. The
+   letters indicate 'sub-issues' and should not be altered, because they
+   provide organization." So a moved piece takes the W client's number
+   for the issue it fills. A letter is used only where it marks a real
+   sub-issue in the W client's own tree, never to carry a 173 letter
+   across. The "came from" line names the 173 issue once.
+9. (Answered 2026-10-07) **Game data and profiles** (173d): read in place
+   for now. "the visual tests might depend on assets, but most of the
+   gameplay tests won't. I think assets should be installed on a
+   per-profile basis (even on the user's end, each 'server' is a profile
+   for them, and could have different visual settings)". So for a player,
+   each server they play on is a profile of the client's own, with its
+   own assets and its own visual settings. The W client's design
+   documents carry this.
+10. (Answered 2026-10-07) **The packet tap** (173l) is not something the
+    client connects through: "that's just for testing purposes. It's not
+    a Warden." It sits between a client and a server only during a
+    recorded test session.
+11. (Answered 2026-10-07) **Live shadows and torch light** (173h) are
+    built in the merged engine, after the move: "let's do it in the
+    merged engine."
