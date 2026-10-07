@@ -89,15 +89,25 @@ Verbatim, 2026-10-06: "can we work on doodad animations / lighting next?"
 **Night light:** the owner (2026-10-06) on Ashenvale at night: "that's
 approximately how it looks, but we can adjust it later if we need to."
 
+**Underwater light (2026-10-07):** each light names, beside its
+clear-weather parameter set (Light's field 8), an underwater one (field
+9; then 10 storm, 11 storm underwater, 12 death; 13-15 are 0 on every
+row, checked). `light_at` takes which kind (`LIGHT_CLEAR`,
+`LIGHT_UNDERWATER`); with the camera below the water's surface the main
+loop asks for the underwater set. Astranaar at noon under water: fog
+from 0 to 167 yards in dark teal (0.11, 0.36, 0.36), against 36 to 361
+above. This replaces the earlier stand-in (the water's deep colour within
+40 yards, this client's distances, 173r). Tested.
+
 **Left:**
 - The combine code's reading, and turning picture animations, checked
   against the original.
-- Weather lights (storms), underwater light, and the ghost world's
-  light after death.
-- The skybox (owner, 2026-10-06: "and skybox!"): many lights name a
-  skybox model (LightParams' skybox, through LightSkybox.dbc: an M2 drawn
-  round the camera, such as Ashenvale's tall trees against the sky). The
-  clouds, the sun and moon, and the stars come with it.
+- Weather lights (storms) and the ghost world's light after death: the
+  sets are read the same way (fields 10, 11, 12), waiting for weather and
+  death to exist in the client.
+- The skybox's clouds, sun, moon and stars: skyboxes are drawn (above),
+  but on the main maps only Northrend's auroras are named; the clouds and
+  the sun and moon disc of the original are not drawn yet.
 - Comparing against the original side by side.
 - Indoor parts of buildings still use their baked colours (173g).
 

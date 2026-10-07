@@ -108,9 +108,10 @@ static void mix_into(LightNow *a, const LightNow *b, float w)
 /* }}} */
 
 /* {{{ light_at */
-int light_at(const LightTables *t, int map, float x, float y, float z, float hours, LightNow *out)
+int light_at(const LightTables *t, int map, float x, float y, float z, float hours, int kind, LightNow *out)
 {
     memset(out, 0, sizeof *out);
+    const int SET = 8 + kind;                            /* Light's field naming this kind's parameter set (8 clear, 9 underwater) */
     uint32_t when = (uint32_t)(fmodf(fmodf(hours, 24.0f) + 24.0f, 24.0f) * 120.0f) % 2880;
     /* the default first, then every sphere reaching here, the larger
      * (outer) first so smaller, nearer lights are laid over them */
@@ -134,11 +135,11 @@ int light_at(const LightTables *t, int map, float x, float y, float z, float hou
         for (int k = i; k > 0 && reach[k].outer > reach[k - 1].outer; --k) { Reach s = reach[k]; reach[k] = reach[k - 1]; reach[k - 1] = s; }
     int used = -1;
     float most = 0;
-    if (def >= 0) { params_at(t, dbc_u32(&t->light, (uint32_t)def, 8), when, out); used = (int)dbc_u32(&t->light, (uint32_t)def, 1); most = 0.0001f; }
+    if (def >= 0) { params_at(t, dbc_u32(&t->light, (uint32_t)def, SET), when, out); used = (int)dbc_u32(&t->light, (uint32_t)def, 1); most = 0.0001f; }
     for (int i = 0; i < nreach; ++i) {
         LightNow l;
         memset(&l, 0, sizeof l);
-        params_at(t, dbc_u32(&t->light, (uint32_t)reach[i].row, 8), when, &l);
+        params_at(t, dbc_u32(&t->light, (uint32_t)reach[i].row, SET), when, &l);
         if (def < 0 && i == 0) *out = l;
         else mix_into(out, &l, reach[i].w);
         if (reach[i].w >= most) { most = reach[i].w; used = (int)dbc_u32(&t->light, (uint32_t)reach[i].row, 1); }
@@ -148,7 +149,7 @@ int light_at(const LightTables *t, int map, float x, float y, float z, float hou
     out->skybox[0] = '\0';
     for (uint32_t r = 0; used >= 0 && r < t->light.rows; ++r) {
         if ((int)dbc_u32(&t->light, r, 1) != used) continue;
-        int prow = find_row(&t->params, dbc_u32(&t->light, r, 8));
+        int prow = find_row(&t->params, dbc_u32(&t->light, r, SET));
         uint32_t sky = prow >= 0 ? dbc_u32(&t->params, (uint32_t)prow, 3) : 0;
         int srow = sky ? find_row(&t->skyboxes, sky) : -1;
         if (srow >= 0) snprintf(out->skybox, sizeof out->skybox, "%s", dbc_text(&t->skyboxes, (uint32_t)srow, 2));

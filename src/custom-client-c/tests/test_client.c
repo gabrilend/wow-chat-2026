@@ -1240,8 +1240,8 @@ particles_done:
         LightTables lt;
         if (mpq_chain_open(&lc, client, "enUS", why, sizeof why) || light_open(&lt, &lc, why, sizeof why)) { check(0, why); goto light_done; }
         LightNow noon, night, far;
-        int id = light_at(&lt, 1, 2717, -400, 110, 12, &noon);
-        light_at(&lt, 1, 2717, -400, 110, 0.5f, &night);
+        int id = light_at(&lt, 1, 2717, -400, 110, 12, LIGHT_CLEAR, &noon);
+        light_at(&lt, 1, 2717, -400, 110, 0.5f, LIGHT_CLEAR, &night);
         snprintf(line, sizeof line, "at Astranaar the light is Ashenvale's own (light %d), not Kalimdor's default (191)", id);
         check(id == 192, line);
         float sn = noon.sun[0] + noon.sun[1] + noon.sun[2], sm = night.sun[0] + night.sun[1] + night.sun[2];
@@ -1252,10 +1252,16 @@ particles_done:
         snprintf(line, sizeof line, "the water's opacity at Astranaar: sea %.2f shallow to %.2f deep, river %.2f to %.2f (0.75-1, 0.5-1)",
                  noon.water_alpha[0], noon.water_alpha[1], noon.water_alpha[2], noon.water_alpha[3]);
         check(fabsf(noon.water_alpha[0] - 0.75f) < 0.01f && fabsf(noon.water_alpha[1] - 1) < 0.01f && fabsf(noon.water_alpha[2] - 0.5f) < 0.01f && fabsf(noon.water_alpha[3] - 1) < 0.01f, line);
-        int far_id = light_at(&lt, 1, -600, -4200, 40, 12, &far);       /* Durotar, across the continent */
+        int far_id = light_at(&lt, 1, -600, -4200, 40, 12, LIGHT_CLEAR, &far);       /* Durotar, across the continent */
         snprintf(line, sizeof line, "across the continent, in Durotar, another light (%d)", far_id);
         check(far_id >= 0 && far_id != 192, line);
         check(noon.sun_dir[2] > 0.9f && night.sun_dir[2] < noon.sun_dir[2], "the sun is high at noon and low in the night");
+        /* underwater (173n): the same light's underwater set (Light's field 9) */
+        LightNow under;
+        int uid = light_at(&lt, 1, 2717, -400, 110, 12, LIGHT_UNDERWATER, &under);
+        snprintf(line, sizeof line, "under water at Astranaar, noon: light %d, fog %.0f to %.0f yards (above: %.0f to %.0f), colour %.2f %.2f %.2f",
+                 uid, under.fog_start, under.fog_end, noon.fog_start, noon.fog_end, under.fog[0], under.fog[1], under.fog[2]);
+        check(uid == 192 && under.fog_end > 0 && under.fog_end < noon.fog_end, line);
         light_close(&lt);
         mpq_chain_close(&lc);
     }

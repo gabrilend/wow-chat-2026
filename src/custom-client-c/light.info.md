@@ -18,9 +18,10 @@ the light here, now?".
 Layouts (3.3.5a):
   Light: 1 id, 2 map, 3-5 position (x, y, z, all times 36, in
     placement space: world x = 17066.67 - z/36, world y = 17066.67 -
-    x/36, height y/36), 6 inner radius, 7 outer radius (times 36), 8
-    clear-weather parameter set. A light at position 0, 0, 0 is the
-    map's default.
+    x/36, height y/36), 6 inner radius, 7 outer radius (times 36), 8-12
+    parameter sets: 8 clear weather, 9 clear underwater, 10 storm, 11
+    storm underwater, 12 death (the ghost world); 13-15 unused (0 on
+    every row). A light at position 0, 0, 0 is the map's default.
   LightIntBand: 1 id (= set * 18 - 17 + band), 2 count, 3-18 times
     (half-minutes since midnight, 0-2880), 19-34 colours (0xRRGGBB).
     Bands used: 0 sun, 1 shade (ambient), 2-6 sky overhead to horizon,
@@ -55,8 +56,9 @@ A LightNow, field by field (colours are red, green, blue, 0 to 1):
 - `type LightTables`
 - `int light_open(LightTables *t, MpqChain *chain, char *why, int why_len);`
 - `void light_close(LightTables *t);`
-- `int light_at(const LightTables *t, int map, float x, float y, float z, float hours, LightNow *out);`
+- `int light_at(const LightTables *t, int map, float x, float y, float z, float hours, int kind, LightNow *out);`
   The light at world (x, y, z) on map `map` at `hours` since midnight
-  (0-24). Returns the id of the light whose colours weigh most (for
+  (0-24), of kind `kind` (LIGHT_CLEAR, or LIGHT_UNDERWATER while the
+  camera is below the water's surface: 173n). Returns the id of the light whose colours weigh most (for
   reports), or -1 when the map has no lights at all (then `out` holds a
   plain grey day, and the caller is told).

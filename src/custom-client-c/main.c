@@ -566,7 +566,7 @@ int main(int argc, char **argv)
     if (light_open(&lights, &chain, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     sky_init();
     LightNow light;
-    int light_id = light_at(&lights, map_id, (float)elf.x, (float)elf.y, (float)elf.z, hours, &light);
+    int light_id = light_at(&lights, map_id, (float)elf.x, (float)elf.y, (float)elf.z, hours, LIGHT_CLEAR, &light);
     if (light_id < 0) printf("light: map %d has no lights in Light.dbc; a plain grey day is used\n", map_id);
     else printf("light: %02d:%02d, light %d, fog from %.0f to %.0f yards\n", (int)hours, (int)(fmodf(hours, 1.0f) * 60), light_id, light.fog_start, light.fog_end);
     int eye_m = GetShaderLocation(model_sh, "eye");
@@ -762,21 +762,14 @@ int main(int argc, char **argv)
         BeginDrawing();
         /* the light here, now: time runs on in real time */
         hours = fmodf(hours + dt / 3600.0f, 24.0f);
-        int lit = light_at(&lights, map_id, (float)elf.x, (float)elf.y, (float)elf.z, hours, &light);
-        /* underwater (173r): with the camera below the water's surface the
-         * world closes in to the water's deep colour (the zone's river or sea
-         * band, 173n) within 40 yards, as the original's underwater view does;
-         * this client's distances, to compare */
-        {
-            int kind = 0;
-            float surface = liquid_surface(waters, eye.x + ox, eye.y + oy, &kind);
-            if (surface > -10000 && eye.z < surface) {
-                const float *deep = kind == 2 || kind == 6 ? light.water[1] : light.water[3];
-                for (int c = 0; c < 3; ++c) light.fog[c] = deep[c];
-                light.fog_start = 0;
-                light.fog_end = 40;
-            }
-        }
+        /* underwater (173r, 173n): with the camera below the water's surface
+         * the light is the zone's own underwater set (each light names one
+         * beside its clear-weather set: its fog closes in, its colours the
+         * water's) */
+        int water_kind = 0;
+        float eye_surface = liquid_surface(waters, eye.x + ox, eye.y + oy, &water_kind);
+        int under = eye_surface > -10000 && eye.z < eye_surface;
+        int lit = light_at(&lights, map_id, (float)elf.x, (float)elf.y, (float)elf.z, hours, under ? LIGHT_UNDERWATER : LIGHT_CLEAR, &light);
         /* the fog ends by the view distance at the latest (173b6) */
         float farclip = (float)settings_num("farclip");
         if (light.fog_end > farclip) { light.fog_start *= farclip / light.fog_end; light.fog_end = farclip; }
