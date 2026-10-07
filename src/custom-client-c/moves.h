@@ -5,7 +5,7 @@
  * is doing (running, walking backwards, turning on the spot, in the air,
  * just landed, standing) and picks the matching animation of her model,
  * with the game's own animation numbers. It keeps the animation's clock,
- * plays the run faster or slower to match her real speed (so her feet
+ * plays the run faster or slower to match her speed (so her feet
  * don't slide), plays one-off animations (a jump's start, a landing, an
  * idle fidget) once and then returns, and blends from the old animation
  * to the new one over the new one's blend time (150 ms when it gives
@@ -24,7 +24,9 @@
  *                   swim left and right (no body turn), or treading water
  *   walking         int, 0 or 1: walk toggled (173i): the walk instead of
  *                   the run, forward and strafing (played at her speed too)
- *   speed           float, yards a second along the ground this frame
+ *   speed           float, yards a second she is moving at by the keys
+ *                   (mover_intended_speed: against a wall too, so she
+ *                   runs on the spot, as the original)
  *   dt              float, seconds
  * A MovesState:
  *   seq, ms         int, float: the animation playing and how far into it

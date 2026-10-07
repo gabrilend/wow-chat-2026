@@ -213,3 +213,16 @@ static void swim_step(Mover *m, const MoverInput *in, double dt, const MoverWorl
     m->vz = 0;
 }
 /* }}} */
+
+/* {{{ mover_intended_speed
+ * The same choice of speed as the steps above make (mover_step's one
+ * speed whatever the mix of keys; swim_step's), without moving */
+double mover_intended_speed(const Mover *m, const MoverInput *in)
+{
+    int ahead = (in->forward ? 1 : 0) - (in->back ? 1 : 0);
+    int left  = ((in->strafe_left || (in->strafe_turns && in->left)) ? 1 : 0) - ((in->strafe_right || (in->strafe_turns && in->right)) ? 1 : 0);
+    if (ahead == 0 && left == 0) return 0;
+    if (m->swimming) return (ahead < 0 ? MOVER_SWIM_BACK : MOVER_SWIM) * m->speed;
+    return (in->walking ? MOVER_WALK : ahead < 0 ? MOVER_BACK : MOVER_RUN) * m->speed;
+}
+/* }}} */

@@ -36,9 +36,13 @@ See 173f (the owner's order, 2026-10-05).
     an edge plays the fall.
   - Landing standing still plays the landing; landing on the move carries
     straight on.
-  - Moving animations play at her real speed over the speed they were
-    made for (the run: 8.4 against 6.94, so 1.21 times; the walk: 3.0
-    against 2.5, 1.2 times), so her feet don't slide.
+  - Moving animations play at the speed the keys ask for over the speed
+    they were made for (the run: 8.4 against 6.94, so 1.21 times; the
+    walk: 3.0 against 2.5, 1.2 times), so her feet don't slide. The keys'
+    speed (`mover_intended_speed`), not the distance she went: running
+    into a wall she runs on the spot, as the original does (owner,
+    2026-10-07; at first the distance was used, and against a wall she
+    froze mid-stride).
   - Changes blend over the new animation's blend time (150 ms when it
     gives none).
   - Strafing plays the run (or the walk) with her body turned toward the

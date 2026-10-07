@@ -263,6 +263,12 @@ int main(int argc, char **argv)
     check(near(m.o, 3.14159265358979, 1e-6), "a second turning left: half a circle");
     mover_init(&m, 0, 0, 10, 0, 1.2, 60); in = none; in.right = 1; in.strafe_turns = 1; run(&m, in, 1, g_flat);
     check(near(m.o, 0, 1e-9) && near(m.y, -8.4, 1e-6), "with the right button held, D strafes instead of turning");
+    /* the animation's pace (owner, 2026-10-07): the keys' speed, whether or
+     * not she gets anywhere: running into a wall she runs on the spot */
+    mover_init(&m, 0, 0, 10, 0, 1.2, 60); in = none; in.forward = 1;
+    check(near(mover_intended_speed(&m, &in), 8.4, 1e-9), "held forward, the keys ask for 8.4 yards a second, wall or no wall");
+    in.walking = 1;
+    check(near(mover_intended_speed(&m, &in), 3.0, 1e-9) && near(mover_intended_speed(&m, &none), 0, 1e-9), "walking 3; no keys 0");
     /* walking (173i): the walk speed, 2.5 a second at 120%, every way */
     mover_init(&m, 0, 0, 10, 0, 1.2, 60); in = none; in.walking = 1; in.forward = 1; run(&m, in, 1, g_flat);
     check(near(m.x, 3.0, 1e-6), "walking, a second forward: 3 yards");

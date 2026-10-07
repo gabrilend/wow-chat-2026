@@ -669,7 +669,7 @@ int main(int argc, char **argv)
             .strafe_left = in.strafe_left || (drag_r && in.left), .strafe_right = in.strafe_right || (drag_r && in.right),
             .turn_left = turning && in.left, .turn_right = turning && in.right,
             .grounded = elf.grounded || elf.swimming, .rising = elf.vz > 0, .swimming = elf.swimming, .walking = walking,
-            .speed = dt > 0 ? (float)(hypot(elf.x - before_x, elf.y - before_y) / dt) : 0, .dt = dt,
+            .speed = (float)mover_intended_speed(&elf, &in), .dt = dt,   /* the keys' speed, not the distance gone: into a wall she runs on the spot */
         };
         moves_step(&moves, &her.anim, &mi);
         if (pose_id >= 0) {

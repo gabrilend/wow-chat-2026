@@ -80,4 +80,11 @@ typedef struct {
 void mover_init(Mover *m, double x, double y, double z, double o, double speed, double max_slope);
 void mover_step(Mover *m, const MoverInput *in, double dt, const MoverWorld *world);
 
+/* The speed (yards a second) the keys held ask for, whatever stops her:
+ * walking, running, backwards or swimming, times her speed bonus; 0 with
+ * no movement key. Her animation is paced by this, not by how far she
+ * really went, so she runs on the spot against a wall, as the original
+ * does (owner, 2026-10-07). */
+double mover_intended_speed(const Mover *m, const MoverInput *in);
+
 #endif
