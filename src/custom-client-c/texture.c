@@ -11,6 +11,7 @@
 #include "blp.h"
 
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 /* {{{ OpenGL through Raylib's loader (glad), as ground.c reaches it */
@@ -19,7 +20,13 @@ extern void (*glad_glGenTextures)(int n, unsigned int *textures);
 extern void (*glad_glBindTexture)(GLenum_ target, unsigned int texture);
 extern void (*glad_glCompressedTexImage2D)(GLenum_ target, int level, GLenum_ internalformat, int width, int height, int border, int size, const void *data);
 extern void (*glad_glTexParameteri)(GLenum_ target, GLenum_ pname, int param);
+extern void (*glad_glTexParameterf)(GLenum_ target, GLenum_ pname, float param);
+extern void (*glad_glGetFloatv)(GLenum_ pname, float *data);
+extern int GLAD_GL_EXT_texture_filter_anisotropic, GLAD_GL_ARB_texture_filter_anisotropic;
 #define GL_TEXTURE_2D_             0x0DE1
+#define GL_LINEAR_MIPMAP_NEAREST_  0x2701
+#define GL_TEXTURE_MAX_ANISOTROPY_ 0x84FE
+#define GL_MAX_TEXTURE_MAX_ANISOTROPY_ 0x84FF
 #define GL_TEXTURE_MAX_LEVEL_      0x813D
 #define GL_TEXTURE_MAG_FILTER_     0x2800
 #define GL_TEXTURE_MIN_FILTER_     0x2801
@@ -34,6 +41,38 @@ extern void (*glad_glTexParameteri)(GLenum_ target, GLenum_ pname, int param);
 /* }}} */
 
 static size_t bytes_sent, bytes_unpacked;
+
+/* {{{ texture_filtering, texture_filter
+ * The mode's two parts: whether copies are blended (0 picks the nearest
+ * copy), and the anisotropy (2 to 5: 2, 4, 8, 16 samples), held to the
+ * card's most; a card without the extension gets plain trilinear and is
+ * told once. */
+static int filter_mode = 1;           /* the default: trilinear, as every picture was before the setting */
+static float anisotropy = 1;
+void texture_filtering(int mode)
+{
+    filter_mode = mode;
+    anisotropy = mode >= 2 ? (float)(1 << (mode - 1)) : 1;
+    if (anisotropy > 1) {
+        if (!GLAD_GL_EXT_texture_filter_anisotropic && !GLAD_GL_ARB_texture_filter_anisotropic) {
+            fprintf(stderr, "texture filtering: the graphics card offers no anisotropic filtering; trilinear is used\n");
+            anisotropy = 1;
+        } else {
+            float most = 1;
+            glad_glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_, &most);
+            if (anisotropy > most) { fprintf(stderr, "texture filtering: %gx asked, the card's most is %gx; %gx is used\n", anisotropy, most, most); anisotropy = most; }
+        }
+    }
+}
+void texture_filter(unsigned int id, unsigned int target, int levels)
+{
+    glad_glBindTexture(target, id);
+    glad_glTexParameteri(target, GL_TEXTURE_MIN_FILTER_, levels <= 1 ? GL_LINEAR_ : filter_mode == 0 ? GL_LINEAR_MIPMAP_NEAREST_ : GL_LINEAR_MIPMAP_LINEAR_);
+    glad_glTexParameteri(target, GL_TEXTURE_MAG_FILTER_, GL_LINEAR_);
+    if (anisotropy > 1 && levels > 1) glad_glTexParameterf(target, GL_TEXTURE_MAX_ANISOTROPY_, anisotropy);
+    glad_glBindTexture(target, 0);
+}
+/* }}} */
 void texture_bytes(size_t *sent, size_t *unpacked) { *sent = bytes_sent; *unpacked = bytes_unpacked; }
 
 static uint32_t u32(const unsigned char *s, size_t at) { return s[at] | s[at + 1] << 8 | s[at + 2] << 16 | (uint32_t)s[at + 3] << 24; }
@@ -69,11 +108,10 @@ int texture_from_blp(const unsigned char *s, size_t len, Texture2D *out, char *w
             }
             if (levels > 0) {
                 glad_glTexParameteri(GL_TEXTURE_2D_, GL_TEXTURE_MAX_LEVEL_, levels - 1);
-                glad_glTexParameteri(GL_TEXTURE_2D_, GL_TEXTURE_MIN_FILTER_, levels > 1 ? GL_LINEAR_MIPMAP_LINEAR_ : GL_LINEAR_);
-                glad_glTexParameteri(GL_TEXTURE_2D_, GL_TEXTURE_MAG_FILTER_, GL_LINEAR_);
                 glad_glTexParameteri(GL_TEXTURE_2D_, GL_TEXTURE_WRAP_S_, GL_REPEAT_);
                 glad_glTexParameteri(GL_TEXTURE_2D_, GL_TEXTURE_WRAP_T_, GL_REPEAT_);
                 glad_glBindTexture(GL_TEXTURE_2D_, 0);
+                texture_filter(id, GL_TEXTURE_2D_, levels);
                 *out = (Texture2D){ .id = id, .width = w, .height = h, .mipmaps = levels,
                                     .format = kind == 0 ? PIXELFORMAT_COMPRESSED_DXT1_RGBA : kind == 1 ? PIXELFORMAT_COMPRESSED_DXT3_RGBA : PIXELFORMAT_COMPRESSED_DXT5_RGBA };
                 return 0;
@@ -91,8 +129,8 @@ int texture_from_blp(const unsigned char *s, size_t len, Texture2D *out, char *w
     bytes_unpacked += (size_t)img.width * img.height * 4;
     blp_free(&img);
     GenTextureMipmaps(&t);
-    SetTextureFilter(t, TEXTURE_FILTER_TRILINEAR);
     SetTextureWrap(t, TEXTURE_WRAP_REPEAT);
+    texture_filter(t.id, GL_TEXTURE_2D_, t.mipmaps);
     *out = t;
     return 0;
 }

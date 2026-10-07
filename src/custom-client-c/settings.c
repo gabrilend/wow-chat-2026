@@ -38,6 +38,11 @@
  *   of the desktop's gamma, which this client doesn't change, so that
  *   sentence is left out. Defaults: windowed, vsync on, as the client
  *   opened before these existed.
+ * particleDensity: Particle Density (173b6): every emitter's birth rate
+ *   times this (particles.c); 1, all of them, is this client's default.
+ * textureFilteringMode: Texture Filtering (173b6): 0 bilinear, 1
+ *   trilinear (the default: every picture was trilinear before it), 2 to
+ *   5 anisotropic 2x to 16x (texture.c). Read at start, as the original.
  * farclip: the view distance, yards (173b6): the far plane, how far the
  *   fog may reach, and how many tiles load round her (one tile covers
  *   533 yards). 507 keeps the 3 x 3 the client had before; the range and
@@ -68,6 +73,12 @@ static const SettingDecl DECLS[] = {
     { .name = "farclip",                 .section = "Effects",    .kind = SETTING_SLIDER, .def = "507",
       .min = 177, .max = 1277, .step = 110,
       .label = "View Distance", .explain = "Changes how far you can see. Decreasing this may greatly improve performance." },
+    { .name = "particleDensity",         .section = "Effects",    .kind = SETTING_SLIDER, .def = "1",
+      .min = 0.1, .max = 1, .step = 0.1,
+      .label = "Particle Density", .explain = "Controls the number of particles used in effects caused by spells, fires, etc. Decrease to improve performance." },
+    { .name = "textureFilteringMode",    .section = "Effects",    .kind = SETTING_SLIDER, .def = "1", .restart = 1,
+      .min = 0, .max = 5, .step = 1,
+      .label = "Texture Filtering", .explain = "Increases texture sharpness, particularly for textures viewed at an angle.  Decrease to improve performance." },
     { .name = "cameraDistanceMaxFactor", .section = "Camera",     .kind = SETTING_SLIDER, .def = "2",
       .min = 1,  .max = 2,   .step = 0.1,
       .label = "Max Camera Distance", .explain = "Adjust the maximum distance the camera will follow behind you." },

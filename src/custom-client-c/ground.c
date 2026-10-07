@@ -9,6 +9,7 @@
 #include "ground_prep.h"
 #include "sight.h"
 #include "sky.h"
+#include "texture.h"
 
 #include "raymath.h"
 #include "rlgl.h"
@@ -84,12 +85,8 @@ extern void (*glad_glTexParameteri)(GLenum_ target, GLenum_ pname, int param);
 #define GL_RGBA_                   0x1908
 #define GL_RGBA8_                  0x8058
 #define GL_UNSIGNED_BYTE_          0x1401
-#define GL_TEXTURE_MAG_FILTER_     0x2800
-#define GL_TEXTURE_MIN_FILTER_     0x2801
 #define GL_TEXTURE_WRAP_S_         0x2802
 #define GL_TEXTURE_WRAP_T_         0x2803
-#define GL_LINEAR_                 0x2601
-#define GL_LINEAR_MIPMAP_LINEAR_   0x2703
 #define GL_REPEAT_                 0x2901
 #define LAYER_SIZE   256              /* nearly every ground picture is 256 x 256 (measured: 139 of 141 round
                                        * Astranaar, Elwynn and Northrend; two tiny ones); others are resized */
@@ -140,11 +137,10 @@ int ground_init(const GroundPlace *p, char *why, int why_len)
     glad_glBindTexture(GL_TEXTURE_2D_ARRAY_, array_id);
     for (int lv = 0; lv < LAYER_LEVELS; ++lv)
         glad_glTexImage3D(GL_TEXTURE_2D_ARRAY_, lv, GL_RGBA8_, LAYER_SIZE >> lv, LAYER_SIZE >> lv, LAYERS, 0, GL_RGBA_, GL_UNSIGNED_BYTE_, NULL);
-    glad_glTexParameteri(GL_TEXTURE_2D_ARRAY_, GL_TEXTURE_MIN_FILTER_, GL_LINEAR_MIPMAP_LINEAR_);
-    glad_glTexParameteri(GL_TEXTURE_2D_ARRAY_, GL_TEXTURE_MAG_FILTER_, GL_LINEAR_);
     glad_glTexParameteri(GL_TEXTURE_2D_ARRAY_, GL_TEXTURE_WRAP_S_, GL_REPEAT_);
     glad_glTexParameteri(GL_TEXTURE_2D_ARRAY_, GL_TEXTURE_WRAP_T_, GL_REPEAT_);
     glad_glBindTexture(GL_TEXTURE_2D_ARRAY_, 0);
+    texture_filter(array_id, GL_TEXTURE_2D_ARRAY_, LAYER_LEVELS);   /* as the Texture Filtering setting says (173b6) */
     loc_eye = GetShaderLocation(shader, "eye");
     loc_blobs = GetShaderLocation(shader, "blobs");
     loc_nblobs = GetShaderLocation(shader, "nblobs");

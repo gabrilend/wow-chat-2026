@@ -109,7 +109,7 @@ static float track(const Anim *a, const AnimTrack *tr, int seq, uint32_t ms, flo
     anim_track_value(a, tr, seq, ms, ms, ANIM_FLOAT, &v);
     return v;
 }
-void particles_step(const Anim *a, const Emitter *e, EmitterRun *run, const float w[16], int seq, uint32_t ms, float dt)
+void particles_step(const Anim *a, const Emitter *e, EmitterRun *run, const float w[16], int seq, uint32_t ms, float dt, float density)
 {
     if (!run->rng) run->rng = 0x9e3779b9u ^ (uint32_t)(uintptr_t)run;
     float gravity = track(a, &e->gravity, seq, ms, 0), drag = e->drag;
@@ -131,7 +131,7 @@ void particles_step(const Anim *a, const Emitter *e, EmitterRun *run, const floa
     float on = 1;
     anim_track_value(a, &e->enabled, seq, ms, ms, ANIM_BYTE, &on);
     if (on == 0) { run->carry = 0; return; }
-    float rate = track(a, &e->rate, seq, ms, 0) * (1 + (rnd(&run->rng) * 2 - 1) * e->rate_vary);
+    float rate = track(a, &e->rate, seq, ms, 0) * (1 + (rnd(&run->rng) * 2 - 1) * e->rate_vary) * density;
     if (rate < 0) rate = 0;
     run->carry += rate * dt;
     int born = (int)run->carry;

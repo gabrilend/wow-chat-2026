@@ -28,6 +28,22 @@ features.**
   the settings file, she loads 5 x 5 (25 tiles, 14,967 placements around
   Astranaar).
 
+**Particle Density built (2026-10-07):** `particleDensity` (0.1 to 1,
+step 0.1; default 1) scales every emitter's birth rate
+(`particles_step`'s density, passed from `main.c` through
+`doodads_animate`, so the particle code reads no settings). Live. Tested:
+at 0.3 a torch keeps about three in ten of its sparks.
+
+**Texture Filtering built (2026-10-07):** `textureFilteringMode` (0 to
+5, read at start as the original marks it; default 1, trilinear, what
+every picture had before): 0 bilinear (the nearest smaller copy), 1
+trilinear, 2 to 5 anisotropic 2x, 4x, 8x, 16x, held to the card's most
+(and to trilinear, said once, on a card without the extension). Every
+picture the client sends goes through one helper (`texture_filter` in
+`texture.c`): model and building pictures, painted skins, water, and the
+ground's picture array. Seen: the default gives the same picture as
+before; 16x sharpens the ground seen at a slant.
+
 ## Intended Behavior
 
 The original's Effects panel (reference page, *Video* → *Effects*), each

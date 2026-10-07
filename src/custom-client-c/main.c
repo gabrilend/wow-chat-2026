@@ -511,6 +511,7 @@ int main(int argc, char **argv)
     SetConfigFlags((vsync_on ? FLAG_VSYNC_HINT : 0) | (resize_locked ? 0 : FLAG_WINDOW_RESIZABLE)
                    | (windowed ? 0 : FLAG_FULLSCREEN_MODE) | (maximized ? FLAG_WINDOW_MAXIMIZED | FLAG_WINDOW_UNDECORATED : 0));
     InitWindow(win_w, win_h, "Everland Ghostsong");
+    texture_filtering((int)settings_num("textureFilteringMode"));   /* before any picture is sent (173b6) */
     SetExitKey(KEY_NULL);                                /* Escape is read in the loop, so it can open the game menu later */
     Shader model_sh  = LoadShaderFromMemory(FIGURE_VS, MODEL_FS);
     model_sh.locs[SHADER_LOC_MAP_METALNESS] = GetShaderLocation(model_sh, "bones");   /* figure.c puts each figure's bone picture in that material slot */
@@ -772,7 +773,7 @@ int main(int argc, char **argv)
             }
         }
         Camera3D cam = { .position = eye, .target = look, .up = { 0, 0, 1 }, .fovy = 60, .projection = CAMERA_PERSPECTIVE };
-        TIMED(PH_DOODADS_ANIMATE, doodads_animate((uint32_t)clock_ms, dt, eye, look));   /* moving doodads, and particles near the camera */
+        TIMED(PH_DOODADS_ANIMATE, doodads_animate((uint32_t)clock_ms, dt, eye, look, (float)settings_num("particleDensity")));   /* moving doodads, and particles near the camera */
         SetShaderValue(model_sh, eye_m, &eye, SHADER_UNIFORM_VEC3);
         /* }}} */
 

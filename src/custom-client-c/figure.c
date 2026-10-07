@@ -27,8 +27,8 @@ static Texture2D texture_of(const BlpImage *img)
                  .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 };
     Texture2D t = LoadTextureFromImage(im);
     GenTextureMipmaps(&t);
-    SetTextureFilter(t, TEXTURE_FILTER_TRILINEAR);
     SetTextureWrap(t, TEXTURE_WRAP_REPEAT);
+    texture_filter(t.id, 0x0DE1, t.mipmaps);              /* a 2D picture, as the Texture Filtering setting says (173b6) */
     return t;
 }
 /* load_picture: a picture named in the archives, through a cache kept for

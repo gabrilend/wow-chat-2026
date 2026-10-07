@@ -65,8 +65,10 @@ int  particles_read(const Anim *a, Emitter **out, int *n, char *why, int why_len
 /* One frame: ages and moves the living, then gives birth at the rate.
  * `world` is where the emitter's bone is in the world this frame (the
  * copy's place times the bone's pose, Raylib's layout, as adt.h's), `seq`
- * and `ms` the model's animation and its moment (for the tracks). */
-void particles_step(const Anim *a, const Emitter *e, EmitterRun *run, const float world[16], int seq, uint32_t ms, float dt);
+ * and `ms` the model's animation and its moment (for the tracks).
+ * `density` (0.1 to 1: the Particle Density setting, 173b6) scales the
+ * birth rate; those already living are untouched. */
+void particles_step(const Anim *a, const Emitter *e, EmitterRun *run, const float world[16], int seq, uint32_t ms, float dt, float density);
 
 /* A particle's colour (red, green, blue, opacity; 0-1) and size (yards). */
 void particles_look(const Emitter *e, const Particle *p, float rgba[4], float size[2]);

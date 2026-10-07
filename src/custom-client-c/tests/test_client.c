@@ -1173,7 +1173,7 @@ anim_done:
             check(near(rate, 20, 0.01) && near(life, 1, 0.01) && em[0].blend == 4 && em[0].rows == 4 && em[0].cols == 4, line);
             EmitterRun run = { 0 };
             float w[16] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 100, 200, 50, 1 };   /* the bone 100, 200, 50 yards off, unturned */
-            for (int t = 0; t < 200; ++t) particles_step(&a, &em[0], &run, w, st, (uint32_t)(t * 10), 0.01f);
+            for (int t = 0; t < 200; ++t) particles_step(&a, &em[0], &run, w, st, (uint32_t)(t * 10), 0.01f, 1);
             float lo = 1e9f, hi = -1e9f;
             for (int k = 0; k < run.n; ++k) { lo = fminf(lo, run.ps[k].p[2]); hi = fmaxf(hi, run.ps[k].p[2]); }
             snprintf(line, sizeof line, "after 2 s, %d sparks live (about rate x life) and rise from the flame (%.2f to %.2f yards up)", run.n, lo, hi);
@@ -1192,6 +1192,12 @@ anim_done:
             check(spark[0] == 0 && spark[1] == 0 && spark[2] == 0 && spark[3] == 0.8f, "past the fog's end, an added-light spark adds nothing");
             check(near(smoke[0], 0.2, 1e-6) && near(smoke[2], 0.4, 1e-6) && smoke[3] == 0.8f, "past it, a see-through particle is the fog's colour");
             check(near_one[0] == 1 && near_one[1] == 0.5f, "before the fog starts, a spark is untouched");
+            /* Particle Density (173b6): at 0.3, about three in ten are born */
+            EmitterRun thin = { 0 };
+            for (int t = 0; t < 1000; ++t) particles_step(&a, &em[0], &thin, w, st, (uint32_t)(t * 10), 0.01f, 0.3f);
+            snprintf(line, sizeof line, "at density 0.3, %d sparks live after 10 s (about 6: rate x life x 0.3)", thin.n);
+            check(thin.n >= 3 && thin.n <= 9, line);
+            particles_free_run(&thin);
             particles_free_run(&run);
             free(em);
             anim_free(&a);

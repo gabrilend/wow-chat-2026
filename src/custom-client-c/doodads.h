@@ -44,8 +44,9 @@ void doodads_draw(Vector3 eye, const LightNow *light);
 /* Bends every moving model (one whose standing animation moves: birds,
  * banners) to its pose at `ms` since start; all copies share it. Runs the
  * particles of every copy within 150 yards of the camera (`eye`, looking
- * at `target`) for `dt` seconds (173o). */
-void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target);
+ * at `target`) for `dt` seconds (173o), each emitter's birth rate times
+ * `particle_density` (0.1 to 1: the Particle Density setting, 173b6). */
+void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target, float particle_density);
 
 /* The skybox (173n): the model at `path` (an M2; "" or NULL: none) is
  * drawn round the camera, behind everything, unlit and unfogged, sized to

@@ -811,7 +811,7 @@ void doodads_draw(Vector3 eye, const LightNow *light)
  * Each moving model's stand animation at `ms` (its own length wraps it;
  * global sequences use `ms` too), its points bent and copied into its
  * pieces' meshes. Only models with copies placed are bent. */
-static void run_particles(DoodadModel *md, uint32_t ms, float dt, Vector3 eye)
+static void run_particles(DoodadModel *md, uint32_t ms, float dt, Vector3 eye, float particle_density)
 {
     int want = md->ncopies * md->nemitters;
     if (md->nruns < want) {
@@ -836,7 +836,7 @@ static void run_particles(DoodadModel *md, uint32_t ms, float dt, Vector3 eye)
                     for (int q = 0; q < 4; ++q) sum += at[q * 4 + row] * b[col * 4 + q];
                     w[col * 4 + row] = sum;
                 }
-            particles_step(md->anim, &md->emitters[k], run, w, md->stand, ms, dt);
+            particles_step(md->anim, &md->emitters[k], run, w, md->stand, ms, dt, particle_density);
         }
     }
 }
@@ -870,7 +870,7 @@ static void pose_copies(DoodadModel *md, Vector3 eye)
 }
 /* }}} */
 
-void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target)
+void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target, float particle_density)
 {
     clock_ms = ms;
     Vector3 ahead = Vector3Normalize(Vector3Subtract(target, eye));
@@ -880,7 +880,7 @@ void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target)
         DoodadModel *md = &models[i];
         if (!md->anim || (!md->ncopies && i != skybox)) continue;
         anim_pose(md->anim, md->stand, ms, ms, md->poses);
-        if (md->nemitters) run_particles(md, ms, dt, eye);
+        if (md->nemitters) run_particles(md, ms, dt, eye, particle_density);
         if (!md->moving || md->billboard) continue;      /* camera-facing ones are posed per copy when drawn */
         bone_rows(md, 1);
         UpdateTexture(md->bones, md->poses);              /* one row, shared by every copy (173u) */

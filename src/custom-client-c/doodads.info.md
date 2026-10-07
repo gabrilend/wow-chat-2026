@@ -32,11 +32,12 @@ How a placement becomes a position and a turn is adt_place_matrix
   its placements; doodads it shared with a tile still loaded stay (173s).
 - `void doodads_draw(Vector3 eye, const LightNow *light);`
   Draws every doodad. `eye` is the camera's position (for the fog).
-- `void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target);`
+- `void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target, float particle_density);`
   Bends every moving model (one whose standing animation moves: birds,
   banners) to its pose at `ms` since start; all copies share it. Runs the
   particles of every copy within 150 yards of the camera (`eye`, looking
-  at `target`) for `dt` seconds (173o).
+  at `target`) for `dt` seconds (173o), each emitter's birth rate times
+  `particle_density` (0.1 to 1: the Particle Density setting, 173b6).
 - `void doodads_skybox(const char *path);`
   The skybox (173n): the model at `path` (an M2; "" or NULL: none) is
   drawn round the camera, behind everything, unlit and unfogged, sized to

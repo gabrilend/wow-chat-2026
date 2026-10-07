@@ -9,6 +9,7 @@
 #include "dbc.h"
 #include "sight.h"
 #include "sky.h"
+#include "texture.h"
 
 #include "raymath.h"
 #include "rlgl.h"
@@ -117,8 +118,8 @@ static int kind_of(int id)
         k->frames[k->nframes] = LoadTextureFromImage(im);
         blp_free(&img);
         GenTextureMipmaps(&k->frames[k->nframes]);
-        SetTextureFilter(k->frames[k->nframes], TEXTURE_FILTER_TRILINEAR);
         SetTextureWrap(k->frames[k->nframes], TEXTURE_WRAP_REPEAT);
+        texture_filter(k->frames[k->nframes].id, 0x0DE1, k->frames[k->nframes].mipmaps);   /* a 2D picture, as Texture Filtering says (173b6) */
         ++k->nframes;
     }
     return nkinds++;
