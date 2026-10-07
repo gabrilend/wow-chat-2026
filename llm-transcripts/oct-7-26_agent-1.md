@@ -1,6 +1,6 @@
 # Conversation Summary: ee3e437d-85af-485c-8ed0-8478da64add8
 
-Generated on: 2026-10-07 11:47:54
+Generated on: 2026-10-07 12:21:58
 Models: claude-opus-5-5
 
 ## Contents
@@ -17,6 +17,10 @@ Models: claude-opus-5-5
    W client, and every decision so far is recorded and committed in its issue.
    Next, I'll rewrite the W client's design documents, then move the code with
    handles and typed errors.
+4. 2026-10-07 11:50, after Request 10 - The custom client has moved into the W
+   client, with everything converted to handles and coded errors, tests passing
+   and pictures matching. Next is building the server connection (login and
+   world entry) in a session opened in the custom-client folder.
 
 --------------------------------------------------------------------------------
 
@@ -1470,6 +1474,70 @@ has code, and that converted maps go to AzerothCore with the server in charge.
 Networking is next on the roadmap, and 176 decided it gets built in the W client
 after the move. To start the server connection, open a session in
 `/mnt/mtwo/games/azeroth-core/custom-client/`.
+
+--------------------------------------------------------------------------------
+
+### User Request 11
+
+> - Our own server (W08): is it still built, now that WC3 maps run on
+> AzerothCore?
+
+huh?
+
+> - The conversations: copies are to go with the client, but the transcript
+> tools file a conversation by where its session ran. Each tool
+>     needs checking against a copied file before we rely on that.
+
+let's just copy them over as a reference, outside of the llm-transcripts
+directory, with explicit instructions to view them here if we want pretty HTML
+or whatever. We'll need to reference this project from time-to-time anyway.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 11
+
+> Corrected both. Now copying the conversations that built the client (October
+> 3/4 to today) into the W client, outside `llm-transcripts/`, with a note on
+> where the live and HTML versions are.
+
+*[commit] fc993e633 in custom-client - Copies of the conversations that built the client, and W08 put right*
+
+*[commit] 5d7ae6bc2 in ai-stuff - world-edit-to-execute: W08 isn't put in question by WC3 maps moving to AzerothCore*
+
+> Both committed. With the conversations copied, nothing is left in 173v, so I'm
+> recording your answer and filing it as completed.
+
+> Every question in 173v is now answered. Filing it as completed and updating
+> the phase table.
+
+*[commit] 52d8bd476 in wow-chat-2026 - The move to the W client is finished and filed*
+
+The conversations are copied, and with that the move is finished. 173v is filed
+as completed.
+
+**The conversations:** the six transcripts from October 3–7, when the client
+was built, are frozen copies in the W client's
+`notes/wow-chat-2026-conversations/`. They sit outside its `llm-transcripts/`,
+so the transcript tools never mistake them for that project's own. A README
+there says:
+- they are copies taken on 2026-10-07, and those days also hold this project's
+  other work (buddies, profiles, caves);
+- which day covers which part of the client;
+- that the living versions, rebuilt by the exporter and linked from issues, stay
+  in `wow-chat-2026/llm-transcripts/`, and that's where to make or read the HTML
+  pages.
+
+No HTML pages of transcripts exist yet; the transcript-care tools make them,
+from the wow-chat-2026 originals. The copies are also listed in the W client's
+table of contents.
+
+**W08:** my question was wrong. W08 is world-edit-to-execute's plan to
+eventually build its own server speaking the same 3.3.5a protocol. It exists
+because of the licence: your RGPL can't combine with AzerothCore's AGPL. Today's
+decision, with AzerothCore installed beside the projects (never bundled) and
+running both games, is W08's own stage 1. Stage 2, the project's own server, is
+unchanged. I've corrected the two documents where I had called it open: the W
+client's network document (004) and world-edit-to-execute's bridge document.
 
 --------------------------------------------------------------------------------
 

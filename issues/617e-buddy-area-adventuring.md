@@ -938,6 +938,20 @@ Verbatim:
     square is seen from at least one stop: take the stop that sees the
     most unchecked floor, repeat, then order the stops by the
     nearest-next tour. This is the watchman route of geometry.
+  - **Only after exploring** (the owner, 2026-10-07): "I like the
+    watchman route idea, but I want to emphasize that it should only
+    happen after we've explored. Otherwise, the buddy-bots would collapse
+    into the same route as their friends every time" (because "the stop
+    that sees the most" is the same stop for everyone). The same risk
+    holds while patrolling: one tour shared by a clan is cut into one
+    stretch per buddy in the open world, and walked together in
+    instances.
+  - **Monsters met on patrol**: "fight the monster then recalculate the
+    route."
+  - **Monsters met while surveying**: fight at once ("fight fight fight
+    fight there's more than just one person exploring this place
+    remember? Always the player, almost always other buddy-bots. They
+    should spread out in the open world and coalesce in instances.")
   - **Walking backward and sideways** for immersion: "if we figured out
     reasons for bots to walk backward and sideways ... buddy-bots might be
     able to since they're meant to be players." The server's spline
