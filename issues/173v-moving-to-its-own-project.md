@@ -232,3 +232,35 @@ behind in this project.
 11. (Answered 2026-10-07) **Live shadows and torch light** (173h) are
     built in the merged engine, after the move: "let's do it in the
     merged engine."
+12. (Answered 2026-10-07) **The asset resolver** (replacement packs
+    first, then Blizzard's archives, then a placeholder): not now. "we
+    don't have a replacement pack yet ... we only have the blizzard ones
+    for now, not even placeholders. We're just using them as, well,
+    placeholders." So the code moves reading straight from the archives,
+    as it does here; the resolver is built when the first replacement
+    exists.
+13. **Code shape** (asked 2026-10-07; the owner asked for more context):
+    the W client's architecture rule is that no part keeps its state
+    inside its own file: each part hands out a handle (a pointer to its
+    state) from an init call, every call takes the handle, and errors
+    are typed codes. This client keeps one copy of each part's state
+    inside the file (one ground, one set of doodads per program) and
+    returns 0 or 1 with a sentence saying why. Which wins, and when?
+14. (Answered 2026-10-07) **The shared reader library** (archives,
+    tables, pictures, models as a library world-edit-to-execute calls
+    from Lua): built during the move.
+15. (Answered 2026-10-07) **What of world-edit-to-execute joins the W
+    client:** "The renderers need to merge. We should be able to load
+    both model types and animations and particles... all visual stuff.
+    Also audio is shared, and probably networking maybe? Not sure if
+    Azerothcore could support the kind of networking that Warcraft 3
+    uses. The game mechanics are typically pretty agnostic to rendering
+    and audio, but often are deeply coupled with networking. The goal is
+    to be able to play both games seamlessly in the same binary, and to
+    re-use as much of the code as we can between them. The goal is to
+    condense the two games into a single project." So: one binary
+    playing both games; one renderer drawing both games' models,
+    animations and particles; one audio system; each game's rules kept
+    apart from the drawing. Still open: whether networking is shared
+    (AzerothCore's client-server sessions against WC3's lockstep, where
+    every player's machine runs the same simulation from shared orders).
