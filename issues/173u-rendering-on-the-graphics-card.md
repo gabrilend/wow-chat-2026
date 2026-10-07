@@ -43,7 +43,15 @@ about 150 orders; the frame without creatures 30 ms to 14.
 their items) are bent by the graphics card: bone numbers and weights on
 the points, sent once; the bone poses each frame as a one-row float
 picture; the figure shader bends. Creatures 5.2 ms to 1.7 ms a frame.
-Swaying and camera-facing doodads are still bent on the processor (3b).
+
+
+**Steps 3b and 4 built (2026-10-06):** swaying and camera-facing doodads
+(and the skybox) are bent by the card too: bones and weights on their
+points; a float picture of bone poses per model, one row shared by a
+swaying model's copies, one row per copy in sight for a camera-facing
+one (whose bones alone are turned on the processor), all its copies in
+one order. Animating doodads 2.0 ms to 0.34 ms a frame. Nothing is bent
+point by point on the processor any more.
 
 ## Intended Behavior
 

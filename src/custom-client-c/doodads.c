@@ -35,17 +35,32 @@
  * One copy's place arrives per instance (instanceTransform); `cutoff`
  * cuts out pixels whose alpha is under it (leaves), -1 for none. Lit by
  * the zone's sun and shade (173n), unless the piece is marked unlit.
+ * A swaying or camera-facing model is bent here (173u, `skinned`): its
+ * points carry four bone numbers (colour slot, a byte each) and weights
+ * (tangent slot); its bone poses come as a picture of floats (`bones`),
+ * four texels a bone, one row for a swaying model (all copies share it)
+ * or one row per copy drawn for a camera-facing one (`per_copy`: the
+ * instance's number picks the row).
  * A building's indoor parts are lit by the light baked into their points
  * instead (`indoor`; MOCV colours, plus a little ambient light: this
  * client's first reading of it, to be compared with the original's). */
 static const char *VS =
     "#version 330\n"
-    "in vec3 vertexPosition; in vec3 vertexNormal; in vec2 vertexTexCoord; in vec2 vertexTexCoord2; in vec4 vertexColor; in mat4 instanceTransform;\n"
-    "uniform mat4 mvp; uniform vec3 eye;\n"
+    "in vec3 vertexPosition; in vec3 vertexNormal; in vec2 vertexTexCoord; in vec2 vertexTexCoord2; in vec4 vertexColor; in vec4 vertexTangent; in mat4 instanceTransform;\n"
+    "uniform mat4 mvp; uniform vec3 eye; uniform int skinned, per_copy; uniform sampler2D bones;\n"
     "out vec3 n; out vec2 uv; out vec2 uv2; out vec4 col; out float dist;\n"
+    "mat4 bone(int i, int row) {\n"
+    "  return mat4(texelFetch(bones, ivec2(i * 4, row), 0), texelFetch(bones, ivec2(i * 4 + 1, row), 0),\n"
+    "              texelFetch(bones, ivec2(i * 4 + 2, row), 0), texelFetch(bones, ivec2(i * 4 + 3, row), 0));\n"
+    "}\n"
     "void main() {\n"
-    "  vec4 w = instanceTransform * vec4(vertexPosition, 1.0);\n"
-    "  n = mat3(instanceTransform) * vertexNormal; uv = vertexTexCoord; uv2 = vertexTexCoord2; col = vertexColor;\n"
+    "  mat4 skin = mat4(1.0);\n"
+    "  if (skinned != 0) {\n"
+    "    ivec4 id = ivec4(vertexColor * 255.0 + 0.5); vec4 wt = vertexTangent; int row = per_copy != 0 ? gl_InstanceID : 0;\n"
+    "    if (wt.x + wt.y + wt.z + wt.w > 0.001) skin = bone(id.x, row) * wt.x + bone(id.y, row) * wt.y + bone(id.z, row) * wt.z + bone(id.w, row) * wt.w;\n"
+    "  }\n"
+    "  vec4 w = instanceTransform * (skin * vec4(vertexPosition, 1.0));\n"
+    "  n = mat3(instanceTransform) * (mat3(skin) * vertexNormal); uv = vertexTexCoord; uv2 = vertexTexCoord2; col = vertexColor;\n"
     "  dist = length(w.xyz - eye);\n"
     "  gl_Position = mvp * w;\n"
     "}\n";
@@ -83,16 +98,16 @@ static const char *FS =
  * the tile that brought it. Which tile places a doodad listed by two is
  * kept with the placements, below (seen_list). */
 typedef struct {
-    Mesh mesh; int picture; uint16_t blend, flags; int indoor; uint32_t *point_of;
+    Mesh mesh; int picture; uint16_t blend, flags; int indoor;
     int picture2, layers, combine;    /* the second layer's picture (-1 none), how many, how joined */
     int set[2], uvanim[2];            /* each layer's picture-position set and animation (-1 none) */
     int colour, fade;                 /* its animated tint's tracks (m2.h), -1 none */
 } DoodadPiece;
 /* A model that moves while standing (trees swaying, lamps flickering)
- * also keeps its skeleton, its points as made, and per piece which model
- * point each mesh corner is (point_of); every frame its points are bent
- * once and all its copies share that pose, as the original plays them, in
- * step. `anim` is NULL for a model that doesn't move. */
+ * also keeps its skeleton; every frame its bones are posed once and all
+ * its copies share that pose, as the original plays them, in step; the
+ * graphics card bends the points (173u). `anim` is NULL for a model that
+ * doesn't move. */
 typedef struct {
     char    name[260];
     DoodadPiece  *pieces;   int npieces;
@@ -102,13 +117,11 @@ typedef struct {
     int     moving;                   /* its stand animation moves bones: bend it */
     int     needs_anim;               /* a piece's pictures move, or its tint is animated: keep the skeleton's file */
     /* camera-facing bones (glow orbs on lamps, wisps): each copy is turned
-     * its own way, so each is posed and bent alone, into its own meshes
-     * (copy_mesh[copy * npieces + piece], made when first needed) */
+     * its own way, so each copy drawn is posed alone, into its own row of
+     * the bone picture (173u) */
     int     billboard;
-    Mesh   *copy_mesh;  int ncopy_mesh;
-    M2Vertex *rest;   uint32_t nrest;
     float (*poses)[16];
-    float  *bent;
+    Texture2D bones;  int bone_rows;  float *bone_data;   /* the bone picture (rows of nbones * 4 float texels) and its copy here */
     /* particles (173o): the model's emitters, each one's picture, and one
      * run per emitter per copy (copy * nemitters + emitter), made when
      * first needed and grown as copies are added */
@@ -141,7 +154,7 @@ static int       skipped_pieces, moving_models, emitting_models;
 static int       doodad_orders;       /* draw orders sent since last asked (for the picture report, 173u) */
 static Shader    shader;
 static Material  material;
-static int       loc_eye, loc_cutoff, loc_unlit, loc_indoor, loc_layers, loc_combine, loc_set0, loc_set1, loc_move0, loc_move1, loc_tint;
+static int       loc_eye, loc_cutoff, loc_unlit, loc_indoor, loc_layers, loc_combine, loc_set0, loc_set1, loc_move0, loc_move1, loc_tint, loc_skinned, loc_per_copy;
 static uint32_t  clock_ms;            /* the world's animation clock (doodads_animate) */
 static int       skybox = -1;         /* the model drawn round the camera (doodads_skybox), -1 none */
 static Vector3   view_right = { 1, 0, 0 }, view_up = { 0, 0, 1 };   /* the camera's, for particles (doodads_animate) */
@@ -167,6 +180,9 @@ int doodads_init(MpqChain *c, CollideWorld *collide, LiquidWorld *liquid_world, 
     loc_move0 = GetShaderLocation(shader, "move0");
     loc_move1 = GetShaderLocation(shader, "move1");
     loc_tint = GetShaderLocation(shader, "tint");
+    loc_skinned = GetShaderLocation(shader, "skinned");
+    loc_per_copy = GetShaderLocation(shader, "per_copy");
+    shader.locs[SHADER_LOC_MAP_NORMAL] = GetShaderLocation(shader, "bones");   /* use_bones puts the model's bone picture in that slot */
     shader.locs[SHADER_LOC_MAP_METALNESS] = GetShaderLocation(shader, "texture1");   /* the second layer's slot */
     material = LoadMaterialDefault();
     material.shader = shader;
@@ -288,13 +304,7 @@ static int load_model(const char *name)
         md->anim = an;
         md->poses = malloc(sizeof *md->poses * (an->nbones ? an->nbones : 1));
     }
-    if (moving || md->billboard) {
-        md->nrest = mod.nvertices;
-        md->rest = malloc(sizeof *md->rest * md->nrest);
-        memcpy(md->rest, mod.vertices, sizeof *md->rest * md->nrest);
-        md->bent = malloc(sizeof(float) * 6 * md->nrest);
-        if (moving) ++moving_models;
-    }
+    if (moving) ++moving_models;
     if (!md->anim) {
         anim_free(an);
         free(an);
@@ -330,13 +340,20 @@ static int load_model(const char *name)
             m.texcoords2[i * 2] = v.u2; m.texcoords2[i * 2 + 1] = v.v2;
         }
         if (!ok) { UnloadMesh(m); fprintf(stderr, "doodads: %s: a piece names a point the model doesn't have; piece left out\n", name); continue; }
-        uint32_t *point_of = NULL;
         if (md->moving || md->billboard) {
-            point_of = malloc(sizeof(uint32_t) * p.count);
-            for (uint32_t i = 0; i < p.count; ++i) point_of[i] = mod.indices[p.first + i];
+            /* its points' bones and weights, for the card to bend them (173u) */
+            m.colors = MemAlloc(4 * p.count);
+            m.tangents = MemAlloc(sizeof(float) * 4 * p.count);
+            for (uint32_t i = 0; i < p.count; ++i) {
+                uint32_t k = mod.indices[p.first + i];
+                for (int j = 0; j < 4; ++j) {
+                    m.colors[i * 4 + j] = md->anim->bone_of[k][j];
+                    m.tangents[i * 4 + j] = md->anim->weights[k][j] / 255.0f;
+                }
+            }
         }
-        UploadMesh(&m, md->moving);                        /* a moving model's meshes are refreshed every frame */
-        md->pieces[md->npieces++] = (DoodadPiece){ m, pic, un.blend, un.flags, 0, point_of, pic2, layers, m2_combine(un.shader),
+        UploadMesh(&m, false);                             /* sent once; never changes */
+        md->pieces[md->npieces++] = (DoodadPiece){ m, pic, un.blend, un.flags, 0, pic2, layers, m2_combine(un.shader),
                                                    { un.uvset[0] == 1, un.uvset[1] == 1 }, { un.uvanim[0], layers > 1 ? un.uvanim[1] : -1 },
                                                    un.colour, un.fade };
     }
@@ -429,7 +446,7 @@ static int load_building(const char *name)
             }
             UploadMesh(&m, false);
             int indoor = (g.flags & 0x2000) && g.has_colours;
-            md->pieces[md->npieces++] = (DoodadPiece){ m, pic, (uint16_t)mat.blend, (uint16_t)mat.flags, indoor, NULL, -1, 1, 1, { 0, 0 }, { -1, -1 }, -1, -1 };
+            md->pieces[md->npieces++] = (DoodadPiece){ m, pic, (uint16_t)mat.blend, (uint16_t)mat.flags, indoor, -1, 1, 1, { 0, 0 }, { -1, -1 }, -1, -1 };
         }
         /* its pool, if any, kept (the grid taken from the group) with its kind */
         if (g.pool.nx) {
@@ -554,17 +571,15 @@ void doodads_drop_tile(int tile)
     for (int i = 0; i < nmodels; ++i) {
         DoodadModel *md = &models[i];
         int kept = 0, gone = 0;
-        /* runs and own meshes exist for a leading run of copies only (made
-         * as needed); the kept copies among those stay a leading run */
-        int run_copies = md->nemitters ? md->nruns / md->nemitters : 0, mesh_copies = md->npieces ? md->ncopy_mesh / md->npieces : 0;
-        int kept_runs = 0, kept_meshes = 0;
+        /* particle runs exist for a leading run of copies only (made as
+         * needed); the kept copies among those stay a leading run */
+        int run_copies = md->nemitters ? md->nruns / md->nemitters : 0;
+        int kept_runs = 0;
         for (int c = 0; c < md->ncopies; ++c) {
             if (md->copy_tile[c] == tile) {
                 ++gone;
                 if (c < run_copies)
                     for (int k = 0; k < md->nemitters; ++k) particles_free_run(&md->runs[c * md->nemitters + k]);
-                if (md->billboard && c < mesh_copies)
-                    for (int j = 0; j < md->npieces; ++j) UnloadMesh(md->copy_mesh[c * md->npieces + j]);
                 continue;
             }
             if (kept != c) {
@@ -572,17 +587,13 @@ void doodads_drop_tile(int tile)
                 md->copy_tile[kept] = md->copy_tile[c];
                 if (c < run_copies)
                     for (int k = 0; k < md->nemitters; ++k) md->runs[kept * md->nemitters + k] = md->runs[c * md->nemitters + k];
-                if (md->billboard && c < mesh_copies)
-                    for (int j = 0; j < md->npieces; ++j) md->copy_mesh[kept * md->npieces + j] = md->copy_mesh[c * md->npieces + j];
             }
             if (c < run_copies) ++kept_runs;
-            if (c < mesh_copies) ++kept_meshes;
             ++kept;
         }
         if (!gone) continue;
         md->ncopies = kept;
         md->nruns = kept_runs * md->nemitters;
-        md->ncopy_mesh = kept_meshes * md->npieces;
     }
     if (solids) collide_drop_tile(solids, tile);
     int k2 = 0;
@@ -602,6 +613,31 @@ static void piece_tint(const DoodadModel *md, const DoodadPiece *p, float rgba[4
 }
 /* }}} */
 
+/* {{{ static bone_rows: the model's bone picture, with room for `rows`
+ * rows (made, or made again larger; 173u) */
+static void bone_rows(DoodadModel *md, int rows)
+{
+    if (md->bone_rows >= rows) return;
+    if (md->bones.id) UnloadTexture(md->bones);
+    int nb = md->anim->nbones ? md->anim->nbones : 1;
+    md->bone_data = realloc(md->bone_data, sizeof(float) * 16 * (size_t)nb * (size_t)rows);
+    for (size_t e = 0; e < (size_t)16 * nb * rows; ++e) md->bone_data[e] = (e % 16) % 5 == 0 ? 1.0f : 0.0f;   /* at rest */
+    Image im = { .data = md->bone_data, .width = nb * 4, .height = rows, .mipmaps = 1, .format = PIXELFORMAT_UNCOMPRESSED_R32G32B32A32 };
+    md->bones = LoadTextureFromImage(im);
+    SetTextureFilter(md->bones, TEXTURE_FILTER_POINT);
+    md->bone_rows = rows;
+}
+static void pose_copies(DoodadModel *md, Vector3 eye);   /* below, with the animating */
+/* static use_bones: the shader told whether this model is bent, and how */
+static void use_bones(const DoodadModel *md)
+{
+    int skinned = md->bones.id && (md->moving || md->billboard), per_copy = md->billboard;
+    SetShaderValue(shader, loc_skinned, &skinned, SHADER_UNIFORM_INT);
+    SetShaderValue(shader, loc_per_copy, &per_copy, SHADER_UNIFORM_INT);
+    material.maps[MATERIAL_MAP_NORMAL].texture = skinned ? md->bones : (Texture2D){ 0 };
+}
+/* }}} */
+
 /* {{{ doodads_draw
  * Two passes: blend 0 and 1 (solid, cut-out) writing depth; then 2-6
  * (see-through, added, multiplied) over them without writing depth. */
@@ -610,6 +646,7 @@ static void draw_pass(int see_through)
     for (int i = 0; i < nmodels; ++i) {
         DoodadModel *md = &models[i];
         if (!md->nvis) continue;                          /* none in sight (or none placed) */
+        use_bones(md);
         for (int k = 0; k < md->npieces; ++k) {
             DoodadPiece *p = &md->pieces[k];
             if ((p->blend >= 2) != see_through) continue;
@@ -635,13 +672,8 @@ static void draw_pass(int see_through)
             SetShaderValue(shader, loc_unlit, &unlit, SHADER_UNIFORM_FLOAT);
             if (see_through) BeginBlendMode(p->blend == 2 ? BLEND_ALPHA : p->blend >= 5 ? BLEND_MULTIPLIED : BLEND_ADDITIVE);
             material.maps[MATERIAL_MAP_DIFFUSE].texture = pictures[p->picture].tex;
-            if (md->billboard && md->ncopy_mesh >= md->ncopies * md->npieces) {   /* each copy its own pose */
-                for (int v = 0; v < md->nvis; ++v) DrawMeshInstanced(md->copy_mesh[md->vis_idx[v] * md->npieces + k], material, &md->vis[v], 1);
-                doodad_orders += md->nvis;
-            } else {
-                DrawMeshInstanced(p->mesh, material, md->vis, md->nvis);
-                ++doodad_orders;
-            }
+            DrawMeshInstanced(p->mesh, material, md->vis, md->nvis);   /* every copy in sight in one order (camera-facing ones too: their rows) */
+            ++doodad_orders;
             if (see_through) EndBlendMode();
         }
     }
@@ -733,6 +765,7 @@ int doodads_orders_last(void) { int n = doodad_orders; doodad_orders = 0; return
 void doodads_draw(Vector3 eye, const LightNow *light)
 {
     gather_sight();
+    for (int i = 0; i < nmodels; ++i) if (models[i].billboard && models[i].anim) pose_copies(&models[i], eye);
     SetShaderValue(shader, loc_eye, &eye, SHADER_UNIFORM_VEC3);
     sky_light_shader(shader, light);
     draw_pass(0);
@@ -779,59 +812,33 @@ static void run_particles(DoodadModel *md, uint32_t ms, float dt, Vector3 eye)
         }
     }
 }
-/* {{{ static bend_copies: a camera-facing model, each copy posed alone
+/* {{{ static pose_copies: a camera-facing model's copies in sight, each
+ * posed alone into its row of the bone picture (173u)
  * The camera's toward, right and up, turned into the copy's own space (its
  * turn undone: the transpose over its size squared), give the facing
- * bones their turn; the copy's points are bent into its own meshes. */
-static void bend_copies(DoodadModel *md, uint32_t ms, Vector3 eye)
+ * bones their turn. Row v is the v-th copy drawn (gather_sight's order),
+ * which the shader finds by the instance's number. */
+static void pose_copies(DoodadModel *md, Vector3 eye)
 {
-    if (md->ncopy_mesh < md->ncopies * md->npieces) {
-        md->copy_mesh = realloc(md->copy_mesh, sizeof(Mesh) * md->ncopies * md->npieces);
-        for (int i = md->ncopy_mesh; i < md->ncopies * md->npieces; ++i) {
-            const Mesh *src = &md->pieces[i % md->npieces].mesh;
-            Mesh m = { 0 };
-            m.vertexCount = src->vertexCount;
-            m.triangleCount = src->triangleCount;
-            m.vertices = MemAlloc(sizeof(float) * 3 * m.vertexCount);
-            m.normals = MemAlloc(sizeof(float) * 3 * m.vertexCount);
-            m.texcoords = MemAlloc(sizeof(float) * 2 * m.vertexCount);
-            memcpy(m.vertices, src->vertices, sizeof(float) * 3 * m.vertexCount);
-            memcpy(m.normals, src->normals, sizeof(float) * 3 * m.vertexCount);
-            memcpy(m.texcoords, src->texcoords, sizeof(float) * 2 * m.vertexCount);
-            UploadMesh(&m, true);
-            md->copy_mesh[i] = m;
-        }
-        md->ncopy_mesh = md->ncopies * md->npieces;
-    }
-    for (int c = 0; c < md->ncopies; ++c) {
+    if (!md->nvis) return;
+    bone_rows(md, md->nvis);
+    int nb = md->anim->nbones;
+    for (int v = 0; v < md->nvis; ++v) {
         float at[16];
-        memcpy(at, MatrixToFloatV(md->copies[c]).v, sizeof at);
+        memcpy(at, MatrixToFloatV(md->vis[v]).v, sizeof at);
         float s2 = at[0] * at[0] + at[1] * at[1] + at[2] * at[2];
         float world[3][3] = { { eye.x - at[12], eye.y - at[13], eye.z - at[14] },
                               { view_right.x, view_right.y, view_right.z }, { view_up.x, view_up.y, view_up.z } };
         float view[9];
-        for (int v = 0; v < 3; ++v) {
+        for (int w = 0; w < 3; ++w) {
             float o[3], l = 0;
-            for (int k = 0; k < 3; ++k) { o[k] = (at[k * 4] * world[v][0] + at[k * 4 + 1] * world[v][1] + at[k * 4 + 2] * world[v][2]) / s2; l += o[k] * o[k]; }
+            for (int k = 0; k < 3; ++k) { o[k] = (at[k * 4] * world[w][0] + at[k * 4 + 1] * world[w][1] + at[k * 4 + 2] * world[w][2]) / s2; l += o[k] * o[k]; }
             l = sqrtf(l);
-            for (int k = 0; k < 3; ++k) view[v * 3 + k] = l > 0 ? o[k] / l : 0;
+            for (int k = 0; k < 3; ++k) view[w * 3 + k] = l > 0 ? o[k] / l : 0;
         }
-        anim_pose_facing(md->anim, md->stand, ms, ms, md->poses, view);
-        for (uint32_t k = 0; k < md->nrest; ++k) {
-            float p[3] = { md->rest[k].x, md->rest[k].y, md->rest[k].z }, n[3] = { md->rest[k].nx, md->rest[k].ny, md->rest[k].nz };
-            anim_skin_point(md->anim, (const float (*)[16])md->poses, k, p, md->bent + k * 6, n, md->bent + k * 6 + 3);
-        }
-        for (int j = 0; j < md->npieces; ++j) {
-            Mesh *m = &md->copy_mesh[c * md->npieces + j];
-            const uint32_t *point_of = md->pieces[j].point_of;
-            for (int v = 0; v < m->vertexCount; ++v) {
-                memcpy(m->vertices + v * 3, md->bent + point_of[v] * 6, sizeof(float) * 3);
-                memcpy(m->normals + v * 3, md->bent + point_of[v] * 6 + 3, sizeof(float) * 3);
-            }
-            UpdateMeshBuffer(*m, 0, m->vertices, (int)(sizeof(float) * 3 * m->vertexCount), 0);
-            UpdateMeshBuffer(*m, 2, m->normals, (int)(sizeof(float) * 3 * m->vertexCount), 0);
-        }
+        anim_pose_facing(md->anim, md->stand, clock_ms, clock_ms, (float (*)[16])(md->bone_data + (size_t)v * nb * 16), view);
     }
+    UpdateTextureRec(md->bones, (Rectangle){ 0, 0, (float)(nb * 4), (float)md->nvis }, md->bone_data);
 }
 /* }}} */
 
@@ -846,23 +853,9 @@ void doodads_animate(uint32_t ms, float dt, Vector3 eye, Vector3 target)
         if (!md->anim || (!md->ncopies && i != skybox)) continue;
         anim_pose(md->anim, md->stand, ms, ms, md->poses);
         if (md->nemitters) run_particles(md, ms, dt, eye);
-        if (md->billboard) { bend_copies(md, ms, eye); continue; }
-        if (!md->moving) continue;
-        for (uint32_t k = 0; k < md->nrest; ++k) {
-            float p[3] = { md->rest[k].x, md->rest[k].y, md->rest[k].z }, n[3] = { md->rest[k].nx, md->rest[k].ny, md->rest[k].nz };
-            anim_skin_point(md->anim, (const float (*)[16])md->poses, k, p, md->bent + k * 6, n, md->bent + k * 6 + 3);
-        }
-        for (int j = 0; j < md->npieces; ++j) {
-            DoodadPiece *pc = &md->pieces[j];
-            Mesh *m = &pc->mesh;
-            for (int v = 0; v < m->vertexCount; ++v) {
-                const float *b = md->bent + pc->point_of[v] * 6;
-                memcpy(m->vertices + v * 3, b, sizeof(float) * 3);
-                memcpy(m->normals + v * 3, b + 3, sizeof(float) * 3);
-            }
-            UpdateMeshBuffer(*m, 0, m->vertices, (int)(sizeof(float) * 3 * m->vertexCount), 0);   /* positions */
-            UpdateMeshBuffer(*m, 2, m->normals, (int)(sizeof(float) * 3 * m->vertexCount), 0);    /* facings */
-        }
+        if (!md->moving || md->billboard) continue;      /* camera-facing ones are posed per copy when drawn */
+        bone_rows(md, 1);
+        UpdateTexture(md->bones, md->poses);              /* one row, shared by every copy (173u) */
     }
 }
 /* }}} */
@@ -886,6 +879,7 @@ void doodads_draw_skybox(Vector3 eye)
     SetShaderValue(shader, loc_indoor, &indoor, SHADER_UNIFORM_FLOAT);
     rlDisableDepthTest();
     rlDisableDepthMask();
+    use_bones(md);
     for (int k = 0; k < md->npieces; ++k) {
         DoodadPiece *p = &md->pieces[k];
         float move0[4] = { 0, 0, 1, 1 }, move1[4] = { 0, 0, 1, 1 }, tint[4] = { 1, 1, 1, 1 };

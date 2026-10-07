@@ -77,15 +77,18 @@ and per-pixel work. Fewer, larger draw orders beat many small ones.
   to 1.7 ms a frame (posing the bones 0.8 of it); her and the
   bystanders 0.18 to 0.04. The same pictures (her, the bystanders mid-
   animation, her axe on her hand).
-- [ ] **3b. Bending on the card (skinning in the shader): doodads.** Figures,
-  swaying doodads and camera-facing doodads: their points are sent once
-  with their bones and weights; each frame only a bone table (a small
-  picture of matrices) goes to the card, and the shader bends and turns
-  the points. Expected: creatures from about 5 ms to about 2 (the bone
-  poses stay), doodad animating mostly gone. Better: same pictures, a
-  harder shader.
-- [ ] **4. Camera-facing doodads turned in the shader** (part of 3): no
-  per-copy meshes or orders. Better.
+- [x] **3b. Doodads bent on the card.** Built 2026-10-06 (`doodads.c`):
+  swaying and camera-facing models carry bones and weights on their
+  points, sent once; each model's bone poses go as a float picture, one
+  row for a swaying model (its copies share the pose) or one row per
+  copy drawn for a camera-facing one (the shader picks the row by the
+  instance's number). The skybox goes the same way.
+- [x] **4. Camera-facing doodads without per-copy meshes** (part of
+  3b): each copy in sight is still turned on the processor, but only its
+  bones (a handful), into its row; all copies go in one order instead of
+  one each. **Measured (3b and 4):** animating doodads 2.0 ms to 0.34 ms
+  a frame; the whole frame without creatures about 13 ms. The same
+  pictures (the gate's orb, the aurora, daytime within 0.09%).
 - [ ] **5. The sky's colours as shader values**, not re-sent vertex
   colours. Tiny; cleaner. Better.
 - [ ] **6. Particles drawn in one batch** from a list of positions,
