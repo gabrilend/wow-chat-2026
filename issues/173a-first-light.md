@@ -1,5 +1,7 @@
 # 173a - First Light: a Night Elf in Ashenvale
 
+*Continues in the W client (`/mnt/mtwo/games/azeroth-core/custom-client/`), since the move on 2026-10-07 (173v): 201, 302. This issue stays as the record of how the client began; its paths are as they were then.*
+
 ## Status
 - Created: 2026-10-04
 - Phase: 1

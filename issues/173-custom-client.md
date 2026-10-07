@@ -1,5 +1,7 @@
 # 173 - The Custom Client
 
+*Continues in the W client (`/mnt/mtwo/games/azeroth-core/custom-client/`), since the move on 2026-10-07 (173v): the whole client: its roadmap (docs/009) and crosswalk. This issue stays as the record of how the client began; its paths are as they were then.*
+
 ## Status
 - Created: 2026-10-04
 - Phase: 1

@@ -25,57 +25,52 @@ private servers", kept separate from this project's server profiles.
 
 ## Current Behavior
 
-Two halves, each missing what the other has.
+**Moved 2026-10-07.** The client lives in the W client,
+`/mnt/mtwo/games/azeroth-core/custom-client/`, and is built, run and
+tested there (its CLAUDE.md, `scripts/build --test`, `scripts/run`).
+What was done, in 173v's step order:
 
-**Here (wow-chat-2026): working code, no project of its own.**
-- `src/custom-client-c/`: the client in C on Raylib. About 30 source
-  pairs (`.c` + `.h`), each with a generated `.info.md`; the test program
-  in `tests/`; the generated creature list in `world/`; the settings
-  folder `settings/`. Count lines with `wc -l src/custom-client-c/*.[ch]`.
-- `src/custom-client/`: the first version in Lua, deprecated (173k), kept
-  as the reference until the engine is fully built in C.
-- Scripts: `build-custom-client`, `custom-client`, `test-custom-client`,
-  `generate-custom-client-info`, `generate-custom-client-creatures`,
-  `test-client-models`, `client`. Each has the hard-coded project folder
-  at the top.
-- Documents: `docs/custom-client-datapath.md`,
-  `docs/custom-client-ingame-checks.md`,
-  `docs/custom-client-optimization-checklist.md`,
-  `docs/custom-client-stock-options.md`, all listed in this project's
-  table of contents.
-- Issues: 173 and its sub-issues (173a to 173u, 173b1 to 173b16), some
-  completed.
-- The conversations that built it are in this project's
-  `llm-transcripts/` (from 2026-10-04 on).
-- CLAUDE.md's "Compiling" section lets Claude build this client and
-  names the build script by its path here.
+1. **The W client's documents** rewritten from the three sources with
+   the answers below: one engine in C for both games with Lua scripting
+   (001, 002), server authority for both games (004), handles and coded
+   errors (001), our own archive reader, zlib, a bash build (002, 008),
+   Blizzard's files as placeholders until the first replacement and a
+   player's folder packed into an archive on the way in (012), the
+   rendering as built (005), the decisions listed in 000.
+2. **The crosswalk** in the W client's roadmap (009): every source file
+   to its reading-order number and the W-client issue it fills, and every
+   173 issue to where it continues.
+3. **The code** copied by a migration tool (numbered 013 to 044), then,
+   in the W client, every part converted to a handle and every failure
+   to a code with its sentence (`013-errors.h`); the main loop's state
+   one App structure; a clean shutdown order; particles seeded so a run
+   repeats; the reader library (`libwreaders.so`) built and loaded from
+   LuaJIT. 211 checks pass; pictures match the old client's; the
+   address- and race-checked builds run clean.
+4. **Scripts:** the build, run and info generators replaced by the W
+   client's own; the options catalog's generator moved there, reading
+   through the C reader (`scripts/libs/wreaders.lua`), its output
+   identical. The creature-list generator stays here (it reads this
+   project's world database) and writes into the W client's
+   `assets/world/` (not yet run against a database since: MySQL was
+   down).
+5. **Documents** moved (W client docs 045 to 048), with this project's
+   table of contents pointing there.
+6. **Issues:** the W client's issues filled by the code rewritten, new
+   ones for the pieces without (109, 309, 310, 401 to 404, 801, 802,
+   1001); every 173 issue points at where it continues.
+7. **CLAUDE.md:** the build permission moved to the W client's CLAUDE.md;
+   a pointer here.
+8. **The old folders and scripts** (`src/custom-client-c`,
+   `src/custom-client` (the Lua first version, removed rather than moved:
+   answer 5), the client's scripts and documents) renamed `-done` for one
+   commit, the W client's code at its commit e1ebf84.
 
-**There (`/mnt/mtwo/games/azeroth-core/custom-client`): a project of its
-own, no code.**
-- Its own git repository, ten commits. The latest describe the "W client":
-  one open client for the WoW world and for Warcraft III maps converted by
-  the sibling project world-edit-to-execute.
-- Documents 000 to 012: vision, architecture, technology stack, asset
-  formats, network protocol, UI and addons, audio, build system,
-  roadmap, table of contents, balance updates, asset replacement and
-  provenance.
-- Eleven phases of issues (101 to 1108), every one pending. `src/` is
-  empty. `.file-index-counter` holds 12.
-- Choices it made on paper that differ from the working code here:
-  - **Build:** CMake wrapped by a shell script. Here: one shell script
-    calling the compiler directly.
-  - **MPQ archives:** StormLib. Here: the project's own reader, written
-    from the format's public description.
-  - **Compression:** miniz. Here: the system's zlib.
-  - **Asset resolver:** every asset is looked up through a resolver
-    (replacement pack first, then the owner's Blizzard files, then a
-    visible placeholder) and counted by where it came from. Here: read in
-    place from the game's archives (173d), with no resolver yet.
-  - **File names:** numbered for reading order (the owner's house rule).
-    Here: plain names (`adt.c`, `m2.c`).
-  - **A shared reader library:** the MPQ, DBC, BLP and later M2 readers
-    built as a C library that world-edit-to-execute calls from Lua. Here:
-    compiled straight into the one program.
+Left:
+- Remove the `-done` files in the next commit (house rule).
+- The conversations (answer 7): copies to go with the client, after
+  checking each transcript tool against a copied file (they file a
+  conversation by where its session ran).
 
 ## Intended Behavior
 

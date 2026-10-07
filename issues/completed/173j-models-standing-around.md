@@ -1,5 +1,7 @@
 # 173j - Models Standing Around
 
+*Continues in the W client (`/mnt/mtwo/games/azeroth-core/custom-client/`), since the move on 2026-10-07 (173v): issue 404. This issue stays as the record of how the client began; its paths are as they were then.*
+
 ## Status
 - Created: 2026-10-05
 - Phase: 1

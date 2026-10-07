@@ -12,14 +12,17 @@
 -- file; it never talks to the database. Re-run it when the database
 -- changes. Issue 173t.
 --
--- Usage: scripts/generate-custom-client-creatures [PROJECT_DIR] [--db NAME] [--map ID]
+-- Usage: scripts/generate-custom-client-creatures [PROJECT_DIR] [--db NAME] [--map ID] [--out DIR]
 --   PROJECT_DIR  default /mnt/mtwo/games/azeroth-core/wow-chat-2026
 --   --db NAME    the world database (default: the active profile's, from
 --                .profile, named as patches/E-patches.sh's _profile_db_name
 --                names it: release and beta acore_world, the others
 --                acore_world_<profile>)
 --   --map ID     the map (default 1, Kalimdor)
---   writes PROJECT_DIR/src/custom-client-c/world/creatures-<map>.tsv
+--   --out DIR    where the list goes (default: the W client's assets/world,
+--                /mnt/mtwo/games/azeroth-core/custom-client/assets/world,
+--                where the client moved on 2026-10-07, issue 173v)
+--   writes OUT/creatures-<map>.tsv
 --   (git-ignored: each server's world differs)
 --
 -- The file: lines starting "#" are comments; every other line is one
@@ -31,11 +34,13 @@
 
 local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
 local db, map = nil, 1
+local out_dir = "/mnt/mtwo/games/azeroth-core/custom-client/assets/world"
 local i = 1
 if arg[1] and not arg[1]:match("^%-%-") then DIR = arg[1]; i = 2 end
 while arg[i] do
     if arg[i] == "--db" then db = arg[i + 1]; i = i + 2
     elseif arg[i] == "--map" then map = tonumber(arg[i + 1]); i = i + 2
+    elseif arg[i] == "--out" then out_dir = arg[i + 1]; i = i + 2
     else io.stderr:write("generate-custom-client-creatures: unknown option " .. arg[i] .. "\n"); os.exit(2) end
 end
 if not map then io.stderr:write("generate-custom-client-creatures: --map needs a number\n"); os.exit(2) end
@@ -89,7 +94,6 @@ local query = table.concat({
     "  AND c.guid NOT IN (SELECT guid FROM game_event_creature WHERE eventEntry > 0)",   -- holiday spawns
     "GROUP BY c.guid ORDER BY c.guid",
 }, " ")
-local out_dir = DIR .. "/src/custom-client-c/world"
 os.execute('mkdir -p "' .. out_dir .. '"')
 local cmd = '"' .. DIR .. '/scripts/mysql-client" "' .. DIR .. '" -N -B ' .. db .. ' -e "' .. query .. '"'
 local p = io.popen(cmd, "r")

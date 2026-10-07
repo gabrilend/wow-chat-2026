@@ -1,5 +1,7 @@
 # 173u - Rendering on the Graphics Card
 
+*Continues in the W client (`/mnt/mtwo/games/azeroth-core/custom-client/`), since the move on 2026-10-07 (173v): docs/005 and docs/047, 302, 305. This issue stays as the record of how the client began; its paths are as they were then.*
+
 ## Status
 - Created: 2026-10-06
 - Phase: 1

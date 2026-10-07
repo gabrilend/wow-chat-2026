@@ -30,10 +30,9 @@ wow-chat-2026/
 │   ├── design-principles.md       Rules of thumb: sustain → power → focus; honest tooltips; no required addons; the model routes, code behaves
 │   ├── gear-3d-pipeline.md        Profile -> views (8 x 1/3/5 rings) -> mesh -> glTF kept / M2 exported -> skeleton -> generated animations (506e-506i)
 │   ├── m2-format-wotlk.md         The game's model files (M2 + .skin, version 264), measured from stock items; body armour is texture, not model
-│   ├── custom-client-datapath.md  The custom client's data path: from the original's files through each reader and drawer to the screen and the mover
-│   ├── custom-client-ingame-checks.md  Things the custom client guesses, for the owner to check against the original client
-│   ├── custom-client-optimization-checklist.md  What the custom client does on the processor each frame, what moves to the graphics card, and in which order (issue 173u)
-│   ├── custom-client-stock-options.md  The original client's whole Options menu: every panel, setting, range, drop-down choice and bindable key (generated; issue 173b)
+│   ├── (the custom client's four documents moved to the W client on 2026-10-07, issue 173v:
+│   │    /mnt/mtwo/games/azeroth-core/custom-client/docs/045-datapath.md, 046-ingame-checks.md,
+│   │    047-optimization-checklist.md, 048-stock-options.md; its table of contents is docs/010)
 │   ├── bot-governor.md            Host-load-driven bot population governor
 │   ├── context-placement.md       Put a thing where it is referred to
 │   ├── class-spells-level-1-20.md Class ability reference (levels 1-20)
