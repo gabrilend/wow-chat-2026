@@ -11,7 +11,7 @@
 # then, gets no new features, and is removed once the C engine is fully
 # built.
 #
-# Usage: scripts/custom-client [PROJECT_DIR] [--lua] [--shot [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--dive S] [--wait S] [--wear SLOT:LOOK,...] [--goto X Y] [--map ID X Y]]
+# Usage: scripts/custom-client [PROJECT_DIR] [--lua] [--shot [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--walking] [--dive S] [--wait S] [--wear SLOT:LOOK,...] [--goto X Y] [--map ID X Y]]
 #   --lua    run the deprecated Lua (LÖVE) version instead of the C one
 #   --shot   run 3 seconds of the world, save a picture to
 #            tmp/shared-memory/custom-client-shot.png, and quit (the window
@@ -23,7 +23,8 @@
 #            --clock MS (the world's animations started MS milliseconds in),
 #            --hour H (the time of day, 0-24; without it, this machine's clock),
 #            --face DEG (her start facing turned DEG degrees left), --walk S
-#            (hold forward for S world-seconds before the picture), --dive S
+#            (hold forward for S world-seconds before the picture), --walking
+#            (walk toggled on, as the keypad's / does in play), --dive S
 #            (then hold X, swimming down, for S world-seconds), --wait S
 #            (then wait S world-seconds more), --wear
 #            SLOT:LOOK,... (dress her: e.g. chest:41143,hands:41138), --goto X Y
@@ -58,7 +59,7 @@ ARGS=(--maps "${MAPS}" --client "${CLIENT}")
 if [[ "${1:-}" == "--shot" ]]; then
     shift
     mkdir -p "${DIR}/tmp/shared-memory"
-    ARGS+=(--shot "${DIR}/tmp/shared-memory/custom-client-shot.png" "$@")   # then any picture options (--zoom, --front, --turn, --pitch, --pose, --clock, --hour, --face, --walk, --dive, --wait, --wear, --goto, --map)
+    ARGS+=(--shot "${DIR}/tmp/shared-memory/custom-client-shot.png" "$@")   # then any picture options (--zoom, --front, --turn, --pitch, --pose, --clock, --hour, --face, --walk, --walking, --dive, --wait, --wear, --goto, --map)
 fi
 
 if [[ ${LUA} -eq 1 ]]; then

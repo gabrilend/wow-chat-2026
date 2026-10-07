@@ -167,6 +167,13 @@ int main(int argc, char **argv)
     check(near(m.o, 3.14159265358979, 1e-6), "a second turning left: half a circle");
     mover_init(&m, 0, 0, 10, 0, 1.2, 60); in = none; in.right = 1; in.strafe_turns = 1; run(&m, in, 1, g_flat);
     check(near(m.o, 0, 1e-9) && near(m.y, -8.4, 1e-6), "with the right button held, D strafes instead of turning");
+    /* walking (173i): the walk speed, 2.5 a second at 120%, every way */
+    mover_init(&m, 0, 0, 10, 0, 1.2, 60); in = none; in.walking = 1; in.forward = 1; run(&m, in, 1, g_flat);
+    check(near(m.x, 3.0, 1e-6), "walking, a second forward: 3 yards");
+    mover_init(&m, 0, 0, 10, 0, 1.2, 60); in = none; in.walking = 1; in.back = 1; run(&m, in, 1, g_flat);
+    check(near(m.x, -3.0, 1e-6), "walking, a second back: 3 yards too");
+    mover_init(&m, 0, 0, 10, 0, 1.2, 60); in = none; in.walking = 1; in.strafe_left = 1; run(&m, in, 1, g_flat);
+    check(near(m.y, 3.0, 1e-6), "walking, a second strafing left: 3 yards");
 
     mover_init(&m, 0, 0, 10, 0, 1.2, 60);
     in = none; in.jump = 1;
@@ -961,6 +968,19 @@ ground_done:
         snprintf(line, sizeof line, "running at 8.4 yards a second: the run, played %.0f ms in a tenth of a second (made for %.2f, so 121)", ms.ms, a.seqs[run].move_speed);
         check(ms.seq == run && near(ms.ms, 100 * 8.4 / a.seqs[run].move_speed, 0.5), line);
         check(ms.from == stand && ms.blend_left > 0, "and blends in from the stand");
+        {
+            /* walking (173i): the walk, at its own pace for 3 yards a second */
+            MovesState ws;
+            moves_init(&ws, &a);
+            int walk = anim_find(&a, MOVE_WALK, 0);
+            MovesInput wi = { .forward = 1, .walking = 1, .grounded = 1, .speed = 3.0f, .dt = 0.1f };
+            moves_step(&ws, &a, &wi);
+            snprintf(line, sizeof line, "walking at 3 yards a second: the walk, played %.0f ms in a tenth of a second (made for %.2f)", ws.ms, walk >= 0 ? a.seqs[walk].move_speed : 0.0f);
+            check(walk >= 0 && ws.seq == walk && near(ws.ms, 100 * 3.0 / a.seqs[walk].move_speed, 0.5), line);
+            wi.forward = 0; wi.back = 1;
+            moves_step(&ws, &a, &wi);
+            check(ws.seq == anim_find(&a, MOVE_WALK_BACK, 0), "walking backwards: the walk-back, as running backwards");
+        }
         mi = (MovesInput){ .grounded = 0, .rising = 1, .dt = 0.01f };
         moves_step(&ms, &a, &mi);
         int jstart = anim_find(&a, MOVE_JUMP_START, 0), jump = anim_find(&a, MOVE_JUMP, 0);

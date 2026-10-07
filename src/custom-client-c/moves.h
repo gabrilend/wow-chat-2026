@@ -22,6 +22,8 @@
  *   rising          int, 0 or 1: going up (a jump) rather than down
  *   swimming        int, 0 or 1: swimming (173r): swim, swim backwards,
  *                   swim left and right (no body turn), or treading water
+ *   walking         int, 0 or 1: walk toggled (173i): the walk instead of
+ *                   the run, forward and strafing (played at her speed too)
  *   speed           float, yards a second along the ground this frame
  *   dt              float, seconds
  * A MovesState:
@@ -51,6 +53,7 @@ typedef struct {
     int   forward, back, strafe_left, strafe_right, turn_left, turn_right;
     int   grounded, rising;
     int   swimming;                   /* in deep water (173r): the swim animations instead */
+    int   walking;                    /* walk toggled (173i): the walk instead of the run */
     float speed;
     float dt;
 } MovesInput;

@@ -81,6 +81,11 @@ void moves_step(MovesState *s, const Anim *a, const MovesInput *in)
     float ease = 10.0f * in->dt;                    /* radians a second */
     s->body_turn += fmaxf(-ease, fminf(ease, target - s->body_turn));
 
+    /* moving along the ground: backwards the walk-back (running or
+     * walking: the model has one); otherwise the walk when walk is
+     * toggled (173i), else the run */
+    int ahead_anim = in->back ? MOVE_WALK_BACK : in->walking ? MOVE_WALK : MOVE_RUN;
+
     /* the situation, in order */
     if (!in->grounded) {
         if (!s->airborne) {
@@ -95,10 +100,10 @@ void moves_step(MovesState *s, const Anim *a, const MovesInput *in)
         s->airborne = 1;
     } else if (s->airborne) {
         s->airborne = 0;
-        if (moving) start(s, a, in->back ? MOVE_WALK_BACK : MOVE_RUN, 0, 0);
+        if (moving) start(s, a, ahead_anim, 0, 0);
         else start(s, a, MOVE_JUMP_END, 0, 1);
     } else if (moving) {
-        start(s, a, in->back ? MOVE_WALK_BACK : MOVE_RUN, 0, 0);
+        start(s, a, ahead_anim, 0, 0);
     } else if (in->turn_left || in->turn_right) {
         start(s, a, in->turn_left ? MOVE_SHUFFLE_LEFT : MOVE_SHUFFLE_RIGHT, 0, 0);
     } else if (s->once && s->seq >= 0 && s->ms < (float)a->seqs[s->seq].length) {

@@ -5,8 +5,8 @@
  * Astranaar, read from the server's own map files, with the night elf of
  * the original game's archives standing on it; moves her with the game's
  * own controls at 120% speed (W/S forward and back, A/D turn or, with the
- * right mouse button held, strafe, Q and E strafe, space jump, left drag
- * turns the camera, right drag turns her with it, the wheel zooms; Escape
+ * right mouse button held, strafe, Q and E strafe, space jump, the
+ * keypad's / toggles walking and running (173i), left drag turns the camera, right drag turns her with it, the wheel zooms; Escape
  * quits until the game menu exists). Written in C on Raylib (owner,
  * 2026-10-05: "let's port now. We should build something like an engine
  * in C anyway, for performance reasons").
@@ -24,6 +24,7 @@
  *   --hour H          the time of day, 0 to 24 (default: this machine's clock)
  *   --face DEG        her start facing turned DEG degrees (left)
  *   --walk S          (pictures) hold forward for S world-seconds
+ *   --walking         walk toggled on from the start (173i), as the keypad's / does
  *   --dive S          (pictures) then hold X (swim down) for S world-seconds
  *   --wait S          (pictures) then wait S world-seconds more
  *   --wear SLOT:LOOK,...  dress her, over her starting outfit: each slot's item look (ItemDisplayInfo id),
@@ -432,6 +433,7 @@ int main(int argc, char **argv)
     double start_ms = 0;                                 /* --clock: the world's animations start this far in */
     double face_deg = 0;                                 /* --face: her start facing turned this far (left) */
     float  walk_s = 0;                                   /* --walk: hold forward this many world-seconds (pictures) */
+    int    walking = 0;                                  /* walk toggled (173i): the keypad's /, or --walking */
     float  dive_s = 0;                                   /* --dive: then hold X (swim down) this many world-seconds */
     float  wait_s = 0;                                   /* --wait: then this many world-seconds more before the picture */
     int    go_to = 0;                                    /* --goto: one world-second in, she is moved to (goto_x, goto_y) */
@@ -459,6 +461,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--hour") && i + 1 < argc) hours = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--face") && i + 1 < argc) face_deg = atof(argv[++i]);
         else if (!strcmp(argv[i], "--walk") && i + 1 < argc) walk_s = (float)atof(argv[++i]);
+        else if (!strcmp(argv[i], "--walking")) walking = 1;
         else if (!strcmp(argv[i], "--dive") && i + 1 < argc) dive_s = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--wait") && i + 1 < argc) wait_s = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--wear") && i + 1 < argc) {
@@ -471,7 +474,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--map") && i + 3 < argc) { map_id = atoi(argv[++i]); start_x = atof(argv[++i]); start_y = atof(argv[++i]); }
         else if (!strcmp(argv[i], "--goto") && i + 2 < argc) { goto_x = atof(argv[++i]); goto_y = atof(argv[++i]); go_to = 1; }
     }
-    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--world DIR] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--dive S] [--wait S] [--wear SLOT:LOOK,...] [--goto X Y] [--map ID X Y]\n"); return 2; }
+    if (!maps || !client) { fprintf(stderr, "usage: custom-client --maps DIR --client DIR [--settings FILE] [--world DIR] [--shot FILE] [--zoom N] [--front] [--turn DEG] [--pitch DEG] [--pose ID MS] [--clock MS] [--hour H] [--face DEG] [--walk S] [--walking] [--dive S] [--wait S] [--wear SLOT:LOOK,...] [--goto X Y] [--map ID X Y]\n"); return 2; }
 
     /* the settings: defaults, then the player's file; a line it refuses is
      * named on the terminal and skipped (173b1) */
@@ -509,7 +512,7 @@ int main(int argc, char **argv)
     if (character_start_outfit(&chain, LOOK.race, HER_CLASS, LOOK.sex, LOOK.items, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     for (int k = 0; k < SLOT_COUNT; ++k) if (WEAR_OVER[k]) LOOK.items[k] = WEAR_OVER[k];
     if (figure_from_character(&her, &chain, &LOOK, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
-    static const int NEEDED[] = { MOVE_STAND, MOVE_RUN, MOVE_WALK_BACK, MOVE_SHUFFLE_LEFT, MOVE_SHUFFLE_RIGHT, MOVE_JUMP_START, MOVE_JUMP, MOVE_JUMP_END, MOVE_FALL };
+    static const int NEEDED[] = { MOVE_STAND, MOVE_RUN, MOVE_WALK, MOVE_WALK_BACK, MOVE_SHUFFLE_LEFT, MOVE_SHUFFLE_RIGHT, MOVE_JUMP_START, MOVE_JUMP, MOVE_JUMP_END, MOVE_FALL };
     for (unsigned i = 0; i < sizeof NEEDED / sizeof NEEDED[0]; ++i)
         if (anim_find(&her.anim, NEEDED[i], 0) < 0) fprintf(stderr, "her animations: her model has no animation %d; she stands instead\n", NEEDED[i]);
     /* the bystanders: each stands round her start, facing her; one that
@@ -613,7 +616,9 @@ int main(int argc, char **argv)
         float wheel = GetMouseWheelMove();
         float zoom_max = ZOOM_BASE * (float)settings_num("cameraDistanceMaxFactor");
         camera_zoom(&view, wheel, zoom_max);            /* in past the nearest is first person (173m) */
+        if (IsKeyPressed(KEY_KP_DIVIDE)) walking = !walking;   /* the stock game's run/walk toggle key (173i) */
         MoverInput in = {
+            .walking = walking,
             .forward = IsKeyDown(KEY_W) || IsKeyDown(KEY_UP) || (drag_l && drag_r) || (walk_s > 0 && frames * 0.05f < walk_s),
             .back = IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN),
             .left = IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT),
@@ -645,7 +650,7 @@ int main(int argc, char **argv)
             .forward = in.forward, .back = in.back,
             .strafe_left = in.strafe_left || (drag_r && in.left), .strafe_right = in.strafe_right || (drag_r && in.right),
             .turn_left = turning && in.left, .turn_right = turning && in.right,
-            .grounded = elf.grounded || elf.swimming, .rising = elf.vz > 0, .swimming = elf.swimming,
+            .grounded = elf.grounded || elf.swimming, .rising = elf.vz > 0, .swimming = elf.swimming, .walking = walking,
             .speed = dt > 0 ? (float)(hypot(elf.x - before_x, elf.y - before_y) / dt) : 0, .dt = dt,
         };
         moves_step(&moves, &her.anim, &mi);

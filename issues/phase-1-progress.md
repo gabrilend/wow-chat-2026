@@ -164,7 +164,7 @@ separate layer. In C on Raylib; the first Lua version is deprecated.
 | 173f | painted-ground | Built | Waits on a side-by-side with the original. |
 | 173g | doodads | Built | Doodads, buildings, furniture, moving doodads, camera-facing bones, layered and moving pictures. |
 | 173h | shadow-maps | Built | Baked ground shadows and soft character shadows. |
-| 173i | night-elf-animation | Built | Skeleton, animations chosen from movement, blending. |
+| 173i | night-elf-animation | Completed | Skeleton, animations chosen from movement, blending; walking (keypad /) (in completed/). |
 | 173j | models-standing-around | Built | Creatures and a tauren cycling animations. |
 | 173m | camera | In Progress | Drags, following styles, kept out of walls, Follow Terrain, Water Collision, Smart Pivot, first person and Head Bob; saved views wait for key bindings. |
 | 173n | zone-light-and-sky | Built | The zone's light by place and hour, sky dome, skyboxes. |

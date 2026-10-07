@@ -92,9 +92,10 @@ void mover_step(Mover *m, const MoverInput *in, double dt, const MoverWorld *wor
     int ahead = (in->forward ? 1 : 0) - (in->back ? 1 : 0);
     int left  = (strafe_l ? 1 : 0) - (strafe_r ? 1 : 0);
     if (ahead != 0 || left != 0) {
-        /* one speed whatever the mix of keys: forward or strafing at run
-         * speed, any backward part at the backward speed */
-        double speed = (ahead < 0 ? MOVER_BACK : MOVER_RUN) * k;
+        /* one speed whatever the mix of keys: walking, the walk speed
+         * every way (173i); running, forward or strafing at run speed and
+         * any backward part at the backward speed */
+        double speed = (in->walking ? MOVER_WALK : ahead < 0 ? MOVER_BACK : MOVER_RUN) * k;
         double len = sqrt((double)(ahead * ahead + left * left));
         double dx = (ahead * cos(m->o) + left * cos(m->o + PI / 2)) / len;
         double dy = (ahead * sin(m->o) + left * sin(m->o + PI / 2)) / len;

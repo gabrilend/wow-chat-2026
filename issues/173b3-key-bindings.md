@@ -20,7 +20,8 @@ keybinds, etc.").
 
 Not built. Keys are fixed in the source: W/Up forward, S/Down back, A/Left
 and D/Right turn (strafe while the right button is held), Q and E strafe
-left and right, Space jump, Escape quit, both mouse buttons forward.
+left and right, Space jump, the keypad's / toggles walking (173i), Escape
+quit, both mouse buttons forward.
 (Until 2026-10-06 q quit and there was no strafe left.)
 
 ## Intended Behavior

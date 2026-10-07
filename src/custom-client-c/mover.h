@@ -15,6 +15,7 @@
 /* the game's movement numbers */
 #define MOVER_RUN      7.0            /* yards a second forward (and strafing) */
 #define MOVER_BACK     4.5            /* yards a second backward */
+#define MOVER_WALK     2.5            /* yards a second walking (walk toggled: 173i), every direction */
 #define MOVER_TURN     3.14159265358979323846    /* radians a second (half a circle) */
 #define MOVER_GRAVITY  19.29110527    /* yards a second squared */
 #define MOVER_JUMP     7.95554        /* yards a second upward at take-off */
@@ -42,6 +43,8 @@ typedef struct {
     int forward, back, left, right, strafe_left, strafe_right, jump;
     int strafe_turns;                 /* the right mouse button: A and D strafe */
     int swim_down;                    /* swimming: down (X); up is `jump` */
+    int walking;                      /* walk toggled (173i): on the ground every direction at MOVER_WALK;
+                                       * swimming is unchanged */
     double pitch;                     /* swimming with the right button held: forward follows
                                        * this pitch (radians, up positive), as the camera looks */
 } MoverInput;
