@@ -52,6 +52,7 @@
 #include "navmesh_slope.h"
 #include "settings.h"
 #include "sky.h"
+#include "texture.h"
 #include "water.h"
 
 #include "raylib.h"
@@ -763,6 +764,9 @@ int main(int argc, char **argv)
             printf("frames took %.1f ms each on average, over %d (drawing, bending and all)\n", (GetTime() - loop_start) * 1000.0 / frames, frames);
             for (int ph = 0; ph < PH_COUNT; ++ph) printf("  %5.2f ms a frame: %s\n", phase_s[ph] * 1000.0 / frames, PHASE_NAME[ph]);
             printf("the ground sent %.1f draw orders a frame, the doodads %.1f (173u)\n", (double)ground_orders_last() / frames, (double)doodads_orders_last() / frames);
+            size_t tex_sent, tex_unpacked;
+            texture_bytes(&tex_sent, &tex_unpacked);
+            printf("model pictures on the card: %.1f MB (%.1f MB if unpacked; 173u)\n", tex_sent / 1048576.0, tex_unpacked / 1048576.0);
             printf("creatures took %.2f ms a frame, %.2f of it posing (%d posed, %d drawn, of %d standing)\n", creature_s * 1000.0 / frames, creature_pose_s * 1000.0 / frames, last_posed, last_drawn, nstanding);
             printf("she ended at x %.2f y %.2f z %.2f, %s\n", elf.x, elf.y, elf.z, elf.swimming ? "swimming" : elf.grounded ? "on the ground" : "in the air");
             /* the creatures nearest her (173t), to check pictures against */

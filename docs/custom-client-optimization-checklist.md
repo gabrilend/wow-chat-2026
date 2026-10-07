@@ -99,13 +99,21 @@ and per-pixel work. Fewer, larger draw orders beat many small ones.
   0.17 ms a frame; water 0.77 to 0.08. The whole frame at Astranaar,
   with its 467 creatures: about 13 ms (36 at the start).
 - [ ] **6. Particles drawn in one batch** from a list of positions,
-  sizes and colours (instanced squares). Better, small. Moving their
-  motion onto the card too (each particle worked out from its birth
-  time) is possible but makes them harder to change: not now.
-- [ ] **7. Pictures sent compressed.** The archives' pictures are DXT
-  compressed; the card unpacks DXT in hardware, so they go as they are
-  instead of unpacked on the processor. Faster tile loads, about 4 to 8
-  times less picture memory. Better.
+  sizes and colours (instanced squares). Better, but **measured small**
+  (2026-10-06, Astranaar at night): drawing them 0.33 ms a frame, moving
+  them part of animating doodads' 0.3. Left for when particles grow
+  (spells). Moving their motion onto the card too (each particle worked
+  out from its birth time) is possible but makes them harder to change.
+- [x] **7. Pictures sent compressed** (models, doodads, buildings).
+  Built 2026-10-06 (`texture.c`): a DXT picture goes to the card as
+  stored, with the game's own smaller copies (through OpenGL directly:
+  Raylib 5.1 miscounts some small copies); others are unpacked as
+  before. **Measured:** model pictures round Astranaar 92.2 MB to 13.9
+  MB on the card; the same picture (0.48% apart: the game's own smaller
+  copies instead of the card's). Still unpacked: the ground's picture
+  array (one format for all its layers; its pictures are DXT1, but a
+  mixed format would need care), painted skins (made on the processor),
+  water ripples (small).
 - [ ] **8. Loading on a second thread.** Tile files read and parsed off
   the frame, handed over when ready, so walking never stalls a frame.
   Better; the handing-over must be careful (the card is only spoken to

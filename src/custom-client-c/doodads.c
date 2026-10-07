@@ -14,6 +14,7 @@
 #include "m2.h"
 #include "particles.h"
 #include "sight.h"
+#include "texture.h"
 #include "water.h"
 #include "sky.h"
 #include "wmo.h"
@@ -198,21 +199,15 @@ static int picture(const char *name)
     const char *from;
     unsigned char *s = mpq_chain_read(chain, name, &len, &from);
     if (!s) { fprintf(stderr, "doodads: the picture %s is in none of the client's archives; pieces using it are left out\n", name); return -1; }
-    BlpImage img;
     char why[300];
-    int bad = blp_decode(s, len, &img, why, sizeof why);
+    Texture2D t;
+    int bad = texture_from_blp(s, len, &t, why, sizeof why);   /* sent compressed when stored so (173u) */
     free(s);
     if (bad) { fprintf(stderr, "doodads: the picture %s: %s; pieces using it are left out\n", name, why); return -1; }
     if (npictures == pictures_cap) {
         pictures_cap = pictures_cap ? pictures_cap * 2 : 256;
         pictures = realloc(pictures, sizeof *pictures * pictures_cap);
     }
-    Image im = { .data = img.rgba, .width = img.width, .height = img.height, .mipmaps = 1, .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 };
-    Texture2D t = LoadTextureFromImage(im);
-    blp_free(&img);
-    GenTextureMipmaps(&t);
-    SetTextureFilter(t, TEXTURE_FILTER_TRILINEAR);
-    SetTextureWrap(t, TEXTURE_WRAP_REPEAT);
     snprintf(pictures[npictures].name, sizeof pictures[npictures].name, "%s", name);
     pictures[npictures].tex = t;
     return npictures++;

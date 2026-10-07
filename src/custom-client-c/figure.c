@@ -8,6 +8,7 @@
 #include "figure.h"
 #include "blp.h"
 #include "dbc.h"
+#include "texture.h"
 
 #include "raymath.h"
 #include "rlgl.h"
@@ -45,13 +46,10 @@ static int load_picture(MpqChain *chain, const char *name, Texture2D *out, char 
     const char *from;
     unsigned char *s = mpq_chain_read(chain, name, &len, &from);
     if (!s) { snprintf(why, why_len, "the picture %.200s is in none of the client's archives", name); return 1; }
-    BlpImage img;
     char inner[300];
-    int bad = blp_decode(s, len, &img, inner, sizeof inner);
+    int bad = texture_from_blp(s, len, out, inner, sizeof inner);   /* sent compressed when stored so (173u) */
     free(s);
     if (bad) { snprintf(why, why_len, "the picture %.120s: %.150s", name, inner); return 1; }
-    *out = texture_of(&img);
-    blp_free(&img);
     if (ncache == cache_cap) { cache_cap = cache_cap ? cache_cap * 2 : 64; cache = realloc(cache, sizeof *cache * cache_cap); }
     snprintf(cache[ncache].name, sizeof cache[ncache].name, "%s", name);
     cache[ncache++].tex = *out;

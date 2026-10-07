@@ -59,6 +59,11 @@ horizon's tiles and the water's layers out of sight aren't drawn. Sky
 and horizon 0.7 to 0.17 ms, water 0.77 to 0.08. The whole frame at
 Astranaar with its creatures: about 13 ms (36 at the start).
 
+**Step 7 built (2026-10-06):** model, doodad and building pictures
+stored compressed go to the card as stored (`texture.h` / `texture.c`):
+92.2 MB to 13.9 MB round Astranaar. Step 6 (particles in one batch) was
+measured small (0.33 ms) and is left for later.
+
 ## Intended Behavior
 
 The processor decides what and where (a few numbers per object); the
