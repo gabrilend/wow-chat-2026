@@ -71,6 +71,12 @@ reports now time them): 236 ms on average to 62, the slowest 706 to
 126. What stalls a tile load now: the ground's points and blend picture
 (the slopes come from the server's heights), and new doodad models.
 
+**Step 8b built (2026-10-06):** a second thread reads ahead the ring of
+tiles beyond those loaded (`prefetch.h` / `prefetch.c`), unpacking every
+file each will want into the archive reader's memory (now locked, so
+the threads share it). Loads while she walks: 48 ms on average to 37.
+Left (8c): preparing the ground and parsing models on that thread too.
+
 ## Intended Behavior
 
 The processor decides what and where (a few numbers per object); the

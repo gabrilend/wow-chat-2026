@@ -16,6 +16,7 @@
  *                     without it, every setting is at its default
  *   --shot FILE       draw a few frames, save a picture there, quit
  *   --world DIR       where the generated creature lists are (creatures-<map>.tsv, 173t)
+ *   --no-read-ahead   no second thread reading tiles ahead (to measure what it saves; 173u)
  *   --zoom N          (pictures) the camera N yards back; 0 is first person
  *   --turn DEG        (pictures) the camera turned DEG degrees round her, held there
  *   --pitch DEG       (pictures) the camera raised DEG degrees (up to 83)
@@ -50,6 +51,7 @@
 #include "moves.h"
 #include "mpq.h"
 #include "navmesh_slope.h"
+#include "prefetch.h"
 #include "settings.h"
 #include "sky.h"
 #include "texture.h"
@@ -355,6 +357,9 @@ static int tile_reach(void)
 }
 static int tile_loaded(int x, int y) { return tile_state[x * 64 + y] == 1; }   /* for the horizon (173s) */
 static double tile_load_most_s, tile_load_total_s;   /* the slowest tile load and their sum, for the picture report (173u) */
+static double walk_load_most_s, walk_load_total_s;   /* the same for loads after the start (while she moves) */
+static int    walk_loads, started_walking;
+static int    read_ahead = 1;                            /* --no-read-ahead: off, to measure what it saves */
 static void refresh_tiles(void)
 {
     const int TILE_REACH = tile_reach();
@@ -381,7 +386,13 @@ static void refresh_tiles(void)
             double took = GetTime() - load_t0;
             tile_load_total_s += took;
             if (took > tile_load_most_s) tile_load_most_s = took;
+            if (started_walking) { ++walk_loads; walk_load_total_s += took; if (took > walk_load_most_s) walk_load_most_s = took; }
         }
+    /* the ring just beyond the loaded square: read ahead, so walking into
+     * it finds its files unpacked (173u) */
+    for (int dx = -TILE_REACH - 1; dx <= TILE_REACH + 1; ++dx)
+        for (int dy = -TILE_REACH - 1; dy <= TILE_REACH + 1; ++dy)
+            if (abs(dx) == TILE_REACH + 1 || abs(dy) == TILE_REACH + 1) prefetch_tile(tx + dx, ty + dy);
     /* dropping (173s): tiles more than a tile beyond the loaded square go,
      * with all they brought; the margin keeps a walk back and forth over
      * an edge from loading and dropping the same tile again and again */
@@ -424,6 +435,7 @@ int main(int argc, char **argv)
         if (!strcmp(argv[i], "--maps") && i + 1 < argc) maps = argv[++i];
         else if (!strcmp(argv[i], "--settings") && i + 1 < argc) settings_file = argv[++i];
         else if (!strcmp(argv[i], "--world") && i + 1 < argc) world_dir = argv[++i];
+        else if (!strcmp(argv[i], "--no-read-ahead")) read_ahead = 0;
         else if (!strcmp(argv[i], "--client") && i + 1 < argc) client = argv[++i];
         else if (!strcmp(argv[i], "--shot") && i + 1 < argc) shot = argv[++i];
         else if (!strcmp(argv[i], "--zoom") && i + 1 < argc) view.dist = (float)atof(argv[++i]);
@@ -524,6 +536,7 @@ int main(int argc, char **argv)
         if (!found) { fprintf(stderr, "no map %d in Map.dbc\n", map_id); CloseWindow(); return 1; }
     }
     if (ground_init(&chain, map_name, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
+    if (read_ahead) prefetch_start(&chain, map_name);    /* reads tiles ahead of her on a second thread (173u) */
     solids = collide_new(ox, oy);
     waters = liquid_new();
     if (doodads_init(&chain, solids, waters, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
@@ -560,6 +573,7 @@ int main(int argc, char **argv)
 
     int frames = 0, drag_l = 0, drag_r = 0;
     double loop_start = GetTime();                       /* for the picture report's frame time */
+    started_walking = 1;                                 /* tile loads from here on happen while she moves */
     while (!WindowShouldClose()) {
         /* {{{ input and movement */
         float dt = shot ? 0.05f : GetFrameTime();          /* pictures: steady 20 frames a world-second */
@@ -806,7 +820,12 @@ int main(int argc, char **argv)
             printf(ok ? "picture saved: %s\n" : "could not save the picture to %s\n", shot);
             int dm2, dc2, ds2, dmov2, demit2;
             doodads_counts(&dm2, &dc2, &ds2, &dmov2, &demit2);
+            int ahead_tiles, ahead_files;
+            prefetch_counts(&ahead_tiles, &ahead_files);
+            printf("unpacking files from the archives: %.0f ms over the run, both threads (%llu read, %llu from memory); read ahead: %d tiles, %d files\n",
+                   chain.unpack_s * 1000, (unsigned long long)chain.misses, (unsigned long long)chain.hits, ahead_tiles, ahead_files);
             printf("tile loads: %.0f ms the slowest, %.0f ms on average (each stalls the frame it happens in; 173u)\n", tile_load_most_s * 1000, tiles_loaded ? tile_load_total_s * 1000 / tiles_loaded : 0.0);
+            printf("  of those, while she moved: %d, %.0f ms the slowest, %.0f ms on average\n", walk_loads, walk_load_most_s * 1000, walk_loads ? walk_load_total_s * 1000 / walk_loads : 0.0);
             printf("tiles: %d loaded, %d dropped over the run; now %d placed, %d solid triangles\n", tiles_loaded, tiles_dropped, dc2, collide_count(solids));
             printf("frames took %.1f ms each on average, over %d (drawing, bending and all)\n", (GetTime() - loop_start) * 1000.0 / frames, frames);
             for (int ph = 0; ph < PH_COUNT; ++ph) printf("  %5.2f ms a frame: %s\n", phase_s[ph] * 1000.0 / frames, PHASE_NAME[ph]);
@@ -844,6 +863,7 @@ int main(int argc, char **argv)
     free(standing);
     free(built_of);
     creatures_free(&spawns);
+    prefetch_stop();
     mpq_chain_close(&chain);
     maps_world_free(&world);
     return 0;

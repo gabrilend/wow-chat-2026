@@ -32,6 +32,7 @@
 #include "../mpq.h"
 #include "../navmesh_slope.h"
 #include "../particles.h"
+#include "../prefetch.h"
 #include "../settings.h"
 #include "../sight.h"
 #include "../wmo.h"
@@ -505,6 +506,32 @@ int main(int argc, char **argv)
         check(!sight_ball(&sg, (Vector3){ -50, 0, 0 }, 1), "one 50 yards behind is not");
         check(!sight_ball(&sg, (Vector3){ 1500, 0, 0 }, 1), "nor one past the far wall");
         check(!sight_ball(&sg, (Vector3){ 10, 40, 0 }, 1) && sight_ball(&sg, (Vector3){ 10, 40, 0 }, 40), "one far off to the side is not, unless it is big enough to reach in");
+    }
+    /* }}} */
+
+    /* {{{ reading ahead (173u): the helper thread unpacks a tile's files;
+     * afterwards the tile's ground file and a doodad it names come from
+     * the archive reader's memory */
+    printf("reading ahead\n");
+    {
+        MpqChain rc;
+        if (mpq_chain_open(&rc, client, "enUS", why, sizeof why)) check(0, why);
+        else {
+            prefetch_start(&rc, "Kalimdor");
+            prefetch_tile(26, 32);
+            prefetch_tile(26, 32);                        /* asked twice: read once */
+            prefetch_wait();
+            int pt, pf;
+            prefetch_counts(&pt, &pf);
+            uint64_t hits = rc.hits;
+            size_t al;
+            unsigned char *adt_s = mpq_chain_read(&rc, "World\\Maps\\Kalimdor\\Kalimdor_32_26.adt", &al, NULL);
+            snprintf(line, sizeof line, "the helper read 1 tile (%d) and its files (%d); its ground file comes from memory afterwards", pt, pf);
+            check(pt == 1 && pf > 100 && adt_s && rc.hits == hits + 1, line);
+            free(adt_s);
+            prefetch_stop();
+            mpq_chain_close(&rc);
+        }
     }
     /* }}} */
 

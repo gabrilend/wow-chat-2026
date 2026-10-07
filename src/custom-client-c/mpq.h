@@ -17,6 +17,7 @@
 #ifndef EG_MPQ_H
 #define EG_MPQ_H
 
+#include <pthread.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -44,6 +45,8 @@ typedef struct {
     size_t      kept_bytes;
     uint64_t    tick;                 /* counts reads, for "read longest ago" */
     uint64_t    hits, misses;         /* for reports */
+    double      unpack_s;             /* seconds spent unpacking files the memory didn't hold (for reports) */
+    pthread_mutex_t lock;             /* one reader at a time: the read-ahead thread (prefetch.h) shares the chain (173u) */
 } MpqChain;
 
 uint32_t mpq_hash(const char *text, int kind);
@@ -57,7 +60,8 @@ void     mpq_close(MpqArchive *a);
 /* The client's archives under `data` (its Data folder) for `locale` ("enUS"). */
 int      mpq_chain_open(MpqChain *c, const char *data, const char *locale, char *why, int why_len);
 /* The newest archive's copy, its size, and which archive (may be NULL).
- * Served from the chain's memory when it was unpacked lately. */
+ * Served from the chain's memory when it was unpacked lately. Safe to
+ * call from more than one thread (the chain is locked while it reads). */
 unsigned char *mpq_chain_read(MpqChain *c, const char *name, size_t *size, const char **from);
 void     mpq_chain_close(MpqChain *c);
 

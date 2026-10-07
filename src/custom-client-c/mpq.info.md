@@ -37,5 +37,6 @@ without the position fix. Anything else is an error naming the file.
   The client's archives under `data` (its Data folder) for `locale` ("enUS").
 - `unsigned char *mpq_chain_read(MpqChain *c, const char *name, size_t *size, const char **from);`
   The newest archive's copy, its size, and which archive (may be NULL).
-  Served from the chain's memory when it was unpacked lately.
+  Served from the chain's memory when it was unpacked lately. Safe to
+  call from more than one thread (the chain is locked while it reads).
 - `void mpq_chain_close(MpqChain *c);`

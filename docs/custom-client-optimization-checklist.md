@@ -123,10 +123,23 @@ and per-pixel work. Fewer, larger draw orders beat many small ones.
   beyond 130. **Measured** (a 12-second walk from Astranaar): tile loads
   236 ms on average to 62, the slowest 706 to 126; creatures at the
   start 1.3 s to 0.34.
-- [ ] **8. Loading on a second thread.** Tile files read and parsed off
-  the frame, handed over when ready, so walking never stalls a frame.
-  Better; the handing-over must be careful (the card is only spoken to
-  from the main thread).
+- [x] **8b. Reading ahead on a second thread.** Built 2026-10-06
+  (`prefetch.c`; the archive reader now locks, so both threads share
+  it): the ring of tiles just beyond those loaded is read ahead, every
+  file each tile will want (its ground file and pictures, each doodad's
+  model, skin and pictures, each building's root, parts and pictures)
+  unpacked into the archive reader's memory. **Measured** (a 12-second
+  walk, the loads while she moved): 48 ms on average to 37, the slowest
+  61 to 50. `--no-read-ahead` turns it off, to measure. Checked with the
+  address-checked build on a walk and a jump across the zone (18 tiles
+  loaded, 8 dropped): no faults.
+- [ ] **8c. Preparing tiles on the second thread.** What still stalls a
+  load on the main thread (about 37 ms): the ground's points (each
+  point's slope from the server's heights: 4 lookups a point) and blend
+  picture, ground pictures unpacked for the array, and new doodad
+  models parsed. The worker could build all of it, leaving the main
+  thread only the sending to the card. Needs the server-height reader
+  locked (it loads its tiles lazily).
 
 ## Not to do
 

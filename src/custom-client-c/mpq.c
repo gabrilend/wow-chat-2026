@@ -7,6 +7,7 @@
 #include <string.h>
 #include <zlib.h>
 #include <ctype.h>
+#include <time.h>
 
 /* block flags (the block table's flags field) */
 #define FILE_IMPLODE     0x00000100u
@@ -245,6 +246,7 @@ static const char *const ORDER[] = {
 int mpq_chain_open(MpqChain *c, const char *data, const char *locale, char *why, int why_len)
 {
     memset(c, 0, sizeof *c);
+    pthread_mutex_init(&c->lock, NULL);
     for (size_t i = 0; i < sizeof ORDER / sizeof ORDER[0]; ++i) {
         char path[600];
         /* each pattern names the folder, then (for locale archives) the locale twice */
@@ -270,7 +272,15 @@ static int same_name(const char *a, const char *b)
     return *a == *b;
 }
 /* }}} */
+static unsigned char *chain_read(MpqChain *c, const char *name, size_t *size, const char **from);
 unsigned char *mpq_chain_read(MpqChain *c, const char *name, size_t *size, const char **from)
+{
+    pthread_mutex_lock(&c->lock);
+    unsigned char *s = chain_read(c, name, size, from);
+    pthread_mutex_unlock(&c->lock);
+    return s;
+}
+static unsigned char *chain_read(MpqChain *c, const char *name, size_t *size, const char **from)
 {
     ++c->tick;
     for (int k = 0; k < c->nkept; ++k)
@@ -284,6 +294,9 @@ unsigned char *mpq_chain_read(MpqChain *c, const char *name, size_t *size, const
             return copy;
         }
     ++c->misses;
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+    unsigned char *got = NULL;
     char why[700];
     for (int i = 0; i < c->count; ++i) {
         unsigned char *s = mpq_read(c->archives[i], name, size, why, sizeof why);
@@ -310,11 +323,14 @@ unsigned char *mpq_chain_read(MpqChain *c, const char *name, size_t *size, const
                 kp->from = c->archives[i]->path;
                 c->kept_bytes += *size;
             }
-            return s;
+            got = s;
+            break;
         }
-        if (why[0]) { fprintf(stderr, "mpq: %s\n", why); return NULL; }
+        if (why[0]) { fprintf(stderr, "mpq: %s\n", why); break; }
     }
-    return NULL;
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    c->unpack_s += (double)(t1.tv_sec - t0.tv_sec) + (double)(t1.tv_nsec - t0.tv_nsec) / 1e9;
+    return got;
 }
 void mpq_chain_close(MpqChain *c)
 {
