@@ -25,12 +25,17 @@ Verbatim, 2026-10-05:
   packed 8-bit), its baked shadow, and its colour tints (MCCV). They
   also read the map's WDT, which says which blend-map form the map uses.
 - **`ground.h` / `ground.c` paint the ground.**
-  - **Meshes:** one mesh per chunk, with the original's four triangles per
-    cell, none over holes. The heights are the client's own.
-  - **Pictures:** each ground picture is loaded once and shared, and
-    repeats 8 times across a chunk.
-  - **Blending:** one 64 x 64 blend picture per chunk; its alpha channel
-    already holds the shadow, for 173h.
+  - **Meshes:** one mesh per quarter tile (64 chunks), with the
+    original's four triangles per cell, none over holes; a quarter out of
+    the camera's sight isn't drawn (173u: from 2,304 draw orders a frame
+    to about 6). The heights are the client's own.
+  - **Pictures:** each ground picture is loaded once into a layer of one
+    shared texture array (256 x 256 layers; a layer no loaded tile uses is
+    freed), and repeats 8 times across a chunk. Each chunk's four layer
+    numbers ride on its points.
+  - **Blending:** each chunk's 64 x 64 blend picture is a square of its
+    tile's 1024 x 1024 one; its alpha channel already holds the shadow,
+    for 173h.
   - **The shader** lays each layer over the ones below by its strength,
     tints the result, then applies the old sun and fog.
   - **Light** comes from the server's heights a yard either side, so it

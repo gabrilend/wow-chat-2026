@@ -33,7 +33,11 @@
 #include "../navmesh_slope.h"
 #include "../particles.h"
 #include "../settings.h"
+#include "../sight.h"
 #include "../wmo.h"
+
+#define RAYMATH_STATIC_INLINE              /* no raylib library in the tests: the maths compiled in here */
+#include "raymath.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -487,6 +491,21 @@ int main(int argc, char **argv)
     }
     blp_free(&img);
     mpq_chain_close(&chain);
+    /* }}} */
+
+    /* {{{ what the camera sees (173u): a camera at the origin looking along
+     * +x (up +z), 60 degrees, 0.3 to 1000 yards */
+    printf("sight\n");
+    {
+        Matrix view = MatrixLookAt((Vector3){ 0, 0, 0 }, (Vector3){ 1, 0, 0 }, (Vector3){ 0, 0, 1 });
+        Matrix proj = MatrixPerspective(60 * DEG2RAD, 16.0 / 9.0, 0.3, 1000);
+        Sight sg;
+        sight_from(&sg, MatrixMultiply(view, proj));
+        check(sight_ball(&sg, (Vector3){ 50, 0, 0 }, 1), "a ball 50 yards ahead is seen");
+        check(!sight_ball(&sg, (Vector3){ -50, 0, 0 }, 1), "one 50 yards behind is not");
+        check(!sight_ball(&sg, (Vector3){ 1500, 0, 0 }, 1), "nor one past the far wall");
+        check(!sight_ball(&sg, (Vector3){ 10, 40, 0 }, 1) && sight_ball(&sg, (Vector3){ 10, 40, 0 }, 40), "one far off to the side is not, unless it is big enough to reach in");
+    }
     /* }}} */
 
     /* {{{ the world's creatures (173t): a small written list */

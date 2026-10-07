@@ -48,4 +48,8 @@ void ground_blob(float x, float y, float z, float radius);
 /* Draws every loaded tile. `eye` is the camera's position (for the fog). */
 void ground_draw(Vector3 eye, const LightNow *light);
 
+/* How many draw orders the ground sent since last asked (for the picture
+ * report; 173u). */
+int  ground_orders_last(void);
+
 #endif

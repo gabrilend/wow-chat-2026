@@ -28,6 +28,12 @@ re-sends them, re-poses camera-facing doodad copies, rebuilds particle
 squares, and re-sends the sky's colours. Nothing is skipped for being out
 of sight except creatures (beyond 100 yards or behind the camera).
 
+**Step 1 built (2026-10-06):** the ground is four draw orders a tile,
+quarters out of sight skipped (`sight.h` / `sight.c`: the view's six
+walls from the camera's matrix, and a ball test; tested without a
+window). Ground: 10.6 ms to 0.04 ms a frame, about 6 orders. Picture
+reports now count the ground's orders.
+
 ## Intended Behavior
 
 The processor decides what and where (a few numbers per object); the

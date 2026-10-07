@@ -50,11 +50,15 @@ and per-pixel work. Fewer, larger draw orders beat many small ones.
 
 ## The checklist, in order
 
-- [ ] **1. Ground in one order a tile, and sight tests.** The tile's 256
-  patches become one mesh; the pictures each patch uses are layers of
-  one texture array, and the patch's choice of layers rides on its
-  points; tiles and patches out of sight aren't drawn. Expected: about
-  10 ms to under 1. Better: no loss.
+- [x] **1. Ground in one order a quarter tile, and sight tests.** Built
+  2026-10-06 (`ground.c`, `sight.c`). Each tile is four meshes (64
+  patches each); every ground picture is a layer of one shared texture
+  array (reached through Raylib's OpenGL loader: Raylib has no arrays);
+  each patch's four layer numbers ride on its points; the tile's blend
+  pictures are one 1024 x 1024 picture; quarters out of sight aren't
+  drawn. **Measured:** ground 10.6 ms to 0.04 ms a frame; 2,304 draw
+  orders to about 6. The same picture (compared pixel by pixel: under
+  0.1% apart, the moving doodads' difference).
 - [ ] **2. Doodads: sight tests and fewer orders.** Copies outside the
   view aren't drawn (per model and per tile bounds); pieces sharing a
   picture and blend are merged. Expected: about 10 ms to a few. Better:

@@ -39,3 +39,6 @@ the tests check.
   a frame; the list empties after each ground_draw.
 - `void ground_draw(Vector3 eye, const LightNow *light);`
   Draws every loaded tile. `eye` is the camera's position (for the fog).
+- `int ground_orders_last(void);`
+  How many draw orders the ground sent since last asked (for the picture
+  report; 173u).
