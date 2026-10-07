@@ -942,10 +942,23 @@ Verbatim:
     watchman route idea, but I want to emphasize that it should only
     happen after we've explored. Otherwise, the buddy-bots would collapse
     into the same route as their friends every time" (because "the stop
-    that sees the most" is the same stop for everyone). The same risk
-    holds while patrolling: one tour shared by a clan is cut into one
-    stretch per buddy in the open world, and walked together in
-    instances.
+    that sees the most" is the same stop for everyone). Sharing out the
+    patrol (the owner, 2026-10-07: "I still want them to cycle through, I
+    don't want one of them staying in the same spot the whole time ...
+    since they all would finish their exploration at different spots,
+    they'd each have their own watchman routes. Is that right?"): one
+    loop through the area's watchman stops, and each buddy enters it at
+    the stop nearest where its survey ended and walks the whole loop, so
+    every buddy passes every stop, spaced out like runners on a track.
+    A buddy that catches up with the one ahead on the loop (after a
+    fight, say) skips past it to the next stop, so they don't bunch.
+  - **Instances have no patrol** (mobs don't respawn there). Instead a
+    help rule, in 617e5 (fighting together): go to an ally's fight in
+    the part of the instance one belongs to.
+  - **An area that changes** (a door opens, an event adds a room; the
+    owner: "just the new part. SFK is a great example for this."): only
+    the newly reachable floor is surveyed. The rest keeps its explored
+    marks.
   - **Monsters met on patrol**: "fight the monster then recalculate the
     route."
   - **Monsters met while surveying**: fight at once ("fight fight fight

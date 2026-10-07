@@ -135,6 +135,15 @@ Owner, 2026-09-27, verbatim:
 - **Helping**: a buddy that sees a clanmate (another buddy of the same
   owner, or the owner) in a fight within reach joins it, whether grouped or
   not.
+- **Helping in instances** (the owner, 2026-10-07): "if an ally is in a
+  fight in a part of the instance I can (should) reach, then I should go
+  help - keep in mind the multi-instance raids designs we have later on,
+  and how one large dungeon (BRD) will be split into two or more
+  sections, and we only want them to come to the aid of allies in those
+  sections." In an instance, "within reach" means the ally is in the
+  same section of the instance (810's parallel routes, such as Blackrock
+  Depths' three parties of five) and can be walked to, not merely seen.
+  An ally fighting on another route is left to its own party.
 - **Taking on more**: a buddy judges whether it can handle one more
   monster (its health, the monsters' levels and number, its role), and if
   so pulls the next one near.
