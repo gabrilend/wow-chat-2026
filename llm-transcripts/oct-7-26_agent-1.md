@@ -1,6 +1,6 @@
 # Conversation Summary: ee3e437d-85af-485c-8ed0-8478da64add8
 
-Generated on: 2026-10-07 10:25:08
+Generated on: 2026-10-07 10:33:53
 Models: claude-opus-5-5
 
 ## Contents
@@ -823,6 +823,122 @@ holds the world while each client sends its moves. WC3 multiplayer is
 simulation, and only the orders are sent between them. Those are different
 designs. AzerothCore could relay WC3 orders, but whether it should is a question
 for later.
+
+--------------------------------------------------------------------------------
+
+### User Request 8
+
+So the ability to add dynamic ground and doodads seems like pretty awesome
+behavior. We just have to make sure that it's synced correctly FROM the server,
+not TO the server. We might also have to validate player positions if we build
+something like that, so they can't just reshape the world and walk through
+locked doors or whatever.
+
+The W client's errors feel more flexible because they allow the calling code to
+branch depending on errors. Ours is more readable, but we could just create more
+verbose error types and expand the list.
+
+We should convert during the move.
+
+
+
+<pasted_content id="ea9d">
+> Still open: whether networking can be shared. AzerothCore works as a server
+> that holds the world while each client sends its moves. WC3
+> multiplayer is "lockstep": no server holds the world; every player's machine
+> runs the same simulation, and only the orders are sent between
+> them. Those are different designs. AzerothCore could relay WC3 orders, but
+> whether it should is a question for later.
+</pasted_content id="ea9d">
+
+
+how is "only the orders are sent between them" and "each client sends its moves"
+different? Kinda seems like with WETE we just have every player as the server.
+That's... Kinda cool actually? I wonder if there's a way we could update
+Azerothcore to do something similar... Though, the consequences for cheaters are
+much lower in WETE, so perhaps we would benefit from having an authority.
+
+I'm picturing a peer-to-peer mmo where each player simulates their local state
+and also syncs to a server. Not sure if that'd help things at all. No sense for
+a player in Tanaris to simulate someone's moves in Azshara, but the server's
+already doing that anyway so, not sure if a peer-to-peer system would really
+bring value to the WoW system.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 8
+
+> Recording your answers in 173v first, then the networking explanation.
+
+*[commit] 1c7dd293c in wow-chat-2026 - The client's parts get handles and typed errors as they move*
+
+Recorded and committed: the parts convert to handles during the move, errors
+become typed codes that still carry their sentence, and world changes only come
+from the server.
+
+**How "only the orders are sent" differs from "each client sends its moves":**
+
+*AzerothCore (an authority):*
+- When you press W, your client moves you itself. A few times a second it tells
+  the server "I am at x, y, z, facing this way, running forward."
+- When you cast Fireball, it sends a request: "cast spell 133 on that creature."
+- The server alone works out everything else: whether the spell hits, the
+  damage, every creature's AI, health and loot. It sends the results to every
+  client near you.
+- So a client sends *its own state and requests*, and receives *the world's
+  results*. Your client never computes a creature's health.
+
+*WC3 (lockstep):*
+- Nobody sends positions or health at all. Each machine sends only commands,
+  tagged with a tick number: "at tick 4,812, unit 12 moves to (300, 450)."
+- Every machine runs the *entire* game from those commands, deterministically,
+  and must get bit-for-bit the same answer.
+- The traffic stays tiny however many units there are: 200 footmen moving costs
+  one order, not 200 positions.
+
+The price of lockstep:
+- Every machine must simulate *everything*.
+- The game advances only as fast as the slowest player's orders arrive. One
+  lagging player stalls everyone.
+- Every machine knows the whole game state, so "map hacks" (seeing through the
+  fog) are easy.
+- Cheating on *outcomes* is hard, though: a client that changes its own numbers
+  just falls out of sync and gets dropped.
+
+So yes, your reading is right: in WETE every player is the server. WC3's host
+was mostly a relay that stamped the ticks.
+
+**Would peer-to-peer help the WoW side?** I agree with your instinct that it
+mostly wouldn't:
+- MMO servers already do "interest management." The world is cut into grid
+  cells, and the server only sends you what's in the cells around you. Tanaris
+  never hears about Azshara.
+- Peer-to-peer would offload server work only if players simulated their own
+  areas. Then the server would have to trust them or re-check them, and
+  re-checking costs about what simulating did.
+- With persistent loot and characters, cheating matters far more than in a
+  one-hour WC3 match.
+
+**What modern games do instead** is the hybrid you're picturing: client-side
+prediction with server authority.
+- Your client simulates *you* immediately, so movement feels instant.
+- The server simulates the truth and corrects you if you disagree. That's where
+  your "validate player positions" lives.
+- AzerothCore does a weak version: it largely trusts the client's movement
+  packets, and 173e covers what it does check.
+
+**Where that might land for WC3 maps:** AzerothCore could be the lockstep
+*host*, stamping ticks and relaying orders. It could also run the same
+simulation itself as a referee, which brings back the authority you said would
+help. Your "every player is the server" idea survives, with one trusted machine
+checking the work.
+
+When I rewrite the W client's network document (004) during the merge, I'll put
+this down as the open networking question, with your words.
+
+Continuing with the merge: next I rewrite the W client's documents (tech stack,
+build, architecture with handles and typed errors, formats, rendering, roadmap
+and crosswalk), then the code moves.
 
 --------------------------------------------------------------------------------
 

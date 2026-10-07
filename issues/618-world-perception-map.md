@@ -77,11 +77,19 @@ player does:
 
 ## Open Questions
 
-1. **Recognition:** a trained model of our own (labelled pictures needed),
-   a borrowed general model, or a simpler rule-based labeller to start?
-2. **Where it runs:** on the developer's machine once per map (a baked
-   database shipped with the server), or continuously by players' clients
-   as they play (916o, player-contributed compute)?
+1. (Answered 2026-10-07) **Recognition:** a trained model of our own.
+   The custom client produces rough labels automatically (it knows which
+   model or texture drew each pixel), and a person corrects them. The
+   owner adds: "we might need to provide additional labels, for example
+   'this is what a road looks like' - also keep in mind we need to have
+   many many different camera angles." So the training set also holds
+   hand-given examples of each label ("this is a road"), and every scene
+   is photographed from many heights, distances and directions, so the
+   model learns a road seen from above, from a horse, and from a
+   kneeling gnome alike.
+2. (Answered 2026-10-07) **Where it runs:** once per map, on the
+   developer's machine. The result is a fixed database shipped with the
+   server, the same for everyone.
 3. **"As the players (and ideally, bots) should see it":** do players see
    the perception map themselves (a map overlay, named places), or is it
    only for bots?

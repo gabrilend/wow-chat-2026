@@ -6,7 +6,7 @@
 - Parent: 617
 - Blocked by: 617c
 - Priority: Medium
-- Sub-issues: 617e1 (the buddy roam strategy), 617e2 (the roaming core in game), 617e3 (creatures, chests and gathering nodes), 617e4 (town visits, with area-change travel), 617e5 (fighting together), 617e6 (exploration modes in game), 617e7 (a zone seen from above), 617e8 (following the owner across maps: boats, zeppelins, the Dark Portal), 617e9 (boarding recordings: the owner's own embarks replayed by buddies), 617e10 (closer in danger); death handling, tunnels and the exploration ("painting") design stay here until split
+- Sub-issues: 617e1 (the buddy roam strategy), 617e2 (the roaming core in game), 617e3 (creatures, chests and gathering nodes), 617e4 (town visits, with area-change travel), 617e5 (fighting together), 617e6 (exploration modes in game), 617e7 (a zone seen from above), 617e8 (following the owner across maps: boats, zeppelins, the Dark Portal), 617e9 (boarding recordings: the owner's own embarks replayed by buddies), 617e10 (closer in danger), 617e11 (passing each other: swerving and greeting); death handling, tunnels and the exploration ("painting") design stay here until split
 
 ## Origin
 
@@ -854,8 +854,10 @@ Verbatim:
   blend (spacing steps while walking to the waypoint)?
 - (Answered 2026-09-27) The Y rule: a percent 1..100 moved 1..20 points
   at even odds, never under 10 yards; X a tenth of a circle.
-- **Waypoint clearance** from rocks and the edge: 2, 3 or 5 yards ("Maybe 2
-  yards. or 3."; 3 here).
+- (Answered 2026-10-07) **Waypoint clearance** from rocks and the edge:
+  "should be the radius of the character. Tauren are wider." Each buddy's
+  clearance is its own body radius (half the planner's body width), not
+  one number for all.
 - **How sharp a height step counts as an obstacle** (0.6 yards beyond the
   slope around it here), and **the planner's weights** (a yard costs
   1 + 6 × grade²; road 60%).
@@ -876,9 +878,15 @@ Verbatim:
   network ("use it").
 - **The pull toward openings**: keep it (always, once a lap), make it a
   chance, or instead let the bearing wobble a few degrees so the ten
-  bearings drift round over time?
-- **Crowding**: also check other buddies' waypoints (where they are
-  going), not only where they stand?
+  bearings drift round over time? The owner, 2026-10-07: "tunnels may
+  curve. A 20 yard line isn't necessarily indicative of a doorway." So
+  the test itself is in doubt, not only how often it fires. Being
+  brainstormed.
+- (Answered 2026-10-07) **Crowding**: the waypoint rule's direction
+  changes. Someone within 5 yards moves a waypoint 10 points toward the
+  middle if it is in the inner half of the area's radius, and toward the
+  edge if it is in the outer half. Meeting while walking is handled by an
+  avoidance system, 617e11 (swerve, wave, the lower level kneels).
 - **Straight-and-orbit walker or planner**: the planner replaces the orbit
   walker in game (it finds obstacles itself); keep the orbit walker only
   as the drawing's comparison?
