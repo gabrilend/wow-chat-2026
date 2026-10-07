@@ -307,8 +307,11 @@
     try {
       if (state.M && state.sims.length) {
         if (state.playing) {
-          const steps = Math.round(real * state.speed / DT);
-          for (let s = 0; s < steps; s++) for (const sim of state.sims) sim.step();
+          // simulated time owed is carried from frame to frame: at real time a frame
+          // (1/60 s) is shorter than one step (1/10 s), and rounding each frame on its
+          // own gave zero steps for ever (2026-10-07, "real time seems to be paused")
+          state.owed = (state.owed || 0) + real * state.speed;
+          while (state.owed >= DT) { state.owed -= DT; for (const sim of state.sims) sim.step(); }
         }
         drawPanels(now);
         if (now - lastChart > 1000) {

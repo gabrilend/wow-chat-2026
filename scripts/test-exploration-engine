@@ -91,7 +91,7 @@ function Node(tag) {
 Node.prototype.append = function (...k) { this.kids.push(...k); };
 Node.prototype.replaceChildren = function (...k) { this.kids = k; };
 Node.prototype.setAttribute = function (k, v) { this.attrs[k] = v; if (k === "hidden") this.hidden = true; };
-Node.prototype.addEventListener = function () {};
+Node.prototype.addEventListener = function (type, fn) { this["on_" + type] = fn; };
 Node.prototype.querySelectorAll = function () { return []; };
 Node.prototype.getBoundingClientRect = function () { return { width: 300, height: 200 }; };
 Node.prototype.getContext = function () { const c = any(); return c; };
@@ -112,13 +112,19 @@ require(page);
 const find = (n, pred) => pred(n) ? n : (n.kids || []).reduce((a, k) => a || (k instanceof Node && find(k, pred)), null);
 const problem = find(root, n => n.attrs && n.attrs.role === "alert");
 const clock = find(root, n => n.tag === "span" && n.className === "xc-clock");
-// the page opens on the first cave; four seconds of frames at 60 a second
-const before = clock.textContent;
-for (let f = 0; f < 240; f++) { now += 16.7; const cb = pending; pending = null; if (!cb) break; cb(now); }
+const speed = find(root, n => n.tag === "select" && n.attrs.id === "xc-speed");
 let failures = 0;
-console.log(`page loop on ${list[0].key}: clock ${before} -> ${clock.textContent}`);
-if (!problem.hidden) { console.log("  FAIL the loop stopped: " + problem.textContent); failures++; }
-if (clock.textContent === before) { console.log("  FAIL the clock did not move"); failures++; }
+// the page opens on the first cave; four seconds of frames at 60 a second, at the
+// opening speed and then at every speed the page offers (2026-10-07: real time,
+// one step every six frames, rounded to no steps at all and never moved)
+for (const v of ["30", "1", "10", "100"]) {
+  if (v !== "30") { speed.value = v; speed.on_change(); }
+  const before = clock.textContent;
+  for (let f = 0; f < 240; f++) { now += 16.7; const cb = pending; pending = null; if (!cb) break; cb(now); }
+  console.log(`page loop on ${list[0].key} at ${v}x: clock ${before} -> ${clock.textContent}`);
+  if (!problem.hidden) { console.log("  FAIL the loop stopped: " + problem.textContent); failures++; break; }
+  if (clock.textContent === before) { console.log("  FAIL the clock did not move"); failures++; }
+}
 console.log(failures ? failures + " page failures" : "page loop runs");
 process.exit(failures ? 1 : 0);
 '
