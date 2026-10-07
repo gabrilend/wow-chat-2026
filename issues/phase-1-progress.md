@@ -154,7 +154,8 @@ from the original's behaviour first, project features later in a
 separate layer. In C on Raylib; the first Lua version is deprecated.
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 173 | custom-client | In Progress | Parent; sub-issues 173a-173s. A world to walk in, read from the original's files; no network yet. |
+| 173 | custom-client | Moved | Parent; sub-issues 173a-173w. Moved to the W client (/mnt/mtwo/games/azeroth-core/custom-client/) on 2026-10-07; each sub-issue says where it continues. |
+| 173v | moving-to-its-own-project | Completed | The move to the W client, step by step (in completed/). |
 | 173a | first-light | Built | Ground, controls at 120%, slopes; Escape quits, Q strafes left. |
 | 173d | models-and-world-objects | In Progress | Her model and skin; a tauren's tail (fur picture); glowing and see-through pieces (her eyes); bare-piece rules still fixed numbers. |
 | 173k | client-in-c-with-raylib | Ported | The C client runs; builds in seconds (Claude may build it, CLAUDE.md "Compiling"). |

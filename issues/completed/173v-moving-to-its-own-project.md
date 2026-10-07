@@ -68,10 +68,10 @@ What was done, in 173v's step order:
 
    Removed in the next commit, as the house rule asks.
 
-Left:
-- The conversations (answer 7): copies to go with the client, after
-  checking each transcript tool against a copied file (they file a
-  conversation by where its session ran).
+9. **The conversations** (answer 7): copied, frozen, into the W client's
+   `notes/wow-chat-2026-conversations/` (October 3 to 7), outside its
+   `llm-transcripts/` so the transcript tools never take them for its
+   own; a README there says the living versions and their HTML stay here.
 
 ## Intended Behavior
 
@@ -207,6 +207,11 @@ behind in this project.
    where the session ran. Copied files from another project may be
    skipped, rebuilt over, or filed twice. Check each tool against a
    copied file before relying on it.
+   - (Answered 2026-10-07) "let's just copy them over as a reference,
+     outside of the llm-transcripts directory, with explicit instructions
+     to view them here if we want pretty HTML or whatever. We'll need to
+     reference this project from time-to-time anyway." So no tool needs
+     checking: the copies sit where the tools don't look (step 9 above).
 8. (Answered 2026-10-07) **Issue numbers:** "W client numbers only. The
    letters indicate 'sub-issues' and should not be altered, because they
    provide organization." So a moved piece takes the W client's number
