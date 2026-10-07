@@ -653,6 +653,14 @@ int main(int argc, char **argv)
     check(settings_num("cameraYawMoveSpeed") == 180 && !strcmp(settings_text("gxResolution"), "1280x720"),
           "every setting starts at its default (mouse look 180, window 1280x720)");
     check(settings_find("noSuchSetting") == NULL, "an unknown name finds nothing (code asking for it by settings_num stops the client)");
+    {
+        /* the Resolution panel's tick boxes (173b5): windowed, vsync on,
+         * not maximized, resizable; the window's kind is read at start */
+        const Setting *w = settings_find("gxWindow"), *mx = settings_find("gxMaximize"), *vs = settings_find("gxVSync"), *rl = settings_find("windowResizeLock");
+        check(w && mx && vs && rl && w->num == 1 && mx->num == 0 && vs->num == 1 && rl->num == 0
+              && w->decl->restart && mx->decl->restart && !vs->decl->restart && !rl->decl->restart,
+              "the window settings start windowed, vsync on, unmaximized and resizable; windowed and maximized need a restart");
+    }
     check(settings_set("cameraYawMoveSpeed", "300", why, sizeof why) && strstr(why, "out of its range") && settings_num("cameraYawMoveSpeed") == 180,
           "a slider refuses a value past its range, says so, and keeps its value");
     check(settings_set("gxResolution", "wide", why, sizeof why) && settings_set("gxResolution", "9000x1000", why, sizeof why),

@@ -30,6 +30,14 @@
  *   the Camera panel's Follow Terrain (off), Water Collision (on), Smart
  *   Pivot (on) and Head Bob (off): what each does is in camera.c and
  *   main.c (173m); defaults are this client's.
+ * gxVSync, gxWindow, gxMaximize, windowResizeLock: the Resolution
+ *   panel's tick boxes (173b5), the original's names and words. Windowed
+ *   and Maximized are read when the window opens (Raylib picks
+ *   fullscreen and borders then); Vertical Sync and Disable Resize are
+ *   applied live by main.c. Windowed Mode's original tooltip also speaks
+ *   of the desktop's gamma, which this client doesn't change, so that
+ *   sentence is left out. Defaults: windowed, vsync on, as the client
+ *   opened before these existed.
  * farclip: the view distance, yards (173b6): the far plane, how far the
  *   fog may reach, and how many tiles load round her (one tile covers
  *   533 yards). 507 keeps the 3 x 3 the client had before; the range and
@@ -49,6 +57,14 @@ static const SettingDecl DECLS[] = {
     { .name = "gxResolution",            .section = "Resolution", .kind = SETTING_TEXT,   .def = "1280x720",
       .check = check_resolution, .restart = 1,
       .label = "Resolution", .explain = "The window's width and height in pixels, typed as WIDTHxHEIGHT (up to 7680x4320, ultrawide included)." },
+    { .name = "gxVSync",                 .section = "Resolution", .kind = SETTING_TOGGLE, .def = "1",
+      .label = "Vertical Sync", .explain = "Synchronizes your framerate to some fraction of your monitor's refresh rate. Enable this if you see excessive screen tearing in game." },
+    { .name = "gxWindow",                .section = "Resolution", .kind = SETTING_TOGGLE, .def = "1", .restart = 1,
+      .label = "Windowed Mode", .explain = "Check to play in a non-fullscreen window." },
+    { .name = "gxMaximize",              .section = "Resolution", .kind = SETTING_TOGGLE, .def = "0", .restart = 1,
+      .label = "Maximized", .explain = "Check to maximize window and remove borders." },
+    { .name = "windowResizeLock",        .section = "Resolution", .kind = SETTING_TOGGLE, .def = "0",
+      .label = "Disable Resize", .explain = "Enable this to prevent resizing the game window." },
     { .name = "farclip",                 .section = "Effects",    .kind = SETTING_SLIDER, .def = "507",
       .min = 177, .max = 1277, .step = 110,
       .label = "View Distance", .explain = "Changes how far you can see. Decreasing this may greatly improve performance." },

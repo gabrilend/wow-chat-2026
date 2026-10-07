@@ -6,8 +6,9 @@
  * the original game's archives standing on it; moves her with the game's
  * own controls at 120% speed (W/S forward and back, A/D turn or, with the
  * right mouse button held, strafe, Q and E strafe, space jump, the
- * keypad's / toggles walking and running (173i), left drag turns the camera, right drag turns her with it, the wheel zooms; Escape
- * quits until the game menu exists). Written in C on Raylib (owner,
+ * keypad's / toggles walking and running (173i), left drag turns the
+ * camera, right drag turns her with it, the wheel zooms; Escape quits
+ * until the game menu exists). Written in C on Raylib (owner,
  * 2026-10-05: "let's port now. We should build something like an engine
  * in C anyway, for performance reasons").
  *
@@ -502,7 +503,13 @@ int main(int argc, char **argv)
     view.yaw = (float)elf.o + (view.yaw - (float)START_O);   /* the camera keeps its place behind her */
     ox = floor(start_x); oy = floor(start_y);
 
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
+    /* the window as the Resolution panel says (173b5): fullscreen at the
+     * resolution unless windowed; maximized means also borderless; vsync
+     * and resizing as set (both also follow later changes, below) */
+    int vsync_on = settings_num("gxVSync") != 0, resize_locked = settings_num("windowResizeLock") != 0;
+    int windowed = settings_num("gxWindow") != 0, maximized = windowed && settings_num("gxMaximize") != 0;
+    SetConfigFlags((vsync_on ? FLAG_VSYNC_HINT : 0) | (resize_locked ? 0 : FLAG_WINDOW_RESIZABLE)
+                   | (windowed ? 0 : FLAG_FULLSCREEN_MODE) | (maximized ? FLAG_WINDOW_MAXIMIZED | FLAG_WINDOW_UNDECORATED : 0));
     InitWindow(win_w, win_h, "Everland Ghostsong");
     SetExitKey(KEY_NULL);                                /* Escape is read in the loop, so it can open the game menu later */
     Shader model_sh  = LoadShaderFromMemory(FIGURE_VS, MODEL_FS);
@@ -599,6 +606,16 @@ int main(int argc, char **argv)
         float dt = shot ? 0.05f : GetFrameTime();          /* pictures: steady 20 frames a world-second */
         if (dt > 0.1f) dt = 0.1f;                        /* a stalled frame doesn't fling her */
         if (IsKeyPressed(KEY_ESCAPE)) break;            /* the owner, 2026-10-06: Escape quits until there are menus (173b2) */
+        /* Vertical Sync and Disable Resize, live (173b5): a change to
+         * either (from the menu, when it exists) takes effect at once */
+        if ((settings_num("gxVSync") != 0) != vsync_on) {
+            vsync_on = !vsync_on;
+            if (vsync_on) SetWindowState(FLAG_VSYNC_HINT); else ClearWindowState(FLAG_VSYNC_HINT);
+        }
+        if ((settings_num("windowResizeLock") != 0) != resize_locked) {
+            resize_locked = !resize_locked;
+            if (resize_locked) ClearWindowState(FLAG_WINDOW_RESIZABLE); else SetWindowState(FLAG_WINDOW_RESIZABLE);
+        }
         if (go_to && frames == 20) {                     /* --goto: there, standing on the ground */
             go_to = 0;
             float gx2, gy2;
@@ -868,6 +885,22 @@ int main(int argc, char **argv)
                 printf("near her: %s (%s) at x %.1f y %.1f z %.1f, %.1f yards off\n", sp->name, standing[best].fig.name, sp->x, sp->y, sp->z, bd);
             }
             break;
+        }
+    }
+    /* the window's size, kept (173b5): resized by the player in a plain
+     * window, it is the resolution next time; saved into the settings
+     * file (pictures and maximized or fullscreen windows leave it be) */
+    if (!shot && windowed && !maximized && !IsWindowMaximized()) {
+        char size[32];
+        snprintf(size, sizeof size, "%dx%d", GetScreenWidth(), GetScreenHeight());
+        if (!strcmp(size, settings_text("gxResolution"))) {
+            /* not resized: nothing to keep */
+        } else if (settings_set("gxResolution", size, why, sizeof why)) {
+            fprintf(stderr, "settings: the window's size isn't kept: %s\n", why);   /* smaller than 640x480 */
+        } else {
+            if (!settings_file) printf("settings: the window is now %s, but no --settings file was given to keep it in\n", size);
+            else if (settings_save(settings_file, why, sizeof why)) fprintf(stderr, "settings: the window's size %s could not be saved: %s\n", size, why);
+            else printf("settings: the window's size %s saved to %s\n", size, settings_file);
         }
     }
     CloseWindow();
