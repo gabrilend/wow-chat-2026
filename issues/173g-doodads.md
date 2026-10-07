@@ -122,16 +122,25 @@ flat? But only some of them)". Likely causes, to be confirmed:
 two-picture piece can look stretched, so the moss may be fixed if its
 arch is such a piece on another tile. To check in-game.
 
+**Placement checked against the server's (step 4, 2026-10-07):** the
+server's collision tiles (`data-files/vmaps`, made by its own extractor
+from the same map records) place each model by their own reading: the
+model's points as made, turned by Z, Y, X from the file's three angles,
+sized, moved. A test reads Astranaar's collision tiles, finds each
+placement among the ground file's doodads and buildings (by place and
+name), and places four points of each model both ways: all 710 found in
+both agree within 0.0007 yards. With two of the server's angles swapped
+the test fails (591 of 710, 12.7 yards off), so it would catch a wrong
+turn. Furnishings inside buildings aren't in the ground file's lists, so
+they aren't compared here (the furnishing-box check covers them).
+
+Particles and moving pictures, once listed here as left, were built
+with 173o and 173n.
+
 **Left:**
 - The moss fault above (to check: perhaps fixed).
 - Pieces whose picture the game chooses at run time (none so far at
   Astranaar).
-- Particles (torch flames, wisps, firefly glow) and picture animations
-  (scrolling water, glowing runes): what makes the torches and wisps look
-  alive. Both are separate parts of the model files, not read yet.
-- Step 4's cross-check against the server's collision placements
-  (`data-files/vmaps`). The furnishing-box check and the pictures cover
-  placement for now.
 - Comparing the indoor light with the original.
 
 ## Intended Behavior

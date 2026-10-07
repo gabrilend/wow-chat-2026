@@ -115,6 +115,102 @@ static float g_shore(void *c, float x, float y, float zt, float *gx, float *gy)
 static float w_sea(void *c, double x, double y) { (void)c; (void)x; (void)y; return 5; }
 /* }}} */
 
+/* {{{ static check_vmap_placements (173g step 4): the client's placement
+ * of each doodad and building on tile `t` against the server's collision
+ * tiles for it (data-files/vmaps/001_<a>_<b>.vmtile, both number orders
+ * read: a placement reaching over a tile edge is listed in each tile it
+ * touches). A vmtile: 8 bytes of magic, a count, then per placement:
+ * flags (uint32: 1 a small model, 2 a whole-map model, 4 a box follows),
+ * an ADT id (uint16), its id (uint32), position (3 floats, the server's
+ * inner space: x = 17066.67 - world x, y = 17066.67 - world y, z up),
+ * the file's three angles (degrees), its size, the box (6 floats) when
+ * flagged, the name's length (uint32) and the name; then a uint32 the
+ * server's tree uses. The server turns a model's points (kept as the model
+ * has them) by Z(angle 2) Y(angle 1) X(angle 3), sizes them, and moves
+ * them to the position (ModelInstance.cpp; vmap4_extractor). Matched by
+ * place (within 0.05 yards) and name; then four points of each model,
+ * placed both ways, are compared. */
+static const char *base_name(const char *path, char *out, size_t n)
+{
+    const char *b = path;
+    for (const char *c = path; *c; ++c) if (*c == '\\' || *c == '/') b = c + 1;
+    snprintf(out, n, "%s", b);
+    char *dot = strrchr(out, '.');
+    if (dot) *dot = '\0';
+    for (char *c = out; *c; ++c) if (*c >= 'A' && *c <= 'Z') *c = (char)(*c - 'A' + 'a');
+    return out;
+}
+static void check_vmap_placements(const char *dir, const AdtTile *t, int *pairs, int *agree, float *worst)
+{
+    const double MID = 0.5 * 64 * 533.33333;
+    const double D2R = 3.14159265358979323846 / 180;
+    uint32_t seen[8192];
+    int nseen = 0;
+    for (int order = 0; order < 2; ++order) {
+        char path[700];
+        snprintf(path, sizeof path, "%s/data-files/vmaps/001_%02d_%02d.vmtile", dir, order ? 26 : 32, order ? 32 : 26);
+        FILE *f = fopen(path, "rb");
+        if (!f) continue;
+        char magic[8];
+        uint32_t n = 0;
+        if (fread(magic, 1, 8, f) != 8 || fread(&n, 4, 1, f) != 1) { fclose(f); continue; }
+        for (uint32_t s = 0; s < n; ++s) {
+            uint32_t flags, id, name_len, node;
+            uint16_t adt_id;
+            float pos[3], rot[3], scale, box[6];
+            char name[512];
+            if (fread(&flags, 4, 1, f) != 1 || fread(&adt_id, 2, 1, f) != 1 || fread(&id, 4, 1, f) != 1
+                || fread(pos, 4, 3, f) != 3 || fread(rot, 4, 3, f) != 3 || fread(&scale, 4, 1, f) != 1) break;
+            if ((flags & 4) && fread(box, 4, 6, f) != 6) break;
+            if (fread(&name_len, 4, 1, f) != 1 || name_len >= sizeof name || fread(name, 1, name_len, f) != name_len) break;
+            name[name_len] = '\0';
+            if (fread(&node, 4, 1, f) != 1) break;
+            int dup = 0;
+            for (int i = 0; i < nseen && !dup; ++i) dup = seen[i] == id;
+            if (dup || (flags & 2) || nseen == 8192) continue;   /* a whole-map model has no ADT record */
+            seen[nseen++] = id;
+            /* the client's record at that place, of that name */
+            double wx = MID - pos[0], wy = MID - pos[1], wz = pos[2];
+            const AdtPlace *list = (flags & 1) ? t->doodads : t->places;
+            int count = (flags & 1) ? t->ndoodads : t->nplaces;
+            const AdtPlace *mine = NULL;
+            char a[260], b[260];
+            base_name(name, a, sizeof a);
+            for (int k = 0; k < count && !mine; ++k) {
+                const AdtPlace *p = &list[k];
+                const char *pname = (flags & 1) ? t->models[p->name] : t->buildings[p->name];
+                if (fabs(p->x - wx) < 0.05 && fabs(p->y - wy) < 0.05 && fabs(p->z - wz) < 0.05 && !strcmp(base_name(pname, b, sizeof b), a)) mine = p;
+            }
+            if (!mine) continue;                         /* a furnishing inside a building, or another tile's */
+            ++*pairs;
+            float m[16];
+            adt_place_matrix(mine, 0, 0, m);
+            double za = rot[1] * D2R, ya = rot[0] * D2R, xa = rot[2] * D2R;
+            double cz = cos(za), sz = sin(za), cy = cos(ya), sy = sin(ya), cx = cos(xa), sx = sin(xa);
+            /* R = Rz * Ry * Rx, row by row */
+            double R[3][3] = { { cz * cy, cz * sy * sx - sz * cx, cz * sy * cx + sz * sx },
+                               { sz * cy, sz * sy * sx + cz * cx, sz * sy * cx - cz * sx },
+                               { -sy,     cy * sx,                cy * cx } };
+            static const float PTS[4][3] = { { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 }, { 3, -2, 5 } };
+            float most = 0;
+            for (int q = 0; q < 4; ++q) {
+                const float *v = PTS[q];
+                double in[3];
+                for (int r = 0; r < 3; ++r) in[r] = pos[r] + scale * (R[r][0] * v[0] + R[r][1] * v[1] + R[r][2] * v[2]);
+                double server[3] = { MID - in[0], MID - in[1], in[2] };
+                for (int r = 0; r < 3; ++r) {
+                    double client = m[r] * v[0] + m[4 + r] * v[1] + m[8 + r] * v[2] + m[12 + r];
+                    most = fmaxf(most, (float)fabs(client - server[r]));
+                }
+            }
+            if (most < 0.01f) ++*agree;
+            if (most > *worst) *worst = most;
+        }
+        fclose(f);
+    }
+}
+/* }}} */
+
 /* {{{ static run: seconds of steps of 0.01 s */
 static void run(Mover *m, MoverInput in, double seconds, MoverGround g)
 {
@@ -786,6 +882,17 @@ int main(int argc, char **argv)
             snprintf(line, sizeof line, "a turn of 30 degrees faces a model's front at 210 degrees (%.1f), upright, twice the size",
                      atan2(fy, fx) / 3.14159265358979 * 180 + (atan2(fy, fx) < 0 ? 360 : 0));
             check(near(atan2(fy, fx), (210 - 360) * 3.14159265358979 / 180, 1e-4) && near(hypot(fx, fy), 2, 1e-4) && near(up, 2, 1e-4), line);
+            /* the placement maths against the server's own (173g step 4):
+             * its collision tiles (data-files/vmaps) place the same models
+             * from the same records, through its own reading */
+            {
+                int pairs = 0, agree = 0;
+                float worst = 0;
+                check_vmap_placements(dir, t, &pairs, &agree, &worst);
+                snprintf(line, sizeof line, "%d doodads and buildings placed as the server's collision tiles place them (of %d found in both), "
+                         "every model corner within %.4f yards", agree, pairs, worst);
+                check(pairs > 50 && agree == pairs && worst < 0.01f, line);
+            }
             /* buildings: each reads, and its furnishings land inside the box
              * the ground file gives the building */
             int roots = 0, groups_ok = 1, inside = 0, furnished = 0;
