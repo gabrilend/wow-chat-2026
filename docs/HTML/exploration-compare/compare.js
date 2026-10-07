@@ -19,8 +19,12 @@
 //   skeleton - the floor shaved down to a one-square line along every
 //              passage; buddies walk passage to passage, least recently
 //              walked first, and turn back at dead ends
+// and the design decided from them after watching (2026-10-07):
+//   decided  - survey by the unseen edge where "explored" means within 5
+//              yards, then patrol one loop of watchman stops (see the
+//              engine's header of this rule)
 //
-// The yardsticks are the same for all three: floor seen from within 20
+// The yardsticks are the same for all four: floor seen from within 20
 // yards (sight stopped by walls), far ends reached (the skeleton's tips at
 // least 10 yards out on their own branch), and how evenly the footprints
 // spread.
@@ -38,8 +42,8 @@
     const get = n => cs.getPropertyValue(n).trim();
     // --m-*: each rule's colour on the page (charts, legend; light and dark themes);
     // --c-*: the same rule on the cave pictures, which are dark in both themes
-    return { rings: get("--m-rings"), frontier: get("--m-frontier"), skeleton: get("--m-skeleton"),
-             crings: get("--c-rings"), cfrontier: get("--c-frontier"), cskeleton: get("--c-skeleton"),
+    return { rings: get("--m-rings"), frontier: get("--m-frontier"), skeleton: get("--m-skeleton"), decided: get("--m-decided"),
+             crings: get("--c-rings"), cfrontier: get("--c-frontier"), cskeleton: get("--c-skeleton"), cdecided: get("--c-decided"),
              ink: get("--ink"), muted: get("--muted"), rule: get("--rule"), accent: get("--accent") };
   }
   function rgbOf(css) {
@@ -92,6 +96,18 @@
         if (age > FORGET) { px[o] = 8; px[o + 1] = 10; px[o + 2] = 14; px[o + 3] = 150; }
         else if (age < 6) { px[o] = col[0]; px[o + 1] = col[1]; px[o + 2] = col[2]; px[o + 3] = 120; }
       }
+    } else if (sim.kind === "decided") {
+      // surveying: floor not yet explored (stood within 5 yards of) is veiled;
+      // patrolling: floor dims as its last glance grows old, over three minutes
+      for (let k = 0; k < M.count; k++) {
+        const c = M.cells[k], o = c * 4;
+        if (sim.phase === "survey") {
+          if (!sim.explored[c]) { px[o] = 8; px[o + 1] = 10; px[o + 2] = 14; px[o + 3] = 160; }
+        } else {
+          const age = Math.min(1, (sim.t - sim.checkedAt[c]) / 180);
+          px[o] = 8; px[o + 1] = 10; px[o + 2] = 14; px[o + 3] = 170 * age;
+        }
+      }
     } else {
       for (const e of M.edges) {
         if (e.cut) continue;
@@ -116,7 +132,7 @@
 
   // {{{ the page: controls, three panels, the charts, the table
   const state = { place: 0, playing: true, speed: 30, buddies: 3, view: true, feet: false, routes: true, focus: "all", sims: [], maps: {}, images: {} };
-  const ORDER = ["rings", "frontier", "skeleton"];
+  const ORDER = ["rings", "frontier", "skeleton", "decided"];
 
   const el = (tag, attrs, ...kids) => {
     const e = document.createElement(tag);
@@ -243,6 +259,19 @@
       }
       // buddies, with a short trail
       const col = T["c" + ORDER[k]];
+      // the decided clan's patrol loop: the watchman stops (diamonds) joined in tour order
+      if (sim.kind === "decided" && sim.phase === "patrol" && M.watch && M.watch.tour.length) {
+        const tour = M.watch.tour, at = c => [(c % M.W + 0.5) * S, (((c / M.W) | 0) + 0.5) * S];
+        g.beginPath();
+        tour.forEach((c, i) => { const [x, y] = at(c); i ? g.lineTo(x, y) : g.moveTo(x, y); });
+        g.closePath(); g.strokeStyle = col; g.globalAlpha = 0.45; g.lineWidth = Math.max(1, S * 0.5); g.stroke(); g.globalAlpha = 1;
+        const r = Math.max(3.5, S * 1.8);
+        for (const c of tour) {
+          const [x, y] = at(c);
+          g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r, y); g.lineTo(x, y + r); g.lineTo(x - r, y); g.closePath();
+          g.fillStyle = "#0b0e13"; g.fill(); g.strokeStyle = col; g.lineWidth = Math.max(1, S * 0.5); g.stroke();
+        }
+      }
       // each buddy's planned walk, from where it stands to its goal (a cross): the path
       // finder's answer, so a wrong turn or a hug of a wall shows before it is walked
       if (state.routes) for (const b of sim.buddies) {
@@ -270,6 +299,10 @@
         el("dt", {}, "Half seen at"), el("dd", {}, sim.firstHalf === null ? "not yet" : fmt(sim.firstHalf)),
         el("dt", {}, "90% seen at"), el("dd", {}, sim.firstMost === null ? "not yet" : fmt(sim.firstMost)),
         el("dt", {}, "Unevenness"), el("dd", {}, sim.unevennessCache === undefined ? "–" : sim.unevennessCache.toFixed(2)));
+      if (sim.kind === "decided") p.nums.append(
+        el("dt", {}, sim.phase === "survey" ? "Surveyed" : "Patrolling"),
+        el("dd", {}, sim.phase === "survey" ? (sim.exploredCount / M.count * 100).toFixed(1) + "% within 5 yards"
+          : "since " + fmt(sim.patrolFrom) + ", " + M.watch.tour.length + " stops, a " + Math.round(M.watch.length) + "-yard loop"));
     });
     clock.textContent = fmt(state.sims[0].t);
   }

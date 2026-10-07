@@ -6,14 +6,14 @@
    plus one colour per exploring rule: --m-* on the page, --c-* on the cave pictures, which stay dark in both themes. */
 :root {
   --ground: #eef0f3; --panel: #ffffff; --ink: #1b2230; --muted: #5b6576; --rule: #d5d9e1; --accent: #8a5d0c;
-  --m-rings: #1d7a6f; --m-frontier: #6a4fb8; --m-skeleton: #b0452a;
-  --c-rings: #5fd0bf; --c-frontier: #b49cf2; --c-skeleton: #f08f6e;
+  --m-rings: #1d7a6f; --m-frontier: #6a4fb8; --m-skeleton: #b0452a; --m-decided: #2b67b0;
+  --c-rings: #5fd0bf; --c-frontier: #b49cf2; --c-skeleton: #f08f6e; --c-decided: #8cbcf5;
   --cave: #12161d;
   --display: "Alegreya SC", Georgia, serif;
   --body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; --m-rings: #5fd0bf; --m-frontier: #b49cf2; --m-skeleton: #f08f6e; } }
-:root[data-theme="dark"] { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; --m-rings: #5fd0bf; --m-frontier: #b49cf2; --m-skeleton: #f08f6e; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; --m-rings: #5fd0bf; --m-frontier: #b49cf2; --m-skeleton: #f08f6e; --m-decided: #8cbcf5; } }
+:root[data-theme="dark"] { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; --m-rings: #5fd0bf; --m-frontier: #b49cf2; --m-skeleton: #f08f6e; --m-decided: #8cbcf5; }
 * { box-sizing: border-box; }
 body { background: var(--ground); color: var(--ink); font: 16px/1.55 var(--body); }
 .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 28px; }
@@ -38,7 +38,7 @@ blockquote { margin: 0; padding-left: 14px; border-left: 3px solid var(--accent)
 .xc-field, .xc-check { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
 .xc-field output, .xc-clock { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 700; }
 .xc-controls :focus-visible, .xc-places button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.xc-panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.xc-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
 @media (max-width: 860px) { .xc-panels { grid-template-columns: minmax(0, 1fr); } }
 .xc-panels.xc-single { grid-template-columns: minmax(0, 1fr); }
 .xc-panels.xc-single .xc-canvas { max-height: 90vh; }
@@ -49,6 +49,7 @@ blockquote { margin: 0; padding-left: 14px; border-left: 3px solid var(--accent)
 .xc-panel[data-method="rings"], .xc-legend [data-method="rings"] { --m: var(--m-rings); }
 .xc-panel[data-method="frontier"], .xc-legend [data-method="frontier"] { --m: var(--m-frontier); }
 .xc-panel[data-method="skeleton"], .xc-legend [data-method="skeleton"] { --m: var(--m-skeleton); }
+.xc-panel[data-method="decided"], .xc-legend [data-method="decided"] { --m: var(--m-decided); }
 .xc-canvas { display: block; width: 100%; max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 6px; background: var(--cave); image-rendering: pixelated; }
 .xc-nums { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; font-size: .93rem; }
 .xc-nums dt { color: var(--muted); }
@@ -64,10 +65,10 @@ blockquote { margin: 0; padding-left: 14px; border-left: 3px solid var(--accent)
 .xc-chart { width: 100%; height: 200px; display: block; }
 
 /* the words */
-.rules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 860px) { .rules { grid-template-columns: minmax(0, 1fr); } }
 .rule { display: grid; gap: 8px; align-content: start; padding: 14px; background: var(--panel); border: 1px solid var(--rule); border-top: 4px solid var(--m); border-radius: 10px; min-width: 0; }
-.rule[data-method="rings"] { --m: var(--m-rings); } .rule[data-method="frontier"] { --m: var(--m-frontier); } .rule[data-method="skeleton"] { --m: var(--m-skeleton); }
+.rule[data-method="rings"] { --m: var(--m-rings); } .rule[data-method="frontier"] { --m: var(--m-frontier); } .rule[data-method="skeleton"] { --m: var(--m-skeleton); } .rule[data-method="decided"] { --m: var(--m-decided); }
 .rule h3 { color: var(--m); }
 .rule dl { margin: 0; display: grid; gap: 6px; }
 .rule dt { font-weight: 700; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
@@ -82,9 +83,9 @@ code { font-size: .92em; }
 <div class="wrap">
   <header class="prose">
     <h1>Buddy Cave Exploring</h1>
-    <p class="lede">Three clans of buddies walk the same real cave at the same moment, each choosing its next step by a different rule. The floors are the server's own walking mesh, cut to one-yard squares. Pick a cave, let them run, and watch who finds the far tunnels first.</p>
+    <p class="lede">Four clans of buddies walk the same real cave at the same moment. Three try the rules from the brainstorm; the fourth walks the design decided after watching them: survey up close, then patrol. The floors are the server's own walking mesh, cut to one-yard squares. Pick a cave, let them run, and watch how each one works through it.</p>
     <blockquote>"tunnels may curve. A 20 yard line isn't necessarily indicative of a doorway. I'm not sure about a solution, wanna take a break from questions and do some brainstorming?" (the owner, 2026-10-07)</blockquote>
-    <p>Today's roaming finds tunnels by standing at an area's middle and looking for a direction where the view suddenly reaches 20 yards farther. A curving tunnel bends out of sight, and an open field gives long views everywhere, so the test both misses tunnels and finds false ones. All three rules here measure by walking, not by straight lines.</p>
+    <p>Today's roaming finds tunnels by standing at an area's middle and looking for a direction where the view suddenly reaches 20 yards farther. A curving tunnel bends out of sight, and an open field gives long views everywhere, so the test both misses tunnels and finds false ones. Every rule here measures by walking, not by straight lines.</p>
   </header>
 
   <section id="xc-root" aria-label="The comparison"></section>
@@ -95,14 +96,15 @@ code { font-size: .92em; }
       <li><b>Blue-grey floor</b><span>under ground; lighter is higher.</span></li>
       <li><b>Green floor</b><span>outside, up to 30 yards beyond each entrance.</span></li>
       <li><b>White rings</b><span>far ends: the tips of the floor's skeleton at least 10 yards out on their own branch. A ring fills in when a buddy comes within 5 yards. Every rule is measured against the same rings.</span></li>
-      <li><b>Each rule's own view</b><span>walking rings: bands of walking distance, with the band each buddy is aiming at lit. Unseen edge: floor the clan doesn't remember seeing is dark, floor just seen is lit. Floor skeleton: the passages, brighter where walked lately.</span></li>
+      <li><b>Each rule's own view</b><span>walking rings: bands of walking distance, with the band each buddy is aiming at lit. Unseen edge: floor the clan doesn't remember seeing is dark, floor just seen is lit. Floor skeleton: the passages, brighter where walked lately. Survey, then patrol: while surveying, floor nobody has stood within 5 yards of is veiled; while patrolling, the floor darkens as its last glance grows old, and the loop of watchman stops is drawn as diamonds.</span></li>
+      <li><b>Planned walks</b><span>a dashed line from each buddy to a cross at its goal: what the path finder chose, before it is walked.</span></li>
       <li><b>Footprints</b><span>where the buddies have stood, amber, brighter where more often.</span></li>
       <li><b>Unevenness</b><span>how much the time spent differs between 6-yard blocks of floor. 0 is perfectly even. An "even wash" is a low number.</span></li>
     </ul>
   </section>
 
   <section class="part">
-    <h2>The three rules</h2>
+    <h2>The rules</h2>
     <div class="rules">
       <article class="rule" data-method="rings">
         <h3>Walking rings</h3>
@@ -143,7 +145,35 @@ code { font-size: .92em; }
           <dd>Buddies keep to the middle line, so the corners of a wide cavern are seen only from that line, and a large hall takes a while.</dd>
         </dl>
       </article>
+      <article class="rule" data-method="decided">
+        <h3>Survey, then patrol</h3>
+        <dl>
+          <dt>Surveying</dt>
+          <dd>The unseen edge, with one change: floor counts as explored only once a buddy has stood within 5 yards of it with nothing in between, so nooks and side rooms get walked into, not looked at from afar. Nothing is forgotten while any floor is left unexplored. Each buddy takes the nearest edge on foot that is not within 12 yards of another buddy's goal.</dd>
+          <dt>Patrolling</dt>
+          <dd>Once the floor is all explored, the clan builds one loop. The watchman stops are picked greedily (each time, the stop that sees the most floor not yet seen from a stop) until 98% of the floor is in view of some stop. The loop through them is the nearest-next tour by walking distance, with crossed legs uncrossed. Each buddy joins the loop at the stop nearest where its survey ended and walks it a random way round, glancing 40 yards at each step. A buddy about to head for the stop another is already heading for skips past it or turns round, so they stay spread like runners on a track.</dd>
+          <dt>What it costs the server</dt>
+          <dd>Looking is shadowcasting (each square in view visited once), and only after walking 2 yards, never in a fight. The loop is built once per area.</dd>
+          <dt>Watch for</dt>
+          <dd>The survey is slow in a big cave: a 5-yard reach means walking nearly everywhere. The loop is drawn the moment the survey ends.</dd>
+        </dl>
+      </article>
     </div>
+  </section>
+
+  <section class="part prose">
+    <h2>Decided so far</h2>
+    <ul class="key">
+      <li><b>The unseen edge</b><span>was the owner's pick after watching the first three ("Unseen edge wins!").</span></li>
+      <li><b>Explored means close</b><span>"gotta get closer than 40 yards ... how will you know if there's any secret passages". Surveying uses 5 yards; the 40-yard glance is for patrolling, to see into a room without walking in.</span></li>
+      <li><b>No forgetting clock</b><span>while anything is unexplored. A big dungeon with fights still has its edges when the fight ends.</span></li>
+      <li><b>Patrol, don't settle</b><span>"keep patrolling because monsters respawn". The watchman loop is built only after the survey, otherwise every buddy would head for the same best stop.</span></li>
+      <li><b>One loop, everyone cycles</b><span>each buddy joins where its survey ended; catching up means skipping past or turning round.</span></li>
+      <li><b>Fights first</b><span>a monster found while surveying or patrolling is fought at once, and the walk is planned again after. (This page has no monsters.)</span></li>
+      <li><b>Spread out in the open world, together in instances</b><span>instances have no patrol; an ally's fight is joined only within one's own section of the instance.</span></li>
+      <li><b>A changed area</b><span>(a door opens, as in Shadowfang Keep): only the new floor is surveyed.</span></li>
+      <li><b>Still open</b><span>why buddies would backpedal and strafe; where a split instance's section edges lie; 5 or 10 yards for "explored".</span></li>
+    </ul>
   </section>
 
   <section class="part prose">

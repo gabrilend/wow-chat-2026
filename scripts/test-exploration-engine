@@ -47,7 +47,12 @@ for (const name of fs.readdirSync(floors).filter(f => f.endsWith(".json")).sort(
   console.log(`${F.key}: ${M.W}x${M.H} squares at ${M.yd} yd, ${M.count} walkable, ${M.knots.length} knots, ${live} runs, ${M.farEnds.length} far ends, prepared in ${tm} ms`);
   if (M.count < 1000) fail(F.key + ": under 1000 walkable squares joined to the start");
   if (!M.farEnds.length) fail(F.key + ": no far ends found");
-  for (const kind of ["rings", "frontier", "skeleton"]) {
+  // the flood of walking distance reaches every square joined to the start (2026-10-07: a
+  // rounding slip stopped it a few hundred squares out, unnoticed, under every rule using it)
+  let flooded = 0;
+  for (const c of M.cells) if (isFinite(M.geo[c])) flooded++;
+  if (flooded !== M.count) fail(`${F.key}: walking distance reached ${flooded} of ${M.count} squares`);
+  for (const kind of ["rings", "frontier", "skeleton", "decided"]) {
     const sim = new Sim(M, kind, 3, 20261007);
     const t1 = Date.now();
     const steps = Math.round(minutes * 60 / 0.1);
@@ -64,6 +69,15 @@ for (const name of fs.readdirSync(floors).filter(f => f.endsWith(".json")).sort(
     if (offFloor) fail(`${F.key}/${kind}: a buddy stood off the floor ${offFloor} times`);
     if (!moved) fail(`${F.key}/${kind}: no buddy left the start`);
     if (seen < 0.05) fail(`${F.key}/${kind}: saw under 5% of the floor`);
+    if (kind === "decided") {
+      // the decided design: when its survey ended, and the patrol loop it then built
+      const explored = sim.exploredCount / M.count;
+      const W = M.watch;
+      console.log(`            explored ${(explored * 100).toFixed(1)}%  ` + (sim.patrolFrom === null ? "still surveying" :
+        `survey done at ${(sim.patrolFrom / 60).toFixed(1)} min; patrol loop ${W.tour.length} stops, ${Math.round(W.length)} yards, sees ${(W.covered * 100).toFixed(1)}% of the floor`));
+      if (sim.patrolFrom !== null && W.covered < 0.9) fail(`${F.key}/decided: the watchman stops see only ${(W.covered * 100).toFixed(1)}% of the floor`);
+      if (sim.patrolFrom !== null && explored < 0.97) fail(`${F.key}/decided: patrol began with ${(explored * 100).toFixed(1)}% explored`);
+    }
   }
 }
 console.log(failures ? failures + " failures" : "all checks passed");

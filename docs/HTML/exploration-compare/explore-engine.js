@@ -20,6 +20,10 @@
   const RING_BAND   = 2;     // percent either side of Y: the band a rings waypoint is drawn from
   const SPUR        = 6;     // yards: skeleton twigs shorter than this are shaved off
   const MERGE       = 3;     // yards: forks joined by a shorter run are one fork
+  // the decided design (2026-10-07): survey close, then patrol by glancing
+  const EXPLORE     = 5;     // yards: floor this near (and in view) counts as explored
+  const MOVE_LOOK   = 2;     // yards walked between looks; standing still sees nothing new
+  const WATCH_COVER = 0.98;  // share of the floor the watchman stops must see between them
   const FAR_END     = 10;    // yards: a skeleton tip on a branch at least this long is a far end
   const REACH       = 5;     // yards: standing this near a far end reaches it
   const BLOCK       = 6;     // yards: footprint blocks for the evenness measure
@@ -174,10 +178,19 @@
 
   // {{{ walkingDistance: yards on foot from the start (water poured at the entrance), and each square's place in that order
   function walkingDistance(M) {
-    const { W, H, N, reach } = M;
-    const g = new Float32Array(N).fill(Infinity);
-    const heap = new Heap(N);
-    g[M.start] = 0; heap.push(0, M.start);
+    const g = new Float32Array(M.N);
+    geoFrom(M, M.start, g);
+    const order = Array.from(M.cells).sort((a, b) => g[a] - g[b]);
+    const rank = new Float32Array(M.N);
+    order.forEach((c, k) => { rank[c] = k / order.length; });
+    M.geo = g; M.byGeo = Int32Array.from(order); M.rank = rank; M.geoMax = g[order[order.length - 1]];
+  }
+  // geoFrom: yards on foot from one square to every square, into g (Infinity where unreachable)
+  function geoFrom(M, start, g) {
+    const { W, H, reach } = M;
+    g.fill(Infinity);
+    const heap = new Heap(4096);
+    g[start] = 0; heap.push(0, start);
     while (heap.n) {
       const c = heap.pop(), key = heap.lastKey;
       if (key > g[c]) continue;
@@ -189,13 +202,13 @@
         if (!reach[c2]) continue;
         if (di && dj && (!reach[j * W + i2] || !reach[j2 * W + i])) continue;
         const nd = key + w * M.yd;
-        if (nd < g[c2]) { g[c2] = nd; heap.push(nd, c2); }
+        // the queue gets the distance as stored (single precision), not as worked out: a
+        // stored value rounded below the worked-out one made the "is this entry stale?"
+        // test above discard live entries, and the flood stopped a few hundred squares out
+        // (2026-10-07: 178 of Jasperlode's 4,261 squares reached)
+        if (nd < g[c2]) { g[c2] = nd; heap.push(g[c2], c2); }
       }
     }
-    const order = Array.from(M.cells).sort((a, b) => g[a] - g[b]);
-    const rank = new Float32Array(N);
-    order.forEach((c, k) => { rank[c] = k / order.length; });
-    M.geo = g; M.byGeo = Int32Array.from(order); M.rank = rank; M.geoMax = g[order[order.length - 1]];
   }
   // }}}
 
@@ -393,7 +406,158 @@
   }
   // }}}
 
-  // {{{ the three choosers: each gets a buddy at the end of its walk and sets its next walk
+  // {{{ shadowcast: every square in view within `radius` squares of (cx, cy), each marked once or twice
+  // The roguelike field of view (recursive shadowcasting): the circle round the looker is cut
+  // into eight slices; each slice is swept row by row outward, keeping the range of angles not
+  // yet hidden; a wall square narrows the range for the rows beyond it, and a gap in a wall
+  // starts a new sweep through the gap. Unlike sight lines, it never visits a square twice per
+  // slice and never skips a far square between two lines.
+  const OCT = [[1, 0, 0, -1, -1, 0, 0, 1], [0, 1, -1, 0, 0, -1, 1, 0], [0, 1, 1, 0, 0, -1, -1, 0], [1, 0, 0, 1, -1, 0, 0, -1]];
+  function shadowcast(M, cx, cy, radius, mark) {
+    const { W, H, reach } = M;
+    const solid = (x, y) => x < 0 || y < 0 || x >= W || y >= H || !reach[y * W + x];
+    if (!solid(cx, cy)) mark(cy * W + cx);
+    const r2 = radius * radius;
+    function cast(row, start, end, xx, xy, yx, yy) {
+      if (start < end) return;
+      let newStart = 0;
+      for (let j = row; j <= radius; j++) {
+        let dx = -j - 1;
+        const dy = -j;
+        let blocked = false;
+        while (dx <= 0) {
+          dx++;
+          const X = cx + dx * xx + dy * xy, Y = cy + dx * yx + dy * yy;
+          const lSlope = (dx - 0.5) / (dy + 0.5), rSlope = (dx + 0.5) / (dy - 0.5);
+          if (start < rSlope) continue;
+          if (end > lSlope) break;
+          if (dx * dx + dy * dy <= r2 && !solid(X, Y)) mark(Y * W + X);
+          if (blocked) {
+            if (solid(X, Y)) { newStart = rSlope; continue; }
+            blocked = false; start = newStart;
+          } else if (solid(X, Y) && j < radius) {
+            blocked = true;
+            cast(j + 1, start, lSlope, xx, xy, yx, yy);
+            newStart = rSlope;
+          }
+        }
+        if (blocked) break;
+      }
+    }
+    for (let o = 0; o < 8; o++) cast(1, 1.0, 0.0, OCT[0][o], OCT[1][o], OCT[2][o], OCT[3][o]);
+  }
+  // }}}
+
+  // {{{ watchman: the stops from which the whole floor is seen, and one short loop through them
+  // Built once per floor, when a clan first finishes its survey. Candidates are the skeleton's
+  // knots and a square every 6 yards along its runs. Stops are taken greedily: the candidate
+  // that sees the most floor not yet seen by a stop, again and again, until WATCH_COVER of the
+  // floor is seen (the last corners would each need a stop of their own). The loop is the
+  // nearest-next tour by walking distance, tidied by "2-opt": wherever two legs cross,
+  // the stretch between them is walked the other way round.
+  function watchman(M) {
+    if (M.watch) return M.watch;
+    const R = SIGHT_FRONT / M.yd, every = Math.max(1, Math.round(6 / M.yd));
+    const cand = new Set();
+    for (const k of M.knots) if (M.liveEdges(k).length) cand.add(k.cell);
+    for (const e of M.edges) if (!e.cut) for (let i = 0; i < e.path.length; i += every) cand.add(e.path[i]);
+    const cands = [...cand];
+    const vis = cands.map(c => { const out = []; shadowcast(M, c % M.W, (c / M.W) | 0, R, x => out.push(x)); return Int32Array.from(out); });
+    const covered = new Uint8Array(M.N), taken = new Uint8Array(cands.length), stops = [];
+    let seen = 0;
+    while (seen < M.count * WATCH_COVER) {
+      let best = -1, gain = 0;
+      for (let i = 0; i < cands.length; i++) {
+        if (taken[i]) continue;
+        let g = 0;
+        const v = vis[i];
+        for (let j = 0; j < v.length; j++) if (!covered[v[j]]) g++;
+        if (g > gain) { gain = g; best = i; }
+      }
+      if (best < 0 || gain < 3) break;
+      taken[best] = 1; stops.push(cands[best]);
+      for (const c of vis[best]) if (!covered[c]) { covered[c] = 1; seen++; }
+    }
+    const k = stops.length, D = new Float64Array(k * k), g = new Float32Array(M.N);
+    for (let a = 0; a < k; a++) { geoFrom(M, stops[a], g); for (let b = 0; b < k; b++) D[a * k + b] = g[stops[b]]; }
+    const tour = [0], inTour = new Uint8Array(k);
+    inTour[0] = 1;
+    for (let s = 1; s < k; s++) {
+      const last = tour[tour.length - 1];
+      let bi = -1, bd = Infinity;
+      for (let j = 0; j < k; j++) if (!inTour[j] && D[last * k + j] < bd) { bd = D[last * k + j]; bi = j; }
+      tour.push(bi); inTour[bi] = 1;
+    }
+    let better = true, passes = 0;
+    while (better && passes++ < 50) {
+      better = false;
+      for (let i = 0; i < k - 2; i++) for (let j = i + 2; j < k; j++) {
+        if (i === 0 && j === k - 1) continue;
+        const a = tour[i], b = tour[i + 1], c = tour[j], d = tour[(j + 1) % k];
+        if (D[a * k + c] + D[b * k + d] < D[a * k + b] + D[c * k + d] - 1e-6) {
+          for (let l = i + 1, r = j; l < r; l++, r--) { const t = tour[l]; tour[l] = tour[r]; tour[r] = t; }
+          better = true;
+        }
+      }
+    }
+    let length = 0;
+    for (let i = 0; i < k; i++) length += D[tour[i] * k + tour[(i + 1) % k]];
+    M.watch = { tour: tour.map(i => stops[i]), length, covered: seen / M.count, candidates: cands.length };
+    return M.watch;
+  }
+  // }}}
+
+  // {{{ the decided design's pieces: looking, the survey's edge, the patrol's next stop
+  function decidedLook(S, b) {
+    const M = S.M, ci = Math.floor(b.x), cj = Math.floor(b.y);
+    b.lookX = b.x; b.lookY = b.y;
+    shadowcast(M, ci, cj, EXPLORE / M.yd, c => { if (!S.explored[c]) { S.explored[c] = 1; S.exploredCount++; } });
+    // the 40-yard glance is the patrol's (in the game it also spots monsters while surveying,
+    // which this drawing has none of, so here it is skipped until the patrol begins)
+    if (S.phase === "patrol") shadowcast(M, ci, cj, SIGHT_FRONT / M.yd, c => { S.checkedAt[c] = S.t; });
+  }
+  function bordersUnexplored(S, c) {
+    const M = S.M, W = M.W, i = c % W, j = (c / W) | 0;
+    for (const [di, dj] of DIRS8) {
+      const i2 = i + di, j2 = j + dj;
+      if (i2 >= 0 && j2 >= 0 && i2 < W && j2 < M.H && M.reach[j2 * W + i2] && !S.explored[j2 * W + i2]) return true;
+    }
+    return false;
+  }
+  // the nearest explored square on foot that touches unexplored floor and is not within
+  // CLAIM yards of another buddy's goal; null when there is none left (the survey is done)
+  function surveyPick(S, b) {
+    const M = S.M, W = M.W;
+    const goals = S.buddies.filter(o => o !== b && o.goal >= 0 && o.edgeGoal).map(o => o.goal);
+    const claimed = c => goals.some(g => ((g % W - c % W) ** 2 + (((g / W) | 0) - ((c / W) | 0)) ** 2) * M.yd * M.yd < CLAIM * CLAIM);
+    const mark = S.mark, q = S.queue;
+    S.gen++;
+    let h = 0, tl = 0, any = false;
+    q[tl++] = b.cell; mark[b.cell] = S.gen;
+    while (h < tl) {
+      const c = q[h++], i = c % W, j = (c / W) | 0;
+      if (S.explored[c] && bordersUnexplored(S, c)) {
+        any = true;
+        if (!claimed(c)) { b.goal = c; b.edgeGoal = true; return S.path(b.cell, c); }
+      }
+      for (const [di, dj] of DIRS8) {
+        const i2 = i + di, j2 = j + dj;
+        if (i2 < 0 || j2 < 0 || i2 >= W || j2 >= M.H) continue;
+        const c2 = j2 * W + i2;
+        if (!M.reach[c2] || mark[c2] === S.gen) continue;
+        if (di && dj && (!M.reach[j * W + i2] || !M.reach[j2 * W + i])) continue;
+        mark[c2] = S.gen; q[tl++] = c2;
+      }
+    }
+    // edges remain but every one is claimed: walk toward the nearest unexplored square anyway
+    if (any) {
+      for (let k = 0; k < tl; k++) if (!S.explored[q[k]]) { b.goal = q[k]; b.edgeGoal = true; return S.path(b.cell, q[k]); }
+    }
+    return null;
+  }
+  // }}}
+
+  // {{{ the choosers: each gets a buddy at the end of its walk and sets its next walk
   const METHODS = {
     rings: {
       label: "Walking rings",
@@ -498,6 +662,52 @@
         return lead.concat(run);
       },
     },
+    // The design decided from the three above (owner, 2026-10-07; issue 617e):
+    // survey  - the unseen edge, where "explored" means within 5 yards and in view;
+    //           looks are shadowcast, and only after walking 2 yards; nothing is forgotten
+    // patrol  - once nothing is left unexplored: one loop through the watchman stops;
+    //           each buddy joins at the stop nearest where its survey ended, walks the
+    //           loop a random way round, glancing 40 yards at each stop; one that would
+    //           head for the stop another is already heading for skips past it or turns
+    //           round. (Monsters are not drawn here; in the game a buddy fights what it
+    //           finds, then plans its walk again.)
+    decided: {
+      label: "Survey, then patrol",
+      setup(S) {
+        S.explored = new Uint8Array(S.M.N); S.exploredCount = 0;
+        S.checkedAt = new Float32Array(S.M.N).fill(-1e9);
+        S.phase = "survey"; S.patrolFrom = null;
+      },
+      init(S, b) { b.lookX = -1e9; b.lookY = -1e9; b.edgeGoal = false; b.stop = -1; b.dir = 1; },
+      moved(S, b) { decidedLook(S, b); },
+      pick(S, b) {
+        decidedLook(S, b);
+        if (S.phase === "survey") {
+          const route = surveyPick(S, b);
+          if (route) return route;
+          S.phase = "patrol"; S.patrolFrom = S.t;
+        }
+        const W = watchman(S.M), k = W.tour.length, M = S.M;
+        b.edgeGoal = false;
+        if (!k) return [];
+        let next;
+        if (b.stop < 0) {
+          let bd = Infinity;
+          for (let s = 0; s < k; s++) { const c = W.tour[s], d = (c % M.W - b.x) ** 2 + (((c / M.W) | 0) - b.y) ** 2; if (d < bd) { bd = d; next = s; } }
+          b.dir = S.r() < 0.5 ? -1 : 1;
+        } else {
+          next = (b.stop + b.dir + k) % k;
+          const heading = s => S.buddies.some(o => o !== b && o.stop === s && o.at < o.route.length);
+          if (k > 2 && heading(next)) {
+            if (S.r() < 0.5) next = (next + b.dir + k) % k;               // skip past it
+            else { b.dir = -b.dir; next = (b.stop + b.dir + k) % k; }      // or turn round
+          }
+        }
+        b.stop = next; b.goal = W.tour[next];
+        return S.path(b.cell, b.goal);
+      },
+      stale(S, b) { return S.phase === "survey" && b.edgeGoal && b.goal >= 0 && !bordersUnexplored(S, b.goal); },
+    },
   };
   // }}}
 
@@ -517,6 +727,7 @@
     this.firstHalf = null; this.firstMost = null;
     this.nextLook = 0; this.nextHistory = HISTORY;
     this.buddies = [];
+    if (this.method.setup) this.method.setup(this);
     const sx = M.start % M.W + 0.5, sy = ((M.start / M.W) | 0) + 0.5;
     for (let k = 0; k < n; k++) {
       const b = { id: k, x: sx + (k - (n - 1) / 2) * 0.6, y: sy, cell: M.start, route: [], at: 0, rest: k * 1.5, goal: -1, trail: [] };
@@ -542,6 +753,8 @@
       }
       if (b.at >= b.route.length) b.rest = 0.5 + this.r() * 1.5;   // a short look round at each waypoint
       this.foot[b.cell]++;
+      // a rule that looks as it walks looks again once it has gone MOVE_LOOK yards
+      if (this.method.moved && Math.hypot(b.x - b.lookX, b.y - b.lookY) * M.yd >= MOVE_LOOK) this.method.moved(this, b);
     }
     if (this.t >= this.nextLook) {
       this.nextLook = this.t + 0.5;
@@ -583,5 +796,5 @@
   };
   // }}}
 
-  global.ExploreEngine = { buildMap, Sim, METHODS, numbers: { DT, RING_BAND, FORGET } };
+  global.ExploreEngine = { buildMap, Sim, METHODS, watchman, numbers: { DT, RING_BAND, FORGET, EXPLORE } };
 })(typeof window !== "undefined" ? window : globalThis);

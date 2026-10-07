@@ -6,14 +6,14 @@
    plus one colour per exploring rule: --m-* on the page, --c-* on the cave pictures, which stay dark in both themes. */
 :root {
   --ground: #eef0f3; --panel: #ffffff; --ink: #1b2230; --muted: #5b6576; --rule: #d5d9e1; --accent: #8a5d0c;
-  --m-rings: #1d7a6f; --m-frontier: #6a4fb8; --m-skeleton: #b0452a;
-  --c-rings: #5fd0bf; --c-frontier: #b49cf2; --c-skeleton: #f08f6e;
+  --m-rings: #1d7a6f; --m-frontier: #6a4fb8; --m-skeleton: #b0452a; --m-decided: #2b67b0;
+  --c-rings: #5fd0bf; --c-frontier: #b49cf2; --c-skeleton: #f08f6e; --c-decided: #8cbcf5;
   --cave: #12161d;
   --display: "Alegreya SC", Georgia, serif;
   --body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; --m-rings: #5fd0bf; --m-frontier: #b49cf2; --m-skeleton: #f08f6e; } }
-:root[data-theme="dark"] { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; --m-rings: #5fd0bf; --m-frontier: #b49cf2; --m-skeleton: #f08f6e; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; --m-rings: #5fd0bf; --m-frontier: #b49cf2; --m-skeleton: #f08f6e; --m-decided: #8cbcf5; } }
+:root[data-theme="dark"] { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; --m-rings: #5fd0bf; --m-frontier: #b49cf2; --m-skeleton: #f08f6e; --m-decided: #8cbcf5; }
 * { box-sizing: border-box; }
 body { background: var(--ground); color: var(--ink); font: 16px/1.55 var(--body); }
 .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 28px; }
@@ -38,7 +38,7 @@ blockquote { margin: 0; padding-left: 14px; border-left: 3px solid var(--accent)
 .xc-field, .xc-check { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
 .xc-field output, .xc-clock { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 700; }
 .xc-controls :focus-visible, .xc-places button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.xc-panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.xc-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
 @media (max-width: 860px) { .xc-panels { grid-template-columns: minmax(0, 1fr); } }
 .xc-panels.xc-single { grid-template-columns: minmax(0, 1fr); }
 .xc-panels.xc-single .xc-canvas { max-height: 90vh; }
@@ -49,6 +49,7 @@ blockquote { margin: 0; padding-left: 14px; border-left: 3px solid var(--accent)
 .xc-panel[data-method="rings"], .xc-legend [data-method="rings"] { --m: var(--m-rings); }
 .xc-panel[data-method="frontier"], .xc-legend [data-method="frontier"] { --m: var(--m-frontier); }
 .xc-panel[data-method="skeleton"], .xc-legend [data-method="skeleton"] { --m: var(--m-skeleton); }
+.xc-panel[data-method="decided"], .xc-legend [data-method="decided"] { --m: var(--m-decided); }
 .xc-canvas { display: block; width: 100%; max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 6px; background: var(--cave); image-rendering: pixelated; }
 .xc-nums { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; font-size: .93rem; }
 .xc-nums dt { color: var(--muted); }
@@ -64,10 +65,10 @@ blockquote { margin: 0; padding-left: 14px; border-left: 3px solid var(--accent)
 .xc-chart { width: 100%; height: 200px; display: block; }
 
 /* the words */
-.rules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 860px) { .rules { grid-template-columns: minmax(0, 1fr); } }
 .rule { display: grid; gap: 8px; align-content: start; padding: 14px; background: var(--panel); border: 1px solid var(--rule); border-top: 4px solid var(--m); border-radius: 10px; min-width: 0; }
-.rule[data-method="rings"] { --m: var(--m-rings); } .rule[data-method="frontier"] { --m: var(--m-frontier); } .rule[data-method="skeleton"] { --m: var(--m-skeleton); }
+.rule[data-method="rings"] { --m: var(--m-rings); } .rule[data-method="frontier"] { --m: var(--m-frontier); } .rule[data-method="skeleton"] { --m: var(--m-skeleton); } .rule[data-method="decided"] { --m: var(--m-decided); }
 .rule h3 { color: var(--m); }
 .rule dl { margin: 0; display: grid; gap: 6px; }
 .rule dt { font-weight: 700; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
@@ -82,9 +83,9 @@ code { font-size: .92em; }
 <div class="wrap">
   <header class="prose">
     <h1>Buddy Cave Exploring</h1>
-    <p class="lede">Three clans of buddies walk the same real cave at the same moment, each choosing its next step by a different rule. The floors are the server's own walking mesh, cut to one-yard squares. Pick a cave, let them run, and watch who finds the far tunnels first.</p>
+    <p class="lede">Four clans of buddies walk the same real cave at the same moment. Three try the rules from the brainstorm; the fourth walks the design decided after watching them: survey up close, then patrol. The floors are the server's own walking mesh, cut to one-yard squares. Pick a cave, let them run, and watch how each one works through it.</p>
     <blockquote>"tunnels may curve. A 20 yard line isn't necessarily indicative of a doorway. I'm not sure about a solution, wanna take a break from questions and do some brainstorming?" (the owner, 2026-10-07)</blockquote>
-    <p>Today's roaming finds tunnels by standing at an area's middle and looking for a direction where the view suddenly reaches 20 yards farther. A curving tunnel bends out of sight, and an open field gives long views everywhere, so the test both misses tunnels and finds false ones. All three rules here measure by walking, not by straight lines.</p>
+    <p>Today's roaming finds tunnels by standing at an area's middle and looking for a direction where the view suddenly reaches 20 yards farther. A curving tunnel bends out of sight, and an open field gives long views everywhere, so the test both misses tunnels and finds false ones. Every rule here measures by walking, not by straight lines.</p>
   </header>
 
   <section id="xc-root" aria-label="The comparison"></section>
@@ -95,14 +96,15 @@ code { font-size: .92em; }
       <li><b>Blue-grey floor</b><span>under ground; lighter is higher.</span></li>
       <li><b>Green floor</b><span>outside, up to 30 yards beyond each entrance.</span></li>
       <li><b>White rings</b><span>far ends: the tips of the floor's skeleton at least 10 yards out on their own branch. A ring fills in when a buddy comes within 5 yards. Every rule is measured against the same rings.</span></li>
-      <li><b>Each rule's own view</b><span>walking rings: bands of walking distance, with the band each buddy is aiming at lit. Unseen edge: floor the clan doesn't remember seeing is dark, floor just seen is lit. Floor skeleton: the passages, brighter where walked lately.</span></li>
+      <li><b>Each rule's own view</b><span>walking rings: bands of walking distance, with the band each buddy is aiming at lit. Unseen edge: floor the clan doesn't remember seeing is dark, floor just seen is lit. Floor skeleton: the passages, brighter where walked lately. Survey, then patrol: while surveying, floor nobody has stood within 5 yards of is veiled; while patrolling, the floor darkens as its last glance grows old, and the loop of watchman stops is drawn as diamonds.</span></li>
+      <li><b>Planned walks</b><span>a dashed line from each buddy to a cross at its goal: what the path finder chose, before it is walked.</span></li>
       <li><b>Footprints</b><span>where the buddies have stood, amber, brighter where more often.</span></li>
       <li><b>Unevenness</b><span>how much the time spent differs between 6-yard blocks of floor. 0 is perfectly even. An "even wash" is a low number.</span></li>
     </ul>
   </section>
 
   <section class="part">
-    <h2>The three rules</h2>
+    <h2>The rules</h2>
     <div class="rules">
       <article class="rule" data-method="rings">
         <h3>Walking rings</h3>
@@ -143,7 +145,35 @@ code { font-size: .92em; }
           <dd>Buddies keep to the middle line, so the corners of a wide cavern are seen only from that line, and a large hall takes a while.</dd>
         </dl>
       </article>
+      <article class="rule" data-method="decided">
+        <h3>Survey, then patrol</h3>
+        <dl>
+          <dt>Surveying</dt>
+          <dd>The unseen edge, with one change: floor counts as explored only once a buddy has stood within 5 yards of it with nothing in between, so nooks and side rooms get walked into, not looked at from afar. Nothing is forgotten while any floor is left unexplored. Each buddy takes the nearest edge on foot that is not within 12 yards of another buddy's goal.</dd>
+          <dt>Patrolling</dt>
+          <dd>Once the floor is all explored, the clan builds one loop. The watchman stops are picked greedily (each time, the stop that sees the most floor not yet seen from a stop) until 98% of the floor is in view of some stop. The loop through them is the nearest-next tour by walking distance, with crossed legs uncrossed. Each buddy joins the loop at the stop nearest where its survey ended and walks it a random way round, glancing 40 yards at each step. A buddy about to head for the stop another is already heading for skips past it or turns round, so they stay spread like runners on a track.</dd>
+          <dt>What it costs the server</dt>
+          <dd>Looking is shadowcasting (each square in view visited once), and only after walking 2 yards, never in a fight. The loop is built once per area.</dd>
+          <dt>Watch for</dt>
+          <dd>The survey is slow in a big cave: a 5-yard reach means walking nearly everywhere. The loop is drawn the moment the survey ends.</dd>
+        </dl>
+      </article>
     </div>
+  </section>
+
+  <section class="part prose">
+    <h2>Decided so far</h2>
+    <ul class="key">
+      <li><b>The unseen edge</b><span>was the owner's pick after watching the first three ("Unseen edge wins!").</span></li>
+      <li><b>Explored means close</b><span>"gotta get closer than 40 yards ... how will you know if there's any secret passages". Surveying uses 5 yards; the 40-yard glance is for patrolling, to see into a room without walking in.</span></li>
+      <li><b>No forgetting clock</b><span>while anything is unexplored. A big dungeon with fights still has its edges when the fight ends.</span></li>
+      <li><b>Patrol, don't settle</b><span>"keep patrolling because monsters respawn". The watchman loop is built only after the survey, otherwise every buddy would head for the same best stop.</span></li>
+      <li><b>One loop, everyone cycles</b><span>each buddy joins where its survey ended; catching up means skipping past or turning round.</span></li>
+      <li><b>Fights first</b><span>a monster found while surveying or patrolling is fought at once, and the walk is planned again after. (This page has no monsters.)</span></li>
+      <li><b>Spread out in the open world, together in instances</b><span>instances have no patrol; an ally's fight is joined only within one's own section of the instance.</span></li>
+      <li><b>A changed area</b><span>(a door opens, as in Shadowfang Keep): only the new floor is surveyed.</span></li>
+      <li><b>Still open</b><span>why buddies would backpedal and strafe; where a split instance's section edges lie; 5 or 10 yards for "explored".</span></li>
+    </ul>
   </section>
 
   <section class="part prose">
@@ -185,6 +215,10 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
   const RING_BAND   = 2;     // percent either side of Y: the band a rings waypoint is drawn from
   const SPUR        = 6;     // yards: skeleton twigs shorter than this are shaved off
   const MERGE       = 3;     // yards: forks joined by a shorter run are one fork
+  // the decided design (2026-10-07): survey close, then patrol by glancing
+  const EXPLORE     = 5;     // yards: floor this near (and in view) counts as explored
+  const MOVE_LOOK   = 2;     // yards walked between looks; standing still sees nothing new
+  const WATCH_COVER = 0.98;  // share of the floor the watchman stops must see between them
   const FAR_END     = 10;    // yards: a skeleton tip on a branch at least this long is a far end
   const REACH       = 5;     // yards: standing this near a far end reaches it
   const BLOCK       = 6;     // yards: footprint blocks for the evenness measure
@@ -339,10 +373,19 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
 
   // {{{ walkingDistance: yards on foot from the start (water poured at the entrance), and each square's place in that order
   function walkingDistance(M) {
-    const { W, H, N, reach } = M;
-    const g = new Float32Array(N).fill(Infinity);
-    const heap = new Heap(N);
-    g[M.start] = 0; heap.push(0, M.start);
+    const g = new Float32Array(M.N);
+    geoFrom(M, M.start, g);
+    const order = Array.from(M.cells).sort((a, b) => g[a] - g[b]);
+    const rank = new Float32Array(M.N);
+    order.forEach((c, k) => { rank[c] = k / order.length; });
+    M.geo = g; M.byGeo = Int32Array.from(order); M.rank = rank; M.geoMax = g[order[order.length - 1]];
+  }
+  // geoFrom: yards on foot from one square to every square, into g (Infinity where unreachable)
+  function geoFrom(M, start, g) {
+    const { W, H, reach } = M;
+    g.fill(Infinity);
+    const heap = new Heap(4096);
+    g[start] = 0; heap.push(0, start);
     while (heap.n) {
       const c = heap.pop(), key = heap.lastKey;
       if (key > g[c]) continue;
@@ -354,13 +397,13 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
         if (!reach[c2]) continue;
         if (di && dj && (!reach[j * W + i2] || !reach[j2 * W + i])) continue;
         const nd = key + w * M.yd;
-        if (nd < g[c2]) { g[c2] = nd; heap.push(nd, c2); }
+        // the queue gets the distance as stored (single precision), not as worked out: a
+        // stored value rounded below the worked-out one made the "is this entry stale?"
+        // test above discard live entries, and the flood stopped a few hundred squares out
+        // (2026-10-07: 178 of Jasperlode's 4,261 squares reached)
+        if (nd < g[c2]) { g[c2] = nd; heap.push(g[c2], c2); }
       }
     }
-    const order = Array.from(M.cells).sort((a, b) => g[a] - g[b]);
-    const rank = new Float32Array(N);
-    order.forEach((c, k) => { rank[c] = k / order.length; });
-    M.geo = g; M.byGeo = Int32Array.from(order); M.rank = rank; M.geoMax = g[order[order.length - 1]];
   }
   // }}}
 
@@ -558,7 +601,158 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
   }
   // }}}
 
-  // {{{ the three choosers: each gets a buddy at the end of its walk and sets its next walk
+  // {{{ shadowcast: every square in view within `radius` squares of (cx, cy), each marked once or twice
+  // The roguelike field of view (recursive shadowcasting): the circle round the looker is cut
+  // into eight slices; each slice is swept row by row outward, keeping the range of angles not
+  // yet hidden; a wall square narrows the range for the rows beyond it, and a gap in a wall
+  // starts a new sweep through the gap. Unlike sight lines, it never visits a square twice per
+  // slice and never skips a far square between two lines.
+  const OCT = [[1, 0, 0, -1, -1, 0, 0, 1], [0, 1, -1, 0, 0, -1, 1, 0], [0, 1, 1, 0, 0, -1, -1, 0], [1, 0, 0, 1, -1, 0, 0, -1]];
+  function shadowcast(M, cx, cy, radius, mark) {
+    const { W, H, reach } = M;
+    const solid = (x, y) => x < 0 || y < 0 || x >= W || y >= H || !reach[y * W + x];
+    if (!solid(cx, cy)) mark(cy * W + cx);
+    const r2 = radius * radius;
+    function cast(row, start, end, xx, xy, yx, yy) {
+      if (start < end) return;
+      let newStart = 0;
+      for (let j = row; j <= radius; j++) {
+        let dx = -j - 1;
+        const dy = -j;
+        let blocked = false;
+        while (dx <= 0) {
+          dx++;
+          const X = cx + dx * xx + dy * xy, Y = cy + dx * yx + dy * yy;
+          const lSlope = (dx - 0.5) / (dy + 0.5), rSlope = (dx + 0.5) / (dy - 0.5);
+          if (start < rSlope) continue;
+          if (end > lSlope) break;
+          if (dx * dx + dy * dy <= r2 && !solid(X, Y)) mark(Y * W + X);
+          if (blocked) {
+            if (solid(X, Y)) { newStart = rSlope; continue; }
+            blocked = false; start = newStart;
+          } else if (solid(X, Y) && j < radius) {
+            blocked = true;
+            cast(j + 1, start, lSlope, xx, xy, yx, yy);
+            newStart = rSlope;
+          }
+        }
+        if (blocked) break;
+      }
+    }
+    for (let o = 0; o < 8; o++) cast(1, 1.0, 0.0, OCT[0][o], OCT[1][o], OCT[2][o], OCT[3][o]);
+  }
+  // }}}
+
+  // {{{ watchman: the stops from which the whole floor is seen, and one short loop through them
+  // Built once per floor, when a clan first finishes its survey. Candidates are the skeleton's
+  // knots and a square every 6 yards along its runs. Stops are taken greedily: the candidate
+  // that sees the most floor not yet seen by a stop, again and again, until WATCH_COVER of the
+  // floor is seen (the last corners would each need a stop of their own). The loop is the
+  // nearest-next tour by walking distance, tidied by "2-opt": wherever two legs cross,
+  // the stretch between them is walked the other way round.
+  function watchman(M) {
+    if (M.watch) return M.watch;
+    const R = SIGHT_FRONT / M.yd, every = Math.max(1, Math.round(6 / M.yd));
+    const cand = new Set();
+    for (const k of M.knots) if (M.liveEdges(k).length) cand.add(k.cell);
+    for (const e of M.edges) if (!e.cut) for (let i = 0; i < e.path.length; i += every) cand.add(e.path[i]);
+    const cands = [...cand];
+    const vis = cands.map(c => { const out = []; shadowcast(M, c % M.W, (c / M.W) | 0, R, x => out.push(x)); return Int32Array.from(out); });
+    const covered = new Uint8Array(M.N), taken = new Uint8Array(cands.length), stops = [];
+    let seen = 0;
+    while (seen < M.count * WATCH_COVER) {
+      let best = -1, gain = 0;
+      for (let i = 0; i < cands.length; i++) {
+        if (taken[i]) continue;
+        let g = 0;
+        const v = vis[i];
+        for (let j = 0; j < v.length; j++) if (!covered[v[j]]) g++;
+        if (g > gain) { gain = g; best = i; }
+      }
+      if (best < 0 || gain < 3) break;
+      taken[best] = 1; stops.push(cands[best]);
+      for (const c of vis[best]) if (!covered[c]) { covered[c] = 1; seen++; }
+    }
+    const k = stops.length, D = new Float64Array(k * k), g = new Float32Array(M.N);
+    for (let a = 0; a < k; a++) { geoFrom(M, stops[a], g); for (let b = 0; b < k; b++) D[a * k + b] = g[stops[b]]; }
+    const tour = [0], inTour = new Uint8Array(k);
+    inTour[0] = 1;
+    for (let s = 1; s < k; s++) {
+      const last = tour[tour.length - 1];
+      let bi = -1, bd = Infinity;
+      for (let j = 0; j < k; j++) if (!inTour[j] && D[last * k + j] < bd) { bd = D[last * k + j]; bi = j; }
+      tour.push(bi); inTour[bi] = 1;
+    }
+    let better = true, passes = 0;
+    while (better && passes++ < 50) {
+      better = false;
+      for (let i = 0; i < k - 2; i++) for (let j = i + 2; j < k; j++) {
+        if (i === 0 && j === k - 1) continue;
+        const a = tour[i], b = tour[i + 1], c = tour[j], d = tour[(j + 1) % k];
+        if (D[a * k + c] + D[b * k + d] < D[a * k + b] + D[c * k + d] - 1e-6) {
+          for (let l = i + 1, r = j; l < r; l++, r--) { const t = tour[l]; tour[l] = tour[r]; tour[r] = t; }
+          better = true;
+        }
+      }
+    }
+    let length = 0;
+    for (let i = 0; i < k; i++) length += D[tour[i] * k + tour[(i + 1) % k]];
+    M.watch = { tour: tour.map(i => stops[i]), length, covered: seen / M.count, candidates: cands.length };
+    return M.watch;
+  }
+  // }}}
+
+  // {{{ the decided design's pieces: looking, the survey's edge, the patrol's next stop
+  function decidedLook(S, b) {
+    const M = S.M, ci = Math.floor(b.x), cj = Math.floor(b.y);
+    b.lookX = b.x; b.lookY = b.y;
+    shadowcast(M, ci, cj, EXPLORE / M.yd, c => { if (!S.explored[c]) { S.explored[c] = 1; S.exploredCount++; } });
+    // the 40-yard glance is the patrol's (in the game it also spots monsters while surveying,
+    // which this drawing has none of, so here it is skipped until the patrol begins)
+    if (S.phase === "patrol") shadowcast(M, ci, cj, SIGHT_FRONT / M.yd, c => { S.checkedAt[c] = S.t; });
+  }
+  function bordersUnexplored(S, c) {
+    const M = S.M, W = M.W, i = c % W, j = (c / W) | 0;
+    for (const [di, dj] of DIRS8) {
+      const i2 = i + di, j2 = j + dj;
+      if (i2 >= 0 && j2 >= 0 && i2 < W && j2 < M.H && M.reach[j2 * W + i2] && !S.explored[j2 * W + i2]) return true;
+    }
+    return false;
+  }
+  // the nearest explored square on foot that touches unexplored floor and is not within
+  // CLAIM yards of another buddy's goal; null when there is none left (the survey is done)
+  function surveyPick(S, b) {
+    const M = S.M, W = M.W;
+    const goals = S.buddies.filter(o => o !== b && o.goal >= 0 && o.edgeGoal).map(o => o.goal);
+    const claimed = c => goals.some(g => ((g % W - c % W) ** 2 + (((g / W) | 0) - ((c / W) | 0)) ** 2) * M.yd * M.yd < CLAIM * CLAIM);
+    const mark = S.mark, q = S.queue;
+    S.gen++;
+    let h = 0, tl = 0, any = false;
+    q[tl++] = b.cell; mark[b.cell] = S.gen;
+    while (h < tl) {
+      const c = q[h++], i = c % W, j = (c / W) | 0;
+      if (S.explored[c] && bordersUnexplored(S, c)) {
+        any = true;
+        if (!claimed(c)) { b.goal = c; b.edgeGoal = true; return S.path(b.cell, c); }
+      }
+      for (const [di, dj] of DIRS8) {
+        const i2 = i + di, j2 = j + dj;
+        if (i2 < 0 || j2 < 0 || i2 >= W || j2 >= M.H) continue;
+        const c2 = j2 * W + i2;
+        if (!M.reach[c2] || mark[c2] === S.gen) continue;
+        if (di && dj && (!M.reach[j * W + i2] || !M.reach[j2 * W + i])) continue;
+        mark[c2] = S.gen; q[tl++] = c2;
+      }
+    }
+    // edges remain but every one is claimed: walk toward the nearest unexplored square anyway
+    if (any) {
+      for (let k = 0; k < tl; k++) if (!S.explored[q[k]]) { b.goal = q[k]; b.edgeGoal = true; return S.path(b.cell, q[k]); }
+    }
+    return null;
+  }
+  // }}}
+
+  // {{{ the choosers: each gets a buddy at the end of its walk and sets its next walk
   const METHODS = {
     rings: {
       label: "Walking rings",
@@ -663,6 +857,52 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
         return lead.concat(run);
       },
     },
+    // The design decided from the three above (owner, 2026-10-07; issue 617e):
+    // survey  - the unseen edge, where "explored" means within 5 yards and in view;
+    //           looks are shadowcast, and only after walking 2 yards; nothing is forgotten
+    // patrol  - once nothing is left unexplored: one loop through the watchman stops;
+    //           each buddy joins at the stop nearest where its survey ended, walks the
+    //           loop a random way round, glancing 40 yards at each stop; one that would
+    //           head for the stop another is already heading for skips past it or turns
+    //           round. (Monsters are not drawn here; in the game a buddy fights what it
+    //           finds, then plans its walk again.)
+    decided: {
+      label: "Survey, then patrol",
+      setup(S) {
+        S.explored = new Uint8Array(S.M.N); S.exploredCount = 0;
+        S.checkedAt = new Float32Array(S.M.N).fill(-1e9);
+        S.phase = "survey"; S.patrolFrom = null;
+      },
+      init(S, b) { b.lookX = -1e9; b.lookY = -1e9; b.edgeGoal = false; b.stop = -1; b.dir = 1; },
+      moved(S, b) { decidedLook(S, b); },
+      pick(S, b) {
+        decidedLook(S, b);
+        if (S.phase === "survey") {
+          const route = surveyPick(S, b);
+          if (route) return route;
+          S.phase = "patrol"; S.patrolFrom = S.t;
+        }
+        const W = watchman(S.M), k = W.tour.length, M = S.M;
+        b.edgeGoal = false;
+        if (!k) return [];
+        let next;
+        if (b.stop < 0) {
+          let bd = Infinity;
+          for (let s = 0; s < k; s++) { const c = W.tour[s], d = (c % M.W - b.x) ** 2 + (((c / M.W) | 0) - b.y) ** 2; if (d < bd) { bd = d; next = s; } }
+          b.dir = S.r() < 0.5 ? -1 : 1;
+        } else {
+          next = (b.stop + b.dir + k) % k;
+          const heading = s => S.buddies.some(o => o !== b && o.stop === s && o.at < o.route.length);
+          if (k > 2 && heading(next)) {
+            if (S.r() < 0.5) next = (next + b.dir + k) % k;               // skip past it
+            else { b.dir = -b.dir; next = (b.stop + b.dir + k) % k; }      // or turn round
+          }
+        }
+        b.stop = next; b.goal = W.tour[next];
+        return S.path(b.cell, b.goal);
+      },
+      stale(S, b) { return S.phase === "survey" && b.edgeGoal && b.goal >= 0 && !bordersUnexplored(S, b.goal); },
+    },
   };
   // }}}
 
@@ -682,6 +922,7 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
     this.firstHalf = null; this.firstMost = null;
     this.nextLook = 0; this.nextHistory = HISTORY;
     this.buddies = [];
+    if (this.method.setup) this.method.setup(this);
     const sx = M.start % M.W + 0.5, sy = ((M.start / M.W) | 0) + 0.5;
     for (let k = 0; k < n; k++) {
       const b = { id: k, x: sx + (k - (n - 1) / 2) * 0.6, y: sy, cell: M.start, route: [], at: 0, rest: k * 1.5, goal: -1, trail: [] };
@@ -707,6 +948,8 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
       }
       if (b.at >= b.route.length) b.rest = 0.5 + this.r() * 1.5;   // a short look round at each waypoint
       this.foot[b.cell]++;
+      // a rule that looks as it walks looks again once it has gone MOVE_LOOK yards
+      if (this.method.moved && Math.hypot(b.x - b.lookX, b.y - b.lookY) * M.yd >= MOVE_LOOK) this.method.moved(this, b);
     }
     if (this.t >= this.nextLook) {
       this.nextLook = this.t + 0.5;
@@ -748,7 +991,7 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
   };
   // }}}
 
-  global.ExploreEngine = { buildMap, Sim, METHODS, numbers: { DT, RING_BAND, FORGET } };
+  global.ExploreEngine = { buildMap, Sim, METHODS, watchman, numbers: { DT, RING_BAND, FORGET, EXPLORE } };
 })(typeof window !== "undefined" ? window : globalThis);
 
 </script>
@@ -774,8 +1017,12 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
 //   skeleton - the floor shaved down to a one-square line along every
 //              passage; buddies walk passage to passage, least recently
 //              walked first, and turn back at dead ends
+// and the design decided from them after watching (2026-10-07):
+//   decided  - survey by the unseen edge where "explored" means within 5
+//              yards, then patrol one loop of watchman stops (see the
+//              engine's header of this rule)
 //
-// The yardsticks are the same for all three: floor seen from within 20
+// The yardsticks are the same for all four: floor seen from within 20
 // yards (sight stopped by walls), far ends reached (the skeleton's tips at
 // least 10 yards out on their own branch), and how evenly the footprints
 // spread.
@@ -793,8 +1040,8 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
     const get = n => cs.getPropertyValue(n).trim();
     // --m-*: each rule's colour on the page (charts, legend; light and dark themes);
     // --c-*: the same rule on the cave pictures, which are dark in both themes
-    return { rings: get("--m-rings"), frontier: get("--m-frontier"), skeleton: get("--m-skeleton"),
-             crings: get("--c-rings"), cfrontier: get("--c-frontier"), cskeleton: get("--c-skeleton"),
+    return { rings: get("--m-rings"), frontier: get("--m-frontier"), skeleton: get("--m-skeleton"), decided: get("--m-decided"),
+             crings: get("--c-rings"), cfrontier: get("--c-frontier"), cskeleton: get("--c-skeleton"), cdecided: get("--c-decided"),
              ink: get("--ink"), muted: get("--muted"), rule: get("--rule"), accent: get("--accent") };
   }
   function rgbOf(css) {
@@ -847,6 +1094,18 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
         if (age > FORGET) { px[o] = 8; px[o + 1] = 10; px[o + 2] = 14; px[o + 3] = 150; }
         else if (age < 6) { px[o] = col[0]; px[o + 1] = col[1]; px[o + 2] = col[2]; px[o + 3] = 120; }
       }
+    } else if (sim.kind === "decided") {
+      // surveying: floor not yet explored (stood within 5 yards of) is veiled;
+      // patrolling: floor dims as its last glance grows old, over three minutes
+      for (let k = 0; k < M.count; k++) {
+        const c = M.cells[k], o = c * 4;
+        if (sim.phase === "survey") {
+          if (!sim.explored[c]) { px[o] = 8; px[o + 1] = 10; px[o + 2] = 14; px[o + 3] = 160; }
+        } else {
+          const age = Math.min(1, (sim.t - sim.checkedAt[c]) / 180);
+          px[o] = 8; px[o + 1] = 10; px[o + 2] = 14; px[o + 3] = 170 * age;
+        }
+      }
     } else {
       for (const e of M.edges) {
         if (e.cut) continue;
@@ -871,7 +1130,7 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
 
   // {{{ the page: controls, three panels, the charts, the table
   const state = { place: 0, playing: true, speed: 30, buddies: 3, view: true, feet: false, routes: true, focus: "all", sims: [], maps: {}, images: {} };
-  const ORDER = ["rings", "frontier", "skeleton"];
+  const ORDER = ["rings", "frontier", "skeleton", "decided"];
 
   const el = (tag, attrs, ...kids) => {
     const e = document.createElement(tag);
@@ -998,6 +1257,19 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
       }
       // buddies, with a short trail
       const col = T["c" + ORDER[k]];
+      // the decided clan's patrol loop: the watchman stops (diamonds) joined in tour order
+      if (sim.kind === "decided" && sim.phase === "patrol" && M.watch && M.watch.tour.length) {
+        const tour = M.watch.tour, at = c => [(c % M.W + 0.5) * S, (((c / M.W) | 0) + 0.5) * S];
+        g.beginPath();
+        tour.forEach((c, i) => { const [x, y] = at(c); i ? g.lineTo(x, y) : g.moveTo(x, y); });
+        g.closePath(); g.strokeStyle = col; g.globalAlpha = 0.45; g.lineWidth = Math.max(1, S * 0.5); g.stroke(); g.globalAlpha = 1;
+        const r = Math.max(3.5, S * 1.8);
+        for (const c of tour) {
+          const [x, y] = at(c);
+          g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r, y); g.lineTo(x, y + r); g.lineTo(x - r, y); g.closePath();
+          g.fillStyle = "#0b0e13"; g.fill(); g.strokeStyle = col; g.lineWidth = Math.max(1, S * 0.5); g.stroke();
+        }
+      }
       // each buddy's planned walk, from where it stands to its goal (a cross): the path
       // finder's answer, so a wrong turn or a hug of a wall shows before it is walked
       if (state.routes) for (const b of sim.buddies) {
@@ -1025,6 +1297,10 @@ window.EXPLORATION_FLOORS = [{"key":"timbermaw","title":"Timbermaw Hold","note":
         el("dt", {}, "Half seen at"), el("dd", {}, sim.firstHalf === null ? "not yet" : fmt(sim.firstHalf)),
         el("dt", {}, "90% seen at"), el("dd", {}, sim.firstMost === null ? "not yet" : fmt(sim.firstMost)),
         el("dt", {}, "Unevenness"), el("dd", {}, sim.unevennessCache === undefined ? "–" : sim.unevennessCache.toFixed(2)));
+      if (sim.kind === "decided") p.nums.append(
+        el("dt", {}, sim.phase === "survey" ? "Surveyed" : "Patrolling"),
+        el("dd", {}, sim.phase === "survey" ? (sim.exploredCount / M.count * 100).toFixed(1) + "% within 5 yards"
+          : "since " + fmt(sim.patrolFrom) + ", " + M.watch.tour.length + " stops, a " + Math.round(M.watch.length) + "-yard loop"));
     });
     clock.textContent = fmt(state.sims[0].t);
   }
