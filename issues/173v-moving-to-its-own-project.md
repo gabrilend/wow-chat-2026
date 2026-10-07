@@ -186,16 +186,30 @@ behind in this project.
      client's documents are rewritten from all three sources before any
      code moves. Where two of them built the same thing (an MPQ reader
      exists in both), the merge chooses one and records why.
-5. **The Lua first version** (`src/custom-client/`): move it too as the
-   reference, or leave it here, deprecated, until it is removed?
+5. (Answered 2026-10-07) **The Lua first version** (`src/custom-client/`):
+   "remove it when we transition to the W client." It does not move.
+   - **world-edit-to-execute's client goes to C too:** "we will need to
+     transition the world-edit-to-execute client to C as well, so they
+     fit in the same engine. We can use lua for scripting of course." So
+     the merged W client is one engine in C. Lua stays as the scripting
+     language (game rules, the interface, addons), not as a second engine.
+   - **Pictures without a window** (asked for under 176): the client can
+     draw a scene straight to a picture file with no window open, so
+     hundreds of test scenes can be photographed in one run.
 6. (Answered 2026-10-07) **The creature list generator:** move or stay?
    Neither in the long run: "let's just build in networking." The client
    gets real networking, tested against a stripped-down server profile,
    cc-test (issue 176). The generator retires when the client's world
    comes from the server. Where networking is built (here before the
    move, or in the W client after it) is asked in 176.
-7. **The conversations:** the transcripts that built the client stay here
-   (house rule: they ride with this project's commits). Should copies, or
-   only references, go with the client?
+7. (Answered 2026-10-07) **The conversations:** copies go with the client:
+   "copies I guess. Though I don't think they'll be picked up by any of
+   our tooling, so that might need to be investigated. Just put it in the
+   issue file for now." To investigate during the move: the transcript
+   tools (the exporter, the commit hook that bundles `llm-transcripts/`,
+   and the transcript-care tools) find a conversation's project from
+   where the session ran. Copied files from another project may be
+   skipped, rebuilt over, or filed twice. Check each tool against a
+   copied file before relying on it.
 8. **Issue numbers:** do the moved pieces keep their 173 letters (for
    example "173f, now 301") or go only by the W client's numbers?

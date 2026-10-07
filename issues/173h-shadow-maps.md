@@ -99,7 +99,7 @@ darkens. This runs on the graphics card (the 173u rule).
    it a different way?" One suggestion, asked as question 4: only the
    environment has a baked form (the ground's map). Characters have the
    round blob, and torches have nothing baked.
-4. A different split, for the owner to accept or not. One "shadow
+4. (Answered 2026-10-07: "looks great.") A different split, for the owner to accept or not. One "shadow
    quality" setting (the depth pictures' size and how many cascades),
    then one choice per source, each listing only the forms that exist:
    - the world (ground, trees, buildings): baked / live;

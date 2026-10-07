@@ -84,9 +84,25 @@ patch gates, source patch list, the word in `.profile`).
    at once, to catch regressions." So a test patch sets up one scene (its
    creatures, objects, a character's starting spot) in a place of its
    own. A cc-test build installs every scene, and one run checks them all.
-   This is its own issue once its shape is clear. Still open: how is a
-   scene's result read (the server's logs, the client's report, a
-   picture)?
+   This is its own issue once its shape is clear.
+   - (Answered 2026-10-07) How a scene's result is read: "each character
+     would create log files, as specified in the 'test patch'. These are
+     saved to RAM and evaluated by a traditional testing suite, to ensure
+     that they produce correct results. Any discrepancies can be picked up
+     by an LLM agent and evaluated, to see if some unrelated change is
+     causing them, if that result is desired, and if so, to update the
+     test to expect the newly provided result." So a test patch names what
+     each character in its scene writes down. The logs go to RAM
+     (`tmp/shared-memory/`), and ordinary test code compares them with
+     what is expected. A difference goes to an agent, which judges whether
+     an unrelated change caused it and whether the new result is wanted,
+     and if so updates what the test expects.
+   - Pictures too: "we should be able to 'headlessly' generate pictures
+     of scenes, so we can create hundreds of these pictures at once for
+     testing purposes." The client draws a scene to a picture file with
+     no window, so many scenes can be photographed in one run and
+     compared with stored references. This belongs to the client (173v,
+     after the move).
 3. (Answered 2026-10-07) **Where the client's networking is built:** in
    the W client, after the move: "let's focus on moving over to to the W
    client." The cc-test server stays in this project.
