@@ -44,9 +44,10 @@ populated." ("yep")
   a night-elf woman's rows stop at 9) takes the race's choice-0 pieces,
   said once as a FALLBACK (`character.c`, `CharacterLook.npc`). A
   player's look with such a choice is still refused.
-- **In the world** (`main.c`): each loaded tile brings its spawns in as
-  figures (`--world DIR`, passed by `scripts/custom-client`); dropped
-  tiles take theirs away. Each stands where the list says, facing its
+- **In the world** (`main.c`): spawns in loaded tiles are built as
+  figures when they come within 110 yards, nearest first, at most 4 ms
+  of building a frame, and freed beyond 130 or when their tile is
+  dropped (`--world DIR`, passed by `scripts/custom-client`; 173u). Each stands where the list says, facing its
   way, playing its standing animation from its own moment, with a ground
   shadow.
 - **Seen within 100 yards** (`CREATURE_SEEN_REACH`): the server tells a

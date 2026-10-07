@@ -64,6 +64,13 @@ stored compressed go to the card as stored (`texture.h` / `texture.c`):
 92.2 MB to 13.9 MB round Astranaar. Step 6 (particles in one batch) was
 measured small (0.33 ms) and is left for later.
 
+**Step 8a built (2026-10-06):** creatures are built as they come within
+110 yards, nearest first, at most 4 ms a frame, and freed beyond 130
+(instead of every spawn of a tile at its load). Tile loads (picture
+reports now time them): 236 ms on average to 62, the slowest 706 to
+126. What stalls a tile load now: the ground's points and blend picture
+(the slopes come from the server's heights), and new doodad models.
+
 ## Intended Behavior
 
 The processor decides what and where (a few numbers per object); the

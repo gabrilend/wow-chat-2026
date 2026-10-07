@@ -114,6 +114,15 @@ and per-pixel work. Fewer, larger draw orders beat many small ones.
   array (one format for all its layers; its pictures are DXT1, but a
   mixed format would need care), painted skins (made on the processor),
   water ripples (small).
+- [x] **8a. Creatures built as they come into sight.** Built 2026-10-06
+  (`main.c`'s stream_creatures): measuring tile loads (picture reports
+  now print the slowest and the average) showed building every
+  creature of a tile as it loaded was most of the stall (about 110 ms a
+  tile, most never seen). Now a spawn is built when it comes within 110
+  yards, nearest first, at most 4 ms of building a frame, and freed
+  beyond 130. **Measured** (a 12-second walk from Astranaar): tile loads
+  236 ms on average to 62, the slowest 706 to 126; creatures at the
+  start 1.3 s to 0.34.
 - [ ] **8. Loading on a second thread.** Tile files read and parsed off
   the frame, handed over when ready, so walking never stalls a frame.
   Better; the handing-over must be careful (the card is only spoken to

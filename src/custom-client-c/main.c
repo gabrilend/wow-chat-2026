@@ -232,40 +232,80 @@ static double phase_s[PH_COUNT];
 static double creature_s, creature_pose_s;               /* seconds spent posing and drawing creatures, and posing alone, for the report */
 static int    last_posed;                                /* creatures posed last frame, for the report */
 static int    last_drawn;                                /* creatures drawn last frame, for the report */
-static void bring_creatures(int tx, int ty)
+static int   *built_of;                                  /* per spawn: its index in standing[]; -1 not built, -2 its look can't be */
+/* build one spawn's figure; 0, or 1 when its look can't be built (said
+ * once, and its look's other spawns left out) */
+static int build_creature(int k)
 {
-    int first, n = creatures_in_tile(&spawns, tx, ty, &first);
-    for (int k = first; k < first + n; ++k) {
-        const Spawn *sp = &spawns.spawns[k];
-        int bad = 0;
-        for (int b = 0; b < nbad_display; ++b) bad |= bad_display[b] == sp->display;
-        if (bad) continue;
-        if (nstanding == standing_cap) { standing_cap = standing_cap ? standing_cap * 2 : 64; standing = realloc(standing, sizeof *standing * standing_cap); }
-        Standing *st = &standing[nstanding];
-        char why[600];
-        double t0 = GetTime();
-        int failed = figure_from_display(&st->fig, &chain, sp->display, why, sizeof why);
-        creature_build_s += GetTime() - t0;
-        if (failed) {
-            fprintf(stderr, "creatures: %s (%s and any others with its look are left out)\n", why, sp->name);
-            if (nbad_display < 512) bad_display[nbad_display++] = sp->display;
-            continue;
-        }
-        st->fig.scale *= sp->size;
-        st->spawn = k;
-        moves_init(&st->moves, &st->fig.anim);
-        moves_advance(&st->moves, &st->fig.anim, (float)(sp->guid % 4000) / 1000.0f);   /* its own moment */
-        ++nstanding;
+    const Spawn *sp = &spawns.spawns[k];
+    for (int b = 0; b < nbad_display; ++b) if (bad_display[b] == sp->display) return 1;
+    if (nstanding == standing_cap) { standing_cap = standing_cap ? standing_cap * 2 : 64; standing = realloc(standing, sizeof *standing * standing_cap); }
+    Standing *st = &standing[nstanding];
+    char why[600];
+    double t0 = GetTime();
+    int failed = figure_from_display(&st->fig, &chain, sp->display, why, sizeof why);
+    creature_build_s += GetTime() - t0;
+    if (failed) {
+        fprintf(stderr, "creatures: %s (%s and any others with its look are left out)\n", why, sp->name);
+        if (nbad_display < 512) bad_display[nbad_display++] = sp->display;
+        return 1;
+    }
+    st->fig.scale *= sp->size;
+    st->spawn = k;
+    moves_init(&st->moves, &st->fig.anim);
+    moves_advance(&st->moves, &st->fig.anim, (float)(sp->guid % 4000) / 1000.0f);   /* its own moment */
+    built_of[k] = nstanding++;
+    return 0;
+}
+/* free one built creature: the last moves into its place */
+static void free_creature(int i)
+{
+    built_of[standing[i].spawn] = -1;
+    figure_free(&standing[i].fig);
+    standing[i] = standing[--nstanding];
+    if (i < nstanding) built_of[standing[i].spawn] = i;
+}
+/* {{{ static stream_creatures (173u): the creatures near her are built,
+ * the far ones freed. A spawn in a loaded tile within CREATURE_SEEN_REACH
+ * + 10 yards is built, nearest first, until `budget_s` seconds are spent
+ * (a few each frame, so walking into town never stalls a frame; all at
+ * once at the start); a built one beyond CREATURE_SEEN_REACH + 30 yards
+ * is freed (the gap keeps one on the edge from being built and freed
+ * over and over). Before, every spawn of a tile was built when the tile
+ * loaded: about 110 ms a tile, most never seen. */
+static void stream_creatures(double budget_s)
+{
+    if (!spawns.n) return;
+    if (!built_of) { built_of = malloc(sizeof *built_of * (size_t)spawns.n); for (int k = 0; k < spawns.n; ++k) built_of[k] = -1; }
+    const double near = CREATURE_SEEN_REACH + 10, far = CREATURE_SEEN_REACH + 30;
+    for (int i = nstanding - 1; i >= 0; --i) {
+        const Spawn *sp = &spawns.spawns[standing[i].spawn];
+        if (hypot(sp->x - elf.x, sp->y - elf.y) > far) free_creature(i);
+    }
+    double t0 = GetTime();
+    while (GetTime() - t0 < budget_s) {
+        int best = -1, tx, ty;
+        double bd = near;
+        maps_tile_of((float)elf.x, (float)elf.y, &tx, &ty);
+        for (int x = tx - 1; x <= tx + 1; ++x)           /* 110 yards never reach past the next tile */
+            for (int y = ty - 1; y <= ty + 1; ++y) {
+                if (x < 0 || x > 63 || y < 0 || y > 63 || !tile_state[x * 64 + y]) continue;
+                int first, n = creatures_in_tile(&spawns, x, y, &first);
+                for (int k = first; k < first + n; ++k) {
+                    if (built_of[k] != -1) continue;
+                    double d = hypot(spawns.spawns[k].x - elf.x, spawns.spawns[k].y - elf.y);
+                    if (d < bd) { bd = d; best = k; }
+                }
+            }
+        if (best < 0) break;
+        if (build_creature(best)) built_of[best] = -2;  /* its look can't be built: not tried again */
     }
 }
+/* }}} */
 static void drop_creatures(int tile)
 {
-    int kept = 0;
-    for (int i = 0; i < nstanding; ++i) {
-        if (spawns.spawns[standing[i].spawn].tile == tile) { figure_free(&standing[i].fig); continue; }
-        standing[kept++] = standing[i];
-    }
-    nstanding = kept;
+    for (int i = nstanding - 1; i >= 0; --i)
+        if (spawns.spawns[standing[i].spawn].tile == tile) free_creature(i);
 }
 /* }}} */
 
@@ -314,6 +354,7 @@ static int tile_reach(void)
     return r < 1 ? 1 : r > 3 ? 3 : r;
 }
 static int tile_loaded(int x, int y) { return tile_state[x * 64 + y] == 1; }   /* for the horizon (173s) */
+static double tile_load_most_s, tile_load_total_s;   /* the slowest tile load and their sum, for the picture report (173u) */
 static void refresh_tiles(void)
 {
     const int TILE_REACH = tile_reach();
@@ -325,6 +366,7 @@ static void refresh_tiles(void)
             if (x < 0 || x >= 64 || y < 0 || y >= 64 || tile_state[x * 64 + y]) continue;
             char why[600];
             AdtTile *adt;
+            double load_t0 = GetTime();
             int got = ground_load_tile(x, y, ox, oy, &world, &adt, why, sizeof why);
             if (got < 0) { fprintf(stderr, "painting tile (%d, %d): %s\n", x, y, why); exit(1); }
             if (got == 0) {
@@ -335,8 +377,10 @@ static void refresh_tiles(void)
                 free(adt);
             }
             tile_state[x * 64 + y] = got == 0 ? 1 : 2;
-            bring_creatures(x, y);                       /* open sea too: its fish (173t) */
             ++tiles_loaded;
+            double took = GetTime() - load_t0;
+            tile_load_total_s += took;
+            if (took > tile_load_most_s) tile_load_most_s = took;
         }
     /* dropping (173s): tiles more than a tile beyond the loaded square go,
      * with all they brought; the margin keeps a walk back and forth over
@@ -503,6 +547,7 @@ int main(int argc, char **argv)
         else printf("creatures: %d spawns on this map in %s\n", spawns.n, path);
     } else fprintf(stderr, "creatures: no --world folder given; running without creatures\n");
     refresh_tiles();
+    stream_creatures(60.0);                              /* all those near her at the start */
     printf("creatures: %d standing round her (built in %.2f s)\n", nstanding, creature_build_s);
     int dm, dc, ds, dmov, demit;
     doodads_counts(&dm, &dc, &ds, &dmov, &demit);
@@ -615,6 +660,7 @@ int main(int argc, char **argv)
         creature_s += GetTime() - creature_t0;
         creature_pose_s += GetTime() - creature_t0;
         refresh_tiles();
+        stream_creatures(0.004);                         /* up to 4 ms a frame building creatures coming into sight (173u) */
         SetWindowTitle(TextFormat("Everland Ghostsong  -  Ashenvale  x %.1f  y %.1f  z %.1f", elf.x, elf.y, elf.z));
         /* }}} */
 
@@ -760,6 +806,7 @@ int main(int argc, char **argv)
             printf(ok ? "picture saved: %s\n" : "could not save the picture to %s\n", shot);
             int dm2, dc2, ds2, dmov2, demit2;
             doodads_counts(&dm2, &dc2, &ds2, &dmov2, &demit2);
+            printf("tile loads: %.0f ms the slowest, %.0f ms on average (each stalls the frame it happens in; 173u)\n", tile_load_most_s * 1000, tiles_loaded ? tile_load_total_s * 1000 / tiles_loaded : 0.0);
             printf("tiles: %d loaded, %d dropped over the run; now %d placed, %d solid triangles\n", tiles_loaded, tiles_dropped, dc2, collide_count(solids));
             printf("frames took %.1f ms each on average, over %d (drawing, bending and all)\n", (GetTime() - loop_start) * 1000.0 / frames, frames);
             for (int ph = 0; ph < PH_COUNT; ++ph) printf("  %5.2f ms a frame: %s\n", phase_s[ph] * 1000.0 / frames, PHASE_NAME[ph]);
@@ -795,6 +842,7 @@ int main(int argc, char **argv)
     for (int i = 0; i < nothers; ++i) figure_free(&others[i]);
     for (int i = 0; i < nstanding; ++i) figure_free(&standing[i].fig);
     free(standing);
+    free(built_of);
     creatures_free(&spawns);
     mpq_chain_close(&chain);
     maps_world_free(&world);
