@@ -113,6 +113,7 @@ The project's own game client, built up in steps:
 | 173s | streaming-tiles | 173f, 173g, 173q, 173r | Tiles near her loaded, tiles left behind dropped with everything they brought; the far horizon from the low-detail map |
 | 173t | creatures-from-the-world-database | 173j, 173p, 173s | The world's creatures and townsfolk, read from a world database into a generated file, standing where they spawn (the network's stand-in) |
 | 173u | rendering-on-the-graphics-card | 173f, 173g, 173j, 173o | The processor decides what and where, the card does the per-point and per-pixel work: batched ground and doodads, sight tests, bending in the shader (checklist: docs/custom-client-optimization-checklist.md) |
+| 173v | moving-to-its-own-project | None | The client moves to its own project, `../custom-client` (the W client), as that design's first working code, with history and issues kept on both sides |
 | 173n | zone-light-and-sky | 173f, 173g | The world lit by the original's own light tables: sun, ambient, fog and sky colours by place and time of day |
 | 173m | camera | 173a, 173b1 | Left drag orbits, right drag steers her; following styles in a table of behaviours (the owner's default: swing back behind her, horizontally only, while she moves); every camera setting live |
 
@@ -138,5 +139,7 @@ interface, 617s7's box select, 719's tooltips.
 
 ## Open Questions
 
-1. Where does the client live: inside this project (`src/custom-client/`,
-   as 173a starts it) or as a project of its own?
+1. (Answered 2026-10-07) Where does the client live? "it will become it's
+   own project. See ../custom-client for details." The sibling project
+   `/mnt/mtwo/games/azeroth-core/custom-client` (the W client) holds the
+   design. The move is 173v, which has its own open questions.

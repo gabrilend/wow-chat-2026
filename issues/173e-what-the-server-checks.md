@@ -111,5 +111,9 @@ project might add) never corrects, kicks or flags it:
    in the custom client climbs by the original client's own limit, to be
    measured in the original client and then used in place of the 60 the
    custom client reads today (173a).
-2. Should the project's own server ever turn Warden off for custom-client
-   accounts instead, or must the custom client always pass it?
+2. (Answered 2026-10-07) Turn Warden off for custom-client accounts, or
+   always pass it? Always pass it: "people trust Warden because it catches
+   cheaters which ruin the game for others. So we should build
+   compatibility for it into our system because otherwise it's less
+   trustworthy." No server is asked to make an exception for the custom
+   client.

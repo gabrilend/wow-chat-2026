@@ -36,4 +36,9 @@ generated and looked at before the client draws it live.
 
 ## Open Questions
 
-1. Look: plain flat colours, or the game's stone-and-gold borders drawn flat?
+1. (Answered 2026-10-07) Look: plain flat colours, or the game's
+   stone-and-gold borders drawn flat? "for now we can load the WoW
+   interface frames. We will create our own as time goes on." So the
+   first pieces use the original's own interface pictures, read from its
+   archives (the `Interface\` folders) like every other picture. The
+   project's own drawings replace them one by one later.

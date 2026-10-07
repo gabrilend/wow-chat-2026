@@ -104,6 +104,12 @@ and per-pixel work. Fewer, larger draw orders beat many small ones.
   them part of animating doodads' 0.3. Left for when particles grow
   (spells). Moving their motion onto the card too (each particle worked
   out from its birth time) is possible but makes them harder to change.
+  **Decided 2026-10-07: build it now, motion on the card too.** The
+  owner: "it's a speed goal, but in the interests of 'development speed'
+  we should build it right the first time around, so we have less
+  replacement and can focus on refactoring during the polish stage
+  instead." So the card does the work wherever that is where it will end
+  up, even when the time saved today is small.
 - [x] **7. Pictures sent compressed** (models, doodads, buildings).
   Built 2026-10-06 (`texture.c`): a DXT picture goes to the card as
   stored, with the game's own smaller copies (through OpenGL directly:
