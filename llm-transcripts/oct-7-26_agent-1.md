@@ -1,6 +1,6 @@
 # Conversation Summary: ee3e437d-85af-485c-8ed0-8478da64add8
 
-Generated on: 2026-10-07 10:45:22
+Generated on: 2026-10-07 11:47:54
 Models: claude-opus-5-5
 
 ## Contents
@@ -13,6 +13,10 @@ Models: claude-opus-5-5
    W client, and all of 173v's questions are answered: the parts move with
    handles and typed errors. Next I rewrite the W client's documents, starting
    with the tech stack and build system.
+3. 2026-10-07 10:48, after Request 9 - We're merging this custom client into the
+   W client, and every decision so far is recorded and committed in its issue.
+   Next, I'll rewrite the W client's design documents, then move the code with
+   handles and typed errors.
 
 --------------------------------------------------------------------------------
 
@@ -1046,6 +1050,426 @@ couldn't check itself?
 I'll carry this into the W client's network document (004) when I rewrite it
 during the merge. I'm continuing with that rewrite now unless you want to keep
 going on networking first.
+
+--------------------------------------------------------------------------------
+
+### User Request 10
+
+<pasted_content id="ea9d">
+>      - So either everyone simulates everything (classic lockstep, where the fog is only a drawing choice and map hacks are possible), or the
+>        server sends a full snapshot of each unit as it comes into view. The second isn't lockstep any more: it's the server being the
+       authority.
+</pasted_content id="ea9d">
+
+
+this is what I was picturing
+
+
+
+<pasted_content id="ea9d">
+> 2. B can't notice what B can't see. If A withholds an order for a fogged unit,
+> B has nothing to compare against. The better detector is the
+>      server itself, since it already has A's orders. Each tick, B sends the server a short digest (a hash) of the orders it received from A.
+>      If it doesn't match the server's copy, the server knows at once, with no accusation needed.
+</pasted_content id="ea9d">
+
+
+great!
+
+> 3. Packet loss looks exactly like cheating. An honest A on bad Wi-Fi "fails to
+> send" to B all the time. A single miss can never mark
+>      anyone. It has to be a pattern, and even then it could be B's connection.
+
+if we start noticing this, maybe we dynamically switch to a server-only system
+with more lag accepted? Is that better or worse or just... not worth the
+implementation cost?
+
+... I think lockstep isn't worth the implementation cost. Let's just do
+server-authoritative and call it good. Maybe lockstep for WETE LAN games or
+something...?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 10
+
+*[commit] ff1809ea9 in wow-chat-2026 - WC3 maps on AzerothCore are server-authoritative, like the WoW world*
+
+> Rewriting 002 (technology stack) with the settled answers.
+
+> Now 008 (build system).
+
+> Committing these two in the W client's repository.
+
+> The "someone else" there is the file's earlier committed text sitting next to
+> mine: I rewrote the whole file. Claiming it whole and committing.
+
+*[commit] 79c6d984c in custom-client - The stack and build documents follow the working client and the owner's choices*
+
+> The merge has many steps; tracking them.
+
+> Writing 001 (architecture): one engine for both games, handles, typed errors
+> that keep their sentence, server-only world changes, profiles per server.
+
+> Now 012: when the resolver comes in, and how players share assets (both
+> answered in 173v).
+
+> Rewriting 005 (rendering) to describe what's built and measured.
+
+> Now 004 (network): the server-authoritative decision and WC3 maps on
+> AzerothCore.
+
+> Updating 000 (the summary) with the October merge.
+
+*[commit] 942c48c50 in custom-client - The documents describe one engine for both games, server-authoritative*
+
+> Documents done. Next, the crosswalk (task 2): which W-client issue each part
+> of the working code fills, plus the reading-order numbers each source file
+> gets.
+
+> Writing the crosswalk into the roadmap: file numbers, the W-client issue each
+> file fills, and which 173 issue continues where.
+
+*[commit] a50ade28b in custom-client - The roadmap gains the crosswalk for the arriving code*
+
+> Copied with numbered names and rewritten includes. Next, the W client's build
+> script: the client, the test program, the reader library, and the checked
+> builds.
+
+> All 204 checks pass in the W client. Checking the reader library, then the run
+> script and a picture comparison.
+
+> The reader library loads from LuaJIT with its generated header, so
+> world-edit-to-execute can call it. Correcting one comment in the build script,
+> then the run script.
+
+*[commit] f24a5002b in custom-client - The working client arrives: wow-chat-2026's custom client, numbered in reading order*
+
+> Looking at how reason buffers are used in a few files, to set the tool's
+> rules.
+
+> Most of those errors cascade from one gap: the headers use the new type
+> without including `013-errors.h`. Adding the include to every header that
+> mentions it.
+
+> Two bugs in my tool: it mis-measured the `w_fail(` check, and it rewrote the
+> new declarations themselves. Restoring the files from the last commit, fixing
+> the tool, and re-running.
+
+> Down to three. Fixing them by hand.
+
+> Builds; 202 of 204 pass. The two failures are in the creature-list reader,
+> where 1 meant "read, with a note", not a failure. Looking.
+
+> Some converted functions return a *value* on success (a layer number, a 0/1
+> flag), so "return the code" collides with real answers. Listing every
+> converted function's returns to find them all.
+
+> Fixing each value-returning function: a navigation slope, a layer number and a
+> 0/1 flag go back to returning -1 on failure; "no such picture" and "no ground
+> file here" become the not-found code.
+
+> Next: return types become `WErr` wherever a function now returns a code (the
+> value-returning ones stay as they are), and the creature-list reader's callers
+> move to the codes.
+
+> All 204 pass. Now the review the compiler can't do. First, any caller still
+> testing a converted function's result with `< 0` or `== 1` (codes are never
+> below 0).
+
+> No stale comparisons remain. Now reviewing the code the tool picked for each
+> failure.
+
+> Each failure that passes on an inner failure now passes on its code too;
+> settings refusals become "refused".
+
+> 204 pass. Updating the headers' notes that still describe "0 or 1" returns.
+
+> All pass. Adding tests for the error codes themselves: w_fail fills and
+> returns the code, and the readers give the right codes for "not there",
+> "broken" and "refused".
+
+> Closed earlier; the test opens its own archive chain instead.
+
+> 209 pass. Checking pictures, then committing the error conversion.
+
+*[commit] 444e53c00 in custom-client - Failures carry a code to branch on as well as their sentence*
+
+> Committed. Next, handles, starting with the parts that keep state in their own
+> file: settings, the archive reader's decryption table, and the server-heights
+> lock. Seeing who reads settings.
+
+> The camera reads settings in five places. It'll hold a pointer to the settings
+> it uses rather than reaching for one shared copy. Reading the settings store
+> to convert it.
+
+> Settings is a handle now. Next the camera: it keeps a pointer to its settings.
+
+> Now the callers in the main loop and tests.
+
+> Placed it in the wrong function; moving it to the start of the test program's
+> main.
+
+> 209 pass. Adding a test that two settings stores don't share values. Then the
+> archive reader's decryption table and the server-heights lock.
+
+> The rest are constant tables, which aren't state. Two remain: the archive
+> reader's decryption table (computed once and never changed after) and the
+> heights lock.
+
+> 210 pass. Checking pictures and the race-checked build (the lock moved), then
+> committing.
+
+> The picture differs by 9%. Re-running the old client in the same view to rule
+> out a stale reference picture before hunting.
+
+> The reference picture was stale: another session had run the old client since.
+> Fresh pictures differ by 98 of 3.6 million pixels, which is the particles'
+> noise. Committing.
+
+*[commit] 3f13fa916 in custom-client - Settings live in a store you hold; the server-heights lock lives in its world*
+
+> Task 5 done. Next: the reading-ahead thread keeps about 20 values in its own
+> file, and it becomes a handle. The texture settings move with the drawing
+> parts, which take them over in the step after.
+
+> Converting the file in one pass: a `Prefetch` structure holding everything,
+> and every function taking it.
+
+> Now the header and the callers.
+
+> The test already used `pf` for "files read". Renaming the handle there to
+> `ahead`.
+
+> Another name clash (`ahead` is also the prepared ground there). Calling the
+> reader-ahead `reader` instead.
+
+*[commit] 10c7c9a3d in custom-client - The reading-ahead thread is a thing you hold*
+
+> Committed. The character, light, creature and ground-preparation parts keep no
+> state of their own, so that step is done. Now the drawing parts (task 7).
+> Looking at what each keeps.
+
+> The sky builds as a handle. The horizon next.
+
+> A local named `h` shadowed the handle there. Renaming the local.
+
+> 210 pass. Water next.
+
+> My helper also rewrote words inside strings ("the water shader"). The assert
+> stopped it before writing anything. Making it skip strings and comments.
+
+> Checking whether the earlier horizon conversion (done before this fix) changed
+> any comments or strings.
+
+> Only one comment was touched, and it still reads correctly. Re-running the
+> water conversion.
+
+> Water done; 210 pass. Picture check across water, the horizon and the sky,
+> then a commit.
+
+*[commit] 08871368a in custom-client - The sky, the far horizon and the water are each a thing you hold*
+
+> Committed. Figures next: their picture cache becomes part of a figure maker.
+
+> Progress: the sky, horizon, water and figures are converted to handles (210
+> checks pass, pictures identical). Next the ground, then doodads, textures, and
+> the main loop.
+
+> Converting the ground. Its "is this picture on the card?" question becomes a
+> function plus the ground it's asking about, since the reading-ahead thread
+> asks it.
+
+> A local tile variable `g` now shadows the ground handle `g` in three
+> functions. Their fields don't overlap, so renaming the tile to `gt` is
+> mechanical. Then I'll check the bare uses by eye.
+
+> Now the ground's start-up returns, its header, and the "on the card" question
+> in preparation, reading ahead, the main loop and the tests.
+
+> 210 pass. Pictures, a walk and the race check, then a commit.
+
+*[commit] 92e58676f in custom-client - The ground and the figure maker are things you hold*
+
+> Doodads next, the largest drawing part (21 values in its file).
+
+> No shadowing names. Writing the conversion for doodads, including adding the
+> handle to every function that needs it and to its callers.
+
+> Turning the start-up into `doodads_new` and writing a matching `doodads_free`
+> (there was none: the old file kept everything until exit). Checking what each
+> model owns first.
+
+> The sky asks the doodads to draw its skybox, so `sky_draw` takes the doodads
+> drawer too.
+
+> Pictures match, the jump still leaves exactly 2,889 placed, and the
+> address-checked build runs clean. Committing.
+
+*[commit] cb2d97216 in custom-client - Doodads and buildings live in a drawer you hold*
+
+> Committed. Now textures: the filtering choice and the counts of bytes sent go
+> into a small `Textures` structure. The ground, water, doodads and figure maker
+> each get a pointer to it.
+
+> Now each user gets the pointer at its creation.
+
+> Textures are threaded through every drawing part; 210 pass. Checking pictures
+> at the default and at 16x filtering, then committing. Main loop's own state is
+> the last conversion.
+
+*[commit] d59a405ec in custom-client - How pictures go to the card is a small structure the caller holds*
+
+> Committed. Last conversion: the main loop's ~40 file-level values become one
+> `App` structure. Listing them.
+
+> Checking for local variables that would clash with these names before
+> scripting it.
+
+> Writing the main-loop conversion as a script, like the doodads one. The three
+> callbacks the mover calls will reach the App through the context pointer
+> they're already given.
+
+> Builds; 210 pass. Checking nothing is left in the file, then making the end of
+> the program free everything it made.
+
+> The program freed figures *after* closing the window, when the graphics
+> context is already gone. Reordering: everything on the graphics card is freed
+> first, then the window closes, then the rest.
+
+> Two runs of the same picture now match exactly (0 pixels, against about 27
+> before). Adding a test that the same seed gives the same sparks.
+
+> 211 pass. Final checks for this step: the race-checked walk and pictures. Then
+> a commit.
+
+*[commit] 70f216b67 in custom-client - The main loop's state is one App; the program lets go cleanly; sparks repeat*
+
+> The other session's cave work doesn't touch the client. Checking the two
+> remaining client-related scripts.
+
+> Works: it reads `Map.dbc` from the newest patch through the C reader. Moving
+> the catalog generator to use it.
+
+> The catalog comes out identical through the C reader. Now the other three
+> client documents. A small tool renames every file, script and path they
+> mention to its new name here.
+
+> Adding the four documents to the W client's contents and reading order.
+
+> Committing the moved documents and the catalog generator in the W client.
+
+*[commit] 3b4614995 in custom-client - The client's documents arrive, and its options catalog reads through the C reader*
+
+*[commit] 8f16cab7c in custom-client - The reader library's Lua module*
+
+> Next, step 9: the W client gets its own CLAUDE.md carrying the build
+> permission and the five-minute rule.
+
+*[commit] 336ea8c62 in custom-client - The W client gets its own instructions, with the build permission*
+
+> I'll write each issue from what the 173 issues record. Pulling their intended
+> behavior, what's left, and any unanswered questions into one scratch file to
+> work from.
+
+> Updating the phase progress files (and adding them for phases 4, 8 and 10,
+> which now have issues) and the roadmap's issue lists.
+
+> The W client's issue tree validates with no findings. Committing.
+
+*[commit] e1ebf841d in custom-client - The issues say what the arriving code already does*
+
+> Now the wow-chat-2026 side. First, the creature-list generator, which stays
+> here (it reads this project's database), now writes into the W client's
+> `assets/world/`.
+
+> The moved files are renamed `-done` (111 renames). Now the stragglers:
+> everything in wow-chat-2026 that still points at the old paths.
+
+> The 173 issues stay as the record of how the client began (their old paths
+> describe that), so each just gains a pointer. The contents page and CLAUDE.md
+> need real updates.
+
+> Now a pointer line in every 173 issue, open and completed, saying where it
+> continues in the W client.
+
+> Now 173v itself: rewriting its Current Behavior to describe the move as done,
+> and what's left.
+
+> Before committing in wow-chat-2026, checking that CLAUDE.md and the contents
+> page hold only my changes (another session edits here too).
+
+> Only my changes. Committing the wow-chat-2026 side of the move.
+
+*[commit] 21c562cd6 in wow-chat-2026 - The custom client has moved to the W client; what stays here points there*
+
+> Committed. The `-done` files have now been in one commit, so removing them, in
+> both projects.
+
+*[commit] d7016b92f in wow-chat-2026 - The moved client's -done files are removed*
+
+*[commit] fc3c3fc74 in custom-client - The one-off conversion and migration tools are removed*
+
+*[commit] 8392538e8 in ai-stuff - world-edit-to-execute: the W client has code now, and WC3 maps go to AzerothCore*
+
+The merge is done: the client now lives in the W client
+(`/mnt/mtwo/games/azeroth-core/custom-client/`) and is built, run and tested
+there. All 211 checks pass, pictures match the old client, and the memory- and
+race-checked builds run clean. The one thing left in 173v is copying the
+conversations.
+
+**In the W client:**
+- **Documents rewritten** from the three sources:
+  - one engine in C for both games, Lua for scripting;
+  - both games server-authoritative on AzerothCore, with the lockstep discussion
+    recorded;
+  - our own archive reader and a bash build;
+  - Blizzard's files act as placeholders until a replacement exists;
+  - the rendering described as built.
+- **A crosswalk in the roadmap:** every source file has its number (013–044)
+  and the issue it fills; every 173 issue says where it continues.
+- **The code**, converted during the move as you asked:
+  - Every part keeps its state behind a handle; nothing is left in its own file
+    except constant tables. The main loop's ~40 values are one App structure.
+  - Every failure returns a code you can branch on, plus its sentence.
+  - The program now frees everything on the graphics card before closing the
+    window; before, figures were freed after it closed.
+  - Particles are seeded by which copy and emitter they are, so the same picture
+    taken twice is now identical to the pixel. That's what the test scenes need.
+  - The reader library loads from LuaJIT, so world-edit-to-execute can call it.
+    The options-catalog generator already reads through it, and its output is
+    unchanged.
+- **Its own CLAUDE.md**, with the build permission and the five-minute rule.
+- **Issues:** 17 existing ones now say what's built. Ten new ones cover the
+  pieces that had none: test scenes, water, shadows and live light, models,
+  animation, particles, characters, movement, collision, and the options menu.
+- **Four documents** moved in (045–048).
+
+**In wow-chat-2026:** the old client, its Lua first version, its scripts and its
+four documents were kept for one commit as `-done`, then removed. The contents
+page and CLAUDE.md point to the new home, and every 173 issue says where it
+continues. The creature-list generator stays here, since it reads this project's
+database, and now writes into the W client. I couldn't run it, though: MySQL
+isn't running.
+
+**In world-edit-to-execute:** its bridge document now records that the W client
+has code, and that converted maps go to AzerothCore with the server in charge.
+
+**Still open:**
+- **The conversations:** copies are to go with the client, but the transcript
+  tools file a conversation by where its session ran. Each tool needs checking
+  against a copied file before we rely on that.
+- **Our own server (W08):** is it still built, now that WC3 maps run on
+  AzerothCore?
+- **Questions moved into W-client issues, still unanswered:**
+  - gamma's curve (1001);
+  - what the original shows for the sentinels' facial-hair choice (404);
+  - her step height, body radius and swim depth (801);
+  - whether model lights light only their own model in the original (310).
+- **The test-scenes questions** (wow-chat-2026 176a).
+
+Networking is next on the roadmap, and 176 decided it gets built in the W client
+after the move. To start the server connection, open a session in
+`/mnt/mtwo/games/azeroth-core/custom-client/`.
 
 --------------------------------------------------------------------------------
 

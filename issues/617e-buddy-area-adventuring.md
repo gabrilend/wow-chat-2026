@@ -918,9 +918,26 @@ Verbatim:
     to inverse this behavior, to keep the group together" (with 617e10,
     closer in danger, and 617c2, the proximity party).
   - **Sight cost**: 96 lines twice a second per buddy, questioned by the
-    owner. Proposed instead: look only after moving 2 yards, and use
-    shadowcasting (the roguelike field-of-view method, each visible
-    square visited once) over the area's ground grid instead of lines.
+    owner. Decided ("how about both?"): look only after moving 2 yards,
+    and use shadowcasting (the roguelike field-of-view method, each
+    visible square visited once) over the area's ground grid instead of
+    lines. And no exploring sight at all in combat: "We also don't need
+    to do 'curious-pathfinding' while in combat. We use a different
+    system for that."
+  - **Two phases of sight** (the owner): "use 5 yards to investigate at
+    first, and once the entire map is surveyed and they start
+    patrolling, then we use a longer sight line to just look for
+    monsters, chests, that sort of thing ... if there's a small divot the
+    buddy-bot doesn't need to dive into it ... They can just walk past,
+    glance into the room, see there's nothing spawned, and keep walking.
+    If there is of course they'd go fight it or whatever they would do
+    when searching for monsters." So while surveying, floor counts as
+    explored within 5 yards of where a buddy stood. Once all is
+    surveyed, a place counts as checked when seen from up to 40 yards
+    (sight stopped by walls). Patrol stops are then chosen so that every
+    square is seen from at least one stop: take the stop that sees the
+    most unchecked floor, repeat, then order the stops by the
+    nearest-next tour. This is the watchman route of geometry.
   - **Walking backward and sideways** for immersion: "if we figured out
     reasons for bots to walk backward and sideways ... buddy-bots might be
     able to since they're meant to be players." The server's spline

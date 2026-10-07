@@ -18,12 +18,16 @@
 --   Reads   data-files/mmaps/*.mmtile   (the navigation mesh)
 --           data-files/maps/*.map       (terrain heights)
 --           the client's archives       (minimap pictures; read in place)
---           src/custom-client/lib/      (the archive and picture readers)
+--           src/tools/archive-readers/  (the archive and picture readers: the first
+--                                        Lua client's, kept here when the client moved to
+--                                        the W client on 2026-10-07; to be replaced by the
+--                                        W client's readers once it builds them as a shared
+--                                        library, as its roadmap plans)
 --   Writes  tmp/shared-memory/exploration-floors/<place>.json and .png
 
 local DIR    = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
 local CLIENT = arg[2] or "/mnt/dile/ritz/games/World of Warcraft 3.3.5a/Data"
-package.path = DIR .. "/src/custom-client/lib/?.lua;" .. package.path
+package.path = DIR .. "/src/tools/archive-readers/?.lua;" .. package.path
 
 local ffi = require("ffi")
 local bit = require("bit")
