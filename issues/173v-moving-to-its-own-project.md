@@ -274,6 +274,22 @@ behind in this project.
     condense the two games into a single project." So: one binary
     playing both games; one renderer drawing both games' models,
     animations and particles; one audio system; each game's rules kept
-    apart from the drawing. Still open: whether networking is shared
-    (AzerothCore's client-server sessions against WC3's lockstep, where
-    every player's machine runs the same simulation from shared orders).
+    apart from the drawing.
+    - (Answered 2026-10-07) **Networking:** "I think we transition WETE to
+      Azerothcore then. We can have AC be the lockstep host, meaning
+      everyone sends their commands to it." So WC3 maps run on
+      AzerothCore too: players send their orders to the server, which
+      stamps each with its tick and passes it on.
+    - **Open: orders sent player to player as well.** The owner: "they
+      also send their commands to every other player as well, who
+      simulate what they can see on their end ... player A sends commands
+      to the server and player B, player B simulates on their end, and
+      the server doesn't need to send player B player A's commands.
+      Unless player B notices that something is amiss and then that
+      player gets a big stamp on their head that says 'don't trust this
+      asshat' - is that valid? Any edge-cases?" The edge cases found
+      (packet loss looking like cheating, simulating only what is seen
+      breaking lockstep, a player lying about another, addresses exposed
+      between players) are in the conversation of 2026-10-07; what
+      sending player to player is meant to save (server traffic, delay,
+      or server work) decides whether it is worth it.
