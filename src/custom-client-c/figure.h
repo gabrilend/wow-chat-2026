@@ -5,8 +5,8 @@
  * world: her, another player's race, or a creature. It holds the model's
  * pieces (one mesh and picture each), its points as made, and its
  * skeleton and animations (anim.h). Each frame its bones are posed (by a
- * MovesState, moves.h), its points bent to follow, and each piece's mesh
- * refreshed from them.
+ * MovesState, moves.h) and the poses sent to the graphics card, which
+ * bends the points to follow (173u: the meshes never change).
  *
  * Where a figure's pictures come from:
  *   a character (figure_from_character): its finished skin sheet and its
@@ -51,7 +51,8 @@ typedef struct Figure {
     M2Vertex    *rest;        uint32_t nrest;      /* points and facings as made */
     Anim         anim;
     float      (*poses)[16], (*scratch)[16];
-    float       *bent;                /* per point: bent position, then facing */
+    Texture2D    bones;               /* the bones' poses for the card (173u): one row, four float texels a bone,
+                                       * each a column of its matrix; the figure shader bends the points */
     float        scale;               /* the display's size (1 for characters) */
     FigureItem   items[6];  int nitems;   /* helm, shoulders, weapons (173p) */
     int          seq;  uint32_t ms, global_ms;   /* the animation and moment it was last bent to (for the pieces' tints) */

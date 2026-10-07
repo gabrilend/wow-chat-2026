@@ -69,7 +69,15 @@ and per-pixel work. Fewer, larger draw orders beat many small ones.
 - [ ] **2b. Doodads: fewer orders.** Pieces sharing a picture and blend
   merged; camera-facing copies (still one order each) folded in by step
   4. Smaller now that 2a is done; measure again after step 3.
-- [ ] **3. Bending on the card (skinning in the shader).** Figures,
+- [x] **3a. Figures bent on the card.** Built 2026-10-06 (`figure.c`,
+  `main.c`'s figure shader): each point's four bone numbers and weights
+  go to the card once (in Raylib's colour and tangent slots: 5.1 has no
+  bone slots); each frame only the bone poses go, as a one-row float
+  picture per figure; the shader bends. **Measured:** creatures 5.2 ms
+  to 1.7 ms a frame (posing the bones 0.8 of it); her and the
+  bystanders 0.18 to 0.04. The same pictures (her, the bystanders mid-
+  animation, her axe on her hand).
+- [ ] **3b. Bending on the card (skinning in the shader): doodads.** Figures,
   swaying doodads and camera-facing doodads: their points are sent once
   with their bones and weights; each frame only a bone table (a small
   picture of matrices) goes to the card, and the shader bends and turns

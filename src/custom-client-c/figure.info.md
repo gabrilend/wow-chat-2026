@@ -8,8 +8,8 @@ For a general audience: a "figure" is one animated model drawn in the
 world: her, another player's race, or a creature. It holds the model's
 pieces (one mesh and picture each), its points as made, and its
 skeleton and animations (anim.h). Each frame its bones are posed (by a
-MovesState, moves.h), its points bent to follow, and each piece's mesh
-refreshed from them.
+MovesState, moves.h) and the poses sent to the graphics card, which
+bends the points to follow (173u: the meshes never change).
 
 Where a figure's pictures come from:
   a character (figure_from_character): its finished skin sheet and its

@@ -106,20 +106,35 @@ static int wear_option(const char *text, char *bad, int bad_len)
 /* }}} */
 
 /* {{{ shaders
- * Her model's: lit by the sun from one direction, faded into the sky with
+ * The figures' (her, bystanders, creatures, their items): bent on the
+ * graphics card (173u). Each point carries its four bone numbers (in the
+ * colour slot, a byte each: Raylib 5.1 has no bone slots) and their
+ * weights (in the tangent slot); each figure's bone poses arrive as a
+ * one-row picture of floats (`bones`), four texels a bone, one column of
+ * its matrix each (figure.c). A point tied to no bone stays where made.
+ * Then lit by the sun from one direction, faded into the sky with
  * distance, see-through pixels (hair strands) cut out. GLSL 330, with
  * Raylib's own attribute and uniform names. The ground has its own, in
  * ground.c. */
-static const char *GROUND_VS =
+static const char *FIGURE_VS =
     "#version 330\n"
-    "in vec3 vertexPosition; in vec3 vertexNormal; in vec4 vertexColor; in vec2 vertexTexCoord;\n"
-    "uniform mat4 mvp; uniform mat4 matModel; uniform vec3 eye;\n"
+    "in vec3 vertexPosition; in vec3 vertexNormal; in vec4 vertexColor; in vec2 vertexTexCoord; in vec4 vertexTangent;\n"
+    "uniform mat4 mvp; uniform mat4 matModel; uniform vec3 eye; uniform sampler2D bones;\n"
     "out vec3 n; out vec4 col; out vec2 uv; out float dist;\n"
+    "mat4 bone(int i) {\n"
+    "  return mat4(texelFetch(bones, ivec2(i * 4, 0), 0), texelFetch(bones, ivec2(i * 4 + 1, 0), 0),\n"
+    "              texelFetch(bones, ivec2(i * 4 + 2, 0), 0), texelFetch(bones, ivec2(i * 4 + 3, 0), 0));\n"
+    "}\n"
     "void main() {\n"
-    "  vec4 w = matModel * vec4(vertexPosition, 1.0);\n"
-    "  n = mat3(matModel) * vertexNormal; col = vertexColor; uv = vertexTexCoord;\n"
-    "  dist = length(w.xyz - eye);\n"
-    "  gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
+    "  ivec4 id = ivec4(vertexColor * 255.0 + 0.5);\n"
+    "  vec4 w = vertexTangent;\n"
+    "  float total = w.x + w.y + w.z + w.w;\n"
+    "  mat4 skin = total > 0.001 ? bone(id.x) * w.x + bone(id.y) * w.y + bone(id.z) * w.z + bone(id.w) * w.w : mat4(1.0);\n"
+    "  vec4 p = skin * vec4(vertexPosition, 1.0);\n"
+    "  vec4 wp = matModel * p;\n"
+    "  n = mat3(matModel) * (mat3(skin) * vertexNormal); col = vec4(1.0); uv = vertexTexCoord;\n"
+    "  dist = length(wp.xyz - eye);\n"
+    "  gl_Position = mvp * p;\n"
     "}\n";
 /* `mode` (figure.c): 0 solid, pixels under half opacity cut out; 1
  * see-through, the picture's opacity times the tint's; 2 added light,
@@ -418,7 +433,8 @@ int main(int argc, char **argv)
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
     InitWindow(win_w, win_h, "Everland Ghostsong");
     SetExitKey(KEY_NULL);                                /* Escape is read in the loop, so it can open the game menu later */
-    Shader model_sh  = LoadShaderFromMemory(GROUND_VS, MODEL_FS);
+    Shader model_sh  = LoadShaderFromMemory(FIGURE_VS, MODEL_FS);
+    model_sh.locs[SHADER_LOC_MAP_METALNESS] = GetShaderLocation(model_sh, "bones");   /* figure.c puts each figure's bone picture in that material slot */
     if (mpq_chain_open(&chain, client, "enUS", why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }
     /* her clothes: a fresh character's of her race and class, then any --wear on top */
     if (character_start_outfit(&chain, LOOK.race, HER_CLASS, LOOK.sex, LOOK.items, why, sizeof why)) { fprintf(stderr, "%s\n", why); CloseWindow(); return 1; }

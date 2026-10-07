@@ -97,8 +97,7 @@ static int build(Figure *f, MpqChain *chain, const M2Model *mod, const uint8_t *
             m.normals[i * 3] = v.nx; m.normals[i * 3 + 1] = v.ny; m.normals[i * 3 + 2] = v.nz;
             m.texcoords[i * 2] = v.u; m.texcoords[i * 2 + 1] = v.v;
         }
-        UploadMesh(&m, true);                             /* dynamic: bent every frame */
-        fp->mesh = m;
+        fp->mesh = m;                                     /* sent to the card once its bones are known, below */
         fp->tex = pics[un.texture];
         fp->blend = un.blend;
         fp->flags = un.flags;
@@ -139,7 +138,31 @@ static int build(Figure *f, MpqChain *chain, const M2Model *mod, const uint8_t *
     }
     f->poses = malloc(sizeof *f->poses * (f->anim.nbones ? f->anim.nbones : 1));
     f->scratch = malloc(sizeof *f->scratch * (f->anim.nbones ? f->anim.nbones : 1));
-    f->bent = malloc(sizeof(float) * 6 * f->nrest);
+    /* each piece's points get their bones and weights (bone numbers in the
+     * colour slot, a byte each; weights 0-1 in the tangent slot), then go
+     * to the card once, never to change (173u) */
+    for (int k = 0; k < f->npieces; ++k) {
+        Mesh *m = &f->pieces[k].mesh;
+        m->colors = MemAlloc(4 * (unsigned)m->vertexCount);
+        m->tangents = MemAlloc(sizeof(float) * 4 * (unsigned)m->vertexCount);
+        for (int v = 0; v < m->vertexCount; ++v) {
+            uint32_t pt = f->pieces[k].point_of[v];
+            for (int j = 0; j < 4; ++j) {
+                m->colors[v * 4 + j] = f->anim.bone_of[pt][j];
+                m->tangents[v * 4 + j] = f->anim.weights[pt][j] / 255.0f;
+            }
+        }
+        UploadMesh(m, false);
+    }
+    /* the bone picture, every bone at rest until the first bending (items,
+     * never bent, stay so) */
+    int nb = f->anim.nbones ? f->anim.nbones : 1;
+    float *rest = malloc(sizeof(float) * 16 * (size_t)nb);
+    for (int b = 0; b < nb; ++b) for (int e = 0; e < 16; ++e) rest[b * 16 + e] = (e % 5 == 0) ? 1.0f : 0.0f;
+    Image im = { .data = rest, .width = nb * 4, .height = 1, .mipmaps = 1, .format = PIXELFORMAT_UNCOMPRESSED_R32G32B32A32 };
+    f->bones = LoadTextureFromImage(im);
+    free(rest);
+    SetTextureFilter(f->bones, TEXTURE_FILTER_POINT);
     return 0;
 }
 /* }}} */
@@ -369,20 +392,7 @@ void figure_bend(Figure *f, const MovesState *moves, uint32_t global_ms)
 {
     moves_pose(moves, &f->anim, global_ms, f->poses, f->scratch);
     f->seq = moves->seq; f->ms = (uint32_t)moves->ms; f->global_ms = global_ms;
-    for (uint32_t i = 0; i < f->nrest; ++i) {
-        float p[3] = { f->rest[i].x, f->rest[i].y, f->rest[i].z }, n[3] = { f->rest[i].nx, f->rest[i].ny, f->rest[i].nz };
-        anim_skin_point(&f->anim, (const float (*)[16])f->poses, i, p, f->bent + i * 6, n, f->bent + i * 6 + 3);
-    }
-    for (int k = 0; k < f->npieces; ++k) {
-        Mesh *m = &f->pieces[k].mesh;
-        for (int v = 0; v < m->vertexCount; ++v) {
-            const float *b = f->bent + f->pieces[k].point_of[v] * 6;
-            memcpy(m->vertices + v * 3, b, sizeof(float) * 3);
-            memcpy(m->normals + v * 3, b + 3, sizeof(float) * 3);
-        }
-        UpdateMeshBuffer(*m, 0, m->vertices, (int)(sizeof(float) * 3 * m->vertexCount), 0);   /* buffer 0: positions */
-        UpdateMeshBuffer(*m, 2, m->normals, (int)(sizeof(float) * 3 * m->vertexCount), 0);    /* buffer 2: facings */
-    }
+    if (f->anim.nbones) UpdateTexture(f->bones, f->poses);   /* the card bends the points (173u) */
     /* the items follow their bones: bone pose times the point's place */
     for (int i = 0; i < f->nitems; ++i) {
         const float *b = f->poses[f->items[i].bone];
@@ -414,6 +424,7 @@ static void draw_pieces(const Figure *f, Material *mat, Matrix at, int pass, int
         SetShaderValue(mat->shader, loc_unlit, &unlit, SHADER_UNIFORM_INT);
         if (see_through) BeginBlendMode(mode == 2 ? BLEND_ADDITIVE : BLEND_ALPHA);
         mat->maps[MATERIAL_MAP_DIFFUSE].texture = p->tex;
+        mat->maps[MATERIAL_MAP_METALNESS].texture = f->bones;   /* the shader's "bones" (main.c) */
         DrawMesh(p->mesh, *mat, at);
         if (see_through) EndBlendMode();
     }
@@ -447,7 +458,8 @@ void figure_free(Figure *f)
     for (int i = 0; i < f->nitems; ++i) { figure_free(f->items[i].fig); free(f->items[i].fig); }
     for (int k = 0; k < f->npieces; ++k) { UnloadMesh(f->pieces[k].mesh); free(f->pieces[k].point_of); }
     anim_free(&f->anim);
-    free(f->rest); free(f->poses); free(f->scratch); free(f->bent);
+    if (f->bones.id) UnloadTexture(f->bones);
+    free(f->rest); free(f->poses); free(f->scratch);
     memset(f, 0, sizeof *f);
 }
 /* }}} */
