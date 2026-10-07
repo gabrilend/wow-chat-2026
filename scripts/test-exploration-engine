@@ -1,0 +1,72 @@
+#!/bin/bash
+# test-exploration-engine - runs the cave comparison's three exploring rules
+# headless on every generated floor, and checks they behave (issue 617e).
+#
+# For a general audience: the comparison page animates three clans of buddies
+# exploring real cave floors. This runs the very same walking code without a
+# browser, for a fixed stretch of simulated time on each floor, and prints
+# what each clan achieved (floor seen, far ends reached, how evenly they
+# walked) and how long the computer took. It fails when a clan stands still,
+# walks through walls, or sees almost nothing, so a broken change shows up
+# here before it shows up on the page.
+#
+# Usage: scripts/test-exploration-engine [PROJECT_DIR] [MINUTES]
+#   Reads   tmp/shared-memory/exploration-floors/*.json
+#           (written by scripts/generate-exploration-floors)
+#   Reads   docs/HTML/exploration-compare/explore-engine.js
+
+# {{{ set_dir
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if [[ -n "$1" && "$1" != [0-9]* ]]; then
+    DIR="$1"
+    shift
+fi
+# }}}
+
+set -euo pipefail
+MINUTES="${1:-10}"
+FLOORS="${DIR}/tmp/shared-memory/exploration-floors"
+ENGINE="${DIR}/docs/HTML/exploration-compare/explore-engine.js"
+[[ -d "${FLOORS}" ]] || { echo "ERROR: no floors in ${FLOORS}; run scripts/generate-exploration-floors first"; exit 1; }
+[[ -f "${ENGINE}" ]] || { echo "ERROR: the engine ${ENGINE} is missing"; exit 1; }
+
+HARNESS='
+const fs = require("fs");
+const [engine, floors, minutes] = process.argv.slice(1);
+globalThis.atob = s => Buffer.from(s, "base64").toString("binary");
+require(engine);
+const { buildMap, Sim } = globalThis.ExploreEngine;
+let failures = 0;
+const fail = m => { failures++; console.log("  FAIL " + m); };
+for (const name of fs.readdirSync(floors).filter(f => f.endsWith(".json")).sort()) {
+  const F = JSON.parse(fs.readFileSync(floors + "/" + name, "utf8"));
+  const t0 = Date.now();
+  const M = buildMap(F);
+  const tm = Date.now() - t0;
+  const live = M.edges.filter(e => !e.cut).length;
+  console.log(`${F.key}: ${M.W}x${M.H} squares at ${M.yd} yd, ${M.count} walkable, ${M.knots.length} knots, ${live} runs, ${M.farEnds.length} far ends, prepared in ${tm} ms`);
+  if (M.count < 1000) fail(F.key + ": under 1000 walkable squares joined to the start");
+  if (!M.farEnds.length) fail(F.key + ": no far ends found");
+  for (const kind of ["rings", "frontier", "skeleton"]) {
+    const sim = new Sim(M, kind, 3, 20261007);
+    const t1 = Date.now();
+    const steps = Math.round(minutes * 60 / 0.1);
+    let offFloor = 0;
+    const startCells = sim.buddies.map(b => b.cell);
+    for (let s = 0; s < steps; s++) {
+      sim.step();
+      for (const b of sim.buddies) if (!M.reach[b.cell]) offFloor++;
+    }
+    const ms = Date.now() - t1;
+    const seen = sim.seenCount / M.count;
+    const moved = sim.buddies.filter((b, k) => b.cell !== startCells[k]).length;
+    console.log(`  ${kind.padEnd(9)} seen ${(seen * 100).toFixed(1).padStart(5)}%  far ends ${String(sim.endCount).padStart(3)}/${M.farEnds.length}  unevenness ${sim.unevenness().toFixed(2)}  half seen ${sim.firstHalf === null ? "never" : (sim.firstHalf / 60).toFixed(1) + " min"}  ${minutes} min in ${ms} ms`);
+    if (offFloor) fail(`${F.key}/${kind}: a buddy stood off the floor ${offFloor} times`);
+    if (!moved) fail(`${F.key}/${kind}: no buddy left the start`);
+    if (seen < 0.05) fail(`${F.key}/${kind}: saw under 5% of the floor`);
+  }
+}
+console.log(failures ? failures + " failures" : "all checks passed");
+process.exit(failures ? 1 : 0);
+'
+node -e "${HARNESS}" "${ENGINE}" "${FLOORS}" "${MINUTES}"

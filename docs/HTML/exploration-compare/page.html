@@ -1,0 +1,164 @@
+<title>Buddy Cave Exploring</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column for the words, widening to three side-by-side caves for the play area.
+   The palette is the buddy roaming gallery's (docs/HTML/buddy-roaming.html), so the two pages read as one set,
+   plus one colour per exploring rule: --m-* on the page, --c-* on the cave pictures, which stay dark in both themes. */
+:root {
+  --ground: #eef0f3; --panel: #ffffff; --ink: #1b2230; --muted: #5b6576; --rule: #d5d9e1; --accent: #8a5d0c;
+  --m-rings: #1d7a6f; --m-frontier: #6a4fb8; --m-skeleton: #b0452a;
+  --c-rings: #5fd0bf; --c-frontier: #b49cf2; --c-skeleton: #f08f6e;
+  --cave: #12161d;
+  --display: "Alegreya SC", Georgia, serif;
+  --body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; --m-rings: #5fd0bf; --m-frontier: #b49cf2; --m-skeleton: #f08f6e; } }
+:root[data-theme="dark"] { color-scheme: dark; --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440; --accent: #dcb45c; --m-rings: #5fd0bf; --m-frontier: #b49cf2; --m-skeleton: #f08f6e; }
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 16px/1.55 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 28px; }
+.prose { max-width: 70ch; display: grid; gap: 12px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: 2.2rem; } h2 { font-size: 1.45rem; color: var(--accent); } h3 { font-size: 1.15rem; }
+p { margin: 0; }
+.lede { color: var(--muted); font-size: 1.05rem; }
+blockquote { margin: 0; padding-left: 14px; border-left: 3px solid var(--accent); color: var(--ink); font-style: italic; }
+.part { display: grid; gap: 12px; padding-top: 14px; border-top: 2px solid var(--accent); }
+
+/* the play area */
+#xc-root { display: grid; gap: 14px; }
+.xc-places { display: flex; flex-wrap: wrap; gap: 6px; }
+.xc-places button { font: 500 1rem var(--body); padding: 6px 14px; border-radius: 999px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); cursor: pointer; }
+.xc-places button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.xc-note { color: var(--muted); max-width: 80ch; }
+.xc-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; font-size: .95rem; }
+.xc-buttons { display: flex; gap: 8px; }
+.xc-buttons button, .xc-controls select { font: inherit; padding: 5px 14px; border-radius: 6px; border: 1px solid var(--rule); background: var(--ground); color: var(--ink); cursor: pointer; }
+.xc-buttons button:hover { border-color: var(--accent); }
+.xc-field, .xc-check { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+.xc-field output, .xc-clock { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 700; }
+.xc-controls :focus-visible, .xc-places button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.xc-panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+@media (max-width: 860px) { .xc-panels { grid-template-columns: minmax(0, 1fr); } }
+.xc-panel { margin: 0; display: grid; gap: 8px; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 10px; min-width: 0; }
+.xc-panel figcaption { font: 700 1.05rem var(--display); display: flex; align-items: center; gap: 8px; }
+.xc-swatch { width: 12px; height: 12px; border-radius: 50%; background: var(--m); }
+.xc-panel[data-method="rings"], .xc-legend [data-method="rings"] { --m: var(--m-rings); }
+.xc-panel[data-method="frontier"], .xc-legend [data-method="frontier"] { --m: var(--m-frontier); }
+.xc-panel[data-method="skeleton"], .xc-legend [data-method="skeleton"] { --m: var(--m-skeleton); }
+.xc-canvas { display: block; width: 100%; max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 6px; background: var(--cave); image-rendering: pixelated; }
+.xc-nums { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; font-size: .93rem; }
+.xc-nums dt { color: var(--muted); }
+.xc-nums dd { margin: 0; font-variant-numeric: tabular-nums; }
+.xc-chartcard { display: grid; gap: 10px; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; }
+.xc-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .95rem; }
+.xc-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.xc-legend span::before { content: ""; width: 18px; height: 3px; border-radius: 2px; background: var(--m); }
+.xc-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 700px) { .xc-charts { grid-template-columns: minmax(0, 1fr); } }
+.xc-charts figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
+.xc-charts figcaption { color: var(--muted); font-size: .92rem; }
+.xc-chart { width: 100%; height: 200px; display: block; }
+
+/* the words */
+.rules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 860px) { .rules { grid-template-columns: minmax(0, 1fr); } }
+.rule { display: grid; gap: 8px; align-content: start; padding: 14px; background: var(--panel); border: 1px solid var(--rule); border-top: 4px solid var(--m); border-radius: 10px; min-width: 0; }
+.rule[data-method="rings"] { --m: var(--m-rings); } .rule[data-method="frontier"] { --m: var(--m-frontier); } .rule[data-method="skeleton"] { --m: var(--m-skeleton); }
+.rule h3 { color: var(--m); }
+.rule dl { margin: 0; display: grid; gap: 6px; }
+.rule dt { font-weight: 700; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.rule dd { margin: 0; }
+.key { display: grid; gap: 6px; padding: 0; margin: 0; list-style: none; }
+.key li { display: flex; gap: 10px; align-items: baseline; }
+.key b { min-width: 9.5em; }
+footer { color: var(--muted); font-size: .88rem; max-width: 80ch; }
+code { font-size: .92em; }
+</style>
+
+<div class="wrap">
+  <header class="prose">
+    <h1>Buddy Cave Exploring</h1>
+    <p class="lede">Three clans of buddies walk the same real cave at the same moment, each choosing its next step by a different rule. The floors are the server's own walking mesh, cut to one-yard squares. Pick a cave, let them run, and watch who finds the far tunnels first.</p>
+    <blockquote>"tunnels may curve. A 20 yard line isn't necessarily indicative of a doorway. I'm not sure about a solution, wanna take a break from questions and do some brainstorming?" (the owner, 2026-10-07)</blockquote>
+    <p>Today's roaming finds tunnels by standing at an area's middle and looking for a direction where the view suddenly reaches 20 yards farther. A curving tunnel bends out of sight, and an open field gives long views everywhere, so the test both misses tunnels and finds false ones. All three rules here measure by walking, not by straight lines.</p>
+  </header>
+
+  <section id="xc-root" aria-label="The comparison"></section>
+
+  <section class="part">
+    <h2>Reading the pictures</h2>
+    <ul class="key">
+      <li><b>Blue-grey floor</b><span>under ground; lighter is higher.</span></li>
+      <li><b>Green floor</b><span>outside, up to 30 yards beyond each entrance.</span></li>
+      <li><b>White rings</b><span>far ends: the tips of the floor's skeleton at least 10 yards out on their own branch. A ring fills in when a buddy comes within 5 yards. Every rule is measured against the same rings.</span></li>
+      <li><b>Each rule's own view</b><span>walking rings: bands of walking distance, with the band each buddy is aiming at lit. Unseen edge: floor the clan doesn't remember seeing is dark, floor just seen is lit. Floor skeleton: the passages, brighter where walked lately.</span></li>
+      <li><b>Footprints</b><span>where the buddies have stood, amber, brighter where more often.</span></li>
+      <li><b>Unevenness</b><span>how much the time spent differs between 6-yard blocks of floor. 0 is perfectly even. An "even wash" is a low number.</span></li>
+    </ul>
+  </section>
+
+  <section class="part">
+    <h2>The three rules</h2>
+    <div class="rules">
+      <article class="rule" data-method="rings">
+        <h3>Walking rings</h3>
+        <dl>
+          <dt>How it works</dt>
+          <dd>Water poured at the entrance spreads along the floor. Every square is stamped with how far the water walked to reach it. Sorting every square by that walk gives a list from nearest to farthest. Your Y rule (1 to 100, moved 1 to 20 at each waypoint) picks a place in the list, and the waypoint is a random square near that place.</dd>
+          <dt>Why tunnels come for free</dt>
+          <dd>The water follows every bend, so a curving tunnel is just more squares in the list. Every percent of the list holds the same number of squares, so waypoints fall evenly over the floor: the even wash.</dd>
+          <dt>What it costs the server</dt>
+          <dd>One flood of the area, done ahead of time like the town bakes. Choosing a waypoint is a single lookup.</dd>
+          <dt>Watch for</dt>
+          <dd>Long trips. One ring of a branching cave lies in every branch at once, so a buddy may cross the whole cave between two waypoints.</dd>
+        </dl>
+      </article>
+      <article class="rule" data-method="frontier">
+        <h3>Unseen edge</h3>
+        <dl>
+          <dt>How it works</dt>
+          <dd>The clan remembers every square it has seen, with sight stopped by walls out to 40 yards, and forgets after 4 minutes. A buddy walks to the nearest spot, on foot, where remembered floor meets floor nobody remembers, skipping any spot within 12 yards of another buddy's goal.</dd>
+          <dt>Why tunnels come for free</dt>
+          <dd>A curving tunnel shows itself one bend at a time. Each step in uncovers the next unseen edge, so the buddy follows the curve.</dd>
+          <dt>What it costs the server</dt>
+          <dd>A memory grid per clan (617e6's paint grid already is one), sight lines a few times a second, and a search outward from the buddy each time it picks a goal.</dd>
+          <dt>Watch for</dt>
+          <dd>Once everything is seen, nothing pulls the buddies anywhere until memories fade. Then they go back to whatever was seen longest ago.</dd>
+        </dl>
+      </article>
+      <article class="rule" data-method="skeleton">
+        <h3>Floor skeleton</h3>
+        <dl>
+          <dt>How it works</dt>
+          <dd>The floor is shaved from its edges inward until a one-square line runs down the middle of every passage. Its forks are junctions, its tips dead ends, the lines between them passages. Forks closer than 3 yards are one fork, and twigs under 6 yards are cut off. Buddies follow Trémaux's rule for mazes, kept by the whole clan: take a passage nobody has set off along; if there is none, go back the way you came; when every passage has been walked there and back, start a new round.</dd>
+          <dt>Why tunnels come for free</dt>
+          <dd>Every tunnel is a branch of the skeleton, curved or not, and the rule walks every branch to its end.</dd>
+          <dt>What it costs the server</dt>
+          <dd>The skeleton is built once per area ahead of time. Walking it is a short list of passages with a mark on each.</dd>
+          <dt>Watch for</dt>
+          <dd>Buddies keep to the middle line, so the corners of a wide cavern are seen only from that line, and a large hall takes a while.</dd>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <section class="part prose">
+    <h2>Where the floors come from</h2>
+    <p>The server plans every creature's walk on its navigation mesh, a map of each spot a character can stand, cut into small flat pieces. <code>scripts/generate-exploration-floors</code> reads those pieces for a box of the world and lays them onto one-yard squares. It keeps the largest stretch of floor that lies under the ground (the terrain is at least 6 yards higher above it), plus 30 yards outside each entrance. Behind it is the game's own outdoor minimap. Wailing Caverns is a dungeon with no terrain at all, so its whole floor counts, and its buddies start where the game puts a player who walks in.</p>
+    <p>Two things are flattened. Where one passage runs over another, the lower floor is drawn and the two share the squares. And Wailing Caverns is drawn at two yards a square so the browser keeps up.</p>
+    <p>This page is a drawing of three ideas on real floors. None of it runs in the game yet. <code>scripts/test-exploration-engine</code> runs the same walking code without a browser and prints each rule's numbers for every cave.</p>
+  </section>
+
+  <footer>Built by <code>scripts/build-exploration-compare-page</code> from <code>docs/HTML/exploration-compare/</code> (page, rules and drawing) and the floors written by <code>scripts/generate-exploration-floors</code>. Issue 617e, buddy area adventuring: the pull toward openings.</footer>
+</div>
+
+<script>
+/*@FLOORS@*/
+</script>
+<script>
+/*@ENGINE@*/
+</script>
+<script>
+/*@COMPARE@*/
+</script>

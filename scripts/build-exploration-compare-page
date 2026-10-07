@@ -1,0 +1,89 @@
+#!/usr/bin/env luajit
+-- build-exploration-compare-page - puts the cave exploring comparison
+-- together as one self-contained page (issue 617e).
+--
+-- For a general audience: the page is written in three parts that live
+-- side by side in docs/HTML/exploration-compare/: the words and layout
+-- (page.html), the walking rules (explore-engine.js) and the drawing
+-- (compare.js). The cave floors are generated separately
+-- (scripts/generate-exploration-floors). This tool copies all of it, and
+-- each floor's minimap picture, into a single HTML file, because the
+-- artifact host runs only what is written inside the page itself.
+--
+-- Usage: scripts/build-exploration-compare-page [PROJECT_DIR]
+--   Reads   docs/HTML/exploration-compare/{page.html,explore-engine.js,compare.js}
+--           tmp/shared-memory/exploration-floors/*.json and *.png
+--   Writes  docs/HTML/exploration-compare.html
+
+local DIR    = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local SRC    = DIR .. "/docs/HTML/exploration-compare"
+local FLOORS = DIR .. "/tmp/shared-memory/exploration-floors"
+local OUT    = DIR .. "/docs/HTML/exploration-compare.html"
+local bit    = require("bit")
+
+-- the order the caves appear in on the page: the owner asked for Timbermaw by name
+local ORDER = { "timbermaw", "fargodeep", "jasperlode", "wailing" }
+
+-- {{{ local function slurp
+local function slurp(path, required)
+    local f = io.open(path, "rb")
+    if not f then
+        if required then error("missing " .. path .. (path:find(FLOORS, 1, true) and " (run scripts/generate-exploration-floors first)" or "")) end
+        return nil
+    end
+    local s = f:read("*a"); f:close()
+    return s
+end
+-- }}}
+
+-- {{{ local function b64
+local B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+local function b64(s)
+    local out = {}
+    for i = 1, #s, 3 do
+        local a, b, c = s:byte(i, i + 2)
+        local v = a * 65536 + (b or 0) * 256 + (c or 0)
+        local q1, q2 = bit.band(bit.rshift(v, 18), 63), bit.band(bit.rshift(v, 12), 63)
+        local q3, q4 = bit.band(bit.rshift(v, 6), 63), bit.band(v, 63)
+        out[#out + 1] = B64:sub(q1 + 1, q1 + 1) .. B64:sub(q2 + 1, q2 + 1)
+            .. (b and B64:sub(q3 + 1, q3 + 1) or "=") .. (c and B64:sub(q4 + 1, q4 + 1) or "=")
+    end
+    return table.concat(out)
+end
+-- }}}
+
+-- {{{ main
+local page    = slurp(SRC .. "/page.html", true)
+local engine  = slurp(SRC .. "/explore-engine.js", true)
+local compare = slurp(SRC .. "/compare.js", true)
+
+local floors = {}
+for _, key in ipairs(ORDER) do
+    local json = slurp(FLOORS .. "/" .. key .. ".json", true)
+    -- a floor's picture goes inside the page as a data address (the host blocks other files)
+    local picture = json:match('"picture":"([^"]+)"')
+    if picture then
+        local png = slurp(FLOORS .. "/" .. picture, true)
+        json = json:gsub('"picture":"[^"]+"', '"picture":"data:image/png;base64,' .. b64(png) .. '"', 1)
+    end
+    floors[#floors + 1] = json
+end
+
+-- a closing script tag inside the inlined code would end the script early
+for name, text in pairs({ engine = engine, compare = compare }) do
+    if text:find("</script", 1, true) then error(name .. " contains a closing script tag") end
+end
+
+local function put(s, mark, text)
+    local a, b = s:find(mark, 1, true)
+    if not a then error("page.html has no " .. mark .. " placeholder") end
+    return s:sub(1, a - 1) .. text .. s:sub(b + 1)
+end
+page = put(page, "/*@FLOORS@*/", "window.EXPLORATION_FLOORS = [" .. table.concat(floors, ",\n") .. "];")
+page = put(page, "/*@ENGINE@*/", engine)
+page = put(page, "/*@COMPARE@*/", compare)
+
+local f = assert(io.open(OUT, "wb"))
+f:write(page); f:close()
+print(string.format("wrote %s (%.1f MB, %d caves)", OUT, #page / 1048576, #floors))
+-- }}}

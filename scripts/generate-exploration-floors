@@ -1,0 +1,512 @@
+#!/usr/bin/env luajit
+-- generate-exploration-floors - the walkable floor of a few real caves and
+-- tunnels, as grids a page can animate buddies over (issue 617e, the
+-- "pull toward openings" brainstorm, 2026-10-07).
+--
+-- For a general audience: the server plans every creature's walk on its
+-- navigation mesh, a map of every spot a character can stand, cut into
+-- small flat pieces. Inside a cave the mesh is the cave floor. This tool
+-- reads those pieces for a box of the world, lays them onto a grid of
+-- one-yard squares, and keeps only the floor that lies *under* the ground
+-- (the terrain is higher above it), plus a short apron outside each
+-- entrance, so the cave stands alone. It also paints the game's own
+-- outdoor minimap pictures behind the grid, square for square. The page
+-- that animates exploring is written separately and only reads these files
+-- (scripts/build-exploration-compare-page).
+--
+-- Usage: scripts/generate-exploration-floors [PROJECT_DIR] [CLIENT_DATA_DIR]
+--   Reads   data-files/mmaps/*.mmtile   (the navigation mesh)
+--           data-files/maps/*.map       (terrain heights)
+--           the client's archives       (minimap pictures; read in place)
+--           src/custom-client/lib/      (the archive and picture readers)
+--   Writes  tmp/shared-memory/exploration-floors/<place>.json and .png
+
+local DIR    = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local CLIENT = arg[2] or "/mnt/dile/ritz/games/World of Warcraft 3.3.5a/Data"
+package.path = DIR .. "/src/custom-client/lib/?.lua;" .. package.path
+
+local ffi = require("ffi")
+local bit = require("bit")
+local Mpq = require("mpq")
+local Blp = require("blp")
+
+ffi.cdef[[
+int compress2(uint8_t *dest, unsigned long *destLen, const uint8_t *source, unsigned long sourceLen, int level);
+unsigned long compressBound(unsigned long sourceLen);
+unsigned long crc32(unsigned long crc, const uint8_t *buf, unsigned int len);
+]]
+local zlib = ffi.load("z")
+
+local OUT = DIR .. "/tmp/shared-memory/exploration-floors"
+
+-- {{{ the places
+-- Centre and half-size in yards, from the terrain's own area cells (each
+-- map file marks its 33-yard squares with an area number; scanned
+-- 2026-10-07). Map 43 (Wailing Caverns) has no terrain at all: it is one
+-- building, so the whole mesh is "under ground" and the box is its tiles.
+-- `world` names the minimap folder for outdoor pictures (nil: none).
+-- `entrance` (a place with no outdoors): where the game puts a player who
+-- walks in, from the world database's areatrigger_teleport (Wailing
+-- Caverns: trigger 228).
+local PLACES = {
+    { key = "timbermaw",  title = "Timbermaw Hold",  map = 1,  cx =  6950, cy = -2117, half = 650, world = "Kalimdor",
+      note = "The furbolg tunnel through the mountain between Felwood and Winterspring." },
+    { key = "fargodeep",  title = "Fargodeep Mine",  map = 0,  cx = -9950, cy =   200, half = 260, world = "Azeroth",
+      note = "A kobold mine under the hills of Elwynn Forest." },
+    { key = "jasperlode", title = "Jasperlode Mine", map = 0,  cx = -9233, cy =  -650, half = 260, world = "Azeroth",
+      note = "A second Elwynn mine, deeper and branching." },
+    { key = "wailing",    title = "Wailing Caverns", map = 43, tiles = true, world = nil, entrance = { x = -163.49, y = 132.9 },
+      note = "The whole dungeon: one building, every floor in it." },
+}
+-- }}}
+
+-- {{{ numbers
+local GRID       = 533.33333      -- yards a map tile
+local CELL       = 1.0            -- yards a grid square
+local LAYERS     = 6              -- floors kept per square (bridges over passages)
+local CLIMB      = 1.6            -- yards up or down between neighbouring squares that still join
+local UNDER      = 6.0            -- terrain this far above the floor: the floor is under ground
+local POCKET     = 400            -- under-ground floor joined in fewer squares than this is noise (an overhang, a mesh edge)
+local APRON      = 30             -- squares of outside floor kept beyond each entrance
+local MARGIN     = 6              -- empty squares round the kept floor
+local NAV_GROUND, NAV_WATER = 0x01, 0x08   -- the mesh's area flags a walker may use
+-- }}}
+
+-- {{{ local function u32
+local function u32(s, at) local a, b, c, d = s:byte(at + 1, at + 4) return a + b * 256 + c * 65536 + d * 16777216 end
+-- }}}
+-- {{{ local function f32
+local f32buf = ffi.new("uint8_t[4]")
+local function f32(s, at)
+    ffi.copy(f32buf, s:sub(at + 1, at + 4), 4)
+    return ffi.cast("float*", f32buf)[0]
+end
+-- }}}
+-- {{{ local function u16
+local function u16(s, at) local a, b = s:byte(at + 1, at + 2) return a + b * 256 end
+-- }}}
+-- {{{ local function slurp
+local function slurp(path)
+    local f = io.open(path, "rb")
+    if not f then return nil end
+    local s = f:read("*a"); f:close()
+    return s
+end
+-- }}}
+
+-- {{{ local function read_tile
+-- One navigation tile: MmapTileHeader (20 bytes, then the 36-byte recast
+-- settings), then Detour's dtMeshHeader (100 bytes: 15 four-byte counts and
+-- settings, then the bounds and a quantising factor), then the points
+-- (three floats each) and the pieces (dtPoly, 32 bytes: first link uint32,
+-- six point numbers uint16, six neighbour numbers uint16, flags uint16,
+-- point count uint8, area and type uint8). Detour keeps points in the
+-- order (y, height, x) of the game's axes; turned round here. Type 1 in
+-- the top two bits is a jump link (off-mesh connection), not floor.
+local function read_tile(path)
+    local s = slurp(path)
+    if not s then return nil end
+    if u32(s, 0) ~= 0x4d4d4150 then error(path .. ": not a navigation tile (magic)") end
+    local h = 56
+    if s:sub(h + 1, h + 4) ~= "VAND" then error(path .. ": no Detour header at byte 56") end
+    local polys, verts = u32(s, h + 24), u32(s, h + 28)
+    local vat = h + 100
+    local pat = vat + verts * 12
+    local pts = {}
+    for i = 0, verts - 1 do
+        local o = vat + i * 12
+        pts[i] = { x = f32(s, o + 8), y = f32(s, o), z = f32(s, o + 4) }
+    end
+    local out = {}
+    for i = 0, polys - 1 do
+        local o = pat + i * 32
+        local flags, n, at = u16(s, o + 28), s:byte(o + 31), s:byte(o + 32)
+        local kind = bit.rshift(at, 6)
+        if kind == 0 and bit.band(flags, NAV_GROUND + NAV_WATER) ~= 0 then
+            local p = {}
+            for k = 0, n - 1 do p[#p + 1] = pts[u16(s, o + 4 + k * 2)] end
+            out[#out + 1] = p
+        end
+    end
+    return out
+end
+-- }}}
+
+-- {{{ local function terrain_height
+-- The ground's height at (x, y) from the map files, nil where a map has no
+-- terrain there. File (gx, gy) holds the tile whose top corner is
+-- ((32 - gx) * GRID, (32 - gy) * GRID); its height header follows the
+-- offset at byte 20: fourcc, flags (1 none, 2 as uint16, 4 as uint8),
+-- base height, top height, then 129 x 129 corner heights, row by x.
+local terrain_cache = {}
+local function terrain_height(map, x, y)
+    local gx, gy = math.floor(32 - x / GRID), math.floor(32 - y / GRID)
+    local key = map * 10000 + gx * 100 + gy
+    local t = terrain_cache[key]
+    if t == nil then
+        local s = slurp(string.format("%s/data-files/maps/%03d%02d%02d.map", DIR, map, gx, gy))
+        t = false
+        if s then
+            local ho = u32(s, 20)
+            local flags, base, top = u32(s, ho + 4), f32(s, ho + 8), f32(s, ho + 12)
+            local read = {
+                [1] = function() return function() return base end end,
+                [2] = function() local m = (top - base) / 65535; return function(i) return u16(s, ho + 16 + i * 2) * m + base end end,
+                [4] = function() local m = (top - base) / 255;   return function(i) return s:byte(ho + 16 + i + 1) * m + base end end,
+                [0] = function() return function(i) return f32(s, ho + 16 + i * 4) end end,
+            }
+            local kind = (bit.band(flags, 1) ~= 0) and 1 or (bit.band(flags, 2) ~= 0) and 2 or (bit.band(flags, 4) ~= 0) and 4 or 0
+            t = { gx = gx, gy = gy, h = read[kind]() }
+        end
+        terrain_cache[key] = t
+    end
+    if not t then return nil end
+    local fx = (32 - x / GRID - t.gx) * 128
+    local fy = (32 - y / GRID - t.gy) * 128
+    -- blended from the four corner heights round the point: the nearest
+    -- corner alone is up to 2 yards off, which on a steep mountainside
+    -- reads as several yards of height and calls bare slope "under ground"
+    local ix = math.max(0, math.min(127, math.floor(fx)))
+    local iy = math.max(0, math.min(127, math.floor(fy)))
+    local ax, ay = math.max(0, math.min(1, fx - ix)), math.max(0, math.min(1, fy - iy))
+    local h00, h10 = t.h(ix * 129 + iy), t.h((ix + 1) * 129 + iy)
+    local h01, h11 = t.h(ix * 129 + iy + 1), t.h((ix + 1) * 129 + iy + 1)
+    return (h00 * (1 - ax) + h10 * ax) * (1 - ay) + (h01 * (1 - ax) + h11 * ax) * ay
+end
+-- }}}
+
+-- {{{ local function png
+-- A plain RGB(A) picture file: signature, header, one compressed block of
+-- rows (each row led by a 0, "no filter"), end.
+local function png(path, w, h, rgba)
+    local raw = ffi.new("uint8_t[?]", (w * 4 + 1) * h)
+    for y = 0, h - 1 do
+        raw[y * (w * 4 + 1)] = 0
+        ffi.copy(raw + y * (w * 4 + 1) + 1, rgba + y * w * 4, w * 4)
+    end
+    local cap = zlib.compressBound((w * 4 + 1) * h)
+    local zbuf = ffi.new("uint8_t[?]", cap)
+    local zlen = ffi.new("unsigned long[1]", cap)
+    if zlib.compress2(zbuf, zlen, raw, (w * 4 + 1) * h, 9) ~= 0 then error("png: compression failed") end
+    local function be(n) return string.char(bit.band(bit.rshift(n, 24), 255), bit.band(bit.rshift(n, 16), 255), bit.band(bit.rshift(n, 8), 255), bit.band(n, 255)) end
+    local function chunk(kind, data)
+        local buf = kind .. data
+        local crc = zlib.crc32(0, ffi.cast("const uint8_t*", buf), #buf)
+        return be(#data) .. buf .. be(tonumber(crc))
+    end
+    local f = assert(io.open(path, "wb"))
+    f:write("\137PNG\r\n\26\n")
+    f:write(chunk("IHDR", be(w) .. be(h) .. string.char(8, 6, 0, 0, 0)))
+    f:write(chunk("IDAT", ffi.string(zbuf, zlen[0])))
+    f:write(chunk("IEND", ""))
+    f:close()
+end
+-- }}}
+
+-- {{{ local function b64
+local B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+local function b64(s)
+    local out, n = {}, #s
+    for i = 1, n, 3 do
+        local a, b, c = s:byte(i, i + 2)
+        local v = a * 65536 + (b or 0) * 256 + (c or 0)
+        local q1, q2 = bit.band(bit.rshift(v, 18), 63), bit.band(bit.rshift(v, 12), 63)
+        local q3, q4 = bit.band(bit.rshift(v, 6), 63), bit.band(v, 63)
+        out[#out + 1] = B64:sub(q1 + 1, q1 + 1) .. B64:sub(q2 + 1, q2 + 1)
+            .. (b and B64:sub(q3 + 1, q3 + 1) or "=") .. (c and B64:sub(q4 + 1, q4 + 1) or "=")
+    end
+    return table.concat(out)
+end
+-- }}}
+
+-- {{{ local function measure
+-- One place, start to end: its box, every floor piece in it laid onto the
+-- squares, joined floors found, the cave's floor kept, written out.
+local function measure(place, minimap)
+    -- the box: north (+x) is up and west (+y) is left, as on the game's map
+    local xmax, xmin, ymax, ymin
+    local tiles = {}
+    if place.tiles then
+        for gx = 0, 63 do for gy = 0, 63 do
+            local path = string.format("%s/data-files/mmaps/%03d%02d%02d.mmtile", DIR, place.map, gx, gy)
+            if io.open(path, "rb") then tiles[#tiles + 1] = path end
+        end end
+    else
+        xmax, xmin = place.cx + place.half, place.cx - place.half
+        ymax, ymin = place.cy + place.half, place.cy - place.half
+        for gx = math.floor(32 - xmax / GRID), math.floor(32 - xmin / GRID) do
+            for gy = math.floor(32 - ymax / GRID), math.floor(32 - ymin / GRID) do
+                tiles[#tiles + 1] = string.format("%s/data-files/mmaps/%03d%02d%02d.mmtile", DIR, place.map, gx, gy)
+            end
+        end
+    end
+
+    local pieces = {}
+    for _, path in ipairs(tiles) do
+        local t = read_tile(path)
+        if t then for _, p in ipairs(t) do pieces[#pieces + 1] = p end end
+    end
+    if #pieces == 0 then error(place.key .. ": no navigation mesh in its box (" .. #tiles .. " tiles looked for)") end
+
+    if place.tiles then
+        xmax, xmin, ymax, ymin = -1e9, 1e9, -1e9, 1e9
+        for _, p in ipairs(pieces) do for _, v in ipairs(p) do
+            xmax, xmin = math.max(xmax, v.x), math.min(xmin, v.x)
+            ymax, ymin = math.max(ymax, v.y), math.min(ymin, v.y)
+        end end
+    end
+
+    -- the squares: column i runs east (y falling), row j runs south (x falling)
+    local nx = math.ceil((ymax - ymin) / CELL)
+    local ny = math.ceil((xmax - xmin) / CELL)
+    local count = ffi.new("uint8_t[?]", nx * ny)
+    local zs    = ffi.new("float[?]", nx * ny * LAYERS)
+
+    -- {{{ lay each piece's triangles onto the square centres inside them
+    for _, p in ipairs(pieces) do
+        for k = 2, #p - 1 do
+            local a, b, c = p[1], p[k], p[k + 1]
+            -- in grid units: u east, v south
+            local au, av = (ymax - a.y) / CELL, (xmax - a.x) / CELL
+            local bu, bv = (ymax - b.y) / CELL, (xmax - b.x) / CELL
+            local cu, cv = (ymax - c.y) / CELL, (xmax - c.x) / CELL
+            local d = (bv - cv) * (au - cu) + (cu - bu) * (av - cv)
+            if math.abs(d) > 1e-9 then
+                local i0 = math.max(0, math.floor(math.min(au, bu, cu)))
+                local i1 = math.min(nx - 1, math.ceil(math.max(au, bu, cu)))
+                local j0 = math.max(0, math.floor(math.min(av, bv, cv)))
+                local j1 = math.min(ny - 1, math.ceil(math.max(av, bv, cv)))
+                for j = j0, j1 do for i = i0, i1 do
+                    local pu, pv = i + 0.5, j + 0.5
+                    local w1 = ((bv - cv) * (pu - cu) + (cu - bu) * (pv - cv)) / d
+                    local w2 = ((cv - av) * (pu - cu) + (au - cu) * (pv - cv)) / d
+                    local w3 = 1 - w1 - w2
+                    if w1 >= -1e-6 and w2 >= -1e-6 and w3 >= -1e-6 then
+                        local z = w1 * a.z + w2 * b.z + w3 * c.z
+                        local cell = j * nx + i
+                        local n, dup = count[cell], false
+                        for l = 0, n - 1 do if math.abs(zs[cell * LAYERS + l] - z) < 0.5 then dup = true end end
+                        if not dup and n < LAYERS then zs[cell * LAYERS + n] = z; count[cell] = n + 1 end
+                    end
+                end end
+            end
+        end
+    end
+    -- }}}
+
+    -- {{{ which floors are under ground
+    local nodes = nx * ny * LAYERS
+    local under = ffi.new("uint8_t[?]", nodes)
+    local terrain_seen = 0
+    for j = 0, ny - 1 do for i = 0, nx - 1 do
+        local cell = j * nx + i
+        if count[cell] > 0 then
+            local th = terrain_height(place.map, xmax - (j + 0.5) * CELL, ymax - (i + 0.5) * CELL)
+            if th then terrain_seen = terrain_seen + 1 end
+            for l = 0, count[cell] - 1 do
+                -- no terrain at all (a dungeon map): every floor counts as indoors
+                under[cell * LAYERS + l] = ((not th) or th - zs[cell * LAYERS + l] > UNDER) and 1 or 0
+            end
+        end
+    end end
+    -- }}}
+
+    local queue = ffi.new("int32_t[?]", nodes)
+    local DI, DJ = { 1, -1, 0, 0 }, { 0, 0, 1, -1 }
+
+    -- {{{ drop small pockets of "under ground": joined through under-ground floor only, under POCKET squares
+    local pocket = ffi.new("int32_t[?]", nodes)
+    local pocket_label, big, big_size = 0, 0, 0
+    for start = 0, nodes - 1 do
+        if under[start] == 1 and pocket[start] == 0 then
+            pocket_label = pocket_label + 1
+            pocket[start] = pocket_label
+            local head, tail = 0, 1
+            queue[0] = start
+            while head < tail do
+                local node = queue[head]; head = head + 1
+                local c = math.floor(node / LAYERS)
+                local i, j, z = c % nx, math.floor(c / nx), zs[node]
+                for k = 1, 4 do
+                    local i2, j2 = i + DI[k], j + DJ[k]
+                    if i2 >= 0 and i2 < nx and j2 >= 0 and j2 < ny then
+                        local c2 = j2 * nx + i2
+                        for l2 = 0, count[c2] - 1 do
+                            local n2 = c2 * LAYERS + l2
+                            if under[n2] == 1 and pocket[n2] == 0 and math.abs(zs[n2] - z) <= CLIMB then
+                                pocket[n2] = pocket_label; queue[tail] = n2; tail = tail + 1
+                            end
+                        end
+                    end
+                end
+            end
+            if tail < POCKET then
+                for q = 0, tail - 1 do under[queue[q]] = 0 end
+            elseif tail > big_size then
+                big, big_size = pocket_label, tail
+            end
+        end
+    end
+    -- }}}
+
+    -- {{{ keep: the largest pocket of under-ground floor (the cave itself; another cave
+    -- joined to it only across open country stays out), and APRON squares of outside
+    -- floor beyond its entrances, reached by walking
+    local dist = ffi.new("int32_t[?]", nodes)
+    local head, tail = 0, 0
+    for n = 0, nodes - 1 do
+        dist[n] = -1
+        if pocket[n] == big then dist[n] = 0; queue[tail] = n; tail = tail + 1 end
+    end
+    while head < tail do
+        local node = queue[head]; head = head + 1
+        if dist[node] < APRON then
+            local c = math.floor(node / LAYERS)
+            local i, j, z = c % nx, math.floor(c / nx), zs[node]
+            for k = 1, 4 do
+                local i2, j2 = i + DI[k], j + DJ[k]
+                if i2 >= 0 and i2 < nx and j2 >= 0 and j2 < ny then
+                    local c2 = j2 * nx + i2
+                    for l2 = 0, count[c2] - 1 do
+                        local n2 = c2 * LAYERS + l2
+                        if dist[n2] < 0 and math.abs(zs[n2] - z) <= CLIMB then
+                            dist[n2] = dist[node] + 1; queue[tail] = n2; tail = tail + 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+    -- }}}
+
+    -- {{{ crop to what is kept; one floor a square (the lowest kept: a bridge over a passage shows the passage)
+    local i0, i1, j0, j1 = nx, -1, ny, -1
+    for c = 0, nx * ny - 1 do
+        for l = 0, count[c] - 1 do
+            if dist[c * LAYERS + l] >= 0 then
+                local i, j = c % nx, math.floor(c / nx)
+                i0, i1, j0, j1 = math.min(i0, i), math.max(i1, i), math.min(j0, j), math.max(j1, j)
+            end
+        end
+    end
+    if i1 < 0 then error(place.key .. ": no floor kept (no under-ground floor joined to anything)") end
+    i0, j0 = math.max(0, i0 - MARGIN), math.max(0, j0 - MARGIN)
+    i1, j1 = math.min(nx - 1, i1 + MARGIN), math.min(ny - 1, j1 + MARGIN)
+    local w, h = i1 - i0 + 1, j1 - j0 + 1
+    local open, inside = {}, {}
+    local zout = ffi.new("int16_t[?]", w * h)
+    local kept, indoors, layered = 0, 0, 0
+    local zlo, zhi = 1e9, -1e9
+    -- where buddies start: the far end of an entrance's apron (the southernmost
+    -- if several), or, for a place with no outdoors, the floor square nearest its
+    -- `entrance` (where the game puts a player who walks in)
+    local start, start_rank = nil, -1
+    for j = 0, h - 1 do for i = 0, w - 1 do
+        local c = (j + j0) * nx + (i + i0)
+        local pick, pz, many = nil, 1e9, 0
+        for l = 0, count[c] - 1 do
+            local n = c * LAYERS + l
+            if dist[n] >= 0 then many = many + 1; if zs[n] < pz then pick, pz = n, zs[n] end end
+        end
+        local o = j * w + i
+        if pick then
+            open[o] = true; kept = kept + 1
+            if under[pick] == 1 then inside[o] = true; indoors = indoors + 1 end
+            if many > 1 then layered = layered + 1 end
+            local rank
+            if place.entrance then
+                local dx = (xmax - (j + j0 + 0.5) * CELL) - place.entrance.x
+                local dy = (ymax - (i + i0 + 0.5) * CELL) - place.entrance.y
+                rank = -(dx * dx + dy * dy)
+            elseif under[pick] == 0 then
+                rank = dist[pick] * 100000 + j
+            end
+            if rank and rank > start_rank then start, start_rank = { i, j }, rank end
+            zout[o] = math.floor(pz * 4 + 0.5)
+            zlo, zhi = math.min(zlo, pz), math.max(zhi, pz)
+        else
+            zout[o] = -32768
+        end
+    end end
+    -- }}}
+
+    -- {{{ bit rows, eight squares a byte, row after row
+    local function bits(set)
+        local bytes = {}
+        for o = 0, w * h - 1, 8 do
+            local v = 0
+            for k = 0, 7 do if set[o + k] and (o + k) < w * h then v = v + bit.lshift(1, k) end end
+            bytes[#bytes + 1] = string.char(v)
+        end
+        return b64(table.concat(bytes))
+    end
+    -- }}}
+
+    -- {{{ the minimap behind it, one picture square a grid square
+    local has_picture = false
+    if place.world and minimap then
+        local rgba = ffi.new("uint8_t[?]", w * h * 4)
+        local pictures = {}
+        for j = 0, h - 1 do for i = 0, w - 1 do
+            local x = xmax - (j + j0 + 0.5) * CELL
+            local y = ymax - (i + i0 + 0.5) * CELL
+            local gx, gy = math.floor(32 - x / GRID), math.floor(32 - y / GRID)
+            local key = gx * 100 + gy
+            local pic = pictures[key]
+            if pic == nil then
+                pic = false
+                -- minimap names put the tile numbers the other way round from the map files
+                local hash = minimap.names[string.format("%s\\map%d_%d.blp", place.world, gy, gx):lower()]
+                if hash then
+                    local s = minimap.chain:read("textures\\Minimap\\" .. hash)
+                    if s then pic = Blp.decode(s, hash) end
+                end
+                pictures[key] = pic
+            end
+            if pic then
+                local u = math.floor((32 - y / GRID - gy) * pic.width)
+                local v = math.floor((32 - x / GRID - gx) * pic.height)
+                u, v = math.max(0, math.min(pic.width - 1, u)), math.max(0, math.min(pic.height - 1, v))
+                local o = (v * pic.width + u) * 4
+                local r, g, b = pic.rgba:byte(o + 1, o + 3)
+                local d = (j * w + i) * 4
+                rgba[d], rgba[d + 1], rgba[d + 2], rgba[d + 3] = r, g, b, 255
+                has_picture = true
+            end
+        end end
+        if has_picture then png(OUT .. "/" .. place.key .. ".png", w, h, rgba) end
+    end
+    -- }}}
+
+    local zbytes = ffi.string(zout, w * h * 2)
+    local json = string.format(
+        '{"key":"%s","title":"%s","note":"%s","map":%d,"cell":%g,"w":%d,"h":%d,' ..
+        '"north":%.2f,"west":%.2f,"open":"%s","inside":"%s","z":"%s","zlo":%.2f,"zhi":%.2f,' ..
+        '"picture":%s,"start":[%d,%d],"stats":{"floor":%d,"indoors":%d,"layered":%d,"pieces":%d,"terrainSquares":%d}}',
+        place.key, place.title, place.note, place.map, CELL, w, h,
+        xmax - j0 * CELL, ymax - i0 * CELL, bits(open), bits(inside), b64(zbytes), zlo, zhi,
+        has_picture and ('"' .. place.key .. '.png"') or "null", start[1], start[2],
+        kept, indoors, layered, #pieces, terrain_seen)
+    local f = assert(io.open(OUT .. "/" .. place.key .. ".json", "w"))
+    f:write(json); f:close()
+    print(string.format("%-11s %4d x %-4d squares  floor %6d  indoors %6d  over-and-under %4d  mesh pieces %6d  picture %s",
+        place.key, w, h, kept, indoors, layered, #pieces, has_picture and "yes" or "no"))
+end
+-- }}}
+
+-- {{{ main
+os.execute("mkdir -p '" .. OUT .. "'")
+local chain = Mpq.chain(CLIENT, "enUS")
+local trs = chain:read("textures\\Minimap\\md5translate.trs")
+if not trs then error("no minimap name table (textures\\Minimap\\md5translate.trs) in " .. CLIENT) end
+local names = {}
+for line in trs:gmatch("[^\r\n]+") do
+    local plain, hashed = line:match("^(.-)\t(.+)$")
+    if plain then names[plain:lower()] = hashed end
+end
+local only = os.getenv("FLOORS_ONLY")
+for _, place in ipairs(PLACES) do
+    if not only or only == place.key then measure(place, { chain = chain, names = names }) end
+end
+print("written to " .. OUT)
+-- }}}

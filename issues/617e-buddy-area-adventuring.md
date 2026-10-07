@@ -881,7 +881,19 @@ Verbatim:
   bearings drift round over time? The owner, 2026-10-07: "tunnels may
   curve. A 20 yard line isn't necessarily indicative of a doorway." So
   the test itself is in doubt, not only how often it fires. Being
-  brainstormed.
+  brainstormed: five ideas were offered, and the owner liked three, all
+  measuring by walking instead of by straight lines. They are (1) walking
+  rings: the floor sorted by walking distance from the entrance, with
+  the Y rule picking a percent of it; (2) the unseen edge: walk to the
+  nearest place where remembered floor meets unremembered floor; (3) the
+  floor's skeleton, walked passage by passage by Trémaux's maze rule.
+  They are compared side by side on real floors (Timbermaw Hold,
+  Fargodeep and Jasperlode mines, Wailing Caverns) in
+  `docs/HTML/exploration-compare.html`. The floors come from the
+  server's navigation mesh (`scripts/generate-exploration-floors`), the
+  rules live in `docs/HTML/exploration-compare/explore-engine.js`, and
+  `scripts/test-exploration-engine` prints each rule's numbers per cave.
+  Still open: which rule, or which blend, goes into the game.
 - (Answered 2026-10-07) **Crowding**: the waypoint rule's direction
   changes. Someone within 5 yards moves a waypoint 10 points toward the
   middle if it is in the inner half of the area's radius, and toward the
