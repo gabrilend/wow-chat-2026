@@ -2,8 +2,9 @@
  * sky.c (issue 173n) - the sky dome; see sky.h
  *
  * For a general audience: builds the bowl once (rings of points round
- * the camera), recolours its points from the light each frame, and draws
- * it behind everything.
+ * the camera), each point knowing which of the light's five sky colours
+ * it takes; each frame only the five colours go to the graphics card
+ * (173u), and the bowl is drawn behind everything.
  */
 #include "sky.h"
 #include "doodads.h"
@@ -23,6 +24,17 @@ static const int   RING_SKY[] = { 4, 4, 3, 2, 1, 0 };           /* which sky col
 #define RADIUS 900.0f                                            /* inside the far plane (1600) */
 static Mesh     dome;
 static Material plain;
+static int      loc_sky;
+/* the dome's shader: each point's sky colour number rides in its colour's
+ * red (0-4); the colours themselves are five shader values, set each
+ * frame. No light, no fog: the sky is the fog's backdrop. */
+static const char *SKY_VS =
+    "#version 330\n"
+    "in vec3 vertexPosition; in vec4 vertexColor; uniform mat4 mvp; uniform vec3 sky[5]; out vec3 c;\n"
+    "void main() { c = sky[int(vertexColor.r * 255.0 + 0.5)]; gl_Position = mvp * vec4(vertexPosition, 1.0); }\n";
+static const char *SKY_FS =
+    "#version 330\n"
+    "in vec3 c; out vec4 frag; void main() { frag = vec4(min(c, vec3(1.0)), 1.0); }\n";
 static char     box_path[128];        /* the skybox now drawn ("" none) */
 /* }}} */
 
@@ -40,6 +52,7 @@ void sky_init(void)
             m.vertices[i * 3]     = cosf(el) * cosf(az) * RADIUS;
             m.vertices[i * 3 + 1] = cosf(el) * sinf(az) * RADIUS;
             m.vertices[i * 3 + 2] = sinf(el) * RADIUS;
+            m.colors[i * 4] = (unsigned char)RING_SKY[r];      /* which sky colour (sky[] in the shader) */
             m.colors[i * 4 + 3] = 255;
         }
     m.triangleCount = (RINGS - 1) * SEGMENTS * 2;
@@ -53,9 +66,11 @@ void sky_init(void)
             memcpy(m.indices + n, tri, sizeof tri);
             n += 6;
         }
-    UploadMesh(&m, true);                                    /* colours change through the day */
+    UploadMesh(&m, false);                                   /* sent once; the colours come as shader values */
     dome = m;
-    plain = LoadMaterialDefault();                           /* Raylib's own shader: vertex colours, no light */
+    plain = LoadMaterialDefault();
+    plain.shader = LoadShaderFromMemory(SKY_VS, SKY_FS);
+    loc_sky = GetShaderLocation(plain.shader, "sky");
 }
 /* }}} */
 
@@ -84,12 +99,7 @@ static void skybox_for(const LightNow *light)
 void sky_draw(Vector3 eye, const LightNow *light)
 {
     skybox_for(light);
-    for (int r = 0; r < RINGS; ++r)
-        for (int s = 0; s <= SEGMENTS; ++s) {
-            int i = r * (SEGMENTS + 1) + s;
-            for (int c = 0; c < 3; ++c) dome.colors[i * 4 + c] = (unsigned char)(fminf(light->sky[RING_SKY[r]][c], 1.0f) * 255);
-        }
-    UpdateMeshBuffer(dome, 3, dome.colors, 4 * dome.vertexCount, 0);   /* buffer 3: colours */
+    SetShaderValueV(plain.shader, loc_sky, light->sky, SHADER_UNIFORM_VEC3, 5);   /* the five colours, overhead to horizon */
     rlDisableDepthTest();
     rlDisableDepthMask();
     DrawMesh(dome, plain, MatrixTranslate(eye.x, eye.y, eye.z));

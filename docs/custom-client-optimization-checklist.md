@@ -89,8 +89,15 @@ and per-pixel work. Fewer, larger draw orders beat many small ones.
   one each. **Measured (3b and 4):** animating doodads 2.0 ms to 0.34 ms
   a frame; the whole frame without creatures about 13 ms. The same
   pictures (the gate's orb, the aurora, daytime within 0.09%).
-- [ ] **5. The sky's colours as shader values**, not re-sent vertex
-  colours. Tiny; cleaner. Better.
+- [x] **5. The sky's colours as shader values.** Built 2026-10-06
+  (`sky.c`): each dome point knows which of the five sky colours it
+  takes; the colours go as five shader values; the dome is sent once.
+- [x] **5b. Sight tests for the far horizon and water** (found on the
+  way: the horizon drew up to 160 low-detail tiles, the water every
+  layer, each its own order, none skipped). `horizon.c`, `water.c`: each
+  piece's bounding ball tested. **Measured:** sky and horizon 0.7 to
+  0.17 ms a frame; water 0.77 to 0.08. The whole frame at Astranaar,
+  with its 467 creatures: about 13 ms (36 at the start).
 - [ ] **6. Particles drawn in one batch** from a list of positions,
   sizes and colours (instanced squares). Better, small. Moving their
   motion onto the card too (each particle worked out from its birth

@@ -6,6 +6,7 @@
  */
 #include "horizon.h"
 #include "adt.h"
+#include "sight.h"
 
 #include "raymath.h"
 #include "rlgl.h"
@@ -33,6 +34,8 @@ static const char *FS =
 /* {{{ state */
 static AdtWdl *wdl;                   /* the map's low-detail heights (adt.h) */
 static Mesh   meshes[64 * 64];
+static Vector3 centre[64 * 64];       /* each tile's bounding ball (173u: tiles out of sight aren't drawn) */
+static float   radius[64 * 64];
 static char   made[64 * 64];          /* 0 not yet, 1 made, 2 nothing to draw */
 static double ox_, oy_;
 static Shader shader;
@@ -104,6 +107,10 @@ static void make(int tx, int ty)
         }
     if (!n) { UnloadMesh(m); made[i] = 2; return; }
     m.triangleCount = n / 3;
+    float lo = 1e30f, hi = -1e30f;
+    for (int k = 0; k < m.vertexCount; ++k) { lo = fminf(lo, m.vertices[k * 3 + 2]); hi = fmaxf(hi, m.vertices[k * 3 + 2]); }
+    centre[i] = (Vector3){ m.vertices[8 * 17 * 3 + 8 * 3], m.vertices[8 * 17 * 3 + 8 * 3 + 1], (lo + hi) / 2 };   /* the middle point, half way up */
+    radius[i] = sqrtf(2 * 266.67f * 266.67f + (hi - lo) * (hi - lo) / 4);
     UploadMesh(&m, false);
     meshes[i] = m;
     made[i] = 1;
@@ -117,12 +124,14 @@ void horizon_draw(int tx, int ty, int (*loaded)(int x, int y), Vector3 eye, cons
     if (!ready) return;
     SetShaderValue(shader, loc_sun, light->sun_dir, SHADER_UNIFORM_VEC3);
     SetShaderValue(shader, loc_fog, light->fog, SHADER_UNIFORM_VEC3);
+    Sight sight;
+    sight_from(&sight, MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection()));
     for (int x = tx - HORIZON_REACH; x <= tx + HORIZON_REACH; ++x)
         for (int y = ty - HORIZON_REACH; y <= ty + HORIZON_REACH; ++y) {
             if (x < 0 || x > 63 || y < 0 || y > 63 || loaded(x, y)) continue;
             int i = x * 64 + y;
             if (!made[i]) make(x, y);
-            if (made[i] == 1) DrawMesh(meshes[i], material, MatrixIdentity());
+            if (made[i] == 1 && sight_ball(&sight, centre[i], radius[i])) DrawMesh(meshes[i], material, MatrixIdentity());
         }
 }
 /* }}} */

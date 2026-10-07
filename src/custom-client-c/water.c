@@ -7,6 +7,7 @@
 #include "water.h"
 #include "blp.h"
 #include "dbc.h"
+#include "sight.h"
 #include "sky.h"
 
 #include "raymath.h"
@@ -53,7 +54,7 @@ static const char *FS =
 #define MAX_FRAMES 32
 typedef struct { int id, type; Texture2D frames[MAX_FRAMES]; int nframes; } Kind;
 static Kind  kinds[64];   static int nkinds;
-static struct { Mesh mesh; int kind, tile; } *layers;
+static struct { Mesh mesh; int kind, tile; Vector3 centre; float radius; } *layers;   /* centre, radius: its bounding ball (173u) */
 static int   nlayers, layers_cap;
 static MpqChain *chain;
 static Dbc   table;  static unsigned char *table_bytes;
@@ -124,6 +125,17 @@ static int kind_of(int id)
 }
 /* }}} */
 
+/* {{{ static bounds: a mesh's bounding ball, for the sight test (173u) */
+static void bounds(const Mesh *m, Vector3 *centre, float *radius)
+{
+    float lo[3] = { 1e30f, 1e30f, 1e30f }, hi[3] = { -1e30f, -1e30f, -1e30f };
+    for (int v = 0; v < m->vertexCount; ++v)
+        for (int d = 0; d < 3; ++d) { lo[d] = fminf(lo[d], m->vertices[v * 3 + d]); hi[d] = fmaxf(hi[d], m->vertices[v * 3 + d]); }
+    *centre = (Vector3){ (lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2 };
+    *radius = Vector3Distance(*centre, (Vector3){ hi[0], hi[1], hi[2] });
+}
+/* }}} */
+
 /* {{{ water_add_tile
  * Each wet cell: two triangles over its four corners; the picture
  * repeats once a cell (4.2 yards), placed by world position so
@@ -166,6 +178,7 @@ void water_add_tile(const AdtTile *t, int tile, double ox, double oy)
         layers[nlayers].mesh = m;
         layers[nlayers].kind = kind_of(q->kind);
         layers[nlayers].tile = tile;
+        bounds(&m, &layers[nlayers].centre, &layers[nlayers].radius);
         ++nlayers;
     }
 }
@@ -202,6 +215,7 @@ void water_add_pool(int tile, const float at[16], const WmoPool *p, int kind)
     layers[nlayers].mesh = m;
     layers[nlayers].kind = kind_of(kind);
     layers[nlayers].tile = tile;
+    bounds(&m, &layers[nlayers].centre, &layers[nlayers].radius);
     ++nlayers;
 }
 /* }}} */
@@ -225,10 +239,12 @@ void water_draw(Vector3 eye, const LightNow *light, double seconds)
 {
     SetShaderValue(shader, loc_eye, &eye, SHADER_UNIFORM_VEC3);
     sky_light_shader(shader, light);
+    Sight sight;
+    sight_from(&sight, MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection()));
     rlDisableDepthMask();
     BeginBlendMode(BLEND_ALPHA);
     for (int i = 0; i < nlayers; ++i) {
-        if (layers[i].kind < 0) continue;
+        if (layers[i].kind < 0 || !sight_ball(&sight, layers[i].centre, layers[i].radius)) continue;   /* out of sight: not sent */
         Kind *k = &kinds[layers[i].kind];
         float raw = k->type >= 2 ? 1.0f : 0.0f;
         int sea = k->type == 1;                         /* the sea's colours and opacity, or a river's */

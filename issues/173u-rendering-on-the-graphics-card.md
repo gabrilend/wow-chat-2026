@@ -53,6 +53,12 @@ one (whose bones alone are turned on the processor), all its copies in
 one order. Animating doodads 2.0 ms to 0.34 ms a frame. Nothing is bent
 point by point on the processor any more.
 
+**Step 5 built, and sight tests for the horizon and water (2026-10-06):**
+the sky dome is sent once, its five colours as shader values; the far
+horizon's tiles and the water's layers out of sight aren't drawn. Sky
+and horizon 0.7 to 0.17 ms, water 0.77 to 0.08. The whole frame at
+Astranaar with its creatures: about 13 ms (36 at the start).
+
 ## Intended Behavior
 
 The processor decides what and where (a few numbers per object); the
