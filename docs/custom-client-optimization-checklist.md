@@ -59,10 +59,16 @@ and per-pixel work. Fewer, larger draw orders beat many small ones.
   drawn. **Measured:** ground 10.6 ms to 0.04 ms a frame; 2,304 draw
   orders to about 6. The same picture (compared pixel by pixel: under
   0.1% apart, the moving doodads' difference).
-- [ ] **2. Doodads: sight tests and fewer orders.** Copies outside the
-  view aren't drawn (per model and per tile bounds); pieces sharing a
-  picture and blend are merged. Expected: about 10 ms to a few. Better:
-  no loss.
+- [x] **2a. Doodads: sight tests.** Built 2026-10-06 (`doodads.c`):
+  each frame, each model's copies within the camera's sight are gathered
+  (a ball: the copy's place, the model's reach times the copy's size,
+  plus a tenth and a yard); only those are drawn. Buildings now know
+  their reach too. **Measured:** doodads and buildings 13 ms to 2.2 ms a
+  frame (about 150 orders); the whole frame without creatures 30 ms to
+  14. The same picture (0.14% apart: particles).
+- [ ] **2b. Doodads: fewer orders.** Pieces sharing a picture and blend
+  merged; camera-facing copies (still one order each) folded in by step
+  4. Smaller now that 2a is done; measure again after step 3.
 - [ ] **3. Bending on the card (skinning in the shader).** Figures,
   swaying doodads and camera-facing doodads: their points are sent once
   with their bones and weights; each frame only a bone table (a small

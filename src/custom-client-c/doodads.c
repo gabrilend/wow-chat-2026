@@ -13,6 +13,7 @@
 #include "collide.h"
 #include "m2.h"
 #include "particles.h"
+#include "sight.h"
 #include "water.h"
 #include "sky.h"
 #include "wmo.h"
@@ -117,7 +118,10 @@ typedef struct {
     /* its solid shape (173q): triangles, 9 floats each, model space; every
      * copy placed adds them, placed, to the collision world */
     float      *solid;     int nsolid;
-    float       radius;               /* the farthest point from its middle, as made (for skyboxes) */
+    float       radius;               /* the farthest point from its middle, as made (for skyboxes and the sight test) */
+    /* the copies within the camera's sight this frame (173u): their places,
+     * and which copy each is (for camera-facing models' own meshes) */
+    Matrix     *vis;  int *vis_idx;  int nvis, vis_cap;
 } DoodadModel;
 #define PARTICLE_REACH 150.0f         /* yards: copies further from the camera run no particles */
 
@@ -134,6 +138,7 @@ static LiquidWorld *liquids;          /* where placed buildings' pools go (dooda
 static double origin_x, origin_y;     /* the drawing origin, from doodads_add_tile (pools are filed in world coordinates) */
 static Building *buildings; static int nbuildings, buildings_cap;
 static int       skipped_pieces, moving_models, emitting_models;
+static int       doodad_orders;       /* draw orders sent since last asked (for the picture report, 173u) */
 static Shader    shader;
 static Material  material;
 static int       loc_eye, loc_cutoff, loc_unlit, loc_indoor, loc_layers, loc_combine, loc_set0, loc_set1, loc_move0, loc_move1, loc_tint;
@@ -384,6 +389,11 @@ static int load_building(const char *name)
         bad = wmo_read_group(s, len, &g, why, sizeof why);
         free(s);
         if (bad) { fprintf(stderr, "buildings: %s: %s; that part is left out\n", path, why); continue; }
+        /* how far it reaches from its middle (for the sight test, 173u) */
+        for (uint32_t v = 0; v < g.nvertices; ++v) {
+            float r = sqrtf(g.vertices[v].x * g.vertices[v].x + g.vertices[v].y * g.vertices[v].y + g.vertices[v].z * g.vertices[v].z);
+            if (r > md->radius) md->radius = r;
+        }
         /* its solid triangles (173q), kept in the building's own space */
         int nt = (int)(g.nindices / 3);
         md->solid = realloc(md->solid, sizeof(float) * 9 * (size_t)(md->nsolid + nt + 1));
@@ -599,7 +609,7 @@ static void draw_pass(int see_through)
 {
     for (int i = 0; i < nmodels; ++i) {
         DoodadModel *md = &models[i];
-        if (!md->ncopies) continue;
+        if (!md->nvis) continue;                          /* none in sight (or none placed) */
         for (int k = 0; k < md->npieces; ++k) {
             DoodadPiece *p = &md->pieces[k];
             if ((p->blend >= 2) != see_through) continue;
@@ -626,9 +636,11 @@ static void draw_pass(int see_through)
             if (see_through) BeginBlendMode(p->blend == 2 ? BLEND_ALPHA : p->blend >= 5 ? BLEND_MULTIPLIED : BLEND_ADDITIVE);
             material.maps[MATERIAL_MAP_DIFFUSE].texture = pictures[p->picture].tex;
             if (md->billboard && md->ncopy_mesh >= md->ncopies * md->npieces) {   /* each copy its own pose */
-                for (int c = 0; c < md->ncopies; ++c) DrawMeshInstanced(md->copy_mesh[c * md->npieces + k], material, &md->copies[c], 1);
+                for (int v = 0; v < md->nvis; ++v) DrawMeshInstanced(md->copy_mesh[md->vis_idx[v] * md->npieces + k], material, &md->vis[v], 1);
+                doodad_orders += md->nvis;
             } else {
-                DrawMeshInstanced(p->mesh, material, md->copies, md->ncopies);
+                DrawMeshInstanced(p->mesh, material, md->vis, md->nvis);
+                ++doodad_orders;
             }
             if (see_through) EndBlendMode();
         }
@@ -687,8 +699,40 @@ static void draw_particles(Vector3 right, Vector3 up, Vector3 eye, const LightNo
     }
 }
 
+/* {{{ static gather_sight: each model's copies within the camera's sight
+ * (173u). A copy's ball: its place, the model's reach times the copy's
+ * size (its matrix's longest axis), a tenth more for swaying and a yard
+ * for luck. The skybox isn't a placed model and is drawn on its own. */
+static void gather_sight(void)
+{
+    Sight sight;
+    sight_from(&sight, MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection()));
+    for (int i = 0; i < nmodels; ++i) {
+        DoodadModel *md = &models[i];
+        md->nvis = 0;
+        if (!md->ncopies) continue;
+        if (md->vis_cap < md->ncopies) {
+            md->vis_cap = md->ncopies;
+            md->vis = realloc(md->vis, sizeof *md->vis * md->vis_cap);
+            md->vis_idx = realloc(md->vis_idx, sizeof *md->vis_idx * md->vis_cap);
+        }
+        for (int c = 0; c < md->ncopies; ++c) {
+            const Matrix *m = &md->copies[c];
+            float sx = m->m0 * m->m0 + m->m1 * m->m1 + m->m2 * m->m2, sy = m->m4 * m->m4 + m->m5 * m->m5 + m->m6 * m->m6, sz = m->m8 * m->m8 + m->m9 * m->m9 + m->m10 * m->m10;
+            float size = sqrtf(fmaxf(sx, fmaxf(sy, sz)));
+            if (!sight_ball(&sight, (Vector3){ m->m12, m->m13, m->m14 }, md->radius * size * 1.1f + 1.0f)) continue;
+            md->vis[md->nvis] = *m;
+            md->vis_idx[md->nvis++] = c;
+        }
+    }
+}
+/* }}} */
+
+int doodads_orders_last(void) { int n = doodad_orders; doodad_orders = 0; return n; }
+
 void doodads_draw(Vector3 eye, const LightNow *light)
 {
+    gather_sight();
     SetShaderValue(shader, loc_eye, &eye, SHADER_UNIFORM_VEC3);
     sky_light_shader(shader, light);
     draw_pass(0);

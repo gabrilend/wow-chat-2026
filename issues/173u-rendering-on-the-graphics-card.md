@@ -34,6 +34,11 @@ walls from the camera's matrix, and a ball test; tested without a
 window). Ground: 10.6 ms to 0.04 ms a frame, about 6 orders. Picture
 reports now count the ground's orders.
 
+**Step 2a built (2026-10-06):** doodad and building copies outside the
+camera's sight aren't drawn (each model's visible copies gathered per
+frame; buildings now know their reach). Doodads 13 ms to 2.2 ms a frame,
+about 150 orders; the frame without creatures 30 ms to 14.
+
 ## Intended Behavior
 
 The processor decides what and where (a few numbers per object); the

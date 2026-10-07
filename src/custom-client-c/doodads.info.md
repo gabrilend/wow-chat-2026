@@ -47,3 +47,6 @@ How a placement becomes a position and a turn is adt_place_matrix
   How many models and copies are loaded, how many pieces were left out
   because their picture is chosen by the game at run time, how many
   models move, and how many have particles (for the start-up report).
+- `int doodads_orders_last(void);`
+  How many draw orders the doodads sent since last asked (for the
+  picture report; 173u). Only copies within the camera's sight are drawn.

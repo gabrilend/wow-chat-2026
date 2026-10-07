@@ -59,4 +59,8 @@ void doodads_draw_skybox(Vector3 eye);
  * models move, and how many have particles (for the start-up report). */
 void doodads_counts(int *models, int *copies, int *skipped_pieces, int *moving, int *emitting);
 
+/* How many draw orders the doodads sent since last asked (for the
+ * picture report; 173u). Only copies within the camera's sight are drawn. */
+int  doodads_orders_last(void);
+
 #endif
