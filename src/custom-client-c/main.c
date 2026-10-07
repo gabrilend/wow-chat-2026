@@ -192,6 +192,16 @@ typedef struct { int spawn; Figure fig; MovesState moves; } Standing;
 static Standing *standing;   static int nstanding, standing_cap;
 static int    bad_display[512];  static int nbad_display;
 static double creature_build_s;                          /* seconds spent building creatures, for the report */
+/* how far creatures are seen (yards): the server tells a client only of
+ * creatures within its visibility distance (this server's worldserver.conf:
+ * Visibility.Distance.Continents = 100; AzerothCore's default 90), so the
+ * original never draws one farther. This list stands in for the network,
+ * so it shows what the network would send. Drawing all 467 round
+ * Astranaar out to the view distance cost about 6 ms a frame. */
+#define CREATURE_SEEN_REACH 100.0
+static double creature_s, creature_pose_s;               /* seconds spent posing and drawing creatures, and posing alone, for the report */
+static int    last_posed;                                /* creatures posed last frame, for the report */
+static int    last_drawn;                                /* creatures drawn last frame, for the report */
 static void bring_creatures(int tx, int ty)
 {
     int first, n = creatures_in_tile(&spawns, tx, ty, &first);
@@ -548,21 +558,24 @@ int main(int argc, char **argv)
             figure_bend(&others[i], &other_at[i].moves, (uint32_t)clock_ms);
         }
         /* the world's creatures (173t): standing, breathing; only those
-         * within CREATURE_BEND_REACH are bent each frame (bending is most of
-         * their cost: 467 round Astranaar took 14 ms a frame); farther ones
-         * keep their last pose, too far to see the difference */
+         * she could see (CREATURE_SEEN_REACH, drawn below) are bent */
+        double creature_t0 = GetTime();
         {
-            const float CREATURE_BEND_REACH = 100.0f;    /* yards; this client's choice */
-            float reach2 = fminf((float)settings_num("farclip"), CREATURE_BEND_REACH);
+            int posed = 0;
+            float reach2 = fminf((float)settings_num("farclip"), CREATURE_SEEN_REACH);
             reach2 *= reach2;
             for (int i = 0; i < nstanding; ++i) {
                 const Spawn *sp = &spawns.spawns[standing[i].spawn];
                 double dx = sp->x - elf.x, dy = sp->y - elf.y;
                 if (dx * dx + dy * dy > reach2) continue;
+                ++posed;
                 moves_advance(&standing[i].moves, &standing[i].fig.anim, dt);
                 figure_bend(&standing[i].fig, &standing[i].moves, (uint32_t)clock_ms);
             }
+            last_posed = posed;
         }
+        creature_s += GetTime() - creature_t0;
+        creature_pose_s += GetTime() - creature_t0;
         refresh_tiles();
         SetWindowTitle(TextFormat("Everland Ghostsong  -  Ashenvale  x %.1f  y %.1f  z %.1f", elf.x, elf.y, elf.z));
         /* }}} */
@@ -681,12 +694,20 @@ int main(int argc, char **argv)
         for (int i = 0; i < nothers; ++i)
             figure_draw(&others[i], model_sh, MatrixMultiply(MatrixRotateZ(other_at[i].facing),
                         MatrixTranslate((float)(other_at[i].x - ox), (float)(other_at[i].y - oy), (float)other_at[i].z)));
-        for (int i = 0; i < nstanding; ++i) {            /* the world's creatures (173t), within the view distance */
+        creature_t0 = GetTime();
+        int creatures_drawn = 0;
+        for (int i = 0; i < nstanding; ++i) {            /* the world's creatures (173t): within sight, and not behind the camera */
             const Spawn *sp = &spawns.spawns[standing[i].spawn];
-            double dx = sp->x - elf.x, dy = sp->y - elf.y, far = settings_num("farclip");
+            double dx = sp->x - elf.x, dy = sp->y - elf.y, far = fmin(settings_num("farclip"), CREATURE_SEEN_REACH);
             if (dx * dx + dy * dy > far * far) continue;
+            Vector3 to = { (float)(sp->x - ox) - eye.x, (float)(sp->y - oy) - eye.y, (float)sp->z - eye.z }, ahead = Vector3Subtract(look, eye);
+            if (Vector3DotProduct(to, Vector3Normalize(ahead)) < -4.0f * standing[i].fig.scale) continue;   /* wholly behind: 4 yards covers the biggest townsfolk */
+            ++creatures_drawn;
             figure_draw(&standing[i].fig, model_sh, MatrixMultiply(MatrixRotateZ(sp->facing), MatrixTranslate((float)(sp->x - ox), (float)(sp->y - oy), (float)sp->z)));
         }
+        rlDrawRenderBatchActive();
+        creature_s += GetTime() - creature_t0;
+        last_drawn = creatures_drawn;
         EndMode3D();
         EndDrawing();
 
@@ -700,6 +721,7 @@ int main(int argc, char **argv)
             doodads_counts(&dm2, &dc2, &ds2, &dmov2, &demit2);
             printf("tiles: %d loaded, %d dropped over the run; now %d placed, %d solid triangles\n", tiles_loaded, tiles_dropped, dc2, collide_count(solids));
             printf("frames took %.1f ms each on average, over %d (drawing, bending and all)\n", (GetTime() - loop_start) * 1000.0 / frames, frames);
+            printf("creatures took %.2f ms a frame, %.2f of it posing (%d posed, %d drawn, of %d standing)\n", creature_s * 1000.0 / frames, creature_pose_s * 1000.0 / frames, last_posed, last_drawn, nstanding);
             printf("she ended at x %.2f y %.2f z %.2f, %s\n", elf.x, elf.y, elf.z, elf.swimming ? "swimming" : elf.grounded ? "on the ground" : "in the air");
             /* the creatures nearest her (173t), to check pictures against */
             for (int pick = 0, used[5] = { -1, -1, -1, -1, -1 }; pick < 5 && pick < nstanding; ++pick) {

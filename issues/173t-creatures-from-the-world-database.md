@@ -48,9 +48,18 @@ populated." ("yep")
   figures (`--world DIR`, passed by `scripts/custom-client`); dropped
   tiles take theirs away. Each stands where the list says, facing its
   way, playing its standing animation from its own moment, with a ground
-  shadow. Drawn within the view distance; bent only within 100 yards
-  (this client's choice: bending all 467 round Astranaar cost 14 ms a
-  frame; now about 6 ms).
+  shadow.
+- **Seen within 100 yards** (`CREATURE_SEEN_REACH`): the server tells a
+  client only of creatures within its visibility distance (this server's
+  `Visibility.Distance.Continents` is 100; AzerothCore's default 90), so
+  the original never draws one farther; nor are creatures wholly behind
+  the camera drawn. Only those within it are posed.
+- **Cost, measured** (picture reports now print it): at Astranaar's
+  start, 27 posed, 14 drawn, of 467 standing: about 5 ms a frame, of
+  which bending each model point on the processor is about 2.3 ms,
+  sending the bent points to the graphics card about 0.9, the bones'
+  poses about 1.1, drawing about 0.75. Bending on the graphics card
+  (skinning in the shader) would remove the first two; not built.
 - **Sharing:** pictures read from the archives are kept in one cache
   (`figure.c`), and the archive reader remembers files it has unpacked
   (`mpq.c`, up to 256 MB, the one read longest ago forgotten first):
