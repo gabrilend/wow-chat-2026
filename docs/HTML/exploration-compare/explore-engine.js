@@ -583,5 +583,5 @@
   };
   // }}}
 
-  global.ExploreEngine = { buildMap, Sim, METHODS, numbers: { RING_BAND, FORGET } };
+  global.ExploreEngine = { buildMap, Sim, METHODS, numbers: { DT, RING_BAND, FORGET } };
 })(typeof window !== "undefined" ? window : globalThis);

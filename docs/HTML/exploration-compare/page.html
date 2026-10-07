@@ -40,6 +40,9 @@ blockquote { margin: 0; padding-left: 14px; border-left: 3px solid var(--accent)
 .xc-controls :focus-visible, .xc-places button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .xc-panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
 @media (max-width: 860px) { .xc-panels { grid-template-columns: minmax(0, 1fr); } }
+.xc-panels.xc-single { grid-template-columns: minmax(0, 1fr); }
+.xc-panels.xc-single .xc-canvas { max-height: 90vh; }
+.xc-problem { margin: 0; padding: 10px 14px; border: 1px solid var(--m-skeleton); border-radius: 8px; background: var(--panel); color: var(--ink); }
 .xc-panel { margin: 0; display: grid; gap: 8px; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 10px; min-width: 0; }
 .xc-panel figcaption { font: 700 1.05rem var(--display); display: flex; align-items: center; gap: 8px; }
 .xc-swatch { width: 12px; height: 12px; border-radius: 50%; background: var(--m); }

@@ -70,3 +70,57 @@ console.log(failures ? failures + " failures" : "all checks passed");
 process.exit(failures ? 1 : 0);
 '
 node -e "${HARNESS}" "${ENGINE}" "${FLOORS}" "${MINUTES}"
+
+# {{{ the page's own loop, in a stand-in browser
+# The walking code above can pass while the page around it is broken (2026-10-07:
+# the frame loop used a value that had moved into the engine, crashed on its first
+# frame, and the page showed one still picture per cave). This loads the page's
+# drawing script against a stand-in browser that draws nothing but keeps every
+# call, runs four seconds of frames on the first cave, and fails if the loop reports a
+# problem or the clock does not move.
+PAGE_JS="${DIR}/docs/HTML/exploration-compare/compare.js"
+LOOP='
+const fs = require("fs");
+const [engine, page, floors] = process.argv.slice(1);
+globalThis.atob = s => Buffer.from(s, "base64").toString("binary");
+const any = () => new Proxy(function () {}, { get: (t, k) => k === "canvas" ? {} : k === "fillStyle" ? t._fill || "#888888" : any(), set: (t, k, v) => { if (k === "fillStyle") t._fill = v; return true; }, apply: () => any() });
+function Node(tag) {
+  this.tag = tag; this.kids = []; this.attrs = {}; this.style = {}; this.hidden = false; this.textContent = "";
+  this.classList = { toggle() {} }; this.width = 0; this.height = 0;
+}
+Node.prototype.append = function (...k) { this.kids.push(...k); };
+Node.prototype.replaceChildren = function (...k) { this.kids = k; };
+Node.prototype.setAttribute = function (k, v) { this.attrs[k] = v; if (k === "hidden") this.hidden = true; };
+Node.prototype.addEventListener = function () {};
+Node.prototype.querySelectorAll = function () { return []; };
+Node.prototype.getBoundingClientRect = function () { return { width: 300, height: 200 }; };
+Node.prototype.getContext = function () { const c = any(); return c; };
+const root = new Node("section");
+globalThis.document = { getElementById: () => root, createElement: t => new Node(t) };
+globalThis.window = globalThis;
+globalThis.getComputedStyle = () => ({ getPropertyValue: () => "#888888" });
+globalThis.ImageData = function (w, h) { this.width = w; this.height = h; this.data = new Uint8ClampedArray(w * h * 4); };
+globalThis.Image = function () { const self = this; Object.defineProperty(this, "src", { set() { self.onload && self.onload(); } }); };
+let pending = null, now = 0;
+globalThis.requestAnimationFrame = f => { pending = f; };
+globalThis.performance = { now: () => now };
+globalThis.matchMedia = () => ({ matches: false });
+require(engine);
+const list = fs.readdirSync(floors).filter(f => f.endsWith(".json")).sort().map(f => JSON.parse(fs.readFileSync(floors + "/" + f, "utf8")));
+window.EXPLORATION_FLOORS = list;
+require(page);
+const find = (n, pred) => pred(n) ? n : (n.kids || []).reduce((a, k) => a || (k instanceof Node && find(k, pred)), null);
+const problem = find(root, n => n.attrs && n.attrs.role === "alert");
+const clock = find(root, n => n.tag === "span" && n.className === "xc-clock");
+// the page opens on the first cave; four seconds of frames at 60 a second
+const before = clock.textContent;
+for (let f = 0; f < 240; f++) { now += 16.7; const cb = pending; pending = null; if (!cb) break; cb(now); }
+let failures = 0;
+console.log(`page loop on ${list[0].key}: clock ${before} -> ${clock.textContent}`);
+if (!problem.hidden) { console.log("  FAIL the loop stopped: " + problem.textContent); failures++; }
+if (clock.textContent === before) { console.log("  FAIL the clock did not move"); failures++; }
+console.log(failures ? failures + " page failures" : "page loop runs");
+process.exit(failures ? 1 : 0);
+'
+node -e "${LOOP}" "${ENGINE}" "${PAGE_JS}" "${FLOORS}"
+# }}}

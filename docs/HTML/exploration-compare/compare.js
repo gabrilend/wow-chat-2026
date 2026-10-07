@@ -30,7 +30,7 @@
   const root = document.getElementById("xc-root");
   if (!root || !FLOORS || !FLOORS.length || !window.ExploreEngine) return;
   const { buildMap, Sim, METHODS, numbers } = window.ExploreEngine;
-  const RING_BAND = numbers.RING_BAND, FORGET = numbers.FORGET;
+  const DT = numbers.DT, RING_BAND = numbers.RING_BAND, FORGET = numbers.FORGET;
 
   // {{{ the page's colours, read from its tokens so both themes work
   function tokens() {
@@ -115,7 +115,7 @@
   // }}}
 
   // {{{ the page: controls, three panels, the charts, the table
-  const state = { place: 0, playing: true, speed: 30, buddies: 3, view: true, feet: false, sims: [], maps: {}, images: {} };
+  const state = { place: 0, playing: true, speed: 30, buddies: 3, view: true, feet: false, routes: true, focus: "all", sims: [], maps: {}, images: {} };
   const ORDER = ["rings", "frontier", "skeleton"];
 
   const el = (tag, attrs, ...kids) => {
@@ -135,14 +135,22 @@
   const budOut = el("output", { for: "xc-buddies" }, "3");
   const viewChk = el("input", { type: "checkbox", id: "xc-view", checked: "", onchange: () => { state.view = viewChk.checked; } });
   const feetChk = el("input", { type: "checkbox", id: "xc-feet", onchange: () => { state.feet = feetChk.checked; } });
+  const routeChk = el("input", { type: "checkbox", id: "xc-routes", checked: "", onchange: () => { state.routes = routeChk.checked; } });
+  // one rule at a time, as large as the page allows, for following a single buddy's choices
+  const focusSel = el("select", { id: "xc-focus", onchange: () => { state.focus = focusSel.value; showFocus(); } });
+  [["all", "All three"], ...ORDER.map(k => [k, METHODS[k].label + " only"])].forEach(([v, t]) => focusSel.append(el("option", { value: v }, t)));
   const clock = el("span", { class: "xc-clock" }, "0:00");
   const controls = el("div", { class: "xc-controls" },
     el("div", { class: "xc-buttons" }, playBtn, restartBtn),
     el("label", { class: "xc-field" }, "Speed ", speedSel),
     el("label", { class: "xc-field" }, "Buddies ", budRange, budOut),
+    el("label", { class: "xc-field" }, "Show ", focusSel),
+    el("label", { class: "xc-check" }, routeChk, " Planned walks"),
     el("label", { class: "xc-check" }, viewChk, " Each rule's own view"),
     el("label", { class: "xc-check" }, feetChk, " Footprints"),
     el("span", { class: "xc-field" }, "Time exploring ", clock));
+  // a failure in the frame loop is shown on the page, not left as a silently frozen picture
+  const problem = el("p", { class: "xc-problem", role: "alert", hidden: "" });
   const placeNote = el("p", { class: "xc-note" });
   const panels = el("div", { class: "xc-panels" });
   const panelParts = ORDER.map(kind => {
@@ -150,15 +158,19 @@
     const nums = el("dl", { class: "xc-nums" });
     const p = el("figure", { class: "xc-panel", "data-method": kind }, el("figcaption", {}, el("span", { class: "xc-swatch" }), METHODS[kind].label), cv, nums);
     panels.append(p);
-    return { kind, cv, nums };
+    return { kind, cv, nums, fig: p };
   });
+  function showFocus() {
+    panels.classList.toggle("xc-single", state.focus !== "all");
+    for (const p of panelParts) p.fig.hidden = state.focus !== "all" && state.focus !== p.kind;
+  }
   const chartSeen = el("canvas", { class: "xc-chart", "aria-label": "Floor seen over time" });
   const chartEnds = el("canvas", { class: "xc-chart", "aria-label": "Far ends reached over time" });
   const charts = el("div", { class: "xc-charts" },
     el("figure", {}, el("figcaption", {}, "Floor seen from within 20 yards"), chartSeen),
     el("figure", {}, el("figcaption", {}, "Far ends reached"), chartEnds));
   const legend = el("div", { class: "xc-legend" }, ...ORDER.map(k => el("span", { "data-method": k }, METHODS[k].label)));
-  root.append(placeBar, placeNote, controls, panels, el("section", { class: "xc-chartcard" }, legend, charts));
+  root.append(placeBar, placeNote, controls, problem, panels, el("section", { class: "xc-chartcard" }, legend, charts));
 
   function fmt(t) { const m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + String(s).padStart(2, "0"); }
 
@@ -208,6 +220,7 @@
     const refreshView = now - state.lastView > 250;
     if (refreshView) state.lastView = now;
     panelParts.forEach((p, k) => {
+      if (p.fig.hidden) return;
       const sim = state.sims[k], g = p.cv.getContext("2d");
       g.imageSmoothingEnabled = false;
       g.drawImage(M.base, 0, 0);
@@ -230,6 +243,18 @@
       }
       // buddies, with a short trail
       const col = T["c" + ORDER[k]];
+      // each buddy's planned walk, from where it stands to its goal (a cross): the path
+      // finder's answer, so a wrong turn or a hug of a wall shows before it is walked
+      if (state.routes) for (const b of sim.buddies) {
+        if (b.at >= b.route.length) continue;
+        g.beginPath(); g.moveTo(b.x * S, b.y * S);
+        for (let m = b.at; m < b.route.length; m++) { const c = b.route[m]; g.lineTo((c % M.W + 0.5) * S, (((c / M.W) | 0) + 0.5) * S); }
+        g.setLineDash([Math.max(2, S * 1.5), Math.max(2, S * 1.5)]);
+        g.strokeStyle = "rgba(255,255,255,0.8)"; g.lineWidth = Math.max(1, S * 0.45); g.stroke(); g.setLineDash([]);
+        const c = b.route[b.route.length - 1], gx = (c % M.W + 0.5) * S, gy = (((c / M.W) | 0) + 0.5) * S, r = Math.max(4, S * 2.2);
+        g.beginPath(); g.moveTo(gx - r, gy - r); g.lineTo(gx + r, gy + r); g.moveTo(gx + r, gy - r); g.lineTo(gx - r, gy + r);
+        g.strokeStyle = col; g.lineWidth = Math.max(1.5, S * 0.8); g.stroke();
+      }
       for (const b of sim.buddies) {
         g.beginPath();
         for (let m = 0; m < b.trail.length; m += 2) { const x = b.trail[m] * S, y = b.trail[m + 1] * S; m ? g.lineTo(x, y) : g.moveTo(x, y); }
@@ -279,25 +304,34 @@
   function frame(now) {
     const real = Math.min(0.1, (now - lastFrame) / 1000);
     lastFrame = now;
-    if (state.M && state.sims.length) {
-      if (state.playing) {
-        const steps = Math.round(real * state.speed / DT);
-        for (let s = 0; s < steps; s++) for (const sim of state.sims) sim.step();
+    try {
+      if (state.M && state.sims.length) {
+        if (state.playing) {
+          const steps = Math.round(real * state.speed / DT);
+          for (let s = 0; s < steps; s++) for (const sim of state.sims) sim.step();
+        }
+        drawPanels(now);
+        if (now - lastChart > 1000) {
+          lastChart = now;
+          for (const sim of state.sims) sim.unevennessCache = sim.unevenness();
+          const T = tokens();
+          drawChart(chartSeen, "seen", T); drawChart(chartEnds, "ends", T);
+        }
       }
-      drawPanels(now);
-      if (now - lastChart > 1000) {
-        lastChart = now;
-        for (const sim of state.sims) sim.unevennessCache = sim.unevenness();
-        const T = tokens();
-        drawChart(chartSeen, "seen", T); drawChart(chartEnds, "ends", T);
-      }
+    } catch (err) {
+      // stop and say so: what failed, where, and what was running
+      problem.hidden = false;
+      problem.textContent = "The animation stopped: " + err.message + ". It was drawing " + (FLOORS[state.place] || {}).title +
+        " at " + fmt(state.sims.length ? state.sims[0].t : 0) + " of exploring, " + state.buddies + " buddies, speed " + state.speed + "×. " +
+        "To debug: open the browser's console for the line; does scripts/test-exploration-engine pass on the same floors?";
+      return;
     }
     requestAnimationFrame(frame);
   }
 
-  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    state.playing = false; playBtn.textContent = "Play";
-  }
+  // The page plays from the start, even where the system asks for reduced motion: the moving
+  // buddies are the content here, not decoration. (2026-10-07: starting paused under that setting,
+  // with the loop also broken, read to the owner as "a picture gallery slideshow".)
   restart();
   requestAnimationFrame(frame);
   // }}}
