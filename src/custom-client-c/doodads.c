@@ -473,6 +473,34 @@ typedef struct { int tile; Placement *p; int n; } TileRecord;
 static TileRecord *records;  static int nrecords;
 typedef struct { uint32_t uid; int building, tile; } Seen;
 static Seen *seen_list;      static int nseen_list, seen_list_cap;
+/* seen_index: where each placement sits in seen_list, by its uid and kind
+ * (a hash table, open addressing; slots hold a position + 1, 0 empty),
+ * so "placed already?" is a lookup, not a search through every
+ * placement seen (about 7,000 round Astranaar: up to 10 ms a tile load
+ * as a search, measured 2026-10-07; 173u). Rebuilt whole when it grows
+ * and when a tile is dropped (rare). */
+static int *seen_index;      static int seen_index_cap;   /* a power of two, at least twice nseen_list */
+static unsigned seen_slot(uint32_t uid, int building) { return (uid * 2654435761u ^ (unsigned)building * 0x9E3779B9u) & (unsigned)(seen_index_cap - 1); }
+static int seen_find(uint32_t uid, int building)
+{
+    if (!seen_index_cap) return -1;
+    for (unsigned s = seen_slot(uid, building); seen_index[s]; s = (s + 1) & (unsigned)(seen_index_cap - 1)) {
+        const Seen *e = &seen_list[seen_index[s] - 1];
+        if (e->uid == uid && e->building == building) return seen_index[s] - 1;
+    }
+    return -1;
+}
+static void seen_reindex(void)
+{
+    while (seen_index_cap < (nseen_list + 1) * 2) seen_index_cap = seen_index_cap ? seen_index_cap * 2 : 8192;
+    seen_index = realloc(seen_index, sizeof *seen_index * (size_t)seen_index_cap);
+    memset(seen_index, 0, sizeof *seen_index * (size_t)seen_index_cap);
+    for (int i = 0; i < nseen_list; ++i) {
+        unsigned s = seen_slot(seen_list[i].uid, seen_list[i].building);
+        while (seen_index[s]) s = (s + 1) & (unsigned)(seen_index_cap - 1);
+        seen_index[s] = i + 1;
+    }
+}
 /* }}} */
 
 /* {{{ static add_copy: one more place for model `which`, brought by `tile` */
@@ -495,11 +523,15 @@ static void realise(const TileRecord *r)
 {
     for (int k = 0; k < r->n; ++k) {
         const Placement *p = &r->p[k];
-        int dup = 0;
-        for (int i = 0; i < nseen_list && !dup; ++i) dup = seen_list[i].uid == p->uid && seen_list[i].building == p->building;
-        if (dup) continue;
+        if (seen_find(p->uid, p->building) >= 0) continue;   /* another tile placed it already */
         if (nseen_list == seen_list_cap) { seen_list_cap = seen_list_cap ? seen_list_cap * 2 : 4096; seen_list = realloc(seen_list, sizeof *seen_list * seen_list_cap); }
         seen_list[nseen_list++] = (Seen){ p->uid, p->building, r->tile };
+        if (seen_index_cap < nseen_list * 2) seen_reindex();
+        else {
+            unsigned s = seen_slot(p->uid, p->building);
+            while (seen_index[s]) s = (s + 1) & (unsigned)(seen_index_cap - 1);
+            seen_index[s] = nseen_list;
+        }
         if (!p->building) { add_copy(p->which, p->at, r->tile); continue; }
         /* a building, and the furnishings of the set it asks for (set 0
          * holds what every placement shows, so it is always added) */
@@ -594,6 +626,7 @@ void doodads_drop_tile(int tile)
     int k2 = 0;
     for (int i = 0; i < nseen_list; ++i) if (seen_list[i].tile != tile) seen_list[k2++] = seen_list[i];
     nseen_list = k2;
+    seen_reindex();                                      /* positions moved */
     for (int i = 0; i < nrecords; ++i)
         if (records[i].tile == tile) { free(records[i].p); records[i] = records[--nrecords]; break; }
     for (int i = 0; i < nrecords; ++i) realise(&records[i]);

@@ -157,10 +157,18 @@ and per-pixel work. Fewer, larger draw orders beat many small ones.
   with the address-checked build (a walk and a jump) and the new
   race-checked one (`build-custom-client --tsan`): no faults, no races.
 - [ ] **8d. Parsing new doodad models on the second thread.** What still
-  stalls a walking load (about 9 of its 14 ms): water and doodads,
-  mostly new models' files parsed and their meshes built before sending.
-  The same split as 8c: the reading-ahead thread parses, the main thread
+  stalls a walking load (about 9 of its 14 ms): water and doodads.
+  Measured per load (2026-10-07, four walking loads): new models and
+  buildings parsed and their meshes built, 0.4 to 15 ms (0 to 10 new
+  models); placing the tile's copies, 1 to 7 ms; water under 1 ms. The
+  same split as 8c: the reading-ahead thread parses, the main thread
   sends. Then the blend picture's sending (about 2.7 ms, 4 MB a tile).
+  **Done on the way (2026-10-07):** placing a copy asked "is it placed
+  already?" by searching every placement seen (about 7,000); now a hash
+  table answers. Placing: 10.6 ms to 5.9 on the same load. What it
+  still costs is filing each copy's solid triangles (about 21,000 a
+  tile) into the collision grid: real work, which the main thread's
+  movement reads.
 
 ## Not to do
 
