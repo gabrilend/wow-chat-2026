@@ -39,6 +39,12 @@ camera's sight aren't drawn (each model's visible copies gathered per
 frame; buildings now know their reach). Doodads 13 ms to 2.2 ms a frame,
 about 150 orders; the frame without creatures 30 ms to 14.
 
+**Step 3a built (2026-10-06):** figures (her, bystanders, creatures,
+their items) are bent by the graphics card: bone numbers and weights on
+the points, sent once; the bone poses each frame as a one-row float
+picture; the figure shader bends. Creatures 5.2 ms to 1.7 ms a frame.
+Swaying and camera-facing doodads are still bent on the processor (3b).
+
 ## Intended Behavior
 
 The processor decides what and where (a few numbers per object); the

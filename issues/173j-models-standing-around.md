@@ -17,7 +17,8 @@ models that just stand around and do various animations").
 **Built 2026-10-06**, in C:
 - **`figure.h` / `figure.c` make any animated model a "figure".** A
   figure has its pieces, its points as made, its skeleton and
-  animations, and its bending each frame. A figure comes from either:
+  animations, and its bending each frame (on the graphics card since
+  173u: each frame only its bone poses are sent). A figure comes from either:
   - a character's look (her, a tauren), with pictures painted by
     `character.c`; or
   - a creature display: the client's CreatureDisplayInfo row gives the
