@@ -57,6 +57,13 @@ to, could we build the entire continent?"
   client (with clang).
 - **Tests:** 2 checks. Dropping a tile forgets its triangles (only its
   own) and its water.
+- **Counts stay level (step 4, 2026-10-07):** a jump far enough that
+  every tile round Astranaar is dropped (`--goto -2000 -2000`) ends with
+  the same 2,889 copies and 114,421 solid triangles as starting there
+  afresh (`--map 1 -2000 -2000`): what dropped tiles brought is all
+  gone. A plain long walk was tried first, but she runs into walls in
+  Astranaar and stops on the Barrens' hills, so it crosses too few
+  tiles to show it.
 
 ## Intended Behavior
 

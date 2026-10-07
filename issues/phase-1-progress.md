@@ -165,14 +165,14 @@ separate layer. In C on Raylib; the first Lua version is deprecated.
 | 173g | doodads | Built | Doodads, buildings, furniture, moving doodads, camera-facing bones, layered and moving pictures. |
 | 173h | shadow-maps | Built | Baked ground shadows and soft character shadows. |
 | 173i | night-elf-animation | Completed | Skeleton, animations chosen from movement, blending; walking (keypad /) (in completed/). |
-| 173j | models-standing-around | Built | Creatures and a tauren cycling animations. |
+| 173j | models-standing-around | Completed | Creatures and a tauren cycling animations (in completed/). |
 | 173m | camera | In Progress | Drags, following styles, kept out of walls, Follow Terrain, Water Collision, Smart Pivot, first person and Head Bob; saved views wait for key bindings. |
 | 173n | zone-light-and-sky | Built | The zone's light by place and hour, sky dome, skyboxes. |
 | 173o | particles | Built (doodads) | Torches, orbs, wisps, fading into fog; figures' particles wait for spells and items that carry them. |
 | 173p | equipment-on-the-body | Built | Painted items, switched pieces, helms, shoulders, weapons, cloaks. |
 | 173q | model-collision | Built | Walls, floors, bridges, the camera. |
 | 173r | water-and-swimming | Built | Ground water, buildings' pools, swimming, underwater. |
-| 173s | streaming-tiles | Built | Tiles loaded and dropped as she moves; the far horizon from the low-detail map. |
+| 173s | streaming-tiles | Completed | Tiles loaded and dropped as she moves; the far horizon from the low-detail map (in completed/). |
 | 173t | creatures-from-the-world-database | In Progress | Townsfolk and creatures from a generated list, by tile; one open question (out-of-table facial hair). |
 | 173u | rendering-on-the-graphics-card | Open | Measured: the processor issues thousands of draw orders a frame; eight-step checklist in docs. |
 

@@ -80,6 +80,10 @@ populated." ("yep")
 - Sitting, kneeling and emotes (`creature_addon`), walking routes and
   wandering: with the network, or later here.
 - Ground height: each stands at the database's height, not the ground's.
+- A creature display's own choice of model pieces (its geosets, from
+  CreatureDisplayInfoExtra and the model's flags) isn't read: the body
+  group and each other group's first variant show (moved here from 173j,
+  2026-10-07).
 
 ## Open Questions
 

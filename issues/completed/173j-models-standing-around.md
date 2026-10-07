@@ -25,8 +25,8 @@ models that just stand around and do various animations").
     model (through CreatureModelData), its size, and up to three skins,
     which fill the model's picture slots of kind 11-13.
 - **Creature pieces:** the body group (ids under 100) and the first
-  variant of each other group show. The display's own geoset choice
-  isn't read yet.
+  variant of each other group show. The display's own choice of pieces
+  is for the world's creatures, so it is listed with them (173t).
 - **She is now a figure too.** `main.c` lost its own copy of the model
   code.
 - **The bystanders**, in a table in `main.c` (configuration in
