@@ -175,7 +175,8 @@ separate layer. In C on Raylib; the first Lua version is deprecated.
 | 173s | streaming-tiles | Completed | Tiles loaded and dropped as she moves; the far horizon from the low-detail map (in completed/). |
 | 173t | creatures-from-the-world-database | In Progress | Townsfolk and creatures from a generated list, by tile; one open question (out-of-table facial hair). |
 | 173u | rendering-on-the-graphics-card | Open | Measured: the processor issues thousands of draw orders a frame; eight-step checklist in docs. |
-| 173w | queued-inputs-and-test-characters | Open | Planned: a queue of inputs per character, logs a test reads, many headless test characters at once; four open questions. |
+| 173w | queued-inputs-and-test-characters | Open | Planned: the client's half of 176a's test scenes (queues of inputs, logs, headless test characters). |
+| 176a | test-scenes | Open | Planned: test patches that set up scenes for the cc-test profile, played by queued inputs, checked from RAM logs; six open questions. |
 
 For current counts, run
 `/home/ritz/programming/ai-stuff/scripts/progress-dashboard.lua <project> -m`.

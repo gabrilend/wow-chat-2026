@@ -9,6 +9,9 @@
   test characters into), 173v (the move to its own project: this goes
   with it), 173i and 173q (what the first scripts would test: moving,
   walls)
+- Part of: 176a (test scenes): the queued inputs and test characters
+  are how a scene's characters are driven. The concepts and the open
+  questions are kept there; this issue is the client's half of the work.
 - Priority: Medium
 
 ## Origin
@@ -106,6 +109,10 @@ compared with the client's logs.
 6. With 173e and 176: the same queues driving logged-in test characters.
 
 ## Open Questions
+
+Kept with the rest of the test-scene questions in 176a (owner,
+2026-10-07: "We can come back to it later, when we implement the new
+test-patch system for the cc-test profile"). As first asked here:
 
 1. **The queue's format:** plain lines as above (simple to read in C,
    like the settings file), or a Lua file (the house language, and

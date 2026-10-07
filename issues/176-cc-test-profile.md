@@ -84,7 +84,8 @@ patch gates, source patch list, the word in `.profile`).
    at once, to catch regressions." So a test patch sets up one scene (its
    creatures, objects, a character's starting spot) in a place of its
    own. A cc-test build installs every scene, and one run checks them all.
-   This is its own issue once its shape is clear.
+   This is its own issue: 176a (test scenes), which also holds the
+   queued inputs and test characters that drive a scene.
    - (Answered 2026-10-07) How a scene's result is read: "each character
      would create log files, as specified in the 'test patch'. These are
      saved to RAM and evaluated by a traditional testing suite, to ensure
