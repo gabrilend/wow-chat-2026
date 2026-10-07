@@ -202,6 +202,17 @@ static double creature_build_s;                          /* seconds spent buildi
  * so it shows what the network would send. Drawing all 467 round
  * Astranaar out to the view distance cost about 6 ms a frame. */
 #define CREATURE_SEEN_REACH 100.0
+/* where a frame's time goes, for the picture report: each phase's seconds
+ * summed over the run. Drawing phases measure handing the work to the
+ * graphics card (the card runs behind); "the card finishing" is the frame's
+ * end, where the program waits for the card and shows the picture. */
+enum { PH_MOVE, PH_POSE_HER, PH_DOODADS_ANIMATE, PH_SKY, PH_GROUND, PH_DOODADS_DRAW, PH_WATER, PH_FIGURES_DRAW, PH_FINISH, PH_COUNT };
+static const char *const PHASE_NAME[PH_COUNT] = {
+    "moving her (collision, water, camera)", "posing her and the bystanders", "animating doodads (moving, facing, particles)",
+    "sky and far horizon", "ground", "doodads and buildings", "water", "her, bystanders and creatures", "the card finishing",
+};
+static double phase_s[PH_COUNT];
+#define TIMED(ph, ...) do { double t0_ = GetTime(); __VA_ARGS__; phase_s[ph] += GetTime() - t0_; } while (0)
 static double creature_s, creature_pose_s;               /* seconds spent posing and drawing creatures, and posing alone, for the report */
 static int    last_posed;                                /* creatures posed last frame, for the report */
 static int    last_drawn;                                /* creatures drawn last frame, for the report */
@@ -523,7 +534,7 @@ int main(int argc, char **argv)
         };
         double before_o = elf.o, before_x = elf.x, before_y = elf.y;
         MoverWorld mw = { ground_at, wall_at, water_at, &world };
-        mover_step(&elf, &in, dt, &mw);
+        TIMED(PH_MOVE, mover_step(&elf, &in, dt, &mw));
         /* moving = she moved along the ground this frame, by any cause
          * (keys, both buttons, sliding); turning in place isn't moving */
         int moving = hypot(elf.x - before_x, elf.y - before_y) > 1e-4;
@@ -551,7 +562,7 @@ int main(int argc, char **argv)
             moves.seq = seq; moves.ms = pose_ms; moves.from = -1; moves.once = 0;
         }
         clock_ms += dt * 1000.0;
-        figure_bend(&her, &moves, (uint32_t)clock_ms);
+        TIMED(PH_POSE_HER, figure_bend(&her, &moves, (uint32_t)clock_ms));
         /* the bystanders: each holds an animation for HOLD_MS, then the
          * next of CYCLE its model has */
         for (int i = 0; i < nothers; ++i) {
@@ -645,7 +656,7 @@ int main(int argc, char **argv)
             }
         }
         Camera3D cam = { .position = eye, .target = look, .up = { 0, 0, 1 }, .fovy = 60, .projection = CAMERA_PERSPECTIVE };
-        doodads_animate((uint32_t)clock_ms, dt, eye, look);   /* moving doodads, and particles near the camera */
+        TIMED(PH_DOODADS_ANIMATE, doodads_animate((uint32_t)clock_ms, dt, eye, look));   /* moving doodads, and particles near the camera */
         SetShaderValue(model_sh, eye_m, &eye, SHADER_UNIFORM_VEC3);
         /* }}} */
 
@@ -683,11 +694,11 @@ int main(int argc, char **argv)
         rlMultMatrixf(MatrixToFloat(MatrixPerspective(60 * DEG2RAD, (double)GetScreenWidth() / GetScreenHeight(), 0.3, fmax(settings_num("farclip") * 1.25 + 100, (HORIZON_REACH + 1) * 533.33))));   /* out to the far horizon (173s) */
         rlMatrixMode(RL_MODELVIEW);
         rlDisableBackfaceCulling();
-        sky_draw(eye, &light);                           /* first, behind everything */
+        TIMED(PH_SKY, sky_draw(eye, &light); rlDrawRenderBatchActive());   /* first, behind everything */
         {
             int htx, hty;
             maps_tile_of((float)elf.x, (float)elf.y, &htx, &hty);
-            horizon_draw(htx, hty, tile_loaded, eye, &light);   /* low-detail tiles beyond the loaded ones (173s) */
+            TIMED(PH_SKY, horizon_draw(htx, hty, tile_loaded, eye, &light));   /* low-detail tiles beyond the loaded ones (173s) */
         }
         ground_blob(at.x, at.y, (float)elf.z, 1.3f);     /* her shadow, a little wider than her shoulders */
         for (int i = 0; i < nothers; ++i)                /* theirs, sized by their display's scale */
@@ -696,9 +707,10 @@ int main(int argc, char **argv)
             const Spawn *sp = &spawns.spawns[standing[i].spawn];
             ground_blob((float)(sp->x - ox), (float)(sp->y - oy), (float)sp->z, 1.3f * standing[i].fig.scale);
         }
-        ground_draw(eye, &light);
-        doodads_draw(eye, &light);
-        water_draw(eye, &light, clock_ms / 1000.0);       /* see-through, after the solid world */
+        TIMED(PH_GROUND, ground_draw(eye, &light); rlDrawRenderBatchActive());
+        TIMED(PH_DOODADS_DRAW, doodads_draw(eye, &light); rlDrawRenderBatchActive());
+        TIMED(PH_WATER, water_draw(eye, &light, clock_ms / 1000.0); rlDrawRenderBatchActive());   /* see-through, after the solid world */
+        double figures_t0 = GetTime();
         Matrix place = MatrixMultiply(MatrixRotateZ((float)elf.o + moves.body_turn), MatrixTranslate(at.x, at.y, (float)elf.z));
         if (!first_person) figure_draw(&her, model_sh, place);   /* first person: she isn't drawn (173m) */
         for (int i = 0; i < nothers; ++i)
@@ -718,8 +730,10 @@ int main(int argc, char **argv)
         rlDrawRenderBatchActive();
         creature_s += GetTime() - creature_t0;
         last_drawn = creatures_drawn;
+        rlDrawRenderBatchActive();
+        phase_s[PH_FIGURES_DRAW] += GetTime() - figures_t0;
         EndMode3D();
-        EndDrawing();
+        TIMED(PH_FINISH, EndDrawing());
 
         /* --shot: after 3 world-seconds, the picture, then quit */
         if (shot && ++frames == 60 + (int)((walk_s + dive_s + wait_s) * 20)) {   /* 3 world-seconds after any walk: particles have filled out */
@@ -731,6 +745,7 @@ int main(int argc, char **argv)
             doodads_counts(&dm2, &dc2, &ds2, &dmov2, &demit2);
             printf("tiles: %d loaded, %d dropped over the run; now %d placed, %d solid triangles\n", tiles_loaded, tiles_dropped, dc2, collide_count(solids));
             printf("frames took %.1f ms each on average, over %d (drawing, bending and all)\n", (GetTime() - loop_start) * 1000.0 / frames, frames);
+            for (int ph = 0; ph < PH_COUNT; ++ph) printf("  %5.2f ms a frame: %s\n", phase_s[ph] * 1000.0 / frames, PHASE_NAME[ph]);
             printf("creatures took %.2f ms a frame, %.2f of it posing (%d posed, %d drawn, of %d standing)\n", creature_s * 1000.0 / frames, creature_pose_s * 1000.0 / frames, last_posed, last_drawn, nstanding);
             printf("she ended at x %.2f y %.2f z %.2f, %s\n", elf.x, elf.y, elf.z, elf.swimming ? "swimming" : elf.grounded ? "on the ground" : "in the air");
             /* the creatures nearest her (173t), to check pictures against */
