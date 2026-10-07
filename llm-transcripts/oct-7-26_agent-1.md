@@ -1,6 +1,6 @@
 # Conversation Summary: ee3e437d-85af-485c-8ed0-8478da64add8
 
-Generated on: 2026-10-07 10:12:50
+Generated on: 2026-10-07 10:25:08
 Models: claude-opus-5-5
 
 ## Contents
@@ -671,6 +671,158 @@ If you move me over, I'd start with step 1: read the three projects' documents
 and draft the W client's rewritten ones. Do you want the merged documents
 drafted as one big change, or one W-client document at a time with you reading
 each?
+
+--------------------------------------------------------------------------------
+
+### User Request 7
+
+Great, let's do the merge now.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7
+
+> Nothing of the merge is in progress on disk (the W client's tree is clean; the
+> other wow-chat session is idle). Starting step 1: reading the three sources'
+> planning documents.
+
+> Now world-edit-to-execute's side: its W-client bridge design, Phase W issues,
+> and what code it has.
+
+> Before writing, I found four places where the W client's plans and our working
+> code disagree, and 173v's answers don't settle them. Each one changes what I
+> write and move.
+
+> **[Asked the user]**
+>
+> *Q1 — Resolver:* The W client plans for every asset to be looked up through
+> a resolver (replacement pack first, then Blizzard's archives, then a
+> placeholder, each counted). Our client reads straight from the archives. When
+> does the resolver come in?
+> - After the move (Recommended) — Move the code as it is, with the pictures
+>   matching; the resolver becomes the first W-client issue built on top,
+>   routing every read through one place.
+> - During the move — Every archive read is rerouted through a new resolver as
+>   the code moves. Bigger move, harder to compare before and after.
+> → **Answered:** we don't have a replacement pack yet. What does "replacement
+> pack" mean? New models? Yeah we only have the blizzard ones for now, not even
+> placeholders. We're just using them as, well, placeholders.
+>
+> *Q2 — Code shape:* The W client's architecture rules say no module-level
+> state: every part hands out a handle from an _init() and typed error codes.
+> Our code keeps state inside each file (the ground's tiles, the doodads'
+> models) and returns 0/1 with a reason string. Which wins?
+> - Move as-is, refactor later (Recommended) — The rule stays the goal; each
+>   module is converted to handles in its own W-client issue, with tests passing
+>   before and after each.
+> - Our shape becomes the rule — The W client's architecture document is
+>   rewritten to describe the code as it is (state per file, reason strings).
+> - Refactor during the move — Convert every module to handles and error codes
+>   as it moves. Much bigger move.
+> → **Answered:** I need more context I think
+>
+> *Q3 — Shared lib:* The W client plans the archive, table and picture readers
+> as a shared library (libwreaders.so) that world-edit-to-execute calls from
+> Lua. When is that built?
+> - During the move (Recommended) — The readers (archives, tables, pictures,
+>   models) already have no window dependency, so the build script also makes
+>   them a .so with a plain header; world-edit-to-execute can use it at once.
+> - Later — Move first; the library is a W-client issue afterwards.
+> → **Selected:** During the move (Recommended)
+>
+> *Q4 — WC3 engine:* world-edit-to-execute has its own whole WC3 engine in Lua
+> (game loop, units, pathfinding, JASS triggers) and a C renderer. Which of it
+> belongs in the W client's plan?
+> - Drawing and input only — The W client draws WC3 maps and sends orders;
+>   AzerothCore runs the rules (as decided 2026-09-23). world-edit-to-execute
+>   keeps its converter, forge and its own engine.
+> - Its whole runtime — The W client takes in the WC3 runtime too (rewritten
+>   in C, triggers as Lua scripts), so a WC3 map can run with no server; the
+>   AzerothCore route stays for multiplayer.
+> - Decide later — Plan only the WoW-world side now; record the WC3-engine
+>   question in the W client's documents.
+> → **Answered:** The renderers need to merge. We should be able to load both
+> model types and animations and particles... all visual stuff. Also audio is
+> shared, and probably networking maybe? Not sure if Azerothcore could support
+> the kind of networking that Warcraft 3 uses. The game mechanics are typically
+> pretty agnostic to rendering and audio, but often are deeply coupled with
+> networking. The goal is to be able to play both games seamlessly in the same
+> binary, and to re-use as much of the code as we can between them. The goal is
+> to condense the two games into a single project.
+
+*[commit] 5313a665a in wow-chat-2026 - The merge's answers on the resolver, the shared library and the two engines*
+
+> The issue file itself wasn't in that commit (my edit came through a script the
+> change ledger can't see). Claiming it and committing again.
+
+*[commit] 2564857df in wow-chat-2026 - The merge's answers on the resolver, the shared library and the two engines*
+
+I've recorded your answers in 173v (committed). One question still blocks the
+move: the code shape. Here's the context you asked for, then your other two
+points.
+
+**The code-shape question.** It's about where each part of the client keeps its
+memory.
+
+*Our client today:* each part keeps its memory inside its own file. The ground
+code holds one table of 4,096 tile slots, declared at the top of `ground.c` and
+shared by the whole program. The doodad code holds one list of models the same
+way. There is exactly one ground and one set of doodads in the program, and
+nothing outside those files can make a second. Every call just says "load tile
+26, 32", and the file knows which ground that means.
+
+*The W client's rule:* `ground_init()` allocates that table and hands back a
+pointer to it, called a handle. Every later call passes the handle in: "load
+tile 26, 32 *into this ground*." The program can hold two grounds at once. A
+test can build its own private one and throw it away without disturbing the real
+one.
+
+Errors differ too:
+- *Ours:* a call returns 0 (fine) or 1 (failed) and writes an English sentence
+  ("the ground picture X is in none of the archives") into a buffer the caller
+  passed in.
+- *The W client's:* a call returns a numbered code from a fixed list, for
+  example "not found" or "corrupt". The caller's code can branch on it, and the
+  sentence goes to the log.
+
+Why it matters for this merge:
+- **What handles enable.** You said one binary should play both games
+  seamlessly. If it ever needs a WoW map and a WC3 map loaded at the same time,
+  or 176a's many headless test characters each with their own world, the client
+  needs more than one ground. Handles allow that; one table per file doesn't.
+- **Cost:** converting means touching every one of about 30 files and every call
+  between them.
+
+Three ways to go:
+- **Move as-is, convert later.** Lowest risk: pictures match before and after
+  the move. Each part is then converted in its own W-client issue, with tests
+  before and after.
+- **Our shape becomes the rule.** The W client's architecture document is
+  rewritten to describe one copy per file.
+- **Convert during the move.** The biggest change at once, and the hardest to
+  check.
+
+To ask it a second way: can you picture the client ever needing two of the same
+thing alive at once? Two maps, two worlds for two test characters, a preview
+window showing a model beside the game. If yes, handles will be needed
+eventually, and the choice is only *when*.
+
+**"Replacement pack"** means files the project makes itself to stand in for
+Blizzard's: new models, textures, sounds. The resolver would look in those
+first, then in Blizzard's archives. None exist yet, so the code moves reading
+the archives directly, and the resolver waits for the first replacement.
+
+**The two engines** are recorded as one binary for both games. It has one
+renderer drawing both games' models, animations and particles, and one audio
+system. Each game's rules stay separate from the drawing. The shared reader
+library gets built during the move.
+
+Still open: whether networking can be shared. AzerothCore works as a server that
+holds the world while each client sends its moves. WC3 multiplayer is
+"lockstep": no server holds the world; every player's machine runs the same
+simulation, and only the orders are sent between them. Those are different
+designs. AzerothCore could relay WC3 orders, but whether it should is a question
+for later.
 
 --------------------------------------------------------------------------------
 

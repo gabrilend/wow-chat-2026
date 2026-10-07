@@ -239,13 +239,26 @@ behind in this project.
     placeholders." So the code moves reading straight from the archives,
     as it does here; the resolver is built when the first replacement
     exists.
-13. **Code shape** (asked 2026-10-07; the owner asked for more context):
-    the W client's architecture rule is that no part keeps its state
-    inside its own file: each part hands out a handle (a pointer to its
-    state) from an init call, every call takes the handle, and errors
-    are typed codes. This client keeps one copy of each part's state
-    inside the file (one ground, one set of doodads per program) and
-    returns 0 or 1 with a sentence saying why. Which wins, and when?
+13. (Answered 2026-10-07) **Code shape:** the W client's rule is that
+    no part keeps its state inside its own file: each part hands out a
+    handle (a pointer to its state) from an init call, and every call
+    takes the handle. This client kept one copy of each part's state in
+    the file (one ground, one set of doodads per program) and returned 0
+    or 1 with a sentence saying why. The owner: "We should convert during
+    the move." On what handles make possible: "the ability to add dynamic
+    ground and doodads seems like pretty awesome behavior. We just have
+    to make sure that it's synced correctly FROM the server, not TO the
+    server. We might also have to validate player positions if we build
+    something like that, so they can't just reshape the world and walk
+    through locked doors or whatever." On errors: "The W client's errors
+    feel more flexible because they allow the calling code to branch
+    depending on errors. Ours is more readable, but we could just create
+    more verbose error types and expand the list." So every part moves
+    with a handle, and errors become typed codes from a list that grows
+    as needed (detailed enough to branch on), each still carrying its
+    readable sentence. World changes (ground, doodads) only ever come
+    from the server to the client; the server checks player positions
+    against the world it holds.
 14. (Answered 2026-10-07) **The shared reader library** (archives,
     tables, pictures, models as a library world-edit-to-execute calls
     from Lua): built during the move.
