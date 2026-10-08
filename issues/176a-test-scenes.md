@@ -229,7 +229,11 @@ with stored references (the client's half, after its move: 173v).
    part of the build's checking step, while debugging; an ordinary run
    keeps one log.
 5. **Placing scenes apart:** asked again 2026-10-08 (the first wording
-   was unclear). Each scene needs its own patch of ground, so that, for
+   was unclear). The owner's answer described how the Alterac Valley
+   scene keeps its own players apart in time and space (barred gates,
+   a held line, an invisible wall; 176a1). Alterac Valley is also an
+   instance, its own copy of the map, so no scene outside it can share
+   its ground. Still open for scenes in the open world. Each scene needs its own patch of ground, so that, for
    example, a stand-in walking out of the Alterac Valley cave doesn't
    walk into another scene's creatures. Who picks where a scene goes:
    one list of places, written by us, with a scene given one of them; or

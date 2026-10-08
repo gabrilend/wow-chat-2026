@@ -60,6 +60,12 @@ seat.
   its last five levels), an item in every slot. Where no white exists for
   a slot (neck, rings, trinkets), the best PvP item available at its level
   (honor and battleground rewards it could use).
+- **Shirts by climate** (owner, 2026-10-08: "can you make sure for the
+  alterac valley stand-ins they always wear a shirt? Because it is cold
+  there. And the ones in Stranglethorn shouldn't wear shirts, because
+  they'll sweat too much."): a stand-in in a cold zone (Alterac Valley
+  first) always wears a shirt; one in Stranglethorn never does. Which
+  other zones count as cold or hot is to be listed.
 - **Sockets**: filled by its class's style (the gem colours and stats its
   class and role want, 617j2's rules).
 - **Kept, not deleted** (owner, 2026-10-04: "you can scale them up to the

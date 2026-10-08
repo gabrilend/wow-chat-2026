@@ -129,7 +129,32 @@ bunker and graveyard back in its starting state.
   middle of the valley is a no-man's land.
 - **Not enough time on purpose.** No one can get everything done in one
   turn, which is meant to bring them back.
-- Then the gates open and the battle resumes.
+- Then the gates open, but not onto the battle. The owner, 2026-10-08:
+
+  > the gates are barred, so they can't leave the stronghold. Then,
+  > there is another 10 minutes where they can quest in that area while
+  > their team holds a defensive line on the boundary by your towers and
+  > fortresses and commanders. The player is prevented from crossing this
+  > line with an invisible wall - the NPCs are not pathable. Then, when
+  > the battle starts, they're swapped out with the stand-ins they
+  > represent, and they charge into battle. During the intermediate 10
+  > minutes, the enemy is so far away that nothing can be seen. But, at
+  > the count of "go" (it's when the horn booms on both sides back and
+  > forth until both are silent) then everyone can charge forward and
+  > slay their foes.
+
+  So a turn has three parts:
+  1. **The battle**, fought by the stock rules.
+  2. **Ten minutes in the stronghold**, gates barred: vendors, writing
+     for the balloons, or leaving by the entrance tunnel.
+  3. **Ten minutes questing in the home ground.** The gates open onto
+     the side's own part of the valley, out to its towers, fortresses and
+     commanders. There the side's defenders hold a line. An invisible
+     wall stops players crossing it, and the defenders can't be walked
+     through. The enemy is too far off to be seen.
+  Then the horns sound, one side and then the other, back and forth until
+  both fall silent. That is "go": the defenders on the line are swapped
+  for the stand-ins they stand for, and everyone charges.
 
 **Hosting: private or public.** The owner, 2026-10-08: "you can make it
 private or public. LAN (including virtual ones, easily set up
@@ -163,6 +188,12 @@ scenes (109 in the custom-client project).
 - **On the owner's server.** The player connects to the server running
   every test patch built here, and takes control of a stand-in already
   in the match, playing with its level, levelling track and gear.
+
+**Shirts by climate.** The owner, 2026-10-08: "can you make sure for
+the alterac valley stand-ins they always wear a shirt? Because it is cold
+there. And the ones in Stranglethorn shouldn't wear shirts, because
+they'll sweat too much." Every stand-in in the valley wears a shirt; the
+rule for shirts by zone lives with the stand-ins' gear (617t).
 
 **Pathfinding is what this scene checks first.** Stand-ins walk out of
 their caves, along the valley, to the towers and graveyards and the
