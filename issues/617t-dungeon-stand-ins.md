@@ -80,13 +80,21 @@ seat.
   |---|---|---|
   | cold | Alterac Valley, all of Northrend, Gnomeregan (under Dun Morogh), the Deeprun Tram, underwater | on |
   | hot | Stranglethorn, Silithus, Ragefire Chasm | off |
-  | warm | Blackrock Mountain, Upper and Lower Blackrock Spire | open question 9 |
+  | warm | Blackrock Mountain, Upper and Lower Blackrock Spire | off for now, kept apart from hot ("for now, yes, but good idea on keeping track of them separately") |
   | normal | Hellfire Peninsula (the Twisting Nether's cold evens it out), everywhere not listed | as it is |
   | not sure | Tirisfal Glades | open question 9 |
 
   **Changing:** a stand-in kneels for a second or two, then puts its
-  shirt on or takes it off. **Swimming for a quest:** it takes the
-  shirt off to swim (open question 9).
+  shirt on or takes it off. **Swimming** (owner, 2026-10-08: "to keep it
+  dry, and they keep it off for 2-3 minutes after last initiating
+  swimming. If they get dumped into water or something like a fight
+  drives them into it, then they take their shirt off at the next
+  downtime opportunity. for 2-3 minutes while it dries."): a stand-in
+  that means to swim takes its shirt off first, to keep it dry, and
+  keeps it off for 2 to 3 minutes after it last went into the water. One
+  that ends up in water without meaning to (thrown in, or driven in by a
+  fight) takes its wet shirt off at its next quiet moment and leaves it
+  off for 2 to 3 minutes while it dries.
 - **Sockets**: filled by its class's style (the gem colours and stats its
   class and role want, 617j2's rules).
 - **Kept, not deleted** (owner, 2026-10-04: "you can scale them up to the
@@ -174,9 +182,8 @@ seat.
    and later the forbidden pairs too, starting with a blood elf druid
    ("yes. blood elf druid pls"). The details are in the Alterac Valley
    test scene's questions (176a1).
-9. **Shirts, the rest of the list.** Does "warm" (Blackrock Mountain and
-   its spires) mean shirt off, like hot, or kept as it is? Is Tirisfal
-   cold? Are Dun Morogh itself and Winterspring cold, and Tanaris,
-   Un'Goro and the Barrens hot? And swimming: "they take it off too - so,
-   underwater is cold" reads both ways. Is the shirt taken off to swim
-   (kept dry), or put on because the water is cold?
+9. **Shirts, the rest of the list.** Answered 2026-10-08: warm means
+   shirt off for now, tracked apart from hot; swimming takes the shirt
+   off to keep it dry (above). Still open: Tirisfal ("I dunno"); are Dun
+   Morogh itself and Winterspring cold, and Tanaris, Un'Goro and the
+   Barrens hot?

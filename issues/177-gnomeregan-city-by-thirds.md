@@ -36,6 +36,11 @@ across a year each gets exactly half the time.
 - **As a city:** the gnomes' capital, with its own people (vendors,
   trainers, guards), and none of the dungeon's enemies.
 - **As a dungeon:** the stock dungeon.
+- **Caught inside at the change** (owner, 2026-10-08): a player in the
+  city when it turns finds themselves alone in a dungeon of their own,
+  at the spot they stood. The toxic gas and ooze stop health and mana
+  coming back on their own; health and mana potions work with no
+  cooldown.
 
 ## Suggested Implementation Steps
 
@@ -50,8 +55,14 @@ across a year each gets exactly half the time.
 
 1. **Which profile:** basic, or every profile?
 2. **When the day starts:** midnight server time, or another hour?
-3. **Who is inside at the change:** sent out, finishes the dungeon
-   first, or the change waits until it is empty?
+3. (Answered 2026-10-08) **Who is inside at the change:** "they get
+   dumped into a dungeon at the spot they're in, alone, and health
+   doesn't regenerate nor mana outside of mana potions which have no
+   cooldown. also health potions. to counteract the toxic gas/ooze."
+   Anyone in the city when it turns into the dungeon finds themselves
+   in a dungeon of their own, alone, at the spot they stood. There
+   neither health nor mana comes back on its own; health and mana
+   potions have no cooldown, as the cure for the toxic gas and ooze.
 4. **The city's people:** from the existing gnome refugees in Ironforge
    (moving home for those hours), or new ones?
 5. **The city half and the dungeon half:** one place (the instance turns
