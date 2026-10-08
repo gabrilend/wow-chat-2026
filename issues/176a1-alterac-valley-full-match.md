@@ -74,11 +74,21 @@ kept. The playerbots module plays a stand-in once it is in the world.
 their faction's entrance cave, where the stock battleground places them.
 
 **The client is the player.** The scene has its own run script. Running
-it starts the custom client, which connects using the values in
-`scripts/connect-parameters.json` (the server's address and port, and the
-test account), logs in a test character and enters the match. The
+it starts the custom client, which connects to whichever server its own
+`scripts/connect-parameters.json` names (the client's equivalent of the
+original's `realmlist.wtf`: the client decides who it connects to), logs
+in a test character and enters the match. The
 client's queue of inputs and its log come from the client's half of test
 scenes (109 in the custom-client project).
+
+**Two ways to play it** (owner, 2026-10-08: "both are options"):
+- **Alone, hosting it yourself.** The player runs the server on their
+  own computer and plays a single-player Alterac Valley match as a
+  character of any race, class and gender, with optional appearance
+  settings. Friends can connect to that server and join.
+- **On the owner's server.** The player connects to the server running
+  every test patch built here, and takes control of a stand-in already
+  in the match, playing with its level, levelling track and gear.
 
 **Pathfinding is what this scene checks first.** Stand-ins walk out of
 their caves, along the valley, to the towers and graveyards and the
@@ -105,23 +115,26 @@ every scene at once.
    their caves, and let the playerbots module play them.
 4. Logs per stand-in to `tmp/shared-memory/test-scenes/alterac-valley/`:
    world-time, position, what it is doing, at a fixed interval.
-5. `scripts/connect-parameters.json` and the scene's run script, which
-   starts the custom client with it.
-6. Players joining: added on top of the 40, in their cave.
-7. The first checks, from the pathfinding list above, agreed with the
+5. The scene's run script, which starts the custom client; the client
+   reads its own `scripts/connect-parameters.json` (custom-client
+   project) to find the server.
+6. Players joining: added on top of the 40, in their cave; or taking
+   control of a stand-in already fighting.
+7. The single-player way: a server on the player's own computer, the
+   player's character of any race, class and gender, friends able to
+   join.
+8. The first checks, from the pathfinding list above, agreed with the
    owner.
 
 ## Open Questions
 
-1. **Where `scripts/connect-parameters.json` lives.** There is no such
-   file in either project yet. What it would hold: what the custom client
-   needs to reach the cc-test server: the address, the login server's
-   port (the realm list) and the game server's port, and the test
-   accounts and characters a scene logs in as. Each profile installs its
-   servers on ports of its own (basic's are 4362 and 4462, not the stock
-   3724 and 8085), so these values are known where the profile is
-   installed. In this project's `scripts/`, written by the cc-test
-   install, or in the custom client's?
+1. (Answered 2026-10-08) **Where `scripts/connect-parameters.json`
+   lives.** With the client, the way the original's `realmlist.wtf`
+   does: "I think it should match the realmlist.wtf pattern. It's a good
+   pattern. Let the client determine who they connect to. Suddenly,
+   freedom everywhere." The client's own file names the server it
+   connects to (its address and ports); the server never writes it. A
+   scene's run script starts the client, and the client reads its file.
 2. (Answered 2026-10-08) **How stand-ins level up.** Only when used, as
    617t says: "this is what I meant." The step may become one level a
    match, on parallel tracks of different speeds; that design lives in
@@ -144,7 +157,9 @@ every scene at once.
    how to create it (its starting stats, spells and gear) and a client
    that accepts it; the stock 3.3.5a client refuses pairs its own data
    files don't list, the custom client need not.
-7. **What controlling a stand-in means.** Does the player's own
-   character step into the stand-in's place (the stand-in leaves), or
-   does the player steer the stand-in itself, so its level, track and
-   gear are what they play with?
+7. (Answered 2026-10-08) **What controlling a stand-in means.** "both
+   are options." On one's own computer, alone: any race, class and
+   gender, with optional appearance settings, in a single-player Alterac
+   Valley match on a server the player is hosting, which friends can
+   join. Or on the owner's server, which runs every test patch built
+   here, as one of its stand-ins.

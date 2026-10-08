@@ -109,8 +109,26 @@ things side by side.
 **Each scene has its own run script.** The owner, 2026-10-08: "They
 should call the custom client when their each individual run script is
 run, from the scripts/connect-parameters.json directory." Running a
-scene's script starts the custom client with the connection values in
-`scripts/connect-parameters.json` and plays that one scene.
+scene's script starts the custom client, which connects to the server
+its own `scripts/connect-parameters.json` names, and plays that one
+scene.
+
+**Test patches are also the world, and they are shared.** The owner,
+2026-10-08: "you can connect to my server, which is running all of the
+test patches that we're building into the world functionality for the
+newly created project that is... my server, wow-chat-2026, but which
+will be shared so anyone can run those test patches if they want. or run
+some of them and replace others with others, their own design
+perhaps..." A scene is both a test and a piece of the playable world.
+The owner's server runs all of them. Anyone else can run the same set,
+choose some and leave others out, or put their own scenes in place of
+ours. So each scene must stand on its own: installed or left out by
+itself, with nothing else breaking.
+
+**The client chooses its server.** The connection settings
+(`scripts/connect-parameters.json`) belong to the client, as the
+original's `realmlist.wtf` does (owner, 2026-10-08: "Let the client
+determine who they connect to. Suddenly, freedom everywhere.").
 
 **Alone first, then all together.** The owner, 2026-10-08: "we should
 always run each test individually, validate that it performed correctly,
