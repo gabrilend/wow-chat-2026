@@ -114,9 +114,14 @@ every scene at once.
 ## Open Questions
 
 1. **Where `scripts/connect-parameters.json` lives.** There is no such
-   file in either project yet. In this project's `scripts/` (the server
-   knows its own address, port and test account), or in the custom
-   client's?
+   file in either project yet. What it would hold: what the custom client
+   needs to reach the cc-test server: the address, the login server's
+   port (the realm list) and the game server's port, and the test
+   accounts and characters a scene logs in as. Each profile installs its
+   servers on ports of its own (basic's are 4362 and 4462, not the stock
+   3724 and 8085), so these values are known where the profile is
+   installed. In this project's `scripts/`, written by the cc-test
+   install, or in the custom client's?
 2. (Answered 2026-10-08) **How stand-ins level up.** Only when used, as
    617t says: "this is what I meant." The step may become one level a
    match, on parallel tracks of different speeds; that design lives in
@@ -128,11 +133,18 @@ every scene at once.
    after a fixed time, or when the pathfinding checks have their answers?
 5. **Players in the scene.** Is "players" here only test characters the
    custom client logs in, or can a person join the running scene too?
-6. **Playing a stand-in.** The owner, 2026-10-08: "We should make it so
-   players can play one too, any race-class that exists (which should
-   probably end up being all of them eventually)." Does a player take
-   control of one of the 40 (so the side stays at 40 plus the others who
-   joined), or log in as a stand-in character outside any match, keeping
-   its level and gear? And "any race-class that exists": every
-   combination the stock game allows, or also ones it forbids (a tauren
-   rogue, a gnome druid)?
+6. (Answered 2026-10-08) **Playing a stand-in.** The owner, 2026-10-08:
+   "We should make it so players can play one too, any race-class that
+   exists (which should probably end up being all of them eventually)."
+   A player takes control of one of the 40 while the match runs; the
+   side stays at 40 plus the other players who joined. Stand-ins come in
+   every race and class the stock game allows, and in time the ones it
+   forbids too ("yes. blood elf druid pls"): the blood elf druid is the
+   first forbidden one wanted. A forbidden pair needs the server to know
+   how to create it (its starting stats, spells and gear) and a client
+   that accepts it; the stock 3.3.5a client refuses pairs its own data
+   files don't list, the custom client need not.
+7. **What controlling a stand-in means.** Does the player's own
+   character step into the stand-in's place (the stand-in leaves), or
+   does the player steer the stand-in itself, so its level, track and
+   gear are what they play with?

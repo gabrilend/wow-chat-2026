@@ -139,7 +139,11 @@ seat.
 7. **The step per use**: a ten-level bracket (as above) or one level a
    match ("it might end up being 1 level each match, we'll see")? And how
    many tracks, at what speeds compared with a player?
-8. **Players playing a stand-in** (owner, 2026-10-08: "We should make it
-   so players can play one too, any race-class that exists (which should
-   probably end up being all of them eventually)"): to be asked; see the
-   Alterac Valley test scene's questions (176a1).
+8. (Answered 2026-10-08) **Players playing a stand-in** (owner,
+   2026-10-08: "We should make it so players can play one too, any
+   race-class that exists (which should probably end up being all of
+   them eventually)"): a player takes control of a stand-in already in a
+   match. Stand-ins cover every race and class the stock game allows,
+   and later the forbidden pairs too, starting with a blood elf druid
+   ("yes. blood elf druid pls"). The details are in the Alterac Valley
+   test scene's questions (176a1).
