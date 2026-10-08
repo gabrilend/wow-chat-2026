@@ -67,6 +67,17 @@ seat.
   particular race/class combination"): when the dungeon ends a stand-in
   leaves the world and is kept, raised to the next level bracket (ten
   levels) with its gear made again for that bracket.
+- **Levelling tracks** (owner, 2026-10-08: "There are situations when a
+  stand-in might be lower level. Also it might end up being 1 level each
+  match, we'll see. It's meant to roughly match the rate of player
+  levelling, though maybe there should be some that go slow or fast, to
+  make sure that everyone knows some stand-ins and are greeted with new
+  ones too. parallel levelling tracks."): a stand-in only levels when it
+  is used, never while stored. The size of the step (a ten-level bracket,
+  or one level a match) is to be tuned so stand-ins as a whole climb
+  about as fast as players do. Each stand-in is on one of several
+  parallel tracks, some slower and some faster than that rate, so a
+  player keeps meeting stand-ins they already know, and new ones too.
 - **Reused anywhere above** ("They should be able to be chosen for *any*
   higher level bracket btw. But their level doesn't go down."): the next
   time any player needs a stand-in of that race, class and role, a kept one
@@ -125,3 +136,10 @@ seat.
 6. (Answered 2026-10-04) "only stand-ins": the doubled places in
    battlegrounds and arenas are filled by stand-ins only; players queue to
    the stock sizes.
+7. **The step per use**: a ten-level bracket (as above) or one level a
+   match ("it might end up being 1 level each match, we'll see")? And how
+   many tracks, at what speeds compared with a player?
+8. **Players playing a stand-in** (owner, 2026-10-08: "We should make it
+   so players can play one too, any race-class that exists (which should
+   probably end up being all of them eventually)"): to be asked; see the
+   Alterac Valley test scene's questions (176a1).

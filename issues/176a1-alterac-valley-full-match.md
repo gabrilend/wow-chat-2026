@@ -117,14 +117,22 @@ every scene at once.
    file in either project yet. In this project's `scripts/` (the server
    knows its own address, port and test account), or in the custom
    client's?
-2. **How stand-ins level up while out of the world.** The owner's words
-   above read as: a stand-in that is not in the world still gains levels
-   over time, and once it reaches the maximum level it joins the pool that
-   buddies are drawn from at random. 617t says instead that a stand-in is
-   raised a level bracket each time it is used. Which one, or both?
+2. (Answered 2026-10-08) **How stand-ins level up.** Only when used, as
+   617t says: "this is what I meant." The step may become one level a
+   match, on parallel tracks of different speeds; that design lives in
+   617t. For this scene: each stand-in that plays the match takes its
+   step afterwards.
 3. **What level the stand-ins are.** One level for all 80, a spread of
    levels, or the profile's maximum level?
 4. **The match's end.** Is the scene finished when the battle is won,
    after a fixed time, or when the pathfinding checks have their answers?
 5. **Players in the scene.** Is "players" here only test characters the
    custom client logs in, or can a person join the running scene too?
+6. **Playing a stand-in.** The owner, 2026-10-08: "We should make it so
+   players can play one too, any race-class that exists (which should
+   probably end up being all of them eventually)." Does a player take
+   control of one of the 40 (so the side stays at 40 plus the others who
+   joined), or log in as a stand-in character outside any match, keeping
+   its level and gear? And "any race-class that exists": every
+   combination the stock game allows, or also ones it forbids (a tauren
+   rogue, a gnome druid)?
