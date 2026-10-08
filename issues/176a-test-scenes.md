@@ -125,6 +125,21 @@ choose some and leave others out, or put their own scenes in place of
 ours. So each scene must stand on its own: installed or left out by
 itself, with nothing else breaking.
 
+**A test patch, and later a cc-patch.** Asked whether one scene can be
+both a repeatable test and a live world, the owner, 2026-10-08: "ya the
+test-patches might later be converted nearly identically to cc-patches,
+which are patches designed for the custom-client's specific test server
+that could be implemented on other servers idempotently." So a scene
+takes two forms, built from nearly the same file:
+- **The test patch:** a sealed copy, started the same way every run with
+  no one let in, so its logs can be compared with what is expected.
+- **The cc-patch:** the same scene as part of the playable world, open to
+  players. It is written so it can be applied to any other server too,
+  and applying it a second time changes nothing (idempotent, as every
+  patch in this project's patch system already is).
+How a test patch is turned into its cc-patch (by hand, or by a tool that
+generates one from the other) is to be decided when the first one is.
+
 **The client chooses its server.** The connection settings
 (`scripts/connect-parameters.json`) belong to the client, as the
 original's `realmlist.wtf` does (owner, 2026-10-08: "Let the client
