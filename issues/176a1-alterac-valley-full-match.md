@@ -62,8 +62,61 @@ setup, not by a queue filling, so it starts the same way every run.
 **Full without players.** Each side has 40 stand-ins from the start, the
 stock side size, so the battle is fought even when nobody joins. Players
 who join are added to their faction's side on top of the 40, so a side
-grows past 40 with every player who shows up. No stand-in leaves to make
-room.
+grows past 40 with every player who shows up. The owner, 2026-10-08:
+"If more than a certain number of players join, say... 10 or 20, it
+starts dropping the number of stand-ins to compensate. Then, at a certain
+point, all new characters spawned are buddy-bots, selected from among the
+connected players." So:
+- the first 10 to 20 players (the number to be tuned) are added on top
+  of the 40;
+- past that, each further player means one stand-in fewer;
+- past a later point, every character spawned to fill the side is a
+  buddy-bot drawn from the buddies of the players connected, not a
+  stand-in.
+
+**One match per tier.** The owner, 2026-10-08: "Alterac Valley is an
+instance, so, as many as there are tiers." Each level tier has its own
+copy of the valley, and its stand-ins are of that tier.
+
+**Fighting, then ten minutes in town.** The owner, 2026-10-08:
+
+> wait 10 minutes, then start again. Allow players to talk to vendors
+> in their stronghold. But the gates are barred until the battle
+> resumes. Nobody knows what happens outside of the gates during this
+> time, but everyone knows they're on the same server because every
+> turn the goblins deliver via package balloons (allowed by Horde and
+> Alliance) which show public messages that the other side sent them
+> last time they were all in town. If you want, you can spend your time
+> writing instead of shopping. Or you could leave out of the entrance
+> tunnel... There's also some repeating quests in the valley around the
+> stronghold and such. But the middle is a no-mans land. It's normal to
+> not be able to accomplish everything you need to do each time. That
+> keeps you coming back, which is an oppressive anti-feature that I'm
+> including to build fun artificially. Please pardon and excuse me, but
+> it sounds fun and I want that.
+
+- After a battle, each side spends **ten minutes** inside its own
+  stronghold with **the gates barred**. Players can buy from the
+  stronghold's vendors.
+- **Goblin balloons** come every turn, allowed by both factions. Each
+  carries the public messages the other side wrote during their last
+  time in town. That is how both sides know they share one server.
+- **Writing instead of shopping:** a player can spend the ten minutes
+  writing a message that the next balloon will carry.
+- **Leaving:** a player can walk out through the entrance tunnel.
+- **Repeating quests** are in the valley around each stronghold. The
+  middle of the valley is a no-man's land.
+- **Not enough time on purpose.** No one can get everything done in one
+  turn, which is meant to bring them back.
+- Then the gates open and the battle resumes.
+
+**Hosting: private or public.** The owner, 2026-10-08: "you can make it
+private or public. LAN (including virtual ones, easily set up
+in-client) or IP style port forwarding. Or public, on some server which
+may or may not be your computer." A player's own server can be private
+(on a local network, including a virtual one set up from inside the
+client, or reached by forwarding a port to an address) or public, and a
+public server may be run on any machine.
 
 **Stand-ins as data first.** A stand-in is a character record with what
 combat and long-term progression need: its level, its attributes, and
@@ -123,8 +176,13 @@ every scene at once.
 7. The single-player way: a server on the player's own computer, the
    player's character of any race, class and gender, friends able to
    join.
-8. The first checks, from the pathfinding list above, agreed with the
-   owner.
+8. The turn: the battle's end, ten minutes in town with the gates
+   barred, then the battle again.
+9. The goblin balloons and the messages written in town.
+10. Fewer stand-ins as players pass 10 to 20, then buddy-bots in their
+    place.
+11. The first checks, from the pathfinding list above, agreed with the
+    owner.
 
 ## Open Questions
 
@@ -140,12 +198,18 @@ every scene at once.
    match, on parallel tracks of different speeds; that design lives in
    617t. For this scene: each stand-in that plays the match takes its
    step afterwards.
-3. **What level the stand-ins are.** One level for all 80, a spread of
-   levels, or the profile's maximum level?
-4. **The match's end.** Is the scene finished when the battle is won,
-   after a fixed time, or when the pathfinding checks have their answers?
-5. **Players in the scene.** Is "players" here only test characters the
-   custom client logs in, or can a person join the running scene too?
+3. (Answered 2026-10-08) **What level the stand-ins are.** One match per
+   tier, its stand-ins of that tier (above). Still open: which tiers.
+   The stock battleground's brackets in 3.3.5a are 51-60, 61-70, 71-79
+   and 80, but this project's profiles cap at 20, 40, 60 or 80, and the
+   stand-in plan (617t) counts in ten-level brackets.
+4. (Answered 2026-10-08) **The match's end.** A battle, then ten
+   minutes in town with the gates barred, then the battle again (above).
+   Still open: what ends each battle (a side winning, or a fixed time),
+   and does the next battle start fresh or carry on from the last one's
+   towers and graveyards ("until the battle resumes")?
+5. (Answered 2026-10-08) **Players in the scene.** People can join,
+   friends on a player's own server or anyone on a public one (above).
 6. (Answered 2026-10-08) **Playing a stand-in.** The owner, 2026-10-08:
    "We should make it so players can play one too, any race-class that
    exists (which should probably end up being all of them eventually)."
@@ -163,3 +227,10 @@ every scene at once.
    Valley match on a server the player is hosting, which friends can
    join. Or on the owner's server, which runs every test patch built
    here, as one of its stand-ins.
+8. **What the sealed test checks across the turns.** The sealed test
+   copy lets no one in. Does it run a battle and its ten minutes in town
+   once and stop, or several turns in a row (which would also test the
+   gates, the balloons and the restart)?
+9. **The balloon messages.** Who can read them (everyone on the side,
+   or only the one written to), how long they are kept, and whether one
+   side's messages are ever answered before the next turn.

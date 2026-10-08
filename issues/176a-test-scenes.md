@@ -137,8 +137,10 @@ takes two forms, built from nearly the same file:
   players. It is written so it can be applied to any other server too,
   and applying it a second time changes nothing (idempotent, as every
   patch in this project's patch system already is).
-How a test patch is turned into its cc-patch (by hand, or by a tool that
-generates one from the other) is to be decided when the first one is.
+A tool makes each cc-patch from its test patch (owner, 2026-10-08:
+"built by tool, tool bugfixes by hand."): the cc-patches are never
+written by hand; a mistake in one is fixed in the tool, by hand, and the
+cc-patch made again.
 
 **The client chooses its server.** The connection settings
 (`scripts/connect-parameters.json`) belong to the client, as the
