@@ -256,7 +256,10 @@ every scene at once.
    scaling with players, the restart) quickly, with shortened timers and
    fixed inputs, so each gives the same result every run.
 9. (Answered 2026-10-08) **The balloon messages.** Anyone on the other
-   side can read them (above). Still open: how long a message is kept.
-10. **Which levels a tier takes in.** Does the 20 tier take players of
-    levels 11 to 20, and does a valley exist for every tier up to the
-    profile's cap (2 on a level-20 profile, 8 on alpha)?
+   side can read them (above). A message is delivered with the next
+   balloon and kept for two hours after, a rolling window ("this, but 2
+   hours, rolling").
+10. (Answered 2026-10-08) **Which levels a tier takes in.** "11-20,
+    yes." A tier is named by its top level and takes the nine below it
+    (the 20 tier takes 11 to 20), and a profile has valleys only up to
+    its own cap (two on a level-20 profile, eight on alpha).

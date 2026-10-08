@@ -184,21 +184,65 @@ with stored references (the client's half, after its move: 173v).
 
 ## Open Questions
 
-1. **The queue's format:** plain lines as above (simple to read in C,
-   like the settings file), or a Lua file (the house language, and
-   queues could then loop or compute)?
-2. **Who plays a scene's characters:** the custom client, logged into
-   the cc-test server (one client process per character, needs the
-   network), or the client headless with no server (one process, many
-   characters sharing one loaded world, no network needed), or both, in
-   that order?
-3. **Do test characters in one run meet?** Collide with and see each
-   other (testing crowds), or each act as if alone (testing many
-   unrelated things at once)?
-4. **Who writes the log:** the client (what the player saw), the server
-   (mod-ale, what the server believes), or both, compared with each
-   other (which would also test 173e's "the server agrees")?
-5. **Placing scenes apart:** a fixed list of places, one per scene, or
-   each scene choosing its own and the runner checking none overlap?
-6. **The client's picture options** once queues exist: keep `--walk` and
-   the others as shortcuts, or replace them with `--queue FILE` only?
+1. (Answered 2026-10-08) **The queue's format:** "lua file with
+   coroutines encouraged." A queue is a Lua file. A character's actions
+   are written as a coroutine: it presses, waits, checks, and goes on,
+   so a queue can loop and compute, not only list moments. The plain
+   lines shown above are the idea, not the format.
+2. (Answered 2026-10-08) **Who plays a scene's characters:** "the
+   server does when it's public. if you're doing the pure singleplayer
+   version it doesn't need to connect to the internet at all, so it
+   doesn't even load those modules. They can even be deleted if the user
+   wants. however it also loads some slight single-player modification
+   patches, but that's for a future phase don't worry about it for now."
+   On a public server the server plays the scene's characters. The pure
+   single-player version never touches the network: the modules for it
+   are not loaded, and a player may delete them. Its single-player
+   patches belong to a later phase.
+3. (Answered 2026-10-08) **Do test characters in one run meet?** "um.
+   yes?" They see each other and collide, and they move around each
+   other in a fight (the owner, 2026-10-08):
+
+   > also they give each other space in combat and make darts forward
+   > when critting and dodges make them jump back. Parry usually moves
+   > them to the side and when they interrupt or are interrupted they'll
+   > move a little bit to apply repositioning (to a more tactical
+   > advantage in relation to the other characters around them and the
+   > environment they're at.) Also if they're in danger they'll fall
+   > back, but they try to do so as a pack, losing ground as steadily as
+   > possible while keeping their area clear of foes.
+
+   Combat footwork, for stand-ins and buddies alike:
+   - keep space from each other while fighting;
+   - a critical hit: a dart forward;
+   - a dodge: a jump back;
+   - a parry: a step to the side;
+   - interrupting or being interrupted: a short move to a better spot,
+     judged against the characters around them and the ground;
+   - in danger: fall back together as a pack, giving ground as steadily
+     as they can while keeping their own area clear of enemies.
+   No issue plans this footwork yet. It is written here until it gets
+   one of its own.
+4. (Answered 2026-10-08) **Who writes the log:** both, compared line by
+   line, "for the debug step, during the validation process of the
+   compilation phase." Comparing the client's log with the server's is
+   part of the build's checking step, while debugging; an ordinary run
+   keeps one log.
+5. **Placing scenes apart:** asked again 2026-10-08 (the first wording
+   was unclear). Each scene needs its own patch of ground, so that, for
+   example, a stand-in walking out of the Alterac Valley cave doesn't
+   walk into another scene's creatures. Who picks where a scene goes:
+   one list of places, written by us, with a scene given one of them; or
+   each scene names its own place, and the runner stops if two scenes'
+   places overlap?
+6. (Answered 2026-10-08) **The client's picture options:** "depends on
+   if they're implemented performantly, but in general we should have
+   movement pathfinding co-routines for things like 'orbit your foe by N
+   percent' or 'turn while walking that way' or 'jump onto this
+   calculated-as-doable-for-you ledge.' etc. Then we can use them in the
+   mechanisms we use to pilot the buddy-bots and stand-ins." Whether the
+   one-off options stay depends on whether they run fast enough as
+   queues. Above them sits a library of movement coroutines (orbit a
+   foe by a share of a circle, turn while walking, jump onto a ledge
+   worked out as reachable for this character), which queues use, and
+   which also steer buddies and stand-ins.
