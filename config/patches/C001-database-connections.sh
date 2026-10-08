@@ -60,6 +60,18 @@ config_database_connections() {
             DB_CHARS="acore_characters_basic"
             DB_PLAYERBOTS="acore_playerbots_basic"
             ;;
+        cc-test)
+            # cc-test (176): the custom client's test server. Its own
+            # world/characters/playerbots, seeded from a fresh AzerothCore
+            # base, so test characters are made and wiped without touching
+            # anyone's play. Underscores: a hyphen can't stand in an
+            # unquoted database name.
+            DB_PORT="3307"
+            DB_AUTH="acore_auth"
+            DB_WORLD="acore_world_cc_test"
+            DB_CHARS="acore_characters_cc_test"
+            DB_PLAYERBOTS="acore_playerbots_cc_test"
+            ;;
         alpha)
             DB_PORT="3308"
             DB_AUTH="acore_auth_alpha"

@@ -35,6 +35,7 @@ CC_JSON="${DIR}/${BUILD_NAME}/compile_commands.json"
 declare -A SOURCE_BY_PROFILE=(
     [release]="source-beta" [beta]="source-beta" [vanilla]="source-beta"
     [basic]="source-beta"   [alpha]="source-alpha"
+    [cc-test]="source-beta"
 )
 SRC="${DIR}/${SOURCE_BY_PROFILE[${PROFILE}]:?unknown profile}"
 WORK="${DIR}/tmp/shared-memory/test-patched-syntax-${PROFILE}"

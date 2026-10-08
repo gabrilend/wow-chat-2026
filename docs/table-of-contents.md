@@ -68,6 +68,7 @@ wow-chat-2026/
 │   ├── profiles/                  Per-profile reference pages (user-facing)
 │   │   ├── index.md               Overview of the profiles + how to switch
 │   │   ├── basic.md               Level 1-60 development baseline (155)
+│   │   ├── cc-test.md             The custom client's test server: stock + playerbots + ALE (176)
 │   │   ├── socket-bonus-catalog.md Generated: every enchantment usable as a socket bonus, by kind and size; low-level cut gems (155p)
 │   │   ├── vanilla.md             Default WotLK + playerbots, light ruleset (148)
 │   │   ├── release.md             Wow-chat custom design, proven-working tier

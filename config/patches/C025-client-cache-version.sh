@@ -38,6 +38,7 @@ config_client_cache_version() {
     local -A SOURCE_BY_PROFILE=(
         [release]="source-beta" [beta]="source-beta" [vanilla]="source-beta"
         [basic]="source-beta"   [alpha]="source-alpha"
+        [cc-test]="source-beta"
     )
     local src="${SOURCE_BY_PROFILE[${PROFILE}]:-}"
     if [[ -z "${src}" ]]; then

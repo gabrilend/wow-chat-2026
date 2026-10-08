@@ -56,6 +56,11 @@ that must be updated to match.
   and a small QoL module set, no Lua engine, no custom scripting.
   Sits outside the alpha → beta → release pipeline because it's a
   parallel ruleset, not an iteration of the wow-chat design.
+- **`cc-test`** — added 2026-10-08 per issue 176. The custom client's
+  test server, outside the pipeline like vanilla: stock AzerothCore with
+  mod-playerbots and mod-ale only, its own suffixed databases
+  (`_cc_test`), realm 6, the shared ports. Test scenes (176a) are
+  installed here. Everything the name resolves to is tabled in 176.
 - **`alpha`** — is wow-chat-1. The whole old project as a frozen snapshot.
 - **`release`** — the minimum featureset that is *guaranteed working*. Features
   enter release only after they're proven on beta. **Current focus:** getting ALE

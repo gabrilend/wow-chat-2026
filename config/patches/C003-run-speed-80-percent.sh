@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # C003 - Run Speed 80%
 # Set player run speed to 80% (slower, more deliberate exploration)
-# Profiles: all
+# Profiles: release beta vanilla basic alpha (every one but cc-test)
+#
+# cc-test (issue 176) is left out: the custom client is tested against the
+# stock movement speed, so a position it logs can be compared with what the
+# original client would do at the same moment.
 #
 # The key's name depends on the source tree the profile builds from:
 #   source-beta  (release, beta, vanilla, basic): Rate.MoveSpeed.Player
@@ -41,6 +45,6 @@ config_run_speed_80_percent() {
     fi
     sed -i "s|^${key_re}[[:space:]]*=.*|${key} = ${RUN_SPEED}|" "${conf}"
 }
-CONFIG_PROFILES[config_run_speed_80_percent]="all"
+CONFIG_PROFILES[config_run_speed_80_percent]="release beta vanilla basic alpha"
 CONFIG_DESCRIPTIONS[config_run_speed_80_percent]="Run speed 80% (slower exploration)"
 # -- }}}

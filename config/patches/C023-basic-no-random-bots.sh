@@ -21,7 +21,10 @@
 # which grew random bots from level 1 to 60 across Eastern Kingdoms,
 # Kalimdor and Outland; basic also shared vanilla's population band (C020)
 # and account count (C018). Those gates no longer include basic.
-# Profiles: basic
+# cc-test (issue 176, 2026-10-08) takes the same switch: a test scene places
+# the bots it needs (the Alterac Valley stand-ins, 176a1), and a random
+# population walking through a scene would change its logs.
+# Profiles: basic cc-test
 
 # -- {{{ config_basic_no_random_bots
 config_basic_no_random_bots() {
@@ -33,6 +36,6 @@ config_basic_no_random_bots() {
     sed -i 's|^AiPlayerbot\.MinRandomBots[[:space:]]*=.*|AiPlayerbot.MinRandomBots = 0|' "${conf}"
     sed -i 's|^AiPlayerbot\.MaxRandomBots[[:space:]]*=.*|AiPlayerbot.MaxRandomBots = 0|' "${conf}"
 }
-CONFIG_PROFILES[config_basic_no_random_bots]="basic"
+CONFIG_PROFILES[config_basic_no_random_bots]="basic cc-test"
 CONFIG_DESCRIPTIONS[config_basic_no_random_bots]="No random bots (buddies only): autologin off, population 0"
 # -- }}}

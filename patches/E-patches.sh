@@ -125,8 +125,8 @@ _unregister_from_updatefetcher() {
 # -- {{{ _profile_db_name
 # Compose a profile-suffixed database name. Mirrors the database
 # isolation policy in config/patches/C001-database-connections.sh:
-# release and beta share the unsuffixed namespace; vanilla, alpha and basic
-# carry _vanilla / _alpha / _basic suffixes for data isolation.
+# release and beta share the unsuffixed namespace; vanilla, alpha, basic and
+# cc-test carry _vanilla / _alpha / _basic / _cc_test suffixes for data isolation.
 #
 # Use this anywhere an E-patch wires a sql directory to a database.
 # The patch function stays profile-anonymous; the dispatcher
@@ -142,6 +142,7 @@ _profile_db_name() {
         release|beta) echo "${base}" ;;
         vanilla)      echo "${base}_vanilla" ;;
         basic)        echo "${base}_basic" ;;
+        cc-test)      echo "${base}_cc_test" ;;   # underscore: a hyphen is not allowed in an unquoted database name
         alpha)        echo "${base}_alpha" ;;
         *)
             echo "ERROR: _profile_db_name called for unknown profile '${PROFILE}'" >&2

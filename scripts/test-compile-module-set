@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# test-compile-module-set - check which modules the compile script builds
+# for each profile, without compiling anything.
+#
+# For a general audience: five profiles share one copy of the server's
+# source code, and that copy collects every profile's add-on modules (the
+# basic profile's loot and dungeon-finder add-ons, the project's own buddy
+# module). The compile script switches each module on or off for the
+# profile being built, so the custom client's test server (cc-test) is
+# built with only the two it is meant to have. This test builds a fake,
+# empty source tree in RAM with those module folders, runs the compile
+# script's own deciding code against it for several profiles, and compares
+# the answer with what each profile's definition says.
+#
+# Usage: scripts/test-compile-module-set [PROJECT_DIR]
+#   PROJECT_DIR defaults to the hard-coded path below.
+# Exit status: 0 if every profile gets exactly its modules, 1 otherwise.
+
+set -o pipefail
+
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+
+# {{{ load_compile_pieces
+# The compile script runs a build when sourced, so its pieces are cut out
+# by their fold markers instead: the module tables and the three functions
+# that decide. Testing the real text means a change there is tested too.
+COMPILE="${DIR}/scripts/compile"
+pieces=$(
+    sed -n '/^# {{{ Modules per profile$/,/^# }}}$/p'     "${COMPILE}"
+    sed -n '/^# {{{ PATCH_PROVIDED_MODULES$/,/^# }}}$/p'  "${COMPILE}"
+    sed -n '/^# {{{ module_wanted$/,/^# }}}$/p'           "${COMPILE}"
+    sed -n '/^# {{{ module_cmake_settings$/,/^# }}}$/p'   "${COMPILE}"
+)
+for piece in "PROFILE_MODULES" "PATCH_PROVIDED_MODULES=" "module_wanted()" "module_cmake_settings()"; do
+    if [[ "${pieces}" != *"${piece}"* ]]; then
+        echo "ERROR: could not cut '${piece}' out of ${COMPILE} (fold marker renamed?)"
+        exit 1
+    fi
+done
+eval "${pieces}"
+# The real per-profile source-patch lists (module_wanted reads them).
+source "${DIR}/patches/patches.sh" || { echo "ERROR: patches/patches.sh failed to source"; exit 1; }
+# }}}
+
+# {{{ fake_tree
+# A source tree holding the module folders the shared tree holds today,
+# each with the src/ folder that makes it count as a module.
+SCRATCH_ROOT="${DIR}/tmp/shared-memory"
+[[ -d "${SCRATCH_ROOT}" ]] || { echo "ERROR: ${SCRATCH_ROOT} missing (the project's RAM scratch link)"; exit 1; }
+FAKE="${SCRATCH_ROOT}/test-compile-module-set"
+rm -rf "${FAKE}"
+for mod_name in mod-ale mod-aoe-loot mod-fireworks-on-level mod-playerbots mod-solo-lfg mod-grownup; do
+    mkdir -p "${FAKE}/source/modules/${mod_name}/src"
+done
+AC_CODE_DIR="${FAKE}/source"
+# mod-buddies lives in the project's own modules/ folder (B036 copies it in)
+# }}}
+
+# {{{ expectations
+# Each profile's wanted modules, as its definition gives them: the module
+# list in scripts/install, plus mod-buddies where B036 is in its patch list.
+declare -A EXPECT_ON=(
+    [basic]="mod-ale mod-aoe-loot mod-buddies mod-fireworks-on-level mod-playerbots mod-solo-lfg"
+    [cc-test]="mod-ale mod-playerbots"
+    [beta]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
+    [vanilla]="mod-ale mod-aoe-loot mod-fireworks-on-level mod-playerbots mod-solo-lfg"
+)
+# }}}
+
+# {{{ check
+fail=0
+for PROFILE in basic cc-test beta vanilla; do
+    got_on=$(module_cmake_settings | sed -n 's/^MODULE_\(.*\)=default$/\1/p' | tr 'A-Z' 'a-z' | sort | tr '\n' ' ')
+    got_off=$(module_cmake_settings | sed -n 's/^MODULE_\(.*\)=disabled$/\1/p' | tr 'A-Z' 'a-z' | sort | tr '\n' ' ')
+    want_on=$(tr ' ' '\n' <<< "${EXPECT_ON[${PROFILE}]}" | sort | tr '\n' ' ')
+    if [[ "${got_on}" == "${want_on}" ]]; then
+        printf "  [✓] %-8s on: %s\n" "${PROFILE}" "${got_on}"
+        printf "      %-8s off: %s\n" "" "${got_off:-none}"
+    else
+        printf "  [✗] %-8s on: %s\n" "${PROFILE}" "${got_on}"
+        printf "      %-8s expected: %s\n" "" "${want_on}"
+        fail=$((fail + 1))
+    fi
+done
+rm -rf "${FAKE}"
+echo "Profiles with the wrong module set: ${fail}"
+# }}}
+
+[[ "${fail}" -eq 0 ]]

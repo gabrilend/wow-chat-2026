@@ -9,7 +9,9 @@ config_network_ports() {
     local conf_world="${INSTALL_DIR}/etc/worldserver.conf"
 
     # Port isolation policy (revised by 136a — unified-realmlist):
-    #   release/beta/vanilla/basic:  authserver 4362, worldserver 4462 (shared)
+    #   release/beta/vanilla/basic/cc-test:  authserver 4362, worldserver 4462 (shared)
+    #     (cc-test, issue 176, takes the shared pair: it runs instead of
+    #     basic, not beside it; whether it gets its own is 176's question 4)
     #   alpha:                 authserver 4363, worldserver 4463
     # Release, beta, and vanilla share the auth+world ports so the user's
     # realmlist.wtf never has to change between profile flips. Only one of
@@ -21,7 +23,7 @@ config_network_ports() {
     local WORLDSERVER_PORT
     local AUTHSERVER_PORT
     case "${PROFILE}" in
-        release|beta|vanilla|basic)  WORLDSERVER_PORT=4462; AUTHSERVER_PORT=4362 ;;
+        release|beta|vanilla|basic|cc-test)  WORLDSERVER_PORT=4462; AUTHSERVER_PORT=4362 ;;
         alpha)                 WORLDSERVER_PORT=4463; AUTHSERVER_PORT=4363 ;;
         *)                     echo "ERROR: Unknown profile '${PROFILE}' in config_network_ports"; return 1 ;;
     esac

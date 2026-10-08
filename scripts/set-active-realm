@@ -10,8 +10,8 @@
 # exec'ing the binary. Idempotent — safe to call repeatedly, safe to
 # call when no profile change is in flight.
 #
-# First call against a fresh acore_auth seeds the four realm rows
-# (release/beta/vanilla/alpha) via INSERT IGNORE so the flip has
+# First call against a fresh acore_auth seeds the six realm rows
+# (release/beta/vanilla/alpha/basic/cc-test) via INSERT IGNORE so the flip has
 # something to flip. The seed is lazy on purpose — it doesn't run
 # unless someone actually invokes this script.
 #
@@ -20,7 +20,7 @@
 # each profile's worldserver.conf). Update both as a pair.
 #
 # Usage: ./scripts/set-active-realm <profile>
-#        Profile must be one of: release, beta, vanilla, alpha
+#        Profile must be one of: release, beta, vanilla, alpha, basic, cc-test
 #
 # Sample: ./scripts/set-active-realm vanilla
 #         → vanilla row online (flag=0), other three offline (flag=2)
@@ -33,7 +33,7 @@ DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
 PROFILE="${1:-}"
 if [[ -z "${PROFILE}" ]]; then
     echo "Usage: $0 <profile>"
-    echo "  profile: release | beta | vanilla | alpha | basic"
+    echo "  profile: release | beta | vanilla | alpha | basic | cc-test"
     exit 1
 fi
 # }}}
@@ -46,8 +46,9 @@ case "${PROFILE}" in
     vanilla)  ACTIVE_ID=3 ;;
     alpha)    ACTIVE_ID=4 ;;
     basic)    ACTIVE_ID=5 ;;
+    cc-test)  ACTIVE_ID=6 ;;
     *)
-        echo "ERROR: unknown profile '${PROFILE}' (expected release|beta|vanilla|alpha|basic)"
+        echo "ERROR: unknown profile '${PROFILE}' (expected release|beta|vanilla|alpha|basic|cc-test)"
         exit 1
         ;;
 esac
@@ -77,7 +78,8 @@ VALUES
   (2, 'beta',    '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
   (3, 'vanilla', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
   (4, 'alpha',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
-  (5, 'basic',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340);
+  (5, 'basic',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (6, 'cc-test', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340);
 SQL
 # }}}
 
@@ -94,6 +96,7 @@ UPDATE realmlist SET name = CASE id
     WHEN 3 THEN 'vanilla'
     WHEN 4 THEN 'alpha'
     WHEN 5 THEN 'basic'
+    WHEN 6 THEN 'cc-test'
     ELSE name END;
 SQL
 # }}}

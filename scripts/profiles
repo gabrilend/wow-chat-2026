@@ -20,6 +20,7 @@ declare -A PROFILE_REPO=(
     ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["vanilla"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["basic"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["cc-test"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
 )
 # }}}
 
@@ -30,6 +31,7 @@ declare -A PROFILE_BRANCH=(
     ["release"]="Playerbot"
     ["vanilla"]="Playerbot"
     ["basic"]="Playerbot"
+    ["cc-test"]="Playerbot"
 )
 # }}}
 
@@ -48,6 +50,7 @@ declare -A PROFILE_COMMIT=(
     ["release"]="52f58186a533"
     ["vanilla"]="52f58186a533"
     ["basic"]="52f58186a533"
+    ["cc-test"]="52f58186a533"
 )
 # }}}
 
@@ -64,6 +67,7 @@ declare -A PROFILE_MODULES=(
     ["beta"]="mod-ale mod-playerbots mod-aoe-loot mod-grownup"
     ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
     ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["cc-test"]="mod-playerbots mod-ale"
 )
 # }}}
 
@@ -89,6 +93,7 @@ show_help() {
     echo ""
     echo "Profiles:"
     echo "  basic   - Levels 1-60, playerbots + QoL, the development baseline (155)"
+    echo "  cc-test - Stock server + playerbots + ALE, for testing the custom client (176)"
     echo "  vanilla - Default WotLK + playerbots, light ruleset (148)"
     echo "  alpha   - Latest playerbots, cutting edge"
     echo "  release - Stable, wow-chat-1 compatible"
@@ -110,7 +115,7 @@ printf "%-10s %-50s %-12s\n" "-------" "----------" "------"
 # basic (155) sits beside vanilla at the floor: the full 1-60 baseline.
 # vanilla is the smallest, most-stable profile; beta is the
 # most-experimental. Reading top-to-bottom traverses that gradient.
-for p in basic vanilla alpha release beta; do
+for p in basic cc-test vanilla alpha release beta; do
     repo="${PROFILE_REPO[$p]}"
     branch="${PROFILE_BRANCH[$p]}"
     commit="${PROFILE_COMMIT[$p]}"
@@ -123,7 +128,7 @@ done
 
 echo ""
 echo "Modules per profile:"
-for p in basic vanilla alpha release beta; do
+for p in basic cc-test vanilla alpha release beta; do
     mods="${PROFILE_MODULES[$p]:-none}"
     [[ -z "${mods}" ]] && mods="none"
     echo "  ${p}: ${mods}"

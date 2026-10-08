@@ -31,6 +31,71 @@ the custom client, but a failure could come from any of those layers. The
 custom client has no network code yet. Its world comes from a file
 generated out of a world database (`scripts/generate-custom-client-creatures`).
 
+**2026-10-08: registered everywhere a profile name resolves; not yet
+built or installed** (the owner runs the build). The table below is what
+each place resolves to. Checked without a server or a build:
+
+- `scripts/test-profile-config-gates <project> cc-test`: 16 of 16 values as
+  promised (stock level cap, speed and fall damage; realm 6; GM level 0;
+  Warden kicks; no random bots). basic still passes all of its own.
+- `scripts/test-compile-module-set`: cc-test builds mod-ale and
+  mod-playerbots only; basic, beta and vanilla build exactly their own sets.
+- `scripts/test-source-patches` on a clean copy of the pinned source (built
+  from git, not the working tree): cc-test's 15 patches apply and revert to
+  a byte-identical tree; basic's 39 too.
+- `scripts/test-patched-syntax` on the same copy: every file cc-test's
+  patches change compiles.
+
+Two things found and fixed on the way, both affecting every profile:
+
+- **Other profiles' modules were built in.** The source tree is shared and
+  only `scripts/install` removes modules a profile doesn't list;
+  `scripts/update` and `scripts/compile` built whatever module folders
+  were there. A cc-test build would have linked basic's mod-aoe-loot,
+  mod-solo-lfg, mod-fireworks-on-level and a copied-in mod-buddies. Now
+  `scripts/compile` sets each module folder on or off for the profile
+  being built (its module list, plus mod-buddies where the buddy-module
+  patch B036 is in its list), and reconfigures when the set differs from
+  the last build's. basic's own set is unchanged, so basic does not
+  reconfigure.
+- **B002's revert left a file behind** (`mod-playerbots.cmake`, which it
+  writes), so the tree never returned to upstream; earlier dry runs passed
+  because they copied a tree that already held it. The revert now removes
+  the file when it carries B002's header.
+
+Not done, for the owner: the first `scripts/install` with `.profile` set
+to `cc-test` (clone, build, databases). Install removes from the shared
+source tree every module cc-test doesn't list (basic's three extra
+modules); basic's next `scripts/update` clones them back.
+
+## What the name resolves to
+
+| What | cc-test | Why |
+|---|---|---|
+| source tree | `source-beta` | shared with basic, vanilla, beta, release: same schema, one compile target |
+| installed tree | `installed-files-cc-test/` | every profile has its own |
+| build directory | `build-shadow/` | shared by every profile (`scripts/compile`); the patches are applied to the source before each build, and the module set is switched per profile (below) |
+| Lua directory | `src/lua-cc-test/` | its own, holding only a README until the first scene; E001 stops if a profile has none |
+| databases | `acore_auth` (shared), `acore_world_cc_test`, `acore_characters_cc_test`, `acore_playerbots_cc_test` | test characters made and wiped without touching anyone's play; underscores, because a hyphen is not allowed in an unquoted database name |
+| logs | `logs-cc-test` → `/tmp/wow-chat-2/logs-cc-test` | as every profile (E004) |
+| ports | auth 4362, world 4462 | shared with basic, vanilla, beta, release: one of them runs at a time, and the realm list shows which (136a); open question 4 |
+| realm id | 6 | the next free row in the shared realm list (C019 and `scripts/set-active-realm`, a pair) |
+| modules | mod-playerbots, mod-ale | pinned exactly as basic's (the shared tree must pin identically) |
+| source patches | B002 B004 B009 B012 B013 B014 B015 B017 B018 B020 B021 B022 B023 B026 B027 | compile and warning fixes, ALE stability (B020, B023), the bot-login crash guards (B026, B027), runtime config folder (B022), bots firing ALE's login event (B002). Left out: B001 (mod-aoe-loot, not loaded), every gameplay patch |
+| install steps | E001 E004 E006 | the Lua link, the log folder, the config files; no database content changes |
+| config patches | the all-profile ones except run speed (C003, now gated away from cc-test), plus C016 (missing keys), C023 (no random bots), C033 (Warden kicks) | stock values everywhere else |
+| GM on login | 0 (player) | a test character sees what a player sees and meets every check a player meets |
+| `.profile` | `cc-test` | the one word |
+
+Random bots are off (C023) because a scene places the bots it needs; a
+random population would walk into scenes and change their logs.
+
+Warden kicks (C033, `Warden.ClientCheckFailAction = 1`): the custom
+client has to answer the server's Warden checks the way the original
+client does, or it is kicked; until it does, every session ends in a kick
+(and one that never answers is dropped after `Warden.ClientResponseDelay`,
+600 seconds, in any profile).
+
 ## Intended Behavior
 
 A sixth profile, `cc-test` ("custom client test"), that resolves
@@ -118,3 +183,12 @@ patch gates, source patch list, the word in `.profile`).
 3. (Answered 2026-10-07) **Where the client's networking is built:** in
    the W client, after the move: "let's focus on moving over to to the W
    client." The cc-test server stays in this project.
+4. **Ports: shared, or its own?** cc-test takes the shared pair (auth
+   4362, world 4462), so it runs instead of basic, never beside it. Its
+   own pair (for example 4366 and 4466) would let a test run while basic
+   is being played, at the cost of a second realm marked online at once,
+   which `scripts/set-active-realm` doesn't do today.
+5. **The custom client and Warden.** With failed checks kicking, the
+   custom client must answer Warden as the original does. Is that wanted
+   from the first connection, or should cc-test log failures only
+   (action 0) until the client's Warden replies exist?

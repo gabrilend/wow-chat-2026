@@ -28,6 +28,7 @@ config_realm_id() {
         vanilla)  REALM_ID=3 ;;
         alpha)    REALM_ID=4 ;;
         basic)    REALM_ID=5 ;;
+        cc-test)  REALM_ID=6 ;;
         *)
             echo "ERROR: Unknown profile '${PROFILE}' in config_realm_id"
             return 1
@@ -37,5 +38,5 @@ config_realm_id() {
     sed -i 's|^RealmID.*=.*|RealmID = '"${REALM_ID}"'|' "${conf_world}"
 }
 CONFIG_PROFILES[config_realm_id]="all"
-CONFIG_DESCRIPTIONS[config_realm_id]="RealmID per profile (1=release, 2=beta, 3=vanilla, 4=alpha)"
+CONFIG_DESCRIPTIONS[config_realm_id]="RealmID per profile (1=release, 2=beta, 3=vanilla, 4=alpha, 5=basic, 6=cc-test)"
 # -- }}}

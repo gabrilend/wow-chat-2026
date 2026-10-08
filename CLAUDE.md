@@ -22,13 +22,17 @@ matching source tree, install dir, and databases.
 - **basic** — levels 1–60, stock game + playerbots + QoL; the development
   baseline (issue 155, `docs/profiles/basic.md`). **expert** (61–80, start
   at 60) is planned, not built (issue 156).
+- **cc-test** — the custom client's test server: stock AzerothCore +
+  playerbots + ALE, no random bots, Warden kicks; test scenes run here
+  (issue 176, `docs/profiles/cc-test.md`). Being registered 2026-10-08,
+  not yet built.
 - **vanilla** — start 20, level cap 40 (constrained demo)
 - **beta** — level cap 20 (the original wow-chat roguelike design)
 - **release** — level cap 20 today (C006b is gated `beta release`), though
   older notes describe it as 80; which is intended is an open question
 - **alpha** — level cap 80, the wow-chat-1 relic
 
-release/beta/vanilla/basic share `source-beta`; alpha uses `source-alpha`. Per-profile
+release/beta/vanilla/basic/cc-test share `source-beta`; alpha uses `source-alpha`. Per-profile
 differences are applied at install time by `config/patches/C*.sh`, gated on the
 profile name.
 

@@ -88,6 +88,7 @@ declare -A PROFILE_COMMIT=(
     ["release"]="52f58186a533"
     ["vanilla"]="52f58186a533"
     ["basic"]="52f58186a533"
+    ["cc-test"]="52f58186a533"
 )
 # }}}
 
@@ -104,6 +105,7 @@ declare -A PROFILE_MODULES=(
     ["release"]="mod-ale mod-playerbots"
     ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
     ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["cc-test"]="mod-playerbots mod-ale"
 )
 # }}}
 
@@ -128,10 +130,12 @@ declare -A PROFILE_MODULE_COMMITS=(
     ["release:mod-playerbots"]="93aaea3d"
     ["vanilla:mod-playerbots"]="93aaea3d"
     ["basic:mod-playerbots"]="93aaea3d"
+    ["cc-test:mod-playerbots"]="93aaea3d"
     ["beta:mod-ale"]="9e5b8c6"
     ["release:mod-ale"]="9e5b8c6"
     ["vanilla:mod-ale"]="9e5b8c6"
     ["basic:mod-ale"]="9e5b8c6"
+    ["cc-test:mod-ale"]="9e5b8c6"
 )
 # }}}
 
@@ -278,6 +282,7 @@ get_profile_paths() {
         beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
         vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
         basic)   AC_CODE_DIR="${DIR}/source-beta"  ;;
+        cc-test) AC_CODE_DIR="${DIR}/source-beta"  ;;
         alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
         *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
     esac

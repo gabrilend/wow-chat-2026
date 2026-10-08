@@ -28,6 +28,7 @@ PROFILE="${2:-basic}"
 declare -A SOURCE_BY_PROFILE=(
     [release]="source-beta" [beta]="source-beta" [vanilla]="source-beta"
     [basic]="source-beta"   [alpha]="source-alpha"
+    [cc-test]="source-beta"
 )
 SRC_NAME="${SOURCE_BY_PROFILE[${PROFILE}]:-}"
 if [[ -z "${SRC_NAME}" ]]; then

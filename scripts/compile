@@ -94,6 +94,7 @@ declare -A PROFILE_MODULES=(
     ["release"]="mod-ale mod-playerbots"
     ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
     ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["cc-test"]="mod-playerbots mod-ale"
 )
 # }}}
 
@@ -229,6 +230,7 @@ get_profile_paths() {
         beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
         vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
         basic)   AC_CODE_DIR="${DIR}/source-beta"  ;;
+        cc-test) AC_CODE_DIR="${DIR}/source-beta"  ;;
         alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
         *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
     esac
@@ -254,9 +256,67 @@ setup_log_symlinks() {
 }
 # }}}
 
+# {{{ PATCH_PROVIDED_MODULES
+# Modules that are not cloned from upstream but copied into the source
+# tree by one of the project's source patches. A profile wants such a
+# module exactly when that patch is in its source-patch list.
+declare -A PATCH_PROVIDED_MODULES=(
+    ["mod-buddies"]="B036"   # the project's buddy module (modules/mod-buddies/, issue 617a1)
+)
+# }}}
+
+# {{{ module_wanted
+# Does the current profile build this module? Yes when it is in the
+# profile's module list (PROFILE_MODULES), or when a source patch in the
+# profile's list provides it (PATCH_PROVIDED_MODULES). Every other module
+# folder in the shared source tree is a neighbour's: basic's mod-aoe-loot,
+# a mod-buddies a basic build copied in. The source tree is shared by five
+# profiles and only install prunes it, so without this a cc-test build
+# (issue 176: stock + playerbots + ALE) would link basic's whole module set.
+# Needs patches.sh loaded (PHASE_BEGIN_PATCHES).
+module_wanted() {
+    local mod_name="${1}"
+    # yes: named in the profile's module list
+    [[ " ${PROFILE_MODULES[${PROFILE}]} " == *" ${mod_name} "* ]] && return 0
+    # yes: brought in by a source patch this profile applies
+    local providing_patch="${PATCH_PROVIDED_MODULES[${mod_name}]:-}"
+    [[ -n "${providing_patch}" && " ${PHASE_BEGIN_PATCHES[${PROFILE}]} " == *" ${providing_patch} "* ]] && return 0
+    # no: some other profile's module
+    return 1
+}
+# }}}
+
+# {{{ module_cmake_settings
+# One cmake setting per module folder in the source tree: MODULE_<NAME>
+# (upper case, hyphens kept; AzerothCore's ModuleNameToVariable) is
+# "default" for a wanted module (linked as -DMODULES says, static) and
+# "disabled" for every other. Echoes "NAME=VALUE" lines, sorted.
+# Project modules copied in by a patch (mod-buddies) are listed from the
+# project's own modules/ folder too, because the copy happens after the
+# module check.
+module_cmake_settings() {
+    local -A seen=()
+    local mod_dir mod_name
+    for mod_dir in "${AC_CODE_DIR}"/modules/*/ "${DIR}"/modules/*/; do
+        [[ -d "${mod_dir}src" ]] || continue
+        mod_name=$(basename "${mod_dir}")
+        [[ -n "${seen[${mod_name}]:-}" ]] && continue
+        seen[${mod_name}]=1
+        local variable="MODULE_${mod_name^^}"
+        if module_wanted "${mod_name}"; then
+            echo "${variable}=default"
+        else
+            echo "${variable}=disabled"
+        fi
+    done | sort
+}
+# }}}
+
 # {{{ check_modules_configured
 # Checks if all modules in source are present in the cmake-generated loader.
 # If any module is missing, sets FORCE_REBUILD=true to trigger reconfiguration.
+# Modules this profile does not want (module_wanted) are skipped: they are
+# switched off on purpose, so their absence from the loader is correct.
 check_modules_configured() {
     local MODULES_DIR="${AC_CODE_DIR}/modules"
     local LOADER_FILE="${BUILD_DIR_SHADOW}/modules/gen_scriptloader/static/ModulesLoader.cpp"
@@ -279,6 +339,8 @@ check_modules_configured() {
         [[ -d "${mod_dir}/src" ]] || continue
         # Skip .gitkeep and other non-module items
         [[ "${mod_name}" == "." || "${mod_name}" == ".." ]] && continue
+        # Another profile's module, switched off for this build: not missing
+        module_wanted "${mod_name}" || continue
         source_modules+=("${mod_name}")
     done
 
@@ -317,6 +379,10 @@ check_modules_configured() {
     local unseen_sources=()
     local source_file
     while IFS= read -r source_file; do
+        # a project module this profile doesn't build: its files are meant to be unseen
+        local project_module="${source_file#"${DIR}/modules/"}"
+        project_module="${project_module%%/*}"
+        module_wanted "${project_module}" || continue
         # path as the build sees it: project modules/ becomes the tree's modules/
         local built_path="${AC_CODE_DIR}/modules/${source_file#"${DIR}/modules/"}"
         if ! grep -qF "\"${built_path}\"" "${COMMANDS_FILE}"; then
@@ -438,6 +504,29 @@ do_build() {
     # needs (then once more, to add that flag; that build compiles
     # everything afresh, after which the cache carries the builds)
     local PCH_FLAG="-Xclang -fno-pch-timestamp"
+
+    # Which modules this profile links (module_cmake_settings), as cmake
+    # settings, and which of them the last configure (the shared
+    # build-shadow cache, used by every profile) had otherwise. A profile
+    # switch that changes the module set has to reconfigure, or the build
+    # keeps the previous profile's modules.
+    local -a MODULE_FLAGS=()
+    local module_changes=()
+    local setting
+    while IFS= read -r setting; do
+        [[ -n "${setting}" ]] || continue
+        MODULE_FLAGS+=("-D${setting%%=*}=${setting#*=}")
+        if [[ -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" ]]; then
+            local cached
+            cached=$(grep -m1 "^${setting%%=*}:STRING=" "${BUILD_DIR_SHADOW}/CMakeCache.txt" | cut -d= -f2-)
+            # unset in the cache counts as "default" (cmake's own default)
+            [[ "${cached:-default}" == "${setting#*=}" ]] || module_changes+=("${setting%%=*} ${cached:-unset} -> ${setting#*=}")
+        fi
+    done < <(module_cmake_settings)
+    echo ""
+    echo "Modules for ${PROFILE}:"
+    for setting in "${MODULE_FLAGS[@]}"; do echo "  ${setting#-D}"; done
+
     local RECONFIGURE_WHY=""
     if [[ ! -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" ]]; then
         RECONFIGURE_WHY="not configured yet"
@@ -445,6 +534,8 @@ do_build() {
         RECONFIGURE_WHY="--force"
     elif ! grep -q -- "-fno-pch-timestamp" "${BUILD_DIR_SHADOW}/CMakeCache.txt"; then
         RECONFIGURE_WHY="adding ${PCH_FLAG} so ccache can cache precompiled-header compiles (this build compiles everything once)"
+    elif [[ ${#module_changes[@]} -gt 0 ]]; then
+        RECONFIGURE_WHY="the module set differs from the last configure: ${module_changes[*]}"
     fi
     if [[ -n "${RECONFIGURE_WHY}" ]]; then
         echo ""
@@ -469,6 +560,7 @@ do_build() {
           -DTOOLS_BUILD=all \
           -DSCRIPTS=static \
           -DMODULES=static \
+          "${MODULE_FLAGS[@]}" \
           -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql" \
           -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include" \
           -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so" \
@@ -574,11 +666,14 @@ if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
     exit 1
 fi
 
+# Source patch functions. Loaded before the module check, because which
+# modules this profile wants depends on its source-patch list (a patch can
+# bring a module in, see PATCH_PROVIDED_MODULES). Loading only defines
+# functions and the per-profile lists; nothing is applied here.
+source "${DIR}/patches/patches.sh"
+
 # Check if any modules were added since last cmake configure
 check_modules_configured
-
-# Source patch functions
-source "${DIR}/patches/patches.sh"
 
 # Hard-reset source-beta and every module to HEAD before re-applying
 # patches. Source trees are build artifacts (issue 136); anything in the
