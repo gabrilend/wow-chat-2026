@@ -64,8 +64,29 @@ seat.
   alterac valley stand-ins they always wear a shirt? Because it is cold
   there. And the ones in Stranglethorn shouldn't wear shirts, because
   they'll sweat too much."): a stand-in in a cold zone (Alterac Valley
-  first) always wears a shirt; one in Stranglethorn never does. Which
-  other zones count as cold or hot is to be listed.
+  first) always wears a shirt; one in Stranglethorn never does. The
+  zones, owner 2026-10-08:
+
+  > silithus, everywhere in northrend, hellfire penninsula is weirdly
+  > normal temperature? It's equalized by the cold of space (twisting
+  > nether) -- tirisfal maybe. not sure. gnomeregan yes because it's
+  > under dun morogh [...] Ragefire chasm should be hot. blackrock
+  > mountain and upper/lower blackrock spire are warm. deeprun tram,
+  > cold. anytime they need to go swimming for a quest, they take it off
+  > too - so, underwater is cold, and they kneel for a second or two
+  > before switching in-or-out of a shirt.
+
+  | Climate | Places | Shirt |
+  |---|---|---|
+  | cold | Alterac Valley, all of Northrend, Gnomeregan (under Dun Morogh), the Deeprun Tram, underwater | on |
+  | hot | Stranglethorn, Silithus, Ragefire Chasm | off |
+  | warm | Blackrock Mountain, Upper and Lower Blackrock Spire | open question 9 |
+  | normal | Hellfire Peninsula (the Twisting Nether's cold evens it out), everywhere not listed | as it is |
+  | not sure | Tirisfal Glades | open question 9 |
+
+  **Changing:** a stand-in kneels for a second or two, then puts its
+  shirt on or takes it off. **Swimming for a quest:** it takes the
+  shirt off to swim (open question 9).
 - **Sockets**: filled by its class's style (the gem colours and stats its
   class and role want, 617j2's rules).
 - **Kept, not deleted** (owner, 2026-10-04: "you can scale them up to the
@@ -153,3 +174,9 @@ seat.
    and later the forbidden pairs too, starting with a blood elf druid
    ("yes. blood elf druid pls"). The details are in the Alterac Valley
    test scene's questions (176a1).
+9. **Shirts, the rest of the list.** Does "warm" (Blackrock Mountain and
+   its spires) mean shirt off, like hot, or kept as it is? Is Tirisfal
+   cold? Are Dun Morogh itself and Winterspring cold, and Tanaris,
+   Un'Goro and the Barrens hot? And swimming: "they take it off too - so,
+   underwater is cold" reads both ways. Is the shirt taken off to swim
+   (kept dry), or put on because the water is cold?

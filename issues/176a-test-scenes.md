@@ -221,8 +221,8 @@ with stored references (the client's half, after its move: 173v).
      judged against the characters around them and the ground;
    - in danger: fall back together as a pack, giving ground as steadily
      as they can while keeping their own area clear of enemies.
-   No issue plans this footwork yet. It is written here until it gets
-   one of its own.
+   The footwork has its own plan: 619 (combat footwork), a patch to
+   the playerbots module.
 4. (Answered 2026-10-08) **Who writes the log:** both, compared line by
    line, "for the debug step, during the validation process of the
    compilation phase." Comparing the client's log with the server's is

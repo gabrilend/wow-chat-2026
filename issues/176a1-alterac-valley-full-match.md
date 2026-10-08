@@ -294,3 +294,10 @@ every scene at once.
     yes." A tier is named by its top level and takes the nine below it
     (the 20 tier takes 11 to 20), and a profile has valleys only up to
     its own cap (two on a level-20 profile, eight on alpha).
+11. **Ending the stock battle.** In the stock game a finished Alterac
+    Valley closes its instance and sends everyone out. Keeping the
+    valley open through the town time and the questing time changes how
+    the server ends a battleground. Only for these turn-based valleys,
+    or for every battleground once the others get their versions? The
+    owner, 2026-10-08: "unclear. will assess momentarily. proceed as
+    continued."
