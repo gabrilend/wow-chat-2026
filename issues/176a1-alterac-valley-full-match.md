@@ -76,7 +76,20 @@ connected players." So:
 
 **One match per tier.** The owner, 2026-10-08: "Alterac Valley is an
 instance, so, as many as there are tiers." Each level tier has its own
-copy of the valley, and its stand-ins are of that tier.
+copy of the valley, and its stand-ins are of that tier. A tier every ten
+levels (owner, 2026-10-08: "can we have one tier for every 10 levels? 10,
+20, 30, 40, 50, 60..."). The valley's own creatures (its guards,
+captains, generals and the rest) are brought down to the tier too ("the
+NPCs should shrink in capabilities and equipment to compensate (duh
+they're stand-ins, they're equipped from the white quality gear)"): their
+level, health, damage and gear match the tier, the way the stand-ins'
+white gear (617t) matches theirs.
+
+**Battles follow the stock rules.** Asked what ends a battle and what the
+next one starts from: "same rules as alterac valley." A battle ends as
+the stock one does (a side kills the other's general, or brings its
+reinforcements to zero), and the next battle starts fresh, every tower,
+bunker and graveyard back in its starting state.
 
 **Fighting, then ten minutes in town.** The owner, 2026-10-08:
 
@@ -101,6 +114,14 @@ copy of the valley, and its stand-ins are of that tier.
 - **Goblin balloons** come every turn, allowed by both factions. Each
   carries the public messages the other side wrote during their last
   time in town. That is how both sides know they share one server.
+  Anyone on the receiving side can read them (owner, 2026-10-08: "anyone
+  on the other side. The leaders of each side are told that it's for
+  demoralizing messages only, but everyone says whatever they want. The
+  goblins say one thing to one person and another to the other, which is
+  sooooo typical goblin-speak of them."): each side's leaders are told
+  the balloons are for demoralizing the enemy, everyone writes what they
+  like anyway, and the goblins tell each side a different story about
+  the service.
 - **Writing instead of shopping:** a player can spend the ten minutes
   writing a message that the next balloon will carry.
 - **Leaving:** a player can walk out through the entrance tunnel.
@@ -199,15 +220,11 @@ every scene at once.
    617t. For this scene: each stand-in that plays the match takes its
    step afterwards.
 3. (Answered 2026-10-08) **What level the stand-ins are.** One match per
-   tier, its stand-ins of that tier (above). Still open: which tiers.
-   The stock battleground's brackets in 3.3.5a are 51-60, 61-70, 71-79
-   and 80, but this project's profiles cap at 20, 40, 60 or 80, and the
-   stand-in plan (617t) counts in ten-level brackets.
+   tier, a tier every ten levels, its stand-ins and the valley's
+   creatures of that tier (above).
 4. (Answered 2026-10-08) **The match's end.** A battle, then ten
-   minutes in town with the gates barred, then the battle again (above).
-   Still open: what ends each battle (a side winning, or a fixed time),
-   and does the next battle start fresh or carry on from the last one's
-   towers and graveyards ("until the battle resumes")?
+   minutes in town with the gates barred, then the battle again. Each
+   battle ends by the stock rules and the next starts fresh (above).
 5. (Answered 2026-10-08) **Players in the scene.** People can join,
    friends on a player's own server or anyone on a public one (above).
 6. (Answered 2026-10-08) **Playing a stand-in.** The owner, 2026-10-08:
@@ -227,10 +244,19 @@ every scene at once.
    Valley match on a server the player is hosting, which friends can
    join. Or on the owner's server, which runs every test patch built
    here, as one of its stand-ins.
-8. **What the sealed test checks across the turns.** The sealed test
-   copy lets no one in. Does it run a battle and its ten minutes in town
-   once and stop, or several turns in a row (which would also test the
-   gates, the balloons and the restart)?
-9. **The balloon messages.** Who can read them (everyone on the side,
-   or only the one written to), how long they are kept, and whether one
-   side's messages are ever answered before the next turn.
+8. (Answered 2026-10-08) **What the sealed test checks across the
+   turns.** "it virtualizes the mechanism once, to verify that bots can
+   level up and such... y'know, the normal test suite stuff that we're
+   doing in addition to this, like where we check datatypes and stuff.
+   Then, it tests the other mechanics very quickly but controll-ed-ly, to
+   verify that everything works out." So the sealed test plays one whole
+   turn with no shortcuts, checking what a turn changes (stand-ins
+   levelled, records of the right shape), alongside the ordinary tests.
+   Then it runs the other mechanisms (the gates, the balloons, the
+   scaling with players, the restart) quickly, with shortened timers and
+   fixed inputs, so each gives the same result every run.
+9. (Answered 2026-10-08) **The balloon messages.** Anyone on the other
+   side can read them (above). Still open: how long a message is kept.
+10. **Which levels a tier takes in.** Does the 20 tier take players of
+    levels 11 to 20, and does a valley exist for every tier up to the
+    profile's cap (2 on a level-20 profile, 8 on alpha)?
