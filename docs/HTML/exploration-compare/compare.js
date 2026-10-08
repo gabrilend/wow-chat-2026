@@ -20,7 +20,7 @@
 //              passage; buddies walk passage to passage, least recently
 //              walked first, and turn back at dead ends
 // and the design decided from them after watching (2026-10-07):
-//   decided  - survey by the unseen edge where "explored" means within 5
+//   decided  - survey by the unseen edge where "explored" means within 30
 //              yards, then patrol one loop of watchman stops (see the
 //              engine's header of this rule)
 //
@@ -97,7 +97,7 @@
         else if (age < 6) { px[o] = col[0]; px[o + 1] = col[1]; px[o + 2] = col[2]; px[o + 3] = 120; }
       }
     } else if (sim.kind === "decided") {
-      // surveying: floor not yet explored (stood within 5 yards of) is veiled;
+      // surveying: floor not yet explored (in view within 30 yards) is veiled;
       // patrolling: floor dims as its last glance grows old, over three minutes
       for (let k = 0; k < M.count; k++) {
         const c = M.cells[k], o = c * 4;
@@ -301,7 +301,7 @@
         el("dt", {}, "Unevenness"), el("dd", {}, sim.unevennessCache === undefined ? "–" : sim.unevennessCache.toFixed(2)));
       if (sim.kind === "decided") p.nums.append(
         el("dt", {}, sim.phase === "survey" ? "Surveyed" : "Patrolling"),
-        el("dd", {}, sim.phase === "survey" ? (sim.exploredCount / M.count * 100).toFixed(1) + "% within 5 yards"
+        el("dd", {}, sim.phase === "survey" ? (sim.exploredCount / M.count * 100).toFixed(1) + "% within " + numbers.EXPLORE + " yards"
           : "since " + fmt(sim.patrolFrom) + ", " + M.watch.tour.length + " stops, a " + Math.round(M.watch.length) + "-yard loop"));
     });
     clock.textContent = fmt(state.sims[0].t);

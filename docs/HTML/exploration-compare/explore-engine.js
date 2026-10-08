@@ -21,7 +21,7 @@
   const SPUR        = 6;     // yards: skeleton twigs shorter than this are shaved off
   const MERGE       = 3;     // yards: forks joined by a shorter run are one fork
   // the decided design (2026-10-07): survey close, then patrol by glancing
-  const EXPLORE     = 5;     // yards: floor this near (and in view) counts as explored
+  const EXPLORE     = 30;    // yards: floor this near (and in view) counts as explored (owner, 2026-10-07: 5 was too slow; "Let's say 30 yards")
   const MOVE_LOOK   = 2;     // yards walked between looks; standing still sees nothing new
   const WATCH_COVER = 0.98;  // share of the floor the watchman stops must see between them
   const FAR_END     = 10;    // yards: a skeleton tip on a branch at least this long is a far end
@@ -663,7 +663,7 @@
       },
     },
     // The design decided from the three above (owner, 2026-10-07; issue 617e):
-    // survey  - the unseen edge, where "explored" means within 5 yards and in view;
+    // survey  - the unseen edge, where "explored" means within 30 yards and in view;
     //           looks are shadowcast, and only after walking 2 yards; nothing is forgotten
     // patrol  - once nothing is left unexplored: one loop through the watchman stops;
     //           each buddy joins at the stop nearest where its survey ended, walks the

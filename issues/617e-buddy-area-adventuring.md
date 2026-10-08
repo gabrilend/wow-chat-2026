@@ -903,8 +903,12 @@ Verbatim:
   - **Explored means close**: "gotta get closer than 40 yards, because
     otherwise how will you know if there's any secret passages or
     whatever? Maybe 5 or 10 yards is better." So sight (40 yards) and
-    "explored" (5 or 10, to choose) are two different distances, and the
-    unseen edge is the edge of the *explored* floor.
+    "explored" are two different distances, and the unseen edge is the
+    edge of the *explored* floor. Set to 30 yards after watching 5 on the
+    comparison page (the owner: "survey-then-patrol needs a larger
+    viewing distance. Let's say 30 yards"). At 5, three buddies had
+    surveyed 39% of Wailing Caverns after 20 minutes; at 30 they finish
+    in about 7.
   - **The 240-second forgetting** "seems arbitrary": scale it by how much
     is explored, and by how long a big dungeon with fights takes.
     Proposed: no clock at all. Memory never fades while unexplored floor
@@ -932,7 +936,8 @@ Verbatim:
     glance into the room, see there's nothing spawned, and keep walking.
     If there is of course they'd go fight it or whatever they would do
     when searching for monsters." So while surveying, floor counts as
-    explored within 5 yards of where a buddy stood. Once all is
+    explored once in view within the explored distance (30 yards, above).
+    Once all is
     surveyed, a place counts as checked when seen from up to 40 yards
     (sight stopped by walls). Patrol stops are then chosen so that every
     square is seen from at least one stop: take the stop that sees the
