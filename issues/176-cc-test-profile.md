@@ -39,9 +39,19 @@ directory, the four databases, build directory, log directory, config
 patch gates, source patch list, the word in `.profile`).
 
 - **Stripped down to what is being tested.** Stock AzerothCore as close to
-  upstream as the build allows: no playerbots, no ambush or traveller
-  scripts, no custom items, no level-cap changes. A difference from the
-  stock server shows up as a test failure, not as a mystery.
+  upstream as the build allows, plus the playerbots module: no ambush or
+  traveller scripts, no custom items, no level-cap changes. Playerbots
+  are in because scenes need characters the server plays (the owner,
+  2026-10-08, on "the cc-test plan says that profile has no playerbots":
+  "let's change that."), first the stand-ins of the Alterac Valley scene
+  (176a1).
+- **Failures are found by running scenes one at a time.** The owner,
+  2026-10-08: "we should always run each test individually, validate
+  that it performed correctly, then run the next. Then, at the end, we
+  run them all at once. If that suite passes, then the mechanisms can be
+  assured to be functional properly." So a failure points at the custom
+  client or at one scene, because each scene has passed alone before the
+  combined run.
 - **The server's own checks left on, at their strictest useful setting.**
   Warden on, with a failed check *kicking* the client instead of only
   being logged. The movement checks are the core's own. The custom client
@@ -75,8 +85,9 @@ patch gates, source patch list, the word in `.profile`).
 
 ## Open Questions
 
-1. (Answered 2026-10-07) **Modules:** mod-ale, yes. Test scenes can be
-   written in Lua.
+1. (Answered 2026-10-07, extended 2026-10-08) **Modules:** mod-ale, yes.
+   Test scenes can be written in Lua. Playerbots, yes (2026-10-08), for
+   the characters scenes need the server to play.
 2. (Answered 2026-10-07) **The patching system's refactor** is for tests:
    "I'm thinking we could add a patch that runs a test by setting up a
    particular scene. Each one could be in a different location so they

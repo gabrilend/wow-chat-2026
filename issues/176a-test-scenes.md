@@ -5,6 +5,7 @@
 - Phase: 1
 - Parent: 176 (the cc-test profile)
 - Blocked by: 176 (the profile must exist to install scenes into)
+- Sub-issues: 176a1 (a full Alterac Valley match)
 - Related: 173w (queued inputs and test characters: the client's half),
   173v (the client's move to its own project), 173e (what the server
   checks), 127 (patch system improvements), 173b3 (the action names
@@ -105,6 +106,19 @@ animation choice, all of which already work without a window. So many
 can run in one go, each with its own queue and log, testing unrelated
 things side by side.
 
+**Each scene has its own run script.** The owner, 2026-10-08: "They
+should call the custom client when their each individual run script is
+run, from the scripts/connect-parameters.json directory." Running a
+scene's script starts the custom client with the connection values in
+`scripts/connect-parameters.json` and plays that one scene.
+
+**Alone first, then all together.** The owner, 2026-10-08: "we should
+always run each test individually, validate that it performed correctly,
+then run the next. Then, at the end, we run them all at once." The runner
+plays each scene by itself and checks it before starting the next; the
+run of every scene at once comes last, and passes only if each scene
+passed alone.
+
 **Pictures without a window.** A scene can ask for pictures; the client
 draws them off-screen, so hundreds can be taken in one run and compared
 with stored references (the client's half, after its move: 173v).
@@ -120,13 +134,18 @@ with stored references (the client's half, after its move: 173v).
 4. The server's half: a scene's setup installed by the cc-test build
    (creatures, objects, the test accounts and characters at their
    starting spots).
-5. The runner: one command builds cc-test, plays every scene, and
-   compares every log with its expected results, listing differences
-   for an agent to judge.
-6. The first scenes: running into a wall (the run keeps playing); walking
+5. The runner: one command builds cc-test, plays each scene alone
+   through its own run script and checks it, then plays every scene at
+   once and checks them all, listing differences for an agent to judge.
+6. The first scene: a full Alterac Valley match (176a1). Then: running into a wall (the run keeps playing); walking
    toggled (the stride halves); a jump's start, loop and landing in
    order; swimming down and up.
 7. Headless pictures of scenes, compared with stored references.
+
+## Sub-issues
+
+- 176a1 - a full Alterac Valley match: 40 stand-ins a side, players
+  added on top, their pathfinding checked first.
 
 ## Open Questions
 
