@@ -168,6 +168,8 @@ public server may be run on any machine.
 combat and long-term progression need: its level, its attributes, and
 its spec profile (its talents and the role they make). Little else is
 kept. The playerbots module plays a stand-in once it is in the world.
+The buddy module makes them, as 617t says, so the cc-test profile builds
+it (owner, 2026-10-08: "cc-test should include it.").
 
 **A player enters in the cave.** A player joining the scene starts in
 their faction's entrance cave, where the stock battleground places them.

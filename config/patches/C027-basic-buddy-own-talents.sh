@@ -15,13 +15,15 @@
 #
 # Knob written into playerbots.conf:
 #   AiPlayerbot.AltMaintenanceTalentTree=0   maintenance leaves talents alone
-# Profiles: basic
+# cc-test (issue 176) builds the buddy module too (2026-10-08) and takes the
+# same buddy settings.
+# Profiles: basic cc-test
 
 # -- {{{ config_basic_buddy_own_talents
 config_basic_buddy_own_talents() {
     local conf="${INSTALL_DIR}/etc/modules/playerbots.conf"
     sed -i 's|^AiPlayerbot\.AltMaintenanceTalentTree[[:space:]]*=.*|AiPlayerbot.AltMaintenanceTalentTree = 0|' "${conf}"
 }
-CONFIG_PROFILES[config_basic_buddy_own_talents]="basic"
+CONFIG_PROFILES[config_basic_buddy_own_talents]="basic cc-test"
 CONFIG_DESCRIPTIONS[config_basic_buddy_own_talents]="Buddies' talents by the project's script: bot maintenance leaves talents alone"
 # -- }}}

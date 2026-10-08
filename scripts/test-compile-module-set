@@ -62,7 +62,7 @@ AC_CODE_DIR="${FAKE}/source"
 # list in scripts/install, plus mod-buddies where B036 is in its patch list.
 declare -A EXPECT_ON=(
     [basic]="mod-ale mod-aoe-loot mod-buddies mod-fireworks-on-level mod-playerbots mod-solo-lfg"
-    [cc-test]="mod-ale mod-playerbots"
+    [cc-test]="mod-ale mod-buddies mod-playerbots"
     [beta]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
     [vanilla]="mod-ale mod-aoe-loot mod-fireworks-on-level mod-playerbots mod-solo-lfg"
 )

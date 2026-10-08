@@ -170,6 +170,23 @@ _shared_sql_src() {
 }
 # -- }}}
 
+# -- {{{ _buddy_sql_src
+# Folder holding the source SQL of the buddy module's data steps (E042 roster
+# tables, E044 area centres, E045 beds and boardings, E050 town circles, E052
+# gearsets). basic owns these files; cc-test (issue 176) builds the buddy
+# module too (owner, 2026-10-08: "cc-test should include it", for the Alterac
+# Valley stand-ins) and reads basic's sources rather than keeping copies, so a
+# change to a bed or a gearset lands on both. The active copy each step writes
+# stays in the profile's own sql/<profile>/db_*/ folder, registered against
+# the profile's own database. Every other profile reads its own folder.
+# Args: $1 = database folder name (db_world, db_characters)
+_buddy_sql_src() {
+    local -A BUDDY_SQL_FROM=( [cc-test]="basic" )
+    local from="${BUDDY_SQL_FROM[${PROFILE}]:-${PROFILE}}"
+    echo "${DIR}/sql/${from}/${1}.src"
+}
+# -- }}}
+
 # -- {{{ apply_config_values
 # Apply all config values for current profile (Issue 119)
 # Called after init_config() copies .dist to .conf
@@ -2232,7 +2249,7 @@ unpatch_E043_basic_buddy_selector() {
 # scripts/generate-buddy-area-centres. Same cp-apply / cp-revert idiom as E040.
 patch_E044_basic_buddy_area_centres() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/27-buddy-area-centres.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/27-buddy-area-centres.apply.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/27-buddy-area-centres.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E044] Apply source missing: ${SRC_FILE} (run scripts/generate-buddy-area-centres)"; return 1; }
 
@@ -2249,7 +2266,7 @@ patch_E044_basic_buddy_area_centres() {
 
 unpatch_E044_basic_buddy_area_centres() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/27-buddy-area-centres.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/27-buddy-area-centres.revert.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/27-buddy-area-centres.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E044_REVERT" "${SQL_FILE}"; then
         echo "  [E044] Active file already holds revert-form content"
@@ -2273,7 +2290,7 @@ unpatch_E044_basic_buddy_area_centres() {
 # cp-revert idiom as E040.
 patch_E045_basic_buddy_beds() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/28-buddy-beds.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/28-buddy-beds.apply.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/28-buddy-beds.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E045] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -2290,7 +2307,7 @@ patch_E045_basic_buddy_beds() {
 
 unpatch_E045_basic_buddy_beds() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/28-buddy-beds.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/28-buddy-beds.revert.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/28-buddy-beds.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E045_REVERT" "${SQL_FILE}"; then
         echo "  [E045] Active file already holds revert-form content"
@@ -2354,7 +2371,7 @@ unpatch_E046_basic_world_boss_respawn() {
 # database. Same cp-apply / cp-revert idiom as E048.
 patch_E050_basic_buddy_town_circles() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/31-buddy-town-circles.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/31-buddy-town-circles.apply.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/31-buddy-town-circles.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E050] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -2371,7 +2388,7 @@ patch_E050_basic_buddy_town_circles() {
 
 unpatch_E050_basic_buddy_town_circles() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/31-buddy-town-circles.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/31-buddy-town-circles.revert.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/31-buddy-town-circles.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E050_REVERT" "${SQL_FILE}"; then
         echo "  [E050] Active file already holds revert-form content"
@@ -2436,7 +2453,7 @@ unpatch_E051_basic_acherus_choice_vendors() {
 # cp-apply / cp-revert idiom as E050.
 patch_E052_basic_gearsets() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/33-gearsets.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/33-gearsets.apply.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/33-gearsets.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E052] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -2453,7 +2470,7 @@ patch_E052_basic_gearsets() {
 
 unpatch_E052_basic_gearsets() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/33-gearsets.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/33-gearsets.revert.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/33-gearsets.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E052_REVERT" "${SQL_FILE}"; then
         echo "  [E052] Active file already holds revert-form content"
@@ -2628,7 +2645,7 @@ unpatch_E041_basic_death_knight_souls() {
 # cp-revert idiom as E023.
 patch_E042_basic_buddy_roster() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/04-buddy-roster.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/04-buddy-roster.apply.sql"
+    local SRC_FILE="$(_buddy_sql_src db_characters)/04-buddy-roster.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E042] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -2646,7 +2663,7 @@ patch_E042_basic_buddy_roster() {
 
 unpatch_E042_basic_buddy_roster() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/04-buddy-roster.sql"
-    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/04-buddy-roster.revert.sql"
+    local SRC_FILE="$(_buddy_sql_src db_characters)/04-buddy-roster.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E042_REVERT" "${SQL_FILE}"; then
         echo "  [E042] Active file already holds revert-form content"

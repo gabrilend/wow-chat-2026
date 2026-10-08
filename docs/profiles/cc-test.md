@@ -1,8 +1,8 @@
 # cc-test Profile
 
 **One-line summary:** The custom client's test server ("custom client
-test"): stock AzerothCore with only the playerbots and ALE modules, so a
-failure seen by the custom client points at the client or at one test
+test"): stock AzerothCore with only the playerbots, ALE and buddy modules, so
+a failure seen by the custom client points at the client or at one test
 scene, not at the game's own customisations.
 
 Design and build record: issue 176 (the profile), 176a (test scenes, the
@@ -12,19 +12,25 @@ Alterac Valley match).
 ## What you get
 
 - **The stock game.** No level-cap change (80), stock movement speed, stock
-  fall damage, no custom items, no ambushes, travellers or buddies. The
+  fall damage, no custom items, no ambushes or travellers, no buddy
+  selector (no player picks buddies here). The
   run-speed patch every other profile takes is gated away from this one.
-- **Playerbots and the Lua engine.** The playerbots module plays the bots a
-  scene places (the Alterac Valley stand-ins); mod-ale runs scene scripts
+- **Playerbots and the Lua engine.** The playerbots module plays the bots
+  a scene places (the Alterac Valley stand-ins); mod-ale runs scene scripts
   from `src/lua-cc-test/` (empty until the first scene).
 - **No random bots.** A scene places the bots it needs; a wandering
   population would walk into scenes and change their logs.
 - **Players log in as players.** GM level 0 on login, so a test character
   meets every check an ordinary player meets.
-- **Warden kicks.** A failed Warden check (the server asking the client a
-  question only the real client answers correctly) ends the session,
-  instead of only being logged. Until the custom client answers Warden,
-  every session ends in a kick (issue 176, open question 5).
+- **Warden failures logged.** Warden is the server asking the client
+  questions only the real client answers correctly. For now a wrong answer
+  is only written to the log, which lists what the custom client still
+  gets wrong; once the client answers Warden, a wrong answer will end the
+  session (`config/patches/C033-cc-test-warden-kicks.sh`).
+- **The buddy module.** It makes the Alterac Valley scene's stand-ins the
+  way it makes buddies, with its data (roster, area centres, beds, town
+  circles, gearsets) read from basic's sources. Not the buddy selector
+  NPCs, and no other change to the stock world.
 - **Its own databases** (`acore_world_cc_test`, `acore_characters_cc_test`,
   `acore_playerbots_cc_test`; the account database `acore_auth` is shared),
   so test characters are made and wiped without touching anyone's play.
@@ -42,9 +48,9 @@ echo cc-test > .profile
 ./scripts/worldserver
 ```
 
-A cc-test build links only mod-playerbots and mod-ale, even though the
-shared source tree holds other profiles' modules: the compile script
-switches every other module folder off for this profile.
+A cc-test build links only mod-playerbots, mod-ale and mod-buddies, even
+though the shared source tree holds other profiles' modules: the compile
+script switches every other module folder off for this profile.
 
 ## Checking it without a server
 

@@ -6,14 +6,16 @@
 # AzerothCore notes a wrong answer in its log and lets the player stay.
 # The cc-test profile (issue 176) is where the custom client is tested,
 # and its pass mark is a session that leaves the server's logs empty, so
-# here a wrong answer ends the session: the failure can't go unnoticed.
+# here a wrong answer is meant to end the session.
 #
-# What it tests: that the custom client answers Warden as the original
-# client does. Until its replies exist, every session on cc-test ends in a
-# kick (open question 5 in issue 176).
+# For now it only logs (owner, 2026-10-08: "only log failures until we can
+# answer."): the custom client does not answer Warden yet, and with kicks on
+# every session would end within seconds. Set WARDEN_FAIL_ACTION below to 1
+# once the client's replies exist; the logged failures meanwhile list what it
+# still gets wrong.
 #
 # Knob written into worldserver.conf:
-#   Warden.ClientCheckFailAction=1   0 log only (stock), 1 kick, 2 ban
+#   Warden.ClientCheckFailAction   0 log only (stock; now), 1 kick (later), 2 ban
 #   (each single check can still be given its own action in the
 #   characters database's warden_action table)
 #
@@ -24,6 +26,7 @@
 # -- {{{ config_cc_test_warden_kicks
 config_cc_test_warden_kicks() {
     local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    local WARDEN_FAIL_ACTION=0   # 0 log only, until the custom client answers Warden; then 1 (kick)
 
     # key present: set it. key absent: the server would fall back to its
     # built-in default (log only), so refuse instead of passing silently.
@@ -33,8 +36,8 @@ config_cc_test_warden_kicks() {
         echo "           or was worldserver.conf generated from an old .dist (C016's case)?"
         return 1
     fi
-    sed -i 's|^Warden\.ClientCheckFailAction[[:space:]]*=.*|Warden.ClientCheckFailAction = 1|' "${conf}"
+    sed -i 's|^Warden\.ClientCheckFailAction[[:space:]]*=.*|Warden.ClientCheckFailAction = '"${WARDEN_FAIL_ACTION}"'|' "${conf}"
 }
 CONFIG_PROFILES[config_cc_test_warden_kicks]="cc-test"
-CONFIG_DESCRIPTIONS[config_cc_test_warden_kicks]="Warden kicks on a failed client check"
+CONFIG_DESCRIPTIONS[config_cc_test_warden_kicks]="Warden failures logged (kicks once the custom client answers Warden)"
 # -- }}}

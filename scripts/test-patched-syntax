@@ -53,6 +53,17 @@ changed=$(diff -rq "${WORK}/pristine" "${WORK}/tree" | sed -n 's|^Files .*/prist
 # Files a patch ADDS ("Only in <tree>/dir: name") are not in the recorded build
 # flags yet; each borrows the flags of a .cpp already built in its folder.
 added=$(diff -rq "${WORK}/pristine" "${WORK}/tree" | sed -n "s|^Only in ${WORK}/tree/\(.*\): \(.*\.cpp\)$|\1/\2|p")
+# A whole folder a patch adds (B036 copies in modules/mod-buddies/) shows as a
+# single "Only in" line naming the folder, not its files, so until 2026-10-08
+# none of its .cpp files were checked. Each one inside is added here; it
+# borrows the flags of a built file in its own folder (the module's own, when
+# a previous build compiled it).
+added_dirs=$(diff -rq "${WORK}/pristine" "${WORK}/tree" | sed -n "s|^Only in ${WORK}/tree/\(.*\): \([^.]*\)$|\1/\2|p")
+for d in ${added_dirs}; do
+    [[ -d "${WORK}/tree/${d}" ]] || continue
+    added+=$'\n'"$(find "${WORK}/tree/${d}" -name '*.cpp' | sed "s|^${WORK}/tree/||" | sort)"
+done
+added=$(echo "${added}" | grep . | sort -u)
 [[ -n "${added}" ]] && echo "Files added by ${PROFILE}'s patches: $(echo "${added}" | grep -c .)"
 echo "Files changed by ${PROFILE}'s patches: $(echo "${changed}" | grep -c .)"
 # }}}

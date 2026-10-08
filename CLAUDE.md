@@ -23,7 +23,7 @@ matching source tree, install dir, and databases.
   baseline (issue 155, `docs/profiles/basic.md`). **expert** (61–80, start
   at 60) is planned, not built (issue 156).
 - **cc-test** — the custom client's test server: stock AzerothCore +
-  playerbots + ALE, no random bots, Warden kicks; test scenes run here
+  playerbots + ALE + the buddy module, no random bots; test scenes run here
   (issue 176, `docs/profiles/cc-test.md`). Being registered 2026-10-08,
   not yet built.
 - **vanilla** — start 20, level cap 40 (constrained demo)

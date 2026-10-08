@@ -58,7 +58,7 @@ that must be updated to match.
   parallel ruleset, not an iteration of the wow-chat design.
 - **`cc-test`** — added 2026-10-08 per issue 176. The custom client's
   test server, outside the pipeline like vanilla: stock AzerothCore with
-  mod-playerbots and mod-ale only, its own suffixed databases
+  mod-playerbots, mod-ale and the buddy module, its own suffixed databases
   (`_cc_test`), realm 6, the shared ports. Test scenes (176a) are
   installed here. Everything the name resolves to is tabled in 176.
 - **`alpha`** — is wow-chat-1. The whole old project as a frozen snapshot.

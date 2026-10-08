@@ -80,12 +80,16 @@ declare -a EXPECT_cc_test=(
     "worldserver.conf|WorldServerPort|4462"
     "authserver.conf|RealmServerPort|4362"
     "worldserver.conf|GM.LoginState|0"                     # a test character meets every player check
-    "worldserver.conf|Warden.ClientCheckFailAction|1"      # C033: a failed Warden check kicks
+    "worldserver.conf|Warden.ClientCheckFailAction|0"      # C033: logged only, until the custom client answers Warden
     "worldserver.conf|ClientCacheVersion|__nonzero_uint32__"
     # no random bots (C023): a scene places the bots it needs
     "modules/playerbots.conf|AiPlayerbot.RandomBotAutologin|0"
     "modules/playerbots.conf|AiPlayerbot.MinRandomBots|0"
     "modules/playerbots.conf|AiPlayerbot.MaxRandomBots|0"
+    # the buddy module's settings, as basic's (C027, C029, C030)
+    "modules/playerbots.conf|AiPlayerbot.AltMaintenanceTalentTree|0"
+    "modules/playerbots.conf|AiPlayerbot.KeepAltsInGroup|1"
+    "modules/playerbots.conf|AiPlayerbot.InviteAltsOnLogin|0"
 )
 # }}}
 

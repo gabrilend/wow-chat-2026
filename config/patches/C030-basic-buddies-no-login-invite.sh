@@ -18,7 +18,9 @@
 # for that reason, which also keeps it out of test-profile-config-gates'
 # "key exists in the stock .conf.dist" scan (the installed .dist only gains
 # it after a build with B037); the expectation table checks the result.
-# Profiles: basic
+# cc-test (issue 176) builds the buddy module too (2026-10-08) and takes the
+# same buddy settings.
+# Profiles: basic cc-test
 
 # -- {{{ config_basic_buddies_no_login_invite
 config_basic_buddies_no_login_invite() {
@@ -32,6 +34,6 @@ config_basic_buddies_no_login_invite() {
         printf '\n# C030 (basic, 617c2): no group invite at a buddy'"'"'s login (switch added by B037)\n%s = %s\n' "${key}" "${val}" >> "${conf}"
     fi
 }
-CONFIG_PROFILES[config_basic_buddies_no_login_invite]="basic"
+CONFIG_PROFILES[config_basic_buddies_no_login_invite]="basic cc-test"
 CONFIG_DESCRIPTIONS[config_basic_buddies_no_login_invite]="No group invite at a buddy's login: buddies are grouped by distance (switch from B037)"
 # -- }}}
