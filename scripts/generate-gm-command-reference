@@ -1,0 +1,459 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- generate-gm-command-reference - every game master command one profile's
+-- server answers, written out as a plain-text reference
+--
+-- For a general audience: the game server answers typed commands such as
+-- ".npc add 1234". They come from four places: the stock server's command
+-- scripts, the modules it loads (playerbots, the Lua engine, ...), this
+-- project's own compiled code (the buddy module, basic's rules), and this
+-- project's Lua scripts. Their help text and who may run them live in the
+-- world database's `command` table. This reads all of those, joins them,
+-- sorts them into systems (accounts, characters, creatures, ...) and then by
+-- their words (".account set gmlevel" inside "account set" inside
+-- "account"), and writes docs/gm-commands.txt: the project's own commands
+-- once at the top ("what's new"), then every command in its system, the new
+-- ones in place beside their stock relatives. The HTML page is made from
+-- that text by scripts/render-gm-command-reference-html.
+--
+-- Reads: the profile's world database (`command`), the C++ command tables
+-- (scripts/lib/command-tables.lua), config/custom-gm-commands.lua.
+-- Needs MySQL running. Stops, naming what it couldn't place, rather than
+-- writing a reference with a hole in it.
+--
+-- Usage: scripts/generate-gm-command-reference [PROJECT_DIR] [PROFILE]
+--   PROFILE defaults to basic. Writes docs/gm-commands.txt for basic, and
+--   docs/gm-commands-<profile>.txt for any other.
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local PROFILE = arg[2] or "basic"
+package.path = DIR .. "/scripts/lib/?.lua;" .. package.path
+local Tables = require("command-tables")
+
+local WIDTH = 80
+
+-- {{{ SYSTEMS
+-- The systems, in the order they are printed, and the command families
+-- (first words) each holds. A family missing from here stops the run: a
+-- new upstream command is placed by adding its word, never guessed.
+local SYSTEMS = {
+    { "Accounts and access",        { "account", "ban", "baninfo", "banlist", "unban", "kick", "mute", "unmute", "mutehistory", "rbac", "ticket" } },
+    { "Game master tools",          { "gm", "cheat", "commands", "help", "possess", "unpossess", "bindsight", "unbindsight", "freeze", "unfreeze",
+                                      "die", "revive", "damage", "combatstop", "cometome", "morph", "aura", "unaura", "cast", "cooldown", "dev",
+                                      "chatfilter", "whispers" } },
+    { "Characters",                 { "character", "pinfo", "player", "levelup", "modify", "reset", "learn", "unlearn", "setskill", "maxskill",
+                                      "titles", "honor", "achievement", "deserter", "pet", "pdump", "cache", "settings", "quest" } },
+    { "Items and mail",             { "additem", "item", "gear", "bags", "inventory", "mail", "mailbox", "send", "aoeloot" } },
+    { "Places and movement",        { "teleport", "go", "appear", "summon", "groupsummon", "recall", "gps", "wpgps", "distance", "unstuck",
+                                      "neargrave", "linkgrave", "hidearea", "showarea", "dismount", "instance", "mmap" } },
+    { "Creatures and world objects",{ "npc", "gobject", "respawn", "wp", "pool", "pooltools", "movegens", "event", "worldstate", "opendoor",
+                                      "wchange" } },
+    { "Groups, guilds and PvP",     { "group", "guild", "lfg", "arena", "bf", "skirmish", "spect", "commentator", "flusharenapoints", "bm" } },
+    { "Companions",                 { "playerbots" } },  -- plus the project's buddy and buddies families
+    { "Lookup and debugging",       { "lookup", "list", "spellinfo", "string", "guid", "debug", "packetlog" } },
+    { "Server and messages",        { "server", "reload", "save", "saveall", "announce", "gmannounce", "notify", "gmnotify", "nameannounce",
+                                      "gmnameannounce", "autobroadcast", "playall", "disable" } },
+}
+local SYSTEM_OF = {}
+for _, s in ipairs(SYSTEMS) do for _, f in ipairs(s[2]) do SYSTEM_OF[f] = s[1] end end
+-- }}}
+
+-- {{{ module commands no table declares
+-- The Lua engine answers ".reload ale" from its own chat hook (mod-ale
+-- hooks/PlayerHooks.cpp, ALE::OnCommand), not from a command table, so the
+-- reader can't see it; listed here, where its module is loaded.
+local HOOK_COMMANDS = {
+    { name = "reload ale", module = "mod-ale", level = 3, console = true,
+      syntax = ".reload ale", help = "Reloads every Lua script of the Lua engine (mod-ale) without a restart. Administrators in game, or the server console." },
+}
+-- }}}
+
+local LEVEL_NAME = { [0] = "player", [1] = "moderator", [2] = "gm", [3] = "admin", [4] = "console" }
+local DATABASE   = { basic = "acore_world_basic", ["cc-test"] = "acore_world_cc_test", vanilla = "acore_world_vanilla",
+                     release = "acore_world", beta = "acore_world", alpha = "acore_world_alpha" }
+
+local problems = {}
+local function problem(text) problems[#problems + 1] = text end
+
+-- {{{ local function shell_lines
+local function shell_lines(cmd)
+    local h = io.popen(cmd)
+    local out = {}
+    for line in h:lines() do out[#out + 1] = line end
+    local ok, _, code = h:close()
+    return out, ok, code
+end
+-- }}}
+
+-- {{{ the profile's modules
+-- Read from scripts/compile's module list (the same list the build uses).
+local function profile_modules(profile)
+    local h = assert(io.open(DIR .. "/scripts/compile", "r"))
+    local text = h:read("*a"); h:close()
+    local block = text:match("declare %-A PROFILE_MODULES=%((.-)\n%)")
+    local list = block and block:match('%["' .. profile:gsub("%-", "%%-") .. '"%]="([^"]*)"')
+    if not list then
+        io.stderr:write("ERROR: no module list for profile '" .. profile .. "' in scripts/compile (PROFILE_MODULES)\n")
+        os.exit(1)
+    end
+    local mods = {}
+    for m in list:gmatch("%S+") do mods[#mods + 1] = m end
+    return mods
+end
+-- }}}
+
+-- {{{ load: custom commands
+local custom = dofile(DIR .. "/config/custom-gm-commands.lua")
+local custom_here, custom_by_name, custom_dirs = {}, {}, {}
+for _, c in ipairs(custom) do
+    for _, p in ipairs(c.profiles) do
+        if p == PROFILE then
+            custom_here[#custom_here + 1] = c
+            custom_by_name[c.name] = c
+            if c.kind == "compiled" then custom_dirs[c.source:match("^(.*)/")] = true end
+        end
+    end
+end
+-- }}}
+
+-- {{{ load: the command table rows
+local db = DATABASE[PROFILE]
+if not db then io.stderr:write("ERROR: unknown profile '" .. PROFILE .. "'\n"); os.exit(1) end
+local mysql = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi -B -N %s -e 'SELECT name, security, help FROM command' 2>&1",
+    DIR, DIR, db)
+local raw_rows, ok = shell_lines(mysql)
+local rows = {}
+for _, line in ipairs(raw_rows) do
+    if not line:find("Using a password on the command line") then
+        local name, sec, help = line:match("^([^\t]*)\t(%d+)\t(.*)$")
+        if not name then
+            io.stderr:write("ERROR: reading " .. db .. ".command failed, or a row was unreadable: " .. line .. "\n")
+            io.stderr:write("       to debug: is MySQL running (scripts/start-mysql)? does " .. db .. " exist?\n")
+            os.exit(1)
+        end
+        -- batch mode escapes: \n line break, \t tab, \\ backslash
+        help = help:gsub("\\\\", "\1"):gsub("\\n", "\n"):gsub("\\t", "\t"):gsub("\\r", ""):gsub("\1", "\\"):gsub("\r", "")
+        rows[name] = { level = tonumber(sec), help = help }
+    end
+end
+if not next(rows) then io.stderr:write("ERROR: " .. db .. ".command is empty\n"); os.exit(1) end
+-- }}}
+
+-- {{{ load: the command tables
+local files = Tables.files_with_tables(DIR .. "/source-beta/src/server/scripts/Commands")
+local origin_of_file = {}
+for _, f in ipairs(files) do origin_of_file[f] = "stock" end
+local modules = profile_modules(PROFILE)
+local loaded = {}
+for _, m in ipairs(modules) do
+    loaded[m] = true
+    local folder = DIR .. "/source-beta/modules/" .. m
+    local h = io.open(folder .. "/README.md", "r") or io.open(folder, "r")
+    if not h then
+        problem("module " .. m .. " is in " .. PROFILE .. "'s list but not in source-beta/modules (not installed?); its commands are missing")
+    else
+        h:close()
+        for _, f in ipairs(Tables.files_with_tables(folder)) do files[#files + 1] = f; origin_of_file[f] = m end
+    end
+end
+for d in pairs(custom_dirs) do
+    for _, f in ipairs(Tables.files_with_tables(DIR .. "/" .. d)) do
+        if not origin_of_file[f] then files[#files + 1] = f; origin_of_file[f] = "project" end
+    end
+end
+local code, errs = Tables.read_files(files, DIR)
+for _, e in ipairs(errs) do problem("reading the command tables: " .. e) end
+-- }}}
+
+-- {{{ join
+-- One entry per command: its words, syntax, help, level, where it runs,
+-- where it comes from, and whether this project added it.
+local commands, by_name = {}, {}
+local function add(e)
+    if by_name[e.name] then return end
+    by_name[e.name] = e
+    commands[#commands + 1] = e
+end
+
+local function split_help(text)
+    -- "Syntax: .x args" lines, then the description
+    local syntax, rest = {}, {}
+    for line in (text .. "\n"):gmatch("(.-)\n") do
+        local s = line:match("^%s*Syntax:%s*(.-)%s*$")
+        -- a few stock rows leave the dot off ("Syntax: server set closed
+        -- on/off"); every syntax line starts with one here, so a reader can
+        -- tell a command from a group of words by its first character
+        if s and s ~= "" and s:sub(1, 1) ~= "." then s = "." .. s end
+        if s == "" and #rest == 0 then
+            -- an empty "Syntax:" line (".wp modify"): nothing to show; the
+            -- command's own words are used when no syntax line is left
+        elseif s and #rest == 0 then syntax[#syntax + 1] = s
+        elseif line:match("%S") or #rest > 0 then rest[#rest + 1] = line end
+    end
+    return syntax, table.concat(rest, "\n"):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+for _, c in ipairs(code) do
+    local row = rows[c.name]
+    local cust = custom_by_name[c.name]
+    local origin = cust and "new" or (origin_of_file[DIR .. "/" .. c.file] or "stock")
+    local level = row and row.level or c.level
+    local syntax, help = {}, ""
+    if cust then
+        syntax = { "." .. c.name .. (cust.args ~= "" and (" " .. cust.args) or "") }
+        help = cust.help
+        level = cust.level
+    elseif row then
+        syntax, help = split_help(row.help)
+    end
+    if #syntax == 0 then syntax = { "." .. c.name } end
+    if level == nil then problem("." .. c.name .. " (" .. c.file .. "): names " .. c.perm .. " and has no `command` row, so no account level reaches it: console only") end
+    add({ name = c.name, syntax = syntax, help = help, level = level, console = c.console, origin = origin,
+          new = cust ~= nil, beside = cust and cust.beside, system = cust and cust.system, file = c.file,
+          norow = (row == nil) })
+end
+for _, c in ipairs(custom_here) do
+    if c.kind == "lua" then
+        add({ name = c.name, syntax = { "." .. c.name .. (c.args ~= "" and (" " .. c.args) or "") }, help = c.help, level = c.level,
+              console = c.console, origin = "new", new = true, beside = c.beside, system = c.system, file = c.source })
+    elseif not by_name[c.name] then
+        problem("." .. c.name .. " is described in config/custom-gm-commands.lua as compiled for " .. PROFILE .. ", but no command table declares it")
+    end
+end
+for _, h in ipairs(HOOK_COMMANDS) do
+    if loaded[h.module] then
+        add({ name = h.name, syntax = { h.syntax }, help = h.help, level = h.level, console = h.console, origin = h.module, new = false })
+    end
+end
+-- rows naming no command (the server logs each at startup and skips it),
+-- and rows that are a family's own description ("reload": "Type .reload to
+-- see the list ...")
+local family_help = {}
+for name, row in pairs(rows) do
+    if not by_name[name] then
+        local is_prefix = false
+        for _, e in ipairs(commands) do if e.name:sub(1, #name + 1) == name .. " " then is_prefix = true; break end end
+        if is_prefix then family_help[name] = select(2, split_help(row.help))
+        else problem("`command` row '" .. name .. "' names no command this server declares") end
+    end
+end
+-- }}}
+
+-- {{{ place each command in a system and a family
+local families = {}                                -- system -> family -> { entries }, and beside entries
+local function family_of(e) return e.beside or e.name:match("^(%S+)") end
+for _, e in ipairs(commands) do
+    local fam = family_of(e)
+    local sys = SYSTEM_OF[fam] or e.system
+    if not sys then
+        problem("." .. e.name .. ": its family '" .. fam .. "' is in no system (add it to SYSTEMS in this script)")
+    else
+        if e.system and SYSTEM_OF[fam] and e.system ~= SYSTEM_OF[fam] then
+            problem("." .. e.name .. ": config says system '" .. e.system .. "', but its family '" .. fam .. "' is in '" .. SYSTEM_OF[fam] .. "'")
+        end
+        e.placed_system, e.placed_family = sys, fam
+        families[sys] = families[sys] or {}
+        families[sys][fam] = families[sys][fam] or {}
+        table.insert(families[sys][fam], e)
+    end
+end
+-- }}}
+
+-- {{{ writing
+local out = {}
+local function w(line) out[#out + 1] = line or "" end
+local function rule(ch) w(string.rep(ch, WIDTH)) end
+local function banner(title) w(); rule("="); w("  " .. title); rule("=") ; w() end
+
+local function wrap(text, indent)
+    local pad = string.rep(" ", indent)
+    for para in (text .. "\n"):gmatch("(.-)\n") do
+        if not para:match("%S") then
+            if #out > 0 and out[#out] ~= "" then w() end
+        else
+            local line = pad
+            for word in para:gmatch("%S+") do
+                if #line > indent and #line + 1 + #word > WIDTH then w(line); line = pad .. word
+                else line = (#line > indent) and (line .. " " .. word) or (pad .. word) end
+            end
+            w(line)
+        end
+    end
+end
+
+local function meta(e)
+    local where = e.console == true and "anywhere" or (e.console == false and "in game" or "?")
+    return "[" .. (e.level and LEVEL_NAME[e.level] or "none") .. ", " .. where .. (e.new and ", NEW" or "") .. "]"
+end
+
+-- a command line: ".syntax" then its [level, where, NEW] after two spaces at least
+local function command_lines(e, indent)
+    local pad = string.rep(" ", indent)
+    for i, s in ipairs(e.syntax) do
+        local text = pad .. s
+        if i == 1 then
+            local m = meta(e)
+            local gap = WIDTH - #text - #m
+            text = text .. string.rep(" ", math.max(2, gap)) .. m
+        end
+        w(text)
+    end
+    if e.help ~= "" then wrap(e.help, indent + 4) end
+end
+
+local function sort_words(a, b) return a:lower() < b:lower() end
+
+-- a family as a tree of its words: a node prints its own command (if the
+-- words are one), then its children in word order, two spaces deeper
+local function tree_of(entries, family)
+    local root = { children = {}, words = family }
+    for _, e in ipairs(entries) do
+        if not e.beside then
+            local node = root
+            local rest = e.name:sub(#family + 2)
+            local words = {}
+            for word in rest:gmatch("%S+") do words[#words + 1] = word end
+            local path = family
+            for _, word in ipairs(words) do
+                path = path .. " " .. word
+                node.children[word] = node.children[word] or { children = {}, words = path }
+                node = node.children[word]
+            end
+            node.entry = e
+        end
+    end
+    return root
+end
+local function print_node(node, indent)
+    if node.entry then command_lines(node.entry, indent) end
+    local keys = {}
+    for k in pairs(node.children) do keys[#keys + 1] = k end
+    table.sort(keys, sort_words)
+    for _, k in ipairs(keys) do
+        local child = node.children[k]
+        if next(child.children) then
+            -- a group of words: named, then its commands one step deeper
+            w(string.rep(" ", indent) .. child.words)
+            if family_help[child.words] and family_help[child.words] ~= "" and not child.entry then wrap(family_help[child.words], indent + 4) end
+            print_node(child, indent + 2)
+        else
+            print_node(child, indent)
+        end
+    end
+end
+local function print_family(entries, family, indent, with_beside)
+    local count, new = 0, 0
+    for _, e in ipairs(entries) do count = count + 1; if e.new then new = new + 1 end end
+    -- counts in the every-command section (how big the family is, how much
+    -- of it is new); the what's-new section is all new, so just the name
+    if with_beside then
+        w(string.rep(" ", indent) .. family .. "  (" .. count .. (count == 1 and " command" or " commands") .. (new > 0 and (", " .. new .. " new") or "") .. ")")
+    else
+        w(string.rep(" ", indent) .. family)
+    end
+    if family_help[family] and family_help[family] ~= "" then wrap(family_help[family], indent + 4) end
+    print_node(tree_of(entries, family), indent + 2)
+    if with_beside then
+        local beside = {}
+        for _, e in ipairs(entries) do if e.beside then beside[#beside + 1] = e end end
+        table.sort(beside, function(a, b) return sort_words(a.name, b.name) end)
+        for _, e in ipairs(beside) do command_lines(e, indent + 2) end
+    end
+    w()
+end
+-- }}}
+
+-- {{{ the reference
+local total, new_total, by_origin = #commands, 0, {}
+for _, e in ipairs(commands) do
+    if e.new then new_total = new_total + 1 end
+    by_origin[e.origin] = (by_origin[e.origin] or 0) + 1
+end
+local origin_words = {}
+for k, n in pairs(by_origin) do origin_words[#origin_words + 1] = (k == "new" and "this project" or k) .. " " .. n end
+table.sort(origin_words)
+
+w("GENERATED by scripts/generate-gm-command-reference (profile " .. PROFILE .. ", " .. os.date("%Y-%m-%d %H:%M") .. ")")
+w("from the world database's `command` table, the server's C++ command tables and")
+w("config/custom-gm-commands.lua. Don't edit by hand: edit those, run it again.")
+w("Why: one place to find every game master command, and the project's own.")
+banner("GAME MASTER COMMANDS -- EVERLAND GHOSTSONG, PROFILE " .. PROFILE:upper())
+wrap(string.format("%d commands: %s. The %d this project added are listed first, under WHAT'S NEW, and again in place among their relatives, marked NEW.",
+    total, table.concat(origin_words, ", "), new_total), 0)
+
+banner("NEURON")
+wrap("wow-chat-neuron (../wow-chat-neuron/, the control plane for a running AzerothCore world) reaches the world through three channels; its live channel sends game master commands over the worldserver's SOAP console. Every command listed here should be able to become a neuron operation: one declaration, from which neuron draws a command-line subcommand, a tool definition a model can call (a tool call), and an entry in its catalogue (docs/vocabulary.txt there). Each line below already holds what a declaration needs: the command's words (its name), its syntax (its typed parameters), its level (who may pull the lever) and where it runs.", 0)
+w()
+wrap("Where it runs decides the channel. A command marked \"anywhere\" can be sent over SOAP as it stands, so it maps straight onto neuron's live channel. One marked \"in game\" needs a character in the world (it reads the game master's position, target or selection), so as a neuron operation it would be carried by the resident channel (a Lua script in the server that acts for a named character) or rewritten to take that character as a parameter. A \"?\" means the code did not say.", 0)
+
+banner("HOW TO READ THIS")
+wrap("Systems are in capitals, underlined. Inside a system, command families (a command's first word) are in word order, and inside a family the commands nest by their words: \".account set gmlevel\" sits in \"account set\", inside \"account\". Each command line gives its syntax, then in brackets who may run it and where:", 0)
+w()
+w("  player     any account          moderator  game master level 1")
+w("  gm         game master level 2  admin      game master level 3")
+w("  console    the server console only")
+w()
+w("  anywhere   runs in game and from the server console (and so over SOAP)")
+w("  in game    needs a character in the world")
+w("  NEW        added by this project")
+w()
+wrap("In a syntax, $word and #number are the stock help's own marks for a value to type; the project's commands use <needed> and [optional], with a|b for a choice. The help under each command is the server's own (.help shows the same), except for NEW ones, whose help is config/custom-gm-commands.lua.", 0)
+
+banner("WHAT'S NEW: THE COMMANDS THIS PROJECT ADDED")
+for _, s in ipairs(SYSTEMS) do
+    local sys = s[1]
+    local fams = {}
+    for _, e in ipairs(commands) do
+        if e.new and e.placed_system == sys then
+            local own = e.name:match("^(%S+)")
+            fams[own] = fams[own] or {}
+            table.insert(fams[own], { name = e.name, syntax = e.syntax, help = e.help, level = e.level, console = e.console, new = true })
+        end
+    end
+    if next(fams) then
+        w(sys:upper()); w(string.rep("-", #sys)); w()
+        local keys = {}
+        for k in pairs(fams) do keys[#keys + 1] = k end
+        table.sort(keys, sort_words)
+        for _, k in ipairs(keys) do print_family(fams[k], k, 2, false) end
+    end
+end
+
+banner("EVERY COMMAND, BY SYSTEM")
+for _, s in ipairs(SYSTEMS) do
+    local sys = s[1]
+    if families[sys] then
+        w(sys:upper()); w(string.rep("-", #sys)); w()
+        local keys = {}
+        for k in pairs(families[sys]) do keys[#keys + 1] = k end
+        table.sort(keys, sort_words)
+        for _, k in ipairs(keys) do print_family(families[sys][k], k, 2, true) end
+    end
+end
+
+banner("CHECKS")
+local norow = 0
+for _, e in ipairs(commands) do if e.norow and not e.new then norow = norow + 1 end end
+wrap(string.format("%d stock or module commands have no `command` row: no .help text (the server warns about each at startup) and the level their code names. %d problems found while reading:", norow, #problems), 0)
+w()
+table.sort(problems)
+for _, p in ipairs(problems) do wrap("- " .. p, 2) end
+if #problems == 0 then w("  none") end
+-- }}}
+
+-- {{{ write it
+local fatal = {}
+for _, p in ipairs(problems) do if p:find("is in no system") or p:find("no command table declares") or p:find("config says system") then fatal[#fatal + 1] = p end end
+if #fatal > 0 then
+    io.stderr:write("ERROR: the reference would have holes; nothing written:\n")
+    for _, p in ipairs(fatal) do io.stderr:write("  " .. p .. "\n") end
+    os.exit(1)
+end
+local path = DIR .. "/docs/" .. (PROFILE == "basic" and "gm-commands.txt" or ("gm-commands-" .. PROFILE .. ".txt"))
+local h = assert(io.open(path, "w"))
+h:write(table.concat(out, "\n"), "\n")
+h:close()
+print(string.format("%s: %d commands (%d new), %d problems listed under CHECKS", path:sub(#DIR + 2), total, new_total, #problems))
+-- }}}

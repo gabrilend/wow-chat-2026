@@ -34,7 +34,10 @@ themselves — "... yes?"
 - **Code**: in `src/cpp-basic/basic_rules.cpp` (copied into the server by
   B030):
   - loads the table at startup (the world's custom-table hook) and on
-    `.basic reload multipliers` (reload permission); a missing table is
+    `.basic reload multipliers` (administrators, and the console: its
+    `command` row, install step E053, sets the level; the code's reload
+    permission number is one no account reaches, so before 2026-10-08 it
+    ran from the console only); a missing table is
     logged as an error ("install step E026 not run?"), an empty one as
     "every creature stock";
   - picks a unit's row: its own template's row, else its creature owner's

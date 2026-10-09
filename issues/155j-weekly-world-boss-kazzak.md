@@ -250,7 +250,11 @@ and install): the hand respawn, Kazzak's swarm, the battle bonus.
     its ground is in (its body in the world: respawned in place; ground
     loaded but body gone: queued for now; ground not loaded: its respawn
     time cleared, so it loads alive) and marks it alive; `.basic worldboss
-    status` lists them;
+    status` lists them; both are for game masters in game and the console
+    (their `command` rows, install step E053, set the level: the code's
+    respawn permission number is one no account reaches, so before
+    2026-10-08 only the console, and the Lua countdown through it, could
+    run them);
   - Kazzak's swarm as decided above, with no cap; the zone's borders come from the area
     table of 617e2 (E044); each pack's leader is kept "active", so its
     ground stays loaded while it lives (summoned creatures vanish with

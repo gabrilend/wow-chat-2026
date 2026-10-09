@@ -1,0 +1,119 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- test-gm-command-reference - the project's game master commands, their one
+-- written description, and the files made from it, all agree
+--
+-- For a general audience: the project's commands are written once, in
+-- config/custom-gm-commands.lua, and three things are made from that: the
+-- database rows behind ".help", the plain-text reference, and its web page.
+-- This checks, without a database or a server:
+--   1. every command the project's compiled code declares is described, as
+--      compiled, with the code's level (unless the code names a permission
+--      number, which the description's level replaces) and console flag;
+--      and every compiled description has its command in the code
+--   2. every word a project Lua script answers as a command is described,
+--      and every Lua description's first word is answered by its script
+--   3. the help-row SQL in sql/ is what the generator writes today
+--   4. the web page holds every command line of the text reference
+--
+-- Usage: scripts/test-gm-command-reference [PROJECT_DIR]
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+package.path = DIR .. "/scripts/lib/?.lua;" .. package.path
+local Tables = require("command-tables")
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+local function read(path) local h = io.open(path, "r"); if not h then return nil end local t = h:read("*a"); h:close(); return t end
+
+local custom = dofile(DIR .. "/config/custom-gm-commands.lua")
+local by_name = {}
+for _, c in ipairs(custom) do by_name[c.name] = c end
+
+print("1. the compiled commands")
+local files = {}
+for _, f in ipairs(Tables.files_with_tables(DIR .. "/modules")) do files[#files + 1] = f end
+for _, f in ipairs(Tables.files_with_tables(DIR .. "/src")) do files[#files + 1] = f end
+local code, errs = Tables.read_files(files, DIR)
+check(#errs == 0, "the project's command tables read without errors" .. (#errs > 0 and (": " .. table.concat(errs, "; ")) or ""))
+local in_code = {}
+for _, c in ipairs(code) do
+    in_code[c.name] = c
+    local d = by_name[c.name]
+    check(d ~= nil and d.kind == "compiled", "." .. c.name .. " (" .. c.file .. ") is described as compiled")
+    if d then
+        check(d.source == c.file, "." .. c.name .. ": described source " .. d.source .. " is where the code declares it")
+        if c.level then check(d.level == c.level, string.format(".%s: level %s matches the code's %s", c.name, tostring(d.level), c.perm)) end
+        if c.console ~= nil then check(d.console == c.console, "." .. c.name .. ": console " .. tostring(d.console) .. " matches the code") end
+    end
+end
+for _, d in ipairs(custom) do
+    if d.kind == "compiled" then check(in_code[d.name] ~= nil, "." .. d.name .. " (described) is declared in the code") end
+end
+
+print("2. the Lua commands")
+local answered = {}                                  -- first word -> the script answering it
+local p = io.popen("ls '" .. DIR .. "'/src/lua-*/*.lua")
+for path in p:lines() do
+    local text = read(path) or ""
+    -- the two ways the scripts read their word: command:match("^word ...")
+    -- and words[1] ~= "word" (redirect-probe.lua)
+    for word in text:gmatch('command:match%("%^([%a]+)') do answered[word] = path:sub(#DIR + 2) end
+    for word in text:gmatch('words%[1%]%s*~=%s*"([%a]+)"') do answered[word] = path:sub(#DIR + 2) end
+end
+p:close()
+for word, path in pairs(answered) do
+    local found = false
+    for _, d in ipairs(custom) do if d.kind == "lua" and d.name:match("^(%S+)") == word then found = true end end
+    check(found, "." .. word .. " (answered in " .. path .. ") is described")
+end
+for _, d in ipairs(custom) do
+    if d.kind == "lua" then
+        local word = d.name:match("^(%S+)")
+        check(answered[word] == d.source, "." .. d.name .. ": its first word is answered by " .. d.source)
+    end
+end
+
+print("3. the help-row SQL is current")
+local tmp = os.tmpname(); os.remove(tmp)
+os.execute("mkdir -p '" .. tmp .. "/config' '" .. tmp .. "/sql'")
+os.execute("cp '" .. DIR .. "/config/custom-gm-commands.lua' '" .. tmp .. "/config/'")
+os.execute("'" .. DIR .. "/scripts/generate-custom-command-help-sql' '" .. tmp .. "' > /dev/null")
+for _, profile in ipairs({ "basic", "cc-test" }) do
+    for _, form in ipairs({ "apply", "revert" }) do
+        local rel = "sql/" .. profile .. "/db_world.src/34-custom-command-help." .. form .. ".sql"
+        local made, kept = read(tmp .. "/" .. rel), read(DIR .. "/" .. rel)
+        check(made ~= nil and made == kept, rel .. " matches what the generator writes (run scripts/generate-custom-command-help-sql if not)")
+    end
+end
+os.execute("rm -rf '" .. tmp .. "'")
+
+print("4. the web page holds the text's commands")
+local txt = read(DIR .. "/docs/gm-commands.txt")
+check(txt ~= nil, "docs/gm-commands.txt exists")
+if txt then
+    local lines_in_text = 0
+    for line in txt:gmatch("[^\n]+") do
+        if line:match("^ +%..-  +%[[%a ]+, [%a %?]+[^%]]*%]$") then lines_in_text = lines_in_text + 1 end
+    end
+    local out = os.tmpname()
+    os.execute("'" .. DIR .. "/scripts/render-gm-command-reference-html' '" .. DIR .. "' '" .. DIR .. "/docs/gm-commands.txt' '" .. out .. "' > /dev/null")
+    local page = read(out) or ""
+    os.remove(out)
+    local on_page = 0
+    for _ in page:gmatch('<div class="c[ "]') do on_page = on_page + 1 end
+    check(lines_in_text > 0 and on_page == lines_in_text, string.format("the page has %d command entries, the text %d", on_page, lines_in_text))
+    local kept = read(DIR .. "/docs/HTML/gm-commands.html") or ""
+    local kept_count = 0
+    for _ in kept:gmatch('<div class="c[ "]') do kept_count = kept_count + 1 end
+    check(kept_count == lines_in_text, "docs/HTML/gm-commands.html is drawn from the current text (run scripts/render-gm-command-reference-html if not)")
+end
+
+print("")
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)
