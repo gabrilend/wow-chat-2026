@@ -5,7 +5,8 @@
 - Phase: 1
 - Parent: 176 (the cc-test profile)
 - Blocked by: 176 (the profile must exist to install scenes into)
-- Sub-issues: 176a1 (a full Alterac Valley match)
+- Sub-issues: 176a1 (a full Alterac Valley match), 176a2 (an Arathi
+  Basin match)
 - Related: 173w (queued inputs and test characters: the client's half),
   173v (the client's move to its own project), 173e (what the server
   checks), 127 (patch system improvements), 173b3 (the action names
@@ -181,6 +182,9 @@ with stored references (the client's half, after its move: 173v).
 
 - 176a1 - a full Alterac Valley match: 40 stand-ins a side, players
   added on top, their pathfinding checked first.
+- 176a2 - an Arathi Basin match: trios of stand-ins spread over the roads
+  by an alternating rule, a tank per base taken, bases that grow a bonus
+  while held (sub-issues 176a2a to 176a2f).
 
 ## Open Questions
 

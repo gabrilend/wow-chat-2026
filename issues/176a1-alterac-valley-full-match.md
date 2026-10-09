@@ -197,7 +197,11 @@ there. And the ones in Stranglethorn shouldn't wear shirts, because
 they'll sweat too much." Every stand-in in the valley wears a shirt; the
 rule for shirts by zone lives with the stand-ins' gear (617t).
 
-**Pathfinding is what this scene checks first.** Stand-ins walk out of
+**Pathfinding is what this scene checks first.** (Found 2026-10-08 while
+planning Arathi Basin, 176a2c: the bot module already walks Alterac
+Valley by hand-placed road paths, `vPaths_AV` in mod-playerbots'
+`BattleGroundTactics.cpp`, from each spawn through the crossroads to the
+bunkers, towers and captains. The stand-ins' routes can start from those.) Stand-ins walk out of
 their caves, along the valley, to the towers and graveyards and the
 enemy's base. Their logs record where they walk, so the test can show:
 - that each stand-in leaves its cave and does not stay stuck at the start;

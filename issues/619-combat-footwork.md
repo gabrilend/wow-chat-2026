@@ -5,7 +5,8 @@
 - Phase: 6
 - Related: 617 (buddy bots), 617t (stand-ins), 617e5 (fighting together),
   176a (test scenes: where this was first written down), 176a1 (the
-  Alterac Valley scene, whose stand-ins fight this way), 161 (bot
+  Alterac Valley scene, whose stand-ins fight this way), 176a2d (Arathi
+  Basin squads: formations that break into this footwork), 161 (bot
   wandering and combat repositioning, kiting)
 - Priority: Medium
 
