@@ -91,7 +91,38 @@ Later the same day:
 
 ## Current Behavior
 
-Not built. The world database's legendary (orange) weapons and pieces,
+**2026-10-08: built, not yet installed** (install step E054, basic).
+`scripts/generate-basic-legendaries-sql` writes
+`sql/basic/db_world.src/35-legendaries.{apply,revert}.sql`:
+- **Six new items**: Atiesh's generic staff (1820001, unbound, turned into
+  the looter's version by `src/lua-basic/legendaries.lua`), and level-60
+  copies (required level 60, item level 80) of the Warglaives (1820002,
+  1820003), Thori'dal (1820004), Val'anyr (1820005) and Shadowmourne
+  (1820006). Stats are scaled by item level (80 over the original's); a
+  stat the original carried as a shared spell ("Attack Power 44") becomes
+  an ordinary stat, scaled; weapon damage matches the best level-60 weapon
+  of its kind that players can get (Warblade of the Hakkari, Grand
+  Marshal's Bullseye, Aurastone Hammer, Dark Edge of Insanity).
+- **Four effects scaled in place** in `spell_dbc` (each used by one item
+  only, so the server's scripts for them keep working): the Warglaives'
+  set haste 450 to 231, Shadowmourne's Chaos Bane 1900 to 535 damage and
+  270 to 76 strength, its Soul Fragment 30 to 8. Val'anyr's absorb is a
+  share of the heal, nothing to scale; its second spell (68496) is a
+  server-made spell, left as it is.
+- **One shared roll** on 42 bosses of Zul'Gurub, Molten Core, Blackwing
+  Lair and both Ahn'Qiraj raids (from the game's encounter list), picking
+  any of nine (Thunderfury, Sulfuras and Ashbringer as they are, and the
+  six above), at 1.05% to 1.74% a boss so a whole run finds one 10% of the
+  time. Majordomo Executus drops a chest, not loot of his own: no roll.
+`scripts/test-basic-legendaries` (37 checks): the numbers; the SQL
+applied twice and reverted on session-only copies of the real tables;
+the Atiesh swap for every class, and with full bags.
+
+To turn it on: run install step E054 for basic (as the other steps were
+run on 2026-10-08) and restart the worldserver; the Lua script loads with
+the rest of `src/lua-basic/`.
+
+Before this, not built. The world database's legendary (orange) weapons and pieces,
 read 2026-10-08 (item level, required level):
 
 | Era | Item | Entry | Item level | Requires |

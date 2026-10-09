@@ -1,0 +1,116 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- test-basic-legendaries - the legendaries install step (issue 182) does
+-- what the plan says, without a server
+--
+-- For a general audience: scripts/generate-basic-legendaries-sql writes the
+-- level-60 legendaries, their scaled effects and their drop chances as SQL.
+-- This checks three things:
+--   1. its numbers: every new item requires level 60 and sits at item level
+--      90 or below; every scaled weapon's damage matches its level-60
+--      reference; every spell changed in place belongs to one item only; a
+--      whole run of each raid finds a legendary about one time in ten
+--   2. its SQL: applied twice and reverted on copies of the real tables
+--      that exist only for this test's database session (the real tables
+--      are never touched), with the right rows in between
+--   3. the Atiesh swap (src/lua-basic/legendaries.lua) in a stand-in world:
+--      each caster class gets its own version, other classes keep the
+--      generic staff, full bags keep it too
+--
+-- Run scripts/generate-basic-legendaries-sql first (it writes the summary
+-- this reads). Usage: scripts/test-basic-legendaries [PROJECT_DIR]
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+
+print("1. the numbers")
+local S = dofile(DIR .. "/tmp/shared-memory/basic-legendaries-summary.lua")
+for _, it in pairs(S.items) do
+    check(it.req == 60 and it.ilvl <= 90, string.format("%d %s: requires %d, item level %d", it.entry, it.name, it.req, it.ilvl))
+    if it.ref_dps then
+        check(math.abs(it.dps - it.ref_dps) / it.ref_dps < 0.02, string.format("%s: %.1f damage a second against its reference %s (%.1f)", it.name, it.dps, it.ref_name, it.ref_dps))
+    end
+end
+for id, sp in pairs(S.spells) do
+    if #sp.changes > 0 then check(true, string.format("spell %d %s scaled: %s (one item only, or the generator would have refused)", id, sp.name, table.concat(sp.changes, ", "))) end
+end
+for _, r in pairs(S.raids) do
+    local run = 1 - (1 - r.chance / 100) ^ r.bosses
+    check(math.abs(run - S.run_chance) < 0.001, string.format("%s: %d bosses at %.2f%% each: a whole run finds one %.1f%% of the time", r.name, r.bosses, r.chance, run * 100))
+end
+
+print("2. the SQL, on session-only copies")
+local apply  = assert(io.open(DIR .. "/sql/basic/db_world.src/35-legendaries.apply.sql")):read("*a")
+local revert = assert(io.open(DIR .. "/sql/basic/db_world.src/35-legendaries.revert.sql")):read("*a")
+local tables = { "item_template", "reference_loot_template", "creature_loot_template", "spell_dbc" }
+local setup = {}
+for _, t in ipairs(tables) do
+    -- a copy, then a temporary table of the real name over it: this session
+    -- sees the temporary one, every other connection the real one
+    setup[#setup + 1] = string.format("CREATE TEMPORARY TABLE copy_%s LIKE %s; INSERT INTO copy_%s SELECT * FROM %s; CREATE TEMPORARY TABLE %s LIKE copy_%s; INSERT INTO %s SELECT * FROM copy_%s;", t, t, t, t, t, t, t, t)
+end
+local count = "SELECT 'items', COUNT(*) FROM item_template WHERE entry BETWEEN 1820001 AND 1829999; SELECT 'roll', COUNT(*) FROM reference_loot_template WHERE Entry = 1820000; SELECT 'bosses', COUNT(*) FROM creature_loot_template WHERE Reference = 1820000; SELECT 'spells', COUNT(*) FROM spell_dbc WHERE ID IN (41435, 71904, 71905, 73422);"
+local script = os.tmpname()
+local f = assert(io.open(script, "w"))
+f:write(table.concat(setup, "\n"), "\n", "SELECT 'stage', 'before';\n", count, "\n", apply, "\n", apply, "\n", "SELECT 'stage', 'applied twice';\n", count, "\n", revert, "\n", "SELECT 'stage', 'reverted';\n", count, "\n")
+f:close()
+local mysql = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi acore_world_basic -N -B < '%s' 2>&1", DIR, DIR, script)
+local h = io.popen(mysql)
+local stage, seen = nil, {}
+for line in h:lines() do
+    if line:find("^ERROR") then check(false, "the SQL ran without errors: " .. line) end
+    local k, v = line:match("^(%a+)\t(.+)$")
+    if k == "stage" then stage = v; seen[stage] = {} elseif k and stage then seen[stage][k] = tonumber(v) end
+end
+h:close(); os.remove(script)
+local b, a, r = seen["before"] or {}, seen["applied twice"] or {}, seen["reverted"] or {}
+local n_items, n_bosses = #S.items, #S.bosses
+check(b.items == 0 and b.roll == 0 and b.bosses == 0, "before: none of the rows exist")
+check(a.items == n_items, string.format("applied twice: %s new items (expected %d)", tostring(a.items), n_items))
+check(a.roll == n_items + 3, string.format("applied twice: the shared roll holds %s legendaries (expected %d: three as they are, and every new item, Atiesh's generic staff among them)", tostring(a.roll), n_items + 3))
+check(a.bosses == n_bosses, string.format("applied twice: %s bosses carry the roll (expected %d)", tostring(a.bosses), n_bosses))
+check(a.spells == 4, string.format("applied twice: 4 spells scaled in place (got %s)", tostring(a.spells)))
+check(r.items == 0 and r.roll == 0 and r.bosses == 0 and r.spells == 0, "reverted: every row gone")
+
+print("3. the Atiesh swap, in a stand-in world")
+local function world(class, room)
+    local bag = { [1820001] = 1 }
+    local said = {}
+    local p = {
+        GetClass = function() return class end, GetName = function() return "tester" end,
+        HasItem = function(_, e) return (bag[e] or 0) > 0 end,
+        RemoveItem = function(_, e, n) bag[e] = (bag[e] or 0) - n end,
+        AddItem = function(_, e, n) if e ~= 1820001 and not room then return false end; bag[e] = (bag[e] or 0) + n; return true end,
+        SendBroadcastMessage = function(_, t) said[#said + 1] = t end,
+        RegisterEvent = function() end,
+    }
+    return p, bag, said
+end
+local env = setmetatable({ RegisterPlayerEvent = function() end, print = function() end }, { __index = _G })
+local chunk = assert(loadfile(DIR .. "/src/lua-basic/legendaries.lua"))
+setfenv(chunk, env)
+local L = chunk()
+for class, version in pairs({ [8] = 22589, [9] = 22630, [5] = 22631, [11] = 22632 }) do
+    local p, bag = world(class, true)
+    L.turn(p)
+    check(bag[version] == 1 and bag[1820001] == 0, "class " .. class .. ": the generic staff becomes " .. version)
+end
+for _, class in ipairs({ 1, 2, 3, 4, 6, 7 }) do
+    local p, bag = world(class, true)
+    L.turn(p)
+    check(bag[1820001] == 1, "class " .. class .. ": keeps the generic staff (to trade to a caster)")
+end
+local p, bag, said = world(8, false)
+L.turn(p)
+check(bag[1820001] == 1 and bag[22589] == nil and #said == 1, "a mage with full bags keeps the generic staff and is told why")
+
+print("")
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)

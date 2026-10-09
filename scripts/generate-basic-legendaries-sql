@@ -1,0 +1,427 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- generate-basic-legendaries-sql - the game's legendaries at level 60, and
+-- where they drop, for the basic profile (issue 182)
+--
+-- For a general audience: the game's legendary weapons from its first three
+-- eras (Thunderfury and Sulfuras up to Val'anyr and Shadowmourne) become
+-- rare drops on basic, which stops at level 60. The ones made for level 70
+-- and 80 get level-60 copies: required level 60, item level 80 (vanilla's
+-- own legendaries' level), stats and their effects' numbers scaled down in
+-- proportion to item level, weapon damage matched to the best level-60
+-- weapon of their kind. The originals are not changed (owner, 2026-10-08:
+-- "leave the originals untouched"). Every boss of every vanilla raid gets
+-- one shared roll that picks any of them, its chance set so a whole run of
+-- the raid sees one about one time in ten ("any from all, not just end
+-- bosses. once in ten runs"). Atiesh drops as one item that becomes the
+-- looter's class's staff (src/lua-basic/legendaries.lua).
+--
+-- How the effects are scaled: a stat a Wrath-era item carries as a spell
+-- ("Attack Power 44", shared by dozens of items) becomes an ordinary stat
+-- on the copy, scaled; a spell only a legendary uses (Shadowmourne's,
+-- the Warglaives' set bonus) is overridden in place through the world
+-- database's spell_dbc table, its amounts scaled, so the server's scripts
+-- for it keep working. The stock client's tooltips will show the old
+-- numbers until the custom client draws its own (owner: "scale them now
+-- and accept bad tooltips").
+--
+-- Reads:  the basic world database (item_template, creature_template,
+--         instance_encounters, spell_dbc), data-files/dbc/Spell.dbc,
+--         DungeonEncounter.dbc, ItemSet.dbc
+-- Writes: sql/basic/db_world.src/35-legendaries.apply.sql and .revert.sql
+--         tmp/shared-memory/basic-legendaries-summary.lua (for the test)
+-- Usage:  scripts/generate-basic-legendaries-sql [PROJECT_DIR]
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local ffi = require("ffi")
+
+-- {{{ configuration
+local TARGET_ILVL   = 80                            -- Thunderfury's and Sulfuras's item level
+local TARGET_LEVEL  = 60                            -- basic's level cap
+local FIRST_ENTRY   = 1820001                       -- docs/custom-id-ranges.md: issue 182 x 10,000
+local REFERENCE     = 1820000                       -- the shared legendary roll (reference_loot_template)
+local RUN_CHANCE    = 0.10                          -- one legendary per ten runs of a raid
+local RAIDS = { [309] = "Zul'Gurub", [409] = "Molten Core", [469] = "Blackwing Lair",
+                [509] = "Ruins of Ahn'Qiraj", [531] = "Temple of Ahn'Qiraj" }
+-- Onyxia's Lair (249) and Naxxramas (533) are their level-80 versions in
+-- this game: out of reach on a level-60 server, so not on the list.
+
+-- already level 60: dropped as they are
+local AS_THEY_ARE = { 19019, 17182, 13262 }        -- Thunderfury, Sulfuras, Ashbringer
+-- made for 70 and 80: level-60 copies
+local TO_SCALE    = { 32837, 32838, 34334, 46017, 49623 }   -- Warglaives (main, off), Thori'dal, Val'anyr, Shadowmourne
+-- Atiesh: one drop that turns into the looter's class's staff
+local ATIESH_SOURCE = 22589                         -- the mage's, copied as the dummy
+local ATIESH_BY_CLASS = { [8] = 22589, [9] = 22630, [5] = 22631, [11] = 22632 }  -- mage, warlock, priest, druid (by their Power of the Guardian auras 28142-28145)
+-- Left out (owner, 2026-10-08): Andonisus and Kael'thas's eight, lent for
+-- one fight each; Glaive of the Defender (23051), whose purpose is unknown.
+
+-- spells a legendary's script casts that no spell field names: scaled with it
+local SCRIPTED_CHAINS = {
+    [71903] = { 71904, 71905, 73422 },              -- spell_item_shadowmourne: Chaos Bane damage, Soul Fragment, Chaos Bane strength
+}
+-- auras that are amounts (scaled); every other aura (percentages, proc
+-- triggers, dummies) is left alone
+local AMOUNT_AURA = { [29] = true, [13] = true, [99] = true, [124] = true, [135] = true, [189] = true, [85] = true, [8] = true, [3] = true, [69] = true }
+local AMOUNT_EFFECT = { [2] = true, [10] = true }    -- school damage, heal
+-- a stat aura turned into an item stat: aura -> item stat type (ITEM_MOD_*)
+local AURA_TO_STAT = { [99] = 38, [13] = 45, [135] = 45 }   -- attack power, spell power (damage, healing)
+local RATING_BIT_TO_STAT = { [1 << 24] = 44, [131072] = 36, [1 << 7] = 32, [1 << 8] = 32 }   -- armour penetration, haste, crit (melee, ranged)
+-- }}}
+
+local problems = {}
+local function problem(t) problems[#problems + 1] = t end
+
+-- {{{ the database
+local MYSQL = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi acore_world_basic -B", DIR, DIR)
+local function query(sql)
+    local h = io.popen(MYSQL .. " -e \"" .. sql:gsub('"', '\\"') .. "\" 2>&1")
+    local header, rows = nil, {}
+    for line in h:lines() do
+        if not line:find("Using a password") then
+            if line:find("^ERROR") then io.stderr:write("ERROR: " .. line .. "\n  in: " .. sql .. "\n"); os.exit(1) end
+            local cells = {}
+            for c in (line .. "\t"):gmatch("(.-)\t") do cells[#cells + 1] = c end
+            if not header then header = cells else
+                local r = {}
+                for i, name in ipairs(header) do r[name] = cells[i] end
+                r.__order = header
+                rows[#rows + 1] = r
+            end
+        end
+    end
+    h:close()
+    return rows, header
+end
+-- }}}
+
+-- {{{ the client data files
+local DBC = DIR .. "/data-files/dbc/"
+local function load_dbc(name)
+    local f = assert(io.open(DBC .. name, "rb"), "cannot open " .. DBC .. name)
+    local d = f:read("*a"); f:close()
+    assert(d:sub(1, 4) == "WDBC", name .. " is not a WDBC file")
+    local function u32(o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+    local n, fields, size = u32(4), u32(8), u32(12)
+    local strs = 20 + n * size
+    local dbc = { n = n, fields = fields, size = size, by_id = {} }
+    function dbc.u(row, i) return u32(20 + row * size + i * 4) end
+    function dbc.i(row, i) local v = dbc.u(row, i); if v >= 2 ^ 31 then v = v - 2 ^ 32 end; return v end
+    function dbc.f(row, i) local v = ffi.new("uint32_t[1]", dbc.u(row, i)); return ffi.cast("float*", v)[0] end
+    function dbc.s(row, i) local o = dbc.u(row, i); local e = d:find("\0", strs + o + 1, true); return d:sub(strs + o + 1, e - 1) end
+    for r = 0, n - 1 do dbc.by_id[dbc.u(r, 0)] = r end
+    return dbc
+end
+local Spell = load_dbc("Spell.dbc")
+local Encounter = load_dbc("DungeonEncounter.dbc")
+local ItemSet = load_dbc("ItemSet.dbc")
+-- Spell.dbc fields used (3.3.5): 71-73 Effect, 80-82 EffectBasePoints
+-- (stored one less than shown), 95-97 EffectApplyAuraName, 110-112
+-- EffectMiscValue, 116-118 EffectTriggerSpell, 136 SpellName (enUS)
+-- }}}
+
+-- {{{ how many items use each spell (a shared spell is never overridden)
+local spell_users = {}
+for _, r in ipairs((query("SELECT spellid_1, spellid_2, spellid_3, spellid_4, spellid_5 FROM item_template"))) do
+    for k = 1, 5 do local s = tonumber(r["spellid_" .. k]); if s and s > 0 then spell_users[s] = (spell_users[s] or 0) + 1 end end
+end
+local overridden_already = {}
+for _, r in ipairs((query("SELECT ID FROM spell_dbc"))) do overridden_already[tonumber(r.ID)] = true end
+-- }}}
+
+-- {{{ reference weapon damage: the best level-60 weapon of each kind
+local function dps(r) local delay = tonumber(r.delay); if delay == 0 then return 0 end return (tonumber(r.dmg_min1) + tonumber(r.dmg_max1)) / 2 / (delay / 1000) end
+local best = {}
+-- only weapons players can actually get: in some loot table or on a vendor
+-- (the item table also holds test and placeholder weapons: "TEST 1H
+-- Amberseal Keeper", "90 Epic Warrior Axe")
+local obtainable = {}
+for _, t in ipairs({ "creature_loot_template", "reference_loot_template", "gameobject_loot_template", "item_loot_template", "npc_vendor" }) do
+    local col = (t == "npc_vendor") and "item" or "Item"
+    for _, r in ipairs((query("SELECT DISTINCT " .. col .. " AS i FROM " .. t))) do obtainable[tonumber(r.i)] = true end
+end
+for _, r in ipairs((query("SELECT entry, name, class, subclass, InventoryType, dmg_min1, dmg_max1, delay FROM item_template WHERE class=2 AND Quality IN (4,5) AND ItemLevel <= 90 AND RequiredLevel <= 60 AND delay > 0 AND duration = 0"))) do
+    if not obtainable[tonumber(r.entry)] then goto skip end
+    local k = r.subclass .. ":" .. r.InventoryType
+    if not best[k] or dps(r) > best[k].dps then best[k] = { dps = dps(r), name = r.name } end
+    ::skip::
+end
+-- }}}
+
+local summary = { items = {}, spells = {}, bosses = {}, raids = {}, atiesh = { dummy = FIRST_ENTRY, by_class = ATIESH_BY_CLASS } }
+local item_inserts, spell_inserts = {}, {}
+
+-- {{{ SQL helpers
+local function sql_value(v, numeric)
+    if v == nil or v == "NULL" then return "NULL" end
+    if numeric then return v end
+    return "'" .. v:gsub("\\", "\\\\"):gsub("'", "''") .. "'"
+end
+local item_columns = query("SHOW COLUMNS FROM item_template")
+local item_numeric, item_order = {}, {}
+for _, c in ipairs(item_columns) do item_order[#item_order + 1] = c.Field; item_numeric[c.Field] = not c.Type:find("char") and not c.Type:find("text") end
+local function insert_item(row)
+    local vals = {}
+    for _, col in ipairs(item_order) do vals[#vals + 1] = sql_value(row[col], item_numeric[col]) end
+    item_inserts[#item_inserts + 1] = "INSERT INTO `item_template` (`" .. table.concat(item_order, "`, `") .. "`) VALUES (" .. table.concat(vals, ", ") .. ");"
+end
+-- }}}
+
+-- {{{ spells: scaled overrides
+local spell_cols = query("SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.columns WHERE table_schema = 'acore_world_basic' AND table_name = 'spell_dbc' ORDER BY ORDINAL_POSITION")
+if #spell_cols ~= Spell.fields then
+    io.stderr:write(string.format("ERROR: spell_dbc has %d columns, Spell.dbc %d fields; can't map one onto the other\n", #spell_cols, Spell.fields)); os.exit(1)
+end
+local scale_spell
+function scale_spell(id, factor, why)
+    if summary.spells[id] then return end
+    local row = Spell.by_id[id]
+    if not row then problem("spell " .. id .. " (" .. why .. ") is not in Spell.dbc; left as it is"); return end
+    if (spell_users[id] or 0) > 1 then problem("spell " .. id .. " is used by " .. spell_users[id] .. " items; not overridden"); return end
+    if overridden_already[id] then problem("spell " .. id .. " already has a spell_dbc row; left as it is"); return end
+    local changed = {}
+    local vals = {}
+    for i, col in ipairs(spell_cols) do
+        local f = i - 1
+        local v
+        if col.DATA_TYPE == "float" then v = string.format("%.6g", Spell.f(row, f))
+        elseif col.DATA_TYPE:find("char") or col.DATA_TYPE:find("text") then v = sql_value(Spell.s(row, f))
+        else v = tostring(Spell.i(row, f)) end
+        -- EffectBasePoints of an amount effect: scaled (stored one below what is shown)
+        if f >= 80 and f <= 82 then
+            local e = f - 80
+            local effect, aura = Spell.i(row, 71 + e), Spell.i(row, 95 + e)
+            if AMOUNT_EFFECT[effect] or (effect == 6 and AMOUNT_AURA[aura]) then
+                local shown = Spell.i(row, f) + 1
+                local scaled = math.max(1, math.floor(shown * factor + 0.5))
+                v = tostring(scaled - 1)
+                changed[#changed + 1] = string.format("%d -> %d", shown, scaled)
+            end
+        end
+        vals[#vals + 1] = v
+    end
+    summary.spells[id] = { name = Spell.s(row, 136), changes = changed, why = why }
+    -- the spells this one triggers (a proc that casts the real effect, as
+    -- the Warglaives' set bonus 41434 casts 41435's +450 haste): scaled too
+    for e = 0, 2 do
+        local trig = Spell.i(row, 116 + e)
+        if trig > 0 then scale_spell(trig, factor, why .. ", triggered") end
+    end
+    if #changed == 0 then return end                 -- nothing to scale here: no override needed
+    local names = {}
+    for _, c in ipairs(spell_cols) do names[#names + 1] = c.COLUMN_NAME end
+    spell_inserts[#spell_inserts + 1] = string.format("-- %d %s (%s): %s\nINSERT INTO `spell_dbc` (`%s`) VALUES (%s);",
+        id, Spell.s(row, 136), why, table.concat(changed, ", "), table.concat(names, "`, `"), table.concat(vals, ", "))
+end
+-- }}}
+
+-- {{{ an item spell that is only a stat: as an item stat instead
+-- Returns stat type and amount, or nil when the spell is more than a stat.
+local function spell_as_stat(id)
+    local row = Spell.by_id[id]
+    if not row then return nil end
+    local stat, amount
+    for e = 0, 2 do
+        local effect, aura = Spell.i(row, 71 + e), Spell.i(row, 95 + e)
+        if effect ~= 0 then
+            if effect ~= 6 then return nil end
+            local t = AURA_TO_STAT[aura]
+            if aura == 189 then t = RATING_BIT_TO_STAT[Spell.i(row, 110 + e)] end
+            if aura == 124 then t = t or 38 end      -- ranged attack power beside attack power: one stat
+            if not t then return nil end
+            stat, amount = stat or t, math.max(amount or 0, Spell.i(row, 80 + e) + 1)
+        end
+    end
+    return stat, amount
+end
+-- }}}
+
+-- {{{ the items
+local function ids(list) local t = {} for _, v in ipairs(list) do t[#t + 1] = v end return table.concat(t, ",") end
+local sources = {}
+for _, r in ipairs((query("SELECT * FROM item_template WHERE entry IN (" .. ids(TO_SCALE) .. "," .. ATIESH_SOURCE .. ")"))) do sources[tonumber(r.entry)] = r end
+local next_entry = FIRST_ENTRY
+
+-- Atiesh's dummy: the mage's staff, unbound (it can be traded to a caster),
+-- with a line saying what it does
+do
+    local r = {}
+    for k, v in pairs(sources[ATIESH_SOURCE]) do r[k] = v end
+    r.entry, r.bonding = tostring(next_entry), "0"
+    r.description = "Becomes the Atiesh of a mage, warlock, priest or druid who takes it."
+    insert_item(r)
+    summary.items[#summary.items + 1] = { entry = next_entry, name = r.name .. " (turns into its bearer's)", source = ATIESH_SOURCE, ilvl = tonumber(r.ItemLevel), req = tonumber(r.RequiredLevel), dps = dps(r) }
+    next_entry = next_entry + 1
+end
+
+local legendary_entries = {}
+for _, e in ipairs(AS_THEY_ARE) do legendary_entries[#legendary_entries + 1] = e end
+legendary_entries[#legendary_entries + 1] = FIRST_ENTRY
+
+for _, src_entry in ipairs(TO_SCALE) do
+    local src = sources[src_entry]
+    if not src then problem("item " .. src_entry .. " not in item_template"); goto continue end
+    do
+        local r = {}
+        for k, v in pairs(src) do r[k] = v end
+        local factor = TARGET_ILVL / tonumber(src.ItemLevel)
+        r.entry, r.ItemLevel, r.RequiredLevel = tostring(next_entry), tostring(TARGET_ILVL), tostring(TARGET_LEVEL)
+        r.ScalingStatDistribution, r.ScalingStatValue = "0", "0"
+        -- stats in proportion to item level
+        local stats = {}
+        for k = 1, 10 do
+            local t, v = tonumber(r["stat_type" .. k]), tonumber(r["stat_value" .. k])
+            if t and t > 0 and v and v ~= 0 then stats[#stats + 1] = { t, math.max(1, math.floor(v * factor + 0.5)) } end
+        end
+        -- spells: a plain stat spell becomes a stat; a legendary's own spell is scaled in place
+        for k = 1, 5 do
+            local s = tonumber(r["spellid_" .. k])
+            if s and s > 0 then
+                local t, amount = spell_as_stat(s)
+                if t and (spell_users[s] or 0) > 1 then
+                    stats[#stats + 1] = { t, math.max(1, math.floor(amount * factor + 0.5)) }
+                    r["spellid_" .. k], r["spelltrigger_" .. k] = "0", "0"
+                else
+                    scale_spell(s, factor, src.name)
+                    for _, extra in ipairs(SCRIPTED_CHAINS[s] or {}) do scale_spell(extra, factor, src.name .. ", scripted") end
+                end
+            end
+        end
+        -- the item set's bonuses (the Warglaives'): scaled in place
+        local set = tonumber(r.itemset)
+        if set and set > 0 and ItemSet.by_id[set] then
+            for f = 35, 42 do local s = ItemSet.u(ItemSet.by_id[set], f); if s > 0 then scale_spell(s, factor, src.name .. ", set bonus") end end
+        end
+        if #stats > 10 then problem(src.name .. ": more than 10 stats after turning spells into stats; the rest dropped") end
+        for k = 1, 10 do
+            r["stat_type" .. k], r["stat_value" .. k] = stats[k] and tostring(stats[k][1]) or "0", stats[k] and tostring(stats[k][2]) or "0"
+        end
+        r.StatsCount = tostring(math.min(#stats, 10))
+        -- weapon damage: the best level-60 weapon of this kind, keeping speed and the low/high spread
+        local ref = best[src.subclass .. ":" .. src.InventoryType]
+        if tonumber(src.class) == 2 and ref then
+            local old = dps(src)
+            local k = ref.dps / old
+            r.dmg_min1 = string.format("%.0f", tonumber(src.dmg_min1) * k)
+            r.dmg_max1 = string.format("%.0f", tonumber(src.dmg_max1) * k)
+        elseif tonumber(src.class) == 2 then
+            problem(src.name .. ": no level-60 weapon of its kind to match; damage scaled by item level")
+            r.dmg_min1 = string.format("%.0f", tonumber(src.dmg_min1) * factor)
+            r.dmg_max1 = string.format("%.0f", tonumber(src.dmg_max1) * factor)
+        end
+        if tonumber(r.armor) and tonumber(r.armor) > 0 then r.armor = string.format("%.0f", tonumber(r.armor) * factor) end
+        insert_item(r)
+        summary.items[#summary.items + 1] = { entry = next_entry, name = src.name, source = src_entry, ilvl = TARGET_ILVL, req = TARGET_LEVEL,
+            dps = dps(r), ref_dps = ref and ref.dps, ref_name = ref and ref.name, stats = #stats }
+        legendary_entries[#legendary_entries + 1] = next_entry
+        next_entry = next_entry + 1
+    end
+    ::continue::
+end
+-- }}}
+
+-- {{{ the drops: every vanilla raid boss, one shared roll
+local credit = {}
+for _, r in ipairs((query("SELECT entry, creditType, creditEntry FROM instance_encounters"))) do credit[tonumber(r.entry)] = r end
+local loot_rows = {}
+local by_raid = {}
+for row = 0, Encounter.n - 1 do
+    local enc_id, map = Encounter.u(row, 0), Encounter.u(row, 1)
+    if RAIDS[map] and Encounter.u(row, 2) == 0 then           -- difficulty 0: the raids have one
+        by_raid[map] = by_raid[map] or {}
+        local c = credit[enc_id]
+        local name = Encounter.s(row, 5)
+        if not c or c.creditType ~= "0" then
+            problem(RAIDS[map] .. ": " .. name .. " is credited by a spell or not at all; no roll (its loot may be a chest)")
+        else
+            table.insert(by_raid[map], { encounter = enc_id, creature = tonumber(c.creditEntry), name = name })
+        end
+    end
+end
+local creature_loot = {}
+for _, r in ipairs((query("SELECT entry, lootid, name FROM creature_template WHERE lootid > 0"))) do creature_loot[tonumber(r.entry)] = tonumber(r.lootid) end
+for map, bosses in pairs(by_raid) do
+    local with_loot = {}
+    for _, b in ipairs(bosses) do
+        if creature_loot[b.creature] then with_loot[#with_loot + 1] = b
+        else problem(RAIDS[map] .. ": " .. b.name .. " (creature " .. b.creature .. ") has no loot table; no roll") end
+    end
+    local n = #with_loot
+    local chance = n > 0 and (1 - (1 - RUN_CHANCE) ^ (1 / n)) * 100 or 0
+    summary.raids[#summary.raids + 1] = { map = map, name = RAIDS[map], bosses = n, chance = chance }
+    for _, b in ipairs(with_loot) do
+        loot_rows[#loot_rows + 1] = string.format("(%d, %d, %d, %.4f, 0, 1, 0, 1, 1, '%s: the legendary roll (182)')",
+            creature_loot[b.creature], REFERENCE, REFERENCE, chance, b.name:gsub("'", "''"))
+        summary.bosses[#summary.bosses + 1] = { raid = RAIDS[map], name = b.name, loot = creature_loot[b.creature], chance = chance }
+    end
+end
+table.sort(loot_rows)
+-- }}}
+
+-- {{{ write
+local stamp = "-- GENERATED by scripts/generate-basic-legendaries-sql from the basic world database and\n"
+           .. "-- data-files/dbc (Spell, DungeonEncounter, ItemSet); don't edit by hand, run it again. Why: the\n"
+           .. "-- game's legendaries as level-60 raid drops on basic (issue 182).\n"
+local ref_rows = {}
+for _, e in ipairs(legendary_entries) do
+    ref_rows[#ref_rows + 1] = string.format("(%d, %d, 0, 0, 0, 1, 1, 1, 1, 'legendary (182)')", REFERENCE, e)
+end
+local spell_ids = {}
+for id, s in pairs(summary.spells) do if #s.changes > 0 then spell_ids[#spell_ids + 1] = id end end
+table.sort(spell_ids)
+local out = DIR .. "/sql/basic/db_world.src/35-legendaries"
+local a = assert(io.open(out .. ".apply.sql", "w"))
+a:write(stamp, "-- MARKER_E054_APPLY\n",
+    string.format("-- %d new items (%d to %d), %d spells scaled in place, one shared roll on %d raid bosses.\n",
+        next_entry - FIRST_ENTRY, FIRST_ENTRY, next_entry - 1, #spell_ids, #loot_rows),
+    "-- Deleted first, so applying again changes nothing.\n",
+    "DELETE FROM `item_template` WHERE `entry` BETWEEN ", FIRST_ENTRY, " AND ", FIRST_ENTRY + 9998, ";\n",
+    "DELETE FROM `reference_loot_template` WHERE `Entry` = ", REFERENCE, ";\n",
+    "DELETE FROM `creature_loot_template` WHERE `Reference` = ", REFERENCE, ";\n",
+    (#spell_ids > 0 and ("DELETE FROM `spell_dbc` WHERE `ID` IN (" .. table.concat(spell_ids, ", ") .. ");\n") or ""),
+    table.concat(item_inserts, "\n"), "\n",
+    table.concat(spell_inserts, "\n"), "\n",
+    "INSERT INTO `reference_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES\n",
+    table.concat(ref_rows, ",\n"), ";\n",
+    "INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES\n",
+    table.concat(loot_rows, ",\n"), ";\n")
+a:close()
+local rv = assert(io.open(out .. ".revert.sql", "w"))
+rv:write(stamp, "-- MARKER_E054_REVERT\n-- 35-legendaries revert: the items, the roll and the scaled spells removed.\n",
+    "DELETE FROM `item_template` WHERE `entry` BETWEEN ", FIRST_ENTRY, " AND ", FIRST_ENTRY + 9998, ";\n",
+    "DELETE FROM `reference_loot_template` WHERE `Entry` = ", REFERENCE, ";\n",
+    "DELETE FROM `creature_loot_template` WHERE `Reference` = ", REFERENCE, ";\n",
+    (#spell_ids > 0 and ("DELETE FROM `spell_dbc` WHERE `ID` IN (" .. table.concat(spell_ids, ", ") .. ");\n") or ""))
+rv:close()
+
+-- the summary the test reads
+local function ser(v, ind)
+    ind = ind or ""
+    if type(v) == "table" then
+        local parts = {}
+        for k, x in pairs(v) do
+            local key = type(k) == "number" and ("[" .. k .. "]") or ("[" .. string.format("%q", k) .. "]")
+            parts[#parts + 1] = ind .. "  " .. key .. " = " .. ser(x, ind .. "  ")
+        end
+        return "{\n" .. table.concat(parts, ",\n") .. "\n" .. ind .. "}"
+    elseif type(v) == "string" then return string.format("%q", v) end
+    return tostring(v)
+end
+summary.problems = problems
+summary.run_chance = RUN_CHANCE
+local sf = assert(io.open(DIR .. "/tmp/shared-memory/basic-legendaries-summary.lua", "w"))
+sf:write("-- GENERATED by scripts/generate-basic-legendaries-sql: what it wrote, for scripts/test-basic-legendaries\nreturn ", ser(summary), "\n")
+sf:close()
+
+print(string.format("sql/basic/db_world.src/35-legendaries.{apply,revert}.sql: %d items, %d spells scaled, %d raid bosses with the roll",
+    next_entry - FIRST_ENTRY, #spell_ids, #loot_rows))
+for _, it in ipairs(summary.items) do
+    print(string.format("  %d %-52s ilvl %d req %d dps %.1f%s", it.entry, it.name, it.ilvl, it.req, it.dps,
+        it.ref_dps and string.format(" (matched to %s, %.1f)", it.ref_name, it.ref_dps) or ""))
+end
+for _, id in ipairs(spell_ids) do print(string.format("  spell %d %s: %s", id, summary.spells[id].name, table.concat(summary.spells[id].changes, ", "))) end
+for _, r in ipairs(summary.raids) do print(string.format("  %s: %d bosses, %.2f%% each", r.name, r.bosses, r.chance)) end
+if #problems > 0 then print("Notes:"); for _, p in ipairs(problems) do print("  " .. p) end end
+-- }}}
