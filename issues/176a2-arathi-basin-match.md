@@ -51,7 +51,19 @@ The owner, 2026-10-08:
 
 ## Current Behavior
 
-Not built. On every profile Arathi Basin is the stock battleground: it
+**2026-10-08: every rule is built and tested as plain Lua; nothing runs in
+game yet.** `src/lua-cc-test/lib/arathi-basin-*.lua` (routes, crossings,
+squads, formations, bonuses, the match), 64 checks in
+`scripts/test-arathi-basin-rules`, all passing under every reading of
+every open question. Each open question is built two or more ways behind
+a switch; `scripts/compare-arathi-basin-variants` plays the same
+scenarios under each, and the report for the owner's client presents
+them with a suggested answer each:
+https://claude.ai/artifact/BRN1s6jpZj49ei8fQM4kJQ (private until shared).
+Waiting on: the cc-test server build (176), stand-ins (617t), the scene
+runner (176a), the client's input queues (W client 109).
+
+Before this, not built. On every profile Arathi Basin is the stock battleground: it
 opens when enough players queue at a battlemaster (155u), 15 a side, the
 Alliance always at Trollbane Hall in the north-west and the Horde at the
 Defiler's Den in the south-east. Holding bases earns resources (one base:
