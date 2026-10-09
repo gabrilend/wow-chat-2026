@@ -24,18 +24,27 @@
 #             turns every existing "StopNow(code)" into a call carrying its
 #             own file and line, so none of the callers change.
 #   World.cpp the two places that set the stop flag directly (a timed
-#             ".server shutdown" running out, and ".server shutdown 0") go
-#             through the stop call too.
+#             ".server shutdown" running out, and ".server shutdown 0")
+#             record their location too, through MarkStopAt: it sets the
+#             flag as before without passing through StopNow, because
+#             upstream (2026-10, #27819, previous-session outcome) has
+#             StopNow mark "stopped by StopNow", which drops a scheduled
+#             shutdown's reason from the saved outcome. Each stays one
+#             statement: both sit in an if/else without braces.
 #   Main.cpp  "Halting process..." prints the requester and the exit code's
 #             meaning; the signal handler names its signal.
 # Anchors must occur exactly once or the patch stops with an error.
+# Retargeted 2026-10-09 for the core at 2a2211cd8: StopNow also sets
+# _stoppedByStopNow, and the timed shutdown's line is indented deeper
+# (a Wintergrasp deferral now wraps it). Found on a clean tree at the newest
+# commits (scripts/make-upstream-tree, scripts/test-source-patches).
 # Parallelizable: No (World.h is included nearly everywhere; one patch at a time)
 
 B043_BEGIN='// >>> B043-say-why-the-world-stopped BEGIN'
 B043_END='// <<< B043-say-why-the-world-stopped END'
-B043_H_STOP='    static void StopNow(uint8 exitcode) { _stopEvent = true; _exitCode = exitcode; }'
+B043_H_STOP='    static void StopNow(uint8 exitcode) { _stoppedByStopNow = true; _stopEvent = true; _exitCode = exitcode; }'
 B043_H_DEFINE='#define sWorld getWorldInstance()'
-B043_CPP_TIMER='                _stopEvent = true;                         // exist code already set'
+B043_CPP_TIMER='                    _stopEvent = true;                     // exist code already set'
 B043_CPP_NOW='            _stopEvent = true;                             // exist code already set'
 B043_MAIN_HALT='    LOG_INFO("server.worldserver", "Halting process...");'
 B043_MAIN_SIG='void SignalHandler(boost::system::error_code const& error, int /*signalNumber*/)'
@@ -84,8 +93,21 @@ patch_B043_say_why_the_world_stopped() {
             print "            _stopFile = file;"
             print "            _stopLine = line;"
             print "        }"
+            print "        _stoppedByStopNow = true;"
             print "        _stopEvent = true;"
             print "        _exitCode = exitcode;"
+            print "    }"
+            print "    // the shutdown command'"'"'s own stop (a timer running out, or \"0\"):"
+            print "    // located like the rest, but not \"stopped by StopNow\", so its"
+            print "    // reason stays in the saved session outcome"
+            print "    static void MarkStopAt(char const* file, int line)"
+            print "    {"
+            print "        if (!_stopEvent)"
+            print "        {"
+            print "            _stopFile = file;"
+            print "            _stopLine = line;"
+            print "        }"
+            print "        _stopEvent = true;"
             print "    }"
             print "    static char const* GetStopFile() { return _stopFile; }   // null: nothing asked yet"
             print "    static int GetStopLine() { return _stopLine; }"
@@ -106,10 +128,10 @@ patch_B043_say_why_the_world_stopped() {
 
     TIMER="${B043_CPP_TIMER}" NOW="${B043_CPP_NOW}" BEGIN_M="${B043_BEGIN}" END_M="${B043_END}" awk '
         $0 == ENVIRON["TIMER"] || $0 == ENVIRON["NOW"] {
-            ind = ($0 == ENVIRON["TIMER"]) ? "                " : "            "
+            match($0, /^ */); ind = substr($0, 1, RLENGTH)
             print ind ENVIRON["BEGIN_M"]
             print "//B043-ORIG:" $0
-            print ind "StopNow(_exitCode);                        // the shutdown command'"'"'s stop, located (issue 163)"
+            print ind "MarkStopAt(__FILE__, __LINE__);            // the shutdown command'"'"'s stop, located (issue 163)"
             print ind ENVIRON["END_M"]
             next
         }

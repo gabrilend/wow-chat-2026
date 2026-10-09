@@ -12,7 +12,10 @@
 # revert also changed lines upstream had since written the fixed way
 # (scripts/verify-patches). Of its original warning fixes, upstream now has all but one (the
 # equipment-slot comparison in mod-ale's PlayerMethods.h); only that edit
-# is left.
+# was left, and on 2026-10-09 it went too: the build's compiler (clang) gives
+# no warning there unpatched, at the old pin or the new one (checked file by
+# file with the build's own flags while moving the pins). The run-time fix
+# below is now the patch's only edit.
 #
 # Added 2026-10-09, a warning at run time rather than compile time: the
 # worldserver log filled with "MoveSplineInitArgs::Validate: expression
@@ -30,7 +33,6 @@
 
 # path (from the source root) <TAB> old line <TAB> new line
 B004_EDITS=$(cat <<'EDITS'
-modules/mod-ale/src/LuaEngine/methods/PlayerMethods.h	        if (slot >= EQUIPMENT_SLOT_START && slot < EQUIPMENT_SLOT_END)	        if (slot >= static_cast<int32>(EQUIPMENT_SLOT_START) && slot < static_cast<int32>(EQUIPMENT_SLOT_END))
 src/server/game/Movement/MovementGenerators/FormationMovementGenerator.cpp	    if (velocity == 0.0f)	    if (velocity <= 0.01f)
 EDITS
 )

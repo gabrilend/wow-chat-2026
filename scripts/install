@@ -105,13 +105,22 @@ declare -A PROFILE_BRANCH=(
 # tree (basic joined it in 155), so they must pin identically. History: vanilla was pinned
 # 2026-06-02 per 148 and un-pinned the same day to stay current.
 # Must match scripts/update's block.
+# 2026-10-09: moved to 2a2211cd8f3d (the Playerbot branch's newest, 2026-10-09),
+# per the owner ("we can move our pin to the newest version and update all
+# our pins"). The facade repair (B027) stays: upstream has not fixed the
+# corrupt facade, and the repair's own log line ("constructed with a
+# corrupt bot facade, repairing it") says on the first boot whether it
+# still happens. Tried first on clean trees at these commits
+# (scripts/make-upstream-tree; scripts/test-source-patches and
+# scripts/test-patched-syntax with a tree), every basic and cc-test
+# patch applying, reverting and compiling there.
 declare -A PROFILE_COMMIT=(
     ["alpha"]=""
-    ["beta"]="52f58186a533"
-    ["release"]="52f58186a533"
-    ["vanilla"]="52f58186a533"
-    ["basic"]="52f58186a533"
-    ["cc-test"]="52f58186a533"
+    ["beta"]="2a2211cd8f3d"
+    ["release"]="2a2211cd8f3d"
+    ["vanilla"]="2a2211cd8f3d"
+    ["basic"]="2a2211cd8f3d"
+    ["cc-test"]="2a2211cd8f3d"
 )
 # }}}
 
@@ -156,18 +165,28 @@ declare -A MODULE_REPOS=(
 # global namespace", PlayerBotMethods.h). 9e5b8c6 is what the last good
 # basic build (2026-09-30) compiled. Un-pin it with mod-playerbots.
 # Must match scripts/update's block.
+# 2026-10-09: mod-playerbots to 037c0141 (its master's 2026-10-02 weekly
+# merge) and mod-ale to cead0cb (master, 2026-10-08), beside the core's
+# move. Not mod-playerbots' newest (79bd4281, 2026-10-09): that merge
+# renamed the bot config's members (ed54b459, "sightDistance" became
+# "SightDistance"), and mod-ale's newest still uses the old names
+# ("no member named 'sightDistance'", PlayerBotAIMethods.h). One merge back
+# pairs with mod-ale's newest cleanly; move both on once mod-ale follows
+# the rename. mod-ale's newest also carries the fix B023 made
+# (bd74eae, the query-format lifetime), and calls the "is this a real
+# player" function the old mod-playerbots pin lacked.
 declare -A PROFILE_MODULE_COMMITS=(
     ["release:mod-eluna"]="1abf244"
-    ["beta:mod-playerbots"]="93aaea3d"
-    ["release:mod-playerbots"]="93aaea3d"
-    ["vanilla:mod-playerbots"]="93aaea3d"
-    ["basic:mod-playerbots"]="93aaea3d"
-    ["cc-test:mod-playerbots"]="93aaea3d"
-    ["beta:mod-ale"]="9e5b8c6"
-    ["release:mod-ale"]="9e5b8c6"
-    ["vanilla:mod-ale"]="9e5b8c6"
-    ["basic:mod-ale"]="9e5b8c6"
-    ["cc-test:mod-ale"]="9e5b8c6"
+    ["beta:mod-playerbots"]="037c0141"
+    ["release:mod-playerbots"]="037c0141"
+    ["vanilla:mod-playerbots"]="037c0141"
+    ["basic:mod-playerbots"]="037c0141"
+    ["cc-test:mod-playerbots"]="037c0141"
+    ["beta:mod-ale"]="cead0cb"
+    ["release:mod-ale"]="cead0cb"
+    ["vanilla:mod-ale"]="cead0cb"
+    ["basic:mod-ale"]="cead0cb"
+    ["cc-test:mod-ale"]="cead0cb"
 )
 # }}}
 

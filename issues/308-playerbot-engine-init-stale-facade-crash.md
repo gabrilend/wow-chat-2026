@@ -10,6 +10,11 @@ construction fault.
 
 ## Current Behavior
 
+**2026-10-09:** the pins moved on (core `2a2211cd8f3d`, mod-playerbots
+`037c0141`) with B026 and B027 kept; whether the corruption still
+happens there is unknown until the first boot (see "Pinned" below). The
+diagnosis that follows is of the old pin.
+
 Upstream mod-playerbots (module rev `93aaea3d`, on core rev `52f58186a533`
 of the Playerbot branch, both 2026-07-10) constructs a fixed subset of each
 bot's strategy objects with a **corrupt facade argument** — the back-pointer each strategy keeps to its owning bot AI.
@@ -115,6 +120,13 @@ degraded the bots; repairing protects both.
   (beta/release/vanilla; they share one source tree so they pin together).
   Un-pin both maps together once upstream fixes the corrupt-facade
   construction and the repair warnings stop appearing on a test build.
+  **Moved 2026-10-09, per the owner**, before upstream fixed it: core
+  `2a2211cd8f3d`, mod-playerbots `037c0141`, mod-ale `cead0cb`. B026 and
+  B027 stay and still apply there; upstream's changes since 93aaea3d don't
+  touch the facade's construction (the nearest, 9af1877e, stops the shared
+  contexts being rebuilt on every config reload, a leak). The first boot
+  on the new pins answers it: the repair warnings (3 per bot at the old
+  pin) either still appear, or stop.
 - **Verified working (2026-07-22):** first post-repair boot: 139 bot logins,
   exactly 417 repair warnings (3 per bot, once each, none repeated), zero
   skips, zero crashes, server stable. Repair coverage audit: every live-bot

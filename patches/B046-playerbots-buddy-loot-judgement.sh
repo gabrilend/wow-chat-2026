@@ -126,7 +126,8 @@ bool BuddyTalentPlan(Player* player, uint8 (&thirds)[3], CollectorType (&types)[
                 part.SetSpecTab(t, types[t]);
                 part.enable_overflow_penalty_ = enable_overflow_penalty_;
                 part.enable_item_set_bonus_   = enable_item_set_bonus_;
-                part.enable_quality_blend_    = enable_quality_blend_;
+                // (quality blend: gone upstream since playerbots 05473d62, 2026-09-18,
+                // "score item by stats only"; nothing to copy)
                 part.pvpSpec_                 = pvpSpec_;
                 part.exclude_resilience_      = exclude_resilience_;
                 blended += float(thirds[t]) / 3.0f * part.CalculateItem(itemId, randomPropertyIds, slot);

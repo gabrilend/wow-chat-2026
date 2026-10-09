@@ -73,29 +73,29 @@ These fix compatibility issues in upstream code.
 
 | ID   | Name                                    | Target                                                  | Description |
 |------|-----------------------------------------|---------------------------------------------------------|-------------|
-| B001 | aoe-loot-item-namespace                 | mod-aoe-loot/src/aoe_loot.cpp                           | Fix `Item` vs `WorldPackets::Item` ambiguity |
-| B002 | playerbots-ale-login-hook               | mod-playerbots/src/Bot/RandomPlayerbotMgr.cpp           | Trigger PLAYER_EVENT_ON_LOGIN for bots |
+| B001 | aoe-loot-item-namespace                 | mod-aoe-loot/src/aoe_loot.cpp                           | Fix `Item` vs `WorldPackets::Item` ambiguity; since 2026-10-09 also the packet hook's read-only signature (the new core dropped the other) |
+| B002 | playerbots-ale-login-hook               | mod-playerbots/src/Bot/PlayerbotMgr.cpp, mod-playerbots.cmake | Trigger PLAYER_EVENT_ON_LOGIN for bots |
 | B003 | ale-gameobject-wildcard                 | mod-ale/src/LuaEngine/LuaEngine.cpp                     | Enable entry 0 as wildcard for gameobject events |
-| B004 | upstream-warning-fixes                  | mod-playerbots/*, mod-ale/*                             | Fix ~695 compiler warnings in upstream modules |
+| B004 | upstream-warning-fixes                  | core: FormationMovementGenerator.cpp                    | Since 2026-10-09 only: formation followers' near-zero speed (a log flood) |
 | B005 | accuracy-level-cap                      | src/server/game/Entities/Unit/*                         | Cap level diff for hit/miss at ±3 |
 | B006 | ale-sell-item-hook                      | mod-ale/*, Handlers/ItemHandler.cpp                     | Add PLAYER_EVENT_ON_SELL_ITEM = 74 |
 | B007 | ale-unit-methods                        | mod-ale/*/UnitMethods.h, LuaFunctions.cpp               | Add SetWalk, IsWalking, IsHostileTo, IsFriendlyTo |
 | B008 | mod-talent-bonus                        | modules/mod-talent-bonus                                | Link local module for compilation |
-| B009 | playerbots-equipment-slots-enum         | mod-playerbots                                          | Forward-declare `enum EquipmentSlots : uint32;` |
+| B009 | playerbots-equipment-slots-enum         | mod-playerbots                                          | **Retired 2026-10-09** (pin move): playerbots no longer forward-declares the enum, at either pin. Was: Forward-declare `enum EquipmentSlots : uint32;` |
 | B010 | playerbots-arena-type-none              | mod-playerbots                                          | `if (type != ARENA_TYPE_NONE)` enum comparison fix |
 | B011 | ale-resurrect-signature                 | mod-ale                                                 | Reconcile `bool&` vs `bool` mismatch with current core |
-| B012 | player-equipment-slot-sign              | core                                                    | Fix int vs `EquipmentSlots` sign-compare warning |
+| B012 | player-equipment-slot-sign              | core                                                    | **Retired 2026-10-09** (pin move): no warning with the build's compiler, unpatched, at either pin. Was: Fix int vs `EquipmentSlots` sign-compare warning |
 | B013 | playerbots-logical-op-parentheses       | mod-playerbots                                          | `&&` within `||` parens (-Wlogical-op-parentheses) |
-| B014 | playerbots-switch-enum-default          | mod-playerbots                                          | Missing case values for `WSBotStrategy` (-Wswitch) |
-| B015 | playerbots-implicit-float-conversion    | mod-playerbots                                          | int→float value-change warning |
-| B016 | playerbots-constructor-reorder          | mod-playerbots                                          | Field-init order (-Wreorder-ctor) |
-| B017 | playerbots-unused-variables             | mod-playerbots                                          | -Wunused-variable cleanup |
-| B018 | playerbots-sign-compare                 | mod-playerbots                                          | Signed/unsigned compare warnings |
-| B019 | playerbots-unused-parameter             | mod-playerbots                                          | -Wunused-parameter cleanup |
+| B014 | playerbots-switch-enum-default          | mod-playerbots                                          | **Retired 2026-10-09** (pin move): no warning with the build's compiler, unpatched, at either pin. Was: Missing case values for `WSBotStrategy` (-Wswitch) |
+| B015 | playerbots-implicit-float-conversion    | mod-playerbots                                          | **Retired 2026-10-09** (pin move): its file and line are gone upstream; it already did nothing at the old pin. Was: int→float value-change warning |
+| B016 | playerbots-constructor-reorder          | mod-playerbots                                          | **Retired 2026-10-03**: upstream has the fix. Was: Field-init order (-Wreorder-ctor) |
+| B017 | playerbots-unused-variables             | mod-playerbots                                          | **Retired 2026-10-09** (pin move): no warning with the build's compiler, unpatched, at either pin. Was: -Wunused-variable cleanup |
+| B018 | playerbots-sign-compare                 | mod-playerbots                                          | **Retired 2026-10-09** (pin move): no warning with the build's compiler, unpatched, at either pin. Was: Signed/unsigned compare warnings |
+| B019 | playerbots-unused-parameter             | mod-playerbots                                          | **Retired 2026-10-03**: upstream has the fix. Was: -Wunused-parameter cleanup |
 | B020 | ale-event-removeevent-lock              | mod-ale                                                 | Add LOCK_ALE around `ALEEventProcessor::RemoveEvent` |
-| B021 | playerbots-misc-warnings                | mod-playerbots                                          | Catch-all bundle for residual one-off warnings |
+| B021 | playerbots-misc-warnings                | mod-playerbots                                          | **Retired 2026-10-09** (pin move): no warning unpatched; worse, widening to size_t broke upstream's `== uint32(-1)` not-found checks (an endless loop in bot outfit parsing). Was: Catch-all bundle for residual one-off warnings |
 | B022 | runtime-conf-dir-override               | core                                                    | Runtime `--conf-dir` override (avoids cmake-baked path) |
-| B023 | ale-formatquery-lifetime                | mod-ale                                                 | Fix variadic format-arg lifetime in FormatQuery |
+| B023 | ale-formatquery-lifetime                | mod-ale                                                 | **Retired 2026-10-09** (pin move): fixed upstream in mod-ale bd74eae. Was: Fix variadic format-arg lifetime in FormatQuery |
 | B024 | symmetric-aggro-radius                  | core                                                    | Make `Creature::GetAttackDistance` symmetric |
 
 Per-patch source of truth lives in `patches/B###-*.sh` — each script's

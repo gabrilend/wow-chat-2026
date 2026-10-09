@@ -8,6 +8,13 @@
 
 ## Current Behavior
 
+**Fixed upstream; B023 retired (2026-10-09).** mod-ale's own commit
+bd74eae (2026-09-09, "use-after-free and incomplete escaping in
+FormatQuery DB helpers") keeps the formatted query in a scoped string, as
+B023 did, and the project's mod-ale pin moved to cead0cb, which has it.
+B023 found nothing to change there and was removed with the pin move.
+What follows is the bug as it was at the old pin.
+
 When a Lua script calls one of ALE's sync DB query methods with format
 args after the query string — e.g.:
 

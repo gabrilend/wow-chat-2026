@@ -28,7 +28,9 @@
 
 B045_TAG='B045-companions-take-no-commands'
 B045_INCLUDE='#include "PlayerbotAI.h"'
-B045_FN_LANG='void PlayerbotAI::HandleCommand(uint32 type, const std::string& text, Player& fromPlayer, const uint32 lang)'
+# 2026-10-09: upstream wrote "const std::string&" as "std::string const&" (playerbots
+# 037c0141); the anchor follows it. Found on a clean tree at the new commits.
+B045_FN_LANG='void PlayerbotAI::HandleCommand(uint32 type, std::string const& text, Player& fromPlayer, const uint32 lang)'
 B045_FN_PTR='void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fromPlayer)'
 
 # {{{ patch_B045_playerbots_companions_take_no_commands

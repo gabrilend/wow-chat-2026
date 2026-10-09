@@ -8,6 +8,19 @@
 
 ## Current Behavior
 
+**2026-10-09, with the pins moved to core 2a2211cd8f3d, mod-playerbots
+037c0141, mod-ale cead0cb:** the warning-fix patches B009, B012, B013,
+B014, B015, B017, B018 and B021 were retired, and B004's last warning fix
+with them. Each target file was compiler-checked unpatched with the last
+build's own flags (clang, -Wall -Wextra), at the old pin and the new: no
+warnings in any of them, so the fixes had been doing nothing for this
+compiler (they were written against gcc's warnings). A planted
+signed/unsigned comparison showed the check does see warnings. B021 was
+worse than idle: widening string positions to size_t broke upstream's
+"== uint32(-1)" not-found checks in bot outfit parsing. B004 now holds
+one run-time fix (formation followers' near-zero speed). The tally below
+is from the gcc era and is kept as history; a fresh count needs a build.
+
 Build produces ~1137 compiler warnings:
 - 500: NextAction deprecated copy assignment (mod-playerbots)
 - 442: boost unary_function deprecated (boost 1.74)
