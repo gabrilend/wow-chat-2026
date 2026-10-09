@@ -333,6 +333,89 @@ module_cmake_settings() {
 }
 # }}}
 
+# {{{ steady_patched_mtimes
+# Gives each file the patch steps rewrote back the timestamp it had at the
+# last build in this build folder, when its content is the same as then.
+#
+# Why: make rebuilds by timestamp. Every build applies the source patches
+# (rewriting the patched files) and reverts them after (rewriting them
+# again), and B036/B030 copy the buddy module and basic's rules in afresh,
+# so every patched or copied file looked new on every build, with everything
+# that includes it: Player.h alone is in most of the server. ccache then
+# turned most compiles into cache hits, but make still walked them all and
+# every link ran again (owner, 2026-10-08: "something tells me we're not
+# properly utilizing incremental builds").
+#
+# How, safely: a ledger (build-shadow/.steady-mtimes) holds, per file, the
+# content hash and timestamp it had when this build folder last compiled.
+#   same hash  -> the timestamp from the ledger goes back on: the objects in
+#                 this folder were compiled from exactly this content
+#   new hash   -> the file keeps its new timestamp, so it and everything
+#                 that depends on it rebuild, and the ledger takes the new
+#                 hash and timestamp
+# Only "the content at the last build here" is ever restored, never an older
+# one, so switching profiles (basic's patched Player.h, cc-test's) can't
+# leave an object compiled from other content looking up to date.
+#
+# Which files: those differing from their git commit in the source tree and
+# each module (tracked and untracked, ignored left out), the patch-copied
+# module folders and src/server/scripts/Custom/ (ignored by git, so listed
+# by hand), and every file the ledger already holds. Only those are read.
+steady_patched_mtimes() {
+    local ledger="${BUILD_DIR_SHADOW}/.steady-mtimes"
+    local -A old_hash=() old_time=()
+    local path hash mtime
+    if [[ -f "${ledger}" ]]; then
+        while IFS=$'\t' read -r path hash mtime; do
+            [[ -n "${path}" ]] || continue
+            old_hash["${path}"]="${hash}"
+            old_time["${path}"]="${mtime}"
+        done < "${ledger}"
+    fi
+
+    # the files to look at
+    local -A wanted=()
+    local repo rel
+    for repo in "${AC_CODE_DIR}" "${AC_CODE_DIR}"/modules/*/; do
+        [[ -d "${repo}/.git" ]] || continue
+        repo="${repo%/}"
+        while IFS= read -r rel; do
+            [[ -n "${rel}" ]] && wanted["${repo}/${rel}"]=1
+        done < <(git -C "${repo}" diff --name-only HEAD; git -C "${repo}" ls-files --others --exclude-standard)
+    done
+    local copied
+    for copied in "${!PATCH_PROVIDED_MODULES[@]}"; do
+        [[ -d "${AC_CODE_DIR}/modules/${copied}" ]] || continue
+        while IFS= read -r path; do wanted["${path}"]=1; done < <(find "${AC_CODE_DIR}/modules/${copied}" -type f)
+    done
+    if [[ -d "${AC_CODE_DIR}/src/server/scripts/Custom" ]]; then
+        while IFS= read -r path; do wanted["${path}"]=1; done < <(find "${AC_CODE_DIR}/src/server/scripts/Custom" -type f)
+    fi
+    for path in "${!old_hash[@]}"; do wanted["${path}"]=1; done
+
+    # put back, or record
+    local restored=0 changed=0 new_ledger=""
+    for path in "${!wanted[@]}"; do
+        [[ -f "${path}" ]] || continue               # gone (a copied module removed): nothing to keep
+        hash=$(sha1sum "${path}" | cut -d' ' -f1)
+        if [[ "${old_hash[${path}]:-}" == "${hash}" ]]; then
+            # same content as the last build here: its timestamp then
+            touch -m -d "@${old_time[${path}]}" "${path}"
+            mtime="${old_time[${path}]}"
+            restored=$((restored + 1))
+        else
+            # new content (or first seen): keeps its new timestamp, rebuilds
+            mtime=$(stat -c %Y "${path}")
+            changed=$((changed + 1))
+        fi
+        new_ledger+="${path}"$'\t'"${hash}"$'\t'"${mtime}"$'\n'
+    done
+    mkdir -p "${BUILD_DIR_SHADOW}"
+    printf '%s' "${new_ledger}" > "${ledger}"
+    echo "Patched and copied files: ${restored} unchanged since the last build (timestamps kept), ${changed} new or changed (will rebuild)"
+}
+# }}}
+
 # {{{ check_modules_configured
 # Checks if all modules in source are present in the cmake-generated loader.
 # If any module is missing, sets FORCE_REBUILD=true to trigger reconfiguration.
@@ -708,6 +791,10 @@ reset_source_trees
 trap 'unapply_patches_begin; leave_source_trees_clean' EXIT
 # Apply pre-compile patches (idempotent)
 apply_patches_begin
+
+# Patched and copied files whose content is what the last build here
+# compiled get that build's timestamps back, so make skips them
+steady_patched_mtimes
 
 # Build
 do_build

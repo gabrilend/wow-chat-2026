@@ -17,6 +17,18 @@ The `scripts/azerothcore` build system:
 
 A failed compile can leave the system in an inconsistent state, requiring manual cleanup or a full rebuild.
 
+**Rebuilds only what changed (2026-10-08).** The source patches are applied
+before every build and reverted after, so each patched file was rewritten
+twice per build and looked new to make, along with everything that includes
+it. Now, just before compiling, `scripts/compile` keeps a ledger in the build
+folder (`.steady-mtimes`: path, content hash, timestamp) of every file the
+patches touched. A file whose content is the same as at this folder's last
+build gets that build's timestamp back, so make skips it; a file whose
+content differs keeps its new timestamp and rebuilds. Only the content last
+built in this folder is ever restored, so switching between profiles that
+share the folder can't leave a stale object looking up to date. Checked by
+`scripts/test-steady-mtimes`.
+
 ## Terminology
 
 **build-{profile}/** - The cmake/make working directory. Contains:
