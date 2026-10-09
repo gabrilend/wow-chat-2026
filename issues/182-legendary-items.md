@@ -118,9 +118,18 @@ Later the same day:
 applied twice and reverted on session-only copies of the real tables;
 the Atiesh swap for every class, and with full bags.
 
-To turn it on: run install step E054 for basic (as the other steps were
-run on 2026-10-08) and restart the worldserver; the Lua script loads with
-the rest of `src/lua-basic/`.
+Install step E054 was run for basic on 2026-10-08 (the owner); it takes
+effect at the worldserver's next start.
+
+**Next, asked 2026-10-08: scaling with your gear.** "how about for the
+legendaries we make them level 80, item level, but they scale to 120,
+according to the highest ilevel item you have equipped at the time?" A
+legendary would start at item level 80 and rise to 120, following the
+highest item level among the wearer's other equipped items. The stock
+heirloom scaling follows the character's level, not its gear, so this is
+the server's own work: when gear changes, the legendary's stats (and
+damage, and effects: open question 7) recalculated and applied as a
+hidden bonus, the stock tooltip showing the item-level-80 numbers.
 
 Before this, not built. The world database's legendary (orange) weapons and pieces,
 read 2026-10-08 (item level, required level):
@@ -230,3 +239,8 @@ server has.
 6. **Banner of the Unbroken Clan** (cloak): three or more clanmates within
    30 yards each take 5% less damage; a buddy dying in that ring returns
    after 30 seconds at half health, once every five minutes.
+7. **Scaling with gear (80 to 120):** what follows the gear: stats only,
+   weapon damage too, the effects too? Does "highest item level equipped"
+   leave out the legendary itself and other legendaries? At what step (each
+   item level, or every 5 or 10)? And the level-60 versions built today:
+   replaced by item-level-80 ones that rise, or kept as the floor?
