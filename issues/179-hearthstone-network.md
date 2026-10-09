@@ -105,7 +105,8 @@ cooldown walks to a nearby innkeeper, buys a network stone, and uses it.
 
 ## Open Questions
 
-1. **The curve from 1 silver to 1 gold a bar:** (a) straight, 2 silver
+1. (Answered 2026-10-08: "let's say (a) it's easier to reason about":
+   2 silver x level, per bar of rested experience) **The curve from 1 silver to 1 gold a bar:** (a) straight, 2 silver
    x level a bar (2 silver at level 1, 1 gold at 50, 1 gold 20 at 60); or
    (b) the same factor each level, about x1.1 a level (1 silver at 1, 10
    silver at 25, 1 gold at 50), which stays cheap longer and climbs late.

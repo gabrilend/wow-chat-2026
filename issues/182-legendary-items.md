@@ -8,75 +8,154 @@
   level), 179 (the hearthstone network), 617 (buddies), 617l (the clan),
   617t (stand-ins), 718 (Sargobras and the souls), 617e12 (the town rule,
   and the owner's red notebook)
-- Priority: Low (for fun)
+- Priority: Low
 
 ## Origin
 
 The owner, 2026-10-08: "Did you say we can create items? I think we
 should make legendary items. Can we design some just for fun?"
 
+### The owner's answers, 2026-10-08
+
+First, the whole design:
+
+> we should make all legendaries only findable if the searcher is a low
+> level, but require a very high level, so they are encouraged to trade it
+> to a friend. Can you take all the legendary items up until WotLK
+> including Shadowburnfury or whatever it's called, and scale them down to
+> level 60? Use the other items at that level as reference, like Ashbringer
+> and Thunderfury. The stats for Ashbringer are correct. Remember, found by
+> low level, must be traded to high level, disappears when the bearer
+> reaches the required level. Upon pickup and at login, this message is
+> delivered again. This should force them to have to trade it to someone
+> who's already that required level. We should have a discrete scaler that
+> allows them all to be heirlooms. So, randomly chosen, if it requires
+> level 44... then a level 44 could equip it, and suddenly it's an heirloom
+> that grows with them and can be traded to their clanmates or other
+> toons. No exp bonuses. Stat value roughly equivalent to a blue.
+> Unsellable, because if you try they get snatched into the void
+> dimension, ready for you to claim a single copy of them from some
+> aetheric wind-trader who lives in one capital city per side. Gnomeregan
+> as well, and Halaa if you ever capture it.
+
+Then, for now:
+
+> the legendary items should be the legendaries that already are in the
+> game files, for now. They should scaled like heirlooms, including their
+> secondary effects. If that requires a client patch to properly display
+> the tooltips, then we will wait on that feature. They won't scale like
+> heirlooms, they will simply be available as rare drops at level 60, and
+> require level 60, and we can put the "noobie giving to an elder" thing on
+> hold as well, until we can do the custom client.
+
+On finding them: "small drop from everything. If that's just... too much
+sql, then we can say they are high level vanilla raid drops, from an
+appropriate raid boss. They should be rare, about 1 in 10 kills has even
+one." And: "1 in 10 kills has even one per raid."
+
+So, now: **the game's own legendaries, scaled to level 60, rare raid
+drops.** On hold until the custom client: found only by low levels,
+required level drawn at random, gone when the finder reaches it, the
+heirloom scaling, the void and the aetheric wind-trader. The six designs
+first drawn up for this issue (the Everland Ghostsong, the Hauberk of the
+Last Stand, Sargobras's Ledger, the Red Notebook, the Hearthstone of Every
+Home, the Banner of the Unbroken Clan) are set aside, kept below for
+later.
+
 ## Current Behavior
 
-Not built. The project already adds items as new rows (the class ability
-tomes, 155q; the white gear changes, 155p); the stock 3.3.5a client draws
-any item whose look (display) it already has, so new items reuse existing
-models. Effects come from existing spells, or from Lua on the item's use
-or its wearer's events.
+Not built. The world database's legendary (orange) weapons and pieces,
+read 2026-10-08 (item level, required level):
 
-## Intended Behavior: six designs
+| Era | Item | Entry | Item level | Requires |
+|---|---|---|---|---|
+| vanilla | Thunderfury, Blessed Blade of the Windseeker | 19019 | 80 | 60 |
+| vanilla | Sulfuras, Hand of Ragnaros | 17182 | 80 | 60 |
+| vanilla | Ashbringer (a game-master item; "the stats for Ashbringer are correct") | 13262 | 76 | 60 |
+| vanilla | Atiesh, Greatstaff of the Guardian (four, one per class group) | 22589, 22630, 22631, 22632 | 90 | 60 |
+| vanilla | Andonisus, Reaper of Souls (lent for the Kel'Thuzad fight) | 22736 | 100 | 60 |
+| vanilla | Glaive of the Defender | 23051 | 86 | 60 |
+| TBC | Warglaive of Azzinoth (main hand, off hand) | 32837, 32838 | 156 | 70 |
+| TBC | Thori'dal, the Stars' Fury | 34334 | 164 | 70 |
+| TBC | Kael'thas's weapons (lent for his fight: Warp Slicer, Infinity Blade, Staff of Disintegration, Phaseshift Bulwark, Devastation, Cosmic Infuser, Netherstrand Longbow, Nether Spike) | 30311-30319 | 175 | 70 |
+| WotLK | Val'anyr, Hammer of Ancient Kings | 46017 | 245 | 80 |
+| WotLK | Shadowmourne ("Shadowburnfury or whatever it's called") | 49623 | 284 | 80 |
 
-Level 60 (basic's cap), legendary (orange). Numbered from 1,820,001
-(`docs/custom-id-ranges.md`: issue 182 x 10,000). Stats are a first
-sketch for tuning. Each fits something only this server has.
+Thunderfury and Sulfuras are crafted from raid drops; Atiesh from
+splinters (Naxxramas); the TBC and WotLK ones drop or are built at their
+own level, far above basic's 60.
 
-1. **Everland Ghostsong** (staff, two hands). The server's own name. Each
-   kill of a monster above your level stores a verse (at most five).
-   Talking to a townsperson sings them: each verse gives the whole clan a
-   bar of rested experience. Fights out in the world feed what the clan
-   carries home.
-2. **Hauberk of the Last Stand** (plate, chest). "Fight to the last"
-   (178): below 20% health, the damage you take is halved and your attacks
-   heal you for a share of what they deal, for 10 seconds; once every two
-   minutes.
-3. **Sargobras's Ledger** (held in the off hand, a tome). Every monster
-   five or more levels above you that you kill is written into it as a
-   soul. Ten souls call a stand-in of your faction, of a random class, to
-   fight beside you for two minutes.
-4. **The Red Notebook** (trinket). From the owner's answer about the boar
-   and the vendor (617e12): "the distance spectrum wheel iron isotope in
-   red notebook". Used: for 20 seconds you and your buddies always take
-   the nearest thing, friend or foe, and each new target reached within
-   10 yards of the last adds 5% haste, stacking to five.
-5. **Hearthstone of Every Home** (a hearthstone). Network stones (179)
-   cost you nothing, and its cooldown is 15 minutes, not 30. Your buddies
-   travel free with it, as they already do.
-6. **Banner of the Unbroken Clan** (cloak). While three or more of your
-   clan stand within 30 yards of you, every one of them takes 5% less
-   damage; a buddy that dies within that ring comes back after 30 seconds
-   with half its health, once every five minutes.
+## Intended Behavior
+
+- **Scaled to level 60.** Each legendary above level 60 gets a level-60
+  version: required level 60, item level that of vanilla's legendaries
+  (80, as Thunderfury and Sulfuras; Atiesh's 90 the ceiling), its stats
+  brought down by the game's own stat budget for that item level and slot,
+  its weapon damage matched to the vanilla legendaries of its kind (a
+  two-hander to Sulfuras and Ashbringer, a one-hander to Thunderfury, a
+  bow to the best vanilla bows). Ashbringer's stats stand as they are.
+- **Their effects scaled too** ("including their secondary effects"): a
+  proc's damage, healing or chance brought to level 60. The tooltip text
+  is the client's, so scaled effects wait for the custom client if the
+  stock client would describe them wrongly (open question 1).
+- **Rare raid drops.** Each from an appropriate vanilla raid boss, rare:
+  about one raid in ten sees one ("1 in 10 kills has even one per raid").
 
 ## Suggested Implementation Steps
 
-1. Choose the looks: an existing legendary or epic model for each slot
-   (the client's own item displays).
-2. The item rows (stats, quality legendary, level 60), as one install
-   step's SQL, generated by a script from a data file of designs.
-3. Each effect: an existing spell where one does the job (the damage
-   halving, the haste stack), Lua for the rest (verses, souls, the stand-in
-   call, the network price).
-4. How each is found (open question 1).
-5. A test per effect without a server where it is arithmetic (verses,
-   souls, the haste stack).
+1. A script reading the legendaries from the world database and writing
+   their level-60 versions: stats by item budget, weapon damage by the
+   vanilla references, as new rows (from 1,820,001) or changed originals
+   (open question 3); an install step for basic.
+2. Their drops: a loot entry on each chosen boss at the chance that gives
+   about one legendary per ten clears of the raid.
+3. Effects: the stock ones kept, or scaled through the server's spell data
+   once the custom client shows them (open question 1).
+4. A test: every level-60 version requires 60, sits at or below item
+   level 90, and has weapon damage within the vanilla references' range.
 
 ## Open Questions
 
-1. **How they are found:** with quests gone (180), from where? A very rare
-   drop from rare monsters (181), from world bosses, crafted from parts
-   that drop separately, or earned (the ledger by souls, the ghostsong by
-   verses)?
-2. **One each, or any number:** unique per character, per clan, or once
-   per server (the first to find it keeps it)?
-3. **Tooltips:** the stock client can only show a new item's effect as
-   the text of an existing spell, or a generic line; the custom client can
-   describe them fully. Acceptable for now?
-4. **Which of the six to keep,** and which to change?
+1. **Effects now or later:** keep each legendary's stock effect as it is
+   (Shadowmourne's soul fragments, Val'anyr's shields, Thori'dal's endless
+   arrows: strong at 60), switch them off until the custom client can show
+   scaled ones, or scale them now and accept stock tooltips that state the
+   old numbers?
+2. **Which boss drops which:** for example Sulfuras and Thunderfury's
+   parts staying as they are in Molten Core, Atiesh from Kel'Thuzad, the
+   Warglaives from Nefarian, Thori'dal from C'Thun, Val'anyr and
+   Shadowmourne from Kel'Thuzad or Ragnaros? And "1 in 10 per raid": one
+   roll at the raid's last boss, or spread over its bosses?
+3. **New rows or the originals changed:** new level-60 copies (the
+   originals untouched, as the patch system prefers) or the original
+   entries edited?
+4. **The lent weapons:** Andonisus and Kael'thas's eight vanish outside
+   their fights in the stock game. Include them as real legendaries, or
+   leave them out?
+5. **Atiesh's four versions:** all four drop (each for its classes), or
+   one?
+
+## Set aside: six designs for this server
+
+Drawn up 2026-10-08 before the owner chose the game's own legendaries;
+kept for later. Level 60, legendary, each tied to something only this
+server has.
+
+1. **Everland Ghostsong** (staff, two hands): each kill of a monster above
+   your level stores a verse (at most five); talking to a townsperson
+   sings them, each giving the whole clan a bar of rested experience.
+2. **Hauberk of the Last Stand** (plate, chest): below 20% health, damage
+   taken halved and attacks heal for a share of their damage, 10 seconds,
+   once every two minutes.
+3. **Sargobras's Ledger** (off-hand tome): monsters five or more levels
+   above you killed are written in as souls; ten souls call a stand-in to
+   fight beside you for two minutes.
+4. **The Red Notebook** (trinket), after the owner's "distance spectrum
+   wheel iron isotope in red notebook" (617e12): for 20 seconds you and
+   your buddies take the nearest thing, and each new target within 10
+   yards adds 5% haste, stacking to five.
+5. **Hearthstone of Every Home**: network stones (179) free, cooldown 15
+   minutes.
+6. **Banner of the Unbroken Clan** (cloak): three or more clanmates within
+   30 yards each take 5% less damage; a buddy dying in that ring returns
+   after 30 seconds at half health, once every five minutes.

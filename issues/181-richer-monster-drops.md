@@ -17,6 +17,14 @@ The owner, 2026-10-08:
 > percentage chance, but double the amount. Also can we 5x the drop rate
 > of epic items?
 
+### Decisions, 2026-10-08 (owner)
+
+- **Epics x5 from ordinary monsters only**: "From raid bosses it's
+  guaranteed" (they already drop an epic every kill).
+- **Rares**: "rare monsters have their loot doubled. Not elites. But, rare
+  elites, yes." Creatures of rank rare and rare elite; plain elites keep
+  stock loot.
+
 ## Current Behavior
 
 Not built. Basic drops at stock rates (`Rate.Drop.Item.Uncommon`,
@@ -52,7 +60,7 @@ more gear from the monsters players fight, above their level by choice
 
 ## Open Questions
 
-1. **Epic x5 from what:** ordinary monsters only (world-drop epics, few
+1. (Answered 2026-10-08: ordinary monsters only) **Epic x5 from what:** ordinary monsters only (world-drop epics, few
    and rare), or bosses too (which would make raid and dungeon epics five
    times as common)?
 2. **"Double the amount" for rares:** two rolls of their whole loot (two

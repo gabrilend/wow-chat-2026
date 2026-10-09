@@ -61,25 +61,37 @@ level-55 kill is x1.1; at 10, a level-15 kill is x1.5; at 1, a level-6
 kill is x6. (The first reading, "+5 extra kills worth", made a +5 kill
 worth six even ones at every level; that is not it.)
 
-Kills to level (even-level kills: 10 x level; monsters above: 10 x L x
-L / (L + d)), stock beside it (`BaseGain`: +5% a level above, at most
-+20%; `player_xp_for_level`, computed 2026-10-08):
+**The bonus grows with your level** (owner, 2026-10-08: "every 10 levels
+we double the exp bonus gained from a level? So it becomes +5 at level 50,
++4 at level 40, +3 at level 30, etc. So if it's +5 levels, it'd be +25x
+instead of +5x."): each level the monster stands above you adds
+max(1, floor(your level / 10)) level-one shares, a level-one share being
+1/L of an even kill. The two cancel: from level 10 on, every level above
+is worth a flat +10% (at 50, a +5 monster: 25 shares, x1.5); below 10 a
+level is worth more (+100% at level 1, +20% at 5). The same rule reads
+downward ("same rule down"): every level below takes the same share
+away, down to nothing. A kill gives an even kill times
+max(0, 1 + d x max(1, floor(L/10)) / L), d the monster's level minus yours.
 
-| Level | ours even | +1 | +2 | +3 | +4 | +5 | stock even | stock +5 |
-|---|---|---|---|---|---|---|---|---|
-| 1 | 10 | 5 | 3 | 2 | 2 | 2 | 8 | 7 |
-| 5 | 50 | 42 | 36 | 31 | 28 | 25 | | |
-| 10 | 100 | 91 | 83 | 77 | 71 | 67 | 80 | 67 |
-| 20 | 200 | 190 | 182 | 174 | 167 | 160 | 143 | 120 |
-| 30 | 300 | 290 | 281 | 273 | 265 | 257 | 199 | 166 |
-| 40 | 400 | 390 | 381 | 372 | 364 | 356 | 303 | 253 |
-| 50 | 500 | 490 | 481 | 472 | 463 | 455 | 410 | 342 |
-| 59 | 590 | 580 | 571 | 561 | 553 | 544 | 506 | 422 |
+Kills to level (computed 2026-10-08; "nothing" where the kill gives no
+experience):
 
-So the curve is about a fifth slower than stock at even level, and the
-reward for a harder monster is large while levels are low and fades as
-they climb: the same five levels up halve a level-10's kills to two
-thirds, a level-59's by under a tenth.
+| Level | per level above | -5 | -2 | even | +1 | +2 | +3 | +4 | +5 |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | +100% | nothing | nothing | 10 | 5 | 3 | 2 | 2 | 2 |
+| 5 | +20% | nothing | 83 | 50 | 42 | 36 | 31 | 28 | 25 |
+| 10 | +10% | 200 | 125 | 100 | 91 | 83 | 77 | 71 | 67 |
+| 20 | +10% | 400 | 250 | 200 | 182 | 167 | 154 | 143 | 133 |
+| 30 | +10% | 600 | 375 | 300 | 273 | 250 | 231 | 214 | 200 |
+| 40 | +10% | 800 | 500 | 400 | 364 | 333 | 308 | 286 | 267 |
+| 50 | +10% | 1,000 | 625 | 500 | 455 | 417 | 385 | 357 | 333 |
+| 59 | +8% | 1,024 | 710 | 590 | 544 | 504 | 470 | 441 | 414 |
+
+Stock, for comparison: even-level 8, 80, 143, 199, 303, 410, 506 kills
+at levels 1, 10, 20, 30, 40, 50, 59; +5 at most a fifth fewer. The
+earlier reading (a level-one share per level above, no growth) faded
+from +100% a level at level 1 to under +2% at 59; this one holds the
+reward for climbing steady all the way.
 
 **Quests leave the players' road** (180): with quests gone from players,
 kills are where experience comes from.
@@ -127,8 +139,6 @@ heal, and once one is in, it stays in until another is clearly nearer
    interact with or heal": buddies only, or any friendly player too? And
    "sticky": how much nearer must another be before it takes a place?
 5. **Quests:** quest experience stays stock, or is counted in kills too?
-6. **Monsters below you:** the same rule read downward (a level-45 kill at
-   50 worth 45/50 = 0.9 of an even one, and grey monsters still worth
-   something), or the stock shrinking and nothing from grey?
+6. (Answered 2026-10-08: "same rule down") **Monsters below you.**
 7. **A cap above:** monster level / your level without a ceiling (a
    level-10 monster at level 1 is worth ten even kills)?
