@@ -257,3 +257,23 @@ stack size is a world-database change to the gem items. All possible.
   some time later"), and says nothing ("nothing needs to be said, it's
   assumed that it is"), built in `src/lua-basic/sargobras.lua`; the
   buddy module no longer adds it at creation.
+- **Longer clan names, dashes and underscores** (owner, 2026-10-08: "can
+  we enable dashes and underscores in names? Also, can we increase the cap
+  size of guild name characters? I want the name to be able to grow as long
+  as desired. Ideally, we'd change it to whatever the "guild message of the
+  day" was, or maybe the guild info idk. we could do that automatically.").
+  Today 24 characters is held in three places: the server's name check
+  (`MAX_CHARTER_NAME`, "max allowed by client name length", and
+  `IsValidCharterName` allows letters, digits and spaces), the characters
+  database's `guild.name` column (`varchar(24)`), and the stock 3.3.5a
+  client, which shows a guild name in a fixed field. Sargobras's own quick
+  check (`sargobras.lua`, letters and spaces, 2-24) sits in front of all
+  three. Open: (a) dashes and underscores: in the server check too (a
+  source patch), or only where the custom client draws the name? (b) a
+  longer name: a source patch raising the limit and a wider column, with
+  the stock client showing it cut short, or a short guild name kept for the
+  stock client and the full one kept beside it (the message of the day
+  holds 128 characters, the guild info 500)? (c) "change it to whatever the
+  message of the day was ... automatically": the guild's name follows its
+  message of the day whenever an officer changes it, or the full name is
+  read from the message of the day only where it is shown?
