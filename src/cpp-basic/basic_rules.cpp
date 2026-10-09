@@ -107,7 +107,7 @@ public:
             return true;
 
         // A real player gets told why; a bot has no one to read it.
-        if (player->GetSession() && !player->GetSession()->IsBot())
+        if (player->GetSession() && !player->GetSession()->IsHeadless())
             ChatHandler(player->GetSession()).SendSysMessage(
                 "That talent is beyond this realm's limit: past 30 points in a tree, only the single-point capstone may be learned.");
         return false;
@@ -526,7 +526,7 @@ static uint32 HumansInZone(uint32 mapId, uint32 zoneId)
     std::shared_lock<std::shared_mutex> lock(*HashMapHolder<Player>::GetLock());
     for (auto const& [guid, player] : ObjectAccessor::GetPlayers())
         if (player && player->IsInWorld() && player->GetMapId() == mapId && player->GetZoneId() == zoneId
-            && player->GetSession() && !player->GetSession()->IsBot())
+            && player->GetSession() && !player->GetSession()->IsHeadless())
             ++count;
     return count;
 }

@@ -35,6 +35,7 @@
 #include "Playerbots.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotMgr.h"
+#include "PlayerbotsDatabase.h"              // PlayerbotsDatabase: no longer reached through Playerbots.h (playerbots 2026-09, af078829)
 #include "Random.h"
 #include "ScriptMgr.h"
 #include "WorldSession.h"

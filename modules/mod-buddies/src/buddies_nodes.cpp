@@ -45,6 +45,8 @@
 #include "GameObject.h"
 #include "GameTime.h"
 #include "Log.h"
+#include "Map.h"
+#include "MapMgr.h"
 #include "ObjectMgr.h"
 #include "PoolMgr.h"
 #include "ScriptMgr.h"
@@ -176,8 +178,18 @@ static void MoveInGroup(uint32 groupPool, uint32 fromMember, float fx, float fy,
         outcome = "its pool " + std::to_string(groupPool) + " is not loaded (pool manager has no such group)";
         return;
     }
-    ActivePoolData const& active = sPoolMgr->GetSpawnedData();
-    if (!active.IsActiveObject<T>(fromMember))
+    // which members are up is kept per map since the core's 2026-08 pool
+    // change (df93fae2e, "store pool spawn state per map"); before it, one
+    // record for the whole world (the pool manager's spawned data). Nodes
+    // are on the continents, so the map is the continent's one copy
+    Map* onMap = sMapMgr->FindBaseNonInstanceMap(map);
+    if (!onMap)
+    {
+        outcome = "map " + std::to_string(map) + " is not loaded: nothing to move";
+        return;
+    }
+    SpawnedPoolData& spawns = onMap->GetPoolData();
+    if (!spawns.IsSpawnedObject<T>(fromMember))
     {
         outcome = "not up right now (another spot of pool " + std::to_string(groupPool) + " is): nothing to move";
         return;
@@ -189,7 +201,7 @@ static void MoveInGroup(uint32 groupPool, uint32 fromMember, float fx, float fy,
     GameObjectData const* bestData = nullptr;
     auto consider = [&](PoolObject const& o)
     {
-        if (o.guid == fromMember || active.IsActiveObject<T>(o.guid))
+        if (o.guid == fromMember || spawns.IsSpawnedObject<T>(o.guid))
             return;                                         // the retired spot itself, or already up
         uint32 spawnHere = std::is_same_v<T, Pool> ? FirstSpawnOfPool(o.guid) : o.guid;
         GameObjectData const* d = nullptr;
@@ -218,15 +230,14 @@ static void MoveInGroup(uint32 groupPool, uint32 fromMember, float fx, float fy,
         return;
     }
 
-    // the group's own two steps, with the active record kept as SpawnObject
+    // the group's own two steps, with the map's record kept as SpawnObject
     // keeps it: despawn and forget the old member, remember and spawn the new
-    PoolGroup<T>&   writable = const_cast<PoolGroup<T>&>(*group);
-    ActivePoolData& record   = const_cast<ActivePoolData&>(active);
-    writable.Despawn1Object(fromMember);
-    record.RemoveObject<T>(fromMember, groupPool);
+    PoolGroup<T>& writable = const_cast<PoolGroup<T>&>(*group);
+    writable.Despawn1Object(spawns, fromMember);
+    spawns.RemoveSpawn<T>(fromMember, groupPool);
     PoolObject chosen = *best;
-    record.ActivateObject<T>(chosen.guid, groupPool);
-    writable.Spawn1Object(&chosen);
+    spawns.AddSpawn<T>(chosen.guid, groupPool);
+    writable.Spawn1Object(spawns, &chosen);
     outcome = "moved " + std::to_string(uint32(bestDist)) + " yards to (" +
               std::to_string(int(bestData->posX)) + ", " + std::to_string(int(bestData->posY)) + ", " +
               std::to_string(int(bestData->posZ)) + "), pool " + std::to_string(groupPool) + " member " +

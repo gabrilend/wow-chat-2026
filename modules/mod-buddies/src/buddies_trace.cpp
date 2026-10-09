@@ -100,7 +100,7 @@ public:
     // taking turns show as alternating lines of about the same distance.
     void OnPlayerUpdate(Player* player, uint32 diff) override
     {
-        if (!BuddiesEnabled() || !player->GetSession()->IsBot())
+        if (!BuddiesEnabled() || !player->GetSession()->IsHeadless())
             return;                                     // only bots are traced; players never pay for the lookup below
         uint32 guid = player->GetGUID().GetCounter();
 

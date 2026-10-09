@@ -88,7 +88,7 @@ public:
 
         // a bot whispering (the bot module's own chatter, or a buddy): no
         // answer, so bots never answer each other round and round
-        if (whisperer->GetSession()->IsBot())
+        if (whisperer->GetSession()->IsHeadless())
             return true;
 
         // a side with no foreign tongue (neutral): no answer

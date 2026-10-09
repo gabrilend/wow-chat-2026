@@ -1568,7 +1568,7 @@ public:
     // again on the map its crossing went to, the landing is noted.
     void OnPlayerUpdate(Player* player, uint32 diff) override
     {
-        if (!BuddiesEnabled() || player->GetSession()->IsBot())
+        if (!BuddiesEnabled() || player->GetSession()->IsHeadless())
             return;
         std::lock_guard<std::mutex> lock(sCrossLock);
         uint32 guid = player->GetGUID().GetCounter();
@@ -1643,7 +1643,7 @@ public:
     bool OnPlayerBeforeTeleport(Player* player, uint32 mapId, float x, float y, float z, float /*orientation*/,
                                 uint32 /*options*/, Unit* /*target*/) override
     {
-        if (!BuddiesEnabled() || player->GetSession()->IsBot())
+        if (!BuddiesEnabled() || player->GetSession()->IsHeadless())
             return true;
         uint32 fromMap = player->GetMapId();
         if (mapId == fromMap || IsInstanceMap(mapId) || IsInstanceMap(fromMap))

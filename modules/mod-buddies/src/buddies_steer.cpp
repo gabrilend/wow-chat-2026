@@ -149,7 +149,7 @@ public:
 
     void OnPlayerUpdate(Player* player, uint32 /*diff*/) override
     {
-        if (!BuddiesEnabled() || !player->GetSession()->IsBot())
+        if (!BuddiesEnabled() || !player->GetSession()->IsHeadless())
             return;
         float face = 0.0f;
         {

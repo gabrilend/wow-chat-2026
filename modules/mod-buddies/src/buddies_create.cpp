@@ -115,11 +115,11 @@ static BuddyLooks PickLooks(uint8 race, uint8 gender)
     std::vector<std::pair<uint8, uint8>> faces, hairs;
     for (CharSectionsEntry const* s : sCharSectionsStore)
     {
-        if (s->Race != race || s->Gender != gender)
+        if (s->RaceID != race || s->SexID != gender)
             continue;
-        if (s->GenType == SECTION_TYPE_FACE)             faces.emplace_back(s->Type, s->Color);
-        else if (s->GenType == SECTION_TYPE_HAIR)        hairs.emplace_back(s->Type, s->Color);
-        else if (s->GenType == SECTION_TYPE_FACIAL_HAIR) facialHairs.push_back(s->Type);
+        if (s->BaseSection == SECTION_TYPE_FACE)             faces.emplace_back(s->VariationIndex, s->ColorIndex);
+        else if (s->BaseSection == SECTION_TYPE_HAIR)        hairs.emplace_back(s->VariationIndex, s->ColorIndex);
+        else if (s->BaseSection == SECTION_TYPE_FACIAL_HAIR) facialHairs.push_back(s->VariationIndex);
     }
     BuddyLooks looks;
     if (faces.empty() || hairs.empty())
@@ -333,9 +333,11 @@ static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
     CharacterCreateInfo info(name, race, cls, gender, looks.skin, looks.face, looks.hairStyle, looks.hairColor, looks.facialHair);
 
     // A throwaway session on the companion account: Player needs one to be
-    // built and saved, as the bot factory's creation does.
+    // built and saved, as the bot factory's creation does. No socket makes it
+    // headless, which since the core's 2026-09 change is how a bot's session is
+    // told apart (the "is a bot" argument it used to take is gone).
     WorldSession* session = new WorldSession(account, "", 0, nullptr, SEC_PLAYER, sWorld->getIntConfig(CONFIG_EXPANSION),
-        time_t(0), LOCALE_enUS, 0, false, false, 0, true);
+        time_t(0), LOCALE_enUS, 0, false, false, 0);
     Player* buddy = new Player(session);
     buddy->GetMotionMaster()->Initialize();
     if (!buddy->Create(sObjectMgr->GetGenerator<HighGuid::Player>().Generate(), &info))
