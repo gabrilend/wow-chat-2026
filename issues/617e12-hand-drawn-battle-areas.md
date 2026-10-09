@@ -24,15 +24,57 @@ The owner, 2026-10-08:
 
 ## Current Behavior
 
-Not built; decided in part (2026-10-08, below). A buddy roams the named area its owner stands in, read from
-the server's map files (617e2): every map is cut into squares about 33
-yards across, each labelled with an area, and
+In progress: decided in part (2026-10-08, below); the automatic first cut
+is built, the roaming that uses it and the AI pass are not.
+
+**What roaming uses today.** A buddy roams the named area its owner stands
+in, read from the server's map files (617e2): every map is cut into
+squares about 33 yards across, each labelled with an area, and
 `scripts/generate-buddy-area-centres` turns each area's squares into a
 row of `buddy_area_centre` (borders, middle). The Valley of Trials is one
 such area (map 1, area 363): 327 squares, about 770 by 630 yards,
 centred near (-449, -4302). The demon cave (the Burning Blade Coven) is
 not labelled apart from the valley in the map files, so it is part of
 that one area.
+
+**The first cut, built (no AI yet).** `scripts/generate-buddy-subareas`
+(LuaJIT, one worker process per map, Eastern Kingdoms and Kalimdor by
+default) cuts every named area into parts the way the owner described,
+monster kinds as the clue and steep ground as the edges:
+1. Each square gets a steepness: the share of neighbouring height samples
+   (the map files' fine height grid, a sample about every 4 yards) whose
+   rise over run is above 1.2 (about 50 degrees).
+2. Monsters are the spawns whose creature trains nobody, isn't a critter,
+   can be attacked, and whose faction belongs to and befriends none of
+   players, Alliance or Horde, and is either hostile to players or has no
+   reputation (so camp guards of the Argent Dawn, Cenarion Hold and the
+   Keepers of Time stay out). Holiday-only spawns (the autumn feast's
+   turkeys) and training dummies are left out.
+3. Monsters are grouped by kind: a beast by its family (boars, scorpids),
+   anything else by creature type and faction. A kind with at least 3
+   spawns within 3 squares of each other makes a seed.
+4. Each seed spreads over its area square by square, a steep square
+   costing up to 7 flat ones, so seeds meet along ridges and cliffs.
+5. Neighbouring parts of one kind merge; a part under 25 squares joins the
+   neighbour it shares the longest border with.
+6. Each part's centre is the middle of its own square nearest its average
+   point, so the centre is always inside it (a bent part's average point
+   fell outside 18% of the time).
+
+Results are in `sql/basic/db_world.src/36-buddy-subareas.{apply,revert}.sql`
+(tables `buddy_subarea`: one row per part with its area, square count,
+centre, levels and three leading monsters; `buddy_subarea_square`: which
+part each square of a split area belongs to), installed for basic by step
+E055. It also draws one picture per split area into
+`tmp/shared-memory/subareas/<map>-<area>.png` (parts in colours, steep
+ground dark, monster spawns as dots). The starting valleys come out as
+the owner described: the Valley of Trials in three (Mottled Boars round
+the edges and the camp, Scorpid Workers in the middle, the demons in the
+north by the Coven), Coldridge in four, Deathknell in five, Shadowglen in
+four, Northshire in two. Run the generator for the current counts, and
+`scripts/test-buddy-subareas` for its 14 checks (the valleys, what counts
+as a monster, every centre inside its part, the SQL applied twice and
+reverted in the `_smoke_test` database). Nothing reads the tables yet.
 
 Towns are marked separately, by circles (617e4a: two in the Valley of
 Trials, around its camp), and inside a town circle buddies do town
@@ -118,6 +160,10 @@ in opposite directions does the nearer one simply win.
 
 ## Suggested Implementation Steps
 
+0. (Built) The automatic first cut, above: `scripts/generate-buddy-subareas`,
+   step E055, `scripts/test-buddy-subareas`. The roaming core (step 3)
+   reads its parts until the AI pass replaces them; the AI pass starts
+   from these parts rather than from nothing.
 1. Decide how an area is drawn (open question 1) and the commands for it,
    in the shape of the town circles' (`.buddy town here`, `show`,
    `remove`; `buddies_town_circles.cpp`).
@@ -157,3 +203,16 @@ in opposite directions does the nearer one simply win.
 5. **"Orbit on their own":** is the drift from nearest thing to nearest
    thing enough, or should a buddy in town also keep circling (617e2's
    orbit) between targets?
+7. **The first cut against the owner's three:** the owner's Valley of
+   Trials is the cave, the middle upper area, and the town side with the
+   entrance. The first cut's are the demons (north, by the Coven), the
+   scorpids (the middle) and the boars, which wrap round both sides of
+   the scorpids as well as holding the camp. Is a part that wraps round
+   another acceptable, or must every part be one solid piece of land on
+   one side?
+8. **Caves:** the Coven's inside is not told apart from the valley in the
+   map files, and the generator sees the ground's height, not the roof.
+   The demons' part reaches the cave because the demons live there, not
+   because it knows a cave is there. Is that enough, or should caves be
+   found (the map files' holes and liquid, or the buildings' models) and
+   always made their own part?

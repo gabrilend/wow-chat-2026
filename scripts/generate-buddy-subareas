@@ -1,0 +1,531 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- generate-buddy-subareas - the world's named areas cut into the smaller
+-- places buddies roam, from where the monsters live and where the ground
+-- is steep (issue 617e12, the first cut, before any AI pass)
+--
+-- For a general audience: the game names its land in big pieces (the whole
+-- Valley of Trials is one), and a buddy roaming "the area its owner is in"
+-- wanders so far it is never seen (owner, 2026-10-08: "we need to have much
+-- smaller areas than just what the world decides is one. Otherwise we'd
+-- never see our buddies"). This cuts each named area into parts the way a
+-- person reading the map would: by which monsters live where ("Look at the
+-- monster types as a clue") and by the cliffs and ridges between them.
+--
+-- How:
+--   1. squares: every map is cut into squares about 33 yards across, each
+--      labelled with its named area (as generate-buddy-area-centres reads
+--      them); each also gets a steepness, the share of its ground (sampled
+--      every 4 yards from the map files' heights) too steep to walk
+--   2. seeds: in each named area, the hostile monsters' spawns are grouped
+--      by kind (a beast by its family: boars, scorpids; anything else by its
+--      creature type and faction: the Burning Blade's cultists, demons), and
+--      each kind's spawns lying close together make one seed
+--   3. growing: every seed spreads square by square over its area, a steep
+--      square costing several times a flat one, so two seeds meet along the
+--      ridges between them, and each square joins the seed that reaches it
+--      first
+--   4. merging: neighbouring parts of the same kind become one, and a part
+--      too small to roam (under MIN_SQUARES) joins the neighbour it shares
+--      the longest border with; an area too small to split stays whole
+--
+-- Reads:  data-files/maps/*.map, data-files/dbc/{AreaTable,FactionTemplate}.dbc,
+--         the basic world database (creature, creature_template)
+-- Writes: sql/basic/db_world.src/36-buddy-subareas.{apply,revert}.sql
+--         tmp/shared-memory/subareas/<map>-<area>.png, one picture per split
+--         area (parts in colours, steep ground dark, monsters as dots)
+--         tmp/shared-memory/subareas/summary.lua (for the test)
+-- One process per map, in parallel.
+--
+-- Usage: scripts/generate-buddy-subareas [PROJECT_DIR] [MAP ...]
+--   maps default to 0 and 1 (the Eastern Kingdoms and Kalimdor)
+--   (internally: --worker DIR MAP prints one map's rows)
+--------------------------------------------------------------------------------
+
+local ffi = require("ffi")
+local bit = require("bit")
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local WORKER_MAP
+local MAPS = {}
+if arg[1] == "--worker" then
+    DIR, WORKER_MAP = arg[2], tonumber(arg[3])
+else
+    if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+    for i = 2, #arg do MAPS[#MAPS + 1] = tonumber(arg[i]) end
+    if #MAPS == 0 then MAPS = { 0, 1 } end
+end
+
+-- {{{ tuning
+local MIN_SQUARES   = 25                            -- a part smaller than this (about 28,000 square yards) joins a neighbour
+local SEED_SPAWNS   = 3                             -- a kind needs this many spawns close together to seed a part
+local SEED_REACH    = 3                             -- squares: spawns of one kind this close belong to one seed
+local STEEP_SLOPE   = 1.2                           -- rise over run between neighbouring height samples counted as steep (about 50 degrees)
+local STEEP_COST    = 6                             -- a fully steep square costs this many flat ones to cross
+local OUT_DIR       = DIR .. "/tmp/shared-memory/subareas"
+-- }}}
+
+-- {{{ the map files
+-- As the server reads them (source-beta: src/server/game/Grids/GridTerrainData
+-- .h/.cpp). Header: "MAPS", version 9, build, then offset/size of the area,
+-- height, liquid and holes sections. Area: "AREA", flags, gridArea, then
+-- 16 x 16 uint16 ids unless flags & 1. Height: "MHGT", flags, gridHeight,
+-- gridMaxHeight, then (unless flags & 1, flat at gridHeight) V9 129 x 129
+-- and V8 128 x 128, as floats, or as uint16 (flags & 2) / uint8 (flags & 4)
+-- scaled by (gridMaxHeight - gridHeight) / 65535 or / 255 above
+-- gridHeight. V9 point (x, y) is index x * 129 + y; a grid is 533.3333
+-- yards, so V9 points are 4.1667 yards apart and a square (1/16 grid)
+-- holds 9 x 9 of them (8 x 8 steps).
+local SIZE_OF_GRIDS = 533.3333
+local SQUARE        = SIZE_OF_GRIDS / 16
+local STEP          = SIZE_OF_GRIDS / 128
+ffi.cdef [[
+typedef struct { uint32_t magic, version, build, areaOffset, areaSize, heightOffset, heightSize,
+                 liquidOffset, liquidSize, holesOffset, holesSize; } sub_map_header;
+typedef struct { uint32_t fourcc; uint16_t flags; uint16_t gridArea; } sub_area_header;
+typedef struct { uint32_t fourcc; uint32_t flags; float gridHeight; float gridMaxHeight; } sub_height_header;
+]]
+local function square_middle(X, Y)
+    return (32 - (X + 0.5) / 16) * SIZE_OF_GRIDS, (32 - (Y + 0.5) / 16) * SIZE_OF_GRIDS
+end
+local function square_of(x, y)
+    return math.floor(16 * (32 - x / SIZE_OF_GRIDS)), math.floor(16 * (32 - y / SIZE_OF_GRIDS))
+end
+local function key(X, Y) return X * 1024 + Y end
+-- }}}
+
+-- {{{ local function read_grid
+-- One map file: area labels and steepness into the tables, per square.
+local function read_grid(path, gx, gy, area_of, steep_of)
+    local f = assert(io.open(path, "rb"), "cannot open " .. path)
+    local raw = f:read("*a")
+    f:close()
+    -- copied into a buffer LuaJIT owns: pointers into a Lua string crashed
+    -- the compiled code (a segmentation fault that went away with -joff,
+    -- 2026-10-08); a buffer of its own is safe to point into
+    local data = ffi.new("uint8_t[?]", #raw)
+    ffi.copy(data, raw, #raw)
+    local h = ffi.cast("const sub_map_header*", data)
+    if h.magic ~= 0x5350414D or h.version ~= 9 then error(path .. ": not a version-9 map file") end
+    -- areas
+    if h.areaOffset ~= 0 then
+        local ah = ffi.cast("const sub_area_header*", ffi.cast("const uint8_t*", data) + h.areaOffset)
+        if bit.band(ah.flags, 1) ~= 0 then
+            if ah.gridArea ~= 0 then for lx = 0, 15 do for ly = 0, 15 do area_of[key(gx * 16 + lx, gy * 16 + ly)] = ah.gridArea end end end
+        else
+            local ids = ffi.cast("const uint16_t*", ffi.cast("const uint8_t*", data) + h.areaOffset + ffi.sizeof("sub_area_header"))
+            for lx = 0, 15 do for ly = 0, 15 do
+                local id = ids[lx * 16 + ly]
+                if id ~= 0 then area_of[key(gx * 16 + lx, gy * 16 + ly)] = id end
+            end end
+        end
+    end
+    -- heights -> steepness per square
+    if h.heightOffset == 0 then return end
+    local hh = ffi.cast("const sub_height_header*", ffi.cast("const uint8_t*", data) + h.heightOffset)
+    if bit.band(hh.flags, 1) ~= 0 then return end   -- flat grid: nothing steep
+    local base = ffi.cast("const uint8_t*", data) + h.heightOffset + ffi.sizeof("sub_height_header")
+    local height
+    if bit.band(hh.flags, 2) ~= 0 then
+        local v = ffi.cast("const uint16_t*", base); local m = (hh.gridMaxHeight - hh.gridHeight) / 65535
+        height = function(x, y) return hh.gridHeight + v[x * 129 + y] * m end
+    elseif bit.band(hh.flags, 4) ~= 0 then
+        local v = ffi.cast("const uint8_t*", base); local m = (hh.gridMaxHeight - hh.gridHeight) / 255
+        height = function(x, y) return hh.gridHeight + v[x * 129 + y] * m end
+    else
+        local v = ffi.cast("const float*", base)
+        height = function(x, y) return v[x * 129 + y] end
+    end
+    for lx = 0, 15 do for ly = 0, 15 do
+        local steep, pairs_ = 0, 0
+        for x = lx * 8, lx * 8 + 8 do for y = ly * 8, ly * 8 + 8 do
+            local z = height(x, y)
+            if x < lx * 8 + 8 then pairs_ = pairs_ + 1; if math.abs(height(x + 1, y) - z) / STEP > STEEP_SLOPE then steep = steep + 1 end end
+            if y < ly * 8 + 8 then pairs_ = pairs_ + 1; if math.abs(height(x, y + 1) - z) / STEP > STEEP_SLOPE then steep = steep + 1 end end
+        end end
+        steep_of[key(gx * 16 + lx, gy * 16 + ly)] = steep / pairs_
+    end end
+end
+-- }}}
+
+-- {{{ local function dbc
+local function dbc(name)
+    local f = assert(io.open(DIR .. "/data-files/dbc/" .. name, "rb"), "cannot open " .. name)
+    local d = f:read("*a"); f:close()
+    assert(d:sub(1, 4) == "WDBC", name .. " is not a WDBC file")
+    -- a buffer of LuaJIT's own (see read_grid)
+    local buf = ffi.new("uint8_t[?]", #d)
+    ffi.copy(buf, d, #d)
+    local p = ffi.cast("const uint32_t*", buf)
+    local n, fields, size = p[1], p[2], p[3]
+    local strs = 20 + n * size
+    local t = { n = n, keep = buf }
+    function t.u(r, i) return ffi.cast("const uint32_t*", buf + 20 + r * size)[i] end
+    function t.s(r, i) local o = t.u(r, i); local e = d:find("\0", strs + o + 1, true); return d:sub(strs + o + 1, e - 1) end
+    return t
+end
+-- }}}
+
+-- {{{ the worker: one map
+local function worker(map)
+    -- squares
+    local area_of, steep_of = {}, {}
+    local ls = io.popen(string.format("ls '%s/data-files/maps' | grep '^%03d[0-9][0-9][0-9][0-9]\\.map$'", DIR, map))
+    for name in ls:lines() do
+        local gx, gy = tonumber(name:sub(4, 5)), tonumber(name:sub(6, 7))
+        read_grid(DIR .. "/data-files/maps/" .. name, gx, gy, area_of, steep_of)
+    end
+    ls:close()
+
+    -- monsters: a creature whose faction belongs to neither side and
+    -- befriends neither (FactionTemplate.dbc: 3 our group, 4 friend group,
+    -- 5 enemy group; bits 1 player, 2 alliance, 4 horde, 8 monster). The
+    -- first test, "hostile to players", counted a Horde town's guards and
+    -- peons, which are hostile to the Alliance (2026-10-08). The second,
+    -- "neither side" on bits 2 and 4 alone, still let through the guards of
+    -- neutral camps (Light's Hope's Argent Sentry, Cenarion Hold's Infantry:
+    -- their templates belong to the player group, bit 1) and the Caverns of
+    -- Time's watchers (a template with no groups at all, friendly through
+    -- its faction's reputation). So a monster's template:
+    --   belongs to and befriends none of player, Alliance, Horde (bits 1|2|4)
+    --   and is hostile to players outright (enemy group has bit 1), or has a
+    --   faction without a reputation (Faction.dbc field 1 is -1: boars'
+    --   "Creature", wolves' "Monster"); a faction with a reputation and no
+    --   hostility is someone's friend (the Keepers of Time, the Argent Dawn)
+    local fac = dbc("Faction.dbc")
+    local has_reputation = {}
+    for r = 0, fac.n - 1 do has_reputation[fac.u(r, 0)] = fac.u(r, 1) ~= 0xFFFFFFFF end
+    local ft = dbc("FactionTemplate.dbc")
+    local hostile = {}
+    for r = 0, ft.n - 1 do
+        local faction, our, friend, enemy = ft.u(r, 1), ft.u(r, 3), ft.u(r, 4), ft.u(r, 5)
+        hostile[ft.u(r, 0)] = bit.band(our, 7) == 0 and bit.band(friend, 7) == 0
+                          and (bit.band(enemy, 1) ~= 0 or not has_reputation[faction])
+    end
+
+    -- spawns, leaving out those that appear only during a holiday
+    -- (game_event_creature with a positive event: present only while it
+    -- runs; a negative event means "gone during it", an everyday spawn, so
+    -- those stay). The first run counted the autumn feast's 3,125 Wild
+    -- Turkeys and the level-70 Beastmaster/Fight Promoter/Paymaster in
+    -- every starting valley: turkeys took Deathknell whole and the valleys'
+    -- level ranges read 1-70 (2026-10-08). Training dummies are left out
+    -- too (they pass every faction test; their script is the only mark)
+    local q = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi acore_world_basic -N -B -e \"SELECT c.position_x, c.position_y, ct.type, ct.family, ct.faction, ct.minlevel, ct.maxlevel, ct.name FROM creature c JOIN creature_template ct ON ct.entry = c.id WHERE c.map = %d AND ct.npcflag = 0 AND ct.type <> 8 AND (ct.unit_flags & 33554434) = 0 AND ct.ScriptName <> 'npc_training_dummy' AND NOT EXISTS (SELECT 1 FROM game_event_creature g WHERE g.guid = c.guid AND g.eventEntry > 0)\" 2>&1", DIR, DIR, map)
+    local spawns_by_area = {}
+    local h = io.popen(q)
+    for line in h:lines() do
+        if line:find("^ERROR") then io.stderr:write(line .. "\n"); os.exit(1) end
+        if not line:find("Using a password") then
+            local x, y, typ, fam, fac, lo, hi, name = line:match("^([^\t]+)\t([^\t]+)\t(%d+)\t(%d+)\t(%d+)\t(%d+)\t(%d+)\t(.*)$")
+            if x and hostile[tonumber(fac)] then
+                local X, Y = square_of(tonumber(x), tonumber(y))
+                local a = area_of[key(X, Y)]
+                if a then
+                    local kind = (tonumber(typ) == 1 and tonumber(fam) > 0) and ("beast family " .. fam) or ("type " .. typ .. " faction " .. fac)
+                    spawns_by_area[a] = spawns_by_area[a] or {}
+                    table.insert(spawns_by_area[a], { X = X, Y = Y, kind = kind, lo = tonumber(lo), hi = tonumber(hi), name = name, x = tonumber(x), y = tonumber(y) })
+                end
+            end
+        end
+    end
+    h:close()
+
+    -- pieces of each area (squares touching side to side)
+    local seen, pieces = {}, {}
+    for k, a in pairs(area_of) do
+        if not seen[k] then
+            local piece, stack = { area = a, squares = {} }, { k }
+            seen[k] = true
+            while #stack > 0 do
+                local c = table.remove(stack)
+                piece.squares[#piece.squares + 1] = c
+                local X, Y = math.floor(c / 1024), c % 1024
+                for _, d in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+                    local n = key(X + d[1], Y + d[2])
+                    if not seen[n] and area_of[n] == a then seen[n] = true; stack[#stack + 1] = n end
+                end
+            end
+            pieces[#pieces + 1] = piece
+        end
+    end
+
+    local out = {}
+    local sub_id = map * 100000
+    for _, piece in ipairs(pieces) do
+        local in_piece = {}
+        for _, c in ipairs(piece.squares) do in_piece[c] = true end
+        -- seeds: each kind's spawns in this piece, grouped by closeness
+        local by_kind = {}
+        for _, s in ipairs(spawns_by_area[piece.area] or {}) do
+            if in_piece[key(s.X, s.Y)] then by_kind[s.kind] = by_kind[s.kind] or {}; table.insert(by_kind[s.kind], s) end
+        end
+        local seeds = {}
+        for kind, list in pairs(by_kind) do
+            local used = {}
+            for i = 1, #list do
+                if not used[i] then
+                    local group, stack = {}, { i }
+                    used[i] = true
+                    while #stack > 0 do
+                        local j = table.remove(stack); group[#group + 1] = list[j]
+                        for m = 1, #list do
+                            if not used[m] and math.abs(list[m].X - list[j].X) <= SEED_REACH and math.abs(list[m].Y - list[j].Y) <= SEED_REACH then used[m] = true; stack[#stack + 1] = m end
+                        end
+                    end
+                    if #group >= SEED_SPAWNS then seeds[#seeds + 1] = { kind = kind, spawns = group } end
+                end
+            end
+        end
+        table.sort(seeds, function(a, b) if #a.spawns ~= #b.spawns then return #a.spawns > #b.spawns end return a.kind < b.kind end)
+
+        local owner = {}                                -- square -> seed index
+        if #piece.squares >= 2 * MIN_SQUARES and #seeds >= 2 then
+            -- grow: cheapest path from any seed square, steep squares dear
+            local cost, heap = {}, {}
+            local function push(c, d, s) heap[#heap + 1] = { c, d, s }; local i = #heap
+                while i > 1 do local p = math.floor(i / 2); if heap[p][2] <= heap[i][2] then break end; heap[p], heap[i] = heap[i], heap[p]; i = p end end
+            local function pop() local top = heap[1]; heap[1] = heap[#heap]; heap[#heap] = nil; local i = 1
+                while true do local l, r, m = 2 * i, 2 * i + 1, i
+                    if l <= #heap and heap[l][2] < heap[m][2] then m = l end
+                    if r <= #heap and heap[r][2] < heap[m][2] then m = r end
+                    if m == i then break end; heap[m], heap[i] = heap[i], heap[m]; i = m end
+                return top end
+            for si, seed in ipairs(seeds) do
+                for _, s in ipairs(seed.spawns) do local c = key(s.X, s.Y); if not cost[c] then cost[c] = 0; owner[c] = si; push(c, 0, si) end end
+            end
+            while #heap > 0 do
+                local top = pop()
+                local c, d, si = top[1], top[2], top[3]
+                if d <= cost[c] and owner[c] == si then
+                    local X, Y = math.floor(c / 1024), c % 1024
+                    for _, dd in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+                        local n = key(X + dd[1], Y + dd[2])
+                        if in_piece[n] then
+                            local nd = d + 1 + STEEP_COST * (steep_of[n] or 0)
+                            if not cost[n] or nd < cost[n] then cost[n] = nd; owner[n] = si; push(n, nd, si) end
+                        end
+                    end
+                end
+            end
+            -- merge neighbouring parts of the same kind
+            local parent = {}
+            for i = 1, #seeds do parent[i] = i end
+            local function find(i) while parent[i] ~= i do parent[i] = parent[parent[i]]; i = parent[i] end return i end
+            for _, c in ipairs(piece.squares) do
+                local X, Y = math.floor(c / 1024), c % 1024
+                for _, dd in ipairs({ { 1, 0 }, { 0, 1 } }) do
+                    local n = key(X + dd[1], Y + dd[2])
+                    if owner[c] and owner[n] and owner[c] ~= owner[n] and seeds[owner[c]].kind == seeds[owner[n]].kind then
+                        local a, b = find(owner[c]), find(owner[n]); if a ~= b then parent[b] = a end
+                    end
+                end
+            end
+            for _, c in ipairs(piece.squares) do if owner[c] then owner[c] = find(owner[c]) end end
+            -- small parts join the neighbour they share the longest border with, until none is small
+            while true do
+                local size, border = {}, {}
+                for _, c in ipairs(piece.squares) do
+                    local o = owner[c]
+                    if o then
+                        size[o] = (size[o] or 0) + 1
+                        local X, Y = math.floor(c / 1024), c % 1024
+                        for _, dd in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+                            local n = owner[key(X + dd[1], Y + dd[2])]
+                            if n and n ~= o then border[o] = border[o] or {}; border[o][n] = (border[o][n] or 0) + 1 end
+                        end
+                    end
+                end
+                local smallest, small_size
+                for o, sz in pairs(size) do if sz < MIN_SQUARES and (not small_size or sz < small_size) then smallest, small_size = o, sz end end
+                if not smallest then break end
+                local best, best_len
+                for n, len in pairs(border[smallest] or {}) do if not best_len or len > best_len then best, best_len = n, len end end
+                if not best then break end              -- an island with no neighbour: kept
+                for _, c in ipairs(piece.squares) do if owner[c] == smallest then owner[c] = best end end
+            end
+            -- squares no seed reached (cut off): to the most common part
+            local count = {}
+            for _, c in ipairs(piece.squares) do if owner[c] then count[owner[c]] = (count[owner[c]] or 0) + 1 end end
+            local common, cn = nil, -1
+            for o, n in pairs(count) do if n > cn then common, cn = o, n end end
+            for _, c in ipairs(piece.squares) do if not owner[c] then owner[c] = common end end
+        end
+
+        -- the parts (one when not split)
+        local parts = {}
+        for _, c in ipairs(piece.squares) do
+            local o = owner[c] or 0
+            parts[o] = parts[o] or { squares = {}, kinds = {}, lo = 999, hi = 0 }
+            table.insert(parts[o].squares, c)
+        end
+        local nparts = 0
+        for _ in pairs(parts) do nparts = nparts + 1 end
+        -- monsters per part
+        for _, s in ipairs(spawns_by_area[piece.area] or {}) do
+            local c = key(s.X, s.Y)
+            if in_piece[c] then
+                local p = parts[owner[c] or 0]
+                if p then
+                    p.kinds[s.name] = (p.kinds[s.name] or 0) + 1
+                    p.lo, p.hi = math.min(p.lo, s.lo), math.max(p.hi, s.hi)
+                end
+            end
+        end
+        for o, p in pairs(parts) do
+            sub_id = sub_id + 1
+            local sx, sy = 0, 0
+            for _, c in ipairs(p.squares) do local x, y = square_middle(math.floor(c / 1024), c % 1024); sx, sy = sx + x, sy + y end
+            local ax, ay = sx / #p.squares, sy / #p.squares
+            -- the centre is the middle of the part's own square nearest its
+            -- average point: a bent part's (a crescent along a ridge, a ring
+            -- round a lake) average can fall outside it, and 18% did on the
+            -- first run (scripts/test-buddy-subareas); a buddy sent "to the
+            -- middle" must arrive somewhere in the part
+            local cx, cy, best = ax, ay, math.huge
+            for _, c in ipairs(p.squares) do
+                local x, y = square_middle(math.floor(c / 1024), c % 1024)
+                local d = (x - ax) ^ 2 + (y - ay) ^ 2
+                if d < best then cx, cy, best = x, y, d end
+            end
+            local names = {}
+            for n, cnt in pairs(p.kinds) do names[#names + 1] = { n, cnt } end
+            table.sort(names, function(a, b) return a[2] > b[2] end)
+            local top = {}
+            for i = 1, math.min(3, #names) do top[i] = names[i][1] .. " x" .. names[i][2] end
+            -- one row per part: sub, map, area, squares, middle, levels, monsters
+            out[#out + 1] = string.format("PART\t%d\t%d\t%d\t%d\t%d\t%.1f\t%.1f\t%d\t%d\t%s",
+                sub_id, map, piece.area, nparts, #p.squares, cx, cy, p.lo == 999 and 0 or p.lo, p.hi, table.concat(top, ", "))
+            if nparts > 1 then
+                for _, c in ipairs(p.squares) do out[#out + 1] = string.format("SQ\t%d\t%d\t%d\t%d", sub_id, map, math.floor(c / 1024), c % 1024) end
+            end
+            p.sub = sub_id
+        end
+        -- a picture of every split area
+        if nparts > 1 then
+            local minX, maxX, minY, maxY = 1e9, -1e9, 1e9, -1e9
+            for _, c in ipairs(piece.squares) do local X, Y = math.floor(c / 1024), c % 1024
+                minX, maxX, minY, maxY = math.min(minX, X), math.max(maxX, X), math.min(minY, Y), math.max(maxY, Y) end
+            local S = 12                               -- pixels a square
+            local W, H = (maxY - minY + 1) * S, (maxX - minX + 1) * S
+            local palette = { { 230, 159, 0 }, { 86, 180, 233 }, { 0, 158, 115 }, { 240, 228, 66 }, { 0, 114, 178 }, { 213, 94, 0 }, { 204, 121, 167 }, { 150, 150, 150 } }
+            local colour, ci = {}, 0
+            for o, p in pairs(parts) do ci = ci + 1; colour[o] = palette[(ci - 1) % #palette + 1] end
+            local px = ffi.new("uint8_t[?]", W * H * 3)
+            for i = 0, W * H * 3 - 1 do px[i] = 32 end
+            local function plot(row, col, r, g, b) if row >= 0 and row < H and col >= 0 and col < W then local i = (row * W + col) * 3; px[i], px[i + 1], px[i + 2] = r, g, b end end
+            for _, c in ipairs(piece.squares) do
+                local X, Y = math.floor(c / 1024), c % 1024
+                local col = colour[owner[c] or 0]
+                local dark = 1 - 0.7 * (steep_of[c] or 0)
+                -- north up: world x falls as X grows, so X is the row; west left: world y falls as Y grows, so Y is the column
+                for dy = 0, S - 1 do for dx = 0, S - 1 do plot((X - minX) * S + dy, (Y - minY) * S + dx, col[1] * dark, col[2] * dark, col[3] * dark) end end
+            end
+            for _, s in ipairs(spawns_by_area[piece.area] or {}) do
+                if in_piece[key(s.X, s.Y)] then
+                    local row = (16 * (32 - s.x / SIZE_OF_GRIDS) - minX) * S
+                    local col = (16 * (32 - s.y / SIZE_OF_GRIDS) - minY) * S
+                    plot(math.floor(row), math.floor(col), 0, 0, 0); plot(math.floor(row) + 1, math.floor(col), 0, 0, 0)
+                end
+            end
+            local ppm = string.format("%s/%d-%d.ppm", OUT_DIR, map, piece.area)
+            local f = assert(io.open(ppm, "wb"))
+            f:write(string.format("P6\n%d %d\n255\n", W, H), ffi.string(px, W * H * 3))
+            f:close()
+            os.execute(string.format("magick '%s' '%s' && rm '%s'", ppm, ppm:gsub("%.ppm$", ".png"), ppm))
+        end
+    end
+    io.write(table.concat(out, "\n"), "\n")
+end
+-- }}}
+
+if WORKER_MAP then worker(WORKER_MAP); os.exit(0) end
+
+-- {{{ the main process: one worker per map, in parallel, then the SQL
+os.execute("mkdir -p '" .. OUT_DIR .. "'")
+local workers = {}
+for _, map in ipairs(MAPS) do
+    workers[#workers + 1] = { map = map, h = io.popen(string.format("luajit '%s' --worker '%s' %d", arg[0], DIR, map)) }
+end
+local parts, squares = {}, {}
+for _, w in ipairs(workers) do
+    for line in w.h:lines() do
+        local kind = line:match("^(%u+)\t")
+        if kind == "PART" then
+            local f = {}
+            for c in (line .. "\t"):gmatch("(.-)\t") do f[#f + 1] = c end
+            parts[#parts + 1] = { sub = tonumber(f[2]), map = tonumber(f[3]), area = tonumber(f[4]), nparts = tonumber(f[5]), squares = tonumber(f[6]),
+                cx = tonumber(f[7]), cy = tonumber(f[8]), lo = tonumber(f[9]), hi = tonumber(f[10]), monsters = f[11] or "" }
+        elseif kind == "SQ" then
+            local s, m, X, Y = line:match("^SQ\t(%d+)\t(%d+)\t(%d+)\t(%d+)")
+            squares[#squares + 1] = string.format("(%s,%s,%s,%s)", s, m, X, Y)
+        elseif line ~= "" then
+            io.stderr:write("map " .. w.map .. ": " .. line .. "\n")
+        end
+    end
+    local ok = w.h:close()
+    if not ok then io.stderr:write("ERROR: the worker for map " .. w.map .. " failed\n"); os.exit(1) end
+end
+
+-- area names
+local at = dbc("AreaTable.dbc")
+local names = {}
+for r = 0, at.n - 1 do names[at.u(r, 0)] = at.s(r, 11) end
+
+local stamp = "-- GENERATED by scripts/generate-buddy-subareas from data-files/maps, data-files/dbc and the basic world\n"
+           .. "-- database's spawns; don't edit by hand, run it again. Why: smaller places for buddies to roam than\n"
+           .. "-- the game's named areas, cut by monster kinds and steep ground (issue 617e12, the first cut).\n"
+local rows, split_areas = {}, 0
+for _, p in ipairs(parts) do
+    if p.nparts > 1 then
+        rows[#rows + 1] = string.format("(%d,%d,%d,%d,%.1f,%.1f,%d,%d,'%s','%s')", p.sub, p.map, p.area, p.squares, p.cx, p.cy, p.lo, p.hi,
+            (names[p.area] or ""):gsub("'", "''"), p.monsters:gsub("'", "''"))
+    end
+end
+local counted = {}
+for _, p in ipairs(parts) do if p.nparts > 1 and not counted[p.map * 100000 + p.area] then counted[p.map * 100000 + p.area] = true; split_areas = split_areas + 1 end end
+local function chunks(list, size)
+    local out = {}
+    for i = 1, #list, size do
+        local t = {}
+        for j = i, math.min(i + size - 1, #list) do t[#t + 1] = list[j] end
+        out[#out + 1] = t
+    end
+    return out
+end
+local a = assert(io.open(DIR .. "/sql/basic/db_world.src/36-buddy-subareas.apply.sql", "w"))
+a:write(stamp, "-- MARKER_E055_APPLY\n",
+    string.format("-- %d named areas split into %d parts (%d squares listed); areas not split keep their named area.\n", split_areas, #rows, #squares),
+    "CREATE TABLE IF NOT EXISTS `buddy_subarea` (\n",
+    "  `id` INT UNSIGNED NOT NULL, `map` SMALLINT UNSIGNED NOT NULL, `area` INT UNSIGNED NOT NULL,\n",
+    "  `squares` INT UNSIGNED NOT NULL, `centre_x` FLOAT NOT NULL, `centre_y` FLOAT NOT NULL,\n",
+    "  `min_level` TINYINT UNSIGNED NOT NULL, `max_level` TINYINT UNSIGNED NOT NULL,\n",
+    "  `area_name` VARCHAR(100) NOT NULL, `monsters` VARCHAR(255) NOT NULL, PRIMARY KEY (`id`)\n",
+    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='617e12: parts of named areas, by monster kind and steep ground';\n",
+    "CREATE TABLE IF NOT EXISTS `buddy_subarea_square` (\n",
+    "  `subarea` INT UNSIGNED NOT NULL, `map` SMALLINT UNSIGNED NOT NULL, `sx` SMALLINT UNSIGNED NOT NULL, `sy` SMALLINT UNSIGNED NOT NULL,\n",
+    "  PRIMARY KEY (`map`, `sx`, `sy`), KEY (`subarea`)\n",
+    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='617e12: which part each square of a split area belongs to (map squares, 1/16 grid)';\n",
+    "DELETE FROM `buddy_subarea`;\nDELETE FROM `buddy_subarea_square`;\n")
+for _, chunk in ipairs(chunks(rows, 500)) do
+    a:write("INSERT INTO `buddy_subarea` (`id`,`map`,`area`,`squares`,`centre_x`,`centre_y`,`min_level`,`max_level`,`area_name`,`monsters`) VALUES\n", table.concat(chunk, ",\n"), ";\n")
+end
+for _, chunk in ipairs(chunks(squares, 2000)) do
+    a:write("INSERT INTO `buddy_subarea_square` (`subarea`,`map`,`sx`,`sy`) VALUES ", table.concat(chunk, ","), ";\n")
+end
+a:close()
+local rv = assert(io.open(DIR .. "/sql/basic/db_world.src/36-buddy-subareas.revert.sql", "w"))
+rv:write(stamp, "-- MARKER_E055_REVERT\n-- 36-buddy-subareas revert: the parts removed.\nDROP TABLE IF EXISTS `buddy_subarea_square`;\nDROP TABLE IF EXISTS `buddy_subarea`;\n")
+rv:close()
+
+-- the summary the test reads: every part, split or not
+local sf = assert(io.open(OUT_DIR .. "/summary.lua", "w"))
+sf:write("-- GENERATED by scripts/generate-buddy-subareas: every part, for scripts/test-buddy-subareas\nreturn {\n")
+for _, p in ipairs(parts) do
+    sf:write(string.format("  { sub = %d, map = %d, area = %d, name = %q, nparts = %d, squares = %d, cx = %.1f, cy = %.1f, lo = %d, hi = %d, monsters = %q },\n",
+        p.sub, p.map, p.area, names[p.area] or "", p.nparts, p.squares, p.cx, p.cy, p.lo, p.hi, p.monsters))
+end
+sf:write("}\n")
+sf:close()
+print(string.format("%d named areas split into %d parts (%d squares); pictures in %s", split_areas, #rows, #squares, OUT_DIR:sub(#DIR + 2)))
+-- }}}

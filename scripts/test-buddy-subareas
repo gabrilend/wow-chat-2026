@@ -1,0 +1,141 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- test-buddy-subareas - the smaller roaming places (issue 617e12, the first
+-- cut) come out the way a person reading the map would cut them
+--
+-- For a general audience: scripts/generate-buddy-subareas cuts the game's
+-- named areas into smaller parts by which monsters live where and by steep
+-- ground. This checks four things, without a server:
+--   1. the starting valleys, which the owner knows by heart, split the way
+--      the owner described ("the valley of trials has three zones": boars,
+--      scorpids, the demons by the cave)
+--   2. what counts as a monster: no holiday creature, town guard or
+--      training dummy names a part, and no split part is too small to roam
+--   3. the parts' squares: every split part's squares are listed once, its
+--      count matches, and how many parts' centres lie inside their own part
+--      (a bent part's average point can fall outside it, so the generator
+--      picks the part's own square nearest it: every centre must be inside)
+--   4. the SQL, applied twice and reverted in the test database
+--      (_smoke_test, the one the database account may create; the real
+--      databases are never touched)
+--
+-- Run scripts/generate-buddy-subareas first (it writes the summary this
+-- reads). Usage: scripts/test-buddy-subareas [PROJECT_DIR]
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local MIN_SQUARES      = 25                         -- the generator's smallest roamable part
+local MIN_CENTRE_SHARE = 1.0                        -- parts whose centre lies in themselves: all
+local SIZE_OF_GRIDS    = 533.3333
+
+local fails, checks = 0, 0
+-- {{{ local function check
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+-- }}}
+
+local S = dofile(DIR .. "/tmp/shared-memory/subareas/summary.lua")
+local by_area = {}
+for _, p in ipairs(S) do
+    local k = p.map * 100000 + p.area
+    by_area[k] = by_area[k] or {}
+    if p.nparts > 1 then table.insert(by_area[k], p) end
+end
+
+print("1. the starting valleys")
+-- {{{ local function first_kinds
+-- the leading monster of each part of an area (the one named first)
+local function first_kinds(map, area)
+    local t = {}
+    for _, p in ipairs(by_area[map * 100000 + area] or {}) do t[#t + 1] = p.monsters:match("^([^,]-) x%d+") or "" end
+    return t
+end
+-- }}}
+local trials = first_kinds(1, 363)
+table.sort(trials)
+check(#trials == 3 and trials[1] == "Mottled Boar" and trials[2] == "Scorpid Worker" and trials[3] == "Vile Familiar",
+      "Valley of Trials: three parts, led by boars, scorpids and the demons (" .. table.concat(trials, ", ") .. ")")
+for _, v in ipairs({ { 0, 132, "Coldridge Valley", 3 }, { 0, 9, "Northshire Valley", 2 }, { 0, 154, "Deathknell", 3 }, { 1, 188, "Shadowglen", 3 } }) do
+    local kinds, seen, distinct = first_kinds(v[1], v[2]), {}, true
+    for _, k in ipairs(kinds) do if seen[k] then distinct = false end; seen[k] = true end
+    check(#kinds >= v[4] and distinct, string.format("%s: %d parts, each led by a different monster (%s)", v[3], #kinds, table.concat(kinds, ", ")))
+end
+
+print("2. what counts as a monster")
+local strays = { "Wild Turkey", "Training Dummy", "Argent Sentry", "Cenarion Hold Infantry", "Time Watcher", "Beastmaster", "Fight Promoter", "Paymaster" }
+local found = {}
+for _, p in ipairs(S) do
+    for _, s in ipairs(strays) do if p.monsters:find(s, 1, true) then found[#found + 1] = p.name .. ": " .. s end end
+end
+check(#found == 0, "no holiday creature, guard or training dummy names a part" .. (#found > 0 and (" (" .. table.concat(found, "; ") .. ")") or ""))
+local small = {}
+for _, p in ipairs(S) do if p.nparts > 1 and p.squares < MIN_SQUARES then small[#small + 1] = p.name .. " " .. p.squares end end
+check(#small == 0, "every part of a split area has at least " .. MIN_SQUARES .. " squares" .. (#small > 0 and (" (" .. table.concat(small, "; ") .. ")") or ""))
+
+print("3. the parts' squares")
+local apply = assert(io.open(DIR .. "/sql/basic/db_world.src/36-buddy-subareas.apply.sql")):read("*a")
+local owner, count, twice = {}, {}, 0
+for sub, map, sx, sy in apply:gmatch("%((%d+),(%d+),(%d+),(%d+)%)") do
+    local k = map .. ":" .. sx .. ":" .. sy
+    if owner[k] then twice = twice + 1 end
+    owner[k] = tonumber(sub)
+    count[tonumber(sub)] = (count[tonumber(sub)] or 0) + 1
+end
+check(twice == 0, "no square is listed twice")
+local mismatched, split, inside = 0, 0, 0
+for _, p in ipairs(S) do
+    if p.nparts > 1 then
+        split = split + 1
+        if count[p.sub] ~= p.squares then mismatched = mismatched + 1 end
+        local sx = math.floor(16 * (32 - p.cx / SIZE_OF_GRIDS))
+        local sy = math.floor(16 * (32 - p.cy / SIZE_OF_GRIDS))
+        if owner[p.map .. ":" .. sx .. ":" .. sy] == p.sub then inside = inside + 1 end
+    end
+end
+check(mismatched == 0, string.format("all %d split parts list as many squares as the summary says (%d differ)", split, mismatched))
+check(inside / split >= MIN_CENTRE_SHARE, string.format("%d of %d parts (%.0f%%) have their centre inside themselves (at least %.0f%% wanted)", inside, split, 100 * inside / split, 100 * MIN_CENTRE_SHARE))
+print("4. the SQL, in the test database")
+local revert = assert(io.open(DIR .. "/sql/basic/db_world.src/36-buddy-subareas.revert.sql")):read("*a")
+-- _smoke_test: the account may create it and nothing else uses it (a new
+-- database per run was the first idea, but the account may create no
+-- other). Temporary tables of
+-- the real names were tried first (as test-basic-legendaries does for
+-- tables that already exist), but "create the table if missing" does not
+-- see a temporary table, so the real database got two empty tables
+-- (2026-10-08). These tables are new, so nothing needs copying in, and
+-- the revert under test is what drops them again
+local SCRATCH = "_smoke_test"
+local tables  = "SELECT 'tables', COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN ('buddy_subarea', 'buddy_subarea_square');\n"
+local rows    = "SELECT 'parts', COUNT(*) FROM buddy_subarea; SELECT 'squares', COUNT(*) FROM buddy_subarea_square;\n"
+local script = os.tmpname()
+local f = assert(io.open(script, "w"))
+f:write("CREATE DATABASE IF NOT EXISTS `", SCRATCH, "`; USE `", SCRATCH, "`;\n",
+        "SELECT 'stage', 'before';\n", tables, apply, "\n", apply, "\n",
+        "SELECT 'stage', 'applied twice';\n", tables, rows, revert, "\n",
+        "SELECT 'stage', 'reverted';\n", tables)
+f:close()
+local mysql = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi -N -B < '%s' 2>&1", DIR, DIR, script)
+local h = io.popen(mysql)
+local stage, seen = nil, {}
+for line in h:lines() do
+    if line:find("^ERROR") then check(false, "the SQL ran without errors: " .. line) end
+    local k, v = line:match("^(%a+)\t(.+)$")
+    if k == "stage" then stage = v; seen[stage] = {} elseif k and stage then seen[stage][k] = tonumber(v) end
+end
+h:close(); os.remove(script)
+local b, a, r = seen["before"] or {}, seen["applied twice"] or {}, seen["reverted"] or {}
+local n_parts, n_squares = 0, 0
+for _, p in ipairs(S) do if p.nparts > 1 then n_parts = n_parts + 1 end end
+for _ in pairs(owner) do n_squares = n_squares + 1 end
+check(b.tables == 0 and a.tables == 2, string.format("applying makes both tables (%s before, %s after)", tostring(b.tables), tostring(a.tables)))
+check(a.parts == n_parts, string.format("applied twice: %s parts (expected %d, the split areas' parts once each)", tostring(a.parts), n_parts))
+check(a.squares == n_squares, string.format("applied twice: %s squares (expected %d)", tostring(a.squares), n_squares))
+check(r.tables == 0, string.format("reverted: both tables gone (%s left)", tostring(r.tables)))
+
+print("")
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)
