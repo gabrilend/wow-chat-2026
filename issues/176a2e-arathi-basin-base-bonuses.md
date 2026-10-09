@@ -38,25 +38,45 @@ power-ups lying at each base are the only buffs.
 | Stables | +5% movement speed |
 | Farm | +5% health |
 
-**Growing.** From the moment a side fully captures a base, the base
-counts the resources that side gains. Every N of them (N is 200 or 100,
-open question 1) the base's bonus grows one step.
+**Growing, each base on its own count** (owner, 2026-10-08: "they're
+tracked separately. So if you capture the BS while you have 165
+resources, then at 265 the BS bonus will increment. The Stables could
+have been capped at 35 resources, which means it'll increment at 135,
+then 235, etc."). From the moment a side fully captures a base, the base
+counts the resources the side gains (from all its bases) while that base
+is held and not contested ("every 100 "points" that are attained while
+that base is operational"). Every 100 (owner: "is the max 1600? If so,
+then we should do every 100 resources it gives +5%") the bonus grows a
+step. A base can't pass 16 steps: a side never gains more than 1,600.
 
 **Paused while contested.** While the enemy is capturing the base (its
 banner clicked, the 60 seconds running), the bonus is switched off for
-the holders and doesn't grow; the count it reached is kept. Defended (the
-banner clicked back), it comes on again at the steps it had and goes on
-growing.
+the holders, and resources gained in that time don't count toward it;
+the steps it reached are kept. Defended (the banner clicked back), it
+comes on again at exactly the steps it had and counts on from there.
+The same holds while a base is first being taken from neutral: nothing
+counts until the capture completes.
 
 **Lost when taken.** When the enemy fully captures the base, the count
 goes to zero for the old holders, and starts from zero for the new ones.
 
-**Worked through, N = 200, one base held.** Holding one base gives 10
-resources every 12 seconds, so 200 resources take 4 minutes: +5% after
-4 minutes, +10% after 8. Holding three bases, the side gains 10 every 6
-seconds, so each base held grows a step every 2 minutes. Holding all
-five, 30 a second: a step every 7 seconds. (The stock tick table:
-`BG_AB_TickIntervals` and `BG_AB_TickPoints` in `BattlegroundAB.h`.)
+**Worked through, a step per 100.** The side's income decides the pace
+of every base it holds (the stock tick table: `BG_AB_TickIntervals` and
+`BG_AB_TickPoints` in `BattlegroundAB.h`):
+
+| Bases held | Income | A step every | Steps in 3 minutes |
+|---|---|---|---|
+| 1 | 10 every 12 s | 2 minutes | 1 |
+| 2 | 10 every 9 s | 90 seconds | 2 |
+| 3 | 10 every 6 s | 1 minute | 3 |
+| 4 | 10 every 3 s | 30 seconds | 6 |
+| 5 | 30 every second | about 3 seconds | up to 16 (the match ends at 1,600) |
+
+The owner's first reading ("15 times ... +75% health? That feels
+wrong") counted three minutes at the five-base rate; with fewer bases
+it is far slower. At +5% a step a base tops out at +80% ("enough to
+quickly finish off a snowball, but also meaningful to fight over and
+defend"); at +1% a step, +16% (open question 1).
 
 ## Suggested Implementation Steps
 
@@ -76,19 +96,20 @@ five, 30 a second: a step every 7 seconds. (The stock tick table:
 
 ## Open Questions
 
-1. **The step: every 200 resources, or every 100?** At 100, holding three
-   bases gives a step every minute, and a side holding all five could
-   stack quickly.
-2. **Whose resources:** the side's whole gain since the capture (every
-   base it holds feeds every bonus, as the worked example assumes), or only
-   what that one base produces (each base growing at its own pace)?
-3. **A ceiling?** A long match could stack the bonus high: by 1,600
-   resources, a base held from the start would be at 8 steps (+40%) with
-   N = 200, or 16 steps (+80%) with N = 100. Is there a cap?
-4. **Who gets it:** every unit on the holding side (players, stand-ins,
-   buddies, their pets), anywhere on the map? And the aura: a new spell
-   per bonus, which the stock client can't describe in its tooltip (the
-   custom client can), or an existing spell with a similar effect?
+1. **How much a step gives: +5% or +1%?** The step is every 100
+   resources (answered). +5% was the first answer ("It's 80% with 100
+   resources ... perfect"); +1% was proposed after the three-minute
+   arithmetic, which counted at the five-base rate (worked example above).
+2. (Answered 2026-10-08) **Whose resources:** the side's whole income,
+   counted per base from that base's own capture, only while it is held
+   and uncontested.
+3. (Answered 2026-10-08) **A ceiling:** none beyond the match's own: 16
+   steps.
+4. (Answered 2026-10-08, "yep") **Who gets it:** every unit on the
+   holding side, anywhere on the map: players, stand-ins, buddies, pets.
+   Still open: the aura, a new spell per bonus (the stock client can't
+   describe it in its tooltip; the custom client can), or an existing
+   spell with a similar effect?
 5. **"Partially capturing":** does the pause start at the click on the
    banner (the stock "assaulted" state), or only while an enemy stands
    at it?

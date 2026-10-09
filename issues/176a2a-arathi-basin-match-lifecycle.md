@@ -44,6 +44,16 @@ resources the match ends, everyone is sent out, and the instance closes.
   stand-ins give way; a player may take over a stand-in already fighting;
   stand-ins level on their tracks after the match (617t); shirts by
   climate (Arathi Highlands: normal, shirt as it is).
+- **Stand-in slots and players** (owner, 2026-10-08: "as many slots for
+  stand-ins as there are players. When a player joins, then the next
+  stand-in to enter a graveyard is removed from the battle untill someone
+  leaves. Alternatively, if someone is already at a graveyard, their soul
+  can be temporarily shredded until they can have space to spawn in."): a
+  side has a fixed number of places. Stand-ins fill those players don't.
+  A player joining takes a stand-in's place: the next stand-in of that
+  side to reach a graveyard (dead) leaves the battle, or one already
+  waiting at a graveyard is held out at once ("its soul shredded"), until
+  a player leaves and a place opens.
 - **Win and restart.** The stock win (1,600 resources). Then one minute
   ("an interim of 1 minute maybe"), then a fresh match in the same
   instance: every base neutral, scores at zero, sides drawn again.
@@ -77,3 +87,6 @@ resources the match ends, everyone is sent out, and the instance closes.
    the restart in place changes how the server ends a battleground. The
    owner, 2026-10-08, for Alterac Valley: "unclear. will assess
    momentarily."
+5. **How many places a side:** "as many slots for stand-ins as there are
+   players" reads as the stock side size, 15, shared by players and
+   stand-ins. Is that it?

@@ -59,7 +59,12 @@ two ways in turn.
 
 **The river.** Not walkable on purpose. A stand-in that ends up in it
 (knocked back, cycloned, feared) walks out to the nearest point of the
-nearest road, and goes on from the crossing it reaches first.
+nearest road, and goes on from the crossing it reaches first. Back on
+the road it joins the first group it meets (owner, 2026-10-08: "they
+should form a dynamic group with the first group they meet. If that group
+could split into two groups of 3, then it will."): the two merge, and if
+the merged group is six and holds two trios' worth of roles (four damage,
+two healers), it splits into two trios.
 
 ## Suggested Implementation Steps
 

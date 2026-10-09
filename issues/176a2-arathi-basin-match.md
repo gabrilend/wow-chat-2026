@@ -136,11 +136,11 @@ designs and their questions tangled together.
 The ones that shape more than one sub-issue; each sub-issue lists its
 own.
 
-1. **How many stand-ins a side?** Stock Arathi Basin is 15 a side: five
-   trios. 617t doubled each side with stand-ins for buddies' battlegrounds
-   (30 a side). Is this scene five trios a side, or ten, with players
-   added on top and stand-ins giving way as in Alterac Valley (from 10 to
-   20 players)?
+1. (Answered 2026-10-08) **How many stand-ins a side?** "as many slots
+   for stand-ins as there are players": a side's places are shared, and
+   each player joining takes a stand-in's place, the next one to reach a
+   graveyard (176a2a). Whether the places number 15, the stock side, is
+   176a2a's question 5.
 2. **Tiers:** a match per ten-level tier, as Alterac Valley (176a1: the 20
    tier takes 11 to 20)? Stock Arathi Basin opens at level 20.
 3. **The playerbots module's own Arathi Basin tactics:** stand-ins are

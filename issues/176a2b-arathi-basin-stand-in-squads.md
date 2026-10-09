@@ -31,18 +31,35 @@ battleground tactics, use the power-ups, and have no squads.
   part-healer), of a random race and class of its side that can take the
   role.
 - **A tank per base taken.** Each time the side fully captures a base, a
-  tank stand-in appears at the home base and waits there. The next trio to
-  set out from home takes it in: four go out together, the tank leading
-  (176a2d's diamond).
+  tank stand-in appears at the home base and waits there ("one for every
+  capture. No limit. It waits at the home base until another party
+  departs the home base"). The next squad to set out from home takes it
+  in: they go out together, the tank leading (176a2d's diamond). Waiting
+  tanks all leave with the next departure.
 - **What they do.** Walk their route (176a2c); fight any enemy they meet
   (619's footwork); at a base that isn't theirs, click its banner and
   guard it until the capture completes, then go on. They never pick up
   the power-ups (speed, restoration, berserking).
-- **Respawning.** A dead stand-in rises at its graveyard as the stock
-  rules say. Out of the graveyard it does not wander: it waits a few
-  seconds for others rising there, forms a squad with them (or goes alone
-  if none come), and leaves by the graveyard's exits the alternating way
-  (176a2c), "one way or the other".
+- **Respawning: dynamic squads.** A dead stand-in rises at its graveyard
+  as the stock rules say. The owner, 2026-10-08: "they should try and form
+  dynamic squads. Two damage, one healer, though if there's an uneven
+  number of units respawning then they should just all group up if they
+  can't evenly divide into groups of two dps and one healer." So the
+  stand-ins rising together split into trios of two damage and a healer
+  when they divide evenly that way; when they don't, they all go as one
+  group. They leave by the graveyard's exits the alternating way (176a2c),
+  "one way or the other".
+- **Departures from home, on the resource tick.** Squads leave the home
+  base periodically: "maybe once every... 12 seconds? We could tie it to
+  when resources tick." A departure goes out on each of the side's
+  resource ticks (every 12 seconds holding one base, faster with more,
+  `BG_AB_TickIntervals`), taking whatever trio and waiting tanks are
+  ready.
+- **Guarding.** "at least one stays to guard, when a stand-in approaches
+  a base that's already theirs, then it guards as well. Otherwise, they
+  attack." After a capture, one of the squad stays at the base; a
+  stand-in whose route brings it to a base its side holds stays there
+  too; every other stand-in goes on attacking.
 
 ## Suggested Implementation Steps
 
@@ -58,14 +75,16 @@ battleground tactics, use the power-ups, and have no squads.
 
 ## Open Questions
 
-1. **Tanks: how many?** One per capture, every time (a base taken, lost
-   and taken again gives two), or one per base, or a cap per side?
-2. **Where the tank waits:** "spawns at your base": the home base
-   (Trollbane Hall or the Defiler's Den), or the base just taken?
-3. **Guarding:** after a capture, does the squad stay to defend the base
-   at all, or always move on? And if the side holds everything, do squads
-   push into the enemy's home graveyard, or wait at the bases?
+1. (Answered 2026-10-08) **Tanks:** one per capture, no limit.
+2. (Answered 2026-10-08) **Where the tank waits:** the home base, until
+   the next departure.
+3. (Answered 2026-10-08) **Guarding:** at least one stays; a stand-in
+   reaching a base its side holds guards it too; the rest attack. Still
+   open: when the side holds all five, do the attackers push into the
+   enemy's home graveyard?
 4. **Squads breaking up:** when one of a trio dies, do the two left go on,
    wait for it to come back, or fall back?
 5. **Respawn gathering:** how long does a risen stand-in wait at the
-   graveyard for others before going alone?
+   graveyard for others before its group sets out?
+6. **Departures with nobody ready:** on a tick with no trio at home but
+   tanks waiting, do the tanks wait for the next tick, or go alone?
