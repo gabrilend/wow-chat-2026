@@ -154,6 +154,178 @@ check(steps_in_three_minutes(12, 10) == 1, "one base held (10 every 12 s): 1 ste
 check(steps_in_three_minutes(6, 10) == 3, "three bases held (10 every 6 s): 3 steps")
 check(steps_in_three_minutes(3, 10) == 6, "four bases held (10 every 3 s): 6 steps")
 
+-- {{{ the owner's crossings, both readings
+local Crossings  = dofile(DIR .. "/src/lua-cc-test/lib/arathi-basin-crossings.lua")
+local Squads     = dofile(DIR .. "/src/lua-cc-test/lib/arathi-basin-squads.lua")
+local Formations = dofile(DIR .. "/src/lua-cc-test/lib/arathi-basin-formations.lua")
+local Match      = dofile(DIR .. "/src/lua-cc-test/lib/arathi-basin-match.lua")
+
+-- the owner's table: from each base, the places its exits lead to
+local OWNER = {
+    ["Stables"]     = { "Gold Mine", "Farm", "Blacksmith", "Lumber Mill" },
+    ["Farm"]        = { "Lumber Mill", "Stables", "Blacksmith", "Gold Mine" },
+    ["Gold Mine"]   = { "Farm", "Blacksmith", "Stables" },
+    ["Lumber Mill"] = { "Stables", "Blacksmith", "Farm" },
+    ["Blacksmith"]  = { "Gold Mine", "Stables", "Lumber Mill", "Farm" },
+}
+local function is_base(p) for _, b in ipairs(Crossings.BASES) do if b == p then return true end end return false end
+-- the bases reachable from `from` through crossings only (no other base, no home on the way)
+local function next_bases(g, from)
+    local seen, found, frontier = { [from] = true }, {}, { from }
+    while #frontier > 0 do
+        local nxt = {}
+        for _, p in ipairs(frontier) do
+            for _, e in ipairs(g[p] or {}) do
+                if not seen[e.to] then
+                    seen[e.to] = true
+                    if is_base(e.to) then found[e.to] = true
+                    elseif not e.to:find("home") then nxt[#nxt + 1] = e.to end
+                end
+            end
+        end
+        frontier = nxt
+    end
+    return found
+end
+for _, map in ipairs({ Crossings.shared, Crossings.literal }) do
+    print("crossings: the " .. map.name .. " reading")
+    local cg = Routes.graph(Crossings.as_roads(map))
+    local all = true
+    local missing = {}
+    for base, wants in pairs(OWNER) do
+        local got = next_bases(cg, base)
+        for _, w in ipairs(wants) do if not got[w] then all = false; missing[#missing + 1] = base .. " to " .. w end end
+    end
+    check(all, "every base reaches each place the owner's table names, through crossings only" .. (#missing > 0 and (": missing " .. table.concat(missing, "; ")) or ""))
+    local cm = Routes.new_match(cg, { alliance = NW, horde = SE })
+    local back = false
+    for _ = 1, 30 do
+        local r = Routes.walk(cm, "alliance", nil, nil, 20)
+        for k = 3, #r do if r[k] == r[k - 2] and #Routes.choices(cm, r[k - 1], r[k - 2]) > 1 then back = true end end
+    end
+    check(not back, "30 walks of 20 steps never turn back where another road was open")
+end
+-- }}}
+
+-- {{{ where a route ends
+print("routes: stopping at the enemy's home, or walking on")
+local stop_g = Routes.graph(Crossings.as_roads(Crossings.literal))
+local stop_m = Routes.new_match(stop_g, { alliance = NW, horde = SE }, { route_end = "stop" })
+local on_m   = Routes.new_match(stop_g, { alliance = NW, horde = SE }, { route_end = "walk on" })
+local stopped, passed = true, false
+for _ = 1, 30 do
+    local r = Routes.walk(stop_m, "alliance", nil, nil, 30)
+    for k = 2, #r - 1 do if r[k] == SE then stopped = false end end
+    local r2 = Routes.walk(on_m, "alliance", nil, nil, 30)
+    for k = 2, #r2 - 1 do if r2[k] == SE then passed = true end end
+end
+check(stopped, "\"stop\": no route goes past the enemy's home")
+check(passed, "\"walk on\": some route goes on out of the enemy's home")
+-- }}}
+
+-- {{{ squads
+print("squads: grouping")
+local function units(spec)                                   -- "ddh" -> damage, damage, healer
+    local out = {}
+    for k = 1, #spec do
+        local c = spec:sub(k, k)
+        out[k] = { id = spec .. k, role = (c == "d" and "damage") or (c == "h" and "healer") or "tank" }
+    end
+    return out
+end
+local function shape_of(groups) local t = {} for _, g in ipairs(groups) do t[#t + 1] = #g end return table.concat(t, "+") end
+check(shape_of(Squads.group(units("ddhddh"))) == "3+3", "four damage and two healers: two trios")
+check(shape_of(Squads.group(units("dddh"))) == "4", "three damage and a healer: one group of four")
+check(shape_of(Squads.group(units("dd"))) == "2", "two damage and no healer: one group")
+check(shape_of(Squads.merge(units("ddh"), units("ddh"))) == "3+3", "a trio meeting a trio: two trios")
+check(shape_of(Squads.merge(units("d"), units("ddh"))) == "4", "one climbing out of the river joins a trio: one group of four")
+
+print("squads: where the dead come back")
+local first = function() return 1 end
+local last  = function(n) return n end
+local side = Squads.new_side(NW)
+check(Squads.choose_place(side, { "Farm", "Stables" }, first) == NW, "a draw of 1 is home")
+check(Squads.choose_place(side, { "Farm", "Stables" }, last) == "Stables", "a draw of the last is a held base (Stables, in name order)")
+side.waiting = { { place = "Stables", units = {} } }
+check(Squads.choose_place(side, { "Stables" }, last) == NW, "a base with a group already waiting is skipped: home")
+side.waiting = { { place = NW, units = {} } }
+check(Squads.choose_place(side, {}, last) == NW, "home takes a second waiting group (they appear together)")
+local place, why = Squads.choose_place(Squads.new_side(SE), { "Farm" }, function() return 7 end)
+check(place == SE and why ~= nil, "a draw out of range falls back to home, and says so")
+
+for _, claimed in ipairs({ "assault", "capture" }) do
+    local sd = Squads.new_side(NW, { claimed = claimed })
+    sd.waiting = { { place = "Farm", units = units("ddh") } }
+    local moved_on_click = Squads.base_event(sd, "Farm", "assaulted")
+    local moved_on_capture = (moved_on_click == 0) and Squads.base_event(sd, "Farm", "captured") or 0
+    if claimed == "assault" then
+        check(moved_on_click == 1 and sd.waiting[1].place == NW, "claimed = assault: a banner click on their base sends the waiting group home")
+    else
+        check(moved_on_click == 0 and moved_on_capture == 1 and sd.waiting[1].place == NW, "claimed = capture: only the full capture sends them home")
+    end
+end
+
+print("squads: departures and tanks")
+for _, tanks in ipairs({ "home only", "any group" }) do
+    local sd = Squads.new_side(NW, { tanks = tanks })
+    Squads.captured(sd, { id = "tank1", role = "tank" })
+    for _, u in ipairs(units("ddh")) do Squads.died(sd, u) end
+    local placed = Squads.depart(sd, { "Gold Mine" }, last)          -- the trio is drawn to the Gold Mine
+    local tank_went = #placed[1].units == 4
+    if tanks == "home only" then
+        check(placed[1].place == "Gold Mine" and not tank_went and #sd.tanks == 1, "tanks = home only: the trio comes back at the Gold Mine; the tank keeps waiting at home")
+        local p2 = Squads.depart(sd, {}, first)                       -- nobody to send: the tank still waits
+        check(#p2 == 0 and #sd.tanks == 1, "a departure with no group: the tank does not go alone")
+    else
+        check(placed[1].place == "Gold Mine" and tank_went and #sd.tanks == 0, "tanks = any group: the tank is placed with the trio at the Gold Mine")
+    end
+    local appeared = Squads.wave(sd)
+    check(#appeared >= 1 and #sd.waiting == 0, "the graveyard wave: every waiting group appears (" .. tanks .. ")")
+end
+
+print("squads: players take stand-ins' places")
+for _, places in ipairs({ 15, 30 }) do
+    local sd = Squads.new_side(SE, { places = places })
+    sd.stand_ins = places                                            -- the side full of stand-ins
+    Squads.player_joined(sd)
+    check(Squads.died(sd, { id = "s1", role = "damage" }) == "held out", "places = " .. places .. ": a player joins; the next stand-in to die is held out")
+    check(Squads.died(sd, { id = "s2", role = "damage" }) == "pool", "places = " .. places .. ": the one after goes back to the pool")
+    check(Squads.player_left(sd) ~= nil and sd.held_out == 0, "places = " .. places .. ": the player leaves; the held-out stand-in may come back")
+end
+-- }}}
+
+-- {{{ formations
+print("formations")
+local tri = units("ddh")
+check(Formations.shape_for(tri, false) == "triangle", "a trio walks as a triangle")
+local dia = units("tddh")
+check(Formations.shape_for(dia, false) == "diamond", "a tank and a trio walk as a diamond")
+check(Formations.shape_for(tri, true, { narrow = "line" }) == "line" and Formations.shape_for(tri, true, { narrow = "keep" }) == "triangle", "narrow ground: squeeze into a line, or keep the shape (both built)")
+check(Formations.shape_for(units("dh"), false, { small = "follow" }) == "follow", "a squad of two may just follow (small = follow)")
+local spots = Formations.slots(dia, "diamond", 0, 0, 0, { spacing = 5 })     -- heading +x
+check(math.abs(spots["tddh1"][1] - 5) < 1e-9 and math.abs(spots["tddh4"][1] + 5) < 1e-9, "diamond, spacing 5, heading east: the tank 5 yards ahead, the healer 5 behind")
+local turned = Formations.slots(tri, "triangle", 10, 10, math.pi / 2, { spacing = 4 })   -- heading +y
+check(turned["ddh3"][2] < 10 and turned["ddh1"][2] > 10, "a triangle turned north: the damage ahead (north), the healer behind")
+check(Formations.calm(0, 0, { { 30, 0 } }, { calm_range = 20 }) and not Formations.calm(0, 0, { { 30, 0 } }, { calm_range = 40 }), "an enemy 30 yards off: calm at range 20, not at range 40")
+-- }}}
+
+-- {{{ the match
+print("the match")
+local m1 = Match.new(function() return 1 end)
+local m2 = Match.new(function() return 2 end)
+check(m1.homes.alliance == NW and m2.homes.alliance == SE, "the draw puts the alliance in either corner")
+for t = 1, 200 do if Match.add_score(m1, "horde", 10, t) then break end end
+check(m1.winner == "horde" and m1.ended_at == 160, "the horde wins on reaching 1,600 (at the 160th tick of 10)")
+check(Match.next(m1, 219) == nil, "59 seconds later: still between matches")
+for _, players in ipairs({ "stay", "out" }) do
+    local mm = Match.new(first, { interim_players = players })
+    Match.add_score(mm, "alliance", 1600, 0)
+    local nm, where = Match.next(mm, 60, last)
+    check(nm and nm.number == 2 and nm.score.alliance == 0 and where == (players == "out" and "invited back" or "stayed in"),
+        "interim_players = " .. players .. ": a fresh match after one minute; players " .. (where or "?"))
+end
+-- }}}
+
 print("")
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)

@@ -74,8 +74,16 @@ end
 -- naming, of the roads there other than the one arrived by, the next to
 -- take. A squad that appeared at a place arrived by no road ("") and may
 -- take any. Every pointer starts at the first road in name order.
-function Routes.new_match(g, homes)
-    local m = { g = g, homes = homes, pointer = {}, toward = {} }
+--
+-- opts.route_end (176a2c question 7, both built):
+--   "stop"     (default) a route ends on reaching the enemy's home
+--   "walk on"  the enemy's home is one more place: the squad takes the
+--              rule on from there, out by another road
+function Routes.new_match(g, homes, opts)
+    opts = opts or {}
+    local route_end = opts.route_end or "stop"
+    assert(route_end == "stop" or route_end == "walk on", "Routes.new_match: route_end is \"stop\" or \"walk on\"")
+    local m = { g = g, homes = homes, pointer = {}, toward = {}, route_end = route_end }
     for side, home in pairs(homes) do
         for other, h in pairs(homes) do if other ~= side then m.toward[side] = h end end
         assert(m.toward[side], "Routes.new_match: two sides with two homes are needed")
@@ -123,7 +131,7 @@ function Routes.walk(m, side, start, came_from, steps)
     local at, from = start or m.homes[side], came_from or ""
     local route = { at }
     for _ = 1, steps or 12 do
-        if at == m.toward[side] and #route > 1 then break end
+        if m.route_end == "stop" and at == m.toward[side] and #route > 1 then break end
         local nxt = Routes.next_place(m, side, at, from)
         if not nxt then break end
         route[#route + 1] = nxt

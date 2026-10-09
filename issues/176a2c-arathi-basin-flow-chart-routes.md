@@ -43,8 +43,17 @@ yet** (no stand-ins, no running scene):
   7 over its four other roads; the same match repeats exactly; each side's
   pointers are its own; routes start at the drawn home or at a base.
 
-It still runs on the bot module's base-to-base roads; the owner's
-crossings (the table below) replace them once confirmed and recorded.
+It runs on any map. The owner's crossings are built in two readings in
+`src/lua-cc-test/lib/arathi-basin-crossings.lua` (question 6): "shared"
+(forks naming the same places are one crossing; each home one road, to
+its near base) and "literal" (every exit its own fork; each home the bot
+module's three roads). Both pass the test that every base reaches each
+place the owner's table names, through crossings only. Question 7 is
+built both ways (`route_end` = "stop" or "walk on"). The comparison:
+under "shared" every squad leaving home reaches its own near base first;
+under "literal" they split evenly over three first bases. The roads'
+points still come from the bot module's paths until the crossings'
+roads are recorded in game.
 
 Before this, not built. The bot module's bots pick their next base by its own
 priorities and walk its 15 road paths between the two home bases and the

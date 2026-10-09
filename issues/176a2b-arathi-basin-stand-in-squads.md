@@ -21,7 +21,19 @@ powerups. They just fight enemy units and attempt to cap bases."
 
 ## Current Behavior
 
-Not built. Bots in a stock match each play alone by the bot module's
+**2026-10-08: the squad rules are built on paper; no stand-in exists to
+follow them yet.** `src/lua-cc-test/lib/arathi-basin-squads.lua`: grouping
+(trios, or one group when uneven), the river merge (six that make two
+trios split), departures every 12 seconds with the place drawn among held
+bases and home (one waiting group a place, home stacking, home as the
+fallback, said so), invisible until the graveyard wave, tanks waiting at
+home, players' places. Open questions built both ways: question 8
+(`claimed` = "assault" or "capture"), question 9 (`tanks` = "home only"
+or "any group"). Checked by `scripts/test-arathi-basin-rules`;
+`scripts/compare-arathi-basin-variants` plays fixed scenarios under each reading and writes the results (ten simulated minutes: tanks wait 16.8 seconds on
+average under "home only", 1.6 under "any group").
+
+Before this, not built. Bots in a stock match each play alone by the bot module's
 battleground tactics, use the power-ups, and have no squads.
 
 ## Intended Behavior

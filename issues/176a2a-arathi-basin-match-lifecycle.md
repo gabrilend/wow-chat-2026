@@ -21,7 +21,15 @@ a single person queues."
 
 ## Current Behavior
 
-Not built. A stock Arathi Basin match opens only when both sides have
+**2026-10-08: the match's rules are built on paper; no server runs them
+yet.** `src/lua-cc-test/lib/arathi-basin-match.lua`: the home draw (either
+side in either corner), the win at 1,600, the next match one minute after,
+with question 1 built both ways (`interim_players` = "stay" or "out").
+Players taking stand-ins' places, with question 5 built both ways
+(`places` = 15 or 30), is in `arathi-basin-squads.lua`. Checked by
+`scripts/test-arathi-basin-rules`; `scripts/compare-arathi-basin-variants` plays fixed scenarios under each reading and writes the results.
+
+Before this, not built. A stock Arathi Basin match opens only when both sides have
 enough players queued, at most 15 a side; the Alliance always starts at
 Trollbane Hall (north-west, near the Stables) and the Horde at the
 Defiler's Den (south-east, near the Farm). When a side reaches 1,600

@@ -19,7 +19,16 @@ tank in front with the healer behind. So, triangle or diamond shape."
 
 ## Current Behavior
 
-Not built. The bot module's bots in a group follow their leader in a
+**2026-10-08: the shapes are built on paper; no squad walks them yet.**
+`src/lua-cc-test/lib/arathi-basin-formations.lua`: triangle, diamond and
+line, each member's spot from the squad's middle and its road's heading,
+and the calm check. Open questions built both ways: question 1 (`spacing`
+3 or 5 yards, `calm_range` 20 or 40), question 2 (`narrow` = "line" or
+"keep"), question 3 (`small` = "line" or "follow"). At spacing 5 a
+diamond is 10 yards across and its healer 10 yards from the tank; at
+spacing 3, 6 yards. Checked by `scripts/test-arathi-basin-rules`.
+
+Before this, not built. The bot module's bots in a group follow their leader in a
 loose cluster, or walk alone in battlegrounds.
 
 ## Intended Behavior
