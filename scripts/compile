@@ -297,6 +297,9 @@ module_wanted() {
 module_cmake_settings() {
     local -A seen=()
     local mod_dir mod_name
+    # one group, sorted as a whole: the folders in the trees, then the
+    # cached modules no tree holds any more
+    {
     for mod_dir in "${AC_CODE_DIR}"/modules/*/ "${DIR}"/modules/*/; do
         [[ -d "${mod_dir}src" ]] || continue
         mod_name=$(basename "${mod_dir}")
@@ -308,7 +311,25 @@ module_cmake_settings() {
         else
             echo "${variable}=disabled"
         fi
-    done | sort
+    done
+    # Modules the last configure knew that have since left the tree (install
+    # deletes another profile's modules): switched off, so the cached build
+    # stops compiling files that are gone. Without this, a module removed
+    # from the tree changed no setting, cmake didn't re-run, and the build
+    # failed on its missing sources (cc-test's first install, 2026-10-08:
+    # "no such file or directory: .../mod-aoe-loot/src/aoe_loot.cpp").
+    local cache="${BUILD_DIR_SHADOW}/CMakeCache.txt"
+    if [[ -f "${cache}" ]]; then
+        local cached_var cached_dir
+        while IFS= read -r cached_var; do
+            cached_dir="${cached_var#MODULE_}"
+            cached_dir="${cached_dir,,}"
+            # still in a tree: already listed above
+            [[ -n "${seen[${cached_dir}]:-}" ]] && continue
+            echo "${cached_var}=disabled"
+        done < <(sed -n 's/^\(MODULE_MOD-[A-Z0-9-]*\):STRING=.*/\1/p' "${cache}")
+    fi
+    } | sort
 }
 # }}}
 

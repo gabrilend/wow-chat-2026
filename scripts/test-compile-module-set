@@ -54,6 +54,8 @@ for mod_name in mod-ale mod-aoe-loot mod-fireworks-on-level mod-playerbots mod-s
     mkdir -p "${FAKE}/source/modules/${mod_name}/src"
 done
 AC_CODE_DIR="${FAKE}/source"
+# the build's memory: no cache for the first checks (a fresh build)
+BUILD_DIR_SHADOW="${FAKE}/build"
 # mod-buddies lives in the project's own modules/ folder (B036 copies it in)
 # }}}
 
@@ -83,6 +85,20 @@ for PROFILE in basic cc-test beta vanilla; do
         fail=$((fail + 1))
     fi
 done
+# A module the last configure knew, gone from the tree (install removes
+# another profile's modules): it must come out switched off, or the build
+# keeps compiling its missing files (cc-test's first install, 2026-10-08).
+mkdir -p "${FAKE}/build"
+printf 'MODULE_MOD-ALE:STRING=default\nMODULE_MOD-AOE-LOOT:STRING=default\nMODULE_MOD-GONE-NOW:STRING=default\n' > "${FAKE}/build/CMakeCache.txt"
+rm -rf "${FAKE}/source/modules/mod-aoe-loot"
+PROFILE="cc-test"
+gone=$(module_cmake_settings | grep -E '^MODULE_MOD-(AOE-LOOT|GONE-NOW)=' | sort | tr '\n' ' ')
+if [[ "${gone}" == "MODULE_MOD-AOE-LOOT=disabled MODULE_MOD-GONE-NOW=disabled " ]]; then
+    echo "  [✓] modules the build remembers but the tree lost are switched off: ${gone}"
+else
+    echo "  [✗] modules the build remembers but the tree lost: got '${gone}', expected both disabled"
+    fail=$((fail + 1))
+fi
 rm -rf "${FAKE}"
 echo "Profiles with the wrong module set: ${fail}"
 # }}}
