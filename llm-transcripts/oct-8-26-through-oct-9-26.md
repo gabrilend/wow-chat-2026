@@ -1,6 +1,6 @@
 # Conversation Summary: a4440faa-87b5-4fc6-b59d-3d898fd95767
 
-Generated on: 2026-10-08 22:18:38
+Generated on: 2026-10-09 00:03:21
 Models: claude-opus-5-5
 
 ## Contents
@@ -3478,6 +3478,555 @@ owner's.
 
 Which first: the stand-in maker as planned, or the automatic first cut of
 smaller areas?
+
+--------------------------------------------------------------------------------
+
+### User Request 38
+
+great let's do it. Then, let's make AB work. Then, let's ensure the test-patches
+are able to correctly apply. Then, let's do the stand-in maker, which honestly
+might need to go earlier in the test. Then, let's ensure that all the
+monster-spawn areas are properly identified by centroid location. Then, let's
+build various statistics gatherers and dashboard viewers for programs, machines,
+and LLMs to view/ponder. Then, let's redesign our whole life to fit the paradigm
+of this game.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 38
+
+> Starting with the first cut of smaller areas. The rest of your list is noted
+> in order, with one dependency up front: Arathi Basin can't run in game until
+> stand-ins exist, so the stand-in maker will likely have to move ahead of it.
+> I'll say so when we get there.
+>
+> The existing area generator already reads the server's map files, so I'll
+> build on its reader. Checking what it extracts and whether ground heights are
+> reachable from the same files.
+
+> Segmentation fault in the worker. Running it on its own to find where.
+
+> The header reads correctly, so the crash is later. Running the worker with a
+> progress line per map file.
+
+The crash comes after reading the faction file, inside a loop that runs fine on
+its own. That points at LuaJIT's compiler rather than my logic. Testing with the
+compiler switched off.
+
+--------------------------------------------------------------------------------
+
+*Prompt is too long*
+
+--------------------------------------------------------------------------------
+
+### User Request 39
+
+/compact
+
+--------------------------------------------------------------------------------
+
+### Session Recap (written by the harness, not by either speaker)
+
+This session is being continued from a previous conversation that ran out of
+context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent:
+   The user (gabrilend, owner of the wow-chat-2026 / "Everland Ghostsong"
+   project) moved through many requests this session:
+   - **Test patches:** find which project owns test-patches. Answer: this one,
+     with issue 176a under the cc-test profile 176; the client half is W-client
+     issue 109.
+   - **Scenes:** plan and then build the Alterac Valley test scene (176a1) and
+     the Arathi Basin test scene (176a2, with sub-issues a to f).
+   - **cc-test:** set up the profile and get it compiling.
+   - **Fixes:** the DK soul trade, the basic worldserver crash, and the GM
+     command reference (.txt plus HTML generated from it).
+   - **Plans:** experience counted in kills (178), the hearthstone network
+     (179), quests to stand-ins (180), richer drops (181), legendaries (182),
+     Gnomeregan city by thirds (177), combat footwork (619), and hand-drawn
+     battle areas (617e12).
+   - **Legendaries:** built and installed.
+   - **Current:** the first cut of smaller roaming areas (no AI). The user's
+     ordered plan: "great let's do it. Then, let's make AB work. Then, let's
+     ensure the test-patches are able to correctly apply. Then, let's do the
+     stand-in maker, which honestly might need to go earlier in the test. Then,
+     let's ensure that all the monster-spawn areas are properly identified by
+     centroid location. Then, let's build various statistics gatherers and
+     dashboard viewers for programs, machines, and LLMs to view/ponder. Then,
+     let's redesign our whole life to fit the paradigm of this game."
+   - **Questions:** the user wants remaining open questions asked 5 at a time,
+     diverse, from anywhere in the project.
+
+2. Key Technical Concepts:
+   - **Patch system:** the AzerothCore 3.3.5a patch system has three kinds of
+     patch:
+     - B-patches: source patches, applied and reverted around each build;
+     - C-patches: config, gated by `CONFIG_PROFILES`;
+     - E-patches: install steps, using the cp-apply / cp-revert idiom with UpdateFetcher registration.
+   - **Profiles:** basic, cc-test, vanilla, beta, release, alpha. All but alpha
+     share source-beta and the build-shadow build folder.
+   - **Lua engine (ALE):** `RunCommand` queues commands; they run on the next
+     world update. Events used: `PLAYER_EVENT_ON_LOOT_ITEM` 32,
+     `ON_STORE_NEW_ITEM` 53, `ON_EQUIP` 29, `ON_CAN_INIT_TRADE` 48, `ON_LOGIN`
+     3.
+   - **The `command` table:** its rows override a command's code-level security.
+     `rbac::` permission numbers (607, 522) are unreachable by any account
+     level.
+   - **`spell_dbc`:** rows override Spell.dbc entries in place
+     (DBCDatabaseLoader: "If exist in DBC file override from DB").
+   - **Reading game data:** DBC reading (WDBC header). Map files are version 9:
+     an AREA section, and an MHGT height section with V9 129×129, stored as
+     float, uint16 or uint8 scaled.
+   - **LuaJIT pitfall:** casting a Lua string to an FFI pointer crashes compiled
+     code. Copy the data into an `ffi.new` buffer first.
+   - **Encounter list:** `DungeonEncounter.dbc` (id, map, difficulty, …, name
+     at field 5) plus `instance_encounters` (creditType, creditEntry) is the
+     reliable list of raid bosses.
+   - **Item sets:** the server counts set pieces by the item's own `ItemSet`
+     field (`AddItemsSetItem`).
+   - **Rotor-router routing:** a pointer per side, per crossing, per road
+     arrived by. "Any road but the one just came by."
+   - **Commits:** made through `commit-own-changes`
+     (`/home/ritz/programming/ai-stuff/scripts/`). Edits made by script or sed
+     are claimed with `claim-own-change`. Issues are checked with
+     `validate-issues`.
+
+3. Files and Code Sections (main ones created/modified this session; all
+   committed unless noted):
+   - **Issues:**
+     - 176 (cc-test profile table, Warden log-only, buddy module included, answered Qs);
+     - 176a (test scenes: run alone then together, test-patch vs cc-patch built by tool, Lua coroutine queues, combat footwork pointer to 619);
+     - 176a1 (AV);
+     - 176a2 and 176a2a–f (AB, with many decisions recorded);
+     - 177, 178 (XP: 10×L kills per level, kill worth `max(0, 1 + d·max(1,floor(L/10))/L)`, so +10% per level from level 10 on);
+     - 179 (hearthstone: 2 silver × level per bar of rested XP, buddies free with a shared cooldown);
+     - 180 (quests removed; stand-in errands; class quest spells to trainers like beta's E013; all doors unlocked; DK skip auto-selected);
+     - 181 (green/blue ×2 from non-bosses; rare and rare-elite loot rolled twice; epics ×5 from ordinary monsters only);
+     - 182 (legendaries built, E054 installed; next idea: scale from ilvl 80 to 120 by the highest equipped non-legendary item, recalculated on equip, stats + damage + effects);
+     - 617e12 (hand-drawn battle areas, AI-drawn polygons, town rule everywhere, empty places use the arc);
+     - 619 (combat footwork);
+     - updates to 617t, 617c2, 617l (guild names past 24: raise limit), 718, 155i, 155j, 136.
+   - **scripts/compile:**
+     - `module_wanted`, `module_cmake_settings` (including disabling modules the CMake cache knows but the tree lost), `PATCH_PROVIDED_MODULES { ["mod-buddies"]="B036" }`;
+     - patches.sh is sourced before `check_modules_configured`;
+     - module flags are passed to cmake, and a reconfigure happens when the set differs.
+     - **UNCOMMITTED/unclear:** the `steady_patched_mtimes` function plus its call before `do_build`. It exists in the scratch file `/tmp/claude-1000/-mnt-mtwo-games-azeroth-core-wow-chat-2026/a4440faa-87b5-4fc6-b59d-3d898fd95767/scratchpad/compile.steady-mtimes`. scripts/compile was restored to HEAD because the user's build was running. A background watcher (bzgjsh9h0) was to restore the new version when "scripts/compile --profile cc-test" exited; whether it fired is unconfirmed.
+   - **scripts/test-steady-mtimes:** written, 6 checks pass against the scratch
+     compile, NOT committed.
+   - **Profile registration** (cc-test added to each): scripts profiles,
+     install, update, switch, authserver, worldserver, redownload-source,
+     apply-patches, set-active-realm (realm 6), verify-build,
+     test-source-patches, test-patched-syntax (also now checks files inside
+     folders a patch adds), test-profile-config-gates (`EXPECT_cc_test`, 19
+     checks), test-compile-module-set.
+   - **Patches and config:**
+     - patches/B002 (the revert removes `mod-playerbots.cmake` when it carries B002's header);
+     - patches/patches.sh (cc-test lists: B002 B004 B009 B012-B015 B017 B018 B020-B023 B026 B027 B036 B037 B042 B044-B048 B050; E001 E004 E006 E042 E044 E045 E050 E052 E053; basic has E053 and E054 added);
+     - patches/E-patches.sh (`_profile_db_name` gives cc-test → `_cc_test`; `_buddy_sql_src` maps cc-test to basic's sources; E053 command help; E054 legendaries);
+     - config patches C001/C002/C003 (gated away from cc-test)/C008 (gm 0)/C010/C016/C019/C023/C025/C027/C029/C030, and the new C033-cc-test-warden-kicks.sh (`WARDEN_FAIL_ACTION=0`).
+   - **GM commands:**
+     - config/custom-gm-commands.lua (28 custom commands, with a `beside` field);
+     - scripts/lib/command-tables.lua plus .info.md (C++ command table reader; handles 5-field rows and file-level tables);
+     - generate-custom-command-help-sql → sql/{basic,cc-test}/db_world.src/34-custom-command-help.*;
+     - generate-gm-command-reference → docs/gm-commands.txt;
+     - render-gm-command-reference-html → docs/HTML/gm-commands.html;
+     - test-gm-command-reference (118 checks).
+   - **Death knight souls:** src/lua-basic/death-knight-souls.lua (`give_soul`
+     now staged with `CreateLuaEvent` waits, `COMMAND_SETTLE_MS=1000`) and
+     scripts/test-dk-soul-trade (14 checks).
+   - **Arathi Basin Lua rules:**
+     - src/lua-cc-test/lib/arathi-basin-routes.lua, arathi-basin-bonuses.lua, arathi-basin-crossings.lua (two readings: "shared", "literal"), arathi-basin-squads.lua, arathi-basin-formations.lua, arathi-basin-match.lua;
+     - data/arathi-basin-roads.lua (from generate-arathi-basin-roads);
+     - scripts/test-arathi-basin-rules (64 checks);
+     - scripts/compare-arathi-basin-variants;
+     - the report artifact https://claude.ai/artifact/BRN1s6jpZj49ei8fQM4kJQ.
+   - **Legendaries:**
+     - scripts/generate-basic-legendaries-sql → sql/basic/db_world.src/35-legendaries.*: items 1820001 (Atiesh dummy) and 1820002–1820006 (Warglaives MH/OH, Thori'dal, Val'anyr, Shadowmourne at ilvl 80, req 60); spell_dbc overrides 41435, 71904, 71905, 73422; reference loot 1820000 on 42 bosses of raids 309/409/469/509/531;
+     - src/lua-basic/legendaries.lua (Atiesh swap);
+     - scripts/test-basic-legendaries (37 checks).
+   - **Profile docs:** docs/profiles/cc-test.md and index.md (infrastructure
+     table corrected), docs/table-of-contents.md, CLAUDE.md profile list.
+   - **CURRENT, uncommitted: scripts/generate-buddy-subareas** (luajit, one
+     worker process per map):
+     - squares get area labels and steepness: the share of adjacent V9 sample pairs with slope > 1.2;
+     - monsters = `npcflag=0`, type≠8, not unselectable/non-attackable (`unit_flags & 33554434 = 0`), and a faction template where `(our & 6)==0 and (friend & 6)==0`;
+     - seeds = kind groups (beast family, or type+faction) with ≥3 spawns within 3 squares;
+     - Dijkstra growth: cost 1 + 6×steep;
+     - merge same-kind neighbours; parts under 25 squares join the neighbour with the longest border;
+     - outputs sql/basic/db_world.src/36-buddy-subareas.{apply,revert}.sql (tables `buddy_subarea`, `buddy_subarea_square`; markers MARKER_E055_APPLY/REVERT), PNG pictures in tmp/shared-memory/subareas/<map>-<area>.png at 12 px per square, and summary.lua;
+     - files are copied into ffi buffers;
+     - last run: 288 named areas split into 1219 parts, 178,973 squares, 3.2 MB SQL, 11.8 s.
+     - Valley of Trials: 3 parts (Mottled Boar 136 squares, Scorpid Worker 142, Vile Familiar/Felstalker 49). Coldridge 4, Northshire 3, Shadowglen 4. Deathknell 1 (dominated by Wild Turkey). Camp Narache 16 squares, unsplit.
+
+4. Errors and fixes:
+   - **Soul trade failed:** `RunCommand` is queued, so results were checked too
+     early. Fixed with staged events plus a test.
+   - **The basic worldserver crashed:** "[1054] Unknown column
+     'dealt_in_batch'". Cause: stale active SQL for E023 (and E051–E053 never
+     copied in). The user ran the four steps.
+   - **cc-test build failed** compiling mod-aoe-loot, which install had removed.
+     The CMake cache was unchanged, so the build didn't reconfigure. Fixed:
+     modules the cache knows but the tree lost are now disabled.
+   - **The user hit "syntax error near `}`" in compile:** they ran it mid-edit;
+     it parsed after the fix.
+   - **I edited compile while the user's build was running.** I restored the
+     exact HEAD bytes and saved the new version to scratch.
+   - **Test mistakes:** arathi expectations (Stables steps; 565→+25%),
+     legendaries roll count (9).
+   - **LuaJIT segfault in generate-buddy-subareas** (fine with `-joff`): fixed
+     by copying file data into ffi buffers.
+   - **Hostile test** counted Horde townsfolk (Den Grunt, Lazy Peon). Fixed: a
+     monster now belongs to and befriends neither faction.
+   - **Legendary weapon references** picked test items. Now only obtainable
+     weapons count (in a loot table or on a vendor).
+   - **The Warglaives' set bonus** wasn't scaled. Triggered spells are now
+     followed recursively.
+
+5. Problem Solving:
+   - **Disk:** was 100% full (709 MB free). I suggested the user delete the
+     unused build-beta-shadow (3.5 GB) and build-release (2.4 GB); unknown
+     whether they did.
+   - **No rmail inbox:** pages can't send feedback without a local service. This
+     is an open question.
+   - **Stand-in maker:** design researched but not written:
+     - reuse buddies_create.cpp's `CreateBuddy` flow (name, looks, `BuddyLearnEverything`, `BuddyGiveStartingKit`, `BuddyGemKit`);
+     - needs owner-less stand-in accounts (via `AccountMgr::CreateAccount`, hidden like the BUDDY accounts in buddies_clan.cpp);
+     - kit bags currently copy the owner's bags (`GiveBags`);
+     - talent shapes come from buddy-talent-data.lua / `BuddyPlanShape`;
+     - log in with `PlayerbotMgr::AddPlayerBot`.
+
+6. All user messages (paraphrased where long; key quotes verbatim):
+   - Find whether this project or the W client is responsible for test-patches;
+     first AV with 40 stand-ins plus players; work through pathfinding.
+   - Run scripts call the custom client from scripts/connect-parameters.json;
+     change "no playerbots"; run each test individually then all; stand-ins have
+     stats/level/spec and level until selected as buddies; (a) side grows past
+     40; "cave."
+   - Stand-ins step up per use, maybe 1 level per match, parallel tracks;
+     players can play one, any race/class (blood elf druid).
+   - (a) take over a stand-in; all combos yes; "what does it do" (the connect
+     file).
+   - realmlist.wtf pattern; both modes (singleplayer host, friends join; or the
+     owner's server); shareable test patches.
+   - test-patches → cc-patches converted nearly identically, idempotent.
+   - Private/public/LAN hosting; cc-patch built by tool; tiers = instances;
+     scaling of stand-ins past 10–20 players → buddy-bots; 10 min wait,
+     barred gates, goblin balloons (long verbatim paragraph kept in 176a1).
+   - Tier every 10 levels, NPCs scaled; same rules as AV; sealed test
+     virtualizes once; balloons readable by the other side; goblins lie.
+   - Ask all 8 questions at once; then answers (11–20; 2 hours rolling; Lua
+     coroutines; server plays them when public; combat footwork paragraph; both
+     logs in the debug step; "huh?"; movement coroutines).
+   - Shirts in AV, none in Stranglethorn; barred gates/defensive line/horns
+     paragraph.
+   - Climate list (Silithus, Northrend, Hellfire normal, Tirisfal?, Gnomeregan
+     city by thirds, Ragefire hot, Blackrock warm, tram cold, swimming);
+     footwork is a playerbots patch; "unclear. will assess momentarily."
+   - Gnomeregan dump into solo dungeon with no regen and potions without
+     cooldown; warm = off for now; swim off for 2–3 minutes; "yes please begin
+     and don't stop until you absolutely can't go anymore further along."
+   - Warden: log only; ports shared (one server); cc-test should include the
+     buddy module.
+   - GM command docs (.txt plus HTML, neuron reference, nested); "I tried to
+     give a soul to the lich king and it didn't work"; .txt and HTML parsed from
+     the text.
+   - Arathi Basin plans (long); answers on stand-in squads, bonuses (each base
+     tracked separately, 100 per step, 5%), places, tanks, guarding.
+   - "can we build that test patch"; let's try 5%; global pool (later replaced);
+     tanks wait, party every 12 s.
+   - Respawn redesign (increment-time spawns at held bases, invisible until
+     wave, home fallback); "forward" = any road not just come from; crossing
+     description.
+   - "build it as described … build two or more implementations … explain
+     them when we present our report to our client".
+   - "yay can we try running the server?"; "can you tell me how to compile the
+     test server?"; build-failed paste; "is working now".
+   - Incremental builds ("ensure that we don't re-compile things that wouldn't
+     have changed… I wish someone would change me :(").
+   - Crash paste after guild creation; guild name length/dashes/MOTD idea.
+   - Paste of the E-step run output; "can we make exp rewards scale linearly
+     with level?"; "the server seems to be working."
+   - Valley of Trials three zones; town rule.
+   - XP numbers (+5 extra kills worth; level 50 gives 50; one kill level one);
+     clan XP always; group of 4 closest sticky; AI-drawn areas with listed
+     inputs; town rule everywhere (Crossroads); split everywhere; empty → arc;
+     the boar answer ("…distance spectrum wheel iron isotope in red
+     notebook").
+   - Too fast, 1/10th; hearthstone network question.
+   - Table request; motto "basically... level as hard as you can with as minimal
+     of gear as you can, and fight to the last."; remove quests, stand-ins
+     quest; innkeeper one-use stones (60 s); price per rested bar × level;
+     homes set; buddies cast too.
+   - +5 levels = +5× a level-one bonus (500→550); buddy stones free; 1 gold
+     per bar at 50; share cooldown; class quests to trainers; all doors
+     unlocked; DK skip auto; stand-in errands; drops ×2/rares/epic ×5;
+     legendaries for fun.
+   - "don't worry I have nothing but affection towards blizzard. I'm making this
+     as an homage to them, that I will give to them free of charge."
+   - Every 10 levels the bonus doubles (+25×); legendaries' long design (on
+     hold) then "for now" existing legendaries scaled to 60, rare raid drops;
+     same rule down; price (a); epics ordinary only; rares and rare elites
+     doubled; drops from everything or raid bosses 1 in 10; "1 in 10 kills has
+     even one per raid."
+   - Leave out Kael'thas weapons and Andonisus; scale effects now and accept bad
+     tooltips; "nah probably"; any from all bosses, once in ten runs.
+   - Originals untouched; Atiesh dummy transforms.
+   - Custom client shows the correct version; (a) stays generic; "yes please"
+     (build legendaries).
+   - "ask me remaining open questions 5 at a time… diverse"; legendaries ilvl
+     80 scaling to 120 by highest equipped; "done" (E054); "what else is
+     standing in our way?"
+   - Check scaling on equip; "yay okay let's work on that" (stand-in maker);
+     clan XP "ask me again later"; rares (a); Gnomeregan "the dungeon is
+     temporarily filled with friendly NPCs"; guild names (a); "both. yes."
+   - Asked status of zone subdivision ("we need to have much smaller areas than
+     just what the world decides is one").
+   - Latest: "great let's do it. Then, let's make AB work. Then…
+     test-patches… stand-in maker… monster-spawn areas… centroid…
+     statistics gatherers and dashboard viewers… redesign our whole life…"
+   - Standing constraints from CLAUDE.md:
+     - the user runs builds ("let me run the compilation scripts. I want to see the output");
+     - don't change the working directory;
+     - commit only own lines, with transcripts riding along;
+     - never refer to issues or functions by number or name when talking to the user;
+     - credentials ritz/menardi, local MySQL on 3307.
+
+7. Pending Tasks (in the user's order):
+   1. Finish the first cut of subareas:
+      - a test (scripts/test-buddy-subareas);
+      - install step E055 for basic (and add it to patches.sh);
+      - update issue 617e12's Current Behavior;
+      - claim the files and commit;
+      - report to the user, including the picture.
+      - Later: runtime use by buddy roaming (C++, needs a build), and the AI pass.
+   2. Make AB work. This depends on stand-ins and the scene runner; the stand-in
+      maker may need to go first.
+   3. Ensure test-patches apply correctly.
+   4. The stand-in maker (design researched).
+   5. Monster-spawn areas identified by centroid.
+   6. Statistics gatherers and dashboards.
+   - Also: confirm whether scripts/compile now holds the steady-mtimes version
+     (scratch compile.steady-mtimes; watcher bzgjsh9h0). If so, commit compile
+     plus scripts/test-steady-mtimes; if not, restore it once no build is
+     running.
+   - Open questions to ask 5 at a time, diverse, later: clan XP share, the
+     crossings map points, the legendary scaling step, and others across the
+     issues.
+
+8. Current Work:
+   Building the automatic first cut of smaller roaming areas.
+   scripts/generate-buddy-subareas was written and debugged (LuaJIT buffer fix,
+   monster faction fix, 12 px pictures). It was run for maps 0 and 1: "288 named
+   areas split into 1219 parts (178973 squares)", SQL 3.2 MB. The starting
+   valleys came out:
+   - Valley of Trials: 3 parts (boars, scorpids, demons);
+   - Coldridge: 4 (troggs, wolves, Frostmane trolls, boars);
+   - Northshire: 3;
+   - Shadowglen: 4;
+   - Deathknell: unsplit (turkeys);
+   - Camp Narache: 16 squares, unsplit.
+   None of this is committed yet (generator, SQL, summary, pictures in tmp).
+
+9. Optional Next Step:
+   Continue the task the user started with "great let's do it": finish the zone
+   first cut. Steps:
+   1. Write scripts/test-buddy-subareas. Checks:
+      - the Valley of Trials splits into 3 parts with distinct dominant kinds;
+      - parts are at least the minimum size;
+      - each centre lies in its area;
+      - the SQL applied on session-temporary tables (`CREATE TEMPORARY TABLE` first, so `CREATE TABLE IF NOT EXISTS` skips).
+   2. Add install step E055 (`patch_E055_basic_buddy_subareas`, copying
+      36-buddy-subareas) to E-patches.sh and to basic's list in patches.sh.
+   3. Update 617e12's Current Behavior.
+   4. Claim the files and commit.
+   5. Report the results and the Valley of Trials picture.
+   6. Note to the user that AB needs the stand-in maker first.
+
+If you need specific details from before compaction (like exact code snippets,
+error messages, or content you generated), read the full transcript at:
+/home/ritz/.claude/projects/-mnt-mtwo-games-azeroth-core-wow-chat-2026/a4440faa-87b5-4fc6-b59d-3d898fd95767.jsonl
+Continue the conversation from where it left off without asking the user any
+further questions. Resume directly — do not acknowledge the summary, do not
+recap what was happening, do not preface with "I'll continue" or similar. Pick
+up the last task as if the break never happened.
+
+--------------------------------------------------------------------------------
+
+`/compact` - Compacted (ctrl+o to see full summary)
+
+--------------------------------------------------------------------------------
+
+### User Request 40
+
+please continue
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 40
+
+> The watcher was matching its own command line, so it would never have fired.
+> No build is running now, so I'll stop it and put the new compile script back
+> by hand.
+
+> Putting the build-speed fix back into the compile script (no build was
+> running, and its 6 checks pass) and committing it. Then I'll finish the
+> smaller roaming areas.
+
+*[commit] 50728adac in wow-chat-2026 - Builds rebuild only what the patches really changed*
+
+> Now the roaming-area test. Checking what the generator's summary holds:
+
+> Confirmed: every one of those comes from a holiday event (3,125 turkeys).
+> Excluding event-only spawns from the generator, then I'll rerun it.
+
+> Much better: Deathknell now splits into 5 parts (ghouls, bats, scavengers,
+> Scarlet converts, spiders), and the valleys' level ranges are 1–5. Checking
+> the 12 parts that still say level 70:
+
+> The guards are gone; only the real level-70 places (Karazhan and Deadwind, the
+> Emerald Nightmare dens) say 70 now. One more stray: training dummies in
+> Orgrimmar. Checking what marks them:
+
+> No dummy-only flag exists, so the training-dummy script name is the mark.
+
+> Now the test. Writing it:
+
+> Now the test's SQL section moves to a throwaway database:
+
+> The account can only create in the databases it's granted; `_smoke_test` is
+> the one set aside for tests. Checking who uses it:
+
+> Nothing uses it and it doesn't exist yet, so the test will create
+> `_smoke_test` when it's missing and run there. The install step's own revert
+> drops the two tables afterwards.
+
+> All 14 checks pass. Next, the install step, modelled on the legendaries one:
+
+> Install step registered. Now updating the battle-areas plan's current state:
+
+> Before writing it up, looking at the Valley of Trials picture to see how well
+> the automatic cut matches the owner's three areas:
+
+> Scripts here carry their documentation in their headers, as the others do.
+> Committing:
+
+*[commit] b9b49ae12 in wow-chat-2026 - Buddies' roaming areas, first cut: every named area split by its monsters and its cliffs*
+
+The first cut of smaller roaming areas is built and committed. The roaming code
+doesn't read the areas yet, and the AI pass isn't built.
+
+**What it does.** Each kind of monster living close together starts a seed. The
+seed spreads square by square across its named area, and steep ground slows it
+down, so neighbouring kinds meet along ridges and cliffs. Scraps under about
+28,000 square yards join the neighbour they share the longest border with. Each
+part gets a centre that lies inside it. All of Eastern Kingdoms and Kalimdor
+takes about 12 seconds on all cores: 280 named areas split into 1,183 parts.
+
+**How the starting valleys came out:**
+- **Valley of Trials, 3 parts:** demons in the north by the Coven; scorpids in
+  the middle; boars around the edges and the camp.
+- **Deathknell, 5 parts:** ghouls, bats, scavengers, Scarlet converts, spiders.
+- **Coldridge, 4 parts:** troggs, wolves, Frostmane trolls, boars.
+- **Shadowglen, 4 parts:** boars, spiders, grells, nightsabers.
+- **Northshire, 2 parts:** wolves and kobolds, then the Defias.
+
+There's one picture per split area, coloured by part with monsters as dots, in
+`tmp/shared-memory/subareas/` (the Valley of Trials is `1-363.png`).
+
+**Problems found and fixed while checking:**
+- **Holiday creatures counted as monsters.** The autumn feast's 3,125 turkeys
+  had taken all of Deathknell, and the feast's level-70 visitors made the
+  valleys read levels 1 to 70. Holiday-only spawns and training dummies are now
+  left out.
+- **Guards of neutral camps counted as monsters** (Light's Hope, Cenarion Hold,
+  the Caverns of Time). They're now told apart by their faction having a
+  reputation.
+- **18% of the parts' centres fell outside their own part** (a bent part's
+  average point lands off it). The centre is now the part's own square nearest
+  that average.
+- **My test's first version put two empty tables in the real basic world
+  database.** Nothing had those names before, and I've dropped them. The test
+  now runs in the separate test database.
+
+The test has 14 checks and all pass. The build-speed fix to the compile script
+is also committed. My background helper that was meant to restore it never could
+have fired, because it was matching its own command line.
+
+**For you:** the next basic install picks up the new install step on its own,
+and nothing uses the tables yet.
+
+**Next:** Arathi Basin needs the stand-in maker first, so I'd build that next
+unless you say otherwise.
+
+Two questions about the cut. I've also added them to the battle-areas plan:
+
+1. **Wrapping parts.** You described the Valley of Trials as the cave, the
+   middle upper area, and the town side with the entrance. In the automatic cut,
+   the boars' part wraps around both sides of the scorpids' part. Is a part that
+   wraps around another acceptable, or must each part be one piece of land on
+   one side?
+2. **Caves.** The map files don't mark the Coven's inside apart from the valley,
+   and the generator sees ground height, not a roof. The demons' part reaches
+   the cave only because the demons live there. Is that enough, or should caves
+   always be found and made their own part?
+
+--------------------------------------------------------------------------------
+
+### User Request 41
+
+okay!
+
+> 2. Caves. The map files don't mark the Coven's inside apart from the valley,
+> and the generator sees ground height, not a roof. The demons' part reaches the
+> cave only because the demons live there. Is that enough, or should caves
+> always be found and made their own part?
+
+should use movement navmesh?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 41
+
+Yes, I think the navmesh is the right tool, and it fixes more than caves. The
+movement files are already in the project: 3,780 tiles in `data-files/mmaps/`.
+
+**What the navmesh is.** The server uses it to plan how creatures walk. It
+covers every walkable surface with flat polygons, each stored with its corner
+heights and which neighbours it connects to. It includes cave floors, bridge
+decks and building interiors, which the height map can't show, because the
+height map has one ground height per spot.
+
+**How it finds a cave.** At each spot, compare the navmesh floor with the height
+map's ground:
+- **Floor at ground level:** open land.
+- **Floor several yards below the ground:** you're walking under the hill, which
+  means a cave.
+- **Cave mouth:** the place where those under-hill polygons connect to surface
+  polygons. The cave can become its own part, with the mouth as its door.
+
+**What else it fixes.** Right now the generator guesses cliffs from slope: it
+marks a square steep when its height rises fast. The navmesh says directly
+whether two places connect on foot. A ridge you can't climb is just a missing
+link, and a gentle slope with a fence along it is also a missing link, which the
+slope guess misses. "Can a buddy walk from here to there" would replace "how
+steep is it here".
+
+**Cost.** The tile format is Detour's (the library the server uses for walking),
+and the generator needs a reader for it in Lua. That's moderate work; the tiles
+are per-grid, so it parallelises the same way the generator does now.
+
+Two questions to think through:
+
+1. **A cave under a building.** Some caves are underground models (mines,
+   crypts) with doors cut into the ground, so their floor sits below the land.
+   The navmesh comparison treats a cellar the same as a cave. Should a
+   building's interior count as its own part, like a cave? Or should only places
+   where monsters live underground split off?
+2. **A cave connected at both ends.** Picture a tunnel through a hill with an
+   opening on each side. One rule says the tunnel is its own part. Another says
+   it's a road joining the parts on either side. How would you tell a cave a
+   buddy should explore from a passage it should just walk through?
 
 --------------------------------------------------------------------------------
 

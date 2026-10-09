@@ -13,10 +13,25 @@
 # (scripts/verify-patches). Of its original warning fixes, upstream now has all but one (the
 # equipment-slot comparison in mod-ale's PlayerMethods.h); only that edit
 # is left.
+#
+# Added 2026-10-09, a warning at run time rather than compile time: the
+# worldserver log filled with "MoveSplineInitArgs::Validate: expression
+# 'velocity > 0.01f' failed" for Mulgore's Kodo Matriarchs (entry 2974),
+# each walking 32 yards behind a Kodo Bull on its path. A creature in a
+# formation is sent toward where its place will be in 1.65 seconds, at the
+# leader's speed scaled by how far it has to go; one already standing on
+# that place gets a speed near zero. Stock code swaps in the leader's walk
+# speed only when the speed is exactly zero, so a near-zero one went on to
+# the spline check, which refused the move and logged it, every second or
+# so per follower. The edit swaps in the walk speed at the check's own limit
+# (0.01 yards a second and below), so the follower takes a step of almost
+# nothing at walking pace instead of a refused step at no pace: the same
+# standing still, without the warning.
 
 # path (from the source root) <TAB> old line <TAB> new line
 B004_EDITS=$(cat <<'EDITS'
 modules/mod-ale/src/LuaEngine/methods/PlayerMethods.h	        if (slot >= EQUIPMENT_SLOT_START && slot < EQUIPMENT_SLOT_END)	        if (slot >= static_cast<int32>(EQUIPMENT_SLOT_START) && slot < static_cast<int32>(EQUIPMENT_SLOT_END))
+src/server/game/Movement/MovementGenerators/FormationMovementGenerator.cpp	    if (velocity == 0.0f)	    if (velocity <= 0.01f)
 EDITS
 )
 
