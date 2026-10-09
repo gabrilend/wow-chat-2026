@@ -241,3 +241,11 @@ they are near and you don't have a full group."
 ## Related Issues
 
 - **617c** parent; **617c1**; **617e** the outer ring
+- **The four nearest, sticky, and experience to the clan** (owner,
+  2026-10-08, in 178: "can we just... increase the range you can
+  distribute EXP to just be distributed to your clanmates always? Then,
+  you're grouped with anyone that you can interact with or heal - the 4
+  closest, sticky targetting."): would replace the leave/join distances
+  above with "the four nearest you could help, kept until another is
+  clearly nearer", once experience no longer needs the group's 74-yard
+  radius. Open in 178 (question 4).
