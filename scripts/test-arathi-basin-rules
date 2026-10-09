@@ -10,11 +10,11 @@
 -- arathi-basin-bonuses.lua), so they are checked here on paper, the way
 -- 176a2f's sealed test will check them again in a real match:
 --
---   routes   every walk from a home reaches the enemy's home, each step
---            nearer to it, never the same place twice; squads leaving one
---            home share its roads evenly; the same match played twice
---            goes the same way; each side keeps its own pointers; a swap
---            of homes starts the routes at the drawn home
+--   routes   no squad takes the road it just came by; squads arriving at
+--            a crossing the same way share its other roads evenly; one
+--            that appeared there may take any; the same match played
+--            twice goes the same way; each side keeps its own pointers;
+--            routes start at the drawn home, or at a base
 --   bonuses  the owner's own examples (a Blacksmith taken at 165 steps up
 --            at 265; Stables taken at 35 at 135 and 235), the pause while
 --            under attack and the return at the same steps, the reset on
@@ -44,38 +44,33 @@ local places = 0
 for _ in pairs(g) do places = places + 1 end
 check(places == 7 and #DATA.roads == 15, "7 places and 15 roads (got " .. places .. ", " .. #DATA.roads .. ")")
 
-print("routes: every walk goes forward to the enemy's home")
+print("routes: a squad never takes the road it just came by")
 local m = Routes.new_match(g, { alliance = NW, horde = SE })
-local dist_to = { alliance = Routes.distances(g, SE), horde = Routes.distances(g, NW) }
-local all_forward, all_arrive, no_repeat = true, true, true
+local no_back, ok_len = true, true
 for _ = 1, 40 do
     for _, side in ipairs({ "alliance", "horde" }) do
-        local route = Routes.walk(m, side)
-        if route[#route] ~= m.toward[side] then all_arrive = false end
-        local seen = {}
-        for i, p in ipairs(route) do
-            if seen[p] then no_repeat = false end
-            seen[p] = true
-            if i > 1 and not (dist_to[side][p] < dist_to[side][route[i - 1]]) then all_forward = false end
-        end
+        local route = Routes.walk(m, side, nil, nil, 10)
+        if #route < 2 then ok_len = false end
+        for k = 3, #route do if route[k] == route[k - 2] and #Routes.choices(m, route[k - 1], route[k - 2]) > 0 then no_back = false end end
     end
 end
-check(all_arrive, "80 walks all end at the enemy's home")
-check(all_forward, "every step is nearer the enemy's home by road")
-check(no_repeat, "no walk visits a place twice")
+check(no_back, "80 walks: no step goes back to the place just left")
+check(ok_len, "every walk moves")
 
-print("routes: squads from one home share its roads evenly")
+print("routes: squads arriving one way share the roads on evenly")
 m = Routes.new_match(g, { alliance = NW, horde = SE })
-local first, n = {}, 30
+local tally, n = {}, 30
 for _ = 1, n do
-    local route = Routes.walk(m, "alliance")
-    first[route[2]] = (first[route[2]] or 0) + 1
+    local nxt = Routes.next_place(m, "alliance", "Stables", NW)   -- arrived at the Stables from home
+    tally[nxt] = (tally[nxt] or 0) + 1
 end
 local counts, lo, hi = {}, math.huge, 0
-for place, c in pairs(first) do counts[#counts + 1] = place .. " " .. c; lo = math.min(lo, c); hi = math.max(hi, c) end
+for place, c in pairs(tally) do counts[#counts + 1] = place .. " " .. c; lo = math.min(lo, c); hi = math.max(hi, c) end
 table.sort(counts)
-local choices = #m.choices.alliance[NW]
-check(#counts == choices and hi - lo <= 1, string.format("%d squads over the home's %d forward roads: %s", n, choices, table.concat(counts, ", ")))
+local ways = #Routes.choices(m, "Stables", NW)
+check(#counts == ways and hi - lo <= 1 and tally[NW] == nil, string.format("%d squads at the Stables from home, over its %d other roads: %s", n, ways, table.concat(counts, ", ")))
+local appeared = Routes.choices(m, "Stables", nil)
+check(#appeared == ways + 1, "a squad that appeared at the Stables may take any of its " .. #appeared .. " roads, home included")
 
 print("routes: the same match goes the same way twice")
 local function sequence()
@@ -92,10 +87,12 @@ local b = Routes.new_match(g, { alliance = NW, horde = SE })
 for _ = 1, 7 do Routes.walk(a, "alliance") end        -- only the alliance walks in match a
 check(table.concat(Routes.walk(a, "horde"), ">") == table.concat(Routes.walk(b, "horde"), ">"), "seven alliance squads leave the horde's first route unchanged")
 
-print("routes: homes drawn the other way round")
+print("routes: homes drawn the other way round, and starting at a base")
 local swapped = Routes.new_match(g, { alliance = SE, horde = NW })
-local r1, r2 = Routes.walk(swapped, "alliance"), Routes.walk(swapped, "horde")
-check(r1[1] == SE and r1[#r1] == NW and r2[1] == NW and r2[#r2] == SE, "the alliance starts in the south-east and ends in the north-west, the horde the reverse")
+local r1 = Routes.walk(swapped, "alliance")
+check(r1[1] == SE, "the alliance's routes start at the south-east home")
+local r2 = Routes.walk(swapped, "horde", "Gold Mine")
+check(r2[1] == "Gold Mine" and #r2 > 1, "a squad appearing at the Gold Mine walks on from there")
 
 print("bonuses: the owner's examples")
 local s = Bonuses.new()

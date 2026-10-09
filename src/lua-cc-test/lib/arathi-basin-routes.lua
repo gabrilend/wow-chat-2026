@@ -7,13 +7,17 @@
 -- names, and the pointer turns to the next road, so the next squad goes
 -- the other way (the owner, 2026-10-08: "it works like a flow chart where
 -- you reverse the path each time you cross it"). Over a match the squads
--- spread evenly over every road toward the enemy, and the same match
+-- spread evenly over the roads out of every crossing, and the same match
 -- played twice sends the same squads the same way. This is the
 -- rotor-router walk (the Propp machine): a fixed stand-in for choosing a
 -- road at random.
 --
--- Only roads that bring a squad nearer the enemy's home, by road
--- distance, count as choices, so a squad never turns back. The roads are
+-- A squad's choices at a crossing are every road there but the one it
+-- arrived by (owner, 2026-10-08: ""forward" should mean "down the path"
+-- and stand-ins should simply route along any of the routes that they did
+-- not immediately just come from"), so the pointer is kept per road
+-- arrived by. The map is, for now, the bot module's base-to-base roads; it
+-- becomes the owner's crossings once those are recorded (176a2c). The roads are
 -- the playerbots module's own (data/arathi-basin-roads.lua, written by
 -- scripts/generate-arathi-basin-roads); the homes are named by place
 -- ("north-west home", "south-east home"), since each match draws which
@@ -65,54 +69,65 @@ end
 
 -- {{{ function Routes.new_match
 -- A match's routing state. `homes` = { [side] = place }, for both sides
--- (sides are whatever the caller names them: "alliance", "horde"). Every
--- pointer starts at the first road in name order; each side has its own.
+-- (sides are whatever the caller names them: "alliance", "horde"). Each
+-- side has its own pointers: one per place per road arrived by, each
+-- naming, of the roads there other than the one arrived by, the next to
+-- take. A squad that appeared at a place arrived by no road ("") and may
+-- take any. Every pointer starts at the first road in name order.
 function Routes.new_match(g, homes)
-    local m = { g = g, homes = homes, pointer = {}, toward = {}, choices = {} }
+    local m = { g = g, homes = homes, pointer = {}, toward = {} }
     for side, home in pairs(homes) do
-        local enemy_home
-        for other, h in pairs(homes) do if other ~= side then enemy_home = h end end
-        assert(enemy_home, "Routes.new_match: two sides with two homes are needed")
-        local dist = Routes.distances(g, enemy_home)
-        m.toward[side], m.pointer[side], m.choices[side] = enemy_home, {}, {}
-        for place, edges in pairs(g) do
-            -- the roads from here that bring the squad nearer the enemy's home
-            local forward = {}
-            for _, e in ipairs(edges) do
-                if dist[e.to] and dist[place] and dist[e.to] < dist[place] then forward[#forward + 1] = e.to end
-            end
-            m.choices[side][place] = forward
-            m.pointer[side][place] = 1
-        end
+        for other, h in pairs(homes) do if other ~= side then m.toward[side] = h end end
+        assert(m.toward[side], "Routes.new_match: two sides with two homes are needed")
+        m.pointer[side] = {}
     end
     return m
 end
 -- }}}
 
+-- {{{ function Routes.choices
+-- The roads a squad at `place` that arrived from `came_from` (nil or "":
+-- it appeared there) may take: every neighbour but the one it came from
+-- (owner, 2026-10-08: "any of the routes that they did not immediately
+-- just come from"). A dead end gives the way back, the only way on.
+function Routes.choices(m, place, came_from)
+    local out = {}
+    for _, e in ipairs(m.g[place] or {}) do
+        if e.to ~= came_from then out[#out + 1] = e.to end
+    end
+    if #out == 0 and came_from and came_from ~= "" then out[1] = came_from end
+    return out
+end
+-- }}}
+
 -- {{{ function Routes.next_place
--- The place a squad of `side` standing at `place` goes to next, and the
--- pointer turned for the squad after it. nil at the enemy's home (nowhere
--- nearer to go).
-function Routes.next_place(m, side, place)
-    local forward = m.choices[side][place]
-    if not forward or #forward == 0 then return nil end
-    local i = m.pointer[side][place]
-    m.pointer[side][place] = i % #forward + 1        -- the next squad takes the next road
-    return forward[i]
+-- The place a squad of `side` at `place`, arrived from `came_from`, goes
+-- to next; the pointer for that arrival is turned for the squad after it.
+function Routes.next_place(m, side, place, came_from)
+    local choices = Routes.choices(m, place, came_from)
+    if #choices == 0 then return nil end
+    local key = place .. "<" .. (came_from or "")
+    local i = m.pointer[side][key] or 1
+    m.pointer[side][key] = i % #choices + 1          -- the next squad arriving this way takes the next road
+    return choices[i]
 end
 -- }}}
 
 -- {{{ function Routes.walk
--- A whole route for one squad of `side`: its home, then each place it
--- reaches, to the enemy's home. Turns every pointer it passes.
-function Routes.walk(m, side)
-    local route = { m.homes[side] }
-    local at = m.homes[side]
-    for _ = 1, 32 do                                  -- a route can't be longer than the places; 32 is far past that
-        local nxt = Routes.next_place(m, side, at)
+-- One squad of `side`'s route from `start` (default its home), arrived
+-- from `came_from` (default: appeared there), for at most `steps` places,
+-- ending early at the enemy's home. Turns every pointer it passes. A real
+-- squad stops sooner, at a base to capture or guard (176a2b); this is the
+-- road it would follow.
+function Routes.walk(m, side, start, came_from, steps)
+    local at, from = start or m.homes[side], came_from or ""
+    local route = { at }
+    for _ = 1, steps or 12 do
+        if at == m.toward[side] and #route > 1 then break end
+        local nxt = Routes.next_place(m, side, at, from)
         if not nxt then break end
         route[#route + 1] = nxt
-        at = nxt
+        from, at = at, nxt
     end
     return route
 end

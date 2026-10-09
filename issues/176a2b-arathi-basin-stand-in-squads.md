@@ -40,16 +40,40 @@ battleground tactics, use the power-ups, and have no squads.
   (619's footwork); at a base that isn't theirs, click its banner and
   guard it until the capture completes, then go on. They never pick up
   the power-ups (speed, restoration, berserking).
-- **Dying: back to the pool, back at home** (owner, 2026-10-08: "oh, um, actually, I forgot. The stand-ins should go into a global pool when they die, and get respawned back at base. They shouldn't go to graveyards. Those should just be for players. If a player dies while in a graveyard or enters combat (and then dies while still in that combat) immediately after spawning, then they'll respawn at the base as well."). A
-  stand-in that dies leaves the world into its side's pool; it never rises
-  at a graveyard. Graveyards are for players only. A player who dies at a
-  graveyard, or who enters combat right after rising there and dies in
-  that same combat, comes back at the home base instead.
-- **Dynamic squads at home.** The owner, 2026-10-08: "they should try and
+- **Dying, and coming back** (owner, 2026-10-08, replacing the pool:
+  "how about we respawn stand-ins separately from players, at the
+  increment time, at a random fully controlled base or the home base. Once
+  they're "spawned" they're invisible and disabled until the next
+  graveyard respawn, and then they move and attack and such. If the base
+  gets claimed while they're invisible and disabled, before the "next
+  graveyard spawn", then they are teleported to the home base and spawned
+  there next. If another group is waiting to spawn at a location, then
+  that location is either skipped, or another is queued to spawn there at
+  the same time if there's only the home base (or if all the others have
+  a spawn waiting. The home base is the fallback spawning location
+  whenever anything goes wrong."):
+  - stand-ins come back separately from players: on each departure (every
+    12 seconds), the dead ones come back as a group at one place: a base
+    their side fully holds (held and not under attack), drawn at random,
+    or the home base;
+  - placed there, they are invisible and do nothing until the next
+    graveyard wave (the stock spirit healers raise the dead every 30
+    seconds in Arathi Basin); then they appear, move and fight;
+  - if their base is claimed by the enemy while they wait, they are moved
+    to the home base and appear there instead;
+  - one waiting group a place: a base with a group already waiting is
+    skipped; when only the home base is left (or every other place has a
+    group waiting), another group waits at the home base too, and both
+    appear together;
+  - the home base whenever anything goes wrong.
+  Players use the graveyards as stock. A player who dies at a graveyard,
+  or who enters combat right after rising there and dies in that same
+  combat, comes back at the home base instead (2026-10-08, earlier).
+- **Dynamic squads.** The owner, 2026-10-08: "they should try and
   form dynamic squads. Two damage, one healer, though if there's an uneven
   number of units respawning then they should just all group up if they
   can't evenly divide into groups of two dps and one healer." Stand-ins
-  coming back from the pool appear at home and split into trios of two
+  coming back together (at home or at a base) split into trios of two
   damage and a healer when they divide evenly that way; when they don't,
   they all go as one group.
 - **A departure every 12 seconds.** "they wait. We send out a party every
@@ -72,7 +96,9 @@ battleground tactics, use the power-ups, and have no squads.
    hold it there until the next trio leaves, then group it with them.
 4. Leaving out the power-ups: the bot module's battleground tactics
    choose to collect them; stand-ins don't.
-5. Dying: out of the world into the side's pool; back at home from it;
+5. Dying and coming back: the place drawn on each departure (a held base
+   or home, one waiting group a place, home as fallback), invisible and
+   inactive until the graveyard wave, moved home if their base is lost;
    players dying at a graveyard (or in their first fight after rising)
    sent home.
 
@@ -87,11 +113,16 @@ battleground tactics, use the power-ups, and have no squads.
    enemy's home graveyard?
 4. **Squads breaking up:** when one of a trio dies, do the two left go on,
    wait for it to come back, or fall back?
-5. **Back from the pool: how soon?** Does a dead stand-in come back at
-   home at once, after the stock resurrection wait (30 seconds, the
-   spirit healer's wave), or just in time for the next departure?
+5. (Answered 2026-10-08) **How soon back:** placed on a departure,
+   active from the next graveyard wave.
 6. (Answered 2026-10-08) **Departures with nobody ready:** tanks wait;
    a party leaves every 12 seconds.
 7. **"Immediately after spawning":** how long after rising does a
    player's first fight still count, if they die in it, for coming back at
    home instead of the graveyard?
+8. **"Claimed":** a waiting group is moved home when its base is
+   "claimed": when the enemy clicks the banner (the base under attack, its
+   bonus off), or only when the enemy fully captures it?
+9. **Tanks and spawning at bases:** tanks wait at home for a departure.
+   With squads now also coming back at bases, does a tank join only a
+   group appearing at home, or can it be placed with a group at a base?
