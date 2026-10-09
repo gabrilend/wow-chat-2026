@@ -23,7 +23,28 @@ path unless they are knocked off by like, cyclone or something."
 
 ## Current Behavior
 
-Not built. The bot module's bots pick their next base by its own
+**2026-10-08: the rule is built and tested on paper; nothing walks it
+yet** (no stand-ins, no running scene):
+- `scripts/generate-arathi-basin-roads` copies the bot module's 15 paths
+  (read from its committed source) into
+  `src/lua-cc-test/data/arathi-basin-roads.lua`, homes named by place
+  ("north-west home", "south-east home"); it stops if any path's ends
+  don't meet at its places.
+- `src/lua-cc-test/lib/arathi-basin-routes.lua`: the roads as a graph,
+  road distances, a pointer per side per place over the roads that bring
+  a squad nearer the enemy's home, turned by each squad.
+- `scripts/test-arathi-basin-rules` (with the bonuses): every walk
+  reaches the enemy's home moving nearer each step; 30 squads from the
+  north-west home split 10, 10, 10 over its three roads; the same match
+  repeats exactly; each side's pointers are its own; swapped homes work.
+
+What the rule does with these roads (the first six squads of each side):
+the north-west side goes Gold Mine, Lumber Mill or Stables, then the
+Blacksmith or straight to the Farm, then home; the south-east side
+sometimes goes Gold Mine and straight into the north-west home, since the
+home-to-Gold-Mine road is the shortest way there (open question 5).
+
+Before this, not built. The bot module's bots pick their next base by its own
 priorities and walk its 15 road paths between the two home bases and the
 five bases (`vPaths_AB`). None of them is the river.
 
@@ -89,6 +110,13 @@ two healers), it splits into two trios.
 3. **The goal:** "to reach the enemy base": once a squad stands at the
    enemy's home, what next? Turn round by the same rule toward their own
    home, fight there, or wait?
+5. **What "forward" means.** Built as "nearer the enemy's home by road
+   length". The roads differ in length, so the two sides' routes differ:
+   the south-east side can go Gold Mine and straight into the north-west
+   home, past every other base, while the north-west side always crosses
+   the Blacksmith or the Farm. The other reading: at each crossing, every
+   road but the one the squad came in by, in turn (it could then wander
+   sideways, Stables to Lumber Mill, before pushing on). Which?
 4. **The river from the Blacksmith:** does it also count as "knocked off"
    when a stand-in falls off the Lumber Mill cliff, or is any way down
    from the cliff a fall to recover from?

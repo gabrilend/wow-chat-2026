@@ -1,0 +1,162 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- test-arathi-basin-rules - the Arathi Basin scene's two rules that need no
+-- server: where squads go, and how the base bonuses grow
+--
+-- For a general audience: the cc-test profile's Arathi Basin scene (issue
+-- 176a2) sends its stand-ins over the roads by an alternating rule at each
+-- crossing, and grows a bonus for each base a side holds. Both rules are
+-- plain arithmetic (src/lua-cc-test/lib/arathi-basin-routes.lua and
+-- arathi-basin-bonuses.lua), so they are checked here on paper, the way
+-- 176a2f's sealed test will check them again in a real match:
+--
+--   routes   every walk from a home reaches the enemy's home, each step
+--            nearer to it, never the same place twice; squads leaving one
+--            home share its roads evenly; the same match played twice
+--            goes the same way; each side keeps its own pointers; a swap
+--            of homes starts the routes at the drawn home
+--   bonuses  the owner's own examples (a Blacksmith taken at 165 steps up
+--            at 265; Stables taken at 35 at 135 and 235), the pause while
+--            under attack and the return at the same steps, the reset on
+--            capture, nothing from an assault on a neutral base, the
+--            ceiling of 16 steps, and the three-minute table in 176a2e
+--
+-- Usage: scripts/test-arathi-basin-rules [PROJECT_DIR]
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local Routes  = dofile(DIR .. "/src/lua-cc-test/lib/arathi-basin-routes.lua")
+local Bonuses = dofile(DIR .. "/src/lua-cc-test/lib/arathi-basin-bonuses.lua")
+local DATA    = dofile(DIR .. "/src/lua-cc-test/data/arathi-basin-roads.lua")
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+
+local NW, SE = "north-west home", "south-east home"
+
+print("routes: the roads")
+local g = Routes.graph(DATA.roads)
+local places = 0
+for _ in pairs(g) do places = places + 1 end
+check(places == 7 and #DATA.roads == 15, "7 places and 15 roads (got " .. places .. ", " .. #DATA.roads .. ")")
+
+print("routes: every walk goes forward to the enemy's home")
+local m = Routes.new_match(g, { alliance = NW, horde = SE })
+local dist_to = { alliance = Routes.distances(g, SE), horde = Routes.distances(g, NW) }
+local all_forward, all_arrive, no_repeat = true, true, true
+for _ = 1, 40 do
+    for _, side in ipairs({ "alliance", "horde" }) do
+        local route = Routes.walk(m, side)
+        if route[#route] ~= m.toward[side] then all_arrive = false end
+        local seen = {}
+        for i, p in ipairs(route) do
+            if seen[p] then no_repeat = false end
+            seen[p] = true
+            if i > 1 and not (dist_to[side][p] < dist_to[side][route[i - 1]]) then all_forward = false end
+        end
+    end
+end
+check(all_arrive, "80 walks all end at the enemy's home")
+check(all_forward, "every step is nearer the enemy's home by road")
+check(no_repeat, "no walk visits a place twice")
+
+print("routes: squads from one home share its roads evenly")
+m = Routes.new_match(g, { alliance = NW, horde = SE })
+local first, n = {}, 30
+for _ = 1, n do
+    local route = Routes.walk(m, "alliance")
+    first[route[2]] = (first[route[2]] or 0) + 1
+end
+local counts, lo, hi = {}, math.huge, 0
+for place, c in pairs(first) do counts[#counts + 1] = place .. " " .. c; lo = math.min(lo, c); hi = math.max(hi, c) end
+table.sort(counts)
+local choices = #m.choices.alliance[NW]
+check(#counts == choices and hi - lo <= 1, string.format("%d squads over the home's %d forward roads: %s", n, choices, table.concat(counts, ", ")))
+
+print("routes: the same match goes the same way twice")
+local function sequence()
+    local mm = Routes.new_match(g, { alliance = NW, horde = SE })
+    local out = {}
+    for _ = 1, 12 do out[#out + 1] = table.concat(Routes.walk(mm, "alliance"), ">"); out[#out + 1] = table.concat(Routes.walk(mm, "horde"), ">") end
+    return table.concat(out, "|")
+end
+check(sequence() == sequence(), "two fresh matches send 24 squads the same ways")
+
+print("routes: each side keeps its own pointers")
+local a = Routes.new_match(g, { alliance = NW, horde = SE })
+local b = Routes.new_match(g, { alliance = NW, horde = SE })
+for _ = 1, 7 do Routes.walk(a, "alliance") end        -- only the alliance walks in match a
+check(table.concat(Routes.walk(a, "horde"), ">") == table.concat(Routes.walk(b, "horde"), ">"), "seven alliance squads leave the horde's first route unchanged")
+
+print("routes: homes drawn the other way round")
+local swapped = Routes.new_match(g, { alliance = SE, horde = NW })
+local r1, r2 = Routes.walk(swapped, "alliance"), Routes.walk(swapped, "horde")
+check(r1[1] == SE and r1[#r1] == NW and r2[1] == NW and r2[#r2] == SE, "the alliance starts in the south-east and ends in the north-west, the horde the reverse")
+
+print("bonuses: the owner's examples")
+local s = Bonuses.new()
+local total = { alliance = 0 }
+local bs_at, st_at = {}, {}
+-- every tick records the side's total whenever a base steps up
+local function tick(side, amount)
+    local bs, st = Bonuses.steps(s, "Blacksmith"), Bonuses.steps(s, "Stables")
+    total[side] = (total[side] or 0) + amount
+    Bonuses.income(s, side, amount)
+    if Bonuses.steps(s, "Blacksmith") > bs then bs_at[#bs_at + 1] = total[side] end
+    if Bonuses.steps(s, "Stables") > st then st_at[#st_at + 1] = total[side] end
+end
+for _ = 1, 3 do tick("alliance", 10) end; tick("alliance", 5)                  -- 35
+Bonuses.captured(s, "Stables", "alliance")                                      -- Stables at 35
+while total.alliance < 165 do tick("alliance", 10) end                          -- 165
+Bonuses.captured(s, "Blacksmith", "alliance")                                   -- Blacksmith at 165
+while total.alliance < 400 do tick("alliance", 10) end
+check(bs_at[1] == 265 and bs_at[2] == 365, "the Blacksmith, taken at 165, steps up at 265 and 365 (got " .. table.concat(bs_at, ", ") .. ")")
+check(st_at[1] == 135 and st_at[2] == 235 and st_at[3] == 335, "the Stables, taken at 35, step up at 135, 235, 335 (got " .. table.concat(st_at, ", ") .. ")")
+local act = Bonuses.active(s, "alliance")
+check(act["melee damage"] == 10 and act["movement speed"] == 15, "at 400: melee damage +10%, movement speed +15%")
+
+print("bonuses: under attack, then defended")
+Bonuses.assaulted(s, "Blacksmith", "horde")
+check(Bonuses.active(s, "alliance")["melee damage"] == nil, "the Blacksmith's bonus is off while the horde takes it")
+for _ = 1, 20 do tick("alliance", 10) end                                       -- 200 more, none of it counted
+check(Bonuses.steps(s, "Blacksmith") == 2, "200 resources gained under attack don't count (still 2 steps)")
+check(Bonuses.active(s, "alliance")["movement speed"] == 25, "the Stables, not under attack, kept counting (600 - 35 = 565: +25%)")
+Bonuses.defended(s, "Blacksmith")
+check(Bonuses.active(s, "alliance")["melee damage"] == 10, "defended: back at exactly +10%")
+
+print("bonuses: taken by the enemy")
+Bonuses.assaulted(s, "Blacksmith", "horde")
+Bonuses.captured(s, "Blacksmith", "horde")
+check(Bonuses.active(s, "alliance")["melee damage"] == nil and Bonuses.steps(s, "Blacksmith") == 0, "the alliance loses it; the count is back to zero")
+Bonuses.income(s, "horde", 100)
+check(Bonuses.active(s, "horde")["melee damage"] == 5, "the horde's own count starts from zero: +5% after 100")
+
+print("bonuses: an assault on a neutral base")
+Bonuses.assaulted(s, "Farm", "alliance")
+Bonuses.income(s, "alliance", 300)
+check(Bonuses.steps(s, "Farm") == 0, "nothing counts until the capture completes")
+
+print("bonuses: the ceiling")
+s = Bonuses.new()
+Bonuses.captured(s, "Gold Mine", "horde")
+for _ = 1, 400 do Bonuses.income(s, "horde", 10) end                            -- 4,000: past any match
+check(Bonuses.active(s, "horde")["armour"] == 80, "at most 16 steps: +80%")
+
+print("bonuses: three minutes, by bases held (176a2e's table)")
+local function steps_in_three_minutes(interval_s, points)
+    local t = Bonuses.new()
+    Bonuses.captured(t, "Farm", "horde")
+    for _ = 1, math.floor(180 / interval_s) do Bonuses.income(t, "horde", points) end
+    return Bonuses.steps(t, "Farm")
+end
+check(steps_in_three_minutes(12, 10) == 1, "one base held (10 every 12 s): 1 step")
+check(steps_in_three_minutes(6, 10) == 3, "three bases held (10 every 6 s): 3 steps")
+check(steps_in_three_minutes(3, 10) == 6, "four bases held (10 every 3 s): 6 steps")
+
+print("")
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)

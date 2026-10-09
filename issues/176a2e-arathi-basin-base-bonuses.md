@@ -23,7 +23,18 @@ melee attacks. Stables has +5% movement speed, and Farm has +5% health."
 
 ## Current Behavior
 
-Not built. Holding a base gives resources only (`BattlegroundAB`); the
+**2026-10-08: the rule is built and tested on paper; nothing applies it
+yet** (no running scene, no auras): `src/lua-cc-test/lib/arathi-basin-
+bonuses.lua` holds each base's holder, whether it is under attack, and
+the resources counted since its capture; it is told of captures,
+assaults, defences and resource ticks, and answers each side's bonuses
+in force. `scripts/test-arathi-basin-rules` checks the owner's examples
+(Blacksmith taken at 165 steps up at 265 and 365; Stables taken at 35 at
+135, 235, 335), the pause under attack and the return at the same steps,
+the reset on capture, nothing from an assault on a neutral base, the
+ceiling of 16 steps (+80%), and the three-minute table above.
+
+Before this, not built. Holding a base gives resources only (`BattlegroundAB`); the
 power-ups lying at each base are the only buffs.
 
 ## Intended Behavior
