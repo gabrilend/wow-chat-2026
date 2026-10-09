@@ -210,9 +210,27 @@ in opposite directions does the nearer one simply win.
    the scorpids as well as holding the camp. Is a part that wraps round
    another acceptable, or must every part be one solid piece of land on
    one side?
-8. **Caves:** the Coven's inside is not told apart from the valley in the
-   map files, and the generator sees the ground's height, not the roof.
-   The demons' part reaches the cave because the demons live there, not
-   because it knows a cave is there. Is that enough, or should caves be
-   found (the map files' holes and liquid, or the buildings' models) and
-   always made their own part?
+8. (Answered 2026-10-09) **Caves:** the Coven's inside is not told apart
+   from the valley in the map files, and the generator sees the ground's
+   height, not the roof. The owner: "should use movement navmesh?" Yes:
+   the server's walking mesh (`data-files/mmaps/`, Detour tiles) covers
+   every walkable floor with polygons, cave floors and building interiors
+   included, and says which polygons join. A floor several yards below
+   the height map's ground is under the hill: a cave; where those
+   polygons join the surface ones is its mouth. The same mesh can replace
+   the steepness guess: two squares are apart when no walkable link joins
+   them, not when the ground between them is steep.
+   - **Buildings' interiors:** "like a cave for now, but more skeletan in
+     the future. Think... Roboquest rails." A cellar, mine or crypt is its
+     own part like a cave today; later, interiors become a skeleton of
+     rails (the paths through them, as Roboquest's grind rails carry a
+     player along fixed lines) that buddies ride rather than roam.
+   - **A tunnel open at both ends** (explore it, or walk through it?):
+     "the navmesh". Decided by the mesh's shape, how is still open
+     (question 9).
+   Not built: a Detour tile reader in Lua for the generator.
+9. **Tunnel or cave, from the mesh:** one reading is a dead end against a
+   through-way: a cave's under-hill polygons join the surface at one
+   mouth, a tunnel's at two or more, on different parts' sides. Another is
+   width against length: a passage is long and one corridor wide, a cave
+   opens into rooms. Which one did the owner mean, or both?
