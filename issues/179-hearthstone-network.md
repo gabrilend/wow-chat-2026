@@ -38,6 +38,20 @@ cooldown, then they'll use the temporary one by walking to a nearby
 innkeeper and asking for one. They know all of your hearthstone
 locations."
 
+### Decisions, 2026-10-08 (owner)
+
+- **Buddies' stones are free**: "the innkeeper will always give them a
+  hearthstone for free because they didn't choose to go there. they're
+  following you, and your cost takes theirs into account."
+- **Buddies share the owner's cooldown** ("they share it").
+- **The price**: "yes it should be 1 silver per bar but it shouldn't be
+  per level. It should be modified by the level, but that's too strong of
+  a factor. I think it should be 1 gold per bar at level 50. I think
+  that's a decent economic price-point, though without quests I might be
+  over-estimating the gold that players will have. Something to
+  consider." So 1 silver a bar at low level, 1 gold a bar at level 50,
+  rising with level more gently than "per level" (open question 1).
+
 ## Current Behavior
 
 Not built. A character has one hearthstone, bound to one inn at a time
@@ -91,12 +105,15 @@ cooldown walks to a nearby innkeeper, buys a network stone, and uses it.
 
 ## Open Questions
 
-1. **The gold per bar:** how much? For example 1 silver per bar per
-   level would make a full 30-bar rest at level 40 cost 12 gold.
+1. **The curve from 1 silver to 1 gold a bar:** (a) straight, 2 silver
+   x level a bar (2 silver at level 1, 1 gold at 50, 1 gold 20 at 60); or
+   (b) the same factor each level, about x1.1 a level (1 silver at 1, 10
+   silver at 25, 1 gold at 50), which stays cheap longer and climbs late.
+   And the gold check (180 takes quests' gold away from players): revisit
+   once drops and vendor prices are known.
 2. **No rested experience:** free, or a small floor price?
-3. **Buddies' cooldown:** a buddy's own hearthstone shares the owner's 30
-   minutes, or buddies have none (so they always come straight with the
-   owner, and the walk to an innkeeper never happens)?
+3. (Answered 2026-10-08) **Buddies' cooldown:** shared with the owner;
+   their stones from innkeepers are free.
 4. **The owner's own hearthstone:** unchanged (bound to the last inn,
    30 minutes), the network stones beside it?
 5. **Inns across factions and neutral inns** (Booty Bay, Gadgetzan): in
