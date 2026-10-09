@@ -47,8 +47,9 @@ captures, the bases change hands, someone wins. What it must show:
   and captures: steps grow, pause while contested, keep the count, reset
   on a full capture; checked against the worked examples;
 - the river: a stand-in placed in the water walks out to the road;
-- respawning: a stand-in killed at a known spot rises, waits, and leaves
-  its graveyard by the next exit in turn;
+- dying: a stand-in killed at a known spot leaves the world, comes back
+  at home from the pool, and leaves with a departure; a player killed at a
+  graveyard comes back at home;
 - the random home base (176a2a): played with each side at each home, the
   routes and tanks start from the right place;
 - many instances: two matches at once keep separate pointers, tanks and

@@ -96,10 +96,8 @@ defend"); at +1% a step, +16% (open question 1).
 
 ## Open Questions
 
-1. **How much a step gives: +5% or +1%?** The step is every 100
-   resources (answered). +5% was the first answer ("It's 80% with 100
-   resources ... perfect"); +1% was proposed after the three-minute
-   arithmetic, which counted at the five-base rate (worked example above).
+1. (Answered 2026-10-08: "let's try 5%") **How much a step gives:** +5%,
+   a base at most +80%.
 2. (Answered 2026-10-08) **Whose resources:** the side's whole income,
    counted per base from that base's own capture, only while it is held
    and uncontested.

@@ -51,9 +51,8 @@ resources the match ends, everyone is sent out, and the instance closes.
   can be temporarily shredded until they can have space to spawn in."): a
   side has a fixed number of places. Stand-ins fill those players don't.
   A player joining takes a stand-in's place: the next stand-in of that
-  side to reach a graveyard (dead) leaves the battle, or one already
-  waiting at a graveyard is held out at once ("its soul shredded"), until
-  a player leaves and a place opens.
+  side to die stays in the pool (stand-ins go to a pool when they die,
+  not to a graveyard: 176a2b), until a player leaves and a place opens.
 - **Win and restart.** The stock win (1,600 resources). Then one minute
   ("an interim of 1 minute maybe"), then a fresh match in the same
   instance: every base neutral, scores at zero, sides drawn again.

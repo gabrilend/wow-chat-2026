@@ -53,9 +53,9 @@ gets nearer the enemy's home in road distance, so a squad never turns
 back the way it came. A squad stopping to capture a base (176a2b) leaves
 it by the same rule.
 
-**Graveyards.** Each graveyard's way onto the roads is a crossing too,
-with its own pointer: risen stand-ins leave "one way or the other", the
-two ways in turn.
+**Graveyards: none for stand-ins.** A dead stand-in goes into its side's
+pool and comes back at home (176a2b), so every route starts at a home
+base; graveyards are players' only and play no part in the rule.
 
 **The river.** Not walkable on purpose. A stand-in that ends up in it
 (knocked back, cycloned, feared) walks out to the nearest point of the
@@ -73,7 +73,7 @@ two healers), it splits into two trios.
 2. The rule, as plain data and code with no bot in it: pointers per side
    per crossing, "next branch toward the enemy home", the pointer turned.
    Tested on paper: 20 squads from each home, where each one went.
-3. Graveyard exits as crossings.
+3. (Dropped 2026-10-08: stand-ins don't use graveyards.)
 4. The river: detect a stand-in off every road (farther than a few yards
    from any edge) and route it to the nearest road point.
 5. Logs: each squad's crossings in order, for 176a2f.

@@ -40,21 +40,22 @@ battleground tactics, use the power-ups, and have no squads.
   (619's footwork); at a base that isn't theirs, click its banner and
   guard it until the capture completes, then go on. They never pick up
   the power-ups (speed, restoration, berserking).
-- **Respawning: dynamic squads.** A dead stand-in rises at its graveyard
-  as the stock rules say. The owner, 2026-10-08: "they should try and form
-  dynamic squads. Two damage, one healer, though if there's an uneven
+- **Dying: back to the pool, back at home** (owner, 2026-10-08: "oh, um, actually, I forgot. The stand-ins should go into a global pool when they die, and get respawned back at base. They shouldn't go to graveyards. Those should just be for players. If a player dies while in a graveyard or enters combat (and then dies while still in that combat) immediately after spawning, then they'll respawn at the base as well."). A
+  stand-in that dies leaves the world into its side's pool; it never rises
+  at a graveyard. Graveyards are for players only. A player who dies at a
+  graveyard, or who enters combat right after rising there and dies in
+  that same combat, comes back at the home base instead.
+- **Dynamic squads at home.** The owner, 2026-10-08: "they should try and
+  form dynamic squads. Two damage, one healer, though if there's an uneven
   number of units respawning then they should just all group up if they
-  can't evenly divide into groups of two dps and one healer." So the
-  stand-ins rising together split into trios of two damage and a healer
-  when they divide evenly that way; when they don't, they all go as one
-  group. They leave by the graveyard's exits the alternating way (176a2c),
-  "one way or the other".
-- **Departures from home, on the resource tick.** Squads leave the home
-  base periodically: "maybe once every... 12 seconds? We could tie it to
-  when resources tick." A departure goes out on each of the side's
-  resource ticks (every 12 seconds holding one base, faster with more,
-  `BG_AB_TickIntervals`), taking whatever trio and waiting tanks are
-  ready.
+  can't evenly divide into groups of two dps and one healer." Stand-ins
+  coming back from the pool appear at home and split into trios of two
+  damage and a healer when they divide evenly that way; when they don't,
+  they all go as one group.
+- **A departure every 12 seconds.** "they wait. We send out a party every
+  12 seconds or so." Every 12 seconds the home base sends out what is
+  ready: the trios (or the one uneven group) and every waiting tank. With
+  no squad ready, tanks wait for the next departure; they never go alone.
 - **Guarding.** "at least one stays to guard, when a stand-in approaches
   a base that's already theirs, then it guards as well. Otherwise, they
   attack." After a capture, one of the squad stays at the base; a
@@ -71,7 +72,9 @@ battleground tactics, use the power-ups, and have no squads.
    hold it there until the next trio leaves, then group it with them.
 4. Leaving out the power-ups: the bot module's battleground tactics
    choose to collect them; stand-ins don't.
-5. Respawning: gather at the graveyard, then the route's graveyard exit.
+5. Dying: out of the world into the side's pool; back at home from it;
+   players dying at a graveyard (or in their first fight after rising)
+   sent home.
 
 ## Open Questions
 
@@ -84,7 +87,11 @@ battleground tactics, use the power-ups, and have no squads.
    enemy's home graveyard?
 4. **Squads breaking up:** when one of a trio dies, do the two left go on,
    wait for it to come back, or fall back?
-5. **Respawn gathering:** how long does a risen stand-in wait at the
-   graveyard for others before its group sets out?
-6. **Departures with nobody ready:** on a tick with no trio at home but
-   tanks waiting, do the tanks wait for the next tick, or go alone?
+5. **Back from the pool: how soon?** Does a dead stand-in come back at
+   home at once, after the stock resurrection wait (30 seconds, the
+   spirit healer's wave), or just in time for the next departure?
+6. (Answered 2026-10-08) **Departures with nobody ready:** tanks wait;
+   a party leaves every 12 seconds.
+7. **"Immediately after spawning":** how long after rising does a
+   player's first fight still count, if they die in it, for coming back at
+   home instead of the graveyard?
