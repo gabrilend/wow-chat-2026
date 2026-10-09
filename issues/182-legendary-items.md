@@ -77,6 +77,18 @@ Later the same day:
   every vanilla raid can drop any of them, at chances that give about one
   legendary per ten runs of that raid.
 
+- **New items, originals untouched**: "follow your instincts and leave
+  the originals untouched." The level-60 versions are new rows from
+  1,820,001; the stock items stay as they are.
+- **Atiesh: one drop that becomes the right staff**: "we could drop a
+  dummy item that, upon being looted, automatically transforms into the
+  correct variant of the four." A single "Atiesh" drops; when a character
+  loots it, it is replaced by the version for that character's class (the
+  four stock versions are the mage's, warlock's, priest's and druid's:
+  22589, 22630, 22631, 22632, to be confirmed from their effects; all four
+  allow every class in the item data, the class tie being the stock
+  questline's).
+
 ## Current Behavior
 
 Not built. The world database's legendary (orange) weapons and pieces,
@@ -125,7 +137,9 @@ own level, far above basic's 60.
    their level-60 versions: stats by item budget, weapon damage by the
    vanilla references, as new rows (from 1,820,001) or changed originals
    (open question 3); an install step for basic.
-2. Their drops: one shared loot group (every legendary, equal chance) on
+2. Atiesh's dummy: one new item in the shared loot group; a Lua loot
+   event replaces it with the looter's class's version.
+3. Their drops: one shared loot group (every legendary, equal chance) on
    every vanilla raid boss, its chance per boss set from the raid's boss
    count so a full run gives about 10% (for a raid of n bosses, 1 - 0.9^(1/n)
    per boss).
@@ -147,14 +161,19 @@ own level, far above basic's 60.
    Warglaives from Nefarian, Thori'dal from C'Thun, Val'anyr and
    Shadowmourne from Kel'Thuzad or Ragnaros? And "1 in 10 per raid": one
    roll at the raid's last boss, or spread over its bosses?
-3. **New rows or the originals changed:** new level-60 copies (the
+3. (Answered 2026-10-08: new rows, originals untouched) **New rows or the originals changed:** new level-60 copies (the
    originals untouched, as the patch system prefers) or the original
    entries edited?
 4. (Answered 2026-10-08: left out) **The lent weapons:** Andonisus and Kael'thas's eight vanish outside
    their fights in the stock game. Include them as real legendaries, or
    leave them out?
-5. **Atiesh's four versions:** all four drop (each for its classes), or
-   one?
+5. (Answered 2026-10-08: one dummy drop, turned into the looter's
+   class's version on loot) **Atiesh's four versions.**
+6. **Atiesh looted by a class it doesn't fit:** a warrior, rogue, hunter,
+   paladin, shaman or death knight loots the dummy. It stays a dummy that
+   can be traded to a caster (and turns when that caster takes it), or
+   it turns into one of the four at random, or it isn't offered to them in
+   the loot roll at all?
 
 ## Set aside: six designs for this server
 
