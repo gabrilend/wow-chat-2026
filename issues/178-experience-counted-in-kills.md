@@ -38,14 +38,41 @@ experience is split among members within 74 yards of the monster
 
 ## Intended Behavior
 
-**A level counts in kills.** At level L, about L even-level kills take a
-character to the next level: one kill at level 1, about 50 at level 50
-("Level 50 should give you 50, approximately. One kill, level one."). So
-an even-level kill gives about a L-th of the experience level L needs.
+**The aim** (owner, 2026-10-08): "basically... level as hard as you can
+with as minimal of gear as you can, and fight to the last."
+
+**A level counts in kills: ten per level number.** The first reading (L
+kills at level L: "One kill, level one") was too fast ("we would level
+too fast. Gotta replace this with something better ... maybe 1/10th as
+fast?"). At level L, about 10 x L even-level kills reach the next level:
+10 at level 1, 500 at level 50. An even-level kill gives a (10 x L)-th of
+what level L needs. The owner, on the comparison below: "our curve scales
+faster, but... not too bad? ... Anyway our system makes more sense I
+think."
 
 **Higher monsters are worth more kills.** A monster d levels above the
-character is worth d more kills than an even-level one: at level 50, a
-level-55 kill counts as 6 ("+5 extra kills worth").
+character is worth 1 + d kills ("Killing a level 55 while you're level 50
+should give you +5 extra kills worth"). Kills to level, stock against
+this (stock: `BaseGain`, +5% a level above, at most +20%; computed
+2026-10-08 from `player_xp_for_level`):
+
+| Level | stock even | +1 | +2 | +3 | +4 | +5 | ours even | +1 | +2 | +3 | +4 | +5 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 8 | 8 | 7 | 7 | 7 | 7 | 10 | 5 | 3 | 2 | 2 | 2 |
+| 10 | 80 | 76 | 72 | 70 | 67 | 67 | 100 | 50 | 33 | 25 | 20 | 17 |
+| 20 | 143 | 137 | 130 | 125 | 120 | 120 | 200 | 100 | 67 | 50 | 40 | 33 |
+| 30 | 199 | 189 | 180 | 173 | 166 | 166 | 300 | 150 | 100 | 75 | 60 | 50 |
+| 40 | 303 | 289 | 275 | 263 | 253 | 253 | 400 | 200 | 133 | 100 | 80 | 67 |
+| 50 | 410 | 390 | 372 | 357 | 342 | 342 | 500 | 250 | 167 | 125 | 100 | 83 |
+| 59 | 506 | 482 | 460 | 440 | 422 | 422 | 590 | 295 | 197 | 148 | 118 | 98 |
+
+At even level the two are close (stock is already about 8 to 10 kills per
+level number); the difference is the climb: stock pays at most 20% more
+for a harder monster, this pays six times as much for one five levels
+up, so fighting above one's level is the fast way.
+
+**Quests leave the players' road** (180): with quests gone from players,
+kills are where experience comes from.
 
 **Buddies make up the climb.** The experience levels need still rises
 ("levels per exp scale"); a character gains buddies as it levels (one
@@ -76,10 +103,8 @@ heal, and once one is in, it stays in until another is clearly nearer
 
 ## Open Questions
 
-1. **"One kill, level one", read literally?** A single kill taking a new
-   character from 1 to 2 (with quests and buddies, level 5 would come in a
-   handful of kills), or "about one" as the shape of the curve, the first
-   levels still taking a few kills?
+1. (Answered 2026-10-08) **The pace:** ten kills per level number, not
+   one.
 2. **Monsters below you:** a monster d levels below: worth d fewer kills
    (a level-45 kill at 50 counting as nothing, or as a fraction), the stock
    shrinking, or still one kill?
@@ -92,3 +117,5 @@ heal, and once one is in, it stays in until another is clearly nearer
    interact with or heal": buddies only, or any friendly player too? And
    "sticky": how much nearer must another be before it takes a place?
 5. **Quests:** quest experience stays stock, or is counted in kills too?
+6. **Monsters more than five above:** worth 1 + d kills without a cap (a
+   level-60 kill at 50 counting as 11), or capped (stock stops at 4)?
