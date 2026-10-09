@@ -62,6 +62,21 @@ Last Stand, Sargobras's Ledger, the Red Notebook, the Hearthstone of Every
 Home, the Banner of the Unbroken Clan) are set aside, kept below for
 later.
 
+Later the same day:
+- **Effects scaled now, tooltips wrong for a while**: "scale them now and
+  accept bad tooltips. They will get fixed automatically when custom
+  tooltips are implemented."
+- **The lent weapons left out**: "we probably don't want to spawn
+  kael'thas's weapons. Or Andonisus, it seems op." Checked: Kael'thas's
+  weapons deal 122 to 159 damage a second (Sulfuras 80) with item-level-175
+  stats and vanish after 15 minutes; Andonisus is near Sulfuras in damage
+  (81) but carries a spell-power effect made for one fight, and vanishes
+  after 10. They could be scaled like the rest; the owner leaves them out.
+- **From any boss, once in ten runs**: "any from all, not just end bosses.
+  once in ten runs. Gives reason to run lower level raids." Every boss of
+  every vanilla raid can drop any of them, at chances that give about one
+  legendary per ten runs of that raid.
+
 ## Current Behavior
 
 Not built. The world database's legendary (orange) weapons and pieces,
@@ -98,8 +113,11 @@ own level, far above basic's 60.
   proc's damage, healing or chance brought to level 60. The tooltip text
   is the client's, so scaled effects wait for the custom client if the
   stock client would describe them wrongly (open question 1).
-- **Rare raid drops.** Each from an appropriate vanilla raid boss, rare:
-  about one raid in ten sees one ("1 in 10 kills has even one per raid").
+- **Rare raid drops, from every boss.** Any legendary from any boss of
+  any vanilla raid (Molten Core, Onyxia, Blackwing Lair, Zul'Gurub, Ruins
+  and Temple of Ahn'Qiraj, Naxxramas), the chance per boss set so a whole
+  run of a raid sees one about one time in ten. The lent weapons
+  (Andonisus, Kael'thas's eight) are left out.
 
 ## Suggested Implementation Steps
 
@@ -107,21 +125,24 @@ own level, far above basic's 60.
    their level-60 versions: stats by item budget, weapon damage by the
    vanilla references, as new rows (from 1,820,001) or changed originals
    (open question 3); an install step for basic.
-2. Their drops: a loot entry on each chosen boss at the chance that gives
-   about one legendary per ten clears of the raid.
-3. Effects: the stock ones kept, or scaled through the server's spell data
-   once the custom client shows them (open question 1).
+2. Their drops: one shared loot group (every legendary, equal chance) on
+   every vanilla raid boss, its chance per boss set from the raid's boss
+   count so a full run gives about 10% (for a raid of n bosses, 1 - 0.9^(1/n)
+   per boss).
+3. Effects scaled now through the server's own spell data (the server
+   reads its own copy of the spell table; the stock client's tooltips will
+   state the old numbers until the custom client's own tooltips).
 4. A test: every level-60 version requires 60, sits at or below item
    level 90, and has weapon damage within the vanilla references' range.
 
 ## Open Questions
 
-1. **Effects now or later:** keep each legendary's stock effect as it is
+1. (Answered 2026-10-08: scale now, tooltips fixed by the custom client) **Effects now or later:** keep each legendary's stock effect as it is
    (Shadowmourne's soul fragments, Val'anyr's shields, Thori'dal's endless
    arrows: strong at 60), switch them off until the custom client can show
    scaled ones, or scale them now and accept stock tooltips that state the
    old numbers?
-2. **Which boss drops which:** for example Sulfuras and Thunderfury's
+2. (Answered 2026-10-08: any from all bosses, once in ten runs) **Which boss drops which:** for example Sulfuras and Thunderfury's
    parts staying as they are in Molten Core, Atiesh from Kel'Thuzad, the
    Warglaives from Nefarian, Thori'dal from C'Thun, Val'anyr and
    Shadowmourne from Kel'Thuzad or Ragnaros? And "1 in 10 per raid": one
@@ -129,7 +150,7 @@ own level, far above basic's 60.
 3. **New rows or the originals changed:** new level-60 copies (the
    originals untouched, as the patch system prefers) or the original
    entries edited?
-4. **The lent weapons:** Andonisus and Kael'thas's eight vanish outside
+4. (Answered 2026-10-08: left out) **The lent weapons:** Andonisus and Kael'thas's eight vanish outside
    their fights in the stock game. Include them as real legendaries, or
    leave them out?
 5. **Atiesh's four versions:** all four drop (each for its classes), or
