@@ -70,7 +70,7 @@ local traded
 for i = 1, 60 do
     local name = debug.getupvalue(on_select, i)
     if not name then break end
-    if name == "give_soul" then debug.setupvalue(on_select, i, function(_, guid) traded = guid; return true end) end
+    if name == "give_soul" then debug.setupvalue(on_select, i, function(_, guid, done) traded = guid; done(dk) end) end   -- the trade itself: scripts/test-dk-soul-trade
     if name == "vanish" then debug.setupvalue(on_select, i, function() end) end
 end
 -- }}}

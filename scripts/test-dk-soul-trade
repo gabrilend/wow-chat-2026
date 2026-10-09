@@ -1,0 +1,165 @@
+#!/usr/bin/env luajit
+-- test-dk-soul-trade - a death knight gives a soul to the Lich King at
+-- Sargobras (src/lua-basic/death-knight-souls.lua, issue 718), in a
+-- stand-in world whose console works the way the real one does.
+--
+-- For a general audience: the trade moves one of the player's level-55+
+-- characters onto a hidden holding account, using the server's own console
+-- commands. Those commands don't run when the script asks for them; they
+-- wait in a queue the server works through on its next update. The trade
+-- used to check their result at once, before they had run, so it always
+-- reported failure (2026-10-08, the owner: "I tried to give a soul to the
+-- lich king and it didn't work"). This test's stand-in console also runs
+-- queued commands only on the next tick, so a script that checks too early
+-- fails here exactly as it failed in the game.
+--
+-- Checked: nothing is decided at the click; after the queue runs, the
+-- holding account exists, the soul sits on it, the ledger says given,
+-- the death knight hears the success line and gets its buddies, and
+-- Sargobras vanishes for it. Then a full holding account: the trade stops,
+-- says why, leaves the ledger owed, and a second try is allowed.
+--
+-- Usage: scripts/test-dk-soul-trade [PROJECT_DIR]
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+
+-- {{{ world
+-- Builds a fresh stand-in world and loads the script into it. The console
+-- queue and the timed events advance only through tick().
+local function world(opts)
+    local W = {
+        accounts  = { RITZ = 101 },                 -- username -> id
+        next_id   = 3435,
+        chars     = { [504] = { name = "Growth", account = 101, level = 60 } },
+        queue     = {},                             -- console commands waiting for the next update
+        events    = {},                             -- { at, fn }
+        now       = 0,
+        heard     = {}, logged = {}, executed = {},
+        buddies   = 0, hidden = false,
+        full      = opts and opts.full,             -- the holding account already holds 10 characters
+    }
+    local dk = setmetatable({
+        GetClass = function() return 6 end, GetGUIDLow = function() return 501 end, GetGUID = function() return 501 end,
+        GetName = function() return "Gabrubre" end, GetAccountId = function() return 101 end,
+        IsInGuild = function() return true end,
+        GossipClearMenu = function() end, GossipMenuAddItem = function() end, GossipSendMenu = function() end, GossipComplete = function() end,
+        SendBroadcastMessage = function(_, t) W.heard[#W.heard + 1] = t end,
+        HasSpell = function() return false end,
+        GetNearestCreature = function() return W.sargobras end,
+        SetCreatureSpawnHidden = function() W.hidden = true end,
+    }, { __index = function() return function() end end })
+    W.dk = dk
+    W.sargobras = setmetatable({
+        CastSpell = function() W.flame = true end,
+        RegisterEvent = function(_, fn, ms) W.events[#W.events + 1] = { at = W.now + ms, fn = fn } end,
+    }, { __index = function() return function() end end })
+
+    -- the console: commands only queue; tick() runs them
+    local function run_queued(cmd)
+        local acc, pw = cmd:match("^%.account create (%S+) (%S+)$")
+        if acc then W.accounts[acc] = W.next_id; W.next_id = W.next_id + 1; return end
+        local to, name = cmd:match("^%.character changeaccount (%S+) (%S+)$")
+        if to then
+            local id = W.accounts[to]
+            if not id or W.full then return end     -- the server answers "account full" and changes nothing
+            for _, c in pairs(W.chars) do if c.name == name then c.account = id end end
+        end
+    end
+    function W.tick(ms)
+        for _, cmd in ipairs(W.queue) do run_queued(cmd) end
+        W.queue = {}
+        W.now = W.now + ms
+        local due = {}
+        for i = #W.events, 1, -1 do if W.events[i].at <= W.now then due[#due + 1] = table.remove(W.events, i) end end
+        for i = #due, 1, -1 do due[i].fn(0, 0, 0, dk) end
+    end
+
+    local function rows(list)
+        local i = 1
+        if #list == 0 then return nil end
+        return { GetUInt32 = function(_, c) return list[i][c + 1] end, GetString = function(_, c) return list[i][c + 1] end,
+                 NextRow = function() i = i + 1; return list[i] ~= nil end }
+    end
+    local handlers = {}
+    local env = setmetatable({
+        RegisterCreatureGossipEvent = function(entry, ev, fn) if entry == 7180001 then handlers[ev] = fn end end,
+        RegisterPlayerEvent = function() end,
+        RunCommand = function(cmd) W.queue[#W.queue + 1] = cmd end,
+        CreateLuaEvent = function(fn, ms) W.events[#W.events + 1] = { at = W.now + ms, fn = fn } end,
+        GetPlayerByGUID = function() return dk end,
+        CharDBExecute = function(sql) W.executed[#W.executed + 1] = sql end,
+        BuddiesGiveDeathKnightBuddies = function() W.buddies = W.buddies + 1 end,
+        print = function(t) W.logged[#W.logged + 1] = t end,
+        AuthDBQuery = function(sql)
+            local name = sql:match("username = '(%S+)'")
+            return W.accounts[name] and rows({ { W.accounts[name] } }) or nil
+        end,
+        CharDBQuery = function(sql)
+            if sql:find("FROM basic_718_souls") then return rows({ { 0, 0, 0, 0 } }) end      -- owed
+            if sql:find("FROM characters WHERE account") then
+                local out = {}
+                for guid, c in pairs(W.chars) do if c.account == 101 then out[#out + 1] = { guid, c.name, c.level } end end
+                return rows(out)
+            end
+            local g = sql:match("SELECT account FROM characters WHERE guid = (%d+)")
+            if g then return W.chars[tonumber(g)] and rows({ { W.chars[tonumber(g)].account } }) or nil end
+            return nil                              -- no professions to carry
+        end,
+    }, { __index = _G })
+    local chunk = assert(loadfile(DIR .. "/src/lua-basic/death-knight-souls.lua"))
+    setfenv(chunk, env)()
+    W.select = function(intid) handlers[2](2, dk, W.sargobras, 0, intid) end
+    return W
+end
+-- }}}
+
+local function said(W, pattern) for _, t in ipairs(W.heard) do if t:find(pattern) then return true end end return false end
+local function ledger_given(W)
+    for _, sql in ipairs(W.executed) do if sql:find("UPDATE basic_718_souls SET soul = 504") and sql:find("state = 1") then return true end end
+    return false
+end
+
+print("a trade, with no holding account yet")
+local W = world()
+W.select(504)
+check(W.chars[504].account == 101 and not ledger_given(W), "nothing is decided at the click (the commands are only queued)")
+check(not said(W, "slipped") and not said(W, "wrong on my end"), "no failure is reported before the commands have run")
+for _ = 1, 4 do W.tick(1000) end
+check(W.accounts.SOULS101 ~= nil, "the holding account SOULS101 is made")
+check(W.chars[504].account == W.accounts.SOULS101, "Growth is moved onto it")
+check(ledger_given(W), "the ledger says given, with Growth as the soul")
+check(said(W, "Growth, for the Lich King"), "the death knight hears the success line")
+check(W.buddies == 1, "the death knight gets its buddies, once")
+check(W.flame == true, "Sargobras goes up in flame")
+W.tick(5000)
+check(W.hidden == true, "and is gone for this death knight")
+
+print("a trade, with the holding account already made")
+W = world()
+W.accounts.SOULS101 = 3435
+W.select(504)
+for _ = 1, 3 do W.tick(1000) end
+check(W.chars[504].account == 3435 and ledger_given(W), "the soul moves and the ledger says given")
+
+print("a full holding account")
+W = world({ full = true })
+W.accounts.SOULS101 = 3435
+W.select(504)
+for _ = 1, 3 do W.tick(1000) end
+check(W.chars[504].account == 101 and not ledger_given(W), "the soul stays, the ledger stays owed")
+check(said(W, "slipped through my fingers"), "the death knight is told it failed")
+local why = table.concat(W.logged, " ")
+check(why:find("stopped at the move") and why:find("account full"), "the log names the step and the likely cause")
+W.select(504)
+check(#W.queue == 1, "a second try is allowed")
+
+print("")
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)

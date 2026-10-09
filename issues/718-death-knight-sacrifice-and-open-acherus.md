@@ -86,7 +86,14 @@ Three different death-knight arrangements exist, one per profile family:
     between accounts with the server's own `.character changeaccount` and
     are removed with `.character erase`, which keep its cache right; each
     player account gets its own holding account (`SOULS<account id>`,
-    random password nobody keeps).
+    random password nobody keeps). The Lua engine's console call does not
+    run a command, it queues it for the server's next update, so each
+    step waits a second before reading what its command did (make the
+    holding account, wait, check; move the soul, wait, check; then the
+    ledger). Until 2026-10-08 the trade checked at once and could never
+    succeed (the owner: "I tried to give a soul to the lich king and it
+    didn't work"); `scripts/test-dk-soul-trade` plays the trade against a
+    stand-in console that runs commands only on the next tick.
   - `scripts/generate-basic-death-knight-soul-data` writes
     `src/lua-basic/data/death-knight-soul-data.lua`: 3,702 profession
     spells over 14 skills (SkillLineAbility.dbc) and each race and sex's

@@ -179,26 +179,6 @@ local function check_gate(player, area)
 end
 -- }}}
 
--- {{{ local function holding_account
--- The player account's own holding account, made the first time it is
--- needed with a random password nobody keeps (so it can never be logged
--- into). Returns its id and name, or nil and a reason.
-local function holding_account(account_id)
-    local name = HOLDING_PREFIX .. account_id
-    local q = AuthDBQuery("SELECT id FROM account WHERE username = '" .. name .. "'")
-    if not q then
-        local chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-        local pw = {}
-        for i = 1, 16 do local k = math.random(#chars); pw[i] = chars:sub(k, k) end
-        pw = table.concat(pw)
-        RunCommand(".account create " .. name .. " " .. pw)
-        q = AuthDBQuery("SELECT id FROM account WHERE username = '" .. name .. "'")
-        if not q then return nil, "the holding account " .. name .. " could not be created" end
-    end
-    return q:GetUInt32(0), name
-end
--- }}}
-
 -- {{{ local function candidates
 -- The account's characters at level 55 or higher, death knights left out.
 local function candidates(player)
@@ -288,38 +268,98 @@ end
 -- }}}
 
 -- {{{ local function give_soul
-local function give_soul(player, soul_guid)
-    local account = player:GetAccountId()
+-- The trade, in steps that wait for each other. RunCommand does not run a
+-- command: it puts it in the console's queue, which the server works through
+-- on its next world update (mod-ale GlobalMethods.h, QueueCliCommand). So a
+-- check made right after it always sees the world from before the command.
+-- Until 2026-10-08 the trade checked at once, and could never succeed: the
+-- first try found no holding account yet ("Something's wrong on my end",
+-- while the queued create made it a moment later) and every later try found
+-- the soul not moved yet ("The soul slipped through my fingers"). Each step
+-- now waits COMMAND_SETTLE_MS before reading what its command did, as
+-- take_back already did.
+--   1. the soul is one of the player's candidates (now)
+--   2. its professions are carried to the death knight (now, while online)
+--   3. the holding account exists, made first if missing (waits)
+--   4. the soul is moved to it (waits), then checked
+--   5. the ledger says given; selection released; buddies; done(player)
+-- A failure says which step stopped and what was already done. The death
+-- knight is looked up again after each wait (it may have logged out); the
+-- ledger is written whether or not it is still online.
+local COMMAND_SETTLE_MS = 1000                      -- a queued console command lands within a world update or two
+local trading = {}                                  -- death knight guid -> true while a trade is under way
+
+local function give_soul(player, soul_guid, done)
+    local dk_guid, dk_name, account = player:GetGUIDLow(), player:GetName(), player:GetAccountId()
+    local guid = player:GetGUID()
+    if trading[dk_guid] then
+        player:SendBroadcastMessage("Sargobras says: Patience. I'm already at work.")
+        return
+    end
     local soul
     for _, c in ipairs(candidates(player)) do if c.guid == soul_guid then soul = c end end
     if not soul then
         player:SendBroadcastMessage("Sargobras says: That one isn't yours to give, or isn't ready.")
         return
     end
-    local holding_id, holding_name = holding_account(account)
-    if not holding_id then
-        print("[death-knight-souls] ERROR: " .. holding_name .. "; " .. player:GetName() .. " keeps its soul for now")
-        player:SendBroadcastMessage("Sargobras says: Something's wrong on my end. Keep your soul a little longer. (The server log says why.)")
-        return
-    end
+    trading[dk_guid] = true
     local learned, skills = carry_professions(player, soul.guid)
-    RunCommand(".character changeaccount " .. holding_name .. " " .. soul.name)
-    local check = CharDBQuery("SELECT account FROM characters WHERE guid = " .. soul.guid)
-    if not check or check:GetUInt32(0) ~= holding_id then
-        print("[death-knight-souls] ERROR: moving " .. soul.name .. " to " .. holding_name .. " failed (is that account full?); "
-            .. player:GetName() .. " keeps its soul for now")
-        player:SendBroadcastMessage("Sargobras says: The soul slipped through my fingers. Try again later. (The server log says why.)")
-        return
+
+    -- stop: say which step, and what was already done
+    local function stop(step, why)
+        trading[dk_guid] = nil
+        print(string.format("[death-knight-souls] ERROR: %s's trade of %s stopped at %s: %s. Done before it: %d profession skills"
+            .. " and %d recipes carried; the ledger still says owed. To debug: run the step's command at the console and read its answer.",
+            dk_name, soul.name, step, why, skills, learned))
+        local p = GetPlayerByGUID(guid)
+        if p then p:SendBroadcastMessage("Sargobras says: The soul slipped through my fingers. Try again in a moment. (The server log says why.)") end
     end
-    CharDBExecute("UPDATE basic_718_souls SET soul = " .. soul.guid .. ", soul_account = " .. account .. ", holding_account = " .. holding_id
-        .. ", state = " .. STATE_GIVEN .. ", changed = UNIX_TIMESTAMP() WHERE dk = " .. player:GetGUIDLow())
-    hold_selection(player, false)                   -- everyone selectable again (164)
-    player:SendBroadcastMessage(string.format("Sargobras says: %s, for the Lich King. You, for the living. Off you go. "
-        .. "(%d profession skills and %d recipes carried over.)", soul.name, skills, learned))
-    -- the four buddies a death knight gets, at this moment and no other (617b)
-    if BuddiesGiveDeathKnightBuddies then BuddiesGiveDeathKnightBuddies(player)
-    else print("[death-knight-souls] ERROR: sargobras.lua isn't loaded; " .. player:GetName() .. " got no buddies (its next login gives them)") end
-    return true
+
+    -- step 5
+    local function finish(holding_id)
+        CharDBExecute("UPDATE basic_718_souls SET soul = " .. soul.guid .. ", soul_account = " .. account .. ", holding_account = " .. holding_id
+            .. ", state = " .. STATE_GIVEN .. ", changed = UNIX_TIMESTAMP() WHERE dk = " .. dk_guid)
+        trading[dk_guid] = nil
+        local p = GetPlayerByGUID(guid)
+        -- offline: the ledger is written; selection and Sargobras's hiding
+        -- follow from it at the next login (on_login), and so do the buddies
+        if not p then return end
+        hold_selection(p, false)                    -- everyone selectable again (164)
+        p:SendBroadcastMessage(string.format("Sargobras says: %s, for the Lich King. You, for the living. Off you go. "
+            .. "(%d profession skills and %d recipes carried over.)", soul.name, skills, learned))
+        -- the four buddies a death knight gets, at this moment and no other (617b)
+        if BuddiesGiveDeathKnightBuddies then BuddiesGiveDeathKnightBuddies(p)
+        else print("[death-knight-souls] ERROR: sargobras.lua isn't loaded; " .. dk_name .. " got no buddies (its next login gives them)") end
+        if done then done(p) end
+    end
+
+    -- step 4
+    local function move(holding_id, holding_name)
+        RunCommand(".character changeaccount " .. holding_name .. " " .. soul.name)
+        CreateLuaEvent(function()
+            local check = CharDBQuery("SELECT account FROM characters WHERE guid = " .. soul.guid)
+            if not check then return stop("the move", soul.name .. " is no longer in the characters table") end
+            if check:GetUInt32(0) ~= holding_id then
+                return stop("the move", string.format("%s is still on account %d, not %s (%d); is that account full (10 characters)?",
+                    soul.name, check:GetUInt32(0), holding_name, holding_id))
+            end
+            finish(holding_id)
+        end, COMMAND_SETTLE_MS, 1)
+    end
+
+    -- step 3: the holding account, made first when missing
+    local name = HOLDING_PREFIX .. account
+    local q = AuthDBQuery("SELECT id FROM account WHERE username = '" .. name .. "'")
+    if q then return move(q:GetUInt32(0), name) end
+    local chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    local pw = {}
+    for i = 1, 16 do local k = math.random(#chars); pw[i] = chars:sub(k, k) end
+    RunCommand(".account create " .. name .. " " .. table.concat(pw))
+    CreateLuaEvent(function()
+        local made = AuthDBQuery("SELECT id FROM account WHERE username = '" .. name .. "'")
+        if not made then return stop("making the holding account", "no account named " .. name .. " after .account create") end
+        move(made:GetUInt32(0), name)
+    end, COMMAND_SETTLE_MS, 1)
 end
 -- }}}
 
@@ -483,13 +523,16 @@ local function on_select(event, player, creature, sender, intid, code)
         on_hello(event, player, creature)           -- the soul list again, plain: the story is played
     elseif row.state == STATE_OWED and intid ~= INTID_RETURN then
         if not player:IsInGuild() then return end   -- an old menu from before the name-first rule
-        if give_soul(player, intid) then
-            vanish(creature, player)
-            if skip_wanted[player:GetGUIDLow()] then
-                skip_wanted[player:GetGUIDLow()] = nil
-                player:RegisterEvent(function(_, _, _, p) skip_story(p) end, SKIP_AFTER_MS, 1)
+        -- the trade finishes a moment later (its console commands are
+        -- queued); his flame and the skip follow it, not the click
+        give_soul(player, intid, function(p)
+            local here = p:GetNearestCreature(30, SARGOBRAS)
+            if here then vanish(here, p) else hide_from(p) end   -- walked off: no flame to see, hidden all the same
+            if skip_wanted[p:GetGUIDLow()] then
+                skip_wanted[p:GetGUIDLow()] = nil
+                p:RegisterEvent(function(_, _, _, pp) skip_story(pp) end, SKIP_AFTER_MS, 1)
             end
-        end
+        end)
     end
 end
 -- }}}
