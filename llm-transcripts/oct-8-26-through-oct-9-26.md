@@ -1,6 +1,6 @@
 # Conversation Summary: a4440faa-87b5-4fc6-b59d-3d898fd95767
 
-Generated on: 2026-10-09 00:03:21
+Generated on: 2026-10-09 00:09:35
 Models: claude-opus-5-5
 
 ## Contents
@@ -4027,6 +4027,147 @@ Two questions to think through:
    opening on each side. One rule says the tunnel is its own part. Another says
    it's a road joining the parts on either side. How would you tell a cave a
    buddy should explore from a passage it should just walk through?
+
+--------------------------------------------------------------------------------
+
+### User Request 42
+
+what does this mean? Can we fix it?
+
+
+
+<pasted_content id="5a6f">
+AC> PlayerbotWorldThreadProcessor initialized
+>> basic: world boss battle bonus ON (876 monsters)
+[world-boss-respawn] 7 world bosses under countdown
+mod-buddies: 30 boat and zeppelin routes read for crossings (617e8)
+mod-buddies: new buddy Danaendu (level 1) knows 1 spells from trainers and
+quests
+mod-buddies: made Danaendu (600, race 8, class 1, level 1) for owner 599, slot 1
+Engine::Init: strategy chat was constructed with a corrupt bot facade, repairing
+it with the engine facade (B027, issue 308)
+Engine::Init: strategy potions was constructed with a corrupt bot facade,
+repairing it with the engine facade (B027, issue 308)
+Engine::Init: strategy racials was constructed with a corrupt bot facade,
+repairing it with the engine facade (B027, issue 308)
+Bot Danaendu logged in
+mod-buddies: loaded 2606 pieces of 2008 named areas for buddy roaming
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e0002bb Type: Creature Entry: 2974 Low: 699
+Update time diff: 118ms with 1 players online
+Last 500 diffs summary:
+|- Mean: 5ms
+|- Median: 1ms
+|- Percentiles (95, 99, max): 19ms, 25ms, 118ms
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e001162 Type: Creature Entry: 2974 Low: 4450
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e001162 Type: Creature Entry: 2974 Low: 4450
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e0002bb Type: Creature Entry: 2974 Low: 699
+Scheduled guild cache validation
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e001162 Type: Creature Entry: 2974 Low: 4450
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e0002bb Type: Creature Entry: 2974 Low: 699
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e0002bb Type: Creature Entry: 2974 Low: 699
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e001162 Type: Creature Entry: 2974 Low: 4450
+Scheduled guild cache validation
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e001162 Type: Creature Entry: 2974 Low: 4450
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e0002bb Type: Creature Entry: 2974 Low: 699
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e001162 Type: Creature Entry: 2974 Low: 4450
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e0002bb Type: Creature Entry: 2974 Low: 699
+MoveSplineInitArgs::Validate: expression 'velocity > 0.01f' failed for GUID
+Full: 0xf130000b9e001162 Type: Creature Entry: 2974 Low: 4450
+</pasted_content id="5a6f">
+
+
+> 1. A cave under a building. Some caves are underground models (mines, crypts)
+> with doors cut into the ground, so their floor sits below the land. The
+> navmesh comparison treats a cellar the same as a cave. Should a building's
+> interior count as its own part, like a cave? Or should
+>      only places where monsters live underground split off?
+
+like a cave for now, but more skeletan in the future. Think... Roboquest rails.
+
+> 2. A cave connected at both ends. Picture a tunnel through a hill with an
+> opening on each side. One rule says the tunnel is its own part. Another says
+> it's a road joining the parts on either side. How would you tell a cave a
+> buddy should explore from a passage it should just walk
+
+the navmesh
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 42
+
+> Tracking down which creatures those warnings are about (Kodo Matriarchs) and
+> why they're trying to move at zero speed.
+
+> The Matriarchs walk in formations behind a leader. Checking the leaders:
+
+> Found it. This is a bug in stock AzerothCore, not in our code. Looking at a
+> small existing source patch to copy its shape:
+
+> The fix fits in the existing source patch for upstream warnings as a one-line
+> edit:
+
+> Now the explanation in the patch's header:
+
+> The fix applies, re-applies harmlessly and reverts exactly. Now recording your
+> cave answers in the battle-areas plan, then committing both.
+
+*[commit] 2233072d0 in wow-chat-2026 - Herd followers stop flooding the log when they are already in place*
+
+*[commit] 85fb650a5 in wow-chat-2026 - Battle areas: caves and interiors to be found with the walking mesh*
+
+Yes, it's fixed in the patch files. It takes effect on your next compile.
+
+**What it means.** The warnings are harmless log spam from a small bug in stock
+AzerothCore, not our code. Entry 2974 is the Kodo Matriarch in Mulgore. Each one
+walks in a herd about 32 yards behind a Kodo Bull that follows a path. About
+once a second, a follower is sent toward where its spot behind the leader will
+be. Its speed is the leader's speed scaled down by how far it has to go. When a
+Matriarch is already standing on that spot, her speed comes out at almost zero,
+though not exactly zero. Stock code only swaps in walking speed when the speed
+is exactly zero. So the movement check gets a speed under 0.01 yards a second,
+refuses the step and logs this line. She stands still either way. The only harm
+is a log full of warnings.
+
+**The fix** is one line added to our existing source patch for upstream
+warnings. Any speed at or below the check's own limit becomes ordinary walking
+speed, so she takes a near-zero step that the check accepts. Nothing changes in
+game except the warnings stop. I ran the patch's apply, re-apply and revert on a
+scratch copy of the file; it applies cleanly and the revert brings the file back
+exactly. Committed.
+
+**Something to know before you compile.** The real source tree is still holding
+the patches from a previous build: 13 changed files in the core, plus files in
+the Lua engine, playerbots and buddy modules. That build's clean-up step didn't
+run, maybe because it was interrupted. Your next compile should handle it,
+because each patch notices when it's already applied. But the round-trip test I
+ran reported those leftovers as a failure.
+
+**Your cave answers are written into the battle-areas plan:**
+- **Caves come from the navmesh.** It can also replace the steepness guess: two
+  places are apart when there's no walkable link between them.
+- **Interiors count as caves for now.** Later they become Roboquest-style rails
+  that buddies ride through.
+
+One new question came out of your tunnel answer. How should the navmesh tell a
+cave from a passage? I see two possible rules:
+- **Openings:** a cave meets the surface at one mouth; a tunnel meets it at two
+  or more, opening onto different parts.
+- **Shape:** a passage is long and one corridor wide; a cave opens out into
+  rooms.
+
+Which did you have in mind? Or should it take both?
 
 --------------------------------------------------------------------------------
 

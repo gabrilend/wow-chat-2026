@@ -10,9 +10,15 @@
 # the next build. This test catches both without compiling anything and
 # without touching the real source tree.
 #
-# Usage: scripts/test-source-patches [PROJECT_DIR] [PROFILE]
+# Usage: scripts/test-source-patches [PROJECT_DIR] [PROFILE] [SOURCE_TREE]
 #   PROJECT_DIR defaults to the hard-coded path below.
 #   PROFILE defaults to basic.
+#   SOURCE_TREE: test against this tree instead of the profile's real one
+#     (scripts/make-upstream-tree builds clean trees at the pinned or the
+#     newest upstream commits). Added 2026-10-09: the real tree can hold a
+#     half-finished build's patches, which the round trip then reports as
+#     leftovers, and a pin move needs the patches tried on the new commits
+#     before anything is checked out for real.
 #
 # Needs ~1 GB free in /dev/shm (the tree is copied there, minus .git).
 # Exit status: 0 if every patch applied, every revert round-tripped.
@@ -22,6 +28,7 @@ set -o pipefail
 DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
 [[ -n "${1:-}" ]] && DIR="$1"
 PROFILE="${2:-basic}"
+SOURCE_TREE="${3:-}"
 
 # {{{ source_tree
 # profile → source tree; mirrors the case blocks in scripts/compile
@@ -36,6 +43,8 @@ if [[ -z "${SRC_NAME}" ]]; then
     exit 1
 fi
 SRC="${DIR}/${SRC_NAME}"
+# a tree given on the command line: the profile's real one is left alone
+[[ -n "${SOURCE_TREE}" ]] && SRC="${SOURCE_TREE}" && SRC_NAME="$(basename "${SOURCE_TREE}")"
 [[ -d "${SRC}" ]] || { echo "ERROR: ${SRC} missing"; exit 1; }
 # }}}
 

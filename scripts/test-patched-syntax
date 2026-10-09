@@ -10,11 +10,17 @@
 # RAM copy of the source tree, so the real tree is never touched, and it
 # writes no object files.
 #
-# Usage: scripts/test-patched-syntax [PROJECT_DIR] [PROFILE] [BUILD_DIR_NAME]
+# Usage: scripts/test-patched-syntax [PROJECT_DIR] [PROFILE] [BUILD_DIR_NAME] [SOURCE_TREE]
 #   PROJECT_DIR     defaults to the hard-coded path below
 #   PROFILE         defaults to basic
 #   BUILD_DIR_NAME  a build tree with compile_commands.json (default:
 #                   build-shadow, the tree compile writes into)
+#   SOURCE_TREE     check against this tree instead of the profile's real
+#                   one (scripts/make-upstream-tree builds clean trees at
+#                   the pinned or newer upstream commits; added 2026-10-09
+#                   for moving the pins). The build's flags still come from
+#                   BUILD_DIR_NAME, so a file upstream added since that
+#                   build is reported as "not in compile_commands.json".
 #
 # Checked files: every .cpp the profile's patches changed, plus, for each
 # changed header, one .cpp from the build that includes it.
@@ -26,6 +32,7 @@ DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
 [[ -n "${1:-}" ]] && DIR="$1"
 PROFILE="${2:-basic}"
 BUILD_NAME="${3:-build-shadow}"
+SOURCE_TREE="${4:-}"
 CC_JSON="${DIR}/${BUILD_NAME}/compile_commands.json"
 [[ -f "${CC_JSON}" ]] || { echo "ERROR: ${CC_JSON} missing (no recorded build flags to reuse)"; exit 1; }
 
@@ -38,6 +45,7 @@ declare -A SOURCE_BY_PROFILE=(
     [cc-test]="source-beta"
 )
 SRC="${DIR}/${SOURCE_BY_PROFILE[${PROFILE}]:?unknown profile}"
+[[ -n "${SOURCE_TREE}" ]] && SRC="${SOURCE_TREE}"     # a given tree: the real one is left alone
 WORK="${DIR}/tmp/shared-memory/test-patched-syntax-${PROFILE}"
 rm -rf "${WORK}"
 mkdir -p "${WORK}"
@@ -114,9 +122,16 @@ tus=$(echo "${tus}" | grep . | sort -u)
 # }}}
 
 # {{{ check_each
+# Two passes: the commands are written first, one file each (named after the
+# source's path, so two same-named sources never share a log), then run
+# JOBS at a time. Until 2026-10-09 they ran one by one, which was fine for
+# a dozen patched files; a pin move checks the whole buddy module and every
+# patched file, about a hundred.
+JOBS="$(nproc)"
 fail=0
+declare -A CMDFILE=()
 for tu in ${tus}; do
-    cmdfile="${WORK}/cmd.sh"
+    cmdfile="${WORK}/cmd.${tu//\//_}.sh"
     flags_from="${BORROW[${tu}]:-${tu}}"
     python3 - "${CC_JSON}" "${flags_from}" "${WORK}/tree" "${tu}" > "${cmdfile}" <<'EOF'
 import json, sys, shlex
@@ -143,6 +158,21 @@ for e in json.load(open(cc)):
             # point every include path at the patched copy instead of the real tree
             a = a.replace('/source-beta/', '/__TREE__/').replace('/source-alpha/', '/__TREE__/')
             out.append(a)
+        # A tree at newer commits (SOURCE_TREE) can have folders the recorded
+        # build never saw: the core gathers every folder under its sources as
+        # an include path, so a new one (TC9Sidecar/, 2026-10) is missing
+        # from these old flags, as is a new dependency's (deps/libsidecar).
+        # Every source folder is added, and each dependency's stub/ before
+        # its include/ (a default build compiles the stub). Harmless on the
+        # real tree: the same folders are already on the list.
+        import os
+        for top in ('src/server', 'src/common'):
+            out += ['-I' + d for d, _, _ in os.walk(tree + '/' + top)]
+        deps = tree + '/deps'
+        for dep in sorted(os.listdir(deps)) if os.path.isdir(deps) else []:
+            for sub in ('stub', 'include'):
+                if os.path.isdir(deps + '/' + dep + '/' + sub):
+                    out.append('-I' + deps + '/' + dep + '/' + sub)
         out += ['-fsyntax-only', tree + '/' + target]
         line = ' '.join(shlex.quote(x) for x in out)
         # "-I.../__TREE__/x" → the RAM copy
@@ -155,11 +185,26 @@ EOF
         echo "  [?] ${tu}: not in ${BUILD_NAME}'s compile_commands.json (module not built there?)"
         continue
     fi
-    if timeout 600 bash "${cmdfile}" > "${WORK}/$(basename "${tu}").log" 2>&1; then
+    CMDFILE["${tu}"]="${cmdfile}"
+done
+
+# run: each check writes its log and, when it passes, an ".ok" beside it
+for tu in "${!CMDFILE[@]}"; do
+    while (( $(jobs -rp | wc -l) >= JOBS )); do wait -n; done
+    log="${WORK}/${tu//\//_}.log"
+    ( timeout 600 bash "${CMDFILE[${tu}]}" > "${log}" 2>&1 && touch "${log}.ok" ) &
+done
+wait
+
+# report, in order
+for tu in ${tus}; do
+    [[ -n "${CMDFILE[${tu}]:-}" ]] || continue
+    log="${WORK}/${tu//\//_}.log"
+    if [[ -f "${log}.ok" ]]; then
         echo "  [✓] ${tu}"
     else
         echo "  [✗] ${tu}"
-        grep -E "error" "${WORK}/$(basename "${tu}").log" | head -10 | sed 's/^/        /'
+        grep -E "error" "${log}" | head -10 | sed 's/^/        /'
         fail=$((fail + 1))
     fi
 done
