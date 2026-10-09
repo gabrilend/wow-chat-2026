@@ -268,7 +268,9 @@ stack size is a world-database change to the gem items. All possible.
   database's `guild.name` column (`varchar(24)`), and the stock 3.3.5a
   client, which shows a guild name in a fixed field. Sargobras's own quick
   check (`sargobras.lua`, letters and spaces, 2-24) sits in front of all
-  three. Open: (a) dashes and underscores: in the server check too (a
+  three. Answered 2026-10-08 for (b): raise the server's limit (a source
+  patch and a wider name column), the stock client showing long names cut
+  short. Open: (a) dashes and underscores: in the server check too (a
   source patch), or only where the custom client draws the name? (b) a
   longer name: a source patch raising the limit and a wider column, with
   the stock client showing it cut short, or a short guild name kept for the

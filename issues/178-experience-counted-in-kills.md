@@ -130,7 +130,7 @@ heal, and once one is in, it stays in until another is clearly nearer
 2. **Monsters below you:** a monster d levels below: worth d fewer kills
    (a level-45 kill at 50 counting as nothing, or as a fraction), the stock
    shrinking, or still one kill?
-3. **Sharing with the clan:** does each clanmate get the whole kill's
+3. (Owner, 2026-10-08: "ask me again later") **Sharing with the clan:** does each clanmate get the whole kill's
    experience (everyone levels as fast as the one fighting), or the kill
    split among them (more buddies, smaller shares)? And players in one
    clan: the same rule for them?

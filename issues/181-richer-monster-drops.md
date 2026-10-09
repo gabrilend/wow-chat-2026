@@ -63,7 +63,7 @@ more gear from the monsters players fight, above their level by choice
 1. (Answered 2026-10-08: ordinary monsters only) **Epic x5 from what:** ordinary monsters only (world-drop epics, few
    and rare), or bosses too (which would make raid and dungeon epics five
    times as common)?
-2. **"Double the amount" for rares:** two rolls of their whole loot (two
+2. (Answered 2026-10-08: (a), their whole loot rolled twice) **"Double the amount" for rares:** two rolls of their whole loot (two
    chances at each item), or the items that drop doubled (every drop
    comes in twos)?
 3. **What counts as a boss:** the creature's rank "boss" (raid bosses and

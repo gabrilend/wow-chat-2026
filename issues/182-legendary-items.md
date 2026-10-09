@@ -239,8 +239,11 @@ server has.
 6. **Banner of the Unbroken Clan** (cloak): three or more clanmates within
    30 yards each take 5% less damage; a buddy dying in that ring returns
    after 30 seconds at half health, once every five minutes.
-7. **Scaling with gear (80 to 120):** what follows the gear: stats only,
-   weapon damage too, the effects too? Does "highest item level equipped"
-   leave out the legendary itself and other legendaries? At what step (each
-   item level, or every 5 or 10)? And the level-60 versions built today:
-   replaced by item-level-80 ones that rise, or kept as the floor?
+7. **Scaling with gear (80 to 120):** answered in part 2026-10-08: stats,
+   weapon damage and effects all follow ("both"); the legendary itself and
+   other legendaries are left out of "highest item level equipped"
+   ("yes"); recalculated when an item is equipped ("we can check for
+   scaling the legendary upon equipping an item. Or maybe when equipping a
+   legendary item?": equipping any item covers both). Still open: the step
+   (each item level, or every 5 or 10), and whether the level-60 versions
+   built today are replaced by item-level-80 ones that rise.

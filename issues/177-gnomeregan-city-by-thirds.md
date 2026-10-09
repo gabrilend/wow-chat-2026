@@ -65,6 +65,7 @@ across a year each gets exactly half the time.
    potions have no cooldown, as the cure for the toxic gas and ooze.
 4. **The city's people:** from the existing gnome refugees in Ironforge
    (moving home for those hours), or new ones?
-5. **The city half and the dungeon half:** one place (the instance turns
+5. (Answered 2026-10-08: "the dungeon is temporarily filled with
+   friendly NPCs": the instance itself is the city for its hours) **The city half and the dungeon half:** one place (the instance turns
    into a city), or the city in the open world above it while the
    dungeon keeps its own entrance?
