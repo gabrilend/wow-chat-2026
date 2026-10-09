@@ -21,7 +21,7 @@ scripts/test-arathi-basin-rules:
 The Lua engine loads every .lua file here at startup; these only return
 tables, so loading them does nothing on its own.
 
-The folder has to exist even while it holds nothing but this file: E001
+The folder has to exist even when it holds nothing but this README: E001
 stops with an error when a profile has no Lua folder, rather than starting a
 server with no scripts and no sign that anything is missing.
 
