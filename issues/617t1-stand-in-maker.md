@@ -34,8 +34,7 @@ stand-in) is open.
 - Talents: spent by its shape by the buddies' own script
   (`src/lua-basic/buddy-talents.lua`, which now reads a stand-in's shape
   from `buddy_stand_in`), at login and on each level. cc-test runs the same
-  file through links in `src/lua-cc-test/` (the script, its spender, its
-  data).
+  file in place through a one-file loader, `src/lua-cc-test/buddy-talents.lua`.
 - PvP jewellery (`BuddyGivePvpJewellery`, `buddies_kit.cpp`): the neck, two
   rings and two trinkets from what vendors sell for honor or arena points
   at or below its level, its class and race allowed, scored by its shape as

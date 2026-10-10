@@ -321,7 +321,7 @@ static void FirstMoments(Player* standIn, StandInDue const& due)
     }
     if (standIn->GetFreeTalentPoints())
         problems += std::to_string(standIn->GetFreeTalentPoints()) + " talent points unspent (is src/lua-basic/buddy-talents.lua "
-            "loaded? on cc-test, through src/lua-cc-test's links to it); ";
+            "loaded? on cc-test, through src/lua-cc-test/buddy-talents.lua); ";
     if (PlayerbotAI* ai = GET_PLAYERBOT_AI(standIn))
         ai->ResetStrategies();                          // tank, healer or damage rules, by its talents
     if (!standIn->TeleportTo(due.map, due.x, due.y, due.z, due.o))
