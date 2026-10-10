@@ -54,10 +54,21 @@ but not built.
 
 ## Intended Behavior
 
-**The scene.** A fresh Alterac Valley match, set up the way the
-battleground starts: every tower, bunker, graveyard and captain in its
-starting state, no reinforcements spent. It is created by the scene's own
-setup, not by a queue filling, so it starts the same way every run.
+**The battleground, always running.** A fresh Alterac Valley match, set
+up the way the battleground starts: every tower, bunker, graveyard and
+captain in its starting state, no reinforcements spent. One is set up
+when the server starts, not by a queue filling, and runs at all times,
+fought out by stand-ins even with no player in it; when it ends, the next
+begins after the ten minutes in town. When the running match holds the
+battleground's most players (40 a side), the next player to queue opens a
+second one, and so on. Run alone (the test step, 176a), the same setup
+starts it the same way every run.
+(The owner, 2026-10-09, reframing it: "It's not a "scene", it's a
+battleground, set up and initialized. Same for AV. We should have one
+running at all times, more if there's enough players." Asked whether one
+runs with nobody in it, stand-ins fighting stand-ins: "yes"; and how many
+players open another: "the max number of players allowed in that
+battleground".)
 
 **Full without players.** Each side has 40 stand-ins from the start, the
 stock side size, so the battle is fought even when nobody joins. Players

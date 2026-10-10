@@ -1,6 +1,6 @@
 # Conversation Summary: a4440faa-87b5-4fc6-b59d-3d898fd95767
 
-Generated on: 2026-10-09 19:30:07
+Generated on: 2026-10-09 20:07:23
 Models: claude-opus-5-5
 
 ## Contents
@@ -42,6 +42,10 @@ Models: claude-opus-5-5
    Alterac Valley test scenes running, and I've written the stand-in builder for
    them on the newly updated upstream code. Next, you compile, then try `.buddy
    standin make horde healer 20` in game.
+10. 2026-10-09 19:33, after Request 48 - We're getting the basic server and the
+    Arathi Basin and Alterac Valley test servers ready: pins moved to upstream's
+    newest and the stand-in builder done. Next, you compile, then try `.buddy
+    standin make horde healer 20` in game.
 
 --------------------------------------------------------------------------------
 
@@ -4844,6 +4848,220 @@ against the generated buddy data, and the table installed twice and removed.
 One follow-up question on playing a stand-in: while a player is playing one,
 should it show in /who and be befriendable like any character? And when they let
 go, does it go back to hidden?
+
+--------------------------------------------------------------------------------
+
+### User Request 49
+
+> - No death knight tanks. In the buddy talent data, all ten death knight shapes
+> are damage (Blood isn't marked as a tank tree), so death knights never come as
+> tanks.
+
+I think that's okay? Death Knight characters only ever get death-knight buddies,
+so... they can't choose one or the other to be a tank. A DK player should have 4
+DK buddies at 60, confirm?
+
+> - Free reputation. Most battleground jewellery needs standing with that
+> battleground's faction, or the server won't let it be worn. Stand-ins are
+> given that standing as they're kitted out, like veterans of those battles.
+
+great.
+
+> One follow-up question on playing a stand-in: while a player is playing one,
+> should it show in /who and be befriendable like any character? And when they
+> let go, does it go back to hidden?
+
+no change.
+
+> 2. Playing them: recorded as playing one like any character, by direct control
+> rather than commands. That's for the taking-over step in the Alterac Valley
+> plan.
+
+We can defer this aspect for a while. Until the custom client lets us draw a UI
+for selecting one maybe.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 49
+
+> Confirmed from the code, with one correction to "at 60": a death knight player
+> gets exactly four death knight buddies, all at once, when it accepts the soul
+> trade in Acherus. It gets nothing by level. The buddy slot code skips death
+> knights entirely, and the buddy chooser makes every buddy of a death knight
+> owner a death knight. So four is the total, from the trade on, not something
+> reached at 60.
+>
+> That has one consequence. All four are damage, so a death knight's party has
+> no tank or healer of its own. The dungeon stand-in rule covers exactly this:
+> from level 30, the farthest member not needed for a role steps out, and a
+> stand-in of the missing role takes the seat. A death knight in a dungeon would
+> therefore swap two of its buddies for a tank stand-in and a healer stand-in.
+> Recording your answers:
+
+*[commit] c172a9ddf in wow-chat-2026 - Stand-in plans: playing one deferred until the custom client can offer it*
+
+Your answers are recorded in three plans (the stand-in builder, dungeon
+stand-ins and Alterac Valley) and committed.
+
+- **Death knights:** confirmed that a death knight player gets four death knight
+  buddies. They all come at once from the soul trade in Acherus, and death
+  knights get no buddy slots by level, so there are never more than four. All
+  four are damage, so in a dungeon from level 30 the missing tank and healer
+  would be stand-ins.
+- **Reputation:** recorded as you approved it.
+- **Playing a stand-in:** deferred until the custom client can draw a way to
+  pick one, and a played stand-in stays hidden. The first Alterac Valley match
+  will run with stand-ins and joining players only.
+
+The stand-in builder's plan has no open questions left. What remains is your
+compile, then trying `.buddy standin make horde healer 20` in game.
+
+--------------------------------------------------------------------------------
+
+### User Request 50
+
+Okay. Any quick wins we can build before the compile?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 50
+
+Here's what fits before the compile, most valuable first:
+
+1. **Database overlap check (recommended).** On first start, the new core
+   applies about 1,200 upstream database updates by itself. If one of them
+   changes a row that one of our install steps also changed, upstream's version
+   wins quietly, and our step won't re-run because its file didn't change. A
+   script could read both sets of SQL and list every table and row they both
+   touch. Then you know before boot what to re-check or re-apply, instead of
+   finding out when something in game stops working. It needs no compile and
+   turns the largest unknown in this upgrade into a list.
+2. **Run every test the project has, in one pass.** There are many
+   `scripts/test-*` scripts; today I only ran the ones near my changes. A full
+   sweep before the compile catches anything the pin move or the stand-in
+   changes broke elsewhere. It's cheap, and I can do it in parallel in a few
+   minutes.
+3. **The Arathi Basin scene, first wiring.** The squad, route and bonus rules
+   already exist as Lua. A scene script could now ask for its trios through the
+   stand-in builder and send them out every 12 seconds. You can't watch it until
+   after the compile, but writing it now means the first boot can try it.
+4. **The navmesh reader for caves and tunnels.** This is pure Lua and needs no
+   compile, but it's a reader for the movement data's tile format, so it's the
+   least quick of these.
+
+My suggestion is 2 then 1: the sweep takes minutes, and the overlap check
+protects your first boot. Which would you like?
+
+--------------------------------------------------------------------------------
+
+### User Request 51
+
+<pasted_content id="5a6f">
+> 1. Database overlap check (recommended). On first start, the new core applies
+> about 1,200 upstream database updates by itself. If one of them changes a row
+> that one of our install steps also changed, upstream's version wins quietly,
+> and our step won't re-run because its file didn't
+>      change. A script could read both sets of SQL and list every table and row they both touch. Then you know before boot what to re-check or re-apply, instead of finding out when something in game stops working. It needs no compile and turns the largest unknown in this upgrade into
+     a list.
+</pasted_content id="5a6f">
+
+
+What's the order of operations here? I thought we resolved this by putting our
+SQL updates after the upstream's?
+
+> 2. Run every test the project has, in one pass. There are many scripts/test-*
+> scripts; today I only ran the ones near my changes. A full sweep before the
+> compile catches anything the pin move or the stand-in changes broke elsewhere.
+> It's cheap, and I can do it in parallel in a few
+     minutes.
+
+this is part of the compile, right? No need to concern ourself with something
+the compilation does automatically.
+
+> 3. The Arathi Basin scene, first wiring. The squad, route and bonus rules
+> already exist as Lua. A scene script could now ask for its trios through the
+> stand-in builder and send them out every 12 seconds. You can't watch it until
+> after the compile, but writing it now means the first
+>      boot can try it.
+
+I mean... It's not a "scene", it's a battleground, set up and initialized. Same
+for AV. We should have one running at all times, more if there's enough players.
+
+> 4. The navmesh reader for caves and tunnels. This is pure Lua and needs no
+> compile, but it's a reader for the movement data's tile format, so it's the
+> least quick of these.
+
+a navmesh reader? What are we reading it for?
+
+what other quick wins are there? For either the basic profile or the cc-test
+profile.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 51
+
+> Checking both claims before answering: how the server orders updates, and what
+> the project decided about it:
+
+> The server collects update files from every folder into one list sorted by
+> file name, applies each new file once, and remembers its fingerprint. Checking
+> whether the compile runs the project's tests:
+
+Neither assumption holds, and I've checked both in code:
+
+**1. Update order.** The server gathers update files from every folder into one
+list sorted by file name. It applies each file it hasn't seen, and remembers
+each file's fingerprint (a hash of its contents).
+- **On an existing database (yours):** our files were applied at earlier boots
+  and haven't changed, so they're skipped. Only upstream's ~1,200 new files run.
+  Where one touches a row ours changed, upstream's version is what remains.
+  Order doesn't enter into it.
+- **On a fresh install:** order does matter, and most of ours sort *before*
+  upstream's. Upstream names its files by date (`2026_09_23_00.sql`), and in
+  name order `08-…` through `29-…` come before `2026_…`. Only our `3x-`
+  files (custom command help, legendaries, roaming areas, and so on) sort after.
+
+I didn't find a past decision about ordering in the plans. If you remember
+making one, do you recall where? It may have been for a case these rules don't
+cover.
+
+There's a fix worth having beyond a one-off check. Our install SQL is built to
+be safe to apply twice (the tests do exactly that). If each of our files carried
+the core pin it was installed against, a pin move would change every file's
+fingerprint, and all of ours would re-apply on that boot. They would also need
+names that sort after upstream's, so they land last. The overlap check tells us
+whether that matters now; the stamp makes it stop mattering for future pin
+moves.
+
+**2. Tests.** The compile doesn't run them. I searched compile, install and
+update, and none of them calls any of the 33 `scripts/test-*` scripts. Wiring
+the fast ones into the compile is itself a quick win, since you expected it to
+be there already.
+
+**3. Battlegrounds running at all times.** That's a design change from "a test
+scene": Arathi Basin and Alterac Valley would be set up at server start and
+always running, with more instances as players arrive. I'll write it into both
+plans. Two questions:
+- Does "always running" mean a match runs even with zero players, with stand-ins
+  fighting stand-ins?
+- What count of players opens a second match?
+
+**4. What the navmesh reader is for.** Your cave question. The roaming-area
+cutter currently sees only ground height, so it can't tell a cave from open
+ground. You asked "should use movement navmesh?", and it's how caves get their
+own parts and tunnels count as roads. It isn't urgent.
+
+**Other quick wins:**
+1. **Wire the fast tests into the compile.** As above.
+2. **A stand-in or bot statistics page.** You asked earlier for dashboards; the
+   stand-in table and the roaming-area summary already hold the numbers.
+3. **The command reference's "9 problems".** Regenerating it listed nine
+   problems under its checks; I haven't looked at what they are.
+4. **Beta's broken patch list.** It names a talent-bonus module that isn't in
+   the project, so beta fails before compiling. It's a one-line fix once you say
+   whether that module is retired.
+
+Which do you want?
 
 --------------------------------------------------------------------------------
 

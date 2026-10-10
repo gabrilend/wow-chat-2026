@@ -37,10 +37,22 @@ resources the match ends, everyone is sent out, and the instance closes.
 
 ## Intended Behavior
 
-- **One person starts it.** The first player to queue gets a match at
-  once: stand-ins fill both sides, so nobody waits for an opponent.
-- **Many at once.** Each first queue that finds no match with room opens
-  a new instance; several run side by side, each its own copy of the map.
+- **Always running.** One match is set up when the server starts and
+  runs at all times, stand-ins on both sides, fought out even with no
+  player in it; when one ends, the next starts after the interim. A
+  player who queues joins the running match at once, so nobody waits for
+  an opponent. (This replaces "the match starts as soon as a single person
+  queues", 2026-10-08.)
+- **Another when it is full.** When the running match holds the
+  battleground's most players (15 a side for Arathi Basin), the next
+  player to queue opens a second one, and so on; several run side by
+  side, each its own copy of the map.
+(The owner, 2026-10-09, reframing it: "It's not a "scene", it's a
+battleground, set up and initialized. Same for AV. We should have one
+running at all times, more if there's enough players." Asked whether one
+runs with nobody in it, stand-ins fighting stand-ins: "yes"; and how many
+players open another: "the max number of players allowed in that
+battleground".)
 - **Home bases at random.** Each match decides by a coin which side
   starts at Trollbane Hall and which at the Defiler's Den. Everything
   that names a home base (spawn, home graveyard, where tanks appear,
@@ -70,7 +82,8 @@ resources the match ends, everyone is sent out, and the instance closes.
 1. Read how the core opens and closes a battleground instance
    (`BattlegroundMgr`, `BattlegroundQueue`) and where "enough players"
    is decided.
-2. Open a match for one queued player, filled with stand-ins.
+2. Open a match at server start, filled with stand-ins (the stand-in
+   maker, 617t1); queued players join it; open another when it is full.
 3. The random home base: swap the two sides' start positions, home
    graveyards and the banner the home base flies, per match.
 4. The one-minute interim and the restart in place, shared with Alterac
@@ -87,9 +100,9 @@ resources the match ends, everyone is sent out, and the instance closes.
    each faction's home marked by its faction. Is it acceptable that the
    map's marks say one thing and the match another, or should the custom
    client draw the home bases from the match?
-3. **More than one person queueing:** does a second player join the first
-   one's match (on their faction's side) while it has room, or always get
-   a new one?
+3. (Answered 2026-10-09) **More than one person queueing:** players join
+   the running match while it has room; the next one past the
+   battleground's most players opens another (above).
 4. **Ending the stock battleground:** as Alterac Valley's question 11:
    the restart in place changes how the server ends a battleground. The
    owner, 2026-10-08, for Alterac Valley: "unclear. will assess
