@@ -10,6 +10,11 @@
 # Get DIR from parent script
 DIR="${DIR:-/home/ritz/games/azeroth-core/wow-chat-2026}"
 
+# The staging folders the install steps registered this run, for
+# _mirror_staged_sql (issue 183): real path -> database. Global (-g): the
+# file is sourced from inside functions.
+declare -gA STAGED_SQL_DIRS=()
+
 # -- {{{ _register_with_updatefetcher
 # Idempotently register a project-local SQL directory with AzerothCore's
 # UpdateFetcher. Once a row exists in `<db>.updates_include` pointing at
@@ -54,6 +59,16 @@ _register_with_updatefetcher() {
     # no matter which ${DIR} spelling ran the install.
     DIR_PATH="$(readlink -f "${DIR_PATH}")"
 
+    # Issue 183: the folder the steps write is staging; the updater scans
+    # its twin, <folder>.updater/, which _mirror_staged_sql fills at the end
+    # of the install steps with every file renamed z_<name> (after every
+    # upstream update) and stamped with the commits it was installed
+    # against (so a pin move runs it again). Remembered here for the mirror.
+    local STAGING="${DIR_PATH}"
+    STAGED_SQL_DIRS["${STAGING}"]="${DB}"
+    DIR_PATH="${STAGING}.updater"
+    mkdir -p "${DIR_PATH}"
+
     # If MySQL isn't up the include row can be inserted on a later
     # install pass. Worldserver picks it up on next boot regardless
     # of when the row was added. This is a deferral, so say so: until a
@@ -90,7 +105,60 @@ CREATE TABLE IF NOT EXISTS \`updates_include\` (
   PRIMARY KEY (\`path\`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='List of directories where we want to include sql updates.';
 INSERT IGNORE INTO \`updates_include\` (\`path\`, \`state\`) VALUES ('${DIR_PATH}', 'CUSTOM');
+DELETE FROM \`updates_include\` WHERE \`path\` = '${STAGING}';
 SQL
+}
+# -- }}}
+
+# -- {{{ _sql_install_stamp
+# The first line of every mirrored file (issue 183): the commits the server
+# is built from, the core's and each module's with a git history. A pin move
+# changes it, so every mirrored file's hash changes and the updater runs it
+# again, after upstream's new updates. Computed once per install run.
+_sql_install_stamp() {
+    if [[ -z "${SQL_INSTALL_STAMP:-}" ]]; then
+        local parts="core=$(git -C "${AC_CODE_DIR}" rev-parse --short=12 HEAD 2>/dev/null || echo none)"
+        local mod
+        for mod in "${AC_CODE_DIR}"/modules/*/; do
+            [[ -d "${mod}.git" ]] || continue
+            parts+=" $(basename "${mod}")=$(git -C "${mod}" rev-parse --short=8 HEAD)"
+        done
+        SQL_INSTALL_STAMP="-- installed against ${parts} (issue 183: a pin move changes this line, so the updater runs the file again, after upstream's)"
+    fi
+    echo "${SQL_INSTALL_STAMP}"
+}
+# -- }}}
+
+# -- {{{ _mirror_staged_sql
+# Every staging folder the steps registered this run, mirrored into the twin
+# the updater scans (issue 183): each staged foo.sql as z_foo.sql, the stamp
+# first, the file after it, written only when it differs; a twin file whose
+# staged one is gone is removed. Run at the end of the install steps (and of
+# their reverts), so it sees whatever they wrote.
+_mirror_staged_sql() {
+    local staging twin stamp f name wrote=0 kept=0 removed=0
+    stamp="$(_sql_install_stamp)"
+    for staging in "${!STAGED_SQL_DIRS[@]}"; do
+        twin="${staging}.updater"
+        mkdir -p "${twin}"
+        for f in "${staging}"/*.sql; do
+            [[ -f "${f}" ]] || continue
+            name="z_$(basename "${f}")"
+            if [[ -f "${twin}/${name}" ]] && cmp -s <(echo "${stamp}"; cat "${f}") "${twin}/${name}"; then
+                kept=$((kept + 1))
+            else
+                { echo "${stamp}"; cat "${f}"; } > "${twin}/${name}"
+                wrote=$((wrote + 1))
+            fi
+        done
+        for f in "${twin}"/z_*.sql; do
+            [[ -f "${f}" ]] || continue
+            [[ -f "${staging}/$(basename "${f}" | sed 's/^z_//')" ]] && continue
+            rm "${f}"
+            removed=$((removed + 1))
+        done
+    done
+    echo "  SQL for the updater (issue 183): ${wrote} written, ${kept} unchanged, ${removed} removed, in ${#STAGED_SQL_DIRS[@]} folders"
 }
 # -- }}}
 
@@ -109,7 +177,13 @@ SQL
 _unregister_from_updatefetcher() {
     # Canonicalize to match how _register stores it (real path, not the
     # /home/ritz symlink spelling) so the DELETE actually hits the row.
+    # Both the staging folder's row (from before issue 183) and its twin's.
     local DIR_PATH; DIR_PATH="$(readlink -f "$1")"
+    _unregister_one "${DIR_PATH}.updater" "$2" || return 1
+    _unregister_one "${DIR_PATH}" "$2"
+}
+_unregister_one() {
+    local DIR_PATH="$1"
     local DB="$2"
     local MYSQL_DIR="${DIR}/mysql/installed-files"
     local MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"

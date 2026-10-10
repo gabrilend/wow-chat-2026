@@ -567,7 +567,7 @@ QUICK_TESTS=(
     test-buddy-stand-ins test-buddy-talents test-compile-module-set test-dk-skip-story
     test-dk-soul-trade test-gear-designs test-gearsets test-gm-command-reference
     test-lua-unique-names test-profile-config-gates test-redirect-listener test-roam-pattern
-    test-sargobras-follow test-steady-mtimes test-valley-deal test-world-boss-countdown
+    test-sargobras-follow test-sql-mirror test-steady-mtimes test-valley-deal test-world-boss-countdown
 )
 run_quick_tests() {
     local out="${DIR}/tmp/shared-memory/compile-tests"

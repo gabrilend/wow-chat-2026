@@ -607,6 +607,8 @@ apply_patches_end() {
             return 1
         fi
     done
+    # what the steps staged, into the folders the updater scans (issue 183)
+    _mirror_staged_sql || { echo "  ERROR: mirroring the staged SQL for the updater failed (issue 183)"; return 1; }
     echo "  PHASE_END complete (${done_ids% })"
 }
 
@@ -647,6 +649,7 @@ unapply_patches_end() {
             echo "  [${patch_id}] No unpatch function (skipping)"
         fi
     done
+    _mirror_staged_sql                          # the reverts' SQL, into the updater's folders (issue 183)
     echo "  PHASE_END revert complete"
 }
 # }}}

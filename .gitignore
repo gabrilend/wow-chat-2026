@@ -125,6 +125,9 @@ sql/basic/db_characters/
 sql/cc-test/db_world/
 sql/cc-test/db_characters/
 # (future profiles with their own SQL: append `sql/<profile>/db_<dbname>/` here)
+# Their twins, which the updater scans (issue 183): the same files renamed
+# z_<name> and stamped with the commits they were installed against.
+sql/*/db_*.updater/
 
 # =============================================================================
 # Per-profile install dirs and runtime artifacts — derived from build
