@@ -566,7 +566,7 @@ QUICK_TESTS=(
     test-buddy-gems test-buddy-gm test-buddy-hearth test-buddy-kit test-buddy-roam-core
     test-buddy-stand-ins test-buddy-talents test-compile-module-set test-dk-skip-story
     test-dk-soul-trade test-gear-designs test-gearsets test-gm-command-reference
-    test-lua-unique-names test-profile-config-gates test-redirect-listener test-roam-pattern
+    test-lua-unique-names test-navmesh-caves test-profile-config-gates test-redirect-listener test-roam-pattern
     test-sargobras-follow test-sql-mirror test-steady-mtimes test-valley-deal test-world-boss-countdown
 )
 run_quick_tests() {

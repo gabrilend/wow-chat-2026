@@ -1,0 +1,75 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- test-navmesh-caves - the walking mesh and the terrain together find a
+-- cave (issue 617e12)
+--
+-- For a general audience: the roaming-area cutter sees only the terrain's
+-- height, so a cave under a hill looks like open ground. The server's
+-- walking mesh has the cave's floor, lying below the terrain. This reads
+-- the Valley of Trials' tile of the mesh (scripts/lib/navmesh-tiles.lua)
+-- and the terrain (scripts/lib/map-heights.lua), groups the floors lying
+-- at least 4 yards under the terrain by the mesh's own links between
+-- polygons, and checks that the Burning Blade Coven comes out: a large
+-- group under the hill north-east of the camp, joined to open floor at one
+-- place only (one mouth: a cave, not a passage through).
+-- Usage: scripts/test-navmesh-caves [PROJECT_DIR]
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local Nav     = dofile(DIR .. "/scripts/lib/navmesh-tiles.lua")
+local Heights = dofile(DIR .. "/scripts/lib/map-heights.lua")
+
+local UNDER = 4                                          -- yards under the terrain to count as under it
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+
+local tile, err = Nav.read(Nav.tile_path(DIR, 1, 32, 40))   -- map 1 (Kalimdor), the grid holding the Valley of Trials
+check(tile ~= nil, "the Valley of Trials' mesh tile reads" .. (err and (": " .. err) or ""))
+if not tile then os.exit(1) end
+check(tile.bmin[1] < -168 and tile.bmax[1] > -168 and tile.bmin[2] < -4356 and tile.bmax[2] > -4356,
+    string.format("its bounds hold the valley's demon part (x %.0f..%.0f, y %.0f..%.0f)", tile.bmin[1], tile.bmax[1], tile.bmin[2], tile.bmax[2]))
+local edges, linked = 0, 0
+for _, p in ipairs(tile.polys) do for _, n in ipairs(p.neis) do edges = edges + 1; if n ~= 0 then linked = linked + 1 end end end
+check(linked / edges > 0.5, string.format("polygons are linked to their neighbours (%d of %d edges)", linked, edges))
+
+local terrain = Heights.map(DIR, 1)
+local under = {}
+for i, p in ipairs(tile.polys) do
+    local h = terrain:height(p.centre[1], p.centre[2])
+    if h and h - p.centre[3] >= UNDER then under[i] = true end
+end
+local seen, best = {}, nil
+for i in pairs(under) do
+    if not seen[i] then
+        local g, stack = { n = 0, x = 0, y = 0, mouths = 0 }, { i }
+        seen[i] = true
+        while #stack > 0 do
+            local j = table.remove(stack)
+            local p = tile.polys[j]
+            g.n, g.x, g.y = g.n + 1, g.x + p.centre[1], g.y + p.centre[2]
+            for _, nb in ipairs(p.neis) do
+                if nb > 0 then
+                    if under[nb] then
+                        if not seen[nb] then seen[nb] = true; stack[#stack + 1] = nb end
+                    else
+                        g.mouths = g.mouths + 1
+                    end
+                end
+            end
+        end
+        if not best or g.n > best.n then best = g end
+    end
+end
+check(best and best.n >= 300, string.format("a large group of floors under the terrain (%d polygons)", best and best.n or 0))
+local bx, by = best.x / best.n, best.y / best.n
+check(bx > -200 and bx < 0 and by > -4400 and by < -4250,
+    string.format("in the valley's north-east, under the hill by the demons (middle %.0f, %.0f)", bx, by))
+check(best.mouths == 1, string.format("joined to open floor at one place: a cave with one mouth (%d)", best.mouths))
+
+print("")
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)

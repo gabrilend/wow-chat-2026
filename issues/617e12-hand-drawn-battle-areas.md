@@ -90,6 +90,23 @@ queries, tried on the data: standing among the Valley of Trials boars
 finds part 100151 (132 squares, levels 1-2, Mottled Boars, one of 3), and
 the boars' spawn points there number 65, the part's own count.
 
+**Caves from the walking mesh (2026-10-09, the reading built; the cutter
+does not use it yet).** The owner, asking what "only sees ground height"
+meant: the map files hold one terrain height per spot, 4.17 yards apart,
+outdoors only; caves and buildings are separate models set on the
+terrain, so the cutter can't see them. The walking mesh is built from
+both. `scripts/lib/navmesh-tiles.lua` reads a mesh tile (polygons, their
+corners and neighbours); `scripts/lib/map-heights.lua` gives the terrain's
+height anywhere (the cutter's own reading, made shared). A floor at least
+4 yards under the terrain is under a hill; such floors, grouped by the
+mesh's links, are caves, and where a group joins open floor is a mouth.
+`scripts/test-navmesh-caves` (6 checks, in the compile's quick tests):
+the Valley of Trials' tile gives one group of 362 floors under the hill
+north-east of the camp, by the demons, with exactly one mouth: the Burning
+Blade Coven, a cave rather than a passage (question 9's first reading).
+Not done: groups crossing tile edges (links to other tiles are seen, not
+followed), and the cutter making caves parts of their own (question 10).
+
 Towns are marked separately, by circles (617e4a: two in the Valley of
 Trials, around its camp), and inside a town circle buddies do town
 things (errands, leisure) rather than fight (617e4).
@@ -248,3 +265,11 @@ in opposite directions does the nearer one simply win.
    mouth, a tunnel's at two or more, on different parts' sides. Another is
    width against length: a passage is long and one corridor wide, a cave
    opens into rooms. Which one did the owner mean, or both?
+10. **A cave in a map of squares:** the roaming parts are flat squares
+    about 33 yards across, one part each; a cave under a hill shares its
+    squares with the hillside above it. A cave part needs a second layer:
+    each square can belong to one part on the surface and another below
+    (the table keyed by map, square and layer; "below" meaning the owner
+    stands 4 yards or more under the terrain). Is a second layer the
+    right shape, or should a cave be an exception kept by its mouth and
+    floor outline instead?
