@@ -19,9 +19,8 @@ maker, which honestly might need to go earlier in the test." And
 ## Current Behavior
 
 In progress: written and compile-checked against the new pins
-(2026-10-09); not yet built into a server or tried in game. The five
-questions below were answered the same day; one follow-up (playing a
-stand-in) is open.
+(2026-10-09); not yet built into a server or tried in game. Every question
+below is answered; what is left is building it and trying it in game.
 
 - `modules/mod-buddies/src/buddies_stand_ins.cpp`: the accounts (STANDIN<n>,
   200 to an account, remembered at startup and hidden through B044's list),
@@ -134,10 +133,21 @@ dismiss <name|all>` takes them out of the world, kept.
    character select screen." Yes: 200 (above).
 2. (Answered 2026-10-09) **Hidden or seen:** "they should be able to play
    them like any other WoW character." Playing is controlling it directly,
-   as one's own character, not whispering it commands; hidden like buddies
-   until then. Still open, for the taking-over step (176a1): while a player
-   plays one, is it shown in /who and befriendable like any character, and
-   does it go back to hidden when the player lets go?
+   as one's own character, not whispering it commands. Asked whether a
+   played stand-in shows in /who and can be befriended, and goes back to
+   hidden after: "no change" (hidden throughout). Taking one over is
+   deferred (the owner, 2026-10-09: "We can defer this aspect for a while.
+   Until the custom client lets us draw a UI for selecting one maybe"):
+   not part of this issue.
+6. (Answered 2026-10-09) **No death knight tanks:** a buddy's death knight
+   shapes are all damage (the talent data marks no Blood tank tree), so a
+   stand-in death knight is never a tank, and "I think that's okay? Death
+   Knight characters only ever get death-knight buddies". A death knight
+   owner has exactly four death knight buddies, from the soul trade in
+   Acherus (718; owed nothing by level, buddies_clan.cpp), all damage: in
+   a dungeon from level 30 its missing tank and healer are stand-ins
+   (617t's missing-role rule). **Reputation:** standing given for the PvP
+   jewellery: "great".
 3. (Answered 2026-10-09) **Names:** no mark ("nah. Their gear will give it
    away").
 4. (Answered 2026-10-09) **The talents:** "pick a spec profile, same as

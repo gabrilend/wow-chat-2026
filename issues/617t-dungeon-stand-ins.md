@@ -187,7 +187,10 @@ seat.
    match. Stand-ins cover every race and class the stock game allows,
    and later the forbidden pairs too, starting with a blood elf druid
    ("yes. blood elf druid pls"). The details are in the Alterac Valley
-   test scene's questions (176a1).
+   test scene's questions (176a1). Deferred (2026-10-09: "We can defer this
+   aspect for a while. Until the custom client lets us draw a UI for
+   selecting one maybe"); a played stand-in stays hidden like any other
+   ("no change").
 9. **Shirts, the rest of the list.** Answered 2026-10-08: warm means
    shirt off for now, tracked apart from hot; swimming takes the shirt
    off to keep it dry (above). Still open: Tirisfal ("I dunno"); are Dun

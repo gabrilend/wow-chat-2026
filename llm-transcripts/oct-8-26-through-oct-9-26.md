@@ -1,6 +1,6 @@
 # Conversation Summary: a4440faa-87b5-4fc6-b59d-3d898fd95767
 
-Generated on: 2026-10-09 18:18:50
+Generated on: 2026-10-09 19:30:07
 Models: claude-opus-5-5
 
 ## Contents
@@ -38,6 +38,10 @@ Models: claude-opus-5-5
    the Arathi Basin test scene can run; your compile is still going, and faster
    rebuilds go in once it finishes. Next, run scripts/install --profile cc-test
    to create the databases.
+9. 2026-10-09 18:21, after Request 47 - We're getting the Arathi Basin and
+   Alterac Valley test scenes running, and I've written the stand-in builder for
+   them on the newly updated upstream code. Next, you compile, then try `.buddy
+   standin make horde healer 20` in game.
 
 --------------------------------------------------------------------------------
 
@@ -4684,6 +4688,162 @@ The five open questions:
 5. **Necklace, rings and trinkets:** the white-gear kit leaves those slots
    empty. The plan says to fill them with the best PvP items for the level. Is
    that needed before the battleground scenes, or can it wait?
+
+--------------------------------------------------------------------------------
+
+### User Request 48
+
+1. Characters per account: I guessed 50. An Alterac Valley match alone
+   wants 80. Is that fine, or would you rather one account per side, or per
+   scene?
+
+I thought there was a hard cap on how many characters per account per server? Or
+is that a client limitation - oh obviously it is haha now that I think of it.
+Can we do more than 10 on the backend? The stand-ins of course never need to see
+the character select screen.
+
+> 2. Hidden or seen: stand-ins are hidden like buddies: not in /who, can't be
+> befriended, ignore whispered commands. You want players to be able to play one
+> later. Is playing one a different thing from commanding it, or should it take
+> commands from whoever plays it?
+
+Yeah they should be able to play them like any other WoW character.
+
+> 3. Names: stand-ins draw from the same name list as buddies. Should they carry
+> a mark (a title, a surname) so you can tell a stand-in from a buddy at a
+> glance?
+
+nah. Their gear will give it away.
+
+> 5. Necklace, rings and trinkets: the white-gear kit leaves those slots empty.
+> The plan says to fill them with the best PvP items for the level. Is that
+> needed before the battleground scenes, or can it wait?
+
+let's do it now, why wait?
+
+> 4. Damage trees: a hunter or rogue has three damage trees. Should each
+> stand-in's tree be drawn at random, or spread evenly across a squad so a trio
+> isn't three marksmanship hunters?
+
+pick a spec profile, same as buddy-bots. It's okay if there's two of one type in
+a squad.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 48
+
+> Answering each as I go. First, checking whether the server itself enforces the
+> 10-character limit, and how buddies get their spec profile:
+
+> Reading the script's login and shape lookup in full:
+
+> The gem step's scoring works on a character before it enters the world,
+> weighted by its shape, so jewellery can be scored the same way. Checking the
+> reputation calls for granting the needed standing:
+
+> Writing it now. First the choosing rules, moved from trees to shapes:
+
+> The header now picks shapes. Updating its test, which also gains a mode that
+> prints every class's ten shape roles, so the test script can compare them
+> against the generated buddy data:
+
+> Now the cross-check against the generated data, added to the test script:
+
+> The Lua one-liner waited on standard input: with `-e`, the file path isn't
+> handed to the code as an argument. Passing it through the environment instead:
+
+> All 100 shape roles match. Now the SQL column (`tree` becomes `profile`, the
+> shape); nothing has installed this table yet, so the file changes in place:
+
+> Now the PvP jewellery, in the kit file beside the white gear:
+
+> The kit's own equip step already replaces whatever is in the slot, so
+> jewellery can reuse it. Writing the jewellery step:
+
+> A stray `python3 -` was left in that command and waited on input, so the
+> header edit after it never ran. Stopping it and redoing the header:
+
+> Now giving the shared maker a jewellery switch (on for stand-ins, off for
+> buddies):
+
+> Now the stand-in file: shapes instead of trees, jewellery, the new account
+> size, and the talent build code removed:
+
+> Now the talent script, so it finds stand-ins too:
+
+> The script needs to know whether the stand-in table exists, declared before
+> that lookup. Adding the check after the roster check:
+
+> The existing talent test may load this script in a stand-in world where my new
+> startup query has no stub. Checking it, and running it:
+
+> That test doesn't load the script. Compile-checking the script's syntax, then
+> adding cc-test's links to the three talent files:
+
+> The links resolve. Noting them in cc-test's Lua README:
+
+> The whole module compiles against the new pins. Checking warnings in the two
+> changed files:
+
+> No warnings. Recording your answers and the changes in the plans:
+
+*[commit] 42237482d in wow-chat-2026 - Stand-ins take a buddy's talent shape of their role and wear PvP jewellery*
+
+> The three cc-test links aren't in that commit. Checking:
+
+> The commit tool skipped the three links; its preview step can't handle them
+> either. Checking its notes for links:
+
+> cc-test isn't installed yet, so I'm checking the same layout on basic's
+> install:
+
+> Confirmed on basic's install. Now actually running the loader through a link,
+> as the server would, with stand-in versions of the Lua engine's calls:
+
+> Through a link, as on the server, it loads basic's script, which finds its
+> data and registers its three events. Updating the README, the plan and one log
+> message that still say "links":
+
+*[commit] 8043e2408 in wow-chat-2026 - cc-test runs basic's talent script through a one-file loader*
+
+All five answers are built in and committed. Everything compiles against the new
+pins; nothing has run in game yet.
+
+1. **Characters per account:** yes, the server has no cap of its own. The
+   ten-a-realm limit is checked only when a player clicks "create" on the
+   character screen, which stand-ins never touch. The one real ceiling is a
+   one-byte character count per account in the login database (255), so stand-in
+   accounts now hold 200 each.
+2. **Playing them:** recorded as playing one like any character, by direct
+   control rather than commands. That's for the taking-over step in the Alterac
+   Valley plan.
+3. **Names:** no mark.
+4. **Talents:** a stand-in now draws one of its class's ten buddy shapes whose
+   role matches, so a squad can hold two alike. Buddies' own talent script
+   spends its points at login and on each level, as it does for buddies; it now
+   reads stand-ins' shapes too. cc-test runs basic's script through a one-file
+   loader that calls basic's file in place, so the two can't drift apart. I
+   checked the loader by loading it through a folder link the way the server
+   will. The bot module's pre-built talent specs are no longer used.
+5. **Jewellery:** neck, two rings and two trinkets come from what vendors sell
+   for honor or arena points at the stand-in's level. That's the battleground
+   medallions and insignia, four ring types, and the faction Insignia trinkets.
+   Each is scored by the stand-in's talent shape, the way gems are.
+
+Two side effects of following buddy rules that you might not expect:
+- **No death knight tanks.** In the buddy talent data, all ten death knight
+  shapes are damage (Blood isn't marked as a tank tree), so death knights never
+  come as tanks.
+- **Free reputation.** Most battleground jewellery needs standing with that
+  battleground's faction, or the server won't let it be worn. Stand-ins are
+  given that standing as they're kitted out, like veterans of those battles.
+
+The stand-in test now has 15 rule checks, a comparison of all 100 shape roles
+against the generated buddy data, and the table installed twice and removed.
+
+One follow-up question on playing a stand-in: while a player is playing one,
+should it show in /who and be befriendable like any character? And when they let
+go, does it go back to hidden?
 
 --------------------------------------------------------------------------------
 

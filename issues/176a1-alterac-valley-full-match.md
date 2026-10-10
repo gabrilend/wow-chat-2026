@@ -274,7 +274,11 @@ every scene at once.
    first forbidden one wanted. A forbidden pair needs the server to know
    how to create it (its starting stats, spells and gear) and a client
    that accepts it; the stock 3.3.5a client refuses pairs its own data
-   files don't list, the custom client need not.
+   files don't list, the custom client need not. **Deferred** (the owner,
+   2026-10-09: "We can defer this aspect for a while. Until the custom
+   client lets us draw a UI for selecting one maybe"): the first match is
+   run with stand-ins and joining players only; a played stand-in stays
+   hidden like the rest ("no change").
 7. (Answered 2026-10-08) **What controlling a stand-in means.** "both
    are options." On one's own computer, alone: any race, class and
    gender, with optional appearance settings, in a single-player Alterac
