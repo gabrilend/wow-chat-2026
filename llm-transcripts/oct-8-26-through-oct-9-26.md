@@ -1,6 +1,6 @@
 # Conversation Summary: a4440faa-87b5-4fc6-b59d-3d898fd95767
 
-Generated on: 2026-10-09 20:07:23
+Generated on: 2026-10-09 20:38:13
 Models: claude-opus-5-5
 
 ## Contents
@@ -5062,6 +5062,287 @@ own parts and tunnels count as roads. It isn't urgent.
    whether that module is retired.
 
 Which do you want?
+
+--------------------------------------------------------------------------------
+
+### User Request 52
+
+<pasted_content id="5a6f">
+> 3. Battlegrounds running at all times. That's a design change from "a test
+> scene": Arathi Basin and Alterac Valley would be set up at server start and
+> always running, with more instances as players arrive. I'll write it into both
+> plans. Two questions:
+> - Does "always running" mean a match runs even with zero players, with
+> stand-ins fighting stand-ins?
+>   - What count of players opens a second match?
+</pasted_content id="5a6f">
+
+
+yes, and the max number of players allowed in that battleground.
+
+> 4. Beta's broken patch list. It names a talent-bonus module that isn't in the
+> project, so beta fails before compiling. It's a one-line fix once you say
+> whether that module is retired.
+
+let's fix it.
+
+> 3. The command reference's "9 problems". Regenerating it listed nine problems
+> under its checks; I haven't looked at what they are.
+
+these are usually problems that you can handle on your own. Go for it.
+
+> 2. A stand-in or bot statistics page. You asked earlier for dashboards; the
+> stand-in table and the roaming-area summary already hold the numbers.
+
+okay?
+
+>   1. Wire the fast tests into the compile. As above.
+
+sure.
+
+> 4. What the navmesh reader is for. Your cave question. The roaming-area cutter
+> currently sees only ground height, so it can't tell a cave from open ground.
+> You asked "should use movement navmesh?", and it's how caves get their own
+> parts and tunnels count as roads. It isn't urgent.
+
+what do you mean it only sees ground height? The terrain mesh? Let's work on
+this I guess, if it's important for the area splitter. What's the status on
+that? Can we add a GM command that let's us visualize these areas? We'll need
+another one for letting us visualize the spawn points of a particular type of
+unit. Usually we can use an un-interactable wisp unit. We have another task that
+spawns these wisps, can you check on that and tell me what the status is, and
+maybe re-use some mechanisms from there?
+
+> 2. Tests. The compile doesn't run them. I searched compile, install and
+> update, and none of them calls any of the 33 scripts/test-* scripts. Wiring
+> the fast ones into the compile is itself a quick win, since you expected it to
+> be there already.
+
+oh um... yeah.
+
+For the SQL updates, Azerothcore handles it's own updates. We should use their
+mechanism when we can, with our patches placed after theirs. Our "database
+patches" which is a particular stage in the pipeline I think, or maybe part of
+another stage? Anyway there's a stage where SQL updates go. Our SQL patches
+should create SQL files which are picked up by the Azerothcore SQL management
+system.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 52
+
+> Starting with the battleground plans. Finding where each describes the match's
+> setup:
+
+> Your answer also settles this plan's third question: a second player joins the
+> running match while it has room. Updating the steps and that question:
+
+*[commit] 3a5c5a4d3 in wow-chat-2026 - Arathi Basin and Alterac Valley run at all times, another opening when full*
+
+> Beta next. Checking whether the talent-bonus module ever existed in the
+> project, before taking it off beta's list:
+
+*[commit] 2e060872a in wow-chat-2026 - Beta compiles again: the retired talent-bonus patch leaves its list*
+
+> Now the command reference's nine problems:
+
+> Before choosing levels for those six, checking whether the new core's own
+> database updates already add their rows:
+
+> Checking whether these six commands really are unreachable. I'm tracing your
+> actual auth database's permission chain from the administrator role down to
+> them:
+
+> No problems left. My comment promised a mark for commands that only the
+> pending updates grant, so I'm adding it to the summary:
+
+> Zero problems, and all 138 reference checks pass. One stale comment in the
+> shared reader still says the command row alone decides; correcting it, then
+> committing:
+
+*[commit] 9613c45be in wow-chat-2026 - Command reference: permission-numbered commands get their real level*
+
+> Now the tests in the compile. Timing every test script in parallel, to sort
+> fast ones from slow ones:
+
+> Most take under ten seconds. Seven failed; looking at why before choosing:
+
+> The fix: inside the same rolled-back transaction, revert first to get stock
+> values whatever the live state, then apply twice, revert, and compare against
+> that stock snapshot:
+
+> That passes now. Next, the in-RAM SQL test's three failed steps:
+
+> The test asks for an E048 file that no longer exists. Checking what E048
+> installs now:
+
+> E048 was retired by the gearset change: the step now always installs its
+> revert, which undoes itself, and the apply file was removed. The test wasn't
+> updated. Looking at its steps:
+
+> Running it again in the background (about two and a half minutes) while I
+> write the compile's test step:
+
+> It parses. Checking that every listed test takes the project folder as its
+> first argument, then running the new step on its own, outside a build:
+
+> All 25 pass in 27 seconds. Committing the test step and the Acherus test fix;
+> the in-RAM database test is still running:
+
+*[commit] 5f335f0d8 in wow-chat-2026 - The compile runs the project's quick tests before it builds*
+
+> Now the SQL ordering, which needs a plan written first. Looking for the plan
+> that owns how our SQL gets installed:
+
+> The in-RAM database test passes now: 149 steps, including the seven newer
+> install steps, with every basic SQL file applied, reverted and re-applied on a
+> fresh stock database. Committing it:
+
+*[commit] 3fa0e13a0 in wow-chat-2026 - The in-RAM database test covers basic's newest install steps*
+
+> Writing the plan for the SQL ordering:
+
+> The plan validates. Reading the rest of the registration helper before
+> changing it:
+
+> The revert path also registers and unregisters, so the twin must follow both.
+> Writing the helper changes and the finishing step:
+
+> Declaring the folder list globally (it's filled from inside functions), and
+> calling the mirror at the end of both the install steps and their reverts:
+
+> Both parse. The new twin folders must stay out of git like the staging ones.
+> Checking the ignore rules:
+
+> Now the test, without the server or MySQL: a small staging folder, a throwaway
+> git history standing in for the core, and the mirror run over it:
+
+> All 8 pass. Checking whether any other script reads or checks the old staging
+> folders' registrations:
+
+> Nothing else reads them. Adding the new test to the compile's list, updating
+> the plan, and committing:
+
+*[commit] 6a119ccee in wow-chat-2026 - Our SQL reaches the core's updater after upstream's, and runs again after a pin move*
+
+> Now the wisp task you mentioned. Finding it:
+
+> The town circles behave as before through the shared function. Declaring it,
+> then writing the two commands:
+
+> The world database's spawn column name varies between versions (`id` in your
+> basic database, `id1` in another). Checking which the new pin uses:
+
+> A June upstream update renamed the column to `id`, which is what your
+> databases have. Fixing the query and registering the file, then
+> compile-checking:
+
+> `SIZE_OF_GRIDS` is already a macro in the core. Renaming mine:
+
+> It compiles with no warnings. Running the command's own queries against your
+> database for a spot in the Valley of Trials, to check they find the right
+> part:
+
+> The roaming tables aren't in your live database yet; they arrive with the next
+> install. Loading them into the test database to try the command's queries
+> there:
+
+> Standing among the boars finds part 100151: Valley of Trials, 132 squares,
+> levels 1 to 2, "Mottled Boar x65", one of 3 parts. Trying the spawns query
+> against your live world database:
+
+> 65 spawn points, matching the 65 boars the part lists. Adding the two
+> commands' help to the reference and regenerating it:
+
+> All 148 reference checks pass. Updating the battle-areas plan and committing:
+
+*[commit] 6fb61fa3d in wow-chat-2026 - Game masters see the roaming parts and creatures' spawn points in wisps*
+
+> The tile's numbers come out wrong, so my field offsets are off. Dumping the
+> raw header to check:
+
+> The bounds read right now: x 1600–2133, y 0–533. Now the probe. First, how
+> the project's mesh labels its polygons' area kinds:
+
+> Moving that height reading into a shared library both scripts can use. The
+> cutter will switch to it when the cave pass is wired in. Writing it with the
+> server's own lookup arithmetic:
+
+> The cave test passes (6 checks). Writing the two libraries' notes files,
+> adding the test to the compile's list, and recording it in the plan:
+
+*[commit] d2749fe5d in wow-chat-2026 - Caves found by comparing the walking mesh with the terrain*
+
+> Everything's committed. One last check: running the compile's test step as it
+> now stands, with the two new tests in it:
+
+Everything you asked for here is done and committed except the statistics page,
+which I left alone because I wasn't sure your "okay?" meant yes. The compile now
+runs 27 quick tests before building, and they all pass in about 25 seconds.
+
+- **Battlegrounds:** the Arathi Basin and Alterac Valley plans now say one match
+  of each starts with the server and always runs, stand-ins against stand-ins if
+  nobody has joined. A second match opens when the first is at the
+  battleground's player limit (15 or 40 a side). This also settled one of Arathi
+  Basin's open questions.
+- **Beta:** its patch list named the talent-bonus module, which was retired in
+  an earlier refactor, so every beta build stopped before compiling. That patch
+  is retired and beta's patches now apply cleanly at the new pins.
+- **Command reference:** all nine problems are gone, and none was a real fault:
+  - **Six commands:** I'd listed them as "console only". The core actually
+    checks them against a role chain in your account database, and that chain
+    gives all six to administrators. The generator now follows it.
+  - **Three modules:** they were missing only because the cc-test install had
+    removed them from the source folder. The reference is now generated from a
+    clean copy of the new pins.
+- **Tests in the compile:** the step stops the build if a test fails or if MySQL
+  is off; `--skip-tests` overrides it. Wiring it in exposed two outdated tests,
+  both now fixed:
+  - **Acherus vendors:** it compared against your live database, where the
+    vendors are already installed.
+  - **In-RAM database:** it asked for a retired file and skipped the seven
+    newest install steps; it now passes on a freshly built database.
+- **SQL ordering:** our install steps already used AzerothCore's own update
+  system, as you said. Two gaps were left: most of our files sorted before
+  upstream's, and nothing re-ran ours after a pin move. Now:
+  - **Names:** every file the updater sees is named `z_…`, so it sorts after
+    all of upstream's.
+  - **Stamp:** each file's first line names the commits the server is built
+    from, so a pin move changes it and ours run again after upstream's new ones.
+
+  This is tested without a server, but hasn't been through a real install and
+  boot yet.
+- **Area visualisation:** the town circles' wisp is now shared, and there are
+  two new commands:
+  - **`.buddy area show`:** names the roaming part you're standing in and
+    outlines its border in wisps.
+  - **`.buddy area spawns <creature>`:** puts a wisp on each spawn point of that
+    creature nearby.
+
+  I ran their queries against the data: standing among the Valley of Trials
+  boars finds their part, and the boars have 65 spawn points there, matching the
+  part's own count. They haven't been built into a server yet. The town circle
+  commands they reuse were written on 3 October, and the plan has no record of
+  anyone trying them in game.
+- **Caves:** the "ground height" I meant is the terrain grid, which holds
+  outdoor ground only. Caves and buildings are separate 3D models, so the area
+  splitter can't see them. The walking mesh is built from both, so I wrote
+  readers for the mesh and the terrain and compared them. In the Valley of
+  Trials that finds one group of 362 floor pieces under the hill by the demons,
+  with exactly one entrance: the Burning Blade Coven. The area splitter doesn't
+  use this yet.
+
+Two questions:
+1. **One-time re-run of our SQL:** on the first boot with the new naming, every
+   one of our SQL files runs once more, after upstream's. They're built to be
+   safe to run twice. Is that acceptable, or should the first boot skip ours
+   until the next pin move?
+2. **How a cave fits the area map:** roaming parts are flat squares about 33
+   yards across, but a cave sits underneath the hillside's square. My proposal
+   is a second layer, so each square can have one part on the surface and one
+   below, with "below" meaning 4 yards or more under the terrain. Does that fit
+   how you picture caves, or should a cave be stored separately, by its entrance
+   and floor outline?
 
 --------------------------------------------------------------------------------
 

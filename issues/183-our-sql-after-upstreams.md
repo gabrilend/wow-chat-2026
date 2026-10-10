@@ -25,7 +25,7 @@ resolved this by putting our SQL updates after the upstream's?" and:
 
 In progress (2026-10-09): built and checked without a server
 (`scripts/test-sql-mirror`, 8 checks, in the compile's quick tests); not
-yet run through an install and a boot, and question 1 is open.
+yet run through an install and a boot. Its one question is answered.
 
 - `patches/E-patches.sh`: `_register_with_updatefetcher` remembers each
   staging folder (`STAGED_SQL_DIRS`), registers its twin
@@ -101,7 +101,7 @@ So two gaps:
 
 ## Open Questions
 
-1. **Our files and the old names:** the first boot sees every file under a
+1. (Answered 2026-10-09: "it should be fine.") **Our files and the old names:** the first boot sees every file under a
    new name and runs it again. Is a full re-run of everything ours, once,
    acceptable (it is meant to be safe), or should the twins start with the
    old files' hashes recorded so nothing runs until the next pin move?
