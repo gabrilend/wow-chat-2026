@@ -80,7 +80,7 @@ These fix compatibility issues in upstream code.
 | B005 | accuracy-level-cap                      | src/server/game/Entities/Unit/*                         | Cap level diff for hit/miss at ±3 |
 | B006 | ale-sell-item-hook                      | mod-ale/*, Handlers/ItemHandler.cpp                     | Add PLAYER_EVENT_ON_SELL_ITEM = 74 |
 | B007 | ale-unit-methods                        | mod-ale/*/UnitMethods.h, LuaFunctions.cpp               | Add SetWalk, IsWalking, IsHostileTo, IsFriendlyTo |
-| B008 | mod-talent-bonus                        | modules/mod-talent-bonus                                | Link local module for compilation |
+| B008 | mod-talent-bonus                        | modules/mod-talent-bonus                                | **Retired 2026-10-09**: the module was set aside in 405 and is not in the project. Was: Link local module for compilation |
 | B009 | playerbots-equipment-slots-enum         | mod-playerbots                                          | **Retired 2026-10-09** (pin move): playerbots no longer forward-declares the enum, at either pin. Was: Forward-declare `enum EquipmentSlots : uint32;` |
 | B010 | playerbots-arena-type-none              | mod-playerbots                                          | `if (type != ARENA_TYPE_NONE)` enum comparison fix |
 | B011 | ale-resurrect-signature                 | mod-ale                                                 | Reconcile `bool&` vs `bool` mismatch with current core |
