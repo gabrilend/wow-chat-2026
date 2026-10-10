@@ -2,11 +2,15 @@
 # test-acherus-vendors
 #
 # What it is: a check that the Acherus vendors install step (E051, issue
-# 718) does what it says, without leaving a trace. It runs the step's SQL
-# inside one database transaction on the basic world database, looks at
-# the result (two vendors open, five items at 1 gold, worth nothing to sell),
-# runs the revert inside the same transaction, looks again (stock restored),
-# and rolls the whole transaction back, so the database is as it was.
+# 718) does what it says, without leaving a trace. Inside one database
+# transaction on the basic world database it runs the revert first and
+# looks (stock, whether or not the live database has the step applied),
+# runs the step twice and looks (two vendors open, five items at 1 gold,
+# worth nothing to sell), runs the revert and looks again (stock
+# restored), then rolls the whole transaction back, so the database is as
+# it was. Until 2026-10-09 the first look was of the live database, which
+# on an installed server already holds the step: the revert, correctly
+# going back to stock, then "failed" against it.
 # Needs the project's MySQL running (scripts/start-mysql).
 #
 # Usage: scripts/test-acherus-vendors [PROJECT_DIR]
@@ -31,7 +35,9 @@ SELECT CONCAT('prices ', GROUP_CONCAT(entry, ':', BuyPrice, '/', SellPrice ORDER
 OUT="$(
     {
         echo "START TRANSACTION;"
+        cat "${REVERT}"
         echo "SELECT 'before';"; echo "${LOOK}"
+        cat "${APPLY}"
         cat "${APPLY}"
         echo "SELECT 'applied';"; echo "${LOOK}"
         cat "${REVERT}"
@@ -56,7 +62,7 @@ has() { [[ "$1" == *"$2"* ]] && echo yes || echo no; }
 check "applied: both creatures carry the vendor flag"   "$(has "${applied}" "flags 28357:128,28471:128")"
 check "applied: five items for sale"                    "$(has "${applied}" "rows 5")"
 check "applied: every item 1 gold, sells for nothing"   "$(has "${applied}" "prices 38632:10000/0,38633:10000/0,38664:10000/0,39320:10000/0,39322:10000/0")"
-check "reverted: the flags, rows and prices are as before" "$([[ "${before}" == "${reverted}" ]] && echo yes || echo no)"
+check "reverted: the flags, rows and prices are stock again" "$([[ "${before}" == "${reverted}" ]] && echo yes || echo no)"
 
 echo ""
 if [[ ${fails} -eq 0 ]]; then echo "All 4 checks passed (rolled back; nothing changed)"; else echo "${fails} of 4 checks failed"; exit 1; fi

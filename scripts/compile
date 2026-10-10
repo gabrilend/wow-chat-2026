@@ -75,6 +75,7 @@ DEFAULT_PROFILE="${PROFILE}"
 
 THREADS="${THREADS:-4}"
 AUTO_VALIDATE=true
+RUN_TESTS=true
 
 # No Boost version is named here. cmake is pointed at the directory
 # scripts/boost installed into and reads the version out of the headers
@@ -177,6 +178,10 @@ parse_args() {
                 AUTO_VALIDATE=false
                 shift
                 ;;
+            --skip-tests)
+                RUN_TESTS=false
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -207,6 +212,8 @@ show_help() {
     echo "  --debug            Build -O0 -g (Debug); the server then auto-runs the"
     echo "                     crash catcher, giving exact file:line in tmp/ traces"
     echo "  --no-validate      Skip auto-validation and promotion"
+    echo "  --skip-tests       Skip the quick tests run before building"
+    echo "                     (they need the project's MySQL running)"
     echo "  --help             Show this help message"
     echo ""
     echo "Pipeline (automatic):"
@@ -533,6 +540,72 @@ print_build_failure() {
 }
 # }}}
 
+# {{{ run_quick_tests
+# The project's quick tests (scripts/test-*), run before anything is
+# patched or built: the owner, 2026-10-09, asked whether the compile ran
+# them, expecting it did ("this is part of the compile, right?"); it did
+# not. They run in parallel, each with its log in
+# tmp/shared-memory/compile-tests/<test>.log; any failure stops the build
+# before it starts, naming the test and its log. Several need the
+# project's MySQL (they apply and revert SQL inside rolled-back
+# transactions or the _smoke_test database): with MySQL down the step
+# stops and says so, rather than reporting those as broken.
+#
+# Left out, and why:
+#   test-basic-legendaries, test-buddy-subareas: read summaries their
+#       generators write into RAM (tmp/shared-memory), gone after a reboot
+#   test-exploration-engine, test-model-formats: read inputs extracted
+#       into RAM by separate steps (exploration floors, reference models)
+#   test-mysql-start: needs MySQL stopped
+#   test-source-patches, test-patched-syntax: this compile applies and
+#       compiles the patches for real
+#   test-basic-sql-in-ram: builds a whole database in RAM (minutes); run it
+#       by hand after changing basic's SQL
+QUICK_TESTS=(
+    test-acherus-vendors test-arathi-basin-rules test-buddy-arc test-buddy-choice
+    test-buddy-gems test-buddy-gm test-buddy-hearth test-buddy-kit test-buddy-roam-core
+    test-buddy-stand-ins test-buddy-talents test-compile-module-set test-dk-skip-story
+    test-dk-soul-trade test-gear-designs test-gearsets test-gm-command-reference
+    test-lua-unique-names test-profile-config-gates test-redirect-listener test-roam-pattern
+    test-sargobras-follow test-steady-mtimes test-valley-deal test-world-boss-countdown
+)
+run_quick_tests() {
+    local out="${DIR}/tmp/shared-memory/compile-tests"
+    mkdir -p "${out}" || { echo "ERROR: can't make ${out} (is tmp/shared-memory linked?)"; exit 1; }
+    rm -f "${out}"/*.log "${out}"/*.ok
+
+    if ! "${DIR}/mysql/installed-files/bin/mysqladmin" --no-defaults --socket="${DIR}/mysql/databases/mysql.sock" \
+            -uritz -pmenardi ping > /dev/null 2>&1; then
+        echo "ERROR: the quick tests need the project's MySQL, and it isn't answering."
+        echo "       start it (./scripts/start-mysql) and compile again, or pass --skip-tests"
+        exit 1
+    fi
+
+    echo "Running ${#QUICK_TESTS[@]} quick tests..."
+    local t
+    for t in "${QUICK_TESTS[@]}"; do
+        [[ -x "${DIR}/scripts/${t}" ]] || { echo "ERROR: scripts/${t} is missing or not executable (the compile's test list names it)"; exit 1; }
+    done
+    printf '%s\n' "${QUICK_TESTS[@]}" | xargs -P "$(nproc)" -I{} bash -c \
+        'timeout 600 "$1/scripts/$2" "$1" > "$3/$2.log" 2>&1 && touch "$3/$2.ok"' _ "${DIR}" {} "${out}"
+
+    local failed=()
+    for t in "${QUICK_TESTS[@]}"; do
+        [[ -f "${out}/${t}.ok" ]] || failed+=("${t}")
+    done
+    if [[ ${#failed[@]} -gt 0 ]]; then
+        echo "ERROR: ${#failed[@]} of ${#QUICK_TESTS[@]} quick tests failed; nothing was patched or built:"
+        for t in "${failed[@]}"; do
+            echo "  ${t}: tmp/shared-memory/compile-tests/${t}.log"
+            tail -n 3 "${out}/${t}.log" | sed 's/^/      /'
+        done
+        echo "       (--skip-tests builds anyway)"
+        exit 1
+    fi
+    echo "All ${#QUICK_TESTS[@]} quick tests passed (logs: tmp/shared-memory/compile-tests/)"
+}
+# }}}
+
 # {{{ do_build
 do_build() {
     echo ""
@@ -775,6 +848,9 @@ fi
 # bring a module in, see PATCH_PROVIDED_MODULES). Loading only defines
 # functions and the per-profile lists; nothing is applied here.
 source "${DIR}/patches/patches.sh"
+
+# The quick tests, before anything is touched (run_quick_tests)
+[[ "${RUN_TESTS}" == "true" ]] && run_quick_tests
 
 # Check if any modules were added since last cmake configure
 check_modules_configured
