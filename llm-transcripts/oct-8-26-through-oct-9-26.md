@@ -1,6 +1,6 @@
 # Conversation Summary: a4440faa-87b5-4fc6-b59d-3d898fd95767
 
-Generated on: 2026-10-09 00:09:35
+Generated on: 2026-10-09 18:03:13
 Models: claude-opus-5-5
 
 ## Contents
@@ -4168,6 +4168,372 @@ cave from a passage? I see two possible rules:
   rooms.
 
 Which did you have in mind? Or should it take both?
+
+--------------------------------------------------------------------------------
+
+### User Request 43
+
+how about... can we see if they've fixed it upstream? We can move our pin to the
+newest version and update all our pins and make sure that A. our compatibility
+patches are still needed, if not, they can be removed in the same git commit
+that moves the pin permanently, and B. that any additional patches we need are
+implemented. Those can go in commits after the pin-move.
+
+I don't know about pathfinding... What can we work on before the next compile?
+Any easy wins? I'm mostly concerned about the basic profile for now, and the AB
+/ AV test-patches.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 43
+
+> Reading how the source versions are pinned (the core is held at one fixed
+> commit; modules at their own), then checking upstream.
+
+> Reading why the pin was frozen (a playerbots crash fix depends on it):
+
+> Now a small script that builds a clean source tree from given commits, without
+> touching the real one:
+
+> Both trees built (about 1 GB each, in RAM). Running every basic source patch
+> against each, current pins first as the baseline:
+
+> Baseline clean: all 39 basic patches apply and revert exactly at the current
+> pins. Now newest upstream:
+
+> B015 and B023 change nothing at newest upstream. That means either upstream
+> fixed what they fix, or their anchors moved and they silently do nothing.
+> Checking each:
+
+> That script can check our buddy module against newest upstream too, once all
+> patches apply there. Fixing the five failing patches first. B014:
+
+> No warnings at all, even on the unpatched current pin. Checking whether the
+> recorded flags turn warnings on at all:
+
+> Zero warnings everywhere, even at the unpatched pin. That's suspicious, so I'm
+> checking that the method can see warnings at all:
+
+> B001 is still needed at the current pin. At newest upstream, though, the loot
+> module fails earlier: the core changed a hook it overrides. Looking:
+
+> The core dropped the non-const version of the packet hook, and the loot
+> module's newest version (December 2025) still overrides it. Checking whether
+> it modifies the packet:
+
+> An official AzerothCore copy of the loot module exists; the project uses a
+> community fork. Checking whether the official one compiles against newest:
+
+> Only two names in the Lua engine are affected (`sightDistance`,
+> `reactDistance`). Testing the pairing with last week's playerbots merge:
+
+> B002 retargeted. Next, B043 ("the world says who stopped it"), whose anchors
+> moved in the core:
+
+> Upstream changed this area itself: "Show previous session outcome… in server
+> info" (their #27819). Seeing whether it now reports who stopped the world:
+
+> Now B045 (a bot on a companion account takes no chat commands), whose anchor
+> is a command-handler signature:
+
+> The check runs one file at a time, and with about a hundred files that would
+> take a long while. Making it run files in parallel:
+
+> Baseline first: the current pins should pass cleanly.
+
+> Expected: B043 now targets the new core, so it no longer fits the old pin.
+> Running the check on the candidate tree:
+
+> A headless session is one with no network connection, which is exactly a
+> bot's, so `IsBot()` becomes `IsHeadless()` with the same meaning. Finding
+> where our module's source lives and every use:
+
+> The old build's include paths don't know upstream's new `TC9Sidecar` folder.
+> The real build gathers every folder under the game source as an include path,
+> so the scratch checker will do the same:
+
+> All five kinds are in our own code. `IsBot` to `IsHeadless` first, then the
+> three changed APIs. The new shapes:
+
+> Same fields, renamed: Race→RaceID, Gender→SexID, GenType→BaseSection,
+> Type→VariationIndex, Color→ColorIndex. Now the database and pool APIs:
+
+> Claimed those edits (the claim output was hidden). Now the spawn-pool code in
+> buddy nodes:
+
+> This code reaches into the pool manager's internals. Seeing what replaced them
+> upstream:
+
+> Pool spawn state now lives on each map instead of in one global record. The
+> new record's interface, and how a map hands it out:
+
+> Same two-step pattern as before, now taking the map's record. Applying it,
+> with the record found through the node's continent map:
+
+> The `is_bot` argument is gone; a session with no connection is headless by
+> itself. Dropping it:
+
+> Date checks out (the core's `92fed92ea`, 2026-09-23). Re-running our module,
+> then the full patched-file check:
+
+> Our module and basic's rules now pass. Next the remaining patched files:
+> playerbots' gear weighing, plus the three core files that hit the new-folder
+> include problem:
+
+> The core gained a new dependency, `deps/libsidecar`. Checking what it needs to
+> build, since a new toolchain requirement would stop your compile:
+
+> By default it builds a small plain-C stub, so no new toolchain is needed.
+> Adding its folder to the scratch checker, and looking at the gear-weighing
+> member our patches use:
+
+> Main.cpp passes. Upstream removed the "quality blend" setting from gear
+> weighing, which our B046 uses. Seeing what B046 does with it and what upstream
+> replaced it with:
+
+> Upstream now scores items by stats alone (their #2790), so there's nothing
+> left to copy. Dropping that line from B046 and checking the other copied
+> settings still exist:
+
+> Two of the other copied settings (`pvpSpec_`, `exclude_resilience_`) didn't
+> show in upstream's header. Checking whether our patches add them:
+
+> B046 is fine otherwise. To make this check reusable for any future pin move,
+> I'm adding the same include-folder handling to the real compiler-check script,
+> used only when it's given a tree:
+
+> Confirmed: none of those files warn without our fixes. One exception to look
+> at before removing: B021 says one of its edits "also fixes a real bug":
+
+> B021's remaining edits are about string positions held in too-small integer
+> types. That can be a real bug even when the compiler stays quiet. Looking at
+> the code:
+
+> Testing B001 by itself on the candidate's loot module: apply, compile,
+> re-apply, revert:
+
+> Writing the pin move now: new commits in the install, update and profile
+> tables, then removing the nine obsolete patches.
+
+> Pins written. Now the patch lists: taking the nine obsolete patches off every
+> profile's list, and B004 off alpha's:
+
+> Lists done. Now B004 loses its old Lua-engine edit (only the formation fix
+> stays), and the nine patch files are removed:
+
+> `git rm` put those deletions in the shared staging area, which this project's
+> commit tool avoids. Moving them back out and claiming them as my changes
+> instead:
+
+> Shared staging is empty again. Searching the whole project for leftover
+> references to the removed patches:
+
+> Script mentions are only my own note. The registry doc needs updating, and the
+> two plans behind the retired patches need their current state. Checking each:
+
+> Registry updated. Now the current state in the three plans those patches came
+> from: the crash-repair pin, the upstream warning fixes, and the database-query
+> fix:
+
+*[commit] e4ecc699b in wow-chat-2026 - Patch checks can run against a clean copy of any upstream version*
+
+> Tooling committed. Now the pin move itself, with the removals and the
+> retargeted patches:
+
+*[commit] 26237dab6 in wow-chat-2026 - Pins move to upstream's newest: core 2a2211cd8f3d, playerbots 037c0141, Lua engine cead0cb*
+
+> Pin move committed. Now our own code, following upstream's new interfaces:
+
+*[commit] 45b5e0f6b in wow-chat-2026 - The buddy module and basic's rules follow the new core and playerbots*
+
+> All committed. One thing to check before you compile: how the update step
+> moves the real source to the new commits, since that tree still holds the
+> interrupted build's patches:
+
+The pins have moved, with three commits and nothing built yet:
+- **The checking tools:** a clean upstream copy in RAM, and a parallel compiler
+  check.
+- **The pin move:** core to today's newest, the Lua engine to its newest, and
+  playerbots to last week's merge, with the obsolete patches removed.
+  Playerbots' newest renamed settings that the newest Lua engine still uses by
+  their old names, so the two don't compile together yet.
+- **Our own code following upstream's new interfaces:** the buddy module and
+  basic's rules.
+
+On a clean tree at the new commits, every basic and cc-test patch applies,
+reverts exactly and compiles. That covers 76 files, the whole buddy module
+included.
+
+**Fixed upstream?** The herd warning isn't, so our fix stays. The playerbots
+crash that froze the pins in July isn't either; its repair stays and logs a
+line, so your first boot will say whether it still happens.
+
+**Removed:**
+- **Eight warning-fix patches** (plus B004's last warning edit), which had been
+  doing nothing. With today's compiler, none of their files warn even unpatched,
+  at the old pin or the new.
+- **One of them (B021) was planting a bug in today's build.** It broke
+  upstream's "not found" checks in the code that reads bot outfit commands, so a
+  bad command could loop forever.
+- **The Lua engine's database-query fix (B023):** upstream made the same fix.
+
+**Retargeted, because upstream moved under them:**
+- **B002:** upstream now ships its own playerbots build file. Ours used to
+  overwrite it, which would have dropped its MySQL link; we now append to it.
+- **B043:** the stop logging no longer interferes with upstream's new record of
+  why the server stopped.
+- **B045:** the companion command guard follows a reworded signature.
+- **B046:** buddy gear judgement drops a setting upstream removed.
+- **B001:** the loot module's packet hook now takes the read-only packet the new
+  core requires.
+
+**For your next build:**
+- **It will be a full rebuild.** Expect a long compile; the cache won't help
+  much across 1,207 core commits.
+- **The first start of each profile's worldserver will apply roughly 1,200
+  upstream database updates on its own.** One risk: if an upstream update
+  changes a row that one of our install steps also changed, upstream's version
+  wins, and our step won't re-run because its file didn't change. I haven't
+  checked that overlap.
+- **The real source tree still has the interrupted build's patches applied.**
+  The update step resets it first, so that's handled.
+
+**Easy wins before the next compile**, most valuable first:
+1. **The stand-in maker.** It's C++ in our buddy module, so writing it now lets
+   this compile carry it. It's also what Arathi Basin and Alterac Valley are
+   waiting on.
+2. **An overlap check before first boot:** list the rows our install steps
+   change that upstream's new updates also touch. That turns the database risk
+   above into a known list.
+3. **The navmesh reader for caves and tunnels.** It's Lua and needs no compile.
+
+Two decisions for you:
+1. **Loot module:** keep the community fork (now fixed for the new core) or
+   switch to AzerothCore's official one? The official one compiles cleanly with
+   no patch. It's maintained (last change 2026-09-25, against December 2025 for
+   the fork) and adds mailing loot when bags are full.
+2. **Start the stand-in maker now?**
+
+--------------------------------------------------------------------------------
+
+### User Request 44
+
+> 1. Loot module: keep the community fork (now fixed for the new core) or switch
+> to AzerothCore's official one? The official one compiles cleanly with no
+> patch. It's maintained (last change 2026-09-25, against December 2025 for the
+> fork) and adds mailing loot when bags are full.
+
+sorry, what are we using a loot module for?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 44
+
+It's AoE loot. When you loot one corpse, it also picks up everything from the
+other corpses nearby, so you don't click each body in turn. It came over from
+the vanilla plan, which says it "cuts the wrist effort of post-combat cleanup,
+which matters more when a bot party leaves five corpses per pull." Basic copied
+vanilla's five modules wholesale, so nobody chose it for basic on its own.
+cc-test doesn't have it.
+
+Before choosing a version, it's worth asking whether basic wants it at all. It
+touches three things we've built since:
+
+1. **Richer drops.** Rare and rare-elite monsters roll their loot twice, and
+   epics drop more from ordinary monsters. Merged looting still gives all of
+   that, just in one window.
+2. **Buddies' gear judgement.** Buddies roll on items by their own talent plans.
+   If the merge pulls in items from corpses the player was never meant to loot,
+   things get messy. The official version fixed exactly that in September: it
+   "only merge[s] AoE loot the looting player can take". The fork has no such
+   fix.
+3. **Legendaries.** One legendary roll sits on each raid boss. Merging a boss's
+   loot with trash corpses around it shouldn't change the odds, but it does move
+   the boss's loot into a merged window.
+
+Your motto points both ways: "level as hard as you can with as minimal of gear
+as you can, and fight to the last." Faster looting fits the "level as hard as
+you can" half; picking through each corpse fits the "minimal gear" half. My
+recommendation is the official version if basic keeps area looting, since point
+2 is the bug the fork never fixed.
+
+When you picture finishing a fight with your buddies around you, do you see
+yourself walking to each body, or sweeping it all up at once?
+
+--------------------------------------------------------------------------------
+
+### User Request 45
+
+I mean yeah AoE loot great but... that's officially supported now?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 45
+
+Not in the way "official" made it sound, sorry. The core still has no area
+looting of its own; its newest config file has no loot-merging setting at all.
+What I called "official" is a separate add-on module hosted by the AzerothCore
+organisation on GitHub (azerothcore/mod-aoe-loot). Their team started it in
+October 2021 and still maintains it; its latest change was 2026-09-25.
+
+The one we install now is a community fork of that same idea
+(TerraByte-tbwps/mod-aoe-loot), last changed in December 2025. Both are add-ons
+the build compiles in, and neither is part of the core.
+
+So the choice is between two versions of the same add-on:
+- **AzerothCore's own version:** its maintainers keep it in step with the core.
+  It compiles against the new core with no patch, and has the September fix
+  limiting merges to loot you're allowed to take.
+- **The community fork:** compiles now only with our one-line patch. It hasn't
+  changed since December.
+
+--------------------------------------------------------------------------------
+
+### User Request 46
+
+what's the argument for/against switching to the official one?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 46
+
+Here's the comparison. Everything except the last row is from reading both
+modules' code and config:
+
+| | AzerothCore's version | The fork (what basic runs now) |
+|---|---|---|
+| Keeps pace with the core | Yes. Their maintainers updated it for core changes in March 2026 and again since; it compiles against the new core unpatched | No changes since December 2025; compiles only with our one-line patch |
+| Who can take merged loot | Since September, only loot the looter is allowed to take | No such check |
+| Quest items | Only for quests you have active, and only as many as you still need (March 2026 fix) | No such check |
+| Full bags | Can mail the overflow to you (off by default) | Items stay on the corpses |
+| Per-player switch | `.aoeloot on` / `.aoeloot off` | None |
+| Below two corpses | Not a setting | Normal looting when only one corpse is in range (setting) |
+| Money range | Not a setting | Gold shares to group members out to twice the loot range (setting) |
+| Debug output | None | Chat debug **on by default**: your installed basic config has it on, so players see each detected item value printed in chat |
+| Install | Needs one small database table for its messages, which the module ships and the server's updater loads | No database part |
+| Already tested here | No: never run on this server | Yes: it's what basic has been running |
+
+**For switching:**
+- It follows the core, so future pin moves are less likely to break it.
+- It fixes two real loot-ownership gaps that matter with buddies rolling on
+  items.
+- It drops the debug chatter.
+- It removes a patch from our pile.
+
+**Against switching:**
+- The fork has run on basic already and the official version hasn't. Any
+  behaviour difference would be new, at the same moment as 1,200 other upstream
+  changes.
+- We'd lose the two tuning knobs (the corpse threshold and the money range).
+  Neither is set by any of our config patches; they run on their defaults.
+
+My recommendation is to switch. The ownership fix matters more with buddies than
+anything the fork offers, and its debug-on default is something we'd have to
+patch around anyway. If you'd rather keep this compile's changes to the pin move
+alone, switching on the next one is just as easy.
+
+Had you noticed the loot values printed in chat on basic? If you hadn't, that
+may mean area looting rarely triggers for you.
 
 --------------------------------------------------------------------------------
 

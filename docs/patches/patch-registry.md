@@ -73,7 +73,7 @@ These fix compatibility issues in upstream code.
 
 | ID   | Name                                    | Target                                                  | Description |
 |------|-----------------------------------------|---------------------------------------------------------|-------------|
-| B001 | aoe-loot-item-namespace                 | mod-aoe-loot/src/aoe_loot.cpp                           | Fix `Item` vs `WorldPackets::Item` ambiguity; since 2026-10-09 also the packet hook's read-only signature (the new core dropped the other) |
+| B001 | aoe-loot-item-namespace                 | mod-aoe-loot/src/aoe_loot.cpp                           | **Retired 2026-10-09**: the loot module is now AzerothCore's own (azerothcore/mod-aoe-loot), which compiles against the core unpatched. Was: Fix `Item` vs `WorldPackets::Item` ambiguity; since 2026-10-09 also the packet hook's read-only signature (the new core dropped the other) |
 | B002 | playerbots-ale-login-hook               | mod-playerbots/src/Bot/PlayerbotMgr.cpp, mod-playerbots.cmake | Trigger PLAYER_EVENT_ON_LOGIN for bots |
 | B003 | ale-gameobject-wildcard                 | mod-ale/src/LuaEngine/LuaEngine.cpp                     | Enable entry 0 as wildcard for gameobject events |
 | B004 | upstream-warning-fixes                  | core: FormationMovementGenerator.cpp                    | Since 2026-10-09 only: formation followers' near-zero speed (a log flood) |

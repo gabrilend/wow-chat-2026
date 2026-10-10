@@ -37,7 +37,7 @@ TREE="${ROOT}/${NAME}"
 CACHE="${ROOT}/module-cache"
 UNPINNED=(
     "mod-solo-lfg https://github.com/azerothcore/mod-solo-lfg.git"
-    "mod-aoe-loot https://github.com/TerraByte-tbwps/mod-aoe-loot.git"
+    "mod-aoe-loot https://github.com/azerothcore/mod-aoe-loot.git"
     "mod-fireworks-on-level https://github.com/azerothcore/mod-fireworks-on-level.git"
 )
 
@@ -65,6 +65,11 @@ export_commit "${SRC}/modules/mod-ale" "${ALE}" "${TREE}/modules/mod-ale" || exi
 mkdir -p "${CACHE}"
 for entry in "${UNPINNED[@]}"; do
     read -r mod url <<< "${entry}"
+    # a cached clone from another address (the loot module's fork, before
+    # 2026-10-09) is cloned again from the right one
+    if [[ -d "${CACHE}/${mod}/.git" && "$(git -C "${CACHE}/${mod}" remote get-url origin)" != "${url}" ]]; then
+        rm -rf "${CACHE:?}/${mod}"
+    fi
     if [[ -d "${CACHE}/${mod}/.git" ]]; then
         git -C "${CACHE}/${mod}" pull --quiet --ff-only || { echo "ERROR: updating ${mod} failed"; exit 1; }
     else

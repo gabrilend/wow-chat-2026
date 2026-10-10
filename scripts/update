@@ -166,7 +166,7 @@ declare -A PROFILE_MODULE_COMMITS=(
 declare -A MODULE_REPOS=(
     ["mod-ale"]="https://github.com/azerothcore/mod-ale.git"
     ["mod-eluna"]="https://github.com/azerothcore/mod-eluna.git"
-    ["mod-aoe-loot"]="https://github.com/TerraByte-tbwps/mod-aoe-loot.git"
+    ["mod-aoe-loot"]="https://github.com/azerothcore/mod-aoe-loot.git"   # 2026-10-09: AzerothCore's own, was the TerraByte-tbwps fork (owner: "let's switch")
     ["mod-grownup"]="https://github.com/webluke/mod-grownup"
     ["mod-playerbots"]="https://github.com/liyunfan1223/mod-playerbots.git --branch=master"
     ["mod-solo-lfg"]="https://github.com/azerothcore/mod-solo-lfg.git"
@@ -466,6 +466,25 @@ source "${DIR}/patches/patches.sh"
 # tree is discardable. See patches.sh:reset_source_trees for the full
 # rationale.
 reset_source_trees
+
+# {{{ a module cloned from another address
+# A module folder whose origin is not the address in MODULE_REPOS is removed,
+# so it is cloned again from the right one. Source trees are build artifacts
+# (issue 136). Added 2026-10-09 when mod-aoe-loot moved from the
+# TerraByte-tbwps fork to AzerothCore's own: an existing clone of the fork
+# would otherwise have kept pulling from the fork.
+for mod_name in ${MODULES}; do
+    mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+    mod_url="${MODULE_REPOS[$mod_name]:-}"
+    mod_url="${mod_url%% *}"                          # the address, without "--branch=..."
+    [[ -d "${mod_dir}/.git" && -n "${mod_url}" ]] || continue
+    have_url="$(git -C "${mod_dir}" remote get-url origin)"
+    if [[ "${have_url}" != "${mod_url}" ]]; then
+        echo "  ${mod_name}: cloned from ${have_url}, wanted ${mod_url}; removing it to clone again"
+        rm -rf "${mod_dir}"
+    fi
+done
+# }}}
 
 needs_rebuild=false
 
