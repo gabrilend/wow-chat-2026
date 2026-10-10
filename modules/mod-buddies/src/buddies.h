@@ -57,9 +57,10 @@ void BuddyQueueLogin(uint32 ownerGuid);
 // Makes and saves one character on an account, buddy or stand-in
 // (buddies_create.cpp, 617a3, 617t1): name, looks, level, professions,
 // every spell up to its level, the kit's gear by its talent shape (bags
-// like `bagsLike`'s, 0 for none), sockets. Its guid and name, or 0 and why.
+// like `bagsLike`'s, 0 for none), the PvP necklace, rings and trinkets when
+// `pvpJewellery` (stand-ins), sockets. Its guid and name, or 0 and why.
 uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, uint8 shape, uint8 role,
-    uint32 bagsLike, char const* kind, std::string const& forWhom, std::string& name, std::string& why);
+    uint32 bagsLike, bool pvpJewellery, char const* kind, std::string const& forWhom, std::string& name, std::string& why);
 
 // Whether this account holds stand-ins: characters that belong to nobody
 // (buddies_stand_ins.cpp, 617t1). Cheap: an in-memory list.

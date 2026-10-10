@@ -300,12 +300,13 @@ static void Fail(uint32 owner, uint8 slot, uint8 race, uint8 cls, std::string co
 // client's tables, the server's ordinary creation, its level, the
 // professions, every spell up to its level, the kit's gear by its talent
 // shape (bags like `bagsLike`'s when that names a character; a stand-in has
-// nobody to match), sockets by its plan, and the first save. What a buddy
+// nobody to match), the PvP necklace, rings and trinkets when `pvpJewellery`
+// (stand-ins, 617t1), sockets by its plan, and the first save. What a buddy
 // adds (its roster row, its owner meeting it) is CreateBuddy's. `kind`
 // names it in the log ("buddy", "stand-in"); `forWhom` says for whom.
 // Returns the new character's guid and its name; 0 and why when it can't.
 uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, uint8 shape, uint8 role,
-    uint32 bagsLike, char const* kind, std::string const& forWhom, std::string& name, std::string& why)
+    uint32 bagsLike, bool pvpJewellery, char const* kind, std::string const& forWhom, std::string& name, std::string& why)
 {
     uint8 gender = urand(0, 1) ? GENDER_MALE : GENDER_FEMALE;
     name = PickName(race, gender);
@@ -363,6 +364,13 @@ uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, ui
     if (!kitProblems.empty())
         LOG_ERROR("module", "mod-buddies: new {} {} for {} (level {}), starting kit incomplete: {}",
             kind, name, forWhom, made->GetLevel(), kitProblems);
+    // a stand-in's neck, rings and trinkets: the best PvP rewards of its level (617t1)
+    if (pvpJewellery)
+    {
+        std::string jewelProblems = BuddyGivePvpJewellery(made, shape, role);
+        if (!jewelProblems.empty())
+            LOG_ERROR("module", "mod-buddies: new {} {} for {}, PvP jewellery incomplete: {}", kind, name, forWhom, jewelProblems);
+    }
     // its gear's sockets filled by its plan (617j2), free
     std::string gemProblems = BuddyGemKit(made, shape, role);
     if (!gemProblems.empty())
@@ -412,7 +420,7 @@ static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
     uint8 profile = plan ? (*plan)[0].Get<uint8>() : 0;
     uint8 role    = plan ? (*plan)[1].Get<uint8>() : 0;
     std::string name, why;
-    uint32 guid = BuddyMakeCharacter(account, race, cls, ownerLevel, profile, role, owner, "buddy",
+    uint32 guid = BuddyMakeCharacter(account, race, cls, ownerLevel, profile, role, owner, false, "buddy",
         "owner " + std::to_string(owner), name, why);
     if (!guid)
         return Fail(owner, slot, race, cls, why);

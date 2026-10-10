@@ -1,11 +1,14 @@
 // pick.cpp - checks the stand-in maker's choices (issue 617t1) against the
-// plan: a tree that takes the role, wholly; the race and class drawn only
-// from the side's pairs that can take the role; a kept stand-in used before
-// a new one is made, never one above the level, never one in use; the
-// pre-made build chosen by where its points lie.
+// plan: a talent shape of the asked role, as a buddy's would be; the race
+// and class drawn only from the side's pairs that can take the role; a kept
+// stand-in used before a new one is made, never one above the level, never
+// one in use. Run with "--shapes" it prints every class's ten shape roles
+// instead, for scripts/test-buddy-stand-ins to compare with the generated
+// buddy talent data.
 #include "buddies_stand_ins_pick.h"
 #include <cstdio>
 #include <set>
+#include <string>
 
 static int passed = 0, failed = 0;
 static void check(bool ok, char const* what)
@@ -14,13 +17,6 @@ static void check(bool ok, char const* what)
     else { ++failed; std::printf("  FAIL: %s\n", what); }
 }
 
-// the module's own role table (buddies_roles.cpp, TREE_ROLES), as bits:
-// 1 damage, 2 tank, 4 healer
-static constexpr uint8_t D = 1, T = 2, H = 4;
-static uint8_t const TREE_ROLES[12][3] = {
-    { D, D, D }, { D, D, T }, { H, T, D }, { D, D, D }, { D, D, D }, { H, H, D },
-    { T, D, D }, { D, D, H }, { D, D, D }, { D, D, D }, { D, D, D }, { D, uint8_t(T | D), H },
-};
 // the game's race and class pairs (3.3.5a playercreateinfo)
 static std::vector<std::pair<uint8_t, uint8_t>> const PAIRS = {
     {1,1},{1,2},{1,4},{1,5},{1,6},{1,8},{1,9},          // human
@@ -35,33 +31,41 @@ static std::vector<std::pair<uint8_t, uint8_t>> const PAIRS = {
     {11,1},{11,2},{11,3},{11,5},{11,6},{11,7},{11,8},   // draenei
 };
 static uint8_t SideOf(uint8_t race) { return (race == 2 || race == 5 || race == 6 || race == 8 || race == 10) ? 1 : 0; }
-static void RolesOf(uint8_t cls, uint8_t (&out)[3]) { for (int t = 0; t < 3; ++t) out[t] = TREE_ROLES[cls][t]; }
 
-int main()
+int main(int argc, char** argv)
 {
     using namespace BuddyStandIn;
 
-    // trees for a role, with the module's roles: bit = 1 << role (0 damage, 1 tank, 2 healer)
-    check(TreesForRole(TREE_ROLES[1], 1) == std::vector<uint8_t>{ 2 }, "a warrior tanks only in protection");
-    check(TreesForRole(TREE_ROLES[5], 2) == std::vector<uint8_t>{ 0, 1 }, "a priest heals in discipline or holy");
-    check(TreesForRole(TREE_ROLES[11], 1) == std::vector<uint8_t>{ 1 }, "a druid tanks in feral");
-    check(TreesForRole(TREE_ROLES[11], 0) == std::vector<uint8_t>{ 0, 1 }, "a druid does damage in balance or feral");
-    check(TreesForRole(TREE_ROLES[8], 1).empty(), "a mage can't tank");
-    check(ShapeForTree(0) == 8 && ShapeForTree(1) == 9 && ShapeForTree(2) == 10, "all points in one tree are shapes 8, 9, 10");
+    if (argc > 1 && std::string(argv[1]) == "--shapes")
+    {
+        // "class shape role" lines, roles as the data writes them
+        char const* const names[3] = { "damage", "tank", "healer" };
+        for (uint8_t cls : { 1, 2, 3, 4, 5, 6, 7, 8, 9, 11 })
+            for (uint8_t shape = 1; shape <= 10; ++shape)
+                std::printf("%u %u %s\n", cls, shape, names[ShapeRole(cls, shape)]);
+        return 0;
+    }
+
+    // shapes for a role
+    check(ShapesForRole(1, 1) == std::vector<uint8_t>{ 5, 6, 10 }, "a warrior tanks in shapes 5, 6, 10 (two thirds or all protection)");
+    check(ShapesForRole(2, 2) == std::vector<uint8_t>{ 1, 2, 8 }, "a paladin heals in 1, 2, 8 (two thirds or all holy; a third each is damage)");
+    check(ShapesForRole(5, 0) == std::vector<uint8_t>{ 5, 6, 7, 10 }, "a priest does damage with two thirds or all in shadow, or a third in each");
+    check(ShapesForRole(8, 1).empty(), "a mage can't tank");
+    check(ShapesForRole(3, 0).size() == 10, "every hunter shape is damage");
 
     // pairs for a side and role
-    auto hordeHealers = PairsFor(PAIRS, 1, 2, SideOf, RolesOf);
+    auto hordeHealers = PairsFor(PAIRS, 1, 2, SideOf);
     std::set<uint8_t> classes;
     bool allHorde = true;
     for (auto const& p : hordeHealers) { classes.insert(p.second); allHorde = allHorde && SideOf(p.first) == 1; }
     check(allHorde, "Horde healers are all of Horde races");
     check(classes == std::set<uint8_t>{ 2, 5, 7, 11 }, "Horde healers are paladins, priests, shamans and druids");
-    auto allianceTanks = PairsFor(PAIRS, 0, 1, SideOf, RolesOf);
+    auto allianceTanks = PairsFor(PAIRS, 0, 1, SideOf);
     std::set<uint8_t> tankClasses;
     for (auto const& p : allianceTanks) tankClasses.insert(p.second);
-    check(tankClasses == std::set<uint8_t>{ 1, 2, 6, 11 }, "Alliance tanks are warriors, paladins, death knights and druids");
+    check(tankClasses == std::set<uint8_t>{ 1, 2, 11 }, "Alliance tanks are warriors, paladins and druids (a buddy death knight's shapes are all damage)");
     bool noBloodElfWarrior = true;
-    for (auto const& p : PairsFor(PAIRS, 1, 1, SideOf, RolesOf))
+    for (auto const& p : PairsFor(PAIRS, 1, 1, SideOf))
         noBloodElfWarrior = noBloodElfWarrior && !(p.first == 10 && p.second == 1);
     check(noBloodElfWarrior, "only the game's pairs: no blood elf warrior (yet)");
 
@@ -82,17 +86,6 @@ int main()
     kept[1].inWorld = true;
     check(PickKept(kept, 1, 1, 1, 35) == 103, "one in use is passed over");
 
-    // the pre-made build by where its points lie
-    std::vector<std::vector<uint8_t>> builds = {
-        { 0, 0, 0, 1, 1 },                              // 0: mostly the first tree
-        {},                                             // 1: no build under this number
-        { 2, 2, 2, 2, 0 },                              // 2: mostly the third
-        { 2, 2, 2, 2, 2 },                              // 3: wholly the third
-    };
-    check(PickSpecForTree(builds, 2) == 3, "the third tree: the build wholly in it");
-    check(PickSpecForTree(builds, 0) == 0, "the first tree: the build mostly in it");
-    check(PickSpecForTree(builds, 1) == 0, "the second tree: the only build with points there");
-    check(PickSpecForTree({ {}, {} }, 0) == -1, "no builds: none");
 
     std::printf("%s: %d of %d checks passed\n", failed ? "FAILED" : "ok", passed, passed + failed);
     return failed ? 1 : 0;

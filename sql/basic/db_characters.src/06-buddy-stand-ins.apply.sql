@@ -11,7 +11,8 @@
 --   guid        the character (characters.guid), on a STANDIN<n> account
 --   race, class the game's ids
 --   role        0 damage, 1 tank, 2 healer (buddy_roster's numbers)
---   tree        0-2: the talent tree it puts every point into
+--   profile     its talent shape, 1-10, as a buddy's (buddy_roster.profile,
+--               617g): drawn among its class's shapes of its role
 --   level       its level now (only ever goes up, when it is used)
 --   track       its levelling track (617t question 7); 0 until decided
 --   uses        times brought into the world
@@ -24,7 +25,7 @@ CREATE TABLE IF NOT EXISTS `buddy_stand_in` (
     `race`      TINYINT UNSIGNED NOT NULL,
     `class`     TINYINT UNSIGNED NOT NULL,
     `role`      TINYINT UNSIGNED NOT NULL,
-    `tree`      TINYINT UNSIGNED NOT NULL,
+    `profile`   TINYINT UNSIGNED NOT NULL,
     `level`     TINYINT UNSIGNED NOT NULL,
     `track`     TINYINT UNSIGNED NOT NULL DEFAULT 0,
     `uses`      INT UNSIGNED     NOT NULL DEFAULT 0,

@@ -4,12 +4,13 @@
  * tests/buddy-stand-ins/pick.cpp, scripts/test-buddy-stand-ins).
  *
  * For a general audience: before a stand-in is brought in, three things
- * are chosen: which talent tree it puts everything into (one that takes
- * its role), which race and class it is when the asker leaves that open,
- * and whether a kept stand-in can be used instead of making a new one.
- * The rules are written here on plain numbers and lists; the module hands
- * them the game's tables (which trees take which role, which race and
- * class pairs exist) and does the making.
+ * are chosen: its talent shape (one of the ten a buddy can have, 617g,
+ * among those whose role is the one asked for: the owner, 2026-10-09,
+ * "pick a spec profile, same as buddy-bots. It's okay if there's two of
+ * one type in a squad"), which race and class it is when the asker leaves
+ * that open, and whether a kept stand-in can be used instead of making a
+ * new one. The rules are written here on plain numbers and lists; the
+ * module hands them the game's race and class pairs and does the making.
  */
 
 #ifndef MOD_BUDDIES_STAND_INS_PICK_H
@@ -33,25 +34,61 @@ namespace BuddyStandIn
     };
     // }}}
 
-    // {{{ TreesForRole
-    // The talent trees (0-2) of a class that take a role, given each tree's
-    // roles as bit sets (bit 1 << role, as BuddyTreeRoles answers): a
-    // stand-in puts everything into one of them (617t: "wholly its role").
-    // Empty when no tree of the class takes the role (a mage tank).
-    inline std::vector<uint8_t> TreesForRole(uint8_t const (&treeRoles)[3], uint8_t role)
+    // {{{ the shapes
+    // Points in each tree in thirds, shape 1-10 (617g; the same table as
+    // buddies_loot.cpp's PLAN_THIRDS and scripts/generate-basic-talent-
+    // data's order, written out for every class alike).
+    static constexpr uint8_t SHAPE_THIRDS[10][3] = {
+        { 2, 1, 0 }, { 2, 0, 1 }, { 1, 2, 0 }, { 0, 2, 1 }, { 1, 0, 2 },
+        { 0, 1, 2 }, { 1, 1, 1 }, { 3, 0, 0 }, { 0, 3, 0 }, { 0, 0, 3 },
+    };
+    // Each class's trees' one role (0 damage, 1 tank, 2 healer), as
+    // scripts/generate-basic-talent-data's TREE_ROLE gives them (feral is a
+    // tank tree there, where buddies_roles.cpp lets it do both): a shape's
+    // role is read from these, so a stand-in's shape has the role a buddy's
+    // would. scripts/test-buddy-stand-ins checks every class's ten against
+    // the generated data.
+    static constexpr uint8_t TREE_ROLE[12][3] = {
+        { 0, 0, 0 },                                    // 0: none
+        { 0, 0, 1 },                                    // warrior: arms, fury, protection
+        { 2, 1, 0 },                                    // paladin: holy, protection, retribution
+        { 0, 0, 0 },                                    // hunter
+        { 0, 0, 0 },                                    // rogue
+        { 2, 2, 0 },                                    // priest: discipline, holy, shadow
+        { 0, 0, 0 },                                    // death knight (the generator gives all three damage)
+        { 0, 0, 2 },                                    // shaman: elemental, enhancement, restoration
+        { 0, 0, 0 },                                    // mage
+        { 0, 0, 0 },                                    // warlock
+        { 0, 0, 0 },                                    // 10: none
+        { 0, 1, 2 },                                    // druid: balance, feral, restoration
+    };
+    // }}}
+
+    // {{{ ShapeRole
+    // A shape's role, as the generator writes it: the role of the tree
+    // holding two thirds or all of the points; a third in each is damage.
+    inline uint8_t ShapeRole(uint8_t cls, uint8_t shape)
     {
-        std::vector<uint8_t> trees;
+        if (cls >= 12 || shape < 1 || shape > 10)
+            return 0;
         for (uint8_t t = 0; t < 3; ++t)
-            if (treeRoles[t] & (1u << role))
-                trees.push_back(t);
-        return trees;
+            if (SHAPE_THIRDS[shape - 1][t] >= 2)
+                return TREE_ROLE[cls][t];
+        return 0;
     }
     // }}}
 
-    // {{{ ShapeForTree
-    // The talent shape (617g's 1-10, buddy_roster.profile's numbers) of all
-    // the points in one tree: 8, 9, 10 for the first, second, third.
-    inline uint8_t ShapeForTree(uint8_t tree) { return uint8_t(8 + tree); }
+    // {{{ ShapesForRole
+    // The shapes (1-10) of a class whose role is the one asked for; empty
+    // when none is (a mage tank).
+    inline std::vector<uint8_t> ShapesForRole(uint8_t cls, uint8_t role)
+    {
+        std::vector<uint8_t> shapes;
+        for (uint8_t shape = 1; shape <= 10; ++shape)
+            if (ShapeRole(cls, shape) == role)
+                shapes.push_back(shape);
+        return shapes;
+    }
     // }}}
 
     // {{{ PickKept
@@ -77,21 +114,18 @@ namespace BuddyStandIn
     // {{{ PairsFor
     // The race and class pairs a stand-in may be drawn from: the game's
     // pairs (the races and classes that can go together), of races on the
-    // asked side, of classes with a tree taking the role. `sideOfRace`
-    // answers 0 Alliance, 1 Horde for a race id; `rolesOfClass` a class's
-    // three trees' roles.
-    template <class SideOfRace, class RolesOfClass>
+    // asked side, of classes with a shape of the role. `sideOfRace`
+    // answers 0 Alliance, 1 Horde for a race id.
+    template <class SideOfRace>
     std::vector<std::pair<uint8_t, uint8_t>> PairsFor(std::vector<std::pair<uint8_t, uint8_t>> const& gamePairs,
-        uint8_t side, uint8_t role, SideOfRace sideOfRace, RolesOfClass rolesOfClass)
+        uint8_t side, uint8_t role, SideOfRace sideOfRace)
     {
         std::vector<std::pair<uint8_t, uint8_t>> out;
         for (auto const& p : gamePairs)
         {
             if (sideOfRace(p.first) != side)
                 continue;                               // the other side's race
-            uint8_t treeRoles[3];
-            rolesOfClass(p.second, treeRoles);
-            if (TreesForRole(treeRoles, role).empty())
+            if (ShapesForRole(p.second, role).empty())
                 continue;                               // the class can't take the role
             out.push_back(p);
         }
@@ -99,36 +133,6 @@ namespace BuddyStandIn
     }
     // }}}
 
-    // {{{ PickSpecForTree
-    // Of the bot module's pre-made talent builds for a class (one list of
-    // trees per build, a tree id for each talent point, the build at its
-    // fullest level), the build putting the largest share of its points in
-    // `tree`; ties go to the lower build number. -1 when no build has any
-    // point there (or there are no builds). The bot module numbers its
-    // builds freely ("arms pve", "fury pvp", ...), so the tree is read from
-    // the points, not the name.
-    inline int PickSpecForTree(std::vector<std::vector<uint8_t>> const& buildTrees, uint8_t tree)
-    {
-        int    best      = -1;
-        double bestShare = 0.0;
-        for (size_t s = 0; s < buildTrees.size(); ++s)
-        {
-            std::vector<uint8_t> const& points = buildTrees[s];
-            if (points.empty())
-                continue;                               // no build under this number
-            size_t inTree = 0;
-            for (uint8_t t : points)
-                inTree += (t == tree);
-            double share = double(inTree) / double(points.size());
-            if (inTree && share > bestShare)
-            {
-                best      = int(s);
-                bestShare = share;
-            }
-        }
-        return best;
-    }
-    // }}}
 }
 
 #endif

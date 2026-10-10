@@ -6,7 +6,7 @@ The Lua scripts of the cc-test profile: the custom client's test server
 `.lua` file in it when the worldserver starts.
 
 Created 2026-10-08. The profile is stock AzerothCore plus playerbots, ALE and
-the buddy module; nothing here acts in the world yet. Test scenes (issue
+the buddy module; besides the talent links below, nothing here acts in the world yet. Test scenes (issue
 176a) can be written in Lua; the first planned are a full Alterac Valley
 match (176a1) and an Arathi Basin match (176a2).
 
@@ -17,6 +17,13 @@ scripts/test-arathi-basin-rules:
 - lib/arathi-basin-bonuses.lua: each base's growing bonus (176a2e)
 - data/arathi-basin-roads.lua: the roads, written by
   scripts/generate-arathi-basin-roads from the playerbots module's paths
+
+Linked from basic (2026-10-09, issue 617t1), not copied, so the two
+profiles always run the same file: `buddy-talents.lua`,
+`lib/buddy-talent-spender.lua` and `data/buddy-talent-data.lua` are links to
+`src/lua-basic/`. They spend stand-ins' talent points by their shape (and
+buddies', the module being on here too); the test scenes' stand-ins need
+them.
 
 The Lua engine loads every .lua file here at startup; these only return
 tables, so loading them does nothing on its own.

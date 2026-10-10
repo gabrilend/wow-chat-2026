@@ -1,6 +1,6 @@
 # Conversation Summary: a4440faa-87b5-4fc6-b59d-3d898fd95767
 
-Generated on: 2026-10-09 18:03:13
+Generated on: 2026-10-09 18:18:50
 Models: claude-opus-5-5
 
 ## Contents
@@ -4534,6 +4534,156 @@ alone, switching on the next one is just as easy.
 
 Had you noticed the loot values printed in chat on basic? If you hadn't, that
 may mean area looting rarely triggers for you.
+
+--------------------------------------------------------------------------------
+
+### User Request 47
+
+Yeah let's switch. Then let's work on the stand-in builder.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 47
+
+> Switching first. Finding every place the loot module's source address appears:
+
+> Adding a check to both: a module folder cloned from a different address than
+> the table's is removed and cloned fresh. Then the address switch, and B001
+> retired:
+
+> The upstream-tree script's module cache needs the same check, since its cached
+> copy is the fork:
+
+> An empty list is handled. Retiring B001:
+
+> Basic's patches round-trip on a tree with the official module, and both of its
+> files compile clean, with no errors or warnings. Committing:
+
+*[commit] d5c17f946 in wow-chat-2026 - Area looting comes from AzerothCore's own module instead of a community fork*
+
+> Switched and committed. Now the stand-in builder. Finding the plan and what's
+> already decided:
+
+> The squads plan says the maker is the stand-ins plan's (617t). Reading it:
+
+> No existing owner-less route. Next, what the starting kit and the role and
+> talent-plan code expect, since both currently assume an owner:
+
+> Marking stand-in accounts on that list hides them the same way. Now the bot
+> module's talent and gear builders, which can do the per-spec work for
+> stand-ins:
+
+> Writing the sub-issue first: the blueprint for the first cut, and the
+> questions it raises:
+
+> Plan written. Now the code. Reading how roles map to talent trees, which the
+> choosing rules build on:
+
+> I have what I need for the choosing rules. One last check before the
+> bringing-in code: whether the random-bot manager's own update loop logs out
+> bots it holds but doesn't count as random:
+
+> Sessions are served regardless, so the route works. Now the bot module's
+> talent builds: how a spec number turns into a build for a level:
+
+> Now the test: the real role table and the real race-and-class pairs, written
+> out the way the game has them:
+
+> 20 of 20 pass. (The editor's errors are only its missing include path; the
+> test script compiles it with the right one.) Now the table and its install
+> step:
+
+> The buddy path is unchanged apart from moving into the shared function.
+> Declaring it in the module's shared header:
+
+> I have everything needed. Writing the stand-in file:
+
+> Next: the declarations, the loader entry, and the role words compared without
+> case:
+
+> Now pointing the player-only skips at the new test:
+
+> All these edits are mine; claiming them, then compiling the module against the
+> patched new-pin tree:
+
+> No race-count constant exists in this core, so the loop runs to the last
+> playable race (draenei):
+
+> Both compile. Checking the new file for warnings too, since the scratch check
+> only counts errors:
+
+> No warnings. Re-checking the whole module after the shared-header change, and
+> running the command-reference test, which should notice four new commands
+> without help text:
+
+> The whole module compiles. As expected, the reference test wants help text for
+> the four new commands. Adding them in the commands list's format:
+
+> All 138 reference checks pass. Claiming the regenerated files, then adding a
+> database check to the stand-in test: the table's install applied twice and
+> reverted, in the test database:
+
+> Both parts of the test pass. Updating the plans' current state: the maker is
+> built but not yet run in a game:
+
+*[commit] 8f263ca13 in wow-chat-2026 - Stand-ins: characters that belong to nobody, made or reused on request*
+
+Area looting has switched to AzerothCore's own module, and the stand-in builder
+is written and compiles against the new pins. Neither is built into a server
+yet, and the builder has five open questions, listed below.
+
+**Area looting:** basic now gets AzerothCore's own version. The fork's patch is
+retired everywhere. Install and update now replace a module folder that was
+cloned from a different address, so an old copy of the fork can't keep updating
+from the fork.
+
+**The stand-in builder.** You ask for a side, a role (tank, healer or damage)
+and a level, and optionally a race and class. Then:
+- **A kept one comes first:** one of that race, class and role, not already in
+  use, at or below the level (the highest such). It's raised to the level if
+  it's below. A stand-in's level never goes down.
+- **Otherwise a new one is made** by the same steps as a buddy: name, looks,
+  every spell up to its level, white gear, gems. Every talent point goes into
+  one tree that takes its role.
+- **It comes in as a bot with no owner.** It learns the bot module's talent
+  build closest to its tree, picks its fighting rules for those talents, and
+  moves to where it was asked for.
+- **Where they live:** hidden accounts named STANDIN1, STANDIN2 and so on, plus
+  a new database table, installed for basic and cc-test.
+- **Commands:**
+  - `.buddy standin make <alliance|horde> <tank|healer|damage> <level> [race]
+    [class]`: brings one in beside you.
+  - `.buddy standin at …`: brings one in at a map and position, which is how
+    the scenes will ask.
+  - `.buddy standin list`
+  - `.buddy standin dismiss <name|all>`: takes it out of the world; it stays
+    kept.
+
+Stand-ins skip everything meant for players: their own hidden account, owed
+buddy slots, dungeon draws. Making a buddy works exactly as before; it now goes
+through the same shared steps. The test passes: 20 checks of the choosing rules,
+plus the new table installed twice and removed in the test database.
+
+**Next:** once you've compiled, `.buddy standin make horde healer 20` is the
+first thing to try in game. After that, the scenes start asking for their
+squads.
+
+The five open questions:
+1. **Characters per account:** I guessed 50. An Alterac Valley match alone wants
+   80. Is that fine, or would you rather one account per side, or per scene?
+2. **Hidden or seen:** stand-ins are hidden like buddies: not in /who, can't be
+   befriended, ignore whispered commands. You want players to be able to play
+   one later. Is playing one a different thing from commanding it, or should it
+   take commands from whoever plays it?
+3. **Names:** stand-ins draw from the same name list as buddies. Should they
+   carry a mark (a title, a surname) so you can tell a stand-in from a buddy at
+   a glance?
+4. **Damage trees:** a hunter or rogue has three damage trees. Should each
+   stand-in's tree be drawn at random, or spread evenly across a squad so a trio
+   isn't three marksmanship hunters?
+5. **Necklace, rings and trinkets:** the white-gear kit leaves those slots
+   empty. The plan says to fill them with the best PvP items for the level. Is
+   that needed before the battleground scenes, or can it wait?
 
 --------------------------------------------------------------------------------
 

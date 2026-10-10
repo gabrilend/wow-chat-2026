@@ -23,4 +23,10 @@ std::string BuddyGiveStartingKit(Player* buddy, uint32 ownerGuid, uint8 shape);
 // Returns what could not be given.
 std::string BuddyRegear(Player* buddy, uint8 shape);
 
+// The neck, rings and trinkets of a stand-in (617t1): the best PvP rewards
+// of its level (bought with honor or arena points), scored by its talent
+// shape; the standing they need is given. Replaces what those slots held.
+// Returns what could not be given.
+std::string BuddyGivePvpJewellery(Player* who, uint8 shape, uint8 role);
+
 #endif

@@ -60,14 +60,29 @@ local function roster_ready()
 end
 -- }}}
 
+-- Whether the stand-ins' table exists (617t1, install step E056). Missing:
+-- said once, and stand-ins keep their points unspent; buddies are unaffected.
+local STAND_INS = CharDBQuery("SHOW TABLES LIKE 'buddy_stand_in'") ~= nil
+if not STAND_INS then
+    print(TAG .. "ERROR: characters table buddy_stand_in is missing (install step E056 not run?); stand-ins' talents are OFF")
+end
+
 -- {{{ local function buddy_row
 -- The roster row of a character that is a buddy: shape id and whether a
 -- re-roll is owed. nil when the character is not a buddy.
+-- A stand-in (617t1: a character that belongs to nobody, made by the buddy
+-- module) is read from buddy_stand_in instead: its shape the same way, and
+-- never a re-roll (it has no owner to respec). Its points are spent like a
+-- buddy's, at login and on each level (the owner, 2026-10-09: "pick a spec
+-- profile, same as buddy-bots").
 local function buddy_row(player)
     local q = CharDBQuery(string.format(
         "SELECT profile, talents_reroll FROM buddy_roster WHERE buddy = %d", player:GetGUIDLow()))
+    if q then return { shape = q:GetUInt32(0), reroll = q:GetUInt32(1) ~= 0 } end
+    if not STAND_INS then return nil end
+    q = CharDBQuery(string.format("SELECT profile FROM buddy_stand_in WHERE guid = %d", player:GetGUIDLow()))
     if not q then return nil end
-    return { shape = q:GetUInt32(0), reroll = q:GetUInt32(1) ~= 0 }
+    return { shape = q:GetUInt32(0), reroll = false, stand_in = true }
 end
 -- }}}
 

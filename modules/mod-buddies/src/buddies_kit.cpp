@@ -45,6 +45,9 @@
 #include "QueryResult.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include "DBCStores.h"
+#include "ReputationMgr.h"
+#include "StatsWeightCalculator.h"
 #include <algorithm>
 #include <map>
 #include <vector>
@@ -215,6 +218,100 @@ std::string BuddyGiveStartingKit(Player* buddy, uint32 ownerGuid, uint8 shape)
     // above that, nothing chosen is a problem worth logging
     if (!worn && buddy->GetLevel() > 1)
         problems += "wears nothing chosen for it; ";
+    return problems;
+}
+// }}}
+
+// {{{ BuddyGivePvpJewellery
+// The neck, the two rings and the two trinkets: no white item exists for
+// them, so a stand-in wears the best player-versus-player rewards of its
+// level instead (617t: "when available give them PvP trinkets, rings, and
+// necklaces, the best available at that level"; the owner, 2026-10-09:
+// "let's do it now"). PvP rewards here are what a vendor sells for honor or
+// arena points (the battleground medallions, insignia, the four kinds of
+// ring, the faction Insignia trinkets: every ten levels from 18), its class
+// and race allowed, at or below its level. Each is scored by its talent
+// shape, tree by tree, as the gem step scores (buddies_gems.cpp): the best
+// necklace, the two best rings and the two best trinkets (two different
+// items each). Most need standing with a battleground's faction (the
+// Warsong Outriders, the League of Arathor...): the stand-in is given that
+// standing, as a veteran of the battles its gear comes from, or the server
+// would refuse to let it wear them. Items wanting an old honor rank are left
+// out (no rank can be given). What was in those slots is replaced.
+std::string BuddyGivePvpJewellery(Player* who, uint8 shape, uint8 role)
+{
+    std::string problems;
+    uint8 thirds[3];
+    CollectorType types[3];
+    bool plan = BuddyPlanShape(who->getClass(), shape, role, thirds, types);
+
+    // candidates by kind (2 neck, 11 finger, 12 trinket), scored
+    std::map<uint32, std::vector<std::pair<float, ItemTemplate const*>>> byKind;
+    QueryResult rows = WorldDatabase.Query(
+        "SELECT DISTINCT it.entry, v.ExtendedCost FROM item_template it JOIN npc_vendor v ON v.item = it.entry "
+        "WHERE it.InventoryType IN (2, 11, 12) AND v.ExtendedCost > 0 AND it.RequiredLevel <= {} AND it.RequiredHonorRank = 0",
+        who->GetLevel());
+    std::set<uint32> seen;
+    if (rows)
+        do
+        {
+            uint32 entry = (*rows)[0].Get<uint32>();
+            ItemExtendedCostEntry const* cost = sItemExtendedCostStore.LookupEntry((*rows)[1].Get<uint32>());
+            if (!cost || (!cost->reqhonorpoints && !cost->reqarenapoints) || !seen.insert(entry).second)
+                continue;                               // not bought with honor or arena points, or seen
+            ItemTemplate const* proto = sObjectMgr->GetItemTemplate(entry);
+            if (!proto || !(proto->AllowableClass & who->getClassMask()) || !(proto->AllowableRace & who->getRaceMask()))
+                continue;                               // another class's, or the other side's
+            float score = 0.0f;
+            if (plan)
+                for (int t = 0; t < 3; ++t)
+                {
+                    if (!thirds[t])
+                        continue;
+                    StatsWeightCalculator part(who);
+                    part.SetSpecTab(t, types[t]);
+                    part.SetOverflowPenalty(false);
+                    score += float(thirds[t]) / 3.0f * part.CalculateItem(entry);
+                }
+            else
+            {
+                StatsWeightCalculator c(who);
+                c.SetOverflowPenalty(false);
+                score = c.CalculateItem(entry);
+            }
+            byKind[proto->InventoryType].emplace_back(score, proto);
+        } while (rows->NextRow());
+
+    // the best (two for rings and trinkets), standing given, worn
+    struct Kind { uint32 inventoryType; std::vector<uint8> slots; char const* name; };
+    std::vector<Kind> const kinds = {
+        { INVTYPE_NECK,    { EQUIPMENT_SLOT_NECK },                             "necklace" },
+        { INVTYPE_FINGER,  { EQUIPMENT_SLOT_FINGER1, EQUIPMENT_SLOT_FINGER2 },   "ring" },
+        { INVTYPE_TRINKET, { EQUIPMENT_SLOT_TRINKET1, EQUIPMENT_SLOT_TRINKET2 }, "trinket" },
+    };
+    for (Kind const& kind : kinds)
+    {
+        auto& list = byKind[kind.inventoryType];
+        std::stable_sort(list.begin(), list.end(), [](auto const& a, auto const& b)
+            { return a.first != b.first ? a.first > b.first : a.second->ItemLevel > b.second->ItemLevel; });
+        size_t next = 0;
+        for (uint8 slot : kind.slots)
+        {
+            if (next >= list.size())
+            {
+                problems += std::string("no PvP ") + kind.name + " at its level for slot " + std::to_string(slot) + "; ";
+                continue;
+            }
+            ItemTemplate const* proto = list[next++].second;
+            if (proto->RequiredReputationFaction)
+                if (FactionEntry const* faction = sFactionStore.LookupEntry(proto->RequiredReputationFaction))
+                    if (who->GetReputationMgr().GetRank(faction) < ReputationRank(proto->RequiredReputationRank))
+                        who->GetReputationMgr().SetReputation(faction,
+                            float(ReputationMgr::ReputationRankToStanding(ReputationRank(proto->RequiredReputationRank))));
+            if (!Wear(who, slot, proto->ItemId))
+                problems += std::string("slot ") + std::to_string(slot) + " refused " + kind.name + " " + std::to_string(proto->ItemId) + "; ";
+        }
+    }
     return problems;
 }
 // }}}

@@ -56,7 +56,9 @@ seat.
 - **Roles, strictly**: the group ends with exactly one tank and one
   healer, everyone else damage; a stand-in is made for the missing roles
   first. Unlike the buddies' draw (617c3, where a part-healer counts 0.4),
-  a stand-in is wholly its role.
+  a stand-in counts as wholly its role. Its talents are a buddy's shape of
+  that role (2026-10-09, 617t1: "pick a spec profile, same as buddy-bots"),
+  so a two-thirds-holy paladin stand-in is the group's healer.
 - **Made fresh**, at the player's level, a random class and race of the
   player's faction that can take the role.
 - **Gear**: white (common) items for its level, chosen at random among

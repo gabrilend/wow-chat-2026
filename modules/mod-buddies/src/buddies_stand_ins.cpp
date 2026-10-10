@@ -8,18 +8,22 @@
  * open or named. A kept one that fits is used first (617t: "spawn the next
  * time someone needs that particular race/class combination"), raised to
  * the level if it is below it; otherwise a new one is made the way a buddy
- * is (BuddyMakeCharacter, buddies_create.cpp), with all its talents in one
- * tree that takes its role. It comes into the world as a bot with no
- * master, through the bot module's random-bot manager (which re-rolls only
- * the bots on its own random accounts, so it leaves stand-ins alone), and
- * in its first moments it learns its talents and moves to where it was
- * asked for.
+ * is (BuddyMakeCharacter, buddies_create.cpp), with a talent shape of its
+ * role drawn as a buddy's would be (the owner, 2026-10-09: "pick a spec
+ * profile, same as buddy-bots"), and the best PvP necklace, rings and
+ * trinkets of its level where white gear has none ("let's do it now"). It
+ * comes into the world as a bot with no master, through the bot module's
+ * random-bot manager (which re-rolls only the bots on its own random
+ * accounts, so it leaves stand-ins alone); the buddies' talent script
+ * (src/lua-basic/buddy-talents.lua) spends its points by its shape at
+ * login, as it does a buddy's, and in its first moments it picks its
+ * fighting rules for those talents and moves to where it was asked for.
  *
  * Where they live: hidden accounts STANDIN1, STANDIN2, ... (a set number of
  * characters each, made as needed, with a password nobody is told), and the
  * characters-database table buddy_stand_in (install step E056).
  *
- * The choices (tree, race and class, which kept one) are written apart, in
+ * The choices (shape, race and class, which kept one) are written apart, in
  * buddies_stand_ins_pick.h, and tested without a server
  * (scripts/test-buddy-stand-ins).
  *
@@ -51,8 +55,6 @@
 #include "ObjectMgr.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
-#include "PlayerbotAIConfig.h"
-#include "PlayerbotFactory.h"
 #include "Playerbots.h"
 #include "Random.h"
 #include "RandomPlayerbotMgr.h"
@@ -65,9 +67,15 @@
 
 using namespace Acore::ChatCommands;
 
-// Characters to an account (617t1 question 1: a first guess). The game's
-// ten-a-realm limit is the character screen's; bots aren't held to it.
-static constexpr uint32 STAND_INS_PER_ACCOUNT = 50;
+// Characters to an account (617t1 question 1). The game's ten a realm is
+// only the character screen's limit, checked when a player presses
+// "create" (CharacterHandler.cpp); characters made here never pass through
+// it, and stand-ins never see that screen (the owner, 2026-10-09: "Can we
+// do more than 10 on the backend? The stand-ins of course never need to see
+// the character select screen"). The one hard ceiling is the login
+// database's count of an account's characters on a realm
+// (realmcharacters.numchars, one byte: 255); 200 stays under it.
+static constexpr uint32 STAND_INS_PER_ACCOUNT = 200;
 // How long a stand-in has to appear in the world before its first moments
 // are given up on, and how often the waiting ones are looked at.
 static constexpr uint64 STAND_IN_APPEAR_MS    = 30000;
@@ -133,7 +141,6 @@ static uint32 AccountWithRoom(std::string& why)
 
 // {{{ the game's tables, for the choices
 static uint8 SideOfRace(uint8 race) { return Player::TeamIdForRace(race) == TEAM_HORDE ? 1 : 0; }
-static void  RolesOfClass(uint8 cls, uint8 (&out)[3]) { for (uint8 t = 0; t < 3; ++t) out[t] = BuddyTreeRoles(cls, t); }
 
 static std::vector<std::pair<uint8, uint8>> GamePairs()
 {
@@ -145,28 +152,6 @@ static std::vector<std::pair<uint8, uint8>> GamePairs()
     return pairs;
 }
 
-// The bot module's pre-made talent builds for a class, as the tree of each
-// talent in the build at its fullest level (617t1: the build putting most
-// of its points in the stand-in's tree is the one it learns).
-static std::vector<std::vector<uint8>> BuildTrees(uint8 cls)
-{
-    std::vector<std::vector<uint8>> builds(MAX_SPECNO);
-    for (int spec = 0; spec < MAX_SPECNO; ++spec)
-    {
-        if (sPlayerbotAIConfig.premadeSpecName[cls][spec].empty())
-            continue;                                   // no build under this number
-        for (int level = DEFAULT_MAX_LEVEL; level > 1; --level)
-        {
-            auto const& talents = sPlayerbotAIConfig.parsedSpecLinkOrder[cls][spec][level];
-            if (talents.empty())
-                continue;
-            for (std::vector<uint32> const& t : talents)
-                builds[spec].push_back(uint8(t[0]));    // {tab, row, column, rank}
-            break;
-        }
-    }
-    return builds;
-}
 // }}}
 
 // {{{ names for the commands
@@ -203,13 +188,15 @@ static uint8 Lookup(std::map<std::string, uint8> const& names, std::string text)
 
 // {{{ waiting to appear
 // A stand-in asked for and not yet given its first moments: where it goes,
-// the tree it fills, whether it was raised (so it learns what its new level
-// brings, and is re-geared), and when it was asked for. World thread only.
+// its talent shape and role, whether it was raised (so it learns what its
+// new level brings, and is re-geared), and when it was asked for. World
+// thread only.
 struct StandInDue
 {
     uint32 map;
     float  x, y, z, o;
-    uint8  tree;
+    uint8  shape;
+    uint8  role;
     bool   raised;
     uint64 asked;
 };
@@ -233,7 +220,7 @@ uint32 BuddyBringStandIn(uint8 side, uint8 role, uint8 level, uint8 race, uint8 
     // the race and class: the side's pairs that can take the role, narrowed
     // by what was named, one drawn at random
     std::vector<std::pair<uint8, uint8>> pairs;
-    for (auto const& p : BuddyStandIn::PairsFor(GamePairs(), side, role, SideOfRace, RolesOfClass))
+    for (auto const& p : BuddyStandIn::PairsFor(GamePairs(), side, role, SideOfRace))
         if ((!race || p.first == race) && (!cls || p.second == cls))
             pairs.push_back(p);
     if (pairs.empty())
@@ -249,25 +236,25 @@ uint32 BuddyBringStandIn(uint8 side, uint8 role, uint8 level, uint8 race, uint8 
 
     // a kept one first
     std::vector<BuddyStandIn::Kept> kept;
-    std::map<uint32, uint8> treeOf;
+    std::map<uint32, uint8> shapeOf;
     if (QueryResult rows = CharacterDatabase.Query(
-            "SELECT guid, race, class, role, level, tree FROM buddy_stand_in WHERE race = {} AND class = {} AND role = {} AND level <= {}",
+            "SELECT guid, race, class, role, level, profile FROM buddy_stand_in WHERE race = {} AND class = {} AND role = {} AND level <= {}",
             race, cls, role, level))
         do
         {
             uint32 guid = (*rows)[0].Get<uint32>();
             bool inWorld = sDue.count(guid) || ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid));
             kept.push_back({ guid, (*rows)[1].Get<uint8>(), (*rows)[2].Get<uint8>(), (*rows)[3].Get<uint8>(), (*rows)[4].Get<uint8>(), inWorld });
-            treeOf[guid] = (*rows)[5].Get<uint8>();
+            shapeOf[guid] = (*rows)[5].Get<uint8>();
         } while (rows->NextRow());
     uint32 guid  = BuddyStandIn::PickKept(kept, race, cls, role, level);
-    uint8  tree  = 0;
+    uint8  shape = 0;
     bool   raised = false;
     std::string name;
 
     if (guid)
     {
-        tree = treeOf[guid];
+        shape = shapeOf[guid];
         sCharacterCache->GetCharacterNameByGuid(ObjectGuid::Create<HighGuid::Player>(guid), name);
         for (auto const& k : kept)
             if (k.guid == guid && k.level < level)
@@ -284,11 +271,10 @@ uint32 BuddyBringStandIn(uint8 side, uint8 role, uint8 level, uint8 race, uint8 
     }
     else
     {
-        // a new one, wholly its role: every point in one tree that takes it
-        uint8 treeRoles[3];
-        RolesOfClass(cls, treeRoles);
-        std::vector<uint8_t> trees = BuddyStandIn::TreesForRole(treeRoles, role);
-        tree = trees[urand(0, uint32(trees.size()) - 1)];  // never empty: PairsFor kept only classes with such a tree
+        // a new one: a talent shape of its role, as a buddy's would be;
+        // two alike in a squad is fine ("It's okay if there's two of one type")
+        std::vector<uint8_t> shapes = BuddyStandIn::ShapesForRole(cls, role);
+        shape = shapes[urand(0, uint32(shapes.size()) - 1)];   // never empty: PairsFor kept only classes with such a shape
         std::string why;
         uint32 account = AccountWithRoom(why);
         if (!account)
@@ -297,56 +283,54 @@ uint32 BuddyBringStandIn(uint8 side, uint8 role, uint8 level, uint8 race, uint8 
             return 0;
         }
         std::string forWhom = std::string("a ") + (side ? "Horde" : "Alliance") + " " + ROLE_NAMES[role] + " stand-in";
-        guid = BuddyMakeCharacter(account, race, cls, level, BuddyStandIn::ShapeForTree(tree), role, 0, "stand-in", forWhom, name, why);
+        guid = BuddyMakeCharacter(account, race, cls, level, shape, role, 0, true, "stand-in", forWhom, name, why);
         if (!guid)
         {
             said = "could not make a stand-in (race " + std::to_string(race) + ", class " + std::to_string(cls) + "): " + why;
             return 0;
         }
-        CharacterDatabase.DirectExecute("INSERT INTO buddy_stand_in (guid, race, class, role, tree, level, made) "
-            "VALUES ({}, {}, {}, {}, {}, {}, UNIX_TIMESTAMP())", guid, race, cls, role, tree, level);
+        CharacterDatabase.DirectExecute("INSERT INTO buddy_stand_in (guid, race, class, role, profile, level, made) "
+            "VALUES ({}, {}, {}, {}, {}, {}, UNIX_TIMESTAMP())", guid, race, cls, role, shape, level);
         said = "new stand-in " + name;
     }
 
     CharacterDatabase.Execute("UPDATE buddy_stand_in SET uses = uses + 1, last_used = UNIX_TIMESTAMP() WHERE guid = {}", guid);
-    sDue[guid] = { map, x, y, z, o, tree, raised, uint64(GameTime::GetGameTimeMS().count()) };
+    sDue[guid] = { map, x, y, z, o, shape, role, raised, uint64(GameTime::GetGameTimeMS().count()) };
     sRandomPlayerbotMgr.AddPlayerBot(ObjectGuid::Create<HighGuid::Player>(guid), 0);   // no master: nobody's bot
     said += std::string(" (") + ROLE_NAMES[role] + ", race " + std::to_string(race) + ", class " + std::to_string(cls)
-        + ", tree " + std::to_string(tree) + ", level " + std::to_string(level) + ") is on its way";
+        + ", shape " + std::to_string(shape) + ", level " + std::to_string(level) + ") is on its way";
     LOG_INFO("module", "mod-buddies: {}", said);
     return guid;
 }
 // }}}
 
 // {{{ the first moments
-// Once a stand-in is in the world with its bot brain: what its new level
-// brings (if it was raised), its talents by the bot module's build for its
-// tree, its fighting rules chosen again for those talents, and the place it
-// was asked for.
+// Once a stand-in is in the world with its bot brain (its talents already
+// spent by its shape at login, by src/lua-basic/buddy-talents.lua): what a
+// raised level brings (its spells, the kit's gear and PvP jewellery for the
+// new level), its fighting rules chosen again for its talents, and the place
+// it was asked for.
 static void FirstMoments(Player* standIn, StandInDue const& due)
 {
     std::string problems;
-    uint8 shape = BuddyStandIn::ShapeForTree(due.tree);
     if (due.raised)
     {
         BuddyLearnEverything(standIn);                  // what the new level teaches (617n)
-        problems += BuddyRegear(standIn, shape);        // the kit's gear for the new level (617a4)
+        problems += BuddyRegear(standIn, due.shape);    // the kit's gear for the new level (617a4)
+        problems += BuddyGivePvpJewellery(standIn, due.shape, due.role);
     }
-    int spec = BuddyStandIn::PickSpecForTree(BuildTrees(standIn->getClass()), due.tree);
-    if (spec < 0)
-        problems += "the bot module has no talent build with points in tree " + std::to_string(due.tree)
-            + " for class " + std::to_string(standIn->getClass()) + " (AiPlayerbot.PremadeSpecLink); its points stay unspent; ";
-    else
-        PlayerbotFactory::InitTalentsBySpecNo(standIn, spec, true);
+    if (standIn->GetFreeTalentPoints())
+        problems += std::to_string(standIn->GetFreeTalentPoints()) + " talent points unspent (is src/lua-basic/buddy-talents.lua "
+            "loaded? on cc-test, through src/lua-cc-test's links to it); ";
     if (PlayerbotAI* ai = GET_PLAYERBOT_AI(standIn))
-        ai->ResetStrategies();                          // tank, healer or damage rules, by the talents just learned
+        ai->ResetStrategies();                          // tank, healer or damage rules, by its talents
     if (!standIn->TeleportTo(due.map, due.x, due.y, due.z, due.o))
         problems += "could not move to map " + std::to_string(due.map) + " (" + std::to_string(int(due.x)) + ", "
             + std::to_string(int(due.y)) + ", " + std::to_string(int(due.z)) + "); ";
     if (!problems.empty())
         LOG_ERROR("module", "mod-buddies: stand-in {}: {}", standIn->GetName(), problems);
     else
-        LOG_INFO("module", "mod-buddies: stand-in {} is in the world (build {}, map {})", standIn->GetName(), spec, due.map);
+        LOG_INFO("module", "mod-buddies: stand-in {} is in the world (shape {}, map {})", standIn->GetName(), due.shape, due.map);
 }
 
 class buddies_stand_ins_world : public WorldScript
@@ -507,7 +491,7 @@ public:
     static bool HandleList(ChatHandler* handler)
     {
         QueryResult rows = CharacterDatabase.Query(
-            "SELECT s.guid, c.name, s.race, s.class, s.role, s.tree, s.level, s.uses FROM buddy_stand_in s "
+            "SELECT s.guid, c.name, s.race, s.class, s.role, s.profile, s.level, s.uses FROM buddy_stand_in s "
             "JOIN characters c ON c.guid = s.guid ORDER BY s.role, s.class, s.level DESC");
         if (!rows)
         {
@@ -520,7 +504,7 @@ public:
             uint32 guid = (*rows)[0].Get<uint32>();
             bool here = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid)) != nullptr;
             uint8 role = (*rows)[4].Get<uint8>();
-            handler->PSendSysMessage("{} {}: race {}, class {}, {} (tree {}), level {}, used {} times{}",
+            handler->PSendSysMessage("{} {}: race {}, class {}, {} (shape {}), level {}, used {} times{}",
                 guid, (*rows)[1].Get<std::string>(), (*rows)[2].Get<uint8>(), (*rows)[3].Get<uint8>(),
                 role < 3 ? ROLE_NAMES[role] : "?", (*rows)[5].Get<uint8>(), (*rows)[6].Get<uint8>(),
                 (*rows)[7].Get<uint32>(), here ? ", in the world" : "");
