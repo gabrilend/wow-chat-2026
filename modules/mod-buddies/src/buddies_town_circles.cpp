@@ -118,6 +118,26 @@ uint32 BuddyTownCircleArea(Player* who)
 // }}}
 
 // {{{ the wisps
+// {{{ BuddyPlaceWisp
+// One wisp, the game masters' marker (shared: the town circles here, the
+// roaming parts and spawn points in buddies_show.cpp): on the ground at x, y
+// (looked for from z + 20 down 60 yards; at z, floating, when there is no
+// ground), friendly to everyone, passive, untouchable, gone after `ms`.
+bool BuddyPlaceWisp(Player* gm, float x, float y, float z, float o, uint32 ms)
+{
+    float ground = gm->GetMap()->GetHeight(gm->GetPhaseMask(), x, y, z + 20.0f, true, 60.0f);
+    if (ground > INVALID_HEIGHT)
+        z = ground;                                    // else no ground found: at the asked height, floating
+    TempSummon* w = gm->SummonCreature(WISP, x, y, z, o, TEMPSUMMON_TIMED_DESPAWN, ms);
+    if (!w)
+        return false;
+    w->SetFaction(WISP_FACTION);
+    w->SetReactState(REACT_PASSIVE);
+    w->SetUnitFlag(UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+    return true;
+}
+// }}}
+
 // A circle drawn in wisps round its edge, one every WISP_SPACING yards (or
 // wider, past WISP_MAX), each on the ground, friendly, untouchable, gone
 // after WISP_MS.
@@ -129,16 +149,8 @@ static uint32 DrawCircle(Player* gm, float cx, float cy, float cz, float r)
     {
         float a = 2.0f * float(M_PI) * float(k) / float(count);
         float x = cx + std::cos(a) * r, y = cy + std::sin(a) * r;
-        float z = gm->GetMap()->GetHeight(gm->GetPhaseMask(), x, y, cz + 20.0f, true, 60.0f);
-        if (z <= INVALID_HEIGHT)
-            z = cz;                                    // no ground found: at the circle's own height, floating
-        if (TempSummon* w = gm->SummonCreature(WISP, x, y, z, a + float(M_PI), TEMPSUMMON_TIMED_DESPAWN, WISP_MS))
-        {
-            w->SetFaction(WISP_FACTION);
-            w->SetReactState(REACT_PASSIVE);
-            w->SetUnitFlag(UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+        if (BuddyPlaceWisp(gm, x, y, cz, a + float(M_PI), WISP_MS))
             ++placed;
-        }
     }
     return placed;
 }

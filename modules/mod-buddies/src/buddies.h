@@ -78,6 +78,11 @@ bool BuddyIsNotAPlayer(uint32 accountId);
 uint32 BuddyBringStandIn(uint8 side, uint8 role, uint8 level, uint8 race, uint8 cls,
     uint32 map, float x, float y, float z, float o, std::string& said);
 
+// One wisp, the game masters' marker (buddies_town_circles.cpp): on the
+// ground near x, y, z, friendly, untouchable, gone after `ms`. False when
+// the server would not place it.
+bool BuddyPlaceWisp(Player* gm, float x, float y, float z, float o, uint32 ms);
+
 // The level a buddy slot is owed from (buddies_clan.cpp, 617a2): slot 1 at
 // creation (level 1), then every tenth level. Also the level below which
 // an owner's buddy in that slot is stored (617a6).

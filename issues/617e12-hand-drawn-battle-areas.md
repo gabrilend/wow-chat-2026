@@ -76,6 +76,20 @@ four, Northshire in two. Run the generator for the current counts, and
 as a monster, every centre inside its part, the SQL applied twice and
 reverted in the `_smoke_test` database). Nothing reads the tables yet.
 
+**Seeing the cut in game (2026-10-09, written, compile-checked, not yet
+built):** the owner asked for a game-master command to see the areas and
+another for a creature's spawn points, in wisps ("Usually we can use an
+un-interactable wisp unit"). `modules/mod-buddies/src/buddies_show.cpp`:
+`.buddy area show` names the part the game master stands in (named area,
+its parts, levels, leading monsters, squares) and draws its border in
+wisps for 30 seconds, along every square edge it shares with another
+part within 250 yards; `.buddy area spawns <creature id or name>` puts a
+wisp on each spawn point of that creature within 300 yards. The wisp is
+the town circles' (617e4a), now one shared call, `BuddyPlaceWisp`. Their
+queries, tried on the data: standing among the Valley of Trials boars
+finds part 100151 (132 squares, levels 1-2, Mottled Boars, one of 3), and
+the boars' spawn points there number 65, the part's own count.
+
 Towns are marked separately, by circles (617e4a: two in the Valley of
 Trials, around its camp), and inside a town circle buddies do town
 things (errands, leisure) rather than fight (617e4).
