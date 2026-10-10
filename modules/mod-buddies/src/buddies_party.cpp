@@ -845,7 +845,7 @@ public:
 
     void OnPlayerMapChanged(Player* player) override
     {
-        if (!BuddiesEnabled() || BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
+        if (!BuddiesEnabled() || BuddyIsNotAPlayer(player->GetSession()->GetAccountId()))
             return;                                    // buddies' own moves are not draws
         Map* map = player->GetMap();
         bool entering = IsFiveManDungeon(map);

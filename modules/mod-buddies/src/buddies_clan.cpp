@@ -154,7 +154,7 @@ public:
     // made on a companion account are buddies (617a3 makes them there).
     void OnPlayerCreate(Player* player) override
     {
-        if (!BuddiesEnabled() || BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
+        if (!BuddiesEnabled() || BuddyIsNotAPlayer(player->GetSession()->GetAccountId()))
             return;
         uint32 owner = player->GetGUID().GetCounter();
         EnsureCompanionAccount(owner);
@@ -163,7 +163,7 @@ public:
 
     void OnPlayerLevelChanged(Player* player, uint8 /*oldLevel*/) override
     {
-        if (!BuddiesEnabled() || BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
+        if (!BuddiesEnabled() || BuddyIsNotAPlayer(player->GetSession()->GetAccountId()))
             return;
         OweSlotsUpTo(player);
     }
@@ -172,7 +172,7 @@ public:
     // account creation failed.
     void OnPlayerLogin(Player* player) override
     {
-        if (!BuddiesEnabled() || BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
+        if (!BuddiesEnabled() || BuddyIsNotAPlayer(player->GetSession()->GetAccountId()))
             return;
         uint32 owner = player->GetGUID().GetCounter();
         EnsureCompanionAccount(owner);
@@ -186,6 +186,8 @@ public:
     {
         if (!BuddiesEnabled())
             return;
+        if (BuddyIsStandInAccount(accountId))
+            return;                                    // a stand-in: buddies_stand_ins.cpp forgets it
         if (BuddyIsCompanionAccount(accountId))
         {
             CharacterDatabase.Execute("UPDATE buddy_roster SET buddy = 0, class = 0, race = 0, profile = 0, role = 0, "
@@ -205,7 +207,7 @@ public:
 
     void OnBeforeAccountDelete(uint32 accountId) override
     {
-        if (!BuddiesEnabled() || BuddyIsCompanionAccount(accountId))
+        if (!BuddiesEnabled() || BuddyIsNotAPlayer(accountId))
             return;
         QueryResult owners = CharacterDatabase.Query(
             "SELECT c.owner FROM buddy_clan c JOIN characters ch ON ch.guid = c.owner WHERE ch.account = {}", accountId);

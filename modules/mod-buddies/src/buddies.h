@@ -54,6 +54,29 @@ void BuddyHoldInviteForRoom(uint32 inviterGuid, WorldPacket const& packet);
 // makes a buddy while the owner is online.
 void BuddyQueueLogin(uint32 ownerGuid);
 
+// Makes and saves one character on an account, buddy or stand-in
+// (buddies_create.cpp, 617a3, 617t1): name, looks, level, professions,
+// every spell up to its level, the kit's gear by its talent shape (bags
+// like `bagsLike`'s, 0 for none), sockets. Its guid and name, or 0 and why.
+uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, uint8 shape, uint8 role,
+    uint32 bagsLike, char const* kind, std::string const& forWhom, std::string& name, std::string& why);
+
+// Whether this account holds stand-ins: characters that belong to nobody
+// (buddies_stand_ins.cpp, 617t1). Cheap: an in-memory list.
+bool BuddyIsStandInAccount(uint32 accountId);
+
+// Neither a player's own account nor any player's: a companion account
+// (buddies) or a stand-in account. The player-only steps (a hidden account
+// of its own, owed slots, draws) skip these.
+bool BuddyIsNotAPlayer(uint32 accountId);
+
+// One stand-in of a side (0 Alliance, 1 Horde) and role (0 damage, 1 tank,
+// 2 healer) at a level, race and class 0 for any, brought to a place
+// (buddies_stand_ins.cpp, 617t1): a kept one if one fits, else a new one.
+// Its guid (0 when it can't), and in `said` what was done or why not.
+uint32 BuddyBringStandIn(uint8 side, uint8 role, uint8 level, uint8 race, uint8 cls,
+    uint32 map, float x, float y, float z, float o, std::string& said);
+
 // The level a buddy slot is owed from (buddies_clan.cpp, 617a2): slot 1 at
 // creation (level 1), then every tenth level. Also the level below which
 // an owner's buddy in that slot is stored (617a6).

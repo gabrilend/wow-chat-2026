@@ -28,7 +28,11 @@ Verbatim, 2026-10-04:
 
 ## Current Behavior
 
-Not built. Entering a five-player dungeon draws the group's own buddies
+**2026-10-09:** the maker is written (617t1): a stand-in of a side, role and
+level, kept or made, brought into the world; nothing asks for one yet (the
+dungeon seats, the battlegrounds, the scenes are still to come).
+
+Not built otherwise. Entering a five-player dungeon draws the group's own buddies
 into the empty seats (617c3); a player with fewer than four buddies goes
 in with empty seats.
 

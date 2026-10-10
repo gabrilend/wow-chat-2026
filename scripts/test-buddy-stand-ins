@@ -1,0 +1,40 @@
+#!/bin/bash
+# test-buddy-stand-ins - checks the stand-in maker's choices (issue 617t1):
+# which talent tree a stand-in fills, which race and class it may be, which
+# kept stand-in is used before a new one is made, and which of the bot
+# module's pre-made builds it learns. Builds the small test with the system
+# compiler (the choices are written apart from the server for this) and
+# runs it, at low priority so the machine stays usable; then applies the
+# stand-ins' table twice and reverts it in the test database.
+# Usage: scripts/test-buddy-stand-ins [PROJECT_DIR]
+DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/modules/mod-buddies/src" \
+    "${DIR}/tests/buddy-stand-ins/pick.cpp" -o "${OUT}/buddy-stand-ins-pick" || exit 1
+nice -n 19 "${OUT}/buddy-stand-ins-pick" || exit 1
+
+# The kept stand-ins' table (install step E056): applied twice and reverted
+# in the test database (_smoke_test, the one the database account may
+# create; nothing else uses it), so the real characters databases are never
+# touched. Each step's count of the table is printed and compared.
+MYSQL=("${DIR}/mysql/installed-files/bin/mysql" --no-defaults --socket="${DIR}/mysql/databases/mysql.sock" -uritz -pmenardi -N -B)
+SRC="${DIR}/sql/basic/db_characters.src"
+COUNT="SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '_smoke_test' AND table_name = 'buddy_stand_in';"
+SQL_SCRIPT="CREATE DATABASE IF NOT EXISTS _smoke_test; USE _smoke_test; ${COUNT}
+$(cat "${SRC}/06-buddy-stand-ins.apply.sql")
+$(cat "${SRC}/06-buddy-stand-ins.apply.sql")
+${COUNT}
+INSERT INTO buddy_stand_in (guid, race, class, role, tree, level) VALUES (1, 1, 1, 1, 2, 20);
+SELECT COUNT(*) FROM buddy_stand_in WHERE role = 1 AND level <= 30;
+$(cat "${SRC}/06-buddy-stand-ins.revert.sql")
+${COUNT}"
+RESULT="$("${MYSQL[@]}" <<< "${SQL_SCRIPT}" 2>&1 | grep -v "Using a password")"
+EXPECTED=$'0\n1\n1\n0'
+if [[ "${RESULT}" == "${EXPECTED}" ]]; then
+    echo "ok: the stand-ins' table applies twice, holds a row, and reverts (in _smoke_test)"
+else
+    echo "FAILED: the stand-ins' table: expected the counts 0 1 1 0 (before, applied twice, a row found, reverted), got:"
+    echo "${RESULT}"
+    exit 1
+fi

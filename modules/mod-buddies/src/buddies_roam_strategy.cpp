@@ -2096,7 +2096,7 @@ public:
     {
         if (!BuddiesEnabled() || !player->IsWalking())
             return;
-        if (BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
+        if (BuddyIsNotAPlayer(player->GetSession()->GetAccountId()))
             player->SetWalk(false);
     }
 };

@@ -147,7 +147,7 @@ public:
         if (!BuddiesEnabled())
             return;
         uint32 account = player->GetSession()->GetAccountId();
-        if (BuddyIsCompanionAccount(account))
+        if (BuddyIsNotAPlayer(account))
             CompanionAccounts::Mark(account);               // a buddy; an owner's own character is left listed
     }
     // }}}
@@ -160,7 +160,7 @@ public:
         if (!BuddiesEnabled())
             return;
         uint32 account = player->GetSession()->GetAccountId();
-        if (BuddyIsCompanionAccount(account))
+        if (BuddyIsNotAPlayer(account))
             CompanionAccounts::Mark(account);
     }
     // }}}

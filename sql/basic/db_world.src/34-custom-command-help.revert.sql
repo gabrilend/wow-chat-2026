@@ -4,4 +4,4 @@
 -- the GM level that may run them (a row's level overrides the code's).
 -- MARKER_E053_REVERT
 -- 34-custom-command-help revert (basic): the project's command rows removed.
-DELETE FROM `command` WHERE `name` IN ('basic reload multipliers', 'basic worldboss respawn', 'basic worldboss status', 'buddy bed add', 'buddy bed link', 'buddy bed list', 'buddy bed remove', 'buddy bed unlink', 'buddy explore', 'buddy kit', 'buddy look', 'buddy record delete', 'buddy record discard', 'buddy record list', 'buddy record start', 'buddy record stop', 'buddy town here', 'buddy town remove', 'buddy town show', 'buddy trace');
+DELETE FROM `command` WHERE `name` IN ('basic reload multipliers', 'basic worldboss respawn', 'basic worldboss status', 'buddy bed add', 'buddy bed link', 'buddy bed list', 'buddy bed remove', 'buddy bed unlink', 'buddy explore', 'buddy kit', 'buddy look', 'buddy record delete', 'buddy record discard', 'buddy record list', 'buddy record start', 'buddy record stop', 'buddy standin at', 'buddy standin dismiss', 'buddy standin list', 'buddy standin make', 'buddy town here', 'buddy town remove', 'buddy town show', 'buddy trace');

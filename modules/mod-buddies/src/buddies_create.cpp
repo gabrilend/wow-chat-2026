@@ -294,6 +294,92 @@ static void Fail(uint32 owner, uint8 slot, uint8 race, uint8 cls, std::string co
 }
 // }}}
 
+// {{{ BuddyMakeCharacter
+// The steps every made character goes through, buddy or stand-in (617t1):
+// a random gender, a name from the bot module's list, looks from the
+// client's tables, the server's ordinary creation, its level, the
+// professions, every spell up to its level, the kit's gear by its talent
+// shape (bags like `bagsLike`'s when that names a character; a stand-in has
+// nobody to match), sockets by its plan, and the first save. What a buddy
+// adds (its roster row, its owner meeting it) is CreateBuddy's. `kind`
+// names it in the log ("buddy", "stand-in"); `forWhom` says for whom.
+// Returns the new character's guid and its name; 0 and why when it can't.
+uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, uint8 shape, uint8 role,
+    uint32 bagsLike, char const* kind, std::string const& forWhom, std::string& name, std::string& why)
+{
+    uint8 gender = urand(0, 1) ? GENDER_MALE : GENDER_FEMALE;
+    name = PickName(race, gender);
+    if (name.empty())
+    {
+        why = "no unused name is left in playerbots_names for this race and gender";
+        return 0;
+    }
+    BuddyLooks looks = PickLooks(race, gender);
+    if (!looks.ok)
+    {
+        why = "CharSections.dbc has no face or hair for this race and gender";
+        return 0;
+    }
+
+    CharacterCreateInfo info(name, race, cls, gender, looks.skin, looks.face, looks.hairStyle, looks.hairColor, looks.facialHair);
+
+    // A throwaway session on the account: Player needs one to be built and
+    // saved, as the bot factory's creation does. No socket makes it
+    // headless, which since the core's 2026-09 change is how a bot's session is
+    // told apart (the "is a bot" argument it used to take is gone).
+    WorldSession* session = new WorldSession(account, "", 0, nullptr, SEC_PLAYER, sWorld->getIntConfig(CONFIG_EXPANSION),
+        time_t(0), LOCALE_enUS, 0, false, false, 0);
+    Player* made = new Player(session);
+    made->GetMotionMaster()->Initialize();
+    if (!made->Create(sObjectMgr->GetGenerator<HighGuid::Player>().Generate(), &info))
+    {
+        made->CleanupsBeforeDelete();
+        delete made;
+        delete session;
+        why = "the server refused to create the character (name '" + name + "')";
+        return 0;
+    }
+
+    made->setCinematic(2);                          // never plays the intro
+    made->SetAtLoginFlag(AT_LOGIN_NONE);
+    if (cls == CLASS_DEATH_KNIGHT)
+        made->learnSpell(50977, false);             // Death Gate, as the bot factory gives it
+    if (level > made->GetLevel())
+        made->SetLevel(level);                      // the rest follows at first login
+    std::string missing = GiveSecondaryProfessions(made) + GivePrimaryProfessions(made)
+        + MaxDeathKnightProfessions(made);          // 617k; death knights maxed (718)
+    if (!missing.empty())
+        LOG_ERROR("module", "mod-buddies: new {} {} for {}: {}; it tries again at its first login",
+            kind, name, forWhom, missing);
+    // everything up to its level, free (617n; the owner, 2026-10-03:
+    // "Everything up to it's level"): trainer lessons and quest spells.
+    // Before the kit, so the armour and weapons it learns to wear (a
+    // paladin's plate at 40) count when the kit chooses.
+    uint32 lessons = BuddyLearnEverything(made);
+    LOG_INFO("module", "mod-buddies: new {} {} (level {}) knows {} spells from trainers and quests", kind, name, made->GetLevel(), lessons);
+    // the starting kit: white gear, food (and drink), level x 1 silver,
+    // bags like the owner's (617a4); made now, before the first save
+    std::string kitProblems = BuddyGiveStartingKit(made, bagsLike, shape);   // its gear by talent shape (617r2)
+    if (!kitProblems.empty())
+        LOG_ERROR("module", "mod-buddies: new {} {} for {} (level {}), starting kit incomplete: {}",
+            kind, name, forWhom, made->GetLevel(), kitProblems);
+    // its gear's sockets filled by its plan (617j2), free
+    std::string gemProblems = BuddyGemKit(made, shape, role);
+    if (!gemProblems.empty())
+        LOG_ERROR("module", "mod-buddies: new {} {} for {}, kit gems incomplete: {}", kind, name, forWhom, gemProblems);
+
+    uint32 guid = made->GetGUID().GetCounter();
+    made->SaveToDB(true, false);
+    sCharacterCache->AddCharacterCacheEntry(made->GetGUID(), account, made->GetName(), made->getGender(),
+        made->getRace(), made->getClass(), made->GetLevel());
+    made->CleanupsBeforeDelete();
+    delete made;
+    delete session;
+    sWorld->UpdateRealmCharCount(account);
+    return guid;
+}
+// }}}
+
 // {{{ CreateBuddy
 // One chosen row -> one saved character, written into the row.
 static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
@@ -322,71 +408,14 @@ static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
     if (!sObjectMgr->GetPlayerInfo(race, cls))
         return Fail(owner, slot, race, cls, "that race can't be that class");
 
-    uint8 gender = urand(0, 1) ? GENDER_MALE : GENDER_FEMALE;
-    std::string name = PickName(race, gender);
-    if (name.empty())
-        return Fail(owner, slot, race, cls, "no unused name is left in playerbots_names for this race and gender");
-    BuddyLooks looks = PickLooks(race, gender);
-    if (!looks.ok)
-        return Fail(owner, slot, race, cls, "CharSections.dbc has no face or hair for this race and gender");
-
-    CharacterCreateInfo info(name, race, cls, gender, looks.skin, looks.face, looks.hairStyle, looks.hairColor, looks.facialHair);
-
-    // A throwaway session on the companion account: Player needs one to be
-    // built and saved, as the bot factory's creation does. No socket makes it
-    // headless, which since the core's 2026-09 change is how a bot's session is
-    // told apart (the "is a bot" argument it used to take is gone).
-    WorldSession* session = new WorldSession(account, "", 0, nullptr, SEC_PLAYER, sWorld->getIntConfig(CONFIG_EXPANSION),
-        time_t(0), LOCALE_enUS, 0, false, false, 0);
-    Player* buddy = new Player(session);
-    buddy->GetMotionMaster()->Initialize();
-    if (!buddy->Create(sObjectMgr->GetGenerator<HighGuid::Player>().Generate(), &info))
-    {
-        buddy->CleanupsBeforeDelete();
-        delete buddy;
-        delete session;
-        return Fail(owner, slot, race, cls, "the server refused to create the character (name '" + name + "')");
-    }
-
-    buddy->setCinematic(2);                         // never plays the intro
-    buddy->SetAtLoginFlag(AT_LOGIN_NONE);
-    if (cls == CLASS_DEATH_KNIGHT)
-        buddy->learnSpell(50977, false);            // Death Gate, as the bot factory gives it
-    if (ownerLevel > buddy->GetLevel())
-        buddy->SetLevel(ownerLevel);                // the rest follows at first login
-    std::string missing = GiveSecondaryProfessions(buddy) + GivePrimaryProfessions(buddy)
-        + MaxDeathKnightProfessions(buddy);         // 617k; death knights maxed (718)
-    if (!missing.empty())
-        LOG_ERROR("module", "mod-buddies: new buddy {} for owner {}: {}; it tries again at its first login",
-            name, owner, missing);
-    // everything up to its level, free (617n; the owner, 2026-10-03:
-    // "Everything up to it's level"): trainer lessons and quest spells.
-    // Before the kit, so the armour and weapons it learns to wear (a
-    // paladin's plate at 40) count when the kit chooses.
-    uint32 lessons = BuddyLearnEverything(buddy);
-    LOG_INFO("module", "mod-buddies: new buddy {} (level {}) knows {} spells from trainers and quests", name, buddy->GetLevel(), lessons);
     QueryResult plan = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE owner = {} AND slot = {}", owner, slot);
     uint8 profile = plan ? (*plan)[0].Get<uint8>() : 0;
     uint8 role    = plan ? (*plan)[1].Get<uint8>() : 0;
-    // the starting kit: white gear, food (and drink), level x 1 silver,
-    // bags like the owner's (617a4); made now, before the first save
-    std::string kitProblems = BuddyGiveStartingKit(buddy, owner, profile);   // its gear by talent shape (617r2)
-    if (!kitProblems.empty())
-        LOG_ERROR("module", "mod-buddies: new buddy {} for owner {} (level {}), starting kit incomplete: {}",
-            name, owner, buddy->GetLevel(), kitProblems);
-    // its gear's sockets filled by its plan (617j2), free
-    std::string gemProblems = BuddyGemKit(buddy, profile, role);
-    if (!gemProblems.empty())
-        LOG_ERROR("module", "mod-buddies: new buddy {} for owner {}, kit gems incomplete: {}", name, owner, gemProblems);
-
-    uint32 guid = buddy->GetGUID().GetCounter();
-    buddy->SaveToDB(true, false);
-    sCharacterCache->AddCharacterCacheEntry(buddy->GetGUID(), account, buddy->GetName(), buddy->getGender(),
-        buddy->getRace(), buddy->getClass(), buddy->GetLevel());
-    buddy->CleanupsBeforeDelete();
-    delete buddy;
-    delete session;
-    sWorld->UpdateRealmCharCount(account);
+    std::string name, why;
+    uint32 guid = BuddyMakeCharacter(account, race, cls, ownerLevel, profile, role, owner, "buddy",
+        "owner " + std::to_string(owner), name, why);
+    if (!guid)
+        return Fail(owner, slot, race, cls, why);
 
     CharacterDatabase.Execute("UPDATE buddy_roster SET buddy = {}, created = UNIX_TIMESTAMP() "
         "WHERE owner = {} AND slot = {} AND buddy = 0", guid, owner, slot);
@@ -451,7 +480,7 @@ public:
 
     void OnPlayerLogin(Player* player) override
     {
-        if (BuddiesEnabled() && BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
+        if (BuddiesEnabled() && BuddyIsNotAPlayer(player->GetSession()->GetAccountId()))
         {
             std::string missing = GiveSecondaryProfessions(player) + GivePrimaryProfessions(player)
                 + MaxDeathKnightProfessions(player);   // 617k; death knights maxed (718)

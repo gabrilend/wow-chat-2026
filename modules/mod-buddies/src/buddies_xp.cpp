@@ -187,7 +187,7 @@ public:
     {
         if (!BuddiesEnabled() || !quest)
             return;
-        if (BuddyIsCompanionAccount(owner->GetSession()->GetAccountId()))
+        if (BuddyIsNotAPlayer(owner->GetSession()->GetAccountId()))
             return;                                    // a buddy's own reward (from here): not passed on again
         uint32 ownerGuid = owner->GetGUID().GetCounter();
         for (auto const& pair : BuddyRosterPairs())

@@ -405,6 +405,8 @@ public:
         if (!BuddiesEnabled())
             return;
         uint64 now = uint64(GameTime::GetGameTimeMS().count());
+        if (BuddyIsStandInAccount(player->GetSession()->GetAccountId()))
+            return;                                    // a stand-in: no owner, no placement (buddies_stand_ins.cpp)
         if (BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
             sBuddiesDue[player->GetGUID().GetCounter()] = { now + BUDDY_SETTLE_MS, 0 };
         else

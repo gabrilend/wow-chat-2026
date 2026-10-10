@@ -111,7 +111,7 @@ static void TakeOut(Player* owner, uint32 buddy, uint8 stage, bool remake)
 // slots would get re-instantiated at level 20."
 void BuddyStageCheck(Player* owner)
 {
-    if (!BuddiesEnabled() || BuddyIsCompanionAccount(owner->GetSession()->GetAccountId()))
+    if (!BuddiesEnabled() || BuddyIsNotAPlayer(owner->GetSession()->GetAccountId()))
         return;
     uint32 ownerGuid = owner->GetGUID().GetCounter();
     uint8  level     = owner->GetLevel();
