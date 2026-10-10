@@ -21,14 +21,21 @@
 -- Needs MySQL running. Stops, naming what it couldn't place, rather than
 -- writing a reference with a hole in it.
 --
--- Usage: scripts/generate-gm-command-reference [PROJECT_DIR] [PROFILE]
+-- Usage: scripts/generate-gm-command-reference [PROJECT_DIR] [PROFILE] [SOURCE_TREE]
 --   PROFILE defaults to basic. Writes docs/gm-commands.txt for basic, and
 --   docs/gm-commands-<profile>.txt for any other.
+--   SOURCE_TREE: read the command tables from this tree instead of
+--   source-beta (scripts/make-upstream-tree builds clean ones at chosen
+--   commits; added 2026-10-09: the real tree holds only the modules of the
+--   profile last installed, so basic's three were missing after a cc-test
+--   install). Files are still shown as source-beta/..., the tree they will
+--   be built from.
 --------------------------------------------------------------------------------
 
 local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
 local PROFILE = arg[2] or "basic"
+local SRC = (arg[3] and arg[3] ~= "") and arg[3] or (DIR .. "/source-beta")
 package.path = DIR .. "/scripts/lib/?.lua;" .. package.path
 local Tables = require("command-tables")
 
@@ -141,15 +148,89 @@ end
 if not next(rows) then io.stderr:write("ERROR: " .. db .. ".command is empty\n"); os.exit(1) end
 -- }}}
 
+-- {{{ load: who the permission system lets run a permission-numbered command
+-- A command whose code names an rbac:: permission (200 and up) is checked
+-- against the account's granted permissions, not its level
+-- (ChatCommandNode::IsInvokerVisible: "RBAC permissions start at 200").
+-- Each level 0-3 has a default role (rbac_default_permissions), and roles
+-- grant further permissions through rbac_linked_permissions, so the lowest
+-- level whose role reaches the permission is the level that may run it.
+-- Until 2026-10-09 every such command without a `command` row was called
+-- console-only; six stock ones (.pet rename, .rbac account ..., .reload
+-- spell_cone) were in fact the administrators' all along.
+local RBAC_ID = {}                                      -- "RBAC_PERM_..." -> its number, from the core's RBAC.h
+do
+    local h = io.open(SRC .. "/src/server/game/Accounts/RBAC.h", "r")
+    if not h then io.stderr:write("ERROR: " .. SRC .. "/src/server/game/Accounts/RBAC.h is missing; can't read the permission numbers\n"); os.exit(1) end
+    local text = h:read("*a"); h:close()
+    for name, num in text:gmatch("(RBAC_PERM_[%w_]+)%s*=%s*(%d+)") do RBAC_ID[name] = tonumber(num) end
+end
+local RBAC_LEVEL = {}                                   -- permission number -> lowest level whose role grants it
+RBAC_PENDING = {}                                       -- permission numbers granted only by updates not yet run
+do
+    local auth = (PROFILE == "vanilla") and "acore_auth_vanilla" or "acore_auth"
+    local q = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi -B -N %s -e "
+        .. "\"SELECT 'd', secId, permissionId FROM rbac_default_permissions UNION ALL SELECT 'l', id, linkedId FROM rbac_linked_permissions\" 2>&1", DIR, DIR, auth)
+    local lines = shell_lines(q)
+    local roots, links = {}, {}
+    for _, line in ipairs(lines) do
+        local kind, a, b = line:match("^([dl])\t(%d+)\t(%d+)$")
+        if kind == "d" then roots[#roots + 1] = { level = tonumber(a), id = tonumber(b) }
+        elseif kind == "l" then
+            links[tonumber(a)] = links[tonumber(a)] or {}
+            table.insert(links[tonumber(a)], tonumber(b))
+        elseif not line:find("Using a password") then
+            io.stderr:write("ERROR: reading " .. auth .. "'s permission tables failed: " .. line .. "\n"); os.exit(1)
+        end
+    end
+    if #roots == 0 then io.stderr:write("ERROR: " .. auth .. ".rbac_default_permissions is empty\n"); os.exit(1) end
+    -- links the tree's own auth updates add that this database hasn't run
+    -- yet (a new pin's: the server applies them at its next start), read
+    -- from their INSERTs; a permission reached only through them is marked
+    -- so ("after the next start")
+    local applied = {}
+    for _, line in ipairs(shell_lines(string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi -B -N %s -e 'SELECT name FROM updates' 2>&1", DIR, DIR, auth))) do
+        applied[line] = true
+    end
+    local pending_dir = SRC .. "/data/sql/updates/db_auth"
+    local pending_links = {}
+    for _, name in ipairs(shell_lines("ls '" .. pending_dir .. "' 2>/dev/null")) do
+        if name:match("%.sql$") and not applied[name] then
+            local h = io.open(pending_dir .. "/" .. name, "r")
+            local text = h:read("*a"); h:close()
+            for values in text:gmatch("INSERT INTO `rbac_linked_permissions`[^;]-VALUES(.-);") do
+                for a, b in values:gmatch("%(%s*(%d+)%s*,%s*(%d+)%s*%)") do
+                    links[tonumber(a)] = links[tonumber(a)] or {}
+                    table.insert(links[tonumber(a)], tonumber(b))
+                    pending_links[tonumber(b)] = true
+                end
+            end
+        end
+    end
+    RBAC_PENDING = pending_links
+    for _, r in ipairs(roots) do
+        local stack, seen = { r.id }, {}
+        while #stack > 0 do
+            local id = table.remove(stack)
+            if not seen[id] then
+                seen[id] = true
+                if not RBAC_LEVEL[id] or r.level < RBAC_LEVEL[id] then RBAC_LEVEL[id] = r.level end
+                for _, next_id in ipairs(links[id] or {}) do stack[#stack + 1] = next_id end
+            end
+        end
+    end
+end
+-- }}}
+
 -- {{{ load: the command tables
-local files = Tables.files_with_tables(DIR .. "/source-beta/src/server/scripts/Commands")
+local files = Tables.files_with_tables(SRC .. "/src/server/scripts/Commands")
 local origin_of_file = {}
 for _, f in ipairs(files) do origin_of_file[f] = "stock" end
 local modules = profile_modules(PROFILE)
 local loaded = {}
 for _, m in ipairs(modules) do
     loaded[m] = true
-    local folder = DIR .. "/source-beta/modules/" .. m
+    local folder = SRC .. "/modules/" .. m
     local h = io.open(folder .. "/README.md", "r") or io.open(folder, "r")
     if not h then
         problem("module " .. m .. " is in " .. PROFILE .. "'s list but not in source-beta/modules (not installed?); its commands are missing")
@@ -165,6 +246,14 @@ for d in pairs(custom_dirs) do
 end
 local code, errs = Tables.read_files(files, DIR)
 for _, e in ipairs(errs) do problem("reading the command tables: " .. e) end
+-- a given tree's files are shown as the source-beta ones they will be built from
+local src_shown = SRC:sub(1, #DIR) == DIR and SRC:sub(#DIR + 2) or SRC
+for _, c in ipairs(code) do
+    c.origin_key = DIR .. "/" .. c.file
+    if src_shown ~= "source-beta" and c.file:sub(1, #src_shown) == src_shown then
+        c.file = "source-beta" .. c.file:sub(#src_shown + 1)
+    end
+end
 -- }}}
 
 -- {{{ join
@@ -198,8 +287,11 @@ end
 for _, c in ipairs(code) do
     local row = rows[c.name]
     local cust = custom_by_name[c.name]
-    local origin = cust and "new" or (origin_of_file[DIR .. "/" .. c.file] or "stock")
+    local origin = cust and "new" or (origin_of_file[c.origin_key] or "stock")
     local level = row and row.level or c.level
+    local perm_id = (level == nil and c.perm) and RBAC_ID[c.perm:match("RBAC_PERM_[%w_]+") or ""] or nil
+    if level == nil and perm_id then level = RBAC_LEVEL[perm_id] end   -- the role chain's level
+    local after_start = (row == nil and perm_id and RBAC_PENDING[perm_id]) and true or nil
     local syntax, help = {}, ""
     if cust then
         syntax = { "." .. c.name .. (cust.args ~= "" and (" " .. cust.args) or "") }
@@ -209,10 +301,11 @@ for _, c in ipairs(code) do
         syntax, help = split_help(row.help)
     end
     if #syntax == 0 then syntax = { "." .. c.name } end
-    if level == nil then problem("." .. c.name .. " (" .. c.file .. "): names " .. c.perm .. " and has no `command` row, so no account level reaches it: console only") end
+    if level == nil then problem("." .. c.name .. " (" .. c.file .. "): names " .. c.perm .. (perm_id and (" (permission " .. perm_id .. ")") or " (a number RBAC.h doesn't define)")
+        .. ", which no level's role grants, and has no `command` row: console only") end
     add({ name = c.name, syntax = syntax, help = help, level = level, console = c.console, origin = origin,
           new = cust ~= nil, beside = cust and cust.beside, system = cust and cust.system, file = c.file,
-          norow = (row == nil) })
+          norow = (row == nil), after_start = after_start })
 end
 for _, c in ipairs(custom_here) do
     if c.kind == "lua" then
@@ -441,6 +534,14 @@ w()
 table.sort(problems)
 for _, p in ipairs(problems) do wrap("- " .. p, 2) end
 if #problems == 0 then w("  none") end
+local pending = {}
+for _, e in ipairs(commands) do if e.after_start then pending[#pending + 1] = "." .. e.name end end
+if #pending > 0 then
+    table.sort(pending)
+    w()
+    wrap(string.format("%d commands get their level from permission links the source tree's auth database updates add, which this database hasn't run yet; the server applies them at its next start: %s.",
+        #pending, table.concat(pending, ", ")), 0)
+end
 -- }}}
 
 -- {{{ write it

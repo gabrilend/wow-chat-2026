@@ -18,7 +18,7 @@ every whole command as data. Loaded with
 | Field | Type | Meaning |
 |---|---|---|
 | `name` | string | the words without the dot, joined by single spaces (`buddy bed add`) |
-| `level` | number or nil | 0 player, 1 moderator, 2 game master, 3 administrator, 4 console; nil when the code names an `rbac::` permission, which no account level reaches (the world database's `command` row then decides) |
+| `level` | number or nil | 0 player, 1 moderator, 2 game master, 3 administrator, 4 console; nil when the code names an `rbac::` permission: a world-database `command` row then decides, or else the auth database's role chain (the lowest level whose default role reaches it; generate-gm-command-reference reads that) |
 | `perm` | string | the permission exactly as written in the code (`SEC_GAMEMASTER`, `rbac::RBAC_PERM_COMMAND_RELOAD`) |
 | `console` | boolean or nil | true: also runs from the server console (and SOAP); false: in game only; nil: the row did not say |
 | `file` | string | where it was declared |

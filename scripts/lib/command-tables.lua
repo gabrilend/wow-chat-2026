@@ -17,8 +17,9 @@
 local M = {}
 
 -- who may run a command, as the code names it (AzerothCore AccountTypes);
--- an rbac:: permission number is not a level an account reaches, so it is
--- kept as text: the `command` table's row decides that command's level
+-- an rbac:: permission number is not a level, so it is kept as text: a
+-- `command` row decides the level, or else the auth database's role chain
+-- (scripts/generate-gm-command-reference reads it; 2026-10-09)
 M.LEVELS = { SEC_PLAYER = 0, SEC_MODERATOR = 1, SEC_GAMEMASTER = 2, SEC_ADMINISTRATOR = 3, SEC_CONSOLE = 4 }
 
 -- {{{ local function strip_comments
