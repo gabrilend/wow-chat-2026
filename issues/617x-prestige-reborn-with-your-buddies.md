@@ -40,12 +40,7 @@ owner's level when the owner comes back up.
 
 ## Intended Behavior
 
-**The item.** At max level, a bind-on-pickup item from Kael'thas starts
-the rebirth when used (which Kael'thas, and what using it looks like: open
-questions).
 
-**The owner, reborn.** The character goes back to level 1 (what it keeps:
-open question).
 
 **The buddies, reborn with them.** Each buddy keeps:
 - its name (later, buddies may rename themselves once they can speak,
@@ -95,13 +90,6 @@ reborn is an open question.
 
 ## Open Questions
 
-1. Which Kael'thas: Magisters' Terrace's (the five-person dungeon, creature
-   24664, level 78 on basic) or Tempest Keep's (the raid, 19622)? And
-   always, or a chance?
-2. What does the owner keep through the rebirth: gear, bags and bank,
-   gold, professions, reputation, mounts, quests completed, talents? And
-   what do they gain for it (a title, a mark, something that counts
-   rebirths)?
 3. Does the rebirth start where they stand, or back in a starting valley
    (the rotating valleys, 155d)?
 4. Can a character be reborn more than once?
