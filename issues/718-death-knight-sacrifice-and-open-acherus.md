@@ -349,14 +349,18 @@ at the start). The new skip rewards no quest, so it no longer arises.
 
 **The skip, as of 2026-10-12** (owner's words, same message):
 
-- **Only the runeblade.** "can you make it so we ONLY get the runesword?
-  And only the first one you get." The first sword of the story is the
-  Runed Soulblade (item 38707, the reward of The Emblazoned Runeblade,
-  12619). The skip gives that one item, once (not again if the death
-  knight already has one, bank included), and nothing else: no quest is
-  taken or rewarded, so no experience, money, spells, reputation or
-  other gear. "Retrieving item information" on the other rewards stops
-  mattering, since they are no longer given.
+- **Only the runeblade, but everything the story teaches.** "can you make
+  it so we ONLY get the runesword? And only the first one you get." The
+  first sword of the story is the Runed Soulblade (item 38707, the reward
+  of The Emblazoned Runeblade, 12619); the skip gives that one item, once
+  (not again if the death knight already has one, bank included). Then,
+  same day: "They should have the talent points and abilities gained from
+  the quests. They just shouldn't get the equipment or gold or experience
+  from them." So every quest of the story is still rewarded the server's
+  own way (its talent points, Runeforging, the Deathcharger and riding,
+  Death Gate, reputation), with the server's "no experience" flag held on
+  for the length of it, the money put back as it was, and each quest's
+  items taken back as soon as it is rewarded, so the bags never fill.
 - **Level 55, in the Plaguelands.** No experience is given, so the death
   knight leaves at the level it was made at.
 - **The fall stays.** The skip places the death knight at the Ebon Hold's
@@ -537,17 +541,20 @@ the list to know what to take off.
   right, or does Sargobras let it go?
 - A held soul's own buddies (617): they belong to that character, so do
   they wait with it on the holding account, and come back with it?
-- (2026-10-12) Why was the Ebon Hold's floor missing on map 0? Its
+- (2026-10-12; owner: "I'm guessing we just placed the DK at the wrong
+  Acherus, it was the one over EPL ... It's okay, we want to be spawned in
+  the EPL") It was the one over the Plaguelands (map 0), on purpose; the
+  server's own creatures stand on its floor at z 382 there, so the fall
+  is still unexplained. Why was the Ebon Hold's floor missing on map 0? Its
   creatures and portals stand at z 382 there, the skip placed the death
   knight at z 382, and the client fell through to z 154. If the floor is
   missing for every death knight, the Ebon Hold Sargobras (who gives a
   soul back) and the portals to the capitals are unreachable too. The
   fall is now wanted for the skip; should the Ebon Hold itself be
   looked into?
-- (2026-10-12) The skipper gets no Runeforging, Deathcharger or Death
-  Gate (only the runeblade, as asked). Without Death Gate a skipper has no
-  way back to the Ebon Hold Sargobras to take the soul back. Is that
-  intended?
+- (Answered 2026-10-12) The skipper keeps what the story teaches
+  (Death Gate included, so the Ebon Hold Sargobras can be reached), not
+  its gear, gold or experience.
 - (2026-10-12) The red circle (Spotlight (Red), spell 62296), the frozen
   point (Freeze Anim, 16245) and the resurrection effect (Resurrection
   Impact Visual, 24171) are chosen from the spell list by name; none has

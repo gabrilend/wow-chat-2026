@@ -29,8 +29,13 @@ end
 -- {{{ the stand-in world
 local TAUREN = 6
 local menu, heard, executed, items, quests_touched = {}, {}, {}, {}, {}
+local rewarded, flags, money, xp_while_rewarding = {}, 0, 2000, {}
+-- each quest's reward in this stand-in world: the runeblade from 12619, a
+-- cloak from 12679, 50 silver from every quest, and experience unless held off
+local QUEST_ITEM = { [12619] = 38707, [12679] = 39320 }
 local events, timers, clock = {}, {}, 0                -- player events; global timers (CreateLuaEvent), ms
 local tele, dead, raised, buddies_given = nil, false, 0, 0
+local in_world = true                                  -- false: between maps (the loading screen): not found
 local spawned = {}                                     -- entry -> stand-in creature
 local x, y, z = 2358, -5667, 426
 
@@ -57,10 +62,22 @@ dk = setmetatable({
     GossipClearMenu = function() menu = {} end,
     GossipMenuAddItem = function(_, _, text, _, intid) menu[#menu + 1] = { text = text, intid = intid } end,
     GossipSendMenu = function() end, GossipComplete = function() end,
-    GetQuestRewardStatus = function() return false end,
+    GetQuestRewardStatus = function(_, q) return rewarded[q] == true end,
     AddQuest = function(_, q) quests_touched[#quests_touched + 1] = q end,
-    CompleteQuest = function(_, q) quests_touched[#quests_touched + 1] = q end,
-    RewardQuest = function(_, q) quests_touched[#quests_touched + 1] = q end,
+    CompleteQuest = function() end,
+    RewardQuest = function(_, q)
+        rewarded[q] = true
+        money = money + 5000
+        xp_while_rewarding[#xp_while_rewarding + 1] = bit.band(flags, 0x02000000) == 0   -- true: experience would be paid
+        if QUEST_ITEM[q] then items[QUEST_ITEM[q]] = (items[QUEST_ITEM[q]] or 0) + 1 end
+    end,
+    HasFlag = function(_, field, f) return field == 150 and bit.band(flags, f) ~= 0 end,
+    SetPlayerFlag = function(_, f) flags = bit.bor(flags, f) end,
+    RemovePlayerFlag = function(_, f) flags = bit.band(flags, bit.bnot(f)) end,
+    GetCoinage = function() return money end,
+    SetCoinage = function(_, m) money = m end,
+    GetItemCount = function(_, e) return items[e] or 0 end,
+    RemoveItem = function(_, e, n) items[e] = (items[e] or 0) - n end,
     HasItem = function(_, entry) return (items[entry] or 0) > 0 end,
     AddItem = function(_, entry, n) items[entry] = (items[entry] or 0) + (n or 1); return {} end,
     SendBroadcastMessage = function(_, t) heard[#heard + 1] = t end,
@@ -97,8 +114,12 @@ local env = setmetatable({
         return nil
     end,
     CharDBExecute = function(sql) executed[#executed + 1] = sql end,
+    WorldDBQuery = function(sql)                                    -- the story's items: the two above
+        local rows, i = { { 38707, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 39320, 38633, 0, 0, 0, 0, 0 } }, 1
+        return { GetUInt32 = function(_, c) return rows[i][c + 1] end, NextRow = function() i = i + 1; return rows[i] ~= nil end }
+    end,
     CreateLuaEvent = function(fn, ms) timers[#timers + 1] = { fn = fn, at = clock + ms } end,
-    GetPlayerByGUID = function() return dk end,
+    GetPlayerByGUID = function() return in_world and dk or nil end,
     BuddiesGiveDeathKnightBuddies = function() buddies_given = buddies_given + 1 end,
     print = function() end,
 }, { __index = _G })
@@ -156,7 +177,16 @@ check(items[38707] == 1, "the Runed Soulblade is given")
 local others = 0
 for entry, n in pairs(items) do if entry ~= 38707 then others = others + n end end
 check(others == 0, "and no other item")
-check(#quests_touched == 0, "no quest is taken, completed or rewarded (no experience, no money)")
+local special = {}
+for _, q in ipairs(quests_touched) do if q >= 12739 and q <= 12750 then special[#special + 1] = q end end
+check(rewarded[12619] and rewarded[12801] and rewarded[13166], "the story's quests are rewarded (what they teach, and their talent points)")
+check(#special == 1 and special[1] == 12739, "only the tauren's own A Special Surprise (12739)")
+local paid = false
+for _, w in ipairs(xp_while_rewarding) do if w then paid = true end end
+check(#xp_while_rewarding > 0 and not paid, "no experience: held off while every quest was rewarded")
+check(bit.band(flags, 0x02000000) == 0, "and experience is on again afterwards")
+check(money == 2000, "no money: back to what it was (" .. money .. ")")
+check((items[39320] or 0) == 0, "no gear: the cloak is taken back")
 local marked = false
 for _, s in ipairs(executed) do if s:find("SET skipped = 1") and s:find("dk = 900") then marked = true end end
 check(marked, "the ledger is marked as skipped")
@@ -164,13 +194,17 @@ local d = tele and math.sqrt((tele.x - 2337.8) ^ 2 + (tele.y - (-5676.7)) ^ 2) o
 check(tele and tele.map == 0 and math.abs(tele.z - 382.3) < 0.01 and d <= 6.01, string.format("placed off the Ebon Hold, within 6 yards of its spot (%.2f)", d))
 
 print("the fall")
-advance(5000)
+in_world = false                                          -- the loading screen
+advance(4000)
+in_world = true
+advance(1000)
 check(spawned[7180002] == nil, "nothing happens while still falling")
 x, y, z = tele.x, tele.y, 154.1                           -- landed
 dead = true
 advance(250)
 local riser = spawned[7180002]
 check(riser == nil, "found dead: the scene starts, Sargobras not yet there")
+check(#timers > 0, "the watch outlasted the loading screen (it once ended there)")
 
 print("the rise")
 advance(500)

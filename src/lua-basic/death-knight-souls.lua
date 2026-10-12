@@ -573,10 +573,17 @@ end
 local function watch_the_fall(player)
     local guid, name, waited = player:GetGUID(), player:GetName(), 0
     local function look()
+        -- not found: on the loading screen between Acherus and the
+        -- Plaguelands (a player between maps is in no world), or logged
+        -- out; either way, look again until the watch runs out (until
+        -- 2026-10-12 this ended the watch, so it ended on every skip)
         local p = GetPlayerByGUID(guid)
-        if not p then return end
-        if p:IsDead() then return rise(p) end
         waited = waited + RISE_WATCH_MS
+        if not p then
+            if waited < RISE_WATCH_FOR_MS then CreateLuaEvent(look, RISE_WATCH_MS, 1) end
+            return
+        end
+        if p:IsDead() then return rise(p) end
         if waited >= RISE_WATCH_FOR_MS then
             print(string.format("[death-knight-souls] ERROR: %s skipped the story and was still alive %d s after the fall"
                 .. " began (map %d at %.1f, %.1f, %.1f); no rise played, buddies given. To debug: did the Ebon Hold's floor"
@@ -591,18 +598,96 @@ local function watch_the_fall(player)
 end
 -- }}}
 
+-- {{{ the story's quests and their items
+-- The story in play order, { quest, races } (scripts/generate-basic-dk-skip-quests).
+local DK_STORY = dofile(script_dir() .. "data/death-knight-skip-quests.lua")
+-- Every item a story quest hands out (its rewards, its reward choices and
+-- the item it gives at the start), read from the world database at load:
+-- the skip takes these back after each quest. entry -> true.
+local STORY_ITEMS = {}
+do
+    local ids = {}
+    for _, q in ipairs(DK_STORY) do ids[#ids + 1] = q[1] end
+    local q = WorldDBQuery("SELECT RewardItem1, RewardItem2, RewardItem3, RewardItem4, RewardChoiceItemID1, RewardChoiceItemID2,"
+        .. " RewardChoiceItemID3, RewardChoiceItemID4, RewardChoiceItemID5, RewardChoiceItemID6, StartItem"
+        .. " FROM quest_template WHERE ID IN (" .. table.concat(ids, ",") .. ")")
+    if q then
+        repeat
+            for c = 0, 10 do local e = q:GetUInt32(c) if e ~= 0 then STORY_ITEMS[e] = true end end
+        until not q:NextRow()
+    end
+end
+local PLAYER_FLAGS_FIELD     = 150          -- UpdateFields.h: PLAYER_FLAGS = UNIT_END (148) + 2
+local PLAYER_FLAG_NO_XP_GAIN = 0x02000000   -- Player.h: PlayerFlags; GiveXP gives nothing while it is set
+-- }}}
+
+-- {{{ local function tell_the_story
+-- Every quest of the story for this death knight's race, in play order,
+-- taken, completed and rewarded the server's own way, so what the story
+-- teaches arrives (owner, 2026-10-12: "They should have the talent points
+-- and abilities gained from the quests. They just shouldn't get the
+-- equipment or gold or experience from them"): Runeforging, the
+-- Deathcharger and riding, Death Gate, and the talent points the quests
+-- grant. Experience is held off by the server's own "no experience" flag
+-- for the length of it (below the level cap a quest pays experience, not
+-- money, so none is paid in its place); the money is put back as it was;
+-- each quest's items are taken back as soon as it is rewarded, so the bags
+-- never fill. Quests already rewarded are passed over. Returns how many
+-- were rewarded, how many already were, and the ones refused.
+local function tell_the_story(player)
+    local had_flag = player:HasFlag(PLAYER_FLAGS_FIELD, PLAYER_FLAG_NO_XP_GAIN)
+    local money    = player:GetCoinage()
+    local before   = {}
+    for e in pairs(STORY_ITEMS) do before[e] = player:GetItemCount(e) end
+    if not had_flag then player:SetPlayerFlag(PLAYER_FLAG_NO_XP_GAIN) end
+
+    local mask, done, already, failed = player:GetRaceMask(), 0, 0, {}
+    for _, q in ipairs(DK_STORY) do
+        local quest, races = q[1], q[2]
+        if races == 0 or bit.band(races, mask) ~= 0 then
+            if player:GetQuestRewardStatus(quest) then
+                already = already + 1
+            else
+                player:AddQuest(quest)
+                player:CompleteQuest(quest)
+                player:RewardQuest(quest)
+                if player:GetQuestRewardStatus(quest) then done = done + 1 else failed[#failed + 1] = tostring(quest) end
+                for e in pairs(STORY_ITEMS) do
+                    local extra = player:GetItemCount(e) - before[e]
+                    if extra > 0 then player:RemoveItem(e, extra) end
+                end
+            end
+        end
+    end
+
+    if not had_flag then player:RemovePlayerFlag(PLAYER_FLAG_NO_XP_GAIN) end
+    player:SetCoinage(money)
+    return done, already, failed
+end
+-- }}}
+
 -- {{{ local function skip_story
--- The runeblade, once (not again if one is already carried or banked),
--- the ledger marked as skipped (so the soul can be asked back without the
--- story, intro_done), and the step off the Ebon Hold: a random spot within
--- SKIP_SCATTER yards of SKIP_LANDING (uniform over the disc), then the
--- watch for the fall.
+-- The story told without its gear, gold or experience (tell_the_story),
+-- then the runeblade, once (not again if one is already carried or
+-- banked), the ledger marked as skipped, and the step off the Ebon Hold: a
+-- random spot within SKIP_SCATTER yards of SKIP_LANDING (uniform over the
+-- disc), then the watch for the fall. A quest that would not go through is
+-- named to the player and the log, with what did.
 local function skip_story(player)
+    local done, already, failed = tell_the_story(player)
+    local line = string.format("Sargobras says: Your story is told: %d quests, %d already were. Keep what it taught you; the rest stays here.", done, already)
+    if #failed > 0 then
+        line = line .. " These would not go through: " .. table.concat(failed, ", ") .. " (a game master can finish them by hand)."
+        print(string.format("[death-knight-souls] ERROR: skipping the story for %s: %d rewarded, %d already, refused: %s"
+            .. " (to debug: quest log full? the quest's starting item refused? check each with .quest add / .quest complete)",
+            player:GetName(), done, already, table.concat(failed, ", ")))
+    end
+    player:SendBroadcastMessage(line)
     if player:HasItem(RUNEBLADE, 1, true) then
         player:SendBroadcastMessage("Sargobras says: You already carry your runeblade. I give nothing twice.")
     elseif not player:AddItem(RUNEBLADE, 1) then
         print("[death-knight-souls] ERROR: " .. player:GetName() .. " skipped the story but the Runed Soulblade ("
-            .. RUNEBLADE .. ") would not go in the bags (full?); done before it: the trade. Give it by hand: .additem " .. RUNEBLADE)
+            .. RUNEBLADE .. ") would not go in the bags (full?); done before it: the trade and the story. Give it by hand: .additem " .. RUNEBLADE)
         player:SendBroadcastMessage("Sargobras says: Your bags are full, so your runeblade stays with me. (The server log says why.)")
     end
     CharDBExecute("UPDATE basic_718_souls SET skipped = 1 WHERE dk = " .. player:GetGUIDLow())
