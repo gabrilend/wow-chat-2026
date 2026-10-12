@@ -21,7 +21,12 @@ a player arriving in a five-player dungeon fills its group's empty seats
 from the buddies of every player in the group; a tank first if the
 group's players (by spec: the tree with the most points) and buddies
 (by plan) have none, then a healer, then one at a time from each
-player's draw bag in turn, players in a random order. Buddies drawn in
+player's draw bag in turn, players in a random order, damage buddies
+first: a tank or healer fills one of those seats only when no damage
+buddy is left (2026-10-12, syntax-checked, not yet built; the owner: "I'm
+a healer, and it gave me a healer, a tank, and 2 dps? It should be me as
+the healer, a tank, and 3 dps"; the server then running was built before
+2026-10-04 and had none of this section's draw). Buddies drawn in
 are kept apart from distance-seated ones, so a later player's arrival
 doesn't redraw them; they rejoin the distance rule when they come out.
 

@@ -770,24 +770,34 @@ static void BringDrawn(Player* player, std::vector<uint32> const& /*buddyGuids*/
             healSum += RoleTenths(pick, BuddyRole::Healer);
         }
     }
-    // the rest: one from each player's bag in turn, the players in a random order
+    // the rest: one from each player's bag in turn, the players in a random
+    // order; damage buddies first, so a group whose tank and healer are
+    // already whole gets damage for its other seats (the owner, 2026-10-12:
+    // "I'm a healer, and it gave me a healer, a tank, and 2 dps? It should
+    // be me as the healer, a tank, and 3 dps"); a tank or healer fills a
+    // seat only when no damage buddy is left
     std::vector<uint32> order(playerGuids.begin(), playerGuids.end());
     for (size_t i = order.size(); i > 1; --i)
         std::swap(order[i - 1], order[urand(0, uint32(i - 1))]);
-    for (bool any = true; any && have + drawn.size() < PARTY_SIZE; )
-    {
-        any = false;
-        for (uint32 owner : order)
+    for (bool damageOnly : { true, false })
+        for (bool any = true; any && have + drawn.size() < PARTY_SIZE; )
         {
-            if (have + drawn.size() >= PARTY_SIZE)
-                break;
-            std::vector<uint32> one = DrawFromBag(owner, eligible[owner], 1);
-            if (one.empty())
-                continue;
-            take(one.front());
-            any = true;
+            any = false;
+            for (uint32 owner : order)
+            {
+                if (have + drawn.size() >= PARTY_SIZE)
+                    break;
+                std::vector<uint32> pool;
+                for (uint32 b : eligible[owner])
+                    if (!damageOnly || roleOf[b] == BuddyRole::Damage)
+                        pool.push_back(b);
+                std::vector<uint32> one = DrawFromBag(owner, pool, 1);
+                if (one.empty())
+                    continue;
+                take(one.front());
+                any = true;
+            }
         }
-    }
     if (drawn.empty())
         return;
     if (!g)
