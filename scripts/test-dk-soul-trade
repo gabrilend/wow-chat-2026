@@ -95,6 +95,7 @@ local function world(opts)
         CreateLuaEvent = function(fn, ms) W.events[#W.events + 1] = { at = W.now + ms, fn = fn } end,
         GetPlayerByGUID = function() return dk end,
         CharDBExecute = function(sql) W.executed[#W.executed + 1] = sql end,
+        WorldDBQuery = function() return nil end,  -- the story's items, read at load by the skip: none here
         BuddiesGiveDeathKnightBuddies = function() W.buddies = W.buddies + 1 end,
         print = function(t) W.logged[#W.logged + 1] = t end,
         AuthDBQuery = function(sql)
