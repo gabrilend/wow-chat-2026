@@ -118,6 +118,13 @@ static constexpr float  JUMP_HOP_SPEED       = 4.0f;    // the jump's upward spe
 static constexpr float  FALL_GRAVITY         = 19.2911f; // the client's gravity (yards/s^2), for how long a drop takes
 static constexpr float  JUMP_MIN_SECONDS     = 0.6f;    // the shortest jump, even onto a deck-high landing
 static constexpr float  FALL_SEARCH_YARDS    = 1000.0f; // how far down the ground is looked for (a zeppelin flies high)
+// The Scarlet Enclave (718, 2026-10-12): see StepEnclaveExit
+static constexpr uint32 MAP_SCARLET_ENCLAVE  = 609;
+static constexpr uint32 AREA_EBON_HOLD_MAP0  = 4281;    // "Acherus: The Ebon Hold" over Eastern Plaguelands (map 0)
+static constexpr float  ENCLAVE_EXIT_X       = 2340.8f; // the Plaguelands ground under the Ebon Hold (map 0), where a
+static constexpr float  ENCLAVE_EXIT_Y       = -5678.0f; //  death knight who skipped its story lands (read from one,
+static constexpr float  ENCLAVE_EXIT_Z       = 154.1f;  //  2026-10-12)
+static constexpr float  ENCLAVE_BESIDE_YARDS = 4.0f;    // beside an owner in the Ebon Hold
 
 // Where a jump may land (owner, 2026-10-02: "only jump if the fall is
 // survivable or they could aim to land in water of a sufficient depth").
@@ -243,7 +250,7 @@ static uint32 sStamp = 0;
 
 // A buddy's own trip. SameShip: the owner waits at a dock on the buddy's
 // own map (or is aboard a docked ship there); the buddy goes to it.
-enum class Way : uint8 { None, Teleport, Portal, Transport, SameShip };
+enum class Way : uint8 { None, Teleport, Portal, Transport, SameShip, EnclaveExit };
 
 struct BuddyTrip
 {
@@ -684,6 +691,17 @@ static bool Plan(Player* bot, Player* owner, BuddyTrip& trip)
         return true;
     }
 
+    // 5. out of the Scarlet Enclave: nothing walks, sails or steps through
+    // a portal out of it; the game moves a death knight out by teleport
+    // (its story's end, Death Gate, the story skipped). So a buddy left
+    // there follows the same way (StepEnclaveExit).
+    if (myMap == MAP_SCARLET_ENCLAVE)
+    {
+        plan.way = Way::EnclaveExit;
+        trip = plan;
+        return true;
+    }
+
     Fail(bot, owner, trip, "no way to the owner's map was found",
          "checked: mage teleports (class " + std::to_string(bot->getClass()) + "), the owner's own crossing (none from this map), "
          "portals on this map, boat and zeppelin routes",
@@ -1075,6 +1093,45 @@ static bool StepReplay(Player* bot, Player* owner, BuddyTrip& trip)
 }
 // }}}
 
+// {{{ StepEnclaveExit
+// Out of the Scarlet Enclave (map 609), where the death knight story is
+// played and which no road, boat or portal leaves: the game itself moves a
+// death knight out by teleport, so its buddies go the same way (the owner,
+// 2026-10-12: "we need to figure out how to get bots to move from Acherus
+// to the main continent"; 2026-10-12 the four buddies of a death knight
+// that left stayed on map 609 trying every minute). An owner in the Ebon
+// Hold over the Plaguelands (map 0, area 4281, no walking way up to it)
+// has them put beside it; anywhere else, they are put on the Plaguelands
+// ground under the Ebon Hold, and walk to the owner from there like any
+// buddy ("they should keep trying to walk to me").
+static bool StepEnclaveExit(Player* bot, Player* owner, BuddyTrip& trip, BuddyCrossingMove& /*move*/)
+{
+    float x = ENCLAVE_EXIT_X, y = ENCLAVE_EXIT_Y, z = ENCLAVE_EXIT_Z;
+    uint32 mapId = 0;
+    bool beside = owner->GetMapId() == 0 && owner->GetAreaId() == AREA_EBON_HOLD_MAP0;
+    if (beside)
+    {
+        float a = frand(0.0f, 2.0f * float(M_PI));
+        x = owner->GetPositionX() + std::cos(a) * ENCLAVE_BESIDE_YARDS;
+        y = owner->GetPositionY() + std::sin(a) * ENCLAVE_BESIDE_YARDS;
+        z = owner->GetPositionZ() + 0.5f;
+    }
+    if (bot->isMoving())
+        bot->StopMoving();
+    if (!bot->TeleportTo(mapId, x, y, z, bot->GetOrientation()))
+    {
+        Fail(bot, owner, trip, "the teleport out of the Scarlet Enclave was refused",
+             std::string("planned the way out to ") + (beside ? "beside the owner in the Ebon Hold" : "the ground under the Ebon Hold"),
+             "is the buddy dead, in combat, or mid-teleport already?");
+        return false;
+    }
+    LOG_INFO("module", "mod-buddies: buddy {} left the Scarlet Enclave after its owner {}, to {}",
+        bot->GetName(), owner->GetName(), beside ? "beside them in the Ebon Hold" : "the ground under the Ebon Hold");
+    trip.way = Way::None;
+    return false;
+}
+// }}}
+
 typedef bool (*WayStep)(Player*, Player*, BuddyTrip&, BuddyCrossingMove&);
 static WayStep const WAY_STEPS[] = {
     nullptr,          // Way::None: planned before any step
@@ -1082,6 +1139,7 @@ static WayStep const WAY_STEPS[] = {
     StepPortal,       // Way::Portal
     StepTransport,    // Way::Transport
     StepSameShip,     // Way::SameShip
+    StepEnclaveExit,  // Way::EnclaveExit
 };
 // }}}
 

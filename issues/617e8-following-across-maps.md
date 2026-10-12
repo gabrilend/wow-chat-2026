@@ -34,6 +34,23 @@ instance. Lordaeron and Azeroth are one map (Eastern Kingdoms, map 0), so
 the Thandol Span and every road between them were already walked by
 617e4's "buddy travel". This issue covers a change of continent.
 
+**Out of the Scarlet Enclave, 2026-10-12 (syntax-checked, not yet
+built).** The owner: "we need to figure out how to get bots to move from
+Acherus to the main continent. What's the solution? Flight paths to
+Acherus from Light's Hope chapel I thought?" The Scarlet Enclave (map 609,
+the death knight story's own copy of the land east of the Plaguelands,
+Acherus floating over it) has no road, boat, portal or flight path to
+anywhere: the game moves a death knight out by teleport (the story's end,
+Death Gate, the skip). Flight paths there run only between Acherus and
+Death's Breach below it. So the planner's last way, before it gives up:
+a buddy on map 609 whose owner is elsewhere is moved out the same way,
+beside the owner when the owner is in the Ebon Hold over the Plaguelands
+(map 0, area 4281, which nothing walks up to), otherwise onto the
+Plaguelands ground under the Ebon Hold (2341, -5678, 154), to walk on to
+the owner from there. Seen 2026-10-12: four buddies of a death knight
+that left stayed on map 609 retrying every minute ("no way to the owner's
+map was found").
+
 - **Watching owners** (every real player, bots skipped):
   - Twice a second the player's footing is noted: the last ground it
     stood on, and on first being seen aboard a boat or zeppelin, the
