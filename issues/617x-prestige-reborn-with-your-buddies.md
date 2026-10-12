@@ -40,7 +40,17 @@ owner's level when the owner comes back up.
 
 ## Intended Behavior
 
+**The item.** At max level, a bind-on-pickup item from Kael'thas in
+Magisters' Terrace (the five-person dungeon, creature 24664) starts the
+rebirth when used (owner, 2026-10-12: "Magister's Terrace"). What using it
+looks like is still open.
 
+**The owner, reborn.** The character goes back to level 1 and keeps
+nothing (owner, 2026-10-12: "The Reborn Character should keep nothing for
+now. It's not for everyone. Maybe... titles? achievements? guild name
+maybe?"): gear, bags, bank, gold, professions, reputation, mounts, quests
+and talents all go. Titles, achievements and the guild (the clan, 617l)
+are the candidates for what stays; not decided.
 
 **The buddies, reborn with them.** Each buddy keeps:
 - its name (later, buddies may rename themselves once they can speak,
@@ -90,6 +100,11 @@ reborn is an open question.
 
 ## Open Questions
 
+1. (Answered 2026-10-12: Magisters' Terrace's, 24664.) Always, or a
+   chance?
+2. (Answered 2026-10-12: nothing, "for now".) Do titles, achievements, or
+   the guild name stay? And what do they gain for it (a title, a mark,
+   something that counts rebirths)?
 3. Does the rebirth start where they stand, or back in a starting valley
    (the rotating valleys, 155d)?
 4. Can a character be reborn more than once?
