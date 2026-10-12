@@ -87,9 +87,73 @@ static constexpr uint32 PASS_EVERY_MS     = 5000;
 // invited by hand and stays; the owner can remove it.
 static std::set<uint32> sSeatedByPass;
 
+// Buddies their owner invited by hand (every such invite comes through
+// RunPulls, 617c4), kept until they leave the group. A buddy in its owner's
+// party that is in neither set is adopted as seated by the pass
+// (AdoptSeated): after a server restart, when both sets are empty, every
+// buddy still in its owner's party used to count as invited by hand and
+// stayed however far away (owner, 2026-10-12: "I was very far away yet they
+// didn't leave the group"); now it leaves past 75 yards like any other.
+static std::set<uint32> sHandInvited;
+
 // Set when any member leaves any group (the server's group hook, from any
 // thread): the world pass fills seats at its next update.
 static std::atomic<bool> sFillSoon { false };
+
+// {{{ asking instead of seating (2026-10-12)
+// The owner: "I found it difficult to create a group while standing
+// outside an instance with my buddy-bots nearby - I'd uninvite one and
+// another would join automatically! Not ideal. How about... if a player
+// leaves the randomly-created group, then the next time a buddy-bot enters
+// the "joining radius" (doesn't count for those already in it) then they
+// send a group invite? And if the player declines, then the buddy-bot
+// random questing system doesn't restart until the player doesn't have ANY
+// buddy-bots within range, and then another one re-enters. Also the player
+// has to walk to a different zone."
+//   Seating   the distance rule seats buddies (FillSeats): the default.
+//   Asking    the owner left a party the rule had seated buddies in, or
+//             removed one of those buddies by hand: nobody is seated for
+//             them. A buddy coming within the join radius that wasn't in it
+//             at the last pass invites the owner (an owner already in a
+//             group of their own is whispered to instead: a buddy can't
+//             invite someone in a group). Accepted: Seating again.
+//   Declined  the invite was turned down (or ran out): nothing, until the
+//             owner has been in a zone other than the one they declined in
+//             and has had no buddy within the radius; then Asking again,
+//             and the next buddy to come in asks.
+// Kept in memory: a server restart or a relog starts at Seating.
+enum class AskState : uint8 { Seating, Asking, Declined };
+struct OwnerAsk
+{
+    AskState state = AskState::Seating;
+    std::set<uint32> lastNear;                         // buddies within the join radius at the last pass
+    uint32 invitedBy = 0;                              // Asking: the buddy whose invite is out (0: none)
+    uint64 invitedAt = 0;
+    uint32 declinedZone = 0;                           // Declined: the zone it was declined in
+    bool   leftZone = false, emptied = false;          // Declined: the two conditions to ask again
+};
+static std::mutex sAskLock;
+static std::map<uint32, OwnerAsk> sAsk;                // by owner guid; absent means Seating
+static constexpr uint64 INVITE_SETTLE_MS = 3000;       // an invite this old with none pending was answered
+
+static bool Seating(uint32 owner)
+{
+    std::lock_guard<std::mutex> lock(sAskLock);
+    auto it = sAsk.find(owner);
+    return it == sAsk.end() || it->second.state == AskState::Seating;
+}
+
+static void StartAsking(uint32 owner, char const* why)
+{
+    std::lock_guard<std::mutex> lock(sAskLock);
+    OwnerAsk& a = sAsk[owner];
+    if (a.state != AskState::Seating)
+        return;
+    a = OwnerAsk{};
+    a.state = AskState::Asking;
+    LOG_INFO("module", "mod-buddies: owner {} {}: buddies now ask before joining instead of being seated", owner, why);
+}
+// }}}
 
 // {{{ IsFarParty
 // A group whose every member is one of this owner's buddies. Any other
@@ -204,6 +268,12 @@ static void ArrangeOwner(Player* owner, std::vector<uint32> const& buddyGuids)
     }
 
     std::vector<Near> buddies = BuddiesNear(owner, buddyGuids);
+
+    // 0. A buddy in the owner's party not invited by hand is the rule's own
+    //    (see sHandInvited): after a restart nothing remembers who seated it.
+    for (Near const& b : buddies)
+        if (b.bot->GetGroup() && b.bot->GetGroup() == owner->GetGroup() && !sHandInvited.count(b.bot->GetGUID().GetCounter()))
+            sSeatedByPass.insert(b.bot->GetGUID().GetCounter());
 
     // 1. Leaving: out of the owner's group past 75; out of a far party
     //    within 74 of the owner, or more than 74 from every other member of
@@ -341,6 +411,96 @@ static void ArrangeFar(Player* owner, std::vector<uint32> const& buddyGuids)
 }
 // }}}
 
+// {{{ AskOrWait
+// One owner's asking rule (see "asking instead of seating" above), each
+// pass while the owner is out in the open world and not in a town.
+static void AskOrWait(Player* owner, std::vector<uint32> const& buddyGuids)
+{
+    uint32 ownerGuid = owner->GetGUID().GetCounter();
+    std::set<uint32> nearNow;
+    for (Near const& b : BuddiesNear(owner, buddyGuids))
+        if (b.bot->IsAlive() && b.yards <= JOIN_OWNER_YARDS)
+            nearNow.insert(b.bot->GetGUID().GetCounter());
+
+    std::lock_guard<std::mutex> lock(sAskLock);
+    auto it = sAsk.find(ownerGuid);
+    if (it == sAsk.end() || it->second.state == AskState::Seating)
+        return;
+    OwnerAsk& a = it->second;
+    uint64 now = uint64(GameTime::GetGameTimeMS().count());
+
+    if (a.state == AskState::Declined)
+    {
+        a.leftZone |= owner->GetZoneId() != a.declinedZone;
+        a.emptied  |= nearNow.empty();
+        if (a.leftZone && a.emptied)
+        {
+            a.state = AskState::Asking;
+            a.lastNear = nearNow;                      // only one coming in from now on asks
+            LOG_INFO("module", "mod-buddies: {} has left the zone they declined in and had no buddy near; buddies ask again",
+                owner->GetName());
+        }
+        return;
+    }
+
+    // Asking, an invite out: accepted, or answered no (none pending any more)
+    if (a.invitedBy)
+    {
+        Group* g = owner->GetGroup();
+        if (g && g->IsMember(ObjectGuid::Create<HighGuid::Player>(a.invitedBy)))
+        {
+            if (g->GetLeaderGUID() != owner->GetGUID())
+                g->ChangeLeader(owner->GetGUID());     // the owner leads, as when the rule seats them
+            sSeatedByPass.insert(a.invitedBy);
+            LOG_INFO("module", "mod-buddies: {} accepted buddy {}'s invite; buddies are seated by distance again",
+                owner->GetName(), a.invitedBy);
+            sAsk.erase(it);
+            return;
+        }
+        if (!owner->GetGroupInvite() && now - a.invitedAt >= INVITE_SETTLE_MS)
+        {
+            LOG_INFO("module", "mod-buddies: {} declined buddy {}'s invite in zone {}; no more until they change zone with "
+                "no buddy near", owner->GetName(), a.invitedBy, owner->GetZoneId());
+            a.state = AskState::Declined;
+            a.declinedZone = owner->GetZoneId();
+            a.invitedBy = 0;
+            a.leftZone = a.emptied = false;
+        }
+        return;
+    }
+
+    // Asking, nothing out: a buddy newly within the radius asks
+    uint32 comer = 0;
+    for (uint32 b : nearNow)
+        if (!a.lastNear.count(b))
+        {
+            Player* bot = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(b));
+            if (bot && !bot->GetGroup())
+            {
+                comer = b;
+                break;
+            }
+        }
+    a.lastNear = nearNow;
+    if (!comer)
+        return;
+    Player* bot = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(comer));
+    if (!owner->GetGroup() && !owner->GetGroupInvite())
+    {
+        // the invite as the buddy's own client would send it
+        WorldPacket invite(CMSG_GROUP_INVITE);
+        invite << owner->GetName();
+        invite << uint32(0);
+        bot->GetSession()->HandleGroupInviteOpcode(invite);
+        a.invitedBy = comer;
+        a.invitedAt = now;
+        LOG_INFO("module", "mod-buddies: buddy {} came near {} and invited them", bot->GetName(), owner->GetName());
+    }
+    else if (owner->GetGroup())
+        bot->Whisper("I'm close by, if you want me along.", LANG_UNIVERSAL, owner);
+}
+// }}}
+
 // {{{ FillSeats
 // The owner, 2026-10-03: "whenever there's space created in a dynamic
 // group, we should select a valid buddy-bot at random from within the
@@ -361,6 +521,8 @@ static void FillSeats(std::map<uint32, std::vector<uint32>> const& byOwner)
         Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(ownerGuid));
         if (!owner || !owner->IsInWorld() || owner->GetMap()->Instanceable() || BuddyTownArea(owner))
             continue;
+        if (!Seating(ownerGuid))
+            continue;                                  // asking, or declined: nobody is seated for them (AskOrWait)
         Group* g = owner->GetGroup();
         if (g && (g->isRaidGroup() || g->isLFGGroup() || g->isBGGroup() || g->isBFGroup()))
             continue;                                  // a raid made with others, or a system group: not ours
@@ -1013,6 +1175,7 @@ static void RunPulls()
         if (g && g->IsMember(b->GetGUID()))
         {
             sSeatedByPass.erase(p.buddy);              // seated by distance already: now it counts as invited by hand
+            sHandInvited.insert(p.buddy);
             continue;
         }
         if (g && !g->isRaidGroup() && g->GetMembersCount() >= PARTY_SIZE)
@@ -1028,6 +1191,7 @@ static void RunPulls()
             LOG_ERROR("module", "mod-buddies: buddy {} could not join {}'s group after leaving its own (server refused); "
                 "it is ungrouped", b->GetName(), inviter->GetName());
         sSeatedByPass.erase(p.buddy);                  // invited by hand: keeps its seat
+        sHandInvited.insert(p.buddy);
     }
     if (!again.empty())
     {
@@ -1083,9 +1247,30 @@ class buddies_party_group : public GroupScript
 public:
     buddies_party_group() : GroupScript("buddies_party_group", { GROUPHOOK_ON_REMOVE_MEMBER }) { }
 
-    void OnRemoveMember(Group* /*group*/, ObjectGuid /*guid*/, RemoveMethod /*method*/, ObjectGuid /*kicker*/, char const* /*reason*/) override
+    // Also the asking rule's two triggers: the owner leaving a party that
+    // holds buddies the rule seated for them, or the owner removing one of
+    // those buddies by hand. The rule's own removals (no kicker) don't count.
+    // Leaving, removing and accepting are handled on the world's own thread
+    // (their opcodes are thread-unsafe), as is the pass, so the sets above
+    // need no lock here.
+    void OnRemoveMember(Group* group, ObjectGuid guid, RemoveMethod method, ObjectGuid kicker, char const* /*reason*/) override
     {
         sFillSoon = true;
+        uint32 low = guid.GetCounter();
+        sHandInvited.erase(low);
+        for (auto const& [buddy, owner] : BuddyRosterPairs())
+        {
+            if (method == GROUP_REMOVEMETHOD_KICK && buddy == low && kicker.GetCounter() == owner && sSeatedByPass.count(low))
+            {
+                StartAsking(owner, "removed a buddy the distance rule had seated");
+                return;
+            }
+            if (method == GROUP_REMOVEMETHOD_LEAVE && owner == low && sSeatedByPass.count(buddy) && group->IsMember(ObjectGuid::Create<HighGuid::Player>(buddy)))
+            {
+                StartAsking(owner, "left a party the distance rule had seated buddies in");
+                return;
+            }
+        }
     }
 };
 // }}}
@@ -1164,6 +1349,7 @@ public:
             else
             {
                 ArrangeOwner(owner, buddyGuids);       // leaving
+                AskOrWait(owner, buddyGuids);          // asking instead of seating, when the owner chose so
                 outside.push_back({ owner, &buddyGuids });
             }
         }

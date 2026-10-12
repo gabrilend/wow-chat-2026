@@ -9,6 +9,39 @@
 
 ## Current Behavior
 
+**Asking instead of seating; who was invited by hand, 2026-10-12,
+syntax-checked, not yet built** (`buddies_party.cpp`, `AskOrWait`, the
+group hook). The owner: "the randomly created "questing group" should only
+apply if they're within range - I was very far away yet they didn't leave
+the group. Also. I found it difficult to create a group while standing
+outside an instance with my buddy-bots nearby - I'd uninvite one and
+another would join automatically! Not ideal. How about... if a player
+leaves the randomly-created group, then the next time a buddy-bot enters
+the "joining radius" (doesn't count for those already in it) then they
+send a group invite? And if the player declines, then the buddy-bot random
+questing system doesn't restart until the player doesn't have ANY
+buddy-bots within range, and then another one re-enters. Also the player
+has to walk to a different zone."
+- **Far and still grouped:** the module remembered the buddies it seated,
+  in memory; after a server restart it remembered none, so every buddy
+  still in its owner's party counted as invited by hand, and those stay
+  however far. Now it remembers the hand-invited ones instead (every hand
+  invite comes through the pull, 617c4), and any other buddy in the
+  owner's party is the rule's, leaving past 75 yards. After a restart a
+  hand-invited buddy counts as the rule's.
+- **Asking:** an owner who leaves a party the rule had seated buddies in,
+  or removes one of those buddies by hand, gets no more buddies seated.
+  Each pass, a buddy that has come within 60 yards since the last pass
+  (and is in no group) invites the owner (as its own client would); an
+  owner already in a group is whispered to instead ("I'm close by, if you
+  want me along."), since a buddy can't invite someone who is grouped.
+  Accepted: the owner is made leader and seating resumes. Declined (or
+  the invite ran out): nothing until the owner has been in another zone
+  and has had no buddy within 60 yards; then the next to come in asks.
+  Kept in memory: a relog or restart starts with seating.
+  (Read here as: after a decline, the system "restarts" by asking again,
+  not by seating straight away.)
+
 **Seats filled at random, 2026-10-04, syntax-checked, not yet built or
 run** (`buddies_party.cpp`, the seat filling): each pass, after every
 owner's leaving step, the free seats of each group with players (and of
