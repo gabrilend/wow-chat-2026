@@ -79,10 +79,21 @@ local CLASS_DEATH_KNIGHT           = 6
 
 -- {{{ tuning (owner decisions, 617b)
 local WANDER_FROM_LEVEL = 10        -- below this only the valley Sargobras
-local STOP_AT           = 10        -- yards: he trails this far behind (was 7: "follows too closely", 2026-10-04)
-local FOLLOW_AGAIN_AT   = 25        -- yards: he sets off again past this (was 15: "you should have to walk a bit")
-local FAN_STEP          = 0.4       -- radians (~23 degrees) between neighbouring tiers' places behind the owner
-local TURN_EVERY_MS     = 5000      -- he starts a turn toward the owner at most this often
+-- his circle (owner, 2026-10-12: "he should stand 5-10 yards away from
+-- you", "As soon as you're more than 15 yards away, he starts walking
+-- toward a new waypoint that's created on a new circle near you")
+local CIRCLE_MIN        = 5         -- yards: the circle's radius is drawn from here ...
+local CIRCLE_MAX        = 10        -- ... to here
+local MOVE_ON_AT        = 15        -- yards from him: past this the owner gets a new circle
+local PULL_STEP         = 1.5       -- yards: a spot with no direct route is pulled in this much at a time ...
+local PULL_FLOOR        = 2         -- ... down to this
+local SIDE_STEPS        = { 0, 0.5, -0.5, 1.0, -1.0 }  -- radians tried either side of his line in, at each radius
+local DIRECT_FACTOR     = 1.25      -- a walk at most this many times the straight line (plus DIRECT_SLACK) is "direct"
+local DIRECT_SLACK      = 1         -- yards
+local FAN_STEP          = 0.4       -- radians (~23 degrees) between neighbouring tiers' spots on one circle
+local ARRIVED_AT        = 2         -- yards from his spot: arrived
+local WALK_GIVE_UP_TICKS = 30       -- ticks (seconds) walking without arriving: he stands where he got to
+local FACE_SLACK        = 0.17      -- radians (~10 degrees) off before he turns again
 -- The server can only set a facing, not animate one, so a turn is played as
 -- small steps (a linear interpolation sampled every TURN_STEP_MS). Owner,
 -- 2026-09-26: step as rarely as still "feels fine", to spare the server.
@@ -183,12 +194,12 @@ local TAG = "[sargobras] "
 -- campfire each wanderer lit. Summoned creatures are never saved, so this
 -- only has to live as long as the server runs.
 local wanderer_of, owner_of, slot_of, fire_of = {}, {}, {}, {}
--- Wanderer guid (low) -> when he last started a turn (ms, GetCurrTime), and
--- whether a turn is under way.
-local turned_at, turning = {}, {}
--- following[low] = true while the server's own follow is carrying him
--- (follow_tick); nil while he stands and waits for the owner to walk off
-local following = {}
+-- Wanderer guid (low) -> whether a turn is under way.
+local turning = {}
+-- Wanderer guid (low) -> his circle { cx, cy, cz, r } (the owner's feet
+-- when it was made, and its radius) and his spot on its rim { x, y, z };
+-- walking[low] = ticks spent walking to the spot, nil once standing there.
+local circle_of, spot_of, walking = {}, {}, {}
 
 -- {{{ local function roster_ready
 local function roster_ready()
@@ -516,9 +527,8 @@ local function remove_wanderer(creature)
     if owner and wanderer_of[owner] and slot_of[low] then wanderer_of[owner][slot_of[low]] = nil end
     owner_of[low] = nil
     slot_of[low] = nil
-    turned_at[low] = nil
     turning[low] = nil
-    following[low] = nil
+    circle_of[low], spot_of[low], walking[low] = nil, nil, nil
     local fire = fire_of[low]
     fire_of[low] = nil
     if fire then
@@ -543,13 +553,13 @@ end
 --                                               not straight back from you
 --   seat = F + SIT_RADIUS * (cos a, sin a)      on a circle round the fire
 --   face = the direction from seat to F         atan2(Fy - y, Fx - x)
--- He turns toward `face` in small steps (as start_turn does), then sits.
+-- He turns toward `face` in small steps (as turn_to does), then sits.
 local function go_on_break(creature, player)
     local low = creature:GetGUIDLow()
     creature:RemoveEvents()
     turning[low]   = nil                         -- any turn in progress was among those events
-    following[low] = nil
-    creature:MoveIdle()                          -- drop the server's follow, or he'd get up and trail the owner
+    walking[low]   = nil
+    creature:MoveIdle()                          -- drop any walk to his spot
     creature:MoveStop()
 
     -- the fire, under the player
@@ -605,18 +615,23 @@ local function go_on_break(creature, player)
 end
 -- }}}
 
--- {{{ local function start_turn
--- Turn toward the owner a step at a time; stops when facing them, when he
--- starts walking, or when the owner is gone.
-local function start_turn(creature, player)
+-- {{{ local function slot_level
+-- The level a slot is owed from, as the buddy module counts it
+-- (buddies_clan.cpp, BuddySlotLevel): 1 for the first, then every tenth.
+local function slot_level(slot) return slot == 1 and 1 or (slot - 1) * 10 end
+-- }}}
+
+-- {{{ local function turn_to
+-- Turn toward the angle `want()` gives (radians; nil ends the turn) a step
+-- at a time; stops when facing it or when he starts walking.
+local function turn_to(creature, want)
     local low = creature:GetGUIDLow()
     if turning[low] then return end
     turning[low] = true
     local step = TURN_SPEED * TURN_STEP_MS / 1000
     creature:RegisterEvent(function(event_id, _, _, c)
-        local owner = owner_of[c:GetGUIDLow()]
-        local p = owner and GetPlayerByGUID(GetPlayerGUID(owner))
-        local delta = p and ((c:GetAngle(p) - c:GetO() + math.pi) % (2 * math.pi) - math.pi)
+        local a = want(c)
+        local delta = a and ((a - c:GetO() + math.pi) % (2 * math.pi) - math.pi)
         -- "moving" is asked as "not stopped": the pinned Lua engine (July
         -- 2026) gives IsMoving to players only; IsStopped is on every unit
         if not delta or not c:IsStopped() or math.abs(delta) <= TURN_DONE then
@@ -629,68 +644,149 @@ local function start_turn(creature, player)
 end
 -- }}}
 
+-- {{{ local function direct_route
+-- Whether the owner could walk straight to (x, y, z): the walk along the
+-- navigation mesh is at most DIRECT_FACTOR times the straight line plus
+-- DIRECT_SLACK yards (owner, 2026-10-12: "use the navmesh and if there
+-- isn't a direct route to the player for the place he picks, then pull him
+-- in closer until there is"). The mesh is asked through B051's
+-- GetWalkablePathLength; a server built without it can't be asked, so
+-- line of sight stands in, and that is an error, logged once per run.
+local path_call_missing_said = false
+local function direct_route(player, x, y, z)
+    local straight = math.sqrt((x - player:GetX()) ^ 2 + (y - player:GetY()) ^ 2)
+    local ok, length = pcall(function() return player:GetWalkablePathLength(x, y, z) end)
+    if ok then return length ~= nil and length <= straight * DIRECT_FACTOR + DIRECT_SLACK end
+    if not path_call_missing_said then
+        path_call_missing_said = true
+        print(TAG .. "ERROR: the server has no GetWalkablePathLength (source patch B051 not built yet); Sargobras"
+            .. " checks his spots by line of sight instead, which misses cliffs and bridges, until the next compile: " .. tostring(length))
+    end
+    return player:IsWithinLoS(x, y, z + 2)
+end
+-- }}}
+
+-- {{{ local function new_circle
+-- A new circle round the owner's feet, and his spot on its rim: radius
+-- drawn from CIRCLE_MIN to CIRCLE_MAX, on the side he is coming from,
+-- fanned by tier so several don't share a spot. A spot with no direct
+-- route is tried a little to either side (SIDE_STEPS), then pulled in by
+-- PULL_STEP, down to PULL_FLOOR; at the floor he takes the line in as it
+-- is. The spot's height is the owner's: his walk along the mesh settles it
+-- onto the ground (a height asked of the map from the sky would find a
+-- roof or a bridge above).
+local function new_circle(creature, player)
+    local low        = creature:GetGUIDLow()
+    local cx, cy, cz = player:GetX(), player:GetY(), player:GetZ()
+    local sx, sy     = creature:GetX(), creature:GetY()
+    local k          = (slot_of[low] or 1) - 1
+    local base       = math.atan2(sy - cy, sx - cx) + math.ceil(k / 2) * (k % 2 == 1 and 1 or -1) * FAN_STEP
+    local r          = CIRCLE_MIN + math.random() * (CIRCLE_MAX - CIRCLE_MIN)
+    while true do
+        for _, side in ipairs(SIDE_STEPS) do
+            local a = base + side
+            local x, y = cx + math.cos(a) * r, cy + math.sin(a) * r
+            if r <= PULL_FLOOR or direct_route(player, x, y, cz) then
+                circle_of[low] = { cx = cx, cy = cy, cz = cz, r = r }
+                spot_of[low]   = { x = x, y = y, z = cz }
+                return
+            end
+            if r <= PULL_FLOOR then break end
+        end
+        r = math.max(PULL_FLOOR, r - PULL_STEP)
+    end
+end
+-- }}}
+
+-- {{{ local function walk_to_spot
+-- Always a walk, never a run (owner, 2026-10-12: "when he paths to a new
+-- location near you, he always walks, and also that he uses the navmesh
+-- instead of walking straight towards it"): MoveTo with its path made
+-- along the mesh.
+local function walk_to_spot(creature)
+    local s = spot_of[creature:GetGUIDLow()]
+    creature:SetWalk(true)
+    creature:MoveTo(0, s.x, s.y, s.z, true)
+    walking[creature:GetGUIDLow()] = 0
+end
+-- }}}
+
 -- {{{ local function follow_tick
--- Once a second, one of two states:
+-- Once a second, one of two states (owner, 2026-10-12; see 617b, "circles,
+-- not a leash"):
 --
---   waiting (following[low] nil): he stands where he last stopped. Once the
---     owner is past FOLLOW_AGAIN_AT he hands himself to the server's own
---     follow, which walks him when the owner walks and runs him when they
---     run (it copies the owner's walk state on every step). Until then he
---     turns toward them at most every TURN_EVERY_MS.
---   following (following[low] true): the server keeps him STOP_AT behind
---     the owner, on the side they came from. When the owner has stopped
---     and so has he, he lets go and goes back to waiting, so the owner has
---     to walk off again before he follows: slack, not a leash.
+--   walking (walking[low] set): on his way to his spot. Arrived (stopped
+--     within ARRIVED_AT of it), or WALK_GIVE_UP_TICKS gone by: standing.
+--   standing: he doesn't move. While the owner is within MOVE_ON_AT of him
+--     he faces the circle's centre if the owner is inside the circle, the
+--     owner if not. Past MOVE_ON_AT: if the owner's level is now below his
+--     tier's he goes ("if your level isn't above the level that particular
+--     Sargobras spawned for, he should disappear"), else a new circle is
+--     made round the owner and he walks to it.
 --
--- (Until 2026-10-04 he was sent each second, at his own running pace, to a
--- point 7 yards from where the owner stood at that moment: a walking owner
--- saw him sprint, stop, wait, and sprint again.)
+-- (2026-10-04 to 10-12 he was handed to the server's own follow, which
+-- kept him 10 yards behind the owner; walking up to talk to him moved that
+-- spot, and he walked away: "Sargobras running away when I try to talk to
+-- him".)
 --
 -- Leaves if the owner is gone.
 local function follow_tick(_, _, _, creature)
-    local low   = creature:GetGUIDLow()
-    local owner = owner_of[low]
+    local low    = creature:GetGUIDLow()
+    local owner  = owner_of[low]
     local player = owner and GetPlayerByGUID(GetPlayerGUID(owner))
     if not player or not player:IsInWorld() or player:GetMapId() ~= creature:GetMapId() then
         return remove_wanderer(creature)
     end
 
-    if following[low] then
-        -- owner and he both still: let go, keep the spot he reached
-        if not player:IsMoving() and creature:IsStopped() then
-            following[low] = nil
+    local s = spot_of[low]
+    if walking[low] then
+        walking[low] = walking[low] + 1
+        local there = (creature:GetX() - s.x) ^ 2 + (creature:GetY() - s.y) ^ 2 <= ARRIVED_AT ^ 2
+        if (there and creature:IsStopped()) or walking[low] >= WALK_GIVE_UP_TICKS then
+            walking[low] = nil
             creature:MoveIdle()
         end
         return
     end
 
-    local d = creature:GetDistance(player)
-    if d > FOLLOW_AGAIN_AT then
-        -- each tier's Sargobras keeps his own place in a fan behind the
-        -- owner (slot 1 straight behind, then alternating left and right),
-        -- so several don't walk in one line
-        local k   = (slot_of[low] or 1) - 1
-        local fan = math.ceil(k / 2) * (k % 2 == 1 and 1 or -1) * FAN_STEP
-        following[low] = true
-        creature:MoveFollow(player, STOP_AT, math.pi + fan)
-    elseif creature:IsStopped() then                -- see start_turn: no IsMoving on creatures
-        local now, low = GetCurrTime(), creature:GetGUIDLow()
-        if not turned_at[low] or now - turned_at[low] >= TURN_EVERY_MS then
-            turned_at[low] = now
-            start_turn(creature, player)
+    if creature:GetDistance(player) > MOVE_ON_AT then
+        if player:GetLevel() < slot_level(slot_of[low] or 1) then
+            return remove_wanderer(creature)
         end
+        new_circle(creature, player)
+        return walk_to_spot(creature)
+    end
+
+    -- standing: face the centre while the owner is in the circle, else the owner
+    local function want(c)
+        local p = GetPlayerByGUID(GetPlayerGUID(owner))
+        local ring = circle_of[c:GetGUIDLow()]
+        if not p or not ring then return nil end
+        local inside = (p:GetX() - ring.cx) ^ 2 + (p:GetY() - ring.cy) ^ 2 <= ring.r ^ 2
+        if inside then return math.atan2(ring.cy - c:GetY(), ring.cx - c:GetX()) end
+        return math.atan2(p:GetY() - c:GetY(), p:GetX() - c:GetX())
+    end
+    local a = want(creature)
+    if a and math.abs((a - creature:GetO() + math.pi) % (2 * math.pi) - math.pi) > FACE_SLACK then
+        turn_to(creature, want)
     end
 end
 -- }}}
 
 -- {{{ local function summon_wanderer
--- One beside the owner for each owed slot that has none yet, each in his
--- own place round them, unless the spot is crowded with others' Sargobras
--- (the owner's own don't count toward the crowd).
+-- One near the owner for each owed slot the owner's level has reached that
+-- has none yet, unless the spot is crowded with others' Sargobras (the
+-- owner's own don't count toward the crowd). Each is his tier's level plus
+-- one (owner, 2026-10-12: "if you hit level 30 then he should be level 31
+-- [...] He wants you to know that he's always stronger than you"), appears
+-- on his first circle's rim, and stands there.
 local function summon_wanderer(player)
     local owner = player:GetGUIDLow()
     if player:GetClass() == CLASS_DEATH_KNIGHT or player:GetLevel() < WANDER_FROM_LEVEL then return end
-    local slots = owed_slots(owner)
+    local slots = {}
+    for _, slot in ipairs(owed_slots(owner)) do
+        if slot_level(slot) <= player:GetLevel() then slots[#slots + 1] = slot end
+    end
     if #slots == 0 then return end
     wanderer_of[owner] = wanderer_of[owner] or {}
     local mine = wanderer_of[owner]
@@ -705,18 +801,24 @@ local function summon_wanderer(player)
         return
     end
 
-    local x, y, z, o = player:GetLocation()
+    local x, y, z = player:GetLocation()
     for _, slot in ipairs(slots) do
         if not mine[slot] then
+            -- appear a little way out, in his tier's direction; his first
+            -- circle is made from there and he is put straight on its rim
             local a = (slot - 1) * 2 * math.pi / 7
-            local c = player:SpawnCreature(WANDERER, x + math.cos(a) * STOP_AT, y + math.sin(a) * STOP_AT, z,
+            local c = player:SpawnCreature(WANDERER, x + math.cos(a) * CIRCLE_MAX, y + math.sin(a) * CIRCLE_MAX, z,
                 math.atan2(-math.sin(a), -math.cos(a)), TEMPSUMMON_MANUAL_DESPAWN, 0)
             if not c then
                 print(string.format("%sERROR: could not summon Sargobras for owner %d, slot %d", TAG, owner, slot))
             else
-                mine[slot]               = c:GetGUID()
-                owner_of[c:GetGUIDLow()] = owner
-                slot_of[c:GetGUIDLow()]  = slot
+                local low  = c:GetGUIDLow()
+                mine[slot]     = c:GetGUID()
+                owner_of[low]  = owner
+                slot_of[low]   = slot
+                c:SetLevel(slot_level(slot) + 1)
+                new_circle(c, player)
+                walk_to_spot(c)
                 c:RegisterEvent(follow_tick, 1000, 0)
             end
         end

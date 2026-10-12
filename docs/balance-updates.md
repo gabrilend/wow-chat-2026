@@ -429,6 +429,23 @@ for each tier", and for him to go "after the fire does". The duration and
 the percentage are first guesses; the old rule (leave when no player is
 within 100 yards) is gone.
 
+## 2026-10-12 — Basic: the wandering Sargobras keeps to a circle, and his level (617b)
+
+| Knob | Value | Where |
+|---|---|---|
+| His circle's radius (drawn each time) | 5 to 10 yards | `src/lua-basic/sargobras.lua`, `CIRCLE_MIN`, `CIRCLE_MAX` |
+| Owner this far from him: a new circle | 15 yards (was: 25 yards of slack behind the server's follow) | `MOVE_ON_AT` |
+| A spot with no direct route: pulled in by / down to | 1.5 yards / 2 yards | `PULL_STEP`, `PULL_FLOOR` |
+| "Direct": a walk at most this long | 1.25 x the straight line + 1 yard | `DIRECT_FACTOR`, `DIRECT_SLACK` |
+| He turns again when this far off | about 10 degrees | `FACE_SLACK` |
+| His level | his tier's level + 1 | `summon_wanderer` |
+
+Why: the owner's numbers ("he should stand 5-10 yards away from you",
+"unless you're more than like, 15 yards away", "if you hit level 30 then
+he should be level 31"). The pull-in steps and the "direct" margin are
+first guesses. The old trailing distance (10) and slack (25) are gone with
+the server's follow, which made him walk away from an owner coming to talk.
+
 ## How to add an entry
 
 ```markdown

@@ -76,11 +76,15 @@ and install).
   - the wandering one comes at each tenth level (where the owner levelled)
     and at login, from level 10, while a slot is owed; not if more than two
     Sargobras are within 30 yards (then tried again every 30 seconds);
-    only his owner may use him; he follows with the server's own follow,
-    about 10 yards behind on the side the owner came from, at the owner's
-    pace (walking when they walk); when both have stopped he lets go, and
-    sets off again only once the owner is past 25 yards; while waiting he
-    turns toward the owner at most every 5 seconds; after the last
+    only his owner may use him; he is level (his tier's level + 1), and
+    only tiers the owner has reached are summoned; he keeps to a circle
+    round the owner (5-10 yards, a spot the owner can walk straight to,
+    checked on the navigation mesh), standing still and facing its centre
+    while the owner is in it, or the owner while they're out of it, and
+    walks (never runs) along the mesh to a new circle once the owner is
+    past 15 yards, going instead if the owner is now below his tier
+    (2026-10-12, which replaced the server's own follow: it made him walk
+    away from an owner coming to talk); after the last
     owed choice he lights a campfire under the chooser (it burns, harder
     per tier), walks off at an angle to a seat 3 yards from it, faces it,
     sits untargetable, tells a joke from `data/sargobras-jokes.lua` every
@@ -160,6 +164,67 @@ When owner and Sargobras have both stopped he lets go, so the owner has
 to walk off past 25 yards before he follows again. Distances: 10 yards
 trailing (was 7), 25 yards slack (was 15); recorded in
 `docs/balance-updates.md`. Checked offline by `scripts/test-sargobras-follow`.
+
+### Decision, 2026-10-12 (Ritz): circles, not a leash; his level; "??"
+
+Verbatim: "I'm having a problem with Sargobras running away when I try to
+talk to him. He's supposed to stand still unless you're more than like,
+15 yards away, and he should stand 5-10 yards away from you. He should
+slowly walk to his new waypoints as well. But if you're within the radius
+that his waypoint was placed to expect, then he shouldn't move at all, and
+if you move away from it he should just turn to face you until you're 15
+yards away from him. So... waypoints create a circle that they're
+positioned around, (this can all be duplicated for multiple Sargobrases
+btw), and he stares at the center of the circle. If you leave the circle
+(whose radius is the radius that he's standing from you - if you're on a
+bridge or a thin cliff or something, the radius should be smaller, use
+the navmesh and if there isn't a direct route to the player for the place
+he picks, then pull him in closer until there is) then he turns to face
+you. As soon as you're more than 15 yards away, he starts walking toward a
+new waypoint that's created on a new circle near you. When he reaches it,
+he turns to face the center of the circle if you're inside it, otherwise
+he faces you until you're 15 yards away from the waypoint."
+
+And, same day: "can we make sure that when he paths to a new location
+near you, he always walks, and also that he uses the navmesh instead of
+walking straight towards it? Also, when he gets a new waypoint, if your
+level isn't above the level that particular Sargobras spawned for, he
+should disappear." And his level: "Can we make them the same level that
+the character level they're spawning for is? For example if you hit level
+30 then he should be level 31. If you hit level 40 he should be level 41.
+He wants you to know that he's always stronger than you." The first
+Sargobras (the valley one) and Acherus's show "??" (a boss rank; the
+client draws a boss's level as "??" whatever the number), as the Lich King
+in Acherus already does.
+
+Why he ran away: the 2026-10-04 design handed him to the server's own
+follow, which keeps him 10 yards behind the owner; walking up to him to
+talk moved the spot he was kept at, so he walked off to it.
+
+**The circle.** A waypoint is a circle round the owner's feet as they were
+when it was made, with a radius drawn from 5 to 10 yards, and his spot on
+its rim, on the side he comes from. He walks there (always walking, along
+the navigation mesh). Then, while the owner is within 15 yards of him:
+- the owner inside the circle: he faces its centre and doesn't move;
+- the owner outside it: he turns to face them, and doesn't move.
+Past 15 yards a new circle is made round the owner and he walks to it.
+Several Sargobras (one per owed tier) each keep their own circle, their
+spots fanned round it so they don't stand in one place.
+
+**A direct route.** The spot must be one the owner could walk straight to:
+the walk along the navigation mesh from the owner to it is no more than a
+quarter longer than the straight line (plus a yard). If not (a bridge, a
+thin cliff), the spot is pulled in toward the owner a yard and a half at a
+time, then tried a little to either side, down to 2 yards. The question is
+asked through a new Lua call, `unit:GetWalkablePathLength(x, y, z)` (source
+patch B051, on basic); until the server is built with it, line of sight is
+used instead and that is logged as an error once.
+
+**His tier, his level.** Sargobras for the tier owed at level 10 is level
+11, at 20 is 21, and so on (the slot's level plus one). On every new
+waypoint, an owner below his tier's level (de-levelled) makes him go; he
+comes back when the tier is reached again. Only tiers the owner's level
+has reached are summoned.
 
 ### Decision, 2026-10-04 (Ritz): the fire under you, and how he sits
 

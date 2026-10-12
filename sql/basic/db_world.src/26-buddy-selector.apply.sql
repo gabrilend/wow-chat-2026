@@ -37,9 +37,16 @@ UPDATE `tmp_617b_template` SET
   `entry` = 6170001, `name` = 'Sargobras', `subname` = '', `npcflag` = 1,
   `difficulty_entry_1` = 0, `difficulty_entry_2` = 0, `difficulty_entry_3` = 0, `KillCredit1` = 0, `KillCredit2` = 0,
   `faction` = 35, `gossip_menu_id` = 0, `minlevel` = 80, `maxlevel` = 80,
-  `lootid` = 0, `pickpocketloot` = 0, `skinloot` = 0, `AIName` = '', `ScriptName` = '';
+  `lootid` = 0, `pickpocketloot` = 0, `skinloot` = 0, `AIName` = '', `ScriptName` = '',
+  `rank` = 3;
+-- rank 3 (boss): the client shows a boss's level as "??" whatever the
+-- number (owner, 2026-10-12: "The first Sargobras that spawns when you're
+-- creating your character should be ?? level as well")
 INSERT INTO `creature_template` SELECT * FROM `tmp_617b_template`;
-UPDATE `tmp_617b_template` SET `entry` = 6170002;
+-- the wanderer is an ordinary rank: sargobras.lua sets his level as he
+-- appears, one above the level of the tier he serves ("He wants you to
+-- know that he's always stronger than you")
+UPDATE `tmp_617b_template` SET `entry` = 6170002, `rank` = 0;
 INSERT INTO `creature_template` SELECT * FROM `tmp_617b_template`;
 DROP TEMPORARY TABLE `tmp_617b_template`;
 DROP TEMPORARY TABLE IF EXISTS `tmp_617b_model`;
