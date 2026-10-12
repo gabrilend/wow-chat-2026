@@ -220,6 +220,13 @@ asked through a new Lua call, `unit:GetWalkablePathLength(x, y, z)` (source
 patch B051, on basic); until the server is built with it, line of sight is
 used instead and that is logged as an error once.
 
+**His hat.** "can we make the normal Sargobrases that spawn for players
+have a 10% chance to spawn with a hat? Specifically, Don Rigoberto's Lost
+Hat." One wandering Sargobras in ten is creature 6170003 instead of
+6170002: the same in every way, but his outfit (buddies_outfits.cpp) has
+the hat (item 21615) on his head. A creature's look is per creature type,
+so the hat needs its own; it shows from the next compile.
+
 **His tier, his level.** Sargobras for the tier owed at level 10 is level
 11, at 20 is 21, and so on (the slot's level plus one). On every new
 waypoint, an owner below his tier's level (de-levelled) makes him go; he

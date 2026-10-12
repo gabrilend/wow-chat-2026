@@ -63,6 +63,12 @@ local Valleys = dofile(script_dir() .. "data/starting-valleys.lua")
 local Deck    = dofile(script_dir() .. "lib/valley-deck.lua")
 
 local VALLEY, WANDERER                   = 6170001, 6170002
+-- the wanderer in Don Rigoberto's Lost Hat, one time in ten (owner,
+-- 2026-10-12: "a 10% chance to spawn with a hat"); his own creature, so the
+-- hat is in his outfit (buddies_outfits.cpp). Everything said of WANDERER
+-- holds for him too (is_wanderer).
+local WANDERER_HATTED, HAT_CHANCE        = 6170003, 0.10
+local function is_wanderer(entry) return entry == WANDERER or entry == WANDERER_HATTED end
 local TEXT_OWED, TEXT_NOT_YOURS, TEXT_NONE = 6170001, 6170002, 6170003
 local CAMPFIRE                           = 1798           -- a stock "Campfire" object
 
@@ -792,8 +798,10 @@ local function summon_wanderer(player)
     local mine = wanderer_of[owner]
 
     local near = #(player:GetCreaturesInRange(CROWD_RANGE, VALLEY) or {})
-    for _, c in ipairs(player:GetCreaturesInRange(CROWD_RANGE, WANDERER) or {}) do
-        if owner_of[c:GetGUIDLow()] ~= owner then near = near + 1 end
+    for _, entry in ipairs({ WANDERER, WANDERER_HATTED }) do
+        for _, c in ipairs(player:GetCreaturesInRange(CROWD_RANGE, entry) or {}) do
+            if owner_of[c:GetGUIDLow()] ~= owner then near = near + 1 end
+        end
     end
     if near > CROWD_MAX then
         -- crowded: try again shortly, until they fit or nothing is owed
@@ -807,7 +815,7 @@ local function summon_wanderer(player)
             -- appear a little way out, in his tier's direction; his first
             -- circle is made from there and he is put straight on its rim
             local a = (slot - 1) * 2 * math.pi / 7
-            local c = player:SpawnCreature(WANDERER, x + math.cos(a) * CIRCLE_MAX, y + math.sin(a) * CIRCLE_MAX, z,
+            local c = player:SpawnCreature(math.random() < HAT_CHANCE and WANDERER_HATTED or WANDERER, x + math.cos(a) * CIRCLE_MAX, y + math.sin(a) * CIRCLE_MAX, z,
                 math.atan2(-math.sin(a), -math.cos(a)), TEMPSUMMON_MANUAL_DESPAWN, 0)
             if not c then
                 print(string.format("%sERROR: could not summon Sargobras for owner %d, slot %d", TAG, owner, slot))
@@ -828,7 +836,7 @@ end
 
 -- {{{ local function on_hello
 local function on_hello(event, player, creature)
-    if creature:GetEntry() == WANDERER and owner_of[creature:GetGUIDLow()] ~= player:GetGUIDLow() then
+    if is_wanderer(creature:GetEntry()) and owner_of[creature:GetGUIDLow()] ~= player:GetGUIDLow() then
         player:GossipClearMenu()
         return player:GossipSendMenu(TEXT_NOT_YOURS, creature)
     end
@@ -893,7 +901,7 @@ local function on_select(event, player, creature, sender, intid, code)
         article(race_name), race_name, RC.classes[b.class].name), 0)
 
     -- his tier is chosen: a wanderer goes on break (he still answers)
-    if creature:GetEntry() == WANDERER then go_on_break(creature, player) end
+    if is_wanderer(creature:GetEntry()) then go_on_break(creature, player) end
 end
 -- }}}
 
@@ -950,7 +958,7 @@ if roster_ready() then
     RegisterPlayerEvent(PLAYER_EVENT_ON_LEVEL_CHANGE, on_level_change)
     RegisterPlayerEvent(PLAYER_EVENT_ON_LOGOUT,       on_logout)
     RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT,         on_chat)
-    for _, entry in ipairs({ VALLEY, WANDERER }) do
+    for _, entry in ipairs({ VALLEY, WANDERER, WANDERER_HATTED }) do
         RegisterCreatureGossipEvent(entry, GOSSIP_EVENT_ON_HELLO,  on_hello)
         RegisterCreatureGossipEvent(entry, GOSSIP_EVENT_ON_SELECT, on_select)
     end
@@ -962,8 +970,10 @@ if roster_ready() then
     -- gets theirs again as at login.
     local players = GetPlayersInWorld() or {}
     for _, p in ipairs(players) do
-        for _, c in ipairs(p:GetCreaturesInRange(SIGHT, WANDERER) or {}) do
-            if not owner_of[c:GetGUIDLow()] then c:DespawnOrUnsummon(0) end
+        for _, entry in ipairs({ WANDERER, WANDERER_HATTED }) do
+            for _, c in ipairs(p:GetCreaturesInRange(SIGHT, entry) or {}) do
+                if not owner_of[c:GetGUIDLow()] then c:DespawnOrUnsummon(0) end
+            end
         end
     end
     for _, p in ipairs(players) do summon_wanderer(p) end

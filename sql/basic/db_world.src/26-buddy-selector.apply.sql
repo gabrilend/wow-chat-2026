@@ -17,7 +17,7 @@
 --   6170002  the wandering Sargobras, to someone who isn't his owner
 --   6170003  to someone owed nothing
 --
--- Creatures 6170001-6170002, valley spawns 6170001-6170008, texts
+-- Creatures 6170001-6170003 (6170003: the wanderer in a hat), valley spawns 6170001-6170008, texts
 -- 6170001-6170003. Re-applicable: each apply first removes what an earlier
 -- one added. Database: acore_world_basic. Applied by E043.
 -- ============================================================================
@@ -26,8 +26,8 @@ DELETE FROM `creature`                WHERE `guid`       BETWEEN 6170001  AND 61
 -- the old spawn range, past the server's 16777215 spawn-id cap (it stopped at
 -- startup); cleared so a database that holds it is repaired on re-apply
 DELETE FROM `creature`                WHERE `guid`       BETWEEN 61700001 AND 61700099;
-DELETE FROM `creature_template_model` WHERE `CreatureID` BETWEEN 6170001  AND 6170002;
-DELETE FROM `creature_template`       WHERE `entry`      BETWEEN 6170001  AND 6170002;
+DELETE FROM `creature_template_model` WHERE `CreatureID` BETWEEN 6170001  AND 6170003;
+DELETE FROM `creature_template`       WHERE `entry`      BETWEEN 6170001  AND 6170003;
 DELETE FROM `npc_text`                WHERE `ID`         BETWEEN 6170001  AND 6170003;
 
 -- two copies of Lord Gregor Lescovar (1754): gossip only, friendly to all
@@ -48,12 +48,18 @@ INSERT INTO `creature_template` SELECT * FROM `tmp_617b_template`;
 -- know that he's always stronger than you")
 UPDATE `tmp_617b_template` SET `entry` = 6170002, `rank` = 0;
 INSERT INTO `creature_template` SELECT * FROM `tmp_617b_template`;
+-- 6170003: the wanderer in a hat, one time in ten (2026-10-12); the hat is
+-- in his outfit (buddies_outfits.cpp), so he is his own creature
+UPDATE `tmp_617b_template` SET `entry` = 6170003;
+INSERT INTO `creature_template` SELECT * FROM `tmp_617b_template`;
 DROP TEMPORARY TABLE `tmp_617b_template`;
 DROP TEMPORARY TABLE IF EXISTS `tmp_617b_model`;
 CREATE TEMPORARY TABLE `tmp_617b_model` AS SELECT * FROM `creature_template_model` WHERE `CreatureID` = 1754;
 UPDATE `tmp_617b_model` SET `CreatureID` = 6170001;
 INSERT INTO `creature_template_model` SELECT * FROM `tmp_617b_model`;
 UPDATE `tmp_617b_model` SET `CreatureID` = 6170002;
+INSERT INTO `creature_template_model` SELECT * FROM `tmp_617b_model`;
+UPDATE `tmp_617b_model` SET `CreatureID` = 6170003;
 INSERT INTO `creature_template_model` SELECT * FROM `tmp_617b_model`;
 DROP TEMPORARY TABLE `tmp_617b_model`;
 

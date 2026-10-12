@@ -35,7 +35,7 @@ static uint32 const SARGOBRAS[] = { 6170001, 6170002, 7180001, 7180002 };   // t
 static constexpr uint32 HUMAN_MALE_BODY = 49;      // the human man's own model (creature_model_info 49)
 // Item slots in the client's order (CreatureOutfits.h): head, shoulders,
 // shirt, chest, waist, legs, feet, wrists, hands, back, tabard.
-enum : uint8 { OUTFIT_SHIRT = 2, OUTFIT_CHEST = 3, OUTFIT_LEGS = 5, OUTFIT_FEET = 6, OUTFIT_BACK = 9 };
+enum : uint8 { OUTFIT_HEAD = 0, OUTFIT_SHIRT = 2, OUTFIT_CHEST = 3, OUTFIT_LEGS = 5, OUTFIT_FEET = 6, OUTFIT_BACK = 9 };
 struct Worn { uint8 slot; uint32 item; char const* name; };
 static Worn const WORN[] = {
     { OUTFIT_BACK,  13340, "Cape of the Black Baron" },
@@ -78,10 +78,25 @@ static CreatureOutfit Look()
     return o;
 }
 
+// The wandering Sargobras in a hat (owner, 2026-10-12: "can we make the
+// normal Sargobrases that spawn for players have a 10% chance to spawn with
+// a hat? Specifically, Don Rigoberto's Lost Hat."): his own creature,
+// 6170003, so the hat is in his outfit; sargobras.lua summons him instead of
+// 6170002 one time in ten.
+static constexpr uint32 SARGOBRAS_HATTED = 6170003;
+static constexpr uint32 RIGOBERTOS_HAT   = 21615;  // Don Rigoberto's Lost Hat
+
 static void ListAll(CreatureOutfit const& o)
 {
     for (uint32 entry : SARGOBRAS)
         CreatureOutfits::Set(entry, o);
+    CreatureOutfit hatted = o;
+    if (ItemTemplate const* hat = sObjectMgr->GetItemTemplate(RIGOBERTOS_HAT))
+        hatted.items[OUTFIT_HEAD] = hat->DisplayInfoID;
+    else
+        LOG_ERROR("module", "mod-buddies: Don Rigoberto's Lost Hat (item {}) is not in the world database; the hatted "
+            "Sargobras goes bare-headed", RIGOBERTOS_HAT);
+    CreatureOutfits::Set(SARGOBRAS_HATTED, hatted);
 }
 // }}}
 
