@@ -407,6 +407,27 @@ at the start). The new skip rewards no quest, so it no longer arises.
   after the rise, in the Plaguelands, so they never have to follow it out
   of Acherus (the 2026-10-12 log: four buddies left on map 609 trying
   every minute to cross to map 0, "no way to the owner's map was found").
+- **The buddies' gear** (`src/lua-basic/death-knight-buddy-gear.lua`,
+  `scripts/test-dk-buddy-gear`): "I noticed the death-knight buddy-bots are
+  spawning with a white quality Draenic Warblade? They should spawn with a
+  runeblade. [...] the level 55 one should spawn with a runeblade and so
+  should the level 57 one, but 59 and 60 will need a random green quality
+  item from the right item range. If the player completed the DK intro
+  quests, then when the buddy-bots spawn they should have the same
+  equipment that the player has unlocked from the questline so far, and as
+  the player proceeds to 58 (which is when the DK quests end) they'll get
+  more of the itemset from the quests as the player does. After the quests
+  are done, if the final one is complete, then we can skip all that and
+  just spawn them in the full set, with a random choice between capes and
+  final weapons." Each buddy wears every item of every story quest its
+  owner has been rewarded (a choice quest's pick random per buddy, but the
+  same each time); without a story weapon, the 55 and 57 buddies carry the
+  Runed Soulblade and the 59 and 60 ones a random green two-hander a death
+  knight can wear, needing a level from 4 below theirs to theirs. A
+  skipper's buddies get the weapon rule only (the skipper's quests are
+  rewarded, their gear isn't). Applied 10 seconds after a buddy appears
+  and 3 seconds after its owner is rewarded a story quest; what it
+  replaces is destroyed.
 - **Taking the soul back.** A skipper never finishes the story, so the
   ledger records the skip, and the Ebon Hold Sargobras offers "I want my
   old life back" to a skipper as to one who played the story.
