@@ -35,7 +35,14 @@ No buddy exists. The pieces to build one with:
 - **A roster table** in the characters database: owner character → buddy
   characters, with each buddy's order (1st at creation, 2nd at 10, 3rd at
   20, …) and chosen class. A buddy slot is *owed* when the owner reaches
-  the level and *filled* when the class is chosen (617b).
+  the level and *filled* when the class is chosen (617b). Slots have no
+  last one since 2026-10-12 (seven before, basic's cap of 60; owner,
+  after a level-100 test character got tiers only to 60: "It'd be nice if
+  there was one for every 10 levels"), bounded by the highest level (255:
+  slot 26 at 250). Not yet checked: whether the server's
+  characters-per-account limit (10) stops the companion account past the
+  tenth buddy (level 90), as the module makes its characters directly
+  rather than through the character-creation screen.
 - **Creation**: when a slot is filled, the factory creates a character of
   the chosen class on the companion account, of the owner's faction, and
   levels it to the owner's current level before its first login.

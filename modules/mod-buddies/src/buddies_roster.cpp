@@ -2,7 +2,7 @@
  * buddies_roster.cpp - the buddy roster's server side (issue 617a).
  *
  * For a general audience: every player character on the basic profile is
- * owed up to seven "buddies", bot companions made for them one at a time.
+ * owed a "buddy" at level 1 and every tenth level after, bot companions made for them one at a time.
  * Who they are lives in two characters-database tables (installed by
  * install step E042, sql/basic/db_characters.src/04-buddy-roster):
  *   buddy_clan    one row per owner: the owner's hidden companion account

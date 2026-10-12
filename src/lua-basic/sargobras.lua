@@ -814,7 +814,7 @@ local function summon_wanderer(player)
         if not mine[slot] then
             -- appear a little way out, in his tier's direction; his first
             -- circle is made from there and he is put straight on its rim
-            local a = (slot - 1) * 2 * math.pi / 7
+            local a = (slot - 1) * 2 * math.pi / 7      -- seven directions round the owner (tiers past seven share them)
             local c = player:SpawnCreature(math.random() < HAT_CHANCE and WANDERER_HATTED or WANDERER, x + math.cos(a) * CIRCLE_MAX, y + math.sin(a) * CIRCLE_MAX, z,
                 math.atan2(-math.sin(a), -math.cos(a)), TEMPSUMMON_MANUAL_DESPAWN, 0)
             if not c then

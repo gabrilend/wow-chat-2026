@@ -33,9 +33,12 @@
 #include "Util.h"
 #include <array>
 
-// Slot n is owed from this level: 1 at creation, then every tenth level.
-// Seven slots reach 60, basic's cap.
-static constexpr uint8 BUDDY_SLOTS = 7;
+// Slot n is owed from this level: 1 at creation, then every tenth level,
+// with no last one (owner, 2026-10-12, after a level-100 character got
+// only the tiers up to 60: "It'd be nice if there was one for every 10
+// levels"; until then seven slots, basic's cap of 60). The level a
+// character can reach (255) bounds it: slot 26 is owed at 250.
+static constexpr uint8 BUDDY_SLOTS = 26;
 uint8 BuddySlotLevel(uint8 slot) { return slot == 1 ? 1 : uint8((slot - 1) * 10); }
 
 // {{{ BuddyCompanionAccountName
