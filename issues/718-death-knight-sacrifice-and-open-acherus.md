@@ -421,9 +421,12 @@ at the start). The new skip rewards no quest, so it no longer arises.
   just spawn them in the full set, with a random choice between capes and
   final weapons." Each buddy wears every item of every story quest its
   owner has been rewarded (a choice quest's pick random per buddy, but the
-  same each time); without a story weapon, the 55 and 57 buddies carry the
-  Runed Soulblade and the 59 and 60 ones a random green two-hander a death
-  knight can wear, needing a level from 4 below theirs to theirs. A
+  same each time). The weapon: the 55 and 57 buddies always carry the
+  Runed Soulblade; the 59 and 60 ones the final quest's great weapon once
+  the owner has it ("If you've completed the quests, then the 59 and 60
+  buddies should get the blue two hander from the final quest"), until then
+  a random green two-hander a death knight can wear, needing a level from 4
+  below theirs to theirs. A
   skipper's buddies get the weapon rule only (the skipper's quests are
   rewarded, their gear isn't). Applied 10 seconds after a buddy appears
   and 3 seconds after its owner is rewarded a story quest; what it

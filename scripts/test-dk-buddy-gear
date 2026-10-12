@@ -10,6 +10,7 @@
 -- that the player has unlocked from the questline so far", and the whole
 -- set, with a random cloak and great weapon, once it is done. Checked:
 --   no story played             runeblade (55, 57), a green two-hander (59, 60)
+--   the final quest done        59 and 60 carry its great weapon; 55 and 57 the runeblade
 --   part of the story played    that part's gear, worn in the right places
 --   the whole story             the whole set, the choice the same each time
 --   a skipper                   the weapon rule only
@@ -119,7 +120,8 @@ print("part of the story played")
 rewarded = { [12619] = true, [12657] = true, [12678] = true }
 roster_slot = 3
 local p = new_buddy(604, 60); appear(p)
-check(p.worn[15].entry == 38707, "the story's runeblade, not a green")
+local pg = p.worn[15].entry
+check(pg == 44444 or pg == 44445, "the level-60 buddy keeps a green until the final quest (" .. pg .. ")")
 check(p.worn[1] and p.worn[1].entry == 38662, "the amulet at the neck")
 check(p.worn[10] and p.worn[10].entry == 38671, "the ring on a finger")
 check(p.worn[14] == nil, "no cloak yet: its quest isn't done")
@@ -133,6 +135,10 @@ check(cloak == 39320 or cloak == 38664 or cloak == 39322, "one of the three cloa
 check(weapon == 38632 or weapon == 38633, "one of the two great weapons (" .. weapon .. ")")
 local w2 = new_buddy(605, 60); appear(w2)
 check(w2.worn[14].entry == cloak and w2.worn[15].entry == weapon, "the same choices each time for that buddy")
+roster_slot = 1
+local early = new_buddy(608, 55); appear(early)
+check(early.worn[15].entry == 38707 and early.worn[14] ~= nil, "the level-55 buddy keeps the runeblade, with the rest of the set")
+roster_slot = 3
 local others, seen = 0, {}
 for low = 610, 640 do local o = new_buddy(low, 60); appear(o); seen[o.worn[14].entry] = true end
 for _ in pairs(seen) do others = others + 1 end
@@ -141,7 +147,8 @@ check(others == 3, "across buddies, every cloak gets chosen (" .. others .. " of
 print("the owner rewarded a quest")
 rewarded[12801] = nil
 local live = new_buddy(606, 60); appear(live)
-check(live.worn[15].entry == 38707, "before The Light of Dawn: the runeblade")
+local lg = live.worn[15].entry
+check(lg == 44444 or lg == 44445, "before The Light of Dawn: a green")
 rewarded[12801] = true
 env.CharDBQuery = function(sql)
     if sql:find("SELECT buddy FROM buddy_roster") then return rows({ { 606 } }) end

@@ -24,12 +24,13 @@
 --                      that offers a choice (the three cloaks, the two
 --                      great weapons) choosing for each buddy at random,
 --                      the same way every time for that buddy;
---   its weapon         if the story gave none yet: the Runed Soulblade for
---                      the buddies of 55 and 57 (slots 1 and 2), a random
---                      green two-handed weapon for 59 and 60 (slots 3 and
---                      4), one a death knight can wear, needing a level
---                      from 4 below the buddy's to its own; again the same
---                      one each time for that buddy.
+--   its weapon         the Runed Soulblade for the buddies of 55 and 57
+--                      (slots 1 and 2), always; for 59 and 60 (slots 3 and
+--                      4) the final quest's great weapon once the owner
+--                      has it, until then a random green two-handed weapon
+--                      a death knight can wear, needing a level from 4
+--                      below the buddy's to its own; again the same one
+--                      each time for that buddy.
 -- A skipper (ledger skipped, death-knight-souls.lua) has its quests
 -- rewarded but none of their gear, so its buddies get the weapon rule only.
 --
@@ -56,6 +57,7 @@ local DRESS_AFTER_LOGIN_MS           = 10000
 local DRESS_AFTER_QUEST_MS           = 3000
 local GREEN_LEVELS_BELOW             = 4           -- a green weapon may need this many levels below the buddy's
 local RUNEBLADE_SLOTS                = { [1] = true, [2] = true }   -- the buddies of 55 and 57
+local LIGHT_OF_DAWN                  = 12801       -- the story's final quest: the great weapons
 local TAG                            = "[death-knight-buddy-gear] "
 
 -- The story's quests in play order, { quest, races } (generated; see
@@ -159,15 +161,18 @@ local function wanted_gear(buddy, owner, slot_in_roster, skipped)
             end
         end
     end
-    if not want[SLOT_MAIN_HAND] then
-        if RUNEBLADE_SLOTS[slot_in_roster] then
-            want[SLOT_MAIN_HAND] = RUNEBLADE
-        else
-            local w = pick(green_weapons(buddy:GetLevel()), low, 0)
-            if w then want[SLOT_MAIN_HAND] = w
-            else print(string.format("%sERROR: no green two-handed weapon for a level-%d death knight; %s keeps its kit's",
-                TAG, buddy:GetLevel(), buddy:GetName())) end
-        end
+    -- the weapon (owner, 2026-10-12, refining it: "If you've completed the
+    -- quests, then the 59 and 60 buddies should get the blue two hander from
+    -- the final quest"): the 55 and 57 buddies always the runeblade; the 59
+    -- and 60 ones the final quest's great weapon once the owner has it (its
+    -- pick above), and a green until then
+    if RUNEBLADE_SLOTS[slot_in_roster] then
+        want[SLOT_MAIN_HAND] = RUNEBLADE
+    elseif skipped or not owner:GetQuestRewardStatus(LIGHT_OF_DAWN) then
+        local w = pick(green_weapons(buddy:GetLevel()), low, 0)
+        if w then want[SLOT_MAIN_HAND] = w
+        else print(string.format("%sERROR: no green two-handed weapon for a level-%d death knight; %s keeps its kit's",
+            TAG, buddy:GetLevel(), buddy:GetName())) end
     end
     return want
 end
