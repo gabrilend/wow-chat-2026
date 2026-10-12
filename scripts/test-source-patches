@@ -54,9 +54,31 @@ SCRATCH_ROOT="${DIR}/tmp/shared-memory"
 WORK="${SCRATCH_ROOT}/test-source-patches-${PROFILE}"
 rm -rf "${WORK}"
 mkdir -p "${WORK}"
-echo "Copying ${SRC_NAME} to RAM (without .git)..."
-rsync -a --exclude='.git' "${SRC}/" "${WORK}/tree/" || { echo "ERROR: copy failed"; exit 1; }
-rsync -a --exclude='.git' "${SRC}/" "${WORK}/pristine/" || { echo "ERROR: copy failed"; exit 1; }
+# The copy is each tree's committed state, not its working files: a build
+# cut off before its clean-up (a killed install, 2026-10-08) leaves its
+# patches in the real tree, and a copy of that would start "pristine" with
+# them already on, so every patch's revert looked wrong (2026-10-12). The
+# main tree and each module that is its own git repository are exported
+# from their commits; anything else under modules/ (a module a patch
+# copies in, B036's) is left out, as a fresh tree has none. A tree with no
+# .git (given on the command line) is copied as it is.
+if [[ -d "${SRC}/.git" ]]; then
+    echo "Exporting ${SRC_NAME}'s committed state to RAM..."
+    mkdir -p "${WORK}/pristine"
+    git -C "${SRC}" archive --format=tar HEAD | tar -x -C "${WORK}/pristine" \
+        || { echo "ERROR: export of ${SRC} failed"; exit 1; }
+    for mod_dir in "${SRC}"/modules/*/; do
+        [[ -d "${mod_dir}/.git" ]] || continue
+        mod="$(basename "${mod_dir}")"
+        mkdir -p "${WORK}/pristine/modules/${mod}"
+        git -C "${mod_dir}" archive --format=tar HEAD | tar -x -C "${WORK}/pristine/modules/${mod}" \
+            || { echo "ERROR: export of module ${mod} failed"; exit 1; }
+    done
+else
+    echo "Copying ${SRC_NAME} to RAM (it has no .git: as it is)..."
+    rsync -a "${SRC}/" "${WORK}/pristine/" || { echo "ERROR: copy failed"; exit 1; }
+fi
+rsync -a "${WORK}/pristine/" "${WORK}/tree/" || { echo "ERROR: copy failed"; exit 1; }
 # }}}
 
 # {{{ load_patches
