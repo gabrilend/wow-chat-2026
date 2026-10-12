@@ -244,8 +244,12 @@ report "Sargobras (7180001) stands in the Ebon Hold, in every phase, with his th
     "$(run_sql "SELECT 'spawn', COUNT(*) FROM ${WORLD}.creature WHERE guid = 7180001 AND id = 7180001 AND map = 0 AND phaseMask = 4294967295 HAVING COUNT(*) <> 1
         UNION ALL SELECT 'gossip flag', npcflag FROM ${WORLD}.creature_template WHERE entry = 7180001 AND npcflag & 1 = 0
         UNION ALL SELECT 'texts', COUNT(*) FROM ${WORLD}.npc_text WHERE ID BETWEEN 7180001 AND 7180003 HAVING COUNT(*) <> 3")"
-report "the soul ledger (basic_718_souls) exists in the characters database" \
-    "$(run_sql "SELECT 'missing' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '${CHARS}' AND table_name = 'basic_718_souls')")"
+report "the rising Sargobras (7180002): no menu, level 100, immune to players, never placed" \
+    "$(run_sql "SELECT 'template', COUNT(*) FROM ${WORLD}.creature_template WHERE entry = 7180002 AND npcflag = 0 AND minlevel = 100 AND maxlevel = 100 AND unit_flags & 256 = 256 HAVING COUNT(*) <> 1
+        UNION ALL SELECT 'placed', COUNT(*) FROM ${WORLD}.creature WHERE id = 7180002 HAVING COUNT(*) <> 0")"
+report "the soul ledger (basic_718_souls) exists in the characters database, with its skipped column" \
+    "$(run_sql "SELECT 'missing' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '${CHARS}' AND table_name = 'basic_718_souls')
+        UNION ALL SELECT 'no skipped column' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = '${CHARS}' AND table_name = 'basic_718_souls' AND column_name = 'skipped')")"
 # }}}
 
 # {{{ 617b: Sargobras the buddy selector

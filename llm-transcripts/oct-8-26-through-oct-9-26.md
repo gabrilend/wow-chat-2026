@@ -1,6 +1,6 @@
 # Conversation Summary: a4440faa-87b5-4fc6-b59d-3d898fd95767
 
-Generated on: 2026-10-09 20:38:13
+Generated on: 2026-10-09 20:50:28
 Models: claude-opus-5-5
 
 ## Contents
@@ -46,6 +46,10 @@ Models: claude-opus-5-5
     Arathi Basin and Alterac Valley test servers ready: pins moved to upstream's
     newest and the stand-in builder done. Next, you compile, then try `.buddy
     standin make horde healer 20` in game.
+11. 2026-10-09 20:41, after Request 52 - We're getting the basic and cc-test
+    servers ready for your next compile, and the pin move, stand-in builder,
+    test step and cave finder are all committed. Next: answer whether our SQL
+    may re-run once on first boot, and how caves should fit the area map.
 
 --------------------------------------------------------------------------------
 
@@ -5343,6 +5347,101 @@ Two questions:
    below, with "below" meaning 4 yards or more under the terrain. Does that fit
    how you picture caves, or should a cave be stored separately, by its entrance
    and floor outline?
+
+--------------------------------------------------------------------------------
+
+### User Request 53
+
+> 1. One-time re-run of our SQL: on the first boot with the new naming, every
+> one of our SQL files runs once more, after upstream's. They're built to be
+> safe to run twice. Is that acceptable, or should the first boot skip ours
+> until the next pin move?
+
+it should be fine.
+
+> 2. How a cave fits the area map: roaming parts are flat squares about 33 yards
+> across, but a cave sits underneath the hillside's square. My proposal is a
+> second layer, so each square can have one part on the surface and one below,
+> with "below" meaning 4 yards or more under the
+>      terrain. Does that fit how you picture caves, or should a cave be stored separately, by its entrance and floor outline?
+
+"roaming parts"? what do you mean by "the hillside's square"? Can we just sort
+them by x,y, and z? With certain Z levels only being accessible through certain
+x/y/z entrance locations... How do bots pathfind up, for example, mountains,
+right now? Let's say there's a tiny winding path, and a bunch of hills on either
+side. How does the navmesh represent that, and how would it change if we added a
+Z level above / below that winding path or whatever?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 53
+
+> Recording your first answer:
+
+*[commit] c99de9130 in wow-chat-2026 - SQL ordering plan: the one-time full re-run of our files is accepted*
+
+Recorded (the SQL plan's question is closed). On your other questions:
+
+**My terms, first.** "Roaming parts" are the smaller areas I cut each named area
+into, like the Valley of Trials' three (boars, scorpids, demons). Right now each
+part is stored as a set of flat map squares, about 33 yards on a side, labelled
+by x and y only. "The hillside's square" means the square on the surface
+directly above the cave. With flat squares, the hillside and the cave under it
+fall in the same square, and a square can only belong to one part.
+
+**How bots climb a mountain today.** The server's pathfinding never looks at the
+terrain directly; it searches the walking mesh. When the mesh is built, only
+ground a character can stand on and walk across becomes polygons. In this
+project's tile settings that means:
+- slopes up to 60 degrees;
+- steps up to 1.6 yards;
+- at least 1.6 yards of headroom.
+
+Anything steeper, taller or lower has no polygon at all. A path is a search
+through the polygons' neighbour links, the same links my cave test followed.
+
+For your winding path between hills:
+- The trail becomes a chain of polygons, each linked to the next along the
+  trail.
+- Hillsides too steep to walk have no polygons, so the trail's polygons have no
+  neighbours on those sides. The search can only go along the trail, so the path
+  winds with it.
+- Hills gentle enough to walk get polygons too, linked to the trail where they
+  meet it. Bots can then cut across them.
+
+**Adding a level above or below the path.** The mesh already does this:
+- **A bridge over the trail** is a second set of polygons at a higher z over the
+  same x and y. They link to each other along the bridge and to the ground only
+  at its two ends. Standing under the bridge, you're on a trail polygon with no
+  link upward, so the only way onto the bridge is through its ends.
+- **A cave under the trail** is the same thing below: a set of polygons at a
+  lower z, linked to the surface only at its mouth. That single link is what my
+  test counted as "one mouth".
+
+So the mesh doesn't arrange floors by height. It arranges them by links: a floor
+is reachable only through the polygons it's connected to, whatever the z.
+
+**So yes to "x, y and z, with entrances": that is the walking mesh.** The more
+natural design is to build roaming parts from mesh polygons instead of flat
+squares:
+- **Ownership:** each polygon belongs to one part.
+- **Lookup:** "which part is the owner in?" becomes "which polygon is the owner
+  standing on?". The buddy module already asks the mesh questions like that
+  (`buddies_navmesh.cpp`).
+- **Entrances:** an entrance is a link between two polygons of different parts.
+  A cave is a part whose only links to other parts are at its mouth. A tunnel
+  has two such links, on different sides.
+- **Bridges and floors:** a bridge or a building's upper floor works the same
+  way, with nothing special for z.
+
+There's one cost. The Valley of Trials' tile alone has 5,346 polygons, and the
+mesh has 3,780 tiles across all maps, a few million polygons in all. That's too
+many for database rows, so they'd live in data files baked per tile, like the
+town exploring grids already are.
+
+Should the parts be made of mesh polygons everywhere, or only underground? The
+second option keeps flat squares for open land and uses polygons for caves,
+buildings and bridges.
 
 --------------------------------------------------------------------------------
 

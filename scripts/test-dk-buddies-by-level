@@ -1,0 +1,154 @@
+#!/usr/bin/env luajit
+-- test-dk-buddies-by-level - a death knight player's buddies come by level
+-- (src/lua-basic/sargobras.lua, issues 718 and 617b), without a server.
+--
+-- For a general audience: a death knight player gets four buddies in all,
+-- and since 2026-10-12 one at a time: "55 = 1 buddy-bot, 57 = 2, 59 = 3,
+-- 60 = 4". The real script is loaded into a stand-in world with a fake
+-- death knight and a fake roster table, and the test walks it through:
+--   a fresh trade at 55            one buddy chosen, the rest named as later
+--   reaching 57, then jumping to 60 the next one, then the last two
+--   buddies set aside by the reset tool ("placed to the side for Gabrubre
+--   to recollect")                 each called back only at its own level
+--   a soul still owed              nothing
+--   all four already with it       nothing (never more than four)
+--   anyone not a death knight      nothing
+--
+-- Usage: scripts/test-dk-buddies-by-level [PROJECT_DIR]
+-- Exits non-zero when any check fails.
+
+-- {{{ configuration
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local SCRIPT = DIR .. "/src/lua-basic/sargobras.lua"
+-- }}}
+
+local fails, checks = 0, 0
+-- {{{ local function check
+local function check(name, ok)
+    checks = checks + 1
+    if ok then print("  ok:   " .. name) else print("  FAIL: " .. name); fails = fails + 1 end
+end
+-- }}}
+
+-- {{{ the stand-in world
+-- roster[slot] = { buddy, stage, class }; given = the ledger says the soul is given
+local roster, given, executed, heard = {}, true, {}, {}
+local function object(fields)
+    return setmetatable(fields, { __index = function() return function() return nil end end })
+end
+local dk = object({
+    level = 55, class = 6,
+    GetGUIDLow = function() return 501 end, GetGUID = function() return 501 end,
+    GetClass   = function(s) return s.class end,
+    GetLevel   = function(s) return s.level end,
+    GetTeam    = function() return 1 end,
+    GetCreaturesInRange = function() return {} end,
+    SendBroadcastMessage = function(_, t) heard[#heard + 1] = t end,
+    RegisterEvent = function() end,
+})
+local function db_result(rows)
+    if #rows == 0 then return nil end
+    local i = 1
+    return { GetUInt32 = function(_, c) return rows[i][c + 1] end,
+             GetString = function(_, c) return tostring(rows[i][c + 1]) end,
+             NextRow   = function() i = i + 1; return rows[i] ~= nil end }
+end
+local handlers = {}
+local stubs = {
+    CharDBQuery = function(sql)
+        if sql:match("^SHOW TABLES") then return db_result({ { 1 } }) end
+        if sql:find("FROM basic_718_souls") then return given and db_result({ { 1 } }) or nil end
+        if sql:find("SELECT slot, buddy, stage, class, profile, role FROM buddy_roster") then
+            local rows = {}
+            for slot = 1, 4 do
+                local r = roster[slot]
+                if r then rows[#rows + 1] = { slot, r.buddy, r.stage, r.class or 6, 1, 0 } end
+            end
+            return db_result(rows)
+        end
+        return nil
+    end,
+    CharDBExecute = function(sql)
+        executed[#executed + 1] = sql
+        local slot = sql:match("VALUES %(501, (%d+),")
+        if slot then roster[tonumber(slot)] = roster[tonumber(slot)] or { buddy = 0, stage = 0 } end
+        local s3, s = sql:match("SET stage = (%d+) WHERE owner = 501 AND slot = (%d+) AND stage = 5")
+        if s and roster[tonumber(s)] and roster[tonumber(s)].stage == 5 then roster[tonumber(s)].stage = tonumber(s3) end
+    end,
+    RegisterPlayerEvent = function(ev, fn) handlers[ev] = fn end,
+    RegisterCreatureGossipEvent = function() end,
+    GetPlayersInWorld = function() return {} end,
+    GetPlayerByGUID = function() return dk end,
+    GetCurrTime     = function() return 0 end,
+}
+setmetatable(_G, { __index = function(_, k)
+    if stubs[k] ~= nil then return stubs[k] end
+    return function() return nil end
+end })
+dofile(SCRIPT)
+local on_level_change = handlers[13]                    -- PLAYER_EVENT_ON_LEVEL_CHANGE
+local give = rawget(_G, "BuddiesGiveDeathKnightBuddies")
+check("the script loads and offers the trade's call and a level handler", type(give) == "function" and type(on_level_change) == "function")
+if type(give) ~= "function" or type(on_level_change) ~= "function" then os.exit(1) end
+
+local function inserted()                               -- slots written as new chosen rows since the last look
+    local s = {}
+    for _, sql in ipairs(executed) do local slot = sql:match("INSERT IGNORE INTO buddy_roster .- VALUES %(501, (%d+),") if slot then s[#s + 1] = slot end end
+    executed = {}
+    return table.concat(s, ",")
+end
+local function called_back()                            -- set-aside slots called back since the last look
+    local s = {}
+    for _, sql in ipairs(executed) do local slot = sql:match("SET stage = 3 WHERE owner = 501 AND slot = (%d+)") if slot then s[#s + 1] = slot end end
+    executed = {}
+    return table.concat(s, ",")
+end
+local function level_to(n) local old = dk.level; dk.level = n; on_level_change(13, dk, old) end
+-- }}}
+
+print("a fresh trade at 55")
+give(dk)
+check("one buddy is chosen (slot 1)", inserted() == "1")
+check("the rest are named as later: 57, 59 and 60", (heard[#heard] or ""):find("level 57, 59, 60") ~= nil)
+roster[1].buddy, roster[1].stage = 601, 0               -- the buddy module made it
+
+print("levelling")
+level_to(56)
+check("56: nothing", inserted() == "")
+level_to(57)
+check("57: the second (slot 2)", inserted() == "2")
+roster[2].buddy = 602
+level_to(60)
+check("57 to 60 at once: the third and the fourth (slots 3, 4)", inserted() == "3,4")
+roster[3].buddy, roster[4].buddy = 603, 604
+level_to(60)
+check("all four with it: nothing more, ever", inserted() == "" and called_back() == "")
+
+print("buddies set aside by the reset tool, death knight back at 55")
+for slot = 1, 4 do roster[slot].stage = 5 end
+dk.level = 55
+give(dk)
+check("at the trade: only slot 1 is called back", called_back() == "1")
+level_to(57)
+check("57: slot 2", called_back() == "2")
+level_to(59)
+check("59: slot 3", called_back() == "3")
+check("no new buddy is chosen while set-aside ones wait", inserted() == "")
+level_to(60)
+check("60: slot 4", called_back() == "4")
+
+print("a soul still owed")
+roster, given = {}, false
+dk.level = 57
+level_to(58)
+check("no buddies before the trade", inserted() == "" and called_back() == "")
+
+print("not a death knight")
+given, dk.class = true, 1
+level_to(59)
+check("nothing", inserted() == "" and called_back() == "")
+
+print("")
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)

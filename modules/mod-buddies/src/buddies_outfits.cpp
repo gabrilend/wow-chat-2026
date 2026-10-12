@@ -31,7 +31,7 @@
 using namespace Acore::ChatCommands;
 
 // {{{ the look
-static uint32 const SARGOBRAS[] = { 6170001, 6170002, 7180001 };   // the valley's, the wanderer, Acherus's
+static uint32 const SARGOBRAS[] = { 6170001, 6170002, 7180001, 7180002 };   // the valley's, the wanderer, Acherus's, the one who raises a skipper (718)
 static constexpr uint32 HUMAN_MALE_BODY = 49;      // the human man's own model (creature_model_info 49)
 // Item slots in the client's order (CreatureOutfits.h): head, shoulders,
 // shirt, chest, waist, legs, feet, wrists, hands, back, tabard.

@@ -12,7 +12,15 @@
 -- (src/lua-basic/death-knight-souls.lua). His model is a stand-in, Lord
 -- Gregor Lescovar's (a Stormwind noble), until his outfit is chosen (617f).
 --
--- Creature 7180001, spawns 7180001-7180002, texts 7180001-7180003. Re-applicable:
+-- The rising one (creature 7180002, 2026-10-12): the Sargobras who raises a
+-- death knight that skipped the story and fell from the Ebon Hold (the
+-- owner: "it should be un-talkable, it should be a new Sargobras. Also he
+-- should be level 100"). Never placed in the world; death-knight-souls.lua
+-- summons him for a few seconds. No menu (npcflag 0), level 100 shown as
+-- "??" (boss rank, as 7180001), friendly to all and immune to players
+-- (unit_flags 256), so he can be looked at but not talked to or fought.
+--
+-- Creatures 7180001-7180002, spawns 7180001-7180002, texts 7180001-7180003. Re-applicable:
 -- each apply first removes what an earlier one added.
 -- Database: acore_world_basic. Applied by E040.
 -- ============================================================================
@@ -21,8 +29,8 @@ DELETE FROM `creature`                WHERE `guid`       BETWEEN 7180001 AND 718
 -- the old spawn id, past the server's 16777215 spawn-id cap (it stopped at
 -- startup); cleared so a database that holds it is repaired on re-apply
 DELETE FROM `creature`                WHERE `guid`       = 71800001;
-DELETE FROM `creature_template_model` WHERE `CreatureID` = 7180001;
-DELETE FROM `creature_template`       WHERE `entry`      = 7180001;
+DELETE FROM `creature_template_model` WHERE `CreatureID` BETWEEN 7180001 AND 7180002;
+DELETE FROM `creature_template`       WHERE `entry`      BETWEEN 7180001 AND 7180002;
 DELETE FROM `npc_text`                WHERE `ID` BETWEEN 7180001 AND 7180003;
 
 -- a copy of Lord Gregor Lescovar (1754): gossip only, friendly to all
@@ -32,12 +40,29 @@ UPDATE `tmp_718_template` SET
   `entry` = 7180001, `name` = 'Sargobras', `subname` = '', `npcflag` = 1,
   `difficulty_entry_1` = 0, `difficulty_entry_2` = 0, `difficulty_entry_3` = 0, `KillCredit1` = 0, `KillCredit2` = 0,
   `faction` = 35, `gossip_menu_id` = 0, `minlevel` = 80, `maxlevel` = 80,
-  `lootid` = 0, `pickpocketloot` = 0, `skinloot` = 0, `AIName` = '', `ScriptName` = '';
+  `lootid` = 0, `pickpocketloot` = 0, `skinloot` = 0, `AIName` = '', `ScriptName` = '',
+  `rank` = 3;
+-- rank 3 (boss): the client shows his level as "??", as it does the Lich
+-- King's beside him (owner, 2026-10-12: "can we make the Lich King's level
+-- be like, a skull, or ?? or something instead? It's more mysterious")
 INSERT INTO `creature_template` SELECT * FROM `tmp_718_template`;
 DROP TEMPORARY TABLE `tmp_718_template`;
 DROP TEMPORARY TABLE IF EXISTS `tmp_718_model`;
 CREATE TEMPORARY TABLE `tmp_718_model` AS SELECT * FROM `creature_template_model` WHERE `CreatureID` = 1754;
 UPDATE `tmp_718_model` SET `CreatureID` = 7180001;
+INSERT INTO `creature_template_model` SELECT * FROM `tmp_718_model`;
+DROP TEMPORARY TABLE `tmp_718_model`;
+
+-- 7180002, the rising one: a copy of 7180001 with no menu, level 100,
+-- immune to players
+DROP TEMPORARY TABLE IF EXISTS `tmp_718_template`;
+CREATE TEMPORARY TABLE `tmp_718_template` AS SELECT * FROM `creature_template` WHERE `entry` = 7180001;
+UPDATE `tmp_718_template` SET `entry` = 7180002, `npcflag` = 0, `minlevel` = 100, `maxlevel` = 100, `unit_flags` = 256;
+INSERT INTO `creature_template` SELECT * FROM `tmp_718_template`;
+DROP TEMPORARY TABLE `tmp_718_template`;
+DROP TEMPORARY TABLE IF EXISTS `tmp_718_model`;
+CREATE TEMPORARY TABLE `tmp_718_model` AS SELECT * FROM `creature_template_model` WHERE `CreatureID` = 7180001;
+UPDATE `tmp_718_model` SET `CreatureID` = 7180002;
 INSERT INTO `creature_template_model` SELECT * FROM `tmp_718_model`;
 DROP TEMPORARY TABLE `tmp_718_model`;
 

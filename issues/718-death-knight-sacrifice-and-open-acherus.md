@@ -171,10 +171,16 @@ Two layers, one per half of the user's design.
   (617b, 2026-09-25). That setting stops every death knight bot from
   logging in, so the buddy module will need its own exception (or the
   setting off, with random bots already off on basic, 155b).
-- **Four buddies at the trade** (owner, 2026-09-26): accepting the soul
-  trade gives the death knight exactly four buddies, death knights of
-  random races, and never more; built in `src/lua-basic/sargobras.lua`,
-  called from the trade in `death-knight-souls.lua`. Taking the soul back
+- **Four buddies from the trade, by level** (owner, 2026-09-26; by level
+  since 2026-10-12: "55 = 1 buddy-bot, 57 = 2, 59 = 3, 60 = 4"): a death
+  knight that has given its soul gets four buddies in all, death knights
+  of random races, and never more; one at 55, the second at 57, the third
+  at 59, the fourth at 60. A buddy is chosen when its level is reached;
+  one the death knight already had and is below the level of again waits
+  aside ("set aside", roster stage 5, which the buddy module neither logs
+  in nor re-stages) and comes back at its level, made again at the owner's
+  level. Built in `src/lua-basic/sargobras.lua`, called from the trade in
+  `death-knight-souls.lua` and at every level. Taking the soul back
   erases the death knight with a command that fires no character-delete
   event, so the take-back also deletes its companion account (and with it
   the four) and its roster rows.
@@ -302,25 +308,116 @@ death knight story? They otherwise can talk to Arthas for the first DK
 quest." (2026-09-25 kept the story for everyone; it is now kept by
 default and skippable.)
 
-Built 2026-10-04 in `death-knight-souls.lua`, tested offline by
-`scripts/test-dk-skip-story` (12 checks), not yet tried in game. While a
+**The menu** (built 2026-10-04 in `death-knight-souls.lua`): while a
 soul is owed, Sargobras in Acherus also offers "I'd rather skip the
 story."; once asked, each soul in his list reads "Give X (level N) to the
-Lich King, and skip the story." and its confirmation says so. Two seconds
-after that trade, every quest of the story is taken, completed and
-rewarded in play order, the server's own way, so its spells (Runeforging,
-the Deathcharger, Death Gate), talent points, gear (the first choice where
-a quest offers several) and experience arrive as if it were played; quests
-already rewarded are passed over; the death knight then stands at the
-Ebon Hold, a step in front of the other Sargobras, between the portals to
-the capitals. A quest that won't go through is named to the player and
-logged as an error with what did. Asked for and not traded yet is kept in
-memory (a relog asks again). Once asked, the menu also offers "I changed
-my mind, I want to follow the Lich King for a time." (owner, 2026-10-04:
-"there should also be a second option ... which undoes it"), which takes
-the asking back: the souls read plain again and the story is played. The
-offline test has 15 checks. Without asking, nothing changes: the Lich
+Lich King, and skip the story." and its confirmation says so. Asked for
+and not traded yet is kept in memory (a relog asks again). Once asked,
+the menu also offers "I changed my mind, I want to follow the Lich King
+for a time." (owner, 2026-10-04: "there should also be a second option
+... which undoes it"), which takes the asking back: the souls read plain
+again and the story is played. Without asking, nothing changes: the Lich
 King gives the first quest once the soul is paid.
+
+**First try in game, 2026-10-12** (Gabrubre, giving Karson). The skip
+then rewarded every quest of the story the server's own way. Verbatim:
+
+> alright I just raised Gabrubre to the living, and the coolest thing
+> happened - we spawned UNDER Acherus, and fell to our deaths, Sargobras
+> and I. Except, Sargobras didn't die, which is fine. I love that so
+> much. However, there were a bunch of log errors, and now when I mouse
+> over the items added to my inventory it says "retrieving item
+> information..." - can you make it so we ONLY get the runesword? And
+> only the first one you get. And we should rejoin the living at level
+> 55, in the plaguelands, perfect.
+
+What the rewards had done (read from the database afterwards): the
+story's experience took Gabrubre from 55 to 60, basic's cap, and past the
+cap the experience was paid as money, which with the quests' own money
+came to 284 gold ("my character spawned with 284 gold? that seems like a
+lot. I didn't even do any questing."); 19 reward items, a letter (News
+From The North), Runeforging, the Deathcharger, Journeyman Riding, Death
+Gate, 4,563 reputation with the Knights of the Ebon Blade and two riding
+achievements. One quest was reported as refused ("it said that one of
+the quests couldn't complete except manually"): the console line naming
+it was not kept, and afterwards all 46 of the orc's story quests read as
+rewarded. The likeliest cause, from the server code: the Lua engine's
+"add quest" gives up silently when the quest log is full or a quest's
+starting item can't be put in the bags, and the rewards had filled the
+backpack by the second half of the story (eight story quests hand an item
+at the start). The new skip rewards no quest, so it no longer arises.
+
+**The skip, as of 2026-10-12** (owner's words, same message):
+
+- **Only the runeblade.** "can you make it so we ONLY get the runesword?
+  And only the first one you get." The first sword of the story is the
+  Runed Soulblade (item 38707, the reward of The Emblazoned Runeblade,
+  12619). The skip gives that one item, once (not again if the death
+  knight already has one, bank included), and nothing else: no quest is
+  taken or rewarded, so no experience, money, spells, reputation or
+  other gear. "Retrieving item information" on the other rewards stops
+  mattering, since they are no longer given.
+- **Level 55, in the Plaguelands.** No experience is given, so the death
+  knight leaves at the level it was made at.
+- **The fall stays.** The skip places the death knight at the Ebon Hold's
+  spot on map 0 (2336, -5678, 382, between its portals). On 2026-10-12
+  the floor was not there for the client and the death knight fell to
+  the ground of Eastern Plaguelands (z 154) and died. The owner loved it;
+  it is now the way the living are rejoined. Why the floor was missing
+  is not known (open question below).
+- **A small random radius.** "we should spawn in a small random radius,
+  so when we fall to our deaths our bones don't pile up on the EXACT same
+  spot." The spot is moved by up to 6 yards in a random direction.
+- **The rise.** "after we land and the character dies, Sargobras should
+  point at you, pause his animation if possible while pointing, and
+  there should be a red circle of demon light that appears under you and
+  then you can respawn with a resurrection effect on both you and
+  Sargobras and he should disappear by the time the effect completes."
+  And: "the Sargobras that spawns for this (and then disappears rapidly)
+  should be un-talkable, it should be a new Sargobras. Also he should be
+  level 100." Played in order, from the moment the death knight is dead:
+  1. a new Sargobras (creature 7180002: no menu, level 100, friendly,
+     immune to players) appears a few yards from the body, facing it;
+  2. he points at the body (the held point emote) and his animation is
+     frozen mid-point (the "Freeze Anim" aura);
+  3. a red circle of light appears under the body (an invisible marker
+     carrying the "Spotlight (Red)" aura, since a dead body can't carry
+     auras itself);
+  4. the death knight is raised with full health where it fell (the body
+     becomes bones there), and the resurrection effect plays on the
+     death knight and on Sargobras;
+  5. Sargobras and the circle are gone by the time the effect ends.
+  A death knight that released its spirit meanwhile is brought back to
+  the body first. One that survived the fall (still alive 45 seconds
+  after the step off, loading screen included) gets no scene and its
+  buddies at once, and that is logged as an error.
+- **Buddies by level** (applies to every death knight player, skipping or
+  not): "I think we should give one buddy-bot every other level, so: 55 =
+  1 buddy-bot, 57 = 2, 59 = 3, 60 = 4." Still four in all, chosen at the
+  trade as before (617b), but brought in by level. Buddies the death
+  knight already has and is not yet level for are set aside: "make sure
+  that the buddy-bots are placed to the side for Gabrubre to recollect
+  when she hits level 60 again". A set-aside buddy keeps its character
+  and comes back at its level, made again at the owner's level (617a6's
+  re-making). For a skipping death knight the buddies are brought in
+  after the rise, in the Plaguelands, so they never have to follow it out
+  of Acherus (the 2026-10-12 log: four buddies left on map 609 trying
+  every minute to cross to map 0, "no way to the owner's map was found").
+- **Taking the soul back.** A skipper never finishes the story, so the
+  ledger records the skip, and the Ebon Hold Sargobras offers "I want my
+  old life back" to a skipper as to one who played the story.
+
+**Testing it again: `scripts/reset-dk-soul-trade`.** "Can you... Undo
+everything that we did exactly, so we can test it a couple times". The
+tool puts a death knight that has given its soul back to owing it: the
+soul returns to its own account ("Don't forget to switch Karson back"),
+the ledger reads owed, the story's quests, items, letter, spells,
+riding, reputation, achievements and experience come off, level and
+money go back to a new death knight's (55; basic's starting money for
+death knights), talents are reset at next login, its buddies are set
+aside, and it stands where new death knights appear in Acherus. Run with
+the server up (the account move goes through the server's console) and
+with the death knight logged out.
 
 The story's quests come from `scripts/generate-basic-dk-skip-quests`
 (writes `src/lua-basic/data/death-knight-skip-quests.lua`): every quest
@@ -329,7 +426,9 @@ Battle For The Ebon Hold (13166), ordered after the quests they follow on
 from: 55 quests. "A Special Surprise" is ten quests, one per race (the
 prisoner of your own people); the world database marks them only by
 faction, so the generator pins each to its race from the scene's server
-script (`ScarletEnclave/chapter2.cpp`), and a death knight gets only its own.
+script (`ScarletEnclave/chapter2.cpp`), and a death knight gets only its
+own. Since 2026-10-12 the skip rewards none of them; the reset tool reads
+the list to know what to take off.
 
 ## Open Questions
 
@@ -438,3 +537,22 @@ script (`ScarletEnclave/chapter2.cpp`), and a death knight gets only its own.
   right, or does Sargobras let it go?
 - A held soul's own buddies (617): they belong to that character, so do
   they wait with it on the holding account, and come back with it?
+- (2026-10-12) Why was the Ebon Hold's floor missing on map 0? Its
+  creatures and portals stand at z 382 there, the skip placed the death
+  knight at z 382, and the client fell through to z 154. If the floor is
+  missing for every death knight, the Ebon Hold Sargobras (who gives a
+  soul back) and the portals to the capitals are unreachable too. The
+  fall is now wanted for the skip; should the Ebon Hold itself be
+  looked into?
+- (2026-10-12) The skipper gets no Runeforging, Deathcharger or Death
+  Gate (only the runeblade, as asked). Without Death Gate a skipper has no
+  way back to the Ebon Hold Sargobras to take the soul back. Is that
+  intended?
+- (2026-10-12) The red circle (Spotlight (Red), spell 62296), the frozen
+  point (Freeze Anim, 16245) and the resurrection effect (Resurrection
+  Impact Visual, 24171) are chosen from the spell list by name; none has
+  been seen in game. If one looks wrong, the spell ids sit together at
+  the top of `death-knight-souls.lua`.
+- (2026-10-12) Until the next compile the rising Sargobras wears the
+  stand-in model (the outfit list that dresses Sargobras is C++,
+  `buddies_outfits.cpp`, and gains the new creature only when built).

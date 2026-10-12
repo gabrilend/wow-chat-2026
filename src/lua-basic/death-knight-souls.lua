@@ -77,18 +77,49 @@ local INTID_SKIP         = 3                        -- "I'd rather skip the stor
 local INTID_UNSKIP       = 4                        -- "I changed my mind, I want to follow the Lich King for a time"
 -- After the trade, a death knight who asked to skip the story is placed a
 -- step in front of the Ebon Hold's Sargobras (spawn 7180001, map 0), where
--- the story ends, facing him: between the portals to the capitals.
+-- the story ends, facing him: between the portals to the capitals. On
+-- 2026-10-12 the floor wasn't there for the client and the death knight
+-- fell to the Plaguelands below and died; the owner loved it ("we spawned
+-- UNDER Acherus, and fell to our deaths"), so the fall is how the living
+-- are rejoined now, and the rise (below) follows it. Why the floor was
+-- missing is an open question in issue 718.
 local SKIP_LANDING       = { map = 0, x = 2336.2 + math.cos(0.66) * 2, y = -5677.9 + math.sin(0.66) * 2, z = 382.3, o = (0.66 + math.pi) % (2 * math.pi) }
+local SKIP_SCATTER       = 6                        -- yards: "a small random radius, so when we fall to our deaths our bones don't pile up"
 local SKIP_AFTER_MS      = 2000                     -- after the trade's own writes and his flame
+local RUNEBLADE          = 38707                    -- Runed Soulblade, the story's first sword (12619): "ONLY get the runesword ... only the first one"
+
+-- {{{ the rise (2026-10-12)
+-- "after we land and the character dies, Sargobras should point at you,
+-- pause his animation if possible while pointing, and there should be a
+-- red circle of demon light that appears under you and then you can
+-- respawn with a resurrection effect on both you and Sargobras and he
+-- should disappear by the time the effect completes." Times are from the
+-- moment the death knight is found dead; the spells are picked from the
+-- client's spell list by name and not yet seen in game (issue 718).
+local RISER              = 7180002                  -- the rising Sargobras (25-death-knight-sargobras): no menu, level 100
+local CIRCLE_MARKER      = 23837                    -- ELM General Purpose Bunny: invisible, carries the circle (a dead body can't hold an aura)
+local CIRCLE_SPELL       = 62296                    -- Spotlight (Red)
+local FREEZE_SPELL       = 16245                    -- Freeze Anim: holds him mid-point
+local RISE_SPELL         = 24171                    -- Resurrection Impact Visual (the core's own scripts use it as a res effect)
+local EMOTE_STATE_POINT  = 29                       -- SharedDefines.h: pointing, held
+local TEMPSUMMON_TIMED_DESPAWN = 3                  -- mod-ale SpawnCreature's type 3
+local RISER_DISTANCE     = 4                        -- yards from the body
+local RISE_WATCH_MS      = 250                      -- how often the fall is checked for a death
+local RISE_WATCH_FOR_MS  = 45000                    -- alive this long after the step off (loading screen and fall included): the fall didn't kill
+local RISE_AT = {                                   -- ms after the death is found
+    appear = 500, point = 1000, freeze = 1700, circle = 2200, raise = 4700, gone = 6200,
+}
+-- }}}
 local HOLDING_PREFIX     = "SOULS"                  -- holding account name: SOULS<player account id>
 local RETURN_DELAY_MS    = 5000                     -- after the erase, before the soul is moved back (the erase's writes land first)
 
 -- {{{ local function ledger
 -- The death knight's row, or nil when it has none (never held).
 local function ledger(dk_guid)
-    local q = CharDBQuery("SELECT soul, soul_account, holding_account, state FROM basic_718_souls WHERE dk = " .. dk_guid)
+    local q = CharDBQuery("SELECT soul, soul_account, holding_account, state, skipped FROM basic_718_souls WHERE dk = " .. dk_guid)
     if not q then return nil end
-    return { soul = q:GetUInt32(0), soul_account = q:GetUInt32(1), holding = q:GetUInt32(2), state = q:GetUInt32(3) }
+    return { soul = q:GetUInt32(0), soul_account = q:GetUInt32(1), holding = q:GetUInt32(2), state = q:GetUInt32(3),
+             skipped = q:GetUInt32(4) == 1 }
 end
 -- }}}
 
@@ -126,9 +157,11 @@ end
 -- For The Ebon Hold" (13166) turned in, the last quest both factions share
 -- (only the trips to Stormwind or Orgrimmar come after). Sargobras gives a
 -- soul back only then (owner, 2026-09-29: "Sargobras can only return a DK
--- to life once they've completed the intro zone").
-local function intro_done(player)
-    return player:GetQuestRewardStatus(INTRO_LAST_QUEST)
+-- to life once they've completed the intro zone"). A death knight that
+-- skipped the story never plays it, so its ledger's skip counts as done
+-- (2026-10-12).
+local function intro_done(player, row)
+    return row.skipped or player:GetQuestRewardStatus(INTRO_LAST_QUEST)
 end
 -- }}}
 
@@ -327,9 +360,8 @@ local function give_soul(player, soul_guid, done)
         hold_selection(p, false)                    -- everyone selectable again (164)
         p:SendBroadcastMessage(string.format("Sargobras says: %s, for the Lich King. You, for the living. Off you go. "
             .. "(%d profession skills and %d recipes carried over.)", soul.name, skills, learned))
-        -- the four buddies a death knight gets, at this moment and no other (617b)
-        if BuddiesGiveDeathKnightBuddies then BuddiesGiveDeathKnightBuddies(p)
-        else print("[death-knight-souls] ERROR: sargobras.lua isn't loaded; " .. dk_name .. " got no buddies (its next login gives them)") end
+        -- the buddies (617b, by level since 2026-10-12) are the caller's to
+        -- give: at once for the story, after the rise for a skipper
         if done then done(p) end
     end
 
@@ -414,7 +446,7 @@ local function take_back(player, row)
 end
 -- }}}
 
--- {{{ the story skipped (2026-10-04)
+-- {{{ the story skipped (2026-10-04; reshaped 2026-10-12)
 -- The owner: "can we make a patch based on the one we have already that
 -- makes death knights have an option when talking to Sargobras to skip the
 -- death knight story? They otherwise can talk to Arthas for the first DK
@@ -423,40 +455,162 @@ end
 -- story", and that trade is followed by the skip; and "I changed my mind,
 -- I want to follow the Lich King for a time." takes the asking back. Asked for and not traded
 -- yet is kept in memory only (a relog asks again).
-local DK_STORY = dofile(script_dir() .. "data/death-knight-skip-quests.lua")  -- { quest, races } in play order
+--
+-- Until 2026-10-12 the skip rewarded every quest of the story. Its
+-- experience took the first skipper from 55 to 60 and, past basic's cap,
+-- paid the rest as money (284 gold with the quests' own), and its rewards
+-- filled the bags. The owner: "can you make it so we ONLY get the
+-- runesword? And only the first one you get. And we should rejoin the
+-- living at level 55, in the plaguelands, perfect." So the skip now gives
+-- the runeblade and the fall, and no quest is taken or rewarded.
 local skip_wanted = {}                              -- death knight guid (low) -> true
 
--- {{{ local function skip_story
--- Every quest of the story for this death knight's race, in play order,
--- taken, completed and rewarded the server's own way, so the story's
--- spells, talent points, gear and experience arrive as if it were played
--- (the first reward choice where a quest offers several). Quests already
--- rewarded are passed over. Then it stands at the Ebon Hold. Any quest
--- that would not go through is named to the player and the log, with what
--- did go through.
-local function skip_story(player)
-    local mask, done, already, failed = player:GetRaceMask(), 0, 0, {}
-    for _, q in ipairs(DK_STORY) do
-        local quest, races = q[1], q[2]
-        if races == 0 or bit.band(races, mask) ~= 0 then
-            if player:GetQuestRewardStatus(quest) then
-                already = already + 1
-            else
-                player:AddQuest(quest)
-                player:CompleteQuest(quest)
-                player:RewardQuest(quest)
-                if player:GetQuestRewardStatus(quest) then done = done + 1 else failed[#failed + 1] = tostring(quest) end
-            end
+-- {{{ local function give_buddies
+-- The death knight's buddies (sargobras.lua: by level, 55/57/59/60). An
+-- error, not a silence, when that script isn't loaded; its next login
+-- gives them then.
+local function give_buddies(p)
+    if BuddiesGiveDeathKnightBuddies then BuddiesGiveDeathKnightBuddies(p)
+    else print("[death-knight-souls] ERROR: sargobras.lua isn't loaded; " .. p:GetName() .. " got no buddies (its next login gives them)") end
+end
+-- }}}
+
+-- {{{ local function rise
+-- The scene at the body, from the moment the death knight is found dead
+-- (times in RISE_AT, spells at the top of the file):
+--   appear  the rising Sargobras stands a few yards off, facing the body
+--   point   he points at it, held
+--   freeze  his animation stops mid-point
+--   circle  the red circle under the body, on an invisible marker
+--   raise   the death knight lives again at the body (which becomes
+--           bones), the resurrection effect on it and on him; its buddies
+--           are given now, in the Plaguelands, so none is left in Acherus
+--           trying to follow it out
+--   gone    he and the circle are gone
+-- The body's spot is read once, at the start: a death knight that released
+-- its spirit meanwhile is raised where its spirit is and brought back to
+-- the body. Each step looks the death knight up again; one that logged
+-- out ends the scene, and Sargobras and the circle leave on their own
+-- despawn timers.
+local function rise(player)
+    local guid, map_id = player:GetGUID(), player:GetMapId()
+    local bx, by, bz, bo = player:GetX(), player:GetY(), player:GetZ(), player:GetO()
+    local theta = math.random() * 2 * math.pi
+    local sx    = bx + math.cos(theta) * RISER_DISTANCE
+    local sy    = by + math.sin(theta) * RISER_DISTANCE
+    -- at the body's height: a height lookup from the sky would find the
+    -- Ebon Hold's floor hanging above the body, not the ground under it
+    local sz    = bz
+    local face  = math.atan2(by - sy, bx - sx) % (2 * math.pi)
+    local riser, marker                             -- their guids, once they stand
+
+    -- one step of the scene, at `ms` after the death was found
+    local function at(ms, fn)
+        CreateLuaEvent(function()
+            local p = GetPlayerByGUID(guid)
+            if p then fn(p) end
+        end, ms, 1)
+    end
+    local function find(p, g) return g and p:GetMap():GetWorldObject(g) end
+
+    at(RISE_AT.appear, function(p)
+        local c = p:SpawnCreature(RISER, sx, sy, sz, face, TEMPSUMMON_TIMED_DESPAWN, RISE_AT.gone - RISE_AT.appear + 2000)
+        if not c then
+            print("[death-knight-souls] ERROR: the rise for " .. p:GetName() .. ": Sargobras (creature " .. RISER
+                .. ") could not be summoned; the circle and the raise still follow. To debug: is install step E040 applied?")
+            return
         end
+        riser = c:GetGUID()
+    end)
+    at(RISE_AT.point, function(p)
+        local c = find(p, riser)
+        if c then c:SetFacing(face); c:EmoteState(EMOTE_STATE_POINT) end
+    end)
+    at(RISE_AT.freeze, function(p)
+        local c = find(p, riser)
+        if c then c:AddAura(FREEZE_SPELL, c) end
+    end)
+    at(RISE_AT.circle, function(p)
+        local m = p:SpawnCreature(CIRCLE_MARKER, bx, by, bz, 0, TEMPSUMMON_TIMED_DESPAWN, RISE_AT.gone - RISE_AT.circle + 2000)
+        if not m or not m:AddAura(CIRCLE_SPELL, m) then
+            print("[death-knight-souls] ERROR: the rise for " .. p:GetName() .. ": no red circle (marker "
+                .. CIRCLE_MARKER .. (m and " stands, but spell " .. CIRCLE_SPELL .. " didn't take" or " could not be summoned") .. ")")
+        end
+        if m then marker = m:GetGUID() end
+    end)
+    at(RISE_AT.raise, function(p)
+        local released = p:GetDistance(bx, by, bz) > 5      -- its spirit went to a graveyard meanwhile
+        if p:IsDead() then p:ResurrectPlayer(1.0, false) end -- full health; the body becomes bones
+        if released then p:Teleport(map_id, bx, by, bz, bo) end
+        local c = find(p, riser)
+        if c then
+            c:RemoveAura(FREEZE_SPELL)
+            c:EmoteState(0)
+            c:CastSpell(p, RISE_SPELL, true)
+            c:CastSpell(c, RISE_SPELL, true)
+            c:SendUnitSay("Up. The living are waiting.", 0)
+        else
+            p:CastSpell(p, RISE_SPELL, true)
+        end
+        give_buddies(p)
+    end)
+    at(RISE_AT.gone, function(p)
+        local c, m = find(p, riser), find(p, marker)
+        if c then c:DespawnOrUnsummon(0) end
+        if m then m:DespawnOrUnsummon(0) end
+    end)
+end
+-- }}}
+
+-- {{{ local function watch_the_fall
+-- Checks every RISE_WATCH_MS whether the fall has killed the death knight,
+-- then plays the rise. Still alive after RISE_WATCH_FOR_MS (the loading
+-- screen and the fall both fit well inside it): the fall didn't kill, so
+-- there is nothing to rise from; it is said, logged as an error (the fall
+-- is the design), and the buddies are given all the same. A death knight
+-- that logs out mid-fall gets its buddies at its next login (sargobras.lua)
+-- and no scene.
+local function watch_the_fall(player)
+    local guid, name, waited = player:GetGUID(), player:GetName(), 0
+    local function look()
+        local p = GetPlayerByGUID(guid)
+        if not p then return end
+        if p:IsDead() then return rise(p) end
+        waited = waited + RISE_WATCH_MS
+        if waited >= RISE_WATCH_FOR_MS then
+            print(string.format("[death-knight-souls] ERROR: %s skipped the story and was still alive %d s after the fall"
+                .. " began (map %d at %.1f, %.1f, %.1f); no rise played, buddies given. To debug: did the Ebon Hold's floor"
+                .. " hold this time (issue 718's open question)?", name, RISE_WATCH_FOR_MS / 1000, p:GetMapId(), p:GetX(), p:GetY(), p:GetZ()))
+            p:SendBroadcastMessage("Sargobras says: On your feet already? Then you never needed me.")
+            give_buddies(p)
+            return
+        end
+        CreateLuaEvent(look, RISE_WATCH_MS, 1)
     end
-    local line = string.format("Your story is told: %d quests rewarded, %d already were.", done, already)
-    if #failed > 0 then
-        line = line .. " These would not go through: " .. table.concat(failed, ", ") .. " (a game master can finish them by hand)."
-        print(string.format("[death-knight-souls] ERROR: skipping the story for %s: %d rewarded, %d already, refused: %s (to debug: quest log full? an item-started quest? check each with .quest add / .quest complete)",
-            player:GetName(), done, already, table.concat(failed, ", ")))
+    CreateLuaEvent(look, RISE_WATCH_MS, 1)
+end
+-- }}}
+
+-- {{{ local function skip_story
+-- The runeblade, once (not again if one is already carried or banked),
+-- the ledger marked as skipped (so the soul can be asked back without the
+-- story, intro_done), and the step off the Ebon Hold: a random spot within
+-- SKIP_SCATTER yards of SKIP_LANDING (uniform over the disc), then the
+-- watch for the fall.
+local function skip_story(player)
+    if player:HasItem(RUNEBLADE, 1, true) then
+        player:SendBroadcastMessage("Sargobras says: You already carry your runeblade. I give nothing twice.")
+    elseif not player:AddItem(RUNEBLADE, 1) then
+        print("[death-knight-souls] ERROR: " .. player:GetName() .. " skipped the story but the Runed Soulblade ("
+            .. RUNEBLADE .. ") would not go in the bags (full?); done before it: the trade. Give it by hand: .additem " .. RUNEBLADE)
+        player:SendBroadcastMessage("Sargobras says: Your bags are full, so your runeblade stays with me. (The server log says why.)")
     end
-    player:SendBroadcastMessage(line)
-    player:Teleport(SKIP_LANDING.map, SKIP_LANDING.x, SKIP_LANDING.y, SKIP_LANDING.z, SKIP_LANDING.o)
+    CharDBExecute("UPDATE basic_718_souls SET skipped = 1 WHERE dk = " .. player:GetGUIDLow())
+    local a, r = math.random() * 2 * math.pi, SKIP_SCATTER * math.sqrt(math.random())
+    local s    = SKIP_LANDING
+    player:SendBroadcastMessage("Sargobras says: The living are below. Mind the first step.")
+    player:Teleport(s.map, s.x + math.cos(a) * r, s.y + math.sin(a) * r, s.z, s.o)
+    watch_the_fall(player)
 end
 -- }}}
 -- }}}
@@ -490,7 +644,7 @@ local function on_hello(event, player, creature)
         end
         player:GossipSendMenu(TEXT_OWED, creature)
     elseif row and row.state == STATE_GIVEN then
-        if intro_done(player) then                   -- only once Acherus's chain is done
+        if intro_done(player, row) then              -- only once Acherus's chain is done (or skipped)
             player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "I want my old life back.", 0, INTID_RETURN, false,
                 "This death knight will be erased for good, and your old self returns to your character list, undead-pale. Are you sure?")
         end
@@ -510,7 +664,7 @@ local function on_select(event, player, creature, sender, intid, code)
     local row = player:GetClass() == CLASS_DEATH_KNIGHT and ledger(player:GetGUIDLow()) or nil
     if not row then return end
     if row.state == STATE_GIVEN and intid == INTID_RETURN then
-        if intro_done(player) then take_back(player, row) end    -- the menu only offers it then; checked again here
+        if intro_done(player, row) then take_back(player, row) end   -- the menu only offers it then; checked again here
     elseif intid == INTID_CLAN then
         -- naming, before the trade (owed) or after it (given): he listens
         -- for the name in /say; sargobras.lua must be loaded for that
@@ -524,13 +678,17 @@ local function on_select(event, player, creature, sender, intid, code)
     elseif row.state == STATE_OWED and intid ~= INTID_RETURN then
         if not player:IsInGuild() then return end   -- an old menu from before the name-first rule
         -- the trade finishes a moment later (its console commands are
-        -- queued); his flame and the skip follow it, not the click
+        -- queued); his flame and the skip follow it, not the click. The
+        -- buddies: now for one who plays the story, after the rise for a
+        -- skipper (in the Plaguelands, so none is left in Acherus)
         give_soul(player, intid, function(p)
             local here = p:GetNearestCreature(30, SARGOBRAS)
             if here then vanish(here, p) else hide_from(p) end   -- walked off: no flame to see, hidden all the same
             if skip_wanted[p:GetGUIDLow()] then
                 skip_wanted[p:GetGUIDLow()] = nil
                 p:RegisterEvent(function(_, _, _, pp) skip_story(pp) end, SKIP_AFTER_MS, 1)
+            else
+                give_buddies(p)
             end
         end)
     end
@@ -579,6 +737,17 @@ local function on_login(event, player)
     elseif row and row.state == STATE_GIVEN then hide_from(player) end   -- he went up in flame for them
 end
 -- }}}
+
+-- The ledger's skipped column (E041, 2026-10-12) is read by every ledger
+-- lookup; a ledger without it would make every lookup fail, which reads as
+-- "no row" and would let every owing death knight walk free. So without
+-- it the script stays off, loudly.
+if not CharDBQuery("SHOW COLUMNS FROM basic_718_souls LIKE 'skipped'") then
+    print("[death-knight-souls] ERROR: basic_718_souls has no skipped column (install step E041 not re-applied since"
+        .. " 2026-10-12?); death knight souls are OFF: no gate, no Sargobras menu. To fix: apply"
+        .. " sql/basic/db_characters.src/03-death-knight-souls.apply.sql, then .reload ale")
+    return
+end
 
 RegisterPlayerEvent(PLAYER_EVENT_ON_FIRST_LOGIN, on_first_login)
 RegisterPlayerEvent(PLAYER_EVENT_ON_LEARN_SPELL, on_learn_spell)

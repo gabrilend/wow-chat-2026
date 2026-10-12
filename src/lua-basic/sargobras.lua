@@ -35,12 +35,13 @@
 -- each later one as it makes it (617a3).
 --
 -- Death-knight owners never meet him (owner, 2026-09-25). They get exactly
--- four buddies, death knights of random races, when they accept the soul
--- trade with the Sargobras at the gate of Acherus (owner, 2026-09-26:
--- "4 buddy-bots per Death Knight [...] never any more [...] when they
--- accept a soul-trade with Sargobras in Acherus"). death-knight-souls.lua
--- calls BuddiesGiveDeathKnightBuddies on the trade; login catches up a
--- death knight who traded before this was installed.
+-- four buddies, death knights of random races, from the soul trade with
+-- the Sargobras at the gate of Acherus on (owner, 2026-09-26: "4
+-- buddy-bots per Death Knight [...] never any more [...] when they accept
+-- a soul-trade with Sargobras in Acherus"), by level since 2026-10-12: one
+-- at 55, 57, 59 and 60. death-knight-souls.lua calls
+-- BuddiesGiveDeathKnightBuddies on the trade (after the rise, for a
+-- skipper); login and each level catch up the rest.
 --
 -- Needs the roster table (617a1, install step E042); without it the script
 -- says so at startup and does nothing.
@@ -255,30 +256,72 @@ end
 -- }}}
 
 -- {{{ local function give_death_knight_buddies
--- A death-knight owner's four buddies, chosen at once (death knights of
--- random races) and written as chosen rows in one statement each, so they
--- don't depend on owed rows landing first. Only for a death knight whose
--- soul is given (traded_now: the trade just happened and its ledger write
--- is still queued), and only if it has no buddies yet: never more than four.
-local DEATH_KNIGHT_BUDDIES = 4
+-- A death-knight owner's buddies: four in all, never more, death knights
+-- of random races (owner, 2026-09-26), and since 2026-10-12 by level: "one
+-- buddy-bot every other level, so: 55 = 1 buddy-bot, 57 = 2, 59 = 3, 60 =
+-- 4". Only for a death knight whose soul is given (traded_now: the trade
+-- just happened and its ledger write is still queued). Called at the
+-- trade (or after the rise, for a skipper), at login and at every level.
+-- For each slot whose level the owner has reached:
+--   no row yet        chosen now and written as a chosen row (one
+--                     statement, so it doesn't wait on an owed row); the
+--                     buddy module makes it at the owner's level
+--   set aside (5)     back (3, remake): the module logs it in and makes it
+--                     again at the owner's level ("placed to the side for
+--                     Gabrubre to recollect when she hits level 60 again")
+--   anything else     already with the owner, or on its way: left alone
+-- A slot not reached yet is left as it is: chosen when reached, or, if
+-- set aside by scripts/reset-dk-soul-trade, waiting. Rows are written
+-- through the database queue, so two calls in one moment could both see a
+-- slot empty; INSERT IGNORE keeps the first (owner and slot are the key).
+local DEATH_KNIGHT_SLOT_LEVEL = { 55, 57, 59, 60 }
+local STAGE_REMAKE, STAGE_ASIDE = 3, 5               -- buddy_roster.stage (04-buddy-roster: 3 made again at login, 5 set aside)
 local function give_death_knight_buddies(player, traded_now)
     if player:GetClass() ~= CLASS_DEATH_KNIGHT then return end
-    local owner = player:GetGUIDLow()
+    local owner, level = player:GetGUIDLow(), player:GetLevel()
     if not traded_now and not CharDBQuery("SELECT 1 FROM basic_718_souls WHERE dk = " .. owner .. " AND state = 1") then return end
-    if CharDBQuery("SELECT 1 FROM buddy_roster WHERE owner = " .. owner .. " LIMIT 1") then return end
-    local roster = {}
-    for slot = 1, DEATH_KNIGHT_BUDDIES do
-        local b, err = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = math.random,
-            team = team_name(player), owner_is_dk = true, slot = slot, roster = roster })
-        if not b then
-            print(string.format("%sERROR: death knight %d buddy %d: %s", TAG, owner, slot, err))
-            return
-        end
-        CharDBExecute(string.format("INSERT IGNORE INTO buddy_roster (owner, slot, class, race, profile, role) "
-            .. "VALUES (%d, %d, %d, %d, %d, %d)", owner, slot, b.class, b.race, b.profile, b.role))
-        roster[#roster + 1] = { class = b.class, profile = b.profile, role = b.role }
+
+    -- the rows as they are, and the clan so far (the chooser balances against it)
+    local rows, roster = {}, {}
+    local q = CharDBQuery("SELECT slot, buddy, stage, class, profile, role FROM buddy_roster WHERE owner = " .. owner .. " ORDER BY slot")
+    if q then
+        repeat
+            rows[q:GetUInt32(0)] = { buddy = q:GetUInt32(1), stage = q:GetUInt32(2) }
+            if q:GetUInt32(3) ~= 0 then
+                roster[#roster + 1] = { class = q:GetUInt32(3), profile = q:GetUInt32(4), role = q:GetUInt32(5) }
+            end
+        until not q:NextRow()
     end
-    player:SendBroadcastMessage("Four who fell beside you rise again. They will find you.")
+
+    local came = 0
+    for slot, at in ipairs(DEATH_KNIGHT_SLOT_LEVEL) do
+        local row = rows[slot]
+        if level >= at and not row then
+            local b, err = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = math.random,
+                team = team_name(player), owner_is_dk = true, slot = slot, roster = roster })
+            if not b then
+                print(string.format("%sERROR: death knight %d buddy %d (level %d): %s; done before it: %d buddies come this time",
+                    TAG, owner, slot, at, err, came))
+                break
+            end
+            CharDBExecute(string.format("INSERT IGNORE INTO buddy_roster (owner, slot, class, race, profile, role) "
+                .. "VALUES (%d, %d, %d, %d, %d, %d)", owner, slot, b.class, b.race, b.profile, b.role))
+            roster[#roster + 1] = { class = b.class, profile = b.profile, role = b.role }
+            came = came + 1
+        elseif level >= at and row.buddy ~= 0 and row.stage == STAGE_ASIDE then
+            CharDBExecute(string.format("UPDATE buddy_roster SET stage = %d WHERE owner = %d AND slot = %d AND stage = %d",
+                STAGE_REMAKE, owner, slot, STAGE_ASIDE))
+            came = came + 1
+        end
+    end
+    if came == 0 then return end
+
+    -- what's still to come, in levels
+    local later = {}
+    for slot, at in ipairs(DEATH_KNIGHT_SLOT_LEVEL) do if level < at then later[#later + 1] = tostring(at) end end
+    player:SendBroadcastMessage((came == 1 and "One who fell beside you rises again." or (came .. " who fell beside you rise again."))
+        .. " They will find you."
+        .. (#later > 0 and (" More will come at level " .. table.concat(later, ", ") .. ".") or ""))
 end
 -- The soul trade (death-knight-souls.lua) calls this; a plain global, since
 -- the two scripts are loaded separately.
@@ -779,6 +822,8 @@ local function on_login(event, player)
 end
 
 local function on_level_change(event, player, old_level)
+    -- a death knight's buddies come by level (55, 57, 59, 60)
+    give_death_knight_buddies(player, false)
     -- a tenth level owes a new slot, written by the buddy module on the same
     -- level-up through the database queue: act a moment later
     if math.floor(player:GetLevel() / 10) > math.floor(old_level / 10) then

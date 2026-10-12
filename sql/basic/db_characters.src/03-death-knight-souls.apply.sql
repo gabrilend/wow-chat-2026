@@ -11,6 +11,9 @@
 --   holding_account  the hidden account the soul is held on meanwhile
 --   state            0 owed (can't leave Acherus), 1 given, 2 being returned
 --   changed          unix time of the last change
+--   skipped          1 when the soul was given with "skip the story"
+--                    (2026-10-12): the death knight never plays the
+--                    story, so the undo is offered to it without it
 --
 -- A death knight with no row (made before this rule) is never held.
 -- Re-applicable: CREATE IF NOT EXISTS keeps souls already given.
@@ -27,6 +30,17 @@ CREATE TABLE IF NOT EXISTS `basic_718_souls` (
   PRIMARY KEY (`dk`),
   KEY `idx_soul` (`soul`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 718: death knight souls given to Sargobras';
+
+-- the skipped column (2026-10-12), added to a ledger made before it
+-- (MySQL has no ADD COLUMN IF NOT EXISTS; asked of the schema instead)
+SET @has_skipped := (SELECT COUNT(*) FROM information_schema.columns
+  WHERE table_schema = DATABASE() AND table_name = 'basic_718_souls' AND column_name = 'skipped');
+SET @add_skipped := IF(@has_skipped = 0,
+  'ALTER TABLE `basic_718_souls` ADD COLUMN `skipped` tinyint unsigned NOT NULL DEFAULT 0 AFTER `changed`',
+  'DO 0');
+PREPARE add_skipped FROM @add_skipped;
+EXECUTE add_skipped;
+DEALLOCATE PREPARE add_skipped;
 
 -- basic_718_maxed (2026-09-30): the primary professions a death knight
 -- player trained that were raised to Artisan 300 at once (owner: "DK players

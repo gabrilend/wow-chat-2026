@@ -29,7 +29,11 @@
 --                      4 recording: its slot is kept but it is above the
 --                      owner's level, so it is recorded first; 3 remake:
 --                      made again at the owner's level at its next login,
---                      then 0
+--                      then 0; 5 set aside (718): a death knight owner's
+--                      buddy waiting for its death-knight level (55, 57,
+--                      59, 60), moved to 3 by sargobras.lua when the
+--                      owner reaches it; the buddy module neither logs
+--                      in nor re-stages a 5
 --
 -- A row moves through three states: owed (class 0), chosen (class set,
 -- buddy 0: the module makes the character), filled (buddy set).
