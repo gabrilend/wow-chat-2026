@@ -39,7 +39,14 @@ settings, not yet run** (`modules/mod-buddies/src/buddies_town.cpp`,
     and Azeroth are one map, so the Thandol Span is already walked).
     **Unstuck** (2026-09-27): playerbots' own recovery (after 90
     seconds without progress, put at the destination) is switched off by
-    resetting its stuck clock (`rpgInfo.stuckTs`, public) before each step;
+    resetting its stuck clock (`rpgInfo.stuckTs`, public) before each step,
+    and (2026-10-12, source patch B052, not yet built) again inside the
+    routine right before its check: the routine zeroes the clock whenever
+    its destination changes, which for a buddy is every time the owner
+    moves, so the step's reset was undone and buddies far behind were put
+    on the owner's very spot (owner, after game-master flight onto a
+    mountaintop two zones off: "they all spawned exactly in the same spot";
+    "they should keep trying to walk to me");
     instead, no 10-yard gain toward the owner in 90 seconds (5 until the
     owner's "let's make it 10", logged in `docs/balance-updates.md`) moves the buddy
     to a random walkable spot within 30 yards (ground within 15 yards of
