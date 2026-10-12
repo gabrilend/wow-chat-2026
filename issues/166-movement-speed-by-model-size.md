@@ -41,13 +41,16 @@ Follow-up decisions, verbatim, 2026-10-04:
 
 Not built yet. Every player character runs at one speed. The config-value step
 `C003-run-speed-80-percent.sh` writes the worldserver setting for player
-move speed (`Rate.MoveSpeed.Player`, a number) as 0.8, on every profile.
+move speed (`Rate.MoveSpeed.Player`, a number) as 0.85 (0.8 until 2026-10-12), on every profile but cc-test.
 Gnome and tauren cover the same ground per second.
 
 ## Intended Behavior
 
 A character's run speed follows its body. The female blood elf stays at
-today's 0.8, as the reference body. Larger bodies run faster (tauren
+today's 0.85 (0.8 until 2026-10-12: "can we increase the movement speed
+for blood elf females to 0.85 instead of 0.8?"; until this issue is built
+everyone runs at it, "0.85 for everyone, let's see how it feels"), as the
+reference body. Larger bodies run faster (tauren
 fastest), and smaller ones run slower.
 
 **Where the speed is decided (the metal).** The server does not move a
@@ -106,11 +109,11 @@ the dispatch table stay as they are, only their numbers change.
 3. Write the B-patch, apply and unapply by the upstream-patch-system rules:
    the dispatch table and one walking function per race and sex, called
    from the speed recalculation for players only, multiplying on top of
-   C003's 0.8.
+   C003's 0.85.
 4. Test: the patch round-trips byte-identically (`scripts/test-source-patches`);
    after the owner's compile, for each race and sex, the run speed the
    server sends after login, after mounting and dismounting, and after a
-   slow wears off equals 0.8 x factor.
+   slow wears off equals 0.85 x factor.
 5. Cleanup pass (phase 2 above): a bone-reading generator for leg length
    and posture, writing the same header.
 

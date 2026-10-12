@@ -35,7 +35,7 @@ declare -a EXPECT_basic=(
     "worldserver.conf|StartHeroicPlayerLevel|55"          # death knights start at 55 (C017)
     "worldserver.conf|RecruitAFriend.MaxLevel|60"
     "worldserver.conf|Rate.Damage.Fall|10.0"
-    "worldserver.conf|Rate.MoveSpeed.Player|0.8"
+    "worldserver.conf|Rate.MoveSpeed.Player|0.85"
     "worldserver.conf|Rate.XP.Kill|1"
     "worldserver.conf|RealmID|5"
     "worldserver.conf|WorldServerPort|4462"

@@ -446,6 +446,18 @@ he should be level 31"). The pull-in steps and the "direct" margin are
 first guesses. The old trailing distance (10) and slack (25) are gone with
 the server's follow, which made him walk away from an owner coming to talk.
 
+## 2026-10-12 — Every profile but cc-test: run speed 0.8 → 0.85 (C003)
+
+| Knob | Value | Where |
+|---|---|---|
+| Player run speed (`Rate.MoveSpeed.Player`) | 0.85 (was 0.8) | `config/patches/C003-run-speed-80-percent.sh`, `RUN_SPEED` |
+
+Why: the owner, "can we increase the movement speed for blood elf females
+to 0.85 instead of 0.8?", then "Sure, 0.85 for everyone, let's see how it
+feels": per-body speeds (issue 166) aren't built, so the reference body's
+pace is everyone's for now. Takes effect at the next install or config
+step (C003 rewrites worldserver.conf), then a world-server restart.
+
 ## How to add an entry
 
 ```markdown

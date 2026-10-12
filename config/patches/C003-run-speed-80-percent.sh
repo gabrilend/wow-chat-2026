@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# C003 - Run Speed 80%
-# Set player run speed to 80% (slower, more deliberate exploration)
+# C003 - Run Speed 85% (named for its first value, 80%)
+# Set player run speed below stock (slower, more deliberate exploration).
+# 0.85 since 2026-10-12 (owner: "Sure, 0.85 for everyone, let's see how it
+# feels"), the blood elf woman's pace that issue 166 measures every other
+# body against; 0.8 before. docs/balance-updates.md keeps the history.
 # Profiles: release beta vanilla basic alpha (every one but cc-test)
 #
 # cc-test (issue 176) is left out: the custom client is tested against the
@@ -20,7 +23,7 @@
 
 # -- {{{ config_run_speed_80_percent
 config_run_speed_80_percent() {
-    local RUN_SPEED=0.8
+    local RUN_SPEED=0.85
     local conf="${INSTALL_DIR}/etc/worldserver.conf"
 
     # source tree → key name; one row per tree (see header)
@@ -46,5 +49,5 @@ config_run_speed_80_percent() {
     sed -i "s|^${key_re}[[:space:]]*=.*|${key} = ${RUN_SPEED}|" "${conf}"
 }
 CONFIG_PROFILES[config_run_speed_80_percent]="release beta vanilla basic alpha"
-CONFIG_DESCRIPTIONS[config_run_speed_80_percent]="Run speed 80% (slower exploration)"
+CONFIG_DESCRIPTIONS[config_run_speed_80_percent]="Run speed 85% (slower exploration)"
 # -- }}}
