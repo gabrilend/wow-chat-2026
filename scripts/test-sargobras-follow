@@ -55,7 +55,10 @@ end
 -- the mesh: a walk is as long as the straight line, except to spots east
 -- of `cliff_x` (beyond a drop: no walk there at all)
 local cliff_x = math.huge
+local in_dungeon = false
 local player = object({
+    GetMap = function() return { IsDungeon = function() return in_dungeon end, IsRaid = function() return false end,
+                                 IsBattleground = function() return false end, IsArena = function() return false end } end,
     x = 0, y = 0, z = 0, level = 30,
     GetGUIDLow  = function() return 42 end,
     GetGUID     = function() return 42 end,
@@ -74,7 +77,7 @@ local player = object({
     end,
 })
 
-local orders, tick, turn = {}, nil, nil
+local orders, tick, turn, giveup = {}, nil, nil, nil
 sarg_followed = false                                   -- set if the script ever asks for the server's follow
 local sarg = object({
     x = 0, y = 0, z = 0, o = 0, stopped = true, walk = nil, level = nil,
@@ -91,14 +94,16 @@ local sarg = object({
     SetWalk     = function(s, on) s.walk = on end,
     MoveFollow  = function() orders[#orders + 1] = { "follow" }; sarg_followed = true end,
     MoveIdle    = function() orders[#orders + 1] = { "idle" } end,
-    MoveTo      = function(s, _, x, y, z, path) orders[#orders + 1] = { "moveto", x = x, y = y, walk = s.walk, path = path } end,
-    -- the once-a-second check is the first repeating 1 s event; a 200 ms one is a turn
+    MoveTo      = function(s, id, x, y, z, path) orders[#orders + 1] = { "moveto", id = id, x = x, y = y, walk = s.walk, path = path } end,
+    -- the once-a-second check is the first repeating 1 s event; a 200 ms one
+    -- is a turn; a one-shot is a walk's give-up timer
     RegisterEvent = function(_, fn, ms, times)
         if ms == 1000 and times == 0 and not tick then tick = fn end
-        if ms == 200 then turn = fn end
+        if ms == 200 then turn = fn; return 200 end
+        if times == 1 then giveup = fn; return 30 end
         return 1
     end,
-    RemoveEventById = function() turn = nil end,
+    RemoveEventById = function(_, id) if id == 200 then turn = nil end; if id == 30 then giveup = nil end end,
     DespawnOrUnsummon = function(s) s.gone = true end,
     RemoveEvents = function() end,
 })
@@ -121,6 +126,7 @@ local stubs = {
     end,
     RegisterPlayerEvent = function(ev, fn) handlers[#handlers + 1] = fn end,
     RegisterCreatureGossipEvent = function(_, ev, fn) if ev == 2 then captured.on_select = fn end end,
+    RegisterCreatureEvent = function(_, ev, fn) if ev == 6 then captured.on_reach = fn end end,
     GetPlayerByGUID = function() return player end,
     GetPlayerGUID   = function(low) return low end,
     GetCurrTime     = function() return 0 end,
@@ -141,7 +147,8 @@ if not on_login then os.exit(1) end
 local function dist(ax, ay, bx, by) return math.sqrt((ax - bx) ^ 2 + (ay - by) ^ 2) end
 local function last_move() for i = #orders, 1, -1 do if orders[i][1] == "moveto" then return orders[i] end end end
 local function step() orders = {}; tick(0, 0, 0, sarg) end
-local function arrive(m) sarg.x, sarg.y, sarg.stopped = m.x, m.y, true end
+-- the server's arrival: he stands at the spot and the arrival event fires (type 8, a point; the walk's id)
+local function arrive(m) sarg.x, sarg.y, sarg.stopped = m.x, m.y, true; orders = {}; captured.on_reach(6, sarg, 8, m.id) end
 local function settle_turn() local n = 0 while turn and n < 100 do turn(1, 0, 0, sarg); n = n + 1 end end
 local function facing_err(a) return math.abs((a - sarg.o + math.pi) % (2 * math.pi) - math.pi) end
 
@@ -155,8 +162,10 @@ check("he walks to his spot (never runs)", m and m.walk == true)
 check("along the navigation mesh", m and m.path == true)
 local r0 = m and dist(m.x, m.y, 0, 0) or 0
 check(string.format("his spot is 5-10 yards from the owner (%.1f)", r0), r0 >= 5 - 1e-6 and r0 <= 10 + 1e-6)
-arrive(m); step()
-check("arrived: he stands", #orders == 1 and orders[1][1] == "idle")
+check("nothing watches the walk: the once-a-second look does nothing meanwhile", (function() step(); return #orders == 0 end)())
+arrive(m)
+check("arrived (the server's event): he stands", orders[1] and orders[1][1] == "idle")
+check("and the give-up timer is gone", giveup == nil)
 
 print("owner walks up to talk to him")
 player.x, player.y = (m.x) * 0.6, (m.y) * 0.6            -- toward him, still inside the circle
@@ -192,6 +201,34 @@ check(string.format("pulled in closer, or round, to reachable ground (%.1f yards
     m and m.x <= cliff_x)
 arrive(m); step()
 cliff_x = math.huge
+
+print("owner teleported within the map, 300 yards off")
+local was = sarg
+sarg.gone = nil
+player.x = sarg.x + 300
+local spawned_again = false
+local spawn = player.SpawnCreature
+player.SpawnCreature = function(...) spawned_again = true; return spawn(...) end
+step()
+check("he is summoned anew beside the owner, not sent walking", sarg.gone == true and spawned_again)
+player.SpawnCreature = spawn
+local mm = last_move()
+arrive(mm)
+
+print("into a dungeon, then out again")
+in_dungeon = true
+spawned_again = false
+player.SpawnCreature = function(...) spawned_again = true; return spawn(...) end
+local on_map_change = handlers[4]                    -- login, level change, logout, map change, chat
+player.RegisterEvent = function(_, fn) fn(0, 0, 0, player) end      -- the delayed summon, run at once
+on_map_change(28, player)
+check("no Sargobras in a dungeon", not spawned_again)
+in_dungeon = false
+on_map_change(28, player)
+check("out again: he is summoned anew", spawned_again)
+player.RegisterEvent = function() end
+player.SpawnCreature = spawn
+arrive(last_move())
 
 print("owner de-levelled below his tier (level 20), then walks off")
 player.level = 15

@@ -211,6 +211,23 @@ Past 15 yards a new circle is made round the owner and he walks to it.
 Several Sargobras (one per owed tier) each keep their own circle, their
 spots fanned round it so they don't stand in one place.
 
+**No watching the walk; teleports; no instances** (same day: "I'd prefer
+if he didn't poll, and instead just walked until he got to the
+checkpoint. At that point we can have a pseudo-recursive system where
+upon arriving, he checks to see if needs to do anything else [...] Can we
+add a hook to things like... teleports and loading screen zone changes
+that checks to see if there are any Sargobrases, and if so, to reset them
+to the new position? He should not spawn in dungeons or battlegrounds or
+arenas."). His walk is handed to the server, which tells the script when
+he arrives (the creature "point reached" event); arriving, he at once
+looks at what to do next. One timer stands him where he got to if he
+never arrives (30 s). Standing still he still looks once a second, as no
+event tells a script that a player moved. An owner more than 100 yards
+from a standing Sargobras (a teleport inside the map, a flight) gets him
+summoned anew beside them; after a loading screen the old ones go with
+the old map and the owed ones are summoned anew in the new place, never
+inside a dungeon, raid, battleground or arena.
+
 **A direct route.** The spot must be one the owner could walk straight to:
 the walk along the navigation mesh from the owner to it is no more than a
 quarter longer than the straight line (plus a yard). If not (a bridge, a

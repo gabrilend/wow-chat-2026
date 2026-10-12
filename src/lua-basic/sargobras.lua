@@ -75,6 +75,8 @@ local CAMPFIRE                           = 1798           -- a stock "Campfire" 
 local PLAYER_EVENT_ON_LOGIN        = 3
 local PLAYER_EVENT_ON_LOGOUT       = 4
 local PLAYER_EVENT_ON_LEVEL_CHANGE = 13
+local PLAYER_EVENT_ON_MAP_CHANGE   = 28     -- mod-ale Hooks.h: (event, player), after a loading screen
+local CREATURE_EVENT_ON_REACH_WP   = 6      -- mod-ale Hooks.h: (event, creature, type, id), a point reached
 local GOSSIP_EVENT_ON_HELLO        = 1
 local GOSSIP_EVENT_ON_SELECT       = 2
 local GOSSIP_ICON_CHAT             = 0
@@ -97,8 +99,10 @@ local SIDE_STEPS        = { 0, 0.5, -0.5, 1.0, -1.0 }  -- radians tried either s
 local DIRECT_FACTOR     = 1.25      -- a walk at most this many times the straight line (plus DIRECT_SLACK) is "direct"
 local DIRECT_SLACK      = 1         -- yards
 local FAN_STEP          = 0.4       -- radians (~23 degrees) between neighbouring tiers' spots on one circle
-local ARRIVED_AT        = 2         -- yards from his spot: arrived
-local WALK_GIVE_UP_TICKS = 30       -- ticks (seconds) walking without arriving: he stands where he got to
+local WALK_GIVE_UP_MS   = 30000     -- a walk that hasn't arrived by then: he stands where he got to
+local MOVE_ID_SPOT      = 6171      -- the movement id of a walk to his spot, told back by the arrival event
+local LOST_AT           = 100       -- yards: an owner this far (a teleport within the map) gets him anew beside them
+local MAP_CHANGE_SUMMON_MS = 3000   -- after a loading screen, once the owner stands in the new place
 local FACE_SLACK        = 0.17      -- radians (~10 degrees) off before he turns again
 -- The server can only set a facing, not animate one, so a turn is played as
 -- small steps (a linear interpolation sampled every TURN_STEP_MS). Owner,
@@ -204,7 +208,7 @@ local wanderer_of, owner_of, slot_of, fire_of = {}, {}, {}, {}
 local turning = {}
 -- Wanderer guid (low) -> his circle { cx, cy, cz, r } (the owner's feet
 -- when it was made, and its radius) and his spot on its rim { x, y, z };
--- walking[low] = ticks spent walking to the spot, nil once standing there.
+-- walking[low] = the give-up timer of his walk to the spot (an event id), nil once standing there.
 local circle_of, spot_of, walking = {}, {}, {}
 
 -- {{{ local function roster_ready
@@ -530,7 +534,11 @@ end
 local function remove_wanderer(creature)
     local low = creature:GetGUIDLow()
     local owner = owner_of[low]
-    if owner and wanderer_of[owner] and slot_of[low] then wanderer_of[owner][slot_of[low]] = nil end
+    -- only if he is still the one the owner's slot names: after a teleport a
+    -- new one may already stand in for him (on_map_change)
+    if owner and wanderer_of[owner] and slot_of[low] and wanderer_of[owner][slot_of[low]] == creature:GetGUID() then
+        wanderer_of[owner][slot_of[low]] = nil
+    end
     owner_of[low] = nil
     slot_of[low] = nil
     turning[low] = nil
@@ -708,34 +716,47 @@ end
 -- Always a walk, never a run (owner, 2026-10-12: "when he paths to a new
 -- location near you, he always walks, and also that he uses the navmesh
 -- instead of walking straight towards it"): MoveTo with its path made
--- along the mesh.
+-- along the mesh. Nothing watches the walk (owner, same day: "I'd prefer
+-- if he didn't poll, and instead just walked until he got to the
+-- checkpoint"): the server tells on_reach when he gets there, and a single
+-- timer stands him still if that never comes (a spot he can't reach).
+local arrived                                       -- on_reach's work, defined below
 local function walk_to_spot(creature)
-    local s = spot_of[creature:GetGUIDLow()]
+    local low = creature:GetGUIDLow()
+    local s   = spot_of[low]
+    if walking[low] then creature:RemoveEventById(walking[low]) end
     creature:SetWalk(true)
-    creature:MoveTo(0, s.x, s.y, s.z, true)
-    walking[creature:GetGUIDLow()] = 0
+    creature:MoveTo(MOVE_ID_SPOT, s.x, s.y, s.z, true)
+    walking[low] = creature:RegisterEvent(function(_, _, _, c)
+        walking[c:GetGUIDLow()] = nil
+        c:MoveIdle()
+        arrived(c)
+    end, WALK_GIVE_UP_MS, 1)
 end
 -- }}}
 
+local summon_wanderer                               -- defined below; a lost Sargobras is summoned anew
+
 -- {{{ local function follow_tick
--- Once a second, one of two states (owner, 2026-10-12; see 617b, "circles,
--- not a leash"):
---
---   walking (walking[low] set): on his way to his spot. Arrived (stopped
---     within ARRIVED_AT of it), or WALK_GIVE_UP_TICKS gone by: standing.
---   standing: he doesn't move. While the owner is within MOVE_ON_AT of him
---     he faces the circle's centre if the owner is inside the circle, the
---     owner if not. Past MOVE_ON_AT: if the owner's level is now below his
---     tier's he goes ("if your level isn't above the level that particular
---     Sargobras spawned for, he should disappear"), else a new circle is
---     made round the owner and he walks to it.
+-- Once a second while he stands (owner, 2026-10-12; see 617b, "circles,
+-- not a leash"); while he walks it does nothing, the arrival event takes
+-- over. Standing, he doesn't move. While the owner is within MOVE_ON_AT of
+-- him he faces the circle's centre if the owner is inside the circle, the
+-- owner if not. Past MOVE_ON_AT: if the owner's level is now below his
+-- tier's he goes ("if your level isn't above the level that particular
+-- Sargobras spawned for, he should disappear"), else a new circle is made
+-- round the owner and he walks to it. Past LOST_AT (a teleport within the
+-- map, a flight) he is summoned anew beside the owner instead of walking
+-- the whole way. (Standing needs this look: nothing tells a script when a
+-- player moves.)
 --
 -- (2026-10-04 to 10-12 he was handed to the server's own follow, which
 -- kept him 10 yards behind the owner; walking up to talk to him moved that
 -- spot, and he walked away: "Sargobras running away when I try to talk to
 -- him".)
 --
--- Leaves if the owner is gone.
+-- Leaves if the owner is gone, or on another map (on_map_change brings a
+-- new one).
 local function follow_tick(_, _, _, creature)
     local low    = creature:GetGUIDLow()
     local owner  = owner_of[low]
@@ -743,22 +764,17 @@ local function follow_tick(_, _, _, creature)
     if not player or not player:IsInWorld() or player:GetMapId() ~= creature:GetMapId() then
         return remove_wanderer(creature)
     end
+    if walking[low] then return end
 
-    local s = spot_of[low]
-    if walking[low] then
-        walking[low] = walking[low] + 1
-        local there = (creature:GetX() - s.x) ^ 2 + (creature:GetY() - s.y) ^ 2 <= ARRIVED_AT ^ 2
-        if (there and creature:IsStopped()) or walking[low] >= WALK_GIVE_UP_TICKS then
-            walking[low] = nil
-            creature:MoveIdle()
-        end
-        return
+    local d = creature:GetDistance(player)
+    if d > MOVE_ON_AT and player:GetLevel() < slot_level(slot_of[low] or 1) then
+        return remove_wanderer(creature)
     end
-
-    if creature:GetDistance(player) > MOVE_ON_AT then
-        if player:GetLevel() < slot_level(slot_of[low] or 1) then
-            return remove_wanderer(creature)
-        end
+    if d > LOST_AT then
+        remove_wanderer(creature)
+        return summon_wanderer(player)
+    end
+    if d > MOVE_ON_AT then
         new_circle(creature, player)
         return walk_to_spot(creature)
     end
@@ -779,6 +795,22 @@ local function follow_tick(_, _, _, creature)
 end
 -- }}}
 
+-- {{{ arrived, on_reach
+-- At his spot (the server's arrival event), or given up walking: he looks
+-- at once at what to do next, the standing check above, rather than a
+-- second later.
+arrived = function(creature) follow_tick(nil, nil, nil, creature) end
+local function on_reach(event, creature, kind, id)
+    if id ~= MOVE_ID_SPOT then return end            -- another walk (his break's seat)
+    local low = creature:GetGUIDLow()
+    if not owner_of[low] or not walking[low] then return end
+    creature:RemoveEventById(walking[low])
+    walking[low] = nil
+    creature:MoveIdle()
+    arrived(creature)
+end
+-- }}}
+
 -- {{{ local function summon_wanderer
 -- One near the owner for each owed slot the owner's level has reached that
 -- has none yet, unless the spot is crowded with others' Sargobras (the
@@ -786,9 +818,14 @@ end
 -- one (owner, 2026-10-12: "if you hit level 30 then he should be level 31
 -- [...] He wants you to know that he's always stronger than you"), appears
 -- on his first circle's rim, and stands there.
-local function summon_wanderer(player)
+summon_wanderer = function(player)
     local owner = player:GetGUIDLow()
     if player:GetClass() == CLASS_DEATH_KNIGHT or player:GetLevel() < WANDER_FROM_LEVEL then return end
+    -- never in a dungeon, raid, battleground or arena (owner, 2026-10-12:
+    -- "He should not spawn in dungeons or battlegrounds or arenas"); he
+    -- comes back when the owner is out again (on_map_change)
+    local map = player:GetMap()
+    if map:IsDungeon() or map:IsRaid() or map:IsBattleground() or map:IsArena() then return end
     local slots = {}
     for _, slot in ipairs(owed_slots(owner)) do
         if slot_level(slot) <= player:GetLevel() then slots[#slots + 1] = slot end
@@ -941,6 +978,17 @@ local function on_level_change(event, player, old_level)
     end
 end
 
+-- after a loading screen (a teleport to another map, a portal, an
+-- instance's door): the old Sargobras go with their old map (follow_tick),
+-- and the owed ones are summoned anew in the new place (owner, 2026-10-12:
+-- "Can we add a hook to things like... teleports and loading screen zone
+-- changes that checks to see if there are any Sargobrases, and if so, to
+-- reset them to the new position?")
+local function on_map_change(event, player)
+    wanderer_of[player:GetGUIDLow()] = {}
+    player:RegisterEvent(function(_, _, _, p) summon_wanderer(p) end, MAP_CHANGE_SUMMON_MS, 1)
+end
+
 local function on_logout(event, player)
     -- every tier's Sargobras leaves with the owner
     local mine = wanderer_of[player:GetGUIDLow()]
@@ -957,6 +1005,10 @@ if roster_ready() then
     RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN,        on_login)
     RegisterPlayerEvent(PLAYER_EVENT_ON_LEVEL_CHANGE, on_level_change)
     RegisterPlayerEvent(PLAYER_EVENT_ON_LOGOUT,       on_logout)
+    RegisterPlayerEvent(PLAYER_EVENT_ON_MAP_CHANGE,   on_map_change)
+    for _, entry in ipairs({ WANDERER, WANDERER_HATTED }) do
+        RegisterCreatureEvent(entry, CREATURE_EVENT_ON_REACH_WP, on_reach)
+    end
     RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT,         on_chat)
     for _, entry in ipairs({ VALLEY, WANDERER, WANDERER_HATTED }) do
         RegisterCreatureGossipEvent(entry, GOSSIP_EVENT_ON_HELLO,  on_hello)
