@@ -458,6 +458,11 @@ feels": per-body speeds (issue 166) aren't built, so the reference body's
 pace is everyone's for now. Takes effect at the next install or config
 step (C003 rewrites worldserver.conf), then a world-server restart.
 
+
+| Knob | Value | Where |
+|---|---|---|
+
+
 ## How to add an entry
 
 ```markdown
