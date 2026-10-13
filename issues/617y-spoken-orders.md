@@ -45,6 +45,19 @@ Answers, 2026-10-12 (verbatim):
 
 ## Current Behavior
 
+**Not live yet (2026-10-13).** The owner tried "go sell" and it did
+nothing: the running server is the build of 2026-10-03
+(`installed-files-basic/bin/worldserver`); the build carrying the orders,
+the selling trip and B048 finished 2026-10-12 22:11 in the shadow
+install and has not been promoted. Other spoken commands are ignored on
+purpose (B045, owner 2026-09-25). Seen the same night in Sen'Jin Village
+(a town circle, 75 yards): a buddy wandered from townsperson to
+townsperson instead of selling. In that build a town visit sells only
+grey junk (and everything at nine-tenths full, where there is no auction
+house); the rest waits for the selling trip. The owner also saw it run
+rather than walk in town; the town visit walks, the walk between areas
+runs. To check after promotion, with `.buddy trace <name>`.
+
 **"My bags are full" and "go sell", 2026-10-12, syntax-checked, not yet
 built** (`modules/mod-buddies/src/buddies_orders.cpp`; the selling trip's
 start in `buddies_roam_strategy.cpp`):

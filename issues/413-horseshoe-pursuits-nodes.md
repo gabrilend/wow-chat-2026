@@ -50,6 +50,15 @@ Answers, 2026-10-12 (verbatim):
 > beasts aren't in wow-chat. For very rare leathers they spawn in the area
 > where the rare mobs that used to give them are.
 
+Answers, 2026-10-13 (verbatim), on the client having no animal models
+for world objects (a client patch, or dead skinnable creatures):
+
+> no they should not be "dead creatures" - they should be upside-down
+> static models that glimmer, as if frozen in time.
+
+> can you use the custom client to create a 3d rendering of each of those
+> models, and put them in an HTML page for me to see?
+
 ## Current Behavior
 
 Herbs and mineral veins appear through spawn pools: each pool is a group
@@ -137,7 +146,12 @@ spawns.
 
 ## Open Questions
 
-1. **The animal model.** The stock client lets a world object use only
+1. (Answered 2026-10-13: world objects, upside down, static, glimmering,
+   "as if frozen in time"; not creatures. So the animal models go onto
+   the client's object-model list by a client patch, or the custom client
+   draws them. First, renderings of the candidate models from the custom
+   client, on an HTML page.) The question as asked:
+   **The animal model.** The stock client lets a world object use only
    models from its own list, and no animal is on it. Two ways:
    - **a client patch**: a file added to every player's client that puts
      boar, bear and deer models on the list. Then the node is a true

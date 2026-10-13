@@ -1,7 +1,14 @@
 # Conversation Summary: 4a14807d-68bc-45b5-b727-e461dd1e7166
 
-Generated on: 2026-10-12 23:14:04
+Generated on: 2026-10-12 23:34:15
 Models: claude-opus-5-5
+
+## Contents
+
+1. 2026-10-12 23:17, after Request 4 - The compile no longer stops silently, it
+   explains what --debug changes, and three new features are planned: tank-paced
+   pulls, a Ragefire stand-in test with Birth, and upside-down Japanese-named
+   nodes. Next, answer the three open questions above.
 
 --------------------------------------------------------------------------------
 
@@ -386,6 +393,148 @@ Every issue file lists its open questions. I'll start with one from each:
    it with a new buddy, or leave it empty so a stand-in takes the seat?
 3. **Nodes:** which model hangs upside down: a horse, a boot, an existing herb
    or ore model, or something else?
+
+--------------------------------------------------------------------------------
+
+### User Request 5
+
+<pasted_content id="433b">
+> 3. Horseshoe Pursuit nodes. Herbs and ore spawn in pools: each pool has a list
+> of possible places and a fixed number of nodes up at once.
+> The basic world has 3,279 such pools with 4,341 nodes up at once. A generator
+> would raise each pool's count and fill the extra slots with
+> the new nodes. For each node it reads the extracted ground heights, finds the
+> direction that runs downhill the longest, and writes the
+>   node's position and tilt into the database.
+</pasted_content id="433b">
+
+
+the tilt should always be rigid straight up and down.
+
+
+
+<pasted_content id="433b">
+> Something to know first: the stock English client can't draw Japanese. Its
+> fonts have no Japanese characters, so ホルシュ・プルシュッツ
+>   would show as blank or as boxes. There are three ways around it:
+> - put a Japanese-capable font into each player's client Fonts folder, under
+> the name of the font it replaces,
+>   - let the custom client draw the names,
+>   - or spell the names in Latin letters (HORUSHU PURUSHUTTSU).
+</pasted_content id="433b">
+
+
+oh if we can't do japanese characters then we should just make them up. anyway
+they should have models that look like boars and bears and deer and other
+creatures that are in the real world and azeroth at roughly those sizes. their
+names can be something in english that roughly corresponds to the instructions I
+gave you - no need to do the "names in latin letters" that was just to describe
+which characters I was hoping for to display. BUT we shall make do with english,
+so if you could think of strange and silly names related to
+"horse-shoe-pursuits" please do, and name the appropriate resource nodes, which,
+when gathered by a skinner, give leather and hides, and slain enemies no longer
+do, because beasts aren't in wow-chat. For very rare leathers they spawn in the
+area where the rare mobs that used to give them are.
+
+can you tell me, what are the purchase points to gemstones? Also, can you make
+the "levelup" script that we're using to adjust player and buddy-bot levels
+while keeping their equipment correct, also increase to the right level their
+professions? So we can pick up exactly where we'd like need to.
+
+> 1. Pulls: Birth is a shaman, so I picture her as the healer, with a buddy tank
+> leading. Is the "healer who says go faster" always the
+>      player? Or can a healer buddy say it too?
+
+healer buddies can say it to the tank if the tank is doing too dangerous and
+they can't keep up. They know their character better, so the tank should default
+to going faster. if the healer asks to slow down though he will for a time,
+until he builds up confidence again which happens over time. she should whisper
+it to him.
+
+> 2. Scene: at level 10 Birth opens a second buddy slot. Should the scene fill
+> it with a new buddy, or leave it empty so a stand-in takes the
+     seat?
+
+Sargobras. Until she's picked for the first time at that tier.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 5
+
+> Working through these in order. First the lookups: where gems are sold, the
+> level-up script, Sargobras, and whether the client has object models built
+> from creature models.
+
+> I can't find a "levelup" script yet. Searching the conversation transcripts
+> for it:
+
+> Reading the gem-supply SQL for who sells gems and what they cost:
+
+> Now Sargobras, to understand the scene answer:
+
+> Rewriting the node plan with your answers: English names, animal models,
+> skinning loot.
+
+> Now the pulling plan, with your answers about healers:
+
+> Now the scene plan:
+
+> Checking basic's profession ceiling before writing the level-up plan:
+
+*[commit] 6c1b91ccf in wow-chat-2026 - Plans: answers on pacing, the scene and the nodes; a level-up command planned*
+
+I've written your answers into the three plans and planned the level-up command
+as a new issue, all committed. Nothing is built yet. Two things need your
+decision first: the animal models, and the skill rule for the level-up command.
+
+**Where gems can be bought** (basic profile; gems and gem-cutting recipes
+otherwise come from prospecting ore and from drops):
+
+| Who | Where | Sells | Price |
+|---|---|---|---|
+| Markus Scylan | Honor Hold, Hellfire Peninsula (Alliance) | 13 cut +4 gems: Tourmaline, Zircon, Amber | 2 gold each |
+| Reagan Mancuso | Thrallmar, Hellfire Peninsula (Horde) | the same 13 | 2 gold each |
+| Inessera, Lisrythe Bloodwatch | Shattrath | the same 13 | 2 gold each |
+| Dealer Senzik | The Stormspire, Netherstorm | the 13 above, plus 18 cut Outland uncommon gems | 1–2 gold |
+| Lhara | Darkmoon Faire (Elwynn, Mulgore, Terokkar, when it's in town) | 6 uncut Outland rare gems | 12 gold each |
+| Earthen Crystal-Keeper | Uldaman entrance; Uldum Pedestal in Tanaris; one of Un'Goro's pylons | a random uncut Wrath gem, sometimes a rare one | one Nexus Crystal each (from disenchanting an epic) |
+| Arena, Honor, Emblem and Jewelcrafting quartermasters | various cities | gems | tokens, not gold |
+
+The Earthen Gemcutter next to each Crystal-Keeper doesn't sell gems; he teaches
+Wrath gem cuts for gold.
+
+**The level-up script doesn't exist.** Levels have been changed with the
+`.character level` command alone. When an owner's level drops, the buddy module
+rebuilds their buddies at the new level. When it rises, nothing else changes:
+gear and professions stay as they were. White-gear outfits for every tenth level
+already exist (`buddy-white-1` to `buddy-white-60`) and can be put on from the
+console. Buddy professions sit at 1 out of 75 forever, except for death-knight
+buddies, which are raised to 300.
+
+The plan is one command, `.levelup <name> <level>`. It sets the level for the
+character and every buddy, dresses them all in that tier's white gear, and
+raises every profession they have, along with the trainer ranks it needs. It
+would be written in Lua, so no compile.
+
+**Two questions:**
+
+1. **Animal models: the client blocks the upside-down nodes.** A world object
+   can only use models from a list built into the client, and that list has no
+   animals, only statues and roasts. There are two ways round it:
+   - **Client patch:** a file every player adds to their client, which puts the
+     boar, bear and deer models on that list. The nodes become real objects:
+     upside down, frozen, sparkling, exactly as you described. The custom client
+     could include the file by default.
+   - **Dead skinnable creatures:** this is how skinning already works, so the
+     client needs no change. They sparkle and freeze like any corpse. But the
+     stock client can't turn a creature upside down, so they'd lie on their
+     side.
+
+   Which would you rather have?
+2. **The skill for a level:** five points per level (level 15 → 75, level 30
+   → 150, level 60 → 300, basic's ceiling)? And should the command also
+   teach the recipes a trainer would have taught along the way, or only set the
+   skill number?
 
 --------------------------------------------------------------------------------
 

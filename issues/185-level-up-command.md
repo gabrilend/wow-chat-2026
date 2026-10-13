@@ -19,6 +19,18 @@ Verbatim, 2026-10-12:
 > increase to the right level their professions? So we can pick up
 > exactly where we'd like need to.
 
+Answers, 2026-10-13 (verbatim):
+
+> let's build our own implementation that changes level, adjusts gear,
+> etc. We should be able to offer extra information to it via cli flags,
+> like "quality=green" or "quality=poor" or whatever, and it'll generate
+> appropriate gearsets to equip each player with depending on their spec
+> profile. It should also adjust professions, if any, and if not, it'll
+> train them to the correct level.
+
+On five skill points a level, and teaching the recipes a trainer would
+have taught: "yes and yes".
+
 ## Current Behavior
 
 No such script exists. Levels are changed by hand with the server's own
@@ -71,14 +83,21 @@ and in game.
 
 ## Open Questions
 
-1. The skill for a level: five points a level (level 15: 75, level 30:
-   150, level 60: 300), capped by the rank the level allows? Or another
-   rule?
-2. Also the recipes a trainer would have taught up to that skill, or
-   only the skill number?
-3. Professions they don't have yet: left alone, or given (a player with
-   none, such as Birth, given leatherworking by the command's own option,
-   e.g. `.levelup Birth 15 leatherworking`)?
+1. (Answered 2026-10-13: five points a level, to 300 on basic.)
+2. (Answered 2026-10-13: yes, the recipes too, from the trainers' lists:
+   every spell a trainer of that profession teaches at or below the new
+   skill and level, the rank spells, Journeyman at 10, Expert at 20,
+   Artisan at 35, among them.)
+3. (Answered 2026-10-13: none yet means trained.) Which ones, for a
+   character with none: named by a flag (`profession=leatherworking`),
+   or chosen as a buddy's are (a random crafting profession and the
+   gathering one that feeds it)?
+6. "quality=green": a new gear file per quality and tier, generated as
+   the white ones are (`scripts/translate-buddy-kit-to-gearset`, scored by
+   the bot module's stat weights for the character's talent shape). White
+   gear comes from vendors; where may green, blue and purple come from:
+   any item of that quality, or only what drops in the world and
+   dungeons (no quest rewards, no crafted)?
 4. Lowering a level (60 to 20): skills lowered to match, or kept?
 5. Gear: the white gearset every time, or only when the tier changes
    (crossing 10, 20, ...), so better gear found in play isn't replaced?
