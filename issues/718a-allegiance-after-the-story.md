@@ -33,6 +33,19 @@ race/class" (a death knight player's buddies, built in 718):
 > parallel the Paladin "Divine Intervention" spell) and says "please be
 > more careful" because the loyalty tabard is enmeshed with their soul.
 
+Answers, 2026-10-12 (verbatim):
+
+> you don't have to have changes to the client I think if we just say DK's
+> are allowed and also they're the "orange" relationship with all of
+> their new faction members because nobody trusts them, a double
+> turncoat. But it should have no real modifications to behavior.
+
+On "serve the other faction, keep your race (server only)": "I think so?"
+On a death knight's buddies: "same faction as the DK. They can be any race
+though." And: "essentially, we want to give DK's the same option as
+Pandaren." (In the later game the Pandaren, one race, choose the Horde or
+the Alliance after their starting story.)
+
 ## Current Behavior
 
 - A death knight is of its race's faction, like any character; nothing
@@ -51,7 +64,16 @@ have not fought free (the buddies of death knight players, and those
 reborn into the buddy pool) can be of any class, and serve a master of
 either faction.
 
-**"Race slots" (needs an answer first).** A character's race is the
+**No new races: a death knight chooses its side, as the Pandaren do.**
+Answered 2026-10-12: no client changes. A death knight keeps its race and
+may swear to either faction after its story; one sworn to the other
+faction is shown as "orange" (unfriendly, the colour of a name and
+reputation the client draws below neutral) to the members of its new
+faction, "a double turncoat" whom nobody trusts, but this changes nothing
+about how they act together: they group, trade and fight side by side as
+faction-mates do. Its buddies are of its sworn faction, any race of it.
+
+**"Race slots" (answered: not needed).** A character's race is the
 client's own data: the race table (ChrRaces.dbc), which faction it
 belongs to, its models, and the character-creation screen are all read
 by the game client, and the server has a matching table per race. Adding
@@ -99,14 +121,15 @@ chooses, at will, one of:
 
 ## Open Questions
 
-1. Races: new races need the client patched (or the custom client). Is
-   "serve the other faction, keep your race" (server-only) enough for
-   now, or wait for the custom client?
+1. (Answered 2026-10-12: server only, no new races; "the same option as
+   Pandaren".) How is "orange" shown with no change in behaviour: a
+   reputation the new faction's members read as unfriendly (a cosmetic
+   standing), or only the name colour?
 2. Which tabards count for each master (any Horde or Alliance city tabard,
    or one made for the oath)?
 3. Can the oath be changed later, and how?
 4. The Val'kyr's hour: if the tabard comes off again within the hour, does
    the death knight stay dead (released to a graveyard as usual)?
-5. "Fight for any master": should the buddies of a death knight player be
-   of either faction (which needs cross-faction grouping, off on basic
-   today), or of the owner's faction as now?
+5. (Answered 2026-10-12: "same faction as the DK. They can be any race
+   though.") After an oath to the other faction, are its buddies drawn
+   anew in the new faction, or do the old ones swear with it?
