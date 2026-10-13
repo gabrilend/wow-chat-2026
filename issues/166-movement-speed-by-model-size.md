@@ -44,6 +44,12 @@ Not built yet. Every player character runs at one speed. The config-value step
 move speed (`Rate.MoveSpeed.Player`, a number) as 0.85 (0.8 until 2026-10-12), on every profile but cc-test.
 Gnome and tauren cover the same ground per second.
 
+**Walking at full speed, 2026-10-12 (source patch B053, basic, not yet
+built).** The owner: "can we make sure that walking speed is at 100% of
+it's normal speed?" C003's rate slowed every kind of player movement,
+walking included; B053 leaves walking out of it, so a player walks at the
+stock 2.5 yards a second and runs (swims, flies) at 0.85 of stock.
+
 ## Intended Behavior
 
 A character's run speed follows its body. The female blood elf stays at
