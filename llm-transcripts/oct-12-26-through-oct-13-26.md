@@ -1,6 +1,6 @@
 # Conversation Summary: 4a14807d-68bc-45b5-b727-e461dd1e7166
 
-Generated on: 2026-10-13 02:40:13
+Generated on: 2026-10-13 03:00:49
 Models: claude-opus-5-5
 
 ## Contents
@@ -1364,6 +1364,257 @@ creature to carry its own list. Two questions:
 
 **Gabrubre:** still waiting. Tell me when the server is up and I'll run the
 reset.
+
+--------------------------------------------------------------------------------
+
+### User Request 10
+
+> Most trade goods are white (cloth, leather, ore, herbs), and the auction
+> errand only lists greens and better. So today no trade good is
+> ever listed. Should white trade goods be an exception and get listed, and at
+> what minimum price?
+
+yes, and, the price people are willing to pay for them. Each bot should try and
+guess and estimate based on what other prices are available in the auction
+house. Pick a random number between -30% and 15% higher or lower than the
+average price.
+
+the cheapest ones always get picked first, so even though it's a higher chance
+to be lower, the price will still probably climb. That's my bet at least, and
+that's good if more goods get sold. When the bots re-list it, they should do the
+same process. I think we had plans for remembering the price from the past? We
+might want to think about replacing that with this system.
+
+
+
+<pasted_content id="433b">
+  ├───────────────────────────┼──────────┼──────────────────────────────────────────────────────┤
+  │ Northrend │ 6 │ Northrend is closed on basic │
+  ├───────────────────────────┼──────────┼──────────────────────────────────────────────────────┤
+  │ Outland │ 7 │ Shattrath (4), Honor Hold, Thrallmar, the Stormspire │
+  ├───────────────────────────┼──────────┼──────────────────────────────────────────────────────┤
+</pasted_content id="433b">
+
+
+we should remove these. Same for all Outland and Northrend profession trainers.
+They shouldn't teach any professions. Same for any of the other professions in
+Outland and Northrend.
+
+
+
+<pasted_content id="433b">
+  ├───────────────────────────┼──────────┼──────────────────────────────────────────────────────┤
+  │ Silvermoon and the Exodar │ 3 │ the stock capital trainers │
+  ├───────────────────────────┼──────────┼──────────────────────────────────────────────────────┤
+  │ Visiting Jewelcrafter │ 1 │ one creature per side, standing in six
+  capitals │
+  └───────────────────────────┴──────────┴──────────────────────────────────────────────────────┘
+</pasted_content id="433b">
+
+
+we need one in each capital city.
+
+> There's no trainer who teaches every profession. Each capital has the stock
+> one-profession trainers, and our gem patch added a Visiting
+>   Jewelcrafter to the six capitals that had none.
+
+maybe this was something for buddy-bots...? Can you search the llm-transcripts?
+
+
+
+<pasted_content id="433b">
+>   Capitals only gives 8 trainers, 4 per side:
+>   - Alliance: Stormwind, Ironforge, Darnassus, the Exodar.
+>   - Horde: Orgrimmar, Thunder Bluff, the Undercity, Silvermoon.
+</pasted_content id="433b">
+
+
+great, so we need 4 lists of randomly sorted gemstones, distributed throughout
+the 300 levels in a roughly evenly proportioned way.
+
+> So that's 8 random orders. Each Visiting Jewelcrafter has to become its own
+> creature to carry its own list.
+
+should be 4. Also, they should be their own creature type. Some odd eccentric
+(autistic) who is visiting from afar. They're just so happy to be there that
+once every hour at a random time +/- 30 minutes, they'll dance for a minute,
+then go back to standing around learning.
+
+just compiled, starting the server, check back in 30 seconds?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 10
+
+> While the server starts: searching the transcripts for an all-professions
+> trainer:
+
+> The server is applying database updates. One of them, "valley universal
+> trainers", may be what you remember. Reading it:
+
+> Still applying updates. Setting a watch on the log for the "World initialized"
+> line, and recording your answers meanwhile:
+
+> The server has been applying the Outland-tradeskills update for a few minutes.
+> Checking whether the database is busy with it, or stuck:
+
+> It's working, just slowly: one delete over the creature loot table has been
+> running for a minute. The watch will tell me when the world is up. Committing
+> the recorded answers meanwhile:
+
+*[commit] cd2ca05bd in wow-chat-2026 - Plans: auction prices guessed from the market, no profession trainers beyond Azeroth, one eccentric jewelcrafter per capital*
+
+Your answers are recorded in the plans and committed. Gabrubre's reset is
+waiting for the server to finish starting.
+
+**The server isn't up yet.** After the new build it's re-running basic's
+database updates, and one of them is a slow delete over the creature loot table
+that has been running for over a minute. It's working, not stuck. A background
+watch is waiting for "World initialized", or for a crash. When it fires I'll run
+Gabrubre's reset and tell you what it did.
+
+**Found the trainer you remembered:** the **Visiting Mentor**, at 24 sites
+(every starting valley, first town and capital). It teaches whichever *classes*
+have no trainer at its site, one dialogue line per class. It doesn't teach
+professions, but the same dialogue-line mechanism could give the eccentric
+jewelcrafter its own list.
+
+**Recorded and committed:**
+- **Auction prices:** white trade goods get listed. A buddy prices at the
+  average of the same item's listings, moved by a random −30% to +15%, and
+  re-lists the same way. Three questions are in the plan:
+  - when nothing is listed, what's the average?
+  - does the per-quality minimum still apply?
+  - does this replace only the remembered price, or the undercut and glut rules
+    too?
+- **Outland and Northrend profession trainers teach nothing,** every profession.
+  Open: remove them from the world, or leave them standing with nothing to
+  teach?
+- **Jewelcrafting:** a jewelcrafter in each of the eight capitals, with four
+  random orders of the cuts, each spread over 1–300 and used once per side.
+  The capital jewelcrafters become a creature of their own: the happy eccentric
+  visitor who dances for a minute every 30–90 minutes. Open: do the stock
+  Silvermoon and Exodar trainers make way for the visitor, or keep one of the
+  four orders?
+
+--------------------------------------------------------------------------------
+
+### User Request 11
+
+<pasted_content id="433b">
+DatabasePool 'acore_auth' opened successfully. 2 total connections running.
+
+Opening DatabasePool 'acore_characters_basic'. Asynchronous connections: 1,
+synchronous connections: 1.
+DatabasePool 'acore_characters_basic' opened successfully. 2 total connections
+running.
+
+Opening DatabasePool 'acore_world_basic'. Asynchronous connections: 1,
+synchronous connections: 1.
+DatabasePool 'acore_world_basic' opened successfully. 2 total connections
+running.
+
+Updating Auth database...
+>> Auth database is up-to-date! Containing 14 new and 9 archived updates.
+
+Updating Character database...
+>> The file '04-buddy-roster.sql' was applied to the database, but is missing in
+>your update directory now!
+>> The file '01-no-intro-cinematic.sql' was applied to the database, but is
+>missing in your update directory now!
+>> The file '03-death-knight-souls.sql' was applied to the database, but is
+>missing in your update directory now!
+>> The file '05-world-boss-timers.sql' was applied to the database, but is
+>missing in your update directory now!
+>> The file '02-starting-valley-rotation.sql' was applied to the database, but
+>is missing in your update directory now!
+>> Character database is up-to-date! Containing 10 new and 30 archived updates.
+etaching after fork from child process 7791]
+[Detaching after fork from child process 7793]
+[Detaching after fork from child process 7794]
+[Detaching after fork from child process 7795]
+[Detaching after fork from child process 7799]
+[Detaching after fork from child process 7800]
+[Detaching after fork from child process 7801]
+[Detaching after fork from child process 7802]
+[Detaching after fork from child process 7846]
+[Detaching after fork from child process 7847]
+[Detaching after fork from child process 7848]
+[Detaching after fork from child process 7852]
+[Detaching after fork from child process 7853]
+[Detaching after fork from child process 7854]
+[Detaching after fork from child process 7855]
+[Detaching after fork from child process 7856]
+[Detaching after fork from child process 7857]
+[Detaching after fork from child process 7858]
+[Detaching after fork from child process 7859]
+[Detaching after fork from child process 7860]
+[Detaching after fork from child process 7861]
+[Detaching after fork from child process 7862]
+[Detaching after fork from child process 7863]
+[Detaching after fork from child process 7867]
+[Detaching after fork from child process 7868]
+[Detaching after fork from child process 7869]
+[Detaching after fork from child process 7870]
+[Detaching after fork from child process 7871]
+[Detaching after fork from child process 7872]
+[Detaching after fork from child process 7873]
+[Detaching after fork from child process 7874]
+[Detaching after fork from child process 7875]
+[Detaching after fork from child process 7876]
+[Detaching after fork from child process 7877]
+[Detaching after fork from child process 7902]
+[Detaching after fork from child process 7903]
+[Detaching after fork from child process 7904]
+[Detaching after fork from child process 8067]
+[Detaching after fork from child process 8074]
+[Detaching after fork from child process 8075]
+[Detaching after fork from child process 10621]
+[Detaching after fork from child process 10625]
+[Detaching after fork from child process 10683]
+[Detaching after fork from child process 10857]
+[Detaching after fork from child process 11254]
+[Detaching after fork from child process 11391]
+[Detaching after fork from child process 11550]
+[Detaching after fork from child process 11554]
+</pasted_content id="433b">
+
+
+um what does this mean
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 11
+
+> Those lines are mostly harmless, but the "missing" warnings point at something
+> real.
+>
+> **"Detaching after fork from child process …"** isn't from the server. It's
+> from **gdb, the crash catcher**: you built with `--debug`, so
+> `./scripts/worldserver` runs the server inside it. Whenever the server starts
+> another program, gdb prints this line. During start-up the server's database
+> updater runs the `mysql` client program once per update file, so you get
+> dozens of them. When start-up finishes they stop. They don't mean anything is
+> wrong.
+>
+> **"The file '04-buddy-roster.sql' was applied to the database, but is missing
+> in your update directory now!"** comes from the server's database updater. It
+> keeps a table of every update file it has applied, by file name. Checking what
+> changed:
+
+These warnings are leftovers from a rename. Your SQL files were renamed with a
+`z_` prefix so they run after upstream's updates, and the updater now reads them
+from the new folder. Today it applied all six under their new names, including
+the stand-ins table, which now exists. But its record still lists the five old
+names, so it warns at every start that those files are "missing". Nothing is
+broken; the old rows just weren't cleared.
+
+I'd fix it in the tool that writes the `z_` copies (rather than by hand), so it
+removes a renamed file's old record. The world database probably has the same
+leftovers. Should I go ahead?
+
+The server is still starting; I'll run Gabrubre's reset as soon as the world is
+up.
 
 --------------------------------------------------------------------------------
 
