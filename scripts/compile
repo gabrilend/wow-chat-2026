@@ -860,6 +860,26 @@ check_modules_configured
 # working tree is discardable. See patches.sh:reset_source_trees.
 reset_source_trees
 
+# The source tree must be at the profile's pinned commit: the patches are
+# written against it, and compile builds whatever commit the tree is on
+# (only scripts/update and scripts/install move it). On 2026-10-12 the pin
+# had moved (to 2a2211cd8f3d, 2026-10-09) but the tree was still at the
+# old one, so the build stopped at the first patch retargeted for the new
+# pin (B043, "anchors found ... 0") with nothing saying why. The pin is
+# read from scripts/update's table, the one that checks it out.
+PIN="$(sed -n '/^declare -A PROFILE_COMMIT=(/,/^)/p' "${DIR}/scripts/update" \
+    | sed -n "s/^ *\[\"${PROFILE}\"\]=\"\([0-9a-f]*\)\".*/\1/p")"
+if [[ -n "${PIN}" ]]; then
+    TREE_COMMIT="$(git -C "${AC_CODE_DIR}" rev-parse HEAD)"
+    if [[ "${TREE_COMMIT}" != "${PIN}"* ]]; then
+        echo "ERROR: ${AC_CODE_DIR} is at ${TREE_COMMIT:0:12}, but the ${PROFILE} profile is pinned to ${PIN}."
+        echo "  The patches are written for the pinned commit, so they would not apply here."
+        echo "  To fix: ./scripts/update   (checks out the pinned commits of the core and modules, then compiles)"
+        echo "  Nothing was changed."
+        exit 1
+    fi
+fi
+
 # Ensure patches are reverted even on build failure. Armed BEFORE applying:
 # apply_patches_begin now stops on the first failing patch, and under
 # set -e that exits here, so a trap set afterward would never fire and the
