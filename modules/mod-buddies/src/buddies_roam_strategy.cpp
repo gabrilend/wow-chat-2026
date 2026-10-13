@@ -198,6 +198,12 @@ static constexpr uint32 AGGRO_LOOK_MS     = 500;     // a buddy inside looks rou
 static constexpr float  AGGRO_REACH       = 1.1f;    // the owner within this times a monster's aggro radius for them: the buddies go
 static constexpr float  AGGRO_SEARCH_YARDS = 50.0f;  // the farthest that can be: the largest radius (45) x 1.1
 static constexpr float  MOBS_YARDS        = 60.0f;   // monsters this near a buddy are offered to the nudge
+// A clan-mate (the owner, or a buddy of the same owner) in a fight this near
+// is helped before a new fight is picked (owner, 2026-10-12: "a radius
+// that's like, 1.3x the bot's "target and engage enemy" radius [...] if any
+// clanmates are in a battle in that area, go and join them instead of
+// picking a new fight"); the engage radius is MOBS_YARDS.
+static constexpr float  HELP_YARDS        = MOBS_YARDS * 1.3f;
 static constexpr uint32 MEAL_MAX_MS       = 120000;  // a meal that hasn't finished by now is ended (and logged)
 static constexpr uint32 CAMPFIRE_SPELL    = 818;     // Basic Campfire: taught with Cooking (every buddy has it,
                                                      // 617k); in this version it needs no wood, flint or tinder
@@ -1085,6 +1091,44 @@ private:
         return best;
     }
 
+    // {{{ HelpNear
+    // The monster the nearest clan-mate within HELP_YARDS is fighting: the
+    // owner, or another buddy of the same owner, alive and in combat with a
+    // creature this buddy may attack. Null when none is.
+    Creature* HelpNear()
+    {
+        Player* owner = botAI->GetMaster();
+        if (!owner)
+            return nullptr;
+        uint32 ownerGuid = owner->GetGUID().GetCounter();
+        std::vector<Player*> clan;
+        clan.push_back(owner);
+        for (auto const& [buddy, o] : BuddyRosterPairs())
+            if (o == ownerGuid && buddy != bot->GetGUID().GetCounter())
+                if (Player* p = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(buddy)))
+                    clan.push_back(p);
+        Creature* best = nullptr;
+        float bestDist = HELP_YARDS + 1.0f;
+        for (Player* mate : clan)
+        {
+            if (!mate->IsInWorld() || mate->GetMapId() != bot->GetMapId() || !mate->IsAlive() || !mate->IsInCombat())
+                continue;
+            float d = bot->GetExactDist(mate);
+            if (d > HELP_YARDS || d >= bestDist)
+                continue;
+            Unit* foe = mate->GetVictim();
+            if (!foe)
+                continue;
+            Creature* c = foe->ToCreature();
+            if (!c || !c->IsAlive() || !bot->IsValidAttackTarget(c))
+                continue;
+            best = c;
+            bestDist = d;
+        }
+        return best;
+    }
+    // }}}
+
     void Shun(RoamState& s, ObjectGuid guid, uint64 now, char const* why)
     {
         s.shunned.erase(std::remove_if(s.shunned.begin(), s.shunned.end(),
@@ -1147,6 +1191,14 @@ private:
         if (!s.prey && now >= s.nextPreyLook)
         {
             s.nextPreyLook = now + PREY_LOOK_MS;
+            // a clan-mate's fight nearby comes first: joined at once, no
+            // approach to the edge (it has begun already)
+            if (Creature* foe = HelpNear())
+            {
+                BuddyTrace(bot, "help: joining a clan-mate's fight with {} ({:.1f} yards off)", foe->GetName(), bot->GetExactDist(foe));
+                OpenFight(foe, s, now);
+                return true;
+            }
             if (Creature* c = PreyNear(s, now))
             {
                 s.prey      = c->GetGUID();
