@@ -6,6 +6,18 @@
 set -e
 set -o pipefail
 
+# Where the script stopped, if a failing command ended it through set -e
+# rather than through one of its own error messages. Recorded here and
+# reported at exit (report_how_compile_ended). -E carries the recorder
+# into functions, including those sourced from patches/patches.sh, so the
+# file and line point at the command that actually failed. Commands whose
+# failure is expected (in an if, or before || / &&) never trigger it.
+# Added 2026-10-12: a module missing from the cmake cache ended a build
+# right after "Cache: ..." with no message at all, and the output looked
+# like a finished build.
+set -E
+trap 'STOPPED_AT="${BASH_SOURCE[0]}:${LINENO}"; STOPPED_COMMAND="${BASH_COMMAND}"' ERR
+
 # {{{ set_dir
 # The project directory: --dir when given, otherwise the parent of the
 # directory this script lives in.
@@ -516,6 +528,7 @@ check_modules_configured() {
 
 # {{{ print_build_failure
 print_build_failure() {
+    FAILURE_ALREADY_EXPLAINED=true
     local ERROR_LOG="${BUILD_DIR_SHADOW}/compile-errors.log"
     echo ""
     echo "==============================================================================="
@@ -694,8 +707,14 @@ do_build() {
         [[ -n "${setting}" ]] || continue
         MODULE_FLAGS+=("-D${setting%%=*}=${setting#*=}")
         if [[ -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" ]]; then
+            # Any entry type: cmake records a setting it was handed on the
+            # command line but no module declared as ":UNINITIALIZED="
+            # (seen for every disabled module), the rest as ":STRING=".
+            # sed, not grep: a setting absent from the cache is normal (a
+            # new module), and grep's "no match" exit would end the script
+            # here under set -e with nothing printed (2026-10-12).
             local cached
-            cached=$(grep -m1 "^${setting%%=*}:STRING=" "${BUILD_DIR_SHADOW}/CMakeCache.txt" | cut -d= -f2-)
+            cached=$(sed -n "s/^${setting%%=*}:[A-Z]*=//p" "${BUILD_DIR_SHADOW}/CMakeCache.txt" | head -n 1)
             # unset in the cache counts as "default" (cmake's own default)
             [[ "${cached:-default}" == "${setting#*=}" ]] || module_changes+=("${setting%%=*} ${cached:-unset} -> ${setting#*=}")
         fi
@@ -826,9 +845,43 @@ do_build() {
 }
 # }}}
 
+# {{{ report_how_compile_ended
+# The last thing printed on any failed exit, so the end of the output always
+# says whether the compile worked. Three ways a run can stop early:
+#   - an explicit error (quick tests, wrong pinned commit, ...): that message
+#     is already above, and this adds the verdict line under it
+#   - a build step failed (print_build_failure already printed BUILD FAILED):
+#     the verdict line only
+#   - a command failed with no message of its own, and set -e ended the
+#     script: this names the file, line and command, since nothing else will
+# A successful run never comes here; it prints COMPILE SUCCEEDED itself.
+report_how_compile_ended() {
+    local status=$1
+    [[ ${status} -ne 0 ]] || return 0
+    echo ""
+    echo "==============================================================================="
+    echo "COMPILE FAILED (exit status ${status}). Nothing was promoted; the installed"
+    echo "server in installed-files-${PROFILE:-<profile>}/ is unchanged."
+    if [[ -n "${STOPPED_AT:-}" && "${FAILURE_ALREADY_EXPLAINED:-false}" != "true" ]]; then
+        echo ""
+        echo "It stopped without an error message of its own, at:"
+        echo "  ${STOPPED_AT#${DIR}/}"
+        echo "  running: ${STOPPED_COMMAND}"
+        echo "That command failed, and the script's stop-on-any-failure rule (set -e)"
+        echo "ended the run there. The script should explain this failure itself; the"
+        echo "line above is where to add that."
+    fi
+    echo "==============================================================================="
+}
+# }}}
+
 # =============================================================================
 # Main
 # =============================================================================
+
+# Armed before anything else, so even an early stop ends with a verdict.
+# Replaced further down by the trap that also reverts the source patches.
+trap 'report_how_compile_ended $?' EXIT
 
 parse_args "$@"
 get_profile_paths
@@ -884,7 +937,8 @@ fi
 # apply_patches_begin now stops on the first failing patch, and under
 # set -e that exits here, so a trap set afterward would never fire and the
 # patches applied before the failure would stay in the tree.
-trap 'unapply_patches_begin; leave_source_trees_clean' EXIT
+# The exit status is caught first: the reverts would overwrite it.
+trap 'compile_status=$?; unapply_patches_begin; leave_source_trees_clean; report_how_compile_ended ${compile_status}' EXIT
 # Apply pre-compile patches (idempotent)
 apply_patches_begin
 
@@ -902,7 +956,9 @@ unapply_patches_begin
 leave_source_trees_clean
 
 echo ""
-echo "Compile complete! Shadow build ready."
+echo "==============================================================================="
+echo "COMPILE SUCCEEDED. The new build is in the shadow install, not yet promoted."
+echo "==============================================================================="
 
 # Auto-validate and promote unless disabled
 if [[ "${AUTO_VALIDATE}" == "true" ]]; then
