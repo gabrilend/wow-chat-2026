@@ -732,6 +732,9 @@ do_build() {
         RECONFIGURE_WHY="adding ${PCH_FLAG} so ccache can cache precompiled-header compiles (this build compiles everything once)"
     elif [[ ${#module_changes[@]} -gt 0 ]]; then
         RECONFIGURE_WHY="the module set differs from the last configure: ${module_changes[*]}"
+    elif ! grep -q "^CMAKE_BUILD_TYPE:[A-Z]*=$([[ "${DEBUG_BUILD}" == "true" ]] && echo Debug || echo RelWithDebInfo)\$" "${BUILD_DIR_SHADOW}/CMakeCache.txt"; then
+        # a plain compile after a --debug one: back to the optimized build
+        RECONFIGURE_WHY="the build type changes back to RelWithDebInfo (the last setup was for a different type)"
     fi
     if [[ -n "${RECONFIGURE_WHY}" ]]; then
         echo ""
@@ -770,6 +773,24 @@ do_build() {
         echo ""
         echo "Skipping cmake (already configured, use --force to reconfigure)"
     fi
+
+    # The build type actually configured, checked against the one asked for.
+    # The reconfigure reasons above should make these always agree; this is
+    # the guard if they ever don't, because the stamp written below (and so
+    # whether the worldserver runs its crash catcher) trusts DEBUG_BUILD, not
+    # what cmake really used.
+    local wanted_type configured_type
+    wanted_type="$([[ "${DEBUG_BUILD}" == "true" ]] && echo Debug || echo RelWithDebInfo)"
+    configured_type="$(sed -n 's/^CMAKE_BUILD_TYPE:[A-Z]*=//p' "${BUILD_DIR_SHADOW}/CMakeCache.txt" | head -n 1)"
+    if [[ "${configured_type}" != "${wanted_type}" ]]; then
+        echo ""
+        echo "ERROR: the build is set up as '${configured_type:-unset}', but this run asked for '${wanted_type}'."
+        echo "  Setup was skipped, so the earlier build type would be used and the install mislabelled."
+        echo "  To fix: add --force to re-run setup with ${wanted_type}."
+        FAILURE_ALREADY_EXPLAINED=true
+        return 1
+    fi
+    echo "Configured build type: ${configured_type}"
 
     echo ""
     echo "Building with ${THREADS} threads..."
@@ -888,6 +909,26 @@ get_profile_paths
 
 echo "Compiling profile: ${PROFILE}"
 echo "  (skipping git checks)"
+# What --debug changes, said up front, because nothing in cmake's or make's
+# own output makes it obvious (cmake prints "buildtype : Debug" once, deep
+# in its option summary). It changes the program that comes out, not just
+# the messages: the compiler leaves the code unoptimized, and the
+# installed folder is marked so the worldserver runs under the crash
+# catcher. It does NOT turn on the core's own debug code (packet counters,
+# slow-query warnings); that is a separate cmake option, WITH_COREDEBUG,
+# which this script never sets.
+if [[ "${DEBUG_BUILD}" == "true" ]]; then
+    echo "Build type: Debug (--debug)"
+    echo "  - compiled without optimization (-O0 -g): a crash report shows the true"
+    echo "    line and every variable's value, but the server runs several times slower"
+    echo "  - standard assertions stay switched on (no -DNDEBUG)"
+    echo "  - the install is marked Debug, so ./scripts/worldserver runs it under the"
+    echo "    crash catcher automatically"
+    echo "  - cmake's setup re-runs (--debug implies --force). The first Debug build"
+    echo "    compiles nearly everything; the cache makes later ones short"
+else
+    echo "Build type: RelWithDebInfo (optimized, with debug symbols; --debug for Debug)"
+fi
 echo ""
 
 # Check source exists
@@ -957,7 +998,8 @@ leave_source_trees_clean
 
 echo ""
 echo "==============================================================================="
-echo "COMPILE SUCCEEDED. The new build is in the shadow install, not yet promoted."
+echo "COMPILE SUCCEEDED ($(cat "${INSTALL_DIR_SHADOW}/bin/.build-type") build). The new build is in the"
+echo "shadow install, not yet promoted."
 echo "==============================================================================="
 
 # Auto-validate and promote unless disabled
