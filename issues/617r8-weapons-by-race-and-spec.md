@@ -26,6 +26,30 @@ Answer, 2026-10-13 (verbatim), on hearing the plan:
 Read as: a buddy's weapon stays the same kind (a mace stays a mace) from
 tier to tier, as far as the white items of that kind reach.
 
+Answers, 2026-10-13 (verbatim), to the three open questions:
+
+> dwarf, 2h axe, for chopping wood in the cold. night elf, staff, for
+> fighting with agility and dexterity. tauren, staff, for walking long
+> across the plains.
+>
+> oh, did you mean a 1h weapon? Ah gotcha. well that should be the case
+> for dwarf warriors, tauren and night elf too.
+>
+> for 1h weapons... dwarfs get 1h axe, tauren get 1h mace, and night elf
+> get 1h sword.
+
+> thrown
+
+> for combat rogues, slow 1h and fast off-hand dagger. for assassination,
+> slow daggers. for subtlety, fast daggers.
+
+Read as: a warrior's two-handed family by race: dwarf axe, night elf
+staff, tauren staff (replacing the starter kits' polearms for these
+three). Where the spec wants one hand: dwarf axe, tauren mace, night elf
+sword. Warriors and rogues carry a thrown weapon. Rogues by main tree:
+combat a slow one-hander and a fast dagger in the off hand; assassination
+two slow daggers; subtlety two fast daggers.
+
 ## Current Behavior
 
 **Hands by spec: already in the outfits, not yet in the server.** The
@@ -81,11 +105,11 @@ the same translator.
 
 ## Open Questions
 
-1. Families with no one-handed form (staff, polearm) when the spec
+1. (Answered 2026-10-13, above.) Families with no one-handed form (staff, polearm) when the spec
    wants one hand: which family instead? (A dwarf protection warrior's
    polearm: axe, mace, sword?)
-2. Ranged for warriors, rogues and hunters' melee: the starter kits give
+2. (Answered 2026-10-13: thrown.) Ranged for warriors, rogues and hunters' melee: the starter kits give
    warriors and rogues no ranged weapon. A bow, gun, crossbow or thrown
    weapon by race (dwarves guns, night elves bows), or none?
-3. Off-hand pairs: the starter kits pair different weapons (an orc rogue's
+3. (Answered 2026-10-13: rogues by main tree, above.) Off-hand pairs: the starter kits pair different weapons (an orc rogue's
    knife and flail). Keep pairs within the family, or as the kits do?

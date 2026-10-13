@@ -72,6 +72,38 @@ apart. A colour's cuts split over its three rounds give 2 to 5 cuts a
 tier, so at any tier only that many of the seventeen trainers can teach
 a different cut.
 
+Answers, 2026-10-13 (verbatim), on hearing that at a tier a colour has
+only 2 to 5 cuts for 17 trainers:
+
+> okay so we should teach the gems in a random order then. We should
+> distribute them such that the colors are as evenly distributed through
+> the levels as possible. There should be 17 different orders, for 17
+> trainers. Can you tell me, why 17? Some of them are faction specific,
+> so that number will go down. Can we just have this random order be for
+> the capital city ones? What other ones exist? Probably in Eversong Woods
+> or Azuremyst or something... I'm thinking just the capital vendors...
+> We have a special vendor that teaches all the professions in each
+> capital city, right? How does that go?
+
+Who teaches jewelcrafting on basic (2026-10-13, the world database): 17
+kinds of trainer. Six are Northrend's grand masters (list 111; Northrend
+is closed on basic). Seven are Outland's masters (list 112: three in
+Shattrath, Honor Hold, Thrallmar, the Stormspire, and one more in
+Shattrath). Three stock trainers (list 113): Silvermoon (two) and the
+Exodar. Then the Visiting Jewelcrafter (list 113), one creature per side
+standing in six capitals: Stormwind, Ironforge, Darnassus; Orgrimmar,
+Thunder Bluff, the Undercity. No trainer teaches every profession: each
+capital has the stock one-profession trainers. So the capitals have
+eight jewelcrafters, four a side (Alliance: Stormwind, Ironforge,
+Darnassus, the Exodar; Horde: Orgrimmar, Thunder Bluff, the Undercity,
+Silvermoon). For each to teach its own order, the six Visiting
+Jewelcrafters become six creatures, each pointed at a list of its own.
+
+Read as: one random order of the cuts per capital trainer, eight orders,
+each spread over 1-300 with the colours as even along the skill as the
+counts allow, and no two trainers of a side teaching the same cut at the
+same skill.
+
 ## Current Behavior
 
 Built by 155p (E033, E034), not yet seen in game:

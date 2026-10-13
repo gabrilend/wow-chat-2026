@@ -322,6 +322,14 @@ static bool TownHasAuctioneer(Player* bot, uint32 town);
 //                                      here, they'd be bought back at the
 //                                      same stop (BuyMeals) or missed in
 //                                      the next fight
+//   trade goods                      - owner, 2026-09-24: "For trade goods
+//                                      they will list it" (the auction
+//                                      house), and 2026-09-26: kept "like
+//                                      hearthstone, consumables, tradegoods
+//                                      for their profession", sold only
+//                                      when the bags stay 90% full ("then
+//                                      they sell all the tradegoods as
+//                                      well"): the full-bags rounds below
 //   anything with a "Use:"           - owner, 2026-10-13: "any item with a
 //                                      'use' should be kept to be used when
 //                                      required" (a scroll, a trinket, a
@@ -347,7 +355,7 @@ static std::vector<ObjectGuid> Junk(PlayerbotAI* ai, Player* bot)
         ItemTemplate const* proto = item->GetTemplate();
         if (!proto->SellPrice)
             continue;                                  // a vendor pays nothing for it (quest items, and the like)
-        if (CantSpare(ai, item) || proto->Class == ITEM_CLASS_CONSUMABLE)
+        if (CantSpare(ai, item) || proto->Class == ITEM_CLASS_CONSUMABLE || proto->Class == ITEM_CLASS_TRADE_GOODS)
             continue;
         bool hasUse = false;
         for (auto const& s : proto->Spells)

@@ -151,7 +151,11 @@ meals", "full bags without an auction house"):
   module judges surplus. Kept: what the full-bags rounds never sell
   (below: the hearthstone, tools, fishing pole, gear and ammo in use,
   quest items, epics for the owner); its consumables (food, drink and
-  potions, which it would buy back at the same stop); anything with a
+  potions, which it would buy back at the same stop); its trade goods
+  (kept for the auction house and its professions, sold to a vendor only
+  by the full-bags rounds below: owner 2026-09-26, "not counting things
+  they just want to keep like hearthstone, consumables, tradegoods for
+  their profession"); anything with a
   "Use:" effect (owner, 2026-10-13: "any item with a 'use' should be kept
   to be used when required"); unbound greens and better, in every town,
   for the auction house (owner, 2026-10-13: "Green and blue items should
@@ -355,3 +359,11 @@ cutting through walls or teleporting.
   price list. Random stacks. Near-minimum counts as minimum. Undercutting
   buddies is fine. No deposit: vendor for the rest of the visit. Mailbox
   after yellow repair. Finish the current task. Epics always posted.
+- (Open, 2026-10-13) White trade goods at the auction house. The owner
+  said "For trade goods they will list it" (2026-09-24) and also "whites
+  are not auctioned at all" (the price multiplier, same day). Most trade
+  goods are white (cloth, leather, ore, herbs), and the auction errand
+  as built lists only greens and better, so today no trade good is ever
+  listed: they are kept, and vendored only by the full-bags rounds.
+  Should white trade goods be listed (an exception to "whites are not
+  auctioned"), and at what minimum price?

@@ -367,8 +367,10 @@ is chosen."
   covers random bots; buddies are the exception.
 - (Answered 2026-09-25) Death knight clans ignore the guarantee; they
   tank-swap and heal themselves instead (617g).
-- (Open, 2026-10-13) "until they hit level 2 and can't teleport with him
-  anymore": what is the teleport? Today a newcomer chooses a buddy from
+- (Answered 2026-10-13: "yes. currently, you can talk to him and ask to
+  adventure somewhere else": his offer to take a newcomer to adventure
+  elsewhere, which ends at level 2.) "until they hit level 2 and can't
+  teleport with him anymore": what is the teleport? Today a newcomer chooses a buddy from
   him and stays in the valley. Is there a ride with him out of the
   valley (to the next town, the buddy's home) offered at level 1 only?
 - (Open, 2026-10-13) His own Sargobras for each newcomer: the shared
