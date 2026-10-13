@@ -171,6 +171,15 @@ Two layers, one per half of the user's design.
   (617b, 2026-09-25). That setting stops every death knight bot from
   logging in, so the buddy module will need its own exception (or the
   setting off, with random bots already off on basic, 155b).
+- **Any race and class** (owner, 2026-10-12: "Sargobras doesn't need to
+  appear to level 56-60 death knights. They should get a completely random
+  race/class."): a death knight player's buddies are drawn from every
+  class of its faction but the death knight, each of a race of the faction
+  that plays it, with a shape drawn as for any buddy (pick "any",
+  `lib/buddy-choice.lua`); death knights of random races until then (those
+  already made stay as they are). The bigger picture the owner set out the
+  same day (the Lich King's servants of any class and any master, and an
+  allegiance chosen after the story) is issue 718a.
 - **Four buddies from the trade, by level** (owner, 2026-09-26; by level
   since 2026-10-12: "55 = 1 buddy-bot, 57 = 2, 59 = 3, 60 = 4"): a death
   knight that has given its soul gets four buddies in all, death knights

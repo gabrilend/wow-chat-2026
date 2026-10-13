@@ -112,6 +112,56 @@ for _, team in ipairs({ "alliance", "horde" }) do
 end
 check(unsteered_offrole > 0, "slots 1-5 look steered: no capable class ever drew another role")
 
+-- "I'm flexible." (2026-10-12): any class of the faction but the death
+-- knight, a race of the faction that plays it, always the even shape (7,
+-- one-third in each tree); a class whose even shape a clan-mate already
+-- holds isn't drawn; over many draws, every class of the faction comes up
+for _, team in ipairs({ "alliance", "horde" }) do
+    local seen, roster = {}, {}
+    for i = 1, 400 do
+        local b, err = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = function(n) return math.random(n) end,
+            team = team, owner_is_dk = false, slot = 1, roster = {}, pick = { kind = "flexible" } })
+        check(b ~= nil, team .. " flexible: " .. tostring(err))
+        if b then
+            seen[b.class] = true
+            check(b.profile == 7, team .. " flexible: shape " .. b.profile .. ", not the even 7")
+            check(b.class ~= 6, team .. " flexible: a death knight")
+            check(RC.races[b.race].team == team, team .. " flexible: race " .. b.race .. " of the other faction")
+            local plays = false
+            for _, c in ipairs(RC.races[b.race].classes) do if c == b.class then plays = true end end
+            check(plays, team .. " flexible: race " .. b.race .. " can't play class " .. b.class)
+        end
+    end
+    local n = 0
+    for _ in pairs(seen) do n = n + 1 end
+    check(n >= 8, team .. " flexible: only " .. n .. " classes ever drawn")
+    -- a clan with a flexible warrior (class 1) draws no second flexible warrior
+    for i = 1, 200 do
+        local b = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = function(n) return math.random(n) end,
+            team = team, owner_is_dk = false, slot = 2, roster = { { class = 1, profile = 7, role = 0 } }, pick = { kind = "flexible" } })
+        check(b and b.class ~= 1, team .. " flexible: a second even-shaped warrior")
+    end
+end
+
+-- a death knight player's buddies (pick "any", 2026-10-12): any class but
+-- the death knight, a race of the faction that plays it, a shape of its ten
+for _, team in ipairs({ "alliance", "horde" }) do
+    local classes = {}
+    for i = 1, 300 do
+        local b, err = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = function(n) return math.random(n) end,
+            team = team, owner_is_dk = false, slot = 1, roster = {}, pick = { kind = "any" } })
+        check(b ~= nil, team .. " any: " .. tostring(err))
+        if b then
+            classes[b.class] = true
+            check(b.class ~= 6 and RC.races[b.race].team == team, team .. " any: class " .. b.class .. " race " .. b.race)
+            check(b.profile >= 1 and b.profile <= 10, team .. " any: shape " .. tostring(b.profile))
+        end
+    end
+    local n = 0
+    for _ in pairs(classes) do n = n + 1 end
+    check(n >= 8, team .. " any: only " .. n .. " classes ever drawn")
+end
+
 print(string.format("test-buddy-choice: %d checks over %d clans per faction and owner kind", checks, RUNS))
 for _, f in ipairs(fails) do print("FAIL " .. f) end
 print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s) shown."))

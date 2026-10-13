@@ -30,6 +30,7 @@ local Choice = {}
 local DEATH_KNIGHT      = 6
 local GUARANTEE_SLOTS   = { [6] = true, [7] = true }   -- owed at levels 50 and 60
 local ROLE_NUMBER       = { damage = 0, tank = 1, healer = 2 }
+local EVEN_SHAPE        = 7         -- one-third in each tree, every class (buddy-talent-data.lua; gearsets.lua's EVEN_SHAPE)
 local ROLE_ORDER        = { "tank", "healer" }         -- the guarantee fills a tank first
 
 -- {{{ local function races_of
@@ -93,7 +94,8 @@ end
 --   a.Spender   buddy-talent-spender.lua   a.rand function(n) -> 1..n
 --   a.team      "alliance"/"horde"         a.owner_is_dk  boolean
 --   a.slot      1..7                       a.roster  (see needed_role)
---   a.pick      { kind = "class" | "race", id } (ignored for a DK owner)
+--   a.pick      { kind = "class" | "race", id }, { kind = "flexible" }, or
+--               { kind = "any" } (ignored for a DK owner)
 -- Returns { class, race, profile, role (number), filled (bool) } or
 -- nil, message (a pick the menu never offers: another faction's race, a
 -- death knight for a non-DK owner, a class the faction can't play).
@@ -135,6 +137,56 @@ function Choice.resolve(a)
         end
         local pool = (#able > 0) and able or all
         class = pool[rand(#pool)]
+
+    elseif a.pick and a.pick.kind == "any" then
+        -- a death knight player's buddies since 2026-10-12 (owner: "They
+        -- should get a completely random race/class"): any class of the
+        -- faction but the death knight, any race of it that plays the
+        -- class; the shape is drawn as for every buddy (below)
+        local classes = {}
+        for _, rid in ipairs(team_races) do
+            for _, c in ipairs(RC.races[rid].classes) do
+                if c ~= DEATH_KNIGHT and a.TD.classes[c] then classes[c] = true end
+            end
+        end
+        local pool = {}
+        for c in pairs(classes) do pool[#pool + 1] = c end
+        table.sort(pool)
+        class = pool[rand(#pool)]
+        local fits = {}
+        for _, rid in ipairs(team_races) do
+            if race_can(RC.races[rid], class) then fits[#fits + 1] = rid end
+        end
+        race = fits[rand(#fits)]
+
+    elseif a.pick and a.pick.kind == "flexible" then
+        -- "I'm flexible." (owner, 2026-10-12: "it creates a totally random
+        -- buddy-bot... but the spec is the one that's 1/3rd in all three
+        -- talent trees. Of any class."): any class the faction can play,
+        -- save the death knight, whose even shape no same-class clan-mate
+        -- already holds; then any race of the faction that can play it
+        local classes = {}
+        for _, rid in ipairs(team_races) do
+            for _, c in ipairs(RC.races[rid].classes) do
+                if c ~= DEATH_KNIGHT and a.TD.classes[c] then classes[c] = true end
+            end
+        end
+        for _, b in ipairs(a.roster) do
+            if b.profile == EVEN_SHAPE then classes[b.class] = nil end
+        end
+        local pool = {}
+        for c in pairs(classes) do pool[#pool + 1] = c end
+        table.sort(pool)
+        if #pool == 0 then return nil, "every class already has a clan-mate in the even shape" end
+        class = pool[rand(#pool)]
+        local fits = {}
+        for _, rid in ipairs(team_races) do
+            if race_can(RC.races[rid], class) then fits[#fits + 1] = rid end
+        end
+        race = fits[rand(#fits)]
+        local cls = a.TD.classes[class]
+        return { class = class, race = race, profile = EVEN_SHAPE,
+                 role = ROLE_NUMBER[cls.shapes[EVEN_SHAPE].role], filled = false }
 
     else
         return nil, "no pick"

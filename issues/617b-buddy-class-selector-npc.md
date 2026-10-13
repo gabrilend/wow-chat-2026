@@ -244,6 +244,16 @@ Hat." One wandering Sargobras in ten is creature 6170003 instead of
 the hat (item 21615) on his head. A creature's look is per creature type,
 so the hat needs its own; it shows from the next compile.
 
+**"I'm flexible."** (owner, same day: "can we add an option to Sargobras
+that says "I'm flexible." and he says "good, you shall find others like
+you soon." and it creates a totally random buddy-bot... but the spec is
+the one that's 1/3rd in all three talent trees. Of any class.") Offered
+beside the classes and peoples; it draws any class of the owner's faction
+but the death knight (one whose even shape no same-class clan-mate holds
+yet) and a race of the faction that plays it, always in shape 7 (a third
+in each tree), and he says "Good, you shall find others like you soon."
+without naming what came (`lib/buddy-choice.lua`, pick "flexible").
+
 **His tier, his level.** Sargobras for the tier owed at level 10 is level
 11, at 20 is 21, and so on (the slot's level plus one). On every new
 waypoint, an owner below his tier's level (de-levelled) makes him go; he

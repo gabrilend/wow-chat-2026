@@ -35,7 +35,8 @@
 -- each later one as it makes it (617a3).
 --
 -- Death-knight owners never meet him (owner, 2026-09-25). They get exactly
--- four buddies, death knights of random races, from the soul trade with
+-- four buddies (any race and class of their faction since 2026-10-12;
+-- death knights of random races before), from the soul trade with
 -- the Sargobras at the gate of Acherus on (owner, 2026-09-26: "4
 -- buddy-bots per Death Knight [...] never any more [...] when they accept
 -- a soul-trade with Sargobras in Acherus"), by level since 2026-10-12: one
@@ -183,6 +184,7 @@ local INTID_NAME                                         = 3
 -- the box works once per side per account. Remove with gossip-trace.lua.
 local INTID_NAME_BOX                                     = 4
 local INTID_ELSEWHERE                                    = 5   -- "Actually, can I go somewhere else?" (155d1)
+local INTID_FLEXIBLE                                     = 6   -- "I'm flexible." (2026-10-12): any class, the even spec
 
 -- {{{ clan names
 -- The server's own rule for guild names is checked by its guild command;
@@ -277,8 +279,10 @@ end
 -- }}}
 
 -- {{{ local function give_death_knight_buddies
--- A death-knight owner's buddies: four in all, never more, death knights
--- of random races (owner, 2026-09-26), and since 2026-10-12 by level: "one
+-- A death-knight owner's buddies: four in all, never more (owner,
+-- 2026-09-26), any race and class of the faction ("a completely random
+-- race/class", 2026-10-12; death knights of random races before), and
+-- since 2026-10-12 by level: "one
 -- buddy-bot every other level, so: 55 = 1 buddy-bot, 57 = 2, 59 = 3, 60 =
 -- 4". Only for a death knight whose soul is given (traded_now: the trade
 -- just happened and its ledger write is still queued). Called at the
@@ -318,8 +322,11 @@ local function give_death_knight_buddies(player, traded_now)
     for slot, at in ipairs(DEATH_KNIGHT_SLOT_LEVEL) do
         local row = rows[slot]
         if level >= at and not row then
+            -- any race and class of the faction, drawn (owner, 2026-10-12:
+            -- "They should get a completely random race/class"; death
+            -- knights of random races until then)
             local b, err = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = math.random,
-                team = team_name(player), owner_is_dk = true, slot = slot, roster = roster })
+                team = team_name(player), owner_is_dk = false, slot = slot, roster = roster, pick = { kind = "any" } })
             if not b then
                 print(string.format("%sERROR: death knight %d buddy %d (level %d): %s; done before it: %d buddies come this time",
                     TAG, owner, slot, at, err, came))
@@ -522,6 +529,7 @@ local function show_menu(player, creature, page)
         for _, r in ipairs(races) do
             player:GossipMenuAddItem(RACE_ICON[r.id] or GOSSIP_ICON_CHAT, r.name, 0, INTID_RACE + r.id)
         end
+        player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "I'm flexible.", 0, INTID_FLEXIBLE)
     end
     if may_go_elsewhere(player, creature) then
         player:GossipMenuAddItem(GOSSIP_ICON_FLIGHT, "Actually, can I go somewhere else?", 0, INTID_ELSEWHERE)
@@ -915,7 +923,8 @@ local function on_select(event, player, creature, sender, intid, code)
 
     local pick
     if intid > INTID_RACE then pick = { kind = "race", id = intid - INTID_RACE }
-    elseif intid > INTID_CLASS then pick = { kind = "class", id = intid - INTID_CLASS } end
+    elseif intid > INTID_CLASS then pick = { kind = "class", id = intid - INTID_CLASS }
+    elseif intid == INTID_FLEXIBLE then pick = { kind = "flexible" } end
     player:GossipComplete()
     if not pick then return end
     if not player:IsInGuild() then return end       -- an old menu still open from before the clan rule: name first
@@ -934,8 +943,12 @@ local function on_select(event, player, creature, sender, intid, code)
         return
     end
     local race_name = RC.races[b.race].name
-    creature:SendUnitSay(string.format("%s %s %s. They'll find you soon.",
-        article(race_name), race_name, RC.classes[b.class].name), 0)
+    if pick.kind == "flexible" then
+        creature:SendUnitSay("Good, you shall find others like you soon.", 0)   -- the owner's words; what came is a surprise
+    else
+        creature:SendUnitSay(string.format("%s %s %s. They'll find you soon.",
+            article(race_name), race_name, RC.classes[b.class].name), 0)
+    end
 
     -- his tier is chosen: a wanderer goes on break (he still answers)
     if is_wanderer(creature:GetEntry()) then go_on_break(creature, player) end
