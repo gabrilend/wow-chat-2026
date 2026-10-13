@@ -144,6 +144,17 @@ meals", "full bags without an auction house"):
   the nearest vendor that sells its meal, even with nothing to sell. 20 is
   one stack, under the bot module's two-stack line, so its item judgement
   never marks the food for sale.
+- **Everything sellable, every vendor stop** (owner, 2026-10-13: "we
+  should sell all we are able every time we are at a vendor"; written the
+  same day, syntax-checked, not yet built). At each vendor stop the buddy
+  sells everything a vendor pays for, not only greys and what the bot
+  module judges surplus. Kept: what the full-bags rounds never sell
+  (below: the hearthstone, tools, fishing pole, gear and ammo in use,
+  quest items, epics for the owner); its consumables (food, drink and
+  potions, which it would buy back at the same stop); and, only in a town
+  with an auction house, what it would rather auction. The vendor stop is
+  still chosen as before (always when bags are 90% full with no
+  auctioneer, otherwise at odds equal to how full the bags are).
 - **Full bags without an auction house.** With no auctioneer in the town
   and bags 90% full or more, the vendor stop is always made; after the
   junk, three rounds at the vendor: (1) the cheapest items by vendor value

@@ -6,7 +6,7 @@
  * buddies "will move to whatever area you're in and explore there. So if you
  * move to town, then they move there as well." In a town they are
  * ungrouped, walk rather than run, first do what the town lets them do
- * (learn at their class trainer, sell junk to a vendor, repair), and then
+ * (learn at their class trainer, sell to a vendor all it can spare, repair), and then
  * "chat with NPCs" (talking animations only, "No chat messages are ever sent
  * to the chat window"), "sit on chairs and chat for a long period of time
  * with other NPCs if any are near, including other buddy bots", eat, drink
@@ -307,22 +307,40 @@ static std::vector<Item*> BagItems(Player* bot)
     return items;
 }
 
-// What to sell: what the bot module itself would sell to a vendor (its
-// "item usage" judgement says vendor: junk, and gear and goods it has no
-// use for), and every grey item. Items it would rather auction are kept for
-// the auction-house errand (617h).
+static bool CantSpare(PlayerbotAI* ai, Item* item);        // below, with the full-bags rounds
+static bool TownHasAuctioneer(Player* bot, uint32 town);
+
+// What to sell at a vendor: everything a vendor pays for, every visit
+// (owner, 2026-10-13: "we should sell all we are able every time we are at
+// a vendor"; until then only greys and what the bot module judged surplus
+// went, and the rest waited until the bags were nine tenths full). Kept,
+// each for its reason:
+//   what it can't spare (CantSpare)  - the hearthstone, its tools and
+//                                      fishing pole, gear and ammo in use,
+//                                      quest items, an epic for its owner
+//   consumables                      - its food, drink and potions: sold
+//                                      here, they'd be bought back at the
+//                                      same stop (BuyMeals) or missed in
+//                                      the next fight
+//   what it would rather auction     - only in a town with an auction
+//                                      house, for the auction errand (617h);
+//                                      elsewhere it is sold here too
 static std::vector<ObjectGuid> Junk(PlayerbotAI* ai, Player* bot)
 {
+    uint32 town = BuddyTownArea(bot) ? BuddyTownArea(bot) : bot->GetAreaId();
+    bool auctionHere = TownHasAuctioneer(bot, town);
     std::vector<ObjectGuid> junk;
     for (Item* item : BagItems(bot))
     {
         ItemTemplate const* proto = item->GetTemplate();
         if (!proto->SellPrice)
             continue;                                  // a vendor pays nothing for it (quest items, and the like)
-        bool grey = proto->Quality == ITEM_QUALITY_POOR;
-        bool surplus = ai->GetAiObjectContext()->GetValue<ItemUsage>("item usage", item->GetEntry())->Get() == ITEM_USAGE_VENDOR;
-        if (grey || surplus)
-            junk.push_back(item->GetGUID());
+        if (CantSpare(ai, item) || proto->Class == ITEM_CLASS_CONSUMABLE)
+            continue;
+        if (auctionHere && proto->Quality != ITEM_QUALITY_POOR &&
+            ai->GetAiObjectContext()->GetValue<ItemUsage>("item usage", item->GetEntry())->Get() == ITEM_USAGE_AH)
+            continue;                                  // for the auction house here
+        junk.push_back(item->GetGUID());
     }
     return junk;
 }
