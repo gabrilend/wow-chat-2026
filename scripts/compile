@@ -992,7 +992,11 @@ do_build
 
 # Clear trap and revert patches after successful build; then the trees are
 # reset to their commits whatever the reverts did (leave_source_trees_clean)
-trap - EXIT
+# The verdict trap stays: a failing revert here would otherwise end the run
+# with no word at all after the build itself succeeded (2026-10-13: a
+# compile at 23:22 the night before installed its build and then never
+# reached validation, and nothing on record says why).
+trap 'report_how_compile_ended $?' EXIT
 unapply_patches_begin
 leave_source_trees_clean
 

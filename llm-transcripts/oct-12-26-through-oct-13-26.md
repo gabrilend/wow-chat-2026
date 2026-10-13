@@ -1,6 +1,6 @@
 # Conversation Summary: 4a14807d-68bc-45b5-b727-e461dd1e7166
 
-Generated on: 2026-10-12 23:34:15
+Generated on: 2026-10-13 00:15:49
 Models: claude-opus-5-5
 
 ## Contents
@@ -535,6 +535,175 @@ would be written in Lua, so no compile.
    → 150, level 60 → 300, basic's ceiling)? And should the command also
    teach the recipes a trainer would have taught along the way, or only set the
    skill number?
+
+--------------------------------------------------------------------------------
+
+### User Request 6
+
+> Where gems can be bought (basic profile; gems and gem-cutting recipes
+> otherwise come from prospecting ore and from drops):
+
+so, jewelcrafting? Can you check our patches?
+
+  The level-up script doesn't exist.
+
+let's build our own implementation that changes level, adjusts gear, etc. We
+should be able to offer extra information to it via cli flags, like
+"quality=green" or "quality=poor" or whatever, and it'll generate appropriate
+gearsets to equip each player with depending on their spec profile. It should
+also adjust professions, if any, and if not, it'll train them to the correct
+level.
+
+the "go sell" command doesn't seem to be working? Also, separately, I just went
+into a town with a buddy, and that buddy just went around talking to people
+instead of selling their goods! Also, they should walk while in a town. It was
+Sen'Jin Village.
+
+okay I logged back on to Gabrubre, and she's still in the original Acherus. The
+Lich King is there. But, she has no runeblade, and Sargobras isn't there. Also
+Karson isn't in my account anymore, so she's with the Lich King and he hasn't
+released us.
+
+>      - Dead skinnable creatures: this is how skinning already works, so the client needs no change. They sparkle and freeze like any corpse.
+>        But the stock client can't turn a creature upside down, so they'd lie on their side.
+
+no they should not be "dead creatures" - they should be upside-down static
+models that glimmer, as if frozen in time.
+
+> 2. The skill for a level: five points per level (level 15 → 75, level 30 →
+> 150, level 60 → 300, basic's ceiling)? And should the command
+>      also teach the recipes a trainer would have taught along the way, or only set the skill number?
+
+yes and yes
+
+also, buddies don't seem to be obeying their commands. That's okay. but we
+should still try and figure out a fix for it.
+
+also, gabrubre is still in Acherus. Can you make a "reset DK" command that will
+apply the various operations we've been doing to her to reset her completely? We
+should be able to do this on command, which is something we could "prestige" as
+as a max level death knight by talking to Darion Mograine and saying "How did we
+win our freedom?" and he says "I will teach you." then a dream state occurs
+where you relive your moments fighting for the Death Lord. Can we rename his
+name to that in all instances in the server files? Also can we make that be
+Darion Mograine's title now?
+
+Also, we should have Tirion Fordring with the Ashbringer at Light's Hope Chapel
+because we haven't opened Northrend yet. But, we should send him there if we
+ever enable the quests out there, which we haven't.
+
+the reset DK command shouldn't redo the given soul, but we should do that while
+we're testing the system. Also it shouldn't allow Sargobras to spawn,
+essentially resetting that DK to the point after talking to Sargobras, but
+before the Death Lord spawns. It should be just Sargobras at first, then he goes
+in visible and the death lord goes uninvisible and the player can select their
+first quest. that's the normal operating procedure, but when they talk to Darion
+Mograine and he runs the "reset dk" command on the player, and it's as if they
+had selected the "I do want to see the story" option and handed a soul to
+Sargobras to give to the Death Lord.
+
+> 1. Animal models: the client blocks the upside-down nodes. A world object can
+> only use models from a list built into the client, and that
+>      list has no animals, only statues and roasts. There are two ways round it:
+
+can you use the custom client to create a 3d rendering of each of those models,
+and put them in an HTML page for me to see?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 6
+
+> A lot here. Tracking it as tasks, then starting with the read-only
+> investigations.
+
+> Starting with "go sell": does the running server contain that code?
+
+> Karson now belongs to an account called SOULS101, not to RITZ. Reading the
+> soul-trade design and the existing reset script:
+
+> Reading the town code's walking and selling parts in the new build:
+
+> Area 367 is Sen'Jin Village. The log shows the buddy mapping it for exploring,
+> which is the open-country behaviour, not the town visit. So Sen'Jin wasn't
+> counted as a town. Checking the town list:
+
+> Writing the two death-knight plans now: the reset command with Darion's
+> prestige, and Tirion at Light's Hope. First, the existing reset notes in the
+> death-knight issue:
+
+> Recording the "go sell" finding and the new answers in the existing plans:
+
+*[commit] 92c541015 in wow-chat-2026 - Plans: a death knight reset and Darion's dream; Tirion at Light's Hope; answers on levelling and nodes*
+
+I've stopped here: the two remaining builds (the level-up command and the model
+pictures) need answers or a go-ahead first. What I found, and what I wrote down:
+
+**"go sell", the town buddy, and orders being ignored: the running server is
+old.** Your worldserver is the **3 October build**. The build that finished last
+night at 22:11 contains "go sell", the selling trip, the quiet bags fix and the
+stand-in maker, but it's still in the shadow folder. To put it live:
+`./scripts/validate --profile basic` (which promotes it), then restart the
+worldserver.
+- **Sen'Jin Village:** the log shows the buddy treating it as a town (it's on
+  the town list, a circle 75 yards across). In the old build a town visit sells
+  only grey junk, unless bags are nine-tenths full. The rest waits for the
+  selling trip, which is only in the new build. After the errands, it "chats"
+  with townspeople. That's the old design working, not a bug.
+- **Running in town:** the town visit sets walking, but the walk *into* a town
+  from another area runs. I couldn't confirm which you saw. After promoting,
+  `.buddy trace <name>` will log it.
+- **Other commands:** buddies ignore the bot module's chat commands on purpose,
+  since a decision of 25 September. "go sell" and "follow me" are the only
+  orders, and only in the new build.
+
+**Gabrubre isn't stuck.** She gave Karson's soul (moving him to the hidden
+account SOULS101 is by design), chose the story, and finished the first quest.
+Her next step is **Instructor Razuvious**, standing beside the Lich King, whose
+quest "The Emblazoned Runeblade" gives the runeblade. Sargobras staying hidden
+after the trade is also by design.
+
+**Gems and jewelcrafting:** our patches don't touch the gem vendors. They:
+- stop every profession at 300,
+- put a Visiting Jewelcrafter in all six capitals, teaching Outland gem cuts for
+  gold,
+- add Earthen Gemcutters at three titan sites teaching Wrath cuts,
+- make gem-cutting recipes drop in Outland,
+- make prospecting copper and tin give gems.
+
+They also removed Outland's herb and ore nodes and its skinning loot.
+
+**New plans** (committed):
+- **Death knight reset and Darion's dream** (the reset issue): a reset back to
+  just after the soul trade with the story chosen, so the Lich King offers the
+  first quest and Sargobras stays gone. A testing switch also hands the soul
+  back. At the level cap, asking Darion "How did we win our freedom?" runs the
+  reset as a dream.
+- **Tirion with the Ashbringer at Light's Hope Chapel** (a second issue), only
+  while Northrend is closed.
+- **Level-up command:** your answers are recorded: five skill points per level,
+  the trainer recipes with them, and a profession trained if there's none.
+- **Leather nodes:** upside-down world objects, not corpses.
+
+**Animal models for the nodes:** the client has these real-world animals: Boar,
+Bear, BearCub, Deer, Stag, Wolf, Lion, Tiger, Cat, Crocodile, Turtle, SeaTurtle,
+Hyena, Gorilla, Mammoth, Ram, Horse, Cow, Pig, Sheep, Rabbit, Skunk, Squirrel,
+Rat, Giraffe, Snake, Crab, Scorpion, Shark. The custom client can build a figure
+from any creature look and draw it with any turn, so upside down is easy. But it
+has no mode that pictures one model alone. That's new code in the client project
+(with its own issue file there), and then an HTML page of the pictures.
+
+**Questions:**
+1. **The renaming:** I read it as the Lich King being renamed "the Death Lord".
+   What becomes Darion's new title, the line under his name that now says
+   "Highlord"? And does "all instances" mean creature names only, or every quest
+   text and spoken line too?
+2. **Level-up, character with no profession:** name it with a flag
+   (`profession=leatherworking`), or pick at random the way a buddy's is picked?
+3. **Level-up, `quality=green` and above:** may the outfit use any item of that
+   quality, or only items that drop in the world and in dungeons (no quest
+   rewards, nothing crafted)?
+4. **Model pictures:** should I go ahead with the single-model picture mode in
+   the custom client project, and which of the animals above should it picture?
 
 --------------------------------------------------------------------------------
 

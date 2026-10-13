@@ -604,6 +604,21 @@ if check_modules_need_rebuild; then
 fi
 
 if [[ "${needs_rebuild}" == false && -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+    # Nothing to compile, but a finished build may still be waiting in the
+    # shadow install, never promoted (a compile that stopped before its
+    # validation, or ran with --no-validate). Then this is where it gets
+    # validated and promoted, as compile does after its own builds: one
+    # waiting since 2026-10-12 22:11 left the server running a build from
+    # 2026-10-03 without anyone knowing.
+    SHADOW_WORLDSERVER="${DIR}/installed-files-shadow/bin/worldserver"
+    if [[ -f "${SHADOW_WORLDSERVER}" && "${SHADOW_WORLDSERVER}" -nt "${INSTALL_DIR}/bin/worldserver" ]]; then
+        echo ""
+        echo "Nothing to compile, but the shadow install holds a newer build than ${INSTALL_DIR#${DIR}/}:"
+        echo "  shadow: $(date -r "${SHADOW_WORLDSERVER}" '+%Y-%m-%d %H:%M')"
+        echo "  main:   $(date -r "${INSTALL_DIR}/bin/worldserver" '+%Y-%m-%d %H:%M')"
+        echo "Validating and promoting it..."
+        exec "${DIR}/scripts/validate" --profile "${PROFILE}"
+    fi
     echo ""
     echo "Everything up-to-date, no rebuild needed."
     echo "Use --force to rebuild anyway."
