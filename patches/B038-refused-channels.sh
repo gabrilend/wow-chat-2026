@@ -44,8 +44,8 @@ patch_B038_refused_channels() {
     [[ -f "${FILE}" ]] || { echo "  [B038] ERROR: ${FILE} missing"; return 1; }
     grep -qF "B038-refused-channels" "${FILE}" && return 0      # witness guard
     local a b
-    a=$(grep -cxF -- "${B038_INCLUDE_ANCHOR}" "${FILE}")
-    b=$(grep -cxF -- "${B038_FN_ANCHOR}" "${FILE}")
+    a=$(grep -cxF -- "${B038_INCLUDE_ANCHOR}" "${FILE}" || true)
+    b=$(grep -cxF -- "${B038_FN_ANCHOR}" "${FILE}" || true)
     if [[ "${a}" -ne 1 || "${b}" -ne 1 ]]; then
         echo "  [B038] ERROR: expected one '${B038_INCLUDE_ANCHOR}' and one JoinChannel signature in ${FILE}, found ${a} and ${b}"
         return 1

@@ -1,6 +1,6 @@
 # Conversation Summary: 4a14807d-68bc-45b5-b727-e461dd1e7166
 
-Generated on: 2026-10-13 00:15:49
+Generated on: 2026-10-13 00:36:35
 Models: claude-opus-5-5
 
 ## Contents
@@ -704,6 +704,273 @@ has no mode that pictures one model alone. That's new code in the client project
    rewards, nothing crafted)?
 4. **Model pictures:** should I go ahead with the single-model picture mode in
    the custom client project, and which of the animals above should it picture?
+
+--------------------------------------------------------------------------------
+
+### User Request 7
+
+Sargobras in Elwynn Forest and Dun Morogh spawns right in-front of the player,
+and right on-top of a quest giver. Can we move him a little bit?
+
+Can we make it so that buddy-bots spawn with the weapons standard for their spec
+profile? So a prot warrior would spawn with weapon and shield. Check the level
+20 starting gear patch for which weapon type each 1h and 2h weapon should be.
+Also ranged weapons.
+
+
+
+<pasted_content id="433b">
+> "go sell", the town buddy, and orders being ignored: the running server is
+> old. Your worldserver is the 3 October build. The build that
+> finished last night at 22:11 contains "go sell", the selling trip, the quiet
+> bags fix and the stand-in maker, but it's still in the shadow
+> folder. To put it live: ./scripts/validate --profile basic (which promotes
+> it), then restart the worldserver.
+</pasted_content id="433b">
+
+
+this step is automatic in the compile script. Can we make it so in the update
+script as well?
+
+
+
+<pasted_content id="433b">
+> - Sen'Jin Village: the log shows the buddy treating it as a town (it's on the
+> town list, a circle 75 yards across). In the old build a town
+>     visit sells only grey junk, unless bags are nine-tenths full. The rest waits for the selling trip, which is only in the new build. After
+>     the errands, it "chats" with townspeople. That's the old design working, not a bug.
+</pasted_content id="433b">
+
+
+we should sell all we are able every time we are at a vendor.
+
+> - Other commands: buddies ignore the bot module's chat commands on purpose,
+> since a decision of 25 September. "go sell" and "follow me" are
+>     the only orders, and only in the new build.
+
+we will write our own.
+
+
+
+<pasted_content id="433b">
+> Gabrubre isn't stuck. She gave Karson's soul (moving him to the hidden account
+> SOULS101 is by design), chose the story, and finished the
+> first quest. Her next step is Instructor Razuvious, standing beside the Lich
+> King, whose quest "The Emblazoned Runeblade" gives the
+>   runeblade. Sargobras staying hidden after the trade is also by design.
+</pasted_content id="433b">
+
+
+but we are testing the other part, the part where she skips the story and is
+teleported out with Sargobras.
+
+
+
+<pasted_content id="433b">
+> Gems and jewelcrafting: our patches don't touch the gem vendors. They:
+>   - stop every profession at 300,
+> - put a Visiting Jewelcrafter in all six capitals, teaching Outland gem cuts
+> for gold,
+>   - add Earthen Gemcutters at three titan sites teaching Wrath cuts,
+>   - make gem-cutting recipes drop in Outland,
+>   - make prospecting copper and tin give gems.
+</pasted_content id="433b">
+
+
+
+the profession issue files must be incomplete then. We are intended to rebalance
+the professions such that low level socketed items are socketable with
+jewelcrafting gems, and we scooch the jewels we can craft down such that the
+WotLK gems are the highest tier available in Outland from... I think dungeon and
+raid bosses? And anyway early jewelcrafters can make TBC gems while later ones
+can make WotLK gems. Or maybe it's WotLK gems in Outland? And earlier
+jewelcrafting recipes, each one should be taught by a different jewelcrafting
+master. Sorta. It's a complicated design and that part we haven't talked about
+yet, so here's the spec design. Feel free to check the llm-transcripts for the
+rest:
+
+"Hi can we make it so that the jewelcrafting masters teaching Outland
+jewelcrafting recipes in Azeroth (WotLK gems are for rare elite monsters in
+Outland and the dungeon and raid bosses) and, since it's a certain amount of
+gems, we should spread them out evenly throughout the levels. But, there will be
+N gemstones and 300 profession levels. So we need to divide 300 by N to figure
+out how often we get a new recipe. And, here's the thing that's neato
+interesting, each JC profession teacher teaches a different one at each tier.
+They will be arranged such that none of them are teaching the same recipe at
+that level. So, a player could walk between all the capital cities and learn
+them all early, if they wanted to. Or at least for their desired favorites. We
+should make sure that we always teach the same color at that level among all the
+jewelcrafters, so that we always have a roughly even split across the colors.
+
+sorry, you got cut-off. Can you say what you just said again?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7
+
+> Your last line asks me to repeat my previous message, so here it is in short,
+> then I'll get to the new requests.
+>
+> **My previous message, in short:**
+> - The running worldserver is the 3 October build. Last night's build (22:11)
+>   is still unpromoted in the shadow folder, which is why "go sell" and the
+>   selling trip did nothing.
+> - Sen'Jin Village counted as a town. The old build sells only grey junk there,
+>   then chats with townspeople.
+> - Gabrubre isn't stuck. Her next step is Instructor Razuvious's "The
+>   Emblazoned Runeblade".
+> - Gems: our patches don't touch the gem vendors.
+> - New plans written: the death-knight reset with Darion's dream, Tirion at
+>   Light's Hope, and your answers for the level-up command and the leather
+>   nodes.
+> - Questions:
+>   1. Renaming: Lich King → "the Death Lord"? What's Darion's new title?
+>      Creature names only, or every quest text too?
+>   2. Level-up for a character with no profession: name it with a flag, or pick
+>      at random?
+>   3. `quality=green`: any item of that quality, or only world and dungeon
+>      drops?
+>   4. Should I build the single-model picture mode in the custom client, and
+>      for which animals?
+>
+> Now the new requests. First: why didn't last night's compile promote itself?
+
+> The 23:22 compile finished its install step. Checking what validation does
+> after that, and whether a running server stops the promotion:
+
+> Validation never started a test server: no log exists. Reading the start of
+> validation:
+
+*[commit] 061af1aff in wow-chat-2026 - Update promotes a waiting build; compile keeps its verdict to the end*
+
+> Moving Sargobras next: reading how his valley spots are generated:
+
+> Each Sargobras stands 4 yards straight ahead of where new characters appear.
+> Checking which quest givers stand near that spot in Elwynn and Dun Morogh:
+
+> Now the generator: trying spots round the arrival point and taking the first
+> one clear of everyone.
+
+> The release database lacks basic's own additions (the arena pedestals in the
+> valleys), so the crowd check should read basic's world, leaving out Sargobras
+> himself:
+
+> Every valley now gets a spot 4 yards out, turned aside from the quest giver.
+> Comparing old and new positions and heights:
+
+> The heights change by less than a yard. These apply SQL files have copies in
+> two other folders; finding the tool that refreshes them:
+
+> The copies are stamped at install time from the source file, so the next
+> install carries the change. Checking whether any test pins the old "4 yards
+> straight ahead" rule:
+
+> Nothing pins the old spot. Adding a check so a Sargobras standing on someone
+> again shows up. Reading the state checker around the existing Sargobras
+> checks:
+
+> Running that check's query against the live database, where the old spots
+> still are. It should catch all eight:
+
+> The check catches the old spots in every valley (Durotar's quest giver stood
+> 4.8 yards off, just outside the check's 4-yard limit, but still within the new
+> 5-yard clearance). Committing:
+
+*[commit] 7ca4f2bfd in wow-chat-2026 - Valley Sargobras steps aside from the quest giver he stood on*
+
+> Next, buddy weapons by spec. The "level 20 starting gear patch" is vanilla's
+> starter equipment (vanilla characters start at 20). Reading its weapon rules:
+
+> The outfit generator already chooses weapons by the main talent tree: a
+> protection warrior gets a one-hander and a shield. Checking whether the
+> generated level-20 outfits actually contain that:
+
+> The quoted design isn't in the transcripts; it's new. The earlier gem design
+> lives in the gem-supply issue. Reading its status:
+
+> Checking that this file still compiles. Finding how earlier sessions
+> syntax-checked module files without a full build:
+
+> Those editor warnings come from the editor not knowing the build's include
+> folders, not from the change. Checking for real, with the compile command the
+> last build recorded for this file:
+
+> The file passes the compiler's check with the build's own flags. Recording the
+> new rule in the town-errands plan:
+
+> Now the jewelcrafting rule. Counting the trainers who teach jewelcrafting on
+> basic, since the spacing depends on it:
+
+> The trainer list has no profession tag on it, so I'm finding jewelcrafting
+> trainers through the jewelcrafting spells they teach:
+
+> Jewelcrafting is taught by about 17 trainers sharing three lists, plus the
+> Earthen Gemcutter's own list. To give each trainer different recipes, each one
+> needs a list of its own. Writing the plan:
+
+*[commit] e9b274020 in wow-chat-2026 - Buddies sell everything a vendor buys; plans for weapons by race and spec, and jewelcrafters teaching different cuts*
+
+> Last, Gabrubre. To test the skip path she has to owe her soul again, which is
+> what the existing reset tool does. A dry run first, which changes nothing:
+
+Several things are done and committed. The C++ change (vendor selling) and
+Sargobras's new spots reach the server only with the next build and install,
+which are yours to run.
+
+**Done:**
+- **Sargobras moved, in all eight valleys, not just two.** Every one stood
+  within 2 yards of the valley's first quest giver, and the Elwynn and Dun
+  Morogh ones were barely half a yard to a yard and a half off. The placement
+  tool now tries spots around the arrival point and takes the first one 5 yards
+  clear of every creature, on ground near the same height. He still faces
+  newcomers. Each now stands 4 yards out, turned aside. I also added a check to
+  the basic state validator; run on the live database, it finds the old overlaps
+  in all eight valleys.
+- **`update` now promotes a waiting build.** If nothing needs compiling but the
+  shadow folder holds a newer build, it validates and promotes it. I also closed
+  a gap in `compile`: after a successful build, a failure while undoing the
+  patches used to end the run without a verdict. That may be why last night's
+  23:22 compile installed its build but never validated it. Can you tell me how
+  that run's output ended?
+- **Buddies sell everything a vendor buys at every vendor stop.** They keep what
+  they can't spare (hearthstone, tools, fishing pole, gear and ammo in use,
+  quest items, epics for you) and their food, drink and potions, which they'd
+  only buy back. In towns with an auction house they also keep what they'd
+  rather auction. The compiler check passes with the build's own flags; it isn't
+  built yet.
+
+**Weapons by spec:** already done in the generated outfits, which choose hands
+by main talent tree. A protection warrior gets a Flail and a Reinforced Targe at
+20, fury a pair, arms a two-hander. Your buddies don't show it because the
+outfits arrived on 5 October, after the running build. What's missing is your
+second point: the outfits don't look at race, so they ignore the starter kit's
+weapon cultures (tauren mace, blood elf sword). That's planned in a new issue
+with three questions.
+
+**Jewelcrafting:** your design is new; it isn't in the transcripts. I wrote it
+into a sub-issue of the sockets issue with the quote. One thing it depends on:
+jewelcrafting is taught by about 17 trainers sharing three lists, so for each to
+teach different cuts, each gets a list of its own.
+
+**Gabrubre:** to test the skip path she has to owe her soul again. The reset
+tool's dry run says it would:
+- move Karson back to your account,
+- remove her one story quest,
+- move her to where new death knights appear,
+- set her ledger back to "owed",
+- set aside her 4 buddies (they return at levels 55, 57, 59 and 60).
+
+The soul trade and the skip are Lua, so they work on the running server. Shall I
+run it for real? She needs to stay logged out.
+
+**Something I noticed:** last night's build was configured as Debug, but its
+install is labeled "RelWithDebInfo". The check I added yesterday stops that
+mismatch on the next compile, so expect setup to re-run once.
+
+**Open questions, one at a time.** First, Sargobras's new spots are turned aside
+from the line newcomers face, as far as 105° in some valleys. Is "a little bit
+to the side" right, or do you want him somewhere specific, such as beside the
+road?
 
 --------------------------------------------------------------------------------
 

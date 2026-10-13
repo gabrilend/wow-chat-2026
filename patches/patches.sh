@@ -130,8 +130,13 @@ _line_edits() {
             return 1
         fi
         want="$(printf '%s\n' "${table}" | awk -F'\t' -v r="${rel}" -v o="${old}" '$1 == r && $2 == o' | wc -l)"
-        tagged="$(grep -cxF -- "${new}${tag}" "${file}")"
-        have="$(grep -cxF -- "${old}" "${file}")"
+        # "|| true": grep -c prints 0 for no match but also exits 1, and
+        # under the callers' set -e that ended the build in silence during
+        # the revert (2026-10-12 23:22 and 2026-10-13: patches.sh:134, once
+        # a revert had turned every tagged line back and the old form was
+        # counted again). A count of 0 is an answer, not a failure.
+        tagged="$(grep -cxF -- "${new}${tag}" "${file}" || true)"
+        have="$(grep -cxF -- "${old}" "${file}" || true)"
         if [[ "${mode}" == "apply" ]]; then
             [[ "${tagged}" -eq "${want}" ]] && continue                 # applied already
             if [[ "${have}" -ne "${want}" ]]; then
@@ -287,7 +292,15 @@ unapply_patches_begin() {
 
         local before
         before=$(_snapshot_dirty_state)
-        ${unpatch_func}
+        # Called as a condition, as apply_patches_begin calls the patches:
+        # a bare call let any failing command inside a revert (a count of
+        # zero from grep -c, 2026-10-13) end the whole build in silence,
+        # after it had compiled and installed. A failed revert is named
+        # here and the reverts go on; leave_source_trees_clean then resets
+        # every tree to its commit, so nothing a revert missed survives.
+        if ! ${unpatch_func}; then
+            echo "  [${patch_id}] ERROR: ${unpatch_func} returned failure (the tree is reset to its commit after the reverts)"
+        fi
         local after
         after=$(_snapshot_dirty_state)
 

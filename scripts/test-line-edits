@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# test-line-edits - check that the source patches' whole-line edits apply
+# and revert under the build's stop-on-any-failure rule.
+#
+# For a general audience: small source fixes are applied as exact line
+# swaps before every build and swapped back after (patches/patches.sh,
+# _line_edits). On 2026-10-12 and -13 the swap-back counted how many lines
+# of the original form were present, got zero (the right answer), and the
+# counting tool reported zero as a failure; the build script, which stops
+# at any failure, then ended in silence after a successful build, so the
+# new server was never validated or promoted. This runs the apply and the
+# revert on a scratch file in RAM, with that rule on, and checks the file
+# after each step.
+#
+# Usage: scripts/test-line-edits [PROJECT_DIR]
+# Exit status: 0 when every check passes.
+
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+SCRATCH="${DIR}/tmp/shared-memory/test-line-edits"
+mkdir -p "${SCRATCH}/src"
+
+# {{{ check
+FAILED=0
+check() {
+    local name="$1" want="$2" got="$3"
+    if [[ "${want}" == "${got}" ]]; then
+        echo "  ok   ${name}"
+    else
+        echo "  FAIL ${name}: wanted [${want}] got [${got}]"
+        FAILED=1
+    fi
+}
+# }}}
+
+printf 'a\nuint8 x = 1;\nb\n' > "${SCRATCH}/src/f.cpp"
+TABLE=$'src/f.cpp\tuint8 x = 1;\tint x = 1;'
+
+# Each step in a shell with the build's rules (set -e, pipefail); the
+# step prints DONE only if nothing ended it early.
+run() {
+    bash -c 'set -e -o pipefail
+        DIR="$1"; PROFILE=basic
+        source "${DIR}/patches/patches.sh" > /dev/null 2>&1 || true
+        AC_CODE_DIR="$2"
+        printf "%s\n" "$3" | line_edits_$4 BTEST > /dev/null
+        echo DONE' _ "${DIR}" "${SCRATCH}" "${TABLE}" "$1"
+}
+
+echo "test-line-edits:"
+check "apply finishes"                       "DONE"                     "$(run apply)"
+check "apply swaps the line and tags it"     "int x = 1;  // BTEST"     "$(sed -n 2p "${SCRATCH}/src/f.cpp")"
+check "apply again finishes (already done)"  "DONE"                     "$(run apply)"
+check "revert finishes (0 original lines)"   "DONE"                     "$(run revert)"
+check "revert puts the line back"            "uint8 x = 1;"             "$(sed -n 2p "${SCRATCH}/src/f.cpp")"
+check "revert again finishes (0 tagged)"     "DONE"                     "$(run revert)"
+check "the file is as it began"              $'a\nuint8 x = 1;\nb'      "$(cat "${SCRATCH}/src/f.cpp")"
+
+rm -rf "${SCRATCH}"
+[[ ${FAILED} -eq 0 ]] && echo "all passed" || echo "FAILED"
+exit ${FAILED}

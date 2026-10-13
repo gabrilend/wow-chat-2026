@@ -63,12 +63,12 @@ patch_B049_spirit_heals_by_stamina() {
     grep -qF "${B049_TAG}" "${B049_P}" && return 0      # witness guard
 
     local a b c d e g
-    a=$(grep -cxF -- "${B049_H_ANCHOR}"  "${B049_H}")
-    b=$(grep -cxF -- "${B049_U_ANCHOR}"  "${B049_U}")
-    g=$(grep -cxF -- "${B049_U_DEF}"     "${B049_U}")
-    c=$(grep -cxF -- "${B049_P_FORMULA}" "${B049_P}")
-    d=$(grep -cxF -- "${B049_P_TICK}"    "${B049_P}")
-    e=$(grep -cxF -- "${B049_P_ALWAYS}"  "${B049_P}")
+    a=$(grep -cxF -- "${B049_H_ANCHOR}"  "${B049_H}" || true)
+    b=$(grep -cxF -- "${B049_U_ANCHOR}"  "${B049_U}" || true)
+    g=$(grep -cxF -- "${B049_U_DEF}"     "${B049_U}" || true)
+    c=$(grep -cxF -- "${B049_P_FORMULA}" "${B049_P}" || true)
+    d=$(grep -cxF -- "${B049_P_TICK}"    "${B049_P}" || true)
+    e=$(grep -cxF -- "${B049_P_ALWAYS}"  "${B049_P}" || true)
     if [[ "${a}${b}${g}${c}${d}${e}" != "111111" ]]; then
         echo "  [B049] ERROR: anchors found (want 1 each): Unit.h mana rule ${a}, Unit.cpp damage hook ${b}, mana rule definition ${g}," \
              "Player.cpp spirit formula ${c}, regen tick ${d}, always-bonus ${e}"
