@@ -91,6 +91,24 @@ function M.map(dir, map)
         local j = math.floor(fy - 128 * gy + 0.5)
         return grid(math.min(128, math.max(0, i)), math.min(128, math.max(0, j)))
     end
+    -- terrain:smooth_height(x, y): the four V9 points round (x, y) blended
+    -- by distance (bilinear), for placing something standing on the
+    -- ground. The server's own height also uses each cell's centre point
+    -- (V8), which this leaves out, so on rough ground it can differ by a
+    -- little; on the gentle ground of a camp, a fraction of a yard. nil
+    -- where the map has no file for that grid. (Added 2026-10-13 for the
+    -- valley Sargobras, who steps aside from the quest giver he stood on.)
+    function terrain:smooth_height(x, y)
+        local fx, fy = 128 * (32 - x / GRID), 128 * (32 - y / GRID)
+        local gx, gy = math.floor(fx / 128), math.floor(fy / 128)
+        if not self:height(x, y) then return nil end         -- reads the grid; nil: no file
+        local grid = grids[gx * 64 + gy]
+        local u, v = fx - 128 * gx, fy - 128 * gy
+        local i, j = math.min(127, math.floor(u)), math.min(127, math.floor(v))
+        local du, dv = u - i, v - j
+        return grid(i, j) * (1 - du) * (1 - dv) + grid(i + 1, j) * du * (1 - dv)
+             + grid(i, j + 1) * (1 - du) * dv  + grid(i + 1, j + 1) * du * dv
+    end
     return terrain
 end
 -- }}}

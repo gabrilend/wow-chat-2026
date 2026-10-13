@@ -258,6 +258,15 @@ report "Sargobras: all three creatures (valley, wandering, wandering in a hat) w
         UNION ALL SELECT 'texts', COUNT(*) FROM ${WORLD}.npc_text WHERE ID BETWEEN 6170001 AND 6170003 HAVING COUNT(*) <> 3
         UNION ALL SELECT 'valley spawns', COUNT(DISTINCT map, ROUND(position_x), ROUND(position_y)) FROM ${WORLD}.creature WHERE id = 6170001 HAVING COUNT(DISTINCT map, ROUND(position_x), ROUND(position_y)) <> 8
         UNION ALL SELECT 'wandering one saved', COUNT(*) FROM ${WORLD}.creature WHERE id IN (6170002, 6170003) HAVING COUNT(*) <> 0")"
+# Until 2026-10-13 each valley Sargobras stood on that valley's first quest
+# giver (straight ahead of the arrival point, where they stand too).
+# scripts/generate-basic-buddy-selector-sql now keeps him 5 yards clear of
+# everyone; anything within 4 means the generator's rule broke or someone
+# was spawned on him since.
+report "Sargobras: no valley one within 4 yards of another creature" \
+    "$(run_sql "SELECT CONCAT('spawn ', s.guid, ' near creature ', c.id, ' (', ROUND(SQRT(POW(c.position_x - s.position_x, 2) + POW(c.position_y - s.position_y, 2)), 1), ' yards)'), 1
+        FROM ${WORLD}.creature s JOIN ${WORLD}.creature c ON c.map = s.map AND c.guid <> s.guid AND c.id <> 6170001
+        WHERE s.id = 6170001 AND POW(c.position_x - s.position_x, 2) + POW(c.position_y - s.position_y, 2) < 16")"
 # }}}
 
 # {{{ 617e2: named areas' borders and middles
