@@ -1,6 +1,6 @@
 # Conversation Summary: 4a14807d-68bc-45b5-b727-e461dd1e7166
 
-Generated on: 2026-10-13 00:36:35
+Generated on: 2026-10-13 01:12:47
 Models: claude-opus-5-5
 
 ## Contents
@@ -971,6 +971,251 @@ mismatch on the next compile, so expect setup to re-run once.
 from the line newcomers face, as far as 105° in some valleys. Is "a little bit
 to the side" right, or do you want him somewhere specific, such as beside the
 road?
+
+--------------------------------------------------------------------------------
+
+### User Request 8
+
+> 3. Level-up, quality=green and above: may the outfit use any item of that
+> quality, or only items that drop in the world and in dungeons (no
+>      quest rewards, nothing crafted)?
+
+good thinking
+
+
+
+<pasted_content id="433b">
+> - Buddies sell everything a vendor buys at every vendor stop. They keep what
+> they can't spare (hearthstone, tools, fishing pole, gear and
+>     ammo in use, quest items, epics for you) and their food, drink and potions, which they'd only buy back. In towns with an auction house
+>     they also keep what they'd rather auction. The compiler check passes with the build's own flags; it isn't built yet.
+</pasted_content id="433b">
+
+
+what do buddies spend gold on in capital towns? Green and blue items should be
+sold on the AH instead of vendored. Also any item with a "use" should be kept to
+be used when required. Can you identify each of the items that a bot might be
+able to pick up, so no quest items because they skip them, but yes to quest
+rewards because they get them. and then see when exactly the bot would use it,
+and if there's any gaps, can we fill them?
+
+
+
+<pasted_content id="433b">
+> Weapons by spec: already done in the generated outfits, which choose hands by
+> main talent tree. A protection warrior gets a Flail and a
+> Reinforced Targe at 20, fury a pair, arms a two-hander. Your buddies don't
+> show it because the outfits arrived on 5 October, after the
+> running build. What's missing is your second point: the outfits don't look at
+> race, so they ignore the starter kit's weapon cultures
+> (tauren mace, blood elf sword). That's planned in a new issue with three
+> questions.
+</pasted_content id="433b">
+
+
+what's the open questions? We should use the same item "type" for each level if
+we can.
+
+
+
+<pasted_content id="433b">
+> Jewelcrafting: your design is new; it isn't in the transcripts. I wrote it
+> into a sub-issue of the sockets issue with the quote. One thing
+> it depends on: jewelcrafting is taught by about 17 trainers sharing three
+> lists, so for each to teach different cuts, each gets a list of
+  its own.
+</pasted_content id="433b">
+
+
+which three lists? They will each need their own list, probably. I mean it
+depends on the distribution of gems, there's what, like 6 colors? red blue
+yellow, green purple orange. so, over 300 levels we could do 300 / 6 which
+equals one gem every 50 levels. But, that sucks, so let's divide the 50 levels
+into 17 lists, one for each trainer. That's like... 3ish? so... maybe we iterate
+through the 6 colors 3 times throughout the 300 levels, so it goes... red purple
+blue green yellow orange, red purple blue green yellow orange, red purple blue
+green yellow orange. That's... 18 total tiers, and 300 divided by 18 is...
+something idk. The math for this is probably wrong?
+
+okay second attempt. So, if we split the 300 levels into tiers. uh, how many
+gemstones are there? lemme go count... okay there's a bunch but let's say
+there's N gemstones of each color. Then we'd -- stack overflow -- uhhhh, did you
+get anything from that?
+
+
+
+<pasted_content id="433b">
+> Gabrubre: to test the skip path she has to owe her soul again. The reset
+> tool's dry run says it would:
+>   - move Karson back to your account,
+>   - remove her one story quest,
+>   - move her to where new death knights appear,
+>   - set her ledger back to "owed",
+  - set aside her 4 buddies (they return at levels 55, 57, 59 and 60).
+
+> The soul trade and the skip are Lua, so they work on the running server. Shall
+> I run it for real? She needs to stay logged out.
+</pasted_content id="433b">
+
+
+sure.
+
+> Something I noticed: last night's build was configured as Debug, but its
+> install is labeled "RelWithDebInfo". The check I added yesterday
+>   stops that mismatch on the next compile, so expect setup to re-run once.
+
+yeah I've been compiling with --debug to give us more information.
+
+> Open questions, one at a time. First, Sargobras's new spots are turned aside
+> from the line newcomers face, as far as 105° in some valleys.
+> Is "a little bit to the side" right, or do you want him somewhere specific,
+> such as beside the road?
+
+we will adjust dynamically later on. For now, just make Sargobras look at the
+player. Each player should see their own Sargobras, the rest should be
+invisible. And theirs should always be looking at them. At least until they
+choose a character, then he should look in that same direction until they hit
+level 2 and can't teleport with him anymore. Then he disappears in fire. Always
+in fire.
+
+
+
+<pasted_content id="433b">
+  [E055] Active file already matches apply-form content
+mysql: [Warning] Using a password on the command line interface can be insecure.
+  [E056] Active file already matches apply-form content
+  SQL for the updater (issue 183): 1 written, 36 unchanged, 0 removed, in 2
+  folders
+  PHASE_END complete (E001 E004 E006 E008 E019 E020 E022 E023 E024 E025 E026
+  E027 E028 E029 E030 E031 E032 E033 E034 E035 E036 E037 E038 E039 E040 E041
+  E042 E043 E044 E045 E046 E047 E048 E049 E050 E051 E052 E053 E054 E055 E056)
+
+Build complete! Shadow install at:
+/mnt/mtwo/games/azeroth-core/wow-chat-2026/installed-files-shadow
+Log: /mnt/mtwo/games/azeroth-core/wow-chat-2026/tmp/build-basic.log
+
+NOTE: Binaries are in shadow directory and have NOT been promoted yet.
+Run validation before promoting to main installation.
+
+Reverting PHASE_BEGIN patches for profile 'basic'...
+  [B002] Reverted
+
+===============================================================================
+COMPILE FAILED (exit status 1). Nothing was promoted; the installed
+server in installed-files-basic/ is unchanged.
+
+It stopped without an error message of its own, at:
+  patches/patches.sh:134
+  running: have="$(grep -cxF -- "${old}" "${file}")"
+That command failed, and the script's stop-on-any-failure rule (set -e)
+ended the run there. The script should explain this failure itself; the
+line above is where to add that.
+===============================================================================
+</pasted_content id="433b">
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 8
+
+> The new banner did its job: it caught the stop that was ending runs silently.
+> Looking at that line first:
+
+> Twenty more patches matched a looser search. Checking which of them count
+> without that guard:
+
+> Whether these matter depends on how the patch functions are called. If they're
+> called as an `if` condition, the stop-on-failure rule is switched off inside
+> them. Checking the patch runner:
+
+> Testing the fixed counting on a scratch file: a revert that leaves zero lines
+> of the old form, under the same stop-on-failure rule the build uses:
+
+> Both pass; before the fix, the first one would have stopped the shell. Making
+> that a permanent test, since the bug cost two silent builds:
+
+> Confirming the test catches the bug: running it against the previous
+> `patches.sh` from git:
+
+> The old code fails, the new code passes. Adding it to the quick tests that run
+> before every compile:
+
+*[commit] 77e80c77e in wow-chat-2026 - Builds no longer end silently while undoing the source patches*
+
+> Now the Gabrubre reset you approved:
+
+> The file still passes the compiler check. Recording the rule in the town plan,
+> then writing the item audit as a plan:
+
+> Now the jewelcrafting numbers. Counting the cuts by colour from the cut list
+> the gem-supply step built:
+
+> The colour sits in the client's gem table, not the database. Reading it and
+> counting the cuts the trainers teach, by colour and quality:
+
+*[commit] f1d16e7b8 in wow-chat-2026 - Buddies keep usable items and save greens for the auction house; plans for the item audit and a personal Sargobras*
+
+Your compile was fine; the run was killed by a bug in the clean-up after the
+build, which I've fixed. Two other changes are done, and Gabrubre's reset is
+waiting for the server.
+
+**The compile failure.** It's the same bug that stopped last night's 23:22
+compile from ever validating. Undoing a source patch means counting the lines
+left in the patched form. `grep -c` reports a count of zero as a failure, and
+the build stops at any failure. So after a full build and install, the run died
+while undoing the patches and never reached validation. Fixed:
+- A zero count is now read as an answer.
+- A failing revert is reported by name, and the other reverts still run.
+- New quick test before every compile. It fails on the old code and passes on
+  the new.
+
+Recompile (`./scripts/update` or `compile --debug`). I changed the town code
+after your build started, and ccache will keep the rebuild short.
+
+**Done:**
+- **Buddies at a vendor:** they sell everything a vendor buys, except:
+  - things they can't spare (hearthstone, tools, gear in use, quest items),
+  - food, drink and potions,
+  - anything with a "Use:" effect,
+  - unbound greens and blues, which wait for the next auction house.
+
+  Compiler-checked, not built.
+- **What buddies spend gold on:** class training, repairs, food and drink (at
+  most a quarter of their money per stop), and auction deposits. Nothing else.
+  The item audit you asked for (everything they can pick up, when they'd use it,
+  and the gaps) is written up as a new issue; it starts with a catalogue
+  generated from the world database.
+- **Gabrubre:** the server was down, so the reset stopped at its first step and
+  **changed nothing**. I'll run it when the server is back.
+
+**Weapons, the open questions** (your "same weapon type at every level" is
+recorded):
+1. Staff and polearm races have no one-handed version. A protection warrior from
+   a polearm race (dwarf, night elf, tauren): which one-handed type instead?
+2. The starter kits give warriors and rogues no ranged weapon. Bow, gun,
+   crossbow or thrown, by race? Or none?
+3. Off-hand pairs: the kits sometimes mix types (an orc rogue's knife and
+   flail). Should pairs stay within one type?
+
+**Jewelcrafting, the math.** I did get it. The trainers teach 70 cuts: purple
+15, yellow 14, orange 13, red 12, green 10, blue 6. Your plan of six colours,
+three rounds through them, is 18 tiers, one every **16⅔ skill points**. The
+problem: at one tier, a colour only has 2 to 5 cuts (blue just 2), but there are
+17 trainers. So at most 2 to 5 trainers can teach something different at that
+tier. Three ways out:
+- **(a)** Each tier, only some trainers teach something new, a different set
+  each tier, so every trainer gets roughly the same number of cuts in the end.
+- **(b)** Fewer tiers, more cuts each: one round through the colours, six tiers
+  50 points apart, with 6 to 15 cuts per tier spread over the trainers.
+- **(c)** Every trainer teaches something at every tier, so some trainers repeat
+  the same cut.
+
+I'd go with (a). It keeps "no two trainers teach the same cut", and walking
+between capitals still pays off.
+
+**Sargobras:** your new behaviour is recorded in his issue (his own per player,
+always facing them, holding still once a buddy is chosen, fire at level 2). One
+question: what is "teleport with him"? Today a newcomer picks a buddy and stays
+in the valley. Is there meant to be a ride out with him at level 1?
 
 --------------------------------------------------------------------------------
 

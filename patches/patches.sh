@@ -281,6 +281,7 @@ unapply_patches_begin() {
     echo ""
     echo "Reverting PHASE_BEGIN patches for profile '${PROFILE}'..."
 
+    local failed_reverts=""
     local reverted=0
     local noop=0
     for patch_id in ${patches}; do
@@ -295,11 +296,16 @@ unapply_patches_begin() {
         # Called as a condition, as apply_patches_begin calls the patches:
         # a bare call let any failing command inside a revert (a count of
         # zero from grep -c, 2026-10-13) end the whole build in silence,
-        # after it had compiled and installed. A failed revert is named
-        # here and the reverts go on; leave_source_trees_clean then resets
-        # every tree to its commit, so nothing a revert missed survives.
+        # after it had compiled and installed. A failed revert is a bug in
+        # that patch's code and fails the run (owner, 2026-10-13: "a failed
+        # revert is an error in the patch code and should be treated as an
+        # error"): it is named here, the other reverts still run so the
+        # report lists every failure at once, and the function returns
+        # failure at the end. The caller then resets every tree to its
+        # commit (leave_source_trees_clean) and reports the run failed.
         if ! ${unpatch_func}; then
-            echo "  [${patch_id}] ERROR: ${unpatch_func} returned failure (the tree is reset to its commit after the reverts)"
+            echo "  [${patch_id}] ERROR: ${unpatch_func} returned failure"
+            failed_reverts+="${patch_id} "
         fi
         local after
         after=$(_snapshot_dirty_state)
@@ -316,6 +322,11 @@ unapply_patches_begin() {
         echo "  (nothing to revert — all ${noop} patches were already absent)"
     elif [[ ${noop} -gt 0 ]]; then
         echo "  (${reverted} reverted, ${noop} no-op)"
+    fi
+    if [[ -n "${failed_reverts}" ]]; then
+        echo "  REVERT FAILED for: ${failed_reverts}(each a bug in that patch's revert; the trees are reset to their commits next)"
+        FAILURE_ALREADY_EXPLAINED=true                # compile's verdict: this message is the explanation
+        return 1
     fi
 }
 # }}}

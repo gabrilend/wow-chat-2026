@@ -56,6 +56,22 @@ check "revert puts the line back"            "uint8 x = 1;"             "$(sed -
 check "revert again finishes (0 tagged)"     "DONE"                     "$(run revert)"
 check "the file is as it began"              $'a\nuint8 x = 1;\nb'      "$(cat "${SCRATCH}/src/f.cpp")"
 
+# A revert that fails is a bug in that patch and fails the run (owner,
+# 2026-10-13), but only after every other revert has run. Two made-up
+# patches: the first's revert fails, the second's succeeds and writes a
+# mark. The revert step must run both, name the first, and return failure.
+REVERTS="$(bash -c 'set -e -o pipefail
+    DIR="$1"; PROFILE=basic
+    source "${DIR}/patches/patches.sh" > /dev/null 2>&1 || true
+    AC_CODE_DIR="$2"; PROFILE=linetest
+    PHASE_BEGIN_PATCHES[linetest]="BX01 BX02"
+    unpatch_BX01_fails()    { return 1; }
+    unpatch_BX02_succeeds() { touch "${AC_CODE_DIR}/second-ran"; }
+    if unapply_patches_begin; then echo "RETURNED-OK"; else echo "RETURNED-FAIL"; fi' _ "${DIR}" "${SCRATCH}")"
+check "a failed revert fails the revert step"  "RETURNED-FAIL"  "$(echo "${REVERTS}" | tail -1)"
+check "the failed revert is named"             "yes"            "$(echo "${REVERTS}" | grep -q 'REVERT FAILED for: BX01' && echo yes || echo no)"
+check "the other reverts still run"            "yes"            "$([[ -f "${SCRATCH}/second-ran" ]] && echo yes || echo no)"
+
 rm -rf "${SCRATCH}"
 [[ ${FAILED} -eq 0 ]] && echo "all passed" || echo "FAILED"
 exit ${FAILED}

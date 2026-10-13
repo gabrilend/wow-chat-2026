@@ -978,8 +978,11 @@ fi
 # apply_patches_begin now stops on the first failing patch, and under
 # set -e that exits here, so a trap set afterward would never fire and the
 # patches applied before the failure would stay in the tree.
-# The exit status is caught first: the reverts would overwrite it.
-trap 'compile_status=$?; unapply_patches_begin; leave_source_trees_clean; report_how_compile_ended ${compile_status}' EXIT
+# The exit status is caught first: the reverts would overwrite it. A
+# failed revert (unapply_patches_begin returns failure, naming the patch)
+# fails a run that had succeeded so far, and must not stop the trap before
+# the trees are reset, hence its "|| compile_status=1".
+trap 'compile_status=$?; unapply_patches_begin || compile_status=1; leave_source_trees_clean; report_how_compile_ended ${compile_status}' EXIT
 # Apply pre-compile patches (idempotent)
 apply_patches_begin
 
@@ -996,7 +999,10 @@ do_build
 # with no word at all after the build itself succeeded (2026-10-13: a
 # compile at 23:22 the night before installed its build and then never
 # reached validation, and nothing on record says why).
-trap 'report_how_compile_ended $?' EXIT
+# A failed revert is an error in that patch (owner, 2026-10-13): it ends
+# the run here, failed; the trap still resets the trees to their commits
+# first, then gives the verdict.
+trap 'compile_status=$?; leave_source_trees_clean; report_how_compile_ended ${compile_status}' EXIT
 unapply_patches_begin
 leave_source_trees_clean
 
