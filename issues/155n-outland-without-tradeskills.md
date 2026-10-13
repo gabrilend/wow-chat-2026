@@ -34,6 +34,19 @@ Answers, verbatim, 2026-09-24:
 > inscription though. Actually, let's remove the glyphs from inscription,
 > and just make it a buff-scroll creation profession. (155o)
 
+Verbatim, 2026-10-13, on hearing that six Northrend and seven Outland
+jewelcrafting trainers still teach:
+
+> we should remove these. Same for all Outland and Northrend profession
+> trainers. They shouldn't teach any professions. Same for any of the
+> other professions in Outland and Northrend.
+
+Planned (2026-10-13, not built): every profession trainer in Outland and
+Northrend teaches nothing, every profession (crafting, gathering,
+cooking, first aid, fishing); today step 6 only removes their lessons
+above 300. Open: removed (gone from the world), or kept standing with an
+empty list (a line saying they teach nothing here)?
+
 ## Current Behavior
 
 **2026-09-29:** the removals left rows pointing at what they removed (about

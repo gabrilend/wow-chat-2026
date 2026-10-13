@@ -104,6 +104,33 @@ each spread over 1-300 with the colours as even along the skill as the
 counts allow, and no two trainers of a side teaching the same cut at the
 same skill.
 
+Answers, 2026-10-13 (verbatim):
+
+> we need one in each capital city.
+
+> great, so we need 4 lists of randomly sorted gemstones, distributed
+> throughout the 300 levels in a roughly evenly proportioned way.
+
+> should be 4. Also, they should be their own creature type. Some odd
+> eccentric (autistic) who is visiting from afar. They're just so happy
+> to be there that once every hour at a random time +/- 30 minutes,
+> they'll dance for a minute, then go back to standing around learning.
+
+And on the trainers outside the capitals:
+
+> we should remove these. Same for all Outland and Northrend profession
+> trainers. (155n)
+
+Read as: a jewelcrafter in each of the eight capitals; four orders of the
+cuts, random, each spread evenly over 1-300 with the colours as even
+along the skill as the counts allow; one order per capital of a side
+(each order used once on each side). The capital jewelcrafters are a new
+creature type of their own, not the Visiting Jewelcrafter: an odd,
+eccentric visitor from afar, so happy to be there that about once an hour
+(every 30 to 90 minutes, at random) they dance for a minute, then go back
+to standing about learning. Silvermoon's and the Exodar's stock trainers:
+open (replaced by the visitor, or kept with one of the four orders).
+
 ## Current Behavior
 
 Built by 155p (E033, E034), not yet seen in game:

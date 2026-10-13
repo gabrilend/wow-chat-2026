@@ -1,6 +1,6 @@
 # Conversation Summary: 4a14807d-68bc-45b5-b727-e461dd1e7166
 
-Generated on: 2026-10-13 01:12:47
+Generated on: 2026-10-13 02:40:13
 Models: claude-opus-5-5
 
 ## Contents
@@ -9,6 +9,10 @@ Models: claude-opus-5-5
    explains what --debug changes, and three new features are planned: tank-paced
    pulls, a Ragefire stand-in test with Birth, and upside-down Japanese-named
    nodes. Next, answer the three open questions above.
+2. 2026-10-13 01:15, after Request 8 - We're getting the newer server build live
+   and settling buddy behaviour, including vendor selling, which is coded but
+   not yet built. Next: recompile, then I'll run Gabrubre's death-knight reset
+   once the server is running.
 
 --------------------------------------------------------------------------------
 
@@ -1216,6 +1220,150 @@ between capitals still pays off.
 always facing them, holding still once a buddy is chosen, fire at level 2). One
 question: what is "teleport with him"? Today a newcomer picks a buddy and stays
 in the valley. Is there meant to be a ride out with him at level 1?
+
+--------------------------------------------------------------------------------
+
+### User Request 9
+
+> - A failing revert is reported by name, and the other reverts still run.
+
+a failed revert is an error in the patch code and should be treated as an error.
+
+>   - Buddies at a vendor: they sell everything a vendor buys, except:
+
+we have rules for trade goods too at a vendor, they only sell when near full.
+Can you find those plans in the issue files or llm-transcripts and make sure
+they're reflected in the up-to-date design?
+
+> 1. Staff and polearm races have no one-handed version. A protection warrior
+> from a polearm race (dwarf, night elf, tauren): which
+>      one-handed type instead?
+
+dwarf, 2h axe, for chopping wood in the cold. night elf, staff, for fighting
+with agility and dexterity. tauren, staff, for walking long across the plains.
+
+oh, did you mean a 1h weapon? Ah gotcha. well that should be the case for dwarf
+warriors, tauren and night elf too.
+
+for 1h weapons... dwarfs get 1h axe, tauren get 1h mace, and night elf get 1h
+sword.
+
+> 2. The starter kits give warriors and rogues no ranged weapon. Bow, gun,
+> crossbow or thrown, by race? Or none?
+
+thrown
+
+> 3. Off-hand pairs: the kits sometimes mix types (an orc rogue's knife and
+> flail). Should pairs stay within one type?
+
+for combat rogues, slow 1h and fast off-hand dagger. for assassination, slow
+daggers. for subtlety, fast daggers.
+
+
+
+<pasted_content id="433b">
+> Sargobras: your new behaviour is recorded in his issue (his own per player,
+> always facing them, holding still once a buddy is chosen, fire
+> at level 2). One question: what is "teleport with him"? Today a newcomer picks
+> a buddy and stays in the valley. Is there meant to be a ride
+>   out with him at level 1?
+</pasted_content id="433b">
+
+
+yes. currently, you can talk to him and ask to adventure somewhere else.
+
+  Jewelcrafting, the math.
+
+okay so we should teach the gems in a random order then. We should distribute
+them such that the colors are as evenly distributed through the levels as
+possible. There should be 17 different orders, for 17 trainers. Can you tell me,
+why 17? Some of them are faction specific, so that number will go down. Can we
+just have this random order be for the capital city ones? What other ones exist?
+Probably in Eversong Woods or Azuremyst or something... I'm thinking just the
+capital vendors... We have a special vendor that teaches all the professions in
+each capital city, right? How does that go?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 9
+
+> Four things to handle. First, the failed revert:
+
+> Now compile's two exit paths, so a failed revert still gets the trees reset
+> and ends with the failure verdict:
+
+> Testing that a failing revert now fails the revert step: a made-up patch whose
+> revert fails, run through the real revert loop:
+
+> Adding that case to the line-edit test, so it covers both halves of the revert
+> fix:
+
+> The test's own bug: inside the made-up revert, `$2` meant the function's
+> arguments, not the scratch folder. Fixing it:
+
+*[commit] db98df0e4 in wow-chat-2026 - A failed patch revert fails the build*
+
+> Now the jewelcrafting trainers: who they are, where they stand, which side.
+> And whether there's an all-professions trainer in the capitals:
+
+*[commit] 96dac2a9f in wow-chat-2026 - Buddies keep trade goods for the auction house; answers on weapons, Sargobras and jewelcrafters*
+
+A failed revert now fails the build, and buddies keep their trade goods again.
+Your weapon and Sargobras answers are recorded, and the jewelcrafting trainer
+list is below. Committed; the town-code change is compiler-checked but not
+built.
+
+**Failed reverts:** a revert that fails now ends the run as COMPILE FAILED,
+naming each broken patch. The other reverts still run first, and the source
+trees are reset to clean upstream before the verdict. That applies both when the
+build had succeeded and when it was already failing. The line-edit test now
+covers it.
+
+**Trade goods:** I found your rule from 26 September. They're kept "like
+hearthstone, consumables, tradegoods for their profession", and sold to a vendor
+only when the bags stay 90% full ("then they sell all the tradegoods as well").
+My earlier vendor change broke that; it's fixed, and the town plan says so.
+
+That turned up a gap. On 24 September you said both:
+- "For trade goods they will list it" at the auction house, and
+- "whites are not auctioned at all".
+
+Most trade goods are white (cloth, leather, ore, herbs), and the auction errand
+only lists greens and better. So today **no trade good is ever listed**. Should
+white trade goods be an exception and get listed, and at what minimum price?
+
+**Weapons:** recorded, with one reading I'd like you to confirm. For dwarf,
+night elf and tauren warriors, the two-hander replaces the starter kit's
+polearm: dwarf axe, night elf staff, tauren staff. One-handed: dwarf axe, tauren
+mace, night elf sword. Warriors and rogues carry thrown weapons, and rogues
+follow your daggers rule by spec.
+
+**Jewelcrafting, why 17:** I counted every kind of jewelcrafting trainer in the
+world database:
+
+| Where | How many | Notes |
+|---|---|---|
+| Northrend | 6 | Northrend is closed on basic |
+| Outland | 7 | Shattrath (4), Honor Hold, Thrallmar, the Stormspire |
+| Silvermoon and the Exodar | 3 | the stock capital trainers |
+| Visiting Jewelcrafter | 1 | one creature per side, standing in six capitals |
+
+There's **no trainer who teaches every profession**. Each capital has the stock
+one-profession trainers, and our gem patch added a Visiting Jewelcrafter to the
+six capitals that had none.
+
+Capitals only gives **8 trainers, 4 per side**:
+- Alliance: Stormwind, Ironforge, Darnassus, the Exodar.
+- Horde: Orgrimmar, Thunder Bluff, the Undercity, Silvermoon.
+
+So that's 8 random orders. Each Visiting Jewelcrafter has to become its own
+creature to carry its own list. Two questions:
+1. Should both sides use the same four orders, or eight different ones?
+2. The Outland masters and the second Silvermoon trainer: do they keep teaching
+   today's full shared list, or stop teaching cuts?
+
+**Gabrubre:** still waiting. Tell me when the server is up and I'll run the
+reset.
 
 --------------------------------------------------------------------------------
 

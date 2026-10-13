@@ -367,3 +367,25 @@ cutting through walls or teleporting.
   listed: they are kept, and vendored only by the full-bags rounds.
   Should white trade goods be listed (an exception to "whites are not
   auctioned"), and at what minimum price?
+- (Answered 2026-10-13, verbatim) White trade goods at the auction house:
+
+  > yes, and, the price people are willing to pay for them. Each bot
+  > should try and guess and estimate based on what other prices are
+  > available in the auction house. Pick a random number between -30%
+  > and 15% higher or lower than the average price.
+  >
+  > the cheapest ones always get picked first, so even though it's a
+  > higher chance to be lower, the price will still probably climb.
+  > That's my bet at least, and that's good if more goods get sold. When
+  > the bots re-list it, they should do the same process. I think we had
+  > plans for remembering the price from the past? We might want to think
+  > about replacing that with this system.
+
+  Read as: white trade goods are listed. A buddy prices any listing by
+  the average of the same item's current listings, times a random factor
+  from 0.70 to 1.15, and re-lists by the same rule. The remembered rising
+  price (`buddy_price`, counted from auction mail) may be replaced by
+  this. Open: when no copy is listed, what is the average (the vendor
+  price times the quality multiplier, as now)? Does the minimum price by
+  quality still floor the guess? Does it replace the undercut, glut and
+  only-minimum rules too, or only the remembered price?
