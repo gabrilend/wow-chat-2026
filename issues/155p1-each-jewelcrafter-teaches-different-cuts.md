@@ -46,6 +46,32 @@ across Outland):
 (The quoted design was not found in the transcripts as of 2026-10-13: it
 is new here.)
 
+Worked on together, 2026-10-13 (verbatim):
+
+> which three lists? They will each need their own list, probably. I mean
+> it depends on the distribution of gems, there's what, like 6 colors?
+> red blue yellow, green purple orange. so, over 300 levels we could do
+> 300 / 6 which equals one gem every 50 levels. But, that sucks, so let's
+> divide the 50 levels into 17 lists, one for each trainer. That's
+> like... 3ish? so... maybe we iterate through the 6 colors 3 times
+> throughout the 300 levels, so it goes... red purple blue green yellow
+> orange, red purple blue green yellow orange, red purple blue green
+> yellow orange. That's... 18 total tiers, and 300 divided by 18 is...
+> something idk. The math for this is probably wrong?
+
+> okay second attempt. So, if we split the 300 levels into tiers. uh, how
+> many gemstones are there? lemme go count... okay there's a bunch but
+> let's say there's N gemstones of each color. Then we'd -- stack
+> overflow -- uhhhh, did you get anything from that?
+
+The count, 2026-10-13 (cuts the trainers teach on basic, colour from the
+client's gem table): purple 15 (7 uncommon, 8 rare), yellow 14 (6, 8),
+orange 13 (6, 7), red 12 (5, 7), green 10 (4, 6), blue 6 (3, 3): 70.
+Eighteen tiers (six colours, three rounds) are 16 2/3 skill points
+apart. A colour's cuts split over its three rounds give 2 to 5 cuts a
+tier, so at any tier only that many of the seventeen trainers can teach
+a different cut.
+
 ## Current Behavior
 
 Built by 155p (E033, E034), not yet seen in game:

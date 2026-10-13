@@ -322,9 +322,21 @@ static bool TownHasAuctioneer(Player* bot, uint32 town);
 //                                      here, they'd be bought back at the
 //                                      same stop (BuyMeals) or missed in
 //                                      the next fight
-//   what it would rather auction     - only in a town with an auction
-//                                      house, for the auction errand (617h);
-//                                      elsewhere it is sold here too
+//   anything with a "Use:"           - owner, 2026-10-13: "any item with a
+//                                      'use' should be kept to be used when
+//                                      required" (a scroll, a trinket, a
+//                                      bag of something to open)
+//   unbound greens and better        - owner, 2026-10-13: "Green and blue
+//                                      items should be sold on the AH
+//                                      instead of vendored": kept for the
+//                                      auction errand (617h), in this town
+//                                      or the next one with an auction
+//                                      house. Bound ones can't be auctioned
+//                                      and are sold here. (Full bags in a
+//                                      town without an auction house still
+//                                      clear them, by the rounds below.)
+//   what the bot module would rather - a white or grey it judges worth an
+//   auction, in an auction town        auction there
 static std::vector<ObjectGuid> Junk(PlayerbotAI* ai, Player* bot)
 {
     uint32 town = BuddyTownArea(bot) ? BuddyTownArea(bot) : bot->GetAreaId();
@@ -337,6 +349,14 @@ static std::vector<ObjectGuid> Junk(PlayerbotAI* ai, Player* bot)
             continue;                                  // a vendor pays nothing for it (quest items, and the like)
         if (CantSpare(ai, item) || proto->Class == ITEM_CLASS_CONSUMABLE)
             continue;
+        bool hasUse = false;
+        for (auto const& s : proto->Spells)
+            if (s.SpellId && s.SpellTrigger == ITEM_SPELLTRIGGER_ON_USE)
+                hasUse = true;
+        if (hasUse)
+            continue;                                  // kept to be used
+        if (proto->Quality >= ITEM_QUALITY_UNCOMMON && !item->IsSoulBound())
+            continue;                                  // for an auction house
         if (auctionHere && proto->Quality != ITEM_QUALITY_POOR &&
             ai->GetAiObjectContext()->GetValue<ItemUsage>("item usage", item->GetEntry())->Get() == ITEM_USAGE_AH)
             continue;                                  // for the auction house here

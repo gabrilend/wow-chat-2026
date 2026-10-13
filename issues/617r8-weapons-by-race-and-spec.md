@@ -19,6 +19,13 @@ Verbatim, 2026-10-13:
 > shield. Check the level 20 starting gear patch for which weapon type
 > each 1h and 2h weapon should be. Also ranged weapons.
 
+Answer, 2026-10-13 (verbatim), on hearing the plan:
+
+> We should use the same item "type" for each level if we can.
+
+Read as: a buddy's weapon stays the same kind (a mace stays a mace) from
+tier to tier, as far as the white items of that kind reach.
+
 ## Current Behavior
 
 **Hands by spec: already in the outfits, not yet in the server.** The

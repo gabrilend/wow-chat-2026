@@ -31,7 +31,30 @@ And his life cycle, verbatim, 2026-09-23:
 > waits until nobody's looking, then turns into a black dragon and flies away.
 > We can just despawn him though, it happens offscreen.
 
+The valley Sargobras, 2026-10-13 (verbatim), after he was moved off the
+quest giver he stood on in every valley:
+
+> we will adjust dynamically later on. For now, just make Sargobras look
+> at the player. Each player should see their own Sargobras, the rest
+> should be invisible. And theirs should always be looking at them. At
+> least until they choose a character, then he should look in that same
+> direction until they hit level 2 and can't teleport with him anymore.
+> Then he disappears in fire. Always in fire.
+
 ## Current Behavior
+
+**The valley Sargobras moved, 2026-10-13** (generated spots, not yet
+installed): each starting valley's Sargobras stands 4 yards from the
+arrival point, turned aside until 5 yards clear of every creature
+(before: straight ahead, on top of the valley's first quest giver in all
+eight valleys), facing the arrival point. One shared spawn per valley,
+seen by everyone.
+
+**Planned, 2026-10-13:** a Sargobras of one's own in the valley, seen by
+that player alone (everyone else's invisible to them); he always turns to
+face his player; once a buddy is chosen he holds that facing; at the
+player's level 2 (when going with him is no longer offered) he vanishes
+in fire, as the death knights' Sargobras does. Open questions at the end (2026-10-13).
 
 **One Sargobras per tier, 2026-09-30** (owner: "Remember, one sargobras per
 tier! Eventually they're gonna have different outfits."): an owner owed
@@ -344,3 +367,11 @@ is chosen."
   covers random bots; buddies are the exception.
 - (Answered 2026-09-25) Death knight clans ignore the guarantee; they
   tank-swap and heal themselves instead (617g).
+- (Open, 2026-10-13) "until they hit level 2 and can't teleport with him
+  anymore": what is the teleport? Today a newcomer chooses a buddy from
+  him and stays in the valley. Is there a ride with him out of the
+  valley (to the next town, the buddy's home) offered at level 1 only?
+- (Open, 2026-10-13) His own Sargobras for each newcomer: the shared
+  valley spawn stays (hidden from everyone), and a personal one is
+  summoned for each player as they arrive? Or the shared one is shown
+  to one player at a time?

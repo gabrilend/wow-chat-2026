@@ -151,8 +151,13 @@ meals", "full bags without an auction house"):
   module judges surplus. Kept: what the full-bags rounds never sell
   (below: the hearthstone, tools, fishing pole, gear and ammo in use,
   quest items, epics for the owner); its consumables (food, drink and
-  potions, which it would buy back at the same stop); and, only in a town
-  with an auction house, what it would rather auction. The vendor stop is
+  potions, which it would buy back at the same stop); anything with a
+  "Use:" effect (owner, 2026-10-13: "any item with a 'use' should be kept
+  to be used when required"); unbound greens and better, in every town,
+  for the auction house (owner, 2026-10-13: "Green and blue items should
+  be sold on the AH instead of vendored"; bound ones can't be auctioned
+  and are sold); and, in a town with an auction house, the whites the bot
+  module would rather auction. The vendor stop is
   still chosen as before (always when bags are 90% full with no
   auctioneer, otherwise at odds equal to how full the bags are).
 - **Full bags without an auction house.** With no auctioneer in the town
