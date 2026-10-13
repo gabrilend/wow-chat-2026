@@ -458,10 +458,19 @@ feels": per-body speeds (issue 166) aren't built, so the reference body's
 pace is everyone's for now. Takes effect at the next install or config
 step (C003 rewrites worldserver.conf), then a world-server restart.
 
+## 2026-10-12 — Basic: no faster healing below level 15 (C034); walking at full speed (B053)
 
 | Knob | Value | Where |
 |---|---|---|
+| Low-level healing boost (`EnableLowLevelRegenBoost`) | 0 (stock 1) | `config/patches/C034-basic-no-low-level-regen-boost.sh` |
+| Player walking speed | stock (2.5 yards a second), outside the 0.85 rate | `patches/B053-walking-at-full-speed.sh` |
 
+Why: the owner, playing two new characters, "can we turn off the
+mechanic that makes levels 1-5 or 10 I forget heal faster? They should
+heal at the normal rate." (stock heals faster under 15) and "can we make
+sure that walking speed is at 100% of it's normal speed?". C034 is set in
+the installed basic config too (a restart picks it up); B053 needs a
+build.
 
 ## How to add an entry
 
