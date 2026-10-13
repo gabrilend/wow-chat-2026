@@ -9,6 +9,19 @@
 
 ## Current Behavior
 
+**Helping a clan-mate first, 2026-10-12, syntax-checked, not yet built**
+(`buddies_roam_strategy.cpp`, `HelpNear`). The owner: "can we add a
+radius that's like, 1.3x the bot's "target and engage enemy" radius
+that's like, if any clanmates are in a battle in that area, go and join
+them instead of picking a new fight?" A roaming buddy looking for its
+next monster first looks for a clan-mate (its owner, or another buddy of
+the same owner) in a fight within 78 yards (1.3 x the 60 yards in which it
+picks monsters), alive, on the same map, fighting a creature the buddy may
+attack; the nearest such clan-mate's foe is attacked at once (no approach
+to the monster's edge: the fight has begun). Only when none is does it
+pick a new monster as before.
+
+
 **Playable in the gallery, 2026-09-28** (the owner: "the gallery rendering
 was taking too long, my computer can't keep up [...] ok let's make them
 playable scenes and allow the user to change certain things with their
