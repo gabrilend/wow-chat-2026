@@ -956,6 +956,10 @@ private:
         {
             if (BuddyBagFullness(bot) < BuddyFullBagsShare())
                 return false;
+            // only when told (617y, owner 2026-10-12: the full buddy says so,
+            // and "go sell" sends it); until then it keeps roaming, full
+            if (!BuddyTakeSellOrder(bot->GetGUID().GetCounter()))
+                return false;
             VendorSpawn const* best = nullptr;
             float bestD = 1e30f;
             for (VendorSpawn const& v : Vendors())

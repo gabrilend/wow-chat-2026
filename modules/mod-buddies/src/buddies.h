@@ -95,6 +95,11 @@ uint8 BuddySlotLevel(uint8 slot);
 // login and at every level change.
 void BuddyStageCheck(Player* owner);
 
+// The selling trip may set off (617y): true once, after a player in the
+// owner's group said "go sell" while this buddy's bags were full
+// (buddies_orders.cpp); the trip takes the order as it starts.
+bool BuddyTakeSellOrder(uint32 buddy);
+
 // The movement trace (buddies_trace.cpp, 617e2): whether a game master has
 // switched it on for this buddy with ".buddy trace <name>", and one line
 // of it, written to the bot module's log so it sits among the bot's own

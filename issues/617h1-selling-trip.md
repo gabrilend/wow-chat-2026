@@ -16,6 +16,13 @@ move to the nearest town / vendor and sell what they need to."
 
 ## Current Behavior
 
+**Waits for "go sell", 2026-10-12 (617y; syntax-checked, not yet built).**
+A buddy past full no longer sets off by itself: it says "My bags are full."
+where its owner sees it, and goes when a player in its owner's group says
+"go sell" (`BuddyTakeSellOrder`, at the trip's start). The owner: "we need
+the whisper to know when we should send them".
+
+
 **The selling trip: written 2026-10-03, syntax-checked, not yet built or
 run** (see the steps). Before it: a buddy sells only on a town visit,
 which happens only when its owner is in a town (`buddies_town.cpp`: junk,

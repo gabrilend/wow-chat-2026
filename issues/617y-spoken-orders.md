@@ -26,14 +26,52 @@ Verbatim, 2026-10-12:
 > of the tool call possibilities instead of training it to speak like a
 > robot.
 
+Answers, 2026-10-12 (verbatim):
+
+> we need the whisper to know when we should send them.
+
+> well, if any of them have full inventories they'll join the journey,
+> and if all of them do, the player might be forced to, especially if
+> they're somewhere dangerous like Outland.
+
+> only people in the player's party... or raid, maybe. >:) and the
+> messages should go to the largest groupsize log that a player is a part
+> of - raid if in a raid, party if in just a group with one or more
+> player, and as a whisper if alone. If one player in a raid says "go
+> sell" then any buddy-bots with full inventories will do so. If they say
+> follow me, though, to the largest groupsize channel, only the player's
+> clanmates would agree. Because saying "follow me" means "I need a team"
+> and you guys know best how to work with each other.
+
 ## Current Behavior
+
+**"My bags are full" and "go sell", 2026-10-12, syntax-checked, not yet
+built** (`modules/mod-buddies/src/buddies_orders.cpp`; the selling trip's
+start in `buddies_roam_strategy.cpp`):
+- a buddy whose bags reach full says "My bags are full." once (again only
+  after they have had room and filled again), where its owner sees it:
+  the owner's raid chat, else party chat, else a whisper (sent to the
+  group's members directly, so a buddy in a far party of its own still
+  reaches them);
+- "go sell" (any case; "please" allowed), said in party or raid chat or
+  /say by a player, reaches the buddies of every player in the speaker's
+  party or raid (the speaker's own when alone); whispered to one buddy, that
+  buddy, when the speaker is its owner or in its owner's group. Each
+  hearer with full bags answers "Off to sell. Come with me if you can."
+  the same way and sets off on the selling trip;
+- the selling trip sets off only on that order now (it used to start by
+  itself when the bags were full); a full buddy keeps roaming until told;
+- the bot module's own "My bags are full" whisper at every failed pickup
+  stays silenced (B048): the one line above replaces it.
+
+Before that:
 
 - **Full bags:** the server now running (built 2026-10-03) has a full
   buddy keep looting while the bot module whispers "My bags are full" at
   each failed pickup. Written since then and in the next build: the
   selling trip (617h1), where a buddy past full walks to the nearest town
   and sells on its own, and B048, which stops the whisper.
-- **Orders:** buddies ignore every bot-module chat command (B045, owner
+- **Orders (still):** buddies ignore every bot-module chat command (B045, owner
   2026-09-25: buddies run on their own rules; the language-model layer
   reaches the same actions later as tool calls, 617m / 917).
 
@@ -69,12 +107,13 @@ speak in commands.
 
 ## Open Questions
 
-1. The selling trip already sends a full buddy to town by itself in the
-   next build. Is "go sell" still wanted on top (sooner, or all at once),
-   or should the trip wait for the order instead of starting by itself?
-2. Who may give orders: only a buddy's own owner, or any player it
-   hears (a party member)?
+1. (Answered 2026-10-12: the order is wanted; read as: the trip waits for
+   it.) Is that right, or should a full buddy also set off by itself after
+   a while unheard?
+2. (Answered 2026-10-12: players in the speaker's party or raid; "follow
+   me" only the speaker's own buddies, its clan.)
 3. How does "follow" end: "stop", the owner logging out, a town, a
    dungeon, after a time?
-4. Spoken to whom: everyone in /say range hears "follow me"; should only
-   buddies addressed by name (or the speaker's target) obey?
+4. (Answered 2026-10-12, for "follow me": said to the group's largest
+   channel, the speaker's own buddies agree.) "follow <name>": the named
+   one's buddies, or the speaker's?
