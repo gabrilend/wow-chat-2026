@@ -1,6 +1,6 @@
 # Conversation Summary: 4a14807d-68bc-45b5-b727-e461dd1e7166
 
-Generated on: 2026-10-12 21:46:25
+Generated on: 2026-10-12 23:14:04
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -278,6 +278,114 @@ Debug and optimized builds use different compiler settings, so each needs its
 own set of cache entries. Your first `--debug` build will be close to a full
 compile. Later Debug builds, and switching back to optimized, should be fast
 because both sets stay in the cache.
+
+--------------------------------------------------------------------------------
+
+### User Request 4
+
+can we make commands for the buddy-bots "go faster" and "slow down" for when
+we're in dungeons, and the tank is pulling, and the healer's mana percentage is
+taken into account? So, like "do I pull or not" is a question of "do I think,
+based on how well and fast we've been doing, could the healer heal me through
+that monster fight?" if so, then the tank moves forward. If not, then he hangs
+back. The healer can say "go faster" because they know they have health potions
+and such that the tank doesn't know about. So, they can do, but only if the
+monsters have a chance of harming them. Otherwise, they refuse to fight.
+
+can we test the stand-in system by levelling birth to the right level and
+putting her in front of Ragefire Chasm with her buddy bots nearby, all equipped
+with white gear? She can be leatherworking.
+
+also, can we add a certain number of new resource nodes to the game? They should
+be spawned like minerals and herbs. Rather, each mineral and herb has an
+increased spawn rate, and a proportional amount of them are now the new resource
+node. They should be... Upside-down, static, floating at the tip of their
+highest modelled point at the top of the ground, but the model itself is
+upside-down turned around, ideally perpendicular to the nearest downward slope.
+Follow the points until they next go up, then stop following that line of
+outward facing points. Pick a direction that stays going "down" the longest, the
+first time it does so. That's the one it should be oriented perpendicular
+around. The animation should be frozen. It should have glowing sparkles like
+mineral nodes and plants do. It should just be there. The names of the new nodes
+should be in japanese, and they should be named "horse-shoe pursuits" but named
+with the most transliterated pronunciation like "horushupurushuts'" like "ho ru
+shu, pu ru shu tsu" but with the tiny tsu like in "mi ka" three things like "mi
+tsu tsu" but the second tsu is tiny. and it should try and describe horses (the
+animal) wearing human shoes (like boots or galoshes) and business pursuits to
+provide them. And each one should be a different poetic device to explain such
+things. Just... absolutely deliverance wretched.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 4
+
+> Three separate pieces of work. Searching the issues for related or existing
+> ones before writing anything:
+
+> Looking up the character "Birth" in the basic profile's database:
+
+> Birth is a level-2 female tauren shaman (Horde), offline. Ragefire Chasm's
+> entrance is in Orgrimmar's Cleft of Shadow, and the dungeon is meant for
+> levels 13–18. Checking her buddies:
+
+> Birth has one buddy so far: Danaendu, a level-4 troll warrior. Checking what
+> tools exist for driving a character from scripts:
+
+> Checking whether the "buddy kit" command can gear a player, not only a buddy:
+
+> Checking whether the stock client can show Japanese text at all, since the
+> node names depend on it:
+
+*[commit] 5b8b06bff in wow-chat-2026 - Plans: tank-paced pulls, a stand-in scene at Ragefire Chasm, upside-down Horseshoe Pursuit nodes*
+
+All three are planned as issue files and committed. None is built: each needs
+answers from you first, and two also wait on things outside my hands.
+
+**1. "go faster" / "slow down" (tank-paced pulls).** Today the player always
+leads in a dungeon. Buddies follow, and they attack whatever hostile monster the
+player walks close to. Nothing walks ahead, and nothing checks anyone's mana.
+Under the plan, the tank walks to the next group of monsters. Before pulling it
+compares three things: the healer's mana as a percentage, what the last few
+fights cost in mana and health and how long they took, and how big and strong
+the next group is. If the healer can carry the fight, the tank pulls; if not, it
+waits. The healer's "go faster" and "slow down" raise or lower how much risk it
+accepts.
+
+**2. The stand-in test at Ragefire Chasm.** Birth is a level-2 tauren shaman
+with one buddy, Danaendu, a level-4 troll warrior. The stand-in maker is written
+but has never been built, and its database table isn't installed yet. So the
+scene waits on the compile you're running. After that it's a script that sends
+game-master commands to the running server, one at a time, in this order:
+- raise Birth's level,
+- teach her leatherworking,
+- put white gear on her and her buddies,
+- place everyone outside the entrance in Orgrimmar's Cleft of Shadow,
+- call stand-ins into the empty seats.
+
+**3. Horseshoe Pursuit nodes.** Herbs and ore spawn in pools: each pool has a
+list of possible places and a fixed number of nodes up at once. The basic world
+has 3,279 such pools with 4,341 nodes up at once. A generator would raise each
+pool's count and fill the extra slots with the new nodes. For each node it reads
+the extracted ground heights, finds the direction that runs downhill the
+longest, and writes the node's position and tilt into the database.
+
+Something to know first: **the stock English client can't draw Japanese.** Its
+fonts have no Japanese characters, so ホルシュ・プルシュッツ would
+show as blank or as boxes. There are three ways around it:
+- put a Japanese-capable font into each player's client Fonts folder, under the
+  name of the font it replaces,
+- let the custom client draw the names,
+- or spell the names in Latin letters (HORUSHU PURUSHUTTSU).
+
+Every issue file lists its open questions. I'll start with one from each:
+
+1. **Pulls:** Birth is a shaman, so I picture her as the healer, with a buddy
+   tank leading. Is the "healer who says go faster" always the player? Or can a
+   healer buddy say it too?
+2. **Scene:** at level 10 Birth opens a second buddy slot. Should the scene fill
+   it with a new buddy, or leave it empty so a stand-in takes the seat?
+3. **Nodes:** which model hangs upside down: a horse, a boot, an existing herb
+   or ore model, or something else?
 
 --------------------------------------------------------------------------------
 

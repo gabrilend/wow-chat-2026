@@ -24,6 +24,14 @@ Verbatim, 2026-10-12:
 > tank doesn't know about. So, they can do, but only if the monsters have
 > a chance of harming them. Otherwise, they refuse to fight.
 
+Answer, 2026-10-12 (verbatim), on whether a healer buddy may say it too:
+
+> healer buddies can say it to the tank if the tank is doing too dangerous
+> and they can't keep up. They know their character better, so the tank
+> should default to going faster. if the healer asks to slow down though
+> he will for a time, until he builds up confidence again which happens
+> over time. she should whisper it to him.
+
 ## Current Behavior
 
 Nothing paces a dungeon but the player. Inside a dungeon each buddy follows
@@ -51,11 +59,24 @@ me through this fight? It weighs:
 Yes: it moves forward and pulls. No: it hangs back and waits (the healer
 drinking, mana coming back) and asks again.
 
-**"go faster" and "slow down"**, said by the healer (the healer knows
-things the tank can't, such as potions in their bags): they shift how
-much risk the tank accepts, so the same mana and the same pack can give a
-different answer. Heard as 617y's orders are (party or raid chat, /say,
-a whisper).
+**The tank's confidence**, one number per tank: how much risk it
+accepts, so the same mana and the same pack can give a different answer.
+It starts high: the tank defaults to going faster, because the healer
+knows their own character better (potions in their bags, cooldowns) and
+will say so when it's too much.
+
+**"slow down"**, whispered by the healer to the tank: the tank's
+confidence drops and it pulls more carefully for a time, then its
+confidence builds back up on its own, a little at a time, toward the
+fast default.
+
+**"go faster"**, whispered by the healer: the confidence goes back up at
+once, without waiting for it to rebuild.
+
+**The healer may be a player or a buddy.** A player whispers the words
+themselves. A healer buddy says "slow down" when it can't keep up: when
+fights leave its mana too low too often, or the group's health falls
+faster than it can heal. It whispers it to the tank the same way.
 
 **Fights worth having:** the tank only pulls monsters that could hurt the
 group; anything that can't, it refuses to fight (open question 5 asks
@@ -69,9 +90,10 @@ what "could hurt" means and what happens to the harmless ones instead).
 3. The guess for the next pack: its expected cost from the record, scaled
    by the pack's size, levels and ranks; compared with the healer's mana
    now and a risk setting.
-4. The risk setting: one number per group, raised by "go faster" and
-   lowered by "slow down" (heard by 617y's listener), with a floor and a
-   ceiling.
+4. The tank's confidence: one number per tank, starting at the fast
+   end, lowered by a whispered "slow down", rising back over time, raised
+   at once by "go faster" (whispers heard as 617y's are). A healer buddy's
+   own judgment of when to whisper "slow down".
 5. The tank's walk ahead: to the next pack's edge, then the pull (the
    class's own pull from range, or walking into range). Waiting in place
    when the answer is no.
@@ -81,12 +103,13 @@ what "could hurt" means and what happens to the harmless ones instead).
 
 ## Open Questions
 
-1. Who is "the healer" who says "go faster": always the player, or a
-   healer buddy too? When the player is the healer (Birth is a shaman),
-   does the tank lead even though its owner is in the group?
-2. "go faster" and "slow down": one step each time it's said (say, ten
-   points of risk), or a setting with named levels (careful, steady,
-   fast)? Does the setting last for the dungeon, or wear off?
+1. (Answered 2026-10-12: a player or a healer buddy, whispered to the
+   tank.) When the player is the healer (Birth is a shaman), does the
+   tank lead even though its owner is in the group?
+2. (Answered 2026-10-12: "slow down" lasts for a time, and confidence
+   builds back up over time.) How long to rebuild, from a "slow down" to
+   full speed: a few pulls, a few minutes? Does a second "slow down"
+   before it has rebuilt drop it further?
 3. The tank walking ahead: does it need a route through each dungeon
    (packs in order, as a player learns them), or does it take the nearest
    pack it hasn't fought yet?

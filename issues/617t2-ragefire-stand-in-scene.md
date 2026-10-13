@@ -5,7 +5,7 @@
 - Phase: 6
 - Parent: 617t (dungeon stand-ins)
 - Blocked by: 617t1 (the stand-in maker: written, not yet built into a
-  server)
+  server), 185 (the level-up command)
 - Related: 176a (test scenes: this is a hand-run one, in the basic
   profile), 617a4 (the kit's white gear), 617z (tank-paced pulls: tried
   here once written)
@@ -19,6 +19,15 @@ Verbatim, 2026-10-12:
 > can we test the stand-in system by levelling birth to the right level
 > and putting her in front of Ragefire Chasm with her buddy bots nearby,
 > all equipped with white gear? She can be leatherworking.
+
+Answer, 2026-10-12 (verbatim), on Birth's second buddy slot (opened at
+level 10): fill it with a new buddy, or leave it for a stand-in?
+
+> Sargobras. Until she's picked for the first time at that tier.
+
+Read as: the slot is left for Birth to fill through Sargobras (who walks
+beside an owner owed a buddy, from level 10); until she has picked her
+buddy of that tier the first time, a stand-in takes the seat.
 
 ## Current Behavior
 
@@ -38,8 +47,12 @@ to the server so nothing it holds in memory is overwritten):
   her talents spent;
 - Birth a leatherworker (apprentice, skill raised to what her level
   allows);
-- Birth and her buddies in white gear for their level (the buddy kit's
-  choice for a buddy; Birth's chosen the same way, by her class);
+- Birth and her buddies in white gear for their level (the existing
+  white gearsets, `src/lua-basic/data/gearsets/buddy-white-<N>.lua`, put
+  on by the `.gearset` console command; the level-raising, gear and
+  professions done together by 185's level-up command);
+- Birth's second slot (level 10) left unchosen: Sargobras comes to her,
+  and a stand-in takes the seat until she picks;
 - Birth placed just outside Ragefire Chasm's entrance in Orgrimmar's Cleft
   of Shadow (map 1, x 1813.5, y -4418.6, z -18.6: where the dungeon's exit
   puts a player, from `areatrigger_teleport` 2226), her buddies beside
@@ -63,9 +76,10 @@ the first refusal, naming it.
 ## Open Questions
 
 1. Which level: 15 (the middle of Ragefire's 13 to 18)?
-2. Birth at level 10 or more opens a second buddy slot. Should the scene
-   fill it (a new buddy made through the normal choosing), or leave it
-   empty so a stand-in takes the seat?
+2. (Answered 2026-10-12: left for Sargobras; a stand-in sits in until
+   she picks.) Does the stand-in sitting in for an unpicked slot belong
+   to 617t (the dungeon seats by themselves), or does the scene bring it
+   in by command for now?
 3. "test the stand-in system": the stand-ins brought in by the console
    command, as the scene's own step (possible once the build is in)? Or
    the dungeon seats filled by themselves on entering (617t's own
