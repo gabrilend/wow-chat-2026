@@ -3,6 +3,7 @@
 ## Status
 - Created: 2026-10-05
 - Phase: 1
+- Blocks: 186 (gear of equal strength), 617r7
 - Related: 148v (cloned kit items drawn invisible), 160 (the client's cache follows the server), 617r (gearsets), 173 (the custom client)
 - Priority: Medium
 

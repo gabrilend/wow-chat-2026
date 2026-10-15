@@ -4,7 +4,7 @@
 - Created: 2026-10-14
 - Phase: 6
 - Parent: 620
-- Blocked by: 620a, 620b
+- Blocked by: 620a, 620b, 617b2 (the whisper door this uses)
 - Related: 617b (Sargobras), 617b1 (buddy entrance), 617f (his look), 617l
   (the clan's name), 617p (NPC awareness: buddies walking up to people),
   164 (per-player unselectable creatures), 718 (the Acherus Sargobras)
@@ -38,9 +38,13 @@ Sargobras (`src/lua-basic/sargobras.lua`) is driven entirely by dialogue
 
 - **A bot owed a buddy goes and asks.** When a wandering Sargobras is
   summoned for it (or it is within 30 yards of a valley Sargobras and
-  owed), it walks up to him, faces him, does the talking gesture for a few
-  seconds, and makes its choice; he answers in /say as he does for a
-  human ("A dwarf Priest. They'll find you soon.").
+  owed), it walks up to him, faces him, and does the talking gesture for 15
+  to 30 seconds, then **whispers him its choice** (617b2, owner
+  2026-10-14: "the bots, upon logging in or acquiring a Sargobras event,
+  will wait ~15-30 seconds while they talk to Sargobras, and then they
+  will automatically send a whisper to him and he'll execute the
+  action"). He answers in /say as he does for a human ("A dwarf Priest.
+  They'll find you soon."). Humans and bots go through the one door.
 - **How a bot chooses:** the role its group lacks most, counted the same
   way the dungeon draw counts tank and healer (617c3), among the classes
   and races `lib/buddy-choice.lua` allows; ties broken at random. An alt
@@ -56,12 +60,10 @@ Sargobras (`src/lua-basic/sargobras.lua`) is driven entirely by dialogue
 
 ## Suggested Implementation Steps
 
-1. Where the choosing happens: either a small bot-module strategy (C++, a
-   B-patch or mod-buddies, as 617p's walk-up to NPCs is) that walks to
-   Sargobras and calls the choice, or a Lua timer in `sargobras.lua` that,
-   for a bot owner (620a), walks it over (`MoveTo`) and calls the same
-   choose function the dialogue line calls. The Lua route reuses
-   everything `sargobras.lua` already has; prefer it.
+1. A Lua timer in `sargobras.lua` that, for a bot owner (620a), walks
+   it to the nearest Sargobras (`MoveTo`), plays the talking gesture for a
+   random 15 to 30 seconds, then sends 617b2's whisper as the bot (the
+   server's whisper, so the same handler runs as for a human).
 2. The role-lacking choice, as a pure function in `lib/buddy-choice.lua`,
    tested offline by `scripts/test-buddy-choice`.
 3. The clan name hand-off (620b).

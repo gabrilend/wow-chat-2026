@@ -5,6 +5,7 @@
 - Phase: 6
 - Parent: 617
 - Blocked by: 617a
+- Sub-issues: 617b1 (buddy entrance), 617b2 (whisper Sargobras)
 - Related: 620c (alt bots and random bots ask Sargobras by themselves)
 - Priority: High
 

@@ -4,7 +4,8 @@
 - Created: 2026-10-12
 - Phase: 6
 - Parent: 617 (buddy bots)
-- Related: 617a6 (buddies by stage: de-levelling, waiting, re-making),
+- Related: 186 (gear of equal strength: worn gear swapped for its match at the new level),
+  617a6 (buddies by stage: de-levelling, waiting, re-making),
   617b (Sargobras, who chooses buddies), 617g (talent shapes), 617k
   (buddy professions), 155f (Outland dungeons, Kael'thas), 718 (death
   knights' buddies come by level)
