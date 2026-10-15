@@ -6,6 +6,7 @@
 - Priority: High for basic (155): "players always have at least one buddy"
 - First profile: basic
 - Sub-issues: 617a–617q
+- Related: 620 (alt bots and random bots as owners, and meeting buddies)
 
 ## Origin
 

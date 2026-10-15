@@ -1,6 +1,6 @@
 # Conversation Summary: 4a14807d-68bc-45b5-b727-e461dd1e7166
 
-Generated on: 2026-10-13 03:00:49
+Generated on: 2026-10-13 14:50:10
 Models: claude-opus-5-5
 
 ## Contents
@@ -13,6 +13,11 @@ Models: claude-opus-5-5
    and settling buddy behaviour, including vendor selling, which is coded but
    not yet built. Next: recompile, then I'll run Gabrubre's death-knight reset
    once the server is running.
+3. 2026-10-13 03:05, after Request 12 - The goal is to finish this round of
+   buddy, death knight and jewelcrafting work, and right now I'm waiting for the
+   server to start so I can reset Gabrubre for the skip-the-story test. Next,
+   answer the profession mentor's first question: every profession, or only ones
+   the city lacks?
 
 --------------------------------------------------------------------------------
 
@@ -1615,6 +1620,81 @@ leftovers. Should I go ahead?
 
 The server is still starting; I'll run Gabrubre's reset as soon as the world is
 up.
+
+--------------------------------------------------------------------------------
+
+### User Request 12
+
+<pasted_content id="433b">
+> Found the trainer you remembered: the Visiting Mentor, at 24 sites (every
+> starting valley, first town and capital). It teaches whichever
+> classes have no trainer at its site, one dialogue line per class. It doesn't
+> teach professions, but the same dialogue-line mechanism could
+>   give the eccentric jewelcrafter its own list.
+</pasted_content id="433b">
+
+
+ah yes we need one of those
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 12
+
+> Writing the profession mentor up as a sub-issue of the Visiting Mentor's.
+> First, checking the server watch and the free issue numbers:
+
+> The Visiting Mentor was built under the quests-by-faction issue (23 mentors in
+> the end). Writing the profession version as its sub-issue:
+
+*[commit] baa8019f2 in wow-chat-2026 - Plan: a visiting mentor for professions in each capital*
+
+I've planned a profession version of the Visiting Mentor, committed as a new
+issue file under the quest-gating issue. The plan is one creature per capital
+with a dialogue line per profession, "Can you teach me alchemy?", each line
+opening that profession's trainer list. It reuses the trick that already lets
+the class mentor teach classes: the patch that makes the server open a trainer
+list named on a dialogue line.
+
+Four questions, starting with the first:
+1. **Every profession, or only the ones that city has no trainer for?**
+2. Capitals only (eight), or everywhere the class mentor stands (starting
+   valleys and first towns too)?
+3. Does its jewelcrafting line open that capital's own order of cuts, or is
+   jewelcrafting left to the eccentric visitor?
+4. One look everywhere, or a different one per city?
+
+The server is still starting. When the world is up I'll run Gabrubre's reset.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "Wait for the world server to finish
+starting or fail" completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 12 (continued)
+
+> The server stopped before the world came up. Finding out why:
+
+> The server did start and ran (those "Update time diff" lines are its
+> heartbeat), but it isn't running now. Checking whether it was shut down or
+> crashed:
+
+Not a crash. The server started at 02:57, the world came up 35 seconds later,
+and it ran until **14:49, when it received Ctrl+C** (an interrupt). Did you stop
+it?
+
+Two things I got wrong or found along the way:
+- **My watch missed the start.** It looked for "World initialized", but the
+  server writes "World **I**nitialized", with a capital I. So it only fired when
+  the server stopped. Gabrubre's reset didn't run, and nothing changed.
+- **The crash catcher logs a Ctrl+C as a crash.** It wrote a 345 KB report
+  headed "CRASHING THREAD" for a normal interrupt. It should say the server was
+  stopped on purpose and skip the dump. Should I fix that?
+
+When the server is up again, tell me and I'll run Gabrubre's reset. I've also
+asked about the profession mentor and about clearing the old update-file
+records; those are waiting on your answers.
 
 --------------------------------------------------------------------------------
 

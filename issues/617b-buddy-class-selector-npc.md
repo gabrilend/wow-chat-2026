@@ -5,6 +5,7 @@
 - Phase: 6
 - Parent: 617
 - Blocked by: 617a
+- Related: 620c (alt bots and random bots ask Sargobras by themselves)
 - Priority: High
 
 ## Origin
