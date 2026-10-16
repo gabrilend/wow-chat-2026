@@ -164,7 +164,7 @@ seat.
 
 ## Open Questions
 
-- When a stand-in becomes a buddy (not built), its weapon kinds follow
+- When a stand-in becomes a buddy (planned in 617t3), its weapon kinds follow
   617n: the kinds of the weapons it wore in battlegrounds and dungeons are
   kept first, even if its new owner knows fewer (owner, 2026-10-15).
 

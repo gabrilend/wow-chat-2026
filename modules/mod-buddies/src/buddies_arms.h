@@ -10,8 +10,11 @@
 class Item;
 class Player;
 
-// Whether `item` is one of the weapons this buddy put in its bags for a
-// town stay, to be worn again on leaving: the town's selling keeps it.
-bool BuddyIsStowedWeapon(Player* bot, Item* item);
+// Whether `item` is the best or the runner-up for one of this buddy's
+// hand slots (main, off, ranged), worked out now from all it carries:
+// the town's selling keeps it (owner, 2026-10-15: "they never sell their
+// *best* weapon ... If there's two that are good ... they shouldn't be
+// sold, either").
+bool BuddyIsKeptWeapon(Player* bot, Item* item);
 
 #endif

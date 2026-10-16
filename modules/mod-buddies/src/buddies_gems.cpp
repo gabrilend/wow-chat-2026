@@ -22,6 +22,9 @@
 #include "buddies_loot.h"
 #include "buddies_roam.h"
 #include "AuctionHouseMgr.h"
+#include "Chat.h"
+#include "ChatCommand.h"
+#include "DatabaseEnv.h"
 #include "Creature.h"
 #include "DBCStores.h"
 #include "GameTime.h"
@@ -43,6 +46,8 @@
 #include <set>
 #include <unordered_map>
 #include <vector>
+
+using namespace Acore::ChatCommands;
 
 // {{{ tuning
 static constexpr float  GAIN_AT_LEAST  = 0.01f;   // a gain smaller than this is no gain (rounding)
@@ -174,35 +179,48 @@ static float ValueOf(GemScorer& scorer, ItemTemplate const* item, std::array<uin
     return v + (bonus ? scorer.Score(item->socketBonus) : 0.0f);
 }
 
-// The gems an item should hold, from `choice`: the best gem in each socket
-// whatever its colour, or the best of each socket's own colour plus the
-// bonus, whichever is worth more. Meta sockets stay empty.
+// The gems an item should hold, from `choice`. Each socket draws a colour
+// at random among the colours that fit it, then takes the best gem of
+// exactly that colour by the buddy's plan (the owner, 2026-10-15: "red
+// slots could be red, purple, or orange. We should pick a random number
+// between 1 and 3 and make the gemstone that they slot that color. Then,
+// they'll pick the one according to their spec profile's stat weights").
+// Until then each socket took the best gem whatever its colour, so a
+// buddy wore one gem everywhere and its items' socket bonuses went
+// unearned (Usanda: seventeen "+3 hit, +4 spell power"). A drawn colour
+// always shares the socket's colour, so every socket bonus is earned.
+//   red socket     red, orange (red + yellow), purple (red + blue)
+//   yellow socket  yellow, orange, green (yellow + blue)
+//   blue socket    blue, purple, green
+//   basic's weapon sockets (all three colours at once): any of the six
+// Only colours the tier has gems of are drawn from: tier I has red,
+// yellow and blue alone (read 2026-10-15), so there a socket gets its own
+// colour. Meta sockets stay empty.
+static constexpr uint32 GEM_COLOURS[] = { 2, 4, 8, 6, 10, 12 };   // red, yellow, blue, orange, purple, green
+
 static std::array<uint32, MAX_GEM_SOCKETS> Choose(GemScorer& scorer, ItemTemplate const* item, std::vector<Gem> const& choice)
 {
-    std::array<uint32, MAX_GEM_SOCKETS> best {}, matched {};
-    bool allMatched = true;
+    std::array<uint32, MAX_GEM_SOCKETS> gems {};
     for (int i = 0; i < MAX_GEM_SOCKETS; ++i)
     {
-        uint32 color = item->Socket[i].Color;
-        if (!color || color == SOCKET_COLOR_META)
-        {
-            allMatched = allMatched && !color;         // a meta socket left empty earns no bonus
+        uint32 socket = item->Socket[i].Color;
+        if (!socket || socket == SOCKET_COLOR_META)
             continue;
-        }
-        float bestScore = -1.0f, matchedScore = -1.0f;
+        // the colours that fit this socket and that the tier has gems of
+        std::vector<uint32> fits;
+        for (uint32 colour : GEM_COLOURS)
+            if ((colour & socket) && std::any_of(choice.begin(), choice.end(), [colour](Gem const& g) { return g.color == colour; }))
+                fits.push_back(colour);
+        if (fits.empty())
+            continue;                                  // the tier has no gem for it: left empty (the kit names empty tiers)
+        uint32 drawn = fits[urand(0, uint32(fits.size()) - 1)];
+        float bestScore = -1.0f;
         for (Gem const& g : choice)
-        {
-            float s = scorer.Score(g.enchant);
-            if (s > bestScore)
-                bestScore = s, best[i] = g.enchant;
-            if ((g.color & color) && s > matchedScore)
-                matchedScore = s, matched[i] = g.enchant;
-        }
-        allMatched = allMatched && matched[i];
+            if (g.color == drawn)
+                if (float sc = scorer.Score(g.enchant); sc > bestScore)
+                    bestScore = sc, gems[i] = g.enchant;
     }
-    if (allMatched && ValueOf(scorer, item, matched) > ValueOf(scorer, item, best))
-        return matched;
-    return best;
+    return gems;
 }
 // }}}
 
@@ -651,10 +669,55 @@ uint32 BuddyBuyGemsAtAuction(Player* bot, Creature* auctioneer)
 }
 // }}}
 
+// {{{ .buddy gems
+// ".buddy gems <buddy name>": a buddy in the world has every socket of what
+// it wears gemmed again by the kit's rule (a random fitting colour per
+// socket, the best gem of it by its plan), replacing what was there. Made
+// 2026-10-15 to bring buddies gemmed by the old rule (one best gem in
+// every socket, no socket bonuses) onto the new one; free, like the kit.
+class buddies_gems_command : public CommandScript
+{
+public:
+    buddies_gems_command() : CommandScript("buddies_gems_command") { }
+
+    ChatCommandTable GetCommands() const override
+    {
+        static ChatCommandTable commandTable =
+        {
+            { "buddy gems", HandleGems, SEC_GAMEMASTER, Console::Yes },
+        };
+        return commandTable;
+    }
+
+    static bool HandleGems(ChatHandler* handler, std::string name)
+    {
+        if (!normalizePlayerName(name))
+        {
+            handler->PSendSysMessage("Usage: .buddy gems <buddy name>");
+            return false;
+        }
+        Player* buddy = ObjectAccessor::FindPlayerByName(name, true);
+        if (!buddy || !BuddyIsCompanionAccount(buddy->GetSession()->GetAccountId()))
+        {
+            handler->PSendSysMessage("{} is not a buddy in the world (a buddy is in the world while its owner is online).", name);
+            return false;
+        }
+        QueryResult row = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE buddy = {}", buddy->GetGUID().GetCounter());
+        uint8 profile = row ? (*row)[0].Get<uint8>() : 0;
+        uint8 role    = row ? (*row)[1].Get<uint8>() : 0;
+        std::string problems = BuddyGemKit(buddy, profile, role);
+        handler->PSendSysMessage("{} re-gemmed by its plan {} (role {}){}{}", name, uint32(profile), uint32(role),
+            problems.empty() ? "" : "; ", problems);
+        return true;
+    }
+};
+// }}}
+
 // {{{ AddSC_buddies_gems
 void AddSC_buddies_gems()
 {
     new buddies_gems_arrivals();
     new buddies_gems_world();
+    new buddies_gems_command();
 }
 // }}}

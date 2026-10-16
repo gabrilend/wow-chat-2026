@@ -1012,8 +1012,8 @@ static bool CantSpare(PlayerbotAI* ai, Item* item)
         return true;                                   // the hearthstone; a tool (pick, knife, rod, hammer)
     if (p->Class == ITEM_CLASS_WEAPON && p->SubClass == ITEM_SUBCLASS_WEAPON_FISHING_POLE)
         return true;
-    if (BuddyIsStowedWeapon(ai->GetBot(), item))
-        return true;                                   // its weapons, put away for the town (617e4b)
+    if (BuddyIsKeptWeapon(ai->GetBot(), item))
+        return true;                                   // its best weapons and runners-up (617e4b)
     if (FateOf(ai, item) == Fate::MailOwner)
         return true;                                   // the owner's epic, waiting for a mailbox
     switch (ai->GetAiObjectContext()->GetValue<ItemUsage>("item usage", item->GetEntry())->Get())

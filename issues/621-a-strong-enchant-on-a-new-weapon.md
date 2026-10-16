@@ -43,7 +43,8 @@ a shield or a held item), for a buddy above level 30, when it is made or
 made again at a tier (617a6), get one of Fiery Weapon (803), Icy Chill (1894),
 Lifestealing (1898) or Unholy Weapon (1899), chosen at random, in the
 item's permanent enchant slot. A re-dress (`.buddy kit`, a stand-in's
-new level) enchants nothing. "After level 30" is built as 31 and up. An enchant number the server's tables lack is
+new level) enchants nothing. From level 30 (owner, 2026-10-15: "above level 29, 30 and up").
+The next enhancements by level are 624's. An enchant number the server's tables lack is
 named in the kit's problem line. Not yet: the weapons of the level-up
 command (185) and the class-change tool (187), and players.
 

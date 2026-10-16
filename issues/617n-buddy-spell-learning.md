@@ -22,7 +22,11 @@ when it is made (the starting kit, at each tier it is made at), random
 kinds its class and race can learn are added until it knows as many as
 its owner (`BuddyFillWeaponKinds`). The "past the count, refused" rule
 below is gone. **Not built:** learning more at weapon masters in the
-capitals (a town errand, like the class trainer's).
+capitals. The owner (2026-10-15): "should be the same as any other
+trainer skill, including class and profession. Seriously, we should
+treat them the exact same." So the town training visit should take a
+buddy to class trainers, weapon masters and its professions' trainers
+alike, buying each lesson it can afford, cheapest first.
 
 On stand-ins (verbatim): "When they are instantiated as buddy-bots, they
 might lose weapon skills! That's fine. ... If the stand-in-becoming-
@@ -195,9 +199,9 @@ list of spells we teach to each class."
 
 ## Open Questions
 
-- Weapon masters in the capitals: how many more kinds may a buddy learn
-  there (up to every kind its class can, or a few per visit), and does it
-  pay the 10 silver like a player?
+- Weapon masters in the capitals (treated as any trainer, owner
+  2026-10-15): does a buddy buy every weapon kind it can afford, or stop
+  at its owner's count?
 - "One for each of the player's learned weapon skills": built as "until
   it knows as many kinds as its owner" (its starting kinds count). Or
   should it be that many random kinds on top of what it starts with?

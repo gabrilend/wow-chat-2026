@@ -35,6 +35,17 @@ On the class-change tool needing the world server stopped:
 > with some message to the authserver, like "you have been banned for 30
 > seconds while we adjust your class" or something?
 
+The owner, 2026-10-15 (verbatim), on this tool and its sibling: "they
+should both modify buddy-bots too, if targeted specifically. If targeting
+to a player, then it adjusts the whole team proportional to their level
+differential with the player. Also, I want you to run the commands for
+me, I don't want to run them in the meat body." So: aimed at a buddy, the
+tool changes that buddy alone; aimed at a player, it changes the player
+and every buddy of the player's clan, each keeping its distance from the
+player (185's kills-ahead measure for levels; for a class change, the
+buddies keep their own classes unless aimed at one by one). Claude runs
+these tools and the `.buddy kit` / `.buddy gems` commands after them.
+
 ## Current Behavior
 
 - The class-change tool (`scripts/change-character-class`, with

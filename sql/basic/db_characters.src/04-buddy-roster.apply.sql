@@ -193,21 +193,6 @@ CREATE TABLE IF NOT EXISTS `buddy_retired_node` (
   PRIMARY KEY (`spawn`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617e3: unreachable gathering spots';
 
--- buddy_stowed_weapon (617e4b, 2026-10-15): the weapons a buddy put in its
--- bags on entering a town, to wear again on leaving it (bare-handed in
--- town, sheathed in the wilds, drawn in danger). Kept here rather than in
--- memory so a restart in town forgets nothing. Written by the buddy module
--- (buddies_arms.cpp); a row is removed when its weapon is worn again.
---   buddy  the buddy (characters.guid)
---   slot   15 main hand, 16 off hand, 17 ranged
---   item   the item (item_instance.guid)
-CREATE TABLE IF NOT EXISTS `buddy_stowed_weapon` (
-  `buddy` int unsigned     NOT NULL,
-  `slot`  tinyint unsigned NOT NULL,
-  `item`  int unsigned     NOT NULL,
-  PRIMARY KEY (`buddy`, `slot`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 617e4b: weapons put away in town';
-
 -- ============================================================================
 -- End of 04-buddy-roster.sql (apply)
 -- ============================================================================

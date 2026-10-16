@@ -26,13 +26,12 @@
 #include <initializer_list>
 
 // {{{ BuddyTablesPresent
-// The roster tables (and the weapons put away in town, 617e4b) exist in the
-// characters database. Logged as an error
+// Both roster tables exist in the characters database. Logged as an error
 // (naming the install step) when either is missing.
 static bool BuddyTablesPresent()
 {
     bool ok = true;
-    for (char const* table : { "buddy_clan", "buddy_roster", "buddy_stowed_weapon" })   // the last: 617e4b, 2026-10-15
+    for (char const* table : { "buddy_clan", "buddy_roster" })
     {
         if (!CharacterDatabase.Query("SHOW TABLES LIKE '{}'", table))
         {

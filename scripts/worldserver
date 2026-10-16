@@ -114,6 +114,14 @@ setup_log_symlinks() {
     mkdir -p "${TMP_LOGS}"
     [[ -L "${DIR}/tmp" ]] || ln -s "${TMP_BASE}" "${DIR}/tmp"
     [[ -L "${DIR}/logs-${PROFILE}" ]] || ln -s "${TMP_LOGS}" "${DIR}/logs-${PROFILE}"
+    # tmp/shared-memory -> /dev/shm/wow-chat-2026, the RAM-only folder the
+    # Lua scripts write their traces into (gossip-trace.lua and others).
+    # /dev/shm is emptied at every reboot, so it is made here each start:
+    # on 2026-10-15 a server started before it existed and every gossip
+    # trace line failed ("gossip-trace: cannot open ...").
+    local SHM="/dev/shm/wow-chat-2026"
+    mkdir -p "${SHM}"
+    [[ -L "${TMP_BASE}/shared-memory" ]] || ln -s "${SHM}" "${TMP_BASE}/shared-memory"
 }
 # }}}
 

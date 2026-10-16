@@ -21,6 +21,26 @@ sure that they'll socket their own gear when they get the chance."
 
 ## Current Behavior
 
+**A random colour per socket, 2026-10-15; syntax-checked, not yet rebuilt
+or run** (`buddies_gems.cpp`, the kit's choice). The owner: "the
+buddy-bots don't seem to be gemming according to the set bonuses... Can
+we make each gemstone slot that they fill have a random color? for
+example, red slots could be red, purple, or orange. We should pick a
+random number between 1 and 3 and make the gemstone that they slot that
+color. Then, they'll pick the one according to their spec profile's stat
+weights." and "we might need to fix the gemstones in the currently built
+buddy-bots to align to this new pattern." Built: each socket draws one
+colour among those that fit it (red: red, orange, purple; yellow:
+yellow, orange, green; blue: blue, purple, green; basic's weapon sockets:
+any of the six) and that the tier has gems of (tier I has only red,
+yellow and blue), then the best gem of exactly that colour by the plan.
+Every socket bonus is then earned. Before, each socket took the best gem
+whatever its colour, so a buddy wore one gem everywhere (Usanda:
+seventeen "+3 hit, +4 spell power", 51 hit rating, 9.2% spell hit at 44,
+over the 5% cap on all but Uldaman's last boss; Drerjokin: twenty-one
+"+6 hit"). A console command, `.buddy gems <name>`, re-gems a buddy in
+the world by the new rule, for buddies gemmed by the old one.
+
 Built 2026-10-03 (`buddies_gems.cpp`), compiles with the source patches
 applied (syntax-checked with B046 on); `scripts/test-buddy-gems` passes
 (each tier has gems: 13, 32 and 61 plain cut gems; no white has a meta

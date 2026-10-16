@@ -98,7 +98,7 @@ static InventoryResult Wear(Player* buddy, uint8 slot, uint32 entry)
     return EQUIP_ERR_OK;
 }
 // The weapon a buddy is first made with, at each level tier it is made at,
-// carries a permanent enchant above level 30, one of these four at random
+// carries a permanent enchant from level 30, one of these four at random
 // (owner, 2026-10-15: "totally random. this is a buff to melee combat";
 // Crusader is "too strong"; and "only when they are instantiated for the
 // first time. Their starting gear weapon, for each of their level tiers
@@ -108,7 +108,7 @@ static InventoryResult Wear(Player* buddy, uint8 slot, uint32 entry)
 // client's data files that day (issue 621). They are melee procs, so a
 // caster's staff gets one too: when to swing it is the caster's own lesson
 // to learn (622).
-static constexpr uint8 ENCHANT_ABOVE_LEVEL = 30;
+static constexpr uint8 ENCHANT_FROM_LEVEL = 30;   // owner, 2026-10-15: "above level 29, 30 and up"
 static constexpr uint32 KIT_ENCHANTS[] = {
      803,   // Fiery Weapon:  now and then burns the target
     1894,   // Icy Chill:     now and then slows the target
@@ -134,7 +134,7 @@ static void Enchant(Player* buddy, uint8 slot, std::string& problems)
 
 // A kit weapon of a kind the buddy lacks is learned first ("That one they
 // should know", 617n). `firstMaking`: the starting kit, whose hand weapons
-// above ENCHANT_ABOVE_LEVEL are enchanted.
+// from ENCHANT_FROM_LEVEL are enchanted.
 //
 // "Neta, nothing eta" (owner, 2026-10-15: "if we're changing a level 57
 // with trinkets to be level 1 and there's no level 1 trinkets, then we
@@ -182,7 +182,7 @@ static uint32 GiveGear(Player* buddy, uint8 shape, bool firstMaking, std::string
         if (InventoryResult r = Wear(buddy, slot, item); r == EQUIP_ERR_OK)
         {
             ++worn;
-            if (firstMaking && buddy->GetLevel() > ENCHANT_ABOVE_LEVEL &&
+            if (firstMaking && buddy->GetLevel() >= ENCHANT_FROM_LEVEL &&
                 (slot == EQUIPMENT_SLOT_MAINHAND || slot == EQUIPMENT_SLOT_OFFHAND))
                 Enchant(buddy, slot, problems);
         }

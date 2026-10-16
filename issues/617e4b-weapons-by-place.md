@@ -26,7 +26,29 @@ Can we build it?"
 
 ## Current Behavior
 
-**Built 2026-10-15; syntax-checked, not yet rebuilt, installed or run**
+**Changed the same day, by the owner's answers; syntax-checked, not yet
+rebuilt or run.** Verbatim: "we don't have to remember. They should equip
+their best one when they're going off adventuring." / "they never sell
+their *best* weapon, which is what they should remember and re-calculate
+anytime they get a new one. If there's two that are good, they can
+exchange them in different situations. And they shouldn't be sold,
+either." / the change of carrying should happen "anytime we enter an
+event or situation or environment that demands it." / danger is
+"specifically when they are questing" (617e4c) / on bows, guns and wands
+going into the bags in town too: "good."
+- No table: leaving town (or a fight) puts on the best weapons it
+  carries, worked out then by the bot module's stat weights for it: main
+  hand, off hand (unless a two-hander), ranged. The best and runner-up of
+  each slot are never sold.
+- A buddy's situation (town, open, danger; fighting; fishing) is watched
+  and the weapons change only when it changes: entering or leaving town,
+  a fight starting or ending, the fishing starting or ending, logging in.
+- Danger is only an instanced map for now (dungeon, raid, battleground,
+  arena); the other faction's land no longer counts. Questing, roads and
+  fishing flocks wait on 617e4c.
+- The `buddy_stowed_weapon` table and its startup check are gone.
+
+**First version, 2026-10-15 (replaced as above)**
 (`modules/mod-buddies/src/buddies_arms.cpp`): every two seconds each
 online buddy is looked at.
 - In a town, out of a fight: main hand, off hand and ranged weapon go
