@@ -23,10 +23,17 @@ static BuddyQuestSpell const sBuddyQuestSpells[] = {
     {  1,  1791, 10,   8121 },   // Path of Defense
     {  1,     0, 30,   8616 },   // The Affray
     {  2,  1791, 12,   7328 },   // The Tome of Divinity
+    {  2,  1791, 12,   7329 },   // The Tome of Divinity
     {  2,  1791, 20,   5502 },   // The Tome of Valor
+    {  2,  1791, 20,   5503 },   // The Tome of Valor
     {  2,  1791, 40,  13819 },   // The Tome of Nobility
+    {  2,  1101, 40,  13820 },   // The Tome of Nobility
+    {  2,   690, 40,  34768 },   // The Thalassian Warhorse
     {  2,  1101, 60,  23215 },   // Judgment and Redemption
+    {  2,   690, 60,  34766 },   // True Masters of the Light
     {  2,   690, 60,  34767 },   // True Masters of the Light
+    {  3,  1791, 10,   1579 },   // Taming the Beast
+    {  3,  1791, 10,   5300 },   // Training the Beast
     {  3,  1791, 10,  23356 },   // Taming the Beast
     {  3,  1791, 10,  23357 },   // Training the Beast
     {  4,  1101, 20,   2995 },   // Klaven's Tower
@@ -34,39 +41,67 @@ static BuddyQuestSpell const sBuddyQuestSpells[] = {
     {  5,   690, 10,   9035 },   // Hex of Weakness
     {  5,  1101, 10,  10797 },   // Stars of Elune
     {  5,  1101, 10,  13908 },   // Desperate Prayer
+    {  5,     0, 10,  19318 },   // Touch of Weakness
+    {  5,   690, 10,  19325 },   // Hex of Weakness
+    {  5,  1101, 10,  19338 },   // Desperate Prayer
+    {  5,  1101, 10,  19350 },   // Stars of Elune
     {  5,     0, 10,  32548 },   // Symbol of Hope
+    {  5,     0, 10,  32758 },   // Symbol of Hope
     {  5,  1101, 20,   2651 },   // Elune's Grace
     {  5,   690, 20,   2944 },   // Devouring Plague
+    {  5,   690, 20,   2946 },   // Devouring Plague
     {  5,  1101, 20,   6346 },   // A Lack of Fear
     {  5,  1101, 20,  13896 },   // Arcane Feedback
     {  5,   690, 20,  18137 },   // Shadowguard
+    {  5,   690, 20,  19331 },   // Shadowguard
+    {  5,  1101, 20,  19337 },   // A Lack of Fear
+    {  5,  1101, 20,  19345 },   // Arcane Feedback
+    {  5,  1101, 20,  19357 },   // Elune's Grace
     {  5,     0, 20,  32676 },   // Consume Magic
+    {  5,     0, 20,  32757 },   // Consume Magic
     {  5,     0, 50,   9884 },   // Blood of Morphaz
     {  6,     0, 55,  48778 },   // Into the Realm of Shadows
     {  6,     0, 55,  50977 },   // The Light of Dawn
     {  6,     0, 55,  51721 },   // The Might Of The Scourge
+    {  6,     0, 55,  52382 },   // Into the Realm of Shadows
     {  6,     0, 55,  53431 },   // The Emblazoned Runeblade
+    {  6,     0, 55,  53821 },   // The Light of Dawn
     {  7,  1791,  4,   8071 },   // Call of Earth
+    {  7,  1791,  4,   8073 },   // Call of Earth
+    {  7,  1791, 10,   2075 },   // Call of Fire
     {  7,  1791, 10,   3599 },   // Call of Fire
     {  7,  1791, 20,   5394 },   // Call of Water
+    {  7,  1791, 20,   5396 },   // Call of Water
     {  7,  1791, 30,   8385 },   // Call of Air
     {  7,     0, 30,  66747 },   // Relic of the Earthen Ring
     {  8,     0, 50,  12510 },   // Magecraft
     {  8,     0, 60,  10140 },   // Arcane Refreshment
+    {  8,     0, 60,  10143 },   // Arcane Refreshment
     {  8,     0, 60,  28272 },   // Fragmented Magic
+    {  8,     0, 60,  28285 },   // Fragmented Magic
+    {  8,  1791, 71,   3578 },   // Attunement to Dalaran
     {  8,  1791, 71,  53140 },   // Attunement to Dalaran
     {  9,  1791,  1,    688 },   // Piercing the Veil
+    {  9,  1791,  1,   7763 },   // Piercing the Veil
     {  9,  1791, 10,    697 },   // The Binding
+    {  9,  1791, 10,  11520 },   // The Binding
     {  9,  1791, 20,    712 },   // The Binding
+    {  9,  1791, 20,  11519 },   // The Binding
     {  9,     0, 30,    691 },   // The Binding
+    {  9,     0, 30,   1373 },   // The Binding
     {  9,     0, 40,   5784 },   // Summon Felsteed
+    {  9,     0, 40,   5785 },   // Summon Felsteed
     {  9,     0, 50,   1122 },   // Kroshius' Infernal Core
+    {  9,     0, 50,   1413 },   // Kroshius' Infernal Core
     {  9,     0, 60,  18540 },   // Suppression
+    {  9,     0, 60,  20700 },   // Suppression
+    {  9,   595, 60,  23160 },   // Dreadsteed of Xoroth
     {  9,   595, 60,  23161 },   // Dreadsteed of Xoroth
     { 11,  1791, 10,  19179 },   // Body and Heart
     { 11,  1791, 14,   8947 },   // Power over Poison
     { 11,  1791, 16,   1446 },   // Aquatic Form
     { 11,     0, 70,  40120 },   // Vanquish the Raven God
+    { 11,     0, 70,  40123 },   // Vanquish the Raven God
     { 11,     0, 70,  40198 },   // Bombing Run
 };
 

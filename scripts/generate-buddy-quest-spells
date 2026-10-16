@@ -26,12 +26,20 @@ local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz
 -- {{{ the query
 -- One class only: the class mask has exactly one bit (a quest any of
 -- several classes may take, like the Wrathgate's, rewards no class
--- ability). The spell learned is the display spell when there is one (the
--- reward spell is then the "teach" spell the quest casts on the player),
--- else the reward spell itself. Repeatable quests are left out.
+-- ability). Both spells a quest names are listed, the display spell and
+-- the reward spell, each its own row: usually the display spell is the
+-- one learned and the reward spell the "teach" spell that casts it, but
+-- not always. The hunter's taming quests show a "Taming Lesson" (23356)
+-- that teaches nothing by itself, while their reward spell (1579) is the
+-- one teaching Tame Beast, Call Pet and Dismiss Pet, and "Training the
+-- Beast" (5300) Feed Pet and Revive Pet; with the display spell alone,
+-- hunter buddies had pets they could never call or revive (Montahmu,
+-- 2026-10-15). The buddy module keeps only rows whose spell (or what it
+-- teaches) is a skill of the class (ClassSkill), so the helper of each
+-- pair drops out there. Repeatable quests are left out.
 local QUERY = [[
 SELECT qa.AllowableClasses, q.AllowableRaces, q.MinLevel,
-       IF(q.RewardDisplaySpell <> 0, q.RewardDisplaySpell, q.RewardSpell), q.ID, q.LogTitle
+       q.RewardDisplaySpell, q.RewardSpell, q.ID, q.LogTitle
 FROM quest_template q JOIN quest_template_addon qa ON qa.ID = q.ID
 WHERE (q.RewardSpell <> 0 OR q.RewardDisplaySpell <> 0)
   AND qa.AllowableClasses <> 0 AND (qa.AllowableClasses & (qa.AllowableClasses - 1)) = 0
@@ -54,12 +62,14 @@ local rows, byKey = {}, {}
 for line in out:gmatch("[^\n]+") do
     if not line:find("Using a password", 1, true) then
         if line:find("^ERROR") then die("database " .. DB .. ": " .. line) end
-        local mask, races, level, spell, id, title = line:match("^(%d+)\t(%d+)\t(%-?%d+)\t(%d+)\t(%d+)\t(.*)$")
+        local mask, races, level, shown, reward, id, title = line:match("^(%d+)\t(%d+)\t(%-?%d+)\t(%d+)\t(%d+)\t(%d+)\t(.*)$")
         if not mask then die("unreadable row: " .. line) end
-        mask, races, level, spell = tonumber(mask), tonumber(races), math.max(1, tonumber(level)), tonumber(spell)
+        mask, races, level = tonumber(mask), tonumber(races), math.max(1, tonumber(level))
         local cls = 0
         while mask > 1 do mask = mask / 2; cls = cls + 1 end
         cls = cls + 1                                           -- class ids count from 1 (mask bit 0 is class 1)
+      for _, spell in ipairs({ tonumber(shown), tonumber(reward) }) do
+       if spell ~= 0 then
         local key = cls .. ":" .. spell
         local r = byKey[key]
         if not r then
@@ -71,6 +81,8 @@ for line in out:gmatch("[^\n]+") do
             r.races = (races == 0 or r.races == 0) and 0 or bit.bor(r.races, races)
             if level < r.level then r.level, r.quest = level, title:gsub('"', "'") end
         end
+       end
+      end
     end
 end
 if #rows == 0 then die("no class quest rewards a spell in " .. DB .. "; is it the right database?") end
