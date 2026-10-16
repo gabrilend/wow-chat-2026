@@ -8,7 +8,8 @@
   change), 148u (the first-login sharpening: a temporary enchant), 622
   (the buddy's weapon record: an enchant changes what a weapon does)
 - Priority: Medium
-- State: planned; the owner picks the enchants first
+- State: built for buddies' kit weapons, 2026-10-15; syntax-checked, not yet
+  rebuilt or run
 
 ## Origin
 
@@ -20,8 +21,27 @@ Verbatim, 2026-10-15:
 Asked whether buddies or players: "either target is fine." Asked for the
 choices: "give me a list."
 
+Answers, 2026-10-15 (verbatim), on Fiery Weapon, Icy Chill,
+Lifestealing and Unholy Weapon: "can do these. crusader too strong." And
+which goes on which weapon:
+
+> totally random. this is a buff to melee combat. spellcasters, using
+> that parallel knowledge structure we mentioned earlier, should learn to
+> possibly prioritize melee over spellcasting at certain times but not
+> others. How and why is up to them to solve.
+
 ## Current Behavior
 
+**Built for buddies, 2026-10-15** (`buddies_kit.cpp`, the kit's
+enchants): every weapon the kit puts in a main or off hand (not a
+shield or a held item) gets one of Fiery Weapon (803), Icy Chill (1894),
+Lifestealing (1898) or Unholy Weapon (1899), chosen at random, in the
+item's permanent enchant slot. That covers new buddies, `.buddy kit`,
+and stand-ins' new levels. An enchant number the server's tables lack is
+named in the kit's problem line. Not yet: the weapons of the level-up
+command (185) and the class-change tool (187), and players.
+
+Before:
 A new buddy's weapons (from its tier's white gearset, `buddies_kit.cpp`)
 carry no enchant. A player's carry one only from 148u's first-login
 sharpening (a temporary stone or oil). Nothing enchants a weapon after a
@@ -80,9 +100,7 @@ a later chore.
 
 ## Open Questions
 
-1. Which enchant for which kind of wielder: one for everyone (Crusader,
-   Fiery Weapon), one by role (melee, caster, healer, tank), or chosen by
-   the buddy's talent shape?
-2. The later-expansion enchants (Mongoose and up) at levels 1-60: allowed,
-   or only the classic ones?
-3. Players too, or buddies only?
+1. (Answered 2026-10-15: totally random, of the four melee procs.)
+2. (Answered by the same choice: only the four classic procs.)
+3. Players too, or buddies only? ("either target is fine": buddies
+   built; players wait on 185 and 187.)

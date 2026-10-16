@@ -15,7 +15,9 @@
 #include "buddies_quest_spells.h"
 #include "Creature.h"
 #include "DBCStores.h"
+#include "DatabaseEnv.h"
 #include "Log.h"
+#include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "Pet.h"
 #include "Player.h"
@@ -26,6 +28,8 @@
 #include "WorldSession.h"
 #include <algorithm>
 #include <mutex>
+#include <set>
+#include <string>
 #include <vector>
 
 // {{{ tuning
@@ -111,6 +115,9 @@ uint32 BuddyTrainAtTrainer(Player* bot, Creature* npc)
     if (!trainer || trainer->GetTrainerType() != Trainer::Type::Class || !trainer->IsTrainerValidForPlayer(bot))
         return 0;
     float discount = bot->GetReputationPriceDiscount(npc);
+    // quest spells first, free: the trainer's later ranks of a quest's
+    // totem or Bear Form ask for them (see BuddyLearnEverything)
+    uint32 quest = LearnQuestSpells(bot);
     uint32 learned = 0;
     // one lesson at a time, the cheapest of what it can learn now: a rank
     // learned may open the next rank, so the list is looked at again
@@ -141,31 +148,43 @@ uint32 BuddyTrainAtTrainer(Player* bot, Creature* npc)
             break;                                     // the server refused it after all: stop rather than loop
         ++learned;
     }
-    uint32 quest = LearnQuestSpells(bot);
     BuddyTrace(bot, "town: trained at {}: {} lessons bought, {} quest spells added", npc->GetName(), learned, quest);
     return learned + quest;
 }
 // }}}
 
-// {{{ BuddyLearnWeaponSkills
-// Weapon masters are filed as profession trainers in the world database
-// (trainer type 2: Staves, Guns, Two-Handed Maces ... 10 silver each), so
-// the class-trainer sweep below never met them. A buddy's gearset hands it
-// any weapon its class can learn ("a buddy learns them all", 617n), and a
-// staff or gun it was never taught was refused: the hunter Montahmu, made
-// at 44 on 2026-10-15, had its staff and gun refused, its starting weapons
-// already gone, and so fought Uldaman with its fishing pole (the owner
-// found it there). Every lesson whose skill line is a weapon skill
-// (SkillLine.dbc category 6) is gathered once from all trainers; the
-// race-and-class check inside CanTeachSpell keeps a rogue from staves.
+// {{{ weapon skills, as many as the owner's
+// The owner's rule (2026-10-15): "buddy-bots should have one weaponskill
+// trained (minimum 1, the weapon they have equipped at the start of the
+// game) per weaponskill that the player trains. So the buddy-bots of a
+// mage who has few weapon skills will have fewer themselves."
+//
+// So a buddy may know as many weapon kinds (Axes, Staves, Guns ... the
+// skill lines a weapon item asks for) as its owner knows, at least one.
+// What it starts with counts, and it is never made to forget one. When
+// the kit hands it a weapon whose kind it lacks, it learns that kind if
+// it is still under its owner's count, the main hand first (the kit goes
+// slot by slot), and is refused it otherwise; the refused weapon is not
+// worn and what it held stays (buddies_kit.cpp).
+//
+// Weapon masters teach these, and they are filed as profession trainers
+// in the world database (trainer type 2), so the class-trainer sweep below
+// never met them: the hunter Montahmu, made at 44 on 2026-10-15, had its
+// kit staff and gun refused, its starting weapons already gone, and fought
+// Uldaman with its fishing pole. Every weapon master lesson is gathered
+// once, with the kind it teaches; the race-and-class check inside
+// CanTeachSpell keeps a rogue from staves.
+struct WeaponLesson { uint32 trainerEntry; uint32 spellId; uint32 skill; };
 static std::once_flag sWeaponLessonsFound;
-static std::vector<std::pair<uint32, uint32>> sWeaponLessons;   // (trainer creature entry, trainer spell id)
+static std::vector<WeaponLesson> sWeaponLessons;
+static std::set<uint32> sWeaponKinds;   // skill lines weapon items ask for; not Fishing, not the unused spear line (253)
 
-static bool TeachesWeaponSkill(uint32 spellId)
+// The weapon kind a lesson (or what it teaches) adds, 0 for none.
+static uint32 WeaponKindTaught(uint32 spellId)
 {
     SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
     if (!info)
-        return false;
+        return 0;
     std::vector<uint32> ids { spellId };
     for (SpellEffectInfo const& eff : info->GetEffects())
         if (eff.IsEffect(SPELL_EFFECT_LEARN_SPELL) && eff.TriggerSpell)
@@ -174,36 +193,78 @@ static bool TeachesWeaponSkill(uint32 spellId)
     {
         SkillLineAbilityMapBounds bounds = sSpellMgr->GetSkillLineAbilityMapBounds(id);
         for (auto it = bounds.first; it != bounds.second; ++it)
-            if (SkillLineEntry const* line = sSkillLineStore.LookupEntry(it->second->SkillLine))
-                if (line->categoryId == SKILL_CATEGORY_WEAPON)
-                    return true;
+            if (sWeaponKinds.count(it->second->SkillLine))
+                return it->second->SkillLine;
     }
-    return false;
+    return 0;
 }
 
-uint32 BuddyLearnWeaponSkills(Player* bot)
+static void FindWeaponLessons()
 {
     std::call_once(sWeaponLessonsFound, [] {
+        for (auto const& kv : *sObjectMgr->GetItemTemplateStore())
+            if (kv.second.Class == ITEM_CLASS_WEAPON)
+                if (uint32 skill = kv.second.GetSkill(); skill && skill != SKILL_FISHING && skill != SKILL_ASSASSINATION)
+                    sWeaponKinds.insert(skill);
         for (auto const& kv : *sObjectMgr->GetCreatureTemplates())
             if (Trainer::Trainer* t = sObjectMgr->GetTrainer(kv.first))
                 if (t->GetTrainerType() == Trainer::Type::Tradeskill)
                     for (Trainer::Spell const& sp : t->GetSpells())
-                        if (TeachesWeaponSkill(sp.SpellId))
-                            sWeaponLessons.emplace_back(kv.first, sp.SpellId);
+                        if (uint32 skill = WeaponKindTaught(sp.SpellId))
+                            sWeaponLessons.push_back({ kv.first, sp.SpellId, skill });
         if (sWeaponLessons.empty())
-            LOG_ERROR("module", "mod-buddies: no trainer in the world database teaches a weapon skill (looked for profession-type "
-                "trainers whose lessons have a SkillLine.dbc category 6 line); buddies will be refused weapons their class "
-                "can learn. To debug: does trainer_spell hold spell 227 (Staves)? is SkillLineAbility.dbc loaded?");
+            LOG_ERROR("module", "mod-buddies: no trainer in the world database teaches a weapon kind (looked for profession-type "
+                "trainers whose lessons add one of {} weapon skill lines); buddies can only use the weapons they start with. "
+                "To debug: does trainer_spell hold spell 227 (Staves)? is SkillLineAbility.dbc loaded?", sWeaponKinds.size());
     });
-    uint32 learned = 0;
-    for (auto const& [entry, spellId] : sWeaponLessons)
+}
+
+static uint32 WeaponKindsKnown(Player const* p)
+{
+    uint32 n = 0;
+    for (uint32 skill : sWeaponKinds)
+        if (p->HasSkill(skill))
+            ++n;
+    return n;
+}
+
+uint32 BuddyWeaponAllowance(uint32 ownerGuid)
+{
+    FindWeaponLessons();
+    uint32 n = 0;
+    if (Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(ownerGuid)))
+        n = WeaponKindsKnown(owner);                   // online: what it knows this moment
+    else if (QueryResult rows = CharacterDatabase.Query("SELECT skill FROM character_skills WHERE guid = {}", ownerGuid))
+        do
+            if (sWeaponKinds.count((*rows)[0].Get<uint16>()))
+                ++n;
+        while (rows->NextRow());                       // offline: as last saved
+    return std::max<uint32>(n, 1);                     // the owner's minimum: one, the weapon it starts with
+}
+
+bool BuddyLearnWeaponKind(Player* bot, uint32 skill, uint32 allowance, std::string& why)
+{
+    FindWeaponLessons();
+    if (!sWeaponKinds.count(skill) || bot->HasSkill(skill))
+        return true;                                   // not a weapon kind (nothing to learn), or known already
+    uint32 known = WeaponKindsKnown(bot);
+    if (known >= allowance)
     {
-        Trainer::Trainer* t = sObjectMgr->GetTrainer(entry);
-        Trainer::Spell const* sp = t ? t->GetSpell(spellId) : nullptr;
-        if (sp && t->IsTrainerValidForPlayer(bot) && t->CanTeachSpell(bot, sp))
-            learned += LearnOne(bot, spellId);
+        why = "it knows " + std::to_string(known) + " weapon kinds and its owner " + std::to_string(allowance)
+            + ", so it learns no more (skill " + std::to_string(skill) + ")";
+        return false;
     }
-    return learned;
+    for (WeaponLesson const& l : sWeaponLessons)
+        if (l.skill == skill)
+            if (Trainer::Trainer* t = sObjectMgr->GetTrainer(l.trainerEntry))
+                if (Trainer::Spell const* sp = t->GetSpell(l.spellId); sp && t->IsTrainerValidForPlayer(bot) && t->CanTeachSpell(bot, sp))
+                {
+                    LearnOne(bot, l.spellId);
+                    if (bot->HasSkill(skill))
+                        return true;
+                }
+    why = "no weapon master teaches skill " + std::to_string(skill) + " to its class and race";
+    return false;
 }
 // }}}
 
@@ -214,9 +275,15 @@ static std::vector<uint32> sClassTrainers;
 
 uint32 BuddyLearnEverything(Player* bot)
 {
-    // weapon skills first: they don't depend on anything the class
-    // trainers teach, and the kit chosen right after needs them
-    uint32 weapons = BuddyLearnWeaponSkills(bot);
+    // quest spells first: the first totem of each element and Bear Form
+    // come from class quests, and the trainers' later ranks (Searing
+    // Totem 2, Maul, Swipe, Dire Bear Form ...) ask for them. Learned after
+    // the trainers, as until 2026-10-15, those later ranks were never
+    // offered (a level-44 druid made knowing Bear Form and no bear
+    // ability). The owner: "They were just in the capital, they are fully
+    // trained." Weapon kinds are not taught here: the kit teaches them,
+    // as many as the owner knows (BuddyLearnWeaponKind).
+    uint32 quests = LearnQuestSpells(bot);
     std::call_once(sTrainersFound, [] {
         for (auto const& kv : *sObjectMgr->GetCreatureTemplates())
             if (Trainer::Trainer* t = sObjectMgr->GetTrainer(kv.first))
@@ -234,7 +301,7 @@ uint32 BuddyLearnEverything(Player* bot)
     {
         LOG_ERROR("module", "mod-buddies: no class trainer in the world teaches buddy {} (class {}, race {}); it starts with only "
             "its quest spells", bot->GetName(), bot->getClass(), bot->getRace());
-        return weapons + LearnQuestSpells(bot);
+        return quests;
     }
     uint32 learned = 0;
     for (bool more = true; more; )
@@ -249,7 +316,7 @@ uint32 BuddyLearnEverything(Player* bot)
                     more = more || n > 0;
                 }
     }
-    return weapons + learned + LearnQuestSpells(bot);
+    return quests + learned + LearnQuestSpells(bot);   // again: a quest spell that asks for a rank just learned
 }
 // }}}
 
@@ -353,11 +420,6 @@ public:
     // offline) gets one when it comes into the world
     void OnPlayerLogin(Player* player) override
     {
-        // buddies made before weapon masters were swept (2026-10-15) learn
-        // the weapon skills they lack; a buddy already taught learns nothing
-        if (BuddiesEnabled() && player->GetSession() && BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
-            if (uint32 n = BuddyLearnWeaponSkills(player))
-                LOG_INFO("module", "mod-buddies: buddy {} learned {} weapon skills it lacked", player->GetName(), n);
         if (IsBuddyHunter(player) && !player->GetPet() && !(player->GetPetStable() && player->GetPetStable()->CurrentPet))
             GivePet(player);
     }

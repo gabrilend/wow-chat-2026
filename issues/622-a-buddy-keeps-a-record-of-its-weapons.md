@@ -43,7 +43,14 @@ things died while it held it, is not recorded anywhere.
    (its first staff) is judged by the listed numbers alone until it has
    held one; after that, by what the line says. Nobody hands it the
    weights: it measures them. Tool use.
-3. **Visible.** A console command (and a whisper) shows a buddy's record:
+3. **Casters learn when to swing.** Their weapons carry melee procs
+   (621), so a caster's record holds what its melee did too; from it,
+   the same parallel knowledge, a caster learns when to fight in melee
+   rather than cast. The owner, 2026-10-15: "spellcasters, using that
+   parallel knowledge structure we mentioned earlier, should learn to
+   possibly prioritize melee over spellcasting at certain times but not
+   others. How and why is up to them to solve."
+4. **Visible.** A console command (and a whisper) shows a buddy's record:
    each weapon, listed damage per second, kills per minute, minutes held.
 
 ## Suggested Implementation Steps

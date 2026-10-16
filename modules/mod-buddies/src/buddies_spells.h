@@ -19,6 +19,7 @@
 #define MOD_BUDDIES_SPELLS_H
 
 #include "Define.h"
+#include <string>
 
 class Creature;
 class Player;
@@ -31,13 +32,17 @@ class Player;
 uint32 BuddyTrainAtTrainer(Player* bot, Creature* trainer);
 // }}}
 
-// {{{ BuddyLearnWeaponSkills
-// Every weapon skill a weapon master would teach this buddy (its class and
-// race allow it), free: weapon masters are profession-type trainers, so
-// BuddyLearnEverything's class-trainer sweep does not reach them on its
-// own (it calls this first). Safe before the buddy is in the world.
-// Returns how many were learned.
-uint32 BuddyLearnWeaponSkills(Player* bot);
+// {{{ weapon kinds, as many as the owner's
+// How many weapon kinds (Axes, Staves, Guns ...) a buddy of this owner may
+// know: as many as the owner knows now (online) or as last saved, at
+// least 1. The owner's rule, 2026-10-15.
+uint32 BuddyWeaponAllowance(uint32 ownerGuid);
+// Teaches the buddy a weapon kind (a skill line) from a weapon master's
+// lessons, free, if it lacks it and knows fewer kinds than `allowance`.
+// True when it knows the kind afterwards (or `skill` is not a weapon
+// kind); false with `why` filled when it may not or can't learn it. Safe
+// before the buddy is in the world.
+bool BuddyLearnWeaponKind(Player* bot, uint32 skill, uint32 allowance, std::string& why);
 // }}}
 
 // {{{ BuddyLearnEverything

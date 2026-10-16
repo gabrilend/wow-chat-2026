@@ -12,17 +12,32 @@
 
 ## Current Behavior
 
-**Weapon masters swept, 2026-10-15; syntax-checked, not yet rebuilt or
-run** (`buddies_spells.cpp`, the weapon-skill lessons): weapon masters are
-filed as profession trainers in the world database (trainer type 2), so
-the class-trainer sweep never met them. Five level-44 buddies made that
-day had kit weapons refused for want of the skill (the hunter Montahmu's
-staff and gun, a druid's two-handed mace, a shaman's dagger, a rogue's
-gun). Now every lesson of any trainer whose skill line is a weapon skill
-(SkillLine.dbc category 6) is gathered once, and a buddy learns those its
-race and class allow, free, before its other lessons when it is made, and
-at every login (so buddies made earlier catch up). This closes the
-weapon half of the gap below.
+**Weapon kinds as many as the owner's, and quest spells first,
+2026-10-15; syntax-checked, not yet rebuilt or run** (`buddies_spells.cpp`):
+- The owner's rule: "buddy-bots should have one weaponskill trained
+  (minimum 1, the weapon they have equipped at the start of the game) per
+  weaponskill that the player trains." A buddy may know as many weapon
+  kinds (Axes, Staves, Guns ... the skill lines weapon items ask for) as
+  its owner knows, at least one; what it starts with counts and is never
+  forgotten. The kit teaches a kind when it hands over a weapon of that
+  kind and the buddy is under the count, main hand first; past the count
+  the weapon is refused and the old one kept (617r2). Weapon masters are
+  filed as profession trainers, so their lessons are gathered separately.
+  Stand-ins have no owner and are not bound by a count. Five level-44
+  buddies made that day had kit weapons refused for want of the kind
+  (the hunter Montahmu fought Uldaman with its fishing pole); `.buddy
+  kit <name>` re-dresses them under the new rule.
+- Quest spells are learned before the trainers' lessons, not after: the
+  first totem of each element and Bear Form come from class quests, and
+  the later ranks (Searing Totem 2, Maul, Swipe, Dire Bear Form...) ask
+  for them. A level-44 druid had been made knowing Bear Form and no bear
+  ability; a shaman knowing the first totems and no later rank. The owner:
+  "They were just in the capital, they are fully trained." Town training
+  learns quest spells first too, so buddies made before buy the missing
+  ranks at their next trainer visit. Checked against the five buddies'
+  rows: every other unknown lesson needs a talent (Aimed Shot,
+  Counterattack, Insect Swarm), as intended. One unexplained: the rogue
+  Drerjokin has the Dual Wield skill but not the Dual Wield spell (674).
 
 **Gap, 2026-10-04:** weapon masters are not visited and the armour
 proficiencies a trainer teaches at 40 are not known to be in the creation

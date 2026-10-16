@@ -316,7 +316,7 @@ static void FirstMoments(Player* standIn, StandInDue const& due)
     if (due.raised)
     {
         BuddyLearnEverything(standIn);                  // what the new level teaches (617n)
-        problems += BuddyRegear(standIn, due.shape);    // the kit's gear for the new level (617a4)
+        problems += BuddyRegear(standIn, due.shape, UINT32_MAX);   // the kit's gear for the new level (617a4); no owner to match
         problems += BuddyGivePvpJewellery(standIn, due.shape, due.role);
     }
     if (standIn->GetFreeTalentPoints())

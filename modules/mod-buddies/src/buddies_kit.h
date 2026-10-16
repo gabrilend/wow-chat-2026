@@ -21,7 +21,9 @@ std::string BuddyGiveStartingKit(Player* buddy, uint32 ownerGuid, uint8 shape);
 // Gives an existing buddy, in the world, the kit's gear for its level now
 // (".buddy kit <name>"): the same choosing, replacing what it wears.
 // Returns what could not be given.
-std::string BuddyRegear(Player* buddy, uint8 shape);
+// `weaponAllowance`: how many weapon kinds it may know (its owner's count,
+// BuddyWeaponAllowance; UINT32_MAX for a stand-in, which has no owner).
+std::string BuddyRegear(Player* buddy, uint8 shape, uint32 weaponAllowance);
 
 // The neck, rings and trinkets of a stand-in (617t1): the best PvP rewards
 // of its level (bought with honor or arena points), scored by its talent

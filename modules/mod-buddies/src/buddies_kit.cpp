@@ -32,6 +32,7 @@
 #include "buddies.h"
 #include "buddies_kit.h"
 #include "buddies_loot.h"
+#include "buddies_spells.h"
 #include "Chat.h"
 #include "ChatCommand.h"
 #include "ObjectAccessor.h"
@@ -96,7 +97,40 @@ static InventoryResult Wear(Player* buddy, uint8 slot, uint32 entry)
     buddy->EquipNewItem(dest, entry, true);
     return EQUIP_ERR_OK;
 }
-static uint32 GiveGear(Player* buddy, uint8 shape, std::string& problems)
+// A weapon put in a hand carries a permanent enchant, one of these four at
+// random (owner, 2026-10-15: "totally random. this is a buff to melee
+// combat"; Crusader is "too strong"). The numbers are SpellItemEnchantment
+// ids, read from the game client's data files that day (issue 621). They
+// are melee procs, so a caster's staff gets one too: when to swing it is
+// the caster's own lesson to learn (622).
+static constexpr uint32 KIT_ENCHANTS[] = {
+     803,   // Fiery Weapon:  now and then burns the target
+    1894,   // Icy Chill:     now and then slows the target
+    1898,   // Lifestealing:  now and then drains the target's life
+    1899,   // Unholy Weapon: now and then curses the target's damage
+};
+static void Enchant(Player* buddy, uint8 slot, std::string& problems)
+{
+    Item* item = buddy->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+    if (!item || item->GetTemplate()->Class != ITEM_CLASS_WEAPON)
+        return;                                         // a shield or held-in-hand item: no weapon enchant
+    uint32 id = KIT_ENCHANTS[urand(0, std::size(KIT_ENCHANTS) - 1)];
+    if (!sSpellItemEnchantmentStore.LookupEntry(id))
+    {
+        problems += "enchant " + std::to_string(id) + " is not in the server's SpellItemEnchantment table (are the client's "
+            "data files extracted?); ";
+        return;
+    }
+    buddy->ApplyEnchantment(item, PERM_ENCHANTMENT_SLOT, false);   // an earlier one's effects off (none on a new item)
+    item->SetEnchantment(PERM_ENCHANTMENT_SLOT, id, 0, 0);
+    buddy->ApplyEnchantment(item, PERM_ENCHANTMENT_SLOT, true);
+}
+
+// `weaponAllowance`: how many weapon kinds the buddy may know (its owner's
+// count, BuddyWeaponAllowance). A kit weapon of a kind it lacks is learned
+// within that count, the main hand first (the rows come by slot); past it,
+// the weapon is refused and what it held is kept.
+static uint32 GiveGear(Player* buddy, uint8 shape, uint32 weaponAllowance, std::string& problems)
 {
     if (buddy->GetLevel() <= 1)
         return 0;                                       // the stock starting outfit stays on
@@ -122,10 +156,20 @@ static uint32 GiveGear(Player* buddy, uint8 shape, std::string& problems)
     {
         uint8 slot = (*rows)[0].Get<uint16>();
         uint32 item = (*rows)[1].Get<uint32>();
+        if (ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item); proto && proto->Class == ITEM_CLASS_WEAPON)
+        {
+            std::string why;
+            if (!BuddyLearnWeaponKind(buddy, proto->GetSkill(), weaponAllowance, why))
+                problems += "slot " + std::to_string(slot) + " item " + std::to_string(item) + ": " + why + "; ";
+        }
         // refused: the server's reason number (InventoryResult in
-        // Item.h; 8 is "no required proficiency", a weapon skill not taught)
+        // Item.h; 8 is "no required proficiency", a weapon kind not known)
         if (InventoryResult r = Wear(buddy, slot, item); r == EQUIP_ERR_OK)
+        {
             ++worn;
+            if (slot == EQUIPMENT_SLOT_MAINHAND || slot == EQUIPMENT_SLOT_OFFHAND)
+                Enchant(buddy, slot, problems);
+        }
         else
             problems += "slot " + std::to_string(slot) + " refused item " + std::to_string(item) + " (reason "
                 + std::to_string(uint32(r)) + ", what it wore there is kept); ";
@@ -224,7 +268,10 @@ std::string BuddyGiveStartingKit(Player* buddy, uint32 ownerGuid, uint8 shape)
 {
     std::string problems;
     GiveBags(buddy, ownerGuid, problems);               // bags first, so the meals have room
-    uint32 worn = GiveGear(buddy, shape, problems);
+    // a stand-in (no owner, made with ownerGuid 0) is nobody's buddy: the
+    // owner's weapon count does not bind it, every kind its class learns
+    uint32 allowance = ownerGuid ? BuddyWeaponAllowance(ownerGuid) : UINT32_MAX;
+    uint32 worn = GiveGear(buddy, shape, allowance, problems);
     GiveMeals(buddy, problems);
     if (buddy->GetLevel() > 1)
         buddy->ModifyMoney(int32(buddy->GetLevel()) * 100);   // level x 1 silver
@@ -331,10 +378,10 @@ std::string BuddyGivePvpJewellery(Player* who, uint8 shape, uint8 role)
 // }}}
 
 // {{{ BuddyRegear and ".buddy kit <name>"
-std::string BuddyRegear(Player* buddy, uint8 shape)
+std::string BuddyRegear(Player* buddy, uint8 shape, uint32 weaponAllowance)
 {
     std::string problems;
-    GiveGear(buddy, shape, problems);
+    GiveGear(buddy, shape, weaponAllowance, problems);
     return problems;
 }
 
@@ -370,9 +417,18 @@ public:
             handler->PSendSysMessage("{} is not a buddy in the world (a buddy is in the world while its owner is online).", name);
             return false;
         }
-        QueryResult row = CharacterDatabase.Query("SELECT profile FROM buddy_roster WHERE buddy = {}", buddy->GetGUID().GetCounter());
-        uint8 shape = row ? (*row)[0].Get<uint8>() : 0;
-        std::string problems = BuddyRegear(buddy, shape);
+        // a buddy's shape and owner from its roster row; a stand-in has
+        // none there, its shape in buddy_stand_in, and no owner to match
+        uint8 shape = 0;
+        uint32 allowance = UINT32_MAX;
+        if (QueryResult row = CharacterDatabase.Query("SELECT profile, owner FROM buddy_roster WHERE buddy = {}", buddy->GetGUID().GetCounter()))
+        {
+            shape     = (*row)[0].Get<uint8>();
+            allowance = BuddyWeaponAllowance((*row)[1].Get<uint32>());
+        }
+        else if (QueryResult standIn = CharacterDatabase.Query("SELECT profile FROM buddy_stand_in WHERE guid = {}", buddy->GetGUID().GetCounter()))
+            shape = (*standIn)[0].Get<uint8>();
+        std::string problems = BuddyRegear(buddy, shape, allowance);
         handler->PSendSysMessage("{} (level {}) re-kitted from {} by its talent shape {}{}{}", name, buddy->GetLevel(), KitGearset(buddy->GetLevel()),
             uint32(shape), problems.empty() ? "" : "; ", problems);
         return true;

@@ -26,7 +26,14 @@ installed (E052) or run.**
   what that slot held. Before, a refused weapon left empty hands, and the
   bot module then equipped the only weapon in its bags, its fishing pole
   (Montahmu, fighting Uldaman with one). A refusal now keeps the old item
-  and names the server's reason number in the log line.
+  and names the server's reason number in the log line. A weapon of a
+  kind the buddy lacks is first learned if the buddy is under its
+  owner's count of weapon kinds (617n); otherwise it is refused this way.
+  The owner: "check to see if there's any items in that slot before
+  finding an item for them" - a slot whose record item can't be worn
+  keeps what was there.
+- Every weapon put in a hand gets a permanent enchant, one of four at
+  random (621).
 - The translator now takes weapons from required level 1 (armour still
   from 2): the starter weapons (Short Staff, Dirk, Shortsword) need level
   1, and without them 23 level 2-9 records (mages, warlocks, feral
@@ -35,7 +42,9 @@ installed (E052) or run.**
   so armour stays at 2. Every record now has a main hand. The re-run also
   picked up items whose required level had changed in the world database
   since 2026-10-05 (Cuirboulli Gloves now need 22, not 20), which the old
-  records would have had refused.
+  records would have had refused. Level 1 still has no record: a
+  level-1 buddy keeps the game's own starting outfit (the owner,
+  2026-10-15: "they can just use their starting gear from level 1").
 
 **Built 2026-10-05; module syntax-checked against the build's own
 compile commands; not yet rebuilt or run.** Needs the owner's rebuild
