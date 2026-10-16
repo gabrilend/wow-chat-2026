@@ -62,12 +62,19 @@ check "removes the Felsteed (2nd dry run)"              "$(has   "${PLAN}" 'spel
 check "keeps Apprentice Riding"                         "$(lacks "${PLAN}" 'spell IN \([^)]*33388')"
 check "removes their action-bar buttons"                "$(has   "${PLAN}" 'DELETE FROM character_action WHERE guid = 577 AND type = 0')"
 check "sets the class and resets talents"               "$(has   "${PLAN}" 'SET class = 5, at_login = at_login \| 4')"
+# owner, 2026-10-15: Felicity arrived with staves at 7 and wands at 11 of
+# 220; a changed character's weapon skills (defense too) are now full
+check "raises kept weapon skills to full (staves, wands)" "$(has "${PLAN}" 'SET value = 220, max = 220 WHERE guid = 577 AND skill = 136;')"
+check "raises defense to full"                            "$(has "${PLAN}" 'SET value = 220, max = 220 WHERE guid = 577 AND skill = 95;')"
 
 # {{{ the priest the plan leaves
 STATE2="${WORK}/priest.tsv"
 {
     printf 'char\t577\t10\t5\t44\n'
-    grep '^skill' "${STATE}" | grep -vE $'^skill\t(354|355|593)\t'
+    # the warlock's skills less its class lines, its weapon skills (and
+    # defense) now full, as the plan's raises leave them
+    grep '^skill' "${STATE}" | grep -vE $'^skill\t(354|355|593)\t' \
+        | sed -E $'s/^skill\t(95|136|162|173|228)\t1\t220$/skill\t\\1\t220\t220/'
     printf 'skill\t56\t220\t220\nskill\t78\t220\t220\nskill\t613\t220\t220\n'
     printf 'spell\t33388\n'
 } > "${STATE2}"

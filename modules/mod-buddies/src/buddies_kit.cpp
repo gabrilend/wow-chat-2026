@@ -239,6 +239,119 @@ static void GiveMeals(Player* buddy, std::string& problems)
 }
 // }}}
 
+// {{{ GiveClassTools
+// What a class can't fight without, found missing on Felicity's buddies in
+// Uldaman, 2026-10-15 (the bot log: the shaman unable to drop a totem, the
+// rogue failing to apply a poison forty thousand times, the hunter holding
+// level-1 arrows and no bow): the owner wants the group "fully enabled".
+//   shaman  the four totem items its totem spells need (3.3.5 asks for
+//           them in the bags), each from the level its quest gives it at
+//           (Earth 4, Fire 10, Water 20, Air 30: buddies_quest_spells.h)
+//   rogue   the best Instant Poison and Deadly Poison a vendor sells for
+//           its level (the two the bot module applies), POISON_DOSES each
+//   hunter  ammunition that fits its ranged weapon (arrows for a bow or
+//           crossbow, bullets for a gun), the best a vendor sells for its
+//           level, AMMO_ROUNDS of it, put in use; and a quiver or ammo
+//           pouch of the right kind in a free bag slot when it has none
+// Only what is missing is given, so it is safe on every kit and re-dress.
+// Nothing of its level found, or no room: named, never a near match.
+static constexpr uint32 POISON_DOSES = 20;     // one stack of each poison
+static constexpr uint32 AMMO_ROUNDS  = 1000;   // five stacks of 200
+struct TotemItem { uint8 level; uint32 item; char const* name; };
+static constexpr TotemItem SHAMAN_TOTEMS[] = {
+    {  4, 5175, "Earth Totem" }, { 10, 5176, "Fire Totem" }, { 20, 5177, "Water Totem" }, { 30, 5178, "Air Totem" },
+};
+
+// The best vendor item matching `where` (an SQL condition on item_template
+// it) that the buddy's level allows; 0 for none.
+static uint32 BestVendorItem(Player* buddy, std::string const& where)
+{
+    QueryResult row = WorldDatabase.Query(
+        "SELECT it.entry FROM item_template it JOIN npc_vendor v ON v.item = it.entry WHERE {} AND it.RequiredLevel <= {} "
+        "ORDER BY it.RequiredLevel DESC, it.ItemLevel DESC, it.entry LIMIT 1", where, buddy->GetLevel());
+    return row ? (*row)[0].Get<uint32>() : 0;
+}
+
+static void GiveClassTools(Player* buddy, std::string& problems)
+{
+    uint8 level = buddy->GetLevel();
+    switch (buddy->getClass())
+    {
+        case CLASS_SHAMAN:
+            for (TotemItem const& t : SHAMAN_TOTEMS)
+                if (level >= t.level && !buddy->HasItemCount(t.item, 1, false) && !buddy->StoreNewItemInBestSlots(t.item, 1))
+                    problems += std::string("no room for its ") + t.name + "; ";
+            break;
+        case CLASS_ROGUE:
+            if (level < 20)
+                break;                                  // the first poison needs level 20
+            for (char const* family : { "Instant Poison%", "Deadly Poison%" })
+            {
+                uint32 entry = BestVendorItem(buddy, std::string("it.name LIKE '") + family + "' AND (it.AllowableClass & 8)");
+                if (!entry)
+                {
+                    if (std::string(family) == "Instant Poison%")
+                        problems += "no Instant Poison at vendors for its level; ";
+                    continue;                           // Deadly Poison starts at 30: none below is no problem
+                }
+                uint32 have = buddy->GetItemCount(entry, false);
+                if (have < POISON_DOSES && !buddy->StoreNewItemInBestSlots(entry, POISON_DOSES - have))
+                    problems += "no room for its poison " + std::to_string(entry) + "; ";
+            }
+            break;
+        case CLASS_HUNTER:
+        {
+            Item* ranged = buddy->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_RANGED);
+            if (!ranged)
+            {
+                problems += "a hunter with no ranged weapon: no ammunition given; ";
+                break;
+            }
+            uint32 sub = ranged->GetTemplate()->SubClass;
+            uint32 ammoSub = (sub == ITEM_SUBCLASS_WEAPON_GUN) ? ITEM_SUBCLASS_BULLET
+                           : (sub == ITEM_SUBCLASS_WEAPON_BOW || sub == ITEM_SUBCLASS_WEAPON_CROSSBOW) ? ITEM_SUBCLASS_ARROW : 0;
+            if (!ammoSub)
+                break;                                  // a thrown weapon or wand needs none
+            uint32 ammo = BestVendorItem(buddy, "it.class = 6 AND it.subclass = " + std::to_string(ammoSub));
+            if (!ammo)
+            {
+                problems += "no ammunition at vendors for its level and weapon; ";
+                break;
+            }
+            uint32 have = buddy->GetItemCount(ammo, false);
+            if (have < AMMO_ROUNDS && !buddy->StoreNewItemInBestSlots(ammo, AMMO_ROUNDS - have))
+                problems += "no room for its ammunition " + std::to_string(ammo) + "; ";
+            buddy->SetAmmo(ammo);
+            // a quiver for arrows, a pouch for bullets (container subclass 2, 3)
+            uint32 bagSub = ammoSub == ITEM_SUBCLASS_ARROW ? 2 : 3;
+            bool hasIt = false;
+            uint8 freeSlot = 0;
+            for (uint8 b = INVENTORY_SLOT_BAG_START; b < INVENTORY_SLOT_BAG_END; ++b)
+            {
+                Item* bag = buddy->GetItemByPos(INVENTORY_SLOT_BAG_0, b);
+                if (!bag && !freeSlot)
+                    freeSlot = b;
+                else if (bag && bag->GetTemplate()->Class == ITEM_CLASS_QUIVER && bag->GetTemplate()->SubClass == bagSub)
+                    hasIt = true;
+            }
+            if (hasIt)
+                break;
+            uint32 container = BestVendorItem(buddy, "it.class = 11 AND it.subclass = " + std::to_string(bagSub));
+            uint16 dest;
+            if (!container || !freeSlot)
+                problems += std::string("no ") + (bagSub == 2 ? "quiver" : "ammo pouch") + (container ? " (no free bag slot)" : " at vendors for its level") + "; ";
+            else if (buddy->CanEquipNewItem(freeSlot, dest, container, false) == EQUIP_ERR_OK)
+                buddy->EquipNewItem(dest, container, true);
+            else
+                problems += "could not put on its " + std::string(bagSub == 2 ? "quiver" : "ammo pouch") + "; ";
+            break;
+        }
+        default:
+            break;
+    }
+}
+// }}}
+
 // {{{ GiveBags
 // The owner's bag slots, read from the owner's equipped bags in the
 // characters database (the owner may be offline), split over the
@@ -291,6 +404,7 @@ std::string BuddyGiveStartingKit(Player* buddy, uint32 ownerGuid, uint8 shape)
     std::string problems;
     GiveBags(buddy, ownerGuid, problems);               // bags first, so the meals have room
     uint32 worn = GiveGear(buddy, shape, true, problems);
+    GiveClassTools(buddy, problems);                     // totems, poisons, ammunition: after the gear (the ammo fits the ranged weapon)
     // then a random weapon kind for each its owner knows (617n); a
     // stand-in (made with ownerGuid 0) is nobody's buddy and learns none
     if (ownerGuid)
@@ -405,6 +519,7 @@ std::string BuddyRegear(Player* buddy, uint8 shape)
 {
     std::string problems;
     GiveGear(buddy, shape, false, problems);
+    GiveClassTools(buddy, problems);                     // a new ranged weapon may want other ammunition
     return problems;
 }
 

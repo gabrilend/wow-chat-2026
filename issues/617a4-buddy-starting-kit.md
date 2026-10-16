@@ -9,6 +9,21 @@
 
 ## Current Behavior
 
+**Class tools, 2026-10-15; syntax-checked, not yet rebuilt or run**
+(`buddies_kit.cpp`, GiveClassTools). Felicity's Uldaman group showed each
+class missing what it fights with: the shaman Usanda had no totem items
+(3.3.5 totem spells need them in the bags), the rogue Drerjokin no poisons
+(forty thousand failed tries in the bot log), the hunter Montahmu 200
+level-1 arrows and no bow. The owner wanted the group "fully enabled". The
+kit (and `.buddy kit`) now gives what is missing: a shaman its Earth,
+Fire, Water and Air Totem from the levels their quests give them (4, 10,
+20, 30); a rogue from 20 the best Instant Poison and (from 30) Deadly
+Poison a vendor sells for its level, a stack of each; a hunter 1,000
+rounds of the best vendor ammunition for its level that fits its ranged
+weapon (arrows for a bow or crossbow, bullets for a gun), put in use, and
+a quiver or ammo pouch of that kind in a free bag slot if it has none.
+Anything not found or with no room is named in the kit's problem line.
+
 **The gear step moved to a gearset, 2026-10-05 (617r2).** The gear below
 is no longer chosen live: the same rules were written out once as the
 `buddy-white` gearset profile, which the buddy module now reads (install

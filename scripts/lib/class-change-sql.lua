@@ -40,7 +40,11 @@ local CLASS_NAMES = {
 -- SkillLine.dbc categories (field 1) that decide a new skill's starting
 -- value, the same rule the server uses when it first gives a skill:
 -- weapon skills start at 1 of level x 5, class skill lines are full
--- (level x 5 of level x 5), anything else (armor) 1 of 1.
+-- (level x 5 of level x 5), anything else (armor) 1 of 1. One change to
+-- that rule (owner, 2026-10-15, after Felicity arrived a priest with her
+-- staff at 7 and her wand at 11 of 220: "There are some things she needs
+-- to be fully enabled"): every weapon skill the character keeps or gains
+-- (defense included, a weapon-category line) is full, as if practised.
 local CATEGORY_WEAPON, CATEGORY_CLASS = 6, 7
 -- the skills a class change may touch at all: weapons, class lines, armor.
 -- Languages (10), racials (12), professions (11), secondary skills (9) and
@@ -220,8 +224,16 @@ end
 for _, skill in ipairs(add_list) do
     local value, max = 1, 1
     if category[skill] == CATEGORY_CLASS then value, max = full, full
-    elseif category[skill] == CATEGORY_WEAPON then value, max = 1, full end
+    elseif category[skill] == CATEGORY_WEAPON then value, max = full, full end
     emit(string.format("INSERT IGNORE INTO character_skills (guid, skill, value, max) VALUES (%d, %d, %d, %d);", ch.guid, skill, value, max))
+end
+-- weapon skills it keeps, raised to full (the rule above); only those not
+-- full already, so a second run writes nothing
+for _, skill in ipairs(keys(have_skills)) do
+    local h = have_skills[skill]
+    if category[skill] == CATEGORY_WEAPON and not remove_skills[skill] and (h.value < full or h.max < full) then
+        emit(string.format("UPDATE character_skills SET value = %d, max = %d WHERE guid = %d AND skill = %d;", full, full, ch.guid, skill))
+    end
 end
 -- the class itself, and what belongs to a class as a whole. Only on a real
 -- change: a second run must not wipe talents picked after the first.
