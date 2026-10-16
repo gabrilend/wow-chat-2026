@@ -204,6 +204,36 @@ to follow, and this issue is the owner's own design.
 
 ## Intended Behavior
 
+**Buying, and a book of sources** (owner, 2026-10-15, verbatim): "tell
+me the plan, as we've discussed it. How do bots gather items now? Do they
+build out a compendium list of sources for each of the things on their
+shopping list that they update and add to while adventuring or wandering
+through town? And then do they take advantage of those sources or seek
+those results when a source that provides one of the items on or
+required by one of the items on your shopping list is suddenly made
+available."
+
+How buddies get items today: loot from what they kill and gathering
+nodes they pass while roaming (617e3); food and drink bought at a town
+vendor (617a4, 617e4); gems for empty sockets bought at the auction house
+(617j2); their kit when made. Nothing remembers where an item came from,
+and nothing is kept as a list of wants beyond gems.
+
+The design asked for:
+- **A shopping list** per buddy: upgrades its stat weights want, reagents
+  its profession's next recipes need (and what those reagents are made
+  from), consumables it uses, gems for its sockets.
+- **A book of sources** per buddy, filled by experience, not looked up:
+  a vendor's wares seen when it visits one (vendor, town, price), a
+  monster's drops seen when it loots one (monster, area), gathering nodes
+  passed (kind, area), auction listings seen at a visit (price), what a
+  recipe it knows makes. Added to while adventuring and in town.
+- **Taking the chance**: when a source of something on its list (or of
+  something an item on its list is made from) is at hand (a vendor in
+  this town sells it, the auction house lists it under its price, its
+  owner is questing where the monster lives), it goes for it: buys,
+  hunts, gathers, crafts.
+
 ### The errand list
 
 On entering a town or city, a buddy builds a short task list from the

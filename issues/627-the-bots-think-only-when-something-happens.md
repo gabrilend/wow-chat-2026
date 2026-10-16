@@ -60,7 +60,9 @@ another module uses changes), with less repeated work:
    event (an enemy in range, damage, a whisper, its owner moving off)
    brings it back to full speed at once.
 4. **Buffs on events.** Buff triggers (an aura missing) are asked when an
-   aura ends, at login, after death, on joining a group, not every run.
+   aura ends or is gained (another caster's buff can take its place, a
+   higher rank can replace a lower: owner, 2026-10-15, "ends or is
+   gained?"), at login, after death, on joining a group, not every run.
 
 ## Suggested Implementation Steps
 
@@ -82,8 +84,10 @@ another module uses changes), with less repeated work:
 
 ## Open Questions
 
-1. The decision log is how today's failures were found (the poisons, the
-   totems, Trueshot Aura). Quiet by default with a per-buddy switch, or
-   keep it on while buddies are new?
+1. (Answered 2026-10-15: keep it on. "debug is fine right now, we don't
+   want to stick our heads in the sand ... Bot debug is important while
+   we're debugging the bots." Reading it that day found the hunter's
+   missing pet spells.) Remembering impossible actions: "not sure this
+   is important?" - left for later.
 2. Steps 3-5 change the bot module's engine for every bot (a source
    patch). All bots, or buddies only?

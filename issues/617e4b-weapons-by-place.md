@@ -117,6 +117,11 @@ draws them at once.
 
 ## Open Questions
 
+- Later (owner, 2026-10-15): "eventually we will implement piercing,
+  blunt, and slashing damage. Then we will have more reasons to wear more
+  than one type of weapon." The best-and-runner-up rule is where a buddy
+  would carry one of each kind and change by the foe.
+
 1. (Answered 2026-10-15: questing in a hostile place, a dungeon, a
    battleground or an arena.)
 2. Ranged weapons and wands: taken off in town too, as built. Right?

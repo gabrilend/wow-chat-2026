@@ -54,6 +54,24 @@ needs (the steps below).
 
 ## Intended Behavior
 
+**The figure, by a renderer of our own in the page** (owner, 2026-10-15,
+correcting a note that it waits on the custom client: "We can render the
+models using a simple javascript renderer built specifically to task. We
+can even do animations if we want." And: "we need to render the models
+using whatever models we have available. In this case, the blizzard
+models. But once we have others, we will automatically be updating this
+page dynamically according to whatever model preference choice we
+make."). The generator, at every compile, takes from the game's own
+files the character model of a race and sex (M2 and its skin), the body
+texture (CharSections.dbc), and for each worn item its display
+(ItemDisplayInfo.dbc: the texture pieces painted onto the body's regions,
+the geosets it switches, and the models of helms, shoulders, weapons and
+shields hung on the model's attachment points), converts textures to
+PNG, and writes them beside the page; a small WebGL renderer in the page
+draws the dressed figure, turns it with the mouse or a finger, and plays
+its stand animation. Which model set is drawn is one setting (the game's
+models now; others when we have them), and the page follows it.
+
 A gallery program (the custom client's renderer, run as a picture
 maker): for a profile, one picture per record, the record's items worn
 by a model of the right race (for a profile with no race key, a race the
@@ -70,6 +88,19 @@ each linked to `https://www.wowhead.com/wotlk/item=<number>`.
 
 ## Suggested Implementation Steps
 
+(For the in-page figure, 2026-10-15; the custom-client steps below stay
+for the picture mode.)
+A1. Read the game's archives: the client data's MPQ files, through the
+    custom client's reader (C, already reading BLP and DBC) or StormLib
+    (the map extractor's), as a small extraction tool.
+A2. One race and sex first: M2 vertices, skin, bones, the stand animation;
+    the body texture; drawn and turned in WebGL with no items.
+A3. Armour on the body: ItemDisplayInfo's texture pieces composited onto
+    the body texture's regions; geosets for sleeves, robes, boots, gloves.
+A4. Attached models: helm, shoulders, weapons, shield on attachment points.
+A5. The model set as a setting; the generator regenerates the figures it
+    finds changed.
+
 1. Items on characters in the client: ItemDisplayInfo (the item's model
    and textures), armour pieces painted onto the skin sheet's regions and
    switching geosets (sleeves, robes, boots, gloves), and attached models
@@ -80,4 +111,7 @@ each linked to `https://www.wowhead.com/wotlk/item=<number>`.
 
 ## Open Questions
 
-None yet.
+1. Which race and sex per card: one fixed per class, random (the first
+   plan's "a random gender"), or a picker?
+2. Where the extracted model files live (they are the game's, large):
+   beside the page in docs/HTML (not committed), or made on demand?
