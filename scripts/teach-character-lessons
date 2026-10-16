@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# teach-character-lessons - give characters every class lesson their class,
+# race and level would have learned, while the world server is stopped.
+#
+# For a general audience: a character is taught spells by class trainers
+# (paid, in town) and by class quests (the first totems, Bear Form). A
+# character made or moved straight to a level can miss some: five buddies
+# made at 44 on 2026-10-15 learned their quest spells after the trainers'
+# lessons, so every later rank asking for them was skipped (a druid with
+# Bear Form and no bear ability, a shaman with only the first totems).
+# This puts that right, from the command line, never from in-game chat
+# (the owner, 2026-10-15: "We shouldn't have a chat command tool that does
+# it ... build it using a script that we call from a command line"):
+#   1. checks: the world server is stopped (it keeps each character's
+#      spells in memory and would write them back) and each name exists;
+#   2. backup: each character's spell rows saved to backups/lessons/;
+#   3. plan: scripts/lib/lessons-sql.lua works out the lessons it lacks by
+#      the server's own trainer rules (level, race and class, the ability
+#      or talent a lesson asks for, the rank before, spell_required);
+#   4. apply: one transaction per character (all or nothing).
+# Only adds spells; never removes one. Running it again adds nothing.
+#
+# Usage: scripts/teach-character-lessons [--dir PROJECT_DIR] [--dry-run] <name> [<name> ...]
+#        scripts/teach-character-lessons [--dir PROJECT_DIR] [--dry-run] --buddies-of <owner name>
+
+set -euo pipefail
+
+# {{{ configuration
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if [[ "${1:-}" == "--dir" ]]; then DIR="$2"; shift 2; fi
+DRY=0
+if [[ "${1:-}" == "--dry-run" ]]; then DRY=1; shift; fi
+PROFILE="$(cat "${DIR}/.profile")"
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+MYSQLDUMP="${DIR}/mysql/installed-files/bin/mysqldump"
+CHARS="acore_characters_${PROFILE}"
+WORLD="acore_world_${PROFILE}"
+PLANNER="${DIR}/scripts/lib/lessons-sql.lua"
+BACKUPS="${DIR}/backups/lessons"
+SCRATCH="${DIR}/tmp/shared-memory/lessons"
+# }}}
+
+# {{{ sql
+sql() { "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi --batch --skip-column-names "$@" 2>&1 | grep -v "Using a password" || true; }
+# }}}
+
+# {{{ who
+NAMES=()
+if [[ "${1:-}" == "--buddies-of" ]]; then
+    OWNER="${2:-}"
+    [[ -n "${OWNER}" ]] || { echo "Usage: $0 [--dry-run] --buddies-of <owner name>"; exit 1; }
+    mapfile -t NAMES < <(sql "${CHARS}" -e "SELECT c.name FROM buddy_roster r JOIN characters c ON c.guid = r.buddy JOIN characters o ON o.guid = r.owner WHERE o.name = '${OWNER//\'/}' ORDER BY c.name")
+    [[ ${#NAMES[@]} -gt 0 ]] || { echo "ERROR: no buddies found for an owner named '${OWNER}' in ${CHARS}"; exit 1; }
+else
+    NAMES=("$@")
+fi
+[[ ${#NAMES[@]} -gt 0 ]] || { echo "Usage: $0 [--dir PROJECT_DIR] [--dry-run] <name> [<name> ...] | --buddies-of <owner name>"; exit 1; }
+# }}}
+
+# {{{ step 1: checks
+STEP="checks"
+trap 'echo "STOPPED at step: ${STEP} (character: ${NAME:-none}). Characters before it are done; see above."' ERR
+if pgrep -x worldserver > /dev/null; then
+    echo "ERROR: the world server is running. It keeps each character's spells in memory"
+    echo "and would write them back over these. Stop it, then run this again."
+    exit 1
+fi
+mkdir -p "${BACKUPS}" "${SCRATCH}"
+sql "${WORLD}" -e "SELECT spell_id, req_spell FROM spell_required" > "${SCRATCH}/required.tsv"
+# }}}
+
+for NAME in "${NAMES[@]}"; do
+    STEP="checks"
+    ROW="$(sql "${CHARS}" -e "SELECT guid, race, class, level FROM characters WHERE name = '${NAME//\'/}'")"
+    if [[ -z "${ROW}" || "${ROW}" == ERROR* ]]; then
+        echo "ERROR: no character named '${NAME}' in ${CHARS}. ${ROW}"
+        exit 1
+    fi
+    read -r GUID RACE CLASS LEVEL <<< "${ROW}"
+    echo "== ${NAME} (guid ${GUID}): race ${RACE}, class ${CLASS}, level ${LEVEL}"
+
+    # {{{ step 2: backup
+    STEP="backup"
+    BACKUP="${BACKUPS}/${NAME}-$(date +%Y-%m-%d-%H%M%S)-spells.sql"
+    {
+        echo "-- written by scripts/teach-character-lessons before teaching ${NAME} (guid ${GUID});"
+        echo "-- to put back: DELETE FROM character_spell WHERE guid = ${GUID}; then load this file."
+        "${MYSQLDUMP}" -h127.0.0.1 -P3307 -uritz -pmenardi --no-create-info --skip-triggers \
+            --where="guid = ${GUID}" "${CHARS}" character_spell 2>&1 | grep -v "Using a password"
+    } > "${BACKUP}"
+    echo "Backup: ${BACKUP}"
+    # }}}
+
+    # {{{ step 3: plan
+    STEP="plan"
+    STATE="${SCRATCH}/${NAME}-state.tsv"
+    LESSONS="${SCRATCH}/class-${CLASS}-lessons.tsv"
+    PLAN="${SCRATCH}/${NAME}-plan.sql"
+    {
+        printf 'char\t%s\t%s\t%s\t%s\n' "${GUID}" "${RACE}" "${CLASS}" "${LEVEL}"
+        sql "${CHARS}" -e "SELECT 'spell', spell FROM character_spell WHERE guid = ${GUID}"
+    } > "${STATE}"
+    sql "${WORLD}" -e "SELECT DISTINCT ts.SpellId, ts.ReqLevel, ts.ReqAbility1, ts.ReqAbility2, ts.ReqAbility3, ts.ReqSkillLine, ts.ReqSkillRank
+        FROM trainer t JOIN trainer_spell ts ON ts.TrainerId = t.Id WHERE t.Type = 0 AND t.Requirement = ${CLASS}" > "${LESSONS}"
+    luajit "${PLANNER}" "${DIR}" "${STATE}" "${LESSONS}" "${SCRATCH}/required.tsv" "${PLAN}"
+    # }}}
+
+    # {{{ step 4: apply
+    STEP="apply"
+    if [[ "${DRY}" == "1" ]]; then
+        sed 's/^COMMIT;$/ROLLBACK;/' "${PLAN}" > "${PLAN}.dry"
+        RESULT="$(sql "${CHARS}" < "${PLAN}.dry")"
+        if [[ -n "${RESULT}" ]]; then echo "${RESULT}"; echo "ERROR: the plan failed in the dry run."; exit 1; fi
+        echo "Dry run: the plan ran and was rolled back. Nothing changed."
+    else
+        RESULT="$(sql "${CHARS}" < "${PLAN}")"
+        if [[ -n "${RESULT}" ]]; then echo "${RESULT}"; echo "ERROR: the plan failed; the transaction did not commit. Nothing changed for ${NAME}."; exit 1; fi
+        echo "Applied."
+    fi
+    # }}}
+done
