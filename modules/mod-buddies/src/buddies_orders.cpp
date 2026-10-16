@@ -29,6 +29,16 @@
  * world's thread) only note what was heard; the world's update hook acts
  * on it, and every 5 seconds looks at each buddy's bags.
  *
+ * "attack" (or "engage"), 2026-10-15 (owner: "There should be a macro
+ * based command that tells my buddy-bots to 'attack my target' as in,
+ * engage / and I should be able to name them by name..."): said in party,
+ * raid or /say, every buddy of the speaker goes at the speaker's target;
+ * "attack Zugsqonuw Usanda" sends only those named; whispered "attack" to
+ * a buddy, that buddy. Only the speaker's own buddies obey (the target is
+ * the speaker's). A macro line "/p attack" or "/w Zugsqonuw attack" is
+ * the keybind. The bot module's own chat commands stay closed to buddies
+ * (B045); this order reaches its attack action directly.
+ *
  * Not built yet: "follow me" and "follow <name>" (617y's open question on
  * how a follow ends); the bot module's per-failure "My bags are full"
  * whisper stays silenced (B048), this one line said once replacing it.
@@ -44,6 +54,8 @@
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "Playerbots.h"
+#include "PlayerbotAI.h"
 #include "ScriptMgr.h"
 #include "WorldPacket.h"
 #include <algorithm>
@@ -63,7 +75,8 @@ static char const* const GOING_LINE        = "Off to sell. Come with me if you c
 // Heard orders, waiting for the world's thread; buddies told to sell (taken
 // by the selling trip as it sets off, BuddyTakeSellOrder); buddies that
 // have said their bags are full, until the bags empty again.
-struct HeardOrder { ObjectGuid speaker; ObjectGuid whisperedBuddy; };
+enum class OrderKind : uint8 { Sell, Attack };
+struct HeardOrder { ObjectGuid speaker; ObjectGuid whisperedBuddy; OrderKind kind = OrderKind::Sell; std::vector<std::string> names; };
 static std::mutex              sOrdersLock;
 static std::vector<HeardOrder> sHeard;
 static std::set<uint32>        sToldToSell;
@@ -91,6 +104,25 @@ static bool IsGoSell(std::string msg)
 }
 // }}}
 
+// {{{ IsAttack
+// "attack" or "engage", any case, then any buddy names (lower-cased into
+// `names`); punctuation and a "please" are dropped.
+static bool IsAttack(std::string msg, std::vector<std::string>& names)
+{
+    std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::isalpha(c) ? char(std::tolower(c)) : ' '; });
+    std::vector<std::string> words;
+    std::string w;
+    for (char c : msg + " ")
+        if (c == ' ') { if (!w.empty()) words.push_back(w); w.clear(); }
+        else w += c;
+    words.erase(std::remove(words.begin(), words.end(), "please"), words.end());
+    if (words.empty() || (words[0] != "attack" && words[0] != "engage"))
+        return false;
+    names.assign(words.begin() + 1, words.end());
+    return true;
+}
+// }}}
+
 // {{{ SayToOwner
 // The buddy's line where its owner will see it: the owner's raid, else
 // party, else a whisper.
@@ -108,6 +140,44 @@ static void SayToOwner(Player* buddy, Player* owner, char const* text)
 }
 // }}}
 
+// {{{ ObeyAttack
+// One heard "attack": the speaker's buddies (those named, or the one
+// whispered) go at the speaker's target, through the bot module's own
+// "attack my target" action (their master is the speaker).
+static void ObeyAttack(HeardOrder const& h, Player* speaker)
+{
+    ChatHandler tell(speaker->GetSession());
+    Unit* target = ObjectAccessor::GetUnit(*speaker, speaker->GetTarget());
+    if (!target || !target->IsAlive() || !speaker->IsValidAttackTarget(target))
+    {
+        tell.SendSysMessage("Your buddies need a living enemy targeted to attack.");
+        return;
+    }
+    std::set<std::string> wanted(h.names.begin(), h.names.end());
+    uint32 sent = 0;
+    for (auto const& [buddyGuid, ownerGuid] : BuddyRosterPairs())
+    {
+        if (ownerGuid != speaker->GetGUID().GetCounter())
+            continue;                                  // only the speaker's own buddies
+        if (!h.whisperedBuddy.IsEmpty() && h.whisperedBuddy.GetCounter() != buddyGuid)
+            continue;                                  // whispered to one buddy: only that one
+        Player* b = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(buddyGuid));
+        if (!b || !b->IsInWorld() || !b->IsAlive())
+            continue;
+        std::string name = b->GetName();
+        std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+        if (!wanted.empty() && !wanted.erase(name))
+            continue;                                  // names given, and not this one
+        if (PlayerbotAI* ai = GET_PLAYERBOT_AI(b))
+            if (ai->DoSpecificAction("attack my target", Event(), true))
+                ++sent;
+    }
+    for (std::string const& missing : wanted)
+        tell.PSendSysMessage("No buddy of yours named {} is here to attack.", missing);
+    LOG_INFO("module", "mod-buddies: {} ordered an attack on {}; {} buddies went", speaker->GetName(), target->GetName(), sent);
+}
+// }}}
+
 // {{{ Obey
 // One heard "go sell": every buddy it reaches with full bags is told to go.
 static void Obey(HeardOrder const& h)
@@ -115,6 +185,8 @@ static void Obey(HeardOrder const& h)
     Player* speaker = ObjectAccessor::FindConnectedPlayer(h.speaker);
     if (!speaker || !speaker->IsInWorld())
         return;
+    if (h.kind == OrderKind::Attack)
+        return ObeyAttack(h, speaker);
     std::set<uint32> owners;                           // whose buddies hear it
     owners.insert(speaker->GetGUID().GetCounter());
     if (Group* g = speaker->GetGroup())
@@ -179,16 +251,15 @@ public:
     // /say (and yell): heard by the speaker's group's buddies
     bool OnPlayerCanUseChat(Player* player, uint32 type, uint32 /*lang*/, std::string& msg) override
     {
-        if ((type == CHAT_MSG_SAY || type == CHAT_MSG_YELL) && Heard(player, msg))
-            Note(player, ObjectGuid::Empty);
+        if (type == CHAT_MSG_SAY || type == CHAT_MSG_YELL)
+            Hear(player, msg, ObjectGuid::Empty);
         return true;
     }
 
     // party and raid chat
     bool OnPlayerCanUseChat(Player* player, uint32 /*type*/, uint32 /*lang*/, std::string& msg, Group* /*group*/) override
     {
-        if (Heard(player, msg))
-            Note(player, ObjectGuid::Empty);
+        Hear(player, msg, ObjectGuid::Empty);
         return true;
     }
 
@@ -201,22 +272,24 @@ public:
         // whether the speaker may order it (its owner, or in its owner's
         // group) is settled on the world's thread (Obey), where groups are
         // safe to read
-        if (Heard(player, msg))
-            Note(player, receiver->GetGUID());
+        Hear(player, msg, receiver->GetGUID());
         return true;
     }
 
 private:
-    // a player (not a buddy) saying "go sell"
-    static bool Heard(Player* player, std::string const& msg)
+    // a player (not a buddy) saying "go sell" or "attack": noted for the
+    // world's thread
+    static void Hear(Player* player, std::string const& msg, ObjectGuid buddy)
     {
-        return BuddiesEnabled() && !CompanionAccounts::Is(player->GetSession()->GetAccountId()) && IsGoSell(msg);
-    }
-
-    static void Note(Player* player, ObjectGuid buddy)
-    {
+        if (!BuddiesEnabled() || CompanionAccounts::Is(player->GetSession()->GetAccountId()))
+            return;
+        HeardOrder h { player->GetGUID(), buddy };
+        if (IsAttack(msg, h.names))
+            h.kind = OrderKind::Attack;
+        else if (!IsGoSell(msg))
+            return;                                    // neither order: ordinary chat
         std::lock_guard<std::mutex> lock(sOrdersLock);
-        sHeard.push_back({ player->GetGUID(), buddy });
+        sHeard.push_back(h);
     }
 };
 // }}}

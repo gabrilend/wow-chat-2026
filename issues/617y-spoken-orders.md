@@ -45,6 +45,20 @@ Answers, 2026-10-12 (verbatim):
 
 ## Current Behavior
 
+**"Attack", 2026-10-15; syntax-checked, not yet rebuilt or run**
+(`buddies_orders.cpp`, ObeyAttack). The owner: "There should be a macro
+based command that tells my buddy-bots to 'attack my target' as in,
+engage / and I should be able to name them by name...". "attack" or
+"engage" said in party, raid or /say sends every buddy of the speaker at
+the speaker's target; "attack Zugsqonuw Usanda" only those named;
+whispered "attack" to a buddy, that buddy. Only the speaker's own buddies
+obey, since the target is the speaker's. A missing target or an unknown
+name is told to the speaker. The order goes straight to the bot module's
+"attack my target" action; its chat commands stay closed to buddies
+(B045). As a key: a macro "/p attack" or "/w Zugsqonuw attack" on the
+action bar, bound to a key. A whispered order also draws the buddy's
+placeholder answer in the other faction's tongue (617a5).
+
 **Not live yet (2026-10-13).** The owner tried "go sell" and it did
 nothing: the running server is the build of 2026-10-03
 (`installed-files-basic/bin/worldserver`); the build carrying the orders,
