@@ -285,9 +285,43 @@ public:
             Remake(player, (*row)[0].Get<uint32>(), (*row)[2].Get<uint8>(), (*row)[3].Get<uint8>());
     }
 
-    void OnPlayerLevelChanged(Player* player, uint8 /*oldLevel*/) override
+    void OnPlayerLevelChanged(Player* player, uint8 oldLevel) override
     {
         BuddyStageCheck(player);
+        LevelJumped(player, oldLevel);
+    }
+
+private:
+    // A buddy whose level moved by more than one at once (a game master's
+    // level command, a level tool, 185) is taught and dressed for the new
+    // level by the same steps as being made again, its gear and gems
+    // included. One level up in play is not a jump: those lessons are
+    // bought at a trainer in town (617n). The owner, 2026-10-15: "anything
+    // that changes a buddy-bots level or class should be teaching them the
+    // relevant abilities already" and, of a chat command doing it, "this
+    // shouldn't be doable via chat command".
+    static void LevelJumped(Player* bot, uint8 oldLevel)
+    {
+        uint8 level = bot->GetLevel();
+        if (!BuddiesEnabled() || !bot->IsInWorld() || (level <= oldLevel + 1 && level >= oldLevel))
+            return;                                    // not in the world yet, or one level up in play
+        if (!BuddyIsCompanionAccount(bot->GetSession()->GetAccountId()))
+            return;
+        QueryResult row = CharacterDatabase.Query("SELECT owner, stage, profile, role FROM buddy_roster WHERE buddy = {}",
+            bot->GetGUID().GetCounter());
+        if (!row || (*row)[1].Get<uint8>() != STAGE_WITH_OWNER)
+            return;                                    // not a roster buddy, or being made again (Remake does it all)
+        uint32 owner   = (*row)[0].Get<uint32>();
+        uint8  profile = (*row)[2].Get<uint8>();
+        uint8  role    = (*row)[3].Get<uint8>();
+        uint32 forgotten = level < oldLevel ? BuddyForgetLessons(bot) : 0;   // going down: the higher lessons go
+        uint32 lessons = BuddyLearnEverything(bot);
+        std::string problems = BuddyRegear(bot, profile);
+        if (level >= BUDDY_PVP_JEWELLERY_FROM)
+            problems += BuddyGivePvpJewellery(bot, profile, role);
+        problems += BuddyGemKit(bot, profile, role);
+        LOG_INFO("module", "mod-buddies: buddy {} (owner {}) jumped level {} -> {}: {} spells forgotten, {} learned, re-dressed{}{}",
+            bot->GetName(), owner, oldLevel, level, forgotten, lessons, problems.empty() ? "" : "; ", problems);
     }
 };
 
