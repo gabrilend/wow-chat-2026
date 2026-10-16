@@ -16,6 +16,21 @@ Verbatim, 2026-10-15:
 > abilities that are mentioned or affected by the spec talents they are
 > slotted? Just... in general.
 
+Then, the same day, on stat weights (verbatim): "stat weights for spec
+profiles must be modified by the current status of the character. The
+profile has the defaults, and whatever the character's spec ends up being
+determines which stats are preferred. We can do this by checking the
+talents they actually pick, and then evaluating the stat weights for each
+of the abilities mentioned, and how large and important of a discrepancy
+the modification of the talent is, then we prefer that more or less
+depending on how much it changed, and how often we are likely to use that
+talent's mentioned abilities. Keep in mind we will always use some of
+them sometime." And on the hunter asking for Trueshot Aura forty
+thousand times: "we probably shouldn't be doing things in a loop if we're
+just... standing around. Everything like that should be triggered by
+something else, to keep it a game focused on user input and not a
+simulation focused on backgrounds."
+
 ## Current Behavior
 
 A buddy fights by the bot module's strategies for its class and the tree
@@ -26,6 +41,19 @@ the same day: the hunter Montahmu's strategy asked 41,000 times for
 Trueshot Aura, a talent it does not have.
 
 ## Intended Behavior
+
+**Stat weights from the talents taken.** A talent shape's weights are the
+starting point; the talents a buddy actually took move them: for each
+ability a talent names, the stats that ability scales with count for
+more, by how much the talent changes the ability and how often the buddy
+uses it (and every ability is used sometimes). Gems (617j2), gear choice
+and loot all read these weights.
+
+**No idle asking.** The bot module checks each of its triggers every
+moment ("does it have Trueshot Aura? no: cast it"), so an ability it can't
+use (a talent not taken) is tried forever. An action for an unknown spell
+should be dropped once, when the buddy's spells change, not checked
+again every moment.
 
 Every ability a buddy's talents name or change counts for more when the
 buddy chooses what to do: the more talent points spent on it, the more

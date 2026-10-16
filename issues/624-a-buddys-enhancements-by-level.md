@@ -24,6 +24,17 @@ Verbatim, 2026-10-15:
 > also... can we add the item that the blacksmith can make that adds a
 > socket to a belt-buckle? What recipe is that?
 
+Answers, 2026-10-15 (verbatim): on legs, head and shoulders, which classic
+enchanting has none for, "we should still do it. We're trying to buff the
+white-quality gear armor so the newly created buddy-bots have a fighting
+chance, and can learn from their equipment what works best and what
+doesn't. Since they can't compare to those enchants specifically, they
+must learn from the combination." On the belt buckle: "can we lower it to
+level 60ish?" On cloaks, rings and trinkets: "They should have cloaks and
+rings and trinkets at the specified level. When they are level
+appropriate. And don't forget the PvP gear..." (built the same day: gray
+cloaks in the white lists, the PvP necklace, rings and trinkets from 18).
+
 ## Current Behavior
 
 A buddy is made in white vendor gear with no neck, rings, trinkets or
@@ -77,11 +88,15 @@ A buddy made at 14 gets the level-10 step; at 34, the 10, 20 and 30 steps.
 
 ## Open Questions
 
-1. Legs at 60: an Arcanum (from Dire Maul's librams, needing level 50-60)
-   in place of an enchant, since classic enchanting has none for legs?
+1. (Answered 2026-10-15: do legs, head and shoulders anyway.) Which
+   enhancement for them: the classic Arcanums and reputation items as
+   they are (levels 50-60), or made enchants of the buddy's level?
 2. Level 50: boots only, or boots and gloves (gloves exist), and head
    (Arcanum) or shoulder (late reputation items)?
-3. The belt buckle needs level 70. Leave it out of basic, make a basic
-   copy usable at 60 (a custom item, 175), or something else?
+3. The belt buckle: lowered to level 60ish (answered 2026-10-15). Its
+   required level lives in the world database (item 41611), so an
+   install-time edit can set it to 60; the recipe stays at blacksmithing
+   415, which basic's blacksmiths (capped at 300) can't reach. Given to
+   buddies at 60 by the kit, sold, or a recipe lowered too?
 4. Which ring and necklace at a level: the best for the plan among those
    of its level, or random among them like the weapon enchants?
