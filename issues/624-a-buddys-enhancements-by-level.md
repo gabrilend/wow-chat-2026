@@ -45,6 +45,17 @@ blacksmithing 300 (basic's cap), the buckle at level 60.
 
 ## Current Behavior
 
+**The buckle at 60, 2026-10-15** (install step E057,
+`sql/basic/db_world.src/37-belt-buckle.*.sql`): the Eternal Belt Buckle
+(41611) needs level 60, not 70. Its source is open: the stock recipe
+(55656) is on no trainer and takes Northrend materials (4 Saronite Bars,
+Eternal Earth, Water and Shadow) basic doesn't have, and the stock client
+draws the craft window from its own copy, so changing the reagents on the
+server alone would still ask for Saronite. The world bosses (read the
+same day): Azuregos (63, Azshara, stock loot only), the four Emerald
+Dragons (63, each already drops three ability tomes, 155q), Doom Lord
+Kazzak and Doomwalker (73, Outland).
+
 A buddy is made in white vendor gear with no neck, rings, trinkets or
 cloak (`buddy-white-*` gearsets), gems in its sockets (617j2), and from
 level 30 a random weapon enchant on its first kit (621). Nothing else.

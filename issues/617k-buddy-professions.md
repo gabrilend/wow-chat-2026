@@ -26,7 +26,22 @@ gives (185's table: five points a level, to 300 on basic), the trainer
 ranks that skill needs (Apprentice, Journeyman, Expert, Artisan), every
 recipe a trainer of it teaches at or below that skill, and the tools of
 that skill (an enchanter's runed rod of its rank: copper, silver, golden,
-truesilver, arcanite). Not built yet.
+truesilver, arcanite).
+
+**Built 2026-10-15; syntax-checked, not yet rebuilt or run**
+(`buddies_spells.cpp`, BuddyRaiseProfessions): when a buddy is made, made
+again at a tier, or its level jumps up, every profession it has, cooking,
+first aid and fishing included, goes to five points a level up to 300,
+with the rank spells that needs (Journeyman from 10, Expert from 20,
+Artisan from 35; learned and the skill set directly, as a buddy being
+made can't cast a rank), every recipe its profession trainers teach at
+or below that skill and level (never a new profession's first rank,
+never a weapon master's lesson), and an enchanter's runed rod of its
+skill. The same rule, in plain Lua, is in the offline tool
+`scripts/teach-character-lessons`, which raised Felicity's five buddies
+(made at 44 with every profession at 1) to 220 of 225 and taught them 54
+to 97 recipes each. The enchanter Eliustan's better rod waits for the
+buddy module (the offline tool makes no items).
 
 ## Current Behavior
 
