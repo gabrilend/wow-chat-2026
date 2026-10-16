@@ -39,12 +39,14 @@ local OUT    = DIR .. "/src/lua-basic/data/gearsets/buddy-white-%d.lua"
 local TD     = dofile(DIR .. "/src/lua-basic/data/buddy-talent-data.lua")
 
 local WINDOW, LOWEST = 5, 2                             -- buddies_kit.cpp's KIT_WINDOW_LEVELS, KIT_LOWEST_LEVEL
--- the levels a record starts at: 2, then every five (5, 10, ... MAX_LEVEL);
--- a record's items need no more than its own level, so all of them are
--- wearable for the whole bracket. Level 1 has none: a level-1 buddy keeps
--- the outfit the game dresses a new character in (617a4).
-local BRACKETS = { 2 }
-for l = 5, MAX_LEVEL, 5 do BRACKETS[#BRACKETS + 1] = l end
+-- the levels a record starts at: every level from 2 to MAX_LEVEL, so a
+-- buddy made at 24 wears the level-24 record (owner, 2026-10-15: "it
+-- should be at the level 24 list. Dynamically generate it using rules";
+-- until then a record each five levels, and a buddy made at 24 wore the
+-- level-20 one). Level 1 has none: a level-1 buddy keeps the outfit the
+-- game dresses a new character in (617a4).
+local BRACKETS = {}
+for l = 2, MAX_LEVEL do BRACKETS[#BRACKETS + 1] = l end
 -- }}}
 
 -- {{{ the game's rules (3.3.5a), as tables
@@ -139,12 +141,27 @@ end
 local STAT_NAME = { [3] = "agi", [4] = "str", [5] = "int", [6] = "spi", [7] = "sta", [12] = "defrtng", [13] = "dodgertng",
                     [14] = "parryrtng", [15] = "blockrtng", [31] = "hitrtng", [32] = "critstrkrtng", [36] = "hastertng",
                     [37] = "exprtng", [38] = "atkpwr", [43] = "manargn", [44] = "armorpenrtng", [45] = "splpwr", [48] = "block" }
-local items = {}
-do
+local function read_items(sql_where, gray)
+    local found = {}
     local cols = { "it.entry", "it.name", "it.class", "it.subclass", "it.InventoryType", "it.RequiredLevel", "it.ItemLevel",
                    "it.AllowableClass", "it.AllowableRace", "it.armor", "it.dmg_min1", "it.dmg_max1", "it.delay" }
     for i = 1, 10 do cols[#cols + 1] = "it.stat_type" .. i; cols[#cols + 1] = "it.stat_value" .. i end
-    for _, r in ipairs(query(WORLD, "SELECT DISTINCT " .. table.concat(cols, ", ") ..
+    for _, r in ipairs(query(WORLD, "SELECT DISTINCT " .. table.concat(cols, ", ") .. sql_where)) do
+        local f = { id = tonumber(r[1]), name = r[2], class = tonumber(r[3]), sub = tonumber(r[4]), inv = tonumber(r[5]),
+                    req = tonumber(r[6]), ilvl = tonumber(r[7]), allow_class = tonumber(r[8]), allow_race = tonumber(r[9]),
+                    armor = tonumber(r[10]), stats = {}, gray = gray }
+        local delay = tonumber(r[13])
+        f.dps = (delay > 0) and ((tonumber(r[11]) + tonumber(r[12])) / 2) / (delay / 1000) or 0
+        for i = 0, 9 do
+            local t, v = tonumber(r[14 + i * 2]), tonumber(r[15 + i * 2])
+            if v ~= 0 and STAT_NAME[t] then f.stats[STAT_NAME[t]] = (f.stats[STAT_NAME[t]] or 0) + v end
+        end
+        found[#found + 1] = f
+    end
+    return found
+end
+-- white armour and weapons some vendor sells
+local items = read_items(
         " FROM item_template it JOIN npc_vendor v ON v.item = it.entry WHERE it.Quality = 1 AND it.class IN (2, 4)" ..
         -- weapons from required level 1, everything else from LOWEST: the
         -- starter weapons (Short Staff, Dirk, Shortsword) need level 1, and
@@ -153,19 +170,21 @@ do
         -- 2026-10-15: "fix."). Armour stays at LOWEST and up: below it are
         -- the level-0 novelties (holiday mantles, jewellers' rings, romance
         -- goggles) a first try at "from 0" dressed every buddy in.
-        " AND (it.RequiredLevel BETWEEN " .. LOWEST .. " AND " .. MAX_LEVEL .. " OR (it.class = 2 AND it.RequiredLevel = 1))")) do
-        local f = { id = tonumber(r[1]), name = r[2], class = tonumber(r[3]), sub = tonumber(r[4]), inv = tonumber(r[5]),
-                    req = tonumber(r[6]), ilvl = tonumber(r[7]), allow_class = tonumber(r[8]), allow_race = tonumber(r[9]),
-                    armor = tonumber(r[10]), stats = {} }
-        local delay = tonumber(r[13])
-        f.dps = (delay > 0) and ((tonumber(r[11]) + tonumber(r[12])) / 2) / (delay / 1000) or 0
-        for i = 0, 9 do
-            local t, v = tonumber(r[14 + i * 2]), tonumber(r[15 + i * 2])
-            if v ~= 0 and STAT_NAME[t] then f.stats[STAT_NAME[t]] = (f.stats[STAT_NAME[t]] or 0) + v end
-        end
-        items[#items + 1] = f
-    end
-end
+        " AND (it.RequiredLevel BETWEEN " .. LOWEST .. " AND " .. MAX_LEVEL .. " OR (it.class = 2 AND it.RequiredLevel = 1))", false)
+-- gray (poor) armour, from anywhere (no vendor sells it; it drops): for an
+-- armour slot no white item of the level fills (owner, 2026-10-15: "if
+-- there's no white item for a slot (usually shoulders and helmet) then we
+-- can use a gray quality item"). No vendor sells a white cloak at all
+-- (read that day: 36 white cloaks, all drops), so the cloak is usually
+-- gray too; until then no buddy wore one.
+-- Only worn armour (cloth, leather, mail, plate: subclasses 1-4, which
+-- takes in cloaks), and nothing named as a placeholder: a first run put
+-- "Deprecated Gnoll Taskmaster Whip" and "Bind On Use Test Item" in the
+-- trinket slots (2026-10-15), so necks, rings and trinkets take no gray.
+local grays = read_items(" FROM item_template it WHERE it.Quality = 0 AND it.class = 4 AND it.subclass BETWEEN 1 AND 4" ..
+        " AND it.name NOT LIKE '%Deprecated%' AND it.name NOT LIKE '%Test%' AND it.name NOT LIKE 'OLD%'" ..
+        " AND it.name NOT LIKE '%[PH]%' AND it.name NOT LIKE '%(old)%'" ..
+        " AND it.RequiredLevel BETWEEN " .. LOWEST .. " AND " .. MAX_LEVEL, true)
 -- }}}
 
 -- {{{ the stat weights: class -> tree position -> { stat = weight }
@@ -225,7 +244,7 @@ local function dress(class, shape_id, level)
     end
     -- the window first, then heavier armour (same inventory type), then the
     -- shape's score, then higher level, item level, lower id
-    table.sort(all, function(a, b)
+    local function order(a, b)
         local wa, wb = a.f.req >= lowest, b.f.req >= lowest
         if wa ~= wb then return wa end
         local ha = a.f.class == 4 and a.f.sub or 0
@@ -235,17 +254,28 @@ local function dress(class, shape_id, level)
         if a.f.req ~= b.f.req then return a.f.req > b.f.req end
         if a.f.ilvl ~= b.f.ilvl then return a.f.ilvl > b.f.ilvl end
         return a.f.id < b.f.id
-    end)
+    end
+    table.sort(all, order)
     local rec = {}
     local function hand(f) return f.class == 2 or f.inv == 14 or f.inv == 23 end
-    for _, c in ipairs(all) do
-        local slots = not hand(c.f) and ARMOUR_SLOTS[c.f.inv]
-        if slots then
-            for _, slot in ipairs(slots) do
-                if not rec[slot] then rec[slot] = c.f; break end
+    local function fill(list)
+        for _, c in ipairs(list) do
+            local slots = not hand(c.f) and ARMOUR_SLOTS[c.f.inv]
+            if slots then
+                for _, slot in ipairs(slots) do
+                    if not rec[slot] then rec[slot] = c.f; break end
+                end
             end
         end
     end
+    fill(all)
+    -- then gray for armour slots still empty, by the same order
+    local poor = {}
+    for _, f in ipairs(grays) do
+        if usable(f, class, level, thirds) then poor[#poor + 1] = { f = f, s = score(f, class, thirds) } end
+    end
+    table.sort(poor, order)
+    fill(poor)
     -- weapons: the plan's main tree (the largest third; the first on a tie)
     local main_tree = 1
     for i = 2, 3 do if thirds[i] > thirds[main_tree] then main_tree = i end end
@@ -269,7 +299,7 @@ end
 
 -- {{{ write the profiles, one per tier
 -- A tier is ten levels (1 holds 2-9, as level 1 has no record); inside it,
--- a record each five levels, its items needing no more than its level.
+-- a record each level, its items needing no more than its level.
 local SLOTNAME = { [0] = "head", "neck", "shoulders", "shirt", "chest", "waist", "legs", "feet", "wrists",
                    "hands", "finger", "finger", "trinket", "trinket", "back", "main hand", "off hand", "ranged" }
 local classes = {}
@@ -290,7 +320,7 @@ for tier = 1, MAX_LEVEL do
         wr("--------------------------------------------------------------------------------")
         wr(string.format("-- data/gearsets/%s.lua (issue 617r2) - a gearset profile", name))
         wr("--")
-        wr(string.format("-- What a buddy of levels %d-%d is made wearing: white vendor gear, by class",
+        wr(string.format("-- What a buddy of levels %d-%d is made wearing: white vendor gear (gray where no white fills a slot), by class",
             tiers[tier][1], tier == 1 and 9 or tier + 9))
         wr("-- and talent shape, then level. GENERATED by scripts/translate-buddy-kit-to-")
         wr("-- gearset from the buddy module's old dressing rules (plus the shape's stat")
@@ -312,7 +342,7 @@ for tier = 1, MAX_LEVEL do
                     wr(string.format("            [%d] = { items = {", level))
                     for slot = 0, 17 do
                         local it = rec[slot]
-                        if it then wr(string.format("                [%2d] = %5d,   -- %-9s %s (level %d)", slot, it.id, SLOTNAME[slot], it.name, it.req)) end
+                        if it then wr(string.format("                [%2d] = %5d,   -- %-9s %s (level %d%s)", slot, it.id, SLOTNAME[slot], it.name, it.req, it.gray and ", gray" or "")) end
                     end
                     wr("            } },")
                     total = total + 1

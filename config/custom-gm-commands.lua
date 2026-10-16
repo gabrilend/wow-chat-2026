@@ -67,7 +67,7 @@ return {
       help = "Chooses how your own buddies explore a town (the work is in buddies_explore.cpp): the pinwheel, least paint, the room orbit, the squished circle, or each buddy a different one in turn (mixed). Any player may set it for their own buddies." },
     { name = "buddy kit", args = "<buddy name>", level = 2, console = true, kind = "compiled",
       source = "modules/mod-buddies/src/buddies_kit.cpp", profiles = BUDDY_PROFILES, system = "Companions",
-      help = "Gives a buddy in the world the kit's gear for its level now, by its talent shape. What it wore is replaced." },
+      help = "Makes a buddy in the world as if just made at its level: every lesson of its level, the kit's gear by its talent shape (gray where no white fills a slot), its class tools (totems, poisons, ammunition), and from level 18 the PvP necklace, rings and trinkets. What it wore is replaced." },
     { name = "buddy gems", args = "<buddy name>", level = 2, console = true, kind = "compiled",
       source = "modules/mod-buddies/src/buddies_gems.cpp", profiles = BUDDY_PROFILES, system = "Companions",
       help = "Gems every socket of what a buddy in the world wears again: each socket a random colour that fits it, then the best gem of that colour for the buddy's talents. What was socketed is replaced; free." },

@@ -420,7 +420,11 @@ static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
     uint8 profile = plan ? (*plan)[0].Get<uint8>() : 0;
     uint8 role    = plan ? (*plan)[1].Get<uint8>() : 0;
     std::string name, why;
-    uint32 guid = BuddyMakeCharacter(account, race, cls, ownerLevel, profile, role, owner, false, "buddy",
+    // from level 18 a buddy wears the PvP necklace, rings and trinkets of
+    // its level, as stand-ins do (owner, 2026-10-15: "They should have
+    // cloaks and rings and trinkets at the specified level ... And don't
+    // forget the PvP gear"); the first PvP rewards are level 18's
+    uint32 guid = BuddyMakeCharacter(account, race, cls, ownerLevel, profile, role, owner, ownerLevel >= BUDDY_PVP_JEWELLERY_FROM, "buddy",
         "owner " + std::to_string(owner), name, why);
     if (!guid)
         return Fail(owner, slot, race, cls, why);

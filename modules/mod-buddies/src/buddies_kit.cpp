@@ -555,9 +555,20 @@ public:
             handler->PSendSysMessage("{} is not a buddy in the world (a buddy is in the world while its owner is online).", name);
             return false;
         }
-        QueryResult row = CharacterDatabase.Query("SELECT profile FROM buddy_roster WHERE buddy = {}", buddy->GetGUID().GetCounter());
+        QueryResult row = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE buddy = {}", buddy->GetGUID().GetCounter());
         uint8 shape = row ? (*row)[0].Get<uint8>() : 0;
+        uint8 role  = row ? (*row)[1].Get<uint8>() : 0;
+        // as if just made at its level (owner, 2026-10-15: "aren't abilities
+        // taught at buddy-bot's first login?"): every lesson of its level
+        // first, free (Zugsqonuw, made before quest spells came first,
+        // lacked every bear ability), then the gear, its class tools, and
+        // from 18 the PvP necklace, rings and trinkets
+        uint32 lessons = BuddyLearnEverything(buddy);
         std::string problems = BuddyRegear(buddy, shape);
+        if (buddy->GetLevel() >= BUDDY_PVP_JEWELLERY_FROM)
+            problems += BuddyGivePvpJewellery(buddy, shape, role);
+        if (lessons)
+            problems = std::to_string(lessons) + " lessons learned; " + problems;
         handler->PSendSysMessage("{} (level {}) re-kitted from {} by its talent shape {}{}{}", name, buddy->GetLevel(), KitGearset(buddy->GetLevel()),
             uint32(shape), problems.empty() ? "" : "; ", problems);
         return true;

@@ -24,12 +24,14 @@
  *                                everything it carries (below), go on:
  *     in danger, or fighting   - drawn (the melee sheath state)
  *     otherwise                - sheathed (on the back or hip)
- * Danger, for now: inside a dungeon, raid, battleground or arena. The
- * owner's wider rule, "specifically when they are questing ... a
+ * Danger: inside a dungeon, raid, battleground or arena, or questing. The
+ * owner's rule for questing is "specifically when they are questing ... a
  * non-road non-town zone ... roads are always sheathed unless actively in
- * combat", needs a map of roads and of where quest monsters live, which
- * does not exist yet (617e4c): until then the open world is sheathed and
- * a fight draws.
+ * combat"; with no map of roads yet (617e4c), the owner's stand-in rule
+ * (2026-10-15): roads are "while the player is on the way to something".
+ * On the way: the owner is mounted, on a flight, or has covered more than
+ * ON_THE_WAY_YARDS in the last ON_THE_WAY_SECONDS (running steadily, not
+ * stopping to fight or loot). Out of town and not on the way: questing.
  *
  * The best weapons: for the main hand, the best-scoring main-hand, one-hand
  * or two-hand weapon it can use; for the off hand (unless the main is a
@@ -51,16 +53,22 @@
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "Playerbots.h"
+#include "PlayerbotAI.h"
 #include "ScriptMgr.h"
 #include "StatsWeightCalculator.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
 #include <mutex>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
 // {{{ tuning
 static constexpr uint32 ARMS_LOOK_MS = 2000;   // how often each buddy's situation is looked at for a change
+static constexpr float  ON_THE_WAY_YARDS   = 80.0f;   // ground covered ...
+static constexpr uint32 ON_THE_WAY_SECONDS = 20;      // ... in this long: the owner is on the way somewhere
+static constexpr uint32 OWNER_SAMPLES = ON_THE_WAY_SECONDS * 1000 / ARMS_LOOK_MS;   // one position per look
 // the slots carried by place, in the order they are put on: the main hand
 // first, so a two-hander is in place before an off hand is tried
 static constexpr uint8 HAND_SLOTS[] = { EQUIPMENT_SLOT_MAINHAND, EQUIPMENT_SLOT_OFFHAND, EQUIPMENT_SLOT_RANGED };
@@ -195,6 +203,37 @@ static bool IntoBags(Player* bot, uint8 slot)
 }
 // }}}
 
+// {{{ the owner on the way
+// owner guid -> the owner's last positions, one per look, oldest first
+// (world thread only: the pass samples, the combat hook only reads the
+// answer the pass last worked out)
+struct Trail { std::vector<Position> at; bool onTheWay = false; };
+static std::mutex sTrailLock;
+static std::unordered_map<uint32, Trail> sTrails;
+
+static void SampleOwner(Player* owner)
+{
+    std::lock_guard<std::mutex> lock(sTrailLock);
+    Trail& t = sTrails[owner->GetGUID().GetCounter()];
+    t.at.push_back(owner->GetPosition());
+    if (t.at.size() > OWNER_SAMPLES)
+        t.at.erase(t.at.begin());
+    bool far = t.at.size() == OWNER_SAMPLES && t.at.front().GetExactDist2d(&t.at.back()) > ON_THE_WAY_YARDS;
+    t.onTheWay = owner->IsMounted() || owner->IsInFlight() || far;
+}
+
+static bool OwnerOnTheWay(Player* bot)
+{
+    PlayerbotAI* ai = GET_PLAYERBOT_AI(bot);
+    Player* owner = ai ? ai->GetMaster() : nullptr;
+    if (!owner)
+        return true;                                   // no owner to follow: count it as travelling (sheathed)
+    std::lock_guard<std::mutex> lock(sTrailLock);
+    auto it = sTrails.find(owner->GetGUID().GetCounter());
+    return it == sTrails.end() || it->second.onTheWay; // not sampled yet: travelling
+}
+// }}}
+
 // {{{ the situation
 enum class Place : uint8 { Town, Open, Danger };
 
@@ -209,7 +248,9 @@ struct Situation
 static Situation SituationOf(Player* bot)
 {
     Place place = bot->GetMap()->Instanceable() ? Place::Danger          // dungeon, raid, battleground, arena
-                : (BuddyTownArea(bot) ? Place::Town : Place::Open);       // a town (its buildings too), or out
+                : BuddyTownArea(bot) ? Place::Town                        // a town (its buildings too)
+                : OwnerOnTheWay(bot) ? Place::Open                        // on the way somewhere: sheathed
+                : Place::Danger;                                          // out, not on the way: questing
     return { place, bot->IsInCombat(), BuddyTownFishing(bot->GetGUID().GetCounter()) };
 }
 
@@ -217,7 +258,7 @@ static char const* Words(Situation const& s)
 {
     if (s.fighting)
         return "as a fight began";
-    return s.place == Place::Town ? "in town" : (s.place == Place::Danger ? "in danger" : "out in the open");
+    return s.place == Place::Town ? "in town" : (s.place == Place::Danger ? "in danger or questing" : "on the way");
 }
 // }}}
 
@@ -324,6 +365,12 @@ public:
         if (_since < ARMS_LOOK_MS || !BuddiesEnabled())
             return;
         _since = 0;
+        std::set<uint32> sampled;                      // each owner once per look
+        for (auto const& [buddyGuid, ownerGuid] : BuddyRosterPairs())
+            if (sampled.insert(ownerGuid).second)
+                if (Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(ownerGuid)))
+                    if (owner->IsInWorld())
+                        SampleOwner(owner);
         for (auto const& [buddyGuid, ownerGuid] : BuddyRosterPairs())
             if (Player* bot = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(buddyGuid)))
                 if (bot->IsInWorld() && bot->IsAlive() && bot->GetSession())

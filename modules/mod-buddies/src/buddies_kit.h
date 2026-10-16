@@ -28,5 +28,7 @@ std::string BuddyRegear(Player* buddy, uint8 shape);
 // shape; the standing they need is given. Replaces what those slots held.
 // Returns what could not be given.
 std::string BuddyGivePvpJewellery(Player* who, uint8 shape, uint8 role);
+// the level the first PvP rewards (necklace, rings, trinkets) can be worn at
+static constexpr uint8 BUDDY_PVP_JEWELLERY_FROM = 18;
 
 #endif
