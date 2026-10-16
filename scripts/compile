@@ -983,6 +983,37 @@ fi
 # fails a run that had succeeded so far, and must not stop the trap before
 # the trees are reset, hence its "|| compile_status=1".
 trap 'compile_status=$?; unapply_patches_begin || compile_status=1; leave_source_trees_clean; report_how_compile_ended ${compile_status}' EXIT
+# {{{ generate_buddy_gear
+# The buddies' gear lists and the page that shows them, made again from
+# the world database before every build (owner, 2026-10-15: "Make sure
+# it's dynamically updated whenever we compile ... just call the generator
+# in the compilation script, and write some output about it's location in
+# the logs"). Three steps, each a script of its own:
+#   scripts/translate-buddy-kit-to-gearset  the rules -> src/lua-basic/data/gearsets/buddy-white-*.lua
+#   scripts/generate-gearset-sql            those lists -> sql/basic/db_world.src/33-gearsets.apply.sql
+#                                           (loaded by install step E052)
+#   scripts/generate-buddy-gear-gallery     the lists + item data -> docs/HTML/buddy-gear-gallery.html
+# Only for the profiles that have buddies (basic, cc-test). They read the
+# world database, so MySQL must be answering; a failure stops the compile
+# with the step's own words (a stale list would dress buddies wrongly).
+generate_buddy_gear() {
+    case "${PROFILE}" in basic|cc-test) ;; *) return 0 ;; esac
+    if ! "${DIR}/mysql/installed-files/bin/mysqladmin" --no-defaults --socket="${DIR}/mysql/databases/mysql.sock" \
+            -uritz -pmenardi ping > /dev/null 2>&1; then
+        echo "ERROR: making the buddy gear lists needs the project's MySQL, and it isn't answering."
+        echo "       start it (./scripts/start-mysql) and compile again"
+        exit 1
+    fi
+    echo "Making the buddy gear lists and their gallery..."
+    "${DIR}/scripts/translate-buddy-kit-to-gearset" "${DIR}" || { echo "ERROR: scripts/translate-buddy-kit-to-gearset failed (above)"; exit 1; }
+    "${DIR}/scripts/generate-gearset-sql" "${DIR}" || { echo "ERROR: scripts/generate-gearset-sql failed (above)"; exit 1; }
+    "${DIR}/scripts/generate-buddy-gear-gallery" "${DIR}" || { echo "ERROR: scripts/generate-buddy-gear-gallery failed (above)"; exit 1; }
+    echo "  gear lists:   ${DIR}/src/lua-basic/data/gearsets/buddy-white-*.lua (into the database at the next install)"
+    echo "  gear gallery: ${DIR}/docs/HTML/buddy-gear-gallery.html"
+}
+# }}}
+generate_buddy_gear
+
 # Apply pre-compile patches (idempotent)
 apply_patches_begin
 

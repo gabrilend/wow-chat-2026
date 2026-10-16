@@ -17,10 +17,40 @@ Verbatim, 2026-10-05:
 > create and update gearsets that look good, so buddy-bots spawn with the
 > most fashionable sets they can.
 
+Then, 2026-10-15 (verbatim):
+
+> Can you create an HTML gallery document page that shows with rotatable
+> 3d models drawn from the game files and equipped with the necessary
+> item models, each of the buddy-bot classes equipment sets (with
+> paper-doll item slots to the left and right of each rotatable gallery
+> portrait image model renderer viewer rotatable) should have tooltips
+> that show what they are. It should have one entry for each class at
+> each tier, for a total of... 60, I think. Make sure it's dynamically
+> updated whenever we compile, if needed. So, just call the generator in
+> the compilation script, and write some output about it's location in
+> the logs.
+
 ## Current Behavior
 
-Not built. The custom client draws a naked night elf; it can't yet draw
-items on a character.
+**The page without the figure, built 2026-10-15**
+(`scripts/generate-buddy-gear-gallery`, the data, and
+`scripts/templates/buddy-gear-gallery.html`, the view; writes
+`docs/HTML/buddy-gear-gallery.html`). Sixty cards, ten classes at levels
+10, 20, 30, 40, 50 and 60 (each the gear list's record at exactly that
+level), each with a picker for the class's ten talent shapes, the gear
+laid out like the game's character pane (left column, right column,
+weapons below), and on every item a tooltip from the world database
+(quality, slot and kind, armour, damage and speed, stats, sockets,
+required level, item level). The middle of each card sums the outfit
+(armour, weapon damage per second, stats, gray pieces). Filters by class
+and level. `scripts/compile` runs the gear translator, the gear SQL and
+this generator before every build and prints where they wrote.
+Necklace, rings and trinkets show "chosen at making": the PvP jewellery
+is picked when a buddy is made, not listed.
+
+**Not built: the turning 3D figure.** The custom client draws a naked
+night elf; it can't yet draw items on a character, which the figure
+needs (the steps below).
 
 ## Intended Behavior
 
